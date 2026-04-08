@@ -1,0 +1,8 @@
+{
+  "name": "my-free-apps",
+  "private": true,
+  "workspaces": [
+    "packages/shared-frontend",
+    "apps/*/frontend"
+  ]
+}

@@ -1,0 +1,81 @@
+name: Deploy MyBookkeeper
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/mybookkeeper/**'
+      - 'packages/**'
+
+concurrency:
+  group: deploy-mybookkeeper
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          command_timeout: 10m
+          script: |
+            set -e
+            cd /srv/mybookkeeper
+
+            echo "--- Pull latest code ---"
+            git checkout -- apps/mybookkeeper/frontend/tsconfig.tsbuildinfo 2>/dev/null || true
+            git pull
+
+            echo "--- Wait for active syncs/extractions to finish ---"
+            for i in $(seq 1 60); do
+              RUNNING=$(docker compose -f apps/mybookkeeper/docker-compose.yml exec -T api python -c "
+            from app.cli.db import SyncSession
+            from sqlalchemy import text
+            with SyncSession() as s:
+                syncs = s.execute(text(\"SELECT COUNT(*) FROM gmail_sync_logs WHERE status = 'running'\")).scalar()
+                extracting = s.execute(text(\"SELECT COUNT(*) FROM email_queue WHERE status = 'extracting'\")).scalar()
+                processing = s.execute(text(\"SELECT COUNT(*) FROM documents WHERE status = 'processing'\")).scalar()
+                print(syncs + extracting + processing)
+            " 2>/dev/null || echo "0")
+              if [ "$RUNNING" = "0" ]; then
+                echo "No active work — safe to deploy"
+                break
+              fi
+              if [ $i -eq 60 ]; then
+                echo "Warning: active work still running after 2 min, deploying anyway"
+                break
+              fi
+              echo "Waiting for $RUNNING active job(s) to finish... ($i/60)"
+              sleep 2
+            done
+
+            echo "--- Build and deploy with Docker ---"
+            docker compose -f apps/mybookkeeper/docker-compose.yml build
+            docker compose -f apps/mybookkeeper/docker-compose.yml up -d --remove-orphans
+
+            echo "--- Run database migrations ---"
+            docker compose -f apps/mybookkeeper/docker-compose.yml exec -T api alembic upgrade head
+
+            echo "--- Wait for API health check ---"
+            for i in $(seq 1 30); do
+              if docker compose -f apps/mybookkeeper/docker-compose.yml exec -T api python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" 2>/dev/null; then
+                echo "API is healthy"
+                break
+              fi
+              if [ $i -eq 30 ]; then
+                echo "API health check failed after 30 attempts"
+                docker compose -f apps/mybookkeeper/docker-compose.yml logs api --tail=50
+                exit 1
+              fi
+              sleep 2
+            done
+
+            echo "--- Done ---"
