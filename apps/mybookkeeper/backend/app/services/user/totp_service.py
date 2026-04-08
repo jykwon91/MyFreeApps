@@ -1,58 +1,32 @@
-import base64
-import hashlib
-import secrets
 import uuid
 
-import pyotp
-from cryptography.fernet import Fernet
+from platform_shared.services.totp_service import (
+    generate_secret,
+    get_provisioning_uri as _get_provisioning_uri,
+    verify_code,
+    generate_recovery_codes,
+    verify_recovery_code,
+    encrypt_for_user,
+    decrypt_for_user,
+)
 
 from app.core.config import settings
 from app.db.session import AsyncSessionLocal, unit_of_work
 from app.repositories import user_repo
 
-
-def _fernet(user_id: uuid.UUID) -> Fernet:
-    key = hashlib.sha256(
-        settings.encryption_key.encode() + str(user_id).encode(),
-    ).digest()
-    return Fernet(base64.urlsafe_b64encode(key))
+ISSUER = "MyBookkeeper"
 
 
 def _encrypt(value: str, user_id: uuid.UUID) -> str:
-    return _fernet(user_id).encrypt(value.encode()).decode()
+    return encrypt_for_user(value, settings.encryption_key, user_id)
 
 
 def _decrypt(value: str, user_id: uuid.UUID) -> str:
-    return _fernet(user_id).decrypt(value.encode()).decode()
-
-
-def generate_secret() -> str:
-    return pyotp.random_base32()
+    return decrypt_for_user(value, settings.encryption_key, user_id)
 
 
 def get_provisioning_uri(secret: str, email: str) -> str:
-    totp = pyotp.TOTP(secret)
-    return totp.provisioning_uri(name=email, issuer_name="MyBookkeeper")
-
-
-def verify_code(secret: str, code: str) -> bool:
-    totp = pyotp.TOTP(secret)
-    return totp.verify(code, valid_window=1)
-
-
-def generate_recovery_codes(count: int = 8) -> list[str]:
-    return [secrets.token_hex(4).upper() for _ in range(count)]
-
-
-def verify_recovery_code(stored_codes_str: str | None, code: str) -> tuple[bool, str | None]:
-    if not stored_codes_str:
-        return False, None
-    codes = stored_codes_str.split(",")
-    normalized = code.strip().upper()
-    if normalized in codes:
-        codes.remove(normalized)
-        return True, ",".join(codes) if codes else None
-    return False, stored_codes_str
+    return _get_provisioning_uri(secret, email, issuer=ISSUER)
 
 
 async def setup_totp(user_id: uuid.UUID) -> tuple[str, str]:

@@ -9,8 +9,9 @@ RUN npm run build
 # Stage 2: Install Python dependencies
 FROM python:3.12-slim AS backend-deps
 WORKDIR /deps
+COPY packages/shared-backend/ /deps/shared-backend/
 COPY apps/mybookkeeper/backend/requirements.txt ./
-RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
+RUN pip install --no-cache-dir --prefix=/install /deps/shared-backend/ -r requirements.txt
 
 # Stage 3: Runtime
 FROM python:3.12-slim AS runtime

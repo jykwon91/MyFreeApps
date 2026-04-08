@@ -1,22 +1,32 @@
-"""Email service using Gmail SMTP."""
+"""Email service using Gmail SMTP — MyBookkeeper-specific templates."""
 
 import html as html_mod
 import logging
-import smtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
+
+from platform_shared.services.email_service import EmailService
 
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
+_mailer: EmailService | None = None
 
-def _smtp_configured() -> bool:
-    return bool(settings.smtp_user and settings.smtp_password)
+
+def _get_mailer() -> EmailService:
+    global _mailer
+    if _mailer is None:
+        _mailer = EmailService(
+            smtp_host=settings.smtp_host,
+            smtp_port=settings.smtp_port,
+            smtp_user=settings.smtp_user,
+            smtp_password=settings.smtp_password,
+            from_name=settings.email_from_name,
+        )
+    return _mailer
 
 
 def is_configured() -> bool:
-    return _smtp_configured()
+    return _get_mailer().is_configured()
 
 
 def get_recipients() -> list[str]:
@@ -26,34 +36,8 @@ def get_recipients() -> list[str]:
     return [addr.strip() for addr in raw.split(",") if addr.strip()]
 
 
-def _send_via_smtp(to: list[str], subject: str, body_html: str) -> bool:
-    msg = MIMEMultipart("alternative")
-    msg["From"] = f"{settings.email_from_name} <{settings.smtp_user}>"
-    msg["To"] = ", ".join(to)
-    msg["Subject"] = subject
-    msg.attach(MIMEText(body_html, "html"))
-
-    try:
-        with smtplib.SMTP(settings.smtp_host, settings.smtp_port) as server:
-            server.starttls()
-            server.login(settings.smtp_user, settings.smtp_password)
-            server.sendmail(settings.smtp_user, to, msg.as_string())
-        logger.info("Email sent via SMTP to %s: %s", to, subject)
-        return True
-    except Exception:
-        logger.warning("Failed to send email via SMTP to %s", to, exc_info=True)
-        return False
-
-
 def send_email(to: list[str], subject: str, body_html: str) -> bool:
-    if not to:
-        return False
-
-    if _smtp_configured():
-        return _send_via_smtp(to, subject, body_html)
-
-    logger.warning("No email service configured (set SMTP_USER and SMTP_PASSWORD)")
-    return False
+    return _get_mailer().send(to, subject, body_html)
 
 
 def send_cost_alert(severity: str, message: str, cost: float, budget: float) -> bool:
