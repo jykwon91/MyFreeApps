@@ -1,0 +1,31 @@
+services:
+  postgres:
+    ports:
+      - "5433:5432"
+
+  api:
+    build:
+      context: ../..
+      dockerfile: apps/myrestaurantreviews/docker/backend.Dockerfile
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001", "--reload", "--reload-dir", "app"]
+    volumes:
+      - ./backend:/app
+      - frontend_dist:/srv/frontend
+
+  caddy:
+    profiles: ["disabled"]
+
+  frontend-dev:
+    image: node:20-alpine
+    working_dir: /app
+    command: ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+    ports:
+      - "5174:5174"
+    environment:
+      VITE_API_TARGET: http://api:8001
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      api:
+        condition: service_healthy
