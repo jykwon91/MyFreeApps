@@ -1,0 +1,57 @@
+name: Deploy MyRestaurantReviews
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/myrestaurantreviews/**'
+      - 'packages/**'
+
+concurrency:
+  group: deploy-myrestaurantreviews
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          command_timeout: 10m
+          script: |
+            set -e
+            cd /srv/mybookkeeper
+
+            echo "--- Pull latest code ---"
+            git pull --ff-only
+
+            echo "--- Build and deploy with Docker ---"
+            docker compose -f apps/myrestaurantreviews/docker-compose.yml build
+            docker compose -f apps/myrestaurantreviews/docker-compose.yml up -d --remove-orphans
+
+            echo "--- Run database migrations ---"
+            docker compose -f apps/myrestaurantreviews/docker-compose.yml exec -T api alembic upgrade head
+
+            echo "--- Wait for API health check ---"
+            for i in $(seq 1 30); do
+              if docker compose -f apps/myrestaurantreviews/docker-compose.yml exec -T api python -c "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')" 2>/dev/null; then
+                echo "API is healthy"
+                break
+              fi
+              if [ $i -eq 30 ]; then
+                echo "API health check failed after 30 attempts"
+                docker compose -f apps/myrestaurantreviews/docker-compose.yml logs api --tail=50
+                exit 1
+              fi
+              sleep 2
+            done
+
+            echo "--- Done ---"
