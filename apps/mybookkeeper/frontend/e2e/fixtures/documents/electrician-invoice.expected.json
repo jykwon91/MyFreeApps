@@ -1,0 +1,14 @@
+{
+  "description": "Electrician invoice for outlet replacement",
+  "expected_transactions": [
+    {
+      "vendor": "Sparks Electric LLC",
+      "amount": 275.0,
+      "transaction_date": "2025-02-08",
+      "transaction_type": "expense",
+      "category": "maintenance",
+      "tax_relevant": true
+    }
+  ],
+  "expected_count": 1
+}

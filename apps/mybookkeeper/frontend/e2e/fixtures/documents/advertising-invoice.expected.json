@@ -1,0 +1,14 @@
+{
+  "description": "Facebook advertising for rental listing",
+  "expected_transactions": [
+    {
+      "vendor": "Facebook Ads",
+      "amount": 150.0,
+      "transaction_date": "2025-03-05",
+      "transaction_type": "expense",
+      "category": "advertising",
+      "tax_relevant": true
+    }
+  ],
+  "expected_count": 1
+}

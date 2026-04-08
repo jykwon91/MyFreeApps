@@ -1,0 +1,27 @@
+{$DOMAIN:localhost} {
+    header {
+        Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+        X-Frame-Options "DENY"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Content-Security-Policy "default-src 'self'; script-src 'self' https://cdn.plaid.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://*.plaid.com; frame-src 'self' https://cdn.plaid.com; frame-ancestors 'none'"
+        -Server
+    }
+
+    # Block API docs in production
+    @docs path /api/docs* /api/openapi.json /api/redoc*
+    respond @docs 404
+
+    # API proxy (strip /api prefix)
+    handle /api/* {
+        uri strip_prefix /api
+        reverse_proxy api:8000
+    }
+
+    # SPA fallback for frontend
+    handle {
+        root * /srv/frontend
+        try_files {path} /index.html
+        file_server
+    }
+}

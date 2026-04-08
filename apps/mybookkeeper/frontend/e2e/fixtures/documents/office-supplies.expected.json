@@ -1,0 +1,15 @@
+{
+  "description": "Office supplies purchase",
+  "expected_transactions": [
+    {
+      "vendor": "Staples",
+      "amount": 89.47,
+      "transaction_date": "2025-02-20",
+      "transaction_type": "expense",
+      "category": "other_expense",
+      "tax_relevant": true
+    }
+  ],
+  "expected_count": 1,
+  "note": "category may change to 'office_supplies' once Schedule C is supported"
+}

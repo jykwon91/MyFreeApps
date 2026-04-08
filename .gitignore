@@ -1,0 +1,57 @@
+# Claude Code local settings (not shared)
+.claude/settings.local.json
+.claude/worktrees/
+.claude/codebase-brief.md
+.claude/scheduled_tasks.lock
+.claude/e2e-passed
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Dependencies
+node_modules/
+
+# Build output
+build/
+dist/
+.next/
+*.tsbuildinfo
+
+# Environment
+.env
+.env.local
+.env.*.local
+*.env.docker
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Database dumps (large binaries)
+*.dump
+*.sql
+!**/alembic/**/*.sql
+
+# Playwright
+**/playwright-report/
+**/blob-report/
+**/e2e/test-results/
+**/e2e/.auth-token
+**/e2e/.auth-org
+**/e2e/.worker-pid
+**/e2e/fixtures/documents/all-test-documents.zip
+
+# Test documents
+test-documents/*.pdf
+test-documents/*.xlsx
+
+# Output
+output.txt
+test-results/
+
+# Lock files
+.~lock.*

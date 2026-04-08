@@ -1,0 +1,14 @@
+{
+  "description": "Monthly electric bill",
+  "expected_transactions": [
+    {
+      "vendor": "Texas Power & Light",
+      "amount": 187.43,
+      "transaction_date": "2025-01-22",
+      "transaction_type": "expense",
+      "category": "utilities",
+      "tax_relevant": true
+    }
+  ],
+  "expected_count": 1
+}

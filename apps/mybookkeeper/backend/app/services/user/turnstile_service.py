@@ -1,0 +1,22 @@
+import httpx
+
+from app.core.config import settings
+
+TURNSTILE_VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
+
+
+async def verify_turnstile_token(token: str, remote_ip: str | None = None) -> bool:
+    if not settings.turnstile_secret_key:
+        return True
+
+    payload = {
+        "secret": settings.turnstile_secret_key,
+        "response": token,
+    }
+    if remote_ip:
+        payload["remoteip"] = remote_ip
+
+    async with httpx.AsyncClient(timeout=10) as client:
+        resp = await client.post(TURNSTILE_VERIFY_URL, data=payload)
+        result = resp.json()
+        return result.get("success", False)

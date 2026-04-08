@@ -1,0 +1,54 @@
+{
+  "manifest_version": 3,
+  "name": "MyBookkeeper Tax Auto-Fill",
+  "version": "1.0.5",
+  "description": "Auto-fill IRS tax forms with your MyBookkeeper rental property data",
+  "permissions": ["storage", "activeTab", "sidePanel", "scripting"],
+  "host_permissions": [
+    "https://*.freetaxusa.com/*",
+    "https://*.turbotax.intuit.com/*",
+    "https://*.hrblock.com/*",
+    "https://*.taxact.com/*",
+    "https://*.irs.gov/*",
+    "https://directfile.irs.gov/*",
+    "https://165-245-134-251.sslip.io/*",
+    "http://localhost:*/*",
+    "http://127.0.0.1:*/*"
+  ],
+  "optional_host_permissions": [
+    "https://*/*"
+  ],
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "action": {
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.freetaxusa.com/*",
+        "https://*.turbotax.intuit.com/*",
+        "https://*.hrblock.com/*",
+        "https://*.taxact.com/*",
+        "https://directfile.irs.gov/*"
+      ],
+      "js": ["content.js"],
+      "css": ["content.css"]
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

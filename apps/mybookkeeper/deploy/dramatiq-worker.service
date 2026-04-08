@@ -1,0 +1,14 @@
+[Unit]
+Description=MyBookkeeper Dramatiq Worker
+After=network.target postgresql.service
+
+[Service]
+User=deploy
+WorkingDirectory=/srv/mybookkeeper/apps/mybookkeeper/backend
+EnvironmentFile=/srv/mybookkeeper/apps/mybookkeeper/backend/.env
+ExecStart=/srv/mybookkeeper/apps/mybookkeeper/backend/.venv/bin/dramatiq app.workers.email_sync_worker
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

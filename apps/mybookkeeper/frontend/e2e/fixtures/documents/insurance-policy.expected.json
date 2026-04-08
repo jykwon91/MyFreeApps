@@ -1,0 +1,14 @@
+{
+  "description": "Annual landlord insurance premium",
+  "expected_transactions": [
+    {
+      "vendor": "State Farm Insurance",
+      "amount": 1240.0,
+      "transaction_date": "2025-01-01",
+      "transaction_type": "expense",
+      "category": "insurance",
+      "tax_relevant": true
+    }
+  ],
+  "expected_count": 1
+}

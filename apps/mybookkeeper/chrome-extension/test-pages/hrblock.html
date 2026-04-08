@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>H&amp;R Block - W-2 Entry</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f8f9fa;
+      color: #212529;
+    }
+    .hrb-header {
+      background: #00a651;
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+    .hrb-logo {
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: #fff;
+    }
+    .hrb-logo .ampersand { color: #d4edda; }
+    .hrb-nav {
+      color: rgba(255,255,255,0.8);
+      font-size: 0.85rem;
+    }
+    .test-notice {
+      background: #fef3c7;
+      border-bottom: 1px solid #f59e0b;
+      color: #92400e;
+      padding: 10px 24px;
+      font-size: 0.85rem;
+    }
+    .hrb-progress {
+      background: #e9ecef;
+      height: 6px;
+    }
+    .hrb-progress-bar {
+      background: #00a651;
+      height: 6px;
+      width: 38%;
+      border-radius: 0 3px 3px 0;
+    }
+    .hrb-container {
+      max-width: 720px;
+      margin: 28px auto;
+      padding: 0 20px;
+    }
+    .hrb-page-header {
+      margin-bottom: 24px;
+    }
+    .hrb-page-header h1 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #212529;
+    }
+    .hrb-page-header p {
+      font-size: 0.9rem;
+      color: #6c757d;
+      margin-top: 4px;
+    }
+    .hrb-card {
+      background: #fff;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 28px;
+      margin-bottom: 20px;
+    }
+    .hrb-card-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #00a651;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #e9ecef;
+    }
+    /* Bootstrap 5 pattern */
+    .form-group {
+      margin-bottom: 16px;
+    }
+    .form-label {
+      display: block;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #495057;
+      margin-bottom: 4px;
+    }
+    .form-label small.text-muted {
+      font-weight: 400;
+      color: #6c757d !important;
+    }
+    .input-group {
+      display: flex;
+      align-items: stretch;
+    }
+    .input-group-text {
+      display: flex;
+      align-items: center;
+      padding: 8px 12px;
+      font-size: 0.9rem;
+      color: #495057;
+      background: #e9ecef;
+      border: 1px solid #ced4da;
+      border-right: none;
+      border-radius: 6px 0 0 6px;
+    }
+    .form-control {
+      flex: 1;
+      padding: 8px 12px;
+      font-size: 0.9rem;
+      border: 1px solid #ced4da;
+      border-radius: 0 6px 6px 0;
+      text-align: right;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .form-control:focus {
+      border-color: #00a651;
+      box-shadow: 0 0 0 3px rgba(0, 166, 81, 0.15);
+    }
+    .form-text {
+      font-size: 0.8rem;
+      color: #6c757d;
+      margin-top: 3px;
+    }
+    .mb-3 { margin-bottom: 16px; }
+    .hrb-btn-row {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 24px;
+      padding-top: 16px;
+      border-top: 1px solid #e9ecef;
+    }
+    .btn-hrb-primary {
+      background: #00a651;
+      color: #fff;
+      padding: 12px 36px;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-hrb-outline {
+      background: #fff;
+      color: #00a651;
+      padding: 12px 28px;
+      border: 2px solid #00a651;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    #fill-log {
+      max-width: 720px;
+      margin: 0 auto 24px;
+      padding: 10px 16px;
+      background: #f0fff4;
+      border: 1px solid #c6f6d5;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 0.8rem;
+      white-space: pre-wrap;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="hrb-header">
+    <div class="hrb-logo">H<span class="ampersand">&amp;</span>R BLOCK</div>
+    <div class="hrb-nav">Federal &gt; Income &gt; Wages (W-2)</div>
+  </div>
+  <div class="test-notice">Simulated H&amp;R Block form for Chrome extension testing &mdash; based on 2025 site structure</div>
+  <div class="hrb-progress"><div class="hrb-progress-bar"></div></div>
+
+  <div class="hrb-container">
+    <div class="hrb-page-header">
+      <h1>Enter your W-2 information</h1>
+      <p>Enter the amounts from your W-2 form. Match each box number carefully.</p>
+    </div>
+
+    <!-- W-2 Card -->
+    <div class="hrb-card">
+      <div class="hrb-card-title">W-2 Wage and Tax Statement</div>
+
+      <div class="form-group mb-3">
+        <label class="form-label" for="input_w2_1">
+          Wages, tips, other compensation <small class="text-muted">(Box 1)</small>
+        </label>
+        <div class="input-group">
+          <span class="input-group-text">$</span>
+          <input type="text" class="form-control" id="input_w2_1" name="wages" aria-describedby="help_w2_1" placeholder="0.00">
+        </div>
+        <div id="help_w2_1" class="form-text">Enter the amount from Box 1 of your W-2</div>
+      </div>
+
+      <div class="form-group mb-3">
+        <label class="form-label" for="input_w2_2">
+          Federal income tax withheld <small class="text-muted">(Box 2)</small>
+        </label>
+        <div class="input-group">
+          <span class="input-group-text">$</span>
+          <input type="text" class="form-control" id="input_w2_2" name="fed_withheld" aria-describedby="help_w2_2" placeholder="0.00">
+        </div>
+        <div id="help_w2_2" class="form-text">Enter the amount from Box 2 of your W-2</div>
+      </div>
+
+      <div class="form-group mb-3">
+        <label class="form-label" for="input_w2_3">
+          Social security wages <small class="text-muted">(Box 3)</small>
+        </label>
+        <div class="input-group">
+          <span class="input-group-text">$</span>
+          <input type="text" class="form-control" id="input_w2_3" name="ss_wages" aria-describedby="help_w2_3" placeholder="0.00">
+        </div>
+        <div id="help_w2_3" class="form-text">Enter the amount from Box 3 of your W-2</div>
+      </div>
+
+      <div class="form-group mb-3">
+        <label class="form-label" for="input_w2_4">
+          Social security tax withheld <small class="text-muted">(Box 4)</small>
+        </label>
+        <div class="input-group">
+          <span class="input-group-text">$</span>
+          <input type="text" class="form-control" id="input_w2_4" name="ss_tax" aria-describedby="help_w2_4" placeholder="0.00">
+        </div>
+        <div id="help_w2_4" class="form-text">Enter the amount from Box 4 of your W-2</div>
+      </div>
+
+      <div class="form-group mb-3">
+        <label class="form-label" for="input_w2_5">
+          Medicare wages and tips <small class="text-muted">(Box 5)</small>
+        </label>
+        <div class="input-group">
+          <span class="input-group-text">$</span>
+          <input type="text" class="form-control" id="input_w2_5" name="medicare_wages" aria-describedby="help_w2_5" placeholder="0.00">
+        </div>
+        <div id="help_w2_5" class="form-text">Enter the amount from Box 5 of your W-2</div>
+      </div>
+
+      <div class="form-group mb-3">
+        <label class="form-label" for="input_w2_6">
+          Medicare tax withheld <small class="text-muted">(Box 6)</small>
+        </label>
+        <div class="input-group">
+          <span class="input-group-text">$</span>
+          <input type="text" class="form-control" id="input_w2_6" name="medicare_tax" aria-describedby="help_w2_6" placeholder="0.00">
+        </div>
+        <div id="help_w2_6" class="form-text">Enter the amount from Box 6 of your W-2</div>
+      </div>
+    </div>
+
+    <!-- Schedule E Card -->
+    <div class="hrb-card">
+      <div class="hrb-card-title">Schedule E &mdash; Rental Property Income and Expenses</div>
+
+      <div class="form-group mb-3">
+        <label class="form-label" for="input_se_3">
+          Rents received <small class="text-muted">(Line 3)</small>
+        </label>
+        <div class="input-group">
+          <span class="input-group-text">$</span>
+          <input type="text" class="form-control" id="input_se_3" name="rents_received" aria-describedby="help_se_3" placeholder="0.00">
+        </div>
+        <div id="help_se_3" class="form-text">Total rental income received for the year</div>
+      </div>
+
+      <div class="form-group mb-3">
+        <label class="form-label" for="input_se_5">
+          Advertising <small class="text-muted">(Line 5)</small>
+        </label>
+        <div class="input-group">
+          <span class="input-group-text">$</span>
+          <input type="text" class="form-control" id="input_se_5" name="advertising" aria-describedby="help_se_5" placeholder="0.00">
+        </div>
+        <div id="help_se_5" class="form-text">Cost of advertising for tenants</div>
+      </div>
+
+      <div class="form-group mb-3">
+        <label class="form-label" for="input_se_6">
+          Auto and travel <small class="text-muted">(Line 6)</small>
+        </label>
+        <div class="input-group">
+          <span class="input-group-text">$</span>
+          <input type="text" class="form-control" id="input_se_6" name="auto_travel" aria-describedby="help_se_6" placeholder="0.00">
+        </div>
+        <div id="help_se_6" class="form-text">Travel costs related to rental property management</div>
+      </div>
+
+      <div class="form-group mb-3">
+        <label class="form-label" for="input_se_7">
+          Cleaning and maintenance <small class="text-muted">(Line 7)</small>
+        </label>
+        <div class="input-group">
+          <span class="input-group-text">$</span>
+          <input type="text" class="form-control" id="input_se_7" name="cleaning_maintenance" aria-describedby="help_se_7" placeholder="0.00">
+        </div>
+        <div id="help_se_7" class="form-text">Cleaning, yard care, and general upkeep</div>
+      </div>
+
+      <div class="form-group mb-3">
+        <label class="form-label" for="input_se_8">
+          Commissions <small class="text-muted">(Line 8)</small>
+        </label>
+        <div class="input-group">
+          <span class="input-group-text">$</span>
+          <input type="text" class="form-control" id="input_se_8" name="commissions" aria-describedby="help_se_8" placeholder="0.00">
+        </div>
+        <div id="help_se_8" class="form-text">Property management commissions</div>
+      </div>
+
+      <div class="form-group mb-3">
+        <label class="form-label" for="input_se_9">
+          Insurance <small class="text-muted">(Line 9)</small>
+        </label>
+        <div class="input-group">
+          <span class="input-group-text">$</span>
+          <input type="text" class="form-control" id="input_se_9" name="insurance" aria-describedby="help_se_9" placeholder="0.00">
+        </div>
+        <div id="help_se_9" class="form-text">Property insurance premiums</div>
+      </div>
+
+      <div class="form-group mb-3">
+        <label class="form-label" for="input_se_10">
+          Legal and other professional fees <small class="text-muted">(Line 10)</small>
+        </label>
+        <div class="input-group">
+          <span class="input-group-text">$</span>
+          <input type="text" class="form-control" id="input_se_10" name="legal_professional" aria-describedby="help_se_10" placeholder="0.00">
+        </div>
+        <div id="help_se_10" class="form-text">Attorney, accountant, and property manager fees</div>
+      </div>
+
+      <div class="form-group mb-3">
+        <label class="form-label" for="input_se_12">
+          Mortgage interest paid <small class="text-muted">(Line 12)</small>
+        </label>
+        <div class="input-group">
+          <span class="input-group-text">$</span>
+          <input type="text" class="form-control" id="input_se_12" name="mortgage_interest" aria-describedby="help_se_12" placeholder="0.00">
+        </div>
+        <div id="help_se_12" class="form-text">Interest paid on rental property mortgage</div>
+      </div>
+
+      <div class="form-group mb-3">
+        <label class="form-label" for="input_se_14">
+          Repairs <small class="text-muted">(Line 14)</small>
+        </label>
+        <div class="input-group">
+          <span class="input-group-text">$</span>
+          <input type="text" class="form-control" id="input_se_14" name="repairs" aria-describedby="help_se_14" placeholder="0.00">
+        </div>
+        <div id="help_se_14" class="form-text">Cost of repairs that maintain property condition</div>
+      </div>
+
+      <div class="form-group mb-3">
+        <label class="form-label" for="input_se_16">
+          Taxes <small class="text-muted">(Line 16)</small>
+        </label>
+        <div class="input-group">
+          <span class="input-group-text">$</span>
+          <input type="text" class="form-control" id="input_se_16" name="taxes" aria-describedby="help_se_16" placeholder="0.00">
+        </div>
+        <div id="help_se_16" class="form-text">Real estate and other property taxes</div>
+      </div>
+
+      <div class="form-group mb-3">
+        <label class="form-label" for="input_se_17">
+          Utilities <small class="text-muted">(Line 17)</small>
+        </label>
+        <div class="input-group">
+          <span class="input-group-text">$</span>
+          <input type="text" class="form-control" id="input_se_17" name="utilities" aria-describedby="help_se_17" placeholder="0.00">
+        </div>
+        <div id="help_se_17" class="form-text">Water, electric, gas, trash paid by landlord</div>
+      </div>
+
+      <div class="form-group mb-3">
+        <label class="form-label" for="input_se_18">
+          Depreciation expense or depletion <small class="text-muted">(Line 18)</small>
+        </label>
+        <div class="input-group">
+          <span class="input-group-text">$</span>
+          <input type="text" class="form-control" id="input_se_18" name="depreciation" aria-describedby="help_se_18" placeholder="0.00">
+        </div>
+        <div id="help_se_18" class="form-text">Annual depreciation on building and improvements</div>
+      </div>
+
+      <div class="form-group mb-3">
+        <label class="form-label" for="input_se_19">
+          Other expenses <small class="text-muted">(Line 19)</small>
+        </label>
+        <div class="input-group">
+          <span class="input-group-text">$</span>
+          <input type="text" class="form-control" id="input_se_19" name="other_expenses" aria-describedby="help_se_19" placeholder="0.00">
+        </div>
+        <div id="help_se_19" class="form-text">Any other deductible rental expenses</div>
+      </div>
+    </div>
+
+    <!-- Schedule C Card -->
+    <div class="hrb-card">
+      <div class="hrb-card-title">Schedule C &mdash; Business Profit or Loss</div>
+
+      <div class="form-group mb-3">
+        <label class="form-label" for="input_sc_1">
+          Gross receipts or sales <small class="text-muted">(Line 1)</small>
+        </label>
+        <div class="input-group">
+          <span class="input-group-text">$</span>
+          <input type="text" class="form-control" id="input_sc_1" name="gross_receipts" aria-describedby="help_sc_1" placeholder="0.00">
+        </div>
+        <div id="help_sc_1" class="form-text">Total business income before expenses</div>
+      </div>
+
+      <div class="form-group mb-3">
+        <label class="form-label" for="input_sc_9">
+          Car and truck expenses <small class="text-muted">(Line 9)</small>
+        </label>
+        <div class="input-group">
+          <span class="input-group-text">$</span>
+          <input type="text" class="form-control" id="input_sc_9" name="car_truck" aria-describedby="help_sc_9" placeholder="0.00">
+        </div>
+        <div id="help_sc_9" class="form-text">Vehicle expenses for business use</div>
+      </div>
+
+      <div class="form-group mb-3">
+        <label class="form-label" for="input_sc_11">
+          Contract labor <small class="text-muted">(Line 11)</small>
+        </label>
+        <div class="input-group">
+          <span class="input-group-text">$</span>
+          <input type="text" class="form-control" id="input_sc_11" name="contract_labor" aria-describedby="help_sc_11" placeholder="0.00">
+        </div>
+        <div id="help_sc_11" class="form-text">Payments to non-employee workers</div>
+      </div>
+
+      <div class="form-group mb-3">
+        <label class="form-label" for="input_sc_18">
+          Office expense <small class="text-muted">(Line 18)</small>
+        </label>
+        <div class="input-group">
+          <span class="input-group-text">$</span>
+          <input type="text" class="form-control" id="input_sc_18" name="office_expense" aria-describedby="help_sc_18" placeholder="0.00">
+        </div>
+        <div id="help_sc_18" class="form-text">Office supplies and postage</div>
+      </div>
+
+      <div class="form-group mb-3">
+        <label class="form-label" for="input_sc_22">
+          Supplies <small class="text-muted">(Line 22)</small>
+        </label>
+        <div class="input-group">
+          <span class="input-group-text">$</span>
+          <input type="text" class="form-control" id="input_sc_22" name="supplies" aria-describedby="help_sc_22" placeholder="0.00">
+        </div>
+        <div id="help_sc_22" class="form-text">Materials and supplies used in business</div>
+      </div>
+
+      <div class="form-group mb-3">
+        <label class="form-label" for="input_sc_24a">
+          Travel expenses <small class="text-muted">(Line 24a)</small>
+        </label>
+        <div class="input-group">
+          <span class="input-group-text">$</span>
+          <input type="text" class="form-control" id="input_sc_24a" name="travel" aria-describedby="help_sc_24a" placeholder="0.00">
+        </div>
+        <div id="help_sc_24a" class="form-text">Business travel away from home</div>
+      </div>
+
+      <div class="form-group mb-3">
+        <label class="form-label" for="input_sc_24b">
+          Deductible meals <small class="text-muted">(Line 24b)</small>
+        </label>
+        <div class="input-group">
+          <span class="input-group-text">$</span>
+          <input type="text" class="form-control" id="input_sc_24b" name="meals" aria-describedby="help_sc_24b" placeholder="0.00">
+        </div>
+        <div id="help_sc_24b" class="form-text">50% deductible business meals</div>
+      </div>
+
+      <div class="form-group mb-3">
+        <label class="form-label" for="input_sc_28">
+          Total expenses <small class="text-muted">(Line 28)</small>
+        </label>
+        <div class="input-group">
+          <span class="input-group-text">$</span>
+          <input type="text" class="form-control" id="input_sc_28" name="total_expenses" aria-describedby="help_sc_28" placeholder="0.00" readonly>
+        </div>
+        <div id="help_sc_28" class="form-text">Calculated automatically</div>
+      </div>
+
+      <div class="form-group mb-3">
+        <label class="form-label" for="input_sc_29">
+          Net profit or loss <small class="text-muted">(Line 29)</small>
+        </label>
+        <div class="input-group">
+          <span class="input-group-text">$</span>
+          <input type="text" class="form-control" id="input_sc_29" name="net_profit" aria-describedby="help_sc_29" placeholder="0.00" readonly>
+        </div>
+        <div id="help_sc_29" class="form-text">Calculated automatically</div>
+      </div>
+
+      <div class="form-group mb-3">
+        <label class="form-label" for="input_sc_30">
+          Business use of home <small class="text-muted">(Line 30)</small>
+        </label>
+        <div class="input-group">
+          <span class="input-group-text">$</span>
+          <input type="text" class="form-control" id="input_sc_30" name="home_office" aria-describedby="help_sc_30" placeholder="0.00">
+        </div>
+        <div id="help_sc_30" class="form-text">Home office deduction amount</div>
+      </div>
+    </div>
+
+    <div class="hrb-btn-row" style="max-width: 720px; margin: 0 auto 40px; display: flex; justify-content: space-between;">
+      <button type="button" class="btn-hrb-outline">Previous</button>
+      <button type="button" class="btn-hrb-primary">Save &amp; Continue</button>
+    </div>
+
+    <div id="fill-log"></div>
+  </div>
+
+  <script>
+    // Listen for Chrome extension autoFill messages and log results
+    if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage) {
+      chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
+        if (message.action === "autoFill") {
+          logFill("Received autoFill message", message);
+        }
+      });
+    }
+
+    // Also listen for manual testing via window.postMessage
+    window.addEventListener("message", function(event) {
+      if (event.data && event.data.action === "autoFill") {
+        logFill("Received autoFill via postMessage", event.data);
+      }
+    });
+
+    function logFill(label, data) {
+      var log = document.getElementById("fill-log");
+      log.style.display = "block";
+      var ts = new Date().toLocaleTimeString();
+      log.textContent += "[" + ts + "] " + label + "\n";
+      if (data.fields) {
+        log.textContent += "  Fields: " + data.fields.length + "\n";
+        data.fields.forEach(function(f) {
+          log.textContent += "    " + f.line + " (" + f.field_name + "): " + f.value + "\n";
+        });
+      }
+    }
+  </script>
+</body>
+</html>

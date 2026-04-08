@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IRS Direct File - W-2 Entry</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Source Sans Pro", "Helvetica Neue", Helvetica, Roboto, Arial, sans-serif;
+      background: #f0f0f0;
+      color: #1b1b1b;
+    }
+    /* USWDS-style header */
+    .usa-banner {
+      background: #f0f0f0;
+      padding: 4px 24px;
+      font-size: 0.75rem;
+      color: #71767a;
+    }
+    .usa-banner__flag {
+      display: inline-block;
+      width: 16px;
+      height: 11px;
+      background: #b50909;
+      margin-right: 6px;
+      vertical-align: middle;
+      border-radius: 1px;
+    }
+    .usa-header {
+      background: #1a4480;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .usa-header__logo {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #fff;
+    }
+    .usa-header__logo .irs { color: #dfe1e2; }
+    .usa-header__nav {
+      color: rgba(255,255,255,0.7);
+      font-size: 0.85rem;
+    }
+    .test-notice {
+      background: #fef3c7;
+      border-bottom: 1px solid #f59e0b;
+      color: #92400e;
+      padding: 10px 24px;
+      font-size: 0.85rem;
+    }
+    /* USWDS step indicator */
+    .usa-step-indicator {
+      background: #fff;
+      border-bottom: 1px solid #dfe1e2;
+      padding: 16px 24px;
+    }
+    .usa-step-indicator__segments {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 8px;
+    }
+    .usa-step-indicator__segment {
+      flex: 1;
+      height: 6px;
+      background: #dfe1e2;
+      border-radius: 3px;
+    }
+    .usa-step-indicator__segment--complete {
+      background: #1a4480;
+    }
+    .usa-step-indicator__segment--current {
+      background: #005ea2;
+    }
+    .usa-step-indicator__label {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #1b1b1b;
+    }
+    .usa-step-indicator__label span {
+      font-weight: 400;
+      color: #71767a;
+    }
+    /* Main layout */
+    .usa-main {
+      max-width: 680px;
+      margin: 32px auto;
+      padding: 0 24px;
+    }
+    .usa-heading {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #1b1b1b;
+      margin-bottom: 8px;
+    }
+    .usa-intro {
+      font-size: 1rem;
+      color: #565c65;
+      margin-bottom: 24px;
+      line-height: 1.6;
+    }
+    .usa-card {
+      background: #fff;
+      border: 1px solid #dfe1e2;
+      border-radius: 8px;
+      padding: 28px;
+      margin-bottom: 24px;
+    }
+    .usa-card__heading {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #1a4480;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #1a4480;
+    }
+    /* USWDS form elements */
+    .usa-form-group {
+      margin-bottom: 20px;
+    }
+    .usa-label {
+      display: block;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #1b1b1b;
+      margin-bottom: 4px;
+    }
+    .usa-hint {
+      font-size: 0.85rem;
+      color: #71767a;
+      margin-bottom: 6px;
+    }
+    .usa-input-group {
+      display: flex;
+      align-items: stretch;
+      max-width: 280px;
+    }
+    .usa-input-prefix {
+      display: flex;
+      align-items: center;
+      padding: 8px 10px;
+      background: #f0f0f0;
+      border: 2px solid #565c65;
+      border-right: none;
+      border-radius: 4px 0 0 4px;
+      font-size: 0.95rem;
+      color: #565c65;
+    }
+    .usa-input {
+      flex: 1;
+      padding: 8px 10px;
+      border: 2px solid #565c65;
+      border-radius: 0 4px 4px 0;
+      font-size: 0.95rem;
+      text-align: right;
+      outline: none;
+    }
+    .usa-input:focus {
+      border-color: #005ea2;
+      box-shadow: 0 0 0 2px #005ea2;
+    }
+    .usa-input[readonly] {
+      background: #f0f0f0;
+      color: #71767a;
+      border-color: #dfe1e2;
+    }
+    /* USWDS buttons */
+    .usa-button-group {
+      display: flex;
+      gap: 12px;
+      margin-top: 28px;
+    }
+    .usa-button {
+      display: inline-block;
+      padding: 12px 28px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .usa-button--primary {
+      background: #005ea2;
+      color: #fff;
+    }
+    .usa-button--outline {
+      background: transparent;
+      color: #005ea2;
+      border: 2px solid #005ea2;
+    }
+    /* Alert */
+    .usa-alert {
+      background: #e7f6f8;
+      border-left: 4px solid #00bde3;
+      padding: 12px 16px;
+      margin-bottom: 20px;
+      border-radius: 0 4px 4px 0;
+    }
+    .usa-alert__text {
+      font-size: 0.9rem;
+      color: #1b1b1b;
+    }
+    #fill-log {
+      max-width: 680px;
+      margin: 0 auto 24px;
+      padding: 10px 16px;
+      background: #f0fff4;
+      border: 1px solid #c6f6d5;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 0.8rem;
+      white-space: pre-wrap;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="usa-banner">
+    <span class="usa-banner__flag"></span>
+    An official website of the United States government
+  </div>
+  <div class="usa-header">
+    <div class="usa-header__logo"><span class="irs">IRS</span> Direct File</div>
+    <div class="usa-header__nav">Income &gt; W-2</div>
+  </div>
+  <div class="test-notice">Simulated IRS Direct File form for Chrome extension testing &mdash; based on 2025 site structure (React 18 + USWDS)</div>
+
+  <div class="usa-step-indicator">
+    <div class="usa-step-indicator__segments">
+      <div class="usa-step-indicator__segment usa-step-indicator__segment--complete"></div>
+      <div class="usa-step-indicator__segment usa-step-indicator__segment--complete"></div>
+      <div class="usa-step-indicator__segment usa-step-indicator__segment--current"></div>
+      <div class="usa-step-indicator__segment"></div>
+      <div class="usa-step-indicator__segment"></div>
+      <div class="usa-step-indicator__segment"></div>
+    </div>
+    <div class="usa-step-indicator__label">
+      Step 3 of 6: <span>Income</span>
+    </div>
+  </div>
+
+  <div class="usa-main">
+    <h1 class="usa-heading">Enter your W-2 information</h1>
+    <p class="usa-intro">Enter the amounts exactly as they appear on the W-2 you received from your employer. Match each box number carefully.</p>
+
+    <!-- W-2 Card -->
+    <div class="usa-card">
+      <div class="usa-card__heading">W-2 Wage and Tax Statement</div>
+
+      <div class="usa-alert">
+        <p class="usa-alert__text">If you have more than one W-2, you can add additional forms after completing this one.</p>
+      </div>
+
+      <div data-testid="formGroup" class="usa-form-group">
+        <label data-testid="label" class="usa-label" for="writableWages">
+          Wages, tips, other compensation (Box 1)
+        </label>
+        <div class="usa-hint" id="writableWages-hint">Enter the amount from Box 1</div>
+        <div class="usa-input-group">
+          <div class="usa-input-prefix" aria-hidden="true">$</div>
+          <input data-testid="textInput" class="usa-input" id="writableWages" name="writableWages" type="text" aria-describedby="writableWages-hint" placeholder="0.00">
+        </div>
+      </div>
+
+      <div data-testid="formGroup" class="usa-form-group">
+        <label data-testid="label" class="usa-label" for="writableFederalIncomeTaxWithheld">
+          Federal income tax withheld (Box 2)
+        </label>
+        <div class="usa-hint" id="writableFederalIncomeTaxWithheld-hint">Enter the amount from Box 2</div>
+        <div class="usa-input-group">
+          <div class="usa-input-prefix" aria-hidden="true">$</div>
+          <input data-testid="textInput" class="usa-input" id="writableFederalIncomeTaxWithheld" name="writableFederalIncomeTaxWithheld" type="text" aria-describedby="writableFederalIncomeTaxWithheld-hint" placeholder="0.00">
+        </div>
+      </div>
+
+      <div data-testid="formGroup" class="usa-form-group">
+        <label data-testid="label" class="usa-label" for="writableSocialSecurityWages">
+          Social security wages (Box 3)
+        </label>
+        <div class="usa-hint" id="writableSocialSecurityWages-hint">Enter the amount from Box 3</div>
+        <div class="usa-input-group">
+          <div class="usa-input-prefix" aria-hidden="true">$</div>
+          <input data-testid="textInput" class="usa-input" id="writableSocialSecurityWages" name="writableSocialSecurityWages" type="text" aria-describedby="writableSocialSecurityWages-hint" placeholder="0.00">
+        </div>
+      </div>
+
+      <div data-testid="formGroup" class="usa-form-group">
+        <label data-testid="label" class="usa-label" for="writableSocialSecurityTaxWithheld">
+          Social security tax withheld (Box 4)
+        </label>
+        <div class="usa-hint" id="writableSocialSecurityTaxWithheld-hint">Enter the amount from Box 4</div>
+        <div class="usa-input-group">
+          <div class="usa-input-prefix" aria-hidden="true">$</div>
+          <input data-testid="textInput" class="usa-input" id="writableSocialSecurityTaxWithheld" name="writableSocialSecurityTaxWithheld" type="text" aria-describedby="writableSocialSecurityTaxWithheld-hint" placeholder="0.00">
+        </div>
+      </div>
+
+      <div data-testid="formGroup" class="usa-form-group">
+        <label data-testid="label" class="usa-label" for="writableMedicareWages">
+          Medicare wages and tips (Box 5)
+        </label>
+        <div class="usa-hint" id="writableMedicareWages-hint">Enter the amount from Box 5</div>
+        <div class="usa-input-group">
+          <div class="usa-input-prefix" aria-hidden="true">$</div>
+          <input data-testid="textInput" class="usa-input" id="writableMedicareWages" name="writableMedicareWages" type="text" aria-describedby="writableMedicareWages-hint" placeholder="0.00">
+        </div>
+      </div>
+
+      <div data-testid="formGroup" class="usa-form-group">
+        <label data-testid="label" class="usa-label" for="writableMedicareTaxWithheld">
+          Medicare tax withheld (Box 6)
+        </label>
+        <div class="usa-hint" id="writableMedicareTaxWithheld-hint">Enter the amount from Box 6</div>
+        <div class="usa-input-group">
+          <div class="usa-input-prefix" aria-hidden="true">$</div>
+          <input data-testid="textInput" class="usa-input" id="writableMedicareTaxWithheld" name="writableMedicareTaxWithheld" type="text" aria-describedby="writableMedicareTaxWithheld-hint" placeholder="0.00">
+        </div>
+      </div>
+    </div>
+
+    <!-- 1099-INT Card (Direct File supports limited forms) -->
+    <div class="usa-card">
+      <div class="usa-card__heading">Form 1099-INT &mdash; Interest Income</div>
+
+      <div class="usa-alert">
+        <p class="usa-alert__text">IRS Direct File supports simple returns. Enter your 1099-INT information below.</p>
+      </div>
+
+      <div data-testid="formGroup" class="usa-form-group">
+        <label data-testid="label" class="usa-label" for="writableInterestIncome">
+          Interest income received (Box 1)
+        </label>
+        <div class="usa-hint" id="writableInterestIncome-hint">Enter the amount from Box 1 of your 1099-INT</div>
+        <div class="usa-input-group">
+          <div class="usa-input-prefix" aria-hidden="true">$</div>
+          <input data-testid="textInput" class="usa-input" id="writableInterestIncome" name="writableInterestIncome" type="text" aria-describedby="writableInterestIncome-hint" placeholder="0.00">
+        </div>
+      </div>
+
+      <div data-testid="formGroup" class="usa-form-group">
+        <label data-testid="label" class="usa-label" for="writableEarlyWithdrawalPenalty">
+          Early withdrawal penalty (Box 2)
+        </label>
+        <div class="usa-hint" id="writableEarlyWithdrawalPenalty-hint">Enter the amount from Box 2 of your 1099-INT</div>
+        <div class="usa-input-group">
+          <div class="usa-input-prefix" aria-hidden="true">$</div>
+          <input data-testid="textInput" class="usa-input" id="writableEarlyWithdrawalPenalty" name="writableEarlyWithdrawalPenalty" type="text" aria-describedby="writableEarlyWithdrawalPenalty-hint" placeholder="0.00">
+        </div>
+      </div>
+
+      <div data-testid="formGroup" class="usa-form-group">
+        <label data-testid="label" class="usa-label" for="writableUsSavingsBondInterest">
+          US savings bond interest (Box 3)
+        </label>
+        <div class="usa-hint" id="writableUsSavingsBondInterest-hint">Enter the amount from Box 3 of your 1099-INT</div>
+        <div class="usa-input-group">
+          <div class="usa-input-prefix" aria-hidden="true">$</div>
+          <input data-testid="textInput" class="usa-input" id="writableUsSavingsBondInterest" name="writableUsSavingsBondInterest" type="text" aria-describedby="writableUsSavingsBondInterest-hint" placeholder="0.00">
+        </div>
+      </div>
+    </div>
+
+    <div class="usa-button-group">
+      <button type="button" class="usa-button usa-button--outline">Back</button>
+      <button type="button" class="usa-button usa-button--primary">Save and continue</button>
+    </div>
+
+    <div id="fill-log"></div>
+  </div>
+
+  <script>
+    // Listen for Chrome extension autoFill messages and log results
+    if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage) {
+      chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
+        if (message.action === "autoFill") {
+          logFill("Received autoFill message", message);
+        }
+      });
+    }
+
+    // Also listen for manual testing via window.postMessage
+    window.addEventListener("message", function(event) {
+      if (event.data && event.data.action === "autoFill") {
+        logFill("Received autoFill via postMessage", event.data);
+      }
+    });
+
+    function logFill(label, data) {
+      var log = document.getElementById("fill-log");
+      log.style.display = "block";
+      var ts = new Date().toLocaleTimeString();
+      log.textContent += "[" + ts + "] " + label + "\n";
+      if (data.fields) {
+        log.textContent += "  Fields: " + data.fields.length + "\n";
+        data.fields.forEach(function(f) {
+          log.textContent += "    " + f.line + " (" + f.field_name + "): " + f.value + "\n";
+        });
+      }
+    }
+  </script>
+</body>
+</html>
