@@ -1,0 +1,108 @@
+name: MyJobHunter Integration
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'apps/myjobhunter/**'
+      - 'packages/**'
+  push:
+    branches: [main]
+    paths:
+      - 'apps/myjobhunter/**'
+      - 'packages/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: integration-myjobhunter-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  stack-smoke:
+    name: Stack smoke (compose up + health + login)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Set up Node (for frontend E2E smoke)
+        uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Write ephemeral .env.docker for backend
+        run: |
+          mkdir -p apps/myjobhunter/backend
+          cat > apps/myjobhunter/backend/.env.docker <<EOF
+          DATABASE_URL=postgresql+asyncpg://myjobhunter:integration_pw@postgres/myjobhunter
+          DATABASE_URL_SYNC=postgresql://myjobhunter:integration_pw@postgres/myjobhunter
+          SECRET_KEY=integration-test-secret-do-not-use-in-production-0123456789abcdef
+          ENCRYPTION_KEY=dGVzdC1lbmNyeXB0aW9uLWtleS0zMi1ieXRlcy0wMDAwMDAx
+          ANTHROPIC_API_KEY=sk-ant-integration-placeholder
+          TAVILY_API_KEY=tvly-integration-placeholder
+          GOOGLE_CLIENT_ID=integration-placeholder
+          GOOGLE_CLIENT_SECRET=integration-placeholder
+          CORS_ORIGINS=http://localhost:8092
+          JWT_LIFETIME_SECONDS=1800
+          LOG_LEVEL=INFO
+          EOF
+
+      - name: Build and start stack
+        working-directory: apps/myjobhunter
+        env:
+          DB_PASSWORD: integration_pw
+          DOMAIN: localhost
+        run: |
+          docker compose up -d --build
+          echo "Waiting for stack to become healthy..."
+
+      - name: Wait for api health
+        run: |
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:8092/api/health > /dev/null 2>&1; then
+              echo "Stack is healthy"
+              curl -s http://localhost:8092/api/health
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Stack did not become healthy in 120 seconds" >&2
+          docker compose -f apps/myjobhunter/docker-compose.yml logs --tail=100 >&2
+          exit 1
+
+      - name: Verify frontend is served
+        run: |
+          curl -fsS -o /tmp/index.html http://localhost:8092/
+          grep -q "<html" /tmp/index.html
+          echo "Frontend HTML served correctly"
+
+      - name: Smoke — register + login
+        run: |
+          EMAIL="ci-$(date +%s)@myjobhunter-test.invalid"
+          PASSWORD="integration_password_12_chars"
+          REGISTER_RES=$(curl -fsS -X POST http://localhost:8092/api/auth/register \
+            -H 'Content-Type: application/json' \
+            -d "{\"email\":\"$EMAIL\",\"password\":\"$PASSWORD\"}")
+          echo "Registered: $REGISTER_RES" | head -c 200; echo
+          LOGIN_RES=$(curl -fsS -X POST http://localhost:8092/api/auth/jwt/login \
+            -H 'Content-Type: application/x-www-form-urlencoded' \
+            -d "username=$EMAIL&password=$PASSWORD")
+          echo "$LOGIN_RES" | grep -q "access_token"
+          echo "Login returned access_token"
+
+      - name: Dump logs on failure
+        if: failure()
+        working-directory: apps/myjobhunter
+        run: |
+          docker compose logs --tail=200 || true
+
+      - name: Tear down
+        if: always()
+        working-directory: apps/myjobhunter
+        run: |
+          docker compose down -v || true
