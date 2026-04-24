@@ -18,7 +18,8 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
-      "@platform/ui/*": ["../../packages/shared-frontend/src/*"]
+      "@platform/ui/*": ["../../../packages/shared-frontend/src/*"],
+      "@/shared/*": ["../../../packages/shared-frontend/src/*"]
     }
   },
   "include": ["src"]
