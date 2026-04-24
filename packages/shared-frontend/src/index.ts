@@ -12,9 +12,45 @@ export { cn } from "./utils/cn";
 export { formatCurrency } from "./utils/currency";
 export { formatDate, timeAgo } from "./utils/date";
 export { formatTag } from "./utils/tag";
-export { getErrorMessage } from "./utils/errorMessage";
+export { extractErrorMessage } from "./utils/errorMessage";
 export { showError, showSuccess, subscribe } from "./lib/toast-store";
 export type { ToastEvent, ToastVariant } from "./lib/toast-store";
 export { notifyAuthChange, useIsAuthenticated } from "./lib/auth-store";
 export { baseApi } from "./store/baseApi";
 export { axiosBaseQuery } from "./store/baseQuery";
+
+// UI components
+export { default as EmptyState } from "./components/ui/EmptyState";
+export { default as AlertBox } from "./components/ui/AlertBox";
+export { default as Button } from "./components/ui/Button";
+export { default as LoadingButton } from "./components/ui/LoadingButton";
+export { default as Skeleton } from "./components/ui/Skeleton";
+export { default as Select } from "./components/ui/Select";
+export { default as Badge } from "./components/ui/Badge";
+export { default as Card } from "./components/ui/Card";
+export { default as FormField } from "./components/ui/FormField";
+export { default as Toaster } from "./components/ui/Toaster";
+
+// Layout components
+export { default as AppShell } from "./components/layout/AppShell";
+export type { AppShellProps, NavItem, BottomNavItem } from "./components/layout/AppShell";
+
+// Auth components
+export { default as RequireAuth } from "./components/auth/RequireAuth";
+export { default as LoginForm } from "./components/auth/LoginForm";
+export type { LoginFormProps } from "./components/auth/LoginForm";
+
+// Data components
+export { default as DataTable } from "./components/data/DataTable";
+export type { DataTableProps, ColumnDef, SortingState, PaginationState } from "./components/data/DataTable";
+export { default as Pagination } from "./components/data/Pagination";
+export type { PaginationProps } from "./components/data/Pagination";
+
+// Upload components
+export { default as FileUploadDropzone } from "./components/upload/FileUploadDropzone";
+export type { FileUploadDropzoneProps } from "./components/upload/FileUploadDropzone";
+
+// Hooks
+export { useMediaQuery } from "./hooks/useMediaQuery";
+export { useTheme } from "./hooks/useTheme";
+export { useToast } from "./hooks/useToast";

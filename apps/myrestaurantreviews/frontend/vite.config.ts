@@ -9,7 +9,11 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
       "@platform/ui": path.resolve(
         __dirname,
-        "../../packages/shared-frontend/src"
+        "../../../packages/shared-frontend/src"
+      ),
+      "@/shared": path.resolve(
+        __dirname,
+        "../../../packages/shared-frontend/src"
       ),
     },
   },
