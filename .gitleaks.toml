@@ -1,0 +1,37 @@
+# Gitleaks configuration
+# Extends the default ruleset — see https://github.com/gitleaks/gitleaks/blob/master/config/gitleaks.toml
+
+[extend]
+useDefault = true
+
+# Allowlist for known-safe matches
+[allowlist]
+description = "Allowlist for placeholders and test fixtures"
+
+regexes = [
+  '''change-me-to-a-strong-password''',
+  '''change-me-to-a-random-hex-string''',
+  '''change-me-[a-z0-9-]+''',
+  '''your[-_](api[-_]?)?key[-_]?here''',
+  '''<your[-_ ][a-z-]+>''',
+  '''example\.com''',
+  '''localhost''',
+  '''\$\{\{\s*secrets\.[A-Z_]+\s*\}\}''',
+  '''hashed_password="fakehash"''',
+  '''hashed_password='fakehash''',
+]
+
+paths = [
+  '''\.env\.example$''',
+  '''\.env\.docker\.example$''',
+  '''backend/tests/.*\.py$''',
+  '''frontend/.*__tests__/.*''',
+]
+
+stopwords = [
+  "example",
+  "placeholder",
+  "demo",
+  "sample",
+  "fixture",
+]

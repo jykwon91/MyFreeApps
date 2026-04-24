@@ -31,6 +31,15 @@ dist/
 .DS_Store
 Thumbs.db
 
+# Editors / IDEs
+.vscode/
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+*~
+.cursor/
+
 # Database dumps (large binaries)
 *.dump
 *.sql
