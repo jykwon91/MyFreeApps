@@ -13,7 +13,7 @@ myrestaurantreviews.165-245-134-251.sslip.io {
     }
 
     handle {
-        root * /srv/mybookkeeper/apps/myrestaurantreviews/frontend/dist
+        root * /srv/myrestaurantreviews/apps/myrestaurantreviews/frontend/dist
         try_files {path} /index.html
         file_server
     }

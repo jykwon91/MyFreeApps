@@ -28,7 +28,7 @@ jobs:
           command_timeout: 10m
           script: |
             set -e
-            cd /srv/mybookkeeper
+            cd /srv/myrestaurantreviews
 
             echo "--- Pull latest code ---"
             git pull --ff-only
