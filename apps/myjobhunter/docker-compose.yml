@@ -17,7 +17,7 @@ services:
   migrate:
     build:
       context: ../..
-      dockerfile: apps/myjobhunter/docker/Dockerfile
+      dockerfile: apps/myjobhunter/docker/backend.Dockerfile
     command: ["alembic", "upgrade", "head"]
     env_file: backend/.env.docker
     environment:
@@ -29,11 +29,14 @@ services:
   api:
     build:
       context: ../..
-      dockerfile: apps/myjobhunter/docker/Dockerfile
+      dockerfile: apps/myjobhunter/docker/backend.Dockerfile
     restart: unless-stopped
     env_file: backend/.env.docker
     environment:
       DATABASE_URL: postgresql+asyncpg://myjobhunter:${DB_PASSWORD}@postgres/myjobhunter
+      FRONTEND_DIST_DIR: /srv/frontend
+    volumes:
+      - frontend_dist:/srv/frontend
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -52,6 +55,7 @@ services:
       DOMAIN: ${DOMAIN:-localhost}
     volumes:
       - ./docker/Caddyfile.docker:/etc/caddy/Caddyfile
+      - frontend_dist:/srv/frontend:ro
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
@@ -60,5 +64,6 @@ services:
 
 volumes:
   pg_data:
+  frontend_dist:
   caddy_data:
   caddy_config:
