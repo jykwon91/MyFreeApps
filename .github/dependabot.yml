@@ -12,16 +12,6 @@ updates:
         update-types: ["minor", "patch"]
 
   - package-ecosystem: "pip"
-    directory: "/apps/myrestaurantreviews/backend"
-    schedule:
-      interval: "weekly"
-    open-pull-requests-limit: 5
-    labels: ["dependencies", "python", "myrestaurantreviews"]
-    groups:
-      python-minor-patch:
-        update-types: ["minor", "patch"]
-
-  - package-ecosystem: "pip"
     directory: "/packages/shared-backend"
     schedule:
       interval: "weekly"
@@ -38,16 +28,6 @@ updates:
       interval: "weekly"
     open-pull-requests-limit: 5
     labels: ["dependencies", "npm", "myjobhunter"]
-    groups:
-      npm-minor-patch:
-        update-types: ["minor", "patch"]
-
-  - package-ecosystem: "npm"
-    directory: "/apps/myrestaurantreviews/frontend"
-    schedule:
-      interval: "weekly"
-    open-pull-requests-limit: 5
-    labels: ["dependencies", "npm", "myrestaurantreviews"]
     groups:
       npm-minor-patch:
         update-types: ["minor", "patch"]
@@ -77,10 +57,3 @@ updates:
       interval: "weekly"
     open-pull-requests-limit: 3
     labels: ["dependencies", "docker", "myjobhunter"]
-
-  - package-ecosystem: "docker"
-    directory: "/apps/myrestaurantreviews"
-    schedule:
-      interval: "weekly"
-    open-pull-requests-limit: 3
-    labels: ["dependencies", "docker", "myrestaurantreviews"]
