@@ -28,7 +28,9 @@ jobs:
           command_timeout: 10m
           script: |
             set -e
-            cd /srv/myjobhunter
+            # Shared MyFreeApps clone on the VPS — also used by myrestaurantreviews.
+            # The directory is historically named /srv/mybookkeeper from before the monorepo rename.
+            cd /srv/mybookkeeper
 
             echo "--- Pull latest code ---"
             git pull --ff-only
