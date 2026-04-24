@@ -28,9 +28,7 @@ jobs:
           command_timeout: 10m
           script: |
             set -e
-            # Shared MyFreeApps clone on the VPS — also used by myrestaurantreviews.
-            # The directory is historically named /srv/mybookkeeper from before the monorepo rename.
-            cd /srv/mybookkeeper
+            cd /srv/myfreeapps
 
             echo "--- Pull latest code ---"
             git pull --ff-only
