@@ -1,0 +1,15 @@
+services:
+  postgres:
+    ports:
+      - "5434:5432"
+
+  api:
+    build:
+      context: ../..
+      dockerfile: apps/myjobhunter/docker/Dockerfile
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8002", "--reload", "--reload-dir", "app"]
+    volumes:
+      - ./backend:/app
+
+  caddy:
+    profiles: ["disabled"]
