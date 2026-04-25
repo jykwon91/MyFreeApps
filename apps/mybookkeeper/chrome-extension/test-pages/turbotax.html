@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TurboTax - W-2 Entry</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f4f5f8;
+      color: #1a1a2e;
+    }
+    .tt-header {
+      background: #003d6b;
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .tt-logo {
+      font-size: 1.3rem;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -0.5px;
+    }
+    .tt-logo span { color: #ff5722; }
+    .tt-nav {
+      color: rgba(255,255,255,0.7);
+      font-size: 0.85rem;
+    }
+    .test-notice {
+      background: #fef3c7;
+      border-bottom: 1px solid #f59e0b;
+      color: #92400e;
+      padding: 10px 24px;
+      font-size: 0.85rem;
+    }
+    .tt-progress {
+      background: #e8ecf1;
+      height: 4px;
+    }
+    .tt-progress-bar {
+      background: linear-gradient(90deg, #003d6b, #0077c8);
+      height: 4px;
+      width: 45%;
+    }
+    .tt-container {
+      max-width: 640px;
+      margin: 32px auto;
+      padding: 0 20px;
+    }
+    .tt-card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      padding: 32px;
+      margin-bottom: 24px;
+    }
+    .tt-page-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #003d6b;
+      margin-bottom: 8px;
+    }
+    .tt-page-subtitle {
+      font-size: 0.95rem;
+      color: #5a6577;
+      margin-bottom: 28px;
+      line-height: 1.5;
+    }
+    .tt-section-label {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #0077c8;
+      margin: 28px 0 16px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #e8ecf1;
+    }
+    .tt-section-label:first-of-type { margin-top: 0; }
+    /* Simulated hashed class names */
+    .sc-bdf49a { margin-bottom: 20px; }
+    .sc-e7c312 { margin-bottom: 6px; }
+    .sc-a1f8e0 { position: relative; }
+    .question-text {
+      font-size: 0.95rem;
+      font-weight: 500;
+      color: #1a1a2e;
+      margin-bottom: 6px;
+    }
+    .question-text .box-ref {
+      color: #5a6577;
+      font-weight: 400;
+      font-size: 0.85rem;
+    }
+    .input-wrapper {
+      display: flex;
+      align-items: center;
+      border: 2px solid #d1d5db;
+      border-radius: 8px;
+      overflow: hidden;
+      transition: border-color 0.15s;
+    }
+    .input-wrapper:focus-within {
+      border-color: #0077c8;
+      box-shadow: 0 0 0 3px rgba(0,119,200,0.15);
+    }
+    .input-wrapper .prefix {
+      padding: 10px 12px;
+      background: #f4f5f8;
+      color: #5a6577;
+      font-size: 0.95rem;
+      border-right: 1px solid #d1d5db;
+      user-select: none;
+    }
+    .input-wrapper input {
+      flex: 1;
+      border: none;
+      outline: none;
+      padding: 10px 12px;
+      font-size: 0.95rem;
+      text-align: right;
+    }
+    .tt-help-text {
+      font-size: 0.8rem;
+      color: #8b95a5;
+      margin-top: 4px;
+    }
+    .tt-btn-row {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 28px;
+    }
+    .tt-btn-continue {
+      background: #003d6b;
+      color: #fff;
+      padding: 14px 40px;
+      border: none;
+      border-radius: 24px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .tt-btn-back {
+      background: none;
+      border: 2px solid #d1d5db;
+      color: #5a6577;
+      padding: 14px 28px;
+      border-radius: 24px;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+    .tt-schedule-card {
+      margin-top: 8px;
+    }
+    #fill-log {
+      max-width: 640px;
+      margin: 0 auto 24px;
+      padding: 10px 16px;
+      background: #f0fff4;
+      border: 1px solid #c6f6d5;
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 0.8rem;
+      white-space: pre-wrap;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="tt-header">
+    <div class="tt-logo">turbo<span>tax</span></div>
+    <div class="tt-nav">Federal &gt; Income &gt; W-2</div>
+  </div>
+  <div class="test-notice">Simulated TurboTax form for Chrome extension testing &mdash; based on 2025 site structure</div>
+  <div class="tt-progress"><div class="tt-progress-bar"></div></div>
+
+  <div class="tt-container">
+    <!-- W-2 Card -->
+    <div class="tt-card">
+      <div class="tt-page-title">Let's enter your W-2 info</div>
+      <div class="tt-page-subtitle">Look at your W-2 form from your employer and enter the amounts below. We'll match each box for you.</div>
+
+      <div class="tt-section-label">Income</div>
+
+      <div data-testid="form-group-wages" class="sc-bdf49a">
+        <div class="sc-e7c312 question-text">
+          <span>Wages, tips, and other compensation</span>
+          <span class="box-ref">(Box 1)</span>
+        </div>
+        <div class="sc-a1f8e0 input-wrapper">
+          <span class="prefix">$</span>
+          <input type="text" data-testid="w2-box1-wages" aria-label="Wages, tips, other compensation" inputmode="decimal" placeholder="0.00">
+        </div>
+      </div>
+
+      <div data-testid="form-group-fed-withheld" class="sc-bdf49a">
+        <div class="sc-e7c312 question-text">
+          <span>Federal income tax withheld</span>
+          <span class="box-ref">(Box 2)</span>
+        </div>
+        <div class="sc-a1f8e0 input-wrapper">
+          <span class="prefix">$</span>
+          <input type="text" data-testid="w2-box2-fed-withheld" aria-label="Federal income tax withheld" inputmode="decimal" placeholder="0.00">
+        </div>
+      </div>
+
+      <div class="tt-section-label">Social Security &amp; Medicare</div>
+
+      <div data-testid="form-group-ss-wages" class="sc-bdf49a">
+        <div class="sc-e7c312 question-text">
+          <span>Social security wages</span>
+          <span class="box-ref">(Box 3)</span>
+        </div>
+        <div class="sc-a1f8e0 input-wrapper">
+          <span class="prefix">$</span>
+          <input type="text" data-testid="w2-box3-ss-wages" aria-label="Social security wages" inputmode="decimal" placeholder="0.00">
+        </div>
+      </div>
+
+      <div data-testid="form-group-ss-tax" class="sc-bdf49a">
+        <div class="sc-e7c312 question-text">
+          <span>Social security tax withheld</span>
+          <span class="box-ref">(Box 4)</span>
+        </div>
+        <div class="sc-a1f8e0 input-wrapper">
+          <span class="prefix">$</span>
+          <input type="text" data-testid="w2-box4-ss-tax" aria-label="Social security tax withheld" inputmode="decimal" placeholder="0.00">
+        </div>
+      </div>
+
+      <div data-testid="form-group-medicare-wages" class="sc-bdf49a">
+        <div class="sc-e7c312 question-text">
+          <span>Medicare wages and tips</span>
+          <span class="box-ref">(Box 5)</span>
+        </div>
+        <div class="sc-a1f8e0 input-wrapper">
+          <span class="prefix">$</span>
+          <input type="text" data-testid="w2-box5-medicare-wages" aria-label="Medicare wages and tips" inputmode="decimal" placeholder="0.00">
+        </div>
+      </div>
+
+      <div data-testid="form-group-medicare-tax" class="sc-bdf49a">
+        <div class="sc-e7c312 question-text">
+          <span>Medicare tax withheld</span>
+          <span class="box-ref">(Box 6)</span>
+        </div>
+        <div class="sc-a1f8e0 input-wrapper">
+          <span class="prefix">$</span>
+          <input type="text" data-testid="w2-box6-medicare-tax" aria-label="Medicare tax withheld" inputmode="decimal" placeholder="0.00">
+        </div>
+      </div>
+
+      <div class="tt-btn-row">
+        <button type="button" class="tt-btn-back">Back</button>
+        <button type="button" class="tt-btn-continue">Continue</button>
+      </div>
+    </div>
+
+    <!-- Schedule E Card (interview-style) -->
+    <div class="tt-card tt-schedule-card">
+      <div class="tt-page-title">Rental property income and expenses</div>
+      <div class="tt-page-subtitle">Tell us about the income and expenses for your rental property. We'll put it on Schedule E for you.</div>
+
+      <div class="tt-section-label">Income</div>
+
+      <div data-testid="form-group-rents-received" class="sc-bdf49a">
+        <div class="sc-e7c312 question-text">
+          <span>How much rent did you receive?</span>
+          <span class="box-ref">(Line 3)</span>
+        </div>
+        <div class="sc-a1f8e0 input-wrapper">
+          <span class="prefix">$</span>
+          <input type="text" data-testid="sched-e-line3" aria-label="Rents received" inputmode="decimal" placeholder="0.00">
+        </div>
+      </div>
+
+      <div class="tt-section-label">Expenses</div>
+
+      <div data-testid="form-group-advertising" class="sc-bdf49a">
+        <div class="sc-e7c312 question-text">
+          <span>Advertising</span>
+          <span class="box-ref">(Line 5)</span>
+        </div>
+        <div class="sc-a1f8e0 input-wrapper">
+          <span class="prefix">$</span>
+          <input type="text" data-testid="sched-e-line5" aria-label="Advertising" inputmode="decimal" placeholder="0.00">
+        </div>
+      </div>
+
+      <div data-testid="form-group-auto-travel" class="sc-bdf49a">
+        <div class="sc-e7c312 question-text">
+          <span>Auto and travel</span>
+          <span class="box-ref">(Line 6)</span>
+        </div>
+        <div class="sc-a1f8e0 input-wrapper">
+          <span class="prefix">$</span>
+          <input type="text" data-testid="sched-e-line6" aria-label="Auto and travel" inputmode="decimal" placeholder="0.00">
+        </div>
+      </div>
+
+      <div data-testid="form-group-cleaning" class="sc-bdf49a">
+        <div class="sc-e7c312 question-text">
+          <span>Cleaning and maintenance</span>
+          <span class="box-ref">(Line 7)</span>
+        </div>
+        <div class="sc-a1f8e0 input-wrapper">
+          <span class="prefix">$</span>
+          <input type="text" data-testid="sched-e-line7" aria-label="Cleaning and maintenance" inputmode="decimal" placeholder="0.00">
+        </div>
+      </div>
+
+      <div data-testid="form-group-commissions" class="sc-bdf49a">
+        <div class="sc-e7c312 question-text">
+          <span>Commissions</span>
+          <span class="box-ref">(Line 8)</span>
+        </div>
+        <div class="sc-a1f8e0 input-wrapper">
+          <span class="prefix">$</span>
+          <input type="text" data-testid="sched-e-line8" aria-label="Commissions" inputmode="decimal" placeholder="0.00">
+        </div>
+      </div>
+
+      <div data-testid="form-group-insurance" class="sc-bdf49a">
+        <div class="sc-e7c312 question-text">
+          <span>Insurance</span>
+          <span class="box-ref">(Line 9)</span>
+        </div>
+        <div class="sc-a1f8e0 input-wrapper">
+          <span class="prefix">$</span>
+          <input type="text" data-testid="sched-e-line9" aria-label="Insurance" inputmode="decimal" placeholder="0.00">
+        </div>
+      </div>
+
+      <div data-testid="form-group-legal" class="sc-bdf49a">
+        <div class="sc-e7c312 question-text">
+          <span>Legal and other professional fees</span>
+          <span class="box-ref">(Line 10)</span>
+        </div>
+        <div class="sc-a1f8e0 input-wrapper">
+          <span class="prefix">$</span>
+          <input type="text" data-testid="sched-e-line10" aria-label="Legal and professional fees" inputmode="decimal" placeholder="0.00">
+        </div>
+      </div>
+
+      <div data-testid="form-group-mortgage" class="sc-bdf49a">
+        <div class="sc-e7c312 question-text">
+          <span>Mortgage interest paid to banks, etc.</span>
+          <span class="box-ref">(Line 12)</span>
+        </div>
+        <div class="sc-a1f8e0 input-wrapper">
+          <span class="prefix">$</span>
+          <input type="text" data-testid="sched-e-line12" aria-label="Mortgage interest paid" inputmode="decimal" placeholder="0.00">
+        </div>
+      </div>
+
+      <div data-testid="form-group-repairs" class="sc-bdf49a">
+        <div class="sc-e7c312 question-text">
+          <span>Repairs</span>
+          <span class="box-ref">(Line 14)</span>
+        </div>
+        <div class="sc-a1f8e0 input-wrapper">
+          <span class="prefix">$</span>
+          <input type="text" data-testid="sched-e-line14" aria-label="Repairs" inputmode="decimal" placeholder="0.00">
+        </div>
+      </div>
+
+      <div data-testid="form-group-taxes" class="sc-bdf49a">
+        <div class="sc-e7c312 question-text">
+          <span>Taxes</span>
+          <span class="box-ref">(Line 16)</span>
+        </div>
+        <div class="sc-a1f8e0 input-wrapper">
+          <span class="prefix">$</span>
+          <input type="text" data-testid="sched-e-line16" aria-label="Taxes" inputmode="decimal" placeholder="0.00">
+        </div>
+      </div>
+
+      <div data-testid="form-group-utilities" class="sc-bdf49a">
+        <div class="sc-e7c312 question-text">
+          <span>Utilities</span>
+          <span class="box-ref">(Line 17)</span>
+        </div>
+        <div class="sc-a1f8e0 input-wrapper">
+          <span class="prefix">$</span>
+          <input type="text" data-testid="sched-e-line17" aria-label="Utilities" inputmode="decimal" placeholder="0.00">
+        </div>
+      </div>
+
+      <div data-testid="form-group-depreciation" class="sc-bdf49a">
+        <div class="sc-e7c312 question-text">
+          <span>Depreciation expense or depletion</span>
+          <span class="box-ref">(Line 18)</span>
+        </div>
+        <div class="sc-a1f8e0 input-wrapper">
+          <span class="prefix">$</span>
+          <input type="text" data-testid="sched-e-line18" aria-label="Depreciation expense or depletion" inputmode="decimal" placeholder="0.00">
+        </div>
+      </div>
+
+      <div data-testid="form-group-other-expenses" class="sc-bdf49a">
+        <div class="sc-e7c312 question-text">
+          <span>Other expenses</span>
+          <span class="box-ref">(Line 19)</span>
+        </div>
+        <div class="sc-a1f8e0 input-wrapper">
+          <span class="prefix">$</span>
+          <input type="text" data-testid="sched-e-line19" aria-label="Other expenses" inputmode="decimal" placeholder="0.00">
+        </div>
+      </div>
+
+      <div class="tt-btn-row">
+        <button type="button" class="tt-btn-back">Back</button>
+        <button type="button" class="tt-btn-continue">Continue</button>
+      </div>
+    </div>
+
+    <!-- Schedule C Card -->
+    <div class="tt-card tt-schedule-card">
+      <div class="tt-page-title">Self-employment income and expenses</div>
+      <div class="tt-page-subtitle">Tell us about your business income and expenses. We'll put this on Schedule C.</div>
+
+      <div class="tt-section-label">Income</div>
+
+      <div data-testid="form-group-gross-receipts" class="sc-bdf49a">
+        <div class="sc-e7c312 question-text">
+          <span>Gross receipts or sales</span>
+          <span class="box-ref">(Line 1)</span>
+        </div>
+        <div class="sc-a1f8e0 input-wrapper">
+          <span class="prefix">$</span>
+          <input type="text" data-testid="sched-c-line1" aria-label="Gross receipts or sales" inputmode="decimal" placeholder="0.00">
+        </div>
+      </div>
+
+      <div class="tt-section-label">Expenses</div>
+
+      <div data-testid="form-group-car-truck" class="sc-bdf49a">
+        <div class="sc-e7c312 question-text">
+          <span>Car and truck expenses</span>
+          <span class="box-ref">(Line 9)</span>
+        </div>
+        <div class="sc-a1f8e0 input-wrapper">
+          <span class="prefix">$</span>
+          <input type="text" data-testid="sched-c-line9" aria-label="Car and truck expenses" inputmode="decimal" placeholder="0.00">
+        </div>
+      </div>
+
+      <div data-testid="form-group-contract-labor" class="sc-bdf49a">
+        <div class="sc-e7c312 question-text">
+          <span>Contract labor</span>
+          <span class="box-ref">(Line 11)</span>
+        </div>
+        <div class="sc-a1f8e0 input-wrapper">
+          <span class="prefix">$</span>
+          <input type="text" data-testid="sched-c-line11" aria-label="Contract labor" inputmode="decimal" placeholder="0.00">
+        </div>
+      </div>
+
+      <div data-testid="form-group-office" class="sc-bdf49a">
+        <div class="sc-e7c312 question-text">
+          <span>Office expense</span>
+          <span class="box-ref">(Line 18)</span>
+        </div>
+        <div class="sc-a1f8e0 input-wrapper">
+          <span class="prefix">$</span>
+          <input type="text" data-testid="sched-c-line18" aria-label="Office expense" inputmode="decimal" placeholder="0.00">
+        </div>
+      </div>
+
+      <div data-testid="form-group-supplies" class="sc-bdf49a">
+        <div class="sc-e7c312 question-text">
+          <span>Supplies</span>
+          <span class="box-ref">(Line 22)</span>
+        </div>
+        <div class="sc-a1f8e0 input-wrapper">
+          <span class="prefix">$</span>
+          <input type="text" data-testid="sched-c-line22" aria-label="Supplies" inputmode="decimal" placeholder="0.00">
+        </div>
+      </div>
+
+      <div data-testid="form-group-travel" class="sc-bdf49a">
+        <div class="sc-e7c312 question-text">
+          <span>Travel expenses</span>
+          <span class="box-ref">(Line 24a)</span>
+        </div>
+        <div class="sc-a1f8e0 input-wrapper">
+          <span class="prefix">$</span>
+          <input type="text" data-testid="sched-c-line24a" aria-label="Travel expenses" inputmode="decimal" placeholder="0.00">
+        </div>
+      </div>
+
+      <div data-testid="form-group-meals" class="sc-bdf49a">
+        <div class="sc-e7c312 question-text">
+          <span>Deductible meals</span>
+          <span class="box-ref">(Line 24b)</span>
+        </div>
+        <div class="sc-a1f8e0 input-wrapper">
+          <span class="prefix">$</span>
+          <input type="text" data-testid="sched-c-line24b" aria-label="Meals" inputmode="decimal" placeholder="0.00">
+        </div>
+      </div>
+
+      <div data-testid="form-group-total-expenses" class="sc-bdf49a">
+        <div class="sc-e7c312 question-text">
+          <span>Total expenses</span>
+          <span class="box-ref">(Line 28)</span>
+        </div>
+        <div class="sc-a1f8e0 input-wrapper">
+          <span class="prefix">$</span>
+          <input type="text" data-testid="sched-c-line28" aria-label="Total expenses" inputmode="decimal" placeholder="0.00" readonly>
+        </div>
+        <div class="tt-help-text">Calculated automatically</div>
+      </div>
+
+      <div data-testid="form-group-net-profit" class="sc-bdf49a">
+        <div class="sc-e7c312 question-text">
+          <span>Tentative profit (or loss)</span>
+          <span class="box-ref">(Line 29)</span>
+        </div>
+        <div class="sc-a1f8e0 input-wrapper">
+          <span class="prefix">$</span>
+          <input type="text" data-testid="sched-c-line29" aria-label="Net profit or loss" inputmode="decimal" placeholder="0.00" readonly>
+        </div>
+        <div class="tt-help-text">Calculated automatically</div>
+      </div>
+
+      <div data-testid="form-group-home-office" class="sc-bdf49a">
+        <div class="sc-e7c312 question-text">
+          <span>Business use of home deduction</span>
+          <span class="box-ref">(Line 30)</span>
+        </div>
+        <div class="sc-a1f8e0 input-wrapper">
+          <span class="prefix">$</span>
+          <input type="text" data-testid="sched-c-line30" aria-label="Business use of home" inputmode="decimal" placeholder="0.00">
+        </div>
+      </div>
+
+      <div class="tt-btn-row">
+        <button type="button" class="tt-btn-back">Back</button>
+        <button type="button" class="tt-btn-continue">Continue</button>
+      </div>
+    </div>
+
+    <div id="fill-log"></div>
+  </div>
+
+  <script>
+    // Listen for Chrome extension autoFill messages and log results
+    if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage) {
+      chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
+        if (message.action === "autoFill") {
+          logFill("Received autoFill message", message);
+        }
+      });
+    }
+
+    // Also listen for manual testing via window.postMessage
+    window.addEventListener("message", function(event) {
+      if (event.data && event.data.action === "autoFill") {
+        logFill("Received autoFill via postMessage", event.data);
+      }
+    });
+
+    function logFill(label, data) {
+      var log = document.getElementById("fill-log");
+      log.style.display = "block";
+      var ts = new Date().toLocaleTimeString();
+      log.textContent += "[" + ts + "] " + label + "\n";
+      if (data.fields) {
+        log.textContent += "  Fields: " + data.fields.length + "\n";
+        data.fields.forEach(function(f) {
+          log.textContent += "    " + f.line + " (" + f.field_name + "): " + f.value + "\n";
+        });
+      }
+    }
+  </script>
+</body>
+</html>

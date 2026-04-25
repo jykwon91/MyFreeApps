@@ -1,0 +1,15 @@
+{
+  "description": "Consulting income from client",
+  "expected_transactions": [
+    {
+      "vendor": "Acme Corp",
+      "amount": 5000.0,
+      "transaction_date": "2025-03-31",
+      "transaction_type": "income",
+      "category": "uncategorized",
+      "tax_relevant": true
+    }
+  ],
+  "expected_count": 1,
+  "note": "category may need 'business_revenue' once Schedule C is supported"
+}

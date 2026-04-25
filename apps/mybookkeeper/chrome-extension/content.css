@@ -1,0 +1,33 @@
+/* Persistent subtle indicator for auto-filled fields */
+.mbk-filled {
+  box-shadow: inset 0 -2px 0 0 #4caf50 !important;
+  transition: box-shadow 0.3s ease;
+}
+
+/* Initial flash to draw attention (fades to subtle underline) */
+.mbk-filled-flash {
+  box-shadow: inset 0 0 0 2px #4caf50 !important;
+  background-color: #e8f5e940 !important;
+}
+
+input[type="checkbox"].mbk-filled,
+input[type="radio"].mbk-filled {
+  outline: 3px solid #4caf50 !important;
+  outline-offset: 3px;
+}
+
+/* Green dot badge next to filled checkboxes/radios */
+.mbk-filled-badge {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #4caf50;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+.mbk-filled-first {
+  scroll-margin-top: 80px;
+}
+

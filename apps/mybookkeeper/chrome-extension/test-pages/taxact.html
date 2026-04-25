@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TaxAct - W-2 Entry</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Helvetica Neue", Arial, sans-serif;
+      background: #eef1f5;
+      color: #333;
+    }
+    .ta-header {
+      background: #1b3a5c;
+      padding: 10px 24px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+    .ta-logo {
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: #fff;
+    }
+    .ta-logo span { color: #4fc3f7; }
+    .ta-nav {
+      color: rgba(255,255,255,0.7);
+      font-size: 0.85rem;
+    }
+    .test-notice {
+      background: #fef3c7;
+      border-bottom: 1px solid #f59e0b;
+      color: #92400e;
+      padding: 10px 24px;
+      font-size: 0.85rem;
+    }
+    .ta-steps {
+      background: #fff;
+      border-bottom: 1px solid #ddd;
+      padding: 10px 24px;
+      font-size: 0.82rem;
+      color: #666;
+    }
+    .ta-steps .active { color: #1b3a5c; font-weight: 700; }
+    .ta-container {
+      max-width: 740px;
+      margin: 24px auto;
+      padding: 0 20px;
+    }
+    .ta-page-title {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: #1b3a5c;
+      margin-bottom: 4px;
+    }
+    .ta-page-desc {
+      font-size: 0.9rem;
+      color: #666;
+      margin-bottom: 20px;
+    }
+    .ta-section {
+      background: #fff;
+      border: 1px solid #d0d5dd;
+      border-radius: 6px;
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+    .ta-section-header {
+      background: #f0f4f8;
+      padding: 12px 20px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #1b3a5c;
+      border-bottom: 1px solid #d0d5dd;
+    }
+    .ta-section-body {
+      padding: 16px 20px;
+    }
+    .tax-line {
+      display: flex;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid #f0f0f0;
+      gap: 12px;
+    }
+    .tax-line:last-child { border-bottom: none; }
+    .tax-line label {
+      flex: 1;
+      font-size: 0.9rem;
+      color: #444;
+    }
+    .tax-line label .line-num {
+      font-weight: 700;
+      color: #1b3a5c;
+      display: inline-block;
+      min-width: 28px;
+    }
+    .user-entry {
+      width: 180px;
+      padding: 7px 10px;
+      border: 1px solid #b0bec5;
+      border-radius: 4px;
+      font-size: 0.9rem;
+      text-align: right;
+      background: #fafbfc;
+      transition: border-color 0.15s;
+    }
+    .user-entry:focus {
+      outline: none;
+      border-color: #1b3a5c;
+      background: #fff;
+      box-shadow: 0 0 0 2px rgba(27, 58, 92, 0.15);
+    }
+    .calculated {
+      width: 180px;
+      padding: 7px 10px;
+      border: 1px solid #e0e0e0;
+      border-radius: 4px;
+      font-size: 0.9rem;
+      text-align: right;
+      background: #f5f5f5;
+      color: #888;
+    }
+    .ta-btn-row {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 20px;
+      margin-bottom: 32px;
+    }
+    .btn-ta-primary {
+      background: #1b3a5c;
+      color: #fff;
+      padding: 11px 32px;
+      border: none;
+      border-radius: 4px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-ta-secondary {
+      background: #e0e4e8;
+      color: #1b3a5c;
+      padding: 11px 28px;
+      border: none;
+      border-radius: 4px;
+      font-size: 0.95rem;
+      cursor: pointer;
+    }
+    #fill-log {
+      max-width: 740px;
+      margin: 0 auto 24px;
+      padding: 10px 16px;
+      background: #f0fff4;
+      border: 1px solid #c6f6d5;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 0.8rem;
+      white-space: pre-wrap;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="ta-header">
+    <div class="ta-logo">Tax<span>Act</span></div>
+    <div class="ta-nav">Federal Return &gt; Income</div>
+  </div>
+  <div class="test-notice">Simulated TaxAct form for Chrome extension testing &mdash; based on 2025 site structure</div>
+  <div class="ta-steps">
+    <span>Basic Info</span> &rarr;
+    <span class="active">Income</span> &rarr;
+    <span>Deductions</span> &rarr;
+    <span>Credits</span> &rarr;
+    <span>Review</span>
+  </div>
+
+  <div class="ta-container">
+    <div class="ta-page-title">W-2 Wage and Tax Statement</div>
+    <div class="ta-page-desc">Enter the amounts exactly as they appear on your W-2.</div>
+
+    <!-- W-2 Section -->
+    <div class="ta-section">
+      <div class="ta-section-header">W-2 Information</div>
+      <div class="ta-section-body">
+
+        <div class="tax-line">
+          <label for="line_box1"><span class="line-num">1.</span> Wages, tips, other compensation</label>
+          <input type="text" id="line_box1" name="line_box1" class="user-entry" data-line="1" placeholder="0.00">
+        </div>
+
+        <div class="tax-line">
+          <label for="line_box2"><span class="line-num">2.</span> Federal income tax withheld</label>
+          <input type="text" id="line_box2" name="line_box2" class="user-entry" data-line="2" placeholder="0.00">
+        </div>
+
+        <div class="tax-line">
+          <label for="line_box3"><span class="line-num">3.</span> Social security wages</label>
+          <input type="text" id="line_box3" name="line_box3" class="user-entry" data-line="3" placeholder="0.00">
+        </div>
+
+        <div class="tax-line">
+          <label for="line_box4"><span class="line-num">4.</span> Social security tax withheld</label>
+          <input type="text" id="line_box4" name="line_box4" class="user-entry" data-line="4" placeholder="0.00">
+        </div>
+
+        <div class="tax-line">
+          <label for="line_box5"><span class="line-num">5.</span> Medicare wages and tips</label>
+          <input type="text" id="line_box5" name="line_box5" class="user-entry" data-line="5" placeholder="0.00">
+        </div>
+
+        <div class="tax-line">
+          <label for="line_box6"><span class="line-num">6.</span> Medicare tax withheld</label>
+          <input type="text" id="line_box6" name="line_box6" class="user-entry" data-line="6" placeholder="0.00">
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Schedule E Section -->
+    <div class="ta-section">
+      <div class="ta-section-header">Schedule E &mdash; Rental Real Estate Income and Expenses</div>
+      <div class="ta-section-body">
+
+        <div class="tax-line">
+          <label for="line_se_3"><span class="line-num">3.</span> Rents received</label>
+          <input type="text" id="line_se_3" name="line_se_3" class="user-entry" data-line="3" placeholder="0.00">
+        </div>
+
+        <div class="tax-line">
+          <label for="line_se_5"><span class="line-num">5.</span> Advertising</label>
+          <input type="text" id="line_se_5" name="line_se_5" class="user-entry" data-line="5" placeholder="0.00">
+        </div>
+
+        <div class="tax-line">
+          <label for="line_se_6"><span class="line-num">6.</span> Auto and travel</label>
+          <input type="text" id="line_se_6" name="line_se_6" class="user-entry" data-line="6" placeholder="0.00">
+        </div>
+
+        <div class="tax-line">
+          <label for="line_se_7"><span class="line-num">7.</span> Cleaning and maintenance</label>
+          <input type="text" id="line_se_7" name="line_se_7" class="user-entry" data-line="7" placeholder="0.00">
+        </div>
+
+        <div class="tax-line">
+          <label for="line_se_8"><span class="line-num">8.</span> Commissions</label>
+          <input type="text" id="line_se_8" name="line_se_8" class="user-entry" data-line="8" placeholder="0.00">
+        </div>
+
+        <div class="tax-line">
+          <label for="line_se_9"><span class="line-num">9.</span> Insurance</label>
+          <input type="text" id="line_se_9" name="line_se_9" class="user-entry" data-line="9" placeholder="0.00">
+        </div>
+
+        <div class="tax-line">
+          <label for="line_se_10"><span class="line-num">10.</span> Legal and other professional fees</label>
+          <input type="text" id="line_se_10" name="line_se_10" class="user-entry" data-line="10" placeholder="0.00">
+        </div>
+
+        <div class="tax-line">
+          <label for="line_se_12"><span class="line-num">12.</span> Mortgage interest paid</label>
+          <input type="text" id="line_se_12" name="line_se_12" class="user-entry" data-line="12" placeholder="0.00">
+        </div>
+
+        <div class="tax-line">
+          <label for="line_se_14"><span class="line-num">14.</span> Repairs</label>
+          <input type="text" id="line_se_14" name="line_se_14" class="user-entry" data-line="14" placeholder="0.00">
+        </div>
+
+        <div class="tax-line">
+          <label for="line_se_16"><span class="line-num">16.</span> Taxes</label>
+          <input type="text" id="line_se_16" name="line_se_16" class="user-entry" data-line="16" placeholder="0.00">
+        </div>
+
+        <div class="tax-line">
+          <label for="line_se_17"><span class="line-num">17.</span> Utilities</label>
+          <input type="text" id="line_se_17" name="line_se_17" class="user-entry" data-line="17" placeholder="0.00">
+        </div>
+
+        <div class="tax-line">
+          <label for="line_se_18"><span class="line-num">18.</span> Depreciation expense or depletion</label>
+          <input type="text" id="line_se_18" name="line_se_18" class="user-entry" data-line="18" placeholder="0.00">
+        </div>
+
+        <div class="tax-line">
+          <label for="line_se_19"><span class="line-num">19.</span> Other expenses</label>
+          <input type="text" id="line_se_19" name="line_se_19" class="user-entry" data-line="19" placeholder="0.00">
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Schedule C Section -->
+    <div class="ta-section">
+      <div class="ta-section-header">Schedule C &mdash; Profit or Loss From Business</div>
+      <div class="ta-section-body">
+
+        <div class="tax-line">
+          <label for="line_sc_1"><span class="line-num">1.</span> Gross receipts or sales</label>
+          <input type="text" id="line_sc_1" name="line_sc_1" class="user-entry" data-line="1" placeholder="0.00">
+        </div>
+
+        <div class="tax-line">
+          <label for="line_sc_9"><span class="line-num">9.</span> Car and truck expenses</label>
+          <input type="text" id="line_sc_9" name="line_sc_9" class="user-entry" data-line="9" placeholder="0.00">
+        </div>
+
+        <div class="tax-line">
+          <label for="line_sc_11"><span class="line-num">11.</span> Contract labor</label>
+          <input type="text" id="line_sc_11" name="line_sc_11" class="user-entry" data-line="11" placeholder="0.00">
+        </div>
+
+        <div class="tax-line">
+          <label for="line_sc_18"><span class="line-num">18.</span> Office expense</label>
+          <input type="text" id="line_sc_18" name="line_sc_18" class="user-entry" data-line="18" placeholder="0.00">
+        </div>
+
+        <div class="tax-line">
+          <label for="line_sc_22"><span class="line-num">22.</span> Supplies</label>
+          <input type="text" id="line_sc_22" name="line_sc_22" class="user-entry" data-line="22" placeholder="0.00">
+        </div>
+
+        <div class="tax-line">
+          <label for="line_sc_24a"><span class="line-num">24a.</span> Travel expenses</label>
+          <input type="text" id="line_sc_24a" name="line_sc_24a" class="user-entry" data-line="24a" placeholder="0.00">
+        </div>
+
+        <div class="tax-line">
+          <label for="line_sc_24b"><span class="line-num">24b.</span> Deductible meals</label>
+          <input type="text" id="line_sc_24b" name="line_sc_24b" class="user-entry" data-line="24b" placeholder="0.00">
+        </div>
+
+        <div class="tax-line">
+          <label for="line_sc_28"><span class="line-num">28.</span> Total expenses</label>
+          <input type="text" id="line_sc_28" name="line_sc_28" class="calculated" data-line="28" placeholder="0.00" readonly>
+        </div>
+
+        <div class="tax-line">
+          <label for="line_sc_29"><span class="line-num">29.</span> Net profit (or loss)</label>
+          <input type="text" id="line_sc_29" name="line_sc_29" class="calculated" data-line="29" placeholder="0.00" readonly>
+        </div>
+
+        <div class="tax-line">
+          <label for="line_sc_30"><span class="line-num">30.</span> Business use of home</label>
+          <input type="text" id="line_sc_30" name="line_sc_30" class="user-entry" data-line="30" placeholder="0.00">
+        </div>
+
+      </div>
+    </div>
+
+    <div class="ta-btn-row">
+      <button type="button" class="btn-ta-secondary">Back</button>
+      <button type="button" class="btn-ta-primary">Continue</button>
+    </div>
+
+    <div id="fill-log"></div>
+  </div>
+
+  <script>
+    // Listen for Chrome extension autoFill messages and log results
+    if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage) {
+      chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
+        if (message.action === "autoFill") {
+          logFill("Received autoFill message", message);
+        }
+      });
+    }
+
+    // Also listen for manual testing via window.postMessage
+    window.addEventListener("message", function(event) {
+      if (event.data && event.data.action === "autoFill") {
+        logFill("Received autoFill via postMessage", event.data);
+      }
+    });
+
+    function logFill(label, data) {
+      var log = document.getElementById("fill-log");
+      log.style.display = "block";
+      var ts = new Date().toLocaleTimeString();
+      log.textContent += "[" + ts + "] " + label + "\n";
+      if (data.fields) {
+        log.textContent += "  Fields: " + data.fields.length + "\n";
+        data.fields.forEach(function(f) {
+          log.textContent += "    " + f.line + " (" + f.field_name + "): " + f.value + "\n";
+        });
+      }
+    }
+  </script>
+</body>
+</html>

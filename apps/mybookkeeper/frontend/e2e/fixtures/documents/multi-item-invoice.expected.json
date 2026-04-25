@@ -1,0 +1,15 @@
+{
+  "description": "Home Depot invoice with multiple maintenance items",
+  "expected_transactions": [
+    {
+      "vendor": "Home Depot",
+      "amount": 523.47,
+      "transaction_date": "2025-03-18",
+      "transaction_type": "expense",
+      "category": "maintenance",
+      "tax_relevant": true
+    }
+  ],
+  "expected_count": 1,
+  "note": "Multi-item invoices with one vendor should produce one transaction with the total amount"
+}

@@ -1,0 +1,48 @@
+165-245-134-251.sslip.io {
+    header {
+        Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+        X-Frame-Options "DENY"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Content-Security-Policy "default-src 'self'; script-src 'self' https://cdn.plaid.com https://us.i.posthog.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://*.plaid.com https://us.i.posthog.com https://*.posthog.com; frame-src 'self' https://cdn.plaid.com https://us.posthog.com; frame-ancestors 'none'"
+        -Server
+    }
+
+    # Protect /api/docs and /api/openapi.json — IP + basic auth
+    handle /api/docs* {
+        @blocked not remote_ip {$ADMIN_ALLOWED_IP:127.0.0.1}
+        respond @blocked 403
+
+        basicauth {
+            admin $2b$12$cwJJJdX7H5h8n141BI4JKO92RbBcVYdQd6N7GAlTyTfJzCPCG3OJS
+        }
+
+        uri strip_prefix /api
+        reverse_proxy 127.0.0.1:8000
+    }
+
+    handle /api/openapi.json {
+        @blocked not remote_ip {$ADMIN_ALLOWED_IP:127.0.0.1}
+        respond @blocked 403
+
+        basicauth {
+            admin $2b$12$cwJJJdX7H5h8n141BI4JKO92RbBcVYdQd6N7GAlTyTfJzCPCG3OJS
+        }
+
+        uri strip_prefix /api
+        reverse_proxy 127.0.0.1:8000
+    }
+
+    # Proxy all other API requests to FastAPI
+    handle /api/* {
+        uri strip_prefix /api
+        reverse_proxy 127.0.0.1:8000
+    }
+
+    # Serve React frontend with SPA fallback
+    handle {
+        root * /srv/mybookkeeper/frontend/dist
+        try_files {path} /index.html
+        file_server
+    }
+}

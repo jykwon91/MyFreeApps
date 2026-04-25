@@ -1,0 +1,14 @@
+{
+  "description": "Furniture purchase for rental property",
+  "expected_transactions": [
+    {
+      "vendor": "IKEA",
+      "amount": 849.99,
+      "transaction_date": "2025-03-20",
+      "transaction_type": "expense",
+      "category": "furnishings",
+      "tax_relevant": true
+    }
+  ],
+  "expected_count": 1
+}

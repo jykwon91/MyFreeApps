@@ -1,0 +1,14 @@
+{
+  "description": "Monthly property management fee",
+  "expected_transactions": [
+    {
+      "vendor": "Coastal Property Mgmt",
+      "amount": 350.0,
+      "transaction_date": "2025-03-01",
+      "transaction_type": "expense",
+      "category": "management_fee",
+      "tax_relevant": true
+    }
+  ],
+  "expected_count": 1
+}

@@ -1,0 +1,14 @@
+{
+  "description": "Monthly lawn care invoice",
+  "expected_transactions": [
+    {
+      "vendor": "Green Thumb Landscaping",
+      "amount": 200.0,
+      "transaction_date": "2025-04-05",
+      "transaction_type": "expense",
+      "category": "contract_work",
+      "tax_relevant": true
+    }
+  ],
+  "expected_count": 1
+}

@@ -1,0 +1,15 @@
+{
+  "description": "Software subscription",
+  "expected_transactions": [
+    {
+      "vendor": "Adobe Inc.",
+      "amount": 54.99,
+      "transaction_date": "2025-03-01",
+      "transaction_type": "expense",
+      "category": "other_expense",
+      "tax_relevant": true
+    }
+  ],
+  "expected_count": 1,
+  "note": "category may change to 'software_subscriptions' once Schedule C is supported"
+}

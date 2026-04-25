@@ -1,0 +1,14 @@
+{
+  "description": "Plumber invoice for water heater replacement",
+  "expected_transactions": [
+    {
+      "vendor": "ABC Plumbing & Heating",
+      "amount": 450.0,
+      "transaction_date": "2025-03-15",
+      "transaction_type": "expense",
+      "category": "maintenance",
+      "tax_relevant": true
+    }
+  ],
+  "expected_count": 1
+}

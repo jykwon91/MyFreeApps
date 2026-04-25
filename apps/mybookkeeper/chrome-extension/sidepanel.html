@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MyBookkeeper Tax Auto-Fill</title>
+  <link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+  <div id="app">
+    <header>
+      <div class="header-row">
+        <img src="icons/icon48.png" alt="" class="header-icon">
+        <div>
+          <h1>MyBookkeeper</h1>
+          <p class="subtitle">Tax Auto-Fill</p>
+        </div>
+      </div>
+    </header>
+
+    <!-- Login section -->
+    <div id="login-section" class="section">
+      <h2>Log In</h2>
+      <form id="login-form">
+        <label for="email">Email</label>
+        <input type="email" id="email" required placeholder="you@example.com">
+        <label for="password">Password</label>
+        <input type="password" id="password" required placeholder="Password">
+        <div id="totp-group" class="hidden">
+          <label for="totp-code">Authentication code</label>
+          <input type="text" id="totp-code" placeholder="6-digit code" maxlength="8" inputmode="numeric" autocomplete="one-time-code">
+        </div>
+        <button type="submit" id="login-btn" class="btn btn-primary">
+          <span class="btn-text">Log In</span>
+          <span class="btn-loading hidden">Logging in...</span>
+        </button>
+      </form>
+      <p id="login-error" class="error hidden"></p>
+    </div>
+
+    <!-- Main section (after login) -->
+    <div id="main-section" class="section hidden">
+      <div class="status-bar">
+        <span id="status-indicator" class="status connected"></span>
+        <span id="status-text">Connected</span>
+        <button id="logout-btn" class="btn btn-link">Logout</button>
+      </div>
+
+      <div id="info-banner" class="info-banner">
+        <p>Navigate to a tax form on FreeTaxUSA, TurboTax, H&amp;R Block, or TaxAct. I'll detect the form and pull your data automatically.</p>
+      </div>
+
+      <div class="form-group">
+        <label for="tax-year-select">
+          Tax Year
+          <span class="tooltip" title="The tax year to pull data from. Auto-detected from the page when possible.">?</span>
+        </label>
+        <select id="tax-year-select">
+          <option value="">Select tax year...</option>
+        </select>
+      </div>
+
+      <div id="detected-form-bar" class="detected-form-bar">
+        <span id="detected-form-icon" class="detected-form-icon"></span>
+        <span id="detected-form-text">Navigate to a tax form page</span>
+      </div>
+
+      <div class="form-group">
+        <label for="form-select">
+          Form
+          <span class="tooltip" title="Auto-detected from the page. You can also select manually.">?</span>
+        </label>
+        <select id="form-select">
+          <option value="">Select form...</option>
+        </select>
+      </div>
+
+      <div id="instance-group" class="form-group hidden">
+        <div class="label-row">
+          <label for="instance-select">Document</label>
+          <button id="view-doc-btn" class="btn-link-sm hidden">View</button>
+        </div>
+        <select id="instance-select">
+          <option value="">Select document...</option>
+        </select>
+      </div>
+
+      <div id="fields-container" class="hidden">
+        <h3>Field Values</h3>
+        <div id="fields-list" class="fields-list"></div>
+        <div class="actions">
+          <button id="autofill-btn" class="btn btn-primary" disabled>
+            <span class="btn-text">Auto-Fill This Page</span>
+            <span class="btn-loading hidden">Filling...</span>
+          </button>
+          <button id="upload-btn" class="btn btn-secondary btn-sm" disabled>
+            <span class="btn-text">Upload</span>
+            <span class="btn-loading hidden">...</span>
+          </button>
+        </div>
+      </div>
+
+      <div id="recompute-section" class="form-group">
+        <p class="hint">Added new documents? Recompute to update your form values with the latest data.</p>
+        <button id="recompute-btn" class="btn btn-secondary btn-sm" disabled>
+          <span class="btn-text">Recompute Values</span>
+          <span class="btn-loading hidden">Computing...</span>
+        </button>
+      </div>
+
+      <p id="main-error" class="error hidden"></p>
+      <p id="main-success" class="success hidden"></p>
+    </div>
+  </div>
+
+  <script src="sidepanel.js"></script>
+</body>
+</html>
