@@ -375,4 +375,4 @@ When compacting, preserve: modified file list, any migration names, open questio
 
 ## Deploy verification
 
-Last verified auto-deploy from MyFreeApps main: 2026-04-26 (post-#84 ssh-action SHA fix).
+Last verified auto-deploy from MyFreeApps main: 2026-04-26 (post-#84 ssh-action SHA fix + SSH_HOST/SSH_USER/SSH_PRIVATE_KEY secrets configured on the monorepo).
