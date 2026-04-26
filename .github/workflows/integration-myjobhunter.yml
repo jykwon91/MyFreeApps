@@ -56,7 +56,7 @@ jobs:
         working-directory: apps/myjobhunter
         env:
           DB_PASSWORD: integration_pw
-          DOMAIN: localhost
+          DOMAIN: http://localhost
         run: |
           docker compose up -d --build
           echo "Waiting for stack to become healthy..."
