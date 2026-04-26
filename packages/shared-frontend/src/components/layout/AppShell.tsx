@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
-import { NavLink, useNavigate, useLocation } from "react-router-dom";
+import { NavLink, useNavigate, useLocation, type NavLinkRenderProps } from "react-router-dom";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { Search, LogOut, ChevronDown } from "lucide-react";
 import { cn } from "@/shared/utils/cn";
@@ -130,7 +130,7 @@ export default function AppShell({
                 key={item.path}
                 to={item.path}
                 end={item.exact}
-                className={({ isActive }) =>
+                className={({ isActive }: NavLinkRenderProps) =>
                   cn(
                     "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors min-h-[44px]",
                     isActive
@@ -231,7 +231,7 @@ export default function AppShell({
                   key={item.path}
                   to={item.path}
                   end={item.exact}
-                  className={({ isActive }) =>
+                  className={({ isActive }: NavLinkRenderProps) =>
                     cn(
                       "flex-1 flex flex-col items-center justify-center gap-1 py-2 text-xs transition-colors min-h-[56px]",
                       isActive ? "text-primary" : "text-muted-foreground"
