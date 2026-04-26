@@ -23,3 +23,9 @@ jobs:
         with:
           fail-on-severity: moderate
           comment-summary-in-pr: on-failure
+          # GHSA-wj6h-64fc-37mp: Minerva timing attack on P-256 in python-ecdsa.
+          # Pulled in transitively by python-jose (used for JWT decode in mybookkeeper).
+          # Timing-side-channel attack — requires precise local timing measurements;
+          # not exploitable over typical noisy network conditions. Tracked for proper
+          # mitigation via python-jose → PyJWT migration in MyBookkeeper.
+          allow-ghsas: GHSA-wj6h-64fc-37mp
