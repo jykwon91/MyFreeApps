@@ -27,7 +27,7 @@ export default function Toaster() {
         <Toast.Root
           key={toast.id}
           open
-          onOpenChange={(open) => handleOpenChange(open, toast.id)}
+          onOpenChange={(open: boolean) => handleOpenChange(open, toast.id)}
           className={`flex items-start gap-3 px-4 py-3 rounded-lg shadow-lg text-sm ${
             toast.variant === "error"
               ? "bg-red-50 border border-red-200 text-red-800 dark:bg-red-950 dark:border-red-800 dark:text-red-200"

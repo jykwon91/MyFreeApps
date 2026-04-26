@@ -27,7 +27,7 @@ export default function ConfirmDialog({
   children,
 }: Props) {
   return (
-    <Dialog.Root open={open} onOpenChange={(isOpen) => { if (!isOpen) onCancel(); }}>
+    <Dialog.Root open={open} onOpenChange={(isOpen: boolean) => { if (!isOpen) onCancel(); }}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-black/50 z-[70]" />
         <Dialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[70] w-full max-w-sm rounded-lg border bg-card p-6 shadow-lg">
