@@ -372,3 +372,7 @@ When `mode: fix`, the pipeline (`g-pipeline`, `g-build-feature`) will actively f
 ## Compact Instructions
 
 When compacting, preserve: modified file list, any migration names, open questions about Category enum or Claude extraction prompt changes.
+
+## Deploy verification
+
+Last verified auto-deploy from MyFreeApps main: 2026-04-26 (post-#84 ssh-action SHA fix).
