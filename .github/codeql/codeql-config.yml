@@ -1,0 +1,23 @@
+name: "MyFreeApps CodeQL config"
+
+# Use security-focused queries only — drop the 'security-and-quality' suite,
+# which produces hundreds of style/maintainability notes that bury real signal.
+queries:
+  - uses: security-extended
+
+paths-ignore:
+  # Test files — frequently use loose regex patterns and intentional dummy values
+  # that trigger false positives on real-world security rules.
+  - "**/__tests__/**"
+  - "**/e2e/**"
+  - "**/*.test.ts"
+  - "**/*.test.tsx"
+  - "**/*.spec.ts"
+  - "**/*.spec.tsx"
+  - "**/test_*.py"
+  - "**/tests/**"
+  # Snapshot/build artifacts
+  - "**/dist/**"
+  - "**/build/**"
+  - "**/node_modules/**"
+  - "**/.venv/**"
