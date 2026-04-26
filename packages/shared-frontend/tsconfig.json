@@ -11,9 +11,8 @@
     "declarationMap": true,
     "sourceMap": true,
     "outDir": "dist",
-    "baseUrl": ".",
     "paths": {
-      "@/shared/*": ["src/*"]
+      "@/shared/*": ["./src/*"]
     },
     "types": ["vite/client", "vitest/globals"]
   },
