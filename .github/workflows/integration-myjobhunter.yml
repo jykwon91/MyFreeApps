@@ -47,7 +47,7 @@ jobs:
           TAVILY_API_KEY=tvly-integration-placeholder
           GOOGLE_CLIENT_ID=integration-placeholder
           GOOGLE_CLIENT_SECRET=integration-placeholder
-          CORS_ORIGINS=http://localhost:8092
+          CORS_ORIGINS=["http://localhost:8092"]
           JWT_LIFETIME_SECONDS=1800
           LOG_LEVEL=INFO
           EOF
