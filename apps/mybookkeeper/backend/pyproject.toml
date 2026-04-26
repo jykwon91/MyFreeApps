@@ -21,7 +21,7 @@ dependencies = [
     "google-auth-httplib2==0.2.0",
     "google-auth-oauthlib==1.2.1",
     "dramatiq[postgres]==1.17.0",
-    "cryptography==46.0.7",
+    "cryptography==47.0.0",
     "python-multipart==0.0.26",
     "passlib[bcrypt]==1.7.4",
     "aiofiles==24.1.0",

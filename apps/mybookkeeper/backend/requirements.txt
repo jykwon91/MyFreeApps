@@ -57,7 +57,7 @@ colorama==0.4.6 ; sys_platform == 'win32'
     #   qrcode
     #   tqdm
     #   uvicorn
-cryptography==46.0.7
+cryptography==47.0.0
     # via
     #   google-auth
     #   mybookkeeper-backend
