@@ -1,0 +1,531 @@
+{
+  "domains": {
+    "admin": {
+      "source_paths": [
+        "backend/app/services/system/admin_service.py",
+        "backend/app/repositories/admin_repo.py",
+        "backend/app/api/admin_routes.py",
+        "backend/app/api/test_utils.py",
+        "frontend/src/admin/pages/UserActivity.tsx"
+      ],
+      "backend_tests": [
+        "test_admin_routes.py",
+        "test_test_utils_routes.py"
+      ],
+      "frontend_tests": [
+        "UserActivity.test.tsx"
+      ],
+      "e2e_specs": [
+        "admin-skeleton.spec.ts",
+        "admin.spec.ts",
+        "user-activity.spec.ts"
+      ]
+    },
+    "analytics": {
+      "source_paths": [
+        "backend/app/services/analytics/",
+        "backend/app/repositories/analytics/",
+        "frontend/src/pages/Analytics.tsx",
+        "frontend/src/features/analytics/"
+      ],
+      "backend_tests": [
+        "test_utility_trends.py"
+      ],
+      "frontend_tests": [
+        "Analytics.test.tsx"
+      ],
+      "e2e_specs": [
+        "analytics.spec.ts",
+        "component-extraction.spec.ts"
+      ]
+    },
+    "auth": {
+      "source_paths": [
+        "frontend/src/shared/lib/auth.ts",
+        "frontend/src/shared/lib/auth-store.ts",
+        "frontend/src/shared/lib/api.ts",
+        "frontend/src/app/pages/Login.tsx",
+        "frontend/src/app/pages/Register.tsx",
+        "frontend/src/app/pages/ForgotPassword.tsx",
+        "frontend/src/app/pages/ResetPassword.tsx",
+        "frontend/src/app/pages/InviteAccept.tsx",
+        "frontend/src/app/pages/VerifyEmail.tsx",
+        "frontend/src/app/pages/Security.tsx",
+        "frontend/src/features/auth/",
+        "frontend/src/shared/store/totpApi.ts",
+        "frontend/src/shared/store/accountApi.ts",
+        "frontend/src/app/features/security/TwoFactorSetup.tsx",
+        "frontend/src/app/features/security/DeleteAccountModal.tsx",
+        "frontend/src/shared/types/security/",
+        "frontend/src/shared/utils/errorMessage.ts",
+        "backend/app/core/auth.py",
+        "backend/app/core/rate_limit.py",
+        "backend/app/models/user/user.py",
+        "backend/app/repositories/user/user_repo.py",
+        "backend/app/repositories/documents/document_repo.py",
+        "backend/app/repositories/transactions/transaction_repo.py",
+        "backend/app/services/user/hibp_service.py",
+        "backend/app/services/user/turnstile_service.py",
+        "backend/app/services/user/account_service.py",
+        "backend/app/services/system/verification_email.py",
+        "backend/app/api/account.py",
+        "backend/app/schemas/user/account.py"
+      ],
+      "backend_tests": [
+        "test_account_lockout.py",
+        "test_account_deletion.py",
+        "test_data_export.py",
+        "test_email_verification.py",
+        "test_password_validation.py",
+        "test_totp_service.py",
+        "test_totp_routes.py",
+        "test_turnstile.py"
+      ],
+      "frontend_tests": [
+        "Login.test.tsx",
+        "Register.test.tsx",
+        "VerifyEmail.test.tsx",
+        "ForgotPassword.test.tsx",
+        "ResetPassword.test.tsx",
+        "Security.test.tsx",
+        "DeleteAccountModal.test.tsx",
+        "TwoFactorSetup.test.tsx",
+        "auth.test.ts",
+        "auth-store.test.ts",
+        "apiInterceptor.test.ts"
+      ],
+      "e2e_specs": [
+        "auth.spec.ts",
+        "email-verification.spec.ts",
+        "password-reset.spec.ts",
+        "security.spec.ts",
+        "account-deletion.spec.ts",
+        "data-export.spec.ts"
+      ]
+    },
+    "classification": {
+      "source_paths": [
+        "backend/app/services/classification/",
+        "backend/app/repositories/classification/",
+        "backend/app/models/classification/",
+        "backend/app/schemas/classification/"
+      ],
+      "backend_tests": [
+        "test_sender_category.py"
+      ],
+      "frontend_tests": [],
+      "e2e_specs": []
+    },
+    "demo": {
+      "source_paths": [
+        "backend/app/services/demo/",
+        "backend/app/repositories/demo/",
+        "backend/app/schemas/demo/",
+        "frontend/src/admin/pages/Demo.tsx",
+        "frontend/src/admin/features/demo/"
+      ],
+      "backend_tests": [
+        "test_demo_service.py",
+        "test_demo_security.py",
+        "test_integration_smoke.py"
+      ],
+      "frontend_tests": [
+        "Demo.test.tsx"
+      ],
+      "e2e_specs": [
+        "demo-management.spec.ts",
+        "demo-seed-data.spec.ts"
+      ]
+    },
+    "documents": {
+      "source_paths": [
+        "backend/app/models/documents/",
+        "backend/app/repositories/documents/",
+        "backend/app/services/documents/",
+        "backend/app/schemas/documents/",
+        "backend/app/api/documents.py",
+        "frontend/src/pages/Documents.tsx",
+        "frontend/src/features/documents/"
+      ],
+      "backend_tests": [
+        "test_document_checklist_service.py",
+        "test_document_dedup.py",
+        "test_document_type.py",
+        "test_document_upload_service.py",
+        "test_source_documents.py",
+        "test_dual_write.py"
+      ],
+      "frontend_tests": [
+        "DocumentUploadZone.test.tsx",
+        "SourceDocumentsSection.test.tsx"
+      ],
+      "e2e_specs": [
+        "documents.spec.ts",
+        "feature-additions.spec.ts"
+      ]
+    },
+    "email": {
+      "source_paths": [
+        "backend/app/models/email/",
+        "backend/app/repositories/email/",
+        "backend/app/services/email/",
+        "backend/app/schemas/email/",
+        "backend/app/workers/email_sync_worker.py"
+      ],
+      "backend_tests": [
+        "test_email_queue_split.py",
+        "test_email_sync_worker.py",
+        "test_gmail_auth_expired.py",
+        "test_email_discovery_last_synced.py"
+      ],
+      "frontend_tests": [
+        "EmailQueueSection.test.tsx"
+      ],
+      "e2e_specs": []
+    },
+    "extraction": {
+      "source_paths": [
+        "backend/app/services/extraction/",
+        "backend/app/models/extraction/",
+        "backend/app/repositories/extraction/",
+        "backend/app/schemas/extraction/",
+        "backend/app/mappers/extraction_mapper.py"
+      ],
+      "backend_tests": [
+        "test_dedup_resolution.py",
+        "test_dedup_service.py",
+        "test_duplicates.py",
+        "test_extraction_mapper.py",
+        "test_extraction_repo.py",
+        "test_extraction_to_transactions.py",
+        "test_prompt_service.py",
+        "test_property_matcher.py",
+        "test_self_healing.py"
+      ],
+      "frontend_tests": [],
+      "e2e_specs": [
+        "extraction-accuracy.spec.ts",
+        "duplicate-review.spec.ts",
+        "duplicate-merge.spec.ts"
+      ]
+    },
+    "integrations": {
+      "source_paths": [
+        "backend/app/services/integrations/",
+        "backend/app/models/integrations/",
+        "backend/app/repositories/integrations/",
+        "backend/app/schemas/integrations/",
+        "backend/app/api/integrations.py",
+        "backend/app/api/plaid.py",
+        "frontend/src/app/pages/Integrations.tsx",
+        "frontend/src/app/features/integrations/",
+        "frontend/src/shared/store/integrationsApi.ts",
+        "frontend/src/shared/hooks/useInvalidateOnExtractionComplete.ts"
+      ],
+      "backend_tests": [
+        "test_gmail_auth_expired.py",
+        "test_plaid_sync.py",
+        "test_plaid_webhook_service.py",
+        "test_plaid_webhook_verifier.py",
+        "test_email_discovery_last_synced.py"
+      ],
+      "frontend_tests": [
+        "Integrations.test.tsx",
+        "useInvalidateOnExtractionComplete.test.ts",
+        "summaryInvalidation.test.ts"
+      ],
+      "e2e_specs": [
+        "integrations.spec.ts",
+        "summary-invalidation.spec.ts"
+      ]
+    },
+    "mappers": {
+      "source_paths": [
+        "backend/app/mappers/transaction_mapper.py",
+        "backend/app/mappers/reservation_mapper.py"
+      ],
+      "backend_tests": [
+        "test_reservation_mapper.py"
+      ],
+      "frontend_tests": [],
+      "e2e_specs": []
+    },
+    "organization": {
+      "source_paths": [
+        "backend/app/models/organization/",
+        "backend/app/repositories/organization/",
+        "backend/app/services/organization/",
+        "backend/app/schemas/organization/",
+        "backend/app/api/organizations.py",
+        "backend/app/api/members.py",
+        "frontend/src/features/organization/",
+        "frontend/src/shared/store/organizationSlice.ts"
+      ],
+      "backend_tests": [
+        "test_organization.py",
+        "test_organization_routes.py",
+        "test_invite_email.py",
+        "test_org_data_isolation.py",
+        "test_org_idor.py",
+        "test_org_role_enforcement.py",
+        "test_member_role_schema.py",
+        "test_member_list.py"
+      ],
+      "frontend_tests": [
+        "OrgSwitcher.test.tsx",
+        "MemberList.test.tsx",
+        "InviteForm.test.tsx",
+        "PendingInvites.test.tsx",
+        "RequireOrgRole.test.tsx",
+        "organizationSlice.test.ts"
+      ],
+      "e2e_specs": [
+        "members.spec.ts",
+        "layout.spec.ts"
+      ]
+    },
+    "properties": {
+      "source_paths": [
+        "backend/app/models/properties/",
+        "backend/app/repositories/properties/",
+        "backend/app/services/properties/",
+        "backend/app/schemas/properties/",
+        "backend/app/api/properties.py",
+        "frontend/src/pages/Properties.tsx",
+        "frontend/src/features/properties/"
+      ],
+      "backend_tests": [
+        "test_property_duplicate.py"
+      ],
+      "frontend_tests": [
+        "Properties.test.tsx"
+      ],
+      "e2e_specs": [
+        "properties.spec.ts"
+      ]
+    },
+    "system": {
+      "source_paths": [
+        "backend/app/models/system/",
+        "backend/app/repositories/system/",
+        "backend/app/schemas/system/",
+        "backend/app/api/system.py"
+      ],
+      "backend_tests": [
+        "test_frontend_errors.py",
+        "test_health_dashboard.py"
+      ],
+      "frontend_tests": [
+        "frontendErrorReporting.test.ts"
+      ],
+      "e2e_specs": [
+        "api-validation.spec.ts",
+        "data-validation.spec.ts"
+      ]
+    },
+    "tax": {
+      "source_paths": [
+        "backend/app/models/tax/",
+        "backend/app/repositories/tax/",
+        "backend/app/services/tax/",
+        "backend/app/schemas/tax/",
+        "backend/app/api/tax.py",
+        "backend/app/api/tax_returns.py",
+        "frontend/src/pages/Tax.tsx",
+        "frontend/src/features/tax/"
+      ],
+      "backend_tests": [
+        "test_tax_advisor_service.py",
+        "test_tax_completeness_service.py",
+        "test_tax_extraction_service.py",
+        "test_tax_documents.py",
+        "test_tax_form_fields.py",
+        "test_tax_form_repo.py",
+        "test_tax_recompute_service.py",
+        "test_tax_return_repo.py",
+        "test_tax_return_routes.py",
+        "test_tax_return_service.py",
+        "test_tax_validation_service.py",
+        "test_tax_validation_p1_p2.py",
+        "test_taxpayer_profile.py",
+        "test_schedule_e_report.py"
+      ],
+      "frontend_tests": [
+        "TaxDocuments.test.tsx",
+        "TaxReturnDetail.test.tsx",
+        "CompletenessChecklist.test.tsx",
+        "ReceivedDocumentsGrouped.test.tsx",
+        "SuggestionCard.test.tsx"
+      ],
+      "e2e_specs": [
+        "tax.spec.ts",
+        "tax-documents.spec.ts",
+        "tax-return-detail.spec.ts"
+      ]
+    },
+    "transactions": {
+      "source_paths": [
+        "backend/app/models/transactions/",
+        "backend/app/repositories/transactions/",
+        "backend/app/services/transactions/",
+        "backend/app/schemas/transactions/",
+        "backend/app/api/transactions.py",
+        "backend/app/api/reconciliation.py",
+        "frontend/src/pages/Transactions.tsx",
+        "frontend/src/pages/Dashboard.tsx",
+        "frontend/src/features/transactions/",
+        "frontend/src/features/dashboard/"
+      ],
+      "backend_tests": [
+        "test_bank_csv_parser.py",
+        "test_export_service.py",
+        "test_import_service.py",
+        "test_merge_transactions.py",
+        "test_reconciliation_repo.py",
+        "test_reconciliation_routes.py",
+        "test_reservation_query_service.py",
+        "test_reservation_repo.py",
+        "test_reservation_routes.py",
+        "test_summary_from_transactions.py",
+        "test_transaction_repo.py",
+        "test_transaction_routes.py",
+        "test_transaction_schema.py",
+        "test_transaction_service.py",
+        "test_vendor_normalization.py"
+      ],
+      "frontend_tests": [
+        "Transactions.test.tsx",
+        "ColumnFilter.test.tsx",
+        "Dashboard.test.tsx",
+        "MonthlyAverageCard.test.tsx",
+        "CategoryChip.test.tsx",
+        "DashboardFilterBar.test.tsx",
+        "DrillDownPanel.test.tsx",
+        "MergeFieldRow.test.tsx",
+        "ExportDropdown.test.tsx",
+        "useDashboardFilter.test.ts",
+        "useDocumentColumns.test.tsx",
+        "chart-utils.test.ts",
+        "SortIndicator.test.tsx"
+      ],
+      "e2e_specs": [
+        "transactions.spec.ts",
+        "dashboard-filter.spec.ts",
+        "dashboard.spec.ts",
+        "reconciliation.spec.ts"
+      ]
+    },
+    "classification_rules": {
+      "source_paths": [
+        "backend/app/services/classification/rule_service.py",
+        "backend/app/services/classification/rule_learning_service.py",
+        "backend/app/services/classification/rule_engine.py",
+        "backend/app/repositories/classification/classification_rule_repo.py",
+        "backend/app/models/classification/classification_rule.py",
+        "backend/app/api/classification_rules.py",
+        "frontend/src/shared/store/classificationRulesApi.ts",
+        "frontend/src/app/features/transactions/ClassificationRulesPanel.tsx"
+      ],
+      "backend_tests": [
+        "test_vendor_normalization.py"
+      ],
+      "frontend_tests": [],
+      "e2e_specs": [
+        "classification-rules.spec.ts"
+      ]
+    },
+    "version": {
+      "source_paths": [
+        "backend/app/main.py",
+        "frontend/src/app/components/VersionTag.tsx",
+        "frontend/src/shared/store/versionApi.ts",
+        "frontend/src/shared/types/version/"
+      ],
+      "backend_tests": [
+        "test_version_endpoint.py"
+      ],
+      "frontend_tests": [
+        "VersionTag.test.tsx"
+      ],
+      "e2e_specs": [
+        "version-display.spec.ts"
+      ]
+    },
+    "core_utils": {
+      "source_paths": [
+        "backend/app/core/pii.py",
+        "backend/app/core/rate_limit.py",
+        "backend/app/core/storage.py",
+        "backend/app/core/tags.py",
+        "backend/app/core/tax_form_fields.py",
+        "backend/app/core/vendors.py"
+      ],
+      "backend_tests": [
+        "test_pii.py",
+        "test_rate_limit.py",
+        "test_storage.py",
+        "test_sanitize_tags.py",
+        "test_schema_cleanup.py"
+      ],
+      "frontend_tests": [],
+      "e2e_specs": []
+    },
+    "migrations": {
+      "source_paths": [
+        "backend/alembic/"
+      ],
+      "backend_tests": [
+        "test_alembic_chain.py"
+      ],
+      "frontend_tests": [],
+      "e2e_specs": []
+    },
+    "legal": {
+      "source_paths": [
+        "frontend/src/app/pages/PrivacyPolicy.tsx",
+        "frontend/src/app/pages/TermsOfService.tsx",
+        "frontend/src/app/components/LegalFooter.tsx",
+        "frontend/src/app/pages/Register.tsx"
+      ],
+      "backend_tests": [],
+      "frontend_tests": [
+        "PrivacyPolicy.test.tsx",
+        "TermsOfService.test.tsx",
+        "Register.test.tsx"
+      ],
+      "e2e_specs": [
+        "legal-pages.spec.ts"
+      ]
+    }
+  },
+  "shared_paths": [
+    "backend/app/db/",
+    "backend/app/core/auth.py",
+    "backend/app/core/config.py",
+    "backend/app/core/context.py",
+    "backend/app/core/permissions.py",
+    "backend/app/core/security.py",
+    "backend/app/models/user/",
+    "backend/app/main.py",
+    "backend/tests/conftest.py",
+    "frontend/src/shared/lib/api.ts",
+    "frontend/src/shared/lib/constants.ts",
+    "frontend/src/App.tsx",
+    "frontend/src/main.tsx",
+    "frontend/src/app/components/Layout.tsx",
+    "frontend/src/admin/components/AdminLayout.tsx",
+    "frontend/vite.config.ts",
+    "frontend/vitest.config.ts",
+    "frontend/playwright.config.ts",
+    "frontend/e2e/global-setup.ts",
+    "frontend/e2e/global-teardown.ts",
+    "frontend/e2e/fixtures/"
+  ],
+  "always_e2e": [
+    "navigation.spec.ts",
+    "mobile.spec.ts",
+    "chrome-extension.spec.ts",
+    "ux-fixes.spec.ts",
+    "info-banners.spec.ts"
+  ]
+}

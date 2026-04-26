@@ -1,0 +1,40 @@
+services:
+  postgres:
+    ports:
+      - "5432:5432"
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/backend.Dockerfile
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--reload-dir", "app"]
+    environment:
+      RUN_UPLOAD_WORKER: "true"
+    volumes:
+      - ./backend:/app
+      - frontend_dist:/srv/frontend
+
+  # Disable separate workers in dev (upload worker runs in-process via RUN_UPLOAD_WORKER=true)
+  upload-processor:
+    profiles: ["disabled"]
+  scheduler:
+    profiles: ["disabled"]
+
+  # Use Vite dev server instead of Caddy in dev
+  caddy:
+    profiles: ["disabled"]
+
+  frontend-dev:
+    image: node:20-alpine
+    working_dir: /app
+    command: ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_TARGET: http://api:8000
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      api:
+        condition: service_healthy

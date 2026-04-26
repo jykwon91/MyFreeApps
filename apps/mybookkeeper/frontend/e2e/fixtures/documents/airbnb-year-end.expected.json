@@ -1,0 +1,8 @@
+{
+  "description": "Airbnb year-end summary statement",
+  "document_type": "year_end_statement",
+  "expected_transactions": [],
+  "expected_count": 0,
+  "expected_reservations": true,
+  "note": "Year-end statements should produce reservation records, not expense transactions"
+}

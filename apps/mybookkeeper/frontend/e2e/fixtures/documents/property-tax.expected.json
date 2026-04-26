@@ -1,0 +1,14 @@
+{
+  "description": "Annual property tax",
+  "expected_transactions": [
+    {
+      "vendor": "Dallas County Tax Office",
+      "amount": 3200.0,
+      "transaction_date": "2025-02-01",
+      "transaction_type": "expense",
+      "category": "taxes",
+      "tax_relevant": true
+    }
+  ],
+  "expected_count": 1
+}

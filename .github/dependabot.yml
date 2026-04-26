@@ -50,6 +50,26 @@ updates:
     open-pull-requests-limit: 5
     labels: ["dependencies", "github-actions"]
 
+  - package-ecosystem: "pip"
+    directory: "/apps/mybookkeeper/backend"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "python", "mybookkeeper"]
+    groups:
+      python-minor-patch:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: "npm"
+    directory: "/apps/mybookkeeper/frontend"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "npm", "mybookkeeper"]
+    groups:
+      npm-minor-patch:
+        update-types: ["minor", "patch"]
+
   # Docker base images (one per app as docker-compose files are added)
   - package-ecosystem: "docker"
     directory: "/apps/myjobhunter"
@@ -57,3 +77,10 @@ updates:
       interval: "weekly"
     open-pull-requests-limit: 3
     labels: ["dependencies", "docker", "myjobhunter"]
+
+  - package-ecosystem: "docker"
+    directory: "/apps/mybookkeeper"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 3
+    labels: ["dependencies", "docker", "mybookkeeper"]

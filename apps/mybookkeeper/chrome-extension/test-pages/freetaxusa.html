@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FreeTaxUSA - W-2 Entry</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Helvetica Neue", Arial, sans-serif;
+      background: #f5f5f5;
+      color: #333;
+    }
+    .site-header {
+      background: #2b6cb0;
+      color: #fff;
+      padding: 12px 24px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+    .site-header span { color: #fbbf24; }
+    .test-notice {
+      background: #fef3c7;
+      border: 1px solid #f59e0b;
+      color: #92400e;
+      padding: 10px 24px;
+      font-size: 0.85rem;
+    }
+    .content {
+      max-width: 780px;
+      margin: 24px auto;
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 24px 32px;
+    }
+    h1 {
+      font-size: 1.25rem;
+      color: #1a365d;
+      margin-bottom: 4px;
+    }
+    .breadcrumb {
+      font-size: 0.8rem;
+      color: #718096;
+      margin-bottom: 20px;
+    }
+    .section-title {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: #2b6cb0;
+      border-bottom: 2px solid #2b6cb0;
+      padding-bottom: 6px;
+      margin: 24px 0 16px;
+    }
+    .section-title:first-of-type { margin-top: 0; }
+    form#taxForm { margin: 0; }
+    .form-row {
+      display: flex;
+      align-items: center;
+      margin: 10px 0;
+      gap: 12px;
+    }
+    .form-row label {
+      flex: 0 0 340px;
+      font-size: 0.9rem;
+      color: #4a5568;
+    }
+    .form-row label .box-ref {
+      font-weight: 600;
+      color: #2b6cb0;
+    }
+    .currency-input {
+      flex: 1;
+      max-width: 200px;
+      padding: 7px 10px;
+      border: 1px solid #cbd5e0;
+      border-radius: 3px;
+      font-size: 0.9rem;
+      text-align: right;
+    }
+    .currency-input:focus {
+      outline: none;
+      border-color: #2b6cb0;
+      box-shadow: 0 0 0 2px rgba(43, 108, 176, 0.2);
+    }
+    .btn-row {
+      margin-top: 24px;
+      display: flex;
+      gap: 12px;
+    }
+    .btn-primary {
+      background: #2b6cb0;
+      color: #fff;
+      padding: 10px 28px;
+      border: none;
+      border-radius: 4px;
+      font-size: 0.95rem;
+      cursor: pointer;
+    }
+    .btn-secondary {
+      background: #e2e8f0;
+      color: #4a5568;
+      padding: 10px 28px;
+      border: none;
+      border-radius: 4px;
+      font-size: 0.95rem;
+      cursor: pointer;
+    }
+    .schedule-separator {
+      margin-top: 32px;
+      padding-top: 16px;
+      border-top: 2px solid #e2e8f0;
+    }
+    #fill-log {
+      margin-top: 16px;
+      padding: 10px;
+      background: #f0fff4;
+      border: 1px solid #c6f6d5;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 0.8rem;
+      white-space: pre-wrap;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="site-header">Free<span>Tax</span>USA</div>
+  <div class="test-notice">Simulated FreeTaxUSA form for Chrome extension testing &mdash; based on 2025 site structure</div>
+
+  <div class="content">
+    <div class="breadcrumb">Income &gt; W-2 Wages &gt; Enter W-2 Information</div>
+    <h1>Enter Your W-2 Information</h1>
+
+    <form id="taxForm" method="post">
+
+      <!-- W-2 Section -->
+      <div class="section-title">W-2 Wage and Tax Statement</div>
+
+      <div class="form-row">
+        <label for="w2_box1"><span class="box-ref">Box 1</span> &ndash; Wages, tips, other compensation</label>
+        <input type="text" id="w2_box1" name="w2_box1" class="currency-input" placeholder="0.00">
+      </div>
+      <div class="form-row">
+        <label for="w2_box2"><span class="box-ref">Box 2</span> &ndash; Federal income tax withheld</label>
+        <input type="text" id="w2_box2" name="w2_box2" class="currency-input" placeholder="0.00">
+      </div>
+      <div class="form-row">
+        <label for="w2_box3"><span class="box-ref">Box 3</span> &ndash; Social security wages</label>
+        <input type="text" id="w2_box3" name="w2_box3" class="currency-input" placeholder="0.00">
+      </div>
+      <div class="form-row">
+        <label for="w2_box4"><span class="box-ref">Box 4</span> &ndash; Social security tax withheld</label>
+        <input type="text" id="w2_box4" name="w2_box4" class="currency-input" placeholder="0.00">
+      </div>
+      <div class="form-row">
+        <label for="w2_box5"><span class="box-ref">Box 5</span> &ndash; Medicare wages and tips</label>
+        <input type="text" id="w2_box5" name="w2_box5" class="currency-input" placeholder="0.00">
+      </div>
+      <div class="form-row">
+        <label for="w2_box6"><span class="box-ref">Box 6</span> &ndash; Medicare tax withheld</label>
+        <input type="text" id="w2_box6" name="w2_box6" class="currency-input" placeholder="0.00">
+      </div>
+
+      <!-- Schedule E Section -->
+      <div class="schedule-separator">
+        <div class="section-title">Schedule E &ndash; Supplemental Income (Rental Property)</div>
+      </div>
+
+      <div class="form-row">
+        <label for="sched_e_line3"><span class="box-ref">Line 3</span> &ndash; Rents received</label>
+        <input type="text" id="sched_e_line3" name="sched_e_line3" class="currency-input" placeholder="0.00">
+      </div>
+      <div class="form-row">
+        <label for="sched_e_line5"><span class="box-ref">Line 5</span> &ndash; Advertising</label>
+        <input type="text" id="sched_e_line5" name="sched_e_line5" class="currency-input" placeholder="0.00">
+      </div>
+      <div class="form-row">
+        <label for="sched_e_line6"><span class="box-ref">Line 6</span> &ndash; Auto and travel</label>
+        <input type="text" id="sched_e_line6" name="sched_e_line6" class="currency-input" placeholder="0.00">
+      </div>
+      <div class="form-row">
+        <label for="sched_e_line7"><span class="box-ref">Line 7</span> &ndash; Cleaning and maintenance</label>
+        <input type="text" id="sched_e_line7" name="sched_e_line7" class="currency-input" placeholder="0.00">
+      </div>
+      <div class="form-row">
+        <label for="sched_e_line8"><span class="box-ref">Line 8</span> &ndash; Commissions</label>
+        <input type="text" id="sched_e_line8" name="sched_e_line8" class="currency-input" placeholder="0.00">
+      </div>
+      <div class="form-row">
+        <label for="sched_e_line9"><span class="box-ref">Line 9</span> &ndash; Insurance</label>
+        <input type="text" id="sched_e_line9" name="sched_e_line9" class="currency-input" placeholder="0.00">
+      </div>
+      <div class="form-row">
+        <label for="sched_e_line10"><span class="box-ref">Line 10</span> &ndash; Legal and other professional fees</label>
+        <input type="text" id="sched_e_line10" name="sched_e_line10" class="currency-input" placeholder="0.00">
+      </div>
+      <div class="form-row">
+        <label for="sched_e_line12"><span class="box-ref">Line 12</span> &ndash; Mortgage interest paid</label>
+        <input type="text" id="sched_e_line12" name="sched_e_line12" class="currency-input" placeholder="0.00">
+      </div>
+      <div class="form-row">
+        <label for="sched_e_line14"><span class="box-ref">Line 14</span> &ndash; Repairs</label>
+        <input type="text" id="sched_e_line14" name="sched_e_line14" class="currency-input" placeholder="0.00">
+      </div>
+      <div class="form-row">
+        <label for="sched_e_line16"><span class="box-ref">Line 16</span> &ndash; Taxes</label>
+        <input type="text" id="sched_e_line16" name="sched_e_line16" class="currency-input" placeholder="0.00">
+      </div>
+      <div class="form-row">
+        <label for="sched_e_line17"><span class="box-ref">Line 17</span> &ndash; Utilities</label>
+        <input type="text" id="sched_e_line17" name="sched_e_line17" class="currency-input" placeholder="0.00">
+      </div>
+      <div class="form-row">
+        <label for="sched_e_line18"><span class="box-ref">Line 18</span> &ndash; Depreciation expense or depletion</label>
+        <input type="text" id="sched_e_line18" name="sched_e_line18" class="currency-input" placeholder="0.00">
+      </div>
+      <div class="form-row">
+        <label for="sched_e_line19"><span class="box-ref">Line 19</span> &ndash; Other expenses</label>
+        <input type="text" id="sched_e_line19" name="sched_e_line19" class="currency-input" placeholder="0.00">
+      </div>
+
+      <!-- Schedule C Section -->
+      <div class="schedule-separator">
+        <div class="section-title">Schedule C &ndash; Profit or Loss From Business</div>
+      </div>
+
+      <div class="form-row">
+        <label for="sched_c_line1"><span class="box-ref">Line 1</span> &ndash; Gross receipts or sales</label>
+        <input type="text" id="sched_c_line1" name="sched_c_line1" class="currency-input" placeholder="0.00">
+      </div>
+      <div class="form-row">
+        <label for="sched_c_line9"><span class="box-ref">Line 9</span> &ndash; Car and truck expenses</label>
+        <input type="text" id="sched_c_line9" name="sched_c_line9" class="currency-input" placeholder="0.00">
+      </div>
+      <div class="form-row">
+        <label for="sched_c_line11"><span class="box-ref">Line 11</span> &ndash; Contract labor</label>
+        <input type="text" id="sched_c_line11" name="sched_c_line11" class="currency-input" placeholder="0.00">
+      </div>
+      <div class="form-row">
+        <label for="sched_c_line18"><span class="box-ref">Line 18</span> &ndash; Office expense</label>
+        <input type="text" id="sched_c_line18" name="sched_c_line18" class="currency-input" placeholder="0.00">
+      </div>
+      <div class="form-row">
+        <label for="sched_c_line22"><span class="box-ref">Line 22</span> &ndash; Supplies</label>
+        <input type="text" id="sched_c_line22" name="sched_c_line22" class="currency-input" placeholder="0.00">
+      </div>
+      <div class="form-row">
+        <label for="sched_c_line24a"><span class="box-ref">Line 24a</span> &ndash; Travel expenses</label>
+        <input type="text" id="sched_c_line24a" name="sched_c_line24a" class="currency-input" placeholder="0.00">
+      </div>
+      <div class="form-row">
+        <label for="sched_c_line24b"><span class="box-ref">Line 24b</span> &ndash; Meals (deductible portion)</label>
+        <input type="text" id="sched_c_line24b" name="sched_c_line24b" class="currency-input" placeholder="0.00">
+      </div>
+      <div class="form-row">
+        <label for="sched_c_line28"><span class="box-ref">Line 28</span> &ndash; Total expenses</label>
+        <input type="text" id="sched_c_line28" name="sched_c_line28" class="currency-input calculated" placeholder="0.00" readonly>
+      </div>
+      <div class="form-row">
+        <label for="sched_c_line29"><span class="box-ref">Line 29</span> &ndash; Net profit (or loss)</label>
+        <input type="text" id="sched_c_line29" name="sched_c_line29" class="currency-input calculated" placeholder="0.00" readonly>
+      </div>
+      <div class="form-row">
+        <label for="sched_c_line30"><span class="box-ref">Line 30</span> &ndash; Business use of home</label>
+        <input type="text" id="sched_c_line30" name="sched_c_line30" class="currency-input" placeholder="0.00">
+      </div>
+
+      <div class="btn-row">
+        <button type="button" class="btn-primary">Save &amp; Continue</button>
+        <button type="button" class="btn-secondary">Back</button>
+      </div>
+    </form>
+
+    <div id="fill-log"></div>
+  </div>
+
+  <script>
+    // Listen for Chrome extension autoFill messages and log results
+    if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage) {
+      chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
+        if (message.action === "autoFill") {
+          logFill("Received autoFill message", message);
+        }
+      });
+    }
+
+    // Also listen for manual testing via window.postMessage
+    window.addEventListener("message", function(event) {
+      if (event.data && event.data.action === "autoFill") {
+        logFill("Received autoFill via postMessage", event.data);
+      }
+    });
+
+    function logFill(label, data) {
+      var log = document.getElementById("fill-log");
+      log.style.display = "block";
+      var ts = new Date().toLocaleTimeString();
+      log.textContent += "[" + ts + "] " + label + "\n";
+      if (data.fields) {
+        log.textContent += "  Fields: " + data.fields.length + "\n";
+        data.fields.forEach(function(f) {
+          log.textContent += "    " + f.line + " (" + f.field_name + "): " + f.value + "\n";
+        });
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+{
+  "description": "Attorney invoice for lease review",
+  "expected_transactions": [
+    {
+      "vendor": "Smith & Associates Law Firm",
+      "amount": 500.0,
+      "transaction_date": "2025-02-15",
+      "transaction_type": "expense",
+      "category": "legal_professional",
+      "tax_relevant": true
+    }
+  ],
+  "expected_count": 1
+}

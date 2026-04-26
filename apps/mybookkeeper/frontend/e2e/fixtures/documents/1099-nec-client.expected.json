@@ -1,0 +1,14 @@
+{
+  "description": "1099-NEC from client for freelance work",
+  "document_type": "tax_form",
+  "expected_transactions": [],
+  "expected_count": 0,
+  "expected_metadata": {
+    "form_type": "1099-NEC",
+    "payer": "Acme Corp",
+    "recipient": "Test User",
+    "amount": 45000.0,
+    "tax_year": 2024
+  },
+  "note": "Tax forms should extract metadata, not create expense transactions"
+}

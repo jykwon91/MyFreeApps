@@ -1,0 +1,14 @@
+{
+  "description": "Turnover cleaning between guests",
+  "expected_transactions": [
+    {
+      "vendor": "Sparkle Clean Services",
+      "amount": 125.0,
+      "transaction_date": "2025-03-10",
+      "transaction_type": "expense",
+      "category": "cleaning_expense",
+      "tax_relevant": true
+    }
+  ],
+  "expected_count": 1
+}

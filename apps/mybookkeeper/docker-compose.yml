@@ -1,0 +1,98 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: mybookkeeper
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: mybookkeeper
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mybookkeeper"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  migrate:
+    build:
+      context: .
+      dockerfile: docker/backend.Dockerfile
+    command: ["alembic", "upgrade", "head"]
+    env_file: backend/.env.docker
+    environment:
+      DATABASE_URL: postgresql+asyncpg://mybookkeeper:${DB_PASSWORD}@postgres/mybookkeeper
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/backend.Dockerfile
+    restart: always
+    env_file: backend/.env.docker
+    environment:
+      DATABASE_URL: postgresql+asyncpg://mybookkeeper:${DB_PASSWORD}@postgres/mybookkeeper
+      RUN_UPLOAD_WORKER: "false"
+      FRONTEND_DIST_DIR: /srv/frontend
+    volumes:
+      - frontend_dist:/srv/frontend
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  upload-processor:
+    build:
+      context: .
+      dockerfile: docker/backend.Dockerfile
+    restart: always
+    command: ["python", "-m", "app.workers.upload_processor_worker"]
+    env_file: backend/.env.docker
+    environment:
+      DATABASE_URL: postgresql+asyncpg://mybookkeeper:${DB_PASSWORD}@postgres/mybookkeeper
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  scheduler:
+    build:
+      context: .
+      dockerfile: docker/backend.Dockerfile
+    restart: always
+    command: ["python", "-m", "app.workers.scheduler_worker"]
+    env_file: backend/.env.docker
+    environment:
+      DATABASE_URL: postgresql+asyncpg://mybookkeeper:${DB_PASSWORD}@postgres/mybookkeeper
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  caddy:
+    image: caddy:2-alpine
+    restart: always
+    ports:
+      # Bind only to localhost — host Caddy is the public front door and proxies here.
+      # Port 80/443 on the host are owned by host Caddy; this container is HTTP-only on 8094.
+      - "127.0.0.1:8094:80"
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+    volumes:
+      - ./docker/Caddyfile.docker:/etc/caddy/Caddyfile
+      - frontend_dist:/srv/frontend:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  pg_data:
+  frontend_dist:
+  caddy_data:
+  caddy_config:
