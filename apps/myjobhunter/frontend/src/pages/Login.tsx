@@ -43,7 +43,7 @@ export default function Login() {
       </div>
 
       {/* Login card */}
-      <div className="w-full max-w-sm bg-background border rounded-xl p-8 shadow-sm">
+      <div className="w-full max-w-sm bg-background border rounded-xl p-8 shadow-xs">
         <LoginForm
           onSignIn={onSignIn}
           onRegister={onRegister}

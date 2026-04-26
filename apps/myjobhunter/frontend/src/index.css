@@ -1,6 +1,8 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@source "../../../../packages/shared-frontend/src";
+
+@custom-variant dark (&:where(.dark, .dark *));
 
 @layer base {
   :root {
