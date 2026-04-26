@@ -35,7 +35,7 @@ export default function ConfirmDialog({
           <Dialog.Description className="text-sm text-muted-foreground mt-2">
             {description}
           </Dialog.Description>
-          {children}
+          <>{children}</>
           <div className="flex justify-end gap-2 mt-6">
             <Button variant="ghost" size="sm" onClick={onCancel}>{cancelLabel}</Button>
             <button
