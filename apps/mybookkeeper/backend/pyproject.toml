@@ -5,7 +5,7 @@ description = "MyBookkeeper FastAPI backend — AI-powered invoice extraction an
 requires-python = "==3.12.*"
 dependencies = [
     "fastapi>=0.118,<0.140",
-    "starlette>=0.47,<1.0",
+    "starlette>=0.47,<2.0",
     "uvicorn[standard]==0.30.0",
     "sqlalchemy==2.0.36",
     "alembic==1.13.3",

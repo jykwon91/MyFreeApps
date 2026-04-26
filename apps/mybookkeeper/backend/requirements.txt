@@ -247,7 +247,7 @@ sqlalchemy==2.0.36
     #   alembic
     #   fastapi-users-db-sqlalchemy
     #   mybookkeeper-backend
-starlette==0.52.1
+starlette==1.0.0
     # via
     #   fastapi
     #   mybookkeeper-backend
