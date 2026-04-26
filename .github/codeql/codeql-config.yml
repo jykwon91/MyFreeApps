@@ -21,3 +21,25 @@ paths-ignore:
   - "**/build/**"
   - "**/node_modules/**"
   - "**/.venv/**"
+
+# Filter out specific intentional findings that cannot be expressed via paths-ignore
+# (because the surrounding file IS production code we want to scan, just not this rule).
+query-filters:
+  # py/sql-injection in apps/mybookkeeper/backend/app/repositories/db_admin_repo.py
+  # is INTENTIONAL — admin-only ad-hoc SELECT runner. User-provided SQL is the
+  # design contract. Safety controls: SELECT-only first-token check, forbidden-keyword
+  # regex, READ ONLY transaction wrapping, Role.ADMIN at the route. Static analysis
+  # cannot see runtime guards.
+  - exclude:
+      id: py/sql-injection
+      paths:
+        - apps/mybookkeeper/backend/app/repositories/db_admin_repo.py
+
+  # py/weak-sensitive-data-hashing in apps/mybookkeeper/backend/app/services/user/hibp_service.py
+  # is INTENTIONAL — SHA1 is the wire-format mandated by HIBP's k-anonymity range API
+  # protocol. Plaintext password is hashed locally for protocol compliance and never
+  # leaves the server (only the 5-char hash prefix does). Password storage uses argon2.
+  - exclude:
+      id: py/weak-sensitive-data-hashing
+      paths:
+        - apps/mybookkeeper/backend/app/services/user/hibp_service.py
