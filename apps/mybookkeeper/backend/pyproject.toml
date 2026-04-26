@@ -24,7 +24,7 @@ dependencies = [
     "cryptography==46.0.7",
     "python-multipart==0.0.26",
     "passlib[bcrypt]==1.7.4",
-    "aiofiles==24.1.0",
+    "aiofiles==25.1.0",
     "pypdf>=5.6",
     "mammoth==1.11.0",
     "openpyxl==3.1.5",
