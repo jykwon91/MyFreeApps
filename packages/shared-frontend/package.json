@@ -25,7 +25,7 @@
     "@tanstack/react-table": "^8.20.0",
     "axios": "^1.7.7",
     "clsx": "^2.1.1",
-    "date-fns": "^3.6.0",
+    "date-fns": "^4.1.0",
     "lucide-react": "^0.447.0",
     "tailwind-merge": "^2.5.2",
     "vaul": "^1.1.2"
