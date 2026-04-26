@@ -4,7 +4,7 @@ from typing import Optional
 from fastapi import Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.rate_limit import _get_client_ip
+from app.core.request_utils import get_client_ip
 from app.models.system.auth_event import AuthEvent
 
 
@@ -25,7 +25,7 @@ async def log_auth_event(
     ip: Optional[str] = None
     ua: Optional[str] = None
     if request is not None:
-        ip = _get_client_ip(request)
+        ip = get_client_ip(request)
         raw_ua = request.headers.get("user-agent")
         if raw_ua:
             ua = raw_ua[:500]

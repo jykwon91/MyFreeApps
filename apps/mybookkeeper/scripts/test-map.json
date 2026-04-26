@@ -59,7 +59,9 @@
         "frontend/src/shared/types/security/",
         "frontend/src/shared/utils/errorMessage.ts",
         "backend/app/core/auth.py",
+        "backend/app/core/auth_messages.py",
         "backend/app/core/rate_limit.py",
+        "backend/app/core/request_utils.py",
         "backend/app/models/user/user.py",
         "backend/app/repositories/user/user_repo.py",
         "backend/app/repositories/documents/document_repo.py",
@@ -76,6 +78,7 @@
         "test_account_deletion.py",
         "test_data_export.py",
         "test_email_verification.py",
+        "test_login_ip_rate_limit.py",
         "test_password_validation.py",
         "test_totp_service.py",
         "test_totp_routes.py",
@@ -453,14 +456,17 @@
     },
     "core_utils": {
       "source_paths": [
+        "backend/app/core/auth_messages.py",
         "backend/app/core/pii.py",
         "backend/app/core/rate_limit.py",
+        "backend/app/core/request_utils.py",
         "backend/app/core/storage.py",
         "backend/app/core/tags.py",
         "backend/app/core/tax_form_fields.py",
         "backend/app/core/vendors.py"
       ],
       "backend_tests": [
+        "test_login_ip_rate_limit.py",
         "test_pii.py",
         "test_rate_limit.py",
         "test_storage.py",
