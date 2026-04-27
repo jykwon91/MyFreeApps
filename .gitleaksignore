@@ -1,0 +1,14 @@
+# Gitleaks fingerprints to ignore.
+#
+# Format: <commit-sha>:<file>:<rule-id>:<line>
+#
+# Why: PR CI for new test gates initially landed CI dummy env values
+# (ENCRYPTION_KEY, etc.) with entropy >3.8 that tripped the
+# generic-api-key rule even though they were obvious placeholders. The
+# follow-up commit b21b592 swapped them for low-entropy "change-me-*" /
+# "placeholder" strings that hit the existing .gitleaks.toml allowlist.
+# These two fingerprints reference the original (now-superseded)
+# commit and exist only so gitleaks doesn't keep flagging the diff
+# when scanning the full PR history.
+3aaf8937165dc8b7d6f65c2543f83e1e0478089a:.github/workflows/ci-mybookkeeper.yml:generic-api-key:92
+3aaf8937165dc8b7d6f65c2543f83e1e0478089a:.github/workflows/ci-myjobhunter.yml:generic-api-key:74
