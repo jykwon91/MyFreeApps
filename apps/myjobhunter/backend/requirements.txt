@@ -1,3 +1,6 @@
+# Local shared-backend package — path is relative to this requirements.txt file.
+# Pip resolves this to <repo>/packages/shared-backend when running from any directory.
+../../../packages/shared-backend
 fastapi==0.136.1
 uvicorn[standard]==0.46.0
 sqlalchemy==2.0.49
