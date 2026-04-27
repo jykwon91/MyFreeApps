@@ -26,10 +26,12 @@ class Settings(BaseSettings):
     demo_max_uploads_per_day: int = 5
 
     minio_endpoint: str = ""
+    minio_public_endpoint: str = ""
     minio_access_key: str = ""
     minio_secret_key: str = ""
-    minio_bucket: str = "mybookkeeper"
+    minio_bucket: str = "mybookkeeper-files"
     minio_secure: bool = False
+    presigned_url_ttl_seconds: int = 3600
 
     plaid_client_id: str = ""
     plaid_secret: str = ""

@@ -11,5 +11,6 @@ class ListingPhotoResponse(BaseModel):
     caption: str | None = None
     display_order: int
     created_at: datetime
+    presigned_url: str | None = None
 
     model_config = ConfigDict(from_attributes=True)

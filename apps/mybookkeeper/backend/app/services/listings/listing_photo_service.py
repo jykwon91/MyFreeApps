@@ -18,6 +18,7 @@ from app.core.storage import get_storage
 from app.db.session import unit_of_work
 from app.repositories import listing_photo_repo, listing_repo
 from app.schemas.listings.listing_photo_response import ListingPhotoResponse
+from app.services.listings.photo_response_builder import attach_presigned_urls
 from app.services.storage.image_processor import ImageRejected, process_image
 
 logger = logging.getLogger(__name__)
@@ -111,7 +112,8 @@ async def upload_photos(
                 raise
             created_rows.append(photo)
 
-        return [ListingPhotoResponse.model_validate(p) for p in created_rows]
+        responses = [ListingPhotoResponse.model_validate(p) for p in created_rows]
+        return attach_presigned_urls(responses)
 
 
 async def update_photo(
@@ -132,7 +134,8 @@ async def update_photo(
         photo = await listing_photo_repo.update(db, photo_id, listing.id, fields)
         if photo is None:
             raise ListingNotFoundError(f"Photo {photo_id} not found")
-        return ListingPhotoResponse.model_validate(photo)
+        response = ListingPhotoResponse.model_validate(photo)
+        return attach_presigned_urls([response])[0]
 
 
 async def delete_photo(

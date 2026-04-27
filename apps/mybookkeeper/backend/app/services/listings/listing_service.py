@@ -21,18 +21,22 @@ from app.schemas.listings.listing_photo_response import ListingPhotoResponse
 from app.schemas.listings.listing_response import ListingResponse
 from app.schemas.listings.listing_summary import ListingSummary
 from app.schemas.listings.listing_update_request import ListingUpdateRequest
+from app.services.listings.photo_response_builder import attach_presigned_urls
 
 
 def _to_listing_response(listing, photos=(), external_ids=()) -> ListingResponse:
     """Convert an ORM Listing + its related rows to a response model.
 
     Centralising this construction prevents drift between get + create + update
-    response shapes.
+    response shapes. Presigned URLs for photos are minted here (single seam)
+    so callers never see a `ListingPhotoResponse` without `presigned_url`
+    attempted.
     """
     base = ListingResponse.model_validate(listing)
+    photo_responses = [ListingPhotoResponse.model_validate(p) for p in photos]
     return base.model_copy(update={
         "amenities": list(listing.amenities or []),
-        "photos": [ListingPhotoResponse.model_validate(p) for p in photos],
+        "photos": attach_presigned_urls(photo_responses),
         "external_ids": [ListingExternalIdResponse.model_validate(x) for x in external_ids],
     })
 

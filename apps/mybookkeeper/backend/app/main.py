@@ -47,6 +47,7 @@ from app.core.audit import current_user_id, register_audit_listeners
 from app.core.rate_limit import check_account_not_locked, check_login_rate_limit, check_password_reset_rate_limit, check_register_rate_limit, require_turnstile
 from app.db.session import AsyncSessionLocal
 from app.schemas.user.user import UserRead, UserCreate, UserUpdate
+from app.services.storage.bucket_initializer import ensure_bucket
 from app.workers.upload_processor_worker import main as worker_main
 from app.api import account, activities, analytics, classification_rules, costs, db_admin, demo, documents, frontend_errors, inquiries, listings, properties, reply_templates, tenants, summary, integrations, audit, prompts, admin, organizations, transactions, reservations, reconciliation, tax_completeness, tax_documents, tax_profile, tax_returns, tax_year_profiles, plaid, webhooks, exports, imports, health_dashboard, totp, taxpayer_profiles
 
@@ -61,6 +62,7 @@ logger = logging.getLogger("app")
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     register_audit_listeners()
+    ensure_bucket()
     worker_task: asyncio.Task[None] | None = None
     if settings.run_upload_worker:
         async def _run_worker() -> None:

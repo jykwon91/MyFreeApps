@@ -1,24 +1,18 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.core.config import settings
 
-# Pool kwargs are valid for QueuePool (Postgres asyncpg) but rejected by sqlite's
-# default pool. The test suite uses an in-memory sqlite URL, so apply pool kwargs
-# only when the configured database is not sqlite.
-engine_kwargs: dict[str, Any] = {"echo": False}
-if not settings.database_url.startswith("sqlite"):
-    engine_kwargs.update(
-        pool_size=10,
-        max_overflow=20,
-        pool_timeout=30,
-        pool_recycle=1800,
-    )
-
-engine = create_async_engine(settings.database_url, **engine_kwargs)
+engine = create_async_engine(
+    settings.database_url,
+    echo=False,
+    pool_size=10,
+    max_overflow=20,
+    pool_timeout=30,
+    pool_recycle=1800,
+)
 AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False)
 
 
