@@ -7,33 +7,50 @@
     }
 }
 
-# HTTP-only on :80 — TLS is terminated by host Caddy before traffic reaches this container.
+# HTTP-only on :80 — TLS is terminated by host Caddy before traffic reaches
+# this container. The :80 listener matches both the app subdomain and the
+# new storage subdomain by Host header (the storage matcher comes first so
+# the security header block isn't applied to MinIO responses, which break
+# image rendering when CSP is too tight).
+#
+# Host Caddy must reverse-proxy BOTH the app domain and storage.<DOMAIN>
+# to this container with the original Host header preserved. See
+# deploy/MINIO_SETUP.md for the host-side config.
 :80 {
-    header {
-        defer
-        Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
-        X-Frame-Options "DENY"
-        X-Content-Type-Options "nosniff"
-        Referrer-Policy "strict-origin-when-cross-origin"
-        Permissions-Policy "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=(), interest-cohort=(), browsing-topics=()"
-        Content-Security-Policy "default-src 'self'; script-src 'self' https://cdn.plaid.com https://us.i.posthog.com https://challenges.cloudflare.com https://*.sentry.io; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self'; connect-src 'self' https://*.plaid.com https://us.i.posthog.com https://*.posthog.com https://challenges.cloudflare.com https://*.sentry.io; frame-src 'self' https://cdn.plaid.com https://us.posthog.com https://challenges.cloudflare.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests"
-        -Server
+    # Storage subdomain — fronts MinIO for browser GETs of presigned URLs.
+    @storage host storage.{$DOMAIN}
+    handle @storage {
+        reverse_proxy minio:9000
     }
 
-    # Block API docs in production
-    @docs path /api/docs* /api/openapi.json /api/redoc*
-    respond @docs 404
-
-    # API proxy (strip /api prefix)
-    handle /api/* {
-        uri strip_prefix /api
-        reverse_proxy api:8000
-    }
-
-    # SPA fallback for frontend
+    # App subdomain — everything else.
     handle {
-        root * /srv/frontend
-        try_files {path} /index.html
-        file_server
+        header {
+            defer
+            Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+            X-Frame-Options "DENY"
+            X-Content-Type-Options "nosniff"
+            Referrer-Policy "strict-origin-when-cross-origin"
+            Permissions-Policy "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=(), interest-cohort=(), browsing-topics=()"
+            Content-Security-Policy "default-src 'self'; script-src 'self' https://cdn.plaid.com https://us.i.posthog.com https://challenges.cloudflare.com https://*.sentry.io; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self'; connect-src 'self' https://*.plaid.com https://us.i.posthog.com https://*.posthog.com https://challenges.cloudflare.com https://*.sentry.io; frame-src 'self' https://cdn.plaid.com https://us.posthog.com https://challenges.cloudflare.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests"
+            -Server
+        }
+
+        # Block API docs in production
+        @docs path /api/docs* /api/openapi.json /api/redoc*
+        respond @docs 404
+
+        # API proxy (strip /api prefix)
+        handle /api/* {
+            uri strip_prefix /api
+            reverse_proxy api:8000
+        }
+
+        # SPA fallback for frontend
+        handle {
+            root * /srv/frontend
+            try_files {path} /index.html
+            file_server
+        }
     }
 }

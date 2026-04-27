@@ -5,7 +5,9 @@ aiofiles==25.1.0
 alembic==1.18.4
     # via mybookkeeper-backend
 annotated-doc==0.0.4
-    # via fastapi
+    # via
+    #   fastapi
+    #   typer
 annotated-types==0.7.0
     # via pydantic
 anthropic==0.97.0
@@ -44,13 +46,16 @@ charset-normalizer==3.4.7
     #   reportlab
     #   requests
 click==8.3.3
-    # via uvicorn
+    # via
+    #   typer
+    #   uvicorn
 cobble==0.1.4
     # via mammoth
 colorama==0.4.6 ; sys_platform == 'win32'
     # via
     #   click
     #   qrcode
+    #   tqdm
     #   uvicorn
 cryptography==47.0.0
     # via
@@ -61,8 +66,6 @@ distro==1.9.0
     # via anthropic
 dnspython==2.8.0
     # via email-validator
-docstring-parser==0.18.0
-    # via anthropic
 dramatiq==1.17.0
     # via mybookkeeper-backend
 email-validator==2.3.0
@@ -84,6 +87,10 @@ fastapi-users-db-sqlalchemy==7.0.0
     # via
     #   fastapi-users
     #   mybookkeeper-backend
+filelock==3.29.0
+    # via huggingface-hub
+fsspec==2026.3.0
+    # via huggingface-hub
 google-api-core==2.30.3
     # via google-api-python-client
 google-api-python-client==2.194.0
@@ -108,6 +115,8 @@ h11==0.16.0
     # via
     #   httpcore
     #   uvicorn
+hf-xet==1.4.3 ; platform_machine == 'AMD64' or platform_machine == 'aarch64' or platform_machine == 'amd64' or platform_machine == 'arm64' or platform_machine == 'x86_64'
+    # via huggingface-hub
 httpcore==1.0.9
     # via httpx
 httplib2==0.31.2
@@ -119,7 +128,10 @@ httptools==0.7.1
 httpx==0.28.1
     # via
     #   anthropic
+    #   huggingface-hub
     #   mybookkeeper-backend
+huggingface-hub==1.12.0
+    # via tokenizers
 idna==3.13
     # via
     #   anyio
@@ -134,14 +146,20 @@ mako==1.3.11
     # via alembic
 mammoth==1.12.0
     # via mybookkeeper-backend
+markdown-it-py==4.0.0
+    # via rich
 markupsafe==3.0.3
     # via mako
+mdurl==0.1.2
+    # via markdown-it-py
 minio==7.2.20
     # via mybookkeeper-backend
 oauthlib==3.3.1
     # via requests-oauthlib
 openpyxl==3.1.5
     # via mybookkeeper-backend
+packaging==26.2
+    # via huggingface-hub
 passlib==1.7.4
     # via mybookkeeper-backend
 pillow==12.2.0
@@ -179,6 +197,8 @@ pydantic-core==2.46.3
     # via pydantic
 pydantic-settings==2.14.0
     # via mybookkeeper-backend
+pygments==2.20.0
+    # via rich
 pyjwt==2.12.1
     # via
     #   fastapi-users
@@ -199,7 +219,9 @@ python-multipart==0.0.26
     #   fastapi-users
     #   mybookkeeper-backend
 pyyaml==6.0.3
-    # via uvicorn
+    # via
+    #   huggingface-hub
+    #   uvicorn
 qrcode==8.2
     # via mybookkeeper-backend
 reportlab==4.4.10
@@ -210,10 +232,16 @@ requests==2.33.1
     #   requests-oauthlib
 requests-oauthlib==2.0.0
     # via google-auth-oauthlib
+rich==15.0.0
+    # via typer
 sentry-sdk==2.58.0
     # via mybookkeeper-backend
+shellingham==1.5.4
+    # via typer
 sniffio==1.3.1
-    # via anthropic
+    # via
+    #   anthropic
+    #   httpx
 sqlalchemy==2.0.49
     # via
     #   alembic
@@ -223,12 +251,19 @@ starlette==1.0.0
     # via
     #   fastapi
     #   mybookkeeper-backend
+tokenizers==0.22.2
+    # via anthropic
+tqdm==4.67.3
+    # via huggingface-hub
+typer==0.25.0
+    # via huggingface-hub
 typing-extensions==4.15.0
     # via
     #   alembic
     #   anthropic
     #   anyio
     #   fastapi
+    #   huggingface-hub
     #   minio
     #   pydantic
     #   pydantic-core
@@ -236,10 +271,9 @@ typing-extensions==4.15.0
     #   starlette
     #   typing-inspection
 typing-inspection==0.4.2
-    # via
-    #   fastapi
-    #   pydantic
-    #   pydantic-settings
+    # via fastapi
+tzdata==2026.2
+    # via pydantic
 uritemplate==4.2.0
     # via google-api-python-client
 urllib3==2.6.3

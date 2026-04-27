@@ -5,4 +5,8 @@ export interface ListingPhoto {
   caption: string | null;
   display_order: number;
   created_at: string;
+  // Signed URL valid for ~1 hour, minted server-side per request. Null when
+  // storage is unavailable, undefined for legacy callers — UI must render a
+  // placeholder in either case.
+  presigned_url?: string | null;
 }

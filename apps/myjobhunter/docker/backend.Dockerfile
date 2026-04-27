@@ -10,13 +10,11 @@ COPY apps/myjobhunter/frontend ./apps/myjobhunter/frontend
 RUN npm run build --workspace=apps/myjobhunter/frontend
 
 # Stage 2: Install Python dependencies
-# Preserve the repo path layout so the relative path in requirements.txt
-# (../../../packages/shared-backend) resolves correctly under /repo.
 FROM python:3.12-slim AS backend-deps
-WORKDIR /repo
-COPY packages/shared-backend/ /repo/packages/shared-backend/
-COPY apps/myjobhunter/backend/requirements.txt /repo/apps/myjobhunter/backend/requirements.txt
-RUN pip install --no-cache-dir --prefix=/install -r /repo/apps/myjobhunter/backend/requirements.txt
+WORKDIR /deps
+COPY packages/shared-backend/ /deps/shared-backend/
+COPY apps/myjobhunter/backend/requirements.txt ./
+RUN pip install --no-cache-dir --prefix=/install /deps/shared-backend/ -r requirements.txt
 
 # Stage 3: Runtime
 FROM python:3.12-slim AS runtime

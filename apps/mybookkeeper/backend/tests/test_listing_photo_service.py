@@ -25,12 +25,28 @@ from app.services.listings import listing_photo_service
 from app.services.storage.image_processor import ImageRejected
 
 
+@pytest.fixture(autouse=True)
+def _patch_builder_storage_to_none(monkeypatch):
+    """Default the photo_response_builder's storage to None so the existing
+    tests (which patch only `listing_photo_service.get_storage`) keep
+    working — `presigned_url` simply comes back as None on the responses,
+    which the assertions don't inspect.
+
+    Tests that want a real storage client mocked into the builder should
+    `monkeypatch.setattr(photo_response_builder, "get_storage", ...)`
+    themselves to override this default.
+    """
+    from app.services.listings import photo_response_builder
+    monkeypatch.setattr(photo_response_builder, "get_storage", lambda: None)
+
+
 class _FakeStorage:
     """In-memory stand-in for `core.storage.StorageClient`."""
 
     def __init__(self) -> None:
         self.objects: dict[str, bytes] = {}
         self.deleted: list[str] = []
+        self.bucket = "test-bucket"
 
     def upload_file(self, key: str, content: bytes, content_type: str) -> str:
         self.objects[key] = content
@@ -42,6 +58,12 @@ class _FakeStorage:
 
     def generate_key(self, org_id: str, filename: str) -> str:
         return f"{org_id}/{uuid.uuid4().hex[:6]}/{filename}"
+
+    def generate_presigned_url(self, key: str, expires_in_seconds: int) -> str:
+        return f"https://signed.example/{key}?expires={expires_in_seconds}"
+
+    def ensure_bucket(self) -> None:
+        return None
 
 
 def _build_jpeg(width: int = 32, height: int = 32) -> bytes:

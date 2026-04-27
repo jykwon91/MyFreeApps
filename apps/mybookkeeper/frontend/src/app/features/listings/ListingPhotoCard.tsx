@@ -26,14 +26,25 @@ export default function ListingPhotoCard({ photo, onDelete }: Props) {
       data-testid="listing-photo-card"
       data-photo-id={photo.id}
     >
-      {/* Storage URL is opaque server-side; the placeholder square keeps layout
-          stable while a future PR wires up signed URLs / CDN delivery. */}
-      <div
-        className="aspect-square bg-muted flex items-center justify-center text-xs text-muted-foreground"
-        data-testid="listing-photo-thumbnail"
-      >
-        Photo {photo.display_order + 1}
-      </div>
+      {/* Photo served via per-request presigned URL minted by the backend.
+          Falls back to a labeled placeholder when storage is unavailable
+          (e.g., MinIO outage) so the page still renders the layout. */}
+      {photo.presigned_url ? (
+        <img
+          src={photo.presigned_url}
+          alt={photo.caption ?? `Photo ${photo.display_order + 1}`}
+          loading="lazy"
+          className="aspect-square w-full object-cover bg-muted"
+          data-testid="listing-photo-thumbnail"
+        />
+      ) : (
+        <div
+          className="aspect-square bg-muted flex items-center justify-center text-xs text-muted-foreground"
+          data-testid="listing-photo-thumbnail"
+        >
+          Photo {photo.display_order + 1}
+        </div>
+      )}
 
       <button
         {...attributes}

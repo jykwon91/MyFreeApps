@@ -219,6 +219,15 @@ All AI-facing UI (extraction feedback, status messages, error states) should fee
 - Vite dev server proxies `/api` → `localhost:8000` (see `vite.config.ts`)
 - Production uses Caddy reverse proxy (`deploy/Caddyfile`)
 
+**MinIO storage (self-hosted, see `deploy/MINIO_SETUP.md`):**
+- Default bucket: `mybookkeeper-files`. Object keys are partitioned by domain prefix: `listings/`, future `applicants/`, `expenses/`, etc. (`StorageClient.generate_key()` in `core/storage.py`).
+- The backend talks to MinIO over the docker-network endpoint (`minio:9000`) for puts/gets/deletes; presigned URLs are signed against the public endpoint (`https://storage.<domain>`) so the browser can fetch directly. The `_DualEndpointStorageClient` in `core/storage.py` keeps these separate.
+- Photo serving: `GET /api/listings/{id}` returns each `ListingPhotoResponse` with a `presigned_url` valid for 1 hour (TTL configurable via `PRESIGNED_URL_TTL_SECONDS`). The bucket is private — no anonymous reads.
+- All presigned-URL injection goes through `services/listings/photo_response_builder.py:attach_presigned_urls()`. Never mint a presigned URL elsewhere — keep the seam single.
+- SSE-S3 auto-encryption is enabled at the MinIO level (`MINIO_KMS_AUTO_ENCRYPTION=on`). Every object is encrypted at rest with a per-object data key, sealed by the master key in `MINIO_KMS_SECRET_KEY`. Verify with `mc admin kms key status local`.
+- Bucket initialization is idempotent — `services/storage/bucket_initializer.py` is wired into the FastAPI lifespan and creates the bucket on every backend start. Safe to call repeatedly.
+- Graceful degradation: if MinIO is unconfigured or unreachable, listing reads still succeed with `presigned_url=null`; photo upload returns 503. Listing reads must never crash on a storage outage.
+
 **Reply templates (PR 2.3):**
 - Per-user templates stored in `reply_templates` (UNIQUE on `(user_id, name)` so the idempotent default-template seed can re-run safely).
 - Variable allowlist: `$name`, `$listing`, `$dates`, `$start_date`, `$end_date`, `$employer`, `$host_name`, `$host_phone`. Defined in `backend/app/core/inquiry_enums.py:REPLY_TEMPLATE_VARIABLES`. Substitution is longest-key-first so `$host_name` never partially matches `$name`.

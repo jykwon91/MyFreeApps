@@ -43,11 +43,12 @@ describe("ListingPhotoManager", () => {
     renderManager([
       {
         id: "p1", listing_id: "listing-1", storage_key: "k1",
-        caption: null, display_order: 0, created_at: "2026-01-01T00:00:00Z",
+        caption: null, display_order: 0, created_at: "2026-01-01T00:00:00Z", presigned_url: null,
       },
       {
         id: "p2", listing_id: "listing-1", storage_key: "k2",
         caption: "front", display_order: 1, created_at: "2026-01-01T00:00:00Z",
+        presigned_url: null,
       },
     ]);
     expect(screen.getAllByTestId("listing-photo-card")).toHaveLength(2);
@@ -94,7 +95,7 @@ describe("ListingPhotoManager", () => {
     renderManager([
       {
         id: "p1", listing_id: "listing-1", storage_key: "k1",
-        caption: null, display_order: 0, created_at: "2026-01-01T00:00:00Z",
+        caption: null, display_order: 0, created_at: "2026-01-01T00:00:00Z", presigned_url: null,
       },
     ]);
     const user = userEvent.setup();
@@ -110,10 +111,11 @@ describe("ListingPhotoManager", () => {
       {
         id: "p2", listing_id: "listing-1", storage_key: "k2",
         caption: null, display_order: 1, created_at: "2026-01-01T00:00:00Z",
+        presigned_url: null,
       },
       {
         id: "p1", listing_id: "listing-1", storage_key: "k1",
-        caption: null, display_order: 0, created_at: "2026-01-01T00:00:00Z",
+        caption: null, display_order: 0, created_at: "2026-01-01T00:00:00Z", presigned_url: null,
       },
     ]);
     const cards = screen.getAllByTestId("listing-photo-card");
