@@ -65,6 +65,13 @@ services:
       DATABASE_URL: postgresql+asyncpg://mybookkeeper:${DB_PASSWORD}@postgres/mybookkeeper
       RUN_UPLOAD_WORKER: "false"
       FRONTEND_DIST_DIR: /srv/frontend
+      # MinIO connection — sourced from root .env (same place the minio service reads from)
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT}
+      MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-${MINIO_ROOT_USER}}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-${MINIO_ROOT_PASSWORD}}
+      MINIO_BUCKET: ${MINIO_BUCKET}
+      PRESIGNED_URL_TTL_SECONDS: ${PRESIGNED_URL_TTL_SECONDS}
     volumes:
       - frontend_dist:/srv/frontend
     depends_on:
