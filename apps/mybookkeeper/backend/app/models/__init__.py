@@ -9,6 +9,13 @@ from app.models.properties.property import Property, PropertyType
 from app.models.properties.activity_period import ActivityPeriod
 from app.models.properties.tenant import Tenant
 from app.models.properties.lease import Lease, LeaseStatus
+from app.models.listings.listing import Listing
+from app.models.listings.listing_photo import ListingPhoto
+from app.models.listings.listing_external_id import ListingExternalId
+from app.models.inquiries.inquiry import Inquiry
+from app.models.inquiries.inquiry_message import InquiryMessage
+from app.models.inquiries.inquiry_event import InquiryEvent
+from app.models.inquiries.reply_template import ReplyTemplate
 from app.models.documents.document import Document
 from app.models.extraction.extraction_prompt import ExtractionPrompt
 from app.models.extraction.extraction_types import ExtractionData, ExtractionResult
@@ -32,6 +39,7 @@ from app.models.integrations.integration import Integration
 from app.models.integrations.plaid_item import PlaidItem
 from app.models.integrations.plaid_account import PlaidAccount
 from app.models.email.processed_email import ProcessedEmail
+from app.models.email.email_filter_log import EmailFilterLog
 from app.models.system.usage_log import UsageLog
 from app.models.integrations.sync_log import SyncLog
 from app.models.email.email_queue import EmailQueue

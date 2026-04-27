@@ -36,6 +36,7 @@ async def upsert_gmail(
     access_token: str,
     refresh_token: str | None,
     token_expiry: datetime,
+    scopes: list[str] | None = None,
 ) -> Integration:
     result = await db.execute(
         select(Integration).where(
@@ -50,13 +51,22 @@ async def upsert_gmail(
         if refresh_token is not None:
             existing.refresh_token = refresh_token
         existing.token_expiry = token_expiry
+        if scopes is not None:
+            metadata = dict(existing.metadata_ or {})
+            metadata["scopes"] = scopes
+            existing.metadata_ = metadata
         return existing
+
+    metadata: dict[str, object] = {}
+    if scopes is not None:
+        metadata["scopes"] = scopes
 
     integration = Integration(
         organization_id=organization_id,
         user_id=user_id,
         provider="gmail",
         token_expiry=token_expiry,
+        metadata_=metadata or None,
     )
     integration.access_token = access_token
     integration.refresh_token = refresh_token

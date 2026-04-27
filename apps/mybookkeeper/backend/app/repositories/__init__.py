@@ -2,6 +2,7 @@ from app.repositories.extraction import extraction_repo
 from app.repositories.extraction import extraction_prompt_repo
 from app.repositories.documents import document_repo
 from app.repositories.email import email_queue_repo
+from app.repositories.email import email_filter_log_repo
 from app.repositories.email import processed_email_repo
 from app.repositories.email import sync_log_repo
 from app.repositories.transactions import transaction_repo
@@ -29,6 +30,13 @@ from app.repositories.organization import taxpayer_profile_repo
 from app.repositories.properties import property_repo
 from app.repositories.properties import tenant_repo
 from app.repositories.properties import lease_repo
+from app.repositories.listings import listing_repo
+from app.repositories.listings import listing_photo_repo
+from app.repositories.listings import listing_external_id_repo
+from app.repositories.inquiries import inquiry_repo
+from app.repositories.inquiries import inquiry_message_repo
+from app.repositories.inquiries import inquiry_event_repo
+from app.repositories.inquiries import reply_template_repo
 from app.repositories.user import user_repo
 from app.repositories.classification import classification_rule_repo
 from app.repositories.demo import demo_repo

@@ -16,7 +16,27 @@ from app.models.responses.sync_log_info import SyncLogInfo
 from app.repositories import email_queue_repo, integration_repo, sync_log_repo
 from app.services.system.auth_event_service import log_auth_event
 
-GMAIL_SCOPES: list[str] = ["https://www.googleapis.com/auth/gmail.readonly"]
+GMAIL_READONLY_SCOPE = "https://www.googleapis.com/auth/gmail.readonly"
+GMAIL_SEND_SCOPE = "https://www.googleapis.com/auth/gmail.send"
+
+# PR 2.3 expands the requested scope set to include ``gmail.send`` so the host
+# can reply to inquiries directly from MyBookkeeper. Existing integrations
+# created before PR 2.3 are missing the send scope — the inquiry reply flow
+# detects that via the ``scopes`` metadata persisted at consent time and
+# surfaces a reconnect banner. Read-only sync continues to work without the
+# new scope, so existing users aren't disrupted until they want to reply.
+GMAIL_SCOPES: list[str] = [GMAIL_READONLY_SCOPE, GMAIL_SEND_SCOPE]
+
+
+def integration_has_send_scope(integration) -> bool:  # type: ignore[no-untyped-def]
+    """Return True iff the integration's stored scopes include ``gmail.send``.
+
+    Pre-PR-2.3 integrations have no ``scopes`` key in metadata — treated as
+    "send not granted" so the host gets the reconnect prompt.
+    """
+    metadata = integration.metadata_ or {}
+    granted = metadata.get("scopes") or []
+    return GMAIL_SEND_SCOPE in granted
 
 
 def _get_flow() -> Flow:
@@ -79,6 +99,11 @@ async def handle_gmail_callback(code: str, state: str) -> None:
     creds = flow.credentials
     expiry = creds.expiry or datetime.now(timezone.utc) + timedelta(seconds=3600)
 
+    # Google returns the actually-granted scopes (incremental consent may
+    # mean fewer than what we requested). Persist them so we can detect
+    # missing send-scope without a Google round-trip.
+    granted_scopes = list(creds.scopes) if creds.scopes else []
+
     async with unit_of_work() as db:
         await integration_repo.upsert_gmail(
             db,
@@ -87,6 +112,7 @@ async def handle_gmail_callback(code: str, state: str) -> None:
             access_token=creds.token,
             refresh_token=creds.refresh_token,
             token_expiry=expiry,
+            scopes=granted_scopes,
         )
         await log_auth_event(
             db,
@@ -102,10 +128,17 @@ async def list_integrations(
 ) -> list[IntegrationInfo]:
     async with AsyncSessionLocal() as db:
         integrations = await integration_repo.list_by_org(db, ctx.organization_id)
-        return [
-            IntegrationInfo(provider=i.provider, last_synced_at=i.last_synced_at, connected=True)
-            for i in integrations
-        ]
+        result: list[IntegrationInfo] = []
+        for i in integrations:
+            info: IntegrationInfo = {
+                "provider": i.provider,
+                "last_synced_at": i.last_synced_at,
+                "connected": True,
+            }
+            if i.provider == "gmail":
+                info["has_send_scope"] = integration_has_send_scope(i)
+            result.append(info)
+        return result
 
 
 async def cancel_gmail_sync(ctx: RequestContext, sync_log_id: int | None = None) -> None:

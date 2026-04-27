@@ -1,0 +1,21 @@
+This is the mail system at host mail.example.com.
+
+I'm sorry to have to inform you that your message could not
+be delivered to one or more recipients. It's attached below.
+
+For further assistance, please send mail to postmaster.
+
+If you do so, please include this problem report. You can
+delete your own text from the attached returned message.
+
+                   The mail system
+
+<recipient@example.invalid>: host mx.example.invalid[10.0.0.1] said: 550 5.1.1
+    The email account that you tried to reach does not exist. (in reply to RCPT
+    TO command)
+
+Final-Recipient: rfc822; recipient@example.invalid
+Original-Recipient: rfc822;recipient@example.invalid
+Action: failed
+Status: 5.1.1
+Diagnostic-Code: smtp; 550-5.1.1 The email account that you tried to reach does not exist.

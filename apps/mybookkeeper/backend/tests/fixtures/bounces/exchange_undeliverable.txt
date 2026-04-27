@@ -1,0 +1,15 @@
+Delivery has failed to these recipients or groups:
+
+recipient@example.invalid
+The email address you entered couldn't be found. Please check the recipient's
+email address and try to resend the message. If the problem continues, please
+contact your email administrator.
+
+Diagnostic information for administrators:
+
+Generating server: mail.contoso.example
+recipient@example.invalid
+#550 5.1.1 RESOLVER.ADR.RecipNotFound; not found ##
+
+Original message headers:
+Received: from CY1PR01MB0000.namprd01.prod.outlook.example

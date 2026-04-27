@@ -6,6 +6,7 @@ import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.organization.organization_member import OrgRole
 from app.models.user.user import Role, User
 from app.repositories.user import user_repo
 
@@ -50,7 +51,21 @@ def _patch_session(db: AsyncSession):
     async def _fake_uow():
         yield db
 
-    with patch("app.api.test_utils.unit_of_work", _fake_uow):
+    @asynccontextmanager
+    async def _fake_session_local():
+        yield db
+
+    # Patch every entry point that opens a DB session so the routes — and the
+    # services they delegate to (inquiry_service.create_inquiry / .get_inquiry
+    # etc.) — see the test in-memory SQLite session.
+    with (
+        patch("app.api.test_utils.unit_of_work", _fake_uow),
+        patch("app.services.inquiries.inquiry_service.unit_of_work", _fake_uow),
+        patch(
+            "app.services.inquiries.inquiry_service.AsyncSessionLocal",
+            _fake_session_local,
+        ),
+    ):
         yield
 
 
@@ -127,5 +142,137 @@ class TestPromoteToAdmin:
             settings.allow_test_admin_promotion = True
             result = await promote_to_admin(user=admin_user)
             assert result.role == Role.ADMIN
+        finally:
+            settings.allow_test_admin_promotion = original
+
+
+class TestSeedInquiry:
+    """Coverage for the test-only POST /test/seed-inquiry endpoint."""
+
+    @pytest.mark.asyncio
+    async def test_endpoint_gated_by_env_var(
+        self, db: AsyncSession, regular_user: User,
+    ) -> None:
+        import datetime as _dt
+        from app.api.test_utils import seed_inquiry
+        from app.core.config import settings
+        from app.core.context import RequestContext
+        from app.schemas.inquiries.inquiry_create_request import InquiryCreateRequest
+        from fastapi import HTTPException
+
+        ctx = RequestContext(
+            user_id=regular_user.id,
+            organization_id=uuid.uuid4(),
+            org_role=OrgRole.OWNER,
+        )
+        payload = InquiryCreateRequest(
+            source="direct",
+            received_at=_dt.datetime.now(_dt.timezone.utc),
+        )
+        original = settings.allow_test_admin_promotion
+        try:
+            settings.allow_test_admin_promotion = False
+            with pytest.raises(HTTPException) as exc_info:
+                await seed_inquiry(payload=payload, ctx=ctx)
+            assert exc_info.value.status_code == 404
+        finally:
+            settings.allow_test_admin_promotion = original
+
+    @pytest.mark.asyncio
+    async def test_creates_an_inquiry_when_enabled(
+        self,
+        db: AsyncSession,
+        test_org,
+        test_user: User,
+    ) -> None:
+        import datetime as _dt
+        from app.api.test_utils import seed_inquiry
+        from app.core.config import settings
+        from app.core.context import RequestContext
+        from app.schemas.inquiries.inquiry_create_request import InquiryCreateRequest
+
+        ctx = RequestContext(
+            user_id=test_user.id,
+            organization_id=test_org.id,
+            org_role=OrgRole.OWNER,
+        )
+        payload = InquiryCreateRequest(
+            source="direct",
+            inquirer_name="Test Nurse",
+            received_at=_dt.datetime.now(_dt.timezone.utc),
+        )
+        original = settings.allow_test_admin_promotion
+        try:
+            settings.allow_test_admin_promotion = True
+            result = await seed_inquiry(payload=payload, ctx=ctx)
+            assert result.source == "direct"
+            assert result.inquirer_name == "Test Nurse"
+            assert result.stage == "new"
+        finally:
+            settings.allow_test_admin_promotion = original
+
+
+class TestDeleteInquiry:
+    """Coverage for the test-only DELETE /test/inquiries/{id} endpoint."""
+
+    @pytest.mark.asyncio
+    async def test_endpoint_gated_by_env_var(self) -> None:
+        from app.api.test_utils import delete_inquiry
+        from app.core.config import settings
+        from app.core.context import RequestContext
+        from fastapi import HTTPException
+
+        ctx = RequestContext(
+            user_id=uuid.uuid4(),
+            organization_id=uuid.uuid4(),
+            org_role=OrgRole.OWNER,
+        )
+        original = settings.allow_test_admin_promotion
+        try:
+            settings.allow_test_admin_promotion = False
+            with pytest.raises(HTTPException) as exc_info:
+                await delete_inquiry(inquiry_id=uuid.uuid4(), ctx=ctx)
+            assert exc_info.value.status_code == 404
+        finally:
+            settings.allow_test_admin_promotion = original
+
+    @pytest.mark.asyncio
+    async def test_hard_deletes_an_inquiry_when_enabled(
+        self,
+        db: AsyncSession,
+        test_org,
+        test_user: User,
+    ) -> None:
+        import datetime as _dt
+        from app.api.test_utils import delete_inquiry, seed_inquiry
+        from app.core.config import settings
+        from app.core.context import RequestContext
+        from app.repositories import inquiry_repo
+        from app.schemas.inquiries.inquiry_create_request import InquiryCreateRequest
+
+        ctx = RequestContext(
+            user_id=test_user.id,
+            organization_id=test_org.id,
+            org_role=OrgRole.OWNER,
+        )
+        payload = InquiryCreateRequest(
+            source="direct",
+            inquirer_name="To Be Deleted",
+            received_at=_dt.datetime.now(_dt.timezone.utc),
+        )
+        original = settings.allow_test_admin_promotion
+        try:
+            settings.allow_test_admin_promotion = True
+            created = await seed_inquiry(payload=payload, ctx=ctx)
+
+            # Sanity: the row is visible to the get path.
+            existing = await inquiry_repo.get_by_id(db, created.id, test_org.id)
+            assert existing is not None
+
+            await delete_inquiry(inquiry_id=created.id, ctx=ctx)
+
+            # After hard-delete, the row should be gone (NOT just soft-deleted).
+            gone = await inquiry_repo.get_by_id(db, created.id, test_org.id)
+            assert gone is None
         finally:
             settings.allow_test_admin_promotion = original

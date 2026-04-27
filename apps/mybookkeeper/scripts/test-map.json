@@ -179,7 +179,9 @@
         "test_email_queue_split.py",
         "test_email_sync_worker.py",
         "test_gmail_auth_expired.py",
-        "test_email_discovery_last_synced.py"
+        "test_email_discovery_last_synced.py",
+        "services/email/test_bounce_detector.py",
+        "services/email/test_discovery_bounce_filter.py"
       ],
       "frontend_tests": [
         "EmailQueueSection.test.tsx"
@@ -305,6 +307,107 @@
       ],
       "e2e_specs": [
         "properties.spec.ts"
+      ]
+    },
+    "listings": {
+      "source_paths": [
+        "backend/app/models/listings/",
+        "backend/app/repositories/listings/",
+        "backend/app/services/listings/",
+        "backend/app/schemas/listings/",
+        "backend/app/core/listing_enums.py",
+        "backend/app/api/listings.py",
+        "backend/app/services/storage/",
+        "frontend/src/app/pages/Listings.tsx",
+        "frontend/src/app/pages/ListingDetail.tsx",
+        "frontend/src/app/features/listings/",
+        "frontend/src/shared/types/listing/",
+        "frontend/src/shared/store/listingsApi.ts",
+        "frontend/src/shared/lib/listing-labels.ts",
+        "frontend/src/shared/lib/external-id-form.ts",
+        "frontend/src/shared/components/ui/SourceBadge.tsx"
+      ],
+      "backend_tests": [
+        "test_listing_repo.py",
+        "test_listing_service.py",
+        "test_listing_routes.py",
+        "test_listing_photo_service.py",
+        "test_listing_external_id_repo.py",
+        "test_listing_external_id_service.py",
+        "test_listing_external_id_routes.py",
+        "test_image_processor.py"
+      ],
+      "frontend_tests": [
+        "Listings.test.tsx",
+        "ListingDetail.test.tsx",
+        "ListingForm.test.tsx",
+        "ListingPhotoManager.test.tsx",
+        "ExternalIdRow.test.tsx",
+        "ExternalIdForm.test.tsx",
+        "ExternalIdSection.test.tsx",
+        "SourceBadge.test.tsx"
+      ],
+      "e2e_specs": [
+        "listings-api.spec.ts",
+        "listings.spec.ts",
+        "listings-layout.spec.ts",
+        "listings-crud.spec.ts",
+        "listings-external-ids.spec.ts"
+      ]
+    },
+    "inquiries": {
+      "source_paths": [
+        "backend/app/models/inquiries/",
+        "backend/app/repositories/inquiries/",
+        "backend/app/services/inquiries/",
+        "backend/app/services/email/gmail_service.py",
+        "backend/app/services/email/exceptions/",
+        "backend/app/schemas/inquiries/",
+        "backend/app/core/inquiry_enums.py",
+        "backend/app/core/encrypted_string_type.py",
+        "backend/app/api/inquiries.py",
+        "backend/app/api/reply_templates.py",
+        "frontend/src/app/pages/Inquiries.tsx",
+        "frontend/src/app/pages/InquiryDetail.tsx",
+        "frontend/src/app/pages/ReplyTemplates.tsx",
+        "frontend/src/app/features/inquiries/",
+        "frontend/src/shared/types/inquiry/",
+        "frontend/src/shared/store/inquiriesApi.ts",
+        "frontend/src/shared/lib/inquiry-labels.ts",
+        "frontend/src/shared/lib/inquiry-quality.ts",
+        "frontend/src/shared/lib/inquiry-date-format.ts"
+      ],
+      "backend_tests": [
+        "test_encrypted_string_type.py",
+        "test_inquiry_repo.py",
+        "test_inquiry_message_repo.py",
+        "test_inquiry_event_repo.py",
+        "test_inquiry_service.py",
+        "test_inquiries_api.py",
+        "test_inquiry_audit_masking.py",
+        "test_inquiry_reply_routes.py",
+        "test_inquiry_reply_service.py",
+        "test_reply_template_renderer.py",
+        "test_reply_template_repo.py",
+        "test_reply_template_routes.py",
+        "test_reply_template_service.py",
+        "test_gmail_service_send.py",
+        "test_test_utils_routes.py"
+      ],
+      "frontend_tests": [
+        "Inquiries.test.tsx",
+        "InquiryDetail.test.tsx",
+        "InquiryForm.test.tsx",
+        "InquiryQualityBadge.test.tsx",
+        "InquiryReplyPanel.test.tsx",
+        "ReplyTemplatesManager.test.tsx",
+        "inquiry-quality.test.ts",
+        "reply-template-renderer.test.ts"
+      ],
+      "e2e_specs": [
+        "inquiries.spec.ts",
+        "inquiries-layout.spec.ts",
+        "inquiry-reply.spec.ts"
       ]
     },
     "system": {
