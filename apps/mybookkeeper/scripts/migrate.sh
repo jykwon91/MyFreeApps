@@ -27,14 +27,14 @@ ALEMBIC=".venv/Scripts/alembic"
 [ -f "$ALEMBIC" ] || ALEMBIC="alembic"
 
 get_current_rev() {
-  $ALEMBIC current 2>/dev/null | grep -oE '^[a-f0-9]{12}' | head -1
+  $ALEMBIC current 2>/dev/null | grep -oE '^[a-z0-9_]{12}' | head -1
 }
 
 get_head_rev() {
   # Try `alembic heads` first. If it fails (e.g. broken import in old migration),
   # fall back to scanning migration files for the latest revision.
   local head
-  head=$($ALEMBIC heads 2>/dev/null | grep -oE '^[a-f0-9]{12}' | head -1)
+  head=$($ALEMBIC heads 2>/dev/null | grep -oE '^[a-z0-9_]{12}' | head -1)
   if [ -n "$head" ]; then
     echo "$head"
     return
@@ -44,7 +44,7 @@ get_head_rev() {
   local latest_file
   latest_file=$(ls -t "$BACKEND_DIR/alembic/versions"/*.py 2>/dev/null | head -1)
   if [ -n "$latest_file" ]; then
-    grep "^revision" "$latest_file" | grep -oE "'[a-f0-9]+'" | tr -d "'" | head -1
+    grep "^revision" "$latest_file" | grep -oE "'[a-z0-9_]+'" | tr -d "'" | head -1
   fi
 }
 

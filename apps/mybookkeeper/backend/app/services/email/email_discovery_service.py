@@ -8,14 +8,28 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.context import RequestContext
 from app.db.session import unit_of_work
+from app.models.email.bounce_detection_result import BounceDetectionResult
 from app.models.email.email_types import DiscoverResult, EmailSourcesData
+from app.models.email.inbound_email_signals import InboundEmailSignals
 from app.core.config import settings
-from app.repositories import document_repo, email_queue_repo, integration_repo, sync_log_repo
-from app.services.email.constants import GMAIL_AUTH_EXPIRED_SYNC_LOG_ERROR
+from app.repositories import document_repo, email_filter_log_repo, email_queue_repo, integration_repo, sync_log_repo
+from app.services.email.bounce_detector import BounceDetector
+from app.services.email.constants import (
+    EMAIL_FILTER_LOG_FROM_ADDRESS_MAX_LEN,
+    EMAIL_FILTER_LOG_SUBJECT_MAX_LEN,
+    GMAIL_AUTH_EXPIRED_SYNC_LOG_ERROR,
+)
 from app.services.email.exceptions import GmailAuthExpiredError
 from app.services.email.gmail_service import get_gmail_service, list_email_document_sources, list_new_email_ids
 
 logger = logging.getLogger(__name__)
+
+
+def _truncate(value: str | None, max_len: int) -> str | None:
+    """Match a Gmail header value to a DB column width without raising."""
+    if value is None:
+        return None
+    return value if len(value) <= max_len else value[:max_len]
 
 
 async def discover_gmail_emails(ctx: RequestContext) -> DiscoverResult:
@@ -74,7 +88,9 @@ async def discover_gmail_emails(ctx: RequestContext) -> DiscoverResult:
 
         log = await sync_log_repo.create(db, org_id, ctx.user_id, "gmail", "running", started_at=now)
 
+        bounce_detector = BounceDetector()
         total_sources = 0
+        filtered_count = 0
         for message_id in new_ids:
             try:
                 sources_data = cast(
@@ -90,6 +106,26 @@ async def discover_gmail_emails(ctx: RequestContext) -> DiscoverResult:
                 raise GmailAuthExpiredError(str(exc)) from exc
             except Exception:
                 logger.warning("Failed to enumerate sources for email %s, skipping", message_id)
+                continue
+
+            bounce_result = _detect_bounce(bounce_detector, sources_data)
+            if bounce_result.filtered and bounce_result.reason is not None:
+                from_address = sources_data.get("from_address")
+                subject = sources_data.get("subject")
+                await email_filter_log_repo.insert_ignore_conflict(
+                    db,
+                    organization_id=org_id,
+                    user_id=ctx.user_id,
+                    message_id=message_id,
+                    from_address=_truncate(from_address, EMAIL_FILTER_LOG_FROM_ADDRESS_MAX_LEN),
+                    subject=_truncate(subject, EMAIL_FILTER_LOG_SUBJECT_MAX_LEN),
+                    reason=bounce_result.reason,
+                )
+                filtered_count += 1
+                logger.info(
+                    "Filtered bounce email message_id=%s reason=%s subject=%r",
+                    message_id, bounce_result.reason, subject,
+                )
                 continue
 
             for source in sources_data["sources"]:
@@ -109,15 +145,32 @@ async def discover_gmail_emails(ctx: RequestContext) -> DiscoverResult:
         if total_sources == 0:
             await sync_log_repo.mark_completed(db, log, "success")
             await integration_repo.update_last_synced(db, integration, datetime.now(timezone.utc))
+            if filtered_count:
+                logger.info(
+                    "Gmail discovery: filtered %d bounce/auto-reply emails for org=%s",
+                    filtered_count, org_id,
+                )
             return DiscoverResult("nothing_new")
 
         log.total_items = total_sources
 
         logger.info(
-            "Gmail discovery: queued %d document sources from %d emails under sync_log_id=%d",
-            total_sources, len(new_ids), log.id,
+            "Gmail discovery: queued %d document sources from %d emails under sync_log_id=%d (filtered %d bounces)",
+            total_sources, len(new_ids), log.id, filtered_count,
         )
         return DiscoverResult("queued", count=total_sources, sync_log_id=log.id)
+
+
+def _detect_bounce(
+    detector: BounceDetector, sources_data: EmailSourcesData
+) -> BounceDetectionResult:
+    signals = InboundEmailSignals(
+        from_address=sources_data.get("from_address"),
+        subject=sources_data.get("subject"),
+        headers=sources_data.get("headers", {}),
+        body_preview=sources_data.get("body_preview"),
+    )
+    return detector.detect(signals)
 
 
 async def _record_auth_expired_sync_log(db: AsyncSession, ctx: RequestContext) -> None:

@@ -16,6 +16,9 @@ class EmailSource(TypedDict, total=False):
 
 class EmailSourcesData(TypedDict):
     subject: str
+    from_address: str | None
+    headers: dict[str, str]
+    body_preview: str | None
     sources: list[EmailSource]
 
 

@@ -9,7 +9,24 @@ from app.models.system.audit_log import AuditLog
 
 current_user_id: ContextVar[str | None] = ContextVar("current_user_id", default=None)
 
-SENSITIVE_FIELDS = {"hashed_password", "access_token", "refresh_token", "issuer_ein"}
+SENSITIVE_FIELDS = {
+    "hashed_password",
+    "access_token",
+    "refresh_token",
+    "issuer_ein",
+    # Inquiries domain PII (RENTALS_PLAN.md §8.7) — encrypted at rest via
+    # EncryptedString TypeDecorator; the audit log must not capture decrypted
+    # PII (or the ciphertext, which leaks the existence of a value).
+    "inquirer_name",
+    "inquirer_email",
+    "inquirer_phone",
+    "inquirer_employer",
+    "from_address",
+    "to_address",
+    # Hosts may put sensitive context into freeform notes (medical info,
+    # personal references) — mask the column to be safe.
+    "notes",
+}
 SKIP_FIELDS = {"file_content"}  # large binary fields with no audit value
 SKIP_TABLES = {"audit_logs", "auth_events", "processed_emails", "usage_logs", "sync_logs"}
 

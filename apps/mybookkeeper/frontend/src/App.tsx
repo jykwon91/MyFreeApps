@@ -18,6 +18,11 @@ import VerifyEmail from "@/app/pages/VerifyEmail";
 import Dashboard from "@/app/pages/Dashboard";
 import Documents from "@/app/pages/Documents";
 import Properties from "@/app/pages/Properties";
+import Listings from "@/app/pages/Listings";
+import ListingDetail from "@/app/pages/ListingDetail";
+import Inquiries from "@/app/pages/Inquiries";
+import InquiryDetail from "@/app/pages/InquiryDetail";
+import ReplyTemplates from "@/app/pages/ReplyTemplates";
 import TaxReport from "@/app/pages/TaxReport";
 import Integrations from "@/app/pages/Integrations";
 import Members from "@/app/pages/Members";
@@ -88,6 +93,11 @@ export default function App() {
               <Route path="transactions" element={<Transactions />} />
               <Route path="documents" element={<Documents />} />
               <Route path="properties" element={<Properties />} />
+              <Route path="listings" element={<Listings />} />
+              <Route path="listings/:listingId" element={<ListingDetail />} />
+              <Route path="inquiries" element={<Inquiries />} />
+              <Route path="inquiries/:inquiryId" element={<InquiryDetail />} />
+              <Route path="reply-templates" element={<ReplyTemplates />} />
               <Route path="reconciliation" element={<Reconciliation />} />
               <Route path="tax" element={<TaxReport />} />
               <Route path="tax-documents" element={<TaxDocuments />} />

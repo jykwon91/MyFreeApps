@@ -136,6 +136,7 @@ backend/app/
   services/               # Business logic — organized by domain
     extraction/  documents/  email/  transactions/  tax/
     integrations/  system/  organization/  properties/
+    inquiries/  listings/  storage/    # storage/image_processor.py: pure EXIF strip + content sniff
   mappers/                # Data transformation (transaction, reservation, tax form)
   workers/                # Background jobs (flat)
 
@@ -153,6 +154,13 @@ deploy/                   # Caddyfile, systemd service files
 5. `mappers/transaction_mapper.py` + `mappers/reservation_mapper.py` build models
 6. Transaction + Document saved; UsageLog records input/output tokens
 7. Frontend polls via React Query
+
+**Listing photo upload (synchronous):**
+1. `ListingPhotoManager.tsx` → POST `/api/listings/{id}/photos` (multipart, multiple files)
+2. `api/listings.py` thin handler reads bytes per file, delegates to `services/listings/listing_photo_service.py`
+3. Service: size cap → `services/storage/image_processor.py` (pure: content-type sniff via header bytes, allowlist, EXIF strip via Pillow re-encode) → `core/storage.py:upload_file` → `repositories/listings/listing_photo_repo.py:create`
+4. EXIF strip is mandatory — host GPS coordinates must NEVER reach the storage bucket. Tested in `test_image_processor.py::test_strips_gps_exif_from_jpeg`.
+5. Storage cleanup on DB-insert failure: best-effort `delete_file` on the just-uploaded object (logged on failure for the next sweep)
 
 **Email sync (background):**
 - `scheduler_worker.py` → Dramatiq queue → `email_sync_worker.py`
@@ -210,6 +218,14 @@ All AI-facing UI (extraction feedback, status messages, error states) should fee
 - Vite dev server proxies `/api` → `localhost:8000` (see `vite.config.ts`)
 - Production uses Caddy reverse proxy (`deploy/Caddyfile`)
 
+**Reply templates (PR 2.3):**
+- Per-user templates stored in `reply_templates` (UNIQUE on `(user_id, name)` so the idempotent default-template seed can re-run safely).
+- Variable allowlist: `$name`, `$listing`, `$dates`, `$start_date`, `$end_date`, `$employer`, `$host_name`, `$host_phone`. Defined in `backend/app/core/inquiry_enums.py:REPLY_TEMPLATE_VARIABLES`. Substitution is longest-key-first so `$host_name` never partially matches `$name`.
+- Renderer is a pure function in `services/inquiries/reply_template_renderer.py` — frontend mirrors it in `app/features/inquiries/reply-template-renderer.ts` for unit-test parity but the live UI calls the backend's `/render-template` endpoint as the source of truth.
+- **Auto-prepend rule (RENTALS_PLAN.md §9.3):** when the inquiry's linked listing has `pets_on_premises = true` AND a `large_dog_disclosure` is set, the disclosure is auto-prepended to the rendered body as a separate paragraph. Host should never have to remember to mention the dog. Mandatory.
+- **Send order:** Gmail send first, then DB insert. If Gmail rejects, no `InquiryMessage` row is persisted and the inquiry stage doesn't advance — the user retries. Stage transitions only `new`/`triaged` → `replied`; later stages preserved.
+- **Gmail OAuth scope:** `gmail.readonly` + `gmail.send` (PR 2.3 widened the default). Pre-PR-2.3 integrations have no `gmail.send` scope and trigger a reconnect banner via `Integration.has_send_scope`.
+
 **OAuth token encryption:**
 - Gmail (and Plaid) OAuth tokens are encrypted at rest using Fernet symmetric encryption derived from `ENCRYPTION_KEY` via HKDF (see `backend/app/core/security.py`)
 - The `Integration` model exposes `access_token` and `refresh_token` as hybrid properties that transparently encrypt on write and decrypt on read — callers interact with plaintext, the database stores ciphertext
@@ -218,6 +234,15 @@ All AI-facing UI (extraction feedback, status messages, error states) should fee
 - Key rotation procedure: bump `key_version`, derive a new key with a new HKDF salt, re-encrypt lazily on the next read+write cycle, then drop the old key after all rows have been migrated
 - The application will fail to start if `ENCRYPTION_KEY` is missing from the environment
 - Never call `encrypt_token()` or `decrypt_token()` directly on Integration tokens — the hybrid property handles it. Explicit calls create double-encrypt / double-decrypt bugs.
+
+**PII encryption (column-level):**
+- For domains that need column-level encryption of PII (Inquiries today, Phase 3 Applicants next), use the `EncryptedString` SQLAlchemy `TypeDecorator` from `backend/app/core/encrypted_string_type.py`
+- Declare columns with `Mapped[str | None] = mapped_column(EncryptedString(255), nullable=True)` — encryption / decryption happens transparently inside the type system, so services and tests interact with plaintext only
+- Underlying ciphertext is Fernet, derived from the same `ENCRYPTION_KEY` master via HKDF but with a distinct `info=b"mybookkeeper-pii-encryption"` so the PII key family is isolated from the OAuth-token key family — leaking one set of ciphertexts does NOT compromise the other
+- Ciphertext is non-deterministic — equality lookups on encrypted columns will NOT match (each write produces a different ciphertext for the same plaintext). Dedup must use non-PII keys (e.g. `email_message_id`, `external_inquiry_id`)
+- Add a sibling `key_version: SmallInteger` column on every PII-bearing table per RENTALS_PLAN.md §8.2 — required for non-destructive future key rotation
+- Add encrypted-column field names to `SENSITIVE_FIELDS` in `core/audit.py` so the audit log masks them as `***` (the audit listener captures values BEFORE the bind-time encryption hook fires, so without masking it would leak plaintext into audit_logs)
+- Phase 3 (Applicants) reuses the same `EncryptedString` type — do NOT re-implement; extend the SENSITIVE_FIELDS allowlist instead
 
 ## Commands
 

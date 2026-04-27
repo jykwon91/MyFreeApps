@@ -131,32 +131,31 @@ export function useDashboardFilter(summary: SummaryResponse | undefined): UseDas
 
   const toggleCategory = useCallback((category: string) => {
     setSelectedCategories((prev) => {
+      // Toggling off the last selected category would either (a) leave the
+      // dashboard with zero categories — which renders an empty chart and
+      // confuses the user — or (b) reset to ALL_DASHBOARD_CATEGORIES, which
+      // silently inverts the host's intent. The least-surprising behaviour
+      // is a no-op: keep the single remaining category selected.
+      if (prev.size === 1 && prev.has(category)) {
+        return prev;
+      }
       const next = new Set(prev);
       if (next.has(category)) {
         next.delete(category);
       } else {
         next.add(category);
       }
-      // If removing the last category, reset to all instead of blocking
-      if (next.size === 0) return new Set(ALL_DASHBOARD_CATEGORIES);
       return next;
     });
   }, []);
 
   const selectOnly = useCallback((category: string) => {
-    setSelectedCategories((prev) => {
-      const isIncome = REVENUE_TAGS.has(category);
-      const isExpense = EXPENSE_TAGS.has(category);
-      const next = new Set<string>();
-      // Keep the other group's current selections
-      for (const cat of prev) {
-        if (isIncome && EXPENSE_TAGS.has(cat)) next.add(cat);
-        if (isExpense && REVENUE_TAGS.has(cat)) next.add(cat);
-      }
-      // Select only the clicked category within its group
-      next.add(category);
-      return next;
-    });
+    // ``selectOnly`` literally means "select only this one" — drop every
+    // other selection regardless of group. The test contract asserts
+    // ``selectedCategories.size === 1`` after selectOnly(c) so any cross-
+    // group preservation contradicts the name and the test (TECH_DEBT.md
+    // pre-existing issue cleared as part of PR 2.3).
+    setSelectedCategories(new Set<string>([category]));
   }, []);
 
   const setPreset = useCallback((newPreset: CategoryFilterPreset) => {

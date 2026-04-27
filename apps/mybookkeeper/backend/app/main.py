@@ -48,7 +48,7 @@ from app.core.rate_limit import check_account_not_locked, check_login_rate_limit
 from app.db.session import AsyncSessionLocal
 from app.schemas.user.user import UserRead, UserCreate, UserUpdate
 from app.workers.upload_processor_worker import main as worker_main
-from app.api import account, activities, analytics, classification_rules, costs, db_admin, demo, documents, frontend_errors, properties, tenants, summary, integrations, audit, prompts, admin, organizations, transactions, reservations, reconciliation, tax_completeness, tax_documents, tax_profile, tax_returns, tax_year_profiles, plaid, webhooks, exports, imports, health_dashboard, totp, taxpayer_profiles
+from app.api import account, activities, analytics, classification_rules, costs, db_admin, demo, documents, frontend_errors, inquiries, listings, properties, reply_templates, tenants, summary, integrations, audit, prompts, admin, organizations, transactions, reservations, reconciliation, tax_completeness, tax_documents, tax_profile, tax_returns, tax_year_profiles, plaid, webhooks, exports, imports, health_dashboard, totp, taxpayer_profiles
 
 logging.basicConfig(
     level=logging.INFO,
@@ -158,6 +158,9 @@ app.include_router(fastapi_users.get_users_router(UserRead, UserUpdate), prefix=
 # App routes
 app.include_router(documents.router)
 app.include_router(properties.router)
+app.include_router(listings.router)
+app.include_router(inquiries.router)
+app.include_router(reply_templates.router)
 app.include_router(tenants.router)
 app.include_router(summary.router)
 app.include_router(integrations.router)
