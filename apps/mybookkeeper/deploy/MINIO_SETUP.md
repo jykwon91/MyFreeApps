@@ -91,11 +91,15 @@ MINIO_KMS_SECRET_KEY=key1:<base64-from-step-1>
 MINIO_BROWSER_URL=http://localhost:9001
 
 # App-side credentials — scoped service-account access for the backend.
-# For initial bring-up, you can reuse MINIO_ROOT_USER/PASSWORD here. After
-# verification, generate a scoped service account in the MinIO console
-# (Identity → Service Accounts) and rotate these to the scoped values.
-MINIO_ACCESS_KEY=mybookkeeper-admin
-MINIO_SECRET_KEY=<same as MINIO_ROOT_PASSWORD initially>
+# These will be REGISTERED as a service account in MinIO in step 6 below;
+# generating them here only sets the values, MinIO doesn't know them yet.
+#
+# IMPORTANT: MinIO service-account access keys must be 3-20 characters and
+# secret keys 8-40 characters. Generate with `openssl rand -hex 8` (16 chars)
+# and `openssl rand -hex 16` (32 chars) — NOT `openssl rand -hex 24` which
+# produces 48-char values that exceed MinIO's limits.
+MINIO_ACCESS_KEY=<openssl rand -hex 8>     # 16 chars
+MINIO_SECRET_KEY=<openssl rand -hex 16>    # 32 chars
 MINIO_ENDPOINT=minio:9000
 MINIO_PUBLIC_ENDPOINT=https://storage.<your-domain>
 MINIO_BUCKET=mybookkeeper-files
@@ -141,7 +145,35 @@ docker compose up -d minio
 docker compose ps minio   # should report (healthy) within ~30s
 ```
 
-### 6. Verify SSE is active
+### 6. Register the app's service account in MinIO
+
+**This step is not optional.** MinIO does NOT auto-create a service account
+from the `MINIO_ACCESS_KEY`/`MINIO_SECRET_KEY` env vars — you have to register
+those values explicitly. Without this step, the api container will return
+`InvalidAccessKeyId` 500s on every photo upload.
+
+```bash
+# Configure mc client with root credentials
+docker exec mybookkeeper-minio mc alias set local http://127.0.0.1:9000 \
+  "$(grep ^MINIO_ROOT_USER /srv/myfreeapps/apps/mybookkeeper/.env | cut -d= -f2)" \
+  "$(grep ^MINIO_ROOT_PASSWORD /srv/myfreeapps/apps/mybookkeeper/.env | cut -d= -f2)"
+
+# Create the service account using the access/secret keys from .env
+docker exec mybookkeeper-minio mc admin user svcacct add local \
+  "$(grep ^MINIO_ROOT_USER /srv/myfreeapps/apps/mybookkeeper/.env | cut -d= -f2)" \
+  --access-key "$(grep ^MINIO_ACCESS_KEY /srv/myfreeapps/apps/mybookkeeper/.env | cut -d= -f2)" \
+  --secret-key "$(grep ^MINIO_SECRET_KEY /srv/myfreeapps/apps/mybookkeeper/.env | cut -d= -f2)"
+
+# Verify the service account exists
+docker exec mybookkeeper-minio mc admin user svcacct list local \
+  "$(grep ^MINIO_ROOT_USER /srv/myfreeapps/apps/mybookkeeper/.env | cut -d= -f2)"
+```
+
+If the `svcacct add` step fails with "access key length should be between 3
+and 20", your `MINIO_ACCESS_KEY` is too long — regenerate per step 2 with
+`openssl rand -hex 8` (NOT `-hex 24`).
+
+### 7. Verify SSE is active
 
 ```bash
 docker exec mybookkeeper-minio mc admin kms key status local
@@ -155,7 +187,7 @@ docker exec mybookkeeper-minio mc stat local/mybookkeeper-files/<some-key>
 # Look for: Encryption: AES256 (or similar)
 ```
 
-### 7. Access the console (optional)
+### 8. Access the console (optional)
 
 The MinIO web console is bound to `127.0.0.1:9001` for safety. Tunnel via
 SSH from your laptop:
