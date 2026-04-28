@@ -1,18 +1,25 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.core.config import settings
 
-engine = create_async_engine(
-    settings.database_url,
-    echo=False,
-    pool_size=10,
-    max_overflow=20,
-    pool_timeout=30,
-    pool_recycle=1800,
-)
+# SQLite (used in unit tests) doesn't support pool sizing — its async driver
+# pairs with StaticPool, and passing pool_size/max_overflow/pool_timeout raises
+# TypeError at engine creation. Only apply pool config to the real Postgres
+# engine used by the app and in integration tests.
+_engine_kwargs: dict[str, Any] = {"echo": False}
+if not settings.database_url.startswith("sqlite"):
+    _engine_kwargs.update(
+        pool_size=10,
+        max_overflow=20,
+        pool_timeout=30,
+        pool_recycle=1800,
+    )
+
+engine = create_async_engine(settings.database_url, **_engine_kwargs)
 AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False)
 
 
