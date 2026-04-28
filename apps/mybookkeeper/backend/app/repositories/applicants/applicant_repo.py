@@ -15,7 +15,7 @@ from __future__ import annotations
 import datetime as _dt
 import uuid
 
-from sqlalchemy import desc, select, update
+from sqlalchemy import desc, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.applicants.applicant import Applicant
@@ -107,6 +107,27 @@ async def list_for_user(
     stmt = stmt.order_by(desc(Applicant.created_at)).limit(limit).offset(offset)
     result = await db.execute(stmt)
     return list(result.scalars().all())
+
+
+async def count_for_user(
+    db: AsyncSession,
+    *,
+    organization_id: uuid.UUID,
+    user_id: uuid.UUID,
+    stage: str | None = None,
+    include_deleted: bool = False,
+) -> int:
+    """Count applicants for (organization_id, user_id) — used for paginated totals."""
+    stmt = select(func.count()).select_from(Applicant).where(
+        Applicant.organization_id == organization_id,
+        Applicant.user_id == user_id,
+    )
+    if not include_deleted:
+        stmt = stmt.where(Applicant.deleted_at.is_(None))
+    if stage is not None:
+        stmt = stmt.where(Applicant.stage == stage)
+    result = await db.execute(stmt)
+    return int(result.scalar_one())
 
 
 async def get_by_inquiry(
