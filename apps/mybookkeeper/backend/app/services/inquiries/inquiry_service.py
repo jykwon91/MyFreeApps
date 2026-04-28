@@ -23,6 +23,7 @@ import uuid
 
 from app.db.session import AsyncSessionLocal, unit_of_work
 from app.repositories import (
+    applicant_repo,
     inquiry_event_repo,
     inquiry_message_repo,
     inquiry_repo,
@@ -44,11 +45,13 @@ def _to_response(
     inquiry,
     messages=(),
     events=(),
+    linked_applicant_id=None,
 ) -> InquiryResponse:
     base = InquiryResponse.model_validate(inquiry)
     return base.model_copy(update={
         "messages": [InquiryMessageResponse.model_validate(m) for m in messages],
         "events": [InquiryEventResponse.model_validate(e) for e in events],
+        "linked_applicant_id": linked_applicant_id,
     })
 
 
@@ -126,7 +129,7 @@ async def create_inquiry(
 
 async def get_inquiry(
     organization_id: uuid.UUID,
-    user_id: uuid.UUID,  # noqa: ARG001 — accepted for audit context parity
+    user_id: uuid.UUID,
     inquiry_id: uuid.UUID,
 ) -> InquiryResponse:
     async with AsyncSessionLocal() as db:
@@ -135,7 +138,20 @@ async def get_inquiry(
             raise LookupError(f"Inquiry {inquiry_id} not found")
         messages = await inquiry_message_repo.list_by_inquiry(db, inquiry.id)
         events = await inquiry_event_repo.list_by_inquiry(db, inquiry.id)
-    return _to_response(inquiry, messages=messages, events=events)
+        # Surface the linked applicant_id if this inquiry has been promoted
+        # so the detail UI can show "View applicant" instead of "Promote".
+        linked_applicant = await applicant_repo.get_by_inquiry(
+            db,
+            inquiry_id=inquiry.id,
+            organization_id=organization_id,
+            user_id=user_id,
+        )
+    return _to_response(
+        inquiry,
+        messages=messages,
+        events=events,
+        linked_applicant_id=linked_applicant.id if linked_applicant else None,
+    )
 
 
 async def list_inbox(
@@ -160,7 +176,7 @@ async def list_inbox(
 
 async def update_inquiry(
     organization_id: uuid.UUID,
-    user_id: uuid.UUID,  # noqa: ARG001 — accepted for audit context parity
+    user_id: uuid.UUID,
     inquiry_id: uuid.UUID,
     payload: InquiryUpdateRequest,
 ) -> InquiryResponse:
@@ -193,7 +209,18 @@ async def update_inquiry(
 
         messages = await inquiry_message_repo.list_by_inquiry(db, inquiry.id)
         events = await inquiry_event_repo.list_by_inquiry(db, inquiry.id)
-        return _to_response(inquiry, messages=messages, events=events)
+        linked_applicant = await applicant_repo.get_by_inquiry(
+            db,
+            inquiry_id=inquiry.id,
+            organization_id=organization_id,
+            user_id=user_id,
+        )
+        return _to_response(
+            inquiry,
+            messages=messages,
+            events=events,
+            linked_applicant_id=linked_applicant.id if linked_applicant else None,
+        )
 
 
 async def delete_inquiry(

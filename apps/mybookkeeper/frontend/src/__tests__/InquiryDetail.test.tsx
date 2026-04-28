@@ -25,6 +25,7 @@ const mockInquiry: InquiryResponse = {
   notes: "Sounds promising — short pet on premises mention.",
   received_at: "2026-04-25T10:00:00Z",
   email_message_id: null,
+  linked_applicant_id: null,
   messages: [
     {
       id: "msg-1",
