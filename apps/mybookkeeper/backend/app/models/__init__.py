@@ -16,6 +16,11 @@ from app.models.inquiries.inquiry import Inquiry
 from app.models.inquiries.inquiry_message import InquiryMessage
 from app.models.inquiries.inquiry_event import InquiryEvent
 from app.models.inquiries.reply_template import ReplyTemplate
+from app.models.applicants.applicant import Applicant
+from app.models.applicants.screening_result import ScreeningResult
+from app.models.applicants.reference import Reference
+from app.models.applicants.video_call_note import VideoCallNote
+from app.models.applicants.applicant_event import ApplicantEvent
 from app.models.documents.document import Document
 from app.models.extraction.extraction_prompt import ExtractionPrompt
 from app.models.extraction.extraction_types import ExtractionData, ExtractionResult
