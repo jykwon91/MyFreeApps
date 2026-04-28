@@ -35,6 +35,14 @@ export interface InquiryResponse {
   received_at: string;
   email_message_id: string | null;
 
+  /**
+   * ID of the Applicant promoted from this inquiry, or ``null`` if the
+   * inquiry has not been promoted yet (PR 3.2). Lets the InquiryDetail
+   * page show "View applicant" instead of "Promote to applicant" when an
+   * applicant already exists.
+   */
+  linked_applicant_id: string | null;
+
   messages: InquiryMessage[];
   events: InquiryEvent[];
 

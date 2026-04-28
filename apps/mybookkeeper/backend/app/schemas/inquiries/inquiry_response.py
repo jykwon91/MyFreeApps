@@ -40,6 +40,11 @@ class InquiryResponse(BaseModel):
     received_at: _dt.datetime
     email_message_id: str | None = None
 
+    # ID of the Applicant promoted from this inquiry (if any). Lets the
+    # detail UI show "View applicant" instead of "Promote to applicant"
+    # when the inquiry has already been converted (PR 3.2).
+    linked_applicant_id: uuid.UUID | None = None
+
     messages: list[InquiryMessageResponse] = []
     events: list[InquiryEventResponse] = []
 

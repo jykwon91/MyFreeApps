@@ -293,6 +293,49 @@ class TestGetInquiry:
                 uuid.uuid4(), test_user.id, created.id,
             )
 
+    @pytest.mark.asyncio
+    async def test_linked_applicant_id_is_null_when_not_promoted(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+        patch_session,
+    ) -> None:
+        created = await inquiry_service.create_inquiry(
+            test_org.id, test_user.id, _create_payload(),
+        )
+        result = await inquiry_service.get_inquiry(
+            test_org.id, test_user.id, created.id,
+        )
+        assert result.linked_applicant_id is None
+
+    @pytest.mark.asyncio
+    async def test_linked_applicant_id_surfaced_after_applicant_seeded(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+        patch_session,
+    ) -> None:
+        """If an Applicant exists pointing at the inquiry, the response surfaces it.
+
+        Used by the frontend InquiryDetail page to switch the "Promote to
+        applicant" button to a "View applicant" link (PR 3.2).
+        """
+        from app.repositories.applicants import applicant_repo
+
+        created = await inquiry_service.create_inquiry(
+            test_org.id, test_user.id, _create_payload(),
+        )
+        applicant = await applicant_repo.create(
+            db,
+            organization_id=test_org.id,
+            user_id=test_user.id,
+            inquiry_id=created.id,
+            legal_name="Alice",
+            stage="lead",
+        )
+        await db.commit()
+
+        result = await inquiry_service.get_inquiry(
+            test_org.id, test_user.id, created.id,
+        )
+        assert result.linked_applicant_id == applicant.id
+
 
 class TestListInbox:
     @pytest.mark.asyncio

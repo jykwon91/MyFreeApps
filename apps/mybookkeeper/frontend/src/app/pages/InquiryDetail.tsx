@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Archive, Ban, Mail } from "lucide-react";
+import { ArrowLeft, Archive, Ban, Mail, UserPlus } from "lucide-react";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import AlertBox from "@/shared/components/ui/AlertBox";
 import Button from "@/shared/components/ui/Button";
@@ -26,6 +26,11 @@ import InquiryEventTimeline from "@/app/features/inquiries/InquiryEventTimeline"
 import InquiryMessageThread from "@/app/features/inquiries/InquiryMessageThread";
 import InquiryNotesEditor from "@/app/features/inquiries/InquiryNotesEditor";
 import InquiryReplyPanel from "@/app/features/inquiries/InquiryReplyPanel";
+import PromoteFromInquiryPanel from "@/app/features/applicants/PromoteFromInquiryPanel";
+
+/** Inquiry stages that can't be promoted. Mirrors the backend
+ * ``_NON_PROMOTABLE_STAGES`` set in ``services/applicants/promote_service.py``. */
+const NON_PROMOTABLE_INQUIRY_STAGES = ["declined", "archived"] as const;
 
 export default function InquiryDetail() {
   const { inquiryId } = useParams<{ inquiryId: string }>();
@@ -33,6 +38,7 @@ export default function InquiryDetail() {
   const [showDeclineConfirm, setShowDeclineConfirm] = useState(false);
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
   const [showReplyPanel, setShowReplyPanel] = useState(false);
+  const [showPromotePanel, setShowPromotePanel] = useState(false);
   const [updateInquiry, { isLoading: isPatching }] = useUpdateInquiryMutation();
   const [deleteInquiry, { isLoading: isDeleting }] = useDeleteInquiryMutation();
 
@@ -143,6 +149,38 @@ export default function InquiryDetail() {
               <Mail className="h-4 w-4 mr-1" />
               Reply with template
             </Button>
+            {inquiry.linked_applicant_id ? (
+              <Link
+                to={`/applicants/${inquiry.linked_applicant_id}`}
+                data-testid="inquiry-view-applicant-link"
+                className="inline-flex items-center font-medium border rounded-md px-4 py-2 text-sm min-h-[44px] hover:bg-muted"
+              >
+                <UserPlus className="h-4 w-4 mr-1" aria-hidden="true" />
+                View applicant
+              </Link>
+            ) : (
+              <Button
+                variant="secondary"
+                size="md"
+                onClick={() => setShowPromotePanel(true)}
+                data-testid="inquiry-promote-button"
+                disabled={
+                  (NON_PROMOTABLE_INQUIRY_STAGES as readonly string[]).includes(
+                    inquiry.stage,
+                  )
+                }
+                title={
+                  (NON_PROMOTABLE_INQUIRY_STAGES as readonly string[]).includes(
+                    inquiry.stage,
+                  )
+                    ? "Can't promote a declined or archived inquiry."
+                    : undefined
+                }
+              >
+                <UserPlus className="h-4 w-4 mr-1" aria-hidden="true" />
+                Promote to applicant
+              </Button>
+            )}
             <Button
               variant="secondary"
               size="md"
@@ -295,6 +333,13 @@ export default function InquiryDetail() {
             <InquiryReplyPanel
               inquiryId={inquiry.id}
               onClose={() => setShowReplyPanel(false)}
+            />
+          ) : null}
+
+          {showPromotePanel ? (
+            <PromoteFromInquiryPanel
+              inquiry={inquiry}
+              onClose={() => setShowPromotePanel(false)}
             />
           ) : null}
         </>
