@@ -31,14 +31,20 @@ def create_session_factory(
     pool_timeout: int = 30,
     pool_recycle: int = 1800,
 ) -> SessionFactory:
-    engine = create_async_engine(
-        database_url,
-        echo=echo,
-        pool_size=pool_size,
-        max_overflow=max_overflow,
-        pool_timeout=pool_timeout,
-        pool_recycle=pool_recycle,
-    )
+    # SQLite (used in unit tests) doesn't support pool sizing — its async driver
+    # pairs with StaticPool, and passing pool_size/max_overflow/pool_timeout
+    # raises TypeError at engine creation. Skip pool kwargs for SQLite URLs.
+    if database_url.startswith("sqlite"):
+        engine = create_async_engine(database_url, echo=echo)
+    else:
+        engine = create_async_engine(
+            database_url,
+            echo=echo,
+            pool_size=pool_size,
+            max_overflow=max_overflow,
+            pool_timeout=pool_timeout,
+            pool_recycle=pool_recycle,
+        )
     session_maker = async_sessionmaker(engine, expire_on_commit=False)
 
     async def get_db() -> AsyncIterator[AsyncSession]:
