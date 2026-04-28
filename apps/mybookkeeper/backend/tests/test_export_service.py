@@ -183,6 +183,10 @@ class TestExportScheduleE:
 
 class TestExportTaxSummary:
     @pytest.mark.asyncio
+    @pytest.mark.skipif(
+        "sqlite" in __import__("os").environ.get("DATABASE_URL", ""),
+        reason="Tax summary export uses Postgres-specific SQL (`tax_relevant IS 1`); requires real Postgres in test env",
+    )
     async def test_tax_summary_pdf_starts_with_magic_bytes(self, db: AsyncSession) -> None:
         user, org_id, prop = await _setup(db)
         db.add(_make_txn(org_id, user.id, prop.id))
