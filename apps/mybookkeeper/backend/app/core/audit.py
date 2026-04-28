@@ -23,8 +23,22 @@ SENSITIVE_FIELDS = {
     "inquirer_employer",
     "from_address",
     "to_address",
+    # Applicants domain PII (RENTALS_PLAN.md §8.7, Phase 3 PR 3.1a) —
+    # encrypted at rest via EncryptedString. Field names are intentionally
+    # specific (``legal_name`` not ``name``, ``reference_name`` not ``name``)
+    # to avoid masking unrelated columns elsewhere in the schema (Property,
+    # Organization, User, ReplyTemplate all have plain ``name`` columns we
+    # MUST NOT mask in the audit log).
+    "legal_name",
+    "dob",
+    "employer_or_hospital",
+    "vehicle_make_model",
+    "reference_name",
+    "reference_contact",
     # Hosts may put sensitive context into freeform notes (medical info,
-    # personal references) — mask the column to be safe.
+    # personal references, candid character assessments) — mask the column
+    # to be safe. Applies to inquiries.notes, applicants.pets context,
+    # video_call_notes.notes, applicant_events.notes, etc.
     "notes",
 }
 SKIP_FIELDS = {"file_content"}  # large binary fields with no audit value

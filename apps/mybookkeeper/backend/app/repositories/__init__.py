@@ -37,6 +37,11 @@ from app.repositories.inquiries import inquiry_repo
 from app.repositories.inquiries import inquiry_message_repo
 from app.repositories.inquiries import inquiry_event_repo
 from app.repositories.inquiries import reply_template_repo
+from app.repositories.applicants import applicant_repo
+from app.repositories.applicants import screening_result_repo
+from app.repositories.applicants import reference_repo
+from app.repositories.applicants import video_call_note_repo
+from app.repositories.applicants import applicant_event_repo
 from app.repositories.user import user_repo
 from app.repositories.classification import classification_rule_repo
 from app.repositories.demo import demo_repo
