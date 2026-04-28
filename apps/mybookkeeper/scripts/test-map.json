@@ -415,11 +415,22 @@
         "backend/app/models/applicants/",
         "backend/app/repositories/applicants/",
         "backend/app/schemas/applicants/",
+        "backend/app/services/applicants/",
+        "backend/app/api/applicants.py",
         "backend/app/core/applicant_enums.py",
-        "backend/alembic/versions/f8h0i3k5l7m9_add_applicants_domain.py"
+        "backend/alembic/versions/f8h0i3k5l7m9_add_applicants_domain.py",
+        "frontend/src/app/pages/Applicants.tsx",
+        "frontend/src/app/pages/ApplicantDetail.tsx",
+        "frontend/src/app/features/applicants/",
+        "frontend/src/shared/types/applicant/",
+        "frontend/src/shared/store/applicantsApi.ts",
+        "frontend/src/shared/lib/applicant-labels.ts"
       ],
       "backend_tests": [
         "test_applicant_repo.py",
+        "test_applicant_repo_count.py",
+        "test_applicant_service.py",
+        "test_applicants_api.py",
         "test_screening_result_repo.py",
         "test_reference_repo.py",
         "test_video_call_note_repo.py",
@@ -428,8 +439,15 @@
         "test_applicant_audit_masking.py",
         "test_applicant_indexes.py"
       ],
-      "frontend_tests": [],
-      "e2e_specs": []
+      "frontend_tests": [
+        "ApplicantStageBadge.test.tsx",
+        "SensitiveDataUnlock.test.tsx",
+        "Applicants.test.tsx"
+      ],
+      "e2e_specs": [
+        "applicants.spec.ts",
+        "applicants-layout.spec.ts"
+      ]
     },
     "system": {
       "source_paths": [

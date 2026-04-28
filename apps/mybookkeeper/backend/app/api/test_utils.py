@@ -4,17 +4,26 @@ from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+from sqlalchemy import delete as _sa_delete
 
 from app.core.auth import current_active_user
 from app.core.context import RequestContext
 from app.core.config import settings
 from app.core.permissions import current_org_member
 from app.db.session import unit_of_work
+from app.models.applicants.applicant import Applicant
 from app.models.user.user import Role, User
 from app.repositories import (
     inquiry_repo,
     integration_repo,
     listing_repo,
+)
+from app.repositories.applicants import (
+    applicant_event_repo,
+    applicant_repo,
+    reference_repo,
+    screening_result_repo,
+    video_call_note_repo,
 )
 from app.repositories.user import user_repo
 from app.schemas.inquiries.inquiry_create_request import InquiryCreateRequest
@@ -210,3 +219,121 @@ async def disable_mock_gmail_send(
     if real is not None:
         gmail_service.send_message = real  # type: ignore[assignment]
         gmail_service._real_send_message = None  # type: ignore[attr-defined]
+
+
+class _SeedApplicantRequest(BaseModel):
+    inquiry_id: uuid.UUID | None = None
+    legal_name: str | None = None
+    dob: str | None = None
+    employer_or_hospital: str | None = None
+    vehicle_make_model: str | None = None
+    smoker: bool | None = None
+    pets: str | None = None
+    referred_by: str | None = None
+    stage: str = "lead"
+    seed_event: bool = True
+    seed_screening: bool = False
+    seed_reference: bool = False
+    seed_video_call_note: bool = False
+
+
+class _SeedApplicantResponse(BaseModel):
+    id: uuid.UUID
+
+
+@router.post("/seed-applicant", response_model=_SeedApplicantResponse)
+async def seed_applicant(
+    payload: _SeedApplicantRequest,
+    ctx: RequestContext = Depends(current_org_member),
+) -> _SeedApplicantResponse:
+    """Test-only direct insert for E2E applicant seeding.
+
+    Bypasses the (yet-to-be-built) PR 3.2 promotion flow so the read-only
+    PR 3.1b frontend can be exercised end-to-end. Gated by
+    ``ALLOW_TEST_ADMIN_PROMOTION`` (off in production).
+
+    Optional flags ``seed_event`` / ``seed_screening`` / ``seed_reference`` /
+    ``seed_video_call_note`` create a representative child row each so the
+    detail page renders every section.
+    """
+    _require_test_mode()
+    now = _dt.datetime.now(_dt.timezone.utc)
+    async with unit_of_work() as db:
+        applicant = await applicant_repo.create(
+            db,
+            organization_id=ctx.organization_id,
+            user_id=ctx.user_id,
+            inquiry_id=payload.inquiry_id,
+            legal_name=payload.legal_name,
+            dob=payload.dob,
+            employer_or_hospital=payload.employer_or_hospital,
+            vehicle_make_model=payload.vehicle_make_model,
+            smoker=payload.smoker,
+            pets=payload.pets,
+            referred_by=payload.referred_by,
+            stage=payload.stage,
+        )
+        if payload.seed_event:
+            await applicant_event_repo.append(
+                db,
+                applicant_id=applicant.id,
+                event_type="lead",
+                actor="host",
+                occurred_at=now,
+            )
+        if payload.seed_screening:
+            await screening_result_repo.create(
+                db,
+                applicant_id=applicant.id,
+                provider="keycheck",
+                requested_at=now,
+                status="pending",
+            )
+        if payload.seed_reference:
+            await reference_repo.create(
+                db,
+                applicant_id=applicant.id,
+                relationship="employer",
+                reference_name="E2E Reference",
+                reference_contact="ref@example.com",
+            )
+        if payload.seed_video_call_note:
+            await video_call_note_repo.create(
+                db,
+                applicant_id=applicant.id,
+                scheduled_at=now,
+                completed_at=None,
+                gut_rating=4,
+                notes="E2E video call note",
+            )
+        return _SeedApplicantResponse(id=applicant.id)
+
+
+@router.delete("/applicants/{applicant_id}", status_code=204)
+async def delete_applicant(
+    applicant_id: uuid.UUID,
+    ctx: RequestContext = Depends(current_org_member),
+) -> None:
+    """Hard-delete an applicant (cascades children) for E2E cleanup.
+
+    Production code path uses soft-delete (``deleted_at``); the E2E suite needs
+    a true cleanup so test artifacts don't accumulate per
+    ``feedback_clean_test_data``.
+    """
+    _require_test_mode()
+    async with unit_of_work() as db:
+        # Use the repo to confirm tenant scope before deleting via raw SQL —
+        # there's no hard_delete helper on the repo (the production flow is
+        # soft-delete). The cascade FK on the children does the cleanup.
+        existing = await applicant_repo.get(
+            db,
+            applicant_id=applicant_id,
+            organization_id=ctx.organization_id,
+            user_id=ctx.user_id,
+            include_deleted=True,
+        )
+        if existing is None:
+            return
+        await db.execute(
+            _sa_delete(Applicant).where(Applicant.id == applicant_id),
+        )
