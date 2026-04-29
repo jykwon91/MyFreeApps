@@ -1,8 +1,10 @@
 import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { Plus } from "lucide-react";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import EmptyState from "@/shared/components/ui/EmptyState";
 import AlertBox from "@/shared/components/ui/AlertBox";
+import Button from "@/shared/components/ui/Button";
 import LoadingButton from "@/shared/components/ui/LoadingButton";
 import { useGetVendorsQuery } from "@/shared/store/vendorsApi";
 import {
@@ -15,6 +17,7 @@ import VendorCategoryFilter from "@/app/features/vendors/VendorCategoryFilter";
 import VendorPreferredToggle from "@/app/features/vendors/VendorPreferredToggle";
 import VendorCard from "@/app/features/vendors/VendorCard";
 import VendorRow from "@/app/features/vendors/VendorRow";
+import VendorForm from "@/app/features/vendors/VendorForm";
 
 const CATEGORY_PARAM = "category";
 const PREFERRED_PARAM = "preferred";
@@ -35,6 +38,7 @@ export default function Vendors() {
   const category = parseCategoryParam(searchParams.get(CATEGORY_PARAM));
   const preferredOnly = parsePreferredParam(searchParams.get(PREFERRED_PARAM));
   const [pageCount, setPageCount] = useState(1);
+  const [showCreateForm, setShowCreateForm] = useState(false);
 
   const queryArgs = useMemo(
     () => ({
@@ -85,6 +89,17 @@ export default function Vendors() {
       <SectionHeader
         title="Vendors"
         subtitle="Your rolodex of trusted handymen, plumbers, cleaners, and other trades."
+        actions={
+          <Button
+            variant="primary"
+            size="md"
+            onClick={() => setShowCreateForm(true)}
+            data-testid="add-vendor-button"
+          >
+            <Plus className="h-4 w-4 mr-1" aria-hidden="true" />
+            Add vendor
+          </Button>
+        }
       />
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -117,7 +132,7 @@ export default function Vendors() {
           message={
             isFiltered
               ? "No vendors match this filter. Try a different category or clear preferred-only."
-              : "No vendors yet — your rolodex is empty. Adding vendors is coming soon."
+              : "No vendors yet — your rolodex is empty. Click \"Add vendor\" above to get started."
           }
         />
       ) : (
@@ -174,6 +189,10 @@ export default function Vendors() {
           ) : null}
         </>
       )}
+
+      {showCreateForm ? (
+        <VendorForm onClose={() => setShowCreateForm(false)} />
+      ) : null}
     </main>
   );
 }

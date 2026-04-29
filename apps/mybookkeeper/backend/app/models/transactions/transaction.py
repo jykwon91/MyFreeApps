@@ -22,6 +22,16 @@ class Transaction(Base):
     property_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("properties.id", ondelete="SET NULL"), nullable=True)
     activity_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("activities.id", ondelete="SET NULL"), nullable=True)
     extraction_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("extractions.id", ondelete="SET NULL"), nullable=True)
+    # Host-curated link to a row in the Vendors rolodex (PR 4.2 / RENTALS_PLAN.md §5.4).
+    # ON DELETE SET NULL — hard-deleting a vendor preserves transaction history.
+    # The free-text ``vendor`` column above stays as the AI-extracted name; this
+    # FK is the host's manual mapping. No backref on Vendor — keeps the model
+    # one-directional to avoid accidental N+1 traps.
+    vendor_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("vendors.id", ondelete="SET NULL", name="fk_txn_vendor"),
+        nullable=True,
+    )
 
     transaction_date: Mapped[date] = mapped_column(Date)
     tax_year: Mapped[int] = mapped_column(SmallInteger)
@@ -182,6 +192,13 @@ class Transaction(Base):
                 "deleted_at IS NULL AND category = 'utilities' AND sub_category IS NOT NULL"
             ),
         ),
+        # Partial index on the vendor FK — most transactions have no vendor
+        # link, so indexing only the populated rows keeps the index lean.
+        # Ships in migration ``h0j2k5m7n9p1`` (PR 4.2).
+        Index(
+            "ix_txn_vendor_id_partial", "vendor_id",
+            postgresql_where=text("vendor_id IS NOT NULL"),
+        ),
     )
 
     organization = relationship("Organization")
@@ -189,6 +206,9 @@ class Transaction(Base):
     linked_property = relationship("Property")
     activity = relationship("Activity")
     extraction = relationship("Extraction")
+    # Forward-only relationship to the Vendors rolodex entry. Deliberately no
+    # backref on Vendor — see vendor_id column docstring.
+    vendor_rolodex_entry = relationship("Vendor", lazy="noload")
     linked_documents = relationship("TransactionDocument", back_populates="transaction", lazy="noload")
 
     @hybrid_property

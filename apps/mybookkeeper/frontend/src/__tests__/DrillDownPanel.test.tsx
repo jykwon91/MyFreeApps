@@ -26,6 +26,7 @@ function makeTxn(overrides: Partial<Transaction> = {}): Transaction {
     transaction_date: "2024-06-15",
     tax_year: 2024,
     vendor: "Test Plumber",
+    vendor_id: null,
     description: null,
     amount: "500.00",
     transaction_type: "expense",

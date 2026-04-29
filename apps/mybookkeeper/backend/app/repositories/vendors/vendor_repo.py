@@ -10,12 +10,33 @@ from __future__ import annotations
 import datetime as _dt
 import uuid
 from decimal import Decimal
+from typing import Any
 
 from sqlalchemy import delete as _sa_delete
-from sqlalchemy import desc, func, select, update
+from sqlalchemy import desc, func, select
+from sqlalchemy import update as _sa_update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.transactions.transaction import Transaction
 from app.models.vendors.vendor import Vendor
+
+# Allowlist of columns that can be applied via the dynamic ``update``
+# function. Per the project security rule: "Always validate field names
+# against an explicit allowlist before applying dynamic updates." Tenant
+# scoping (organization_id, user_id) and server-managed columns (id,
+# created_at, updated_at, deleted_at, last_used_at) are deliberately
+# excluded.
+_UPDATABLE_COLUMNS: frozenset[str] = frozenset({
+    "name",
+    "category",
+    "phone",
+    "email",
+    "address",
+    "hourly_rate",
+    "flat_rate_notes",
+    "preferred",
+    "notes",
+})
 
 
 async def create(
@@ -130,6 +151,93 @@ async def count_by_organization(
     return int(result.scalar_one())
 
 
+async def update(
+    db: AsyncSession,
+    *,
+    vendor_id: uuid.UUID,
+    organization_id: uuid.UUID,
+    user_id: uuid.UUID,
+    fields: dict[str, Any],
+) -> Vendor | None:
+    """Apply allowlisted updates to a vendor.
+
+    Filters ``fields`` against ``_UPDATABLE_COLUMNS`` before applying — any
+    keys outside the allowlist are silently dropped (a defense-in-depth
+    check on top of the Pydantic schema's ``extra='forbid'``). Returns the
+    refreshed vendor, or ``None`` if the vendor does not exist / is
+    soft-deleted / belongs to a different tenant.
+    """
+    vendor = await get_by_id(
+        db,
+        vendor_id=vendor_id,
+        organization_id=organization_id,
+        user_id=user_id,
+    )
+    if vendor is None:
+        return None
+
+    safe_fields = {k: v for k, v in fields.items() if k in _UPDATABLE_COLUMNS}
+    if not safe_fields:
+        return vendor
+
+    for key, value in safe_fields.items():
+        setattr(vendor, key, value)
+    await db.flush()
+    return vendor
+
+
+async def count_linked_transactions(
+    db: AsyncSession,
+    *,
+    vendor_id: uuid.UUID,
+    organization_id: uuid.UUID,
+) -> int:
+    """Count non-deleted transactions currently linked to the vendor.
+
+    Used by the delete flow's audit trail (PR 4.2) — surfaces how many
+    transaction rows will have their ``vendor_id`` cleared.
+    """
+    stmt = (
+        select(func.count())
+        .select_from(Transaction)
+        .where(
+            Transaction.vendor_id == vendor_id,
+            Transaction.organization_id == organization_id,
+            Transaction.deleted_at.is_(None),
+        )
+    )
+    result = await db.execute(stmt)
+    return int(result.scalar_one() or 0)
+
+
+async def null_vendor_on_transactions(
+    db: AsyncSession,
+    *,
+    vendor_id: uuid.UUID,
+    organization_id: uuid.UUID,
+) -> int:
+    """Explicitly clear ``transactions.vendor_id`` for the given vendor.
+
+    The FK is ``ON DELETE SET NULL`` so a hard-delete would null these out
+    automatically — but the SQLAlchemy audit listener never sees DB-level
+    cascade actions, which would silently lose the audit trail. This
+    helper performs the equivalent UPDATE through the session so each
+    cleared row is captured by the audit log before the vendor row itself
+    is deleted.
+
+    Returns the number of transactions affected.
+    """
+    result = await db.execute(
+        _sa_update(Transaction)
+        .where(
+            Transaction.vendor_id == vendor_id,
+            Transaction.organization_id == organization_id,
+        )
+        .values(vendor_id=None)
+    )
+    return int(result.rowcount or 0)
+
+
 async def soft_delete(
     db: AsyncSession,
     *,
@@ -139,7 +247,7 @@ async def soft_delete(
 ) -> bool:
     """Soft-delete a vendor. Returns True iff a row was updated."""
     result = await db.execute(
-        update(Vendor)
+        _sa_update(Vendor)
         .where(
             Vendor.id == vendor_id,
             Vendor.organization_id == organization_id,

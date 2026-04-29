@@ -29,6 +29,7 @@ interface Props {
 function buildDefaults(t: Transaction): TransactionFormValues {
   return {
     vendor: t.vendor ?? "",
+    vendor_id: t.vendor_id ?? "",
     description: t.description ?? "",
     amount: t.amount,
     transaction_type: t.transaction_type,

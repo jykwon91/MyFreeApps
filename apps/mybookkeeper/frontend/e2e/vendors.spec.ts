@@ -233,3 +233,113 @@ test.describe("Vendors frontend (PR 4.1b)", () => {
     });
   });
 });
+
+test.describe("Vendors writes (PR 4.2)", () => {
+  /**
+   * The full create → see-in-list → edit → delete flow exercising the new
+   * POST / PATCH / DELETE endpoints. Cleanup uses /test/vendors/{id} to
+   * hard-purge any seeded rows that survive an aborted run.
+   */
+  test("user can create, edit, and delete a vendor end-to-end", async ({
+    authedPage: page,
+    api,
+  }) => {
+    const runId = Date.now();
+    const initialName = `E2E Create ${runId}`;
+    const renamedName = `E2E Renamed ${runId}`;
+    const createdIds: string[] = [];
+
+    try {
+      await page.goto("/vendors");
+      await waitForVendorsPage(page);
+
+      // ----- CREATE -----
+      await page.getByTestId("add-vendor-button").click();
+      await expect(page.getByTestId("vendor-form")).toBeVisible();
+
+      await page.getByTestId("vendor-form-name").fill(initialName);
+      await page.getByTestId("vendor-form-category").selectOption("plumber");
+      await page.getByTestId("vendor-form-phone").fill("555-7777");
+      await page.getByTestId("vendor-form-hourly-rate").fill("99.99");
+
+      await page.getByTestId("vendor-form-submit").click();
+      await expect(page.getByTestId("vendor-form")).toBeHidden({
+        timeout: 10000,
+      });
+
+      // The new vendor must show up in the rolodex.
+      await expect(page.getByText(initialName).first()).toBeVisible({
+        timeout: 5000,
+      });
+
+      // Capture the created vendor's ID so we can clean it up if the test
+      // aborts mid-flight. Best-effort lookup via the list endpoint.
+      const listRes = await api.get("/vendors", {
+        params: { limit: 100, offset: 0 },
+      });
+      if (listRes.ok()) {
+        const body = (await listRes.json()) as {
+          items: Array<{ id: string; name: string }>;
+        };
+        const created = body.items.find((v) => v.name === initialName);
+        if (created) createdIds.push(created.id);
+      }
+
+      // ----- EDIT -----
+      await page.getByText(initialName).first().click();
+      await expect(
+        page.getByRole("heading", { name: initialName }),
+      ).toBeVisible();
+      await page.getByTestId("edit-vendor-button").click();
+      await expect(page.getByTestId("vendor-form")).toBeVisible();
+
+      const nameField = page.getByTestId("vendor-form-name");
+      await nameField.fill(renamedName);
+      await page.getByTestId("vendor-form-submit").click();
+      await expect(page.getByTestId("vendor-form")).toBeHidden({
+        timeout: 10000,
+      });
+
+      // Detail page heading reflects the rename.
+      await expect(
+        page.getByRole("heading", { name: renamedName }),
+      ).toBeVisible({ timeout: 5000 });
+
+      // ----- DELETE -----
+      await page.getByTestId("delete-vendor-button").click();
+      // Confirmation dialog mentions the renamed vendor in its description.
+      await expect(
+        page.getByText(new RegExp(`"${renamedName}" will be removed`, "i")),
+      ).toBeVisible();
+
+      // Click the dialog's confirm button (label "Delete").
+      const confirmDelete = page
+        .getByRole("button", { name: "Delete" })
+        .last();
+      await confirmDelete.click();
+
+      // Redirect back to /vendors after delete.
+      await page.waitForURL(/\/vendors$/, { timeout: 10000 });
+      await waitForVendorsPage(page);
+
+      // The deleted vendor is no longer in the rolodex.
+      await expect(page.getByText(renamedName)).toHaveCount(0);
+    } finally {
+      for (const id of createdIds) await deleteVendor(api, id);
+    }
+  });
+
+  test("create form validates name + category before submitting", async ({
+    authedPage: page,
+  }) => {
+    await page.goto("/vendors");
+    await waitForVendorsPage(page);
+
+    await page.getByTestId("add-vendor-button").click();
+    await expect(page.getByTestId("vendor-form")).toBeVisible();
+
+    // Submit with no name — form should stay open (HTML5 required).
+    await page.getByTestId("vendor-form-submit").click();
+    await expect(page.getByTestId("vendor-form")).toBeVisible();
+  });
+});

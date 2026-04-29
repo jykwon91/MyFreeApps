@@ -1,15 +1,23 @@
-import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, Star } from "lucide-react";
+import { useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { ArrowLeft, Star, Trash2 } from "lucide-react";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import AlertBox from "@/shared/components/ui/AlertBox";
+import Button from "@/shared/components/ui/Button";
 import LoadingButton from "@/shared/components/ui/LoadingButton";
-import { useGetVendorByIdQuery } from "@/shared/store/vendorsApi";
+import { showError, showSuccess } from "@/shared/lib/toast-store";
+import {
+  useDeleteVendorMutation,
+  useGetVendorByIdQuery,
+} from "@/shared/store/vendorsApi";
 import {
   formatAbsoluteTime,
   formatRelativeTime,
 } from "@/shared/lib/inquiry-date-format";
 import VendorCategoryBadge from "@/app/features/vendors/VendorCategoryBadge";
 import VendorDetailSkeleton from "@/app/features/vendors/VendorDetailSkeleton";
+import VendorForm from "@/app/features/vendors/VendorForm";
+import DeleteVendorModal from "@/app/features/vendors/DeleteVendorModal";
 
 function formatHourlyRate(rate: string | null): string {
   if (rate === null) return "Not set";
@@ -20,6 +28,10 @@ function formatHourlyRate(rate: string | null): string {
 
 export default function VendorDetail() {
   const { vendorId } = useParams<{ vendorId: string }>();
+  const navigate = useNavigate();
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteVendor, { isLoading: isDeleting }] = useDeleteVendorMutation();
   const {
     data: vendor,
     isLoading,
@@ -27,6 +39,18 @@ export default function VendorDetail() {
     isError,
     refetch,
   } = useGetVendorByIdQuery(vendorId ?? "", { skip: !vendorId });
+
+  async function handleConfirmDelete() {
+    if (!vendor) return;
+    try {
+      await deleteVendor(vendor.id).unwrap();
+      showSuccess("Vendor deleted.");
+      setShowDeleteModal(false);
+      navigate("/vendors");
+    } catch {
+      showError("I couldn't delete that vendor. Want to try again?");
+    }
+  }
 
   return (
     <main className="p-4 sm:p-8 space-y-6 max-w-3xl">
@@ -87,6 +111,28 @@ export default function VendorDetail() {
                   </span>
                 )}
               </span>
+            }
+            actions={
+              <>
+                <Button
+                  variant="secondary"
+                  size="md"
+                  onClick={() => setShowEditForm(true)}
+                  data-testid="edit-vendor-button"
+                >
+                  Edit
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="md"
+                  onClick={() => setShowDeleteModal(true)}
+                  className="text-red-600 border-red-200 hover:bg-red-50"
+                  data-testid="delete-vendor-button"
+                >
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  Delete
+                </Button>
+              </>
             }
           />
 
@@ -174,6 +220,21 @@ export default function VendorDetail() {
               {vendor.notes ?? "No notes yet."}
             </p>
           </section>
+
+          {showEditForm ? (
+            <VendorForm
+              vendor={vendor}
+              onClose={() => setShowEditForm(false)}
+            />
+          ) : null}
+
+          <DeleteVendorModal
+            open={showDeleteModal}
+            vendorName={vendor.name}
+            isLoading={isDeleting}
+            onConfirm={handleConfirmDelete}
+            onCancel={() => setShowDeleteModal(false)}
+          />
         </>
       )}
     </main>

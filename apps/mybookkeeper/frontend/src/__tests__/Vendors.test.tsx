@@ -48,9 +48,16 @@ const defaultVendorsState = {
   refetch: vi.fn(),
 };
 
+const createVendor = vi.fn(() => ({ unwrap: () => Promise.resolve({}) }));
+const updateVendor = vi.fn(() => ({ unwrap: () => Promise.resolve({}) }));
+const deleteVendor = vi.fn(() => ({ unwrap: () => Promise.resolve() }));
+
 vi.mock("@/shared/store/vendorsApi", () => ({
   useGetVendorsQuery: vi.fn(() => defaultVendorsState),
   useGetVendorByIdQuery: vi.fn(() => ({ data: undefined, isLoading: false })),
+  useCreateVendorMutation: () => [createVendor, { isLoading: false }],
+  useUpdateVendorMutation: () => [updateVendor, { isLoading: false }],
+  useDeleteVendorMutation: () => [deleteVendor, { isLoading: false }],
 }));
 
 import { useGetVendorsQuery } from "@/shared/store/vendorsApi";

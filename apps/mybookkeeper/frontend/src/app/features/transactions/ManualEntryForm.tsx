@@ -24,6 +24,9 @@ function buildDefaults(): TransactionFormValues {
     transaction_date: format(now, "yyyy-MM-dd"),
     tax_year: getYear(now),
     vendor: "",
+    // PR 4.2: vendor_id dropdown lives only on the edit panel; manual entry
+    // defaults to no rolodex link. Hosts can attach a vendor afterwards.
+    vendor_id: "",
     description: "",
     amount: "",
     transaction_type: "expense",

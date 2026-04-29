@@ -8,6 +8,10 @@ export interface Transaction {
   user_id: string;
   property_id: string | null;
   extraction_id: string | null;
+  // Host-curated link to the Vendors rolodex (PR 4.2). NULL for AI-extracted
+  // transactions that haven't been manually mapped yet, or for transactions
+  // whose vendor was hard-deleted.
+  vendor_id: string | null;
   transaction_date: string;
   tax_year: number;
   vendor: string | null;
