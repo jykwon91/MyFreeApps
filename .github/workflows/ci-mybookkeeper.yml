@@ -82,6 +82,13 @@ jobs:
         # Mirrors the standalone repo's CI pattern (pytest + pytest-asyncio + aiosqlite).
         run: uv pip install pytest pytest-asyncio aiosqlite
 
+      - name: Install shared-backend package
+        # platform_shared lives at packages/shared-backend and is imported by
+        # apps/mybookkeeper/backend (auth events, HIBP, Turnstile, etc.).
+        # Install into the same uv venv so MBK's tests can resolve it.
+        working-directory: apps/mybookkeeper/backend
+        run: uv pip install ../../../packages/shared-backend
+
       - name: Run pytest
         working-directory: apps/mybookkeeper/backend
         env:

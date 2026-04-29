@@ -26,8 +26,9 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.auth_events import AuthEventType
-from app.core.auth_messages import RATE_LIMIT_GENERIC_DETAIL
+from platform_shared.core.auth_events import AuthEventType
+from platform_shared.core.auth_messages import RATE_LIMIT_GENERIC_DETAIL
+
 from app.core.rate_limit import (
     RateLimiter,
     check_account_not_locked,

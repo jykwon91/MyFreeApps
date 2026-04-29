@@ -1,3 +1,10 @@
+"""Have-I-Been-Pwned password breach check via the k-anonymity range API.
+
+The plaintext password never leaves this server: only the first 5 hex characters
+of its SHA-1 hash are sent to the HIBP API, which returns all hash suffixes
+matching that prefix and the breach count for each. Documented at
+https://haveibeenpwned.com/API/v3#PwnedPasswords.
+"""
 import hashlib
 from typing import Final
 
@@ -5,7 +12,7 @@ import httpx
 
 HIBP_API_URL: Final = "https://api.pwnedpasswords.com/range/"
 HIBP_TIMEOUT_S: Final = 3.0
-HIBP_USER_AGENT: Final = "MyBookkeeper-PasswordCheck/1.0"
+HIBP_USER_AGENT: Final = "MyFreeApps-PasswordCheck/1.0"
 
 
 class HIBPCheckError(Exception):

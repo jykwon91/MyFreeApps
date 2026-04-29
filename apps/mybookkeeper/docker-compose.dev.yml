@@ -5,8 +5,10 @@ services:
 
   api:
     build:
-      context: .
-      dockerfile: docker/backend.Dockerfile
+      # Mirror docker-compose.yml — context is the monorepo root so the image
+      # can install packages/shared-backend (the platform_shared library).
+      context: ../..
+      dockerfile: apps/mybookkeeper/docker/backend.Dockerfile
     command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--reload-dir", "app"]
     environment:
       RUN_UPLOAD_WORKER: "true"

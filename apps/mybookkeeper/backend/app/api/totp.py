@@ -1,13 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from platform_shared.core.auth_events import AuthEventType
+
 from app.core.auth import (
     UserManager,
     current_active_user,
     get_jwt_strategy,
     get_user_manager,
 )
-from app.core.auth_events import AuthEventType
 from app.core.rate_limit import check_login_rate_limit, check_totp_rate_limit
 from app.db.session import get_db
 from app.models.user.user import User

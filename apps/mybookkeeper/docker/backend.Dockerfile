@@ -1,16 +1,20 @@
+# NOTE: Build context is the monorepo root (see docker-compose.yml).
+# All COPY paths are relative to MyFreeApps/, not apps/mybookkeeper/.
+
 # Stage 1: Build frontend
 FROM node:20-alpine AS frontend-build
 WORKDIR /build
-COPY frontend/package.json frontend/package-lock.json ./
+COPY apps/mybookkeeper/frontend/package.json apps/mybookkeeper/frontend/package-lock.json ./
 RUN npm ci
-COPY frontend/ ./
+COPY apps/mybookkeeper/frontend/ ./
 RUN npm run build
 
-# Stage 2: Install Python dependencies
+# Stage 2: Install Python dependencies (app + shared-backend package)
 FROM python:3.12-slim AS backend-deps
 WORKDIR /deps
-COPY backend/requirements.txt ./
-RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
+COPY packages/shared-backend/ /deps/shared-backend/
+COPY apps/mybookkeeper/backend/requirements.txt ./
+RUN pip install --no-cache-dir --prefix=/install /deps/shared-backend/ -r requirements.txt
 
 # Stage 3: Runtime
 FROM python:3.12-slim AS runtime
@@ -27,8 +31,8 @@ WORKDIR /app
 
 COPY --from=backend-deps /install /usr/local
 COPY --from=frontend-build /build/dist /app/frontend-dist
-COPY backend/ /app/
-COPY docker/entrypoint.sh /entrypoint.sh
+COPY apps/mybookkeeper/backend/ /app/
+COPY apps/mybookkeeper/docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 EXPOSE 8000

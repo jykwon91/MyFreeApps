@@ -1,0 +1,36 @@
+# BuildKit looks for <dockerfile>.dockerignore first when present.
+# Build context is the monorepo root (see ../docker-compose.yml).
+# Patterns are evaluated relative to that root.
+
+.git
+.github
+**/*.md
+!apps/mybookkeeper/backend/requirements.txt
+
+# App-scoped caches and dev artefacts
+apps/mybookkeeper/frontend/node_modules
+apps/mybookkeeper/frontend/dist
+apps/mybookkeeper/backend/.venv
+apps/mybookkeeper/backend/__pycache__
+apps/mybookkeeper/backend/.pytest_cache
+apps/mybookkeeper/e2e
+apps/mybookkeeper/playwright-report
+apps/mybookkeeper/test-results
+apps/mybookkeeper/chrome-extension
+apps/mybookkeeper/test-documents
+apps/mybookkeeper/hooks
+apps/mybookkeeper/.claude
+
+# Other apps in the monorepo — never bundled into the MBK image
+apps/myjobhunter
+
+# Shared frontend is unused by MBK's backend image
+packages/shared-frontend
+
+# Dev artefacts found anywhere in the tree
+**/__pycache__
+**/*.pyc
+**/.env
+**/*.log
+packages/shared-backend/.venv
+packages/shared-backend/**/__pycache__

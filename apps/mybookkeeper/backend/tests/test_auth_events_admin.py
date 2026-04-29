@@ -7,8 +7,9 @@ import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from platform_shared.core.auth_events import AuthEventType
+
 from app.core.auth import current_active_user
-from app.core.auth_events import AuthEventType
 from app.db.session import get_db
 from app.main import app
 from app.models.system.auth_event import AuthEvent
