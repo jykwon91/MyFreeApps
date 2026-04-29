@@ -142,6 +142,7 @@ class TestGetApplicant:
             applicant_id=applicant.id,
             provider="keycheck",
             requested_at=now,
+            uploaded_by_user_id=test_user.id,
             status="pending",
         )
         await reference_repo.create(

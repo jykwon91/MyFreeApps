@@ -12,6 +12,7 @@ from app.core.config import settings
 from app.core.permissions import current_org_member
 from app.db.session import unit_of_work
 from app.models.applicants.applicant import Applicant
+from app.models.applicants.screening_result import ScreeningResult
 from app.models.user.user import Role, User
 from app.repositories import (
     inquiry_repo,
@@ -288,6 +289,9 @@ async def seed_applicant(
                 applicant_id=applicant.id,
                 provider="keycheck",
                 requested_at=now,
+                # Seed flow has no real uploader — fall back to the parent
+                # applicant's owner so the NOT NULL FK is satisfied.
+                uploaded_by_user_id=ctx.user_id,
                 status="pending",
             )
         if payload.seed_reference:
@@ -308,6 +312,41 @@ async def seed_applicant(
                 notes="E2E video call note",
             )
         return _SeedApplicantResponse(id=applicant.id)
+
+
+@router.delete("/screening/{screening_id}", status_code=204)
+async def delete_screening_result(
+    screening_id: uuid.UUID,
+    ctx: RequestContext = Depends(current_org_member),
+) -> None:
+    """Hard-delete a screening_result row for E2E cleanup. Test-only.
+
+    PR 3.3 (KeyCheck redirect-only) introduces this cleanup hook so the
+    ``applicant-screening.spec.ts`` E2E test can leave the DB clean per
+    ``feedback_clean_test_data``. The applicant rows themselves stay —
+    cleanup of the parent applicant uses ``DELETE /test/applicants/<id>``.
+    Tenant-scoped via the parent applicant's ``(organization_id, user_id)``.
+    """
+    _require_test_mode()
+    async with unit_of_work() as db:
+        # Tenant-scoped JOIN — the screening row inherits scope from its
+        # parent applicant. Delete only if the calling org owns the parent.
+        from sqlalchemy import select as _sa_select
+        result = await db.execute(
+            _sa_select(ScreeningResult)
+            .join(Applicant, Applicant.id == ScreeningResult.applicant_id)
+            .where(
+                ScreeningResult.id == screening_id,
+                Applicant.organization_id == ctx.organization_id,
+                Applicant.user_id == ctx.user_id,
+            )
+        )
+        row = result.scalar_one_or_none()
+        if row is None:
+            return
+        await db.execute(
+            _sa_delete(ScreeningResult).where(ScreeningResult.id == screening_id),
+        )
 
 
 @router.delete("/applicants/{applicant_id}", status_code=204)

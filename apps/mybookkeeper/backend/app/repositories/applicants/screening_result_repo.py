@@ -23,23 +23,37 @@ async def create(
     applicant_id: uuid.UUID,
     provider: str,
     requested_at: _dt.datetime,
+    uploaded_by_user_id: uuid.UUID,
     status: str = "pending",
     report_storage_key: str | None = None,
     adverse_action_snippet: str | None = None,
     notes: str | None = None,
+    completed_at: _dt.datetime | None = None,
+    uploaded_at: _dt.datetime | None = None,
 ) -> ScreeningResult:
     """Create a screening_result row. Caller is responsible for proving the
     applicant belongs to the calling tenant via ``applicant_repo.get()``
-    BEFORE calling this — services compose, repos do not double-check."""
-    sr = ScreeningResult(
-        applicant_id=applicant_id,
-        provider=provider,
-        requested_at=requested_at,
-        status=status,
-        report_storage_key=report_storage_key,
-        adverse_action_snippet=adverse_action_snippet,
-        notes=notes,
-    )
+    BEFORE calling this — services compose, repos do not double-check.
+
+    ``uploaded_by_user_id`` is required (NOT NULL on the row). For PR 3.3
+    record-result the caller passes the route's request-context user; for
+    legacy seed paths (test_utils, prior PR 3.1a tests) the caller passes
+    the parent applicant's user_id as a sensible default.
+    """
+    kwargs: dict[str, object] = {
+        "applicant_id": applicant_id,
+        "provider": provider,
+        "requested_at": requested_at,
+        "uploaded_by_user_id": uploaded_by_user_id,
+        "status": status,
+        "report_storage_key": report_storage_key,
+        "adverse_action_snippet": adverse_action_snippet,
+        "notes": notes,
+        "completed_at": completed_at,
+    }
+    if uploaded_at is not None:
+        kwargs["uploaded_at"] = uploaded_at
+    sr = ScreeningResult(**kwargs)
     db.add(sr)
     await db.flush()
     return sr
@@ -55,7 +69,10 @@ async def list_for_applicant(
     """List screenings for an applicant, scoped through the parent's tenancy.
 
     Returns [] if the applicant doesn't belong to (organization_id, user_id).
-    Newest-requested-first.
+    Sort: newest-uploaded first — upload time is what hosts care about when
+    scanning the screening history (which report was reviewed most recently),
+    and ``requested_at`` only diverges from ``uploaded_at`` on the rare
+    in-flight ``pending`` rows.
     """
     result = await db.execute(
         select(ScreeningResult)
@@ -65,7 +82,7 @@ async def list_for_applicant(
             Applicant.organization_id == organization_id,
             Applicant.user_id == user_id,
         )
-        .order_by(desc(ScreeningResult.requested_at))
+        .order_by(desc(ScreeningResult.uploaded_at))
     )
     return list(result.scalars().all())
 

@@ -1,4 +1,10 @@
-"""Pydantic schema for a ScreeningResult response."""
+"""Pydantic schema for a ScreeningResult response.
+
+Includes ``presigned_url`` which is populated by ``screening_response_builder``
+on read paths (mirrors how listing photos surface a short-lived URL — the
+underlying object key is never exposed to the browser directly). PR 3.3
+populates ``uploaded_at`` / ``uploaded_by_user_id`` via the upload pipeline.
+"""
 from __future__ import annotations
 
 import datetime as _dt
@@ -17,6 +23,11 @@ class ScreeningResultResponse(BaseModel):
     notes: str | None = None
     requested_at: _dt.datetime
     completed_at: _dt.datetime | None = None
+    uploaded_at: _dt.datetime
+    uploaded_by_user_id: uuid.UUID
     created_at: _dt.datetime
+    # Populated by the screening response builder on read paths. None when
+    # storage is unavailable or the row has no report yet.
+    presigned_url: str | None = None
 
     model_config = ConfigDict(from_attributes=True)

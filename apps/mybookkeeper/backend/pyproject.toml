@@ -36,6 +36,13 @@ dependencies = [
     "pyotp==2.9.0",
     "qrcode[pil]==8.2",
     "pyjwt[crypto]>=2.10",
+    # PR 3.3 — screening report safety pipeline (RENTALS_PLAN.md §8.5).
+    # python-magic does the libmagic-backed content-type sniff; clamd is
+    # the unix-socket client for ClamAV. Both gracefully degrade when the
+    # underlying system library / daemon isn't present (dev / CI / Windows).
+    # Pillow already comes in via qrcode[pil].
+    "python-magic==0.4.27",
+    "clamd==1.0.2",
 ]
 
 [tool.uv]
