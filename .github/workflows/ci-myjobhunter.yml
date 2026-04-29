@@ -93,6 +93,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          pip install -e ../../../packages/shared-backend
 
       - name: Run alembic migrations
         working-directory: apps/myjobhunter/backend
