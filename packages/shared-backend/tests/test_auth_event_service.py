@@ -1,4 +1,4 @@
-"""Unit tests for auth_event_service.log_auth_event."""
+"""Unit tests for ``platform_shared.services.auth_event_service.log_auth_event``."""
 import uuid
 from unittest.mock import MagicMock
 
@@ -7,9 +7,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from platform_shared.core.auth_events import AuthEventType
-
-from app.models.system.auth_event import AuthEvent
-from app.services.system.auth_event_service import log_auth_event
+from platform_shared.db.models.auth_event import AuthEvent
+from platform_shared.services.auth_event_service import log_auth_event
 
 
 def _make_request(
@@ -113,7 +112,11 @@ async def test_log_auth_event_extracts_real_ip_from_forwarded_for(db: AsyncSessi
 
 @pytest.mark.anyio
 async def test_log_auth_event_no_user_id(db: AsyncSession) -> None:
-    """Events for unknown-user attempts are allowed with user_id=None."""
+    """Events for unknown-user attempts are allowed with user_id=None.
+
+    Anonymous failed-login rows store only ``metadata.email_domain`` —
+    never the full email — to keep PII out of the audit log.
+    """
     await log_auth_event(
         db,
         event_type=AuthEventType.LOGIN_FAILURE,
@@ -126,3 +129,18 @@ async def test_log_auth_event_no_user_id(db: AsyncSession) -> None:
     ev = (await db.execute(select(AuthEvent))).scalars().one()
     assert ev.user_id is None
     assert ev.event_metadata["email_domain"] == "example.com"
+
+
+@pytest.mark.anyio
+async def test_log_auth_event_does_not_flush(db: AsyncSession) -> None:
+    """The helper adds the row but never flushes — caller's tx commits."""
+    await log_auth_event(
+        db,
+        event_type=AuthEventType.LOGIN_SUCCESS,
+        user_id=uuid.uuid4(),
+        succeeded=True,
+    )
+
+    # Row should be staged in the session but not yet visible without flush.
+    pending = [obj for obj in db.new if isinstance(obj, AuthEvent)]
+    assert len(pending) == 1

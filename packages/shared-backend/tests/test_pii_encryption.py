@@ -189,8 +189,11 @@ class TestTamperDetection:
             secret_key=_FIXED_KEY, salt=_FIXED_SALT, info=_FIXED_INFO,
         )
         assert ct is not None
-        # Flip a character near the end.
-        bad = ct[:-2] + ("A" if ct[-2] != "A" else "B") + ct[-1]
+        # Flip a character in the middle of the token so we don't land in the
+        # trailing base64 padding bytes (which a lenient decoder may discard,
+        # leaving the underlying bytes — and the Fernet HMAC — unchanged).
+        mid = len(ct) // 2
+        bad = ct[:mid] + ("A" if ct[mid] != "A" else "B") + ct[mid + 1:]
         with pytest.raises(InvalidToken):
             decrypt_pii(
                 bad,

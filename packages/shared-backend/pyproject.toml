@@ -27,5 +27,8 @@ dev = [
     "aiosqlite>=0.20.0",
 ]
 
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+
 [tool.setuptools.packages.find]
 include = ["platform_shared*"]
