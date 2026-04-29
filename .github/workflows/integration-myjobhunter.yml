@@ -125,7 +125,10 @@ jobs:
 
       - name: Smoke — register + login
         run: |
-          EMAIL="ci-$(date +%s)@myjobhunter-test.invalid"
+          # email-validator>=2 rejects RFC 6761 reserved TLDs (.invalid) when
+          # globally_deliverable=True, which fastapi-users' EmailStr enforces.
+          # Use example.com (RFC 2606 reserved, real public-suffix-list TLD).
+          EMAIL="ci-$(date +%s)@myjobhunter-ci.example.com"
           PASSWORD="integration_password_12_chars"
           REGISTER_RES=$(curl -fsS -X POST http://localhost:8092/api/auth/register \
             -H 'Content-Type: application/json' \
