@@ -45,8 +45,11 @@ services:
 
   migrate:
     build:
-      context: .
-      dockerfile: docker/backend.Dockerfile
+      # Build context is the monorepo root so the image can pull in
+      # packages/shared-backend (the `platform_shared` library) alongside
+      # apps/mybookkeeper/. Mirrors apps/myjobhunter/docker/backend.Dockerfile.
+      context: ../..
+      dockerfile: apps/mybookkeeper/docker/backend.Dockerfile
     command: ["alembic", "upgrade", "head"]
     env_file: backend/.env.docker
     environment:
@@ -57,8 +60,11 @@ services:
 
   api:
     build:
-      context: .
-      dockerfile: docker/backend.Dockerfile
+      # Build context is the monorepo root so the image can pull in
+      # packages/shared-backend (the `platform_shared` library) alongside
+      # apps/mybookkeeper/. Mirrors apps/myjobhunter/docker/backend.Dockerfile.
+      context: ../..
+      dockerfile: apps/mybookkeeper/docker/backend.Dockerfile
     restart: always
     env_file: backend/.env.docker
     environment:
@@ -87,8 +93,11 @@ services:
 
   upload-processor:
     build:
-      context: .
-      dockerfile: docker/backend.Dockerfile
+      # Build context is the monorepo root so the image can pull in
+      # packages/shared-backend (the `platform_shared` library) alongside
+      # apps/mybookkeeper/. Mirrors apps/myjobhunter/docker/backend.Dockerfile.
+      context: ../..
+      dockerfile: apps/mybookkeeper/docker/backend.Dockerfile
     restart: always
     command: ["python", "-m", "app.workers.upload_processor_worker"]
     env_file: backend/.env.docker
@@ -100,8 +109,11 @@ services:
 
   scheduler:
     build:
-      context: .
-      dockerfile: docker/backend.Dockerfile
+      # Build context is the monorepo root so the image can pull in
+      # packages/shared-backend (the `platform_shared` library) alongside
+      # apps/mybookkeeper/. Mirrors apps/myjobhunter/docker/backend.Dockerfile.
+      context: ../..
+      dockerfile: apps/mybookkeeper/docker/backend.Dockerfile
     restart: always
     command: ["python", "-m", "app.workers.scheduler_worker"]
     env_file: backend/.env.docker

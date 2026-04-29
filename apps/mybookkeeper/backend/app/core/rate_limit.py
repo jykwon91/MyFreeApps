@@ -11,14 +11,15 @@ from fastapi import Depends, HTTPException, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.auth_events import AuthEventType
-from app.core.auth_messages import RATE_LIMIT_GENERIC_DETAIL
+from platform_shared.core.auth_events import AuthEventType
+from platform_shared.core.auth_messages import RATE_LIMIT_GENERIC_DETAIL
+from platform_shared.services.turnstile_service import verify_turnstile_token
+
 from app.core.config import settings
 from app.core.request_utils import get_client_ip
 from app.db.session import get_db
 from app.repositories.user.user_repo import get_by_email as get_user_by_email
 from app.services.system.auth_event_service import log_auth_event
-from app.services.user.turnstile_service import verify_turnstile_token
 
 
 @dataclass(slots=True)
@@ -143,7 +144,11 @@ async def require_turnstile(request: Request) -> None:
     token = request.headers.get("X-Turnstile-Token", "")
     if not token:
         raise HTTPException(status_code=400, detail="Captcha token required")
-    valid = await verify_turnstile_token(token, get_client_ip(request))
+    valid = await verify_turnstile_token(
+        token,
+        get_client_ip(request),
+        secret_key=settings.turnstile_secret_key,
+    )
     if not valid:
         raise HTTPException(status_code=400, detail="Captcha verification failed")
 

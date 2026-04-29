@@ -5,8 +5,9 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from fastapi_users import InvalidPasswordException
 
+from platform_shared.services.hibp_service import HIBPCheckError
+
 from app.core.auth import MIN_PASSWORD_LENGTH, UserManager
-from app.services.user.hibp_service import HIBPCheckError
 
 
 class TestMinLengthConstant:
@@ -118,7 +119,7 @@ class TestHIBPRealAPI:
     @pytest.mark.anyio
     async def test_well_known_pwned_password_detected(self) -> None:
         """'P@ssw0rd1234' is heavily pwned — HIBP must return True for it."""
-        from app.services.user.hibp_service import is_password_pwned
+        from platform_shared.services.hibp_service import is_password_pwned
 
         result = await is_password_pwned("P@ssw0rd1234")
         assert result is True, "Expected 'P@ssw0rd1234' to be flagged as pwned by HIBP"
@@ -128,7 +129,7 @@ class TestHIBPRealAPI:
         """A cryptographically random 32-char password should not appear in HIBP."""
         import secrets
 
-        from app.services.user.hibp_service import is_password_pwned
+        from platform_shared.services.hibp_service import is_password_pwned
 
         unique_pw = secrets.token_urlsafe(32)
         result = await is_password_pwned(unique_pw)

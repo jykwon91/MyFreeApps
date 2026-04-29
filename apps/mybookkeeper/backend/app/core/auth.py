@@ -10,7 +10,9 @@ from fastapi_users.authentication import AuthenticationBackend, BearerTransport,
 from fastapi_users.db import SQLAlchemyUserDatabase
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.auth_events import AuthEventType
+from platform_shared.core.auth_events import AuthEventType
+from platform_shared.services.hibp_service import HIBPCheckError, is_password_pwned
+
 from app.core.config import settings
 from app.db.session import get_db
 from app.models.organization.organization import Organization
@@ -20,7 +22,6 @@ from app.models.user.user import User
 from app.services.system.auth_event_service import log_auth_event
 from app.services.system.password_reset_email import send_password_reset_email
 from app.services.system.verification_email import send_verification_email
-from app.services.user.hibp_service import HIBPCheckError, is_password_pwned
 
 logger = logging.getLogger(__name__)
 

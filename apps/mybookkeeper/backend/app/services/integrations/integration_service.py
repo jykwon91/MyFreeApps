@@ -5,7 +5,8 @@ from google_auth_oauthlib.flow import Flow
 import jwt
 from jwt.exceptions import PyJWTError as JWTError
 
-from app.core.auth_events import AuthEventType
+from platform_shared.core.auth_events import AuthEventType
+
 from app.core.config import settings
 from app.core.context import RequestContext
 from app.db.session import AsyncSessionLocal, unit_of_work

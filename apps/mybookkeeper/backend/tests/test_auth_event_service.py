@@ -6,7 +6,8 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.auth_events import AuthEventType
+from platform_shared.core.auth_events import AuthEventType
+
 from app.models.system.auth_event import AuthEvent
 from app.services.system.auth_event_service import log_auth_event
 

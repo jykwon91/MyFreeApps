@@ -1,3 +1,6 @@
+"""Auth event type constants used by every app's auth-event audit log."""
+
+
 class AuthEventType:
     LOGIN_SUCCESS = "login.success"
     LOGIN_FAILURE = "login.failure"

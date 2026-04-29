@@ -4,7 +4,8 @@ from datetime import datetime, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.auth_events import AuthEventType
+from platform_shared.core.auth_events import AuthEventType
+
 from app.models.user.user import User
 from app.repositories.documents import document_repo
 from app.repositories.integrations import integration_repo
