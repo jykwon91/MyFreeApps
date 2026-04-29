@@ -22,6 +22,7 @@ TransactionFieldValue = (
 
 UPDATABLE_FIELDS = frozenset({
     "property_id",
+    "vendor_id",
     "activity_id",
     "transaction_date",
     "tax_year",

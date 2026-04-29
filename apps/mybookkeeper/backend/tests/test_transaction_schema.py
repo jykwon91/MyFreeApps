@@ -1,4 +1,5 @@
 """Tests for transaction schema Literal type validation."""
+import uuid
 from datetime import date
 from decimal import Decimal
 
@@ -82,3 +83,42 @@ class TestTransactionUpdateValidation:
         txn = TransactionUpdate()
         assert txn.transaction_type is None
         assert txn.category is None
+
+
+class TestTransactionUpdateVendorId:
+    """PR 4.2: ``vendor_id`` supports both "set to UUID" and "explicit null"
+    semantics. The ``to_update_dict()`` helper distinguishes "field omitted"
+    (drop) from "field set to null" (preserve as None) so the dropdown's
+    "(none)" option can detach the link.
+    """
+
+    def test_omitted_field_is_excluded_from_payload(self) -> None:
+        # Status is set, vendor_id is not even mentioned.
+        txn = TransactionUpdate(status="approved")
+        payload = txn.to_update_dict()
+        assert "vendor_id" not in payload
+
+    def test_explicit_null_vendor_id_is_preserved(self) -> None:
+        txn = TransactionUpdate(vendor_id=None)
+        # Pydantic v2 records explicit-null in model_fields_set.
+        payload = txn.to_update_dict()
+        assert payload.get("vendor_id") is None
+        assert "vendor_id" in payload
+
+    def test_uuid_vendor_id_is_preserved(self) -> None:
+        vid = uuid.uuid4()
+        txn = TransactionUpdate(vendor_id=vid)
+        payload = txn.to_update_dict()
+        assert payload["vendor_id"] == vid
+
+    def test_other_none_fields_still_dropped(self) -> None:
+        # Sanity check — historical behaviour (None == omitted) preserved
+        # for every field except vendor_id.
+        txn = TransactionUpdate(
+            vendor_id=None, property_id=None, status=None,
+        )
+        payload = txn.to_update_dict()
+        assert "vendor_id" in payload  # explicit
+        assert payload["vendor_id"] is None
+        assert "property_id" not in payload
+        assert "status" not in payload

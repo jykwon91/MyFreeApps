@@ -194,7 +194,7 @@ async def update_transaction(
 ) -> TransactionUpdateResponse:
     try:
         result = await transaction_service.update_transaction(
-            ctx, transaction_id, updates.model_dump(exclude_none=True),
+            ctx, transaction_id, updates.to_update_dict(),
         )
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))

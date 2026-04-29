@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from "react";
 import { UseFormRegister, UseFormWatch, UseFormSetValue, FieldErrors } from "react-hook-form";
 import { X, FileText } from "lucide-react";
 import api from "@/shared/lib/api";
-import { formatDate } from "@/shared/utils/date";
 import { formatTag } from "@/shared/utils/tag";
 import { EXPENSE_CATEGORY_LIST, INCOME_CATEGORIES, PAYMENT_METHODS, CHANNELS } from "@/shared/lib/constants";
 import type { Transaction } from "@/shared/types/transaction/transaction";
@@ -12,6 +11,7 @@ import type { DuplicateTransaction } from "@/shared/types/transaction/duplicate"
 import FormField from "@/shared/components/ui/FormField";
 import Select from "@/shared/components/ui/Select";
 import TransactionDuplicateActions from "@/app/features/transactions/TransactionDuplicateActions";
+import { useGetVendorsQuery } from "@/shared/store/vendorsApi";
 
 interface Props {
   transaction: Transaction;
@@ -43,6 +43,14 @@ export default function TransactionForm({
 
   const transactionType = watch("transaction_type");
   const categories = transactionType === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORY_LIST;
+
+  // PR 4.2: vendor rolodex for the "Assign vendor" dropdown. Bound is
+  // generous — listing 100 vendors at once is fine for typical hosts.
+  const { data: vendorsData, isLoading: vendorsLoading } = useGetVendorsQuery({
+    limit: 100,
+    offset: 0,
+  });
+  const vendors = vendorsData?.items ?? [];
 
   const revokePreview = useCallback(() => {
     setSourcePreview((prev) => {
@@ -167,6 +175,30 @@ export default function TransactionForm({
           {...register("vendor")}
           className={fieldClass("vendor")}
         />
+      </FormField>
+
+      {/* PR 4.2: link this transaction to a row in the Vendors rolodex.
+          The "(none)" option submits ``vendor_id: null`` to detach. */}
+      <FormField label="Assign vendor" dirty={!!dirtyFields.vendor_id}>
+        {vendorsLoading ? (
+          <div
+            className="h-10 w-full bg-muted/40 rounded-md animate-pulse"
+            data-testid="vendor-id-select-skeleton"
+          />
+        ) : (
+          <Select
+            {...register("vendor_id")}
+            className={selectClass("vendor_id")}
+            data-testid="vendor-id-select"
+          >
+            <option value="">(none)</option>
+            {vendors.map((v) => (
+              <option key={v.id} value={v.id}>
+                {v.name}
+              </option>
+            ))}
+          </Select>
+        )}
       </FormField>
 
       <FormField label="Description" dirty={!!dirtyFields.description}>

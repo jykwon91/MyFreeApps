@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { Provider } from "react-redux";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { store } from "@/shared/store";
@@ -32,9 +32,16 @@ const defaultDetailState = {
   refetch: vi.fn(),
 };
 
+const deleteVendor = vi.fn(() => ({ unwrap: () => Promise.resolve() }));
+const updateVendor = vi.fn(() => ({ unwrap: () => Promise.resolve(mockVendor) }));
+const createVendor = vi.fn(() => ({ unwrap: () => Promise.resolve(mockVendor) }));
+
 vi.mock("@/shared/store/vendorsApi", () => ({
   useGetVendorsQuery: vi.fn(() => ({ data: undefined, isLoading: false })),
   useGetVendorByIdQuery: vi.fn(() => defaultDetailState),
+  useDeleteVendorMutation: () => [deleteVendor, { isLoading: false }],
+  useUpdateVendorMutation: () => [updateVendor, { isLoading: false }],
+  useCreateVendorMutation: () => [createVendor, { isLoading: false }],
 }));
 
 import { useGetVendorByIdQuery } from "@/shared/store/vendorsApi";
@@ -166,5 +173,42 @@ describe("VendorDetail page", () => {
     } as unknown as DetailQueryReturn);
     renderVendorDetail();
     expect(screen.getByText(/Never used/i)).toBeInTheDocument();
+  });
+
+  // ----- PR 4.2: edit + delete UI -----
+
+  it("opens the edit form when the Edit button is clicked", () => {
+    renderVendorDetail();
+    expect(screen.queryByTestId("vendor-form")).toBeNull();
+    fireEvent.click(screen.getByTestId("edit-vendor-button"));
+    expect(screen.getByTestId("vendor-form")).toBeInTheDocument();
+    // The name field should be pre-populated with the vendor's name.
+    expect(screen.getByTestId("vendor-form-name")).toHaveValue("Bob's Plumbing");
+  });
+
+  it("opens the delete confirmation dialog when Delete is clicked", () => {
+    renderVendorDetail();
+    fireEvent.click(screen.getByTestId("delete-vendor-button"));
+    expect(screen.getByText(/Delete this vendor\?/i)).toBeInTheDocument();
+    // The vendor name appears multiple places in the dialog + page header;
+    // the dialog body must mention it inside the description copy.
+    expect(
+      screen.getByText(/"Bob's Plumbing" will be removed/i),
+    ).toBeInTheDocument();
+  });
+
+  it("calls deleteVendor when the user confirms the delete dialog", async () => {
+    deleteVendor.mockClear();
+    renderVendorDetail();
+    fireEvent.click(screen.getByTestId("delete-vendor-button"));
+    // ConfirmDialog confirm button has role=button + label "Delete".
+    const confirmBtn = screen
+      .getAllByRole("button")
+      .find((b) => b.textContent === "Delete");
+    expect(confirmBtn).toBeDefined();
+    fireEvent.click(confirmBtn!);
+    await waitFor(() => {
+      expect(deleteVendor).toHaveBeenCalledWith("vendor-1");
+    });
   });
 });

@@ -33,6 +33,9 @@ class TransactionRead(BaseModel):
     user_id: uuid.UUID
     property_id: uuid.UUID | None = None
     extraction_id: uuid.UUID | None = None
+    # Host-curated link to the Vendors rolodex (PR 4.2). NULL for AI-extracted
+    # transactions that haven't been manually mapped yet.
+    vendor_id: uuid.UUID | None = None
 
     transaction_date: date
     tax_year: int
@@ -108,6 +111,10 @@ class ScheduleELineItem(BaseModel):
 
 class TransactionUpdate(BaseModel):
     property_id: uuid.UUID | None = None
+    # Host-curated link to a Vendors rolodex row (PR 4.2). Explicit null is
+    # supported via ``to_update_dict()`` below — the "(none)" option in the
+    # frontend dropdown sends ``vendor_id: null`` to detach the link.
+    vendor_id: uuid.UUID | None = None
     transaction_date: date | None = None
     tax_year: int | None = None
     vendor: str | None = None
@@ -125,6 +132,21 @@ class TransactionUpdate(BaseModel):
     address: str | None = None
     payment_method: PaymentMethod | None = None
     status: TransactionStatus | None = None
+
+    def to_update_dict(self) -> dict[str, object]:
+        """Return the patch payload for the service layer.
+
+        Most fields drop ``None`` (treating null as "not provided") to
+        preserve historical behaviour. ``vendor_id`` is special: an explicit
+        ``null`` from the client must reach the service so the FK can be
+        unset (PR 4.2 — the Transaction edit page's "Assign vendor" dropdown
+        has a "(none)" option that sends ``vendor_id: null``). We detect the
+        explicit-null case via ``model_fields_set``.
+        """
+        payload = self.model_dump(exclude_none=True)
+        if "vendor_id" in self.model_fields_set and self.vendor_id is None:
+            payload["vendor_id"] = None
+        return payload
 
 
 class TransactionUpdateResponse(TransactionRead):
