@@ -21,6 +21,7 @@ from app.models.applicants.screening_result import ScreeningResult
 from app.models.applicants.reference import Reference
 from app.models.applicants.video_call_note import VideoCallNote
 from app.models.applicants.applicant_event import ApplicantEvent
+from app.models.vendors.vendor import Vendor
 from app.models.documents.document import Document
 from app.models.extraction.extraction_prompt import ExtractionPrompt
 from app.models.extraction.extraction_types import ExtractionData, ExtractionResult

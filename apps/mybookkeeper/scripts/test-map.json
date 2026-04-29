@@ -454,6 +454,26 @@
         "applicant-promote.spec.ts"
       ]
     },
+    "vendors": {
+      "source_paths": [
+        "backend/app/models/vendors/",
+        "backend/app/repositories/vendors/",
+        "backend/app/schemas/vendors/",
+        "backend/app/services/vendors/",
+        "backend/app/api/vendors.py",
+        "backend/app/core/vendor_enums.py",
+        "backend/alembic/versions/g9i1j4l6m8n0_add_vendors_domain.py"
+      ],
+      "backend_tests": [
+        "test_vendor_repo.py",
+        "test_vendor_service.py",
+        "test_vendor_routes.py"
+      ],
+      "frontend_tests": [],
+      "e2e_specs": [
+        "vendors-api.spec.ts"
+      ]
+    },
     "system": {
       "source_paths": [
         "backend/app/models/system/",
