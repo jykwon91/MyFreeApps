@@ -81,6 +81,48 @@ jobs:
           grep -q "<html" /tmp/index.html
           echo "Frontend HTML served correctly"
 
+      - name: Verify security response headers
+        # Asserts apps/myjobhunter/docker/Caddyfile.docker is emitting the
+        # five security headers required for parity with MyBookkeeper.
+        # Header lookups are case-insensitive (curl -I lower-cases names).
+        run: |
+          set -e
+          HEADERS=$(curl -fsSI http://localhost:8092/ | tr -d '\r')
+          echo "$HEADERS"
+
+          echo "$HEADERS" | grep -i '^Strict-Transport-Security:' \
+            | grep -q 'max-age=63072000' \
+            || (echo "Missing or wrong HSTS header" && exit 1)
+
+          echo "$HEADERS" | grep -iq '^X-Frame-Options:.*DENY' \
+            || (echo "Missing or wrong X-Frame-Options header" && exit 1)
+
+          echo "$HEADERS" | grep -iq '^X-Content-Type-Options:.*nosniff' \
+            || (echo "Missing or wrong X-Content-Type-Options header" && exit 1)
+
+          echo "$HEADERS" | grep -iq '^Referrer-Policy:.*strict-origin-when-cross-origin' \
+            || (echo "Missing or wrong Referrer-Policy header" && exit 1)
+
+          echo "$HEADERS" | grep -iq "^Content-Security-Policy:.*default-src 'self'" \
+            || (echo "Missing or wrong Content-Security-Policy header" && exit 1)
+
+          # Phase 1 CSP must NOT contain 'unsafe-inline' for scripts.
+          # If this ever fires, someone added a third-party script integration
+          # without splitting the script-src directive — fail loud.
+          if echo "$HEADERS" | grep -i '^Content-Security-Policy:' \
+              | grep -Eq "script-src[^;]*'unsafe-inline'"; then
+            echo "CSP regression: script-src must never contain 'unsafe-inline'" >&2
+            exit 1
+          fi
+
+          # Server header should be stripped.
+          if echo "$HEADERS" | grep -iq '^Server:'; then
+            echo "Server header was not stripped" >&2
+            exit 1
+          fi
+
+          echo "All security headers present and correctly configured."
+
       - name: Smoke — register + login
         run: |
           # email-validator>=2 rejects RFC 6761 reserved TLDs (.invalid) when

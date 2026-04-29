@@ -1,9 +1,84 @@
+# Trust X-Forwarded-For headers from host Caddy (runs on the same machine,
+# bridges to this container). This ensures real client IPs appear in app logs
+# rather than the Docker bridge IP.
+{
+    servers {
+        trusted_proxies static private_ranges
+        client_ip_headers X-Forwarded-For
+    }
+}
+
+# HTTP-only on :80 — TLS is terminated by host Caddy before traffic reaches
+# this container. The host Caddy must reverse-proxy the app domain to this
+# container with the original Host header preserved.
 {$DOMAIN:localhost} {
+    # ----------------------------------------------------------------------
+    # Security response headers — applied to every response (API + SPA).
+    #
+    # `defer` lets these headers also override anything the upstream FastAPI
+    # process might emit, so we never accidentally regress on a stricter
+    # policy because the API set a looser one.
+    #
+    # Mirrors apps/mybookkeeper/docker/Caddyfile.docker; CSP is intentionally
+    # tighter — see the per-directive justification under Content-Security-Policy.
+    # ----------------------------------------------------------------------
+    header {
+        defer
+
+        # HSTS — instructs browsers to only ever talk to this origin over HTTPS.
+        # Effective once the outer host Caddy is terminating TLS for the domain;
+        # harmless to set early. Two years + preload list eligibility, matching MBK.
+        Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+
+        # Forbid framing entirely — MJH never embeds itself in another site.
+        X-Frame-Options "DENY"
+
+        # Don't let browsers MIME-sniff responses past the declared Content-Type.
+        X-Content-Type-Options "nosniff"
+
+        # Send the origin (no path or query) on cross-origin nav; full referrer same-origin.
+        Referrer-Policy "strict-origin-when-cross-origin"
+
+        # Disable browser features MJH does not use. Matches MBK's exhaustive list
+        # so we don't have to revisit it as features get standardized.
+        Permissions-Policy "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=(), interest-cohort=(), browsing-topics=()"
+
+        # Content-Security-Policy — tighter than MBK because MJH Phase 1 has no
+        # third-party integrations on the page (no Plaid, no PostHog, no Sentry,
+        # no Cloudflare embeds). Each directive justified:
+        #
+        #   default-src 'self'         — fallback: only same-origin assets
+        #   script-src 'self'          — bundled JS only; NEVER add 'unsafe-inline'
+        #   style-src 'self' 'unsafe-inline' — Tailwind/Vite emit inline styles for
+        #                                runtime theme variables; acceptable for
+        #                                styles, never for scripts
+        #   img-src 'self' data: blob: — data: for inline SVG icons, blob: for any
+        #                                client-built images (e.g. avatar previews)
+        #   font-src 'self'            — bundled fonts only
+        #   connect-src 'self'         — XHR/fetch only to the same origin (the API
+        #                                lives at /api/* under the same host).
+        #                                Widen here when Phase 4 adds Anthropic /
+        #                                Tavily / Google OAuth callbacks.
+        #   frame-src 'none'           — MJH does not embed any iframes today.
+        #                                Add Cloudflare Turnstile here when C1 ships.
+        #   frame-ancestors 'none'     — backstop for X-Frame-Options on modern browsers
+        #   base-uri 'self'            — block <base href="..."> hijacks
+        #   form-action 'self'         — forms can only submit back to the app
+        #   object-src 'none'          — no Flash/Java/legacy plugin embeds
+        #   upgrade-insecure-requests  — auto-upgrade any stray http:// reference
+        Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; frame-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests"
+
+        # Don't advertise the server software in the response headers.
+        -Server
+    }
+
+    # API proxy (strip /api prefix)
     handle /api/* {
         uri strip_prefix /api
         reverse_proxy api:8002
     }
 
+    # SPA fallback for frontend
     handle {
         root * /srv/frontend
         try_files {path} /index.html
