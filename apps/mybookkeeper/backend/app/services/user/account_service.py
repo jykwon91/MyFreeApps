@@ -1,11 +1,40 @@
+"""MBK-specific account-management services.
+
+This module owns:
+
+  * :func:`build_export` — assembles a full per-user data export
+    (properties, documents, transactions, integrations). MBK-specific
+    because the domain rows differ across apps.
+  * :func:`delete_account` — hard-delete the user row; the FK cascade
+    wipes every related domain row. Also app-specific.
+
+The lockout-policy half (``record_failed_login``,
+``record_successful_login``, ``is_locked``, ``_lock_duration_for``)
+was promoted to ``platform_shared.services.account_lockout`` in PR M7
+and is re-exported below for back-compat with existing call sites that
+do ``from app.services.user.account_service import record_failed_login``.
+The MBK-specific exponential schedule + threshold remain configurable
+through ``app.core.config.settings.lockout_threshold`` and
+``settings.lockout_autoreset_hours`` — the wrapper functions inject
+those values into the shared helpers so production behaviour is
+byte-identical with pre-M7.
+"""
 import logging
 import uuid
 from datetime import datetime, timezone
+from typing import Any, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from platform_shared.core.auth_events import AuthEventType
+from platform_shared.services.account_lockout import (
+    autoreset_update_if_stale as _autoreset_update_if_stale,
+    is_locked as _shared_is_locked,
+    record_failed_login as _shared_record_failed_login,
+    record_successful_login_update as _shared_record_successful_login_update,
+)
 
+from app.core.config import settings
 from app.models.user.user import User
 from app.repositories.documents import document_repo
 from app.repositories.integrations import integration_repo
@@ -15,6 +44,64 @@ from app.repositories.user import user_repo
 from app.services.system.auth_event_service import log_auth_event
 
 logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Back-compat lockout shims
+#
+# Existing callers (and any future callers) that do
+# ``from app.services.user.account_service import record_failed_login``
+# keep working. New code should import directly from
+# ``platform_shared.services.account_lockout``.
+# ---------------------------------------------------------------------------
+
+
+async def record_failed_login(
+    user: User,
+    db: AsyncSession,
+    *,
+    metadata: Optional[dict[str, Any]] = None,
+    now: Optional[datetime] = None,
+) -> dict[str, Any]:
+    """Compute the post-failure update dict and emit a LOGIN_FAILURE row.
+
+    Back-compat wrapper that injects MBK's configured lockout threshold
+    and the standard ``log_auth_event`` writer. Returns the update dict
+    the caller must persist (mirrors the contract of the shared helper).
+    Audit semantics are preserved byte-identical with pre-M7 — see the
+    note on :func:`platform_shared.services.account_lockout.record_failed_login`.
+    """
+    return await _shared_record_failed_login(
+        user,
+        db=db,
+        user_id=user.id,
+        lockout_threshold=settings.lockout_threshold,
+        metadata=metadata,
+        now=now,
+    )
+
+
+def record_successful_login(user: User) -> Optional[dict[str, Any]]:
+    """Return the clear-counters update dict, or ``None`` if nothing to clear."""
+    return _shared_record_successful_login_update(user)
+
+
+def is_locked(user: User, *, now: Optional[datetime] = None) -> bool:
+    """Return ``True`` iff the account is currently locked."""
+    return _shared_is_locked(user, now=now)
+
+
+def autoreset_update_if_stale(
+    user: User,
+    *,
+    now: Optional[datetime] = None,
+) -> Optional[dict[str, Any]]:
+    """Return the auto-reset update dict if the counter is stale, else ``None``."""
+    return _autoreset_update_if_stale(
+        user,
+        now=now,
+        autoreset_hours=settings.lockout_autoreset_hours,
+    )
 
 
 def _user_to_export_dict(user: User) -> dict:

@@ -11,6 +11,14 @@ from fastapi_users.db import SQLAlchemyUserDatabase
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from platform_shared.core.auth_events import AuthEventType
+from platform_shared.services.account_lockout import (
+    autoreset_update_if_stale,
+    emit_locked_login_event,
+    is_locked as account_is_locked,
+    lock_duration_for,
+    record_failed_login,
+    record_successful_login_update,
+)
 from platform_shared.services.hibp_service import HIBPCheckError, is_password_pwned
 
 from app.core.config import settings
@@ -29,17 +37,14 @@ MIN_PASSWORD_LENGTH = 12
 
 
 def _lock_duration_for(failure_count: int) -> timedelta:
-    """Return exponential lock duration based on consecutive failure count."""
-    threshold = settings.lockout_threshold
-    if failure_count == threshold:
-        return timedelta(minutes=1)
-    if failure_count == threshold + 1:
-        return timedelta(minutes=5)
-    if failure_count == threshold + 2:
-        return timedelta(minutes=15)
-    if failure_count == threshold + 3:
-        return timedelta(hours=1)
-    return timedelta(hours=24)
+    """Return exponential lock duration based on consecutive failure count.
+
+    Thin back-compat wrapper around the shared
+    :func:`platform_shared.services.account_lockout.lock_duration_for`.
+    Existing test imports of ``app.core.auth._lock_duration_for`` keep
+    working; the underlying schedule is the shared default.
+    """
+    return lock_duration_for(failure_count, threshold=settings.lockout_threshold)
 
 
 async def get_user_db(session: AsyncSession = Depends(get_db)):
@@ -85,35 +90,23 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
         now = datetime.now(tz=timezone.utc)
 
         # Reject immediately if a lock is still in effect.
-        if user.locked_until and user.locked_until > now:
+        if account_is_locked(user, now=now):
             logger.info(
                 "Login rejected for locked account %s (locked until %s)",
                 user.email,
                 user.locked_until,
             )
-            await log_auth_event(
-                db,
-                event_type=AuthEventType.LOGIN_BLOCKED_LOCKED,
-                user_id=user.id,
-                succeeded=False,
-            )
+            await emit_locked_login_event(db=db, user_id=user.id)
             return None
 
         # Auto-reset a stale counter — occasional typos should not compound forever.
-        if (
-            user.failed_login_count > 0
-            and user.last_failed_login_at is not None
-            and (now - user.last_failed_login_at).total_seconds()
-            > settings.lockout_autoreset_hours * 3600
-        ):
-            await self.user_db.update(
-                user,
-                {
-                    "failed_login_count": 0,
-                    "last_failed_login_at": None,
-                    "locked_until": None,
-                },
-            )
+        autoreset = autoreset_update_if_stale(
+            user,
+            now=now,
+            autoreset_hours=settings.lockout_autoreset_hours,
+        )
+        if autoreset is not None:
+            await self.user_db.update(user, autoreset)
             user.failed_login_count = 0
             user.last_failed_login_at = None
             user.locked_until = None
@@ -122,41 +115,30 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
         result = await super().authenticate(credentials)
 
         if result is None:
-            # Bad password — increment failure counter.
-            new_count = user.failed_login_count + 1
-            update: dict[str, object] = {
-                "failed_login_count": new_count,
-                "last_failed_login_at": now,
-            }
-            if new_count >= settings.lockout_threshold:
-                lock_until = now + _lock_duration_for(new_count)
-                update["locked_until"] = lock_until
+            # Bad password — increment failure counter and apply exponential
+            # lock at threshold via the shared policy module.
+            update = await record_failed_login(
+                user,
+                db=db,
+                user_id=user.id,
+                lockout_threshold=settings.lockout_threshold,
+                metadata={"reason": "bad_password"},
+                now=now,
+            )
+            if "locked_until" in update:
                 logger.warning(
                     "Account locked: %s until %s (consecutive failures: %d)",
                     user.email,
-                    lock_until,
-                    new_count,
+                    update["locked_until"],
+                    update["failed_login_count"],
                 )
             await self.user_db.update(user, update)
-            await log_auth_event(
-                db,
-                event_type=AuthEventType.LOGIN_FAILURE,
-                user_id=user.id,
-                succeeded=False,
-                metadata={"reason": "bad_password"},
-            )
             return None
 
         # Successful password match — clear lockout state if any.
-        if result.failed_login_count > 0 or result.locked_until is not None:
-            await self.user_db.update(
-                result,
-                {
-                    "failed_login_count": 0,
-                    "last_failed_login_at": None,
-                    "locked_until": None,
-                },
-            )
+        clear_update = record_successful_login_update(result)
+        if clear_update is not None:
+            await self.user_db.update(result, clear_update)
 
         # Block unverified users — they must click the verification link first.
         # The TOTP login endpoint surfaces LOGIN_USER_NOT_VERIFIED to the frontend.
