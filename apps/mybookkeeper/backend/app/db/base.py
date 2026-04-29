@@ -1,9 +1,12 @@
-"""Re-export the shared SQLAlchemy declarative base.
+"""MBK's ``Base`` is the shared :class:`platform_shared.db.base.Base`.
 
-A single ``Base`` is shared with ``platform_shared`` so models defined in the
-shared package (e.g. ``platform_shared.db.models.auth_event.AuthEvent``)
-register with the same ``Base.metadata`` MyBookkeeper's Alembic migrations
-target. Without this unification, autogenerate would see the shared model as
-a "missing" table and try to create it on every revision.
+Re-exported so the 50+ existing ``from app.db.base import Base`` imports keep
+working unchanged. Models registered against this Base land in
+``platform_shared.db.base.Base.metadata`` — the same metadata the shared
+:class:`platform_shared.db.models.audit_log.AuditLog` and
+:class:`platform_shared.db.models.auth_event.AuthEvent` use, so alembic's
+``target_metadata`` sees both MBK-defined and shared tables in one pass.
 """
-from platform_shared.db.base import Base  # noqa: F401
+from platform_shared.db.base import Base
+
+__all__ = ["Base"]
