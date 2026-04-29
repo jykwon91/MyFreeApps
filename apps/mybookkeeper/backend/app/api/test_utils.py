@@ -25,6 +25,7 @@ from app.repositories.applicants import (
     screening_result_repo,
     video_call_note_repo,
 )
+from app.repositories.vendors import vendor_repo
 from app.repositories.user import user_repo
 from app.schemas.inquiries.inquiry_create_request import InquiryCreateRequest
 from app.schemas.inquiries.inquiry_response import InquiryResponse
@@ -336,4 +337,72 @@ async def delete_applicant(
             return
         await db.execute(
             _sa_delete(Applicant).where(Applicant.id == applicant_id),
+        )
+
+
+class _SeedVendorRequest(BaseModel):
+    name: str = "E2E Test Vendor"
+    category: str = "handyman"
+    phone: str | None = None
+    email: str | None = None
+    address: str | None = None
+    hourly_rate: Decimal | None = None
+    flat_rate_notes: str | None = None
+    preferred: bool = False
+    notes: str | None = None
+
+
+class _SeedVendorResponse(BaseModel):
+    id: uuid.UUID
+
+
+@router.post("/seed-vendor", response_model=_SeedVendorResponse)
+async def seed_vendor(
+    payload: _SeedVendorRequest,
+    ctx: RequestContext = Depends(current_org_member),
+) -> _SeedVendorResponse:
+    """Test-only direct insert for E2E vendor seeding.
+
+    PR 4.1a ships read-only vendor endpoints. Until PR 4.2 adds the public
+    POST /vendors, the E2E suite needs this seeded path to exercise full
+    create-fetch-cleanup flows. Gated by ``ALLOW_TEST_ADMIN_PROMOTION`` (off
+    in production).
+    """
+    _require_test_mode()
+    async with unit_of_work() as db:
+        created = await vendor_repo.create(
+            db,
+            organization_id=ctx.organization_id,
+            user_id=ctx.user_id,
+            name=payload.name,
+            category=payload.category,
+            phone=payload.phone,
+            email=payload.email,
+            address=payload.address,
+            hourly_rate=payload.hourly_rate,
+            flat_rate_notes=payload.flat_rate_notes,
+            preferred=payload.preferred,
+            notes=payload.notes,
+        )
+        return _SeedVendorResponse(id=created.id)
+
+
+@router.delete("/vendors/{vendor_id}", status_code=204)
+async def delete_vendor(
+    vendor_id: uuid.UUID,
+    ctx: RequestContext = Depends(current_org_member),
+) -> None:
+    """Hard-delete a vendor for E2E cleanup. Test-only.
+
+    Production code path uses soft-delete (``deleted_at``); the E2E suite
+    needs a true cleanup so test artifacts don't accumulate per
+    ``feedback_clean_test_data``.
+    """
+    _require_test_mode()
+    async with unit_of_work() as db:
+        await vendor_repo.hard_delete_by_id(
+            db,
+            vendor_id=vendor_id,
+            organization_id=ctx.organization_id,
+            user_id=ctx.user_id,
         )
