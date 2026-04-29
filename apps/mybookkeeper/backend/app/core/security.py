@@ -4,9 +4,16 @@ from cryptography.fernet import Fernet, InvalidToken
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from cryptography.hazmat.primitives import hashes
 
+from platform_shared.core.security import FernetSuite, create_pii_suite
+
 from app.core.config import settings
 
 HKDF_SALT = b"mybookkeeper-v1"
+# HKDF info string for the PII key family — distinct from the OAuth-token
+# family below so leaking one set of ciphertexts does NOT compromise the
+# other. MUST stay byte-identical to what's baked into existing production
+# PII columns; changing it would silently make every PII row unreadable.
+_MBK_PII_INFO = b"mybookkeeper-pii-encryption"
 
 
 def _derive_fernet(salt: bytes | None, info: bytes = b"mybookkeeper-token-encryption") -> Fernet:
@@ -22,7 +29,7 @@ def _derive_fernet(salt: bytes | None, info: bytes = b"mybookkeeper-token-encryp
 
 _fernet = None
 _fernet_legacy = None
-_fernet_pii = None
+_pii_suite: FernetSuite | None = None
 
 
 def get_fernet() -> Fernet:
@@ -39,13 +46,6 @@ def _get_legacy_fernet() -> Fernet:
     return _fernet_legacy
 
 
-def _get_pii_fernet() -> Fernet:
-    global _fernet_pii
-    if _fernet_pii is None:
-        _fernet_pii = _derive_fernet(HKDF_SALT, info=b"mybookkeeper-pii-encryption")
-    return _fernet_pii
-
-
 def encrypt_token(token: str) -> str:
     return get_fernet().encrypt(token.encode()).decode()
 
@@ -57,9 +57,36 @@ def decrypt_token(token: str) -> str:
         return _get_legacy_fernet().decrypt(token.encode()).decode()
 
 
+def _get_pii_suite() -> FernetSuite:
+    """Lazily build (and cache) the MBK PII Fernet suite.
+
+    Caching matters here — PII columns are encrypted/decrypted on every
+    Inquiry / Applicant read & write. Re-deriving the HKDF key on each call
+    would be a measurable perf regression vs. the pre-promotion behaviour.
+    """
+    global _pii_suite
+    if _pii_suite is None:
+        _pii_suite = create_pii_suite(
+            settings.encryption_key,
+            salt=HKDF_SALT,
+            info=_MBK_PII_INFO,
+        )
+    return _pii_suite
+
+
 def encrypt_pii(value: str) -> str:
-    return _get_pii_fernet().encrypt(value.encode()).decode()
+    """Encrypt PII with MBK's PII key family.
+
+    Thin wrapper around the shared :class:`FernetSuite` from
+    ``platform_shared.core.security``. Same `(str) -> str` signature as
+    before — call sites are unchanged.
+    """
+    return _get_pii_suite().encrypt(value)
 
 
 def decrypt_pii(ciphertext: str) -> str:
-    return _get_pii_fernet().decrypt(ciphertext.encode()).decode()
+    """Decrypt PII produced by :func:`encrypt_pii`.
+
+    Same `(str) -> str` signature as before — call sites are unchanged.
+    """
+    return _get_pii_suite().decrypt(ciphertext)
