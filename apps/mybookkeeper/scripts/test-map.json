@@ -454,6 +454,35 @@
         "applicant-promote.spec.ts"
       ]
     },
+    "screening": {
+      "source_paths": [
+        "backend/app/api/screening.py",
+        "backend/app/services/screening/",
+        "backend/app/schemas/applicants/screening_redirect_response.py",
+        "backend/app/schemas/applicants/screening_upload_request.py",
+        "backend/app/schemas/applicants/screening_result_response.py",
+        "backend/app/repositories/applicants/screening_result_repo.py",
+        "backend/app/models/applicants/screening_result.py",
+        "backend/alembic/versions/i1k3l6n8p0q2_add_screening_results_uploaded_columns.py",
+        "frontend/src/app/features/screening/",
+        "frontend/src/shared/store/screeningApi.ts",
+        "frontend/src/shared/types/screening/",
+        "frontend/src/shared/types/applicant/screening-result.ts"
+      ],
+      "backend_tests": [
+        "test_screening.py",
+        "test_screening_result_repo.py"
+      ],
+      "frontend_tests": [
+        "RunScreeningButton.test.tsx",
+        "UploadScreeningResultModal.test.tsx",
+        "ScreeningResultRow.test.tsx",
+        "ScreeningResultsList.test.tsx"
+      ],
+      "e2e_specs": [
+        "applicant-screening.spec.ts"
+      ]
+    },
     "vendors": {
       "source_paths": [
         "backend/app/models/vendors/",

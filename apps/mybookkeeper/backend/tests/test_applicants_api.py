@@ -93,6 +93,8 @@ def _build_detail(
                 status="pending",
                 requested_at=now,
                 completed_at=None,
+                uploaded_at=now,
+                uploaded_by_user_id=user_id,
                 created_at=now,
             ),
         ],

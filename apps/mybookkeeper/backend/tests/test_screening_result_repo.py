@@ -48,12 +48,17 @@ class TestScreeningResultRepoCreate:
             applicant_id=a.id,
             provider="keycheck",
             requested_at=_dt.datetime.now(_dt.timezone.utc),
+            uploaded_by_user_id=test_user.id,
             status="pending",
         )
         await db.commit()
         assert sr.applicant_id == a.id
         assert sr.provider == "keycheck"
         assert sr.status == "pending"
+        # PR 3.3 added uploaded_by_user_id + uploaded_at — both are required
+        # for the audit trail. Verify they're populated on every create.
+        assert sr.uploaded_by_user_id == test_user.id
+        assert sr.uploaded_at is not None
 
 
 class TestScreeningResultRepoList:
@@ -67,7 +72,8 @@ class TestScreeningResultRepoList:
 
         await screening_result_repo.create(
             db, applicant_id=a.id, provider="keycheck",
-            requested_at=_dt.datetime.now(_dt.timezone.utc), status="pass",
+            requested_at=_dt.datetime.now(_dt.timezone.utc),
+            uploaded_by_user_id=test_user.id, status="pass",
         )
         await db.commit()
 
@@ -88,7 +94,8 @@ class TestScreeningResultRepoList:
 
         await screening_result_repo.create(
             db, applicant_id=a.id, provider="keycheck",
-            requested_at=_dt.datetime.now(_dt.timezone.utc), status="pass",
+            requested_at=_dt.datetime.now(_dt.timezone.utc),
+            uploaded_by_user_id=test_user.id, status="pass",
         )
         await db.commit()
 
@@ -109,7 +116,8 @@ class TestScreeningResultRepoList:
 
         await screening_result_repo.create(
             db, applicant_id=a.id, provider="keycheck",
-            requested_at=_dt.datetime.now(_dt.timezone.utc), status="pass",
+            requested_at=_dt.datetime.now(_dt.timezone.utc),
+            uploaded_by_user_id=test_user.id, status="pass",
         )
         await db.commit()
 
@@ -131,7 +139,8 @@ class TestScreeningResultRepoUpdate:
 
         sr = await screening_result_repo.create(
             db, applicant_id=a.id, provider="keycheck",
-            requested_at=_dt.datetime.now(_dt.timezone.utc), status="pending",
+            requested_at=_dt.datetime.now(_dt.timezone.utc),
+            uploaded_by_user_id=test_user.id, status="pending",
         )
         await db.commit()
 
@@ -157,7 +166,8 @@ class TestScreeningResultRepoUpdate:
         await db.commit()
         sr = await screening_result_repo.create(
             db, applicant_id=a.id, provider="keycheck",
-            requested_at=_dt.datetime.now(_dt.timezone.utc), status="pending",
+            requested_at=_dt.datetime.now(_dt.timezone.utc),
+            uploaded_by_user_id=test_user.id, status="pending",
         )
         await db.commit()
 
@@ -183,6 +193,7 @@ class TestScreeningResultConstraints:
             provider="bogus",
             status="pending",
             requested_at=_dt.datetime.now(_dt.timezone.utc),
+            uploaded_by_user_id=test_user.id,
         )
         db.add(bad)
         with pytest.raises(IntegrityError):
@@ -202,6 +213,7 @@ class TestScreeningResultConstraints:
             provider="keycheck",
             status="never_heard_of_this",
             requested_at=_dt.datetime.now(_dt.timezone.utc),
+            uploaded_by_user_id=test_user.id,
         )
         db.add(bad)
         with pytest.raises(IntegrityError):
@@ -228,7 +240,8 @@ class TestScreeningResultConstraints:
 
         await screening_result_repo.create(
             db, applicant_id=a.id, provider="keycheck",
-            requested_at=_dt.datetime.now(_dt.timezone.utc), status="pending",
+            requested_at=_dt.datetime.now(_dt.timezone.utc),
+            uploaded_by_user_id=test_user.id, status="pending",
         )
         await db.commit()
 
@@ -237,7 +250,8 @@ class TestScreeningResultConstraints:
         with pytest.raises(IntegrityError):
             await screening_result_repo.create(
                 db, applicant_id=a.id, provider="keycheck",
-                requested_at=_dt.datetime.now(_dt.timezone.utc), status="pending",
+                requested_at=_dt.datetime.now(_dt.timezone.utc),
+                uploaded_by_user_id=test_user.id, status="pending",
             )
         await db.rollback()
 
@@ -267,11 +281,13 @@ class TestScreeningResultConstraints:
 
         await screening_result_repo.create(
             db, applicant_id=a.id, provider="keycheck",
-            requested_at=_dt.datetime.now(_dt.timezone.utc), status="fail",
+            requested_at=_dt.datetime.now(_dt.timezone.utc),
+            uploaded_by_user_id=test_user.id, status="fail",
         )
         await screening_result_repo.create(
             db, applicant_id=a.id, provider="keycheck",
-            requested_at=_dt.datetime.now(_dt.timezone.utc), status="pending",
+            requested_at=_dt.datetime.now(_dt.timezone.utc),
+            uploaded_by_user_id=test_user.id, status="pending",
         )
         await db.commit()
 
@@ -295,7 +311,8 @@ class TestScreeningResultCascade:
 
         await screening_result_repo.create(
             db, applicant_id=a.id, provider="keycheck",
-            requested_at=_dt.datetime.now(_dt.timezone.utc), status="pass",
+            requested_at=_dt.datetime.now(_dt.timezone.utc),
+            uploaded_by_user_id=test_user.id, status="pass",
         )
         await db.commit()
 

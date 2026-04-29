@@ -220,6 +220,15 @@ wheels = [
 ]
 
 [[package]]
+name = "clamd"
+version = "1.0.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/14/8b/55332f1f79f28a5ccc50f66364087e64fae8e4ed62e52007ca82b3072221/clamd-1.0.2.tar.gz", hash = "sha256:d82a2fd814684a35a1b31feadafb2e69c8ebde9403613f6bdaa5d877c0f29560", size = 8218, upload-time = "2014-08-21T14:58:18.562Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/3d/d0/84614de2a53ad52370adc9f9260bea420e53e0c228a248ec0eacfa65ccbb/clamd-1.0.2-py2.py3-none-any.whl", hash = "sha256:5c32546b7d1eb00fd6be00a889d79e00fbf980ed082826ccfa369bce3dcff5e7", size = 6684, upload-time = "2014-08-21T14:58:22.946Z" },
+]
+
+[[package]]
 name = "click"
 version = "8.3.3"
 source = { registry = "https://pypi.org/simple" }
@@ -677,6 +686,7 @@ dependencies = [
     { name = "alembic" },
     { name = "anthropic" },
     { name = "asyncpg" },
+    { name = "clamd" },
     { name = "cryptography" },
     { name = "dramatiq" },
     { name = "email-validator" },
@@ -698,6 +708,7 @@ dependencies = [
     { name = "pyotp" },
     { name = "pypdf" },
     { name = "python-dotenv" },
+    { name = "python-magic" },
     { name = "python-multipart" },
     { name = "qrcode", extra = ["pil"] },
     { name = "reportlab" },
@@ -713,6 +724,7 @@ requires-dist = [
     { name = "alembic", specifier = "==1.18.4" },
     { name = "anthropic", specifier = "==0.97.0" },
     { name = "asyncpg", specifier = "==0.31.0" },
+    { name = "clamd", specifier = "==1.0.2" },
     { name = "cryptography", specifier = ">=47" },
     { name = "dramatiq", extras = ["postgres"], specifier = "==1.17.0" },
     { name = "email-validator", specifier = "==2.3.0" },
@@ -734,6 +746,7 @@ requires-dist = [
     { name = "pyotp", specifier = "==2.9.0" },
     { name = "pypdf", specifier = ">=5.6" },
     { name = "python-dotenv", specifier = "==1.2.2" },
+    { name = "python-magic", specifier = "==0.4.27" },
     { name = "python-multipart", specifier = "==0.0.26" },
     { name = "qrcode", extras = ["pil"], specifier = "==8.2" },
     { name = "reportlab", specifier = "==4.4.10" },
@@ -1025,6 +1038,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/82/ed/0301aeeac3e5353ef3d94b6ec08bbcabd04a72018415dcb29e588514bba8/python_dotenv-1.2.2.tar.gz", hash = "sha256:2c371a91fbd7ba082c2c1dc1f8bf89ca22564a087c2c287cd9b662adde799cf3", size = 50135, upload-time = "2026-03-01T16:00:26.196Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/0b/d7/1959b9648791274998a9c3526f6d0ec8fd2233e4d4acce81bbae76b44b2a/python_dotenv-1.2.2-py3-none-any.whl", hash = "sha256:1d8214789a24de455a8b8bd8ae6fe3c6b69a5e3d64aa8a8e5d68e694bbcb285a", size = 22101, upload-time = "2026-03-01T16:00:25.09Z" },
+]
+
+[[package]]
+name = "python-magic"
+version = "0.4.27"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/da/db/0b3e28ac047452d079d375ec6798bf76a036a08182dbb39ed38116a49130/python-magic-0.4.27.tar.gz", hash = "sha256:c1ba14b08e4a5f5c31a302b7721239695b2f0f058d125bd5ce1ee36b9d9d3c3b", size = 14677, upload-time = "2022-06-07T20:16:59.508Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/6c/73/9f872cb81fc5c3bb48f7227872c28975f998f3e7c2b1c16e95e6432bbb90/python_magic-0.4.27-py2.py3-none-any.whl", hash = "sha256:c212960ad306f700aa0d01e5d7a325d20548ff97eb9920dcd29513174f0294d3", size = 13840, upload-time = "2022-06-07T20:16:57.763Z" },
 ]
 
 [[package]]

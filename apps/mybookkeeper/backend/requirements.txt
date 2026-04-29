@@ -43,6 +43,8 @@ charset-normalizer==3.4.7
     # via
     #   reportlab
     #   requests
+clamd==1.0.2
+    # via mybookkeeper-backend
 click==8.3.3
     # via uvicorn
 cobble==0.1.4
@@ -194,6 +196,8 @@ python-dotenv==1.2.2
     #   mybookkeeper-backend
     #   pydantic-settings
     #   uvicorn
+python-magic==0.4.27
+    # via mybookkeeper-backend
 python-multipart==0.0.26
     # via
     #   fastapi-users

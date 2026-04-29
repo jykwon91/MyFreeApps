@@ -61,6 +61,23 @@ class ScreeningResult(Base):
     completed_at: Mapped[_dt.datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True,
     )
+    # When the host uploaded the report PDF (PR 3.3 KeyCheck redirect-only
+    # flow). Distinct from completed_at (provider-side signal we don't have
+    # in the redirect-only model) and created_at (row-creation timestamp).
+    uploaded_at: Mapped[_dt.datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: _dt.datetime.now(_dt.timezone.utc),
+        server_default=func.now(),
+    )
+    # Who uploaded the report — required for the audit trail. ON DELETE
+    # RESTRICT (set in the migration) — a user with active uploaded
+    # screening reports cannot be hard-deleted.
+    uploaded_by_user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
     created_at: Mapped[_dt.datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

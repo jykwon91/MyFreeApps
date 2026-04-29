@@ -1,9 +1,12 @@
+import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, ExternalLink } from "lucide-react";
+import { ArrowLeft, ExternalLink, Upload } from "lucide-react";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import AlertBox from "@/shared/components/ui/AlertBox";
+import Button from "@/shared/components/ui/Button";
 import LoadingButton from "@/shared/components/ui/LoadingButton";
 import { useGetApplicantByIdQuery } from "@/shared/store/applicantsApi";
+import { useCanWrite } from "@/shared/hooks/useOrgRole";
 import {
   formatAbsoluteTime,
   formatLongDate,
@@ -12,13 +15,17 @@ import {
 import ApplicantStageBadge from "@/app/features/applicants/ApplicantStageBadge";
 import ApplicantDetailSkeleton from "@/app/features/applicants/ApplicantDetailSkeleton";
 import ApplicantTimelineList from "@/app/features/applicants/ApplicantTimelineList";
-import ScreeningResultRow from "@/app/features/applicants/ScreeningResultRow";
 import ReferenceRow from "@/app/features/applicants/ReferenceRow";
 import VideoCallNoteCard from "@/app/features/applicants/VideoCallNoteCard";
 import SensitiveDataUnlock from "@/app/features/applicants/SensitiveDataUnlock";
+import RunScreeningButton from "@/app/features/screening/RunScreeningButton";
+import ScreeningResultsList from "@/app/features/screening/ScreeningResultsList";
+import UploadScreeningResultModal from "@/app/features/screening/UploadScreeningResultModal";
 
 export default function ApplicantDetail() {
   const { applicantId } = useParams<{ applicantId: string }>();
+  const canWrite = useCanWrite();
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const {
     data: applicant,
     isLoading,
@@ -172,24 +179,43 @@ export default function ApplicantDetail() {
             </div>
           </SensitiveDataUnlock>
 
-          {/* Screening results */}
+          {/* Screening — PR 3.3 KeyCheck redirect-only flow.
+              Read access for any org member; only non-VIEWER members see
+              the "Run KeyCheck" / "Upload result" controls. */}
           <section
             className="border rounded-lg p-4 space-y-3"
             data-testid="screening-section"
           >
-            <h2 className="text-sm font-medium">Screening</h2>
-            {applicant.screening_results.length === 0 ? (
-              <p className="text-xs text-muted-foreground italic">
-                No screening run yet.
-              </p>
-            ) : (
-              <ul className="divide-y" data-testid="screening-list">
-                {applicant.screening_results.map((result) => (
-                  <ScreeningResultRow key={result.id} result={result} />
-                ))}
-              </ul>
-            )}
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <h2 className="text-sm font-medium">Screening</h2>
+              {canWrite ? (
+                <div className="flex items-center gap-2">
+                  <RunScreeningButton applicantId={applicant.id} />
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setUploadModalOpen(true)}
+                    data-testid="open-upload-screening-modal"
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <Upload className="h-3.5 w-3.5" aria-hidden="true" />
+                      Upload result
+                    </span>
+                  </Button>
+                </div>
+              ) : null}
+            </div>
+            <ScreeningResultsList applicantId={applicant.id} />
           </section>
+
+          {canWrite ? (
+            <UploadScreeningResultModal
+              applicantId={applicant.id}
+              open={uploadModalOpen}
+              onClose={() => setUploadModalOpen(false)}
+            />
+          ) : null}
 
           {/* References */}
           <section
