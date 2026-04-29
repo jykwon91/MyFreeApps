@@ -8,7 +8,10 @@ Modules:
     platform_shared.core.security            — create_fernet_suite(), create_pii_suite(), encrypt_pii(), decrypt_pii()
     platform_shared.core.encrypted_string_type — EncryptedString TypeDecorator, PIICodec
     platform_shared.core.storage             — StorageClient, get_storage()
-    platform_shared.core.rate_limit          — RateLimiter, get_client_ip()
+    platform_shared.core.rate_limit          — RateLimiter, email_domain_from_request,
+                                                make_require_turnstile,
+                                                make_check_login_ip_limit,
+                                                make_check_account_not_locked
     platform_shared.core.audit               — register_audit_listeners(),
                                                 register_sensitive_fields(),
                                                 register_skip_tables(),
