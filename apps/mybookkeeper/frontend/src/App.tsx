@@ -24,6 +24,8 @@ import Inquiries from "@/app/pages/Inquiries";
 import InquiryDetail from "@/app/pages/InquiryDetail";
 import Applicants from "@/app/pages/Applicants";
 import ApplicantDetail from "@/app/pages/ApplicantDetail";
+import Vendors from "@/app/pages/Vendors";
+import VendorDetail from "@/app/pages/VendorDetail";
 import ReplyTemplates from "@/app/pages/ReplyTemplates";
 import TaxReport from "@/app/pages/TaxReport";
 import Integrations from "@/app/pages/Integrations";
@@ -101,6 +103,8 @@ export default function App() {
               <Route path="inquiries/:inquiryId" element={<InquiryDetail />} />
               <Route path="applicants" element={<Applicants />} />
               <Route path="applicants/:applicantId" element={<ApplicantDetail />} />
+              <Route path="vendors" element={<Vendors />} />
+              <Route path="vendors/:vendorId" element={<VendorDetail />} />
               <Route path="reply-templates" element={<ReplyTemplates />} />
               <Route path="reconciliation" element={<Reconciliation />} />
               <Route path="tax" element={<TaxReport />} />

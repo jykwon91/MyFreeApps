@@ -462,16 +462,27 @@
         "backend/app/services/vendors/",
         "backend/app/api/vendors.py",
         "backend/app/core/vendor_enums.py",
-        "backend/alembic/versions/g9i1j4l6m8n0_add_vendors_domain.py"
+        "backend/alembic/versions/g9i1j4l6m8n0_add_vendors_domain.py",
+        "frontend/src/app/pages/Vendors.tsx",
+        "frontend/src/app/pages/VendorDetail.tsx",
+        "frontend/src/app/features/vendors/",
+        "frontend/src/shared/types/vendor/",
+        "frontend/src/shared/store/vendorsApi.ts",
+        "frontend/src/shared/lib/vendor-labels.ts"
       ],
       "backend_tests": [
         "test_vendor_repo.py",
         "test_vendor_service.py",
         "test_vendor_routes.py"
       ],
-      "frontend_tests": [],
+      "frontend_tests": [
+        "Vendors.test.tsx",
+        "VendorDetail.test.tsx"
+      ],
       "e2e_specs": [
-        "vendors-api.spec.ts"
+        "vendors-api.spec.ts",
+        "vendors.spec.ts",
+        "vendors-layout.spec.ts"
       ]
     },
     "system": {
