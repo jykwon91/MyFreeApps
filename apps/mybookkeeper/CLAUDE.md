@@ -251,8 +251,8 @@ All AI-facing UI (extraction feedback, status messages, error states) should fee
 - Underlying ciphertext is Fernet, derived from the same `ENCRYPTION_KEY` master via HKDF but with a distinct `info=b"mybookkeeper-pii-encryption"` so the PII key family is isolated from the OAuth-token key family — leaking one set of ciphertexts does NOT compromise the other
 - Ciphertext is non-deterministic — equality lookups on encrypted columns will NOT match (each write produces a different ciphertext for the same plaintext). Dedup must use non-PII keys (e.g. `email_message_id`, `external_inquiry_id`)
 - Add a sibling `key_version: SmallInteger` column on every PII-bearing table per RENTALS_PLAN.md §8.2 — required for non-destructive future key rotation
-- Add encrypted-column field names to `SENSITIVE_FIELDS` in `core/audit.py` so the audit log masks them as `***` (the audit listener captures values BEFORE the bind-time encryption hook fires, so without masking it would leak plaintext into audit_logs)
-- Phase 3 (Applicants) reuses the same `EncryptedString` type — do NOT re-implement; extend the SENSITIVE_FIELDS allowlist instead
+- Add encrypted-column field names to `MBK_SENSITIVE_FIELDS` in `app/core/audit.py` so the audit log masks them as `***` (the audit listener captures values BEFORE the bind-time encryption hook fires, so without masking it would leak plaintext into audit_logs). The wrapper calls `platform_shared.core.audit.register_sensitive_fields()` at import time — listener + model now live in `platform_shared` (PR M3).
+- Phase 3 (Applicants) reuses the same `EncryptedString` type — do NOT re-implement; extend the `MBK_SENSITIVE_FIELDS` allowlist instead
 
 ## Commands
 
