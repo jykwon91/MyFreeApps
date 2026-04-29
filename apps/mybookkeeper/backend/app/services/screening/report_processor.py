@@ -130,6 +130,13 @@ def _sniff_header(content: bytes) -> str | None:
     return None
 
 
+_GENERIC_MAGIC_MIMES = frozenset({
+    "application/octet-stream",
+    "application/x-empty",
+    "inode/x-empty",
+})
+
+
 def sniff_content_type(content: bytes) -> str | None:
     """Return the sniffed MIME type, or None if unrecognised.
 
@@ -138,7 +145,7 @@ def sniff_content_type(content: bytes) -> str | None:
     separate so unit tests can exercise the fallback path explicitly.
     """
     sniffed = _sniff_with_magic(content)
-    if sniffed is not None and sniffed != "application/octet-stream":
+    if sniffed is not None and sniffed not in _GENERIC_MAGIC_MIMES:
         return sniffed
     return _sniff_header(content)
 
