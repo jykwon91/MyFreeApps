@@ -97,7 +97,9 @@ class TestRequireTurnstile:
                     "x-forwarded-for": "9.9.9.9, 10.0.0.1",
                 })
                 await require_turnstile(request)
-                mock_verify.assert_awaited_once_with("good-token", "9.9.9.9")
+                mock_verify.assert_awaited_once_with(
+                    "good-token", "9.9.9.9", secret_key="test-secret",
+                )
 
 
 # ---------------------------------------------------------------------------
