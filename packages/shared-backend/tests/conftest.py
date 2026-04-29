@@ -29,6 +29,24 @@ def _patch_metadata_for_sqlite() -> None:
                 column.type = JSON()
 
 
+@pytest.fixture(autouse=True, scope="session")
+def _patch_jsonb_for_sqlite_session() -> None:
+    """Apply the JSONB→JSON patch once per test session.
+
+    Any test that calls ``Base.metadata.create_all`` against SQLite (including
+    tests that define their own ``db`` fixture, like ``test_audit.py``) needs
+    this. Runs at session scope so it's idempotent and applies before any
+    test-local fixtures touch metadata.
+    """
+    # Force-import every shared model so its table is registered with
+    # ``Base.metadata`` before we walk it. Lazy importers would otherwise
+    # leave the metadata empty until their tests run.
+    from platform_shared.db.models.audit_log import AuditLog  # noqa: F401
+    from platform_shared.db.models.auth_event import AuthEvent  # noqa: F401
+
+    _patch_metadata_for_sqlite()
+
+
 @pytest_asyncio.fixture()
 async def db() -> AsyncGenerator[AsyncSession, None]:
     """Yield an in-memory SQLite async session with the shared schema applied.
