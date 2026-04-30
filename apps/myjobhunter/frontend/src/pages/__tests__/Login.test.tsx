@@ -63,7 +63,7 @@ describe("Login page", () => {
   });
 
   it("navigates to /dashboard on successful sign-in", async () => {
-    mockSignIn.mockResolvedValue(undefined);
+    mockSignIn.mockResolvedValue({ status: "ok" });
     const user = userEvent.setup();
     renderLogin();
 
@@ -80,7 +80,7 @@ describe("Login page", () => {
   });
 
   it("navigates to location.state.from after successful sign-in", async () => {
-    mockSignIn.mockResolvedValue(undefined);
+    mockSignIn.mockResolvedValue({ status: "ok" });
     const user = userEvent.setup();
 
     render(
