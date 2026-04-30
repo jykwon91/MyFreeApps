@@ -14,7 +14,7 @@ class Upload1099Request(BaseModel):
 
 class CreateMatchRequest(BaseModel):
     reconciliation_source_id: uuid.UUID
-    reservation_id: uuid.UUID
+    booking_statement_id: uuid.UUID
     matched_amount: Decimal
 
 
@@ -44,7 +44,7 @@ class ReconciliationSourceRead(BaseModel):
 class ReconciliationMatchRead(BaseModel):
     id: uuid.UUID
     reconciliation_source_id: uuid.UUID
-    reservation_id: uuid.UUID
+    booking_statement_id: uuid.UUID
     matched_amount: Decimal
 
     created_at: datetime

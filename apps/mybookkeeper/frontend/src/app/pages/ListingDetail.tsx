@@ -25,6 +25,7 @@ import ListingApplyUrlPanel from "@/app/features/listings/ListingApplyUrlPanel";
 import ListingForm from "@/app/features/listings/ListingForm";
 import ListingPhotoManager from "@/app/features/listings/ListingPhotoManager";
 import DeleteListingModal from "@/app/features/listings/DeleteListingModal";
+import ChannelsSection from "@/app/features/listings/ChannelsSection";
 
 export default function ListingDetail() {
   const { listingId } = useParams<{ listingId: string }>();
@@ -179,6 +180,11 @@ export default function ListingDetail() {
           <section className="border rounded-lg p-4 space-y-3">
             <h2 className="text-sm font-medium">Photos</h2>
             <ListingPhotoManager listingId={listing.id} photos={listing.photos} />
+          </section>
+
+          <section className="border rounded-lg p-4 space-y-3">
+            <h2 className="text-sm font-medium">Channels</h2>
+            <ChannelsSection listingId={listing.id} />
           </section>
 
           {showEditForm ? (

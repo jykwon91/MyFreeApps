@@ -316,7 +316,9 @@
         "backend/app/services/listings/",
         "backend/app/schemas/listings/",
         "backend/app/core/listing_enums.py",
+        "backend/app/core/channel_constants.py",
         "backend/app/api/listings.py",
+        "backend/app/api/calendar.py",
         "backend/app/services/storage/",
         "frontend/src/app/pages/Listings.tsx",
         "frontend/src/app/pages/ListingDetail.tsx",
@@ -324,6 +326,7 @@
         "frontend/src/shared/types/listing/",
         "frontend/src/shared/store/listingsApi.ts",
         "frontend/src/shared/lib/listing-labels.ts",
+        "frontend/src/shared/lib/channel-labels.ts",
         "frontend/src/shared/lib/external-id-form.ts",
         "frontend/src/shared/components/ui/SourceBadge.tsx"
       ],
@@ -335,7 +338,14 @@
         "test_listing_external_id_repo.py",
         "test_listing_external_id_service.py",
         "test_listing_external_id_routes.py",
-        "test_image_processor.py"
+        "test_image_processor.py",
+        "test_channel_constants.py",
+        "test_channel_listing_repo.py",
+        "test_channel_listing_routes.py",
+        "test_channel_sync_service.py",
+        "test_calendar_route.py",
+        "test_ical_serializer.py",
+        "test_ical_parser.py"
       ],
       "frontend_tests": [
         "Listings.test.tsx",
@@ -345,14 +355,18 @@
         "ExternalIdRow.test.tsx",
         "ExternalIdForm.test.tsx",
         "ExternalIdSection.test.tsx",
-        "SourceBadge.test.tsx"
+        "SourceBadge.test.tsx",
+        "ChannelsSection.test.tsx",
+        "ChannelListingFormModal.test.tsx",
+        "channel-labels.test.ts"
       ],
       "e2e_specs": [
         "listings-api.spec.ts",
         "listings.spec.ts",
         "listings-layout.spec.ts",
         "listings-crud.spec.ts",
-        "listings-external-ids.spec.ts"
+        "listings-external-ids.spec.ts",
+        "listings-channels.spec.ts"
       ]
     },
     "inquiries": {

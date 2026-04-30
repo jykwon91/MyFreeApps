@@ -353,7 +353,7 @@ class TestFourteenDayRental:
         await db.commit()
 
         with patch("app.services.tax.tax_validation.unit_of_work", _fake_uow(db)), \
-             patch("app.services.tax.tax_validation.rental_rules.reservation_repo") as mock_res:
+             patch("app.services.tax.tax_validation.rental_rules.booking_statement_repo") as mock_res:
             mock_res.total_nights_by_property = AsyncMock(return_value={prop.id: 10})
             results = await tax_validation_service.validate(test_org.id, tr.id)
 

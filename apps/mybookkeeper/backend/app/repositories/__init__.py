@@ -6,7 +6,7 @@ from app.repositories.email import email_filter_log_repo
 from app.repositories.email import processed_email_repo
 from app.repositories.email import sync_log_repo
 from app.repositories.transactions import transaction_repo
-from app.repositories.transactions import reservation_repo
+from app.repositories.transactions import booking_statement_repo
 from app.repositories.transactions import reconciliation_repo
 from app.repositories.transactions import summary_repo
 from app.repositories.tax import tax_return_repo
@@ -33,6 +33,9 @@ from app.repositories.properties import lease_repo
 from app.repositories.listings import listing_repo
 from app.repositories.listings import listing_photo_repo
 from app.repositories.listings import listing_external_id_repo
+from app.repositories.listings import channel_repo
+from app.repositories.listings import channel_listing_repo
+from app.repositories.listings import listing_blackout_repo
 from app.repositories.inquiries import inquiry_repo
 from app.repositories.inquiries import inquiry_message_repo
 from app.repositories.inquiries import inquiry_event_repo

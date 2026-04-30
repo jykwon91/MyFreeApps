@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.organization.organization import Organization
 from app.models.transactions.reconciliation_match import ReconciliationMatch
 from app.models.transactions.reconciliation_source import ReconciliationSource
-from app.models.transactions.reservation import Reservation
+from app.models.transactions.booking_statement import BookingStatement
 from app.models.user.user import User
 from app.repositories import reconciliation_repo
 
@@ -54,7 +54,7 @@ class TestCreateMatch:
         source = _make_source(test_org.id, test_user.id)
         await reconciliation_repo.create_source(db, source)
 
-        reservation = Reservation(
+        booking_statement = BookingStatement(
             id=uuid.uuid4(),
             organization_id=test_org.id,
             res_code="MATCH-RES-1",
@@ -62,13 +62,13 @@ class TestCreateMatch:
             check_out=date(2025, 6, 5),
             gross_booking=Decimal("500.00"),
         )
-        db.add(reservation)
+        db.add(booking_statement)
         await db.flush()
 
         match = ReconciliationMatch(
             id=uuid.uuid4(),
             reconciliation_source_id=source.id,
-            reservation_id=reservation.id,
+            booking_statement_id=booking_statement.id,
             matched_amount=Decimal("500.00"),
         )
         result = await reconciliation_repo.create_match(db, match)

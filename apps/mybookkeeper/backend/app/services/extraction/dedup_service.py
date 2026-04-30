@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.source_quality import QUALITY_GAP_THRESHOLD, source_quality_rank
 from app.core.vendors import normalize_vendor
 from app.models.transactions.transaction import Transaction
-from app.repositories import extraction_repo, reservation_repo, transaction_repo
+from app.repositories import extraction_repo, booking_statement_repo, transaction_repo
 
 logger = logging.getLogger(__name__)
 
@@ -113,9 +113,9 @@ async def evaluate_dedup(
             if isinstance(li, dict) and li.get("res_code")
         ]
         for rc in res_codes:
-            res = await reservation_repo.find_by_res_code(db, organization_id, rc)
-            if res and res.transaction_id:
-                existing = await transaction_repo.get_by_id(db, res.transaction_id, organization_id)
+            bs = await booking_statement_repo.find_by_res_code(db, organization_id, rc)
+            if bs and bs.transaction_id:
+                existing = await transaction_repo.get_by_id(db, bs.transaction_id, organization_id)
                 if existing:
                     amounts_match = (
                         amount is not None

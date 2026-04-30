@@ -1,7 +1,7 @@
 """Document repository — file-storage queries only.
 
 Financial queries (dedup by vendor/date, summary aggregations) now live in
-transaction_repo and reservation_repo.
+transaction_repo and booking_statement_repo.
 """
 import uuid
 from collections.abc import Sequence
