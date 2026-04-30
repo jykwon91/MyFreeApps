@@ -19,7 +19,7 @@ from app.models.properties.property import Property, PropertyType
 from app.models.tax.tax_form_field import TaxFormField
 from app.models.tax.tax_form_instance import TaxFormInstance
 from app.models.tax.tax_return import TaxReturn
-from app.models.transactions.reservation import Reservation
+from app.models.transactions.booking_statement import BookingStatement
 from app.models.transactions.transaction import Transaction
 from app.models.user.user import User
 from app.services.tax import tax_return_service
@@ -257,7 +257,7 @@ class TestSourceDocumentsService:
         db.add(tr)
         await db.flush()
 
-        res = Reservation(
+        bs = BookingStatement(
             id=uuid.uuid4(),
             organization_id=org.id,
             res_code="RES-001",
@@ -266,7 +266,7 @@ class TestSourceDocumentsService:
             check_out=date(2025, 6, 5),
             gross_booking=Decimal("500.00"),
         )
-        db.add(res)
+        db.add(bs)
         await db.commit()
 
         result = await tax_return_service.get_source_documents(ctx, tr.id)
@@ -288,8 +288,8 @@ class TestSourceDocumentsService:
         db.add(tr)
         await db.flush()
 
-        # Create reservation that expects a 1099-K
-        res = Reservation(
+        # Create booking statement that expects a 1099-K
+        bs = BookingStatement(
             id=uuid.uuid4(),
             organization_id=org.id,
             res_code="RES-002",
@@ -298,7 +298,7 @@ class TestSourceDocumentsService:
             check_out=date(2025, 7, 3),
             gross_booking=Decimal("300.00"),
         )
-        db.add(res)
+        db.add(bs)
         await db.flush()
 
         # Create a document with matching form instance

@@ -9,8 +9,8 @@ from app.core.parsers import safe_date, safe_decimal
 from app.models.transactions.reconciliation_match import ReconciliationMatch
 from app.models.transactions.reconciliation_source import ReconciliationSource
 from app.models.responses.upload_result import ReconciliationItem
-from app.repositories import reconciliation_repo, reservation_repo
-from app.mappers.reservation_mapper import build_reservation_from_line_item
+from app.repositories import reconciliation_repo, booking_statement_repo
+from app.mappers.booking_statement_mapper import build_booking_statement_from_line_item
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +28,7 @@ async def reconcile_year_end(
     For each reservation, checks if a document with that res_code exists,
     then compares expected vs actual earnings.
 
-    Also creates ReconciliationSource, Reservation, and
+    Also creates ReconciliationSource, BookingStatement, and
     ReconciliationMatch rows in the financial tables.
     """
     items: list[ReconciliationItem] = []
@@ -75,19 +75,19 @@ async def reconcile_year_end(
         expected = res.get("net_client_earnings") or res.get("booking_revenue")
         expected_dec = safe_decimal(expected)
 
-        # Upsert Reservation row
-        existing_res = await reservation_repo.find_by_res_code(db, organization_id, res_code)
-        if not existing_res:
-            new_res = build_reservation_from_line_item(res, organization_id)
-            if new_res:
-                new_res.res_code = res_code
+        # Upsert BookingStatement row
+        existing_bs = await booking_statement_repo.find_by_res_code(db, organization_id, res_code)
+        if not existing_bs:
+            new_bs = build_booking_statement_from_line_item(res, organization_id)
+            if new_bs:
+                new_bs.res_code = res_code
                 try:
                     async with db.begin_nested():
-                        existing_res = await reservation_repo.create(db, new_res)
+                        existing_bs = await booking_statement_repo.create(db, new_bs)
                 except Exception:
-                    logger.warning("Skipped duplicate reservation %s during reconciliation", res_code)
+                    logger.warning("Skipped duplicate booking statement %s during reconciliation", res_code)
 
-        matched_res = existing_res or await reservation_repo.find_by_res_code(db, organization_id, res_code)
+        matched_res = existing_bs or await booking_statement_repo.find_by_res_code(db, organization_id, res_code)
         if not matched_res:
             items.append(ReconciliationItem(
                 res_code=res_code,
@@ -104,12 +104,12 @@ async def reconcile_year_end(
         else:
             status = "matched"
 
-        if existing_res and actual_dec and actual_dec > 0:
+        if existing_bs and actual_dec and actual_dec > 0:
             try:
                 async with db.begin_nested():
                     match = ReconciliationMatch(
                         reconciliation_source_id=recon_source.id,
-                        reservation_id=existing_res.id,
+                        booking_statement_id=existing_bs.id,
                         matched_amount=actual_dec,
                     )
                     await reconciliation_repo.create_match(db, match)

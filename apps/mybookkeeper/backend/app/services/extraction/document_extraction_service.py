@@ -9,7 +9,7 @@ from app.db.session import AsyncSessionLocal, unit_of_work
 from app.models.documents.document import Document
 from app.models.extraction.extraction import Extraction
 from app.models.responses.upload_result import UploadResult
-from app.repositories import document_repo, extraction_repo, property_repo, transaction_repo, reservation_repo, usage_log_repo
+from app.repositories import document_repo, extraction_repo, property_repo, transaction_repo, booking_statement_repo, usage_log_repo
 from app.repositories.tax import tax_return_repo
 from app.services.extraction.claude_service import extract_from_text, extract_from_image
 from app.services.extraction.dedup_service import evaluate_dedup
@@ -22,7 +22,7 @@ from app.services.extraction.extractor_service import (
     extract_text_from_docx,
     extract_text_from_spreadsheet,
 )
-from app.mappers.reservation_mapper import build_reservations_from_line_items
+from app.mappers.booking_statement_mapper import build_booking_statements_from_line_items
 from app.mappers.tax_form_mapper import normalize_tax_doc_type, build_tax_form_data
 from app.mappers.transaction_mapper import build_transaction_from_mapped_item
 from app.mappers.cost_basis_lot_mapper import build_cost_basis_lot_from_mapped_item
@@ -328,16 +328,16 @@ async def process_document(document_id: uuid.UUID) -> UploadResult:
                 )
 
                 if surviving:
-                    for res in build_reservations_from_line_items(
+                    for bs in build_booking_statements_from_line_items(
                         item.line_items, ctx.organization_id, item.property_id, surviving.id,
                     ):
-                        existing_res = await reservation_repo.find_by_res_code(
-                            db, ctx.organization_id, res.res_code,
+                        existing_bs = await booking_statement_repo.find_by_res_code(
+                            db, ctx.organization_id, bs.res_code,
                         )
-                        if existing_res:
-                            logger.warning("Skipped duplicate reservation %s", res.res_code)
+                        if existing_bs:
+                            logger.warning("Skipped duplicate booking statement %s", bs.res_code)
                             continue
-                        await reservation_repo.create(db, res)
+                        await booking_statement_repo.create(db, bs)
 
         if first_item:
             doc.status = "failed"

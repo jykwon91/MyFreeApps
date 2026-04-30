@@ -25,7 +25,7 @@ class TaxFormFieldSource(Base):
     __table_args__ = (
         CheckConstraint(
             "source_type IN ("
-            "'transaction', 'reservation', 'reconciliation_source', "
+            "'transaction', 'booking_statement', 'reconciliation_source', "
             "'tax_form_instance', 'manual'"
             ")",
             name="chk_tffs_source",

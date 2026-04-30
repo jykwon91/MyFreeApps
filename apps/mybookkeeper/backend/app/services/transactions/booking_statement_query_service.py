@@ -5,11 +5,11 @@ from decimal import Decimal
 
 from app.core.context import RequestContext
 from app.db.session import AsyncSessionLocal
-from app.models.transactions.reservation import Reservation
-from app.repositories import reservation_repo
+from app.models.transactions.booking_statement import BookingStatement
+from app.repositories import booking_statement_repo
 
 
-async def list_reservations(
+async def list_booking_statements(
     ctx: RequestContext,
     *,
     property_id: uuid.UUID | None = None,
@@ -17,9 +17,9 @@ async def list_reservations(
     end_date: date | None = None,
     limit: int | None = None,
     offset: int | None = None,
-) -> Sequence[Reservation]:
+) -> Sequence[BookingStatement]:
     async with AsyncSessionLocal() as db:
-        return await reservation_repo.list_filtered(
+        return await booking_statement_repo.list_filtered(
             db,
             ctx.organization_id,
             property_id=property_id,
@@ -37,7 +37,7 @@ async def get_occupancy(
     end_date: date,
 ) -> dict[str, int | Decimal | None]:
     async with AsyncSessionLocal() as db:
-        row = await reservation_repo.occupancy_query(
+        row = await booking_statement_repo.occupancy_query(
             db, ctx.organization_id, property_id, start_date, end_date,
         )
         total_days = (end_date - start_date).days

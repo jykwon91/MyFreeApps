@@ -1,4 +1,4 @@
-export interface Reservation {
+export interface BookingStatement {
   id: string;
   organization_id: string;
   property_id: string | null;

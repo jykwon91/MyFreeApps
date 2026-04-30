@@ -1,4 +1,4 @@
-"""Tests for reservation_query_service."""
+"""Tests for booking_statement_query_service."""
 import uuid
 from contextlib import asynccontextmanager
 from datetime import date
@@ -11,10 +11,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.context import RequestContext
 from app.models.organization.organization import Organization
 from app.models.properties.property import Property, PropertyType
-from app.models.transactions.reservation import Reservation
+from app.models.transactions.booking_statement import BookingStatement
 from app.models.user.user import User
-from app.repositories import reservation_repo
-from app.services.transactions import reservation_query_service
+from app.repositories import booking_statement_repo
+from app.services.transactions import booking_statement_query_service
 
 
 def _make_ctx(org: Organization, user: User) -> RequestContext:
@@ -25,7 +25,7 @@ def _make_ctx(org: Organization, user: User) -> RequestContext:
     )
 
 
-async def _seed_reservation(
+async def _seed_booking_statement(
     db: AsyncSession,
     org: Organization,
     prop: Property,
@@ -33,8 +33,8 @@ async def _seed_reservation(
     res_code: str = "SVC-RES-001",
     check_in: date = date(2025, 6, 1),
     check_out: date = date(2025, 6, 5),
-) -> Reservation:
-    res = Reservation(
+) -> BookingStatement:
+    bs = BookingStatement(
         id=uuid.uuid4(),
         organization_id=org.id,
         property_id=prop.id,
@@ -44,13 +44,13 @@ async def _seed_reservation(
         gross_booking=Decimal("500.00"),
         platform="airbnb",
     )
-    await reservation_repo.create(db, res)
+    await booking_statement_repo.create(db, bs)
     await db.commit()
-    await db.refresh(res)
-    return res
+    await db.refresh(bs)
+    return bs
 
 
-class TestListReservations:
+class TestListBookingStatements:
     @pytest.mark.asyncio
     async def test_lists(
         self, db: AsyncSession, test_user: User, test_org: Organization,
@@ -65,15 +65,15 @@ class TestListReservations:
         db.add(prop)
         await db.flush()
 
-        await _seed_reservation(db, test_org, prop)
+        await _seed_booking_statement(db, test_org, prop)
         ctx = _make_ctx(test_org, test_user)
 
         @asynccontextmanager
         async def _fake():
             yield db
 
-        with patch("app.services.transactions.reservation_query_service.AsyncSessionLocal", _fake):
-            results = await reservation_query_service.list_reservations(ctx)
+        with patch("app.services.transactions.booking_statement_query_service.AsyncSessionLocal", _fake):
+            results = await booking_statement_query_service.list_booking_statements(ctx)
         assert len(results) >= 1
 
     @pytest.mark.asyncio
@@ -86,8 +86,8 @@ class TestListReservations:
         async def _fake():
             yield db
 
-        with patch("app.services.transactions.reservation_query_service.AsyncSessionLocal", _fake):
-            results = await reservation_query_service.list_reservations(ctx)
+        with patch("app.services.transactions.booking_statement_query_service.AsyncSessionLocal", _fake):
+            results = await booking_statement_query_service.list_booking_statements(ctx)
         assert len(results) == 0
 
 
@@ -106,15 +106,15 @@ class TestGetOccupancy:
         db.add(prop)
         await db.flush()
 
-        await _seed_reservation(db, test_org, prop)
+        await _seed_booking_statement(db, test_org, prop)
         ctx = _make_ctx(test_org, test_user)
 
         @asynccontextmanager
         async def _fake():
             yield db
 
-        with patch("app.services.transactions.reservation_query_service.AsyncSessionLocal", _fake):
-            result = await reservation_query_service.get_occupancy(
+        with patch("app.services.transactions.booking_statement_query_service.AsyncSessionLocal", _fake):
+            result = await booking_statement_query_service.get_occupancy(
                 ctx, prop.id, date(2025, 1, 1), date(2025, 12, 31),
             )
         assert "reservation_count" in result
@@ -122,7 +122,7 @@ class TestGetOccupancy:
         assert "occupancy_rate" in result
 
     @pytest.mark.asyncio
-    async def test_zero_when_no_reservations(
+    async def test_zero_when_no_booking_statements(
         self, db: AsyncSession, test_user: User, test_org: Organization,
     ) -> None:
         prop = Property(
@@ -142,8 +142,8 @@ class TestGetOccupancy:
         async def _fake():
             yield db
 
-        with patch("app.services.transactions.reservation_query_service.AsyncSessionLocal", _fake):
-            result = await reservation_query_service.get_occupancy(
+        with patch("app.services.transactions.booking_statement_query_service.AsyncSessionLocal", _fake):
+            result = await booking_statement_query_service.get_occupancy(
                 ctx, prop.id, date(2025, 1, 1), date(2025, 12, 31),
             )
         assert result["total_nights"] == 0

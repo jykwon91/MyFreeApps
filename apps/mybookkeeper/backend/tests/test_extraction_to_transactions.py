@@ -16,7 +16,7 @@ from app.models.documents.document import Document
 from app.models.extraction.extraction import Extraction
 from app.models.organization.organization import Organization
 from app.models.properties.property import Property
-from app.models.transactions.reservation import Reservation
+from app.models.transactions.booking_statement import BookingStatement
 from app.models.transactions.reconciliation_source import ReconciliationSource
 from app.models.transactions.reconciliation_match import ReconciliationMatch
 from app.models.transactions.transaction import Transaction
@@ -324,8 +324,8 @@ class TestPMStatementUpload:
 
         # Verify Reservations were created from line_items of the revenue transaction
         res_rows = (await db.execute(
-            select(Reservation).where(Reservation.organization_id == org_id)
-            .order_by(Reservation.res_code.asc())
+            select(BookingStatement).where(BookingStatement.organization_id == org_id)
+            .order_by(BookingStatement.res_code.asc())
         )).scalars().all()
         assert len(res_rows) == 2
         assert res_rows[0].res_code == "RES001"
@@ -355,7 +355,7 @@ class TestYearEndStatement:
             patch("app.services.extraction.document_extraction_service.extract_text_from_pdf", new_callable=AsyncMock, return_value="Year end statement text with enough content to pass the 50 char check."),
             patch("app.services.extraction.document_extraction_service.extract_from_text", new_callable=AsyncMock, return_value=extraction),
             patch("app.services.extraction.document_extraction_service.extract_from_image", new_callable=AsyncMock, return_value=extraction),
-            patch("app.services.transactions.reconciliation_service.reservation_repo.find_by_res_code", new_callable=AsyncMock, return_value=None),
+            patch("app.services.transactions.reconciliation_service.booking_statement_repo.find_by_res_code", new_callable=AsyncMock, return_value=None),
         ):
             from app.services.extraction.document_extraction_service import process_document
             result = await process_document(doc.id)
@@ -379,8 +379,8 @@ class TestYearEndStatement:
 
         # Verify Reservation rows were created
         res_rows = (await db.execute(
-            select(Reservation).where(Reservation.organization_id == org_id)
-            .order_by(Reservation.res_code.asc())
+            select(BookingStatement).where(BookingStatement.organization_id == org_id)
+            .order_by(BookingStatement.res_code.asc())
         )).scalars().all()
         assert len(res_rows) == 2
         assert res_rows[0].res_code == "YE001"
