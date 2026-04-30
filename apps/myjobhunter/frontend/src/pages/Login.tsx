@@ -1,59 +1,44 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-<<<<<<< HEAD
-import { LoginForm, useIsAuthenticated, LoadingButton } from "@platform/ui";
-import { isUnverifiedError, useSignIn } from "@/features/auth/useSignIn";
-import { requestVerifyToken } from "@/lib/auth";
-=======
 import {
   LoginForm,
   LoadingButton,
   extractErrorMessage,
   useIsAuthenticated,
 } from "@platform/ui";
-import { useSignIn } from "@/features/auth/useSignIn";
->>>>>>> origin/main
+import { isUnverifiedError, useSignIn } from "@/features/auth/useSignIn";
+import { requestVerifyToken } from "@/lib/auth";
 
 interface LocationState {
   from?: string;
 }
 
-<<<<<<< HEAD
 type ResendStatus = "idle" | "sending" | "sent" | "error";
 
-=======
 /**
- * Login page with two-factor challenge support.
+ * Login page with three layered flows:
  *
- * Flow:
- *   1. User enters email + password in `LoginForm` (or signs up — registration
- *      is single-step, no 2FA).
- *   2. `signIn` posts to `/auth/totp/login`. If the user has 2FA enabled,
- *      the response is `{ status: "totp_required" }` — we hide LoginForm and
- *      render the inline TOTP challenge step. The challenge accepts both
- *      6-digit TOTP codes and 8-char alphanumeric recovery codes; the
- *      backend disambiguates.
- *   3. User enters the code; we re-call `signIn` with `totpCode` populated;
- *      backend issues the JWT and we navigate.
+ *   1. **Email verification (PR C4)** — when login returns
+ *      `LOGIN_USER_NOT_VERIFIED`, surface a "Resend verification email" CTA.
+ *   2. **TOTP challenge (PR C5)** — when `signIn` returns
+ *      `{ status: "totp_required" }`, hide LoginForm and render the inline
+ *      TOTP challenge step (accepts both 6-digit codes and recovery codes).
+ *   3. **Registration confirmation (PR C4)** — after register, show
+ *      "check your inbox" banner instead of auto-signing-in.
  */
->>>>>>> origin/main
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
   const isAuthenticated = useIsAuthenticated();
   const { handleSignIn, handleRegister } = useSignIn();
 
-<<<<<<< HEAD
+  // Email-verification state (C4)
   const [needsVerification, setNeedsVerification] = useState(false);
   const [pendingEmail, setPendingEmail] = useState("");
   const [registeredEmail, setRegisteredEmail] = useState("");
   const [resendStatus, setResendStatus] = useState<ResendStatus>("idle");
 
-  // Redirect if already authenticated
-=======
-  // TOTP challenge state — populated after the first signIn returns
-  // `{ status: "totp_required" }`. We retain the original email + password
-  // so the second submit can re-issue the same login with `totpCode`.
+  // TOTP challenge state (C5) — populated after first signIn returns totp_required
   const [pendingCredentials, setPendingCredentials] = useState<
     { email: string; password: string } | null
   >(null);
@@ -61,8 +46,6 @@ export default function Login() {
   const [totpError, setTotpError] = useState("");
   const [isVerifyingTotp, setIsVerifyingTotp] = useState(false);
 
-  // Redirect if already authenticated (e.g. opened /login while signed in).
->>>>>>> origin/main
   useEffect(() => {
     if (isAuthenticated) {
       const state = location.state as LocationState | null;
@@ -70,47 +53,35 @@ export default function Login() {
     }
   }, [isAuthenticated, navigate, location.state]);
 
-<<<<<<< HEAD
+  function navigateAfterLogin(): void {
+    const state = location.state as LocationState | null;
+    navigate(state?.from ?? "/dashboard", { replace: true });
+  }
+
   async function onSignIn(email: string, password: string): Promise<void> {
     setNeedsVerification(false);
     setRegisteredEmail("");
     try {
-      await handleSignIn(email, password);
-      const state = location.state as LocationState | null;
-      navigate(state?.from ?? "/dashboard", { replace: true });
+      const result = await handleSignIn(email, password);
+      if (result.status === "totp_required") {
+        setPendingCredentials({ email, password });
+        setTotpCode("");
+        setTotpError("");
+        return;
+      }
+      navigateAfterLogin();
     } catch (err) {
       if (isUnverifiedError(err)) {
         setPendingEmail(email);
         setNeedsVerification(true);
         setResendStatus("idle");
       }
-      // Re-throw so LoginForm can show its inline error AlertBox; the
-      // useSignIn hook already suppressed the toast for the unverified case.
       throw err;
     }
-=======
-  function navigateAfterLogin(): void {
-    const state = location.state as LocationState | null;
-    navigate(state?.from ?? "/dashboard", { replace: true });
->>>>>>> origin/main
-  }
-
-  async function onSignIn(email: string, password: string): Promise<void> {
-    const result = await handleSignIn(email, password);
-    if (result.status === "totp_required") {
-      // Switch to the TOTP challenge step. LoginForm caught no error so its
-      // inline error state is already clean; we own the challenge UI from here.
-      setPendingCredentials({ email, password });
-      setTotpCode("");
-      setTotpError("");
-      return;
-    }
-    navigateAfterLogin();
   }
 
   async function onRegister(email: string, password: string): Promise<void> {
     await handleRegister(email, password);
-<<<<<<< HEAD
     setRegisteredEmail(email);
     setNeedsVerification(false);
   }
@@ -124,9 +95,6 @@ export default function Login() {
     } catch {
       setResendStatus("error");
     }
-=======
-    navigate("/dashboard", { replace: true });
->>>>>>> origin/main
   }
 
   async function onTotpSubmit(e: React.FormEvent): Promise<void> {
@@ -144,8 +112,6 @@ export default function Login() {
       if (result.status === "ok") {
         navigateAfterLogin();
       } else {
-        // Server responded with totp_required again — shouldn't happen since
-        // we just provided a code; surface a defensive error.
         setTotpError("Authentication code didn't go through. Please try again.");
       }
     } catch (err) {
@@ -163,7 +129,6 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-muted/30 px-4">
-      {/* App logo */}
       <div className="mb-8 flex flex-col items-center gap-2">
         <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center">
           <span className="text-primary-foreground font-bold text-xl">J</span>
@@ -171,64 +136,7 @@ export default function Login() {
         <span className="text-xl font-semibold tracking-tight">MyJobHunter</span>
       </div>
 
-      {/* Login card — swaps between email/password (LoginForm) and TOTP challenge */}
       <div className="w-full max-w-sm bg-background border rounded-xl p-8 shadow-xs">
-<<<<<<< HEAD
-        {registeredEmail ? (
-          <div
-            data-testid="registration-success-banner"
-            className="mb-6 rounded-md border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900"
-          >
-            <p className="font-medium">Check your inbox</p>
-            <p className="mt-1">
-              We sent a verification link to{" "}
-              <span className="font-medium">{registeredEmail}</span>. Click it to
-              activate your account, then sign in.
-            </p>
-          </div>
-        ) : null}
-
-        <LoginForm
-          onSignIn={onSignIn}
-          onRegister={onRegister}
-          trustCopy="Your job search data stays private. No recruiter access, no data resale, ever."
-          passwordMinLength={12}
-        />
-
-        {needsVerification ? (
-          <div
-            data-testid="resend-verification-banner"
-            className="mt-6 space-y-2 rounded-md border border-amber-200 bg-amber-50 p-4 text-sm"
-          >
-            <p className="text-amber-900">
-              Please verify your email before signing in. Check your inbox for the
-              verification link.
-            </p>
-            {resendStatus === "sent" ? (
-              <p
-                className="text-emerald-700"
-                data-testid="resend-verification-sent"
-              >
-                Verification email sent. Check your inbox.
-              </p>
-            ) : resendStatus === "error" ? (
-              <p className="text-destructive">
-                Couldn't resend right now. Try again shortly.
-              </p>
-            ) : (
-              <LoadingButton
-                type="button"
-                isLoading={resendStatus === "sending"}
-                loadingText="Sending..."
-                className="w-full"
-                onClick={onResendVerification}
-              >
-                Resend verification email
-              </LoadingButton>
-            )}
-          </div>
-        ) : null}
-=======
         {pendingCredentials ? (
           <form onSubmit={onTotpSubmit} className="space-y-4">
             <div>
@@ -278,17 +186,65 @@ export default function Login() {
             </button>
           </form>
         ) : (
-          <LoginForm
-            onSignIn={onSignIn}
-            onRegister={onRegister}
-            trustCopy="Your job search data stays private. No recruiter access, no data resale, ever."
-            passwordMinLength={12}
-          />
+          <>
+            {registeredEmail ? (
+              <div
+                data-testid="registration-success-banner"
+                className="mb-6 rounded-md border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900"
+              >
+                <p className="font-medium">Check your inbox</p>
+                <p className="mt-1">
+                  We sent a verification link to{" "}
+                  <span className="font-medium">{registeredEmail}</span>. Click it to
+                  activate your account, then sign in.
+                </p>
+              </div>
+            ) : null}
+
+            <LoginForm
+              onSignIn={onSignIn}
+              onRegister={onRegister}
+              trustCopy="Your job search data stays private. No recruiter access, no data resale, ever."
+              passwordMinLength={12}
+            />
+
+            {needsVerification ? (
+              <div
+                data-testid="resend-verification-banner"
+                className="mt-6 space-y-2 rounded-md border border-amber-200 bg-amber-50 p-4 text-sm"
+              >
+                <p className="text-amber-900">
+                  Please verify your email before signing in. Check your inbox for the
+                  verification link.
+                </p>
+                {resendStatus === "sent" ? (
+                  <p
+                    className="text-emerald-700"
+                    data-testid="resend-verification-sent"
+                  >
+                    Verification email sent. Check your inbox.
+                  </p>
+                ) : resendStatus === "error" ? (
+                  <p className="text-destructive">
+                    Couldn't resend right now. Try again shortly.
+                  </p>
+                ) : (
+                  <LoadingButton
+                    type="button"
+                    isLoading={resendStatus === "sending"}
+                    loadingText="Sending..."
+                    className="w-full"
+                    onClick={onResendVerification}
+                  >
+                    Resend verification email
+                  </LoadingButton>
+                )}
+              </div>
+            ) : null}
+          </>
         )}
->>>>>>> origin/main
       </div>
 
-      {/* Footer */}
       <p className="mt-8 text-xs text-muted-foreground">&copy; 2026 MyJobHunter</p>
     </div>
   );
