@@ -8,13 +8,12 @@ the parts that depend on MJH's settings + session factory.
 Encryption is handled by the ``EncryptedString`` ``TypeDecorator`` on the
 ``User.totp_secret`` and ``User.totp_recovery_codes`` columns. Service code
 interacts with plaintext only — encryption happens at SQLAlchemy bind time.
-
-Re-exports preserve a stable import shape for callers and tests::
-
-    from app.services.user import totp_service
-    secret, uri = await totp_service.setup_totp(user.id)
 """
 import uuid
+from typing import Optional
+
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from platform_shared.services.totp_service import (
     enroll_totp as _shared_enroll_totp,
@@ -27,6 +26,7 @@ from platform_shared.services.totp_service import (
 
 from app.core.config import settings
 from app.db.session import AsyncSessionLocal, unit_of_work
+from app.models.user.user import User
 from app.repositories.user import user_repo
 
 __all__ = [
@@ -34,6 +34,7 @@ __all__ = [
     "get_provisioning_uri",
     "verify_code",
     "verify_recovery_code",
+    "verify_totp_code",
     "generate_recovery_codes",
     "setup_totp",
     "confirm_totp",
@@ -59,19 +60,7 @@ def get_provisioning_uri(secret: str, email: str) -> str:
 # ---------------------------------------------------------------------------
 
 async def setup_totp(user_id: uuid.UUID) -> tuple[str, str, list[str]]:
-    """Generate a fresh TOTP enrollment and stash it on the user row.
-
-    Returns ``(secret, provisioning_uri, recovery_codes)``. The plaintext
-    secret + recovery codes are persisted (encrypted at rest by the column
-    type), but ``totp_enabled`` stays ``False`` until :func:`confirm_totp`
-    succeeds — the user must prove they can generate a valid code from the
-    secret before 2FA actually gates their login.
-
-    Recovery codes are returned to the caller exactly once (here) and shown
-    to the user in the enrollment UI. Subsequent reads of
-    ``user.totp_recovery_codes`` give back the comma-joined string only;
-    individual codes can never be re-displayed.
-    """
+    """Generate a fresh TOTP enrollment and stash it on the user row."""
     async with unit_of_work() as db:
         user = await user_repo.get_by_id(db, user_id)
         if user is None:
@@ -86,13 +75,7 @@ async def setup_totp(user_id: uuid.UUID) -> tuple[str, str, list[str]]:
 
 
 async def confirm_totp(user_id: uuid.UUID, code: str) -> bool:
-    """Verify the first TOTP code from a freshly-enrolled user. Flip ``totp_enabled`` on success.
-
-    Returns True iff the code matches the stored secret. On failure or unknown
-    user, returns False and leaves all flags unchanged. Recovery codes are
-    NOT regenerated here — they were issued during :func:`setup_totp` and
-    must survive a confirm so the user can save them.
-    """
+    """Verify the first TOTP code from a freshly-enrolled user. Flip ``totp_enabled`` on success."""
     async with unit_of_work() as db:
         user = await user_repo.get_by_id(db, user_id)
         if user is None or not user.totp_secret:
@@ -104,11 +87,7 @@ async def confirm_totp(user_id: uuid.UUID, code: str) -> bool:
 
 
 async def disable_totp(user_id: uuid.UUID, code: str) -> bool:
-    """Disable 2FA after verifying a current TOTP ``code``. Clears all TOTP fields on success.
-
-    Requires a current TOTP code — NOT just the password — so a stolen
-    session cookie / leaked password alone can't strip 2FA off an account.
-    """
+    """Disable 2FA after verifying a current TOTP ``code``. Clears all TOTP fields on success."""
     async with unit_of_work() as db:
         user = await user_repo.get_by_id(db, user_id)
         if user is None or not user.totp_enabled or not user.totp_secret:
@@ -127,11 +106,6 @@ async def validate_totp_for_login(email: str, code: str) -> tuple[bool, bool]:
     Returns ``(valid, used_recovery_code)``. A successful recovery-code
     consumption rewrites ``user.totp_recovery_codes`` with the matched code
     removed (or ``None`` if it was the last one).
-
-    The login route distinguishes 6-digit TOTP codes from 8-char alphanumeric
-    recovery codes by trying TOTP verification first; only on failure does
-    it fall through to recovery. This keeps the dispatch deterministic
-    without parsing the input string.
     """
     async with unit_of_work() as db:
         user = await user_repo.get_by_email(db, email)
@@ -151,10 +125,33 @@ async def validate_totp_for_login(email: str, code: str) -> tuple[bool, bool]:
 
 
 async def is_totp_required(email: str) -> bool:
-    """Return True if the user with ``email`` has 2FA enabled.
-
-    Cheap probe that opens its own session (no rolling transaction) — used
-    by the login route to decide whether to surface the TOTP challenge step.
-    """
+    """Return True if the user with ``email`` has 2FA enabled."""
     async with AsyncSessionLocal() as db:
         return await user_repo.get_totp_enabled(db, email)
+
+
+async def verify_totp_code(db: AsyncSession, user_id: uuid.UUID, code: str) -> bool:
+    """Return True if ``code`` is a valid TOTP or recovery code for the user.
+
+    Used by the account-deletion flow (PR C6) — it accepts either a 6-digit
+    RFC 6238 code or an 8-char recovery code. Does NOT consume the recovery
+    code on match; the caller is about to delete the user anyway.
+    """
+    if not code:
+        return False
+
+    user = (
+        await db.execute(select(User).where(User.id == user_id))
+    ).scalar_one_or_none()
+    if user is None or not user.totp_enabled or not user.totp_secret:
+        return False
+
+    if verify_code(user.totp_secret, code):
+        return True
+
+    if user.totp_recovery_codes:
+        valid, _ = verify_recovery_code(user.totp_recovery_codes, code)
+        if valid:
+            return True
+
+    return False

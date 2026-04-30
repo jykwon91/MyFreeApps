@@ -1,17 +1,25 @@
 from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI
+import jwt
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from jwt.exceptions import PyJWTError as JWTError
 
-from app.api import applications, companies, health, integrations, profile, totp
+from app.api import account, applications, companies, health, integrations, profile, totp
+from app.core.audit import current_user_id, register_audit_listeners
 from app.core.auth import auth_backend, fastapi_users
 from app.core.config import settings
-from app.core.rate_limit import check_account_not_locked, check_login_rate_limit
+from app.core.rate_limit import (
+    check_account_not_locked,
+    check_login_rate_limit,
+    require_turnstile,
+)
 from app.schemas.user import UserCreate, UserRead, UserUpdate
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    register_audit_listeners()
     yield
 
 
@@ -29,10 +37,31 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Auth routes — gate ONLY the /login route with the per-IP throttle and the
-# account-lockout dependency (PR C3). Both dependencies require an
-# OAuth2PasswordRequestForm body, so attaching them to the entire
-# get_auth_router() prefix would break /logout (which has no body).
+
+@app.middleware("http")
+async def set_audit_user(request: Request, call_next):
+    """Populate ``current_user_id`` ContextVar from the request's JWT."""
+    token = request.headers.get("Authorization", "").removeprefix("Bearer ").strip()
+    if not token:
+        return await call_next(request)
+    try:
+        payload = jwt.decode(
+            token,
+            settings.secret_key,
+            algorithms=["HS256"],
+            audience="fastapi-users:auth",
+        )
+    except JWTError:
+        return await call_next(request)
+
+    ctx_token = current_user_id.set(payload.get("sub"))
+    try:
+        return await call_next(request)
+    finally:
+        current_user_id.reset(ctx_token)
+
+
+# Auth routes — gate /login with per-IP throttle + account-lockout (PR C3).
 _auth_router = fastapi_users.get_auth_router(auth_backend)
 for _route in _auth_router.routes:
     if getattr(_route, "path", None) == "/login":
@@ -44,11 +73,31 @@ app.include_router(
     prefix="/auth/jwt",
     tags=["auth"],
 )
+
+# Registration is gated behind Turnstile CAPTCHA (PR C1) — no-op when secret is empty.
 app.include_router(
     fastapi_users.get_register_router(UserRead, UserCreate),
     prefix="/auth",
     tags=["auth"],
+    dependencies=[Depends(require_turnstile)],
 )
+
+# Reset-password router exposes both /forgot-password and /reset-password.
+# Only gate /forgot-password — /reset-password is protected by the email-link token.
+_reset_router = fastapi_users.get_reset_password_router()
+for _route in _reset_router.routes:
+    if getattr(_route, "path", None) == "/forgot-password":
+        _route.dependencies.append(Depends(require_turnstile))
+app.include_router(
+    _reset_router,
+    prefix="/auth",
+    tags=["auth"],
+)
+
+# Register account self-service routes BEFORE fastapi-users users router so that
+# DELETE /users/me is matched here rather than by fastapi-users' DELETE /users/{id}.
+app.include_router(account.router)
+
 app.include_router(
     fastapi_users.get_users_router(UserRead, UserUpdate),
     prefix="/users",
@@ -62,12 +111,12 @@ app.include_router(applications.router, tags=["applications"])
 app.include_router(companies.router, tags=["companies"])
 app.include_router(integrations.router, tags=["integrations"])
 
-# TOTP routes — the /login subroute gets the same per-IP throttle + lockout
-# guard wired onto the standard /auth/jwt/login route above. Without this,
-# the 2FA login path would be a brute-force-friendlier hole than the
-# password-only one.
+# TOTP routes — the /login subroute gets the per-IP throttle (matching the
+# guard on /auth/jwt/login). Account lockout is enforced INSIDE
+# `UserManager.authenticate_password` rather than as a route-level dependency,
+# because `check_account_not_locked` consumes a form-encoded
+# OAuth2PasswordRequestForm body and the TOTP login endpoint accepts JSON.
 for _route in totp.router.routes:
     if getattr(_route, "path", None) == "/auth/totp/login":
         _route.dependencies.append(Depends(check_login_rate_limit))
-        _route.dependencies.append(Depends(check_account_not_locked))
 app.include_router(totp.router)
