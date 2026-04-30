@@ -15,5 +15,8 @@ class ListingSummary(BaseModel):
     monthly_rate: Decimal
     property_id: uuid.UUID
     created_at: datetime
+    # Public-form slug — surfaced in the listings list so the operator can
+    # copy the apply URL straight from the Listings page.
+    slug: str | None = None
 
     model_config = ConfigDict(from_attributes=True)

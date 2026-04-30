@@ -49,7 +49,7 @@ from app.db.session import AsyncSessionLocal
 from app.schemas.user.user import UserRead, UserCreate, UserUpdate
 from app.services.storage.bucket_initializer import ensure_bucket
 from app.workers.upload_processor_worker import main as worker_main
-from app.api import account, activities, analytics, applicants, classification_rules, costs, db_admin, demo, documents, frontend_errors, inquiries, listings, properties, reply_templates, tenants, summary, integrations, audit, prompts, admin, organizations, transactions, reservations, reconciliation, screening, tax_completeness, tax_documents, tax_profile, tax_returns, tax_year_profiles, plaid, vendors, webhooks, exports, imports, health_dashboard, totp, taxpayer_profiles
+from app.api import account, activities, analytics, applicants, classification_rules, costs, db_admin, demo, documents, frontend_errors, inquiries, listings, properties, public_inquiries, reply_templates, tenants, summary, integrations, audit, prompts, admin, organizations, transactions, reservations, reconciliation, screening, tax_completeness, tax_documents, tax_profile, tax_returns, tax_year_profiles, plaid, vendors, webhooks, exports, imports, health_dashboard, totp, taxpayer_profiles
 
 logging.basicConfig(
     level=logging.INFO,
@@ -162,6 +162,9 @@ app.include_router(documents.router)
 app.include_router(properties.router)
 app.include_router(listings.router)
 app.include_router(inquiries.router)
+# Public inquiry form (T0) — unauthenticated; lives under /api so the Vite
+# dev proxy + Caddy production reverse proxy both forward it correctly.
+app.include_router(public_inquiries.router)
 app.include_router(applicants.router)
 app.include_router(screening.router)
 app.include_router(vendors.router)

@@ -50,6 +50,11 @@ MBK_SENSITIVE_FIELDS: frozenset[str] = frozenset({
     # to be safe. Applies to inquiries.notes, applicants.pets context,
     # video_call_notes.notes, applicant_events.notes, etc.
     "notes",
+    # Public-form (T0) submitter context — IP and UA aren't strictly PII per
+    # FCRA but they're tied to identifiable individuals once the inquiry has
+    # contact info, so mask them in audit_logs to be safe.
+    "client_ip",
+    "user_agent",
 })
 
 # MBK skip-tables — high-volume / secret-bearing tables we don't audit.

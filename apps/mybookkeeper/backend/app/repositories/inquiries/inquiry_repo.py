@@ -33,6 +33,8 @@ _UPDATABLE_COLUMNS: frozenset[str] = frozenset({
     "stage",
     "gut_rating",
     "notes",
+    # T0 — operator can override spam triage from the inbox.
+    "spam_status",
 })
 
 # How many characters of the last message body to surface as a preview in
@@ -75,6 +77,21 @@ async def create(
     gut_rating: int | None = None,
     notes: str | None = None,
     email_message_id: str | None = None,
+    submitted_via: str = "manual_entry",
+    spam_status: str = "unscored",
+    spam_score: float | None = None,
+    move_in_date: _dt.date | None = None,
+    lease_length_months: int | None = None,
+    occupant_count: int | None = None,
+    has_pets: bool | None = None,
+    pets_description: str | None = None,
+    vehicle_count: int | None = None,
+    current_city: str | None = None,
+    employment_status: str | None = None,
+    why_this_room: str | None = None,
+    additional_notes: str | None = None,
+    client_ip: str | None = None,
+    user_agent: str | None = None,
 ) -> Inquiry:
     """Persist an Inquiry. ``stage`` is forced to ``'new'`` on create."""
     inquiry = Inquiry(
@@ -94,8 +111,48 @@ async def create(
         notes=notes,
         received_at=received_at,
         email_message_id=email_message_id,
+        submitted_via=submitted_via,
+        spam_status=spam_status,
+        spam_score=spam_score,
+        move_in_date=move_in_date,
+        lease_length_months=lease_length_months,
+        occupant_count=occupant_count,
+        has_pets=has_pets,
+        pets_description=pets_description,
+        vehicle_count=vehicle_count,
+        current_city=current_city,
+        employment_status=employment_status,
+        why_this_room=why_this_room,
+        additional_notes=additional_notes,
+        client_ip=client_ip,
+        user_agent=user_agent,
     )
     db.add(inquiry)
+    await db.flush()
+    return inquiry
+
+
+async def update_spam_triage(
+    db: AsyncSession,
+    inquiry_id: uuid.UUID,
+    *,
+    spam_status: str,
+    spam_score: float | None = None,
+) -> Inquiry | None:
+    """Apply the final spam_status + spam_score after the filter pipeline.
+
+    Distinct from ``update_inquiry`` because it doesn't go through the
+    operator-facing allowlist — these columns are written by the public
+    ingest path itself, never by a route handler driven by client input.
+    """
+    result = await db.execute(
+        select(Inquiry).where(Inquiry.id == inquiry_id)
+    )
+    inquiry = result.scalar_one_or_none()
+    if inquiry is None:
+        return None
+    inquiry.spam_status = spam_status
+    inquiry.spam_score = spam_score
     await db.flush()
     return inquiry
 
@@ -161,14 +218,21 @@ async def count_by_organization(
     organization_id: uuid.UUID,
     *,
     stage: str | None = None,
+    spam_status: str | None = None,
 ) -> int:
-    """Count active (non-deleted) inquiries for the inbox total."""
+    """Count active (non-deleted) inquiries for the inbox total.
+
+    ``spam_status`` is used by the inbox tabs ("All" / "Clean" / "Flagged" /
+    "Spam") so each tab's count reflects its filtered subset.
+    """
     stmt = select(func.count(Inquiry.id)).where(
         Inquiry.organization_id == organization_id,
         Inquiry.deleted_at.is_(None),
     )
     if stage is not None:
         stmt = stmt.where(Inquiry.stage == stage)
+    if spam_status is not None:
+        stmt = stmt.where(Inquiry.spam_status == spam_status)
     result = await db.execute(stmt)
     return int(result.scalar_one() or 0)
 
@@ -178,6 +242,7 @@ async def list_with_last_message(
     organization_id: uuid.UUID,
     *,
     stage: str | None = None,
+    spam_status: str | None = None,
     limit: int = 50,
     offset: int = 0,
 ) -> list[InquiryWithLastMessage]:
@@ -217,6 +282,9 @@ async def list_with_last_message(
             Inquiry.desired_end_date,
             Inquiry.gut_rating,
             Inquiry.received_at,
+            Inquiry.spam_status,
+            Inquiry.spam_score,
+            Inquiry.submitted_via,
             last_msg.id.label("last_message_id"),
             last_msg.parsed_body.label("last_message_parsed_body"),
             last_msg.raw_email_body.label("last_message_raw_body"),
@@ -230,6 +298,8 @@ async def list_with_last_message(
     )
     if stage is not None:
         stmt = stmt.where(Inquiry.stage == stage)
+    if spam_status is not None:
+        stmt = stmt.where(Inquiry.spam_status == spam_status)
     stmt = stmt.order_by(desc(Inquiry.received_at)).limit(limit).offset(offset)
 
     result = await db.execute(stmt)
@@ -251,6 +321,9 @@ async def list_with_last_message(
             desired_end_date=row.desired_end_date,
             gut_rating=row.gut_rating,
             received_at=row.received_at,
+            spam_status=row.spam_status,
+            spam_score=float(row.spam_score) if row.spam_score is not None else None,
+            submitted_via=row.submitted_via,
             last_message_id=row.last_message_id,
             last_message_preview=preview,
             last_message_at=row.last_message_at,

@@ -36,6 +36,7 @@ from app.repositories.listings import listing_external_id_repo
 from app.repositories.inquiries import inquiry_repo
 from app.repositories.inquiries import inquiry_message_repo
 from app.repositories.inquiries import inquiry_event_repo
+from app.repositories.inquiries import inquiry_spam_assessment_repo
 from app.repositories.inquiries import reply_template_repo
 from app.repositories.applicants import applicant_repo
 from app.repositories.applicants import screening_result_repo

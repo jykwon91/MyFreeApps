@@ -4,9 +4,9 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 import pytest_asyncio
-from sqlalchemy import event, JSON
+from sqlalchemy import event, JSON, String
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import ARRAY, INET, JSONB
 from sqlalchemy.orm import sessionmaker
 
 from app.db.base import Base
@@ -26,6 +26,14 @@ def _patch_metadata_for_sqlite() -> None:
         cols_to_drop: list[str] = []
         for column in table.columns:
             if isinstance(column.type, JSONB):
+                column.type = JSON()
+            if isinstance(column.type, INET):
+                # SQLite has no INET; round-trip as text. Production schema
+                # is the source of truth (PostgreSQL INET).
+                column.type = String(45)
+            if isinstance(column.type, ARRAY):
+                # SQLite has no ARRAY; serialize as JSON for tests. The
+                # repository layer reads / writes Python lists either way.
                 column.type = JSON()
             if column.computed is not None:
                 cols_to_drop.append(column.name)

@@ -8,14 +8,25 @@ import LoadingButton from "@/shared/components/ui/LoadingButton";
 import { useGetInquiriesQuery } from "@/shared/store/inquiriesApi";
 import { useGetListingsQuery } from "@/shared/store/listingsApi";
 import { INQUIRY_PAGE_SIZE, INQUIRY_STAGES } from "@/shared/lib/inquiry-labels";
+import type { InquirySpamStatus } from "@/shared/types/inquiry/inquiry-spam-status";
 import type { InquiryStage } from "@/shared/types/inquiry/inquiry-stage";
 import InquiriesSkeleton from "@/app/features/inquiries/InquiriesSkeleton";
 import InquiryStageFilter from "@/app/features/inquiries/InquiryStageFilter";
+import InquirySpamTabFilter from "@/app/features/inquiries/InquirySpamTabFilter";
 import InquiryCard from "@/app/features/inquiries/InquiryCard";
 import InquiryRow from "@/app/features/inquiries/InquiryRow";
 import InquiryForm from "@/app/features/inquiries/InquiryForm";
 
 const STAGE_PARAM = "stage";
+const SPAM_PARAM = "spam";
+
+const SPAM_STATUSES: ReadonlyArray<InquirySpamStatus> = [
+  "unscored",
+  "clean",
+  "flagged",
+  "spam",
+  "manually_cleared",
+];
 
 function parseStageParam(value: string | null): InquiryStage | null {
   if (value === null) return null;
@@ -24,19 +35,33 @@ function parseStageParam(value: string | null): InquiryStage | null {
     : null;
 }
 
+// "Clean" is the default tab when no spam param is present — it matches the
+// most common operator workflow (review legitimate inquiries first).
+const DEFAULT_SPAM_FILTER: InquirySpamStatus = "clean";
+
+function parseSpamParam(value: string | null): InquirySpamStatus | null {
+  if (value === null) return DEFAULT_SPAM_FILTER;
+  if (value === "all") return null;
+  return (SPAM_STATUSES as readonly string[]).includes(value)
+    ? (value as InquirySpamStatus)
+    : DEFAULT_SPAM_FILTER;
+}
+
 export default function Inquiries() {
   const [searchParams, setSearchParams] = useSearchParams();
   const stage = parseStageParam(searchParams.get(STAGE_PARAM));
+  const spamFilter = parseSpamParam(searchParams.get(SPAM_PARAM));
   const [pageCount, setPageCount] = useState(1);
   const [showForm, setShowForm] = useState(false);
 
   const queryArgs = useMemo(
     () => ({
       ...(stage ? { stage } : {}),
+      ...(spamFilter ? { spam_status: spamFilter } : {}),
       limit: INQUIRY_PAGE_SIZE * pageCount,
       offset: 0,
     }),
-    [stage, pageCount],
+    [stage, spamFilter, pageCount],
   );
 
   const { data, isLoading, isFetching, isError, refetch } = useGetInquiriesQuery(queryArgs);
@@ -67,6 +92,20 @@ export default function Inquiries() {
       params.set(STAGE_PARAM, next);
     } else {
       params.delete(STAGE_PARAM);
+    }
+    setSearchParams(params, { replace: true });
+    setPageCount(1);
+  }
+
+  function handleSpamFilterChange(next: InquirySpamStatus | null) {
+    const params = new URLSearchParams(searchParams);
+    if (next === null) {
+      params.set(SPAM_PARAM, "all");
+    } else if (next === DEFAULT_SPAM_FILTER) {
+      // Default tab — drop the param so the URL stays clean.
+      params.delete(SPAM_PARAM);
+    } else {
+      params.set(SPAM_PARAM, next);
     }
     setSearchParams(params, { replace: true });
     setPageCount(1);
@@ -106,6 +145,8 @@ export default function Inquiries() {
           </div>
         }
       />
+
+      <InquirySpamTabFilter value={spamFilter} onChange={handleSpamFilterChange} />
 
       <InquiryStageFilter value={stage} onChange={handleFilterChange} />
 

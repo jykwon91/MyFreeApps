@@ -5,6 +5,7 @@ import type { InquiryListResponse } from "@/shared/types/inquiry/inquiry-list-re
 import type { InquiryMessage } from "@/shared/types/inquiry/inquiry-message";
 import type { InquiryReplyRequest } from "@/shared/types/inquiry/inquiry-reply-request";
 import type { InquiryResponse } from "@/shared/types/inquiry/inquiry-response";
+import type { InquirySpamAssessment } from "@/shared/types/inquiry/inquiry-spam-assessment";
 import type { InquiryUpdateRequest } from "@/shared/types/inquiry/inquiry-update-request";
 import type { RenderedTemplate } from "@/shared/types/inquiry/rendered-template";
 import type { ReplyTemplate } from "@/shared/types/inquiry/reply-template";
@@ -29,6 +30,7 @@ const inquiriesApi = baseApi.injectEndpoints({
         url: "/inquiries",
         params: {
           ...(args?.stage ? { stage: args.stage } : {}),
+          ...(args?.spam_status ? { spam_status: args.spam_status } : {}),
           ...(args?.limit !== undefined ? { limit: args.limit } : {}),
           ...(args?.offset !== undefined ? { offset: args.offset } : {}),
         },
@@ -127,6 +129,36 @@ const inquiriesApi = baseApi.injectEndpoints({
         { type: "Inquiry", id: "LIST" },
       ],
     }),
+
+    // ----- T0: spam triage -----
+    getInquirySpamAssessments: builder.query<InquirySpamAssessment[], string>({
+      query: (inquiryId) => ({ url: `/inquiries/${inquiryId}/spam-assessments` }),
+      providesTags: (_result, _error, inquiryId) => [
+        { type: "Inquiry", id: `spam-${inquiryId}` },
+      ],
+    }),
+    markInquiryNotSpam: builder.mutation<void, string>({
+      query: (inquiryId) => ({
+        url: `/inquiries/${inquiryId}/mark-not-spam`,
+        method: "POST",
+      }),
+      invalidatesTags: (_result, _err, inquiryId) => [
+        { type: "Inquiry", id: inquiryId },
+        { type: "Inquiry", id: "LIST" },
+        { type: "Inquiry", id: `spam-${inquiryId}` },
+      ],
+    }),
+    markInquirySpam: builder.mutation<void, string>({
+      query: (inquiryId) => ({
+        url: `/inquiries/${inquiryId}/mark-spam`,
+        method: "POST",
+      }),
+      invalidatesTags: (_result, _err, inquiryId) => [
+        { type: "Inquiry", id: inquiryId },
+        { type: "Inquiry", id: "LIST" },
+        { type: "Inquiry", id: `spam-${inquiryId}` },
+      ],
+    }),
   }),
 });
 
@@ -143,4 +175,7 @@ export const {
   useRenderReplyTemplateQuery,
   useLazyRenderReplyTemplateQuery,
   useSendInquiryReplyMutation,
+  useGetInquirySpamAssessmentsQuery,
+  useMarkInquiryNotSpamMutation,
+  useMarkInquirySpamMutation,
 } = inquiriesApi;

@@ -15,6 +15,7 @@ from app.models.listings.listing_external_id import ListingExternalId
 from app.models.inquiries.inquiry import Inquiry
 from app.models.inquiries.inquiry_message import InquiryMessage
 from app.models.inquiries.inquiry_event import InquiryEvent
+from app.models.inquiries.inquiry_spam_assessment import InquirySpamAssessment
 from app.models.inquiries.reply_template import ReplyTemplate
 from app.models.applicants.applicant import Applicant
 from app.models.applicants.screening_result import ScreeningResult

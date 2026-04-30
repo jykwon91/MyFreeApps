@@ -52,6 +52,20 @@ class Settings(BaseSettings):
 
     turnstile_secret_key: str = ""
 
+    # ----- Public inquiry form (T0) -----
+    # Score threshold for the Claude spam-scoring step. Inquiries scoring
+    # below this are stored as ``spam`` and never surface to the operator's
+    # default inbox tab. Operator-tunable in MBK Settings → Inquiries.
+    inquiry_spam_threshold: int = 30
+    # Master switch for the disposable-email gate (filter step 5).
+    inquiry_block_disposable_email: bool = True
+    # Per-IP rate limit for ``POST /api/inquiries/public`` (filter step 1).
+    inquiry_public_rate_limit_max: int = 5
+    inquiry_public_rate_limit_window_seconds: int = 3600
+    # Minimum-character soft gate for the ``why_this_room`` text field
+    # (filter step 9). Lowered/raised by the operator if spam patterns shift.
+    inquiry_min_why_this_room_chars: int = 30
+
     email_from_address: str = "mybookkeeper6@gmail.com"
     email_from_name: str = "MyBookkeeper"
 

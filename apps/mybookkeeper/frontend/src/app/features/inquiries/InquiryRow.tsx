@@ -6,6 +6,7 @@ import {
 } from "@/shared/lib/inquiry-date-format";
 import type { InquirySummary } from "@/shared/types/inquiry/inquiry-summary";
 import InquiryQualityBadge from "./InquiryQualityBadge";
+import InquirySpamBadge from "./InquirySpamBadge";
 import InquiryStageBadge from "./InquiryStageBadge";
 
 interface Props {
@@ -47,7 +48,12 @@ export default function InquiryRow({ inquiry, listingTitle }: Props) {
       }}
       className="border-t cursor-pointer hover:bg-muted/40 focus:outline-none focus:ring-2 focus:ring-primary"
     >
-      <td className="px-4 py-3 font-medium">{inquirerName}</td>
+      <td className="px-4 py-3 font-medium">
+        <div className="flex items-center gap-2">
+          <span>{inquirerName}</span>
+          <InquirySpamBadge status={inquiry.spam_status} score={inquiry.spam_score} />
+        </div>
+      </td>
       <td className="px-4 py-3"><SourceBadge source={inquiry.source} variant="short" /></td>
       <td className="px-4 py-3 text-muted-foreground">{desiredDates}</td>
       <td className="px-4 py-3 text-muted-foreground">{employer}</td>

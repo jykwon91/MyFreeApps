@@ -25,6 +25,7 @@ import InquiryQualityBreakdown from "@/app/features/inquiries/InquiryQualityBrea
 import InquiryEventTimeline from "@/app/features/inquiries/InquiryEventTimeline";
 import InquiryMessageThread from "@/app/features/inquiries/InquiryMessageThread";
 import InquiryNotesEditor from "@/app/features/inquiries/InquiryNotesEditor";
+import InquirySpamTriagePanel from "@/app/features/inquiries/InquirySpamTriagePanel";
 import InquiryReplyPanel from "@/app/features/inquiries/InquiryReplyPanel";
 import PromoteFromInquiryPanel from "@/app/features/applicants/PromoteFromInquiryPanel";
 
@@ -278,6 +279,15 @@ export default function InquiryDetail() {
               </div>
             </div>
           </section>
+
+          {/* Spam triage (T0) — only meaningful for public-form inquiries
+              but rendered for all so the operator can override unscored
+              Gmail-parsed inquiries too. */}
+          <InquirySpamTriagePanel
+            inquiryId={inquiry.id}
+            spamStatus={inquiry.spam_status}
+            spamScore={inquiry.spam_score}
+          />
 
           {/* Notes */}
           <section className="border rounded-lg p-4 space-y-3" data-testid="notes-section">

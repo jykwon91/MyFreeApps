@@ -48,6 +48,7 @@ const sampleListing: ListingResponse = {
   property_id: "prop-1",
   title: "Existing Listing",
   description: "Cozy",
+  slug: "existing-listing-zzz000",
   monthly_rate: "1500.00",
   weekly_rate: null,
   nightly_rate: null,

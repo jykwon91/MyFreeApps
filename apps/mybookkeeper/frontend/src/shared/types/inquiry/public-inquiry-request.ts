@@ -1,0 +1,29 @@
+import type { EmploymentStatus } from "./employment-status";
+
+/**
+ * Body for ``POST /api/inquiries/public``. Mirrors backend
+ * ``PublicInquiryRequest`` — every field is enforced server-side, this type
+ * is only the client contract.
+ */
+export interface PublicInquiryRequest {
+  listing_slug: string;
+  name: string;
+  email: string;
+  phone: string;
+  move_in_date: string;
+  lease_length_months: number;
+  occupant_count: number;
+  has_pets: boolean;
+  pets_description: string | null;
+  vehicle_count: number;
+  current_city: string;
+  employment_status: EmploymentStatus;
+  why_this_room: string;
+  additional_notes: string | null;
+  /** Millisecond timestamp captured at form mount. */
+  form_loaded_at: number;
+  /** Honeypot — visually hidden in the form. */
+  website: string;
+  /** Cloudflare Turnstile token. Empty string when secret_key not configured. */
+  turnstile_token: string;
+}

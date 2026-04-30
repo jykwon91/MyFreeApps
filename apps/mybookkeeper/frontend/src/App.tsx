@@ -39,6 +39,7 @@ import Analytics from "@/app/pages/Analytics";
 import Security from "@/app/pages/Security";
 import Forbidden from "@/app/pages/Forbidden";
 import OAuthCallback from "@/app/pages/OAuthCallback";
+import PublicInquiryForm from "@/app/pages/PublicInquiryForm";
 
 import PrivacyPolicy from "@/app/pages/PrivacyPolicy";
 import TermsOfService from "@/app/pages/TermsOfService";
@@ -73,6 +74,8 @@ export default function App() {
             <Route path="/invite/:token" element={<InviteAccept />} />
             <Route path="/oauth-callback" element={<OAuthCallback />} />
             <Route path="/verify-email" element={<VerifyEmail />} />
+            {/* Public inquiry form (T0) — unauthenticated, no Layout. */}
+            <Route path="/apply/:slug" element={<PublicInquiryForm />} />
             <Route
               path="/onboarding"
               element={
