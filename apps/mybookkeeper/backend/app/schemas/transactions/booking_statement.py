@@ -12,7 +12,7 @@ class OccupancyResponse(BaseModel):
     occupancy_rate: Decimal
 
 
-class ReservationRead(BaseModel):
+class BookingStatementRead(BaseModel):
     id: uuid.UUID
     organization_id: uuid.UUID
     property_id: uuid.UUID | None = None

@@ -6,7 +6,7 @@ from app.repositories.email import email_filter_log_repo
 from app.repositories.email import processed_email_repo
 from app.repositories.email import sync_log_repo
 from app.repositories.transactions import transaction_repo
-from app.repositories.transactions import reservation_repo
+from app.repositories.transactions import booking_statement_repo
 from app.repositories.transactions import reconciliation_repo
 from app.repositories.transactions import summary_repo
 from app.repositories.tax import tax_return_repo

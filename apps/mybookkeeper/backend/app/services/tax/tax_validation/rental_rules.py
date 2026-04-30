@@ -15,7 +15,7 @@ from app.models.tax.tax_form_instance import TaxFormInstance
 from app.models.tax.tax_return import TaxReturn
 from app.repositories import (
     property_repo,
-    reservation_repo,
+    booking_statement_repo,
     tax_carryforward_repo,
     transaction_repo,
 )
@@ -159,7 +159,7 @@ async def _validate_personal_use_days(
     if not props_with_personal_use:
         return results
 
-    rental_nights = await reservation_repo.total_nights_by_property(
+    rental_nights = await booking_statement_repo.total_nights_by_property(
         db, tax_return.organization_id, tax_return.tax_year,
     )
 
@@ -363,7 +363,7 @@ async def _validate_14_day_rental(
     if not properties:
         return []
 
-    rental_nights = await reservation_repo.total_nights_by_property(
+    rental_nights = await booking_statement_repo.total_nights_by_property(
         db, tax_return.organization_id, tax_return.tax_year,
     )
 

@@ -16,16 +16,16 @@ class ReconciliationMatch(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     reconciliation_source_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("reconciliation_sources.id", ondelete="CASCADE"))
-    reservation_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("reservations.id", ondelete="CASCADE"))
+    booking_statement_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("booking_statements.id", ondelete="CASCADE"))
     matched_amount: Mapped[Decimal] = mapped_column(Numeric(12, 2))
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     __table_args__ = (
-        UniqueConstraint("reconciliation_source_id", "reservation_id", name="uq_recon_match"),
+        UniqueConstraint("reconciliation_source_id", "booking_statement_id", name="uq_recon_match"),
         CheckConstraint("matched_amount > 0", name="chk_match_amount"),
-        Index("ix_recon_match_reservation", "reservation_id"),
+        Index("ix_recon_match_booking_statement", "booking_statement_id"),
     )
 
     reconciliation_source = relationship("ReconciliationSource")
-    reservation = relationship("Reservation")
+    booking_statement = relationship("BookingStatement")

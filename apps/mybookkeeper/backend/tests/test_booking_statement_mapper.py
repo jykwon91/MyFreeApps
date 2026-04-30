@@ -1,19 +1,19 @@
-"""Tests for reservation_mapper — building Reservation models from line items."""
+"""Tests for booking_statement_mapper — building BookingStatement models from line items."""
 import uuid
 
 import pytest
 from decimal import Decimal
 
-from app.mappers.reservation_mapper import (
-    build_reservation_from_line_item,
-    build_reservations_from_line_items,
+from app.mappers.booking_statement_mapper import (
+    build_booking_statement_from_line_item,
+    build_booking_statements_from_line_items,
 )
 
 ORG_ID = uuid.uuid4()
 
 
-class TestBuildReservationFromLineItem:
-    def test_basic_reservation(self) -> None:
+class TestBuildBookingStatementFromLineItem:
+    def test_basic_booking_statement(self) -> None:
         li = {
             "res_code": "ABC123",
             "check_in": "2025-01-01",
@@ -21,23 +21,23 @@ class TestBuildReservationFromLineItem:
             "platform": "airbnb",
             "gross_booking": "500.00",
         }
-        res = build_reservation_from_line_item(li, ORG_ID)
-        assert res is not None
-        assert res.res_code == "ABC123"
-        assert res.platform == "airbnb"
-        assert res.gross_booking == Decimal("500.00")
+        bs = build_booking_statement_from_line_item(li, ORG_ID)
+        assert bs is not None
+        assert bs.res_code == "ABC123"
+        assert bs.platform == "airbnb"
+        assert bs.gross_booking == Decimal("500.00")
 
     def test_missing_res_code_returns_none(self) -> None:
         li = {"check_in": "2025-01-01", "check_out": "2025-01-05"}
-        assert build_reservation_from_line_item(li, ORG_ID) is None
+        assert build_booking_statement_from_line_item(li, ORG_ID) is None
 
     def test_missing_dates_returns_none(self) -> None:
         li = {"res_code": "ABC123"}
-        assert build_reservation_from_line_item(li, ORG_ID) is None
+        assert build_booking_statement_from_line_item(li, ORG_ID) is None
 
     def test_checkout_before_checkin_returns_none(self) -> None:
         li = {"res_code": "ABC123", "check_in": "2025-01-05", "check_out": "2025-01-01"}
-        assert build_reservation_from_line_item(li, ORG_ID) is None
+        assert build_booking_statement_from_line_item(li, ORG_ID) is None
 
     def test_gross_booking_computed_from_net_plus_commission(self) -> None:
         li = {
@@ -47,9 +47,9 @@ class TestBuildReservationFromLineItem:
             "net_booking_revenue": "400.00",
             "commission": "100.00",
         }
-        res = build_reservation_from_line_item(li, ORG_ID)
-        assert res is not None
-        assert res.gross_booking == Decimal("500.00")
+        bs = build_booking_statement_from_line_item(li, ORG_ID)
+        assert bs is not None
+        assert bs.gross_booking == Decimal("500.00")
 
     def test_platform_cleared_when_gross_booking_null(self) -> None:
         """DB constraint: platform IS NULL OR gross_booking IS NOT NULL.
@@ -63,10 +63,10 @@ class TestBuildReservationFromLineItem:
             "platform": "airbnb",
             # No gross_booking, booking_revenue, or net_booking_revenue
         }
-        res = build_reservation_from_line_item(li, ORG_ID)
-        assert res is not None
-        assert res.platform is None
-        assert res.gross_booking is None
+        bs = build_booking_statement_from_line_item(li, ORG_ID)
+        assert bs is not None
+        assert bs.platform is None
+        assert bs.gross_booking is None
 
     def test_platform_kept_when_gross_booking_present(self) -> None:
         li = {
@@ -76,10 +76,10 @@ class TestBuildReservationFromLineItem:
             "platform": "vrbo",
             "gross_booking": "300.00",
         }
-        res = build_reservation_from_line_item(li, ORG_ID)
-        assert res is not None
-        assert res.platform == "vrbo"
-        assert res.gross_booking == Decimal("300.00")
+        bs = build_booking_statement_from_line_item(li, ORG_ID)
+        assert bs is not None
+        assert bs.platform == "vrbo"
+        assert bs.gross_booking == Decimal("300.00")
 
     def test_no_platform_no_gross_is_fine(self) -> None:
         li = {
@@ -87,18 +87,18 @@ class TestBuildReservationFromLineItem:
             "check_in": "2025-01-01",
             "check_out": "2025-01-05",
         }
-        res = build_reservation_from_line_item(li, ORG_ID)
-        assert res is not None
-        assert res.platform is None
-        assert res.gross_booking is None
+        bs = build_booking_statement_from_line_item(li, ORG_ID)
+        assert bs is not None
+        assert bs.platform is None
+        assert bs.gross_booking is None
 
 
-class TestBuildReservationsFromLineItems:
+class TestBuildBookingStatementsFromLineItems:
     def test_empty_list(self) -> None:
-        assert build_reservations_from_line_items([], ORG_ID) == []
+        assert build_booking_statements_from_line_items([], ORG_ID) == []
 
     def test_none_input(self) -> None:
-        assert build_reservations_from_line_items(None, ORG_ID) == []
+        assert build_booking_statements_from_line_items(None, ORG_ID) == []
 
     def test_skips_invalid_items(self) -> None:
         items = [
@@ -106,6 +106,6 @@ class TestBuildReservationsFromLineItems:
             {"bad": "data"},
             "not a dict",
         ]
-        result = build_reservations_from_line_items(items, ORG_ID)
+        result = build_booking_statements_from_line_items(items, ORG_ID)
         assert len(result) == 1
         assert result[0].res_code == "A"

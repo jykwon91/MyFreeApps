@@ -9,7 +9,7 @@ from app.core.vendors import normalize_vendor
 from app.db.session import AsyncSessionLocal, unit_of_work
 from app.models.transactions.reconciliation_match import ReconciliationMatch
 from app.models.transactions.reconciliation_source import ReconciliationSource
-from app.repositories import reconciliation_repo, reservation_repo, transaction_repo
+from app.repositories import reconciliation_repo, booking_statement_repo, transaction_repo
 
 logger = logging.getLogger(__name__)
 
@@ -105,7 +105,7 @@ async def auto_reconcile(
 async def create_match(
     ctx: RequestContext,
     source_id: uuid.UUID,
-    reservation_id: uuid.UUID,
+    booking_statement_id: uuid.UUID,
     matched_amount: Decimal,
 ) -> ReconciliationMatch:
     async with unit_of_work() as db:
@@ -115,13 +115,15 @@ async def create_match(
         if not source:
             raise LookupError("Reconciliation source not found")
 
-        reservation = await reservation_repo.get_by_id(db, reservation_id, ctx.organization_id)
-        if not reservation:
-            raise LookupError("Reservation not found")
+        booking_statement = await booking_statement_repo.get_by_id(
+            db, booking_statement_id, ctx.organization_id,
+        )
+        if not booking_statement:
+            raise LookupError("Booking statement not found")
 
         match = ReconciliationMatch(
             reconciliation_source_id=source_id,
-            reservation_id=reservation_id,
+            booking_statement_id=booking_statement_id,
             matched_amount=matched_amount,
         )
         created = await reconciliation_repo.create_match(db, match)

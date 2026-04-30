@@ -1,17 +1,22 @@
-"""Reservation mapper — single source of truth for building Reservation models from raw data."""
+"""BookingStatement mapper — single source of truth for building BookingStatement models from raw data.
+
+The input dicts come from Claude extraction of PM (property manager) statements,
+where each line item describes a single reservation row (booking) on the
+statement. The mapper normalizes those rows into BookingStatement ORM rows.
+"""
 import uuid
 
 from app.core.parsers import safe_date, safe_decimal
-from app.models.transactions.reservation import Reservation
+from app.models.transactions.booking_statement import BookingStatement
 
 
-def build_reservation_from_line_item(
+def build_booking_statement_from_line_item(
     li: dict,
     organization_id: uuid.UUID,
     property_id: uuid.UUID | None = None,
     transaction_id: uuid.UUID | None = None,
-) -> Reservation | None:
-    """Build a Reservation from a single line_item dict. Returns None if required fields are missing."""
+) -> BookingStatement | None:
+    """Build a BookingStatement from a single line_item dict. Returns None if required fields are missing."""
     res_code = li.get("res_code")
     check_in = safe_date(li.get("check_in"))
     check_out = safe_date(li.get("check_out"))
@@ -36,7 +41,7 @@ def build_reservation_from_line_item(
     if platform and not gross_booking:
         platform = None
 
-    return Reservation(
+    return BookingStatement(
         organization_id=organization_id,
         property_id=property_id,
         transaction_id=transaction_id,
@@ -55,20 +60,20 @@ def build_reservation_from_line_item(
     )
 
 
-def build_reservations_from_line_items(
+def build_booking_statements_from_line_items(
     line_items: list[dict] | None,
     organization_id: uuid.UUID,
     property_id: uuid.UUID | None = None,
     transaction_id: uuid.UUID | None = None,
-) -> list[Reservation]:
-    """Build Reservation rows from line_items that have res_code + check_in + check_out."""
+) -> list[BookingStatement]:
+    """Build BookingStatement rows from line_items that have res_code + check_in + check_out."""
     if not line_items:
         return []
-    reservations: list[Reservation] = []
+    booking_statements: list[BookingStatement] = []
     for li in line_items:
         if not isinstance(li, dict):
             continue
-        res = build_reservation_from_line_item(li, organization_id, property_id, transaction_id)
-        if res:
-            reservations.append(res)
-    return reservations
+        bs = build_booking_statement_from_line_item(li, organization_id, property_id, transaction_id)
+        if bs:
+            booking_statements.append(bs)
+    return booking_statements

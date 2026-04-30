@@ -12,8 +12,16 @@ from sqlalchemy.dialects.postgresql import UUID
 from app.db.base import Base
 
 
-class Reservation(Base):
-    __tablename__ = "reservations"
+class BookingStatement(Base):
+    """A finance-derived row extracted from a PM (property manager) statement.
+
+    Each row corresponds to a single reservation line item on a year-end
+    or monthly statement issued by a property manager (gross booking,
+    commission, net client earnings, etc.). These rows are NOT operational
+    bookings — they exist purely for tax/finance reconciliation.
+    """
+
+    __tablename__ = "booking_statements"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     organization_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"))
@@ -43,20 +51,20 @@ class Reservation(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     __table_args__ = (
-        CheckConstraint("check_out > check_in", name="chk_res_dates"),
+        CheckConstraint("check_out > check_in", name="chk_bs_dates"),
         CheckConstraint(
             "platform IS NULL OR platform IN ('airbnb', 'vrbo', 'booking.com', 'direct')",
-            name="chk_res_platform",
+            name="chk_bs_platform",
         ),
         CheckConstraint(
             "platform IS NULL OR gross_booking IS NOT NULL",
-            name="chk_res_gross_when_platform",
+            name="chk_bs_gross_when_platform",
         ),
-        UniqueConstraint("organization_id", "res_code", name="uq_res_org_code"),
-        Index("ix_res_property_dates", "organization_id", "property_id", "check_in"),
-        Index("ix_res_org_checkin", "organization_id", "check_in"),
-        Index("ix_res_platform", "organization_id", "platform"),
-        Index("ix_res_transaction", "transaction_id"),
+        UniqueConstraint("organization_id", "res_code", name="uq_bs_org_code"),
+        Index("ix_bs_property_dates", "organization_id", "property_id", "check_in"),
+        Index("ix_bs_org_checkin", "organization_id", "check_in"),
+        Index("ix_bs_platform", "organization_id", "platform"),
+        Index("ix_bs_transaction", "transaction_id"),
     )
 
     organization = relationship("Organization")

@@ -14,13 +14,13 @@ from app.models.extraction.extraction import Extraction
 from app.models.extraction.extraction_types import ExtractionData, ExtractionResult
 from app.repositories import (
     document_repo, extraction_repo, processed_email_repo,
-    reservation_repo, transaction_repo, usage_log_repo,
+    booking_statement_repo, transaction_repo, usage_log_repo,
 )
 from app.services.extraction.dedup_service import evaluate_dedup
 from app.services.extraction.dedup_resolution_service import resolve_and_link
 from app.services.documents.document_query_service import _extract_renderable_from_eml
 from app.mappers.extraction_mapper import derive_category, derive_transaction_type, sanitize_extraction_tags
-from app.mappers.reservation_mapper import build_reservation_from_line_item
+from app.mappers.booking_statement_mapper import build_booking_statement_from_line_item
 from app.mappers.transaction_mapper import build_transaction_from_extraction_data
 from app.services.extraction.property_matcher_service import resolve_property_id
 from app.services.extraction.sender_category_service import match_sender_category
@@ -201,18 +201,18 @@ async def save_email_extraction(
                 for li in (data.get("line_items") or []):
                     if not isinstance(li, dict):
                         continue
-                    res = build_reservation_from_line_item(
+                    bs = build_booking_statement_from_line_item(
                         li, organization_id, property_id, surviving.id,
                     )
-                    if not res:
+                    if not bs:
                         continue
-                    existing_res = await reservation_repo.find_by_res_code(
-                        db, organization_id, res.res_code,
+                    existing_bs = await booking_statement_repo.find_by_res_code(
+                        db, organization_id, bs.res_code,
                     )
-                    if existing_res:
-                        logger.warning("Skipped duplicate reservation %s during email extraction", res.res_code)
+                    if existing_bs:
+                        logger.warning("Skipped duplicate booking statement %s during email extraction", bs.res_code)
                         continue
-                    await reservation_repo.create(db, res)
+                    await booking_statement_repo.create(db, bs)
 
     return records_added
 

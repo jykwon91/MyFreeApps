@@ -6,22 +6,22 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member
-from app.schemas.transactions.reservation import OccupancyResponse, ReservationRead
-from app.services.transactions import reservation_query_service
+from app.schemas.transactions.booking_statement import BookingStatementRead, OccupancyResponse
+from app.services.transactions import booking_statement_query_service
 
-router = APIRouter(prefix="/reservations", tags=["reservations"])
+router = APIRouter(prefix="/booking-statements", tags=["booking-statements"])
 
 
-@router.get("", response_model=list[ReservationRead])
-async def list_reservations(
+@router.get("", response_model=list[BookingStatementRead])
+async def list_booking_statements(
     property_id: Optional[uuid.UUID] = None,
     start_date: Optional[date] = None,
     end_date: Optional[date] = None,
     limit: int = Query(default=1000, le=5000),
     offset: int = 0,
     ctx: RequestContext = Depends(current_org_member),
-) -> list[ReservationRead]:
-    return await reservation_query_service.list_reservations(
+) -> list[BookingStatementRead]:
+    return await booking_statement_query_service.list_booking_statements(
         ctx,
         property_id=property_id,
         start_date=start_date,
@@ -40,6 +40,6 @@ async def occupancy_stats(
 ) -> OccupancyResponse:
     if end_date <= start_date:
         raise HTTPException(status_code=422, detail="end_date must be after start_date")
-    return await reservation_query_service.get_occupancy(
+    return await booking_statement_query_service.get_occupancy(
         ctx, property_id, start_date, end_date,
     )
