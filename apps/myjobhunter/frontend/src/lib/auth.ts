@@ -36,11 +36,25 @@ export async function signIn(email: string, password: string): Promise<void> {
  * Register a new account via fastapi-users.
  *
  * The backend sends a verification email; the new user must click the link
- * before they can log in. We do NOT auto-sign-in after registration —
- * the Login page redirects them to a "check your inbox" notice instead.
+ * before they can log in. We do NOT auto-sign-in after registration — the
+ * Login page redirects them to a "check your inbox" notice instead.
+ *
+ * When a Turnstile token is supplied, it is forwarded as the `X-Turnstile-Token`
+ * header so the backend `require_turnstile` dependency can verify it. In dev /
+ * CI the token is empty and the backend short-circuits the check.
  */
-export async function register(email: string, password: string): Promise<void> {
-  await api.post<RegisterResponse>("/auth/register", { email, password });
+export async function register(
+  email: string,
+  password: string,
+  turnstileToken = "",
+): Promise<void> {
+  await api.post<RegisterResponse>(
+    "/auth/register",
+    { email, password },
+    {
+      headers: turnstileToken ? { "X-Turnstile-Token": turnstileToken } : {},
+    },
+  );
 }
 
 /**

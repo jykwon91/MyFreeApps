@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import * as Tabs from "@radix-ui/react-tabs";
 import { Eye, EyeOff } from "lucide-react";
 import AlertBox from "@/shared/components/ui/AlertBox";
@@ -11,6 +11,13 @@ export interface LoginFormProps {
   defaultTab?: "signin" | "register";
   trustCopy?: string;
   passwordMinLength?: number;
+  /**
+   * Optional element rendered above the submit button on the register tab.
+   * Intended for a Cloudflare Turnstile widget. When the consumer's
+   * environment doesn't configure Turnstile the slot can stay null —
+   * passing it doesn't change the form layout when the widget renders nothing.
+   */
+  registerCaptchaSlot?: ReactNode;
 }
 
 const DEFAULT_TRUST_COPY =
@@ -25,6 +32,7 @@ export default function LoginForm({
   defaultTab = "signin",
   trustCopy = DEFAULT_TRUST_COPY,
   passwordMinLength = 12,
+  registerCaptchaSlot,
 }: LoginFormProps) {
   const [tab, setTab] = useState<TabId>(defaultTab);
   const [email, setEmail] = useState("");
@@ -192,6 +200,9 @@ export default function LoginForm({
               passwordMeetsMin={passwordMeetsMin}
             />
             <p className="text-xs text-muted-foreground">{trustCopy}</p>
+            {registerCaptchaSlot ? (
+              <div data-testid="register-captcha-slot">{registerCaptchaSlot}</div>
+            ) : null}
             {error && (
               <AlertBox variant="error" className="text-sm">
                 <span id={errorId} role="alert">
