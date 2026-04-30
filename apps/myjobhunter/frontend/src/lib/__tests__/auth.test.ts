@@ -89,11 +89,42 @@ describe("auth helpers", () => {
 
       await register("u@e.com", "securepass123");
 
-      expect(mockApiPost).toHaveBeenCalledWith("/auth/register", {
-        email: "u@e.com",
-        password: "securepass123",
-      });
+      expect(mockApiPost).toHaveBeenCalledWith(
+        "/auth/register",
+        { email: "u@e.com", password: "securepass123" },
+        // No turnstile token → empty headers object.
+        { headers: {} },
+      );
       expect(localStorage.getItem("token")).toBe("new.token");
+    });
+
+    it("forwards a Turnstile token as the X-Turnstile-Token header", async () => {
+      mockApiPost
+        .mockResolvedValueOnce({ data: { id: "uuid", email: "u@e.com" } })
+        .mockResolvedValueOnce({
+          data: { access_token: "new.token", token_type: "bearer" },
+        });
+
+      await register("u@e.com", "securepass123", "captcha-token-123");
+
+      expect(mockApiPost).toHaveBeenCalledWith(
+        "/auth/register",
+        { email: "u@e.com", password: "securepass123" },
+        { headers: { "X-Turnstile-Token": "captcha-token-123" } },
+      );
+    });
+
+    it("omits the captcha header when the token is an empty string", async () => {
+      mockApiPost
+        .mockResolvedValueOnce({ data: { id: "uuid", email: "u@e.com" } })
+        .mockResolvedValueOnce({
+          data: { access_token: "new.token", token_type: "bearer" },
+        });
+
+      await register("u@e.com", "securepass123", "");
+
+      const [, , config] = mockApiPost.mock.calls[0];
+      expect(config).toEqual({ headers: {} });
     });
   });
 

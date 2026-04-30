@@ -1,6 +1,6 @@
-import { useEffect } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { LoginForm, useIsAuthenticated } from "@platform/ui";
+import { LoginForm, TurnstileWidget, useIsAuthenticated } from "@platform/ui";
 import { useSignIn } from "@/features/auth/useSignIn";
 
 interface LocationState {
@@ -12,6 +12,22 @@ export default function Login() {
   const location = useLocation();
   const isAuthenticated = useIsAuthenticated();
   const { handleSignIn, handleRegister } = useSignIn();
+
+  // Captured Turnstile token. Held in a ref so handleRegister (which is
+  // re-created every render by LoginForm's submit handler) always reads
+  // the latest value without forcing a re-render.
+  const turnstileTokenRef = useRef("");
+  const [, setTokenTick] = useState(0);
+
+  const onTurnstileVerify = useCallback((token: string) => {
+    turnstileTokenRef.current = token;
+    setTokenTick((n) => n + 1);
+  }, []);
+
+  const onTurnstileExpire = useCallback(() => {
+    turnstileTokenRef.current = "";
+    setTokenTick((n) => n + 1);
+  }, []);
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -28,7 +44,7 @@ export default function Login() {
   }
 
   async function onRegister(email: string, password: string): Promise<void> {
-    await handleRegister(email, password);
+    await handleRegister(email, password, turnstileTokenRef.current);
     navigate("/dashboard", { replace: true });
   }
 
@@ -49,6 +65,12 @@ export default function Login() {
           onRegister={onRegister}
           trustCopy="Your job search data stays private. No recruiter access, no data resale, ever."
           passwordMinLength={12}
+          registerCaptchaSlot={
+            <TurnstileWidget
+              onVerify={onTurnstileVerify}
+              onExpire={onTurnstileExpire}
+            />
+          }
         />
       </div>
 

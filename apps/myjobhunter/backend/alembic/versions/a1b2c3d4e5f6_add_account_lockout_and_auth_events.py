@@ -1,21 +1,19 @@
-"""add auth_events table
+"""add account lockout columns + auth_events table
 
-Adds the shared ``auth_events`` audit table to MyJobHunter so the app can
-write security-relevant events (login success/failure, registration,
-password reset, TOTP, OAuth connect/disconnect, account deletion, data
-export). Schema mirrors the table provisioned in MyBookkeeper by
-revision ``e3bc2531d23e`` so the same ``platform_shared.db.models.AuthEvent``
-ORM model resolves against either app's database.
+Adds three columns to ``users`` to support account-level login lockout:
+- ``failed_login_count``: consecutive bad-password attempt counter
+- ``locked_until``: timestamp until which login is blocked (NULL = not locked)
+- ``last_failed_login_at``: timestamp of the most recent failure (used for auto-reset)
 
-Notes
------
-- ``user_id`` deliberately has NO foreign key to ``users.id`` so event rows
-  survive account deletion. The ``ACCOUNT_DELETED`` event is written BEFORE
-  the cascade delete runs.
-- ``metadata`` is the SQL column name; the ORM maps it to ``event_metadata``
-  to avoid colliding with SQLAlchemy's ``DeclarativeBase.metadata``.
+Also adds a partial index on ``locked_until`` for efficient locked-account queries.
 
-Revision ID: 0002
+Creates the ``auth_events`` audit table consumed by the shared
+``platform_shared.db.models.auth_event.AuthEvent`` model. This is the same
+schema MyBookkeeper uses (revisions ``652c2754ae61`` + ``e3bc2531d23e``)
+collapsed into a single migration since MyJobHunter does not have an
+``auth_events`` table yet.
+
+Revision ID: a1b2c3d4e5f6
 Revises: 0001
 Create Date: 2026-04-29 00:00:00.000000
 """
@@ -25,13 +23,39 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision: str = "0002"
+# revision identifiers, used by Alembic.
+revision: str = "a1b2c3d4e5f6"
 down_revision: Union[str, None] = "0001"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
+    # ---- Account lockout columns on users ----
+    op.add_column(
+        "users",
+        sa.Column(
+            "failed_login_count",
+            sa.SmallInteger(),
+            nullable=False,
+            server_default="0",
+        ),
+    )
+    op.add_column(
+        "users",
+        sa.Column("locked_until", sa.DateTime(timezone=True), nullable=True),
+    )
+    op.add_column(
+        "users",
+        sa.Column("last_failed_login_at", sa.DateTime(timezone=True), nullable=True),
+    )
+    # Partial index — only indexes rows that are actually locked.
+    op.execute(
+        "CREATE INDEX ix_users_locked_until ON users (locked_until) "
+        "WHERE locked_until IS NOT NULL"
+    )
+
+    # ---- auth_events audit table ----
     op.create_table(
         "auth_events",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
@@ -75,3 +99,8 @@ def downgrade() -> None:
     op.drop_index("ix_auth_events_event_type", table_name="auth_events")
     op.drop_index("ix_auth_events_user_id", table_name="auth_events")
     op.drop_table("auth_events")
+
+    op.execute("DROP INDEX IF EXISTS ix_users_locked_until")
+    op.drop_column("users", "last_failed_login_at")
+    op.drop_column("users", "locked_until")
+    op.drop_column("users", "failed_login_count")

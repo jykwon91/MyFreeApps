@@ -22,6 +22,41 @@ from app.main import app
 
 
 # ---------------------------------------------------------------------------
+# Default-disable HIBP + Turnstile for the whole test session.
+#
+# Tests that explicitly want HIBP enabled (test_hibp_validation.py) override
+# this with ``monkeypatch.setattr(settings, "hibp_enabled", True)`` or by
+# patching the module-level symbol directly. The same goes for Turnstile —
+# test_turnstile.py monkeypatches ``settings.turnstile_secret_key`` per test.
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(autouse=True)
+def _disable_external_auth_gates(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(settings, "hibp_enabled", False)
+    monkeypatch.setattr(settings, "turnstile_secret_key", "")
+
+
+# ---------------------------------------------------------------------------
+# Reset module-level limiter state between tests (PR C3)
+# ---------------------------------------------------------------------------
+
+@pytest.fixture(autouse=True)
+def _reset_login_limiter():
+    """Reset the per-IP login limiter buckets before every test.
+
+    The ``app.core.rate_limit.login_limiter`` instance holds bucket state
+    in a module-level dict; without this fixture the buckets accumulate
+    across tests and a single test session exhausts the 10/5min budget,
+    causing unrelated tests' login calls to receive 429.
+    """
+    from app.core.rate_limit import login_limiter
+    login_limiter._buckets.clear()
+    yield
+    login_limiter._buckets.clear()
+
+
+# ---------------------------------------------------------------------------
 # Shared async engine (session-scoped, NullPool so no connection reuse)
 # ---------------------------------------------------------------------------
 
