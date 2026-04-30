@@ -48,25 +48,8 @@ export async function createTestUser(
 }
 
 /**
-<<<<<<< HEAD
- * Force-verify a test user by reaching into the backend test helper.
- *
- * The dev/CI flow does NOT actually click the verification link — instead
- * it requests a fresh token via the public resend endpoint and lets the
- * backend log it. The CI environment runs with `EMAIL_BACKEND=console`,
- * which prints the verify URL to stdout. For tests we need a deterministic
- * way to flip the flag without parsing logs, so we hit a small admin SQL
- * helper through the public test-only endpoint exposed in the dev backend.
- *
- * Implementation: post to a backend test endpoint that updates the user
- * row directly. To stay decoupled from a custom endpoint, we instead use
- * the existing `/auth/request-verify-token` to mint a token and read the
- * token from the console-backend log.
- *
- * Simpler approach: piggyback on the dev DB connection by issuing a
- * direct UPDATE through psql in the e2e setup. To avoid that infra
- * dependency, we instead expose a tiny test-only verify-by-email helper
- * gated on the `MYJOBHUNTER_E2E_TEST_HELPER` env var.
+ * Force-verify a test user by reaching into the backend test helper
+ * (gated by MYJOBHUNTER_ENABLE_TEST_HELPERS=1).
  */
 async function verifyTestUser(
   request: APIRequestContext,
@@ -87,10 +70,7 @@ async function verifyTestUser(
 }
 
 /**
- * Attempts to delete the test user via the backend.
-=======
  * Deletes the test user via ``DELETE /users/me``.
->>>>>>> origin/main
  *
  * Logs the user in to obtain a JWT, then issues the delete with the
  * three-factor body (TOTP is null because test users never enable 2FA).
@@ -103,17 +83,6 @@ async function verifyTestUser(
  * so they are easy to identify and bulk-delete.
  */
 export async function deleteTestUser(
-<<<<<<< HEAD
-  _request: APIRequestContext,
-  _user: TestUser,
-): Promise<void> {
-  // Phase 1: no delete endpoint yet — document gap
-  console.warn(
-    "[E2E cleanup] User delete endpoint not available in Phase 1. " +
-      `Test user ${_user.email} remains in the dev database. ` +
-      "Cleanup manually or wait for Phase 2 user management.",
-  );
-=======
   request: APIRequestContext,
   user: TestUser
 ): Promise<void> {
@@ -146,7 +115,6 @@ export async function deleteTestUser(
       `[E2E cleanup] Failed to delete test user ${user.email}: ${String(err)}`
     );
   }
->>>>>>> origin/main
 }
 
 /**
