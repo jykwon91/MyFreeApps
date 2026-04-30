@@ -22,6 +22,25 @@ from app.main import app
 
 
 # ---------------------------------------------------------------------------
+# Reset module-level limiter state between tests
+# ---------------------------------------------------------------------------
+
+@pytest.fixture(autouse=True)
+def _reset_login_limiter():
+    """Reset the per-IP login limiter buckets before every test.
+
+    The ``app.core.rate_limit.login_limiter`` instance holds bucket state
+    in a module-level dict; without this fixture the buckets accumulate
+    across tests and a single test session exhausts the 10/5min budget,
+    causing unrelated tests' login calls to receive 429.
+    """
+    from app.core.rate_limit import login_limiter
+    login_limiter._buckets.clear()
+    yield
+    login_limiter._buckets.clear()
+
+
+# ---------------------------------------------------------------------------
 # Shared async engine (session-scoped, NullPool so no connection reuse)
 # ---------------------------------------------------------------------------
 

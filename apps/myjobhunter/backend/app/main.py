@@ -1,15 +1,16 @@
 from contextlib import asynccontextmanager
 
 import jwt
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from jwt.exceptions import PyJWTError as JWTError
 
+from app.api import applications, companies, health, integrations, profile
 from app.core.audit import current_user_id, register_audit_listeners
 from app.core.auth import auth_backend, fastapi_users
 from app.core.config import settings
+from app.core.rate_limit import check_account_not_locked, check_login_rate_limit
 from app.schemas.user import UserCreate, UserRead, UserUpdate
-from app.api import applications, companies, health, integrations, profile
 
 
 @asynccontextmanager
@@ -67,9 +68,19 @@ async def set_audit_user(request: Request, call_next):
     finally:
         current_user_id.reset(ctx_token)
 
-# Auth routes
+
+# Auth routes — gate ONLY the /login route with the per-IP throttle and the
+# account-lockout dependency (PR C3). Both dependencies require an
+# OAuth2PasswordRequestForm body, so attaching them to the entire
+# get_auth_router() prefix would break /logout (which has no body).
+_auth_router = fastapi_users.get_auth_router(auth_backend)
+for _route in _auth_router.routes:
+    if getattr(_route, "path", None) == "/login":
+        _route.dependencies.append(Depends(check_login_rate_limit))
+        _route.dependencies.append(Depends(check_account_not_locked))
+
 app.include_router(
-    fastapi_users.get_auth_router(auth_backend),
+    _auth_router,
     prefix="/auth/jwt",
     tags=["auth"],
 )
