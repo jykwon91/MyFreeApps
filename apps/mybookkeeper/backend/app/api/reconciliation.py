@@ -59,7 +59,7 @@ async def create_match(
 ):
     try:
         return await reconciliation_route_service.create_match(
-            ctx, body.reconciliation_source_id, body.reservation_id, body.matched_amount,
+            ctx, body.reconciliation_source_id, body.booking_statement_id, body.matched_amount,
         )
     except LookupError as e:
         raise HTTPException(status_code=404, detail=str(e))

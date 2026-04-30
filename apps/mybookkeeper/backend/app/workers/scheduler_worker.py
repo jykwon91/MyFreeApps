@@ -1,6 +1,14 @@
 """
 Run with: python -m app.workers.scheduler
-Polls Gmail and Plaid for all connected integrations every N minutes.
+Polls Gmail, Plaid, and channel iCal feeds for all connected integrations.
+
+Cycle cadence is driven by ``gmail_poll_interval_minutes`` (default 1440,
+i.e. once a day). The channel-iCal poll runs on every cycle — the
+operator's per-channel feeds are tiny and the upstream channels poll us
+on their own cadence regardless, so over-polling MBK side has no
+amplification cost. PR 1.4 keeps it simple by piggy-backing on the
+existing scheduler loop; a dedicated 15-minute timer can be split out
+in a follow-up if cycle drift becomes an issue.
 """
 import asyncio
 import logging
@@ -10,6 +18,7 @@ from app.core.config import settings
 from app.db.session import AsyncSessionLocal, unit_of_work
 from app.repositories import integration_repo, plaid_repo
 from app.services.integrations.plaid_sync_service import sync_plaid_item
+from app.services.listings.channel_sync_service import poll_all as poll_all_channels
 from app.workers.email_sync_worker import sync_gmail_for_user
 
 logger = logging.getLogger(__name__)
@@ -30,6 +39,22 @@ async def sync_all_plaid_items() -> None:
                 logger.exception("Plaid sync failed for item %s", item.plaid_item_id)
 
 
+async def sync_all_channel_calendars() -> None:
+    """Poll every channel_listing with a non-NULL ical_import_url.
+
+    Errors on individual feeds are logged + recorded on the row by
+    ``channel_sync_service.poll_one``; this wrapper only catches the
+    catastrophic case where ``poll_all`` itself blows up (DB outage,
+    etc.) — we log and move on, never crashing the scheduler.
+    """
+    try:
+        polled = await poll_all_channels()
+        if polled:
+            logger.info("Polled %d channel iCal feeds", polled)
+    except Exception:
+        logger.exception("Channel iCal sync cycle failed")
+
+
 async def run_sync_cycle() -> None:
     """Run one full sync cycle for all integration types."""
     gmail_user_ids = await get_gmail_user_ids()
@@ -38,6 +63,7 @@ async def run_sync_cycle() -> None:
         await sync_gmail_for_user(user_id)
 
     await sync_all_plaid_items()
+    await sync_all_channel_calendars()
 
 
 def run() -> None:

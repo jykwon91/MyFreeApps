@@ -20,7 +20,7 @@ export interface ReconciliationSource {
 export interface ReconciliationMatch {
   id: string;
   reconciliation_source_id: string;
-  reservation_id: string;
+  booking_statement_id: string;
   matched_amount: string;
   created_at: string;
 }

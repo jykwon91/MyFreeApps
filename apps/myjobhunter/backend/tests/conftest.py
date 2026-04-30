@@ -6,7 +6,17 @@ Tenant isolation strategy:
 - Use `as_user(user)` fixture factory to get an httpx client bearing that
   user's JWT bearer token.
 """
+import asyncio
+import sys
 import uuid
+
+# On Windows, asyncpg is incompatible with the default ProactorEventLoop
+# policy when connections are reused across event loops (the situation that
+# arises when ``totp_service.unit_of_work`` opens a new session inside a
+# test). The SelectorEventLoop policy avoids this. Linux/macOS already use
+# SelectorEventLoop by default — this is a Windows-only adjustment.
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 from collections.abc import AsyncGenerator, Callable
 from typing import Any
 
@@ -62,6 +72,14 @@ def _reset_login_limiter():
 
 @pytest_asyncio.fixture(scope="session")
 async def db_engine():
+    """Session-scoped async engine.
+
+    Shared across all tests so connections created via ``unit_of_work`` (in
+    services) bind to the same event loop pytest-asyncio uses for the whole
+    run. See ``pytest.ini`` — both ``asyncio_default_fixture_loop_scope``
+    and ``asyncio_default_test_loop_scope`` are set to ``session`` for the
+    same reason.
+    """
     engine = create_async_engine(settings.database_url, poolclass=NullPool)
     yield engine
     await engine.dispose()
@@ -154,15 +172,35 @@ async def user_factory(
 
     # Hard-delete so rows don't persist across test sessions.
     # We use a fresh engine/session outside the rolled-back transaction.
+    # auth_events.user_id has no FK to users.id (so events survive account
+    # deletion in production); for tests we explicitly purge them along
+    # with the user row to keep the test DB clean. Anonymous LOGIN_FAILURE
+    # events (user_id IS NULL) are also cleared since they're produced by
+    # tests in this fixture's scope.
     cleanup_engine = create_async_engine(settings.database_url, poolclass=NullPool)
     cleanup_factory = async_sessionmaker(cleanup_engine, expire_on_commit=False)
     async with cleanup_factory() as sess:
         async with sess.begin():
             for email in created_emails:
+                user_row = await sess.execute(
+                    text("SELECT id FROM users WHERE email = :email"),
+                    {"email": email},
+                )
+                user_id = user_row.scalar_one_or_none()
+                if user_id is not None:
+                    await sess.execute(
+                        text("DELETE FROM auth_events WHERE user_id = :uid"),
+                        {"uid": user_id},
+                    )
                 await sess.execute(
                     text("DELETE FROM users WHERE email = :email"),
                     {"email": email},
                 )
+            # Clear any anonymous-failure rows (user_id IS NULL) — these
+            # accumulate from /auth/totp/login bad-credentials tests.
+            await sess.execute(
+                text("DELETE FROM auth_events WHERE user_id IS NULL"),
+            )
     await cleanup_engine.dispose()
 
 

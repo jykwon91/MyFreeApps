@@ -12,6 +12,9 @@ from app.models.properties.lease import Lease, LeaseStatus
 from app.models.listings.listing import Listing
 from app.models.listings.listing_photo import ListingPhoto
 from app.models.listings.listing_external_id import ListingExternalId
+from app.models.listings.channel import Channel
+from app.models.listings.channel_listing import ChannelListing
+from app.models.listings.listing_blackout import ListingBlackout
 from app.models.inquiries.inquiry import Inquiry
 from app.models.inquiries.inquiry_message import InquiryMessage
 from app.models.inquiries.inquiry_event import InquiryEvent
@@ -27,7 +30,7 @@ from app.models.extraction.extraction_prompt import ExtractionPrompt
 from app.models.extraction.extraction_types import ExtractionData, ExtractionResult
 from app.models.extraction.extraction import Extraction
 from app.models.transactions.transaction import Transaction
-from app.models.transactions.reservation import Reservation
+from app.models.transactions.booking_statement import BookingStatement
 from app.models.transactions.reconciliation_source import ReconciliationSource
 from app.models.transactions.reconciliation_match import ReconciliationMatch
 from app.models.transactions.transaction_document import TransactionDocument

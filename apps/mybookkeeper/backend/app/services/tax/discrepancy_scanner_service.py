@@ -16,7 +16,7 @@ from app.db.session import AsyncSessionLocal
 from app.repositories import (
     property_repo,
     reconciliation_repo,
-    reservation_repo,
+    booking_statement_repo,
     tax_return_repo,
     transaction_repo,
 )
@@ -164,7 +164,7 @@ async def _scan_missing_income(
     db: AsyncSession, organization_id: uuid.UUID, tax_year: int
 ) -> list[DiscrepancyItem]:
     """Flag properties that have reservations but no rental_revenue transactions."""
-    reservation_rows = await reservation_repo.summary_by_property_platform(
+    reservation_rows = await booking_statement_repo.summary_by_property_platform(
         db, organization_id, tax_year
     )
     if not reservation_rows:

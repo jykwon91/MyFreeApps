@@ -6,7 +6,7 @@ from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from jwt.exceptions import PyJWTError as JWTError
 
-from app.api import applications, companies, health, integrations, profile
+from app.api import account, applications, companies, health, integrations, profile, totp
 from app.core.audit import current_user_id, register_audit_listeners
 from app.core.auth import auth_backend, fastapi_users
 from app.core.config import settings
@@ -62,10 +62,15 @@ async def set_audit_user(request: Request, call_next):
         current_user_id.reset(ctx_token)
 
 
+<<<<<<< HEAD
 # Auth routes — JWT login enforces email verification (returns
 # detail="LOGIN_USER_NOT_VERIFIED" when an unverified user tries to log in)
 # AND gates /login with the per-IP throttle + account-lockout (PR C3).
 _auth_router = fastapi_users.get_auth_router(auth_backend, requires_verification=True)
+=======
+# Auth routes — gate /login with per-IP throttle + account-lockout (PR C3).
+_auth_router = fastapi_users.get_auth_router(auth_backend)
+>>>>>>> origin/main
 for _route in _auth_router.routes:
     if getattr(_route, "path", None) == "/login":
         _route.dependencies.append(Depends(check_login_rate_limit))
@@ -77,7 +82,11 @@ app.include_router(
     tags=["auth"],
 )
 
+<<<<<<< HEAD
 # Registration is gated behind Turnstile CAPTCHA — no-op in dev/CI.
+=======
+# Registration is gated behind Turnstile CAPTCHA (PR C1) — no-op when secret is empty.
+>>>>>>> origin/main
 app.include_router(
     fastapi_users.get_register_router(UserRead, UserCreate),
     prefix="/auth",
@@ -97,12 +106,18 @@ app.include_router(
     tags=["auth"],
 )
 
+<<<<<<< HEAD
 # Email verification routes (PR C4) — /auth/request-verify-token and /auth/verify
 app.include_router(
     fastapi_users.get_verify_router(UserRead),
     prefix="/auth",
     tags=["auth"],
 )
+=======
+# Register account self-service routes BEFORE fastapi-users users router so that
+# DELETE /users/me is matched here rather than by fastapi-users' DELETE /users/{id}.
+app.include_router(account.router)
+>>>>>>> origin/main
 
 app.include_router(
     fastapi_users.get_users_router(UserRead, UserUpdate),
@@ -117,6 +132,7 @@ app.include_router(applications.router, tags=["applications"])
 app.include_router(companies.router, tags=["companies"])
 app.include_router(integrations.router, tags=["integrations"])
 
+<<<<<<< HEAD
 # Test-only helpers — mounted only when MYJOBHUNTER_ENABLE_TEST_HELPERS=1.
 # Used by the E2E suite to put the DB into deterministic states (e.g.
 # flipping `is_verified=True`). NEVER enable in production.
@@ -125,3 +141,14 @@ if os.environ.get("MYJOBHUNTER_ENABLE_TEST_HELPERS") == "1":
 
     app.include_router(test_helpers.router, tags=["_test"])
 
+=======
+# TOTP routes — the /login subroute gets the per-IP throttle (matching the
+# guard on /auth/jwt/login). Account lockout is enforced INSIDE
+# `UserManager.authenticate_password` rather than as a route-level dependency,
+# because `check_account_not_locked` consumes a form-encoded
+# OAuth2PasswordRequestForm body and the TOTP login endpoint accepts JSON.
+for _route in totp.router.routes:
+    if getattr(_route, "path", None) == "/auth/totp/login":
+        _route.dependencies.append(Depends(check_login_rate_limit))
+app.include_router(totp.router)
+>>>>>>> origin/main

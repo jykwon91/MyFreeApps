@@ -45,6 +45,11 @@ class Settings(BaseSettings):
     smtp_user: str = ""
     smtp_password: str = ""
 
+    # TOTP enrollment branding (PR C5) — baked into the otpauth:// URI.
+    # Ship-once-forever constants; changing them orphans existing user enrollments.
+    totp_label: str = "MyJobHunter"
+    totp_issuer: str = "MyJobHunter"
+
     model_config = {"env_file": ".env", "extra": "ignore"}
 
 

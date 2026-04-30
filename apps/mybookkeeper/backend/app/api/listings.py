@@ -4,6 +4,16 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, Up
 
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member, require_write_access
+from app.db.session import AsyncSessionLocal
+from app.repositories import channel_repo
+from app.schemas.listings.channel_listing_create_request import (
+    ChannelListingCreateRequest,
+)
+from app.schemas.listings.channel_listing_response import ChannelListingResponse
+from app.schemas.listings.channel_listing_update_request import (
+    ChannelListingUpdateRequest,
+)
+from app.schemas.listings.channel_response import ChannelResponse
 from app.schemas.listings.listing_create_request import ListingCreateRequest
 from app.schemas.listings.listing_external_id_create_request import (
     ListingExternalIdCreateRequest,
@@ -18,6 +28,7 @@ from app.schemas.listings.listing_photo_update_request import ListingPhotoUpdate
 from app.schemas.listings.listing_response import ListingResponse
 from app.schemas.listings.listing_update_request import ListingUpdateRequest
 from app.services.listings import (
+    channel_listing_service,
     listing_external_id_service,
     listing_photo_service,
     listing_service,
@@ -25,6 +36,30 @@ from app.services.listings import (
 from app.services.storage.image_processor import ImageRejected
 
 router = APIRouter(prefix="/listings", tags=["listings"])
+
+
+# ---------------------------------------------------------------------------
+# Channels (PR 1.4) — listed unscoped (channel metadata is public reference
+# data) but the per-listing channel_listings endpoints require auth.
+# ---------------------------------------------------------------------------
+
+
+channels_router = APIRouter(prefix="/channels", tags=["channels"])
+
+
+@channels_router.get("", response_model=list[ChannelResponse])
+async def list_channels(
+    ctx: RequestContext = Depends(current_org_member),  # noqa: ARG001 — auth gate only
+) -> list[ChannelResponse]:
+    """Return every channel known to the system.
+
+    Authenticated (any org member) but not org-scoped — the channel
+    catalogue is shared across all tenants. Powers the "Add channel"
+    dropdown on the listing detail page.
+    """
+    async with AsyncSessionLocal() as db:
+        rows = await channel_repo.list_all(db)
+    return [ChannelResponse.model_validate(row) for row in rows]
 
 
 @router.get("", response_model=ListingListResponse)
@@ -212,4 +247,85 @@ async def delete_external_id(
         raise HTTPException(status_code=404, detail="Listing not found") from exc
     except listing_external_id_service.ExternalIdNotFoundError as exc:
         raise HTTPException(status_code=404, detail="External ID not found") from exc
+    return Response(status_code=204)
+
+
+# ---------------------------------------------------------------------------
+# Channel listings (PR 1.4) — one row per (listing × channel) pair.
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/{listing_id}/channels",
+    response_model=list[ChannelListingResponse],
+)
+async def list_listing_channels(
+    listing_id: uuid.UUID,
+    ctx: RequestContext = Depends(current_org_member),
+) -> list[ChannelListingResponse]:
+    try:
+        return await channel_listing_service.list_channels(
+            ctx.organization_id, ctx.user_id, listing_id,
+        )
+    except channel_listing_service.ListingNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Listing not found") from exc
+
+
+@router.post(
+    "/{listing_id}/channels",
+    response_model=ChannelListingResponse,
+    status_code=201,
+)
+async def create_listing_channel(
+    listing_id: uuid.UUID,
+    payload: ChannelListingCreateRequest,
+    ctx: RequestContext = Depends(require_write_access),
+) -> ChannelListingResponse:
+    try:
+        return await channel_listing_service.create_channel_listing(
+            ctx.organization_id, ctx.user_id, listing_id, payload,
+        )
+    except channel_listing_service.ListingNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Listing not found") from exc
+    except channel_listing_service.ChannelNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except channel_listing_service.ChannelAlreadyLinkedError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+channel_listings_router = APIRouter(
+    prefix="/channel-listings", tags=["channel-listings"],
+)
+
+
+@channel_listings_router.patch(
+    "/{channel_listing_id}",
+    response_model=ChannelListingResponse,
+)
+async def patch_channel_listing(
+    channel_listing_id: uuid.UUID,
+    payload: ChannelListingUpdateRequest,
+    ctx: RequestContext = Depends(require_write_access),
+) -> ChannelListingResponse:
+    try:
+        return await channel_listing_service.update_channel_listing(
+            ctx.organization_id, ctx.user_id, channel_listing_id, payload,
+        )
+    except channel_listing_service.ChannelListingNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Channel listing not found") from exc
+
+
+@channel_listings_router.delete(
+    "/{channel_listing_id}", status_code=204,
+)
+async def delete_channel_listing(
+    channel_listing_id: uuid.UUID,
+    ctx: RequestContext = Depends(require_write_access),
+) -> Response:
+    try:
+        await channel_listing_service.delete_channel_listing(
+            ctx.organization_id, ctx.user_id, channel_listing_id,
+        )
+    except channel_listing_service.ChannelListingNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Channel listing not found") from exc
     return Response(status_code=204)

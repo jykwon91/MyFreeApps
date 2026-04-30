@@ -6,7 +6,7 @@ from decimal import Decimal
 import pytest
 
 from app.mappers.transaction_mapper import build_transaction_from_mapped_item
-from app.mappers.reservation_mapper import build_reservations_from_line_items
+from app.mappers.booking_statement_mapper import build_booking_statements_from_line_items
 from app.mappers.extraction_mapper import MappedItem
 
 
@@ -106,8 +106,8 @@ class TestBuildTransactionFromItem:
         assert txn.property_id == prop_id
 
 
-class TestBuildReservationsFromLineItems:
-    def test_creates_reservation_from_valid_line_item(self) -> None:
+class TestBuildBookingStatementsFromLineItems:
+    def test_creates_booking_statement_from_valid_line_item(self) -> None:
         org_id = uuid.uuid4()
         prop_id = uuid.uuid4()
         txn_id = uuid.uuid4()
@@ -122,7 +122,7 @@ class TestBuildReservationsFromLineItems:
                 "guest_name": "John Doe",
             }
         ]
-        reservations = build_reservations_from_line_items(line_items, org_id, prop_id, txn_id)
+        reservations = build_booking_statements_from_line_items(line_items, org_id, prop_id, txn_id)
         assert len(reservations) == 1
         res = reservations[0]
         assert res.res_code == "ABC123"
@@ -136,25 +136,25 @@ class TestBuildReservationsFromLineItems:
 
     def test_skips_line_item_without_res_code(self) -> None:
         line_items = [{"check_in": "2025-06-01", "check_out": "2025-06-05"}]
-        reservations = build_reservations_from_line_items(line_items, uuid.uuid4(), None, None)
+        reservations = build_booking_statements_from_line_items(line_items, uuid.uuid4(), None, None)
         assert len(reservations) == 0
 
     def test_skips_line_item_without_dates(self) -> None:
         line_items = [{"res_code": "ABC123"}]
-        reservations = build_reservations_from_line_items(line_items, uuid.uuid4(), None, None)
+        reservations = build_booking_statements_from_line_items(line_items, uuid.uuid4(), None, None)
         assert len(reservations) == 0
 
     def test_returns_empty_for_none(self) -> None:
-        reservations = build_reservations_from_line_items(None, uuid.uuid4(), None, None)
+        reservations = build_booking_statements_from_line_items(None, uuid.uuid4(), None, None)
         assert len(reservations) == 0
 
     def test_returns_empty_for_empty_list(self) -> None:
-        reservations = build_reservations_from_line_items([], uuid.uuid4(), None, None)
+        reservations = build_booking_statements_from_line_items([], uuid.uuid4(), None, None)
         assert len(reservations) == 0
 
     def test_skips_non_dict_items(self) -> None:
         line_items = ["not_a_dict", 42]
-        reservations = build_reservations_from_line_items(line_items, uuid.uuid4(), None, None)
+        reservations = build_booking_statements_from_line_items(line_items, uuid.uuid4(), None, None)
         assert len(reservations) == 0
 
     def test_multiple_valid_line_items(self) -> None:
@@ -162,7 +162,7 @@ class TestBuildReservationsFromLineItems:
             {"res_code": "A1", "check_in": "2025-06-01", "check_out": "2025-06-03"},
             {"res_code": "A2", "check_in": "2025-06-05", "check_out": "2025-06-08"},
         ]
-        reservations = build_reservations_from_line_items(line_items, uuid.uuid4(), None, None)
+        reservations = build_booking_statements_from_line_items(line_items, uuid.uuid4(), None, None)
         assert len(reservations) == 2
         assert reservations[0].res_code == "A1"
         assert reservations[1].res_code == "A2"
@@ -171,7 +171,7 @@ class TestBuildReservationsFromLineItems:
         line_items = [
             {"res_code": "X1", "check_in": "2025-06-01", "check_out": "2025-06-02", "platform": "vrbo", "gross_booking": "100.00"}
         ]
-        reservations = build_reservations_from_line_items(line_items, uuid.uuid4(), None, None)
+        reservations = build_booking_statements_from_line_items(line_items, uuid.uuid4(), None, None)
         assert reservations[0].platform == "vrbo"
 
     def test_platform_cleared_when_no_gross_booking(self) -> None:
@@ -179,5 +179,5 @@ class TestBuildReservationsFromLineItems:
         line_items = [
             {"res_code": "X1", "check_in": "2025-06-01", "check_out": "2025-06-02", "platform": "vrbo"}
         ]
-        reservations = build_reservations_from_line_items(line_items, uuid.uuid4(), None, None)
+        reservations = build_booking_statements_from_line_items(line_items, uuid.uuid4(), None, None)
         assert reservations[0].platform is None

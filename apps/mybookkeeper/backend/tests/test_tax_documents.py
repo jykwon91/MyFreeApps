@@ -18,7 +18,7 @@ from app.models.organization.organization import Organization
 from app.models.tax.tax_form_field import TaxFormField
 from app.models.tax.tax_form_instance import TaxFormInstance
 from app.models.tax.tax_return import TaxReturn
-from app.models.transactions.reservation import Reservation
+from app.models.transactions.booking_statement import BookingStatement
 from app.models.user.user import User
 from app.services.tax import tax_return_service
 
@@ -325,7 +325,7 @@ class TestListAllSourceDocumentsService:
         db.add_all([tr_2024, tr_2025])
         await db.flush()
         for year in [2024, 2025]:
-            res = Reservation(
+            bs = BookingStatement(
                 id=uuid.uuid4(),
                 organization_id=org.id,
                 res_code=f'RES-{year}',
@@ -334,7 +334,7 @@ class TestListAllSourceDocumentsService:
                 check_out=date(year, 6, 5),
                 gross_booking=Decimal('500.00'),
             )
-            db.add(res)
+            db.add(bs)
         await db.commit()
 
         result = await tax_return_service.list_all_source_documents(ctx)

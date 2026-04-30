@@ -12,7 +12,7 @@ from app.db.session import AsyncSessionLocal, unit_of_work
 from app.models.tax.tax_advisor_generation import TaxAdvisorGeneration
 from app.models.tax.tax_advisor_suggestion import TaxAdvisorSuggestion
 from app.models.tax.tax_return import TaxReturn
-from app.repositories import property_repo, reservation_repo, tax_return_repo, transaction_repo, usage_log_repo
+from app.repositories import property_repo, booking_statement_repo, tax_return_repo, transaction_repo, usage_log_repo
 from app.repositories.organization import tax_profile_repo
 from app.repositories.tax import cost_basis_lot_repo, tax_advisor_repo
 from app.schemas.tax.tax_advisor import (
@@ -428,7 +428,7 @@ async def _load_reservation_summary(
     db: AsyncSession, organization_id: uuid.UUID, tax_year: int,
 ) -> list[_ReservationSummaryEntry]:
     """Summarize reservation nights and revenue per property."""
-    rows = await reservation_repo.summary_by_property_platform(db, organization_id, tax_year)
+    rows = await booking_statement_repo.summary_by_property_platform(db, organization_id, tax_year)
 
     return [
         _ReservationSummaryEntry(

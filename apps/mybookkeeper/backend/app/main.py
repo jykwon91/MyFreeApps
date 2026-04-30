@@ -49,7 +49,7 @@ from app.db.session import AsyncSessionLocal
 from app.schemas.user.user import UserRead, UserCreate, UserUpdate
 from app.services.storage.bucket_initializer import ensure_bucket
 from app.workers.upload_processor_worker import main as worker_main
-from app.api import account, activities, analytics, applicants, classification_rules, costs, db_admin, demo, documents, frontend_errors, inquiries, listings, properties, reply_templates, tenants, summary, integrations, audit, prompts, admin, organizations, transactions, reservations, reconciliation, screening, tax_completeness, tax_documents, tax_profile, tax_returns, tax_year_profiles, plaid, vendors, webhooks, exports, imports, health_dashboard, totp, taxpayer_profiles
+from app.api import account, activities, analytics, applicants, booking_statements, calendar, classification_rules, costs, db_admin, demo, documents, frontend_errors, inquiries, listings, properties, reply_templates, tenants, summary, integrations, audit, prompts, admin, organizations, transactions, reconciliation, screening, tax_completeness, tax_documents, tax_profile, tax_returns, tax_year_profiles, plaid, vendors, webhooks, exports, imports, health_dashboard, totp, taxpayer_profiles
 
 logging.basicConfig(
     level=logging.INFO,
@@ -161,6 +161,12 @@ app.include_router(fastapi_users.get_users_router(UserRead, UserUpdate), prefix=
 app.include_router(documents.router)
 app.include_router(properties.router)
 app.include_router(listings.router)
+app.include_router(listings.channels_router)
+app.include_router(listings.channel_listings_router)
+# Calendar router declares its own ``/api`` prefix because the outbound
+# iCal URL must be unauthenticated and follow a stable channel-facing
+# path that does not depend on auth-router ordering.
+app.include_router(calendar.router)
 app.include_router(inquiries.router)
 app.include_router(applicants.router)
 app.include_router(screening.router)
@@ -175,7 +181,7 @@ app.include_router(db_admin.router)
 app.include_router(prompts.router)
 app.include_router(organizations.router)
 app.include_router(transactions.router)
-app.include_router(reservations.router)
+app.include_router(booking_statements.router)
 app.include_router(reconciliation.router)
 app.include_router(tax_profile.router)
 app.include_router(tax_returns.router)

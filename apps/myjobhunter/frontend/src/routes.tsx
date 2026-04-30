@@ -5,6 +5,7 @@ import ApplicationDetail from "@/pages/ApplicationDetail";
 import Companies from "@/pages/Companies";
 import CompanyDetail from "@/pages/CompanyDetail";
 import Profile from "@/pages/Profile";
+import Security from "@/pages/Security";
 import Settings from "@/pages/Settings";
 import Login from "@/pages/Login";
 import VerifyEmail from "@/pages/VerifyEmail";
@@ -23,6 +24,7 @@ export const routes: RouteObject[] = [
       { path: "/companies/:id", element: <CompanyDetail /> },
       { path: "/profile", element: <Profile /> },
       { path: "/settings", element: <Settings /> },
+      { path: "/security", element: <Security /> },
     ],
   },
   { path: "/login", element: <Login /> },

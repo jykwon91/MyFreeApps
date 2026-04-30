@@ -27,7 +27,7 @@ const reconciliationApi = baseApi.injectEndpoints({
       query: (params = {}) => ({ url: "/reconciliation/discrepancies", params: { ...params } }),
       providesTags: ["Reconciliation"],
     }),
-    createMatch: builder.mutation<ReconciliationMatch, { reconciliation_source_id: string; reservation_id: string; matched_amount: string }>({
+    createMatch: builder.mutation<ReconciliationMatch, { reconciliation_source_id: string; booking_statement_id: string; matched_amount: string }>({
       query: (data) => ({ url: "/reconciliation/match", method: "POST", data }),
       invalidatesTags: ["Reconciliation"],
     }),

@@ -16,9 +16,9 @@ from app.main import app
 from app.models.organization.organization import Organization
 from app.models.properties.property import Property, PropertyType
 from app.models.transactions.reconciliation_source import ReconciliationSource
-from app.models.transactions.reservation import Reservation
+from app.models.transactions.booking_statement import BookingStatement
 from app.models.user.user import User
-from app.repositories import reconciliation_repo, reservation_repo
+from app.repositories import reconciliation_repo, booking_statement_repo
 
 
 @pytest_asyncio.fixture()
@@ -227,7 +227,7 @@ class TestCreateMatch:
         )
         await reconciliation_repo.create_source(db, source)
 
-        res = Reservation(
+        bs = BookingStatement(
             id=uuid.uuid4(),
             organization_id=org.id,
             property_id=prop.id,
@@ -237,18 +237,18 @@ class TestCreateMatch:
             gross_booking=Decimal("500.00"),
             platform="airbnb",
         )
-        await reservation_repo.create(db, res)
+        await booking_statement_repo.create(db, bs)
         await db.commit()
 
         resp = await client.post("/reconciliation/match", json={
             "reconciliation_source_id": str(source.id),
-            "reservation_id": str(res.id),
+            "booking_statement_id": str(bs.id),
             "matched_amount": "500.00",
         })
         assert resp.status_code == 201
         data = resp.json()
         assert data["matched_amount"] == "500.00"
-        assert data["reservation_id"] == str(res.id)
+        assert data["booking_statement_id"] == str(bs.id)
 
     @pytest.mark.asyncio
     async def test_returns_404_for_missing_source(
@@ -256,13 +256,13 @@ class TestCreateMatch:
     ) -> None:
         resp = await client.post("/reconciliation/match", json={
             "reconciliation_source_id": str(uuid.uuid4()),
-            "reservation_id": str(uuid.uuid4()),
+            "booking_statement_id": str(uuid.uuid4()),
             "matched_amount": "100.00",
         })
         assert resp.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_returns_404_for_missing_reservation(
+    async def test_returns_404_for_missing_booking_statement(
         self,
         client: AsyncClient,
         db: AsyncSession,
@@ -282,7 +282,7 @@ class TestCreateMatch:
 
         resp = await client.post("/reconciliation/match", json={
             "reconciliation_source_id": str(source.id),
-            "reservation_id": str(uuid.uuid4()),
+            "booking_statement_id": str(uuid.uuid4()),
             "matched_amount": "100.00",
         })
         assert resp.status_code == 404

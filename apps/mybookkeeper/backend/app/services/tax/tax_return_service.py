@@ -16,7 +16,7 @@ from app.models.tax.tax_return import TaxReturn
 from app.repositories import (
     document_repo,
     property_repo,
-    reservation_repo,
+    booking_statement_repo,
     tax_form_repo,
     tax_return_repo,
     transaction_repo,
@@ -329,7 +329,7 @@ async def _get_source_documents_for_return(
 
     if not has_pm:
         # No PM — platforms pay owner directly, expect 1099-Ks
-        platforms = await reservation_repo.distinct_platforms_for_year(
+        platforms = await booking_statement_repo.distinct_platforms_for_year(
             db, ctx.organization_id, tax_year
         )
 

@@ -1,8 +1,17 @@
 import { signIn, register } from "@/lib/auth";
 import { showError } from "@platform/ui";
+import type { LoginResult } from "@/types/security/login-result";
 
 interface UseSignInResult {
-  handleSignIn: (email: string, password: string) => Promise<void>;
+  /** Returns the result of the login attempt — `ok` (token stashed) or
+   * `totp_required` (caller should show the TOTP challenge step and call
+   * back in with `totpCode` populated). Errors propagate after surfacing a
+   * toast. */
+  handleSignIn: (
+    email: string,
+    password: string,
+    totpCode?: string,
+  ) => Promise<LoginResult>;
   handleRegister: (
     email: string,
     password: string,
@@ -35,13 +44,17 @@ export function isUnverifiedError(err: unknown): boolean {
 }
 
 /**
- * Wraps signIn/register helpers from lib/auth for use with LoginForm.
- * Shows a toast on unexpected errors that aren't surfaced by LoginForm itself.
+ * Wraps signIn/register helpers from lib/auth for use with the Login page.
+ * Shows a toast on unexpected errors that aren't surfaced inline.
  */
 export function useSignIn(): UseSignInResult {
-  async function handleSignIn(email: string, password: string): Promise<void> {
+  async function handleSignIn(
+    email: string,
+    password: string,
+    totpCode?: string,
+  ): Promise<LoginResult> {
     try {
-      await signIn(email, password);
+      return await signIn(email, password, totpCode);
     } catch (err: unknown) {
       // Don't show a generic error toast for the unverified case — the
       // Login page surfaces a dedicated banner with a resend button.

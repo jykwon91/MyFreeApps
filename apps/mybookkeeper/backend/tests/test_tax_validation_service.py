@@ -425,7 +425,7 @@ class TestPersonalUseDaysValidation:
 
         with (
             patch("app.services.tax.tax_validation.unit_of_work", _fake),
-            patch("app.services.tax.tax_validation.rental_rules.reservation_repo.total_nights_by_property", _mock_nights),
+            patch("app.services.tax.tax_validation.rental_rules.booking_statement_repo.total_nights_by_property", _mock_nights),
         ):
             results = await tax_validation_service.validate(test_org.id, tr.id)
 
