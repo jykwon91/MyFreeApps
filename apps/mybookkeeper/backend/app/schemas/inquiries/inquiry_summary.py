@@ -42,6 +42,11 @@ class InquirySummary(BaseModel):
     gut_rating: int | None = None
     received_at: _dt.datetime
 
+    # T0 — surfaced on the inbox card so operator can see triage status at a glance.
+    spam_status: str = "unscored"
+    spam_score: float | None = None
+    submitted_via: str = "manual_entry"
+
     last_message_preview: str | None = None
     last_message_at: _dt.datetime | None = None
 

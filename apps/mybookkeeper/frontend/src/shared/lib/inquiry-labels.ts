@@ -15,6 +15,7 @@ export const INQUIRY_SOURCES: readonly InquirySource[] = [
   "TNH",
   "direct",
   "other",
+  "public_form",
 ] as const;
 
 export const INQUIRY_STAGES: readonly InquiryStage[] = [
@@ -34,6 +35,7 @@ export const INQUIRY_SOURCE_LABELS: Record<InquirySource, string> = {
   TNH: "Travel Nurse Housing",
   direct: "Direct",
   other: "Other",
+  public_form: "Public form",
 };
 
 export const INQUIRY_SOURCE_SHORT_LABELS: Record<InquirySource, string> = {
@@ -41,6 +43,7 @@ export const INQUIRY_SOURCE_SHORT_LABELS: Record<InquirySource, string> = {
   TNH: "TNH",
   direct: "Direct",
   other: "Other",
+  public_form: "Form",
 };
 
 export const INQUIRY_SOURCE_BADGE_COLORS: Record<InquirySource, BadgeColor> = {
@@ -48,6 +51,7 @@ export const INQUIRY_SOURCE_BADGE_COLORS: Record<InquirySource, BadgeColor> = {
   TNH: "purple",
   direct: "gray",
   other: "orange",
+  public_form: "green",
 };
 
 export const INQUIRY_STAGE_LABELS: Record<InquiryStage, string> = {

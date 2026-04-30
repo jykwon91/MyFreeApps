@@ -21,7 +21,14 @@ from app.schemas.listings.listing_photo_response import ListingPhotoResponse
 from app.schemas.listings.listing_response import ListingResponse
 from app.schemas.listings.listing_summary import ListingSummary
 from app.schemas.listings.listing_update_request import ListingUpdateRequest
+from app.services.listings.listing_slug import generate_slug
 from app.services.listings.photo_response_builder import attach_presigned_urls
+
+# Number of slug-collision retries before giving up. The 32^6 keyspace makes
+# even a single collision astronomically unlikely on a small portfolio, but
+# the retry loop is cheap defense in depth — and important if a future
+# operator has thousands of listings.
+_SLUG_GENERATION_ATTEMPTS = 5
 
 
 def _to_listing_response(listing, photos=(), external_ids=()) -> ListingResponse:
@@ -104,6 +111,16 @@ async def create_listing(
         if prop is None:
             raise LookupError(f"Property {payload.property_id} not found")
 
+        # Generate the public-form slug. Pre-check for collisions so we don't
+        # rely on catching IntegrityError mid-transaction (which would taint
+        # the unit_of_work and force a rollback for an extremely rare event).
+        slug = generate_slug(payload.title)
+        for _attempt in range(_SLUG_GENERATION_ATTEMPTS - 1):
+            existing = await listing_repo.get_by_slug(db, slug)
+            if existing is None:
+                break
+            slug = generate_slug(payload.title)
+
         listing = await listing_repo.create_listing(
             db,
             organization_id=organization_id,
@@ -124,6 +141,7 @@ async def create_listing(
             amenities=payload.amenities,
             pets_on_premises=payload.pets_on_premises,
             large_dog_disclosure=payload.large_dog_disclosure,
+            slug=slug,
         )
         return _to_listing_response(listing)
 

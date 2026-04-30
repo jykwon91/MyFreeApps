@@ -18,6 +18,10 @@ class ListingResponse(BaseModel):
 
     title: str
     description: str | None = None
+    # Public-form slug (T0). Always non-null after the
+    # ``b2c3d4e5f6a1_public_inquiry_form_t0`` migration; declared optional so
+    # newly-created Listings before flush still validate.
+    slug: str | None = None
 
     monthly_rate: Decimal
     weekly_rate: Decimal | None = None

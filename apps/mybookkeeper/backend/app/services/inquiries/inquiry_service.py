@@ -68,6 +68,9 @@ def _to_summary(row) -> InquirySummary:
         desired_end_date=row.desired_end_date,
         gut_rating=row.gut_rating,
         received_at=row.received_at,
+        spam_status=row.spam_status,
+        spam_score=row.spam_score,
+        submitted_via=row.submitted_via,
         last_message_preview=row.last_message_preview,
         last_message_at=row.last_message_at,
     )
@@ -159,15 +162,18 @@ async def list_inbox(
     user_id: uuid.UUID,  # noqa: ARG001 — accepted for audit context parity
     *,
     stage: str | None = None,
+    spam_status: str | None = None,
     limit: int = 50,
     offset: int = 0,
 ) -> InquiryListResponse:
     async with AsyncSessionLocal() as db:
         rows = await inquiry_repo.list_with_last_message(
-            db, organization_id, stage=stage, limit=limit, offset=offset,
+            db, organization_id,
+            stage=stage, spam_status=spam_status,
+            limit=limit, offset=offset,
         )
         total = await inquiry_repo.count_by_organization(
-            db, organization_id, stage=stage,
+            db, organization_id, stage=stage, spam_status=spam_status,
         )
     items = [_to_summary(r) for r in rows]
     has_more = (offset + len(items)) < total

@@ -15,6 +15,7 @@ const mockListing: ListingResponse = {
   property_id: "prop-1",
   title: "Garage Suite A",
   description: "Cozy private suite with separate entrance.",
+  slug: "garage-suite-a-abc123",
   monthly_rate: "1799.00",
   weekly_rate: "550.00",
   nightly_rate: null,

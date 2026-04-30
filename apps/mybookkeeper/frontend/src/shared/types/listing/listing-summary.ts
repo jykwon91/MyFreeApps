@@ -13,4 +13,6 @@ export interface ListingSummary {
   monthly_rate: string;
   property_id: string;
   created_at: string;
+  /** Public-form slug (T0). Backfilled for pre-T0 rows; nullable while a row is mid-flush. */
+  slug: string | null;
 }
