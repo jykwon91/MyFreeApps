@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import applications, companies, health, integrations, profile
+from app.api import applications, companies, health, integrations, profile, totp
 from app.core.auth import auth_backend, fastapi_users
 from app.core.config import settings
 from app.core.rate_limit import check_account_not_locked, check_login_rate_limit
@@ -61,3 +61,13 @@ app.include_router(profile.router, tags=["profile"])
 app.include_router(applications.router, tags=["applications"])
 app.include_router(companies.router, tags=["companies"])
 app.include_router(integrations.router, tags=["integrations"])
+
+# TOTP routes — the /login subroute gets the same per-IP throttle + lockout
+# guard wired onto the standard /auth/jwt/login route above. Without this,
+# the 2FA login path would be a brute-force-friendlier hole than the
+# password-only one.
+for _route in totp.router.routes:
+    if getattr(_route, "path", None) == "/auth/totp/login":
+        _route.dependencies.append(Depends(check_login_rate_limit))
+        _route.dependencies.append(Depends(check_account_not_locked))
+app.include_router(totp.router)

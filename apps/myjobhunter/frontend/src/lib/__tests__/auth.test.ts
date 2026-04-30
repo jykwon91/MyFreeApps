@@ -35,37 +35,56 @@ describe("auth helpers", () => {
   });
 
   describe("signIn", () => {
-    it("stores the token in localStorage and notifies auth change", async () => {
+    it("stores the token in localStorage and notifies auth change on success", async () => {
       mockApiPost.mockResolvedValueOnce({
         data: { access_token: "test.jwt.token", token_type: "bearer" },
       });
 
-      await signIn("user@example.com", "password123");
+      const result = await signIn("user@example.com", "password123");
 
+      expect(result).toEqual({ status: "ok" });
       expect(localStorage.getItem("token")).toBe("test.jwt.token");
       expect(mockNotifyAuthChange).toHaveBeenCalledTimes(1);
     });
 
-    it("calls the fastapi-users login endpoint with form-encoded body", async () => {
+    it("posts to /auth/totp/login with email + password JSON body", async () => {
       mockApiPost.mockResolvedValueOnce({
         data: { access_token: "tok", token_type: "bearer" },
       });
 
       await signIn("u@e.com", "pass");
 
-      expect(mockApiPost).toHaveBeenCalledWith(
-        "/auth/jwt/login",
-        expect.any(URLSearchParams),
-        expect.objectContaining({
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        })
-      );
+      expect(mockApiPost).toHaveBeenCalledWith("/auth/totp/login", {
+        email: "u@e.com",
+        password: "pass",
+        totp_code: undefined,
+      });
+    });
 
-      // Verify the URLSearchParams contains username + password
-      const [, params] = mockApiPost.mock.calls[0];
-      const sp = params as URLSearchParams;
-      expect(sp.get("username")).toBe("u@e.com");
-      expect(sp.get("password")).toBe("pass");
+    it("forwards totp_code on the second call after totp_required", async () => {
+      mockApiPost.mockResolvedValueOnce({
+        data: { access_token: "tok", token_type: "bearer" },
+      });
+
+      await signIn("u@e.com", "pass", "654321");
+
+      expect(mockApiPost).toHaveBeenCalledWith("/auth/totp/login", {
+        email: "u@e.com",
+        password: "pass",
+        totp_code: "654321",
+      });
+    });
+
+    it("returns status: totp_required when backend signals 2FA gate", async () => {
+      mockApiPost.mockResolvedValueOnce({
+        data: { detail: "totp_required" },
+      });
+
+      const result = await signIn("u@e.com", "pass");
+
+      expect(result).toEqual({ status: "totp_required" });
+      expect(localStorage.getItem("token")).toBeNull();
+      expect(mockNotifyAuthChange).not.toHaveBeenCalled();
     });
 
     it("throws on network error without writing to localStorage", async () => {

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import Login from "@/pages/Login";
 
 // Mock auth lib so tests don't hit the network
@@ -27,15 +27,16 @@ const mockSignIn = vi.mocked(signIn);
 const mockRegister = vi.mocked(register);
 const mockUseIsAuthenticated = vi.mocked(useIsAuthenticated);
 
-function renderLogin(initialEntries = ["/login"]) {
-  return render(
-    <MemoryRouter initialEntries={initialEntries}>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/dashboard" element={<div>Dashboard</div>} />
-      </Routes>
-    </MemoryRouter>
+function renderLogin(initialEntry: string | { pathname: string; state: unknown } = "/login") {
+  const router = createMemoryRouter(
+    [
+      { path: "/login", element: <Login /> },
+      { path: "/dashboard", element: <div>Dashboard</div> },
+      { path: "/applications", element: <div>Applications</div> },
+    ],
+    { initialEntries: [initialEntry] },
   );
+  return render(<RouterProvider router={router} />);
 }
 
 describe("Login page", () => {
@@ -47,13 +48,9 @@ describe("Login page", () => {
   it("renders the login form", () => {
     renderLogin();
     expect(screen.getByRole("tab", { name: /sign in/i })).toBeInTheDocument();
-    // Use 'for' attribute match for the email label
     expect(screen.getByLabelText("Email")).toBeInTheDocument();
-    // Use 'for' attribute match for password label (not the show/hide button)
     expect(screen.getByLabelText("Password")).toBeInTheDocument();
-    expect(
-      screen.getByText(/no recruiter access/i)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/no recruiter access/i)).toBeInTheDocument();
   });
 
   it("shows app branding", () => {
@@ -63,7 +60,7 @@ describe("Login page", () => {
   });
 
   it("navigates to /dashboard on successful sign-in", async () => {
-    mockSignIn.mockResolvedValue(undefined);
+    mockSignIn.mockResolvedValue({ status: "ok" });
     const user = userEvent.setup();
     renderLogin();
 
@@ -72,7 +69,11 @@ describe("Login page", () => {
     await user.click(screen.getByRole("button", { name: /^sign in$/i }));
 
     await waitFor(() => {
-      expect(mockSignIn).toHaveBeenCalledWith("test@example.com", "password123456");
+      expect(mockSignIn).toHaveBeenCalledWith(
+        "test@example.com",
+        "password123456",
+        undefined,
+      );
     });
     await waitFor(() => {
       expect(screen.getByText("Dashboard")).toBeInTheDocument();
@@ -80,19 +81,9 @@ describe("Login page", () => {
   });
 
   it("navigates to location.state.from after successful sign-in", async () => {
-    mockSignIn.mockResolvedValue(undefined);
+    mockSignIn.mockResolvedValue({ status: "ok" });
     const user = userEvent.setup();
-
-    render(
-      <MemoryRouter
-        initialEntries={[{ pathname: "/login", state: { from: "/applications" } }]}
-      >
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/applications" element={<div>Applications</div>} />
-        </Routes>
-      </MemoryRouter>
-    );
+    renderLogin({ pathname: "/login", state: { from: "/applications" } });
 
     await user.type(screen.getByLabelText("Email"), "test@example.com");
     await user.type(screen.getByLabelText("Password"), "password123456");
@@ -109,7 +100,6 @@ describe("Login page", () => {
     renderLogin();
 
     await user.click(screen.getByRole("tab", { name: /create account/i }));
-    // After tab switch, new form fields are rendered — re-query
     await user.type(screen.getByLabelText("Email"), "new@example.com");
     await user.type(screen.getByLabelText("Password"), "supersecret123");
     await user.click(screen.getByRole("button", { name: /^create account$/i }));
@@ -126,5 +116,66 @@ describe("Login page", () => {
     mockUseIsAuthenticated.mockReturnValue(true);
     renderLogin();
     expect(screen.getByText("Dashboard")).toBeInTheDocument();
+  });
+
+  it("shows the TOTP challenge when sign-in returns totp_required", async () => {
+    mockSignIn.mockResolvedValue({ status: "totp_required" });
+    const user = userEvent.setup();
+    renderLogin();
+
+    await user.type(screen.getByLabelText("Email"), "totp@example.com");
+    await user.type(screen.getByLabelText("Password"), "password123456");
+    await user.click(screen.getByRole("button", { name: /^sign in$/i }));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/authentication code/i)).toBeInTheDocument();
+    });
+    expect(
+      screen.getByText(/Enter the 6-digit code from your authenticator app/i),
+    ).toBeInTheDocument();
+  });
+
+  it("re-submits with the typed totp_code on the second step", async () => {
+    mockSignIn
+      .mockResolvedValueOnce({ status: "totp_required" })
+      .mockResolvedValueOnce({ status: "ok" });
+    const user = userEvent.setup();
+    renderLogin();
+
+    await user.type(screen.getByLabelText("Email"), "totp@example.com");
+    await user.type(screen.getByLabelText("Password"), "password123456");
+    await user.click(screen.getByRole("button", { name: /^sign in$/i }));
+
+    await screen.findByLabelText(/authentication code/i);
+    await user.type(screen.getByLabelText(/authentication code/i), "123456");
+    await user.click(screen.getByRole("button", { name: /^verify$/i }));
+
+    await waitFor(() => {
+      expect(mockSignIn).toHaveBeenLastCalledWith(
+        "totp@example.com",
+        "password123456",
+        "123456",
+      );
+    });
+    await waitFor(() => {
+      expect(screen.getByText("Dashboard")).toBeInTheDocument();
+    });
+  });
+
+  it("Back to login from totp challenge restores the email/password form", async () => {
+    mockSignIn.mockResolvedValue({ status: "totp_required" });
+    const user = userEvent.setup();
+    renderLogin();
+
+    await user.type(screen.getByLabelText("Email"), "totp@example.com");
+    await user.type(screen.getByLabelText("Password"), "password123456");
+    await user.click(screen.getByRole("button", { name: /^sign in$/i }));
+
+    await screen.findByLabelText(/authentication code/i);
+    await user.click(screen.getByRole("button", { name: /back to login/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("tab", { name: /sign in/i })).toBeInTheDocument();
+    });
   });
 });
