@@ -23,4 +23,10 @@ from app.models.integration.job_board_credential import JobBoardCredential  # no
 from app.models.jobs.resume_upload_job import ResumeUploadJob  # noqa: F401
 
 from app.models.system.extraction_log import ExtractionLog  # noqa: F401
-from app.models.system.auth_event import AuthEvent  # noqa: F401
+
+# Shared models from platform_shared. Importing them here registers their
+# tables with ``Base.metadata`` so Alembic autogenerate + Base.metadata.create_all
+# see the schema. The tables themselves are provisioned by alembic migration
+# 0002 (PR C2). MJH does not own the schema — platform_shared is canonical.
+from platform_shared.db.models.audit_log import AuditLog  # noqa: F401
+from platform_shared.db.models.auth_event import AuthEvent  # noqa: F401
