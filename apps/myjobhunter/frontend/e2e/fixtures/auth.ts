@@ -36,29 +36,51 @@ export async function createTestUser(
 }
 
 /**
- * Attempts to delete the test user via the backend.
+ * Deletes the test user via ``DELETE /users/me``.
  *
- * NOTE (Phase 1 known gap): The backend does not yet expose a self-delete or
- * admin-delete endpoint. When the endpoint is added in a future phase, implement
- * cleanup here by calling it with the user's JWT token.
- *
- * For now, test users accumulate in the dev database. Run the companion
- * cleanup script periodically:
+ * Logs the user in to obtain a JWT, then issues the delete with the
+ * three-factor body (TOTP is null because test users never enable 2FA).
+ * On any failure, logs a warning instead of throwing so test teardown
+ * doesn't mask the real test failure — the periodic cleanup script
+ * picks up any survivors:
  *   python backend/scripts/cleanup_test_users.py
  *
- * Pattern: test user emails use the `@myjobhunter-test.invalid` domain so they
- * are easy to identify and bulk-delete.
+ * Pattern: test user emails use the ``@myjobhunter-test.invalid`` domain
+ * so they are easy to identify and bulk-delete.
  */
 export async function deleteTestUser(
-  _request: APIRequestContext,
-  _user: TestUser
+  request: APIRequestContext,
+  user: TestUser
 ): Promise<void> {
-  // Phase 1: no delete endpoint yet — document gap
-  console.warn(
-    "[E2E cleanup] User delete endpoint not available in Phase 1. " +
-    `Test user ${_user.email} remains in the dev database. ` +
-    "Cleanup manually or wait for Phase 2 user management."
-  );
+  try {
+    const loginResponse = await request.post(`${BACKEND_URL}/api/auth/jwt/login`, {
+      form: { username: user.email, password: user.password },
+    });
+    if (!loginResponse.ok()) {
+      // User is already gone (e.g. the test itself deleted it). Nothing to do.
+      return;
+    }
+    const { access_token: token } = await loginResponse.json();
+
+    const deleteResponse = await request.delete(`${BACKEND_URL}/api/users/me`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      data: { password: user.password, confirm_email: user.email, totp_code: null },
+    });
+    if (!deleteResponse.ok()) {
+      const body = await deleteResponse.text();
+      console.warn(
+        `[E2E cleanup] DELETE /users/me failed for ${user.email}: ` +
+          `${deleteResponse.status()} — ${body}`
+      );
+    }
+  } catch (err) {
+    console.warn(
+      `[E2E cleanup] Failed to delete test user ${user.email}: ${String(err)}`
+    );
+  }
 }
 
 /**

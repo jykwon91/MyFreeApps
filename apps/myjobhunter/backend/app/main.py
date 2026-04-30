@@ -5,7 +5,7 @@ from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from jwt.exceptions import PyJWTError as JWTError
 
-from app.api import applications, companies, health, integrations, profile
+from app.api import account, applications, companies, health, integrations, profile
 from app.core.audit import current_user_id, register_audit_listeners
 from app.core.auth import auth_backend, fastapi_users
 from app.core.config import settings
@@ -19,10 +19,6 @@ from app.schemas.user import UserCreate, UserRead, UserUpdate
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Attach the shared SQLAlchemy after_flush listener that writes audit_logs
-    # rows for every INSERT/UPDATE/DELETE. Idempotent — safe across uvicorn
-    # reloader restarts. PII masking + skip-tables are already registered at
-    # import time via ``app.core.audit``.
     register_audit_listeners()
     yield
 
@@ -44,19 +40,11 @@ app.add_middleware(
 
 @app.middleware("http")
 async def set_audit_user(request: Request, call_next):
-    """Populate ``current_user_id`` ContextVar from the request's JWT.
-
-    The audit listener reads this ContextVar to set ``audit_logs.changed_by``
-    on every audited write. Anonymous requests (no/invalid token) leave it
-    as ``None``, producing audit rows with ``changed_by=NULL``.
-    """
+    """Populate ``current_user_id`` ContextVar from the request's JWT."""
     token = request.headers.get("Authorization", "").removeprefix("Bearer ").strip()
     if not token:
         return await call_next(request)
     try:
-        # fastapi-users JWTStrategy embeds ``aud: ["fastapi-users:auth"]`` in
-        # every token. PyJWT rejects tokens containing an ``aud`` claim unless
-        # ``audience`` is passed at decode time, so we must include it.
         payload = jwt.decode(
             token,
             settings.secret_key,
@@ -73,10 +61,7 @@ async def set_audit_user(request: Request, call_next):
         current_user_id.reset(ctx_token)
 
 
-# Auth routes — gate ONLY the /login route with the per-IP throttle and the
-# account-lockout dependency (PR C3). Both dependencies require an
-# OAuth2PasswordRequestForm body, so attaching them to the entire
-# get_auth_router() prefix would break /logout (which has no body).
+# Auth routes — gate /login with per-IP throttle + account-lockout (PR C3).
 _auth_router = fastapi_users.get_auth_router(auth_backend)
 for _route in _auth_router.routes:
     if getattr(_route, "path", None) == "/login":
@@ -89,8 +74,7 @@ app.include_router(
     tags=["auth"],
 )
 
-# Registration is gated behind Turnstile CAPTCHA — no-op in dev/CI when
-# ``TURNSTILE_SECRET_KEY`` is empty.
+# Registration is gated behind Turnstile CAPTCHA (PR C1) — no-op when secret is empty.
 app.include_router(
     fastapi_users.get_register_router(UserRead, UserCreate),
     prefix="/auth",
@@ -98,9 +82,8 @@ app.include_router(
     dependencies=[Depends(require_turnstile)],
 )
 
-# Reset-password router exposes BOTH /forgot-password and /reset-password.
-# We only gate /forgot-password — /reset-password is protected by the
-# email-link token itself, matching MBK's policy.
+# Reset-password router exposes both /forgot-password and /reset-password.
+# Only gate /forgot-password — /reset-password is protected by the email-link token.
 _reset_router = fastapi_users.get_reset_password_router()
 for _route in _reset_router.routes:
     if getattr(_route, "path", None) == "/forgot-password":
@@ -110,6 +93,10 @@ app.include_router(
     prefix="/auth",
     tags=["auth"],
 )
+
+# Register account self-service routes BEFORE fastapi-users users router so that
+# DELETE /users/me is matched here rather than by fastapi-users' DELETE /users/{id}.
+app.include_router(account.router)
 
 app.include_router(
     fastapi_users.get_users_router(UserRead, UserUpdate),
