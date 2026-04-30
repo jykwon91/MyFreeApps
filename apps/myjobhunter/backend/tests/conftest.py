@@ -53,7 +53,7 @@ from app.main import app
 
 import hashlib
 
-from fastapi_users.password import PasswordHelperProtocol
+import fastapi_users.password as _fa_password
 from fastapi_users.manager import BaseUserManager
 
 
@@ -76,9 +76,26 @@ class _FastPasswordHelper:
         return uuid.uuid4().hex
 
 
-# Install at import time so every UserManager instantiated during the test
-# session uses the fast helper.
+# fastapi-users' BaseUserManager.__init__ does:
+#   self.password_helper = password_helper if password_helper is not None else PasswordHelper()
+# so a class-level override gets shadowed on every instance. Replace the
+# default-constructor symbol so every fresh PasswordHelper() returns our
+# fast stub instead.
+_fa_password.PasswordHelper = _FastPasswordHelper  # type: ignore[misc,assignment]
 BaseUserManager.password_helper = _FastPasswordHelper()  # type: ignore[assignment]
+
+
+# Override BaseUserManager.__init__ so newly-constructed managers always use
+# the fast helper, regardless of whether they pass password_helper=None.
+_orig_init = BaseUserManager.__init__
+
+
+def _fast_init(self, *args, **kwargs):  # type: ignore[no-untyped-def]
+    _orig_init(self, *args, **kwargs)
+    self.password_helper = _FastPasswordHelper()
+
+
+BaseUserManager.__init__ = _fast_init  # type: ignore[method-assign]
 
 
 # ---------------------------------------------------------------------------
