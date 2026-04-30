@@ -14,7 +14,7 @@ export default function Button({ variant = "primary", size = "md", className, ..
   return (
     <button
       className={cn(
-        "inline-flex items-center font-medium disabled:opacity-50",
+        "inline-flex items-center justify-center font-medium disabled:opacity-50",
         variant === "primary" && "bg-primary text-primary-foreground hover:opacity-90",
         variant === "secondary" && "border hover:bg-muted",
         variant === "ghost" && "text-muted-foreground hover:underline px-2",
