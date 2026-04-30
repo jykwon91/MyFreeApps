@@ -20,6 +20,7 @@ from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
 import pytest
+import pytest_asyncio
 from fastapi import HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import select
@@ -44,14 +45,39 @@ from app.models.user.user import User
 # ---------------------------------------------------------------------------
 
 
-@pytest.fixture(autouse=True)
-def _route_db(db: AsyncSession):
-    """Point all routes at the rolled-back test transaction."""
+@pytest_asyncio.fixture
+async def _route_db(db: AsyncSession):
+    """Point all routes at the rolled-back test transaction.
+
+    These tests intentionally call ``db.commit()`` (the per-IP gate
+    commits its audit row before re-raising the 429), which means rows
+    leak across the rolled-back-transaction boundary. We clean the
+    ``auth_events`` and ``users`` tables once per test so each test
+    starts from a clean slate without contaminating sibling tests.
+
+    Not autouse — only the DB-bound tests in this file pull this in.
+    The static-only test (``TestJwtLoginRouterIncludesAuditedGate``)
+    must NOT require a DB connection.
+    """
+    from sqlalchemy import text
+
     async def _fake_get_db():
         yield db
 
     app.dependency_overrides[get_db] = _fake_get_db
+
+    await db.execute(text("DELETE FROM auth_events"))
+    await db.execute(text("DELETE FROM users"))
+    await db.commit()
+
     yield
+
+    try:
+        await db.execute(text("DELETE FROM auth_events"))
+        await db.execute(text("DELETE FROM users"))
+        await db.commit()
+    except Exception:  # noqa: BLE001
+        await db.rollback()
     app.dependency_overrides.clear()
 
 
@@ -97,7 +123,7 @@ async def _events(db: AsyncSession) -> list[AuthEvent]:
 class TestResponseBodyIndistinguishability:
     @pytest.mark.asyncio
     async def test_per_ip_429_body_matches_account_lockout_429_body(
-        self, db: AsyncSession,
+        self, db: AsyncSession, _route_db,
     ) -> None:
         """Both gates raise an HTTPException with the same status code AND
         the same detail string. FastAPI serializes any HTTPException to
@@ -137,7 +163,7 @@ class TestResponseBodyIndistinguishability:
 class TestPerIpBlockAuditEvent:
     @pytest.mark.asyncio
     async def test_per_ip_block_writes_audit_event(
-        self, db: AsyncSession,
+        self, db: AsyncSession, _route_db,
     ) -> None:
         """A per-IP block produces exactly one LOGIN_BLOCKED_RATE_LIMIT
         row with the IP in metadata and no full email anywhere."""
@@ -171,7 +197,7 @@ class TestPerIpBlockAuditEvent:
 
     @pytest.mark.asyncio
     async def test_per_ip_block_records_email_domain_when_available(
-        self, db: AsyncSession,
+        self, db: AsyncSession, _route_db,
     ) -> None:
         """When ``request.state.login_email`` is set by an upstream layer,
         the audit row records ``metadata.email_domain`` (lowercase, no full
