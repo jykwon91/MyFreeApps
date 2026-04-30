@@ -55,16 +55,28 @@ export async function signIn(
 
 /**
  * Register a new account via fastapi-users.
+ *
+ * When a Turnstile token is supplied (PR C1), it is forwarded as the
+ * ``X-Turnstile-Token`` header so the backend ``require_turnstile``
+ * dependency can verify it. In dev / CI the token is empty and the
+ * backend short-circuits the check.
+ *
+ * Does NOT auto-sign-in — the caller (Login page) shows a "check your
+ * inbox" notice and the user must verify their email before signing in
+ * (PR C4).
  */
-export async function register(email: string, password: string): Promise<void> {
-  await api.post<RegisterResponse>("/auth/register", { email, password });
-  // Auto sign-in after registration. Newly-created accounts never have 2FA
-  // enabled, so the call always resolves with status: "ok" — but we still
-  // type-check the response to keep the contract honest.
-  const result = await signIn(email, password);
-  if (result.status !== "ok") {
-    throw new Error("Unexpected TOTP challenge after registration.");
-  }
+export async function register(
+  email: string,
+  password: string,
+  turnstileToken = "",
+): Promise<void> {
+  await api.post<RegisterResponse>(
+    "/auth/register",
+    { email, password },
+    {
+      headers: turnstileToken ? { "X-Turnstile-Token": turnstileToken } : {},
+    },
+  );
 }
 
 /**
