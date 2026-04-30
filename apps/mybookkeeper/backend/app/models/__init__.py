@@ -12,6 +12,9 @@ from app.models.properties.lease import Lease, LeaseStatus
 from app.models.listings.listing import Listing
 from app.models.listings.listing_photo import ListingPhoto
 from app.models.listings.listing_external_id import ListingExternalId
+from app.models.listings.channel import Channel
+from app.models.listings.channel_listing import ChannelListing
+from app.models.listings.listing_blackout import ListingBlackout
 from app.models.inquiries.inquiry import Inquiry
 from app.models.inquiries.inquiry_message import InquiryMessage
 from app.models.inquiries.inquiry_event import InquiryEvent

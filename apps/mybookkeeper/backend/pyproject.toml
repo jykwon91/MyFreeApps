@@ -43,6 +43,11 @@ dependencies = [
     # Pillow already comes in via qrcode[pil].
     "python-magic==0.4.27",
     "clamd==1.0.2",
+    # PR 1.4 — channel calendar sync. The icalendar library handles RFC
+    # 5545 line folding, escaping, DATE vs DATETIME VALUE parameters, and
+    # timezone propagation — all of which are fiddly enough that hand-rolling
+    # is a bug factory. Used by both outbound serializer and inbound parser.
+    "icalendar==6.1.3",
 ]
 
 [tool.uv]

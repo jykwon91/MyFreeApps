@@ -1,4 +1,8 @@
 import { baseApi } from "./baseApi";
+import type { Channel } from "@/shared/types/listing/channel";
+import type { ChannelListing } from "@/shared/types/listing/channel-listing";
+import type { ChannelListingCreateRequest } from "@/shared/types/listing/channel-listing-create-request";
+import type { ChannelListingUpdateRequest } from "@/shared/types/listing/channel-listing-update-request";
 import type { ListingCreateRequest } from "@/shared/types/listing/listing-create-request";
 import type { ListingExternalId } from "@/shared/types/listing/listing-external-id";
 import type { ListingExternalIdCreateRequest } from "@/shared/types/listing/listing-external-id-create-request";
@@ -147,6 +151,64 @@ const listingsApi = baseApi.injectEndpoints({
         { type: "Listing", id: arg.listingId },
       ],
     }),
+    getChannels: builder.query<Channel[], void>({
+      query: () => ({ url: "/channels" }),
+      providesTags: [{ type: "Channel", id: "LIST" }],
+    }),
+    getListingChannels: builder.query<ChannelListing[], string>({
+      query: (listingId) => ({ url: `/listings/${listingId}/channels` }),
+      providesTags: (result, _err, listingId) =>
+        result
+          ? [
+              ...result.map((cl) => ({ type: "ChannelListing" as const, id: cl.id })),
+              { type: "ChannelListing" as const, id: `LISTING-${listingId}` },
+            ]
+          : [{ type: "ChannelListing" as const, id: `LISTING-${listingId}` }],
+    }),
+    createListingChannel: builder.mutation<
+      ChannelListing,
+      { listingId: string; data: ChannelListingCreateRequest }
+    >({
+      query: ({ listingId, data }) => ({
+        url: `/listings/${listingId}/channels`,
+        method: "POST",
+        data,
+      }),
+      invalidatesTags: (_result, _err, arg) => [
+        { type: "ChannelListing", id: `LISTING-${arg.listingId}` },
+      ],
+    }),
+    updateChannelListing: builder.mutation<
+      ChannelListing,
+      {
+        listingId: string;
+        channelListingId: string;
+        data: ChannelListingUpdateRequest;
+      }
+    >({
+      query: ({ channelListingId, data }) => ({
+        url: `/channel-listings/${channelListingId}`,
+        method: "PATCH",
+        data,
+      }),
+      invalidatesTags: (_result, _err, arg) => [
+        { type: "ChannelListing", id: arg.channelListingId },
+        { type: "ChannelListing", id: `LISTING-${arg.listingId}` },
+      ],
+    }),
+    deleteChannelListing: builder.mutation<
+      void,
+      { listingId: string; channelListingId: string }
+    >({
+      query: ({ channelListingId }) => ({
+        url: `/channel-listings/${channelListingId}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: (_result, _err, arg) => [
+        { type: "ChannelListing", id: arg.channelListingId },
+        { type: "ChannelListing", id: `LISTING-${arg.listingId}` },
+      ],
+    }),
   }),
 });
 
@@ -162,4 +224,9 @@ export const {
   useCreateListingExternalIdMutation,
   useUpdateListingExternalIdMutation,
   useDeleteListingExternalIdMutation,
+  useGetChannelsQuery,
+  useGetListingChannelsQuery,
+  useCreateListingChannelMutation,
+  useUpdateChannelListingMutation,
+  useDeleteChannelListingMutation,
 } = listingsApi;
