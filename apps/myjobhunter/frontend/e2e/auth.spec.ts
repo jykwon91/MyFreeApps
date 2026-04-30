@@ -73,7 +73,7 @@ test.describe("MyJobHunter — HIBP enforcement on registration", () => {
     // is covered by backend integration tests against the same handler.
     const email = `e2e-hibp-${Date.now()}@myjobhunter-test.invalid`;
     const response = await request.post(`${BACKEND_URL}/api/auth/register`, {
-      data: { email, password: "this-is-a-strong-unique-pass-9173-aWk" },
+      data: { email, password: "this-is-a-strong-unique-pass-9173-aWk" }, // gitleaks:allow
     });
     // Either created (HIBP allowed it / disabled) or fail-open after outage.
     // What we *do not* allow: an unrelated 5xx.
