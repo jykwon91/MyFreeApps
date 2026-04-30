@@ -23,3 +23,4 @@ from app.models.integration.job_board_credential import JobBoardCredential  # no
 from app.models.jobs.resume_upload_job import ResumeUploadJob  # noqa: F401
 
 from app.models.system.extraction_log import ExtractionLog  # noqa: F401
+from app.models.system.auth_event import AuthEvent  # noqa: F401

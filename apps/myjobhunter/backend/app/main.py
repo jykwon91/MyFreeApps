@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.auth import auth_backend, fastapi_users
 from app.core.config import settings
 from app.schemas.user import UserCreate, UserRead, UserUpdate
-from app.api import applications, companies, health, integrations, profile
+from app.api import account, applications, companies, health, integrations, profile
 
 
 @asynccontextmanager
@@ -39,6 +39,9 @@ app.include_router(
     prefix="/auth",
     tags=["auth"],
 )
+# Register account self-service routes BEFORE the fastapi-users users router so that
+# DELETE /users/me is matched here rather than by fastapi-users' DELETE /users/{id}.
+app.include_router(account.router)
 app.include_router(
     fastapi_users.get_users_router(UserRead, UserUpdate),
     prefix="/users",

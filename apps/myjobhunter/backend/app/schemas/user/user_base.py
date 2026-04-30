@@ -1,3 +1,4 @@
+"""fastapi-users base schemas for the User entity."""
 import uuid
 
 from fastapi_users import schemas

@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { Badge, Button, Card } from "@platform/ui";
 
 export default function Settings() {
@@ -35,11 +36,24 @@ export default function Settings() {
         </div>
       </Card>
 
-      {/* Account section placeholder */}
-      <Card title="Account">
-        <p className="text-sm text-muted-foreground">
-          Account management options coming in a future phase.
-        </p>
+      {/* Security & Data — link to dedicated page */}
+      <Card title="Security &amp; Data">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+          <div className="flex-1 space-y-1">
+            <p className="text-sm text-muted-foreground">
+              Export your data or permanently delete your account.
+            </p>
+          </div>
+          <div className="shrink-0">
+            <Link
+              to="/security"
+              className="inline-flex items-center justify-center rounded-md border bg-background px-3 py-1.5 text-sm font-medium hover:bg-muted transition-colors min-h-[44px] sm:min-h-[36px]"
+              aria-label="Manage security and data"
+            >
+              Manage
+            </Link>
+          </div>
+        </div>
       </Card>
     </div>
   );
