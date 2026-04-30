@@ -7,6 +7,7 @@ import CompanyDetail from "@/pages/CompanyDetail";
 import Profile from "@/pages/Profile";
 import Settings from "@/pages/Settings";
 import Login from "@/pages/Login";
+import VerifyEmail from "@/pages/VerifyEmail";
 import NotFound from "@/pages/NotFound";
 import RootLayout from "@/RootLayout";
 
@@ -25,5 +26,6 @@ export const routes: RouteObject[] = [
     ],
   },
   { path: "/login", element: <Login /> },
+  { path: "/verify-email", element: <VerifyEmail /> },
   { path: "*", element: <NotFound /> },
 ];

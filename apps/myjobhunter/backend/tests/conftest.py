@@ -78,13 +78,23 @@ async def client(db: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
 # ---------------------------------------------------------------------------
 
 @pytest_asyncio.fixture(scope="function")
-async def user_factory(client: AsyncClient) -> AsyncGenerator[Callable, None]:
-    """Factory fixture: call to register a user, auto-cleaned up after test."""
+async def user_factory(
+    client: AsyncClient, db: AsyncSession,
+) -> AsyncGenerator[Callable, None]:
+    """Factory fixture: call to register a user, auto-cleaned up after test.
+
+    Registers via the public /auth/register endpoint, then forces
+    is_verified=True directly on the same rolled-back transaction so
+    tests can call /auth/jwt/login without going through the verification
+    flow. Pass `verified=False` to keep the user unverified (used by the
+    email-verification tests themselves).
+    """
     created_emails: list[str] = []
 
     async def _create(
         email: str | None = None,
         password: str = "TestPassword123!",
+        verified: bool = True,
     ) -> dict[str, Any]:
         email = email or f"test-{uuid.uuid4().hex[:8]}@example.com"
         resp = await client.post(
@@ -93,7 +103,17 @@ async def user_factory(client: AsyncClient) -> AsyncGenerator[Callable, None]:
         )
         assert resp.status_code == 201, f"Registration failed: {resp.text}"
         created_emails.append(email)
-        return {**resp.json(), "password": password, "email": email}
+        if verified:
+            await db.execute(
+                text("UPDATE users SET is_verified = TRUE WHERE email = :email"),
+                {"email": email},
+            )
+        return {
+            **resp.json(),
+            "password": password,
+            "email": email,
+            "is_verified": verified,
+        }
 
     yield _create
 

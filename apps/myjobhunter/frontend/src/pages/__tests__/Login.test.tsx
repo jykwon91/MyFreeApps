@@ -8,6 +8,7 @@ import Login from "@/pages/Login";
 vi.mock("@/lib/auth", () => ({
   signIn: vi.fn(),
   register: vi.fn(),
+  requestVerifyToken: vi.fn(),
   signOut: vi.fn(),
 }));
 
@@ -17,14 +18,17 @@ vi.mock("@platform/ui", async (importOriginal) => {
   return {
     ...actual,
     useIsAuthenticated: vi.fn(() => false),
+    showError: vi.fn(),
+    showSuccess: vi.fn(),
   };
 });
 
-import { signIn, register } from "@/lib/auth";
+import { signIn, register, requestVerifyToken } from "@/lib/auth";
 import { useIsAuthenticated } from "@platform/ui";
 
 const mockSignIn = vi.mocked(signIn);
 const mockRegister = vi.mocked(register);
+const mockRequestVerifyToken = vi.mocked(requestVerifyToken);
 const mockUseIsAuthenticated = vi.mocked(useIsAuthenticated);
 
 function renderLogin(initialEntries = ["/login"]) {
@@ -34,7 +38,7 @@ function renderLogin(initialEntries = ["/login"]) {
         <Route path="/login" element={<Login />} />
         <Route path="/dashboard" element={<div>Dashboard</div>} />
       </Routes>
-    </MemoryRouter>
+    </MemoryRouter>,
   );
 }
 
@@ -47,13 +51,9 @@ describe("Login page", () => {
   it("renders the login form", () => {
     renderLogin();
     expect(screen.getByRole("tab", { name: /sign in/i })).toBeInTheDocument();
-    // Use 'for' attribute match for the email label
     expect(screen.getByLabelText("Email")).toBeInTheDocument();
-    // Use 'for' attribute match for password label (not the show/hide button)
     expect(screen.getByLabelText("Password")).toBeInTheDocument();
-    expect(
-      screen.getByText(/no recruiter access/i)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/no recruiter access/i)).toBeInTheDocument();
   });
 
   it("shows app branding", () => {
@@ -91,7 +91,7 @@ describe("Login page", () => {
           <Route path="/login" element={<Login />} />
           <Route path="/applications" element={<div>Applications</div>} />
         </Routes>
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     await user.type(screen.getByLabelText("Email"), "test@example.com");
@@ -103,13 +103,12 @@ describe("Login page", () => {
     });
   });
 
-  it("navigates to /dashboard on successful registration", async () => {
+  it("shows a 'check your inbox' banner after successful registration (no auto-login)", async () => {
     mockRegister.mockResolvedValue(undefined);
     const user = userEvent.setup();
     renderLogin();
 
     await user.click(screen.getByRole("tab", { name: /create account/i }));
-    // After tab switch, new form fields are rendered — re-query
     await user.type(screen.getByLabelText("Email"), "new@example.com");
     await user.type(screen.getByLabelText("Password"), "supersecret123");
     await user.click(screen.getByRole("button", { name: /^create account$/i }));
@@ -117,14 +116,90 @@ describe("Login page", () => {
     await waitFor(() => {
       expect(mockRegister).toHaveBeenCalledWith("new@example.com", "supersecret123");
     });
-    await waitFor(() => {
-      expect(screen.getByText("Dashboard")).toBeInTheDocument();
-    });
+    expect(
+      await screen.findByTestId("registration-success-banner"),
+    ).toHaveTextContent(/we sent a verification link to/i);
+    expect(
+      screen.getByTestId("registration-success-banner"),
+    ).toHaveTextContent("new@example.com");
+    // Must not auto-navigate to dashboard
+    expect(screen.queryByText("Dashboard")).not.toBeInTheDocument();
   });
 
   it("redirects to /dashboard if already authenticated", () => {
     mockUseIsAuthenticated.mockReturnValue(true);
     renderLogin();
     expect(screen.getByText("Dashboard")).toBeInTheDocument();
+  });
+
+  describe("unverified login", () => {
+    function unverifiedAxiosError() {
+      const err = new Error("Request failed") as Error & {
+        response: { data: { detail: string } };
+      };
+      err.response = { data: { detail: "LOGIN_USER_NOT_VERIFIED" } };
+      return err;
+    }
+
+    it("shows the resend banner when login fails with LOGIN_USER_NOT_VERIFIED", async () => {
+      mockSignIn.mockRejectedValueOnce(unverifiedAxiosError());
+      const user = userEvent.setup();
+      renderLogin();
+
+      await user.type(screen.getByLabelText("Email"), "noverify@example.com");
+      await user.type(screen.getByLabelText("Password"), "password123456");
+      await user.click(screen.getByRole("button", { name: /^sign in$/i }));
+
+      const banner = await screen.findByTestId("resend-verification-banner");
+      expect(banner).toHaveTextContent(/please verify your email/i);
+      expect(
+        screen.getByRole("button", { name: /resend verification email/i }),
+      ).toBeVisible();
+    });
+
+    it("does NOT show the resend banner on a regular bad-credentials failure", async () => {
+      const err = new Error("Request failed") as Error & {
+        response: { data: { detail: string } };
+      };
+      err.response = { data: { detail: "LOGIN_BAD_CREDENTIALS" } };
+      mockSignIn.mockRejectedValueOnce(err);
+
+      const user = userEvent.setup();
+      renderLogin();
+
+      await user.type(screen.getByLabelText("Email"), "test@example.com");
+      await user.type(screen.getByLabelText("Password"), "wrongpass12345");
+      await user.click(screen.getByRole("button", { name: /^sign in$/i }));
+
+      await waitFor(() => {
+        expect(mockSignIn).toHaveBeenCalled();
+      });
+      expect(
+        screen.queryByTestId("resend-verification-banner"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("clicking 'Resend verification email' POSTs the email", async () => {
+      mockSignIn.mockRejectedValueOnce(unverifiedAxiosError());
+      mockRequestVerifyToken.mockResolvedValueOnce(undefined);
+      const user = userEvent.setup();
+      renderLogin();
+
+      await user.type(screen.getByLabelText("Email"), "noverify@example.com");
+      await user.type(screen.getByLabelText("Password"), "password123456");
+      await user.click(screen.getByRole("button", { name: /^sign in$/i }));
+
+      const resendBtn = await screen.findByRole("button", {
+        name: /resend verification email/i,
+      });
+      await user.click(resendBtn);
+
+      await waitFor(() => {
+        expect(mockRequestVerifyToken).toHaveBeenCalledWith("noverify@example.com");
+      });
+      expect(
+        await screen.findByTestId("resend-verification-sent"),
+      ).toHaveTextContent(/verification email sent/i);
+    });
   });
 });

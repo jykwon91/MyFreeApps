@@ -1,3 +1,4 @@
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -28,14 +29,25 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Auth routes
+# Auth routes — JWT login enforces email verification (returns
+# detail="LOGIN_USER_NOT_VERIFIED" when an unverified user tries to log in).
 app.include_router(
-    fastapi_users.get_auth_router(auth_backend),
+    fastapi_users.get_auth_router(auth_backend, requires_verification=True),
     prefix="/auth/jwt",
     tags=["auth"],
 )
 app.include_router(
     fastapi_users.get_register_router(UserRead, UserCreate),
+    prefix="/auth",
+    tags=["auth"],
+)
+app.include_router(
+    fastapi_users.get_verify_router(UserRead),
+    prefix="/auth",
+    tags=["auth"],
+)
+app.include_router(
+    fastapi_users.get_reset_password_router(),
     prefix="/auth",
     tags=["auth"],
 )
@@ -51,3 +63,11 @@ app.include_router(profile.router, tags=["profile"])
 app.include_router(applications.router, tags=["applications"])
 app.include_router(companies.router, tags=["companies"])
 app.include_router(integrations.router, tags=["integrations"])
+
+# Test-only helpers — mounted only when MYJOBHUNTER_ENABLE_TEST_HELPERS=1.
+# Used by the E2E suite to put the DB into deterministic states (e.g.
+# flipping `is_verified=True`). NEVER enable in production.
+if os.environ.get("MYJOBHUNTER_ENABLE_TEST_HELPERS") == "1":
+    from app.api import test_helpers
+
+    app.include_router(test_helpers.router, tags=["_test"])
