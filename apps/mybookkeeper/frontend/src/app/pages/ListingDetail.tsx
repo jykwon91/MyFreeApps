@@ -21,6 +21,7 @@ import ListingStatusBadge from "@/app/features/listings/ListingStatusBadge";
 import PetDisclosureBanner from "@/app/features/listings/PetDisclosureBanner";
 import ListingAmenities from "@/app/features/listings/ListingAmenities";
 import ExternalIdSection from "@/app/features/listings/ExternalIdSection";
+import ListingApplyUrlPanel from "@/app/features/listings/ListingApplyUrlPanel";
 import ListingForm from "@/app/features/listings/ListingForm";
 import ListingPhotoManager from "@/app/features/listings/ListingPhotoManager";
 import DeleteListingModal from "@/app/features/listings/DeleteListingModal";
@@ -173,6 +174,8 @@ export default function ListingDetail() {
               externalIds={listing.external_ids}
             />
           </section>
+
+          <ListingApplyUrlPanel slug={listing.slug} />
 
           <section className="border rounded-lg p-4 space-y-3">
             <h2 className="text-sm font-medium">Photos</h2>

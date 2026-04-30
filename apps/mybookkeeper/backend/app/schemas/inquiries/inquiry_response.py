@@ -45,6 +45,22 @@ class InquiryResponse(BaseModel):
     # when the inquiry has already been converted (PR 3.2).
     linked_applicant_id: uuid.UUID | None = None
 
+    # ----- Public inquiry form (T0) -----
+    submitted_via: str = "manual_entry"
+    spam_status: str = "unscored"
+    spam_score: float | None = None
+
+    move_in_date: _dt.date | None = None
+    lease_length_months: int | None = None
+    occupant_count: int | None = None
+    has_pets: bool | None = None
+    pets_description: str | None = None
+    vehicle_count: int | None = None
+    current_city: str | None = None
+    employment_status: str | None = None
+    why_this_room: str | None = None
+    additional_notes: str | None = None
+
     messages: list[InquiryMessageResponse] = []
     events: list[InquiryEventResponse] = []
 

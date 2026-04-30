@@ -14,24 +14,29 @@ import datetime as _dt
 import uuid
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     Date,
     DateTime,
     ForeignKey,
     Index,
+    Numeric,
     SmallInteger,
     String,
     Text,
     func,
     text,
 )
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import INET, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.encrypted_string_type import EncryptedString
 from app.core.inquiry_enums import (
+    INQUIRY_EMPLOYMENT_STATUSES_SQL,
     INQUIRY_SOURCES_SQL,
+    INQUIRY_SPAM_STATUSES_SQL,
     INQUIRY_STAGES_SQL,
+    INQUIRY_SUBMITTED_VIA_SQL,
 )
 from app.db.base import Base
 
@@ -84,6 +89,51 @@ class Inquiry(Base):
     )
     email_message_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
+    # ----- Public inquiry form (T0) -----
+    # Where the inquiry record came into MBK. Defaults to ``manual_entry`` for
+    # pre-T0 rows; new manual + Gmail-OAuth + public-form inserts set this
+    # explicitly. Used by the operator inbox to distinguish channels.
+    submitted_via: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        default="manual_entry",
+        server_default="manual_entry",
+    )
+
+    # Spam triage state. ``unscored`` for legacy rows + Gmail-parsed inquiries
+    # that don't run the public-form filter pipeline. Public-form inquiries
+    # always have one of {clean, flagged, spam, manually_cleared}. The operator
+    # can override via "Mark as not spam" / "Mark as spam".
+    spam_status: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        default="unscored",
+        server_default="unscored",
+    )
+    # Final 0-100 score from ``inquiry_spam_service`` (Claude scoring step).
+    # NULL when no Claude scoring has run (legacy / Gmail-parsed / hard-rejected
+    # inquiries that never reached the scoring step).
+    spam_score: Mapped[float | None] = mapped_column(Numeric(5, 2), nullable=True)
+
+    # Public form fields — collected on the prospect-facing form. NULL on
+    # Gmail-parsed and manually-entered inquiries.
+    move_in_date: Mapped[_dt.date | None] = mapped_column(Date, nullable=True)
+    lease_length_months: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
+    occupant_count: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
+    has_pets: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    pets_description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    vehicle_count: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
+    current_city: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    employment_status: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    why_this_room: Mapped[str | None] = mapped_column(Text, nullable=True)
+    additional_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # Submitter context — captured server-side for audit + abuse triage.
+    # ``client_ip`` is INET on PostgreSQL so range queries (``<<= '1.2.3.0/24'``)
+    # work directly; on SQLite (tests) it falls back to a string column.
+    client_ip: Mapped[str | None] = mapped_column(INET, nullable=True)
+    user_agent: Mapped[str | None] = mapped_column(String(500), nullable=True)
+
     key_version: Mapped[int] = mapped_column(
         SmallInteger, nullable=False, default=1, server_default="1",
     )
@@ -117,6 +167,40 @@ class Inquiry(Base):
         CheckConstraint(
             "gut_rating IS NULL OR (gut_rating BETWEEN 1 AND 5)",
             name="chk_inquiry_gut_rating",
+        ),
+        CheckConstraint(
+            f"submitted_via IN {INQUIRY_SUBMITTED_VIA_SQL}",
+            name="chk_inquiry_submitted_via",
+        ),
+        CheckConstraint(
+            f"spam_status IN {INQUIRY_SPAM_STATUSES_SQL}",
+            name="chk_inquiry_spam_status",
+        ),
+        CheckConstraint(
+            f"employment_status IS NULL OR employment_status IN {INQUIRY_EMPLOYMENT_STATUSES_SQL}",
+            name="chk_inquiry_employment_status",
+        ),
+        CheckConstraint(
+            "spam_score IS NULL OR (spam_score >= 0 AND spam_score <= 100)",
+            name="chk_inquiry_spam_score_range",
+        ),
+        CheckConstraint(
+            "lease_length_months IS NULL OR (lease_length_months BETWEEN 1 AND 24)",
+            name="chk_inquiry_lease_length_months",
+        ),
+        CheckConstraint(
+            "occupant_count IS NULL OR (occupant_count BETWEEN 1 AND 10)",
+            name="chk_inquiry_occupant_count",
+        ),
+        CheckConstraint(
+            "vehicle_count IS NULL OR (vehicle_count BETWEEN 0 AND 10)",
+            name="chk_inquiry_vehicle_count",
+        ),
+        # Inbox spam-tab filter — covers (org, spam_status) for active rows.
+        Index(
+            "ix_inquiries_org_spam_active",
+            "organization_id", "spam_status",
+            postgresql_where=text("deleted_at IS NULL"),
         ),
         # Inbox stage filter — covers (org, stage) for active rows.
         Index(

@@ -42,6 +42,13 @@ class Listing(Base):
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
 
+    # URL-safe public identifier used by the public inquiry form
+    # (``GET /apply/<slug>``). Globally unique so a listing's apply URL stays
+    # stable when copy-pasted into Airbnb/VRBO/FF/Rotating Room descriptions.
+    # Auto-generated server-side on create (``listing_slug.generate_slug``);
+    # backfilled for pre-T0 rows by the ``b2c3d4e5f6a1`` migration.
+    slug: Mapped[str | None] = mapped_column(String(220), nullable=True, unique=True)
+
     monthly_rate: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     weekly_rate: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
     nightly_rate: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)

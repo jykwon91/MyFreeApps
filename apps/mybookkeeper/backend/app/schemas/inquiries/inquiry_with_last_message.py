@@ -32,6 +32,11 @@ class InquiryWithLastMessage(BaseModel):
     gut_rating: int | None = None
     received_at: _dt.datetime
 
+    # T0 — public-form spam triage data carried into the inbox card.
+    spam_status: str = "unscored"
+    spam_score: float | None = None
+    submitted_via: str = "manual_entry"
+
     # Last-message join (NULL if the inquiry has no messages yet — common for
     # manual entries that haven't been replied to).
     last_message_id: uuid.UUID | None = None

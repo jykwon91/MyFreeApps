@@ -30,6 +30,9 @@ _UPDATABLE_COLUMNS: frozenset[str] = frozenset({
     "amenities",
     "pets_on_premises",
     "large_dog_disclosure",
+    # ``slug`` is omitted from the operator-updatable allowlist — it's set
+    # server-side at create time and shouldn't be edited via PATCH because
+    # the URL is plastered across external listing channels.
 })
 
 
@@ -43,6 +46,23 @@ async def get_by_id(
         select(Listing).where(
             Listing.id == listing_id,
             Listing.organization_id == organization_id,
+            Listing.deleted_at.is_(None),
+        )
+    )
+    return result.scalar_one_or_none()
+
+
+async def get_by_slug(db: AsyncSession, slug: str) -> Listing | None:
+    """Look up a non-deleted listing by its public slug.
+
+    Used by the public inquiry form (``GET /apply/<slug>``) to resolve the
+    listing without an organization scope — the slug itself is the capability.
+    Returns None for soft-deleted listings so the form 404s once a host
+    archives a listing.
+    """
+    result = await db.execute(
+        select(Listing).where(
+            Listing.slug == slug,
             Listing.deleted_at.is_(None),
         )
     )
@@ -108,11 +128,14 @@ async def create_listing(
     amenities: list[str] | None = None,
     pets_on_premises: bool = False,
     large_dog_disclosure: str | None = None,
+    slug: str | None = None,
 ) -> Listing:
     """Construct and persist a Listing.
 
     Mirrors `property_repo.create_property` — accepts every column on Listing
-    except server-managed ones. Caller scopes by org.
+    except server-managed ones. Caller scopes by org. ``slug`` is generated
+    by ``listing_service.create_listing`` (which retries on UNIQUE collision)
+    before this function runs.
     """
     listing = Listing(
         organization_id=organization_id,
@@ -133,6 +156,7 @@ async def create_listing(
         amenities=amenities if amenities is not None else [],
         pets_on_premises=pets_on_premises,
         large_dog_disclosure=large_dog_disclosure,
+        slug=slug,
     )
     db.add(listing)
     await db.flush()

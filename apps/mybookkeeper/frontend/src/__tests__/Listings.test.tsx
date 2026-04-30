@@ -18,6 +18,7 @@ const mockListings: ListingSummary[] = [
     monthly_rate: "1799.00",
     property_id: "prop-1",
     created_at: "2026-01-01T00:00:00Z",
+    slug: "garage-suite-a-abc123",
   },
   {
     id: "listing-2",
@@ -27,6 +28,7 @@ const mockListings: ListingSummary[] = [
     monthly_rate: "2400.00",
     property_id: "prop-1",
     created_at: "2026-01-05T00:00:00Z",
+    slug: "upstairs-loft-def456",
   },
 ];
 

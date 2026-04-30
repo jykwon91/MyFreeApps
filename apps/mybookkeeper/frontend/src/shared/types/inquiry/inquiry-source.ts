@@ -7,4 +7,10 @@
  * inbox), but inquiries DO track ``"other"`` for one-off platforms (Zillow,
  * Apartments.com).
  */
-export type InquirySource = "FF" | "TNH" | "direct" | "other";
+export type InquirySource =
+  | "FF"
+  | "TNH"
+  | "direct"
+  | "other"
+  // T0 — public inquiry form
+  | "public_form";

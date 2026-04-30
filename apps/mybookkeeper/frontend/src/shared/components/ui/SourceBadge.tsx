@@ -1,4 +1,4 @@
-import { Mail, Plane, Home, User, MoreHorizontal } from "lucide-react";
+import { Mail, Plane, Home, Link2, User, MoreHorizontal } from "lucide-react";
 import type { Source } from "@/shared/types/source";
 import type { BadgeColor } from "./Badge";
 
@@ -56,6 +56,13 @@ const SOURCE_META: Record<Source, SourceMeta> = {
     shortLabel: "Other",
     color: "orange",
     Icon: MoreHorizontal,
+  },
+  // T0 — public inquiry form (https://.../apply/<slug>)
+  public_form: {
+    fullLabel: "Public form",
+    shortLabel: "Form",
+    color: "green",
+    Icon: Link2,
   },
 };
 

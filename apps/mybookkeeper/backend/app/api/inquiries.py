@@ -20,11 +20,17 @@ from app.schemas.inquiries.inquiry_reply_request import InquiryReplyRequest
 from app.schemas.inquiries.inquiry_response import InquiryResponse
 from app.schemas.inquiries.inquiry_update_request import InquiryUpdateRequest
 from app.schemas.inquiries.rendered_template_response import RenderedTemplateResponse
+from app.repositories.inquiries import inquiry_spam_assessment_repo
+from app.schemas.inquiries.inquiry_spam_assessment_response import (
+    InquirySpamAssessmentResponse,
+)
 from app.services.inquiries import (
     inquiry_reply_service,
     inquiry_service,
+    public_inquiry_service,
     reply_template_service,
 )
+from app.db.session import AsyncSessionLocal
 
 router = APIRouter(prefix="/inquiries", tags=["inquiries"])
 
@@ -32,13 +38,77 @@ router = APIRouter(prefix="/inquiries", tags=["inquiries"])
 @router.get("", response_model=InquiryListResponse)
 async def list_inbox(
     stage: str | None = Query(None, description="Optional stage filter"),
+    spam_status: str | None = Query(
+        None, description="Optional spam-triage filter (clean / flagged / spam / unscored / manually_cleared)",
+    ),
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
     ctx: RequestContext = Depends(current_org_member),
 ) -> InquiryListResponse:
     return await inquiry_service.list_inbox(
-        ctx.organization_id, ctx.user_id, stage=stage, limit=limit, offset=offset,
+        ctx.organization_id, ctx.user_id,
+        stage=stage, spam_status=spam_status,
+        limit=limit, offset=offset,
     )
+
+
+@router.get(
+    "/{inquiry_id}/spam-assessments",
+    response_model=list[InquirySpamAssessmentResponse],
+)
+async def list_spam_assessments(
+    inquiry_id: uuid.UUID,
+    ctx: RequestContext = Depends(current_org_member),
+) -> list[InquirySpamAssessmentResponse]:
+    """Return the audit trail of every spam check ever run on this inquiry.
+
+    Powers the expandable "Spam triage" panel on the inquiry detail page.
+    Org-scoping is enforced by reading the inquiry first — we never expose
+    assessments without confirming the caller has access to the parent.
+    """
+    async with AsyncSessionLocal() as db:
+        from app.repositories.inquiries import inquiry_repo as _inquiry_repo
+        inquiry = await _inquiry_repo.get_by_id(db, inquiry_id, ctx.organization_id)
+        if inquiry is None:
+            raise HTTPException(status_code=404, detail="Inquiry not found")
+        rows = await inquiry_spam_assessment_repo.list_by_inquiry(db, inquiry_id)
+    return [InquirySpamAssessmentResponse.model_validate(r) for r in rows]
+
+
+@router.post("/{inquiry_id}/mark-not-spam", status_code=204)
+async def mark_not_spam(
+    inquiry_id: uuid.UUID,
+    ctx: RequestContext = Depends(require_write_access),
+) -> Response:
+    """Operator override — flip an inquiry to ``manually_cleared``."""
+    try:
+        await public_inquiry_service.manual_override(
+            inquiry_id=inquiry_id,
+            organization_id=ctx.organization_id,
+            new_spam_status="manually_cleared",
+            actor_user_id=ctx.user_id,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail="Inquiry not found") from exc
+    return Response(status_code=204)
+
+
+@router.post("/{inquiry_id}/mark-spam", status_code=204)
+async def mark_spam(
+    inquiry_id: uuid.UUID,
+    ctx: RequestContext = Depends(require_write_access),
+) -> Response:
+    """Operator override — flip an inquiry to ``spam``."""
+    try:
+        await public_inquiry_service.manual_override(
+            inquiry_id=inquiry_id,
+            organization_id=ctx.organization_id,
+            new_spam_status="spam",
+            actor_user_id=ctx.user_id,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail="Inquiry not found") from exc
+    return Response(status_code=204)
 
 
 @router.post("", response_model=InquiryResponse, status_code=201)

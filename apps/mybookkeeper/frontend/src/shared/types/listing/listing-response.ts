@@ -16,6 +16,8 @@ export interface ListingResponse {
 
   title: string;
   description: string | null;
+  /** Public-form slug — used to mint the apply URL on the listing detail page. */
+  slug: string | null;
 
   monthly_rate: string;
   weekly_rate: string | null;

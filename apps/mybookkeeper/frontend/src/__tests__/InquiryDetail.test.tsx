@@ -26,6 +26,20 @@ const mockInquiry: InquiryResponse = {
   received_at: "2026-04-25T10:00:00Z",
   email_message_id: null,
   linked_applicant_id: null,
+  // T0 — public inquiry form fields default to safe pre-T0 values
+  submitted_via: "manual_entry",
+  spam_status: "unscored",
+  spam_score: null,
+  move_in_date: null,
+  lease_length_months: null,
+  occupant_count: null,
+  has_pets: null,
+  pets_description: null,
+  vehicle_count: null,
+  current_city: null,
+  employment_status: null,
+  why_this_room: null,
+  additional_notes: null,
   messages: [
     {
       id: "msg-1",
@@ -88,6 +102,13 @@ vi.mock("@/shared/store/inquiriesApi", () => ({
     { data: undefined, isFetching: false },
   ]),
   useSendInquiryReplyMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  // T0 — public inquiry form spam triage hooks
+  useGetInquirySpamAssessmentsQuery: vi.fn(() => ({
+    data: [],
+    isLoading: false,
+  })),
+  useMarkInquiryNotSpamMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useMarkInquirySpamMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
 }));
 
 vi.mock("@/shared/store/integrationsApi", () => ({
