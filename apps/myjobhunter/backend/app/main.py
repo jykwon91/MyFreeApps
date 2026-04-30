@@ -124,3 +124,4 @@ if os.environ.get("MYJOBHUNTER_ENABLE_TEST_HELPERS") == "1":
     from app.api import test_helpers
 
     app.include_router(test_helpers.router, tags=["_test"])
+
