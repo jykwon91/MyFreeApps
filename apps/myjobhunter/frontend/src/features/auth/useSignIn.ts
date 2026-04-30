@@ -3,7 +3,11 @@ import { showError } from "@platform/ui";
 
 interface UseSignInResult {
   handleSignIn: (email: string, password: string) => Promise<void>;
-  handleRegister: (email: string, password: string) => Promise<void>;
+  handleRegister: (
+    email: string,
+    password: string,
+    turnstileToken?: string,
+  ) => Promise<void>;
 }
 
 /**
@@ -26,10 +30,11 @@ export function useSignIn(): UseSignInResult {
 
   async function handleRegister(
     email: string,
-    password: string
+    password: string,
+    turnstileToken = "",
   ): Promise<void> {
     try {
-      await register(email, password);
+      await register(email, password, turnstileToken);
     } catch (err: unknown) {
       const message =
         err instanceof Error

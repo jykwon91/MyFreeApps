@@ -60,18 +60,37 @@ describe("useSignIn", () => {
   });
 
   describe("handleRegister", () => {
-    it("calls register with the provided credentials", async () => {
+    it("calls register with the provided credentials and an empty captcha token by default", async () => {
       mockRegister.mockResolvedValue(undefined);
       const { result } = renderHook(() => useSignIn());
       await result.current.handleRegister("new@example.com", "securepass123");
-      expect(mockRegister).toHaveBeenCalledWith("new@example.com", "securepass123");
+      expect(mockRegister).toHaveBeenCalledWith(
+        "new@example.com",
+        "securepass123",
+        "",
+      );
+    });
+
+    it("forwards the Turnstile token to the register helper when provided", async () => {
+      mockRegister.mockResolvedValue(undefined);
+      const { result } = renderHook(() => useSignIn());
+      await result.current.handleRegister(
+        "captcha@example.com",
+        "securepass123",
+        "turnstile-token-xyz",
+      );
+      expect(mockRegister).toHaveBeenCalledWith(
+        "captcha@example.com",
+        "securepass123",
+        "turnstile-token-xyz",
+      );
     });
 
     it("re-throws and shows a toast on registration failure", async () => {
       mockRegister.mockRejectedValue(new Error("Email already exists"));
       const { result } = renderHook(() => useSignIn());
       await expect(
-        result.current.handleRegister("existing@example.com", "pass123")
+        result.current.handleRegister("existing@example.com", "pass123"),
       ).rejects.toThrow("Email already exists");
       expect(mockShowError).toHaveBeenCalledWith("Email already exists");
     });

@@ -11,12 +11,39 @@ vi.mock("@/lib/auth", () => ({
   signOut: vi.fn(),
 }));
 
-// Mock @platform/ui auth store so we control isAuthenticated
+// Mock @platform/ui auth store so we control isAuthenticated.
+// TurnstileWidget renders null when VITE_TURNSTILE_SITE_KEY is empty
+// (the case in vitest env), so we replace it with a stub that exposes
+// a button to simulate the verify callback firing.
 vi.mock("@platform/ui", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@platform/ui")>();
   return {
     ...actual,
     useIsAuthenticated: vi.fn(() => false),
+    TurnstileWidget: ({
+      onVerify,
+      onExpire,
+    }: {
+      onVerify: (t: string) => void;
+      onExpire?: () => void;
+    }) => (
+      <div data-testid="turnstile-stub">
+        <button
+          type="button"
+          data-testid="turnstile-verify"
+          onClick={() => onVerify("turnstile-test-token")}
+        >
+          Verify
+        </button>
+        <button
+          type="button"
+          data-testid="turnstile-expire"
+          onClick={() => onExpire?.()}
+        >
+          Expire
+        </button>
+      </div>
+    ),
   };
 });
 
@@ -34,7 +61,7 @@ function renderLogin(initialEntries = ["/login"]) {
         <Route path="/login" element={<Login />} />
         <Route path="/dashboard" element={<div>Dashboard</div>} />
       </Routes>
-    </MemoryRouter>
+    </MemoryRouter>,
   );
 }
 
@@ -47,13 +74,9 @@ describe("Login page", () => {
   it("renders the login form", () => {
     renderLogin();
     expect(screen.getByRole("tab", { name: /sign in/i })).toBeInTheDocument();
-    // Use 'for' attribute match for the email label
     expect(screen.getByLabelText("Email")).toBeInTheDocument();
-    // Use 'for' attribute match for password label (not the show/hide button)
     expect(screen.getByLabelText("Password")).toBeInTheDocument();
-    expect(
-      screen.getByText(/no recruiter access/i)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/no recruiter access/i)).toBeInTheDocument();
   });
 
   it("shows app branding", () => {
@@ -91,7 +114,7 @@ describe("Login page", () => {
           <Route path="/login" element={<Login />} />
           <Route path="/applications" element={<div>Applications</div>} />
         </Routes>
-      </MemoryRouter>
+      </MemoryRouter>,
     );
 
     await user.type(screen.getByLabelText("Email"), "test@example.com");
@@ -115,7 +138,12 @@ describe("Login page", () => {
     await user.click(screen.getByRole("button", { name: /^create account$/i }));
 
     await waitFor(() => {
-      expect(mockRegister).toHaveBeenCalledWith("new@example.com", "supersecret123");
+      expect(mockRegister).toHaveBeenCalledWith(
+        "new@example.com",
+        "supersecret123",
+        // No turnstile token captured — empty string forwarded.
+        "",
+      );
     });
     await waitFor(() => {
       expect(screen.getByText("Dashboard")).toBeInTheDocument();
@@ -126,5 +154,69 @@ describe("Login page", () => {
     mockUseIsAuthenticated.mockReturnValue(true);
     renderLogin();
     expect(screen.getByText("Dashboard")).toBeInTheDocument();
+  });
+});
+
+describe("Login page — Turnstile", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUseIsAuthenticated.mockReturnValue(false);
+  });
+
+  it("renders the Turnstile slot inside the register tab", async () => {
+    const user = userEvent.setup();
+    renderLogin();
+    await user.click(screen.getByRole("tab", { name: /create account/i }));
+    expect(screen.getByTestId("register-captcha-slot")).toBeInTheDocument();
+    expect(screen.getByTestId("turnstile-stub")).toBeInTheDocument();
+  });
+
+  it("does NOT render the Turnstile slot inside the sign-in tab", () => {
+    renderLogin();
+    expect(screen.queryByTestId("register-captcha-slot")).not.toBeInTheDocument();
+  });
+
+  it("forwards the captured Turnstile token on register", async () => {
+    mockRegister.mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    renderLogin();
+    await user.click(screen.getByRole("tab", { name: /create account/i }));
+
+    // Simulate the Turnstile widget firing its verify callback
+    await user.click(screen.getByTestId("turnstile-verify"));
+
+    await user.type(screen.getByLabelText("Email"), "captcha@example.com");
+    await user.type(screen.getByLabelText("Password"), "supersecret123");
+    await user.click(screen.getByRole("button", { name: /^create account$/i }));
+
+    await waitFor(() => {
+      expect(mockRegister).toHaveBeenCalledWith(
+        "captcha@example.com",
+        "supersecret123",
+        "turnstile-test-token",
+      );
+    });
+  });
+
+  it("clears the captured token when the widget signals expiry", async () => {
+    mockRegister.mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    renderLogin();
+    await user.click(screen.getByRole("tab", { name: /create account/i }));
+
+    await user.click(screen.getByTestId("turnstile-verify"));
+    await user.click(screen.getByTestId("turnstile-expire"));
+
+    await user.type(screen.getByLabelText("Email"), "expire@example.com");
+    await user.type(screen.getByLabelText("Password"), "supersecret123");
+    await user.click(screen.getByRole("button", { name: /^create account$/i }));
+
+    await waitFor(() => {
+      expect(mockRegister).toHaveBeenCalledWith(
+        "expire@example.com",
+        "supersecret123",
+        "",
+      );
+    });
   });
 });

@@ -22,7 +22,23 @@ from app.main import app
 
 
 # ---------------------------------------------------------------------------
-# Reset module-level limiter state between tests
+# Default-disable HIBP + Turnstile for the whole test session.
+#
+# Tests that explicitly want HIBP enabled (test_hibp_validation.py) override
+# this with ``monkeypatch.setattr(settings, "hibp_enabled", True)`` or by
+# patching the module-level symbol directly. The same goes for Turnstile —
+# test_turnstile.py monkeypatches ``settings.turnstile_secret_key`` per test.
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(autouse=True)
+def _disable_external_auth_gates(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(settings, "hibp_enabled", False)
+    monkeypatch.setattr(settings, "turnstile_secret_key", "")
+
+
+# ---------------------------------------------------------------------------
+# Reset module-level limiter state between tests (PR C3)
 # ---------------------------------------------------------------------------
 
 @pytest.fixture(autouse=True)

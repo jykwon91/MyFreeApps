@@ -30,6 +30,7 @@ from platform_shared.services.account_lockout import (
     record_failed_login,
     record_successful_login_update,
 )
+from platform_shared.services.hibp_service import HIBPCheckError, is_password_pwned
 
 from app.core.config import settings
 from app.db.session import get_db
@@ -63,7 +64,7 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
     async def authenticate(
         self, credentials: OAuth2PasswordRequestForm,
     ) -> Optional[models.UP]:
-        """Authenticate with account-level lockout enforcement.
+        """Authenticate with account-level lockout enforcement (PR C3).
 
         Layers on top of fastapi-users' standard ``authenticate``:
 
@@ -83,7 +84,6 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
         try:
             user = await self.get_by_email(credentials.username)
         except exceptions.UserNotExists:
-            # Unknown email — mimic parent's timing mitigation and return None.
             self.password_helper.hash(credentials.password)
             email_domain = (
                 credentials.username.split("@", 1)[-1]
@@ -159,6 +159,25 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
             raise InvalidPasswordException(
                 reason=f"Password must be at least {MIN_PASSWORD_LENGTH} characters.",
             )
+
+        if settings.hibp_enabled:
+            try:
+                if await is_password_pwned(password):
+                    raise InvalidPasswordException(
+                        reason=(
+                            "This password has appeared in a known data breach. "
+                            "Please pick a different one. "
+                            "(We checked anonymously — your password never left our server in plaintext.)"
+                        ),
+                    )
+            except HIBPCheckError:
+                # Fail-open: a HIBP outage must not block registrations or
+                # password resets. The narrow window where a breached password
+                # slips through is preferable to "any HIBP downtime = no signups".
+                logger.warning(
+                    "HIBP check failed; accepting password without breach check",
+                    exc_info=True,
+                )
 
 
 async def get_user_manager(user_db=Depends(get_user_db)):

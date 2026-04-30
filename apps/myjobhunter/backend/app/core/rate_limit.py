@@ -1,19 +1,19 @@
-"""MyJobHunter wrapper over :mod:`platform_shared.core.rate_limit` (PR C3).
+"""MJH rate-limit + CAPTCHA dependencies.
 
-Builds the per-IP login limiter and the account-lockout dependency from
+Thin wrappers around ``platform_shared`` services that close over MJH-local
+``settings`` so per-request reads pick up monkeypatches in tests.
+
+C1 wires the Turnstile gate on registration / forgot-password.
+C3 wires the per-IP login throttle and the account-lockout dependency over
 the shared M6 factories. Each app owns its own thresholds + user-lookup
 callable; the shared module deliberately does not import any app's
 ``settings`` or repositories.
 
 Existing tests can keep monkeypatching the module-level symbols
-(``login_limiter``, ``get_user_by_email``) via
+(``login_limiter``, ``get_user_by_email``, ``verify_turnstile_token``) via
 ``patch("app.core.rate_limit.<symbol>", ...)`` — we deliberately re-bind
 the dependencies to the module-level names so those patches still take
 effect on the next request.
-
-Future PRs (Turnstile / register-rate / password-reset) will extend this
-file; the C1 worktree may already be doing that in parallel. The merge
-resolution is: keep both wrappers in this single module.
 """
 from datetime import datetime, timezone
 
@@ -28,6 +28,7 @@ from platform_shared.core.rate_limit import (
     email_domain_from_request,
 )
 from platform_shared.core.request_utils import get_client_ip
+from platform_shared.services.turnstile_service import verify_turnstile_token
 
 from app.core.config import settings
 from app.db.session import get_db
@@ -42,11 +43,13 @@ __all__ = [
     "login_limiter",
     "check_login_rate_limit",
     "check_account_not_locked",
+    "verify_turnstile_token",
+    "require_turnstile",
 ]
 
 
 # ---------------------------------------------------------------------------
-# MJH rate-limit policy — pre-instantiated limiters
+# Pre-instantiated limiters
 # ---------------------------------------------------------------------------
 
 login_limiter = RateLimiter(
@@ -56,14 +59,31 @@ login_limiter = RateLimiter(
 
 
 # ---------------------------------------------------------------------------
-# FastAPI dependencies
-#
-# Each dependency body deliberately references the *module-level* symbols
-# (``login_limiter``, ``get_user_by_email``) so that existing tests using
-# ``patch("app.core.rate_limit.<symbol>", …)`` still influence the
-# dependency's behaviour. Calling the shared ``make_*`` factories at
-# import time would close over the values present at startup and make
-# those patches no-ops.
+# Turnstile (C1)
+# ---------------------------------------------------------------------------
+
+
+async def require_turnstile(request: Request) -> None:
+    """FastAPI dependency that enforces Turnstile CAPTCHA verification.
+
+    No-op when ``settings.turnstile_secret_key`` is empty (dev/CI mode).
+    """
+    if not settings.turnstile_secret_key:
+        return
+    token = request.headers.get("X-Turnstile-Token", "")
+    if not token:
+        raise HTTPException(status_code=400, detail="Captcha token required")
+    valid = await verify_turnstile_token(
+        token,
+        get_client_ip(request),
+        secret_key=settings.turnstile_secret_key,
+    )
+    if not valid:
+        raise HTTPException(status_code=400, detail="Captcha verification failed")
+
+
+# ---------------------------------------------------------------------------
+# Login throttle + lockout (C3)
 # ---------------------------------------------------------------------------
 
 
@@ -74,9 +94,8 @@ async def check_login_rate_limit(
     """Per-IP rate limit for login endpoints with audit logging.
 
     On block, writes a ``LOGIN_BLOCKED_RATE_LIMIT`` auth event before
-    re-raising so SOC/admin tooling can see credential-stuffing patterns.
-    The 429 body is intentionally identical to the account-lockout
-    response so callers cannot infer which gate fired.
+    re-raising. The 429 body is intentionally identical to the
+    account-lockout response so callers cannot infer which gate fired.
     """
     ip = get_client_ip(request)
     try:
@@ -102,16 +121,9 @@ async def check_account_not_locked(
     credentials: OAuth2PasswordRequestForm = Depends(),
     db: AsyncSession = Depends(get_db),
 ) -> None:
-    """Reject login attempts for accounts currently under lockout.
-
-    Runs BEFORE the password check so that a locked account is rejected
-    without revealing password correctness, and without incrementing the
-    failure counter further (the counter is only incremented inside
-    UserManager.authenticate on a real password failure).
-    """
+    """Reject login attempts for accounts currently under lockout."""
     user = await get_user_by_email(db, credentials.username)
     if user is None:
-        # Unknown email — let the normal auth flow handle it (timing-safe).
         return
     if user.locked_until and user.locked_until > datetime.now(tz=timezone.utc):
         raise HTTPException(
