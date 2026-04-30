@@ -1,12 +1,13 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api import applications, companies, health, integrations, profile
 from app.core.auth import auth_backend, fastapi_users
 from app.core.config import settings
+from app.core.rate_limit import check_account_not_locked, check_login_rate_limit
 from app.schemas.user import UserCreate, UserRead, UserUpdate
-from app.api import applications, companies, health, integrations, profile
 
 
 @asynccontextmanager
@@ -28,11 +29,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Auth routes
+# Auth routes — JWT login is gated by per-IP throttle + account-lockout (PR C3).
 app.include_router(
     fastapi_users.get_auth_router(auth_backend),
     prefix="/auth/jwt",
     tags=["auth"],
+    dependencies=[Depends(check_login_rate_limit), Depends(check_account_not_locked)],
 )
 app.include_router(
     fastapi_users.get_register_router(UserRead, UserCreate),
