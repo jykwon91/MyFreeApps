@@ -1,19 +1,16 @@
 import { useState } from "react";
 import { Trash2 } from "lucide-react";
 
+import TwoFactorSetup from "@/features/security/TwoFactorSetup";
 import DataExportButton from "@/features/security/DataExportButton";
 import DeleteAccountModal from "@/features/security/DeleteAccountModal";
 
 /**
- * Security page — Data & Privacy controls.
+ * Settings → Security page.
  *
- * Phase 1 / C6 surface area:
- *  - Download my data — full JSON export of every user-owned row
- *  - Delete my account — three-factor irreversible deletion
- *
- * C5 will fold a Two-Factor Authentication section above ``Data & Privacy``
- * once the TOTP enrollment flow lands. Avoid touching the layout below the
- * heading when adding it — keep this file additive.
+ * Sections (top → bottom):
+ *  - Two-Factor Authentication (PR C5) — TOTP enrollment / disable
+ *  - Data & Privacy (PR C6) — export your data, delete your account
  */
 export default function Security() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -23,8 +20,12 @@ export default function Security() {
       <div>
         <h1 className="text-xl font-semibold">Security</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Manage your data and account.
+          Manage your account security, data, and privacy.
         </p>
+      </div>
+
+      <div className="bg-card border rounded-lg p-6">
+        <TwoFactorSetup />
       </div>
 
       <div className="bg-card border rounded-lg p-6 space-y-6">

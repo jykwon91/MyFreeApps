@@ -1,58 +1,141 @@
-"""MJH TOTP verification for security-critical re-auth flows.
+"""MJH TOTP orchestration — thin wrapper over :mod:`platform_shared.services.totp_service`.
 
-C5 will build the full enrollment / login flow; for now this module exposes
-just the verifier that the account-deletion endpoint needs. It accepts
-either a 6-digit RFC 6238 code OR an 8-char recovery code, mirroring MBK's
-``validate_totp_for_login`` semantics.
+The pure crypto / OTP helpers live in ``platform_shared`` (M5 of the
+shared-backend migration). This module owns the DB-coupled coordinators —
+loading the user row, calling the shared crypto, and persisting the result —
+the parts that depend on MJH's settings + session factory.
 
-The MJH user model stores:
-  * ``totp_secret_encrypted`` — Fernet-encrypted base32 secret, sealed with
-    the per-user key derived from ``settings.encryption_key`` (same scheme
-    as MBK; see ``platform_shared.services.totp_service.encrypt_for_user``)
-  * ``totp_recovery_codes`` — Fernet-encrypted comma-separated list of
-    8-char hex codes (same per-user key)
-
-Both columns are encrypted at the application layer (not via the M2
-``EncryptedString`` TypeDecorator) because the existing column types are
-``String(...)`` rather than the ``LargeBinary`` the TypeDecorator expects.
-This is consistent with MBK's pre-PII pattern and is fine for the current
-key version — when MJH gets PII columns, they should adopt the
-TypeDecorator and live alongside this code.
+Encryption is handled by the ``EncryptedString`` ``TypeDecorator`` on the
+``User.totp_secret`` and ``User.totp_recovery_codes`` columns. Service code
+interacts with plaintext only — encryption happens at SQLAlchemy bind time.
 """
 import uuid
 from typing import Optional
 
-from cryptography.fernet import InvalidToken
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from platform_shared.services.totp_service import (
-    decrypt_for_user,
+    enroll_totp as _shared_enroll_totp,
+    generate_recovery_codes,
+    generate_secret,
+    get_provisioning_uri as _shared_get_provisioning_uri,
     verify_code,
     verify_recovery_code,
 )
 
 from app.core.config import settings
+from app.db.session import AsyncSessionLocal, unit_of_work
 from app.models.user.user import User
+from app.repositories.user import user_repo
+
+__all__ = [
+    "generate_secret",
+    "get_provisioning_uri",
+    "verify_code",
+    "verify_recovery_code",
+    "verify_totp_code",
+    "generate_recovery_codes",
+    "setup_totp",
+    "confirm_totp",
+    "disable_totp",
+    "validate_totp_for_login",
+    "is_totp_required",
+]
 
 
-def _decrypt_secret(encrypted: str, user_id: uuid.UUID) -> Optional[str]:
-    """Decrypt a Fernet-sealed value for ``user_id``. Returns None on key mismatch."""
-    try:
-        return decrypt_for_user(encrypted, settings.encryption_key, user_id)
-    except InvalidToken:
-        return None
+def get_provisioning_uri(secret: str, email: str) -> str:
+    """Build the otpauth:// URI shown in authenticator apps.
+
+    Issuer + label are bound to MJH's configured branding (``TOTP_ISSUER`` /
+    ``TOTP_LABEL`` in ``app.core.config``). These strings are part of the
+    user's enrolled QR code — once shipped they MUST stay stable, otherwise
+    every existing authenticator entry becomes ambiguous.
+    """
+    return _shared_get_provisioning_uri(secret, email, issuer=settings.totp_issuer)
+
+
+# ---------------------------------------------------------------------------
+# DB-coupled coordinators
+# ---------------------------------------------------------------------------
+
+async def setup_totp(user_id: uuid.UUID) -> tuple[str, str, list[str]]:
+    """Generate a fresh TOTP enrollment and stash it on the user row."""
+    async with unit_of_work() as db:
+        user = await user_repo.get_by_id(db, user_id)
+        if user is None:
+            raise ValueError("User not found")
+        secret, uri, recovery = _shared_enroll_totp(
+            label=user.email,
+            issuer=settings.totp_issuer,
+        )
+        user.totp_secret = secret
+        user.totp_recovery_codes = ",".join(recovery)
+        return secret, uri, recovery
+
+
+async def confirm_totp(user_id: uuid.UUID, code: str) -> bool:
+    """Verify the first TOTP code from a freshly-enrolled user. Flip ``totp_enabled`` on success."""
+    async with unit_of_work() as db:
+        user = await user_repo.get_by_id(db, user_id)
+        if user is None or not user.totp_secret:
+            return False
+        if not verify_code(user.totp_secret, code):
+            return False
+        user.totp_enabled = True
+        return True
+
+
+async def disable_totp(user_id: uuid.UUID, code: str) -> bool:
+    """Disable 2FA after verifying a current TOTP ``code``. Clears all TOTP fields on success."""
+    async with unit_of_work() as db:
+        user = await user_repo.get_by_id(db, user_id)
+        if user is None or not user.totp_enabled or not user.totp_secret:
+            return False
+        if not verify_code(user.totp_secret, code):
+            return False
+        user.totp_enabled = False
+        user.totp_secret = None
+        user.totp_recovery_codes = None
+        return True
+
+
+async def validate_totp_for_login(email: str, code: str) -> tuple[bool, bool]:
+    """Validate a TOTP code OR a recovery code for the login flow.
+
+    Returns ``(valid, used_recovery_code)``. A successful recovery-code
+    consumption rewrites ``user.totp_recovery_codes`` with the matched code
+    removed (or ``None`` if it was the last one).
+    """
+    async with unit_of_work() as db:
+        user = await user_repo.get_by_email(db, email)
+        if user is None or not user.totp_enabled or not user.totp_secret:
+            return False, False
+
+        if verify_code(user.totp_secret, code):
+            return True, False
+
+        if user.totp_recovery_codes:
+            valid, remaining = verify_recovery_code(user.totp_recovery_codes, code)
+            if valid:
+                user.totp_recovery_codes = remaining
+                return True, True
+
+        return False, False
+
+
+async def is_totp_required(email: str) -> bool:
+    """Return True if the user with ``email`` has 2FA enabled."""
+    async with AsyncSessionLocal() as db:
+        return await user_repo.get_totp_enabled(db, email)
 
 
 async def verify_totp_code(db: AsyncSession, user_id: uuid.UUID, code: str) -> bool:
-    """Return True if ``code`` is a valid current TOTP or recovery code for the user.
+    """Return True if ``code`` is a valid TOTP or recovery code for the user.
 
-    Recovery codes are matched against the encrypted column; a successful
-    match here does NOT consume the code (the caller — account deletion —
-    is about to delete the user anyway, so consumption is moot). For
-    flows that need consume-on-use semantics (login, MBK pattern), this
-    helper is the wrong building block — write a separate one that
-    persists the decremented codes list.
+    Used by the account-deletion flow (PR C6) — it accepts either a 6-digit
+    RFC 6238 code or an 8-char recovery code. Does NOT consume the recovery
+    code on match; the caller is about to delete the user anyway.
     """
     if not code:
         return False
@@ -60,18 +143,15 @@ async def verify_totp_code(db: AsyncSession, user_id: uuid.UUID, code: str) -> b
     user = (
         await db.execute(select(User).where(User.id == user_id))
     ).scalar_one_or_none()
-    if user is None or not user.totp_enabled or not user.totp_secret_encrypted:
+    if user is None or not user.totp_enabled or not user.totp_secret:
         return False
 
-    secret = _decrypt_secret(user.totp_secret_encrypted, user.id)
-    if secret is not None and verify_code(secret, code):
+    if verify_code(user.totp_secret, code):
         return True
 
     if user.totp_recovery_codes:
-        recovery_str = _decrypt_secret(user.totp_recovery_codes, user.id)
-        if recovery_str is not None:
-            valid, _ = verify_recovery_code(recovery_str, code)
-            if valid:
-                return True
+        valid, _ = verify_recovery_code(user.totp_recovery_codes, code)
+        if valid:
+            return True
 
     return False

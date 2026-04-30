@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { Shield, ChevronRight } from "lucide-react";
 import { Badge, Button, Card } from "@platform/ui";
 
 export default function Settings() {
@@ -10,6 +11,25 @@ export default function Settings() {
           Manage your account and integrations.
         </p>
       </div>
+
+      {/* Security — link out to dedicated page */}
+      <Card title="Security">
+        <Link
+          to="/security"
+          className="flex items-center justify-between gap-4 -m-2 p-2 rounded hover:bg-muted/40 transition-colors min-h-[44px]"
+        >
+          <div className="flex items-center gap-3">
+            <Shield className="h-5 w-5 text-muted-foreground shrink-0" />
+            <div>
+              <p className="text-sm font-medium">Two-factor authentication</p>
+              <p className="text-xs text-muted-foreground">
+                Protect your account with an authenticator app.
+              </p>
+            </div>
+          </div>
+          <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+        </Link>
+      </Card>
 
       {/* Gmail integration — disconnected state */}
       <Card title="Gmail Integration">
@@ -36,24 +56,11 @@ export default function Settings() {
         </div>
       </Card>
 
-      {/* Security & Data — link to dedicated page */}
-      <Card title="Security &amp; Data">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-          <div className="flex-1 space-y-1">
-            <p className="text-sm text-muted-foreground">
-              Export your data or permanently delete your account.
-            </p>
-          </div>
-          <div className="shrink-0">
-            <Link
-              to="/security"
-              className="inline-flex items-center justify-center rounded-md border bg-background px-3 py-1.5 text-sm font-medium hover:bg-muted transition-colors min-h-[44px] sm:min-h-[36px]"
-              aria-label="Manage security and data"
-            >
-              Manage
-            </Link>
-          </div>
-        </div>
+      {/* Account section placeholder */}
+      <Card title="Account">
+        <p className="text-sm text-muted-foreground">
+          Account management options coming in a future phase.
+        </p>
       </Card>
     </div>
   );

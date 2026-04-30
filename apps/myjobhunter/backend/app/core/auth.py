@@ -1,3 +1,17 @@
+"""MyJobHunter authentication wiring (fastapi-users + custom UserManager).
+
+Layered concerns ``UserManager.authenticate`` enforces, in order:
+  * **Lockout (PR C3)** — block locked accounts before checking password.
+  * **TOTP gate (this PR — C5)** — block standard JWT login for users who
+    have 2FA enabled; they must use ``POST /auth/totp/login`` instead so
+    we can validate the 6-digit code before issuing a token.
+
+The lockout slice runs first so a TOTP-enabled user whose account is locked
+never advances to the TOTP gate. The TOTP gate is the last check after a
+successful password match — :meth:`authenticate_password` is the
+password-only escape hatch the unified login endpoint uses to bypass it
+(after which the endpoint validates the TOTP code itself).
+"""
 import logging
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -64,7 +78,7 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
     async def authenticate(
         self, credentials: OAuth2PasswordRequestForm,
     ) -> Optional[models.UP]:
-        """Authenticate with account-level lockout enforcement (PR C3).
+        """Authenticate with lockout + TOTP gate (PR C3 + C5).
 
         Layers on top of fastapi-users' standard ``authenticate``:
 
@@ -78,6 +92,10 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
         5. On failure → increment counter, apply exponential lock at
            threshold, write LOGIN_FAILURE.
         6. On success → clear counter and lock state, write LOGIN_SUCCESS.
+        7. **TOTP gate (C5)** — if the authenticated user has ``totp_enabled``,
+           return ``None`` so the standard ``/auth/jwt/login`` endpoint does
+           NOT issue a token. The user has to use ``/auth/totp/login`` (which
+           calls :meth:`authenticate_password` below) to provide their code.
         """
         db = self.user_db.session
 
@@ -146,12 +164,96 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
         if clear_update is not None:
             await self.user_db.update(result, clear_update)
 
+        # TOTP gate: block the standard login endpoint for 2FA-enabled users.
+        # They must use POST /auth/totp/login, which calls
+        # authenticate_password() below to skip this guard. We do NOT log a
+        # LOGIN_SUCCESS event here — the dedicated /auth/totp/login endpoint
+        # owns the audit trail for 2FA-enabled accounts (it logs both
+        # TOTP_VERIFY_SUCCESS and LOGIN_SUCCESS once the code clears).
+        if getattr(result, "totp_enabled", False):
+            return None
+
         await log_auth_event(
             db,
             event_type=AuthEventType.LOGIN_SUCCESS,
             user_id=result.id,
             succeeded=True,
         )
+        return result
+
+    async def authenticate_password(
+        self, credentials: OAuth2PasswordRequestForm,
+    ) -> Optional[models.UP]:
+        """Authenticate with lockout enforcement but WITHOUT the TOTP gate.
+
+        Used by the unified ``/auth/totp/login`` endpoint, which performs
+        its own TOTP validation after this returns. We deliberately re-run
+        the full lockout flow here (lookup → lock check → auto-reset →
+        password verify → counter update) so the 2FA login path enjoys the
+        same brute-force protection as the standard one.
+
+        Calling this from anywhere else bypasses 2FA — don't.
+        """
+        db = self.user_db.session
+
+        try:
+            user = await self.get_by_email(credentials.username)
+        except exceptions.UserNotExists:
+            self.password_helper.hash(credentials.password)
+            email_domain = (
+                credentials.username.split("@", 1)[-1]
+                if "@" in credentials.username
+                else ""
+            )
+            await log_auth_event(
+                db,
+                event_type=AuthEventType.LOGIN_FAILURE,
+                user_id=None,
+                succeeded=False,
+                metadata={"email_domain": email_domain, "reason": "unknown_email"},
+            )
+            return None
+
+        now = datetime.now(tz=timezone.utc)
+
+        if account_is_locked(user, now=now):
+            logger.info(
+                "TOTP login rejected for locked account %s (locked until %s)",
+                user.email,
+                user.locked_until,
+            )
+            await emit_locked_login_event(db=db, user_id=user.id)
+            return None
+
+        autoreset = autoreset_update_if_stale(
+            user,
+            now=now,
+            autoreset_hours=settings.lockout_autoreset_hours,
+        )
+        if autoreset is not None:
+            await self.user_db.update(user, autoreset)
+            user.failed_login_count = 0
+            user.last_failed_login_at = None
+            user.locked_until = None
+
+        result = await super().authenticate(credentials)
+
+        if result is None:
+            update = await record_failed_login(
+                user,
+                db=db,
+                user_id=user.id,
+                lockout_threshold=settings.lockout_threshold,
+                metadata={"reason": "bad_password"},
+                now=now,
+            )
+            await self.user_db.update(user, update)
+            return None
+
+        clear_update = record_successful_login_update(result)
+        if clear_update is not None:
+            await self.user_db.update(result, clear_update)
+
         return result
 
     async def validate_password(self, password: str, user: User | None = None) -> None:

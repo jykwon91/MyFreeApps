@@ -34,6 +34,15 @@ class Settings(BaseSettings):
     login_rate_limit_threshold: int = 10
     login_rate_limit_window_seconds: int = 300
 
+    # TOTP enrollment branding (PR C5) — these strings are baked into the
+    # ``otpauth://`` provisioning URI (and therefore into every QR code a
+    # user scans). Once a user enrols, their authenticator app keeps these
+    # values forever; changing them here would NOT migrate the user's
+    # existing entry, it would just cause duplicate / orphaned entries on
+    # next enrollment. Treat them as ship-once-forever constants.
+    totp_label: str = "MyJobHunter"
+    totp_issuer: str = "MyJobHunter"
+
     model_config = {"env_file": ".env", "extra": "ignore"}
 
 

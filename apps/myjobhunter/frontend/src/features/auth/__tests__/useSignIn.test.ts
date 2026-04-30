@@ -32,10 +32,39 @@ describe("useSignIn", () => {
 
   describe("handleSignIn", () => {
     it("calls signIn with the provided credentials", async () => {
-      mockSignIn.mockResolvedValue(undefined);
+      mockSignIn.mockResolvedValue({ status: "ok" });
       const { result } = renderHook(() => useSignIn());
       await result.current.handleSignIn("user@example.com", "mypassword123");
-      expect(mockSignIn).toHaveBeenCalledWith("user@example.com", "mypassword123");
+      expect(mockSignIn).toHaveBeenCalledWith(
+        "user@example.com",
+        "mypassword123",
+        undefined,
+      );
+    });
+
+    it("forwards the totp_required result from signIn", async () => {
+      mockSignIn.mockResolvedValue({ status: "totp_required" });
+      const { result } = renderHook(() => useSignIn());
+      const out = await result.current.handleSignIn(
+        "user@example.com",
+        "mypassword123",
+      );
+      expect(out).toEqual({ status: "totp_required" });
+    });
+
+    it("forwards the totp code on the second call", async () => {
+      mockSignIn.mockResolvedValue({ status: "ok" });
+      const { result } = renderHook(() => useSignIn());
+      await result.current.handleSignIn(
+        "user@example.com",
+        "mypassword123",
+        "123456",
+      );
+      expect(mockSignIn).toHaveBeenCalledWith(
+        "user@example.com",
+        "mypassword123",
+        "123456",
+      );
     });
 
     it("re-throws and shows a toast on sign-in failure", async () => {
