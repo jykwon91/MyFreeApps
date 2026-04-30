@@ -16,6 +16,16 @@ class Settings(BaseSettings):
     jwt_lifetime_seconds: int = 1800  # 30 minutes
     log_level: str = "INFO"
 
+    # HIBP compromised-password check (k-anonymity range API).
+    # Default true; set to false in local dev / CI to skip the network call.
+    hibp_enabled: bool = True
+
+    # Cloudflare Turnstile CAPTCHA — wired on /auth/register and /auth/forgot-password.
+    # Empty secret = no-op (dev / CI mode); the require_turnstile dependency
+    # short-circuits to allow the request through.
+    turnstile_secret_key: str = ""
+    turnstile_site_key: str = ""
+
     model_config = {"env_file": ".env", "extra": "ignore"}
 
 
