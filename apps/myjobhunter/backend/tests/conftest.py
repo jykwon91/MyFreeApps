@@ -32,6 +32,56 @@ from app.main import app
 
 
 # ---------------------------------------------------------------------------
+# Fast password hashing for tests.
+#
+# fastapi-users' default PasswordHelper uses pwdlib's argon2 with recommended
+# (production-grade) parameters — ~250ms per hash. Tests like
+# ``test_account_lockout`` simulate 5+ failed login attempts each, and
+# user_factory creates a fresh user per test. Across the whole suite this
+# adds up to many minutes of pure cryptographic work, which is what blew
+# past the 20-min CI timeout.
+#
+# Override the password_helper on BaseUserManager (where MJH's UserManager
+# inherits it) with a plaintext-comparison stub. SAFE because:
+#   - It only applies inside the test process (this conftest)
+#   - Production code is unchanged
+#   - Test users are short-lived and never have real passwords
+#
+# Tests that specifically exercise hashing semantics (none today, but if
+# added) should explicitly monkeypatch back to the real PasswordHelper.
+# ---------------------------------------------------------------------------
+
+import hashlib
+
+from fastapi_users.password import PasswordHelperProtocol
+from fastapi_users.manager import BaseUserManager
+
+
+class _FastPasswordHelper:
+    """Test-only password helper — SHA-256 with no salt, fast.
+
+    NEVER use in production. Only deployed in conftest for the test session.
+    """
+
+    def hash(self, password: str) -> str:
+        return "sha256:" + hashlib.sha256(password.encode()).hexdigest()
+
+    def verify_and_update(
+        self, plain_password: str, hashed_password: str,
+    ) -> tuple[bool, str | None]:
+        expected = "sha256:" + hashlib.sha256(plain_password.encode()).hexdigest()
+        return (expected == hashed_password, None)
+
+    def generate(self) -> str:
+        return uuid.uuid4().hex
+
+
+# Install at import time so every UserManager instantiated during the test
+# session uses the fast helper.
+BaseUserManager.password_helper = _FastPasswordHelper()  # type: ignore[assignment]
+
+
+# ---------------------------------------------------------------------------
 # Default-disable HIBP + Turnstile for the whole test session.
 #
 # Tests that explicitly want HIBP enabled (test_hibp_validation.py) override
