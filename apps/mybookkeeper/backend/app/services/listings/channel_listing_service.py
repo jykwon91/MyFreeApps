@@ -21,6 +21,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.core.config import settings
 from app.db.session import unit_of_work
+from app.models.listings.channel import Channel
 from app.models.listings.channel_listing import ChannelListing
 from app.repositories import (
     channel_listing_repo,
@@ -69,7 +70,7 @@ def _build_export_url(token: str) -> str:
     return f"{base}/api/calendar/{token}.ics"
 
 
-def _to_response(row: ChannelListing, channel=None) -> ChannelListingResponse:
+def _to_response(row: ChannelListing, channel: Channel | None = None) -> ChannelListingResponse:
     """Serialize an ORM row to its API representation.
 
     Embeds the full outbound iCal URL so callers can copy/paste it into

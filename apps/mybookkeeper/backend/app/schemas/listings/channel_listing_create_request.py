@@ -1,7 +1,7 @@
 """Request body for POST /listings/{id}/channels."""
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_serializer
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_serializer, model_validator
 
 _EXTERNAL_ID_MAX_LEN = 120
 _EXTERNAL_URL_MAX_LEN = 500
@@ -34,24 +34,32 @@ class ChannelListingCreateRequest(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    @field_serializer("external_url")
-    def _serialize_external_url(self, value: HttpUrl) -> str:
-        url_str = str(value)
-        if len(url_str) > _EXTERNAL_URL_MAX_LEN:
+    @model_validator(mode="after")
+    def _validate_url_constraints(self) -> "ChannelListingCreateRequest":
+        # Pydantic's HttpUrl already enforces a valid http/https URL — we
+        # just enforce our own column-length limits and scheme allowlist.
+        external_url_str = str(self.external_url)
+        if len(external_url_str) > _EXTERNAL_URL_MAX_LEN:
             raise ValueError(
                 f"external_url must be at most {_EXTERNAL_URL_MAX_LEN} characters",
             )
-        return url_str
+        if self.external_url.scheme not in ("http", "https"):
+            raise ValueError("external_url must use http or https scheme")
+
+        if self.ical_import_url is not None:
+            ical_url_str = str(self.ical_import_url)
+            if len(ical_url_str) > _ICAL_URL_MAX_LEN:
+                raise ValueError(
+                    f"ical_import_url must be at most {_ICAL_URL_MAX_LEN} characters",
+                )
+            if self.ical_import_url.scheme not in ("http", "https"):
+                raise ValueError("ical_import_url must use http or https scheme")
+        return self
+
+    @field_serializer("external_url")
+    def _serialize_external_url(self, value: HttpUrl) -> str:
+        return str(value)
 
     @field_serializer("ical_import_url")
     def _serialize_ical_url(self, value: HttpUrl | None) -> str | None:
-        if value is None:
-            return None
-        url_str = str(value)
-        if len(url_str) > _ICAL_URL_MAX_LEN:
-            raise ValueError(
-                f"ical_import_url must be at most {_ICAL_URL_MAX_LEN} characters",
-            )
-        if value.scheme not in ("http", "https"):
-            raise ValueError("ical_import_url must use http or https scheme")
-        return url_str
+        return str(value) if value is not None else None

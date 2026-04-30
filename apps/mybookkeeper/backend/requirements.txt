@@ -122,6 +122,8 @@ httpx==0.28.1
     # via
     #   anthropic
     #   mybookkeeper-backend
+icalendar==6.1.3
+    # via mybookkeeper-backend
 idna==3.13
     # via
     #   anyio

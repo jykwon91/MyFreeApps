@@ -5,6 +5,7 @@ Per layered-architecture rule (CLAUDE.md): all DB access for this domain
 goes through this module. Services orchestrate; routes are thin wrappers.
 """
 import uuid
+from datetime import datetime
 from typing import Any
 
 from sqlalchemy import delete, select
@@ -185,7 +186,7 @@ async def mark_imported(
     db: AsyncSession,
     channel_listing_id: uuid.UUID,
     *,
-    last_imported_at,  # noqa: ANN001 — datetime, intentionally not imported here
+    last_imported_at: datetime,
     last_import_error: str | None,
 ) -> None:
     """Update poll-status columns. Called by the iCal polling worker."""
