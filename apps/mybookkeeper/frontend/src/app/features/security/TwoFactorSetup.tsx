@@ -140,7 +140,7 @@ export default function TwoFactorSetup() {
             />
           </div>
           {error ? <p className="text-destructive text-sm">{error}</p> : null}
-          <div className="flex gap-2">
+          <div className="flex justify-center gap-2">
             <LoadingButton onClick={handleVerify} isLoading={isVerifying} loadingText="Verifying..." disabled={code.length !== 6}>
               Verify & Enable
             </LoadingButton>
@@ -187,7 +187,7 @@ export default function TwoFactorSetup() {
             autoFocus
           />
           {error ? <p className="text-destructive text-sm">{error}</p> : null}
-          <div className="flex gap-2">
+          <div className="flex justify-center gap-2">
             <LoadingButton onClick={handleDisable} isLoading={isDisabling} loadingText="Disabling..." disabled={code.length !== 6} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               Disable 2FA
             </LoadingButton>
