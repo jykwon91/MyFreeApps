@@ -119,7 +119,14 @@ jobs:
 
       - name: Install workspace dependencies
         # Root package.json is an npm workspace covering all apps' frontends.
-        run: npm ci
+        # Use `npm install` rather than `npm ci`: there is a known npm bug
+        # (https://github.com/npm/cli/issues/4828) where workspace + optional
+        # platform-specific deps (rollup, esbuild) interact badly with the
+        # strict lockfile validation in `npm ci`, producing
+        # `Cannot find module '@rollup/rollup-linux-x64-gnu'` failures even
+        # when the lockfile has the entry. `npm install` is more lenient
+        # and self-heals.
+        run: npm install
 
       - name: Build frontend
         run: npm run build --workspace=mybookkeeper-frontend
