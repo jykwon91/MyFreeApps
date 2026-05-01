@@ -70,7 +70,6 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://mybookkeeper:${DB_PASSWORD}@postgres/mybookkeeper
       RUN_UPLOAD_WORKER: "false"
-      FRONTEND_DIST_DIR: /srv/frontend
       # MinIO connection — sourced from root .env (same place the minio service reads from)
       MINIO_ENDPOINT: ${MINIO_ENDPOINT}
       MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT}
@@ -78,8 +77,6 @@ services:
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-${MINIO_ROOT_PASSWORD}}
       MINIO_BUCKET: ${MINIO_BUCKET}
       PRESIGNED_URL_TTL_SECONDS: ${PRESIGNED_URL_TTL_SECONDS}
-    volumes:
-      - frontend_dist:/srv/frontend
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -124,7 +121,13 @@ services:
         condition: service_completed_successfully
 
   caddy:
-    image: caddy:2-alpine
+    # Custom image: caddy:2-alpine + freshly-built frontend dist baked in
+    # at /srv/frontend + Caddyfile baked at /etc/caddy/Caddyfile. No shared
+    # volume, no entrypoint copy, no drift between deploys. See
+    # docker/caddy.Dockerfile for the full rationale.
+    build:
+      context: ../..
+      dockerfile: apps/mybookkeeper/docker/caddy.Dockerfile
     restart: always
     ports:
       # Bind only to localhost — host Caddy is the public front door and proxies here.
@@ -133,8 +136,6 @@ services:
     environment:
       DOMAIN: ${DOMAIN:-localhost}
     volumes:
-      - ./docker/Caddyfile.docker:/etc/caddy/Caddyfile
-      - frontend_dist:/srv/frontend:ro
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
@@ -143,7 +144,6 @@ services:
 
 volumes:
   pg_data:
-  frontend_dist:
   caddy_data:
   caddy_config:
   minio_data:
