@@ -1,13 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { createMemoryRouter, RouterProvider } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import Login from "@/pages/Login";
 
 // Mock auth lib so tests don't hit the network
 vi.mock("@/lib/auth", () => ({
   signIn: vi.fn(),
   register: vi.fn(),
+  requestVerifyToken: vi.fn(),
   signOut: vi.fn(),
 }));
 
@@ -17,26 +18,28 @@ vi.mock("@platform/ui", async (importOriginal) => {
   return {
     ...actual,
     useIsAuthenticated: vi.fn(() => false),
+    showError: vi.fn(),
+    showSuccess: vi.fn(),
   };
 });
 
-import { signIn, register } from "@/lib/auth";
+import { signIn, register, requestVerifyToken } from "@/lib/auth";
 import { useIsAuthenticated } from "@platform/ui";
 
 const mockSignIn = vi.mocked(signIn);
 const mockRegister = vi.mocked(register);
+const mockRequestVerifyToken = vi.mocked(requestVerifyToken);
 const mockUseIsAuthenticated = vi.mocked(useIsAuthenticated);
 
-function renderLogin(initialEntry: string | { pathname: string; state: unknown } = "/login") {
-  const router = createMemoryRouter(
-    [
-      { path: "/login", element: <Login /> },
-      { path: "/dashboard", element: <div>Dashboard</div> },
-      { path: "/applications", element: <div>Applications</div> },
-    ],
-    { initialEntries: [initialEntry] },
+function renderLogin(initialEntries = ["/login"]) {
+  return render(
+    <MemoryRouter initialEntries={initialEntries}>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/dashboard" element={<div>Dashboard</div>} />
+      </Routes>
+    </MemoryRouter>,
   );
-  return render(<RouterProvider router={router} />);
 }
 
 describe("Login page", () => {
@@ -69,11 +72,7 @@ describe("Login page", () => {
     await user.click(screen.getByRole("button", { name: /^sign in$/i }));
 
     await waitFor(() => {
-      expect(mockSignIn).toHaveBeenCalledWith(
-        "test@example.com",
-        "password123456",
-        undefined,
-      );
+      expect(mockSignIn).toHaveBeenCalledWith("test@example.com", "password123456");
     });
     await waitFor(() => {
       expect(screen.getByText("Dashboard")).toBeInTheDocument();
@@ -83,7 +82,17 @@ describe("Login page", () => {
   it("navigates to location.state.from after successful sign-in", async () => {
     mockSignIn.mockResolvedValue({ status: "ok" });
     const user = userEvent.setup();
-    renderLogin({ pathname: "/login", state: { from: "/applications" } });
+
+    render(
+      <MemoryRouter
+        initialEntries={[{ pathname: "/login", state: { from: "/applications" } }]}
+      >
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/applications" element={<div>Applications</div>} />
+        </Routes>
+      </MemoryRouter>,
+    );
 
     await user.type(screen.getByLabelText("Email"), "test@example.com");
     await user.type(screen.getByLabelText("Password"), "password123456");
@@ -94,7 +103,7 @@ describe("Login page", () => {
     });
   });
 
-  it("navigates to /dashboard on successful registration", async () => {
+  it("shows a 'check your inbox' banner after successful registration (no auto-login)", async () => {
     mockRegister.mockResolvedValue(undefined);
     const user = userEvent.setup();
     renderLogin();
@@ -107,9 +116,14 @@ describe("Login page", () => {
     await waitFor(() => {
       expect(mockRegister).toHaveBeenCalledWith("new@example.com", "supersecret123");
     });
-    await waitFor(() => {
-      expect(screen.getByText("Dashboard")).toBeInTheDocument();
-    });
+    expect(
+      await screen.findByTestId("registration-success-banner"),
+    ).toHaveTextContent(/we sent a verification link to/i);
+    expect(
+      screen.getByTestId("registration-success-banner"),
+    ).toHaveTextContent("new@example.com");
+    // Must not auto-navigate to dashboard
+    expect(screen.queryByText("Dashboard")).not.toBeInTheDocument();
   });
 
   it("redirects to /dashboard if already authenticated", () => {
@@ -118,64 +132,74 @@ describe("Login page", () => {
     expect(screen.getByText("Dashboard")).toBeInTheDocument();
   });
 
-  it("shows the TOTP challenge when sign-in returns totp_required", async () => {
-    mockSignIn.mockResolvedValue({ status: "totp_required" });
-    const user = userEvent.setup();
-    renderLogin();
+  describe("unverified login", () => {
+    function unverifiedAxiosError() {
+      const err = new Error("Request failed") as Error & {
+        response: { data: { detail: string } };
+      };
+      err.response = { data: { detail: "LOGIN_USER_NOT_VERIFIED" } };
+      return err;
+    }
 
-    await user.type(screen.getByLabelText("Email"), "totp@example.com");
-    await user.type(screen.getByLabelText("Password"), "password123456");
-    await user.click(screen.getByRole("button", { name: /^sign in$/i }));
+    it("shows the resend banner when login fails with LOGIN_USER_NOT_VERIFIED", async () => {
+      mockSignIn.mockRejectedValueOnce(unverifiedAxiosError());
+      const user = userEvent.setup();
+      renderLogin();
 
-    await waitFor(() => {
-      expect(screen.getByLabelText(/authentication code/i)).toBeInTheDocument();
+      await user.type(screen.getByLabelText("Email"), "noverify@example.com");
+      await user.type(screen.getByLabelText("Password"), "password123456");
+      await user.click(screen.getByRole("button", { name: /^sign in$/i }));
+
+      const banner = await screen.findByTestId("resend-verification-banner");
+      expect(banner).toHaveTextContent(/please verify your email/i);
+      expect(
+        screen.getByRole("button", { name: /resend verification email/i }),
+      ).toBeVisible();
     });
-    expect(
-      screen.getByText(/Enter the 6-digit code from your authenticator app/i),
-    ).toBeInTheDocument();
-  });
 
-  it("re-submits with the typed totp_code on the second step", async () => {
-    mockSignIn
-      .mockResolvedValueOnce({ status: "totp_required" })
-      .mockResolvedValueOnce({ status: "ok" });
-    const user = userEvent.setup();
-    renderLogin();
+    it("does NOT show the resend banner on a regular bad-credentials failure", async () => {
+      const err = new Error("Request failed") as Error & {
+        response: { data: { detail: string } };
+      };
+      err.response = { data: { detail: "LOGIN_BAD_CREDENTIALS" } };
+      mockSignIn.mockRejectedValueOnce(err);
 
-    await user.type(screen.getByLabelText("Email"), "totp@example.com");
-    await user.type(screen.getByLabelText("Password"), "password123456");
-    await user.click(screen.getByRole("button", { name: /^sign in$/i }));
+      const user = userEvent.setup();
+      renderLogin();
 
-    await screen.findByLabelText(/authentication code/i);
-    await user.type(screen.getByLabelText(/authentication code/i), "123456");
-    await user.click(screen.getByRole("button", { name: /^verify$/i }));
+      await user.type(screen.getByLabelText("Email"), "test@example.com");
+      await user.type(screen.getByLabelText("Password"), "wrongpass12345");
+      await user.click(screen.getByRole("button", { name: /^sign in$/i }));
 
-    await waitFor(() => {
-      expect(mockSignIn).toHaveBeenLastCalledWith(
-        "totp@example.com",
-        "password123456",
-        "123456",
-      );
+      await waitFor(() => {
+        expect(mockSignIn).toHaveBeenCalled();
+      });
+      expect(
+        screen.queryByTestId("resend-verification-banner"),
+      ).not.toBeInTheDocument();
     });
-    await waitFor(() => {
-      expect(screen.getByText("Dashboard")).toBeInTheDocument();
-    });
-  });
 
-  it("Back to login from totp challenge restores the email/password form", async () => {
-    mockSignIn.mockResolvedValue({ status: "totp_required" });
-    const user = userEvent.setup();
-    renderLogin();
+    it("clicking 'Resend verification email' POSTs the email", async () => {
+      mockSignIn.mockRejectedValueOnce(unverifiedAxiosError());
+      mockRequestVerifyToken.mockResolvedValueOnce(undefined);
+      const user = userEvent.setup();
+      renderLogin();
 
-    await user.type(screen.getByLabelText("Email"), "totp@example.com");
-    await user.type(screen.getByLabelText("Password"), "password123456");
-    await user.click(screen.getByRole("button", { name: /^sign in$/i }));
+      await user.type(screen.getByLabelText("Email"), "noverify@example.com");
+      await user.type(screen.getByLabelText("Password"), "password123456");
+      await user.click(screen.getByRole("button", { name: /^sign in$/i }));
 
-    await screen.findByLabelText(/authentication code/i);
-    await user.click(screen.getByRole("button", { name: /back to login/i }));
+      const resendBtn = await screen.findByRole("button", {
+        name: /resend verification email/i,
+      });
+      await user.click(resendBtn);
 
-    await waitFor(() => {
-      expect(screen.getByRole("tab", { name: /sign in/i })).toBeInTheDocument();
+      await waitFor(() => {
+        expect(mockRequestVerifyToken).toHaveBeenCalledWith("noverify@example.com");
+      });
+      expect(
+        await screen.findByTestId("resend-verification-sent"),
+      ).toHaveTextContent(/verification email sent/i);
     });
   });
 });

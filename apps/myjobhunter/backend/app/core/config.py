@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     google_client_secret: str = ""
 
     cors_origins: list[str] = ["http://localhost:5175"]
-    jwt_lifetime_seconds: int = 1800  # 30 minutes
+    jwt_lifetime_seconds: int = 1800
     log_level: str = "INFO"
 
     # HIBP compromised-password check (k-anonymity range API).
@@ -34,12 +34,19 @@ class Settings(BaseSettings):
     login_rate_limit_threshold: int = 10
     login_rate_limit_window_seconds: int = 300
 
-    # TOTP enrollment branding (PR C5) — these strings are baked into the
-    # ``otpauth://`` provisioning URI (and therefore into every QR code a
-    # user scans). Once a user enrols, their authenticator app keeps these
-    # values forever; changing them here would NOT migrate the user's
-    # existing entry, it would just cause duplicate / orphaned entries on
-    # next enrollment. Treat them as ship-once-forever constants.
+    # Frontend URL used to build links in transactional emails (PR C4)
+    frontend_url: str = "http://localhost:5174"
+
+    # Email delivery — "console" prints to stdout (dev/CI), "smtp" sends via SMTP
+    email_backend: str = "console"
+    email_from_name: str = "MyJobHunter"
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+
+    # TOTP enrollment branding (PR C5) — baked into the otpauth:// URI.
+    # Ship-once-forever constants; changing them orphans existing user enrollments.
     totp_label: str = "MyJobHunter"
     totp_issuer: str = "MyJobHunter"
 

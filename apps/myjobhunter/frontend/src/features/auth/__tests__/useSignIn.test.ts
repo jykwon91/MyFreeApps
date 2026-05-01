@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook } from "@testing-library/react";
-import { useSignIn } from "@/features/auth/useSignIn";
+import { isUnverifiedError, useSignIn } from "@/features/auth/useSignIn";
 
 // Mock the auth lib and toast
 vi.mock("@/lib/auth", () => ({
@@ -85,6 +85,37 @@ describe("useSignIn", () => {
       expect(mockShowError).toHaveBeenCalledWith(
         "Couldn't sign you in — please try again."
       );
+    });
+
+    it("does NOT show a toast when the error is LOGIN_USER_NOT_VERIFIED (Login page handles it)", async () => {
+      const err = { data: { detail: "LOGIN_USER_NOT_VERIFIED" } };
+      mockSignIn.mockRejectedValue(err);
+      const { result } = renderHook(() => useSignIn());
+      await expect(
+        result.current.handleSignIn("u@e.com", "p")
+      ).rejects.toBe(err);
+      expect(mockShowError).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("isUnverifiedError", () => {
+    it("returns true for the fastapi-users response shape", () => {
+      expect(isUnverifiedError({ data: { detail: "LOGIN_USER_NOT_VERIFIED" } })).toBe(true);
+    });
+
+    it("returns true for axios-style errors with .response.data.detail", () => {
+      expect(
+        isUnverifiedError({
+          response: { data: { detail: "LOGIN_USER_NOT_VERIFIED" } },
+        }),
+      ).toBe(true);
+    });
+
+    it("returns false for other error shapes", () => {
+      expect(isUnverifiedError(null)).toBe(false);
+      expect(isUnverifiedError("string error")).toBe(false);
+      expect(isUnverifiedError({ data: { detail: "LOGIN_BAD_CREDENTIALS" } })).toBe(false);
+      expect(isUnverifiedError(new Error("plain error"))).toBe(false);
     });
   });
 

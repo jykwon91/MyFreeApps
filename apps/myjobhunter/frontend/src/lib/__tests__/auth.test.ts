@@ -19,7 +19,7 @@ vi.mock("@/lib/api", () => ({
 
 import api from "@/lib/api";
 import { notifyAuthChange } from "@platform/ui";
-import { signIn, register, signOut } from "@/lib/auth";
+import { signIn, register, requestVerifyToken, signOut } from "@/lib/auth";
 
 const mockApiPost = vi.mocked(api.post);
 const mockNotifyAuthChange = vi.mocked(notifyAuthChange);
@@ -98,52 +98,31 @@ describe("auth helpers", () => {
   });
 
   describe("register", () => {
-    it("calls register endpoint then auto sign-in", async () => {
-      // First call: register, second call: signIn login
-      mockApiPost
-        .mockResolvedValueOnce({ data: { id: "uuid", email: "u@e.com" } })
-        .mockResolvedValueOnce({
-          data: { access_token: "new.token", token_type: "bearer" },
-        });
+    it("calls register endpoint and does NOT auto sign-in (verification required)", async () => {
+      mockApiPost.mockResolvedValueOnce({
+        data: { id: "uuid", email: "u@e.com" },
+      });
 
       await register("u@e.com", "securepass123");
 
-      expect(mockApiPost).toHaveBeenCalledWith(
-        "/auth/register",
-        { email: "u@e.com", password: "securepass123" },
-        // No turnstile token → empty headers object.
-        { headers: {} },
-      );
-      expect(localStorage.getItem("token")).toBe("new.token");
+      expect(mockApiPost).toHaveBeenCalledTimes(1);
+      expect(mockApiPost).toHaveBeenCalledWith("/auth/register", {
+        email: "u@e.com",
+        password: "securepass123",
+      });
+      // Token must NOT be set — user has to verify their email first
+      expect(localStorage.getItem("token")).toBeNull();
+      expect(mockNotifyAuthChange).not.toHaveBeenCalled();
     });
+  });
 
-    it("forwards a Turnstile token as the X-Turnstile-Token header", async () => {
-      mockApiPost
-        .mockResolvedValueOnce({ data: { id: "uuid", email: "u@e.com" } })
-        .mockResolvedValueOnce({
-          data: { access_token: "new.token", token_type: "bearer" },
-        });
-
-      await register("u@e.com", "securepass123", "captcha-token-123");
-
-      expect(mockApiPost).toHaveBeenCalledWith(
-        "/auth/register",
-        { email: "u@e.com", password: "securepass123" },
-        { headers: { "X-Turnstile-Token": "captcha-token-123" } },
-      );
-    });
-
-    it("omits the captcha header when the token is an empty string", async () => {
-      mockApiPost
-        .mockResolvedValueOnce({ data: { id: "uuid", email: "u@e.com" } })
-        .mockResolvedValueOnce({
-          data: { access_token: "new.token", token_type: "bearer" },
-        });
-
-      await register("u@e.com", "securepass123", "");
-
-      const [, , config] = mockApiPost.mock.calls[0];
-      expect(config).toEqual({ headers: {} });
+  describe("requestVerifyToken", () => {
+    it("posts the email to /auth/request-verify-token", async () => {
+      mockApiPost.mockResolvedValueOnce({ data: null });
+      await requestVerifyToken("u@e.com");
+      expect(mockApiPost).toHaveBeenCalledWith("/auth/request-verify-token", {
+        email: "u@e.com",
+      });
     });
   });
 
