@@ -78,13 +78,18 @@ jobs:
             echo "--- Verify deployed frontend bundle is fresh ---"
             # Catch the class of bug from 2026-05-01 where the deployed
             # bundle was months stale despite many "successful" deploys.
-            # Fetch the live index.html, extract the asset hash it points
+            # Fetch the live index.html, extract the asset path it points
             # at, then verify that exact file exists in the docker volume.
             # If they don't match, the volume didn't get repopulated by
             # the api container's entrypoint (volume staleness bug).
-            DEPLOYED_JS=$(curl -sS http://127.0.0.1:8094/ | grep -oE 'index-[A-Za-z0-9_-]+\.js' | head -1)
+            #
+            # The path may be flat (`index-AbCd.js`, vite-plugin-pwa layout)
+            # or under `assets/` (`assets/index-AbCd.js`, default Vite
+            # layout). Match either via the script tag's `src=` attribute
+            # so we always check the path the SPA actually loads.
+            DEPLOYED_JS=$(curl -sS http://127.0.0.1:8094/ | grep -oE 'src="/[^"]*index-[A-Za-z0-9_-]+\.js"' | head -1 | sed -E 's|src="/||; s|"$||')
             if [ -z "$DEPLOYED_JS" ]; then
-              echo "Could not extract deployed JS hash from index.html — frontend serving may be broken"
+              echo "Could not extract deployed JS path from index.html — frontend serving may be broken"
               exit 1
             fi
             if ! docker compose -f apps/mybookkeeper/docker-compose.yml exec -T caddy test -f "/srv/frontend/$DEPLOYED_JS"; then
