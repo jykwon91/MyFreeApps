@@ -37,6 +37,14 @@ jobs:
             docker compose -f apps/mybookkeeper/docker-compose.yml build
             docker compose -f apps/mybookkeeper/docker-compose.yml up -d --remove-orphans
 
+            echo "--- One-time cleanup: remove obsolete frontend_dist volume ---"
+            # The frontend_dist volume was used by the pre-2026-05-01 layout
+            # where api copied dist into a shared volume that caddy mounted.
+            # The new layout bakes dist directly into the caddy image, so the
+            # volume is orphaned. `docker volume rm` is a no-op (exit 1) if
+            # the volume is in use or doesn't exist; either way safe to run.
+            docker volume rm mybookkeeper_frontend_dist 2>/dev/null || true
+
             echo "--- Run database migrations ---"
             docker compose -f apps/mybookkeeper/docker-compose.yml exec -T api alembic upgrade head
 
@@ -76,26 +84,21 @@ jobs:
             fi
 
             echo "--- Verify deployed frontend bundle is fresh ---"
-            # Catch the class of bug from 2026-05-01 where the deployed
-            # bundle was months stale despite many "successful" deploys.
-            # Fetch the live index.html, extract the asset path it points
-            # at, then verify that exact file exists in the docker volume.
-            # If they don't match, the volume didn't get repopulated by
-            # the api container's entrypoint (volume staleness bug).
-            #
-            # The path may be flat (`index-AbCd.js`, vite-plugin-pwa layout)
-            # or under `assets/` (`assets/index-AbCd.js`, default Vite
-            # layout). Match either via the script tag's `src=` attribute
-            # so we always check the path the SPA actually loads.
+            # Sanity check: fetch the live index.html, extract the asset
+            # path it points at, verify that exact file is present where
+            # Caddy is serving from. After the 2026-05-01 architectural
+            # change that bakes the dist directly into the caddy image
+            # (eliminating the frontend_dist volume), staleness should
+            # be impossible — but keep the check as a tripwire.
             DEPLOYED_JS=$(curl -sS http://127.0.0.1:8094/ | grep -oE 'src="/[^"]*index-[A-Za-z0-9_-]+\.js"' | head -1 | sed -E 's|src="/||; s|"$||')
             if [ -z "$DEPLOYED_JS" ]; then
               echo "Could not extract deployed JS path from index.html — frontend serving may be broken"
               exit 1
             fi
             if ! docker compose -f apps/mybookkeeper/docker-compose.yml exec -T caddy test -f "/srv/frontend/$DEPLOYED_JS"; then
-              echo "Deployed bundle ($DEPLOYED_JS) is missing from /srv/frontend — volume is stale"
+              echo "Deployed bundle ($DEPLOYED_JS) is missing from caddy container — image build may be broken"
               exit 1
             fi
-            echo "Deployed bundle: $DEPLOYED_JS (verified present in volume)"
+            echo "Deployed bundle: $DEPLOYED_JS (verified present in caddy image)"
 
             echo "--- Done ---"

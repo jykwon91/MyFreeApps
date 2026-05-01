@@ -1,22 +1,18 @@
 # NOTE: Build context is the monorepo root (see docker-compose.yml).
 # All COPY paths are relative to MyFreeApps/, not apps/mybookkeeper/.
+#
+# Frontend dist is no longer built or copied into the api image. The
+# Caddy image (docker/caddy.Dockerfile) builds and serves the frontend
+# directly. See that file for the rationale.
 
-# Stage 1: Build frontend
-FROM node:20-alpine AS frontend-build
-WORKDIR /build
-COPY apps/mybookkeeper/frontend/package.json apps/mybookkeeper/frontend/package-lock.json ./
-RUN npm ci
-COPY apps/mybookkeeper/frontend/ ./
-RUN npm run build
-
-# Stage 2: Install Python dependencies (app + shared-backend package)
+# Stage 1: Install Python dependencies (app + shared-backend package)
 FROM python:3.12-slim AS backend-deps
 WORKDIR /deps
 COPY packages/shared-backend/ /deps/shared-backend/
 COPY apps/mybookkeeper/backend/requirements.txt ./
 RUN pip install --no-cache-dir --prefix=/install /deps/shared-backend/ -r requirements.txt
 
-# Stage 3: Runtime
+# Stage 2: Runtime
 FROM python:3.12-slim AS runtime
 
 ARG GIT_COMMIT=unknown
@@ -30,12 +26,8 @@ RUN apt-get update \
 WORKDIR /app
 
 COPY --from=backend-deps /install /usr/local
-COPY --from=frontend-build /build/dist /app/frontend-dist
 COPY apps/mybookkeeper/backend/ /app/
-COPY apps/mybookkeeper/docker/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
 
 EXPOSE 8000
 
-ENTRYPOINT ["/entrypoint.sh"]
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]

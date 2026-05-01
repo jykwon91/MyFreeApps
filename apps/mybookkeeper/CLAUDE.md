@@ -217,7 +217,13 @@ All AI-facing UI (extraction feedback, status messages, error states) should fee
 
 **Frontend proxy:**
 - Vite dev server proxies `/api` → `localhost:8000` (see `vite.config.ts`)
-- Production uses Caddy reverse proxy (`deploy/Caddyfile`)
+- Production routing is two-tier:
+  - Host Caddy (`deploy/Caddyfile`, lives at `/etc/caddy/Caddyfile` on VPS) is intentionally a thin TLS terminator + reverse-proxy to docker Caddy on `127.0.0.1:8094`. Only HSTS + nosniff + Referrer-Policy at this layer.
+  - Docker Caddy (`docker/Caddyfile.docker`, baked into the caddy image) is the single source of truth for routing, security headers, CSP, cache-control, SPA fallback. Owns the `/api/*` → backend proxy AND serves the SPA from `/srv/frontend` baked in at build time.
+- The frontend dist is built and baked into the caddy docker image (`docker/caddy.Dockerfile`). NO shared volume between api and caddy containers — image and dist are produced atomically. The pre-2026-05-01 `frontend_dist` named volume is gone (caused months-stale prod bundles because volume content didn't get refreshed when api container wasn't recreated).
+- Cache strategy: `Cache-Control: no-cache` for HTML / sw.js / manifest; `Cache-Control: public, max-age=31536000, immutable` for content-hashed assets (e.g. `assets/index-AbCd1234.js`). Set in docker Caddy.
+- vite-plugin-pwa was removed (2026-05-01). Service workers caching the bundle were the proximate cause of users being stuck on stale code. The kill-switch `public/sw.js` exists temporarily to clean any registered SW in existing browsers; it can be deleted once enough time has passed for all users to have visited.
+- Deploy workflow auto-syncs `deploy/Caddyfile` → `/etc/caddy/Caddyfile` on the VPS and runs a bundle freshness tripwire (extracts script src from live index.html, asserts the file exists in caddy container).
 
 **MinIO storage (self-hosted, see `deploy/MINIO_SETUP.md`):**
 - Default bucket: `mybookkeeper-files`. Object keys are partitioned by domain prefix: `listings/`, future `applicants/`, `expenses/`, etc. (`StorageClient.generate_key()` in `core/storage.py`).
