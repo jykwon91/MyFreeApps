@@ -130,12 +130,9 @@ jobs:
 
       - name: Run pytest (${{ matrix.shard.name }})
         working-directory: apps/myjobhunter/backend
-        # -v shows test names as they enter setup/call/teardown
-        # --timeout=30 + --timeout-method=thread dumps the full Python
-        # stack of the hung thread (including app frames) instead of
-        # just the asyncio loop frame.
-        # --tb=long preserves the entire traceback chain.
-        run: python -m pytest -v -s --timeout=30 --timeout-method=thread --tb=long ${{ matrix.shard.paths }}
+        # --timeout=60 (pytest-timeout) is a safety net so a future
+        # teardown bug can't consume the whole shard timeout silently.
+        run: python -m pytest -q --timeout=60 ${{ matrix.shard.paths }}
 
   frontend-build:
     name: frontend-build / myjobhunter

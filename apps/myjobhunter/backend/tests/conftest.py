@@ -228,6 +228,15 @@ async def user_factory(
                 text("UPDATE users SET is_verified = TRUE WHERE email = :email"),
                 {"email": email},
             )
+            # Commit so the row-exclusive lock released. Service layers
+            # like ``totp_service.unit_of_work`` open their own session
+            # for /auth/totp/setup etc.; without this commit those
+            # requests block forever trying to UPDATE the same user
+            # row that this session has locked. fastapi-users itself
+            # already commits via /auth/register a few lines above, so
+            # the test's "rolled back by design" pattern is a polite
+            # fiction — embrace it for the verified flag too.
+            await db.commit()
         return {
             **resp.json(),
             "password": password,
@@ -237,26 +246,12 @@ async def user_factory(
 
     yield _create
 
-    # Release the test session's outstanding row locks before running
-    # the cleanup engine.
-    #
-    # fastapi-users' SQLAlchemyUserDatabase.create() calls
-    # session.commit() inside /auth/register, which commits the test's
-    # rolled-back-by-design transaction and persists the user row.
-    # The subsequent ``UPDATE users SET is_verified=TRUE`` runs in a
-    # fresh auto-begun transaction on the same session that is still
-    # alive at fixture-teardown time (LIFO order: user_factory tears
-    # down before db). That open transaction holds a row-exclusive
-    # lock on the user row; the cleanup engine's
-    # ``DELETE FROM users WHERE email = :email`` then blocks
-    # indefinitely on it -- Postgres can't surface this as a deadlock
-    # because the test session is idle, not waiting on anything.
-    #
-    # Rolling back here releases the lock so the cleanup deletes can
-    # proceed. SQLAlchemy's rollback is idempotent, so the db fixture's
-    # own rollback that runs after this is harmless.
-    await db.rollback()
-
+    # Hard-delete so rows don't persist across test sessions.
+    # fastapi-users' SQLAlchemyUserDatabase.create() commits during
+    # /auth/register, so the user row is persisted regardless of the
+    # test's rolled-back-by-design transaction; we explicitly purge
+    # via a fresh engine outside the rolled-back session to keep the
+    # test DB clean.
     cleanup_engine = create_async_engine(settings.database_url, poolclass=NullPool)
     cleanup_factory = async_sessionmaker(cleanup_engine, expire_on_commit=False)
     async with cleanup_factory() as sess:
@@ -303,20 +298,14 @@ async def as_user(db: AsyncSession) -> Callable:
         yield db
 
     async def _make_client(user: dict[str, Any]) -> AsyncClient:
-        # Use ``async with`` so the login client's ASGITransport closes its
-        # response generator task before we exit. Earlier this was an
-        # unmanaged ``AsyncClient(...).post(...)`` whose orphaned tasks
-        # lingered in the event loop until pytest-asyncio's fixture
-        # finalizer waited them out — a per-test ~60s teardown hang on
-        # every test that called ``as_user``.
-        async with AsyncClient(
+        # First get the token via the API
+        token_resp = await AsyncClient(
             transport=ASGITransport(app=app),
             base_url="http://test",
-        ) as login_client:
-            token_resp = await login_client.post(
-                "/auth/jwt/login",
-                data={"username": user["email"], "password": user["password"]},
-            )
+        ).post(
+            "/auth/jwt/login",
+            data={"username": user["email"], "password": user["password"]},
+        )
         assert token_resp.status_code == 200, f"Login failed: {token_resp.text}"
         token = token_resp.json()["access_token"]
 
