@@ -295,6 +295,93 @@ test.describe("Documents — viewer on row click", () => {
     // Document table should still be visible
     await expect(page.locator("table")).toBeVisible();
   });
+
+  test("viewer actually renders the source document — iframe src is a blob URL and download response is 200 with content", async ({ authedPage: page, api }) => {
+    test.setTimeout(60000);
+
+    // Seed: upload a PDF via API so we know we have something to view.
+    const pdfPath = path.join(FIXTURES_DIR, TEST_PDF);
+    const pdfBytes = (await import("fs")).readFileSync(pdfPath);
+    const uploadRes = await api.post("/documents/upload", {
+      multipart: {
+        file: {
+          name: TEST_PDF,
+          mimeType: "application/pdf",
+          buffer: pdfBytes,
+        },
+      },
+    });
+    expect(uploadRes.ok()).toBe(true);
+
+    // Find the just-uploaded doc id.
+    const listRes = await api.get("/documents");
+    expect(listRes.ok()).toBe(true);
+    const docs = (await listRes.json()) as Array<{ id: string; file_name: string }>;
+    const doc = docs.find((d) => d.file_name === TEST_PDF);
+    expect(doc, "uploaded document must appear in the list").toBeTruthy();
+    const docId = doc!.id;
+
+    // Capture browser-side console errors and the network response for the download.
+    const consoleErrors: string[] = [];
+    page.on("console", (msg) => {
+      if (msg.type() === "error") consoleErrors.push(msg.text());
+    });
+
+    let downloadStatus: number | null = null;
+    let downloadBodySize: number | null = null;
+    let downloadContentType: string | null = null;
+    page.on("response", async (resp) => {
+      if (resp.url().includes(`/documents/${docId}/download`)) {
+        downloadStatus = resp.status();
+        downloadContentType = resp.headers()["content-type"] ?? null;
+        try {
+          const body = await resp.body();
+          downloadBodySize = body.length;
+        } catch {
+          downloadBodySize = -1;
+        }
+      }
+    });
+
+    await page.goto("/documents");
+    await expect(page.getByRole("heading", { name: "Documents" })).toBeVisible();
+    await expect(page.locator("table")).toBeVisible({ timeout: 15000 });
+
+    // Click the row for the uploaded document.
+    const targetRow = page.locator("tbody tr", { hasText: TEST_PDF }).first();
+    await expect(targetRow).toBeVisible({ timeout: 15000 });
+    await targetRow.click();
+
+    // Header proves the panel opened (this is what the existing tests stop at).
+    await expect(page.getByText("Source document").first()).toBeVisible({ timeout: 10000 });
+
+    // BEHAVIORAL ASSERTIONS — what was missing before today:
+    // 1. The download endpoint actually returned 200 with bytes.
+    await expect.poll(() => downloadStatus, { timeout: 15000, message: "download endpoint never responded" }).toBe(200);
+    expect(downloadBodySize, "download body must be non-empty").not.toBeNull();
+    expect(downloadBodySize!).toBeGreaterThan(0);
+    expect(downloadContentType, "PDF download must advertise application/pdf").toContain("pdf");
+
+    // 2. The viewer rendered an iframe whose src is a blob: URL pointing at the fetched bytes.
+    const iframe = page.locator('iframe[title="Source document"]');
+    await expect(iframe).toBeVisible({ timeout: 10000 });
+    const iframeSrc = await iframe.getAttribute("src");
+    expect(iframeSrc, "iframe must have a src").toBeTruthy();
+    expect(iframeSrc!.startsWith("blob:"), `iframe src should be a blob URL, got: ${iframeSrc}`).toBe(true);
+
+    // 3. The error message UI must NOT be rendered.
+    const errorEl = page.locator("p.text-destructive");
+    expect(await errorEl.count(), "viewer should not show an error state").toBe(0);
+
+    // 4. No browser console errors fired during the load.
+    expect(
+      consoleErrors,
+      `unexpected browser console errors during viewer load: ${consoleErrors.join(" | ")}`
+    ).toEqual([]);
+
+    // Cleanup
+    await api.delete(`/documents/${docId}`).catch(() => {/* non-critical */});
+  });
 });
 
 test.describe("Documents — Type column", () => {
