@@ -66,6 +66,23 @@
                 X-Frame-Options "DENY"
                 Content-Security-Policy "default-src 'self'; script-src 'self' https://cdn.plaid.com https://us.i.posthog.com https://challenges.cloudflare.com https://*.sentry.io; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self'; connect-src 'self' https://storage.{$DOMAIN} https://*.plaid.com https://us.i.posthog.com https://*.posthog.com https://challenges.cloudflare.com https://*.sentry.io; frame-src 'self' blob: https://cdn.plaid.com https://us.posthog.com https://challenges.cloudflare.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests"
             }
+
+            # Cache strategy:
+            # - HTML and the service worker MUST never be cached. They are the
+            #   entry points that reference the latest asset bundles. If they
+            #   were cached, users would be stuck on old bundles forever after
+            #   a deploy (this happened 2026-05-01 — clients kept loading a
+            #   pre-2FA bundle weeks after the new one shipped because the SW
+            #   precached it and `index.html` was cached too).
+            # - Hashed assets (Vite content-hashes filenames like
+            #   `index-AbCd1234.js`) ARE safe to cache forever because the
+            #   filename changes whenever content changes.
+            @no_cache_html path / /index.html /sw.js /workbox-*.js /manifest.webmanifest /registerSW.js
+            header @no_cache_html Cache-Control "no-cache, no-store, must-revalidate"
+
+            @hashed_assets path_regexp \.[A-Za-z0-9_-]{8,}\.(js|css|woff2)$
+            header @hashed_assets Cache-Control "public, max-age=31536000, immutable"
+
             root * /srv/frontend
             try_files {path} /index.html
             file_server
