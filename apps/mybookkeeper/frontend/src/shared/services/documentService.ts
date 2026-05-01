@@ -3,11 +3,12 @@ import api from "@/shared/lib/api";
 export interface DocumentBlob {
   url: string;
   contentType: string;
+  size: number;
 }
 
 /**
  * Fetches the source document for a given document ID and returns a
- * temporary blob URL and content type.
+ * temporary blob URL, content type, and size.
  * The caller is responsible for calling URL.revokeObjectURL() when done.
  */
 export async function fetchDocumentBlob(documentId: string): Promise<DocumentBlob> {
@@ -18,5 +19,6 @@ export async function fetchDocumentBlob(documentId: string): Promise<DocumentBlo
   return {
     url: URL.createObjectURL(blob),
     contentType: blob.type,
+    size: blob.size,
   };
 }
