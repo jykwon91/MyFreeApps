@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, ExternalLink } from "lucide-react";
 import { fetchDocumentBlob, type DocumentBlob } from "@/shared/services/documentService";
 import Panel, { PanelCloseButton } from "@/shared/components/ui/Panel";
 
@@ -28,17 +28,41 @@ export default function DocumentViewer({ documentId, onClose }: Props) {
 
   const isImage = blob?.contentType.startsWith("image/");
   const isPdf = blob?.contentType === "application/pdf";
+  const isEmpty = blob !== null && blob.size === 0;
 
   return (
     <Panel position="center" onClose={onClose}>
       <header className="flex items-center justify-between px-4 py-2 border-b shrink-0 bg-card">
-        <span className="text-sm font-medium text-muted-foreground">Source document</span>
+        <div className="flex items-center gap-3 min-w-0">
+          <span className="text-sm font-medium text-muted-foreground">Source document</span>
+          {blob && !isEmpty ? (
+            <a
+              href={blob.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-primary hover:underline inline-flex items-center gap-1"
+              data-testid="document-open-in-new-tab"
+            >
+              <ExternalLink size={12} />
+              Open in new tab
+            </a>
+          ) : null}
+        </div>
         <PanelCloseButton onClose={onClose} label="Close viewer" />
       </header>
 
       <div className="flex-1 min-h-0 overflow-auto bg-muted/50">
         {error ? (
-          <p className="flex items-center justify-center h-full text-sm text-destructive">{error}</p>
+          <p className="flex items-center justify-center h-full text-sm text-destructive px-4 text-center" data-testid="document-error">
+            {error}
+          </p>
+        ) : isEmpty ? (
+          <div className="flex flex-col items-center justify-center h-full gap-2 px-4 text-center" data-testid="document-empty">
+            <p className="text-sm text-destructive">This document has no content available.</p>
+            <p className="text-xs text-muted-foreground">
+              The file may have been removed from storage. Try re-uploading the document.
+            </p>
+          </div>
         ) : blob ? (
           isImage ? (
             <div className="flex items-center justify-center h-full p-4">
