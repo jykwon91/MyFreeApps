@@ -45,13 +45,16 @@ async def list_applications(
 ) -> dict:
     """Return the caller's non-deleted applications.
 
-    Phase 1 shape preserved — ``items`` is intentionally an empty list with
-    ``total`` carrying the count, matching the existing tenant-isolation
-    smoke contract. Full pagination + summary projection ships in PR 2.1b
-    once the kanban frontend lands.
+    Response shape: ``{"items": [ApplicationResponse...], "total": int}``.
+    Phase 1 returned ``items: []`` with the count carried only in ``total``;
+    PR 2.1b (this change) populates ``items`` so the kanban / list view can
+    render real data.
     """
     items = await application_service.list_applications(db, user.id)
-    return {"items": [], "total": len(items)}
+    return {
+        "items": [ApplicationResponse.model_validate(a).model_dump(mode="json") for a in items],
+        "total": len(items),
+    }
 
 
 @router.post("/applications", response_model=ApplicationResponse, status_code=201)
