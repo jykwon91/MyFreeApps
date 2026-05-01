@@ -237,38 +237,50 @@ async def user_factory(
 
     yield _create
 
-    # Hard-delete so rows don't persist across test sessions.
-    # We use a fresh engine/session outside the rolled-back transaction.
-    # auth_events.user_id has no FK to users.id (so events survive account
-    # deletion in production); for tests we explicitly purge them along
-    # with the user row to keep the test DB clean. Anonymous LOGIN_FAILURE
-    # events (user_id IS NULL) are also cleared since they're produced by
-    # tests in this fixture's scope.
+    # ----- TEMPORARY DIAGNOSTIC PRINTS -----
+    # The teardown has been hanging silently in CI. Print before each
+    # await so the last line printed reveals exactly which step blocks.
+    import sys as _sys
+    def _bp(msg):
+        print(f"[user_factory.teardown] {msg}", flush=True, file=_sys.stderr)
+
+    _bp("entering teardown")
     cleanup_engine = create_async_engine(settings.database_url, poolclass=NullPool)
+    _bp("created cleanup_engine")
     cleanup_factory = async_sessionmaker(cleanup_engine, expire_on_commit=False)
+    _bp(f"about to open cleanup session; created_emails={created_emails!r}")
     async with cleanup_factory() as sess:
+        _bp("opened cleanup session")
         async with sess.begin():
+            _bp("began cleanup transaction")
             for email in created_emails:
+                _bp(f"SELECT user id for {email}")
                 user_row = await sess.execute(
                     text("SELECT id FROM users WHERE email = :email"),
                     {"email": email},
                 )
                 user_id = user_row.scalar_one_or_none()
+                _bp(f"user_id={user_id}")
                 if user_id is not None:
+                    _bp(f"DELETE auth_events for uid={user_id}")
                     await sess.execute(
                         text("DELETE FROM auth_events WHERE user_id = :uid"),
                         {"uid": user_id},
                     )
+                _bp(f"DELETE user {email}")
                 await sess.execute(
                     text("DELETE FROM users WHERE email = :email"),
                     {"email": email},
                 )
-            # Clear any anonymous-failure rows (user_id IS NULL) — these
-            # accumulate from /auth/totp/login bad-credentials tests.
+            _bp("DELETE anonymous auth_events")
             await sess.execute(
                 text("DELETE FROM auth_events WHERE user_id IS NULL"),
             )
+            _bp("done deletes")
+        _bp("committed cleanup transaction")
+    _bp("closed cleanup session")
     await cleanup_engine.dispose()
+    _bp("disposed cleanup_engine -- teardown complete")
 
 
 # ---------------------------------------------------------------------------

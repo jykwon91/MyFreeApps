@@ -135,7 +135,7 @@ jobs:
         # stack of the hung thread (including app frames) instead of
         # just the asyncio loop frame.
         # --tb=long preserves the entire traceback chain.
-        run: python -m pytest -v --timeout=30 --timeout-method=thread --tb=long ${{ matrix.shard.paths }}
+        run: python -m pytest -v -s --timeout=30 --timeout-method=thread --tb=long ${{ matrix.shard.paths }}
 
   frontend-build:
     name: frontend-build / myjobhunter
