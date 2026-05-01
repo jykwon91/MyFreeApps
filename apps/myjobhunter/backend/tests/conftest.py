@@ -237,50 +237,51 @@ async def user_factory(
 
     yield _create
 
-    # ----- TEMPORARY DIAGNOSTIC PRINTS -----
-    # The teardown has been hanging silently in CI. Print before each
-    # await so the last line printed reveals exactly which step blocks.
-    import sys as _sys
-    def _bp(msg):
-        print(f"[user_factory.teardown] {msg}", flush=True, file=_sys.stderr)
+    # Release the test session's outstanding row locks before running
+    # the cleanup engine.
+    #
+    # fastapi-users' SQLAlchemyUserDatabase.create() calls
+    # session.commit() inside /auth/register, which commits the test's
+    # rolled-back-by-design transaction and persists the user row.
+    # The subsequent ``UPDATE users SET is_verified=TRUE`` runs in a
+    # fresh auto-begun transaction on the same session that is still
+    # alive at fixture-teardown time (LIFO order: user_factory tears
+    # down before db). That open transaction holds a row-exclusive
+    # lock on the user row; the cleanup engine's
+    # ``DELETE FROM users WHERE email = :email`` then blocks
+    # indefinitely on it -- Postgres can't surface this as a deadlock
+    # because the test session is idle, not waiting on anything.
+    #
+    # Rolling back here releases the lock so the cleanup deletes can
+    # proceed. SQLAlchemy's rollback is idempotent, so the db fixture's
+    # own rollback that runs after this is harmless.
+    await db.rollback()
 
-    _bp("entering teardown")
     cleanup_engine = create_async_engine(settings.database_url, poolclass=NullPool)
-    _bp("created cleanup_engine")
     cleanup_factory = async_sessionmaker(cleanup_engine, expire_on_commit=False)
-    _bp(f"about to open cleanup session; created_emails={created_emails!r}")
     async with cleanup_factory() as sess:
-        _bp("opened cleanup session")
         async with sess.begin():
-            _bp("began cleanup transaction")
             for email in created_emails:
-                _bp(f"SELECT user id for {email}")
                 user_row = await sess.execute(
                     text("SELECT id FROM users WHERE email = :email"),
                     {"email": email},
                 )
                 user_id = user_row.scalar_one_or_none()
-                _bp(f"user_id={user_id}")
                 if user_id is not None:
-                    _bp(f"DELETE auth_events for uid={user_id}")
                     await sess.execute(
                         text("DELETE FROM auth_events WHERE user_id = :uid"),
                         {"uid": user_id},
                     )
-                _bp(f"DELETE user {email}")
                 await sess.execute(
                     text("DELETE FROM users WHERE email = :email"),
                     {"email": email},
                 )
-            _bp("DELETE anonymous auth_events")
+            # Clear any anonymous-failure rows (user_id IS NULL) — these
+            # accumulate from /auth/totp/login bad-credentials tests.
             await sess.execute(
                 text("DELETE FROM auth_events WHERE user_id IS NULL"),
             )
-            _bp("done deletes")
-        _bp("committed cleanup transaction")
-    _bp("closed cleanup session")
     await cleanup_engine.dispose()
-    _bp("disposed cleanup_engine -- teardown complete")
 
 
 # ---------------------------------------------------------------------------
