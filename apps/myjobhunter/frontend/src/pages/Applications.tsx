@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FilePlus } from "lucide-react";
 import { DataTable, EmptyState, type ColumnDef } from "@platform/ui";
 import ApplicationsSkeleton from "@/features/applications/ApplicationsSkeleton";
+import AddApplicationDialog from "@/features/applications/AddApplicationDialog";
 import { useListApplicationsQuery } from "@/lib/applicationsApi";
 import { EMPTY_STATES } from "@/constants/empty-states";
 import type { Application } from "@/types/application";
@@ -47,11 +49,11 @@ const COLUMNS: ColumnDef<Application>[] = [
 export default function Applications() {
   const navigate = useNavigate();
   const { data, isLoading, isError, error } = useListApplicationsQuery();
+  const [dialogOpen, setDialogOpen] = useState(false);
   const copy = EMPTY_STATES.applications;
 
   function handleAddApplication() {
-    // TODO Phase 2.2: open AddApplicationDialog. For now, defer.
-    console.info("AddApplicationDialog — Phase 2.2");
+    setDialogOpen(true);
   }
 
   if (isLoading) {
@@ -82,14 +84,17 @@ export default function Applications() {
 
   if (items.length === 0) {
     return (
-      <div className="p-6">
-        <EmptyState
-          icon={<FilePlus className="w-12 h-12" />}
-          heading={copy.heading}
-          body={copy.body}
-          action={{ label: copy.actionLabel, onClick: handleAddApplication }}
-        />
-      </div>
+      <>
+        <div className="p-6">
+          <EmptyState
+            icon={<FilePlus className="w-12 h-12" />}
+            heading={copy.heading}
+            body={copy.body}
+            action={{ label: copy.actionLabel, onClick: handleAddApplication }}
+          />
+        </div>
+        <AddApplicationDialog open={dialogOpen} onOpenChange={setDialogOpen} />
+      </>
     );
   }
 
@@ -105,6 +110,8 @@ export default function Applications() {
           Add application
         </button>
       </header>
+
+      <AddApplicationDialog open={dialogOpen} onOpenChange={setDialogOpen} />
 
       <DataTable<Application>
         data={items}

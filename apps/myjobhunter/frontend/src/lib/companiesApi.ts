@@ -1,0 +1,37 @@
+import { baseApi } from "@platform/ui";
+import type { Company } from "@/types/company";
+import type { CompanyListResponse } from "@/types/company-list-response";
+import type { CompanyCreateRequest } from "@/types/company-create-request";
+
+const COMPANIES_TAG = "Companies";
+
+const companiesApi = baseApi.enhanceEndpoints({ addTagTypes: [COMPANIES_TAG] }).injectEndpoints({
+  endpoints: (build) => ({
+    listCompanies: build.query<CompanyListResponse, void>({
+      query: () => ({ url: "/companies", method: "GET" }),
+      providesTags: (result) =>
+        result
+          ? [
+              ...result.items.map(({ id }) => ({ type: COMPANIES_TAG, id }) as const),
+              { type: COMPANIES_TAG, id: "LIST" } as const,
+            ]
+          : [{ type: COMPANIES_TAG, id: "LIST" } as const],
+    }),
+
+    getCompany: build.query<Company, string>({
+      query: (id) => ({ url: `/companies/${id}`, method: "GET" }),
+      providesTags: (_result, _err, id) => [{ type: COMPANIES_TAG, id }],
+    }),
+
+    createCompany: build.mutation<Company, CompanyCreateRequest>({
+      query: (body) => ({ url: "/companies", method: "POST", data: body }),
+      invalidatesTags: [{ type: COMPANIES_TAG, id: "LIST" }],
+    }),
+  }),
+});
+
+export const {
+  useListCompaniesQuery,
+  useGetCompanyQuery,
+  useCreateCompanyMutation,
+} = companiesApi;
