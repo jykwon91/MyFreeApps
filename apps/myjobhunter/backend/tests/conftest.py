@@ -290,14 +290,20 @@ async def as_user(db: AsyncSession) -> Callable:
         yield db
 
     async def _make_client(user: dict[str, Any]) -> AsyncClient:
-        # First get the token via the API
-        token_resp = await AsyncClient(
+        # Use ``async with`` so the login client's ASGITransport closes its
+        # response generator task before we exit. Earlier this was an
+        # unmanaged ``AsyncClient(...).post(...)`` whose orphaned tasks
+        # lingered in the event loop until pytest-asyncio's fixture
+        # finalizer waited them out — a per-test ~60s teardown hang on
+        # every test that called ``as_user``.
+        async with AsyncClient(
             transport=ASGITransport(app=app),
             base_url="http://test",
-        ).post(
-            "/auth/jwt/login",
-            data={"username": user["email"], "password": user["password"]},
-        )
+        ) as login_client:
+            token_resp = await login_client.post(
+                "/auth/jwt/login",
+                data={"username": user["email"], "password": user["password"]},
+            )
         assert token_resp.status_code == 200, f"Login failed: {token_resp.text}"
         token = token_resp.json()["access_token"]
 
