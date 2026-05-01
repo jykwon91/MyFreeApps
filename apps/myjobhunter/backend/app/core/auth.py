@@ -17,7 +17,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-from fastapi import Depends
+from fastapi import Depends, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi_users import (
     BaseUserManager,
@@ -49,6 +49,7 @@ from platform_shared.services.hibp_service import HIBPCheckError, is_password_pw
 from app.core.config import settings
 from app.db.session import get_db
 from app.models.user.user import User
+from app.services.email.verification_email import send_verification_email
 from app.services.system.auth_event_service import log_auth_event
 
 logger = logging.getLogger(__name__)
@@ -57,12 +58,8 @@ MIN_PASSWORD_LENGTH = 12
 
 
 def _lock_duration_for(failure_count: int) -> timedelta:
-    """Return exponential lock duration based on consecutive failure count.
-
-    Thin wrapper around the shared
-    :func:`platform_shared.services.account_lockout.lock_duration_for`,
-    keyed off MJH's configured ``lockout_threshold``. Kept as a
-    module-level callable so tests can import it directly.
+    """Thin wrapper around the shared lock_duration_for, keyed off MJH's
+    configured ``lockout_threshold``. Kept module-level so tests can import it.
     """
     return lock_duration_for(failure_count, threshold=settings.lockout_threshold)
 
@@ -86,16 +83,12 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
            (domain only) and return None.
         2. If the account is locked → emit ``LOGIN_BLOCKED_LOCKED`` and
            reject without checking the password.
-        3. Auto-reset stale failure counter (no activity > autoreset
-           window) so a six-month-old typo does not compound forever.
-        4. Delegate to parent for password verification.
-        5. On failure → increment counter, apply exponential lock at
-           threshold, write LOGIN_FAILURE.
-        6. On success → clear counter and lock state, write LOGIN_SUCCESS.
-        7. **TOTP gate (C5)** — if the authenticated user has ``totp_enabled``,
+        3. Auto-reset stale failure counter; delegate to parent; on bad
+           password → increment counter + maybe apply lock; on success →
+           clear counter and lock state, write LOGIN_SUCCESS.
+        4. **TOTP gate (C5)** — if the authenticated user has ``totp_enabled``,
            return ``None`` so the standard ``/auth/jwt/login`` endpoint does
-           NOT issue a token. The user has to use ``/auth/totp/login`` (which
-           calls :meth:`authenticate_password` below) to provide their code.
+           NOT issue a token. The user has to use ``/auth/totp/login``.
         """
         db = self.user_db.session
 
@@ -122,15 +115,13 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
         if account_is_locked(user, now=now):
             logger.info(
                 "Login rejected for locked account %s (locked until %s)",
-                user.email,
-                user.locked_until,
+                user.email, user.locked_until,
             )
             await emit_locked_login_event(db=db, user_id=user.id)
             return None
 
         autoreset = autoreset_update_if_stale(
-            user,
-            now=now,
+            user, now=now,
             autoreset_hours=settings.lockout_autoreset_hours,
         )
         if autoreset is not None:
@@ -143,19 +134,14 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
 
         if result is None:
             update = await record_failed_login(
-                user,
-                db=db,
-                user_id=user.id,
+                user, db=db, user_id=user.id,
                 lockout_threshold=settings.lockout_threshold,
-                metadata={"reason": "bad_password"},
-                now=now,
+                metadata={"reason": "bad_password"}, now=now,
             )
             if "locked_until" in update:
                 logger.warning(
                     "Account locked: %s until %s (consecutive failures: %d)",
-                    user.email,
-                    update["locked_until"],
-                    update["failed_login_count"],
+                    user.email, update["locked_until"], update["failed_login_count"],
                 )
             await self.user_db.update(user, update)
             return None
@@ -174,10 +160,8 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
             return None
 
         await log_auth_event(
-            db,
-            event_type=AuthEventType.LOGIN_SUCCESS,
-            user_id=result.id,
-            succeeded=True,
+            db, event_type=AuthEventType.LOGIN_SUCCESS,
+            user_id=result.id, succeeded=True,
         )
         return result
 
@@ -273,13 +257,31 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
                         ),
                     )
             except HIBPCheckError:
-                # Fail-open: a HIBP outage must not block registrations or
-                # password resets. The narrow window where a breached password
-                # slips through is preferable to "any HIBP downtime = no signups".
                 logger.warning(
                     "HIBP check failed; accepting password without breach check",
                     exc_info=True,
                 )
+
+    async def on_after_register(
+        self, user: User, request: Optional[Request] = None,
+    ) -> None:
+        """Trigger the verification email immediately after registration."""
+        await self.request_verify(user, request)
+
+    async def on_after_request_verify(
+        self, user: User, token: str, request: Optional[Request] = None,
+    ) -> None:
+        """Send verification email when a token is generated (registration or resend)."""
+        success = send_verification_email(user.email, token)
+        if success:
+            logger.info("Verification email sent to %s", user.email)
+        else:
+            logger.warning("Failed to send verification email to %s", user.email)
+
+    async def on_after_verify(
+        self, user: User, request: Optional[Request] = None,
+    ) -> None:
+        logger.info("User verified: %s", user.email)
 
 
 async def get_user_manager(user_db=Depends(get_user_db)):
@@ -303,4 +305,4 @@ auth_backend = AuthenticationBackend(
 )
 
 fastapi_users = FastAPIUsers[User, uuid.UUID](get_user_manager, [auth_backend])
-current_active_user = fastapi_users.current_user(active=True)
+current_active_user = fastapi_users.current_user(active=True, verified=True)

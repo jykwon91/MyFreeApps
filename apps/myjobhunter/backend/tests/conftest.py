@@ -32,6 +32,73 @@ from app.main import app
 
 
 # ---------------------------------------------------------------------------
+# Fast password hashing for tests.
+#
+# fastapi-users' default PasswordHelper uses pwdlib's argon2 with recommended
+# (production-grade) parameters — ~250ms per hash. Tests like
+# ``test_account_lockout`` simulate 5+ failed login attempts each, and
+# user_factory creates a fresh user per test. Across the whole suite this
+# adds up to many minutes of pure cryptographic work, which is what blew
+# past the 20-min CI timeout.
+#
+# Override the password_helper on BaseUserManager (where MJH's UserManager
+# inherits it) with a plaintext-comparison stub. SAFE because:
+#   - It only applies inside the test process (this conftest)
+#   - Production code is unchanged
+#   - Test users are short-lived and never have real passwords
+#
+# Tests that specifically exercise hashing semantics (none today, but if
+# added) should explicitly monkeypatch back to the real PasswordHelper.
+# ---------------------------------------------------------------------------
+
+import hashlib
+
+import fastapi_users.password as _fa_password
+from fastapi_users.manager import BaseUserManager
+
+
+class _FastPasswordHelper:
+    """Test-only password helper — SHA-256 with no salt, fast.
+
+    NEVER use in production. Only deployed in conftest for the test session.
+    """
+
+    def hash(self, password: str) -> str:
+        return "sha256:" + hashlib.sha256(password.encode()).hexdigest()
+
+    def verify_and_update(
+        self, plain_password: str, hashed_password: str,
+    ) -> tuple[bool, str | None]:
+        expected = "sha256:" + hashlib.sha256(plain_password.encode()).hexdigest()
+        return (expected == hashed_password, None)
+
+    def generate(self) -> str:
+        return uuid.uuid4().hex
+
+
+# fastapi-users' BaseUserManager.__init__ does:
+#   self.password_helper = password_helper if password_helper is not None else PasswordHelper()
+# so a class-level override gets shadowed on every instance. Replace the
+# default-constructor symbol so every fresh PasswordHelper() returns our
+# fast stub instead.
+_fa_password.PasswordHelper = _FastPasswordHelper  # type: ignore[misc,assignment]
+BaseUserManager.password_helper = _FastPasswordHelper()  # type: ignore[assignment]
+
+
+# Override BaseUserManager.__init__ so newly-constructed managers always use
+# the fast helper, regardless of whether they pass password_helper=None.
+_orig_init = BaseUserManager.__init__
+
+
+def _fast_init(self, *args, **kwargs):  # type: ignore[no-untyped-def]
+    _orig_init(self, *args, **kwargs)
+    self.password_helper = _FastPasswordHelper()
+
+
+BaseUserManager.__init__ = _fast_init  # type: ignore[method-assign]
+
+
+# ---------------------------------------------------------------------------
 # Default-disable HIBP + Turnstile for the whole test session.
 #
 # Tests that explicitly want HIBP enabled (test_hibp_validation.py) override
@@ -131,13 +198,23 @@ async def client(db: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
 # ---------------------------------------------------------------------------
 
 @pytest_asyncio.fixture(scope="function")
-async def user_factory(client: AsyncClient) -> AsyncGenerator[Callable, None]:
-    """Factory fixture: call to register a user, auto-cleaned up after test."""
+async def user_factory(
+    client: AsyncClient, db: AsyncSession,
+) -> AsyncGenerator[Callable, None]:
+    """Factory fixture: call to register a user, auto-cleaned up after test.
+
+    Registers via the public /auth/register endpoint, then forces
+    is_verified=True directly on the same rolled-back transaction so
+    tests can call /auth/jwt/login without going through the verification
+    flow. Pass `verified=False` to keep the user unverified (used by the
+    email-verification tests themselves).
+    """
     created_emails: list[str] = []
 
     async def _create(
         email: str | None = None,
         password: str = "TestPassword123!",
+        verified: bool = True,
     ) -> dict[str, Any]:
         email = email or f"test-{uuid.uuid4().hex[:8]}@example.com"
         resp = await client.post(
@@ -146,17 +223,35 @@ async def user_factory(client: AsyncClient) -> AsyncGenerator[Callable, None]:
         )
         assert resp.status_code == 201, f"Registration failed: {resp.text}"
         created_emails.append(email)
-        return {**resp.json(), "password": password, "email": email}
+        if verified:
+            await db.execute(
+                text("UPDATE users SET is_verified = TRUE WHERE email = :email"),
+                {"email": email},
+            )
+            # Commit so the row-exclusive lock released. Service layers
+            # like ``totp_service.unit_of_work`` open their own session
+            # for /auth/totp/setup etc.; without this commit those
+            # requests block forever trying to UPDATE the same user
+            # row that this session has locked. fastapi-users itself
+            # already commits via /auth/register a few lines above, so
+            # the test's "rolled back by design" pattern is a polite
+            # fiction — embrace it for the verified flag too.
+            await db.commit()
+        return {
+            **resp.json(),
+            "password": password,
+            "email": email,
+            "is_verified": verified,
+        }
 
     yield _create
 
     # Hard-delete so rows don't persist across test sessions.
-    # We use a fresh engine/session outside the rolled-back transaction.
-    # auth_events.user_id has no FK to users.id (so events survive account
-    # deletion in production); for tests we explicitly purge them along
-    # with the user row to keep the test DB clean. Anonymous LOGIN_FAILURE
-    # events (user_id IS NULL) are also cleared since they're produced by
-    # tests in this fixture's scope.
+    # fastapi-users' SQLAlchemyUserDatabase.create() commits during
+    # /auth/register, so the user row is persisted regardless of the
+    # test's rolled-back-by-design transaction; we explicitly purge
+    # via a fresh engine outside the rolled-back session to keep the
+    # test DB clean.
     cleanup_engine = create_async_engine(settings.database_url, poolclass=NullPool)
     cleanup_factory = async_sessionmaker(cleanup_engine, expire_on_commit=False)
     async with cleanup_factory() as sess:

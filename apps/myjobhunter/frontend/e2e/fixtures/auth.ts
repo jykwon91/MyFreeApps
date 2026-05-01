@@ -9,15 +9,23 @@ export interface TestUser {
 
 /**
  * Creates a test user via the backend auth/register endpoint.
+ *
+ * Email verification is required before login: this helper auto-verifies
+ * the new user via the dev-only test helper if `verify=true` (default).
+ * Pass `verify=false` to keep the user unverified — used by the
+ * email-verification spec itself.
+ *
  * Returns the created user's credentials for use in tests.
  */
 export async function createTestUser(
   request: APIRequestContext,
-  overrides: Partial<TestUser> = {}
+  overrides: Partial<TestUser> & { verify?: boolean } = {},
 ): Promise<TestUser> {
   const timestamp = Date.now();
+  const verify = overrides.verify ?? true;
   const user: TestUser = {
-    email: overrides.email ?? `e2e-test-${timestamp}@myjobhunter-test.invalid`,
+    email:
+      overrides.email ?? `e2e-test-${timestamp}@myjobhunter-test.invalid`,
     password: overrides.password ?? `TestPass${timestamp}!`,
   };
 
@@ -28,11 +36,37 @@ export async function createTestUser(
   if (!response.ok()) {
     const body = await response.text();
     throw new Error(
-      `Failed to create test user: ${response.status()} — ${body}`
+      `Failed to create test user: ${response.status()} — ${body}`,
     );
   }
 
+  if (verify) {
+    await verifyTestUser(request, user.email);
+  }
+
   return user;
+}
+
+/**
+ * Force-verify a test user by reaching into the backend test helper
+ * (gated by MYJOBHUNTER_ENABLE_TEST_HELPERS=1).
+ */
+async function verifyTestUser(
+  request: APIRequestContext,
+  email: string,
+): Promise<void> {
+  const response = await request.post(
+    `${BACKEND_URL}/api/_test/verify-email`,
+    {
+      data: { email },
+    },
+  );
+  if (!response.ok()) {
+    const body = await response.text();
+    throw new Error(
+      `Failed to verify test user ${email}: ${response.status()} — ${body}`,
+    );
+  }
 }
 
 /**
@@ -88,7 +122,7 @@ export async function deleteTestUser(
  */
 export async function loginViaUI(
   page: import("@playwright/test").Page,
-  user: TestUser
+  user: TestUser,
 ): Promise<void> {
   await page.goto("/login");
   await page.getByLabel(/email/i).fill(user.email);

@@ -50,6 +50,8 @@ jobs:
           CORS_ORIGINS=["http://localhost:8092"]
           JWT_LIFETIME_SECONDS=1800
           LOG_LEVEL=INFO
+          EMAIL_BACKEND=console
+          MYJOBHUNTER_ENABLE_TEST_HELPERS=1
           EOF
 
       - name: Build and start stack
@@ -123,7 +125,7 @@ jobs:
 
           echo "All security headers present and correctly configured."
 
-      - name: Smoke — register + login
+      - name: Smoke — register + verify + login
         run: |
           # email-validator>=2 rejects RFC 6761 reserved TLDs (.invalid) when
           # globally_deliverable=True, which fastapi-users' EmailStr enforces.
@@ -134,11 +136,29 @@ jobs:
             -H 'Content-Type: application/json' \
             -d "{\"email\":\"$EMAIL\",\"password\":\"$PASSWORD\"}")
           echo "Registered: $REGISTER_RES" | head -c 200; echo
+
+          # Unverified login MUST be rejected with LOGIN_USER_NOT_VERIFIED.
+          UNVERIFIED_RES=$(curl -s -o /tmp/unverified.json -w "%{http_code}" \
+            -X POST http://localhost:8092/api/auth/jwt/login \
+            -H 'Content-Type: application/x-www-form-urlencoded' \
+            -d "username=$EMAIL&password=$PASSWORD")
+          if [ "$UNVERIFIED_RES" != "400" ]; then
+            echo "Expected 400 for unverified login, got $UNVERIFIED_RES" >&2
+            cat /tmp/unverified.json >&2
+            exit 1
+          fi
+          grep -q "LOGIN_USER_NOT_VERIFIED" /tmp/unverified.json
+          echo "Unverified login correctly rejected"
+
+          # Force-verify via the test helper, then login should succeed.
+          curl -fsS -X POST http://localhost:8092/api/_test/verify-email \
+            -H 'Content-Type: application/json' \
+            -d "{\"email\":\"$EMAIL\"}"
           LOGIN_RES=$(curl -fsS -X POST http://localhost:8092/api/auth/jwt/login \
             -H 'Content-Type: application/x-www-form-urlencoded' \
             -d "username=$EMAIL&password=$PASSWORD")
           echo "$LOGIN_RES" | grep -q "access_token"
-          echo "Login returned access_token"
+          echo "Verified login returned access_token"
 
       - name: Dump logs on failure
         if: failure()

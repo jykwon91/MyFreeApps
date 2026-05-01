@@ -1,3 +1,4 @@
+import os
 from contextlib import asynccontextmanager
 
 import jwt
@@ -61,8 +62,10 @@ async def set_audit_user(request: Request, call_next):
         current_user_id.reset(ctx_token)
 
 
-# Auth routes — gate /login with per-IP throttle + account-lockout (PR C3).
-_auth_router = fastapi_users.get_auth_router(auth_backend)
+# Auth routes — JWT login enforces email verification (returns
+# detail="LOGIN_USER_NOT_VERIFIED" when an unverified user tries to log in)
+# AND gates /login with the per-IP throttle + account-lockout (PR C3).
+_auth_router = fastapi_users.get_auth_router(auth_backend, requires_verification=True)
 for _route in _auth_router.routes:
     if getattr(_route, "path", None) == "/login":
         _route.dependencies.append(Depends(check_login_rate_limit))
@@ -94,6 +97,13 @@ app.include_router(
     tags=["auth"],
 )
 
+# Email verification routes (PR C4) — /auth/request-verify-token and /auth/verify
+app.include_router(
+    fastapi_users.get_verify_router(UserRead),
+    prefix="/auth",
+    tags=["auth"],
+)
+
 # Register account self-service routes BEFORE fastapi-users users router so that
 # DELETE /users/me is matched here rather than by fastapi-users' DELETE /users/{id}.
 app.include_router(account.router)
@@ -113,10 +123,18 @@ app.include_router(integrations.router, tags=["integrations"])
 
 # TOTP routes — the /login subroute gets the per-IP throttle (matching the
 # guard on /auth/jwt/login). Account lockout is enforced INSIDE
-# `UserManager.authenticate_password` rather than as a route-level dependency,
-# because `check_account_not_locked` consumes a form-encoded
+# UserManager.authenticate_password rather than as a route-level dependency,
+# because check_account_not_locked consumes a form-encoded
 # OAuth2PasswordRequestForm body and the TOTP login endpoint accepts JSON.
 for _route in totp.router.routes:
     if getattr(_route, "path", None) == "/auth/totp/login":
         _route.dependencies.append(Depends(check_login_rate_limit))
 app.include_router(totp.router)
+
+# Test-only helpers — mounted only when MYJOBHUNTER_ENABLE_TEST_HELPERS=1.
+# Used by the E2E suite to put the DB into deterministic states (e.g.
+# flipping `is_verified=True`). NEVER enable in production.
+if os.environ.get("MYJOBHUNTER_ENABLE_TEST_HELPERS") == "1":
+    from app.api import test_helpers
+
+    app.include_router(test_helpers.router, tags=["_test"])
