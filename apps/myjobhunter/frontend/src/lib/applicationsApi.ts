@@ -18,9 +18,10 @@ const applicationsApi = baseApi.enhanceEndpoints({ addTagTypes: [APPLICATIONS_TA
           : [{ type: APPLICATIONS_TAG, id: "LIST" } as const],
     }),
 
-    // Note: backend has no GET /applications/{id} endpoint yet. The detail
-    // page reads from the list query's cache via `selectFromResult` until
-    // the single-resource endpoint is added.
+    getApplication: build.query<Application, string>({
+      query: (id) => ({ url: `/applications/${id}`, method: "GET" }),
+      providesTags: (_result, _err, id) => [{ type: APPLICATIONS_TAG, id }],
+    }),
 
     createApplication: build.mutation<Application, ApplicationCreateRequest>({
       query: (body) => ({ url: "/applications", method: "POST", data: body }),
@@ -50,6 +51,7 @@ const applicationsApi = baseApi.enhanceEndpoints({ addTagTypes: [APPLICATIONS_TA
 
 export const {
   useListApplicationsQuery,
+  useGetApplicationQuery,
   useCreateApplicationMutation,
   useUpdateApplicationMutation,
   useDeleteApplicationMutation,
