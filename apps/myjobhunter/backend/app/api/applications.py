@@ -57,6 +57,24 @@ async def list_applications(
     }
 
 
+@router.get("/applications/{application_id}", response_model=ApplicationResponse)
+async def get_application(
+    application_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(current_active_user),
+) -> ApplicationResponse:
+    """Return a single Application iff it belongs to the caller.
+
+    Returns 404 if the application is missing OR belongs to another user —
+    callers cannot distinguish the two cases (no existence leak). Soft-deleted
+    rows are not visible (the underlying repo filters ``deleted_at IS NULL``).
+    """
+    application = await application_service.get_application(db, user.id, application_id)
+    if application is None:
+        raise HTTPException(status_code=404, detail=_NOT_FOUND_DETAIL)
+    return ApplicationResponse.model_validate(application)
+
+
 @router.post("/applications", response_model=ApplicationResponse, status_code=201)
 async def create_application(
     payload: ApplicationCreateRequest,
