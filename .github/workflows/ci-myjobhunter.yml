@@ -130,7 +130,10 @@ jobs:
 
       - name: Run pytest (${{ matrix.shard.name }})
         working-directory: apps/myjobhunter/backend
-        run: python -m pytest -q ${{ matrix.shard.paths }}
+        # -v shows test names as they enter setup/call/teardown
+        # --timeout=60 (pytest-timeout) breaks hung tests with a traceback
+        # --tb=short keeps the traceback readable
+        run: python -m pytest -v --timeout=60 --tb=short ${{ matrix.shard.paths }}
 
   frontend-build:
     name: frontend-build / myjobhunter
