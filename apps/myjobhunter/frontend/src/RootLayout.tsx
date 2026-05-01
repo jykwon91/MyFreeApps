@@ -10,6 +10,7 @@ import {
 import { AppShell, RequireAuth, Toaster, useIsAuthenticated } from "@platform/ui";
 import { buildNav, buildBottomNav } from "@/constants/nav";
 import { signOut } from "@/lib/auth";
+import ThemeToggle from "@/components/ThemeToggle";
 
 // Decode basic user info from JWT for display in the shell's user menu.
 // This is display-only — no security decisions are made from client-side decode.
@@ -70,6 +71,7 @@ export default function RootLayout() {
         user={user}
         onSignOut={signOut}
         searchPlaceholder="Search applications, companies..."
+        headerActions={<ThemeToggle />}
       >
         <Outlet />
       </AppShell>
