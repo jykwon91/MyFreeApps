@@ -1,10 +1,14 @@
 165-245-134-251.sslip.io {
+    # Headers safe + useful on every response (HTML, JSON, binary).
+    # X-Frame-Options and CSP `frame-ancestors` are intentionally NOT here —
+    # they propagate to /api/* responses, and Chrome enforces the framing
+    # restrictions on blob URLs synthesized from those Responses, which
+    # blocks DocumentViewer's in-app PDF iframe in production. See the SPA
+    # handler below — the HTML document is the right place for those.
     header {
         Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
-        X-Frame-Options "DENY"
         X-Content-Type-Options "nosniff"
         Referrer-Policy "strict-origin-when-cross-origin"
-        Content-Security-Policy "default-src 'self'; script-src 'self' https://cdn.plaid.com https://us.i.posthog.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://*.plaid.com https://us.i.posthog.com https://*.posthog.com; frame-src 'self' https://cdn.plaid.com https://us.posthog.com; frame-ancestors 'none'"
         -Server
     }
 
@@ -33,14 +37,22 @@
         reverse_proxy 127.0.0.1:8000
     }
 
-    # Proxy all other API requests to FastAPI
+    # Proxy all other API requests to FastAPI. API responses MUST NOT carry
+    # `X-Frame-Options: DENY` or CSP `frame-ancestors 'none'` — see the
+    # comment on the top-level header block above.
     handle /api/* {
         uri strip_prefix /api
         reverse_proxy 127.0.0.1:8000
     }
 
-    # Serve React frontend with SPA fallback
+    # Serve React frontend with SPA fallback. XFO + CSP `frame-ancestors`
+    # belong on the HTML document — that is the surface clickjacking attacks
+    # target. Same anti-clickjacking protection, scoped to the right place.
     handle {
+        header {
+            X-Frame-Options "DENY"
+            Content-Security-Policy "default-src 'self'; script-src 'self' https://cdn.plaid.com https://us.i.posthog.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://*.plaid.com https://us.i.posthog.com https://*.posthog.com; frame-src 'self' https://cdn.plaid.com https://us.posthog.com; frame-ancestors 'none'"
+        }
         root * /srv/mybookkeeper/frontend/dist
         try_files {path} /index.html
         file_server
