@@ -161,11 +161,17 @@ jobs:
 
       - name: Run layout E2E tests (no backend)
         working-directory: apps/mybookkeeper/frontend
-        # Uses the layout-only Playwright config which skips globalSetup
-        # (no backend dependency) and webServer-starts a Vite dev server.
-        # Excludes the headed-Chrome tests (channel: chrome + headless:false)
-        # that require a full Chrome install — those run only locally for now.
-        run: npx playwright test --config=playwright.layout.config.ts --grep-invert "PDF iframe rendering under the production CSP|Headers on download response — blob iframe rendering"
+        # Pass explicit spec paths because the layout config's testDir is
+        # the full e2e/ folder, and the rest of those specs require a real
+        # backend via globalSetup. The layout config skips globalSetup but
+        # cannot filter which specs match. Add new layout-style specs to
+        # this list as they are written.
+        run: |
+          npx playwright test --config=playwright.layout.config.ts \
+            e2e/two-factor-button-alignment.spec.ts \
+            e2e/login-totp-button-text-centered.spec.ts \
+            e2e/document-viewer-failure-modes.spec.ts \
+            e2e/caddy-headers-blob-iframe.spec.ts
 
       - name: Upload Playwright report on failure
         if: failure()
