@@ -1,10 +1,22 @@
 165-245-134-251.sslip.io {
-    # Headers safe + useful on every response (HTML, JSON, binary).
-    # X-Frame-Options and CSP `frame-ancestors` are intentionally NOT here —
-    # they propagate to /api/* responses, and Chrome enforces the framing
-    # restrictions on blob URLs synthesized from those Responses, which
-    # blocks DocumentViewer's in-app PDF iframe in production. See the SPA
-    # handler below — the HTML document is the right place for those.
+    # Host Caddy is intentionally a thin TLS-terminator + reverse-proxy. All
+    # routing — API, frontend, security headers, cache headers — lives in
+    # the docker Caddy (apps/mybookkeeper/docker/Caddyfile.docker) on
+    # 127.0.0.1:8094. That keeps the source of truth in one place and
+    # eliminates the class of bugs we hit 2026-05-01 where:
+    #
+    #   - Host Caddy was serving frontend from /srv/mybookkeeper/frontend/dist,
+    #     a directory frozen since the pre-docker era. The docker volume had
+    #     fresh bundles but host Caddy never read from it. Users saw months-old
+    #     frontend code (login broken, document viewer broken).
+    #   - Two layers each ran their own header / strip_prefix / CSP logic and
+    #     drifted out of sync after every deploy, requiring manual debugging
+    #     to find which layer was misconfigured.
+    #
+    # Keep ONLY HSTS + nosniff + Referrer-Policy at this layer (network-level
+    # protections that make sense at the TLS edge). Everything else — XFO,
+    # CSP, cache-control, /api routing, SPA fallback — is in the docker Caddy.
+
     header {
         Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
         X-Content-Type-Options "nosniff"
@@ -12,63 +24,5 @@
         -Server
     }
 
-    # Protect /api/docs and /api/openapi.json — IP + basic auth.
-    # Forwards to docker Caddy on :8094 which then strips /api before
-    # forwarding to FastAPI. Do NOT strip /api here — double-stripping
-    # caused /api/* to fall through to docker Caddy's SPA handler and
-    # serve HTML instead of API responses (caught 2026-05-01).
-    handle /api/docs* {
-        @blocked not remote_ip {$ADMIN_ALLOWED_IP:127.0.0.1}
-        respond @blocked 403
-
-        basicauth {
-            admin $2b$12$cwJJJdX7H5h8n141BI4JKO92RbBcVYdQd6N7GAlTyTfJzCPCG3OJS
-        }
-
-        reverse_proxy 127.0.0.1:8094
-    }
-
-    handle /api/openapi.json {
-        @blocked not remote_ip {$ADMIN_ALLOWED_IP:127.0.0.1}
-        respond @blocked 403
-
-        basicauth {
-            admin $2b$12$cwJJJdX7H5h8n141BI4JKO92RbBcVYdQd6N7GAlTyTfJzCPCG3OJS
-        }
-
-        reverse_proxy 127.0.0.1:8094
-    }
-
-    # Proxy all other API requests to docker Caddy. API responses MUST NOT
-    # carry `X-Frame-Options: DENY` or CSP `frame-ancestors 'none'` — see
-    # the comment on the top-level header block above.
-    handle /api/* {
-        reverse_proxy 127.0.0.1:8094
-    }
-
-    # Serve React frontend with SPA fallback. XFO + CSP `frame-ancestors`
-    # belong on the HTML document — that is the surface clickjacking attacks
-    # target. Same anti-clickjacking protection, scoped to the right place.
-    handle {
-        header {
-            X-Frame-Options "DENY"
-            Content-Security-Policy "default-src 'self'; script-src 'self' https://cdn.plaid.com https://us.i.posthog.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://*.plaid.com https://us.i.posthog.com https://*.posthog.com; frame-src 'self' blob: https://cdn.plaid.com https://us.posthog.com; frame-ancestors 'none'"
-        }
-
-        # Cache strategy: never cache HTML / service worker (entry points
-        # that reference the latest asset bundles); cache content-hashed
-        # assets forever (Vite hashes the filename so it changes when
-        # content changes, making aggressive caching safe). Without this,
-        # browsers served stale bundles for weeks after each deploy —
-        # caught 2026-05-01 when prod was still running pre-2FA frontend.
-        @no_cache_html path / /index.html /sw.js /workbox-*.js /manifest.webmanifest /registerSW.js
-        header @no_cache_html Cache-Control "no-cache, no-store, must-revalidate"
-
-        @hashed_assets path_regexp \.[A-Za-z0-9_-]{8,}\.(js|css|woff2)$
-        header @hashed_assets Cache-Control "public, max-age=31536000, immutable"
-
-        root * /srv/mybookkeeper/frontend/dist
-        try_files {path} /index.html
-        file_server
-    }
+    reverse_proxy 127.0.0.1:8094
 }
