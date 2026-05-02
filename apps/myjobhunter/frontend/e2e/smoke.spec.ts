@@ -47,6 +47,10 @@ test.describe("MyJobHunter smoke tests", () => {
       await expect(
         page.getByText(/I'll add companies here as you log applications/)
       ).toBeVisible();
+      // "Add a company" CTA is present in the empty state
+      await expect(
+        page.getByRole("button", { name: /add a company/i })
+      ).toBeVisible();
 
       // 7. Profile page
       await page.getByRole("link", { name: /profile/i }).first().click();
