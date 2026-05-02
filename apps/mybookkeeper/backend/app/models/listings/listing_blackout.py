@@ -27,6 +27,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     String,
+    Text,
     func,
     text,
 )
@@ -57,6 +58,10 @@ class ListingBlackout(Base):
     )
     # iCal VEVENT UID for dedup on re-poll. NULL for ``manual`` rows.
     source_event_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+    # Host-written annotation. Never touched by the iCal poller UPSERT — only
+    # the PATCH /listings/blackouts/{id} endpoint may write here.
+    host_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
