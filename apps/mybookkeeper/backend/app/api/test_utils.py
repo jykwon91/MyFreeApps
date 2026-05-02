@@ -13,12 +13,11 @@ from app.core.permissions import current_org_member
 from app.db.session import unit_of_work
 from app.models.applicants.applicant import Applicant
 from app.models.applicants.screening_result import ScreeningResult
-from app.models.listings.listing import Listing
-from app.models.listings.listing_blackout import ListingBlackout
 from app.models.user.user import Role, User
 from app.repositories import (
     inquiry_repo,
     integration_repo,
+    listing_blackout_repo,
     listing_repo,
 )
 from app.repositories.applicants import (
@@ -141,15 +140,14 @@ async def seed_blackout(
         listing = await listing_repo.get_by_id(db, payload.listing_id, ctx.organization_id)
         if listing is None:
             raise HTTPException(status_code=404, detail="Listing not found")
-        row = ListingBlackout(
+        row = await listing_blackout_repo.create(
+            db,
             listing_id=payload.listing_id,
             starts_on=payload.starts_on,
             ends_on=payload.ends_on,
             source=payload.source,
             source_event_id=payload.source_event_id,
         )
-        db.add(row)
-        await db.flush()
         return _SeedBlackoutResponse(id=row.id)
 
 
@@ -160,25 +158,15 @@ async def delete_blackout(
 ) -> None:
     """Hard-delete a blackout for E2E cleanup. Test-only.
 
-    Tenant-scoped via JOIN to ``listings.organization_id`` — the
-    blackout row itself has no tenant column.
+    Tenant-scoped via JOIN to ``listings.organization_id`` (enforced
+    inside the repository helper).
     """
-    from sqlalchemy import select as _sa_select
     _require_test_mode()
     async with unit_of_work() as db:
-        result = await db.execute(
-            _sa_select(ListingBlackout)
-            .join(Listing, Listing.id == ListingBlackout.listing_id)
-            .where(
-                ListingBlackout.id == blackout_id,
-                Listing.organization_id == ctx.organization_id,
-            )
-        )
-        row = result.scalar_one_or_none()
-        if row is None:
-            return
-        await db.execute(
-            _sa_delete(ListingBlackout).where(ListingBlackout.id == blackout_id),
+        await listing_blackout_repo.delete_by_id_scoped_to_organization(
+            db,
+            blackout_id=blackout_id,
+            organization_id=ctx.organization_id,
         )
 
 

@@ -131,35 +131,67 @@ test.describe("Unified calendar viewer", () => {
     }
   });
 
-  test("page heading and core layout are visible at desktop and mobile viewports", async ({
+  test("renders desktop grid + mobile agenda from the same seeded data", async ({
     authedPage: page,
     api,
   }) => {
-    // No seed needed — this test just exercises layout, not data.
-    const viewports = [
-      { name: "mobile", width: 375, height: 800 },
-      { name: "desktop", width: 1280, height: 900 },
-    ] as const;
+    // Seed a property + listing + a blackout so the layout tests are
+    // exercising a real loaded state (not the empty / no-listings
+    // states). Per project rule: E2E tests must create data, perform
+    // user action, verify outcome, and clean up — not check rendering
+    // alone.
+    const runId = Date.now();
+    const property = await createProperty(api, { name: `E2E Calendar Layout ${runId}` });
+    const listingId = await seedListing(api, {
+      property_id: property.id,
+      title: `E2E Layout Listing ${runId}`,
+      status: "active",
+    });
+    const blackoutIds: string[] = [];
+    const ab = await seedBlackout(api, {
+      listing_id: listingId,
+      starts_on: "2026-06-05",
+      ends_on: "2026-06-10",
+      source: "airbnb",
+      source_event_id: `e2e-layout-${runId}`,
+    });
+    test.skip(
+      ab === null,
+      "Blackout seed endpoint not wired up — see test_utils.py for the helper",
+    );
+    if (ab !== null) blackoutIds.push(ab);
 
-    for (const vp of viewports) {
-      await page.setViewportSize({ width: vp.width, height: vp.height });
-      await page.goto("/calendar");
+    try {
+      // Desktop: grid view visible, mobile agenda hidden.
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await page.goto("/calendar?from=2026-06-01&to=2026-07-01");
       await page.waitForLoadState("networkidle");
-
-      await expect(
-        page.getByRole("heading", { name: "Calendar" }),
-        `heading visible at ${vp.name}`,
-      ).toBeVisible();
-      await expect(
-        page.getByTestId("calendar-window-nav"),
-        `window nav visible at ${vp.name}`,
-      ).toBeVisible();
-
-      const bodyWidth = await page.evaluate(() => document.body.scrollWidth);
+      await expect(page.getByRole("heading", { name: "Calendar" })).toBeVisible();
+      await expect(page.getByTestId("calendar-desktop")).toBeVisible();
+      await expect(page.getByTestId("calendar-mobile")).toBeHidden();
+      await expect(page.getByTestId("calendar-event-bar")).toHaveCount(1);
+      let bodyWidth = await page.evaluate(() => document.body.scrollWidth);
       expect(
         bodyWidth,
-        `Horizontal scroll on body at ${vp.name} (${vp.width}px) — bodyWidth=${bodyWidth}`,
-      ).toBeLessThanOrEqual(vp.width + 1);
+        `Horizontal scroll on body at desktop (1280px) — bodyWidth=${bodyWidth}`,
+      ).toBeLessThanOrEqual(1281);
+
+      // Mobile: agenda list visible, desktop grid hidden.
+      await page.setViewportSize({ width: 375, height: 800 });
+      await page.goto("/calendar?from=2026-06-01&to=2026-07-01");
+      await page.waitForLoadState("networkidle");
+      await expect(page.getByTestId("calendar-mobile")).toBeVisible();
+      await expect(page.getByTestId("calendar-desktop")).toBeHidden();
+      await expect(page.getByTestId("calendar-agenda-event")).toHaveCount(1);
+      bodyWidth = await page.evaluate(() => document.body.scrollWidth);
+      expect(
+        bodyWidth,
+        `Horizontal scroll on body at mobile (375px) — bodyWidth=${bodyWidth}`,
+      ).toBeLessThanOrEqual(376);
+    } finally {
+      for (const id of blackoutIds) await deleteBlackout(api, id);
+      await deleteListing(api, listingId);
+      await deleteProperty(api, property.id);
     }
   });
 });

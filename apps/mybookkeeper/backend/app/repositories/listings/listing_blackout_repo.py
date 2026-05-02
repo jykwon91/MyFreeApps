@@ -129,6 +129,65 @@ async def delete_missing_uids(
     return result.rowcount or 0
 
 
+async def create(
+    db: AsyncSession,
+    *,
+    listing_id: uuid.UUID,
+    starts_on: date,
+    ends_on: date,
+    source: str,
+    source_event_id: str | None = None,
+) -> ListingBlackout:
+    """Create a single blackout row.
+
+    Used by the unified calendar viewer's E2E seed path (where the
+    iCal poll job is bypassed). Production blackout writes go through
+    ``upsert_by_uid`` instead — that path is idempotent on the
+    (listing, source, uid) key. This function does NOT enforce any
+    upsert: callers must dedupe upstream.
+    """
+    row = ListingBlackout(
+        listing_id=listing_id,
+        starts_on=starts_on,
+        ends_on=ends_on,
+        source=source,
+        source_event_id=source_event_id,
+    )
+    db.add(row)
+    await db.flush()
+    return row
+
+
+async def delete_by_id_scoped_to_organization(
+    db: AsyncSession,
+    *,
+    blackout_id: uuid.UUID,
+    organization_id: uuid.UUID,
+) -> bool:
+    """Hard-delete a blackout, scoped via JOIN to the parent listing's org.
+
+    The blackout row has no tenant column — isolation is enforced
+    through the ``listings.organization_id`` link. Returns True if a
+    row was deleted, False otherwise.
+    """
+    from app.models.listings.listing import Listing
+    result = await db.execute(
+        select(ListingBlackout)
+        .join(Listing, Listing.id == ListingBlackout.listing_id)
+        .where(
+            ListingBlackout.id == blackout_id,
+            Listing.organization_id == organization_id,
+        )
+    )
+    row = result.scalar_one_or_none()
+    if row is None:
+        return False
+    await db.execute(
+        delete(ListingBlackout).where(ListingBlackout.id == blackout_id),
+    )
+    return True
+
+
 async def delete_by_listing_and_source(
     db: AsyncSession, listing_id: uuid.UUID, source: str,
 ) -> int:

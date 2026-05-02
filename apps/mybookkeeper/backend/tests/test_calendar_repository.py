@@ -26,6 +26,7 @@ from app.models.organization.organization_member import OrganizationMember
 from app.models.properties.property import Property
 from app.models.user.user import User
 from app.repositories.calendar import calendar_repository
+from app.repositories.listings import listing_blackout_repo
 
 
 # ---------------------------------------------------------------------------
@@ -653,3 +654,115 @@ class TestCalendarRepoHappyPath:
         for blackout, listing, prop in rows:
             assert listing.id == blackout.listing_id
             assert prop.id == listing.property_id
+
+
+# ---------------------------------------------------------------------------
+# listing_blackout_repo.create + delete_by_id_scoped_to_organization
+# (added in this PR for the calendar E2E seed path)
+# ---------------------------------------------------------------------------
+
+
+class TestListingBlackoutRepoCreateAndDelete:
+    @pytest.mark.asyncio
+    async def test_create_persists_a_blackout(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        prop = await _seed_property(db, test_org, test_user)
+        listing = _make_listing(
+            organization_id=test_org.id, user_id=test_user.id, property_id=prop.id,
+        )
+        db.add(listing)
+        await db.flush()
+
+        created = await listing_blackout_repo.create(
+            db,
+            listing_id=listing.id,
+            starts_on=date(2026, 6, 5),
+            ends_on=date(2026, 6, 10),
+            source="airbnb",
+            source_event_id="test-uid",
+        )
+        await db.commit()
+
+        # Re-read via the cross-listing query path.
+        rows = await calendar_repository.query_events(
+            db, organization_id=test_org.id,
+            from_=date(2026, 6, 1), to=date(2026, 7, 1),
+        )
+        assert len(rows) == 1
+        assert rows[0][0].id == created.id
+        assert rows[0][0].source == "airbnb"
+
+    @pytest.mark.asyncio
+    async def test_delete_returns_true_when_row_exists_in_org(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        prop = await _seed_property(db, test_org, test_user)
+        listing = _make_listing(
+            organization_id=test_org.id, user_id=test_user.id, property_id=prop.id,
+        )
+        db.add(listing)
+        await db.flush()
+        created = await listing_blackout_repo.create(
+            db,
+            listing_id=listing.id,
+            starts_on=date(2026, 6, 5),
+            ends_on=date(2026, 6, 10),
+            source="airbnb",
+        )
+        await db.commit()
+
+        deleted = await listing_blackout_repo.delete_by_id_scoped_to_organization(
+            db, blackout_id=created.id, organization_id=test_org.id,
+        )
+        await db.commit()
+        assert deleted is True
+
+        # Confirm the row is gone.
+        rows = await calendar_repository.query_events(
+            db, organization_id=test_org.id,
+            from_=date(2026, 6, 1), to=date(2026, 7, 1),
+        )
+        assert rows == []
+
+    @pytest.mark.asyncio
+    async def test_delete_returns_false_for_other_org(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        """A caller from another org cannot delete this org's blackout."""
+        prop = await _seed_property(db, test_org, test_user)
+        listing = _make_listing(
+            organization_id=test_org.id, user_id=test_user.id, property_id=prop.id,
+        )
+        db.add(listing)
+        await db.flush()
+        created = await listing_blackout_repo.create(
+            db,
+            listing_id=listing.id,
+            starts_on=date(2026, 6, 5),
+            ends_on=date(2026, 6, 10),
+            source="airbnb",
+        )
+        await db.commit()
+
+        # Other org's UUID — should not match.
+        deleted = await listing_blackout_repo.delete_by_id_scoped_to_organization(
+            db, blackout_id=created.id, organization_id=uuid.uuid4(),
+        )
+        assert deleted is False
+
+        # And the row in the original org is still intact.
+        rows = await calendar_repository.query_events(
+            db, organization_id=test_org.id,
+            from_=date(2026, 6, 1), to=date(2026, 7, 1),
+        )
+        assert len(rows) == 1
+
+    @pytest.mark.asyncio
+    async def test_delete_returns_false_when_row_doesnt_exist(
+        self, db: AsyncSession, test_org: Organization,
+    ) -> None:
+        deleted = await listing_blackout_repo.delete_by_id_scoped_to_organization(
+            db, blackout_id=uuid.uuid4(), organization_id=test_org.id,
+        )
+        assert deleted is False
