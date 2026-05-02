@@ -50,8 +50,20 @@ export default function Calendar() {
   const toIso =
     parseIsoOrNull(searchParams.get("to")) ?? addDays(fromIso, CALENDAR_DEFAULT_WINDOW_DAYS);
 
-  const selectedPropertyIds = parseCsvOrEmpty(searchParams.get("properties"));
-  const selectedSources = parseCsvOrEmpty(searchParams.get("sources"));
+  // Memoize the filter arrays so the query cache key stays referentially
+  // stable across renders that don't change the URL — without this, the
+  // `useMemo` below sees fresh arrays each render and would re-fetch on
+  // every single re-render.
+  const propertiesParam = searchParams.get("properties");
+  const sourcesParam = searchParams.get("sources");
+  const selectedPropertyIds = useMemo(
+    () => parseCsvOrEmpty(propertiesParam),
+    [propertiesParam],
+  );
+  const selectedSources = useMemo(
+    () => parseCsvOrEmpty(sourcesParam),
+    [sourcesParam],
+  );
 
   const queryArgs = useMemo(
     () => ({
