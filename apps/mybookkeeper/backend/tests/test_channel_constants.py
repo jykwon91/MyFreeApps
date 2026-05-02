@@ -1,9 +1,16 @@
-"""Verify the migration's seed list matches ``CHANNEL_SEEDS``.
+"""Verify the migration chain produces the seed rows ``CHANNEL_SEEDS`` declares.
 
-Both must agree exactly — the migration is the source of truth for what
-ships in the DB at deploy time, but the constants module is the source of
-truth in code. Drift here means a re-run of the migration on a fresh DB
-would produce different rows than the live DB.
+The constants module is the source of truth in code; the migration chain is
+the source of truth at deploy time. They must agree exactly — drift here
+means a fresh DB rebuild would diverge from a long-running prod DB.
+
+We replay the chain in order:
+1. ``j2k4l6m8n0p2_add_channels_and_blackouts`` — initial seed (PR 1.4)
+2. ``a1b2c3d4e5f6_correct_furnished_finder_ical_capabilities`` — FF
+   correction (2026-05-02): FF doesn't expose iCal, only iCal import from
+   Airbnb/VRBO. Both flags flipped to False for ``furnished_finder``.
+
+If a future migration changes another channel's flags, add a step here.
 """
 from __future__ import annotations
 
@@ -13,46 +20,53 @@ from pathlib import Path
 from app.core.channel_constants import CHANNEL_SEEDS
 
 
-_MIGRATION_PATH = (
-    Path(__file__).resolve().parents[1]
-    / "alembic"
-    / "versions"
-    / "j2k4l6m8n0p2_add_channels_and_blackouts.py"
+_VERSIONS_DIR = (
+    Path(__file__).resolve().parents[1] / "alembic" / "versions"
+)
+_SEED_MIGRATION = _VERSIONS_DIR / "j2k4l6m8n0p2_add_channels_and_blackouts.py"
+_FF_CORRECTION_MIGRATION = (
+    _VERSIONS_DIR / "ffcorr260502_correct_furnished_finder_ical_capabilities.py"
 )
 
 
-def test_migration_seed_matches_constants() -> None:
-    text = _MIGRATION_PATH.read_text(encoding="utf-8")
-
-    # Extract every tuple from the migration's _CHANNEL_SEEDS literal.
-    # Format: ("airbnb", "Airbnb", True, True),
+def _replay_seed_migration() -> dict[str, dict[str, object]]:
+    """Parse the initial seed migration's ``_CHANNEL_SEEDS`` tuple."""
+    text = _SEED_MIGRATION.read_text(encoding="utf-8")
     pattern = re.compile(
         r'\("([\w_]+)",\s*"([^"]+)",\s*(True|False),\s*(True|False)\)',
     )
-    raw_matches = pattern.findall(text)
-    # Only keep the matches inside _CHANNEL_SEEDS — the file may contain
-    # other tuples elsewhere, but as of this PR there are none. Be safe:
-    # filter by the known channel slugs.
     expected_slugs = {seed["id"] for seed in CHANNEL_SEEDS}
-    matches = [m for m in raw_matches if m[0] in expected_slugs]
-
-    assert len(matches) == len(CHANNEL_SEEDS), (
-        f"Expected {len(CHANNEL_SEEDS)} channels in migration; saw {len(matches)}"
-    )
-
-    migration_seeds = [
-        {
+    matches = [m for m in pattern.findall(text) if m[0] in expected_slugs]
+    return {
+        cid: {
             "id": cid,
             "name": cname,
             "supports_ical_export": exp == "True",
             "supports_ical_import": imp == "True",
         }
         for cid, cname, exp, imp in matches
-    ]
+    }
 
-    # Compare in slug order (stable across re-runs).
+
+def _replay_ff_correction(state: dict[str, dict[str, object]]) -> None:
+    """Apply the FF capabilities correction in-place."""
+    state["furnished_finder"]["supports_ical_export"] = False
+    state["furnished_finder"]["supports_ical_import"] = False
+
+
+def test_migration_chain_matches_constants() -> None:
+    state = _replay_seed_migration()
+    _replay_ff_correction(state)
+
     by_slug_const = {s["id"]: s for s in CHANNEL_SEEDS}
-    by_slug_mig = {s["id"]: s for s in migration_seeds}
-    assert set(by_slug_const) == set(by_slug_mig)
+    assert set(by_slug_const) == set(state)
     for slug in by_slug_const:
-        assert by_slug_const[slug] == by_slug_mig[slug]
+        assert by_slug_const[slug] == state[slug]
+
+
+def test_ff_correction_migration_clears_both_flags() -> None:
+    """Guard against the FF row drifting back to True/True in the constants."""
+    text = _FF_CORRECTION_MIGRATION.read_text(encoding="utf-8")
+    assert "supports_ical_export = false" in text
+    assert "supports_ical_import = false" in text
+    assert "id = 'furnished_finder'" in text

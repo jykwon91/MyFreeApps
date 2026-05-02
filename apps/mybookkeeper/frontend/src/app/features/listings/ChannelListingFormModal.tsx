@@ -60,6 +60,12 @@ export default function ChannelListingFormModal({
   );
   const [validationError, setValidationError] = useState<string | null>(null);
 
+  const selectedChannel = isEdit
+    ? existing?.channel
+    : availableChannels.find((c) => c.id === channelId);
+  const channelSupportsImport = selectedChannel?.supports_ical_import ?? true;
+  const channelSupportsExport = selectedChannel?.supports_ical_export ?? true;
+
   const [createChannel, { isLoading: isCreating }] = useCreateListingChannelMutation();
   const [updateChannel, { isLoading: isUpdating }] = useUpdateChannelListingMutation();
 
@@ -185,23 +191,31 @@ export default function ChannelListingFormModal({
               />
             </FormField>
 
-            <FormField label="Channel's calendar export URL (optional)">
-              <input
-                type="url"
-                value={icalImportUrl}
-                onChange={(e) => setIcalImportUrl(e.target.value)}
-                placeholder="https://.../calendar.ics"
-                maxLength={1000}
-                data-testid="channel-listing-form-ical-import-url"
-                className="w-full min-h-[44px] rounded border bg-background px-3 py-2 text-sm"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Paste the channel's iCal export URL here so bookings on that
-                channel come back into MBK every 15 minutes.
+            {channelSupportsImport ? (
+              <FormField label="Channel's calendar export URL (optional)">
+                <input
+                  type="url"
+                  value={icalImportUrl}
+                  onChange={(e) => setIcalImportUrl(e.target.value)}
+                  placeholder="https://.../calendar.ics"
+                  maxLength={1000}
+                  data-testid="channel-listing-form-ical-import-url"
+                  className="w-full min-h-[44px] rounded border bg-background px-3 py-2 text-sm"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Paste the channel's iCal export URL here so bookings on that
+                  channel come back into MBK every 15 minutes.
+                </p>
+              </FormField>
+            ) : (
+              <p className="text-xs text-muted-foreground italic">
+                {selectedChannel?.name ?? "This channel"} doesn't expose a
+                calendar feed, so MBK can only store the listing link —
+                bookings won't sync automatically.
               </p>
-            </FormField>
+            )}
 
-            {isEdit && existing ? (
+            {isEdit && existing && channelSupportsExport ? (
               <div className="space-y-1">
                 <p className="text-xs font-medium">
                   Outbound iCal URL — paste this into the channel's import-calendar field:

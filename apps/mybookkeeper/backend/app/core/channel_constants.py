@@ -26,8 +26,12 @@ CHANNEL_SEEDS: tuple[ChannelSeed, ...] = (
     {
         "id": "furnished_finder",
         "name": "Furnished Finder",
-        "supports_ical_export": True,
-        "supports_ical_import": True,
+        # Furnished Finder does not expose an iCal export — verified via
+        # FF support docs (2026-05-02). Only iCal import is supported on
+        # FF's side, and only from Airbnb / VRBO. So an FF channel link
+        # in MBK is record-keeping (External URL) only.
+        "supports_ical_export": False,
+        "supports_ical_import": False,
     },
     {
         "id": "rotating_room",

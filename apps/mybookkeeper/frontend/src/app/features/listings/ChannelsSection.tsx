@@ -115,6 +115,7 @@ export default function ChannelsSection({ listingId }: Props) {
             size="sm"
             onClick={handleAdd}
             data-testid="channels-section-add-button"
+            className="whitespace-nowrap shrink-0"
           >
             <Plus className="h-3 w-3 mr-1" aria-hidden="true" />
             Add channel
