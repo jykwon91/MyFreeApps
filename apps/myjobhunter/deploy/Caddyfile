@@ -1,0 +1,23 @@
+# Replace the placeholder domain with the actual MJH domain before first deploy.
+# This file is auto-synced to /etc/caddy/Caddyfile on the VPS by the deploy workflow.
+#
+# Host Caddy is intentionally a thin TLS-terminator + reverse-proxy. All
+# routing — API, frontend, security headers, cache headers — lives in
+# the docker Caddy (apps/myjobhunter/docker/Caddyfile.docker) on
+# 127.0.0.1:8092. That keeps the source of truth in one place and mirrors
+# the MBK architecture (apps/mybookkeeper/deploy/Caddyfile).
+#
+# Keep ONLY HSTS + nosniff + Referrer-Policy at this layer (network-level
+# protections that make sense at the TLS edge). Everything else — XFO,
+# CSP, cache-control, /api routing, SPA fallback — is in the docker Caddy.
+
+myjobhunter.example.com {
+    header {
+        Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        -Server
+    }
+
+    reverse_proxy 127.0.0.1:8092
+}

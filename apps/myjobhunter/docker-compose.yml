@@ -34,9 +34,6 @@ services:
     env_file: backend/.env.docker
     environment:
       DATABASE_URL: postgresql+asyncpg://myjobhunter:${DB_PASSWORD}@postgres/myjobhunter
-      FRONTEND_DIST_DIR: /srv/frontend
-    volumes:
-      - frontend_dist:/srv/frontend
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -47,15 +44,21 @@ services:
       retries: 3
 
   caddy:
-    image: caddy:2-alpine
+    # Custom image: caddy:2-alpine + freshly-built frontend dist baked in
+    # at /srv/frontend + Caddyfile baked at /etc/caddy/Caddyfile. No shared
+    # volume, no entrypoint copy, no drift between deploys. See
+    # docker/caddy.Dockerfile for the full rationale.
+    build:
+      context: ../..
+      dockerfile: apps/myjobhunter/docker/caddy.Dockerfile
     restart: unless-stopped
     ports:
-      - "8092:80"
+      # Bind only to localhost — host Caddy is the public front door and proxies here.
+      # Port 80/443 on the host are owned by host Caddy; this container is HTTP-only on 8092.
+      - "127.0.0.1:8092:80"
     environment:
       DOMAIN: ${DOMAIN:-localhost}
     volumes:
-      - ./docker/Caddyfile.docker:/etc/caddy/Caddyfile
-      - frontend_dist:/srv/frontend:ro
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
@@ -64,6 +67,5 @@ services:
 
 volumes:
   pg_data:
-  frontend_dist:
   caddy_data:
   caddy_config:

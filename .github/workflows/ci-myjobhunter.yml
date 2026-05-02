@@ -155,3 +155,24 @@ jobs:
 
       - name: Build frontend
         run: npm run build --workspace=myjobhunter-frontend
+
+  caddy-image:
+    name: caddy-image / myjobhunter
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Build caddy image (bakes frontend dist in)
+        run: |
+          docker build \
+            -f apps/myjobhunter/docker/caddy.Dockerfile \
+            -t myjobhunter-caddy:ci \
+            .
+
+      - name: Verify frontend dist is baked into image
+        # Confirms the multi-stage build produced /srv/frontend/index.html
+        # inside the caddy image. If this fails, the bake step silently
+        # didn't copy the dist (wrong COPY path, wrong build stage, etc.).
+        run: docker run --rm myjobhunter-caddy:ci test -f /srv/frontend/index.html
