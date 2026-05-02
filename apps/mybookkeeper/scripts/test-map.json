@@ -369,6 +369,33 @@
         "listings-channels.spec.ts"
       ]
     },
+    "calendar": {
+      "source_paths": [
+        "backend/app/api/calendar.py",
+        "backend/app/services/calendar/",
+        "backend/app/repositories/calendar/",
+        "backend/app/schemas/calendar/",
+        "backend/app/core/calendar_constants.py",
+        "frontend/src/app/pages/Calendar.tsx",
+        "frontend/src/app/features/calendar/",
+        "frontend/src/shared/types/calendar/",
+        "frontend/src/shared/store/calendarApi.ts",
+        "frontend/src/shared/lib/calendar-constants.ts"
+      ],
+      "backend_tests": [
+        "test_calendar_repository.py",
+        "test_calendar_service.py",
+        "test_calendar_events_route.py",
+        "test_calendar_route.py"
+      ],
+      "frontend_tests": [
+        "Calendar.test.tsx",
+        "calendar-utils.test.ts"
+      ],
+      "e2e_specs": [
+        "calendar.spec.ts"
+      ]
+    },
     "inquiries": {
       "source_paths": [
         "backend/app/models/inquiries/",

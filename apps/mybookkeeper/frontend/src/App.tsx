@@ -20,6 +20,7 @@ import Documents from "@/app/pages/Documents";
 import Properties from "@/app/pages/Properties";
 import Listings from "@/app/pages/Listings";
 import ListingDetail from "@/app/pages/ListingDetail";
+import Calendar from "@/app/pages/Calendar";
 import Inquiries from "@/app/pages/Inquiries";
 import InquiryDetail from "@/app/pages/InquiryDetail";
 import Applicants from "@/app/pages/Applicants";
@@ -102,6 +103,7 @@ export default function App() {
               <Route path="properties" element={<Properties />} />
               <Route path="listings" element={<Listings />} />
               <Route path="listings/:listingId" element={<ListingDetail />} />
+              <Route path="calendar" element={<Calendar />} />
               <Route path="inquiries" element={<Inquiries />} />
               <Route path="inquiries/:inquiryId" element={<InquiryDetail />} />
               <Route path="applicants" element={<Applicants />} />

@@ -276,3 +276,141 @@ class TestDeleteInquiry:
             assert gone is None
         finally:
             settings.allow_test_admin_promotion = original
+
+
+class TestSeedBlackout:
+    """Coverage for the test-only POST /test/seed-blackout endpoint
+    (used by the unified-calendar E2E)."""
+
+    @pytest.mark.asyncio
+    async def test_seed_then_delete_round_trip(
+        self,
+        db: AsyncSession,
+        test_org,
+        test_user: User,
+    ) -> None:
+        import datetime as _dt
+        from decimal import Decimal
+        from app.api.test_utils import (
+            _SeedBlackoutRequest,
+            delete_blackout,
+            seed_blackout,
+        )
+        from app.core.config import settings
+        from app.core.context import RequestContext
+        from app.models.listings.listing import Listing
+        from app.models.listings.listing_blackout import ListingBlackout
+        from app.models.properties.property import Property
+        from sqlalchemy import select
+
+        # Seed property + listing first.
+        prop = Property(
+            organization_id=test_org.id, user_id=test_user.id,
+            name="Calendar Seed Test House", address="100 Test St",
+        )
+        db.add(prop)
+        await db.flush()
+        listing = Listing(
+            organization_id=test_org.id, user_id=test_user.id,
+            property_id=prop.id, title="Seed Room",
+            monthly_rate=Decimal("1500.00"), room_type="private_room",
+            private_bath=False, parking_assigned=False, furnished=True,
+            status="active", amenities=[], pets_on_premises=False,
+        )
+        db.add(listing)
+        await db.commit()
+
+        ctx = RequestContext(
+            user_id=test_user.id,
+            organization_id=test_org.id,
+            org_role=OrgRole.OWNER,
+        )
+        original = settings.allow_test_admin_promotion
+        try:
+            settings.allow_test_admin_promotion = True
+            payload = _SeedBlackoutRequest(
+                listing_id=listing.id,
+                starts_on=_dt.date(2026, 6, 5),
+                ends_on=_dt.date(2026, 6, 10),
+                source="airbnb",
+                source_event_id="seed-test-1",
+            )
+            created = await seed_blackout(payload=payload, ctx=ctx)
+
+            row = await db.execute(
+                select(ListingBlackout).where(ListingBlackout.id == created.id),
+            )
+            assert row.scalar_one_or_none() is not None
+
+            await delete_blackout(blackout_id=created.id, ctx=ctx)
+            row = await db.execute(
+                select(ListingBlackout).where(ListingBlackout.id == created.id),
+            )
+            assert row.scalar_one_or_none() is None
+        finally:
+            settings.allow_test_admin_promotion = original
+
+    @pytest.mark.asyncio
+    async def test_seed_rejects_listing_in_other_org(
+        self,
+        db: AsyncSession,
+        test_org,
+        test_user: User,
+    ) -> None:
+        """A caller cannot seed a blackout under another org's listing."""
+        import datetime as _dt
+        from decimal import Decimal
+        from fastapi import HTTPException
+        from app.api.test_utils import _SeedBlackoutRequest, seed_blackout
+        from app.core.config import settings
+        from app.core.context import RequestContext
+        from app.models.listings.listing import Listing
+        from app.models.organization.organization import Organization
+        from app.models.properties.property import Property
+
+        # Create a separate org's listing.
+        other_user = User(
+            id=uuid.uuid4(), email="other@example.com",
+            hashed_password="hash", is_active=True,
+            is_superuser=False, is_verified=True,
+        )
+        other_org = Organization(
+            id=uuid.uuid4(), name="Other", created_by=other_user.id,
+        )
+        db.add_all([other_user, other_org])
+        await db.flush()
+        other_prop = Property(
+            organization_id=other_org.id, user_id=other_user.id,
+            name="Other House", address="2 Other St",
+        )
+        db.add(other_prop)
+        await db.flush()
+        other_listing = Listing(
+            organization_id=other_org.id, user_id=other_user.id,
+            property_id=other_prop.id, title="Other Room",
+            monthly_rate=Decimal("1500.00"), room_type="private_room",
+            private_bath=False, parking_assigned=False, furnished=True,
+            status="active", amenities=[], pets_on_premises=False,
+        )
+        db.add(other_listing)
+        await db.commit()
+
+        ctx = RequestContext(
+            user_id=test_user.id,
+            organization_id=test_org.id,
+            org_role=OrgRole.OWNER,
+        )
+        original = settings.allow_test_admin_promotion
+        try:
+            settings.allow_test_admin_promotion = True
+            payload = _SeedBlackoutRequest(
+                listing_id=other_listing.id,
+                starts_on=_dt.date(2026, 6, 5),
+                ends_on=_dt.date(2026, 6, 10),
+                source="airbnb",
+            )
+            with pytest.raises(HTTPException) as exc_info:
+                await seed_blackout(payload=payload, ctx=ctx)
+            assert exc_info.value.status_code == 404
+        finally:
+            settings.allow_test_admin_promotion = original

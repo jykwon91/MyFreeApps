@@ -17,6 +17,7 @@ from app.models.user.user import Role, User
 from app.repositories import (
     inquiry_repo,
     integration_repo,
+    listing_blackout_repo,
     listing_repo,
 )
 from app.repositories.applicants import (
@@ -108,6 +109,65 @@ async def delete_listing(
     _require_test_mode()
     async with unit_of_work() as db:
         await listing_repo.hard_delete_by_id(db, listing_id, ctx.organization_id)
+
+
+class _SeedBlackoutRequest(BaseModel):
+    listing_id: uuid.UUID
+    starts_on: _dt.date
+    ends_on: _dt.date
+    source: str = "airbnb"
+    source_event_id: str | None = None
+
+
+class _SeedBlackoutResponse(BaseModel):
+    id: uuid.UUID
+
+
+@router.post("/seed-blackout", response_model=_SeedBlackoutResponse)
+async def seed_blackout(
+    payload: _SeedBlackoutRequest,
+    ctx: RequestContext = Depends(current_org_member),
+) -> _SeedBlackoutResponse:
+    """Test-only direct insert for unified-calendar E2E seeding.
+
+    Production blackout writes go through the iCal poll job; this seed
+    endpoint exists so the E2E suite has a deterministic data path
+    without spinning up a fake iCal feed. Tenant-scoped via the parent
+    listing's organization_id.
+    """
+    _require_test_mode()
+    async with unit_of_work() as db:
+        listing = await listing_repo.get_by_id(db, payload.listing_id, ctx.organization_id)
+        if listing is None:
+            raise HTTPException(status_code=404, detail="Listing not found")
+        row = await listing_blackout_repo.create(
+            db,
+            listing_id=payload.listing_id,
+            starts_on=payload.starts_on,
+            ends_on=payload.ends_on,
+            source=payload.source,
+            source_event_id=payload.source_event_id,
+        )
+        return _SeedBlackoutResponse(id=row.id)
+
+
+@router.delete("/blackouts/{blackout_id}", status_code=204)
+async def delete_blackout(
+    blackout_id: uuid.UUID,
+    ctx: RequestContext = Depends(current_org_member),
+) -> None:
+    """Hard-delete a blackout for E2E cleanup. Test-only.
+
+    Tenant-scoped via JOIN to ``listings.organization_id`` (enforced
+    inside the repository helper).
+    """
+    _require_test_mode()
+    async with unit_of_work() as db:
+        await listing_blackout_repo.delete_by_id_scoped_to_organization(
+            db,
+            blackout_id=blackout_id,
+            organization_id=ctx.organization_id,
+        )
 
 
 @router.post("/seed-inquiry", response_model=InquiryResponse)
