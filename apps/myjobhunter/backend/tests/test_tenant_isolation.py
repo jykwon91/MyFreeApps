@@ -31,12 +31,22 @@ async def test_unauthenticated_requests_rejected(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_user_a_sees_empty_profile(client: AsyncClient, user_factory, as_user) -> None:
+async def test_user_a_sees_own_profile(client: AsyncClient, user_factory, as_user) -> None:
+    """GET /profile lazily creates a profile row and returns a ProfileResponse.
+
+    Phase 2: profile is no longer nullable — the endpoint creates one on first
+    access so new users always get a 200 with an empty-but-valid profile object.
+    """
     user_a = await user_factory()
     async with await as_user(user_a) as authed_a:
         resp = await authed_a.get("/profile")
     assert resp.status_code == 200
-    assert resp.json()["profile"] is None
+    body = resp.json()
+    # Profile is always present (lazy create), user_id must match user A.
+    assert body["user_id"] == user_a["id"]
+    # Nullable fields default to None / empty on first creation.
+    assert body["summary"] is None
+    assert body["locations"] == []
 
 
 @pytest.mark.asyncio

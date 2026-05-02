@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { createTestUser, deleteTestUser } from "./fixtures/auth";
+import { createTestUser, deleteTestUser, resetRateLimit } from "./fixtures/auth";
 
 test.describe("Email verification at registration", () => {
   test("unverified user cannot login; resend banner appears; verified user can", async ({
@@ -10,10 +10,19 @@ test.describe("Email verification at registration", () => {
     const user = await createTestUser(request, { verify: false });
 
     try {
-      // 2. Attempt to log in via the UI — should be blocked
+      // Reset rate limit so this test starts with a clean slate
+      await resetRateLimit(request);
+
+      // 2. Clear any stale auth token so the Login page doesn't auto-redirect
+      //    to /dashboard before we can attempt the unverified login.
+      //    The /verify-email route has no RequireAuth wrapper, so we can
+      //    safely navigate there first and clear localStorage before the
+      //    Login page's useEffect can fire.
+      await page.goto("/verify-email");
+      await page.evaluate(() => localStorage.removeItem("token"));
       await page.goto("/login");
       await page.getByLabel(/email/i).fill(user.email);
-      await page.getByLabel(/password/i).fill(user.password);
+      await page.locator("#login-password").fill(user.password);
       await page.getByRole("button", { name: /sign in/i }).click();
 
       // 3. The Login page surfaces the resend banner with a button
@@ -37,13 +46,13 @@ test.describe("Email verification at registration", () => {
 
       // 5. Force-verify via the test helper (simulates the user clicking the email link)
       await request.post(
-        `${process.env.BACKEND_URL ?? "http://localhost:8002"}/api/_test/verify-email`,
+        `${process.env.BACKEND_URL ?? "http://localhost:8004"}/api/_test/verify-email`,
         { data: { email: user.email } },
       );
 
       // 6. Login again — should succeed and reach /dashboard
       await page.getByLabel(/email/i).fill(user.email);
-      await page.getByLabel(/password/i).fill(user.password);
+      await page.locator("#login-password").fill(user.password);
       await page.getByRole("button", { name: /sign in/i }).click();
       await expect(page).toHaveURL(/\/dashboard/, { timeout: 10_000 });
     } finally {
@@ -55,13 +64,19 @@ test.describe("Email verification at registration", () => {
     page,
   }) => {
     const timestamp = Date.now();
-    const email = `e2e-register-${timestamp}@myjobhunter-test.invalid`;
+    const email = `e2e-register-${timestamp}@myjobhunter-test.example.com`;
     const password = `TestPass${timestamp}!`;
 
+    // Clear stale auth so Login doesn't auto-redirect before the form renders.
+    // Navigate to a public route first so we can safely clear localStorage
+    // before React's isAuthenticated useEffect fires.
+    await page.goto("/verify-email");
+    await page.evaluate(() => localStorage.removeItem("token"));
     await page.goto("/login");
     await page.getByRole("tab", { name: /create account/i }).click();
     await page.getByLabel(/email/i).fill(email);
-    await page.getByLabel(/password/i).fill(password);
+    // The Create Account tab password field — scoped by the visible tab panel
+    await page.getByRole("tabpanel").locator("#login-password").fill(password);
     await page.getByRole("button", { name: /^create account$/i }).click();
 
     await expect(

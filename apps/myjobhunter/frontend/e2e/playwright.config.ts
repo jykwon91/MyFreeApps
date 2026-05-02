@@ -10,7 +10,7 @@ export default defineConfig({
   workers: "50%",
   reporter: [["html", { open: "never" }], ["list"]],
   use: {
-    baseURL: "http://localhost:5174",
+    baseURL: process.env.BASE_URL ?? "http://localhost:5174",
     trace: "on-first-retry",
     screenshot: "only-on-failure",
   },
@@ -22,7 +22,7 @@ export default defineConfig({
   ],
   webServer: {
     command: "npm run dev",
-    url: "http://localhost:5174",
+    url: process.env.BASE_URL ?? "http://localhost:5174",
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
   },

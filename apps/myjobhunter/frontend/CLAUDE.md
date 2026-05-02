@@ -135,8 +135,9 @@ Config: `e2e/playwright.config.ts`
 Smoke test: `e2e/smoke.spec.ts` — creates a test user, navigates all 5 pages,
 checks empty states, tests 404, signs out.
 
-Known gap (Phase 1): No user self-delete endpoint yet. Test users with
-`@myjobhunter-test.invalid` email domain accumulate in dev DB. Clean up with:
+Test users use `@myjobhunter-test.example.com` (RFC 2606 reserved, accepted by
+email validators). They are auto-deleted by `deleteTestUser()` after each E2E test.
+Any survivors (test crash before teardown) can be cleaned up with:
 ```bash
 python backend/scripts/cleanup_test_users.py
 ```

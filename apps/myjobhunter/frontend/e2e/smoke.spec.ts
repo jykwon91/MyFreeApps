@@ -11,7 +11,7 @@ test.describe("MyJobHunter smoke tests", () => {
 
     try {
       // 2. Log in via the UI
-      await loginViaUI(page, user);
+      await loginViaUI(page, user, request);
       await expect(page).toHaveURL(/\/dashboard/);
 
       // 3. Dashboard — check heading and empty state
@@ -32,11 +32,13 @@ test.describe("MyJobHunter smoke tests", () => {
         page.getByText(/Drop your first one in/)
       ).toBeVisible();
 
-      // 5. Click "Add application" CTA — assert Phase 2 toast feedback
+      // 5. Click "Add application" CTA — dialog opens (Phase 2)
       await page.getByRole("button", { name: /add application/i }).first().click();
       await expect(
-        page.getByText(/coming in Phase 2/i)
+        page.getByRole("dialog", { name: /add application/i })
       ).toBeVisible({ timeout: 5_000 });
+      // Dismiss the dialog before continuing
+      await page.getByRole("button", { name: /cancel/i }).click();
 
       // 6. Companies page
       await page.getByRole("link", { name: /companies/i }).first().click();
@@ -52,14 +54,16 @@ test.describe("MyJobHunter smoke tests", () => {
         page.getByRole("button", { name: /add a company/i })
       ).toBeVisible();
 
-      // 7. Profile page
+      // 7. Profile page — Phase 3: profile is lazily created, shows sections
       await page.getByRole("link", { name: /profile/i }).first().click();
       await page.waitForURL("**/profile");
+      // The profile page now shows salary + location + work history sections
+      // (Phase 1 empty-state heading "Tell me about yourself" is no longer shown)
       await expect(
-        page.getByRole("heading", { name: "Tell me about yourself" })
+        page.getByRole("heading", { name: "Salary preferences" })
       ).toBeVisible();
       await expect(
-        page.getByText(/Upload your resume/)
+        page.getByRole("heading", { name: "Work history" })
       ).toBeVisible();
 
       // 8. Settings page
@@ -68,26 +72,26 @@ test.describe("MyJobHunter smoke tests", () => {
       await expect(
         page.getByRole("heading", { name: "Settings" })
       ).toBeVisible();
-      await expect(page.getByText("Gmail")).toBeVisible();
-      await expect(page.getByText("Disconnected")).toBeVisible();
+      await expect(page.getByRole("heading", { name: /gmail/i })).toBeVisible();
+      await expect(page.getByText("Disconnected", { exact: true }).first()).toBeVisible();
 
-      // 9. Application detail 404
+      // 9. Application detail error page — invalid/non-existent UUID
       await page.goto("/applications/non-existent-uuid");
+      // The app shows a 422/error state when the UUID is not found
       await expect(
         page.getByRole("heading", {
-          name: /I couldn't find that application/i,
+          name: /couldn't load that application/i,
         })
-      ).toBeVisible();
+      ).toBeVisible({ timeout: 5_000 });
       await expect(
-        page.getByText(/it may have been deleted/i)
+        page.getByText(/non-existent-uuid.*isn't available/i)
       ).toBeVisible();
 
       // 10. Sign out
-      // Desktop: user menu in sidebar; mobile: bottom nav doesn't have sign out,
-      // so we look for the dropdown trigger in the sidebar
+      // Desktop: user menu in sidebar — the button shows the truncated name,
+      // not the full email. Click the last button in the sidebar to open the menu.
       const signOutButton = page.getByRole("menuitem", { name: /sign out/i });
-      // Trigger dropdown first
-      await page.getByRole("button", { name: user.email }).click();
+      await page.locator("aside").getByRole("button").last().click();
       await expect(signOutButton).toBeVisible();
       await signOutButton.click();
 

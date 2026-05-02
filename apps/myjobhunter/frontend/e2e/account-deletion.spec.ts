@@ -30,7 +30,7 @@ test.describe("MyJobHunter account deletion + data export", () => {
     const user = await createTestUser(request);
     let cleanup: typeof deleteTestUser | null = deleteTestUser;
     try {
-      await loginViaUI(page, user);
+      await loginViaUI(page, user, request);
       await expect(page).toHaveURL(/\/dashboard/);
 
       // 2. Navigate to the Security page.
@@ -46,7 +46,7 @@ test.describe("MyJobHunter account deletion + data export", () => {
       const tokenCookie = await page.evaluate(() => localStorage.getItem("token"));
       expect(tokenCookie).not.toBeNull();
       const exportResponse = await request.get(
-        `${process.env.BACKEND_URL ?? "http://localhost:8002"}/api/users/me/export`,
+        `${process.env.BACKEND_URL ?? "http://localhost:8004"}/api/users/me/export`,
         {
           headers: { Authorization: `Bearer ${tokenCookie}` },
         },
@@ -84,7 +84,8 @@ test.describe("MyJobHunter account deletion + data export", () => {
 
       // 6. Login should now fail because the user row is gone.
       await page.getByLabel(/email/i).fill(user.email);
-      await page.getByLabel(/password/i).fill(user.password);
+      // Use the input's id directly — "Show password" button also matches /password/i
+      await page.locator("#login-password").fill(user.password);
       await page.getByRole("button", { name: /sign in/i }).click();
 
       // fastapi-users returns 400 on bad credentials; the LoginForm surfaces

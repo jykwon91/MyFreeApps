@@ -3,7 +3,7 @@
 Issues discovered during development. New entries are appended; resolved entries are
 removed and the counts in this header are updated.
 
-**Open issues: 1 (Critical: 0 / High: 1 / Medium: 0 / Low: 0)**
+**Open issues: 4 (Critical: 1 / High: 1 / Medium: 1 / Low: 1)**
 
 ---
 
@@ -48,3 +48,73 @@ None of these forced Vitest to load the v19 `react-dom` over the hoisted v18.
 and an E2E spec, so the gap is in the JSX unit-test surface only. Production builds (`vite build`)
 are unaffected — they correctly resolve React 19. Logging a Critical would imply the feature
 ships broken; in fact it ships fully tested through backend + E2E layers.
+
+---
+
+### [Security] TOTP login endpoint did not enforce email verification
+
+**Severity:** Critical (now fixed in this PR)
+**Effort:** XS (1-line fix)
+**Location:** `apps/myjobhunter/backend/app/api/totp.py` — `totp_login` handler
+**Discovered:** PR profile-wiring — `2026-05-02`
+
+**Problem:** `POST /auth/totp/login` returned a JWT for unverified users. The standard
+`/auth/jwt/login` route (via fastapi-users `authenticate` backend) enforces `is_verified`,
+but the custom TOTP endpoint called `authenticate_password()` which bypasses that check.
+An unverified user with valid credentials could obtain a JWT via the TOTP endpoint.
+
+**Fix applied:** Added `if not user.is_verified: raise HTTPException(400, "LOGIN_USER_NOT_VERIFIED")`
+after the `is_active` check in the TOTP login handler. E2E test `auth.spec.ts` now covers this.
+
+**Why still listed:** The fix is in, but the pattern of `authenticate_password` bypassing
+fastapi-users' verification gate is fragile — if new login paths are added, the same mistake
+could recur. Consider adding an `is_verified` assertion directly in `authenticate_password()`
+or documenting the gap prominently in `auth.py`.
+
+---
+
+### [E2E Tests] E2E spec files shared a browser context with no isolation between tests
+
+**Severity:** Medium
+**Effort:** S
+**Location:** `apps/myjobhunter/frontend/e2e/playwright.config.ts` — missing `storageState`
+**Discovered:** PR profile-wiring — `2026-05-02`
+
+**Problem:** All E2E specs share the same Playwright browser context. Tests that log in leave
+a JWT in `localStorage`. If a subsequent test navigates to `/login` while a token is still
+present, the Login page's `useIsAuthenticated` `useEffect` immediately redirects to `/dashboard`,
+bypassing the test's intended flow. The `auth.spec.ts` "unverified user" test was failing for
+this reason — it had to navigate to `/verify-email` (a public route) first to clear the token.
+
+**Recommendation:** Either:
+1. Add `storageState: { cookies: [], origins: [] }` to the playwright config's `use` block
+   to start each test with a clean context. This is the simplest fix and aligns with best
+   practices.
+2. Or configure `use.actionTimeout` and ensure every test that modifies auth state calls
+   `localStorage.removeItem("token")` via a shared `beforeEach` fixture.
+
+Option 1 is preferred — zero per-test overhead and prevents the class of bug entirely.
+
+---
+
+### [Backend Tests] asyncpg event loop errors in pytest on Windows
+
+**Severity:** Low
+**Effort:** M
+**Location:** `apps/myjobhunter/backend/tests/` — most test files after the 10th test
+**Discovered:** PR profile-wiring — `2026-05-02`
+
+**Problem:** Backend pytest run produces `asyncpg.exceptions._base.InterfaceError:
+cannot perform operation: another operation is in progress` and `RuntimeError: Event loop is closed`
+errors after running ~10 tests. Only the first ~9 tests in each test file pass reliably.
+This is a known asyncpg/pytest-asyncio interaction on Windows with certain event loop policies.
+
+**Recommendation:**
+1. Add `asyncio_mode = "auto"` + `asyncio_default_test_loop_scope = "session"` to `pyproject.toml`
+   pytest config (may already be set — verify `asyncio_default_test_loop_scope` is accepted by the
+   installed pytest-asyncio version; a PytestConfigWarning suggests it isn't yet).
+2. Or add `@pytest.fixture(scope="session")` event loop override per the pytest-asyncio docs.
+3. Or upgrade pytest-asyncio to ≥0.24 which handles the session-scoped loop natively.
+
+This does not block CI (which runs on Linux with a different event loop policy) but makes
+local test runs unreliable on Windows.
