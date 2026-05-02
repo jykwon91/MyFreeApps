@@ -21,5 +21,7 @@ export interface CalendarEvent {
   source: string;
   source_event_id: string | null;
   summary: string | null;
+  host_notes: string | null;
+  attachment_count: number;
   updated_at: string;
 }

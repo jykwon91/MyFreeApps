@@ -372,13 +372,25 @@
     "calendar": {
       "source_paths": [
         "backend/app/api/calendar.py",
+        "backend/app/api/blackouts.py",
         "backend/app/services/calendar/",
+        "backend/app/services/listings/blackout_service.py",
+        "backend/app/services/listings/attachment_response_builder.py",
         "backend/app/repositories/calendar/",
+        "backend/app/repositories/listings/listing_blackout_repo.py",
+        "backend/app/repositories/listings/listing_blackout_attachment_repo.py",
         "backend/app/schemas/calendar/",
+        "backend/app/schemas/listings/blackout_update_request.py",
+        "backend/app/schemas/listings/blackout_response.py",
+        "backend/app/schemas/listings/listing_blackout_attachment_response.py",
+        "backend/app/models/listings/listing_blackout.py",
+        "backend/app/models/listings/listing_blackout_attachment.py",
         "backend/app/core/calendar_constants.py",
         "frontend/src/app/pages/Calendar.tsx",
         "frontend/src/app/features/calendar/",
         "frontend/src/shared/types/calendar/",
+        "frontend/src/shared/types/listing/listing-blackout-attachment.ts",
+        "frontend/src/shared/types/listing/blackout-update-request.ts",
         "frontend/src/shared/store/calendarApi.ts",
         "frontend/src/shared/lib/calendar-constants.ts"
       ],
@@ -386,14 +398,17 @@
         "test_calendar_repository.py",
         "test_calendar_service.py",
         "test_calendar_events_route.py",
-        "test_calendar_route.py"
+        "test_calendar_route.py",
+        "test_blackout_notes_attachments.py"
       ],
       "frontend_tests": [
         "Calendar.test.tsx",
-        "calendar-utils.test.ts"
+        "calendar-utils.test.ts",
+        "CalendarEventDetail.test.tsx"
       ],
       "e2e_specs": [
-        "calendar.spec.ts"
+        "calendar.spec.ts",
+        "calendar-booking-notes.spec.ts"
       ]
     },
     "inquiries": {

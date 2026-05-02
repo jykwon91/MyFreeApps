@@ -36,6 +36,7 @@ from app.repositories.listings import listing_external_id_repo
 from app.repositories.listings import channel_repo
 from app.repositories.listings import channel_listing_repo
 from app.repositories.listings import listing_blackout_repo
+from app.repositories.listings import listing_blackout_attachment_repo
 from app.repositories.calendar import calendar_repository
 from app.repositories.inquiries import inquiry_repo
 from app.repositories.inquiries import inquiry_message_repo

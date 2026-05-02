@@ -4,6 +4,7 @@ Used by:
 - the outbound iCal serializer (``list_by_listing``)
 - the inbound iCal poll job (``upsert_by_uid``, ``delete_missing_uids``)
 - the service that removes a channel_listing (``delete_by_listing_and_source``)
+- the blackout notes + attachment endpoints (``get_by_id_scoped``, ``update_notes``)
 """
 import uuid
 from datetime import date
@@ -11,6 +12,7 @@ from datetime import date
 from sqlalchemy import and_, delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.listings.listing import Listing
 from app.models.listings.listing_blackout import ListingBlackout
 
 
@@ -74,6 +76,8 @@ async def upsert_by_uid(
     )
     existing = result.scalar_one_or_none()
     if existing is not None:
+        # Only update the date fields — host_notes is host-owned and must
+        # survive re-polls. Never assign host_notes here.
         existing.starts_on = starts_on
         existing.ends_on = ends_on
         await db.flush()
@@ -186,6 +190,49 @@ async def delete_by_id_scoped_to_organization(
         delete(ListingBlackout).where(ListingBlackout.id == blackout_id),
     )
     return True
+
+
+async def get_by_id_scoped_to_organization(
+    db: AsyncSession,
+    *,
+    blackout_id: uuid.UUID,
+    organization_id: uuid.UUID,
+) -> ListingBlackout | None:
+    """Fetch a blackout row, scoped via JOIN to the parent listing's org.
+
+    Returns None if the blackout does not exist OR belongs to a different org.
+    Used by the notes-update and attachment endpoints for tenant-scoped access.
+    """
+    result = await db.execute(
+        select(ListingBlackout)
+        .join(Listing, Listing.id == ListingBlackout.listing_id)
+        .where(
+            ListingBlackout.id == blackout_id,
+            Listing.organization_id == organization_id,
+            Listing.deleted_at.is_(None),
+        )
+    )
+    return result.scalar_one_or_none()
+
+
+async def update_notes(
+    db: AsyncSession,
+    *,
+    blackout_id: uuid.UUID,
+    host_notes: str | None,
+) -> None:
+    """Update only the host_notes column on a blackout row.
+
+    The iCal poller MUST NOT call this function — only the explicit
+    PATCH /listings/blackouts/{id} endpoint does. Kept narrow so the
+    accidental-overwrite risk is minimised.
+    """
+    result = await db.execute(
+        select(ListingBlackout).where(ListingBlackout.id == blackout_id)
+    )
+    row = result.scalar_one()
+    row.host_notes = host_notes
+    await db.flush()
 
 
 async def delete_by_listing_and_source(

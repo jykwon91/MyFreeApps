@@ -24,6 +24,8 @@ const mockEvents: CalendarEvent[] = [
     source: "airbnb",
     source_event_id: "uid-1",
     summary: null,
+    host_notes: null,
+    attachment_count: 0,
     updated_at: "2026-05-01T12:00:00Z",
   },
   {
@@ -37,6 +39,8 @@ const mockEvents: CalendarEvent[] = [
     source: "vrbo",
     source_event_id: "uid-2",
     summary: null,
+    host_notes: null,
+    attachment_count: 0,
     updated_at: "2026-05-02T08:00:00Z",
   },
   {
@@ -50,6 +54,8 @@ const mockEvents: CalendarEvent[] = [
     source: "manual",
     source_event_id: null,
     summary: null,
+    host_notes: null,
+    attachment_count: 0,
     updated_at: "2026-05-01T10:00:00Z",
   },
 ];

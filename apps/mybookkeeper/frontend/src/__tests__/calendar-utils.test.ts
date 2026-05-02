@@ -28,6 +28,8 @@ function makeEvent(overrides: Partial<CalendarEvent> = {}): CalendarEvent {
     source: "airbnb",
     source_event_id: "uid-1",
     summary: null,
+    host_notes: null,
+    attachment_count: 0,
     updated_at: "2026-05-01T12:00:00Z",
     ...overrides,
   };

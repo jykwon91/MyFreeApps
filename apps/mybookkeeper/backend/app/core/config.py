@@ -32,6 +32,7 @@ class Settings(BaseSettings):
     minio_bucket: str = "mybookkeeper-files"
     minio_secure: bool = False
     presigned_url_ttl_seconds: int = 3600
+    max_blackout_attachment_size_bytes: int = 25 * 1024 * 1024  # 25 MB
 
     plaid_client_id: str = ""
     plaid_secret: str = ""

@@ -13,6 +13,7 @@ from datetime import date, timedelta
 from app.core.calendar_constants import DEFAULT_WINDOW_DAYS, MAX_WINDOW_DAYS
 from app.db.session import AsyncSessionLocal
 from app.repositories.calendar import calendar_repository
+from app.repositories.listings import listing_blackout_attachment_repo
 from app.schemas.calendar.calendar_event_response import CalendarEventResponse
 
 
@@ -77,6 +78,12 @@ async def list_events(
             sources=sources,
         )
 
+        # Batch-load attachment counts in one round-trip to avoid N+1.
+        blackout_ids = [blackout.id for blackout, _listing, _prop in rows]
+        attachment_counts = await listing_blackout_attachment_repo.count_by_blackout_ids(
+            db, blackout_ids,
+        )
+
     return [
         CalendarEventResponse(
             id=blackout.id,
@@ -89,6 +96,8 @@ async def list_events(
             source=blackout.source,
             source_event_id=blackout.source_event_id,
             summary=None,
+            host_notes=blackout.host_notes,
+            attachment_count=attachment_counts.get(blackout.id, 0),
             updated_at=blackout.updated_at,
         )
         for blackout, listing, prop in rows

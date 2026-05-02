@@ -28,6 +28,8 @@ class CalendarEventResponse(BaseModel):
     source: str
     source_event_id: str | None = None
     summary: str | None = None
+    host_notes: str | None = None
+    attachment_count: int = 0
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
