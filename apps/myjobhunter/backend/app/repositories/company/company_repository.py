@@ -11,11 +11,30 @@ documented in CLAUDE.md.
 from __future__ import annotations
 
 import uuid
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.company.company import Company
+
+# Allowlist of columns that can be applied via the dynamic ``update``
+# function. Per the project security rule: "Always validate field names
+# against an explicit allowlist before applying dynamic updates." Tenant
+# scoping (``user_id``) and server-managed columns (``id``, ``created_at``,
+# ``updated_at``) are deliberately excluded.
+_UPDATABLE_COLUMNS: frozenset[str] = frozenset({
+    "name",
+    "primary_domain",
+    "logo_url",
+    "industry",
+    "size_range",
+    "hq_location",
+    "description",
+    "external_ref",
+    "external_source",
+    "crunchbase_id",
+})
 
 
 async def get_by_id(db: AsyncSession, company_id: uuid.UUID, user_id: uuid.UUID) -> Company | None:
@@ -46,3 +65,37 @@ async def create(db: AsyncSession, company: Company) -> Company:
     await db.flush()
     await db.refresh(company)
     return company
+
+
+async def update(
+    db: AsyncSession,
+    company: Company,
+    updates: dict[str, Any],
+) -> Company:
+    """Apply allowlisted updates to a Company.
+
+    Filters ``updates`` against ``_UPDATABLE_COLUMNS`` before applying — any
+    keys outside the allowlist are silently dropped (defense in depth on top
+    of the Pydantic schema's ``extra='forbid'``). Returns the refreshed
+    ``Company``.
+    """
+    safe_fields = {k: v for k, v in updates.items() if k in _UPDATABLE_COLUMNS}
+    if not safe_fields:
+        return company
+
+    for key, value in safe_fields.items():
+        setattr(company, key, value)
+    await db.flush()
+    await db.refresh(company)
+    return company
+
+
+async def delete(db: AsyncSession, company: Company) -> None:
+    """Hard-delete a Company.
+
+    Companies use HARD delete (no ``deleted_at`` column) per the data model.
+    Associated records (applications, company_research, research_sources) are
+    handled by CASCADE rules on the foreign key constraints.
+    """
+    await db.delete(company)
+    await db.flush()

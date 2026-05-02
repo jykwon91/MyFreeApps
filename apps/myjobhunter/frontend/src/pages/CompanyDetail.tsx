@@ -1,8 +1,8 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { ChevronLeft, ExternalLink as ExternalLinkIcon } from "lucide-react";
-import { Badge, DataTable, type ColumnDef } from "@platform/ui";
+import { ChevronLeft, ExternalLink as ExternalLinkIcon, Trash2 } from "lucide-react";
+import { Badge, DataTable, showSuccess, showError, extractErrorMessage, type ColumnDef } from "@platform/ui";
 import CompanyDetailSkeleton from "@/features/companies/CompanyDetailSkeleton";
-import { useGetCompanyQuery } from "@/lib/companiesApi";
+import { useGetCompanyQuery, useDeleteCompanyMutation } from "@/lib/companiesApi";
 import { useListApplicationsQuery } from "@/lib/applicationsApi";
 import type { Application } from "@/types/application";
 
@@ -39,6 +39,21 @@ export default function CompanyDetail() {
   const navigate = useNavigate();
   const { data: company, isLoading, isError, error } = useGetCompanyQuery(id ?? "", { skip: !id });
   const { data: applicationsData } = useListApplicationsQuery();
+  const [deleteCompany, { isLoading: deleting }] = useDeleteCompanyMutation();
+
+  async function handleDelete() {
+    if (!company) return;
+    if (!window.confirm(`Delete "${company.name}"? This permanently removes the company and cannot be undone.`)) {
+      return;
+    }
+    try {
+      await deleteCompany(company.id).unwrap();
+      showSuccess(`"${company.name}" deleted`);
+      navigate("/companies");
+    } catch (err) {
+      showError(`Couldn't delete: ${extractErrorMessage(err)}`);
+    }
+  }
 
   if (isLoading) {
     return <CompanyDetailSkeleton />;
@@ -84,23 +99,33 @@ export default function CompanyDetail() {
         Back to Companies
       </Link>
 
-      <header className="space-y-2">
-        <h1 className="text-2xl font-semibold">{company.name}</h1>
-        {company.primary_domain ? (
-          <a
-            href={`https://${company.primary_domain}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
-          >
-            <ExternalLinkIcon size={14} />
-            {company.primary_domain}
-          </a>
-        ) : null}
-        <div className="flex items-center gap-2 pt-1 flex-wrap">
-          {company.industry ? <Badge label={company.industry} color="blue" /> : null}
-          {company.size_range ? <Badge label={company.size_range} color="gray" /> : null}
+      <header className="flex items-start justify-between gap-4">
+        <div className="space-y-2">
+          <h1 className="text-2xl font-semibold">{company.name}</h1>
+          {company.primary_domain ? (
+            <a
+              href={`https://${company.primary_domain}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+            >
+              <ExternalLinkIcon size={14} />
+              {company.primary_domain}
+            </a>
+          ) : null}
+          <div className="flex items-center gap-2 pt-1 flex-wrap">
+            {company.industry ? <Badge label={company.industry} color="blue" /> : null}
+            {company.size_range ? <Badge label={company.size_range} color="gray" /> : null}
+          </div>
         </div>
+        <button
+          onClick={handleDelete}
+          disabled={deleting}
+          className="inline-flex items-center gap-1.5 px-3 py-2 text-sm border rounded-md hover:bg-destructive/10 text-destructive disabled:opacity-50 shrink-0"
+        >
+          <Trash2 size={14} />
+          Delete
+        </button>
       </header>
 
       <section className="border rounded-lg p-4 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">

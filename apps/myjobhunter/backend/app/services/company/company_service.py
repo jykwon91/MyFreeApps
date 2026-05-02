@@ -23,6 +23,7 @@ from app.models.company.company import Company
 from app.models.company.company_research import CompanyResearch
 from app.repositories.company import company_repository, company_research_repository
 from app.schemas.company.company_create_request import CompanyCreateRequest
+from app.schemas.company.company_update_request import CompanyUpdateRequest
 
 
 class DuplicatePrimaryDomainError(ValueError):
@@ -86,6 +87,62 @@ async def create_company(
             f"A company with primary_domain={request.primary_domain!r} already exists.",
         ) from exc
     return company
+
+
+async def update_company(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    company_id: uuid.UUID,
+    request: CompanyUpdateRequest,
+) -> Company | None:
+    """Apply allowlisted PATCH updates to a Company.
+
+    Returns ``None`` if the company does not exist or belongs to a different
+    user. The route handler maps ``None`` to HTTP 404 so cross-tenant probing
+    yields the same response as a genuine miss.
+
+    Raises ``DuplicatePrimaryDomainError`` if the new ``primary_domain``
+    collides with another company owned by the same user.
+
+    Commits at the end so the write survives the request lifecycle.
+    """
+    company = await company_repository.get_by_id(db, company_id, user_id)
+    if company is None:
+        return None
+
+    updates = request.to_update_dict()
+    if not updates:
+        return company
+
+    try:
+        company = await company_repository.update(db, company, updates)
+        await db.commit()
+    except IntegrityError as exc:
+        await db.rollback()
+        raise DuplicatePrimaryDomainError(
+            f"A company with primary_domain={updates.get('primary_domain')!r} already exists.",
+        ) from exc
+    return company
+
+
+async def delete_company(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    company_id: uuid.UUID,
+) -> bool:
+    """Hard-delete a Company scoped to ``user_id``.
+
+    Returns ``True`` if a row was found and deleted, ``False`` if the company
+    does not exist or belongs to another user.
+
+    Commits at the end so the write survives the request lifecycle.
+    """
+    company = await company_repository.get_by_id(db, company_id, user_id)
+    if company is None:
+        return False
+    await company_repository.delete(db, company)
+    await db.commit()
+    return True
 
 
 async def get_company_research(

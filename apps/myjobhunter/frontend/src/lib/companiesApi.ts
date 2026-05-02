@@ -2,6 +2,7 @@ import { baseApi } from "@platform/ui";
 import type { Company } from "@/types/company";
 import type { CompanyListResponse } from "@/types/company-list-response";
 import type { CompanyCreateRequest } from "@/types/company-create-request";
+import type { CompanyUpdateRequest } from "@/types/company-update-request";
 
 const COMPANIES_TAG = "Companies";
 
@@ -27,6 +28,22 @@ const companiesApi = baseApi.enhanceEndpoints({ addTagTypes: [COMPANIES_TAG] }).
       query: (body) => ({ url: "/companies", method: "POST", data: body }),
       invalidatesTags: [{ type: COMPANIES_TAG, id: "LIST" }],
     }),
+
+    updateCompany: build.mutation<Company, { id: string; patch: CompanyUpdateRequest }>({
+      query: ({ id, patch }) => ({ url: `/companies/${id}`, method: "PATCH", data: patch }),
+      invalidatesTags: (_result, _err, { id }) => [
+        { type: COMPANIES_TAG, id },
+        { type: COMPANIES_TAG, id: "LIST" },
+      ],
+    }),
+
+    deleteCompany: build.mutation<void, string>({
+      query: (id) => ({ url: `/companies/${id}`, method: "DELETE" }),
+      invalidatesTags: (_result, _err, id) => [
+        { type: COMPANIES_TAG, id },
+        { type: COMPANIES_TAG, id: "LIST" },
+      ],
+    }),
   }),
 });
 
@@ -34,4 +51,6 @@ export const {
   useListCompaniesQuery,
   useGetCompanyQuery,
   useCreateCompanyMutation,
+  useUpdateCompanyMutation,
+  useDeleteCompanyMutation,
 } = companiesApi;
