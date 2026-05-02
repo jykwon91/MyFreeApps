@@ -89,8 +89,27 @@ async def create_application(
             f"Company {request.company_id} not found under user {user_id}",
         )
 
-    payload = request.model_dump()
-    application = Application(user_id=user_id, **payload)
+    application = Application(
+        user_id=user_id,
+        company_id=request.company_id,
+        role_title=request.role_title,
+        url=request.url,
+        jd_text=request.jd_text,
+        jd_parsed=request.jd_parsed,
+        source=request.source,
+        applied_at=request.applied_at,
+        posted_salary_min=request.posted_salary_min,
+        posted_salary_max=request.posted_salary_max,
+        posted_salary_currency=request.posted_salary_currency,
+        posted_salary_period=request.posted_salary_period,
+        location=request.location,
+        remote_type=request.remote_type,
+        fit_score=request.fit_score,
+        notes=request.notes,
+        archived=request.archived,
+        external_ref=request.external_ref,
+        external_source=request.external_source,
+    )
     application = await application_repository.create(db, application)
     await db.commit()
     return application

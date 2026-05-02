@@ -168,9 +168,68 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
     async def authenticate_password(
         self, credentials: OAuth2PasswordRequestForm,
     ) -> Optional[models.UP]:
-        """Authenticate password only (no TOTP check).
-        Used by the unified /auth/totp/login endpoint."""
-        return await super().authenticate(credentials)
+        """Authenticate password only (no TOTP check), with full lockout tracking.
+
+        Used by the unified /auth/totp/login endpoint.  Replicates the
+        lockout-counter logic from :meth:`authenticate` so that bad-password
+        attempts via this path increment ``failed_login_count`` and ultimately
+        lock the account — closing the bypass that existed when this method
+        called ``super().authenticate()`` directly.
+
+        The route-level ``check_totp_account_not_locked`` dependency handles the
+        early-reject case; this method handles the counter update on failure and
+        the counter clear on success.
+        """
+        db = self.user_db.session
+
+        try:
+            user = await self.get_by_email(credentials.username)
+        except exceptions.UserNotExists:
+            self.password_helper.hash(credentials.password)
+            return None
+
+        now = datetime.now(tz=timezone.utc)
+
+        # Auto-reset stale counter before the password check.
+        autoreset = autoreset_update_if_stale(
+            user,
+            now=now,
+            autoreset_hours=settings.lockout_autoreset_hours,
+        )
+        if autoreset is not None:
+            await self.user_db.update(user, autoreset)
+            user.failed_login_count = 0
+            user.last_failed_login_at = None
+            user.locked_until = None
+
+        # Delegate to parent for password verification only (no TOTP gate).
+        result = await super().authenticate(credentials)
+
+        if result is None:
+            update = await record_failed_login(
+                user,
+                db=db,
+                user_id=user.id,
+                lockout_threshold=settings.lockout_threshold,
+                metadata={"reason": "bad_password"},
+                now=now,
+            )
+            if "locked_until" in update:
+                logger.warning(
+                    "Account locked: %s until %s (consecutive failures: %d)",
+                    user.email,
+                    update["locked_until"],
+                    update["failed_login_count"],
+                )
+            await self.user_db.update(user, update)
+            return None
+
+        # Successful password match — clear lockout state if any.
+        clear_update = record_successful_login_update(result)
+        if clear_update is not None:
+            await self.user_db.update(result, clear_update)
+
+        return result
 
     async def validate_password(
         self, password: str, user: Union[schemas.UC, models.UP],

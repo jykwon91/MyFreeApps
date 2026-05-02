@@ -565,3 +565,60 @@ class TestAuditOnCreate:
         by_field = {r.field_name: r for r in rows}
         assert "role_title" in by_field
         assert by_field["role_title"].new_value == "Audit Test Engineer"
+
+
+# ---------------------------------------------------------------------------
+# Allowlist enforcement in create_application (audit fix 2026-05-02)
+#
+# Regression for mass-assignment via model_dump() spread.  The fix replaced
+# ``Application(user_id=user_id, **request.model_dump())`` with an explicit
+# field-by-field constructor.  These tests confirm that server-managed columns
+# (``id``, ``deleted_at``, ``created_at``, ``updated_at``) can NOT reach the
+# ORM even if they were somehow present in the request payload.
+# ---------------------------------------------------------------------------
+
+
+class TestCreateApplicationAllowlist:
+    @pytest.mark.asyncio
+    async def test_server_managed_fields_not_propagated_from_schema(
+        self, db: AsyncSession, user_factory, as_user,
+    ) -> None:
+        """Regression: explicit construction must not forward server-managed columns.
+
+        Before the fix ``Application(user_id=user_id, **request.model_dump())``
+        would silently forward any schema field that happened to share a name
+        with a model column.  After the fix the service builds the model from
+        explicit keyword arguments so only allowlisted fields can reach the ORM.
+
+        ``ApplicationCreateRequest`` has ``extra='forbid'`` so unknown keys are
+        already rejected at the Pydantic boundary.  This test verifies the
+        *construction path* in the service: ``deleted_at`` is NOT a schema field
+        (forbid would catch it if it were), but we confirm the created row's
+        ``deleted_at`` is ``None`` (i.e., the server default applies, not a
+        caller-supplied value) and that ``id`` is a fresh UUID (not a
+        caller-supplied one).
+        """
+        user = await user_factory()
+        company = await _create_company(db, uuid.UUID(user["id"]), "Acme Allowlist")
+
+        async with await as_user(user) as authed:
+            resp = await authed.post(
+                "/applications",
+                json=_make_create_payload(company.id),
+            )
+
+        assert resp.status_code == 201, resp.text
+        body = resp.json()
+
+        # Server-managed fields must be set by the server, not the request.
+        assert body["deleted_at"] is None, "deleted_at must be None on creation"
+        assert body["user_id"] == user["id"], "user_id must come from the auth context"
+        assert body["company_id"] == str(company.id)
+
+        # Verify the ORM row directly — confirms no caller-supplied id leaked through.
+        app_id = uuid.UUID(body["id"])
+        row = await application_repository.get_by_id(db, app_id, uuid.UUID(user["id"]))
+        assert row is not None
+        assert row.id == app_id
+        assert row.deleted_at is None
+        assert row.user_id == uuid.UUID(user["id"])

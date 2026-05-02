@@ -418,3 +418,52 @@ class TestTenantIsolation:
             db, other_blackout_id,
         )
         assert results == [], "A different blackout's attachments must not bleed through"
+
+    @pytest.mark.asyncio
+    async def test_cross_tenant_delete_returns_none(
+        self,
+        db,
+    ) -> None:
+        """Regression: IDOR on DELETE attachment (audit 2026-05-02).
+
+        Tenant A creates blackout BX.
+        Tenant B creates blackout BY with attachment AY.
+        Tenant A sends DELETE /listings/blackouts/BX/attachments/AY
+        (valid own-org BX, leaked foreign AY).
+
+        ``delete_by_id_scoped_to_blackout(AY, BX)`` must return None
+        because AY belongs to BY, not BX — and AY must still exist in the DB.
+        """
+        blackout_id_bx = uuid.uuid4()  # Tenant A's blackout
+        blackout_id_by = uuid.uuid4()  # Tenant B's blackout
+        user_b = uuid.uuid4()
+
+        now = datetime.now(timezone.utc)
+
+        # Tenant B creates attachment AY under blackout BY.
+        att_ay = await listing_blackout_attachment_repo.create(
+            db,
+            listing_blackout_id=blackout_id_by,
+            storage_key=f"blackout-attachments/{blackout_id_by}/{uuid.uuid4()}",
+            filename="tenant_b_doc.pdf",
+            content_type="application/pdf",
+            size_bytes=1024,
+            uploaded_by_user_id=user_b,
+            uploaded_at=now,
+        )
+        await db.commit()
+
+        # Tenant A attempts to delete AY by pairing it with their own BX.
+        result = await listing_blackout_attachment_repo.delete_by_id_scoped_to_blackout(
+            db,
+            attachment_id=att_ay.id,
+            blackout_id=blackout_id_bx,  # wrong blackout — cross-tenant mismatch
+        )
+        await db.commit()
+
+        # Must return None (not found under BX).
+        assert result is None, "Cross-tenant delete must return None (not found)"
+
+        # AY must still exist in the DB.
+        still_exists = await listing_blackout_attachment_repo.get_by_id(db, att_ay.id)
+        assert still_exists is not None, "Cross-tenant delete must not remove the attachment"

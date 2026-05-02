@@ -55,6 +55,7 @@ __all__ = [
     "check_password_reset_rate_limit",
     "check_register_rate_limit",
     "check_account_not_locked",
+    "check_totp_account_not_locked",
 ]
 
 
@@ -162,6 +163,45 @@ async def check_account_not_locked(
         # Unknown email — let the normal auth flow handle it (timing-safe).
         return
     if user.locked_until and user.locked_until > datetime.now(tz=timezone.utc):
+        raise HTTPException(
+            status_code=429,
+            detail=RATE_LIMIT_GENERIC_DETAIL,
+        )
+
+
+async def check_totp_account_not_locked(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """Reject ``POST /auth/totp/login`` attempts for locked accounts.
+
+    Parallel to ``check_account_not_locked`` for the form-encoded JWT login
+    path, but reads ``email`` from the JSON ``TotpLoginRequest`` body instead
+    of an ``OAuth2PasswordRequestForm``.
+
+    On block, writes a ``LOGIN_BLOCKED_LOCKED`` auth event so SOC/admin
+    tooling sees the same signal whether the attacker uses the JWT or TOTP
+    login endpoint.  The 429 body is intentionally identical to all other
+    rate-limit / lockout responses — callers cannot infer which gate fired.
+    """
+    body = await request.json()
+    email: str = body.get("email", "")
+    if not email:
+        return
+
+    user = await get_user_by_email(db, email)
+    if user is None:
+        return
+
+    if user.locked_until and user.locked_until > datetime.now(tz=timezone.utc):
+        await log_auth_event(
+            db,
+            event_type=AuthEventType.LOGIN_BLOCKED_LOCKED,
+            user_id=user.id,
+            request=request,
+            succeeded=False,
+        )
+        await db.commit()
         raise HTTPException(
             status_code=429,
             detail=RATE_LIMIT_GENERIC_DETAIL,

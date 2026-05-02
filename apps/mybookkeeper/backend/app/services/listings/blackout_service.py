@@ -300,7 +300,9 @@ async def delete_attachment(
         if blackout is None:
             raise BlackoutNotFoundError(f"Blackout {blackout_id} not found")
 
-        deleted = await listing_blackout_attachment_repo.delete_by_id(db, attachment_id)
+        deleted = await listing_blackout_attachment_repo.delete_by_id_scoped_to_blackout(
+            db, attachment_id, blackout_id,
+        )
         if deleted is None:
             raise AttachmentNotFoundError(f"Attachment {attachment_id} not found")
         storage_key = deleted.storage_key

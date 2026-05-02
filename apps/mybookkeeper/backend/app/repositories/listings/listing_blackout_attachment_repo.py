@@ -66,14 +66,24 @@ async def get_by_id(
     return result.scalar_one_or_none()
 
 
-async def delete_by_id(
+async def delete_by_id_scoped_to_blackout(
     db: AsyncSession,
     attachment_id: uuid.UUID,
+    blackout_id: uuid.UUID,
 ) -> ListingBlackoutAttachment | None:
-    """Delete a single attachment row. Returns the deleted row (for storage cleanup)."""
+    """Delete a single attachment row scoped to its parent blackout.
+
+    Both ``attachment_id`` AND ``blackout_id`` must match — prevents a
+    cross-tenant attacker from pairing a valid own-org ``blackout_id`` with
+    a leaked ``attachment_id`` belonging to another tenant.
+
+    Returns the deleted row (for storage cleanup), or ``None`` if no row
+    matched the composite filter.
+    """
     result = await db.execute(
         select(ListingBlackoutAttachment).where(
             ListingBlackoutAttachment.id == attachment_id,
+            ListingBlackoutAttachment.listing_blackout_id == blackout_id,
         )
     )
     row = result.scalar_one_or_none()
@@ -82,6 +92,7 @@ async def delete_by_id(
     await db.execute(
         delete(ListingBlackoutAttachment).where(
             ListingBlackoutAttachment.id == attachment_id,
+            ListingBlackoutAttachment.listing_blackout_id == blackout_id,
         )
     )
     return row
