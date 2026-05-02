@@ -13,6 +13,8 @@ from app.core.permissions import current_org_member
 from app.db.session import unit_of_work
 from app.models.applicants.applicant import Applicant
 from app.models.applicants.screening_result import ScreeningResult
+from app.models.listings.listing import Listing
+from app.models.listings.listing_blackout import ListingBlackout
 from app.models.user.user import Role, User
 from app.repositories import (
     inquiry_repo,
@@ -108,6 +110,76 @@ async def delete_listing(
     _require_test_mode()
     async with unit_of_work() as db:
         await listing_repo.hard_delete_by_id(db, listing_id, ctx.organization_id)
+
+
+class _SeedBlackoutRequest(BaseModel):
+    listing_id: uuid.UUID
+    starts_on: _dt.date
+    ends_on: _dt.date
+    source: str = "airbnb"
+    source_event_id: str | None = None
+
+
+class _SeedBlackoutResponse(BaseModel):
+    id: uuid.UUID
+
+
+@router.post("/seed-blackout", response_model=_SeedBlackoutResponse)
+async def seed_blackout(
+    payload: _SeedBlackoutRequest,
+    ctx: RequestContext = Depends(current_org_member),
+) -> _SeedBlackoutResponse:
+    """Test-only direct insert for unified-calendar E2E seeding.
+
+    Production blackout writes go through the iCal poll job; this seed
+    endpoint exists so the E2E suite has a deterministic data path
+    without spinning up a fake iCal feed. Tenant-scoped via the parent
+    listing's organization_id.
+    """
+    _require_test_mode()
+    async with unit_of_work() as db:
+        listing = await listing_repo.get_by_id(db, payload.listing_id, ctx.organization_id)
+        if listing is None:
+            raise HTTPException(status_code=404, detail="Listing not found")
+        row = ListingBlackout(
+            listing_id=payload.listing_id,
+            starts_on=payload.starts_on,
+            ends_on=payload.ends_on,
+            source=payload.source,
+            source_event_id=payload.source_event_id,
+        )
+        db.add(row)
+        await db.flush()
+        return _SeedBlackoutResponse(id=row.id)
+
+
+@router.delete("/blackouts/{blackout_id}", status_code=204)
+async def delete_blackout(
+    blackout_id: uuid.UUID,
+    ctx: RequestContext = Depends(current_org_member),
+) -> None:
+    """Hard-delete a blackout for E2E cleanup. Test-only.
+
+    Tenant-scoped via JOIN to ``listings.organization_id`` — the
+    blackout row itself has no tenant column.
+    """
+    from sqlalchemy import select as _sa_select
+    _require_test_mode()
+    async with unit_of_work() as db:
+        result = await db.execute(
+            _sa_select(ListingBlackout)
+            .join(Listing, Listing.id == ListingBlackout.listing_id)
+            .where(
+                ListingBlackout.id == blackout_id,
+                Listing.organization_id == ctx.organization_id,
+            )
+        )
+        row = result.scalar_one_or_none()
+        if row is None:
+            return
+        await db.execute(
+            _sa_delete(ListingBlackout).where(ListingBlackout.id == blackout_id),
+        )
 
 
 @router.post("/seed-inquiry", response_model=InquiryResponse)
