@@ -9,12 +9,14 @@ import {
   type ListingRow,
 } from "@/app/features/calendar/calendar-utils";
 import CalendarEventBar from "@/app/features/calendar/CalendarEventBar";
+import type { CalendarEvent } from "@/shared/types/calendar/calendar-event";
 
 interface Props {
   row: ListingRow;
   fromIso: string;
   toIso: string;
   totalDays: number;
+  onEventClick: (event: CalendarEvent) => void;
 }
 
 /**
@@ -30,6 +32,7 @@ export default function CalendarListingRow({
   fromIso,
   toIso,
   totalDays,
+  onEventClick,
 }: Props) {
   return (
     <div
@@ -72,6 +75,7 @@ export default function CalendarListingRow({
               event={event}
               startCol={startCol}
               span={span}
+              onClick={onEventClick}
             />
           );
         })}

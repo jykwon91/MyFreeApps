@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   CALENDAR_DAY_CELL_PX,
   CALENDAR_LABEL_COLUMN_PX,
@@ -10,6 +11,7 @@ import {
 import type { CalendarEvent } from "@/shared/types/calendar/calendar-event";
 import CalendarGridHeader from "@/app/features/calendar/CalendarGridHeader";
 import CalendarListingRow from "@/app/features/calendar/CalendarListingRow";
+import CalendarEventDetail from "@/app/features/calendar/CalendarEventDetail";
 
 interface Props {
   events: readonly CalendarEvent[];
@@ -35,35 +37,44 @@ export default function CalendarGrid({ events, fromIso, toIso }: Props) {
   const groups = groupByProperty(rows);
   const totalGridWidth = CALENDAR_LABEL_COLUMN_PX + totalDays * CALENDAR_DAY_CELL_PX;
 
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+
   return (
-    <div
-      className="border rounded-lg overflow-x-auto bg-card"
-      data-testid="calendar-grid"
-    >
-      <div style={{ minWidth: totalGridWidth }}>
-        <CalendarGridHeader fromIso={fromIso} totalDays={totalDays} />
-        {groups.map((group) => (
-          <div key={group.property_id}>
-            {/* Property header row — visually distinct so multiple properties
-                are obvious without a tree-collapse interaction (kept simple). */}
-            <div
-              className="flex bg-muted/30 border-t text-xs font-semibold text-muted-foreground uppercase tracking-wide px-3 py-1.5"
-              data-testid="calendar-property-header"
-            >
-              {group.property_name}
+    <>
+      <div
+        className="border rounded-lg overflow-x-auto bg-card"
+        data-testid="calendar-grid"
+      >
+        <div style={{ minWidth: totalGridWidth }}>
+          <CalendarGridHeader fromIso={fromIso} totalDays={totalDays} />
+          {groups.map((group) => (
+            <div key={group.property_id}>
+              {/* Property header row — visually distinct so multiple properties
+                  are obvious without a tree-collapse interaction (kept simple). */}
+              <div
+                className="flex bg-muted/30 border-t text-xs font-semibold text-muted-foreground uppercase tracking-wide px-3 py-1.5"
+                data-testid="calendar-property-header"
+              >
+                {group.property_name}
+              </div>
+              {group.rows.map((row) => (
+                <CalendarListingRow
+                  key={row.listing_id}
+                  row={row}
+                  fromIso={fromIso}
+                  toIso={toIso}
+                  totalDays={totalDays}
+                  onEventClick={setSelectedEvent}
+                />
+              ))}
             </div>
-            {group.rows.map((row) => (
-              <CalendarListingRow
-                key={row.listing_id}
-                row={row}
-                fromIso={fromIso}
-                toIso={toIso}
-                totalDays={totalDays}
-              />
-            ))}
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
-    </div>
+      <CalendarEventDetail
+        event={selectedEvent}
+        onClose={() => setSelectedEvent(null)}
+      />
+    </>
   );
 }

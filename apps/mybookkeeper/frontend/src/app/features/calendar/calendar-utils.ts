@@ -127,6 +127,38 @@ export function lastSyncedAt(events: readonly CalendarEvent[]): string | null {
   return max;
 }
 
+/** Format an ISO date as a long month/year label (e.g. "May 2026"). */
+export function formatMonthYear(iso: string): string {
+  const d = parseIsoDate(iso);
+  return d.toLocaleString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
+}
+
+/** Format a window as a compact range label (e.g. "May 2 – Aug 1, 2026"). */
+export function formatWindowLabel(fromIso: string, toExclusiveIso: string): string {
+  const from = parseIsoDate(fromIso);
+  const toInclusive = parseIsoDate(addDays(toExclusiveIso, -1));
+  const sameYear = from.getUTCFullYear() === toInclusive.getUTCFullYear();
+  const fmtFrom: Intl.DateTimeFormatOptions = sameYear
+    ? { month: "short", day: "numeric", timeZone: "UTC" }
+    : { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" };
+  const fmtTo: Intl.DateTimeFormatOptions = {
+    month: "short", day: "numeric", year: "numeric", timeZone: "UTC",
+  };
+  return `${from.toLocaleString("en-US", fmtFrom)} – ${toInclusive.toLocaleString("en-US", fmtTo)}`;
+}
+
+/** ISO date for the first of the given (UTC) year+month. */
+export function firstOfMonth(year: number, monthZeroIndexed: number): string {
+  const d = new Date(Date.UTC(year, monthZeroIndexed, 1));
+  return formatIsoDate(d);
+}
+
+/** Number of days in the given (UTC) year+month. */
+export function daysInMonth(year: number, monthZeroIndexed: number): number {
+  // Day 0 of next month = last day of this month.
+  return new Date(Date.UTC(year, monthZeroIndexed + 1, 0)).getUTCDate();
+}
+
 /** Human-friendly relative time ("2 minutes ago", "3 hours ago"). */
 export function relativeTime(iso: string, now: Date = new Date()): string {
   const then = new Date(iso);

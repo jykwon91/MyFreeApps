@@ -1,8 +1,10 @@
+import { useState } from "react";
 import {
   getSourceColor,
   getSourceLabel,
 } from "@/shared/lib/calendar-constants";
 import type { CalendarEvent } from "@/shared/types/calendar/calendar-event";
+import CalendarEventDetail from "@/app/features/calendar/CalendarEventDetail";
 
 interface Props {
   events: readonly CalendarEvent[];
@@ -34,46 +36,57 @@ export default function CalendarAgendaList({ events }: Props) {
     }
   }
 
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+
   return (
-    <ul className="space-y-3" data-testid="calendar-agenda-list">
-      {Array.from(groups.entries()).map(([dateIso, dayEvents]) => (
-        <li
-          key={dateIso}
-          className="border rounded-lg p-3 space-y-2"
-          data-testid="calendar-agenda-day"
-        >
-          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-            {dateIso}
-          </div>
-          <ul className="space-y-2">
-            {dayEvents.map((event) => (
-              <li
-                key={event.id}
-                className="flex items-start gap-2"
-                data-testid="calendar-agenda-event"
-                data-source={event.source}
-              >
-                <span
-                  className="inline-block h-3 w-3 rounded-sm mt-1 shrink-0"
-                  style={{ backgroundColor: getSourceColor(event.source) }}
-                  aria-hidden
-                />
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium truncate">
-                    {event.listing_name}
-                  </div>
-                  <div className="text-xs text-muted-foreground truncate">
-                    {event.property_name} · {getSourceLabel(event.source)}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {event.starts_on} → {event.ends_on}
-                  </div>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </li>
-      ))}
-    </ul>
+    <>
+      <ul className="space-y-3" data-testid="calendar-agenda-list">
+        {Array.from(groups.entries()).map(([dateIso, dayEvents]) => (
+          <li
+            key={dateIso}
+            className="border rounded-lg p-3 space-y-2"
+            data-testid="calendar-agenda-day"
+          >
+            <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+              {dateIso}
+            </div>
+            <ul className="space-y-2">
+              {dayEvents.map((event) => (
+                <li key={event.id} data-source={event.source}>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedEvent(event)}
+                    className="flex items-start gap-2 w-full text-left p-2 -m-2 rounded-md hover:bg-muted transition-colors min-h-[44px]"
+                    data-testid="calendar-agenda-event"
+                    aria-label={`${event.listing_name}, ${getSourceLabel(event.source)} booking. Click for details.`}
+                  >
+                    <span
+                      className="inline-block h-3 w-3 rounded-sm mt-1 shrink-0"
+                      style={{ backgroundColor: getSourceColor(event.source) }}
+                      aria-hidden="true"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium truncate">
+                        {event.listing_name}
+                      </div>
+                      <div className="text-xs text-muted-foreground truncate">
+                        {event.property_name} · {getSourceLabel(event.source)}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {event.starts_on} → {event.ends_on}
+                      </div>
+                    </div>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </li>
+        ))}
+      </ul>
+      <CalendarEventDetail
+        event={selectedEvent}
+        onClose={() => setSelectedEvent(null)}
+      />
+    </>
   );
 }

@@ -2,8 +2,12 @@ import { describe, it, expect } from "vitest";
 import {
   addDays,
   daysBetween,
+  daysInMonth,
   eventSpan,
   eventStartIndex,
+  firstOfMonth,
+  formatMonthYear,
+  formatWindowLabel,
   groupByListing,
   groupByProperty,
   lastSyncedAt,
@@ -175,5 +179,60 @@ describe("relativeTime", () => {
   it("uses singular form when exactly 1", () => {
     expect(relativeTime("2026-05-02T11:59:00Z", now)).toBe("1 minute ago");
     expect(relativeTime("2026-05-02T11:00:00Z", now)).toBe("1 hour ago");
+  });
+});
+
+describe("formatMonthYear", () => {
+  it("formats UTC ISO date as full month + year", () => {
+    expect(formatMonthYear("2026-05-02")).toBe("May 2026");
+    expect(formatMonthYear("2026-12-31")).toBe("December 2026");
+  });
+
+  it("uses UTC, not local timezone", () => {
+    // 2026-01-01 in UTC is January 2026 regardless of local zone.
+    expect(formatMonthYear("2026-01-01")).toBe("January 2026");
+  });
+});
+
+describe("formatWindowLabel", () => {
+  it("compact form within same year", () => {
+    // ends_on is exclusive — last visible day is May 31.
+    expect(formatWindowLabel("2026-05-02", "2026-06-01")).toBe(
+      "May 2 – May 31, 2026",
+    );
+  });
+
+  it("expanded form crossing years", () => {
+    expect(formatWindowLabel("2026-12-15", "2027-01-15")).toBe(
+      "Dec 15, 2026 – Jan 14, 2027",
+    );
+  });
+});
+
+describe("firstOfMonth", () => {
+  it("returns ISO for first of given month at UTC", () => {
+    expect(firstOfMonth(2026, 0)).toBe("2026-01-01");
+    expect(firstOfMonth(2026, 4)).toBe("2026-05-01");
+    expect(firstOfMonth(2026, 11)).toBe("2026-12-01");
+  });
+});
+
+describe("daysInMonth", () => {
+  it("31 for January, May, December", () => {
+    expect(daysInMonth(2026, 0)).toBe(31);
+    expect(daysInMonth(2026, 4)).toBe(31);
+    expect(daysInMonth(2026, 11)).toBe(31);
+  });
+
+  it("30 for April, June", () => {
+    expect(daysInMonth(2026, 3)).toBe(30);
+    expect(daysInMonth(2026, 5)).toBe(30);
+  });
+
+  it("28 for non-leap February, 29 for leap", () => {
+    expect(daysInMonth(2026, 1)).toBe(28); // 2026 not divisible by 4
+    expect(daysInMonth(2024, 1)).toBe(29);
+    expect(daysInMonth(2000, 1)).toBe(29); // century divisible by 400
+    expect(daysInMonth(1900, 1)).toBe(28); // century not divisible by 400
   });
 });

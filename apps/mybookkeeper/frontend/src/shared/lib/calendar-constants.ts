@@ -23,11 +23,24 @@ export const CALENDAR_LABEL_COLUMN_PX = 200;
 export const CALENDAR_DEFAULT_WINDOW_DAYS = 30;
 
 /**
- * Hard cap matches the backend (`MAX_WINDOW_DAYS`). The frontend never
- * lets the user request a larger window — the prev/next buttons step
- * by `CALENDAR_DEFAULT_WINDOW_DAYS`, so the visible window stays fixed.
+ * Hard cap matches the backend (`MAX_WINDOW_DAYS`).
  */
 export const CALENDAR_MAX_WINDOW_DAYS = 365;
+
+/**
+ * Window-size presets surfaced in the nav. Lets the host zoom out for
+ * planning ("Year") or zoom in for inspection ("Month") without
+ * clicking prev/next repeatedly.
+ *
+ * `days` is the visible window width; the active preset is highlighted.
+ * Order matches reading order (narrow → wide).
+ */
+export const CALENDAR_WINDOW_PRESETS: ReadonlyArray<{ label: string; days: number }> = [
+  { label: "Month", days: 30 },
+  { label: "3 mo", days: 90 },
+  { label: "6 mo", days: 180 },
+  { label: "Year", days: 365 },
+];
 
 /**
  * Color per source. `manual` is rendered with a hatched overlay (see
