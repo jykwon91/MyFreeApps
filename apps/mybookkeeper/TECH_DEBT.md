@@ -1,7 +1,7 @@
 # Tech Debt
 
-> Last scanned: 2026-04-16
-> Issues: 0 critical, 2 high, 2 medium (deferred), 0 low
+> Last scanned: 2026-05-02
+> Issues: 0 critical, 3 high, 2 medium (deferred), 0 low
 
 ## High
 
@@ -10,6 +10,14 @@
 **Location:** frontend/src/__tests__/DocumentUploadZone.test.tsx, DrillDownPanel.test.tsx, InviteAccept.test.tsx, PendingInvites.test.tsx, Documents.test.tsx, Transactions.test.tsx, useDashboardFilter.test.ts
 **Problem:** 43 unit tests across 8 files fail on main (e.g. `useMediaQuery` hook crashes during render, `filterState.selectedCategories.size` returns 4 instead of 1). Discovered during Gmail-disconnect PR validation — all failures reproduce on main before any new commits, so they were introduced in a prior merge.
 **Recommendation:** Triage in a dedicated session. The `DocumentUploadZone` failures all trace to `useMediaQuery` mounting during test render; likely needs a jsdom matchMedia polyfill or a mock in conftest.
+
+---
+
+### [Frontend lint] 20+ files use setState synchronously inside useEffect (react-hooks/set-state-in-effect)
+**Effort:** M
+**Location:** src/app/pages/VerifyEmail.tsx, src/admin/features/costs/ThresholdSettings.tsx, src/admin/features/demo/CreateDemoDialog.tsx, src/app/pages/ResetPassword.tsx, and ~15 others
+**Problem:** The `react-hooks/set-state-in-effect` ESLint rule flags synchronous setState calls inside useEffect bodies. The pattern causes cascading renders. Several pages use this for initialization (syncing query param to local state). The rule fires as errors and `npm run lint` fails.
+**Recommendation:** Refactor each use to either (a) use a `key` prop to reset state when the dependency changes, or (b) derive the state from props using `useMemo` instead of `useEffect`. Fix file by file as each page is touched in future PRs.
 
 ---
 
