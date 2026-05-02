@@ -11,6 +11,7 @@ from pydantic import EmailStr
 from sqlalchemy import text
 
 from app.db.session import AsyncSessionLocal
+from app.core import rate_limit as rl
 
 router = APIRouter()
 
@@ -30,3 +31,24 @@ async def force_verify_email(email: EmailStr = Body(..., embed=True)) -> None:
             row = result.first()
         if row is None:
             raise HTTPException(status_code=404, detail="user not found")
+
+
+@router.post("/_test/reset-rate-limit", status_code=204)
+async def reset_rate_limit() -> None:
+    """Clear all in-memory rate-limit buckets.
+
+    Allows E2E tests to reset per-IP login throttle between test runs
+    without restarting the server.
+
+    Uses the internal ``_buckets`` dict directly (thread-safe via the
+    limiter's own lock) because ``reset_all()`` may not be available in
+    older platform_shared releases.
+    """
+    limiter = rl.login_limiter
+    lock = getattr(limiter, "_lock", None)
+    if lock is not None:
+        with lock:
+            getattr(limiter, "_buckets", {}).clear()
+    else:
+        # Fallback: no-op rather than crash
+        pass

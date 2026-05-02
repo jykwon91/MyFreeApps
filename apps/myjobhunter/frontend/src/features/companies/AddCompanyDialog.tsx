@@ -77,10 +77,11 @@ export default function AddCompanyDialog({ open, onOpenChange, onCreated }: Prop
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
             <div>
-              <label className="block text-sm font-medium mb-1">
+              <label htmlFor="ac-name" className="block text-sm font-medium mb-1">
                 Name <span className="text-destructive">*</span>
               </label>
               <input
+                id="ac-name"
                 type="text"
                 {...register("name", { required: "Name is required", minLength: 1 })}
                 className="w-full border rounded-md px-3 py-2 text-sm bg-background"
@@ -93,8 +94,9 @@ export default function AddCompanyDialog({ open, onOpenChange, onCreated }: Prop
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">Domain</label>
+              <label htmlFor="ac-domain" className="block text-sm font-medium mb-1">Domain</label>
               <input
+                id="ac-domain"
                 type="text"
                 {...register("primary_domain")}
                 className="w-full border rounded-md px-3 py-2 text-sm bg-background"
@@ -107,8 +109,9 @@ export default function AddCompanyDialog({ open, onOpenChange, onCreated }: Prop
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-medium mb-1">Industry</label>
+                <label htmlFor="ac-industry" className="block text-sm font-medium mb-1">Industry</label>
                 <input
+                  id="ac-industry"
                   type="text"
                   {...register("industry")}
                   className="w-full border rounded-md px-3 py-2 text-sm bg-background"
@@ -116,8 +119,9 @@ export default function AddCompanyDialog({ open, onOpenChange, onCreated }: Prop
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">HQ location</label>
+                <label htmlFor="ac-hq" className="block text-sm font-medium mb-1">HQ location</label>
                 <input
+                  id="ac-hq"
                   type="text"
                   {...register("hq_location")}
                   className="w-full border rounded-md px-3 py-2 text-sm bg-background"

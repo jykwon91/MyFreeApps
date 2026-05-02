@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import { authenticator } from "otplib";
 import { createTestUser, deleteTestUser, loginViaUI } from "./fixtures/auth";
 
-const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:8002";
+const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:8004";
 
 /**
  * End-to-end TOTP enrollment + login challenge.
@@ -35,7 +35,7 @@ test.describe("MyJobHunter TOTP 2FA", () => {
 
     try {
       // 1. Sign in to a fresh account
-      await loginViaUI(page, user);
+      await loginViaUI(page, user, request);
       await expect(page).toHaveURL(/\/dashboard/);
 
       // 2. Navigate to Settings → Security via the Settings link
@@ -81,14 +81,14 @@ test.describe("MyJobHunter TOTP 2FA", () => {
         page.getByRole("button", { name: /disable 2fa/i }),
       ).toBeVisible();
 
-      // 6. Sign out
-      await page.getByRole("button", { name: user.email }).click();
+      // 6. Sign out — sidebar user menu button shows truncated name, not email
+      await page.locator("aside").getByRole("button").last().click();
       await page.getByRole("menuitem", { name: /sign out/i }).click();
       await page.waitForURL("**/login", { timeout: 5_000 });
 
       // 7. Sign in again — TOTP challenge should appear
       await page.getByLabel(/email/i).fill(user.email);
-      await page.getByLabel(/password/i).fill(user.password);
+      await page.locator("#login-password").fill(user.password);
       await page.getByRole("button", { name: /^sign in$/i }).click();
       await expect(page.getByLabel(/authentication code/i)).toBeVisible({
         timeout: 5_000,
@@ -99,20 +99,30 @@ test.describe("MyJobHunter TOTP 2FA", () => {
       const challengeCode = authenticator.generate(setup.secret);
       await page.getByLabel(/authentication code/i).fill(challengeCode);
       await page.getByRole("button", { name: /^verify$/i }).click();
-      await page.waitForURL("**/dashboard", { timeout: 5_000 });
+      // After TOTP verify, navigate goes to the "from" state (last visited page
+      // before sign-out) which may be /security or /dashboard. Wait for any
+      // navigation away from /login.
+      await page.waitForURL(
+        (url) => !url.pathname.includes("/login"),
+        { timeout: 10_000 },
+      );
 
       // 9. Sign out again, then sign in using a recovery code
-      await page.getByRole("button", { name: user.email }).click();
+      await page.locator("aside").getByRole("button").last().click();
       await page.getByRole("menuitem", { name: /sign out/i }).click();
       await page.waitForURL("**/login", { timeout: 5_000 });
 
       await page.getByLabel(/email/i).fill(user.email);
-      await page.getByLabel(/password/i).fill(user.password);
+      await page.locator("#login-password").fill(user.password);
       await page.getByRole("button", { name: /^sign in$/i }).click();
       await expect(page.getByLabel(/authentication code/i)).toBeVisible();
       await page.getByLabel(/authentication code/i).fill(recoveryCodes[0]);
       await page.getByRole("button", { name: /^verify$/i }).click();
-      await page.waitForURL("**/dashboard", { timeout: 5_000 });
+      // Same as above — navigate targets the "from" state
+      await page.waitForURL(
+        (url) => !url.pathname.includes("/login"),
+        { timeout: 10_000 },
+      );
     } finally {
       // Reset the user back to no-2FA state so test cleanup (and re-runs)
       // don't trip over a half-enrolled record. Use the backend API directly

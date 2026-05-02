@@ -8,7 +8,7 @@
 import { test, expect } from "@playwright/test";
 import { createTestUser, deleteTestUser, loginViaUI } from "./fixtures/auth";
 
-const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:8002";
+const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:8004";
 
 /**
  * Create a company via the API (faster than UI flow for test setup).
@@ -126,7 +126,7 @@ test.describe("Applications list — Status column", () => {
       await logEventViaApi(request, token, appIdB, "rejected");
 
       // --- Navigate to /applications and verify ---
-      await loginViaUI(page, user);
+      await loginViaUI(page, user, request);
 
       await page.getByRole("link", { name: /applications/i }).first().click();
       await page.waitForURL("**/applications");
@@ -156,17 +156,19 @@ test.describe("Applications list — Status column", () => {
       const companyId = await createCompanyViaApi(request, token, "No Events Corp");
       await createApplicationViaApi(request, token, companyId, "No Events Role");
 
-      await loginViaUI(page, user);
+      await loginViaUI(page, user, request);
 
       await page.getByRole("link", { name: /applications/i }).first().click();
       await page.waitForURL("**/applications");
 
       await expect(page.getByText("No Events Role")).toBeVisible({ timeout: 8_000 });
 
-      // The Status column should show an em-dash for zero events
-      // Find the row and check the status cell
-      const row = page.getByRole("row").filter({ hasText: "No Events Role" });
-      await expect(row.getByText("—")).toBeVisible();
+      // The Status column should show an em-dash for zero events.
+      // DataTable renders each row as a <button> (clickable), so use getByRole("button")
+      // scoped to the row, then assert the second cell (Status) contains "—".
+      const row = page.getByRole("button").filter({ hasText: "No Events Role" });
+      // The Status cell is the first "—" inside this row button
+      await expect(row.getByRole("cell").nth(1)).toHaveText("—");
     } finally {
       await deleteTestUser(request, user);
     }

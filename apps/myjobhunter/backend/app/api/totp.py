@@ -180,6 +180,12 @@ async def totp_login(
         await db.commit()
         raise HTTPException(status_code=400, detail="LOGIN_BAD_CREDENTIALS")
 
+    # Email verification gate — mirrors the check fastapi-users applies on the
+    # standard /auth/jwt/login route. The TOTP login path must enforce this too
+    # or unverified users can obtain a JWT via this endpoint.
+    if not user.is_verified:
+        raise HTTPException(status_code=400, detail="LOGIN_USER_NOT_VERIFIED")
+
     # TOTP gate: if the user has 2FA enabled, require the code before issuing JWT.
     if user.totp_enabled:
         if not body.totp_code:

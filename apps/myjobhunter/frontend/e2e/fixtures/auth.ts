@@ -25,7 +25,7 @@ export async function createTestUser(
   const verify = overrides.verify ?? true;
   const user: TestUser = {
     email:
-      overrides.email ?? `e2e-test-${timestamp}@myjobhunter-test.invalid`,
+      overrides.email ?? `e2e-test-${timestamp}@myjobhunter-test.example.com`,
     password: overrides.password ?? `TestPass${timestamp}!`,
   };
 
@@ -79,8 +79,9 @@ async function verifyTestUser(
  * picks up any survivors:
  *   python backend/scripts/cleanup_test_users.py
  *
- * Pattern: test user emails use the ``@myjobhunter-test.invalid`` domain
- * so they are easy to identify and bulk-delete.
+ * Pattern: test user emails use the ``@myjobhunter-test.example.com`` domain
+ * (RFC 2606 reserved, accepted by email validators) so they are easy to identify
+ * and bulk-delete.
  */
 export async function deleteTestUser(
   request: APIRequestContext,
@@ -118,15 +119,46 @@ export async function deleteTestUser(
 }
 
 /**
+ * Resets the backend's in-memory login rate-limit buckets.
+ *
+ * Call this before every login attempt in E2E tests to prevent the per-IP
+ * throttle from triggering when many test runs share the same loopback IP.
+ * The endpoint is gated by MYJOBHUNTER_ENABLE_TEST_HELPERS=1 and is never
+ * mounted in production.
+ */
+export async function resetRateLimit(
+  request: APIRequestContext,
+): Promise<void> {
+  const response = await request.post(`${BACKEND_URL}/api/_test/reset-rate-limit`);
+  if (!response.ok()) {
+    // Non-fatal — warn but don't abort the test.
+    console.warn(
+      `[E2E] reset-rate-limit failed: ${response.status()} — endpoint may not be mounted`,
+    );
+  }
+}
+
+/**
  * Logs in via the LoginForm UI and waits for the redirect to /dashboard.
+ *
+ * Resets the backend rate-limit buckets before each login so tests don't
+ * interfere with each other when they all share 127.0.0.1 as the client IP.
  */
 export async function loginViaUI(
   page: import("@playwright/test").Page,
   user: TestUser,
+  request?: APIRequestContext,
 ): Promise<void> {
+  if (request) {
+    await resetRateLimit(request);
+  }
   await page.goto("/login");
   await page.getByLabel(/email/i).fill(user.email);
-  await page.getByLabel(/password/i).fill(user.password);
+  // Use the input's id directly to avoid matching the 'Show password' toggle button
+  // (which also has 'password' in its aria-label).
+  await page.locator("#login-password").fill(user.password);
   await page.getByRole("button", { name: /sign in/i }).click();
-  await page.waitForURL("**/dashboard", { timeout: 10_000 });
+  // Wait for navigation away from /login — the redirect target may be /dashboard
+  // (first login) or whatever page the user last visited (returning session).
+  await page.waitForURL((url) => !url.pathname.includes("/login"), { timeout: 10_000 });
 }
