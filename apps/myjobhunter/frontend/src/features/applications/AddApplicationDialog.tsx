@@ -5,6 +5,8 @@ import { LoadingButton, showSuccess, showError, extractErrorMessage } from "@pla
 import { X, Plus } from "lucide-react";
 import { useListCompaniesQuery, useCreateCompanyMutation } from "@/lib/companiesApi";
 import { useCreateApplicationMutation } from "@/lib/applicationsApi";
+import type { CompanyCreateRequest } from "@/types/company-create-request";
+import CompanyForm from "@/features/companies/CompanyForm";
 
 interface FormValues {
   company_id: string;
@@ -13,11 +15,6 @@ interface FormValues {
   location: string;
   remote_type: "unknown" | "remote" | "hybrid" | "onsite";
   notes: string;
-}
-
-interface NewCompanyValues {
-  name: string;
-  primary_domain: string;
 }
 
 const REMOTE_OPTIONS: { value: FormValues["remote_type"]; label: string }[] = [
@@ -56,18 +53,13 @@ export default function AddApplicationDialog({ open, onOpenChange }: Props) {
     },
   });
 
-  const newCompanyForm = useForm<NewCompanyValues>({
-    defaultValues: { name: "", primary_domain: "" },
-  });
-
-  // Reset both forms when the dialog closes so a re-open starts fresh.
+  // Reset form + inline panel when the dialog closes so a re-open starts fresh.
   useEffect(() => {
     if (!open) {
       reset();
-      newCompanyForm.reset();
       setShowNewCompany(false);
     }
-  }, [open, reset, newCompanyForm]);
+  }, [open, reset]);
 
   const onSubmit: SubmitHandler<FormValues> = async (values) => {
     try {
@@ -86,16 +78,13 @@ export default function AddApplicationDialog({ open, onOpenChange }: Props) {
     }
   };
 
-  const onSubmitNewCompany: SubmitHandler<NewCompanyValues> = async (values) => {
+  const handleCreateCompany = async (request: CompanyCreateRequest) => {
     try {
-      const created = await createCompany({
-        name: values.name.trim(),
-        primary_domain: values.primary_domain.trim() || null,
-      }).unwrap();
+      const created = await createCompany(request).unwrap();
       showSuccess(`Company "${created.name}" created`);
+      // Auto-select the new company in the application dropdown.
       setValue("company_id", created.id, { shouldValidate: true });
       setShowNewCompany(false);
-      newCompanyForm.reset();
     } catch (err) {
       showError(`Couldn't create company: ${extractErrorMessage(err)}`);
     }
@@ -127,44 +116,16 @@ export default function AddApplicationDialog({ open, onOpenChange }: Props) {
                 Company <span className="text-destructive">*</span>
               </label>
               {showNewCompany ? (
-                <div className="border rounded-md p-3 space-y-3 bg-muted/30">
-                  <p className="text-xs text-muted-foreground">New company</p>
-                  <div>
-                    <label className="block text-xs font-medium mb-1">Name</label>
-                    <input
-                      type="text"
-                      {...newCompanyForm.register("name", { required: true, minLength: 1 })}
-                      className="w-full border rounded-md px-3 py-2 text-sm bg-background"
-                      placeholder="e.g. Acme Corp"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium mb-1">Domain (optional)</label>
-                    <input
-                      type="text"
-                      {...newCompanyForm.register("primary_domain")}
-                      className="w-full border rounded-md px-3 py-2 text-sm bg-background"
-                      placeholder="acme.com"
-                    />
-                  </div>
-                  <div className="flex gap-2 justify-end">
-                    <button
-                      type="button"
-                      onClick={() => setShowNewCompany(false)}
-                      className="px-3 py-1.5 text-xs border rounded-md hover:bg-muted"
-                    >
-                      Cancel
-                    </button>
-                    <LoadingButton
-                      type="button"
-                      size="sm"
-                      isLoading={creatingCompany}
-                      loadingText="Creating..."
-                      onClick={newCompanyForm.handleSubmit(onSubmitNewCompany)}
-                    >
-                      Create company
-                    </LoadingButton>
-                  </div>
+                // Inline panel — NOT a nested Dialog (a11y rule: no dialogs inside dialogs).
+                <div className="border rounded-md p-4 bg-muted/30">
+                  <p className="text-xs font-medium text-muted-foreground mb-3">New company</p>
+                  <CompanyForm
+                    onSubmit={handleCreateCompany}
+                    onCancel={() => setShowNewCompany(false)}
+                    submitLabel="Create company"
+                    submitting={creatingCompany}
+                    autoFocus={true}
+                  />
                 </div>
               ) : (
                 <div className="flex gap-2">
@@ -183,7 +144,8 @@ export default function AddApplicationDialog({ open, onOpenChange }: Props) {
                   <button
                     type="button"
                     onClick={() => setShowNewCompany(true)}
-                    className="inline-flex items-center gap-1 px-3 py-2 text-sm border rounded-md hover:bg-muted whitespace-nowrap"
+                    className="inline-flex items-center gap-1 px-3 py-2 text-sm border rounded-md hover:bg-muted whitespace-nowrap min-h-[44px]"
+                    aria-label="Add new company"
                   >
                     <Plus size={14} />
                     New

@@ -12,6 +12,11 @@ vi.mock("@/lib/applicationsApi", () => ({
   useCreateApplicationMutation: vi.fn(),
 }));
 
+vi.mock("@/lib/companiesApi", () => ({
+  useListCompaniesQuery: vi.fn(),
+  useCreateCompanyMutation: vi.fn(),
+}));
+
 // Suppress radix-dialog portal errors in jsdom.
 vi.mock("@radix-ui/react-dialog", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@radix-ui/react-dialog")>();
@@ -42,12 +47,22 @@ import {
   useListApplicationsQuery,
   useCreateApplicationMutation,
 } from "@/lib/applicationsApi";
+import {
+  useListCompaniesQuery,
+  useCreateCompanyMutation,
+} from "@/lib/companiesApi";
 
 const mockUseListApplicationsQuery = vi.mocked(useListApplicationsQuery);
 const mockUseCreateApplicationMutation = vi.mocked(useCreateApplicationMutation);
+const mockUseListCompaniesQuery = vi.mocked(useListCompaniesQuery);
+const mockUseCreateCompanyMutation = vi.mocked(useCreateCompanyMutation);
 
 const stubMutation = [vi.fn(), { isLoading: false }] as unknown as ReturnType<
   typeof useCreateApplicationMutation
+>;
+
+const stubCompanyMutation = [vi.fn(), { isLoading: false }] as unknown as ReturnType<
+  typeof useCreateCompanyMutation
 >;
 
 function renderApplications() {
@@ -99,6 +114,13 @@ describe("Applications page", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseCreateApplicationMutation.mockReturnValue(stubMutation);
+    mockUseCreateCompanyMutation.mockReturnValue(stubCompanyMutation);
+    mockUseListCompaniesQuery.mockReturnValue({
+      data: { items: [], total: 0 },
+      isLoading: false,
+      isError: false,
+      error: undefined,
+    } as unknown as ReturnType<typeof useListCompaniesQuery>);
   });
 
   describe("loading state", () => {
