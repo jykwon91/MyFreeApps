@@ -21,9 +21,11 @@ import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.application.application import Application
-from app.repositories.application import application_repository
+from app.models.application.application_event import ApplicationEvent
+from app.repositories.application import application_repository, application_event_repository
 from app.repositories.company import company_repository
 from app.schemas.application.application_create_request import ApplicationCreateRequest
+from app.schemas.application.application_event_create_request import ApplicationEventCreateRequest
 from app.schemas.application.application_update_request import ApplicationUpdateRequest
 
 
@@ -136,3 +138,52 @@ async def soft_delete_application(
     await application_repository.soft_delete(db, application)
     await db.commit()
     return True
+
+
+async def list_application_events(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    application_id: uuid.UUID,
+) -> list[ApplicationEvent] | None:
+    """Return events for ``application_id`` ordered newest-first.
+
+    Returns ``None`` if the application does not exist under ``user_id``
+    so the route layer can map to HTTP 404 with no existence leak. Soft-
+    deleted applications also return ``None`` — events are not visible
+    after the parent application is deleted.
+    """
+    application = await application_repository.get_by_id(db, application_id, user_id)
+    if application is None:
+        return None
+    return await application_event_repository.list_by_application(db, user_id, application_id)
+
+
+async def log_application_event(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    application_id: uuid.UUID,
+    request: ApplicationEventCreateRequest,
+) -> ApplicationEvent | None:
+    """Persist a new event against an application.
+
+    Returns ``None`` if the application does not exist under ``user_id``
+    (route layer maps to 404). The event's ``user_id`` is denormalized
+    from the parent application; the route never trusts a body-provided
+    ``user_id`` (the schema's ``extra='forbid'`` rejects it anyway).
+
+    Commits at the end so the write survives the request lifecycle.
+    """
+    application = await application_repository.get_by_id(db, application_id, user_id)
+    if application is None:
+        return None
+    event = ApplicationEvent(
+        user_id=user_id,
+        application_id=application_id,
+        event_type=request.event_type,
+        occurred_at=request.occurred_at,
+        source=request.source,
+        note=request.note,
+    )
+    event = await application_event_repository.create(db, event)
+    await db.commit()
+    return event

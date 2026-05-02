@@ -28,6 +28,8 @@ from app.core.auth import current_active_user
 from app.db.session import get_db
 from app.models.user.user import User
 from app.schemas.application.application_create_request import ApplicationCreateRequest
+from app.schemas.application.application_event_create_request import ApplicationEventCreateRequest
+from app.schemas.application.application_event_response import ApplicationEventResponse
 from app.schemas.application.application_response import ApplicationResponse
 from app.schemas.application.application_update_request import ApplicationUpdateRequest
 from app.services.application import application_service
@@ -139,3 +141,53 @@ async def delete_application(
     if not deleted:
         raise HTTPException(status_code=404, detail=_NOT_FOUND_DETAIL)
     return Response(status_code=204)
+
+
+@router.get("/applications/{application_id}/events")
+async def list_application_events(
+    application_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(current_active_user),
+) -> dict:
+    """Return events for an application, newest first.
+
+    Returns 404 if the application is missing or belongs to another user
+    (no existence leak — same response as a genuine miss). Response
+    shape mirrors the list endpoints: ``{"items": [...], "total": int}``.
+    """
+    events = await application_service.list_application_events(db, user.id, application_id)
+    if events is None:
+        raise HTTPException(status_code=404, detail=_NOT_FOUND_DETAIL)
+    return {
+        "items": [
+            ApplicationEventResponse.model_validate(e).model_dump(mode="json") for e in events
+        ],
+        "total": len(events),
+    }
+
+
+@router.post(
+    "/applications/{application_id}/events",
+    response_model=ApplicationEventResponse,
+    status_code=201,
+)
+async def create_application_event(
+    application_id: uuid.UUID,
+    payload: ApplicationEventCreateRequest,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(current_active_user),
+) -> ApplicationEventResponse:
+    """Log a new event against an application.
+
+    Returns 404 if the application is missing or belongs to another user.
+    422 on schema violations (event_type not in enum, source not in enum,
+    extra fields). Idempotency for sync-imported events lives on the
+    UNIQUE(user_id, email_message_id) constraint — manual events
+    intentionally don't carry email_message_id and so always insert.
+    """
+    event = await application_service.log_application_event(
+        db, user.id, application_id, payload,
+    )
+    if event is None:
+        raise HTTPException(status_code=404, detail=_NOT_FOUND_DETAIL)
+    return ApplicationEventResponse.model_validate(event)
