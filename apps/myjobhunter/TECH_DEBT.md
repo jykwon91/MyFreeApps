@@ -3,7 +3,7 @@
 Issues discovered during development. New entries are appended; resolved entries are
 removed and the counts in this header are updated.
 
-**Open issues: 4 (Critical: 1 / High: 1 / Medium: 1 / Low: 1)**
+**Open issues: 7 (Critical: 1 / High: 1 / Medium: 3 / Low: 2)**
 
 ---
 
@@ -51,6 +51,7 @@ ships broken; in fact it ships fully tested through backend + E2E layers.
 
 ---
 
+<<<<<<< HEAD
 ### [Security] TOTP login endpoint did not enforce email verification
 
 **Severity:** Critical (now fixed in this PR)
@@ -118,3 +119,62 @@ This is a known asyncpg/pytest-asyncio interaction on Windows with certain event
 
 This does not block CI (which runs on Linux with a different event loop policy) but makes
 local test runs unreliable on Windows.
+
+---
+
+### [Frontend Tests] Applications.test.tsx — "Applied" text collision between column header and status badge
+
+**Severity:** Medium
+**Effort:** XS
+**Location:** `apps/myjobhunter/frontend/src/pages/__tests__/Applications.test.tsx`
+**Discovered:** PR #170 (CompanyForm refactor) — `2026-05-02`
+
+**Problem:** Two unit tests use `screen.getByText("Applied")` but the DataTable
+renders an "Applied" column header (sortable button) alongside the "Applied" status
+badge. `getByText` finds both and throws "Found multiple elements". These tests have
+been failing since the status column was added in PR #167 — they were just masked by
+the Redux Provider crash (missing `companiesApi` mock) until this PR fixed that.
+
+**Recommendation:** Use `screen.getByRole("cell", { name: "Applied" })` or
+`within(row).getByText("Applied")` to scope the query to the badge cell. Also
+update the column header test to use `getByRole("columnheader", { name: "Applied" })`
+to avoid future collisions.
+
+---
+
+### [Frontend] `npm run lint` is broken — missing ESLint config
+
+**Severity:** Medium
+**Effort:** S
+**Location:** `apps/myjobhunter/frontend/` — `package.json` scripts `"lint": "eslint ."`
+**Discovered:** PR #170 (CompanyForm refactor) — `2026-05-02`
+
+**Problem:** Running `npm run lint` fails with "ESLint couldn't find an eslint.config.js
+file." The project has no `eslint.config.js`, `.eslintrc.js`, or `.eslintrc.json`. The
+lint script has been a no-op (or broken) for some time; it's not caught in CI because
+the frontend CI workflow may not run `npm run lint`.
+
+**Recommendation:** Add a minimal `eslint.config.js` (ESLint v9 flat config format)
+with `@typescript-eslint` and `eslint-plugin-react-hooks`. The project already has
+TypeScript configured so minimal rules needed. See `apps/mybookkeeper/frontend/` for
+an example config if one exists.
+
+---
+
+### [Frontend Tests] `auth.test.ts` — register call assertion is brittle
+
+**Severity:** Low
+**Effort:** XS
+**Location:** `apps/myjobhunter/frontend/src/lib/__tests__/auth.test.ts:109`
+**Discovered:** PR #170 (CompanyForm refactor) — `2026-05-02`
+
+**Problem:** The test asserts `toHaveBeenCalledWith("/auth/register", { email, password })`
+but the underlying `api.post` call now passes a 3rd argument `{ headers: {} }`. The
+assertion fails because `toHaveBeenCalledWith` checks exact argument equality. Probably
+a recent upstream change to the shared axios wrapper in `@platform/ui` added default
+headers to all POST calls.
+
+**Recommendation:** Change the assertion to `toHaveBeenCalledWith("/auth/register",
+expect.objectContaining({ email, password }))` to ignore the extra headers argument,
+or use `toHaveBeenLastCalledWith` with `expect.objectContaining`. Also investigate
+whether the `{ headers: {} }` is intentional or a regression in `@platform/ui`.
