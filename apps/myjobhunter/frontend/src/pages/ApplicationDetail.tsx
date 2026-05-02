@@ -1,9 +1,47 @@
+import { useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { ChevronLeft, Trash2, ExternalLink as ExternalLinkIcon } from "lucide-react";
+import { ChevronLeft, Trash2, ExternalLink as ExternalLinkIcon, Plus } from "lucide-react";
 import { Badge, showSuccess, showError, extractErrorMessage } from "@platform/ui";
 import ApplicationDetailSkeleton from "@/features/applications/ApplicationDetailSkeleton";
-import { useGetApplicationQuery, useDeleteApplicationMutation } from "@/lib/applicationsApi";
+import LogEventDialog from "@/features/applications/LogEventDialog";
+import {
+  useGetApplicationQuery,
+  useDeleteApplicationMutation,
+  useListApplicationEventsQuery,
+} from "@/lib/applicationsApi";
 import { useGetCompanyQuery } from "@/lib/companiesApi";
+import type { ApplicationEvent, ApplicationEventType } from "@/types/application-event";
+
+const EVENT_LABELS: Record<ApplicationEventType, string> = {
+  applied: "Applied",
+  email_received: "Email received",
+  interview_scheduled: "Interview scheduled",
+  interview_completed: "Interview completed",
+  rejected: "Rejected",
+  offer_received: "Offer received",
+  withdrawn: "Withdrawn",
+  ghosted: "Ghosted",
+  note_added: "Note",
+};
+
+const EVENT_BADGE_COLOR: Record<ApplicationEventType, "gray" | "blue" | "yellow" | "green" | "red" | "purple"> = {
+  applied: "blue",
+  email_received: "gray",
+  interview_scheduled: "yellow",
+  interview_completed: "yellow",
+  rejected: "red",
+  offer_received: "green",
+  withdrawn: "gray",
+  ghosted: "gray",
+  note_added: "purple",
+};
+
+function deriveStatus(events: ApplicationEvent[] | undefined): ApplicationEventType | null {
+  if (!events || events.length === 0) return null;
+  // Events come back newest-first; the latest non-note event drives status.
+  const meaningful = events.find((e) => e.event_type !== "note_added");
+  return meaningful?.event_type ?? null;
+}
 
 function formatDate(iso: string | null): string {
   if (!iso) return "—";
@@ -30,7 +68,12 @@ export default function ApplicationDetail() {
   const { data: company } = useGetCompanyQuery(app?.company_id ?? "", {
     skip: !app?.company_id,
   });
+  const { data: eventsData } = useListApplicationEventsQuery(id ?? "", { skip: !id });
   const [deleteApplication, { isLoading: deleting }] = useDeleteApplicationMutation();
+  const [logEventOpen, setLogEventOpen] = useState(false);
+
+  const events = eventsData?.items ?? [];
+  const status = deriveStatus(events);
 
   if (isLoading) {
     return <ApplicationDetailSkeleton />;
@@ -92,6 +135,9 @@ export default function ApplicationDetail() {
             {app.location ? ` · ${app.location}` : ""}
           </p>
           <div className="flex items-center gap-2 pt-1 flex-wrap">
+            {status ? (
+              <Badge label={EVENT_LABELS[status]} color={EVENT_BADGE_COLOR[status]} />
+            ) : null}
             {app.archived ? <Badge label="Archived" color="gray" /> : null}
             {app.remote_type !== "unknown" ? <Badge label={app.remote_type} color="blue" /> : null}
             {app.source ? <Badge label={app.source} color="purple" /> : null}
@@ -146,6 +192,60 @@ export default function ApplicationDetail() {
           </p>
         </section>
       ) : null}
+
+      <section>
+        <header className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-medium">
+            Timeline{" "}
+            <span className="text-muted-foreground font-normal">({events.length})</span>
+          </h2>
+          <button
+            onClick={() => setLogEventOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs border rounded-md hover:bg-muted"
+          >
+            <Plus size={12} />
+            Log event
+          </button>
+        </header>
+        {events.length === 0 ? (
+          <p className="text-sm text-muted-foreground border rounded-lg p-3 bg-muted/30">
+            No events yet. Log the first one to start tracking this application's status.
+          </p>
+        ) : (
+          <ol className="space-y-2">
+            {events.map((event) => (
+              <li
+                key={event.id}
+                className="border rounded-lg p-3 bg-muted/20"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <Badge
+                    label={EVENT_LABELS[event.event_type]}
+                    color={EVENT_BADGE_COLOR[event.event_type]}
+                  />
+                  <span className="text-xs text-muted-foreground">
+                    {formatDate(event.occurred_at)}
+                  </span>
+                </div>
+                {event.note ? (
+                  <p className="text-sm mt-2 whitespace-pre-wrap">{event.note}</p>
+                ) : null}
+                {event.source !== "manual" ? (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    via {event.source}
+                  </p>
+                ) : null}
+              </li>
+            ))}
+          </ol>
+        )}
+      </section>
+
+      <LogEventDialog
+        applicationId={app.id}
+        open={logEventOpen}
+        onOpenChange={setLogEventOpen}
+      />
     </div>
   );
 }
