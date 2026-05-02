@@ -14,6 +14,11 @@ import path from "path";
 export default defineConfig({
   plugins: [react()],
   resolve: {
+    // Force a single React instance. The workspace root has React 18 while
+    // packages/shared-frontend has React 19 in its own node_modules. Without
+    // dedupe, vitest resolves two React copies and all JSX renders fail with
+    // "Objects are not valid as a React child".
+    dedupe: ["react", "react-dom"],
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },

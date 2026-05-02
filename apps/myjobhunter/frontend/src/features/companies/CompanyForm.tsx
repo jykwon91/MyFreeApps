@@ -85,7 +85,6 @@ export default function CompanyForm({
           {...register("name", { required: "Name is required", minLength: 1 })}
           className="w-full border rounded-md px-3 py-2 text-sm bg-background"
           placeholder="e.g. Acme Corp"
-          // eslint-disable-next-line jsx-a11y/no-autofocus
           autoFocus={autoFocus}
         />
         {errors.name ? (
