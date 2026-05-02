@@ -2,10 +2,16 @@ import { baseApi } from "@platform/ui";
 import type { Application } from "@/types/application";
 import type { ApplicationListResponse } from "@/types/application-list-response";
 import type { ApplicationCreateRequest } from "@/types/application-create-request";
+import type { ApplicationEvent } from "@/types/application-event";
+import type { ApplicationEventCreateRequest } from "@/types/application-event-create-request";
+import type { ApplicationEventListResponse } from "@/types/application-event-list-response";
 
 const APPLICATIONS_TAG = "Applications";
+const APPLICATION_EVENTS_TAG = "ApplicationEvents";
 
-const applicationsApi = baseApi.enhanceEndpoints({ addTagTypes: [APPLICATIONS_TAG] }).injectEndpoints({
+const applicationsApi = baseApi.enhanceEndpoints({
+  addTagTypes: [APPLICATIONS_TAG, APPLICATION_EVENTS_TAG],
+}).injectEndpoints({
   endpoints: (build) => ({
     listApplications: build.query<ApplicationListResponse, void>({
       query: () => ({ url: "/applications", method: "GET" }),
@@ -46,6 +52,30 @@ const applicationsApi = baseApi.enhanceEndpoints({ addTagTypes: [APPLICATIONS_TA
         { type: APPLICATIONS_TAG, id: "LIST" },
       ],
     }),
+
+    listApplicationEvents: build.query<ApplicationEventListResponse, string>({
+      query: (applicationId) => ({
+        url: `/applications/${applicationId}/events`,
+        method: "GET",
+      }),
+      providesTags: (_result, _err, applicationId) => [
+        { type: APPLICATION_EVENTS_TAG, id: applicationId },
+      ],
+    }),
+
+    logApplicationEvent: build.mutation<
+      ApplicationEvent,
+      { applicationId: string; body: ApplicationEventCreateRequest }
+    >({
+      query: ({ applicationId, body }) => ({
+        url: `/applications/${applicationId}/events`,
+        method: "POST",
+        data: body,
+      }),
+      invalidatesTags: (_result, _err, { applicationId }) => [
+        { type: APPLICATION_EVENTS_TAG, id: applicationId },
+      ],
+    }),
   }),
 });
 
@@ -55,4 +85,6 @@ export const {
   useCreateApplicationMutation,
   useUpdateApplicationMutation,
   useDeleteApplicationMutation,
+  useListApplicationEventsQuery,
+  useLogApplicationEventMutation,
 } = applicationsApi;
