@@ -73,10 +73,12 @@ jobs:
               tests/test_email_verification.py
           - name: crud
             # Phase 2 CRUD tests — added 2026-05-02 (were never in CI matrix
-            # before this PR). Covers applications, companies, profiles, and
-            # application events.
+            # before this PR). Covers applications (read-only), companies,
+            # profiles, and application events. test_application_writes.py
+            # is on the login-heavy shard because each test calls Argon2
+            # password hashing via the user_factory fixture; ~15 tests at
+            # ~5s each blows the 60s pytest-timeout when bundled here.
             paths: >-
-              tests/test_application_writes.py
               tests/test_application_get_by_id.py
               tests/test_application_status_column.py
               tests/test_application_events.py
@@ -88,6 +90,7 @@ jobs:
               tests/test_login_ip_rate_limit.py
               tests/test_account_deletion.py
               tests/test_data_export.py
+              tests/test_application_writes.py
           - name: totp
             paths: >-
               tests/test_totp_login.py
