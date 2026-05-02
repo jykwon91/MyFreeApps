@@ -1,6 +1,9 @@
 import { Skeleton } from "@platform/ui";
 
-const COLUMN_WIDTHS = ["w-1/3", "w-1/4", "w-20", "w-24", "w-16"] as const;
+// Column widths mirror the loaded DataTable column widths exactly.
+// Order: Role | Status | Location | Remote | Applied | Fit
+const COLUMN_WIDTHS = ["w-1/3", "w-20", "w-1/4", "w-20", "w-24", "w-16"] as const;
+const COLUMN_HEADERS = ["Role", "Status", "Location", "Remote", "Applied", "Fit"] as const;
 
 export default function ApplicationsSkeleton() {
   return (
@@ -12,7 +15,7 @@ export default function ApplicationsSkeleton() {
       <table role="table" className="w-full text-sm border-collapse">
         <thead>
           <tr className="border-b">
-            {["Company", "Role", "Status", "Applied", "Actions"].map((col) => (
+            {COLUMN_HEADERS.map((col) => (
               <th
                 key={col}
                 scope="col"

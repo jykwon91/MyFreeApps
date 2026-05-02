@@ -37,6 +37,13 @@ export interface Application {
   external_ref: string | null;
   external_source: string | null;
 
+  /**
+   * Latest event_type from application_events, computed via lateral join.
+   * null when the application has no events yet.
+   * Only present in list responses (GET /applications).
+   */
+  latest_status: string | null;
+
   deleted_at: string | null;
   created_at: string;
   updated_at: string;

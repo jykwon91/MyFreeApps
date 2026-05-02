@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FilePlus } from "lucide-react";
-import { DataTable, EmptyState, type ColumnDef } from "@platform/ui";
+import { Badge, DataTable, EmptyState, type ColumnDef, type SortingState } from "@platform/ui";
 import ApplicationsSkeleton from "@/features/applications/ApplicationsSkeleton";
 import AddApplicationDialog from "@/features/applications/AddApplicationDialog";
 import { useListApplicationsQuery } from "@/lib/applicationsApi";
+import { formatEventType, getEventTypeColor, getEventTypeSortRank } from "@/lib/event-format";
 import { EMPTY_STATES } from "@/constants/empty-states";
 import type { Application } from "@/types/application";
 
@@ -14,6 +15,24 @@ const COLUMNS: ColumnDef<Application>[] = [
     header: "Role",
     accessorKey: "role_title",
     cell: ({ getValue }) => <span className="font-medium">{getValue<string>()}</span>,
+  },
+  {
+    id: "latest_status",
+    header: "Status",
+    accessorKey: "latest_status",
+    // Custom sort function so the order is applied → interview → offer → rejected → null
+    sortingFn: (rowA, rowB) => {
+      const a = getEventTypeSortRank(rowA.original.latest_status);
+      const b = getEventTypeSortRank(rowB.original.latest_status);
+      return a - b;
+    },
+    cell: ({ getValue }) => {
+      const value = getValue<string | null>();
+      if (value == null) {
+        return <span className="text-sm text-muted-foreground">—</span>;
+      }
+      return <Badge label={formatEventType(value)} color={getEventTypeColor(value)} />;
+    },
   },
   {
     id: "location",
@@ -50,6 +69,7 @@ export default function Applications() {
   const navigate = useNavigate();
   const { data, isLoading, isError, error } = useListApplicationsQuery();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [sorting, setSorting] = useState<SortingState>([]);
   const copy = EMPTY_STATES.applications;
 
   function handleAddApplication() {
@@ -118,6 +138,8 @@ export default function Applications() {
         columns={COLUMNS}
         getRowId={(row) => row.id}
         onRowClick={(row) => navigate(`/applications/${row.id}`)}
+        sorting={sorting}
+        onSortingChange={setSorting}
       />
     </div>
   );

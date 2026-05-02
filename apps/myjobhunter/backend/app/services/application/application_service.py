@@ -26,6 +26,7 @@ from app.repositories.application import application_repository, application_eve
 from app.repositories.company import company_repository
 from app.schemas.application.application_create_request import ApplicationCreateRequest
 from app.schemas.application.application_event_create_request import ApplicationEventCreateRequest
+from app.schemas.application.application_list_item import ApplicationListItem
 from app.schemas.application.application_update_request import ApplicationUpdateRequest
 
 
@@ -39,9 +40,23 @@ class CompanyNotOwnedError(LookupError):
     """
 
 
-async def list_applications(db: AsyncSession, user_id: uuid.UUID) -> list[Application]:
-    """List a user's non-deleted applications."""
-    return await application_repository.list_by_user(db, user_id)
+async def list_applications(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+) -> list[ApplicationListItem]:
+    """List a user's non-deleted applications with computed ``latest_status``.
+
+    Delegates to the repository's lateral-join query so status is always
+    computed from ``application_events`` — never stored on the applications
+    row. Returns ``ApplicationListItem`` instances (Pydantic) ready for
+    serialization; the route handler can call ``.model_dump(mode='json')``
+    directly without re-validating.
+    """
+    rows = await application_repository.list_with_status(db, user_id)
+    return [
+        ApplicationListItem.model_validate(app).model_copy(update={"latest_status": status})
+        for app, status in rows
+    ]
 
 
 async def get_application(

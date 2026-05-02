@@ -30,6 +30,7 @@ from app.models.user.user import User
 from app.schemas.application.application_create_request import ApplicationCreateRequest
 from app.schemas.application.application_event_create_request import ApplicationEventCreateRequest
 from app.schemas.application.application_event_response import ApplicationEventResponse
+from app.schemas.application.application_list_item import ApplicationListItem
 from app.schemas.application.application_response import ApplicationResponse
 from app.schemas.application.application_update_request import ApplicationUpdateRequest
 from app.services.application import application_service
@@ -45,16 +46,17 @@ async def list_applications(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> dict:
-    """Return the caller's non-deleted applications.
+    """Return the caller's non-deleted applications with latest event status.
 
-    Response shape: ``{"items": [ApplicationResponse...], "total": int}``.
-    Phase 1 returned ``items: []`` with the count carried only in ``total``;
-    PR 2.1b (this change) populates ``items`` so the kanban / list view can
-    render real data.
+    Response shape: ``{"items": [ApplicationListItem...], "total": int}``.
+    Each item includes ``latest_status: str | None`` — the ``event_type``
+    of the most-recent ``application_events`` row, computed via a correlated
+    sub-select on the covering index ``ix_appevent_app_occurred``.  ``None``
+    when the application has no events yet.
     """
     items = await application_service.list_applications(db, user.id)
     return {
-        "items": [ApplicationResponse.model_validate(a).model_dump(mode="json") for a in items],
+        "items": [item.model_dump(mode="json") for item in items],
         "total": len(items),
     }
 

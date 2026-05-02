@@ -9,6 +9,13 @@ Soft-delete convention: ``applications`` carries ``deleted_at``. Reads filter
 ``deleted_at IS NULL`` by default so soft-deleted rows are invisible to the
 list / detail endpoints. ``soft_delete`` is idempotent — calling it on a row
 that is already soft-deleted is a no-op (returns the existing row unchanged).
+
+Status query: ``list_with_status`` returns ``(Application, str | None)``
+tuples where the second element is the latest ``event_type`` from
+``application_events`` via a correlated lateral join on the covering index
+``ix_appevent_app_occurred(application_id, occurred_at)``. No denormalized
+column is written to the ``applications`` table — status is always computed
+at query time per CLAUDE.md architecture rules.
 """
 from __future__ import annotations
 
@@ -20,6 +27,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.application.application import Application
+from app.models.application.application_event import ApplicationEvent
 
 # Allowlist of columns that can be applied via the dynamic ``update``
 # function. Per the project security rule: "Always validate field names
@@ -80,6 +88,46 @@ async def list_by_user(db: AsyncSession, user_id: uuid.UUID) -> list[Application
         )
     )
     return list(result.scalars().all())
+
+
+async def list_with_status(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+) -> list[tuple[Application, str | None]]:
+    """List a user's non-deleted applications with their latest event type.
+
+    Uses a correlated scalar sub-select (equivalent to a lateral join) so
+    PostgreSQL uses the covering index ``ix_appevent_app_occurred`` on
+    ``(application_id, occurred_at)`` — one index-only lookup per row with
+    no sequential scan of ``application_events``.
+
+    Returns a list of ``(Application, latest_event_type_or_None)`` tuples.
+    The ``latest_status`` is ``None`` for applications that have zero events.
+    Tenant isolation is enforced on both sides of the correlated sub-query
+    (``user_id`` on ``application_events`` as well) so user A's events can
+    never bleed into user B's application rows.
+    """
+    latest_event_sq = (
+        select(ApplicationEvent.event_type)
+        .where(
+            ApplicationEvent.application_id == Application.id,
+            ApplicationEvent.user_id == user_id,
+        )
+        .order_by(ApplicationEvent.occurred_at.desc())
+        .limit(1)
+        .correlate(Application)
+        .scalar_subquery()
+    )
+
+    stmt = (
+        select(Application, latest_event_sq.label("latest_status"))
+        .where(
+            Application.user_id == user_id,
+            Application.deleted_at.is_(None),
+        )
+    )
+    result = await db.execute(stmt)
+    return [(row[0], row[1]) for row in result.all()]
 
 
 async def create(db: AsyncSession, application: Application) -> Application:
