@@ -26,7 +26,7 @@ from app.core.lease_enums import (
 )
 
 revision: str = "lease260502"
-down_revision: Union[str, None] = "mbk260502"
+down_revision: Union[str, None] = "stage260502"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
