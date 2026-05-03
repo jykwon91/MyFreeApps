@@ -335,18 +335,18 @@ async def list_leases(
         )
 
         # Bulk-load applicant names for the tenant name column on the list page.
-        # The EncryptedString TypeDecorator decrypts transparently on load.
-        applicant_ids = list({r.applicant_id for r in rows})
-        applicant_names: dict[uuid.UUID, str | None] = {}
-        for aid in applicant_ids:
-            applicant = await applicant_repo.get(
-                db,
-                applicant_id=aid,
-                organization_id=organization_id,
-                user_id=user_id,
-                include_deleted=True,
-            )
-            applicant_names[aid] = applicant.legal_name if applicant else None
+        # Single IN-list query; the EncryptedString TypeDecorator decrypts
+        # transparently on load.
+        applicant_ids = [aid for aid in {r.applicant_id for r in rows} if aid is not None]
+        applicants = await applicant_repo.list_by_ids(
+            db,
+            organization_id=organization_id,
+            user_id=user_id,
+            applicant_ids=applicant_ids,
+        )
+        applicant_names: dict[uuid.UUID, str | None] = {
+            a.id: a.legal_name for a in applicants
+        }
 
     items = [_build_summary(r, applicant_names) for r in rows]
     return SignedLeaseListResponse(
