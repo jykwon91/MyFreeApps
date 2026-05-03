@@ -9,7 +9,11 @@ from app.core.auth import (
     get_jwt_strategy,
     get_user_manager,
 )
-from app.core.rate_limit import check_login_rate_limit, check_totp_rate_limit
+from app.core.rate_limit import (
+    check_login_rate_limit,
+    check_totp_account_not_locked,
+    check_totp_rate_limit,
+)
 from app.db.session import get_db
 from app.models.user.user import User
 from app.schemas.user.totp import (
@@ -85,7 +89,11 @@ async def totp_status(user: User = Depends(current_active_user)) -> TotpStatusRe
 
 @router.post(
     "/login",
-    dependencies=[Depends(check_login_rate_limit), Depends(check_totp_rate_limit)],
+    dependencies=[
+        Depends(check_login_rate_limit),
+        Depends(check_totp_rate_limit),
+        Depends(check_totp_account_not_locked),
+    ],
     response_model=TotpLoginResponse,
     response_model_exclude_none=True,
 )

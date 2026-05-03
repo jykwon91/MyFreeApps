@@ -293,17 +293,34 @@ class TestTotpLoginUnverified:
         """The /auth/totp/login endpoint returns LOGIN_USER_NOT_VERIFIED for unverified users."""
         from httpx import AsyncClient, ASGITransport
         from app.main import app
+        from app.core.rate_limit import (
+            check_login_rate_limit,
+            check_totp_rate_limit,
+            check_totp_account_not_locked,
+        )
 
         unverified_user = _make_user(is_verified=False)
 
-        with (
-            patch("app.api.totp.UserManager.authenticate_password", new=AsyncMock(return_value=unverified_user)),
-        ):
-            async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-                resp = await client.post(
-                    "/auth/totp/login",
-                    json={"email": "user@example.com", "password": "secret123456"},
-                )
+        # Bypass route-level dependencies that would hit the DB. The
+        # check_totp_account_not_locked dep was added by the 2026-05-02
+        # security hotfix and looks up the user by email; this test
+        # mocks at the UserManager level and never sets up a DB schema,
+        # so the lockout-check dep must be overridden here.
+        app.dependency_overrides[check_login_rate_limit] = lambda: None
+        app.dependency_overrides[check_totp_rate_limit] = lambda: None
+        app.dependency_overrides[check_totp_account_not_locked] = lambda: None
+
+        try:
+            with (
+                patch("app.api.totp.UserManager.authenticate_password", new=AsyncMock(return_value=unverified_user)),
+            ):
+                async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+                    resp = await client.post(
+                        "/auth/totp/login",
+                        json={"email": "user@example.com", "password": "secret123456"},
+                    )
+        finally:
+            app.dependency_overrides.clear()
 
         assert resp.status_code == 400
         assert resp.json()["detail"] == "LOGIN_USER_NOT_VERIFIED"

@@ -6,6 +6,7 @@ since we do not have a live database with hashed passwords in the test environme
 """
 import uuid
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 from unittest.mock import AsyncMock, patch
 
 import pyotp
@@ -487,3 +488,131 @@ class TestTotpLoginRateLimit:
             app.dependency_overrides.clear()
 
         assert resp.status_code == 429
+
+
+# ---------------------------------------------------------------------------
+# Account lockout on /auth/totp/login (audit fix 2026-05-02)
+# ---------------------------------------------------------------------------
+
+class TestTotpLoginAccountLockout:
+    """Regression tests for the lockout bypass on POST /auth/totp/login.
+
+    Before the fix, ``authenticate_password`` called ``super().authenticate()``
+    which bypassed MBK's overridden ``UserManager.authenticate`` where lockout
+    enforcement lives.  After the fix:
+    - A locked account gets 429 (not 401) on any attempt via this endpoint.
+    - Bad-password attempts increment ``failed_login_count``.
+    - A locked account blocked by the route-level dependency emits a
+      ``LOGIN_BLOCKED_LOCKED`` auth event.
+    """
+
+    @pytest.mark.asyncio
+    async def test_locked_account_gets_429_not_401(
+        self, db: AsyncSession, user_no_totp: User,
+    ) -> None:
+        """An already-locked account must get 429 from the route-level guard."""
+        from datetime import timedelta
+        from app.core.rate_limit import (
+            check_login_rate_limit,
+            check_totp_rate_limit,
+            check_totp_account_not_locked,
+        )
+
+        # Lock the user.
+        future = datetime.now(tz=timezone.utc) + timedelta(minutes=5)
+        user_no_totp.locked_until = future
+        await db.commit()
+
+        # Bypass IP rate limits; let the account-lockout dep run for real.
+        app.dependency_overrides[check_login_rate_limit] = lambda: None
+        app.dependency_overrides[check_totp_rate_limit] = lambda: None
+        try:
+            transport = ASGITransport(app=app)
+            async with AsyncClient(transport=transport, base_url="http://test") as client:
+                resp = await client.post(
+                    "/auth/totp/login",
+                    json={"email": user_no_totp.email, "password": "wrongpassword"},
+                )
+        finally:
+            app.dependency_overrides.clear()
+
+        assert resp.status_code == 429, (
+            "Locked account must get 429, not 401 — account state should not be revealed"
+        )
+
+    @pytest.mark.asyncio
+    async def test_locked_account_with_correct_password_still_gets_429(
+        self, db: AsyncSession, user_no_totp: User,
+    ) -> None:
+        """Even the correct password must be rejected while the account is locked."""
+        from datetime import timedelta
+        from app.core.rate_limit import (
+            check_login_rate_limit,
+            check_totp_rate_limit,
+        )
+
+        future = datetime.now(tz=timezone.utc) + timedelta(minutes=5)
+        user_no_totp.locked_until = future
+        await db.commit()
+
+        app.dependency_overrides[check_login_rate_limit] = lambda: None
+        app.dependency_overrides[check_totp_rate_limit] = lambda: None
+        try:
+            with patch(
+                "app.api.totp.UserManager.authenticate_password",
+                new_callable=AsyncMock,
+                return_value=user_no_totp,
+            ):
+                transport = ASGITransport(app=app)
+                async with AsyncClient(transport=transport, base_url="http://test") as client:
+                    resp = await client.post(
+                        "/auth/totp/login",
+                        json={"email": user_no_totp.email, "password": "correct_password"},
+                    )
+        finally:
+            app.dependency_overrides.clear()
+
+        assert resp.status_code == 429, (
+            "Locked account must get 429 even with correct password"
+        )
+
+    @pytest.mark.asyncio
+    async def test_locked_account_emits_login_blocked_locked_event(
+        self, db: AsyncSession, user_no_totp: User,
+    ) -> None:
+        """Blocking a locked account via the TOTP login path must emit LOGIN_BLOCKED_LOCKED."""
+        from datetime import timedelta
+        from platform_shared.core.auth_events import AuthEventType
+        from app.core.rate_limit import (
+            check_login_rate_limit,
+            check_totp_rate_limit,
+        )
+        from app.models.system.auth_event import AuthEvent
+
+        future = datetime.now(tz=timezone.utc) + timedelta(minutes=5)
+        user_no_totp.locked_until = future
+        await db.commit()
+
+        app.dependency_overrides[check_login_rate_limit] = lambda: None
+        app.dependency_overrides[check_totp_rate_limit] = lambda: None
+        try:
+            transport = ASGITransport(app=app)
+            async with AsyncClient(transport=transport, base_url="http://test") as client:
+                await client.post(
+                    "/auth/totp/login",
+                    json={"email": user_no_totp.email, "password": "wrongpassword"},
+                )
+        finally:
+            app.dependency_overrides.clear()
+
+        from sqlalchemy import select
+        result = await db.execute(
+            select(AuthEvent).where(
+                AuthEvent.user_id == user_no_totp.id,
+                AuthEvent.event_type == AuthEventType.LOGIN_BLOCKED_LOCKED,
+            )
+        )
+        rows = result.scalars().all()
+        assert len(rows) >= 1, (
+            "LOGIN_BLOCKED_LOCKED event must be emitted when TOTP login is blocked by lockout"
+        )
