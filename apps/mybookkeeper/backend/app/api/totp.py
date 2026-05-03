@@ -126,6 +126,7 @@ async def totp_login(
             succeeded=False,
             metadata={"reason": "bad_credentials"},
         )
+        await db.commit()
         raise HTTPException(status_code=400, detail="LOGIN_BAD_CREDENTIALS")
 
     if not user.is_active:
@@ -137,6 +138,7 @@ async def totp_login(
             succeeded=False,
             metadata={"reason": "account_inactive"},
         )
+        await db.commit()
         raise HTTPException(status_code=400, detail="LOGIN_BAD_CREDENTIALS")
 
     if not user.is_verified:
@@ -147,6 +149,7 @@ async def totp_login(
             request=request,
             succeeded=False,
         )
+        await db.commit()
         raise HTTPException(status_code=400, detail="LOGIN_USER_NOT_VERIFIED")
 
     # TOTP gate: if user has 2FA enabled, require the code
