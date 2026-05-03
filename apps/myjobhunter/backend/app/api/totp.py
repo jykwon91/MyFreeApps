@@ -196,6 +196,14 @@ async def totp_login(
     # standard /auth/jwt/login route. The TOTP login path must enforce this too
     # or unverified users can obtain a JWT via this endpoint.
     if not user.is_verified:
+        await log_auth_event(
+            db,
+            event_type=AuthEventType.LOGIN_BLOCKED_UNVERIFIED,
+            user_id=user.id,
+            request=request,
+            succeeded=False,
+        )
+        await db.commit()
         raise HTTPException(status_code=400, detail="LOGIN_USER_NOT_VERIFIED")
 
     # TOTP gate: if the user has 2FA enabled, require the code before issuing JWT.
