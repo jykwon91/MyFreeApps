@@ -120,8 +120,8 @@ jobs:
     env:
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/test
       DATABASE_URL_SYNC: postgresql://postgres:postgres@localhost:5432/test
-      SECRET_KEY: 00000000000000000000000000000000 # gitleaks:allow
-      ENCRYPTION_KEY: 00000000000000000000000000000000 # gitleaks:allow
+      SECRET_KEY: "ci-placeholder-secret-key-not-real-32chars" # gitleaks:allow
+      ENCRYPTION_KEY: "ci-placeholder-encryption-key-not-real-32" # gitleaks:allow
       ANTHROPIC_API_KEY: sk-ant-placeholder-not-real
       TAVILY_API_KEY: tvly-placeholder-not-real
       GOOGLE_CLIENT_ID: placeholder-not-real-google-client
