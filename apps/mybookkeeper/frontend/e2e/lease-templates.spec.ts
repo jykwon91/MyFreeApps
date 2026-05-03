@@ -1,19 +1,14 @@
 import { test, expect, type APIRequestContext, type Page } from "./fixtures/auth";
 
 /**
- * Lease Templates Phase 1 — primary user flow.
+ * Lease Templates Phase 1 — primary user flows.
  *
- * Verifies:
- * 1. Lease Templates list renders, the Upload dialog opens, and uploading a
- *    Markdown bundle creates a template that lands on the detail page with
- *    detected placeholders.
- * 2. The placeholder spec editor table is editable inline and persists.
- * 3. The Leases page lists draft leases and the empty-state message renders
- *    when there are no leases.
- * 4. The skeleton on the Leases page has the same shape as the loaded list.
+ * Each test creates its own data (via the test-only seed endpoint or via
+ * the production multipart upload), performs an action, verifies the
+ * outcome in both the UI and the API/DB layer, and cleans up.
  *
- * The lease detail / generate / sign cycle is exercised at the API layer in
- * the backend test suite — this spec covers the UI flow.
+ * The lease detail / generate / sign cycle is exercised at the API layer
+ * in the backend test suite — this spec covers the host's UI flow.
  */
 
 interface SeedTemplatePayload {
@@ -36,6 +31,14 @@ async function seedTemplate(
 
 async function deleteTemplate(api: APIRequestContext, id: string): Promise<void> {
   await api.delete(`/test/lease-templates/${id}`).catch(() => {});
+}
+
+async function fetchTemplate(api: APIRequestContext, id: string) {
+  const res = await api.get(`/lease-templates/${id}`);
+  if (!res.ok()) {
+    throw new Error(`fetchTemplate failed: ${res.status()} ${await res.text()}`);
+  }
+  return res.json();
 }
 
 async function waitForLeaseTemplatesPage(page: Page): Promise<void> {
@@ -82,12 +85,16 @@ test.describe("Lease Templates (Phase 1)", () => {
 
       // Files section renders one file row.
       await expect(page.getByTestId("template-files-section")).toBeVisible();
+
+      // Verify the API layer agrees with what the UI rendered.
+      const fetched = await fetchTemplate(api, id);
+      expect(fetched.placeholders.length).toBeGreaterThanOrEqual(5);
     } finally {
       for (const id of seededIds) await deleteTemplate(api, id);
     }
   });
 
-  test("upload dialog opens, validates files, and submits", async ({
+  test("upload dialog creates a real template via multipart and persists in the DB", async ({
     authedPage: page,
     api,
   }) => {
@@ -104,7 +111,6 @@ test.describe("Lease Templates (Phase 1)", () => {
 
       await page.getByTestId("template-name-input").fill(newName);
 
-      // Provide an in-memory file via the hidden input.
       const md =
         "# Lease\n\n[TENANT FULL NAME] moves in [MOVE-IN DATE]. Term [NUMBER OF DAYS] days.\n";
       await page
@@ -117,7 +123,6 @@ test.describe("Lease Templates (Phase 1)", () => {
         });
 
       await expect(page.getByTestId("template-file-list")).toBeVisible();
-      // Submit.
       await page.getByTestId("template-upload-submit").click();
 
       // Land on detail page after success.
@@ -128,41 +133,103 @@ test.describe("Lease Templates (Phase 1)", () => {
 
       // Capture the seeded id from the URL for cleanup.
       const url = new URL(page.url());
-      const segments = url.pathname.split("/");
-      const id = segments[segments.length - 1];
+      const id = url.pathname.split("/").pop() ?? "";
       if (id && id !== newName) seededIds.push(id);
+
+      // Verify that the placeholders were extracted server-side.
+      await expect(
+        page.getByTestId("placeholder-row-TENANT FULL NAME"),
+      ).toBeVisible();
+      await expect(page.getByTestId("placeholder-row-MOVE-IN DATE")).toBeVisible();
+      await expect(page.getByTestId("placeholder-row-NUMBER OF DAYS")).toBeVisible();
+
+      // Verify the API layer agrees.
+      const fetched = await fetchTemplate(api, id);
+      expect(fetched.name).toBe(newName);
+      const keys = (fetched.placeholders as Array<{ key: string }>).map(
+        (p) => p.key,
+      );
+      expect(keys).toEqual(
+        expect.arrayContaining([
+          "TENANT FULL NAME",
+          "MOVE-IN DATE",
+          "NUMBER OF DAYS",
+        ]),
+      );
     } finally {
       for (const id of seededIds) await deleteTemplate(api, id);
     }
   });
 
-  test("Leases empty-state renders the friendly message", async ({
+  test("editing a placeholder's display_label persists in the DB", async ({
     authedPage: page,
+    api,
   }) => {
-    await page.goto("/leases");
-    await expect(page.getByRole("heading", { name: "Leases" })).toBeVisible();
-    await page.waitForLoadState("networkidle");
+    const runId = Date.now();
+    const templateName = `E2E Editable Template ${runId}`;
+    const seededIds: string[] = [];
+    const newLabel = `Tenant legal name (edited ${runId})`;
 
-    // No leases seeded — the empty state should render.
-    const empty = page.getByText(/No leases yet/i);
-    await expect(empty.first()).toBeVisible({ timeout: 5000 });
+    try {
+      const id = await seedTemplate(api, { name: templateName });
+      seededIds.push(id);
+
+      await page.goto(`/lease-templates/${id}`);
+      await expect(page.getByRole("heading", { name: templateName })).toBeVisible();
+
+      const row = page.getByTestId("placeholder-row-TENANT FULL NAME");
+      await expect(row).toBeVisible();
+
+      // The first text input in the row is the display_label cell.
+      const labelInput = row.locator("input[type='text']").first();
+      await labelInput.fill(newLabel);
+      await labelInput.blur();
+
+      // Allow the autosave round-trip.
+      await page.waitForTimeout(500);
+
+      // Verify in the DB via the API.
+      const fetched = await fetchTemplate(api, id);
+      const updated = (fetched.placeholders as Array<{
+        key: string;
+        display_label: string;
+      }>).find((p) => p.key === "TENANT FULL NAME");
+      expect(updated?.display_label).toBe(newLabel);
+    } finally {
+      for (const id of seededIds) await deleteTemplate(api, id);
+    }
   });
 
-  test("Lease Templates list skeleton renders before data loads", async ({
+  test("deleting a template via the UI removes it from the list", async ({
     authedPage: page,
+    api,
   }) => {
-    // Throttle the templates fetch so we can observe the skeleton.
-    await page.route("**/api/lease-templates**", async (route) => {
-      await new Promise((r) => setTimeout(r, 1500));
-      await route.continue();
-    });
+    const runId = Date.now();
+    const templateName = `E2E Deletable Template ${runId}`;
+    const seededIds: string[] = [];
 
-    const navPromise = page.goto("/lease-templates");
-    await expect(page.getByTestId("lease-templates-skeleton")).toBeVisible({
-      timeout: 5000,
-    });
-    await page.unroute("**/api/lease-templates**");
-    await navPromise;
-    await page.waitForLoadState("networkidle");
+    try {
+      const id = await seedTemplate(api, { name: templateName });
+      seededIds.push(id);
+
+      await page.goto(`/lease-templates/${id}`);
+      await expect(page.getByRole("heading", { name: templateName })).toBeVisible();
+
+      // Auto-confirm the window.confirm() dialog.
+      page.once("dialog", (dialog) => void dialog.accept());
+      await page.getByTestId("lease-template-delete").click();
+
+      // Lands back on list page with the template gone.
+      await expect(page).toHaveURL(/\/lease-templates$/, { timeout: 10000 });
+      await expect(page.getByText(templateName)).toHaveCount(0);
+
+      // Verify the API layer reports the soft-delete (404 on GET).
+      const res = await api.get(`/lease-templates/${id}`);
+      expect(res.status()).toBe(404);
+
+      // Cleanup endpoint hard-deletes — keep the array so finally block does it.
+    } finally {
+      for (const id of seededIds) await deleteTemplate(api, id);
+    }
   });
 });

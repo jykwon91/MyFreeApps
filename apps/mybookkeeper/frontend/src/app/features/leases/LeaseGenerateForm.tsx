@@ -4,6 +4,7 @@ import LoadingButton from "@/shared/components/ui/LoadingButton";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import { useCreateSignedLeaseMutation } from "@/shared/store/signedLeasesApi";
 import type { LeaseTemplateDetail } from "@/shared/types/lease/lease-template-detail";
+import PlaceholderInput from "@/app/features/leases/PlaceholderInput";
 
 interface Props {
   template: LeaseTemplateDetail;
@@ -128,49 +129,5 @@ export default function LeaseGenerateForm({
         </LoadingButton>
       </div>
     </form>
-  );
-}
-
-function PlaceholderInput({
-  placeholder,
-  value,
-  onChange,
-}: {
-  placeholder: import("@/shared/types/lease/lease-template-placeholder").LeaseTemplatePlaceholder;
-  value: string;
-  onChange: (next: string) => void;
-}) {
-  const inputType = (() => {
-    switch (placeholder.input_type) {
-      case "email":
-        return "email";
-      case "phone":
-        return "tel";
-      case "date":
-        return "date";
-      case "number":
-        return "number";
-      default:
-        return "text";
-    }
-  })();
-
-  return (
-    <div data-testid={`generate-field-${placeholder.key}`}>
-      <label className="block text-sm font-medium mb-1">
-        {placeholder.display_label}
-        {placeholder.required ? <span className="text-destructive ml-0.5">*</span> : null}
-      </label>
-      <input
-        type={inputType}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full px-3 py-2 text-sm border rounded-md"
-        placeholder={placeholder.default_source ?? ""}
-      />
-      <p className="text-xs text-muted-foreground mt-0.5 font-mono">
-        [{placeholder.key}]
-      </p>
-    </div>
   );
 }

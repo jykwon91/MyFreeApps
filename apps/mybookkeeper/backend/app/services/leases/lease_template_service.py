@@ -435,31 +435,37 @@ async def update_placeholder(
                 f"Placeholder {placeholder_id} not found"
             )
 
-        # Validate computed_expr before write.
+        # Build the field dict, validating computed_expr against the DSL
+        # allowlist before any write happens. The repository owns the actual
+        # ORM mutations + flush — keeps the layered architecture clean.
+        update_payload: dict[str, object] = {}
         if "computed_expr" in fields:
             expr = fields["computed_expr"]
             if expr is None or expr == "":
-                placeholder.computed_expr = None
+                update_payload["computed_expr"] = None
             else:
                 try:
                     validate_expr(expr)  # type: ignore[arg-type]
                 except ComputedExprError as exc:
                     raise InvalidComputedExprError(str(exc)) from exc
-                placeholder.computed_expr = expr  # type: ignore[assignment]
-
+                update_payload["computed_expr"] = expr
         if "display_label" in fields and fields["display_label"] is not None:
-            placeholder.display_label = fields["display_label"]  # type: ignore[assignment]
+            update_payload["display_label"] = fields["display_label"]
         if "input_type" in fields and fields["input_type"] is not None:
-            placeholder.input_type = fields["input_type"]  # type: ignore[assignment]
+            update_payload["input_type"] = fields["input_type"]
         if "required" in fields and fields["required"] is not None:
-            placeholder.required = bool(fields["required"])
+            update_payload["required"] = bool(fields["required"])
         if "default_source" in fields:
-            placeholder.default_source = fields["default_source"]  # type: ignore[assignment]
+            update_payload["default_source"] = fields["default_source"]
         if "display_order" in fields and fields["display_order"] is not None:
-            placeholder.display_order = int(fields["display_order"])  # type: ignore[arg-type]
+            update_payload["display_order"] = int(fields["display_order"])  # type: ignore[arg-type]
 
-        await db.flush()
-        return LeaseTemplatePlaceholderResponse.model_validate(placeholder)
+        updated = await lease_template_placeholder_repo.update_fields(
+            db,
+            placeholder=placeholder,
+            fields=update_payload,
+        )
+        return LeaseTemplatePlaceholderResponse.model_validate(updated)
 
 
 # ---------------------------------------------------------------------------

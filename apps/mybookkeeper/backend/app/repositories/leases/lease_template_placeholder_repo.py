@@ -79,3 +79,33 @@ async def delete_all_for_template(
             LeaseTemplatePlaceholder.template_id == template_id,
         )
     )
+
+
+# Allowlist for ``update_fields`` — anything not in here is silently ignored.
+_UPDATABLE_FIELDS: frozenset[str] = frozenset({
+    "display_label",
+    "input_type",
+    "required",
+    "default_source",
+    "computed_expr",
+    "display_order",
+})
+
+
+async def update_fields(
+    db: AsyncSession,
+    *,
+    placeholder: LeaseTemplatePlaceholder,
+    fields: dict[str, object],
+) -> LeaseTemplatePlaceholder:
+    """Apply field-by-field updates and flush. Allowlisted fields only.
+
+    The service layer is responsible for additional validation (e.g.
+    computed_expr DSL) before calling this.
+    """
+    for key, value in fields.items():
+        if key not in _UPDATABLE_FIELDS:
+            continue
+        setattr(placeholder, key, value)
+    await db.flush()
+    return placeholder
