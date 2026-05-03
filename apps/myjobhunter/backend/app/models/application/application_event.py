@@ -58,7 +58,12 @@ class ApplicationEvent(Base):
             "source IN ('manual','gmail','calendar','extension','system')",
             name="chk_appevent_source",
         ),
-        Index("ix_appevent_app_occurred", "application_id", "occurred_at"),
+        Index(
+            "ix_appevent_app_occurred",
+            "application_id",
+            "occurred_at",
+            postgresql_include=["event_type"],
+        ),
         Index("ix_appevent_user_occurred", "user_id", "occurred_at"),
         Index(
             "uq_appevent_user_msgid",

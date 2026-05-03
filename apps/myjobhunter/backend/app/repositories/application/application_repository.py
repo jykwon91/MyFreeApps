@@ -12,10 +12,12 @@ that is already soft-deleted is a no-op (returns the existing row unchanged).
 
 Status query: ``list_with_status`` returns ``(Application, str | None)``
 tuples where the second element is the latest ``event_type`` from
-``application_events`` via a correlated lateral join on the covering index
-``ix_appevent_app_occurred(application_id, occurred_at)``. No denormalized
-column is written to the ``applications`` table — status is always computed
-at query time per CLAUDE.md architecture rules.
+``application_events`` via a correlated scalar sub-select on the covering
+index ``ix_appevent_app_occurred(application_id, occurred_at) INCLUDE
+(event_type)``.  The INCLUDE column lets PostgreSQL satisfy the sub-select
+entirely from the index leaf pages (Index Only Scan) with no heap fetch.
+No denormalized column is written to the ``applications`` table — status
+is always computed at query time per CLAUDE.md architecture rules.
 """
 from __future__ import annotations
 
@@ -93,19 +95,27 @@ async def list_by_user(db: AsyncSession, user_id: uuid.UUID) -> list[Application
 async def list_with_status(
     db: AsyncSession,
     user_id: uuid.UUID,
+    *,
+    company_id: uuid.UUID | None = None,
 ) -> list[tuple[Application, str | None]]:
     """List a user's non-deleted applications with their latest event type.
 
     Uses a correlated scalar sub-select (equivalent to a lateral join) so
-    PostgreSQL uses the covering index ``ix_appevent_app_occurred`` on
-    ``(application_id, occurred_at)`` — one index-only lookup per row with
-    no sequential scan of ``application_events``.
+    PostgreSQL can use the covering index ``ix_appevent_app_occurred`` on
+    ``(application_id, occurred_at) INCLUDE (event_type)`` — one Index
+    Only Scan per row with no heap fetch and no sequential scan of
+    ``application_events``.
 
     Returns a list of ``(Application, latest_event_type_or_None)`` tuples.
     The ``latest_status`` is ``None`` for applications that have zero events.
     Tenant isolation is enforced on both sides of the correlated sub-query
     (``user_id`` on ``application_events`` as well) so user A's events can
     never bleed into user B's application rows.
+
+    Optional ``company_id`` narrows results to applications linked to that
+    company.  Tenant isolation still applies — ``user_id`` scoping is
+    applied first so cross-tenant probing via ``company_id`` yields an empty
+    list, never a 403/404 that would confirm ownership.
     """
     latest_event_sq = (
         select(ApplicationEvent.event_type)
@@ -126,6 +136,9 @@ async def list_with_status(
             Application.deleted_at.is_(None),
         )
     )
+    if company_id is not None:
+        stmt = stmt.where(Application.company_id == company_id)
+
     result = await db.execute(stmt)
     return [(row[0], row[1]) for row in result.all()]
 
