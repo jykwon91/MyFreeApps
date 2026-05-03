@@ -1,6 +1,6 @@
 """Calendar endpoints.
 
-Two routers live here:
+Three routers live here:
 
 1. ``router`` — the unauthenticated outbound iCal feed at
    ``GET /calendar/{token}.ics``. Channels poll this URL without
@@ -11,9 +11,9 @@ Two routers live here:
    in the active organization, joined with its parent listing + property.
    Used by the in-app ``/calendar`` page.
 
-The two routers share a path prefix (``/calendar``) but have completely
-different access patterns — keeping them separate makes the auth/rate-limit
-intent obvious at registration time.
+3. ``review_queue_router`` — the Phase 2 booking review queue at
+   ``/calendar/review-queue``. Lets users resolve or ignore unmatched
+   reservation emails from Gmail.
 """
 import uuid
 from datetime import date
@@ -23,7 +23,13 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member
 from app.schemas.calendar.calendar_event_response import CalendarEventResponse
+from app.schemas.calendar.review_queue_requests import (
+    IgnoreQueueItemRequest,
+    ResolveQueueItemRequest,
+)
+from app.schemas.calendar.review_queue_response import ReviewQueueItemResponse
 from app.services.calendar import calendar_service
+from app.services.calendar import review_queue_service
 from app.services.listings.calendar_export_service import render_ical_for_token
 
 # Caddy strips ``/api`` before forwarding to FastAPI, and the Vite dev proxy
@@ -131,3 +137,96 @@ async def list_calendar_events(
         )
     except calendar_service.CalendarWindowError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+# ---------------------------------------------------------------------------
+# Phase 2 — booking review queue
+# ---------------------------------------------------------------------------
+
+review_queue_router = APIRouter(prefix="/calendar", tags=["calendar"])
+
+
+@review_queue_router.get(
+    "/review-queue",
+    response_model=list[ReviewQueueItemResponse],
+)
+async def list_review_queue(
+    ctx: RequestContext = Depends(current_org_member),
+) -> list[ReviewQueueItemResponse]:
+    """Return all pending review-queue items for the active organisation."""
+    return await review_queue_service.list_pending_items(ctx.organization_id)
+
+
+@review_queue_router.get(
+    "/review-queue/count",
+    response_model=int,
+)
+async def count_review_queue(
+    ctx: RequestContext = Depends(current_org_member),
+) -> int:
+    """Return the count of pending items — used for the badge in the Calendar header."""
+    return await review_queue_service.count_pending_items(ctx.organization_id)
+
+
+@review_queue_router.post(
+    "/review-queue/{item_id}/resolve",
+    response_model=ReviewQueueItemResponse,
+)
+async def resolve_queue_item(
+    item_id: uuid.UUID,
+    body: ResolveQueueItemRequest,
+    ctx: RequestContext = Depends(current_org_member),
+) -> ReviewQueueItemResponse:
+    """Resolve a pending item by linking it to an existing MBK listing."""
+    try:
+        return await review_queue_service.resolve_item(
+            item_id,
+            ctx.organization_id,
+            ctx.user_id,
+            listing_id=body.listing_id,
+        )
+    except review_queue_service.QueueItemNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except review_queue_service.QueueItemNotPending as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except review_queue_service.ListingNotFound as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@review_queue_router.post(
+    "/review-queue/{item_id}/ignore",
+    response_model=ReviewQueueItemResponse,
+)
+async def ignore_queue_item(
+    item_id: uuid.UUID,
+    body: IgnoreQueueItemRequest,
+    ctx: RequestContext = Depends(current_org_member),
+) -> ReviewQueueItemResponse:
+    """Ignore a pending item and add its listing to the blocklist."""
+    try:
+        return await review_queue_service.ignore_item(
+            item_id,
+            ctx.organization_id,
+            ctx.user_id,
+            source_listing_id=body.source_listing_id,
+            reason=body.reason,
+        )
+    except review_queue_service.QueueItemNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except review_queue_service.QueueItemNotPending as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@review_queue_router.delete(
+    "/review-queue/{item_id}",
+    status_code=204,
+)
+async def dismiss_queue_item(
+    item_id: uuid.UUID,
+    ctx: RequestContext = Depends(current_org_member),
+) -> None:
+    """Soft-delete a queue item (user dismisses without acting)."""
+    try:
+        await review_queue_service.dismiss_item(item_id, ctx.organization_id)
+    except review_queue_service.QueueItemNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc

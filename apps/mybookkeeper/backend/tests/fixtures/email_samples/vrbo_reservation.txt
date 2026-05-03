@@ -1,0 +1,17 @@
+Subject: Booking Request: The Beach House - Robert Wilson (Sep 4 - Sep 11)
+From: reservations@vrbo.com
+
+Hi Jason,
+
+You've received a new booking request on Vrbo.
+
+Guest: Robert Wilson
+Property: The Beach House (Listing #VRBO-321654)
+Check-in: Friday, September 4, 2026
+Checkout: Friday, September 11, 2026
+Nights: 7
+Total: $1,050.00
+
+Booking ID: VB2026090412345
+
+Accept or decline this request within 24 hours.

@@ -171,6 +171,8 @@ app.include_router(calendar.router)
 # Authenticated unified calendar viewer — declared separately because it
 # has different auth/rate-limit needs from the public iCal feed above.
 app.include_router(calendar.events_router)
+# Phase 2 — Gmail booking review queue.
+app.include_router(calendar.review_queue_router)
 app.include_router(inquiries.router)
 # Public inquiry form (T0) — unauthenticated; lives under /api so the Vite
 # dev proxy + Caddy production reverse proxy both forward it correctly.

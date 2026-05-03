@@ -1,0 +1,17 @@
+Subject: New booking: Studio Apartment, Aug 12 – Aug 15
+From: noreply@booking.com
+
+Dear Jason,
+
+A new booking has been made at your property.
+
+Guest name: Maria Garcia
+Property: Studio Apartment (Property ID: BDC-456789)
+Arrival: Tuesday, 12 August 2026
+Departure: Friday, 15 August 2026
+Nights: 3
+Total amount: $270.00
+
+Booking reference: 1234567890
+
+Please prepare for arrival.

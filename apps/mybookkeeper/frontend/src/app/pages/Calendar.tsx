@@ -1,11 +1,12 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import { Inbox } from "lucide-react";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import EmptyState from "@/shared/components/ui/EmptyState";
 import AlertBox from "@/shared/components/ui/AlertBox";
 import LoadingButton from "@/shared/components/ui/LoadingButton";
 import PropertyMultiSelect from "@/shared/components/PropertyMultiSelect";
-import { useGetCalendarEventsQuery } from "@/shared/store/calendarApi";
+import { useGetCalendarEventsQuery, useGetReviewQueueCountQuery } from "@/shared/store/calendarApi";
 import { useGetPropertiesQuery } from "@/shared/store/propertiesApi";
 import { useGetListingsQuery } from "@/shared/store/listingsApi";
 import {
@@ -22,6 +23,7 @@ import CalendarLegend from "@/app/features/calendar/CalendarLegend";
 import CalendarSourceFilter from "@/app/features/calendar/CalendarSourceFilter";
 import CalendarWindowNav from "@/app/features/calendar/CalendarWindowNav";
 import CalendarLastSynced from "@/app/features/calendar/CalendarLastSynced";
+import ReviewQueueDrawer from "@/app/features/calendar/ReviewQueueDrawer";
 
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -44,6 +46,8 @@ function parseCsvOrEmpty(value: string | null): string[] {
 
 export default function Calendar() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const [isQueueOpen, setIsQueueOpen] = useState(false);
+  const { data: pendingCount = 0 } = useGetReviewQueueCountQuery();
 
   // Resolve the current window from URL, defaulting to today → today + 30.
   const fromIso = parseIsoOrNull(searchParams.get("from")) ?? todayIso();
@@ -127,8 +131,37 @@ export default function Calendar() {
       <SectionHeader
         title="Calendar"
         subtitle="Every booking across every channel and listing, in one view."
-        actions={<CalendarLastSynced events={eventsList} />}
+        actions={
+          <div className="flex items-center gap-3">
+            <CalendarLastSynced events={eventsList} />
+            <button
+              type="button"
+              onClick={() => setIsQueueOpen(true)}
+              className="relative inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 min-h-[44px]"
+              aria-label={
+                pendingCount > 0
+                  ? `Review queue — ${pendingCount} pending`
+                  : "Review queue"
+              }
+              data-testid="review-queue-badge-btn"
+            >
+              <Inbox className="h-4 w-4" aria-hidden="true" />
+              <span className="hidden sm:inline">Review queue</span>
+              {pendingCount > 0 && (
+                <span
+                  className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-white"
+                  aria-hidden="true"
+                  data-testid="review-queue-badge-count"
+                >
+                  {pendingCount > 99 ? "99+" : pendingCount}
+                </span>
+              )}
+            </button>
+          </div>
+        }
       />
+
+      <ReviewQueueDrawer isOpen={isQueueOpen} onClose={() => setIsQueueOpen(false)} />
 
       <div className="flex flex-wrap items-center gap-3">
         <CalendarWindowNav
