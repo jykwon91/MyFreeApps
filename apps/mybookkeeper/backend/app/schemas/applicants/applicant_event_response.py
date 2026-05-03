@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import datetime as _dt
 import uuid
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
@@ -13,6 +14,7 @@ class ApplicantEventResponse(BaseModel):
     event_type: str
     actor: str
     notes: str | None = None
+    payload: dict[str, Any] | None = None
     occurred_at: _dt.datetime
     created_at: _dt.datetime
 

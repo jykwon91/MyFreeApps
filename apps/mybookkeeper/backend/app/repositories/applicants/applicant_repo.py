@@ -175,6 +175,23 @@ async def soft_delete(
     return (result.rowcount or 0) > 0
 
 
+async def update_stage(
+    db: AsyncSession,
+    *,
+    applicant: Applicant,
+    new_stage: str,
+    now: _dt.datetime,
+) -> None:
+    """Update the stage and updated_at on an already-loaded Applicant row.
+
+    Caller is responsible for verifying tenant scope before calling (via
+    ``applicant_repo.get()``). The ``update`` path uses an ORM attribute
+    assignment so SQLAlchemy tracks the dirty column — no raw UPDATE needed.
+    """
+    applicant.stage = new_stage
+    applicant.updated_at = now
+
+
 async def list_pending_purge(
     db: AsyncSession,
     *,
