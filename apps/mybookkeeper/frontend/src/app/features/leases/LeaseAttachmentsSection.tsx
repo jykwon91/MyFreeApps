@@ -1,18 +1,20 @@
 import { useRef, useState } from "react";
-import { Download, Loader2, Trash2, Upload } from "lucide-react";
+import { Loader2, Upload } from "lucide-react";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
-import {
-  LEASE_ATTACHMENT_KIND_LABELS,
-} from "@/shared/lib/lease-labels";
+import { LEASE_ATTACHMENT_KIND_LABELS } from "@/shared/lib/lease-labels";
 import {
   LEASE_ATTACHMENT_KINDS,
   type LeaseAttachmentKind,
 } from "@/shared/types/lease/lease-attachment-kind";
 import {
   useDeleteSignedLeaseAttachmentMutation,
+  useUpdateLeaseAttachmentMutation,
   useUploadSignedLeaseAttachmentMutation,
 } from "@/shared/store/signedLeasesApi";
+import { inferKindsForFiles } from "@/shared/lib/infer-attachment-kind";
 import type { SignedLeaseAttachment } from "@/shared/types/lease/signed-lease-attachment";
+import AttachmentViewer from "@/app/features/leases/AttachmentViewer";
+import LeaseAttachmentRow from "@/app/features/leases/LeaseAttachmentRow";
 
 interface Props {
   leaseId: string;
@@ -32,22 +34,34 @@ export default function LeaseAttachmentsSection({ leaseId, attachments, canWrite
   const [uploadAttachment, { isLoading: isUploading }] =
     useUploadSignedLeaseAttachmentMutation();
   const [deleteAttachment] = useDeleteSignedLeaseAttachmentMutation();
-  const [kind, setKind] = useState<LeaseAttachmentKind>("signed_lease");
+  const [updateAttachment] = useUpdateLeaseAttachmentMutation();
+
+  const [manualKind, setManualKind] = useState<LeaseAttachmentKind>("signed_lease");
   const [isDragging, setIsDragging] = useState(false);
+  const [viewingAttachment, setViewingAttachment] = useState<SignedLeaseAttachment | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Group attachments by kind for display.
-  const groups: Record<string, SignedLeaseAttachment[]> = {};
-  for (const att of attachments) {
-    (groups[att.kind] ??= []).push(att);
-  }
-
   async function handleFiles(files: File[]) {
-    for (const file of files) {
+    const validFiles = files.filter((file) => {
       if (file.type && !ALLOWED_MIME.includes(file.type)) {
         showError(`${file.name}: unsupported file type.`);
-        continue;
+        return false;
       }
+      return true;
+    });
+
+    if (validFiles.length === 0) return;
+
+    // When multiple files are dropped, use the filename heuristic.
+    // For a single file, fall back to the manual kind picker.
+    const kinds: LeaseAttachmentKind[] =
+      validFiles.length > 1
+        ? inferKindsForFiles(validFiles.map((f) => f.name))
+        : [manualKind];
+
+    for (let i = 0; i < validFiles.length; i++) {
+      const file = validFiles[i];
+      const kind = kinds[i];
       try {
         await uploadAttachment({ leaseId, file, kind }).unwrap();
         showSuccess(`${file.name} uploaded.`);
@@ -70,66 +84,46 @@ export default function LeaseAttachmentsSection({ leaseId, attachments, canWrite
     }
   }
 
+  async function handleKindChange(att: SignedLeaseAttachment, kind: LeaseAttachmentKind) {
+    try {
+      await updateAttachment({ leaseId, attachmentId: att.id, kind }).unwrap();
+      showSuccess("Kind updated.");
+    } catch {
+      showError("Couldn't update the kind.");
+    }
+  }
+
   return (
     <section className="space-y-3">
-      {Object.keys(groups).length === 0 ? (
+      {attachments.length === 0 ? (
         <p className="text-sm text-muted-foreground" data-testid="lease-attachments-empty">
           No attachments yet.
         </p>
       ) : (
-        Object.entries(groups).map(([groupKind, items]) => (
-          <div key={groupKind} className="space-y-1">
-            <h3 className="text-xs font-semibold uppercase text-muted-foreground">
-              {LEASE_ATTACHMENT_KIND_LABELS[groupKind as LeaseAttachmentKind]}
-            </h3>
-            <ul className="space-y-1">
-              {items.map((att) => (
-                <li
-                  key={att.id}
-                  className="flex items-center justify-between border rounded-md px-3 py-2 text-sm"
-                  data-testid={`lease-attachment-${att.id}`}
-                >
-                  <span className="truncate">{att.filename}</span>
-                  <div className="flex items-center gap-3">
-                    {att.presigned_url ? (
-                      <a
-                        href={att.presigned_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary hover:underline inline-flex items-center gap-1 text-xs"
-                      >
-                        <Download size={14} />
-                        Download
-                      </a>
-                    ) : null}
-                    {canWrite ? (
-                      <button
-                        type="button"
-                        onClick={() => void handleDelete(att)}
-                        className="text-muted-foreground hover:text-destructive"
-                        aria-label={`Delete ${att.filename}`}
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    ) : null}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))
+        <ul className="space-y-1">
+          {attachments.map((att) => (
+            <LeaseAttachmentRow
+              key={att.id}
+              att={att}
+              canWrite={canWrite}
+              onPreview={() => setViewingAttachment(att)}
+              onDelete={() => void handleDelete(att)}
+              onKindChange={(kind) => void handleKindChange(att, kind)}
+            />
+          ))}
+        </ul>
       )}
 
       {canWrite ? (
         <div className="space-y-2 pt-2 border-t">
           <div className="flex items-center gap-2">
             <label htmlFor="attachment-kind" className="text-xs font-medium">
-              Kind:
+              Kind (single file):
             </label>
             <select
               id="attachment-kind"
-              value={kind}
-              onChange={(e) => setKind(e.target.value as LeaseAttachmentKind)}
+              value={manualKind}
+              onChange={(e) => setManualKind(e.target.value as LeaseAttachmentKind)}
               className="px-2 py-1 text-sm border rounded"
               data-testid="lease-attachment-kind-select"
             >
@@ -140,6 +134,9 @@ export default function LeaseAttachmentsSection({ leaseId, attachments, canWrite
               ))}
             </select>
           </div>
+          <p className="text-xs text-muted-foreground/70">
+            Dropping multiple files auto-detects kind from filename.
+          </p>
           <div
             onDragOver={(e) => {
               e.preventDefault();
@@ -184,6 +181,7 @@ export default function LeaseAttachmentsSection({ leaseId, attachments, canWrite
               ref={fileInputRef}
               type="file"
               className="hidden"
+              multiple
               accept={ALLOWED_MIME.join(",")}
               onChange={(e) => {
                 const files = Array.from(e.target.files ?? []);
@@ -194,6 +192,16 @@ export default function LeaseAttachmentsSection({ leaseId, attachments, canWrite
           </div>
         </div>
       ) : null}
+
+      {viewingAttachment?.presigned_url ? (
+        <AttachmentViewer
+          url={viewingAttachment.presigned_url}
+          filename={viewingAttachment.filename}
+          contentType={viewingAttachment.content_type}
+          onClose={() => setViewingAttachment(null)}
+        />
+      ) : null}
     </section>
   );
 }
+

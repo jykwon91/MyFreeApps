@@ -16,7 +16,7 @@ import logging
 import uuid
 from typing import Any
 
-from app.core.lease_enums import SIGNED_LEASE_STATUSES
+from app.core.lease_enums import LEASE_ATTACHMENT_KINDS, SIGNED_LEASE_STATUSES
 from app.core.storage import get_storage
 from app.db.session import unit_of_work
 from app.repositories.applicants import applicant_repo
@@ -89,6 +89,10 @@ class AttachmentTypeRejectedError(ValueError):
     pass
 
 
+class InvalidAttachmentKindError(ValueError):
+    pass
+
+
 # ---------------------------------------------------------------------------
 # Allowlist for signed-lease attachment uploads.
 # ---------------------------------------------------------------------------
@@ -112,6 +116,46 @@ _ALLOWED_TRANSITIONS: dict[str, set[str]] = {
     "ended": {"ended"},
     "terminated": {"terminated"},
 }
+
+
+def infer_kind_from_filename(filename: str) -> str:
+    """Infer the attachment kind from a filename using pattern matching.
+
+    Order of evaluation (case-insensitive):
+    1. "move-in inspection" / "move in inspection" → move_in_inspection
+    2. "move-out inspection" / "move out inspection" → move_out_inspection
+    3. "lease agreement" / "master lease" / "rental agreement" → signed_lease
+    4. "inspection" (without "move") → move_in_inspection (default to in if ambiguous)
+    5. "insurance" → insurance_proof
+    6. Everything else → signed_addendum
+    """
+    lower = filename.lower()
+
+    if "move-in inspection" in lower or "move in inspection" in lower:
+        return "move_in_inspection"
+    if "move-out inspection" in lower or "move out inspection" in lower:
+        return "move_out_inspection"
+    if "lease agreement" in lower or "master lease" in lower or "rental agreement" in lower:
+        return "signed_lease"
+    if "inspection" in lower:
+        return "move_in_inspection"
+    if "insurance" in lower:
+        return "insurance_proof"
+    return "signed_addendum"
+
+
+def infer_kinds_for_files(filenames: list[str]) -> list[str]:
+    """Infer a kind for each filename in a batch.
+
+    Applies ``infer_kind_from_filename`` to each file. If none of the
+    inferred kinds is ``signed_lease``, the first file is promoted to
+    ``signed_lease`` as a last-resort fallback so every batch has at
+    least one main lease.
+    """
+    kinds = [infer_kind_from_filename(name) for name in filenames]
+    if "signed_lease" not in kinds and filenames:
+        kinds[0] = "signed_lease"
+    return kinds
 
 
 def _validate_status_transition(current: str, target: str) -> None:
@@ -748,7 +792,6 @@ async def upload_attachment(
         raise StorageNotConfiguredError("Object storage is not configured")
 
     from app.core.config import settings as _settings
-    from app.core.lease_enums import LEASE_ATTACHMENT_KINDS
 
     if kind not in LEASE_ATTACHMENT_KINDS:
         raise AttachmentTypeRejectedError(f"Invalid kind: {kind}")
@@ -837,6 +880,47 @@ async def list_attachments(
             raise SignedLeaseNotFoundError(f"Lease {lease_id} not found")
         rows = await signed_lease_attachment_repo.list_by_lease(db, lease_id)
     return _attachment_responses(rows)
+
+
+async def update_attachment_kind(
+    *,
+    user_id: uuid.UUID,
+    organization_id: uuid.UUID,
+    lease_id: uuid.UUID,
+    attachment_id: uuid.UUID,
+    kind: str,
+) -> SignedLeaseAttachmentResponse:
+    """Change the kind of an existing attachment.
+
+    Validates the kind is in ``LEASE_ATTACHMENT_KINDS``, then applies a
+    composite-WHERE update (attachment_id + lease_id) to prevent IDOR.
+    """
+    if kind not in LEASE_ATTACHMENT_KINDS:
+        raise InvalidAttachmentKindError(f"Invalid kind: {kind}")
+
+    async with unit_of_work() as db:
+        # Tenant scope — 404 if lease doesn't belong to this org/user.
+        lease = await signed_lease_repo.get(
+            db,
+            lease_id=lease_id,
+            user_id=user_id,
+            organization_id=organization_id,
+        )
+        if lease is None:
+            raise SignedLeaseNotFoundError(f"Lease {lease_id} not found")
+
+        row = await signed_lease_attachment_repo.update_kind_scoped_to_lease(
+            db,
+            attachment_id=attachment_id,
+            lease_id=lease_id,
+            kind=kind,
+        )
+        if row is None:
+            raise AttachmentNotFoundError(f"Attachment {attachment_id} not found")
+
+        response = SignedLeaseAttachmentResponse.model_validate(row)
+
+    return attach_presigned_urls_to_attachments([response])[0]
 
 
 async def delete_attachment(
