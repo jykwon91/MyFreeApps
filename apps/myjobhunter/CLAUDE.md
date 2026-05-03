@@ -123,6 +123,30 @@ alembic revision -m "description"                # New migration
 pytest                                            # Run all tests
 ```
 
+**Backend dependency management** (run from `apps/myjobhunter/backend/`):
+
+The source of truth is `pyproject.toml` (top-level deps) locked into `uv.lock` (full transitive closure). `requirements.txt` is a machine-generated compatibility export consumed by Docker/CI/deploy scripts — never hand-edit it.
+
+```bash
+# First-time setup (creates backend/.venv from the lockfile)
+uv sync
+
+# Add / remove / bump a dependency
+uv add <pkg>                          # adds to pyproject.toml and uv.lock
+uv remove <pkg>                       # removes from pyproject.toml and uv.lock
+uv lock --upgrade-package <pkg>       # bump a single pinned dep
+
+# Regenerate requirements.txt after any dep change
+uv export --format requirements-txt --no-hashes --no-emit-project \
+  --output-file requirements.txt
+
+# Commit all three files together
+git add pyproject.toml uv.lock requirements.txt
+
+# Verify the lockfile is consistent (runs in CI too)
+uv lock --check
+```
+
 ## Testing
 
 - `pytest` with `asyncio_mode = auto`
