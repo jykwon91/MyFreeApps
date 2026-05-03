@@ -3,6 +3,7 @@
 Exercises every function in app/services/user/totp_service.py with
 real pyotp calls -- no mocked TOTP codes.
 """
+import hashlib
 import uuid
 from contextlib import asynccontextmanager
 from unittest.mock import patch
@@ -97,8 +98,9 @@ class TestGetProvisioningUri:
 
 class TestVerifyCode:
     def test_current_code_is_valid(self) -> None:
+        # verify_code defaults to sha256; generate the code with sha256 to match
         secret = pyotp.random_base32()
-        code = pyotp.TOTP(secret).now()
+        code = pyotp.TOTP(secret, digest=hashlib.sha256).now()
         assert totp_service.verify_code(secret, code) is True
 
     def test_wrong_code_is_invalid(self) -> None:
@@ -522,3 +524,162 @@ class TestIsTotpRequired:
     async def test_returns_false_for_unknown_email(self, db: AsyncSession) -> None:
         result = await totp_service.is_totp_required("nobody@example.com")
         assert result is False
+
+
+# ---------------------------------------------------------------------------
+# SHA-256 algorithm migration (audit 2026-05-02)
+# ---------------------------------------------------------------------------
+
+class TestSetupTotpAlgorithm:
+    """setup_totp writes totp_algorithm = 'sha256' for all new enrollments."""
+
+    @pytest.mark.asyncio
+    async def test_setup_writes_sha256_algorithm(self, db: AsyncSession) -> None:
+        user = _make_user(email="sha256setup@example.com")
+        db.add(user)
+        await db.commit()
+
+        await totp_service.setup_totp(user.id)
+        await db.refresh(user)
+
+        assert user.totp_algorithm == "sha256"
+
+    @pytest.mark.asyncio
+    async def test_setup_uri_contains_algorithm_sha256(self, db: AsyncSession) -> None:
+        user = _make_user(email="sha256uri@example.com")
+        db.add(user)
+        await db.commit()
+
+        _, uri = await totp_service.setup_totp(user.id)
+
+        assert "algorithm=SHA256" in uri
+
+
+class TestGrandfatheredSha1Users:
+    """Existing SHA-1 users (totp_algorithm='sha1') continue to work after the migration."""
+
+    def _make_sha1_user(self, email: str = "sha1user@example.com") -> tuple["User", str]:
+        """Return a user with SHA-1 TOTP and the plaintext secret."""
+        user = _make_user(totp_enabled=True, email=email)
+        secret = pyotp.random_base32()
+        user.totp_secret = _encrypt_for_user(secret, user.id)
+        # Leave totp_algorithm at default 'sha1' (model default = 'sha1')
+        return user, secret
+
+    @pytest.mark.asyncio
+    async def test_sha1_user_can_confirm_totp(self, db: AsyncSession) -> None:
+        """A user with totp_algorithm='sha1' can confirm their TOTP code."""
+        user, secret = self._make_sha1_user(email="sha1confirm@example.com")
+        user.totp_enabled = False  # not yet enabled — about to confirm
+        db.add(user)
+        await db.commit()
+
+        code = pyotp.TOTP(secret, digest=hashlib.sha1).now()
+        verified, recovery_codes = await totp_service.confirm_totp(user.id, code)
+
+        assert verified is True
+        assert len(recovery_codes) == 8
+
+    @pytest.mark.asyncio
+    async def test_sha1_user_can_login(self, db: AsyncSession) -> None:
+        """A user with totp_algorithm='sha1' can log in with a SHA-1 TOTP code."""
+        user, secret = self._make_sha1_user(email="sha1login@example.com")
+        db.add(user)
+        await db.commit()
+
+        code = pyotp.TOTP(secret, digest=hashlib.sha1).now()
+        valid, used_recovery = await totp_service.validate_totp_for_login(
+            "sha1login@example.com", code
+        )
+
+        assert valid is True
+        assert used_recovery is False
+
+    @pytest.mark.asyncio
+    async def test_sha1_user_can_disable_totp(self, db: AsyncSession) -> None:
+        """A user with totp_algorithm='sha1' can disable TOTP with a SHA-1 code."""
+        user, secret = self._make_sha1_user(email="sha1disable@example.com")
+        db.add(user)
+        await db.commit()
+
+        code = pyotp.TOTP(secret, digest=hashlib.sha1).now()
+        result = await totp_service.disable_totp(user.id, code)
+
+        assert result is True
+        await db.refresh(user)
+        assert user.totp_enabled is False
+        assert user.totp_secret is None
+
+
+class TestReEnrollmentUpgradesAlgorithm:
+    """After disable + re-enroll, the user's algorithm becomes sha256."""
+
+    @pytest.mark.asyncio
+    async def test_reenrollment_after_disable_uses_sha256(self, db: AsyncSession) -> None:
+        """disable_totp + setup_totp results in totp_algorithm='sha256'."""
+        # Start as a SHA-1 grandfathered user
+        user = _make_user(totp_enabled=True, email="reenroll@example.com")
+        secret = pyotp.random_base32()
+        user.totp_secret = _encrypt_for_user(secret, user.id)
+        # totp_algorithm stays 'sha1' (model default)
+        db.add(user)
+        await db.commit()
+
+        # Disable with SHA-1 code
+        sha1_code = pyotp.TOTP(secret, digest=hashlib.sha1).now()
+        disabled = await totp_service.disable_totp(user.id, sha1_code)
+        assert disabled is True
+        await db.refresh(user)
+        assert user.totp_algorithm == "sha1"  # reset to default after disable
+
+        # Re-enroll — setup_totp always writes sha256
+        new_secret, new_uri = await totp_service.setup_totp(user.id)
+        await db.refresh(user)
+
+        assert user.totp_algorithm == "sha256"
+        assert "algorithm=SHA256" in new_uri
+
+        # The new enrollment verifies with SHA-256
+        sha256_code = pyotp.TOTP(new_secret, digest=hashlib.sha256).now()
+        verified, _ = await totp_service.confirm_totp(user.id, sha256_code)
+        assert verified is True
+
+
+class TestNewUserEnrollmentEndToEnd:
+    """Full new-user enrollment: setup → confirm → login, all with SHA-256."""
+
+    @pytest.mark.asyncio
+    async def test_full_sha256_flow(self, db: AsyncSession) -> None:
+        """New user goes through setup → confirm → login with SHA-256."""
+        user = _make_user(email="newsha256@example.com")
+        db.add(user)
+        await db.commit()
+
+        # 1. Setup: returns a secret and URI with SHA-256 in the URI
+        secret, uri = await totp_service.setup_totp(user.id)
+        assert "algorithm=SHA256" in uri
+        await db.refresh(user)
+        assert user.totp_algorithm == "sha256"
+
+        # 2. Confirm: SHA-256 code must verify
+        code = pyotp.TOTP(secret, digest=hashlib.sha256).now()
+        verified, recovery_codes = await totp_service.confirm_totp(user.id, code)
+        assert verified is True
+        assert len(recovery_codes) == 8
+
+        # 3. Login: SHA-256 code accepted
+        login_code = pyotp.TOTP(secret, digest=hashlib.sha256).now()
+        valid, used_recovery = await totp_service.validate_totp_for_login(
+            "newsha256@example.com", login_code
+        )
+        assert valid is True
+        assert used_recovery is False
+
+        # 4. Confirm SHA-1 code is rejected for this new SHA-256 user
+        sha1_code = pyotp.TOTP(secret, digest=hashlib.sha1).now()
+        # Only run this assertion if the codes differ (they usually do)
+        if sha1_code != login_code:
+            valid_sha1, _ = await totp_service.validate_totp_for_login(
+                "newsha256@example.com", sha1_code
+            )
+            assert valid_sha1 is False

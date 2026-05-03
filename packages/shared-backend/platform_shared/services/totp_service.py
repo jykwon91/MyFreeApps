@@ -13,14 +13,26 @@ The caller is responsible for:
     TypeDecorator using the caller's own PII codec)
   * supplying the ``label`` (usually the user's email) and ``issuer`` (the
     app brand shown in Google Authenticator / 1Password) on enrollment
+  * supplying the ``algorithm`` when enrolling or verifying — defaults to
+    ``"sha256"`` for new enrollments; existing SHA-1 users supply ``"sha1"``
+    via their ``users.totp_algorithm`` column (grace-period migration)
 
 Wire format / on-disk format is preserved verbatim from the MBK production
 copy so existing TOTP-enrolled users keep generating valid codes:
   * secrets are ``pyotp.random_base32()`` (default 32-char base32 alphabet)
   * recovery codes are ``secrets.token_hex(4).upper()`` (8 uppercase hex chars)
-  * the otpauth URI is ``pyotp.TOTP(secret).provisioning_uri(name=label,
-    issuer_name=issuer)`` — RFC 6238 + Google Authenticator key-uri spec
+  * the otpauth URI uses RFC 6238 + Google Authenticator key-uri spec
   * verification window is ±1 30-second step (``valid_window=1``)
+
+Algorithm selection (audit 2026-05-02 — SHA-256 upgrade):
+  * New enrollments default to SHA-256 (NIST + RFC 6238 guidance).
+  * Existing users remain on SHA-1 until they re-enroll (grace-period
+    strategy — see ``users.totp_algorithm`` column and the migration).
+  * The ``otpauth://`` URI includes ``algorithm=SHA256`` when the chosen
+    algorithm is sha256, so authenticator apps that support RFC 6238 digests
+    (1Password, Aegis) will use the right HMAC. Google Authenticator ignores
+    the parameter and always uses SHA-1 — those users should re-enroll or
+    switch to a more capable app.
 
 Per-user Fernet derivation (``make_user_fernet``, ``encrypt_for_user``,
 ``decrypt_for_user``) is also pure: callers pass their own
@@ -38,7 +50,7 @@ import base64
 import hashlib
 import secrets
 import uuid
-from typing import Final
+from typing import Final, Literal
 
 import pyotp
 from cryptography.fernet import Fernet
@@ -56,6 +68,33 @@ VERIFY_WINDOW: Final[int] = 1
 DEFAULT_RECOVERY_CODE_COUNT: Final[int] = 8
 RECOVERY_CODE_BYTES: Final[int] = 4  # token_hex(4) -> 8 hex chars uppercased
 
+# Algorithm type — only sha1 and sha256 are supported. sha1 is kept for
+# grandfathered existing users; all new enrollments use sha256.
+TotpAlgorithm = Literal["sha1", "sha256"]
+
+# Default algorithm for all new enrollments (audit 2026-05-02).
+DEFAULT_TOTP_ALGORITHM: Final[TotpAlgorithm] = "sha256"
+
+# Map the stored algorithm string to the Python hashlib module object that
+# pyotp expects as its ``digest`` parameter.
+_ALGORITHM_DIGEST: dict[TotpAlgorithm, object] = {
+    "sha1": hashlib.sha1,
+    "sha256": hashlib.sha256,
+}
+
+
+def _digest_for(algorithm: TotpAlgorithm) -> object:
+    """Return the hashlib digest callable for ``algorithm``.
+
+    Raises ``ValueError`` for unrecognised algorithm strings so bad column
+    values fail loudly at the service layer rather than silently falling
+    back to the wrong HMAC.
+    """
+    try:
+        return _ALGORITHM_DIGEST[algorithm]
+    except KeyError:
+        raise ValueError(f"Unsupported TOTP algorithm: {algorithm!r}. Must be 'sha1' or 'sha256'.")
+
 
 # ---------------------------------------------------------------------------
 # Pure crypto / OTP helpers
@@ -66,21 +105,44 @@ def generate_secret() -> str:
     return pyotp.random_base32()
 
 
-def get_provisioning_uri(secret: str, label: str, *, issuer: str) -> str:
+def get_provisioning_uri(
+    secret: str,
+    label: str,
+    *,
+    issuer: str,
+    algorithm: TotpAlgorithm = DEFAULT_TOTP_ALGORITHM,
+) -> str:
     """Build the ``otpauth://`` URI consumed by authenticator apps.
 
     ``label`` is typically the user's email; ``issuer`` is the app brand
     shown in Google Authenticator / 1Password. Both are caller-supplied so
     no app-specific config leaks into this module.
+
+    ``algorithm`` controls the HMAC digest embedded in the URI. The default
+    is ``sha256`` for all new enrollments. Authenticator apps that honour
+    the RFC 6238 ``algorithm`` parameter (1Password, Aegis, Bitwarden) will
+    use SHA-256 automatically when the user scans the QR code.
     """
-    return pyotp.TOTP(secret).provisioning_uri(name=label, issuer_name=issuer)
+    totp = pyotp.TOTP(secret, digest=_digest_for(algorithm))
+    return totp.provisioning_uri(name=label, issuer_name=issuer)
 
 
-def verify_code(secret: str, code: str) -> bool:
-    """Return True if ``code`` is the current TOTP for ``secret`` (±1 step)."""
+def verify_code(
+    secret: str,
+    code: str,
+    *,
+    algorithm: TotpAlgorithm = DEFAULT_TOTP_ALGORITHM,
+) -> bool:
+    """Return True if ``code`` is the current TOTP for ``secret`` (±1 step).
+
+    The ``algorithm`` must match the digest used when the secret was enrolled —
+    read it from ``users.totp_algorithm``. SHA-1 grandfathered users pass
+    ``algorithm="sha1"``; all new users use the default SHA-256.
+    """
     if not code:
         return False
-    return pyotp.TOTP(secret).verify(code, valid_window=VERIFY_WINDOW)
+    totp = pyotp.TOTP(secret, digest=_digest_for(algorithm))
+    return totp.verify(code, valid_window=VERIFY_WINDOW)
 
 
 def generate_recovery_codes(count: int = DEFAULT_RECOVERY_CODE_COUNT) -> list[str]:
@@ -122,19 +184,22 @@ def enroll_totp(
     label: str,
     issuer: str,
     recovery_code_count: int = DEFAULT_RECOVERY_CODE_COUNT,
+    algorithm: TotpAlgorithm = DEFAULT_TOTP_ALGORITHM,
 ) -> tuple[str, str, list[str]]:
     """Generate a fresh TOTP enrollment bundle.
 
     Returns ``(secret, provisioning_uri, recovery_codes)``. The caller is
     responsible for persisting all three values (typically on the user row,
-    encrypted at rest via the M2 ``EncryptedString`` TypeDecorator).
+    encrypted at rest via the M2 ``EncryptedString`` TypeDecorator), AND
+    persisting ``algorithm`` to ``users.totp_algorithm`` so that subsequent
+    verifications use the matching HMAC digest.
 
-    This is a thin convenience wrapper over :func:`generate_secret`,
-    :func:`get_provisioning_uri`, and :func:`generate_recovery_codes` so
-    apps don't have to call all three in sequence.
+    All new enrollments should use the default ``algorithm="sha256"``. The
+    ``"sha1"`` value is retained only to support grandfathered users who
+    enrolled before this migration.
     """
     secret = generate_secret()
-    uri = get_provisioning_uri(secret, label, issuer=issuer)
+    uri = get_provisioning_uri(secret, label, issuer=issuer, algorithm=algorithm)
     recovery_codes = generate_recovery_codes(count=recovery_code_count)
     return secret, uri, recovery_codes
 
