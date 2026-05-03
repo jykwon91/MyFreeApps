@@ -47,7 +47,7 @@ dependencies = [
     # 5545 line folding, escaping, DATE vs DATETIME VALUE parameters, and
     # timezone propagation — all of which are fiddly enough that hand-rolling
     # is a bug factory. Used by both outbound serializer and inbound parser.
-    "icalendar==6.1.3",
+    "icalendar==7.1.0",
     # Lease Templates Phase 1 — DOCX rendering with placeholder substitution.
     # PDF rendering uses the existing ``reportlab`` dep (low-fidelity for v1;
     # weasyprint deferred per Phase 1 stop conditions due to Windows install
