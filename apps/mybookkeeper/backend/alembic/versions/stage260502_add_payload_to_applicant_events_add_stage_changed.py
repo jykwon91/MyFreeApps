@@ -5,8 +5,8 @@ The manual stage-transition feature (PR manual-stage) writes a
 host's approval history is auditable without querying the applicant row
 history.
 
-Revision ID: a1b2c3d4e5f6
-Revises: z0a1b2c3d4e5
+Revision ID: stage260502
+Revises: mbk260502
 Create Date: 2026-05-02 00:00:00.000000
 
 """
@@ -16,8 +16,8 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision: str = "a1b2c3d4e5f6"
-down_revision: Union[str, None] = "z0a1b2c3d4e5"
+revision: str = "stage260502"
+down_revision: Union[str, None] = "mbk260502"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
