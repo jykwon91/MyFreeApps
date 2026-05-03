@@ -117,6 +117,34 @@ async def list_for_user(
     return list(result.scalars().all())
 
 
+async def list_by_ids(
+    db: AsyncSession,
+    *,
+    organization_id: uuid.UUID,
+    user_id: uuid.UUID,
+    applicant_ids: list[uuid.UUID],
+    include_deleted: bool = True,
+) -> list[Applicant]:
+    """Bulk-fetch applicants by IDs in a single query, scoped to the tenant.
+
+    Used by the lease list page to avoid N+1 round-trips when joining
+    applicant.legal_name onto each lease row. Pass ``include_deleted=True``
+    by default so soft-deleted applicants still surface their name on the
+    historical lease (matches prior per-id ``applicant_repo.get`` behavior).
+    """
+    if not applicant_ids:
+        return []
+    stmt = select(Applicant).where(
+        Applicant.organization_id == organization_id,
+        Applicant.user_id == user_id,
+        Applicant.id.in_(applicant_ids),
+    )
+    if not include_deleted:
+        stmt = stmt.where(Applicant.deleted_at.is_(None))
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
+
+
 async def count_for_user(
     db: AsyncSession,
     *,
