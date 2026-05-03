@@ -92,8 +92,8 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
         # Reject immediately if a lock is still in effect.
         if account_is_locked(user, now=now):
             logger.info(
-                "Login rejected for locked account %s (locked until %s)",
-                user.email,
+                "Login rejected for locked account user_id=%s (locked until %s)",
+                user.id,
                 user.locked_until,
             )
             await emit_locked_login_event(db=db, user_id=user.id)
@@ -127,8 +127,8 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
             )
             if "locked_until" in update:
                 logger.warning(
-                    "Account locked: %s until %s (consecutive failures: %d)",
-                    user.email,
+                    "Account locked: user_id=%s until %s (consecutive failures: %d)",
+                    user.id,
                     update["locked_until"],
                     update["failed_login_count"],
                 )
@@ -166,7 +166,9 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
         return result
 
     async def authenticate_password(
-        self, credentials: OAuth2PasswordRequestForm,
+        self,
+        credentials: OAuth2PasswordRequestForm,
+        request: Optional[Request] = None,
     ) -> Optional[models.UP]:
         """Authenticate password only (no TOTP check), with full lockout tracking.
 
@@ -179,6 +181,9 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
         The route-level ``check_totp_account_not_locked`` dependency handles the
         early-reject case; this method handles the counter update on failure and
         the counter clear on success.
+
+        Pass ``request`` so that ``emit_locked_login_event`` can capture
+        ``ip_address`` and ``user_agent`` in the audit row.
         """
         db = self.user_db.session
 
@@ -216,8 +221,8 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
             )
             if "locked_until" in update:
                 logger.warning(
-                    "Account locked: %s until %s (consecutive failures: %d)",
-                    user.email,
+                    "Account locked: user_id=%s until %s (consecutive failures: %d)",
+                    user.id,
                     update["locked_until"],
                     update["failed_login_count"],
                 )

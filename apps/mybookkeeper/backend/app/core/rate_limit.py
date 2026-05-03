@@ -115,8 +115,36 @@ async def check_login_rate_limit(
         raise
 
 
-async def check_totp_rate_limit(request: Request) -> None:
-    totp_limiter.check(get_client_ip(request))
+async def check_totp_rate_limit(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """Per-IP rate limit for the TOTP login endpoint with audit logging.
+
+    Mirrors ``check_login_rate_limit`` — on block, writes a
+    ``LOGIN_BLOCKED_RATE_LIMIT`` auth event with ``gate="totp"`` so
+    SOC/admin tooling can distinguish TOTP-path credential stuffing from
+    standard-login stuffing. The 429 body is intentionally identical to all
+    other rate-limit / lockout responses.
+    """
+    ip = get_client_ip(request)
+    try:
+        totp_limiter.check(ip)
+    except HTTPException:
+        metadata: dict[str, str] = {"ip": ip, "gate": "totp"}
+        domain = email_domain_from_request(request)
+        if domain is not None:
+            metadata["email_domain"] = domain
+        await log_auth_event(
+            db,
+            event_type=AuthEventType.LOGIN_BLOCKED_RATE_LIMIT,
+            user_id=None,
+            request=request,
+            succeeded=False,
+            metadata=metadata,
+        )
+        await db.commit()
+        raise
 
 
 async def check_password_reset_rate_limit(request: Request) -> None:

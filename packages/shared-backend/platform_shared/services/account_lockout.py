@@ -48,6 +48,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any, Awaitable, Callable, Optional, Protocol, runtime_checkable
 
+from fastapi import Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from platform_shared.core.auth_events import AuthEventType
@@ -299,6 +300,7 @@ async def emit_locked_login_event(
     *,
     db: AsyncSession,
     user_id: Optional[uuid.UUID],
+    request: Optional[Request] = None,
     log_event: LogEvent = log_auth_event,
 ) -> None:
     """Emit a ``LOGIN_BLOCKED_LOCKED`` audit row for an already-locked account.
@@ -306,11 +308,18 @@ async def emit_locked_login_event(
     Used when an attempt comes in for an account whose ``locked_until``
     is still in the future — we reject without touching the password
     helper, but still log the attempt so SOC / admin tooling can see it.
+
+    Pass ``request`` to capture ``ip_address`` and ``user_agent`` in the
+    audit row — critical for per-IP brute-force analysis on locked accounts.
+    When called from code paths that don't have a ``Request`` available
+    (e.g. the standard fastapi-users JWT login path), omit the argument and
+    the fields will be NULL.
     """
     await log_event(
         db,
         event_type=AuthEventType.LOGIN_BLOCKED_LOCKED,
         user_id=user_id,
+        request=request,
         succeeded=False,
     )
 
