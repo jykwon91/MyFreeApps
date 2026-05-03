@@ -13,7 +13,7 @@ an auditable business decision.
 """
 from __future__ import annotations
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.core.applicant_enums import SCREENING_STATUSES
 
@@ -29,6 +29,8 @@ class ScreeningUploadRequest(BaseModel):
             "outcomes can trigger an adverse action."
         ),
     )
+
+    model_config = ConfigDict(extra="forbid")
 
     @model_validator(mode="after")
     def _validate_status(self) -> "ScreeningUploadRequest":

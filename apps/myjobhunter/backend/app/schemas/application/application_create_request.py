@@ -20,7 +20,7 @@ import datetime as _dt
 import uuid
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, field_serializer, model_validator
 
 from app.core.enums import ApplicationSource, RemoteType, SalaryPeriod
 
@@ -30,6 +30,9 @@ _LOCATION_MAX_LEN = 200
 _CURRENCY_LEN = 3
 _EXTERNAL_REF_MAX_LEN = 255
 _EXTERNAL_SOURCE_MAX_LEN = 50
+_URL_MAX_LEN = 2048
+_JD_TEXT_MAX_LEN = 50000
+_NOTES_MAX_LEN = 5000
 
 
 class ApplicationCreateRequest(BaseModel):
@@ -44,8 +47,8 @@ class ApplicationCreateRequest(BaseModel):
     company_id: uuid.UUID
     role_title: str = Field(min_length=1, max_length=_ROLE_TITLE_MAX_LEN)
 
-    url: str | None = None
-    jd_text: str | None = None
+    url: AnyHttpUrl | None = None
+    jd_text: str | None = Field(default=None, max_length=_JD_TEXT_MAX_LEN)
     jd_parsed: dict | None = None
 
     source: str | None = None
@@ -64,13 +67,18 @@ class ApplicationCreateRequest(BaseModel):
     remote_type: str = "unknown"
 
     fit_score: Decimal | None = Field(default=None, ge=0, le=100)
-    notes: str | None = None
+    notes: str | None = Field(default=None, max_length=_NOTES_MAX_LEN)
     archived: bool = False
 
     external_ref: str | None = Field(default=None, max_length=_EXTERNAL_REF_MAX_LEN)
     external_source: str | None = Field(default=None, max_length=_EXTERNAL_SOURCE_MAX_LEN)
 
     model_config = ConfigDict(extra="forbid")
+
+    @field_serializer("url")
+    def _serialize_url(self, value: AnyHttpUrl | None) -> str | None:
+        """Coerce AnyHttpUrl to plain string for DB storage."""
+        return str(value) if value is not None else None
 
     @model_validator(mode="after")
     def _validate_business_rules(self) -> "ApplicationCreateRequest":

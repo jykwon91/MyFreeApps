@@ -1,8 +1,14 @@
 """Pydantic schema for an ApplicationEvent response.
 
 Used by GET /applications/{id}/events and POST /applications/{id}/events.
-``raw_payload`` and ``email_message_id`` are exposed read-only — they
-only get populated by Gmail sync workers, never by manual log entries.
+``email_message_id`` is exposed read-only — it is only populated by Gmail
+sync workers, never by manual log entries.
+
+``raw_payload`` was removed from this response schema (audit 2026-05-02,
+CWE-200). The field is always null in Phase 1-2 and exposing it in the public
+API response is a forward-looking data-exposure risk. If Phase 3 Gmail
+sync workers need to surface parsed email artifacts, introduce a separate
+admin-only response schema at that time.
 """
 from __future__ import annotations
 
@@ -21,7 +27,6 @@ class ApplicationEventResponse(BaseModel):
     occurred_at: _dt.datetime
     source: str
     email_message_id: str | None = None
-    raw_payload: dict | None = None
     note: str | None = None
 
     created_at: _dt.datetime

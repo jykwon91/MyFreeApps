@@ -20,6 +20,7 @@ from app.core.enums import EventType, EventSource
 
 _EVENT_TYPE_MAX_LEN = 30
 _SOURCE_MAX_LEN = 20
+_NOTE_MAX_LEN = 5000
 
 
 class ApplicationEventCreateRequest(BaseModel):
@@ -28,7 +29,7 @@ class ApplicationEventCreateRequest(BaseModel):
     event_type: str = Field(min_length=1, max_length=_EVENT_TYPE_MAX_LEN)
     occurred_at: _dt.datetime
     source: str = Field(default=EventSource.MANUAL, max_length=_SOURCE_MAX_LEN)
-    note: str | None = None
+    note: str | None = Field(default=None, max_length=_NOTE_MAX_LEN)
 
     model_config = ConfigDict(extra="forbid")
 
