@@ -192,6 +192,28 @@ async def update_stage(
     applicant.updated_at = now
 
 
+async def update_contract_dates(
+    db: AsyncSession,
+    *,
+    applicant: Applicant,
+    contract_start: _dt.date | None,
+    contract_end: _dt.date | None,
+    now: _dt.datetime,
+) -> None:
+    """Update contract_start / contract_end on an already-loaded Applicant row.
+
+    Only the fields explicitly passed (non-sentinel) are written — but this
+    function always receives the final resolved values from the service layer,
+    so it does a simple assignment on both.
+
+    Caller is responsible for verifying tenant scope and the lock check
+    (``stage != 'lease_signed'``) before calling.
+    """
+    applicant.contract_start = contract_start
+    applicant.contract_end = contract_end
+    applicant.updated_at = now
+
+
 async def list_pending_purge(
     db: AsyncSession,
     *,

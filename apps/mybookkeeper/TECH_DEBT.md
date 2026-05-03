@@ -1,7 +1,11 @@
 # Tech Debt
 
 > Last scanned: 2026-05-02
+<<<<<<< HEAD
 > Issues: 0 critical, 5 high, 2 medium (deferred), 0 low
+=======
+> Issues: 0 critical, 5 high, 3 medium (deferred), 0 low
+>>>>>>> 12250ec (chore(mybookkeeper): log tech debt from contract-dates pipeline run)
 
 ## High
 
@@ -37,6 +41,14 @@
 
 ---
 
+### [Contract dates] Partial-update cannot explicitly null a date field
+**Effort:** S
+**Location:** `apps/mybookkeeper/backend/app/services/applicants/applicant_contract_service.py` — `update_contract_dates()`, comment at line 84-91; `apps/mybookkeeper/backend/app/schemas/applicants/applicant_update_request.py`
+**Problem:** The PATCH schema uses `None` as the default for both `contract_start` and `contract_end`, making it impossible to distinguish "field not sent" from "field explicitly set to null". The service treats `None` as "keep existing value", which is the correct UX for the inline date picker (users rarely want to null a date). However, if a future UX needs a "clear date" action, the API cannot express it without a schema change (e.g., using `UNSET` sentinel or a separate `clear_contract_start: bool` field).
+**Recommendation:** When a "clear date" UX is needed, extend the request schema to use `Annotated[date | None, Field(default=UNSET)]` with a custom sentinel, or add a separate `clear_fields: list[str]` parameter. Document this limitation in the schema docstring until then.
+
+---
+
 ### [E2E tests] "Bank Accounts section renders" fails because Plaid section no longer exists on Integrations page
 **Effort:** XS
 **Location:** frontend/e2e/integrations.spec.ts:453
@@ -46,6 +58,14 @@
 ---
 
 ## Medium
+
+### [Frontend tests] Debounce + async toast tests require switching between fake/real timers per test [DEFERRED]
+**Effort:** S
+**Location:** `apps/mybookkeeper/frontend/src/__tests__/ContractDatesEditor.test.tsx` — `shows success toast` and `shows error toast` tests (lines 129-162)
+**Problem:** Tests that verify debounce behavior use `vi.useFakeTimers()` (to control `setTimeout`), but toast-verification tests must call `vi.useRealTimers()` at the top of the test because `waitFor` with fake timers doesn't flush async promise chains reliably. This creates a brittle pattern: if a new test forgets to switch, it silently passes or flakes. The root cause is mixing synchronous timer control with async RTK mutation resolution.
+**Recommendation:** Refactor toast tests to use `vi.runAllTimersAsync()` (Vitest ≥ 1.6) which advances both fake timers and microtask queue atomically. This would allow all tests to keep `vi.useFakeTimers()` throughout the describe block.
+
+---
 
 ### [Architecture] Inline Plaid imports -- try/except in plaid_client.py [DEFERRED]
 **Effort:** S

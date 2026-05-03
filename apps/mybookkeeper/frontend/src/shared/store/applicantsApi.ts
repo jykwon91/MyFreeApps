@@ -3,6 +3,7 @@ import type { ApplicantDetailResponse } from "@/shared/types/applicant/applicant
 import type { ApplicantListArgs } from "@/shared/types/applicant/applicant-list-args";
 import type { ApplicantListResponse } from "@/shared/types/applicant/applicant-list-response";
 import type { ApplicantPromoteRequest } from "@/shared/types/applicant/applicant-promote-request";
+import type { ApplicantUpdateRequest } from "@/shared/types/applicant/applicant-update-request";
 import type { StageTransitionRequest } from "@/shared/types/applicant/stage-transition-request";
 
 /**
@@ -74,6 +75,20 @@ const applicantsApi = baseApi.injectEndpoints({
         { type: "Applicant", id: "LIST" },
       ],
     }),
+    updateApplicantContractDates: builder.mutation<
+      ApplicantDetailResponse,
+      { applicantId: string; data: ApplicantUpdateRequest }
+    >({
+      query: ({ applicantId, data }) => ({
+        url: `/applicants/${applicantId}`,
+        method: "PATCH",
+        data,
+      }),
+      invalidatesTags: (_result, _err, arg) => [
+        { type: "Applicant", id: arg.applicantId },
+        { type: "Applicant", id: "LIST" },
+      ],
+    }),
   }),
 });
 
@@ -82,4 +97,5 @@ export const {
   useGetApplicantByIdQuery,
   usePromoteFromInquiryMutation,
   useTransitionApplicantStageMutation,
+  useUpdateApplicantContractDatesMutation,
 } = applicantsApi;
