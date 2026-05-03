@@ -508,18 +508,22 @@
         "test_applicant_event_repo.py",
         "test_applicant_encryption.py",
         "test_applicant_audit_masking.py",
-        "test_applicant_indexes.py"
+        "test_applicant_indexes.py",
+        "test_applicant_contract_dates_api.py",
+        "test_applicant_contract_service.py"
       ],
       "frontend_tests": [
         "ApplicantStageBadge.test.tsx",
         "SensitiveDataUnlock.test.tsx",
         "Applicants.test.tsx",
-        "PromoteFromInquiryPanel.test.tsx"
+        "PromoteFromInquiryPanel.test.tsx",
+        "ContractDatesEditor.test.tsx"
       ],
       "e2e_specs": [
         "applicants.spec.ts",
         "applicants-layout.spec.ts",
-        "applicant-promote.spec.ts"
+        "applicant-promote.spec.ts",
+        "applicant-contract-dates.spec.ts"
       ]
     },
     "leases": {

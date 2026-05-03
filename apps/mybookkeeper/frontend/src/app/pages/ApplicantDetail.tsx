@@ -15,6 +15,7 @@ import {
 import ApplicantStatusControl from "@/app/features/applicants/ApplicantStatusControl";
 import ApplicantDetailSkeleton from "@/app/features/applicants/ApplicantDetailSkeleton";
 import ApplicantTimelineList from "@/app/features/applicants/ApplicantTimelineList";
+import ContractDatesEditor from "@/app/features/applicants/ContractDatesEditor";
 import ReferenceRow from "@/app/features/applicants/ReferenceRow";
 import VideoCallNoteCard from "@/app/features/applicants/VideoCallNoteCard";
 import SensitiveDataUnlock from "@/app/features/applicants/SensitiveDataUnlock";
@@ -98,22 +99,44 @@ export default function ApplicantDetail() {
           >
             <h2 className="text-sm font-medium">Contract dates</h2>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
-              <div>
-                <dt className="text-xs text-muted-foreground">Start</dt>
-                <dd>
-                  {applicant.contract_start
-                    ? formatLongDate(applicant.contract_start)
-                    : "—"}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-xs text-muted-foreground">End</dt>
-                <dd>
-                  {applicant.contract_end
-                    ? formatLongDate(applicant.contract_end)
-                    : "—"}
-                </dd>
-              </div>
+              {canWrite ? (
+                <ContractDatesEditor
+                  key={`contract_start-${applicant.updated_at}`}
+                  applicantId={applicant.id}
+                  field="contract_start"
+                  value={applicant.contract_start}
+                  stage={applicant.stage}
+                  label="Start"
+                />
+              ) : (
+                <div>
+                  <dt className="text-xs text-muted-foreground">Start</dt>
+                  <dd>
+                    {applicant.contract_start
+                      ? formatLongDate(applicant.contract_start)
+                      : "—"}
+                  </dd>
+                </div>
+              )}
+              {canWrite ? (
+                <ContractDatesEditor
+                  key={`contract_end-${applicant.updated_at}`}
+                  applicantId={applicant.id}
+                  field="contract_end"
+                  value={applicant.contract_end}
+                  stage={applicant.stage}
+                  label="End"
+                />
+              ) : (
+                <div>
+                  <dt className="text-xs text-muted-foreground">End</dt>
+                  <dd>
+                    {applicant.contract_end
+                      ? formatLongDate(applicant.contract_end)
+                      : "—"}
+                  </dd>
+                </div>
+              )}
               <div>
                 <dt className="text-xs text-muted-foreground">Pets</dt>
                 <dd>{applicant.pets ?? "—"}</dd>

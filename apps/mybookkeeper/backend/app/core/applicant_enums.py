@@ -30,6 +30,7 @@ APPLICANT_EVENT_TYPES: tuple[str, ...] = APPLICANT_STAGES + (
     "screening_completed",
     "reference_contacted",
     "stage_changed",
+    "contract_dates_changed",
 )
 
 APPLICANT_EVENT_ACTORS: tuple[str, ...] = ("host", "system", "applicant")

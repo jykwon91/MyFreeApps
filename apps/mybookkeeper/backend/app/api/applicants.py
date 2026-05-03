@@ -18,8 +18,14 @@ from app.core.permissions import current_org_member, require_write_access
 from app.schemas.applicants.applicant_detail_response import ApplicantDetailResponse
 from app.schemas.applicants.applicant_list_response import ApplicantListResponse
 from app.schemas.applicants.applicant_promote_request import ApplicantPromoteRequest
+from app.schemas.applicants.applicant_update_request import ApplicantUpdateRequest
 from app.schemas.applicants.stage_transition_request import StageTransitionRequest
-from app.services.applicants import applicant_service, applicant_stage_service, promote_service
+from app.services.applicants import (
+    applicant_contract_service,
+    applicant_service,
+    applicant_stage_service,
+    promote_service,
+)
 
 router = APIRouter(prefix="/applicants", tags=["applicants"])
 
@@ -53,6 +59,47 @@ async def get_applicant(
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail="Applicant not found") from exc
+
+
+@router.patch(
+    "/{applicant_id}",
+    response_model=ApplicantDetailResponse,
+)
+async def update_applicant(
+    applicant_id: uuid.UUID,
+    payload: ApplicantUpdateRequest,
+    ctx: RequestContext = Depends(require_write_access),
+) -> ApplicantDetailResponse:
+    """Update an applicant's contract dates.
+
+    Both ``contract_start`` and ``contract_end`` are optional. Omitting a
+    field means "leave it unchanged" — the service resolves the existing
+    value from the DB and writes the merged result.
+
+    Errors:
+        404 — applicant not found in the calling tenant.
+        409 — applicant is in ``lease_signed`` stage (dates are locked).
+        422 — ``contract_end`` is not after ``contract_start`` when both
+              are provided, or extra fields were sent.
+    """
+    try:
+        return await applicant_contract_service.update_contract_dates(
+            organization_id=ctx.organization_id,
+            user_id=ctx.user_id,
+            applicant_id=applicant_id,
+            contract_start=payload.contract_start,
+            contract_end=payload.contract_end,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail="Applicant not found") from exc
+    except applicant_contract_service.ContractDatesLockedError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "CONTRACT_DATES_LOCKED",
+                "message": str(exc),
+            },
+        ) from exc
 
 
 @router.patch(
