@@ -4,9 +4,10 @@ export interface SignedLeaseSummary {
   id: string;
   user_id: string;
   organization_id: string;
-  template_id: string;
+  template_id: string | null;
   applicant_id: string;
   listing_id: string | null;
+  kind: "generated" | "imported";
   status: SignedLeaseStatus;
   starts_on: string | null;
   ends_on: string | null;

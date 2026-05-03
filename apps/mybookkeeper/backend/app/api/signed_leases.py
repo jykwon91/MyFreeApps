@@ -28,6 +28,7 @@ from app.schemas.leases.signed_lease_update_request import (
     SignedLeaseUpdateRequest,
 )
 from app.services.leases import lease_template_service, signed_lease_service
+from app.core.lease_enums import SIGNED_LEASE_STATUSES
 
 router = APIRouter(prefix="/signed-leases", tags=["signed-leases"])
 
@@ -50,6 +51,53 @@ async def create_lease(
         raise HTTPException(status_code=404, detail="Template not found") from exc
     except signed_lease_service.MissingRequiredValuesError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post("/import", response_model=SignedLeaseResponse, status_code=201)
+async def import_lease(
+    applicant_id: uuid.UUID = Form(...),
+    listing_id: uuid.UUID | None = Form(None),
+    starts_on: _dt.date | None = Form(None),
+    ends_on: _dt.date | None = Form(None),
+    notes: str | None = Form(None),
+    status: str = Form("signed"),
+    files: list[UploadFile] = File(...),
+    ctx: RequestContext = Depends(require_write_access),
+) -> SignedLeaseResponse:
+    if not files:
+        raise HTTPException(status_code=422, detail="At least one file is required")
+    if status not in SIGNED_LEASE_STATUSES:
+        raise HTTPException(status_code=422, detail=f"Invalid status: {status}")
+    if notes is not None and len(notes) > 2000:
+        raise HTTPException(status_code=422, detail="Notes must be 2000 characters or fewer")
+
+    file_tuples: list[tuple[bytes, str, str | None]] = []
+    for f in files:
+        content = await f.read()
+        file_tuples.append((content, f.filename or "", f.content_type))
+
+    try:
+        return await signed_lease_service.import_signed_lease(
+            user_id=ctx.user_id,
+            organization_id=ctx.organization_id,
+            applicant_id=applicant_id,
+            listing_id=listing_id,
+            starts_on=starts_on,
+            ends_on=ends_on,
+            notes=notes,
+            status=status,
+            files=file_tuples,
+        )
+    except signed_lease_service.ApplicantNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Applicant not found") from exc
+    except signed_lease_service.ListingNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Listing not found") from exc
+    except signed_lease_service.AttachmentTooLargeError as exc:
+        raise HTTPException(status_code=413, detail=str(exc)) from exc
+    except signed_lease_service.AttachmentTypeRejectedError as exc:
+        raise HTTPException(status_code=415, detail=str(exc)) from exc
+    except signed_lease_service.StorageNotConfiguredError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 @router.get("", response_model=SignedLeaseListResponse)

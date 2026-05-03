@@ -16,13 +16,14 @@ async def create(
     *,
     user_id: uuid.UUID,
     organization_id: uuid.UUID,
-    template_id: uuid.UUID,
+    template_id: uuid.UUID | None,
     applicant_id: uuid.UUID,
     listing_id: uuid.UUID | None,
     values: dict[str, Any],
     starts_on: _dt.date | None,
     ends_on: _dt.date | None,
     status: str = "draft",
+    kind: str = "generated",
 ) -> SignedLease:
     lease = SignedLease(
         user_id=user_id,
@@ -34,6 +35,7 @@ async def create(
         starts_on=starts_on,
         ends_on=ends_on,
         status=status,
+        kind=kind,
     )
     db.add(lease)
     await db.flush()

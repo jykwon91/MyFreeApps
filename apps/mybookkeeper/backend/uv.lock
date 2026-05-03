@@ -750,6 +750,7 @@ dependencies = [
     { name = "minio" },
     { name = "openpyxl" },
     { name = "passlib", extra = ["bcrypt"] },
+    { name = "platform-shared" },
     { name = "psycopg2-binary" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
@@ -797,6 +798,7 @@ requires-dist = [
     { name = "minio", specifier = "==7.2.20" },
     { name = "openpyxl", specifier = "==3.1.5" },
     { name = "passlib", extras = ["bcrypt"], specifier = "==1.7.4" },
+    { name = "platform-shared", editable = "../../../packages/shared-backend" },
     { name = "psycopg2-binary", specifier = "==2.9.12" },
     { name = "pydantic", specifier = "==2.13.3" },
     { name = "pydantic-settings", specifier = "==2.14.0" },
@@ -884,6 +886,41 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/5d/7b/25a221d2c761c6a8ae21bfa3874988ff2583e19cf8a27bf2fee358df7942/pillow-12.2.0-cp312-cp312-win_amd64.whl", hash = "sha256:7f84204dee22a783350679a0333981df803dac21a0190d706a50475e361c93f5", size = 7084129, upload-time = "2026-04-01T14:43:37.213Z" },
     { url = "https://files.pythonhosted.org/packages/10/e1/542a474affab20fd4a0f1836cb234e8493519da6b76899e30bcc5d990b8b/pillow-12.2.0-cp312-cp312-win_arm64.whl", hash = "sha256:af73337013e0b3b46f175e79492d96845b16126ddf79c438d7ea7ff27783a414", size = 2463612, upload-time = "2026-04-01T14:43:39.421Z" },
 ]
+
+[[package]]
+name = "platform-shared"
+version = "0.1.0"
+source = { editable = "../../../packages/shared-backend" }
+dependencies = [
+    { name = "asyncpg" },
+    { name = "cryptography" },
+    { name = "fastapi" },
+    { name = "httpx" },
+    { name = "minio" },
+    { name = "pydantic" },
+    { name = "pydantic-settings" },
+    { name = "pyotp" },
+    { name = "qrcode" },
+    { name = "sqlalchemy" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "aiosqlite", marker = "extra == 'dev'", specifier = ">=0.20.0" },
+    { name = "asyncpg", specifier = ">=0.30.0" },
+    { name = "cryptography", specifier = ">=43.0.0" },
+    { name = "fastapi", specifier = ">=0.115.0" },
+    { name = "httpx", specifier = ">=0.27.0" },
+    { name = "minio", specifier = ">=7.2.0" },
+    { name = "pydantic", specifier = ">=2.9.0" },
+    { name = "pydantic-settings", specifier = ">=2.5.0" },
+    { name = "pyotp", specifier = ">=2.9.0" },
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" },
+    { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.24" },
+    { name = "qrcode", specifier = ">=7.4.2" },
+    { name = "sqlalchemy", specifier = ">=2.0.36" },
+]
+provides-extras = ["dev"]
 
 [[package]]
 name = "pluggy"

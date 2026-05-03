@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, FileText } from "lucide-react";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import AlertBox from "@/shared/components/ui/AlertBox";
+import Badge from "@/shared/components/ui/Badge";
 import Skeleton from "@/shared/components/ui/Skeleton";
 import LoadingButton from "@/shared/components/ui/LoadingButton";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
@@ -105,13 +106,19 @@ export default function LeaseDetail() {
             subtitle={
               <span className="inline-flex items-center gap-2 flex-wrap">
                 <SignedLeaseStatusBadge status={lease.status} />
+                <span data-testid="lease-kind-badge">
+                  <Badge
+                    label={lease.kind === "imported" ? "Imported" : "Generated"}
+                    color={lease.kind === "imported" ? "purple" : "blue"}
+                  />
+                </span>
                 <span className="text-xs text-muted-foreground">
                   {lease.starts_on ?? "—"} → {lease.ends_on ?? "—"}
                 </span>
               </span>
             }
             actions={
-              canWrite && lease.status === "draft" ? (
+              canWrite && lease.status === "draft" && lease.kind === "generated" ? (
                 <LoadingButton
                   isLoading={isGenerating}
                   loadingText="Generating..."
@@ -152,7 +159,11 @@ export default function LeaseDetail() {
           {tab === "files" ? (
             <LeaseAttachmentsSection
               leaseId={lease.id}
-              attachments={lease.attachments}
+              attachments={
+                lease.kind === "imported"
+                  ? lease.attachments.filter((a) => a.kind !== "rendered_original")
+                  : lease.attachments
+              }
               canWrite={canWrite}
             />
           ) : null}

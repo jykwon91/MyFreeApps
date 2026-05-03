@@ -5,9 +5,10 @@ export interface SignedLeaseDetail {
   id: string;
   user_id: string;
   organization_id: string;
-  template_id: string;
+  template_id: string | null;
   applicant_id: string;
   listing_id: string | null;
+  kind: "generated" | "imported";
   values: Record<string, unknown>;
   status: SignedLeaseStatus;
   starts_on: string | null;

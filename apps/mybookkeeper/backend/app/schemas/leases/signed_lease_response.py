@@ -16,9 +16,10 @@ class SignedLeaseResponse(BaseModel):
     id: uuid.UUID
     user_id: uuid.UUID
     organization_id: uuid.UUID
-    template_id: uuid.UUID
+    template_id: uuid.UUID | None = None
     applicant_id: uuid.UUID
     listing_id: uuid.UUID | None = None
+    kind: str
     values: dict[str, Any]
     status: str
     starts_on: _dt.date | None = None

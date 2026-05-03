@@ -610,6 +610,59 @@ async def hard_delete_lease_template(
         await db.execute(_sa_delete(LeaseTemplate).where(LeaseTemplate.id == template_id))
 
 
+class _SeedSignedLeasePayload(BaseModel):
+    applicant_id: uuid.UUID
+    kind: str = "imported"
+    status: str = "signed"
+
+
+class _SeedSignedLeaseResponse(BaseModel):
+    id: uuid.UUID
+    attachment_id: uuid.UUID
+
+
+@router.post("/seed-signed-lease", response_model=_SeedSignedLeaseResponse, status_code=201)
+async def seed_signed_lease(
+    payload: _SeedSignedLeasePayload,
+    ctx: RequestContext = Depends(current_org_member),
+) -> _SeedSignedLeaseResponse:
+    """Seed a signed lease with one fake attachment record (no MinIO upload). Test-only."""
+    _require_test_mode()
+    import datetime as _dt2
+    from app.models.leases.signed_lease import SignedLease
+    from app.models.leases.signed_lease_attachment import SignedLeaseAttachment
+
+    async with unit_of_work() as db:
+        lease = SignedLease(
+            id=uuid.uuid4(),
+            user_id=ctx.user_id,
+            organization_id=ctx.organization_id,
+            template_id=None,
+            applicant_id=payload.applicant_id,
+            listing_id=None,
+            kind=payload.kind,
+            values={},
+            status=payload.status,
+            signed_at=_dt2.datetime.now(_dt2.timezone.utc),
+        )
+        db.add(lease)
+        await db.flush()
+
+        attachment = SignedLeaseAttachment(
+            id=uuid.uuid4(),
+            lease_id=lease.id,
+            storage_key=f"signed-leases/{lease.id}/seed-attachment",
+            filename="seeded-lease.pdf",
+            content_type="application/pdf",
+            size_bytes=1024,
+            kind="signed_lease",
+            uploaded_by_user_id=ctx.user_id,
+        )
+        db.add(attachment)
+
+    return _SeedSignedLeaseResponse(id=lease.id, attachment_id=attachment.id)
+
+
 @router.delete("/signed-leases/{lease_id}", status_code=204)
 async def hard_delete_signed_lease(
     lease_id: uuid.UUID,
