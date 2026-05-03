@@ -9,7 +9,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.leases.signed_lease_attachment import SignedLeaseAttachment
@@ -64,6 +64,38 @@ async def get_by_id(
         )
     )
     return result.scalar_one_or_none()
+
+
+async def update_kind_scoped_to_lease(
+    db: AsyncSession,
+    attachment_id: uuid.UUID,
+    lease_id: uuid.UUID,
+    kind: str,
+) -> SignedLeaseAttachment | None:
+    """Update the kind of an attachment, scoped to its parent lease.
+
+    Both ``attachment_id`` AND ``lease_id`` must match — prevents IDOR.
+    Returns the updated row, or None if the composite key does not match.
+    """
+    result = await db.execute(
+        select(SignedLeaseAttachment).where(
+            SignedLeaseAttachment.id == attachment_id,
+            SignedLeaseAttachment.lease_id == lease_id,
+        )
+    )
+    row = result.scalar_one_or_none()
+    if row is None:
+        return None
+    await db.execute(
+        update(SignedLeaseAttachment)
+        .where(
+            SignedLeaseAttachment.id == attachment_id,
+            SignedLeaseAttachment.lease_id == lease_id,
+        )
+        .values(kind=kind)
+    )
+    await db.refresh(row)
+    return row
 
 
 async def delete_by_id_scoped_to_lease(

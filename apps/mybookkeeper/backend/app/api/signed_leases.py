@@ -17,6 +17,9 @@ from app.core.permissions import current_org_member, require_write_access
 from app.schemas.leases.signed_lease_attachment_response import (
     SignedLeaseAttachmentResponse,
 )
+from app.schemas.leases.signed_lease_attachment_update_request import (
+    SignedLeaseAttachmentUpdateRequest,
+)
 from app.schemas.leases.signed_lease_create_request import (
     SignedLeaseCreateRequest,
 )
@@ -243,6 +246,33 @@ async def list_attachments(
         )
     except signed_lease_service.SignedLeaseNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Lease not found") from exc
+
+
+@router.patch(
+    "/{lease_id}/attachments/{attachment_id}",
+    response_model=SignedLeaseAttachmentResponse,
+)
+async def update_attachment(
+    lease_id: uuid.UUID,
+    attachment_id: uuid.UUID,
+    payload: SignedLeaseAttachmentUpdateRequest,
+    ctx: RequestContext = Depends(require_write_access),
+) -> SignedLeaseAttachmentResponse:
+    try:
+        return await signed_lease_service.update_attachment_kind(
+            user_id=ctx.user_id,
+            organization_id=ctx.organization_id,
+            lease_id=lease_id,
+            attachment_id=attachment_id,
+            kind=payload.kind,
+        )
+    except (
+        signed_lease_service.SignedLeaseNotFoundError,
+        signed_lease_service.AttachmentNotFoundError,
+    ) as exc:
+        raise HTTPException(status_code=404, detail="Not found") from exc
+    except signed_lease_service.InvalidAttachmentKindError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.delete(

@@ -610,31 +610,46 @@ async def hard_delete_lease_template(
         await db.execute(_sa_delete(LeaseTemplate).where(LeaseTemplate.id == template_id))
 
 
-class _SeedSignedLeasePayload(BaseModel):
-    applicant_id: uuid.UUID
+class _SeedAttachmentSpec(BaseModel):
+    filename: str = "seeded-lease.pdf"
+    kind: str = "signed_lease"
+    content_type: str = "application/pdf"
+
+
+class _SeedSignedLeaseRequest(BaseModel):
+    applicant_id: uuid.UUID | None = None
     kind: str = "imported"
     status: str = "signed"
+    attachments: list[_SeedAttachmentSpec] = []
 
 
 class _SeedSignedLeaseResponse(BaseModel):
     id: uuid.UUID
-    attachment_id: uuid.UUID
+    attachment_ids: list[uuid.UUID] = []
 
 
 @router.post("/seed-signed-lease", response_model=_SeedSignedLeaseResponse, status_code=201)
 async def seed_signed_lease(
-    payload: _SeedSignedLeasePayload,
+    payload: _SeedSignedLeaseRequest,
     ctx: RequestContext = Depends(current_org_member),
 ) -> _SeedSignedLeaseResponse:
-    """Seed a signed lease with one fake attachment record (no MinIO upload). Test-only."""
+    """Test-only: create a signed lease (status=signed) with optional fake attachments.
+
+    Bypasses MinIO — attachment storage_keys are fake paths. Suitable for
+    testing import / attachment UX (kind picker, viewer links, PATCH kind
+    endpoint) without requiring a real storage bucket.
+    """
     _require_test_mode()
-    import datetime as _dt2
     from app.models.leases.signed_lease import SignedLease
     from app.models.leases.signed_lease_attachment import SignedLeaseAttachment
 
+    now = _dt.datetime.now(_dt.timezone.utc)
+    lease_id = uuid.uuid4()
+    attachment_ids: list[uuid.UUID] = []
+
     async with unit_of_work() as db:
         lease = SignedLease(
-            id=uuid.uuid4(),
+            id=lease_id,
             user_id=ctx.user_id,
             organization_id=ctx.organization_id,
             template_id=None,
@@ -643,24 +658,33 @@ async def seed_signed_lease(
             kind=payload.kind,
             values={},
             status=payload.status,
-            signed_at=_dt2.datetime.now(_dt2.timezone.utc),
+            signed_at=now,
+            created_at=now,
+            updated_at=now,
         )
         db.add(lease)
         await db.flush()
 
-        attachment = SignedLeaseAttachment(
-            id=uuid.uuid4(),
-            lease_id=lease.id,
-            storage_key=f"signed-leases/{lease.id}/seed-attachment",
-            filename="seeded-lease.pdf",
-            content_type="application/pdf",
-            size_bytes=1024,
-            kind="signed_lease",
-            uploaded_by_user_id=ctx.user_id,
-        )
-        db.add(attachment)
+        specs = payload.attachments or [_SeedAttachmentSpec()]
+        for spec in specs:
+            att_id = uuid.uuid4()
+            att = SignedLeaseAttachment(
+                id=att_id,
+                lease_id=lease_id,
+                storage_key=f"signed-leases/{lease_id}/{att_id}",
+                filename=spec.filename,
+                content_type=spec.content_type,
+                size_bytes=1024,
+                kind=spec.kind,
+                uploaded_by_user_id=ctx.user_id,
+                uploaded_at=now,
+            )
+            db.add(att)
+            attachment_ids.append(att_id)
 
-    return _SeedSignedLeaseResponse(id=lease.id, attachment_id=attachment.id)
+        await db.flush()
+
+    return _SeedSignedLeaseResponse(id=lease_id, attachment_ids=attachment_ids)
 
 
 @router.delete("/signed-leases/{lease_id}", status_code=204)
