@@ -114,8 +114,8 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
 
         if account_is_locked(user, now=now):
             logger.info(
-                "Login rejected for locked account %s (locked until %s)",
-                user.email, user.locked_until,
+                "Login rejected for locked account user_id=%s (locked until %s)",
+                user.id, user.locked_until,
             )
             await emit_locked_login_event(db=db, user_id=user.id)
             return None
@@ -140,8 +140,8 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
             )
             if "locked_until" in update:
                 logger.warning(
-                    "Account locked: %s until %s (consecutive failures: %d)",
-                    user.email, update["locked_until"], update["failed_login_count"],
+                    "Account locked: user_id=%s until %s (consecutive failures: %d)",
+                    user.id, update["locked_until"], update["failed_login_count"],
                 )
             await self.user_db.update(user, update)
             return None
@@ -166,7 +166,9 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
         return result
 
     async def authenticate_password(
-        self, credentials: OAuth2PasswordRequestForm,
+        self,
+        credentials: OAuth2PasswordRequestForm,
+        request: Optional[Request] = None,
     ) -> Optional[models.UP]:
         """Authenticate with lockout enforcement but WITHOUT the TOTP gate.
 
@@ -175,6 +177,9 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
         the full lockout flow here (lookup → lock check → auto-reset →
         password verify → counter update) so the 2FA login path enjoys the
         same brute-force protection as the standard one.
+
+        Pass ``request`` so that ``emit_locked_login_event`` can capture
+        ``ip_address`` and ``user_agent`` in the audit row.
 
         Calling this from anywhere else bypasses 2FA — don't.
         """
@@ -202,11 +207,11 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
 
         if account_is_locked(user, now=now):
             logger.info(
-                "TOTP login rejected for locked account %s (locked until %s)",
-                user.email,
+                "TOTP login rejected for locked account user_id=%s (locked until %s)",
+                user.id,
                 user.locked_until,
             )
-            await emit_locked_login_event(db=db, user_id=user.id)
+            await emit_locked_login_event(db=db, user_id=user.id, request=request)
             return None
 
         autoreset = autoreset_update_if_stale(
@@ -274,14 +279,14 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
         """Send verification email when a token is generated (registration or resend)."""
         success = send_verification_email(user.email, token)
         if success:
-            logger.info("Verification email sent to %s", user.email)
+            logger.info("Verification email sent to user_id=%s", user.id)
         else:
-            logger.warning("Failed to send verification email to %s", user.email)
+            logger.warning("Failed to send verification email to user_id=%s", user.id)
 
     async def on_after_verify(
         self, user: User, request: Optional[Request] = None,
     ) -> None:
-        logger.info("User verified: %s", user.email)
+        logger.info("User verified: user_id=%s", user.id)
 
 
 async def get_user_manager(user_db=Depends(get_user_db)):

@@ -166,9 +166,9 @@ async def totp_login(
         username: str = body.email
         password: str = body.password
 
-    user = await user_manager.authenticate_password(_Creds())  # type: ignore[arg-type]
+    user = await user_manager.authenticate_password(_Creds(), request)  # type: ignore[arg-type]
 
-    if user is None or not user.is_active:
+    if user is None:
         await log_auth_event(
             db,
             event_type=AuthEventType.LOGIN_FAILURE,
@@ -176,6 +176,18 @@ async def totp_login(
             request=request,
             succeeded=False,
             metadata={"reason": "bad_credentials"},
+        )
+        await db.commit()
+        raise HTTPException(status_code=400, detail="LOGIN_BAD_CREDENTIALS")
+
+    if not user.is_active:
+        await log_auth_event(
+            db,
+            event_type=AuthEventType.LOGIN_FAILURE,
+            user_id=user.id,
+            request=request,
+            succeeded=False,
+            metadata={"reason": "account_inactive"},
         )
         await db.commit()
         raise HTTPException(status_code=400, detail="LOGIN_BAD_CREDENTIALS")
