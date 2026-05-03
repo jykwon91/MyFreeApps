@@ -3,6 +3,7 @@ import type { ApplicantDetailResponse } from "@/shared/types/applicant/applicant
 import type { ApplicantListArgs } from "@/shared/types/applicant/applicant-list-args";
 import type { ApplicantListResponse } from "@/shared/types/applicant/applicant-list-response";
 import type { ApplicantPromoteRequest } from "@/shared/types/applicant/applicant-promote-request";
+import type { StageTransitionRequest } from "@/shared/types/applicant/stage-transition-request";
 
 /**
  * RTK Query slice for the Applicants domain.
@@ -59,6 +60,20 @@ const applicantsApi = baseApi.injectEndpoints({
         { type: "Inquiry", id: "LIST" },
       ],
     }),
+    transitionApplicantStage: builder.mutation<
+      ApplicantDetailResponse,
+      { applicantId: string; data: StageTransitionRequest }
+    >({
+      query: ({ applicantId, data }) => ({
+        url: `/applicants/${applicantId}/stage`,
+        method: "PATCH",
+        data,
+      }),
+      invalidatesTags: (_result, _err, arg) => [
+        { type: "Applicant", id: arg.applicantId },
+        { type: "Applicant", id: "LIST" },
+      ],
+    }),
   }),
 });
 
@@ -66,4 +81,5 @@ export const {
   useGetApplicantsQuery,
   useGetApplicantByIdQuery,
   usePromoteFromInquiryMutation,
+  useTransitionApplicantStageMutation,
 } = applicantsApi;

@@ -27,6 +27,7 @@ async def append(
     actor: str,
     occurred_at: _dt.datetime,
     notes: str | None = None,
+    payload: dict | None = None,
 ) -> ApplicantEvent:
     """Append an event to an applicant's timeline.
 
@@ -39,6 +40,7 @@ async def append(
         event_type=event_type,
         actor=actor,
         notes=notes,
+        payload=payload,
         occurred_at=occurred_at,
     )
     db.add(event)
