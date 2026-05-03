@@ -18,7 +18,8 @@ from app.core.permissions import current_org_member, require_write_access
 from app.schemas.applicants.applicant_detail_response import ApplicantDetailResponse
 from app.schemas.applicants.applicant_list_response import ApplicantListResponse
 from app.schemas.applicants.applicant_promote_request import ApplicantPromoteRequest
-from app.services.applicants import applicant_service, promote_service
+from app.schemas.applicants.stage_transition_request import StageTransitionRequest
+from app.services.applicants import applicant_service, applicant_stage_service, promote_service
 
 router = APIRouter(prefix="/applicants", tags=["applicants"])
 
@@ -52,6 +53,43 @@ async def get_applicant(
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail="Applicant not found") from exc
+
+
+@router.patch(
+    "/{applicant_id}/stage",
+    response_model=ApplicantDetailResponse,
+)
+async def transition_stage(
+    applicant_id: uuid.UUID,
+    payload: StageTransitionRequest,
+    ctx: RequestContext = Depends(require_write_access),
+) -> ApplicantDetailResponse:
+    """Manually transition an applicant to a new stage.
+
+    The host can approve, decline, or reset an applicant without uploading
+    a screening report. An ``applicant_events`` row with ``event_type =
+    "stage_changed"`` is appended atomically alongside the stage update.
+
+    Errors:
+        404 — applicant not found in the calling tenant.
+        422 — new_stage is not a known stage, transition is not allowed from
+              the current stage, or note exceeds 500 characters.
+    """
+    try:
+        return await applicant_stage_service.transition_stage(
+            organization_id=ctx.organization_id,
+            user_id=ctx.user_id,
+            applicant_id=applicant_id,
+            new_stage=payload.new_stage,
+            note=payload.note,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail="Applicant not found") from exc
+    except (
+        applicant_stage_service.InvalidStageError,
+        applicant_stage_service.InvalidTransitionError,
+    ) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.post(

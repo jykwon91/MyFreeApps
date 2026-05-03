@@ -24,7 +24,7 @@ from sqlalchemy import (
     Text,
     func,
 )
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.applicant_enums import (
@@ -50,6 +50,9 @@ class ApplicantEvent(Base):
     event_type: Mapped[str] = mapped_column(String(40), nullable=False)
     actor: Mapped[str] = mapped_column(String(20), nullable=False)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Structured metadata for stage_changed events: {from, to, note}.
+    # NULL for non-stage events (note_added, screening_initiated, etc.).
+    payload: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
     occurred_at: Mapped[_dt.datetime] = mapped_column(
         DateTime(timezone=True), nullable=False,

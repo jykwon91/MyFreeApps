@@ -12,7 +12,7 @@ import {
   formatLongDate,
   formatRelativeTime,
 } from "@/shared/lib/inquiry-date-format";
-import ApplicantStageBadge from "@/app/features/applicants/ApplicantStageBadge";
+import ApplicantStatusControl from "@/app/features/applicants/ApplicantStatusControl";
 import ApplicantDetailSkeleton from "@/app/features/applicants/ApplicantDetailSkeleton";
 import ApplicantTimelineList from "@/app/features/applicants/ApplicantTimelineList";
 import ReferenceRow from "@/app/features/applicants/ReferenceRow";
@@ -67,7 +67,10 @@ export default function ApplicantDetail() {
             title={applicant.legal_name ?? "Unnamed applicant"}
             subtitle={
               <span className="inline-flex items-center gap-2 flex-wrap">
-                <ApplicantStageBadge stage={applicant.stage} />
+                <ApplicantStatusControl
+                  applicantId={applicant.id}
+                  currentStage={applicant.stage}
+                />
                 <span
                   className="text-xs text-muted-foreground"
                   title={formatAbsoluteTime(applicant.created_at)}
