@@ -22,6 +22,12 @@ class User(SQLAlchemyBaseUserTableUUID, Base):
     totp_secret: Mapped[str | None] = mapped_column(String(255), nullable=True)
     totp_enabled: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     totp_recovery_codes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # HMAC digest algorithm used at enrollment. Grandfathered users keep 'sha1';
+    # all new enrollments write 'sha256'. The verifier reads this column to
+    # pick the matching pyotp digest. See migration totp260503.
+    totp_algorithm: Mapped[str] = mapped_column(
+        String(10), nullable=False, default="sha1", server_default="sha1"
+    )
 
     failed_login_count: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=0, server_default="0")
     locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

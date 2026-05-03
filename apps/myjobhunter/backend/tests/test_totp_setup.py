@@ -4,7 +4,13 @@ Each test creates a fresh user, drives the TOTP flow through the API, and
 asserts both the wire response and the persisted state. Encryption-at-rest
 is verified by reading the raw column value via a separate session that
 does NOT go through the ``EncryptedString`` decoder.
+
+After the SHA-256 KDF migration (2026-05-02), all new enrollments via
+``POST /auth/totp/setup`` generate a SHA-256 TOTP secret. Tests that verify
+a 6-digit code must use ``pyotp.TOTP(secret, digest=hashlib.sha256).now()``
+to generate a code that the server will accept.
 """
+import hashlib
 import uuid
 
 import pyotp
@@ -59,7 +65,7 @@ async def test_setup_rejects_when_already_enabled(
     async with await as_user(user) as authed:
         setup = await authed.post("/auth/totp/setup")
         secret = setup.json()["secret"]
-        code = pyotp.TOTP(secret).now()
+        code = pyotp.TOTP(secret, digest=hashlib.sha256).now()
         await authed.post("/auth/totp/verify", json={"code": code})
 
         # Second setup attempt should be rejected
@@ -75,7 +81,7 @@ async def test_verify_with_correct_code_enables_totp(
     async with await as_user(user) as authed:
         setup = await authed.post("/auth/totp/setup")
         secret = setup.json()["secret"]
-        code = pyotp.TOTP(secret).now()
+        code = pyotp.TOTP(secret, digest=hashlib.sha256).now()
         verify = await authed.post("/auth/totp/verify", json={"code": code})
         status = await authed.get("/auth/totp/status")
 
@@ -108,14 +114,14 @@ async def test_disable_requires_current_totp_code(
         # Enroll
         setup = await authed.post("/auth/totp/setup")
         secret = setup.json()["secret"]
-        await authed.post("/auth/totp/verify", json={"code": pyotp.TOTP(secret).now()})
+        await authed.post("/auth/totp/verify", json={"code": pyotp.TOTP(secret, digest=hashlib.sha256).now()})
 
         # Wrong code is rejected — 2FA stays enabled
         bad = await authed.post("/auth/totp/disable", json={"code": "000000"})
         status_after_bad = await authed.get("/auth/totp/status")
 
         # Correct code disables
-        good = await authed.post("/auth/totp/disable", json={"code": pyotp.TOTP(secret).now()})
+        good = await authed.post("/auth/totp/disable", json={"code": pyotp.TOTP(secret, digest=hashlib.sha256).now()})
         status_after_good = await authed.get("/auth/totp/status")
 
     assert bad.status_code == 400
@@ -135,8 +141,8 @@ async def test_disable_clears_totp_secret_and_recovery_codes(
     async with await as_user(user) as authed:
         setup = await authed.post("/auth/totp/setup")
         secret = setup.json()["secret"]
-        await authed.post("/auth/totp/verify", json={"code": pyotp.TOTP(secret).now()})
-        await authed.post("/auth/totp/disable", json={"code": pyotp.TOTP(secret).now()})
+        await authed.post("/auth/totp/verify", json={"code": pyotp.TOTP(secret, digest=hashlib.sha256).now()})
+        await authed.post("/auth/totp/disable", json={"code": pyotp.TOTP(secret, digest=hashlib.sha256).now()})
 
     # Read raw row to confirm fields are cleared
     eng = create_async_engine(settings.database_url, poolclass=NullPool)

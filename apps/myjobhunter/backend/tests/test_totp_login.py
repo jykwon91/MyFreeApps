@@ -7,7 +7,13 @@ Covers:
   * Recovery-code login: consumed code is removed and cannot be reused.
   * Bad credentials / bad totp_code: surface the documented detail strings.
   * Auth events written on each branch.
+
+After the SHA-256 KDF migration (2026-05-02), all new enrollments generate
+SHA-256 TOTP secrets. Tests that verify 6-digit codes use
+``pyotp.TOTP(secret, digest=hashlib.sha256).now()`` to generate matching codes.
 """
+import hashlib
+
 import pyotp
 import pytest
 from httpx import AsyncClient
@@ -26,7 +32,7 @@ async def _enroll_totp(client: AsyncClient, user, as_user) -> str:
         secret = setup.json()["secret"]
         await authed.post(
             "/auth/totp/verify",
-            json={"code": pyotp.TOTP(secret).now()},
+            json={"code": pyotp.TOTP(secret, digest=hashlib.sha256).now()},
         )
     return secret
 
@@ -91,7 +97,7 @@ async def test_login_with_valid_totp_returns_jwt(
         json={
             "email": user["email"],
             "password": user["password"],
-            "totp_code": pyotp.TOTP(secret).now(),
+            "totp_code": pyotp.TOTP(secret, digest=hashlib.sha256).now(),
         },
     )
     assert resp.status_code == 200, resp.text
@@ -145,7 +151,7 @@ async def test_recovery_code_accepted_and_consumed(
         recovery_codes = setup.json()["recovery_codes"]
         await authed.post(
             "/auth/totp/verify",
-            json={"code": pyotp.TOTP(secret).now()},
+            json={"code": pyotp.TOTP(secret, digest=hashlib.sha256).now()},
         )
 
     # Use the first recovery code
@@ -215,7 +221,7 @@ async def test_auth_events_written_on_totp_login_success(
         json={
             "email": user["email"],
             "password": user["password"],
-            "totp_code": pyotp.TOTP(secret).now(),
+            "totp_code": pyotp.TOTP(secret, digest=hashlib.sha256).now(),
         },
     )
     events = await _read_auth_events(user["id"])
@@ -236,7 +242,7 @@ async def test_auth_events_written_on_totp_recovery_used(
         recovery_codes = setup.json()["recovery_codes"]
         await authed.post(
             "/auth/totp/verify",
-            json={"code": pyotp.TOTP(secret).now()},
+            json={"code": pyotp.TOTP(secret, digest=hashlib.sha256).now()},
         )
     await client.post(
         "/auth/totp/login",

@@ -20,10 +20,19 @@ and the integration tests don't have to change:
     totp_service._encrypt(value, user_id)        # private alias kept for tests
     totp_service._decrypt(value, user_id)        # private alias kept for tests
     await totp_service.setup_totp(user.id)       # DB coordinator (this module)
+
+Algorithm handling (audit 2026-05-02):
+    All new enrollments use SHA-256. ``setup_totp`` writes ``users.totp_algorithm``
+    = ``"sha256"`` for the new secret; ``confirm_totp``, ``disable_totp``, and
+    ``validate_totp_for_login`` read the column to select the correct HMAC
+    digest. Grandfathered users with ``totp_algorithm = "sha1"`` continue to
+    work transparently until they re-enroll.
 """
 import uuid
 
 from platform_shared.services.totp_service import (
+    DEFAULT_TOTP_ALGORITHM,
+    TotpAlgorithm,
     decrypt_for_user,
     encrypt_for_user,
     generate_recovery_codes,
@@ -66,15 +75,23 @@ __all__ = [
 ]
 
 
-def get_provisioning_uri(secret: str, email: str) -> str:
+def get_provisioning_uri(
+    secret: str,
+    email: str,
+    *,
+    algorithm: TotpAlgorithm = DEFAULT_TOTP_ALGORITHM,
+) -> str:
     """MBK-issuer-bound wrapper over the shared provisioning-URI builder.
 
     Pre-M5 callers passed ``(secret, email)`` and the issuer was hardcoded
     inside the function. Keep that signature so existing call sites and
     tests keep working — the shared helper is what actually builds the
     URI, with ``issuer`` always set to MBK's brand string.
+
+    ``algorithm`` is passed through to embed the correct ``algorithm=``
+    parameter in the otpauth URI for authenticator apps that support it.
     """
-    return _shared_get_provisioning_uri(secret, email, issuer=_TOTP_ISSUER)
+    return _shared_get_provisioning_uri(secret, email, issuer=_TOTP_ISSUER, algorithm=algorithm)
 
 
 # ---------------------------------------------------------------------------
@@ -102,11 +119,12 @@ def _decrypt(value: str, user_id: uuid.UUID) -> str:
 # ---------------------------------------------------------------------------
 
 async def setup_totp(user_id: uuid.UUID) -> tuple[str, str]:
-    """Generate a fresh TOTP secret for a user and return ``(secret, provisioning_uri)``.
+    """Generate a fresh SHA-256 TOTP secret for a user.
 
-    The plaintext secret is encrypted onto ``users.totp_secret`` but
-    ``totp_enabled`` stays False — the user still has to confirm a code
-    via :func:`confirm_totp` before 2FA actually gates their login.
+    Returns ``(secret, provisioning_uri)``. The plaintext secret is
+    encrypted onto ``users.totp_secret`` and ``users.totp_algorithm`` is
+    set to ``"sha256"`` for all new enrollments. ``totp_enabled`` stays
+    False — the user still has to confirm a code via :func:`confirm_totp`.
     """
     async with unit_of_work() as db:
         user = await user_repo.get_by_id(db, user_id)
@@ -114,7 +132,8 @@ async def setup_totp(user_id: uuid.UUID) -> tuple[str, str]:
             raise ValueError("User not found")
         secret = generate_secret()
         user.totp_secret = _encrypt(secret, user_id)
-        uri = get_provisioning_uri(secret, user.email)
+        user.totp_algorithm = DEFAULT_TOTP_ALGORITHM
+        uri = get_provisioning_uri(secret, user.email, algorithm=DEFAULT_TOTP_ALGORITHM)
         return secret, uri
 
 
@@ -123,13 +142,17 @@ async def confirm_totp(user_id: uuid.UUID, code: str) -> tuple[bool, list[str]]:
 
     Returns ``(verified, recovery_codes)``. On failure or unknown user,
     returns ``(False, [])`` and leaves all flags unchanged.
+
+    Uses the algorithm stored in ``user.totp_algorithm`` so grandfathered
+    SHA-1 users can still confirm during their grace period.
     """
     async with unit_of_work() as db:
         user = await user_repo.get_by_id(db, user_id)
         if user is None or not user.totp_secret:
             return False, []
         secret = _decrypt(user.totp_secret, user_id)
-        if not verify_code(secret, code):
+        algorithm: TotpAlgorithm = user.totp_algorithm  # type: ignore[assignment]
+        if not verify_code(secret, code, algorithm=algorithm):
             return False, []
         recovery = generate_recovery_codes()
         user.totp_enabled = True
@@ -138,17 +161,28 @@ async def confirm_totp(user_id: uuid.UUID, code: str) -> tuple[bool, list[str]]:
 
 
 async def disable_totp(user_id: uuid.UUID, code: str) -> bool:
-    """Disable 2FA after verifying a current TOTP ``code``. Clears all TOTP fields on success."""
+    """Disable 2FA after verifying a current TOTP ``code``.
+
+    Clears ``totp_secret``, ``totp_recovery_codes``, and ``totp_algorithm``
+    on success. The algorithm column is reset to the default (``"sha1"``,
+    the migration server_default) here so that any subsequent re-enrollment
+    begins from the column default; the re-enrollment ``setup_totp`` call
+    will then overwrite it to ``"sha256"``.
+    """
     async with unit_of_work() as db:
         user = await user_repo.get_by_id(db, user_id)
         if user is None or not user.totp_enabled or not user.totp_secret:
             return False
         secret = _decrypt(user.totp_secret, user_id)
-        if not verify_code(secret, code):
+        algorithm: TotpAlgorithm = user.totp_algorithm  # type: ignore[assignment]
+        if not verify_code(secret, code, algorithm=algorithm):
             return False
         user.totp_enabled = False
         user.totp_secret = None
         user.totp_recovery_codes = None
+        # Reset to server_default so the column is defined; setup_totp will
+        # overwrite to sha256 on the next enrollment.
+        user.totp_algorithm = "sha1"
         return True
 
 
@@ -159,6 +193,9 @@ async def validate_totp_for_login(email: str, code: str) -> tuple[bool, bool]:
     consumption rewrites the encrypted recovery-codes column with the
     matched code removed (or clears the column entirely if it was the
     last one).
+
+    Uses ``user.totp_algorithm`` to drive the HMAC verification so both
+    grandfathered SHA-1 users and new SHA-256 users are handled correctly.
     """
     async with unit_of_work() as db:
         user = await user_repo.get_by_email(db, email)
@@ -166,7 +203,8 @@ async def validate_totp_for_login(email: str, code: str) -> tuple[bool, bool]:
             return False, False
 
         secret = _decrypt(user.totp_secret, user.id)
-        if verify_code(secret, code):
+        algorithm: TotpAlgorithm = user.totp_algorithm  # type: ignore[assignment]
+        if verify_code(secret, code, algorithm=algorithm):
             return True, False
 
         if user.totp_recovery_codes:
