@@ -1,5 +1,3 @@
-import Button from "@/shared/components/ui/Button";
-
 const MIN = 0;
 const MAX = 20;
 

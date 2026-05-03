@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAcceptInviteMutation, useGetInviteInfoQuery } from "@/shared/store/membersApi";
-import { isAuthenticated, login, notifyAuthChange } from "@/shared/lib/auth";
+import { login, notifyAuthChange } from "@/shared/lib/auth";
 import { useCurrentUser } from "@/shared/hooks/useCurrentUser";
 import { extractErrorMessage } from "@/shared/utils/errorMessage";
 import LoadingButton from "@/shared/components/ui/LoadingButton";

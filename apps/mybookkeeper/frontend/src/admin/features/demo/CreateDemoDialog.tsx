@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import Button from "@/shared/components/ui/Button";
 import LoadingButton from "@/shared/components/ui/LoadingButton";
@@ -13,13 +13,6 @@ interface Props {
 export default function CreateDemoDialog({ open, isLoading, onSubmit, onCancel }: Props) {
   const [tag, setTag] = useState("");
   const [recipientEmail, setRecipientEmail] = useState("");
-
-  useEffect(() => {
-    if (open) {
-      setTag("");
-      setRecipientEmail("");
-    }
-  }, [open]);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

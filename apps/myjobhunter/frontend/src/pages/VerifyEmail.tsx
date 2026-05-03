@@ -5,21 +5,19 @@ import api from "@/lib/api";
 
 type VerifyState = "verifying" | "success" | "error";
 
+const NO_TOKEN_MESSAGE =
+  "No verification token found in the link. Please check your email and try again.";
+
 export default function VerifyEmail() {
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token");
 
-  const [state, setState] = useState<VerifyState>("verifying");
-  const [errorMessage, setErrorMessage] = useState("");
+  // Initialize directly from token presence — avoids calling setState inside an effect.
+  const [state, setState] = useState<VerifyState>(token ? "verifying" : "error");
+  const [errorMessage, setErrorMessage] = useState(token ? "" : NO_TOKEN_MESSAGE);
 
   useEffect(() => {
-    if (!token) {
-      setState("error");
-      setErrorMessage(
-        "No verification token found in the link. Please check your email and try again.",
-      );
-      return;
-    }
+    if (!token) return;
 
     api
       .post("/auth/verify", { token })

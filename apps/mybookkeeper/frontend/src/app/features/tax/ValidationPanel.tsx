@@ -1,4 +1,4 @@
-import { getFormLabel } from "@/app/features/tax/FormNameLabel";
+import { getFormLabel } from "@/shared/lib/tax-config";
 import { formatCurrency } from "@/shared/utils/currency";
 import type { ValidationResult } from "@/shared/types/tax/validation-result";
 import { SEVERITY_ORDER, SEVERITY_CONFIG } from "@/shared/lib/validation-config";

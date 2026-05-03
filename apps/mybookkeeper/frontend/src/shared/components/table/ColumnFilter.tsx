@@ -1,16 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 import { type Column } from "@tanstack/react-table";
 import { Filter, X } from "lucide-react";
 
-interface Props {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  column: Column<any, unknown>;
+interface Props<TData = unknown> {
+  column: Column<TData, unknown>;
   options?: { value: string; label: string }[];
   enableDateRange?: boolean;
 }
 
-export default function ColumnFilter({ column, options, enableDateRange }: Props) {
+export default function ColumnFilter<TData = unknown>({ column, options, enableDateRange }: Props<TData>) {
   if (enableDateRange) {
     return <DateRangeFilter column={column} />;
   }
@@ -22,8 +20,7 @@ export default function ColumnFilter({ column, options, enableDateRange }: Props
   return null;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function DateRangeFilter({ column }: { column: Column<any, unknown> }) {
+function DateRangeFilter<TData = unknown>({ column }: { column: Column<TData, unknown> }) {
   const value = (column.getFilterValue() as [string, string] | undefined) ?? ["", ""];
 
   return (
@@ -46,12 +43,11 @@ function DateRangeFilter({ column }: { column: Column<any, unknown> }) {
   );
 }
 
-function MultiSelectFilter({
+function MultiSelectFilter<TData = unknown>({
   column,
   options,
 }: {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  column: Column<any, unknown>;
+  column: Column<TData, unknown>;
   options: { value: string; label: string }[];
 }) {
   const [open, setOpen] = useState(false);

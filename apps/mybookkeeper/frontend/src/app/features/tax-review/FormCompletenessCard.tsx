@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import { ChevronDown, ChevronUp, AlertTriangle, CheckCircle } from "lucide-react";
 import { cn } from "@/shared/utils/cn";
-import { getFormLabel } from "@/app/features/tax/FormNameLabel";
+import { getFormLabel } from "@/shared/lib/tax-config";
 import type { FormCompleteness } from "@/shared/types/tax/tax-completeness";
 
 interface Props {

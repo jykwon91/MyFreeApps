@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { useForm, type SubmitHandler } from "react-hook-form";
 import { LoadingButton, showSuccess, showError, extractErrorMessage } from "@platform/ui";
@@ -54,12 +54,13 @@ export default function AddApplicationDialog({ open, onOpenChange }: Props) {
   });
 
   // Reset form + inline panel when the dialog closes so a re-open starts fresh.
-  useEffect(() => {
-    if (!open) {
+  function handleOpenChange(next: boolean) {
+    if (!next) {
       reset();
       setShowNewCompany(false);
     }
-  }, [open, reset]);
+    onOpenChange(next);
+  }
 
   const onSubmit: SubmitHandler<FormValues> = async (values) => {
     try {
@@ -94,7 +95,7 @@ export default function AddApplicationDialog({ open, onOpenChange }: Props) {
   const hasCompanies = companies.length > 0;
 
   return (
-    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+    <Dialog.Root open={open} onOpenChange={handleOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-black/50 z-40" />
         <Dialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-lg max-h-[90vh] overflow-y-auto bg-card border rounded-lg shadow-lg z-50 p-6">

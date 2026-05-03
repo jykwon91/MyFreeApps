@@ -1,5 +1,5 @@
 import { FileText, AlertTriangle, CheckCircle2, AlertCircle } from "lucide-react";
-import { getFormLabel } from "@/app/features/tax/FormNameLabel";
+import { getFormLabel } from "@/shared/lib/tax-config";
 import Badge from "@/shared/components/ui/Badge";
 import type { BadgeColor } from "@/shared/components/ui/Badge";
 import type { ValidationResult } from "@/shared/types/tax/validation-result";
@@ -21,24 +21,6 @@ function getStatusBadge(errors: number, warnings: number): { label: string; colo
   if (errors > 0) return { label: `${errors} error${errors > 1 ? "s" : ""}`, color: "red" };
   if (warnings > 0) return { label: `${warnings} warning${warnings > 1 ? "s" : ""}`, color: "yellow" };
   return { label: "Valid", color: "green" };
-}
-
-export function buildFormSummaries(
-  formNames: string[],
-  instanceCounts: Record<string, number>,
-  fieldCounts: Record<string, number>,
-  validationResults: ValidationResult[],
-): FormSummary[] {
-  return formNames.map((form_name) => {
-    const formResults = validationResults.filter((v) => v.form_name === form_name);
-    return {
-      form_name,
-      instance_count: instanceCounts[form_name] ?? 0,
-      field_count: fieldCounts[form_name] ?? 0,
-      error_count: formResults.filter((v) => v.severity === "error").length,
-      warning_count: formResults.filter((v) => v.severity === "warning").length,
-    };
-  });
 }
 
 export default function FormOverviewGrid({ forms, validationResults, onFormClick }: Props) {

@@ -2,7 +2,6 @@ import { useCallback, useRef, useState } from "react";
 import { Upload, FileSpreadsheet, X, Loader2 } from "lucide-react";
 import api from "@/shared/lib/api";
 import type { Property } from "@/shared/types/property/property";
-import type { TransactionPreview } from "@/shared/types/transaction/transaction-preview";
 import type { ImportResult } from "@/shared/types/transaction/import-result";
 import Button from "@/shared/components/ui/Button";
 import Select from "@/shared/components/ui/Select";

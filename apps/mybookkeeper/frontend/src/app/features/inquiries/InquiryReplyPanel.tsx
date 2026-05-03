@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Panel, { PanelCloseButton } from "@/shared/components/ui/Panel";
 import LoadingButton from "@/shared/components/ui/LoadingButton";
 import Button from "@/shared/components/ui/Button";
@@ -40,8 +40,10 @@ type ReplyTab = "template" | "custom";
 export default function InquiryReplyPanel({ inquiryId, onClose }: Props) {
   const [tab, setTab] = useState<ReplyTab>("template");
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
-  const [subject, setSubject] = useState("");
-  const [body, setBody] = useState("");
+  // Local overrides allow the user to edit the rendered template content.
+  // When a new render arrives, the overrides reset (via key change below).
+  const [subjectOverride, setSubjectOverride] = useState<string | null>(null);
+  const [bodyOverride, setBodyOverride] = useState<string | null>(null);
 
   const { data: templates = [], isLoading: templatesLoading } =
     useGetReplyTemplatesQuery();
@@ -60,19 +62,24 @@ export default function InquiryReplyPanel({ inquiryId, onClose }: Props) {
           ? "missing-send-scope"
           : null;
 
-  // Pull the server-rendered subject/body into the editor whenever a new
-  // (template,inquiry) render returns. Synchronizing local state to a remote
-  // resource is exactly the use-case useEffect was designed for.
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => {
-    if (renderState.data) {
-      setSubject(renderState.data.subject);
-      setBody(renderState.data.body);
-    }
-  }, [renderState.data]);
+  // Derive subject/body: prefer local override (user edits), fall back to
+  // server-rendered template data, then empty string.
+  const subject = subjectOverride ?? renderState.data?.subject ?? "";
+  const body = bodyOverride ?? renderState.data?.body ?? "";
+
+  function setSubject(value: string) {
+    setSubjectOverride(value);
+  }
+
+  function setBody(value: string) {
+    setBodyOverride(value);
+  }
 
   function handleSelectTemplate(template: ReplyTemplate) {
     setSelectedTemplateId(template.id);
+    // Clear local overrides so the newly-rendered template fills the editor.
+    setSubjectOverride(null);
+    setBodyOverride(null);
     void triggerRender({ inquiryId, templateId: template.id });
   }
 
@@ -80,6 +87,8 @@ export default function InquiryReplyPanel({ inquiryId, onClose }: Props) {
     setTab(next);
     if (next === "custom") {
       setSelectedTemplateId(null);
+      setSubjectOverride(null);
+      setBodyOverride(null);
     }
   }
 

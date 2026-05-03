@@ -22,7 +22,7 @@ vi.mock("@platform/ui", async (importOriginal) => {
     extractErrorMessage: vi.fn((err: unknown) =>
       err instanceof Error ? err.message : "Something went wrong",
     ),
-  };
+  } as typeof import("@platform/ui");
 });
 
 import DeleteAccountModal from "@/features/security/DeleteAccountModal";
@@ -42,15 +42,16 @@ interface DeleteMutationFn {
 
 function setupMutation(unwrapImpl: () => Promise<void>) {
   const trigger = vi.fn(() => ({ unwrap: unwrapImpl }) as DeleteMutationFn);
-  // Cast to any: RTK Query's mutation tuple is complex and the test only
-  // exercises the trigger + isLoading slot we use in the component.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  mockUseDeleteAccountMutation.mockReturnValue([trigger, { isLoading: false }] as any);
+  // RTK Query's mutation tuple is complex; cast to the expected return type via
+  // unknown to avoid using `any` while still bypassing the full generic signature
+  // that the test doesn't need to exercise.
+  mockUseDeleteAccountMutation.mockReturnValue(
+    [trigger, { isLoading: false }] as unknown as ReturnType<typeof useDeleteAccountMutation>,
+  );
   return trigger;
 }
 
 function setupCurrentUser(totp_enabled: boolean) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   mockUseGetCurrentUserQuery.mockReturnValue({
     data: {
       id: "user-1",
@@ -64,7 +65,7 @@ function setupCurrentUser(totp_enabled: boolean) {
     isSuccess: true,
     isError: false,
     refetch: vi.fn(),
-  } as any);
+  } as unknown as ReturnType<typeof useGetCurrentUserQuery>);
 }
 
 describe("DeleteAccountModal", () => {
