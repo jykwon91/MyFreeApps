@@ -1,9 +1,17 @@
 # Tech Debt
 
 > Last scanned: 2026-05-02
-> Issues: 0 critical, 3 high, 2 medium (deferred), 0 low
+> Issues: 0 critical, 4 high, 2 medium (deferred), 0 low
 
 ## High
+
+### [Auth] LOGIN_BLOCKED_UNVERIFIED audit event is silently lost on rollback
+**Effort:** XS
+**Location:** `apps/mybookkeeper/backend/app/api/totp.py` — `totp_login()` around line 143; same pattern in MJH `apps/myjobhunter/backend/app/api/totp.py`
+**Problem:** When an unverified user hits `POST /auth/totp/login`, the handler calls `log_auth_event(... LOGIN_BLOCKED_UNVERIFIED ...)` but immediately raises `HTTPException` without calling `await db.commit()`. FastAPI's exception handler rolls back the session, so the audit row is never persisted. Every other early-exit branch in the same function commits before raising. Pre-existing; not introduced by PR fix/audit-log-gaps-pii-cleanup.
+**Recommendation:** Add `await db.commit()` before the `raise HTTPException` on the `not user.is_verified` branch in both `apps/mybookkeeper/backend/app/api/totp.py` and `apps/myjobhunter/backend/app/api/totp.py`.
+
+---
 
 ### [Frontend tests] Pre-existing frontend unit test failures unrelated to Gmail-disconnect PR
 **Effort:** M

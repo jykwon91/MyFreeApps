@@ -3,7 +3,17 @@
 Issues discovered during development. New entries are appended; resolved entries are
 removed and the counts in this header are updated.
 
-**Open issues: 7 (Critical: 1 / High: 1 / Medium: 3 / Low: 2)**
+**Open issues: 8 (Critical: 1 / High: 2 / Medium: 3 / Low: 2)**
+
+---
+
+### [Auth] LOGIN_BLOCKED_UNVERIFIED audit event is silently lost on rollback
+**Severity:** High
+**Effort:** XS
+**Location:** `apps/myjobhunter/backend/app/api/totp.py` — `totp_login()` unverified-user branch (shared pattern with MBK)
+**Discovered:** PR fix/audit-log-gaps-pii-cleanup — 2026-05-02
+**Problem:** When an unverified user hits `POST /auth/totp/login`, `log_auth_event(... LOGIN_BLOCKED_UNVERIFIED ...)` is called but the handler immediately raises `HTTPException` without `await db.commit()`. FastAPI rolls back the session on the exception, so the audit row is never persisted. Every other early-exit branch in the function commits before raising. MBK has the same gap.
+**Recommendation:** Add `await db.commit()` before the `raise HTTPException` on the `not user.is_verified` branch.
 
 ---
 
