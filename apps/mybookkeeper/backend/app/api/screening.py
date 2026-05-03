@@ -1,4 +1,4 @@
-"""HTTP routes for the screening sub-domain (rentals Phase 3, PR 3.3).
+"""HTTP routes for the screening sub-domain (rentals Phase 3, PR 3.3 + scrnv2260503).
 
 Mounted under ``/applicants/{applicant_id}/screening`` in main.py — kept in
 its own module to keep ``api/applicants.py`` focused on the parent CRUD.
@@ -11,6 +11,10 @@ Audit: ``screening.redirect_initiated`` and ``screening.result_uploaded``
 events are emitted via the service layer to ``audit_logs`` (a semantic
 event row alongside the per-column INSERT rows the SQLAlchemy listener
 captures automatically).
+
+New endpoints (scrnv2260503 UX rebuild):
+  GET  /{id}/screening/eligibility — returns eligibility gate fields
+  GET  /{id}/screening/providers   — returns static provider grid metadata
 """
 from __future__ import annotations
 
@@ -22,6 +26,12 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from app.core.config import settings
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member, require_write_access
+from app.schemas.applicants.screening_eligibility_response import (
+    ScreeningEligibilityResponse,
+)
+from app.schemas.applicants.screening_provider_response import (
+    ScreeningProvidersResponse,
+)
 from app.schemas.applicants.screening_redirect_response import (
     ScreeningRedirectResponse,
 )
@@ -34,28 +44,80 @@ router = APIRouter(prefix="/applicants", tags=["applicants"])
 
 
 @router.get(
-    "/{applicant_id}/screening/redirect",
-    response_model=ScreeningRedirectResponse,
+    "/{applicant_id}/screening/eligibility",
+    response_model=ScreeningEligibilityResponse,
 )
-async def initiate_screening_redirect(
+async def get_screening_eligibility(
     applicant_id: uuid.UUID,
     ctx: RequestContext = Depends(current_org_member),
-) -> ScreeningRedirectResponse:
-    """Resolve the KeyCheck dashboard URL the host should be redirected to.
+) -> ScreeningEligibilityResponse:
+    """Check whether this applicant can be screened and if a result is pending.
+
+    Returns:
+        eligible: True iff name + contact are present.
+        missing_fields: human-readable list of what's missing.
+        has_pending: True iff a "pending" screening result is in flight.
 
     Returns 404 when the applicant doesn't exist in the calling tenant.
-    The host opens the URL in a new tab, completes the screening on
-    KeyCheck, then uploads the resulting PDF via the upload endpoint.
     """
     try:
-        url, provider = await screening_service.initiate_redirect(
+        return await screening_service.get_eligibility(
             organization_id=ctx.organization_id,
             user_id=ctx.user_id,
             applicant_id=applicant_id,
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail="Applicant not found") from exc
-    return ScreeningRedirectResponse(redirect_url=url, provider=provider)
+
+
+@router.get(
+    "/{applicant_id}/screening/providers",
+    response_model=ScreeningProvidersResponse,
+)
+async def list_screening_providers(
+    applicant_id: uuid.UUID,  # noqa: ARG001 — path param kept for consistency
+    ctx: RequestContext = Depends(current_org_member),  # noqa: ARG001
+) -> ScreeningProvidersResponse:
+    """Return the static provider grid metadata.
+
+    The applicant_id path param is accepted for URL consistency but the
+    response is not per-applicant — all applicants see the same provider
+    grid. Auth is still required (any org member can read).
+    """
+    return screening_service.list_providers()
+
+
+@router.get(
+    "/{applicant_id}/screening/redirect",
+    response_model=ScreeningRedirectResponse,
+)
+async def initiate_screening_redirect(
+    applicant_id: uuid.UUID,
+    provider: str = "keycheck",
+    ctx: RequestContext = Depends(current_org_member),
+) -> ScreeningRedirectResponse:
+    """Resolve the provider dashboard URL the host should be redirected to.
+
+    Query params:
+        provider: screening provider name (default "keycheck"). Must be one
+                  of the registered providers; 400 on unknown value.
+
+    Returns 404 when the applicant doesn't exist in the calling tenant.
+    The host opens the URL in a new tab, completes the screening on the
+    provider's site, then uploads the resulting PDF via the upload endpoint.
+    """
+    try:
+        url, provider_name = await screening_service.initiate_redirect(
+            organization_id=ctx.organization_id,
+            user_id=ctx.user_id,
+            applicant_id=applicant_id,
+            provider_name=provider,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail="Applicant not found") from exc
+    except screening_service.UnknownProviderError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return ScreeningRedirectResponse(redirect_url=url, provider=provider_name)
 
 
 @router.post(

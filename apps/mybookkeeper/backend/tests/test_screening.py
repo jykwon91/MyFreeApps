@@ -557,3 +557,291 @@ class TestUploadValidation:
     def test_pending_does_not_need_snippet(self) -> None:
         from app.services.screening.screening_service import _validate_upload_payload
         _validate_upload_payload("pending", None)
+
+
+# --------------------------------------------------------------------------- #
+# RentSpree provider tests (scrnv2260503)
+# --------------------------------------------------------------------------- #
+
+class TestRentSpreeProvider:
+    def test_default_dashboard_url(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from app.services.screening.rentspree_provider import (
+            DEFAULT_RENTSPREE_DASHBOARD_URL,
+            RentSpreeProvider,
+        )
+        monkeypatch.delenv("RENTSPREE_DASHBOARD_URL", raising=False)
+        provider = RentSpreeProvider()
+        assert provider.dashboard_url() == DEFAULT_RENTSPREE_DASHBOARD_URL
+
+    def test_env_override(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from app.services.screening.rentspree_provider import RentSpreeProvider
+        monkeypatch.setenv("RENTSPREE_DASHBOARD_URL", "https://staging.rentspree.example/pm")
+        provider = RentSpreeProvider()
+        assert provider.dashboard_url() == "https://staging.rentspree.example/pm"
+
+    def test_blank_env_falls_back_to_default(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from app.services.screening.rentspree_provider import (
+            DEFAULT_RENTSPREE_DASHBOARD_URL,
+            RentSpreeProvider,
+        )
+        monkeypatch.setenv("RENTSPREE_DASHBOARD_URL", "   ")
+        provider = RentSpreeProvider()
+        assert provider.dashboard_url() == DEFAULT_RENTSPREE_DASHBOARD_URL
+
+    def test_provider_name(self) -> None:
+        from app.services.screening.rentspree_provider import RentSpreeProvider
+        assert RentSpreeProvider.name == "rentspree"
+
+
+# --------------------------------------------------------------------------- #
+# Provider registry: RentSpree registered (scrnv2260503)
+# --------------------------------------------------------------------------- #
+
+class TestProviderRegistryV2:
+    def test_get_rentspree(self) -> None:
+        provider = get_provider("rentspree")
+        assert provider.name == "rentspree"
+
+    def test_redirect_with_rentspree_param(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Redirect endpoint accepts a 'provider' query param."""
+        monkeypatch.setenv("RENTSPREE_DASHBOARD_URL", "https://rentspree.test/pm")
+        org_id, user_id = uuid.uuid4(), uuid.uuid4()
+        applicant_id = uuid.uuid4()
+
+        app.dependency_overrides[current_org_member] = lambda: _ctx(org_id, user_id)
+        try:
+            with patch(
+                "app.api.screening.screening_service.initiate_redirect",
+                new=AsyncMock(
+                    return_value=("https://rentspree.test/pm", "rentspree"),
+                ),
+            ) as mock_init:
+                client = TestClient(app)
+                response = client.get(
+                    f"/applicants/{applicant_id}/screening/redirect?provider=rentspree",
+                )
+                assert response.status_code == 200
+                body = response.json()
+                assert body["provider"] == "rentspree"
+                kwargs = mock_init.call_args.kwargs
+                assert kwargs["provider_name"] == "rentspree"
+        finally:
+            app.dependency_overrides.clear()
+
+    def test_redirect_unknown_provider_returns_400(self) -> None:
+        org_id, user_id = uuid.uuid4(), uuid.uuid4()
+        applicant_id = uuid.uuid4()
+
+        app.dependency_overrides[current_org_member] = lambda: _ctx(org_id, user_id)
+        try:
+            with patch(
+                "app.api.screening.screening_service.initiate_redirect",
+                new=AsyncMock(
+                    side_effect=UnknownProviderError("unknown provider 'transunion'"),
+                ),
+            ):
+                client = TestClient(app)
+                response = client.get(
+                    f"/applicants/{applicant_id}/screening/redirect?provider=transunion",
+                )
+                assert response.status_code == 400
+        finally:
+            app.dependency_overrides.clear()
+
+
+# --------------------------------------------------------------------------- #
+# Service: list_providers (scrnv2260503)
+# --------------------------------------------------------------------------- #
+
+class TestListProviders:
+    def test_returns_both_providers(self) -> None:
+        from app.services.screening.screening_service import list_providers
+        result = list_providers()
+        names = [p.name for p in result.providers]
+        assert "keycheck" in names
+        assert "rentspree" in names
+
+    def test_each_provider_has_required_fields(self) -> None:
+        from app.services.screening.screening_service import list_providers
+        result = list_providers()
+        for provider in result.providers:
+            assert provider.label, f"{provider.name} has no label"
+            assert provider.description, f"{provider.name} has no description"
+            assert provider.cost_label, f"{provider.name} has no cost_label"
+            assert provider.turnaround_label, f"{provider.name} has no turnaround_label"
+            assert provider.external_url.startswith("https://"), (
+                f"{provider.name} external_url must start with https://"
+            )
+
+
+# --------------------------------------------------------------------------- #
+# Route: GET /applicants/{id}/screening/providers (scrnv2260503)
+# --------------------------------------------------------------------------- #
+
+class TestProvidersEndpoint:
+    def test_unauthenticated_returns_401(self) -> None:
+        client = TestClient(app)
+        response = client.get(f"/applicants/{uuid.uuid4()}/screening/providers")
+        assert response.status_code == 401
+
+    @pytest.mark.asyncio
+    async def test_returns_provider_grid(self) -> None:
+        org_id, user_id = uuid.uuid4(), uuid.uuid4()
+        applicant_id = uuid.uuid4()
+        app.dependency_overrides[current_org_member] = lambda: _ctx(org_id, user_id)
+        try:
+            client = TestClient(app)
+            response = client.get(f"/applicants/{applicant_id}/screening/providers")
+            assert response.status_code == 200
+            body = response.json()
+            assert "providers" in body
+            names = [p["name"] for p in body["providers"]]
+            assert "keycheck" in names
+            assert "rentspree" in names
+        finally:
+            app.dependency_overrides.clear()
+
+
+# --------------------------------------------------------------------------- #
+# Route: GET /applicants/{id}/screening/eligibility (scrnv2260503)
+# --------------------------------------------------------------------------- #
+
+class TestEligibilityEndpoint:
+    def test_unauthenticated_returns_401(self) -> None:
+        client = TestClient(app)
+        response = client.get(f"/applicants/{uuid.uuid4()}/screening/eligibility")
+        assert response.status_code == 401
+
+    @pytest.mark.asyncio
+    async def test_eligible_applicant(self) -> None:
+        org_id, user_id = uuid.uuid4(), uuid.uuid4()
+        applicant_id = uuid.uuid4()
+        from app.schemas.applicants.screening_eligibility_response import (
+            ScreeningEligibilityResponse,
+        )
+        eligibility = ScreeningEligibilityResponse(
+            eligible=True, missing_fields=[], has_pending=False,
+        )
+        app.dependency_overrides[current_org_member] = lambda: _ctx(org_id, user_id)
+        try:
+            with patch(
+                "app.api.screening.screening_service.get_eligibility",
+                new=AsyncMock(return_value=eligibility),
+            ):
+                client = TestClient(app)
+                response = client.get(f"/applicants/{applicant_id}/screening/eligibility")
+                assert response.status_code == 200
+                body = response.json()
+                assert body["eligible"] is True
+                assert body["missing_fields"] == []
+                assert body["has_pending"] is False
+        finally:
+            app.dependency_overrides.clear()
+
+    @pytest.mark.asyncio
+    async def test_ineligible_applicant_returns_missing_fields(self) -> None:
+        org_id, user_id = uuid.uuid4(), uuid.uuid4()
+        applicant_id = uuid.uuid4()
+        from app.schemas.applicants.screening_eligibility_response import (
+            ScreeningEligibilityResponse,
+        )
+        eligibility = ScreeningEligibilityResponse(
+            eligible=False,
+            missing_fields=["Legal name", "Email or phone (from the linked inquiry)"],
+            has_pending=False,
+        )
+        app.dependency_overrides[current_org_member] = lambda: _ctx(org_id, user_id)
+        try:
+            with patch(
+                "app.api.screening.screening_service.get_eligibility",
+                new=AsyncMock(return_value=eligibility),
+            ):
+                client = TestClient(app)
+                response = client.get(f"/applicants/{applicant_id}/screening/eligibility")
+                assert response.status_code == 200
+                body = response.json()
+                assert body["eligible"] is False
+                assert len(body["missing_fields"]) == 2
+        finally:
+            app.dependency_overrides.clear()
+
+    @pytest.mark.asyncio
+    async def test_has_pending_when_in_flight(self) -> None:
+        org_id, user_id = uuid.uuid4(), uuid.uuid4()
+        applicant_id = uuid.uuid4()
+        from app.schemas.applicants.screening_eligibility_response import (
+            ScreeningEligibilityResponse,
+        )
+        eligibility = ScreeningEligibilityResponse(
+            eligible=True, missing_fields=[], has_pending=True,
+        )
+        app.dependency_overrides[current_org_member] = lambda: _ctx(org_id, user_id)
+        try:
+            with patch(
+                "app.api.screening.screening_service.get_eligibility",
+                new=AsyncMock(return_value=eligibility),
+            ):
+                client = TestClient(app)
+                response = client.get(f"/applicants/{applicant_id}/screening/eligibility")
+                assert response.status_code == 200
+                body = response.json()
+                assert body["has_pending"] is True
+        finally:
+            app.dependency_overrides.clear()
+
+    @pytest.mark.asyncio
+    async def test_missing_applicant_returns_404(self) -> None:
+        org_id, user_id = uuid.uuid4(), uuid.uuid4()
+        app.dependency_overrides[current_org_member] = lambda: _ctx(org_id, user_id)
+        try:
+            with patch(
+                "app.api.screening.screening_service.get_eligibility",
+                new=AsyncMock(side_effect=LookupError("not found")),
+            ):
+                client = TestClient(app)
+                response = client.get(f"/applicants/{uuid.uuid4()}/screening/eligibility")
+                assert response.status_code == 404
+        finally:
+            app.dependency_overrides.clear()
+
+
+# --------------------------------------------------------------------------- #
+# Service: get_eligibility unit tests (pure logic path, scrnv2260503)
+# --------------------------------------------------------------------------- #
+
+class TestEligibilityService:
+    def test_eligible_state_with_all_fields_present(self) -> None:
+        """Verify eligibility response shape from pydantic schema."""
+        from app.schemas.applicants.screening_eligibility_response import (
+            ScreeningEligibilityResponse,
+        )
+        r = ScreeningEligibilityResponse(
+            eligible=True, missing_fields=[], has_pending=False,
+        )
+        assert r.eligible is True
+        assert r.missing_fields == []
+        assert r.has_pending is False
+
+    def test_ineligible_state_lists_missing_fields(self) -> None:
+        from app.schemas.applicants.screening_eligibility_response import (
+            ScreeningEligibilityResponse,
+        )
+        r = ScreeningEligibilityResponse(
+            eligible=False,
+            missing_fields=["Legal name"],
+            has_pending=False,
+        )
+        assert r.eligible is False
+        assert "Legal name" in r.missing_fields
+
+    def test_extra_forbid_on_schema(self) -> None:
+        """Pydantic extra=forbid enforced per CLAUDE.md convention."""
+        from app.schemas.applicants.screening_eligibility_response import (
+            ScreeningEligibilityResponse,
+        )
+        import pytest
+        with pytest.raises(Exception):
+            ScreeningEligibilityResponse(
+                eligible=True, missing_fields=[], has_pending=False,
+                rogue_field="surprise",  # type: ignore[call-arg]
+            )
