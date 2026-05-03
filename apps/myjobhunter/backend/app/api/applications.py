@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import current_active_user
@@ -45,6 +45,7 @@ _NOT_FOUND_DETAIL = "Application not found"
 async def list_applications(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
+    company_id: uuid.UUID | None = Query(default=None),
 ) -> dict:
     """Return the caller's non-deleted applications with latest event status.
 
@@ -53,8 +54,12 @@ async def list_applications(
     of the most-recent ``application_events`` row, computed via a correlated
     sub-select on the covering index ``ix_appevent_app_occurred``.  ``None``
     when the application has no events yet.
+
+    Optional ``?company_id=<uuid>`` narrows results to a single company.
+    Tenant isolation is preserved — querying with another user's company_id
+    returns an empty list, not a 403/404, so no ownership information leaks.
     """
-    items = await application_service.list_applications(db, user.id)
+    items = await application_service.list_applications(db, user.id, company_id=company_id)
     return {
         "items": [item.model_dump(mode="json") for item in items],
         "total": len(items),

@@ -3,17 +3,7 @@
 Issues discovered during development. New entries are appended; resolved entries are
 removed and the counts in this header are updated.
 
-**Open issues: 8 (Critical: 1 / High: 2 / Medium: 3 / Low: 2)**
-
----
-
-### [Auth] LOGIN_BLOCKED_UNVERIFIED audit event is silently lost on rollback
-**Severity:** High
-**Effort:** XS
-**Location:** `apps/myjobhunter/backend/app/api/totp.py` — `totp_login()` unverified-user branch (shared pattern with MBK)
-**Discovered:** PR fix/audit-log-gaps-pii-cleanup — 2026-05-02
-**Problem:** When an unverified user hits `POST /auth/totp/login`, `log_auth_event(... LOGIN_BLOCKED_UNVERIFIED ...)` is called but the handler immediately raises `HTTPException` without `await db.commit()`. FastAPI rolls back the session on the exception, so the audit row is never persisted. Every other early-exit branch in the function commits before raising. MBK has the same gap.
-**Recommendation:** Add `await db.commit()` before the `raise HTTPException` on the `not user.is_verified` branch.
+**Open issues: 8 (Critical: 1 / High: 1 / Medium: 4 / Low: 2)**
 
 ---
 
@@ -61,7 +51,6 @@ ships broken; in fact it ships fully tested through backend + E2E layers.
 
 ---
 
-<<<<<<< HEAD
 ### [Security] TOTP login endpoint did not enforce email verification
 
 **Severity:** Critical (now fixed in this PR)
@@ -188,3 +177,24 @@ headers to all POST calls.
 expect.objectContaining({ email, password }))` to ignore the extra headers argument,
 or use `toHaveBeenLastCalledWith` with `expect.objectContaining`. Also investigate
 whether the `{ headers: {} }` is intentional or a regression in `@platform/ui`.
+
+---
+
+### [Frontend Tests] CompanyDetail.test.tsx — dual-React prevents full component render tests
+
+**Severity:** Medium
+**Effort:** S
+**Location:** `apps/myjobhunter/frontend/src/pages/__tests__/CompanyDetail.test.tsx`
+**Discovered:** PR fix/audit-perf-and-ux-cleanup — `2026-05-02`
+
+**Problem:** The CompanyDetail test for the server-side `?company_id=` filter cannot use
+full React component renders because `@platform/ui` components (`Badge`, `DataTable`) render
+through a different React instance than the test environment (pre-existing dual-React issue
+logged above). The behavioral contract tests (query args, response passthrough) were written
+as pure-JS assertions instead. Once the dual-React issue is resolved, these tests can be
+upgraded to full component renders to also verify the visual output.
+
+**Recommendation:** After fixing the React versioning issue (see "[Frontend Tests] React 18
+hoisted..." entry above), update `CompanyDetail.test.tsx` to use `render()` + `screen.getBy*`
+assertions to cover the full rendering path including the applications table and empty state copy.
+

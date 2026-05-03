@@ -43,6 +43,8 @@ class CompanyNotOwnedError(LookupError):
 async def list_applications(
     db: AsyncSession,
     user_id: uuid.UUID,
+    *,
+    company_id: uuid.UUID | None = None,
 ) -> list[ApplicationListItem]:
     """List a user's non-deleted applications with computed ``latest_status``.
 
@@ -51,8 +53,13 @@ async def list_applications(
     row. Returns ``ApplicationListItem`` instances (Pydantic) ready for
     serialization; the route handler can call ``.model_dump(mode='json')``
     directly without re-validating.
+
+    Optional ``company_id`` narrows results to a single company.  The filter
+    is passed through to the repository which applies it after user_id
+    scoping — no existence leak regardless of whether the company belongs to
+    this user.
     """
-    rows = await application_repository.list_with_status(db, user_id)
+    rows = await application_repository.list_with_status(db, user_id, company_id=company_id)
     return [
         ApplicationListItem.model_validate(app).model_copy(update={"latest_status": status})
         for app, status in rows

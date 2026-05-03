@@ -38,7 +38,10 @@ export default function CompanyDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data: company, isLoading, isError, error } = useGetCompanyQuery(id ?? "", { skip: !id });
-  const { data: applicationsData } = useListApplicationsQuery();
+  const { data: applicationsData } = useListApplicationsQuery(
+    id ? { company_id: id } : undefined,
+    { skip: !id },
+  );
   const [deleteCompany, { isLoading: deleting }] = useDeleteCompanyMutation();
 
   async function handleDelete() {
@@ -83,11 +86,9 @@ export default function CompanyDetail() {
     );
   }
 
-  // Filter applications that belong to this company (client-side; backend
-  // doesn't yet support ?company_id= filter on /applications).
-  const applicationsForCompany = (applicationsData?.items ?? []).filter(
-    (a) => a.company_id === company.id,
-  );
+  // Backend filters by ?company_id= so this list already contains only
+  // applications for this company. No client-side filter needed.
+  const applicationsForCompany = applicationsData?.items ?? [];
 
   return (
     <div className="p-6 max-w-3xl space-y-6">
