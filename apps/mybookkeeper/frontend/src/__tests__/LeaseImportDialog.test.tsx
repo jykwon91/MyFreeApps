@@ -40,6 +40,8 @@ vi.mock("@/shared/store/applicantsApi", () => ({
           contract_start: null,
           contract_end: null,
           stage: "lead",
+          tenant_ended_at: null,
+          tenant_ended_reason: null,
           created_at: "2026-05-01T00:00:00Z",
           updated_at: "2026-05-01T00:00:00Z",
         } satisfies ApplicantSummary,
