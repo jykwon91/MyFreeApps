@@ -81,12 +81,14 @@ function renderDrawer(isOpen = true) {
 // ---------------------------------------------------------------------------
 
 describe("ReviewQueueDrawer", () => {
+  function mockQuery(partial: { data?: ReviewQueueItem[]; isLoading?: boolean; isError?: boolean }) {
+    vi.mocked(useGetReviewQueueQuery).mockReturnValue(
+      partial as unknown as ReturnType<typeof useGetReviewQueueQuery>,
+    );
+  }
+
   beforeEach(() => {
-    vi.mocked(useGetReviewQueueQuery).mockReturnValue({
-      data: mockItems,
-      isLoading: false,
-      isError: false,
-    } as ReturnType<typeof useGetReviewQueueQuery>);
+    mockQuery({ data: mockItems, isLoading: false, isError: false });
   });
 
   it("renders nothing when closed", () => {
@@ -106,32 +108,20 @@ describe("ReviewQueueDrawer", () => {
   });
 
   it("renders a skeleton while loading", () => {
-    vi.mocked(useGetReviewQueueQuery).mockReturnValue({
-      data: undefined,
-      isLoading: true,
-      isError: false,
-    } as ReturnType<typeof useGetReviewQueueQuery>);
+    mockQuery({ data: undefined, isLoading: true, isError: false });
     renderDrawer();
     expect(screen.getByTestId("review-queue-skeleton")).toBeInTheDocument();
     expect(screen.queryByTestId("review-queue-item")).not.toBeInTheDocument();
   });
 
   it("shows empty state when queue is empty", () => {
-    vi.mocked(useGetReviewQueueQuery).mockReturnValue({
-      data: [],
-      isLoading: false,
-      isError: false,
-    } as ReturnType<typeof useGetReviewQueueQuery>);
+    mockQuery({ data: [], isLoading: false, isError: false });
     renderDrawer();
     expect(screen.getByText(/all clear/i)).toBeInTheDocument();
   });
 
   it("shows error message on fetch error", () => {
-    vi.mocked(useGetReviewQueueQuery).mockReturnValue({
-      data: undefined,
-      isLoading: false,
-      isError: true,
-    } as ReturnType<typeof useGetReviewQueueQuery>);
+    mockQuery({ data: undefined, isLoading: false, isError: true });
     renderDrawer();
     expect(screen.getByText(/couldn't load/i)).toBeInTheDocument();
   });

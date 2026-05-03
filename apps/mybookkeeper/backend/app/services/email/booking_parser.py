@@ -448,18 +448,17 @@ def _extract_date_range_from_subject(
         return None, None
 
     # Assume current or next year — heuristic for now.
-    from datetime import date as date_cls
-    year = date_cls.today().year
+    year = date.today().year
 
     def _make(month_abbr: str, day_str: str) -> date | None:
         month = _MONTHS.get(month_abbr.lower())
         if not month:
             return None
         try:
-            d = date_cls(year, int(month), int(day_str))
+            d = date(year, int(month), int(day_str))
             # If the date is in the past by more than a week, try next year.
-            if (date_cls.today() - d).days > 7:
-                d = date_cls(year + 1, int(month), int(day_str))
+            if (date.today() - d).days > 7:
+                d = date(year + 1, int(month), int(day_str))
             return d
         except ValueError:
             return None

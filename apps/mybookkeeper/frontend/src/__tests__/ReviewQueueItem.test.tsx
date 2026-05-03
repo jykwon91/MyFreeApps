@@ -90,15 +90,15 @@ describe("ReviewQueueItem", () => {
   beforeEach(() => {
     vi.mocked(useResolveQueueItemMutation).mockReturnValue([
       mockResolve,
-      { isLoading: false } as ReturnType<typeof useResolveQueueItemMutation>[1],
+      { isLoading: false } as unknown as ReturnType<typeof useResolveQueueItemMutation>[1],
     ]);
     vi.mocked(useIgnoreQueueItemMutation).mockReturnValue([
       mockIgnore,
-      { isLoading: false } as ReturnType<typeof useIgnoreQueueItemMutation>[1],
+      { isLoading: false } as unknown as ReturnType<typeof useIgnoreQueueItemMutation>[1],
     ]);
     vi.mocked(useDismissQueueItemMutation).mockReturnValue([
       mockDismiss,
-      { isLoading: false } as ReturnType<typeof useDismissQueueItemMutation>[1],
+      { isLoading: false } as unknown as ReturnType<typeof useDismissQueueItemMutation>[1],
     ]);
     mockResolve.mockClear();
     mockIgnore.mockClear();
@@ -142,16 +142,13 @@ describe("ReviewQueueItem", () => {
     expect(screen.getByTestId("review-queue-listing-select")).toBeInTheDocument();
   });
 
-  it("shows error when confirming without selecting a listing", async () => {
+  it("confirm button is disabled when no listing is selected", async () => {
     renderItem();
     fireEvent.click(screen.getByTestId("review-queue-add-btn"));
     await waitFor(() => screen.getByTestId("review-queue-resolve-panel"));
 
-    fireEvent.click(screen.getByTestId("review-queue-confirm-btn"));
-
-    await waitFor(() => {
-      expect(screen.getByTestId("review-queue-error")).toBeInTheDocument();
-    });
+    // Confirm is disabled until a listing is chosen — guards against accidental submit.
+    expect(screen.getByTestId("review-queue-confirm-btn")).toBeDisabled();
     expect(mockResolve).not.toHaveBeenCalled();
   });
 
