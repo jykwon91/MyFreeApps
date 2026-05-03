@@ -114,6 +114,7 @@ export default function App() {
               <Route path="applicants" element={<Applicants />} />
               <Route path="applicants/:applicantId" element={<ApplicantDetail />} />
               <Route path="tenants" element={<Tenants />} />
+              <Route path="tenants/:applicantId" element={<ApplicantDetail />} />
               <Route path="leases" element={<Leases />} />
               <Route path="leases/:leaseId" element={<LeaseDetail />} />
               <Route path="lease-templates" element={<LeaseTemplates />} />

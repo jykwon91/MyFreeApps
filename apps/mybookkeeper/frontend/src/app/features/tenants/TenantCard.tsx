@@ -17,7 +17,7 @@ export default function TenantCard({ tenant }: Props) {
 
   return (
     <Link
-      to={`/applicants/${tenant.id}`}
+      to={`/tenants/${tenant.id}`}
       data-testid={`tenant-card-${tenant.id}`}
       className="block border rounded-lg p-4 min-h-[44px] hover:bg-muted/50 transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
     >
