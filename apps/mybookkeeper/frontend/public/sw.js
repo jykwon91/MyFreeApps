@@ -1,3 +1,4 @@
+/* global self, caches */
 // Kill-switch service worker.
 //
 // vite-plugin-pwa was removed 2026-05-01 (see vite.config.ts comment for

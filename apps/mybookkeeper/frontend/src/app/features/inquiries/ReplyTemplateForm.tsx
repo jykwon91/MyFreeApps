@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Panel, { PanelCloseButton } from "@/shared/components/ui/Panel";
 import LoadingButton from "@/shared/components/ui/LoadingButton";
 import Button from "@/shared/components/ui/Button";
@@ -39,15 +39,18 @@ export default function ReplyTemplateForm({ template, onClose }: Props) {
   const [updateTemplate, { isLoading: isUpdating }] =
     useUpdateReplyTemplateMutation();
 
-  // If the parent swaps the ``template`` prop (e.g., the manager opens edit
-  // for a different template after first opening another), refresh the local
-  // form state. This is the documented React idiom for syncing form fields
-  // to a prop change.
-  // eslint-disable-next-line react-hooks/set-state-in-effect
+  // When the parent swaps the template prop (e.g., the manager opens edit for
+  // a different template after first opening another), refresh local form state.
+  // Tracking the previously-seen template id avoids re-setting on every render
+  // while still responding to genuine prop changes.
+  const prevTemplateIdRef = useRef(template?.id);
   useEffect(() => {
-    setName(template?.name ?? "");
-    setSubject(template?.subject_template ?? "");
-    setBody(template?.body_template ?? "");
+    if (template?.id !== prevTemplateIdRef.current) {
+      prevTemplateIdRef.current = template?.id;
+      setName(template?.name ?? "");
+      setSubject(template?.subject_template ?? "");
+      setBody(template?.body_template ?? "");
+    }
   }, [template]);
 
   const isEdit = template !== null;

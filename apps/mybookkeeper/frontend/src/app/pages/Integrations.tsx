@@ -58,15 +58,13 @@ export default function Integrations() {
   const isSyncing = latestLog?.status === "running";
 
   const savedLabel = (gmail?.metadata as Record<string, unknown> | null)?.gmail_label;
-  const [labelInput, setLabelInput] = useState("");
-  const [labelInitialized, setLabelInitialized] = useState(false);
+  // Track user edits as an override; fall back to the server value before any edit.
+  const [labelOverride, setLabelOverride] = useState<string | null>(null);
+  const labelInput = labelOverride ?? (typeof savedLabel === "string" ? savedLabel : "");
 
-  useEffect(() => {
-    if (!labelInitialized && gmail) {
-      setLabelInput(typeof savedLabel === "string" ? savedLabel : "");
-      setLabelInitialized(true);
-    }
-  }, [gmail, savedLabel, labelInitialized]);
+  function setLabelInput(value: string) {
+    setLabelOverride(value);
+  }
 
   const queueBySession = useMemo(() => {
     const map = new Map<number, EmailQueueItem[]>();
@@ -158,12 +156,12 @@ export default function Integrations() {
     [dismissItem, showError],
   );
 
-  const handleSaveLabel = useCallback(() => {
+  function handleSaveLabel() {
     updateGmailLabel({ label: labelInput.trim() })
       .unwrap()
       .then(() => showSuccess(labelInput.trim() ? `Got it, I'll only sync emails with the "${labelInput.trim()}" label` : "Label filter cleared - I'll sync all emails now"))
       .catch((err) => showError(`Couldn't save label: ${extractErrorMessage(err)}`));
-  }, [updateGmailLabel, labelInput, showSuccess, showError]);
+  }
 
   return (
     <main className="p-4 sm:p-8 space-y-6">

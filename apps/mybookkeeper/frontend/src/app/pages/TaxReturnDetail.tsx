@@ -16,12 +16,13 @@ import Button from "@/shared/components/ui/Button";
 import LoadingButton from "@/shared/components/ui/LoadingButton";
 import Badge from "@/shared/components/ui/Badge";
 import TaxReturnSkeleton from "@/app/features/tax/TaxReturnSkeleton";
-import FormOverviewGrid, { buildFormSummaries } from "@/app/features/tax/FormOverviewGrid";
+import FormOverviewGrid from "@/app/features/tax/FormOverviewGrid";
+import { buildFormSummaries } from "@/app/features/tax/form-summaries";
 import FormFieldsTable from "@/app/features/tax/FormFieldsTable";
 import ValidationPanel from "@/app/features/tax/ValidationPanel";
 import SourceDocumentsSection from "@/app/features/tax/SourceDocumentsSection";
 import TaxAdvisorPanel from "@/app/features/tax/TaxAdvisorPanel";
-import { getFormLabel } from "@/app/features/tax/FormNameLabel";
+import { getFormLabel } from "@/shared/lib/tax-config";
 import type { FieldValueType } from "@/shared/types/tax/tax-form";
 import { STATUS_BADGE } from "@/shared/lib/tax-return-config";
 

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams, Link, useNavigate } from "react-router-dom";
 import api from "@/shared/lib/api";
 import { extractErrorMessage } from "@/shared/utils/errorMessage";
@@ -9,8 +9,10 @@ const MIN_PASSWORD_LENGTH = 12;
 export default function ResetPassword() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const tokenRef = useRef(searchParams.get("token"));
-  const token = tokenRef.current;
+  // Capture the token from the URL once on mount using useState lazy initializer.
+  // window.history.replaceState below removes the token from the URL without
+  // triggering a re-render, so searchParams stays stable after the initial read.
+  const [token] = useState(() => searchParams.get("token"));
 
   // Clear token from URL to prevent leaking in browser history/referer
   useEffect(() => {

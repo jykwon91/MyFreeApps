@@ -1,11 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useGetCostThresholdsQuery, useUpdateCostThresholdsMutation } from "@/shared/store/costsApi";
+import type { CostThresholds } from "@/shared/types/admin/cost";
 import { useToast } from "@/shared/hooks/useToast";
 import Card from "@/shared/components/ui/Card";
 import LoadingButton from "@/shared/components/ui/LoadingButton";
 
+type ThresholdKey = keyof CostThresholds;
+
 interface ThresholdField {
-  key: string;
+  key: ThresholdKey;
   label: string;
   prefix?: string;
   suffix?: string;
@@ -25,31 +28,25 @@ export default function ThresholdSettings({ onSaved }: { onSaved?: () => void } 
   const { data: thresholds } = useGetCostThresholdsQuery();
   const [updateThresholds, { isLoading }] = useUpdateCostThresholdsMutation();
   const { showSuccess, showError } = useToast();
-  const [values, setValues] = useState<Record<string, string>>({});
-  const [dirty, setDirty] = useState(false);
+  // Track user edits as partial overrides; fall back to server values for unedited fields.
+  const [overrides, setOverrides] = useState<Record<string, string>>({});
+  const dirty = Object.keys(overrides).length > 0;
 
-  useEffect(() => {
-    if (thresholds) {
-      setValues({
-        daily_budget: String(thresholds.daily_budget),
-        monthly_budget: String(thresholds.monthly_budget),
-        per_user_daily_alert: String(thresholds.per_user_daily_alert),
-        input_rate_per_million: String(thresholds.input_rate_per_million),
-        output_rate_per_million: String(thresholds.output_rate_per_million),
-      });
-      setDirty(false);
-    }
-  }, [thresholds]);
+  // Merge server data with user overrides to get the current displayed values.
+  function getValue(key: ThresholdKey): string {
+    if (key in overrides) return overrides[key];
+    if (!thresholds) return "";
+    return String(thresholds[key]);
+  }
 
-  function handleChange(key: string, val: string) {
-    setValues((prev) => ({ ...prev, [key]: val }));
-    setDirty(true);
+  function handleChange(key: ThresholdKey, val: string) {
+    setOverrides((prev) => ({ ...prev, [key]: val }));
   }
 
   async function handleSave() {
-    const updates: Record<string, number> = {};
+    const updates: Partial<CostThresholds> = {};
     for (const field of FIELDS) {
-      const val = parseFloat(values[field.key] ?? "0");
+      const val = parseFloat(getValue(field.key));
       if (!isNaN(val) && val >= 0) {
         updates[field.key] = val;
       }
@@ -57,7 +54,7 @@ export default function ThresholdSettings({ onSaved }: { onSaved?: () => void } 
     try {
       await updateThresholds(updates).unwrap();
       showSuccess("Thresholds updated");
-      setDirty(false);
+      setOverrides({});
       onSaved?.();
     } catch {
       showError("Couldn't update thresholds");
@@ -82,7 +79,7 @@ export default function ThresholdSettings({ onSaved }: { onSaved?: () => void } 
                 min="0"
                 max={field.max}
                 step={field.step}
-                value={values[field.key] ?? ""}
+                value={getValue(field.key)}
                 onChange={(e) => handleChange(field.key, e.target.value)}
                 className="w-24 border rounded-md px-2 py-1.5 text-sm bg-background"
               />
@@ -93,7 +90,7 @@ export default function ThresholdSettings({ onSaved }: { onSaved?: () => void } 
               min="0"
               max={field.max}
               step={field.step}
-              value={parseFloat(values[field.key] ?? "0") || 0}
+              value={parseFloat(getValue(field.key)) || 0}
               onChange={(e) => handleChange(field.key, e.target.value)}
               className="w-full mt-2 accent-primary"
               aria-label={`${field.label} slider`}

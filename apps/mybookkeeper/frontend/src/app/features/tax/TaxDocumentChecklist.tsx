@@ -1,6 +1,6 @@
 import { CheckCircle2, AlertCircle, Upload } from "lucide-react";
 import { Link } from "react-router-dom";
-import { getFormLabel } from "@/app/features/tax/FormNameLabel";
+import { getFormLabel } from "@/shared/lib/tax-config";
 import Badge from "@/shared/components/ui/Badge";
 import type { ChecklistItem } from "@/shared/types/tax/source-document";
 
