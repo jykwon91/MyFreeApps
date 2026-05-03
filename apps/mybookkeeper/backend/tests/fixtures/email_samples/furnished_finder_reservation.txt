@@ -1,0 +1,14 @@
+Subject: New Booking Request - Sarah Johnson (Jul 1 - Jul 31)
+From: noreply@furnishedfinder.com
+
+Hi Jason,
+
+You have a new booking request from Furnished Finder!
+
+Tenant: Sarah Johnson
+Property: 2BR Apartment - Downtown (#FF-789012)
+Move-in: July 1, 2026
+Move-out: July 31, 2026
+Monthly rent: $2,200.00
+
+Please log in to your Furnished Finder dashboard to accept or decline this request.

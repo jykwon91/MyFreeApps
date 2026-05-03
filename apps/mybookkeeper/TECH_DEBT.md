@@ -23,9 +23,9 @@
 
 ### [Frontend tests] Pre-existing frontend unit test failures unrelated to Gmail-disconnect PR
 **Effort:** M
-**Location:** frontend/src/__tests__/DocumentUploadZone.test.tsx, DrillDownPanel.test.tsx, InviteAccept.test.tsx, PendingInvites.test.tsx, Documents.test.tsx, Transactions.test.tsx, useDashboardFilter.test.ts
-**Problem:** 43 unit tests across 8 files fail on main (e.g. `useMediaQuery` hook crashes during render, `filterState.selectedCategories.size` returns 4 instead of 1). Discovered during Gmail-disconnect PR validation — all failures reproduce on main before any new commits, so they were introduced in a prior merge.
-**Recommendation:** Triage in a dedicated session. The `DocumentUploadZone` failures all trace to `useMediaQuery` mounting during test render; likely needs a jsdom matchMedia polyfill or a mock in conftest.
+**Location:** frontend/src/__tests__/DocumentUploadZone.test.tsx, DrillDownPanel.test.tsx, InviteAccept.test.tsx, PendingInvites.test.tsx, Documents.test.tsx, Transactions.test.tsx, useDashboardFilter.test.ts, ApplicantDetail.test.tsx, ListingDetail.test.tsx
+**Problem:** 52 unit tests across 9 files fail on main (e.g. `useMediaQuery` hook crashes during render, `filterState.selectedCategories.size` returns 4 instead of 1; `ApplicantSummary` type missing `tenant_ended_at`/`tenant_ended_reason` fields in test mocks). Discovered during Gmail-disconnect PR validation — all failures reproduce on main before any new commits, so they were introduced in a prior merge.
+**Recommendation:** Triage in a dedicated session. The `DocumentUploadZone` failures all trace to `useMediaQuery` mounting during test render; likely needs a jsdom matchMedia polyfill or a mock in conftest. The `ApplicantDetail` and `ListingDetail` failures trace to outdated test mock data not including fields added in PR #187 (tenant lifecycle).
 
 ---
 
@@ -46,7 +46,6 @@
 ---
 
 ### [Leases] LeaseGenerateForm not yet integrated into any app route
-
 **Effort:** M
 **Location:** `apps/mybookkeeper/frontend/src/app/features/leases/LeaseGenerateForm.tsx`
 **Problem:** `LeaseGenerateForm` (originally from PR #175, enhanced in PR #185) is a standalone component with no consuming page route. The `GET /lease-templates/{id}/generate-defaults` endpoint exists and is tested, but the end-to-end flow (applicant selector + template picker + form) has no UI entry point yet. E2E tests cover the API layer only; UI-level E2E tests are blocked until the page is wired up.
@@ -57,7 +56,7 @@
 ### [Auth] test_totp_enable_creates_event fails on main (pre-existing)
 **Effort:** S
 **Location:** `apps/mybookkeeper/backend/tests/test_auth_events_integration.py::test_totp_enable_creates_event`
-**Problem:** `POST /auth/totp/verify` returns 400 in this integration test. The test encrypts a TOTP secret, generates a valid TOTP code, and verifies — but the backend rejects the code. Likely a timing window (TOTP codes expire every 30s and the test may be running near a boundary) or the encrypted secret being decoded differently than expected in the test environment. Confirmed pre-existing on main before Phase 2 work.
+**Problem:** `POST /auth/totp/verify` returns 400 in this integration test. The test encrypts a TOTP secret, generates a valid TOTP code, and verifies — but the backend rejects the code. Likely a timing window (TOTP codes expire every 30s and the test may be running near a boundary) or the encrypted secret being decoded differently than expected in the test environment. Worth re-checking after PR #191 (TOTP SHA-256 migration) — the algorithm column may interact with the test fixture.
 **Recommendation:** Investigate whether the test needs to use `pyotp.TOTP(secret).at(dt.datetime.now(), 0)` + the ±1 window the backend allows, or whether the TOTP verify endpoint's clock drift tolerance differs between local and CI.
 
 ---

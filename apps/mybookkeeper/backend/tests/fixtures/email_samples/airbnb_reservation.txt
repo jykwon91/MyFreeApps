@@ -1,0 +1,17 @@
+Subject: Reservation confirmed - John Smith (Jun 5 - Jun 10)
+From: automated@airbnb.com
+
+Hi Jason,
+
+You have a new reservation!
+
+Guest: John Smith
+Listing: Master Bedroom (#12345678)
+Check-in: June 5, 2026
+Check-out: June 10, 2026
+Duration: 5 nights
+Total payout: $425.00
+
+Reservation code: HMABCD123
+
+View reservation details at: https://www.airbnb.com/hosting/reservations/details/HMABCD123

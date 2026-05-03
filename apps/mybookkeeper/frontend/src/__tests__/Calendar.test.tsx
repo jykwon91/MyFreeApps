@@ -101,6 +101,11 @@ const defaultEventsState: QueryState<CalendarEvent[]> = {
 
 vi.mock("@/shared/store/calendarApi", () => ({
   useGetCalendarEventsQuery: vi.fn(() => defaultEventsState),
+  useGetReviewQueueCountQuery: vi.fn(() => ({ data: 0 })),
+  useGetReviewQueueQuery: vi.fn(() => ({ data: [], isLoading: false, isError: false })),
+  useResolveQueueItemMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useIgnoreQueueItemMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useDismissQueueItemMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
 }));
 
 vi.mock("@/shared/store/propertiesApi", () => ({

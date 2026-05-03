@@ -3,6 +3,11 @@ import type { CalendarEvent } from "@/shared/types/calendar/calendar-event";
 import type { CalendarEventsArgs } from "@/shared/types/calendar/calendar-events-args";
 import type { ListingBlackoutAttachment } from "@/shared/types/listing/listing-blackout-attachment";
 import type { BlackoutUpdateRequest } from "@/shared/types/listing/blackout-update-request";
+import type { ReviewQueueItem } from "@/shared/types/calendar/review-queue-item";
+import type {
+  ResolveQueueItemRequest,
+  IgnoreQueueItemRequest,
+} from "@/shared/types/calendar/review-queue-requests";
 
 /**
  * Unified calendar viewer API.
@@ -90,6 +95,62 @@ const calendarApi = baseApi.injectEndpoints({
         { type: "BlackoutAttachments", id: blackoutId },
       ],
     }),
+
+    // -----------------------------------------------------------------------
+    // Phase 2 — booking review queue
+    // -----------------------------------------------------------------------
+
+    getReviewQueue: builder.query<ReviewQueueItem[], void>({
+      query: () => ({ url: "/calendar/review-queue" }),
+      providesTags: [{ type: "ReviewQueue", id: "LIST" }],
+    }),
+
+    getReviewQueueCount: builder.query<number, void>({
+      query: () => ({ url: "/calendar/review-queue/count" }),
+      providesTags: [{ type: "ReviewQueue", id: "COUNT" }],
+    }),
+
+    resolveQueueItem: builder.mutation<
+      ReviewQueueItem,
+      { itemId: string; body: ResolveQueueItemRequest }
+    >({
+      query: ({ itemId, body }) => ({
+        url: `/calendar/review-queue/${itemId}/resolve`,
+        method: "POST",
+        data: body,
+      }),
+      invalidatesTags: [
+        { type: "ReviewQueue", id: "LIST" },
+        { type: "ReviewQueue", id: "COUNT" },
+        { type: "Calendar", id: "LIST" },
+      ],
+    }),
+
+    ignoreQueueItem: builder.mutation<
+      ReviewQueueItem,
+      { itemId: string; body: IgnoreQueueItemRequest }
+    >({
+      query: ({ itemId, body }) => ({
+        url: `/calendar/review-queue/${itemId}/ignore`,
+        method: "POST",
+        data: body,
+      }),
+      invalidatesTags: [
+        { type: "ReviewQueue", id: "LIST" },
+        { type: "ReviewQueue", id: "COUNT" },
+      ],
+    }),
+
+    dismissQueueItem: builder.mutation<void, string>({
+      query: (itemId) => ({
+        url: `/calendar/review-queue/${itemId}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: [
+        { type: "ReviewQueue", id: "LIST" },
+        { type: "ReviewQueue", id: "COUNT" },
+      ],
+    }),
   }),
 });
 
@@ -99,4 +160,9 @@ export const {
   useGetBlackoutAttachmentsQuery,
   useUploadBlackoutAttachmentMutation,
   useDeleteBlackoutAttachmentMutation,
+  useGetReviewQueueQuery,
+  useGetReviewQueueCountQuery,
+  useResolveQueueItemMutation,
+  useIgnoreQueueItemMutation,
+  useDismissQueueItemMutation,
 } = calendarApi;
