@@ -9,6 +9,8 @@ export const NAV: readonly NavItem[] = [
   { to: "/calendar", label: "Calendar" },
   { to: "/inquiries", label: "Inquiries" },
   { to: "/applicants", label: "Applicants" },
+  { to: "/leases", label: "Leases" },
+  { to: "/lease-templates", label: "Lease Templates" },
   { to: "/vendors", label: "Vendors" },
   { to: "/reconciliation", label: "Reconciliation" },
   { to: "/tax", label: "Tax Report" },

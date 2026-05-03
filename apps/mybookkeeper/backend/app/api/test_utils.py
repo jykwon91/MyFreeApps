@@ -505,3 +505,129 @@ async def delete_vendor(
             organization_id=ctx.organization_id,
             user_id=ctx.user_id,
         )
+
+
+# ---------------------------------------------------------------------------
+# Lease Templates / Signed Leases — E2E seed + cleanup helpers (Phase 1)
+# ---------------------------------------------------------------------------
+
+class _SeedLeaseTemplateRequest(BaseModel):
+    name: str = "E2E Lease Template"
+    description: str | None = None
+    # Source text for placeholder extraction. Defaults to a small sample
+    # that exercises the common placeholder set.
+    source_text: str = (
+        "LEASE AGREEMENT\n\n"
+        "This Lease is entered into on [EFFECTIVE DATE] between Landlord and "
+        "[TENANT FULL NAME] (\"Tenant\").\n\n"
+        "Tenant Email: [TENANT EMAIL]\n"
+        "Term: [NUMBER OF DAYS] days, beginning [MOVE-IN DATE] and "
+        "ending [MOVE-OUT DATE].\n"
+    )
+
+
+class _SeedLeaseTemplateResponse(BaseModel):
+    id: uuid.UUID
+
+
+@router.post("/seed-lease-template", response_model=_SeedLeaseTemplateResponse)
+async def seed_lease_template(
+    payload: _SeedLeaseTemplateRequest,
+    ctx: RequestContext = Depends(current_org_member),
+) -> _SeedLeaseTemplateResponse:
+    """Test-only direct insert for E2E lease-template seeding.
+
+    Bypasses MinIO upload — writes a single in-memory template_file row
+    pointing at a fake storage_key. The E2E flow that exercises the upload
+    pipeline uses the real ``POST /lease-templates`` endpoint via the UI.
+    """
+    _require_test_mode()
+    from app.repositories.leases import (
+        lease_template_file_repo,
+        lease_template_placeholder_repo,
+        lease_template_repo,
+    )
+    from app.services.leases.default_source_map import (
+        guess_display_label,
+        guess_input_type_and_default,
+    )
+    from app.services.leases.placeholder_extractor import extract_placeholder_keys
+
+    async with unit_of_work() as db:
+        template = await lease_template_repo.create(
+            db,
+            user_id=ctx.user_id,
+            organization_id=ctx.organization_id,
+            name=payload.name,
+            description=payload.description,
+        )
+        await lease_template_file_repo.create(
+            db,
+            template_id=template.id,
+            filename="seed.md",
+            storage_key=f"lease-templates/{template.id}/seed",
+            content_type="text/markdown",
+            size_bytes=len(payload.source_text),
+            display_order=0,
+        )
+        keys = extract_placeholder_keys(payload.source_text)
+        for order, key in enumerate(keys):
+            input_type, default_source = guess_input_type_and_default(key)
+            await lease_template_placeholder_repo.create(
+                db,
+                template_id=template.id,
+                key=key,
+                display_label=guess_display_label(key),
+                input_type=input_type,
+                required=True,
+                default_source=default_source,
+                computed_expr=None,
+                display_order=order,
+            )
+        return _SeedLeaseTemplateResponse(id=template.id)
+
+
+@router.delete("/lease-templates/{template_id}", status_code=204)
+async def hard_delete_lease_template(
+    template_id: uuid.UUID,
+    ctx: RequestContext = Depends(current_org_member),
+) -> None:
+    """Hard-delete a lease template (cascades files / placeholders). Test-only."""
+    _require_test_mode()
+    from app.models.leases.lease_template import LeaseTemplate
+    from app.repositories.leases import lease_template_repo
+
+    async with unit_of_work() as db:
+        existing = await lease_template_repo.get(
+            db,
+            template_id=template_id,
+            user_id=ctx.user_id,
+            organization_id=ctx.organization_id,
+            include_deleted=True,
+        )
+        if existing is None:
+            return
+        await db.execute(_sa_delete(LeaseTemplate).where(LeaseTemplate.id == template_id))
+
+
+@router.delete("/signed-leases/{lease_id}", status_code=204)
+async def hard_delete_signed_lease(
+    lease_id: uuid.UUID,
+    ctx: RequestContext = Depends(current_org_member),
+) -> None:
+    """Hard-delete a signed lease (cascades attachments). Test-only."""
+    _require_test_mode()
+    from app.models.leases.signed_lease import SignedLease
+    from app.repositories.leases import signed_lease_repo
+
+    async with unit_of_work() as db:
+        existing = await signed_lease_repo.get(
+            db,
+            lease_id=lease_id,
+            user_id=ctx.user_id,
+            organization_id=ctx.organization_id,
+            include_deleted=True,
+        )
+        if existing is None:
+            return
+        await db.execute(_sa_delete(SignedLease).where(SignedLease.id == lease_id))
