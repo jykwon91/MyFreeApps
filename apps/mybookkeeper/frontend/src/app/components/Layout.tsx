@@ -4,7 +4,8 @@ import PageErrorBoundary from "@/shared/components/PageErrorBoundary";
 import { Menu, Settings, X, LogOut, ChevronUp } from "lucide-react";
 import { logout } from "@/shared/lib/auth";
 import { cn } from "@/shared/utils/cn";
-import { NAV } from "@/app/lib/nav";
+import { NAV_GROUPS } from "@/app/lib/nav";
+import type { NavItem } from "@/shared/lib/constants";
 import { useCurrentUser } from "@/shared/hooks/useCurrentUser";
 import { useIsOrgAdmin } from "@/shared/hooks/useOrgRole";
 import ThemeToggle from "@/shared/components/ThemeToggle";
@@ -38,13 +39,15 @@ export default function Layout() {
       isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted",
     );
 
-  const filteredNav = NAV.filter(
-    (item) => {
-      if (item.roles && (!user || !item.roles.includes(user.role))) return false;
-      if (item.orgAdmin && !isOrgAdmin) return false;
-      return true;
-    },
-  );
+  const itemAllowed = (item: NavItem): boolean => {
+    if (item.roles && (!user || !item.roles.includes(user.role))) return false;
+    if (item.orgAdmin && !isOrgAdmin) return false;
+    return true;
+  };
+
+  const filteredGroups = NAV_GROUPS
+    .map((g) => ({ ...g, items: g.items.filter(itemAllowed) }))
+    .filter((g) => g.items.length > 0);
 
   return (
     <div className="min-h-screen flex md:h-screen md:overflow-hidden">
@@ -81,17 +84,26 @@ export default function Layout() {
           </div>
           <OrgSwitcher />
         </div>
-        <nav className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 py-4 space-y-1">
-          {filteredNav.map(({ to, label }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={to === "/"}
-              onClick={() => setSidebarOpen(false)}
-              className={navLinkClass}
-            >
-              {label}
-            </NavLink>
+        <nav className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 py-4 space-y-4">
+          {filteredGroups.map((group, idx) => (
+            <div key={group.label ?? `group-${idx}`} className="space-y-1">
+              {group.label ? (
+                <div className="px-3 pt-1 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                  {group.label}
+                </div>
+              ) : null}
+              {group.items.map(({ to, label }) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  end={to === "/"}
+                  onClick={() => setSidebarOpen(false)}
+                  className={navLinkClass}
+                >
+                  {label}
+                </NavLink>
+              ))}
+            </div>
           ))}
         </nav>
         <div className="px-3 py-3 border-t space-y-2">

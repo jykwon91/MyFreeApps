@@ -9,7 +9,9 @@ interface Props {
 
 /**
  * Desktop table row for the Tenants list. Click anywhere navigates to the
- * applicant detail page (tenants are applicants at lease_signed stage).
+ * tenant detail page (same component as ApplicantDetail; the URL is
+ * `/tenants/:id` so the breadcrumb context stays "tenant" rather than
+ * jumping the user back to /applicants).
  */
 export default function TenantRow({ tenant }: Props) {
   const navigate = useNavigate();
@@ -20,7 +22,7 @@ export default function TenantRow({ tenant }: Props) {
   return (
     <tr
       data-testid={`tenant-row-${tenant.id}`}
-      onClick={() => navigate(`/applicants/${tenant.id}`)}
+      onClick={() => navigate(`/tenants/${tenant.id}`)}
       className="border-t cursor-pointer hover:bg-muted/30 transition-colors"
     >
       <td className="px-4 py-3 font-medium">{legalName}</td>

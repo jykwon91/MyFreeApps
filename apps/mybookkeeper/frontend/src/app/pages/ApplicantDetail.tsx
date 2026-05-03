@@ -1,5 +1,7 @@
-import { Link, useParams } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
 import { ArrowLeft, ExternalLink } from "lucide-react";
+import { useGetSignedLeasesQuery } from "@/shared/store/signedLeasesApi";
+import LinkedLeaseCard from "@/app/features/applicants/LinkedLeaseCard";
 import EndTenancyDialog from "@/app/features/tenants/EndTenancyDialog";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import AlertBox from "@/shared/components/ui/AlertBox";
@@ -25,6 +27,8 @@ import { useState } from "react";
 
 export default function ApplicantDetail() {
   const { applicantId } = useParams<{ applicantId: string }>();
+  const location = useLocation();
+  const isTenantContext = location.pathname.startsWith("/tenants/");
   const canWrite = useCanWrite();
   const [endTenancyOpen, setEndTenancyOpen] = useState(false);
   const [restartTenancy, { isLoading: isRestarting }] = useRestartTenancyMutation();
@@ -35,15 +39,20 @@ export default function ApplicantDetail() {
     isError,
     refetch,
   } = useGetApplicantByIdQuery(applicantId ?? "", { skip: !applicantId });
+  const { data: leasesResponse } = useGetSignedLeasesQuery(
+    { applicant_id: applicantId },
+    { skip: !applicantId },
+  );
+  const linkedLeases = leasesResponse?.items ?? [];
 
   return (
     <main className="p-4 sm:p-8 space-y-6 max-w-3xl">
       <Link
-        to="/applicants"
+        to={isTenantContext ? "/tenants" : "/applicants"}
         className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground min-h-[44px]"
       >
         <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-        Back to applicants
+        Back to {isTenantContext ? "tenants" : "applicants"}
       </Link>
 
       {isError ? (
@@ -151,6 +160,22 @@ export default function ApplicantDetail() {
               tenantName={applicant.legal_name ?? "this tenant"}
               onClose={() => setEndTenancyOpen(false)}
             />
+          ) : null}
+
+          {linkedLeases.length > 0 ? (
+            <section
+              className="border rounded-lg p-4 space-y-3"
+              data-testid="linked-leases-section"
+            >
+              <h2 className="text-sm font-medium">Leases</h2>
+              <ul className="space-y-2">
+                {linkedLeases.map((lease) => (
+                  <li key={lease.id}>
+                    <LinkedLeaseCard lease={lease} />
+                  </li>
+                ))}
+              </ul>
+            </section>
           ) : null}
 
           {/* Contract dates */}
