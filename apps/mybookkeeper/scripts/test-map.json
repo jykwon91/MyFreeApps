@@ -551,17 +551,29 @@
         "test_lease_renderer.py",
         "test_lease_template_repo.py",
         "test_lease_templates_api.py",
+<<<<<<< HEAD
         "test_lease_import_api.py",
         "test_lease_import_heuristic.py"
+=======
+        "test_default_source_resolver.py"
+>>>>>>> a18f113 (feat(mybookkeeper/leases): auto-pull placeholder values from applicant + inquiry fallback)
       ],
       "frontend_tests": [
         "SignedLeaseStatusBadge.test.tsx",
         "PlaceholderSpecEditor.test.tsx",
+<<<<<<< HEAD
         "LeaseImportDialog.test.tsx"
       ],
       "e2e_specs": [
         "lease-templates.spec.ts",
         "lease-import.spec.ts"
+=======
+        "LeaseGenerateForm.test.tsx"
+      ],
+      "e2e_specs": [
+        "lease-templates.spec.ts",
+        "lease-generate-defaults.spec.ts"
+>>>>>>> a18f113 (feat(mybookkeeper/leases): auto-pull placeholder values from applicant + inquiry fallback)
       ]
     },
     "screening": {

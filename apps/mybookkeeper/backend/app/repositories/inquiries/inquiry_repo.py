@@ -363,3 +363,26 @@ async def find_by_source_and_external_id(
         )
     )
     return result.scalar_one_or_none()
+
+
+async def get_by_applicant_inquiry_id(
+    db: AsyncSession,
+    inquiry_id: uuid.UUID,
+    organization_id: uuid.UUID,
+    user_id: uuid.UUID,
+) -> Inquiry | None:
+    """Return the inquiry linked from an applicant's ``inquiry_id``.
+
+    Scoped by both ``organization_id`` and ``user_id`` — dual tenant check
+    per the project's multi-tenant isolation pattern. Returns ``None`` if the
+    inquiry is soft-deleted or belongs to a different tenant.
+    """
+    result = await db.execute(
+        select(Inquiry).where(
+            Inquiry.id == inquiry_id,
+            Inquiry.organization_id == organization_id,
+            Inquiry.user_id == user_id,
+            Inquiry.deleted_at.is_(None),
+        )
+    )
+    return result.scalar_one_or_none()

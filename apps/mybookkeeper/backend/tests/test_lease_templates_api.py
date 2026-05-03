@@ -202,6 +202,158 @@ class TestUpdatePlaceholder:
         finally:
             app.dependency_overrides.clear()
 
+    def test_invalid_default_source_returns_422(self) -> None:
+        """An arbitrary default_source string must be rejected with 422."""
+        org_id, user_id = uuid.uuid4(), uuid.uuid4()
+        template_id, placeholder_id = uuid.uuid4(), uuid.uuid4()
+
+        from app.services.leases.lease_template_service import (
+            InvalidDefaultSourceError,
+        )
+
+        app.dependency_overrides[require_write_access] = lambda: _ctx(org_id, user_id)
+        try:
+            with patch(
+                "app.api.lease_templates.lease_template_service.update_placeholder",
+                side_effect=InvalidDefaultSourceError(
+                    "Invalid default_source segment 'foo.bar'",
+                ),
+            ):
+                client = TestClient(app)
+                resp = client.patch(
+                    f"/lease-templates/{template_id}/placeholders/{placeholder_id}",
+                    json={"default_source": "foo.bar"},
+                )
+            assert resp.status_code == 422
+        finally:
+            app.dependency_overrides.clear()
+
+    def test_valid_pipe_chain_default_source_accepted(self) -> None:
+        """A valid || chain must reach the service (no early rejection)."""
+        org_id, user_id = uuid.uuid4(), uuid.uuid4()
+        template_id, placeholder_id = uuid.uuid4(), uuid.uuid4()
+
+        import datetime as _dt
+        from app.schemas.leases.lease_template_placeholder_response import (
+            LeaseTemplatePlaceholderResponse,
+        )
+
+        app.dependency_overrides[require_write_access] = lambda: _ctx(org_id, user_id)
+        try:
+            mock_resp = LeaseTemplatePlaceholderResponse(
+                id=placeholder_id,
+                template_id=template_id,
+                key="TENANT FULL NAME",
+                display_label="Tenant full name",
+                input_type="text",
+                required=True,
+                default_source="applicant.legal_name || inquiry.inquirer_name",
+                computed_expr=None,
+                display_order=0,
+                created_at=_dt.datetime.now(_dt.timezone.utc),
+                updated_at=_dt.datetime.now(_dt.timezone.utc),
+            )
+            with patch(
+                "app.api.lease_templates.lease_template_service.update_placeholder",
+                return_value=mock_resp,
+            ):
+                client = TestClient(app)
+                resp = client.patch(
+                    f"/lease-templates/{template_id}/placeholders/{placeholder_id}",
+                    json={
+                        "default_source": "applicant.legal_name || inquiry.inquirer_name"
+                    },
+                )
+            assert resp.status_code == 200
+            assert (
+                resp.json()["default_source"]
+                == "applicant.legal_name || inquiry.inquirer_name"
+            )
+        finally:
+            app.dependency_overrides.clear()
+
+
+# ---------------------------------------------------------------------------
+# GET /lease-templates/{id}/generate-defaults
+# ---------------------------------------------------------------------------
+
+class TestGetGenerateDefaults:
+    def test_happy_path_returns_defaults_list(self) -> None:
+        org_id, user_id = uuid.uuid4(), uuid.uuid4()
+        template_id, applicant_id = uuid.uuid4(), uuid.uuid4()
+
+        from app.schemas.leases.generate_defaults_response import (
+            GenerateDefaultsResponse,
+            PlaceholderDefault,
+        )
+
+        app.dependency_overrides[current_org_member] = lambda: _ctx(org_id, user_id)
+        try:
+            mock_defaults = [
+                {"key": "TENANT FULL NAME", "value": "Jane Doe", "provenance": "applicant"},
+                {"key": "TENANT EMAIL", "value": None, "provenance": None},
+            ]
+            with patch(
+                "app.api.lease_templates.lease_template_service.generate_defaults",
+                return_value=mock_defaults,
+            ):
+                client = TestClient(app)
+                resp = client.get(
+                    f"/lease-templates/{template_id}/generate-defaults",
+                    params={"applicant_id": str(applicant_id)},
+                )
+            assert resp.status_code == 200
+            body = resp.json()
+            assert len(body["defaults"]) == 2
+            assert body["defaults"][0]["key"] == "TENANT FULL NAME"
+            assert body["defaults"][0]["value"] == "Jane Doe"
+            assert body["defaults"][0]["provenance"] == "applicant"
+            assert body["defaults"][1]["value"] is None
+        finally:
+            app.dependency_overrides.clear()
+
+    def test_template_not_found_returns_404(self) -> None:
+        org_id, user_id = uuid.uuid4(), uuid.uuid4()
+        template_id, applicant_id = uuid.uuid4(), uuid.uuid4()
+
+        from app.services.leases.lease_template_service import TemplateNotFoundError
+
+        app.dependency_overrides[current_org_member] = lambda: _ctx(org_id, user_id)
+        try:
+            with patch(
+                "app.api.lease_templates.lease_template_service.generate_defaults",
+                side_effect=TemplateNotFoundError("not found"),
+            ):
+                client = TestClient(app)
+                resp = client.get(
+                    f"/lease-templates/{template_id}/generate-defaults",
+                    params={"applicant_id": str(applicant_id)},
+                )
+            assert resp.status_code == 404
+        finally:
+            app.dependency_overrides.clear()
+
+    def test_applicant_not_found_returns_404(self) -> None:
+        org_id, user_id = uuid.uuid4(), uuid.uuid4()
+        template_id, applicant_id = uuid.uuid4(), uuid.uuid4()
+
+        from app.services.leases.lease_template_service import ApplicantNotFoundError
+
+        app.dependency_overrides[current_org_member] = lambda: _ctx(org_id, user_id)
+        try:
+            with patch(
+                "app.api.lease_templates.lease_template_service.generate_defaults",
+                side_effect=ApplicantNotFoundError("not found"),
+            ):
+                client = TestClient(app)
+                resp = client.get(
+                    f"/lease-templates/{template_id}/generate-defaults",
+                    params={"applicant_id": str(applicant_id)},
+                )
+            assert resp.status_code == 404
+        finally:
+            app.dependency_overrides.clear()
+
 
 # ---------------------------------------------------------------------------
 # POST /signed-leases/{id}/generate

@@ -15,6 +15,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Respon
 
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member, require_write_access
+from app.schemas.leases.generate_defaults_response import GenerateDefaultsResponse
 from app.schemas.leases.lease_template_list_response import (
     LeaseTemplateListResponse,
 )
@@ -132,6 +133,41 @@ async def update_placeholder(
         raise HTTPException(status_code=404, detail="Placeholder not found") from exc
     except lease_template_service.InvalidComputedExprError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except lease_template_service.InvalidDefaultSourceError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.get(
+    "/{template_id}/generate-defaults",
+    response_model=GenerateDefaultsResponse,
+)
+async def get_generate_defaults(
+    template_id: uuid.UUID,
+    applicant_id: uuid.UUID = Query(...),
+    ctx: RequestContext = Depends(current_org_member),
+) -> GenerateDefaultsResponse:
+    """Return resolved default values for each placeholder given an applicant.
+
+    Evaluates each placeholder's ``default_source`` spec against the applicant
+    and (if linked) the applicant's inquiry. Returns the resolved value and
+    provenance so the frontend can pre-fill the generate form and show
+    provenance badges.
+    """
+    try:
+        defaults = await lease_template_service.generate_defaults(
+            user_id=ctx.user_id,
+            organization_id=ctx.organization_id,
+            template_id=template_id,
+            applicant_id=applicant_id,
+        )
+        from app.schemas.leases.generate_defaults_response import PlaceholderDefault
+        return GenerateDefaultsResponse(
+            defaults=[PlaceholderDefault(**d) for d in defaults]
+        )
+    except lease_template_service.TemplateNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Template not found") from exc
+    except lease_template_service.ApplicantNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Applicant not found") from exc
 
 
 @router.delete("/{template_id}", status_code=204)

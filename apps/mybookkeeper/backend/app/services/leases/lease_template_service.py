@@ -21,6 +21,8 @@ import uuid
 from app.core.config import settings
 from app.core.storage import StorageClient, get_storage
 from app.db.session import unit_of_work
+from app.repositories.applicants import applicant_repo
+from app.repositories.inquiries.inquiry_repo import get_by_applicant_inquiry_id
 from app.repositories.leases import (
     lease_template_file_repo,
     lease_template_placeholder_repo,
@@ -45,6 +47,10 @@ from app.services.leases.computed import ComputedExprError, validate_expr
 from app.services.leases.default_source_map import (
     guess_display_label,
     guess_input_type_and_default,
+)
+from app.services.leases.default_source_resolver import (
+    resolve_default_source,
+    validate_default_source_spec,
 )
 from app.services.leases.placeholder_extractor import (
     extract_placeholders_across_files,
@@ -94,7 +100,15 @@ class InvalidComputedExprError(ValueError):
     pass
 
 
+class InvalidDefaultSourceError(ValueError):
+    pass
+
+
 class PlaceholderNotFoundError(LookupError):
+    pass
+
+
+class ApplicantNotFoundError(LookupError):
     pass
 
 
@@ -371,6 +385,81 @@ async def get_template(
 
 
 # ---------------------------------------------------------------------------
+# Resolve generate-defaults for a template + applicant pair
+# ---------------------------------------------------------------------------
+
+async def generate_defaults(
+    *,
+    user_id: uuid.UUID,
+    organization_id: uuid.UUID,
+    template_id: uuid.UUID,
+    applicant_id: uuid.UUID,
+) -> list[dict]:
+    """Return resolved default values for each placeholder in a template.
+
+    For each placeholder with a ``default_source`` spec, evaluates the spec
+    against the applicant row and (if the applicant has a linked inquiry) the
+    inquiry row. Returns a list of dicts with ``key``, ``value``, and
+    ``provenance`` fields.
+
+    Placeholders without ``default_source`` are included with ``value=None``
+    and ``provenance=None`` so the frontend can render all fields in one pass.
+    """
+    async with unit_of_work() as db:
+        # Validate template belongs to caller.
+        template = await lease_template_repo.get(
+            db,
+            template_id=template_id,
+            user_id=user_id,
+            organization_id=organization_id,
+        )
+        if template is None:
+            raise TemplateNotFoundError(f"Template {template_id} not found")
+
+        # Validate applicant belongs to caller.
+        applicant = await applicant_repo.get(
+            db,
+            applicant_id=applicant_id,
+            organization_id=organization_id,
+            user_id=user_id,
+        )
+        if applicant is None:
+            raise ApplicantNotFoundError(f"Applicant {applicant_id} not found")
+
+        # Load linked inquiry if present.
+        inquiry = None
+        if applicant.inquiry_id is not None:
+            inquiry = await get_by_applicant_inquiry_id(
+                db,
+                inquiry_id=applicant.inquiry_id,
+                organization_id=organization_id,
+                user_id=user_id,
+            )
+
+        placeholders = await lease_template_placeholder_repo.list_for_template(
+            db, template_id=template_id,
+        )
+
+    defaults: list[dict] = []
+    for p in placeholders:
+        if p.input_type in ("signature", "computed"):
+            continue
+        if p.default_source:
+            value, provenance = resolve_default_source(
+                p.default_source, applicant, inquiry,
+            )
+        else:
+            value, provenance = None, None
+        defaults.append({
+            "key": p.key,
+            "value": value,
+            "provenance": provenance,
+        })
+
+    return defaults
+
+
+# ---------------------------------------------------------------------------
 # Update template metadata (name / description)
 # ---------------------------------------------------------------------------
 
@@ -456,7 +545,13 @@ async def update_placeholder(
         if "required" in fields and fields["required"] is not None:
             update_payload["required"] = bool(fields["required"])
         if "default_source" in fields:
-            update_payload["default_source"] = fields["default_source"]
+            ds = fields["default_source"]
+            if ds is not None and ds != "":
+                try:
+                    validate_default_source_spec(ds)  # type: ignore[arg-type]
+                except ValueError as exc:
+                    raise InvalidDefaultSourceError(str(exc)) from exc
+            update_payload["default_source"] = ds
         if "display_order" in fields and fields["display_order"] is not None:
             update_payload["display_order"] = int(fields["display_order"])  # type: ignore[arg-type]
 
