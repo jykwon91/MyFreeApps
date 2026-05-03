@@ -74,7 +74,11 @@ export default function LeaseTemplates() {
       <LeaseTemplateUploadDialog
         open={uploadOpen}
         onOpenChange={setUploadOpen}
-        onCreated={(created) => navigate(`/lease-templates/${created.id}`)}
+        onCreated={(created, aiSuggestions) =>
+          navigate(`/lease-templates/${created.id}`, {
+            state: { aiSuggestions },
+          })
+        }
       />
     </main>
   );

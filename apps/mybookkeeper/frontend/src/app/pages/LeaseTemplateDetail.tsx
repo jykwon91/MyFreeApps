@@ -1,4 +1,5 @@
-import { Link, useParams, useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { Link, useLocation, useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Download, Trash2 } from "lucide-react";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import AlertBox from "@/shared/components/ui/AlertBox";
@@ -11,11 +12,24 @@ import {
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import PlaceholderSpecEditor from "@/app/features/leases/PlaceholderSpecEditor";
+import AISuggestionsPanel from "@/app/features/leases/AISuggestionsPanel";
+import type { SuggestPlaceholdersResponse } from "@/shared/types/lease/suggest-placeholders-response";
+
+interface LocationState {
+  aiSuggestions?: SuggestPlaceholdersResponse | null;
+}
 
 export default function LeaseTemplateDetail() {
   const { templateId } = useParams<{ templateId: string }>();
+  const location = useLocation();
   const canWrite = useCanWrite();
   const navigate = useNavigate();
+
+  const locationState = (location.state ?? {}) as LocationState;
+  const [aiSuggestions, setAiSuggestions] = useState<SuggestPlaceholdersResponse | null>(
+    locationState.aiSuggestions ?? null,
+  );
+
   const {
     data: template,
     isLoading,
@@ -28,7 +42,11 @@ export default function LeaseTemplateDetail() {
 
   async function handleDelete() {
     if (!template) return;
-    if (!window.confirm(`Delete "${template.name}"? Existing leases will be preserved.`)) {
+    if (
+      !window.confirm(
+        `Delete "${template.name}"? Existing leases will be preserved.`,
+      )
+    ) {
       return;
     }
     try {
@@ -36,7 +54,10 @@ export default function LeaseTemplateDetail() {
       showSuccess("Template deleted.");
       navigate("/lease-templates");
     } catch (e: unknown) {
-      const err = e as { status?: number; data?: { detail?: { code?: string } } };
+      const err = e as {
+        status?: number;
+        data?: { detail?: { code?: string } };
+      };
       if (err.status === 409 && err.data?.detail?.code === "template_in_use") {
         showError(
           "Can't delete this template — there are active leases referencing it.",
@@ -46,6 +67,10 @@ export default function LeaseTemplateDetail() {
       }
     }
   }
+
+  const savedPlaceholderKeys = new Set(
+    (template?.placeholders ?? []).map((p) => p.key),
+  );
 
   return (
     <main className="p-4 sm:p-8 space-y-6 max-w-4xl">
@@ -58,7 +83,10 @@ export default function LeaseTemplateDetail() {
       </Link>
 
       {isError ? (
-        <AlertBox variant="error" className="flex items-center justify-between gap-3">
+        <AlertBox
+          variant="error"
+          className="flex items-center justify-between gap-3"
+        >
           <span>I couldn't find that template. Maybe it was deleted?</span>
           <LoadingButton
             variant="secondary"
@@ -74,7 +102,10 @@ export default function LeaseTemplateDetail() {
 
       {isLoading || !template ? (
         !isError ? (
-          <div className="space-y-4" data-testid="lease-template-detail-skeleton">
+          <div
+            className="space-y-4"
+            data-testid="lease-template-detail-skeleton"
+          >
             <Skeleton className="h-7 w-1/2" />
             <Skeleton className="h-4 w-3/4" />
             <Skeleton className="h-32" />
@@ -111,7 +142,20 @@ export default function LeaseTemplateDetail() {
           />
 
           {template.description ? (
-            <p className="text-sm text-muted-foreground">{template.description}</p>
+            <p className="text-sm text-muted-foreground">
+              {template.description}
+            </p>
+          ) : null}
+
+          {/* AI suggestions panel — shown after fresh upload */}
+          {aiSuggestions ? (
+            <AISuggestionsPanel
+              suggestions={aiSuggestions.suggestions}
+              truncated={aiSuggestions.truncated}
+              pagesNote={aiSuggestions.pages_note}
+              templatePlaceholderKeys={savedPlaceholderKeys}
+              onDismiss={() => setAiSuggestions(null)}
+            />
           ) : null}
 
           {/* Files */}
@@ -125,7 +169,10 @@ export default function LeaseTemplateDetail() {
                   key={f.id}
                   className="flex items-center justify-between border rounded-md px-3 py-2 text-sm"
                 >
-                  <span className="truncate" data-testid={`template-file-${f.id}`}>
+                  <span
+                    className="truncate"
+                    data-testid={`template-file-${f.id}`}
+                  >
                     {f.filename}
                   </span>
                   {f.presigned_url ? (
@@ -140,7 +187,9 @@ export default function LeaseTemplateDetail() {
                       Download
                     </a>
                   ) : (
-                    <span className="text-xs text-muted-foreground">Storage offline</span>
+                    <span className="text-xs text-muted-foreground">
+                      Storage offline
+                    </span>
                   )}
                 </li>
               ))}

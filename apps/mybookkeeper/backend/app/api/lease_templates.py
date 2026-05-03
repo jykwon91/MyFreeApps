@@ -29,6 +29,9 @@ from app.schemas.leases.lease_template_response import LeaseTemplateResponse
 from app.schemas.leases.lease_template_update_request import (
     LeaseTemplateUpdateRequest,
 )
+from app.schemas.leases.suggest_placeholders_response import (
+    SuggestPlaceholdersResponse,
+)
 from app.services.leases import lease_template_service
 
 router = APIRouter(prefix="/lease-templates", tags=["lease-templates"])
@@ -192,6 +195,31 @@ async def delete_template(
             },
         ) from exc
     return Response(status_code=204)
+
+
+@router.post(
+    "/{template_id}/suggest-placeholders",
+    response_model=SuggestPlaceholdersResponse,
+)
+async def suggest_placeholders(
+    template_id: uuid.UUID,
+    ctx: RequestContext = Depends(current_org_member),
+) -> SuggestPlaceholdersResponse:
+    """Run an AI pass over the template's source files and return proposed placeholders.
+
+    Does NOT persist anything — the host reviews the suggestions and commits
+    via the existing ``PATCH /{template_id}/placeholders/{placeholder_id}`` endpoint.
+    """
+    try:
+        return await lease_template_service.suggest_ai_placeholders(
+            user_id=ctx.user_id,
+            organization_id=ctx.organization_id,
+            template_id=template_id,
+        )
+    except lease_template_service.TemplateNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Template not found") from exc
+    except lease_template_service.StorageNotConfiguredError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 @router.post(

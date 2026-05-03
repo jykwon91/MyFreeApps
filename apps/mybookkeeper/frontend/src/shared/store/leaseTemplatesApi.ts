@@ -5,6 +5,7 @@ import type { LeaseTemplateDetail } from "@/shared/types/lease/lease-template-de
 import type { LeaseTemplateListResponse } from "@/shared/types/lease/lease-template-list-response";
 import type { LeaseTemplatePlaceholder } from "@/shared/types/lease/lease-template-placeholder";
 import type { LeaseTemplateUpdateRequest } from "@/shared/types/lease/lease-template-update-request";
+import type { SuggestPlaceholdersResponse } from "@/shared/types/lease/suggest-placeholders-response";
 
 /**
  * RTK Query slice for the Lease Templates domain.
@@ -131,6 +132,17 @@ const leaseTemplatesApi = baseApi.injectEndpoints({
         { type: "LeaseTemplate", id: "LIST" },
       ],
     }),
+
+    suggestPlaceholders: builder.mutation<
+      SuggestPlaceholdersResponse,
+      { templateId: string }
+    >({
+      query: ({ templateId }) => ({
+        url: `/lease-templates/${templateId}/suggest-placeholders`,
+        method: "POST",
+      }),
+      // No cache invalidation — result is ephemeral (not persisted).
+    }),
   }),
 });
 
@@ -143,4 +155,5 @@ export const {
   useUpdateLeasePlaceholderMutation,
   useDeleteLeaseTemplateMutation,
   useReplaceLeaseTemplateFilesMutation,
+  useSuggestPlaceholdersMutation,
 } = leaseTemplatesApi;
