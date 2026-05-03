@@ -10,6 +10,7 @@ Usage:
 """
 import logging
 import smtplib
+import ssl
 from dataclasses import dataclass
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -40,7 +41,7 @@ class EmailService:
 
         try:
             with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
-                server.starttls()
+                server.starttls(context=ssl.create_default_context())
                 server.login(self.smtp_user, self.smtp_password)
                 server.sendmail(self.smtp_user, to, msg.as_string())
             logger.info("Email sent via SMTP to %s: %s", to, subject)

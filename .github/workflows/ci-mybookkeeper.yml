@@ -95,8 +95,8 @@ jobs:
           # Dummy values — tests use in-memory sqlite, not these envs, but pydantic-settings may require them.
           DATABASE_URL: "sqlite+aiosqlite:///:memory:"
           DATABASE_URL_SYNC: "sqlite:///:memory:"
-          SECRET_KEY: placeholder-not-real-secret-key # gitleaks:allow
-          ENCRYPTION_KEY: placeholder-not-real-encryption-key # gitleaks:allow
+          SECRET_KEY: 00000000000000000000000000000000 # gitleaks:allow
+          ENCRYPTION_KEY: 00000000000000000000000000000000 # gitleaks:allow
           ANTHROPIC_API_KEY: sk-ant-placeholder-not-real
           GOOGLE_CLIENT_ID: placeholder-not-real-google-client
           GOOGLE_CLIENT_SECRET: placeholder-not-real-google-secret

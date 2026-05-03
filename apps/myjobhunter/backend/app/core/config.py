@@ -1,4 +1,7 @@
+from pydantic import field_validator
 from pydantic_settings import BaseSettings
+
+_MIN_KEY_LENGTH = 32
 
 
 class Settings(BaseSettings):
@@ -6,6 +9,18 @@ class Settings(BaseSettings):
     database_url_sync: str
     secret_key: str
     encryption_key: str
+
+    @field_validator("secret_key", "encryption_key")
+    @classmethod
+    def _validate_key_length(cls, v: str, info: object) -> str:
+        if len(v) < _MIN_KEY_LENGTH:
+            field = getattr(info, "field_name", "key")
+            raise ValueError(
+                f"{field} must be at least {_MIN_KEY_LENGTH} characters "
+                f"(got {len(v)}). Generate a strong key with: "
+                f"python -c \"import secrets; print(secrets.token_hex(32))\""
+            )
+        return v
 
     anthropic_api_key: str = ""
     tavily_api_key: str = ""
