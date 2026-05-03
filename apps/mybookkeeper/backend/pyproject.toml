@@ -54,10 +54,14 @@ dependencies = [
     # complexity). The DOCX renderer falls back gracefully if the lib is absent
     # (e.g. CI without the optional dep) — see services/leases/renderer.py.
     "python-docx==1.1.2",
+    "platform-shared",
 ]
 
 [tool.uv]
 package = false
+
+[tool.uv.sources]
+platform-shared = { path = "../../../packages/shared-backend", editable = true }
 
 [dependency-groups]
 dev = [
