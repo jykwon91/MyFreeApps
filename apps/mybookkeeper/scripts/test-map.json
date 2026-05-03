@@ -532,6 +532,7 @@
         "backend/app/api/signed_leases.py",
         "backend/app/core/lease_enums.py",
         "backend/alembic/versions/lease260502_add_lease_templates_phase_1.py",
+        "backend/alembic/versions/leaseimport260502_add_signed_lease_kind_nullable_template.py",
         "frontend/src/app/pages/LeaseTemplates.tsx",
         "frontend/src/app/pages/LeaseTemplateDetail.tsx",
         "frontend/src/app/pages/Leases.tsx",
@@ -545,14 +546,18 @@
       "backend_tests": [
         "test_lease_renderer.py",
         "test_lease_template_repo.py",
-        "test_lease_templates_api.py"
+        "test_lease_templates_api.py",
+        "test_lease_import_api.py",
+        "test_lease_import_heuristic.py"
       ],
       "frontend_tests": [
         "SignedLeaseStatusBadge.test.tsx",
-        "PlaceholderSpecEditor.test.tsx"
+        "PlaceholderSpecEditor.test.tsx",
+        "LeaseImportDialog.test.tsx"
       ],
       "e2e_specs": [
-        "lease-templates.spec.ts"
+        "lease-templates.spec.ts",
+        "lease-import.spec.ts"
       ]
     },
     "screening": {

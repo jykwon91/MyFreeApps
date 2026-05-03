@@ -51,6 +51,11 @@ LEASE_ATTACHMENT_KINDS: tuple[str, ...] = (
     "other",
 )
 
+# How the signed_lease record was created.
+# 'generated' = created from a lease template (Phase 1 flow).
+# 'imported'  = uploaded externally-signed PDFs with no template involved.
+LEASE_KINDS: tuple[str, ...] = ("generated", "imported")
+
 
 def _sql_in_list(values: tuple[str, ...]) -> str:
     return "(" + ", ".join(f"'{v}'" for v in values) + ")"
@@ -59,3 +64,4 @@ def _sql_in_list(values: tuple[str, ...]) -> str:
 SIGNED_LEASE_STATUSES_SQL = _sql_in_list(SIGNED_LEASE_STATUSES)
 LEASE_PLACEHOLDER_INPUT_TYPES_SQL = _sql_in_list(LEASE_PLACEHOLDER_INPUT_TYPES)
 LEASE_ATTACHMENT_KINDS_SQL = _sql_in_list(LEASE_ATTACHMENT_KINDS)
+LEASE_KINDS_SQL = _sql_in_list(LEASE_KINDS)

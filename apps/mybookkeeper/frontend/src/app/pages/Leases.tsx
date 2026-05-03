@@ -1,22 +1,43 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import EmptyState from "@/shared/components/ui/EmptyState";
 import AlertBox from "@/shared/components/ui/AlertBox";
 import LoadingButton from "@/shared/components/ui/LoadingButton";
+import Button from "@/shared/components/ui/Button";
+import { useCanWrite } from "@/shared/hooks/useOrgRole";
 import { useGetSignedLeasesQuery } from "@/shared/store/signedLeasesApi";
 import LeasesListSkeleton from "@/app/features/leases/LeasesListSkeleton";
+import LeaseImportDialog from "@/app/features/leases/LeaseImportDialog";
 import SignedLeaseStatusBadge from "@/app/features/leases/SignedLeaseStatusBadge";
 
 export default function Leases() {
+  const canWrite = useCanWrite();
+  const [showImportDialog, setShowImportDialog] = useState(false);
   const { data, isLoading, isFetching, isError, refetch } =
     useGetSignedLeasesQuery();
   const leases = data?.items ?? [];
 
   return (
     <main className="p-4 sm:p-8 space-y-6">
+      {showImportDialog ? (
+        <LeaseImportDialog onClose={() => setShowImportDialog(false)} />
+      ) : null}
+
       <SectionHeader
         title="Leases"
-        subtitle="Generated leases per applicant. Upload signed PDFs and signed-lease attachments here."
+        subtitle="Generated and imported leases per applicant. Upload signed PDFs and attachments here."
+        actions={
+          canWrite ? (
+            <Button
+              variant="secondary"
+              onClick={() => setShowImportDialog(true)}
+              data-testid="import-signed-lease-button"
+            >
+              Import signed lease
+            </Button>
+          ) : null
+        }
       />
 
       {isError ? (
@@ -38,7 +59,7 @@ export default function Leases() {
         <LeasesListSkeleton />
       ) : leases.length === 0 && !isError ? (
         <EmptyState
-          message="No leases yet — generate one from an applicant detail page once you have a template."
+          message="No leases yet — generate one from a template or import an already-signed PDF using the button above."
         />
       ) : (
         <div

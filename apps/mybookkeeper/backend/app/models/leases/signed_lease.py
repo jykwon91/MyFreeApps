@@ -27,7 +27,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.core.lease_enums import SIGNED_LEASE_STATUSES_SQL
+from app.core.lease_enums import LEASE_KINDS_SQL, SIGNED_LEASE_STATUSES_SQL
 from app.db.base import Base
 
 
@@ -52,10 +52,12 @@ class SignedLease(Base):
     # RESTRICT on template — preserve generated leases when a template is
     # soft-deleted. The application layer enforces "soft-delete blocked when
     # active leases reference this template" with a 409 response.
-    template_id: Mapped[uuid.UUID] = mapped_column(
+    # NULL is allowed for imported leases (kind='imported') that were signed
+    # externally before MBK existed.
+    template_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("lease_templates.id", ondelete="RESTRICT"),
-        nullable=False,
+        nullable=True,
     )
     applicant_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -68,6 +70,12 @@ class SignedLease(Base):
         ForeignKey("listings.id", ondelete="SET NULL"),
         index=True,
         nullable=True,
+    )
+
+    # 'generated' = created via template substitution pipeline.
+    # 'imported'  = uploaded externally-signed PDF(s) with no template.
+    kind: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="generated",
     )
 
     # The values dict the host filled in to drive substitution.
@@ -121,6 +129,10 @@ class SignedLease(Base):
         CheckConstraint(
             f"status IN {SIGNED_LEASE_STATUSES_SQL}",
             name="chk_signed_lease_status",
+        ),
+        CheckConstraint(
+            f"kind IN {LEASE_KINDS_SQL}",
+            name="chk_signed_lease_kind",
         ),
         # List page filter — newest active first per tenant.
         Index(

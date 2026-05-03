@@ -3,6 +3,7 @@ import type { LeaseAttachmentKind } from "@/shared/types/lease/lease-attachment-
 import type { SignedLeaseAttachment } from "@/shared/types/lease/signed-lease-attachment";
 import type { SignedLeaseCreateRequest } from "@/shared/types/lease/signed-lease-create-request";
 import type { SignedLeaseDetail } from "@/shared/types/lease/signed-lease-detail";
+import type { SignedLeaseImportRequest } from "@/shared/types/lease/signed-lease-import-request";
 import type { SignedLeaseListArgs } from "@/shared/types/lease/signed-lease-list-args";
 import type { SignedLeaseListResponse } from "@/shared/types/lease/signed-lease-list-response";
 import type { SignedLeaseUpdateRequest } from "@/shared/types/lease/signed-lease-update-request";
@@ -111,6 +112,27 @@ const signedLeasesApi = baseApi.injectEndpoints({
         { type: "SignedLease", id: leaseId },
       ],
     }),
+
+    importSignedLease: builder.mutation<SignedLeaseDetail, SignedLeaseImportRequest>({
+      query: (data) => {
+        const formData = new FormData();
+        formData.append("applicant_id", data.applicant_id);
+        if (data.listing_id) formData.append("listing_id", data.listing_id);
+        if (data.starts_on) formData.append("starts_on", data.starts_on);
+        if (data.ends_on) formData.append("ends_on", data.ends_on);
+        if (data.notes) formData.append("notes", data.notes);
+        if (data.status) formData.append("status", data.status);
+        for (const file of data.files) {
+          formData.append("files", file);
+        }
+        return {
+          url: "/signed-leases/import",
+          method: "POST",
+          data: formData,
+        };
+      },
+      invalidatesTags: [{ type: "SignedLease", id: "LIST" }],
+    }),
   }),
 });
 
@@ -123,4 +145,5 @@ export const {
   useGenerateSignedLeaseMutation,
   useUploadSignedLeaseAttachmentMutation,
   useDeleteSignedLeaseAttachmentMutation,
+  useImportSignedLeaseMutation,
 } = signedLeasesApi;

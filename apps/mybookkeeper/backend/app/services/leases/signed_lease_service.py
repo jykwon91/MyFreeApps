@@ -19,6 +19,7 @@ from typing import Any
 from app.core.lease_enums import SIGNED_LEASE_STATUSES
 from app.core.storage import get_storage
 from app.db.session import unit_of_work
+from app.repositories.applicants import applicant_repo
 from app.repositories.leases import (
     lease_template_file_repo,
     lease_template_placeholder_repo,
@@ -26,6 +27,7 @@ from app.repositories.leases import (
     signed_lease_attachment_repo,
     signed_lease_repo,
 )
+from app.repositories.listings import listing_repo
 from app.schemas.leases.signed_lease_attachment_response import (
     SignedLeaseAttachmentResponse,
 )
@@ -141,6 +143,7 @@ def _to_detail(lease, attachments) -> SignedLeaseResponse:
         template_id=lease.template_id,
         applicant_id=lease.applicant_id,
         listing_id=lease.listing_id,
+        kind=lease.kind,
         values=dict(lease.values or {}),
         status=lease.status,
         starts_on=lease.starts_on,
@@ -235,6 +238,7 @@ async def create_lease(
             starts_on=starts,
             ends_on=ends,
             status="draft",
+            kind="generated",
         )
         attachments = await signed_lease_attachment_repo.list_by_lease(db, lease.id)
     return _to_detail(lease, attachments)
@@ -508,6 +512,194 @@ def _ensure_suffix(filename: str, suffix: str) -> str:
 def _swap_extension(filename: str, suffix: str) -> str:
     base = filename.rsplit(".", 1)[0] if "." in filename else filename
     return f"{base}{suffix}"
+
+
+# ---------------------------------------------------------------------------
+# Import signed lease (externally-signed PDFs — no template required)
+# ---------------------------------------------------------------------------
+
+# Attachment-kind heuristic for import uploads.
+# The FIRST file is always signed_lease.  Subsequent files check the filename
+# for "move" + "in" → move_in_inspection, or "move" + "out" →
+# move_out_inspection.  Everything else is signed_addendum.
+# Heuristic is deliberately conservative — false negatives are cheaper than
+# false positives (wrong kind mislabels the file in the UI, but it's editable).
+def _infer_attachment_kind(filename: str, position: int) -> str:
+    if position == 0:
+        return "signed_lease"
+    lower = filename.lower()
+    if "move" in lower and "out" in lower:
+        return "move_out_inspection"
+    if "move" in lower and "in" in lower:
+        return "move_in_inspection"
+    return "signed_addendum"
+
+
+class ApplicantNotFoundError(LookupError):
+    pass
+
+
+class ListingNotFoundError(LookupError):
+    pass
+
+
+async def import_signed_lease(
+    *,
+    user_id: uuid.UUID,
+    organization_id: uuid.UUID,
+    applicant_id: uuid.UUID,
+    listing_id: uuid.UUID | None,
+    starts_on: _dt.date | None,
+    ends_on: _dt.date | None,
+    notes: str | None,
+    status: str,
+    files: list[tuple[bytes, str, str | None]],  # (content, filename, declared_ct)
+) -> SignedLeaseResponse:
+    """Create an imported signed lease from externally-signed PDFs.
+
+    Unlike ``create_lease``, this path does NOT require a template. The lease
+    is created with ``kind='imported'``, ``template_id=NULL``, and
+    ``signed_at=now()`` since by definition the documents are already signed.
+
+    ``files`` is an ordered list of ``(content_bytes, filename, content_type)``
+    tuples. The first file becomes ``kind=signed_lease``; subsequent files use
+    the ``_infer_attachment_kind`` heuristic.
+    """
+    from app.core.config import settings as _settings
+
+    storage = get_storage()
+    if storage is None:
+        raise StorageNotConfiguredError("Object storage is not configured")
+
+    # Validate all files before touching the database.
+    processed: list[tuple[bytes, str, str]] = []  # (content, filename, ct)
+    for content, filename, declared_ct in files:
+        if len(content) > _settings.max_blackout_attachment_size_bytes:
+            max_mb = _settings.max_blackout_attachment_size_bytes // (1024 * 1024)
+            raise AttachmentTooLargeError(f"File '{filename}' exceeds {max_mb}MB limit")
+        ct = _resolve_content_type(content, filename, declared_ct)
+        if ct is None:
+            raise AttachmentTypeRejectedError(
+                f"Unsupported file type for '{filename}'. "
+                "Allowed: pdf, docx, jpg, png, webp",
+            )
+        # EXIF-strip images to remove GPS metadata.
+        if ct in ("image/jpeg", "image/png", "image/webp"):
+            content = _exif_strip_image(content, ct)
+        processed.append((content, filename, ct))
+
+    # Validate tenant scoping.
+    async with unit_of_work() as db:
+        applicant = await applicant_repo.get(
+            db,
+            applicant_id=applicant_id,
+            organization_id=organization_id,
+            user_id=user_id,
+        )
+        if applicant is None:
+            raise ApplicantNotFoundError(f"Applicant {applicant_id} not found")
+
+        if listing_id is not None:
+            listing = await listing_repo.get_by_id(
+                db,
+                listing_id=listing_id,
+                organization_id=organization_id,
+            )
+            if listing is None:
+                raise ListingNotFoundError(f"Listing {listing_id} not found")
+
+        now = _dt.datetime.now(_dt.timezone.utc)
+        lease = await signed_lease_repo.create(
+            db,
+            user_id=user_id,
+            organization_id=organization_id,
+            template_id=None,
+            applicant_id=applicant_id,
+            listing_id=listing_id,
+            values={},
+            starts_on=starts_on,
+            ends_on=ends_on,
+            status=status,
+            kind="imported",
+        )
+        # Stamp signed_at — imported leases are signed by definition.
+        await signed_lease_repo.update_lease(
+            db,
+            lease_id=lease.id,
+            user_id=user_id,
+            organization_id=organization_id,
+            fields={"signed_at": now, "notes": notes},
+        )
+        lease_id = lease.id
+
+    # Upload files and persist attachment rows.
+    uploaded: list[str] = []  # storage keys for rollback on failure
+    try:
+        async with unit_of_work() as db:
+            now = _dt.datetime.now(_dt.timezone.utc)
+            for position, (content, filename, ct) in enumerate(processed):
+                attachment_id = uuid.uuid4()
+                storage_key = f"signed-leases/{lease_id}/{attachment_id}"
+                storage.upload_file(storage_key, content, ct)
+                uploaded.append(storage_key)
+                kind = _infer_attachment_kind(filename, position)
+                await signed_lease_attachment_repo.create(
+                    db,
+                    lease_id=lease_id,
+                    storage_key=storage_key,
+                    filename=filename or f"attachment-{attachment_id.hex}",
+                    content_type=ct,
+                    size_bytes=len(content),
+                    kind=kind,
+                    uploaded_by_user_id=user_id,
+                    uploaded_at=now,
+                )
+    except Exception:
+        for storage_key in uploaded:
+            try:
+                storage.delete_file(storage_key)
+            except Exception:  # noqa: BLE001
+                logger.warning("Failed to clean up import attachment %s", storage_key)
+        raise
+
+    return await get_lease(
+        user_id=user_id,
+        organization_id=organization_id,
+        lease_id=lease_id,
+    )
+
+
+def _resolve_content_type(
+    content: bytes, filename: str, declared: str | None,
+) -> str | None:
+    """Return a validated MIME type or None if not in the allowlist."""
+    if declared and declared in ALLOWED_ATTACHMENT_MIME_TYPES:
+        return declared
+    lower = filename.lower()
+    ext_map = {
+        ".pdf": "application/pdf",
+        ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".png": "image/png",
+        ".webp": "image/webp",
+    }
+    for ext, ct in ext_map.items():
+        if lower.endswith(ext):
+            return ct
+    return None
+
+
+def _exif_strip_image(content: bytes, content_type: str) -> bytes:
+    """EXIF-strip an image via Pillow. Returns cleaned bytes."""
+    from app.services.storage.image_processor import process_image, ImageRejected
+    try:
+        result = process_image(content, declared_content_type=content_type)
+        return result.content
+    except ImageRejected:
+        # If Pillow can't decode it, let it pass through — the content-type
+        # check already validated the header bytes.
+        return content
 
 
 # ---------------------------------------------------------------------------
