@@ -399,7 +399,8 @@
         "test_calendar_service.py",
         "test_calendar_events_route.py",
         "test_calendar_route.py",
-        "test_blackout_notes_attachments.py"
+        "test_blackout_notes_attachments.py",
+        "test_input_validation_hardening.py"
       ],
       "frontend_tests": [
         "Calendar.test.tsx",
@@ -538,7 +539,8 @@
       ],
       "backend_tests": [
         "test_screening.py",
-        "test_screening_result_repo.py"
+        "test_screening_result_repo.py",
+        "test_input_validation_hardening.py"
       ],
       "frontend_tests": [
         "RunScreeningButton.test.tsx",
