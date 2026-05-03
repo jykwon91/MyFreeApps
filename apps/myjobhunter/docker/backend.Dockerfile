@@ -3,7 +3,12 @@ FROM python:3.12-slim AS backend-deps
 WORKDIR /deps
 COPY packages/shared-backend/ /deps/shared-backend/
 COPY apps/myjobhunter/backend/requirements.txt ./
-RUN pip install --no-cache-dir --prefix=/install /deps/shared-backend/ -r requirements.txt
+# Strip the editable workspace dep line — uv export emits `-e ../../../packages/shared-backend`
+# which only resolves in the monorepo working tree, not in the Docker /deps context. The package
+# is installed via the positional /deps/shared-backend/ arg below; the -e line in requirements
+# is for local dev only.
+RUN sed -i '/^-e \.\.\/\.\.\/\.\.\/packages\/shared-backend/d' requirements.txt \
+    && pip install --no-cache-dir --prefix=/install /deps/shared-backend/ -r requirements.txt
 
 # Stage 2: Runtime
 FROM python:3.12-slim AS runtime
