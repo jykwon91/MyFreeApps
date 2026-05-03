@@ -265,9 +265,9 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
     ) -> None:
         success = send_password_reset_email(user.email, token)
         if success:
-            logger.info("Password reset email sent to user_id=%s", user.id)
+            logger.info("Password reset email sent to %s", user.email)
         else:
-            logger.warning("Failed to send password reset email to user_id=%s", user.id)
+            logger.warning("Failed to send password reset email to %s", user.email)
         await log_auth_event(
             self.user_db.session,
             event_type=AuthEventType.PASSWORD_RESET_REQUEST,
@@ -337,9 +337,9 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
         """Send verification email when a token is generated (registration or resend)."""
         success = send_verification_email(user.email, token)
         if success:
-            logger.info("Verification email sent to user_id=%s", user.id)
+            logger.info("Verification email sent to %s", user.email)
         else:
-            logger.warning("Failed to send verification email to user_id=%s", user.id)
+            logger.warning("Failed to send verification email to %s", user.email)
         await log_auth_event(
             self.user_db.session,
             event_type=AuthEventType.EMAIL_VERIFY_RESEND,
@@ -351,7 +351,7 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
         self, user: User, request=None,
     ) -> None:
         """Called after a user successfully verifies their email."""
-        logger.info("User verified: user_id=%s", user.id)
+        logger.info("User verified: %s", user.email)
         await log_auth_event(
             self.user_db.session,
             event_type=AuthEventType.EMAIL_VERIFY_SUCCESS,
