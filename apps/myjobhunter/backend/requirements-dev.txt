@@ -1,0 +1,5 @@
+# Development and test dependencies — NOT installed in production containers.
+# Install via: pip install -r requirements.txt -r requirements-dev.txt
+pytest==9.0.3
+pytest-asyncio==1.3.0
+pytest-timeout==2.4.0
