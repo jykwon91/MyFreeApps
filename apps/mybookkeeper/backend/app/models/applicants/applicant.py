@@ -92,6 +92,14 @@ class Applicant(Base):
         String(40), nullable=False, default="lead", server_default="lead",
     )
 
+    # Tenant lifecycle — set when the host manually ends a tenancy. Cleared
+    # on restart. A tenant is also considered ended if contract_end < today
+    # (computed at read-time; no background job needed).
+    tenant_ended_at: Mapped[_dt.datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True,
+    )
+    tenant_ended_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+
     key_version: Mapped[int] = mapped_column(
         SmallInteger, nullable=False, default=1, server_default="1",
     )

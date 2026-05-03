@@ -25,6 +25,7 @@ import Inquiries from "@/app/pages/Inquiries";
 import InquiryDetail from "@/app/pages/InquiryDetail";
 import Applicants from "@/app/pages/Applicants";
 import ApplicantDetail from "@/app/pages/ApplicantDetail";
+import Tenants from "@/app/pages/Tenants";
 import Leases from "@/app/pages/Leases";
 import LeaseDetail from "@/app/pages/LeaseDetail";
 import LeaseTemplates from "@/app/pages/LeaseTemplates";
@@ -112,6 +113,7 @@ export default function App() {
               <Route path="inquiries/:inquiryId" element={<InquiryDetail />} />
               <Route path="applicants" element={<Applicants />} />
               <Route path="applicants/:applicantId" element={<ApplicantDetail />} />
+              <Route path="tenants" element={<Tenants />} />
               <Route path="leases" element={<Leases />} />
               <Route path="leases/:leaseId" element={<LeaseDetail />} />
               <Route path="lease-templates" element={<LeaseTemplates />} />

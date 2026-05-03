@@ -5,6 +5,9 @@ import type { ApplicantListResponse } from "@/shared/types/applicant/applicant-l
 import type { ApplicantPromoteRequest } from "@/shared/types/applicant/applicant-promote-request";
 import type { ApplicantUpdateRequest } from "@/shared/types/applicant/applicant-update-request";
 import type { StageTransitionRequest } from "@/shared/types/applicant/stage-transition-request";
+import type { TenancyEndRequest } from "@/shared/types/applicant/tenancy-end-request";
+import type { TenantListArgs } from "@/shared/types/applicant/tenant-list-args";
+import type { TenantListResponse } from "@/shared/types/applicant/tenant-list-response";
 
 /**
  * RTK Query slice for the Applicants domain.
@@ -73,6 +76,56 @@ const applicantsApi = baseApi.injectEndpoints({
       invalidatesTags: (_result, _err, arg) => [
         { type: "Applicant", id: arg.applicantId },
         { type: "Applicant", id: "LIST" },
+        { type: "Applicant", id: "TENANT_LIST" },
+      ],
+    }),
+
+    getTenants: builder.query<TenantListResponse, TenantListArgs | void>({
+      query: (args) => ({
+        url: "/applicants/tenants",
+        params: {
+          ...(args?.include_ended !== undefined
+            ? { include_ended: args.include_ended }
+            : {}),
+          ...(args?.limit !== undefined ? { limit: args.limit } : {}),
+          ...(args?.offset !== undefined ? { offset: args.offset } : {}),
+        },
+      }),
+      providesTags: (result) =>
+        result
+          ? [
+              ...result.items.map((t) => ({
+                type: "Applicant" as const,
+                id: t.id,
+              })),
+              { type: "Applicant" as const, id: "TENANT_LIST" },
+            ]
+          : [{ type: "Applicant" as const, id: "TENANT_LIST" }],
+    }),
+
+    endTenancy: builder.mutation<
+      ApplicantDetailResponse,
+      { applicantId: string; data: TenancyEndRequest }
+    >({
+      query: ({ applicantId, data }) => ({
+        url: `/applicants/${applicantId}/tenancy/end`,
+        method: "PATCH",
+        data,
+      }),
+      invalidatesTags: (_result, _err, arg) => [
+        { type: "Applicant", id: arg.applicantId },
+        { type: "Applicant", id: "TENANT_LIST" },
+      ],
+    }),
+
+    restartTenancy: builder.mutation<ApplicantDetailResponse, string>({
+      query: (applicantId) => ({
+        url: `/applicants/${applicantId}/tenancy/restart`,
+        method: "PATCH",
+      }),
+      invalidatesTags: (_result, _err, applicantId) => [
+        { type: "Applicant", id: applicantId },
+        { type: "Applicant", id: "TENANT_LIST" },
       ],
     }),
     updateApplicantContractDates: builder.mutation<
@@ -98,4 +151,7 @@ export const {
   usePromoteFromInquiryMutation,
   useTransitionApplicantStageMutation,
   useUpdateApplicantContractDatesMutation,
+  useGetTenantsQuery,
+  useEndTenancyMutation,
+  useRestartTenancyMutation,
 } = applicantsApi;

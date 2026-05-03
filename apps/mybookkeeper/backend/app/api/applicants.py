@@ -20,14 +20,102 @@ from app.schemas.applicants.applicant_list_response import ApplicantListResponse
 from app.schemas.applicants.applicant_promote_request import ApplicantPromoteRequest
 from app.schemas.applicants.applicant_update_request import ApplicantUpdateRequest
 from app.schemas.applicants.stage_transition_request import StageTransitionRequest
+from app.schemas.applicants.tenancy_end_request import TenancyEndRequest
+from app.schemas.applicants.tenant_list_response import TenantListResponse
 from app.services.applicants import (
     applicant_contract_service,
     applicant_service,
     applicant_stage_service,
     promote_service,
+    tenancy_service,
 )
 
 router = APIRouter(prefix="/applicants", tags=["applicants"])
+
+
+@router.get("/tenants", response_model=TenantListResponse)
+async def list_tenants(
+    include_ended: bool = Query(False, description="Include ended tenants"),
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    ctx: RequestContext = Depends(current_org_member),
+) -> TenantListResponse:
+    """List applicants at stage=lease_signed.
+
+    By default, returns active tenants only. Pass ``include_ended=true``
+    to include manually-ended and contract-expired tenants.
+    """
+    return await tenancy_service.list_tenants(
+        ctx.organization_id,
+        ctx.user_id,
+        include_ended=include_ended,
+        limit=limit,
+        offset=offset,
+    )
+
+
+@router.patch(
+    "/{applicant_id}/tenancy/end",
+    response_model=ApplicantDetailResponse,
+)
+async def end_tenancy(
+    applicant_id: uuid.UUID,
+    payload: TenancyEndRequest,
+    ctx: RequestContext = Depends(require_write_access),
+) -> ApplicantDetailResponse:
+    """End a tenant's tenancy.
+
+    Sets ``tenant_ended_at = now()`` and writes a ``tenancy_ended`` event.
+    Only applies to applicants at stage=``lease_signed``.
+
+    Errors:
+        404 — applicant not found in the calling tenant.
+        409 — applicant is not at stage=lease_signed.
+    """
+    try:
+        return await tenancy_service.end_tenancy(
+            organization_id=ctx.organization_id,
+            user_id=ctx.user_id,
+            applicant_id=applicant_id,
+            reason=payload.reason,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail="Applicant not found") from exc
+    except tenancy_service.NotATenantError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@router.patch(
+    "/{applicant_id}/tenancy/restart",
+    response_model=ApplicantDetailResponse,
+)
+async def restart_tenancy(
+    applicant_id: uuid.UUID,
+    ctx: RequestContext = Depends(require_write_access),
+) -> ApplicantDetailResponse:
+    """Restart a manually-ended tenancy (clear tenant_ended_at).
+
+    Writes a ``tenancy_restarted`` event. Only applies to tenants whose
+    tenancy was manually ended (not contract-expiry — update contract_end
+    instead).
+
+    Errors:
+        404 — applicant not found.
+        409 — not a tenant, or tenancy was not manually ended.
+    """
+    try:
+        return await tenancy_service.restart_tenancy(
+            organization_id=ctx.organization_id,
+            user_id=ctx.user_id,
+            applicant_id=applicant_id,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail="Applicant not found") from exc
+    except (
+        tenancy_service.NotATenantError,
+        tenancy_service.TenancyNotEndedError,
+    ) as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @router.get("", response_model=ApplicantListResponse)

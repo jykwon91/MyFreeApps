@@ -70,6 +70,7 @@ export default function Leases() {
             <thead className="bg-muted/50 text-left text-xs uppercase text-muted-foreground">
               <tr>
                 <th className="px-4 py-2 font-medium">Lease</th>
+                <th className="px-4 py-2 font-medium">Tenant</th>
                 <th className="px-4 py-2 font-medium">Term</th>
                 <th className="px-4 py-2 font-medium">Generated</th>
                 <th className="px-4 py-2 font-medium">Signed</th>
@@ -90,6 +91,19 @@ export default function Leases() {
                     >
                       Lease {lease.id.slice(0, 8)}
                     </Link>
+                  </td>
+                  <td className="px-4 py-2">
+                    {lease.applicant_legal_name ? (
+                      <Link
+                        to={`/applicants/${lease.applicant_id}`}
+                        className="text-primary hover:underline"
+                        data-testid={`lease-tenant-link-${lease.id}`}
+                      >
+                        {lease.applicant_legal_name}
+                      </Link>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
                   </td>
                   <td className="px-4 py-2 text-muted-foreground">
                     {lease.starts_on ?? "—"} → {lease.ends_on ?? "—"}

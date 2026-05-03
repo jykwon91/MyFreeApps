@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, FileText } from "lucide-react";
+import { ArrowLeft, FileText, User } from "lucide-react";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import AlertBox from "@/shared/components/ui/AlertBox";
 import Badge from "@/shared/components/ui/Badge";
@@ -13,6 +13,7 @@ import {
   useGetSignedLeaseByIdQuery,
   useUpdateSignedLeaseMutation,
 } from "@/shared/store/signedLeasesApi";
+import { useGetApplicantByIdQuery } from "@/shared/store/applicantsApi";
 import SignedLeaseStatusBadge from "@/app/features/leases/SignedLeaseStatusBadge";
 import LeaseAttachmentsSection from "@/app/features/leases/LeaseAttachmentsSection";
 
@@ -32,6 +33,11 @@ export default function LeaseDetail() {
   const [generateLease, { isLoading: isGenerating }] =
     useGenerateSignedLeaseMutation();
   const [updateLease] = useUpdateSignedLeaseMutation();
+
+  const { data: applicant } = useGetApplicantByIdQuery(
+    lease?.applicant_id ?? "",
+    { skip: !lease?.applicant_id },
+  );
 
   async function handleGenerate() {
     if (!lease) return;
@@ -131,6 +137,30 @@ export default function LeaseDetail() {
               ) : null
             }
           />
+
+          {/* Applicant / Tenant card */}
+          {applicant ? (
+            <section
+              className="border rounded-lg p-4"
+              data-testid="lease-applicant-card"
+            >
+              <div className="flex items-center gap-3">
+                <User className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden="true" />
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground uppercase font-medium tracking-wide">
+                    {applicant.stage === "lease_signed" ? "Tenant" : "Applicant"}
+                  </p>
+                  <Link
+                    to={`/applicants/${applicant.id}`}
+                    data-testid="lease-applicant-link"
+                    className="text-sm font-medium text-primary hover:underline truncate block"
+                  >
+                    {applicant.legal_name ?? "Unnamed"}
+                  </Link>
+                </div>
+              </div>
+            </section>
+          ) : null}
 
           {/* Tabs */}
           <div role="tablist" className="flex gap-1 border-b" data-testid="lease-tabs">

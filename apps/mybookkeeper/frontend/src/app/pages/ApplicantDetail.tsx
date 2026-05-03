@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, ExternalLink, Upload } from "lucide-react";
+import EndTenancyDialog from "@/app/features/tenants/EndTenancyDialog";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import AlertBox from "@/shared/components/ui/AlertBox";
 import Button from "@/shared/components/ui/Button";
 import LoadingButton from "@/shared/components/ui/LoadingButton";
-import { useGetApplicantByIdQuery } from "@/shared/store/applicantsApi";
+import { useGetApplicantByIdQuery, useRestartTenancyMutation } from "@/shared/store/applicantsApi";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
+import { showError, showSuccess } from "@/shared/lib/toast-store";
 import {
   formatAbsoluteTime,
   formatLongDate,
@@ -27,6 +29,8 @@ export default function ApplicantDetail() {
   const { applicantId } = useParams<{ applicantId: string }>();
   const canWrite = useCanWrite();
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [endTenancyOpen, setEndTenancyOpen] = useState(false);
+  const [restartTenancy, { isLoading: isRestarting }] = useRestartTenancyMutation();
   const {
     data: applicant,
     isLoading,
@@ -91,6 +95,66 @@ export default function ApplicantDetail() {
               </span>
             }
           />
+
+          {/* Tenant lifecycle controls — only for lease_signed stage */}
+          {applicant.stage === "lease_signed" && canWrite ? (
+            <section
+              className="border rounded-lg p-4 space-y-3"
+              data-testid="tenancy-section"
+            >
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div>
+                  <h2 className="text-sm font-medium">Tenancy</h2>
+                  {applicant.tenant_ended_at ? (
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Ended{" "}
+                      {new Date(applicant.tenant_ended_at).toLocaleDateString()}
+                      {applicant.tenant_ended_reason
+                        ? ` — ${applicant.tenant_ended_reason}`
+                        : ""}
+                    </p>
+                  ) : null}
+                </div>
+                <div className="flex items-center gap-2">
+                  {applicant.tenant_ended_at ? (
+                    <LoadingButton
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      data-testid="restart-tenancy-button"
+                      isLoading={isRestarting}
+                      loadingText="Restarting..."
+                      onClick={() => {
+                        void restartTenancy(applicant.id).unwrap()
+                          .then(() => showSuccess("Tenancy restarted."))
+                          .catch(() => showError("Couldn't restart the tenancy. Please try again."));
+                      }}
+                    >
+                      Restart tenancy
+                    </LoadingButton>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      data-testid="end-tenancy-button"
+                      onClick={() => setEndTenancyOpen(true)}
+                    >
+                      End tenancy
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </section>
+          ) : null}
+
+          {endTenancyOpen && applicant.stage === "lease_signed" ? (
+            <EndTenancyDialog
+              applicantId={applicant.id}
+              tenantName={applicant.legal_name ?? "this tenant"}
+              onClose={() => setEndTenancyOpen(false)}
+            />
+          ) : null}
 
           {/* Contract dates */}
           <section

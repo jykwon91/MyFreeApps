@@ -41,6 +41,9 @@ class ApplicantDetailResponse(BaseModel):
 
     stage: str
 
+    tenant_ended_at: _dt.datetime | None = None
+    tenant_ended_reason: str | None = None
+
     created_at: _dt.datetime
     updated_at: _dt.datetime
 
