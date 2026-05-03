@@ -3,15 +3,11 @@
 Per the layered-architecture rule: services orchestrate (load → decide →
 shape → persist), repositories own queries, routes are thin shells.
 
-PR 3.3 ships KeyCheck redirect-only:
-- ``get_provider`` looks up a provider by name. Today only ``keycheck`` is
-  registered. The ``provider`` arg on the model is a CHECK constraint not a
-  SAEnum so adding a future provider is a registry update + migration to
-  widen the constraint, no schema rewrite.
-- ``record_result`` runs the §8.5 upload pipeline, persists the row, and
-  emits an explicit audit-log entry beyond what the SQLAlchemy session
-  listener already captures (the listener captures the INSERT; we add a
-  semantic ``screening.result_uploaded`` row for fast-path queries).
+PR 3.3 ships KeyCheck redirect-only; scrnv2260503 (UX rebuild) adds:
+- ``get_provider`` now also registers RentSpree.
+- ``get_eligibility`` — pure eligibility gate: has_name + has_contact, and
+  whether there's already a ``pending`` result in flight.
+- ``list_providers`` — static provider metadata for the frontend grid.
 
 Tenant scoping is via the parent applicant — the screening_results row has
 no ``organization_id`` of its own (RENTALS_PLAN.md §8.1). Every entry point
@@ -27,14 +23,24 @@ from typing import Protocol
 from app.core.applicant_enums import SCREENING_PROVIDERS, SCREENING_STATUSES
 from app.core.storage import get_storage
 from app.db.session import unit_of_work
+from app.models.applicants.screening_result import ScreeningResult
+from app.models.inquiries.inquiry import Inquiry
 from app.models.system.audit_log import AuditLog
 from app.repositories.applicants import (
     applicant_event_repo,
     applicant_repo,
     screening_result_repo,
 )
+from app.schemas.applicants.screening_eligibility_response import (
+    ScreeningEligibilityResponse,
+)
+from app.schemas.applicants.screening_provider_response import (
+    ScreeningProviderInfo,
+    ScreeningProvidersResponse,
+)
 from app.schemas.applicants.screening_result_response import ScreeningResultResponse
 from app.services.screening.keycheck_provider import KeyCheckProvider
+from app.services.screening.rentspree_provider import RentSpreeProvider
 from app.services.screening.report_processor import (
     ProcessedReport,
     ReportRejected,
@@ -67,7 +73,36 @@ class ScreeningProvider(Protocol):
 
 _PROVIDER_REGISTRY: dict[str, ScreeningProvider] = {
     "keycheck": KeyCheckProvider(),
+    "rentspree": RentSpreeProvider(),
 }
+
+# Static provider metadata for the frontend grid. Costs / turnaround are
+# approximate, operator-facing copy — not a binding quote. Ordered: free
+# provider first, paid second.
+_PROVIDER_GRID: list[ScreeningProviderInfo] = [
+    ScreeningProviderInfo(
+        name="keycheck",
+        label="KeyCheck",
+        description=(
+            "Run a comprehensive background check on your applicant — "
+            "credit, criminal, and eviction history in one report."
+        ),
+        cost_label="Free",
+        turnaround_label="Usually 1–2 days",
+        external_url="https://www.keycheck.com/dashboard",
+    ),
+    ScreeningProviderInfo(
+        name="rentspree",
+        label="RentSpree",
+        description=(
+            "Applicant-pays screening with instant identity verification, "
+            "credit report, and background check. No cost to you as the host."
+        ),
+        cost_label="Paid by applicant",
+        turnaround_label="Usually same day",
+        external_url="https://app.rentspree.com/property-manager",
+    ),
+]
 
 
 class ScreeningServiceError(RuntimeError):
@@ -364,3 +399,83 @@ async def list_results(
         )
     responses = [ScreeningResultResponse.model_validate(r) for r in rows]
     return attach_presigned_urls(responses)
+
+
+def list_providers() -> ScreeningProvidersResponse:
+    """Return the static provider grid metadata for the frontend.
+
+    Pure function — no I/O. The grid is baked into the service layer so it
+    can be unit-tested without HTTP overhead and stays in sync with the
+    provider registry.
+    """
+    return ScreeningProvidersResponse(providers=_PROVIDER_GRID)
+
+
+async def get_eligibility(
+    *,
+    organization_id: uuid.UUID,
+    user_id: uuid.UUID,
+    applicant_id: uuid.UUID,
+) -> ScreeningEligibilityResponse:
+    """Compute whether the applicant is ready to be screened.
+
+    Eligibility criteria:
+    1. ``legal_name`` is set — providers need a full legal name to run a
+       background check.
+    2. At least one contact method is available (``inquirer_email`` or
+       ``inquirer_phone`` from the linked Inquiry, when one exists).
+
+    ``has_pending`` — True iff there's already a screening_result with
+    status "pending" in flight. The frontend uses this to show a waiting
+    indicator instead of the provider grid.
+
+    Raises ``LookupError`` if the applicant doesn't exist in the calling
+    tenant (same contract as every other service function here).
+    """
+    from sqlalchemy import select
+
+    async with unit_of_work() as db:
+        applicant = await applicant_repo.get(
+            db,
+            applicant_id=applicant_id,
+            organization_id=organization_id,
+            user_id=user_id,
+        )
+        if applicant is None:
+            raise LookupError(f"Applicant {applicant_id} not found")
+
+        # Check for in-flight pending screening result.
+        pending_result = await db.execute(
+            select(ScreeningResult).where(
+                ScreeningResult.applicant_id == applicant_id,
+                ScreeningResult.status == "pending",
+            ).limit(1)
+        )
+        has_pending = pending_result.scalar_one_or_none() is not None
+
+        # Derive contact info from linked Inquiry.
+        has_email = False
+        has_phone = False
+        if applicant.inquiry_id is not None:
+            inq_result = await db.execute(
+                select(
+                    Inquiry.inquirer_email,
+                    Inquiry.inquirer_phone,
+                ).where(Inquiry.id == applicant.inquiry_id)
+            )
+            row = inq_result.one_or_none()
+            if row is not None:
+                has_email = bool(row.inquirer_email and str(row.inquirer_email).strip())
+                has_phone = bool(row.inquirer_phone and str(row.inquirer_phone).strip())
+
+    missing: list[str] = []
+    if not (applicant.legal_name and str(applicant.legal_name).strip()):
+        missing.append("Legal name")
+    if not (has_email or has_phone):
+        missing.append("Email or phone (from the linked inquiry)")
+
+    return ScreeningEligibilityResponse(
+        eligible=len(missing) == 0,
+        missing_fields=missing,
+        has_pending=has_pending,
+    )

@@ -47,6 +47,7 @@ vi.mock("@/shared/store/applicantsApi", () => ({
   useRestartTenancyMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useTransitionApplicantStageMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useEndTenancyMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useUpdateApplicantContractDatesMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
 }));
 
 vi.mock("@/shared/hooks/useOrgRole", () => ({
@@ -58,17 +59,12 @@ vi.mock("@/shared/lib/toast-store", () => ({
   showError: vi.fn(),
 }));
 
-// Stub RunScreeningButton and ScreeningResultsList to avoid deep mock chains
-vi.mock("@/app/features/screening/RunScreeningButton", () => ({
-  default: () => <button data-testid="stub-run-screening">Run KeyCheck</button>,
-}));
-
-vi.mock("@/app/features/screening/ScreeningResultsList", () => ({
-  default: () => <div data-testid="stub-screening-results" />,
-}));
-
-vi.mock("@/app/features/screening/UploadScreeningResultModal", () => ({
-  default: () => <div data-testid="stub-upload-modal" />,
+// Stub ScreeningSection to avoid deep mock chains (replaces old
+// RunScreeningButton / ScreeningResultsList / UploadScreeningResultModal stubs)
+vi.mock("@/app/features/screening/ScreeningSection", () => ({
+  default: ({ applicantId }: { applicantId: string }) => (
+    <div data-testid="stub-screening-section" data-applicant-id={applicantId} />
+  ),
 }));
 
 import { useGetApplicantByIdQuery } from "@/shared/store/applicantsApi";

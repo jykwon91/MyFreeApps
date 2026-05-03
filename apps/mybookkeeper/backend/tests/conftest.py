@@ -1,8 +1,17 @@
+import os
 import uuid
 from collections.abc import AsyncGenerator
 from unittest.mock import AsyncMock, patch
 
 import pytest
+
+# Disable python-magic's libmagic DLL on Windows — it crashes the test
+# interpreter with an access violation when the native libmagic DLL isn't
+# installed.  The header-bytes fallback in report_processor.py covers the
+# same allowlisted MIME types (PDF, JPEG, PNG) and is the path exercised by
+# the report-processor unit tests.  Setting this at conftest import time
+# ensures the guard fires before any test module is collected.
+os.environ.setdefault("MAGIC_DISABLED", "1")
 import pytest_asyncio
 from sqlalchemy import event, JSON, String
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine

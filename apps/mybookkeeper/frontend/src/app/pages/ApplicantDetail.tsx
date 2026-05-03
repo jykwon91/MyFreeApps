@@ -1,6 +1,5 @@
-import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, ExternalLink, Upload } from "lucide-react";
+import { ArrowLeft, ExternalLink } from "lucide-react";
 import EndTenancyDialog from "@/app/features/tenants/EndTenancyDialog";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import AlertBox from "@/shared/components/ui/AlertBox";
@@ -21,14 +20,12 @@ import ContractDatesEditor from "@/app/features/applicants/ContractDatesEditor";
 import ReferenceRow from "@/app/features/applicants/ReferenceRow";
 import VideoCallNoteCard from "@/app/features/applicants/VideoCallNoteCard";
 import SensitiveDataUnlock from "@/app/features/applicants/SensitiveDataUnlock";
-import RunScreeningButton from "@/app/features/screening/RunScreeningButton";
-import ScreeningResultsList from "@/app/features/screening/ScreeningResultsList";
-import UploadScreeningResultModal from "@/app/features/screening/UploadScreeningResultModal";
+import ScreeningSection from "@/app/features/screening/ScreeningSection";
+import { useState } from "react";
 
 export default function ApplicantDetail() {
   const { applicantId } = useParams<{ applicantId: string }>();
   const canWrite = useCanWrite();
-  const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [endTenancyOpen, setEndTenancyOpen] = useState(false);
   const [restartTenancy, { isLoading: isRestarting }] = useRestartTenancyMutation();
   const {
@@ -269,43 +266,20 @@ export default function ApplicantDetail() {
             </div>
           </SensitiveDataUnlock>
 
-          {/* Screening — PR 3.3 KeyCheck redirect-only flow.
-              Read access for any org member; only non-VIEWER members see
-              the "Run KeyCheck" / "Upload result" controls. */}
+          {/* Screening — scrnv2260503 UX rebuild.
+              Provider grid with eligibility gate, pending panel, and
+              clean result cards. Read access for any org member; the
+              provider grid and upload CTA are gated behind canWrite. */}
           <section
             className="border rounded-lg p-4 space-y-3"
             data-testid="screening-section"
           >
-            <div className="flex items-center justify-between gap-2 flex-wrap">
-              <h2 className="text-sm font-medium">Screening</h2>
-              {canWrite ? (
-                <div className="flex items-center gap-2">
-                  <RunScreeningButton applicantId={applicant.id} />
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => setUploadModalOpen(true)}
-                    data-testid="open-upload-screening-modal"
-                  >
-                    <span className="flex items-center gap-1.5">
-                      <Upload className="h-3.5 w-3.5" aria-hidden="true" />
-                      Upload result
-                    </span>
-                  </Button>
-                </div>
-              ) : null}
-            </div>
-            <ScreeningResultsList applicantId={applicant.id} />
-          </section>
-
-          {canWrite ? (
-            <UploadScreeningResultModal
+            <h2 className="text-sm font-medium">Screening</h2>
+            <ScreeningSection
               applicantId={applicant.id}
-              open={uploadModalOpen}
-              onClose={() => setUploadModalOpen(false)}
+              canWrite={canWrite}
             />
-          ) : null}
+          </section>
 
           {/* References */}
           <section

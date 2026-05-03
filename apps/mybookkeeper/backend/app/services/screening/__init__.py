@@ -12,8 +12,10 @@ from app.services.screening.screening_service import (
     ScreeningUploadValidationError,
     StorageNotConfiguredError,
     UnknownProviderError,
+    get_eligibility,
     get_provider,
     initiate_redirect,
+    list_providers,
     list_results,
     record_result,
 )
@@ -24,8 +26,10 @@ __all__ = [
     "ScreeningUploadValidationError",
     "StorageNotConfiguredError",
     "UnknownProviderError",
+    "get_eligibility",
     "get_provider",
     "initiate_redirect",
+    "list_providers",
     "list_results",
     "record_result",
 ]
