@@ -514,6 +514,8 @@
       ],
       "frontend_tests": [
         "ApplicantStageBadge.test.tsx",
+        "ApplicantDetail.test.tsx",
+        "ApplicantStatusControl.test.tsx",
         "SensitiveDataUnlock.test.tsx",
         "Applicants.test.tsx",
         "PromoteFromInquiryPanel.test.tsx",
@@ -524,6 +526,33 @@
         "applicants-layout.spec.ts",
         "applicant-promote.spec.ts",
         "applicant-contract-dates.spec.ts"
+      ]
+    },
+    "tenants": {
+      "source_paths": [
+        "backend/app/services/applicants/tenancy_service.py",
+        "backend/app/repositories/applicants/applicant_repo.py",
+        "backend/app/schemas/applicants/tenancy_end_request.py",
+        "backend/app/schemas/applicants/tenant_list_response.py",
+        "backend/alembic/versions/tenend260503_add_tenant_ended_columns.py",
+        "frontend/src/app/pages/Tenants.tsx",
+        "frontend/src/app/features/tenants/",
+        "frontend/src/shared/types/applicant/tenant-list-args.ts",
+        "frontend/src/shared/types/applicant/tenant-list-response.ts",
+        "frontend/src/shared/types/applicant/tenancy-end-request.ts"
+      ],
+      "backend_tests": [
+        "test_tenancy_api.py",
+        "test_applicant_repo.py",
+        "test_applicant_service.py"
+      ],
+      "frontend_tests": [
+        "Tenants.test.tsx",
+        "TenantStatusBadge.test.tsx",
+        "EndTenancyDialog.test.tsx"
+      ],
+      "e2e_specs": [
+        "tenants.spec.ts"
       ]
     },
     "leases": {
@@ -551,29 +580,21 @@
         "test_lease_renderer.py",
         "test_lease_template_repo.py",
         "test_lease_templates_api.py",
-<<<<<<< HEAD
         "test_lease_import_api.py",
-        "test_lease_import_heuristic.py"
-=======
+        "test_lease_import_heuristic.py",
         "test_default_source_resolver.py"
->>>>>>> a18f113 (feat(mybookkeeper/leases): auto-pull placeholder values from applicant + inquiry fallback)
       ],
       "frontend_tests": [
         "SignedLeaseStatusBadge.test.tsx",
         "PlaceholderSpecEditor.test.tsx",
-<<<<<<< HEAD
-        "LeaseImportDialog.test.tsx"
-      ],
-      "e2e_specs": [
-        "lease-templates.spec.ts",
-        "lease-import.spec.ts"
-=======
+        "LeaseImportDialog.test.tsx",
         "LeaseGenerateForm.test.tsx"
       ],
       "e2e_specs": [
         "lease-templates.spec.ts",
-        "lease-generate-defaults.spec.ts"
->>>>>>> a18f113 (feat(mybookkeeper/leases): auto-pull placeholder values from applicant + inquiry fallback)
+        "lease-import.spec.ts",
+        "lease-generate-defaults.spec.ts",
+        "leases.spec.ts"
       ]
     },
     "screening": {

@@ -62,13 +62,23 @@ async def list_applicants(
     limit: int = 50,
     offset: int = 0,
 ) -> ApplicantListResponse:
-    """List applicants for a tenant. Newest first. Paginated."""
+    """List applicants for a tenant. Newest first. Paginated.
+
+    Applicants at ``stage=lease_signed`` are excluded from the main
+    /applicants page — they have graduated to tenants and appear on
+    /tenants instead. The host can still see them via a direct stage
+    filter (``stage=lease_signed``).
+    """
+    # When the caller specifies an explicit stage filter, honour it exactly.
+    # When no filter is applied, exclude lease_signed (they're tenants).
+    exclude_stage = "lease_signed" if stage is None else None
     async with AsyncSessionLocal() as db:
         rows = await applicant_repo.list_for_user(
             db,
             organization_id=organization_id,
             user_id=user_id,
             stage=stage,
+            exclude_stage=exclude_stage,
             include_deleted=include_deleted,
             limit=limit,
             offset=offset,
@@ -78,6 +88,7 @@ async def list_applicants(
             organization_id=organization_id,
             user_id=user_id,
             stage=stage,
+            exclude_stage=exclude_stage,
             include_deleted=include_deleted,
         )
     items = [_to_summary(row) for row in rows]

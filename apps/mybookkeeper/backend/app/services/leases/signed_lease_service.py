@@ -169,8 +169,16 @@ def _validate_status_transition(current: str, target: str) -> None:
         )
 
 
-def _build_summary(lease) -> SignedLeaseSummary:
-    return SignedLeaseSummary.model_validate(lease)
+def _build_summary(
+    lease,
+    applicant_names: dict[uuid.UUID, str | None] | None = None,
+) -> SignedLeaseSummary:
+    summary = SignedLeaseSummary.model_validate(lease)
+    if applicant_names is not None:
+        summary = summary.model_copy(
+            update={"applicant_legal_name": applicant_names.get(lease.applicant_id)}
+        )
+    return summary
 
 
 def _attachment_responses(rows) -> list[SignedLeaseAttachmentResponse]:
@@ -325,7 +333,22 @@ async def list_leases(
             listing_id=listing_id,
             status=status,
         )
-    items = [_build_summary(r) for r in rows]
+
+        # Bulk-load applicant names for the tenant name column on the list page.
+        # The EncryptedString TypeDecorator decrypts transparently on load.
+        applicant_ids = list({r.applicant_id for r in rows})
+        applicant_names: dict[uuid.UUID, str | None] = {}
+        for aid in applicant_ids:
+            applicant = await applicant_repo.get(
+                db,
+                applicant_id=aid,
+                organization_id=organization_id,
+                user_id=user_id,
+                include_deleted=True,
+            )
+            applicant_names[aid] = applicant.legal_name if applicant else None
+
+    items = [_build_summary(r, applicant_names) for r in rows]
     return SignedLeaseListResponse(
         items=items, total=total, has_more=(offset + len(items)) < total,
     )

@@ -15,7 +15,7 @@ from __future__ import annotations
 import datetime as _dt
 import uuid
 
-from sqlalchemy import desc, func, select, update
+from sqlalchemy import and_, desc, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.applicants.applicant import Applicant
@@ -91,11 +91,17 @@ async def list_for_user(
     organization_id: uuid.UUID,
     user_id: uuid.UUID,
     stage: str | None = None,
+    exclude_stage: str | None = None,
     include_deleted: bool = False,
     limit: int = 50,
     offset: int = 0,
 ) -> list[Applicant]:
-    """List applicants for (organization_id, user_id). Newest first."""
+    """List applicants for (organization_id, user_id). Newest first.
+
+    ``stage``: filter to exact stage.
+    ``exclude_stage``: exclude rows at this stage (used by /applicants to
+        hide tenants, whose stage == 'lease_signed').
+    """
     stmt = select(Applicant).where(
         Applicant.organization_id == organization_id,
         Applicant.user_id == user_id,
@@ -104,6 +110,8 @@ async def list_for_user(
         stmt = stmt.where(Applicant.deleted_at.is_(None))
     if stage is not None:
         stmt = stmt.where(Applicant.stage == stage)
+    if exclude_stage is not None:
+        stmt = stmt.where(Applicant.stage != exclude_stage)
     stmt = stmt.order_by(desc(Applicant.created_at)).limit(limit).offset(offset)
     result = await db.execute(stmt)
     return list(result.scalars().all())
@@ -115,6 +123,7 @@ async def count_for_user(
     organization_id: uuid.UUID,
     user_id: uuid.UUID,
     stage: str | None = None,
+    exclude_stage: str | None = None,
     include_deleted: bool = False,
 ) -> int:
     """Count applicants for (organization_id, user_id) — used for paginated totals."""
@@ -126,6 +135,8 @@ async def count_for_user(
         stmt = stmt.where(Applicant.deleted_at.is_(None))
     if stage is not None:
         stmt = stmt.where(Applicant.stage == stage)
+    if exclude_stage is not None:
+        stmt = stmt.where(Applicant.stage != exclude_stage)
     result = await db.execute(stmt)
     return int(result.scalar_one())
 
@@ -212,6 +223,106 @@ async def update_contract_dates(
     applicant.contract_start = contract_start
     applicant.contract_end = contract_end
     applicant.updated_at = now
+
+
+async def set_tenancy_ended(
+    db: AsyncSession,
+    *,
+    applicant: Applicant,
+    reason: str | None,
+    now: _dt.datetime,
+) -> None:
+    """Mark a tenant's tenancy as ended. Caller has already verified scope."""
+    applicant.tenant_ended_at = now
+    applicant.tenant_ended_reason = reason
+    applicant.updated_at = now
+
+
+async def clear_tenancy_ended(
+    db: AsyncSession,
+    *,
+    applicant: Applicant,
+    now: _dt.datetime,
+) -> None:
+    """Clear an ended tenancy (restart). Caller has already verified scope."""
+    applicant.tenant_ended_at = None
+    applicant.tenant_ended_reason = None
+    applicant.updated_at = now
+
+
+def is_ended(applicant: Applicant, today: _dt.date) -> bool:
+    """Compute whether a tenant's tenancy has ended.
+
+    True if:
+    - ``tenant_ended_at`` is set (manual end by host), OR
+    - ``contract_end`` is set and is before today (contract expired)
+    """
+    if applicant.tenant_ended_at is not None:
+        return True
+    if applicant.contract_end is not None and applicant.contract_end < today:
+        return True
+    return False
+
+
+async def list_tenants(
+    db: AsyncSession,
+    *,
+    organization_id: uuid.UUID,
+    user_id: uuid.UUID,
+    include_ended: bool = False,
+    limit: int = 50,
+    offset: int = 0,
+) -> list[Applicant]:
+    """List applicants at stage=lease_signed (tenants). Newest first.
+
+    By default, excludes ended tenants (both manually ended and
+    contract-expired). Pass ``include_ended=True`` for the "Show ended" toggle.
+    """
+    today = _dt.date.today()
+    stmt = select(Applicant).where(
+        Applicant.organization_id == organization_id,
+        Applicant.user_id == user_id,
+        Applicant.stage == "lease_signed",
+        Applicant.deleted_at.is_(None),
+    )
+    if not include_ended:
+        stmt = stmt.where(
+            Applicant.tenant_ended_at.is_(None),
+            or_(
+                Applicant.contract_end.is_(None),
+                Applicant.contract_end >= today,
+            ),
+        )
+    stmt = stmt.order_by(desc(Applicant.created_at)).limit(limit).offset(offset)
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
+
+
+async def count_tenants(
+    db: AsyncSession,
+    *,
+    organization_id: uuid.UUID,
+    user_id: uuid.UUID,
+    include_ended: bool = False,
+) -> int:
+    """Count tenants — paired with ``list_tenants`` for pagination."""
+    today = _dt.date.today()
+    stmt = select(func.count()).select_from(Applicant).where(
+        Applicant.organization_id == organization_id,
+        Applicant.user_id == user_id,
+        Applicant.stage == "lease_signed",
+        Applicant.deleted_at.is_(None),
+    )
+    if not include_ended:
+        stmt = stmt.where(
+            Applicant.tenant_ended_at.is_(None),
+            or_(
+                Applicant.contract_end.is_(None),
+                Applicant.contract_end >= today,
+            ),
+        )
+    result = await db.execute(stmt)
+    return int(result.scalar_one())
 
 
 async def list_pending_purge(

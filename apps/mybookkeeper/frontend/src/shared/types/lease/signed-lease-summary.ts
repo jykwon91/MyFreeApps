@@ -15,4 +15,7 @@ export interface SignedLeaseSummary {
   signed_at: string | null;
   created_at: string;
   updated_at: string;
+
+  /** Decrypted applicant name from applicants.legal_name. Null if not set. */
+  applicant_legal_name: string | null;
 }

@@ -34,6 +34,9 @@ export interface ApplicantDetailResponse {
 
   stage: ApplicantStage;
 
+  tenant_ended_at: string | null;
+  tenant_ended_reason: string | null;
+
   created_at: string;
   updated_at: string;
 
