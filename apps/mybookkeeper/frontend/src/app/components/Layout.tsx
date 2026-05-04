@@ -12,6 +12,7 @@ import ThemeToggle from "@/shared/components/ThemeToggle";
 import OrgSwitcher from "@/app/features/organizations/OrgSwitcher";
 import VersionTag from "@/app/components/VersionTag";
 import DemoWelcomeDialog from "@/app/components/DemoWelcomeDialog";
+import GmailReauthSidebarBanner from "@/app/components/GmailReauthSidebarBanner";
 import LegalFooter from "@/app/components/LegalFooter";
 
 export default function Layout() {
@@ -106,6 +107,7 @@ export default function Layout() {
           </div>
           <OrgSwitcher />
         </div>
+        <GmailReauthSidebarBanner />
         <nav className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 py-4 space-y-4">
           {filteredGroups.map((group, idx) => {
             const isCollapsed = group.label ? collapsedGroups[group.label] : false;

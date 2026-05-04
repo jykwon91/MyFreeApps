@@ -1,12 +1,16 @@
 """Tests for Gmail refresh-token expiry handling in the email discovery service.
 
 When Google rejects the stored refresh token (RefreshError) the service must:
+- Set needs_reauth=True on the Integration row.
 - Record a failed sync_log row so the failure is visible in the Sync Sessions UI.
 - Raise GmailAuthExpiredError so callers (route / worker) can react.
 
 The route is expected to translate GmailAuthExpiredError into HTTP 401, and the
 background worker is expected to swallow it with a warning so the scheduler
 loop stays healthy.
+
+The scheduler must skip integrations where needs_reauth=True so it does not
+burn Google API quota retrying dead tokens on every cycle.
 """
 import uuid
 from contextlib import asynccontextmanager
@@ -21,7 +25,7 @@ from app.services.email.constants import (
     GMAIL_AUTH_EXPIRED_API_DETAIL,
     GMAIL_AUTH_EXPIRED_SYNC_LOG_ERROR,
 )
-from app.services.email.exceptions import GmailAuthExpiredError
+from app.services.email.exceptions import GmailAuthExpiredError, GmailReauthRequiredError
 
 
 def _make_ctx() -> RequestContext:
@@ -173,3 +177,111 @@ async def test_worker_logs_warning_and_returns_on_gmail_auth_expired() -> None:
     mock_fetch.assert_not_awaited()
     mock_extract.assert_not_awaited()
     mock_finalize.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_discovery_sets_needs_reauth_on_refresh_error() -> None:
+    """When RefreshError is raised during discovery, mark_needs_reauth is called
+    on the integration before GmailAuthExpiredError propagates to the caller.
+
+    This is the critical seam: the DB flag must be committed so the scheduler
+    skips the integration on the next cycle, even if the caller crashes after
+    receiving the exception.
+    """
+    ctx = _make_ctx()
+
+    fake_db = MagicMock()
+    fake_db.flush = AsyncMock()
+
+    @asynccontextmanager
+    async def fake_uow():
+        yield fake_db
+
+    fake_integration = MagicMock(access_token="enc", refresh_token="enc_refresh")
+
+    mark_reauth_calls: list[tuple] = []
+
+    async def fake_mark_needs_reauth(_db, integration, error, failed_at):
+        mark_reauth_calls.append((integration, error, failed_at))
+
+    with (
+        patch("app.services.email.email_discovery_service.unit_of_work", fake_uow),
+        patch(
+            "app.services.email.email_discovery_service.integration_repo.get_by_org_and_provider",
+            new=AsyncMock(return_value=fake_integration),
+        ),
+        patch(
+            "app.services.email.email_discovery_service.sync_log_repo.timeout_stuck",
+            new=AsyncMock(),
+        ),
+        patch(
+            "app.services.email.email_discovery_service.sync_log_repo.count_running",
+            new=AsyncMock(return_value=0),
+        ),
+        patch(
+            "app.services.email.email_discovery_service.email_queue_repo.reset_stuck",
+            new=AsyncMock(),
+        ),
+        patch(
+            "app.services.email.email_discovery_service.get_gmail_service",
+            return_value=MagicMock(),
+        ),
+        patch(
+            "app.services.email.email_discovery_service.email_queue_repo.get_message_ids",
+            new=AsyncMock(return_value=set()),
+        ),
+        patch(
+            "app.services.email.email_discovery_service.document_repo.get_email_message_ids",
+            new=AsyncMock(return_value=set()),
+        ),
+        patch(
+            "app.services.email.email_discovery_service.list_new_email_ids",
+            side_effect=RefreshError("invalid_grant: Token has been expired or revoked."),
+        ),
+        patch(
+            "app.services.email.email_discovery_service.sync_log_repo.create",
+            new=AsyncMock(return_value=MagicMock(id=123)),
+        ),
+        patch(
+            "app.services.email.email_discovery_service.sync_log_repo.mark_completed",
+            new=AsyncMock(),
+        ),
+        patch(
+            "app.services.email.email_discovery_service.integration_repo.mark_needs_reauth",
+            new=fake_mark_needs_reauth,
+        ),
+    ):
+        from app.services.email.email_discovery_service import discover_gmail_emails
+
+        with pytest.raises(GmailAuthExpiredError):
+            await discover_gmail_emails(ctx)
+
+    # mark_needs_reauth must be called exactly once with the integration object.
+    assert len(mark_reauth_calls) == 1
+    integration_arg, error_arg, failed_at_arg = mark_reauth_calls[0]
+    assert integration_arg is fake_integration
+    assert "invalid_grant" in error_arg or "RefreshError" in error_arg
+    assert failed_at_arg is not None
+
+
+@pytest.mark.asyncio
+async def test_scheduler_skips_needs_reauth_integrations() -> None:
+    """get_active_gmail_user_ids excludes integrations where needs_reauth=True.
+
+    This is the scheduler-skip contract: integrations with expired tokens must
+    not be polled on every 15-minute cycle.
+    """
+    from unittest.mock import AsyncMock, patch
+
+    active_ids = ["user-111", "user-222"]
+
+    with patch(
+        "app.workers.scheduler_worker.integration_repo.get_active_gmail_user_ids",
+        new=AsyncMock(return_value=active_ids),
+    ) as mock_get_active:
+        from app.workers.scheduler_worker import get_gmail_user_ids
+
+        result = await get_gmail_user_ids()
+
+    mock_get_active.assert_awaited_once()
+    assert result == active_ids

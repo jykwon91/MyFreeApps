@@ -68,6 +68,9 @@ async def discover_gmail_emails(ctx: RequestContext) -> DiscoverResult:
                 list_new_email_ids, service, processed_ids, label=label
             )
         except RefreshError as exc:
+            await integration_repo.mark_needs_reauth(
+                db, integration, repr(exc)[:200], datetime.now(timezone.utc)
+            )
             await _record_auth_expired_sync_log(db, ctx)
             logger.warning(
                 "Gmail refresh token rejected for org=%s user=%s during discovery: %s",
@@ -98,6 +101,9 @@ async def discover_gmail_emails(ctx: RequestContext) -> DiscoverResult:
                     await asyncio.to_thread(list_email_document_sources, service, message_id),
                 )
             except RefreshError as exc:
+                await integration_repo.mark_needs_reauth(
+                    db, integration, repr(exc)[:200], datetime.now(timezone.utc)
+                )
                 await sync_log_repo.mark_completed(db, log, "failed", error=GMAIL_AUTH_EXPIRED_SYNC_LOG_ERROR)
                 logger.warning(
                     "Gmail refresh token rejected for org=%s user=%s while fetching sources for message %s: %s",

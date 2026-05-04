@@ -5,6 +5,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import cast
 
+from google.auth.exceptions import RefreshError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -12,6 +13,7 @@ from app.core.context import RequestContext
 from app.db.session import AsyncSessionLocal, unit_of_work
 from app.models.email.email_types import EmailBodyData, FetchResult
 from app.repositories import email_queue_repo, integration_repo, sync_log_repo
+from app.services.email.exceptions import GmailReauthRequiredError
 from app.services.email.gmail_service import fetch_attachment_bytes, fetch_email_body, get_gmail_service
 
 logger = logging.getLogger(__name__)
@@ -20,7 +22,11 @@ CANCELLATION_CHECK_INTERVAL = 5
 
 
 async def drain_gmail_fetch(ctx: RequestContext, sync_log_id: int | None = None) -> None:
-    """Download bytes from Gmail for all pending queue items, one at a time."""
+    """Download bytes from Gmail for all pending queue items, one at a time.
+
+    Stops immediately if a GmailReauthRequiredError is raised — the token is
+    dead for this integration, so there is no point retrying the remaining items.
+    """
     items_processed = 0
     while True:
         if sync_log_id is not None and items_processed % CANCELLATION_CHECK_INTERVAL == 0:
@@ -39,6 +45,12 @@ async def drain_gmail_fetch(ctx: RequestContext, sync_log_id: int | None = None)
             async with unit_of_work() as db:
                 await email_queue_repo.reset_stuck(db, ctx.organization_id, ["pending"], "failed", error="Fetch timed out")
             continue
+        except GmailReauthRequiredError:
+            logger.warning(
+                "Stopping fetch drain for org=%s — Gmail token expired, needs_reauth already set",
+                ctx.organization_id,
+            )
+            return
 
         if result.status == "nothing_to_fetch":
             break
@@ -92,6 +104,22 @@ async def _fetch_next_pending(ctx: RequestContext) -> FetchResult:
             await _complete_sync_log_if_done(db, sync_log_id, ctx)
 
         return FetchResult("fetched")
+
+    except RefreshError as exc:
+        logger.warning(
+            "Gmail refresh token rejected for org=%s while fetching queue item %s: %s",
+            ctx.organization_id, item_id, exc,
+        )
+        async with unit_of_work() as db:
+            integration = await integration_repo.get_by_org_and_provider(db, ctx.organization_id, "gmail")
+            if integration:
+                await integration_repo.mark_needs_reauth(
+                    db, integration, repr(exc)[:200], datetime.now(timezone.utc)
+                )
+            item_ref = await email_queue_repo.get_by_id(db, item_id)
+            if item_ref:
+                await email_queue_repo.mark_status(db, item_ref, "failed", error="Gmail auth expired")
+        raise GmailReauthRequiredError(str(exc)) from exc
 
     except Exception as e:
         logger.exception("Failed to fetch queue item %s", item_id)

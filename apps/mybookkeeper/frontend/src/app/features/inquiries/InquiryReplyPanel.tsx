@@ -53,14 +53,16 @@ export default function InquiryReplyPanel({ inquiryId, onClose }: Props) {
   const [sendReply, { isLoading: isSending }] = useSendInquiryReplyMutation();
 
   const gmail = integrations.find((i) => i.provider === "gmail");
-  const reconnectReason: "missing-integration" | "missing-send-scope" | null =
+  const reconnectReason: "missing-integration" | "missing-send-scope" | "reauth-required" | null =
     integrationsLoading
       ? null
       : !gmail
         ? "missing-integration"
-        : gmail.has_send_scope === false
-          ? "missing-send-scope"
-          : null;
+        : gmail.needs_reauth
+          ? "reauth-required"
+          : gmail.has_send_scope === false
+            ? "missing-send-scope"
+            : null;
 
   // Derive subject/body: prefer local override (user edits), fall back to
   // server-rendered template data, then empty string.

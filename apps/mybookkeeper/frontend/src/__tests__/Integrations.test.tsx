@@ -15,6 +15,15 @@ const mockGmailIntegration: Integration = {
   metadata: { gmail_label: "Receipts" },
 };
 
+const mockNeedsReauthIntegration: Integration = {
+  provider: "gmail",
+  connected: true,
+  last_synced_at: "2024-03-10T10:00:00Z",
+  metadata: null,
+  needs_reauth: true,
+  last_reauth_error: "RefreshError: Token has been expired or revoked.",
+};
+
 const mockSyncLog: SyncLog = {
   id: 1,
   status: "success",
@@ -437,6 +446,69 @@ describe("Integrations", () => {
     await Promise.resolve();
     expect(disconnectMock).toHaveBeenCalledTimes(1);
     expect(screen.getByText("Gmail")).toBeInTheDocument();
+  });
+});
+
+describe("Integrations — needs_reauth state", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.removeItem("integrations-info-dismissed");
+    vi.mocked(useGetSyncLogsQuery).mockReturnValue({
+      data: [],
+    } as unknown as ReturnType<typeof useGetSyncLogsQuery>);
+    vi.mocked(useGetEmailQueueQuery).mockReturnValue({
+      data: [],
+    } as unknown as ReturnType<typeof useGetEmailQueueQuery>);
+    vi.mocked(useCanWrite).mockReturnValue(true);
+  });
+
+  afterEach(() => {
+    localStorage.removeItem("integrations-info-dismissed");
+  });
+
+  it("shows 'Reconnection required' status when needs_reauth is true", () => {
+    vi.mocked(useGetIntegrationsQuery).mockReturnValue({
+      data: [mockNeedsReauthIntegration],
+      isLoading: false,
+      refetch: vi.fn(),
+    } as unknown as ReturnType<typeof useGetIntegrationsQuery>);
+    renderWithProviders(<Integrations />);
+    expect(screen.getByTestId("gmail-needs-reauth-status")).toBeInTheDocument();
+    expect(screen.getByText(/Reconnection required/)).toBeInTheDocument();
+  });
+
+  it("shows Reconnect Gmail button instead of Sync/Disconnect when needs_reauth", () => {
+    vi.mocked(useGetIntegrationsQuery).mockReturnValue({
+      data: [mockNeedsReauthIntegration],
+      isLoading: false,
+      refetch: vi.fn(),
+    } as unknown as ReturnType<typeof useGetIntegrationsQuery>);
+    renderWithProviders(<Integrations />);
+    expect(screen.getByTestId("gmail-reconnect-button")).toBeInTheDocument();
+    expect(screen.queryByText("Sync now")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Disconnect" })).not.toBeInTheDocument();
+  });
+
+  it("reconnect button triggers the connectGmail mutation", async () => {
+    const user = userEvent.setup();
+    const unwrapMock = vi.fn().mockResolvedValue({ auth_url: "https://accounts.google.com/o/oauth2/auth" });
+    const connectMock = vi.fn(() => ({ unwrap: unwrapMock }));
+
+    const { useConnectGmailMutation } = await import("@/shared/store/integrationsApi");
+    vi.mocked(useConnectGmailMutation).mockReturnValue([
+      connectMock,
+      { isLoading: false, reset: vi.fn() },
+    ] as unknown as ReturnType<typeof useConnectGmailMutation>);
+
+    vi.mocked(useGetIntegrationsQuery).mockReturnValue({
+      data: [mockNeedsReauthIntegration],
+      isLoading: false,
+      refetch: vi.fn(),
+    } as unknown as ReturnType<typeof useGetIntegrationsQuery>);
+
+    renderWithProviders(<Integrations />);
+    await user.click(screen.getByTestId("gmail-reconnect-button"));
+    expect(connectMock).toHaveBeenCalledTimes(1);
   });
 });
 

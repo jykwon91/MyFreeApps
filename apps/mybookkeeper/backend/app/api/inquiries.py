@@ -213,6 +213,11 @@ async def send_reply(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except inquiry_reply_service.InquiryReplyMissingRecipientError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except inquiry_reply_service.InquiryReplyAuthExpiredError as exc:
+        # 503 with detail "gmail_reauth_required" — frontend checks this to
+        # show the reconnect prompt. The flag has already been set on the
+        # Integration row at this point.
+        raise HTTPException(status_code=503, detail="gmail_reauth_required") from exc
     except inquiry_reply_service.InquiryReplySendFailedError as exc:
         # 502 — upstream Gmail rejected; the host can retry.
         raise HTTPException(status_code=502, detail=str(exc)) from exc

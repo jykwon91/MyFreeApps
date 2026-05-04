@@ -30,7 +30,7 @@ from app.models.organization.organization import Organization
 from app.models.user.user import User
 from app.repositories.inquiries import inquiry_repo
 from app.schemas.inquiries.inquiry_reply_request import InquiryReplyRequest
-from app.services.email.exceptions import GmailSendError, GmailSendScopeError
+from app.services.email.exceptions import GmailReauthRequiredError, GmailSendError, GmailSendScopeError
 from app.services.inquiries import inquiry_reply_service
 
 
@@ -299,3 +299,134 @@ async def test_send_reply_scope_revoked_at_send_time_maps_to_scope_error(
                 test_org.id, test_user.id, inquiry.id,
                 InquiryReplyRequest(subject="s", body="b"),
             )
+
+
+@pytest.mark.asyncio
+async def test_send_reply_token_expired_sets_needs_reauth_and_raises(
+    db: AsyncSession, test_user: User, test_org: Organization, patch_session,
+) -> None:
+    """When send_message raises GmailReauthRequiredError, the service sets
+    needs_reauth=True on the Integration and raises InquiryReplyAuthExpiredError.
+    No InquiryMessage row is created and the inquiry stage does not change."""
+    integration = await _seed_integration(db, org=test_org, user=test_user)
+    inquiry = await _seed_inquiry(db, org=test_org, user=test_user)
+
+    with patch(
+        "app.services.inquiries.inquiry_reply_service.gmail_service.send_message",
+        side_effect=GmailReauthRequiredError("refresh token expired"),
+    ):
+        with pytest.raises(inquiry_reply_service.InquiryReplyAuthExpiredError):
+            await inquiry_reply_service.send_reply(
+                test_org.id, test_user.id, inquiry.id,
+                InquiryReplyRequest(subject="s", body="b"),
+            )
+
+    # The needs_reauth flag must be set on the integration row.
+    await db.refresh(integration)
+    assert integration.needs_reauth is True
+    assert integration.last_reauth_error is not None
+    assert integration.last_reauth_failed_at is not None
+
+    # No outbound message persisted.
+    msgs = await db.execute(
+        select(InquiryMessage).where(
+            InquiryMessage.inquiry_id == inquiry.id,
+            InquiryMessage.direction == "outbound",
+        )
+    )
+    assert msgs.scalars().all() == []
+
+    # Stage unchanged.
+    refreshed = await inquiry_repo.get_by_id(db, inquiry.id, test_org.id)
+    assert refreshed is not None
+    assert refreshed.stage == "new"
+
+
+@pytest.mark.asyncio
+async def test_send_reply_reply_route_returns_503_on_auth_expired(
+    db: AsyncSession, test_user: User, test_org: Organization, patch_session,
+) -> None:
+    """The inquiries reply route maps InquiryReplyAuthExpiredError → HTTP 503
+    with detail 'gmail_reauth_required'."""
+    from fastapi import HTTPException
+    from unittest.mock import AsyncMock
+
+    with patch(
+        "app.api.inquiries.inquiry_reply_service.send_reply",
+        new=AsyncMock(side_effect=inquiry_reply_service.InquiryReplyAuthExpiredError("token expired")),
+    ):
+        from app.api.inquiries import send_reply as route_send_reply
+        from app.core.context import RequestContext
+        from app.models.organization.organization_member import OrgRole
+        from app.schemas.inquiries.inquiry_reply_request import InquiryReplyRequest as RouteRequest
+
+        ctx = RequestContext(
+            organization_id=test_org.id,
+            user_id=test_user.id,
+            org_role=OrgRole.OWNER,
+        )
+        with pytest.raises(HTTPException) as exc_info:
+            await route_send_reply(
+                inquiry_id=uuid.uuid4(),
+                payload=RouteRequest(subject="s", body="b"),
+                ctx=ctx,
+            )
+
+    assert exc_info.value.status_code == 503
+    assert exc_info.value.detail == "gmail_reauth_required"
+
+
+@pytest.mark.asyncio
+async def test_integration_clear_reauth_state_on_oauth_callback() -> None:
+    """handle_gmail_callback clears needs_reauth after a successful re-auth."""
+    from contextlib import asynccontextmanager
+    from unittest.mock import AsyncMock, MagicMock, patch
+
+    fake_integration = MagicMock(
+        needs_reauth=True,
+        last_reauth_error="RefreshError: token revoked",
+        last_reauth_failed_at=_dt.datetime.now(_dt.timezone.utc),
+    )
+
+    @asynccontextmanager
+    async def fake_uow():
+        yield MagicMock()
+
+    with (
+        patch(
+            "app.services.integrations.integration_service.unit_of_work", fake_uow,
+        ),
+        patch(
+            "app.services.integrations.integration_service.integration_repo.upsert_gmail",
+            new=AsyncMock(return_value=fake_integration),
+        ),
+        patch(
+            "app.services.integrations.integration_service.integration_repo.clear_reauth_state",
+            new=AsyncMock(),
+        ) as mock_clear,
+        patch(
+            "app.services.integrations.integration_service.log_auth_event",
+            new=AsyncMock(),
+        ),
+        patch(
+            "app.services.integrations.integration_service._verify_oauth_state",
+            return_value=(str(uuid.uuid4()), str(uuid.uuid4())),
+        ),
+        patch(
+            "app.services.integrations.integration_service._get_flow",
+        ) as mock_flow_fn,
+    ):
+        mock_creds = MagicMock()
+        mock_creds.token = "new-access-token"
+        mock_creds.refresh_token = "new-refresh-token"
+        mock_creds.expiry = _dt.datetime.now(_dt.timezone.utc) + _dt.timedelta(hours=1)
+        mock_creds.scopes = {"https://www.googleapis.com/auth/gmail.readonly"}
+
+        mock_flow = MagicMock()
+        mock_flow.credentials = mock_creds
+        mock_flow_fn.return_value = mock_flow
+
+        from app.services.integrations.integration_service import handle_gmail_callback
+        await handle_gmail_callback("oauth-code", "state-jwt")
+
+    mock_clear.assert_awaited_once()

@@ -37,7 +37,7 @@ from app.repositories.user import user_repo
 from app.schemas.inquiries.inquiry_message_response import InquiryMessageResponse
 from app.schemas.inquiries.inquiry_reply_request import InquiryReplyRequest
 from app.services.email import gmail_service
-from app.services.email.exceptions import GmailSendError, GmailSendScopeError
+from app.services.email.exceptions import GmailReauthRequiredError, GmailSendError, GmailSendScopeError
 from app.services.integrations import integration_service
 
 logger = logging.getLogger(__name__)
@@ -53,6 +53,10 @@ class InquiryReplyMissingSendScopeError(Exception):
 
 class InquiryReplyMissingRecipientError(Exception):
     """Inquiry has no inquirer_email — can't send a reply."""
+
+
+class InquiryReplyAuthExpiredError(Exception):
+    """Gmail token expired while trying to send the reply. User must reconnect Gmail."""
 
 
 class InquiryReplySendFailedError(Exception):
@@ -117,6 +121,20 @@ async def send_reply(
             body=request.body,
             in_reply_to_message_id=original_email_message_id,
         )
+    except GmailReauthRequiredError as exc:
+        # Token was rejected by Google. Flip the flag so the UI shows the
+        # reconnect prompt immediately. Use a short-lived session so the
+        # flag write commits even if this function is called from a route
+        # that has no enclosing transaction.
+        async with unit_of_work() as db:
+            stale = await integration_repo.get_by_org_and_provider(
+                db, organization_id, "gmail",
+            )
+            if stale is not None:
+                await integration_repo.mark_needs_reauth(
+                    db, stale, repr(exc)[:200], _dt.datetime.now(_dt.timezone.utc)
+                )
+        raise InquiryReplyAuthExpiredError(str(exc)) from exc
     except GmailSendScopeError as exc:
         # Defensive — we already checked scope but Google may have revoked
         # it between the check and the send. Map to the same scope error.
