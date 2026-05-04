@@ -2,7 +2,7 @@ import { DollarSign } from "lucide-react";
 import type { Transaction } from "@/shared/types/transaction/transaction";
 import { formatCurrency } from "@/shared/utils/currency";
 
-interface Props {
+export interface PaymentDocumentCardProps {
   transaction: Transaction;
 }
 
@@ -20,25 +20,29 @@ const PAYMENT_VENDOR_PATTERNS = [
 
 export function isPaymentTransaction(txn: Transaction): boolean {
   if (txn.transaction_type !== "income") return false;
-  if (txn.amount === null || parseFloat(txn.amount) <= 0) return false;
+  if (!txn.amount || parseFloat(txn.amount) <= 0) return false;
   const vendor = (txn.vendor ?? "").toLowerCase();
   if (!vendor) return false;
   return PAYMENT_VENDOR_PATTERNS.some((p) => vendor.includes(p));
 }
 
-export default function PaymentDocumentCard({ transaction }: Props) {
+export default function PaymentDocumentCard({ transaction }: PaymentDocumentCardProps) {
   const amount = parseFloat(transaction.amount);
   const date = new Date(transaction.transaction_date);
+  // ``--card`` and ``--background`` resolve to the same near-black in dark
+  // mode, so ``bg-card`` is invisible against the modal background. Using a
+  // green-tinted accent gives the card a clear edge in both themes and
+  // visually telegraphs "income payment".
   return (
-    <div className="rounded-lg border bg-card overflow-hidden">
-      <div className="flex items-center justify-between px-4 py-3 border-b bg-muted/40">
+    <div className="rounded-lg border border-green-300 dark:border-green-800/60 bg-white dark:bg-zinc-900 shadow-sm overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-green-200 dark:border-green-900/50 bg-green-50 dark:bg-green-950/40">
         <div className="flex items-center gap-2 min-w-0">
-          <DollarSign className="h-4 w-4 text-green-600 shrink-0" aria-hidden="true" />
-          <span className="text-sm font-medium truncate">
+          <DollarSign className="h-4 w-4 text-green-600 dark:text-green-400 shrink-0" aria-hidden="true" />
+          <span className="text-sm font-medium truncate text-foreground">
             {transaction.vendor ?? "Payment"}
           </span>
         </div>
-        <span className="text-base font-semibold text-green-600 shrink-0">
+        <span className="text-base font-semibold text-green-600 dark:text-green-400 shrink-0">
           {formatCurrency(amount)}
         </span>
       </div>
