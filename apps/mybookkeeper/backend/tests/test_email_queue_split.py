@@ -177,7 +177,11 @@ class TestDrainClaudeExtraction:
 
         assert result.status == "done"
         await db.refresh(item)
-        assert item.status == "done"
+        # Extraction returned an empty data array (zero documents extracted),
+        # so the queue row is now ``skipped`` rather than ``done``. This
+        # distinction lets a future sync re-fetch the message if the prompt
+        # later improves — see email_queue_repo.get_message_ids dedup rule.
+        assert item.status == "skipped"
         # raw_content is deferred — query it explicitly to avoid greenlet issues
         from sqlalchemy.orm import undefer
         row = await db.execute(

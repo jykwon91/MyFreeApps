@@ -32,8 +32,29 @@ async def get_with_content(
 
 
 async def get_message_ids(db: AsyncSession, organization_id: uuid.UUID) -> set[str]:
+    """Return message_ids that should be EXCLUDED from re-fetch.
+
+    Excludes:
+      - Rows currently in flight (``fetched``, ``extracting``)
+      - Rows that successfully produced a Document (``done``)
+
+    Does NOT exclude:
+      - ``failed`` rows — let them be retried
+      - ``skipped`` rows — re-fetch so the current prompt gets another chance
+        (these are emails the extractor classified as duplicates/no-op; if the
+        prompt has improved since, we want a re-run. Token cost is bounded
+        because legit duplicates re-skip quickly.)
+
+    The status filter here is the systemic fix for the
+    'fetched-once-locked-forever' lockout: if an email was previously fetched
+    but no Document survived (silent skip / extraction error), the message is
+    eligible for re-fetch on the next sync.
+    """
     result = await db.execute(
-        select(EmailQueue.message_id).where(EmailQueue.organization_id == organization_id)
+        select(EmailQueue.message_id).where(
+            EmailQueue.organization_id == organization_id,
+            EmailQueue.status.in_(("fetched", "extracting", "done")),
+        )
     )
     return {row[0] for row in result.all()}
 
@@ -141,6 +162,18 @@ async def mark_done(db: AsyncSession, item: EmailQueue) -> None:
     item.status = "done"
     item.raw_content = None
     item.error = None
+
+
+async def mark_skipped(db: AsyncSession, item: EmailQueue, *, reason: str | None = None) -> None:
+    """Mark a queue row as skipped — extraction succeeded but produced no
+    Document (e.g. classified as a payment-confirmation duplicate).
+
+    Distinct from ``done`` so a future sync (with a possibly-improved prompt)
+    can re-fetch and re-extract — see ``get_message_ids`` for the dedup rule.
+    """
+    item.status = "skipped"
+    item.raw_content = None
+    item.error = reason[:1000] if reason else None
 
 
 async def count_by_status(

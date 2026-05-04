@@ -152,7 +152,18 @@ async def _extract_next_fetched(ctx: RequestContext) -> ExtractResult:
 
             item_ref = await email_queue_repo.get_by_id(db, item_id)
             if item_ref:
-                await email_queue_repo.mark_done(db, item_ref)
+                # Distinguish 'extraction succeeded and produced documents' (done)
+                # from 'extraction succeeded but produced no documents' (skipped —
+                # e.g. payment-confirmation duplicate). Skipped rows are
+                # re-fetchable on the next sync so a future prompt improvement
+                # can give the email another chance — see
+                # email_queue_repo.get_message_ids for the dedup rule.
+                if records_added > 0:
+                    await email_queue_repo.mark_done(db, item_ref)
+                else:
+                    await email_queue_repo.mark_skipped(
+                        db, item_ref, reason="extraction returned 0 documents",
+                    )
 
             log = await sync_log_repo.get_by_id(db, sync_log_id)
             if log:
