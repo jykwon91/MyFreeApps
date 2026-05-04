@@ -229,6 +229,7 @@ export const STATUS_BADGE: Readonly<Record<EmailQueueStatus, { label: string; co
   fetched: { label: "Fetched", color: "blue" },
   extracting: { label: "Extracting", color: "yellow" },
   done: { label: "Done", color: "green" },
+  skipped: { label: "Skipped", color: "gray" },
   failed: { label: "Failed", color: "red" },
 };
 
