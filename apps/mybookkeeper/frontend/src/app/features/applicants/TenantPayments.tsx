@@ -14,7 +14,8 @@ export default function TenantPayments({ applicantId }: Props) {
     { applicant_id: applicantId, transaction_type: "income" },
     { skip: !applicantId },
   );
-  const [viewingDocumentId, setViewingDocumentId] = useState<string | null>(null);
+  const [viewing, setViewing] = useState<{ documentId: string; txnId: string } | null>(null);
+  const viewingTransaction = viewing ? transactions.find((t) => t.id === viewing.txnId) : undefined;
 
   const total = transactions.reduce(
     (sum, txn) => sum + parseFloat(txn.amount),
@@ -60,7 +61,7 @@ export default function TenantPayments({ applicantId }: Props) {
                 {docId ? (
                   <button
                     type="button"
-                    onClick={() => setViewingDocumentId(docId)}
+                    onClick={() => setViewing({ documentId: docId, txnId: txn.id })}
                     className="text-muted-foreground hover:text-primary shrink-0"
                     title="Open source document"
                     aria-label="Open source document"
@@ -85,10 +86,11 @@ export default function TenantPayments({ applicantId }: Props) {
           );
         })}
       </ul>
-      {viewingDocumentId ? (
+      {viewing ? (
         <DocumentViewer
-          documentId={viewingDocumentId}
-          onClose={() => setViewingDocumentId(null)}
+          documentId={viewing.documentId}
+          transaction={viewingTransaction}
+          onClose={() => setViewing(null)}
         />
       ) : null}
     </div>
