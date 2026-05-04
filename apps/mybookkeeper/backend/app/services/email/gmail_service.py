@@ -271,6 +271,85 @@ def _collect_attachments(payload: _GmailPayload, service, message_id: str, resul
         _collect_attachments(part, service, message_id, result)
 
 
+def send_message_with_attachment(
+    integration,  # type: ignore[no-untyped-def] — app.models.integrations.Integration, avoid circular import
+    *,
+    from_address: str,
+    to_address: str,
+    subject: str,
+    body: str,
+    attachment_bytes: bytes,
+    attachment_filename: str,
+    attachment_content_type: str,
+) -> str:
+    """Send an email with a single binary attachment via Gmail API.
+
+    Builds a MIME multipart/mixed message, encodes the attachment inline, and
+    POSTs to ``users.messages.send``.  Returns the Gmail-issued message ID.
+
+    Raises the same GmailReauthRequiredError / GmailSendScopeError /
+    GmailSendError hierarchy as ``send_message`` so callers can handle errors
+    uniformly.
+    """
+    if not integration.access_token:
+        raise GmailSendScopeError("Gmail integration has no access token")
+
+    from email.mime.application import MIMEApplication
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.text import MIMEText
+
+    msg = MIMEMultipart()
+    msg["From"] = from_address
+    msg["To"] = to_address
+    msg["Subject"] = subject
+    msg["Message-ID"] = make_msgid(domain="mybookkeeper.app")
+    msg.attach(MIMEText(body, "plain"))
+
+    attachment_part = MIMEApplication(attachment_bytes, _subtype="octet-stream")
+    attachment_part.add_header(
+        "Content-Disposition", "attachment", filename=attachment_filename
+    )
+    attachment_part.add_header("Content-Type", attachment_content_type)
+    msg.attach(attachment_part)
+
+    raw = base64.urlsafe_b64encode(msg.as_bytes()).decode("ascii")
+
+    service = get_gmail_service(integration.access_token, integration.refresh_token)
+    try:
+        sent = service.users().messages().send(
+            userId="me", body={"raw": raw},
+        ).execute()
+    except RefreshError as exc:
+        logger.warning("Gmail send rejected — refresh token invalid: %s", exc)
+        raise GmailReauthRequiredError(
+            "Gmail token expired. Reconnect Gmail to send receipts."
+        ) from exc
+    except HttpError as exc:
+        status = getattr(getattr(exc, "resp", None), "status", None)
+        if status == 401:
+            logger.warning("Gmail send rejected with 401 — token rejected by Google")
+            raise GmailReauthRequiredError(
+                "Gmail token rejected (401). Reconnect Gmail to send receipts."
+            ) from exc
+        if status == 403:
+            logger.warning(
+                "Gmail send rejected with 403 — likely missing gmail.send scope",
+            )
+            raise GmailSendScopeError(
+                "Gmail send permission missing. Reconnect Gmail to enable receipts.",
+            ) from exc
+        logger.warning("Gmail send failed: status=%s", status)
+        raise GmailSendError(f"Gmail rejected the message (status {status})") from exc
+    except Exception as exc:
+        logger.warning("Gmail send raised an unexpected error", exc_info=True)
+        raise GmailSendError("Gmail send failed unexpectedly") from exc
+
+    sent_id = sent.get("id")
+    if not isinstance(sent_id, str) or not sent_id:
+        raise GmailSendError("Gmail did not return a message id")
+    return sent_id
+
+
 def send_message(
     integration,  # type: ignore[no-untyped-def] — app.models.integrations.Integration, avoid circular import
     *,

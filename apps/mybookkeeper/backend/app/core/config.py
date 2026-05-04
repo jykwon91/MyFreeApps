@@ -60,6 +60,11 @@ class Settings(BaseSettings):
     posthog_api_key: str = ""
 
     allow_test_admin_promotion: bool = False
+    # When true, skips the MinIO bucket-existence check at startup.
+    # Only effective when allow_test_admin_promotion is also true so this
+    # flag can never be accidentally set in production (which always has
+    # allow_test_admin_promotion=false).
+    minio_skip_startup_check: bool = False
 
     hibp_enabled: bool = True
 
