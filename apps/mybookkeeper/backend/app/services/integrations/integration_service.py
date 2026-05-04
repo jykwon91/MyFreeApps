@@ -93,23 +93,30 @@ def _verify_oauth_state(state: str) -> tuple[str, str, str | None]:
 
 def get_gmail_connect_url(ctx: RequestContext) -> str:
     flow = _get_flow()
-    auth_url, _ = flow.authorization_url(
+    # First call: have the Flow auto-generate ``code_verifier`` and
+    # ``code_challenge``. The returned URL is discarded — we only need the
+    # verifier on the Flow instance.
+    flow.authorization_url(
         access_type="offline",
         include_granted_scopes="true",
         prompt="consent",
     )
-    # ``flow.authorization_url`` populates ``flow.code_verifier`` as a side
-    # effect when PKCE is enabled. We persist it in the state JWT so the
-    # callback can rebuild the Flow with the same verifier.
+    # Persist the verifier in the JWT state so the callback can rebuild
+    # the Flow with the same value (Google enforces PKCE verifier match).
     state = _create_oauth_state(
         str(ctx.user_id),
         str(ctx.organization_id),
         flow.code_verifier or "",
     )
-    # Re-mint the auth URL with our state. (authorization_url returns the URL
-    # already; we replace the auto-generated state via query-string append.)
-    sep = "&" if "?" in auth_url else "?"
-    return f"{auth_url}{sep}state={state}"
+    # Second call: reuse the same Flow (same verifier/challenge) and pass
+    # our JWT state. Single ``state`` parameter, no manual URL splicing.
+    auth_url, _ = flow.authorization_url(
+        access_type="offline",
+        include_granted_scopes="true",
+        state=state,
+        prompt="consent",
+    )
+    return auth_url
 
 
 async def handle_gmail_callback(code: str, state: str) -> None:
