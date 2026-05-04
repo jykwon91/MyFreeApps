@@ -1,7 +1,7 @@
 import os
 import uuid
 from collections.abc import AsyncGenerator
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -12,6 +12,17 @@ import pytest
 # the report-processor unit tests.  Setting this at conftest import time
 # ensures the guard fires before any test module is collected.
 os.environ.setdefault("MAGIC_DISABLED", "1")
+
+# Storage env vars — set before settings is imported so ``get_storage()``
+# doesn't raise StorageNotConfiguredError when the lifespan or any
+# service touches it. The ``_patch_storage_for_tests`` autouse fixture
+# replaces the cached client with a MagicMock so no real network call
+# is ever attempted.
+os.environ.setdefault("MINIO_ENDPOINT", "test-minio:9000")
+os.environ.setdefault("MINIO_ACCESS_KEY", "test-access-key")
+os.environ.setdefault("MINIO_SECRET_KEY", "test-secret-key")
+os.environ.setdefault("MINIO_BUCKET", "test-bucket")
+os.environ.setdefault("MINIO_PUBLIC_ENDPOINT", "test-minio:9000")
 import pytest_asyncio
 from sqlalchemy import event, JSON, String
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
@@ -27,6 +38,34 @@ from app.models.user.user import User
 @pytest.fixture(scope="session")
 def anyio_backend() -> str:
     return "asyncio"
+
+
+@pytest.fixture(autouse=True)
+def _patch_storage_for_tests(monkeypatch):
+    """Replace the cached storage client with an in-memory MagicMock so
+    every importer of ``get_storage`` sees a working storage without
+    actually touching the network.
+
+    Storage is now a hard requirement (the FastAPI lifespan refuses to
+    boot on misconfig). Tests don't have a real MinIO, so we (a) ensure
+    env vars are set above so the get_storage missing-vars check passes,
+    then (b) inject a fake into ``_client`` so the function returns it
+    without ever constructing a real Minio() client. Tests that want to
+    assert misconfig behavior override by patching ``get_storage`` on
+    the importing module directly.
+    """
+    fake = MagicMock()
+    fake.bucket = "test-bucket"
+    fake.generate_presigned_url.side_effect = lambda key, ttl: f"https://signed/{key}"
+    fake.ensure_bucket.return_value = None
+    # ``generate_key`` is the storage key generator used by upload paths;
+    # returning a MagicMock from it would fail downstream INSERTs that
+    # bind the value as a string column.
+    fake.generate_key.side_effect = lambda org_id, filename: f"{org_id}/test/{filename}"
+    fake.upload_file.side_effect = lambda key, content, content_type: key
+
+    from app.core import storage
+    monkeypatch.setattr(storage, "_client", fake)
 
 
 def _patch_metadata_for_sqlite() -> None:

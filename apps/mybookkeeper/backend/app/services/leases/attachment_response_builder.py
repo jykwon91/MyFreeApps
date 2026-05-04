@@ -5,12 +5,15 @@ lease domain are minted ONLY through this module. Two helpers — one for
 ``LeaseTemplateFileResponse`` rows, one for ``SignedLeaseAttachmentResponse``
 rows — share the same signing helper.
 
-Graceful degradation: if storage is unavailable, every row gets
-``presigned_url=None`` so the frontend can show a placeholder.
+Storage is a hard requirement (the lifespan refuses to boot if MinIO is
+unreachable). Per-request signing is purely cryptographic and cannot
+fail under normal operation; any exception bubbles up so the request
+returns 500 with a real stack trace, surfacing the misconfiguration
+loudly. Silent ``presigned_url=None`` placeholders were the source of
+the PR #201–#204 outage trail and are no longer permitted on this path.
 """
 from __future__ import annotations
 
-import logging
 from typing import TypeVar
 
 from app.core.config import settings
@@ -22,25 +25,17 @@ from app.schemas.leases.signed_lease_attachment_response import (
     SignedLeaseAttachmentResponse,
 )
 
-logger = logging.getLogger(__name__)
-
 _T = TypeVar("_T", LeaseTemplateFileResponse, SignedLeaseAttachmentResponse)
 
 
-def _sign_one(storage: StorageClient, key: str) -> str | None:
-    try:
-        return storage.generate_presigned_url(key, settings.presigned_url_ttl_seconds)
-    except Exception:  # noqa: BLE001
-        logger.warning("Failed to sign presigned URL for %s", key, exc_info=True)
-        return None
+def _sign_one(storage: StorageClient, key: str) -> str:
+    return storage.generate_presigned_url(key, settings.presigned_url_ttl_seconds)
 
 
 def _attach(rows: list[_T]) -> list[_T]:
     if not rows:
         return rows
     storage = get_storage()
-    if storage is None:
-        return [r.model_copy(update={"presigned_url": None}) for r in rows]
     return [
         r.model_copy(update={"presigned_url": _sign_one(storage, r.storage_key)})
         for r in rows

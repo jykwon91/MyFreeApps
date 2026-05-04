@@ -7,9 +7,13 @@ must be signed against the *public* hostname so the user's browser can fetch
 the object directly. The `_DualEndpointStorageClient` keeps these two
 endpoints distinct.
 
-When MinIO is not configured, `get_storage()` returns `None` and callers fall
-back to the appropriate degraded path (e.g., `presigned_url=None`, or a 503
-on photo upload).
+Storage is a HARD REQUIREMENT. Listing photos, lease attachments, and
+applicant documents all depend on it. ``get_storage()`` raises
+``StorageNotConfiguredError`` on missing env vars; the FastAPI lifespan
+verifies bucket reachability at startup and refuses to boot on failure.
+Per-request paths therefore never see ``None`` — silent degradation
+(``presigned_url=None`` placeholders) is gone. See the
+PR #201–#204 postmortem for the bug trail this pattern caused.
 """
 import io
 import logging
@@ -26,6 +30,14 @@ from app.core.config import settings
 logger = logging.getLogger(__name__)
 
 _client: "StorageClient | None" = None
+
+
+class StorageNotConfiguredError(RuntimeError):
+    """Raised when MinIO env vars are missing or incomplete.
+
+    Distinct from a transient outage: this is a *deployment-time* fault
+    that should crash the app at boot, not a per-request degradation.
+    """
 
 
 def _parse_endpoint(url: str) -> tuple[str, bool]:
@@ -147,10 +159,6 @@ class _DualEndpointStorageClient(StorageClient):
         )
 
 
-def _is_configured() -> bool:
-    return bool(settings.minio_endpoint and settings.minio_access_key and settings.minio_secret_key)
-
-
 def _build_client(host: str, secure: bool) -> Minio:
     # Pin region to "us-east-1" so the minio-py client never calls
     # GetBucketLocation to discover it. Without this, presign triggers
@@ -169,8 +177,13 @@ def _build_client(host: str, secure: bool) -> Minio:
     )
 
 
-def get_storage() -> StorageClient | None:
-    """Return the MinIO storage client, or None if not configured.
+def get_storage() -> StorageClient:
+    """Return the MinIO storage client.
+
+    Raises ``StorageNotConfiguredError`` if the required env vars
+    (MINIO_ENDPOINT / MINIO_ACCESS_KEY / MINIO_SECRET_KEY / MINIO_BUCKET)
+    are missing. The lifespan calls this at startup so misconfiguration
+    crashes the app at boot rather than per-request.
 
     When `minio_public_endpoint` is set and differs from `minio_endpoint`,
     a `_DualEndpointStorageClient` is returned so presigned URLs are signed
@@ -178,8 +191,18 @@ def get_storage() -> StorageClient | None:
     internal one.
     """
     global _client
-    if not _is_configured():
-        return None
+    missing = [
+        name for name, value in (
+            ("MINIO_ENDPOINT", settings.minio_endpoint),
+            ("MINIO_ACCESS_KEY", settings.minio_access_key),
+            ("MINIO_SECRET_KEY", settings.minio_secret_key),
+            ("MINIO_BUCKET", settings.minio_bucket),
+        ) if not value
+    ]
+    if missing:
+        raise StorageNotConfiguredError(
+            f"MinIO storage is required but the following env vars are unset: {', '.join(missing)}",
+        )
     if _client is not None:
         return _client
 
