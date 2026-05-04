@@ -144,6 +144,55 @@ async def _resolve_property_address(
 # Public service functions
 # ---------------------------------------------------------------------------
 
+async def create_pending_receipt_in_session(
+    db: AsyncSession,
+    *,
+    transaction_id: uuid.UUID,
+    applicant_id: uuid.UUID,
+    user_id: uuid.UUID,
+    organization_id: uuid.UUID,
+    period_start_date: _dt.date | None = None,
+    period_end_date: _dt.date | None = None,
+) -> None:
+    """Path B — create a pending receipt row in the caller's session.
+
+    Idempotent on ``transaction_id`` — safe to call multiple times.
+    The caller owns the commit; the receipt insert is part of the same
+    transaction as the attribution that produced it. Used by
+    ``attribution_service`` so the receipt and the applicant_id mutation
+    land atomically.
+    """
+    txn = await transaction_repo.get_by_id(db, transaction_id, organization_id)
+    if not txn:
+        return  # transaction disappeared; nothing to do
+
+    leases = await signed_lease_repo.list_for_tenant(
+        db,
+        user_id=user_id,
+        organization_id=organization_id,
+        applicant_id=applicant_id,
+        include_deleted=False,
+        limit=1,
+    )
+    signed_lease_id = leases[0].id if leases else None
+
+    if not period_start_date or not period_end_date:
+        start, end = _default_period(txn.transaction_date)
+    else:
+        start, end = period_start_date, period_end_date
+
+    await pending_rent_receipt_repo.create_idempotent(
+        db,
+        user_id=user_id,
+        organization_id=organization_id,
+        transaction_id=transaction_id,
+        applicant_id=applicant_id,
+        signed_lease_id=signed_lease_id,
+        period_start_date=start,
+        period_end_date=end,
+    )
+
+
 async def create_pending_receipt_from_attribution(
     *,
     transaction_id: uuid.UUID,
@@ -153,42 +202,22 @@ async def create_pending_receipt_from_attribution(
     period_start_date: _dt.date | None = None,
     period_end_date: _dt.date | None = None,
 ) -> None:
-    """Path B — create a pending receipt row when a transaction is attributed.
+    """Top-level wrapper — opens its own session.
 
-    Idempotent on ``transaction_id`` — safe to call multiple times.
-    Called from ``attribution_service.maybe_attribute_payment`` and
-    ``attribution_service.confirm_review``.
+    Used by test seeds that need to create a pending receipt outside any
+    existing transaction. Production attribution paths use
+    ``create_pending_receipt_in_session`` instead so the receipt creation
+    rides on the same commit as the applicant_id mutation.
     """
     async with unit_of_work() as db:
-        txn = await transaction_repo.get_by_id(db, transaction_id, organization_id)
-        if txn is None:
-            return  # transaction disappeared; nothing to do
-
-        # Resolve the signed lease for this applicant (for the receipt queue)
-        leases = await signed_lease_repo.list_for_tenant(
+        await create_pending_receipt_in_session(
             db,
-            user_id=user_id,
-            organization_id=organization_id,
-            applicant_id=applicant_id,
-            include_deleted=False,
-            limit=1,
-        )
-        signed_lease_id = leases[0].id if leases else None
-
-        if period_start_date is None or period_end_date is None:
-            start, end = _default_period(txn.transaction_date)
-        else:
-            start, end = period_start_date, period_end_date
-
-        await pending_rent_receipt_repo.create_idempotent(
-            db,
-            user_id=user_id,
-            organization_id=organization_id,
             transaction_id=transaction_id,
             applicant_id=applicant_id,
-            signed_lease_id=signed_lease_id,
-            period_start_date=start,
-            period_end_date=end,
+            user_id=user_id,
+            organization_id=organization_id,
+            period_start_date=period_start_date,
+            period_end_date=period_end_date,
         )
 
 

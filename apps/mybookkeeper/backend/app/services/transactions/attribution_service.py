@@ -24,6 +24,7 @@ from app.repositories.applicants import applicant_repo
 from app.repositories.leases import signed_lease_repo
 from app.repositories.listings import listing_repo
 from app.repositories import transaction_repo as txn_repo
+from app.services.leases import receipt_service
 
 logger = logging.getLogger(__name__)
 
@@ -187,6 +188,13 @@ async def maybe_attribute_payment(
             "Auto-attributed transaction %s to applicant %s (exact match)",
             txn.id, best.id,
         )
+        await receipt_service.create_pending_receipt_in_session(
+            db,
+            transaction_id=txn.id,
+            applicant_id=best.id,
+            user_id=user_id,
+            organization_id=organization_id,
+        )
         return
 
     # Queue for review — fuzzy or unmatched
@@ -326,6 +334,13 @@ async def confirm_review(
                 txn.property_id = property_id
 
         await attribution_repo.resolve(db, row, "confirmed")
+        await receipt_service.create_pending_receipt_in_session(
+            db,
+            transaction_id=txn.id,
+            applicant_id=applicant.id,
+            user_id=user_id,
+            organization_id=organization_id,
+        )
         return {"ok": True, "transaction_id": str(txn.id)}
 
 
@@ -376,4 +391,11 @@ async def attribute_manually(
             if property_id:
                 txn.property_id = property_id
 
+        await receipt_service.create_pending_receipt_in_session(
+            db,
+            transaction_id=txn.id,
+            applicant_id=applicant.id,
+            user_id=user_id,
+            organization_id=organization_id,
+        )
         return {"ok": True, "transaction_id": str(txn.id)}
