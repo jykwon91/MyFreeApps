@@ -7,8 +7,8 @@ import pytest
 
 from app.core.storage import (
     StorageClient,
+    StorageNotConfiguredError,
     _DualEndpointStorageClient,
-    _is_configured,
     _parse_endpoint,
     get_storage,
     reset_client_cache,
@@ -51,35 +51,66 @@ class TestParseEndpoint:
         assert secure is False
 
 
-class TestFallbackWhenNotConfigured:
+class TestRaisesWhenNotConfigured:
+    """Storage is a hard requirement; missing env vars must crash, not
+    return None. The lifespan calls get_storage() at boot so the deploy
+    healthcheck catches misconfiguration immediately.
+    """
+
     @patch("app.core.storage.settings")
-    def test_get_storage_returns_none_when_not_configured(self, mock_settings: MagicMock) -> None:
+    def test_get_storage_raises_when_endpoint_empty(self, mock_settings: MagicMock) -> None:
+        reset_client_cache()
+        mock_settings.minio_endpoint = ""
+        mock_settings.minio_access_key = "key"
+        mock_settings.minio_secret_key = "secret"
+        mock_settings.minio_bucket = "bucket"
+        with pytest.raises(StorageNotConfiguredError, match="MINIO_ENDPOINT"):
+            get_storage()
+
+    @patch("app.core.storage.settings")
+    def test_get_storage_raises_when_access_key_empty(self, mock_settings: MagicMock) -> None:
+        reset_client_cache()
+        mock_settings.minio_endpoint = "localhost:9000"
+        mock_settings.minio_access_key = ""
+        mock_settings.minio_secret_key = "secret"
+        mock_settings.minio_bucket = "bucket"
+        with pytest.raises(StorageNotConfiguredError, match="MINIO_ACCESS_KEY"):
+            get_storage()
+
+    @patch("app.core.storage.settings")
+    def test_get_storage_raises_when_secret_key_empty(self, mock_settings: MagicMock) -> None:
+        reset_client_cache()
+        mock_settings.minio_endpoint = "localhost:9000"
+        mock_settings.minio_access_key = "key"
+        mock_settings.minio_secret_key = ""
+        mock_settings.minio_bucket = "bucket"
+        with pytest.raises(StorageNotConfiguredError, match="MINIO_SECRET_KEY"):
+            get_storage()
+
+    @patch("app.core.storage.settings")
+    def test_get_storage_raises_when_bucket_empty(self, mock_settings: MagicMock) -> None:
+        reset_client_cache()
+        mock_settings.minio_endpoint = "localhost:9000"
+        mock_settings.minio_access_key = "key"
+        mock_settings.minio_secret_key = "secret"
+        mock_settings.minio_bucket = ""
+        with pytest.raises(StorageNotConfiguredError, match="MINIO_BUCKET"):
+            get_storage()
+
+    @patch("app.core.storage.settings")
+    def test_error_lists_all_missing_vars(self, mock_settings: MagicMock) -> None:
         reset_client_cache()
         mock_settings.minio_endpoint = ""
         mock_settings.minio_access_key = ""
         mock_settings.minio_secret_key = ""
-        assert get_storage() is None
-
-    @patch("app.core.storage.settings")
-    def test_is_configured_false_when_endpoint_empty(self, mock_settings: MagicMock) -> None:
-        mock_settings.minio_endpoint = ""
-        mock_settings.minio_access_key = "key"
-        mock_settings.minio_secret_key = "secret"
-        assert _is_configured() is False
-
-    @patch("app.core.storage.settings")
-    def test_is_configured_false_when_access_key_empty(self, mock_settings: MagicMock) -> None:
-        mock_settings.minio_endpoint = "localhost:9000"
-        mock_settings.minio_access_key = ""
-        mock_settings.minio_secret_key = "secret"
-        assert _is_configured() is False
-
-    @patch("app.core.storage.settings")
-    def test_is_configured_false_when_secret_key_empty(self, mock_settings: MagicMock) -> None:
-        mock_settings.minio_endpoint = "localhost:9000"
-        mock_settings.minio_access_key = "key"
-        mock_settings.minio_secret_key = ""
-        assert _is_configured() is False
+        mock_settings.minio_bucket = ""
+        with pytest.raises(StorageNotConfiguredError) as exc:
+            get_storage()
+        msg = str(exc.value)
+        assert "MINIO_ENDPOINT" in msg
+        assert "MINIO_ACCESS_KEY" in msg
+        assert "MINIO_SECRET_KEY" in msg
+        assert "MINIO_BUCKET" in msg
 
 
 class TestStorageClientMethods:

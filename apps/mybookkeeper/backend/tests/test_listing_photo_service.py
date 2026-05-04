@@ -10,7 +10,7 @@ from __future__ import annotations
 import io
 import uuid
 from contextlib import asynccontextmanager
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from PIL import Image
@@ -26,18 +26,21 @@ from app.services.storage.image_processor import ImageRejected
 
 
 @pytest.fixture(autouse=True)
-def _patch_builder_storage_to_none(monkeypatch):
-    """Default the photo_response_builder's storage to None so the existing
-    tests (which patch only `listing_photo_service.get_storage`) keep
-    working — `presigned_url` simply comes back as None on the responses,
-    which the assertions don't inspect.
+def _patch_builder_storage(monkeypatch):
+    """Provide a working storage stub to ``photo_response_builder.get_storage``
+    so per-request signing succeeds in the read path. Storage is now a
+    hard requirement (the lifespan refuses to boot without it), so any
+    test exercising read paths must inject a real or fake storage —
+    silent ``presigned_url=None`` is no longer permitted.
 
-    Tests that want a real storage client mocked into the builder should
-    `monkeypatch.setattr(photo_response_builder, "get_storage", ...)`
-    themselves to override this default.
+    Tests that want to assert misconfig-propagation should override this
+    fixture by patching ``photo_response_builder.get_storage`` to raise.
     """
     from app.services.listings import photo_response_builder
-    monkeypatch.setattr(photo_response_builder, "get_storage", lambda: None)
+
+    fake = MagicMock()
+    fake.generate_presigned_url.side_effect = lambda key, ttl: f"https://signed/{key}"
+    monkeypatch.setattr(photo_response_builder, "get_storage", lambda: fake)
 
 
 class _FakeStorage:

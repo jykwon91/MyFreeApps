@@ -1,11 +1,9 @@
 """Tests for `services/listings/photo_response_builder.py`.
 
-Covers:
-- presigned URL injection happy path
-- graceful degradation when storage is unavailable (returns None for url)
-- per-row resilience: a single signing failure doesn't poison the batch
-- empty input is a no-op
-- input is not mutated
+Storage is a hard requirement (lifespan refuses to boot if MinIO is
+unreachable). Per-request signing is purely cryptographic — failures
+must propagate so the request returns 500 rather than silently degrade
+to ``presigned_url=None`` placeholders.
 """
 from __future__ import annotations
 
@@ -13,6 +11,9 @@ import uuid
 from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
 
+import pytest
+
+from app.core.storage import StorageNotConfiguredError
 from app.schemas.listings.listing_photo_response import ListingPhotoResponse
 from app.services.listings.photo_response_builder import attach_presigned_urls
 
@@ -34,16 +35,14 @@ class TestAttachPresignedUrls:
         result = attach_presigned_urls([])
         assert result == []
 
-    def test_returns_none_url_when_storage_not_configured(self) -> None:
-        photos = [_make_response(), _make_response()]
+    def test_propagates_storage_misconfig(self) -> None:
+        photos = [_make_response()]
         with patch(
             "app.services.listings.photo_response_builder.get_storage",
-            return_value=None,
+            side_effect=StorageNotConfiguredError("MINIO_ENDPOINT unset"),
         ):
-            result = attach_presigned_urls(photos)
-        assert all(p.presigned_url is None for p in result)
-        # Original input is not mutated.
-        assert all(p.presigned_url is None for p in photos)
+            with pytest.raises(StorageNotConfiguredError):
+                attach_presigned_urls(photos)
 
     def test_signs_each_photo_when_storage_configured(self) -> None:
         photos = [_make_response("a"), _make_response("b")]
@@ -57,33 +56,31 @@ class TestAttachPresignedUrls:
 
         assert result[0].presigned_url == "https://signed/a"
         assert result[1].presigned_url == "https://signed/b"
-        # TTL passed through from settings.
         assert storage.generate_presigned_url.call_count == 2
 
-    def test_per_row_failure_does_not_poison_batch(self) -> None:
+    def test_per_row_signing_error_propagates(self) -> None:
+        """A signing exception is never swallowed. The request returns 500
+        with the real stack trace; silent ``presigned_url=None`` is gone."""
         photos = [_make_response("a"), _make_response("b")]
         storage = MagicMock()
-        storage.generate_presigned_url.side_effect = [
-            RuntimeError("transient failure"),
-            "https://signed/b",
-        ]
+        storage.generate_presigned_url.side_effect = RuntimeError("signing exploded")
         with patch(
             "app.services.listings.photo_response_builder.get_storage",
             return_value=storage,
         ):
-            result = attach_presigned_urls(photos)
-
-        assert result[0].presigned_url is None
-        assert result[1].presigned_url == "https://signed/b"
+            with pytest.raises(RuntimeError, match="signing exploded"):
+                attach_presigned_urls(photos)
 
     def test_does_not_mutate_input(self) -> None:
         photo = _make_response("k")
         original_id = photo.id
+        storage = MagicMock()
+        storage.generate_presigned_url.return_value = "https://signed/k"
         with patch(
             "app.services.listings.photo_response_builder.get_storage",
-            return_value=None,
+            return_value=storage,
         ):
             attach_presigned_urls([photo])
-        # Same object, unchanged.
+        # Original object unchanged (model_copy returns a new instance).
         assert photo.id == original_id
         assert photo.presigned_url is None
