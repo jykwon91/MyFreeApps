@@ -58,7 +58,7 @@ export default function DocumentViewer({
   return (
     <Panel position="center" onClose={onClose}>
       <DocumentViewerHeader blob={blob} mode={mode} onClose={onClose} />
-      <div className="flex-1 min-h-0 overflow-auto bg-muted/50">
+      <div className="flex-1 min-h-0 overflow-auto bg-background">
         <DocumentViewerBody
           mode={mode}
           blob={blob}

@@ -12,7 +12,16 @@ export default function SourceEmailFrame({ blob }: SourceEmailFrameProps) {
   if (blob.size === 0) return <SourceEmailUnavailable />;
   return (
     <div className="border rounded-md bg-card overflow-hidden">
-      <iframe src={blob.url} className="w-full h-[40vh]" title="Original email" />
+      {/* Force light color-scheme inside the iframe — forwarded emails ship
+          plain text without their own background colors, and inheriting the
+          parent's dark color-scheme renders dark text on a near-black
+          background. Locking to light gives the email a white canvas. */}
+      <iframe
+        src={blob.url}
+        className="w-full h-[40vh] bg-white"
+        style={{ colorScheme: "light" }}
+        title="Original email"
+      />
     </div>
   );
 }
