@@ -49,6 +49,9 @@ async def gmail_callback(
         await integration_service.handle_gmail_callback(code, state)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except Exception:
+        logger.exception("Gmail OAuth callback failed — exception class and traceback above")
+        raise
     return RedirectResponse(url=f"{settings.frontend_url}/oauth-callback")
 
 

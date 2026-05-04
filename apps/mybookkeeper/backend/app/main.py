@@ -7,7 +7,6 @@ from contextlib import asynccontextmanager
 from collections.abc import AsyncGenerator
 from datetime import datetime, timezone
 
-import sentry_sdk
 from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -17,6 +16,7 @@ from sqlalchemy import text
 
 from app.core.auth import fastapi_users, auth_backend
 from app.core.config import settings
+from app.core.observability import init_sentry
 
 
 def _resolve_git_commit() -> str:
@@ -36,13 +36,6 @@ def _resolve_git_commit() -> str:
 GIT_COMMIT = _resolve_git_commit()
 STARTUP_TIMESTAMP = datetime.now(timezone.utc).isoformat()
 
-if settings.sentry_dsn:
-    sentry_sdk.init(
-        dsn=settings.sentry_dsn,
-        send_default_pii=False,
-        traces_sample_rate=0.1,
-        environment="production",
-    )
 from app.core.audit import current_user_id, register_audit_listeners
 from app.core.rate_limit import check_account_not_locked, check_login_rate_limit, check_password_reset_rate_limit, check_register_rate_limit, require_turnstile
 from app.db.session import AsyncSessionLocal
@@ -61,6 +54,7 @@ logger = logging.getLogger("app")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    init_sentry()
     register_audit_listeners()
     ensure_bucket()
     worker_task: asyncio.Task[None] | None = None
