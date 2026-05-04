@@ -9,6 +9,7 @@ import {
   useDismissQueueItemMutation,
 } from "@/shared/store/calendarApi";
 import ReviewQueueChannelBadge from "@/app/features/calendar/ReviewQueueChannelBadge";
+import { useToast } from "@/shared/hooks/useToast";
 
 interface Props {
   item: ReviewQueueItemType;
@@ -58,6 +59,7 @@ export default function ReviewQueueItem({ item }: Props) {
   const [resolveItem, { isLoading: isResolving }] = useResolveQueueItemMutation();
   const [ignoreItem, { isLoading: isIgnoring }] = useIgnoreQueueItemMutation();
   const [dismissItem, { isLoading: isDismissing }] = useDismissQueueItemMutation();
+  const { showSuccess, showError } = useToast();
 
   const payload = item.parsed_payload;
   const channelLabel = CHANNEL_LABELS[item.source_channel] ?? item.source_channel;
@@ -70,11 +72,16 @@ export default function ReviewQueueItem({ item }: Props) {
     }
     setError(null);
     try {
-      await resolveItem({
+      const result = await resolveItem({
         itemId: item.id,
         body: { listing_id: selectedListingId },
       }).unwrap();
+      const { starts_on, ends_on } = result.blackout;
+      showSuccess(
+        `Booking added — see ${formatDate(starts_on)} → ${formatDate(ends_on)} on the calendar.`,
+      );
     } catch {
+      showError("I couldn't add this booking. Try again?");
       setError("I couldn't add this booking. Try again?");
     }
   }

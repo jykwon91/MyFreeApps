@@ -3,7 +3,8 @@
 Covers:
 - 401 when unauthenticated
 - GET /review-queue returns list + GET /review-queue/count returns int
-- POST /review-queue/{id}/resolve — happy path, 404, 409
+- POST /review-queue/{id}/resolve — happy path (new shape), 404, 409, 422 (listing),
+  422 (missing payload fields)
 - POST /review-queue/{id}/ignore — happy path, 404
 - DELETE /review-queue/{id} — happy path, 404
 - IDOR guard: resolve with wrong listing_id returns 422
@@ -11,7 +12,8 @@ Covers:
 from __future__ import annotations
 
 import uuid
-from unittest.mock import patch, AsyncMock
+from datetime import date, datetime, timezone
+from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -20,9 +22,12 @@ from app.core.context import RequestContext
 from app.core.permissions import current_org_member
 from app.main import app
 from app.models.organization.organization_member import OrgRole
+from app.schemas.calendar.resolve_queue_item_response import (
+    BlackoutSummary,
+    ResolveQueueItemResponse,
+)
 from app.schemas.calendar.review_queue_response import ReviewQueueItemResponse
 from app.services.calendar import review_queue_service
-from datetime import datetime, timezone
 
 
 def _ctx(org_id: uuid.UUID, user_id: uuid.UUID) -> RequestContext:
@@ -45,6 +50,22 @@ def _make_item(*, status: str = "pending") -> ReviewQueueItemResponse:
         },
         status=status,
         created_at=datetime.now(timezone.utc),
+    )
+
+
+def _make_resolve_response(
+    item_id: uuid.UUID | None = None,
+    listing_id: uuid.UUID | None = None,
+) -> ResolveQueueItemResponse:
+    return ResolveQueueItemResponse(
+        queue_item_id=item_id or uuid.uuid4(),
+        blackout=BlackoutSummary(
+            id=uuid.uuid4(),
+            listing_id=listing_id or uuid.uuid4(),
+            starts_on=date(2026, 6, 5),
+            ends_on=date(2026, 6, 10),
+            source="airbnb",
+        ),
     )
 
 
@@ -95,16 +116,17 @@ class TestCountReviewQueue:
 
 class TestResolveQueueItem:
     @pytest.mark.asyncio
-    async def test_resolve_happy_path(self) -> None:
+    async def test_resolve_happy_path_returns_blackout(self) -> None:
+        """POST resolve returns {queue_item_id, blackout} — Phase 2b shape."""
         org_id, user_id = uuid.uuid4(), uuid.uuid4()
         item_id = uuid.uuid4()
         listing_id = uuid.uuid4()
         app.dependency_overrides[current_org_member] = lambda: _ctx(org_id, user_id)
 
-        resolved_item = _make_item(status="resolved")
+        resolved = _make_resolve_response(item_id=item_id, listing_id=listing_id)
         with patch(
             "app.api.calendar.review_queue_service.resolve_item",
-            return_value=resolved_item,
+            return_value=resolved,
         ):
             client = TestClient(app)
             response = client.post(
@@ -113,7 +135,12 @@ class TestResolveQueueItem:
             )
 
         assert response.status_code == 200
-        assert response.json()["status"] == "resolved"
+        body = response.json()
+        assert body["queue_item_id"] == str(item_id)
+        assert "blackout" in body
+        assert body["blackout"]["starts_on"] == "2026-06-05"
+        assert body["blackout"]["ends_on"] == "2026-06-10"
+        assert body["blackout"]["source"] == "airbnb"
         app.dependency_overrides.clear()
 
     @pytest.mark.asyncio
@@ -174,6 +201,30 @@ class TestResolveQueueItem:
             )
 
         assert response.status_code == 422
+        app.dependency_overrides.clear()
+
+    @pytest.mark.asyncio
+    async def test_resolve_missing_payload_fields_returns_422(self) -> None:
+        """Missing check_in/check_out in parsed_payload must return 422."""
+        org_id, user_id = uuid.uuid4(), uuid.uuid4()
+        item_id = uuid.uuid4()
+        listing_id = uuid.uuid4()
+        app.dependency_overrides[current_org_member] = lambda: _ctx(org_id, user_id)
+
+        with patch(
+            "app.api.calendar.review_queue_service.resolve_item",
+            side_effect=review_queue_service.MissingPayloadFieldsError(
+                "parsed_payload is missing check_in or check_out"
+            ),
+        ):
+            client = TestClient(app)
+            response = client.post(
+                f"/calendar/review-queue/{item_id}/resolve",
+                json={"listing_id": str(listing_id)},
+            )
+
+        assert response.status_code == 422
+        assert "check_in" in response.json()["detail"] or "check_out" in response.json()["detail"]
         app.dependency_overrides.clear()
 
 

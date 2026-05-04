@@ -708,3 +708,92 @@ async def hard_delete_signed_lease(
         if existing is None:
             return
         await db.execute(_sa_delete(SignedLease).where(SignedLease.id == lease_id))
+
+
+# ---------------------------------------------------------------------------
+# Calendar review queue — E2E seed + cleanup helpers (Phase 2b)
+# ---------------------------------------------------------------------------
+
+class _SeedReviewQueueRequest(BaseModel):
+    source_channel: str = "airbnb"
+    email_message_id: str
+    check_in: str
+    check_out: str
+    guest_name: str | None = None
+    total_price: str | None = None
+    source_listing_id: str | None = None
+    raw_subject: str = "Reservation confirmed"
+
+
+class _SeedReviewQueueResponse(BaseModel):
+    id: uuid.UUID
+
+
+@router.post("/seed-review-queue-item", response_model=_SeedReviewQueueResponse, status_code=201)
+async def seed_review_queue_item(
+    payload: _SeedReviewQueueRequest,
+    ctx: RequestContext = Depends(current_org_member),
+) -> _SeedReviewQueueResponse:
+    """Test-only direct insert for E2E calendar Phase 2b seeding.
+
+    Creates a pending review-queue item for the authenticated user's org
+    without going through the Gmail sync pipeline. Gated by
+    ``ALLOW_TEST_ADMIN_PROMOTION``.
+    """
+    _require_test_mode()
+    from app.repositories.calendar import review_queue_repo
+
+    parsed_payload = {
+        "source_channel": payload.source_channel,
+        "source_listing_id": payload.source_listing_id,
+        "guest_name": payload.guest_name,
+        "check_in": payload.check_in,
+        "check_out": payload.check_out,
+        "total_price": payload.total_price,
+        "raw_subject": payload.raw_subject,
+    }
+
+    async with unit_of_work() as db:
+        row = await review_queue_repo.insert_if_not_exists(
+            db,
+            user_id=ctx.user_id,
+            organization_id=ctx.organization_id,
+            email_message_id=payload.email_message_id,
+            source_channel=payload.source_channel,
+            parsed_payload=parsed_payload,
+        )
+        if row is None:
+            # Already exists — fetch the existing row to return its id.
+            from app.models.calendar.calendar_email_review_queue import (
+                CalendarEmailReviewQueue,
+            )
+            from sqlalchemy import select as _sa_select
+            result = await db.execute(
+                _sa_select(CalendarEmailReviewQueue).where(
+                    CalendarEmailReviewQueue.user_id == ctx.user_id,
+                    CalendarEmailReviewQueue.email_message_id == payload.email_message_id,
+                )
+            )
+            row = result.scalar_one()
+
+    return _SeedReviewQueueResponse(id=row.id)
+
+
+@router.delete("/review-queue/{item_id}", status_code=204)
+async def hard_delete_review_queue_item(
+    item_id: uuid.UUID,
+    ctx: RequestContext = Depends(current_org_member),
+) -> None:
+    """Hard-delete a review-queue item for E2E cleanup. Test-only."""
+    _require_test_mode()
+    from app.models.calendar.calendar_email_review_queue import (
+        CalendarEmailReviewQueue,
+    )
+
+    async with unit_of_work() as db:
+        await db.execute(
+            _sa_delete(CalendarEmailReviewQueue).where(
+                CalendarEmailReviewQueue.id == item_id,
+                CalendarEmailReviewQueue.organization_id == ctx.organization_id,
+            )
+        )

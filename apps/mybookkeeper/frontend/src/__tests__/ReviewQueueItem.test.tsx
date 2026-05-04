@@ -36,9 +36,29 @@ const mockItemNoListingId: ReviewQueueItemType = {
 // Mocks
 // ---------------------------------------------------------------------------
 
+const mockResolveResponse = {
+  queue_item_id: "item-1",
+  blackout: {
+    id: "blackout-1",
+    listing_id: "listing-1",
+    starts_on: "2026-06-05",
+    ends_on: "2026-06-10",
+    source: "airbnb",
+  },
+};
+
 const mockResolve = vi.fn().mockResolvedValue({});
 const mockIgnore = vi.fn().mockResolvedValue({});
 const mockDismiss = vi.fn().mockResolvedValue({});
+const mockShowSuccess = vi.fn();
+const mockShowError = vi.fn();
+
+vi.mock("@/shared/hooks/useToast", () => ({
+  useToast: vi.fn(() => ({
+    showSuccess: mockShowSuccess,
+    showError: mockShowError,
+  })),
+}));
 
 vi.mock("@/shared/store/calendarApi", () => ({
   useResolveQueueItemMutation: vi.fn(() => [
@@ -103,6 +123,8 @@ describe("ReviewQueueItem", () => {
     mockResolve.mockClear();
     mockIgnore.mockClear();
     mockDismiss.mockClear();
+    mockShowSuccess.mockClear();
+    mockShowError.mockClear();
   });
 
   it("renders the channel badge", () => {
@@ -153,7 +175,9 @@ describe("ReviewQueueItem", () => {
   });
 
   it("calls resolveItem when listing selected and confirmed", async () => {
-    mockResolve.mockReturnValueOnce({ unwrap: () => Promise.resolve({}) });
+    mockResolve.mockReturnValueOnce({
+      unwrap: () => Promise.resolve(mockResolveResponse),
+    });
     renderItem();
     fireEvent.click(screen.getByTestId("review-queue-add-btn"));
     await waitFor(() => screen.getByTestId("review-queue-listing-select"));
@@ -168,6 +192,48 @@ describe("ReviewQueueItem", () => {
         itemId: mockItem.id,
         body: { listing_id: "listing-1" },
       });
+    });
+  });
+
+  it("shows success toast with date range after resolve", async () => {
+    mockResolve.mockReturnValueOnce({
+      unwrap: () => Promise.resolve(mockResolveResponse),
+    });
+    renderItem();
+    fireEvent.click(screen.getByTestId("review-queue-add-btn"));
+    await waitFor(() => screen.getByTestId("review-queue-listing-select"));
+
+    fireEvent.change(screen.getByTestId("review-queue-listing-select"), {
+      target: { value: "listing-1" },
+    });
+    fireEvent.click(screen.getByTestId("review-queue-confirm-btn"));
+
+    await waitFor(() => {
+      expect(mockShowSuccess).toHaveBeenCalledWith(
+        expect.stringContaining("Booking added"),
+      );
+    });
+    // Toast must mention both dates.
+    const toastMsg = mockShowSuccess.mock.calls[0][0] as string;
+    expect(toastMsg).toMatch(/2026/);
+  });
+
+  it("shows error toast and inline error when resolve API fails", async () => {
+    mockResolve.mockReturnValueOnce({
+      unwrap: () => Promise.reject(new Error("API error")),
+    });
+    renderItem();
+    fireEvent.click(screen.getByTestId("review-queue-add-btn"));
+    await waitFor(() => screen.getByTestId("review-queue-listing-select"));
+
+    fireEvent.change(screen.getByTestId("review-queue-listing-select"), {
+      target: { value: "listing-1" },
+    });
+    fireEvent.click(screen.getByTestId("review-queue-confirm-btn"));
+
+    await waitFor(() => {
+      expect(mockShowError).toHaveBeenCalled();
+      expect(screen.getByTestId("review-queue-error")).toBeInTheDocument();
     });
   });
 
@@ -212,7 +278,7 @@ describe("ReviewQueueItem", () => {
     });
   });
 
-  it("shows an error on resolve API failure", async () => {
+  it("shows an inline error on resolve API failure (legacy test)", async () => {
     mockResolve.mockReturnValueOnce({
       unwrap: () => Promise.reject(new Error("API error")),
     });

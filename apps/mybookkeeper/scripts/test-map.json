@@ -400,16 +400,21 @@
         "test_calendar_events_route.py",
         "test_calendar_route.py",
         "test_blackout_notes_attachments.py",
-        "test_input_validation_hardening.py"
+        "test_input_validation_hardening.py",
+        "test_review_queue_routes.py",
+        "test_review_queue_service.py"
       ],
       "frontend_tests": [
         "Calendar.test.tsx",
         "calendar-utils.test.ts",
-        "CalendarEventDetail.test.tsx"
+        "CalendarEventDetail.test.tsx",
+        "ReviewQueueItem.test.tsx",
+        "ReviewQueueDrawer.test.tsx"
       ],
       "e2e_specs": [
         "calendar.spec.ts",
-        "calendar-booking-notes.spec.ts"
+        "calendar-booking-notes.spec.ts",
+        "calendar-review-queue-resolve.spec.ts"
       ]
     },
     "inquiries": {
