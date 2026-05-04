@@ -10,4 +10,5 @@ export interface SyncLog {
   emails_total: number;
   emails_done: number;
   emails_fetched: number;
+  gmail_matches_total: number;
 }

@@ -69,7 +69,25 @@ export default function SyncLogRow({
                   <span>{formatDate(log.completed_at)}</span>
                 </>
               ) : null}
-              {log.emails_total > 0 ? (
+              {/* Funnel — render whenever Gmail returned at least one match */}
+              {/* (lets the user see "100 matched, 100 already processed, 0 new") */}
+              {log.gmail_matches_total > 0 ? (
+                <>
+                  <span>Gmail matches</span>
+                  <span>{log.gmail_matches_total}</span>
+                  <span>New (after dedup)</span>
+                  <span>{log.emails_total}</span>
+                  {log.emails_total > 0 ? (
+                    <>
+                      <span>Fetched from Gmail</span>
+                      <span>{log.emails_fetched}</span>
+                      <span>Extracted by Claude</span>
+                      <span>{log.emails_done}</span>
+                    </>
+                  ) : null}
+                </>
+              ) : log.emails_total > 0 ? (
+                /* Legacy sync_logs (pre-#235) without gmail_matches_total */
                 <>
                   <span>Emails found</span>
                   <span>{log.emails_total}</span>

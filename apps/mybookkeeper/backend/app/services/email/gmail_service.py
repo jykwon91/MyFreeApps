@@ -69,7 +69,14 @@ def get_gmail_service(access_token: str, refresh_token: str | None = None):
 
 def list_new_email_ids(
     service, processed_ids: set[str], *, label: str | None = None,
-) -> list[str]:
+) -> tuple[list[str], int]:
+    """Return (new_ids, total_matched).
+
+    ``new_ids`` excludes any message already in ``processed_ids`` (the dedup
+    set built from email_queue + documents). ``total_matched`` is the
+    pre-dedup count Gmail returned for the configured query — surfaced to
+    the UI so '0 documents added' isn't ambiguous.
+    """
     query = settings.gmail_search_query
     label_ids: list[str] | None = None
 
@@ -106,7 +113,8 @@ def list_new_email_ids(
         except Exception:
             logger.debug("Failed to fetch metadata for diagnostic log", exc_info=True)
 
-    return [msg["id"] for msg in messages if msg["id"] not in processed_ids]
+    new_ids = [msg["id"] for msg in messages if msg["id"] not in processed_ids]
+    return new_ids, len(messages)
 
 
 def _resolve_label_id(service, label_name: str) -> str | None:

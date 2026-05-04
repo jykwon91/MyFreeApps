@@ -297,6 +297,7 @@ async def get_sync_logs(
                 emails_total=emails_total,
                 emails_done=emails_done,
                 emails_fetched=emails_fetched,
+                gmail_matches_total=log.gmail_matches_total,
             ))
         return response
 

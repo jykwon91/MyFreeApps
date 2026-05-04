@@ -36,6 +36,7 @@ const mockSyncLog: SyncLog = {
   emails_total: 10,
   emails_done: 10,
   emails_fetched: 5,
+  gmail_matches_total: 10,
 };
 
 const mockRunningSyncLog: SyncLog = {

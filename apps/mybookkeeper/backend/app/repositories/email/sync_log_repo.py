@@ -59,6 +59,7 @@ async def create(
     records_added: int = 0,
     started_at: datetime | None = None,
     completed_at: datetime | None = None,
+    gmail_matches_total: int = 0,
 ) -> SyncLog:
     log = SyncLog(
         organization_id=organization_id,
@@ -68,6 +69,7 @@ async def create(
         records_added=records_added,
         started_at=started_at or datetime.now(timezone.utc),
         completed_at=completed_at,
+        gmail_matches_total=gmail_matches_total,
     )
     db.add(log)
     await db.flush()

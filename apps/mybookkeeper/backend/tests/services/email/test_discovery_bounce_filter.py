@@ -100,7 +100,7 @@ async def test_discovery_filters_bounce_and_logs_it(
         patch("app.services.email.email_discovery_service.get_gmail_service") as mock_gmail,
         patch(
             "app.services.email.email_discovery_service.list_new_email_ids",
-            return_value=[bounce_msg_id],
+            return_value=([bounce_msg_id], 1),
         ),
         patch(
             "app.services.email.email_discovery_service.list_email_document_sources",
@@ -157,7 +157,7 @@ async def test_discovery_queues_legit_email_alongside_filtered_bounce(
         patch("app.services.email.email_discovery_service.get_gmail_service") as mock_gmail,
         patch(
             "app.services.email.email_discovery_service.list_new_email_ids",
-            return_value=[bounce_msg_id, legit_msg_id],
+            return_value=([bounce_msg_id, legit_msg_id], 2),
         ),
         patch(
             "app.services.email.email_discovery_service.list_email_document_sources",
@@ -207,7 +207,7 @@ async def test_discovery_does_not_call_extraction_for_filtered_bounce(
         patch("app.services.email.email_discovery_service.get_gmail_service") as mock_gmail,
         patch(
             "app.services.email.email_discovery_service.list_new_email_ids",
-            return_value=[bounce_msg_id],
+            return_value=([bounce_msg_id], 1),
         ),
         patch(
             "app.services.email.email_discovery_service.list_email_document_sources",

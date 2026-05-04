@@ -18,6 +18,12 @@ class SyncLog(Base):
     status: Mapped[str] = mapped_column(String(20))
     records_added: Mapped[int] = mapped_column(default=0)
     total_items: Mapped[int] = mapped_column(Integer, default=0)
+    # Pre-dedup count of message IDs Gmail returned for the configured search
+    # query. Lets the UI surface the full funnel (matched → new → fetched →
+    # extracted → added) so a "0 documents" sync is no longer ambiguous —
+    # operator can see whether Gmail returned 0 matches or 100 matches that
+    # were all already processed.
+    gmail_matches_total: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     error: Mapped[str | None] = mapped_column(String(1000), nullable=True)
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
