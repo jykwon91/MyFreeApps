@@ -1,7 +1,7 @@
 # Tech Debt
 
 > Last scanned: 2026-05-04
-> Issues: 0 critical, 7 high, 4 medium (1 deferred + 3 active), 0 low
+> Issues: 0 critical, 7 high, 6 medium (1 deferred + 5 active), 0 low
 
 ## High
 
@@ -105,11 +105,27 @@
 
 ---
 
-### [Frontend] Inline Props interfaces in 48 component files [DEFERRED]
-**Effort:** L
-**Location:** 48 files across frontend/src/app/features/
-**Problem:** Simple Props interfaces defined inline rather than in shared/types/.
-**Recommendation:** [DEFERRED] -- Single-use Props colocated with their component are acceptable per prior decision.
+### [Frontend] Bare `interface Props` across ~199 frontend component files
+**Effort:** M (mechanical sweep)
+**Location:** ~199 files across `apps/mybookkeeper/frontend/src/`
+**Problem:** Most component files declare their props as `interface Props` (un-prefixed). Per the new global config rule (jkwon-claude-config PR #92, merged 2026-05-04), props interfaces must be domain-prefixed (`<ComponentName>Props`) AND exported, otherwise importing two `Props` types into the same file collides and IDE rename refactors break. Props CAN stay co-located with the component (one allowed exception to "one type per file") but the bare name is no longer acceptable.
+**Recommendation:** Mechanical sweep — for each file, rename `interface Props` → `interface <ComponentName>Props` (matching the default-export name), add `export`, update local references. Type-check after the rename catches breakage. Ship as one PR (uniform change, TS catches all incorrect references). Defer until next time the codebase has natural quiet — bulk-touching 199 files mid-feature creates merge-conflict risk for in-flight branches.
+
+---
+
+### [Frontend] Stacked ternary chains in JSX rendering (per-file audit needed)
+**Effort:** M
+**Location:** Unknown — no clean grep heuristic. Audit per-domain (`features/transactions/`, `features/applicants/`, `features/leases/`, `features/integrations/`).
+**Problem:** Per the new global config rule (jkwon-claude-config #92), nested ternaries in JSX are unreadable past 2 levels. The canonical fix is a `useXxxMode()` hook returning a discriminated union plus a `switch` in the body component dispatching to one subcomponent per state. Reference impl: `apps/mybookkeeper/frontend/src/app/features/documents/DocumentViewer.tsx` + `useDocumentViewMode.ts` + `DocumentViewerBody.tsx` (PR #238).
+**Recommendation:** Tackle per-domain, not as a sweep — each refactor needs human judgment about the right discriminated-union shape. Start with the highest-traffic domains (transactions, integrations). Use the DocumentViewer trio as the worked example.
+
+---
+
+### [Frontend] Explicit `=== null` / `!== null` / `=== undefined` checks (~64 files)
+**Effort:** S-M
+**Location:** ~64 files across `apps/mybookkeeper/frontend/src/` (per `grep -rln "=== null\|!== null\|=== undefined"`)
+**Problem:** Per the new global config rule (jkwon-claude-config #92), `if (!x)` is preferred over `if (x === null)` when the type is `T | null` and `T` is always truthy. Reserve explicit comparisons for cases where falsy would over-match (distinguishing `null` from `""`, `0`, or `undefined` when those are valid values). Many of the 64 sites are legitimate; many are not.
+**Recommendation:** Per-file audit — read each line, determine if the type would over-match with truthy. If yes, keep explicit. If no, switch to truthy. Group fixes by domain into ≤3 PRs.
 
 ---
 
