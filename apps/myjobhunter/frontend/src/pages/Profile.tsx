@@ -11,21 +11,19 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
-import { LoadingButton, showError, showSuccess, extractErrorMessage } from "@platform/ui";
+import { showError, showSuccess, extractErrorMessage } from "@platform/ui";
 import ProfileSkeleton from "@/features/profile/ProfileSkeleton";
 import ProfileHeaderDialog from "@/features/profile/ProfileHeaderDialog";
 import WorkHistoryDialog from "@/features/profile/WorkHistoryDialog";
 import EducationDialog from "@/features/profile/EducationDialog";
 import ScreeningAnswerDialog from "@/features/profile/ScreeningAnswerDialog";
 import ResumeUploadSection from "@/features/profile/ResumeUploadSection";
+import SkillAddForm from "@/features/profile/SkillAddForm";
+import ScreeningAnswerRow from "@/features/profile/ScreeningAnswerRow";
 import { useGetProfileQuery, useUpdateProfileMutation } from "@/lib/profileApi";
 import { useListWorkHistoryQuery, useDeleteWorkHistoryMutation } from "@/lib/workHistoryApi";
 import { useListEducationQuery, useDeleteEducationMutation } from "@/lib/educationApi";
-import {
-  useListSkillsQuery,
-  useCreateSkillMutation,
-  useDeleteSkillMutation,
-} from "@/lib/skillsApi";
+import { useListSkillsQuery, useDeleteSkillMutation } from "@/lib/skillsApi";
 import {
   useListScreeningAnswersQuery,
   useDeleteScreeningAnswerMutation,
@@ -35,7 +33,7 @@ import type { Education } from "@/types/education/education";
 import type { ScreeningAnswer } from "@/types/screening-answer/screening-answer";
 
 // ---------------------------------------------------------------------------
-// Salary section — inline edit with update mutation
+// Salary / location display helpers
 // ---------------------------------------------------------------------------
 
 const SALARY_PERIOD_LABELS: Record<string, string> = {
@@ -77,91 +75,6 @@ function formatDateRange(start: string, end: string | null): string {
     });
   };
   return end ? `${fmt(start)} – ${fmt(end)}` : `${fmt(start)} – Present`;
-}
-
-// ---------------------------------------------------------------------------
-// Skills inline add form
-// ---------------------------------------------------------------------------
-
-const SKILL_YEAR_OPTIONS = [
-  { value: "", label: "— yrs —" },
-  { value: "1", label: "< 1 yr" },
-  { value: "2", label: "2 yrs" },
-  { value: "3", label: "3 yrs" },
-  { value: "5", label: "5 yrs" },
-  { value: "7", label: "7 yrs" },
-  { value: "10", label: "10+ yrs" },
-];
-
-interface SkillAddFormProps {
-  existingNames: string[];
-}
-
-function SkillAddForm({ existingNames }: SkillAddFormProps) {
-  const [name, setName] = useState("");
-  const [years, setYears] = useState("");
-  const [createSkill, { isLoading }] = useCreateSkillMutation();
-
-  async function handleAdd() {
-    const trimmed = name.trim();
-    if (!trimmed) return;
-    if (existingNames.map((n) => n.toLowerCase()).includes(trimmed.toLowerCase())) {
-      showError(`Skill "${trimmed}" already exists`);
-      return;
-    }
-    try {
-      await createSkill({
-        name: trimmed,
-        years_experience: years ? parseInt(years, 10) : null,
-        category: null,
-      }).unwrap();
-      showSuccess(`Skill "${trimmed}" added`);
-      setName("");
-      setYears("");
-    } catch (err) {
-      showError(`Couldn't add skill: ${extractErrorMessage(err)}`);
-    }
-  }
-
-  return (
-    <div className="flex items-center gap-2 mt-3">
-      <input
-        type="text"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            e.preventDefault();
-            void handleAdd();
-          }
-        }}
-        className="flex-1 border rounded-md px-3 py-2 text-sm bg-background"
-        placeholder="Add a skill..."
-        aria-label="Skill name"
-      />
-      <select
-        value={years}
-        onChange={(e) => setYears(e.target.value)}
-        className="border rounded-md px-2 py-2 text-sm bg-background"
-        aria-label="Years of experience"
-      >
-        {SKILL_YEAR_OPTIONS.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
-      <LoadingButton
-        type="button"
-        isLoading={isLoading}
-        loadingText="Adding..."
-        onClick={() => void handleAdd()}
-        className="min-h-[44px]"
-      >
-        <Plus size={16} />
-      </LoadingButton>
-    </div>
-  );
 }
 
 // ---------------------------------------------------------------------------
@@ -657,45 +570,6 @@ export default function Profile() {
         existing={screeningEditTarget}
         existingKeys={existingAnswerKeys}
       />
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Screening answer row — extracted to avoid inline component definition
-// ---------------------------------------------------------------------------
-
-interface ScreeningAnswerRowProps {
-  answer: ScreeningAnswer;
-  onEdit: () => void;
-  onDelete: () => void;
-}
-
-function ScreeningAnswerRow({ answer, onEdit, onDelete }: ScreeningAnswerRowProps) {
-  return (
-    <div className="flex items-center justify-between gap-3 group rounded-md p-2 hover:bg-muted/40">
-      <div className="flex-1 min-w-0">
-        <p className="text-xs text-muted-foreground capitalize">
-          {answer.question_key.replace(/_/g, " ")}
-        </p>
-        <p className="text-sm truncate">{answer.answer ?? <em className="text-muted-foreground">No answer</em>}</p>
-      </div>
-      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-        <button
-          onClick={onEdit}
-          className="p-2 rounded hover:bg-muted min-h-[44px] min-w-[44px] flex items-center justify-center"
-          aria-label="Edit answer"
-        >
-          <Pencil size={14} />
-        </button>
-        <button
-          onClick={onDelete}
-          className="p-2 rounded hover:bg-destructive/10 text-destructive min-h-[44px] min-w-[44px] flex items-center justify-center"
-          aria-label="Delete answer"
-        >
-          <Trash2 size={14} />
-        </button>
-      </div>
     </div>
   );
 }
