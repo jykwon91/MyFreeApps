@@ -95,7 +95,9 @@ mako==1.3.12
 markupsafe==3.0.3
     # via mako
 minio==7.2.20
-    # via platform-shared
+    # via
+    #   myjobhunter-backend
+    #   platform-shared
 packaging==26.2
     # via pytest
 passlib==1.7.4

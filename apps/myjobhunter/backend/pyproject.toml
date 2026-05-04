@@ -19,6 +19,7 @@ dependencies = [
     "cryptography==47.0.0",
     "httpx==0.28.1",
     "anyio==4.13.0",
+    "minio==7.2.20",
     "platform-shared",
 ]
 

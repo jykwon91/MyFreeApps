@@ -23,6 +23,10 @@ vi.mock("@/features/profile/ScreeningAnswerDialog", () => ({
   default: () => null,
 }));
 
+vi.mock("@/features/profile/ResumeUploadSection", () => ({
+  default: () => <div data-testid="resume-upload-section" />,
+}));
+
 // ---------------------------------------------------------------------------
 // Mock all RTK Query hooks — state controlled per-test via mockReturnValue.
 // ---------------------------------------------------------------------------

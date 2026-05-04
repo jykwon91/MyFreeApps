@@ -17,6 +17,7 @@ import ProfileHeaderDialog from "@/features/profile/ProfileHeaderDialog";
 import WorkHistoryDialog from "@/features/profile/WorkHistoryDialog";
 import EducationDialog from "@/features/profile/EducationDialog";
 import ScreeningAnswerDialog from "@/features/profile/ScreeningAnswerDialog";
+import ResumeUploadSection from "@/features/profile/ResumeUploadSection";
 import { useGetProfileQuery, useUpdateProfileMutation } from "@/lib/profileApi";
 import { useListWorkHistoryQuery, useDeleteWorkHistoryMutation } from "@/lib/workHistoryApi";
 import { useListEducationQuery, useDeleteEducationMutation } from "@/lib/educationApi";
@@ -621,6 +622,11 @@ export default function Profile() {
           </div>
         )}
       </section>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* Resume upload */}
+      {/* ------------------------------------------------------------------ */}
+      <ResumeUploadSection profileId={profile.id} />
 
       {/* ------------------------------------------------------------------ */}
       {/* Dialogs */}
