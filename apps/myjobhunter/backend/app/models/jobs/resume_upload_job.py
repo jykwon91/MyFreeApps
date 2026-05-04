@@ -33,7 +33,11 @@ class ResumeUploadJob(Base):
         index=True,
     )
 
+    # MinIO object key — set by the upload endpoint after the bytes land.
     file_path: Mapped[str] = mapped_column(Text, nullable=False)
+    file_filename: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    file_content_type: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    file_size_bytes: Mapped[int | None] = mapped_column(Integer, nullable=True)
     status: Mapped[str] = mapped_column(String(20), default="queued")
     retry_count: Mapped[int] = mapped_column(Integer, default=0)
     next_retry_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

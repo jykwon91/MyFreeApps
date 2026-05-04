@@ -65,6 +65,27 @@ class Settings(BaseSettings):
     totp_label: str = "MyJobHunter"
     totp_issuer: str = "MyJobHunter"
 
+    # MinIO object storage — mirrors MBK's setup so resumes / cover letters /
+    # tailored docs land in an encrypted bucket with presigned URL access.
+    # ``minio_endpoint`` is the docker-network endpoint the backend uses for
+    # put/get/delete; ``minio_public_endpoint`` is what the browser sees in
+    # presigned URLs. Empty values disable storage entirely (uploads return
+    # 503 — never silently swallowed).
+    minio_endpoint: str = ""
+    minio_public_endpoint: str = ""
+    minio_access_key: str = ""
+    minio_secret_key: str = ""
+    minio_bucket: str = "myjobhunter-files"
+    minio_secure: bool = False
+    # Skip the lifespan bucket-existence check (useful in unit tests where
+    # MinIO isn't available; production must leave this False so a missing
+    # bucket fails loudly at boot).
+    minio_skip_startup_check: bool = False
+
+    # Resume upload limits — generous for legitimate PDF/DOCX resumes,
+    # bounded to prevent storage abuse.
+    max_resume_upload_bytes: int = 25 * 1024 * 1024  # 25 MB
+
     model_config = {"env_file": ".env", "extra": "ignore"}
 
 
