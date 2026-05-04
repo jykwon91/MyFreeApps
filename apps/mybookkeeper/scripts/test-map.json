@@ -671,6 +671,36 @@
         "lease-templates.spec.ts"
       ]
     },
+    "receipts": {
+      "source_paths": [
+        "backend/app/models/leases/pending_rent_receipt.py",
+        "backend/app/models/leases/rent_receipt_sequence.py",
+        "backend/app/repositories/leases/pending_rent_receipt_repo.py",
+        "backend/app/repositories/leases/rent_receipt_sequence_repo.py",
+        "backend/app/schemas/leases/receipt_request.py",
+        "backend/app/schemas/leases/receipt_response.py",
+        "backend/app/services/leases/receipt_service.py",
+        "backend/app/services/leases/receipt_pdf_service.py",
+        "backend/app/api/rent_receipts.py",
+        "backend/alembic/versions/rcpt260504_rent_receipts.py",
+        "frontend/src/app/pages/PendingReceipts.tsx",
+        "frontend/src/app/features/receipts/",
+        "frontend/src/shared/store/rentReceiptsApi.ts",
+        "frontend/src/shared/types/lease/pending-receipt.ts"
+      ],
+      "backend_tests": [
+        "test_receipt_pdf_service.py",
+        "test_receipt_sequence_repo.py",
+        "test_receipt_routes.py"
+      ],
+      "frontend_tests": [
+        "SendReceiptDialog.test.tsx",
+        "PendingReceipts.test.tsx"
+      ],
+      "e2e_specs": [
+        "pending-receipts.spec.ts"
+      ]
+    },
     "screening": {
       "source_paths": [
         "backend/app/api/screening.py",

@@ -171,7 +171,8 @@ jobs:
             e2e/two-factor-button-alignment.spec.ts \
             e2e/login-totp-button-text-centered.spec.ts \
             e2e/document-viewer-failure-modes.spec.ts \
-            e2e/caddy-headers-blob-iframe.spec.ts
+            e2e/caddy-headers-blob-iframe.spec.ts \
+            e2e/pending-receipts.spec.ts
 
       - name: Upload Playwright report on failure
         if: failure()

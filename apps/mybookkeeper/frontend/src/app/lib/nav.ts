@@ -29,6 +29,7 @@ export const NAV_GROUPS: readonly NavGroup[] = [
       { to: "/leases", label: "Leases" },
       { to: "/lease-templates", label: "Lease Templates" },
       { to: "/payment-review", label: "Payment Review" },
+      { to: "/receipts", label: "Receipts" },
     ],
   },
   {
