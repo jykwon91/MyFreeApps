@@ -106,6 +106,24 @@ def _default_period(txn_date: _dt.date) -> tuple[_dt.date, _dt.date]:
     return first, last
 
 
+def _resolve_landlord_name(host_user) -> str:  # type: ignore[no-untyped-def]
+    """Pick the landlord display name for the receipt.
+
+    Prefers the host's configured ``user.name`` (legal name they entered
+    at registration or in profile settings). Falls back to the email
+    local-part only when the user hasn't set a name yet — that fallback
+    surfaces strings like 'jasonykwon91' on the receipt, which is wrong
+    for tenant-facing artifacts. The UI nudges the user to set their
+    name on the Security page so the fallback is short-lived.
+    """
+    name = (host_user.name or "").strip() if hasattr(host_user, "name") else ""
+    if name:
+        return name
+    if host_user.email:
+        return host_user.email.split("@")[0]
+    return "Landlord"
+
+
 async def _resolve_property_address(
     db: AsyncSession,
     *,
@@ -307,10 +325,10 @@ async def send_receipt(
             )
 
         host_user = await user_repo.get_by_id(db, user_id)
-        if host_user is None or not host_user.email:
+        if not host_user or not host_user.email:
             raise LookupError(f"User {user_id} not found or has no email")
 
-        landlord_name = host_user.email.split("@")[0]
+        landlord_name = _resolve_landlord_name(host_user)
         from_address = host_user.email
 
     # ── Phase 2: claim the receipt number (atomic DB op) ────────────────────
@@ -527,7 +545,7 @@ async def preview_receipt_pdf(
         )
 
         host_user = await user_repo.get_by_id(db, user_id)
-        landlord_name = host_user.email.split("@")[0] if host_user and host_user.email else "Landlord"
+        landlord_name = _resolve_landlord_name(host_user) if host_user else "Landlord"
 
     receipt_data = ReceiptData(
         receipt_number="R-PREVIEW",
