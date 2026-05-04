@@ -26,3 +26,19 @@
 
     reverse_proxy 127.0.0.1:8094
 }
+
+# MinIO public endpoint. The minio container binds to 127.0.0.1:9000 (see
+# docker-compose.yml). MinIO listens HTTP-only — host Caddy terminates
+# TLS for storage.<domain> and proxies plaintext to MinIO. The backend
+# signs presigned URLs against this hostname so the browser can fetch
+# attachments directly without round-tripping through the API.
+storage.165-245-134-251.sslip.io {
+    header {
+        Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        -Server
+    }
+
+    reverse_proxy 127.0.0.1:9000
+}
