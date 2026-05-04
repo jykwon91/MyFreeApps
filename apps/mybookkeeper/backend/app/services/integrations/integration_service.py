@@ -99,7 +99,7 @@ def get_gmail_connect_url(ctx: RequestContext) -> str:
     flow.authorization_url(
         access_type="offline",
         include_granted_scopes="true",
-        prompt="consent",
+        prompt="consent select_account",
     )
     # Persist the verifier in the JWT state so the callback can rebuild
     # the Flow with the same value (Google enforces PKCE verifier match).
@@ -114,7 +114,7 @@ def get_gmail_connect_url(ctx: RequestContext) -> str:
         access_type="offline",
         include_granted_scopes="true",
         state=state,
-        prompt="consent",
+        prompt="consent select_account",
     )
     return auth_url
 
