@@ -1,11 +1,14 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Button from "@/shared/components/ui/Button";
 import LoadingButton from "@/shared/components/ui/LoadingButton";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import { useSendReceiptMutation } from "@/shared/store/rentReceiptsApi";
+import api from "@/shared/lib/api";
 import type { Transaction } from "@/shared/types/transaction/transaction";
+import { inferPaymentMethod } from "./inferPaymentMethod";
+import ReceiptPreviewPane from "./ReceiptPreviewPane";
 
-interface Props {
+export interface SendReceiptDialogProps {
   transaction: Transaction;
   onClose: (receiptNumber?: string) => void;
 }
@@ -35,28 +38,50 @@ function defaultPeriod(transactionDate: string): { start: string; end: string } 
  * Modal dialog to review and send a rent receipt PDF to the tenant.
  * Path A — triggered from a transaction row or the pending receipts page.
  */
-export default function SendReceiptDialog({ transaction, onClose }: Props) {
+export default function SendReceiptDialog({ transaction, onClose }: SendReceiptDialogProps) {
   const period = defaultPeriod(transaction.transaction_date);
   const [periodStart, setPeriodStart] = useState(period.start);
   const [periodEnd, setPeriodEnd] = useState(period.end);
-  const [paymentMethod, setPaymentMethod] = useState<string>(
-    transaction.payment_method ?? "",
+  const [paymentMethod, setPaymentMethod] = useState<string>(() =>
+    inferPaymentMethod(transaction),
   );
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewError, setPreviewError] = useState<string | null>(null);
 
   const [sendReceipt, { isLoading: isSending }] = useSendReceiptMutation();
 
+  // Free the blob URL when it changes or the dialog unmounts. Iframes don't
+  // release blob: URLs on src change, so leaks accumulate without this.
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
   async function handlePreview() {
     setPreviewLoading(true);
-    const params = new URLSearchParams({
-      period_start: periodStart,
-      period_end: periodEnd,
-      ...(paymentMethod ? { payment_method: paymentMethod } : {}),
-    });
-    const url = `/api/rent-receipts/preview/${transaction.id}?${params.toString()}`;
-    setPreviewUrl(url);
-    setPreviewLoading(false);
+    setPreviewError(null);
+    try {
+      // Iframes don't carry the JWT Authorization header — fetch the PDF as
+      // a blob via the authenticated axios client, then point the iframe at
+      // a blob: URL we control.
+      const params = new URLSearchParams({
+        period_start: periodStart,
+        period_end: periodEnd,
+      });
+      if (paymentMethod) params.append("payment_method", paymentMethod);
+      const res = await api.get(
+        `/rent-receipts/preview/${transaction.id}?${params.toString()}`,
+        { responseType: "blob" },
+      );
+      const blobUrl = URL.createObjectURL(res.data as Blob);
+      setPreviewUrl(blobUrl);
+    } catch {
+      setPreviewError("Couldn't load preview. Try again.");
+    } finally {
+      setPreviewLoading(false);
+    }
   }
 
   async function handleSend() {
@@ -183,19 +208,7 @@ export default function SendReceiptDialog({ transaction, onClose }: Props) {
 
           {/* Right: PDF preview */}
           <div className="flex-1 bg-muted/20 border-t md:border-t-0 md:border-l flex items-center justify-center min-h-64">
-            {previewUrl ? (
-              <iframe
-                src={previewUrl}
-                title="Receipt preview"
-                data-testid="receipt-preview-iframe"
-                className="w-full h-full min-h-64"
-                style={{ border: "none" }}
-              />
-            ) : (
-              <p className="text-sm text-muted-foreground p-6 text-center">
-                Click "Preview PDF" to see what the tenant will receive.
-              </p>
-            )}
+            <ReceiptPreviewPane url={previewUrl} error={previewError} />
           </div>
         </div>
 
