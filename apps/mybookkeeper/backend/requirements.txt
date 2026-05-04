@@ -131,7 +131,7 @@ httpx==0.28.1
     #   anthropic
     #   mybookkeeper-backend
     #   platform-shared
-icalendar==6.1.3
+icalendar==7.1.0
     # via mybookkeeper-backend
 idna==3.13
     # via
@@ -276,6 +276,7 @@ typing-extensions==4.15.0
     #   anthropic
     #   anyio
     #   fastapi
+    #   icalendar
     #   minio
     #   pydantic
     #   pydantic-core
