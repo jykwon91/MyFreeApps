@@ -152,11 +152,20 @@ def _is_configured() -> bool:
 
 
 def _build_client(host: str, secure: bool) -> Minio:
+    # Pin region to "us-east-1" so the minio-py client never calls
+    # GetBucketLocation to discover it. Without this, presign triggers
+    # a network round-trip to the *public* endpoint just to read the
+    # region — which (a) is slow even when reachable, (b) hangs forever
+    # if the public endpoint's TLS is misconfigured (we hit this in
+    # prod: `TLSV1_ALERT_INTERNAL_ERROR` from storage.<domain>). The
+    # region value is only used in the SigV4 string-to-sign; MinIO
+    # accepts any value here, the default is "us-east-1".
     return Minio(
         host,
         access_key=settings.minio_access_key,
         secret_key=settings.minio_secret_key,
         secure=secure,
+        region="us-east-1",
     )
 
 
