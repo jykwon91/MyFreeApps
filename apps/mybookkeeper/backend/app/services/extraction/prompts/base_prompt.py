@@ -38,6 +38,16 @@ Always return this structure (documents is always an array, even for a single re
   - Bill-ready notifications: "Your bill is ready to view", "Your statement is available", "View your bill online", "Bill reminder"
   - Any email that notifies about a bill or payment but does NOT contain the actual bill/invoice document itself
   When you detect any of these, return a single document entry with document_type "payment_confirmation", the vendor name, a description, amount null, and category "uncategorized" — do NOT extract transaction amounts, as these duplicate the original invoice or bill
+
+  CRITICAL EXCEPTION — peer-to-peer money transfer emails are NEVER "payment_confirmation". They ARE the source of truth for the income, not a duplicate of any invoice. This includes ALL of:
+    - Zelle ("You received money with Zelle", "FN LN sent you $X with Zelle")
+    - Venmo ("FN LN paid you $X", "Venmo: ... sent you $X")
+    - Cash App ("FN LN sent you $X", "$X from FN")
+    - PayPal ("You received $X from FN LN")
+    - Apple Pay Cash, Google Pay, direct ACH/wire deposit alerts
+    - Any bank deposit alert showing a person-to-person transfer (e.g. Chase Zelle, Bank of America Zelle, Wells Fargo Zelle)
+    - Forwarded ("Fwd:") versions of any of the above
+  For all of these, set document_type "invoice", transaction_type "income", category "rental_revenue", and extract: amount, date, payer_name (the sender), vendor (the platform — "Zelle", "Venmo", "Cash App", "PayPal"), and payment_method "bank_transfer" (or "platform_payout" for Venmo/Cash App/PayPal).
 - "statement" — billing statements, account statements, property management billing periods
 - "lease" — lease agreements, rental contracts, renewals/amendments
 - "insurance_policy" — insurance policies, declarations pages, certificates of insurance
@@ -296,4 +306,13 @@ Mortgage statement with interest and principal breakdown:
 
 Airbnb payout:
 {"documents": [{"document_type": "statement", "date": "2025-09-20", "vendor": "Airbnb", "amount": "850.00", "description": "Payout for reservation HM12345", "transaction_type": "income", "category": "rental_revenue", "payment_method": "platform_payout", "tags": ["rental_revenue"], "tax_relevant": true, "channel": "airbnb", "address": "6738 Peerless St Houston TX", "confidence": "high", "line_items": null}]}
+
+Zelle payment ("You received money with Zelle" — Sonu King sent $701.20):
+{"documents": [{"document_type": "invoice", "date": "2026-05-03", "vendor": "Zelle", "payer_name": "Sonu King", "amount": "701.20", "description": "Zelle from Sonu King", "transaction_type": "income", "category": "rental_revenue", "payment_method": "bank_transfer", "tags": ["rental_revenue"], "tax_relevant": true, "channel": null, "address": null, "confidence": "high", "line_items": null}]}
+
+Venmo payment ("John Doe paid you $1500.00"):
+{"documents": [{"document_type": "invoice", "date": "2026-05-01", "vendor": "Venmo", "payer_name": "John Doe", "amount": "1500.00", "description": "Venmo from John Doe", "transaction_type": "income", "category": "rental_revenue", "payment_method": "platform_payout", "tags": ["rental_revenue"], "tax_relevant": true, "channel": null, "address": null, "confidence": "high", "line_items": null}]}
+
+Cash App payment ("$800.00 from Jane Smith"):
+{"documents": [{"document_type": "invoice", "date": "2026-05-02", "vendor": "Cash App", "payer_name": "Jane Smith", "amount": "800.00", "description": "Cash App from Jane Smith", "transaction_type": "income", "category": "rental_revenue", "payment_method": "platform_payout", "tags": ["rental_revenue"], "tax_relevant": true, "channel": null, "address": null, "confidence": "high", "line_items": null}]}
 """

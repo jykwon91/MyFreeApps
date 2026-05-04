@@ -33,15 +33,32 @@ class Settings(BaseSettings):
     # universe MBK can react to:
     #   - Document-extractor patterns (invoice/receipt/billing/etc.)
     #   - Airbnb host payouts (subject:payout)
-    #   - Peer-to-peer rent payments (Zelle/Venmo/Cash App/Chase Zelle alerts)
+    #   - Peer-to-peer rent payments (Zelle/Venmo/Cash App/PayPal/Apple Pay)
+    #     across multiple banks (Chase, BoA, Wells, Citi, Capital One, etc.)
     gmail_search_query: str = (
+        # --- Document-extractor patterns ------------------------------------
         "subject:invoice OR subject:receipt OR subject:payment OR subject:payout OR "
         "subject:billing OR subject:statement OR subject:booking OR subject:report OR "
         "subject:financial OR has:attachment OR "
-        # Rent-attribution catches — peer-to-peer payment notifications
+        # --- Peer-to-peer payment subjects ----------------------------------
+        # Platform-named subjects
         "subject:zelle OR subject:venmo OR subject:\"cash app\" OR "
+        "subject:cashapp OR subject:paypal OR subject:\"apple pay\" OR "
+        # Generic money-movement phrases — catches forwarded subjects too
+        # ("Fwd: ..." prefix doesn't break Gmail subject token matching)
         "subject:\"received money\" OR subject:\"sent you money\" OR "
-        "from:no.reply.alerts@chase.com OR from:venmo@venmo.com OR from:cash@square.com"
+        "subject:\"sent you\" OR subject:\"paid you\" OR "
+        "subject:\"you received\" OR subject:\"you got paid\" OR "
+        "subject:\"deposit alert\" OR subject:\"transfer received\" OR "
+        # --- Peer-to-peer payment senders -----------------------------------
+        # Standalone platforms
+        "from:zellepay.com OR from:venmo.com OR from:cash.app OR "
+        "from:paypal.com OR from:square.com OR "
+        # Bank-routed Zelle / deposit alerts (major US issuers)
+        "from:no.reply.alerts@chase.com OR from:alerts.chase.com OR "
+        "from:ealerts.bankofamerica.com OR from:notify.wellsfargo.com OR "
+        "from:notification.capitalone.com OR from:alerts.citibank.com OR "
+        "from:usaa.com OR from:alerts.usbank.com OR from:pncalerts.com"
     )
     max_uploads_per_user_per_day: int = 50
     max_upload_size_bytes: int = 100 * 1024 * 1024  # 100MB (supports zip uploads)
