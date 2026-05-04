@@ -64,7 +64,7 @@ async def discover_gmail_emails(ctx: RequestContext) -> DiscoverResult:
 
         label = settings.gmail_label or None
         try:
-            new_ids: list[str] = await asyncio.to_thread(
+            new_ids, gmail_matches_total = await asyncio.to_thread(
                 list_new_email_ids, service, processed_ids, label=label
             )
         except RefreshError as exc:
@@ -77,7 +77,10 @@ async def discover_gmail_emails(ctx: RequestContext) -> DiscoverResult:
                 org_id, ctx.user_id, exc,
             )
             raise GmailAuthExpiredError(str(exc)) from exc
-        logger.info("Gmail discovery: %d new emails found (skipped %d)", len(new_ids), len(processed_ids))
+        logger.info(
+            "Gmail discovery: matched=%d new=%d (skipped %d already-processed)",
+            gmail_matches_total, len(new_ids), gmail_matches_total - len(new_ids),
+        )
 
         if not new_ids:
             await sync_log_repo.create(
@@ -85,11 +88,16 @@ async def discover_gmail_emails(ctx: RequestContext) -> DiscoverResult:
                 records_added=0,
                 started_at=now,
                 completed_at=now,
+                gmail_matches_total=gmail_matches_total,
             )
             await integration_repo.update_last_synced(db, integration, now)
             return DiscoverResult("nothing_new")
 
-        log = await sync_log_repo.create(db, org_id, ctx.user_id, "gmail", "running", started_at=now)
+        log = await sync_log_repo.create(
+            db, org_id, ctx.user_id, "gmail", "running",
+            started_at=now,
+            gmail_matches_total=gmail_matches_total,
+        )
 
         bounce_detector = BounceDetector()
         total_sources = 0

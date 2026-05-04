@@ -14,3 +14,4 @@ class SyncLogInfo(TypedDict):
     emails_total: int
     emails_done: int
     emails_fetched: int
+    gmail_matches_total: int

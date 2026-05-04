@@ -109,7 +109,7 @@ def _patch_discovery_dependencies(
         patches.append(
             patch(
                 "app.services.email.email_discovery_service.list_new_email_ids",
-                return_value=new_ids,
+                return_value=(new_ids, len(new_ids)),
             )
         )
 
