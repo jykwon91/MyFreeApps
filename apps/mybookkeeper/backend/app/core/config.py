@@ -28,7 +28,21 @@ class Settings(BaseSettings):
     cors_origins: list[str] = ["http://localhost:5173"]
     jwt_lifetime_seconds: int = 60 * 60 * 24  # 24 hours
     gmail_poll_interval_minutes: int = 1440
-    gmail_search_query: str = "subject:invoice OR subject:receipt OR subject:payment OR subject:payout OR subject:billing OR subject:statement OR subject:booking OR subject:report OR subject:financial OR has:attachment"
+    # Gmail search filter applied at API-list time. Anything that doesn't
+    # match never gets fetched, so the categories here define the full
+    # universe MBK can react to:
+    #   - Document-extractor patterns (invoice/receipt/billing/etc.)
+    #   - Airbnb host payouts (subject:payout)
+    #   - Peer-to-peer rent payments (Zelle/Venmo/Cash App/Chase Zelle alerts)
+    gmail_search_query: str = (
+        "subject:invoice OR subject:receipt OR subject:payment OR subject:payout OR "
+        "subject:billing OR subject:statement OR subject:booking OR subject:report OR "
+        "subject:financial OR has:attachment OR "
+        # Rent-attribution catches — peer-to-peer payment notifications
+        "subject:zelle OR subject:venmo OR subject:\"cash app\" OR "
+        "subject:\"received money\" OR subject:\"sent you money\" OR "
+        "from:no.reply.alerts@chase.com OR from:venmo@venmo.com OR from:cash@square.com"
+    )
     max_uploads_per_user_per_day: int = 50
     max_upload_size_bytes: int = 100 * 1024 * 1024  # 100MB (supports zip uploads)
     max_text_chars: int = 20000
