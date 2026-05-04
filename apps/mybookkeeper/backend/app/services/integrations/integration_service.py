@@ -1,3 +1,4 @@
+import logging
 import uuid
 from datetime import datetime, timedelta, timezone
 
@@ -16,6 +17,8 @@ from app.models.responses.retry_result import RetryResult
 from app.models.responses.sync_log_info import SyncLogInfo
 from app.repositories import email_queue_repo, integration_repo, sync_log_repo
 from app.services.system.auth_event_service import log_auth_event
+
+logger = logging.getLogger(__name__)
 
 GMAIL_READONLY_SCOPE = "https://www.googleapis.com/auth/gmail.readonly"
 GMAIL_SEND_SCOPE = "https://www.googleapis.com/auth/gmail.send"
@@ -96,7 +99,11 @@ async def handle_gmail_callback(code: str, state: str) -> None:
     user_id_str, org_id_str = _verify_oauth_state(state)
 
     flow = _get_flow()
-    flow.fetch_token(code=code)
+    try:
+        flow.fetch_token(code=code)
+    except Exception:
+        logger.exception("Gmail OAuth token exchange failed (fetch_token)")
+        raise
     creds = flow.credentials
     expiry = creds.expiry or datetime.now(timezone.utc) + timedelta(seconds=3600)
 
@@ -105,26 +112,30 @@ async def handle_gmail_callback(code: str, state: str) -> None:
     # missing send-scope without a Google round-trip.
     granted_scopes = list(creds.scopes) if creds.scopes else []
 
-    async with unit_of_work() as db:
-        integration = await integration_repo.upsert_gmail(
-            db,
-            organization_id=uuid.UUID(org_id_str),
-            user_id=uuid.UUID(user_id_str),
-            access_token=creds.token,
-            refresh_token=creds.refresh_token,
-            token_expiry=expiry,
-            scopes=granted_scopes,
-        )
-        # A successful re-auth clears any stale reauth state so the UI
-        # reconnect banner goes away immediately after the OAuth popup closes.
-        await integration_repo.clear_reauth_state(db, integration)
-        await log_auth_event(
-            db,
-            event_type=AuthEventType.OAUTH_CONNECT,
-            user_id=uuid.UUID(user_id_str),
-            succeeded=True,
-            metadata={"provider": "gmail"},
-        )
+    try:
+        async with unit_of_work() as db:
+            integration = await integration_repo.upsert_gmail(
+                db,
+                organization_id=uuid.UUID(org_id_str),
+                user_id=uuid.UUID(user_id_str),
+                access_token=creds.token,
+                refresh_token=creds.refresh_token,
+                token_expiry=expiry,
+                scopes=granted_scopes,
+            )
+            # A successful re-auth clears any stale reauth state so the UI
+            # reconnect banner goes away immediately after the OAuth popup closes.
+            await integration_repo.clear_reauth_state(db, integration)
+            await log_auth_event(
+                db,
+                event_type=AuthEventType.OAUTH_CONNECT,
+                user_id=uuid.UUID(user_id_str),
+                succeeded=True,
+                metadata={"provider": "gmail"},
+            )
+    except Exception:
+        logger.exception("Gmail OAuth upsert failed (upsert_gmail / clear_reauth_state)")
+        raise
 
 
 async def list_integrations(

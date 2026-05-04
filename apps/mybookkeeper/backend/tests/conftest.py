@@ -13,6 +13,10 @@ import pytest
 # ensures the guard fires before any test module is collected.
 os.environ.setdefault("MAGIC_DISABLED", "1")
 
+# Environment tag — set to "test" so init_sentry() does not require SENTRY_DSN.
+# Must be set before settings is imported.
+os.environ.setdefault("ENVIRONMENT", "test")
+
 # Storage env vars — set before settings is imported so ``get_storage()``
 # doesn't raise StorageNotConfiguredError when the lifespan or any
 # service touches it. The ``_patch_storage_for_tests`` autouse fixture

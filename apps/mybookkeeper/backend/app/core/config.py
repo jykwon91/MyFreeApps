@@ -56,6 +56,7 @@ class Settings(BaseSettings):
 
     gmail_label: str = ""
 
+    environment: str = "development"
     sentry_dsn: str = ""
     posthog_api_key: str = ""
 
