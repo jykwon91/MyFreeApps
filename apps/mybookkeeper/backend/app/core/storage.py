@@ -187,15 +187,14 @@ def get_storage() -> StorageClient | None:
     else:
         client = StorageClient(internal_client, settings.minio_bucket)
 
-    try:
-        client.ensure_bucket()
-    except S3Error:
-        logger.warning(
-            "Failed to ensure MinIO bucket %s exists at startup",
-            settings.minio_bucket,
-            exc_info=True,
-        )
-
+    # Bucket existence is verified by the FastAPI lifespan
+    # (services/storage/bucket_initializer.py). Calling ensure_bucket()
+    # here would re-trigger a network round-trip on every cold-cache
+    # invocation — when MinIO is unreachable, bucket_exists() hangs for
+    # tens of seconds, blocking any request that touches attachments.
+    # Presigning is purely cryptographic (HMAC over the URL) and does
+    # not require the bucket to exist or MinIO to be reachable; the
+    # browser-side fetch is what tests connectivity.
     _client = client
     return _client
 
