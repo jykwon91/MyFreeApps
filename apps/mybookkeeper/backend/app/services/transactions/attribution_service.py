@@ -21,6 +21,7 @@ from app.models.applicants.applicant import Applicant
 from app.models.transactions.transaction import Transaction
 from app.repositories import attribution_repo
 from app.repositories.applicants import applicant_repo
+from app.repositories.leases import signed_lease_repo
 from app.repositories.listings import listing_repo
 from app.repositories import transaction_repo as txn_repo
 
@@ -119,8 +120,6 @@ async def _get_property_id_for_applicant(
     Walks: applicant → signed_lease → listing → property_id.
     Returns the first non-null property_id found, or None.
     """
-    from app.repositories.leases import signed_lease_repo
-    from app.repositories.listings import listing_repo as l_repo
     leases = await signed_lease_repo.list_for_tenant(
         db,
         user_id=applicant.user_id,
@@ -132,7 +131,7 @@ async def _get_property_id_for_applicant(
     for lease in leases:
         if not lease.listing_id:
             continue
-        listing = await l_repo.get_by_id(db, lease.listing_id, organization_id)
+        listing = await listing_repo.get_by_id(db, lease.listing_id, organization_id)
         if listing and listing.property_id:
             return listing.property_id
     return None

@@ -23,6 +23,7 @@ import ReferenceRow from "@/app/features/applicants/ReferenceRow";
 import VideoCallNoteCard from "@/app/features/applicants/VideoCallNoteCard";
 import SensitiveDataUnlock from "@/app/features/applicants/SensitiveDataUnlock";
 import ScreeningSection from "@/app/features/screening/ScreeningSection";
+import TenantPayments from "@/app/features/applicants/TenantPayments";
 import { useState } from "react";
 
 export default function ApplicantDetail() {
@@ -305,6 +306,17 @@ export default function ApplicantDetail() {
               </div>
             </div>
           </SensitiveDataUnlock>
+
+          {/* Payments — attributed rent payments from this tenant */}
+          {applicant.stage === "lease_signed" ? (
+            <section
+              className="border rounded-lg p-4 space-y-3"
+              data-testid="tenant-payments-section"
+            >
+              <h2 className="text-sm font-medium">Payments</h2>
+              <TenantPayments applicantId={applicant.id} />
+            </section>
+          ) : null}
 
           {/* Screening — scrnv2260503 UX rebuild.
               Provider grid with eligibility gate, pending panel, and

@@ -813,6 +813,37 @@
         "reconciliation.spec.ts"
       ]
     },
+    "attribution": {
+      "source_paths": [
+        "backend/app/models/transactions/rent_attribution_review_queue.py",
+        "backend/app/repositories/transactions/attribution_repo.py",
+        "backend/app/services/transactions/attribution_service.py",
+        "backend/app/services/transactions/property_pnl_service.py",
+        "backend/app/schemas/transactions/attribution.py",
+        "backend/app/api/attribution.py",
+        "backend/alembic/versions/txnattr260504_rent_attribution.py",
+        "frontend/src/shared/store/attributionApi.ts",
+        "frontend/src/shared/types/attribution/",
+        "frontend/src/app/features/attribution/",
+        "frontend/src/app/pages/AttributionReview.tsx",
+        "frontend/src/app/features/applicants/TenantPayments.tsx",
+        "frontend/src/app/features/transactions/AttributeTenantPicker.tsx"
+      ],
+      "backend_tests": [
+        "test_attribution_matcher.py",
+        "test_attribution_repo.py",
+        "test_attribution_routes.py"
+      ],
+      "frontend_tests": [
+        "AttributionReviewPanel.test.tsx",
+        "PropertyPnLGrid.test.tsx",
+        "Dashboard.test.tsx"
+      ],
+      "e2e_specs": [
+        "attribution-review.spec.ts",
+        "property-pnl-dashboard.spec.ts"
+      ]
+    },
     "classification_rules": {
       "source_paths": [
         "backend/app/services/classification/rule_service.py",

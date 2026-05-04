@@ -55,6 +55,9 @@ function makeTxn(overrides: Partial<Transaction> = {}): Transaction {
     is_pending: false,
     activity_id: null,
     review_reason: null,
+    applicant_id: null,
+    attribution_source: null,
+    payer_name: null,
     ...overrides,
   };
 }

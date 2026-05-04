@@ -12,6 +12,7 @@ import ConfirmDialog from "@/shared/components/ui/ConfirmDialog";
 import TransactionStatusBadge from "@/app/features/transactions/TransactionStatusBadge";
 import TransactionTypeBadge from "@/app/features/transactions/TransactionTypeBadge";
 import TransactionForm from "@/app/features/transactions/TransactionForm";
+import AttributeTenantPicker from "@/app/features/transactions/AttributeTenantPicker";
 import { useUpdateTransactionMutation, useDeleteTransactionMutation } from "@/shared/store/transactionsApi";
 
 interface Props {
@@ -172,6 +173,19 @@ export default function TransactionPanel({ transaction, properties, onClose, onV
         onKeepDuplicate={onKeepDuplicate}
         onDismissDuplicate={onDismissDuplicate}
       />
+
+      {transaction.transaction_type === "income" && (
+        <div className="px-5 py-4 border-t space-y-2">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+            Attribute to tenant
+          </p>
+          <AttributeTenantPicker
+            transactionId={transaction.id}
+            currentApplicantId={transaction.applicant_id}
+            currentAttributionSource={transaction.attribution_source}
+          />
+        </div>
+      )}
 
       <div className="flex items-center justify-between gap-2 px-5 py-4 border-t">
         <div className="flex items-center gap-2">
