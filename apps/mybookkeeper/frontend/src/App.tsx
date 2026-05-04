@@ -45,6 +45,7 @@ import TaxDocuments from "@/app/pages/TaxDocuments";
 import TaxReturns from "@/app/pages/TaxReturns";
 import TaxReturnDetail from "@/app/pages/TaxReturnDetail";
 import Analytics from "@/app/pages/Analytics";
+import AttributionReview from "@/app/pages/AttributionReview";
 import Security from "@/app/pages/Security";
 import Forbidden from "@/app/pages/Forbidden";
 import OAuthCallback from "@/app/pages/OAuthCallback";
@@ -134,6 +135,7 @@ export default function App() {
               <Route path="tax-returns" element={<TaxReturns />} />
               <Route path="tax-returns/:id" element={<TaxReturnDetail />} />
               <Route path="analytics" element={<Analytics />} />
+              <Route path="payment-review" element={<AttributionReview />} />
               <Route
                 path="tax-review"
                 element={

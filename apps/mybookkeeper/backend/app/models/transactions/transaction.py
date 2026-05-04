@@ -32,6 +32,17 @@ class Transaction(Base):
         ForeignKey("vendors.id", ondelete="SET NULL", name="fk_txn_vendor"),
         nullable=True,
     )
+    # Tenant who made this payment — set by the attribution pipeline or manually
+    # by the host. ON DELETE SET NULL — deleting an applicant preserves history.
+    applicant_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("applicants.id", ondelete="SET NULL", name="fk_txn_applicant"),
+        nullable=True,
+    )
+    # How the applicant link was established — NULL for unattributed transactions.
+    attribution_source: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    # AI-extracted sender name — used by the attribution matcher.
+    payer_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     transaction_date: Mapped[date] = mapped_column(Date)
     tax_year: Mapped[int] = mapped_column(SmallInteger)
@@ -198,6 +209,16 @@ class Transaction(Base):
         Index(
             "ix_txn_vendor_id_partial", "vendor_id",
             postgresql_where=text("vendor_id IS NOT NULL"),
+        ),
+        # Partial index on the applicant FK — only attributed transactions.
+        Index(
+            "ix_txn_applicant_id_partial", "applicant_id",
+            postgresql_where=text("applicant_id IS NOT NULL"),
+        ),
+        CheckConstraint(
+            "attribution_source IS NULL OR attribution_source IN "
+            "('auto_exact', 'auto_fuzzy_confirmed', 'manual')",
+            name="chk_txn_attribution_source",
         ),
     )
 

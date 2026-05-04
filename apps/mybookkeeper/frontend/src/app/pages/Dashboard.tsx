@@ -21,11 +21,23 @@ import DashboardSkeleton from "@/app/features/dashboard/DashboardSkeleton";
 import HealthBanner from "@/shared/components/HealthBanner";
 import Card from "@/shared/components/ui/Card";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
+import PropertyPnLGrid from "@/app/features/attribution/PropertyPnLGrid";
+import PnLDateRangeSelector from "@/app/features/attribution/PnLDateRangeSelector";
+
+function getThisMonthRange(): { since: string; until: string } {
+  const now = new Date();
+  const since = new Date(now.getFullYear(), now.getMonth(), 1)
+    .toISOString()
+    .slice(0, 10);
+  const until = now.toISOString().slice(0, 10);
+  return { since, until };
+}
 
 export default function Dashboard() {
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [drillDown, setDrillDown] = useState<DrillDownFilter | null>(null);
   const [selectedPropertyIds, setSelectedPropertyIds] = useState<string[]>([]);
+  const [pnlDateRange, setPnlDateRange] = useState(getThisMonthRange);
 
   const { user } = useCurrentUser();
   const isAdmin = user?.role === "admin";
@@ -296,6 +308,15 @@ export default function Dashboard() {
             />
           </Card>
         )}
+
+      {/* Property P&L section */}
+      <section className="space-y-4" data-testid="property-pnl-section">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
+          <h2 className="text-base font-medium">Property P&L</h2>
+          <PnLDateRangeSelector value={pnlDateRange} onChange={setPnlDateRange} />
+        </div>
+        <PropertyPnLGrid since={pnlDateRange.since} until={pnlDateRange.until} />
+      </section>
 
       {drillDown && (
         <DrillDownPanel

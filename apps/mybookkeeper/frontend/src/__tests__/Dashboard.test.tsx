@@ -49,6 +49,27 @@ vi.mock("@/shared/store/summaryApi", () => ({
   })),
 }));
 
+vi.mock("@/shared/store/attributionApi", () => ({
+  useGetPropertyPnlQuery: vi.fn(() => ({
+    data: {
+      since: "2026-05-01",
+      until: "2026-05-31",
+      properties: [],
+      total_revenue_cents: 0,
+      total_expenses_cents: 0,
+      total_net_cents: 0,
+    },
+    isLoading: false,
+  })),
+  useGetAttributionReviewQueueQuery: vi.fn(() => ({
+    data: { items: [], total: 0, pending_count: 0 },
+    isLoading: false,
+  })),
+  useConfirmAttributionReviewMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useRejectAttributionReviewMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useAttributeTransactionManuallyMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+}));
+
 vi.mock("recharts", () => ({
   ResponsiveContainer: ({ children }: { children: React.ReactNode }) => <div data-testid="responsive-container">{children}</div>,
   BarChart: ({ children }: { children: React.ReactNode }) => <div data-testid="bar-chart">{children}</div>,

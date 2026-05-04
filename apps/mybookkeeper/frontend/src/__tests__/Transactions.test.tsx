@@ -47,6 +47,9 @@ const mockTransactions: Transaction[] = [
     is_pending: false,
     activity_id: null,
     review_reason: null,
+    applicant_id: null,
+    attribution_source: null,
+    payer_name: null,
   },
   {
     id: "txn-2",
@@ -86,6 +89,9 @@ const mockTransactions: Transaction[] = [
     is_pending: false,
     activity_id: null,
     review_reason: null,
+    applicant_id: null,
+    attribution_source: null,
+    payer_name: null,
   },
 ];
 
@@ -123,6 +129,24 @@ vi.mock("@/shared/store/propertiesApi", () => ({
     data: mockProperties,
     isLoading: false,
   })),
+}));
+
+vi.mock("@/shared/store/applicantsApi", () => ({
+  useGetApplicantsQuery: vi.fn(() => ({
+    data: { items: [], total: 0, has_more: false },
+    isLoading: false,
+  })),
+}));
+
+vi.mock("@/shared/store/attributionApi", () => ({
+  useGetAttributionReviewQueueQuery: vi.fn(() => ({
+    data: { items: [], total: 0, pending_count: 0 },
+    isLoading: false,
+  })),
+  useAttributeTransactionManuallyMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useConfirmAttributionReviewMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useRejectAttributionReviewMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useGetPropertyPnlQuery: vi.fn(() => ({ data: undefined, isLoading: false })),
 }));
 
 vi.mock("@/shared/utils/download", () => ({

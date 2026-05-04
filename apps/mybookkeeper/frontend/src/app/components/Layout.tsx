@@ -14,12 +14,20 @@ import VersionTag from "@/app/components/VersionTag";
 import DemoWelcomeDialog from "@/app/components/DemoWelcomeDialog";
 import GmailReauthSidebarBanner from "@/app/components/GmailReauthSidebarBanner";
 import LegalFooter from "@/app/components/LegalFooter";
+import { useGetAttributionReviewQueueQuery } from "@/shared/store/attributionApi";
 
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  // Poll attribution queue count every 2 min to keep the badge fresh.
+  const { data: attributionQueueData } = useGetAttributionReviewQueueQuery(
+    { limit: 1, offset: 0 },
+    { pollingInterval: 120_000 },
+  );
+  const attributionPendingCount = attributionQueueData?.pending_count ?? 0;
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -138,7 +146,15 @@ export default function Layout() {
                         onClick={() => setSidebarOpen(false)}
                         className={navLinkClass}
                       >
-                        {label}
+                        <span className="flex-1">{label}</span>
+                        {to === "/payment-review" && attributionPendingCount > 0 && (
+                          <span
+                            className="ml-auto shrink-0 inline-flex items-center justify-center rounded-full bg-amber-500 text-white text-[10px] font-semibold min-w-[18px] h-[18px] px-1"
+                            aria-label={`${attributionPendingCount} pending payment reviews`}
+                          >
+                            {attributionPendingCount > 99 ? "99+" : attributionPendingCount}
+                          </span>
+                        )}
                       </NavLink>
                     ))
                   : null}

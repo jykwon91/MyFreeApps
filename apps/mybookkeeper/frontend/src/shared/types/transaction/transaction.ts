@@ -12,6 +12,10 @@ export interface Transaction {
   // transactions that haven't been manually mapped yet, or for transactions
   // whose vendor was hard-deleted.
   vendor_id: string | null;
+  // Tenant attribution
+  applicant_id: string | null;
+  attribution_source: "auto_exact" | "auto_fuzzy_confirmed" | "manual" | null;
+  payer_name: string | null;
   transaction_date: string;
   tax_year: number;
   vendor: string | null;

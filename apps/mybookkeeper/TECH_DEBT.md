@@ -1,7 +1,7 @@
 # Tech Debt
 
 > Last scanned: 2026-05-03
-> Issues: 0 critical, 5 high, 3 medium (deferred), 0 low
+> Issues: 0 critical, 5 high, 4 medium (1 deferred + 3 active), 0 low
 
 ## High
 
@@ -21,11 +21,11 @@
 
 ---
 
-### [Frontend tests] Pre-existing frontend unit test failures unrelated to Gmail-disconnect PR
+### [Frontend tests] Pre-existing frontend unit test failures unrelated to attribution PR
 **Effort:** M
-**Location:** frontend/src/__tests__/DocumentUploadZone.test.tsx, DrillDownPanel.test.tsx, InviteAccept.test.tsx, PendingInvites.test.tsx, Documents.test.tsx, Transactions.test.tsx, useDashboardFilter.test.ts, ApplicantDetail.test.tsx, ListingDetail.test.tsx
-**Problem:** 52 unit tests across 9 files fail on main (e.g. `useMediaQuery` hook crashes during render, `filterState.selectedCategories.size` returns 4 instead of 1; `ApplicantSummary` type missing `tenant_ended_at`/`tenant_ended_reason` fields in test mocks). Discovered during Gmail-disconnect PR validation — all failures reproduce on main before any new commits, so they were introduced in a prior merge.
-**Recommendation:** Triage in a dedicated session. The `DocumentUploadZone` failures all trace to `useMediaQuery` mounting during test render; likely needs a jsdom matchMedia polyfill or a mock in conftest. The `ApplicantDetail` and `ListingDetail` failures trace to outdated test mock data not including fields added in PR #187 (tenant lifecycle).
+**Location:** frontend/src/__tests__/DocumentUploadZone.test.tsx, InviteAccept.test.tsx, PendingInvites.test.tsx, Documents.test.tsx, useDashboardFilter.test.ts, ApplicantDetail.test.tsx, ListingDetail.test.tsx
+**Problem:** Failures across 7 files on main. Root causes: (a) `useMediaQuery` hook crashes during render in `DocumentUploadZone` — likely needs a jsdom matchMedia polyfill or vi.mock; (b) `filterState.selectedCategories.size` returns 4 instead of 1 in `useDashboardFilter`; (c) `ApplicantDetail` and `ListingDetail` test mocks are missing fields added in PR #187 (tenant lifecycle) — `tenant_ended_at`, `tenant_ended_reason`. Note: `DrillDownPanel.test.tsx` and `Transactions.test.tsx` attribution-fixture failures (missing `applicant_id`/`attribution_source`/`payer_name`) were fixed in PR #213.
+**Recommendation:** Triage in a dedicated session. Fix `DocumentUploadZone` matchMedia mock first (lowest effort, unblocks the most tests). Then update the `ApplicantDetail` and `ListingDetail` mocks to include the PR #187 fields.
 
 ---
 
@@ -62,6 +62,14 @@
 ---
 
 ## Medium
+
+### [Attribution] Unmatched review items have no inline tenant-assign flow on the review panel
+**Effort:** S
+**Location:** `apps/mybookkeeper/frontend/src/app/features/attribution/AttributionReviewItem.tsx`, `AttributionReviewPanel.tsx`
+**Problem:** For `confidence="unmatched"` queue items (no proposed candidate), the review panel only shows a Reject button. To attribute an unmatched income transaction to a tenant the user must: (1) reject the queue item, (2) navigate to the Transactions page, (3) find the transaction, (4) open it, and (5) use the `AttributeTenantPicker`. This 5-step flow was intentional for Phase 1 but creates friction for the main "I got a Venmo payment and don't know who it's from" use case.
+**Recommendation:** Add an inline applicant select to `AttributionReviewItem` for `unmatched` items — reuse the same `lease_signed` applicants query already used by `AttributeTenantPicker`. On confirm, call `useAttributeTransactionManuallyMutation` (which also closes the queue item server-side). This collapses the 5-step flow to 2 steps on the review panel.
+
+---
 
 ### [Frontend tests] Debounce + async toast tests require switching between fake/real timers per test [DEFERRED]
 **Effort:** S
