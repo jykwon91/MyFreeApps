@@ -48,6 +48,7 @@ LEASE_ATTACHMENT_KINDS: tuple[str, ...] = (
     "insurance_proof",
     "amendment",
     "notice",
+    "rent_receipt",
     "other",
 )
 

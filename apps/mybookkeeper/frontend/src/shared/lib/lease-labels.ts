@@ -39,6 +39,7 @@ export const LEASE_ATTACHMENT_KIND_LABELS: Record<LeaseAttachmentKind, string> =
   insurance_proof: "Insurance proof",
   amendment: "Amendment",
   notice: "Notice",
+  rent_receipt: "Rent receipt",
   other: "Other",
 };
 

@@ -13,6 +13,7 @@ export type LeaseAttachmentKind =
   | "insurance_proof"
   | "amendment"
   | "notice"
+  | "rent_receipt"
   | "other";
 
 export const LEASE_ATTACHMENT_KINDS: readonly LeaseAttachmentKind[] = [
@@ -24,5 +25,6 @@ export const LEASE_ATTACHMENT_KINDS: readonly LeaseAttachmentKind[] = [
   "insurance_proof",
   "amendment",
   "notice",
+  "rent_receipt",
   "other",
 ] as const;
