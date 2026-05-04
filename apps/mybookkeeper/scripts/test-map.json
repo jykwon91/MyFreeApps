@@ -638,6 +638,39 @@
         "lease-templates-phase2.spec.ts"
       ]
     },
+    "leases": {
+      "source_paths": [
+        "backend/app/models/leases/",
+        "backend/app/repositories/leases/",
+        "backend/app/schemas/leases/",
+        "backend/app/services/leases/",
+        "backend/app/api/lease_templates.py",
+        "backend/app/api/signed_leases.py",
+        "backend/app/core/lease_enums.py",
+        "backend/alembic/versions/lease260502_add_lease_templates_phase_1.py",
+        "frontend/src/app/pages/LeaseTemplates.tsx",
+        "frontend/src/app/pages/LeaseTemplateDetail.tsx",
+        "frontend/src/app/pages/Leases.tsx",
+        "frontend/src/app/pages/LeaseDetail.tsx",
+        "frontend/src/app/features/leases/",
+        "frontend/src/shared/types/lease/",
+        "frontend/src/shared/store/leaseTemplatesApi.ts",
+        "frontend/src/shared/store/signedLeasesApi.ts",
+        "frontend/src/shared/lib/lease-labels.ts"
+      ],
+      "backend_tests": [
+        "test_lease_renderer.py",
+        "test_lease_template_repo.py",
+        "test_lease_templates_api.py"
+      ],
+      "frontend_tests": [
+        "LeaseStatusBadge.test.tsx",
+        "PlaceholderSpecEditor.test.tsx"
+      ],
+      "e2e_specs": [
+        "lease-templates.spec.ts"
+      ]
+    },
     "screening": {
       "source_paths": [
         "backend/app/api/screening.py",
