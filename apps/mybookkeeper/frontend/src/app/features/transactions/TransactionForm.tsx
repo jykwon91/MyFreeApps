@@ -8,6 +8,7 @@ import type { Transaction } from "@/shared/types/transaction/transaction";
 import type { Property } from "@/shared/types/property/property";
 import type { TransactionFormValues } from "@/shared/types/transaction/transaction-form-values";
 import type { DuplicateTransaction } from "@/shared/types/transaction/duplicate";
+import type { SourcePreview } from "@/shared/types/transaction/source-preview";
 import FormField from "@/shared/components/ui/FormField";
 import Select from "@/shared/components/ui/Select";
 import TransactionDuplicateActions from "@/app/features/transactions/TransactionDuplicateActions";
@@ -39,7 +40,7 @@ export default function TransactionForm({
   onKeepDuplicate,
   onDismissDuplicate,
 }: Props) {
-  const [sourcePreview, setSourcePreview] = useState<{ url: string; type: string } | null>(null);
+  const [sourcePreview, setSourcePreview] = useState<SourcePreview | null>(null);
 
   const transactionType = watch("transaction_type");
   const categories = transactionType === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORY_LIST;

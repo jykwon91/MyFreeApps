@@ -13,6 +13,7 @@ import { useToast } from "@/shared/hooks/useToast";
 import ConfirmDialog from "@/shared/components/ui/ConfirmDialog";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import type { Role } from "@/shared/types/user/role";
+import type { AdminConfirmAction } from "@/shared/types/admin/admin-confirm-action";
 import UsersTable from "@/admin/features/users/UsersTable";
 import StatsCards from "@/admin/features/users/StatsCards";
 import OrgsTable from "@/admin/features/organizations/OrgsTable";
@@ -37,11 +38,7 @@ export default function Admin() {
   const { showSuccess, showError } = useToast();
   const [activeTab, setActiveTab] = useState<Tab>("users");
   const [searchQuery, setSearchQuery] = useState("");
-  const [confirmAction, setConfirmAction] = useState<{
-    type: "deactivate" | "activate" | "superuser";
-    userId: string;
-    email: string;
-  } | null>(null);
+  const [confirmAction, setConfirmAction] = useState<AdminConfirmAction | null>(null);
 
   const filteredUsers = useMemo(() => {
     if (!users) return [];
