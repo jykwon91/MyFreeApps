@@ -1,7 +1,7 @@
 # Tech Debt
 
-> Last scanned: 2026-05-03
-> Issues: 0 critical, 5 high, 4 medium (1 deferred + 3 active), 0 low
+> Last scanned: 2026-05-04
+> Issues: 0 critical, 7 high, 4 medium (1 deferred + 3 active), 0 low
 
 ## High
 
@@ -50,6 +50,24 @@
 **Location:** `apps/mybookkeeper/backend/tests/test_auth_events_integration.py::test_totp_enable_creates_event`
 **Problem:** `POST /auth/totp/verify` returns 400 in this integration test. The test encrypts a TOTP secret, generates a valid TOTP code, and verifies — but the backend rejects the code. Likely a timing window (TOTP codes expire every 30s and the test may be running near a boundary) or the encrypted secret being decoded differently than expected in the test environment. Worth re-checking after PR #191 (TOTP SHA-256 migration) — the algorithm column may interact with the test fixture.
 **Recommendation:** Investigate whether the test needs to use `pyotp.TOTP(secret).at(dt.datetime.now(), 0)` + the ±1 window the backend allows, or whether the TOTP verify endpoint's clock drift tolerance differs between local and CI.
+
+---
+
+### [Receipts] next_number in rent_receipt_sequence_repo.py has no unit-test coverage
+
+**Effort:** S
+**Location:** `apps/mybookkeeper/backend/app/repositories/receipts/rent_receipt_sequence_repo.py` — `next_number()` method
+**Problem:** The `next_number` method uses a PostgreSQL-specific `INSERT ... ON CONFLICT DO UPDATE ... RETURNING` statement that is not supported by SQLite. The repository test file (`tests/test_receipt_sequence_repo.py`) only tests the pure `format_receipt_number` function. The `next_number` path is covered only by E2E tests. If the SQL changes (e.g., bug in conflict target or increment expression), unit tests will not catch it.
+**Recommendation:** Add an integration test for `next_number` using `@pytest.mark.integration` and a PostgreSQL fixture (or a test-only helper that runs the same SQL against a real Postgres instance). Until then, treat E2E tests as the sole regression gate for the sequence increment logic.
+
+---
+
+### [Receipts] send_receipt uses txn.applicant_id across session boundary without explicit local capture
+
+**Effort:** XS
+**Location:** `apps/mybookkeeper/backend/app/services/leases/receipt_service.py` — `send_receipt()`, around the `_send_receipt_email` call
+**Problem:** `txn.applicant_id` is read after the `unit_of_work()` context exits. This works today because `expire_on_commit=False` is set on the session factory, which keeps loaded attribute values accessible after the session closes. However the dependency is implicit — future changes to session configuration (e.g., reverting `expire_on_commit`) would cause a `DetachedInstanceError` at that line without any obvious connection to the root cause.
+**Recommendation:** Capture `applicant_id = txn.applicant_id` as a local variable inside the `unit_of_work()` block before the context exits, making the dependency explicit and session-safe by construction.
 
 ---
 
