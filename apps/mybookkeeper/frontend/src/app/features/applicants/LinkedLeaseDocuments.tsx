@@ -9,17 +9,20 @@ import SignedLeaseStatusBadge from "@/app/features/leases/SignedLeaseStatusBadge
 import AttachmentViewer from "@/app/features/leases/AttachmentViewer";
 import { formatLongDate } from "@/shared/lib/inquiry-date-format";
 
-interface Props {
+export interface LinkedLeaseDocumentsProps {
   lease: SignedLeaseSummary;
 }
 
+const RECEIPT_KIND = "rent_receipt";
+
 /**
- * Lists a single linked lease's attachments inline on the applicant/tenant
- * detail page. Click a filename to open the document via ``AttachmentViewer``
- * — the same per-document preview pattern the rest of MBK uses. No drilling
- * away from the parent profile.
+ * Lists a single linked lease's NON-RECEIPT attachments inline on the
+ * applicant/tenant detail page. Receipts render in a separate section
+ * via ``LinkedLeaseReceipts`` so the Leases group only shows the lease
+ * agreement + addenda + amendments. Click a filename to open the
+ * document via ``AttachmentViewer``.
  */
-export default function LinkedLeaseDocuments({ lease }: Props) {
+export default function LinkedLeaseDocuments({ lease }: LinkedLeaseDocumentsProps) {
   const { data: detail, isLoading } = useGetSignedLeaseByIdQuery(lease.id);
   const [viewing, setViewing] = useState<SignedLeaseAttachment | null>(null);
 
@@ -29,7 +32,9 @@ export default function LinkedLeaseDocuments({ lease }: Props) {
           lease.ends_on ? formatLongDate(lease.ends_on) : "—"
         }`
       : null;
-  const attachments = detail?.attachments ?? [];
+  const attachments = (detail?.attachments ?? []).filter(
+    (att) => att.kind !== RECEIPT_KIND,
+  );
 
   return (
     <div className="space-y-2" data-testid={`linked-lease-${lease.id}`}>

@@ -2,6 +2,7 @@ import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import { useGetSignedLeasesQuery } from "@/shared/store/signedLeasesApi";
 import LinkedLeaseDocuments from "@/app/features/applicants/LinkedLeaseDocuments";
+import LinkedLeaseReceipts from "@/app/features/applicants/LinkedLeaseReceipts";
 import EndTenancyDialog from "@/app/features/tenants/EndTenancyDialog";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import AlertBox from "@/shared/components/ui/AlertBox";
@@ -193,6 +194,8 @@ export default function ApplicantDetail() {
               </div>
             </section>
           ) : null}
+
+          <LinkedLeaseReceipts leases={linkedLeases} />
 
           {/* Contract dates */}
           <section
