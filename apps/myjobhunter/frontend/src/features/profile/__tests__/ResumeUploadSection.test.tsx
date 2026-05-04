@@ -97,8 +97,7 @@ const mockResumeJobRow = vi.mocked(ResumeJobRow);
 const mockResumeUploadSectionSkeleton = vi.mocked(ResumeUploadSectionSkeleton);
 
 // Generic stub mutation: [trigger, { isLoading: false }]
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const stubMutation = [vi.fn(), { isLoading: false }] as unknown as any;
+const stubMutation = [vi.fn(), { isLoading: false }] as unknown as ReturnType<typeof useUploadResumeMutation>;
 
 // ---------------------------------------------------------------------------
 // Test data
@@ -137,10 +136,8 @@ function setupDefaultMocks() {
 describe("ResumeUploadSection", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockResumeJobRow.mockReturnValue(null as any);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockResumeUploadSectionSkeleton.mockReturnValue(null as any);
+    mockResumeJobRow.mockReturnValue(false as unknown as ReturnType<typeof ResumeJobRow>);
+    mockResumeUploadSectionSkeleton.mockReturnValue(false as unknown as ReturnType<typeof ResumeUploadSectionSkeleton>);
   });
 
   it("renders the section heading", () => {

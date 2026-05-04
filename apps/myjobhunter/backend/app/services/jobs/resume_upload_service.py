@@ -71,8 +71,6 @@ async def create_upload(
             file_size_bytes=len(file_bytes),
             status="queued",
         )
-        await db.commit()
-        await db.refresh(job)
     except Exception:
         # Best-effort cleanup: delete the object we just uploaded so
         # no orphaned objects accumulate on DB-insert failure.

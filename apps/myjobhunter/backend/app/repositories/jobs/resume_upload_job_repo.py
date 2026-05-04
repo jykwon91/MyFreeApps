@@ -38,6 +38,7 @@ async def create(
     )
     db.add(job)
     await db.flush()
+    await db.commit()
     await db.refresh(job)
     return job
 
