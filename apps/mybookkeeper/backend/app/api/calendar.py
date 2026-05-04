@@ -23,6 +23,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member
 from app.schemas.calendar.calendar_event_response import CalendarEventResponse
+from app.schemas.calendar.resolve_queue_item_response import ResolveQueueItemResponse
 from app.schemas.calendar.review_queue_requests import (
     IgnoreQueueItemRequest,
     ResolveQueueItemRequest,
@@ -170,14 +171,18 @@ async def count_review_queue(
 
 @review_queue_router.post(
     "/review-queue/{item_id}/resolve",
-    response_model=ReviewQueueItemResponse,
+    response_model=ResolveQueueItemResponse,
 )
 async def resolve_queue_item(
     item_id: uuid.UUID,
     body: ResolveQueueItemRequest,
     ctx: RequestContext = Depends(current_org_member),
-) -> ReviewQueueItemResponse:
-    """Resolve a pending item by linking it to an existing MBK listing."""
+) -> ResolveQueueItemResponse:
+    """Resolve a pending item — creates a listing_blackout and marks the queue row resolved.
+
+    Returns both the resolved queue-item id and the new blackout so the frontend
+    can navigate the calendar to the correct date window.
+    """
     try:
         return await review_queue_service.resolve_item(
             item_id,
@@ -190,6 +195,8 @@ async def resolve_queue_item(
     except review_queue_service.QueueItemNotPending as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except review_queue_service.ListingNotFound as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except review_queue_service.MissingPayloadFieldsError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 

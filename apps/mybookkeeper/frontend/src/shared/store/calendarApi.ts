@@ -8,6 +8,7 @@ import type {
   ResolveQueueItemRequest,
   IgnoreQueueItemRequest,
 } from "@/shared/types/calendar/review-queue-requests";
+import type { ResolveQueueItemResponse } from "@/shared/types/calendar/resolve-queue-item-response";
 
 /**
  * Unified calendar viewer API.
@@ -111,7 +112,7 @@ const calendarApi = baseApi.injectEndpoints({
     }),
 
     resolveQueueItem: builder.mutation<
-      ReviewQueueItem,
+      ResolveQueueItemResponse,
       { itemId: string; body: ResolveQueueItemRequest }
     >({
       query: ({ itemId, body }) => ({
