@@ -1,7 +1,7 @@
 import { Link, useLocation, useParams } from "react-router-dom";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import { useGetSignedLeasesQuery } from "@/shared/store/signedLeasesApi";
-import LinkedLeaseCard from "@/app/features/applicants/LinkedLeaseCard";
+import LinkedLeaseDocuments from "@/app/features/applicants/LinkedLeaseDocuments";
 import EndTenancyDialog from "@/app/features/tenants/EndTenancyDialog";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import AlertBox from "@/shared/components/ui/AlertBox";
@@ -164,17 +164,15 @@ export default function ApplicantDetail() {
 
           {linkedLeases.length > 0 ? (
             <section
-              className="border rounded-lg p-4 space-y-3"
+              className="border rounded-lg p-4 space-y-4"
               data-testid="linked-leases-section"
             >
               <h2 className="text-sm font-medium">Leases</h2>
-              <ul className="space-y-2">
+              <div className="space-y-4">
                 {linkedLeases.map((lease) => (
-                  <li key={lease.id}>
-                    <LinkedLeaseCard lease={lease} />
-                  </li>
+                  <LinkedLeaseDocuments key={lease.id} lease={lease} />
                 ))}
-              </ul>
+              </div>
             </section>
           ) : null}
 
