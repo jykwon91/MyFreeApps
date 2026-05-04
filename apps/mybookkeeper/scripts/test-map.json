@@ -568,6 +568,7 @@
         "backend/alembic/versions/leaseimport260502_add_signed_lease_kind_nullable_template.py",
         "frontend/src/app/pages/LeaseTemplates.tsx",
         "frontend/src/app/pages/LeaseTemplateDetail.tsx",
+        "frontend/src/app/pages/LeaseNew.tsx",
         "frontend/src/app/pages/Leases.tsx",
         "frontend/src/app/pages/LeaseDetail.tsx",
         "frontend/src/app/features/leases/",
@@ -590,6 +591,7 @@
         "PlaceholderSpecEditor.test.tsx",
         "LeaseImportDialog.test.tsx",
         "LeaseGenerateForm.test.tsx",
+        "LeaseNew.test.tsx",
         "AISuggestionsPanel.test.tsx",
         "LeaseTemplateUploadDialog.test.tsx"
       ],
@@ -597,6 +599,7 @@
         "lease-templates.spec.ts",
         "lease-import.spec.ts",
         "lease-generate-defaults.spec.ts",
+        "lease-new.spec.ts",
         "leases.spec.ts",
         "lease-templates-phase2.spec.ts"
       ]

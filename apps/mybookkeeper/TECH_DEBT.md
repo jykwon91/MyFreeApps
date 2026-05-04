@@ -1,7 +1,7 @@
 # Tech Debt
 
 > Last scanned: 2026-05-03
-> Issues: 0 critical, 6 high, 3 medium (deferred), 0 low
+> Issues: 0 critical, 5 high, 3 medium (deferred), 0 low
 
 ## High
 
@@ -42,14 +42,6 @@
 **Location:** `apps/mybookkeeper/backend/app/services/applicants/applicant_contract_service.py` — `update_contract_dates()`, comment at line 84-91; `apps/mybookkeeper/backend/app/schemas/applicants/applicant_update_request.py`
 **Problem:** The PATCH schema uses `None` as the default for both `contract_start` and `contract_end`, making it impossible to distinguish "field not sent" from "field explicitly set to null". The service treats `None` as "keep existing value", which is the correct UX for the inline date picker (users rarely want to null a date). However, if a future UX needs a "clear date" action, the API cannot express it without a schema change (e.g., using `UNSET` sentinel or a separate `clear_contract_start: bool` field).
 **Recommendation:** When a "clear date" UX is needed, extend the request schema to use `Annotated[date | None, Field(default=UNSET)]` with a custom sentinel, or add a separate `clear_fields: list[str]` parameter. Document this limitation in the schema docstring until then.
-
----
-
-### [Leases] LeaseGenerateForm not yet integrated into any app route
-**Effort:** M
-**Location:** `apps/mybookkeeper/frontend/src/app/features/leases/LeaseGenerateForm.tsx`
-**Problem:** `LeaseGenerateForm` (originally from PR #175, enhanced in PR #185) is a standalone component with no consuming page route. The `GET /lease-templates/{id}/generate-defaults` endpoint exists and is tested, but the end-to-end flow (applicant selector + template picker + form) has no UI entry point yet. E2E tests cover the API layer only; UI-level E2E tests are blocked until the page is wired up.
-**Recommendation:** In the follow-up lease-generate-page PR: mount `LeaseGenerateForm` inside a `/leases/new?template_id=&applicant_id=` route, add an applicant dropdown, and add Playwright E2E tests for the full UI flow including provenance badge rendering and the "Pull from source" confirmation.
 
 ---
 

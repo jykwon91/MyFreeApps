@@ -1,4 +1,4 @@
-import { Link, useLocation, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import { useGetSignedLeasesQuery } from "@/shared/store/signedLeasesApi";
 import LinkedLeaseDocuments from "@/app/features/applicants/LinkedLeaseDocuments";
@@ -28,6 +28,7 @@ import { useState } from "react";
 export default function ApplicantDetail() {
   const { applicantId } = useParams<{ applicantId: string }>();
   const location = useLocation();
+  const navigate = useNavigate();
   const isTenantContext = location.pathname.startsWith("/tenants/");
   const canWrite = useCanWrite();
   const [endTenancyOpen, setEndTenancyOpen] = useState(false);
@@ -99,6 +100,22 @@ export default function ApplicantDetail() {
                   </Link>
                 ) : null}
               </span>
+            }
+            actions={
+              canWrite &&
+              (applicant.stage === "approved" || applicant.stage === "lease_sent") ? (
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  onClick={() =>
+                    navigate(`/leases/new?applicant_id=${applicant.id}`)
+                  }
+                  data-testid="generate-lease-from-applicant"
+                >
+                  Generate lease
+                </Button>
+              ) : null
             }
           />
 

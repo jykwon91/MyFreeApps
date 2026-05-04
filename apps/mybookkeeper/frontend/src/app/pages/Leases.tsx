@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import EmptyState from "@/shared/components/ui/EmptyState";
 import AlertBox from "@/shared/components/ui/AlertBox";
@@ -13,6 +13,7 @@ import SignedLeaseStatusBadge from "@/app/features/leases/SignedLeaseStatusBadge
 
 export default function Leases() {
   const canWrite = useCanWrite();
+  const navigate = useNavigate();
   const [showImportDialog, setShowImportDialog] = useState(false);
   const { data, isLoading, isFetching, isError, refetch } =
     useGetSignedLeasesQuery();
@@ -29,13 +30,22 @@ export default function Leases() {
         subtitle="Generated and imported leases per applicant. Upload signed PDFs and attachments here."
         actions={
           canWrite ? (
-            <Button
-              variant="secondary"
-              onClick={() => setShowImportDialog(true)}
-              data-testid="import-signed-lease-button"
-            >
-              Import signed lease
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="primary"
+                onClick={() => navigate("/leases/new")}
+                data-testid="generate-lease-button"
+              >
+                Generate lease
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => setShowImportDialog(true)}
+                data-testid="import-signed-lease-button"
+              >
+                Import signed lease
+              </Button>
+            </div>
           ) : null
         }
       />
