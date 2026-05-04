@@ -155,6 +155,58 @@ uv lock --check
 - Hard-delete users in teardown to prevent cross-session contamination
 - Tenant isolation tests in `test_tenant_isolation.py`
 
+## Deployment
+
+**VPS path:** `/srv/myfreeapps/apps/myjobhunter`
+
+**Required env files (must exist on VPS before first deploy):**
+
+| File | What it is |
+|---|---|
+| `apps/myjobhunter/.env` | Compose-level — only `DB_PASSWORD` |
+| `apps/myjobhunter/backend/.env.docker` | App-level — all other secrets; see `backend/.env.docker.example` |
+
+**First-time setup** (new VPS only — run once from `/srv/myfreeapps`):
+```bash
+sudo bash apps/myjobhunter/scripts/seed-env-from-mbk.sh
+# Then fill in the MJH-specific blanks:
+vim apps/myjobhunter/backend/.env.docker
+# Required: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, TURNSTILE_SECRET_KEY, TURNSTILE_SITE_KEY
+# Optional: TAVILY_API_KEY (Phase 4), SMTP_* (currently uses console backend)
+```
+
+The seed script reads safe-to-reuse keys from MBK's running config (Anthropic API key, lockout
+tunables, log level) and generates fresh secrets for per-app values (SECRET_KEY, ENCRYPTION_KEY,
+DB_PASSWORD). FRONTEND_URL and CORS_ORIGINS are pre-filled with the sslip.io domain.
+
+**Day-to-day deploys:** Push to main or merge a PR — GitHub Actions deploys automatically.
+
+**Routing:**
+- Domain: `myjobhunter.165-245-134-251.sslip.io`
+- Host Caddy (TLS termination at `/etc/caddy/Caddyfile`) proxies to docker Caddy on `127.0.0.1:8092`
+- Docker Caddy (baked into caddy image) owns routing, security headers, CSP, SPA fallback, and `/api/*` → backend proxy
+
+**Health check:**
+```bash
+curl http://127.0.0.1:8092/health    # from VPS (bypasses host Caddy)
+curl https://myjobhunter.165-245-134-251.sslip.io/health  # public
+```
+
+**Database backup/restore:**
+MJH does not yet have automated backup scripts (MBK has `deploy/backup.sh` + systemd timer;
+MJH should mirror this — see TECH_DEBT.md). For now, manual backup:
+```bash
+# On VPS:
+docker compose -f apps/myjobhunter/docker-compose.yml exec postgres \
+  pg_dump -U myjobhunter myjobhunter | gzip > /tmp/mjh-$(date +%Y%m%d).sql.gz
+```
+
+**When to SSH into the server:**
+- First-time env file setup (seed-env-from-mbk.sh)
+- Restore from backup
+- Check logs: `docker compose -f apps/myjobhunter/docker-compose.yml logs api --tail=50`
+- Debug production issues
+
 ## Phase 1 Scope
 
 **Implemented:** models, migrations, auth endpoints, 6 smoke read endpoints, tests, Docker, CI
