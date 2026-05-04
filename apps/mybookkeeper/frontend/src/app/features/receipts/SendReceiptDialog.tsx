@@ -124,7 +124,7 @@ export default function SendReceiptDialog({ transaction, onClose }: SendReceiptD
       data-testid="send-receipt-dialog"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
     >
-      <div className="bg-card rounded-lg shadow-lg w-full max-w-2xl flex flex-col gap-0 overflow-hidden max-h-[90vh]">
+      <div className="bg-card rounded-lg shadow-lg w-full max-w-5xl flex flex-col gap-0 overflow-hidden h-[90vh]">
         {/* Header */}
         <div className="px-6 py-4 border-b">
           <h2 className="text-base font-semibold">Send rent receipt</h2>
@@ -207,7 +207,7 @@ export default function SendReceiptDialog({ transaction, onClose }: SendReceiptD
           </div>
 
           {/* Right: PDF preview */}
-          <div className="flex-1 bg-muted/20 border-t md:border-t-0 md:border-l flex items-center justify-center min-h-64">
+          <div className="flex-1 bg-muted/20 border-t md:border-t-0 md:border-l flex items-center justify-center min-h-0">
             <ReceiptPreviewPane url={previewUrl} error={previewError} />
           </div>
         </div>
