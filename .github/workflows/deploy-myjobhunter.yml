@@ -33,6 +33,21 @@ jobs:
             echo "--- Pull latest code ---"
             git pull --ff-only
 
+            echo "--- Preflight: verify required env files exist ---"
+            # These files must be created manually on first VPS setup via:
+            #   sudo bash apps/myjobhunter/scripts/seed-env-from-mbk.sh
+            # Without them docker compose silently starts with no secrets and
+            # postgres reports "unhealthy" for 30+ deploys (PR #206 RCA).
+            test -f /srv/myfreeapps/apps/myjobhunter/.env || {
+              echo "::error::Missing /srv/myfreeapps/apps/myjobhunter/.env — run apps/myjobhunter/scripts/seed-env-from-mbk.sh on the VPS first"
+              exit 1
+            }
+            test -f /srv/myfreeapps/apps/myjobhunter/backend/.env.docker || {
+              echo "::error::Missing /srv/myfreeapps/apps/myjobhunter/backend/.env.docker — run apps/myjobhunter/scripts/seed-env-from-mbk.sh on the VPS first"
+              exit 1
+            }
+            echo "Env files present — proceeding"
+
             echo "--- Build and deploy with Docker ---"
             docker compose -f apps/myjobhunter/docker-compose.yml build
             docker compose -f apps/myjobhunter/docker-compose.yml up -d --remove-orphans

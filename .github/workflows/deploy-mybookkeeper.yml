@@ -33,6 +33,20 @@ jobs:
             echo "--- Pull latest code ---"
             git pull --ff-only
 
+            echo "--- Preflight: verify required env files exist ---"
+            # These files must be created manually on first VPS setup (via setup.sh
+            # or equivalent). Without them docker compose starts with no secrets and
+            # the app fails at runtime. Same class of failure as PR #206 RCA for MJH.
+            test -f /srv/myfreeapps/apps/mybookkeeper/.env || {
+              echo "::error::Missing /srv/myfreeapps/apps/mybookkeeper/.env — run setup.sh or create env files manually first"
+              exit 1
+            }
+            test -f /srv/myfreeapps/apps/mybookkeeper/backend/.env.docker || {
+              echo "::error::Missing /srv/myfreeapps/apps/mybookkeeper/backend/.env.docker — run setup.sh or create env files manually first"
+              exit 1
+            }
+            echo "Env files present — proceeding"
+
             echo "--- Build and deploy with Docker ---"
             docker compose -f apps/mybookkeeper/docker-compose.yml build
             docker compose -f apps/mybookkeeper/docker-compose.yml up -d --remove-orphans
