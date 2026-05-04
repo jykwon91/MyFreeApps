@@ -17,6 +17,11 @@ vi.mock("@/shared/lib/toast-store", () => ({
   showError: vi.fn(),
 }));
 
+const mockApiGet = vi.fn();
+vi.mock("@/shared/lib/api", () => ({
+  default: { get: (...args: unknown[]) => mockApiGet(...args) },
+}));
+
 import { showSuccess, showError } from "@/shared/lib/toast-store";
 
 const mockTransaction = {
@@ -144,7 +149,13 @@ describe("SendReceiptDialog", () => {
     });
   });
 
-  it("sets preview iframe src after clicking Preview PDF", async () => {
+  it("fetches the preview PDF via the authenticated API and renders it as a blob URL", async () => {
+    const fakeBlob = new Blob(["%PDF-1.4 fake"], { type: "application/pdf" });
+    mockApiGet.mockResolvedValueOnce({ data: fakeBlob });
+    const objectUrlSpy = vi
+      .spyOn(URL, "createObjectURL")
+      .mockReturnValue("blob:fake-pdf-url");
+
     renderDialog();
     fireEvent.click(screen.getByTestId("receipt-preview-btn"));
 
@@ -152,9 +163,28 @@ describe("SendReceiptDialog", () => {
       expect(screen.getByTestId("receipt-preview-iframe")).toBeInTheDocument();
     });
 
+    expect(mockApiGet).toHaveBeenCalledWith(
+      expect.stringContaining("/rent-receipts/preview/txn-123"),
+      expect.objectContaining({ responseType: "blob" }),
+    );
+    const calledUrl = mockApiGet.mock.calls[0][0] as string;
+    expect(calledUrl).toContain("period_start=2026-05-01");
+    expect(calledUrl).toContain("period_end=2026-05-31");
+
     const iframe = screen.getByTestId("receipt-preview-iframe") as HTMLIFrameElement;
-    expect(iframe.src).toContain("/api/rent-receipts/preview/txn-123");
-    expect(iframe.src).toContain("period_start=2026-05-01");
-    expect(iframe.src).toContain("period_end=2026-05-31");
+    expect(iframe.src).toBe("blob:fake-pdf-url");
+
+    objectUrlSpy.mockRestore();
+  });
+
+  it("surfaces a preview error when the API fails", async () => {
+    mockApiGet.mockRejectedValueOnce(new Error("net err"));
+    renderDialog();
+    fireEvent.click(screen.getByTestId("receipt-preview-btn"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("receipt-preview-error")).toBeInTheDocument();
+    });
+    expect(screen.queryByTestId("receipt-preview-iframe")).not.toBeInTheDocument();
   });
 });
