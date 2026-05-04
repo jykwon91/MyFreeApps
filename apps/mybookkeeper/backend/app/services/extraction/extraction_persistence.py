@@ -25,6 +25,7 @@ from app.mappers.transaction_mapper import build_transaction_from_extraction_dat
 from app.services.extraction.property_matcher_service import resolve_property_id
 from app.services.extraction.sender_category_service import match_sender_category
 from app.services.classification.rule_engine import classify
+from app.services.transactions.attribution_service import maybe_attribute_payment
 
 logger = logging.getLogger(__name__)
 
@@ -198,6 +199,19 @@ async def save_email_extraction(
             )
 
             if surviving:
+                # Attribution — attempt to link this payment to a tenant
+                payer_name = data.get("payer_name")
+                is_airbnb_label = _has_airbnb_label(data)
+                if payer_name or is_airbnb_label:
+                    await maybe_attribute_payment(
+                        db,
+                        txn=surviving,
+                        payer_name=payer_name if isinstance(payer_name, str) else None,
+                        organization_id=organization_id,
+                        user_id=user_id,
+                        is_airbnb_label=is_airbnb_label,
+                    )
+
                 for li in (data.get("line_items") or []):
                     if not isinstance(li, dict):
                         continue
@@ -256,3 +270,20 @@ def _resolve_attachment_content(
             att = cast(Attachment, inner)
 
     return att["data"], att.get("filename"), att.get("content_type")
+
+
+def _has_airbnb_label(data: ExtractionData) -> bool:
+    """Return True if the extraction data signals an Airbnb payout label.
+
+    The email worker attaches Gmail label names to extraction data under
+    ``gmail_labels``. If 'Properties/airbnb reservation' is present and
+    the channel is 'airbnb', treat this as an Airbnb payout.
+    """
+    labels = data.get("gmail_labels") or []
+    if not isinstance(labels, list):
+        return False
+    has_label = any(
+        isinstance(label, str) and "airbnb" in label.lower()
+        for label in labels
+    )
+    return has_label and data.get("channel") == "airbnb"

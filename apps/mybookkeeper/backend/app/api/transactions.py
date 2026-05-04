@@ -24,6 +24,7 @@ router = APIRouter(prefix="/transactions", tags=["transactions"])
 @router.get("", response_model=list[TransactionRead])
 async def list_transactions(
     property_id: Optional[uuid.UUID] = None,
+    applicant_id: Optional[uuid.UUID] = None,
     status: Optional[str] = None,
     transaction_type: Optional[str] = None,
     category: Optional[str] = None,
@@ -38,6 +39,7 @@ async def list_transactions(
     return await transaction_service.list_transactions(
         ctx,
         property_id=property_id,
+        applicant_id=applicant_id,
         status=status,
         transaction_type=transaction_type,
         category=category,

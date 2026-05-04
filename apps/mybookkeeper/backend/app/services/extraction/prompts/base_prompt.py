@@ -13,6 +13,7 @@ Always return this structure (documents is always an array, even for a single re
       "document_type": "invoice | statement | lease | insurance_policy | tax_form | w2 | 1099_int | 1099_div | 1099_b | 1099_k | 1099_misc | 1099_nec | 1099_r | 1098 | k1 | contract | other",
       "date": "YYYY-MM-DD or null",
       "vendor": "string or null",
+      "payer_name": "the person or entity who sent the payment (e.g. 'Sonu King' from a Zelle notification), or null if not a payment from a specific person",
       "amount": "decimal as string e.g. '150.00' or null",
       "description": "brief description or null",
       "transaction_type": "income | expense",
@@ -264,6 +265,7 @@ For lease, tax_form, contract, other:
 
 # Field rules
 
+- payer_name: for payment emails (Zelle, Venmo, Cash App, direct deposit), extract the name of the person who sent the money. Examples: from "SONU KING sent you $701.20 via Zelle" extract "Sonu King". From "Venmo: John Doe paid you $500" extract "John Doe". For platform payouts (Airbnb, VRBO) set payer_name to null — the platform is the sender, not a specific tenant. For non-payment documents (invoices, bills) set payer_name to null.
 - vendor: single company name, never combine with "/" or "and". Use the company that issued the bill. For utilities, use the retail provider (e.g. "Constellation" not "Constellation / CenterPoint").
 - address: physical property street address, NOT the vendor's address
 - tax_relevant: true for business expenses and taxable income

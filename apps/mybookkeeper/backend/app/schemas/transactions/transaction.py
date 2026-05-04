@@ -36,6 +36,10 @@ class TransactionRead(BaseModel):
     # Host-curated link to the Vendors rolodex (PR 4.2). NULL for AI-extracted
     # transactions that haven't been manually mapped yet.
     vendor_id: uuid.UUID | None = None
+    # Attribution to a tenant applicant
+    applicant_id: uuid.UUID | None = None
+    attribution_source: str | None = None
+    payer_name: str | None = None
 
     transaction_date: date
     tax_year: int

@@ -227,3 +227,30 @@ async def hard_delete_by_id(
             Listing.organization_id == organization_id,
         )
     )
+
+
+async def list_by_channel(
+    db: AsyncSession,
+    *,
+    organization_id: uuid.UUID,
+    user_id: uuid.UUID,
+    channel: str,
+) -> list[Listing]:
+    """Return non-deleted listings linked to a specific booking channel.
+
+    Used by the Airbnb payout attribution path to find candidate listings.
+    """
+    from app.models.listings.channel_listing import ChannelListing
+    from app.models.listings.channel import Channel
+    result = await db.execute(
+        select(Listing)
+        .join(ChannelListing, ChannelListing.listing_id == Listing.id)
+        .join(Channel, Channel.id == ChannelListing.channel_id)
+        .where(
+            Listing.organization_id == organization_id,
+            Listing.user_id == user_id,
+            Listing.deleted_at.is_(None),
+            Channel.slug == channel,
+        )
+    )
+    return list(result.scalars().all())
