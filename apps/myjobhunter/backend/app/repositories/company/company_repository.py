@@ -45,11 +45,25 @@ async def get_by_id(db: AsyncSession, company_id: uuid.UUID, user_id: uuid.UUID)
     return result.scalar_one_or_none()
 
 
-async def list_by_user(db: AsyncSession, user_id: uuid.UUID) -> list[Company]:
-    """List a user's companies, ordered by name."""
-    result = await db.execute(
-        select(Company).where(Company.user_id == user_id).order_by(Company.name.asc())
-    )
+async def list_by_user(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    *,
+    name_search: str | None = None,
+) -> list[Company]:
+    """List a user's companies, ordered by name.
+
+    Optional ``name_search``: case-insensitive substring filter on ``name``.
+    Uses ``ILIKE`` so PostgreSQL can use a trigram index (GIN) if one exists.
+    For a basic ASCII prefix match a B-tree on ``lower(name)`` would also
+    work, but ``ILIKE`` is more useful for mid-string search without
+    requiring a GIN index to be pre-existing.
+    """
+    stmt = select(Company).where(Company.user_id == user_id)
+    if name_search is not None and name_search.strip():
+        stmt = stmt.where(Company.name.ilike(f"%{name_search.strip()}%"))
+    stmt = stmt.order_by(Company.name.asc())
+    result = await db.execute(stmt)
     return list(result.scalars().all())
 
 

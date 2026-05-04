@@ -16,16 +16,26 @@ the route via ``Depends(get_db)``. The shared SQLAlchemy session listener
 """
 from __future__ import annotations
 
+import datetime as _dt
 import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.application.application import Application
+from app.models.application.application_contact import ApplicationContact
 from app.models.application.application_event import ApplicationEvent
-from app.repositories.application import application_repository, application_event_repository
+from app.repositories.application import (
+    application_contact_repository,
+    application_event_repository,
+    application_repository,
+)
 from app.repositories.company import company_repository
+from app.schemas.application.application_contact_create_request import ApplicationContactCreateRequest
+from app.schemas.application.application_contact_response import ApplicationContactResponse
 from app.schemas.application.application_create_request import ApplicationCreateRequest
+from app.schemas.application.application_detail_response import ApplicationDetailResponse
 from app.schemas.application.application_event_create_request import ApplicationEventCreateRequest
+from app.schemas.application.application_event_response import ApplicationEventResponse
 from app.schemas.application.application_list_item import ApplicationListItem
 from app.schemas.application.application_update_request import ApplicationUpdateRequest
 
@@ -45,6 +55,11 @@ async def list_applications(
     user_id: uuid.UUID,
     *,
     company_id: uuid.UUID | None = None,
+    status_filter: str | None = None,
+    archived: bool | None = None,
+    since: _dt.datetime | None = None,
+    limit: int = 100,
+    offset: int = 0,
 ) -> list[ApplicationListItem]:
     """List a user's non-deleted applications with computed ``latest_status``.
 
@@ -54,16 +69,54 @@ async def list_applications(
     serialization; the route handler can call ``.model_dump(mode='json')``
     directly without re-validating.
 
-    Optional ``company_id`` narrows results to a single company.  The filter
-    is passed through to the repository which applies it after user_id
-    scoping — no existence leak regardless of whether the company belongs to
-    this user.
+    Optional filters:
+    - ``company_id``: narrow to a single company (tenant-safe).
+    - ``status_filter``: keep only rows whose latest event_type matches.
+    - ``archived``: ``True`` = archived only; ``False`` = active only; ``None`` = all.
+    - ``since``: include only applications with ``applied_at >= since``.
+    - ``limit`` / ``offset``: pagination (default limit=100, offset=0).
     """
-    rows = await application_repository.list_with_status(db, user_id, company_id=company_id)
+    rows = await application_repository.list_with_status(
+        db,
+        user_id,
+        company_id=company_id,
+        status_filter=status_filter,
+        archived=archived,
+        since=since,
+        limit=limit,
+        offset=offset,
+    )
     return [
         ApplicationListItem.model_validate(app).model_copy(update={"latest_status": status})
         for app, status in rows
     ]
+
+
+async def get_application_detail(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    application_id: uuid.UUID,
+) -> ApplicationDetailResponse | None:
+    """Return a non-deleted application with eagerly-loaded events and contacts.
+
+    Events are sorted newest-first; contacts are sorted oldest-first (insertion
+    order). Returns ``None`` if the application is missing, soft-deleted, or
+    belongs to another user.
+    """
+    application = await application_repository.get_with_detail(db, application_id, user_id)
+    if application is None:
+        return None
+
+    # Sort events newest-first (the selectinload does not guarantee order).
+    sorted_events = sorted(application.events, key=lambda e: e.occurred_at, reverse=True)
+    sorted_contacts = sorted(application.contacts, key=lambda c: c.created_at)
+
+    return ApplicationDetailResponse.model_validate(application).model_copy(
+        update={
+            "events": [ApplicationEventResponse.model_validate(e) for e in sorted_events],
+            "contacts": [ApplicationContactResponse.model_validate(c) for c in sorted_contacts],
+        }
+    )
 
 
 async def get_application(
@@ -85,6 +138,13 @@ async def create_application(
     Verifies the supplied ``company_id`` belongs to ``user_id`` before
     persisting. Raises :class:`CompanyNotOwnedError` if not — the route
     handler maps this to HTTP 422 with a generic detail message.
+
+    Automatically logs an ``applied`` event after the application row is
+    created, using ``applied_at`` from the request as the ``occurred_at``
+    (falling back to ``datetime.now(UTC)`` when not supplied). This ensures
+    every newly-created application has a baseline status in the event log
+    so ``latest_status`` in the list endpoint is never ``None`` for a brand-
+    new application.
 
     Commits at the end so the write survives the request lifecycle —
     ``get_db`` does NOT auto-commit (see ``platform_shared.db.session``),
@@ -118,6 +178,19 @@ async def create_application(
         external_source=request.external_source,
     )
     application = await application_repository.create(db, application)
+
+    # Auto-log the initial "applied" event so latest_status is never None
+    # for a freshly-created application. The occurred_at mirrors applied_at
+    # (user-supplied submission date) or falls back to now.
+    initial_event = ApplicationEvent(
+        user_id=user_id,
+        application_id=application.id,
+        event_type="applied",
+        occurred_at=request.applied_at or _dt.datetime.now(_dt.timezone.utc),
+        source="system",
+    )
+    await application_event_repository.create(db, initial_event)
+
     await db.commit()
     return application
 
@@ -228,3 +301,63 @@ async def log_application_event(
     event = await application_event_repository.create(db, event)
     await db.commit()
     return event
+
+
+async def create_application_contact(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    application_id: uuid.UUID,
+    request: ApplicationContactCreateRequest,
+) -> ApplicationContact | None:
+    """Persist a new contact against an application.
+
+    Returns ``None`` if the application does not exist under ``user_id``
+    (route layer maps to 404). The contact's ``user_id`` is denormalized
+    from the parent application context — the route never trusts a
+    body-provided ``user_id`` (the schema's ``extra='forbid'`` rejects it).
+
+    Commits at the end so the write survives the request lifecycle.
+    """
+    application = await application_repository.get_by_id(db, application_id, user_id)
+    if application is None:
+        return None
+    contact = ApplicationContact(
+        user_id=user_id,
+        application_id=application_id,
+        name=request.name,
+        email=str(request.email) if request.email is not None else None,
+        linkedin_url=request.linkedin_url,
+        role=request.role,
+        notes=request.notes,
+    )
+    contact = await application_contact_repository.create(db, contact)
+    await db.commit()
+    return contact
+
+
+async def delete_application_contact(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    application_id: uuid.UUID,
+    contact_id: uuid.UUID,
+) -> bool:
+    """Hard-delete a contact scoped by both application and user.
+
+    The composite WHERE on ``(id, application_id, user_id)`` is the IDOR
+    guard — a caller who knows a contact UUID but does not own the parent
+    application cannot reach it.
+
+    Returns ``True`` if the row was found and deleted, ``False`` if not
+    found (or if the application/contact IDs are cross-tenant — the route
+    layer maps both to 404 so callers cannot distinguish the two cases).
+
+    Commits at the end so the write survives the request lifecycle.
+    """
+    contact = await application_contact_repository.get_by_id(
+        db, contact_id, application_id, user_id,
+    )
+    if contact is None:
+        return False
+    await application_contact_repository.delete(db, contact)
+    await db.commit()
+    return True

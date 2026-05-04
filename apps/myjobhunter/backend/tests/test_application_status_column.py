@@ -72,10 +72,12 @@ def _ts_iso(year: int, month: int, day: int) -> str:
 
 class TestListApplicationsLatestStatus:
     @pytest.mark.asyncio
-    async def test_no_events_returns_null_latest_status(
+    async def test_new_application_latest_status_is_applied(
         self, db: AsyncSession, user_factory, as_user,
     ) -> None:
-        """GET /applications must return latest_status=null for a new application."""
+        """GET /applications must return latest_status='applied' for a newly-created
+        application because POST /applications auto-logs an initial 'applied' event
+        with source='system'."""
         user = await user_factory()
         company = await _create_company(db, uuid.UUID(user["id"]), "Acme Corp")
 
@@ -90,7 +92,7 @@ class TestListApplicationsLatestStatus:
         assert body["total"] == 1
         item = body["items"][0]
         assert "latest_status" in item
-        assert item["latest_status"] is None
+        assert item["latest_status"] == "applied"
 
     @pytest.mark.asyncio
     async def test_single_event_returns_that_event_type(
@@ -122,19 +124,24 @@ class TestListApplicationsLatestStatus:
     ) -> None:
         """GET /applications must reflect the LATEST event by occurred_at.
 
-        Three events are logged in forward chronological order. The response
-        must show the most-recent event type — not the first or last inserted.
-        This directly validates the lateral-join ORDER BY occurred_at DESC LIMIT 1
-        in the repository.
+        The application is created with applied_at=2025-12-01 so the auto-system
+        event is anchored at that past date. Three manual events are then logged
+        at 2026-01-01, 2026-02-01, and 2026-03-01. The response must show
+        offer_received (2026-03-01) — the most-recent by occurred_at — validating
+        the lateral-join ORDER BY occurred_at DESC LIMIT 1 in the repository.
         """
         user = await user_factory()
         company = await _create_company(db, uuid.UUID(user["id"]), "Gamma LLC")
 
         async with await as_user(user) as authed:
-            create_resp = await authed.post("/applications", json=_app_payload(company.id))
+            # applied_at pins the auto-event to a date before the manual events.
+            create_resp = await authed.post(
+                "/applications",
+                json={**_app_payload(company.id), "applied_at": _ts_iso(2025, 12, 1)},
+            )
             app_id = create_resp.json()["id"]
 
-            # Log three events in ascending occurred_at order
+            # Log three events in ascending occurred_at order (all after the auto-event).
             await authed.post(
                 f"/applications/{app_id}/events",
                 json=_event_payload("applied", occurred_at=_ts_iso(2026, 1, 1)),
@@ -155,21 +162,21 @@ class TestListApplicationsLatestStatus:
         assert item["latest_status"] == "offer_received"
 
     @pytest.mark.asyncio
-    async def test_tenant_isolation_user_b_sees_null_not_user_a_status(
+    async def test_tenant_isolation_user_b_sees_own_status_not_user_a_status(
         self, db: AsyncSession, user_factory, as_user,
     ) -> None:
         """User B cannot see user A's event types in the list response.
 
-        User A: has an application with offer_received event.
-        User B: has an application with no events.
-        User B's list response must show latest_status=null.
+        User A: has an application advanced to offer_received.
+        User B: has a newly-created application (auto 'applied' event only).
+        User B's list response must show 'applied', not 'offer_received'.
         """
         user_a = await user_factory()
         user_b = await user_factory()
         company_a = await _create_company(db, uuid.UUID(user_a["id"]), "Corp A Status")
         company_b = await _create_company(db, uuid.UUID(user_b["id"]), "Corp B Status")
 
-        # User A creates an application and logs an offer
+        # User A creates an application and advances it to offer_received
         async with await as_user(user_a) as authed_a:
             create_a = await authed_a.post("/applications", json=_app_payload(company_a.id))
             app_a_id = create_a.json()["id"]
@@ -178,15 +185,15 @@ class TestListApplicationsLatestStatus:
                 json=_event_payload("offer_received"),
             )
 
-        # User B creates an application with no events
+        # User B creates an application (gets auto "applied" event)
         async with await as_user(user_b) as authed_b:
             await authed_b.post("/applications", json=_app_payload(company_b.id))
             list_b = await authed_b.get("/applications")
 
         body_b = list_b.json()
         assert body_b["total"] == 1
-        # User B must see None, not "offer_received"
-        assert body_b["items"][0]["latest_status"] is None
+        # User B must see their own auto-"applied" status, not user A's "offer_received"
+        assert body_b["items"][0]["latest_status"] == "applied"
 
     @pytest.mark.asyncio
     async def test_multiple_applications_each_shows_own_latest_status(
@@ -199,18 +206,20 @@ class TestListApplicationsLatestStatus:
         company3 = await _create_company(db, uuid.UUID(user["id"]), "Company Three")
 
         async with await as_user(user) as authed:
-            # App 1: applied → rejected (latest = rejected)
-            r1 = await authed.post("/applications", json={**_app_payload(company1.id), "role_title": "Role One"})
+            # App 1: auto-applied at 2025-12-01, then applied (2026-01-01), then rejected (2026-02-01).
+            # Latest = rejected (2026-02-01 is more recent than all others).
+            r1 = await authed.post("/applications", json={**_app_payload(company1.id), "role_title": "Role One", "applied_at": _ts_iso(2025, 12, 1)})
             id1 = r1.json()["id"]
             await authed.post(f"/applications/{id1}/events", json=_event_payload("applied", occurred_at=_ts_iso(2026, 1, 1)))
             await authed.post(f"/applications/{id1}/events", json=_event_payload("rejected", occurred_at=_ts_iso(2026, 2, 1)))
 
-            # App 2: interview_scheduled (latest = interview_scheduled)
-            r2 = await authed.post("/applications", json={**_app_payload(company2.id), "role_title": "Role Two"})
+            # App 2: auto-applied at 2025-12-01, then interview_scheduled at 2026-01-15.
+            # Latest = interview_scheduled (2026-01-15 > 2025-12-01).
+            r2 = await authed.post("/applications", json={**_app_payload(company2.id), "role_title": "Role Two", "applied_at": _ts_iso(2025, 12, 1)})
             id2 = r2.json()["id"]
-            await authed.post(f"/applications/{id2}/events", json=_event_payload("interview_scheduled"))
+            await authed.post(f"/applications/{id2}/events", json=_event_payload("interview_scheduled", occurred_at=_ts_iso(2026, 1, 15)))
 
-            # App 3: no events (latest = null)
+            # App 3: only the auto-applied event (latest = "applied")
             r3 = await authed.post("/applications", json={**_app_payload(company3.id), "role_title": "Role Three"})
 
             list_resp = await authed.get("/applications")
@@ -223,4 +232,5 @@ class TestListApplicationsLatestStatus:
         by_id = {item["id"]: item["latest_status"] for item in items}
         assert by_id[r1.json()["id"]] == "rejected"
         assert by_id[r2.json()["id"]] == "interview_scheduled"
-        assert by_id[r3.json()["id"]] is None
+        # App 3 was just created — it has the auto-applied event (source=system)
+        assert by_id[r3.json()["id"]] == "applied"

@@ -157,6 +157,13 @@ class TestListEvents:
     async def test_returns_newest_first(
         self, db: AsyncSession, user_factory, as_user,
     ) -> None:
+        """GET /applications/{id}/events returns events newest-first.
+
+        POST /applications auto-creates a source=system 'applied' event.
+        This test adds two more manual events at fixed past timestamps so the
+        ordering is deterministic and the auto-event (at now) lands last in
+        the returned list.
+        """
         user = await user_factory()
         company = await _create_company(db, uuid.UUID(user["id"]), "Acme")
 
@@ -164,32 +171,38 @@ class TestListEvents:
             create_app = await authed.post("/applications", json=_app_payload(company.id))
             app_id = create_app.json()["id"]
 
+            # Two manual events at timestamps well in the past so the auto-event
+            # (occurred_at = now) sorts as the most recent.
             old = await authed.post(
                 f"/applications/{app_id}/events",
                 json=_event_payload(
-                    "applied",
-                    occurred_at=_dt.datetime(2026, 1, 1, tzinfo=_dt.timezone.utc).isoformat(),
+                    "interview_scheduled",
+                    occurred_at=_dt.datetime(2024, 1, 1, tzinfo=_dt.timezone.utc).isoformat(),
                 ),
             )
             assert old.status_code == 201
 
-            new = await authed.post(
+            older = await authed.post(
                 f"/applications/{app_id}/events",
                 json=_event_payload(
-                    "interview_scheduled",
-                    occurred_at=_dt.datetime(2026, 2, 1, tzinfo=_dt.timezone.utc).isoformat(),
+                    "applied",
+                    occurred_at=_dt.datetime(2023, 1, 1, tzinfo=_dt.timezone.utc).isoformat(),
                 ),
             )
-            assert new.status_code == 201
+            assert older.status_code == 201
 
             list_resp = await authed.get(f"/applications/{app_id}/events")
 
         assert list_resp.status_code == 200
         body = list_resp.json()
-        assert body["total"] == 2
-        # Newest first.
-        assert body["items"][0]["event_type"] == "interview_scheduled"
-        assert body["items"][1]["event_type"] == "applied"
+        # 3 events: auto-system-applied (now) + interview_scheduled (2024) + applied (2023).
+        assert body["total"] == 3
+        # Newest first — the auto-event (now) is the most recent.
+        assert body["items"][0]["event_type"] == "applied"
+        assert body["items"][0]["source"] == "system"
+        assert body["items"][1]["event_type"] == "interview_scheduled"
+        assert body["items"][2]["event_type"] == "applied"
+        assert body["items"][2]["source"] == "manual"
 
     @pytest.mark.asyncio
     async def test_cross_tenant_returns_404(

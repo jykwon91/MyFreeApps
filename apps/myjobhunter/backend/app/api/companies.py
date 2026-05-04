@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import current_active_user
@@ -41,13 +41,16 @@ _NOT_FOUND_DETAIL = "Company not found"
 async def list_companies(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
+    name_search: str | None = Query(default=None, description="Case-insensitive substring filter on company name"),
 ) -> dict:
     """Return the caller's companies.
 
     Response shape: ``{"items": [CompanyResponse...], "total": int}``.
-    Phase 1 returned ``items: []``; this PR populates ``items``.
+
+    Optional ``?name_search=<string>`` filters by case-insensitive name
+    substring.  Empty or whitespace-only values are treated as no filter.
     """
-    items = await company_service.list_companies(db, user.id)
+    items = await company_service.list_companies(db, user.id, name_search=name_search)
     return {
         "items": [CompanyResponse.model_validate(c).model_dump(mode="json") for c in items],
         "total": len(items),
