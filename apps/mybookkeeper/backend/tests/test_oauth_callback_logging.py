@@ -133,7 +133,7 @@ class TestHandleGmailCallbackServiceLogging:
             with patch.object(
                 integration_service,
                 "_verify_oauth_state",
-                return_value=(str(uuid.uuid4()), str(uuid.uuid4())),
+                return_value=(str(uuid.uuid4()), str(uuid.uuid4()), "test-code-verifier"),
             ):
                 with caplog.at_level(
                     logging.ERROR,
@@ -172,7 +172,7 @@ class TestHandleGmailCallbackServiceLogging:
             with patch.object(
                 integration_service,
                 "_verify_oauth_state",
-                return_value=(str(uuid.uuid4()), str(uuid.uuid4())),
+                return_value=(str(uuid.uuid4()), str(uuid.uuid4()), "test-code-verifier"),
             ):
                 with patch.object(
                     integration_service.integration_repo,

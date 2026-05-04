@@ -410,7 +410,7 @@ async def test_integration_clear_reauth_state_on_oauth_callback() -> None:
         ),
         patch(
             "app.services.integrations.integration_service._verify_oauth_state",
-            return_value=(str(uuid.uuid4()), str(uuid.uuid4())),
+            return_value=(str(uuid.uuid4()), str(uuid.uuid4()), "test-code-verifier"),
         ),
         patch(
             "app.services.integrations.integration_service._get_flow",
