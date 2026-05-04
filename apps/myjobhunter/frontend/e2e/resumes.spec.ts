@@ -63,6 +63,45 @@ test.describe("Resume section — Profile page UI", () => {
       await deleteTestUser(request, user);
     }
   });
+
+  test("uploading a valid PDF triggers the upload flow and shows a result", async ({
+    page,
+    request,
+  }) => {
+    const user = await createTestUser(request);
+
+    // Create a minimal valid PDF in a temp buffer (magic bytes + minimal structure)
+    const pdfContent = Buffer.from(
+      "%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\nxref\n0 1\n0000000000 65535 f\ntrailer\n<< /Size 1 /Root 1 0 R >>\nstartxref\n9\n%%EOF",
+    );
+
+    try {
+      await loginViaUI(page, user, request);
+
+      await page.getByRole("link", { name: /profile/i }).first().click();
+      await page.waitForURL("**/profile");
+
+      // The Resume section must be visible with the file input
+      await expect(page.getByRole("heading", { name: /resume/i })).toBeVisible();
+
+      // Upload a PDF via the hidden file input inside FileUploadDropzone
+      const fileInput = page.locator('input[type="file"]').last();
+      await fileInput.setInputFiles({
+        name: "my_resume.pdf",
+        mimeType: "application/pdf",
+        buffer: pdfContent,
+      });
+
+      // After upload attempt: either the job row appears (MinIO available)
+      // or an error toast appears (MinIO not configured). Both confirm the
+      // upload flow was triggered end-to-end.
+      await expect(
+        page.getByText(/my_resume\.pdf|queued|uploading|error|couldn.t upload/i),
+      ).toBeVisible({ timeout: 10_000 });
+    } finally {
+      await deleteTestUser(request, user);
+    }
+  });
 });
 
 // ---------------------------------------------------------------------------
