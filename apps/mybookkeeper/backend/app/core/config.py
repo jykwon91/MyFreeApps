@@ -58,7 +58,19 @@ class Settings(BaseSettings):
         "from:no.reply.alerts@chase.com OR from:alerts.chase.com OR "
         "from:ealerts.bankofamerica.com OR from:notify.wellsfargo.com OR "
         "from:notification.capitalone.com OR from:alerts.citibank.com OR "
-        "from:usaa.com OR from:alerts.usbank.com OR from:pncalerts.com"
+        "from:usaa.com OR from:alerts.usbank.com OR from:pncalerts.com OR "
+        # --- Body-text fallback (catches forwarded P2P notifications) -------
+        # ``subject:zelle`` doesn't match "Fwd: You received money with Zelle®"
+        # — Gmail's subject tokenizer appears to keep the ® glyph attached
+        # to the word, so the token is "Zelle®" not "Zelle". Bare-word and
+        # bare-phrase search clauses (no ``subject:`` prefix) cover body +
+        # subject + headers, so the phrases below match the *body* of a
+        # Chase/Venmo/Cash-App notification email even when the subject
+        # tokenizer fails. Phrases are chosen to be specific to payment
+        # notifications, NOT marketing copy.
+        "\"sent you money with zelle\" OR \"with zelle®\" OR "
+        "\"received money with zelle\" OR \"venmo payment received\" OR "
+        "\"you received\" OR \"sent you money\""
     )
     max_uploads_per_user_per_day: int = 50
     max_upload_size_bytes: int = 100 * 1024 * 1024  # 100MB (supports zip uploads)
