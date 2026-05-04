@@ -89,8 +89,8 @@ LOGIN_RATE_LIMIT_WINDOW_SECONDS=$(get_mbk LOGIN_RATE_LIMIT_WINDOW_SECONDS)
     echo "GOOGLE_CLIENT_SECRET="
     echo "TURNSTILE_SECRET_KEY="
     echo "TURNSTILE_SITE_KEY="
-    echo "FRONTEND_URL=https://your-mjh-domain.example.com"
-    echo 'CORS_ORIGINS=["https://your-mjh-domain.example.com"]'
+    echo "FRONTEND_URL=https://myjobhunter.165-245-134-251.sslip.io"
+    echo 'CORS_ORIGINS=["https://myjobhunter.165-245-134-251.sslip.io"]'
     echo ""
     echo "EMAIL_BACKEND=console"
     echo "EMAIL_FROM_NAME=MyJobHunter"
