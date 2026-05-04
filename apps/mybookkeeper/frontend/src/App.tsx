@@ -34,6 +34,8 @@ import LeaseTemplateDetail from "@/app/pages/LeaseTemplateDetail";
 import Vendors from "@/app/pages/Vendors";
 import VendorDetail from "@/app/pages/VendorDetail";
 import ReplyTemplates from "@/app/pages/ReplyTemplates";
+import InsurancePolicies from "@/app/pages/InsurancePolicies";
+import InsurancePolicyDetail from "@/app/pages/InsurancePolicyDetail";
 import TaxReport from "@/app/pages/TaxReport";
 import Integrations from "@/app/pages/Integrations";
 import Members from "@/app/pages/Members";
@@ -123,6 +125,8 @@ export default function App() {
               <Route path="lease-templates/:templateId" element={<LeaseTemplateDetail />} />
               <Route path="vendors" element={<Vendors />} />
               <Route path="vendors/:vendorId" element={<VendorDetail />} />
+              <Route path="insurance-policies" element={<InsurancePolicies />} />
+              <Route path="insurance-policies/:policyId" element={<InsurancePolicyDetail />} />
               <Route path="reply-templates" element={<ReplyTemplates />} />
               <Route path="reconciliation" element={<Reconciliation />} />
               <Route path="tax" element={<TaxReport />} />

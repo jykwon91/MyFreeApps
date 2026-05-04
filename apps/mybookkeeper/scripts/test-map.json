@@ -560,6 +560,35 @@
         "tenants.spec.ts"
       ]
     },
+    "insurance": {
+      "source_paths": [
+        "backend/app/models/insurance/",
+        "backend/app/repositories/insurance/",
+        "backend/app/schemas/insurance/",
+        "backend/app/services/insurance/",
+        "backend/app/api/insurance_policies.py",
+        "backend/app/core/insurance_enums.py",
+        "backend/alembic/versions/insur260504_add_insurance_policy_tables.py",
+        "frontend/src/app/pages/InsurancePolicies.tsx",
+        "frontend/src/app/pages/InsurancePolicyDetail.tsx",
+        "frontend/src/app/features/insurance/",
+        "frontend/src/shared/types/insurance/",
+        "frontend/src/shared/store/insurancePoliciesApi.ts"
+      ],
+      "backend_tests": [
+        "test_insurance_policies_api.py",
+        "test_insurance_policy_repo.py"
+      ],
+      "frontend_tests": [
+        "InsuranceExpirationBadge.test.tsx",
+        "ListingInsuranceSection.test.tsx",
+        "InsurancePolicies.test.tsx",
+        "InsurancePolicyDetail.test.tsx"
+      ],
+      "e2e_specs": [
+        "insurance-policies.spec.ts"
+      ]
+    },
     "leases": {
       "source_paths": [
         "backend/app/models/leases/",

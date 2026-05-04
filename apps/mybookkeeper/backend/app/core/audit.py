@@ -40,6 +40,9 @@ MBK_SENSITIVE_FIELDS: frozenset[str] = frozenset({
     # Organization, User, ReplyTemplate all have plain ``name`` columns we
     # MUST NOT mask in the audit log).
     "legal_name",
+    # Insurance domain PII — policy numbers are PII-adjacent (can identify
+    # individuals with insurers), encrypted at rest via EncryptedString.
+    "policy_number",
     "dob",
     "employer_or_hospital",
     "vehicle_make_model",

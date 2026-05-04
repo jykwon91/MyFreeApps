@@ -33,6 +33,8 @@ from app.models.leases.lease_template_file import LeaseTemplateFile
 from app.models.leases.lease_template_placeholder import LeaseTemplatePlaceholder
 from app.models.leases.signed_lease import SignedLease
 from app.models.leases.signed_lease_attachment import SignedLeaseAttachment
+from app.models.insurance.insurance_policy import InsurancePolicy
+from app.models.insurance.insurance_policy_attachment import InsurancePolicyAttachment
 from app.models.vendors.vendor import Vendor
 from app.models.documents.document import Document
 from app.models.extraction.extraction_prompt import ExtractionPrompt

@@ -26,6 +26,8 @@ import ListingForm from "@/app/features/listings/ListingForm";
 import ListingPhotoManager from "@/app/features/listings/ListingPhotoManager";
 import DeleteListingModal from "@/app/features/listings/DeleteListingModal";
 import ChannelsSection from "@/app/features/listings/ChannelsSection";
+import ListingInsuranceSection from "@/app/features/insurance/ListingInsuranceSection";
+import { useCanWrite } from "@/shared/hooks/useOrgRole";
 
 export default function ListingDetail() {
   const { listingId } = useParams<{ listingId: string }>();
@@ -33,6 +35,7 @@ export default function ListingDetail() {
   const [showEditForm, setShowEditForm] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteListing, { isLoading: isDeleting }] = useDeleteListingMutation();
+  const canWrite = useCanWrite();
   const {
     data: listing,
     isLoading,
@@ -185,6 +188,11 @@ export default function ListingDetail() {
           <section className="border rounded-lg p-4 space-y-3">
             <h2 className="text-sm font-medium">Channels</h2>
             <ChannelsSection listingId={listing.id} />
+          </section>
+
+          <section className="border rounded-lg p-4 space-y-3" data-testid="listing-insurance-section-wrapper">
+            <h2 className="text-sm font-medium">Insurance</h2>
+            <ListingInsuranceSection listingId={listing.id} canWrite={canWrite} />
           </section>
 
           {showEditForm ? (
