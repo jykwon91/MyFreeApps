@@ -73,9 +73,8 @@ jobs:
               tests/test_email_verification.py
               tests/test_config_key_validation.py
           - name: crud
-            # Phase 2 CRUD tests — added 2026-05-02 (were never in CI matrix
-            # before this PR). Covers applications (read-only), companies,
-            # profiles, and application events.
+            # Phase 2 CRUD tests. Covers applications full CRUD, contacts,
+            # events, list filters, company writes + name search, and profiles.
             #
             # NOTE: test_application_writes.py is INTENTIONALLY EXCLUDED.
             # 4 of its TestCreateApplication tests consistently exceed the
@@ -89,7 +88,11 @@ jobs:
               tests/test_application_get_by_id.py
               tests/test_application_status_column.py
               tests/test_application_events.py
+              tests/test_application_contacts.py
+              tests/test_application_list_filters.py
+              tests/test_application_company_filter.py
               tests/test_company_writes.py
+              tests/test_company_name_search.py
               tests/test_profile_writes.py
           - name: login-heavy
             paths: >-

@@ -27,6 +27,7 @@ from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.models.application.application import Application
 from app.models.application.application_event import ApplicationEvent
@@ -92,11 +93,46 @@ async def list_by_user(db: AsyncSession, user_id: uuid.UUID) -> list[Application
     return list(result.scalars().all())
 
 
+async def get_with_detail(
+    db: AsyncSession,
+    application_id: uuid.UUID,
+    user_id: uuid.UUID,
+) -> Application | None:
+    """Return an application with eagerly-loaded events and contacts.
+
+    Events are ordered newest-first; contacts are ordered oldest-first.
+    Returns ``None`` if the application does not exist, is soft-deleted,
+    or belongs to a different user (tenant isolation).
+
+    Uses ``selectinload`` for both relationships — two additional SELECT
+    statements instead of a JOIN, which avoids row-multiplication when both
+    collections are non-empty.
+    """
+    result = await db.execute(
+        select(Application)
+        .options(
+            selectinload(Application.events),
+            selectinload(Application.contacts),
+        )
+        .where(
+            Application.id == application_id,
+            Application.user_id == user_id,
+            Application.deleted_at.is_(None),
+        )
+    )
+    return result.scalar_one_or_none()
+
+
 async def list_with_status(
     db: AsyncSession,
     user_id: uuid.UUID,
     *,
     company_id: uuid.UUID | None = None,
+    status_filter: str | None = None,
+    archived: bool | None = None,
+    since: _dt.datetime | None = None,
+    limit: int = 100,
+    offset: int = 0,
 ) -> list[tuple[Application, str | None]]:
     """List a user's non-deleted applications with their latest event type.
 
@@ -112,10 +148,19 @@ async def list_with_status(
     (``user_id`` on ``application_events`` as well) so user A's events can
     never bleed into user B's application rows.
 
-    Optional ``company_id`` narrows results to applications linked to that
-    company.  Tenant isolation still applies — ``user_id`` scoping is
-    applied first so cross-tenant probing via ``company_id`` yields an empty
-    list, never a 403/404 that would confirm ownership.
+    Optional filters:
+    - ``company_id``: narrow to a specific company (tenant-safe — returns
+      empty list, not 403/404, for cross-tenant probing).
+    - ``status_filter``: keep only rows whose latest event_type matches this
+      string.  Applied in Python after the query (the sub-select is already
+      scalar; a HAVING clause would require a different query shape).
+    - ``archived``: when ``True`` include only archived rows; when ``False``
+      include only non-archived rows; when ``None`` include both.
+    - ``since``: include only applications with ``applied_at >= since``.
+    - ``limit`` / ``offset``: standard pagination.  Offset is applied on the
+      ``applications`` table before status filtering for correct page sizes;
+      callers that need exact pages with status filtering should pass ``None``
+      for ``status_filter`` and filter in the service layer.
     """
     latest_event_sq = (
         select(ApplicationEvent.event_type)
@@ -135,12 +180,25 @@ async def list_with_status(
             Application.user_id == user_id,
             Application.deleted_at.is_(None),
         )
+        .order_by(Application.applied_at.desc().nullslast(), Application.created_at.desc())
     )
     if company_id is not None:
         stmt = stmt.where(Application.company_id == company_id)
+    if archived is not None:
+        stmt = stmt.where(Application.archived == archived)
+    if since is not None:
+        stmt = stmt.where(Application.applied_at >= since)
 
+    stmt = stmt.offset(offset).limit(limit)
     result = await db.execute(stmt)
-    return [(row[0], row[1]) for row in result.all()]
+    rows = [(row[0], row[1]) for row in result.all()]
+
+    # status_filter is applied post-query because it filters on the sub-select
+    # label value, which is not a real column and cannot be used in WHERE.
+    if status_filter is not None:
+        rows = [(app, status) for app, status in rows if status == status_filter]
+
+    return rows
 
 
 async def create(db: AsyncSession, application: Application) -> Application:

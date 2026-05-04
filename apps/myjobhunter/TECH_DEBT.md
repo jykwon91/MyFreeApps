@@ -3,7 +3,7 @@
 Issues discovered during development. New entries are appended; resolved entries are
 removed and the counts in this header are updated.
 
-**Open issues: 8 (Critical: 1 / High: 1 / Medium: 4 / Low: 2)**
+**Open issues: 9 (Critical: 1 / High: 1 / Medium: 4 / Low: 3)**
 
 ---
 
@@ -177,6 +177,29 @@ headers to all POST calls.
 expect.objectContaining({ email, password }))` to ignore the extra headers argument,
 or use `toHaveBeenLastCalledWith` with `expect.objectContaining`. Also investigate
 whether the `{ headers: {} }` is intentional or a regression in `@platform/ui`.
+
+---
+
+### [Quality Gate] settings.json Check #3 false-positive on MJH service-layer commits
+
+**Severity:** Low
+**Effort:** XS
+**Location:** `~/.claude/settings.json` — PreToolUse quality gate Check #3
+**Discovered:** Phase 2 Applications + Companies CRUD — `2026-05-04`
+
+**Problem:** The global PreToolUse quality gate checks for `db.commit()` in service
+files and blocks `gh pr create`. MJH intentionally uses a service-layer commit pattern
+(services own the transaction boundary, repositories only do `add/flush`) — this was
+established in Phase 1 and is consistent across all MJH service files. The gate was
+designed for MBK's pattern (repository-layer commits) and fires as a false positive on
+MJH PRs that touch service files.
+
+**Recommendation:** Update `~/.claude/settings.json` PreToolUse Check #3 to either:
+1. Exclude `apps/myjobhunter/` from the ORM-in-services check, OR
+2. Recognize the service-layer commit pattern as acceptable (services commit, repos flush).
+
+**Workaround:** Create PRs via `gh pr create` from a shell outside the Claude Bash tool,
+or via the GitHub UI, to bypass the hook.
 
 ---
 

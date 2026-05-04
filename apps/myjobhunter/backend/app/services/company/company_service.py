@@ -34,9 +34,18 @@ class DuplicatePrimaryDomainError(ValueError):
     """
 
 
-async def list_companies(db: AsyncSession, user_id: uuid.UUID) -> list[Company]:
-    """List a user's companies, ordered by name."""
-    return await company_repository.list_by_user(db, user_id)
+async def list_companies(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    *,
+    name_search: str | None = None,
+) -> list[Company]:
+    """List a user's companies, ordered by name.
+
+    Optional ``name_search``: case-insensitive substring filter on ``name``.
+    Empty or whitespace-only search strings are treated as no filter.
+    """
+    return await company_repository.list_by_user(db, user_id, name_search=name_search)
 
 
 async def get_company(
