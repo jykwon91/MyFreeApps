@@ -12,7 +12,12 @@ services:
       test: ["CMD-SHELL", "pg_isready -U myjobhunter"]
       interval: 5s
       timeout: 3s
-      retries: 5
+      retries: 10
+      # initdb on a cold start can take 10–20s; without start_period the early
+      # pg_isready failures count toward retries and Docker reports the
+      # container "unhealthy" before postgres has even bound the socket.
+      # Dependent services (migrate, api) bail out before postgres is ready.
+      start_period: 30s
 
   migrate:
     build:
