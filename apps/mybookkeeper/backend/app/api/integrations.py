@@ -182,23 +182,3 @@ async def disconnect_gmail(
     disconnected = await integration_service.disconnect_gmail(ctx)
     if not disconnected:
         raise HTTPException(status_code=404, detail="Gmail not connected")
-
-
-@router.get("/gmail/diagnostic-search")
-async def gmail_diagnostic_search(
-    q: str | None = None,
-    limit: int = 25,
-    ctx: RequestContext = Depends(current_org_member),
-) -> dict:
-    """Run an arbitrary Gmail search and return matching message metadata.
-
-    Bypasses the dedup set so the operator can see exactly what Gmail
-    returns for a given query — useful for diagnosing why an expected
-    email isn't being picked up by sync.
-
-    Pass ``q`` to override the configured search; omit to use the live
-    config value. Capped at ``limit`` results (max 100).
-    """
-    return await integration_service.diagnostic_gmail_search(
-        ctx, query=q, limit=min(max(limit, 1), 100),
-    )
