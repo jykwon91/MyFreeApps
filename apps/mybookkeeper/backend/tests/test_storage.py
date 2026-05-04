@@ -230,22 +230,29 @@ class TestGetStorageInitialization:
         mock_settings.minio_bucket = "mybookkeeper"
         mock_settings.minio_secure = False
         instance = MagicMock()
-        instance.bucket_exists.return_value = False
         mock_minio_cls.return_value = instance
 
         result = get_storage()
         try:
             assert result is not None
             assert not isinstance(result, _DualEndpointStorageClient)
-            instance.make_bucket.assert_called_once_with("mybookkeeper")
+            # Bucket existence is verified by the FastAPI lifespan
+            # (bucket_initializer.ensure_bucket); get_storage no longer
+            # touches the network on every cold-cache invocation.
+            instance.bucket_exists.assert_not_called()
+            instance.make_bucket.assert_not_called()
         finally:
             reset_client_cache()
 
     @patch("app.core.storage.settings")
     @patch("app.core.storage.Minio")
-    def test_skips_bucket_creation_when_present(
+    def test_does_not_call_bucket_check_on_get_storage(
         self, mock_minio_cls: MagicMock, mock_settings: MagicMock,
     ) -> None:
+        """Regression: per-request bucket_exists() hung when MinIO was
+        unreachable, blocking attachment-list endpoints. get_storage now
+        constructs the client without any network round-trip.
+        """
         reset_client_cache()
         mock_settings.minio_endpoint = "localhost:9000"
         mock_settings.minio_public_endpoint = ""
@@ -254,12 +261,12 @@ class TestGetStorageInitialization:
         mock_settings.minio_bucket = "mybookkeeper"
         mock_settings.minio_secure = False
         instance = MagicMock()
-        instance.bucket_exists.return_value = True
         mock_minio_cls.return_value = instance
 
         result = get_storage()
         try:
             assert result is not None
+            instance.bucket_exists.assert_not_called()
             instance.make_bucket.assert_not_called()
         finally:
             reset_client_cache()
