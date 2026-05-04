@@ -75,8 +75,14 @@ async def save_email_extraction(
     records_added = 0
     ext_record: Extraction | None = None
 
-    # Payment confirmations: skip entirely — they duplicate the original invoice
-    if ext_doc_type == "payment_confirmation" or _is_payment_confirmation(documents_data):
+    # Payment confirmations: skip entirely — they duplicate the original invoice.
+    # Carve-out: peer-to-peer transfers (Zelle/Venmo/Cash App/PayPal etc.) ARE
+    # the source of truth for rent income, not duplicates. If any document in
+    # the batch looks like a P2P payment, we must not short-circuit here.
+    has_p2p = any(_looks_like_p2p_payment(d) for d in documents_data)
+    if not has_p2p and (
+        ext_doc_type == "payment_confirmation" or _is_payment_confirmation(documents_data)
+    ):
         logger.info(
             "Skipping payment confirmation email (message_id=%s, subject=%r)",
             message_id, subject,
@@ -238,14 +244,46 @@ _PAYMENT_CONFIRMATION_PATTERNS = re.compile(
     re.IGNORECASE,
 )
 
+# Peer-to-peer money transfer notifications. These emails ARE the source of
+# truth for rent income — they must NEVER be silently dropped as
+# "payment_confirmation duplicates of an invoice", because there is no
+# invoice. Defense-in-depth: even if Claude mis-classifies, the presence of
+# a payer_name + non-zero amount + a P2P-platform vendor short-circuits the
+# skip.
+_P2P_PLATFORM_VENDORS = frozenset({
+    "zelle", "venmo", "cash app", "cashapp", "paypal", "apple pay", "google pay",
+})
+
+
+def _looks_like_p2p_payment(data: dict) -> bool:
+    """Return True if the extraction looks like a peer-to-peer transfer.
+
+    P2P payments have a real payer (not the host) AND a real amount AND a
+    P2P-platform vendor. They must bypass the payment_confirmation skip path.
+    """
+    payer = (data.get("payer_name") or "").strip()
+    if not payer:
+        return False
+    amount_raw = data.get("amount")
+    try:
+        if amount_raw is None or float(str(amount_raw)) <= 0:
+            return False
+    except (TypeError, ValueError):
+        return False
+    vendor = (data.get("vendor") or "").strip().lower()
+    return any(platform in vendor for platform in _P2P_PLATFORM_VENDORS)
+
 
 def _is_payment_confirmation(documents_data: list) -> bool:
     """Detect payment confirmations from extraction data as a fallback.
 
     Checks if any extracted item has a document_type of 'payment_confirmation'
     or if the description/vendor text matches common payment confirmation patterns.
+    Peer-to-peer transfers are explicitly excluded — see _looks_like_p2p_payment.
     """
     for data in documents_data:
+        if _looks_like_p2p_payment(data):
+            continue
         if data.get("document_type") == "payment_confirmation":
             return True
         desc = data.get("description") or ""
