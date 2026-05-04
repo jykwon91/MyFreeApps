@@ -3,6 +3,7 @@ import { X, Download, Trash2 } from "lucide-react";
 import AlertBox from "@/shared/components/ui/AlertBox";
 import TwoFactorSetup from "@/app/features/security/TwoFactorSetup";
 import DeleteAccountModal from "@/app/features/security/DeleteAccountModal";
+import DisplayNameSetting from "@/app/features/security/DisplayNameSetting";
 import { useDismissable } from "@/shared/hooks/useDismissable";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import api from "@/shared/lib/api";
@@ -50,6 +51,10 @@ export default function Security() {
           </button>
         </AlertBox>
       )}
+
+      <div className="bg-card border rounded-lg p-6">
+        <DisplayNameSetting />
+      </div>
 
       <div className="bg-card border rounded-lg p-6">
         <TwoFactorSetup />
