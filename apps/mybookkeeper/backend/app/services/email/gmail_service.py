@@ -6,11 +6,12 @@ from email.utils import make_msgid
 from pathlib import Path
 from typing import NotRequired, TypedDict
 
+from google.auth.exceptions import RefreshError
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from app.core.config import settings
-from app.services.email.exceptions import GmailSendError, GmailSendScopeError
+from app.services.email.exceptions import GmailReauthRequiredError, GmailSendError, GmailSendScopeError
 
 logger = logging.getLogger(__name__)
 
@@ -324,8 +325,18 @@ def send_message(
         sent = service.users().messages().send(
             userId="me", body={"raw": raw},
         ).execute()
+    except RefreshError as exc:
+        logger.warning("Gmail send rejected — refresh token invalid: %s", exc)
+        raise GmailReauthRequiredError(
+            "Gmail token expired. Reconnect Gmail to send replies."
+        ) from exc
     except HttpError as exc:
         status = getattr(getattr(exc, "resp", None), "status", None)
+        if status == 401:
+            logger.warning("Gmail send rejected with 401 — token rejected by Google")
+            raise GmailReauthRequiredError(
+                "Gmail token rejected (401). Reconnect Gmail to send replies."
+            ) from exc
         if status == 403:
             logger.warning(
                 "Gmail send rejected with 403 — likely missing gmail.send scope",

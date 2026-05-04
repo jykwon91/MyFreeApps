@@ -20,6 +20,33 @@ async def get_by_org_and_provider(
     return result.scalar_one_or_none()
 
 
+async def mark_needs_reauth(
+    db: AsyncSession,
+    integration: Integration,
+    error: str,
+    failed_at: datetime,
+) -> None:
+    """Flip the reauth flag and record when/why it was set.
+
+    Called from the Gmail client seam immediately after catching a RefreshError
+    so the state is persisted before raising GmailReauthRequiredError to callers.
+    The session is NOT flushed here — the caller must flush or commit.
+    """
+    integration.needs_reauth = True
+    integration.last_reauth_error = error
+    integration.last_reauth_failed_at = failed_at
+
+
+async def clear_reauth_state(db: AsyncSession, integration: Integration) -> None:
+    """Clear the reauth flag after a successful OAuth re-flow.
+
+    Called from handle_gmail_callback when fresh tokens are written back.
+    """
+    integration.needs_reauth = False
+    integration.last_reauth_error = None
+    integration.last_reauth_failed_at = None
+
+
 async def list_by_org(
     db: AsyncSession, organization_id: uuid.UUID
 ) -> Sequence[Integration]:
@@ -82,8 +109,26 @@ async def update_last_synced(
 
 
 async def get_gmail_user_ids(db: AsyncSession) -> list[str]:
+    """Return all Gmail integration user IDs, including those in needs_reauth state.
+
+    Use ``get_active_gmail_user_ids`` in the scheduler to skip expired tokens.
+    """
     result = await db.execute(
         select(Integration.user_id).where(Integration.provider == "gmail")
+    )
+    return [str(uid) for uid in result.scalars().all()]
+
+
+async def get_active_gmail_user_ids(db: AsyncSession) -> list[str]:
+    """Return Gmail integration user IDs where needs_reauth is False.
+
+    The scheduler uses this to avoid retrying dead tokens every 15 minutes.
+    """
+    result = await db.execute(
+        select(Integration.user_id).where(
+            Integration.provider == "gmail",
+            Integration.needs_reauth.is_(False),
+        )
     )
     return [str(uid) for uid in result.scalars().all()]
 

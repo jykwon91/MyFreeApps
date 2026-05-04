@@ -25,8 +25,9 @@ logger = logging.getLogger(__name__)
 
 
 async def get_gmail_user_ids() -> list[str]:
+    """Return only user IDs whose Gmail token is still active (not in needs_reauth state)."""
     async with AsyncSessionLocal() as db:
-        return await integration_repo.get_gmail_user_ids(db)
+        return await integration_repo.get_active_gmail_user_ids(db)
 
 
 async def sync_all_plaid_items() -> None:

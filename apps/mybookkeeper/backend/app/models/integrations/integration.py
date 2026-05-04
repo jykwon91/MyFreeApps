@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import SmallInteger, String, Text, ForeignKey, DateTime, UniqueConstraint
+from sqlalchemy import Boolean, SmallInteger, String, Text, ForeignKey, DateTime, UniqueConstraint
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID, JSONB
@@ -24,6 +24,11 @@ class Integration(Base):
     metadata_: Mapped[dict | None] = mapped_column("metadata", JSONB, nullable=True)
     last_synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    # Reauth-state columns — flipped by the Gmail client seam when Google rejects
+    # the stored refresh token. Cleared on a successful OAuth re-flow.
+    needs_reauth: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    last_reauth_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    last_reauth_failed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     __table_args__ = (UniqueConstraint("user_id", "provider", name="uq_integration_user_provider"),)
 

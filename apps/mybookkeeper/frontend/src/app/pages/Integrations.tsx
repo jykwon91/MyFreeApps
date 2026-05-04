@@ -192,10 +192,16 @@ export default function Integrations() {
               <div>
                 <p className="font-medium">Gmail</p>
                 {gmail ? (
-                  <p className="text-sm text-muted-foreground mt-0.5">
-                    Connected · Last synced{" "}
-                    {gmail.last_synced_at ? timeAgo(gmail.last_synced_at) : "never"}
-                  </p>
+                  gmail.needs_reauth ? (
+                    <p className="text-sm text-amber-600 dark:text-amber-400 mt-0.5" data-testid="gmail-needs-reauth-status">
+                      Reconnection required — token expired
+                    </p>
+                  ) : (
+                    <p className="text-sm text-muted-foreground mt-0.5">
+                      Connected · Last synced{" "}
+                      {gmail.last_synced_at ? timeAgo(gmail.last_synced_at) : "never"}
+                    </p>
+                  )
                 ) : (
                   <p className="text-sm text-muted-foreground mt-0.5">
                     Automatically import documents from your inbox
@@ -207,59 +213,74 @@ export default function Integrations() {
                 <div className="flex gap-2">
                   {gmail ? (
                     <>
-                      {confirmSync ? (
-                        <div className="flex items-center gap-2 border rounded-md px-3 py-1.5 text-sm">
-                          <span className="text-muted-foreground">Start email sync?</span>
-                          <button onClick={handleSync} className="text-primary font-medium hover:underline">Yes</button>
-                          <button onClick={() => setConfirmSync(false)} className="text-muted-foreground hover:text-foreground">No</button>
-                        </div>
+                      {gmail.needs_reauth ? (
+                        /* Token expired — show Reconnect instead of Sync/Disconnect.
+                           The OAuth flow replaces the tokens without requiring a disconnect. */
+                        <LoadingButton
+                          onClick={handleConnect}
+                          isLoading={isConnecting}
+                          loadingText="Reconnecting..."
+                          data-testid="gmail-reconnect-button"
+                        >
+                          Reconnect Gmail
+                        </LoadingButton>
                       ) : (
-                        <LoadingButton
-                          variant="secondary"
-                          onClick={() => setConfirmSync(true)}
-                          disabled={isSyncing}
-                          isLoading={isSyncing || isSyncStarting}
-                          loadingText="Syncing..."
-                        >
-                          Sync now
-                        </LoadingButton>
-                      )}
-                      {isSyncing ? (
-                        <LoadingButton
-                          variant="ghost"
-                          onClick={() => handleCancel(latestLog?.id)}
-                          isLoading={isCancelling}
-                          loadingText="Cancelling..."
-                          className="text-destructive hover:text-destructive"
-                        >
-                          Cancel
-                        </LoadingButton>
-                      ) : confirmDisconnect ? (
-                        <div className="flex items-center gap-2 border rounded-md px-3 py-1.5 text-sm">
-                          <span className="text-muted-foreground">Disconnect Gmail?</span>
-                          <button
-                            onClick={handleDisconnect}
-                            className="text-destructive font-medium hover:underline"
-                          >
-                            Yes
-                          </button>
-                          <button
-                            onClick={() => setConfirmDisconnect(false)}
-                            className="text-muted-foreground hover:text-foreground"
-                          >
-                            No
-                          </button>
-                        </div>
-                      ) : (
-                        <LoadingButton
-                          variant="ghost"
-                          onClick={() => setConfirmDisconnect(true)}
-                          isLoading={isDisconnecting}
-                          loadingText="Disconnecting..."
-                          className="text-destructive hover:text-destructive"
-                        >
-                          Disconnect
-                        </LoadingButton>
+                        <>
+                          {confirmSync ? (
+                            <div className="flex items-center gap-2 border rounded-md px-3 py-1.5 text-sm">
+                              <span className="text-muted-foreground">Start email sync?</span>
+                              <button onClick={handleSync} className="text-primary font-medium hover:underline">Yes</button>
+                              <button onClick={() => setConfirmSync(false)} className="text-muted-foreground hover:text-foreground">No</button>
+                            </div>
+                          ) : (
+                            <LoadingButton
+                              variant="secondary"
+                              onClick={() => setConfirmSync(true)}
+                              disabled={isSyncing}
+                              isLoading={isSyncing || isSyncStarting}
+                              loadingText="Syncing..."
+                            >
+                              Sync now
+                            </LoadingButton>
+                          )}
+                          {isSyncing ? (
+                            <LoadingButton
+                              variant="ghost"
+                              onClick={() => handleCancel(latestLog?.id)}
+                              isLoading={isCancelling}
+                              loadingText="Cancelling..."
+                              className="text-destructive hover:text-destructive"
+                            >
+                              Cancel
+                            </LoadingButton>
+                          ) : confirmDisconnect ? (
+                            <div className="flex items-center gap-2 border rounded-md px-3 py-1.5 text-sm">
+                              <span className="text-muted-foreground">Disconnect Gmail?</span>
+                              <button
+                                onClick={handleDisconnect}
+                                className="text-destructive font-medium hover:underline"
+                              >
+                                Yes
+                              </button>
+                              <button
+                                onClick={() => setConfirmDisconnect(false)}
+                                className="text-muted-foreground hover:text-foreground"
+                              >
+                                No
+                              </button>
+                            </div>
+                          ) : (
+                            <LoadingButton
+                              variant="ghost"
+                              onClick={() => setConfirmDisconnect(true)}
+                              isLoading={isDisconnecting}
+                              loadingText="Disconnecting..."
+                              className="text-destructive hover:text-destructive"
+                            >
+                              Disconnect
+                            </LoadingButton>
+                          )}
+                        </>
                       )}
                     </>
                   ) : (

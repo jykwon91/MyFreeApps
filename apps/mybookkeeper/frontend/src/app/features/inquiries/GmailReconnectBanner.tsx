@@ -2,22 +2,25 @@ import { Link } from "react-router-dom";
 import AlertBox from "@/shared/components/ui/AlertBox";
 
 interface Props {
-  reason: "missing-integration" | "missing-send-scope";
+  reason: "missing-integration" | "missing-send-scope" | "reauth-required";
 }
 
 /**
  * Banner shown inside the reply panel when the host can't send through
- * Gmail. Two cases:
+ * Gmail. Three cases:
  *   - missing-integration: no Gmail OAuth at all yet
  *   - missing-send-scope:  connected pre-PR-2.3 (only readonly scope)
+ *   - reauth-required:     refresh token expired or revoked by Google
  *
- * Both link to Integrations where the host can connect (or reconnect).
+ * All cases link to Integrations where the host can connect or reconnect.
  */
 export default function GmailReconnectBanner({ reason }: Props) {
   const message =
     reason === "missing-integration"
       ? "Connect Gmail to send replies. Your existing data stays untouched."
-      : "Reply via Gmail needs send permission. Reconnect Gmail to grant it — your existing access is preserved.";
+      : reason === "reauth-required"
+        ? "Gmail connection expired. Reconnect Gmail in Settings → Integrations to send replies."
+        : "Reply via Gmail needs send permission. Reconnect Gmail to grant it — your existing access is preserved.";
 
   return (
     <div data-testid="gmail-reconnect-banner">

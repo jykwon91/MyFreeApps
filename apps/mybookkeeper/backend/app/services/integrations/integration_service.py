@@ -106,7 +106,7 @@ async def handle_gmail_callback(code: str, state: str) -> None:
     granted_scopes = list(creds.scopes) if creds.scopes else []
 
     async with unit_of_work() as db:
-        await integration_repo.upsert_gmail(
+        integration = await integration_repo.upsert_gmail(
             db,
             organization_id=uuid.UUID(org_id_str),
             user_id=uuid.UUID(user_id_str),
@@ -115,6 +115,9 @@ async def handle_gmail_callback(code: str, state: str) -> None:
             token_expiry=expiry,
             scopes=granted_scopes,
         )
+        # A successful re-auth clears any stale reauth state so the UI
+        # reconnect banner goes away immediately after the OAuth popup closes.
+        await integration_repo.clear_reauth_state(db, integration)
         await log_auth_event(
             db,
             event_type=AuthEventType.OAUTH_CONNECT,
@@ -138,6 +141,8 @@ async def list_integrations(
             }
             if i.provider == "gmail":
                 info["has_send_scope"] = integration_has_send_scope(i)
+                info["needs_reauth"] = i.needs_reauth
+                info["last_reauth_error"] = i.last_reauth_error
             result.append(info)
         return result
 
