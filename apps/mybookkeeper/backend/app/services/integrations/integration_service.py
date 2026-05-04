@@ -58,11 +58,16 @@ def _get_flow() -> Flow:
     )
 
 
-def _create_oauth_state(user_id: str, organization_id: str) -> str:
+def _create_oauth_state(user_id: str, organization_id: str, code_verifier: str) -> str:
     return jwt.encode(
         {
             "sub": user_id,
             "org_id": organization_id,
+            # PKCE verifier — Google requires this round-tripped at token-exchange
+            # time so the new Flow instance in the callback can reuse the same
+            # verifier the original Flow generated. Stuffing it into the state
+            # JWT keeps the OAuth handshake stateless on the server side.
+            "cv": code_verifier,
             "type": "oauth_state",
             "exp": datetime.now(timezone.utc) + timedelta(minutes=10),
         },
@@ -71,34 +76,53 @@ def _create_oauth_state(user_id: str, organization_id: str) -> str:
     )
 
 
-def _verify_oauth_state(state: str) -> tuple[str, str]:
-    """Returns (user_id, organization_id) from state token. Raises ValueError on invalid/expired state."""
+def _verify_oauth_state(state: str) -> tuple[str, str, str | None]:
+    """Returns (user_id, organization_id, code_verifier) from state token.
+    Raises ValueError on invalid/expired state. ``code_verifier`` may be None
+    on legacy state tokens minted before the PKCE fix; the caller falls back
+    to the Flow's own auto-generated verifier in that case (which Google
+    rejects, but we surface a clean ValueError instead of a 500)."""
     try:
         payload: dict[str, str] = jwt.decode(state, settings.secret_key, algorithms=["HS256"])
         if payload.get("type") != "oauth_state":
             raise ValueError("Invalid OAuth state")
-        return payload["sub"], payload["org_id"]
+        return payload["sub"], payload["org_id"], payload.get("cv")
     except JWTError:
         raise ValueError("Invalid or expired OAuth state")
 
 
 def get_gmail_connect_url(ctx: RequestContext) -> str:
     flow = _get_flow()
-    state = _create_oauth_state(str(ctx.user_id), str(ctx.organization_id))
     auth_url, _ = flow.authorization_url(
         access_type="offline",
         include_granted_scopes="true",
-        state=state,
         prompt="consent",
     )
-    return auth_url
+    # ``flow.authorization_url`` populates ``flow.code_verifier`` as a side
+    # effect when PKCE is enabled. We persist it in the state JWT so the
+    # callback can rebuild the Flow with the same verifier.
+    state = _create_oauth_state(
+        str(ctx.user_id),
+        str(ctx.organization_id),
+        flow.code_verifier or "",
+    )
+    # Re-mint the auth URL with our state. (authorization_url returns the URL
+    # already; we replace the auto-generated state via query-string append.)
+    sep = "&" if "?" in auth_url else "?"
+    return f"{auth_url}{sep}state={state}"
 
 
 async def handle_gmail_callback(code: str, state: str) -> None:
     """Exchange OAuth code for tokens, upsert integration. Raises ValueError on bad state."""
-    user_id_str, org_id_str = _verify_oauth_state(state)
+    user_id_str, org_id_str, code_verifier = _verify_oauth_state(state)
+    if not code_verifier:
+        raise ValueError("OAuth state missing PKCE verifier — restart the connection flow")
 
     flow = _get_flow()
+    # Reuse the original code_verifier generated at auth-start. Without this,
+    # the fresh Flow instance generates a new verifier and Google rejects with
+    # "invalid_grant: Missing code verifier" (PR #221 RCA).
+    flow.code_verifier = code_verifier
     try:
         flow.fetch_token(code=code)
     except Exception:
