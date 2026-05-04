@@ -301,6 +301,89 @@ async def get_sync_logs(
         return response
 
 
+async def diagnostic_gmail_search(
+    ctx: RequestContext,
+    *,
+    query: str | None = None,
+    limit: int = 25,
+) -> dict:
+    """Run a Gmail search bypassing the dedup set; return raw match metadata.
+
+    Returns
+        {
+          "query": <effective query>,
+          "count": <int>,
+          "results": [{"id": str, "subject": str, "from": str, "date": str}, ...],
+          "error": <str | None>,
+        }
+
+    Used to diagnose why an expected email isn't being picked up by sync.
+    """
+    from app.services.email import gmail_service
+    from app.repositories import integration_repo
+
+    effective_query = query if query is not None else settings.gmail_search_query
+
+    async with AsyncSessionLocal() as db:
+        integration = await integration_repo.get_by_org_and_provider(
+            db, ctx.organization_id, "gmail",
+        )
+    if not integration or not integration.access_token:
+        return {
+            "query": effective_query,
+            "count": 0,
+            "results": [],
+            "error": "Gmail not connected",
+        }
+
+    try:
+        service = gmail_service.get_gmail_service(
+            integration.access_token, integration.refresh_token,
+        )
+        results = service.users().messages().list(
+            userId="me", q=effective_query, maxResults=limit,
+        ).execute()
+        messages = results.get("messages", [])
+        out: list[dict] = []
+        for msg in messages:
+            try:
+                preview = service.users().messages().get(
+                    userId="me", id=msg["id"], format="metadata",
+                    metadataHeaders=["Subject", "From", "Date"],
+                ).execute()
+                headers = {
+                    h["name"]: h["value"]
+                    for h in preview.get("payload", {}).get("headers", [])
+                }
+                out.append({
+                    "id": msg["id"],
+                    "subject": headers.get("Subject", ""),
+                    "from": headers.get("From", ""),
+                    "date": headers.get("Date", ""),
+                })
+            except Exception:
+                out.append({
+                    "id": msg["id"],
+                    "subject": "<metadata fetch failed>",
+                    "from": "",
+                    "date": "",
+                })
+        return {
+            "query": effective_query,
+            "count": len(messages),
+            "results": out,
+            "error": None,
+        }
+    except Exception as e:
+        logger.exception("diagnostic_gmail_search failed")
+        return {
+            "query": effective_query,
+            "count": 0,
+            "results": [],
+            "error": str(e),
+        }
+
+
 async def disconnect_gmail(ctx: RequestContext) -> bool:
     async with unit_of_work() as db:
         integration = await integration_repo.get_by_org_and_provider(db, ctx.organization_id, "gmail")
