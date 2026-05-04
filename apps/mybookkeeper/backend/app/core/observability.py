@@ -12,6 +12,7 @@ optional — ``init_sentry()`` exits silently when the DSN is empty.
 import logging
 
 import sentry_sdk
+from sentry_sdk.integrations.logging import LoggingIntegration
 
 from app.core.config import settings
 
@@ -43,12 +44,23 @@ def init_sentry() -> None:
         # Non-production: Sentry is optional — skip silently.
         return
 
+    # LoggingIntegration: capture INFO+ as breadcrumbs (attached to any
+    # subsequent error event for context), and INFO+ as standalone events
+    # so diagnostic logs are visible in Sentry without exposing a debug API.
+    # The breadcrumb level controls what rides on errors; the event level
+    # controls what gets posted as its own Sentry event.
+    logging_integration = LoggingIntegration(
+        level=logging.INFO,
+        event_level=logging.INFO,
+    )
+
     try:
         sentry_sdk.init(
             dsn=settings.sentry_dsn,
             send_default_pii=False,
             traces_sample_rate=0.1,
             environment=settings.environment,
+            integrations=[logging_integration],
         )
     except Exception:
         logger.warning(
