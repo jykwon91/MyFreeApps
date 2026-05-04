@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import PageErrorBoundary from "@/shared/components/PageErrorBoundary";
-import { Menu, Settings, X, LogOut, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronRight, Menu, Settings, X, LogOut, ChevronUp } from "lucide-react";
 import { logout } from "@/shared/lib/auth";
 import { cn } from "@/shared/utils/cn";
 import { NAV_GROUPS } from "@/app/lib/nav";
@@ -49,6 +49,28 @@ export default function Layout() {
     .map((g) => ({ ...g, items: g.items.filter(itemAllowed) }))
     .filter((g) => g.items.length > 0);
 
+  // Persist collapsed-group state per-user. Default: all groups expanded.
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>(() => {
+    try {
+      const stored = localStorage.getItem("nav.collapsedGroups");
+      return stored ? JSON.parse(stored) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("nav.collapsedGroups", JSON.stringify(collapsedGroups));
+    } catch {
+      // localStorage unavailable (private mode, quota) — silently no-op
+    }
+  }, [collapsedGroups]);
+
+  const toggleGroup = (label: string) => {
+    setCollapsedGroups((prev) => ({ ...prev, [label]: !prev[label] }));
+  };
+
   return (
     <div className="min-h-screen flex md:h-screen md:overflow-hidden">
       {/* Mobile header */}
@@ -85,26 +107,42 @@ export default function Layout() {
           <OrgSwitcher />
         </div>
         <nav className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 py-4 space-y-4">
-          {filteredGroups.map((group, idx) => (
-            <div key={group.label ?? `group-${idx}`} className="space-y-1">
-              {group.label ? (
-                <div className="px-3 pt-1 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-                  {group.label}
-                </div>
-              ) : null}
-              {group.items.map(({ to, label }) => (
-                <NavLink
-                  key={to}
-                  to={to}
-                  end={to === "/"}
-                  onClick={() => setSidebarOpen(false)}
-                  className={navLinkClass}
-                >
-                  {label}
-                </NavLink>
-              ))}
-            </div>
-          ))}
+          {filteredGroups.map((group, idx) => {
+            const isCollapsed = group.label ? collapsedGroups[group.label] : false;
+            return (
+              <div key={group.label ?? `group-${idx}`} className="space-y-1">
+                {group.label ? (
+                  <button
+                    type="button"
+                    onClick={() => toggleGroup(group.label!)}
+                    className="w-full flex items-center justify-between px-3 pt-1 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 hover:text-muted-foreground transition-colors min-h-[28px]"
+                    aria-expanded={!isCollapsed}
+                    data-testid={`nav-group-toggle-${group.label}`}
+                  >
+                    <span>{group.label}</span>
+                    {isCollapsed ? (
+                      <ChevronRight size={12} aria-hidden="true" />
+                    ) : (
+                      <ChevronDown size={12} aria-hidden="true" />
+                    )}
+                  </button>
+                ) : null}
+                {!isCollapsed
+                  ? group.items.map(({ to, label }) => (
+                      <NavLink
+                        key={to}
+                        to={to}
+                        end={to === "/"}
+                        onClick={() => setSidebarOpen(false)}
+                        className={navLinkClass}
+                      >
+                        {label}
+                      </NavLink>
+                    ))
+                  : null}
+              </div>
+            );
+          })}
         </nav>
         <div className="px-3 py-3 border-t space-y-2">
           <div className="flex justify-center">
