@@ -51,7 +51,7 @@ from app.services.email.exceptions import (
 )
 from app.services.integrations import integration_service
 from app.services.leases.receipt_pdf_service import ReceiptData, generate_receipt_pdf
-from app.core.storage import get_storage
+from app.core import storage as _storage_module
 
 logger = logging.getLogger(__name__)
 
@@ -320,7 +320,7 @@ async def send_receipt(
     pdf_filename = f"receipt-{receipt_number}.pdf"
 
     # ── Phase 4: upload to MinIO ──────────────────────────────────────────────
-    storage = get_storage()
+    storage = _storage_module.get_storage()
     storage_key = f"signed-leases/{signed_lease_id or 'unlinked'}/{uuid.uuid4()}/{pdf_filename}"
     storage.upload_file(storage_key, pdf_bytes, "application/pdf")
 
