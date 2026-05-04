@@ -131,9 +131,8 @@ async def send_reply(
                 db, organization_id, "gmail",
             )
             if stale is not None:
-                import datetime as _dtnow
                 await integration_repo.mark_needs_reauth(
-                    db, stale, repr(exc)[:200], _dtnow.datetime.now(_dtnow.timezone.utc)
+                    db, stale, repr(exc)[:200], _dt.datetime.now(_dt.timezone.utc)
                 )
         raise InquiryReplyAuthExpiredError(str(exc)) from exc
     except GmailSendScopeError as exc:

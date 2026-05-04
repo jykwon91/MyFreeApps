@@ -1,7 +1,7 @@
 """Add needs_reauth, last_reauth_error, last_reauth_failed_at to integrations
 
 Revision ID: gmreauth260504
-Revises: z0a1b2c3d4e5
+Revises: calttp260503
 Create Date: 2026-05-04 00:00:00.000000
 
 """
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision: str = 'gmreauth260504'
-down_revision: Union[str, None] = 'z0a1b2c3d4e5'
+down_revision: Union[str, None] = 'calttp260503'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
