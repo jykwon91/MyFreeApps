@@ -17,7 +17,7 @@ export default function ReceiptPreviewPane({ url, error }: ReceiptPreviewPanePro
         src={url}
         title="Receipt preview"
         data-testid="receipt-preview-iframe"
-        className="w-full h-full min-h-64 bg-white"
+        className="w-full h-full bg-white"
         style={{ border: "none", colorScheme: "light" }}
       />
     );
