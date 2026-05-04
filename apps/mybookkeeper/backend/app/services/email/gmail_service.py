@@ -84,6 +84,28 @@ def list_new_email_ids(
 
     results = service.users().messages().list(**kwargs).execute()
     messages = results.get("messages", [])
+    # Diagnostic: log what Gmail returned so we can tell at-a-glance whether
+    # the search query is the bottleneck (returns 0 / wrong shape) vs the
+    # downstream pipeline (returns N but extractor drops them). Subjects and
+    # from-addresses only — no body content — so log volume stays bounded.
+    logger.info(
+        "gmail.search returned %d messages (query=%r, label=%r)",
+        len(messages), query, label,
+    )
+    for msg in messages:
+        try:
+            preview = service.users().messages().get(
+                userId="me", id=msg["id"], format="metadata",
+                metadataHeaders=["Subject", "From"],
+            ).execute()
+            headers = {h["name"]: h["value"] for h in preview.get("payload", {}).get("headers", [])}
+            logger.info(
+                "  gmail.match id=%s from=%r subject=%r",
+                msg["id"], headers.get("From"), headers.get("Subject"),
+            )
+        except Exception:
+            logger.debug("Failed to fetch metadata for diagnostic log", exc_info=True)
+
     return [msg["id"] for msg in messages if msg["id"] not in processed_ids]
 
 
