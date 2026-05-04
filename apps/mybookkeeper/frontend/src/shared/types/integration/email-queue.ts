@@ -1,4 +1,10 @@
-export type EmailQueueStatus = "pending" | "fetched" | "extracting" | "done" | "failed";
+export type EmailQueueStatus =
+  | "pending"
+  | "fetched"
+  | "extracting"
+  | "done"
+  | "skipped"
+  | "failed";
 
 export interface EmailQueueItem {
   id: string;
