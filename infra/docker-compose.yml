@@ -1,0 +1,68 @@
+# Shared infrastructure stack for the MyFreeApps monorepo.
+#
+# Currently runs the MinIO object-storage service that every app in the
+# monorepo consumes. Each app gets its own bucket (mybookkeeper-files,
+# myjobhunter-files, ...) on a single MinIO cluster, with its own access
+# key + secret key — bucket-level isolation, not container-level.
+#
+# Why this lives at the monorepo root rather than per-app: a single
+# MinIO is the right shape for the operator running multiple apps on
+# one VPS. One key-rotation cycle, one backup target, one
+# encryption-at-rest config. Per-app MinIO would mean N times the
+# memory + N times the operations cost for no isolation gain.
+#
+# Deploy: bring this stack up FIRST on the VPS, then the per-app stacks
+# (apps/mybookkeeper/docker-compose.yml, apps/myjobhunter/docker-compose.yml)
+# will join the shared `myfreeapps` network and reach minio at
+# myfreeapps-minio:9000.
+#
+# Run from the monorepo root on the VPS:
+#   sudo docker compose -f infra/docker-compose.yml up -d
+#
+services:
+  minio:
+    # SHA-pinned via tag — verified against Docker Hub on 2026-04-26.
+    # Tag check: gh api hub.docker.com/v2/repositories/minio/minio/tags/<tag>
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
+    container_name: myfreeapps-minio
+    restart: unless-stopped
+    ports:
+      # Bind only to localhost — apps reach the API via the docker
+      # network; public access for downloads goes through the per-app
+      # caddy reverse-proxy (storage.<app-domain>).
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
+    volumes:
+      - minio_data:/data
+    environment:
+      # Dev defaults — production OVERRIDES these via /srv/myfreeapps/infra/.env.
+      # Never use these credentials in production: see deploy/MINIO_SETUP.md
+      # in apps/mybookkeeper/ for the production setup procedure.
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      MINIO_KMS_AUTO_ENCRYPTION: "on"
+      MINIO_KMS_SECRET_KEY: ${MINIO_KMS_SECRET_KEY:-key1:V0VBSyBERVYgS0VZIC0gUkVQTEFDRSBJTiBQUk9EICAgIA==}
+      MINIO_BROWSER_REDIRECT_URL: ${MINIO_BROWSER_URL:-http://localhost:9001}
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD-SHELL", "mc ready local || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - myfreeapps
+
+volumes:
+  # Named volume holding object data. The migration from MBK's own
+  # `mybookkeeper_minio_data` volume to this one is operator-driven
+  # (one-time `docker run --rm -v old:/old -v new:/new alpine cp -a /old/. /new/`)
+  # documented in infra/MIGRATION.md.
+  minio_data:
+
+networks:
+  # Shared external network. Per-app compose stacks join it via
+  # `networks: myfreeapps: external: true`.
+  myfreeapps:
+    name: myfreeapps
+    driver: bridge
