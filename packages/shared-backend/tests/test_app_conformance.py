@@ -82,73 +82,78 @@ class TestNoLocalBootGuards:
 
 
 @pytest.mark.parametrize("app", _APPS)
-class TestLifespanCallsSharedGuards:
-    """Each app's lifespan must call all the shared boot guards.
+class TestLifespanUsesSharedFactory:
+    """Each app's lifespan must be built via the shared
+    ``create_app_lifespan`` factory rather than a hand-rolled
+    ``@asynccontextmanager`` that re-implements the canonical boot
+    sequence.
 
-    This is the parity contract: missing a guard in one app while having
-    it in the other is the drift this series prevents.
+    This is the parity contract: the boot order (sentry, turnstile,
+    email, audit, bucket) is centralised in
+    ``platform_shared.core.lifespan`` and unit-tested there. App
+    main.py files just compose the factory with their settings + an
+    optional bucket_init / on_startup / on_shutdown.
     """
 
-    def test_lifespan_calls_check_turnstile_configured(self, app: str) -> None:
+    def test_imports_create_app_lifespan(self, app: str) -> None:
         main_src = _read("apps", app, "backend", "app", "main.py")
-        assert "check_turnstile_configured(" in main_src, (
-            f"{app}/backend/app/main.py lifespan does not call "
-            f"check_turnstile_configured(). Add it after init_sentry() — "
-            f"production deploys without TURNSTILE_SECRET_KEY are a "
-            f"credential-stuffing vulnerability."
+        assert "from platform_shared.core.lifespan import create_app_lifespan" in main_src, (
+            f"{app}/backend/app/main.py must import create_app_lifespan "
+            f"from platform_shared.core.lifespan — see PR #301 for the "
+            f"canonical lifespan composition pattern."
         )
 
-    def test_lifespan_calls_check_email_configured(self, app: str) -> None:
+    def test_calls_create_app_lifespan(self, app: str) -> None:
         main_src = _read("apps", app, "backend", "app", "main.py")
-        assert "check_email_configured(" in main_src, (
-            f"{app}/backend/app/main.py lifespan does not call "
-            f"check_email_configured(). Add it after check_turnstile_configured() — "
-            f"the 2026-05-05 Kenneth verification-email outage was caused by "
-            f"console-mode email backend silently logging to stdout in "
-            f"production."
+        assert "create_app_lifespan(" in main_src, (
+            f"{app}/backend/app/main.py must build its lifespan via "
+            f"create_app_lifespan(...) instead of a hand-rolled "
+            f"@asynccontextmanager."
         )
 
-    def test_lifespan_calls_init_sentry(self, app: str) -> None:
+    def test_passes_settings_to_factory(self, app: str) -> None:
         main_src = _read("apps", app, "backend", "app", "main.py")
-        assert "init_sentry()" in main_src, (
-            f"{app}/backend/app/main.py lifespan must call init_sentry() "
-            f"to satisfy the production observability contract."
+        assert "settings=settings" in main_src, (
+            f"{app}/backend/app/main.py must pass settings=settings to "
+            f"create_app_lifespan so the boot guards can read sentry_dsn, "
+            f"turnstile_secret_key, and email_backend."
         )
 
-    def test_lifespan_calls_register_audit_listeners(self, app: str) -> None:
+    def test_passes_init_sentry_to_factory(self, app: str) -> None:
         main_src = _read("apps", app, "backend", "app", "main.py")
-        assert "register_audit_listeners(" in main_src, (
-            f"{app}/backend/app/main.py lifespan must call "
-            f"register_audit_listeners() — without it, no audit_log rows "
-            f"get written for any model write."
+        assert "init_sentry=init_sentry" in main_src, (
+            f"{app}/backend/app/main.py must pass init_sentry=init_sentry "
+            f"to create_app_lifespan. The wrapper from "
+            f"app.core.observability binds settings.sentry_dsn / "
+            f"settings.environment internally."
         )
 
-
-class TestLifespanGuardOrder:
-    """Boot guards must run in a specific order so each one's preconditions
-    are satisfied: Sentry first (so guard failures get captured), then the
-    config guards in any order, then the side-effect inits."""
-
-    @pytest.mark.parametrize("app", _APPS)
-    def test_init_sentry_runs_before_check_turnstile(self, app: str) -> None:
+    def test_passes_bucket_init_to_factory(self, app: str) -> None:
+        """Both apps use MinIO and should wire ensure_bucket through
+        the factory's bucket_init parameter so the canonical boot
+        order (sentry → guards → audit → bucket → app-startup) is
+        enforced."""
         main_src = _read("apps", app, "backend", "app", "main.py")
-        sentry_idx = main_src.find("init_sentry()")
-        turnstile_idx = main_src.find("check_turnstile_configured(")
-        assert 0 < sentry_idx < turnstile_idx, (
-            f"{app}/backend/app/main.py: init_sentry() must run BEFORE "
-            f"check_turnstile_configured() so any boot-guard failure is "
-            f"captured by Sentry."
+        assert "bucket_init=ensure_bucket" in main_src, (
+            f"{app}/backend/app/main.py must pass "
+            f"bucket_init=ensure_bucket to create_app_lifespan."
         )
 
-    @pytest.mark.parametrize("app", _APPS)
-    def test_init_sentry_runs_before_check_email(self, app: str) -> None:
+    def test_does_not_define_local_lifespan(self, app: str) -> None:
+        """The hand-rolled `async def lifespan(...)` was the drift surface
+        this Tier-1 series eliminated. Apps must NOT redefine it."""
         main_src = _read("apps", app, "backend", "app", "main.py")
-        sentry_idx = main_src.find("init_sentry()")
-        email_idx = main_src.find("check_email_configured(")
-        assert 0 < sentry_idx < email_idx, (
-            f"{app}/backend/app/main.py: init_sentry() must run BEFORE "
-            f"check_email_configured() so any boot-guard failure is "
-            f"captured by Sentry."
+        # Match a function definition that opens a lifespan
+        local_def = re.search(
+            r"^async\s+def\s+lifespan\s*\(",
+            main_src,
+            re.MULTILINE,
+        )
+        assert local_def is None, (
+            f"{app}/backend/app/main.py defines a local async lifespan(). "
+            f"Use create_app_lifespan() from platform_shared instead. "
+            f"App-specific startup/shutdown belongs in on_startup / "
+            f"on_shutdown hooks passed to the factory."
         )
 
 
