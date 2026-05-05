@@ -14,35 +14,6 @@ services:
       timeout: 3s
       retries: 5
 
-  minio:
-    # SHA-pinned via tag — verified against Docker Hub on 2026-04-26.
-    # Tag check: gh api hub.docker.com/v2/repositories/minio/minio/tags/<tag>
-    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
-    container_name: mybookkeeper-minio
-    restart: unless-stopped
-    ports:
-      # Bind only to localhost — the docker-network Caddy is the single
-      # public route to the storage subdomain. SSH tunnel for the console.
-      - "127.0.0.1:9000:9000"
-      - "127.0.0.1:9001:9001"
-    volumes:
-      - minio_data:/data
-    environment:
-      # Dev defaults — production OVERRIDES these via /srv/myfreeapps/.env.
-      # Never use these credentials in production: see deploy/MINIO_SETUP.md.
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
-      MINIO_KMS_AUTO_ENCRYPTION: "on"
-      MINIO_KMS_SECRET_KEY: ${MINIO_KMS_SECRET_KEY:-key1:V0VBSyBERVYgS0VZIC0gUkVQTEFDRSBJTiBQUk9EICAgIA==}
-      MINIO_BROWSER_REDIRECT_URL: ${MINIO_BROWSER_URL:-http://localhost:9001}
-    command: server /data --console-address ":9001"
-    healthcheck:
-      test: ["CMD-SHELL", "mc ready local || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
-
   migrate:
     build:
       # Build context is the monorepo root so the image can pull in
@@ -70,7 +41,12 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://mybookkeeper:${DB_PASSWORD}@postgres/mybookkeeper
       RUN_UPLOAD_WORKER: "false"
-      # MinIO connection — sourced from root .env (same place the minio service reads from)
+      # MinIO connection — points at the shared infra/ stack's
+      # ``myfreeapps-minio`` container reachable via the shared
+      # ``myfreeapps`` external network. ``MINIO_ENDPOINT`` should be
+      # ``myfreeapps-minio:9000`` (set in /srv/myfreeapps/apps/mybookkeeper/.env
+      # on the VPS); ``MINIO_PUBLIC_ENDPOINT`` is the public URL the
+      # browser uses for presigned downloads.
       MINIO_ENDPOINT: ${MINIO_ENDPOINT}
       MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT}
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-${MINIO_ROOT_USER}}
@@ -80,8 +56,9 @@ services:
     depends_on:
       migrate:
         condition: service_completed_successfully
-      minio:
-        condition: service_healthy
+    networks:
+      - default
+      - myfreeapps
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 10s
@@ -103,6 +80,9 @@ services:
     depends_on:
       migrate:
         condition: service_completed_successfully
+    networks:
+      - default
+      - myfreeapps
 
   scheduler:
     build:
@@ -141,9 +121,20 @@ services:
     depends_on:
       api:
         condition: service_healthy
+    networks:
+      - default
+      - myfreeapps
 
 volumes:
   pg_data:
   caddy_data:
   caddy_config:
-  minio_data:
+
+networks:
+  # Per-app default network for postgres + migrate + workers.
+  default:
+  # Shared external network owned by infra/docker-compose.yml — joined
+  # by services that need to reach myfreeapps-minio. Bring up the infra
+  # stack first or compose-up will fail with "network myfreeapps not found".
+  myfreeapps:
+    external: true

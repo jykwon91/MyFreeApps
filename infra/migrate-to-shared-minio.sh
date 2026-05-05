@@ -192,6 +192,41 @@ fi
 green "  ${NEW_CONTAINER} is running"
 
 # ──────────────────────────────────────────────────────────────────────────
+# Pre-flight for step 6: MBK's compose MUST already point at
+# myfreeapps-minio (PR B). If MBK's compose still has its own minio
+# service, step 6 fails on a port-9000 collision (we hit this on
+# 2026-05-04 — see PR-B description). Detect early and refuse to proceed.
+# ──────────────────────────────────────────────────────────────────────────
+blue "Step 4.5/9: verifying MBK compose has been refactored to consume shared MinIO"
+if grep -qE "^[[:space:]]*minio:" "$MBK_COMPOSE"; then
+  red "  $MBK_COMPOSE still defines its own 'minio:' service."
+  red "  This means PR B (MBK consume shared MinIO) hasn't landed yet."
+  red "  Bringing MBK back up here would collide on port 9000 with the shared service."
+  red ""
+  red "  Recover with:  sudo bash $0 --rollback"
+  red "  Then merge the matching MBK-compose-refactor PR before re-running migration."
+  exit 1
+fi
+if ! grep -qE "myfreeapps:[[:space:]]*$" "$MBK_COMPOSE" && \
+   ! grep -qE "^networks:[[:space:]]*$" "$MBK_COMPOSE"; then
+  yellow "  warning: MBK compose may not be wired to the shared 'myfreeapps' network."
+  yellow "  api will fail to resolve myfreeapps-minio if so. Continuing — step 7 will catch it."
+fi
+green "  MBK compose looks refactored ✓"
+
+# Update MBK env to point at the shared service (idempotent — overwrites
+# the value if present, otherwise no-op).
+if [[ -f "$MBK_ENV_FILE" ]] && ! grep -q "^MINIO_ENDPOINT=myfreeapps-minio:9000$" "$MBK_ENV_FILE"; then
+  if grep -q "^MINIO_ENDPOINT=" "$MBK_ENV_FILE"; then
+    sed -i.bak 's|^MINIO_ENDPOINT=.*|MINIO_ENDPOINT=myfreeapps-minio:9000|' "$MBK_ENV_FILE"
+    green "  updated MINIO_ENDPOINT in $MBK_ENV_FILE (backup at ${MBK_ENV_FILE}.bak)"
+  else
+    echo "MINIO_ENDPOINT=myfreeapps-minio:9000" >> "$MBK_ENV_FILE"
+    green "  appended MINIO_ENDPOINT to $MBK_ENV_FILE"
+  fi
+fi
+
+# ──────────────────────────────────────────────────────────────────────────
 # Step 5/9: verify data is readable from the new container
 # ──────────────────────────────────────────────────────────────────────────
 blue "Step 5/9: verifying data accessibility"
