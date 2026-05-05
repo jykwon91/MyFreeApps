@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Briefcase } from "lucide-react";
 import {
   LoginForm,
   LoadingButton,
+  TurnstileWidget,
   extractErrorMessage,
   useIsAuthenticated,
 } from "@platform/ui";
@@ -47,6 +48,20 @@ export default function Login() {
   const [totpError, setTotpError] = useState("");
   const [isVerifyingTotp, setIsVerifyingTotp] = useState(false);
 
+  // Turnstile token captured from the widget on the register tab.
+  // Submitted to the backend as the X-Turnstile-Token header during
+  // registration. Empty until the user solves the CAPTCHA. The widget
+  // renders nothing when VITE_TURNSTILE_SITE_KEY is unset (dev/CI),
+  // and registration proceeds without the header — backend's
+  // require_turnstile dependency short-circuits in that case.
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const handleTurnstileVerify = useCallback((token: string) => {
+    setTurnstileToken(token);
+  }, []);
+  const handleTurnstileExpire = useCallback(() => {
+    setTurnstileToken("");
+  }, []);
+
   useEffect(() => {
     if (isAuthenticated) {
       const state = location.state as LocationState | null;
@@ -82,7 +97,7 @@ export default function Login() {
   }
 
   async function onRegister(email: string, password: string): Promise<void> {
-    await handleRegister(email, password);
+    await handleRegister(email, password, turnstileToken);
     setRegisteredEmail(email);
     setNeedsVerification(false);
   }
@@ -207,6 +222,12 @@ export default function Login() {
               onRegister={onRegister}
               trustCopy="Your job search data stays private. No recruiter access, no data resale, ever."
               passwordMinLength={12}
+              registerCaptchaSlot={
+                <TurnstileWidget
+                  onVerify={handleTurnstileVerify}
+                  onExpire={handleTurnstileExpire}
+                />
+              }
             />
 
             {needsVerification ? (
