@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { ChevronLeft, Trash2, ExternalLink as ExternalLinkIcon, Plus } from "lucide-react";
+import { ChevronLeft, Plus, Trash2, ExternalLink as ExternalLinkIcon } from "lucide-react";
 import { Badge, showSuccess, showError, extractErrorMessage } from "@platform/ui";
 import ApplicationDetailSkeleton from "@/features/applications/ApplicationDetailSkeleton";
+import DocumentList from "@/features/documents/DocumentList";
+import DocumentUploadDialog from "@/features/documents/DocumentUploadDialog";
 import LogEventDialog from "@/features/applications/LogEventDialog";
 import {
   useGetApplicationQuery,
@@ -24,7 +26,10 @@ const EVENT_LABELS: Record<ApplicationEventType, string> = {
   note_added: "Note",
 };
 
-const EVENT_BADGE_COLOR: Record<ApplicationEventType, "gray" | "blue" | "yellow" | "green" | "red" | "purple"> = {
+const EVENT_BADGE_COLOR: Record<
+  ApplicationEventType,
+  "gray" | "blue" | "yellow" | "green" | "red" | "purple"
+> = {
   applied: "blue",
   email_received: "gray",
   interview_scheduled: "yellow",
@@ -38,7 +43,6 @@ const EVENT_BADGE_COLOR: Record<ApplicationEventType, "gray" | "blue" | "yellow"
 
 function deriveStatus(events: ApplicationEvent[] | undefined): ApplicationEventType | null {
   if (!events || events.length === 0) return null;
-  // Events come back newest-first; the latest non-note event drives status.
   const meaningful = events.find((e) => e.event_type !== "note_added");
   return meaningful?.event_type ?? null;
 }
@@ -48,7 +52,12 @@ function formatDate(iso: string | null): string {
   return new Date(iso).toLocaleString();
 }
 
-function formatSalaryRange(min: string | null, max: string | null, currency: string, period: string | null): string {
+function formatSalaryRange(
+  min: string | null,
+  max: string | null,
+  currency: string,
+  period: string | null,
+): string {
   if (!min && !max) return "—";
   const parts: string[] = [];
   if (min) parts.push(min);
@@ -57,6 +66,15 @@ function formatSalaryRange(min: string | null, max: string | null, currency: str
   parts.push(currency);
   if (period) parts.push(`/ ${period}`);
   return parts.join(" ");
+}
+
+function Field({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="font-medium">{value}</p>
+    </div>
+  );
 }
 
 export default function ApplicationDetail() {
@@ -71,6 +89,7 @@ export default function ApplicationDetail() {
   const { data: eventsData } = useListApplicationEventsQuery(id ?? "", { skip: !id });
   const [deleteApplication, { isLoading: deleting }] = useDeleteApplicationMutation();
   const [logEventOpen, setLogEventOpen] = useState(false);
+  const [docUploadOpen, setDocUploadOpen] = useState(false);
 
   const events = eventsData?.items ?? [];
   const status = deriveStatus(events);
@@ -80,17 +99,22 @@ export default function ApplicationDetail() {
   }
 
   if (isError || !app) {
-    const status = error && typeof error === "object" && "status" in error ? (error as { status: number }).status : null;
+    const errorStatus =
+      error && typeof error === "object" && "status" in error
+        ? (error as { status: number }).status
+        : null;
     return (
       <div className="p-6 flex flex-col items-center text-center gap-4 py-20">
-        <p className="text-4xl font-bold text-muted-foreground">{status ?? 404}</p>
+        <p className="text-4xl font-bold text-muted-foreground">{errorStatus ?? 404}</p>
         <h1 className="text-xl font-semibold">
-          {status === 404 || status === null
+          {errorStatus === 404 || errorStatus === null
             ? "I couldn't find that application — it may have been deleted."
             : "Couldn't load that application."}
         </h1>
         <p className="text-sm text-muted-foreground max-w-sm">
-          The application with id <code className="font-mono text-xs bg-muted px-1 py-0.5 rounded">{id}</code> isn&apos;t available.
+          The application with id{" "}
+          <code className="font-mono text-xs bg-muted px-1 py-0.5 rounded">{id}</code> isn&apos;t
+          available.
         </p>
         <Link
           to="/applications"
@@ -105,7 +129,11 @@ export default function ApplicationDetail() {
 
   async function handleDelete() {
     if (!app) return;
-    if (!window.confirm("Delete this application? This soft-deletes — it won't appear in the list.")) {
+    if (
+      !window.confirm(
+        "Delete this application? This soft-deletes — it won't appear in the list.",
+      )
+    ) {
       return;
     }
     try {
@@ -139,7 +167,9 @@ export default function ApplicationDetail() {
               <Badge label={EVENT_LABELS[status]} color={EVENT_BADGE_COLOR[status]} />
             ) : null}
             {app.archived ? <Badge label="Archived" color="gray" /> : null}
-            {app.remote_type !== "unknown" ? <Badge label={app.remote_type} color="blue" /> : null}
+            {app.remote_type !== "unknown" ? (
+              <Badge label={app.remote_type} color="blue" />
+            ) : null}
             {app.source ? <Badge label={app.source} color="purple" /> : null}
           </div>
         </div>
@@ -193,6 +223,27 @@ export default function ApplicationDetail() {
         </section>
       ) : null}
 
+      {/* Documents section */}
+      <section>
+        <header className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-medium">Documents</h2>
+          <button
+            onClick={() => setDocUploadOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs border rounded-md hover:bg-muted"
+          >
+            <Plus size={12} />
+            Add document
+          </button>
+        </header>
+        <DocumentList applicationId={app.id} hideKindFilter />
+        <DocumentUploadDialog
+          open={docUploadOpen}
+          onOpenChange={setDocUploadOpen}
+          applicationId={app.id}
+        />
+      </section>
+
+      {/* Timeline section */}
       <section>
         <header className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-medium">
@@ -209,15 +260,12 @@ export default function ApplicationDetail() {
         </header>
         {events.length === 0 ? (
           <p className="text-sm text-muted-foreground border rounded-lg p-3 bg-muted/30">
-            No events yet. Log the first one to start tracking this application's status.
+            No events yet. Log the first one to start tracking this application&apos;s status.
           </p>
         ) : (
           <ol className="space-y-2">
             {events.map((event) => (
-              <li
-                key={event.id}
-                className="border rounded-lg p-3 bg-muted/20"
-              >
+              <li key={event.id} className="border rounded-lg p-3 bg-muted/20">
                 <div className="flex items-center justify-between gap-2">
                   <Badge
                     label={EVENT_LABELS[event.event_type]}
@@ -231,9 +279,7 @@ export default function ApplicationDetail() {
                   <p className="text-sm mt-2 whitespace-pre-wrap">{event.note}</p>
                 ) : null}
                 {event.source !== "manual" ? (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    via {event.source}
-                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">via {event.source}</p>
                 ) : null}
               </li>
             ))}
@@ -246,15 +292,6 @@ export default function ApplicationDetail() {
         open={logEventOpen}
         onOpenChange={setLogEventOpen}
       />
-    </div>
-  );
-}
-
-function Field({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p className="font-medium">{value}</p>
     </div>
   );
 }

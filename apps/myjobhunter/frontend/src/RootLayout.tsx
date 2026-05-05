@@ -1,11 +1,12 @@
 import { Outlet, ScrollRestoration, useNavigate } from "react-router-dom";
 import {
-  LayoutDashboard,
   Briefcase,
   Building2,
-  UserCircle,
-  Settings,
+  FileText,
+  LayoutDashboard,
   Plus,
+  Settings,
+  UserCircle,
 } from "lucide-react";
 import { AppShell, RequireAuth, Toaster, useIsAuthenticated } from "@platform/ui";
 import { buildNav, buildBottomNav } from "@/constants/nav";
@@ -29,12 +30,13 @@ function getUserFromToken(): { name: string; email: string } {
 }
 
 const ICONS: Record<string, React.ReactNode> = {
-  LayoutDashboard: <LayoutDashboard className="w-5 h-5" />,
   Briefcase: <Briefcase className="w-5 h-5" />,
   Building2: <Building2 className="w-5 h-5" />,
-  UserCircle: <UserCircle className="w-5 h-5" />,
-  Settings: <Settings className="w-5 h-5" />,
+  FileText: <FileText className="w-5 h-5" />,
+  LayoutDashboard: <LayoutDashboard className="w-5 h-5" />,
   Plus: <Plus className="w-5 h-5" />,
+  Settings: <Settings className="w-5 h-5" />,
+  UserCircle: <UserCircle className="w-5 h-5" />,
 };
 
 const nav = buildNav(ICONS);
