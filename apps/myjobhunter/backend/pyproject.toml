@@ -21,6 +21,9 @@ dependencies = [
     "anyio==4.13.0",
     "minio==7.2.20",
     "platform-shared",
+    "anthropic>=0.40.0",
+    "pypdf>=4.0.0",
+    "mammoth>=1.7.0",
 ]
 
 [tool.uv]

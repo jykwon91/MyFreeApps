@@ -3,8 +3,19 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict
+
+
+class ResumeJobParsedFields(BaseModel):
+    """Summary of what the resume parser extracted — stored in result_parsed_fields."""
+
+    summary: str | None = None
+    headline: str | None = None
+    work_history_count: int = 0
+    education_count: int = 0
+    skills_count: int = 0
 
 
 class ResumeUploadJobResponse(BaseModel):
@@ -22,7 +33,10 @@ class ResumeUploadJobResponse(BaseModel):
     file_content_type: str | None
     file_size_bytes: int | None
     status: str
+    retry_count: int = 0
     error_message: str | None
+    result_parsed_fields: ResumeJobParsedFields | None = None
+    parser_version: str | None = None
     started_at: datetime | None
     completed_at: datetime | None
     created_at: datetime
