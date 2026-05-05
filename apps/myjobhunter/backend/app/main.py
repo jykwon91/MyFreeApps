@@ -180,6 +180,21 @@ app.include_router(integrations.router, tags=["integrations"])
 app.include_router(resumes.router, tags=["resumes"])
 app.include_router(documents.router)
 
+# Shared platform admin router — generic user-management endpoints
+# (list/role/activate/deactivate/superuser/stats-users). MJH has no
+# app-specific admin endpoints today; if any are added later they
+# mount alongside this under the same /admin prefix.
+from platform_shared.api.admin_router import build_admin_router
+from app.core.permissions import current_admin
+from app.services.system.admin_user_service_factory import shared_admin_user_service
+
+app.include_router(
+    build_admin_router(
+        service=shared_admin_user_service,
+        current_admin=current_admin,
+    )
+)
+
 # TOTP routes — the /login subroute gets the per-IP throttle (matching the
 # guard on /auth/jwt/login). Account lockout is enforced INSIDE
 # UserManager.authenticate_password rather than as a route-level dependency,
