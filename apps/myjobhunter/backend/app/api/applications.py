@@ -6,6 +6,9 @@ Phase 1 shipped read-only ``GET /applications``. Phase 2 (this PR) ships:
 - Contact management (POST + DELETE /contacts)
 - List filters (status, archived, since, pagination)
 
+Phase 4 (this PR) adds:
+- POST /applications/parse-jd — AI-powered JD field extraction via Claude
+
 Auth: every endpoint requires an authenticated user via
 ``current_active_user``. Tenant scoping is mandatory — every operation
 scopes the query by ``user.id`` so cross-tenant access yields HTTP 404 with
@@ -40,8 +43,11 @@ from app.schemas.application.application_event_response import ApplicationEventR
 from app.schemas.application.application_list_item import ApplicationListItem
 from app.schemas.application.application_response import ApplicationResponse
 from app.schemas.application.application_update_request import ApplicationUpdateRequest
+from app.schemas.application.jd_parse_request import JdParseRequest
+from app.schemas.application.jd_parse_response import JdParseResponse
 from app.services.application import application_service
 from app.services.application.application_service import CompanyNotOwnedError
+from app.services.application.jd_parsing_service import JdParseError, parse_jd
 
 router = APIRouter()
 
@@ -114,6 +120,38 @@ async def get_application(
     if detail is None:
         raise HTTPException(status_code=404, detail=_NOT_FOUND_DETAIL)
     return detail
+
+
+@router.post("/applications/parse-jd", response_model=JdParseResponse, status_code=200)
+async def parse_job_description(
+    payload: JdParseRequest,
+    user: User = Depends(current_active_user),
+) -> JdParseResponse:
+    """Extract structured fields from a pasted job description using Claude.
+
+    The caller pastes raw JD text; Claude returns a structured object with
+    title, company, location, salary range, seniority, requirements, and
+    a summary. The frontend pre-fills the Add Application form with the
+    returned values and lets the user edit before saving.
+
+    This endpoint does NOT persist an Application row — it is a stateless
+    preview call. Pass the parsed fields alongside the rest of the form on
+    ``POST /applications`` to actually save them.
+
+    Returns HTTP 502 if the Claude API call fails so the client can surface
+    a clear "AI parsing unavailable" message rather than a generic 500.
+
+    No ``db`` session needed — the only DB write is an extraction_log row
+    written inside ``claude_service._record_log`` via its own session.
+    """
+    try:
+        result = await parse_jd(payload.jd_text, user.id)
+    except JdParseError as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=f"JD parsing failed: {exc}",
+        ) from exc
+    return JdParseResponse(**result.to_dict())
 
 
 @router.post("/applications", response_model=ApplicationResponse, status_code=201)
