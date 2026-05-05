@@ -525,7 +525,10 @@
         "SensitiveDataUnlock.test.tsx",
         "Applicants.test.tsx",
         "PromoteFromInquiryPanel.test.tsx",
-        "ContractDatesEditor.test.tsx"
+        "ContractDatesEditor.test.tsx",
+        "useApplicantsListMode.test.ts",
+        "useApplicantDetailMode.test.ts",
+        "useLinkedLeaseDocumentsMode.test.ts"
       ],
       "e2e_specs": [
         "applicants.spec.ts",
