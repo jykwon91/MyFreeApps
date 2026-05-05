@@ -46,30 +46,42 @@
         # so we don't have to revisit it as features get standardized.
         Permissions-Policy "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=(), interest-cohort=(), browsing-topics=()"
 
-        # Content-Security-Policy — tighter than MBK because MJH Phase 1 has no
-        # third-party integrations on the page (no Plaid, no PostHog, no Sentry,
-        # no Cloudflare embeds). Each directive justified:
+        # Content-Security-Policy — tighter than MBK because MJH Phase 1 has
+        # fewer third-party integrations on the page (no Plaid, no PostHog,
+        # no Sentry frontend SDK yet). Each directive justified:
         #
         #   default-src 'self'         — fallback: only same-origin assets
-        #   script-src 'self'          — bundled JS only; NEVER add 'unsafe-inline'
-        #   style-src 'self' 'unsafe-inline' — Tailwind/Vite emit inline styles for
-        #                                runtime theme variables; acceptable for
-        #                                styles, never for scripts
-        #   img-src 'self' data: blob: — data: for inline SVG icons, blob: for any
-        #                                client-built images (e.g. avatar previews)
+        #   script-src 'self' 'sha256-...' https://challenges.cloudflare.com
+        #     - 'self' for bundled JS
+        #     - sha256 hash allows the inline theme-bootstrap script in
+        #       index.html (sets dark mode before React hydrates to avoid
+        #       a flash of the wrong theme). Hash matches the EXACT bytes
+        #       of that script — if someone edits the script the hash
+        #       must be regenerated. Same script + same hash in MBK.
+        #     - challenges.cloudflare.com for the Turnstile CAPTCHA
+        #       widget on /register and /forgot-password
+        #   style-src 'self' 'unsafe-inline' — Tailwind/Vite emit inline
+        #     styles for runtime theme variables; acceptable for styles,
+        #     never for scripts
+        #   img-src 'self' data: blob: — data: for inline SVG icons, blob:
+        #     for any client-built images (e.g. avatar previews)
         #   font-src 'self'            — bundled fonts only
-        #   connect-src 'self'         — XHR/fetch only to the same origin (the API
-        #                                lives at /api/* under the same host).
-        #                                Widen here when Phase 4 adds Anthropic /
-        #                                Tavily / Google OAuth callbacks.
-        #   frame-src 'none'           — MJH does not embed any iframes today.
-        #                                Add Cloudflare Turnstile here when C1 ships.
-        #   frame-ancestors 'none'     — backstop for X-Frame-Options on modern browsers
+        #   connect-src 'self' https://challenges.cloudflare.com
+        #     - 'self' for the SPA's XHR/fetch to /api/* under the same host
+        #     - challenges.cloudflare.com for the Turnstile widget's
+        #       validation callbacks
+        #     Widen here when Phase 4 adds Anthropic / Tavily / Google
+        #     OAuth callbacks.
+        #   frame-src 'self' https://challenges.cloudflare.com
+        #     - challenges.cloudflare.com renders the Turnstile widget as
+        #       an iframe; without this the widget is blank
+        #   frame-ancestors 'none'     — backstop for X-Frame-Options on
+        #     modern browsers
         #   base-uri 'self'            — block <base href="..."> hijacks
         #   form-action 'self'         — forms can only submit back to the app
         #   object-src 'none'          — no Flash/Java/legacy plugin embeds
         #   upgrade-insecure-requests  — auto-upgrade any stray http:// reference
-        Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; frame-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests"
+        Content-Security-Policy "default-src 'self'; script-src 'self' 'sha256-6gP5jY9WKtmx3Qr/KXGhyuG+YL86Nf6n5b7wHrV5jmk=' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://challenges.cloudflare.com; frame-src 'self' https://challenges.cloudflare.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests"
 
         # Don't advertise the server software in the response headers.
         -Server
