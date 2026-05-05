@@ -1,13 +1,15 @@
 """Data-access layer for resume_upload_jobs.
 
 All queries are tenant-scoped on ``user_id`` — callers must never omit it.
+The worker uses ``claim_next_queued`` which is intentionally NOT tenant-scoped;
+it processes all users' queued jobs. Every other function must include user_id.
 """
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
-from sqlalchemy import select
+from sqlalchemy import select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.jobs.resume_upload_job import ResumeUploadJob
@@ -70,6 +72,74 @@ async def list_recent_for_user(
         .limit(_RECENT_LIMIT)
     )
     return list(result.scalars().all())
+
+
+async def claim_next_queued(db: AsyncSession) -> ResumeUploadJob | None:
+    """Atomically transition one queued job to ``processing`` and return it.
+
+    Uses ``UPDATE ... WHERE id = (subquery) RETURNING *`` so only one worker
+    process can claim a given job even when multiple replicas run concurrently.
+    The subquery selects the oldest queued job via ``ORDER BY created_at LIMIT 1``
+    with ``FOR UPDATE SKIP LOCKED`` for safe concurrent access.
+
+    Returns ``None`` when no queued jobs exist.
+    """
+    now = datetime.now(timezone.utc)
+    # Subquery: pick the oldest queued job id, skip rows locked by other workers.
+    subq = (
+        select(ResumeUploadJob.id)
+        .where(ResumeUploadJob.status == "queued")
+        .order_by(ResumeUploadJob.created_at.asc())
+        .limit(1)
+        .with_for_update(skip_locked=True)
+        .scalar_subquery()
+    )
+    stmt = (
+        update(ResumeUploadJob)
+        .where(ResumeUploadJob.id == subq)
+        .values(status="processing", started_at=now, updated_at=now)
+        .returning(ResumeUploadJob)
+    )
+    result = await db.execute(stmt)
+    row = result.scalar_one_or_none()
+    if row is not None:
+        await db.commit()
+    return row
+
+
+async def mark_complete(
+    db: AsyncSession,
+    job: ResumeUploadJob,
+    result_parsed_fields: dict,
+    parser_version: str,
+) -> ResumeUploadJob:
+    """Mark a job as complete with parsed fields."""
+    now = datetime.now(timezone.utc)
+    job.status = "complete"
+    job.result_parsed_fields = result_parsed_fields
+    job.parser_version = parser_version
+    job.completed_at = now
+    job.error_message = None
+    await db.flush()
+    await db.commit()
+    await db.refresh(job)
+    return job
+
+
+async def mark_failed(
+    db: AsyncSession,
+    job: ResumeUploadJob,
+    error_message: str,
+) -> ResumeUploadJob:
+    """Mark a job as failed with an error message."""
+    now = datetime.now(timezone.utc)
+    job.status = "failed"
+    job.error_message = error_message[:1000]
+    job.completed_at = now
+    await db.flush()
+    await db.commit()
+    await db.refresh(job)
+    return job
 
 
 async def update_status(

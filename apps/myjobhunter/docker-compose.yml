@@ -55,6 +55,22 @@ services:
       timeout: 5s
       retries: 3
 
+  resume-parser:
+    build:
+      context: ../..
+      dockerfile: apps/myjobhunter/docker/backend.Dockerfile
+    command: ["python", "-m", "app.workers.resume_parser_worker"]
+    restart: unless-stopped
+    env_file: backend/.env.docker
+    environment:
+      DATABASE_URL: postgresql+asyncpg://myjobhunter:${DB_PASSWORD}@postgres/myjobhunter
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    networks:
+      - default
+      - myfreeapps
+
   caddy:
     # Custom image: caddy:2-alpine + freshly-built frontend dist baked in
     # at /srv/frontend + Caddyfile baked at /etc/caddy/Caddyfile. No shared
