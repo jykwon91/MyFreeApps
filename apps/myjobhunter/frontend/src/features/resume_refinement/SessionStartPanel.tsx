@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Sparkles } from "lucide-react";
 import {
   EmptyState,
@@ -17,6 +17,7 @@ interface SessionStartPanelProps {
 }
 
 export default function SessionStartPanel({ onSessionStarted }: SessionStartPanelProps) {
+  const navigate = useNavigate();
   const { data: jobs, isLoading } = useListResumeJobsQuery();
   const [startSession, { isLoading: isStarting }] = useStartRefinementSessionMutation();
   const [picked, setPicked] = useState<string | null>(null);
@@ -38,16 +39,8 @@ export default function SessionStartPanel({ onSessionStarted }: SessionStartPane
       <EmptyState
         icon={<Sparkles className="size-8 text-muted-foreground" />}
         heading="Upload a resume first"
-        body={
-          <span>
-            The refinement loop iterates on a resume you've already uploaded and
-            parsed. Head to{" "}
-            <Link to="/profile" className="underline">
-              Profile
-            </Link>{" "}
-            to upload one, then come back.
-          </span>
-        }
+        body="The refinement loop iterates on a resume you've already uploaded and parsed. Head to Profile to upload one, then come back."
+        action={{ label: "Go to Profile", onClick: () => navigate("/profile") }}
       />
     );
   }

@@ -92,9 +92,10 @@ export default function PendingProposalCard({ session }: PendingProposalCardProp
           <Sparkles className="size-4 text-primary" />
           Suggestion
         </h2>
-        <Badge>
-          {session.target_index + 1} / {totalTargets} · {remaining} left
-        </Badge>
+        <Badge
+          label={`${session.target_index + 1} / ${totalTargets} · ${remaining} left`}
+          color="gray"
+        />
       </header>
 
       {targetSection && (
