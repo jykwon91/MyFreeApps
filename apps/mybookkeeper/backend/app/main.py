@@ -3,8 +3,6 @@ import logging
 import os
 import subprocess
 import time
-from contextlib import asynccontextmanager
-from collections.abc import AsyncGenerator
 from datetime import datetime, timezone
 
 from fastapi import Depends, FastAPI, Request
@@ -14,10 +12,7 @@ import jwt
 from jwt.exceptions import PyJWTError as JWTError
 from sqlalchemy import text
 
-from platform_shared.core.boot_guards import (
-    check_email_configured,
-    check_turnstile_configured,
-)
+from platform_shared.core.lifespan import create_app_lifespan
 
 from app.core.auth import fastapi_users, auth_backend
 from app.core.config import settings
@@ -41,7 +36,7 @@ def _resolve_git_commit() -> str:
 GIT_COMMIT = _resolve_git_commit()
 STARTUP_TIMESTAMP = datetime.now(timezone.utc).isoformat()
 
-from app.core.audit import current_user_id, register_audit_listeners
+from app.core.audit import current_user_id
 from app.core.rate_limit import check_account_not_locked, check_login_rate_limit, check_password_reset_rate_limit, check_register_rate_limit, require_turnstile
 from app.db.session import AsyncSessionLocal
 from app.schemas.user.user import UserRead, UserCreate, UserUpdate
@@ -57,22 +52,18 @@ logging.basicConfig(
 logger = logging.getLogger("app")
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    init_sentry()
-    check_turnstile_configured(
-        turnstile_secret_key=settings.turnstile_secret_key,
-        environment=settings.environment,
-    )
-    check_email_configured(
-        email_backend=settings.email_backend,
-        smtp_user=settings.smtp_user,
-        smtp_password=settings.smtp_password,
-        environment=settings.environment,
-    )
-    register_audit_listeners()
-    ensure_bucket()
-    worker_task: asyncio.Task[None] | None = None
+_worker_task: asyncio.Task[None] | None = None
+
+
+async def _on_startup() -> None:
+    """MBK-specific startup: spawn the Dramatiq upload-processor worker.
+
+    The worker pulls Document rows in status=processing and runs the
+    extraction pipeline; if RUN_UPLOAD_WORKER is False (e.g. running
+    a one-off migration container), we skip it so the same image can
+    boot without grabbing the queue.
+    """
+    global _worker_task
     if settings.run_upload_worker:
         async def _run_worker() -> None:
             try:
@@ -80,16 +71,27 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             except asyncio.CancelledError:
                 pass
 
-        worker_task = asyncio.create_task(_run_worker())
+        _worker_task = asyncio.create_task(_run_worker())
 
-    yield
 
-    if worker_task and not worker_task.done():
-        worker_task.cancel()
+async def _on_shutdown() -> None:
+    """MBK-specific shutdown: cancel the upload worker."""
+    global _worker_task
+    if _worker_task and not _worker_task.done():
+        _worker_task.cancel()
         try:
-            await worker_task
+            await _worker_task
         except asyncio.CancelledError:
             pass
+
+
+lifespan = create_app_lifespan(
+    settings=settings,
+    init_sentry=init_sentry,
+    bucket_init=ensure_bucket,
+    on_startup=_on_startup,
+    on_shutdown=_on_shutdown,
+)
 
 
 app = FastAPI(title="MyBookkeeper API", lifespan=lifespan)

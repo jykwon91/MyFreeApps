@@ -2,8 +2,6 @@ import logging
 import os
 import subprocess
 import time
-from collections.abc import AsyncGenerator
-from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
 import jwt
@@ -11,13 +9,10 @@ from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from jwt.exceptions import PyJWTError as JWTError
 
-from platform_shared.core.boot_guards import (
-    check_email_configured,
-    check_turnstile_configured,
-)
+from platform_shared.core.lifespan import create_app_lifespan
 
 from app.api import account, applications, companies, documents, health, integrations, profile, resumes, totp
-from app.core.audit import current_user_id, register_audit_listeners
+from app.core.audit import current_user_id
 from app.core.auth import auth_backend, fastapi_users
 from app.core.config import settings
 from app.core.observability import init_sentry
@@ -61,22 +56,11 @@ logging.basicConfig(
 logger = logging.getLogger("app")
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    init_sentry()
-    check_turnstile_configured(
-        turnstile_secret_key=settings.turnstile_secret_key,
-        environment=settings.environment,
-    )
-    check_email_configured(
-        email_backend=settings.email_backend,
-        smtp_user=settings.smtp_user,
-        smtp_password=settings.smtp_password,
-        environment=settings.environment,
-    )
-    register_audit_listeners()
-    ensure_bucket()
-    yield
+lifespan = create_app_lifespan(
+    settings=settings,
+    init_sentry=init_sentry,
+    bucket_init=ensure_bucket,
+)
 
 
 app = FastAPI(
