@@ -836,7 +836,8 @@
         "frontend/src/pages/Transactions.tsx",
         "frontend/src/pages/Dashboard.tsx",
         "frontend/src/features/transactions/",
-        "frontend/src/features/dashboard/"
+        "frontend/src/features/dashboard/",
+        "frontend/src/shared/types/dashboard/"
       ],
       "backend_tests": [
         "test_bank_csv_parser.py",
@@ -863,6 +864,7 @@
         "CategoryChip.test.tsx",
         "DashboardFilterBar.test.tsx",
         "DrillDownPanel.test.tsx",
+        "DrillDownPanelMode.test.tsx",
         "MergeFieldRow.test.tsx",
         "ExportDropdown.test.tsx",
         "useDashboardFilter.test.ts",

@@ -1,6 +1,5 @@
 import { useState, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { AlertTriangle } from "lucide-react";
 import { formatCurrency } from "@/shared/utils/currency";
 import { formatTag } from "@/shared/utils/tag";
 import { useGetSummaryQuery } from "@/shared/store/summaryApi";
@@ -13,6 +12,9 @@ import MonthlyAverageCard from "@/app/features/dashboard/MonthlyAverageCard";
 import MonthlyChart from "@/app/features/dashboard/MonthlyChart";
 import MonthlyOverviewChart from "@/app/features/dashboard/MonthlyOverviewChart";
 import DashboardFilterBar from "@/app/features/dashboard/DashboardFilterBar";
+import DashboardHeaderSubtitle from "@/app/features/dashboard/DashboardHeaderSubtitle";
+import DashboardHeaderActions from "@/app/features/dashboard/DashboardHeaderActions";
+import { useDashboardHeaderMode } from "@/app/features/dashboard/useDashboardHeaderMode";
 import type { DrillDownFilter } from "@/shared/types/dashboard/drill-down-filter";
 import type { DateRange } from "@/shared/types/dashboard/date-range";
 import DrillDownPanel from "@/app/features/dashboard/DrillDownPanel";
@@ -69,6 +71,29 @@ export default function Dashboard() {
   const allPropertiesSelected = selectedPropertyIds.length === 0 || selectedPropertyIds.length === properties.length;
   const activePropertyIds = allPropertiesSelected ? undefined : selectedPropertyIds;
 
+  const headerMode = useDashboardHeaderMode({
+    dateRange,
+    healthSummary,
+    byMonthLength: summary?.by_month?.length ?? 0,
+  });
+
+  const headerSubtitle =
+    headerMode.subtitle === "none" ? undefined : (
+      <DashboardHeaderSubtitle
+        mode={headerMode.subtitle}
+        dateRange={dateRange}
+        healthSummary={healthSummary}
+      />
+    );
+
+  const headerActions =
+    headerMode.actions === "none" ? undefined : (
+      <DashboardHeaderActions
+        mode={headerMode.actions}
+        onResetDateRange={() => setDateRange(undefined)}
+      />
+    );
+
   const handleDrillDown = useCallback(
     (filter: DrillDownFilter) => {
       setDrillDown({ ...filter, propertyIds: activePropertyIds });
@@ -111,38 +136,8 @@ export default function Dashboard() {
 
       <SectionHeader
         title="Dashboard"
-        subtitle={
-          dateRange
-            ? `${dateRange.startDate} — ${dateRange.endDate}`
-            : healthSummary && healthSummary.status !== "healthy"
-              ? (
-                  <Link
-                    to="/admin/system-health"
-                    className="inline-flex items-center gap-1.5 text-amber-600 dark:text-amber-400 hover:underline"
-                  >
-                    <AlertTriangle size={14} />
-                    <span>
-                      {healthSummary.stats?.documents_failed ?? 0} failed
-                      documents
-                    </span>
-                  </Link>
-                )
-              : undefined
-        }
-        actions={
-          dateRange ? (
-            <button
-              onClick={() => setDateRange(undefined)}
-              className="text-sm text-primary hover:underline font-medium"
-            >
-              Reset to all time
-            </button>
-          ) : (summary?.by_month?.length ?? 0) > 0 ? (
-            <span className="text-xs text-muted-foreground">
-              Drag across months to filter
-            </span>
-          ) : undefined
-        }
+        subtitle={headerSubtitle}
+        actions={headerActions}
       />
 
       <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">
