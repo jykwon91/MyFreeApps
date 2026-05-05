@@ -3,7 +3,7 @@
 Issues discovered during development. New entries are appended; resolved entries are
 removed and the counts in this header are updated.
 
-**Open issues: 9 (Critical: 1 / High: 1 / Medium: 4 / Low: 3)**
+**Open issues: 10 (Critical: 1 / High: 1 / Medium: 4 / Low: 4)**
 
 ---
 
@@ -220,4 +220,25 @@ upgraded to full component renders to also verify the visual output.
 **Recommendation:** After fixing the React versioning issue (see "[Frontend Tests] React 18
 hoisted..." entry above), update `CompanyDetail.test.tsx` to use `render()` + `screen.getBy*`
 assertions to cover the full rendering path including the applications table and empty state copy.
+
+---
+
+### [Frontend Tests] Profile.test.tsx uses `as unknown as any` for generic mutation stub
+
+**Severity:** Low
+**Effort:** XS
+**Location:** `apps/myjobhunter/frontend/src/pages/__tests__/Profile.test.tsx:150`
+**Discovered:** PR feat/resume-upload Phase 2 — `2026-05-04`
+
+**Problem:** `stubMutation` is typed as `as unknown as any` so it can be assigned to 11
+different RTK Query mutation hook return types (`useDeleteWorkHistoryMutation`,
+`useCreateSkillMutation`, etc.). The quality gate flags `as any` in changed files.
+The pattern is necessary because there is no common RTK Query base type that satisfies
+all mutation hook signatures without `any`.
+
+**Recommendation:** Once the React 18/19 dual-instance issue is resolved and JSX tests
+can actually run, consider splitting `stubMutation` into per-mutation typed stubs using
+`as unknown as ReturnType<typeof useXxx>` at each call site. This makes the tests
+fully typed at the cost of verbosity. Alternatively, use `vi.mocked(hook).mockReturnValue`
+with the correct type at the mock definition level so the stub doesn't need casting.
 
