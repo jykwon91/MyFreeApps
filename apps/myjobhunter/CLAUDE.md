@@ -193,13 +193,18 @@ curl https://myjobhunter.165-245-134-251.sslip.io/health  # public
 ```
 
 **Database backup/restore:**
-MJH does not yet have automated backup scripts (MBK has `deploy/backup.sh` + systemd timer;
-MJH should mirror this — see TECH_DEBT.md). For now, manual backup:
+Automated daily backups via systemd timer at 02:00 to
+`/srv/myfreeapps/apps/myjobhunter/backups/` with 30-day retention. Setup +
+restore procedure documented in `apps/myjobhunter/deploy/DATABASE_BACKUP_RECOVERY.md`.
+
+Manual backup (anytime):
 ```bash
-# On VPS:
-docker compose -f apps/myjobhunter/docker-compose.yml exec postgres \
-  pg_dump -U myjobhunter myjobhunter | gzip > /tmp/mjh-$(date +%Y%m%d).sql.gz
+sudo /srv/myfreeapps/apps/myjobhunter/deploy/backup.sh
 ```
+
+Off-host replication is NOT currently configured — local backups only.
+Add `rclone sync` or `aws s3 sync` as a second timer for off-host
+durability.
 
 **When to SSH into the server:**
 - First-time env file setup (seed-env-from-mbk.sh)

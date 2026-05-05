@@ -1,0 +1,18 @@
+[Unit]
+Description=MyJobHunter database backup
+After=docker.service network-online.target
+Requires=docker.service
+# Don't start if the docker compose stack isn't running — postgres needs to be up.
+ConditionPathExists=/srv/myfreeapps/apps/myjobhunter/docker-compose.yml
+
+[Service]
+Type=oneshot
+WorkingDirectory=/srv/myfreeapps/apps/myjobhunter
+ExecStart=/srv/myfreeapps/apps/myjobhunter/deploy/backup.sh
+# Run as root because the script invokes `docker compose exec` which
+# requires socket access. If the operator has set up rootless docker
+# or added themselves to the docker group, change this to a less
+# privileged account.
+User=root
+StandardOutput=journal
+StandardError=journal
