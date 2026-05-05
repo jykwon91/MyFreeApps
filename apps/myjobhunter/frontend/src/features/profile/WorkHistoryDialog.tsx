@@ -17,7 +17,7 @@ interface FormValues {
   bullets: string;
 }
 
-interface Props {
+export interface WorkHistoryDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** When provided, dialog is in edit mode; otherwise add mode. */
@@ -35,7 +35,7 @@ function textToBullets(text: string): string[] {
     .filter(Boolean);
 }
 
-export default function WorkHistoryDialog({ open, onOpenChange, existing }: Props) {
+export default function WorkHistoryDialog({ open, onOpenChange, existing }: WorkHistoryDialogProps) {
   const [createWorkHistory, { isLoading: isCreating }] = useCreateWorkHistoryMutation();
   const [updateWorkHistory, { isLoading: isUpdating }] = useUpdateWorkHistoryMutation();
   const isLoading = isCreating || isUpdating;

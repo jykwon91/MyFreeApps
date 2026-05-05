@@ -13,6 +13,8 @@ doesn't require a logged-in user. Defense-in-depth lives in the service layer
 """
 from __future__ import annotations
 
+import logging
+
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 
 from app.core.config import settings
@@ -39,12 +41,23 @@ public_inquiry_limiter = RateLimiter(
     window_seconds=settings.inquiry_public_rate_limit_window_seconds,
 )
 
+logger = logging.getLogger(__name__)
+
 # Generic message returned on EVERY filter failure except the friendly
 # "tell us more" gate. Keeps anti-spam intel out of the response so an
 # attacker probing the form can't tell which check tripped.
 _GENERIC_REJECTION = "Something went wrong, please try again."
 
-router = APIRouter(prefix="/api", tags=["public-inquiries"])
+# NO ``prefix`` here. The frontend hits ``/api/listings/public/{slug}`` and
+# ``/api/inquiries/public``, but both production Caddy (``uri strip_prefix
+# /api``) and the Vite dev proxy (``rewrite: p.replace(/^\/api/, "")``) drop
+# the ``/api`` segment before the request reaches FastAPI. If we declared a
+# ``prefix="/api"`` on this router, the routes would resolve to
+# ``/api/listings/public/...`` inside the app, which the stripped requests
+# would never match — yielding the FastAPI default ``{"detail":"Not Found"}``
+# 404. (Bug shipped in PR #130; the original tests used TestClient and did
+# not exercise the strip-prefix, so the regression went undetected.)
+router = APIRouter(tags=["public-inquiries"])
 
 
 @router.get("/listings/public/{slug}", response_model=PublicListingResponse)
@@ -54,10 +67,25 @@ async def get_public_listing(slug: str) -> PublicListingResponse:
     Anyone with the slug can read the basic listing fields. Returns 404 for
     unknown / soft-deleted slugs — operators rotate slugs by archiving the
     listing, which automatically takes the form down.
+
+    On 404, logs a WARNING with the slug AND whether the slug exists in an
+    archived state. This lets the operator distinguish "host pasted a typo'd
+    URL into Airbnb" (slug never existed) from "host archived a listing whose
+    URL is still live in external descriptions" (slug exists but archived) —
+    without SSHing into the DB to triage every public-form 404.
     """
     async with AsyncSessionLocal() as db:
         listing = await listing_repo.get_by_slug(db, slug)
+        if listing is None:
+            archived_match = await listing_repo.slug_exists_including_archived(
+                db, slug,
+            )
     if listing is None:
+        logger.warning(
+            "public_listing.not_found slug=%r archived_match=%s",
+            slug,
+            archived_match,
+        )
         raise HTTPException(status_code=404, detail="Listing not found")
     return PublicListingResponse.model_validate(listing)
 

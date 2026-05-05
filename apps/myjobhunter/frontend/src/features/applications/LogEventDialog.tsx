@@ -33,13 +33,13 @@ function defaultOccurredAt(): string {
   return local.toISOString().slice(0, 16);
 }
 
-interface Props {
+export interface LogEventDialogProps {
   applicationId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-export default function LogEventDialog({ applicationId, open, onOpenChange }: Props) {
+export default function LogEventDialog({ applicationId, open, onOpenChange }: LogEventDialogProps) {
   const [logEvent, { isLoading }] = useLogApplicationEventMutation();
 
   const {

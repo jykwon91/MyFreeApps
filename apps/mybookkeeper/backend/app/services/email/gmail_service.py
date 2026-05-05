@@ -121,11 +121,20 @@ def _resolve_label_id(service, label_name: str) -> str | None:
     """Resolve a Gmail label name to its ID."""
     try:
         results = service.users().labels().list(userId="me").execute()
-        for lbl in results.get("labels", []):
-            if lbl["name"].lower() == label_name.lower():
-                return lbl["id"]
     except Exception:
-        pass
+        logger.warning(
+            "Gmail label lookup failed for label=%r — falling back to no label filter",
+            label_name,
+            exc_info=True,
+        )
+        return None
+    for lbl in results.get("labels", []):
+        if lbl["name"].lower() == label_name.lower():
+            return lbl["id"]
+    logger.warning(
+        "Gmail label %r not found in user's label set — falling back to no label filter",
+        label_name,
+    )
     return None
 
 

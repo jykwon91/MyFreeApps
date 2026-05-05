@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
   DndContext,
   closestCenter,
@@ -25,10 +25,12 @@ import {
   useUploadListingPhotosMutation,
 } from "@/shared/store/listingsApi";
 import type { ListingPhoto } from "@/shared/types/listing/listing-photo";
+import type { PhotoLightboxTarget } from "@/shared/types/listing/photo-lightbox-target";
 import ListingPhotoCard from "@/app/features/listings/ListingPhotoCard";
 import PhotoSelectionToolbar from "@/app/features/listings/PhotoSelectionToolbar";
 import { usePhotoSelection } from "@/app/features/listings/usePhotoSelection";
 import { downloadPhotosAsZip } from "@/app/features/listings/photo-bulk-download";
+import PhotoLightbox from "@/app/features/listings/PhotoLightbox";
 
 export interface ListingPhotoManagerProps {
   listingId: string;
@@ -71,10 +73,15 @@ export default function ListingPhotoManager({
   const [orderedIds, setOrderedIds] = useState<string[] | null>(null);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [isBulkDownloading, setIsBulkDownloading] = useState(false);
+  const [lightboxTarget, setLightboxTarget] = useState<PhotoLightboxTarget | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { selection, toggleSelection, selectAll, clearSelection, isSelected } =
     usePhotoSelection();
+
+  const handleLightboxNavigate = useCallback((nextIndex: number) => {
+    setLightboxTarget({ listingId, index: nextIndex });
+  }, [listingId]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -250,7 +257,7 @@ export default function ListingPhotoManager({
               className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3"
               data-testid="listing-photo-grid"
             >
-              {displayIds.map((photoId) => {
+              {displayIds.map((photoId, index) => {
                 const photo = photosById.get(photoId);
                 if (!photo) return null;
                 return (
@@ -262,6 +269,7 @@ export default function ListingPhotoManager({
                     onToggleSelection={(id, shiftKey) =>
                       toggleSelection(id, shiftKey, displayIds)
                     }
+                    onOpen={() => setLightboxTarget({ listingId, index })}
                   />
                 );
               })}
@@ -292,6 +300,15 @@ export default function ListingPhotoManager({
         onConfirm={() => void handleBulkDelete()}
         onCancel={() => setConfirmBulkDelete(false)}
       />
+
+      {lightboxTarget ? (
+        <PhotoLightbox
+          photos={displayIds.map((id) => photosById.get(id)).filter((p): p is ListingPhoto => p !== undefined)}
+          currentIndex={lightboxTarget.index}
+          onClose={() => setLightboxTarget(null)}
+          onNavigate={handleLightboxNavigate}
+        />
+      ) : null}
     </div>
   );
 }
