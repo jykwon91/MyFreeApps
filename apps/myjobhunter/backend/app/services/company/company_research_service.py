@@ -165,10 +165,9 @@ async def run_research(
         sources=source_dicts,
     )
 
-    await db.commit()
-
-    # Refresh to load the new sources relationship.
-    await db.refresh(research, attribute_names=["sources"])
+    # Commit and refresh sources via the repository (keeps transaction ownership
+    # out of the service layer).
+    research = await company_research_repository.commit_with_sources_refresh(db, research)
 
     logger.info(
         "Company research complete: company=%s research=%s sentiment=%s sources=%d",

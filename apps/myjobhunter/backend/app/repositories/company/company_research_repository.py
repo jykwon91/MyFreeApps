@@ -159,6 +159,20 @@ async def list_sources_for_research(
     return list(result.scalars().all())
 
 
+async def commit_with_sources_refresh(
+    db: AsyncSession,
+    research: CompanyResearch,
+) -> CompanyResearch:
+    """Commit the current transaction and refresh the research record's sources.
+
+    Centralises the commit + refresh in the repository layer so services
+    do not need to call db.commit() or db.refresh() directly.
+    """
+    await db.commit()
+    await db.refresh(research, attribute_names=["sources"])
+    return research
+
+
 async def list_by_user(
     db: AsyncSession,
     user_id: uuid.UUID,
