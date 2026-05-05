@@ -11,7 +11,7 @@ from jwt.exceptions import PyJWTError as JWTError
 
 from platform_shared.core.lifespan import create_app_lifespan
 
-from app.api import account, applications, companies, documents, health, integrations, profile, resumes, totp
+from app.api import account, admin, applications, companies, documents, health, integrations, profile, resumes, totp
 from app.core.audit import current_user_id
 from app.core.auth import auth_backend, fastapi_users
 from app.core.config import settings
@@ -179,6 +179,7 @@ app.include_router(companies.router, tags=["companies"])
 app.include_router(integrations.router, tags=["integrations"])
 app.include_router(resumes.router, tags=["resumes"])
 app.include_router(documents.router)
+app.include_router(admin.router)
 
 # TOTP routes — the /login subroute gets the per-IP throttle (matching the
 # guard on /auth/jwt/login). Account lockout is enforced INSIDE
