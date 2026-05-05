@@ -301,9 +301,13 @@ async def send_receipt(
                 "Tenant has no email address on file. Cannot send the receipt."
             )
 
+        # Capture scalar before the session closes — avoids an implicit
+        # dependency on expire_on_commit=False after the context exits.
+        txn_applicant_id: uuid.UUID = txn.applicant_id
+
         property_address, signed_lease_id = await _resolve_property_address(
             db,
-            applicant_id=txn.applicant_id,
+            applicant_id=txn_applicant_id,
             organization_id=organization_id,
             user_id=user_id,
         )
@@ -438,7 +442,7 @@ async def send_receipt(
                 db,
                 user_id=user_id,
                 organization_id=organization_id,
-                applicant_id=txn.applicant_id,
+                applicant_id=txn_applicant_id,
                 include_deleted=False,
                 limit=1,
             )
