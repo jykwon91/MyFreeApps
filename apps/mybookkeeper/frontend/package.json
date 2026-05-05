@@ -39,7 +39,7 @@
     "react-plaid-link": "^4.1.1",
     "react-redux": "^9.2.0",
     "react-router-dom": "^6.26.2",
-    "recharts": "^2.12.7",
+    "recharts": "^3.8.1",
     "tailwind-merge": "^2.5.2",
     "vaul": "^1.1.2"
   },
