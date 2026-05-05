@@ -1,15 +1,10 @@
 import { FileText, Paperclip, Trash2 } from "lucide-react";
 import type { ListingBlackoutAttachment } from "@/shared/types/listing/listing-blackout-attachment";
+import { formatFileSize } from "@/shared/utils/file-size";
 
 export interface CalendarEventAttachmentCardProps {
   attachment: ListingBlackoutAttachment;
   onDelete: () => void;
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 export default function CalendarEventAttachmentCard({ attachment, onDelete }: CalendarEventAttachmentCardProps) {
@@ -54,7 +49,7 @@ export default function CalendarEventAttachmentCard({ attachment, onDelete }: Ca
           </span>
         )}
         <span className="text-xs text-muted-foreground">
-          {formatBytes(attachment.size_bytes)}
+          {formatFileSize(attachment.size_bytes)}
         </span>
       </div>
 

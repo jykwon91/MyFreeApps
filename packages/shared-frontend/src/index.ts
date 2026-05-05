@@ -11,6 +11,7 @@
 export { cn } from "./utils/cn";
 export { formatCurrency } from "./utils/currency";
 export { formatDate, timeAgo } from "./utils/date";
+export { formatFileSize } from "./utils/file-size";
 export { formatTag } from "./utils/tag";
 export { extractErrorMessage } from "./utils/errorMessage";
 export { showError, showSuccess, subscribe } from "./lib/toast-store";
