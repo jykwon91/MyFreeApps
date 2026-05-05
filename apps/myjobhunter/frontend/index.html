@@ -2,16 +2,19 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#0f172a" />
+    <!-- iOS add-to-homescreen polish — mirrors apps/mybookkeeper/frontend/index.html. -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💼</text></svg>" />
+    <title>MyJobHunter</title>
     <script>
       // Apply dark/light theme BEFORE React hydrates to avoid a flash of the
       // wrong theme on first paint. Mirrors apps/mybookkeeper/frontend/index.html.
       // Storage key matches @platform/ui's useTheme() hook.
       (function(){var t=localStorage.getItem("v1_theme");var d=t==="dark"||(t!=="light"&&matchMedia("(prefers-color-scheme:dark)").matches);if(d)document.documentElement.classList.add("dark")})();
     </script>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💼</text></svg>" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>MyJobHunter</title>
   </head>
   <body>
     <div id="root"></div>

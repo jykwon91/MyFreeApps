@@ -7,7 +7,7 @@ export default function Documents() {
   const [uploadOpen, setUploadOpen] = useState(false);
 
   return (
-    <div className="p-6 max-w-3xl space-y-6">
+    <main className="p-4 sm:p-8 space-y-6 max-w-3xl">
       <header className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold">Documents</h1>
@@ -30,6 +30,6 @@ export default function Documents() {
         open={uploadOpen}
         onOpenChange={setUploadOpen}
       />
-    </div>
+    </main>
   );
 }

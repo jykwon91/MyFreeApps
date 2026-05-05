@@ -24,7 +24,7 @@ export default function Security() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   return (
-    <div className="p-6 max-w-2xl space-y-6">
+    <main className="p-4 sm:p-8 space-y-6 max-w-2xl">
       <h1 className="text-2xl font-semibold">Security</h1>
 
       {!infoDismissed && (
@@ -96,6 +96,6 @@ export default function Security() {
         open={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
       />
-    </div>
+    </main>
   );
 }

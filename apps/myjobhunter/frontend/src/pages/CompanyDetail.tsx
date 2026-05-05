@@ -66,7 +66,7 @@ export default function CompanyDetail() {
   if (isError || !company) {
     const status = error && typeof error === "object" && "status" in error ? (error as { status: number }).status : null;
     return (
-      <div className="p-6 flex flex-col items-center text-center gap-4 py-20">
+      <main className="p-4 sm:p-8 flex flex-col items-center text-center gap-4 py-20">
         <p className="text-4xl font-bold text-muted-foreground">{status ?? 404}</p>
         <h1 className="text-xl font-semibold">
           {/* status is number | null; null means no HTTP status extracted (e.g. network error) — treat same as 404 */}
@@ -84,7 +84,7 @@ export default function CompanyDetail() {
           <ChevronLeft className="w-4 h-4" />
           Back to Companies
         </Link>
-      </div>
+      </main>
     );
   }
 
@@ -93,7 +93,7 @@ export default function CompanyDetail() {
   const applicationsForCompany = applicationsData?.items ?? [];
 
   return (
-    <div className="p-6 max-w-3xl space-y-6">
+    <main className="p-4 sm:p-8 space-y-6 max-w-3xl">
       <Link
         to="/companies"
         className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
@@ -170,7 +170,7 @@ export default function CompanyDetail() {
           />
         )}
       </section>
-    </div>
+    </main>
   );
 }
 
