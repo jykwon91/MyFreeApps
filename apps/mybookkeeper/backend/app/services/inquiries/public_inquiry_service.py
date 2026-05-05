@@ -33,8 +33,9 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any
 
+from platform_shared.core.disposable_email_domains import is_disposable_email
+
 from app.core.config import settings
-from app.core.disposable_email_domains import is_disposable_email
 from app.db.session import unit_of_work
 from app.repositories.inquiries import (
     inquiry_event_repo,
