@@ -155,7 +155,23 @@ blue "Step 2/9: stopping MBK"
 if [[ "$already_migrated" == "1" ]]; then
   yellow "  already migrated — skipping"
 else
-  docker compose -f "$MBK_COMPOSE" down
+  # --remove-orphans is critical: post-PR-#253 the MBK compose no longer
+  # declares a ``minio:`` service, so the old ``mybookkeeper-minio``
+  # container is an ORPHAN as far as compose is concerned. Without this
+  # flag, ``compose down`` leaves it running, port 9000 stays bound,
+  # and step 4 (``compose up`` for myfreeapps-minio) fails with a port
+  # collision. We hit this exactly on 2026-05-04.
+  docker compose -f "$MBK_COMPOSE" down --remove-orphans
+  # Defensive: if any container with the old names is still hanging
+  # around (e.g. created by hand or from a different compose file),
+  # stop + remove it so port 9000 is unconditionally free.
+  for stale in mybookkeeper-minio mybookkeeper_minio_1; do
+    if docker ps -a --format '{{.Names}}' | grep -q "^${stale}\$"; then
+      yellow "  stopping stale container ${stale}"
+      docker stop "$stale" >/dev/null 2>&1 || true
+      docker rm   "$stale" >/dev/null 2>&1 || true
+    fi
+  done
   green "  MBK stopped"
 fi
 
