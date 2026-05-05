@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { Briefcase } from "lucide-react";
 import {
   LoginForm,
   LoadingButton,
@@ -131,7 +132,7 @@ export default function Login() {
     <div className="min-h-screen flex flex-col items-center justify-center bg-muted/30 px-4">
       <div className="mb-8 flex flex-col items-center gap-2">
         <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center">
-          <span className="text-primary-foreground font-bold text-xl">J</span>
+          <Briefcase className="w-6 h-6 text-primary-foreground" aria-hidden />
         </div>
         <span className="text-xl font-semibold tracking-tight">MyJobHunter</span>
       </div>
