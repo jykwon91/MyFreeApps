@@ -15,13 +15,13 @@ interface FormValues {
   gpa: string;
 }
 
-interface Props {
+export interface EducationDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   existing?: Education;
 }
 
-export default function EducationDialog({ open, onOpenChange, existing }: Props) {
+export default function EducationDialog({ open, onOpenChange, existing }: EducationDialogProps) {
   const [createEducation, { isLoading: isCreating }] = useCreateEducationMutation();
   const [updateEducation, { isLoading: isUpdating }] = useUpdateEducationMutation();
   const isLoading = isCreating || isUpdating;

@@ -6,7 +6,7 @@ import type { Company } from "@/types/company";
 import type { CompanyCreateRequest } from "@/types/company-create-request";
 import CompanyForm from "./CompanyForm";
 
-interface Props {
+export interface AddCompanyDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /**
@@ -18,7 +18,7 @@ interface Props {
   onCreated?: (company: Company) => void;
 }
 
-export default function AddCompanyDialog({ open, onOpenChange, onCreated }: Props) {
+export default function AddCompanyDialog({ open, onOpenChange, onCreated }: AddCompanyDialogProps) {
   const [createCompany, { isLoading }] = useCreateCompanyMutation();
 
   const handleSubmit = async (request: CompanyCreateRequest) => {

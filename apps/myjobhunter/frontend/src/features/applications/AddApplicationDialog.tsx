@@ -24,12 +24,12 @@ const REMOTE_OPTIONS: { value: FormValues["remote_type"]; label: string }[] = [
   { value: "onsite", label: "Onsite" },
 ];
 
-interface Props {
+export interface AddApplicationDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-export default function AddApplicationDialog({ open, onOpenChange }: Props) {
+export default function AddApplicationDialog({ open, onOpenChange }: AddApplicationDialogProps) {
   const { data: companiesData, isLoading: companiesLoading } = useListCompaniesQuery();
   const [createApplication, { isLoading: creatingApplication }] = useCreateApplicationMutation();
   const [createCompany, { isLoading: creatingCompany }] = useCreateCompanyMutation();

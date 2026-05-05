@@ -7,7 +7,7 @@ import { signOut } from "@/lib/auth";
 import { useDeleteAccountMutation } from "@/lib/accountApi";
 import { useGetCurrentUserQuery } from "@/lib/userApi";
 
-interface Props {
+export interface DeleteAccountModalProps {
   open: boolean;
   onClose: () => void;
 }
@@ -24,7 +24,7 @@ const TOTP_INPUT_MIN_LENGTH = 6;
  * On 204 the modal calls ``signOut()``, which clears the JWT and lets
  * ``RequireAuth`` redirect to ``/login``. No explicit navigate is needed.
  */
-export default function DeleteAccountModal({ open, onClose }: Props) {
+export default function DeleteAccountModal({ open, onClose }: DeleteAccountModalProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [totpCode, setTotpCode] = useState("");

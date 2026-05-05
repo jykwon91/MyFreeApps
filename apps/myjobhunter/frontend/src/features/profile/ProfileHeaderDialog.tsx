@@ -23,13 +23,13 @@ const SENIORITY_OPTIONS = [
   { value: "exec", label: "Executive" },
 ];
 
-interface Props {
+export interface ProfileHeaderDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   profile: Profile;
 }
 
-export default function ProfileHeaderDialog({ open, onOpenChange, profile }: Props) {
+export default function ProfileHeaderDialog({ open, onOpenChange, profile }: ProfileHeaderDialogProps) {
   const [updateProfile, { isLoading }] = useUpdateProfileMutation();
 
   const { register, handleSubmit, reset } = useForm<FormValues>({
