@@ -2,6 +2,7 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { ChevronLeft, ExternalLink as ExternalLinkIcon, Trash2 } from "lucide-react";
 import { Badge, DataTable, showSuccess, showError, extractErrorMessage, type ColumnDef } from "@platform/ui";
 import CompanyDetailSkeleton from "@/features/companies/CompanyDetailSkeleton";
+import CompanyResearchPanel from "@/features/companies/CompanyResearchPanel";
 import { useGetCompanyQuery, useDeleteCompanyMutation } from "@/lib/companiesApi";
 import { useListApplicationsQuery } from "@/lib/applicationsApi";
 import type { Application } from "@/types/application";
@@ -148,6 +149,8 @@ export default function CompanyDetail() {
           </p>
         </section>
       ) : null}
+
+      <CompanyResearchPanel companyId={company.id} />
 
       <section>
         <h2 className="text-sm font-medium mb-2">

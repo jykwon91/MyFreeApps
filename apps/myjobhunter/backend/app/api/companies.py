@@ -1,13 +1,15 @@
 """HTTP routes for the Companies domain.
 
 Phase 1 shipped read-only ``GET /companies`` (returning empty items + a
-count). Phase 2.2 (this file) ships:
+count). Phase 2.2 ships full CRUD. Phase 4.1 adds research endpoints:
 
-  - ``GET /companies`` — now actually returns the items.
+  - ``GET /companies`` — returns the caller's companies.
   - ``GET /companies/{id}`` — single resource read.
   - ``POST /companies`` — create.
   - ``PATCH /companies/{id}`` — partial update.
   - ``DELETE /companies/{id}`` — hard delete (no soft-delete for companies).
+  - ``GET  /companies/{id}/research`` — latest research record + sources.
+  - ``POST /companies/{id}/research`` — trigger (or re-run) research.
 
 Auth: every endpoint requires an authenticated user via
 ``current_active_user``. Tenant scoping is mandatory — every operation
@@ -20,28 +22,38 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response
+import anthropic
+import httpx
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import current_active_user
 from app.db.session import get_db
 from app.models.user.user import User
 from app.schemas.company.company_create_request import CompanyCreateRequest
+from app.schemas.company.company_research_request import CompanyResearchRequest
+from app.schemas.company.company_research_response import CompanyResearchResponse
 from app.schemas.company.company_response import CompanyResponse
 from app.schemas.company.company_update_request import CompanyUpdateRequest
 from app.services.company import company_service
+from app.services.company import company_research_service
 from app.services.company.company_service import DuplicatePrimaryDomainError
+from app.services.integrations.tavily_service import TavilyNotConfiguredError
 
 router = APIRouter()
 
 _NOT_FOUND_DETAIL = "Company not found"
+_RESEARCH_NOT_FOUND_DETAIL = "No research has been run for this company yet"
 
 
 @router.get("/companies")
 async def list_companies(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
-    name_search: str | None = Query(default=None, description="Case-insensitive substring filter on company name"),
+    name_search: str | None = Query(
+        default=None,
+        description="Case-insensitive substring filter on company name",
+    ),
 ) -> dict:
     """Return the caller's companies.
 
@@ -130,13 +142,81 @@ async def delete_company(
     return Response(status_code=204)
 
 
-@router.get("/companies/{company_id}/research")
+# ---------------------------------------------------------------------------
+# Research sub-resource
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/companies/{company_id}/research",
+    response_model=CompanyResearchResponse,
+    summary="Get latest company research",
+)
 async def get_company_research(
     company_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
-) -> dict:
-    research = await company_service.get_company_research(db, company_id, user.id)
+) -> CompanyResearchResponse:
+    """Return the most recent research record and its sources for a company.
+
+    Returns 404 when:
+    - The company does not exist or belongs to another user.
+    - No research has been run for this company yet.
+
+    Use ``POST /companies/{id}/research`` to trigger the first research run.
+    """
+    research = await company_research_service.get_research(
+        db, company_id=company_id, user_id=user.id
+    )
     if research is None:
-        raise HTTPException(status_code=404, detail="Research not found")
-    return {"research": {"id": str(research.id)}}
+        raise HTTPException(status_code=404, detail=_RESEARCH_NOT_FOUND_DETAIL)
+    return CompanyResearchResponse.model_validate(research)
+
+
+@router.post(
+    "/companies/{company_id}/research",
+    response_model=CompanyResearchResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Trigger or re-run company research",
+)
+async def trigger_company_research(
+    company_id: uuid.UUID,
+    _payload: CompanyResearchRequest = CompanyResearchRequest(),  # noqa: B008
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(current_active_user),
+) -> CompanyResearchResponse:
+    """Run Tavily + Claude research for a company and return the result.
+
+    This is a synchronous call — it may take 10-30 seconds while we fetch
+    search results and synthesise them with Claude. Phase 5 will move this
+    to a background queue.
+
+    Returns 404 if the company does not exist or belongs to another user.
+    Returns 503 if the Tavily API key is not configured.
+    Returns 502 if the Anthropic API call fails.
+    Returns 200 with the populated research record on success.
+    """
+    try:
+        research = await company_research_service.run_research(
+            db, company_id=company_id, user_id=user.id
+        )
+    except TavilyNotConfiguredError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Tavily research is not configured: {exc}",
+        ) from exc
+    except (anthropic.APIError, ValueError) as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=f"AI synthesis failed: {exc}",
+        ) from exc
+    except httpx.HTTPStatusError as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Tavily request failed: {exc.response.status_code}",
+        ) from exc
+
+    if research is None:
+        raise HTTPException(status_code=404, detail=_NOT_FOUND_DETAIL)
+
+    return CompanyResearchResponse.model_validate(research)
