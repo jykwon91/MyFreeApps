@@ -18,13 +18,7 @@ import VendorCategoryBadge from "@/app/features/vendors/VendorCategoryBadge";
 import VendorDetailSkeleton from "@/app/features/vendors/VendorDetailSkeleton";
 import VendorForm from "@/app/features/vendors/VendorForm";
 import DeleteVendorModal from "@/app/features/vendors/DeleteVendorModal";
-
-function formatHourlyRate(rate: string | null): string {
-  if (rate === null) return "Not set";
-  const num = Number(rate);
-  if (Number.isNaN(num)) return "Not set";
-  return `$${num.toFixed(2)} / hour`;
-}
+import { formatHourlyRate } from "@/shared/utils/hourly-rate";
 
 export default function VendorDetail() {
   const { vendorId } = useParams<{ vendorId: string }>();

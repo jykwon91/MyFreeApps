@@ -1,20 +1,13 @@
 import { useNavigate } from "react-router-dom";
 import { Star } from "lucide-react";
 import { formatRelativeTime } from "@/shared/lib/inquiry-date-format";
+import { formatHourlyRate } from "@/shared/utils/hourly-rate";
 import type { VendorSummary } from "@/shared/types/vendor/vendor-summary";
 import VendorCategoryBadge from "./VendorCategoryBadge";
 
 export interface VendorRowProps {
   vendor: VendorSummary;
   showCategoryBadge: boolean;
-}
-
-function formatHourlyRate(rate: string | null): string {
-  if (rate === null) return "—";
-  // Backend returns Decimal as a string — strip trailing zeros for display.
-  const num = Number(rate);
-  if (Number.isNaN(num)) return "—";
-  return `$${num.toFixed(2)}/hr`;
 }
 
 function formatLastUsed(lastUsedAt: string | null): string {

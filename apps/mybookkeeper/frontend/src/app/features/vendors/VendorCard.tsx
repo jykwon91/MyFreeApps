@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { Star } from "lucide-react";
 import { formatRelativeTime } from "@/shared/lib/inquiry-date-format";
+import { formatHourlyRate } from "@/shared/utils/hourly-rate";
 import type { VendorSummary } from "@/shared/types/vendor/vendor-summary";
 import VendorCategoryBadge from "./VendorCategoryBadge";
 
@@ -12,13 +13,6 @@ export interface VendorCardProps {
    * redundant — it's implied by the active chip.
    */
   showCategoryBadge: boolean;
-}
-
-function formatHourlyRate(rate: string | null): string {
-  if (rate === null) return "Rate not set";
-  const num = Number(rate);
-  if (Number.isNaN(num)) return "Rate not set";
-  return `$${num.toFixed(2)}/hr`;
 }
 
 function formatLastUsed(lastUsedAt: string | null): string {
