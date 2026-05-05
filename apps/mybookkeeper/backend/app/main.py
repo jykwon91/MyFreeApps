@@ -158,9 +158,10 @@ app.include_router(listings.router)
 app.include_router(listings.channels_router)
 app.include_router(listings.channel_listings_router)
 app.include_router(blackouts.router)
-# Calendar router declares its own ``/api`` prefix because the outbound
-# iCal URL must be unauthenticated and follow a stable channel-facing
-# path that does not depend on auth-router ordering.
+# Public iCal feed — unauthenticated, follows a stable channel-facing
+# path (``/calendar/{token}.ics``). Mounted separately from the
+# authenticated calendar viewer below so the two have independent
+# dependency stacks.
 app.include_router(calendar.router)
 # Authenticated unified calendar viewer — declared separately because it
 # has different auth/rate-limit needs from the public iCal feed above.
@@ -168,8 +169,10 @@ app.include_router(calendar.events_router)
 # Phase 2 — Gmail booking review queue.
 app.include_router(calendar.review_queue_router)
 app.include_router(inquiries.router)
-# Public inquiry form (T0) — unauthenticated; lives under /api so the Vite
-# dev proxy + Caddy production reverse proxy both forward it correctly.
+# Public inquiry form (T0) — unauthenticated. The router declares no prefix
+# because production Caddy (``uri strip_prefix /api``) and the Vite dev proxy
+# already drop the ``/api`` segment before requests reach FastAPI. See the
+# detailed comment in ``api/public_inquiries.py``.
 app.include_router(public_inquiries.router)
 app.include_router(applicants.router)
 app.include_router(lease_templates.router)

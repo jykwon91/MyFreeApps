@@ -623,6 +623,100 @@ class TestListingRepoSoftDelete:
         assert await listing_repo.get_by_id(db, listing.id, test_org.id) is not None
 
 
+class TestListingRepoGetBySlug:
+    """Cover the public-form lookup path. The slug itself is the capability —
+    no organization scope on this lookup."""
+
+    @pytest.mark.asyncio
+    async def test_returns_listing_for_active_slug(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        prop = await _seed_property(db, test_org, test_user)
+        listing = _make_listing(
+            organization_id=test_org.id, user_id=test_user.id, property_id=prop.id,
+        )
+        listing.slug = "master-bedroom-abc123"
+        db.add(listing)
+        await db.commit()
+
+        result = await listing_repo.get_by_slug(db, "master-bedroom-abc123")
+        assert result is not None
+        assert result.id == listing.id
+
+    @pytest.mark.asyncio
+    async def test_returns_none_for_unknown_slug(
+        self, db: AsyncSession,
+    ) -> None:
+        result = await listing_repo.get_by_slug(db, "never-existed-zzz999")
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_returns_none_for_soft_deleted_slug(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        prop = await _seed_property(db, test_org, test_user)
+        listing = _make_listing(
+            organization_id=test_org.id,
+            user_id=test_user.id,
+            property_id=prop.id,
+            deleted_at=datetime.now(timezone.utc),
+        )
+        listing.slug = "archived-listing-xyz789"
+        db.add(listing)
+        await db.commit()
+
+        result = await listing_repo.get_by_slug(db, "archived-listing-xyz789")
+        assert result is None
+
+
+class TestListingRepoSlugExistsIncludingArchived:
+    """The operator-diagnostic helper that lets the public route distinguish
+    'slug never existed' from 'slug archived' for log triage."""
+
+    @pytest.mark.asyncio
+    async def test_active_slug_returns_true(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        prop = await _seed_property(db, test_org, test_user)
+        listing = _make_listing(
+            organization_id=test_org.id, user_id=test_user.id, property_id=prop.id,
+        )
+        listing.slug = "active-listing-aaa111"
+        db.add(listing)
+        await db.commit()
+
+        assert await listing_repo.slug_exists_including_archived(
+            db, "active-listing-aaa111",
+        ) is True
+
+    @pytest.mark.asyncio
+    async def test_archived_slug_returns_true(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        prop = await _seed_property(db, test_org, test_user)
+        listing = _make_listing(
+            organization_id=test_org.id,
+            user_id=test_user.id,
+            property_id=prop.id,
+            deleted_at=datetime.now(timezone.utc),
+        )
+        listing.slug = "archived-listing-bbb222"
+        db.add(listing)
+        await db.commit()
+
+        assert await listing_repo.slug_exists_including_archived(
+            db, "archived-listing-bbb222",
+        ) is True
+
+    @pytest.mark.asyncio
+    async def test_unknown_slug_returns_false(
+        self, db: AsyncSession,
+    ) -> None:
+        assert await listing_repo.slug_exists_including_archived(
+            db, "never-existed-ccc333",
+        ) is False
+
+
 class TestListingRepoCount:
     @pytest.mark.asyncio
     async def test_count_excludes_soft_deleted(
