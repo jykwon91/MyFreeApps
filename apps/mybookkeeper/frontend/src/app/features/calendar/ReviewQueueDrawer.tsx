@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { X } from "lucide-react";
 import ReviewQueueItem from "@/app/features/calendar/ReviewQueueItem";
 import ReviewQueueSkeleton from "@/app/features/calendar/ReviewQueueSkeleton";

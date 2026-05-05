@@ -1,7 +1,7 @@
 # Tech Debt
 
 > Last scanned: 2026-05-04
-> Issues: 0 critical, 7 high, 6 medium (1 deferred + 5 active), 0 low
+> Issues: 0 critical, 6 high, 6 medium (1 deferred + 5 active), 0 low
 
 ## High
 
@@ -29,11 +29,8 @@
 
 ---
 
-### [Frontend lint] 20+ files use setState synchronously inside useEffect (react-hooks/set-state-in-effect)
-**Effort:** M
-**Location:** src/app/pages/VerifyEmail.tsx, src/admin/features/costs/ThresholdSettings.tsx, src/admin/features/demo/CreateDemoDialog.tsx, src/app/pages/ResetPassword.tsx, and ~15 others
-**Problem:** The `react-hooks/set-state-in-effect` ESLint rule flags synchronous setState calls inside useEffect bodies. The pattern causes cascading renders. Several pages use this for initialization (syncing query param to local state). The rule fires as errors and `npm run lint` fails.
-**Recommendation:** Refactor each use to either (a) use a `key` prop to reset state when the dependency changes, or (b) derive the state from props using `useMemo` instead of `useEffect`. Fix file by file as each page is touched in future PRs.
+### ~~[Frontend lint] 20+ files use setState synchronously inside useEffect (react-hooks/set-state-in-effect)~~ RESOLVED
+**Resolved:** PR fix/mbk-eslint-setstate-in-effect (2026-05-04) — no `react-hooks/set-state-in-effect` violations found in codebase; violations had been resolved organically through normal development. Remaining lint errors (unused imports in 5 files) fixed as part of this PR. `npm run lint` now exits 0.
 
 ---
 
