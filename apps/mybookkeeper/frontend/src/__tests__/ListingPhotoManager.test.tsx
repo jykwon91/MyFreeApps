@@ -122,4 +122,72 @@ describe("ListingPhotoManager", () => {
     expect(cards[0]).toHaveAttribute("data-photo-id", "p1");
     expect(cards[1]).toHaveAttribute("data-photo-id", "p2");
   });
+
+  it("toolbar is hidden when nothing is selected", () => {
+    renderManager([
+      {
+        id: "p1", listing_id: "listing-1", storage_key: "k1",
+        caption: null, display_order: 0, created_at: "2026-01-01T00:00:00Z", presigned_url: null,
+      },
+    ]);
+    expect(screen.queryByTestId("photo-selection-toolbar")).not.toBeInTheDocument();
+  });
+
+  it("clicking a checkbox shows the toolbar with the correct count", async () => {
+    renderManager([
+      {
+        id: "p1", listing_id: "listing-1", storage_key: "k1",
+        caption: null, display_order: 0, created_at: "2026-01-01T00:00:00Z", presigned_url: null,
+      },
+      {
+        id: "p2", listing_id: "listing-1", storage_key: "k2",
+        caption: null, display_order: 1, created_at: "2026-01-01T00:00:00Z", presigned_url: null,
+      },
+    ]);
+    const user = userEvent.setup();
+    const checkboxes = screen.getAllByTestId("listing-photo-checkbox");
+    await user.click(checkboxes[0]);
+
+    expect(screen.getByTestId("photo-selection-toolbar")).toBeInTheDocument();
+    expect(screen.getByTestId("photo-selection-count")).toHaveTextContent("1 selected");
+  });
+
+  it("bulk delete opens a confirmation dialog and calls delete for each selected photo", async () => {
+    renderManager([
+      {
+        id: "p1", listing_id: "listing-1", storage_key: "k1",
+        caption: null, display_order: 0, created_at: "2026-01-01T00:00:00Z", presigned_url: null,
+      },
+      {
+        id: "p2", listing_id: "listing-1", storage_key: "k2",
+        caption: null, display_order: 1, created_at: "2026-01-01T00:00:00Z", presigned_url: null,
+      },
+    ]);
+    const user = userEvent.setup();
+    const checkboxes = screen.getAllByTestId("listing-photo-checkbox");
+    await user.click(checkboxes[0]);
+    await user.click(checkboxes[1]);
+
+    await user.click(screen.getByTestId("photo-bulk-delete-button"));
+    // Confirmation dialog appears
+    expect(screen.getByText(/Delete 2 photos\?/i)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /Delete 2 photos/i }));
+
+    expect(deleteMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("Clear button hides the toolbar", async () => {
+    renderManager([
+      {
+        id: "p1", listing_id: "listing-1", storage_key: "k1",
+        caption: null, display_order: 0, created_at: "2026-01-01T00:00:00Z", presigned_url: null,
+      },
+    ]);
+    const user = userEvent.setup();
+    await user.click(screen.getByTestId("listing-photo-checkbox"));
+    expect(screen.getByTestId("photo-selection-toolbar")).toBeInTheDocument();
+
+    await user.click(screen.getByTestId("photo-clear-selection-button"));
+    expect(screen.queryByTestId("photo-selection-toolbar")).not.toBeInTheDocument();
+  });
 });
