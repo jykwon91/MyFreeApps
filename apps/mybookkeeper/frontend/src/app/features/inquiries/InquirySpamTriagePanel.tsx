@@ -9,22 +9,14 @@ import {
 } from "@/shared/store/inquiriesApi";
 import type { InquirySpamStatus } from "@/shared/types/inquiry/inquiry-spam-status";
 import InquirySpamBadge from "./InquirySpamBadge";
+import InquiryAuditTrailBody from "./InquiryAuditTrailBody";
+import { useInquiryAuditTrailMode } from "./useInquiryAuditTrailMode";
 
 export interface InquirySpamTriagePanelProps {
   inquiryId: string;
   spamStatus: InquirySpamStatus;
   spamScore: number | null;
 }
-
-const ASSESSMENT_LABELS: Record<string, string> = {
-  turnstile: "Captcha",
-  honeypot: "Honeypot",
-  submit_timing: "Submit timing",
-  disposable_email: "Disposable email",
-  rate_limit: "Rate limit",
-  claude_score: "AI score",
-  manual_override: "Manual override",
-};
 
 export default function InquirySpamTriagePanel({ inquiryId, spamStatus, spamScore }: InquirySpamTriagePanelProps) {
   const [expanded, setExpanded] = useState(false);
@@ -35,6 +27,8 @@ export default function InquirySpamTriagePanel({ inquiryId, spamStatus, spamScor
   const [markNotSpam, { isLoading: isMarkingNotSpam }] =
     useMarkInquiryNotSpamMutation();
   const [markSpam, { isLoading: isMarkingSpam }] = useMarkInquirySpamMutation();
+
+  const auditTrailMode = useInquiryAuditTrailMode({ expanded, isLoading, assessments });
 
   async function handleMarkNotSpam() {
     try {
@@ -110,53 +104,7 @@ export default function InquirySpamTriagePanel({ inquiryId, spamStatus, spamScor
         {expanded ? "Hide" : "Show"} audit trail
       </button>
 
-      {expanded ? (
-        isLoading ? (
-          <p className="text-xs text-muted-foreground">Loading audit trail...</p>
-        ) : assessments.length === 0 ? (
-          <p className="text-xs text-muted-foreground">
-            No spam assessments recorded for this inquiry.
-          </p>
-        ) : (
-          <ul
-            className="space-y-2 text-xs"
-            data-testid="spam-assessments-list"
-          >
-            {assessments.map((a) => {
-              const label = ASSESSMENT_LABELS[a.assessment_type] ?? a.assessment_type;
-              const passLabel =
-                a.passed === null ? "—" : a.passed ? "passed" : "tripped";
-              return (
-                <li
-                  key={a.id}
-                  className="border rounded-md p-2 bg-muted/40"
-                  data-testid={`spam-assessment-${a.assessment_type}`}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <div>
-                      <span className="font-medium">{label}</span>
-                      <span className="text-muted-foreground ml-2">{passLabel}</span>
-                      {a.score !== null ? (
-                        <span className="text-muted-foreground ml-2">
-                          score {Math.round(a.score)}
-                        </span>
-                      ) : null}
-                    </div>
-                    <span className="text-muted-foreground">
-                      {new Date(a.created_at).toLocaleString()}
-                    </span>
-                  </div>
-                  {a.flags && a.flags.length > 0 ? (
-                    <p className="mt-1 text-muted-foreground">
-                      Flags: {a.flags.join(", ")}
-                    </p>
-                  ) : null}
-                </li>
-              );
-            })}
-          </ul>
-        )
-      ) : null}
+      <InquiryAuditTrailBody mode={auditTrailMode} assessments={assessments} />
     </section>
   );
 }
