@@ -14,6 +14,8 @@ import jwt
 from jwt.exceptions import PyJWTError as JWTError
 from sqlalchemy import text
 
+from platform_shared.core.boot_guards import check_turnstile_configured
+
 from app.core.auth import fastapi_users, auth_backend
 from app.core.config import settings
 from app.core.observability import init_sentry
@@ -52,31 +54,13 @@ logging.basicConfig(
 logger = logging.getLogger("app")
 
 
-def _check_turnstile_configured() -> None:
-    """Fail loud at boot if Turnstile is not configured in a non-development environment.
-
-    Turnstile is the CAPTCHA gate on /auth/register and /auth/forgot-password.
-    Running without it in production is a credential-stuffing vulnerability.
-    In development/test the key is intentionally empty — the require_turnstile
-    dependency short-circuits when the key is absent, which is the desired CI/dev behaviour.
-
-    Raises:
-        RuntimeError: If ``ENVIRONMENT`` is not ``development`` or ``test`` and
-            ``TURNSTILE_SECRET_KEY`` is not set.
-    """
-    if settings.environment not in ("development", "test") and not settings.turnstile_secret_key:
-        raise RuntimeError(
-            "TURNSTILE_SECRET_KEY must be set in non-development environments. "
-            "Cloudflare Turnstile is the CAPTCHA gate on /auth/register and "
-            "/auth/forgot-password — running prod without it is a credential-stuffing "
-            "vulnerability. Set TURNSTILE_SECRET_KEY or set ENVIRONMENT=development."
-        )
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     init_sentry()
-    _check_turnstile_configured()
+    check_turnstile_configured(
+        turnstile_secret_key=settings.turnstile_secret_key,
+        environment=settings.environment,
+    )
     register_audit_listeners()
     ensure_bucket()
     worker_task: asyncio.Task[None] | None = None
