@@ -22,13 +22,13 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="p-6">
+    <main className="p-4 sm:p-8 space-y-6">
       <EmptyState
         icon={<Briefcase className="w-12 h-12" />}
         heading={copy.heading}
         body={copy.body}
         action={{ label: copy.actionLabel, onClick: handleAddApplication }}
       />
-    </div>
+    </main>
   );
 }

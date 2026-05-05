@@ -53,15 +53,15 @@ export default function Companies() {
 
   if (isLoading) {
     return (
-      <div className="p-6">
+      <main className="p-4 sm:p-8 space-y-6">
         <CompaniesSkeleton />
-      </div>
+      </main>
     );
   }
 
   if (isError) {
     return (
-      <div className="p-6">
+      <main className="p-4 sm:p-8 space-y-6">
         <EmptyState
           icon={<Building2 className="w-12 h-12 text-destructive" />}
           heading="Couldn't load companies"
@@ -71,7 +71,7 @@ export default function Companies() {
               : "Try refreshing the page."
           }
         />
-      </div>
+      </main>
     );
   }
 
@@ -80,21 +80,21 @@ export default function Companies() {
   if (items.length === 0) {
     return (
       <>
-        <div className="p-6">
+        <main className="p-4 sm:p-8 space-y-6">
           <EmptyState
             icon={<Building2 className="w-12 h-12" />}
             heading={copy.heading}
             body={copy.body}
             action={{ label: "Add a company", onClick: handleAddCompany }}
           />
-        </div>
+        </main>
         <AddCompanyDialog open={dialogOpen} onOpenChange={setDialogOpen} />
       </>
     );
   }
 
   return (
-    <div className="p-6 space-y-4">
+    <main className="p-4 sm:p-8 space-y-6">
       <header className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Companies</h1>
         <button
@@ -114,6 +114,6 @@ export default function Companies() {
         getRowId={(row) => row.id}
         onRowClick={(row) => navigate(`/companies/${row.id}`)}
       />
-    </div>
+    </main>
   );
 }

@@ -1,5 +1,10 @@
+import logging
 import os
+import subprocess
+import time
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 
 import jwt
 from fastapi import Depends, FastAPI, Request
@@ -10,6 +15,7 @@ from app.api import account, applications, companies, documents, health, integra
 from app.core.audit import current_user_id, register_audit_listeners
 from app.core.auth import auth_backend, fastapi_users
 from app.core.config import settings
+from app.core.observability import init_sentry
 from app.core.rate_limit import (
     check_account_not_locked,
     check_login_rate_limit,
@@ -19,8 +25,64 @@ from app.schemas.user import UserCreate, UserRead, UserUpdate
 from app.services.storage.bucket_initializer import ensure_bucket
 
 
+def _resolve_git_commit() -> str:
+    """Resolve the deployed git commit short SHA.
+
+    Mirrors apps/mybookkeeper/backend/app/main.py — used by the deploy
+    workflow's freshness tripwire and by /api/version + /health for
+    deploy verification.
+    """
+    env_commit = os.environ.get("GIT_COMMIT", "").strip()
+    if env_commit:
+        return env_commit
+    try:
+        return subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"],
+            text=True,
+            stderr=subprocess.DEVNULL,
+        ).strip()
+    except Exception:
+        return "unknown"
+
+
+GIT_COMMIT = _resolve_git_commit()
+STARTUP_TIMESTAMP = datetime.now(timezone.utc).isoformat()
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s %(message)s",
+    datefmt="%Y-%m-%dT%H:%M:%S",
+)
+logger = logging.getLogger("app")
+
+
+def _check_turnstile_configured() -> None:
+    """Fail loud at boot if Turnstile is not configured in a non-development environment.
+
+    Turnstile is the CAPTCHA gate on /auth/register and /auth/forgot-password.
+    Running without it in production is a credential-stuffing vulnerability.
+    In development/test the key is intentionally empty — the require_turnstile
+    dependency short-circuits when the key is absent, which is the desired CI/dev behaviour.
+
+    Mirrors apps/mybookkeeper/backend/app/main.py::_check_turnstile_configured.
+
+    Raises:
+        RuntimeError: If ``ENVIRONMENT`` is not ``development`` or ``test`` and
+            ``TURNSTILE_SECRET_KEY`` is not set.
+    """
+    if settings.environment not in ("development", "test") and not settings.turnstile_secret_key:
+        raise RuntimeError(
+            "TURNSTILE_SECRET_KEY must be set in non-development environments. "
+            "Cloudflare Turnstile is the CAPTCHA gate on /auth/register and "
+            "/auth/forgot-password — running prod without it is a credential-stuffing "
+            "vulnerability. Set TURNSTILE_SECRET_KEY or set ENVIRONMENT=development."
+        )
+
+
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    init_sentry()
+    _check_turnstile_configured()
     register_audit_listeners()
     ensure_bucket()
     yield
@@ -43,25 +105,43 @@ app.add_middleware(
 
 @app.middleware("http")
 async def set_audit_user(request: Request, call_next):
-    """Populate ``current_user_id`` ContextVar from the request's JWT."""
-    token = request.headers.get("Authorization", "").removeprefix("Bearer ").strip()
-    if not token:
-        return await call_next(request)
-    try:
-        payload = jwt.decode(
-            token,
-            settings.secret_key,
-            algorithms=["HS256"],
-            audience="fastapi-users:auth",
-        )
-    except JWTError:
-        return await call_next(request)
+    """Populate ``current_user_id`` ContextVar from the request's JWT and
+    emit a structured access log line for every request.
 
-    ctx_token = current_user_id.set(payload.get("sub"))
-    try:
-        return await call_next(request)
-    finally:
-        current_user_id.reset(ctx_token)
+    Mirrors apps/mybookkeeper/backend/app/main.py — the access log is the
+    primary triage surface in production, on top of Sentry. Without it,
+    debugging a slow / 5xx endpoint requires `docker logs api` parsing.
+    """
+    start = time.perf_counter()
+    token = request.headers.get("Authorization", "").removeprefix("Bearer ").strip()
+    user_id = None
+    if token:
+        try:
+            payload = jwt.decode(
+                token,
+                settings.secret_key,
+                algorithms=["HS256"],
+                audience="fastapi-users:auth",
+            )
+            user_id = payload.get("sub")
+            ctx_token = current_user_id.set(user_id)
+            try:
+                response = await call_next(request)
+            finally:
+                current_user_id.reset(ctx_token)
+        except JWTError:
+            response = await call_next(request)
+    else:
+        response = await call_next(request)
+
+    ms = (time.perf_counter() - start) * 1000
+    logger.info(
+        "%s %s %s %.0fms user=%s",
+        request.method, request.url.path, response.status_code, ms, user_id or "anonymous",
+    )
+    if response.status_code >= 500:
+        logger.error("5xx on %s %s", request.method, request.url.path)
+    return response
 
 
 # Auth routes — JWT login enforces email verification (returns
@@ -142,3 +222,12 @@ if os.environ.get("MYJOBHUNTER_ENABLE_TEST_HELPERS") == "1":
     from app.api import test_helpers
 
     app.include_router(test_helpers.router, tags=["_test"])
+
+
+# Deploy verification — exposes the git commit + boot timestamp so the
+# deploy workflow can confirm which commit is live without parsing logs.
+# Mirrors apps/mybookkeeper/backend/app/main.py:/api/version. Note that
+# this app uses ``root_path="/api"`` so the public path is /api/version.
+@app.get("/version")
+async def version() -> dict[str, str]:
+    return {"commit": GIT_COMMIT, "timestamp": STARTUP_TIMESTAMP}

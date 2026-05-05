@@ -79,15 +79,15 @@ export default function Applications() {
 
   if (isLoading) {
     return (
-      <div className="p-6">
+      <main className="p-4 sm:p-8 space-y-6">
         <ApplicationsSkeleton />
-      </div>
+      </main>
     );
   }
 
   if (isError) {
     return (
-      <div className="p-6">
+      <main className="p-4 sm:p-8 space-y-6">
         <EmptyState
           icon={<FilePlus className="w-12 h-12 text-destructive" />}
           heading="Couldn't load applications"
@@ -97,7 +97,7 @@ export default function Applications() {
               : "Try refreshing the page."
           }
         />
-      </div>
+      </main>
     );
   }
 
@@ -106,21 +106,21 @@ export default function Applications() {
   if (items.length === 0) {
     return (
       <>
-        <div className="p-6">
+        <main className="p-4 sm:p-8 space-y-6">
           <EmptyState
             icon={<FilePlus className="w-12 h-12" />}
             heading={copy.heading}
             body={copy.body}
             action={{ label: copy.actionLabel, onClick: handleAddApplication }}
           />
-        </div>
+        </main>
         <AddApplicationDialog open={dialogOpen} onOpenChange={setDialogOpen} />
       </>
     );
   }
 
   return (
-    <div className="p-6 space-y-4">
+    <main className="p-4 sm:p-8 space-y-6">
       <header className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Applications</h1>
         <button
@@ -142,6 +142,6 @@ export default function Applications() {
         sorting={sorting}
         onSortingChange={setSorting}
       />
-    </div>
+    </main>
   );
 }

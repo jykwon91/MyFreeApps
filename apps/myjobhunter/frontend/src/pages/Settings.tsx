@@ -4,7 +4,7 @@ import { Badge, Button, Card } from "@platform/ui";
 
 export default function Settings() {
   return (
-    <div className="p-6 max-w-2xl space-y-6">
+    <main className="p-4 sm:p-8 space-y-6 max-w-2xl">
       <div>
         <h1 className="text-xl font-semibold">Settings</h1>
         <p className="text-sm text-muted-foreground mt-1">
@@ -62,6 +62,6 @@ export default function Settings() {
           Account management options coming in a future phase.
         </p>
       </Card>
-    </div>
+    </main>
   );
 }

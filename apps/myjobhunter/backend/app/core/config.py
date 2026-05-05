@@ -89,6 +89,16 @@ class Settings(BaseSettings):
     # bounded to prevent storage abuse.
     max_resume_upload_bytes: int = 25 * 1024 * 1024  # 25 MB
 
+    # Deployment environment — controls Sentry enforcement.
+    # Set to "production" in prod deployments; SENTRY_DSN becomes REQUIRED.
+    # Leave as "development" or "test" for local/CI environments.
+    # Mirrors apps/mybookkeeper/backend/app/core/config.py.
+    environment: str = "development"
+
+    # Sentry DSN — fail-loud at boot when ENVIRONMENT=production and this is empty.
+    # Mirrors MBK's observability contract; see app/core/observability.py.
+    sentry_dsn: str = ""
+
     model_config = {"env_file": ".env", "extra": "ignore"}
 
 

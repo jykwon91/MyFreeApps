@@ -24,6 +24,9 @@ dependencies = [
     "anthropic>=0.49.0",
     "pypdf>=4.0.0",
     "mammoth>=1.7.0",
+    # Sentry — fail-loud production enforcement. See app/core/observability.py.
+    # Mirrors apps/mybookkeeper/backend/pyproject.toml.
+    "sentry-sdk[fastapi]==2.58.0",
 ]
 
 [tool.uv]
