@@ -76,14 +76,45 @@ require_cmd() {
 # ──────────────────────────────────────────────────────────────────────────
 if [[ "$ROLLBACK" == "1" ]]; then
   yellow "Rolling back to per-app MinIO."
-  blue "Step 1/3: bringing down shared infra stack"
+
+  # Step 1: bring down the shared infra stack (frees port 9000 + the
+  # myfreeapps network).
+  blue "Step 1/5: bringing down shared infra stack"
   if [[ -f "$INFRA_COMPOSE" ]]; then
-    docker compose -f "$INFRA_COMPOSE" down || true
+    docker compose -f "$INFRA_COMPOSE" down --remove-orphans || true
   fi
-  blue "Step 2/3: bringing MBK back up against original volume"
+
+  # Step 2: bring MBK FULLY down. Without --remove-orphans, the
+  # ``mybookkeeper-minio`` container can survive from a previous partial
+  # run while the api / caddy / etc are recreated on a fresh
+  # ``mybookkeeper_default`` network — the new api then can't resolve
+  # the hostname ``minio``. We hit this exact failure on 2026-05-04.
+  blue "Step 2/5: bringing MBK fully down (clears stale networks + containers)"
+  docker compose -f "$MBK_COMPOSE" down --remove-orphans || true
+
+  # Step 3: restore MINIO_ENDPOINT in the env file if a forward run
+  # had rewritten it (idempotent — does nothing if already on the
+  # original value).
+  blue "Step 3/5: restoring MBK env if needed"
+  if [[ -f "$MBK_ENV_FILE" ]]; then
+    if [[ -f "${MBK_ENV_FILE}.bak" ]]; then
+      mv "${MBK_ENV_FILE}.bak" "$MBK_ENV_FILE"
+      green "  restored from ${MBK_ENV_FILE}.bak"
+    elif grep -q "^MINIO_ENDPOINT=myfreeapps-minio:9000$" "$MBK_ENV_FILE"; then
+      sed -i 's|^MINIO_ENDPOINT=myfreeapps-minio:9000$|MINIO_ENDPOINT=minio:9000|' "$MBK_ENV_FILE"
+      green "  reverted MINIO_ENDPOINT to minio:9000"
+    else
+      yellow "  no env rewrite to undo"
+    fi
+  fi
+
+  # Step 4: clean restart — every container joins the same fresh network.
+  blue "Step 4/5: bringing MBK back up against original volume"
   docker compose -f "$MBK_COMPOSE" up -d
-  blue "Step 3/3: verifying MBK is healthy"
-  sleep 5
+
+  # Step 5: wait for health.
+  blue "Step 5/5: verifying MBK is healthy"
+  sleep 15
   docker compose -f "$MBK_COMPOSE" ps
   green "Rollback complete. ${OLD_VOLUME} is intact and serving MBK again."
   exit 0
@@ -190,6 +221,41 @@ if ! docker ps --format '{{.Names}}' | grep -q "^${NEW_CONTAINER}\$"; then
   exit 1
 fi
 green "  ${NEW_CONTAINER} is running"
+
+# ──────────────────────────────────────────────────────────────────────────
+# Pre-flight for step 6: MBK's compose MUST already point at
+# myfreeapps-minio (PR B). If MBK's compose still has its own minio
+# service, step 6 fails on a port-9000 collision (we hit this on
+# 2026-05-04 — see PR-B description). Detect early and refuse to proceed.
+# ──────────────────────────────────────────────────────────────────────────
+blue "Step 4.5/9: verifying MBK compose has been refactored to consume shared MinIO"
+if grep -qE "^[[:space:]]*minio:" "$MBK_COMPOSE"; then
+  red "  $MBK_COMPOSE still defines its own 'minio:' service."
+  red "  This means PR B (MBK consume shared MinIO) hasn't landed yet."
+  red "  Bringing MBK back up here would collide on port 9000 with the shared service."
+  red ""
+  red "  Recover with:  sudo bash $0 --rollback"
+  red "  Then merge the matching MBK-compose-refactor PR before re-running migration."
+  exit 1
+fi
+if ! grep -qE "myfreeapps:[[:space:]]*$" "$MBK_COMPOSE" && \
+   ! grep -qE "^networks:[[:space:]]*$" "$MBK_COMPOSE"; then
+  yellow "  warning: MBK compose may not be wired to the shared 'myfreeapps' network."
+  yellow "  api will fail to resolve myfreeapps-minio if so. Continuing — step 7 will catch it."
+fi
+green "  MBK compose looks refactored ✓"
+
+# Update MBK env to point at the shared service (idempotent — overwrites
+# the value if present, otherwise no-op).
+if [[ -f "$MBK_ENV_FILE" ]] && ! grep -q "^MINIO_ENDPOINT=myfreeapps-minio:9000$" "$MBK_ENV_FILE"; then
+  if grep -q "^MINIO_ENDPOINT=" "$MBK_ENV_FILE"; then
+    sed -i.bak 's|^MINIO_ENDPOINT=.*|MINIO_ENDPOINT=myfreeapps-minio:9000|' "$MBK_ENV_FILE"
+    green "  updated MINIO_ENDPOINT in $MBK_ENV_FILE (backup at ${MBK_ENV_FILE}.bak)"
+  else
+    echo "MINIO_ENDPOINT=myfreeapps-minio:9000" >> "$MBK_ENV_FILE"
+    green "  appended MINIO_ENDPOINT to $MBK_ENV_FILE"
+  fi
+fi
 
 # ──────────────────────────────────────────────────────────────────────────
 # Step 5/9: verify data is readable from the new container
