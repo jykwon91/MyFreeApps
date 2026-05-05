@@ -20,8 +20,10 @@ class Settings(BaseAppSettings):
     minio_bucket: str = "mybookkeeper-files"
     email_from_address: str = "mybookkeeper6@gmail.com"
     email_from_name: str = "MyBookkeeper"
-    # MBK historically hardcoded Gmail SMTP. Keeping the same default for
-    # parity; flip email_backend to "smtp" in .env.docker to enable.
+    # MBK historically hardcoded SMTP — opt in by default. Operators
+    # who want to silence outbound mail in a local sandbox can override
+    # to "console" via .env.docker.
+    email_backend: str = "smtp"
     smtp_host: str = "smtp.gmail.com"
 
     # ------------------------------------------------------------------
