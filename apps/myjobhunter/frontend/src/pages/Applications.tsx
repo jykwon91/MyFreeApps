@@ -60,6 +60,7 @@ const COLUMNS: ColumnDef<Application>[] = [
     accessorKey: "fit_score",
     cell: ({ getValue }) => {
       const v = getValue<string | null>();
+      // fit_score is string | null; "" (empty string) is falsy but not "no score" — keep === null
       return <span className="text-sm">{v === null ? "—" : `${v}%`}</span>;
     },
   },

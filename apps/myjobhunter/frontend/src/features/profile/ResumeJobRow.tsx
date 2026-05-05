@@ -30,6 +30,7 @@ const STATUS_COLORS: Record<ResumeUploadJobStatus, BadgeColor> = {
 };
 
 function formatFileSize(bytes: number | null): string {
+  // bytes is number | null; 0 is a valid distinct value (0-byte file) — keep === null
   if (bytes === null) return "";
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -77,6 +78,7 @@ export default function ResumeJobRow({ job, onDownload, isDownloading }: ResumeJ
           <p className="text-sm font-medium truncate">{job.file_filename ?? "resume"}</p>
           <p className="text-xs text-muted-foreground">
             {formatTimestamp(job.created_at)}
+            {/* file_size_bytes is number | null; 0 bytes is a meaningful distinct value — keep !== null */}
             {job.file_size_bytes !== null ? ` · ${formatFileSize(job.file_size_bytes)}` : ""}
           </p>
           {mode.kind === "failed" ? (

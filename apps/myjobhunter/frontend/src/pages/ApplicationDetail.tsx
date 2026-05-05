@@ -107,6 +107,7 @@ export default function ApplicationDetail() {
       <div className="p-6 flex flex-col items-center text-center gap-4 py-20">
         <p className="text-4xl font-bold text-muted-foreground">{errorStatus ?? 404}</p>
         <h1 className="text-xl font-semibold">
+          {/* errorStatus is number | null; null means no HTTP status extracted (e.g. network error) — treat same as 404 */}
           {errorStatus === 404 || errorStatus === null
             ? "I couldn't find that application — it may have been deleted."
             : "Couldn't load that application."}
