@@ -152,7 +152,37 @@ class TestLifespanGuardOrder:
         )
 
 
-# NOTE: TestObservabilityWrapperShape (assertions that
-# apps/{app}/backend/app/core/observability.py is a thin wrapper around
-# platform_shared.core.observability) lives in a follow-up PR — depends
-# on PR #291 (init_sentry extraction) merging first.
+@pytest.mark.parametrize("app", _APPS)
+class TestObservabilityWrapperShape:
+    """Each app's app/core/observability.py must be a thin wrapper around
+    platform_shared.core.observability.init_sentry — not a re-implementation."""
+
+    def test_wrapper_imports_shared(self, app: str) -> None:
+        wrapper_src = _read("apps", app, "backend", "app", "core", "observability.py")
+        assert "from platform_shared.core.observability import" in wrapper_src, (
+            f"{app}/backend/app/core/observability.py must import from "
+            f"platform_shared.core.observability — see PR #291 for the "
+            f"canonical wrapper shape."
+        )
+
+    def test_wrapper_does_not_import_sentry_sdk_directly(self, app: str) -> None:
+        wrapper_src = _read("apps", app, "backend", "app", "core", "observability.py")
+        # Match an actual `import sentry_sdk` line — the wrapper must
+        # delegate to the shared layer, not re-import sentry_sdk itself.
+        # Skip comment lines so docstrings mentioning sentry_sdk don't
+        # trigger a false-positive.
+        for line in wrapper_src.splitlines():
+            stripped = line.strip()
+            if not stripped or stripped.startswith("#") or stripped.startswith('"""'):
+                continue
+            assert not stripped.startswith("import sentry_sdk"), (
+                f"{app}/backend/app/core/observability.py imports sentry_sdk "
+                f"directly. The wrapper must delegate to "
+                f"platform_shared.core.observability — sentry_sdk should only "
+                f"be imported there."
+            )
+            assert not stripped.startswith("from sentry_sdk"), (
+                f"{app}/backend/app/core/observability.py imports from "
+                f"sentry_sdk directly. Delegate to "
+                f"platform_shared.core.observability."
+            )
