@@ -9,11 +9,9 @@ const { fileMock, generateMock } = vi.hoisted(() => ({
 }));
 
 vi.mock("jszip", () => ({
-  default: vi.fn().mockImplementation(function () {
-    // eslint-disable-next-line @typescript-eslint/no-this-alias
-    const self = this as { file: typeof fileMock; generateAsync: typeof generateMock };
-    self.file = fileMock;
-    self.generateAsync = generateMock;
+  default: vi.fn().mockImplementation(function (this: { file: typeof fileMock; generateAsync: typeof generateMock }) {
+    this.file = fileMock;
+    this.generateAsync = generateMock;
   }),
 }));
 
