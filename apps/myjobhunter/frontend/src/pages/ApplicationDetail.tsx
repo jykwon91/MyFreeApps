@@ -1,7 +1,13 @@
 import { useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { ChevronLeft, Plus, Trash2, ExternalLink as ExternalLinkIcon } from "lucide-react";
-import { Badge, showSuccess, showError, extractErrorMessage } from "@platform/ui";
+import {
+  Badge,
+  showSuccess,
+  showError,
+  extractErrorMessage,
+  formatSalaryRange,
+} from "@platform/ui";
 import ApplicationDetailSkeleton from "@/features/applications/ApplicationDetailSkeleton";
 import DocumentList from "@/features/documents/DocumentList";
 import DocumentUploadDialog from "@/features/documents/DocumentUploadDialog";
@@ -50,22 +56,6 @@ function deriveStatus(events: ApplicationEvent[] | undefined): ApplicationEventT
 function formatDate(iso: string | null): string {
   if (!iso) return "—";
   return new Date(iso).toLocaleString();
-}
-
-function formatSalaryRange(
-  min: string | null,
-  max: string | null,
-  currency: string,
-  period: string | null,
-): string {
-  if (!min && !max) return "—";
-  const parts: string[] = [];
-  if (min) parts.push(min);
-  if (min && max) parts.push("–");
-  if (max && max !== min) parts.push(max);
-  parts.push(currency);
-  if (period) parts.push(`/ ${period}`);
-  return parts.join(" ");
 }
 
 function Field({ label, value }: { label: string; value: string }) {
