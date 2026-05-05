@@ -1,16 +1,23 @@
 """Tests for platform_shared.services.email_service.
 
-Covers the STARTTLS hardening fix (CWE-327): starttls() must be called with
-an explicit ssl.SSLContext rather than no-arg (which is vulnerable to
-STARTTLS stripping by a MITM that can downgrade the connection before the
-upgrade handshake).
+Covers:
+- STARTTLS hardening (CWE-327): starttls() must be called with an explicit
+  ssl.SSLContext rather than no-arg (which is vulnerable to STARTTLS stripping
+  by a MITM that can downgrade the connection before the upgrade handshake).
+- Best-effort send() returning bool (for non-critical emails).
+- Critical-path send_or_raise() raising on any failure (for verification,
+  password reset, and other emails where silent loss leaves the user broken).
 """
 import ssl
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from platform_shared.services.email_service import EmailService
+from platform_shared.services.email_service import (
+    EmailNotConfiguredError,
+    EmailSendError,
+    EmailService,
+)
 
 
 def _configured_service() -> EmailService:
@@ -110,3 +117,65 @@ class TestEmailServiceBehaviour:
             result = service.send(["x@example.com"], "subj", "<p>body</p>")
 
         assert result is True
+
+
+class TestSendOrRaise:
+    """Critical-path send method — raises rather than silently returning False."""
+
+    def test_raises_email_not_configured_when_creds_missing(self) -> None:
+        service = EmailService()
+        with pytest.raises(EmailNotConfiguredError):
+            service.send_or_raise(["x@example.com"], "subj", "<p>body</p>")
+
+    def test_raises_value_error_for_empty_recipients(self) -> None:
+        service = _configured_service()
+        with pytest.raises(ValueError):
+            service.send_or_raise([], "subj", "<p>body</p>")
+
+    def test_raises_email_send_error_on_smtp_exception(self) -> None:
+        service = _configured_service()
+        with patch("smtplib.SMTP", side_effect=OSError("connection refused")):
+            with pytest.raises(EmailSendError) as exc:
+                service.send_or_raise(["x@example.com"], "subj", "<p>body</p>")
+        assert "connection refused" in str(exc.value)
+
+    def test_chains_underlying_exception(self) -> None:
+        """The original SMTP exception should be preserved as __cause__ for
+        Sentry diagnostics."""
+        service = _configured_service()
+        underlying = OSError("network down")
+        with patch("smtplib.SMTP", side_effect=underlying):
+            with pytest.raises(EmailSendError) as exc:
+                service.send_or_raise(["x@example.com"], "subj", "<p>body</p>")
+        assert exc.value.__cause__ is underlying
+
+    def test_returns_none_on_success(self) -> None:
+        service = _configured_service()
+        mock_server = MagicMock()
+
+        with patch("smtplib.SMTP") as mock_smtp_cls:
+            mock_smtp_cls.return_value.__enter__ = lambda s: mock_server
+            mock_smtp_cls.return_value.__exit__ = MagicMock(return_value=False)
+
+            result = service.send_or_raise(["x@example.com"], "subj", "<p>body</p>")
+
+        assert result is None  # explicit no-return on success
+
+    def test_inheritance(self) -> None:
+        assert issubclass(EmailNotConfiguredError, RuntimeError)
+        assert issubclass(EmailSendError, RuntimeError)
+
+
+class TestSendDelegatesToSendOrRaise:
+    """send() should swallow failures from send_or_raise() and return False."""
+
+    def test_send_swallows_email_not_configured(self) -> None:
+        service = EmailService()
+        # is_configured() returns False, so send_or_raise raises
+        # EmailNotConfiguredError, send() returns False.
+        assert service.send(["x@example.com"], "subj", "<p>body</p>") is False
+
+    def test_send_swallows_send_error(self) -> None:
+        service = _configured_service()
+        with patch("smtplib.SMTP", side_effect=OSError("network")):
+            assert service.send(["x@example.com"], "subj", "<p>body</p>") is False
