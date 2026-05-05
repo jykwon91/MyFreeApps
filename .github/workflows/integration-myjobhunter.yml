@@ -54,6 +54,15 @@ jobs:
           MYJOBHUNTER_ENABLE_TEST_HELPERS=1
           EOF
 
+      - name: Create shared infra network
+        # apps/myjobhunter/docker-compose.yml declares `myfreeapps` as an
+        # external network (it's owned by the top-level infra/docker-compose
+        # stack at runtime, where shared MinIO lives). In CI we don't run
+        # the infra stack, so we create the network manually before bringing
+        # the app stack up. Without this, `docker compose up` fails with
+        # "network myfreeapps declared as external, but could not be found".
+        run: docker network create myfreeapps || true
+
       - name: Build and start stack
         working-directory: apps/myjobhunter
         env:
