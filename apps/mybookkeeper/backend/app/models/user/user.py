@@ -1,16 +1,17 @@
-import enum
 from datetime import datetime
 
 from fastapi_users.db import SQLAlchemyBaseUserTableUUID
 from sqlalchemy import Boolean, DateTime, SmallInteger, String, Text, Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from platform_shared.core.permissions import Role
+
 from app.db.base import Base
 
-
-class Role(str, enum.Enum):
-    ADMIN = "admin"
-    USER = "user"
+# Re-export for backwards compatibility — many MBK files import Role
+# from `app.models.user.user`. The canonical location is now
+# `platform_shared.core.permissions.Role`.
+__all__ = ["User", "Role"]
 
 
 class User(SQLAlchemyBaseUserTableUUID, Base):

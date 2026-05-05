@@ -2,11 +2,17 @@ import uuid
 from datetime import datetime
 
 from fastapi_users.db import SQLAlchemyBaseUserTableUUID
-from sqlalchemy import Boolean, DateTime, SmallInteger, String
+from sqlalchemy import Boolean, DateTime, Enum as SAEnum, SmallInteger, String
 from sqlalchemy.orm import Mapped, mapped_column
+
+from platform_shared.core.permissions import Role
 
 from app.core.encrypted_string_type import EncryptedString
 from app.db.base import Base
+
+# Re-export for downstream callers that prefer ``from app.models.user.user
+# import Role`` over reaching into platform_shared directly. Mirrors MBK.
+__all__ = ["User", "Role"]
 
 
 class User(SQLAlchemyBaseUserTableUUID, Base):
@@ -20,6 +26,17 @@ class User(SQLAlchemyBaseUserTableUUID, Base):
     __tablename__ = "users"
 
     display_name: Mapped[str] = mapped_column(String(100), default="")
+
+    # Platform-level role (ADMIN | USER). Gates platform-wide admin
+    # routes via ``platform_shared.core.permissions.require_role``. Per-
+    # organization roles (when MJH ports the orgs/members system) layer
+    # on top of this — they don't replace it.
+    role: Mapped[Role] = mapped_column(
+        SAEnum(Role, name="user_role", values_callable=lambda enum_cls: [e.value for e in enum_cls]),
+        default=Role.USER,
+        server_default=Role.USER.value,
+        nullable=False,
+    )
 
     # TOTP secret + recovery codes are stored encrypted at rest via the
     # ``EncryptedString`` TypeDecorator (Fernet, MJH PII key family). The
