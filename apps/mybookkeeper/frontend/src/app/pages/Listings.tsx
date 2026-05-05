@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import { Plus } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
-import EmptyState from "@/shared/components/ui/EmptyState";
 import AlertBox from "@/shared/components/ui/AlertBox";
 import LoadingButton from "@/shared/components/ui/LoadingButton";
 import { useGetListingsQuery } from "@/shared/store/listingsApi";
@@ -10,11 +9,10 @@ import { useGetPropertiesQuery } from "@/shared/store/propertiesApi";
 import { LISTING_PAGE_SIZE, LISTING_STATUSES } from "@/shared/lib/listing-labels";
 import type { ListingStatus } from "@/shared/types/listing/listing-status";
 import type { ListingSummary } from "@/shared/types/listing/listing-summary";
-import ListingsSkeleton from "@/app/features/listings/ListingsSkeleton";
 import ListingStatusFilter from "@/app/features/listings/ListingStatusFilter";
-import ListingCard from "@/app/features/listings/ListingCard";
-import ListingTableRow from "@/app/features/listings/ListingTableRow";
 import ListingForm from "@/app/features/listings/ListingForm";
+import { useListingsListMode } from "@/app/features/listings/useListingsListMode";
+import ListingsListBody from "@/app/features/listings/ListingsListBody";
 
 const STATUS_PARAM = "status";
 
@@ -69,6 +67,8 @@ export default function Listings() {
 
   const propertyName = (l: ListingSummary) => propertyById.get(l.property_id) ?? "Unknown property";
 
+  const mode = useListingsListMode({ isLoading, isError, listingCount: listings.length });
+
   return (
     <main className="p-4 sm:p-8 space-y-6">
       <SectionHeader
@@ -103,59 +103,14 @@ export default function Listings() {
         </AlertBox>
       ) : null}
 
-      {isLoading ? (
-        <ListingsSkeleton />
-      ) : listings.length === 0 && !isError ? (
-        <EmptyState message="No listings yet. Create your first one to start tracking inquiries from Furnished Finder, Travel Nurse Housing, and direct contacts." />
-      ) : (
-        <>
-          {/* Mobile: cards */}
-          <ul className="md:hidden space-y-3" data-testid="listings-mobile">
-            {listings.map((listing) => (
-              <li key={listing.id}>
-                <ListingCard listing={listing} propertyName={propertyName(listing)} />
-              </li>
-            ))}
-          </ul>
-
-          {/* Desktop: table */}
-          <div className="hidden md:block border rounded-lg overflow-hidden" data-testid="listings-desktop">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/50 text-left text-xs uppercase text-muted-foreground">
-                <tr>
-                  <th className="px-4 py-2 font-medium">Title</th>
-                  <th className="px-4 py-2 font-medium">Property</th>
-                  <th className="px-4 py-2 font-medium">Room Type</th>
-                  <th className="px-4 py-2 font-medium">Status</th>
-                  <th className="px-4 py-2 font-medium text-right">Monthly</th>
-                </tr>
-              </thead>
-              <tbody>
-                {listings.map((listing) => (
-                  <ListingTableRow
-                    key={listing.id}
-                    listing={listing}
-                    propertyName={propertyName(listing)}
-                  />
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {hasMore ? (
-            <div className="flex justify-center">
-              <LoadingButton
-                variant="secondary"
-                onClick={handleLoadMore}
-                isLoading={isFetching}
-                loadingText="Loading..."
-              >
-                Load more
-              </LoadingButton>
-            </div>
-          ) : null}
-        </>
-      )}
+      <ListingsListBody
+        mode={mode}
+        listings={listings}
+        propertyName={propertyName}
+        hasMore={hasMore}
+        isFetching={isFetching}
+        onLoadMore={handleLoadMore}
+      />
 
       {showForm ? (
         <ListingForm

@@ -359,7 +359,8 @@
         "SourceBadge.test.tsx",
         "ChannelsSection.test.tsx",
         "ChannelListingFormModal.test.tsx",
-        "channel-labels.test.ts"
+        "channel-labels.test.ts",
+        "usePageListModes.test.ts"
       ],
       "e2e_specs": [
         "listings-api.spec.ts",
@@ -476,7 +477,8 @@
         "PublicInquiryForm.test.tsx",
         "ReplyTemplatesManager.test.tsx",
         "inquiry-quality.test.ts",
-        "reply-template-renderer.test.ts"
+        "reply-template-renderer.test.ts",
+        "usePageListModes.test.ts"
       ],
       "e2e_specs": [
         "inquiries.spec.ts",
@@ -558,7 +560,8 @@
       "frontend_tests": [
         "Tenants.test.tsx",
         "TenantStatusBadge.test.tsx",
-        "EndTenancyDialog.test.tsx"
+        "EndTenancyDialog.test.tsx",
+        "usePageListModes.test.ts"
       ],
       "e2e_specs": [
         "tenants.spec.ts"
@@ -587,7 +590,8 @@
         "InsuranceExpirationBadge.test.tsx",
         "ListingInsuranceSection.test.tsx",
         "InsurancePolicies.test.tsx",
-        "InsurancePolicyDetail.test.tsx"
+        "InsurancePolicyDetail.test.tsx",
+        "usePageListModes.test.ts"
       ],
       "e2e_specs": [
         "insurance-policies.spec.ts"
@@ -634,7 +638,8 @@
         "AISuggestionsPanel.test.tsx",
         "LeaseTemplateUploadDialog.test.tsx",
         "AttachmentViewer.test.tsx",
-        "useAttachmentViewMode.test.ts"
+        "useAttachmentViewMode.test.ts",
+        "usePageListModes.test.ts"
       ],
       "e2e_specs": [
         "lease-templates.spec.ts",
@@ -731,7 +736,8 @@
       "frontend_tests": [
         "Vendors.test.tsx",
         "VendorDetail.test.tsx",
-        "VendorForm.test.tsx"
+        "VendorForm.test.tsx",
+        "usePageListModes.test.ts"
       ],
       "e2e_specs": [
         "vendors-api.spec.ts",

@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Plus } from "lucide-react";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
-import EmptyState from "@/shared/components/ui/EmptyState";
 import AlertBox from "@/shared/components/ui/AlertBox";
 import Button from "@/shared/components/ui/Button";
 import LoadingButton from "@/shared/components/ui/LoadingButton";
@@ -12,12 +11,11 @@ import {
   VENDOR_PAGE_SIZE,
 } from "@/shared/lib/vendor-labels";
 import type { VendorCategory } from "@/shared/types/vendor/vendor-category";
-import VendorsListSkeleton from "@/app/features/vendors/VendorsListSkeleton";
 import VendorCategoryFilter from "@/app/features/vendors/VendorCategoryFilter";
 import VendorPreferredToggle from "@/app/features/vendors/VendorPreferredToggle";
-import VendorCard from "@/app/features/vendors/VendorCard";
-import VendorRow from "@/app/features/vendors/VendorRow";
 import VendorForm from "@/app/features/vendors/VendorForm";
+import { useVendorsListMode } from "@/app/features/vendors/useVendorsListMode";
+import VendorsListBody from "@/app/features/vendors/VendorsListBody";
 
 const CATEGORY_PARAM = "category";
 const PREFERRED_PARAM = "preferred";
@@ -57,6 +55,8 @@ export default function Vendors() {
   const hasMore = data?.has_more ?? false;
   const isFiltered = category !== null || preferredOnly;
   const showCategoryBadge = category === null;
+
+  const mode = useVendorsListMode({ isLoading, isError, vendorCount: vendors.length });
 
   function handleCategoryChange(next: VendorCategory | null) {
     const params = new URLSearchParams(searchParams);
@@ -125,70 +125,15 @@ export default function Vendors() {
         </AlertBox>
       ) : null}
 
-      {isLoading ? (
-        <VendorsListSkeleton />
-      ) : vendors.length === 0 && !isError ? (
-        <EmptyState
-          message={
-            isFiltered
-              ? "No vendors match this filter. Try a different category or clear preferred-only."
-              : "No vendors yet — your rolodex is empty. Click \"Add vendor\" above to get started."
-          }
-        />
-      ) : (
-        <>
-          {/* Mobile: cards */}
-          <ul className="md:hidden space-y-3" data-testid="vendors-mobile">
-            {vendors.map((vendor) => (
-              <li key={vendor.id}>
-                <VendorCard
-                  vendor={vendor}
-                  showCategoryBadge={showCategoryBadge}
-                />
-              </li>
-            ))}
-          </ul>
-
-          {/* Desktop: table */}
-          <div
-            className="hidden md:block border rounded-lg overflow-hidden"
-            data-testid="vendors-desktop"
-          >
-            <table className="w-full text-sm">
-              <thead className="bg-muted/50 text-left text-xs uppercase text-muted-foreground">
-                <tr>
-                  <th className="px-4 py-2 font-medium">Name</th>
-                  <th className="px-4 py-2 font-medium">Category</th>
-                  <th className="px-4 py-2 font-medium">Hourly Rate</th>
-                  <th className="px-4 py-2 font-medium">Last Used</th>
-                </tr>
-              </thead>
-              <tbody>
-                {vendors.map((vendor) => (
-                  <VendorRow
-                    key={vendor.id}
-                    vendor={vendor}
-                    showCategoryBadge={showCategoryBadge}
-                  />
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {hasMore ? (
-            <div className="flex justify-center">
-              <LoadingButton
-                variant="secondary"
-                onClick={handleLoadMore}
-                isLoading={isFetching}
-                loadingText="Loading..."
-              >
-                Load more
-              </LoadingButton>
-            </div>
-          ) : null}
-        </>
-      )}
+      <VendorsListBody
+        mode={mode}
+        vendors={vendors}
+        isFiltered={isFiltered}
+        showCategoryBadge={showCategoryBadge}
+        hasMore={hasMore}
+        isFetching={isFetching}
+        onLoadMore={handleLoadMore}
+      />
 
       {showCreateForm ? (
         <VendorForm onClose={() => setShowCreateForm(false)} />
