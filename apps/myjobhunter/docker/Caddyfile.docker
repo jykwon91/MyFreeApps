@@ -9,9 +9,12 @@
 }
 
 # HTTP-only on :80 — TLS is terminated by host Caddy before traffic reaches
-# this container. The host Caddy must reverse-proxy the app domain to this
-# container with the original Host header preserved.
-{$DOMAIN:localhost} {
+# this container. Using a port-only address (`:80`) instead of a hostname
+# disables Caddy's auto-HTTPS behaviour: with `{$DOMAIN}` Caddy issues a
+# 308 redirect from HTTP→HTTPS, but host Caddy proxies plain HTTP into
+# this container, so the redirect bounces back to the same URL → infinite
+# loop. Mirrors apps/mybookkeeper/docker/Caddyfile.docker.
+:80 {
     # ----------------------------------------------------------------------
     # Security response headers — applied to every response (API + SPA).
     #
