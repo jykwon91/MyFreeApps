@@ -1,17 +1,9 @@
 # Tech Debt
 
 > Last scanned: 2026-05-04
-> Issues: 0 critical, 7 high, 6 medium (1 deferred + 5 active), 0 low
+> Issues: 0 critical, 5 high, 6 medium (1 deferred + 5 active), 0 low
 
 ## High
-
-### [Auth] LOGIN_BLOCKED_UNVERIFIED audit event is silently lost on rollback
-**Effort:** XS
-**Location:** `apps/mybookkeeper/backend/app/api/totp.py` — `totp_login()` around line 143; same pattern in MJH `apps/myjobhunter/backend/app/api/totp.py`
-**Problem:** When an unverified user hits `POST /auth/totp/login`, the handler calls `log_auth_event(... LOGIN_BLOCKED_UNVERIFIED ...)` but immediately raises `HTTPException` without calling `await db.commit()`. FastAPI's exception handler rolls back the session, so the audit row is never persisted. Every other early-exit branch in the same function commits before raising. Pre-existing; not introduced by PR fix/audit-log-gaps-pii-cleanup.
-**Recommendation:** Add `await db.commit()` before the `raise HTTPException` on the `not user.is_verified` branch in both `apps/mybookkeeper/backend/app/api/totp.py` and `apps/myjobhunter/backend/app/api/totp.py`.
-
----
 
 ### [E2E] Lease import E2E test skips actual file upload (requires MinIO)
 **Effort:** S
@@ -50,24 +42,6 @@
 **Location:** `apps/mybookkeeper/backend/tests/test_auth_events_integration.py::test_totp_enable_creates_event`
 **Problem:** `POST /auth/totp/verify` returns 400 in this integration test. The test encrypts a TOTP secret, generates a valid TOTP code, and verifies — but the backend rejects the code. Likely a timing window (TOTP codes expire every 30s and the test may be running near a boundary) or the encrypted secret being decoded differently than expected in the test environment. Worth re-checking after PR #191 (TOTP SHA-256 migration) — the algorithm column may interact with the test fixture.
 **Recommendation:** Investigate whether the test needs to use `pyotp.TOTP(secret).at(dt.datetime.now(), 0)` + the ±1 window the backend allows, or whether the TOTP verify endpoint's clock drift tolerance differs between local and CI.
-
----
-
-### [Receipts] next_number in rent_receipt_sequence_repo.py has no unit-test coverage
-
-**Effort:** S
-**Location:** `apps/mybookkeeper/backend/app/repositories/receipts/rent_receipt_sequence_repo.py` — `next_number()` method
-**Problem:** The `next_number` method uses a PostgreSQL-specific `INSERT ... ON CONFLICT DO UPDATE ... RETURNING` statement that is not supported by SQLite. The repository test file (`tests/test_receipt_sequence_repo.py`) only tests the pure `format_receipt_number` function. The `next_number` path is covered only by E2E tests. If the SQL changes (e.g., bug in conflict target or increment expression), unit tests will not catch it.
-**Recommendation:** Add an integration test for `next_number` using `@pytest.mark.integration` and a PostgreSQL fixture (or a test-only helper that runs the same SQL against a real Postgres instance). Until then, treat E2E tests as the sole regression gate for the sequence increment logic.
-
----
-
-### [Receipts] send_receipt uses txn.applicant_id across session boundary without explicit local capture
-
-**Effort:** XS
-**Location:** `apps/mybookkeeper/backend/app/services/leases/receipt_service.py` — `send_receipt()`, around the `_send_receipt_email` call
-**Problem:** `txn.applicant_id` is read after the `unit_of_work()` context exits. This works today because `expire_on_commit=False` is set on the session factory, which keeps loaded attribute values accessible after the session closes. However the dependency is implicit — future changes to session configuration (e.g., reverting `expire_on_commit`) would cause a `DetachedInstanceError` at that line without any obvious connection to the root cause.
-**Recommendation:** Capture `applicant_id = txn.applicant_id` as a local variable inside the `unit_of_work()` block before the context exits, making the dependency explicit and session-safe by construction.
 
 ---
 
@@ -123,6 +97,14 @@
 **Location:** ~64 files across `apps/mybookkeeper/frontend/src/` (per `grep -rln "=== null\|!== null\|=== undefined"`)
 **Problem:** Per the new global config rule (jkwon-claude-config #92), `if (!x)` is preferred over `if (x === null)` when the type is `T | null` and `T` is always truthy. Reserve explicit comparisons for cases where falsy would over-match (distinguishing `null` from `""`, `0`, or `undefined` when those are valid values). Many of the 64 sites are legitimate; many are not.
 **Recommendation:** Per-file audit — read each line, determine if the type would over-match with truthy. If yes, keep explicit. If no, switch to truthy. Group fixes by domain into ≤3 PRs.
+
+---
+
+## Resolved (2026-05-04 tech debt PR)
+
+- ~~[Auth] LOGIN_BLOCKED_UNVERIFIED audit event silently lost on rollback~~ — The `is_verified` branch in both MBK and MJH `totp.py` already had `await db.commit()`. Fixed the `TOTP_VERIFY_FAILURE` branch in MBK `totp.py` which was missing a commit before its raise (MJH already had it). All early-exit audit branches now commit before raising.
+- ~~[Receipts] send_receipt uses txn.applicant_id across session boundary~~ — captured as `txn_applicant_id: uuid.UUID` local variable inside the phase-1 `AsyncSessionLocal()` block; both cross-boundary references updated to use the local.
+- ~~[Receipts] next_number has no unit-test coverage~~ — added `TestNextNumber` integration test class in `tests/test_receipt_sequence_repo.py` with 4 cases: first call returns 1, sequential calls increment, year rollover resets to 1, different users are isolated. Tests skip on SQLite via `@pytest.mark.skipif`; run against real Postgres with `DATABASE_URL` set.
 
 ---
 
