@@ -69,6 +69,20 @@ async def get_by_slug(db: AsyncSession, slug: str) -> Listing | None:
     return result.scalar_one_or_none()
 
 
+async def slug_exists_including_archived(db: AsyncSession, slug: str) -> bool:
+    """Return True iff a listing with this slug exists (active OR soft-deleted).
+
+    Operator-diagnostic helper used by the public-inquiry route to log the
+    *reason* a 404 fired: was the slug typo'd into a never-existed value,
+    or did the host archive a still-published external link? Without this
+    distinction the operator has to SSH into the DB to triage every 404.
+    """
+    result = await db.execute(
+        select(Listing.id).where(Listing.slug == slug).limit(1)
+    )
+    return result.scalar_one_or_none() is not None
+
+
 async def list_by_organization(
     db: AsyncSession,
     organization_id: uuid.UUID,

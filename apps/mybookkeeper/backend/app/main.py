@@ -52,9 +52,31 @@ logging.basicConfig(
 logger = logging.getLogger("app")
 
 
+def _check_turnstile_configured() -> None:
+    """Fail loud at boot if Turnstile is not configured in a non-development environment.
+
+    Turnstile is the CAPTCHA gate on /auth/register and /auth/forgot-password.
+    Running without it in production is a credential-stuffing vulnerability.
+    In development/test the key is intentionally empty — the require_turnstile
+    dependency short-circuits when the key is absent, which is the desired CI/dev behaviour.
+
+    Raises:
+        RuntimeError: If ``ENVIRONMENT`` is not ``development`` or ``test`` and
+            ``TURNSTILE_SECRET_KEY`` is not set.
+    """
+    if settings.environment not in ("development", "test") and not settings.turnstile_secret_key:
+        raise RuntimeError(
+            "TURNSTILE_SECRET_KEY must be set in non-development environments. "
+            "Cloudflare Turnstile is the CAPTCHA gate on /auth/register and "
+            "/auth/forgot-password — running prod without it is a credential-stuffing "
+            "vulnerability. Set TURNSTILE_SECRET_KEY or set ENVIRONMENT=development."
+        )
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     init_sentry()
+    _check_turnstile_configured()
     register_audit_listeners()
     ensure_bucket()
     worker_task: asyncio.Task[None] | None = None
@@ -158,9 +180,10 @@ app.include_router(listings.router)
 app.include_router(listings.channels_router)
 app.include_router(listings.channel_listings_router)
 app.include_router(blackouts.router)
-# Calendar router declares its own ``/api`` prefix because the outbound
-# iCal URL must be unauthenticated and follow a stable channel-facing
-# path that does not depend on auth-router ordering.
+# Public iCal feed — unauthenticated, follows a stable channel-facing
+# path (``/calendar/{token}.ics``). Mounted separately from the
+# authenticated calendar viewer below so the two have independent
+# dependency stacks.
 app.include_router(calendar.router)
 # Authenticated unified calendar viewer — declared separately because it
 # has different auth/rate-limit needs from the public iCal feed above.
@@ -168,8 +191,10 @@ app.include_router(calendar.events_router)
 # Phase 2 — Gmail booking review queue.
 app.include_router(calendar.review_queue_router)
 app.include_router(inquiries.router)
-# Public inquiry form (T0) — unauthenticated; lives under /api so the Vite
-# dev proxy + Caddy production reverse proxy both forward it correctly.
+# Public inquiry form (T0) — unauthenticated. The router declares no prefix
+# because production Caddy (``uri strip_prefix /api``) and the Vite dev proxy
+# already drop the ``/api`` segment before requests reach FastAPI. See the
+# detailed comment in ``api/public_inquiries.py``.
 app.include_router(public_inquiries.router)
 app.include_router(applicants.router)
 app.include_router(lease_templates.router)

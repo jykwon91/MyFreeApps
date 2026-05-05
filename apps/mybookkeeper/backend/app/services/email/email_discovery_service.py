@@ -119,7 +119,11 @@ async def discover_gmail_emails(ctx: RequestContext) -> DiscoverResult:
                 )
                 raise GmailAuthExpiredError(str(exc)) from exc
             except Exception:
-                logger.warning("Failed to enumerate sources for email %s, skipping", message_id)
+                logger.warning(
+                    "Failed to enumerate sources for email %s, skipping",
+                    message_id,
+                    exc_info=True,
+                )
                 continue
 
             bounce_result = _detect_bounce(bounce_detector, sources_data)

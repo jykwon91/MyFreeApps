@@ -180,6 +180,7 @@
         "test_email_sync_worker.py",
         "test_gmail_auth_expired.py",
         "test_email_discovery_last_synced.py",
+        "test_silent_fail_audit_fixes.py",
         "services/email/test_bounce_detector.py",
         "services/email/test_discovery_bounce_filter.py"
       ],
@@ -934,7 +935,8 @@
         "frontend/src/shared/types/version/"
       ],
       "backend_tests": [
-        "test_version_endpoint.py"
+        "test_version_endpoint.py",
+        "test_turnstile_boot_check.py"
       ],
       "frontend_tests": [
         "VersionTag.test.tsx"

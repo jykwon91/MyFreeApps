@@ -41,7 +41,7 @@ interface FormValues {
   answer: string;
 }
 
-interface Props {
+export interface ScreeningAnswerDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   existing?: ScreeningAnswer;
@@ -54,7 +54,7 @@ export default function ScreeningAnswerDialog({
   onOpenChange,
   existing,
   existingKeys = [],
-}: Props) {
+}: ScreeningAnswerDialogProps) {
   const [createAnswer, { isLoading: isCreating }] = useCreateScreeningAnswerMutation();
   const [updateAnswer, { isLoading: isUpdating }] = useUpdateScreeningAnswerMutation();
   const isLoading = isCreating || isUpdating;
