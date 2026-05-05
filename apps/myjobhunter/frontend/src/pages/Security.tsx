@@ -1,7 +1,10 @@
 import { useState } from "react";
-import { Trash2 } from "lucide-react";
+import { X, Trash2 } from "lucide-react";
+import { AlertBox } from "@platform/ui";
 
+import { useDismissable } from "@/hooks/useDismissable";
 import TwoFactorSetup from "@/features/security/TwoFactorSetup";
+import DisplayNameSetting from "@/features/security/DisplayNameSetting";
 import DataExportButton from "@/features/security/DataExportButton";
 import DeleteAccountModal from "@/features/security/DeleteAccountModal";
 
@@ -9,19 +12,40 @@ import DeleteAccountModal from "@/features/security/DeleteAccountModal";
  * Settings → Security page.
  *
  * Sections (top → bottom):
- *  - Two-Factor Authentication (PR C5) — TOTP enrollment / disable
- *  - Data & Privacy (PR C6) — export your data, delete your account
+ *  - Intro AlertBox about 2FA (dismissable, persisted in localStorage)
+ *  - Display Name setting — shown in profile and on exported data
+ *  - Two-Factor Authentication — TOTP enrollment / disable
+ *  - Data & Privacy — export your data, delete your account
  */
 export default function Security() {
+  const { dismissed: infoDismissed, dismiss: dismissInfo } = useDismissable(
+    "mjh-security-info-dismissed",
+  );
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   return (
     <div className="p-6 max-w-2xl space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold">Security</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Manage your account security, data, and privacy.
-        </p>
+      <h1 className="text-2xl font-semibold">Security</h1>
+
+      {!infoDismissed && (
+        <AlertBox variant="info" className="flex items-center justify-between gap-3">
+          <span>
+            Two-factor authentication adds an extra layer of security to your account. We
+            recommend enabling it to protect your job applications and personal data.
+          </span>
+          <button
+            type="button"
+            onClick={dismissInfo}
+            aria-label="Dismiss"
+            className="p-1 rounded hover:bg-blue-100 dark:hover:bg-blue-900 text-blue-800 dark:text-blue-200 shrink-0"
+          >
+            <X size={14} />
+          </button>
+        </AlertBox>
+      )}
+
+      <div className="bg-card border rounded-lg p-6">
+        <DisplayNameSetting />
       </div>
 
       <div className="bg-card border rounded-lg p-6">
