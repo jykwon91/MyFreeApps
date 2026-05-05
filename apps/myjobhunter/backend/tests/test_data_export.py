@@ -144,9 +144,9 @@ async def test_export_returns_user_data(db: AsyncSession) -> None:
     db.add(Document(
         user_id=user.id,
         application_id=application.id,
-        document_type="cover_letter",
+        title="Cover letter",
+        kind="cover_letter",
         file_path="/tmp/cover.pdf",
-        generated_by="user",
     ))
     await db.flush()
 
