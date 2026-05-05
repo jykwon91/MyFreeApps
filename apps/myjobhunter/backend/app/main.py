@@ -6,7 +6,7 @@ from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from jwt.exceptions import PyJWTError as JWTError
 
-from app.api import account, applications, companies, health, integrations, profile, resumes, totp
+from app.api import account, applications, companies, documents, health, integrations, profile, resumes, totp
 from app.core.audit import current_user_id, register_audit_listeners
 from app.core.auth import auth_backend, fastapi_users
 from app.core.config import settings
@@ -123,6 +123,7 @@ app.include_router(applications.router, tags=["applications"])
 app.include_router(companies.router, tags=["companies"])
 app.include_router(integrations.router, tags=["integrations"])
 app.include_router(resumes.router, tags=["resumes"])
+app.include_router(documents.router)
 
 # TOTP routes — the /login subroute gets the per-IP throttle (matching the
 # guard on /auth/jwt/login). Account lockout is enforced INSIDE

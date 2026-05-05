@@ -66,7 +66,15 @@ test.describe("MyJobHunter smoke tests", () => {
         page.getByRole("heading", { name: "Work history" })
       ).toBeVisible();
 
-      // 8. Settings page
+      // 8. Documents page
+      await page.getByRole("link", { name: /documents/i }).first().click();
+      await page.waitForURL("**/documents");
+      await expect(
+        page.getByRole("heading", { name: /documents/i })
+      ).toBeVisible();
+      await expect(page.getByText(/No documents yet/i)).toBeVisible();
+
+      // 9. Settings page
       await page.getByRole("link", { name: /settings/i }).first().click();
       await page.waitForURL("**/settings");
       await expect(
@@ -75,7 +83,7 @@ test.describe("MyJobHunter smoke tests", () => {
       await expect(page.getByRole("heading", { name: /gmail/i })).toBeVisible();
       await expect(page.getByText("Disconnected", { exact: true }).first()).toBeVisible();
 
-      // 9. Application detail error page — invalid/non-existent UUID
+      // 10. Application detail error page — invalid/non-existent UUID
       await page.goto("/applications/non-existent-uuid");
       // The app shows a 422/error state when the UUID is not found
       await expect(
@@ -87,7 +95,7 @@ test.describe("MyJobHunter smoke tests", () => {
         page.getByText(/non-existent-uuid.*isn't available/i)
       ).toBeVisible();
 
-      // 10. Sign out
+      // 11. Sign out
       // Desktop: user menu in sidebar — the button shows the truncated name,
       // not the full email. Click the last button in the sidebar to open the menu.
       const signOutButton = page.getByRole("menuitem", { name: /sign out/i });
@@ -98,7 +106,7 @@ test.describe("MyJobHunter smoke tests", () => {
       await page.waitForURL("**/login", { timeout: 5_000 });
       await expect(page).toHaveURL(/\/login/);
     } finally {
-      // 11. Cleanup
+      // 12. Cleanup
       await deleteTestUser(request, user);
     }
   });

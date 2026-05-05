@@ -157,16 +157,21 @@ class ContactRole:
     ALL = ("recruiter", "hiring_manager", "interviewer", "referrer", "other")
 
 
-class DocumentType:
+class DocumentKind:
+    """Canonical document kinds used in the ``documents`` table.
+
+    These must stay in sync with:
+    - The ``chk_document_kind`` CheckConstraint in the ORM model.
+    - The Alembic migration that creates/alters the ``documents`` table.
+    """
+
     COVER_LETTER = "cover_letter"
     TAILORED_RESUME = "tailored_resume"
-    OFFER_LETTER = "offer_letter"
-    SCREENSHOT = "screenshot"
-    EMAIL_ATTACHMENT = "email_attachment"
-    ORIGINAL_RESUME = "original_resume"
+    JOB_DESCRIPTION = "job_description"
+    PORTFOLIO = "portfolio"
     OTHER = "other"
 
-    ALL = ("cover_letter", "tailored_resume", "offer_letter", "screenshot", "email_attachment", "original_resume", "other")
+    ALL = ("cover_letter", "tailored_resume", "job_description", "portfolio", "other")
 
 
 class GeneratedBy:

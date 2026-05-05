@@ -3,7 +3,7 @@
 Issues discovered during development. New entries are appended; resolved entries are
 removed and the counts in this header are updated.
 
-**Open issues: 10 (Critical: 1 / High: 1 / Medium: 4 / Low: 4)**
+**Open issues: 11 (Critical: 1 / High: 1 / Medium: 4 / Low: 5)**
 
 ---
 
@@ -222,6 +222,31 @@ hoisted..." entry above), update `CompanyDetail.test.tsx` to use `render()` + `s
 assertions to cover the full rendering path including the applications table and empty state copy.
 
 ---
+
+### [Backend] DocumentCreateRequest leaks file-storage fields to callers
+
+**Severity:** Low
+**Effort:** XS
+**Location:** `apps/myjobhunter/backend/app/schemas/documents/document_create_request.py`
+**Discovered:** Documents domain Phase 2 — `2026-05-05`
+
+**Problem:** `DocumentCreateRequest` is a single schema used for both the text-only
+JSON route and as an internal schema populated by the file-upload service. It declares
+`file_path`, `filename`, `content_type`, and `size_bytes` as optional fields. Because
+`extra="forbid"` is set, a caller who sends `{"file_path": "some/key", ...}` in the
+JSON body of `POST /documents` will have that value accepted by the schema (not rejected),
+even though it is supposed to be set only by the service layer.
+
+The service layer still controls where the object is stored (it always calls MinIO for
+file documents), so this is not a security issue — a caller-supplied `file_path` would
+be overwritten by the service for the file-upload path. But it's misleading and could
+become a bug if the schema is reused elsewhere.
+
+**Recommendation:** Split `DocumentCreateRequest` into two schemas:
+1. `DocumentTextCreateRequest` — `title`, `kind`, `application_id`, `body` (required).
+   `extra="forbid"`. Used by `POST /documents`.
+2. `DocumentFileCreateInternal` — the internal record written by `create_file_document`.
+   Not exposed to callers at all (used only by the service).
 
 ### [Frontend Tests] Profile.test.tsx uses `as unknown as any` for generic mutation stub
 
