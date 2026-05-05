@@ -2,14 +2,13 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus } from "lucide-react";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
-import EmptyState from "@/shared/components/ui/EmptyState";
 import AlertBox from "@/shared/components/ui/AlertBox";
 import LoadingButton from "@/shared/components/ui/LoadingButton";
 import { useGetLeaseTemplatesQuery } from "@/shared/store/leaseTemplatesApi";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
-import LeaseTemplatesListSkeleton from "@/app/features/leases/LeaseTemplatesListSkeleton";
-import LeaseTemplateCard from "@/app/features/leases/LeaseTemplateCard";
 import LeaseTemplateUploadDialog from "@/app/features/leases/LeaseTemplateUploadDialog";
+import { useLeaseTemplatesListMode } from "@/app/features/leases/useLeaseTemplatesListMode";
+import LeaseTemplatesListBody from "@/app/features/leases/LeaseTemplatesListBody";
 
 export default function LeaseTemplates() {
   const canWrite = useCanWrite();
@@ -19,6 +18,7 @@ export default function LeaseTemplates() {
   const [uploadOpen, setUploadOpen] = useState(false);
 
   const templates = data?.items ?? [];
+  const mode = useLeaseTemplatesListMode({ isLoading, isError, templateCount: templates.length });
 
   return (
     <main className="p-4 sm:p-8 space-y-6">
@@ -55,21 +55,7 @@ export default function LeaseTemplates() {
         </AlertBox>
       ) : null}
 
-      {isLoading ? (
-        <LeaseTemplatesListSkeleton />
-      ) : templates.length === 0 && !isError ? (
-        <EmptyState
-          message="No templates yet — upload one to get started."
-        />
-      ) : (
-        <ul className="space-y-3" data-testid="lease-templates-list">
-          {templates.map((t) => (
-            <li key={t.id}>
-              <LeaseTemplateCard template={t} />
-            </li>
-          ))}
-        </ul>
-      )}
+      <LeaseTemplatesListBody mode={mode} templates={templates} />
 
       <LeaseTemplateUploadDialog
         open={uploadOpen}
