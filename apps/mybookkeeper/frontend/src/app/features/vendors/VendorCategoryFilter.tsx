@@ -5,7 +5,7 @@ import {
 } from "@/shared/lib/vendor-labels";
 import type { VendorCategory } from "@/shared/types/vendor/vendor-category";
 
-interface Props {
+export interface VendorCategoryFilterProps {
   value: VendorCategory | null;
   onChange: (category: VendorCategory | null) => void;
 }
@@ -26,7 +26,7 @@ const CHIPS: Chip[] = [
  * on mobile (``overflow-x-auto`` + ``flex-nowrap``), URL-state sync handled
  * by the parent page via ``useSearchParams``.
  */
-export default function VendorCategoryFilter({ value, onChange }: Props) {
+export default function VendorCategoryFilter({ value, onChange }: VendorCategoryFilterProps) {
   return (
     <div
       role="tablist"

@@ -3,7 +3,7 @@ import ListingStatusBadge from "./ListingStatusBadge";
 import { LISTING_ROOM_TYPE_LABELS, formatRate } from "@/shared/lib/listing-labels";
 import type { ListingSummary } from "@/shared/types/listing/listing-summary";
 
-interface Props {
+export interface ListingCardProps {
   listing: ListingSummary;
   propertyName: string;
 }
@@ -17,7 +17,7 @@ interface Props {
  *   - room type (quick scan classifier)
  *   - monthly rate (primary money figure)
  */
-export default function ListingCard({ listing, propertyName }: Props) {
+export default function ListingCard({ listing, propertyName }: ListingCardProps) {
   return (
     <Link
       to={`/listings/${listing.id}`}

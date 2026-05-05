@@ -21,7 +21,7 @@ const ACTOR_LABELS: Record<InquiryEventActor, string> = {
   applicant: "Inquirer",
 };
 
-interface Props {
+export interface InquiryEventTimelineProps {
   events: InquiryEvent[];
   /**
    * Default-collapsed per RENTALS_PLAN.md §9.1 detail-page hierarchy — the
@@ -45,7 +45,7 @@ function formatEventType(eventType: string): string {
   return eventType.charAt(0).toUpperCase() + eventType.slice(1);
 }
 
-export default function InquiryEventTimeline({ events, defaultOpen = false }: Props) {
+export default function InquiryEventTimeline({ events, defaultOpen = false }: InquiryEventTimelineProps) {
   const [open, setOpen] = useState(defaultOpen);
 
   return (

@@ -1,7 +1,7 @@
 import { CheckCircle, Trash2 } from "lucide-react";
 import LoadingButton from "@/shared/components/ui/LoadingButton";
 
-interface Props {
+export interface TransactionBulkBarProps {
   selectedCount: number;
   hasApprovable: boolean;
   isApproving: boolean;
@@ -11,7 +11,7 @@ interface Props {
   onClearSelection: () => void;
 }
 
-export default function TransactionBulkBar({ selectedCount, hasApprovable, isApproving, isDeleting, onApprove, onDelete, onClearSelection }: Props) {
+export default function TransactionBulkBar({ selectedCount, hasApprovable, isApproving, isDeleting, onApprove, onDelete, onClearSelection }: TransactionBulkBarProps) {
   const busy = isApproving || isDeleting;
 
   return (

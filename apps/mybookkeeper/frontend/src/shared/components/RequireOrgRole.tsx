@@ -2,12 +2,12 @@ import { Navigate } from "react-router-dom";
 import type { OrgRole } from "@/shared/types/organization/org-role";
 import { useOrgRole } from "@/shared/hooks/useOrgRole";
 
-interface Props {
+export interface RequireOrgRoleProps {
   roles: OrgRole[];
   children: React.ReactNode;
 }
 
-export default function RequireOrgRole({ roles, children }: Props) {
+export default function RequireOrgRole({ roles, children }: RequireOrgRoleProps) {
   const currentRole = useOrgRole();
 
   if (!currentRole) {

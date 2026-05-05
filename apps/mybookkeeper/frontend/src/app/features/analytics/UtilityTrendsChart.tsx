@@ -52,13 +52,13 @@ function buildChartData(trends: UtilityTrendPoint[], granularity: Granularity): 
   );
 }
 
-interface Props {
+export interface UtilityTrendsChartProps {
   trends: UtilityTrendPoint[];
   granularity: Granularity;
   height?: number;
 }
 
-export default function UtilityTrendsChart({ trends, granularity, height = 350 }: Props) {
+export default function UtilityTrendsChart({ trends, granularity, height = 350 }: UtilityTrendsChartProps) {
   const presentCategories = UTILITY_SUB_CATEGORIES.filter((cat) =>
     trends.some((t) => t.sub_category === cat),
   );

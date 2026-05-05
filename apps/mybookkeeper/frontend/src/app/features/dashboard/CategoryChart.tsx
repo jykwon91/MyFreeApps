@@ -3,12 +3,12 @@ import { formatTag } from "@/shared/utils/tag";
 import { TAG_COLORS } from "@/shared/lib/constants";
 import CategoryChartTooltip from "@/app/features/dashboard/CategoryChartTooltip";
 
-interface Props {
+export interface CategoryChartProps {
   byCategory: Record<string, number>;
   onBarClick?: (category: string) => void;
 }
 
-export default function CategoryChart({ byCategory, onBarClick }: Props) {
+export default function CategoryChart({ byCategory, onBarClick }: CategoryChartProps) {
   const chartData = Object.entries(byCategory)
     .filter(([, amount]) => amount !== 0)
     .map(([key, amount]) => ({

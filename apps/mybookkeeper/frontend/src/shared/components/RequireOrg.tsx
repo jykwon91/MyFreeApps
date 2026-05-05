@@ -10,11 +10,11 @@ import type { ApiError } from "@/shared/types/api-error";
 import Skeleton from "@/shared/components/ui/Skeleton";
 import CreateOrgPrompt from "@/app/features/organizations/CreateOrgPrompt";
 
-interface Props {
+export interface RequireOrgProps {
   children: React.ReactNode;
 }
 
-export default function RequireOrg({ children }: Props) {
+export default function RequireOrg({ children }: RequireOrgProps) {
   const dispatch = useDispatch<AppDispatch>();
   const {
     data: orgs,

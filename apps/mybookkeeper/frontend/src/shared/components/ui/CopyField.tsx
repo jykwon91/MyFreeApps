@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { Check, Copy } from "lucide-react";
 
-interface Props {
+export interface CopyFieldProps {
   label: string;
   value: string;
 }
 
-export default function CopyField({ label, value }: Props) {
+export default function CopyField({ label, value }: CopyFieldProps) {
   const [copied, setCopied] = useState(false);
 
   async function handleCopy() {

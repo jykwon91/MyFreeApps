@@ -1,7 +1,7 @@
 import type { ReplyTemplate } from "@/shared/types/inquiry/reply-template";
 import ReplyTemplateCard from "./ReplyTemplateCard";
 
-interface Props {
+export interface ReplyTemplatePickerProps {
   templates: ReplyTemplate[];
   selectedTemplateId: string | null;
   onSelect: (template: ReplyTemplate) => void;
@@ -16,7 +16,7 @@ export default function ReplyTemplatePicker({
   templates,
   selectedTemplateId,
   onSelect,
-}: Props) {
+}: ReplyTemplatePickerProps) {
   if (templates.length === 0) {
     return (
       <div className="text-sm text-muted-foreground p-4">

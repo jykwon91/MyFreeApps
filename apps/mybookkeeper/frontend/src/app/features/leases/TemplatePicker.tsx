@@ -4,7 +4,7 @@ import Skeleton from "@/shared/components/ui/Skeleton";
 import { useGetLeaseTemplatesQuery } from "@/shared/store/leaseTemplatesApi";
 import type { LeaseTemplateSummary } from "@/shared/types/lease/lease-template-summary";
 
-interface Props {
+export interface TemplatePickerProps {
   selectedId: string | null;
   onSelect: (template: LeaseTemplateSummary) => void;
 }
@@ -13,7 +13,7 @@ interface Props {
  * Renders a pick-list of lease templates. The selected item is highlighted.
  * Used on /leases/new when no template_id query param is present.
  */
-export default function TemplatePicker({ selectedId, onSelect }: Props) {
+export default function TemplatePicker({ selectedId, onSelect }: TemplatePickerProps) {
   const { data, isLoading, isFetching, isError, refetch } =
     useGetLeaseTemplatesQuery();
   const templates = data?.items ?? [];

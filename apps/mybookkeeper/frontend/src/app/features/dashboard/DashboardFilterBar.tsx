@@ -7,7 +7,7 @@ import CategoryChip from "@/app/features/dashboard/CategoryChip";
 import type { CategoryFilterPreset, CategoryFilterState } from "@/shared/types/dashboard/category-filter";
 import type { Property } from "@/shared/types/property/property";
 
-interface Props {
+export interface DashboardFilterBarProps {
   filterState: CategoryFilterState;
   onToggleCategory: (category: string) => void;
   onSelectOnlyCategory: (category: string) => void;
@@ -35,7 +35,7 @@ export default function DashboardFilterBar({
   properties,
   selectedPropertyIds,
   onPropertyIdsChange,
-}: Props) {
+}: DashboardFilterBarProps) {
   const [expanded, setExpanded] = useState(false);
   const [touchedGroups, setTouchedGroups] = useState<Set<string>>(new Set());
   const { selectedCategories, preset } = filterState;

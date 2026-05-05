@@ -27,7 +27,7 @@ import {
 import type { ListingPhoto } from "@/shared/types/listing/listing-photo";
 import ListingPhotoCard from "@/app/features/listings/ListingPhotoCard";
 
-interface Props {
+export interface ListingPhotoManagerProps {
   listingId: string;
   photos: readonly ListingPhoto[];
 }
@@ -54,7 +54,7 @@ function clientSideValidate(files: File[]): { valid: File[]; rejected: string[] 
   return { valid, rejected };
 }
 
-export default function ListingPhotoManager({ listingId, photos }: Props) {
+export default function ListingPhotoManager({ listingId, photos }: ListingPhotoManagerProps) {
   const [uploadPhotos, { isLoading: isUploading }] = useUploadListingPhotosMutation();
   const [deletePhoto] = useDeleteListingPhotoMutation();
   const [updatePhoto] = useUpdateListingPhotoMutation();

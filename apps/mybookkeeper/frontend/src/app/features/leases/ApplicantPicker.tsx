@@ -17,7 +17,7 @@ import type { ApplicantStage } from "@/shared/types/applicant/applicant-stage";
  */
 const LEASE_ELIGIBLE_STAGES: ApplicantStage[] = ["approved", "lease_sent"];
 
-interface Props {
+export interface ApplicantPickerProps {
   selectedId: string | null;
   onSelect: (applicant: ApplicantSummary) => void;
 }
@@ -26,7 +26,7 @@ interface Props {
  * Renders a pick-list of applicants eligible for lease generation.
  * Filters to ``approved`` and ``lease_sent`` stages; excludes ``lease_signed``.
  */
-export default function ApplicantPicker({ selectedId, onSelect }: Props) {
+export default function ApplicantPicker({ selectedId, onSelect }: ApplicantPickerProps) {
   const { data, isLoading, isFetching, isError, refetch } =
     useGetApplicantsQuery();
   const allApplicants = data?.items ?? [];

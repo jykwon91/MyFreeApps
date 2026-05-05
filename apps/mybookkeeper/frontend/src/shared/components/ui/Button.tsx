@@ -3,14 +3,14 @@ import { cn } from "@/shared/utils/cn";
 type Variant = "primary" | "secondary" | "ghost" | "destructive" | "link";
 type Size = "md" | "sm";
 
-interface Props extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;
   size?: Size;
 }
 
 const isBlock = (v: Variant) => v === "primary" || v === "secondary";
 
-export default function Button({ variant = "primary", size = "md", className, ...props }: Props) {
+export default function Button({ variant = "primary", size = "md", className, ...props }: ButtonProps) {
   return (
     <button
       className={cn(

@@ -1,10 +1,10 @@
-interface Props {
+export interface SectionHeaderProps {
   title: string;
   subtitle?: React.ReactNode;
   actions?: React.ReactNode;
 }
 
-export default function SectionHeader({ title, subtitle, actions }: Props) {
+export default function SectionHeader({ title, subtitle, actions }: SectionHeaderProps) {
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0">

@@ -7,7 +7,7 @@ import {
 } from "@/shared/lib/calendar-constants";
 import type { CalendarSource } from "@/shared/types/calendar/calendar-source";
 
-interface Props {
+export interface CalendarSourceFilterProps {
   selectedSources: readonly string[];
   onChange: (sources: string[]) => void;
 }
@@ -24,7 +24,7 @@ function getTriggerLabel(selected: readonly string[]): string {
  * Mirrors PropertyMultiSelect's UX so the page feels consistent.
  * Selecting nothing == "all sources" (no filter applied).
  */
-export default function CalendarSourceFilter({ selectedSources, onChange }: Props) {
+export default function CalendarSourceFilter({ selectedSources, onChange }: CalendarSourceFilterProps) {
   function handleCheck(source: CalendarSource, checked: boolean) {
     if (checked) {
       onChange([...selectedSources, source]);

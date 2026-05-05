@@ -1,12 +1,12 @@
 import type { AddressFields } from "@/shared/types/property/address-fields";
 import FormField from "@/shared/components/ui/FormField";
 
-interface Props {
+export interface AddressInputsProps {
   form: AddressFields;
   onChange: (field: keyof AddressFields, value: string) => void;
 }
 
-export default function AddressInputs({ form, onChange }: Props) {
+export default function AddressInputs({ form, onChange }: AddressInputsProps) {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
       <div className="sm:col-span-2">

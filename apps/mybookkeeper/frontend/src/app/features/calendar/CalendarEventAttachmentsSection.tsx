@@ -21,11 +21,11 @@ const ALLOWED_MIME = [
   "text/plain",
 ];
 
-interface Props {
+export interface CalendarEventAttachmentsSectionProps {
   blackoutId: string;
 }
 
-export default function CalendarEventAttachmentsSection({ blackoutId }: Props) {
+export default function CalendarEventAttachmentsSection({ blackoutId }: CalendarEventAttachmentsSectionProps) {
   const { data: attachments, isLoading } = useGetBlackoutAttachmentsQuery(blackoutId);
   const [uploadAttachment, { isLoading: isUploading }] =
     useUploadBlackoutAttachmentMutation();

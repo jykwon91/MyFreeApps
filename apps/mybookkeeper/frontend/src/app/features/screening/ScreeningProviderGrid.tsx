@@ -4,7 +4,7 @@ import { showError } from "@/shared/lib/toast-store";
 import { useGetScreeningProvidersQuery, useLazyGetScreeningRedirectQuery } from "@/shared/store/screeningApi";
 import ScreeningProviderCard from "./ScreeningProviderCard";
 
-interface Props {
+export interface ScreeningProviderGridProps {
   applicantId: string;
   /** Override window.open — only used by tests. */
   openWindow?: (url: string) => void;
@@ -47,7 +47,7 @@ function ProviderGridSkeleton() {
  * All provider cards are disabled while any single redirect fetch is in
  * flight — prevents race conditions from rapid multi-clicks.
  */
-export default function ScreeningProviderGrid({ applicantId, openWindow }: Props) {
+export default function ScreeningProviderGrid({ applicantId, openWindow }: ScreeningProviderGridProps) {
   const [loadingProvider, setLoadingProvider] = useState<string | null>(null);
   const { data, isLoading, isError } = useGetScreeningProvidersQuery(applicantId);
   const [triggerRedirect] = useLazyGetScreeningRedirectQuery();

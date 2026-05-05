@@ -15,7 +15,7 @@ const COLOR_CLASSES: Record<BadgeColor, string> = {
   purple: "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300",
 };
 
-interface Props {
+export interface VendorCategoryBadgeProps {
   category: VendorCategory;
   className?: string;
 }
@@ -26,7 +26,7 @@ interface Props {
  * Hidden in category-filtered list views (the active chip already conveys
  * the category) but shown on detail pages and the unfiltered "All" list.
  */
-export default function VendorCategoryBadge({ category, className = "" }: Props) {
+export default function VendorCategoryBadge({ category, className = "" }: VendorCategoryBadgeProps) {
   const color = VENDOR_CATEGORY_BADGE_COLORS[category];
   return (
     <span

@@ -37,7 +37,7 @@ const FALLBACK_META = {
   Icon: Globe,
 };
 
-interface Props {
+export interface ReviewQueueChannelBadgeProps {
   channel: string;
 }
 
@@ -46,7 +46,7 @@ interface Props {
  * Distinct from SourceBadge (which is for inquiry sources) — the channel slug
  * format differs between the two domains.
  */
-export default function ReviewQueueChannelBadge({ channel }: Props) {
+export default function ReviewQueueChannelBadge({ channel }: ReviewQueueChannelBadgeProps) {
   const meta = CHANNEL_META[channel] ?? FALLBACK_META;
   const { Icon, label, colorClass } = meta;
 

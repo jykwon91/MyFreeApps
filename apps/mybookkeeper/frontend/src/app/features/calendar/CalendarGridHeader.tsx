@@ -5,7 +5,7 @@ import {
 } from "@/shared/lib/calendar-constants";
 import { addDays, parseIsoDate } from "@/app/features/calendar/calendar-utils";
 
-interface Props {
+export interface CalendarGridHeaderProps {
   fromIso: string;
   totalDays: number;
 }
@@ -23,7 +23,7 @@ const SHORT_MONTH_NAMES = [
  * the first day of each month to anchor the view without a separate
  * row.
  */
-export default function CalendarGridHeader({ fromIso, totalDays }: Props) {
+export default function CalendarGridHeader({ fromIso, totalDays }: CalendarGridHeaderProps) {
   return (
     <div
       className="flex bg-muted/50 border-b sticky top-0 z-10"

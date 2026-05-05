@@ -2,7 +2,7 @@ import Skeleton from "@/shared/components/ui/Skeleton";
 import { useGetScreeningResultsQuery } from "@/shared/store/screeningApi";
 import ScreeningResultRow from "./ScreeningResultRow";
 
-interface Props {
+export interface ScreeningResultsListProps {
   applicantId: string;
 }
 
@@ -37,7 +37,7 @@ function ScreeningResultsSkeleton() {
  * convention — the parent ApplicantDetail already has a top-level error
  * banner so we keep this list-level error subtle.
  */
-export default function ScreeningResultsList({ applicantId }: Props) {
+export default function ScreeningResultsList({ applicantId }: ScreeningResultsListProps) {
   const { data, isLoading, isError, refetch, isFetching } =
     useGetScreeningResultsQuery(applicantId);
 

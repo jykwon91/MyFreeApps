@@ -3,14 +3,14 @@ import { formatDesiredDates, formatRelativeTime } from "@/shared/lib/inquiry-dat
 import type { ApplicantSummary } from "@/shared/types/applicant/applicant-summary";
 import TenantStatusBadge from "./TenantStatusBadge";
 
-interface Props {
+export interface TenantCardProps {
   tenant: ApplicantSummary;
 }
 
 /**
  * Mobile card for the Tenants list. Whole card is tappable (touch target ≥ 44px).
  */
-export default function TenantCard({ tenant }: Props) {
+export default function TenantCard({ tenant }: TenantCardProps) {
   const legalName = tenant.legal_name ?? "Unnamed tenant";
   const contractDates = formatDesiredDates(tenant.contract_start, tenant.contract_end);
   const created = formatRelativeTime(tenant.created_at);

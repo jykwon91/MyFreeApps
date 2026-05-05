@@ -15,7 +15,7 @@ const COLOR_CLASSES: Record<BadgeColor, string> = {
   purple: "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300",
 };
 
-interface Props {
+export interface SignedLeaseStatusBadgeProps {
   status: SignedLeaseStatus;
   className?: string;
 }
@@ -23,7 +23,7 @@ interface Props {
 /**
  * Status badge for a signed lease. Mirrors the ApplicantStageBadge pattern.
  */
-export default function SignedLeaseStatusBadge({ status, className = "" }: Props) {
+export default function SignedLeaseStatusBadge({ status, className = "" }: SignedLeaseStatusBadgeProps) {
   const color = SIGNED_LEASE_STATUS_BADGE_COLORS[status];
   return (
     <span

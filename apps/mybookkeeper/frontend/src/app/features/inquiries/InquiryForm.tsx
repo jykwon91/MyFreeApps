@@ -13,7 +13,7 @@ import type { InquiryResponse } from "@/shared/types/inquiry/inquiry-response";
 import type { InquirySource } from "@/shared/types/inquiry/inquiry-source";
 import type { ListingSummary } from "@/shared/types/listing/listing-summary";
 
-interface Props {
+export interface InquiryFormProps {
   listings: readonly ListingSummary[];
   onClose: () => void;
   onCreated?: (inquiry: InquiryResponse) => void;
@@ -70,7 +70,7 @@ function formValuesToCreateRequest(values: InquiryFormValues): InquiryCreateRequ
   };
 }
 
-export default function InquiryForm({ listings, onClose, onCreated }: Props) {
+export default function InquiryForm({ listings, onClose, onCreated }: InquiryFormProps) {
   const [createInquiry, { isLoading }] = useCreateInquiryMutation();
   const defaults = useMemo<InquiryFormValues>(() => buildEmptyDefaults(), []);
 

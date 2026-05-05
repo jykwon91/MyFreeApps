@@ -21,12 +21,12 @@ const TABS: ReadonlyArray<TabConfig> = [
   { key: "spam", label: "Spam", value: "spam" },
 ];
 
-interface Props {
+export interface InquirySpamTabFilterProps {
   value: InquirySpamStatus | null;
   onChange: (next: InquirySpamStatus | null) => void;
 }
 
-export default function InquirySpamTabFilter({ value, onChange }: Props) {
+export default function InquirySpamTabFilter({ value, onChange }: InquirySpamTabFilterProps) {
   return (
     <div
       className="flex flex-wrap gap-2 border-b pb-2"

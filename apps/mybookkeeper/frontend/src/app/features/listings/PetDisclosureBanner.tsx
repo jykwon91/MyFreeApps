@@ -1,6 +1,6 @@
 import { AlertTriangle } from "lucide-react";
 
-interface Props {
+export interface PetDisclosureBannerProps {
   largeDogDisclosure: string | null;
 }
 
@@ -13,7 +13,7 @@ interface Props {
  * Per RENTALS_PLAN §9.3 the host should never need to remember to mention
  * pets — the banner makes the disclosure the first thing a viewer sees.
  */
-export default function PetDisclosureBanner({ largeDogDisclosure }: Props) {
+export default function PetDisclosureBanner({ largeDogDisclosure }: PetDisclosureBannerProps) {
   return (
     <div
       role="note"

@@ -2,7 +2,7 @@ import { getSourceColor, getSourceLabel } from "@/shared/lib/calendar-constants"
 import { CALENDAR_DAY_CELL_PX } from "@/shared/lib/calendar-constants";
 import type { CalendarEvent } from "@/shared/types/calendar/calendar-event";
 
-interface Props {
+export interface CalendarEventBarProps {
   event: CalendarEvent;
   startCol: number;
   span: number;
@@ -21,7 +21,7 @@ interface Props {
  * Top-right corner shows tiny indicators when the host has added notes
  * (📝) or file attachments (📎). Clicking still opens the detail dialog.
  */
-export default function CalendarEventBar({ event, startCol, span, onClick }: Props) {
+export default function CalendarEventBar({ event, startCol, span, onClick }: CalendarEventBarProps) {
   const isManual = event.source === "manual";
   const color = getSourceColor(event.source);
   const label = getSourceLabel(event.source);

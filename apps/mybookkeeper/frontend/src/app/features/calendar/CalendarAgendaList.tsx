@@ -6,7 +6,7 @@ import {
 import type { CalendarEvent } from "@/shared/types/calendar/calendar-event";
 import CalendarEventDetail from "@/app/features/calendar/CalendarEventDetail";
 
-interface Props {
+export interface CalendarAgendaListProps {
   events: readonly CalendarEvent[];
 }
 
@@ -18,7 +18,7 @@ interface Props {
  * unusable. Events are sorted by start date; events spanning multiple
  * days appear once at their start date with the date range visible.
  */
-export default function CalendarAgendaList({ events }: Props) {
+export default function CalendarAgendaList({ events }: CalendarAgendaListProps) {
   // Sort by start date, then end date (longer first for ties).
   const sorted = [...events].sort((a, b) => {
     if (a.starts_on !== b.starts_on) return a.starts_on.localeCompare(b.starts_on);

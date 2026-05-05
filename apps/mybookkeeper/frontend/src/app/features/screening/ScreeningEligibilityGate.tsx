@@ -1,7 +1,7 @@
 import { AlertCircle } from "lucide-react";
 import type { ScreeningEligibilityResponse } from "@/shared/types/screening/screening-eligibility-response";
 
-interface Props {
+export interface ScreeningEligibilityGateProps {
   eligibility: ScreeningEligibilityResponse;
 }
 
@@ -13,7 +13,7 @@ interface Props {
  *
  * This component is only rendered when ``eligibility.eligible === false``.
  */
-export default function ScreeningEligibilityGate({ eligibility }: Props) {
+export default function ScreeningEligibilityGate({ eligibility }: ScreeningEligibilityGateProps) {
   const { missing_fields } = eligibility;
 
   return (

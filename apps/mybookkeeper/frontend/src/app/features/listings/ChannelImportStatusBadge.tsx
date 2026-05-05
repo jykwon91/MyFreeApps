@@ -5,7 +5,7 @@ import {
 } from "@/shared/lib/channel-labels";
 import type { ChannelListing } from "@/shared/types/listing/channel-listing";
 
-interface Props {
+export interface ChannelImportStatusBadgeProps {
   channelListing: ChannelListing;
 }
 
@@ -17,7 +17,7 @@ interface Props {
  * clicking into a row. Uses an icon AND color (never color alone) for
  * accessibility.
  */
-export default function ChannelImportStatusBadge({ channelListing }: Props) {
+export default function ChannelImportStatusBadge({ channelListing }: ChannelImportStatusBadgeProps) {
   const status = deriveImportStatus(channelListing);
 
   if (status === "pending") {

@@ -1,7 +1,7 @@
 import { FileText, Paperclip, Trash2 } from "lucide-react";
 import type { ListingBlackoutAttachment } from "@/shared/types/listing/listing-blackout-attachment";
 
-interface Props {
+export interface CalendarEventAttachmentCardProps {
   attachment: ListingBlackoutAttachment;
   onDelete: () => void;
 }
@@ -12,7 +12,7 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export default function CalendarEventAttachmentCard({ attachment, onDelete }: Props) {
+export default function CalendarEventAttachmentCard({ attachment, onDelete }: CalendarEventAttachmentCardProps) {
   const isImage = attachment.content_type.startsWith("image/");
 
   return (

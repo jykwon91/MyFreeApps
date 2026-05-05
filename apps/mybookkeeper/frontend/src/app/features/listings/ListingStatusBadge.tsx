@@ -5,10 +5,10 @@ import {
 } from "@/shared/lib/listing-labels";
 import type { ListingStatus } from "@/shared/types/listing/listing-status";
 
-interface Props {
+export interface ListingStatusBadgeProps {
   status: ListingStatus;
 }
 
-export default function ListingStatusBadge({ status }: Props) {
+export default function ListingStatusBadge({ status }: ListingStatusBadgeProps) {
   return <Badge label={LISTING_STATUS_LABELS[status]} color={LISTING_STATUS_BADGE_COLORS[status]} />;
 }

@@ -4,7 +4,7 @@ import { formatRelativeTime } from "@/shared/lib/inquiry-date-format";
 import type { VendorSummary } from "@/shared/types/vendor/vendor-summary";
 import VendorCategoryBadge from "./VendorCategoryBadge";
 
-interface Props {
+export interface VendorRowProps {
   vendor: VendorSummary;
   showCategoryBadge: boolean;
 }
@@ -25,7 +25,7 @@ function formatLastUsed(lastUsedAt: string | null): string {
  * Desktop table row for the Vendors rolodex. Click anywhere navigates to
  * the detail page.
  */
-export default function VendorRow({ vendor, showCategoryBadge }: Props) {
+export default function VendorRow({ vendor, showCategoryBadge }: VendorRowProps) {
   const navigate = useNavigate();
 
   return (

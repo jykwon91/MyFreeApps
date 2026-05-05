@@ -1,10 +1,10 @@
 import { getFormLabel } from "@/shared/lib/tax-config";
 
-interface Props {
+export interface FormNameLabelProps {
   formName: string;
   className?: string;
 }
 
-export default function FormNameLabel({ formName, className }: Props) {
+export default function FormNameLabel({ formName, className }: FormNameLabelProps) {
   return <span className={className}>{getFormLabel(formName)}</span>;
 }

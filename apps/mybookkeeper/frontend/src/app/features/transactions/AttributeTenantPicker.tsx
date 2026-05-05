@@ -12,7 +12,7 @@ import { useGetApplicantsQuery } from "@/shared/store/applicantsApi";
 import { useAttributeTransactionManuallyMutation } from "@/shared/store/attributionApi";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 
-interface Props {
+export interface AttributeTenantPickerProps {
   transactionId: string;
   currentApplicantId: string | null;
   currentAttributionSource: "auto_exact" | "auto_fuzzy_confirmed" | "manual" | null;
@@ -22,7 +22,7 @@ export default function AttributeTenantPicker({
   transactionId,
   currentApplicantId,
   currentAttributionSource,
-}: Props) {
+}: AttributeTenantPickerProps) {
   const [selectedId, setSelectedId] = useState<string>(currentApplicantId ?? "");
   const [attribute, { isLoading }] = useAttributeTransactionManuallyMutation();
 

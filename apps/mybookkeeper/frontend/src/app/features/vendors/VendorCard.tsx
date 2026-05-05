@@ -4,7 +4,7 @@ import { formatRelativeTime } from "@/shared/lib/inquiry-date-format";
 import type { VendorSummary } from "@/shared/types/vendor/vendor-summary";
 import VendorCategoryBadge from "./VendorCategoryBadge";
 
-interface Props {
+export interface VendorCardProps {
   vendor: VendorSummary;
   /**
    * When true (i.e. the list is in the "All" filter), render the category
@@ -40,7 +40,7 @@ function formatLastUsed(lastUsedAt: string | null): string {
  *   - phone, email, address (contact info)
  *   - flat_rate_notes, notes (free-form host notes)
  */
-export default function VendorCard({ vendor, showCategoryBadge }: Props) {
+export default function VendorCard({ vendor, showCategoryBadge }: VendorCardProps) {
   return (
     <Link
       to={`/vendors/${vendor.id}`}

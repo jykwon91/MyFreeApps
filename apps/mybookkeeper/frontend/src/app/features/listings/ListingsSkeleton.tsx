@@ -1,6 +1,6 @@
 import Skeleton from "@/shared/components/ui/Skeleton";
 
-interface Props {
+export interface ListingsSkeletonProps {
   count?: number;
 }
 
@@ -9,7 +9,7 @@ interface Props {
  * — same number of card slots on mobile, same column count in the desktop table —
  * to prevent layout shift and satisfy `feedback_skeletons_match_layout`.
  */
-export default function ListingsSkeleton({ count = 4 }: Props) {
+export default function ListingsSkeleton({ count = 4 }: ListingsSkeletonProps) {
   const rows = Array.from({ length: count }, (_, i) => i);
 
   return (

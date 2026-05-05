@@ -5,12 +5,12 @@ import { X } from "lucide-react";
 import Badge from "@/shared/components/ui/Badge";
 import { INVITE_STATUS_COLORS } from "@/shared/lib/organization-config";
 
-interface Props {
+export interface PendingInvitesProps {
   onSuccess?: (message: string) => void;
   onError?: (message: string) => void;
 }
 
-export default function PendingInvites({ onSuccess, onError }: Props) {
+export default function PendingInvites({ onSuccess, onError }: PendingInvitesProps) {
   const orgId = useActiveOrgId();
   const { data: invites = [] } = useListInvitesQuery(orgId!, { skip: !orgId });
   const [cancelInvite] = useCancelInviteMutation();

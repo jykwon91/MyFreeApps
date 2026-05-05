@@ -5,7 +5,7 @@ import {
 } from "@/shared/lib/inquiry-date-format";
 import type { VideoCallNote } from "@/shared/types/applicant/video-call-note";
 
-interface Props {
+export interface VideoCallNoteCardProps {
   note: VideoCallNote;
 }
 
@@ -16,7 +16,7 @@ const MAX_RATING = 5;
  * gut_rating (1-5 stars), notes body. Read-only in PR 3.1b — editing UI
  * lands in PR 3.4 along with the kanban + create-note flow.
  */
-export default function VideoCallNoteCard({ note }: Props) {
+export default function VideoCallNoteCard({ note }: VideoCallNoteCardProps) {
   const isComplete = note.completed_at !== null;
   const stars = note.gut_rating ?? 0;
 

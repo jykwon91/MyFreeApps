@@ -14,7 +14,7 @@ import Select from "@/shared/components/ui/Select";
 import TransactionDuplicateActions from "@/app/features/transactions/TransactionDuplicateActions";
 import { useGetVendorsQuery } from "@/shared/store/vendorsApi";
 
-interface Props {
+export interface TransactionFormProps {
   transaction: Transaction;
   properties: readonly Property[];
   register: UseFormRegister<TransactionFormValues>;
@@ -39,7 +39,7 @@ export default function TransactionForm({
   dupOther,
   onKeepDuplicate,
   onDismissDuplicate,
-}: Props) {
+}: TransactionFormProps) {
   const [sourcePreview, setSourcePreview] = useState<SourcePreview | null>(null);
 
   const transactionType = watch("transaction_type");

@@ -3,7 +3,7 @@ import { formatDesiredDates, formatRelativeTime } from "@/shared/lib/inquiry-dat
 import type { ApplicantSummary } from "@/shared/types/applicant/applicant-summary";
 import TenantStatusBadge from "./TenantStatusBadge";
 
-interface Props {
+export interface TenantRowProps {
   tenant: ApplicantSummary;
 }
 
@@ -13,7 +13,7 @@ interface Props {
  * `/tenants/:id` so the breadcrumb context stays "tenant" rather than
  * jumping the user back to /applicants).
  */
-export default function TenantRow({ tenant }: Props) {
+export default function TenantRow({ tenant }: TenantRowProps) {
   const navigate = useNavigate();
   const legalName = tenant.legal_name ?? "Unnamed tenant";
   const contractDates = formatDesiredDates(tenant.contract_start, tenant.contract_end);

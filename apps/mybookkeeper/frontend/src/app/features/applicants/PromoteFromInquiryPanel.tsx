@@ -21,7 +21,7 @@ import type { ApplicantPromoteRequest } from "@/shared/types/applicant/applicant
 import type { ApplicantPromoteConflictDetail } from "@/shared/types/applicant/applicant-promote-conflict";
 import type { InquiryResponse } from "@/shared/types/inquiry/inquiry-response";
 
-interface Props {
+export interface PromoteFromInquiryPanelProps {
   inquiry: InquiryResponse;
   onClose: () => void;
 }
@@ -102,7 +102,7 @@ function formValuesToRequest(values: PromoteFormValues): ApplicantPromoteRequest
  * - 409 ``not_promotable`` → toast explaining the inquiry is terminal.
  * - Other errors → conversational AI-tone retry prompt.
  */
-export default function PromoteFromInquiryPanel({ inquiry, onClose }: Props) {
+export default function PromoteFromInquiryPanel({ inquiry, onClose }: PromoteFromInquiryPanelProps) {
   const navigate = useNavigate();
   const [promote, { isLoading }] = usePromoteFromInquiryMutation();
   const defaults = useMemo<PromoteFormValues>(

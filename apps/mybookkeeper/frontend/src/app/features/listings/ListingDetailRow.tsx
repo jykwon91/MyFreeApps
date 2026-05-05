@@ -1,4 +1,4 @@
-interface Props {
+export interface ListingDetailRowProps {
   label: string;
   value: React.ReactNode;
 }
@@ -8,7 +8,7 @@ interface Props {
  * the listing detail page's Rates and Room details sections to keep
  * presentation consistent.
  */
-export default function ListingDetailRow({ label, value }: Props) {
+export default function ListingDetailRow({ label, value }: ListingDetailRowProps) {
   return (
     <div className="flex flex-col gap-0.5">
       <span className="text-xs uppercase tracking-wide text-muted-foreground">{label}</span>

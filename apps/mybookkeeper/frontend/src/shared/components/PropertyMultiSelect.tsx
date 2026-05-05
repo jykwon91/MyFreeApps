@@ -2,7 +2,7 @@ import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { ChevronDown } from "lucide-react";
 import type { Property } from "@/shared/types/property/property";
 
-interface Props {
+export interface PropertyMultiSelectProps {
   properties: Property[];
   selectedIds: string[];
   onChange: (ids: string[]) => void;
@@ -18,7 +18,7 @@ function getTriggerLabel(properties: Property[], selectedIds: string[]): string 
   return `${selectedIds.length} properties`;
 }
 
-export default function PropertyMultiSelect({ properties, selectedIds, onChange, maxSelected }: Props) {
+export default function PropertyMultiSelect({ properties, selectedIds, onChange, maxSelected }: PropertyMultiSelectProps) {
   function handleCheck(id: string, checked: boolean) {
     if (checked) {
       if (maxSelected !== undefined && selectedIds.length >= maxSelected) return;

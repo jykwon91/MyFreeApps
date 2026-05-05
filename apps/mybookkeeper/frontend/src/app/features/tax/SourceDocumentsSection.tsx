@@ -5,11 +5,11 @@ import SourceDocumentsSkeleton from "@/app/features/tax/SourceDocumentsSkeleton"
 import ReceivedDocumentsGrouped from "@/app/features/tax/ReceivedDocumentsGrouped";
 import CompletenessChecklist from "@/app/features/tax/CompletenessChecklist";
 
-interface Props {
+export interface SourceDocumentsSectionProps {
   taxReturnId: string;
 }
 
-export default function SourceDocumentsSection({ taxReturnId }: Props) {
+export default function SourceDocumentsSection({ taxReturnId }: SourceDocumentsSectionProps) {
   const [viewingDocId, setViewingDocId] = useState<string | null>(null);
 
   const { data, isLoading, isError } = useGetSourceDocumentsQuery(taxReturnId);

@@ -2,7 +2,7 @@ import { cn } from "@/shared/utils/cn";
 import { INQUIRY_STAGES, INQUIRY_STAGE_LABELS } from "@/shared/lib/inquiry-labels";
 import type { InquiryStage } from "@/shared/types/inquiry/inquiry-stage";
 
-interface Props {
+export interface InquiryStageFilterProps {
   value: InquiryStage | null;
   onChange: (stage: InquiryStage | null) => void;
 }
@@ -23,7 +23,7 @@ const CHIPS: Chip[] = [
  * mobile (``overflow-x-auto`` + ``flex-nowrap``), URL-state sync handled by
  * the parent page via ``useSearchParams``.
  */
-export default function InquiryStageFilter({ value, onChange }: Props) {
+export default function InquiryStageFilter({ value, onChange }: InquiryStageFilterProps) {
   return (
     <div
       role="tablist"

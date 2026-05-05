@@ -6,12 +6,12 @@ import { useUpdateBlackoutMutation } from "@/shared/store/calendarApi";
 // Debounce delay for saving notes on blur (ms).
 const NOTES_SAVE_DELAY_MS = 600;
 
-interface Props {
+export interface CalendarEventNotesSectionProps {
   blackoutId: string;
   initialNotes: string | null;
 }
 
-export default function CalendarEventNotesSection({ blackoutId, initialNotes }: Props) {
+export default function CalendarEventNotesSection({ blackoutId, initialNotes }: CalendarEventNotesSectionProps) {
   const [notes, setNotes] = useState(initialNotes ?? "");
   const [isSaving, setIsSaving] = useState(false);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);

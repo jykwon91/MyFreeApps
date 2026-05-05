@@ -3,12 +3,12 @@ import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, X } from "lucide-react";
 import type { ListingPhoto } from "@/shared/types/listing/listing-photo";
 
-interface Props {
+export interface ListingPhotoCardProps {
   photo: ListingPhoto;
   onDelete: () => void;
 }
 
-export default function ListingPhotoCard({ photo, onDelete }: Props) {
+export default function ListingPhotoCard({ photo, onDelete }: ListingPhotoCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: photo.id });
 

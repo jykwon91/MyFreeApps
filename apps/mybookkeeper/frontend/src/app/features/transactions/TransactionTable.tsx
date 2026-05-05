@@ -17,7 +17,7 @@ import { formatDate } from "@/shared/utils/date";
 import { formatTag } from "@/shared/utils/tag";
 import { cn } from "@/shared/utils/cn";
 
-interface Props {
+export interface TransactionTableProps {
   table: Table<Transaction>;
   colCount: number;
   onRowClick: (transaction: Transaction) => void;
@@ -26,7 +26,7 @@ interface Props {
   propertyMap?: ReadonlyMap<string, string>;
 }
 
-export default function TransactionTable({ table, colCount, onRowClick, editingId, filterOptions, propertyMap }: Props) {
+export default function TransactionTable({ table, colCount, onRowClick, editingId, filterOptions, propertyMap }: TransactionTableProps) {
   const { pageIndex, pageSize } = table.getState().pagination;
   const totalRows = table.getFilteredRowModel().rows.length;
   const start = pageIndex * pageSize + 1;

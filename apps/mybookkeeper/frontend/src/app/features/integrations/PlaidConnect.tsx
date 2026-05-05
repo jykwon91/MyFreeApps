@@ -7,12 +7,12 @@ import {
 import { extractErrorMessage } from "@/shared/utils/errorMessage";
 import LoadingButton from "@/shared/components/ui/LoadingButton";
 
-interface Props {
+export interface PlaidConnectProps {
   onSuccess: (institutionName: string) => void;
   onError: (message: string) => void;
 }
 
-export default function PlaidConnect({ onSuccess, onError }: Props) {
+export default function PlaidConnect({ onSuccess, onError }: PlaidConnectProps) {
   const [linkToken, setLinkToken] = useState<string | null>(null);
   const [createLinkToken, { isLoading: isCreating }] = useCreateLinkTokenMutation();
   const [exchangePublicToken, { isLoading: isExchanging }] = useExchangePublicTokenMutation();

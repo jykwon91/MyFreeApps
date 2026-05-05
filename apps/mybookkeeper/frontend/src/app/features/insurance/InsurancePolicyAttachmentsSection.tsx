@@ -14,7 +14,7 @@ import type { InsurancePolicyAttachment } from "@/shared/types/insurance/insuran
 import AttachmentViewer from "@/app/features/leases/AttachmentViewer";
 import InsurancePolicyAttachmentRow from "@/app/features/insurance/InsurancePolicyAttachmentRow";
 
-interface Props {
+export interface InsurancePolicyAttachmentsSectionProps {
   policyId: string;
   attachments: InsurancePolicyAttachment[];
   canWrite: boolean;
@@ -32,7 +32,7 @@ export default function InsurancePolicyAttachmentsSection({
   policyId,
   attachments,
   canWrite,
-}: Props) {
+}: InsurancePolicyAttachmentsSectionProps) {
   const [uploadAttachment, { isLoading: isUploading }] =
     useUploadInsurancePolicyAttachmentMutation();
   const [deleteAttachment] = useDeleteInsurancePolicyAttachmentMutation();

@@ -1,7 +1,7 @@
 import { Star } from "lucide-react";
 import { cn } from "@/shared/utils/cn";
 
-interface Props {
+export interface VendorPreferredToggleProps {
   value: boolean;
   onChange: (next: boolean) => void;
 }
@@ -11,7 +11,7 @@ interface Props {
  * the same 44px touch target as the category chips so the two filters feel
  * paired. ``aria-pressed`` reflects state for screen readers.
  */
-export default function VendorPreferredToggle({ value, onChange }: Props) {
+export default function VendorPreferredToggle({ value, onChange }: VendorPreferredToggleProps) {
   return (
     <button
       type="button"

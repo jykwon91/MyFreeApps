@@ -15,7 +15,7 @@ const COLOR_CLASSES: Record<BadgeColor, string> = {
   purple: "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300",
 };
 
-interface Props {
+export interface InquiryStageBadgeProps {
   stage: InquiryStage;
   className?: string;
 }
@@ -26,7 +26,7 @@ interface Props {
  * Hidden in stage-filtered list views (the chip already conveys that
  * information) but shown on detail pages and the unfiltered "All" inbox.
  */
-export default function InquiryStageBadge({ stage, className = "" }: Props) {
+export default function InquiryStageBadge({ stage, className = "" }: InquiryStageBadgeProps) {
   const color = INQUIRY_STAGE_BADGE_COLORS[stage];
   return (
     <span

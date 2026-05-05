@@ -1,11 +1,11 @@
 import { Link, useNavigate } from "react-router-dom";
 import type { LeaseTemplateSummary } from "@/shared/types/lease/lease-template-summary";
 
-interface Props {
+export interface LeaseTemplateCardProps {
   template: LeaseTemplateSummary;
 }
 
-export default function LeaseTemplateCard({ template }: Props) {
+export default function LeaseTemplateCard({ template }: LeaseTemplateCardProps) {
   const navigate = useNavigate();
 
   return (

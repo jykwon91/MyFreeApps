@@ -6,13 +6,13 @@ import Spinner from "@/shared/components/icons/Spinner";
 import RetryIcon from "@/shared/components/icons/RetryIcon";
 import { X } from "lucide-react";
 
-interface Props {
+export interface QueueItemProps {
   item: EmailQueueItem;
   onRetry: (id: string) => void;
   onDismiss: (id: string) => void;
 }
 
-export default function QueueItem({ item, onRetry, onDismiss }: Props) {
+export default function QueueItem({ item, onRetry, onDismiss }: QueueItemProps) {
   const badge = STATUS_BADGE[item.status];
   const [busy, setBusy] = useState<"retry" | "dismiss" | null>(null);
 

@@ -1,8 +1,8 @@
-interface Props {
+export interface ChevronDownProps {
   className?: string;
 }
 
-export default function ChevronDown({ className = "h-4 w-4" }: Props) {
+export default function ChevronDown({ className = "h-4 w-4" }: ChevronDownProps) {
   return (
     <svg
       className={className}

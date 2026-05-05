@@ -1,6 +1,6 @@
 import { differenceInDays, parseISO } from "date-fns";
 
-interface Props {
+export interface InsuranceExpirationBadgeProps {
   expirationDate: string | null;
 }
 
@@ -12,7 +12,7 @@ interface Props {
  * - Within 90 days → yellow "Expires in N days"
  * - Beyond → nothing rendered
  */
-export default function InsuranceExpirationBadge({ expirationDate }: Props) {
+export default function InsuranceExpirationBadge({ expirationDate }: InsuranceExpirationBadgeProps) {
   if (!expirationDate) return null;
 
   const today = new Date();

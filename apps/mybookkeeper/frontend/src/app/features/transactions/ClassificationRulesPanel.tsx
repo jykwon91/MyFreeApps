@@ -10,11 +10,11 @@ import Panel from "@/shared/components/ui/Panel";
 import ConfirmDialog from "@/shared/components/ui/ConfirmDialog";
 import Spinner from "@/shared/components/icons/Spinner";
 
-interface Props {
+export interface ClassificationRulesPanelProps {
   onClose: () => void;
 }
 
-export default function ClassificationRulesPanel({ onClose }: Props) {
+export default function ClassificationRulesPanel({ onClose }: ClassificationRulesPanelProps) {
   const { data: rules = [], isLoading } = useListClassificationRulesQuery();
   const { data: properties = [] } = useGetPropertiesQuery();
   const [deleteRule] = useDeleteClassificationRuleMutation();

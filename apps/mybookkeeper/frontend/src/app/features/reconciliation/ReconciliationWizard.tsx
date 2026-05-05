@@ -18,12 +18,12 @@ import EmptyState from "@/shared/components/ui/EmptyState";
 import Skeleton from "@/shared/components/ui/Skeleton";
 
 
-interface Props {
+export interface ReconciliationWizardProps {
   onToast: (message: string, variant: "success" | "error") => void;
   canWrite?: boolean;
 }
 
-export default function ReconciliationWizard({ onToast, canWrite = true }: Props) {
+export default function ReconciliationWizard({ onToast, canWrite = true }: ReconciliationWizardProps) {
   const currentYear = getYear(new Date());
   const [taxYear, setTaxYear] = useState(currentYear - 1);
   const [step, setStep] = useState(0);

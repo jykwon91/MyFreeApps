@@ -5,7 +5,7 @@ import { CLASSIFICATION_LABELS, TYPE_LABELS } from "@/shared/lib/property-labels
 import Button from "@/shared/components/ui/Button";
 import Badge from "@/shared/components/ui/Badge";
 
-interface Props {
+export interface PropertyListItemProps {
   property: Property;
   onEdit: () => void;
   onDelete: () => void;
@@ -13,7 +13,7 @@ interface Props {
   canWrite?: boolean;
 }
 
-export default function PropertyListItem({ property, onEdit, onDelete, onToggleActive, canWrite = true }: Props) {
+export default function PropertyListItem({ property, onEdit, onDelete, onToggleActive, canWrite = true }: PropertyListItemProps) {
   return (
     <div className={`border rounded-lg p-4 flex items-center justify-between ${!property.is_active ? "opacity-60" : ""}`}>
       <div>

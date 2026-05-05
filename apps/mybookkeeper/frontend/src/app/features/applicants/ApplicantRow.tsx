@@ -6,7 +6,7 @@ import {
 import type { ApplicantSummary } from "@/shared/types/applicant/applicant-summary";
 import ApplicantStageBadge from "./ApplicantStageBadge";
 
-interface Props {
+export interface ApplicantRowProps {
   applicant: ApplicantSummary;
 }
 
@@ -14,7 +14,7 @@ interface Props {
  * Desktop table row for the Applicants list. Click anywhere navigates to
  * the detail page.
  */
-export default function ApplicantRow({ applicant }: Props) {
+export default function ApplicantRow({ applicant }: ApplicantRowProps) {
   const navigate = useNavigate();
   const legalName = applicant.legal_name ?? "Unnamed applicant";
   const employer = applicant.employer_or_hospital ?? "—";

@@ -1,7 +1,7 @@
 import { ExternalLink } from "lucide-react";
 import Panel, { PanelCloseButton } from "@/shared/components/ui/Panel";
 
-interface Props {
+export interface AttachmentViewerProps {
   url: string;
   filename: string;
   contentType: string;
@@ -17,7 +17,7 @@ interface Props {
  * - image/* → <img>
  * - anything else → download-only message (DOCX, etc.)
  */
-export default function AttachmentViewer({ url, filename, contentType, onClose }: Props) {
+export default function AttachmentViewer({ url, filename, contentType, onClose }: AttachmentViewerProps) {
   const isPdf = contentType === "application/pdf";
   const isImage = contentType.startsWith("image/");
 

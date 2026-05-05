@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import AlertBox from "@/shared/components/ui/AlertBox";
 
-interface Props {
+export interface GmailReconnectBannerProps {
   reason: "missing-integration" | "missing-send-scope" | "reauth-required";
 }
 
@@ -14,7 +14,7 @@ interface Props {
  *
  * All cases link to Integrations where the host can connect or reconnect.
  */
-export default function GmailReconnectBanner({ reason }: Props) {
+export default function GmailReconnectBanner({ reason }: GmailReconnectBannerProps) {
   const message =
     reason === "missing-integration"
       ? "Connect Gmail to send replies. Your existing data stays untouched."

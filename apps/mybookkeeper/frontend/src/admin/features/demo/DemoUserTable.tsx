@@ -2,13 +2,13 @@ import { RotateCcw, Trash2 } from "lucide-react";
 import type { DemoUser } from "@/shared/types/demo/demo-user";
 import { formatDate } from "@/shared/utils/date";
 
-interface Props {
+export interface DemoUserTableProps {
   users: DemoUser[];
   onReset: (userId: string) => void;
   onDelete: (userId: string) => void;
 }
 
-export default function DemoUserTable({ users, onReset, onDelete }: Props) {
+export default function DemoUserTable({ users, onReset, onDelete }: DemoUserTableProps) {
   if (users.length === 0) {
     return (
       <div className="border rounded-lg px-6 py-12 text-center">

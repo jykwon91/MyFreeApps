@@ -4,14 +4,14 @@ import { Drawer } from "vaul";
 import { useKeyboardClose } from "@/shared/hooks/useKeyboardClose";
 import { useMediaQuery } from "@/shared/hooks/useMediaQuery";
 
-interface Props {
+export interface PanelProps {
   position: "right" | "center";
   width?: string;
   onClose: () => void;
   children: React.ReactNode;
 }
 
-export default function Panel({ position, width, onClose, children }: Props) {
+export default function Panel({ position, width, onClose, children }: PanelProps) {
   useKeyboardClose(onClose);
   const isMobile = useMediaQuery("(max-width: 768px)");
 

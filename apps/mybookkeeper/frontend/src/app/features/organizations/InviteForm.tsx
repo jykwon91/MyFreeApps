@@ -7,12 +7,12 @@ import { INVITE_ROLE_OPTIONS } from "@/shared/lib/organization-config";
 import LoadingButton from "@/shared/components/ui/LoadingButton";
 import Select from "@/shared/components/ui/Select";
 
-interface Props {
+export interface InviteFormProps {
   onError: (message: string) => void;
   onSuccess: (message: string) => void;
 }
 
-export default function InviteForm({ onError, onSuccess }: Props) {
+export default function InviteForm({ onError, onSuccess }: InviteFormProps) {
   const orgId = useActiveOrgId();
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<OrgRole>("user");

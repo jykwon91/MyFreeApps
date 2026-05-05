@@ -4,14 +4,14 @@ import type { DuplicateTransaction } from "@/shared/types/transaction/duplicate"
 import Badge from "@/shared/components/ui/Badge";
 import { formatTag } from "@/shared/utils/tag";
 
-interface Props {
+export interface TransactionSideProps {
   txn: DuplicateTransaction;
   propertyMap: Map<string, string>;
   label: string;
   onViewSource?: (docId: string) => void;
 }
 
-export default function TransactionSide({ txn, propertyMap, label, onViewSource }: Props) {
+export default function TransactionSide({ txn, propertyMap, label, onViewSource }: TransactionSideProps) {
   const propertyName = txn.property_id ? propertyMap.get(txn.property_id) ?? "Unknown" : "No property";
   const sourceCount = (txn.linked_document_ids?.length ?? 0) + (txn.source_document_id ? 1 : 0);
 

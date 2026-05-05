@@ -7,7 +7,7 @@ import type { ApplicantStage } from "@/shared/types/applicant/applicant-stage";
 const DEBOUNCE_MS = 600;
 const LOCKED_STAGE: ApplicantStage = "lease_signed";
 
-interface Props {
+export interface ContractDatesEditorProps {
   applicantId: string;
   field: "contract_start" | "contract_end";
   value: string | null;
@@ -38,7 +38,7 @@ export default function ContractDatesEditor({
   value,
   stage,
   label,
-}: Props) {
+}: ContractDatesEditorProps) {
   const { showError, showSuccess } = useToast();
   const [updateDates, { isLoading }] = useUpdateApplicantContractDatesMutation();
 

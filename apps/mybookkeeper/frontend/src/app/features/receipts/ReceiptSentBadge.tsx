@@ -2,12 +2,12 @@
  * Small pill shown on a transaction row when a receipt has been sent.
  * Links to the signed-lease attachments page for the tenant's lease.
  */
-interface Props {
+export interface ReceiptSentBadgeProps {
   /** If provided, the badge links to the lease detail page. */
   leaseId?: string | null;
 }
 
-export default function ReceiptSentBadge({ leaseId }: Props) {
+export default function ReceiptSentBadge({ leaseId }: ReceiptSentBadgeProps) {
   const content = (
     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
       Receipt sent

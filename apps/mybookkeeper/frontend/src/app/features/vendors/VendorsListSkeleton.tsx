@@ -1,6 +1,6 @@
 import Skeleton from "@/shared/components/ui/Skeleton";
 
-interface Props {
+export interface VendorsListSkeletonProps {
   count?: number;
 }
 
@@ -13,7 +13,7 @@ interface Props {
  *   - Desktop: same 4 columns (Name, Category, Hourly Rate, Last Used) and
  *     same number of skeleton rows.
  */
-export default function VendorsListSkeleton({ count = 4 }: Props) {
+export default function VendorsListSkeleton({ count = 4 }: VendorsListSkeletonProps) {
   const rows = Array.from({ length: count }, (_, i) => i);
 
   return (

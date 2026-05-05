@@ -1,6 +1,6 @@
 import type { PlaceholderProvenance } from "@/shared/types/lease/placeholder-provenance";
 
-interface Props {
+export interface ProvenanceBadgeProps {
   provenance: PlaceholderProvenance;
 }
 
@@ -32,7 +32,7 @@ const BADGE_CONFIG: Record<
  * Renders nothing when ``provenance`` is ``null`` (no ``default_source`` on
  * the placeholder — manual entry only).
  */
-export default function ProvenanceBadge({ provenance }: Props) {
+export default function ProvenanceBadge({ provenance }: ProvenanceBadgeProps) {
   if (provenance === null) return null;
 
   const config = BADGE_CONFIG[provenance];

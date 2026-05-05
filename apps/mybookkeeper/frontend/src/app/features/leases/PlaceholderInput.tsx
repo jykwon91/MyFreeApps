@@ -2,7 +2,7 @@ import type { LeaseTemplatePlaceholder } from "@/shared/types/lease/lease-templa
 import type { PlaceholderProvenance } from "@/shared/types/lease/placeholder-provenance";
 import ProvenanceBadge from "@/app/features/leases/ProvenanceBadge";
 
-interface Props {
+export interface PlaceholderInputProps {
   placeholder: LeaseTemplatePlaceholder;
   value: string;
   provenance: PlaceholderProvenance;
@@ -22,7 +22,7 @@ export default function PlaceholderInput({
   value,
   provenance,
   onChange,
-}: Props) {
+}: PlaceholderInputProps) {
   const inputType = (() => {
     switch (placeholder.input_type) {
       case "email":

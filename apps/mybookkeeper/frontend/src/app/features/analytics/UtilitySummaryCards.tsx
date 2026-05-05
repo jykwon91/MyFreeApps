@@ -2,7 +2,7 @@ import Card from "@/shared/components/ui/Card";
 import { formatCurrency } from "@/shared/utils/currency";
 import { UTILITY_SUB_CATEGORIES, UTILITY_SUB_CATEGORY_COLORS } from "@/shared/lib/constants";
 
-interface Props {
+export interface UtilitySummaryCardsProps {
   totalSpend: number;
   summary: Record<string, number>;
 }
@@ -11,7 +11,7 @@ function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-export default function UtilitySummaryCards({ totalSpend, summary }: Props) {
+export default function UtilitySummaryCards({ totalSpend, summary }: UtilitySummaryCardsProps) {
   return (
     <section
       className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3"

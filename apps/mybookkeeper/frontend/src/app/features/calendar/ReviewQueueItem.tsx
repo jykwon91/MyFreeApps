@@ -11,7 +11,7 @@ import {
 import ReviewQueueChannelBadge from "@/app/features/calendar/ReviewQueueChannelBadge";
 import { useToast } from "@/shared/hooks/useToast";
 
-interface Props {
+export interface ReviewQueueItemProps {
   item: ReviewQueueItemType;
 }
 
@@ -45,7 +45,7 @@ function formatDate(isoDate: string | null): string {
  * The "Add to MBK" button expands the listing picker. "Ignore" adds the
  * listing to the blocklist and dismisses the item from the queue.
  */
-export default function ReviewQueueItem({ item }: Props) {
+export default function ReviewQueueItem({ item }: ReviewQueueItemProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [selectedListingId, setSelectedListingId] = useState<string>("");
   const [error, setError] = useState<string | null>(null);

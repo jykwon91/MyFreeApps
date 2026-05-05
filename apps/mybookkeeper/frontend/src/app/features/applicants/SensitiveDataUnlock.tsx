@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Eye, EyeOff, ShieldAlert } from "lucide-react";
 
-interface Props {
+export interface SensitiveDataUnlockProps {
   children: React.ReactNode;
   /**
    * Optional override label for the toggle button. Defaults to a generic
@@ -24,7 +24,7 @@ export default function SensitiveDataUnlock({
   children,
   showLabel = "Show sensitive data",
   hideLabel = "Hide sensitive data",
-}: Props) {
+}: SensitiveDataUnlockProps) {
   const [revealed, setRevealed] = useState(false);
 
   return (

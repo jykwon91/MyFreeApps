@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-interface Props {
+export interface ListingAmenitiesProps {
   amenities: string[];
 }
 
@@ -12,7 +12,7 @@ const COLLAPSE_THRESHOLD = 6;
  * compact. Desktop shows everything inline because vertical real estate is
  * cheaper there.
  */
-export default function ListingAmenities({ amenities }: Props) {
+export default function ListingAmenities({ amenities }: ListingAmenitiesProps) {
   const [expanded, setExpanded] = useState(false);
 
   if (amenities.length === 0) {

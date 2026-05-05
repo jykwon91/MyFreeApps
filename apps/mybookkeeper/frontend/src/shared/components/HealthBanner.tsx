@@ -2,11 +2,11 @@ import { Link } from "react-router-dom";
 import { AlertTriangle, AlertCircle } from "lucide-react";
 import type { HealthSummary } from "@/shared/types/health/health-summary";
 
-interface Props {
+export interface HealthBannerProps {
   status: Exclude<HealthSummary["status"], "healthy">;
 }
 
-export default function HealthBanner({ status }: Props) {
+export default function HealthBanner({ status }: HealthBannerProps) {
   const isDegraded = status === "degraded";
 
   return (

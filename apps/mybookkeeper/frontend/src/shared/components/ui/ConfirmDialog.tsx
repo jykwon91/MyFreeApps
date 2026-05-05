@@ -1,7 +1,7 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import Button from "./Button";
 
-interface Props {
+export interface ConfirmDialogProps {
   open: boolean;
   title: string;
   description: string;
@@ -25,7 +25,7 @@ export default function ConfirmDialog({
   onConfirm,
   onCancel,
   children,
-}: Props) {
+}: ConfirmDialogProps) {
   return (
     <Dialog.Root open={open} onOpenChange={(isOpen) => { if (!isOpen) onCancel(); }}>
       <Dialog.Portal>

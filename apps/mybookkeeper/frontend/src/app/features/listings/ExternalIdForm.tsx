@@ -18,7 +18,7 @@ import {
 import type { ListingExternalId } from "@/shared/types/listing/listing-external-id";
 import type { ListingSource } from "@/shared/types/listing/listing-source";
 
-interface Props {
+export interface ExternalIdFormProps {
   listingId: string;
   /** When undefined, the form is in create mode. */
   existing?: ListingExternalId;
@@ -45,7 +45,7 @@ export default function ExternalIdForm({
   linkedSources,
   onSuccess,
   onCancel,
-}: Props) {
+}: ExternalIdFormProps) {
   const isEdit = existing !== undefined;
   const availableSources = isEdit
     ? LISTING_SOURCES

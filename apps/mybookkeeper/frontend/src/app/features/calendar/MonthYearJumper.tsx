@@ -6,7 +6,7 @@ import {
   parseIsoDate,
 } from "@/app/features/calendar/calendar-utils";
 
-interface Props {
+export interface MonthYearJumperProps {
   fromIso: string;
   onJump: (newFromIso: string) => void;
 }
@@ -30,7 +30,7 @@ const YEAR_LOOKAHEAD = 5;
  * for a single small surface. Two `<select>` elements give us native
  * keyboard support and accessibility for free.
  */
-export default function MonthYearJumper({ fromIso, onJump }: Props) {
+export default function MonthYearJumper({ fromIso, onJump }: MonthYearJumperProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 

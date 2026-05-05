@@ -7,13 +7,13 @@ import { STATUS_OPTIONS, TYPE_OPTIONS, ALL_CATEGORIES } from "@/shared/lib/trans
 import Select from "@/shared/components/ui/Select";
 import Badge from "@/shared/components/ui/Badge";
 
-interface Props {
+export interface TransactionFilterBarProps {
   filters: Filters;
   onChange: (filters: Filters) => void;
   properties: readonly Property[];
 }
 
-export default function TransactionFilterBar({ filters, onChange, properties }: Props) {
+export default function TransactionFilterBar({ filters, onChange, properties }: TransactionFilterBarProps) {
   const [mobileExpanded, setMobileExpanded] = useState(false);
 
   function update(field: keyof Filters, value: string) {

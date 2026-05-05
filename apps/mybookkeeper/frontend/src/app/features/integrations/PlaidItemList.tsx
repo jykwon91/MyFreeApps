@@ -15,12 +15,12 @@ import PlaidAccountMapping from "./PlaidAccountMapping";
 import { PLAID_STATUS_BADGE } from "@/shared/lib/integration-config";
 import type { PlaidItem } from "@/shared/types/plaid/plaid-item";
 
-interface Props {
+export interface PlaidItemListProps {
   onSuccess: (message: string) => void;
   onError: (message: string) => void;
 }
 
-export default function PlaidItemList({ onSuccess, onError }: Props) {
+export default function PlaidItemList({ onSuccess, onError }: PlaidItemListProps) {
   const { data: items = [], isLoading } = useListPlaidItemsQuery();
   const [disconnectItem, { isLoading: isDisconnecting }] = useDisconnectPlaidItemMutation();
   const [syncItem] = useSyncPlaidItemMutation();

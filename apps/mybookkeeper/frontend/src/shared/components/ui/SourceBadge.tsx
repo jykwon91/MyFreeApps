@@ -66,7 +66,7 @@ const SOURCE_META: Record<Source, SourceMeta> = {
   },
 };
 
-interface Props {
+export interface SourceBadgeProps {
   source: Source;
   variant?: "full" | "short";
   className?: string;
@@ -76,7 +76,7 @@ interface Props {
  * Color + icon badge for inquiry/listing sources. Used across listings,
  * inquiries, and applicants per RENTALS_PLAN.md §9.2.
  */
-export default function SourceBadge({ source, variant = "full", className = "" }: Props) {
+export default function SourceBadge({ source, variant = "full", className = "" }: SourceBadgeProps) {
   const meta = SOURCE_META[source];
   const label = variant === "short" ? meta.shortLabel : meta.fullLabel;
   const Icon = meta.Icon;

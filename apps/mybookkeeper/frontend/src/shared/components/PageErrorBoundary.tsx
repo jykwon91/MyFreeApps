@@ -3,7 +3,7 @@ import { Coffee, ChevronDown, ChevronUp, Copy, Home, RotateCcw } from "lucide-re
 import Button from "@/shared/components/ui/Button";
 import api from "@/shared/lib/api";
 
-interface Props {
+export interface PageErrorBoundaryProps {
   children: ReactNode;
 }
 
@@ -90,7 +90,7 @@ function PageErrorFallback({
   );
 }
 
-export default class PageErrorBoundary extends Component<Props, State> {
+export default class PageErrorBoundary extends Component<PageErrorBoundaryProps, State> {
   state: State = { error: null };
 
   static getDerivedStateFromError(error: Error): State {

@@ -2,7 +2,7 @@ import { Clock, DollarSign, ExternalLink } from "lucide-react";
 import LoadingButton from "@/shared/components/ui/LoadingButton";
 import type { ScreeningProviderInfo } from "@/shared/store/screeningApi";
 
-interface Props {
+export interface ScreeningProviderCardProps {
   provider: ScreeningProviderInfo;
   isLoading: boolean;
   onSelect: (providerName: string) => void;
@@ -17,7 +17,7 @@ interface Props {
  * ``isLoading`` disables all cards while any redirect fetch is in flight —
  * prevents double-clicks across different cards.
  */
-export default function ScreeningProviderCard({ provider, isLoading, onSelect }: Props) {
+export default function ScreeningProviderCard({ provider, isLoading, onSelect }: ScreeningProviderCardProps) {
   return (
     <div
       data-testid={`screening-provider-card-${provider.name}`}

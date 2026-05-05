@@ -8,12 +8,12 @@ import { useGetTotpStatusQuery } from "@/shared/store/totpApi";
 import { logout } from "@/shared/lib/auth";
 import { showError } from "@/shared/lib/toast-store";
 
-interface Props {
+export interface DeleteAccountModalProps {
   open: boolean;
   onClose: () => void;
 }
 
-export default function DeleteAccountModal({ open, onClose }: Props) {
+export default function DeleteAccountModal({ open, onClose }: DeleteAccountModalProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [totpCode, setTotpCode] = useState("");

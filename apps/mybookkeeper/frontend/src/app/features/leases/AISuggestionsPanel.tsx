@@ -4,7 +4,7 @@ import type { SuggestedPlaceholderItem } from "@/shared/types/lease/suggest-plac
 import { LEASE_PLACEHOLDER_INPUT_TYPE_LABELS } from "@/shared/lib/lease-labels";
 import type { LeasePlaceholderInputType } from "@/shared/types/lease/lease-placeholder-input-type";
 
-interface Props {
+export interface AISuggestionsPanelProps {
   suggestions: SuggestedPlaceholderItem[];
   truncated: boolean;
   pagesNote: string | null;
@@ -29,7 +29,7 @@ export default function AISuggestionsPanel({
   pagesNote,
   templatePlaceholderKeys,
   onDismiss,
-}: Props) {
+}: AISuggestionsPanelProps) {
   const [collapsed, setCollapsed] = useState(false);
 
   const newSuggestions = suggestions.filter(

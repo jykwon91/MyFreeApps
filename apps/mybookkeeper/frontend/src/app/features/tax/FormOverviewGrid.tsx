@@ -5,7 +5,7 @@ import type { BadgeColor } from "@/shared/components/ui/Badge";
 import type { ValidationResult } from "@/shared/types/tax/validation-result";
 import type { FormSummary } from "@/shared/types/tax/form-summary";
 
-interface Props {
+export interface FormOverviewGridProps {
   forms: FormSummary[];
   validationResults: ValidationResult[];
   onFormClick: (formName: string) => void;
@@ -23,7 +23,7 @@ function getStatusBadge(errors: number, warnings: number): { label: string; colo
   return { label: "Valid", color: "green" };
 }
 
-export default function FormOverviewGrid({ forms, validationResults, onFormClick }: Props) {
+export default function FormOverviewGrid({ forms, validationResults, onFormClick }: FormOverviewGridProps) {
   if (forms.length === 0) {
     return (
       <div className="text-center py-12 text-muted-foreground">

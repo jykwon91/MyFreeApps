@@ -1,7 +1,7 @@
 import { lastSyncedAt, relativeTime } from "@/app/features/calendar/calendar-utils";
 import type { CalendarEvent } from "@/shared/types/calendar/calendar-event";
 
-interface Props {
+export interface CalendarLastSyncedProps {
   events: readonly CalendarEvent[];
 }
 
@@ -13,7 +13,7 @@ interface Props {
  * When there are no events, shows "—" so the indicator never lies
  * about staleness ("just now" with zero rows would be misleading).
  */
-export default function CalendarLastSynced({ events }: Props) {
+export default function CalendarLastSynced({ events }: CalendarLastSyncedProps) {
   const latest = lastSyncedAt(events);
   return (
     <div

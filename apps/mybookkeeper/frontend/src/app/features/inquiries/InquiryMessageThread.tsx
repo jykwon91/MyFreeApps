@@ -2,7 +2,7 @@ import { ChevronDown, ChevronUp } from "lucide-react";
 import { formatAbsoluteTime } from "@/shared/lib/inquiry-date-format";
 import type { InquiryMessage } from "@/shared/types/inquiry/inquiry-message";
 
-interface Props {
+export interface InquiryMessageThreadProps {
   messages: InquiryMessage[];
 }
 
@@ -21,7 +21,7 @@ const CHANNEL_LABELS: Record<string, string> = {
  * Manual inquiries created via this PR will normally have no messages at
  * all; PR 2.2 populates the thread for parsed FF/TNH emails.
  */
-export default function InquiryMessageThread({ messages }: Props) {
+export default function InquiryMessageThread({ messages }: InquiryMessageThreadProps) {
   if (messages.length === 0) {
     return (
       <p className="text-sm text-muted-foreground italic">

@@ -6,7 +6,7 @@ import { useEndTenancyMutation } from "@/shared/store/applicantsApi";
 
 const REASON_MAX_LENGTH = 500;
 
-interface Props {
+export interface EndTenancyDialogProps {
   applicantId: string;
   tenantName: string;
   onClose: () => void;
@@ -16,7 +16,7 @@ interface Props {
  * Inline dialog to confirm ending a tenant's tenancy.
  * Posts PATCH /applicants/{id}/tenancy/end with an optional reason.
  */
-export default function EndTenancyDialog({ applicantId, tenantName, onClose }: Props) {
+export default function EndTenancyDialog({ applicantId, tenantName, onClose }: EndTenancyDialogProps) {
   const [reason, setReason] = useState("");
   const [endTenancy, { isLoading }] = useEndTenancyMutation();
   const reasonRef = useRef<HTMLTextAreaElement>(null);
