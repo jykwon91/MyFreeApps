@@ -118,7 +118,11 @@ async def _create_with_backoff(**kwargs) -> anthropic.types.Message:
                     {"wait_seconds": wait, "consecutive_429s": _throttle.consecutive_429s},
                 )
             except Exception:
-                pass
+                logger.warning(
+                    "Failed to record rate_limited event (consecutive=%d) — continuing backoff",
+                    _throttle.consecutive_429s,
+                    exc_info=True,
+                )
             if attempt == 4:
                 raise
             await asyncio.sleep(wait)
