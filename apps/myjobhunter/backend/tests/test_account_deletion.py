@@ -405,9 +405,9 @@ async def test_delete_cascades_all_domain_rows(db: AsyncSession) -> None:
     db.add(Document(
         user_id=user.id,
         application_id=application.id,
-        document_type="cover_letter",
+        title="Cover letter",
+        kind="cover_letter",
         file_path="/tmp/cover.pdf",
-        generated_by="user",
     ))
 
     db.add(JobBoardCredential(
