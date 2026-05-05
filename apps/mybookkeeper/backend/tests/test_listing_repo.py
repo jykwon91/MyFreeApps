@@ -759,6 +759,152 @@ class TestListingExternalIdUniquenessMatrix:
         assert miss is None
 
 
+class TestListingSlugUniqueness:
+    """Uniqueness matrix for listings.slug (partial unique index).
+
+    The index enforces: slug must be unique among rows where deleted_at IS NULL.
+    Soft-deleted rows are exempt — a host may reuse their old slug after archiving.
+
+    Per CLAUDE.md: enumerate all composite-key combinations for any uniqueness
+    constraint before implementation.
+
+    The partial-index semantics (archived + active may share a slug) require
+    PostgreSQL, which is the production DB.  Tests that depend on this behaviour
+    verify the model + migration DDL instead of exercising the constraint at the
+    ORM level — identical to the approach used in ``test_applicant_indexes.py``.
+    The one ORM-level test (two active listings rejected) works on SQLite too
+    because a full unique index would enforce it the same way.
+    """
+
+    # ------------------------------------------------------------------ #
+    # ORM-level test (works on SQLite)                                     #
+    # ------------------------------------------------------------------ #
+
+    @pytest.mark.asyncio
+    async def test_two_active_listings_same_slug_rejected(
+        self, db: AsyncSession, test_user: User, test_org: Organization
+    ) -> None:
+        """Two non-deleted listings cannot share a slug — DB-level constraint."""
+        prop = await _seed_property(db, test_org, test_user)
+        l1 = _make_listing(
+            organization_id=test_org.id, user_id=test_user.id, property_id=prop.id,
+            title="Room A",
+        )
+        l1.slug = "sunny-room-abc123"
+        db.add(l1)
+        await db.commit()
+
+        l2 = _make_listing(
+            organization_id=test_org.id, user_id=test_user.id, property_id=prop.id,
+            title="Room B",
+        )
+        l2.slug = "sunny-room-abc123"
+        db.add(l2)
+        with pytest.raises(IntegrityError):
+            await db.commit()
+        await db.rollback()
+
+    # ------------------------------------------------------------------ #
+    # Metadata + migration source tests (PostgreSQL partial-index shape)  #
+    # ------------------------------------------------------------------ #
+
+    def test_model_declares_partial_unique_index(self) -> None:
+        """The Listing model must declare ``uq_listings_slug_active`` as a
+        partial unique index, not as a column-level ``unique=True``."""
+        from app.models.listings.listing import Listing
+
+        # Column-level unique must be gone.
+        slug_col = Listing.__table__.c["slug"]
+        assert not slug_col.unique, (
+            "slug must NOT have column-level unique=True; "
+            "uniqueness lives in the partial index uq_listings_slug_active"
+        )
+
+        # The partial index must be declared in __table_args__.
+        index_names = {ix.name for ix in Listing.__table__.indexes}
+        assert "uq_listings_slug_active" in index_names, (
+            "Listing model is missing the uq_listings_slug_active index"
+        )
+
+        # Verify it is marked unique.
+        slug_index = next(
+            ix for ix in Listing.__table__.indexes if ix.name == "uq_listings_slug_active"
+        )
+        assert slug_index.unique, "uq_listings_slug_active must be unique=True"
+
+    def test_migration_drops_old_constraint_and_creates_partial_index(self) -> None:
+        """The migration source must drop ``uq_listings_slug`` and create
+        ``uq_listings_slug_active`` with ``postgresql_where='deleted_at IS NULL'``."""
+        import re
+        from pathlib import Path
+
+        migration_path = (
+            Path(__file__).resolve().parent.parent
+            / "alembic" / "versions"
+            / "slugpidx260504_listing_slug_partial_unique_index.py"
+        )
+        assert migration_path.exists(), f"Migration file not found: {migration_path}"
+        source = migration_path.read_text(encoding="utf-8")
+
+        assert "uq_listings_slug" in source, (
+            "Migration must reference the old constraint name uq_listings_slug"
+        )
+        assert "drop_constraint" in source, (
+            "Migration must call op.drop_constraint to remove the old full unique"
+        )
+        assert "uq_listings_slug_active" in source, (
+            "Migration must create uq_listings_slug_active"
+        )
+        assert "deleted_at IS NULL" in source, (
+            "Migration must include the WHERE clause 'deleted_at IS NULL' "
+            "to create a partial index, not a full unique constraint"
+        )
+
+    def test_migration_has_defensive_duplicate_check(self) -> None:
+        """The migration must abort if duplicate active slugs exist before
+        the constraint is dropped — defensive data integrity check."""
+        from pathlib import Path
+
+        migration_path = (
+            Path(__file__).resolve().parent.parent
+            / "alembic" / "versions"
+            / "slugpidx260504_listing_slug_partial_unique_index.py"
+        )
+        source = migration_path.read_text(encoding="utf-8")
+
+        assert "HAVING COUNT(*) > 1" in source, (
+            "Migration must include a HAVING COUNT(*) > 1 check to detect "
+            "duplicate slugs among active rows before proceeding"
+        )
+        assert "RuntimeError" in source, (
+            "Migration must raise RuntimeError (not silently ignore) "
+            "when duplicate active slugs are found"
+        )
+
+    def test_migration_downgrade_restores_full_constraint(self) -> None:
+        """The downgrade path must recreate the original full unique constraint."""
+        from pathlib import Path
+
+        migration_path = (
+            Path(__file__).resolve().parent.parent
+            / "alembic" / "versions"
+            / "slugpidx260504_listing_slug_partial_unique_index.py"
+        )
+        source = migration_path.read_text(encoding="utf-8")
+
+        assert "def downgrade" in source, "Migration must have a downgrade() function"
+        downgrade_section = source[source.index("def downgrade"):]
+        assert "uq_listings_slug_active" in downgrade_section, (
+            "downgrade() must drop uq_listings_slug_active"
+        )
+        assert "uq_listings_slug" in downgrade_section, (
+            "downgrade() must recreate the original uq_listings_slug constraint"
+        )
+        assert "create_unique_constraint" in downgrade_section, (
+            "downgrade() must call create_unique_constraint to restore full uniqueness"
+        )
+
+
 class TestListingTenantIsolation:
     """The most important test in the file (per RENTALS_PLAN.md §13).
 

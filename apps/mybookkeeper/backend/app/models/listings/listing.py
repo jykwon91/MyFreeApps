@@ -43,11 +43,14 @@ class Listing(Base):
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # URL-safe public identifier used by the public inquiry form
-    # (``GET /apply/<slug>``). Globally unique so a listing's apply URL stays
-    # stable when copy-pasted into Airbnb/VRBO/FF/Rotating Room descriptions.
+    # (``GET /apply/<slug>``). Unique among *active* (non-deleted) listings so
+    # a listing's apply URL stays stable when copy-pasted into Airbnb/VRBO/FF/
+    # Rotating Room descriptions. Archived listings may recycle their slug.
     # Auto-generated server-side on create (``listing_slug.generate_slug``);
     # backfilled for pre-T0 rows by the ``b2c3d4e5f6a1`` migration.
-    slug: Mapped[str | None] = mapped_column(String(220), nullable=True, unique=True)
+    # Uniqueness is enforced by the partial index ``uq_listings_slug_active``
+    # (``WHERE deleted_at IS NULL``) in ``__table_args__`` below.
+    slug: Mapped[str | None] = mapped_column(String(220), nullable=True)
 
     monthly_rate: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     weekly_rate: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
@@ -94,6 +97,14 @@ class Listing(Base):
         CheckConstraint(
             f"status IN {LISTING_STATUSES_SQL}",
             name="chk_listing_status",
+        ),
+        # Slug uniqueness is scoped to active listings only — archived rows may
+        # reuse a slug so a host can recreate a listing with the same URL.
+        Index(
+            "uq_listings_slug_active",
+            "slug",
+            unique=True,
+            postgresql_where=text("deleted_at IS NULL"),
         ),
         Index(
             "ix_listings_org_status_active",
