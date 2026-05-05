@@ -6,9 +6,12 @@ _MIN_KEY_LENGTH = 32
 
 class Settings(BaseSettings):
     database_url: str
-    database_url_sync: str
     secret_key: str
     encryption_key: str
+
+    @property
+    def database_url_sync(self) -> str:
+        return self.database_url.replace("+asyncpg", "")
 
     @field_validator("secret_key", "encryption_key")
     @classmethod
