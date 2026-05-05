@@ -27,10 +27,14 @@ import {
 import type { ListingPhoto } from "@/shared/types/listing/listing-photo";
 import type { PhotoLightboxTarget } from "@/shared/types/listing/photo-lightbox-target";
 import ListingPhotoCard from "@/app/features/listings/ListingPhotoCard";
+import PhotoSelectionToolbar from "@/app/features/listings/PhotoSelectionToolbar";
+import { usePhotoSelection } from "@/app/features/listings/usePhotoSelection";
+import { downloadPhotosAsZip } from "@/app/features/listings/photo-bulk-download";
 import PhotoLightbox from "@/app/features/listings/PhotoLightbox";
 
 export interface ListingPhotoManagerProps {
   listingId: string;
+  listingSlug?: string;
   photos: readonly ListingPhoto[];
 }
 
@@ -56,14 +60,24 @@ function clientSideValidate(files: File[]): { valid: File[]; rejected: string[] 
   return { valid, rejected };
 }
 
-export default function ListingPhotoManager({ listingId, photos }: ListingPhotoManagerProps) {
+export default function ListingPhotoManager({
+  listingId,
+  listingSlug,
+  photos,
+}: ListingPhotoManagerProps) {
   const [uploadPhotos, { isLoading: isUploading }] = useUploadListingPhotosMutation();
   const [deletePhoto] = useDeleteListingPhotoMutation();
   const [updatePhoto] = useUpdateListingPhotoMutation();
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
   const [orderedIds, setOrderedIds] = useState<string[] | null>(null);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [isBulkDownloading, setIsBulkDownloading] = useState(false);
   const [lightboxTarget, setLightboxTarget] = useState<PhotoLightboxTarget | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const { selection, toggleSelection, selectAll, clearSelection, isSelected } =
+    usePhotoSelection();
 
   const handleLightboxNavigate = useCallback((nextIndex: number) => {
     setLightboxTarget({ listingId, index: nextIndex });
@@ -78,6 +92,9 @@ export default function ListingPhotoManager({ listingId, photos }: ListingPhotoM
   const sortedPhotos = [...photos].sort((a, b) => a.display_order - b.display_order);
   const displayIds = orderedIds ?? sortedPhotos.map((p) => p.id);
   const photosById = new Map(sortedPhotos.map((p) => [p.id, p]));
+
+  const selectedCount = selection.selectedIds.size;
+  const hasSelection = selectedCount > 0;
 
   async function handleFiles(files: FileList | null) {
     if (!files || files.length === 0) return;
@@ -105,6 +122,44 @@ export default function ListingPhotoManager({ listingId, photos }: ListingPhotoM
       showSuccess("Photo removed.");
     } catch {
       showError("I couldn't remove that photo. Want to try again?");
+    }
+  }
+
+  async function handleBulkDelete() {
+    setConfirmBulkDelete(false);
+    setIsBulkDeleting(true);
+    const ids = Array.from(selection.selectedIds);
+    let failedCount = 0;
+    for (const photoId of ids) {
+      try {
+        await deletePhoto({ listingId, photoId }).unwrap();
+      } catch {
+        failedCount++;
+        showError(`I couldn't remove photo ${photoId}. Stopped after the first failure.`);
+        break;
+      }
+    }
+    setIsBulkDeleting(false);
+    if (failedCount === 0) {
+      showSuccess(ids.length === 1 ? "Photo removed." : `${ids.length} photos removed.`);
+      clearSelection();
+    }
+  }
+
+  async function handleBulkDownload() {
+    setIsBulkDownloading(true);
+    const selectedPhotos = displayIds
+      .filter((id) => selection.selectedIds.has(id))
+      .map((id) => photosById.get(id))
+      .filter((p): p is ListingPhoto => p !== undefined);
+
+    const slug = listingSlug ?? listingId;
+    try {
+      await downloadPhotosAsZip(selectedPhotos, slug);
+    } catch {
+      showError("I couldn't create the download. Want to try again?");
+    } finally {
+      setIsBulkDownloading(false);
     }
   }
 
@@ -170,6 +225,19 @@ export default function ListingPhotoManager({ listingId, photos }: ListingPhotoM
         />
       </div>
 
+      {hasSelection ? (
+        <PhotoSelectionToolbar
+          selectedCount={selectedCount}
+          totalCount={displayIds.length}
+          onSelectAll={() => selectAll(displayIds)}
+          onClear={clearSelection}
+          onBulkDelete={() => setConfirmBulkDelete(true)}
+          onBulkDownload={() => void handleBulkDownload()}
+          isBulkDeleting={isBulkDeleting}
+          isBulkDownloading={isBulkDownloading}
+        />
+      ) : null}
+
       {sortedPhotos.length === 0 ? (
         <p
           className="text-sm text-muted-foreground border rounded-lg p-6 text-center"
@@ -197,6 +265,10 @@ export default function ListingPhotoManager({ listingId, photos }: ListingPhotoM
                     key={photoId}
                     photo={photo}
                     onDelete={() => setConfirmDeleteId(photoId)}
+                    selected={isSelected(photoId)}
+                    onToggleSelection={(id, shiftKey) =>
+                      toggleSelection(id, shiftKey, displayIds)
+                    }
                     onOpen={() => setLightboxTarget({ listingId, index })}
                   />
                 );
@@ -217,14 +289,26 @@ export default function ListingPhotoManager({ listingId, photos }: ListingPhotoM
         onCancel={() => setConfirmDeleteId(null)}
       />
 
-      {lightboxTarget && (
+      <ConfirmDialog
+        open={confirmBulkDelete}
+        title={`Delete ${selectedCount} photo${selectedCount === 1 ? "" : "s"}?`}
+        description="These photos will be permanently deleted from this listing. This can't be undone."
+        confirmLabel={`Delete ${selectedCount} photo${selectedCount === 1 ? "" : "s"}`}
+        cancelLabel="Cancel"
+        variant="danger"
+        isLoading={isBulkDeleting}
+        onConfirm={() => void handleBulkDelete()}
+        onCancel={() => setConfirmBulkDelete(false)}
+      />
+
+      {lightboxTarget ? (
         <PhotoLightbox
           photos={displayIds.map((id) => photosById.get(id)).filter((p): p is ListingPhoto => p !== undefined)}
           currentIndex={lightboxTarget.index}
           onClose={() => setLightboxTarget(null)}
           onNavigate={handleLightboxNavigate}
         />
-      )}
+      ) : null}
     </div>
   );
 }

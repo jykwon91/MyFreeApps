@@ -3,7 +3,7 @@
 Issues discovered during development. New entries are appended; resolved entries are
 removed and the counts in this header are updated.
 
-**Open issues: 11 (Critical: 1 / High: 1 / Medium: 4 / Low: 5)**
+**Open issues: 13 (Critical: 1 / High: 2 / Medium: 4 / Low: 6)**
 
 ---
 
@@ -247,6 +247,49 @@ become a bug if the schema is reused elsewhere.
    `extra="forbid"`. Used by `POST /documents`.
 2. `DocumentFileCreateInternal` — the internal record written by `create_file_document`.
    Not exposed to callers at all (used only by the service).
+
+### [Backend Tests] test_application_writes.py hangs on 3rd test (timeout in teardown)
+
+**Severity:** High
+**Effort:** M
+**Location:** `apps/myjobhunter/backend/tests/test_application_writes.py` — 3rd test
+**Discovered:** Phase 3 resume parser worker — `2026-05-04`
+
+**Problem:** Running the full backend test suite hangs during teardown of the 3rd test in
+`test_application_writes.py` with a 60-second timeout in `select.select`. The same timeout
+occurs on both `main` and the worktree branch, confirming it is pre-existing. Likely an
+asyncpg event loop interaction on Windows where a connection pool connection is held open
+by the session-scoped fixture beyond what the event loop can cleanly shut down.
+
+**Recommendation:**
+1. Add `@pytest.mark.timeout(30)` to the hanging test to get faster feedback.
+2. Try `asyncio_default_fixture_loop_scope = "function"` (instead of "session") in
+   `pyproject.toml` to see if shorter event loop lifetimes avoid the hang.
+3. Run the full suite on Linux CI (likely unaffected) to confirm tests pass end-to-end.
+
+**Workaround:** Run individual test files (`pytest tests/test_X.py`) rather than the
+full suite on Windows until this is resolved.
+
+---
+
+### [Worker] resume_parser_worker._upsert_skill_ignore_conflict uses `Any` type
+
+**Severity:** Low
+**Effort:** XS
+**Location:** `apps/myjobhunter/backend/app/workers/resume_parser_worker.py:183`
+**Discovered:** Phase 3 resume parser worker — `2026-05-04`
+
+**Problem:** `_upsert_skill_ignore_conflict(db: Any, skill: Any)` uses `Any` for both
+parameters to avoid a circular import (Skill model → SQLAlchemy → session types all
+live in the same import graph as the worker). The function is small and its types are
+well-understood — it just needs proper type annotations.
+
+**Recommendation:** Change `db: Any` to `db: AsyncSession` and `skill: Any` to a
+`SkillUpsertData` TypedDict (or the `Skill` ORM model directly) without importing
+the Skill model at module level (use `TYPE_CHECKING` guard). This preserves the
+deferred import behaviour while enabling type checking.
+
+---
 
 ### [Frontend Tests] Profile.test.tsx uses `as unknown as any` for generic mutation stub
 

@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
-import EmptyState from "@/shared/components/ui/EmptyState";
 import AlertBox from "@/shared/components/ui/AlertBox";
 import LoadingButton from "@/shared/components/ui/LoadingButton";
 import { useGetApplicantsQuery } from "@/shared/store/applicantsApi";
@@ -10,10 +9,9 @@ import {
   APPLICANT_STAGES,
 } from "@/shared/lib/applicant-labels";
 import type { ApplicantStage } from "@/shared/types/applicant/applicant-stage";
-import ApplicantsListSkeleton from "@/app/features/applicants/ApplicantsListSkeleton";
 import ApplicantStageFilter from "@/app/features/applicants/ApplicantStageFilter";
-import ApplicantCard from "@/app/features/applicants/ApplicantCard";
-import ApplicantRow from "@/app/features/applicants/ApplicantRow";
+import ApplicantsListBody from "@/app/features/applicants/ApplicantsListBody";
+import { useApplicantsListMode } from "@/app/features/applicants/useApplicantsListMode";
 
 const STAGE_PARAM = "stage";
 
@@ -45,6 +43,11 @@ export default function Applicants() {
   const hasMore = data?.has_more ?? false;
   const isFiltered = stage !== null;
   const showStageBadge = stage === null;
+
+  const mode = useApplicantsListMode({
+    isLoading,
+    isEmpty: applicants.length === 0 && !isError,
+  });
 
   function handleFilterChange(next: ApplicantStage | null) {
     const params = new URLSearchParams(searchParams);
@@ -85,67 +88,15 @@ export default function Applicants() {
         </AlertBox>
       ) : null}
 
-      {isLoading ? (
-        <ApplicantsListSkeleton />
-      ) : applicants.length === 0 && !isError ? (
-        <EmptyState
-          message={
-            isFiltered
-              ? "No applicants in this stage. Try a different filter."
-              : "No applicants yet — they'll show up here once you promote an inquiry."
-          }
-        />
-      ) : (
-        <>
-          {/* Mobile: cards */}
-          <ul className="md:hidden space-y-3" data-testid="applicants-mobile">
-            {applicants.map((applicant) => (
-              <li key={applicant.id}>
-                <ApplicantCard
-                  applicant={applicant}
-                  showStageBadge={showStageBadge}
-                />
-              </li>
-            ))}
-          </ul>
-
-          {/* Desktop: table */}
-          <div
-            className="hidden md:block border rounded-lg overflow-hidden"
-            data-testid="applicants-desktop"
-          >
-            <table className="w-full text-sm">
-              <thead className="bg-muted/50 text-left text-xs uppercase text-muted-foreground">
-                <tr>
-                  <th className="px-4 py-2 font-medium">Name</th>
-                  <th className="px-4 py-2 font-medium">Employer</th>
-                  <th className="px-4 py-2 font-medium">Contract Dates</th>
-                  <th className="px-4 py-2 font-medium">Promoted</th>
-                  <th className="px-4 py-2 font-medium">Stage</th>
-                </tr>
-              </thead>
-              <tbody>
-                {applicants.map((applicant) => (
-                  <ApplicantRow key={applicant.id} applicant={applicant} />
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {hasMore ? (
-            <div className="flex justify-center">
-              <LoadingButton
-                variant="secondary"
-                onClick={handleLoadMore}
-                isLoading={isFetching}
-                loadingText="Loading..."
-              >
-                Load more
-              </LoadingButton>
-            </div>
-          ) : null}
-        </>
-      )}
+      <ApplicantsListBody
+        mode={mode}
+        applicants={applicants}
+        showStageBadge={showStageBadge}
+        isFiltered={isFiltered}
+        hasMore={hasMore}
+        isFetching={isFetching}
+        onLoadMore={handleLoadMore}
+      />
     </main>
   );
 }

@@ -168,6 +168,7 @@ async def totp_login(
                 request=request,
                 succeeded=False,
             )
+            await db.commit()
             raise HTTPException(status_code=401, detail="Invalid authentication code")
 
         event_type = AuthEventType.TOTP_RECOVERY_USED if used_recovery else AuthEventType.TOTP_VERIFY_SUCCESS
