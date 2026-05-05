@@ -10,7 +10,7 @@ export interface CompanyFormValues {
   hq_location: string;
 }
 
-interface Props {
+export interface CompanyFormProps {
   onSubmit: (request: CompanyCreateRequest) => Promise<void>;
   onCancel: () => void;
   submitLabel?: string;
@@ -28,7 +28,7 @@ export default function CompanyForm({
   submitting = false,
   initialValues,
   autoFocus = true,
-}: Props) {
+}: CompanyFormProps) {
   // Use React's useId so IDs are unique even when the form renders multiple
   // times in the same page (e.g. AddApplicationDialog + AddCompanyDialog open
   // at the same time in tests).
