@@ -9,6 +9,20 @@ import { SEVERITY_ORDER, SEVERITY_CONFIG } from "@/shared/lib/tax-advisor-config
 import SuggestionCard from "@/app/features/tax/SuggestionCard";
 import TaxAdvisorPanelSkeleton from "@/app/features/tax/TaxAdvisorPanelSkeleton";
 
+type AdvisorCtaState = "rate-limited" | "error" | "idle";
+
+function resolveAdvisorCtaState(is429: boolean, hasError: boolean): AdvisorCtaState {
+  if (is429) return "rate-limited";
+  if (hasError) return "error";
+  return "idle";
+}
+
+const ADVISOR_CTA_MESSAGE: Record<AdvisorCtaState, string> = {
+  "rate-limited": "I've already reviewed this return several times today. Check back tomorrow.",
+  "error": "I ran into a problem reviewing your tax data. Want me to try again?",
+  "idle": "I can review your tax return and suggest ways to save money or fix potential issues.",
+};
+
 export interface TaxAdvisorPanelProps {
   taxReturnId: string;
   formCount: number;
@@ -57,17 +71,14 @@ export default function TaxAdvisorPanel({ taxReturnId, formCount }: TaxAdvisorPa
 
   if (noCachedSuggestions) {
     const is429 = generateError && "status" in generateError && generateError.status === 429;
+    const ctaState = resolveAdvisorCtaState(!!is429, !!generateError);
     return (
       <div className="border rounded-lg p-6 text-center">
         <Lightbulb className="h-8 w-8 mx-auto mb-3 text-yellow-500" />
         <p className="text-sm text-muted-foreground mb-4">
-          {is429
-            ? "I've already reviewed this return several times today. Check back tomorrow."
-            : generateError
-            ? "I ran into a problem reviewing your tax data. Want me to try again?"
-            : "I can review your tax return and suggest ways to save money or fix potential issues."}
+          {ADVISOR_CTA_MESSAGE[ctaState]}
         </p>
-        {!is429 && (
+        {ctaState !== "rate-limited" && (
           <LoadingButton onClick={handleGenerate} isLoading={isGenerating} loadingText="Reviewing...">
             Get Tax Advice
           </LoadingButton>

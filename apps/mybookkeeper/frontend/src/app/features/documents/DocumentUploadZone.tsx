@@ -18,6 +18,81 @@ import {
   restoreProcessing,
   dismiss,
 } from "@/shared/store/documentUploadSlice";
+import type { FileStatus } from "@/shared/types/document/file-status";
+import type { UploadSubstatus } from "@/shared/types/document/upload-substatus";
+
+interface UploadStateSnapshot {
+  status: FileStatus;
+  fileName: string;
+  batchId: string | null;
+  multiUploadTotal: number;
+  singleStatusCode: string | undefined;
+  batchStatusReady: boolean;
+}
+
+function resolveUploadSubstatus(snap: UploadStateSnapshot): UploadSubstatus {
+  const { status, fileName, batchId, multiUploadTotal, singleStatusCode, batchStatusReady } = snap;
+  const isMulti = multiUploadTotal > 0;
+  switch (status) {
+    case "error":
+      return fileName ? "error-named" : "error-anonymous";
+    case "uploading":
+      return isMulti ? "uploading-multi" : "uploading-single";
+    case "processing":
+      if (batchId && batchStatusReady) return "processing-batch";
+      if (!batchId && singleStatusCode === "extracting") return "processing-extracting";
+      return "processing-single";
+    case "done":
+      if (isMulti) return "done-multi";
+      return batchId ? "done-batch" : "done-single";
+  }
+}
+
+interface UploadStatusTextArgs {
+  substatus: UploadSubstatus;
+  fileName: string;
+  multiUploadCompleted: number;
+  multiUploadTotal: number;
+  multiUploadFailed: number;
+  batchTotal: number;
+  batchCompleted: number;
+  batchFailed: number;
+}
+
+function resolveUploadStatusText(args: UploadStatusTextArgs): string {
+  const {
+    substatus,
+    fileName,
+    multiUploadCompleted,
+    multiUploadTotal,
+    multiUploadFailed,
+    batchTotal,
+    batchCompleted,
+    batchFailed,
+  } = args;
+  switch (substatus) {
+    case "error-anonymous":
+      return "Something went wrong. Please try again.";
+    case "error-named":
+      return fileName;
+    case "uploading-multi":
+      return `${fileName} — Uploading ${multiUploadCompleted + 1} of ${multiUploadTotal}…`;
+    case "uploading-single":
+      return `${fileName} — Uploading…`;
+    case "processing-batch":
+      return `${fileName} — ${batchCompleted} of ${batchTotal} extracted${batchFailed > 0 ? ` (${batchFailed} failed)` : ""}…`;
+    case "processing-extracting":
+      return `${fileName} — Hmm, let me read this...`;
+    case "processing-single":
+      return `${fileName} — Processing…`;
+    case "done-multi":
+      return `${fileName} — ${multiUploadCompleted} of ${multiUploadTotal} uploaded${multiUploadFailed > 0 ? ` (${multiUploadFailed} failed)` : ""}`;
+    case "done-batch":
+      return `${fileName} — ${batchTotal} document${batchTotal !== 1 ? "s" : ""} processed`;
+    case "done-single":
+      return `${fileName} — Got it! Check your Transactions page for the extracted data.`;
+  }
+}
 
 export default function DocumentUploadZone() {
   const isMobile = useMediaQuery("(pointer: coarse)");
@@ -150,6 +225,30 @@ export default function DocumentUploadZone() {
   const isActive = upload?.status === "uploading" || upload?.status === "processing";
   const isMultiUpload = upload?.multiUploadTotal !== undefined && upload.multiUploadTotal > 0;
 
+  const substatus = upload
+    ? resolveUploadSubstatus({
+        status: upload.status,
+        fileName: upload.fileName,
+        batchId: upload.batchId,
+        multiUploadTotal: upload.multiUploadTotal,
+        singleStatusCode: singleStatus?.status,
+        batchStatusReady: !!(upload.batchId && batchStatus),
+      })
+    : null;
+
+  const statusText = substatus && upload
+    ? resolveUploadStatusText({
+        substatus,
+        fileName: upload.fileName,
+        multiUploadCompleted: upload.multiUploadCompleted,
+        multiUploadTotal: upload.multiUploadTotal,
+        multiUploadFailed: upload.multiUploadFailed,
+        batchTotal: upload.batchTotal,
+        batchCompleted: batchStatus?.completed ?? 0,
+        batchFailed: batchStatus?.failed ?? 0,
+      })
+    : null;
+
   return (
     <div className="space-y-2">
       <div
@@ -225,27 +324,7 @@ export default function DocumentUploadZone() {
                 <XCircle size={14} className="text-destructive shrink-0" />
               )}
               <span className={`truncate ${upload.status === "error" ? "text-destructive" : "text-muted-foreground"}`}>
-                {upload.status === "error" && !upload.fileName
-                  ? "Something went wrong. Please try again."
-                  : upload.fileName}
-                {upload.status === "uploading" && isMultiUpload
-                  ? ` — Uploading ${upload.multiUploadCompleted + 1} of ${upload.multiUploadTotal}…`
-                  : ""}
-                {upload.status === "uploading" && !isMultiUpload ? " — Uploading…" : ""}
-                {upload.status === "processing" && upload.batchId && batchStatus
-                  ? ` — ${batchStatus.completed} of ${batchStatus.total} extracted${batchStatus.failed > 0 ? ` (${batchStatus.failed} failed)` : ""}…`
-                  : ""}
-                {upload.status === "processing" && !upload.batchId
-                  ? singleStatus?.status === "extracting" ? " — Hmm, let me read this..." : " — Processing…"
-                  : ""}
-                {upload.status === "done" && isMultiUpload
-                  ? ` — ${upload.multiUploadCompleted} of ${upload.multiUploadTotal} uploaded${upload.multiUploadFailed > 0 ? ` (${upload.multiUploadFailed} failed)` : ""}`
-                  : ""}
-                {upload.status === "done" && !isMultiUpload
-                  ? upload.batchId
-                    ? ` — ${upload.batchTotal} document${upload.batchTotal !== 1 ? "s" : ""} processed`
-                    : " — Got it! Check your Transactions page for the extracted data."
-                  : ""}
+                {statusText}
               </span>
             </div>
             <div className="flex items-center gap-1 shrink-0 ml-2">

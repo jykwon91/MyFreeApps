@@ -2,9 +2,29 @@ import { useState, useCallback } from "react";
 import { Pencil, FileText } from "lucide-react";
 import { formatCurrency } from "@/shared/utils/currency";
 import Badge from "@/shared/components/ui/Badge";
+import type { BadgeColor } from "@/shared/components/ui/Badge";
 import DocumentViewer from "@/app/features/documents/DocumentViewer";
 import type { TaxFormField, FieldValueType, SourceType } from "@/shared/types/tax/tax-form";
 import { VALIDATION_ICONS, SOURCE_BADGES, PII_FIELDS, SSN_REGEX } from "@/shared/lib/tax-form-config";
+
+type FieldSourceMode = "calculated" | "overridden" | "sourced";
+
+function resolveFieldSourceMode(field: TaxFormField): FieldSourceMode {
+  if (field.is_calculated) return "calculated";
+  if (field.is_overridden) return "overridden";
+  return "sourced";
+}
+
+function resolveFieldSourceBadge(
+  mode: FieldSourceMode,
+  fallback: { label: string; color: BadgeColor },
+): { label: string; color: BadgeColor } {
+  switch (mode) {
+    case "calculated": return { label: "Calc", color: "gray" };
+    case "overridden": return { label: "Override", color: "orange" };
+    case "sourced": return fallback;
+  }
+}
 
 export interface FormFieldsTableProps {
   fields: TaxFormField[];
@@ -97,6 +117,8 @@ export default function FormFieldsTable({ fields, instanceLabel, sourceType, doc
           {fields.map((field) => {
             const isEditing = editingFieldId === field.id;
 
+            const fieldSourceMode = resolveFieldSourceMode(field);
+            const fieldSourceBadge = resolveFieldSourceBadge(fieldSourceMode, badge);
             return (
               <tr
                 key={field.id}
@@ -151,13 +173,7 @@ export default function FormFieldsTable({ fields, instanceLabel, sourceType, doc
                   )}
                 </td>
                 <td className="px-4 py-3 text-center">
-                  {field.is_calculated ? (
-                    <Badge label="Calc" color="gray" />
-                  ) : field.is_overridden ? (
-                    <Badge label="Override" color="orange" />
-                  ) : (
-                    <Badge label={badge.label} color={badge.color} />
-                  )}
+                  <Badge label={fieldSourceBadge.label} color={fieldSourceBadge.color} />
                 </td>
                 <td className="px-4 py-3 text-center">
                   {VALIDATION_ICONS[field.validation_status]}
