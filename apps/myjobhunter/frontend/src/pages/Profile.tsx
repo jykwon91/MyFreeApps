@@ -442,6 +442,7 @@ export default function Profile() {
                 className="inline-flex items-center gap-1.5 text-sm bg-muted px-3 py-1.5 rounded-full"
               >
                 <span>{skill.name}</span>
+                {/* years_experience is number | null; 0 years is a valid distinct value — keep !== null */}
                 {skill.years_experience !== null ? (
                   <span className="text-xs text-muted-foreground">{skill.years_experience}y</span>
                 ) : null}

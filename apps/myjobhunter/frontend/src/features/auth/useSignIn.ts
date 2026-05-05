@@ -25,15 +25,19 @@ interface UseSignInResult {
  * match the backend constant exactly — see `app/core/auth.py`.
  */
 export function isUnverifiedError(err: unknown): boolean {
+  // typeof null === "object" in JS, so !== null is required to narrow unknown → non-null object
   if (typeof err === "object" && err !== null) {
     const obj = err as Record<string, unknown>;
+    // typeof null === "object"; explicit null check required to narrow unknown field
     if (typeof obj.data === "object" && obj.data !== null) {
       const data = obj.data as Record<string, unknown>;
       if (data.detail === "LOGIN_USER_NOT_VERIFIED") return true;
     }
     // Axios error responses keep the body under .response.data
+    // typeof null === "object"; explicit null check required to narrow unknown field
     if (typeof obj.response === "object" && obj.response !== null) {
       const resp = obj.response as Record<string, unknown>;
+      // typeof null === "object"; explicit null check required to narrow unknown field
       if (typeof resp.data === "object" && resp.data !== null) {
         const data = resp.data as Record<string, unknown>;
         if (data.detail === "LOGIN_USER_NOT_VERIFIED") return true;

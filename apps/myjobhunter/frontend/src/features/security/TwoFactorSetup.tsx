@@ -86,6 +86,7 @@ export default function TwoFactorSetup() {
     setTimeout(() => setCopied(false), 2000);
   }
 
+  // enabled is boolean | null; !enabled would misfire when enabled === false (2FA already off)
   if (isStatusLoading || enabled === null) {
     return (
       <div className="p-6">

@@ -68,6 +68,7 @@ export default function CompanyDetail() {
       <div className="p-6 flex flex-col items-center text-center gap-4 py-20">
         <p className="text-4xl font-bold text-muted-foreground">{status ?? 404}</p>
         <h1 className="text-xl font-semibold">
+          {/* status is number | null; null means no HTTP status extracted (e.g. network error) — treat same as 404 */}
           {status === 404 || status === null
             ? "I couldn't find that company — it may have been removed."
             : "Couldn't load that company."}
