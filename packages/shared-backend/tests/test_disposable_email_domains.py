@@ -1,7 +1,7 @@
 """Lookup tests for the disposable email blocklist (T0)."""
 from __future__ import annotations
 
-from app.core.disposable_email_domains import (
+from platform_shared.core.disposable_email_domains import (
     DISPOSABLE_EMAIL_DOMAINS,
     is_disposable_email,
 )
