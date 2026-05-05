@@ -10,6 +10,13 @@ from app.db.base import Base
 
 
 class User(SQLAlchemyBaseUserTableUUID, Base):
+    # Intentional divergence from MBK (which uses singular ``user``): MJH was
+    # scaffolded with the plural form before the parity audit and migrating
+    # the table now would require a multi-step rename across every FK,
+    # index, RLS policy, and downstream system. The cost outweighs the
+    # benefit. Documented in apps/myjobhunter/CLAUDE.md "Parity rule" →
+    # divergences. New tables in MJH should follow the singular convention
+    # to minimise further drift.
     __tablename__ = "users"
 
     display_name: Mapped[str] = mapped_column(String(100), default="")
