@@ -191,3 +191,91 @@ class TestObservabilityWrapperShape:
                 f"sentry_sdk directly. Delegate to "
                 f"platform_shared.core.observability."
             )
+
+
+@pytest.mark.parametrize("app", _APPS)
+class TestTurnstileBundleWiring:
+    """The 2026-05-05 silent-registration-broken bug: VITE_TURNSTILE_SITE_KEY
+    was missing from the docker-compose build-arg → caddy.Dockerfile ARG path,
+    so every production bundle was built with an empty site key and the
+    TurnstileWidget rendered null. Backend rejected every registration with
+    400 captcha_token_required.
+
+    This conformance check fails CI if either the Dockerfile ARG or the
+    docker-compose build-args wiring is missing — preventing the same drift.
+
+    Note: this is a structural conformance check, NOT a bundle smoke test.
+    The bundle smoke test (e.g. an E2E that asserts a Turnstile widget
+    renders on the registration page) is a separate follow-up tracked in
+    the broader test backlog.
+    """
+
+    def test_caddy_dockerfile_declares_turnstile_arg(self, app: str) -> None:
+        """The frontend build stage in caddy.Dockerfile must declare ARG +
+        ENV for VITE_TURNSTILE_SITE_KEY before the `npm run build` line."""
+        dockerfile_src = _read("apps", app, "docker", "caddy.Dockerfile")
+        assert "ARG VITE_TURNSTILE_SITE_KEY" in dockerfile_src, (
+            f"{app}/docker/caddy.Dockerfile must declare "
+            f"`ARG VITE_TURNSTILE_SITE_KEY=` before `RUN npm run build` "
+            f"so docker-compose can pass the public Turnstile site key "
+            f"into the Vite bundle. Without this, the bundle is built "
+            f"with an empty key, TurnstileWidget renders null, and "
+            f"registration silently 400s in production."
+        )
+        assert "ENV VITE_TURNSTILE_SITE_KEY" in dockerfile_src, (
+            f"{app}/docker/caddy.Dockerfile must set "
+            f"`ENV VITE_TURNSTILE_SITE_KEY=${{VITE_TURNSTILE_SITE_KEY}}` "
+            f"after the ARG declaration so Vite picks up the value at "
+            f"build time."
+        )
+        # The ARG/ENV must come BEFORE the npm run build line, otherwise
+        # the build runs with no env set.
+        arg_idx = dockerfile_src.find("ARG VITE_TURNSTILE_SITE_KEY")
+        build_idx = dockerfile_src.find("npm run build")
+        assert 0 < arg_idx < build_idx, (
+            f"{app}/docker/caddy.Dockerfile: ARG VITE_TURNSTILE_SITE_KEY "
+            f"must be declared BEFORE `RUN npm run build`, otherwise "
+            f"Vite runs without the env value."
+        )
+
+    def test_docker_compose_passes_turnstile_arg_to_caddy(self, app: str) -> None:
+        """The caddy service in docker-compose.yml must declare a
+        build.args block that maps VITE_TURNSTILE_SITE_KEY from the shell
+        env (where the operator / deploy workflow sources backend/.env.docker)."""
+        compose_src = _read("apps", app, "docker-compose.yml")
+        assert "VITE_TURNSTILE_SITE_KEY:" in compose_src, (
+            f"{app}/docker-compose.yml must include `VITE_TURNSTILE_SITE_KEY: "
+            f"${{TURNSTILE_SITE_KEY:-}}` under the caddy service's "
+            f"`build.args:` block. Without this, the caddy.Dockerfile's "
+            f"ARG sees no value at build time and the bundle is baked "
+            f"with an empty Turnstile site key."
+        )
+        assert "${TURNSTILE_SITE_KEY" in compose_src, (
+            f"{app}/docker-compose.yml: VITE_TURNSTILE_SITE_KEY build "
+            f"arg must reference ${{TURNSTILE_SITE_KEY}} (no VITE_ "
+            f"prefix on the right-hand side) so docker compose reads "
+            f"the value from the same env var name the backend uses."
+        )
+
+    def test_deploy_workflow_uses_env_file_for_build(self, app: str) -> None:
+        """The deploy workflow must pass `--env-file backend/.env.docker`
+        to `docker compose build` so the build-args block can resolve
+        TURNSTILE_SITE_KEY from the env file."""
+        workflow_src = _read(".github", "workflows", f"deploy-{app}.yml")
+        # Match a `docker compose ... --env-file ...backend/.env.docker ... build`
+        # invocation, allowing shell line-continuations (backslash + newline)
+        # between the segments. Re-DOTALL lets `.` cross newlines so the
+        # wrapped multi-line form in the workflow is matched.
+        match = re.search(
+            r"docker\s+compose.*?--env-file.*?backend/\.env\.docker.*?\bbuild\b",
+            workflow_src,
+            re.DOTALL,
+        )
+        assert match is not None, (
+            f".github/workflows/deploy-{app}.yml must invoke "
+            f"`docker compose --env-file apps/{app}/backend/.env.docker "
+            f"... build` so TURNSTILE_SITE_KEY (and other build-time env "
+            f"vars) are exposed to docker compose's build.args block. "
+            f"Without --env-file, the build runs with no .env.docker "
+            f"values and bundles get baked with empty defaults."
+        )

@@ -49,7 +49,14 @@ jobs:
             echo "Env files present — proceeding"
 
             echo "--- Build and deploy with Docker ---"
-            docker compose -f apps/myjobhunter/docker-compose.yml build
+            # --env-file flag exposes backend/.env.docker variables to docker
+            # compose's build args (caddy.build.args reads VITE_TURNSTILE_SITE_KEY
+            # from the shell). Without --env-file the bundle gets baked with an
+            # empty site key and TurnstileWidget renders null in production —
+            # the 2026-05-05 silent-registration-broken bug.
+            docker compose -f apps/myjobhunter/docker-compose.yml \
+              --env-file apps/myjobhunter/backend/.env.docker \
+              build
             docker compose -f apps/myjobhunter/docker-compose.yml up -d --remove-orphans
 
             echo "--- One-time cleanup: remove obsolete frontend_dist volume ---"

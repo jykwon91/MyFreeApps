@@ -27,6 +27,22 @@ WORKDIR /build
 COPY apps/mybookkeeper/frontend/package.json apps/mybookkeeper/frontend/package-lock.json ./
 RUN npm ci
 COPY apps/mybookkeeper/frontend/ ./
+
+# Frontend build-time public env. Vite inlines anything prefixed with
+# VITE_ into the bundle at build time — these MUST be passed as build
+# args from docker-compose, NOT runtime env vars on the caddy container,
+# because the bundle is already minified and frozen by the time caddy
+# starts.
+#
+# VITE_TURNSTILE_SITE_KEY: Cloudflare Turnstile public site key.
+# Empty value → TurnstileWidget renders null and registration POSTs
+# without a captcha token, so the backend's require_turnstile dependency
+# returns 400 captcha_token_required. This was the 2026-05-05 silent-
+# registration-broken bug — the SECRET key was wired but the SITE key
+# never made it into the bundle because this ARG didn't exist.
+ARG VITE_TURNSTILE_SITE_KEY=
+ENV VITE_TURNSTILE_SITE_KEY=${VITE_TURNSTILE_SITE_KEY}
+
 RUN npm run build
 
 FROM caddy:2-alpine
