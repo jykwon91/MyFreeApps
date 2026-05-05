@@ -11,7 +11,7 @@ import {
 import CalendarEventBar from "@/app/features/calendar/CalendarEventBar";
 import type { CalendarEvent } from "@/shared/types/calendar/calendar-event";
 
-interface Props {
+export interface CalendarListingRowProps {
   row: ListingRow;
   fromIso: string;
   toIso: string;
@@ -33,7 +33,7 @@ export default function CalendarListingRow({
   toIso,
   totalDays,
   onEventClick,
-}: Props) {
+}: CalendarListingRowProps) {
   return (
     <div
       className="flex border-t"

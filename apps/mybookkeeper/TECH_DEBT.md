@@ -105,11 +105,8 @@
 
 ---
 
-### [Frontend] Bare `interface Props` across ~199 frontend component files
-**Effort:** M (mechanical sweep)
-**Location:** ~199 files across `apps/mybookkeeper/frontend/src/`
-**Problem:** Most component files declare their props as `interface Props` (un-prefixed). Per the new global config rule (jkwon-claude-config PR #92, merged 2026-05-04), props interfaces must be domain-prefixed (`<ComponentName>Props`) AND exported, otherwise importing two `Props` types into the same file collides and IDE rename refactors break. Props CAN stay co-located with the component (one allowed exception to "one type per file") but the bare name is no longer acceptable.
-**Recommendation:** Mechanical sweep — for each file, rename `interface Props` → `interface <ComponentName>Props` (matching the default-export name), add `export`, update local references. Type-check after the rename catches breakage. Ship as one PR (uniform change, TS catches all incorrect references). Defer until next time the codebase has natural quiet — bulk-touching 199 files mid-feature creates merge-conflict risk for in-flight branches.
+### ~~[Frontend] Bare `interface Props` across ~199 frontend component files~~ RESOLVED
+**Resolved:** PR refactor/jykwon91/mbk-props-rename (2026-05-04) — all 196 files renamed; `tsc --noEmit` clean.
 
 ---
 

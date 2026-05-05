@@ -9,7 +9,7 @@ import {
 } from "@/shared/store/inquiriesApi";
 import type { ReplyTemplate } from "@/shared/types/inquiry/reply-template";
 
-interface Props {
+export interface ReplyTemplateFormProps {
   template: ReplyTemplate | null;
   onClose: () => void;
 }
@@ -30,7 +30,7 @@ const SUBJECT_MAX = 500;
 const BODY_MAX = 10000;
 
 /** Add / edit form for a reply template — slide-in panel. */
-export default function ReplyTemplateForm({ template, onClose }: Props) {
+export default function ReplyTemplateForm({ template, onClose }: ReplyTemplateFormProps) {
   const [name, setName] = useState(template?.name ?? "");
   const [subject, setSubject] = useState(template?.subject_template ?? "");
   const [body, setBody] = useState(template?.body_template ?? "");

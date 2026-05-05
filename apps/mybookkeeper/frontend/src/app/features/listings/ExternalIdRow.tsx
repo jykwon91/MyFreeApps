@@ -4,7 +4,7 @@ import Button from "@/shared/components/ui/Button";
 import { LISTING_SOURCE_LABELS } from "@/shared/lib/listing-labels";
 import type { ListingExternalId } from "@/shared/types/listing/listing-external-id";
 
-interface Props {
+export interface ExternalIdRowProps {
   externalId: ListingExternalId;
   onEdit: () => void;
   onRemove: () => void;
@@ -24,7 +24,7 @@ export default function ExternalIdRow({
   onEdit,
   onRemove,
   isRemoving,
-}: Props) {
+}: ExternalIdRowProps) {
   const sourceLabel = LISTING_SOURCE_LABELS[externalId.source];
   return (
     <li

@@ -1,6 +1,6 @@
 import { useRef, useEffect } from "react";
 
-interface Props {
+export interface IndeterminateCheckboxProps {
   checked: boolean;
   indeterminate?: boolean;
   onChange?: React.ChangeEventHandler<HTMLInputElement>;
@@ -8,7 +8,7 @@ interface Props {
   "aria-label"?: string;
 }
 
-export default function IndeterminateCheckbox({ checked, indeterminate, onChange, onClick, "aria-label": ariaLabel }: Props) {
+export default function IndeterminateCheckbox({ checked, indeterminate, onChange, onClick, "aria-label": ariaLabel }: IndeterminateCheckboxProps) {
   const ref = useRef<HTMLInputElement>(null);
   useEffect(() => {
     if (ref.current) ref.current.indeterminate = !!indeterminate;

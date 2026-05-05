@@ -21,7 +21,7 @@ const PROVIDER_LABELS: Record<string, string> = {
   other: "Other",
 };
 
-interface Props {
+export interface ScreeningResultRowProps {
   result: ScreeningResult;
 }
 
@@ -34,7 +34,7 @@ interface Props {
  *   - Download link uses the per-row ``presigned_url`` minted by the
  *     screening response builder. Storage keys are never exposed.
  */
-export default function ScreeningResultRow({ result }: Props) {
+export default function ScreeningResultRow({ result }: ScreeningResultRowProps) {
   const [snippetOpen, setSnippetOpen] = useState(false);
   const statusMeta = STATUS_BADGE[result.status] ?? {
     label: result.status,

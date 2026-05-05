@@ -1,6 +1,6 @@
 import type { ReplyTemplate } from "@/shared/types/inquiry/reply-template";
 
-interface Props {
+export interface ReplyTemplateCardProps {
   template: ReplyTemplate;
   selected: boolean;
   onSelect: () => void;
@@ -16,7 +16,7 @@ export default function ReplyTemplateCard({
   template,
   selected,
   onSelect,
-}: Props) {
+}: ReplyTemplateCardProps) {
   const previewLines = template.body_template
     .split("\n")
     .filter((line) => line.trim().length > 0)

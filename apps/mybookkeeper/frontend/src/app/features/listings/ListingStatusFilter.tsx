@@ -2,7 +2,7 @@ import { cn } from "@/shared/utils/cn";
 import { LISTING_STATUSES, LISTING_STATUS_LABELS } from "@/shared/lib/listing-labels";
 import type { ListingStatus } from "@/shared/types/listing/listing-status";
 
-interface Props {
+export interface ListingStatusFilterProps {
   value: ListingStatus | null;
   onChange: (status: ListingStatus | null) => void;
 }
@@ -22,7 +22,7 @@ const CHIPS: Chip[] = [
  * scrolls horizontally (overflow-x-auto, flex-nowrap) so all five chips remain
  * reachable without forcing a wrap. Touch targets are ≥ 44px tall.
  */
-export default function ListingStatusFilter({ value, onChange }: Props) {
+export default function ListingStatusFilter({ value, onChange }: ListingStatusFilterProps) {
   return (
     <div
       role="tablist"

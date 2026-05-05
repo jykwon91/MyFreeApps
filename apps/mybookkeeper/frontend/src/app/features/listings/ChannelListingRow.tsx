@@ -5,7 +5,7 @@ import { showSuccess } from "@/shared/lib/toast-store";
 import type { ChannelListing } from "@/shared/types/listing/channel-listing";
 import ChannelImportStatusBadge from "./ChannelImportStatusBadge";
 
-interface Props {
+export interface ChannelListingRowProps {
   channelListing: ChannelListing;
   onEdit: () => void;
   onRemove: () => void;
@@ -24,7 +24,7 @@ export default function ChannelListingRow({
   onEdit,
   onRemove,
   isRemoving,
-}: Props) {
+}: ChannelListingRowProps) {
   const [copied, setCopied] = useState(false);
   const channelName = channelListing.channel?.name ?? channelListing.channel_id;
 

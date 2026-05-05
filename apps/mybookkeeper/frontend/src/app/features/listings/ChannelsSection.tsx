@@ -12,7 +12,7 @@ import type { ChannelListing } from "@/shared/types/listing/channel-listing";
 import ChannelListingRow from "./ChannelListingRow";
 import ChannelListingFormModal from "./ChannelListingFormModal";
 
-interface Props {
+export interface ChannelsSectionProps {
   listingId: string;
 }
 
@@ -29,7 +29,7 @@ type FormMode =
  * shows when there's at least one unlinked channel available. Empty
  * state pitches the operator on the first link.
  */
-export default function ChannelsSection({ listingId }: Props) {
+export default function ChannelsSection({ listingId }: ChannelsSectionProps) {
   const {
     data: channelListings = [],
     isLoading,

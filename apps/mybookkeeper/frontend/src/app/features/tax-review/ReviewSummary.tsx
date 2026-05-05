@@ -1,10 +1,10 @@
 import { Sparkles } from "lucide-react";
 
-interface Props {
+export interface ReviewSummaryProps {
   summary: string;
 }
 
-export default function ReviewSummary({ summary }: Props) {
+export default function ReviewSummary({ summary }: ReviewSummaryProps) {
   return (
     <div className="bg-card border rounded-lg p-5 sm:p-6">
       <div className="flex items-start gap-3">

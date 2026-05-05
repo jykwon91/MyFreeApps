@@ -9,11 +9,11 @@ import {
 } from "@/shared/store/attributionApi";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 
-interface Props {
+export interface AttributionReviewItemProps {
   item: ReviewItemType;
 }
 
-export default function AttributionReviewItem({ item }: Props) {
+export default function AttributionReviewItem({ item }: AttributionReviewItemProps) {
   const [confirmReview, { isLoading: isConfirming }] = useConfirmAttributionReviewMutation();
   const [rejectReview, { isLoading: isRejecting }] = useRejectAttributionReviewMutation();
   const [isActing, setIsActing] = useState(false);

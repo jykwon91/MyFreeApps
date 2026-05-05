@@ -10,7 +10,7 @@ import {
 import type { LeaseTemplateDetail } from "@/shared/types/lease/lease-template-detail";
 import type { SuggestPlaceholdersResponse } from "@/shared/types/lease/suggest-placeholders-response";
 
-interface Props {
+export interface LeaseTemplateUploadDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreated?: (
@@ -40,7 +40,7 @@ export default function LeaseTemplateUploadDialog({
   open,
   onOpenChange,
   onCreated,
-}: Props) {
+}: LeaseTemplateUploadDialogProps) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [files, setFiles] = useState<File[]>([]);

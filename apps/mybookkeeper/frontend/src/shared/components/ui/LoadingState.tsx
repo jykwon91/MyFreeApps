@@ -1,9 +1,9 @@
-interface Props {
+export interface LoadingStateProps {
   text?: string;
   fullHeight?: boolean;
 }
 
-export default function LoadingState({ text = "Loading...", fullHeight = false }: Props) {
+export default function LoadingState({ text = "Loading...", fullHeight = false }: LoadingStateProps) {
   if (fullHeight) {
     return (
       <div className="h-full flex items-center justify-center">

@@ -11,13 +11,13 @@ function formatMonth(month: string): string {
   return format(parse(month, "yyyy-MM", new Date()), "MMM yy");
 }
 
-interface Props {
+export interface MonthlyChartProps {
   data: MonthSummary[];
   height?: number;
   onBarClick?: (startDate: string, endDate: string, dataKey: string) => void;
 }
 
-export default function MonthlyChart({ data, height = 260, onBarClick }: Props) {
+export default function MonthlyChart({ data, height = 260, onBarClick }: MonthlyChartProps) {
   const chartData: ChartRow[] = data.map((row) => ({
     ...row,
     displayMonth: formatMonth(row.month),

@@ -4,14 +4,14 @@ import { formatCurrency } from "@/shared/utils/currency";
 import { useGetPropertyPnlQuery } from "@/shared/store/attributionApi";
 import PropertyPnLCard from "./PropertyPnLCard";
 
-interface Props {
+export interface PropertyPnLGridProps {
   since: string;
   until: string;
 }
 
 const centsToAmount = (cents: number) => cents / 100;
 
-export default function PropertyPnLGrid({ since, until }: Props) {
+export default function PropertyPnLGrid({ since, until }: PropertyPnLGridProps) {
   const { data, isLoading } = useGetPropertyPnlQuery({ since, until });
 
   if (isLoading) {

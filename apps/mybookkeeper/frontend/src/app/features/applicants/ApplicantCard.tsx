@@ -6,7 +6,7 @@ import {
 import type { ApplicantSummary } from "@/shared/types/applicant/applicant-summary";
 import ApplicantStageBadge from "./ApplicantStageBadge";
 
-interface Props {
+export interface ApplicantCardProps {
   applicant: ApplicantSummary;
   /**
    * When true (i.e., the list is in the "All" filter), render the stage
@@ -32,7 +32,7 @@ interface Props {
  *   - DOB, vehicle, ID document key (PII — detail page only, behind unlock)
  *   - screening status (detail page only — surfaced via ScreeningResultRow)
  */
-export default function ApplicantCard({ applicant, showStageBadge }: Props) {
+export default function ApplicantCard({ applicant, showStageBadge }: ApplicantCardProps) {
   const legalName = applicant.legal_name ?? "Unnamed applicant";
   const employer = applicant.employer_or_hospital ?? "—";
   const contractDates = formatDesiredDates(

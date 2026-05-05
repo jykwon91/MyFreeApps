@@ -7,7 +7,7 @@ import { useGetApplicantsQuery } from "@/shared/store/applicantsApi";
 import { useGetListingsQuery } from "@/shared/store/listingsApi";
 import { useImportSignedLeaseMutation } from "@/shared/store/signedLeasesApi";
 
-interface Props {
+export interface LeaseImportDialogProps {
   onClose: () => void;
 }
 
@@ -19,7 +19,7 @@ interface Props {
  * subsequent files use a filename heuristic (move-in / move-out inspection →
  * appropriate kind, everything else → signed_addendum).
  */
-export default function LeaseImportDialog({ onClose }: Props) {
+export default function LeaseImportDialog({ onClose }: LeaseImportDialogProps) {
   const navigate = useNavigate();
   const [importLease, { isLoading }] = useImportSignedLeaseMutation();
   const { data: applicantsData } = useGetApplicantsQuery({ limit: 100 });

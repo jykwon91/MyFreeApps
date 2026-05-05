@@ -2,7 +2,7 @@ import { useState } from "react";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import { useUpdateInquiryMutation } from "@/shared/store/inquiriesApi";
 
-interface Props {
+export interface InquiryNotesEditorProps {
   inquiryId: string;
   initialNotes: string | null;
 }
@@ -22,7 +22,7 @@ interface Props {
 const SAVED_TOAST = "Notes saved.";
 const ERROR_TOAST = "I couldn't save those notes. Want to try again?";
 
-export default function InquiryNotesEditor({ inquiryId, initialNotes }: Props) {
+export default function InquiryNotesEditor({ inquiryId, initialNotes }: InquiryNotesEditorProps) {
   const [value, setValue] = useState(initialNotes ?? "");
   const [savedValue, setSavedValue] = useState(initialNotes ?? "");
   const [updateInquiry, { isLoading }] = useUpdateInquiryMutation();

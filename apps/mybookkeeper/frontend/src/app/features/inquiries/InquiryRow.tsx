@@ -9,7 +9,7 @@ import InquiryQualityBadge from "./InquiryQualityBadge";
 import InquirySpamBadge from "./InquirySpamBadge";
 import InquiryStageBadge from "./InquiryStageBadge";
 
-interface Props {
+export interface InquiryRowProps {
   inquiry: InquirySummary;
   listingTitle: string | null;
 }
@@ -21,7 +21,7 @@ interface Props {
  *
  * Columns: Inquirer | Source | Desired Dates | Employer | Listing | Received | Stage | Quality.
  */
-export default function InquiryRow({ inquiry, listingTitle }: Props) {
+export default function InquiryRow({ inquiry, listingTitle }: InquiryRowProps) {
   const navigate = useNavigate();
   const goToDetail = () => navigate(`/inquiries/${inquiry.id}`);
 

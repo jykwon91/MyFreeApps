@@ -6,7 +6,7 @@ import {
 } from "@/shared/types/lease/lease-attachment-kind";
 import type { SignedLeaseAttachment } from "@/shared/types/lease/signed-lease-attachment";
 
-interface Props {
+export interface LeaseAttachmentRowProps {
   att: SignedLeaseAttachment;
   canWrite: boolean;
   onPreview: () => void;
@@ -14,7 +14,7 @@ interface Props {
   onKindChange: (kind: LeaseAttachmentKind) => void;
 }
 
-export default function LeaseAttachmentRow({ att, canWrite, onPreview, onDelete, onKindChange }: Props) {
+export default function LeaseAttachmentRow({ att, canWrite, onPreview, onDelete, onKindChange }: LeaseAttachmentRowProps) {
   const canPreview =
     att.presigned_url !== null &&
     (att.content_type === "application/pdf" || att.content_type.startsWith("image/"));

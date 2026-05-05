@@ -6,7 +6,7 @@ import DocumentViewer from "@/app/features/documents/DocumentViewer";
 import type { TaxFormField, FieldValueType, SourceType } from "@/shared/types/tax/tax-form";
 import { VALIDATION_ICONS, SOURCE_BADGES, PII_FIELDS, SSN_REGEX } from "@/shared/lib/tax-form-config";
 
-interface Props {
+export interface FormFieldsTableProps {
   fields: TaxFormField[];
   instanceLabel: string | null;
   sourceType: SourceType;
@@ -29,7 +29,7 @@ function formatFieldValue(field: TaxFormField): string {
   return maskPii(field.field_id, String(field.value));
 }
 
-export default function FormFieldsTable({ fields, instanceLabel, sourceType, documentId, onOverride, isSaving }: Props) {
+export default function FormFieldsTable({ fields, instanceLabel, sourceType, documentId, onOverride, isSaving }: FormFieldsTableProps) {
   const [editingFieldId, setEditingFieldId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   const [editReason, setEditReason] = useState("");

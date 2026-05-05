@@ -8,7 +8,7 @@ import type { InquirySummary } from "@/shared/types/inquiry/inquiry-summary";
 import InquiryQualityBadge from "./InquiryQualityBadge";
 import InquiryStageBadge from "./InquiryStageBadge";
 
-interface Props {
+export interface InquiryCardProps {
   inquiry: InquirySummary;
   listingTitle: string | null;
   /**
@@ -37,7 +37,7 @@ interface Props {
  * ``showStageBadge``), notes preview, gut_rating at new/triaged stage.
  */
 
-export default function InquiryCard({ inquiry, listingTitle, showStageBadge }: Props) {
+export default function InquiryCard({ inquiry, listingTitle, showStageBadge }: InquiryCardProps) {
   const desiredDates = formatDesiredDates(
     inquiry.desired_start_date,
     inquiry.desired_end_date,

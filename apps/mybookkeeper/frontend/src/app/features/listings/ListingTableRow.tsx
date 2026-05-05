@@ -3,7 +3,7 @@ import ListingStatusBadge from "./ListingStatusBadge";
 import { LISTING_ROOM_TYPE_LABELS, formatRate } from "@/shared/lib/listing-labels";
 import type { ListingSummary } from "@/shared/types/listing/listing-summary";
 
-interface Props {
+export interface ListingTableRowProps {
   listing: ListingSummary;
   propertyName: string;
 }
@@ -13,7 +13,7 @@ interface Props {
  * navigation) and exposes a keyboard-accessible button via tabIndex + key
  * handling.
  */
-export default function ListingTableRow({ listing, propertyName }: Props) {
+export default function ListingTableRow({ listing, propertyName }: ListingTableRowProps) {
   const navigate = useNavigate();
   const goToDetail = () => navigate(`/listings/${listing.id}`);
 

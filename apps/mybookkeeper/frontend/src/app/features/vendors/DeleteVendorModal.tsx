@@ -1,6 +1,6 @@
 import ConfirmDialog from "@/shared/components/ui/ConfirmDialog";
 
-interface Props {
+export interface DeleteVendorModalProps {
   open: boolean;
   vendorName: string;
   isLoading?: boolean;
@@ -22,7 +22,7 @@ export default function DeleteVendorModal({
   isLoading,
   onConfirm,
   onCancel,
-}: Props) {
+}: DeleteVendorModalProps) {
   return (
     <ConfirmDialog
       open={open}

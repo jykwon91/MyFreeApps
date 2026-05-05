@@ -2,13 +2,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { type Column } from "@tanstack/react-table";
 import { Filter, X } from "lucide-react";
 
-interface Props<TData = unknown> {
+export interface ColumnFilterProps<TData = unknown> {
   column: Column<TData, unknown>;
   options?: { value: string; label: string }[];
   enableDateRange?: boolean;
 }
 
-export default function ColumnFilter<TData = unknown>({ column, options, enableDateRange }: Props<TData>) {
+export default function ColumnFilter<TData = unknown>({ column, options, enableDateRange }: ColumnFilterProps<TData>) {
   if (enableDateRange) {
     return <DateRangeFilter column={column} />;
   }

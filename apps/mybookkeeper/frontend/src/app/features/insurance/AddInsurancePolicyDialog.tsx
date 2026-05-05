@@ -6,7 +6,7 @@ import Button from "@/shared/components/ui/Button";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import { useCreateInsurancePolicyMutation } from "@/shared/store/insurancePoliciesApi";
 
-interface Props {
+export interface AddInsurancePolicyDialogProps {
   listingId: string;
   onClose: () => void;
 }
@@ -14,7 +14,7 @@ interface Props {
 /**
  * Modal dialog for creating a new insurance policy on a listing.
  */
-export default function AddInsurancePolicyDialog({ listingId, onClose }: Props) {
+export default function AddInsurancePolicyDialog({ listingId, onClose }: AddInsurancePolicyDialogProps) {
   const [createPolicy, { isLoading }] = useCreateInsurancePolicyMutation();
 
   const [policyName, setPolicyName] = useState("");

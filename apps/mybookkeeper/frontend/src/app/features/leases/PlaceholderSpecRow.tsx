@@ -8,7 +8,7 @@ import {
 } from "@/shared/types/lease/lease-placeholder-input-type";
 import type { LeaseTemplatePlaceholder } from "@/shared/types/lease/lease-template-placeholder";
 
-interface Props {
+export interface PlaceholderSpecRowProps {
   templateId: string;
   placeholder: LeaseTemplatePlaceholder;
 }
@@ -20,7 +20,7 @@ interface Props {
  * change via the update-placeholder mutation; the parent invalidates the
  * template cache tag automatically.
  */
-export default function PlaceholderSpecRow({ templateId, placeholder }: Props) {
+export default function PlaceholderSpecRow({ templateId, placeholder }: PlaceholderSpecRowProps) {
   const [updatePlaceholder] = useUpdateLeasePlaceholderMutation();
   const [draft, setDraft] = useState({
     display_label: placeholder.display_label,

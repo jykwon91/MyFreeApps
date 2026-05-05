@@ -16,7 +16,7 @@ import type { SignedLeaseAttachment } from "@/shared/types/lease/signed-lease-at
 import AttachmentViewer from "@/app/features/leases/AttachmentViewer";
 import LeaseAttachmentRow from "@/app/features/leases/LeaseAttachmentRow";
 
-interface Props {
+export interface LeaseAttachmentsSectionProps {
   leaseId: string;
   attachments: SignedLeaseAttachment[];
   canWrite: boolean;
@@ -30,7 +30,7 @@ const ALLOWED_MIME = [
   "image/webp",
 ];
 
-export default function LeaseAttachmentsSection({ leaseId, attachments, canWrite }: Props) {
+export default function LeaseAttachmentsSection({ leaseId, attachments, canWrite }: LeaseAttachmentsSectionProps) {
   const [uploadAttachment, { isLoading: isUploading }] =
     useUploadSignedLeaseAttachmentMutation();
   const [deleteAttachment] = useDeleteSignedLeaseAttachmentMutation();

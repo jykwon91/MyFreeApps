@@ -12,11 +12,11 @@ import type { CalendarEvent } from "@/shared/types/calendar/calendar-event";
 import AttachmentsSection from "@/app/features/calendar/CalendarEventAttachmentsSection";
 import NotesSection from "@/app/features/calendar/CalendarEventNotesSection";
 
-interface Props {
+export interface CalendarEventDetailBodyProps {
   event: CalendarEvent;
 }
 
-export default function CalendarEventDetailBody({ event }: Props) {
+export default function CalendarEventDetailBody({ event }: CalendarEventDetailBodyProps) {
   const sourceLabel = getSourceLabel(event.source);
   const sourceColor = getSourceColor(event.source);
   const nights = Math.max(1, daysBetween(event.starts_on, event.ends_on));

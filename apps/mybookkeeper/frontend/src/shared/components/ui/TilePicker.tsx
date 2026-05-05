@@ -6,14 +6,14 @@ export interface TileOption {
   description: string;
 }
 
-interface Props {
+export interface TilePickerProps {
   options: TileOption[];
   value: string;
   onChange: (value: string) => void;
   columns?: 1 | 2;
 }
 
-export default function TilePicker({ options, value, onChange, columns = 1 }: Props) {
+export default function TilePicker({ options, value, onChange, columns = 1 }: TilePickerProps) {
   return (
     <div className={cn("grid gap-3", columns === 2 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1")}>
       {options.map((option) => {

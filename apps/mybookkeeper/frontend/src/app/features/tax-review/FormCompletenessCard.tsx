@@ -4,7 +4,7 @@ import { cn } from "@/shared/utils/cn";
 import { getFormLabel } from "@/shared/lib/tax-config";
 import type { FormCompleteness } from "@/shared/types/tax/tax-completeness";
 
-interface Props {
+export interface FormCompletenessCardProps {
   form: FormCompleteness;
 }
 
@@ -15,7 +15,7 @@ function completenessLabel(pct: number): string {
   return "Needs attention";
 }
 
-export default function FormCompletenessCard({ form }: Props) {
+export default function FormCompletenessCard({ form }: FormCompletenessCardProps) {
   const [expanded, setExpanded] = useState(false);
 
   const toggle = useCallback(() => {

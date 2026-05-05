@@ -3,7 +3,7 @@ import Button from "@/shared/components/ui/Button";
 import { formatRelativeTime } from "@/shared/lib/inquiry-date-format";
 import type { ScreeningResult } from "@/shared/types/applicant/screening-result";
 
-interface Props {
+export interface ScreeningPendingPanelProps {
   pendingResult: ScreeningResult;
   onUploadClick: () => void;
   canWrite: boolean;
@@ -16,7 +16,7 @@ interface Props {
  *
  * Uses AI-conversational tone per CLAUDE.md § UX: AI Interactions.
  */
-export default function ScreeningPendingPanel({ pendingResult, onUploadClick, canWrite }: Props) {
+export default function ScreeningPendingPanel({ pendingResult, onUploadClick, canWrite }: ScreeningPendingPanelProps) {
   return (
     <div
       data-testid="screening-pending-panel"

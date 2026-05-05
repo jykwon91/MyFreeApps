@@ -21,7 +21,7 @@ import type { ListingResponse } from "@/shared/types/listing/listing-response";
 import type { ListingUpdateRequest } from "@/shared/types/listing/listing-update-request";
 import type { Property } from "@/shared/types/property/property";
 
-interface Props {
+export interface ListingFormProps {
   listing?: ListingResponse;
   properties: readonly Property[];
   onClose: () => void;
@@ -130,7 +130,7 @@ export default function ListingForm({
   onClose,
   onCreated,
   onUpdated,
-}: Props) {
+}: ListingFormProps) {
   const [createListing, { isLoading: isCreating }] = useCreateListingMutation();
   const [updateListing, { isLoading: isUpdating }] = useUpdateListingMutation();
 

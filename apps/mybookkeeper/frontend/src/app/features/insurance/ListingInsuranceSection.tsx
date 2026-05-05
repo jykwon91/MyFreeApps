@@ -6,7 +6,7 @@ import Button from "@/shared/components/ui/Button";
 import InsuranceExpirationBadge from "@/app/features/insurance/InsuranceExpirationBadge";
 import AddInsurancePolicyDialog from "@/app/features/insurance/AddInsurancePolicyDialog";
 
-interface Props {
+export interface ListingInsuranceSectionProps {
   listingId: string;
   canWrite: boolean;
 }
@@ -17,7 +17,7 @@ interface Props {
  * Shows a summary list of policies for this listing with expiration badges,
  * plus an "Add policy" button.
  */
-export default function ListingInsuranceSection({ listingId, canWrite }: Props) {
+export default function ListingInsuranceSection({ listingId, canWrite }: ListingInsuranceSectionProps) {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const { data, isLoading, isError } = useGetInsurancePoliciesQuery({
     listing_id: listingId,

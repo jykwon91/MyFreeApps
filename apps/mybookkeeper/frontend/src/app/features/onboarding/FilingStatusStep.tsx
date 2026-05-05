@@ -1,12 +1,12 @@
 import { cn } from "@/shared/utils/cn";
 import { FILING_STATUS_OPTIONS } from "@/shared/lib/tax-config";
 
-interface Props {
+export interface FilingStatusStepProps {
   value: string | null;
   onChange: (value: string) => void;
 }
 
-export default function FilingStatusStep({ value, onChange }: Props) {
+export default function FilingStatusStep({ value, onChange }: FilingStatusStepProps) {
   return (
     <div className="space-y-3">
       <p className="text-sm text-muted-foreground">

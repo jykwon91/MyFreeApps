@@ -1,4 +1,4 @@
-interface Props {
+export interface RenderedReplyEditorProps {
   subject: string;
   body: string;
   onSubjectChange: (value: string) => void;
@@ -22,7 +22,7 @@ export default function RenderedReplyEditor({
   onSubjectChange,
   onBodyChange,
   disabled = false,
-}: Props) {
+}: RenderedReplyEditorProps) {
   return (
     <div className="space-y-3">
       <div>

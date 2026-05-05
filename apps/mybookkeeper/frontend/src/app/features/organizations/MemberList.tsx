@@ -11,12 +11,12 @@ import Select from "@/shared/components/ui/Select";
 import ConfirmDialog from "@/shared/components/ui/ConfirmDialog";
 import { ROLE_BADGE_COLORS, ROLE_OPTIONS } from "@/shared/lib/organization-config";
 
-interface Props {
+export interface MemberListProps {
   onError: (message: string) => void;
   onSuccess: (message: string) => void;
 }
 
-export default function MemberList({ onError, onSuccess }: Props) {
+export default function MemberList({ onError, onSuccess }: MemberListProps) {
   const orgId = useActiveOrgId();
   const { user } = useCurrentUser();
   const isAdmin = useIsOrgAdmin();

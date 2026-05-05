@@ -12,7 +12,7 @@ import {
 import type { Channel } from "@/shared/types/listing/channel";
 import type { ChannelListing } from "@/shared/types/listing/channel-listing";
 
-interface Props {
+export interface ChannelListingFormModalProps {
   open: boolean;
   listingId: string;
   /** Available channels (already filtered to exclude already-linked ones in create mode). */
@@ -48,7 +48,7 @@ export default function ChannelListingFormModal({
   availableChannels,
   existing,
   onClose,
-}: Props) {
+}: ChannelListingFormModalProps) {
   const isEdit = existing !== undefined;
   const initialChannelId = existing?.channel_id ?? availableChannels[0]?.id ?? "";
 

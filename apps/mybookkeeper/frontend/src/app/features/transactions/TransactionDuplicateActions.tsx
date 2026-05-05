@@ -3,14 +3,14 @@ import { Copy, Check, XCircle } from "lucide-react";
 import { formatDate } from "@/shared/utils/date";
 import type { DuplicateTransaction } from "@/shared/types/transaction/duplicate";
 
-interface Props {
+export interface TransactionDuplicateActionsProps {
   transactionId: string;
   dupOther: DuplicateTransaction;
   onKeepDuplicate: (keepId: string, deleteIds: string[]) => Promise<void>;
   onDismissDuplicate: (transactionIds: string[]) => Promise<void>;
 }
 
-export default function TransactionDuplicateActions({ transactionId, dupOther, onKeepDuplicate, onDismissDuplicate }: Props) {
+export default function TransactionDuplicateActions({ transactionId, dupOther, onKeepDuplicate, onDismissDuplicate }: TransactionDuplicateActionsProps) {
   const [dupBusy, setDupBusy] = useState<"keep" | "dismiss" | null>(null);
 
   return (

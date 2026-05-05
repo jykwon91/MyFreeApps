@@ -42,7 +42,7 @@ const PROVIDER_LABELS: Record<string, string> = {
   other: "Other",
 };
 
-interface Props {
+export interface ScreeningResultCardProps {
   result: ScreeningResult;
 }
 
@@ -54,7 +54,7 @@ interface Props {
  *   expands it intentionally to read the reason for their records).
  * - Download link uses the per-row ``presigned_url`` minted by the backend.
  */
-export default function ScreeningResultCard({ result }: Props) {
+export default function ScreeningResultCard({ result }: ScreeningResultCardProps) {
   const [snippetOpen, setSnippetOpen] = useState(false);
   const meta = STATUS_META[result.status] ?? {
     label: result.status,

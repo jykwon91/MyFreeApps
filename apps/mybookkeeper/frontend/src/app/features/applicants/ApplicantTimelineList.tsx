@@ -28,7 +28,7 @@ const NON_STAGE_EVENT_LABELS: Record<string, string> = {
   reference_contacted: "Reference contacted",
 };
 
-interface Props {
+export interface ApplicantTimelineListProps {
   events: ApplicantEvent[];
   /**
    * Default-collapsed per RENTALS_PLAN.md §9.1 detail-page hierarchy — the
@@ -52,7 +52,7 @@ function formatEventType(eventType: string): string {
  * Read-only — the host-driven event sources (note_added, screening_*,
  * reference_contacted) ship in PR 3.3 / 3.4.
  */
-export default function ApplicantTimelineList({ events, defaultOpen = false }: Props) {
+export default function ApplicantTimelineList({ events, defaultOpen = false }: ApplicantTimelineListProps) {
   const [open, setOpen] = useState(defaultOpen);
 
   return (

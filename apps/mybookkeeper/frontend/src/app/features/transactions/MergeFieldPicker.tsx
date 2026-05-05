@@ -34,7 +34,7 @@ function formatFieldValue(
   }
 }
 
-interface Props {
+export interface MergeFieldPickerProps {
   txnA: DuplicateTransaction;
   txnB: DuplicateTransaction;
   labelA: string;
@@ -52,7 +52,7 @@ export default function MergeFieldPicker({
   propertyMap,
   selections,
   onSelectionChange,
-}: Props) {
+}: MergeFieldPickerProps) {
   const allTags = [...new Set([...(txnA.tags ?? []), ...(txnB.tags ?? [])])];
 
   // Build rows — skip fields where both values are identical or both null

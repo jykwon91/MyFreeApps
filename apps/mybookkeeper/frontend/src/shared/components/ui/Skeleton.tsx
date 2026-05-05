@@ -1,8 +1,8 @@
-interface Props {
+export interface SkeletonProps {
   className?: string;
 }
 
-export default function Skeleton({ className = "h-4 w-full" }: Props) {
+export default function Skeleton({ className = "h-4 w-full" }: SkeletonProps) {
   return (
     <div className={`animate-pulse rounded bg-muted ${className}`} />
   );

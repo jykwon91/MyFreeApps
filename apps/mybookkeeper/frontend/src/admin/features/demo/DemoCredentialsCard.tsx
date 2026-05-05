@@ -2,11 +2,11 @@ import type { DemoCredentials } from "@/shared/types/demo/demo-status";
 import Card from "@/shared/components/ui/Card";
 import CopyField from "@/shared/components/ui/CopyField";
 
-interface Props {
+export interface DemoCredentialsCardProps {
   credentials: DemoCredentials;
 }
 
-export default function DemoCredentialsCard({ credentials }: Props) {
+export default function DemoCredentialsCard({ credentials }: DemoCredentialsCardProps) {
   return (
     <Card title="Demo Credentials">
       <div className="space-y-3">

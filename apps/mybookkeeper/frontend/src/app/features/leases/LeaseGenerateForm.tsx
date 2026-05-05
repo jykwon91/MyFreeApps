@@ -8,7 +8,7 @@ import type { LeaseTemplateDetail } from "@/shared/types/lease/lease-template-de
 import type { PlaceholderProvenance } from "@/shared/types/lease/placeholder-provenance";
 import PlaceholderInput from "@/app/features/leases/PlaceholderInput";
 
-interface Props {
+export interface LeaseGenerateFormProps {
   template: LeaseTemplateDetail;
   applicantId: string;
   listingId?: string | null;
@@ -42,7 +42,7 @@ export default function LeaseGenerateForm({
   template,
   applicantId,
   listingId,
-}: Props) {
+}: LeaseGenerateFormProps) {
   const navigate = useNavigate();
   const [createLease, { isLoading: isCreating }] = useCreateSignedLeaseMutation();
 

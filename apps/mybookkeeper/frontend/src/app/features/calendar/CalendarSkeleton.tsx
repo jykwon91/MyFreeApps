@@ -5,7 +5,7 @@ import {
   CALENDAR_ROW_HEIGHT_PX,
 } from "@/shared/lib/calendar-constants";
 
-interface Props {
+export interface CalendarSkeletonProps {
   rows?: number;
   days?: number;
 }
@@ -17,7 +17,7 @@ interface Props {
  * Per project rule: skeletons mirror loaded layout exactly to prevent
  * layout shift.
  */
-export default function CalendarSkeleton({ rows = 4, days = 30 }: Props) {
+export default function CalendarSkeleton({ rows = 4, days = 30 }: CalendarSkeletonProps) {
   return (
     <div data-testid="calendar-skeleton">
       {/* Mobile: agenda list skeleton */}

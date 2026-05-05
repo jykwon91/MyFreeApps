@@ -4,7 +4,7 @@ import { useUpdateInquiryMutation } from "@/shared/store/inquiriesApi";
 import { INQUIRY_STAGES, INQUIRY_STAGE_LABELS } from "@/shared/lib/inquiry-labels";
 import type { InquiryStage } from "@/shared/types/inquiry/inquiry-stage";
 
-interface Props {
+export interface InquiryStageDropdownProps {
   inquiryId: string;
   currentStage: InquiryStage;
 }
@@ -17,7 +17,7 @@ interface Props {
  * inquiry tag + the list tag (see ``inquiriesApi``) so the inbox reflects
  * the change without a refetch dance.
  */
-export default function InquiryStageDropdown({ inquiryId, currentStage }: Props) {
+export default function InquiryStageDropdown({ inquiryId, currentStage }: InquiryStageDropdownProps) {
   const [updateInquiry] = useUpdateInquiryMutation();
   const [pending, setPending] = useState<InquiryStage | null>(null);
 

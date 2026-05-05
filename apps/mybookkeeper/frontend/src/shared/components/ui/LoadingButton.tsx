@@ -1,7 +1,7 @@
 import Button from "@/shared/components/ui/Button";
 import Spinner from "@/shared/components/icons/Spinner";
 
-interface Props extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+export interface LoadingButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   isLoading?: boolean;
   loadingText?: string;
   variant?: "primary" | "secondary" | "ghost" | "destructive" | "link";
@@ -16,7 +16,7 @@ export default function LoadingButton({
   children,
   disabled,
   ...props
-}: Props) {
+}: LoadingButtonProps) {
   return (
     <Button variant={variant} size={size} disabled={disabled || isLoading} {...props}>
       {isLoading ? (

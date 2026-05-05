@@ -5,7 +5,7 @@ import {
   type InquiryQualitySignals,
 } from "@/shared/lib/inquiry-quality";
 
-interface Props {
+export interface InquiryQualityBadgeProps {
   signals: InquiryQualitySignals;
   className?: string;
 }
@@ -23,7 +23,7 @@ interface Props {
  * badge competing for attention with the actually-important sparse / complete
  * signals defeats the purpose of the heuristic.
  */
-export default function InquiryQualityBadge({ signals, className = "" }: Props) {
+export default function InquiryQualityBadge({ signals, className = "" }: InquiryQualityBadgeProps) {
   const score = computeInquiryQualityScore(signals);
   const tier = getQualityTier(score);
 

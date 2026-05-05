@@ -6,7 +6,7 @@ import {
 import MonthYearJumper from "@/app/features/calendar/MonthYearJumper";
 import { CALENDAR_WINDOW_PRESETS } from "@/shared/lib/calendar-constants";
 
-interface Props {
+export interface CalendarWindowNavProps {
   fromIso: string;
   toIso: string;
   onChange: (fromIso: string, toIso: string) => void;
@@ -36,7 +36,7 @@ export default function CalendarWindowNav({
   toIso,
   onChange,
   onToday,
-}: Props) {
+}: CalendarWindowNavProps) {
   const stepDays = daysBetween(fromIso, toIso);
 
   function handlePrev() {

@@ -7,7 +7,7 @@ import ScreeningProviderGrid from "./ScreeningProviderGrid";
 import ScreeningResultCard from "./ScreeningResultCard";
 import UploadScreeningResultModal from "./UploadScreeningResultModal";
 
-interface Props {
+export interface ScreeningSectionProps {
   applicantId: string;
   canWrite: boolean;
   /** Override window.open — only used by tests. */
@@ -48,7 +48,7 @@ function ScreeningSectionSkeleton() {
  * Results list is always shown when results exist, regardless of current state.
  * This lets the host see historical results while a new one is pending.
  */
-export default function ScreeningSection({ applicantId, canWrite, openWindow }: Props) {
+export default function ScreeningSection({ applicantId, canWrite, openWindow }: ScreeningSectionProps) {
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
 
   const {

@@ -1,8 +1,8 @@
-interface Props {
+export interface RetryIconProps {
   className?: string;
 }
 
-export default function RetryIcon({ className = "h-4 w-4" }: Props) {
+export default function RetryIcon({ className = "h-4 w-4" }: RetryIconProps) {
   return (
     <svg
       className={className}

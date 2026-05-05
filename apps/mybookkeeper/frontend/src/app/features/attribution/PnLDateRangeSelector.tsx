@@ -9,7 +9,7 @@ interface DateRange {
   until: string;
 }
 
-interface Props {
+export interface PnLDateRangeSelectorProps {
   value: DateRange;
   onChange: (range: DateRange) => void;
 }
@@ -48,7 +48,7 @@ const PRESETS: { key: Exclude<Preset, "custom">; label: string }[] = [
   { key: "ytd", label: "YTD" },
 ];
 
-export default function PnLDateRangeSelector({ value, onChange }: Props) {
+export default function PnLDateRangeSelector({ value, onChange }: PnLDateRangeSelectorProps) {
   const [showCustom, setShowCustom] = useState(false);
   const [customSince, setCustomSince] = useState(value.since);
   const [customUntil, setCustomUntil] = useState(value.until);

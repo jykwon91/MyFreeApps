@@ -4,7 +4,7 @@ import { QRCodeSVG } from "qrcode.react";
 import LoadingButton from "@/shared/components/ui/LoadingButton";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 
-interface Props {
+export interface ListingApplyUrlPanelProps {
   slug: string | null;
 }
 
@@ -16,7 +16,7 @@ interface Props {
  * than copying the URL, so we hide it behind a button to keep the panel
  * compact on small screens).
  */
-export default function ListingApplyUrlPanel({ slug }: Props) {
+export default function ListingApplyUrlPanel({ slug }: ListingApplyUrlPanelProps) {
   const [copied, setCopied] = useState(false);
   const [showQr, setShowQr] = useState(false);
 

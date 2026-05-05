@@ -8,12 +8,12 @@ import { extractErrorMessage } from "@/shared/utils/errorMessage";
 import Select from "@/shared/components/ui/Select";
 import Skeleton from "@/shared/components/ui/Skeleton";
 
-interface Props {
+export interface PlaidAccountMappingProps {
   itemId: string;
   onError: (message: string) => void;
 }
 
-export default function PlaidAccountMapping({ itemId, onError }: Props) {
+export default function PlaidAccountMapping({ itemId, onError }: PlaidAccountMappingProps) {
   const { data: accounts = [], isLoading: accountsLoading } = useGetPlaidAccountsQuery(itemId);
   const { data: properties = [] } = useGetPropertiesQuery();
   const [updateProperty] = useUpdateAccountPropertyMutation();

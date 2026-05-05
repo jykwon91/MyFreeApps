@@ -14,7 +14,7 @@ import GmailReconnectBanner from "./GmailReconnectBanner";
 import RenderedReplyEditor from "./RenderedReplyEditor";
 import ReplyTemplatePicker from "./ReplyTemplatePicker";
 
-interface Props {
+export interface InquiryReplyPanelProps {
   inquiryId: string;
   onClose: () => void;
 }
@@ -37,7 +37,7 @@ type ReplyTab = "template" | "custom";
  *   5. On success: panel closes, toast confirms, inquiry refetches via
  *      RTK tag invalidation.
  */
-export default function InquiryReplyPanel({ inquiryId, onClose }: Props) {
+export default function InquiryReplyPanel({ inquiryId, onClose }: InquiryReplyPanelProps) {
   const [tab, setTab] = useState<ReplyTab>("template");
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   // Local overrides allow the user to edit the rendered template content.

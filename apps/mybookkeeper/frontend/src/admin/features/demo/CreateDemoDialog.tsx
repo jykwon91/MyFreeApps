@@ -3,14 +3,14 @@ import * as Dialog from "@radix-ui/react-dialog";
 import Button from "@/shared/components/ui/Button";
 import LoadingButton from "@/shared/components/ui/LoadingButton";
 
-interface Props {
+export interface CreateDemoDialogProps {
   open: boolean;
   isLoading: boolean;
   onSubmit: (tag: string, recipientEmail?: string) => void;
   onCancel: () => void;
 }
 
-export default function CreateDemoDialog({ open, isLoading, onSubmit, onCancel }: Props) {
+export default function CreateDemoDialog({ open, isLoading, onSubmit, onCancel }: CreateDemoDialogProps) {
   const [tag, setTag] = useState("");
   const [recipientEmail, setRecipientEmail] = useState("");
 

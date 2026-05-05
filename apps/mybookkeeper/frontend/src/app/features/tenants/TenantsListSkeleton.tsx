@@ -1,6 +1,6 @@
 import Skeleton from "@/shared/components/ui/Skeleton";
 
-interface Props {
+export interface TenantsListSkeletonProps {
   count?: number;
 }
 
@@ -11,7 +11,7 @@ interface Props {
  *   - Mobile: card slots with name + status badge, contract dates / created
  *   - Desktop: 4 columns (Name, Contract Dates, Since, Status)
  */
-export default function TenantsListSkeleton({ count = 4 }: Props) {
+export default function TenantsListSkeleton({ count = 4 }: TenantsListSkeletonProps) {
   const rows = Array.from({ length: count }, (_, i) => i);
 
   return (

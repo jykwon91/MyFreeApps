@@ -3,12 +3,12 @@ import { formatCurrency } from "@/shared/utils/currency";
 import type { ValidationResult } from "@/shared/types/tax/validation-result";
 import { SEVERITY_ORDER, SEVERITY_CONFIG } from "@/shared/lib/validation-config";
 
-interface Props {
+export interface ValidationPanelProps {
   results: ValidationResult[];
   onNavigateToField: (formName: string, fieldId: string | null) => void;
 }
 
-export default function ValidationPanel({ results, onNavigateToField }: Props) {
+export default function ValidationPanel({ results, onNavigateToField }: ValidationPanelProps) {
   if (results.length === 0) {
     return (
       <div className="border rounded-lg p-6 text-center text-muted-foreground">

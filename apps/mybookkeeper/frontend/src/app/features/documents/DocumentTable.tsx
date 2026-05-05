@@ -18,14 +18,14 @@ interface FilterOptions {
   [columnId: string]: { value: string; label: string }[];
 }
 
-interface Props {
+export interface DocumentTableProps {
   table: Table<Document>;
   colCount: number;
   filterOptions: FilterOptions;
   onRowClick?: (doc: Document) => void;
 }
 
-export default function DocumentTable({ table, colCount, filterOptions, onRowClick }: Props) {
+export default function DocumentTable({ table, colCount, filterOptions, onRowClick }: DocumentTableProps) {
   const { pageIndex, pageSize } = table.getState().pagination;
   const totalRows = table.getFilteredRowModel().rows.length;
   const start = pageIndex * pageSize + 1;

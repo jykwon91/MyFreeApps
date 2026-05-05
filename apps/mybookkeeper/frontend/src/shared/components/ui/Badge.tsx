@@ -1,6 +1,6 @@
 export type BadgeColor = "gray" | "blue" | "yellow" | "orange" | "green" | "red" | "purple";
 
-interface Props {
+export interface BadgeProps {
   label: string;
   color: BadgeColor;
 }
@@ -15,7 +15,7 @@ const COLOR_CLASSES: Record<BadgeColor, string> = {
   purple: "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300",
 };
 
-export default function Badge({ label, color }: Props) {
+export default function Badge({ label, color }: BadgeProps) {
   return (
     <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${COLOR_CLASSES[color]}`}>
       {label}

@@ -1,6 +1,6 @@
 import Skeleton from "@/shared/components/ui/Skeleton";
 
-interface Props {
+export interface InquiriesSkeletonProps {
   count?: number;
 }
 
@@ -12,7 +12,7 @@ interface Props {
  *     row structure (inquirer/badges, dates, employer/quality, listing/time).
  *   - Desktop: same 8 columns + same number of skeleton rows.
  */
-export default function InquiriesSkeleton({ count = 4 }: Props) {
+export default function InquiriesSkeleton({ count = 4 }: InquiriesSkeletonProps) {
   const rows = Array.from({ length: count }, (_, i) => i);
 
   return (

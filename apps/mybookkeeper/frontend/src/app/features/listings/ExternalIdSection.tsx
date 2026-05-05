@@ -12,7 +12,7 @@ import type { ListingSource } from "@/shared/types/listing/listing-source";
 import ExternalIdForm from "./ExternalIdForm";
 import ExternalIdRow from "./ExternalIdRow";
 
-interface Props {
+export interface ExternalIdSectionProps {
   listingId: string;
   externalIds: readonly ListingExternalId[];
 }
@@ -32,7 +32,7 @@ type FormMode =
  *   - Empty state with prominent CTA
  *   - Toasts for success / failure (no alert(), no modal popups for ops)
  */
-export default function ExternalIdSection({ listingId, externalIds }: Props) {
+export default function ExternalIdSection({ listingId, externalIds }: ExternalIdSectionProps) {
   const [formMode, setFormMode] = useState<FormMode>({ kind: "closed" });
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [deleteExternalId] = useDeleteListingExternalIdMutation();

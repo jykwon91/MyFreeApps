@@ -13,7 +13,7 @@ import {
   type ScreeningStatus,
 } from "@/shared/types/screening/screening-status";
 
-interface Props {
+export interface UploadScreeningResultModalProps {
   applicantId: string;
   open: boolean;
   onClose: () => void;
@@ -40,7 +40,7 @@ export default function UploadScreeningResultModal({
   applicantId,
   open,
   onClose,
-}: Props) {
+}: UploadScreeningResultModalProps) {
   const [file, setFile] = useState<File | null>(null);
   const [status, setStatus] = useState<ScreeningStatus | "">("");
   const [adverseSnippet, setAdverseSnippet] = useState<string>("");

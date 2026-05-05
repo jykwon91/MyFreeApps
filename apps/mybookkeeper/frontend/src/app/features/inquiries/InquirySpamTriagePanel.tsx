@@ -10,7 +10,7 @@ import {
 import type { InquirySpamStatus } from "@/shared/types/inquiry/inquiry-spam-status";
 import InquirySpamBadge from "./InquirySpamBadge";
 
-interface Props {
+export interface InquirySpamTriagePanelProps {
   inquiryId: string;
   spamStatus: InquirySpamStatus;
   spamScore: number | null;
@@ -26,7 +26,7 @@ const ASSESSMENT_LABELS: Record<string, string> = {
   manual_override: "Manual override",
 };
 
-export default function InquirySpamTriagePanel({ inquiryId, spamStatus, spamScore }: Props) {
+export default function InquirySpamTriagePanel({ inquiryId, spamStatus, spamScore }: InquirySpamTriagePanelProps) {
   const [expanded, setExpanded] = useState(false);
   const { data: assessments = [], isLoading } = useGetInquirySpamAssessmentsQuery(
     inquiryId,

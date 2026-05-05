@@ -6,14 +6,14 @@ import type { ImportResult } from "@/shared/types/transaction/import-result";
 import Button from "@/shared/components/ui/Button";
 import Select from "@/shared/components/ui/Select";
 
-interface Props {
+export interface BankStatementImportProps {
   properties: readonly Property[];
   onClose: () => void;
   onSuccess: (message: string) => void;
   onError: (message: string) => void;
 }
 
-export default function BankStatementImport({ properties, onClose, onSuccess, onError }: Props) {
+export default function BankStatementImport({ properties, onClose, onSuccess, onError }: BankStatementImportProps) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [propertyId, setPropertyId] = useState("");

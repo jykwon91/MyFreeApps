@@ -3,7 +3,7 @@ import { X } from "lucide-react";
 import type { CalendarEvent } from "@/shared/types/calendar/calendar-event";
 import CalendarEventDetailBody from "@/app/features/calendar/CalendarEventDetailBody";
 
-interface Props {
+export interface CalendarEventDetailProps {
   event: CalendarEvent | null;
   onClose: () => void;
 }
@@ -16,7 +16,7 @@ interface Props {
  * the content layout; CalendarEventNotesSection and
  * CalendarEventAttachmentsSection for the editable sections.
  */
-export default function CalendarEventDetail({ event, onClose }: Props) {
+export default function CalendarEventDetail({ event, onClose }: CalendarEventDetailProps) {
   const open = event !== null;
 
   return (

@@ -5,7 +5,7 @@ import {
 } from "@/shared/lib/applicant-labels";
 import type { ApplicantStage } from "@/shared/types/applicant/applicant-stage";
 
-interface Props {
+export interface ApplicantStageFilterProps {
   value: ApplicantStage | null;
   onChange: (stage: ApplicantStage | null) => void;
 }
@@ -26,7 +26,7 @@ const CHIPS: Chip[] = [
  * mobile (``overflow-x-auto`` + ``flex-nowrap``), URL-state sync handled by
  * the parent page via ``useSearchParams``.
  */
-export default function ApplicantStageFilter({ value, onChange }: Props) {
+export default function ApplicantStageFilter({ value, onChange }: ApplicantStageFilterProps) {
   return (
     <div
       role="tablist"

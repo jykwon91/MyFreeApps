@@ -5,7 +5,7 @@ import {
 } from "@/shared/lib/inquiry-date-format";
 import type { ApplicantReference } from "@/shared/types/applicant/applicant-reference";
 
-interface Props {
+export interface ReferenceRowProps {
   reference: ApplicantReference;
 }
 
@@ -25,7 +25,7 @@ const RELATIONSHIP_LABELS: Record<string, string> = {
  * Per RENTALS_PLAN.md §9.1: contacted_at is the actionable signal — the
  * host should know at a glance which references they've already chased.
  */
-export default function ReferenceRow({ reference }: Props) {
+export default function ReferenceRow({ reference }: ReferenceRowProps) {
   const relationship =
     RELATIONSHIP_LABELS[reference.relationship] ?? reference.relationship;
 

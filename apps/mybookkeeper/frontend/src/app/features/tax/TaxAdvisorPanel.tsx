@@ -9,12 +9,12 @@ import { SEVERITY_ORDER, SEVERITY_CONFIG } from "@/shared/lib/tax-advisor-config
 import SuggestionCard from "@/app/features/tax/SuggestionCard";
 import TaxAdvisorPanelSkeleton from "@/app/features/tax/TaxAdvisorPanelSkeleton";
 
-interface Props {
+export interface TaxAdvisorPanelProps {
   taxReturnId: string;
   formCount: number;
 }
 
-export default function TaxAdvisorPanel({ taxReturnId, formCount }: Props) {
+export default function TaxAdvisorPanel({ taxReturnId, formCount }: TaxAdvisorPanelProps) {
   const {
     data: cached,
     isLoading: isCacheLoading,

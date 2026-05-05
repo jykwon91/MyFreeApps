@@ -13,7 +13,7 @@ import CalendarGridHeader from "@/app/features/calendar/CalendarGridHeader";
 import CalendarListingRow from "@/app/features/calendar/CalendarListingRow";
 import CalendarEventDetail from "@/app/features/calendar/CalendarEventDetail";
 
-interface Props {
+export interface CalendarGridProps {
   events: readonly CalendarEvent[];
   fromIso: string;
   toIso: string;
@@ -31,7 +31,7 @@ interface Props {
  * license. A custom grid keeps the bundle small, the styling
  * predictable, and lets the skeleton match the loaded layout exactly.
  */
-export default function CalendarGrid({ events, fromIso, toIso }: Props) {
+export default function CalendarGrid({ events, fromIso, toIso }: CalendarGridProps) {
   const totalDays = daysBetween(fromIso, toIso);
   const rows = groupByListing(events);
   const groups = groupByProperty(rows);

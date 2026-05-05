@@ -1,6 +1,6 @@
 import type { ApplicantSummary } from "@/shared/types/applicant/applicant-summary";
 
-interface Props {
+export interface TenantStatusBadgeProps {
   tenant: ApplicantSummary;
   today?: string;
 }
@@ -12,7 +12,7 @@ interface Props {
  * - tenant_ended_at is set (manual end), OR
  * - contract_end is not null and is before today (contract expiry)
  */
-export default function TenantStatusBadge({ tenant, today }: Props) {
+export default function TenantStatusBadge({ tenant, today }: TenantStatusBadgeProps) {
   const todayStr = today ?? new Date().toISOString().slice(0, 10);
   const ended =
     tenant.tenant_ended_at !== null ||

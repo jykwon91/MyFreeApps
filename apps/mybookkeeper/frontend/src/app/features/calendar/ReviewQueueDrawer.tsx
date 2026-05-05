@@ -5,7 +5,7 @@ import ReviewQueueSkeleton from "@/app/features/calendar/ReviewQueueSkeleton";
 import EmptyState from "@/shared/components/ui/EmptyState";
 import { useGetReviewQueueQuery } from "@/shared/store/calendarApi";
 
-interface Props {
+export interface ReviewQueueDrawerProps {
   isOpen: boolean;
   onClose: () => void;
 }
@@ -16,7 +16,7 @@ interface Props {
  * Rendered lazily — the queue is only fetched when the drawer opens so we
  * don't add a background poll to every Calendar page render.
  */
-export default function ReviewQueueDrawer({ isOpen, onClose }: Props) {
+export default function ReviewQueueDrawer({ isOpen, onClose }: ReviewQueueDrawerProps) {
   const { data: items, isLoading, isError } = useGetReviewQueueQuery(
     undefined,
     { skip: !isOpen },

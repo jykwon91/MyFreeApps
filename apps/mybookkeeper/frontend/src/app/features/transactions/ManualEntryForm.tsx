@@ -11,7 +11,7 @@ import Select from "@/shared/components/ui/Select";
 import LoadingButton from "@/shared/components/ui/LoadingButton";
 import { useCreateTransactionMutation } from "@/shared/store/transactionsApi";
 
-interface Props {
+export interface ManualEntryFormProps {
   properties: readonly Property[];
   onClose: () => void;
   onSuccess: () => void;
@@ -38,7 +38,7 @@ function buildDefaults(): TransactionFormValues {
   };
 }
 
-export default function ManualEntryForm({ properties, onClose, onSuccess, onError }: Props) {
+export default function ManualEntryForm({ properties, onClose, onSuccess, onError }: ManualEntryFormProps) {
   const [createTransaction, { isLoading }] = useCreateTransactionMutation();
 
   const { register, handleSubmit, watch, setValue } = useForm<TransactionFormValues>({

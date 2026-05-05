@@ -1,8 +1,8 @@
-interface Props {
+export interface ExternalLinkProps {
   className?: string;
 }
 
-export default function ExternalLink({ className = "h-3 w-3" }: Props) {
+export default function ExternalLink({ className = "h-3 w-3" }: ExternalLinkProps) {
   return (
     <svg
       className={className}

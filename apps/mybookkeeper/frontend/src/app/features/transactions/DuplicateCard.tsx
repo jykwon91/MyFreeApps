@@ -9,7 +9,7 @@ import MergePreview from "@/app/features/transactions/MergePreview";
 import DocumentViewer from "@/app/features/documents/DocumentViewer";
 import { computeDefaults, computeSurvivingId, type MergeableField } from "@/app/features/transactions/merge-defaults";
 
-interface Props {
+export interface DuplicateCardProps {
   pair: DuplicatePair;
   propertyMap: Map<string, string>;
   onMerge: (
@@ -44,7 +44,7 @@ function getConfidenceConfig(
   }
 }
 
-export default function DuplicateCard({ pair, propertyMap, onMerge, onDismiss }: Props) {
+export default function DuplicateCard({ pair, propertyMap, onMerge, onDismiss }: DuplicateCardProps) {
   const [busy, setBusy] = useState<"merge" | "dismiss" | null>(null);
   const [mergeOpen, setMergeOpen] = useState(false);
   const [viewingDocId, setViewingDocId] = useState<string | null>(null);

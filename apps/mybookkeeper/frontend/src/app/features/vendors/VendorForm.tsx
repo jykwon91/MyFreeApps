@@ -18,7 +18,7 @@ import type { VendorCreateRequest } from "@/shared/types/vendor/vendor-create-re
 import type { VendorResponse } from "@/shared/types/vendor/vendor-response";
 import type { VendorUpdateRequest } from "@/shared/types/vendor/vendor-update-request";
 
-interface Props {
+export interface VendorFormProps {
   /** When provided the form is in edit mode; absent = create. */
   vendor?: VendorResponse;
   onClose: () => void;
@@ -112,7 +112,7 @@ export default function VendorForm({
   onClose,
   onCreated,
   onUpdated,
-}: Props) {
+}: VendorFormProps) {
   const [createVendor, { isLoading: isCreating }] = useCreateVendorMutation();
   const [updateVendor, { isLoading: isUpdating }] = useUpdateVendorMutation();
 

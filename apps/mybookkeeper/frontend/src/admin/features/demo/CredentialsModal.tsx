@@ -3,14 +3,14 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { Check, Copy, AlertTriangle } from "lucide-react";
 import Button from "@/shared/components/ui/Button";
 
-interface Props {
+export interface CredentialsModalProps {
   open: boolean;
   email: string;
   password: string;
   onClose: () => void;
 }
 
-export default function CredentialsModal({ open, email, password, onClose }: Props) {
+export default function CredentialsModal({ open, email, password, onClose }: CredentialsModalProps) {
   const [copied, setCopied] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout>>();
 

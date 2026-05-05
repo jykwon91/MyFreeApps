@@ -6,7 +6,7 @@ import {
 } from "@/shared/types/insurance/insurance-attachment-kind";
 import type { InsurancePolicyAttachment } from "@/shared/types/insurance/insurance-policy-attachment";
 
-interface Props {
+export interface InsurancePolicyAttachmentRowProps {
   att: InsurancePolicyAttachment;
   canWrite: boolean;
   onPreview: () => void;
@@ -18,7 +18,7 @@ export default function InsurancePolicyAttachmentRow({
   canWrite,
   onPreview,
   onDelete,
-}: Props) {
+}: InsurancePolicyAttachmentRowProps) {
   const canPreview =
     att.presigned_url !== null &&
     (att.content_type === "application/pdf" || att.content_type.startsWith("image/"));

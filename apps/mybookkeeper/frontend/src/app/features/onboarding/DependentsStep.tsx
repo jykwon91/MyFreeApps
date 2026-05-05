@@ -1,12 +1,12 @@
 const MIN = 0;
 const MAX = 20;
 
-interface Props {
+export interface DependentsStepProps {
   value: number;
   onChange: (value: number) => void;
 }
 
-export default function DependentsStep({ value, onChange }: Props) {
+export default function DependentsStep({ value, onChange }: DependentsStepProps) {
   function decrement() {
     if (value > MIN) onChange(value - 1);
   }

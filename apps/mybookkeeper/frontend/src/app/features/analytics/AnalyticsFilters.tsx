@@ -6,7 +6,7 @@ import type { Property } from "@/shared/types/property/property";
 
 type Granularity = "monthly" | "quarterly";
 
-interface Props {
+export interface AnalyticsFiltersProps {
   fromDate: string;
   toDate: string;
   granularity: Granularity;
@@ -32,7 +32,7 @@ export default function AnalyticsFilters({
   onPropertyIds,
   hasActiveFilters,
   onClear,
-}: Props) {
+}: AnalyticsFiltersProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const filterContent = (

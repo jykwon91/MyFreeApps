@@ -29,14 +29,14 @@ function formatResolvedValue(
   }
 }
 
-interface Props {
+export interface MergePreviewProps {
   txnA: DuplicateTransaction;
   txnB: DuplicateTransaction;
   selections: Record<MergeableField, MergeFieldSide>;
   propertyMap: Map<string, string>;
 }
 
-export default function MergePreview({ txnA, txnB, selections, propertyMap }: Props) {
+export default function MergePreview({ txnA, txnB, selections, propertyMap }: MergePreviewProps) {
   // Only show fields that have a conflict (were selectable)
   const conflictedFields = MERGEABLE_FIELDS.filter((field) => {
     const rawA = getRawValue(field, txnA);

@@ -12,12 +12,12 @@ import FormField from "@/shared/components/ui/FormField";
 import { fromProperty, toAddress, addressComplete } from "./propertyForm";
 import AddressInputs from "./AddressInputs";
 
-interface Props {
+export interface PropertyEditCardProps {
   property: Property;
   onDone: () => void;
 }
 
-export default function PropertyEditCard({ property, onDone }: Props) {
+export default function PropertyEditCard({ property, onDone }: PropertyEditCardProps) {
   const [form, setForm] = useState<PropertyForm>(() => fromProperty(property));
   const [updateProperty, { isLoading }] = useUpdatePropertyMutation();
 

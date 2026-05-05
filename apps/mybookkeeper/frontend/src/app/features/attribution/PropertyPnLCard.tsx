@@ -5,14 +5,14 @@ import { formatCurrency } from "@/shared/utils/currency";
 import { formatTag } from "@/shared/utils/tag";
 import type { PropertyPnLEntry } from "@/shared/types/attribution/property-pnl";
 
-interface Props {
+export interface PropertyPnLCardProps {
   entry: PropertyPnLEntry;
   dateRange: { since: string; until: string };
 }
 
 const centsToAmount = (cents: number) => cents / 100;
 
-export default function PropertyPnLCard({ entry, dateRange }: Props) {
+export default function PropertyPnLCard({ entry, dateRange }: PropertyPnLCardProps) {
   const navigate = useNavigate();
   const isProfit = entry.net_cents >= 0;
 

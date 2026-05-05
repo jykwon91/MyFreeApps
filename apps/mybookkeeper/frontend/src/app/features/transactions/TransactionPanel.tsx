@@ -15,7 +15,7 @@ import TransactionForm from "@/app/features/transactions/TransactionForm";
 import AttributeTenantPicker from "@/app/features/transactions/AttributeTenantPicker";
 import { useUpdateTransactionMutation, useDeleteTransactionMutation } from "@/shared/store/transactionsApi";
 
-interface Props {
+export interface TransactionPanelProps {
   transaction: Transaction;
   properties: readonly Property[];
   onClose: () => void;
@@ -52,7 +52,7 @@ function buildPayload(data: TransactionFormValues, dirty: Partial<Record<keyof T
   return payload;
 }
 
-export default function TransactionPanel({ transaction, properties, onClose, onVendorLearned, onDeleted, embedded, duplicatePair, onKeepDuplicate, onDismissDuplicate }: Props) {
+export default function TransactionPanel({ transaction, properties, onClose, onVendorLearned, onDeleted, embedded, duplicatePair, onKeepDuplicate, onDismissDuplicate }: TransactionPanelProps) {
   const [updateTransaction, { isLoading: isSaving }] = useUpdateTransactionMutation();
   const [deleteTransaction, { isLoading: isDeleting }] = useDeleteTransactionMutation();
   const [showDiscardDialog, setShowDiscardDialog] = useState(false);

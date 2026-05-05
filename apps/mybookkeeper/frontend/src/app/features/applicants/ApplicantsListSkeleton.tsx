@@ -1,6 +1,6 @@
 import Skeleton from "@/shared/components/ui/Skeleton";
 
-interface Props {
+export interface ApplicantsListSkeletonProps {
   count?: number;
 }
 
@@ -13,7 +13,7 @@ interface Props {
  *   - Desktop: same 5 columns (Name, Employer, Contract Dates, Promoted,
  *     Stage) and same number of skeleton rows.
  */
-export default function ApplicantsListSkeleton({ count = 4 }: Props) {
+export default function ApplicantsListSkeleton({ count = 4 }: ApplicantsListSkeletonProps) {
   const rows = Array.from({ length: count }, (_, i) => i);
 
   return (

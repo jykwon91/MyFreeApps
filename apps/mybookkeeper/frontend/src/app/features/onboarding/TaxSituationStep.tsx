@@ -1,12 +1,12 @@
 import { cn } from "@/shared/utils/cn";
 import { TAX_SITUATION_OPTIONS } from "@/shared/lib/tax-config";
 
-interface Props {
+export interface TaxSituationStepProps {
   value: string[];
   onChange: (value: string[]) => void;
 }
 
-export default function TaxSituationStep({ value, onChange }: Props) {
+export default function TaxSituationStep({ value, onChange }: TaxSituationStepProps) {
   function toggle(option: string) {
     if (value.includes(option)) {
       onChange(value.filter((v) => v !== option));

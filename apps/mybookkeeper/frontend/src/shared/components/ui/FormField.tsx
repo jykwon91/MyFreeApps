@@ -1,4 +1,4 @@
-interface Props {
+export interface FormFieldProps {
   label: string;
   required?: boolean;
   highlight?: boolean;
@@ -6,7 +6,7 @@ interface Props {
   children: React.ReactNode;
 }
 
-export default function FormField({ label, required, highlight, dirty, children }: Props) {
+export default function FormField({ label, required, highlight, dirty, children }: FormFieldProps) {
   return (
     <div>
       <label className="flex items-center gap-1.5 text-xs font-medium mb-1">

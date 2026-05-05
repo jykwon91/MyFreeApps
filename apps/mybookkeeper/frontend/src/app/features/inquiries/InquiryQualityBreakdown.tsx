@@ -4,7 +4,7 @@ import {
   type InquiryQualitySignals,
 } from "@/shared/lib/inquiry-quality";
 
-interface Props {
+export interface InquiryQualityBreakdownProps {
   signals: InquiryQualitySignals;
 }
 
@@ -22,7 +22,7 @@ const BODY_LENGTH_THRESHOLD = 100;
  * §9.1 detail-page hierarchy: "what's missing"). Mirrors the heuristic in
  * ``shared/lib/inquiry-quality.ts``.
  */
-export default function InquiryQualityBreakdown({ signals }: Props) {
+export default function InquiryQualityBreakdown({ signals }: InquiryQualityBreakdownProps) {
   const score = computeInquiryQualityScore(signals);
   const employerLen = signals.inquirer_employer?.trim().length ?? 0;
   const bodyLen = signals.last_message_body?.trim().length ?? 0;

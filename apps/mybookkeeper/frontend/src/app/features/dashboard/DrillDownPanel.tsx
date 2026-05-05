@@ -11,12 +11,12 @@ import TransactionPanel from "@/app/features/transactions/TransactionPanel";
 import type { DrillDownFilter } from "@/shared/types/dashboard/drill-down-filter";
 import type { Transaction } from "@/shared/types/transaction/transaction";
 
-interface Props {
+export interface DrillDownPanelProps {
   filter: DrillDownFilter;
   onClose: () => void;
 }
 
-export default function DrillDownPanel({ filter, onClose }: Props) {
+export default function DrillDownPanel({ filter, onClose }: DrillDownPanelProps) {
   const { showSuccess } = useToast();
   const [selectedTxn, setSelectedTxn] = useState<Transaction | null>(null);
 

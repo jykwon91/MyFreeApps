@@ -2,11 +2,11 @@ import { formatCurrency } from "@/shared/utils/currency";
 import Card from "@/shared/components/ui/Card";
 import type { MonthSummary } from "@/shared/types/summary/month-summary";
 
-interface Props {
+export interface MonthlyAverageCardProps {
   byMonth: MonthSummary[];
 }
 
-export default function MonthlyAverageCard({ byMonth }: Props) {
+export default function MonthlyAverageCard({ byMonth }: MonthlyAverageCardProps) {
   const activeMonths = byMonth.filter(
     (m) => m.revenue !== 0 || m.expenses !== 0,
   );

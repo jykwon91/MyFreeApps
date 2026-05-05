@@ -25,7 +25,7 @@ const COLOR_CLASSES: Record<BadgeColor, string> = {
   purple: "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300",
 };
 
-interface Props {
+export interface ApplicantStatusControlProps {
   applicantId: string;
   currentStage: ApplicantStage;
 }
@@ -36,7 +36,7 @@ interface Props {
  *
  * Read-only members see a plain non-interactive badge instead.
  */
-export default function ApplicantStatusControl({ applicantId, currentStage }: Props) {
+export default function ApplicantStatusControl({ applicantId, currentStage }: ApplicantStatusControlProps) {
   const canWrite = useCanWrite();
   const { showSuccess, showError } = useToast();
   const [transitionStage] = useTransitionApplicantStageMutation();

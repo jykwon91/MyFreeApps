@@ -8,7 +8,7 @@ import ChevronDown from "@/shared/components/icons/ChevronDown";
 import ProgressBar from "./ProgressBar";
 import QueueItem from "./QueueItem";
 
-interface Props {
+export interface SyncLogRowProps {
   log: SyncLog;
   queueItems?: readonly EmailQueueItem[];
   onRetryItem?: (id: string) => void;
@@ -26,7 +26,7 @@ export default function SyncLogRow({
   onCancel,
   isCancelling = false,
   defaultOpen = false,
-}: Props) {
+}: SyncLogRowProps) {
   const [open, setOpen] = useState(defaultOpen);
   const toggle = useCallback(() => setOpen((prev) => !prev), []);
 

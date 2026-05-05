@@ -1,7 +1,7 @@
 import PlaceholderSpecRow from "@/app/features/leases/PlaceholderSpecRow";
 import type { LeaseTemplatePlaceholder } from "@/shared/types/lease/lease-template-placeholder";
 
-interface Props {
+export interface PlaceholderSpecEditorProps {
   templateId: string;
   placeholders: LeaseTemplatePlaceholder[];
 }
@@ -12,7 +12,7 @@ interface Props {
  * ``computed_expr`` are editable here. ``key`` is read-only because it's the
  * identifier used by the substitution pipeline.
  */
-export default function PlaceholderSpecEditor({ templateId, placeholders }: Props) {
+export default function PlaceholderSpecEditor({ templateId, placeholders }: PlaceholderSpecEditorProps) {
   if (placeholders.length === 0) {
     return (
       <p className="text-sm text-muted-foreground" data-testid="placeholders-empty">
