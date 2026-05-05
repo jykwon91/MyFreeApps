@@ -11,7 +11,7 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
-import { showError, showSuccess, extractErrorMessage } from "@platform/ui";
+import { showError, showSuccess, extractErrorMessage, formatSalaryRange } from "@platform/ui";
 import ProfileSkeleton from "@/features/profile/ProfileSkeleton";
 import ProfileHeaderDialog from "@/features/profile/ProfileHeaderDialog";
 import WorkHistoryDialog from "@/features/profile/WorkHistoryDialog";
@@ -33,14 +33,8 @@ import type { Education } from "@/types/education/education";
 import type { ScreeningAnswer } from "@/types/screening-answer/screening-answer";
 
 // ---------------------------------------------------------------------------
-// Salary / location display helpers
+// Display helpers
 // ---------------------------------------------------------------------------
-
-const SALARY_PERIOD_LABELS: Record<string, string> = {
-  annual: "/ year",
-  hourly: "/ hour",
-  monthly: "/ month",
-};
 
 const REMOTE_PREF_LABELS: Record<string, string> = {
   remote_only: "Remote only",
@@ -48,23 +42,6 @@ const REMOTE_PREF_LABELS: Record<string, string> = {
   onsite: "On-site",
   any: "Open to all",
 };
-
-function formatSalaryRange(
-  min: string | null,
-  max: string | null,
-  currency: string,
-  period: string,
-): string {
-  if (!min && !max) return "Not set";
-  const fmt = (n: string) =>
-    new Intl.NumberFormat("en-US", { style: "currency", currency, maximumFractionDigits: 0 }).format(
-      parseFloat(n),
-    );
-  const label = SALARY_PERIOD_LABELS[period] ?? "";
-  if (min && max) return `${fmt(min)} – ${fmt(max)} ${label}`;
-  if (min) return `${fmt(min)}+ ${label}`;
-  return `up to ${fmt(max!)} ${label}`;
-}
 
 function formatDateRange(start: string, end: string | null): string {
   const fmt = (d: string) => {
