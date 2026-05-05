@@ -7,6 +7,8 @@ import Spinner from "@/shared/components/icons/Spinner";
 import ChevronDown from "@/shared/components/icons/ChevronDown";
 import ProgressBar from "./ProgressBar";
 import QueueItem from "./QueueItem";
+import { useSyncLogFunnelMode } from "./useSyncLogFunnelMode";
+import SyncLogFunnelStats from "./SyncLogFunnelStats";
 
 export interface SyncLogRowProps {
   log: SyncLog;
@@ -32,6 +34,7 @@ export default function SyncLogRow({
 
   const statusColor = getStatusColor(log.status);
   const statusLabel = getStatusLabel(log);
+  const funnelMode = useSyncLogFunnelMode(log);
   const handleRetry = useCallback((id: string) => onRetryItem?.(id), [onRetryItem]);
   const handleDismiss = useCallback((id: string) => onDismissItem?.(id), [onDismissItem]);
 
@@ -71,32 +74,7 @@ export default function SyncLogRow({
               ) : null}
               {/* Funnel — render whenever Gmail returned at least one match */}
               {/* (lets the user see "100 matched, 100 already processed, 0 new") */}
-              {log.gmail_matches_total > 0 ? (
-                <>
-                  <span>Gmail matches</span>
-                  <span>{log.gmail_matches_total}</span>
-                  <span>New (after dedup)</span>
-                  <span>{log.emails_total}</span>
-                  {log.emails_total > 0 ? (
-                    <>
-                      <span>Fetched from Gmail</span>
-                      <span>{log.emails_fetched}</span>
-                      <span>Extracted by Claude</span>
-                      <span>{log.emails_done}</span>
-                    </>
-                  ) : null}
-                </>
-              ) : log.emails_total > 0 ? (
-                /* Legacy sync_logs (pre-#235) without gmail_matches_total */
-                <>
-                  <span>Emails found</span>
-                  <span>{log.emails_total}</span>
-                  <span>Fetched from Gmail</span>
-                  <span>{log.emails_fetched}</span>
-                  <span>Extracted by Claude</span>
-                  <span>{log.emails_done}</span>
-                </>
-              ) : null}
+              <SyncLogFunnelStats mode={funnelMode} log={log} />
               <span>Documents added</span>
               <span>{log.records_added ?? 0}</span>
             </div>

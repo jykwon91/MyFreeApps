@@ -7,8 +7,8 @@ import {
   useUploadBlackoutAttachmentMutation,
 } from "@/shared/store/calendarApi";
 import type { ListingBlackoutAttachment } from "@/shared/types/listing/listing-blackout-attachment";
-import CalendarEventAttachmentCard from "@/app/features/calendar/CalendarEventAttachmentCard";
-import CalendarEventAttachmentsSkeleton from "@/app/features/calendar/CalendarEventAttachmentsSkeleton";
+import { useCalendarAttachmentsMode } from "./useCalendarAttachmentsMode";
+import CalendarAttachmentsListBody from "./CalendarAttachmentsListBody";
 
 // Maximum attachment file size (client-side pre-check) — matches the backend cap.
 const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024;
@@ -32,6 +32,8 @@ export default function CalendarEventAttachmentsSection({ blackoutId }: Calendar
   const [deleteAttachment] = useDeleteBlackoutAttachmentMutation();
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const attachmentsMode = useCalendarAttachmentsMode({ isLoading, attachments });
 
   function validateFile(file: File): string | null {
     if (file.size > MAX_ATTACHMENT_BYTES) return `${file.name} exceeds 25MB`;
@@ -84,23 +86,11 @@ export default function CalendarEventAttachmentsSection({ blackoutId }: Calendar
       <p className="text-sm font-medium">Attachments</p>
 
       {/* Attachment list */}
-      {isLoading ? (
-        <CalendarEventAttachmentsSkeleton />
-      ) : attachments && attachments.length > 0 ? (
-        <ul className="space-y-2" data-testid="attachment-list">
-          {attachments.map((att) => (
-            <CalendarEventAttachmentCard
-              key={att.id}
-              attachment={att}
-              onDelete={() => void handleDelete(att)}
-            />
-          ))}
-        </ul>
-      ) : (
-        <p className="text-xs text-muted-foreground" data-testid="attachments-empty">
-          No attachments yet.
-        </p>
-      )}
+      <CalendarAttachmentsListBody
+        mode={attachmentsMode}
+        attachments={attachments}
+        onDelete={(att) => void handleDelete(att)}
+      />
 
       {/* Upload zone */}
       <div

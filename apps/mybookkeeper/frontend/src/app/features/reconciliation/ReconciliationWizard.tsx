@@ -1,21 +1,19 @@
 import { useState } from "react";
 import { getYear } from "date-fns";
-import { formatCurrency } from "@/shared/utils/currency";
-import { formatTag } from "@/shared/utils/tag";
-import { RECONCILIATION_STATUS_STYLES } from "@/shared/lib/constants";
+import { Link } from "react-router-dom";
 import { STEPS } from "@/shared/lib/reconciliation-config";
-import type { ReconciliationSource } from "@/shared/types/reconciliation/reconciliation-source";
 import {
   useUpload1099Mutation,
   useListSourcesQuery,
   useGetDiscrepanciesQuery,
 } from "@/shared/store/reconciliationApi";
-import { Link } from "react-router-dom";
 import Select from "@/shared/components/ui/Select";
 import LoadingButton from "@/shared/components/ui/LoadingButton";
 import Card from "@/shared/components/ui/Card";
-import EmptyState from "@/shared/components/ui/EmptyState";
-import Skeleton from "@/shared/components/ui/Skeleton";
+import { useReconciliationSourcesMode } from "./useReconciliationSourcesMode";
+import { useReconciliationDiscrepanciesMode } from "./useReconciliationDiscrepanciesMode";
+import ReconciliationSourcesBody from "./ReconciliationSourcesBody";
+import ReconciliationDiscrepanciesBody from "./ReconciliationDiscrepanciesBody";
 
 
 export interface ReconciliationWizardProps {
@@ -38,6 +36,9 @@ export default function ReconciliationWizard({ onToast, canWrite = true }: Recon
   const [sourceType, setSourceType] = useState("1099_k");
   const [issuer, setIssuer] = useState("");
   const [reportedAmount, setReportedAmount] = useState("");
+
+  const sourcesMode = useReconciliationSourcesMode({ isLoading: sourcesLoading, sources });
+  const discrepanciesMode = useReconciliationDiscrepanciesMode({ isLoading: discrepanciesLoading, count: discrepancies.length });
 
   async function handleUpload(e: React.FormEvent) {
     e.preventDefault();
@@ -150,119 +151,21 @@ export default function ReconciliationWizard({ onToast, canWrite = true }: Recon
 
       {step === 1 && (
         <Card>
-          {sourcesLoading ? (
-            <div className="space-y-3">
-              {Array.from({ length: 3 }, (_, i) => (
-                <Skeleton key={i} className="h-12 w-full" />
-              ))}
-            </div>
-          ) : sources.length === 0 ? (
-            <EmptyState
-              message="No reconciliation sources yet"
-              action={{ label: "Upload a 1099", onClick: () => setStep(0) }}
-            />
-          ) : (
-            <div className="space-y-3">
-              <p className="text-sm text-muted-foreground mb-4">
-                Here are the 1099 sources I found. I have automatically matched them against your reservations.
-              </p>
-              <p className="text-xs text-muted-foreground mb-3">
-                Each row is one 1099 form or year-end statement. A single form may cover multiple properties.
-              </p>
-              <div className="overflow-x-auto">
-              <table className="w-full text-sm min-w-[900px]">
-                <thead className="bg-muted text-muted-foreground">
-                  <tr>
-                    <th className="text-left px-4 py-3 font-medium">Type</th>
-                    <th className="text-left px-4 py-3 font-medium">Issuer</th>
-                    <th className="text-left px-4 py-3 font-medium">Source Document</th>
-                    <th className="text-left px-4 py-3 font-medium">Property</th>
-                    <th className="text-right px-4 py-3 font-medium">1099 Amount</th>
-                    <th className="text-right px-4 py-3 font-medium">Reservation Total</th>
-                    <th className="text-right px-4 py-3 font-medium">Discrepancy</th>
-                    <th className="text-left px-4 py-3 font-medium">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {sources.map((source: ReconciliationSource) => (
-                    <tr key={source.id} className="hover:bg-muted/40">
-                      <td className="px-4 py-3">{formatTag(source.source_type)}</td>
-                      <td className="px-4 py-3">
-                        {source.issuer ?? (source.source_type === "year_end_statement" ? source.document_file_name ?? "\u2014" : "\u2014")}
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground">{source.document_file_name ?? "\u2014"}</td>
-                      <td className="px-4 py-3">{source.property_name ?? "\u2014"}</td>
-                      <td className="px-4 py-3 text-right font-medium">{formatCurrency(source.reported_amount)}</td>
-                      <td className="px-4 py-3 text-right">{formatCurrency(source.matched_amount)}</td>
-                      <td className={`px-4 py-3 text-right font-medium ${parseFloat(source.discrepancy) === 0 ? "text-green-600" : "text-amber-600"}`}>
-                        {formatCurrency(source.discrepancy)}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${RECONCILIATION_STATUS_STYLES[source.status] ?? ""}`}>
-                          {formatTag(source.status)}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              </div>
-              <div className="flex justify-end pt-2">
-                <LoadingButton size="sm" variant="secondary" onClick={() => setStep(2)}>
-                  Review Discrepancies
-                </LoadingButton>
-              </div>
-            </div>
-          )}
+          <ReconciliationSourcesBody
+            mode={sourcesMode}
+            sources={sources}
+            onUploadStep={() => setStep(0)}
+            onNext={() => setStep(2)}
+          />
         </Card>
       )}
 
       {step === 2 && (
         <Card>
-          {discrepanciesLoading ? (
-            <div className="space-y-3">
-              {Array.from({ length: 3 }, (_, i) => (
-                <Skeleton key={i} className="h-12 w-full" />
-              ))}
-            </div>
-          ) : discrepancies.length === 0 ? (
-            <EmptyState message="No discrepancies found. Everything matches!" />
-          ) : (
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                These sources have discrepancies between reported and matched amounts. Review and resolve them below.
-              </p>
-              {discrepancies.map((d) => (
-                <div key={d.id} className="border rounded-lg p-4 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="font-medium">{formatTag(d.source_type)}</span>
-                      {d.issuer && <span className="text-muted-foreground ml-2">{d.issuer}</span>}
-                    </div>
-                    <span className={`text-sm font-medium ${RECONCILIATION_STATUS_STYLES[d.status] ?? ""} px-2 py-0.5 rounded`}>
-                      {formatTag(d.status)}
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-3 gap-4 text-sm">
-                    <div>
-                      <p className="text-muted-foreground text-xs">1099 Amount</p>
-                      <p className="font-medium">{formatCurrency(d.reported_amount)}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground text-xs">Reservation Total</p>
-                      <p className="font-medium">{formatCurrency(d.matched_amount)}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground text-xs">Discrepancy</p>
-                      <p className={`font-medium ${parseFloat(d.discrepancy) === 0 ? "text-green-600" : "text-amber-600"}`}>
-                        {formatCurrency(d.discrepancy)}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          <ReconciliationDiscrepanciesBody
+            mode={discrepanciesMode}
+            discrepancies={discrepancies}
+          />
         </Card>
       )}
     </div>
