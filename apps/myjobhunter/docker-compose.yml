@@ -39,9 +39,16 @@ services:
     env_file: backend/.env.docker
     environment:
       DATABASE_URL: postgresql+asyncpg://myjobhunter:${DB_PASSWORD}@postgres/myjobhunter
+      # MinIO connection — points at the shared infra/ stack's
+      # ``myfreeapps-minio`` container reachable via the shared
+      # ``myfreeapps`` external network. ``MINIO_ENDPOINT`` is set in
+      # backend/.env.docker on the VPS to ``myfreeapps-minio:9000``.
     depends_on:
       migrate:
         condition: service_completed_successfully
+    networks:
+      - default
+      - myfreeapps
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8002/health')"]
       interval: 10s
@@ -69,8 +76,20 @@ services:
     depends_on:
       api:
         condition: service_healthy
+    networks:
+      - default
+      - myfreeapps
 
 volumes:
   pg_data:
   caddy_data:
   caddy_config:
+
+networks:
+  # Per-app default network for postgres + migrate.
+  default:
+  # Shared external network owned by infra/docker-compose.yml — joined
+  # by services that need to reach myfreeapps-minio. Bring up the infra
+  # stack first or compose-up will fail with "network myfreeapps not found".
+  myfreeapps:
+    external: true
