@@ -78,12 +78,13 @@ jobs:
             done
 
             echo "--- Update host Caddyfile ---"
-            # Auto-sync deploy/Caddyfile → /etc/caddy/Caddyfile so header and
-            # routing changes propagate on every deploy without a manual SSH step.
-            # Mirrors apps/mybookkeeper/deploy/Caddyfile sync in deploy-mybookkeeper.yml.
-            if ! diff -q apps/myjobhunter/deploy/Caddyfile /etc/caddy/Caddyfile > /dev/null 2>&1; then
+            # Sync the SHARED host Caddyfile (infra/Caddyfile) → /etc/caddy/Caddyfile.
+            # The shared file holds blocks for every app in the monorepo so a
+            # deploy of one app does not wipe another's host-Caddy entry.
+            # See infra/Caddyfile for the rationale and the per-app entries.
+            if ! diff -q infra/Caddyfile /etc/caddy/Caddyfile > /dev/null 2>&1; then
               echo "Host Caddyfile differs from repo — updating"
-              sudo cp apps/myjobhunter/deploy/Caddyfile /etc/caddy/Caddyfile
+              sudo cp infra/Caddyfile /etc/caddy/Caddyfile
               sudo caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
               sudo caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile
               echo "Host Caddy reloaded with new config"

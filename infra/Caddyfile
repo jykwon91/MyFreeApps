@@ -1,0 +1,55 @@
+# Shared host Caddyfile — synced to /etc/caddy/Caddyfile on the VPS by every
+# app's deploy workflow. Holds blocks for ALL apps in the monorepo so a
+# deploy of one app does not wipe another's host-Caddy entry.
+#
+# Host Caddy is intentionally a thin TLS-terminator + reverse-proxy. All
+# routing — API, frontend, security headers, cache headers — lives in
+# each app's docker Caddy. Keep ONLY HSTS + nosniff + Referrer-Policy at
+# this layer (network-level protections that make sense at the TLS edge).
+# Everything else — XFO, CSP, cache-control, /api routing, SPA fallback —
+# is in the docker Caddy.
+#
+# Adding a new app:
+#   1. Append a new <hostname> { ... reverse_proxy 127.0.0.1:<port> } block.
+#   2. Pick a unique loopback port (8094 = MBK, 8092 = MJH, 9000 = MinIO).
+#   3. Make sure the app's docker compose binds that port on 127.0.0.1.
+
+# MyBookkeeper — primary domain.
+165-245-134-251.sslip.io {
+    header {
+        Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        -Server
+    }
+
+    reverse_proxy 127.0.0.1:8094
+}
+
+# Shared MinIO — public storage endpoint. The minio container binds to
+# 127.0.0.1:9000 (see infra/docker-compose.yml). MinIO listens HTTP-only —
+# host Caddy terminates TLS for storage.<domain> and proxies plaintext to
+# MinIO. Backends sign presigned URLs against this hostname so the browser
+# can fetch attachments directly without round-tripping through any API.
+storage.165-245-134-251.sslip.io {
+    header {
+        Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        -Server
+    }
+
+    reverse_proxy 127.0.0.1:9000
+}
+
+# MyJobHunter — separate subdomain.
+myjobhunter.165-245-134-251.sslip.io {
+    header {
+        Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        -Server
+    }
+
+    reverse_proxy 127.0.0.1:8092
+}

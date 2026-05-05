@@ -77,19 +77,13 @@ jobs:
             done
 
             echo "--- Update host Caddyfile ---"
-            # The host Caddy (TLS termination + routing on the VPS itself,
-            # NOT the docker Caddy in the container) historically lived only
-            # on the VPS as /etc/caddy/Caddyfile. That meant changes to
-            # `apps/mybookkeeper/deploy/Caddyfile` in this repo never
-            # propagated automatically — every CSP / header / proxy fix
-            # required a manual `sudo cp + sudo caddy reload` on the VPS.
-            # That gap caused the 2026-05-01 incident where the host Caddy
-            # ran a stale config (wrong reverse_proxy port, double-stripping
-            # /api, no cache-control headers) for an unknown number of
-            # weeks. Sync it as part of every deploy now.
-            if ! diff -q apps/mybookkeeper/deploy/Caddyfile /etc/caddy/Caddyfile > /dev/null 2>&1; then
+            # Sync the SHARED host Caddyfile (infra/Caddyfile) → /etc/caddy/Caddyfile.
+            # The shared file holds blocks for every app in the monorepo so a
+            # deploy of one app does not wipe another's host-Caddy entry.
+            # See infra/Caddyfile for the rationale and the per-app entries.
+            if ! diff -q infra/Caddyfile /etc/caddy/Caddyfile > /dev/null 2>&1; then
               echo "Host Caddyfile differs from repo — updating"
-              sudo cp apps/mybookkeeper/deploy/Caddyfile /etc/caddy/Caddyfile
+              sudo cp infra/Caddyfile /etc/caddy/Caddyfile
               sudo caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
               sudo caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile
               echo "Host Caddy reloaded with new config"

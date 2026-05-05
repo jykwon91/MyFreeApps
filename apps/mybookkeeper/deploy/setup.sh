@@ -157,7 +157,7 @@ deploy ALL=(ALL) NOPASSWD: \
     /bin/systemctl restart dramatiq-scheduler, \
     /bin/systemctl restart upload-processor, \
     /bin/systemctl restart caddy, \
-    /bin/cp /srv/mybookkeeper/deploy/Caddyfile /etc/caddy/Caddyfile
+    /bin/cp /srv/myfreeapps/infra/Caddyfile /etc/caddy/Caddyfile
 SUDOERS
 
 systemctl daemon-reload
@@ -166,7 +166,8 @@ systemctl restart uvicorn dramatiq-worker dramatiq-scheduler upload-processor
 
 # ─── 10. Caddy ────────────────────────────────────────────────────────────────
 info "Configuring Caddy..."
-cp "$APP_DIR/deploy/Caddyfile" /etc/caddy/Caddyfile
+# Shared host Caddyfile lives at the monorepo root, not under apps/<app>/.
+cp /srv/myfreeapps/infra/Caddyfile /etc/caddy/Caddyfile
 
 # Set admin allowed IP for /api/docs endpoint restriction
 if [ -z "${ADMIN_ALLOWED_IP:-}" ]; then
