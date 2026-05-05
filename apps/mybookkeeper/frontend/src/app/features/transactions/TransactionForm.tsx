@@ -13,6 +13,7 @@ import FormField from "@/shared/components/ui/FormField";
 import Select from "@/shared/components/ui/Select";
 import TransactionDuplicateActions from "@/app/features/transactions/TransactionDuplicateActions";
 import { useGetVendorsQuery } from "@/shared/store/vendorsApi";
+import SourcePreviewBody from "./SourcePreviewBody";
 
 export interface TransactionFormProps {
   transaction: Transaction;
@@ -136,17 +137,11 @@ export default function TransactionForm({
               </button>
             </div>
             <div className="overflow-auto max-h-[calc(80vh-3rem)] flex items-center justify-center">
-              {sourcePreview.type === "pdf" ? (
-                <iframe src={sourcePreview.url} className="w-full h-[70vh]" title="Source document" />
-              ) : sourcePreview.type === "image" ? (
-                <img src={sourcePreview.url} alt="Source document" className="max-w-full max-h-[70vh] object-contain" />
-              ) : (
-                <div className="p-4 text-sm text-muted-foreground">
-                  <a href={sourcePreview.url} download={transaction.source_file_name} className="text-primary hover:underline">
-                    Download {transaction.source_file_name}
-                  </a>
-                </div>
-              )}
+              <SourcePreviewBody
+                mode={sourcePreview.type}
+                url={sourcePreview.url}
+                fileName={transaction.source_file_name}
+              />
             </div>
           </div>
         </div>
