@@ -10,9 +10,8 @@ import {
   useSendInquiryReplyMutation,
 } from "@/shared/store/inquiriesApi";
 import type { ReplyTemplate } from "@/shared/types/inquiry/reply-template";
-import GmailReconnectBanner from "./GmailReconnectBanner";
-import RenderedReplyEditor from "./RenderedReplyEditor";
-import ReplyTemplatePicker from "./ReplyTemplatePicker";
+import InquiryReplyPanelBody from "./InquiryReplyPanelBody";
+import { useInquiryReplyMode } from "./useInquiryReplyMode";
 
 export interface InquiryReplyPanelProps {
   inquiryId: string;
@@ -20,6 +19,23 @@ export interface InquiryReplyPanelProps {
 }
 
 type ReplyTab = "template" | "custom";
+
+type ReconnectReason =
+  | "missing-integration"
+  | "missing-send-scope"
+  | "reauth-required"
+  | null;
+
+function deriveReconnectReason(
+  integrationsLoading: boolean,
+  gmail: { needs_reauth?: boolean; has_send_scope?: boolean } | undefined,
+): ReconnectReason {
+  if (integrationsLoading) return null;
+  if (!gmail) return "missing-integration";
+  if (gmail.needs_reauth) return "reauth-required";
+  if (gmail.has_send_scope === false) return "missing-send-scope";
+  return null;
+}
 
 /**
  * Right-side slide-in (mobile: bottom sheet) for composing a templated
@@ -53,27 +69,19 @@ export default function InquiryReplyPanel({ inquiryId, onClose }: InquiryReplyPa
   const [sendReply, { isLoading: isSending }] = useSendInquiryReplyMutation();
 
   const gmail = integrations.find((i) => i.provider === "gmail");
-  const reconnectReason: "missing-integration" | "missing-send-scope" | "reauth-required" | null =
-    integrationsLoading
-      ? null
-      : !gmail
-        ? "missing-integration"
-        : gmail.needs_reauth
-          ? "reauth-required"
-          : gmail.has_send_scope === false
-            ? "missing-send-scope"
-            : null;
+  const reconnectReason = deriveReconnectReason(integrationsLoading, gmail);
+  const mode = useInquiryReplyMode({ reconnectReason, tab });
 
   // Derive subject/body: prefer local override (user edits), fall back to
   // server-rendered template data, then empty string.
   const subject = subjectOverride ?? renderState.data?.subject ?? "";
   const body = bodyOverride ?? renderState.data?.body ?? "";
 
-  function setSubject(value: string) {
+  function handleSubjectChange(value: string) {
     setSubjectOverride(value);
   }
 
-  function setBody(value: string) {
+  function handleBodyChange(value: string) {
     setBodyOverride(value);
   }
 
@@ -173,62 +181,20 @@ export default function InquiryReplyPanel({ inquiryId, onClose }: InquiryReplyPa
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto p-5 space-y-4">
-          {reconnectReason !== null ? (
-            <GmailReconnectBanner reason={reconnectReason} />
-          ) : null}
-
-          {tab === "template" && reconnectReason === null ? (
-            <>
-              <div>
-                <h4 className="text-sm font-medium mb-2">Choose a template</h4>
-                {templatesLoading ? (
-                  <div
-                    className="text-sm text-muted-foreground"
-                    data-testid="reply-templates-loading"
-                  >
-                    Loading templates...
-                  </div>
-                ) : (
-                  <ReplyTemplatePicker
-                    templates={templates}
-                    selectedTemplateId={selectedTemplateId}
-                    onSelect={handleSelectTemplate}
-                  />
-                )}
-              </div>
-              {selectedTemplateId !== null ? (
-                <div className="border-t pt-4">
-                  <h4 className="text-sm font-medium mb-2">Preview &amp; edit</h4>
-                  {renderState.isFetching ? (
-                    <div
-                      className="text-sm text-muted-foreground"
-                      data-testid="reply-render-loading"
-                    >
-                      Hmm, let me build that for you...
-                    </div>
-                  ) : (
-                    <RenderedReplyEditor
-                      subject={subject}
-                      body={body}
-                      onSubjectChange={setSubject}
-                      onBodyChange={setBody}
-                      disabled={isSending}
-                    />
-                  )}
-                </div>
-              ) : null}
-            </>
-          ) : null}
-
-          {tab === "custom" && reconnectReason === null ? (
-            <RenderedReplyEditor
-              subject={subject}
-              body={body}
-              onSubjectChange={setSubject}
-              onBodyChange={setBody}
-              disabled={isSending}
-            />
-          ) : null}
+          <InquiryReplyPanelBody
+            mode={mode}
+            reconnectReason={reconnectReason}
+            templates={templates}
+            templatesLoading={templatesLoading}
+            selectedTemplateId={selectedTemplateId}
+            isRenderFetching={renderState.isFetching}
+            isSending={isSending}
+            subject={subject}
+            body={body}
+            onSelectTemplate={handleSelectTemplate}
+            onSubjectChange={handleSubjectChange}
+            onBodyChange={handleBodyChange}
+          />
         </div>
 
         {/* Footer */}

@@ -111,6 +111,8 @@ const STUB_JOB: ResumeUploadJob = {
   file_size_bytes: 12345,
   status: "queued",
   error_message: null,
+  result_parsed_fields: null,
+  parser_version: null,
   started_at: null,
   completed_at: null,
   created_at: "2026-05-04T12:00:00Z",

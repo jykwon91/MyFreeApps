@@ -1,6 +1,5 @@
 import { Download, Trash2 } from "lucide-react";
 import {
-  INSURANCE_ATTACHMENT_KINDS,
   INSURANCE_ATTACHMENT_KIND_LABELS,
   type InsuranceAttachmentKind,
 } from "@/shared/types/insurance/insurance-attachment-kind";

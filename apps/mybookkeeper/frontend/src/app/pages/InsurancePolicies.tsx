@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { addDays, format } from "date-fns";
 import { useGetInsurancePoliciesQuery } from "@/shared/store/insurancePoliciesApi";
-import { useCanWrite } from "@/shared/hooks/useOrgRole";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import AlertBox from "@/shared/components/ui/AlertBox";
 import InsuranceExpirationBadge from "@/app/features/insurance/InsuranceExpirationBadge";
@@ -12,7 +11,6 @@ import InsuranceExpirationBadge from "@/app/features/insurance/InsuranceExpirati
  * Includes an "expiring soon" toggle (within 30 days).
  */
 export default function InsurancePolicies() {
-  const canWrite = useCanWrite();
   const [showExpiringSoon, setShowExpiringSoon] = useState(false);
 
   const expiringBefore = showExpiringSoon
