@@ -64,7 +64,17 @@
             header {
                 defer
                 X-Frame-Options "DENY"
-                Content-Security-Policy "default-src 'self'; script-src 'self' https://cdn.plaid.com https://us.i.posthog.com https://challenges.cloudflare.com https://*.sentry.io; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://storage.{$DOMAIN} https:; font-src 'self'; connect-src 'self' https://storage.{$DOMAIN} https://*.plaid.com https://us.i.posthog.com https://*.posthog.com https://challenges.cloudflare.com https://*.sentry.io; frame-src 'self' blob: https://storage.{$DOMAIN} https://cdn.plaid.com https://us.posthog.com https://challenges.cloudflare.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests"
+                # script-src includes the SHA-256 hash of the inline theme-
+                # bootstrap script in apps/mybookkeeper/frontend/index.html
+                # (sets dark mode before React hydrates to avoid a flash of
+                # the wrong theme). Without the hash, that inline script is
+                # silently blocked — the bundle still loads via the external
+                # `<script type="module">`, but the theme bootstrap doesn't
+                # run, so first-paint shows the wrong theme briefly.
+                # Same script byte-for-byte as MJH (apps/myjobhunter/frontend/
+                # index.html) → same hash. If the script is ever edited,
+                # regenerate via the browser's CSP-error console message.
+                Content-Security-Policy "default-src 'self'; script-src 'self' 'sha256-6gP5jY9WKtmx3Qr/KXGhyuG+YL86Nf6n5b7wHrV5jmk=' https://cdn.plaid.com https://us.i.posthog.com https://challenges.cloudflare.com https://*.sentry.io; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://storage.{$DOMAIN} https:; font-src 'self'; connect-src 'self' https://storage.{$DOMAIN} https://*.plaid.com https://us.i.posthog.com https://*.posthog.com https://challenges.cloudflare.com https://*.sentry.io; frame-src 'self' blob: https://storage.{$DOMAIN} https://cdn.plaid.com https://us.posthog.com https://challenges.cloudflare.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests"
             }
 
             # Cache strategy:
