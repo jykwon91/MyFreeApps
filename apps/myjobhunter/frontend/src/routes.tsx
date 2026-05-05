@@ -6,6 +6,7 @@ import Companies from "@/pages/Companies";
 import CompanyDetail from "@/pages/CompanyDetail";
 import Documents from "@/pages/Documents";
 import Profile from "@/pages/Profile";
+import ResumeRefinement from "@/pages/ResumeRefinement";
 import Security from "@/pages/Security";
 import Settings from "@/pages/Settings";
 import Login from "@/pages/Login";
@@ -24,6 +25,7 @@ export const routes: RouteObject[] = [
       { path: "/companies", element: <Companies /> },
       { path: "/companies/:id", element: <CompanyDetail /> },
       { path: "/documents", element: <Documents /> },
+      { path: "/resume", element: <ResumeRefinement /> },
       { path: "/profile", element: <Profile /> },
       { path: "/settings", element: <Settings /> },
       { path: "/security", element: <Security /> },

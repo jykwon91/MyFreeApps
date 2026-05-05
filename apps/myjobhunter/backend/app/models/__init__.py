@@ -22,6 +22,9 @@ from app.models.integration.job_board_credential import JobBoardCredential  # no
 
 from app.models.jobs.resume_upload_job import ResumeUploadJob  # noqa: F401
 
+from app.models.resume_refinement.session import ResumeRefinementSession  # noqa: F401
+from app.models.resume_refinement.turn import ResumeRefinementTurn  # noqa: F401
+
 from app.models.system.extraction_log import ExtractionLog  # noqa: F401
 
 # Shared models from platform_shared. Importing them here registers their

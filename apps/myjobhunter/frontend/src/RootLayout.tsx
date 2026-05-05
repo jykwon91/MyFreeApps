@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   Plus,
   Settings,
+  Sparkles,
   UserCircle,
 } from "lucide-react";
 import { AppShell, RequireAuth, Toaster, useIsAuthenticated } from "@platform/ui";
@@ -36,6 +37,7 @@ const ICONS: Record<string, React.ReactNode> = {
   LayoutDashboard: <LayoutDashboard className="w-5 h-5" />,
   Plus: <Plus className="w-5 h-5" />,
   Settings: <Settings className="w-5 h-5" />,
+  Sparkles: <Sparkles className="w-5 h-5" />,
   UserCircle: <UserCircle className="w-5 h-5" />,
 };
 
