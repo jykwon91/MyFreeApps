@@ -11,7 +11,10 @@ from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from jwt.exceptions import PyJWTError as JWTError
 
-from platform_shared.core.boot_guards import check_turnstile_configured
+from platform_shared.core.boot_guards import (
+    check_email_configured,
+    check_turnstile_configured,
+)
 
 from app.api import account, applications, companies, documents, health, integrations, profile, resumes, totp
 from app.core.audit import current_user_id, register_audit_listeners
@@ -63,6 +66,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     init_sentry()
     check_turnstile_configured(
         turnstile_secret_key=settings.turnstile_secret_key,
+        environment=settings.environment,
+    )
+    check_email_configured(
+        email_backend=settings.email_backend,
+        smtp_user=settings.smtp_user,
+        smtp_password=settings.smtp_password,
         environment=settings.environment,
     )
     register_audit_listeners()
