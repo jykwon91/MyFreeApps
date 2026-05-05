@@ -19,6 +19,7 @@ import logging
 import time
 import uuid
 from datetime import datetime, timezone
+from decimal import Decimal
 
 import anthropic
 from anthropic import Timeout
@@ -81,6 +82,36 @@ async def call_claude(
         anthropic.APIError: on non-retryable API failures after backoff.
         ValueError: when Claude returns malformed JSON after all retries.
     """
+    result = await call_claude_with_meta(
+        system_prompt=system_prompt,
+        user_content=user_content,
+        context_type=context_type,
+        user_id=user_id,
+        context_id=context_id,
+    )
+    return result["parsed"]
+
+
+async def call_claude_with_meta(
+    *,
+    system_prompt: str,
+    user_content: str,
+    context_type: str,
+    user_id: uuid.UUID,
+    context_id: uuid.UUID | None = None,
+) -> dict:
+    """Same as ``call_claude`` but returns parsed + token + cost meta.
+
+    Returns a dict with keys:
+        - ``parsed``: dict — the parsed JSON response.
+        - ``input_tokens``: int — usage.input_tokens (0 if unavailable).
+        - ``output_tokens``: int — usage.output_tokens (0 if unavailable).
+        - ``cost_usd``: Decimal — computed via the same pricing used by
+          ``_record_log``.
+
+    Used by the resume-refinement service to track per-session token /
+    cost totals on the session row.
+    """
     truncated = user_content[:_MAX_TEXT_CHARS]
     started_at = time.monotonic()
     status = "success"
@@ -101,7 +132,16 @@ async def call_claude(
                 "content": truncated,
             }],
         )
-        return _parse_json_response(message)
+        parsed = _parse_json_response(message)
+        input_tokens = message.usage.input_tokens if message and message.usage else 0
+        output_tokens = message.usage.output_tokens if message and message.usage else 0
+        cost_usd = Decimal(input_tokens * 3 + output_tokens * 15) / Decimal(1_000_000)
+        return {
+            "parsed": parsed,
+            "input_tokens": input_tokens,
+            "output_tokens": output_tokens,
+            "cost_usd": cost_usd,
+        }
     except Exception as exc:
         status = "error"
         error_message = str(exc)[:500]

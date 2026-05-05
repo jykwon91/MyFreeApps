@@ -17,7 +17,16 @@ ARG GIT_COMMIT=unknown
 ENV GIT_COMMIT=${GIT_COMMIT}
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends postgresql-client \
+    && apt-get install -y --no-install-recommends \
+        postgresql-client \
+        pandoc \
+        libpango-1.0-0 \
+        libpangoft2-1.0-0 \
+        libharfbuzz0b \
+        libffi8 \
+        fonts-dejavu \
+        fonts-liberation \
+        fontconfig \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
