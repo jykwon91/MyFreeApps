@@ -214,6 +214,50 @@ docker compose -f apps/myjobhunter/docker-compose.yml exec postgres \
 **Phase 3:** Dramatiq workers, Gmail OAuth, Chrome extension integration
 **Phase 4:** Tavily company research, Claude JD parsing, cover letter generation
 
+## Parity rule
+
+MJH mirrors MBK by default. MBK is the canonical, battle-tested
+implementation; every MJH structural divergence is presumed to be a bug
+until justified.
+
+Before adding any of the following to MJH, **open the matching MBK file
+and copy its pattern**:
+
+- Settings classes / fields in `backend/app/core/config.py`
+- Lifespan steps in `backend/app/main.py` (Sentry init, Turnstile boot
+  guard, audit listeners, bucket initialisation, request-logging middleware,
+  `/version` + `/health` deploy-verification surfaces)
+- Env contract in `backend/.env.docker.example` — variables that must
+  exist in prod
+- Site-address syntax, header blocks, route ordering, and cache-control
+  policy in `docker/Caddyfile.docker` (`@no_cache_html` + `@hashed_assets`
+  — missing this on MBK in 2026-05-01 caused a stale-bundle outage)
+- Service definitions in `docker-compose.yml` (apart from the per-app
+  name and port — see "Port Offsets" above)
+- Deploy-workflow steps in `.github/workflows/deploy-myjobhunter.yml`
+  (env-file preflight, host-Caddyfile sync, frontend bundle freshness
+  tripwire)
+- Theme bootstrap script in `frontend/index.html`, AppShell layout in
+  `frontend/src/RootLayout.tsx`, semantic page wrappers in
+  `frontend/src/pages/*.tsx` (`<main className="p-4 sm:p-8 space-y-6 ...">`)
+
+**Divergence requires explicit justification.** Acceptable divergences:
+
+- The plural `users` table name (would require a migration; doesn't
+  warrant the disruption — documented in `apps/myjobhunter/backend/app/models/user/user.py`).
+- Port assignments (8002 / 8092 / 5174 vs MBK's 8000 / 8094) — by design.
+- Tighter CSP than MBK — MJH has fewer third-party integrations on the
+  page (no Plaid, no PostHog yet, no shared-storage subdomain). Widen
+  here when those land.
+- Tracing fewer routes than MBK (no `documents/`, `transactions/` etc.)
+  — MJH is earlier in its lifecycle.
+- `email_backend: str = "console"` default — appropriate while SMTP isn't
+  wired on the VPS. Operator flips to `smtp` in `.env.docker` when ready.
+- `restart: unless-stopped` (MJH) vs `restart: always` (MBK) — MJH's
+  choice is arguably better; both are valid.
+
+Anything NOT on the divergence list, presume MBK is right and copy.
+
 ## Known Follow-ups
 
 - GIN indexes on JSONB columns (add when actual query predicates exist)

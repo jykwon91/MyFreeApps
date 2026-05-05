@@ -175,3 +175,40 @@ See `packages/shared-frontend/src/index.ts` for the full export list. Key compon
 4. `notifyAuthChange()` from `@platform/ui` triggers `useIsAuthenticated` re-render
 5. `RequireAuth` in `RootLayout` redirects unauthenticated users to `/login`
 6. 401 responses handled by the shared axios interceptor in `@platform/ui/lib/api`
+
+## Parity rule
+
+MJH frontend mirrors MBK frontend by default. MBK is the canonical
+reference; before introducing a new layout pattern, dark-mode class,
+or theme variable, **open the matching MBK file and copy its pattern.**
+
+Files to mirror:
+
+- `frontend/index.html` — theme bootstrap script + iOS add-to-homescreen
+  meta tags (`apple-mobile-web-app-capable`, `apple-mobile-web-app-status-bar-style`)
+- `frontend/src/index.css` — Tailwind theme tokens. The CSS-variable
+  shadcn-style approach is the right choice — page components should
+  consume `bg-card`, `text-foreground`, `border-border` (which auto-flip
+  with `.dark`) and avoid handcrafted `dark:bg-...` overrides. Reach for
+  explicit `dark:` only when the token system can't express the variant
+  (rare — usually a sign the token system needs another variable).
+- **Page wrapper semantic + responsive padding:** every authenticated
+  page in MBK uses `<main className="p-4 sm:p-8 space-y-6 ...">` (not
+  `<div className="p-6 ...">`). The `sm:p-8` doubles the padding on
+  larger viewports, which makes the page feel less cramped on desktop;
+  `p-4` keeps mobile dense. Use `<main>` semantic — there should be
+  exactly one main landmark per route. Loaded / loading / error / empty
+  states all share the same wrapper element so the layout doesn't shift.
+- `RootLayout.tsx` consumes `@platform/ui`'s `AppShell` — sticky header
+  is the responsibility of the shell, not the route.
+
+Divergence requires explicit justification. Acceptable divergences:
+
+- MBK uses a custom `Layout.tsx` instead of `AppShell` because MBK
+  cannot migrate to `@platform/ui` until React 19 (two-React-copies
+  runtime crash). The two will reconverge once MBK upgrades.
+- Per-page `max-w-*` sizing is route-specific (Profile is `max-w-3xl`,
+  Settings is `max-w-2xl`). Mirror MBK's choice for the equivalent
+  page when one exists; otherwise pick what fits the data.
+
+Anything NOT on the divergence list, presume MBK is right and copy.
