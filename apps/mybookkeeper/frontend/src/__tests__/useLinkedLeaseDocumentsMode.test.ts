@@ -4,9 +4,14 @@ import type { SignedLeaseAttachment } from "@/shared/types/lease/signed-lease-at
 
 const mockAttachment: SignedLeaseAttachment = {
   id: "att-1",
+  lease_id: "lease-1",
   filename: "lease.pdf",
+  storage_key: "leases/lease-1/lease.pdf",
   content_type: "application/pdf",
-  kind: "lease_agreement",
+  size_bytes: 12345,
+  kind: "signed_lease",
+  uploaded_by_user_id: "user-1",
+  uploaded_at: "2026-01-01T00:00:00Z",
   presigned_url: "https://example.com/lease.pdf",
 };
 

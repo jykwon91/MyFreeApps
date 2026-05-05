@@ -26,12 +26,12 @@ const THREE_PHOTOS: ListingPhoto[] = [
 ];
 
 describe("PhotoLightbox", () => {
-  let onClose: ReturnType<typeof vi.fn>;
-  let onNavigate: ReturnType<typeof vi.fn>;
+  let onClose: ReturnType<typeof vi.fn<() => void>>;
+  let onNavigate: ReturnType<typeof vi.fn<(nextIndex: number) => void>>;
 
   beforeEach(() => {
-    onClose = vi.fn();
-    onNavigate = vi.fn();
+    onClose = vi.fn<() => void>();
+    onNavigate = vi.fn<(nextIndex: number) => void>();
   });
 
   it("renders with the correct photo when opened at index 0", () => {
