@@ -208,11 +208,36 @@ fi
 
 # ──────────────────────────────────────────────────────────────────────────
 # Step 3/9: copy old volume → new volume
+#
+# Idempotency check looks at the ACTUAL data, not just the volume's
+# existence. A previous run could have created the volume (when
+# myfreeapps-minio booted against an empty ``myfreeapps_minio_data``
+# attached by docker compose) without ever copying any bucket data.
+# The bug we hit on 2026-05-04: the volume existed but was empty
+# except for ``.minio.sys/`` — the script skipped the copy and the
+# new MinIO had no buckets / no users.
 # ──────────────────────────────────────────────────────────────────────────
 blue "Step 3/9: copying $OLD_VOLUME → $NEW_VOLUME"
+new_volume_has_data=0
 if docker volume inspect "$NEW_VOLUME" >/dev/null 2>&1; then
-  yellow "  $NEW_VOLUME already exists — assuming previous copy succeeded. Skipping."
+  # Check whether the new volume already contains a non-`.minio.sys` directory
+  # (i.e. an actual bucket). If it does, the copy succeeded previously. If
+  # it doesn't, the volume is empty and we MUST copy.
+  new_volume_has_data=$(
+    docker run --rm \
+      -v "${NEW_VOLUME}:/data:ro" \
+      alpine sh -c "find /data -mindepth 1 -maxdepth 1 ! -name .minio.sys -type d | head -1 | wc -l" 2>/dev/null \
+    || echo 0
+  )
+fi
+if [[ "$new_volume_has_data" == "1" ]]; then
+  yellow "  $NEW_VOLUME already contains bucket data — skipping copy."
 else
+  if [[ -n "${new_volume_has_data:-}" && "$new_volume_has_data" == "0" ]] \
+     && docker volume inspect "$NEW_VOLUME" >/dev/null 2>&1; then
+    yellow "  $NEW_VOLUME exists but is empty — wiping + redoing copy."
+    docker volume rm "$NEW_VOLUME" >/dev/null
+  fi
   if ! docker volume inspect "$OLD_VOLUME" >/dev/null 2>&1; then
     red "  $OLD_VOLUME does not exist — nothing to migrate from."
     red "  This is unexpected unless this is a fresh VPS. Aborting."
@@ -276,17 +301,56 @@ fi
 # ──────────────────────────────────────────────────────────────────────────
 # Step 5/9: verify data is readable from the new container
 # ──────────────────────────────────────────────────────────────────────────
-blue "Step 5/9: verifying data accessibility"
+blue "Step 5/9: verifying data accessibility + recreating IAM if needed"
 ROOT_USER="$(grep '^MINIO_ROOT_USER=' "$INFRA_ENV" | cut -d= -f2-)"
 ROOT_PASS="$(grep '^MINIO_ROOT_PASSWORD=' "$INFRA_ENV" | cut -d= -f2-)"
 docker exec "$NEW_CONTAINER" mc alias set local \
   http://127.0.0.1:9000 "$ROOT_USER" "$ROOT_PASS" >/dev/null
+
+# A clean ``cp -a`` of the data volume preserves bucket directories +
+# encrypted object data, BUT does NOT reliably transfer MinIO's IAM
+# database (users + policies live in ``.minio.sys/iam/`` sealed by the
+# master key, and MinIO sometimes overwrites these on first boot before
+# we can intervene). On 2026-05-04 we hit this exactly: the old
+# bucket directory was on disk but ``mc ls local/`` returned empty
+# because the new MinIO had no IAM record of the bucket.
+#
+# Recovery: explicitly register the bucket + recreate MBK's API
+# service-account user with the SAME credentials MBK already has in
+# its ``.env`` (so MBK doesn't need an env change). If the user
+# already exists, ``mc admin user add`` is idempotent.
+
+# Register the existing bucket (idempotent — won't wipe data files
+# already on disk).
+MBK_BUCKET="$(grep '^MINIO_BUCKET=' "$MBK_ENV_FILE" | cut -d= -f2- | tr -d '\r')"
+MBK_BUCKET="${MBK_BUCKET:-mybookkeeper-files}"
+docker exec "$NEW_CONTAINER" mc mb --ignore-existing "local/${MBK_BUCKET}"
+
+# Recreate the MBK service-account user from its existing env.
+MBK_ACCESS_KEY="$(grep '^MINIO_ACCESS_KEY=' "$MBK_ENV_FILE" | cut -d= -f2- | tr -d '\r')"
+MBK_SECRET_KEY="$(grep '^MINIO_SECRET_KEY=' "$MBK_ENV_FILE" | cut -d= -f2- | tr -d '\r')"
+if [[ -n "$MBK_ACCESS_KEY" && -n "$MBK_SECRET_KEY" ]]; then
+  if docker exec "$NEW_CONTAINER" mc admin user info local "$MBK_ACCESS_KEY" >/dev/null 2>&1; then
+    yellow "  user $MBK_ACCESS_KEY already exists — skipping create"
+  else
+    docker exec "$NEW_CONTAINER" mc admin user add local "$MBK_ACCESS_KEY" "$MBK_SECRET_KEY"
+    docker exec "$NEW_CONTAINER" mc admin policy attach local readwrite \
+      --user="$MBK_ACCESS_KEY" 2>/dev/null || true
+    green "  recreated MBK service account + readwrite policy"
+  fi
+else
+  yellow "  no MINIO_ACCESS_KEY/SECRET_KEY in MBK env — skipping IAM recreation."
+  yellow "  MBK is using root creds for API access; no service-account migration needed."
+fi
+
+# Verify the bucket is now visible.
 if docker exec "$NEW_CONTAINER" mc ls local/ 2>/dev/null | grep -q .; then
-  green "  buckets found:"
+  green "  buckets visible:"
   docker exec "$NEW_CONTAINER" mc ls local/ | sed 's/^/    /'
 else
-  yellow "  no buckets visible. If this is the first migration, that's unexpected."
-  yellow "  If only myjobhunter-files is missing, that's fine — it's created on MJH boot."
+  red "  no buckets visible even after recreation. Aborting."
+  red "  Inspect: docker exec $NEW_CONTAINER mc ls local/"
+  exit 1
 fi
 
 # ──────────────────────────────────────────────────────────────────────────
