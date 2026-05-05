@@ -1,32 +1,40 @@
-from pydantic import field_validator
-from pydantic_settings import BaseSettings
+"""MyBookkeeper application settings.
 
-_MIN_KEY_LENGTH = 32
+Inherits all common platform fields (database, auth, CORS, lockout, HIBP,
+Turnstile, email, MinIO, Sentry, logging) from
+platform_shared.core.settings.BaseAppSettings. Only MBK-specific fields
+(Plaid, Gmail integration, document extraction, cost accounting,
+inquiry filters, etc.) live here.
+"""
+
+from platform_shared.core.settings import BaseAppSettings
 
 
-class Settings(BaseSettings):
-    database_url: str
-    secret_key: str
-    encryption_key: str
+class Settings(BaseAppSettings):
+    # ------------------------------------------------------------------
+    # MBK-specific overrides of base defaults
+    # ------------------------------------------------------------------
+    jwt_lifetime_seconds: int = 60 * 60 * 24  # 24 hours
+    frontend_url: str = "http://localhost:5173"
+    cors_origins: list[str] = ["http://localhost:5173"]
+    minio_bucket: str = "mybookkeeper-files"
+    email_from_address: str = "mybookkeeper6@gmail.com"
+    email_from_name: str = "MyBookkeeper"
+    # MBK historically hardcoded Gmail SMTP. Keeping the same default for
+    # parity; flip email_backend to "smtp" in .env.docker to enable.
+    smtp_host: str = "smtp.gmail.com"
 
-    @field_validator("secret_key", "encryption_key")
-    @classmethod
-    def _validate_key_length(cls, v: str, info: object) -> str:
-        if len(v) < _MIN_KEY_LENGTH:
-            field = getattr(info, "field_name", "key")
-            raise ValueError(
-                f"{field} must be at least {_MIN_KEY_LENGTH} characters "
-                f"(got {len(v)}). Generate a strong key with: "
-                f"python -c \"import secrets; print(secrets.token_hex(32))\""
-            )
-        return v
+    # ------------------------------------------------------------------
+    # Required MBK app keys (no default — must be set in env)
+    # ------------------------------------------------------------------
     anthropic_api_key: str
     google_client_id: str
     google_client_secret: str
+
+    # ------------------------------------------------------------------
+    # Gmail integration
+    # ------------------------------------------------------------------
     oauth_redirect_uri: str = "http://localhost:8000/integrations/gmail/callback"
-    frontend_url: str = "http://localhost:5173"
-    cors_origins: list[str] = ["http://localhost:5173"]
-    jwt_lifetime_seconds: int = 60 * 60 * 24  # 24 hours
     gmail_poll_interval_minutes: int = 1440
     # Gmail search filter applied at API-list time. Anything that doesn't
     # match never gets fetched, so the categories here define the full
@@ -72,6 +80,11 @@ class Settings(BaseSettings):
         "\"received money with zelle\" OR \"venmo payment received\" OR "
         "\"you received\" OR \"sent you money\""
     )
+    gmail_label: str = ""
+
+    # ------------------------------------------------------------------
+    # Document upload / extraction
+    # ------------------------------------------------------------------
     max_uploads_per_user_per_day: int = 50
     max_upload_size_bytes: int = 100 * 1024 * 1024  # 100MB (supports zip uploads)
     max_text_chars: int = 20000
@@ -82,80 +95,50 @@ class Settings(BaseSettings):
     email_extraction_timeout_seconds: int = 120
     run_upload_worker: bool = True
     demo_max_uploads_per_day: int = 5
-
-    minio_endpoint: str = ""
-    minio_public_endpoint: str = ""
-    minio_access_key: str = ""
-    minio_secret_key: str = ""
-    minio_bucket: str = "mybookkeeper-files"
-    minio_secure: bool = False
-    presigned_url_ttl_seconds: int = 3600
     max_blackout_attachment_size_bytes: int = 25 * 1024 * 1024  # 25 MB
 
+    # ------------------------------------------------------------------
+    # Plaid integration
+    # ------------------------------------------------------------------
     plaid_client_id: str = ""
     plaid_secret: str = ""
     plaid_environment: str = "sandbox"
     plaid_webhook_url: str = ""
 
-    gmail_label: str = ""
-
-    environment: str = "development"
-    sentry_dsn: str = ""
+    # ------------------------------------------------------------------
+    # Analytics
+    # ------------------------------------------------------------------
     posthog_api_key: str = ""
 
+    # ------------------------------------------------------------------
+    # Test / admin escape hatches — never set true in production
+    # ------------------------------------------------------------------
     allow_test_admin_promotion: bool = False
-    # When true, skips the MinIO bucket-existence check at startup.
-    # Only effective when allow_test_admin_promotion is also true so this
-    # flag can never be accidentally set in production (which always has
-    # allow_test_admin_promotion=false).
-    minio_skip_startup_check: bool = False
 
-    hibp_enabled: bool = True
-
-    lockout_threshold: int = 5
-    lockout_autoreset_hours: int = 24
-
-    turnstile_secret_key: str = ""
-
-    # ----- Public inquiry form (T0) -----
-    # Score threshold for the Claude spam-scoring step. Inquiries scoring
-    # below this are stored as ``spam`` and never surface to the operator's
-    # default inbox tab. Operator-tunable in MBK Settings → Inquiries.
+    # ------------------------------------------------------------------
+    # Public inquiry form filters (T0 spam controls)
+    # ------------------------------------------------------------------
     inquiry_spam_threshold: int = 30
-    # Master switch for the disposable-email gate (filter step 5).
     inquiry_block_disposable_email: bool = True
-    # Per-IP rate limit for ``POST /api/inquiries/public`` (filter step 1).
     inquiry_public_rate_limit_max: int = 5
     inquiry_public_rate_limit_window_seconds: int = 3600
-    # Minimum-character soft gate for the ``why_this_room`` text field
-    # (filter step 9). Lowered/raised by the operator if spam patterns shift.
     inquiry_min_why_this_room_chars: int = 30
 
-    email_from_address: str = "mybookkeeper6@gmail.com"
-    email_from_name: str = "MyBookkeeper"
-
-    smtp_host: str = "smtp.gmail.com"
-    smtp_port: int = 587
-    smtp_user: str = ""
-    smtp_password: str = ""
+    # ------------------------------------------------------------------
+    # Cost accounting + alerts
+    # ------------------------------------------------------------------
     cost_alert_recipients: str = ""
-
-    app_url: str = ""
-    admin_api_key: str = ""
-
     cost_input_rate_per_million: float = 3.0
     cost_output_rate_per_million: float = 15.0
     cost_daily_budget: float = 50.0
     cost_monthly_budget: float = 1000.0
     cost_per_user_daily_alert: float = 10.0
 
-    @property
-    def database_url_sync(self) -> str:
-        return self.database_url.replace("+asyncpg", "")
-
-    class Config:
-        env_file = ".env"
-        extra = "ignore"
+    # ------------------------------------------------------------------
+    # App URL (used in email links) + admin API key
+    # ------------------------------------------------------------------
+    app_url: str = ""
+    admin_api_key: str = ""
 
 
 settings = Settings()
