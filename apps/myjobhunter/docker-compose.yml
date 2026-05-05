@@ -79,6 +79,15 @@ services:
     build:
       context: ../..
       dockerfile: apps/myjobhunter/docker/caddy.Dockerfile
+      args:
+        # Frontend public env baked into the Vite bundle at build time.
+        # Read from the host shell environment when `docker compose build`
+        # runs; the deploy workflow / operator passes these via
+        # `--env-file backend/.env.docker` or by sourcing the file before
+        # build. Empty values produce a bundle where TurnstileWidget
+        # returns null and registration silently 400s — see the
+        # caddy.Dockerfile comment for the full failure mode.
+        VITE_TURNSTILE_SITE_KEY: ${TURNSTILE_SITE_KEY:-}
     restart: unless-stopped
     ports:
       # Bind only to localhost — host Caddy is the public front door and proxies here.

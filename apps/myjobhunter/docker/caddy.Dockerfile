@@ -31,6 +31,22 @@ COPY apps/myjobhunter/frontend/package.json ./apps/myjobhunter/frontend/
 RUN npm ci --ignore-scripts
 COPY packages/shared-frontend ./packages/shared-frontend
 COPY apps/myjobhunter/frontend ./apps/myjobhunter/frontend
+
+# Frontend build-time public env. Vite inlines anything prefixed with
+# VITE_ into the bundle at build time — these MUST be passed as build
+# args from docker-compose, NOT runtime env vars on the caddy container,
+# because the bundle is already minified and frozen by the time caddy
+# starts.
+#
+# VITE_TURNSTILE_SITE_KEY: Cloudflare Turnstile public site key.
+# Empty value → TurnstileWidget renders null and registration POSTs
+# without a captcha token, so the backend's require_turnstile dependency
+# returns 400 captcha_token_required. This was the 2026-05-05 silent-
+# registration-broken bug — the SECRET key was wired but the SITE key
+# never made it into the bundle because this ARG didn't exist.
+ARG VITE_TURNSTILE_SITE_KEY=
+ENV VITE_TURNSTILE_SITE_KEY=${VITE_TURNSTILE_SITE_KEY}
+
 RUN npm run build --workspace=apps/myjobhunter/frontend
 
 FROM caddy:2-alpine
