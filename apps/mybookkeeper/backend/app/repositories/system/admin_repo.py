@@ -1,3 +1,11 @@
+"""MBK-specific admin queries.
+
+Generic platform-level admin queries (user counts, set_superuser) live
+in ``platform_shared.repositories.admin_user_repo`` so MJH and any
+future apps share them without duplication. This module owns only the
+queries that depend on MBK's domain tables (organizations,
+transactions, documents).
+"""
 import uuid
 
 from sqlalchemy import func, select
@@ -8,19 +16,6 @@ from app.models.organization.organization import Organization
 from app.models.organization.organization_member import OrganizationMember
 from app.models.transactions.transaction import Transaction
 from app.models.user.user import User
-
-
-async def count_users(db: AsyncSession) -> tuple[int, int, int]:
-    """Return (total, active, inactive) user counts."""
-    result = await db.execute(
-        select(
-            func.count(User.id),
-            func.count(User.id).filter(User.is_active.is_(True)),
-            func.count(User.id).filter(User.is_active.is_(False)),
-        )
-    )
-    row = result.one()
-    return int(row[0]), int(row[1]), int(row[2])
 
 
 async def count_organizations(db: AsyncSession) -> int:
@@ -103,6 +98,3 @@ async def list_orgs_with_counts(db: AsyncSession) -> list[dict]:
     ]
 
 
-async def set_superuser(db: AsyncSession, user: User, *, is_superuser: bool) -> User:
-    user.is_superuser = is_superuser
-    return user

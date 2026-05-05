@@ -203,6 +203,20 @@ app.include_router(rent_receipts.router)
 app.include_router(summary.router)
 app.include_router(integrations.router)
 app.include_router(audit.router)
+# Shared platform admin router — generic user-management endpoints
+# (list/role/activate/deactivate/superuser/stats-users). Mounted before
+# the MBK-specific admin router so both sets of routes live under
+# /admin without path collisions.
+from platform_shared.api.admin_router import build_admin_router
+from app.core.permissions import current_admin
+from app.services.system.admin_user_service_factory import shared_admin_user_service
+
+app.include_router(
+    build_admin_router(
+        service=shared_admin_user_service,
+        current_admin=current_admin,
+    )
+)
 app.include_router(admin.router)
 app.include_router(db_admin.router)
 app.include_router(prompts.router)

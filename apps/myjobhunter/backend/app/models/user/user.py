@@ -65,3 +65,17 @@ class User(SQLAlchemyBaseUserTableUUID, Base):
     last_failed_login_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True,
     )
+
+    @property
+    def name(self) -> str | None:
+        """Compatibility shim for shared admin schemas.
+
+        ``platform_shared.schemas.admin_user.AdminUserRead`` exposes a
+        ``name`` field; MBK's User column is already ``name`` while
+        MJH stores it as ``display_name``. This property lets the
+        shared schema serialize uniformly across both apps without
+        renaming the underlying column (the column-name divergence is
+        tracked separately as a pre-existing parity issue).
+        """
+        value = self.display_name or ""
+        return value or None

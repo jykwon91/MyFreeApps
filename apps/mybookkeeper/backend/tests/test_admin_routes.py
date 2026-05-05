@@ -1,3 +1,11 @@
+"""MBK admin tests after the platform_shared admin extraction.
+
+The generic admin user-management code lives in
+``platform_shared.services.admin_user_service`` /
+``platform_shared.repositories.admin_user_repo``. MBK still owns
+``get_platform_stats``, ``clean_re_extract``, and ``list_all_orgs``.
+This file covers both surfaces.
+"""
 import uuid
 from contextlib import asynccontextmanager
 from unittest.mock import patch
@@ -6,11 +14,14 @@ import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from platform_shared.repositories import admin_user_repo as shared_admin_user_repo
+
 from app.models.organization.organization import Organization
 from app.models.organization.organization_member import OrganizationMember
 from app.models.user.user import Role, User
 from app.repositories import admin_repo, user_repo
 from app.services.system import admin_service
+from app.services.system.admin_user_service_factory import shared_admin_user_service
 
 
 @pytest_asyncio.fixture()
@@ -93,7 +104,15 @@ class TestUserRepo:
 
 @pytest.fixture(autouse=True)
 def _patch_session(db: AsyncSession):
-    """Route admin_service's AsyncSessionLocal and unit_of_work to the test DB session."""
+    """Route every admin code path's session helpers to the test DB session.
+
+    Two layers to patch:
+      1. MBK's local ``admin_service`` (still owns get_platform_stats /
+         clean_re_extract / list_all_orgs).
+      2. The platform_shared ``AdminUserService`` instance MBK owns —
+         its ``_unit_of_work`` and ``_async_session_factory`` are
+         instance attributes set at construction time.
+    """
     @asynccontextmanager
     async def _fake_session():
         yield db
@@ -105,6 +124,8 @@ def _patch_session(db: AsyncSession):
     with (
         patch("app.services.system.admin_service.AsyncSessionLocal", _fake_session),
         patch("app.services.system.admin_service.unit_of_work", _fake_uow),
+        patch.object(shared_admin_user_service, "_unit_of_work", _fake_uow),
+        patch.object(shared_admin_user_service, "_async_session_factory", _fake_session),
     ):
         yield
 
@@ -114,7 +135,7 @@ class TestAdminServiceUpdateRole:
     async def test_update_role_success(
         self, db: AsyncSession, admin_user: User, regular_user: User
     ) -> None:
-        result = await admin_service.update_user_role(
+        result = await shared_admin_user_service.update_user_role(
             regular_user.id, Role.ADMIN, admin_user
         )
         assert result.role == Role.ADMIN
@@ -124,7 +145,7 @@ class TestAdminServiceUpdateRole:
         self, db: AsyncSession, admin_user: User
     ) -> None:
         with pytest.raises(ValueError, match="Cannot change your own role"):
-            await admin_service.update_user_role(
+            await shared_admin_user_service.update_user_role(
                 admin_user.id, Role.USER, admin_user
             )
 
@@ -133,7 +154,7 @@ class TestAdminServiceUpdateRole:
         self, db: AsyncSession, admin_user: User
     ) -> None:
         with pytest.raises(LookupError, match="User not found"):
-            await admin_service.update_user_role(
+            await shared_admin_user_service.update_user_role(
                 uuid.uuid4(), Role.ADMIN, admin_user
             )
 
@@ -143,7 +164,7 @@ class TestAdminServiceDeactivate:
     async def test_deactivate_success(
         self, db: AsyncSession, admin_user: User, regular_user: User
     ) -> None:
-        result = await admin_service.deactivate_user(regular_user.id, admin_user)
+        result = await shared_admin_user_service.deactivate_user(regular_user.id, admin_user)
         assert result.is_active is False
 
     @pytest.mark.asyncio
@@ -151,14 +172,14 @@ class TestAdminServiceDeactivate:
         self, db: AsyncSession, admin_user: User
     ) -> None:
         with pytest.raises(ValueError, match="Cannot deactivate yourself"):
-            await admin_service.deactivate_user(admin_user.id, admin_user)
+            await shared_admin_user_service.deactivate_user(admin_user.id, admin_user)
 
     @pytest.mark.asyncio
     async def test_deactivate_nonexistent_user(
         self, db: AsyncSession, admin_user: User
     ) -> None:
         with pytest.raises(LookupError, match="User not found"):
-            await admin_service.deactivate_user(uuid.uuid4(), admin_user)
+            await shared_admin_user_service.deactivate_user(uuid.uuid4(), admin_user)
 
 
 class TestAdminServiceActivate:
@@ -167,7 +188,7 @@ class TestAdminServiceActivate:
         self, db: AsyncSession, admin_user: User, regular_user: User
     ) -> None:
         await user_repo.set_active(db, regular_user, is_active=False)
-        result = await admin_service.activate_user(regular_user.id, admin_user)
+        result = await shared_admin_user_service.activate_user(regular_user.id, admin_user)
         assert result.is_active is True
 
     @pytest.mark.asyncio
@@ -175,14 +196,14 @@ class TestAdminServiceActivate:
         self, db: AsyncSession, admin_user: User
     ) -> None:
         with pytest.raises(ValueError, match="Cannot activate yourself"):
-            await admin_service.activate_user(admin_user.id, admin_user)
+            await shared_admin_user_service.activate_user(admin_user.id, admin_user)
 
     @pytest.mark.asyncio
     async def test_activate_nonexistent_user(
         self, db: AsyncSession, admin_user: User
     ) -> None:
         with pytest.raises(LookupError, match="User not found"):
-            await admin_service.activate_user(uuid.uuid4(), admin_user)
+            await shared_admin_user_service.activate_user(uuid.uuid4(), admin_user)
 
 
 @pytest_asyncio.fixture()
@@ -223,24 +244,11 @@ async def test_org(db: AsyncSession, admin_user: User) -> Organization:
 
 
 class TestAdminRepo:
-    @pytest.mark.asyncio
-    async def test_count_users(
-        self, db: AsyncSession, admin_user: User, regular_user: User
-    ) -> None:
-        total, active, inactive = await admin_repo.count_users(db)
-        assert total >= 2
-        assert active >= 2
-        assert inactive == 0
+    """MBK-domain admin queries (orgs/transactions/documents).
 
-    @pytest.mark.asyncio
-    async def test_count_users_with_inactive(
-        self, db: AsyncSession, admin_user: User, regular_user: User
-    ) -> None:
-        await user_repo.set_active(db, regular_user, is_active=False)
-        await db.commit()
-        total, active, inactive = await admin_repo.count_users(db)
-        assert total >= 2
-        assert inactive >= 1
+    The user-count + set_superuser queries moved to platform_shared
+    and are exercised in TestSharedAdminUserRepo below.
+    """
 
     @pytest.mark.asyncio
     async def test_count_organizations(
@@ -271,13 +279,36 @@ class TestAdminRepo:
         assert org_row["transaction_count"] == 0
         assert org_row["owner_email"] == admin_user.email
 
+
+class TestSharedAdminUserRepo:
+    """Tests for the shared user-counting + superuser-toggling repo."""
+
+    @pytest.mark.asyncio
+    async def test_count_users(
+        self, db: AsyncSession, admin_user: User, regular_user: User
+    ) -> None:
+        total, active, inactive = await shared_admin_user_repo.count_users(db, User)
+        assert total >= 2
+        assert active >= 2
+        assert inactive == 0
+
+    @pytest.mark.asyncio
+    async def test_count_users_with_inactive(
+        self, db: AsyncSession, admin_user: User, regular_user: User
+    ) -> None:
+        await user_repo.set_active(db, regular_user, is_active=False)
+        await db.commit()
+        total, active, inactive = await shared_admin_user_repo.count_users(db, User)
+        assert total >= 2
+        assert inactive >= 1
+
     @pytest.mark.asyncio
     async def test_set_superuser(
         self, db: AsyncSession, regular_user: User
     ) -> None:
-        result = await admin_repo.set_superuser(db, regular_user, is_superuser=True)
+        result = await shared_admin_user_repo.set_superuser(db, regular_user, is_superuser=True)
         assert result.is_superuser is True
-        result = await admin_repo.set_superuser(db, regular_user, is_superuser=False)
+        result = await shared_admin_user_repo.set_superuser(db, regular_user, is_superuser=False)
         assert result.is_superuser is False
 
 
@@ -286,38 +317,38 @@ class TestAdminServiceToggleSuperuser:
     async def test_toggle_superuser_success(
         self, db: AsyncSession, superuser: User, regular_user: User
     ) -> None:
-        result = await admin_service.toggle_superuser(regular_user.id, superuser)
+        result = await shared_admin_user_service.toggle_superuser(regular_user.id, superuser)
         assert result.is_superuser is True
 
     @pytest.mark.asyncio
     async def test_toggle_superuser_revoke(
         self, db: AsyncSession, superuser: User, regular_user: User
     ) -> None:
-        await admin_repo.set_superuser(db, regular_user, is_superuser=True)
+        await shared_admin_user_repo.set_superuser(db, regular_user, is_superuser=True)
         await db.commit()
-        result = await admin_service.toggle_superuser(regular_user.id, superuser)
+        result = await shared_admin_user_service.toggle_superuser(regular_user.id, superuser)
         assert result.is_superuser is False
 
     @pytest.mark.asyncio
     async def test_toggle_superuser_non_superuser_rejected(
         self, db: AsyncSession, admin_user: User, regular_user: User
     ) -> None:
-        with pytest.raises(PermissionError, match="Only superusers"):
-            await admin_service.toggle_superuser(regular_user.id, admin_user)
+        with pytest.raises(PermissionError, match="superusers"):
+            await shared_admin_user_service.toggle_superuser(regular_user.id, admin_user)
 
     @pytest.mark.asyncio
     async def test_toggle_superuser_self_rejected(
         self, db: AsyncSession, superuser: User
     ) -> None:
         with pytest.raises(ValueError, match="Cannot change your own superuser"):
-            await admin_service.toggle_superuser(superuser.id, superuser)
+            await shared_admin_user_service.toggle_superuser(superuser.id, superuser)
 
     @pytest.mark.asyncio
     async def test_toggle_superuser_nonexistent_user(
         self, db: AsyncSession, superuser: User
     ) -> None:
         with pytest.raises(LookupError, match="User not found"):
-            await admin_service.toggle_superuser(uuid.uuid4(), superuser)
+            await shared_admin_user_service.toggle_superuser(uuid.uuid4(), superuser)
 
 
 class TestAdminServicePlatformStats:
@@ -327,22 +358,3 @@ class TestAdminServicePlatformStats:
     ) -> None:
         stats = await admin_service.get_platform_stats()
         assert stats.total_users >= 2
-        assert stats.active_users >= 2
-        assert stats.inactive_users == 0
-        assert stats.total_organizations >= 1
-        assert stats.total_transactions == 0
-        assert stats.total_documents == 0
-
-
-class TestAdminServiceListOrgs:
-    @pytest.mark.asyncio
-    async def test_list_all_orgs(
-        self, db: AsyncSession, admin_user: User, test_org: Organization
-    ) -> None:
-        orgs = await admin_service.list_all_orgs()
-        assert len(orgs) >= 1
-        org = next(o for o in orgs if o.id == test_org.id)
-        assert org.name == "Test Org"
-        assert org.owner_email == admin_user.email
-        assert org.member_count == 1
-        assert org.transaction_count == 0

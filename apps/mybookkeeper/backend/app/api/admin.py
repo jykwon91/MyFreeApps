@@ -1,8 +1,15 @@
+"""MBK admin endpoints (app-specific only).
+
+Generic admin user-management endpoints (list users, change role,
+activate/deactivate, toggle superuser, user-count stats) are mounted
+from ``platform_shared.api.admin_router`` in ``app.main``. This module
+owns only the MBK-specific admin surface area.
+"""
 import uuid
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -13,7 +20,6 @@ from app.models.user.user import User
 from app.repositories.system import auth_event_repo
 from app.schemas.system.admin import AdminOrgRead, CleanReExtractRequest, CleanReExtractResponse, PlatformStats
 from app.schemas.system.auth_event import AuthEventRead
-from app.schemas.user.user import AdminUserRoleUpdate, UserRead
 from app.services.system import admin_service
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -76,73 +82,12 @@ async def storage_health(user: User = Depends(current_admin)) -> dict:
     }
 
 
-@router.get("/users", response_model=list[UserRead])
-async def list_users(
-    user: User = Depends(current_admin),
-) -> list[User]:
-    return await admin_service.list_users()
-
-
-@router.patch("/users/{user_id}/role", response_model=UserRead)
-async def update_user_role(
-    user_id: uuid.UUID,
-    body: AdminUserRoleUpdate,
-    admin: User = Depends(current_admin),
-) -> User:
-    try:
-        return await admin_service.update_user_role(user_id, body.role, admin)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except LookupError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-
-
-@router.patch("/users/{user_id}/deactivate", response_model=UserRead)
-async def deactivate_user(
-    user_id: uuid.UUID,
-    admin: User = Depends(current_admin),
-) -> User:
-    try:
-        return await admin_service.deactivate_user(user_id, admin)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except LookupError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-
-
-@router.patch("/users/{user_id}/activate", response_model=UserRead)
-async def activate_user(
-    user_id: uuid.UUID,
-    admin: User = Depends(current_admin),
-) -> User:
-    try:
-        return await admin_service.activate_user(user_id, admin)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except LookupError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-
-
 @router.get("/stats", response_model=PlatformStats)
 async def get_platform_stats(
     user: User = Depends(current_admin),
 ) -> PlatformStats:
+    """User counts (from shared admin) + MBK-specific org/txn/doc counts."""
     return await admin_service.get_platform_stats()
-
-
-@router.patch("/users/{user_id}/superuser", response_model=UserRead)
-async def toggle_superuser(
-    user_id: uuid.UUID,
-    admin: User = Depends(current_admin),
-) -> User:
-    try:
-        return await admin_service.toggle_superuser(user_id, admin)
-    except PermissionError as e:
-        raise HTTPException(status_code=403, detail=str(e))
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except LookupError as e:
-        raise HTTPException(status_code=404, detail=str(e))
 
 
 @router.post("/clean-re-extract", response_model=CleanReExtractResponse)
