@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Download, Edit2, ExternalLink, Trash2 } from "lucide-react";
-import { Badge, EmptyState, Skeleton, showError, showSuccess, extractErrorMessage } from "@platform/ui";
+import { Badge, EmptyState, Skeleton, showError, showSuccess, extractErrorMessage, formatFileSize } from "@platform/ui";
 import DocumentKindBadge from "@/features/documents/DocumentKindBadge";
 import DocumentEditDialog from "@/features/documents/DocumentEditDialog";
 import type { Document } from "@/types/document/document";
@@ -18,13 +18,6 @@ export interface DocumentListProps {
   applicationId?: string;
   /** When true, the kind filter dropdown is hidden (parent controls it). */
   hideKindFilter?: boolean;
-}
-
-function formatBytes(bytes: number | null): string {
-  if (!bytes) return "";
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function formatDate(iso: string): string {
@@ -90,7 +83,7 @@ function DocumentRow({ doc, onEdit, onDelete }: DocumentRowProps) {
         <p className="text-sm font-medium truncate">{doc.title}</p>
         <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
           <span>{formatDate(doc.updated_at)}</span>
-          {doc.size_bytes ? <span>{formatBytes(doc.size_bytes)}</span> : null}
+          {doc.size_bytes ? <span>{formatFileSize(doc.size_bytes)}</span> : null}
           {doc.application_id ? (
             <Link
               to={`/applications/${doc.application_id}`}

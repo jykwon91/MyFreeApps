@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ChevronDown, ChevronUp, Download, FileText } from "lucide-react";
-import { Badge } from "@platform/ui";
+import { Badge, formatFileSize } from "@platform/ui";
 import type { ResumeUploadJob, ResumeUploadJobStatus } from "@/types/resume-upload-job/resume-upload-job";
 import ResumeJobParsedPanel from "@/features/profile/ResumeJobParsedPanel";
 
@@ -28,14 +28,6 @@ const STATUS_COLORS: Record<ResumeUploadJobStatus, BadgeColor> = {
   failed: "red",
   cancelled: "gray",
 };
-
-function formatFileSize(bytes: number | null): string {
-  // bytes is number | null; 0 is a valid distinct value (0-byte file) — keep === null
-  if (bytes === null) return "";
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
 
 function formatTimestamp(iso: string): string {
   return new Date(iso).toLocaleDateString("en-US", {

@@ -1,6 +1,5 @@
 import Skeleton from "@/shared/components/ui/Skeleton";
-import { format } from "date-fns/format";
-import { parseISO } from "date-fns/parseISO";
+import { formatDate } from "@/shared/utils/date";
 
 interface OrgRow {
   id: string;
@@ -14,10 +13,6 @@ interface OrgRow {
 interface OrgsTableProps {
   orgs: OrgRow[];
   isLoading: boolean;
-}
-
-function formatDate(iso: string): string {
-  return format(parseISO(iso), "MMM d, yyyy");
 }
 
 export default function OrgsTable({ orgs, isLoading }: OrgsTableProps) {
