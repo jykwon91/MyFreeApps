@@ -48,17 +48,18 @@ async def test_verify_token_flips_is_verified(
 ) -> None:
     user = await user_factory(verified=False)
 
-    # Capture the token by mocking send_email; the token is the second
-    # positional argument fastapi-users passes to on_after_request_verify,
-    # which then calls send_verification_email(email, token).
+    # Capture the token by mocking send_email_or_raise; the token is the
+    # second positional argument fastapi-users passes to
+    # on_after_request_verify, which then calls
+    # send_verification_email(email, token).
     captured_token: dict[str, str] = {}
 
     def _capture(recipients, subject, body_html):
         captured_token["body"] = body_html
-        return True
 
     with patch(
-        "app.services.email.verification_email.send_email", side_effect=_capture,
+        "app.services.email.verification_email.send_email_or_raise",
+        side_effect=_capture,
     ):
         resp = await client.post(
             "/auth/request-verify-token", json={"email": user["email"]},
@@ -91,7 +92,8 @@ async def test_request_verify_token_sends_email(
 ) -> None:
     user = await user_factory(verified=False)
     with patch(
-        "app.services.email.verification_email.send_email", return_value=True,
+        "app.services.email.verification_email.send_email_or_raise",
+        return_value=None,
     ) as mock_send:
         resp = await client.post(
             "/auth/request-verify-token", json={"email": user["email"]},
@@ -108,7 +110,8 @@ async def test_register_triggers_verification_email(
     client: AsyncClient,
 ) -> None:
     with patch(
-        "app.services.email.verification_email.send_email", return_value=True,
+        "app.services.email.verification_email.send_email_or_raise",
+        return_value=None,
     ) as mock_send:
         resp = await client.post(
             "/auth/register",

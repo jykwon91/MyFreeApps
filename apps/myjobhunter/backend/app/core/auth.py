@@ -276,12 +276,17 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
     async def on_after_request_verify(
         self, user: User, token: str, request: Optional[Request] = None,
     ) -> None:
-        """Send verification email when a token is generated (registration or resend)."""
-        success = send_verification_email(user.email, token)
-        if success:
-            logger.info("Verification email sent to user_id=%s", user.id)
-        else:
-            logger.warning("Failed to send verification email to user_id=%s", user.id)
+        """Send verification email when a token is generated (registration or resend).
+
+        Raises on any send failure so the registration / resend HTTP request
+        fails 5xx and the user retries — never returns a 2xx with the
+        verification email lost. The pre-2026-05-05 bool-returning version
+        silently swallowed failures, which produced the
+        kennethmontgo@gmail.com bug class (registered-but-unverified
+        account with no recovery path).
+        """
+        send_verification_email(user.email, token)
+        logger.info("Verification email sent to user_id=%s", user.id)
 
     async def on_after_verify(
         self, user: User, request: Optional[Request] = None,
