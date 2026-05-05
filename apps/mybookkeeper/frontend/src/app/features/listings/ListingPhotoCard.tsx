@@ -6,9 +6,10 @@ import type { ListingPhoto } from "@/shared/types/listing/listing-photo";
 export interface ListingPhotoCardProps {
   photo: ListingPhoto;
   onDelete: () => void;
+  onOpen: () => void;
 }
 
-export default function ListingPhotoCard({ photo, onDelete }: ListingPhotoCardProps) {
+export default function ListingPhotoCard({ photo, onDelete, onOpen }: ListingPhotoCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: photo.id });
 
@@ -28,15 +29,24 @@ export default function ListingPhotoCard({ photo, onDelete }: ListingPhotoCardPr
     >
       {/* Photo served via per-request presigned URL minted by the backend.
           Falls back to a labeled placeholder when storage is unavailable
-          (e.g., MinIO outage) so the page still renders the layout. */}
+          (e.g., MinIO outage) so the page still renders the layout.
+          Clicking opens the full-size lightbox viewer. */}
       {photo.presigned_url ? (
-        <img
-          src={photo.presigned_url}
-          alt={photo.caption ?? `Photo ${photo.display_order + 1}`}
-          loading="lazy"
-          className="aspect-square w-full object-cover bg-muted"
-          data-testid="listing-photo-thumbnail"
-        />
+        <button
+          type="button"
+          onClick={onOpen}
+          className="block w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          aria-label={`View photo ${photo.display_order + 1} full size`}
+          data-testid="listing-photo-open-button"
+        >
+          <img
+            src={photo.presigned_url}
+            alt={photo.caption ?? `Photo ${photo.display_order + 1}`}
+            loading="lazy"
+            className="aspect-square w-full object-cover bg-muted hover:opacity-90 transition-opacity"
+            data-testid="listing-photo-thumbnail"
+          />
+        </button>
       ) : (
         <div
           className="aspect-square bg-muted flex items-center justify-center text-xs text-muted-foreground"
