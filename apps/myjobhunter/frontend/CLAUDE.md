@@ -5,7 +5,7 @@
 | Layer | Tech |
 |---|---|
 | Framework | React 18 + TypeScript + Vite 5 |
-| Styling | TailwindCSS 3 (CSS variables for theming) |
+| Styling | TailwindCSS 4 (CSS-first config via `@import "tailwindcss"`; CSS variables for theming) |
 | State | Redux Toolkit + RTK Query (`baseApi` from `@platform/ui`) |
 | Routing | React Router v6 (data router — `createBrowserRouter`) |
 | Forms | React Hook Form (for any form with validation or >3 fields) |
