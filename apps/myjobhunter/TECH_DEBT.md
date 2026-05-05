@@ -3,7 +3,7 @@
 Issues discovered during development. New entries are appended; resolved entries are
 removed and the counts in this header are updated.
 
-**Open issues: 13 (Critical: 1 / High: 2 / Medium: 4 / Low: 6)**
+**Open issues: 14 (Critical: 1 / High: 2 / Medium: 5 / Low: 6)**
 
 ---
 
@@ -309,4 +309,25 @@ can actually run, consider splitting `stubMutation` into per-mutation typed stub
 `as unknown as ReturnType<typeof useXxx>` at each call site. This makes the tests
 fully typed at the cost of verbosity. Alternatively, use `vi.mocked(hook).mockReturnValue`
 with the correct type at the mock definition level so the stub doesn't need casting.
+
+---
+
+### [Frontend Lint] setState called synchronously inside useEffect in 3 files
+
+**Severity:** Medium
+**Effort:** S
+**Location:**
+- `apps/myjobhunter/frontend/src/features/documents/DocumentEditDialog.tsx` (lines 26, 38)
+- `apps/myjobhunter/frontend/src/features/profile/ResumeUploadSection.tsx` (line 38)
+- `apps/myjobhunter/frontend/src/features/security/DisplayNameSetting.tsx` (line 19)
+**Discovered:** PR #284 (shared-frontend utils refactor) — 2026-05-05
+
+**Problem:** `react-hooks/set-state-in-effect` ESLint rule flags these files because
+`setState()` is called directly inside a `useEffect` body. This creates cascading re-renders
+and can hurt performance. The lint rule blocks clean CI (`npm run lint` exits 1).
+
+**Recommendation:** Refactor each `useEffect` that calls `setState` to use a derived value
+instead (compute from props/state directly without a synchronous effect), or use `useEffect`
+with a proper dependency array that prevents the cascade. Pattern: replace
+`useEffect(() => { setState(derived); }, [dep])` with `const value = useMemo(() => derived, [dep])`.
 
