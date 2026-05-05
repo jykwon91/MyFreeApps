@@ -78,6 +78,17 @@ describe("PublicInquiryForm — listing rendering", () => {
     renderForm("does-not-exist");
     expect(await screen.findByText(/Listing not found/)).toBeInTheDocument();
   });
+
+  it("requests the public listing endpoint with the slug from the URL", async () => {
+    // Regression guard: the axios baseURL is "/api", so the frontend must
+    // call `/listings/public/<slug>` (NOT `/api/listings/public/<slug>`).
+    // Caddy strips the leading `/api` segment before requests reach the
+    // backend; re-introducing `/api/` here would 404 in production.
+    (api.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ data: mockListing });
+    renderForm("master-bedroom-abc123");
+    await screen.findByText(/Master Bedroom in Houston/);
+    expect(api.get).toHaveBeenCalledWith("/listings/public/master-bedroom-abc123");
+  });
 });
 
 describe("PublicInquiryForm — honeypot", () => {
