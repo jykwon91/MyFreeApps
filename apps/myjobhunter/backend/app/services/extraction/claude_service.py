@@ -1,11 +1,15 @@
 """Claude API client for MJH extraction tasks.
 
-Mirrors MBK's ``app/services/extraction/claude_service.py`` but scoped
-to MJH's extraction_logs table and prompt shapes.
+Two entry points:
+- ``call_claude(system_prompt, user_content, context_type, user_id, context_id)``
+  — generic Claude call. Used by jd_parsing_service.parse_jd, future cover-letter
+  generator, etc.
+- ``extract_resume(text, user_id, job_id)`` — thin wrapper around ``call_claude``
+  for the resume parser worker; pins the resume system prompt and applies the
+  resume-specific defaults dict-shape on the response.
 
-Single entry point: ``extract_resume(text, user_id, job_id)`` — calls the
-Anthropic API with the resume prompt, parses the JSON response, and records
-token usage to ``extraction_logs``.
+Both share the same singleton Anthropic client, exponential backoff on rate
+limits, and best-effort extraction_logs recording.
 """
 from __future__ import annotations
 
@@ -26,19 +30,19 @@ from app.services.extraction.prompts.resume_prompt import RESUME_EXTRACTION_PROM
 
 logger = logging.getLogger(__name__)
 
-# Shared Anthropic async client — module-level singleton so connection
-# pools are reused across worker iterations.
+# Shared Anthropic async client — module-level singleton so connection pools
+# are reused across calls.
 _client: anthropic.AsyncAnthropic | None = None
 
-# Maximum resume text characters sent to Claude. Generous for resumes
-# (most are <20 k chars) but bounded to prevent runaway token costs.
-_MAX_TEXT_CHARS = 50_000
-
-# Model to use for resume extraction.
+# Model used for all extraction tasks.
 _MODEL = "claude-sonnet-4-6"
 
 # Max tokens in the response — the structured JSON reply is compact.
 _MAX_TOKENS = 8192
+
+# Maximum text characters sent to Claude. Generous for resumes / JDs (most
+# are <20 k chars) but bounded to prevent runaway token costs.
+_MAX_TEXT_CHARS = 50_000
 
 
 def _get_client() -> anthropic.AsyncAnthropic:
@@ -51,26 +55,33 @@ def _get_client() -> anthropic.AsyncAnthropic:
     return _client
 
 
-async def extract_resume(
-    text: str,
+async def call_claude(
+    *,
+    system_prompt: str,
+    user_content: str,
+    context_type: str,
     user_id: uuid.UUID,
-    job_id: uuid.UUID,
+    context_id: uuid.UUID | None = None,
 ) -> dict:
-    """Call Claude to extract structured resume data from ``text``.
+    """Call Claude with a system prompt and return the parsed JSON response.
 
     Args:
-        text: Plain text of the resume (from the text extractor).
+        system_prompt: The extraction instruction (e.g. JD_PARSING_PROMPT).
+        user_content: The raw text to extract from (e.g. pasted JD text).
+        context_type: Logged to extraction_logs (e.g. "jd_parse",
+            "resume_parse").
         user_id: Scopes the extraction_log row.
-        job_id: Polymorphic context_id in extraction_logs.
+        context_id: Polymorphic FK for the extraction_logs row; pass the
+            application/job ID when available, else None.
 
     Returns:
-        Parsed dict matching the resume JSON schema (see resume_prompt.py).
+        Parsed dict from Claude's JSON response.
 
     Raises:
-        anthropic.APIError: on non-retryable API failures.
-        ValueError: when Claude returns malformed JSON.
+        anthropic.APIError: on non-retryable API failures after backoff.
+        ValueError: when Claude returns malformed JSON after all retries.
     """
-    truncated = text[:_MAX_TEXT_CHARS]
+    truncated = user_content[:_MAX_TEXT_CHARS]
     started_at = time.monotonic()
     status = "success"
     error_message: str | None = None
@@ -82,16 +93,15 @@ async def extract_resume(
             max_tokens=_MAX_TOKENS,
             system=[{
                 "type": "text",
-                "text": RESUME_EXTRACTION_PROMPT,
+                "text": system_prompt,
                 "cache_control": {"type": "ephemeral"},
             }],
             messages=[{
                 "role": "user",
-                "content": f"Resume:\n{truncated}",
+                "content": truncated,
             }],
         )
-        result = _parse_response(message)
-        return result
+        return _parse_json_response(message)
     except Exception as exc:
         status = "error"
         error_message = str(exc)[:500]
@@ -100,7 +110,8 @@ async def extract_resume(
         duration_ms = int((time.monotonic() - started_at) * 1000)
         await _record_log(
             user_id=user_id,
-            job_id=job_id,
+            context_id=context_id,
+            context_type=context_type,
             message=message,
             duration_ms=duration_ms,
             status=status,
@@ -108,18 +119,47 @@ async def extract_resume(
         )
 
 
-async def _call_with_backoff(**kwargs) -> anthropic.types.Message:
+async def extract_resume(
+    text: str,
+    user_id: uuid.UUID,
+    job_id: uuid.UUID,
+) -> dict:
+    """Call Claude to extract structured resume data from ``text``.
+
+    Thin wrapper around ``call_claude`` that pins the resume system prompt
+    and normalises the response dict to the resume schema (defaults for
+    missing keys so a schema drift doesn't crash the worker).
+    """
+    parsed = await call_claude(
+        system_prompt=RESUME_EXTRACTION_PROMPT,
+        user_content=f"Resume:\n{text}",
+        context_type="resume_parse",
+        user_id=user_id,
+        context_id=job_id,
+    )
+    return {
+        "work_history": parsed.get("work_history") or [],
+        "education": parsed.get("education") or [],
+        "skills": parsed.get("skills") or [],
+        "summary": parsed.get("summary"),
+        "headline": parsed.get("headline"),
+    }
+
+
+async def _call_with_backoff(**kwargs: object) -> anthropic.types.Message:
+    """Call the Anthropic API with exponential backoff on rate-limit errors."""
     for attempt in range(5):
         try:
-            return await _get_client().messages.create(**kwargs)
+            return await _get_client().messages.create(**kwargs)  # type: ignore[arg-type]
         except anthropic.RateLimitError as exc:
             retry_after = getattr(
                 getattr(exc, "response", None), "headers", {}
             ).get("retry-after")
-            wait = float(retry_after) if retry_after else 60 * (2 ** attempt)
+            wait = float(retry_after) if retry_after else 60.0 * (2 ** attempt)
             logger.warning(
                 "Anthropic rate-limited — waiting %.0fs (attempt %d/5)",
-                wait, attempt + 1,
+                wait,
+                attempt + 1,
             )
             if attempt == 4:
                 raise
@@ -127,7 +167,8 @@ async def _call_with_backoff(**kwargs) -> anthropic.types.Message:
     raise RuntimeError("unreachable")
 
 
-def _parse_response(message: anthropic.types.Message) -> dict:
+def _parse_json_response(message: anthropic.types.Message) -> dict:
+    """Extract and parse the JSON payload from a Claude Message."""
     content = message.content[0].text.strip() if message.content else ""
 
     # Strip markdown code fences if Claude wraps the JSON.
@@ -141,26 +182,22 @@ def _parse_response(message: anthropic.types.Message) -> dict:
                 break
 
     try:
-        parsed = json.loads(content)
+        return json.loads(content)
     except json.JSONDecodeError as exc:
         raw_preview = content[:300]
-        logger.error("Failed to parse Claude resume response: %s — raw: %s", exc, raw_preview)
+        logger.error(
+            "Failed to parse Claude response as JSON: %s — raw: %s",
+            exc,
+            raw_preview,
+        )
         raise ValueError(f"Claude returned invalid JSON: {exc}") from exc
-
-    # Validate required keys — return defaults rather than crashing the worker
-    # on unexpected schema drift.
-    return {
-        "work_history": parsed.get("work_history") or [],
-        "education": parsed.get("education") or [],
-        "skills": parsed.get("skills") or [],
-        "summary": parsed.get("summary"),
-        "headline": parsed.get("headline"),
-    }
 
 
 async def _record_log(
+    *,
     user_id: uuid.UUID,
-    job_id: uuid.UUID,
+    context_id: uuid.UUID | None,
+    context_type: str,
     message: anthropic.types.Message | None,
     duration_ms: int,
     status: str,
@@ -172,8 +209,8 @@ async def _record_log(
         output_tokens = message.usage.output_tokens if message else None
         model_name = message.model if message else _MODEL
 
-        # Cost estimate: sonnet-4-6 pricing
-        # Input: $3 / 1M tokens, Output: $15 / 1M tokens (as of 2026-05)
+        # Cost estimate: claude-sonnet-4-6 pricing.
+        # Input: $3 / 1M tokens, Output: $15 / 1M tokens (as of 2026-05).
         cost_usd: float | None = None
         if input_tokens is not None and output_tokens is not None:
             cost_usd = (input_tokens * 3 + output_tokens * 15) / 1_000_000
@@ -181,8 +218,8 @@ async def _record_log(
         async with AsyncSessionLocal() as db:
             log = ExtractionLog(
                 user_id=user_id,
-                context_type="resume_parse",
-                context_id=job_id,
+                context_type=context_type,
+                context_id=context_id,
                 model=model_name,
                 input_tokens=input_tokens,
                 output_tokens=output_tokens,

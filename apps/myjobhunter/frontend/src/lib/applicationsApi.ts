@@ -5,6 +5,7 @@ import type { ApplicationCreateRequest } from "@/types/application-create-reques
 import type { ApplicationEvent } from "@/types/application-event";
 import type { ApplicationEventCreateRequest } from "@/types/application-event-create-request";
 import type { ApplicationEventListResponse } from "@/types/application-event-list-response";
+import type { JdParseResponse } from "@/types/application/jd-parse-response";
 
 const APPLICATIONS_TAG = "Applications";
 const APPLICATION_EVENTS_TAG = "ApplicationEvents";
@@ -93,6 +94,23 @@ const applicationsApi = baseApi.enhanceEndpoints({
         { type: APPLICATIONS_TAG, id: "LIST" },
       ],
     }),
+
+    /**
+     * POST /applications/parse-jd
+     *
+     * Stateless AI extraction — does NOT create an Application row.
+     * The caller passes the returned fields to the Add Application form
+     * for preview and editing before the user submits.
+     *
+     * Returns HTTP 502 when the Claude API call fails.
+     */
+    parseJobDescription: build.mutation<JdParseResponse, { jd_text: string }>({
+      query: (body) => ({
+        url: "/applications/parse-jd",
+        method: "POST",
+        data: body,
+      }),
+    }),
   }),
 });
 
@@ -104,4 +122,5 @@ export const {
   useDeleteApplicationMutation,
   useListApplicationEventsQuery,
   useLogApplicationEventMutation,
+  useParseJobDescriptionMutation,
 } = applicationsApi;

@@ -2,13 +2,15 @@ import { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { useForm, type SubmitHandler } from "react-hook-form";
 import { LoadingButton, showSuccess, showError, extractErrorMessage } from "@platform/ui";
-import { X, Plus } from "lucide-react";
+import { X, Plus, Sparkles, ChevronDown, ChevronUp } from "lucide-react";
 import { useListCompaniesQuery, useCreateCompanyMutation } from "@/lib/companiesApi";
-import { useCreateApplicationMutation } from "@/lib/applicationsApi";
+import { useCreateApplicationMutation, useParseJobDescriptionMutation } from "@/lib/applicationsApi";
 import type { CompanyCreateRequest } from "@/types/company-create-request";
 import CompanyForm from "@/features/companies/CompanyForm";
+import type { JdParseMode } from "./useJdParseMode";
+import { JD_PARSE_MODE_IDLE } from "./useJdParseMode";
 
-interface FormValues {
+interface AddApplicationFormValues {
   company_id: string;
   role_title: string;
   url: string;
@@ -17,7 +19,7 @@ interface FormValues {
   notes: string;
 }
 
-const REMOTE_OPTIONS: { value: FormValues["remote_type"]; label: string }[] = [
+const REMOTE_OPTIONS: { value: AddApplicationFormValues["remote_type"]; label: string }[] = [
   { value: "unknown", label: "Unknown" },
   { value: "remote", label: "Remote" },
   { value: "hybrid", label: "Hybrid" },
@@ -33,8 +35,10 @@ export default function AddApplicationDialog({ open, onOpenChange }: AddApplicat
   const { data: companiesData, isLoading: companiesLoading } = useListCompaniesQuery();
   const [createApplication, { isLoading: creatingApplication }] = useCreateApplicationMutation();
   const [createCompany, { isLoading: creatingCompany }] = useCreateCompanyMutation();
+  const [parseJobDescription, { isLoading: parsing }] = useParseJobDescriptionMutation();
 
   const [showNewCompany, setShowNewCompany] = useState(false);
+  const [jdMode, setJdMode] = useState<JdParseMode>(JD_PARSE_MODE_IDLE);
 
   const {
     register,
@@ -42,7 +46,7 @@ export default function AddApplicationDialog({ open, onOpenChange }: AddApplicat
     formState: { errors },
     reset,
     setValue,
-  } = useForm<FormValues>({
+  } = useForm<AddApplicationFormValues>({
     defaultValues: {
       company_id: "",
       role_title: "",
@@ -53,16 +57,17 @@ export default function AddApplicationDialog({ open, onOpenChange }: AddApplicat
     },
   });
 
-  // Reset form + inline panel when the dialog closes so a re-open starts fresh.
+  // Reset form + all panel states when the dialog closes so a re-open starts fresh.
   function handleOpenChange(next: boolean) {
     if (!next) {
       reset();
       setShowNewCompany(false);
+      setJdMode(JD_PARSE_MODE_IDLE);
     }
     onOpenChange(next);
   }
 
-  const onSubmit: SubmitHandler<FormValues> = async (values) => {
+  const onSubmit: SubmitHandler<AddApplicationFormValues> = async (values) => {
     try {
       await createApplication({
         company_id: values.company_id,
@@ -71,6 +76,11 @@ export default function AddApplicationDialog({ open, onOpenChange }: AddApplicat
         location: values.location.trim() || null,
         remote_type: values.remote_type,
         notes: values.notes.trim() || null,
+        // Preserve the pasted JD text if the user went through the parse flow.
+        jd_text:
+          jdMode.kind === "pasting" || jdMode.kind === "parsing"
+            ? jdMode.jdText.trim() || null
+            : null,
       }).unwrap();
       showSuccess("Application added");
       onOpenChange(false);
@@ -91,6 +101,40 @@ export default function AddApplicationDialog({ open, onOpenChange }: AddApplicat
     }
   };
 
+  async function handleParseJd() {
+    if (jdMode.kind !== "pasting" || !jdMode.jdText.trim()) return;
+
+    const jdText = jdMode.jdText;
+    setJdMode({ kind: "parsing", jdText });
+
+    try {
+      const result = await parseJobDescription({ jd_text: jdText }).unwrap();
+
+      // Pre-fill form fields with Claude's extracted values where non-null.
+      if (result.title) {
+        setValue("role_title", result.title, { shouldValidate: true });
+      }
+      if (result.location) {
+        setValue("location", result.location, { shouldValidate: true });
+      }
+      if (result.remote_type && result.remote_type !== "unknown") {
+        setValue(
+          "remote_type",
+          result.remote_type as AddApplicationFormValues["remote_type"],
+          { shouldValidate: true },
+        );
+      }
+
+      setJdMode({ kind: "parsed", summary: result.summary });
+    } catch (err) {
+      setJdMode({
+        kind: "failed",
+        errorMessage:
+          extractErrorMessage(err) ?? "AI parsing failed — please fill fields manually",
+      });
+    }
+  }
+
   const companies = companiesData?.items ?? [];
   const hasCompanies = companies.length > 0;
 
@@ -110,6 +154,22 @@ export default function AddApplicationDialog({ open, onOpenChange }: AddApplicat
               </button>
             </Dialog.Close>
           </div>
+
+          {/* JD paste + parse section — collapses after a successful parse */}
+          <JdParseSection
+            mode={jdMode}
+            parsing={parsing}
+            onToggle={() =>
+              setJdMode((prev) =>
+                prev.kind === "idle"
+                  ? { kind: "pasting", jdText: "" }
+                  : JD_PARSE_MODE_IDLE,
+              )
+            }
+            onTextChange={(text) => setJdMode({ kind: "pasting", jdText: text })}
+            onParse={handleParseJd}
+            onDismiss={() => setJdMode(JD_PARSE_MODE_IDLE)}
+          />
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
             <div>
@@ -237,5 +297,134 @@ export default function AddApplicationDialog({ open, onOpenChange }: AddApplicat
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// JdParseSection — isolated sub-component for the paste + parse UX.
+// Extracted to keep the parent component lean.
+// ---------------------------------------------------------------------------
+
+interface JdParseSectionProps {
+  mode: JdParseMode;
+  parsing: boolean;
+  onToggle: () => void;
+  onTextChange: (text: string) => void;
+  onParse: () => void;
+  onDismiss: () => void;
+}
+
+function JdParseSection({
+  mode,
+  parsing,
+  onToggle,
+  onTextChange,
+  onParse,
+  onDismiss,
+}: JdParseSectionProps) {
+  if (mode.kind === "parsed") {
+    return (
+      <div className="mb-4 rounded-md border border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/30 p-3 flex items-start justify-between gap-2">
+        <div>
+          <p className="text-sm font-medium text-green-800 dark:text-green-300">
+            Fields pre-filled from JD
+          </p>
+          {mode.summary ? (
+            <p className="text-xs text-green-700 dark:text-green-400 mt-0.5 line-clamp-2">
+              {mode.summary}
+            </p>
+          ) : null}
+          <p className="text-xs text-muted-foreground mt-1">
+            Review and adjust the fields below before saving.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onDismiss}
+          className="text-muted-foreground hover:text-foreground shrink-0 mt-0.5"
+          aria-label="Dismiss parse result"
+        >
+          <X size={14} />
+        </button>
+      </div>
+    );
+  }
+
+  if (mode.kind === "failed") {
+    return (
+      <div className="mb-4 rounded-md border border-destructive/30 bg-destructive/5 p-3 flex items-start justify-between gap-2">
+        <div>
+          <p className="text-sm font-medium text-destructive">AI parsing failed</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{mode.errorMessage}</p>
+        </div>
+        <button
+          type="button"
+          onClick={onDismiss}
+          className="text-muted-foreground hover:text-foreground shrink-0 mt-0.5"
+          aria-label="Dismiss error"
+        >
+          <X size={14} />
+        </button>
+      </div>
+    );
+  }
+
+  if (mode.kind === "idle") {
+    return (
+      <div className="mb-4">
+        <button
+          type="button"
+          onClick={onToggle}
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+        >
+          <Sparkles size={14} />
+          Paste job description to auto-fill
+          <ChevronDown size={14} />
+        </button>
+      </div>
+    );
+  }
+
+  // mode.kind === "pasting" | "parsing"
+  const jdText = mode.jdText;
+  const canParse = jdText.trim().length > 0;
+
+  return (
+    <div className="mb-4 space-y-2">
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-medium flex items-center gap-1.5">
+          <Sparkles size={14} />
+          Job description
+        </span>
+        <button
+          type="button"
+          onClick={onToggle}
+          className="text-muted-foreground hover:text-foreground"
+          aria-label="Collapse job description panel"
+        >
+          <ChevronUp size={14} />
+        </button>
+      </div>
+
+      <textarea
+        value={jdText}
+        onChange={(e) => onTextChange(e.target.value)}
+        rows={6}
+        placeholder="Paste the full job description here…"
+        className="w-full border rounded-md px-3 py-2 text-sm bg-background resize-y"
+        disabled={parsing}
+        aria-label="Job description text"
+      />
+
+      <LoadingButton
+        type="button"
+        isLoading={parsing}
+        loadingText="Parsing…"
+        disabled={!canParse || parsing}
+        onClick={onParse}
+      >
+        Parse with AI
+      </LoadingButton>
+    </div>
   );
 }
