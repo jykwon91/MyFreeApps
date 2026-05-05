@@ -76,14 +76,45 @@ require_cmd() {
 # ──────────────────────────────────────────────────────────────────────────
 if [[ "$ROLLBACK" == "1" ]]; then
   yellow "Rolling back to per-app MinIO."
-  blue "Step 1/3: bringing down shared infra stack"
+
+  # Step 1: bring down the shared infra stack (frees port 9000 + the
+  # myfreeapps network).
+  blue "Step 1/5: bringing down shared infra stack"
   if [[ -f "$INFRA_COMPOSE" ]]; then
-    docker compose -f "$INFRA_COMPOSE" down || true
+    docker compose -f "$INFRA_COMPOSE" down --remove-orphans || true
   fi
-  blue "Step 2/3: bringing MBK back up against original volume"
+
+  # Step 2: bring MBK FULLY down. Without --remove-orphans, the
+  # ``mybookkeeper-minio`` container can survive from a previous partial
+  # run while the api / caddy / etc are recreated on a fresh
+  # ``mybookkeeper_default`` network — the new api then can't resolve
+  # the hostname ``minio``. We hit this exact failure on 2026-05-04.
+  blue "Step 2/5: bringing MBK fully down (clears stale networks + containers)"
+  docker compose -f "$MBK_COMPOSE" down --remove-orphans || true
+
+  # Step 3: restore MINIO_ENDPOINT in the env file if a forward run
+  # had rewritten it (idempotent — does nothing if already on the
+  # original value).
+  blue "Step 3/5: restoring MBK env if needed"
+  if [[ -f "$MBK_ENV_FILE" ]]; then
+    if [[ -f "${MBK_ENV_FILE}.bak" ]]; then
+      mv "${MBK_ENV_FILE}.bak" "$MBK_ENV_FILE"
+      green "  restored from ${MBK_ENV_FILE}.bak"
+    elif grep -q "^MINIO_ENDPOINT=myfreeapps-minio:9000$" "$MBK_ENV_FILE"; then
+      sed -i 's|^MINIO_ENDPOINT=myfreeapps-minio:9000$|MINIO_ENDPOINT=minio:9000|' "$MBK_ENV_FILE"
+      green "  reverted MINIO_ENDPOINT to minio:9000"
+    else
+      yellow "  no env rewrite to undo"
+    fi
+  fi
+
+  # Step 4: clean restart — every container joins the same fresh network.
+  blue "Step 4/5: bringing MBK back up against original volume"
   docker compose -f "$MBK_COMPOSE" up -d
-  blue "Step 3/3: verifying MBK is healthy"
-  sleep 5
+
+  # Step 5: wait for health.
+  blue "Step 5/5: verifying MBK is healthy"
+  sleep 15
   docker compose -f "$MBK_COMPOSE" ps
   green "Rollback complete. ${OLD_VOLUME} is intact and serving MBK again."
   exit 0
