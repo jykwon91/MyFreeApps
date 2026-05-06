@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { AlertTriangle, Download, FileText } from "lucide-react";
 import { useGetSignedLeaseByIdQuery } from "@/shared/store/signedLeasesApi";
 import type { SignedLeaseAttachment } from "@/shared/types/lease/signed-lease-attachment";
@@ -17,9 +18,9 @@ const RECEIPT_KIND = "rent_receipt";
  *
  * Receipts are system-generated (sequential receipt number, PDF rendered
  * server-side from rent transactions); a missing storage object can't be
- * fixed by re-uploading an arbitrary file. We surface the row as missing
- * but provide no re-upload affordance — the user can re-generate the
- * receipt via the rent-receipts flow if needed.
+ * fixed by re-uploading an arbitrary file. The row stays clickable —
+ * the missing-file filename links to the receipts page where the user
+ * can re-generate it.
  */
 export default function LeaseReceiptsRow({ leaseId, onPreview }: LeaseReceiptsRowProps) {
   const { data: detail, isLoading } = useGetSignedLeaseByIdQuery(leaseId);
@@ -42,8 +43,22 @@ export default function LeaseReceiptsRow({ leaseId, onPreview }: LeaseReceiptsRo
           >
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2 min-w-0">
-                <FileText className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden="true" />
-                {!isMissing && att.presigned_url ? (
+                <FileText
+                  className={`h-4 w-4 shrink-0 ${
+                    isMissing ? "text-destructive" : "text-muted-foreground"
+                  }`}
+                  aria-hidden="true"
+                />
+                {isMissing ? (
+                  <Link
+                    to="/receipts"
+                    className="text-left text-destructive hover:underline font-medium truncate"
+                    data-testid={`receipt-attachment-regen-link-${att.id}`}
+                    title={`${att.filename} — re-generate from receipts page`}
+                  >
+                    {att.filename}
+                  </Link>
+                ) : att.presigned_url ? (
                   <button
                     type="button"
                     onClick={() => onPreview(att)}
@@ -53,12 +68,7 @@ export default function LeaseReceiptsRow({ leaseId, onPreview }: LeaseReceiptsRo
                     {att.filename}
                   </button>
                 ) : (
-                  <span
-                    className={`truncate ${
-                      isMissing ? "text-destructive" : "text-muted-foreground"
-                    }`}
-                    title={att.filename}
-                  >
+                  <span className="truncate text-muted-foreground" title={att.filename}>
                     {att.filename}
                   </span>
                 )}
@@ -82,7 +92,7 @@ export default function LeaseReceiptsRow({ leaseId, onPreview }: LeaseReceiptsRo
                 data-testid={`receipt-attachment-${att.id}-missing`}
               >
                 <AlertTriangle size={14} aria-hidden="true" />
-                <span>Receipt PDF missing from storage. Re-generate from the receipts page.</span>
+                <span>Receipt PDF missing — re-generate from the receipts page.</span>
               </div>
             ) : null}
           </li>

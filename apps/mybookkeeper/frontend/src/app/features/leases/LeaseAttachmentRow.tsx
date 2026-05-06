@@ -1,11 +1,11 @@
-import { Download, Trash2 } from "lucide-react";
+import { useRef } from "react";
+import { AlertTriangle, Download, Trash2, Upload } from "lucide-react";
 import { LEASE_ATTACHMENT_KIND_LABELS } from "@/shared/lib/lease-labels";
 import {
   LEASE_ATTACHMENT_KINDS,
   type LeaseAttachmentKind,
 } from "@/shared/types/lease/lease-attachment-kind";
 import type { SignedLeaseAttachment } from "@/shared/types/lease/signed-lease-attachment";
-import MissingFileAffordance from "@/shared/components/storage/MissingFileAffordance";
 import { LEASE_REUPLOAD_ACCEPT } from "@/shared/lib/lease-reupload-accept";
 
 export interface LeaseAttachmentRowProps {
@@ -25,11 +25,13 @@ export default function LeaseAttachmentRow({
   onKindChange,
   onReupload,
 }: LeaseAttachmentRowProps) {
+  const reuploadInputRef = useRef<HTMLInputElement>(null);
   const isMissing = att.is_available === false;
-  const canPreview =
+  const canPreviewInline =
     !isMissing
     && att.presigned_url !== null
     && (att.content_type === "application/pdf" || att.content_type.startsWith("image/"));
+  const triggerReupload = () => reuploadInputRef.current?.click();
 
   return (
     <li
@@ -37,7 +39,23 @@ export default function LeaseAttachmentRow({
       data-testid={`lease-attachment-${att.id}`}
     >
       <div className="flex items-center justify-between gap-2">
-        {canPreview ? (
+        {/* Filename is always clickable. Behavior depends on state:
+            - missing  → opens the file picker for re-upload
+            - PDF/img  → opens the AttachmentViewer modal
+            - other    → opens the presigned URL in a new tab (download)
+        */}
+        {isMissing ? (
+          <button
+            type="button"
+            onClick={() => (canWrite ? triggerReupload() : undefined)}
+            disabled={!canWrite}
+            className="truncate text-left text-destructive hover:underline font-medium min-w-0 disabled:cursor-not-allowed"
+            data-testid={`lease-attachment-reupload-trigger-${att.id}`}
+            title={canWrite ? `Re-upload ${att.filename}` : att.filename}
+          >
+            {att.filename}
+          </button>
+        ) : canPreviewInline ? (
           <button
             type="button"
             onClick={onPreview}
@@ -47,13 +65,19 @@ export default function LeaseAttachmentRow({
           >
             {att.filename}
           </button>
-        ) : (
-          <span
-            className={`truncate min-w-0 ${
-              isMissing ? "text-destructive" : "text-muted-foreground"
-            }`}
+        ) : att.presigned_url ? (
+          <a
+            href={att.presigned_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="truncate text-left text-primary hover:underline font-medium min-w-0"
+            data-testid={`lease-attachment-download-link-${att.id}`}
             title={att.filename}
           >
+            {att.filename}
+          </a>
+        ) : (
+          <span className="truncate text-muted-foreground min-w-0" title={att.filename}>
             {att.filename}
           </span>
         )}
@@ -84,13 +108,37 @@ export default function LeaseAttachmentRow({
         </div>
       </div>
 
+      <input
+        ref={reuploadInputRef}
+        type="file"
+        className="hidden"
+        accept={LEASE_REUPLOAD_ACCEPT}
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) onReupload(file);
+          e.target.value = "";
+        }}
+      />
+
       {isMissing ? (
-        <MissingFileAffordance
-          canReupload={canWrite}
-          onReupload={onReupload}
-          acceptMime={LEASE_REUPLOAD_ACCEPT}
-          testIdPrefix={`lease-attachment-${att.id}`}
-        />
+        <div
+          className="flex items-center gap-2 text-xs text-destructive"
+          role="alert"
+          data-testid={`lease-attachment-${att.id}-missing`}
+        >
+          <AlertTriangle size={14} aria-hidden="true" />
+          <span>File missing from storage.</span>
+          {canWrite ? (
+            <button
+              type="button"
+              onClick={triggerReupload}
+              className="inline-flex items-center gap-1 px-2 py-1 text-xs border rounded hover:bg-muted min-h-[28px]"
+              data-testid={`lease-attachment-${att.id}-reupload`}
+            >
+              <Upload size={12} aria-hidden="true" /> Re-upload
+            </button>
+          ) : null}
+        </div>
       ) : null}
 
       <div className="flex items-center gap-2">
