@@ -5,7 +5,7 @@ import {
   TurnstileWidget,
   extractErrorMessage,
 } from "@platform/ui";
-import { Briefcase } from "lucide-react";
+import { Briefcase, Eye, EyeOff } from "lucide-react";
 import { register } from "@/lib/auth";
 import { useGetInviteInfoQuery } from "@/store/invitesApi";
 
@@ -52,6 +52,7 @@ function RegisterWithInvite({ token }: RegisterWithInviteProps) {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [confirmTouched, setConfirmTouched] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [registered, setRegistered] = useState(false);
@@ -178,9 +179,27 @@ function RegisterWithInvite({ token }: RegisterWithInviteProps) {
               </p>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Password</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-sm font-medium">Password</label>
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  aria-label={
+                    showPassword ? "Hide passwords" : "Show passwords"
+                  }
+                  aria-pressed={showPassword}
+                  className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {showPassword ? (
+                    <EyeOff size={14} aria-hidden="true" />
+                  ) : (
+                    <Eye size={14} aria-hidden="true" />
+                  )}
+                  <span>{showPassword ? "Hide" : "Show"}</span>
+                </button>
+              </div>
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
@@ -202,7 +221,7 @@ function RegisterWithInvite({ token }: RegisterWithInviteProps) {
                 Confirm password
               </label>
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 onBlur={() => setConfirmTouched(true)}
