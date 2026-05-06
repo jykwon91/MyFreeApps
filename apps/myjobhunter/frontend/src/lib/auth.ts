@@ -1,5 +1,6 @@
 import api from "@/lib/api";
-import { notifyAuthChange } from "@platform/ui";
+import { baseApi, notifyAuthChange } from "@platform/ui";
+import { store } from "@/lib/store";
 import type { LoginResult } from "@/types/security/login-result";
 
 interface LoginResponse {
@@ -47,6 +48,11 @@ export async function signIn(
 
   if (response.data.access_token) {
     localStorage.setItem("token", response.data.access_token);
+    // Wipe RTK Query caches BEFORE notifying — every cached query under
+    // the previous user (e.g. /users/me) becomes stale the moment the
+    // identity changes. resetApiState clears the cache; the next mount
+    // of any component using a query refetches against the new token.
+    store.dispatch(baseApi.util.resetApiState());
     notifyAuthChange();
     return { status: "ok" };
   }
@@ -90,9 +96,12 @@ export async function requestVerifyToken(email: string): Promise<void> {
 }
 
 /**
- * Sign out — clear token and notify subscribers (triggers RequireAuth redirect).
+ * Sign out — clear token, wipe RTK Query caches so the next signed-in
+ * user doesn't see the previous user's cached data, and notify
+ * subscribers (triggers RequireAuth redirect).
  */
 export function signOut(): void {
   localStorage.removeItem("token");
+  store.dispatch(baseApi.util.resetApiState());
   notifyAuthChange();
 }
