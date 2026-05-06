@@ -144,7 +144,7 @@ export default function AddApplicationDialog({ open, onOpenChange }: AddApplicat
     setJdMode({ kind: "extracting", url });
     try {
       const result = await extractJdFromUrl({ url }).unwrap();
-      applyExtractResult(result);
+      await applyExtractResult(result);
     } catch (err) {
       if (isAuthRequiredError(err)) {
         setJdMode({ kind: "authRequired", url });
@@ -180,7 +180,7 @@ export default function AddApplicationDialog({ open, onOpenChange }: AddApplicat
     setJdMode({ kind: "parsed", summary: result.summary, sourceUrl });
   }
 
-  function applyExtractResult(result: JdUrlExtractResponse) {
+  async function applyExtractResult(result: JdUrlExtractResponse) {
     // Echo the source URL into the form's URL field so the operator
     // doesn't have to paste it twice.
     setValue("url", result.source_url, { shouldValidate: true });
@@ -197,11 +197,40 @@ export default function AddApplicationDialog({ open, onOpenChange }: AddApplicat
     if (notesScaffold) {
       setValue("notes", notesScaffold, { shouldValidate: true });
     }
+    // Auto-find-or-create the company so the operator doesn't have to
+    // manually re-enter what we already extracted. Case-insensitive
+    // match against existing companies; create on miss.
+    if (result.company) {
+      await selectOrCreateCompany(result.company);
+    }
     setJdMode({
       kind: "parsed",
       summary: result.summary,
       sourceUrl: result.source_url,
     });
+  }
+
+  async function selectOrCreateCompany(name: string): Promise<void> {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    const existing = companies.find(
+      (c) => c.name.trim().toLowerCase() === trimmed.toLowerCase(),
+    );
+    if (existing) {
+      setValue("company_id", existing.id, { shouldValidate: true });
+      return;
+    }
+    try {
+      const created = await createCompany({ name: trimmed }).unwrap();
+      setValue("company_id", created.id, { shouldValidate: true });
+    } catch (err) {
+      // Don't block the rest of the pre-fill if company create fails —
+      // operator can still pick or create one manually. Surface the
+      // error so they know what happened.
+      showError(
+        `Couldn't auto-create company "${trimmed}": ${extractErrorMessage(err)}`,
+      );
+    }
   }
 
   // -------------------------------------------------------------------------

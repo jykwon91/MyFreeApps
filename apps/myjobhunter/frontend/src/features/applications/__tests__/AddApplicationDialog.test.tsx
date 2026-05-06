@@ -503,6 +503,120 @@ describe("AddApplicationDialog — JD paste-link flow", () => {
     expect(screen.getByText(/took too long/i)).toBeInTheDocument();
   });
 
+  it("auto-creates the company on extract when no match exists", async () => {
+    const user = userEvent.setup();
+    const mockExtract = vi.fn().mockReturnValue({
+      unwrap: () =>
+        Promise.resolve({
+          title: "Senior Engineer",
+          company: "Pivotal Health",
+          location: "Remote",
+          description_html: null,
+          requirements_text: null,
+          summary: null,
+          source_url: "https://jobs.example.com/x",
+        }),
+    });
+    const mockCreateCompany = vi.fn().mockReturnValue({
+      unwrap: () =>
+        Promise.resolve({
+          id: "co-123",
+          name: "Pivotal Health",
+          primary_domain: null,
+          logo_url: null,
+          industry: null,
+          size_range: null,
+          notes: null,
+          deleted_at: null,
+        }),
+    });
+
+    // Empty companies list → must auto-create.
+    mockUseListCompaniesQuery.mockReturnValue(emptyCompanies);
+    mockUseExtractJdFromUrlMutation.mockReturnValue(
+      [mockExtract, { isLoading: false }] as unknown as ReturnType<typeof useExtractJdFromUrlMutation>,
+    );
+    mockUseCreateCompanyMutation.mockReturnValue(
+      [mockCreateCompany, { isLoading: false }] as unknown as ReturnType<typeof useCreateCompanyMutation>,
+    );
+
+    renderDialog();
+    await user.click(screen.getByText(/paste a link or job description to auto-fill/i));
+    const urlInput = screen.getByLabelText(/job posting url/i);
+    await user.type(urlInput, "https://jobs.example.com/x");
+    await user.click(screen.getByRole("button", { name: /fetch and auto-fill/i }));
+
+    await waitFor(() => {
+      expect(mockCreateCompany).toHaveBeenCalledWith({ name: "Pivotal Health" });
+    });
+  });
+
+  it("auto-selects an existing company on extract (case-insensitive)", async () => {
+    const user = userEvent.setup();
+    const mockExtract = vi.fn().mockReturnValue({
+      unwrap: () =>
+        Promise.resolve({
+          title: "Senior Engineer",
+          company: "PIVOTAL HEALTH",
+          location: "Remote",
+          description_html: null,
+          requirements_text: null,
+          summary: null,
+          source_url: "https://jobs.example.com/x",
+        }),
+    });
+    const mockCreateCompany = vi.fn();
+
+    // Existing companies — one matches case-insensitively.
+    mockUseListCompaniesQuery.mockReturnValue({
+      data: {
+        items: [
+          {
+            id: "co-existing",
+            name: "Pivotal Health",
+            primary_domain: null,
+            logo_url: null,
+            industry: null,
+            size_range: null,
+            notes: null,
+            deleted_at: null,
+          },
+        ],
+        total: 1,
+      },
+      isLoading: false,
+      isError: false,
+      error: undefined,
+    } as unknown as ReturnType<typeof useListCompaniesQuery>);
+    mockUseExtractJdFromUrlMutation.mockReturnValue(
+      [mockExtract, { isLoading: false }] as unknown as ReturnType<typeof useExtractJdFromUrlMutation>,
+    );
+    mockUseCreateCompanyMutation.mockReturnValue(
+      [mockCreateCompany, { isLoading: false }] as unknown as ReturnType<typeof useCreateCompanyMutation>,
+    );
+
+    renderDialog();
+    await user.click(screen.getByText(/paste a link or job description to auto-fill/i));
+    const urlInput = screen.getByLabelText(/job posting url/i);
+    await user.type(urlInput, "https://jobs.example.com/x");
+    await user.click(screen.getByRole("button", { name: /fetch and auto-fill/i }));
+
+    // Wait for pre-fill to land — role title becomes visible
+    await waitFor(() => {
+      expect(screen.getByText(/fields pre-filled from jd/i)).toBeInTheDocument();
+    });
+
+    // No createCompany call — existing one was found case-insensitively
+    expect(mockCreateCompany).not.toHaveBeenCalled();
+    // The company select should now have the matched company chosen.
+    // (There are multiple comboboxes in the dialog; pick the one with
+    // the company name as a visible option.)
+    const companyOption = screen.getByRole("option", {
+      name: "Pivotal Health",
+    }) as HTMLOptionElement;
+    expect(companyOption.selected).toBe(true);
+  });
+
   it("preserves typed URL when switching to text tab and back", async () => {
     const user = userEvent.setup();
     mockUseExtractJdFromUrlMutation.mockReturnValue(
