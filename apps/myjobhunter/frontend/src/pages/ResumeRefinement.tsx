@@ -49,7 +49,7 @@ export default function ResumeRefinement() {
   }
 
   return (
-    <main className="p-4 sm:p-8 space-y-6 max-w-3xl">
+    <main className="p-4 sm:p-8 space-y-6 max-w-6xl">
       <header>
         <div className="flex items-center gap-2">
           <Sparkles className="size-6 text-primary" />
@@ -84,24 +84,39 @@ export default function ResumeRefinement() {
         </div>
       )}
 
-      {session && (
-        <div className="space-y-4">
-          {session.status === "active" && (
-            <PendingProposalCard session={session} />
-          )}
-          <CompletePanel session={session} />
-          <CurrentDraftPanel markdown={session.current_draft} />
-          <div className="flex justify-end">
-            <button
-              type="button"
-              onClick={handleStartNew}
-              className="text-xs underline text-muted-foreground hover:text-foreground"
-            >
-              Start a different session
-            </button>
+      {session && (() => {
+        const activeTarget =
+          session.improvement_targets &&
+          session.target_index < session.improvement_targets.length
+            ? session.improvement_targets[session.target_index]
+            : null;
+        const highlightText = activeTarget?.current_text ?? null;
+        return (
+          <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
+            <div className="space-y-4">
+              {session.status === "active" && (
+                <PendingProposalCard session={session} />
+              )}
+              <CompletePanel session={session} />
+            </div>
+            <div className="lg:sticky lg:top-4 space-y-4">
+              <CurrentDraftPanel
+                markdown={session.current_draft}
+                highlightText={highlightText}
+              />
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={handleStartNew}
+                  className="text-xs underline text-muted-foreground hover:text-foreground"
+                >
+                  Start a different session
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </main>
   );
 }

@@ -32,6 +32,11 @@ export default function PendingProposalCard({ session }: PendingProposalCardProp
   const totalTargets = session.improvement_targets?.length ?? 0;
   const remaining = Math.max(totalTargets - session.target_index, 0);
   const targetSection = session.pending_target_section;
+  const activeTarget =
+    session.improvement_targets && session.target_index < session.improvement_targets.length
+      ? session.improvement_targets[session.target_index]
+      : null;
+  const currentText = activeTarget?.current_text ?? null;
   const proposal = session.pending_proposal;
   const rationale = session.pending_rationale;
   const clarifyingQuestion = session.pending_clarifying_question;
@@ -104,6 +109,15 @@ export default function PendingProposalCard({ session }: PendingProposalCardProp
         </p>
       )}
 
+      {currentText && (
+        <div className="rounded-md border border-amber-300/60 bg-amber-50/60 dark:bg-amber-500/10 p-3">
+          <p className="text-[11px] uppercase tracking-wide text-amber-900/70 dark:text-amber-200/70 font-semibold mb-1">
+            Currently
+          </p>
+          <p className="text-sm whitespace-pre-wrap">{currentText}</p>
+        </div>
+      )}
+
       {clarifyingQuestion ? (
         <ClarifyingPanel
           question={clarifyingQuestion}
@@ -113,14 +127,15 @@ export default function PendingProposalCard({ session }: PendingProposalCardProp
           isPending={isPending}
         />
       ) : proposal ? (
-        <>
-          <div className="rounded-md border border-border bg-muted/40 p-3 text-sm whitespace-pre-wrap">
-            {proposal}
-          </div>
+        <div className="rounded-md border border-emerald-400/50 bg-emerald-50/60 dark:bg-emerald-500/10 p-3">
+          <p className="text-[11px] uppercase tracking-wide text-emerald-900/70 dark:text-emerald-200/70 font-semibold mb-1">
+            Proposed rewrite
+          </p>
+          <p className="text-sm whitespace-pre-wrap">{proposal}</p>
           {rationale && (
-            <p className="text-xs text-muted-foreground italic">{rationale}</p>
+            <p className="text-xs text-muted-foreground italic mt-2">{rationale}</p>
           )}
-        </>
+        </div>
       ) : (
         <p className="text-sm text-muted-foreground">
           Hmm, let me think. Working on a suggestion…
