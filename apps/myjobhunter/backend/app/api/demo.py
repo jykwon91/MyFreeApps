@@ -1,8 +1,8 @@
-"""Admin demo-management routes.
+"""Superuser demo-management routes.
 
-Every route here is gated by ``require_admin`` (platform-level admin
-only). Demo accounts are an internal showcase tool — they MUST never
-be reachable from a regular user session.
+Every route here is gated by ``current_superuser`` (operator only).
+Demo accounts are an internal showcase tool — they MUST never be
+reachable from a regular user session.
 
 Routes:
 
@@ -28,9 +28,7 @@ import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from platform_shared.core.permissions import Role, require_role
-
-from app.core.auth import current_active_user
+from app.core.permissions import current_superuser
 from app.models.user.user import User
 from app.schemas.demo.demo import (
     DemoCreateRequest,
@@ -43,17 +41,11 @@ from app.services.demo import demo_service
 
 router = APIRouter(prefix="/admin/demo", tags=["admin", "demo"])
 
-# Pre-bake the dependency once. The factory ``require_role`` needs the
-# app's ``current_active_user`` to share the same fastapi-users wiring,
-# so apps can't reuse a single global instance — each app builds its
-# own admin gate. Mirrors ``app.api.admin.require_admin``.
-require_admin = require_role(Role.ADMIN, current_active_user=current_active_user)
-
 
 @router.post("/users", response_model=DemoCreateResponse, status_code=201)
 async def create_demo_user(
     body: DemoCreateRequest,
-    _admin: User = Depends(require_admin),
+    _admin: User = Depends(current_superuser),
 ) -> DemoCreateResponse:
     """Create a new fully-seeded demo account.
 
@@ -71,7 +63,7 @@ async def create_demo_user(
 
 @router.get("/users", response_model=DemoUserListResponse)
 async def list_demo_users(
-    _admin: User = Depends(require_admin),
+    _admin: User = Depends(current_superuser),
 ) -> DemoUserListResponse:
     """List every demo account with summary counts (newest first)."""
     return await demo_service.list_demo_users()
@@ -82,7 +74,7 @@ async def list_demo_users(
 )
 async def delete_demo_user(
     user_id: uuid.UUID,
-    _admin: User = Depends(require_admin),
+    _admin: User = Depends(current_superuser),
 ) -> DemoDeleteResponse:
     """Hard-delete a demo account and all cascade-able rows.
 

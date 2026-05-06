@@ -1,15 +1,14 @@
 import { baseApi } from "@platform/ui";
-import type { Role } from "@/constants/roles";
 
 /**
  * Subset of the fastapi-users ``UserRead`` payload returned by ``GET /users/me``.
- * Only the fields the UI actually consumes are typed here — the API may carry
- * more (e.g. ``is_active``, ``is_superuser``) that are deliberately ignored.
+ * Only the fields the UI consumes are typed here — the API carries more that
+ * is deliberately ignored.
  *
- * ``role`` is surfaced so the SPA can conditionally render admin-only nav
- * items (e.g. /admin/demo). The backend remains the source of truth for
- * authorization — every admin-only route still validates the role
- * server-side.
+ * ``is_superuser`` is surfaced so the SPA can gate the admin dashboard
+ * (Demo accounts, Invites). The backend remains the source of truth for
+ * authorization — every admin-only route is also validated server-side
+ * against ``current_superuser``.
  */
 export interface CurrentUser {
   id: string;
@@ -17,7 +16,7 @@ export interface CurrentUser {
   display_name: string;
   totp_enabled: boolean;
   is_verified: boolean;
-  role: Role;
+  is_superuser: boolean;
   is_demo: boolean;
 }
 

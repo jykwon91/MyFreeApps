@@ -6,15 +6,15 @@ import {
   LayoutDashboard,
   Plus,
   Settings,
+  Shield,
   Sparkles,
   UserCircle,
-  Wand2,
 } from "lucide-react";
 import { AppShell, RequireAuth, Toaster, useIsAuthenticated } from "@platform/ui";
 import { buildNav, buildBottomNav } from "@/constants/nav";
 import { signOut } from "@/lib/auth";
 import ThemeToggle from "@/components/ThemeToggle";
-import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { useIsSuperuser } from "@/hooks/useIsSuperuser";
 
 // Decode basic user info from JWT for display in the shell's user menu.
 // This is display-only — no security decisions are made from client-side decode.
@@ -39,17 +39,17 @@ const ICONS: Record<string, React.ReactNode> = {
   LayoutDashboard: <LayoutDashboard className="w-5 h-5" />,
   Plus: <Plus className="w-5 h-5" />,
   Settings: <Settings className="w-5 h-5" />,
+  Shield: <Shield className="w-5 h-5" />,
   Sparkles: <Sparkles className="w-5 h-5" />,
   UserCircle: <UserCircle className="w-5 h-5" />,
-  Wand2: <Wand2 className="w-5 h-5" />,
 };
 
 export default function RootLayout() {
   const navigate = useNavigate();
   const isAuthenticated = useIsAuthenticated();
-  const { isAdmin } = useIsAdmin();
+  const { isSuperuser } = useIsSuperuser();
 
-  const nav = buildNav(ICONS, { includeAdmin: isAdmin });
+  const nav = buildNav(ICONS, { includeAdmin: isSuperuser });
   const bottomNav = buildBottomNav(ICONS, () => {
     // Phase 2 will open the Add Application dialog
     // For Phase 1, navigate to applications page

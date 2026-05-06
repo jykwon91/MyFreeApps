@@ -3,17 +3,16 @@ import uuid
 
 from fastapi_users import schemas
 
-from platform_shared.core.permissions import Role
-
 
 class UserRead(schemas.BaseUser[uuid.UUID]):
     display_name: str = ""
     totp_enabled: bool = False
-    # Platform-level role + demo flag — exposed so the SPA can gate
-    # admin-only nav (Demo and Invites pages) and so the demo cleanup
-    # tooling can identify seeded accounts. Backend remains the source
-    # of truth for authorization.
-    role: Role = Role.USER
+    # Demo flag — exposed so the demo-cleanup admin tooling can identify
+    # seeded accounts. ``is_superuser`` is inherited from
+    # fastapi-users' BaseUser so the SPA can gate the operator-only
+    # admin dashboard. MJH does not have a multi-tier role system —
+    # the operator is the sole superuser; everyone else is a regular
+    # user.
     is_demo: bool = False
 
 

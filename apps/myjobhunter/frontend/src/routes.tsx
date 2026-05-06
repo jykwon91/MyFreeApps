@@ -12,9 +12,11 @@ import Settings from "@/pages/Settings";
 import Login from "@/pages/Login";
 import VerifyEmail from "@/pages/VerifyEmail";
 import NotFound from "@/pages/NotFound";
+import AdminDashboard from "@/pages/admin/AdminDashboard";
 import DemoUsers from "@/pages/admin/DemoUsers";
+import AdminInvites from "@/pages/admin/Invites";
 import RootLayout from "@/RootLayout";
-import RequireAdmin from "@/components/RequireAdmin";
+import RequireSuperuser from "@/components/RequireSuperuser";
 import { ADMIN_ROUTES } from "@/constants/admin-routes";
 
 export const routes: RouteObject[] = [
@@ -33,11 +35,27 @@ export const routes: RouteObject[] = [
       { path: "/settings", element: <Settings /> },
       { path: "/security", element: <Security /> },
       {
+        path: ADMIN_ROUTES.DASHBOARD,
+        element: (
+          <RequireSuperuser>
+            <AdminDashboard />
+          </RequireSuperuser>
+        ),
+      },
+      {
         path: ADMIN_ROUTES.DEMO_USERS,
         element: (
-          <RequireAdmin>
+          <RequireSuperuser>
             <DemoUsers />
-          </RequireAdmin>
+          </RequireSuperuser>
+        ),
+      },
+      {
+        path: ADMIN_ROUTES.INVITES,
+        element: (
+          <RequireSuperuser>
+            <AdminInvites />
+          </RequireSuperuser>
         ),
       },
     ],
