@@ -230,6 +230,15 @@ export default function Login() {
               }
             />
 
+            <p className="mt-4 text-sm text-center text-muted-foreground">
+              <a
+                href="/forgot-password"
+                className="text-primary hover:underline"
+              >
+                Forgot password?
+              </a>
+            </p>
+
             {needsVerification ? (
               <div
                 data-testid="resend-verification-banner"
