@@ -52,6 +52,15 @@ jobs:
           LOG_LEVEL=INFO
           EMAIL_BACKEND=console
           MYJOBHUNTER_ENABLE_TEST_HELPERS=1
+          # MinIO is part of the shared infra stack on the VPS; in CI we
+          # don't run it. The boot guard would otherwise fail with
+          # StorageNotConfiguredError. Skip the bucket-existence check
+          # at startup; document endpoints (which DO need MinIO) are
+          # not exercised by the smoke test.
+          MINIO_SKIP_STARTUP_CHECK=true
+          MINIO_ENDPOINT=ci-placeholder:9000
+          MINIO_ACCESS_KEY=ci-placeholder
+          MINIO_SECRET_KEY=ci-placeholder-do-not-use
           EOF
 
       - name: Create shared infra network
