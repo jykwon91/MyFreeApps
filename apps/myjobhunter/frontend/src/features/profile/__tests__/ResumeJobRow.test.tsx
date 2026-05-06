@@ -28,6 +28,9 @@ vi.mock("@platform/ui", () => ({
   Badge: ({ label, color }: { label: string; color: string }) => (
     <span data-testid="badge" data-color={color}>{label}</span>
   ),
+  // The component reads formatFileSize for the size suffix; identity
+  // string is fine here — the test asserts behavior, not formatting.
+  formatFileSize: (bytes: number) => `${bytes} bytes`,
 }));
 
 vi.mock("lucide-react", () => ({
