@@ -14,6 +14,7 @@ import type { PublicInquiryRequest } from "@/shared/types/inquiry/public-inquiry
 const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY ?? "";
 const MIN_WHY_THIS_ROOM_CHARS = 30;
 const MAX_FREE_TEXT_CHARS = 2000;
+const MIN_PHONE_DIGITS = 7;
 
 interface FormState {
   name: string;
@@ -32,6 +33,21 @@ interface FormState {
   website: string; // honeypot
 }
 
+type ValidatedField =
+  | "name"
+  | "email"
+  | "phone"
+  | "moveInDate"
+  | "leaseLengthMonths"
+  | "occupantCount"
+  | "hasPets"
+  | "currentCity"
+  | "employmentStatus"
+  | "whyThisRoom";
+
+type FieldErrors = Partial<Record<ValidatedField, string>>;
+type TouchedFields = Partial<Record<ValidatedField, boolean>>;
+
 const INITIAL_FORM: FormState = {
   name: "",
   email: "",
@@ -49,23 +65,85 @@ const INITIAL_FORM: FormState = {
   website: "",
 };
 
+// Order matters — drives focus-first-invalid on submit.
+const FIELD_FOCUS_TARGETS: { key: ValidatedField; id: string }[] = [
+  { key: "name", id: "name" },
+  { key: "email", id: "email" },
+  { key: "phone", id: "phone" },
+  { key: "moveInDate", id: "move-in" },
+  { key: "leaseLengthMonths", id: "lease" },
+  { key: "occupantCount", id: "occupants" },
+  { key: "hasPets", id: "has-pets-no" },
+  { key: "currentCity", id: "city" },
+  { key: "employmentStatus", id: "employment" },
+  { key: "whyThisRoom", id: "why" },
+];
+
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-function isFormValid(state: FormState): boolean {
-  return (
-    state.name.trim().length > 0
-    && state.email.trim().length > 0
-    && state.phone.trim().length >= 7
-    && state.moveInDate.length === 10
-    && Number.parseInt(state.leaseLengthMonths, 10) >= 1
-    && Number.parseInt(state.occupantCount, 10) >= 1
-    && state.hasPets !== ""
-    && state.currentCity.trim().length > 0
-    && state.employmentStatus !== ""
-    && state.whyThisRoom.trim().length >= MIN_WHY_THIS_ROOM_CHARS
-  );
+function validateForm(state: FormState): FieldErrors {
+  const errors: FieldErrors = {};
+
+  if (!state.name.trim()) {
+    errors.name = "Please enter your name.";
+  }
+
+  if (!state.email.trim()) {
+    errors.email = "Please enter your email.";
+  } else if (!/^\S+@\S+\.\S+$/.test(state.email.trim())) {
+    errors.email = "Please enter a valid email address.";
+  }
+
+  const phoneDigits = state.phone.replace(/\D/g, "");
+  if (!state.phone.trim()) {
+    errors.phone = "Please enter a phone number.";
+  } else if (phoneDigits.length < MIN_PHONE_DIGITS) {
+    errors.phone = "Please enter a valid phone number.";
+  }
+
+  if (state.moveInDate.length !== 10) {
+    errors.moveInDate = "Please choose a move-in date.";
+  } else if (state.moveInDate < todayISO()) {
+    errors.moveInDate = "Move-in date can't be in the past.";
+  }
+
+  const lease = Number.parseInt(state.leaseLengthMonths, 10);
+  if (!Number.isFinite(lease) || lease < 1) {
+    errors.leaseLengthMonths = "Please enter at least 1 month.";
+  } else if (lease > 24) {
+    errors.leaseLengthMonths = "Maximum lease length is 24 months.";
+  }
+
+  const occupants = Number.parseInt(state.occupantCount, 10);
+  if (!Number.isFinite(occupants) || occupants < 1) {
+    errors.occupantCount = "Please enter at least 1 occupant.";
+  } else if (occupants > 10) {
+    errors.occupantCount = "Maximum is 10 occupants.";
+  }
+
+  if (state.hasPets === "") {
+    errors.hasPets = "Please tell us if you have pets.";
+  }
+
+  if (!state.currentCity.trim()) {
+    errors.currentCity = "Please tell us your current city and state.";
+  }
+
+  if (state.employmentStatus === "") {
+    errors.employmentStatus = "Please choose your employment status.";
+  }
+
+  const whyLen = state.whyThisRoom.trim().length;
+  if (whyLen === 0) {
+    errors.whyThisRoom = "Please tell us why you're interested.";
+  } else if (whyLen < MIN_WHY_THIS_ROOM_CHARS) {
+    const remaining = MIN_WHY_THIS_ROOM_CHARS - whyLen;
+    errors.whyThisRoom = `Please add ${remaining} more character${remaining === 1 ? "" : "s"} (minimum ${MIN_WHY_THIS_ROOM_CHARS}).`;
+  }
+
+  return errors;
 }
 
 export default function PublicInquiryForm() {
@@ -80,11 +158,16 @@ export default function PublicInquiryForm() {
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
+  const [touched, setTouched] = useState<TouchedFields>({});
+  const [attemptedSubmit, setAttemptedSubmit] = useState(false);
+  const [turnstileError, setTurnstileError] = useState("");
+
   const [turnstileToken, setTurnstileToken] = useState("");
   const [formLoadedAt] = useState<number>(() => Date.now());
 
   const handleTurnstileVerify = useCallback((token: string) => {
     setTurnstileToken(token);
+    setTurnstileError("");
   }, []);
 
   const handleTurnstileExpire = useCallback(() => {
@@ -92,12 +175,6 @@ export default function PublicInquiryForm() {
   }, []);
 
   useEffect(() => {
-    // Local cancellation flag — keeps stale promises from racing with newer
-    // slug changes. We deliberately do NOT call setState BEFORE the fetch
-    // (eslint react-hooks/set-state-in-effect): the initial state already
-    // has loading=true + error=null, and any subsequent slug change goes
-    // through setState IN the resolve/reject branches below, which is
-    // allowed because it's inside an async callback.
     let cancelled = false;
 
     api
@@ -121,24 +198,70 @@ export default function PublicInquiryForm() {
   }, [slug]);
 
   const turnstileRequired = TURNSTILE_SITE_KEY.length > 0;
-  const canSubmit = useMemo(
-    () =>
-      !submitting
-      && !!listing
-      && isFormValid(form)
-      && (!turnstileRequired || turnstileToken.length > 0),
-    [submitting, listing, form, turnstileRequired, turnstileToken],
-  );
+
+  const errors = useMemo(() => validateForm(form), [form]);
+  const visibleErrors = useMemo<FieldErrors>(() => {
+    const out: FieldErrors = {};
+    for (const key of Object.keys(errors) as ValidatedField[]) {
+      if (attemptedSubmit || touched[key]) {
+        out[key] = errors[key];
+      }
+    }
+    return out;
+  }, [errors, touched, attemptedSubmit]);
+
+  const errorCount =
+    Object.keys(errors).length
+    + (turnstileRequired && !turnstileToken ? 1 : 0);
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
+  function markTouched(key: ValidatedField) {
+    setTouched((prev) => (prev[key] ? prev : { ...prev, [key]: true }));
+  }
+
+  function focusFirstInvalid(currentErrors: FieldErrors, turnstileMissing: boolean) {
+    for (const target of FIELD_FOCUS_TARGETS) {
+      if (currentErrors[target.key]) {
+        const el = document.getElementById(target.id);
+        if (el) {
+          el.focus({ preventScroll: false });
+          el.scrollIntoView?.({ block: "center", behavior: "smooth" });
+        }
+        return;
+      }
+    }
+    if (turnstileMissing) {
+      const widget = document.querySelector<HTMLElement>(
+        '[data-testid="turnstile-widget"]',
+      );
+      widget?.scrollIntoView?.({ block: "center", behavior: "smooth" });
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!canSubmit || !listing) return;
-    setSubmitting(true);
+    setAttemptedSubmit(true);
     setSubmitError("");
+
+    if (!listing) return;
+
+    const turnstileMissing = turnstileRequired && !turnstileToken;
+    if (turnstileMissing) {
+      setTurnstileError("Please complete the captcha to continue.");
+    } else {
+      setTurnstileError("");
+    }
+
+    const hasFieldErrors = Object.keys(errors).length > 0;
+    if (hasFieldErrors || turnstileMissing) {
+      focusFirstInvalid(errors, turnstileMissing);
+      return;
+    }
+
+    setSubmitting(true);
 
     const body: PublicInquiryRequest = {
       listing_slug: listing.slug,
@@ -215,6 +338,8 @@ export default function PublicInquiryForm() {
     );
   }
 
+  const showSummary = attemptedSubmit && errorCount > 0;
+
   return (
     <div className="min-h-screen bg-muted py-6 sm:py-12">
       <div className="mx-auto max-w-xl px-4">
@@ -243,7 +368,18 @@ export default function PublicInquiryForm() {
             className="space-y-4"
             data-testid="public-inquiry-form"
             aria-label="Public inquiry form"
+            noValidate
           >
+            {showSummary ? (
+              <div
+                role="alert"
+                className="bg-red-50 border border-red-200 rounded-md p-3 text-sm text-red-700"
+                data-testid="public-inquiry-summary"
+              >
+                Please fix {errorCount} {errorCount === 1 ? "issue" : "issues"} below.
+              </div>
+            ) : null}
+
             {/* Honeypot — visually hidden but real DOM. Bots that fill every
                 input flip the gate. NOT display:none because some bots
                 intentionally skip those fields. */}
@@ -271,7 +407,7 @@ export default function PublicInquiryForm() {
               </label>
             </div>
 
-            <Field label="Your name" htmlFor="name">
+            <Field label="Your name" htmlFor="name" error={visibleErrors.name}>
               <input
                 id="name"
                 type="text"
@@ -279,37 +415,50 @@ export default function PublicInquiryForm() {
                 maxLength={200}
                 value={form.name}
                 onChange={(e) => update("name", e.target.value)}
-                className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-[44px]"
+                onBlur={() => markTouched("name")}
+                aria-invalid={!!visibleErrors.name}
+                aria-describedby={visibleErrors.name ? "name-error" : undefined}
+                className={inputClasses(!!visibleErrors.name)}
                 data-testid="public-inquiry-name"
               />
             </Field>
 
-            <Field label="Email" htmlFor="email">
+            <Field label="Email" htmlFor="email" error={visibleErrors.email}>
               <input
                 id="email"
                 type="email"
                 required
                 value={form.email}
                 onChange={(e) => update("email", e.target.value)}
-                className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-[44px]"
+                onBlur={() => markTouched("email")}
+                aria-invalid={!!visibleErrors.email}
+                aria-describedby={visibleErrors.email ? "email-error" : undefined}
+                className={inputClasses(!!visibleErrors.email)}
                 data-testid="public-inquiry-email"
               />
             </Field>
 
-            <Field label="Phone" htmlFor="phone">
+            <Field label="Phone" htmlFor="phone" error={visibleErrors.phone}>
               <input
                 id="phone"
                 type="tel"
                 required
                 value={form.phone}
                 onChange={(e) => update("phone", e.target.value)}
-                className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-[44px]"
+                onBlur={() => markTouched("phone")}
+                aria-invalid={!!visibleErrors.phone}
+                aria-describedby={visibleErrors.phone ? "phone-error" : undefined}
+                className={inputClasses(!!visibleErrors.phone)}
                 data-testid="public-inquiry-phone"
               />
             </Field>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field label="Move-in date" htmlFor="move-in">
+              <Field
+                label="Move-in date"
+                htmlFor="move-in"
+                error={visibleErrors.moveInDate}
+              >
                 <input
                   id="move-in"
                   type="date"
@@ -317,12 +466,21 @@ export default function PublicInquiryForm() {
                   min={todayISO()}
                   value={form.moveInDate}
                   onChange={(e) => update("moveInDate", e.target.value)}
-                  className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-[44px]"
+                  onBlur={() => markTouched("moveInDate")}
+                  aria-invalid={!!visibleErrors.moveInDate}
+                  aria-describedby={
+                    visibleErrors.moveInDate ? "move-in-error" : undefined
+                  }
+                  className={inputClasses(!!visibleErrors.moveInDate)}
                   data-testid="public-inquiry-move-in"
                 />
               </Field>
 
-              <Field label="Lease length (months)" htmlFor="lease">
+              <Field
+                label="Lease length (months)"
+                htmlFor="lease"
+                error={visibleErrors.leaseLengthMonths}
+              >
                 <input
                   id="lease"
                   type="number"
@@ -331,14 +489,23 @@ export default function PublicInquiryForm() {
                   max={24}
                   value={form.leaseLengthMonths}
                   onChange={(e) => update("leaseLengthMonths", e.target.value)}
-                  className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-[44px]"
+                  onBlur={() => markTouched("leaseLengthMonths")}
+                  aria-invalid={!!visibleErrors.leaseLengthMonths}
+                  aria-describedby={
+                    visibleErrors.leaseLengthMonths ? "lease-error" : undefined
+                  }
+                  className={inputClasses(!!visibleErrors.leaseLengthMonths)}
                   data-testid="public-inquiry-lease-length"
                 />
               </Field>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field label="Occupants" htmlFor="occupants">
+              <Field
+                label="Occupants"
+                htmlFor="occupants"
+                error={visibleErrors.occupantCount}
+              >
                 <input
                   id="occupants"
                   type="number"
@@ -347,7 +514,12 @@ export default function PublicInquiryForm() {
                   max={10}
                   value={form.occupantCount}
                   onChange={(e) => update("occupantCount", e.target.value)}
-                  className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-[44px]"
+                  onBlur={() => markTouched("occupantCount")}
+                  aria-invalid={!!visibleErrors.occupantCount}
+                  aria-describedby={
+                    visibleErrors.occupantCount ? "occupants-error" : undefined
+                  }
+                  className={inputClasses(!!visibleErrors.occupantCount)}
                   data-testid="public-inquiry-occupants"
                 />
               </Field>
@@ -360,7 +532,7 @@ export default function PublicInquiryForm() {
                   max={10}
                   value={form.vehicleCount}
                   onChange={(e) => update("vehicleCount", e.target.value)}
-                  className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-[44px]"
+                  className={inputClasses(false)}
                   data-testid="public-inquiry-vehicles"
                 />
               </Field>
@@ -371,27 +543,47 @@ export default function PublicInquiryForm() {
               <div className="flex gap-4">
                 <label className="inline-flex items-center gap-2 text-sm">
                   <input
+                    id="has-pets-no"
                     type="radio"
                     name="has-pets"
                     value="no"
                     checked={form.hasPets === "no"}
-                    onChange={() => update("hasPets", "no")}
+                    onChange={() => {
+                      update("hasPets", "no");
+                      markTouched("hasPets");
+                    }}
+                    aria-invalid={!!visibleErrors.hasPets}
                     data-testid="public-inquiry-pets-no"
                   />
                   No
                 </label>
                 <label className="inline-flex items-center gap-2 text-sm">
                   <input
+                    id="has-pets-yes"
                     type="radio"
                     name="has-pets"
                     value="yes"
                     checked={form.hasPets === "yes"}
-                    onChange={() => update("hasPets", "yes")}
+                    onChange={() => {
+                      update("hasPets", "yes");
+                      markTouched("hasPets");
+                    }}
+                    aria-invalid={!!visibleErrors.hasPets}
                     data-testid="public-inquiry-pets-yes"
                   />
                   Yes
                 </label>
               </div>
+              {visibleErrors.hasPets ? (
+                <p
+                  id="has-pets-error"
+                  className="mt-1 text-xs text-red-600"
+                  role="alert"
+                  data-testid="public-inquiry-has-pets-error"
+                >
+                  {visibleErrors.hasPets}
+                </p>
+              ) : null}
             </fieldset>
 
             {form.hasPets === "yes" ? (
@@ -402,13 +594,17 @@ export default function PublicInquiryForm() {
                   maxLength={MAX_FREE_TEXT_CHARS}
                   value={form.petsDescription}
                   onChange={(e) => update("petsDescription", e.target.value)}
-                  className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-[44px]"
+                  className={inputClasses(false)}
                   data-testid="public-inquiry-pets-description"
                 />
               </Field>
             ) : null}
 
-            <Field label="Current city / state" htmlFor="city">
+            <Field
+              label="Current city / state"
+              htmlFor="city"
+              error={visibleErrors.currentCity}
+            >
               <input
                 id="city"
                 type="text"
@@ -416,12 +612,21 @@ export default function PublicInquiryForm() {
                 maxLength={200}
                 value={form.currentCity}
                 onChange={(e) => update("currentCity", e.target.value)}
-                className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-[44px]"
+                onBlur={() => markTouched("currentCity")}
+                aria-invalid={!!visibleErrors.currentCity}
+                aria-describedby={
+                  visibleErrors.currentCity ? "city-error" : undefined
+                }
+                className={inputClasses(!!visibleErrors.currentCity)}
                 data-testid="public-inquiry-city"
               />
             </Field>
 
-            <Field label="Employment status" htmlFor="employment">
+            <Field
+              label="Employment status"
+              htmlFor="employment"
+              error={visibleErrors.employmentStatus}
+            >
               <select
                 id="employment"
                 required
@@ -429,7 +634,12 @@ export default function PublicInquiryForm() {
                 onChange={(e) =>
                   update("employmentStatus", e.target.value as EmploymentStatus | "")
                 }
-                className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-[44px]"
+                onBlur={() => markTouched("employmentStatus")}
+                aria-invalid={!!visibleErrors.employmentStatus}
+                aria-describedby={
+                  visibleErrors.employmentStatus ? "employment-error" : undefined
+                }
+                className={inputClasses(!!visibleErrors.employmentStatus)}
                 data-testid="public-inquiry-employment"
               >
                 <option value="" disabled>
@@ -447,6 +657,7 @@ export default function PublicInquiryForm() {
               label="Why are you interested in this room?"
               htmlFor="why"
               hint={`At least ${MIN_WHY_THIS_ROOM_CHARS} characters.`}
+              error={visibleErrors.whyThisRoom}
             >
               <textarea
                 id="why"
@@ -455,7 +666,10 @@ export default function PublicInquiryForm() {
                 maxLength={MAX_FREE_TEXT_CHARS}
                 value={form.whyThisRoom}
                 onChange={(e) => update("whyThisRoom", e.target.value)}
-                className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-[44px]"
+                onBlur={() => markTouched("whyThisRoom")}
+                aria-invalid={!!visibleErrors.whyThisRoom}
+                aria-describedby={visibleErrors.whyThisRoom ? "why-error" : undefined}
+                className={inputClasses(!!visibleErrors.whyThisRoom)}
                 data-testid="public-inquiry-why"
               />
             </Field>
@@ -467,16 +681,27 @@ export default function PublicInquiryForm() {
                 maxLength={MAX_FREE_TEXT_CHARS}
                 value={form.additionalNotes}
                 onChange={(e) => update("additionalNotes", e.target.value)}
-                className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary min-h-[44px]"
+                className={inputClasses(false)}
                 data-testid="public-inquiry-notes"
               />
             </Field>
 
             {turnstileRequired ? (
-              <TurnstileWidget
-                onVerify={handleTurnstileVerify}
-                onExpire={handleTurnstileExpire}
-              />
+              <div>
+                <TurnstileWidget
+                  onVerify={handleTurnstileVerify}
+                  onExpire={handleTurnstileExpire}
+                />
+                {turnstileError ? (
+                  <p
+                    className="mt-1 text-xs text-red-600"
+                    role="alert"
+                    data-testid="public-inquiry-turnstile-error"
+                  >
+                    {turnstileError}
+                  </p>
+                ) : null}
+              </div>
             ) : null}
 
             {submitError ? (
@@ -493,7 +718,7 @@ export default function PublicInquiryForm() {
               type="submit"
               isLoading={submitting}
               loadingText="Submitting..."
-              disabled={!canSubmit}
+              disabled={submitting}
               className="w-full min-h-[44px]"
               data-testid="public-inquiry-submit"
             >
@@ -510,21 +735,39 @@ export default function PublicInquiryForm() {
   );
 }
 
+function inputClasses(invalid: boolean): string {
+  const base =
+    "w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 min-h-[44px]";
+  return invalid
+    ? `${base} border-red-500 focus:ring-red-400`
+    : `${base} focus:ring-primary`;
+}
+
 interface FieldProps {
   label: string;
   htmlFor: string;
   hint?: string;
+  error?: string;
   children: React.ReactNode;
 }
 
-function Field({ label, htmlFor, hint, children }: FieldProps) {
+function Field({ label, htmlFor, hint, error, children }: FieldProps) {
   return (
     <div>
       <label htmlFor={htmlFor} className="block text-sm font-medium mb-1">
         {label}
       </label>
       {children}
-      {hint ? (
+      {error ? (
+        <p
+          id={`${htmlFor}-error`}
+          className="mt-1 text-xs text-red-600"
+          role="alert"
+          data-testid={`public-inquiry-${htmlFor}-error`}
+        >
+          {error}
+        </p>
+      ) : hint ? (
         <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
       ) : null}
     </div>

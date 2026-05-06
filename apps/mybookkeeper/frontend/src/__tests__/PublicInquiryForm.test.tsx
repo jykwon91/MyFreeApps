@@ -1,14 +1,16 @@
 /**
- * Tests for the public inquiry form (T0).
+ * Tests for the public inquiry form.
  *
  * Covers:
  * - Listing fetched and rendered (title, rent, room type)
- * - Form-loaded-at timestamp captured at mount
+ * - Listing 404 renders "Listing not found"
  * - Honeypot field is in the DOM but visually hidden
- * - Submit button disabled until required fields are filled
+ * - Submit on empty form surfaces inline + summary errors and does NOT POST
+ * - Inline error appears on blur with invalid input
+ * - whyThisRoom under 30 chars shows precise remaining-characters error
+ * - Fixing a field clears its error
  * - Successful submit → success view
  * - 400 from backend renders generic error
- * - Listing 404 renders "Listing not found"
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
@@ -61,6 +63,29 @@ function renderForm(slug = "master-bedroom-abc123") {
   );
 }
 
+function futureDateIso(daysFromNow = 30): string {
+  const d = new Date();
+  d.setDate(d.getDate() + daysFromNow);
+  return d.toISOString().slice(0, 10);
+}
+
+async function fillValidForm(user: ReturnType<typeof userEvent.setup>) {
+  await user.type(screen.getByTestId("public-inquiry-name"), "Alice Smith");
+  await user.type(screen.getByTestId("public-inquiry-email"), "alice@example.com");
+  await user.type(screen.getByTestId("public-inquiry-phone"), "555-123-4567");
+  await user.type(screen.getByTestId("public-inquiry-move-in"), futureDateIso());
+  const lease = screen.getByTestId("public-inquiry-lease-length");
+  await user.clear(lease);
+  await user.type(lease, "6");
+  await user.click(screen.getByTestId("public-inquiry-pets-no"));
+  await user.type(screen.getByTestId("public-inquiry-city"), "Austin, TX");
+  await user.selectOptions(screen.getByTestId("public-inquiry-employment"), "employed");
+  await user.type(
+    screen.getByTestId("public-inquiry-why"),
+    "I'm a travel nurse on assignment at the medical center.",
+  );
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
 });
@@ -80,10 +105,6 @@ describe("PublicInquiryForm — listing rendering", () => {
   });
 
   it("requests the public listing endpoint with the slug from the URL", async () => {
-    // Regression guard: the axios baseURL is "/api", so the frontend must
-    // call `/listings/public/<slug>` (NOT `/api/listings/public/<slug>`).
-    // Caddy strips the leading `/api` segment before requests reach the
-    // backend; re-introducing `/api/` here would 404 in production.
     (api.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ data: mockListing });
     renderForm("master-bedroom-abc123");
     await screen.findByText(/Master Bedroom in Houston/);
@@ -98,21 +119,92 @@ describe("PublicInquiryForm — honeypot", () => {
     const honeypot = await screen.findByTestId("public-inquiry-honeypot");
     expect(honeypot).toBeInTheDocument();
     expect(honeypot).toHaveAttribute("name", "website");
-    // Wrapper is positioned off-screen
     const wrapper = honeypot.closest("div");
     expect(wrapper?.style.position).toBe("absolute");
     expect(wrapper?.style.left).toContain("-10000");
   });
 });
 
-describe("PublicInquiryForm — submit gating", () => {
-  it("submit is disabled until required fields are filled", async () => {
+describe("PublicInquiryForm — validation UX", () => {
+  it("clicking submit on an empty form surfaces inline + summary errors and does not POST", async () => {
     (api.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ data: mockListing });
+    const user = userEvent.setup();
     renderForm();
-    const submit = await screen.findByTestId("public-inquiry-submit");
-    expect(submit).toBeDisabled();
+
+    await screen.findByTestId("public-inquiry-form");
+    const submit = screen.getByTestId("public-inquiry-submit");
+    expect(submit).not.toBeDisabled();
+
+    await user.click(submit);
+
+    expect(await screen.findByTestId("public-inquiry-summary")).toHaveTextContent(
+      /Please fix \d+ issues below/,
+    );
+    expect(screen.getByTestId("public-inquiry-name-error")).toHaveTextContent(
+      /Please enter your name/,
+    );
+    expect(screen.getByTestId("public-inquiry-email-error")).toHaveTextContent(
+      /Please enter your email/,
+    );
+    expect(screen.getByTestId("public-inquiry-why-error")).toHaveTextContent(
+      /Please tell us why you're interested/,
+    );
+    expect(api.post).not.toHaveBeenCalled();
   });
 
+  it("shows precise remaining-characters error when whyThisRoom is too short", async () => {
+    (api.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ data: mockListing });
+    const user = userEvent.setup();
+    renderForm();
+
+    await screen.findByTestId("public-inquiry-form");
+    // 28 characters — 2 short of the 30-char minimum.
+    await user.type(
+      screen.getByTestId("public-inquiry-why"),
+      "lookingh gor a place to stay",
+    );
+    await user.click(screen.getByTestId("public-inquiry-submit"));
+
+    expect(await screen.findByTestId("public-inquiry-why-error")).toHaveTextContent(
+      /Please add 2 more characters \(minimum 30\)/,
+    );
+    expect(api.post).not.toHaveBeenCalled();
+  });
+
+  it("shows an inline error on blur with invalid input", async () => {
+    (api.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ data: mockListing });
+    const user = userEvent.setup();
+    renderForm();
+
+    await screen.findByTestId("public-inquiry-form");
+    const email = screen.getByTestId("public-inquiry-email");
+    await user.type(email, "not-an-email");
+    await user.tab(); // blur
+
+    expect(await screen.findByTestId("public-inquiry-email-error")).toHaveTextContent(
+      /valid email address/,
+    );
+    // Other untouched fields don't show errors yet.
+    expect(screen.queryByTestId("public-inquiry-name-error")).not.toBeInTheDocument();
+  });
+
+  it("clears a field's error once the user fixes the value", async () => {
+    (api.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ data: mockListing });
+    const user = userEvent.setup();
+    renderForm();
+
+    await screen.findByTestId("public-inquiry-form");
+    await user.click(screen.getByTestId("public-inquiry-submit"));
+    expect(await screen.findByTestId("public-inquiry-name-error")).toBeInTheDocument();
+
+    await user.type(screen.getByTestId("public-inquiry-name"), "Alice");
+    await waitFor(() =>
+      expect(screen.queryByTestId("public-inquiry-name-error")).not.toBeInTheDocument(),
+    );
+  });
+});
+
+describe("PublicInquiryForm — submit", () => {
   it("successful POST shows the thanks view", async () => {
     (api.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ data: mockListing });
     (api.post as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
@@ -122,30 +214,8 @@ describe("PublicInquiryForm — submit gating", () => {
     renderForm();
 
     await screen.findByTestId("public-inquiry-form");
-
-    await user.type(screen.getByTestId("public-inquiry-name"), "Alice Smith");
-    await user.type(screen.getByTestId("public-inquiry-email"), "alice@example.com");
-    await user.type(screen.getByTestId("public-inquiry-phone"), "555-123-4567");
-    // Use a date 30 days out
-    const future = new Date();
-    future.setDate(future.getDate() + 30);
-    const futureIso = future.toISOString().slice(0, 10);
-    await user.type(screen.getByTestId("public-inquiry-move-in"), futureIso);
-    // Lease length already defaults to empty — fill it
-    const lease = screen.getByTestId("public-inquiry-lease-length");
-    await user.clear(lease);
-    await user.type(lease, "6");
-    await user.click(screen.getByTestId("public-inquiry-pets-no"));
-    await user.type(screen.getByTestId("public-inquiry-city"), "Austin, TX");
-    await user.selectOptions(screen.getByTestId("public-inquiry-employment"), "employed");
-    await user.type(
-      screen.getByTestId("public-inquiry-why"),
-      "I'm a travel nurse on assignment at the medical center.",
-    );
-
-    const submit = screen.getByTestId("public-inquiry-submit");
-    await waitFor(() => expect(submit).not.toBeDisabled());
-    await user.click(submit);
+    await fillValidForm(user);
+    await user.click(screen.getByTestId("public-inquiry-submit"));
 
     expect(await screen.findByText(/Thanks!/)).toBeInTheDocument();
     expect(api.post).toHaveBeenCalledWith(
@@ -169,30 +239,15 @@ describe("PublicInquiryForm — submit gating", () => {
     renderForm();
 
     await screen.findByTestId("public-inquiry-form");
-
-    await user.type(screen.getByTestId("public-inquiry-name"), "Alice");
-    await user.type(screen.getByTestId("public-inquiry-email"), "a@b.com");
-    await user.type(screen.getByTestId("public-inquiry-phone"), "555-123-4567");
-    const future = new Date();
-    future.setDate(future.getDate() + 30);
+    await fillValidForm(user);
+    // Replace the why field with longer text so client-side validation passes.
+    const why = screen.getByTestId("public-inquiry-why");
+    await user.clear(why);
     await user.type(
-      screen.getByTestId("public-inquiry-move-in"),
-      future.toISOString().slice(0, 10),
-    );
-    const lease = screen.getByTestId("public-inquiry-lease-length");
-    await user.clear(lease);
-    await user.type(lease, "6");
-    await user.click(screen.getByTestId("public-inquiry-pets-no"));
-    await user.type(screen.getByTestId("public-inquiry-city"), "Austin");
-    await user.selectOptions(screen.getByTestId("public-inquiry-employment"), "employed");
-    await user.type(
-      screen.getByTestId("public-inquiry-why"),
+      why,
       "Because I want to live there with my family for a few months while I work nearby",
     );
-
-    const submit = screen.getByTestId("public-inquiry-submit");
-    await waitFor(() => expect(submit).not.toBeDisabled());
-    await user.click(submit);
+    await user.click(screen.getByTestId("public-inquiry-submit"));
 
     expect(await screen.findByTestId("public-inquiry-error")).toHaveTextContent(
       /tell us a bit more/i,
