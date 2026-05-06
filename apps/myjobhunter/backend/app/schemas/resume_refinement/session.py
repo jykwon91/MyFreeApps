@@ -122,3 +122,12 @@ class SessionCompleteRequest(BaseModel):
     """User marks the session done. Locks the current_draft."""
 
     pass
+
+
+class NavigateRequest(BaseModel):
+    """Move the iteration cursor without acting on the current proposal."""
+
+    direction: Literal["next", "prev"] = Field(
+        ...,
+        description="Move to the next or previous improvement target.",
+    )
