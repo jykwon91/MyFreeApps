@@ -31,6 +31,10 @@ vi.mock("lucide-react", () => ({
 vi.mock("@/lib/companiesApi", () => ({
   useListCompaniesQuery: vi.fn(),
   useCreateCompanyMutation: vi.fn(),
+  useTriggerCompanyResearchMutation: vi.fn(() => [
+    vi.fn(() => ({ unwrap: () => Promise.resolve(undefined) })),
+    { isLoading: false },
+  ]),
 }));
 
 vi.mock("@/lib/applicationsApi", () => ({

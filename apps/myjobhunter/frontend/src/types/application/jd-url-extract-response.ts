@@ -20,6 +20,15 @@
 export interface JdUrlExtractResponse {
   title: string | null;
   company: string | null;
+  /**
+   * Canonical company website (schema.org JobPosting
+   * `hiringOrganization.sameAs`). Populated only on the schema.org
+   * fast path; the Claude HTML-text fallback returns null. Used by
+   * the auto-create flow to populate `primary_domain`.
+   */
+  company_website: string | null;
+  /** Company logo URL (schema.org `hiringOrganization.logo`). */
+  company_logo_url: string | null;
   location: string | null;
   description_html: string | null;
   requirements_text: string | null;
