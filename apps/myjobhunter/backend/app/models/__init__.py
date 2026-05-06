@@ -27,6 +27,8 @@ from app.models.resume_refinement.turn import ResumeRefinementTurn  # noqa: F401
 
 from app.models.system.extraction_log import ExtractionLog  # noqa: F401
 
+from app.models.platform.invite import PlatformInvite  # noqa: F401
+
 # Shared models from platform_shared. Importing them here registers their
 # tables with ``Base.metadata`` so Alembic autogenerate + Base.metadata.create_all
 # see the schema. The tables themselves are provisioned by alembic migration
