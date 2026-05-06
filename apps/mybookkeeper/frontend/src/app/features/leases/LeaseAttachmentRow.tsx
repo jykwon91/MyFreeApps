@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import { AlertTriangle, Download, Trash2, Upload } from "lucide-react";
+import { Download, Trash2 } from "lucide-react";
 import { LEASE_ATTACHMENT_KIND_LABELS } from "@/shared/lib/lease-labels";
 import {
   LEASE_ATTACHMENT_KINDS,
@@ -7,6 +7,7 @@ import {
 } from "@/shared/types/lease/lease-attachment-kind";
 import type { SignedLeaseAttachment } from "@/shared/types/lease/signed-lease-attachment";
 import { LEASE_REUPLOAD_ACCEPT } from "@/shared/lib/lease-reupload-accept";
+import { reportMissingStorageObject } from "@/shared/lib/storage-observability";
 
 export interface LeaseAttachmentRowProps {
   att: SignedLeaseAttachment;
@@ -17,6 +18,13 @@ export interface LeaseAttachmentRowProps {
   onReupload: (file: File) => void;
 }
 
+/**
+ * Renders a lease attachment row with the filename ALWAYS clickable.
+ * For broken (missing-from-storage) rows, the click silently opens the
+ * re-upload picker; the operator sees the underlying NoSuchKey via
+ * Sentry + PostHog + the Network tab. The user-facing UI never carries
+ * a destructive "File missing" alert.
+ */
 export default function LeaseAttachmentRow({
   att,
   canWrite,
@@ -33,25 +41,30 @@ export default function LeaseAttachmentRow({
     && (att.content_type === "application/pdf" || att.content_type.startsWith("image/"));
   const triggerReupload = () => reuploadInputRef.current?.click();
 
+  function handleMissingClick() {
+    reportMissingStorageObject({
+      domain: "lease_attachment",
+      attachment_id: att.id,
+      storage_key: att.storage_key,
+      parent_id: att.lease_id,
+      parent_kind: "signed_lease",
+    });
+    if (canWrite) triggerReupload();
+  }
+
   return (
     <li
       className="border rounded-md px-3 py-2 text-sm space-y-1"
       data-testid={`lease-attachment-${att.id}`}
     >
       <div className="flex items-center justify-between gap-2">
-        {/* Filename is always clickable. Behavior depends on state:
-            - missing  → opens the file picker for re-upload
-            - PDF/img  → opens the AttachmentViewer modal
-            - other    → opens the presigned URL in a new tab (download)
-        */}
         {isMissing ? (
           <button
             type="button"
-            onClick={() => (canWrite ? triggerReupload() : undefined)}
-            disabled={!canWrite}
-            className="truncate text-left text-destructive hover:underline font-medium min-w-0 disabled:cursor-not-allowed"
-            data-testid={`lease-attachment-reupload-trigger-${att.id}`}
-            title={canWrite ? `Re-upload ${att.filename}` : att.filename}
+            onClick={handleMissingClick}
+            className="truncate text-left text-primary hover:underline font-medium min-w-0"
+            data-testid={`lease-attachment-preview-${att.id}`}
+            title={att.filename}
           >
             {att.filename}
           </button>
@@ -119,27 +132,6 @@ export default function LeaseAttachmentRow({
           e.target.value = "";
         }}
       />
-
-      {isMissing ? (
-        <div
-          className="flex items-center gap-2 text-xs text-destructive"
-          role="alert"
-          data-testid={`lease-attachment-${att.id}-missing`}
-        >
-          <AlertTriangle size={14} aria-hidden="true" />
-          <span>File missing from storage.</span>
-          {canWrite ? (
-            <button
-              type="button"
-              onClick={triggerReupload}
-              className="inline-flex items-center gap-1 px-2 py-1 text-xs border rounded hover:bg-muted min-h-[28px]"
-              data-testid={`lease-attachment-${att.id}-reupload`}
-            >
-              <Upload size={12} aria-hidden="true" /> Re-upload
-            </button>
-          ) : null}
-        </div>
-      ) : null}
 
       <div className="flex items-center gap-2">
         {canWrite ? (

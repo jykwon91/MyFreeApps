@@ -1,6 +1,7 @@
-import { AlertTriangle, FileText, Paperclip, Trash2 } from "lucide-react";
+import { FileText, Paperclip, Trash2 } from "lucide-react";
 import type { ListingBlackoutAttachment } from "@/shared/types/listing/listing-blackout-attachment";
 import { formatFileSize } from "@/shared/utils/file-size";
+import { reportMissingStorageObject } from "@/shared/lib/storage-observability";
 
 export interface CalendarEventAttachmentCardProps {
   attachment: ListingBlackoutAttachment;
@@ -10,6 +11,17 @@ export interface CalendarEventAttachmentCardProps {
 export default function CalendarEventAttachmentCard({ attachment, onDelete }: CalendarEventAttachmentCardProps) {
   const isImage = attachment.content_type.startsWith("image/");
   const isMissing = attachment.is_available === false;
+
+  function handleMissingClick(e: React.MouseEvent) {
+    e.preventDefault();
+    reportMissingStorageObject({
+      domain: "blackout_attachment",
+      attachment_id: attachment.id,
+      storage_key: attachment.storage_key,
+      parent_id: attachment.listing_blackout_id,
+      parent_kind: "listing_blackout",
+    });
+  }
 
   return (
     <li
@@ -25,9 +37,7 @@ export default function CalendarEventAttachmentCard({ attachment, onDelete }: Ca
         />
       ) : (
         <div className="h-10 w-10 rounded bg-muted flex items-center justify-center shrink-0">
-          {isMissing ? (
-            <AlertTriangle size={16} className="text-destructive" aria-hidden="true" />
-          ) : attachment.content_type === "application/pdf" ? (
+          {attachment.content_type === "application/pdf" ? (
             <FileText size={16} className="text-muted-foreground" />
           ) : (
             <Paperclip size={16} className="text-muted-foreground" />
@@ -36,7 +46,17 @@ export default function CalendarEventAttachmentCard({ attachment, onDelete }: Ca
       )}
 
       <div className="flex-1 min-w-0">
-        {!isMissing && attachment.presigned_url ? (
+        {isMissing ? (
+          <button
+            type="button"
+            onClick={handleMissingClick}
+            className="text-sm font-medium truncate block text-left hover:underline text-primary"
+            data-testid="attachment-filename"
+            title={attachment.filename}
+          >
+            {attachment.filename}
+          </button>
+        ) : attachment.presigned_url ? (
           <a
             href={attachment.presigned_url}
             target="_blank"
@@ -47,17 +67,12 @@ export default function CalendarEventAttachmentCard({ attachment, onDelete }: Ca
             {attachment.filename}
           </a>
         ) : (
-          <span
-            className={`text-sm font-medium truncate block ${
-              isMissing ? "text-destructive" : ""
-            }`}
-            data-testid="attachment-filename"
-          >
+          <span className="text-sm font-medium truncate block" data-testid="attachment-filename">
             {attachment.filename}
           </span>
         )}
         <span className="text-xs text-muted-foreground">
-          {isMissing ? "File missing from storage." : formatFileSize(attachment.size_bytes)}
+          {formatFileSize(attachment.size_bytes)}
         </span>
       </div>
 

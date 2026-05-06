@@ -1,11 +1,12 @@
 import { useRef } from "react";
-import { AlertTriangle, Download, Trash2, Upload } from "lucide-react";
+import { Download, Trash2 } from "lucide-react";
 import {
   INSURANCE_ATTACHMENT_KIND_LABELS,
   type InsuranceAttachmentKind,
 } from "@/shared/types/insurance/insurance-attachment-kind";
 import type { InsurancePolicyAttachment } from "@/shared/types/insurance/insurance-policy-attachment";
 import { LEASE_REUPLOAD_ACCEPT } from "@/shared/lib/lease-reupload-accept";
+import { reportMissingStorageObject } from "@/shared/lib/storage-observability";
 
 export interface InsurancePolicyAttachmentRowProps {
   att: InsurancePolicyAttachment;
@@ -30,6 +31,17 @@ export default function InsurancePolicyAttachmentRow({
     && (att.content_type === "application/pdf" || att.content_type.startsWith("image/"));
   const triggerReupload = () => reuploadInputRef.current?.click();
 
+  function handleMissingClick() {
+    reportMissingStorageObject({
+      domain: "insurance_attachment",
+      attachment_id: att.id,
+      storage_key: att.storage_key,
+      parent_id: att.policy_id,
+      parent_kind: "insurance_policy",
+    });
+    if (canWrite) triggerReupload();
+  }
+
   return (
     <li
       className="border rounded-md px-3 py-2 text-sm space-y-1"
@@ -39,11 +51,10 @@ export default function InsurancePolicyAttachmentRow({
         {isMissing ? (
           <button
             type="button"
-            onClick={() => (canWrite ? triggerReupload() : undefined)}
-            disabled={!canWrite}
-            className="truncate text-left text-destructive hover:underline font-medium min-w-0 disabled:cursor-not-allowed"
-            data-testid={`insurance-attachment-reupload-trigger-${att.id}`}
-            title={canWrite ? `Re-upload ${att.filename}` : att.filename}
+            onClick={handleMissingClick}
+            className="truncate text-left text-primary hover:underline font-medium min-w-0"
+            data-testid={`insurance-attachment-preview-${att.id}`}
+            title={att.filename}
           >
             {att.filename}
           </button>
@@ -112,27 +123,6 @@ export default function InsurancePolicyAttachmentRow({
           e.target.value = "";
         }}
       />
-
-      {isMissing ? (
-        <div
-          className="flex items-center gap-2 text-xs text-destructive"
-          role="alert"
-          data-testid={`insurance-attachment-${att.id}-missing`}
-        >
-          <AlertTriangle size={14} aria-hidden="true" />
-          <span>File missing from storage.</span>
-          {canWrite ? (
-            <button
-              type="button"
-              onClick={triggerReupload}
-              className="inline-flex items-center gap-1 px-2 py-1 text-xs border rounded hover:bg-muted min-h-[28px]"
-              data-testid={`insurance-attachment-${att.id}-reupload`}
-            >
-              <Upload size={12} aria-hidden="true" /> Re-upload
-            </button>
-          ) : null}
-        </div>
-      ) : null}
 
       <span className="text-xs text-muted-foreground">
         {INSURANCE_ATTACHMENT_KIND_LABELS[att.kind as InsuranceAttachmentKind] ?? att.kind}
