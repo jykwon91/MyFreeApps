@@ -58,10 +58,13 @@ export default function RootLayout() {
 
   const user = isAuthenticated ? getUserFromToken() : { name: "You", email: "" };
 
+  // Matches the favicon (briefcase emoji from index.html) so the
+  // brand mark is consistent everywhere it shows. The previous
+  // text-based "J" tile read like a dev placeholder.
   const logo = (
     <div className="flex items-center gap-2">
-      <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center shrink-0">
-        <span className="text-primary-foreground font-bold text-sm">J</span>
+      <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 text-base leading-none">
+        <span aria-hidden="true">💼</span>
       </div>
       <span className="font-semibold text-sm">MyJobHunter</span>
     </div>

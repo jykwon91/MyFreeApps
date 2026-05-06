@@ -24,15 +24,19 @@ export const NAV_DESCRIPTORS: NavDescriptor[] = [
 ];
 
 /**
- * Admin-only nav descriptors. Appended to the user nav by `buildNav`
- * when called with `includeAdmin=true`. Hidden by default; the
- * RootLayout decides who sees these by inspecting the user's role.
+ * Superuser-only nav descriptors. Appended to the user nav by `buildNav`
+ * when called with `includeAdmin=true`. The RootLayout decides who sees
+ * these by inspecting `is_superuser` via `useIsSuperuser`.
+ *
+ * Single landing point — `/admin` — with sub-pages (demo, invites)
+ * surfaced via the dashboard's card grid rather than separate nav
+ * items. Avoids cluttering the sidebar with one-off operator tools.
  */
 export const ADMIN_NAV_DESCRIPTORS: NavDescriptor[] = [
   {
-    path: ADMIN_ROUTES.DEMO_USERS,
-    label: "Demo accounts",
-    iconName: "Wand2",
+    path: ADMIN_ROUTES.DASHBOARD,
+    label: "Admin",
+    iconName: "Shield",
   },
 ];
 
