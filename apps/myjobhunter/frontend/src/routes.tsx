@@ -12,7 +12,10 @@ import Settings from "@/pages/Settings";
 import Login from "@/pages/Login";
 import VerifyEmail from "@/pages/VerifyEmail";
 import NotFound from "@/pages/NotFound";
+import DemoUsers from "@/pages/admin/DemoUsers";
 import RootLayout from "@/RootLayout";
+import RequireAdmin from "@/components/RequireAdmin";
+import { ADMIN_ROUTES } from "@/constants/admin-routes";
 
 export const routes: RouteObject[] = [
   {
@@ -29,6 +32,14 @@ export const routes: RouteObject[] = [
       { path: "/profile", element: <Profile /> },
       { path: "/settings", element: <Settings /> },
       { path: "/security", element: <Security /> },
+      {
+        path: ADMIN_ROUTES.DEMO_USERS,
+        element: (
+          <RequireAdmin>
+            <DemoUsers />
+          </RequireAdmin>
+        ),
+      },
     ],
   },
   { path: "/login", element: <Login /> },
