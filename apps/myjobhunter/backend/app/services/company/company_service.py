@@ -71,11 +71,17 @@ async def create_company(
 
     Commits at the end so the write survives the request lifecycle.
     """
+    # ``logo_url`` is typed as ``AnyHttpUrl`` on the Pydantic schema for
+    # input validation. In Pydantic v2 that's a ``Url`` wrapper object,
+    # NOT a str subclass — passing it directly to SQLAlchemy / asyncpg
+    # raises at parameter-bind time (HTTP 500). Coerce to plain str
+    # before persistence. Same for ``primary_domain`` defensively even
+    # though that field is ``str | None`` today (matches the pattern).
     company = Company(
         user_id=user_id,
         name=request.name,
         primary_domain=request.primary_domain,
-        logo_url=request.logo_url,
+        logo_url=str(request.logo_url) if request.logo_url is not None else None,
         industry=request.industry,
         size_range=request.size_range,
         hq_location=request.hq_location,
