@@ -230,11 +230,14 @@ def _application_contact_to_export_dict(item: ApplicationContact) -> dict:
 def _document_to_export_dict(item: Document) -> dict:
     return {
         "id": str(item.id),
-        "application_id": str(item.application_id),
-        "document_type": item.document_type,
+        "application_id": str(item.application_id) if item.application_id else None,
+        "title": item.title,
+        "kind": item.kind,
+        "body": item.body,
         "file_path": item.file_path,
-        "generated_by": item.generated_by,
-        "version": item.version,
+        "filename": item.filename,
+        "content_type": item.content_type,
+        "size_bytes": item.size_bytes,
         "deleted_at": item.deleted_at.isoformat() if item.deleted_at else None,
         "created_at": item.created_at.isoformat() if item.created_at else None,
     }
