@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import uuid
 
-from pydantic import BaseModel, ConfigDict, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 from platform_shared.core.permissions import Role
 
@@ -39,6 +39,27 @@ class AdminUserRoleUpdate(BaseModel):
     """Body for PATCH /admin/users/{id}/role."""
 
     role: Role
+
+
+class SuperuserToggleRequest(BaseModel):
+    """Body for PATCH /admin/users/{id}/superuser.
+
+    Step-up auth: the calling admin must supply a current TOTP code
+    (or a recovery code) along with the toggle. The router's
+    ``step_up_verify`` callable validates it against the admin's
+    enrolled secret. A leaked session token alone is NOT sufficient
+    to flip the most-privileged flag in the system.
+    """
+
+    totp_code: str = Field(
+        ...,
+        min_length=1,
+        max_length=20,
+        description=(
+            "Current 6-digit TOTP code or a recovery code from the "
+            "calling admin's authenticator. Required."
+        ),
+    )
 
 
 class UserStats(BaseModel):
