@@ -16,4 +16,11 @@ export interface SignedLeaseAttachment {
   uploaded_by_user_id: string;
   uploaded_at: string;
   presigned_url: string | null;
+  /**
+   * `false` when the underlying MinIO object is missing (NoSuchKey on HEAD).
+   * The UI surfaces a "File missing — re-upload" affordance instead of the
+   * normal Open / Download links so the user gets an actionable error.
+   * Defaults to `true` for backwards-compat with older API responses.
+   */
+  is_available: boolean;
 }

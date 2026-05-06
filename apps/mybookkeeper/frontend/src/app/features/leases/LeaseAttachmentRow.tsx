@@ -1,4 +1,5 @@
-import { Download, Trash2 } from "lucide-react";
+import { useRef } from "react";
+import { AlertTriangle, Download, Trash2, Upload } from "lucide-react";
 import { LEASE_ATTACHMENT_KIND_LABELS } from "@/shared/lib/lease-labels";
 import {
   LEASE_ATTACHMENT_KINDS,
@@ -12,12 +13,31 @@ export interface LeaseAttachmentRowProps {
   onPreview: () => void;
   onDelete: () => void;
   onKindChange: (kind: LeaseAttachmentKind) => void;
+  onReupload: (file: File) => void;
 }
 
-export default function LeaseAttachmentRow({ att, canWrite, onPreview, onDelete, onKindChange }: LeaseAttachmentRowProps) {
+const REUPLOAD_ACCEPT = [
+  "application/pdf",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+].join(",");
+
+export default function LeaseAttachmentRow({
+  att,
+  canWrite,
+  onPreview,
+  onDelete,
+  onKindChange,
+  onReupload,
+}: LeaseAttachmentRowProps) {
+  const reuploadInputRef = useRef<HTMLInputElement>(null);
+  const isMissing = att.is_available === false;
   const canPreview =
-    att.presigned_url !== null &&
-    (att.content_type === "application/pdf" || att.content_type.startsWith("image/"));
+    !isMissing
+    && att.presigned_url !== null
+    && (att.content_type === "application/pdf" || att.content_type.startsWith("image/"));
 
   return (
     <li
@@ -36,13 +56,18 @@ export default function LeaseAttachmentRow({ att, canWrite, onPreview, onDelete,
             {att.filename}
           </button>
         ) : (
-          <span className="truncate text-muted-foreground min-w-0" title={att.filename}>
+          <span
+            className={`truncate min-w-0 ${
+              isMissing ? "text-destructive" : "text-muted-foreground"
+            }`}
+            title={att.filename}
+          >
             {att.filename}
           </span>
         )}
 
         <div className="flex items-center gap-2 shrink-0">
-          {att.presigned_url ? (
+          {!isMissing && att.presigned_url ? (
             <a
               href={att.presigned_url}
               target="_blank"
@@ -66,6 +91,38 @@ export default function LeaseAttachmentRow({ att, canWrite, onPreview, onDelete,
           ) : null}
         </div>
       </div>
+
+      {isMissing ? (
+        <div
+          className="flex items-center gap-2 text-xs text-destructive"
+          data-testid={`lease-attachment-missing-${att.id}`}
+          role="alert"
+        >
+          <AlertTriangle size={14} aria-hidden="true" />
+          <span>File missing from storage.</span>
+          {canWrite ? (
+            <button
+              type="button"
+              onClick={() => reuploadInputRef.current?.click()}
+              className="inline-flex items-center gap-1 px-2 py-1 text-xs border rounded hover:bg-muted min-h-[28px]"
+              data-testid={`lease-attachment-reupload-${att.id}`}
+            >
+              <Upload size={12} aria-hidden="true" /> Re-upload
+            </button>
+          ) : null}
+          <input
+            ref={reuploadInputRef}
+            type="file"
+            className="hidden"
+            accept={REUPLOAD_ACCEPT}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) onReupload(file);
+              e.target.value = "";
+            }}
+          />
+        </div>
+      ) : null}
 
       <div className="flex items-center gap-2">
         {canWrite ? (

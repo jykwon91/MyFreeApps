@@ -93,6 +93,31 @@ export default function LeaseAttachmentsSection({ leaseId, attachments, canWrite
     }
   }
 
+  async function handleReupload(att: SignedLeaseAttachment, file: File) {
+    if (file.type && !ALLOWED_MIME.includes(file.type)) {
+      showError(`${file.name}: unsupported file type.`);
+      return;
+    }
+    // Delete the orphan row first, then upload the new file under the same
+    // kind. The orphan is already broken so loss of the row mid-flow is
+    // acceptable — the user can retry the upload via the dropzone.
+    try {
+      await deleteAttachment({ leaseId, attachmentId: att.id }).unwrap();
+    } catch {
+      showError("Couldn't remove the broken file. Please try again.");
+      return;
+    }
+    try {
+      await uploadAttachment({ leaseId, file, kind: att.kind }).unwrap();
+      showSuccess(`${file.name} uploaded.`);
+    } catch (e: unknown) {
+      const status = (e as { status?: number }).status;
+      if (status === 413) showError(`${file.name} is too large.`);
+      else if (status === 415) showError(`${file.name}: unsupported file type.`);
+      else showError(`Couldn't upload ${file.name}.`);
+    }
+  }
+
   return (
     <section className="space-y-3">
       {attachments.length === 0 ? (
@@ -109,6 +134,7 @@ export default function LeaseAttachmentsSection({ leaseId, attachments, canWrite
               onPreview={() => setViewingAttachment(att)}
               onDelete={() => void handleDelete(att)}
               onKindChange={(kind) => void handleKindChange(att, kind)}
+              onReupload={(file) => void handleReupload(att, file)}
             />
           ))}
         </ul>
