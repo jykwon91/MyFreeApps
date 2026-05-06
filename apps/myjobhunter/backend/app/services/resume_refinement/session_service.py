@@ -22,10 +22,19 @@ Each "advance" entry point has the same shape:
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import uuid
+from decimal import Decimal
 from typing import Any
+
+# Cap on parallel Claude calls during session-start prefetch. Anthropic
+# allows higher concurrency, but throttling protects against rate-limit
+# spikes when a session has many improvement targets and ensures a
+# clean failure mode if Claude has an outage (5 in-flight requests
+# fail-fast vs. 13).
+_PREFETCH_CONCURRENCY = 5
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -132,9 +141,26 @@ async def start_session(
         tokens_out=critique["output_tokens"],
     )
 
-    # Kick off the first rewrite proposal.
-    session = await _generate_next_proposal(db, session, user_id=user_id, hint=None)
-    return session
+    # Prefetch proposals for ALL critique targets in parallel. The
+    # operator's stated workflow is to browse every suggestion before
+    # acting, so we pay the Claude cost up front to make navigation
+    # instant. Wall-clock latency is one Claude round-trip (capped at
+    # _PREFETCH_CONCURRENCY in flight); per-target failures are
+    # graceful — those targets generate on first visit.
+    session = await _prefetch_all_proposals(
+        db, session, user_id=user_id,
+    )
+
+    # Hydrate pending_* from the cache for the starting target so the
+    # session-start response includes a proposal. If the prefetch for
+    # target 0 failed, fall back to a synchronous generation (matches
+    # the pre-prefetch behavior).
+    hydrated = await session_repo.hydrate_pending_from_cache(
+        db, session, target_index=session.target_index,
+    )
+    if hydrated is not None:
+        return hydrated
+    return await _generate_next_proposal(db, session, user_id=user_id, hint=None)
 
 
 async def get_session_state(
@@ -553,6 +579,98 @@ async def _generate_next_proposal(
         tokens_out=rewrite["output_tokens"],
     )
 
+    return session
+
+
+async def _prefetch_all_proposals(
+    db: AsyncSession,
+    session: ResumeRefinementSession,
+    *,
+    user_id: uuid.UUID,
+) -> ResumeRefinementSession:
+    """Generate proposals for every critique target in parallel and
+    populate ``proposal_cache``.
+
+    Called once at session start so the operator's first navigation
+    forward — and every navigation after — is a cache hit. Per-target
+    Claude failures degrade gracefully: those targets are simply left
+    out of the cache and will generate on first visit.
+
+    Concurrency is capped at ``_PREFETCH_CONCURRENCY`` to avoid
+    triggering Anthropic rate limits when a session has many targets.
+    Total wall-clock latency is approximately
+    ``ceil(N / _PREFETCH_CONCURRENCY) * one_round_trip``.
+
+    Token / cost counters on the session are updated by the per-target
+    helper, so the operator's totals reflect the true spend.
+    """
+    targets = session.improvement_targets or []
+    if not targets:
+        return session
+
+    semaphore = asyncio.Semaphore(_PREFETCH_CONCURRENCY)
+    current_draft = session.current_draft
+
+    async def _one(target_index: int, target: dict[str, Any]) -> dict[str, Any] | None:
+        async with semaphore:
+            try:
+                rewrite = await rewrite_service.run_rewrite(
+                    resume_markdown=current_draft,
+                    target=target,
+                    hint=None,
+                    user_id=user_id,
+                    session_id=session.id,
+                )
+            except Exception as exc:  # noqa: BLE001 — graceful per-target degrade
+                logger.warning(
+                    "Prefetch rewrite failed session=%s target_index=%d: %s",
+                    session.id, target_index, exc,
+                )
+                return None
+            return {
+                "target_index": target_index,
+                "target": target,
+                "rewrite": rewrite,
+            }
+
+    results = await asyncio.gather(
+        *[_one(i, t) for i, t in enumerate(targets)],
+    )
+
+    # Sequential DB writes after parallel Claude calls — JSONB column
+    # mutation is not safe across concurrent transactions on the same
+    # row. Each write is fast (single round-trip) so the sequential
+    # cost is negligible.
+    for entry in results:
+        if entry is None:
+            continue
+        target = entry["target"]
+        rewrite = entry["rewrite"]
+        is_proposal = rewrite.get("kind") == "proposal"
+        is_clarify = rewrite.get("kind") == "clarify"
+
+        # Bump session counters via update_pending_proposal — but for
+        # prefetch we don't actually want the pending_* fields stamped
+        # (they belong to the CURRENT target only). Use a token-only
+        # accumulator instead.
+        session.total_tokens_in += rewrite["input_tokens"]
+        session.total_tokens_out += rewrite["output_tokens"]
+        session.total_cost_usd = (
+            session.total_cost_usd or Decimal("0")
+        ) + rewrite["cost_usd"]
+
+        session = await session_repo.cache_proposal(
+            db,
+            session,
+            target_index=entry["target_index"],
+            target_section=target.get("section"),
+            proposal=rewrite["rewritten_text"] if is_proposal else None,
+            rationale=rewrite["rationale"] if is_proposal else None,
+            clarifying_question=rewrite["question"] if is_clarify else None,
+        )
+    await db.flush()
+    await db.commit()
+    await db.refresh(session)
     return session
 
 
