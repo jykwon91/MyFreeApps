@@ -127,14 +127,18 @@ if [[ ! -f "$INFRA_ENV" ]]; then
   exit 1
 fi
 
-# Pull MinIO root creds from the shared infra .env. The migration script
-# wrote MBK's existing root user/password into this file so old
-# encrypted objects remain readable.
+# Pull MinIO root creds + KMS secret from the shared infra .env. The
+# migration script wrote MBK's existing root user/password/KMS secret
+# into this file so old encrypted objects remain readable.
+# MINIO_KMS_SECRET_KEY is REQUIRED — MBK enables SSE-S3 auto-encryption,
+# so without the matching KMS key the temp container can list metadata
+# but cannot decrypt object bytes for the mirror copy.
 # shellcheck disable=SC1090
 source "$INFRA_ENV"
 : "${MINIO_ROOT_USER:?MINIO_ROOT_USER must be set in $INFRA_ENV}"
 : "${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD must be set in $INFRA_ENV}"
-green "  ✓ MinIO root credentials loaded from $INFRA_ENV"
+: "${MINIO_KMS_SECRET_KEY:?MINIO_KMS_SECRET_KEY must be set in $INFRA_ENV}"
+green "  ✓ MinIO root credentials + KMS key loaded from $INFRA_ENV"
 
 # ──────────────────────────────────────────────────────────────────────────
 # Bring up a temporary read-only MinIO against the old volume
@@ -150,6 +154,8 @@ docker run -d \
   -p "127.0.0.1:${TEMP_PORT}:9000" \
   -e "MINIO_ROOT_USER=$MINIO_ROOT_USER" \
   -e "MINIO_ROOT_PASSWORD=$MINIO_ROOT_PASSWORD" \
+  -e "MINIO_KMS_SECRET_KEY=$MINIO_KMS_SECRET_KEY" \
+  -e "MINIO_KMS_AUTO_ENCRYPTION=on" \
   -v "${OLD_VOLUME}:/data:ro" \
   --restart no \
   minio/minio:RELEASE.2025-09-07T16-13-09Z \
@@ -178,10 +184,18 @@ blue "Step 3/6: inspecting old volume contents"
 if ! docker exec "$TEMP_CONTAINER" mc ls "self/$BUCKET" >/dev/null 2>&1; then
   red "bucket '$BUCKET' not found in old volume"
   red "the old volume may be from a different MBK install — recovery not applicable"
+  red ""
+  red "Diagnostic — top-level contents of self/:"
+  docker exec "$TEMP_CONTAINER" mc ls "self/" || true
   exit 1
 fi
 
-OLD_KEY_COUNT=$(docker exec "$TEMP_CONTAINER" mc find "self/$BUCKET" --type f 2>/dev/null | wc -l)
+# `mc ls --recursive` is universally supported across mc versions and
+# always exits 0 on a present bucket. `mc find --type f` was used here
+# previously and silently failed under set -euo pipefail (the option
+# isn't honoured in some mc builds), aborting the script with no error.
+OLD_KEY_COUNT=$(docker exec "$TEMP_CONTAINER" mc ls --recursive "self/$BUCKET" 2>/dev/null | wc -l || true)
+OLD_KEY_COUNT="${OLD_KEY_COUNT:-0}"
 green "  ✓ old bucket has $OLD_KEY_COUNT objects"
 
 # ──────────────────────────────────────────────────────────────────────────
@@ -191,7 +205,8 @@ blue "Step 4/6: configuring mc for shared MinIO"
 
 docker exec "$TEMP_CONTAINER" mc alias set shared "http://${NEW_CONTAINER}:9000" "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD" >/dev/null
 
-NEW_KEY_COUNT_BEFORE=$(docker exec "$TEMP_CONTAINER" mc find "shared/$BUCKET" --type f 2>/dev/null | wc -l)
+NEW_KEY_COUNT_BEFORE=$(docker exec "$TEMP_CONTAINER" mc ls --recursive "shared/$BUCKET" 2>/dev/null | wc -l || true)
+NEW_KEY_COUNT_BEFORE="${NEW_KEY_COUNT_BEFORE:-0}"
 green "  ✓ shared bucket currently has $NEW_KEY_COUNT_BEFORE objects"
 
 # ──────────────────────────────────────────────────────────────────────────
@@ -201,8 +216,8 @@ if [[ "$DRY_RUN" == "1" ]]; then
   blue "Step 5/6: DRY RUN — listing keys in old NOT in shared"
   docker exec "$TEMP_CONTAINER" sh -c "
     diff \
-      <(mc find self/$BUCKET --type f | sed 's|self/||' | sort) \
-      <(mc find shared/$BUCKET --type f | sed 's|shared/||' | sort) \
+      <(mc ls --recursive self/$BUCKET | awk '{print \$NF}' | sort) \
+      <(mc ls --recursive shared/$BUCKET | awk '{print \$NF}' | sort) \
       | grep '^<' | sed 's/^< //'
   " | head -200
   yellow "  ↑ keys above would be copied. Re-run without --dry-run to actually mirror."
@@ -216,7 +231,8 @@ blue "Step 5/6: mirroring missing keys (--overwrite=false)"
 docker exec "$TEMP_CONTAINER" \
   mc mirror --overwrite=false --preserve "self/$BUCKET" "shared/$BUCKET"
 
-NEW_KEY_COUNT_AFTER=$(docker exec "$TEMP_CONTAINER" mc find "shared/$BUCKET" --type f 2>/dev/null | wc -l)
+NEW_KEY_COUNT_AFTER=$(docker exec "$TEMP_CONTAINER" mc ls --recursive "shared/$BUCKET" 2>/dev/null | wc -l || true)
+NEW_KEY_COUNT_AFTER="${NEW_KEY_COUNT_AFTER:-0}"
 COPIED=$((NEW_KEY_COUNT_AFTER - NEW_KEY_COUNT_BEFORE))
 green "  ✓ mirror complete: $COPIED objects newly copied"
 
@@ -226,7 +242,8 @@ green "  ✓ mirror complete: $COPIED objects newly copied"
 blue "Step 6/6: verifying recovery for known-missing lease (Sonu King)"
 
 KNOWN_MISSING_PREFIX="signed-leases/25463728-889a-48fa-a942-6507d1d4adaf"
-RECOVERED=$(docker exec "$TEMP_CONTAINER" mc find "shared/$BUCKET/$KNOWN_MISSING_PREFIX" --type f 2>/dev/null | wc -l)
+RECOVERED=$(docker exec "$TEMP_CONTAINER" mc ls --recursive "shared/$BUCKET/$KNOWN_MISSING_PREFIX" 2>/dev/null | wc -l || true)
+RECOVERED="${RECOVERED:-0}"
 echo "  $RECOVERED objects now present under $KNOWN_MISSING_PREFIX/"
 if [[ "$RECOVERED" -ge 1 ]]; then
   green "  ✓ Sonu King lease attachments recovered"
