@@ -59,9 +59,9 @@ export default function LinkedLeaseDocuments({ lease }: LinkedLeaseDocumentsProp
         onPreview={setViewing}
       />
 
-      {viewing?.presigned_url ? (
+      {viewing ? (
         <AttachmentViewer
-          url={viewing.presigned_url}
+          url={viewing.presigned_url ?? ""}
           filename={viewing.filename}
           contentType={viewing.content_type}
           onClose={() => setViewing(null)}

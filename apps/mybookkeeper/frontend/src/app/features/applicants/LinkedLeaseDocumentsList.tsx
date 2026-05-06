@@ -38,10 +38,6 @@ export default function LinkedLeaseDocumentsList({
   return (
     <ul className="space-y-1">
       {attachments.map((att) => {
-        const canPreviewInline =
-          att.presigned_url !== null
-          && (att.content_type === "application/pdf"
-            || att.content_type.startsWith("image/"));
         const kindLabel =
           LEASE_ATTACHMENT_KIND_LABELS[att.kind as LeaseAttachmentKind] ?? att.kind;
 
@@ -53,28 +49,18 @@ export default function LinkedLeaseDocumentsList({
           >
             <div className="flex items-center gap-2 min-w-0">
               <FileText className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden="true" />
-              {canPreviewInline ? (
-                <button
-                  type="button"
-                  onClick={() => onPreview(att)}
-                  className="text-left text-primary hover:underline font-medium truncate"
-                  data-testid={`linked-lease-attachment-preview-${att.id}`}
-                  title={att.filename}
-                >
-                  {att.filename}
-                </button>
-              ) : (
-                <a
-                  href={att.presigned_url ?? undefined}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-left text-primary hover:underline font-medium truncate"
-                  data-testid={`linked-lease-attachment-download-link-${att.id}`}
-                  title={att.filename}
-                >
-                  {att.filename}
-                </a>
-              )}
+              {/* Filename always opens the AttachmentViewer modal — the
+                  modal renders the file when the URL is present, or a
+                  neutral "no longer available" message when it's not. */}
+              <button
+                type="button"
+                onClick={() => onPreview(att)}
+                className="text-left text-primary hover:underline font-medium truncate"
+                data-testid={`linked-lease-attachment-preview-${att.id}`}
+                title={att.filename}
+              >
+                {att.filename}
+              </button>
               <span className="text-xs text-muted-foreground shrink-0">{kindLabel}</span>
             </div>
             {att.presigned_url ? (

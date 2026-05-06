@@ -2,6 +2,7 @@ import type { AttachmentViewMode } from "@/shared/types/lease/attachment-view-mo
 import AttachmentViewerImageBody from "./AttachmentViewerImageBody";
 import AttachmentViewerOtherBody from "./AttachmentViewerOtherBody";
 import AttachmentViewerPdfBody from "./AttachmentViewerPdfBody";
+import AttachmentViewerUnavailableBody from "./AttachmentViewerUnavailableBody";
 
 export interface AttachmentViewerBodyProps {
   mode: AttachmentViewMode;
@@ -21,5 +22,7 @@ export default function AttachmentViewerBody({
       return <AttachmentViewerImageBody url={url} filename={filename} />;
     case "other":
       return <AttachmentViewerOtherBody url={url} filename={filename} />;
+    case "unavailable":
+      return <AttachmentViewerUnavailableBody />;
   }
 }

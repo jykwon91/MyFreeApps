@@ -24,10 +24,6 @@ export default function LeaseAttachmentRow({
   onKindChange,
 }: LeaseAttachmentRowProps) {
   const isMissing = att.is_available === false;
-  const canPreviewInline =
-    !isMissing
-    && att.presigned_url !== null
-    && (att.content_type === "application/pdf" || att.content_type.startsWith("image/"));
 
   useEffect(() => {
     if (!isMissing) return;
@@ -46,28 +42,17 @@ export default function LeaseAttachmentRow({
       data-testid={`lease-attachment-${att.id}`}
     >
       <div className="flex items-center justify-between gap-2">
-        {canPreviewInline ? (
-          <button
-            type="button"
-            onClick={onPreview}
-            className="truncate text-left text-primary hover:underline font-medium min-w-0"
-            data-testid={`lease-attachment-preview-${att.id}`}
-            title={att.filename}
-          >
-            {att.filename}
-          </button>
-        ) : (
-          <a
-            href={att.presigned_url ?? undefined}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="truncate text-left text-primary hover:underline font-medium min-w-0"
-            data-testid={`lease-attachment-download-link-${att.id}`}
-            title={att.filename}
-          >
-            {att.filename}
-          </a>
-        )}
+        {/* Filename always opens AttachmentViewer modal — viewer renders
+            file when URL present, neutral empty-state when not. */}
+        <button
+          type="button"
+          onClick={onPreview}
+          className="truncate text-left text-primary hover:underline font-medium min-w-0"
+          data-testid={`lease-attachment-preview-${att.id}`}
+          title={att.filename}
+        >
+          {att.filename}
+        </button>
 
         <div className="flex items-center gap-2 shrink-0">
           {att.presigned_url ? (

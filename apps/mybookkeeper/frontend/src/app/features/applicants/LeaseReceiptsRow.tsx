@@ -53,26 +53,14 @@ export default function LeaseReceiptsRow({ leaseId, onPreview }: LeaseReceiptsRo
         >
           <div className="flex items-center gap-2 min-w-0">
             <FileText className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden="true" />
-            {att.presigned_url ? (
-              <button
-                type="button"
-                onClick={() => onPreview(att)}
-                className="text-left text-primary hover:underline font-medium truncate"
-                title={att.filename}
-              >
-                {att.filename}
-              </button>
-            ) : (
-              <a
-                href={undefined}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-left text-primary hover:underline font-medium truncate"
-                title={att.filename}
-              >
-                {att.filename}
-              </a>
-            )}
+            <button
+              type="button"
+              onClick={() => onPreview(att)}
+              className="text-left text-primary hover:underline font-medium truncate"
+              title={att.filename}
+            >
+              {att.filename}
+            </button>
           </div>
           {att.presigned_url ? (
             <a

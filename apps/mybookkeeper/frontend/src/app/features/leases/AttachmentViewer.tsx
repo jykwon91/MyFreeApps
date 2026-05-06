@@ -4,6 +4,11 @@ import { useAttachmentViewMode } from "./useAttachmentViewMode";
 import AttachmentViewerBody from "./AttachmentViewerBody";
 
 export interface AttachmentViewerProps {
+  /**
+   * Presigned URL or empty string when the underlying object is missing.
+   * Empty triggers the "unavailable" body and suppresses the
+   * "Open in new tab" link in the header.
+   */
   url: string;
   filename: string;
   contentType: string;
@@ -18,6 +23,7 @@ export interface AttachmentViewerProps {
  * - PDF → iframe
  * - image/* → <img>
  * - anything else → download-only message (DOCX, etc.)
+ * - URL is empty (storage object missing) → "no longer available" message
  */
 export default function AttachmentViewer({
   url,
@@ -25,7 +31,7 @@ export default function AttachmentViewer({
   contentType,
   onClose,
 }: AttachmentViewerProps) {
-  const mode = useAttachmentViewMode({ contentType });
+  const mode = useAttachmentViewMode({ url, contentType });
 
   return (
     <Panel position="center" onClose={onClose}>
@@ -37,16 +43,18 @@ export default function AttachmentViewer({
           >
             {filename}
           </span>
-          <a
-            href={url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs text-primary hover:underline inline-flex items-center gap-1 shrink-0"
-            data-testid="attachment-viewer-open-in-new-tab"
-          >
-            <ExternalLink size={12} />
-            Open in new tab
-          </a>
+          {url ? (
+            <a
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-primary hover:underline inline-flex items-center gap-1 shrink-0"
+              data-testid="attachment-viewer-open-in-new-tab"
+            >
+              <ExternalLink size={12} />
+              Open in new tab
+            </a>
+          ) : null}
         </div>
         <PanelCloseButton onClose={onClose} label="Close viewer" />
       </header>
