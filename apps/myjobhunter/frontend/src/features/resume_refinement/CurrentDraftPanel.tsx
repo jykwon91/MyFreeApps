@@ -6,10 +6,21 @@ interface CurrentDraftPanelProps {
   highlightText?: string | null;
 }
 
+/**
+ * Resume-preview pane.
+ *
+ * Designed to live inside ``ActiveSessionLayout``'s left column,
+ * which sets a fixed height + ``min-h-0``. We fill that height
+ * with ``flex-1`` and let the inner block own the scroll. The
+ * outer ``section`` gets ``flex flex-col`` so the inner scroll
+ * region (the rendered markdown) shrinks to fit and scrolls
+ * internally — the operator always sees the full resume while
+ * working through suggestions on the right.
+ */
 export default function CurrentDraftPanel({ markdown, highlightText }: CurrentDraftPanelProps) {
   return (
-    <section className="rounded-lg border border-border bg-card p-4 space-y-2">
-      <header>
+    <section className="rounded-lg border border-border bg-card p-4 flex flex-col min-h-0 flex-1 gap-2">
+      <header className="shrink-0">
         <h2 className="text-sm font-semibold">Current draft</h2>
         <p className="text-xs text-muted-foreground mt-0.5">
           Your live working copy.{" "}
@@ -18,16 +29,7 @@ export default function CurrentDraftPanel({ markdown, highlightText }: CurrentDr
             : "Changes apply as you accept rewrites."}
         </p>
       </header>
-      {/* Fill the visible viewport on desktop so the operator always
-          sees the full resume while iterating on the suggestion card.
-          ``calc(100dvh - 12rem)`` reserves room for the AppShell
-          header (3.5rem) + page top padding (1-2rem) + this section's
-          own header / padding (~3rem). ``dvh`` follows mobile-browser
-          chrome so the panel never gets buried under a slide-up
-          toolbar. The inner block keeps its own ``overflow-y-auto``
-          so a long resume scrolls inside the panel rather than
-          pushing the page. */}
-      <div className="rounded-md border border-border bg-background p-4 overflow-y-auto max-h-[calc(100dvh-12rem)]">
+      <div className="rounded-md border border-border bg-background p-4 overflow-y-auto flex-1 min-h-0">
         {markdown.trim() ? (
           <MarkdownPreview source={markdown} highlightText={highlightText} />
         ) : (
