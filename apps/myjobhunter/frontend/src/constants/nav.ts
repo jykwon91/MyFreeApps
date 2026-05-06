@@ -14,6 +14,11 @@ export interface NavDescriptor {
 }
 
 export const NAV_DESCRIPTORS: NavDescriptor[] = [
+  // "Analyze a job" is the operator's primary entry point — paste a JD,
+  // see how it ranks, then decide whether to add it to applications.
+  // Listed first per session decision: the application page is no
+  // longer the first step in the new-job workflow.
+  { path: "/analyze", label: "Analyze a job", iconName: "Search" },
   { path: "/dashboard", label: "Dashboard", iconName: "LayoutDashboard" },
   { path: "/applications", label: "Applications", iconName: "Briefcase" },
   { path: "/companies", label: "Companies", iconName: "Building2" },

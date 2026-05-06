@@ -11,7 +11,7 @@ from jwt.exceptions import PyJWTError as JWTError
 
 from platform_shared.core.lifespan import create_app_lifespan
 
-from app.api import account, admin, admin_invites, applications, companies, demo, documents, health, integrations, profile, resume_refinement, resumes, totp
+from app.api import account, admin, admin_invites, applications, companies, demo, documents, health, integrations, job_analysis, profile, resume_refinement, resumes, totp
 from app.core.audit import current_user_id
 from app.core.auth import auth_backend, fastapi_users
 from app.core.config import settings
@@ -175,6 +175,7 @@ app.include_router(
 app.include_router(health.router, tags=["health"])
 app.include_router(profile.router, tags=["profile"])
 app.include_router(applications.router, tags=["applications"])
+app.include_router(job_analysis.router, tags=["job_analysis"])
 app.include_router(companies.router, tags=["companies"])
 app.include_router(integrations.router, tags=["integrations"])
 app.include_router(resumes.router, tags=["resumes"])
