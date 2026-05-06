@@ -50,6 +50,8 @@ function RegisterWithInvite({ token }: RegisterWithInviteProps) {
   } = useGetInviteInfoQuery(token);
 
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [confirmTouched, setConfirmTouched] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [registered, setRegistered] = useState(false);
@@ -117,6 +119,11 @@ function RegisterWithInvite({ token }: RegisterWithInviteProps) {
       return;
     }
 
+    if (password !== confirmPassword) {
+      setSubmitError("Passwords don't match. Re-type the same password in both fields.");
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       await register(invite!.email, password, turnstileToken);
@@ -180,7 +187,48 @@ function RegisterWithInvite({ token }: RegisterWithInviteProps) {
                 required
                 minLength={12}
                 placeholder="At least 12 characters"
+                autoComplete="new-password"
+                aria-describedby="password-hint"
               />
+              <p
+                id="password-hint"
+                className="text-xs text-muted-foreground mt-1"
+              >
+                At least 12 characters.
+              </p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Confirm password
+              </label>
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                onBlur={() => setConfirmTouched(true)}
+                className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                required
+                minLength={12}
+                placeholder="Confirm your password"
+                autoComplete="new-password"
+                aria-invalid={
+                  confirmTouched && confirmPassword !== password
+                }
+                aria-describedby={
+                  confirmTouched && confirmPassword !== password
+                    ? "confirm-password-error"
+                    : undefined
+                }
+              />
+              {confirmTouched && confirmPassword !== password ? (
+                <p
+                  id="confirm-password-error"
+                  role="alert"
+                  className="text-xs text-destructive mt-1"
+                >
+                  Passwords don't match.
+                </p>
+              ) : null}
             </div>
             <TurnstileWidget
               onVerify={handleTurnstileVerify}
@@ -205,7 +253,12 @@ function RegisterWithInvite({ token }: RegisterWithInviteProps) {
               isLoading={isSubmitting}
               loadingText="Creating account…"
               className="w-full"
-              disabled={isSubmitting || !termsAccepted}
+              disabled={
+                isSubmitting ||
+                !termsAccepted ||
+                password.length < 12 ||
+                password !== confirmPassword
+              }
             >
               Sign up
             </LoadingButton>
