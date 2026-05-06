@@ -24,7 +24,7 @@ export default function ClarifyingPanel({
         value={customText}
         onChange={(e) => onCustomTextChange(e.target.value)}
         rows={3}
-        placeholder="Your answer or your own rewrite…"
+        placeholder="Type your answer — I'll use it to compose a suggestion."
         className="w-full rounded-md border border-border bg-background p-2 text-sm"
       />
       <div className="flex justify-end">
@@ -33,7 +33,7 @@ export default function ClarifyingPanel({
           onClick={onSubmit}
           disabled={!customText.trim()}
         >
-          Use this
+          Submit answer
         </LoadingButton>
       </div>
     </div>

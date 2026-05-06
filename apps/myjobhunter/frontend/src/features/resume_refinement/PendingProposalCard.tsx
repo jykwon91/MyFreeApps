@@ -84,6 +84,27 @@ export default function PendingProposalCard({ session }: PendingProposalCardProp
     }
   }
 
+  // Distinct from handleCustom: when Claude asked a clarifying question,
+  // the operator's typed answer is CONTEXT for Claude to compose a
+  // better proposal — not the rewrite itself. Pipe it through
+  // request_alternative as the ``hint`` so the regenerated proposal
+  // reflects the answer. The cache for the current target is
+  // invalidated server-side, so the new proposal lands fresh.
+  async function handleClarifySubmit() {
+    if (!customText.trim()) return;
+    try {
+      await requestAlternative({
+        id: session.id,
+        hint: customText.trim(),
+      }).unwrap();
+      showSuccess("Got it — composing a suggestion with your context.");
+      resetMode();
+      setCustomText("");
+    } catch (err) {
+      showError(extractErrorMessage(err));
+    }
+  }
+
   async function handleAlternative() {
     try {
       await requestAlternative({
@@ -151,7 +172,7 @@ export default function PendingProposalCard({ session }: PendingProposalCardProp
         clarifyingQuestion={clarifyingQuestion}
         customText={customText}
         onCustomTextChange={setCustomText}
-        onClarifySubmit={handleCustom}
+        onClarifySubmit={handleClarifySubmit}
         proposal={proposal}
         rationale={rationale}
         isPending={isPending}
