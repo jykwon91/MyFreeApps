@@ -156,11 +156,17 @@ async def create_application(
             f"Company {request.company_id} not found under user {user_id}",
         )
 
+    # ``url`` is typed as Pydantic ``AnyHttpUrl`` for input validation.
+    # In Pydantic v2 that's a ``Url`` wrapper object — NOT a str
+    # subclass — so passing it directly to SQLAlchemy / asyncpg raises
+    # at parameter-bind time (HTTP 500). Coerce to plain str before
+    # persistence. Same pattern as company_service.create_company's
+    # logo_url fix from PR #363.
     application = Application(
         user_id=user_id,
         company_id=request.company_id,
         role_title=request.role_title,
-        url=request.url,
+        url=str(request.url) if request.url is not None else None,
         jd_text=request.jd_text,
         jd_parsed=request.jd_parsed,
         source=request.source,
