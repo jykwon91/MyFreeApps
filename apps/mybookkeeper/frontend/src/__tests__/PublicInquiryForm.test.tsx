@@ -78,7 +78,9 @@ async function fillValidForm(user: ReturnType<typeof userEvent.setup>) {
   await user.clear(lease);
   await user.type(lease, "6");
   await user.click(screen.getByTestId("public-inquiry-pets-no"));
-  await user.type(screen.getByTestId("public-inquiry-city"), "Austin, TX");
+  await user.type(screen.getByTestId("public-inquiry-city"), "Austin");
+  // Country defaults to US — region renders as the state dropdown.
+  await user.selectOptions(screen.getByTestId("public-inquiry-region"), "TX");
   await user.selectOptions(screen.getByTestId("public-inquiry-employment"), "employed");
   await user.type(
     screen.getByTestId("public-inquiry-why"),
@@ -204,6 +206,79 @@ describe("PublicInquiryForm — validation UX", () => {
   });
 });
 
+describe("PublicInquiryForm — country / region", () => {
+  it("defaults to US country and renders a state dropdown", async () => {
+    (api.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ data: mockListing });
+    renderForm();
+    await screen.findByTestId("public-inquiry-form");
+    const country = screen.getByTestId("public-inquiry-country") as HTMLSelectElement;
+    expect(country.value).toBe("US");
+    const region = screen.getByTestId("public-inquiry-region");
+    expect(region.tagName).toBe("SELECT");
+  });
+
+  it("switches to a free-text region input when the country is non-US", async () => {
+    (api.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ data: mockListing });
+    const user = userEvent.setup();
+    renderForm();
+    await screen.findByTestId("public-inquiry-form");
+    await user.selectOptions(screen.getByTestId("public-inquiry-country"), "CA");
+    const region = screen.getByTestId("public-inquiry-region");
+    expect(region.tagName).toBe("INPUT");
+  });
+
+  it("clears region when the country changes", async () => {
+    (api.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ data: mockListing });
+    const user = userEvent.setup();
+    renderForm();
+    await screen.findByTestId("public-inquiry-form");
+    await user.selectOptions(screen.getByTestId("public-inquiry-region"), "TX");
+    expect((screen.getByTestId("public-inquiry-region") as HTMLSelectElement).value).toBe("TX");
+    await user.selectOptions(screen.getByTestId("public-inquiry-country"), "MX");
+    const region = screen.getByTestId("public-inquiry-region") as HTMLInputElement;
+    expect(region.value).toBe("");
+  });
+
+  it("submits current_country + current_region for an international applicant", async () => {
+    (api.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ data: mockListing });
+    (api.post as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      data: { status: "received" },
+    });
+    const user = userEvent.setup();
+    renderForm();
+    await screen.findByTestId("public-inquiry-form");
+
+    await user.type(screen.getByTestId("public-inquiry-name"), "Bjorn Eriksen");
+    await user.type(screen.getByTestId("public-inquiry-email"), "bjorn@example.no");
+    await user.type(screen.getByTestId("public-inquiry-phone"), "555-987-6543");
+    await user.type(screen.getByTestId("public-inquiry-move-in"), futureDateIso());
+    const lease = screen.getByTestId("public-inquiry-lease-length");
+    await user.clear(lease);
+    await user.type(lease, "12");
+    await user.click(screen.getByTestId("public-inquiry-pets-no"));
+    await user.type(screen.getByTestId("public-inquiry-city"), "Oslo");
+    await user.selectOptions(screen.getByTestId("public-inquiry-country"), "NO");
+    await user.type(screen.getByTestId("public-inquiry-region"), "Oslo County");
+    await user.selectOptions(screen.getByTestId("public-inquiry-employment"), "employed");
+    await user.type(
+      screen.getByTestId("public-inquiry-why"),
+      "Relocating for a six-month research fellowship at the medical center.",
+    );
+
+    await user.click(screen.getByTestId("public-inquiry-submit"));
+
+    expect(await screen.findByText(/Thanks!/)).toBeInTheDocument();
+    expect(api.post).toHaveBeenCalledWith(
+      "/inquiries/public",
+      expect.objectContaining({
+        current_city: "Oslo",
+        current_country: "NO",
+        current_region: "Oslo County",
+      }),
+    );
+  });
+});
+
 describe("PublicInquiryForm — submit", () => {
   it("successful POST shows the thanks view", async () => {
     (api.get as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ data: mockListing });
@@ -226,6 +301,9 @@ describe("PublicInquiryForm — submit", () => {
         email: "alice@example.com",
         has_pets: false,
         employment_status: "employed",
+        current_city: "Austin",
+        current_country: "US",
+        current_region: "TX",
       }),
     );
   });

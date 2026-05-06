@@ -17,6 +17,10 @@ export interface PublicInquiryRequest {
   pets_description: string | null;
   vehicle_count: number;
   current_city: string;
+  /** ISO 3166-1 alpha-2 country code (e.g. "US"). */
+  current_country: string;
+  /** State / province / region. For US, the 2-letter state code. */
+  current_region: string;
   employment_status: EmploymentStatus;
   why_this_room: string;
   additional_notes: string | null;

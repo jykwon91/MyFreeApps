@@ -44,6 +44,20 @@ INQUIRY_EMPLOYMENT_STATUSES: tuple[str, ...] = (
     "other",
 )
 
+# US states + DC (ISO 3166-2:US codes without the "US-" prefix). Used to
+# validate ``current_region`` when ``current_country = "US"`` on the public
+# inquiry form. Frontend mirror lives in
+# ``frontend/src/shared/types/inquiry/us-state.ts`` — keep in sync.
+INQUIRY_US_STATES: tuple[str, ...] = (
+    "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "DC", "FL",
+    "GA", "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME",
+    "MD", "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH",
+    "NJ", "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI",
+    "SC", "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI",
+    "WY",
+)
+INQUIRY_DEFAULT_COUNTRY = "US"
+
 # Spam-assessment check types — one row per check ever performed on an
 # inquiry. ``manual_override`` is written when the operator clicks
 # "Mark as not spam" / "Mark as spam" from the inbox.

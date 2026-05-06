@@ -13,13 +13,18 @@ from __future__ import annotations
 
 import datetime as _dt
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
 
-from app.core.inquiry_enums import INQUIRY_EMPLOYMENT_STATUSES
+from app.core.inquiry_enums import (
+    INQUIRY_DEFAULT_COUNTRY,
+    INQUIRY_EMPLOYMENT_STATUSES,
+    INQUIRY_US_STATES,
+)
 
 _NAME_MAX = 200
 _PHONE_MAX = 50
 _CITY_MAX = 200
+_REGION_MAX = 100
 _FREE_TEXT_MAX = 2000
 
 
@@ -42,6 +47,19 @@ class PublicInquiryRequest(BaseModel):
     pets_description: str | None = Field(default=None, max_length=_FREE_TEXT_MAX)
     vehicle_count: int = Field(ge=0, le=10)
     current_city: str = Field(min_length=1, max_length=_CITY_MAX)
+    # ISO 3166-1 alpha-2 country code. Default "US" for forwards compat with
+    # legacy clients that haven't been updated to send the field. Frontend
+    # always sends an explicit value.
+    current_country: str = Field(
+        default=INQUIRY_DEFAULT_COUNTRY,
+        pattern=r"^[A-Z]{2}$",
+    )
+    # State / province / region. When ``current_country == "US"`` this MUST
+    # be one of the 50 states + DC (validated below). Otherwise it's free
+    # text up to 100 chars — different countries name their subdivisions
+    # differently, and enumerating every region of every country isn't
+    # practical or useful.
+    current_region: str = Field(min_length=1, max_length=_REGION_MAX)
     employment_status: str
     why_this_room: str = Field(max_length=_FREE_TEXT_MAX)
     additional_notes: str | None = Field(default=None, max_length=_FREE_TEXT_MAX)
@@ -60,6 +78,15 @@ class PublicInquiryRequest(BaseModel):
     turnstile_token: str = Field(default="", max_length=2048)
 
     model_config = ConfigDict(extra="forbid")
+
+    @model_validator(mode="after")
+    def _check_us_region(self) -> PublicInquiryRequest:
+        """When country is US, region must be a recognized state code."""
+        if self.current_country == "US" and self.current_region not in INQUIRY_US_STATES:
+            raise ValueError(
+                "current_region must be one of the 50 US states or DC when current_country is US",
+            )
+        return self
 
 
 # Lightweight error returned by the schema-validation step that we want to

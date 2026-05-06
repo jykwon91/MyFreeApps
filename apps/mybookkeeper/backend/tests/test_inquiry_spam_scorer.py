@@ -37,7 +37,9 @@ class TestBuildPrompt:
             name="Alice Smith",
             email="alice@example.com",
             phone="555-1234567",
-            current_city="Austin, TX",
+            current_city="Austin",
+            current_country="US",
+            current_region="TX",
             employment_status="employed",
             move_in_date="2026-06-01",
             lease_length_months=6,
@@ -56,7 +58,9 @@ class TestBuildPrompt:
         assert "alice@example.com" not in prompt
         assert "555-1234567" not in prompt
         # But context that's safe to share IS present
-        assert "Austin, TX" in prompt
+        assert "Austin" in prompt
+        assert "TX" in prompt
+        assert "US" in prompt
         assert "employed" in prompt
         assert "1500.00" in prompt
 
@@ -66,6 +70,8 @@ class TestBuildPrompt:
             email="e@e.com",
             phone="555",
             current_city="X",
+            current_country="US",
+            current_region="TX",
             employment_status="employed",
             move_in_date="2026-06-01",
             lease_length_months=6,

@@ -57,6 +57,8 @@ class InquiryResponse(BaseModel):
     pets_description: str | None = None
     vehicle_count: int | None = None
     current_city: str | None = None
+    current_country: str | None = None
+    current_region: str | None = None
     employment_status: str | None = None
     why_this_room: str | None = None
     additional_notes: str | None = None

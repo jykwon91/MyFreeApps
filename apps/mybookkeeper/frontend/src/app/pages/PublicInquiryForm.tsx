@@ -10,6 +10,14 @@ import {
 } from "@/shared/types/inquiry/employment-status";
 import type { PublicListing } from "@/shared/types/inquiry/public-listing";
 import type { PublicInquiryRequest } from "@/shared/types/inquiry/public-inquiry-request";
+import {
+  COUNTRY_OPTIONS,
+  DEFAULT_COUNTRY_CODE,
+} from "@/shared/types/inquiry/country";
+import {
+  US_STATE_CODES,
+  US_STATE_OPTIONS,
+} from "@/shared/types/inquiry/us-state";
 
 const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY ?? "";
 const MIN_WHY_THIS_ROOM_CHARS = 30;
@@ -27,6 +35,8 @@ interface FormState {
   petsDescription: string;
   vehicleCount: string;
   currentCity: string;
+  currentCountry: string; // ISO 3166-1 alpha-2
+  currentRegion: string; // 2-letter US state code OR free-text region
   employmentStatus: EmploymentStatus | "";
   whyThisRoom: string;
   additionalNotes: string;
@@ -42,6 +52,8 @@ type ValidatedField =
   | "occupantCount"
   | "hasPets"
   | "currentCity"
+  | "currentCountry"
+  | "currentRegion"
   | "employmentStatus"
   | "whyThisRoom";
 
@@ -59,6 +71,8 @@ const INITIAL_FORM: FormState = {
   petsDescription: "",
   vehicleCount: "0",
   currentCity: "",
+  currentCountry: DEFAULT_COUNTRY_CODE,
+  currentRegion: "",
   employmentStatus: "",
   whyThisRoom: "",
   additionalNotes: "",
@@ -75,6 +89,8 @@ const FIELD_FOCUS_TARGETS: { key: ValidatedField; id: string }[] = [
   { key: "occupantCount", id: "occupants" },
   { key: "hasPets", id: "has-pets-no" },
   { key: "currentCity", id: "city" },
+  { key: "currentCountry", id: "country" },
+  { key: "currentRegion", id: "region" },
   { key: "employmentStatus", id: "employment" },
   { key: "whyThisRoom", id: "why" },
 ];
@@ -128,7 +144,23 @@ function validateForm(state: FormState): FieldErrors {
   }
 
   if (!state.currentCity.trim()) {
-    errors.currentCity = "Please tell us your current city and state.";
+    errors.currentCity = "Please enter your current city.";
+  }
+
+  if (!state.currentCountry) {
+    errors.currentCountry = "Please choose a country.";
+  }
+
+  if (!state.currentRegion.trim()) {
+    errors.currentRegion =
+      state.currentCountry === "US"
+        ? "Please choose your state."
+        : "Please enter your state, province, or region.";
+  } else if (
+    state.currentCountry === "US"
+    && !US_STATE_CODES.includes(state.currentRegion)
+  ) {
+    errors.currentRegion = "Please choose a valid US state.";
   }
 
   if (state.employmentStatus === "") {
@@ -278,6 +310,8 @@ export default function PublicInquiryForm() {
           : null,
       vehicle_count: Number.parseInt(form.vehicleCount || "0", 10),
       current_city: form.currentCity.trim(),
+      current_country: form.currentCountry,
+      current_region: form.currentRegion.trim(),
       employment_status: form.employmentStatus as EmploymentStatus,
       why_this_room: form.whyThisRoom.trim(),
       additional_notes: form.additionalNotes.trim() || null,
@@ -601,7 +635,7 @@ export default function PublicInquiryForm() {
             ) : null}
 
             <Field
-              label="Current city / state"
+              label="Current city"
               htmlFor="city"
               error={visibleErrors.currentCity}
             >
@@ -621,6 +655,91 @@ export default function PublicInquiryForm() {
                 data-testid="public-inquiry-city"
               />
             </Field>
+
+            <Field
+              label="Country"
+              htmlFor="country"
+              error={visibleErrors.currentCountry}
+            >
+              <select
+                id="country"
+                required
+                value={form.currentCountry}
+                onChange={(e) => {
+                  // Clear the region when country changes — a US state code
+                  // is meaningless once the user picks a non-US country, and
+                  // free-text region likewise doesn't apply once they pick US.
+                  update("currentCountry", e.target.value);
+                  update("currentRegion", "");
+                }}
+                onBlur={() => markTouched("currentCountry")}
+                aria-invalid={!!visibleErrors.currentCountry}
+                aria-describedby={
+                  visibleErrors.currentCountry ? "country-error" : undefined
+                }
+                className={inputClasses(!!visibleErrors.currentCountry)}
+                data-testid="public-inquiry-country"
+              >
+                {COUNTRY_OPTIONS.map((opt) => (
+                  <option key={opt.code} value={opt.code}>
+                    {opt.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
+
+            {form.currentCountry === "US" ? (
+              <Field
+                label="State"
+                htmlFor="region"
+                error={visibleErrors.currentRegion}
+              >
+                <select
+                  id="region"
+                  required
+                  value={form.currentRegion}
+                  onChange={(e) => update("currentRegion", e.target.value)}
+                  onBlur={() => markTouched("currentRegion")}
+                  aria-invalid={!!visibleErrors.currentRegion}
+                  aria-describedby={
+                    visibleErrors.currentRegion ? "region-error" : undefined
+                  }
+                  className={inputClasses(!!visibleErrors.currentRegion)}
+                  data-testid="public-inquiry-region"
+                >
+                  <option value="" disabled>
+                    Select a state
+                  </option>
+                  {US_STATE_OPTIONS.map((opt) => (
+                    <option key={opt.code} value={opt.code}>
+                      {opt.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            ) : (
+              <Field
+                label="State / Province / Region"
+                htmlFor="region"
+                error={visibleErrors.currentRegion}
+              >
+                <input
+                  id="region"
+                  type="text"
+                  required
+                  maxLength={100}
+                  value={form.currentRegion}
+                  onChange={(e) => update("currentRegion", e.target.value)}
+                  onBlur={() => markTouched("currentRegion")}
+                  aria-invalid={!!visibleErrors.currentRegion}
+                  aria-describedby={
+                    visibleErrors.currentRegion ? "region-error" : undefined
+                  }
+                  className={inputClasses(!!visibleErrors.currentRegion)}
+                  data-testid="public-inquiry-region"
+                />
+              </Field>
+            )}
 
             <Field
               label="Employment status"
