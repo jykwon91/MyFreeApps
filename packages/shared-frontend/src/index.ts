@@ -42,6 +42,8 @@ export type { AppShellProps, NavItem, BottomNavItem } from "./components/layout/
 export { default as RequireAuth } from "./components/auth/RequireAuth";
 export { default as LoginForm } from "./components/auth/LoginForm";
 export type { LoginFormProps } from "./components/auth/LoginForm";
+export { default as PasswordPair } from "./components/auth/PasswordPair";
+export type { PasswordPairProps } from "./components/auth/PasswordPair";
 
 // Data components
 export { default as DataTable } from "./components/data/DataTable";
