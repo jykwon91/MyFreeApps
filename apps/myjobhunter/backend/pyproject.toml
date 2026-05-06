@@ -24,6 +24,13 @@ dependencies = [
     "anthropic>=0.49.0",
     "pypdf>=4.0.0",
     "mammoth>=1.7.0",
+    # JD URL extractor (POST /applications/extract-from-url): parses HTML from
+    # arbitrary career-page URLs to either (a) extract schema.org JobPosting
+    # JSON-LD blocks server-rendered by modern ATSes, or (b) strip visible
+    # text for the Claude HTML-fallback path. lxml (declared via beautifulsoup4)
+    # is the parser we feed BeautifulSoup — faster + stricter than html.parser.
+    "beautifulsoup4>=4.12.0",
+    "lxml>=5.2.0",
     # Resume-refinement export pipeline: weasyprint converts HTML
     # (produced by pandoc) to PDF; pandoc handles DOCX natively.
     "weasyprint>=62.0",

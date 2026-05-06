@@ -31,6 +31,8 @@ bcrypt==5.0.0
     # via
     #   passlib
     #   pwdlib
+beautifulsoup4==4.14.3
+    # via myjobhunter-backend
 brotli==1.2.0 ; platform_python_implementation == 'CPython'
     # via fonttools
 brotlicffi==1.2.0.1 ; platform_python_implementation != 'CPython'
@@ -74,6 +76,7 @@ email-validator==2.3.0
     # via
     #   fastapi-users
     #   myjobhunter-backend
+    #   pydantic
 fastapi==0.136.1
     # via
     #   fastapi-users
@@ -112,6 +115,8 @@ iniconfig==2.3.0
     # via pytest
 jiter==0.14.0
     # via anthropic
+lxml==6.1.0
+    # via myjobhunter-backend
 makefun==1.16.0
     # via fastapi-users
 mako==1.3.12
@@ -189,6 +194,8 @@ sentry-sdk==2.58.0
     #   platform-shared
 sniffio==1.3.1
     # via anthropic
+soupsieve==2.8.3
+    # via beautifulsoup4
 sqlalchemy==2.0.49
     # via
     #   alembic
@@ -208,6 +215,7 @@ typing-extensions==4.15.0
     #   alembic
     #   anthropic
     #   anyio
+    #   beautifulsoup4
     #   fastapi
     #   minio
     #   pydantic

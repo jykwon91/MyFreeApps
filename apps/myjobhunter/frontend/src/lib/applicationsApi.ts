@@ -6,6 +6,8 @@ import type { ApplicationEvent } from "@/types/application-event";
 import type { ApplicationEventCreateRequest } from "@/types/application-event-create-request";
 import type { ApplicationEventListResponse } from "@/types/application-event-list-response";
 import type { JdParseResponse } from "@/types/application/jd-parse-response";
+import type { JdUrlExtractRequest } from "@/types/application/jd-url-extract-request";
+import type { JdUrlExtractResponse } from "@/types/application/jd-url-extract-response";
 
 const APPLICATIONS_TAG = "Applications";
 const APPLICATION_EVENTS_TAG = "ApplicationEvents";
@@ -111,6 +113,30 @@ const applicationsApi = baseApi.enhanceEndpoints({
         data: body,
       }),
     }),
+
+    /**
+     * POST /applications/extract-from-url
+     *
+     * Fetches a job-posting URL and extracts structured fields server-side.
+     * Two-tier strategy: schema.org JobPosting fast path, Claude HTML-text
+     * fallback. Stateless — does NOT create an Application row.
+     *
+     * Status codes the caller must handle:
+     * - 200 → JdUrlExtractResponse with extracted fields
+     * - 422 with detail "auth_required" → URL is auth-walled (LinkedIn,
+     *   Glassdoor) or the page returned <500 visible bytes. Switch to the
+     *   paste-text tab.
+     * - 429 → per-IP rate limit exceeded (10 / 5 minutes)
+     * - 502 → upstream error or AI extraction failed
+     * - 504 → upstream fetch timed out
+     */
+    extractJdFromUrl: build.mutation<JdUrlExtractResponse, JdUrlExtractRequest>({
+      query: (body) => ({
+        url: "/applications/extract-from-url",
+        method: "POST",
+        data: body,
+      }),
+    }),
   }),
 });
 
@@ -123,4 +149,5 @@ export const {
   useListApplicationEventsQuery,
   useLogApplicationEventMutation,
   useParseJobDescriptionMutation,
+  useExtractJdFromUrlMutation,
 } = applicationsApi;

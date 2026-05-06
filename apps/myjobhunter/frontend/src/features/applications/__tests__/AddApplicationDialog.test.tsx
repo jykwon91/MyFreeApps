@@ -1,11 +1,14 @@
 /**
- * Smoke tests for AddApplicationDialog — focused on the inline company-create flow.
+ * Smoke tests for AddApplicationDialog.
  *
- * Tests:
- * - "+ New" button shows the CompanyForm inline panel
- * - Filling and submitting CompanyForm calls createCompany, auto-selects the new
- *   company in the application dropdown, and closes the panel
- * - Cancel on CompanyForm closes the panel without submitting
+ * Three scenario groups:
+ * - Inline company-create flow (existing — "+ New" panel)
+ * - JD paste-text flow (existing — "Paste the description" tab + AI parse)
+ * - JD URL-extract flow (new — "Paste a link" tab + Fetch button)
+ *
+ * Each group mocks the RTK Query hooks at the module boundary; no real
+ * network calls. The radix Dialog and lucide-react icons are stubbed so
+ * jsdom doesn't choke on the SVG children.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
@@ -14,9 +17,6 @@ import AddApplicationDialog from "../AddApplicationDialog";
 
 // ---- mocks ----
 
-// Lucide icons render as SVG elements which cause "Objects are not valid as
-// a React child" in the jsdom test environment when used inside plain button
-// children. Mock them as null-rendering stubs.
 vi.mock("lucide-react", () => ({
   X: () => null,
   Plus: () => null,
@@ -25,6 +25,7 @@ vi.mock("lucide-react", () => ({
   ChevronUp: () => null,
   Download: () => null,
   FileText: () => null,
+  Link: () => null,
 }));
 
 vi.mock("@/lib/companiesApi", () => ({
@@ -35,6 +36,7 @@ vi.mock("@/lib/companiesApi", () => ({
 vi.mock("@/lib/applicationsApi", () => ({
   useCreateApplicationMutation: vi.fn(),
   useParseJobDescriptionMutation: vi.fn(),
+  useExtractJdFromUrlMutation: vi.fn(),
 }));
 
 vi.mock("@radix-ui/react-dialog", async (importOriginal) => {
@@ -42,8 +44,6 @@ vi.mock("@radix-ui/react-dialog", async (importOriginal) => {
   return {
     ...actual,
     Portal: ({ children }: { children: React.ReactNode }) => children,
-    // Dialog.Close must close the dialog — make it call onOpenChange via a
-    // wrapper button. In our simplified mock it just renders children normally.
     Close: ({ asChild, children }: { asChild?: boolean; children: React.ReactNode }) => {
       void asChild;
       return <>{children}</>;
@@ -79,13 +79,18 @@ vi.mock("@platform/ui", async (importOriginal) => {
 });
 
 import { useListCompaniesQuery, useCreateCompanyMutation } from "@/lib/companiesApi";
-import { useCreateApplicationMutation, useParseJobDescriptionMutation } from "@/lib/applicationsApi";
+import {
+  useCreateApplicationMutation,
+  useExtractJdFromUrlMutation,
+  useParseJobDescriptionMutation,
+} from "@/lib/applicationsApi";
 import { showSuccess } from "@platform/ui";
 
 const mockUseListCompaniesQuery = vi.mocked(useListCompaniesQuery);
 const mockUseCreateCompanyMutation = vi.mocked(useCreateCompanyMutation);
 const mockUseCreateApplicationMutation = vi.mocked(useCreateApplicationMutation);
 const mockUseParseJobDescriptionMutation = vi.mocked(useParseJobDescriptionMutation);
+const mockUseExtractJdFromUrlMutation = vi.mocked(useExtractJdFromUrlMutation);
 const mockShowSuccess = vi.mocked(showSuccess);
 
 const emptyCompanies = {
@@ -95,17 +100,25 @@ const emptyCompanies = {
   error: undefined,
 } as unknown as ReturnType<typeof useListCompaniesQuery>;
 
+// Default mutation state — never called unless the test sets a specific
+// return value via `.mockReturnValue` again.
+function defaultMutation<T>(): T {
+  return [vi.fn(), { isLoading: false }] as unknown as T;
+}
+
 describe("AddApplicationDialog — inline company create", () => {
   const mockOnOpenChange = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseCreateApplicationMutation.mockReturnValue(
-      [vi.fn(), { isLoading: false }] as unknown as ReturnType<typeof useCreateApplicationMutation>,
+      defaultMutation<ReturnType<typeof useCreateApplicationMutation>>(),
     );
-    // Default: parse mutation is idle (never called in most tests).
     mockUseParseJobDescriptionMutation.mockReturnValue(
-      [vi.fn(), { isLoading: false }] as unknown as ReturnType<typeof useParseJobDescriptionMutation>,
+      defaultMutation<ReturnType<typeof useParseJobDescriptionMutation>>(),
+    );
+    mockUseExtractJdFromUrlMutation.mockReturnValue(
+      defaultMutation<ReturnType<typeof useExtractJdFromUrlMutation>>(),
     );
   });
 
@@ -118,14 +131,12 @@ describe("AddApplicationDialog — inline company create", () => {
   it("shows the company dropdown with a '+ New' button by default", () => {
     mockUseListCompaniesQuery.mockReturnValue(emptyCompanies);
     mockUseCreateCompanyMutation.mockReturnValue(
-      [vi.fn(), { isLoading: false }] as unknown as ReturnType<typeof useCreateCompanyMutation>,
+      defaultMutation<ReturnType<typeof useCreateCompanyMutation>>(),
     );
 
     renderDialog();
 
-    // The "+ New" button should be visible
     expect(screen.getByRole("button", { name: /add new company/i })).toBeInTheDocument();
-    // CompanyForm should NOT be visible yet
     expect(screen.queryByText("New company")).not.toBeInTheDocument();
   });
 
@@ -133,16 +144,14 @@ describe("AddApplicationDialog — inline company create", () => {
     const user = userEvent.setup();
     mockUseListCompaniesQuery.mockReturnValue(emptyCompanies);
     mockUseCreateCompanyMutation.mockReturnValue(
-      [vi.fn(), { isLoading: false }] as unknown as ReturnType<typeof useCreateCompanyMutation>,
+      defaultMutation<ReturnType<typeof useCreateCompanyMutation>>(),
     );
 
     renderDialog();
 
     await user.click(screen.getByRole("button", { name: /add new company/i }));
 
-    // CompanyForm header label is now visible
     expect(screen.getByText("New company")).toBeInTheDocument();
-    // The company dropdown should be hidden
     expect(screen.queryByRole("button", { name: /add new company/i })).not.toBeInTheDocument();
   });
 
@@ -160,10 +169,8 @@ describe("AddApplicationDialog — inline company create", () => {
     const companyPanel = screen.getByText("New company").closest("div")!;
     expect(companyPanel).toBeInTheDocument();
 
-    // Click cancel inside the CompanyForm panel (not the outer dialog Cancel)
     await user.click(within(companyPanel).getByRole("button", { name: /cancel/i }));
 
-    // Panel closed, dropdown visible again
     expect(screen.queryByText("New company")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /add new company/i })).toBeInTheDocument();
     expect(mockCreate).not.toHaveBeenCalled();
@@ -176,8 +183,6 @@ describe("AddApplicationDialog — inline company create", () => {
       unwrap: () => Promise.resolve(newCompany),
     });
 
-    // Initially no companies; after create the list would have the new one.
-    // The mock just returns empty — the auto-select via setValue is what we test.
     mockUseListCompaniesQuery.mockReturnValue(emptyCompanies);
     mockUseCreateCompanyMutation.mockReturnValue(
       [mockCreate, { isLoading: false }] as unknown as ReturnType<typeof useCreateCompanyMutation>,
@@ -185,28 +190,20 @@ describe("AddApplicationDialog — inline company create", () => {
 
     renderDialog();
 
-    // Open the inline form
     await user.click(screen.getByRole("button", { name: /add new company/i }));
-
-    // Fill in the company name
     await user.type(screen.getByLabelText(/name/i), "New Corp");
-
-    // Submit the company form
     await user.click(screen.getByRole("button", { name: /create company/i }));
 
     await waitFor(() => {
-      // Mutation was called with the correct payload
       expect(mockCreate).toHaveBeenCalledWith({
         name: "New Corp",
         primary_domain: null,
         industry: null,
         hq_location: null,
       });
-      // Success toast fired
       expect(mockShowSuccess).toHaveBeenCalledWith('Company "New Corp" created');
     });
 
-    // The panel closed, dropdown is back
     await waitFor(() => {
       expect(screen.queryByText("New company")).not.toBeInTheDocument();
     });
@@ -214,20 +211,23 @@ describe("AddApplicationDialog — inline company create", () => {
 });
 
 // ---------------------------------------------------------------------------
-// JD paste + parse UX tests
+// Paste-text flow — existing JD AI parse path
 // ---------------------------------------------------------------------------
 
-describe("AddApplicationDialog — JD parse flow", () => {
+describe("AddApplicationDialog — JD paste-text flow", () => {
   const mockOnOpenChange = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseCreateApplicationMutation.mockReturnValue(
-      [vi.fn(), { isLoading: false }] as unknown as ReturnType<typeof useCreateApplicationMutation>,
+      defaultMutation<ReturnType<typeof useCreateApplicationMutation>>(),
     );
     mockUseListCompaniesQuery.mockReturnValue(emptyCompanies);
     mockUseCreateCompanyMutation.mockReturnValue(
-      [vi.fn(), { isLoading: false }] as unknown as ReturnType<typeof useCreateCompanyMutation>,
+      defaultMutation<ReturnType<typeof useCreateCompanyMutation>>(),
+    );
+    mockUseExtractJdFromUrlMutation.mockReturnValue(
+      defaultMutation<ReturnType<typeof useExtractJdFromUrlMutation>>(),
     );
   });
 
@@ -235,31 +235,45 @@ describe("AddApplicationDialog — JD parse flow", () => {
     return render(<AddApplicationDialog open={open} onOpenChange={mockOnOpenChange} />);
   }
 
-  it("shows the 'Paste job description to auto-fill' button by default", () => {
+  it("shows the collapsed auto-fill prompt by default", () => {
     mockUseParseJobDescriptionMutation.mockReturnValue(
-      [vi.fn(), { isLoading: false }] as unknown as ReturnType<typeof useParseJobDescriptionMutation>,
+      defaultMutation<ReturnType<typeof useParseJobDescriptionMutation>>(),
     );
 
     renderDialog();
 
-    expect(screen.getByText(/paste job description to auto-fill/i)).toBeInTheDocument();
-    // Textarea is hidden in idle state
+    expect(screen.getByText(/paste a link or job description to auto-fill/i)).toBeInTheDocument();
     expect(screen.queryByRole("textbox", { name: /job description text/i })).not.toBeInTheDocument();
   });
 
-  it("shows the JD textarea when the expand button is clicked", async () => {
+  it("expanding the panel defaults to the URL tab", async () => {
     const user = userEvent.setup();
     mockUseParseJobDescriptionMutation.mockReturnValue(
-      [vi.fn(), { isLoading: false }] as unknown as ReturnType<typeof useParseJobDescriptionMutation>,
+      defaultMutation<ReturnType<typeof useParseJobDescriptionMutation>>(),
     );
 
     renderDialog();
 
-    await user.click(screen.getByText(/paste job description to auto-fill/i));
+    await user.click(screen.getByText(/paste a link or job description to auto-fill/i));
+
+    // URL tab is the default — the URL input should be visible.
+    expect(screen.getByLabelText(/job posting url/i)).toBeInTheDocument();
+    // The text-tab textarea is NOT visible until the user switches.
+    expect(screen.queryByRole("textbox", { name: /job description text/i })).not.toBeInTheDocument();
+  });
+
+  it("switching to text tab shows the JD textarea", async () => {
+    const user = userEvent.setup();
+    mockUseParseJobDescriptionMutation.mockReturnValue(
+      defaultMutation<ReturnType<typeof useParseJobDescriptionMutation>>(),
+    );
+
+    renderDialog();
+
+    await user.click(screen.getByText(/paste a link or job description to auto-fill/i));
+    await user.click(screen.getByRole("tab", { name: /paste the description/i }));
 
     expect(screen.getByRole("textbox", { name: /job description text/i })).toBeInTheDocument();
-    // The expand button should be gone, replaced by collapse
-    expect(screen.queryByText(/paste job description to auto-fill/i)).not.toBeInTheDocument();
   });
 
   it("calls parseJobDescription mutation when 'Parse with AI' is clicked", async () => {
@@ -289,21 +303,18 @@ describe("AddApplicationDialog — JD parse flow", () => {
 
     renderDialog();
 
-    // Open the JD panel
-    await user.click(screen.getByText(/paste job description to auto-fill/i));
+    await user.click(screen.getByText(/paste a link or job description to auto-fill/i));
+    await user.click(screen.getByRole("tab", { name: /paste the description/i }));
 
-    // Type some JD text
     const textarea = screen.getByRole("textbox", { name: /job description text/i });
     await user.type(textarea, "Senior Engineer at Acme Corp");
 
-    // Click parse
     await user.click(screen.getByRole("button", { name: /parse with ai/i }));
 
     await waitFor(() => {
       expect(mockParse).toHaveBeenCalledWith({ jd_text: "Senior Engineer at Acme Corp" });
     });
 
-    // After success, shows the parsed confirmation banner
     await waitFor(() => {
       expect(screen.getByText(/fields pre-filled from jd/i)).toBeInTheDocument();
     });
@@ -321,7 +332,8 @@ describe("AddApplicationDialog — JD parse flow", () => {
 
     renderDialog();
 
-    await user.click(screen.getByText(/paste job description to auto-fill/i));
+    await user.click(screen.getByText(/paste a link or job description to auto-fill/i));
+    await user.click(screen.getByRole("tab", { name: /paste the description/i }));
 
     const textarea = screen.getByRole("textbox", { name: /job description text/i });
     await user.type(textarea, "Some JD text");
@@ -329,53 +341,190 @@ describe("AddApplicationDialog — JD parse flow", () => {
     await user.click(screen.getByRole("button", { name: /parse with ai/i }));
 
     await waitFor(() => {
-      expect(screen.getByText(/ai parsing failed/i)).toBeInTheDocument();
+      expect(screen.getByText(/couldn't auto-fill/i)).toBeInTheDocument();
     });
   });
+});
 
-  it("dismiss button on success banner resets to idle state", async () => {
+// ---------------------------------------------------------------------------
+// New: paste-link flow — JD URL extract path
+// ---------------------------------------------------------------------------
+
+describe("AddApplicationDialog — JD paste-link flow", () => {
+  const mockOnOpenChange = vi.fn();
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUseCreateApplicationMutation.mockReturnValue(
+      defaultMutation<ReturnType<typeof useCreateApplicationMutation>>(),
+    );
+    mockUseListCompaniesQuery.mockReturnValue(emptyCompanies);
+    mockUseCreateCompanyMutation.mockReturnValue(
+      defaultMutation<ReturnType<typeof useCreateCompanyMutation>>(),
+    );
+    mockUseParseJobDescriptionMutation.mockReturnValue(
+      defaultMutation<ReturnType<typeof useParseJobDescriptionMutation>>(),
+    );
+  });
+
+  function renderDialog(open = true) {
+    return render(<AddApplicationDialog open={open} onOpenChange={mockOnOpenChange} />);
+  }
+
+  it("calls extractJdFromUrl when 'Fetch and auto-fill' is clicked", async () => {
     const user = userEvent.setup();
-    const mockParse = vi.fn().mockReturnValue({
+    const mockExtract = vi.fn().mockReturnValue({
       unwrap: () =>
         Promise.resolve({
-          title: null,
-          company: null,
-          location: null,
-          remote_type: null,
-          salary_min: null,
-          salary_max: null,
-          salary_currency: null,
-          salary_period: null,
-          seniority: null,
-          must_have_requirements: [],
-          nice_to_have_requirements: [],
-          responsibilities: [],
+          title: "Senior Backend Engineer",
+          company: "Acme Corp",
+          location: "San Francisco, CA, US",
+          description_html: "<p>Build APIs at scale.</p>",
+          requirements_text: "Must have:\n- Python",
           summary: null,
+          source_url: "https://jobs.example.com/abc",
         }),
     });
 
-    mockUseParseJobDescriptionMutation.mockReturnValue(
-      [mockParse, { isLoading: false }] as unknown as ReturnType<typeof useParseJobDescriptionMutation>,
+    mockUseExtractJdFromUrlMutation.mockReturnValue(
+      [mockExtract, { isLoading: false }] as unknown as ReturnType<typeof useExtractJdFromUrlMutation>,
     );
 
     renderDialog();
 
-    await user.click(screen.getByText(/paste job description to auto-fill/i));
-    const textarea = screen.getByRole("textbox", { name: /job description text/i });
-    await user.type(textarea, "Some JD");
-    await user.click(screen.getByRole("button", { name: /parse with ai/i }));
+    await user.click(screen.getByText(/paste a link or job description to auto-fill/i));
 
-    // Wait for success banner
+    // URL tab is default. Type a URL and click fetch.
+    const urlInput = screen.getByLabelText(/job posting url/i);
+    await user.type(urlInput, "https://jobs.example.com/abc");
+
+    await user.click(screen.getByRole("button", { name: /fetch and auto-fill/i }));
+
+    await waitFor(() => {
+      expect(mockExtract).toHaveBeenCalledWith({ url: "https://jobs.example.com/abc" });
+    });
+
     await waitFor(() => {
       expect(screen.getByText(/fields pre-filled from jd/i)).toBeInTheDocument();
     });
+    // Source URL is shown in the success banner.
+    expect(screen.getByText(/fetched from/i)).toBeInTheDocument();
+  });
 
-    // Dismiss it
-    await user.click(screen.getByRole("button", { name: /dismiss parse result/i }));
-
-    // Back to idle — the expand button is visible again
-    await waitFor(() => {
-      expect(screen.getByText(/paste job description to auto-fill/i)).toBeInTheDocument();
+  it("shows authRequired banner with 'switch to paste-text' affordance on 422 auth_required", async () => {
+    const user = userEvent.setup();
+    const mockExtract = vi.fn().mockReturnValue({
+      // RTK Query rejects with the error shape from axiosBaseQuery.
+      unwrap: () =>
+        Promise.reject({
+          status: 422,
+          data: { detail: "auth_required" },
+        }),
     });
+
+    mockUseExtractJdFromUrlMutation.mockReturnValue(
+      [mockExtract, { isLoading: false }] as unknown as ReturnType<typeof useExtractJdFromUrlMutation>,
+    );
+
+    renderDialog();
+
+    await user.click(screen.getByText(/paste a link or job description to auto-fill/i));
+
+    const urlInput = screen.getByLabelText(/job posting url/i);
+    await user.type(urlInput, "https://www.linkedin.com/jobs/view/123");
+
+    await user.click(screen.getByRole("button", { name: /fetch and auto-fill/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/couldn't reach this page/i)).toBeInTheDocument();
+    });
+    expect(screen.getByRole("button", { name: /paste the description text instead/i })).toBeInTheDocument();
+  });
+
+  it("clicking 'paste the description text instead' switches to the text tab", async () => {
+    const user = userEvent.setup();
+    const mockExtract = vi.fn().mockReturnValue({
+      unwrap: () =>
+        Promise.reject({
+          status: 422,
+          data: { detail: "auth_required" },
+        }),
+    });
+
+    mockUseExtractJdFromUrlMutation.mockReturnValue(
+      [mockExtract, { isLoading: false }] as unknown as ReturnType<typeof useExtractJdFromUrlMutation>,
+    );
+
+    renderDialog();
+
+    await user.click(screen.getByText(/paste a link or job description to auto-fill/i));
+
+    const urlInput = screen.getByLabelText(/job posting url/i);
+    await user.type(urlInput, "https://www.linkedin.com/jobs/view/123");
+
+    await user.click(screen.getByRole("button", { name: /fetch and auto-fill/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /paste the description text instead/i })).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole("button", { name: /paste the description text instead/i }));
+
+    // Text tab is now active — the textarea is visible.
+    await waitFor(() => {
+      expect(screen.getByRole("textbox", { name: /job description text/i })).toBeInTheDocument();
+    });
+  });
+
+  it("shows generic error banner on 502 / 504 / network failures", async () => {
+    const user = userEvent.setup();
+    const mockExtract = vi.fn().mockReturnValue({
+      unwrap: () =>
+        Promise.reject({ status: 504, data: "Gateway timeout" }),
+    });
+
+    mockUseExtractJdFromUrlMutation.mockReturnValue(
+      [mockExtract, { isLoading: false }] as unknown as ReturnType<typeof useExtractJdFromUrlMutation>,
+    );
+
+    renderDialog();
+
+    await user.click(screen.getByText(/paste a link or job description to auto-fill/i));
+
+    const urlInput = screen.getByLabelText(/job posting url/i);
+    await user.type(urlInput, "https://slow.example.com/job");
+
+    await user.click(screen.getByRole("button", { name: /fetch and auto-fill/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/couldn't auto-fill/i)).toBeInTheDocument();
+    });
+    // Specific 504 wording.
+    expect(screen.getByText(/took too long/i)).toBeInTheDocument();
+  });
+
+  it("preserves typed URL when switching to text tab and back", async () => {
+    const user = userEvent.setup();
+    mockUseExtractJdFromUrlMutation.mockReturnValue(
+      defaultMutation<ReturnType<typeof useExtractJdFromUrlMutation>>(),
+    );
+
+    renderDialog();
+
+    await user.click(screen.getByText(/paste a link or job description to auto-fill/i));
+
+    const urlInput = screen.getByLabelText(/job posting url/i);
+    await user.type(urlInput, "https://jobs.example.com/abc");
+
+    // Switch to text tab.
+    await user.click(screen.getByRole("tab", { name: /paste the description/i }));
+    expect(screen.queryByLabelText(/job posting url/i)).not.toBeInTheDocument();
+
+    // Switch back.
+    await user.click(screen.getByRole("tab", { name: /paste a link/i }));
+
+    // URL is still there.
+    const restored = screen.getByLabelText(/job posting url/i) as HTMLInputElement;
+    expect(restored.value).toBe("https://jobs.example.com/abc");
   });
 });
