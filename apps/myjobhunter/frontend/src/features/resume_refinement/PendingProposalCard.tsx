@@ -20,6 +20,7 @@ import CustomRewritePanel from "@/features/resume_refinement/CustomRewritePanel"
 import AlternativePanel from "@/features/resume_refinement/AlternativePanel";
 import TargetMetaBadges from "@/features/resume_refinement/TargetMetaBadges";
 import SuggestionProgressBar from "@/features/resume_refinement/SuggestionProgressBar";
+import NavigationButtons from "@/features/resume_refinement/NavigationButtons";
 import type { RefinementSession } from "@/types/resume-refinement/refinement-session";
 
 interface PendingProposalCardProps {
@@ -107,12 +108,22 @@ export default function PendingProposalCard({ session }: PendingProposalCardProp
 
   return (
     <section className="rounded-lg border border-border bg-card p-4 space-y-3">
-      <header className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold flex items-center gap-2">
-          <Sparkles className="size-4 text-primary" />
-          Suggestion {session.target_index + 1} of {totalTargets}
+      <header className="flex items-center justify-between gap-2">
+        <h2 className="text-sm font-semibold flex items-center gap-2 min-w-0">
+          <Sparkles className="size-4 text-primary shrink-0" />
+          <span className="truncate">
+            Suggestion {session.target_index + 1} of {totalTargets}
+          </span>
         </h2>
-        <Badge label={`${remaining} left`} color="gray" />
+        <div className="flex items-center gap-2 shrink-0">
+          <Badge label={`${remaining} left`} color="gray" />
+          <NavigationButtons
+            sessionId={session.id}
+            targetIndex={session.target_index}
+            totalTargets={totalTargets}
+            isPending={isPending}
+          />
+        </div>
       </header>
 
       <SuggestionProgressBar

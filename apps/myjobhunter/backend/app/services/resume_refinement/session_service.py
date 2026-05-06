@@ -255,6 +255,48 @@ async def skip_target(
     return await _generate_next_proposal(db, session, user_id=user_id, hint=None)
 
 
+async def navigate(
+    *,
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    session_id: uuid.UUID,
+    direction: str,
+) -> ResumeRefinementSession:
+    """Move the iteration cursor without consuming the active proposal.
+
+    Lets the operator browse suggestions before committing to act on
+    them. ``direction`` is ``"next"`` or ``"prev"`` — bounds-checked
+    against ``len(improvement_targets)``. The previous pending
+    proposal (if any) is cleared because it belonged to the previous
+    target; a fresh proposal is generated for the new target.
+
+    Raises:
+        SessionNotFound / SessionNotActive: standard load failures.
+        ValueError: ``direction`` is not "next" / "prev", OR the move
+            would step out of bounds.
+    """
+    session = await _load_active(db, session_id, user_id)
+    targets = session.improvement_targets or []
+    if not targets:
+        raise NoMoreTargets()
+
+    if direction == "next":
+        delta = 1
+    elif direction == "prev":
+        delta = -1
+    else:
+        raise ValueError(f"direction must be 'next' or 'prev', got {direction!r}")
+
+    new_index = session.target_index + delta
+    if new_index < 0:
+        raise ValueError("Already at the first suggestion.")
+    if new_index >= len(targets):
+        raise ValueError("Already at the last suggestion.")
+
+    session = await session_repo.set_target_index(db, session, new_index=new_index)
+    return await _generate_next_proposal(db, session, user_id=user_id, hint=None)
+
+
 async def complete_session(
     *,
     db: AsyncSession,

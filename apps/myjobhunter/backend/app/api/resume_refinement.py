@@ -27,6 +27,7 @@ from app.core.auth import current_active_user
 from app.db.session import get_db
 from app.models.user.user import User
 from app.schemas.resume_refinement.session import (
+    NavigateRequest,
     SessionRead,
     SessionStartRequest,
     TurnAlternativeRequest,
@@ -166,6 +167,37 @@ async def skip_target(
         raise HTTPException(status_code=404, detail="Session not found") from exc
     except SessionNotActive as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return SessionRead.model_validate(session)
+
+
+@router.post("/sessions/{session_id}/navigate", response_model=SessionRead)
+async def navigate(
+    session_id: uuid.UUID,
+    body: NavigateRequest,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(current_active_user),
+) -> SessionRead:
+    """Browse suggestions without acting on them.
+
+    Moves ``target_index`` forward or backward and regenerates the
+    pending AI proposal for the new target. The current_draft is
+    untouched. 400 when the move would step out of bounds.
+    """
+    try:
+        session = await session_service.navigate(
+            db=db,
+            user_id=user.id,
+            session_id=session_id,
+            direction=body.direction,
+        )
+    except SessionNotFound as exc:
+        raise HTTPException(status_code=404, detail="Session not found") from exc
+    except SessionNotActive as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except NoMoreTargets as exc:
+        raise HTTPException(status_code=409, detail="No improvement targets to navigate") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return SessionRead.model_validate(session)
 
 

@@ -1,4 +1,5 @@
 import { baseApi } from "@platform/ui";
+import type { NavDirection } from "@/features/resume_refinement/nav-direction";
 import type { RefinementSession } from "@/types/resume-refinement/refinement-session";
 
 const REFINEMENT_TAG = "RefinementSession";
@@ -57,6 +58,18 @@ const resumeRefinementApi = baseApi
         invalidatesTags: (_result, _err, id) => [{ type: REFINEMENT_TAG, id }],
       }),
 
+      navigateRefinement: build.mutation<
+        RefinementSession,
+        { id: string; direction: NavDirection }
+      >({
+        query: ({ id, direction }) => ({
+          url: `/resume-refinement/sessions/${id}/navigate`,
+          method: "POST",
+          data: { direction },
+        }),
+        invalidatesTags: (_result, _err, { id }) => [{ type: REFINEMENT_TAG, id }],
+      }),
+
       completeRefinementSession: build.mutation<RefinementSession, string>({
         query: (id) => ({
           url: `/resume-refinement/sessions/${id}/complete`,
@@ -75,5 +88,6 @@ export const {
   useSupplyCustomRewriteMutation,
   useRequestAlternativeMutation,
   useSkipTargetMutation,
+  useNavigateRefinementMutation,
   useCompleteRefinementSessionMutation,
 } = resumeRefinementApi;

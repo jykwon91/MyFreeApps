@@ -175,6 +175,31 @@ async def apply_user_resolution(
     return session
 
 
+async def set_target_index(
+    db: AsyncSession,
+    session: ResumeRefinementSession,
+    *,
+    new_index: int,
+) -> ResumeRefinementSession:
+    """Move the iteration cursor without modifying the draft.
+
+    Used by the navigation entry point so the operator can browse
+    suggestions without committing to act on each one. Pending
+    proposal state is cleared (the previous proposal was for the
+    previous target); the caller may choose to regenerate immediately.
+    Does NOT bump ``turn_count`` — navigation isn't a content change.
+    """
+    session.target_index = new_index
+    session.pending_target_section = None
+    session.pending_proposal = None
+    session.pending_rationale = None
+    session.pending_clarifying_question = None
+    await db.flush()
+    await db.commit()
+    await db.refresh(session)
+    return session
+
+
 async def mark_completed(
     db: AsyncSession,
     session: ResumeRefinementSession,
