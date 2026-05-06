@@ -45,7 +45,14 @@ vi.mock("@/lib/api", () => ({
 
 import api from "@/lib/api";
 import { notifyAuthChange } from "@platform/ui";
-import { signIn, register, requestVerifyToken, signOut } from "@/lib/auth";
+import {
+  signIn,
+  register,
+  requestVerifyToken,
+  signOut,
+  forgotPassword,
+  resetPassword,
+} from "@/lib/auth";
 
 const mockApiPost = vi.mocked(api.post);
 const mockNotifyAuthChange = vi.mocked(notifyAuthChange);
@@ -192,6 +199,39 @@ describe("auth helpers", () => {
       // 2026-05-06 "still showed mybookkeeper6 as signed-in" bug).
       expect(mockResetApiState).toHaveBeenCalledTimes(1);
       expect(mockDispatch).toHaveBeenCalledWith(mockResetApiStateAction);
+    });
+  });
+
+  describe("forgotPassword", () => {
+    it("posts the email to /auth/forgot-password with no Turnstile header by default", async () => {
+      mockApiPost.mockResolvedValueOnce({ data: null });
+      await forgotPassword("u@e.com");
+      expect(mockApiPost).toHaveBeenCalledWith(
+        "/auth/forgot-password",
+        { email: "u@e.com" },
+        { headers: {} },
+      );
+    });
+
+    it("forwards X-Turnstile-Token header when supplied", async () => {
+      mockApiPost.mockResolvedValueOnce({ data: null });
+      await forgotPassword("u@e.com", "ts-tok");
+      expect(mockApiPost).toHaveBeenCalledWith(
+        "/auth/forgot-password",
+        { email: "u@e.com" },
+        { headers: { "X-Turnstile-Token": "ts-tok" } },
+      );
+    });
+  });
+
+  describe("resetPassword", () => {
+    it("posts token + new password to /auth/reset-password", async () => {
+      mockApiPost.mockResolvedValueOnce({ data: null });
+      await resetPassword("the-token", "supersecret-12chars");
+      expect(mockApiPost).toHaveBeenCalledWith("/auth/reset-password", {
+        token: "the-token",
+        password: "supersecret-12chars",
+      });
     });
   });
 

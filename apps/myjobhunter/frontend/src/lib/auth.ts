@@ -96,6 +96,42 @@ export async function requestVerifyToken(email: string): Promise<void> {
 }
 
 /**
+ * Request a password-reset email for ``email``.
+ *
+ * Backend always returns 202 — even for unknown / unverified emails —
+ * so we never leak which addresses are registered. Errors here are
+ * deliberately swallowed at the call site so the UI shows the same
+ * "check your inbox" affordance for valid + invalid addresses.
+ *
+ * Turnstile token is forwarded as ``X-Turnstile-Token`` (the backend's
+ * ``require_turnstile`` dependency runs on /forgot-password). In dev /
+ * CI the token is empty and the backend short-circuits.
+ */
+export async function forgotPassword(
+  email: string,
+  turnstileToken = "",
+): Promise<void> {
+  await api.post(
+    "/auth/forgot-password",
+    { email },
+    {
+      headers: turnstileToken ? { "X-Turnstile-Token": turnstileToken } : {},
+    },
+  );
+}
+
+/**
+ * Submit a new password using the token from the reset email.
+ *
+ * The reset endpoint deliberately has no Turnstile gate — the email-link
+ * token is the security control at this step. Failures bubble up so
+ * the UI can show "expired link" vs "weak password" vs "network error".
+ */
+export async function resetPassword(token: string, password: string): Promise<void> {
+  await api.post("/auth/reset-password", { token, password });
+}
+
+/**
  * Sign out — clear token, wipe RTK Query caches so the next signed-in
  * user doesn't see the previous user's cached data, and notify
  * subscribers (triggers RequireAuth redirect).
