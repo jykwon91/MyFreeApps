@@ -193,9 +193,9 @@ export default function LeaseAttachmentsSection({ leaseId, attachments, canWrite
         </div>
       ) : null}
 
-      {viewingAttachment?.presigned_url ? (
+      {viewingAttachment ? (
         <AttachmentViewer
-          url={viewingAttachment.presigned_url}
+          url={viewingAttachment.presigned_url ?? ""}
           filename={viewingAttachment.filename}
           contentType={viewingAttachment.content_type}
           onClose={() => setViewingAttachment(null)}

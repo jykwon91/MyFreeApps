@@ -57,14 +57,23 @@ def init_sentry(*, dsn: str, environment: str) -> None:
         # Non-production: Sentry is optional — skip silently.
         return
 
-    # LoggingIntegration: capture INFO+ as breadcrumbs (attached to any
-    # subsequent error event for context), and INFO+ as standalone events
-    # so diagnostic logs are visible in Sentry without exposing a debug API.
-    # The breadcrumb level controls what rides on errors; the event level
-    # controls what gets posted as its own Sentry event.
+    # LoggingIntegration:
+    # - level=INFO         → INFO+ logs ride along as breadcrumbs on
+    #                        later events (debug context).
+    # - event_level=WARNING → only WARNING+ logs become standalone
+    #                        Sentry events.
+    #
+    # Was previously event_level=INFO, which forwarded every /health
+    # request log as its own Sentry event. That blew through the
+    # project's quota (~36h before 2026-05-06 18:00 UTC) and silently
+    # rate-limited ALL subsequent events — including the warning
+    # captures we rely on for missing-storage observability.
+    # WARNING+ is the correct ceiling: loud enough that orphan-storage,
+    # boot-guard, and silent-fail warnings reach Sentry; quiet enough
+    # that request-log noise doesn't burn the quota.
     logging_integration = LoggingIntegration(
         level=logging.INFO,
-        event_level=logging.INFO,
+        event_level=logging.WARNING,
     )
 
     try:
