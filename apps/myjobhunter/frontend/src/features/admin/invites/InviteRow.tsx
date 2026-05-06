@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { Trash2 } from "lucide-react";
 import {
   extractErrorMessage,
@@ -13,20 +14,49 @@ export interface InviteRowProps {
   invite: Invite;
 }
 
+const CONFIRM_WINDOW_MS = 3000;
+
 /**
  * Single row in the pending-invites table. Shows email, status badge,
- * expiry, and a cancel button. The cancel mutation auto-invalidates
- * the list cache via the `Invite` tag in `invitesApi`.
+ * expiry, and a cancel button.
+ *
+ * Cancel UX is a two-click inline confirm (no modal, no native alert):
+ * first click swaps the trash icon for a "Confirm?" pill that auto-
+ * reverts after 3s; second click within that window fires the
+ * cancellation. Per design review — see g-design-ux note 2026-05-06.
  */
 export default function InviteRow({ invite }: InviteRowProps) {
   const [cancelInvite, { isLoading: isCancelling }] = useCancelInviteMutation();
+  const [confirming, setConfirming] = useState(false);
+  const confirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  async function handleCancel() {
-    if (
-      !window.confirm(`Cancel invite for ${invite.email}? This cannot be undone.`)
-    ) {
-      return;
+  function clearConfirmTimer() {
+    if (confirmTimerRef.current !== null) {
+      clearTimeout(confirmTimerRef.current);
+      confirmTimerRef.current = null;
     }
+  }
+
+  // Cancel the pending timeout if the row unmounts (which happens
+  // immediately after a successful cancel — RTK Query invalidates the
+  // Invite tag and re-renders the list). Prevents a setState on an
+  // unmounted component.
+  useEffect(() => {
+    return () => clearConfirmTimer();
+  }, []);
+
+  function startConfirmation() {
+    setConfirming(true);
+    clearConfirmTimer();
+    confirmTimerRef.current = setTimeout(() => {
+      setConfirming(false);
+      confirmTimerRef.current = null;
+    }, CONFIRM_WINDOW_MS);
+  }
+
+  async function commitCancel() {
+    clearConfirmTimer();
+    setConfirming(false);
     try {
       await cancelInvite(invite.id).unwrap();
       showSuccess("Invite cancelled");
@@ -34,6 +64,28 @@ export default function InviteRow({ invite }: InviteRowProps) {
       showError(`Couldn't cancel: ${extractErrorMessage(err)}`);
     }
   }
+
+  function handleClick() {
+    if (isCancelling) return;
+    if (confirming) {
+      void commitCancel();
+      return;
+    }
+    startConfirmation();
+  }
+
+  function handleBlur() {
+    // Tabbing away from the button in confirming state aborts the
+    // pending confirmation. Belt-and-braces with the 3s auto-revert.
+    if (confirming) {
+      clearConfirmTimer();
+      setConfirming(false);
+    }
+  }
+
+  const ariaLabel = confirming
+    ? `Confirm cancellation of invite for ${invite.email}`
+    : `Cancel invite for ${invite.email}`;
 
   return (
     <div className="flex items-center justify-between gap-3 p-3 border rounded-lg hover:bg-muted/30 transition-colors">
@@ -46,15 +98,32 @@ export default function InviteRow({ invite }: InviteRowProps) {
           Expires {formatInviteDate(invite.expires_at)}
         </p>
       </div>
-      <button
-        type="button"
-        onClick={handleCancel}
-        disabled={isCancelling}
-        title="Cancel invite"
-        className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive disabled:opacity-50 min-h-[44px] min-w-[44px] flex items-center justify-center"
-      >
-        <Trash2 size={14} />
-      </button>
+      <span aria-live="polite">
+        {confirming ? (
+          <button
+            type="button"
+            onClick={handleClick}
+            onBlur={handleBlur}
+            disabled={isCancelling}
+            aria-label={ariaLabel}
+            className="inline-flex items-center gap-1.5 rounded-md bg-destructive px-3 py-1.5 text-xs font-medium text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50 min-h-[44px]"
+          >
+            <Trash2 size={14} aria-hidden="true" />
+            <span>Confirm?</span>
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={handleClick}
+            disabled={isCancelling}
+            aria-label={ariaLabel}
+            title="Cancel invite"
+            className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive disabled:opacity-50 min-h-[44px] min-w-[44px] flex items-center justify-center"
+          >
+            <Trash2 size={14} aria-hidden="true" />
+          </button>
+        )}
+      </span>
     </div>
   );
 }
