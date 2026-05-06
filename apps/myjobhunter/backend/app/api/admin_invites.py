@@ -2,7 +2,7 @@
 
 Two route groups in one file:
 
-  * ``/admin/invites/*`` — admin-only (Role.ADMIN); CRUD on invites
+  * ``/admin/invites/*`` — superuser-only; CRUD on invites
   * ``/invites/{token}/*`` — public preview + authenticated accept
 
 Layered architecture: routes are thin — every handler delegates to
@@ -25,9 +25,8 @@ import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from platform_shared.core.permissions import Role, require_role
-
 from app.core.auth import current_active_user
+from app.core.permissions import current_superuser
 from app.models.user.user import User
 from app.schemas.platform.invite_accept_response import InviteAcceptResponse
 from app.schemas.platform.invite_create_request import InviteCreateRequest
@@ -42,12 +41,6 @@ from app.services.platform.invite_service import (
     InviteNotFoundError,
     UserAlreadyRegisteredError,
 )
-
-
-# Pre-baked admin gate — built once and reused per route. Mirrors the
-# pattern from app/api/admin.py exactly so a future RBAC tightening (e.g.
-# adding a SUPER_ADMIN tier) only needs to change one factory call.
-require_admin = require_role(Role.ADMIN, current_active_user=current_active_user)
 
 
 admin_router = APIRouter(prefix="/admin/invites", tags=["admin"])
@@ -81,7 +74,7 @@ def _to_read(invite) -> InviteRead:  # type: ignore[no-untyped-def]
 )
 async def create_invite(
     body: InviteCreateRequest,
-    admin: User = Depends(require_admin),
+    admin: User = Depends(current_superuser),
 ) -> InviteRead:
     try:
         invite = await invite_service.create_invite(
@@ -96,7 +89,7 @@ async def create_invite(
 
 @admin_router.get("", response_model=list[InviteRead])
 async def list_invites(
-    admin: User = Depends(require_admin),
+    admin: User = Depends(current_superuser),
 ) -> list[InviteRead]:
     invites = await invite_service.list_pending_invites()
     return [_to_read(i) for i in invites]
@@ -108,7 +101,7 @@ async def list_invites(
 )
 async def cancel_invite(
     invite_id: uuid.UUID,
-    admin: User = Depends(require_admin),
+    admin: User = Depends(current_superuser),
 ) -> None:
     try:
         await invite_service.cancel_invite(

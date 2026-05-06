@@ -44,6 +44,25 @@
 }
 
 @layer base {
+  /* Lock the document to the viewport. AppShell already declares
+     ``h-screen overflow-hidden`` on its outer container; setting the
+     same on html/body/#root closes the residual body-level scroll
+     path that surfaced as a phantom black gap below content on
+     /profile (and other pages whose content is shorter than the
+     viewport). Pages that need vertical scroll always do it inside
+     AppShell's inner ``<main className="overflow-y-auto">``. Auth
+     pages (Login, VerifyEmail) render at <100vh and don't need body
+     scroll either. */
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    overflow: hidden;
+  }
+
   * {
     border-color: hsl(var(--border));
   }

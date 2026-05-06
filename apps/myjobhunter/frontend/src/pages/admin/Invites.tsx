@@ -1,38 +1,21 @@
 import { useState } from "react";
-import { Navigate } from "react-router-dom";
 import { Plus } from "lucide-react";
-import { Skeleton } from "@platform/ui";
 import CreateInviteDialog from "@/features/admin/invites/CreateInviteDialog";
 import InvitesList from "@/features/admin/invites/InvitesList";
-import { useGetCurrentUserQuery } from "@/lib/userApi";
-import { ROLE } from "@/constants/roles";
 
 /**
- * Admin Invites page — gated on Role.ADMIN.
+ * Superuser Invites page.
  *
- * The server-side `require_role(Role.ADMIN, ...)` is the security
- * boundary; this client gate is a UX nicety (renders a not-found-style
- * redirect instead of a 403 from a fetch). While the `/users/me`
- * query is in-flight we render a skeleton — never the page contents —
- * so admin-only chrome never flashes for a regular user.
+ * The route is wrapped by `<RequireSuperuser>` in `routes.tsx`, which
+ * handles the loading skeleton + redirect for non-superusers. Here we
+ * just assume the gate has already passed.
+ *
+ * The server-side `current_superuser` dependency is the actual
+ * security boundary — every admin-only invite endpoint validates
+ * server-side.
  */
 export default function AdminInvites() {
   const [createOpen, setCreateOpen] = useState(false);
-  const { data: user, isLoading } = useGetCurrentUserQuery();
-
-  if (isLoading) {
-    return (
-      <main className="p-4 sm:p-8 space-y-6 max-w-3xl">
-        <Skeleton className="h-9 w-48" />
-        <Skeleton className="h-4 w-72" />
-        <Skeleton className="h-16 w-full rounded-lg" />
-      </main>
-    );
-  }
-
-  if (user?.role !== ROLE.ADMIN) {
-    return <Navigate to="/dashboard" replace />;
-  }
 
   return (
     <main className="p-4 sm:p-8 space-y-6 max-w-3xl">

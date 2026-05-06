@@ -1,12 +1,14 @@
 /**
- * Admin-only frontend routes. Centralised so route definitions, nav
- * descriptors, and any future redirect logic share one source of
+ * Superuser-only frontend routes. Centralised so route definitions,
+ * nav descriptors, and any future redirect logic share one source of
  * truth — no magic strings sprinkled through the codebase.
  *
- * Backend-side these routes are gated by `require_admin`
- * (Role.ADMIN). The frontend uses these paths only to decide what
- * to render in the SPA.
+ * Every entry below is gated by `current_superuser` server-side and
+ * by `<RequireSuperuser>` client-side. The frontend uses these paths
+ * only to decide what to render in the SPA.
  */
 export const ADMIN_ROUTES = {
+  DASHBOARD: "/admin",
   DEMO_USERS: "/admin/demo",
+  INVITES: "/admin/invites",
 } as const;
