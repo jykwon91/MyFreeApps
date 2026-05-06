@@ -14,13 +14,31 @@ Business rules enforced here:
   * the recipient email must be a fresh address — no pending invite for
     the same email, no existing user account on that email
   * tokens are single-use — accepting consumes the row
-  * tokens expire 7 days after creation — `accept` raises ValueError
+  * tokens expire 7 days after creation — `accept` raises ``InviteExpiredError``
     when called past the deadline
+
+Security shape (PR fix/myjobhunter-invite-security-hardening, 2026-05-05):
+  * Raw tokens generated here, hashed via
+    ``app.services.platform.invite_token``, only the hash persists.
+    The raw token is returned exactly once via ``CreateInviteResult`` so
+    the route layer can pass it to the email send before discarding.
+  * Audit-log metadata strips PII to ``email_domain`` on the create
+    path (the recipient is by definition not yet a user, so per the
+    auth-events policy we never log their full email for unknown-user
+    events).
+  * The 409-collision response collapses the "already-registered user"
+    and "already-pending invite" branches into a single generic body so
+    a compromised-admin token cannot enumerate which case applies.
+  * The email send is moved OUT of the create transaction. Row commits
+    first; if SMTP fails, the row stays and the admin can resend.
+    Previously SMTP failures rolled back the row, opening a race where
+    the email could land while the row didn't (orphan email).
 """
 from __future__ import annotations
 
 import logging
 import uuid
+from dataclasses import dataclass
 from datetime import datetime, timezone
 
 from app.db.session import AsyncSessionLocal, unit_of_work
@@ -29,6 +47,7 @@ from app.repositories.platform import invite_repo
 from app.repositories.user import user_repo
 from app.schemas.platform.invite_status import InviteStatus
 from app.services.platform.invite_email import send_invite_email
+from app.services.platform.invite_token import generate_token, hash_token
 from app.services.system.auth_event_service import log_auth_event
 
 logger = logging.getLogger(__name__)
@@ -52,12 +71,14 @@ class InviteError(Exception):
     """Base for invite-flow business-rule violations."""
 
 
-class InviteAlreadyExistsError(InviteError):
-    """A pending, un-expired invite already exists for this email."""
+class InviteRecipientUnavailableError(InviteError):
+    """The recipient email cannot accept a new invite.
 
-
-class UserAlreadyRegisteredError(InviteError):
-    """The recipient email is already a registered MJH user."""
+    Collapses two underlying causes — already-registered user OR pending
+    invite already in flight — into a single error so a compromised
+    admin token cannot enumerate which case applies. The route layer
+    maps this to a single generic 409 body.
+    """
 
 
 class InviteNotFoundError(InviteError):
@@ -74,6 +95,24 @@ class InviteAlreadyAcceptedError(InviteError):
 
 class InviteEmailMismatchError(InviteError):
     """The accepting user's email doesn't match the invite's bound email."""
+
+
+# ---------------------------------------------------------------------------
+# Service-layer return shapes
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class CreateInviteResult:
+    """Return shape for ``create_invite``.
+
+    The raw token lives here for exactly one purpose: hand it to the
+    email sender at the route layer, then drop it. It is NEVER persisted
+    and NEVER returned to the admin in the API response.
+    """
+
+    invite: PlatformInvite
+    raw_token: str
 
 
 # ---------------------------------------------------------------------------
@@ -100,6 +139,23 @@ def compute_status(invite: PlatformInvite, *, now: datetime | None = None) -> In
 
 
 # ---------------------------------------------------------------------------
+# PII helpers
+# ---------------------------------------------------------------------------
+
+
+def _email_domain(email: str) -> str:
+    """Extract the domain portion of an email address.
+
+    Returns the lowercased substring after the last '@'. Falls back to
+    the literal ``"unknown"`` for inputs without an '@' so the audit
+    log never carries a malformed value masquerading as a domain.
+    """
+    _, _, domain = email.rpartition("@")
+    domain = domain.strip().lower()
+    return domain or "unknown"
+
+
+# ---------------------------------------------------------------------------
 # Public service functions
 # ---------------------------------------------------------------------------
 
@@ -108,53 +164,59 @@ async def create_invite(
     *,
     email: str,
     admin_id: uuid.UUID,
-) -> PlatformInvite:
-    """Create + email a new invite to ``email``.
+) -> CreateInviteResult:
+    """Create a new invite row and return the raw token for one-shot email use.
+
+    Two-stage transaction shape:
+      1. Open ``unit_of_work``, validate uniqueness, insert the row +
+         audit log, and commit.
+      2. Return the raw token; the caller (route layer) hands it to the
+         email sender. SMTP failures are surfaced to the admin via 5xx
+         but the row is already persisted, so the admin can resend.
 
     Raises:
-        UserAlreadyRegisteredError: the email already has an MJH account.
-        InviteAlreadyExistsError:   a pending invite for this email is
-            still un-expired.
+        InviteRecipientUnavailableError: the email already belongs to a
+            user account OR a pending invite is in flight.
     """
     normalized = email.strip().lower()
+    raw_token = generate_token()
+    token_h = hash_token(raw_token)
 
     async with unit_of_work() as db:
         existing_user = await user_repo.get_by_email(db, normalized)
         if existing_user is not None:
-            raise UserAlreadyRegisteredError(
-                "An account with this email already exists."
+            raise InviteRecipientUnavailableError(
+                "Cannot send invite to this email."
             )
 
         existing_invite = await invite_repo.get_pending_for_email(db, normalized)
         if existing_invite is not None:
-            raise InviteAlreadyExistsError(
-                "A pending invite already exists for this email."
+            raise InviteRecipientUnavailableError(
+                "Cannot send invite to this email."
             )
 
         invite = await invite_repo.create(
-            db, email=normalized, created_by=admin_id,
+            db,
+            email=normalized,
+            token_hash=token_h,
+            created_by=admin_id,
         )
-
-        # Email send happens BEFORE the audit row is written so that a
-        # send failure rolls back the row insertion via the
-        # unit_of_work transaction. Otherwise the admin sees a 5xx but
-        # an orphan invite row stays in the DB confusingly. Console-mode
-        # send_email_or_raise never raises, so dev/CI exits this block
-        # with the row committed.
-        send_invite_email(normalized, invite.token)
 
         await log_auth_event(
             db,
             event_type=INVITE_CREATED,
             user_id=admin_id,
             succeeded=True,
-            metadata={"invite_id": str(invite.id), "email": normalized},
+            metadata={
+                "invite_id": str(invite.id),
+                "email_domain": _email_domain(normalized),
+            },
         )
         logger.info(
-            "Platform invite created id=%s email=%s by_admin=%s",
-            invite.id, normalized, admin_id,
+            "Platform invite created id=%s email_domain=%s by_admin=%s",
+            invite.id, _email_domain(normalized), admin_id,
         )
-        return invite
+        return CreateInviteResult(invite=invite, raw_token=raw_token)
 
 
 async def list_pending_invites() -> list[PlatformInvite]:
@@ -189,13 +251,17 @@ async def cancel_invite(
             raise InviteAlreadyAcceptedError(
                 "Cannot cancel an invite that has already been accepted."
             )
+        cancelled_email_domain = _email_domain(invite.email)
         await invite_repo.delete(db, invite)
         await log_auth_event(
             db,
             event_type=INVITE_CANCELLED,
             user_id=admin_id,
             succeeded=True,
-            metadata={"invite_id": str(invite_id), "email": invite.email},
+            metadata={
+                "invite_id": str(invite_id),
+                "email_domain": cancelled_email_domain,
+            },
         )
         logger.info(
             "Platform invite cancelled id=%s by_admin=%s",
@@ -206,15 +272,17 @@ async def cancel_invite(
 async def get_invite_info(token: str) -> tuple[PlatformInvite, InviteStatus]:
     """Public preview lookup.
 
-    Returns the invite + its computed status. The route layer projects
-    this into the (deliberately narrow) ``InviteInfoResponse`` schema —
-    only ``email`` / ``status`` / ``expires_at`` reach the wire.
+    Hashes the incoming raw token before lookup. Returns the invite +
+    its computed status. The route layer projects this into the
+    (deliberately narrow) ``InviteInfoResponse`` schema — only ``email`` /
+    ``status`` / ``expires_at`` reach the wire.
 
     Raises:
-        InviteNotFoundError: no row matches the token.
+        InviteNotFoundError: no row matches the token's hash.
     """
+    token_h = hash_token(token)
     async with AsyncSessionLocal() as db:
-        invite = await invite_repo.get_by_token(db, token)
+        invite = await invite_repo.get_by_token_hash(db, token_h)
         if invite is None:
             raise InviteNotFoundError("Invite not found.")
         status = compute_status(invite)
@@ -229,24 +297,22 @@ async def accept_invite(
 ) -> PlatformInvite:
     """Mark the invite consumed by ``user_id``.
 
-    The accepting user must already be authenticated AND their email
-    must match the invite's bound email (case-insensitive). The
-    registration flow on the frontend will: (a) prefill the email
-    field with the invite's email, (b) call ``POST /auth/register``
-    with that email, (c) verify via the email link, (d) log in,
-    (e) call this endpoint with the token from the URL.
+    Hashes the incoming raw token before lookup. The accepting user
+    must already be authenticated AND their email must match the
+    invite's bound email (case-insensitive).
 
     Raises:
-        InviteNotFoundError:        no row matches the token.
+        InviteNotFoundError:        no row matches the token's hash.
         InviteExpiredError:         expires_at is in the past.
         InviteAlreadyAcceptedError: accepted_at is non-null already.
         InviteEmailMismatchError:   the accepting user's email differs
             from the bound email.
     """
     normalized = user_email.strip().lower()
+    token_h = hash_token(token)
 
     async with unit_of_work() as db:
-        invite = await invite_repo.get_by_token(db, token)
+        invite = await invite_repo.get_by_token_hash(db, token_h)
         if invite is None:
             raise InviteNotFoundError("Invite not found.")
 
@@ -276,7 +342,6 @@ async def accept_invite(
             succeeded=True,
             metadata={
                 "invite_id": str(invite.id),
-                "email": invite.email,
                 "invited_by": str(invite.created_by),
             },
         )
@@ -285,3 +350,24 @@ async def accept_invite(
             invite.id, user_id,
         )
         return accepted
+
+
+__all__ = [
+    "CreateInviteResult",
+    "INVITE_ACCEPTED",
+    "INVITE_CANCELLED",
+    "INVITE_CREATED",
+    "InviteAlreadyAcceptedError",
+    "InviteEmailMismatchError",
+    "InviteError",
+    "InviteExpiredError",
+    "InviteNotFoundError",
+    "InviteRecipientUnavailableError",
+    "accept_invite",
+    "cancel_invite",
+    "compute_status",
+    "create_invite",
+    "get_invite_info",
+    "list_pending_invites",
+    "send_invite_email",
+]

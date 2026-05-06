@@ -9,42 +9,60 @@ Layered architecture: routes are thin — every handler delegates to
 ``invite_service`` and translates the service's domain exceptions into
 the appropriate HTTP status codes. No DB primitives in this file.
 
+Security shape (2026-05-05): the public ``GET /invites/{token}/info``
+endpoint is per-IP rate-limited so an attacker cannot use it as a
+free token-validity oracle. The 409-collision response on
+``POST /admin/invites`` returns a single generic body so even a
+compromised admin token cannot enumerate existing user accounts vs.
+in-flight invites.
+
 Status code conventions:
   * 201 — invite created
   * 200 — list / preview / accept
   * 204 — cancel
   * 400 — request shape problems / email mismatch on accept
   * 404 — invite not found
-  * 409 — conflict (already-pending invite, already-registered user,
-          already-accepted invite)
+  * 409 — conflict (recipient unavailable, already-accepted invite)
   * 410 — gone (expired)
+  * 429 — rate limited (public preview)
 """
 from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 from app.core.auth import current_active_user
 from app.core.permissions import current_superuser
+from app.core.rate_limit import RateLimiter
 from app.models.user.user import User
 from app.schemas.platform.invite_accept_response import InviteAcceptResponse
 from app.schemas.platform.invite_create_request import InviteCreateRequest
 from app.schemas.platform.invite_info_response import InviteInfoResponse
 from app.schemas.platform.invite_read import InviteRead
 from app.services.platform import invite_service
+from app.services.platform.invite_email import send_invite_email
 from app.services.platform.invite_service import (
     InviteAlreadyAcceptedError,
-    InviteAlreadyExistsError,
     InviteEmailMismatchError,
     InviteExpiredError,
     InviteNotFoundError,
-    UserAlreadyRegisteredError,
+    InviteRecipientUnavailableError,
 )
+from platform_shared.core.request_utils import get_client_ip
 
 
 admin_router = APIRouter(prefix="/admin/invites", tags=["admin"])
 public_router = APIRouter(prefix="/invites", tags=["invites"])
+
+
+# Per-IP throttle on the unauthenticated invite-preview endpoint. 30
+# requests per 5 minutes is generous for a legitimate registration
+# flow (a user might refresh the page a handful of times) but tight
+# enough to make a 32-byte token brute-force economically infeasible
+# even before the entropy math kicks in. Pre-instantiated at module
+# import so all requests share the same sliding-window state.
+_INVITE_INFO_LIMITER = RateLimiter(max_attempts=30, window_seconds=300)
 
 
 def _to_read(invite) -> InviteRead:  # type: ignore[no-untyped-def]
@@ -52,7 +70,6 @@ def _to_read(invite) -> InviteRead:  # type: ignore[no-untyped-def]
     return InviteRead(
         id=invite.id,
         email=invite.email,
-        token=invite.token,
         status=invite_service.compute_status(invite),
         expires_at=invite.expires_at,
         accepted_at=invite.accepted_at,
@@ -77,14 +94,18 @@ async def create_invite(
     admin: User = Depends(current_superuser),
 ) -> InviteRead:
     try:
-        invite = await invite_service.create_invite(
+        result = await invite_service.create_invite(
             email=body.email, admin_id=admin.id,
         )
-    except UserAlreadyRegisteredError as e:
-        raise HTTPException(status_code=409, detail=str(e))
-    except InviteAlreadyExistsError as e:
-        raise HTTPException(status_code=409, detail=str(e))
-    return _to_read(invite)
+    except InviteRecipientUnavailableError as e:
+        raise HTTPException(status_code=409, detail=str(e)) from e
+
+    # Email send happens AFTER the row commits (the unit_of_work in the
+    # service has already returned). If SMTP fails the row stays — the
+    # admin can resend via a future cancel-and-reissue flow rather than
+    # being left with an orphan email-but-no-row.
+    send_invite_email(result.invite.email, result.raw_token)
+    return _to_read(result.invite)
 
 
 @admin_router.get("", response_model=list[InviteRead])
@@ -108,9 +129,9 @@ async def cancel_invite(
             invite_id=invite_id, admin_id=admin.id,
         )
     except InviteNotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=404, detail=str(e)) from e
     except InviteAlreadyAcceptedError as e:
-        raise HTTPException(status_code=409, detail=str(e))
+        raise HTTPException(status_code=409, detail=str(e)) from e
 
 
 # ---------------------------------------------------------------------------
@@ -119,16 +140,18 @@ async def cancel_invite(
 
 
 @public_router.get("/{token}/info", response_model=InviteInfoResponse)
-async def get_invite_info(token: str) -> InviteInfoResponse:
+async def get_invite_info(token: str, request: Request) -> InviteInfoResponse:
     """Public — no auth. Returns email + computed status + expires_at.
 
-    Deliberately leaks no inviter identity / id / created_at — see
-    ``InviteInfoResponse`` for the full reasoning.
+    Rate-limited per IP to prevent the endpoint becoming a token-
+    validity oracle. Deliberately leaks no inviter identity / id /
+    created_at — see ``InviteInfoResponse`` for the full reasoning.
     """
+    _INVITE_INFO_LIMITER.check(get_client_ip(request))
     try:
         invite, computed_status = await invite_service.get_invite_info(token)
     except InviteNotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=404, detail=str(e)) from e
     return InviteInfoResponse(
         email=invite.email,
         status=computed_status,
@@ -157,13 +180,13 @@ async def accept_invite(
             token=token, user_id=user.id, user_email=user.email,
         )
     except InviteNotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=404, detail=str(e)) from e
     except InviteExpiredError as e:
-        raise HTTPException(status_code=410, detail=str(e))
+        raise HTTPException(status_code=410, detail=str(e)) from e
     except InviteAlreadyAcceptedError as e:
-        raise HTTPException(status_code=409, detail=str(e))
+        raise HTTPException(status_code=409, detail=str(e)) from e
     except InviteEmailMismatchError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     assert invite.accepted_at is not None  # set by mark_accepted
     return InviteAcceptResponse(
         invite_id=invite.id,

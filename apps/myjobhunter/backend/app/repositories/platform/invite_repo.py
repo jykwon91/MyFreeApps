@@ -5,13 +5,16 @@ classes). Every public function takes the ``AsyncSession`` first; the
 service layer is responsible for choosing between ``unit_of_work`` (for
 writes) and ``AsyncSessionLocal`` (for reads).
 
+Security shape (2026-05-05): tokens are persisted as sha256 hashes via
+the ``token_hash`` column. Lookups go through ``get_by_token_hash``;
+the service layer is responsible for computing the hash before calling.
+The repository never sees raw tokens.
+
 Tenant scoping notes:
 - Invite ownership is admin-scoped, not tenant-scoped — every admin can
   see every pending invite. Tenant isolation here is "is this row
   visible to a non-admin?"; the answer is no, and that gate is enforced
-  at the route layer via ``require_admin``. Repos take ``user_id`` only
-  where it constrains the row (e.g. cancel-invite uses ``created_by`` to
-  let an admin only cancel invites they created — defensive scoping).
+  at the route layer via ``current_superuser``.
 """
 from __future__ import annotations
 
@@ -29,14 +32,18 @@ async def create(
     db: AsyncSession,
     *,
     email: str,
+    token_hash: str,
     created_by: uuid.UUID,
 ) -> PlatformInvite:
     """Insert a fresh invite row.
 
-    ``token`` and ``expires_at`` are populated by model-level defaults so
-    the repo never has to know how they're generated.
+    ``token_hash`` is computed by the service layer from the raw token
+    before this is called. ``expires_at`` is populated by a model-level
+    default.
     """
-    invite = PlatformInvite(email=email, created_by=created_by)
+    invite = PlatformInvite(
+        email=email, token_hash=token_hash, created_by=created_by,
+    )
     db.add(invite)
     await db.flush()
     await db.refresh(invite)
@@ -52,10 +59,10 @@ async def get_by_id(
     return result.scalar_one_or_none()
 
 
-async def get_by_token(
-    db: AsyncSession, token: str,
+async def get_by_token_hash(
+    db: AsyncSession, token_hash: str,
 ) -> PlatformInvite | None:
-    """Look up an invite by its token regardless of state.
+    """Look up an invite by its sha256 hash regardless of state.
 
     Returns the row even when expired or already accepted — the service
     layer decides whether the state allows the requested action and
@@ -65,7 +72,7 @@ async def get_by_token(
     page instead of a generic 404.
     """
     result = await db.execute(
-        select(PlatformInvite).where(PlatformInvite.token == token)
+        select(PlatformInvite).where(PlatformInvite.token_hash == token_hash)
     )
     return result.scalar_one_or_none()
 
