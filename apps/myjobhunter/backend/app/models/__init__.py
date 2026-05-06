@@ -18,6 +18,8 @@ from app.models.application.application_event import ApplicationEvent  # noqa: F
 from app.models.application.application_contact import ApplicationContact  # noqa: F401
 from app.models.application.document import Document  # noqa: F401
 
+from app.models.job_analysis.job_analysis import JobAnalysis  # noqa: F401
+
 from app.models.integration.job_board_credential import JobBoardCredential  # noqa: F401
 
 from app.models.jobs.resume_upload_job import ResumeUploadJob  # noqa: F401
