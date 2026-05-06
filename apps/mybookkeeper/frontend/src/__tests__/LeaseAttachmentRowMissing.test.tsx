@@ -1,12 +1,13 @@
 /**
  * Behavior tests for LeaseAttachmentRow when the underlying storage
- * object is missing (is_available=false). Per the silent-observability
- * rule, the UI stays clean — there is no visible "File missing" alert
- * and no explicit "Re-upload" button. The filename remains clickable;
- * clicking captures a PostHog/console event AND opens the file picker
- * so the host can replace the orphan in place.
+ * object is missing (is_available=false).
+ *
+ * Click on filename = view document (always). Missing rows fire an
+ * observability event on render; the click itself is the standard
+ * preview/download — no UI hijacking, no re-upload picker, no
+ * destructive alerts.
  */
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { Provider } from "react-redux";
 import { store } from "@/shared/store";
@@ -67,7 +68,7 @@ describe("LeaseAttachmentRow — missing file (silent UX)", () => {
     reportMock.mockReset();
   });
 
-  it("does NOT render a visible 'File missing' alert", () => {
+  it("does NOT render any visible 'File missing' alert", () => {
     renderSection(ORPHAN_ATTACHMENT);
     expect(
       screen.queryByText(/file missing from storage/i),
@@ -75,22 +76,17 @@ describe("LeaseAttachmentRow — missing file (silent UX)", () => {
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
-  it("renders the filename as a clickable button (always-clickable rule)", () => {
+  it("does NOT render a re-upload button", () => {
     renderSection(ORPHAN_ATTACHMENT);
-    const filenameButton = screen.getByTestId(
-      `lease-attachment-preview-${ORPHAN_ATTACHMENT.id}`,
+    const li = screen.getByTestId(`lease-attachment-${ORPHAN_ATTACHMENT.id}`);
+    const reuploadBtn = li.querySelector(
+      "[data-testid$='-reupload'], [data-testid*='reupload-trigger']",
     );
-    expect(filenameButton).toBeInTheDocument();
-    expect(filenameButton.tagName).toBe("BUTTON");
+    expect(reuploadBtn).toBeNull();
   });
 
-  it("clicking the filename captures a PostHog/console event AND triggers the file picker", () => {
+  it("captures the missing-storage event on render via PostHog/console", () => {
     renderSection(ORPHAN_ATTACHMENT);
-    const filenameButton = screen.getByTestId(
-      `lease-attachment-preview-${ORPHAN_ATTACHMENT.id}`,
-    );
-    fireEvent.click(filenameButton);
-
     expect(reportMock).toHaveBeenCalledWith(
       expect.objectContaining({
         domain: "lease_attachment",
@@ -101,33 +97,19 @@ describe("LeaseAttachmentRow — missing file (silent UX)", () => {
     );
   });
 
-  it("re-uploading after a missing-file click triggers DELETE + POST with the same kind", async () => {
-    deleteMock.mockReturnValue({ unwrap: () => Promise.resolve(undefined) });
-    uploadMock.mockReturnValue({
-      unwrap: () =>
-        Promise.resolve({ ...ORPHAN_ATTACHMENT, id: "att-new", is_available: true }),
-    });
-
+  it("does not call DELETE or upload mutations on render of a missing row", () => {
     renderSection(ORPHAN_ATTACHMENT);
+    expect(deleteMock).not.toHaveBeenCalled();
+    expect(uploadMock).not.toHaveBeenCalled();
+  });
 
+  it("renders the filename as a clickable element (no plain text)", () => {
+    renderSection(ORPHAN_ATTACHMENT);
     const li = screen.getByTestId(`lease-attachment-${ORPHAN_ATTACHMENT.id}`);
-    const fileInput = li.querySelector('input[type="file"]') as HTMLInputElement;
-
-    const file = new File(["replacement bytes"], "replacement.pdf", {
-      type: "application/pdf",
-    });
-    fireEvent.change(fileInput, { target: { files: [file] } });
-
-    await waitFor(() => {
-      expect(deleteMock).toHaveBeenCalledWith({
-        leaseId: "lease-1",
-        attachmentId: "att-orphan",
-      });
-      expect(uploadMock).toHaveBeenCalledWith({
-        leaseId: "lease-1",
-        file,
-        kind: "signed_lease",
-      });
-    });
+    const linkOrBtn = li.querySelector(
+      `[data-testid='lease-attachment-download-link-${ORPHAN_ATTACHMENT.id}'], `
+      + `[data-testid='lease-attachment-preview-${ORPHAN_ATTACHMENT.id}']`,
+    );
+    expect(linkOrBtn).not.toBeNull();
   });
 });

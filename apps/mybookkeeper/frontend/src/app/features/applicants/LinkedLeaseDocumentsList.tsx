@@ -1,54 +1,45 @@
-import { useRef } from "react";
+import { useEffect } from "react";
 import { Download, FileText } from "lucide-react";
 import { LEASE_ATTACHMENT_KIND_LABELS } from "@/shared/lib/lease-labels";
 import type { LeaseAttachmentKind } from "@/shared/types/lease/lease-attachment-kind";
 import type { SignedLeaseAttachment } from "@/shared/types/lease/signed-lease-attachment";
-import { LEASE_REUPLOAD_ACCEPT } from "@/shared/lib/lease-reupload-accept";
 import { reportMissingStorageObject } from "@/shared/lib/storage-observability";
 
 export interface LinkedLeaseDocumentsListProps {
   attachments: readonly SignedLeaseAttachment[];
-  canWrite: boolean;
   onPreview: (attachment: SignedLeaseAttachment) => void;
-  onReupload: (attachment: SignedLeaseAttachment, file: File) => void;
 }
 
 /**
- * Renders each lease attachment row with the filename ALWAYS clickable.
- * Behavior depends on state — but the user never sees a "File missing"
- * alert; the only signal that something is off is that clicking opens a
- * re-upload picker instead of the document. Operators see the
- * underlying issue via PostHog + Sentry + the Network tab.
+ * Click on filename = view document. The user's intent is always to
+ * VIEW — not to upload. Missing-storage rows are captured to PostHog +
+ * Sentry on render so the operator can take action; the click itself
+ * still attempts a view via the (possibly empty) presigned URL. No
+ * UI hijacking, no destructive alerts, no re-upload pickers.
  */
 export default function LinkedLeaseDocumentsList({
   attachments,
-  canWrite,
   onPreview,
-  onReupload,
 }: LinkedLeaseDocumentsListProps) {
-  const reuploadInputs = useRef<Record<string, HTMLInputElement | null>>({});
-  const triggerReupload = (attId: string) => {
-    reuploadInputs.current[attId]?.click();
-  };
-
-  function handleMissingClick(att: SignedLeaseAttachment) {
-    reportMissingStorageObject({
-      domain: "lease_attachment",
-      attachment_id: att.id,
-      storage_key: att.storage_key,
-      parent_id: att.lease_id,
-      parent_kind: "signed_lease",
-    });
-    if (canWrite) triggerReupload(att.id);
-  }
+  useEffect(() => {
+    for (const att of attachments) {
+      if (att.is_available === false) {
+        reportMissingStorageObject({
+          domain: "lease_attachment",
+          attachment_id: att.id,
+          storage_key: att.storage_key,
+          parent_id: att.lease_id,
+          parent_kind: "signed_lease",
+        });
+      }
+    }
+  }, [attachments]);
 
   return (
     <ul className="space-y-1">
       {attachments.map((att) => {
-        const isMissing = att.is_available === false;
         const canPreviewInline =
-          !isMissing
-          && att.presigned_url !== null
+          att.presigned_url !== null
           && (att.content_type === "application/pdf"
             || att.content_type.startsWith("image/"));
         const kindLabel =
@@ -62,17 +53,7 @@ export default function LinkedLeaseDocumentsList({
           >
             <div className="flex items-center gap-2 min-w-0">
               <FileText className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden="true" />
-              {isMissing ? (
-                <button
-                  type="button"
-                  onClick={() => handleMissingClick(att)}
-                  className="text-left text-primary hover:underline font-medium truncate"
-                  data-testid={`linked-lease-attachment-preview-${att.id}`}
-                  title={att.filename}
-                >
-                  {att.filename}
-                </button>
-              ) : canPreviewInline ? (
+              {canPreviewInline ? (
                 <button
                   type="button"
                   onClick={() => onPreview(att)}
@@ -82,9 +63,9 @@ export default function LinkedLeaseDocumentsList({
                 >
                   {att.filename}
                 </button>
-              ) : att.presigned_url ? (
+              ) : (
                 <a
-                  href={att.presigned_url}
+                  href={att.presigned_url ?? undefined}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-left text-primary hover:underline font-medium truncate"
@@ -93,14 +74,10 @@ export default function LinkedLeaseDocumentsList({
                 >
                   {att.filename}
                 </a>
-              ) : (
-                <span className="truncate text-muted-foreground" title={att.filename}>
-                  {att.filename}
-                </span>
               )}
               <span className="text-xs text-muted-foreground shrink-0">{kindLabel}</span>
             </div>
-            {!isMissing && att.presigned_url ? (
+            {att.presigned_url ? (
               <a
                 href={att.presigned_url}
                 target="_blank"
@@ -112,19 +89,6 @@ export default function LinkedLeaseDocumentsList({
                 <Download size={14} />
               </a>
             ) : null}
-            <input
-              ref={(el) => {
-                reuploadInputs.current[att.id] = el;
-              }}
-              type="file"
-              className="hidden"
-              accept={LEASE_REUPLOAD_ACCEPT}
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) onReupload(att, file);
-                e.target.value = "";
-              }}
-            />
           </li>
         );
       })}

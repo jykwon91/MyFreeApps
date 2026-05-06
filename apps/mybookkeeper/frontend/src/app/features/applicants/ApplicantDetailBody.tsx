@@ -156,7 +156,7 @@ export default function ApplicantDetailBody({ applicant }: ApplicantDetailBodyPr
           <h2 className="text-sm font-medium">Leases</h2>
           <div className="space-y-4">
             {linkedLeases.map((lease) => (
-              <LinkedLeaseDocuments key={lease.id} lease={lease} canWrite={canWrite} />
+              <LinkedLeaseDocuments key={lease.id} lease={lease} />
             ))}
           </div>
         </section>
