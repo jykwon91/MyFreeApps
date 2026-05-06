@@ -22,7 +22,7 @@ import uuid
 from collections.abc import Callable
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from platform_shared.schemas.admin_user import (
     AdminUserRead,
@@ -59,9 +59,11 @@ def build_admin_router(
 
     @router.get("/users", response_model=list[response_model])  # type: ignore[valid-type]
     async def list_users(
+        limit: int = Query(50, ge=1, le=200),
+        offset: int = Query(0, ge=0),
         admin: Any = Depends(current_admin),
     ) -> list[Any]:
-        return list(await service.list_users())
+        return list(await service.list_users(limit=limit, offset=offset))
 
     @router.patch(
         "/users/{user_id}/role", response_model=response_model,  # type: ignore[valid-type]
