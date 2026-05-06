@@ -320,6 +320,64 @@ describe("AddApplicationDialog — JD paste-text flow", () => {
     });
   });
 
+  it("auto-creates the company on parse-with-AI when no match exists", async () => {
+    const user = userEvent.setup();
+    const mockParse = vi.fn().mockReturnValue({
+      unwrap: () =>
+        Promise.resolve({
+          title: "Senior Engineer",
+          company: "Pivotal Health",
+          location: "Remote",
+          remote_type: "remote",
+          salary_min: null,
+          salary_max: null,
+          salary_currency: null,
+          salary_period: null,
+          seniority: null,
+          must_have_requirements: [],
+          nice_to_have_requirements: [],
+          responsibilities: [],
+          summary: null,
+        }),
+    });
+    const mockCreateCompany = vi.fn().mockReturnValue({
+      unwrap: () =>
+        Promise.resolve({
+          id: "co-new",
+          name: "Pivotal Health",
+          primary_domain: null,
+          logo_url: null,
+          industry: null,
+          size_range: null,
+          notes: null,
+          deleted_at: null,
+        }),
+    });
+
+    mockUseListCompaniesQuery.mockReturnValue(emptyCompanies);
+    mockUseParseJobDescriptionMutation.mockReturnValue(
+      [mockParse, { isLoading: false }] as unknown as ReturnType<typeof useParseJobDescriptionMutation>,
+    );
+    mockUseCreateCompanyMutation.mockReturnValue(
+      [mockCreateCompany, { isLoading: false }] as unknown as ReturnType<typeof useCreateCompanyMutation>,
+    );
+
+    renderDialog();
+    await user.click(screen.getByText(/paste a link or job description to auto-fill/i));
+    await user.click(screen.getByRole("tab", { name: /paste the description/i }));
+
+    const textarea = screen.getByRole("textbox", { name: /job description text/i });
+    await user.type(textarea, "JD text mentioning Pivotal Health");
+    await user.click(screen.getByRole("button", { name: /parse with ai/i }));
+
+    await waitFor(() => {
+      // The text-parse path now MUST auto-create the company —
+      // operator's stated workflow is never to manually re-enter what
+      // we already extracted.
+      expect(mockCreateCompany).toHaveBeenCalledWith({ name: "Pivotal Health" });
+    });
+  });
+
   it("shows error banner when parse mutation fails", async () => {
     const user = userEvent.setup();
     const mockParse = vi.fn().mockReturnValue({

@@ -161,7 +161,7 @@ export default function AddApplicationDialog({ open, onOpenChange }: AddApplicat
     setJdMode({ kind: "parsing", jdText: pastedJdText });
     try {
       const result = await parseJobDescription({ jd_text: pastedJdText }).unwrap();
-      applyParseResult(result, { sourceUrl: null });
+      await applyParseResult(result, { sourceUrl: null });
     } catch (err) {
       setJdMode({
         kind: "failed",
@@ -196,7 +196,7 @@ export default function AddApplicationDialog({ open, onOpenChange }: AddApplicat
   // Pre-fill helper — both the text-parse and URL-extract paths converge here
   // (text-parse calls applyParseResult; URL-extract maps to a JdParseResponse
   // shape via mapExtractToParse and then calls the same).
-  function applyParseResult(
+  async function applyParseResult(
     result: JdParseResponse,
     { sourceUrl }: { sourceUrl: string | null },
   ) {
@@ -212,6 +212,16 @@ export default function AddApplicationDialog({ open, onOpenChange }: AddApplicat
       result.remote_type === "onsite"
     ) {
       setValue("remote_type", result.remote_type, { shouldValidate: true });
+    }
+    // Same auto-find-or-create the URL-extract path uses. Without
+    // this, the operator pastes a JD text, lets Claude parse it,
+    // and the form STILL bounces with "Company is required" because
+    // the parse response's company field was being silently dropped.
+    if (result.company) {
+      setPendingCompanyName(result.company);
+      await selectOrCreateCompany(result.company);
+    } else {
+      setPendingCompanyName(null);
     }
     setJdMode({ kind: "parsed", summary: result.summary, sourceUrl });
   }
