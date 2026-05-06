@@ -22,13 +22,25 @@ Each "advance" entry point has the same shape:
 """
 from __future__ import annotations
 
+import json
 import logging
 import uuid
+from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.profile.education import Education
+from app.models.profile.profile import Profile
+from app.models.profile.skill import Skill
+from app.models.profile.work_history import WorkHistory
 from app.models.resume_refinement.session import ResumeRefinementSession
 from app.repositories.jobs import resume_upload_job_repo
+from app.repositories.profile import (
+    education_repository,
+    profile_repository,
+    skill_repository,
+    work_history_repository,
+)
 from app.repositories.resume_refinement import session_repo, turn_repo
 from app.services.resume_refinement import critique_service, rewrite_service
 from app.services.resume_refinement.errors import (
@@ -63,8 +75,21 @@ async def start_session(
             f"resume_upload_job is in status={job.status!r}; must be 'complete'."
         )
 
-    parsed = job.result_parsed_fields or {}
-    initial_draft = render_resume_to_markdown(parsed)
+    # Build the initial draft from profile tables — NOT from result_parsed_fields,
+    # which only stores {"raw": "<Claude JSON string>"} and not the structured data.
+    profile = await profile_repository.get_by_user_id(db, user_id)
+    work_history_rows = await work_history_repository.list_by_user(db, user_id)
+    education_rows = await education_repository.list_by_user(db, user_id)
+    skill_rows = await skill_repository.list_by_user(db, user_id)
+
+    renderer_input = _build_renderer_input(
+        profile=profile,
+        work_history_rows=work_history_rows,
+        education_rows=education_rows,
+        skill_rows=skill_rows,
+        raw_parsed=job.result_parsed_fields,
+    )
+    initial_draft = render_resume_to_markdown(renderer_input)
 
     session = await session_repo.create(
         db,
@@ -319,6 +344,86 @@ async def complete_session(
 # -----------------------------------------------------------------------------
 # Internals
 # -----------------------------------------------------------------------------
+
+
+def _build_renderer_input(
+    *,
+    profile: Profile | None,
+    work_history_rows: list[WorkHistory],
+    education_rows: list[Education],
+    skill_rows: list[Skill],
+    raw_parsed: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Adapter: project profile-table ORM rows into the dict shape that
+    ``render_resume_to_markdown`` expects.
+
+    The renderer was originally designed to consume Claude's parsed JSON
+    directly, which uses different field names from our ORM models:
+
+    - WorkHistory.company_name   → renderer["company"]
+    - WorkHistory.start_date     → renderer["starts_on"] (ISO date string or "")
+    - WorkHistory.end_date       → renderer["ends_on"]   (ISO date string or None)
+    - Education.start_year       → renderer["starts_on"] (year as string or "")
+    - Education.end_year         → renderer["ends_on"]   (year as string or "")
+    - Education.gpa (float)      → renderer["gpa"]       (string representation)
+
+    ``headline`` is best-effort: we JSON-parse result_parsed_fields["raw"]
+    and pull .headline if present; otherwise it's omitted (None falls through
+    the ``if headline:`` guard in the renderer with no visible effect).
+    """
+    # Best-effort headline from the raw Claude JSON blob.
+    headline: str | None = None
+    raw_str = (raw_parsed or {}).get("raw")
+    if raw_str:
+        try:
+            raw_obj = json.loads(raw_str)
+            headline = raw_obj.get("headline") or None
+        except (json.JSONDecodeError, AttributeError, TypeError):
+            logger.debug(
+                "result_parsed_fields['raw'] is not valid JSON — skipping headline."
+            )
+
+    work_history_dicts = [
+        {
+            "company": row.company_name,
+            "title": row.title,
+            "location": "",
+            "starts_on": row.start_date.isoformat() if row.start_date else "",
+            "ends_on": row.end_date.isoformat() if row.end_date else None,
+            "is_current": row.end_date is None,
+            "bullets": list(row.bullets or []),
+        }
+        for row in work_history_rows
+    ]
+
+    education_dicts = [
+        {
+            "school": row.school,
+            "degree": row.degree or "",
+            "field": row.field or "",
+            "starts_on": str(row.start_year) if row.start_year else "",
+            "ends_on": str(row.end_year) if row.end_year else "",
+            "gpa": str(row.gpa) if row.gpa is not None else "",
+        }
+        for row in education_rows
+    ]
+
+    skill_dicts = [
+        {
+            "name": row.name,
+            "category": row.category or "other",
+        }
+        for row in skill_rows
+    ]
+
+    result: dict[str, Any] = {
+        "summary": (profile.summary or "").strip() if profile else "",
+        "headline": headline,
+        "work_history": work_history_dicts,
+        "education": education_dicts,
+        "skills": skill_dicts,
+    }
+    return result
 
 
 async def _load_active(
