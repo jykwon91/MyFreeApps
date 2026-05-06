@@ -1,14 +1,40 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import axios from "axios";
 
+// vi.mock factories run BEFORE module-scope statements after the
+// hoisting pass, so any helper they reference must come from
+// vi.hoisted() to be initialized in time.
+const { mockResetApiState, mockResetApiStateAction, mockDispatch } = vi.hoisted(() => {
+  const action = { type: "api/util/resetApiState" };
+  return {
+    mockResetApiStateAction: action,
+    mockResetApiState: vi.fn(() => action),
+    mockDispatch: vi.fn(),
+  };
+});
+
 // Mock axios and @platform/ui auth-store before importing auth.ts
 vi.mock("@platform/ui", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@platform/ui")>();
   return {
     ...actual,
     notifyAuthChange: vi.fn(),
+    baseApi: {
+      ...actual.baseApi,
+      util: {
+        ...actual.baseApi.util,
+        resetApiState: mockResetApiState,
+      },
+    },
   };
 });
+
+// Mock the local store so we can assert resetApiState is dispatched on
+// auth transitions (PR #340 — wipes cached /users/me etc. so the next
+// signed-in user doesn't see the previous user's identity until refresh).
+vi.mock("@/lib/store", () => ({
+  store: { dispatch: mockDispatch },
+}));
 
 // Mock the api module to control HTTP calls
 vi.mock("@/lib/api", () => ({
@@ -106,13 +132,28 @@ describe("auth helpers", () => {
       await register("u@e.com", "securepass123");
 
       expect(mockApiPost).toHaveBeenCalledTimes(1);
-      expect(mockApiPost).toHaveBeenCalledWith("/auth/register", {
-        email: "u@e.com",
-        password: "securepass123",
-      });
+      expect(mockApiPost).toHaveBeenCalledWith(
+        "/auth/register",
+        { email: "u@e.com", password: "securepass123" },
+        { headers: {} },
+      );
       // Token must NOT be set — user has to verify their email first
       expect(localStorage.getItem("token")).toBeNull();
       expect(mockNotifyAuthChange).not.toHaveBeenCalled();
+    });
+
+    it("forwards X-Turnstile-Token header when supplied", async () => {
+      mockApiPost.mockResolvedValueOnce({
+        data: { id: "uuid", email: "u@e.com" },
+      });
+
+      await register("u@e.com", "securepass123", "ts-token-abc");
+
+      expect(mockApiPost).toHaveBeenCalledWith(
+        "/auth/register",
+        { email: "u@e.com", password: "securepass123" },
+        { headers: { "X-Turnstile-Token": "ts-token-abc" } },
+      );
     });
   });
 
@@ -139,6 +180,51 @@ describe("auth helpers", () => {
     it("is safe to call when no token is stored", () => {
       expect(() => signOut()).not.toThrow();
       expect(mockNotifyAuthChange).toHaveBeenCalledTimes(1);
+    });
+
+    it("dispatches resetApiState so the next signed-in user does not see cached responses", () => {
+      localStorage.setItem("token", "some.token");
+
+      signOut();
+
+      // Cache wipe MUST happen on signOut so a subsequent signIn from
+      // a different user doesn't render previous-user data (the
+      // 2026-05-06 "still showed mybookkeeper6 as signed-in" bug).
+      expect(mockResetApiState).toHaveBeenCalledTimes(1);
+      expect(mockDispatch).toHaveBeenCalledWith(mockResetApiStateAction);
+    });
+  });
+
+  describe("RTK Query cache reset on auth transitions", () => {
+    it("signIn dispatches resetApiState BEFORE notifyAuthChange", async () => {
+      mockApiPost.mockResolvedValueOnce({
+        data: { access_token: "fresh.token", token_type: "bearer" },
+      });
+
+      await signIn("u@e.com", "pass");
+
+      // Both must fire on a successful sign-in; order matters because
+      // the auth-change notification triggers a re-render that should
+      // refetch /users/me against the NEW token, not the previous
+      // response.
+      expect(mockResetApiState).toHaveBeenCalledTimes(1);
+      expect(mockNotifyAuthChange).toHaveBeenCalledTimes(1);
+
+      const resetOrder = mockResetApiState.mock.invocationCallOrder[0]!;
+      const notifyOrder = mockNotifyAuthChange.mock.invocationCallOrder[0]!;
+      expect(resetOrder).toBeLessThan(notifyOrder);
+    });
+
+    it("signIn does NOT reset the cache on a totp_required response", async () => {
+      mockApiPost.mockResolvedValueOnce({
+        data: { detail: "totp_required" },
+      });
+
+      await signIn("u@e.com", "pass");
+
+      // 2FA gate hit; no token issued; nothing to wipe yet.
+      expect(mockResetApiState).not.toHaveBeenCalled();
+      expect(mockDispatch).not.toHaveBeenCalled();
     });
   });
 });
