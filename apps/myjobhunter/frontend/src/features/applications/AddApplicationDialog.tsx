@@ -2,13 +2,21 @@ import { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { useForm, type SubmitHandler } from "react-hook-form";
 import { LoadingButton, showSuccess, showError, extractErrorMessage } from "@platform/ui";
-import { X, Plus, Sparkles, ChevronDown, ChevronUp } from "lucide-react";
+import { X, Plus } from "lucide-react";
 import { useListCompaniesQuery, useCreateCompanyMutation } from "@/lib/companiesApi";
-import { useCreateApplicationMutation, useParseJobDescriptionMutation } from "@/lib/applicationsApi";
+import {
+  useCreateApplicationMutation,
+  useExtractJdFromUrlMutation,
+  useParseJobDescriptionMutation,
+} from "@/lib/applicationsApi";
 import type { CompanyCreateRequest } from "@/types/company-create-request";
+import type { JdParseResponse } from "@/types/application/jd-parse-response";
+import type { JdUrlExtractResponse } from "@/types/application/jd-url-extract-response";
 import CompanyForm from "@/features/companies/CompanyForm";
-import type { JdParseMode } from "./useJdParseMode";
-import { JD_PARSE_MODE_IDLE } from "./useJdParseMode";
+import { JdAutoFillSection } from "./JdAutoFillSection";
+import type { JdInputTab, JdParseMode } from "./useJdParseMode";
+import { JD_INPUT_TAB_DEFAULT, JD_PARSE_MODE_IDLE } from "./useJdParseMode";
+import { describeExtractError, isAuthRequiredError } from "./jdErrorRouting";
 
 interface AddApplicationFormValues {
   company_id: string;
@@ -35,10 +43,16 @@ export default function AddApplicationDialog({ open, onOpenChange }: AddApplicat
   const { data: companiesData, isLoading: companiesLoading } = useListCompaniesQuery();
   const [createApplication, { isLoading: creatingApplication }] = useCreateApplicationMutation();
   const [createCompany, { isLoading: creatingCompany }] = useCreateCompanyMutation();
-  const [parseJobDescription, { isLoading: parsing }] = useParseJobDescriptionMutation();
+  const [parseJobDescription] = useParseJobDescriptionMutation();
+  const [extractJdFromUrl] = useExtractJdFromUrlMutation();
 
   const [showNewCompany, setShowNewCompany] = useState(false);
   const [jdMode, setJdMode] = useState<JdParseMode>(JD_PARSE_MODE_IDLE);
+  const [jdTab, setJdTab] = useState<JdInputTab>(JD_INPUT_TAB_DEFAULT);
+  // Persist the buffers across tab switches so the user doesn't lose what
+  // they typed in one tab when they peek at the other.
+  const [pastedJdText, setPastedJdText] = useState("");
+  const [pastedUrl, setPastedUrl] = useState("");
 
   const {
     register,
@@ -63,6 +77,9 @@ export default function AddApplicationDialog({ open, onOpenChange }: AddApplicat
       reset();
       setShowNewCompany(false);
       setJdMode(JD_PARSE_MODE_IDLE);
+      setJdTab(JD_INPUT_TAB_DEFAULT);
+      setPastedJdText("");
+      setPastedUrl("");
     }
     onOpenChange(next);
   }
@@ -77,10 +94,9 @@ export default function AddApplicationDialog({ open, onOpenChange }: AddApplicat
         remote_type: values.remote_type,
         notes: values.notes.trim() || null,
         // Preserve the pasted JD text if the user went through the parse flow.
-        jd_text:
-          jdMode.kind === "pasting" || jdMode.kind === "parsing"
-            ? jdMode.jdText.trim() || null
-            : null,
+        // The URL-extract path doesn't capture raw JD text — that lives in
+        // description_html on the JdUrlExtractResponse and is not yet sent on.
+        jd_text: pastedJdText.trim() || null,
       }).unwrap();
       showSuccess("Application added");
       onOpenChange(false);
@@ -101,31 +117,15 @@ export default function AddApplicationDialog({ open, onOpenChange }: AddApplicat
     }
   };
 
+  // -------------------------------------------------------------------------
+  // JD parse flow — paste-text path (existing)
+  // -------------------------------------------------------------------------
   async function handleParseJd() {
-    if (jdMode.kind !== "pasting" || !jdMode.jdText.trim()) return;
-
-    const jdText = jdMode.jdText;
-    setJdMode({ kind: "parsing", jdText });
-
+    if (!pastedJdText.trim()) return;
+    setJdMode({ kind: "parsing", jdText: pastedJdText });
     try {
-      const result = await parseJobDescription({ jd_text: jdText }).unwrap();
-
-      // Pre-fill form fields with Claude's extracted values where non-null.
-      if (result.title) {
-        setValue("role_title", result.title, { shouldValidate: true });
-      }
-      if (result.location) {
-        setValue("location", result.location, { shouldValidate: true });
-      }
-      if (result.remote_type && result.remote_type !== "unknown") {
-        setValue(
-          "remote_type",
-          result.remote_type as AddApplicationFormValues["remote_type"],
-          { shouldValidate: true },
-        );
-      }
-
-      setJdMode({ kind: "parsed", summary: result.summary });
+      const result = await parseJobDescription({ jd_text: pastedJdText }).unwrap();
+      applyParseResult(result, { sourceUrl: null });
     } catch (err) {
       setJdMode({
         kind: "failed",
@@ -133,6 +133,115 @@ export default function AddApplicationDialog({ open, onOpenChange }: AddApplicat
           extractErrorMessage(err) ?? "AI parsing failed — please fill fields manually",
       });
     }
+  }
+
+  // -------------------------------------------------------------------------
+  // JD extract flow — URL path (new)
+  // -------------------------------------------------------------------------
+  async function handleFetchUrl() {
+    const url = pastedUrl.trim();
+    if (!url) return;
+    setJdMode({ kind: "extracting", url });
+    try {
+      const result = await extractJdFromUrl({ url }).unwrap();
+      applyExtractResult(result);
+    } catch (err) {
+      if (isAuthRequiredError(err)) {
+        setJdMode({ kind: "authRequired", url });
+        return;
+      }
+      setJdMode({
+        kind: "failed",
+        errorMessage: describeExtractError(err),
+      });
+    }
+  }
+
+  // Pre-fill helper — both the text-parse and URL-extract paths converge here
+  // (text-parse calls applyParseResult; URL-extract maps to a JdParseResponse
+  // shape via mapExtractToParse and then calls the same).
+  function applyParseResult(
+    result: JdParseResponse,
+    { sourceUrl }: { sourceUrl: string | null },
+  ) {
+    if (result.title) {
+      setValue("role_title", result.title, { shouldValidate: true });
+    }
+    if (result.location) {
+      setValue("location", result.location, { shouldValidate: true });
+    }
+    if (
+      result.remote_type === "remote" ||
+      result.remote_type === "hybrid" ||
+      result.remote_type === "onsite"
+    ) {
+      setValue("remote_type", result.remote_type, { shouldValidate: true });
+    }
+    setJdMode({ kind: "parsed", summary: result.summary, sourceUrl });
+  }
+
+  function applyExtractResult(result: JdUrlExtractResponse) {
+    // Echo the source URL into the form's URL field so the operator
+    // doesn't have to paste it twice.
+    setValue("url", result.source_url, { shouldValidate: true });
+    if (result.title) {
+      setValue("role_title", result.title, { shouldValidate: true });
+    }
+    if (result.location) {
+      setValue("location", result.location, { shouldValidate: true });
+    }
+    // Combine description + requirements into the notes field as a
+    // best-effort scaffold the operator can edit. We strip HTML tags
+    // here client-side because the form's notes field is plain text.
+    const notesScaffold = combineNotes(result);
+    if (notesScaffold) {
+      setValue("notes", notesScaffold, { shouldValidate: true });
+    }
+    setJdMode({
+      kind: "parsed",
+      summary: result.summary,
+      sourceUrl: result.source_url,
+    });
+  }
+
+  // -------------------------------------------------------------------------
+  // Tab switching — preserves the buffer of the OTHER tab so the user can
+  // flip without losing input.
+  // -------------------------------------------------------------------------
+  function handleSwitchTab(next: JdInputTab) {
+    setJdTab(next);
+    if (next === "url") {
+      setJdMode({ kind: "fetching", url: pastedUrl });
+    } else {
+      setJdMode({ kind: "pasting", jdText: pastedJdText });
+    }
+  }
+
+  function handleExpand() {
+    // Expand into whichever tab is currently selected, defaulting to URL.
+    if (jdTab === "url") {
+      setJdMode({ kind: "fetching", url: pastedUrl });
+    } else {
+      setJdMode({ kind: "pasting", jdText: pastedJdText });
+    }
+  }
+
+  function handleCollapse() {
+    setJdMode(JD_PARSE_MODE_IDLE);
+  }
+
+  function handleDismiss() {
+    setJdMode(JD_PARSE_MODE_IDLE);
+  }
+
+  function handleUrlChange(url: string) {
+    setPastedUrl(url);
+    setJdMode({ kind: "fetching", url });
+  }
+
+  function handleTextChange(text: string) {
+    setPastedJdText(text);
+    setJdMode({ kind: "pasting", jdText: text });
   }
 
   const companies = companiesData?.items ?? [];
@@ -155,20 +264,17 @@ export default function AddApplicationDialog({ open, onOpenChange }: AddApplicat
             </Dialog.Close>
           </div>
 
-          {/* JD paste + parse section — collapses after a successful parse */}
-          <JdParseSection
+          <JdAutoFillSection
             mode={jdMode}
-            parsing={parsing}
-            onToggle={() =>
-              setJdMode((prev) =>
-                prev.kind === "idle"
-                  ? { kind: "pasting", jdText: "" }
-                  : JD_PARSE_MODE_IDLE,
-              )
-            }
-            onTextChange={(text) => setJdMode({ kind: "pasting", jdText: text })}
+            tab={jdTab}
+            onExpand={handleExpand}
+            onCollapse={handleCollapse}
+            onSwitchTab={handleSwitchTab}
+            onUrlChange={handleUrlChange}
+            onTextChange={handleTextChange}
+            onFetch={handleFetchUrl}
             onParse={handleParseJd}
-            onDismiss={() => setJdMode(JD_PARSE_MODE_IDLE)}
+            onDismiss={handleDismiss}
           />
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
@@ -177,7 +283,6 @@ export default function AddApplicationDialog({ open, onOpenChange }: AddApplicat
                 Company <span className="text-destructive">*</span>
               </label>
               {showNewCompany ? (
-                // Inline panel — NOT a nested Dialog (a11y rule: no dialogs inside dialogs).
                 <div className="border rounded-md p-4 bg-muted/30">
                   <p className="text-xs font-medium text-muted-foreground mb-3">New company</p>
                   <CompanyForm
@@ -301,130 +406,48 @@ export default function AddApplicationDialog({ open, onOpenChange }: AddApplicat
 }
 
 // ---------------------------------------------------------------------------
-// JdParseSection — isolated sub-component for the paste + parse UX.
-// Extracted to keep the parent component lean.
+// Notes field scaffold — combine description + requirements text from the
+// URL-extract response into a single Markdown-friendly block. Plain-text
+// strip the description because the notes textarea is not HTML-aware.
 // ---------------------------------------------------------------------------
 
-interface JdParseSectionProps {
-  mode: JdParseMode;
-  parsing: boolean;
-  onToggle: () => void;
-  onTextChange: (text: string) => void;
-  onParse: () => void;
-  onDismiss: () => void;
+function combineNotes(result: JdUrlExtractResponse): string | null {
+  const chunks: string[] = [];
+  if (result.summary) {
+    chunks.push(result.summary);
+  }
+  if (result.description_html) {
+    const stripped = stripHtml(result.description_html).trim();
+    if (stripped) {
+      chunks.push(stripped);
+    }
+  }
+  if (result.requirements_text) {
+    chunks.push(result.requirements_text);
+  }
+  if (chunks.length === 0) return null;
+  // Truncate to the form's documented notes max so we don't blow past it.
+  const combined = chunks.join("\n\n");
+  return combined.length > NOTES_MAX_LEN ? combined.slice(0, NOTES_MAX_LEN) : combined;
 }
 
-function JdParseSection({
-  mode,
-  parsing,
-  onToggle,
-  onTextChange,
-  onParse,
-  onDismiss,
-}: JdParseSectionProps) {
-  if (mode.kind === "parsed") {
-    return (
-      <div className="mb-4 rounded-md border border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/30 p-3 flex items-start justify-between gap-2">
-        <div>
-          <p className="text-sm font-medium text-green-800 dark:text-green-300">
-            Fields pre-filled from JD
-          </p>
-          {mode.summary ? (
-            <p className="text-xs text-green-700 dark:text-green-400 mt-0.5 line-clamp-2">
-              {mode.summary}
-            </p>
-          ) : null}
-          <p className="text-xs text-muted-foreground mt-1">
-            Review and adjust the fields below before saving.
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={onDismiss}
-          className="text-muted-foreground hover:text-foreground shrink-0 mt-0.5"
-          aria-label="Dismiss parse result"
-        >
-          <X size={14} />
-        </button>
-      </div>
-    );
-  }
+const NOTES_MAX_LEN = 5000;
 
-  if (mode.kind === "failed") {
-    return (
-      <div className="mb-4 rounded-md border border-destructive/30 bg-destructive/5 p-3 flex items-start justify-between gap-2">
-        <div>
-          <p className="text-sm font-medium text-destructive">AI parsing failed</p>
-          <p className="text-xs text-muted-foreground mt-0.5">{mode.errorMessage}</p>
-        </div>
-        <button
-          type="button"
-          onClick={onDismiss}
-          className="text-muted-foreground hover:text-foreground shrink-0 mt-0.5"
-          aria-label="Dismiss error"
-        >
-          <X size={14} />
-        </button>
-      </div>
-    );
-  }
-
-  if (mode.kind === "idle") {
-    return (
-      <div className="mb-4">
-        <button
-          type="button"
-          onClick={onToggle}
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
-        >
-          <Sparkles size={14} />
-          Paste job description to auto-fill
-          <ChevronDown size={14} />
-        </button>
-      </div>
-    );
-  }
-
-  // mode.kind === "pasting" | "parsing"
-  const jdText = mode.jdText;
-  const canParse = jdText.trim().length > 0;
-
-  return (
-    <div className="mb-4 space-y-2">
-      <div className="flex items-center justify-between">
-        <span className="text-sm font-medium flex items-center gap-1.5">
-          <Sparkles size={14} />
-          Job description
-        </span>
-        <button
-          type="button"
-          onClick={onToggle}
-          className="text-muted-foreground hover:text-foreground"
-          aria-label="Collapse job description panel"
-        >
-          <ChevronUp size={14} />
-        </button>
-      </div>
-
-      <textarea
-        value={jdText}
-        onChange={(e) => onTextChange(e.target.value)}
-        rows={6}
-        placeholder="Paste the full job description here…"
-        className="w-full border rounded-md px-3 py-2 text-sm bg-background resize-y"
-        disabled={parsing}
-        aria-label="Job description text"
-      />
-
-      <LoadingButton
-        type="button"
-        isLoading={parsing}
-        loadingText="Parsing…"
-        disabled={!canParse || parsing}
-        onClick={onParse}
-      >
-        Parse with AI
-      </LoadingButton>
-    </div>
-  );
+function stripHtml(html: string): string {
+  // Conservative client-side strip — replace tags with newlines so paragraph
+  // structure survives, then collapse runs of whitespace. We do NOT use
+  // dangerouslySetInnerHTML or a full HTML sanitiser here — the notes
+  // field is plain text on submission.
+  return html
+    .replace(/<\s*br\s*\/?\s*>/gi, "\n")
+    .replace(/<\s*\/?\s*(p|li|div|h[1-6])[^>]*>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }

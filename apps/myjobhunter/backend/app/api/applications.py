@@ -28,10 +28,13 @@ from __future__ import annotations
 import datetime as _dt
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from platform_shared.core.request_utils import get_client_ip
+
 from app.core.auth import current_active_user
+from app.core.rate_limit import RateLimiter
 from app.db.session import get_db
 from app.models.user.user import User
 from app.schemas.application.application_contact_create_request import ApplicationContactCreateRequest
@@ -45,9 +48,17 @@ from app.schemas.application.application_response import ApplicationResponse
 from app.schemas.application.application_update_request import ApplicationUpdateRequest
 from app.schemas.application.jd_parse_request import JdParseRequest
 from app.schemas.application.jd_parse_response import JdParseResponse
+from app.schemas.application.jd_url_extract_request import JdUrlExtractRequest
+from app.schemas.application.jd_url_extract_response import JdUrlExtractResponse
 from app.services.application import application_service
 from app.services.application.application_service import CompanyNotOwnedError
 from app.services.application.jd_parsing_service import JdParseError, parse_jd
+from app.services.extraction.jd_url_extractor import (
+    JDFetchAuthRequiredError,
+    JDFetchError,
+    JDFetchTimeoutError,
+    extract_from_url,
+)
 
 router = APIRouter()
 
@@ -56,6 +67,14 @@ _CONTACT_NOT_FOUND_DETAIL = "Contact not found"
 
 # Pagination safety cap — prevents pathological limit values.
 _MAX_LIMIT = 500
+
+# Per-IP rate limit for the JD URL extractor. 10 requests / 5 minutes is
+# generous for a legitimate operator (one-paste-per-application throughput)
+# but tight enough to prevent the endpoint being used as an SSRF probe or
+# a free third-party HTML scraper. Pre-instantiated at module import so all
+# requests share the same sliding-window state. Pattern mirrors
+# admin_invites._INVITE_INFO_LIMITER.
+_JD_URL_EXTRACT_LIMITER = RateLimiter(max_attempts=10, window_seconds=300)
 
 
 @router.get("/applications")
@@ -152,6 +171,81 @@ async def parse_job_description(
             detail=f"JD parsing failed: {exc}",
         ) from exc
     return JdParseResponse(**result.to_dict())
+
+
+@router.post(
+    "/applications/extract-from-url",
+    response_model=JdUrlExtractResponse,
+    status_code=200,
+)
+async def extract_from_url_endpoint(
+    payload: JdUrlExtractRequest,
+    request: Request,
+    user: User = Depends(current_active_user),
+) -> JdUrlExtractResponse:
+    """Fetch a job-posting URL and extract structured fields from it.
+
+    Two-tier strategy: schema.org JobPosting fast path for any modern ATS,
+    Claude HTML-text fallback for everything else. Returns the extracted
+    fields for client-side preview / form pre-fill — does NOT persist
+    an Application row (the frontend then submits ``POST /applications``
+    with the merged values once the user has reviewed them).
+
+    Rate limit: 10 requests per 5 minutes per IP. Bypassing requires
+    going through ``POST /applications/parse-jd`` (the paste-text path),
+    which has its own gating.
+
+    Status codes:
+    - 200 on success — body is the extracted ``JdUrlExtractResponse``.
+    - 400 when the URL is malformed (non-http(s), missing host).
+    - 422 ``auth_required`` when the URL is auth-walled (LinkedIn,
+      Glassdoor) or when the fetched page returned <500 visible bytes
+      after stripping. The frontend prompts the user to paste the
+      description text instead.
+    - 429 when the per-IP rate limit is exceeded.
+    - 502 when the upstream returned non-2xx, the body could not be
+      parsed, or the Claude fallback failed.
+    - 504 when the upstream fetch timed out.
+
+    No DB session — the only persistence is an ``extraction_logs`` row
+    written inside ``claude_service._record_log`` on the Tier-2 path
+    via its own session.
+    """
+    _JD_URL_EXTRACT_LIMITER.check(get_client_ip(request))
+
+    url_str = str(payload.url)
+    try:
+        result = await extract_from_url(url_str, user_id=user.id)
+    except JDFetchAuthRequiredError as exc:
+        # 422 with a stable ``detail`` literal so the frontend can route
+        # on it deterministically without parsing the human-readable
+        # message.
+        raise HTTPException(status_code=422, detail="auth_required") from exc
+    except JDFetchTimeoutError as exc:
+        raise HTTPException(
+            status_code=504,
+            detail=f"Timed out fetching URL: {exc}",
+        ) from exc
+    except JDFetchError as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Couldn't extract JD from URL: {exc}",
+        ) from exc
+    except ValueError as exc:
+        # Defensive — Pydantic AnyHttpUrl should reject malformed URLs at
+        # the schema layer, but service-level _validate_url adds a second
+        # check for things like ``ftp://`` that slip through ``AnyHttpUrl``.
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    return JdUrlExtractResponse(
+        title=result.title,
+        company=result.company,
+        location=result.location,
+        description_html=result.description_html,
+        requirements_text=result.requirements_text,
+        summary=result.summary,
+        source_url=result.source_url,
+    )
 
 
 @router.post("/applications", response_model=ApplicationResponse, status_code=201)
