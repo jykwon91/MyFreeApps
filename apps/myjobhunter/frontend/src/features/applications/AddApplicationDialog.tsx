@@ -3,7 +3,11 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { useForm, type SubmitHandler } from "react-hook-form";
 import { LoadingButton, showSuccess, showError, extractErrorMessage } from "@platform/ui";
 import { X, Plus } from "lucide-react";
-import { useListCompaniesQuery, useCreateCompanyMutation } from "@/lib/companiesApi";
+import {
+  useListCompaniesQuery,
+  useCreateCompanyMutation,
+  useTriggerCompanyResearchMutation,
+} from "@/lib/companiesApi";
 import {
   useCreateApplicationMutation,
   useExtractJdFromUrlMutation,
@@ -43,6 +47,11 @@ export default function AddApplicationDialog({ open, onOpenChange }: AddApplicat
   const { data: companiesData, isLoading: companiesLoading } = useListCompaniesQuery();
   const [createApplication, { isLoading: creatingApplication }] = useCreateApplicationMutation();
   const [createCompany, { isLoading: creatingCompany }] = useCreateCompanyMutation();
+  // Fire-and-forget enrichment — auto-created companies kick off
+  // Tavily+Claude research in the background. The mutation hook is
+  // returned but only the trigger is used (we ignore the loading
+  // state because the operator doesn't wait on it).
+  const [triggerCompanyResearch] = useTriggerCompanyResearchMutation();
   const [parseJobDescription] = useParseJobDescriptionMutation();
   const [extractJdFromUrl] = useExtractJdFromUrlMutation();
 
@@ -240,7 +249,10 @@ export default function AddApplicationDialog({ open, onOpenChange }: AddApplicat
     // fallback if the auto-create raced with the click.
     if (result.company) {
       setPendingCompanyName(result.company);
-      await selectOrCreateCompany(result.company);
+      await selectOrCreateCompany(result.company, {
+        website: result.company_website,
+        logoUrl: result.company_logo_url,
+      });
     } else {
       setPendingCompanyName(null);
     }
@@ -251,7 +263,34 @@ export default function AddApplicationDialog({ open, onOpenChange }: AddApplicat
     });
   }
 
-  async function selectOrCreateCompany(name: string): Promise<void> {
+  interface CompanyExtras {
+    website?: string | null;
+    logoUrl?: string | null;
+  }
+
+  /**
+   * Reduce a company website URL to its bare host (no scheme, no
+   * leading "www.", no trailing slash). The Company model's
+   * ``primary_domain`` is a domain string, not a URL.
+   */
+  function websiteToDomain(website: string | null | undefined): string | null {
+    if (!website) return null;
+    try {
+      const url = new URL(website.trim());
+      let host = url.hostname.toLowerCase();
+      if (host.startsWith("www.")) host = host.slice(4);
+      return host || null;
+    } catch {
+      // Already a bare domain? Strip whitespace + leading www.
+      const stripped = website.trim().replace(/^https?:\/\//i, "").replace(/\/$/, "");
+      return stripped.replace(/^www\./i, "") || null;
+    }
+  }
+
+  async function selectOrCreateCompany(
+    name: string,
+    extras: CompanyExtras = {},
+  ): Promise<void> {
     const trimmed = name.trim();
     if (!trimmed) return;
     const existing = companies.find(
@@ -262,8 +301,29 @@ export default function AddApplicationDialog({ open, onOpenChange }: AddApplicat
       return;
     }
     try {
-      const created = await createCompany({ name: trimmed }).unwrap();
+      const payload: { name: string; primary_domain?: string | null; logo_url?: string | null } = {
+        name: trimmed,
+      };
+      const domain = websiteToDomain(extras.website);
+      if (domain) payload.primary_domain = domain;
+      if (extras.logoUrl) payload.logo_url = extras.logoUrl;
+
+      const created = await createCompany(payload).unwrap();
       setValue("company_id", created.id, { shouldValidate: true });
+
+      // Fire-and-forget: kick off Tavily + Claude research so the
+      // operator gets the rich company profile (industry, culture
+      // signals, red/green flags) when they navigate to the company
+      // detail page later. The application form does NOT wait — the
+      // operator submits as soon as the auto-create returns.
+      void triggerCompanyResearch(created.id)
+        .unwrap()
+        .catch((err) => {
+          // Research failures are non-blocking; log but don't toast
+          // since the operator may already be on a different page.
+          // eslint-disable-next-line no-console
+          console.warn("Background company research failed:", err);
+        });
     } catch (err) {
       // Don't block the rest of the pre-fill if company create fails —
       // operator can still pick or create one manually. Surface the

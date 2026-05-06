@@ -296,6 +296,9 @@ class TestExtractFromUrlSchema:
         assert isinstance(result, ExtractedJD)
         assert result.title == "Senior Backend Engineer"
         assert result.company == "Acme Corp"
+        # The sample payload has no sameAs / logo so these are None.
+        assert result.company_website is None
+        assert result.company_logo_url is None
         assert result.location == "San Francisco, CA, US"
         assert result.description_html is not None
         assert "Build APIs" in result.description_html
@@ -303,6 +306,63 @@ class TestExtractFromUrlSchema:
         assert "Design backend services" in result.requirements_text
         assert result.summary is None
         assert result.source_url == "https://jobs.example.com/posting/abc"
+
+    @pytest.mark.asyncio
+    async def test_schema_org_extracts_company_website_and_logo(self) -> None:
+        """When ``hiringOrganization`` exposes ``sameAs`` + ``logo``,
+        both must surface so the frontend's auto-create can populate
+        ``primary_domain`` + ``logo_url`` instead of just ``name``.
+        """
+        payload = {
+            "@type": "JobPosting",
+            "title": "Engineer",
+            "hiringOrganization": {
+                "@type": "Organization",
+                "name": "Pivotal Health",
+                "sameAs": "https://pivotalhealth.ai/",
+                "logo": "https://cdn.example.com/logos/pivotal.png",
+            },
+        }
+        html = _wrap_html_with_schema(payload)
+        fake_client = _FakeAsyncClient(response=_build_httpx_response(html))
+
+        with _patch_httpx(fake_client):
+            result = await extract_from_url(
+                "https://example.com/posting",
+                user_id=uuid.uuid4(),
+            )
+
+        assert result.company == "Pivotal Health"
+        assert result.company_website == "https://pivotalhealth.ai/"
+        assert result.company_logo_url == "https://cdn.example.com/logos/pivotal.png"
+
+    @pytest.mark.asyncio
+    async def test_schema_org_logo_as_image_object(self) -> None:
+        """schema.org allows ``logo`` to be an ImageObject with ``url``;
+        the extractor must pull the nested URL.
+        """
+        payload = {
+            "@type": "JobPosting",
+            "title": "Engineer",
+            "hiringOrganization": {
+                "@type": "Organization",
+                "name": "Acme",
+                "logo": {
+                    "@type": "ImageObject",
+                    "url": "https://cdn.example.com/acme-logo.svg",
+                },
+            },
+        }
+        html = _wrap_html_with_schema(payload)
+        fake_client = _FakeAsyncClient(response=_build_httpx_response(html))
+
+        with _patch_httpx(fake_client):
+            result = await extract_from_url(
+                "https://example.com/posting",
+                user_id=uuid.uuid4(),
+            )
+
+        assert result.company_logo_url == "https://cdn.example.com/acme-logo.svg"
 
     @pytest.mark.asyncio
     async def test_schema_description_html_preserved(self) -> None:

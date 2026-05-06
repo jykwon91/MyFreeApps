@@ -240,6 +240,8 @@ async def extract_from_url_endpoint(
     return JdUrlExtractResponse(
         title=result.title,
         company=result.company,
+        company_website=result.company_website,
+        company_logo_url=result.company_logo_url,
         location=result.location,
         description_html=result.description_html,
         requirements_text=result.requirements_text,
