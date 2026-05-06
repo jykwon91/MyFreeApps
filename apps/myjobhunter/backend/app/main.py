@@ -191,12 +191,29 @@ app.include_router(resume_refinement.router)
 # mount alongside this under the same /admin prefix.
 from platform_shared.api.admin_router import build_admin_router
 from app.core.permissions import current_admin
+from app.db.session import AsyncSessionLocal
 from app.services.system.admin_user_service_factory import shared_admin_user_service
+from app.services.user.totp_service import verify_totp_code as _verify_totp_code
+
+
+# Step-up verifier for the shared toggle_superuser endpoint. Opens a
+# fresh session because the route itself does not bind one — the
+# admin object passed in carries only the user id.
+async def _superuser_step_up(admin, totp_code: str) -> bool:
+    if not getattr(admin, "totp_enabled", False):
+        # Operator without 2FA enrollment cannot perform the highest-
+        # privilege op. Forces the right shape: any user with
+        # is_superuser=True must also have TOTP set up.
+        return False
+    async with AsyncSessionLocal() as db:
+        return await _verify_totp_code(db, admin.id, totp_code)
+
 
 app.include_router(
     build_admin_router(
         service=shared_admin_user_service,
         current_admin=current_admin,
+        step_up_verify=_superuser_step_up,
     )
 )
 
