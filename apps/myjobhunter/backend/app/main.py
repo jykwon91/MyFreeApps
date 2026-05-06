@@ -11,7 +11,7 @@ from jwt.exceptions import PyJWTError as JWTError
 
 from platform_shared.core.lifespan import create_app_lifespan
 
-from app.api import account, admin, applications, companies, demo, documents, health, integrations, profile, resume_refinement, resumes, totp
+from app.api import account, admin, admin_invites, applications, companies, demo, documents, health, integrations, profile, resume_refinement, resumes, totp
 from app.core.audit import current_user_id
 from app.core.auth import auth_backend, fastapi_users
 from app.core.config import settings
@@ -181,6 +181,8 @@ app.include_router(resumes.router, tags=["resumes"])
 app.include_router(documents.router)
 app.include_router(admin.router)
 app.include_router(demo.router)
+app.include_router(admin_invites.admin_router)
+app.include_router(admin_invites.public_router)
 app.include_router(resume_refinement.router)
 
 # Shared platform admin router — generic user-management endpoints
