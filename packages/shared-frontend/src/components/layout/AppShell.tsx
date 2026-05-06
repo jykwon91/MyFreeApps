@@ -189,8 +189,12 @@ export default function AppShell({
         </aside>
       )}
 
-      {/* Main column */}
-      <div className="flex flex-col flex-1 min-w-0">
+      {/* Main column. ``min-h-0`` is required so the inner ``main``'s
+          ``overflow-y-auto`` constrains to the allocated flex height
+          rather than the min-content of its descendants. Without it,
+          some browsers let the column grow past the viewport, which
+          surfaces as a scroll-bar that runs past the actual content. */}
+      <div className="flex flex-col flex-1 min-w-0 min-h-0">
         {/* Top bar */}
         <header className="flex items-center gap-4 px-4 py-3 border-b bg-background shrink-0 h-14">
           {headerTitle && (
