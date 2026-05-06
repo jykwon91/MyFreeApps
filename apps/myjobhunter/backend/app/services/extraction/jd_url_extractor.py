@@ -132,6 +132,8 @@ class ExtractedJD:
 
     title: str | None
     company: str | None
+    company_website: str | None
+    company_logo_url: str | None
     location: str | None
     description_html: str | None
     requirements_text: str | None
@@ -372,10 +374,23 @@ def _from_schema_org(payload: dict, *, source_url: str) -> ExtractedJD:
     title = _str_or_none(payload.get("title"))
 
     # ``hiringOrganization`` may be a string or a nested Organization object.
+    # When it's an object, schema.org also defines ``sameAs`` (canonical
+    # company website) and ``logo`` — we pull both so the auto-create
+    # flow on the frontend can populate ``primary_domain`` and
+    # ``logo_url`` instead of just ``name``.
     company = None
+    company_website: str | None = None
+    company_logo_url: str | None = None
     org = payload.get("hiringOrganization")
     if isinstance(org, dict):
         company = _str_or_none(org.get("name"))
+        company_website = _str_or_none(org.get("sameAs"))
+        # ``logo`` may be a plain URL string OR an ImageObject
+        logo = org.get("logo")
+        if isinstance(logo, str):
+            company_logo_url = _str_or_none(logo)
+        elif isinstance(logo, dict):
+            company_logo_url = _str_or_none(logo.get("url"))
     elif isinstance(org, str):
         company = _str_or_none(org)
 
@@ -391,6 +406,8 @@ def _from_schema_org(payload: dict, *, source_url: str) -> ExtractedJD:
     return ExtractedJD(
         title=title,
         company=company,
+        company_website=company_website,
+        company_logo_url=company_logo_url,
         location=location,
         description_html=description_html,
         requirements_text=requirements_text,
@@ -519,6 +536,12 @@ async def _claude_fallback(
     return ExtractedJD(
         title=title,
         company=company,
+        # Claude HTML-text fallback path doesn't reliably surface the
+        # company website / logo. Operators can still trigger the
+        # async company-research enrichment after auto-create, which
+        # uses Tavily to find the website.
+        company_website=None,
+        company_logo_url=None,
         location=location,
         description_html=None,
         requirements_text=requirements_text,

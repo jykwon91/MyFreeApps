@@ -35,6 +35,16 @@ class JdUrlExtractResponse(BaseModel):
 
     title: str | None = None
     company: str | None = None
+    # Canonical company website (``hiringOrganization.sameAs`` in
+    # schema.org JobPosting). Populated only on the schema.org fast
+    # path; Claude HTML-text fallback leaves it None. Lets the
+    # frontend's auto-create populate ``primary_domain`` so the
+    # company has a usable identity beyond just the name.
+    company_website: str | None = None
+    # Company logo URL (``hiringOrganization.logo`` — may be a plain
+    # URL string OR an ImageObject with ``url``). Same fast-path-only
+    # caveat as ``company_website``.
+    company_logo_url: str | None = None
     location: str | None = None
 
     # Long-form HTML (preserved when the source publishes it as HTML —
