@@ -15,21 +15,33 @@ import { buildNav, buildBottomNav } from "@/constants/nav";
 import { signOut } from "@/lib/auth";
 import ThemeToggle from "@/components/ThemeToggle";
 import { useIsSuperuser } from "@/hooks/useIsSuperuser";
+import { useGetCurrentUserQuery } from "@/lib/userApi";
+import type { CurrentUser } from "@/lib/userApi";
 
-// Decode basic user info from JWT for display in the shell's user menu.
-// This is display-only — no security decisions are made from client-side decode.
-function getUserFromToken(): { name: string; email: string } {
-  try {
-    const token = localStorage.getItem("token");
-    if (!token) return { name: "You", email: "" };
-    const payload = JSON.parse(atob(token.split(".")[1]));
-    return {
-      name: payload.name ?? payload.email?.split("@")[0] ?? "You",
-      email: payload.email ?? "",
-    };
-  } catch {
-    return { name: "You", email: "" };
-  }
+const ANONYMOUS_USER = { name: "You", email: "" };
+
+/**
+ * Project the authenticated user's profile into the
+ * ``{ name, email }`` shape the shared AppShell expects.
+ *
+ * fastapi-users JWTs do not carry name / email claims by default —
+ * the previous implementation decoded the JWT and always fell back
+ * to the literal "You", which is what the operator was seeing in
+ * the sidebar. ``GET /users/me`` is the canonical source of the
+ * display name + email, so use that.
+ *
+ * Fallback chain mirrors what AppShell's UserAvatar already does
+ * for the avatar initial: prefer display_name, then email
+ * local-part, then literal "You".
+ */
+function projectUser(user: CurrentUser | undefined): { name: string; email: string } {
+  if (!user) return ANONYMOUS_USER;
+  const trimmedName = user.display_name?.trim() ?? "";
+  const localPart = user.email?.split("@")[0]?.trim() ?? "";
+  return {
+    name: trimmedName || localPart || "You",
+    email: user.email ?? "",
+  };
 }
 
 const ICONS: Record<string, React.ReactNode> = {
@@ -48,6 +60,9 @@ export default function RootLayout() {
   const navigate = useNavigate();
   const isAuthenticated = useIsAuthenticated();
   const { isSuperuser } = useIsSuperuser();
+  const { data: currentUser } = useGetCurrentUserQuery(undefined, {
+    skip: !isAuthenticated,
+  });
 
   const nav = buildNav(ICONS, { includeAdmin: isSuperuser });
   const bottomNav = buildBottomNav(ICONS, () => {
@@ -56,7 +71,7 @@ export default function RootLayout() {
     navigate("/applications");
   });
 
-  const user = isAuthenticated ? getUserFromToken() : { name: "You", email: "" };
+  const user = isAuthenticated ? projectUser(currentUser) : ANONYMOUS_USER;
 
   // Matches the favicon (briefcase emoji from index.html) so the
   // brand mark is consistent everywhere it shows. The previous
