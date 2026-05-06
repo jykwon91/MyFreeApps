@@ -124,6 +124,13 @@ class Inquiry(Base):
     pets_description: Mapped[str | None] = mapped_column(Text, nullable=True)
     vehicle_count: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
     current_city: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    # ISO 3166-1 alpha-2 country code (e.g. "US", "CA", "MX"). NULL on
+    # legacy rows pre-dating the city/state split.
+    current_country: Mapped[str | None] = mapped_column(String(2), nullable=True)
+    # State / province / region. For US country, holds the 2-letter state
+    # code (validated by the schema's cross-field check). For non-US
+    # countries, free text up to 100 chars.
+    current_region: Mapped[str | None] = mapped_column(String(100), nullable=True)
     employment_status: Mapped[str | None] = mapped_column(String(20), nullable=True)
     why_this_room: Mapped[str | None] = mapped_column(Text, nullable=True)
     additional_notes: Mapped[str | None] = mapped_column(Text, nullable=True)

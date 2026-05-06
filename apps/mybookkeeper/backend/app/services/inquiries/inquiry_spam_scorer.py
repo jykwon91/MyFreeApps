@@ -76,6 +76,8 @@ def _build_prompt(
     email: str,
     phone: str,
     current_city: str,
+    current_country: str,
+    current_region: str,
     employment_status: str,
     move_in_date: str,
     lease_length_months: int,
@@ -115,7 +117,7 @@ def _build_prompt(
         f"- Name: [redacted-name]\n"
         f"- Email: [redacted-email]\n"
         f"- Phone: [redacted-phone]\n"
-        f"- Current city: {current_city}\n"
+        f"- Current location: {current_city}, {current_region}, {current_country}\n"
         f"- Employment: {employment_status}\n"
         f"- Move-in: {move_in_date}\n"
         f"- Lease length: {lease_length_months} months\n"
@@ -163,6 +165,8 @@ async def score_inquiry(
     email: str,
     phone: str,
     current_city: str,
+    current_country: str,
+    current_region: str,
     employment_status: str,
     move_in_date: str,
     lease_length_months: int,
@@ -183,6 +187,8 @@ async def score_inquiry(
         email=email,
         phone=phone,
         current_city=current_city,
+        current_country=current_country,
+        current_region=current_region,
         employment_status=employment_status,
         move_in_date=move_in_date,
         lease_length_months=lease_length_months,

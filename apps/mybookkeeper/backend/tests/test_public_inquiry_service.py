@@ -103,7 +103,9 @@ def _payload(slug: str = "master-bedroom-abc123", **overrides) -> PublicInquiryR
         "has_pets": False,
         "pets_description": None,
         "vehicle_count": 1,
-        "current_city": "Austin, TX",
+        "current_city": "Austin",
+        "current_country": "US",
+        "current_region": "TX",
         "employment_status": "employed",
         "why_this_room": (
             "I'm a travel nurse on a 13-week assignment at the medical center "
