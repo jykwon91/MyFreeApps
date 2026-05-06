@@ -42,23 +42,25 @@ export default function NavigationButtons({
   }
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-2">
       <button
         type="button"
         onClick={() => move(NavDirection.PREV)}
         disabled={busy || atFirst}
         aria-label="Previous suggestion"
-        className="inline-flex items-center justify-center rounded-md border w-8 h-8 hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
+        className="inline-flex items-center gap-1 rounded-md border border-border bg-background px-2.5 py-1 text-xs font-medium hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
       >
         <ChevronLeft size={14} />
+        <span>Prev</span>
       </button>
       <button
         type="button"
         onClick={() => move(NavDirection.NEXT)}
         disabled={busy || atLast}
         aria-label="Next suggestion"
-        className="inline-flex items-center justify-center rounded-md border w-8 h-8 hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
+        className="inline-flex items-center gap-1 rounded-md border border-border bg-background px-2.5 py-1 text-xs font-medium hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
       >
+        <span>Next</span>
         <ChevronRight size={14} />
       </button>
     </div>
