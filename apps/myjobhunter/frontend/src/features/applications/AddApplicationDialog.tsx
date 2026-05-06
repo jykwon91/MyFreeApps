@@ -53,6 +53,11 @@ export default function AddApplicationDialog({ open, onOpenChange }: AddApplicat
   // they typed in one tab when they peek at the other.
   const [pastedJdText, setPastedJdText] = useState("");
   const [pastedUrl, setPastedUrl] = useState("");
+  // Holds the company name returned by extract / parse so the submit
+  // handler can defensively auto-create the company at submit time if
+  // ``selectOrCreateCompany`` either didn't run or didn't propagate
+  // before the operator clicked submit. Cleared on close.
+  const [pendingCompanyName, setPendingCompanyName] = useState<string | null>(null);
 
   const {
     register,
@@ -80,14 +85,45 @@ export default function AddApplicationDialog({ open, onOpenChange }: AddApplicat
       setJdTab(JD_INPUT_TAB_DEFAULT);
       setPastedJdText("");
       setPastedUrl("");
+      setPendingCompanyName(null);
     }
     onOpenChange(next);
   }
 
   const onSubmit: SubmitHandler<AddApplicationFormValues> = async (values) => {
+    // Resilience: if the JD extract gave us a company name but the
+    // auto-create either raced with the submit click or silently
+    // failed, retry the create-or-select here. Without this fallback
+    // the operator has to manually open "+ New" and re-type the name.
+    let companyId = values.company_id;
+    if (!companyId && pendingCompanyName) {
+      try {
+        const trimmed = pendingCompanyName.trim();
+        const existing = companies.find(
+          (c) => c.name.trim().toLowerCase() === trimmed.toLowerCase(),
+        );
+        if (existing) {
+          companyId = existing.id;
+        } else {
+          const created = await createCompany({ name: trimmed }).unwrap();
+          companyId = created.id;
+        }
+        setValue("company_id", companyId, { shouldValidate: true });
+        setPendingCompanyName(null);
+      } catch (err) {
+        showError(
+          `Couldn't auto-create company "${pendingCompanyName}": ${extractErrorMessage(err)}`,
+        );
+        return;
+      }
+    }
+    if (!companyId) {
+      showError("Pick a company before saving the application.");
+      return;
+    }
     try {
       await createApplication({
-        company_id: values.company_id,
+        company_id: companyId,
         role_title: values.role_title.trim(),
         url: values.url.trim() || null,
         location: values.location.trim() || null,
@@ -199,9 +235,14 @@ export default function AddApplicationDialog({ open, onOpenChange }: AddApplicat
     }
     // Auto-find-or-create the company so the operator doesn't have to
     // manually re-enter what we already extracted. Case-insensitive
-    // match against existing companies; create on miss.
+    // match against existing companies; create on miss. Also stash
+    // the name in ``pendingCompanyName`` so the submit handler has a
+    // fallback if the auto-create raced with the click.
     if (result.company) {
+      setPendingCompanyName(result.company);
       await selectOrCreateCompany(result.company);
+    } else {
+      setPendingCompanyName(null);
     }
     setJdMode({
       kind: "parsed",
@@ -325,7 +366,17 @@ export default function AddApplicationDialog({ open, onOpenChange }: AddApplicat
               ) : (
                 <div className="flex gap-2">
                   <select
-                    {...register("company_id", { required: "Company is required" })}
+                    {...register("company_id", {
+                      // Validation passes if either a company is selected
+                      // OR a pending JD-extract company name is staged for
+                      // on-submit auto-create. Without the second branch,
+                      // form-level validation fails before our submit
+                      // handler gets a chance to run the fallback create.
+                      validate: (value) =>
+                        Boolean(value) || Boolean(pendingCompanyName)
+                          ? true
+                          : "Company is required",
+                    })}
                     disabled={companiesLoading || !hasCompanies}
                     className="flex-1 border rounded-md px-3 py-2 text-sm bg-background"
                   >
