@@ -94,6 +94,19 @@ class ResumeRefinementSession(Base):
         nullable=False,
     )
 
+    # Per-target cache of generated AI proposals so navigating among
+    # suggestions doesn't burn a fresh Claude round-trip on every
+    # move. Keyed by stringified target_index. See
+    # ``_generate_next_proposal`` (write path) and ``navigate`` (read
+    # path) in session_service.py. ``request_alternative`` skips the
+    # cache so the operator can force a regeneration.
+    proposal_cache: Mapped[dict] = mapped_column(
+        JSONB,
+        nullable=False,
+        default=dict,
+        server_default="{}",
+    )
+
     turns: Mapped[list["ResumeRefinementTurn"]] = relationship(  # type: ignore[name-defined]
         "ResumeRefinementTurn",
         back_populates="session",

@@ -249,6 +249,14 @@ async def request_alternative(
     await db.commit()
     await db.refresh(session)
 
+    # Drop the cached proposal so this regeneration's output replaces
+    # the stale one. Without invalidation, a future navigate-back to
+    # this target would surface the OLD proposal even though the
+    # operator explicitly asked for a fresh take.
+    session = await session_repo.invalidate_cached_proposal(
+        db, session, target_index=session.target_index,
+    )
+
     return await _generate_next_proposal(db, session, user_id=user_id, hint=hint)
 
 
@@ -319,6 +327,19 @@ async def navigate(
         raise ValueError("Already at the last suggestion.")
 
     session = await session_repo.set_target_index(db, session, new_index=new_index)
+
+    # Cache hit: hydrate the pending_* fields from the previously
+    # generated proposal for this target. No Anthropic round-trip,
+    # so navigation is instant. The operator can still force a
+    # regeneration via ``request_alternative`` ("Another option").
+    cached = await session_repo.hydrate_pending_from_cache(
+        db, session, target_index=new_index,
+    )
+    if cached is not None:
+        return cached
+
+    # Cache miss: fall through to generation. ``_generate_next_proposal``
+    # writes the result back to the cache for future navigations.
     return await _generate_next_proposal(db, session, user_id=user_id, hint=None)
 
 
@@ -504,6 +525,19 @@ async def _generate_next_proposal(
         tokens_in=rewrite["input_tokens"],
         tokens_out=rewrite["output_tokens"],
         cost_usd=rewrite["cost_usd"],
+    )
+
+    # Cache the proposal so navigating back to this target_index later
+    # is instant. ``request_alternative`` invalidates this entry before
+    # asking us to regenerate.
+    session = await session_repo.cache_proposal(
+        db,
+        session,
+        target_index=session.target_index,
+        target_section=session.pending_target_section,
+        proposal=session.pending_proposal,
+        rationale=session.pending_rationale,
+        clarifying_question=session.pending_clarifying_question,
     )
 
     await turn_repo.append(
