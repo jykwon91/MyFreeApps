@@ -7,17 +7,13 @@ import LinkedLeaseDocumentsLoading from "./LinkedLeaseDocumentsLoading";
 export interface LinkedLeaseDocumentsBodyProps {
   mode: LinkedLeaseDocumentsMode;
   attachments: readonly SignedLeaseAttachment[];
-  canWrite: boolean;
   onPreview: (attachment: SignedLeaseAttachment) => void;
-  onReupload: (attachment: SignedLeaseAttachment, file: File) => void;
 }
 
 export default function LinkedLeaseDocumentsBody({
   mode,
   attachments,
-  canWrite,
   onPreview,
-  onReupload,
 }: LinkedLeaseDocumentsBodyProps) {
   switch (mode) {
     case "loading":
@@ -28,9 +24,7 @@ export default function LinkedLeaseDocumentsBody({
       return (
         <LinkedLeaseDocumentsList
           attachments={attachments}
-          canWrite={canWrite}
           onPreview={onPreview}
-          onReupload={onReupload}
         />
       );
   }

@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useEffect } from "react";
 import { Download, Trash2 } from "lucide-react";
 import { LEASE_ATTACHMENT_KIND_LABELS } from "@/shared/lib/lease-labels";
 import {
@@ -6,7 +6,6 @@ import {
   type LeaseAttachmentKind,
 } from "@/shared/types/lease/lease-attachment-kind";
 import type { SignedLeaseAttachment } from "@/shared/types/lease/signed-lease-attachment";
-import { LEASE_REUPLOAD_ACCEPT } from "@/shared/lib/lease-reupload-accept";
 import { reportMissingStorageObject } from "@/shared/lib/storage-observability";
 
 export interface LeaseAttachmentRowProps {
@@ -15,33 +14,23 @@ export interface LeaseAttachmentRowProps {
   onPreview: () => void;
   onDelete: () => void;
   onKindChange: (kind: LeaseAttachmentKind) => void;
-  onReupload: (file: File) => void;
 }
 
-/**
- * Renders a lease attachment row with the filename ALWAYS clickable.
- * For broken (missing-from-storage) rows, the click silently opens the
- * re-upload picker; the operator sees the underlying NoSuchKey via
- * Sentry + PostHog + the Network tab. The user-facing UI never carries
- * a destructive "File missing" alert.
- */
 export default function LeaseAttachmentRow({
   att,
   canWrite,
   onPreview,
   onDelete,
   onKindChange,
-  onReupload,
 }: LeaseAttachmentRowProps) {
-  const reuploadInputRef = useRef<HTMLInputElement>(null);
   const isMissing = att.is_available === false;
   const canPreviewInline =
     !isMissing
     && att.presigned_url !== null
     && (att.content_type === "application/pdf" || att.content_type.startsWith("image/"));
-  const triggerReupload = () => reuploadInputRef.current?.click();
 
-  function handleMissingClick() {
+  useEffect(() => {
+    if (!isMissing) return;
     reportMissingStorageObject({
       domain: "lease_attachment",
       attachment_id: att.id,
@@ -49,8 +38,7 @@ export default function LeaseAttachmentRow({
       parent_id: att.lease_id,
       parent_kind: "signed_lease",
     });
-    if (canWrite) triggerReupload();
-  }
+  }, [isMissing, att.id, att.storage_key, att.lease_id]);
 
   return (
     <li
@@ -58,17 +46,7 @@ export default function LeaseAttachmentRow({
       data-testid={`lease-attachment-${att.id}`}
     >
       <div className="flex items-center justify-between gap-2">
-        {isMissing ? (
-          <button
-            type="button"
-            onClick={handleMissingClick}
-            className="truncate text-left text-primary hover:underline font-medium min-w-0"
-            data-testid={`lease-attachment-preview-${att.id}`}
-            title={att.filename}
-          >
-            {att.filename}
-          </button>
-        ) : canPreviewInline ? (
+        {canPreviewInline ? (
           <button
             type="button"
             onClick={onPreview}
@@ -78,9 +56,9 @@ export default function LeaseAttachmentRow({
           >
             {att.filename}
           </button>
-        ) : att.presigned_url ? (
+        ) : (
           <a
-            href={att.presigned_url}
+            href={att.presigned_url ?? undefined}
             target="_blank"
             rel="noopener noreferrer"
             className="truncate text-left text-primary hover:underline font-medium min-w-0"
@@ -89,14 +67,10 @@ export default function LeaseAttachmentRow({
           >
             {att.filename}
           </a>
-        ) : (
-          <span className="truncate text-muted-foreground min-w-0" title={att.filename}>
-            {att.filename}
-          </span>
         )}
 
         <div className="flex items-center gap-2 shrink-0">
-          {!isMissing && att.presigned_url ? (
+          {att.presigned_url ? (
             <a
               href={att.presigned_url}
               target="_blank"
@@ -120,18 +94,6 @@ export default function LeaseAttachmentRow({
           ) : null}
         </div>
       </div>
-
-      <input
-        ref={reuploadInputRef}
-        type="file"
-        className="hidden"
-        accept={LEASE_REUPLOAD_ACCEPT}
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) onReupload(file);
-          e.target.value = "";
-        }}
-      />
 
       <div className="flex items-center gap-2">
         {canWrite ? (
