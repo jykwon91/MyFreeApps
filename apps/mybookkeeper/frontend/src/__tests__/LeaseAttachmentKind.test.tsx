@@ -97,6 +97,7 @@ const ATTACHMENT: SignedLeaseAttachment = {
   uploaded_by_user_id: "user-1",
   uploaded_at: "2026-05-01T10:00:00Z",
   presigned_url: "https://storage.example.com/presigned/lease.pdf",
+  is_available: true,
 };
 
 describe("LeaseAttachmentsSection — kind picker", () => {

@@ -108,6 +108,24 @@ class StorageClient:
             "last_modified": stat.last_modified,
         }
 
+    def object_exists(self, key: str) -> bool:
+        """Whether the object exists. ``False`` only on NoSuchKey.
+
+        Distinct from ``head_object``: this re-raises transient S3 errors
+        (network blip, signature mismatch, server 5xx) so the caller sees
+        a real exception instead of confusing a service outage with a
+        missing object. Used by per-request response builders to flag
+        orphan attachment rows whose underlying file is gone — see
+        ``services/leases/attachment_response_builder.py``.
+        """
+        try:
+            self._client.stat_object(self._bucket, key)
+        except S3Error as exc:
+            if exc.code in {"NoSuchKey", "NoSuchObject"}:
+                return False
+            raise
+        return True
+
     def generate_presigned_url(self, key: str, expires_in_seconds: int) -> str:
         """Sign a GET URL for `key` valid for `expires_in_seconds`.
 

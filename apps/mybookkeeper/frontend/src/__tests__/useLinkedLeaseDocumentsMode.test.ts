@@ -13,6 +13,7 @@ const mockAttachment: SignedLeaseAttachment = {
   uploaded_by_user_id: "user-1",
   uploaded_at: "2026-01-01T00:00:00Z",
   presigned_url: "https://example.com/lease.pdf",
+  is_available: true,
 };
 
 describe("useLinkedLeaseDocumentsMode", () => {

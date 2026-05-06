@@ -18,5 +18,11 @@ class SignedLeaseAttachmentResponse(BaseModel):
     uploaded_by_user_id: uuid.UUID
     uploaded_at: _dt.datetime
     presigned_url: str | None = None
+    # ``False`` means the row exists in the DB but the underlying MinIO
+    # object is missing (NoSuchKey on HEAD). Set by the response builder so
+    # the UI can render "File missing — re-upload" instead of an "Open" link
+    # that 404s. Defaults to ``True`` so legacy callers / tests that
+    # construct this schema directly don't have to set it.
+    is_available: bool = True
 
     model_config = ConfigDict(from_attributes=True)
