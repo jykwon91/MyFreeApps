@@ -10,6 +10,7 @@ import ResumeRefinement from "@/pages/ResumeRefinement";
 import Security from "@/pages/Security";
 import Settings from "@/pages/Settings";
 import Login from "@/pages/Login";
+import Register from "@/pages/Register";
 import VerifyEmail from "@/pages/VerifyEmail";
 import NotFound from "@/pages/NotFound";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
@@ -61,6 +62,7 @@ export const routes: RouteObject[] = [
     ],
   },
   { path: "/login", element: <Login /> },
+  { path: "/register", element: <Register /> },
   { path: "/verify-email", element: <VerifyEmail /> },
   { path: "*", element: <NotFound /> },
 ];
