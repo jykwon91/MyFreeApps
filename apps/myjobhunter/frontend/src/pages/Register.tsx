@@ -51,6 +51,7 @@ function RegisterWithInvite({ token }: RegisterWithInviteProps) {
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [confirmTouched, setConfirmTouched] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [registered, setRegistered] = useState(false);
@@ -187,7 +188,14 @@ function RegisterWithInvite({ token }: RegisterWithInviteProps) {
                 minLength={12}
                 placeholder="At least 12 characters"
                 autoComplete="new-password"
+                aria-describedby="password-hint"
               />
+              <p
+                id="password-hint"
+                className="text-xs text-muted-foreground mt-1"
+              >
+                At least 12 characters.
+              </p>
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">
@@ -197,17 +205,27 @@ function RegisterWithInvite({ token }: RegisterWithInviteProps) {
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
+                onBlur={() => setConfirmTouched(true)}
                 className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 required
                 minLength={12}
-                placeholder="Re-type your password"
+                placeholder="Confirm your password"
                 autoComplete="new-password"
                 aria-invalid={
-                  confirmPassword.length > 0 && confirmPassword !== password
+                  confirmTouched && confirmPassword !== password
+                }
+                aria-describedby={
+                  confirmTouched && confirmPassword !== password
+                    ? "confirm-password-error"
+                    : undefined
                 }
               />
-              {confirmPassword.length > 0 && confirmPassword !== password ? (
-                <p className="text-xs text-destructive mt-1">
+              {confirmTouched && confirmPassword !== password ? (
+                <p
+                  id="confirm-password-error"
+                  role="alert"
+                  className="text-xs text-destructive mt-1"
+                >
                   Passwords don't match.
                 </p>
               ) : null}
