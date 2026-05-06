@@ -17,7 +17,6 @@ export interface CurrentUser {
   totp_enabled: boolean;
   is_verified: boolean;
   is_superuser: boolean;
-  is_demo: boolean;
 }
 
 export interface UpdateUserRequest {

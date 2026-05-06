@@ -60,10 +60,19 @@ class AdminUserService(Generic[TUser]):
         self._unit_of_work = unit_of_work
         self._async_session_factory = async_session_factory
 
-    async def list_users(self) -> Sequence[TUser]:
-        """Return every user in the table, ordered by email."""
+    async def list_users(
+        self, *, limit: int = 50, offset: int = 0,
+    ) -> Sequence[TUser]:
+        """Return a page of users, ordered by email.
+
+        Defaults to 50 per page so an admin-token compromise yields one
+        page at a time, not the full table. Callers asking for a full
+        export must paginate explicitly.
+        """
         async with self._async_session_factory() as db:
-            return await admin_user_repo.list_all(db, self._user_model)
+            return await admin_user_repo.list_all(
+                db, self._user_model, limit=limit, offset=offset,
+            )
 
     async def update_user_role(
         self, user_id: uuid.UUID, role: Role, admin: TUser,

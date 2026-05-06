@@ -19,9 +19,25 @@ from sqlalchemy.ext.asyncio import AsyncSession
 TUser = TypeVar("TUser")
 
 
-async def list_all(db: AsyncSession, user_model: type[TUser]) -> Sequence[TUser]:
-    """Return every user in the table, ordered by email."""
-    result = await db.execute(select(user_model).order_by(user_model.email))
+async def list_all(
+    db: AsyncSession,
+    user_model: type[TUser],
+    *,
+    limit: int = 50,
+    offset: int = 0,
+) -> Sequence[TUser]:
+    """Return a page of users, ordered by email.
+
+    Defaults to a 50-row page so a single compromised admin token cannot
+    exfiltrate the entire user table in one request. Callers asking for
+    a full export must paginate.
+    """
+    result = await db.execute(
+        select(user_model)
+        .order_by(user_model.email)
+        .limit(limit)
+        .offset(offset)
+    )
     return result.scalars().all()
 
 

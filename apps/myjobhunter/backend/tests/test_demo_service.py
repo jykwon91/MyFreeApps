@@ -212,9 +212,15 @@ async def test_delete_demo_user_cascades_data() -> None:
 
 
 async def test_delete_demo_user_refuses_unknown_id() -> None:
-    """Deleting a non-existent id raises LookupError (404)."""
-    with pytest.raises(LookupError, match="No demo user"):
+    """Deleting a non-existent id raises LookupError (404).
+
+    The error body is intentionally generic — it must be byte-identical
+    for both "id is bogus" and "id is a real (non-demo) user" so the
+    endpoint cannot be used as an account-enumeration oracle.
+    """
+    with pytest.raises(LookupError) as exc_info:
         await demo_service.delete_demo_user(uuid.uuid4())
+    assert str(exc_info.value) == "Demo user not found."
 
 
 # ---------------------------------------------------------------------------

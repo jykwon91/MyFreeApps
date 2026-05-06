@@ -146,9 +146,13 @@ async def create_demo_user(
 
         user_id = user.id
 
+    # Log only the email domain — demo emails today are non-deliverable
+    # (`.local`), but the same log shape would copy-paste into a real
+    # signup flow if extracted later. PII redaction by default.
+    _, _, _domain = final_email.rpartition("@")
     logger.info(
-        "DEMO_ACTION created demo user user_id=%s email=%s",
-        user_id, final_email,
+        "DEMO_ACTION created demo user user_id=%s email_domain=%s",
+        user_id, (_domain or "unknown").lower(),
     )
 
     return DemoCreateResponse(
@@ -185,11 +189,10 @@ async def delete_demo_user(user_id: uuid.UUID) -> DemoDeleteResponse:
     async with unit_of_work() as db:
         target = await demo_repo.get_demo_user_by_id(db, user_id)
         if target is None:
-            raise LookupError(
-                f"No demo user with id {user_id} exists. "
-                "It may have already been deleted, or the id refers to "
-                "a real (non-demo) account."
-            )
+            # Single byte-identical body for both "id is bogus" and "id
+            # is a real (non-demo) user" branches, so the endpoint
+            # cannot be used as an oracle to enumerate real accounts.
+            raise LookupError("Demo user not found.")
         await demo_repo.delete_demo_user_cascade(db, user_id=user_id)
 
     logger.info("DEMO_ACTION deleted demo user user_id=%s", user_id)

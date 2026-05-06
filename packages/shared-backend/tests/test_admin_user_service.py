@@ -252,3 +252,36 @@ async def test_list_users_delegates_to_repo():
     ):
         users = list(await service.list_users())
     assert users == [target_a, target_b]
+
+
+@pytest.mark.asyncio
+async def test_list_users_passes_pagination_kwargs():
+    """The service must forward limit/offset to the repo verbatim.
+
+    Default values matter: ``limit=50, offset=0`` is the security
+    backstop against a single compromised admin token exfiltrating
+    the entire user table.
+    """
+    service, _ = _build_service(target=None)
+    mock = AsyncMock(return_value=[])
+    with patch(
+        "platform_shared.services.admin_user_service.admin_user_repo.list_all",
+        new=mock,
+    ):
+        await service.list_users(limit=10, offset=20)
+    _, kwargs = mock.call_args
+    assert kwargs == {"limit": 10, "offset": 20}
+
+
+@pytest.mark.asyncio
+async def test_list_users_default_limit_is_50():
+    service, _ = _build_service(target=None)
+    mock = AsyncMock(return_value=[])
+    with patch(
+        "platform_shared.services.admin_user_service.admin_user_repo.list_all",
+        new=mock,
+    ):
+        await service.list_users()
+    _, kwargs = mock.call_args
+    assert kwargs["limit"] == 50
+    assert kwargs["offset"] == 0
