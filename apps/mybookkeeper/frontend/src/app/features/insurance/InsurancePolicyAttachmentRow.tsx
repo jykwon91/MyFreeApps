@@ -4,12 +4,15 @@ import {
   type InsuranceAttachmentKind,
 } from "@/shared/types/insurance/insurance-attachment-kind";
 import type { InsurancePolicyAttachment } from "@/shared/types/insurance/insurance-policy-attachment";
+import MissingFileAffordance from "@/shared/components/storage/MissingFileAffordance";
+import { LEASE_REUPLOAD_ACCEPT } from "@/shared/lib/lease-reupload-accept";
 
 export interface InsurancePolicyAttachmentRowProps {
   att: InsurancePolicyAttachment;
   canWrite: boolean;
   onPreview: () => void;
   onDelete: () => void;
+  onReupload: (file: File) => void;
 }
 
 export default function InsurancePolicyAttachmentRow({
@@ -17,10 +20,13 @@ export default function InsurancePolicyAttachmentRow({
   canWrite,
   onPreview,
   onDelete,
+  onReupload,
 }: InsurancePolicyAttachmentRowProps) {
+  const isMissing = att.is_available === false;
   const canPreview =
-    att.presigned_url !== null &&
-    (att.content_type === "application/pdf" || att.content_type.startsWith("image/"));
+    !isMissing
+    && att.presigned_url !== null
+    && (att.content_type === "application/pdf" || att.content_type.startsWith("image/"));
 
   return (
     <li
@@ -39,13 +45,18 @@ export default function InsurancePolicyAttachmentRow({
             {att.filename}
           </button>
         ) : (
-          <span className="truncate text-muted-foreground min-w-0" title={att.filename}>
+          <span
+            className={`truncate min-w-0 ${
+              isMissing ? "text-destructive" : "text-muted-foreground"
+            }`}
+            title={att.filename}
+          >
             {att.filename}
           </span>
         )}
 
         <div className="flex items-center gap-2 shrink-0">
-          {att.presigned_url ? (
+          {!isMissing && att.presigned_url ? (
             <a
               href={att.presigned_url}
               target="_blank"
@@ -70,6 +81,15 @@ export default function InsurancePolicyAttachmentRow({
           ) : null}
         </div>
       </div>
+
+      {isMissing ? (
+        <MissingFileAffordance
+          canReupload={canWrite}
+          onReupload={onReupload}
+          acceptMime={LEASE_REUPLOAD_ACCEPT}
+          testIdPrefix={`insurance-attachment-${att.id}`}
+        />
+      ) : null}
 
       <span className="text-xs text-muted-foreground">
         {INSURANCE_ATTACHMENT_KIND_LABELS[att.kind as InsuranceAttachmentKind] ?? att.kind}

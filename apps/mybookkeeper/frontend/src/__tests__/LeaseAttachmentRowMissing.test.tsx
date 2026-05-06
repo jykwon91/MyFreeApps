@@ -63,10 +63,10 @@ describe("LeaseAttachmentRow — missing file UX", () => {
   it("renders the 'File missing' alert and re-upload button when is_available=false", () => {
     renderSection(ORPHAN_ATTACHMENT);
     expect(
-      screen.getByTestId(`lease-attachment-missing-${ORPHAN_ATTACHMENT.id}`),
+      screen.getByTestId(`lease-attachment-${ORPHAN_ATTACHMENT.id}-missing`),
     ).toHaveTextContent(/File missing/i);
     expect(
-      screen.getByTestId(`lease-attachment-reupload-${ORPHAN_ATTACHMENT.id}`),
+      screen.getByTestId(`lease-attachment-${ORPHAN_ATTACHMENT.id}-reupload`),
     ).toBeInTheDocument();
   });
 
@@ -83,12 +83,12 @@ describe("LeaseAttachmentRow — missing file UX", () => {
   it("hides the re-upload button when canWrite=false", () => {
     renderSection(ORPHAN_ATTACHMENT, false);
     expect(
-      screen.queryByTestId(`lease-attachment-reupload-${ORPHAN_ATTACHMENT.id}`),
+      screen.queryByTestId(`lease-attachment-${ORPHAN_ATTACHMENT.id}-reupload`),
     ).toBeNull();
     // The 'File missing' message itself remains so the user understands
     // why they can't open the file.
     expect(
-      screen.getByTestId(`lease-attachment-missing-${ORPHAN_ATTACHMENT.id}`),
+      screen.getByTestId(`lease-attachment-${ORPHAN_ATTACHMENT.id}-missing`),
     ).toBeInTheDocument();
   });
 
@@ -102,7 +102,7 @@ describe("LeaseAttachmentRow — missing file UX", () => {
     renderSection(ORPHAN_ATTACHMENT);
 
     const reuploadButton = screen.getByTestId(
-      `lease-attachment-reupload-${ORPHAN_ATTACHMENT.id}`,
+      `lease-attachment-${ORPHAN_ATTACHMENT.id}-reupload`,
     );
     // The hidden file input is sibling to the button. Find via container.
     const li = reuploadButton.closest("li") as HTMLElement;
@@ -132,7 +132,7 @@ describe("LeaseAttachmentRow — missing file UX", () => {
     renderSection(ORPHAN_ATTACHMENT);
 
     const reuploadButton = screen.getByTestId(
-      `lease-attachment-reupload-${ORPHAN_ATTACHMENT.id}`,
+      `lease-attachment-${ORPHAN_ATTACHMENT.id}-reupload`,
     );
     const li = reuploadButton.closest("li") as HTMLElement;
     const fileInput = li.querySelector(

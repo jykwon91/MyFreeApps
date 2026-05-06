@@ -29,6 +29,7 @@ export default function ListingPhotoCard({
   };
 
   const selectedBorder = selected ? "border-2 border-primary" : "border";
+  const isMissing = photo.is_available === false;
 
   return (
     <li
@@ -46,10 +47,11 @@ export default function ListingPhotoCard({
       />
 
       {/* Photo served via per-request presigned URL minted by the backend.
-          Falls back to a labeled placeholder when storage is unavailable
-          (e.g., MinIO outage) so the page still renders the layout.
+          Falls back to a labeled placeholder when:
+          - storage is unavailable (e.g., MinIO outage) → "Photo N"
+          - the underlying object is missing (NoSuchKey) → "Photo missing" with destructive tint
           Clicking opens the full-size lightbox viewer. */}
-      {photo.presigned_url ? (
+      {!isMissing && photo.presigned_url ? (
         <button
           type="button"
           onClick={onOpen}
@@ -69,11 +71,17 @@ export default function ListingPhotoCard({
         <button
           type="button"
           onClick={onOpen}
-          className="aspect-square w-full bg-muted flex items-center justify-center text-xs text-muted-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className={`aspect-square w-full flex items-center justify-center text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+            isMissing
+              ? "bg-destructive/10 text-destructive"
+              : "bg-muted text-muted-foreground"
+          }`}
           aria-label={`View photo ${photo.display_order + 1} full size`}
           data-testid="listing-photo-thumbnail"
         >
-          Photo {photo.display_order + 1}
+          {isMissing
+            ? `Photo ${photo.display_order + 1} missing`
+            : `Photo ${photo.display_order + 1}`}
         </button>
       )}
 

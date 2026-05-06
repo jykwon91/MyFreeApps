@@ -77,6 +77,28 @@ export default function InsurancePolicyAttachmentsSection({
     }
   }
 
+  async function handleReupload(att: InsurancePolicyAttachment, file: File) {
+    if (file.type && !ALLOWED_MIME.includes(file.type)) {
+      showError(`${file.name}: unsupported file type.`);
+      return;
+    }
+    try {
+      await deleteAttachment({ policyId, attachmentId: att.id }).unwrap();
+    } catch {
+      showError("Couldn't remove the broken file. Please try again.");
+      return;
+    }
+    try {
+      await uploadAttachment({ policyId, file, kind: att.kind }).unwrap();
+      showSuccess(`${file.name} uploaded.`);
+    } catch (e: unknown) {
+      const status = (e as { status?: number }).status;
+      if (status === 413) showError(`${file.name} is too large.`);
+      else if (status === 415) showError(`${file.name}: unsupported file type.`);
+      else showError(`Couldn't upload ${file.name}.`);
+    }
+  }
+
   return (
     <section className="space-y-3" data-testid="insurance-attachments-section">
       {attachments.length === 0 ? (
@@ -95,6 +117,7 @@ export default function InsurancePolicyAttachmentsSection({
               canWrite={canWrite}
               onPreview={() => setViewingAttachment(att)}
               onDelete={() => void handleDelete(att)}
+              onReupload={(file) => void handleReupload(att, file)}
             />
           ))}
         </ul>

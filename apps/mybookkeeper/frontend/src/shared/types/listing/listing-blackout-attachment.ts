@@ -14,4 +14,6 @@ export interface ListingBlackoutAttachment {
   uploaded_by_user_id: string;
   uploaded_at: string;
   presigned_url: string | null;
+  /** `false` when the underlying MinIO object is missing. UI shows a "File missing" affordance. */
+  is_available?: boolean;
 }

@@ -9,4 +9,6 @@ export interface ListingPhoto {
   // storage is unavailable, undefined for legacy callers — UI must render a
   // placeholder in either case.
   presigned_url?: string | null;
+  /** `false` when the underlying MinIO object is missing. UI shows a placeholder. */
+  is_available?: boolean;
 }

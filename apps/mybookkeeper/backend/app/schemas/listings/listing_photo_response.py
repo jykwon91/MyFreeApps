@@ -12,5 +12,8 @@ class ListingPhotoResponse(BaseModel):
     display_order: int
     created_at: datetime
     presigned_url: str | None = None
+    # ``False`` means the underlying MinIO object is missing. UI surfaces
+    # a placeholder + warning instead of a broken image tag.
+    is_available: bool = True
 
     model_config = ConfigDict(from_attributes=True)

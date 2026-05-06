@@ -1,11 +1,12 @@
-import { useRef } from "react";
-import { AlertTriangle, Download, Trash2, Upload } from "lucide-react";
+import { Download, Trash2 } from "lucide-react";
 import { LEASE_ATTACHMENT_KIND_LABELS } from "@/shared/lib/lease-labels";
 import {
   LEASE_ATTACHMENT_KINDS,
   type LeaseAttachmentKind,
 } from "@/shared/types/lease/lease-attachment-kind";
 import type { SignedLeaseAttachment } from "@/shared/types/lease/signed-lease-attachment";
+import MissingFileAffordance from "@/shared/components/storage/MissingFileAffordance";
+import { LEASE_REUPLOAD_ACCEPT } from "@/shared/lib/lease-reupload-accept";
 
 export interface LeaseAttachmentRowProps {
   att: SignedLeaseAttachment;
@@ -16,14 +17,6 @@ export interface LeaseAttachmentRowProps {
   onReupload: (file: File) => void;
 }
 
-const REUPLOAD_ACCEPT = [
-  "application/pdf",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-].join(",");
-
 export default function LeaseAttachmentRow({
   att,
   canWrite,
@@ -32,7 +25,6 @@ export default function LeaseAttachmentRow({
   onKindChange,
   onReupload,
 }: LeaseAttachmentRowProps) {
-  const reuploadInputRef = useRef<HTMLInputElement>(null);
   const isMissing = att.is_available === false;
   const canPreview =
     !isMissing
@@ -93,35 +85,12 @@ export default function LeaseAttachmentRow({
       </div>
 
       {isMissing ? (
-        <div
-          className="flex items-center gap-2 text-xs text-destructive"
-          data-testid={`lease-attachment-missing-${att.id}`}
-          role="alert"
-        >
-          <AlertTriangle size={14} aria-hidden="true" />
-          <span>File missing from storage.</span>
-          {canWrite ? (
-            <button
-              type="button"
-              onClick={() => reuploadInputRef.current?.click()}
-              className="inline-flex items-center gap-1 px-2 py-1 text-xs border rounded hover:bg-muted min-h-[28px]"
-              data-testid={`lease-attachment-reupload-${att.id}`}
-            >
-              <Upload size={12} aria-hidden="true" /> Re-upload
-            </button>
-          ) : null}
-          <input
-            ref={reuploadInputRef}
-            type="file"
-            className="hidden"
-            accept={REUPLOAD_ACCEPT}
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) onReupload(file);
-              e.target.value = "";
-            }}
-          />
-        </div>
+        <MissingFileAffordance
+          canReupload={canWrite}
+          onReupload={onReupload}
+          acceptMime={LEASE_REUPLOAD_ACCEPT}
+          testIdPrefix={`lease-attachment-${att.id}`}
+        />
       ) : null}
 
       <div className="flex items-center gap-2">

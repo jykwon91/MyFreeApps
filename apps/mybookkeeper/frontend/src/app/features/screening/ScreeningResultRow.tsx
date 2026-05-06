@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronDown, ChevronRight, Download } from "lucide-react";
+import { AlertTriangle, ChevronDown, ChevronRight, Download } from "lucide-react";
 import Badge from "@/shared/components/ui/Badge";
 import type { BadgeColor } from "@/shared/components/ui/Badge";
 import {
@@ -41,7 +41,9 @@ export default function ScreeningResultRow({ result }: ScreeningResultRowProps) 
     color: "gray" as BadgeColor,
   };
   const providerLabel = PROVIDER_LABELS[result.provider] ?? result.provider;
-  const downloadHref = result.presigned_url;
+  const isMissing =
+    result.is_available === false && result.report_storage_key !== null;
+  const downloadHref = isMissing ? null : result.presigned_url;
 
   return (
     <li
@@ -68,6 +70,16 @@ export default function ScreeningResultRow({ result }: ScreeningResultRowProps) 
               <Download className="h-3.5 w-3.5" aria-hidden="true" />
               Download
             </a>
+          ) : null}
+          {isMissing ? (
+            <span
+              className="inline-flex items-center gap-1 text-destructive"
+              role="alert"
+              data-testid={`screening-missing-${result.id}`}
+            >
+              <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
+              Report missing
+            </span>
           ) : null}
         </div>
       </div>

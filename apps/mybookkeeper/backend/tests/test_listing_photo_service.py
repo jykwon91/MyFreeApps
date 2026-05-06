@@ -27,20 +27,22 @@ from app.services.storage.image_processor import ImageRejected
 
 @pytest.fixture(autouse=True)
 def _patch_builder_storage(monkeypatch):
-    """Provide a working storage stub to ``photo_response_builder.get_storage``
-    so per-request signing succeeds in the read path. Storage is now a
-    hard requirement (the lifespan refuses to boot without it), so any
-    test exercising read paths must inject a real or fake storage —
-    silent ``presigned_url=None`` is no longer permitted.
+    """Provide a working storage stub to the shared
+    ``presigned_url_attacher.get_storage`` so per-request signing succeeds
+    in the read path. Storage is now a hard requirement (the lifespan
+    refuses to boot without it), so any test exercising read paths must
+    inject a real or fake storage — silent ``presigned_url=None`` is no
+    longer permitted.
 
-    Tests that want to assert misconfig-propagation should override this
-    fixture by patching ``photo_response_builder.get_storage`` to raise.
+    The stub also returns ``object_exists=True`` so the HEAD-check added
+    for orphan-attachment detection passes by default.
     """
-    from app.services.listings import photo_response_builder
+    from app.services.storage import presigned_url_attacher
 
     fake = MagicMock()
+    fake.object_exists.return_value = True
     fake.generate_presigned_url.side_effect = lambda key, ttl: f"https://signed/{key}"
-    monkeypatch.setattr(photo_response_builder, "get_storage", lambda: fake)
+    monkeypatch.setattr(presigned_url_attacher, "get_storage", lambda: fake)
 
 
 class _FakeStorage:

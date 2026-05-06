@@ -38,7 +38,7 @@ class TestAttachPresignedUrls:
     def test_propagates_storage_misconfig(self) -> None:
         photos = [_make_response()]
         with patch(
-            "app.services.listings.photo_response_builder.get_storage",
+            "app.services.storage.presigned_url_attacher.get_storage",
             side_effect=StorageNotConfiguredError("MINIO_ENDPOINT unset"),
         ):
             with pytest.raises(StorageNotConfiguredError):
@@ -47,9 +47,10 @@ class TestAttachPresignedUrls:
     def test_signs_each_photo_when_storage_configured(self) -> None:
         photos = [_make_response("a"), _make_response("b")]
         storage = MagicMock()
+        storage.object_exists.return_value = True
         storage.generate_presigned_url.side_effect = lambda key, ttl: f"https://signed/{key}"
         with patch(
-            "app.services.listings.photo_response_builder.get_storage",
+            "app.services.storage.presigned_url_attacher.get_storage",
             return_value=storage,
         ):
             result = attach_presigned_urls(photos)
@@ -63,9 +64,10 @@ class TestAttachPresignedUrls:
         with the real stack trace; silent ``presigned_url=None`` is gone."""
         photos = [_make_response("a"), _make_response("b")]
         storage = MagicMock()
+        storage.object_exists.return_value = True
         storage.generate_presigned_url.side_effect = RuntimeError("signing exploded")
         with patch(
-            "app.services.listings.photo_response_builder.get_storage",
+            "app.services.storage.presigned_url_attacher.get_storage",
             return_value=storage,
         ):
             with pytest.raises(RuntimeError, match="signing exploded"):
@@ -75,9 +77,10 @@ class TestAttachPresignedUrls:
         photo = _make_response("k")
         original_id = photo.id
         storage = MagicMock()
+        storage.object_exists.return_value = True
         storage.generate_presigned_url.return_value = "https://signed/k"
         with patch(
-            "app.services.listings.photo_response_builder.get_storage",
+            "app.services.storage.presigned_url_attacher.get_storage",
             return_value=storage,
         ):
             attach_presigned_urls([photo])
