@@ -1,35 +1,25 @@
 """Inject per-request presigned URLs for insurance-domain attachments.
 
-The single-seam rule (CLAUDE.md): presigned URLs for any object in the
-insurance domain are minted ONLY through this module.
-
-Storage is a hard requirement (the lifespan refuses to boot if MinIO is
-unreachable). Per-request signing is purely cryptographic and cannot fail
-under normal operation; any exception bubbles up so the request returns 500
-with a real stack trace, surfacing the misconfiguration loudly.
+Single-seam rule: presigned URLs for any object in the insurance domain
+are minted ONLY through this module. Each row is HEAD-checked via the
+shared ``attach_presigned_url_with_head_check`` helper; missing objects
+are flagged ``is_available=False`` so the UI can render a "File missing
+— re-upload" affordance.
 """
 from __future__ import annotations
 
-from app.core.config import settings
-from app.core.storage import get_storage
 from app.schemas.insurance.insurance_policy_attachment_response import (
     InsurancePolicyAttachmentResponse,
+)
+from app.services.storage.presigned_url_attacher import (
+    attach_presigned_url_with_head_check,
 )
 
 
 def attach_presigned_urls(
     attachments: list[InsurancePolicyAttachmentResponse],
 ) -> list[InsurancePolicyAttachmentResponse]:
-    if not attachments:
-        return attachments
-    storage = get_storage()
-    return [
-        a.model_copy(
-            update={
-                "presigned_url": storage.generate_presigned_url(
-                    a.storage_key, settings.presigned_url_ttl_seconds
-                )
-            }
-        )
-        for a in attachments
-    ]
+    return attach_presigned_url_with_head_check(
+        attachments,
+        sentry_event_name="insurance_attachment_storage_object_missing",
+    )

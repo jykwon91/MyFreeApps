@@ -20,4 +20,6 @@ export interface ScreeningResult {
   uploaded_by_user_id: string;
   created_at: string;
   presigned_url: string | null;
+  /** `false` when the underlying MinIO object is missing. UI shows a "Report missing" affordance. */
+  is_available?: boolean;
 }

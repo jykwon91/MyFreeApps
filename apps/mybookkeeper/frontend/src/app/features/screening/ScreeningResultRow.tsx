@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronDown, ChevronRight, Download } from "lucide-react";
 import Badge from "@/shared/components/ui/Badge";
 import type { BadgeColor } from "@/shared/components/ui/Badge";
@@ -7,6 +7,7 @@ import {
   formatRelativeTime,
 } from "@/shared/lib/inquiry-date-format";
 import type { ScreeningResult } from "@/shared/types/applicant/screening-result";
+import { reportMissingStorageObject } from "@/shared/lib/storage-observability";
 
 const STATUS_BADGE: Record<string, { label: string; color: BadgeColor }> = {
   pending: { label: "Pending", color: "yellow" },
@@ -33,6 +34,13 @@ export interface ScreeningResultRowProps {
  *     host expands it intentionally to read the reason).
  *   - Download link uses the per-row ``presigned_url`` minted by the
  *     screening response builder. Storage keys are never exposed.
+ *
+ * When the underlying object is missing (``is_available=false``), the
+ * Download link is hidden and an observability event is captured to
+ * PostHog + console — there's no recovery path the user can take from
+ * this row (screening reports are uploaded by the operator, not
+ * regenerated), so the UI stays quiet and the operator gets a server-
+ * side Sentry alert plus a client-side PostHog event.
  */
 export default function ScreeningResultRow({ result }: ScreeningResultRowProps) {
   const [snippetOpen, setSnippetOpen] = useState(false);
@@ -41,7 +49,20 @@ export default function ScreeningResultRow({ result }: ScreeningResultRowProps) 
     color: "gray" as BadgeColor,
   };
   const providerLabel = PROVIDER_LABELS[result.provider] ?? result.provider;
-  const downloadHref = result.presigned_url;
+  const isMissing =
+    result.is_available === false && result.report_storage_key !== null;
+  const downloadHref = isMissing ? null : result.presigned_url;
+
+  useEffect(() => {
+    if (!isMissing) return;
+    reportMissingStorageObject({
+      domain: "screening_report",
+      attachment_id: result.id,
+      storage_key: result.report_storage_key ?? "",
+      parent_id: result.applicant_id,
+      parent_kind: "applicant",
+    });
+  }, [isMissing, result.id, result.report_storage_key, result.applicant_id]);
 
   return (
     <li

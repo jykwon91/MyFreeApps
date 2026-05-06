@@ -18,5 +18,8 @@ class LeaseTemplateFileResponse(BaseModel):
     created_at: _dt.datetime
     # Presigned URL injected by the service layer; None when storage is down.
     presigned_url: str | None = None
+    # ``False`` means the underlying MinIO object is missing. UI surfaces a
+    # "File missing" affordance instead of a broken link.
+    is_available: bool = True
 
     model_config = ConfigDict(from_attributes=True)

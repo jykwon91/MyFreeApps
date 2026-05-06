@@ -1,9 +1,10 @@
 /**
  * Behavior tests for LeaseAttachmentRow when the underlying storage
- * object is missing (NoSuchKey). The backend response builder flips
- * `is_available=false` and clears `presigned_url`; the row should
- * render a "File missing" alert with a "Re-upload" button instead of
- * the normal Open / Download links.
+ * object is missing (is_available=false). Per the silent-observability
+ * rule, the UI stays clean — there is no visible "File missing" alert
+ * and no explicit "Re-upload" button. The filename remains clickable;
+ * clicking captures a PostHog/console event AND opens the file picker
+ * so the host can replace the orphan in place.
  */
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -25,6 +26,11 @@ vi.mock("@/shared/store/signedLeasesApi", () => ({
 vi.mock("@/shared/lib/toast-store", () => ({
   showError: vi.fn(),
   showSuccess: vi.fn(),
+}));
+
+const reportMock = vi.fn();
+vi.mock("@/shared/lib/storage-observability", () => ({
+  reportMissingStorageObject: (...args: unknown[]) => reportMock(...args),
 }));
 
 const ORPHAN_ATTACHMENT: SignedLeaseAttachment = {
@@ -53,46 +59,49 @@ function renderSection(att: SignedLeaseAttachment, canWrite = true) {
   );
 }
 
-describe("LeaseAttachmentRow — missing file UX", () => {
+describe("LeaseAttachmentRow — missing file (silent UX)", () => {
   beforeEach(() => {
     updateMock.mockReset();
     deleteMock.mockReset();
     uploadMock.mockReset();
+    reportMock.mockReset();
   });
 
-  it("renders the 'File missing' alert and re-upload button when is_available=false", () => {
+  it("does NOT render a visible 'File missing' alert", () => {
     renderSection(ORPHAN_ATTACHMENT);
     expect(
-      screen.getByTestId(`lease-attachment-missing-${ORPHAN_ATTACHMENT.id}`),
-    ).toHaveTextContent(/File missing/i);
-    expect(
-      screen.getByTestId(`lease-attachment-reupload-${ORPHAN_ATTACHMENT.id}`),
-    ).toBeInTheDocument();
+      screen.queryByText(/file missing from storage/i),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
-  it("hides the preview button and download link when is_available=false", () => {
+  it("renders the filename as a clickable button (always-clickable rule)", () => {
     renderSection(ORPHAN_ATTACHMENT);
-    expect(
-      screen.queryByTestId(`lease-attachment-preview-${ORPHAN_ATTACHMENT.id}`),
-    ).toBeNull();
-    expect(
-      screen.queryByTestId(`lease-attachment-download-${ORPHAN_ATTACHMENT.id}`),
-    ).toBeNull();
+    const filenameButton = screen.getByTestId(
+      `lease-attachment-preview-${ORPHAN_ATTACHMENT.id}`,
+    );
+    expect(filenameButton).toBeInTheDocument();
+    expect(filenameButton.tagName).toBe("BUTTON");
   });
 
-  it("hides the re-upload button when canWrite=false", () => {
-    renderSection(ORPHAN_ATTACHMENT, false);
-    expect(
-      screen.queryByTestId(`lease-attachment-reupload-${ORPHAN_ATTACHMENT.id}`),
-    ).toBeNull();
-    // The 'File missing' message itself remains so the user understands
-    // why they can't open the file.
-    expect(
-      screen.getByTestId(`lease-attachment-missing-${ORPHAN_ATTACHMENT.id}`),
-    ).toBeInTheDocument();
+  it("clicking the filename captures a PostHog/console event AND triggers the file picker", () => {
+    renderSection(ORPHAN_ATTACHMENT);
+    const filenameButton = screen.getByTestId(
+      `lease-attachment-preview-${ORPHAN_ATTACHMENT.id}`,
+    );
+    fireEvent.click(filenameButton);
+
+    expect(reportMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        domain: "lease_attachment",
+        attachment_id: "att-orphan",
+        storage_key: "signed-leases/lease-1/att-orphan",
+        parent_id: "lease-1",
+      }),
+    );
   });
 
-  it("re-upload triggers DELETE then POST with the same kind", async () => {
+  it("re-uploading after a missing-file click triggers DELETE + POST with the same kind", async () => {
     deleteMock.mockReturnValue({ unwrap: () => Promise.resolve(undefined) });
     uploadMock.mockReturnValue({
       unwrap: () =>
@@ -101,14 +110,8 @@ describe("LeaseAttachmentRow — missing file UX", () => {
 
     renderSection(ORPHAN_ATTACHMENT);
 
-    const reuploadButton = screen.getByTestId(
-      `lease-attachment-reupload-${ORPHAN_ATTACHMENT.id}`,
-    );
-    // The hidden file input is sibling to the button. Find via container.
-    const li = reuploadButton.closest("li") as HTMLElement;
-    const fileInput = li.querySelector(
-      'input[type="file"]',
-    ) as HTMLInputElement;
+    const li = screen.getByTestId(`lease-attachment-${ORPHAN_ATTACHMENT.id}`);
+    const fileInput = li.querySelector('input[type="file"]') as HTMLInputElement;
 
     const file = new File(["replacement bytes"], "replacement.pdf", {
       type: "application/pdf",
@@ -126,25 +129,5 @@ describe("LeaseAttachmentRow — missing file UX", () => {
         kind: "signed_lease",
       });
     });
-  });
-
-  it("does not call DELETE when re-upload picks an unsupported file type", () => {
-    renderSection(ORPHAN_ATTACHMENT);
-
-    const reuploadButton = screen.getByTestId(
-      `lease-attachment-reupload-${ORPHAN_ATTACHMENT.id}`,
-    );
-    const li = reuploadButton.closest("li") as HTMLElement;
-    const fileInput = li.querySelector(
-      'input[type="file"]',
-    ) as HTMLInputElement;
-
-    const file = new File(["nope"], "shady.exe", {
-      type: "application/x-msdownload",
-    });
-    fireEvent.change(fileInput, { target: { files: [file] } });
-
-    expect(deleteMock).not.toHaveBeenCalled();
-    expect(uploadMock).not.toHaveBeenCalled();
   });
 });

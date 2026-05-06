@@ -1,11 +1,13 @@
 import { useRef } from "react";
-import { AlertTriangle, Download, Trash2, Upload } from "lucide-react";
+import { Download, Trash2 } from "lucide-react";
 import { LEASE_ATTACHMENT_KIND_LABELS } from "@/shared/lib/lease-labels";
 import {
   LEASE_ATTACHMENT_KINDS,
   type LeaseAttachmentKind,
 } from "@/shared/types/lease/lease-attachment-kind";
 import type { SignedLeaseAttachment } from "@/shared/types/lease/signed-lease-attachment";
+import { LEASE_REUPLOAD_ACCEPT } from "@/shared/lib/lease-reupload-accept";
+import { reportMissingStorageObject } from "@/shared/lib/storage-observability";
 
 export interface LeaseAttachmentRowProps {
   att: SignedLeaseAttachment;
@@ -16,14 +18,13 @@ export interface LeaseAttachmentRowProps {
   onReupload: (file: File) => void;
 }
 
-const REUPLOAD_ACCEPT = [
-  "application/pdf",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-].join(",");
-
+/**
+ * Renders a lease attachment row with the filename ALWAYS clickable.
+ * For broken (missing-from-storage) rows, the click silently opens the
+ * re-upload picker; the operator sees the underlying NoSuchKey via
+ * Sentry + PostHog + the Network tab. The user-facing UI never carries
+ * a destructive "File missing" alert.
+ */
 export default function LeaseAttachmentRow({
   att,
   canWrite,
@@ -34,10 +35,22 @@ export default function LeaseAttachmentRow({
 }: LeaseAttachmentRowProps) {
   const reuploadInputRef = useRef<HTMLInputElement>(null);
   const isMissing = att.is_available === false;
-  const canPreview =
+  const canPreviewInline =
     !isMissing
     && att.presigned_url !== null
     && (att.content_type === "application/pdf" || att.content_type.startsWith("image/"));
+  const triggerReupload = () => reuploadInputRef.current?.click();
+
+  function handleMissingClick() {
+    reportMissingStorageObject({
+      domain: "lease_attachment",
+      attachment_id: att.id,
+      storage_key: att.storage_key,
+      parent_id: att.lease_id,
+      parent_kind: "signed_lease",
+    });
+    if (canWrite) triggerReupload();
+  }
 
   return (
     <li
@@ -45,7 +58,17 @@ export default function LeaseAttachmentRow({
       data-testid={`lease-attachment-${att.id}`}
     >
       <div className="flex items-center justify-between gap-2">
-        {canPreview ? (
+        {isMissing ? (
+          <button
+            type="button"
+            onClick={handleMissingClick}
+            className="truncate text-left text-primary hover:underline font-medium min-w-0"
+            data-testid={`lease-attachment-preview-${att.id}`}
+            title={att.filename}
+          >
+            {att.filename}
+          </button>
+        ) : canPreviewInline ? (
           <button
             type="button"
             onClick={onPreview}
@@ -55,13 +78,19 @@ export default function LeaseAttachmentRow({
           >
             {att.filename}
           </button>
-        ) : (
-          <span
-            className={`truncate min-w-0 ${
-              isMissing ? "text-destructive" : "text-muted-foreground"
-            }`}
+        ) : att.presigned_url ? (
+          <a
+            href={att.presigned_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="truncate text-left text-primary hover:underline font-medium min-w-0"
+            data-testid={`lease-attachment-download-link-${att.id}`}
             title={att.filename}
           >
+            {att.filename}
+          </a>
+        ) : (
+          <span className="truncate text-muted-foreground min-w-0" title={att.filename}>
             {att.filename}
           </span>
         )}
@@ -92,37 +121,17 @@ export default function LeaseAttachmentRow({
         </div>
       </div>
 
-      {isMissing ? (
-        <div
-          className="flex items-center gap-2 text-xs text-destructive"
-          data-testid={`lease-attachment-missing-${att.id}`}
-          role="alert"
-        >
-          <AlertTriangle size={14} aria-hidden="true" />
-          <span>File missing from storage.</span>
-          {canWrite ? (
-            <button
-              type="button"
-              onClick={() => reuploadInputRef.current?.click()}
-              className="inline-flex items-center gap-1 px-2 py-1 text-xs border rounded hover:bg-muted min-h-[28px]"
-              data-testid={`lease-attachment-reupload-${att.id}`}
-            >
-              <Upload size={12} aria-hidden="true" /> Re-upload
-            </button>
-          ) : null}
-          <input
-            ref={reuploadInputRef}
-            type="file"
-            className="hidden"
-            accept={REUPLOAD_ACCEPT}
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) onReupload(file);
-              e.target.value = "";
-            }}
-          />
-        </div>
-      ) : null}
+      <input
+        ref={reuploadInputRef}
+        type="file"
+        className="hidden"
+        accept={LEASE_REUPLOAD_ACCEPT}
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) onReupload(file);
+          e.target.value = "";
+        }}
+      />
 
       <div className="flex items-center gap-2">
         {canWrite ? (

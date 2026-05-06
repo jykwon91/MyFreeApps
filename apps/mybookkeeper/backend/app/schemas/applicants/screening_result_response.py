@@ -29,5 +29,10 @@ class ScreeningResultResponse(BaseModel):
     # Populated by the screening response builder on read paths. None when
     # storage is unavailable or the row has no report yet.
     presigned_url: str | None = None
+    # ``False`` means the underlying MinIO object is missing. UI surfaces a
+    # "Report missing" affordance instead of a broken link. Defaults to
+    # ``True`` so rows without a report yet (``report_storage_key=None``)
+    # don't get falsely flagged.
+    is_available: bool = True
 
     model_config = ConfigDict(from_attributes=True)

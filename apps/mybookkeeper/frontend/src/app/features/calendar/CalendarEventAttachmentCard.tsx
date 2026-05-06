@@ -1,6 +1,7 @@
 import { FileText, Paperclip, Trash2 } from "lucide-react";
 import type { ListingBlackoutAttachment } from "@/shared/types/listing/listing-blackout-attachment";
 import { formatFileSize } from "@/shared/utils/file-size";
+import { reportMissingStorageObject } from "@/shared/lib/storage-observability";
 
 export interface CalendarEventAttachmentCardProps {
   attachment: ListingBlackoutAttachment;
@@ -9,13 +10,25 @@ export interface CalendarEventAttachmentCardProps {
 
 export default function CalendarEventAttachmentCard({ attachment, onDelete }: CalendarEventAttachmentCardProps) {
   const isImage = attachment.content_type.startsWith("image/");
+  const isMissing = attachment.is_available === false;
+
+  function handleMissingClick(e: React.MouseEvent) {
+    e.preventDefault();
+    reportMissingStorageObject({
+      domain: "blackout_attachment",
+      attachment_id: attachment.id,
+      storage_key: attachment.storage_key,
+      parent_id: attachment.listing_blackout_id,
+      parent_kind: "listing_blackout",
+    });
+  }
 
   return (
     <li
       className="flex items-center gap-3 rounded-md border bg-background px-3 py-2"
       data-testid="attachment-card"
     >
-      {isImage && attachment.presigned_url ? (
+      {isImage && !isMissing && attachment.presigned_url ? (
         <img
           src={attachment.presigned_url}
           alt={attachment.filename}
@@ -33,7 +46,17 @@ export default function CalendarEventAttachmentCard({ attachment, onDelete }: Ca
       )}
 
       <div className="flex-1 min-w-0">
-        {attachment.presigned_url ? (
+        {isMissing ? (
+          <button
+            type="button"
+            onClick={handleMissingClick}
+            className="text-sm font-medium truncate block text-left hover:underline text-primary"
+            data-testid="attachment-filename"
+            title={attachment.filename}
+          >
+            {attachment.filename}
+          </button>
+        ) : attachment.presigned_url ? (
           <a
             href={attachment.presigned_url}
             target="_blank"

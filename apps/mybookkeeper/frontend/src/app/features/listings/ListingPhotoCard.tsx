@@ -1,8 +1,10 @@
+import { useEffect } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, X } from "lucide-react";
 import type { ListingPhoto } from "@/shared/types/listing/listing-photo";
 import PhotoSelectionCheckbox from "@/app/features/listings/PhotoSelectionCheckbox";
+import { reportMissingStorageObject } from "@/shared/lib/storage-observability";
 
 export interface ListingPhotoCardProps {
   photo: ListingPhoto;
@@ -29,6 +31,18 @@ export default function ListingPhotoCard({
   };
 
   const selectedBorder = selected ? "border-2 border-primary" : "border";
+  const isMissing = photo.is_available === false;
+
+  useEffect(() => {
+    if (!isMissing) return;
+    reportMissingStorageObject({
+      domain: "listing_photo",
+      attachment_id: photo.id,
+      storage_key: photo.storage_key,
+      parent_id: photo.listing_id,
+      parent_kind: "listing",
+    });
+  }, [isMissing, photo.id, photo.storage_key, photo.listing_id]);
 
   return (
     <li
@@ -46,10 +60,12 @@ export default function ListingPhotoCard({
       />
 
       {/* Photo served via per-request presigned URL minted by the backend.
-          Falls back to a labeled placeholder when storage is unavailable
-          (e.g., MinIO outage) so the page still renders the layout.
+          Falls back to a neutral labeled placeholder when storage is
+          unavailable OR when the underlying object is missing — the
+          missing-object case is captured to PostHog/console silently
+          (see useEffect above) so the user-facing UI stays quiet.
           Clicking opens the full-size lightbox viewer. */}
-      {photo.presigned_url ? (
+      {!isMissing && photo.presigned_url ? (
         <button
           type="button"
           onClick={onOpen}
@@ -69,7 +85,7 @@ export default function ListingPhotoCard({
         <button
           type="button"
           onClick={onOpen}
-          className="aspect-square w-full bg-muted flex items-center justify-center text-xs text-muted-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="aspect-square w-full flex items-center justify-center text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-ring bg-muted text-muted-foreground"
           aria-label={`View photo ${photo.display_order + 1} full size`}
           data-testid="listing-photo-thumbnail"
         >

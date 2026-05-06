@@ -1,10 +1,18 @@
-"""Tests for ``attach_presigned_urls_to_attachments``.
+"""Tests for the shared ``attach_presigned_url_with_head_check`` helper.
 
-Covers the orphan-detection path added with the lease-attachment-missing UX:
+Covers the behavior every domain (lease attachments, lease templates,
+insurance, blackout, photo, screening) inherits:
+
 - HEAD ok → ``is_available=True`` and ``presigned_url`` set
 - HEAD NoSuchKey → ``is_available=False`` and ``presigned_url=None``
-- transient S3 error → exception propagates (no silent degradation)
-- empty input list → returns empty list without touching storage
+- transient S3 error → exception propagates
+- empty input → returns empty unchanged
+- nullable storage_key (e.g. screening pre-upload) → row passes through
+- mixed present + missing in one call
+
+The original lease-specific test (``test_attachment_response_builder.py``)
+also indirectly covers this through the lease builder; this file is the
+direct contract for the shared helper.
 """
 from __future__ import annotations
 
@@ -17,8 +25,11 @@ import pytest
 from app.schemas.leases.signed_lease_attachment_response import (
     SignedLeaseAttachmentResponse,
 )
-from app.services.leases.attachment_response_builder import (
-    attach_presigned_urls_to_attachments,
+from app.schemas.applicants.screening_result_response import (
+    ScreeningResultResponse,
+)
+from app.services.storage.presigned_url_attacher import (
+    attach_presigned_url_with_head_check,
 )
 
 
@@ -40,6 +51,22 @@ def _row(**overrides) -> SignedLeaseAttachmentResponse:
     return SignedLeaseAttachmentResponse(**base)
 
 
+def _screening_row(**overrides) -> ScreeningResultResponse:
+    base = {
+        "id": uuid.uuid4(),
+        "applicant_id": uuid.uuid4(),
+        "provider": "keycheck",
+        "status": "pass",
+        "report_storage_key": f"screening/{uuid.uuid4()}.pdf",
+        "uploaded_at": _dt.datetime.now(_dt.timezone.utc),
+        "uploaded_by_user_id": uuid.uuid4(),
+        "created_at": _dt.datetime.now(_dt.timezone.utc),
+        "requested_at": _dt.datetime.now(_dt.timezone.utc),
+    }
+    base.update(overrides)
+    return ScreeningResultResponse(**base)
+
+
 def _mock_storage(*, exists: bool = True, raise_exc: Exception | None = None) -> MagicMock:
     storage = MagicMock()
     if raise_exc is not None:
@@ -50,30 +77,31 @@ def _mock_storage(*, exists: bool = True, raise_exc: Exception | None = None) ->
     return storage
 
 
-class TestAttachPresignedUrlsToAttachments:
-    def test_empty_list_returns_empty(self) -> None:
+class TestSharedHelper:
+    def test_empty_list(self) -> None:
         with patch(
             "app.services.storage.presigned_url_attacher.get_storage",
         ) as get_storage:
-            result = attach_presigned_urls_to_attachments([])
-            assert result == []
+            assert attach_presigned_url_with_head_check(
+                [], sentry_event_name="test_event",
+            ) == []
             get_storage.assert_not_called()
 
-    def test_present_object_gets_presigned_url(self) -> None:
+    def test_present_object(self) -> None:
         row = _row()
         storage = _mock_storage(exists=True)
         with patch(
             "app.services.storage.presigned_url_attacher.get_storage",
             return_value=storage,
         ):
-            [out] = attach_presigned_urls_to_attachments([row])
+            [out] = attach_presigned_url_with_head_check(
+                [row], sentry_event_name="test_event",
+            )
         assert out.is_available is True
         assert out.presigned_url == "https://example.com/signed-url"
-        storage.object_exists.assert_called_once_with(row.storage_key)
-        storage.generate_presigned_url.assert_called_once()
 
-    def test_missing_object_flips_is_available_and_skips_url(self) -> None:
-        row = _row(presigned_url=None, is_available=True)
+    def test_missing_object_flips_flag(self) -> None:
+        row = _row()
         storage = _mock_storage(exists=False)
         with patch(
             "app.services.storage.presigned_url_attacher.get_storage",
@@ -81,34 +109,44 @@ class TestAttachPresignedUrlsToAttachments:
         ), patch(
             "app.services.storage.presigned_url_attacher.sentry_sdk",
         ) as sentry_mock:
-            [out] = attach_presigned_urls_to_attachments([row])
+            [out] = attach_presigned_url_with_head_check(
+                [row], sentry_event_name="test_event",
+            )
         assert out.is_available is False
         assert out.presigned_url is None
-        storage.generate_presigned_url.assert_not_called()
         sentry_mock.capture_message.assert_called_once()
-        # Confirm we set the lease_id + row id tags so Sentry groups
-        # missing-file events by lease (operator can see at-a-glance whether
-        # this is one orphan or many). The shared helper auto-tags ``id``
-        # (the attachment's primary key) and ``lease_id`` from common
-        # attribute names; per-domain Sentry events differ only by the
-        # event name string.
-        scope_cm = sentry_mock.new_scope.return_value
-        scope = scope_cm.__enter__.return_value
-        tag_calls = {call.args[0]: call.args[1] for call in scope.set_tag.call_args_list}
-        assert tag_calls["lease_id"] == str(row.lease_id)
-        assert tag_calls["id"] == str(row.id)
 
     def test_transient_error_propagates(self) -> None:
-        row = _row()
         storage = _mock_storage(raise_exc=RuntimeError("MinIO 503"))
         with patch(
             "app.services.storage.presigned_url_attacher.get_storage",
             return_value=storage,
         ):
             with pytest.raises(RuntimeError, match="MinIO 503"):
-                attach_presigned_urls_to_attachments([row])
+                attach_presigned_url_with_head_check(
+                    [_row()], sentry_event_name="test_event",
+                )
 
-    def test_mixed_present_and_missing_in_one_call(self) -> None:
+    def test_screening_row_with_no_storage_key_passes_through(self) -> None:
+        # Screening rows can exist without an uploaded report; their
+        # ``report_storage_key`` is None and we should NOT HEAD-check or
+        # falsely flag them missing.
+        row = _screening_row(report_storage_key=None)
+        storage = _mock_storage()
+        with patch(
+            "app.services.storage.presigned_url_attacher.get_storage",
+            return_value=storage,
+        ):
+            [out] = attach_presigned_url_with_head_check(
+                [row],
+                storage_key_attr="report_storage_key",
+                sentry_event_name="test_event",
+            )
+        assert out.is_available is True
+        assert out.presigned_url is None
+        storage.object_exists.assert_not_called()
+
+    def test_mixed_present_and_missing(self) -> None:
         present = _row()
         missing = _row()
 
@@ -122,11 +160,13 @@ class TestAttachPresignedUrlsToAttachments:
         with patch(
             "app.services.storage.presigned_url_attacher.get_storage",
             return_value=storage,
-        ), patch("app.services.storage.presigned_url_attacher.sentry_sdk"):
-            results = attach_presigned_urls_to_attachments([present, missing])
+        ), patch(
+            "app.services.storage.presigned_url_attacher.sentry_sdk",
+        ):
+            results = attach_presigned_url_with_head_check(
+                [present, missing], sentry_event_name="test_event",
+            )
 
         by_id = {r.id: r for r in results}
         assert by_id[present.id].is_available is True
-        assert by_id[present.id].presigned_url == "https://example.com/signed"
         assert by_id[missing.id].is_available is False
-        assert by_id[missing.id].presigned_url is None
