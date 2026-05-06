@@ -66,6 +66,17 @@ class User(SQLAlchemyBaseUserTableUUID, Base):
         DateTime(timezone=True), nullable=True,
     )
 
+    # Showcase/sandbox accounts seeded with realistic dummy data so an
+    # operator can demo MJH to a stranger without hand-crafting test data.
+    # Set ``True`` only by ``services.demo.demo_service.create_demo_user`` —
+    # never via the public registration flow. The admin demo-management
+    # API uses this flag as the sole guard before allowing bulk delete:
+    # only ``is_demo=True`` rows are deletable. See migration
+    # ``demo260505_add_user_is_demo``.
+    is_demo: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false",
+    )
+
     @property
     def name(self) -> str | None:
         """Compatibility shim for shared admin schemas.

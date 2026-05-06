@@ -52,3 +52,26 @@ async def reset_rate_limit() -> None:
     else:
         # Fallback: no-op rather than crash
         pass
+
+
+@router.post("/_test/promote-to-admin", status_code=204)
+async def promote_to_admin(email: EmailStr = Body(..., embed=True)) -> None:
+    """Flip a user's role to admin.
+
+    Used by E2E tests that exercise admin-gated routes (e.g.
+    ``/admin/demo/users``) so a fresh test user can be granted the
+    role without seeding via SQL. Gated by
+    ``MYJOBHUNTER_ENABLE_TEST_HELPERS=1`` — never mounted in production.
+    """
+    async with AsyncSessionLocal() as session:
+        async with session.begin():
+            result = await session.execute(
+                text(
+                    "UPDATE users SET role = 'admin' "
+                    "WHERE email = :email RETURNING id"
+                ),
+                {"email": email},
+            )
+            row = result.first()
+        if row is None:
+            raise HTTPException(status_code=404, detail="user not found")
