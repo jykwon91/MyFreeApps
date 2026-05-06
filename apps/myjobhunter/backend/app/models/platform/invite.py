@@ -5,9 +5,14 @@ registration, the user submits the token and the system marks the row
 ``accepted_at`` + ``accepted_by``. The token row is never deleted on
 acceptance — it stays as an audit trail of who invited whom.
 
-This is the platform-level analogue of MBK's ``OrganizationInvite`` —
-shape mirrored, org_role/organization_id stripped because MJH has no
-orgs. New columns added vs. the MBK shape:
+Security shape (PR fix/myjobhunter-invite-security-hardening, 2026-05-05):
+the ``token_hash`` column stores ``sha256(raw_token)`` only — the raw
+token never persists. The raw token reaches the recipient via email
+once, then exists only in their inbox. A read-only DB compromise
+yields hashes, not usable grants.
+
+Columns vs. MBK's ``OrganizationInvite``: org_role/organization_id are
+stripped because MJH has no orgs. New columns:
 
   * ``accepted_at``     — nullable timestamp; non-null means consumed
   * ``accepted_by``     — nullable FK to users.id; the account that claimed it
@@ -17,7 +22,6 @@ matter are: pending, accepted, or expired (computed from ``expires_at``).
 """
 from __future__ import annotations
 
-import secrets
 import uuid
 from datetime import datetime, timedelta, timezone
 
@@ -44,13 +48,6 @@ def _default_expires_at() -> datetime:
     return datetime.now(timezone.utc) + timedelta(days=INVITE_EXPIRY_DAYS)
 
 
-def _default_token() -> str:
-    # 32 bytes urlsafe = 43-char base64 — comfortably above the threshold
-    # where guessing is computationally infeasible. MBK uses the same
-    # generator for its OrganizationInvite tokens.
-    return secrets.token_urlsafe(32)
-
-
 class PlatformInvite(Base):
     __tablename__ = "platform_invites"
 
@@ -60,11 +57,14 @@ class PlatformInvite(Base):
         default=uuid.uuid4,
     )
     email: Mapped[str] = mapped_column(String(255), nullable=False)
-    token: Mapped[str] = mapped_column(
-        String(255),
+    # sha256 hex digest of the raw token. Service layer owns generation +
+    # hashing — see app/services/platform/invite_token.py. The model
+    # deliberately has NO default so callers can't accidentally insert an
+    # empty row and lose the link between row and recipient.
+    token_hash: Mapped[str] = mapped_column(
+        String(64),
         nullable=False,
         unique=True,
-        default=_default_token,
     )
     expires_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

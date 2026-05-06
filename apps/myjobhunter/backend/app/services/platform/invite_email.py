@@ -9,6 +9,14 @@ The link target is ``${frontend_url}/register?invite=<token>``. The
 register page reads the ``invite`` query param, fetches
 ``GET /invites/{token}/info`` for the preview, and pre-binds the email
 field on the registration form.
+
+Security note (2026-05-05): ``html.escape(..., quote=True)`` escapes
+``"`` so the URL cannot break out of the ``href="..."`` attribute. The
+current token shape (``secrets.token_urlsafe``) emits no quote chars,
+so this is defense-in-depth — but the function is reusable and the
+``frontend_url`` portion is operator-controlled, so a future preview-
+deploy with a domain that happened to embed quote-equivalent chars
+would otherwise break out of the attribute and inject markup.
 """
 from __future__ import annotations
 
@@ -22,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 
 def _build_invite_html(accept_url: str) -> str:
-    safe_url = html_mod.escape(accept_url)
+    safe_url = html_mod.escape(accept_url, quote=True)
 
     return f"""\
 <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f9fafb; padding: 40px 20px;">
@@ -91,4 +99,11 @@ def send_invite_email(recipient_email: str, token: str) -> None:
     html = _build_invite_html(accept_url)
     subject = "You've been invited to MyJobHunter"
     send_email_or_raise([recipient_email], subject, html)
-    logger.info("Platform invite email sent to %s", recipient_email)
+    # Log only the email domain, never the full address. The recipient
+    # is by definition not yet a user, so per the auth-events policy
+    # for unknown-user events we keep PII out of operator logs.
+    _, _, domain = recipient_email.rpartition("@")
+    logger.info(
+        "Platform invite email sent domain=%s",
+        (domain or "unknown").strip().lower(),
+    )
