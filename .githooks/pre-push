@@ -1,0 +1,73 @@
+#!/bin/sh
+# Pre-push verification — catches the classes of failure that broke 6 deploys
+# on 2026-05-07:
+#   - uv.lock out of sync with pyproject.toml (was failing as
+#     `backend-deps-resolve` for hours; previously dismissed as flaky)
+#   - per-app frontend package-lock.json missing deps that the root
+#     workspace lockfile has (the `mammoth`-from-DOCX-preview class of bug)
+#
+# Install once with: bash scripts/install-hooks.sh
+# Bypass for emergencies with: git push --no-verify
+
+set -e
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+RANGE_FILES=$(git diff --name-only "@{push}" 2>/dev/null || git diff --name-only HEAD~1 2>/dev/null || echo "")
+
+color_red() { printf "\033[31m%s\033[0m\n" "$1"; }
+color_yellow() { printf "\033[33m%s\033[0m\n" "$1"; }
+color_green() { printf "\033[32m%s\033[0m\n" "$1"; }
+
+# ----- 1. uv.lock drift -----
+# Walk every backend with a pyproject.toml that has changed deps OR an
+# unsynced lockfile. Skipping when uv isn't installed so contributors
+# without the toolchain aren't blocked, but the hook nags them.
+if command -v uv >/dev/null 2>&1; then
+    for pyproject in $(find "$REPO_ROOT/apps" -mindepth 3 -maxdepth 3 -name "pyproject.toml" 2>/dev/null); do
+        backend_dir="$(dirname "$pyproject")"
+        rel="${backend_dir#"$REPO_ROOT/"}"
+        if ! (cd "$backend_dir" && uv lock --check 2>&1 | grep -q "needs to be updated"); then
+            continue
+        fi
+        color_red "✗ $rel/uv.lock is out of sync with pyproject.toml"
+        echo "  Run: cd $rel && uv lock && uv export --format requirements-txt --no-hashes --no-emit-project --output-file requirements.txt"
+        echo "  Then re-stage uv.lock + requirements.txt and push again."
+        echo "  (Bypass with --no-verify if you know what you're doing)"
+        exit 1
+    done
+else
+    color_yellow "⚠ uv not installed; skipping uv.lock drift check (install: https://docs.astral.sh/uv/)"
+fi
+
+# ----- 2. Per-app frontend lockfile drift -----
+# When an agent or contributor adds an npm dep via the workspace root,
+# only the root package-lock.json updates. The Dockerfile copies the
+# per-app lockfile, so docker build's `npm ci` fails with
+# "Missing: <package> from lock file". Catch it before push.
+if command -v node >/dev/null 2>&1; then
+    for fe_pkg in $(find "$REPO_ROOT/apps" -mindepth 3 -maxdepth 3 -path "*/frontend/package.json" 2>/dev/null); do
+        fe_dir="$(dirname "$fe_pkg")"
+        fe_lock="$fe_dir/package-lock.json"
+        rel="${fe_dir#"$REPO_ROOT/"}"
+        if [ ! -f "$fe_lock" ]; then
+            continue  # workspace-only project; no per-app lockfile needed
+        fi
+        # Quick check: every dep listed in package.json must appear in the per-app lockfile.
+        missing=$(node -e "
+            const pkg = require('$fe_pkg');
+            const lock = require('$fe_lock');
+            const deps = Object.keys({...pkg.dependencies, ...pkg.devDependencies});
+            const inLock = (lock.packages && lock.packages['']) ? Object.keys({...lock.packages[''].dependencies, ...lock.packages[''].devDependencies}) : [];
+            const missing = deps.filter(d => !inLock.includes(d));
+            console.log(missing.join(' '));
+        " 2>/dev/null || echo "")
+        if [ -n "$missing" ]; then
+            color_red "✗ $rel/package-lock.json is missing entries for: $missing"
+            echo "  Run: cd $rel && npm install --package-lock-only --no-workspaces"
+            echo "  Then re-stage package-lock.json and push again."
+            exit 1
+        fi
+    done
+fi
+
+color_green "✓ pre-push checks passed"
