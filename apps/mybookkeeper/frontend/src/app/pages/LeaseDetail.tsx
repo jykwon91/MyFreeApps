@@ -124,7 +124,9 @@ export default function LeaseDetail() {
               </span>
             }
             actions={
-              canWrite && lease.status === "draft" && lease.kind === "generated" ? (
+              canWrite
+              && lease.kind === "generated"
+              && (lease.status === "draft" || lease.attachments.length === 0) ? (
                 <LoadingButton
                   isLoading={isGenerating}
                   loadingText="Generating..."
@@ -132,7 +134,7 @@ export default function LeaseDetail() {
                   data-testid="lease-generate-button"
                 >
                   <FileText size={16} className="mr-1" />
-                  Generate
+                  {lease.status === "draft" ? "Generate" : "Regenerate"}
                 </LoadingButton>
               ) : null
             }
