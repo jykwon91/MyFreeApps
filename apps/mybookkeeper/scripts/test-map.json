@@ -618,6 +618,7 @@
         "frontend/src/shared/store/leaseTemplatesApi.ts",
         "frontend/src/shared/store/signedLeasesApi.ts",
         "frontend/src/shared/lib/lease-labels.ts",
+        "frontend/src/shared/lib/infer-attachment-kind.ts",
         "frontend/src/shared/types/lease/attachment-view-mode.ts"
       ],
       "backend_tests": [
@@ -637,6 +638,7 @@
         "LeaseGenerateForm.test.tsx",
         "LeaseNew.test.tsx",
         "LeasesListBody.test.tsx",
+        "LeaseAttachmentDropzone.test.tsx",
         "AISuggestionsPanel.test.tsx",
         "LeaseTemplateUploadDialog.test.tsx",
         "AttachmentViewer.test.tsx",

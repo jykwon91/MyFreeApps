@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Trash2 } from "lucide-react";
+import { Trash2, Upload } from "lucide-react";
 import type { LeasesListMode } from "@/shared/types/lease/leases-list-mode";
 import type { SignedLeaseSummary } from "@/shared/types/lease/signed-lease-summary";
 import EmptyState from "@/shared/components/ui/EmptyState";
 import ConfirmDialog from "@/shared/components/ui/ConfirmDialog";
 import LeasesListSkeleton from "./LeasesListSkeleton";
+import LeaseQuickUploadModal from "./LeaseQuickUploadModal";
 import SignedLeaseStatusBadge from "./SignedLeaseStatusBadge";
 
 export interface LeasesListBodyProps {
@@ -29,6 +30,7 @@ export default function LeasesListBody({
   isDeleting = false,
 }: LeasesListBodyProps) {
   const [pendingDelete, setPendingDelete] = useState<SignedLeaseSummary | null>(null);
+  const [uploadingLease, setUploadingLease] = useState<SignedLeaseSummary | null>(null);
 
   function handleDeleteClick(lease: SignedLeaseSummary) {
     setPendingDelete(lease);
@@ -60,6 +62,15 @@ export default function LeasesListBody({
               isLoading={isDeleting}
               onConfirm={() => void handleConfirmDelete()}
               onCancel={() => setPendingDelete(null)}
+            />
+          ) : null}
+
+          {uploadingLease ? (
+            <LeaseQuickUploadModal
+              leaseId={uploadingLease.id}
+              leaseShortId={uploadingLease.id.slice(0, 8)}
+              open
+              onClose={() => setUploadingLease(null)}
             />
           ) : null}
 
@@ -122,15 +133,26 @@ export default function LeasesListBody({
                     </td>
                     {canWrite ? (
                       <td className="px-2 py-2 text-right">
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteClick(lease)}
-                          aria-label={`Delete lease ${lease.id.slice(0, 8)}`}
-                          data-testid={`lease-delete-btn-${lease.id}`}
-                          className="text-muted-foreground hover:text-destructive transition-colors p-1 rounded min-h-[44px] min-w-[44px] flex items-center justify-center sm:min-h-[32px] sm:min-w-[32px]"
-                        >
-                          <Trash2 size={14} aria-hidden="true" />
-                        </button>
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            type="button"
+                            onClick={() => setUploadingLease(lease)}
+                            aria-label={`Upload documents for lease ${lease.id.slice(0, 8)}`}
+                            data-testid={`lease-upload-btn-${lease.id}`}
+                            className="text-muted-foreground hover:text-primary transition-colors p-1 rounded min-h-[44px] min-w-[44px] flex items-center justify-center sm:min-h-[32px] sm:min-w-[32px]"
+                          >
+                            <Upload size={14} aria-hidden="true" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteClick(lease)}
+                            aria-label={`Delete lease ${lease.id.slice(0, 8)}`}
+                            data-testid={`lease-delete-btn-${lease.id}`}
+                            className="text-muted-foreground hover:text-destructive transition-colors p-1 rounded min-h-[44px] min-w-[44px] flex items-center justify-center sm:min-h-[32px] sm:min-w-[32px]"
+                          >
+                            <Trash2 size={14} aria-hidden="true" />
+                          </button>
+                        </div>
                       </td>
                     ) : null}
                   </tr>
@@ -159,15 +181,26 @@ export default function LeasesListBody({
                     </p>
                   </Link>
                   {canWrite ? (
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteClick(lease)}
-                      aria-label={`Delete lease ${lease.id.slice(0, 8)}`}
-                      data-testid={`lease-delete-btn-mobile-${lease.id}`}
-                      className="text-muted-foreground hover:text-destructive transition-colors p-2 rounded min-h-[44px] min-w-[44px] flex items-center justify-center shrink-0"
-                    >
-                      <Trash2 size={14} aria-hidden="true" />
-                    </button>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setUploadingLease(lease)}
+                        aria-label={`Upload documents for lease ${lease.id.slice(0, 8)}`}
+                        data-testid={`lease-upload-btn-mobile-${lease.id}`}
+                        className="text-muted-foreground hover:text-primary transition-colors p-2 rounded min-h-[44px] min-w-[44px] flex items-center justify-center"
+                      >
+                        <Upload size={14} aria-hidden="true" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteClick(lease)}
+                        aria-label={`Delete lease ${lease.id.slice(0, 8)}`}
+                        data-testid={`lease-delete-btn-mobile-${lease.id}`}
+                        className="text-muted-foreground hover:text-destructive transition-colors p-2 rounded min-h-[44px] min-w-[44px] flex items-center justify-center"
+                      >
+                        <Trash2 size={14} aria-hidden="true" />
+                      </button>
+                    </div>
                   ) : null}
                 </div>
               </li>
