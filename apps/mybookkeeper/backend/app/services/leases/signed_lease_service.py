@@ -26,6 +26,7 @@ from app.repositories.leases import (
     lease_template_repo,
     signed_lease_attachment_repo,
     signed_lease_repo,
+    signed_lease_template_repo,
 )
 from app.repositories.listings import listing_repo
 from app.schemas.leases.signed_lease_attachment_response import (
@@ -36,6 +37,7 @@ from app.schemas.leases.signed_lease_list_response import (
 )
 from app.schemas.leases.signed_lease_response import SignedLeaseResponse
 from app.schemas.leases.signed_lease_summary import SignedLeaseSummary
+from app.schemas.leases.signed_lease_template_link import SignedLeaseTemplateLink
 from app.services.leases.attachment_response_builder import (
     attach_presigned_urls_to_attachments,
 )
@@ -172,13 +174,13 @@ def _validate_status_transition(current: str, target: str) -> None:
 def _build_summary(
     lease,
     applicant_names: dict[uuid.UUID, str | None] | None = None,
+    template_ids: list[uuid.UUID] | None = None,
 ) -> SignedLeaseSummary:
     summary = SignedLeaseSummary.model_validate(lease)
+    updates: dict[str, Any] = {"template_ids": template_ids or []}
     if applicant_names is not None:
-        summary = summary.model_copy(
-            update={"applicant_legal_name": applicant_names.get(lease.applicant_id)}
-        )
-    return summary
+        updates["applicant_legal_name"] = applicant_names.get(lease.applicant_id)
+    return summary.model_copy(update=updates)
 
 
 def _attachment_responses(rows) -> list[SignedLeaseAttachmentResponse]:
@@ -187,12 +189,12 @@ def _attachment_responses(rows) -> list[SignedLeaseAttachmentResponse]:
     )
 
 
-def _to_detail(lease, attachments) -> SignedLeaseResponse:
+def _to_detail(lease, attachments, template_links: list[SignedLeaseTemplateLink]) -> SignedLeaseResponse:
     return SignedLeaseResponse(
         id=lease.id,
         user_id=lease.user_id,
         organization_id=lease.organization_id,
-        template_id=lease.template_id,
+        templates=template_links,
         applicant_id=lease.applicant_id,
         listing_id=lease.listing_id,
         kind=lease.kind,
@@ -209,6 +211,38 @@ def _to_detail(lease, attachments) -> SignedLeaseResponse:
         updated_at=lease.updated_at,
         attachments=_attachment_responses(attachments),
     )
+
+
+async def _resolve_template_links(
+    db,
+    *,
+    lease_id: uuid.UUID,
+) -> list[SignedLeaseTemplateLink]:
+    """Resolve the ordered list of template links (id + name + version) for a lease."""
+    join_rows = await signed_lease_template_repo.list_for_lease(db, lease_id=lease_id)
+    if not join_rows:
+        return []
+    template_ids = [r.template_id for r in join_rows]
+    # Bulk-load template metadata via the repo (one IN-list query).
+    templates = await lease_template_repo.list_by_ids(
+        db, template_ids=template_ids,
+    )
+    templates_by_id = {t.id: t for t in templates}
+    links: list[SignedLeaseTemplateLink] = []
+    for r in join_rows:
+        template = templates_by_id.get(r.template_id)
+        if template is None:
+            # Defensive — RESTRICT FK should prevent this, but skip gracefully.
+            continue
+        links.append(
+            SignedLeaseTemplateLink(
+                id=template.id,
+                name=template.name,
+                version=template.version,
+                display_order=r.display_order,
+            )
+        )
+    return links
 
 
 def _denormalise_dates(values: dict[str, Any]) -> tuple[_dt.date | None, _dt.date | None]:
@@ -240,29 +274,48 @@ async def create_lease(
     *,
     user_id: uuid.UUID,
     organization_id: uuid.UUID,
-    template_id: uuid.UUID,
+    template_ids: list[uuid.UUID],
     applicant_id: uuid.UUID,
     listing_id: uuid.UUID | None,
     values: dict[str, Any],
 ) -> SignedLeaseResponse:
-    """Create a draft signed lease. Validates required placeholders are present."""
+    """Create a draft signed lease from one or more templates.
+
+    Validates required placeholders across the union of all selected
+    templates. Persists ONE ``signed_leases`` row plus N rows in
+    ``signed_lease_templates`` (one per template, ordered by
+    ``display_order`` matching the host's pick order).
+    """
+    if not template_ids:
+        raise TemplateNotFoundError("At least one template_id is required")
+
     async with unit_of_work() as db:
-        template = await lease_template_repo.get(
-            db,
-            template_id=template_id,
-            user_id=user_id,
-            organization_id=organization_id,
-        )
-        if template is None:
-            raise TemplateNotFoundError(f"Template {template_id} not found")
+        # Validate every template is in scope and load placeholders for each.
+        # Union the required-placeholder set across all templates so the
+        # generate form's missing-values check covers every contributing doc.
+        seen_keys: set[str] = set()
+        merged_required: list = []
+        for tid in template_ids:
+            template = await lease_template_repo.get(
+                db,
+                template_id=tid,
+                user_id=user_id,
+                organization_id=organization_id,
+            )
+            if template is None:
+                raise TemplateNotFoundError(f"Template {tid} not found")
+            placeholders = await lease_template_placeholder_repo.list_for_template(
+                db, template_id=tid,
+            )
+            for p in placeholders:
+                if p.key in seen_keys:
+                    continue
+                seen_keys.add(p.key)
+                merged_required.append(p)
 
-        placeholders = await lease_template_placeholder_repo.list_for_template(
-            db, template_id=template_id,
-        )
-
-        # Validate required placeholders.
+        # Validate required placeholders against the merged set.
         missing: list[str] = []
-        for p in placeholders:
+        for p in merged_required:
             if not p.required:
                 continue
             if p.input_type == "computed":
@@ -283,7 +336,6 @@ async def create_lease(
             db,
             user_id=user_id,
             organization_id=organization_id,
-            template_id=template_id,
             applicant_id=applicant_id,
             listing_id=listing_id,
             values=values,
@@ -292,8 +344,18 @@ async def create_lease(
             status="draft",
             kind="generated",
         )
+        # Persist the ordered template links.
+        for order, tid in enumerate(template_ids):
+            await signed_lease_template_repo.create(
+                db,
+                lease_id=lease.id,
+                template_id=tid,
+                display_order=order,
+            )
+
         attachments = await signed_lease_attachment_repo.list_by_lease(db, lease.id)
-    return _to_detail(lease, attachments)
+        template_links = await _resolve_template_links(db, lease_id=lease.id)
+    return _to_detail(lease, attachments, template_links)
 
 
 # ---------------------------------------------------------------------------
@@ -348,7 +410,15 @@ async def list_leases(
             a.id: a.legal_name for a in applicants
         }
 
-    items = [_build_summary(r, applicant_names) for r in rows]
+        # Bulk-load template IDs per lease (ordered) — one IN-list query.
+        template_ids_by_lease = await signed_lease_template_repo.list_template_ids_for_leases(
+            db, lease_ids=[r.id for r in rows],
+        )
+
+    items = [
+        _build_summary(r, applicant_names, template_ids_by_lease.get(r.id, []))
+        for r in rows
+    ]
     return SignedLeaseListResponse(
         items=items, total=total, has_more=(offset + len(items)) < total,
     )
@@ -372,7 +442,8 @@ async def get_lease(
         attachments = await signed_lease_attachment_repo.list_by_lease(
             db, lease.id,
         )
-    return _to_detail(lease, attachments)
+        template_links = await _resolve_template_links(db, lease_id=lease.id)
+    return _to_detail(lease, attachments, template_links)
 
 
 # ---------------------------------------------------------------------------
@@ -442,7 +513,8 @@ async def update_lease(
             user_id=user_id,
             organization_id=organization_id,
         )
-    return _to_detail(lease, attachments)
+        template_links = await _resolve_template_links(db, lease_id=lease_id)
+    return _to_detail(lease, attachments, template_links)
 
 
 # ---------------------------------------------------------------------------
@@ -469,12 +541,29 @@ async def generate_lease(
         if lease is None:
             raise SignedLeaseNotFoundError(f"Lease {lease_id} not found")
 
-        files = await lease_template_file_repo.list_for_template(
-            db, template_id=lease.template_id,
+        # Load every template linked to this lease, then load each template's
+        # files + placeholders. Files are processed in template-display-order
+        # so the rendered attachments appear in the host's pick order.
+        join_rows = await signed_lease_template_repo.list_for_lease(
+            db, lease_id=lease_id,
         )
-        placeholders = await lease_template_placeholder_repo.list_for_template(
-            db, template_id=lease.template_id,
-        )
+        files: list = []
+        placeholders: list = []
+        seen_placeholder_keys: set[str] = set()
+        for jr in join_rows:
+            tpl_files = await lease_template_file_repo.list_for_template(
+                db, template_id=jr.template_id,
+            )
+            files.extend(tpl_files)
+            tpl_placeholders = await lease_template_placeholder_repo.list_for_template(
+                db, template_id=jr.template_id,
+            )
+            # Dedupe placeholders across templates — first definition wins
+            # (matches the merge rule used at draft creation time).
+            for p in tpl_placeholders:
+                if p.key not in seen_placeholder_keys:
+                    seen_placeholder_keys.add(p.key)
+                    placeholders.append(p)
 
     # Build the substitution dict — start from raw values, then evaluate
     # computed placeholders (which can reference other keys).
@@ -625,7 +714,7 @@ async def import_signed_lease(
     """Create an imported signed lease from externally-signed PDFs.
 
     Unlike ``create_lease``, this path does NOT require a template. The lease
-    is created with ``kind='imported'``, ``template_id=NULL``, and
+    is created with ``kind='imported'``, no template links, and
     ``signed_at=now()`` since by definition the documents are already signed.
 
     ``files`` is an ordered list of ``(content_bytes, filename, content_type)``
@@ -680,7 +769,6 @@ async def import_signed_lease(
             db,
             user_id=user_id,
             organization_id=organization_id,
-            template_id=None,
             applicant_id=applicant_id,
             listing_id=listing_id,
             values={},

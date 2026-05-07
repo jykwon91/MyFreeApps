@@ -45,7 +45,7 @@ async def create_lease(
         return await signed_lease_service.create_lease(
             user_id=ctx.user_id,
             organization_id=ctx.organization_id,
-            template_id=payload.template_id,
+            template_ids=payload.resolved_template_ids,
             applicant_id=payload.applicant_id,
             listing_id=payload.listing_id,
             values=payload.values,

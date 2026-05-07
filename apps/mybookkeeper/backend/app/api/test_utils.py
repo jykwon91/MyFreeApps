@@ -712,7 +712,6 @@ async def seed_signed_lease(
             id=lease_id,
             user_id=ctx.user_id,
             organization_id=ctx.organization_id,
-            template_id=None,
             applicant_id=payload.applicant_id,
             listing_id=None,
             kind=payload.kind,
@@ -956,7 +955,6 @@ async def seed_rent_payment_attributed(
         lease = SignedLease(
             user_id=ctx.user_id,
             organization_id=ctx.organization_id,
-            template_id=None,
             applicant_id=applicant.id,
             listing_id=None,
             kind="imported",

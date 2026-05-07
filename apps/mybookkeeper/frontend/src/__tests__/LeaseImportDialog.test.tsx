@@ -132,14 +132,14 @@ describe("LeaseImportDialog", () => {
         attachments: [{ id: "att-1" }],
         kind: "imported",
         status: "signed",
-        template_id: null,
+        templates: [],
       },
       unwrap: async () => ({
         id: "lease-1",
         attachments: [{ id: "att-1" }],
         kind: "imported",
         status: "signed",
-        template_id: null,
+        templates: [],
       }),
     });
 
@@ -150,7 +150,7 @@ describe("LeaseImportDialog", () => {
         attachments: [{ id: "att-1" }],
         kind: "imported",
         status: "signed",
-        template_id: null,
+        templates: [],
       }),
     }));
 

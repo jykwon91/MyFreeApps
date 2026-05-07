@@ -16,7 +16,6 @@ async def create(
     *,
     user_id: uuid.UUID,
     organization_id: uuid.UUID,
-    template_id: uuid.UUID | None,
     applicant_id: uuid.UUID,
     listing_id: uuid.UUID | None,
     values: dict[str, Any],
@@ -28,7 +27,6 @@ async def create(
     lease = SignedLease(
         user_id=user_id,
         organization_id=organization_id,
-        template_id=template_id,
         applicant_id=applicant_id,
         listing_id=listing_id,
         values=values,
@@ -120,21 +118,6 @@ async def count_for_tenant(
         stmt = stmt.where(SignedLease.status == status)
     result = await db.execute(stmt)
     return int(result.scalar_one())
-
-
-async def has_active_lease_for_template(
-    db: AsyncSession,
-    *,
-    template_id: uuid.UUID,
-) -> bool:
-    """Used by the soft-delete-template flow to enforce 409 on conflict."""
-    result = await db.execute(
-        select(func.count()).select_from(SignedLease).where(
-            SignedLease.template_id == template_id,
-            SignedLease.deleted_at.is_(None),
-        )
-    )
-    return int(result.scalar_one()) > 0
 
 
 async def update_lease(

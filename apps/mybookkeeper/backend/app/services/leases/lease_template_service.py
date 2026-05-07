@@ -27,7 +27,7 @@ from app.repositories.leases import (
     lease_template_file_repo,
     lease_template_placeholder_repo,
     lease_template_repo,
-    signed_lease_repo,
+    signed_lease_template_repo,
 )
 from app.schemas.leases.lease_template_file_response import (
     LeaseTemplateFileResponse,
@@ -395,6 +395,93 @@ async def get_template(
 # Resolve generate-defaults for a template + applicant pair
 # ---------------------------------------------------------------------------
 
+async def generate_defaults_multi(
+    *,
+    user_id: uuid.UUID,
+    organization_id: uuid.UUID,
+    template_ids: list[uuid.UUID],
+    applicant_id: uuid.UUID,
+) -> list[dict]:
+    """Return merged placeholders + resolved defaults across N templates.
+
+    Merge rule: **first-template-wins** for placeholders defined in 2+
+    templates. The resolved value/provenance comes from the FIRST template
+    that defines the key (in the order ``template_ids`` was passed).
+
+    Each result includes ``template_ids``, the IDs of every template that
+    defines that key — so the UI can show "Used by: Template A, Template B".
+
+    Returns a list of dicts with ``placeholder`` (full schema), ``template_ids``,
+    ``value``, and ``provenance`` fields.
+    """
+    if not template_ids:
+        raise TemplateNotFoundError("At least one template_id is required")
+
+    async with unit_of_work() as db:
+        # Validate all templates belong to caller and load placeholders.
+        placeholders_by_template: dict[uuid.UUID, list] = {}
+        for tid in template_ids:
+            template = await lease_template_repo.get(
+                db,
+                template_id=tid,
+                user_id=user_id,
+                organization_id=organization_id,
+            )
+            if template is None:
+                raise TemplateNotFoundError(f"Template {tid} not found")
+            placeholders_by_template[tid] = (
+                await lease_template_placeholder_repo.list_for_template(
+                    db, template_id=tid,
+                )
+            )
+
+        # Validate applicant belongs to caller.
+        applicant = await applicant_repo.get(
+            db,
+            applicant_id=applicant_id,
+            organization_id=organization_id,
+            user_id=user_id,
+        )
+        if applicant is None:
+            raise ApplicantNotFoundError(f"Applicant {applicant_id} not found")
+
+        # Load linked inquiry if present.
+        inquiry = None
+        if applicant.inquiry_id is not None:
+            inquiry = await get_by_applicant_inquiry_id(
+                db,
+                inquiry_id=applicant.inquiry_id,
+                organization_id=organization_id,
+                user_id=user_id,
+            )
+
+    # Merge across templates: first-template-wins. For each key, capture the
+    # full set of templates that define it (for UI surfacing).
+    seen_keys: dict[str, dict] = {}
+    for tid in template_ids:
+        for p in placeholders_by_template.get(tid, []):
+            if p.input_type in ("signature", "computed"):
+                continue
+            if p.key in seen_keys:
+                # Record this additional template as a contributor.
+                seen_keys[p.key]["template_ids"].append(tid)
+                continue
+            if p.default_source:
+                value, provenance = resolve_default_source(
+                    p.default_source, applicant, inquiry,
+                )
+            else:
+                value, provenance = None, None
+            seen_keys[p.key] = {
+                "placeholder": p,
+                "template_ids": [tid],
+                "value": value,
+                "provenance": provenance,
+            }
+
+    return list(seen_keys.values())
+
+
 async def generate_defaults(
     *,
     user_id: uuid.UUID,
@@ -589,7 +676,7 @@ async def soft_delete_template(
         )
         if template is None:
             raise TemplateNotFoundError(f"Template {template_id} not found")
-        in_use = await signed_lease_repo.has_active_lease_for_template(
+        in_use = await signed_lease_template_repo.has_active_lease_for_template(
             db, template_id=template_id,
         )
         if in_use:

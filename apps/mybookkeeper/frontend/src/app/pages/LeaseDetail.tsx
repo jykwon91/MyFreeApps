@@ -138,6 +138,32 @@ export default function LeaseDetail() {
             }
           />
 
+          {/* Templates list — only for generated leases */}
+          {lease.kind === "generated" && lease.templates.length > 0 ? (
+            <section
+              className="border rounded-lg p-4"
+              data-testid="lease-templates-card"
+            >
+              <p className="text-xs text-muted-foreground uppercase font-medium tracking-wide mb-2">
+                {lease.templates.length === 1 ? "Template" : "Templates"}
+              </p>
+              <ul className="flex flex-wrap gap-2">
+                {lease.templates.map((t) => (
+                  <li key={t.id}>
+                    <Link
+                      to={`/lease-templates/${t.id}`}
+                      data-testid={`lease-template-link-${t.id}`}
+                      className="inline-block text-xs px-2 py-1 rounded-md bg-muted text-foreground hover:bg-muted/70"
+                    >
+                      {t.name}{" "}
+                      <span className="text-muted-foreground">v{t.version}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+
           {/* Applicant / Tenant card */}
           {applicant ? (
             <section

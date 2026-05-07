@@ -29,6 +29,13 @@ from app.schemas.leases.lease_template_response import LeaseTemplateResponse
 from app.schemas.leases.lease_template_update_request import (
     LeaseTemplateUpdateRequest,
 )
+from app.schemas.leases.multi_generate_defaults_request import (
+    MultiGenerateDefaultsRequest,
+)
+from app.schemas.leases.multi_generate_defaults_response import (
+    MergedPlaceholder,
+    MultiGenerateDefaultsResponse,
+)
 from app.schemas.leases.suggest_placeholders_response import (
     SuggestPlaceholdersResponse,
 )
@@ -75,6 +82,45 @@ async def list_templates(
         organization_id=ctx.organization_id,
         limit=limit,
         offset=offset,
+    )
+
+
+@router.post(
+    "/generate-defaults",
+    response_model=MultiGenerateDefaultsResponse,
+)
+async def post_multi_generate_defaults(
+    payload: MultiGenerateDefaultsRequest,
+    ctx: RequestContext = Depends(current_org_member),
+) -> MultiGenerateDefaultsResponse:
+    """Resolve merged defaults across N templates for one applicant.
+
+    Returns the union of placeholders across all selected templates plus
+    the resolved value/provenance using the first-template-wins rule for
+    duplicates.
+    """
+    try:
+        merged = await lease_template_service.generate_defaults_multi(
+            user_id=ctx.user_id,
+            organization_id=ctx.organization_id,
+            template_ids=payload.template_ids,
+            applicant_id=payload.applicant_id,
+        )
+    except lease_template_service.TemplateNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Template not found") from exc
+    except lease_template_service.ApplicantNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Applicant not found") from exc
+
+    return MultiGenerateDefaultsResponse(
+        placeholders=[
+            MergedPlaceholder(
+                placeholder=LeaseTemplatePlaceholderResponse.model_validate(m["placeholder"]),
+                template_ids=m["template_ids"],
+                value=m["value"],
+                provenance=m["provenance"],
+            )
+            for m in merged
+        ],
     )
 
 

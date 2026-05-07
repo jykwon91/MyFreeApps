@@ -18,11 +18,14 @@ import type { LeaseTemplateDetail } from "@/shared/types/lease/lease-template-de
 // ---------------------------------------------------------------------------
 
 const mockUseGetGenerateDefaultsQuery = vi.fn();
+const mockUseGetMultiGenerateDefaultsQuery = vi.fn();
 const mockUseCreateSignedLeaseMutation = vi.fn();
 
 vi.mock("@/shared/store/leaseTemplatesApi", () => ({
   useGetGenerateDefaultsQuery: (args: unknown, opts: unknown) =>
     mockUseGetGenerateDefaultsQuery(args, opts),
+  useGetMultiGenerateDefaultsQuery: (args: unknown, opts: unknown) =>
+    mockUseGetMultiGenerateDefaultsQuery(args, opts),
 }));
 
 vi.mock("@/shared/store/signedLeasesApi", () => ({
@@ -124,6 +127,13 @@ function renderForm(applicantId: string) {
 describe("LeaseGenerateForm", () => {
   beforeEach(() => {
     mockUseCreateSignedLeaseMutation.mockReturnValue([vi.fn(), { isLoading: false }]);
+    // Default the multi-template query to "skipped" — single-template tests
+    // never trigger it.
+    mockUseGetMultiGenerateDefaultsQuery.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isFetching: false,
+    });
   });
 
   it("pre-fills fields from resolved defaults on mount", () => {
@@ -222,6 +232,97 @@ describe("LeaseGenerateForm", () => {
     // Value and provenance should be reset to defaults
     expect(nameInput.value).toBe("Jane Doe");
     expect(screen.getByTestId("provenance-badge-applicant")).toBeInTheDocument();
+  });
+
+  // ---------------------------------------------------------------------
+  // Multi-template mode
+  // ---------------------------------------------------------------------
+
+  describe("multi-template mode", () => {
+    const MULTI_DEFAULTS = {
+      data: {
+        placeholders: [
+          {
+            placeholder: TEMPLATE.placeholders[0],
+            template_ids: ["tpl-1", "tpl-2"],
+            value: "Jane Doe",
+            provenance: "applicant",
+          },
+          {
+            placeholder: TEMPLATE.placeholders[1],
+            template_ids: ["tpl-1"],
+            value: null,
+            provenance: null,
+          },
+        ],
+      },
+      isLoading: false,
+      isFetching: false,
+    };
+
+    function renderMulti() {
+      return render(
+        <MemoryRouter>
+          <Provider store={store}>
+            <LeaseGenerateForm
+              templateIds={["tpl-1", "tpl-2"]}
+              templateLabels={{ "tpl-1": "Master Lease", "tpl-2": "Addendum" }}
+              applicantId="applicant-1"
+            />
+          </Provider>
+        </MemoryRouter>,
+      );
+    }
+
+    it("merges placeholders across templates and pre-fills with first-template-wins value", () => {
+      mockUseGetMultiGenerateDefaultsQuery.mockReturnValue(MULTI_DEFAULTS);
+      renderMulti();
+
+      const nameInput = screen
+        .getByTestId("generate-field-TENANT FULL NAME")
+        .querySelector("input")!;
+      expect(nameInput.value).toBe("Jane Doe");
+    });
+
+    it("shows 'Used by' hint for placeholders defined in 2+ templates", () => {
+      mockUseGetMultiGenerateDefaultsQuery.mockReturnValue(MULTI_DEFAULTS);
+      renderMulti();
+
+      expect(
+        screen.getByTestId("placeholder-used-by-TENANT FULL NAME"),
+      ).toHaveTextContent("Used by: Master Lease, Addendum");
+    });
+
+    it("does NOT show 'Used by' hint for placeholders in only one template", () => {
+      mockUseGetMultiGenerateDefaultsQuery.mockReturnValue(MULTI_DEFAULTS);
+      renderMulti();
+
+      expect(
+        screen.queryByTestId("placeholder-used-by-TENANT EMAIL"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("submits with template_ids containing all selected templates", async () => {
+      mockUseGetMultiGenerateDefaultsQuery.mockReturnValue(MULTI_DEFAULTS);
+      const unwrap = vi.fn().mockResolvedValue({ id: "lease-1" });
+      const createMutation = vi.fn().mockReturnValue({ unwrap });
+      mockUseCreateSignedLeaseMutation.mockReturnValue([
+        createMutation,
+        { isLoading: false },
+      ]);
+      renderMulti();
+
+      // Submit (the only required field is TENANT FULL NAME and it's filled).
+      fireEvent.submit(screen.getByTestId("lease-generate-form"));
+
+      await Promise.resolve();
+      expect(createMutation).toHaveBeenCalledWith(
+        expect.objectContaining({
+          template_ids: ["tpl-1", "tpl-2"],
+          applicant_id: "applicant-1",
+        }),
+      );
+    });
   });
 
   it("dismisses confirmation without changing values when Cancel is clicked", () => {

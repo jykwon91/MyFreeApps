@@ -5,6 +5,8 @@ import type { LeaseTemplateDetail } from "@/shared/types/lease/lease-template-de
 import type { LeaseTemplateListResponse } from "@/shared/types/lease/lease-template-list-response";
 import type { LeaseTemplatePlaceholder } from "@/shared/types/lease/lease-template-placeholder";
 import type { LeaseTemplateUpdateRequest } from "@/shared/types/lease/lease-template-update-request";
+import type { MultiGenerateDefaultsRequest } from "@/shared/types/lease/multi-generate-defaults-request";
+import type { MultiGenerateDefaultsResponse } from "@/shared/types/lease/multi-generate-defaults-response";
 import type { SuggestPlaceholdersResponse } from "@/shared/types/lease/suggest-placeholders-response";
 
 /**
@@ -109,6 +111,18 @@ const leaseTemplatesApi = baseApi.injectEndpoints({
       // No cache tag — always fetch fresh when applicant changes.
     }),
 
+    getMultiGenerateDefaults: builder.query<
+      MultiGenerateDefaultsResponse,
+      MultiGenerateDefaultsRequest
+    >({
+      query: (body) => ({
+        url: `/lease-templates/generate-defaults`,
+        method: "POST",
+        data: body,
+      }),
+      // Re-fetched whenever templateIds or applicantId changes; no cache tag.
+    }),
+
     deleteLeaseTemplate: builder.mutation<void, string>({
       query: (id) => ({ url: `/lease-templates/${id}`, method: "DELETE" }),
       invalidatesTags: [{ type: "LeaseTemplate", id: "LIST" }],
@@ -150,6 +164,7 @@ export const {
   useGetLeaseTemplatesQuery,
   useGetLeaseTemplateByIdQuery,
   useGetGenerateDefaultsQuery,
+  useGetMultiGenerateDefaultsQuery,
   useCreateLeaseTemplateMutation,
   useUpdateLeaseTemplateMutation,
   useUpdateLeasePlaceholderMutation,

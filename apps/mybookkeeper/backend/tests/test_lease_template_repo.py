@@ -18,6 +18,7 @@ from app.repositories.leases import (
     lease_template_repo,
     signed_lease_attachment_repo,
     signed_lease_repo,
+    signed_lease_template_repo,
 )
 
 
@@ -121,7 +122,7 @@ async def test_signed_lease_attachment_idor_protection(db) -> None:
 
 @pytest.mark.asyncio
 async def test_template_in_use_blocks_soft_delete(db) -> None:
-    """``has_active_lease_for_template`` must report True when leases reference."""
+    """``has_active_lease_for_template`` reports True when leases link via the join table."""
     user_id = uuid.uuid4()
     org_id = uuid.uuid4()
     applicant_id = uuid.uuid4()
@@ -132,17 +133,16 @@ async def test_template_in_use_blocks_soft_delete(db) -> None:
     await db.commit()
 
     # No leases yet.
-    in_use = await signed_lease_repo.has_active_lease_for_template(
+    in_use = await signed_lease_template_repo.has_active_lease_for_template(
         db, template_id=template.id,
     )
     assert in_use is False
 
-    # Create a draft lease pointing at this template.
-    await signed_lease_repo.create(
+    # Create a draft lease and link it to this template via the join row.
+    lease = await signed_lease_repo.create(
         db,
         user_id=user_id,
         organization_id=org_id,
-        template_id=template.id,
         applicant_id=applicant_id,
         listing_id=None,
         values={},
@@ -150,9 +150,12 @@ async def test_template_in_use_blocks_soft_delete(db) -> None:
         ends_on=None,
         status="draft",
     )
+    await signed_lease_template_repo.create(
+        db, lease_id=lease.id, template_id=template.id, display_order=0,
+    )
     await db.commit()
 
-    in_use = await signed_lease_repo.has_active_lease_for_template(
+    in_use = await signed_lease_template_repo.has_active_lease_for_template(
         db, template_id=template.id,
     )
     assert in_use is True
@@ -208,15 +211,21 @@ async def test_signed_lease_listing_filter(db) -> None:
     a2 = uuid.uuid4()
     await db.commit()
 
-    await signed_lease_repo.create(
-        db, user_id=user_id, organization_id=org_id, template_id=template.id,
+    l1 = await signed_lease_repo.create(
+        db, user_id=user_id, organization_id=org_id,
         applicant_id=a1, listing_id=None, values={}, starts_on=None, ends_on=None,
         status="draft",
     )
-    await signed_lease_repo.create(
-        db, user_id=user_id, organization_id=org_id, template_id=template.id,
+    l2 = await signed_lease_repo.create(
+        db, user_id=user_id, organization_id=org_id,
         applicant_id=a2, listing_id=None, values={}, starts_on=None, ends_on=None,
         status="signed",
+    )
+    await signed_lease_template_repo.create(
+        db, lease_id=l1.id, template_id=template.id, display_order=0,
+    )
+    await signed_lease_template_repo.create(
+        db, lease_id=l2.id, template_id=template.id, display_order=0,
     )
     await db.commit()
 

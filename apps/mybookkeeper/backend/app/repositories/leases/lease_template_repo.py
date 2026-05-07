@@ -135,6 +135,26 @@ async def bump_version(
     return template
 
 
+async def list_by_ids(
+    db: AsyncSession,
+    *,
+    template_ids: list[uuid.UUID],
+) -> list[LeaseTemplate]:
+    """Bulk-load templates by ID in a single IN-list query.
+
+    Used by services that need to resolve multiple templates at once
+    (e.g. multi-template signed-lease detail view). Does NOT filter by
+    tenant — the caller is responsible for tenant scoping (typically
+    by walking from a tenant-scoped parent row first).
+    """
+    if not template_ids:
+        return []
+    result = await db.execute(
+        select(LeaseTemplate).where(LeaseTemplate.id.in_(template_ids))
+    )
+    return list(result.scalars().all())
+
+
 async def soft_delete(
     db: AsyncSession,
     *,
