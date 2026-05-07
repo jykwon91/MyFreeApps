@@ -12,21 +12,18 @@ The keys are matched after normalisation (whitespace collapsed, uppercased).
 - Single path: ``applicant.legal_name``, ``today``
 - Fallback chain: ``applicant.legal_name || inquiry.inquirer_name``
   (first non-None, non-empty value wins)
-
-NOTE: Applicant has no ``email`` or ``phone`` columns — those PII fields
-live only on the Inquiry model (``inquirer_email``, ``inquirer_phone``).
-For those fields the inquiry is the primary source with no applicant fallback.
 """
 from __future__ import annotations
 
 # (input_type, default_source) — None means "no default".
 DEFAULT_SOURCE_MAP: dict[str, tuple[str, str | None]] = {
-    # Tenant identity — applicant-primary where the field exists, inquiry fallback otherwise.
+    # Tenant identity — applicant-primary, inquiry fallback. ``contact_email``
+    # and ``contact_phone`` were added to the applicant model so contact
+    # details persist past the inquiry stage (the inquiry can be deleted).
     "TENANT FULL NAME": ("text", "applicant.legal_name || inquiry.inquirer_name"),
     "TENANT NAME": ("text", "applicant.legal_name || inquiry.inquirer_name"),
-    # Email and phone only exist on Inquiry — no applicant fallback.
-    "TENANT EMAIL": ("email", "inquiry.inquirer_email"),
-    "TENANT PHONE": ("phone", "inquiry.inquirer_phone"),
+    "TENANT EMAIL": ("email", "applicant.contact_email || inquiry.inquirer_email"),
+    "TENANT PHONE": ("phone", "applicant.contact_phone || inquiry.inquirer_phone"),
     "TENANT EMPLOYER": ("text", "applicant.employer_or_hospital || inquiry.inquirer_employer"),
     "EMPLOYER": ("text", "applicant.employer_or_hospital || inquiry.inquirer_employer"),
     # Dates — applicant-primary (contract dates), inquiry fallback (desired dates).
