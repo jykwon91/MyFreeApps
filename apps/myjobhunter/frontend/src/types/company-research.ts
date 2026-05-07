@@ -15,6 +15,10 @@ export interface CompanyResearch {
   overall_sentiment: ResearchSentiment;
   senior_engineer_sentiment: string | null;
   interview_process: string | null;
+  /** What the company does — products, business model, customers. */
+  description: string | null;
+  /** Personalised: which products / teams match the user's resume. */
+  products_for_you: string | null;
   red_flags: string[];
   green_flags: string[];
 

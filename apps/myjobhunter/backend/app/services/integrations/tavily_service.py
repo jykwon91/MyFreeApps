@@ -72,6 +72,19 @@ def _build_query(company_name: str, domain: str | None) -> str:
     return " ".join(parts)
 
 
+def _build_overview_query(company_name: str, domain: str | None) -> str:
+    """Build a Tavily query targeting company description / products.
+
+    Different shape from ``_build_query``: targets the company's own
+    site, news, wikipedia, crunchbase. Powers the ``description`` and
+    ``products_for_you`` fields on CompanyResearch.
+    """
+    parts = [f"{company_name} what does company do products services"]
+    if domain:
+        parts.append(f"OR site:{domain}")
+    return " ".join(parts)
+
+
 async def search_company(company_name: str, domain: str | None = None) -> list[TavilyResult]:
     """Search Tavily for company research on ``company_name``.
 
@@ -136,6 +149,64 @@ async def search_company(company_name: str, domain: str | None = None) -> list[T
     ]
 
 
+async def search_company_overview(
+    company_name: str, domain: str | None = None
+) -> list[TavilyResult]:
+    """Search Tavily for company description / products / business model.
+
+    Companion to ``search_company``. Where ``search_company`` is locked
+    to review sites, this call has NO domain whitelist so the company's
+    own site, news outlets, wikipedia, crunchbase can land in the
+    prompt context — the inputs Claude needs to write the
+    ``description`` and ``products_for_you`` fields.
+
+    Returns the same TavilyResult shape; ``source_type`` is classified
+    by URL heuristic (most will be ``official`` or ``other``).
+
+    Raises the same exceptions as ``search_company``.
+    """
+    if not settings.tavily_api_key:
+        if _is_dev_environment():
+            logger.warning(
+                "TAVILY_API_KEY not configured — returning stub overview for dev mode"
+            )
+            return _stub_overview_results(company_name)
+        raise TavilyNotConfiguredError(
+            "TAVILY_API_KEY is not configured. "
+            "Set it in .env.docker or set MYJOBHUNTER_ENV=development for stub mode."
+        )
+
+    query = _build_overview_query(company_name, domain)
+
+    async with httpx.AsyncClient(timeout=_TIMEOUT_SECONDS) as client:
+        response = await client.post(
+            _TAVILY_SEARCH_URL,
+            json={
+                "api_key": settings.tavily_api_key,
+                "query": query,
+                "search_depth": "advanced",
+                "include_answer": False,
+                "include_raw_content": False,
+                "max_results": _MAX_RESULTS,
+            },
+        )
+        response.raise_for_status()
+        data = response.json()
+
+    results = data.get("results", [])
+    return [
+        TavilyResult(
+            url=r.get("url", ""),
+            title=r.get("title"),
+            content=r.get("content"),
+            score=r.get("score"),
+            source_type=_classify_source_type(r.get("url", "")),
+        )
+        for r in results
+        if r.get("url")
+    ]
+
+
 def _stub_results(company_name: str) -> list[TavilyResult]:
     """Development stub — returns fake results so the pipeline can be exercised."""
     return [
@@ -161,5 +232,35 @@ def _stub_results(company_name: str) -> list[TavilyResult]:
             ),
             score=0.75,
             source_type="reddit",
+        ),
+    ]
+
+
+def _stub_overview_results(company_name: str) -> list[TavilyResult]:
+    """Dev stub for the description / overview Tavily call."""
+    slug = company_name.lower().replace(" ", "-")
+    return [
+        TavilyResult(
+            url=f"https://www.{slug}.com/about",
+            title=f"About {company_name}",
+            content=(
+                f"{company_name} builds software products for mid-market customers. "
+                "The flagship product is a workflow automation platform; secondary "
+                "offerings include analytics dashboards and an integration marketplace. "
+                "Revenue is primarily SaaS subscriptions with a usage-based component."
+            ),
+            score=0.95,
+            source_type="official",
+        ),
+        TavilyResult(
+            url=f"https://en.wikipedia.org/wiki/{slug}",
+            title=f"{company_name} - Wikipedia",
+            content=(
+                f"{company_name} is a privately held software company founded in 2014. "
+                "The company employs approximately 200 staff across engineering, "
+                "product, and customer success."
+            ),
+            score=0.7,
+            source_type="other",
         ),
     ]

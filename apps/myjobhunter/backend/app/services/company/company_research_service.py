@@ -19,6 +19,7 @@ Fail-loud:
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import uuid
@@ -29,9 +30,17 @@ from sqlalchemy.orm.attributes import set_committed_value
 
 from app.models.company.company_research import CompanyResearch
 from app.repositories.company import company_repository, company_research_repository
+from app.repositories.profile import (
+    profile_repository,
+    skill_repository,
+    work_history_repository,
+)
 from app.services.extraction import claude_service
 from app.services.extraction.prompts.company_research_prompt import COMPANY_RESEARCH_PROMPT
-from app.services.integrations.tavily_service import search_company
+from app.services.integrations.tavily_service import (
+    search_company,
+    search_company_overview,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +73,85 @@ def _build_tavily_context(company_name: str, results: list[dict]) -> str:
     return "\n".join(parts)
 
 
+_MAX_USER_BULLETS = 8        # Across all roles, not per-role
+_MAX_USER_SKILLS = 15
+_MAX_USER_ROLES = 3          # Most recent N work entries
+_MAX_BULLET_CHARS = 220
+
+
+async def _build_user_context(db: AsyncSession, user_id: uuid.UUID) -> str | None:
+    """Build a compact user-profile block to feed Claude for personalisation.
+
+    Returns ``None`` when the user has no resume content uploaded — the
+    prompt then skips ``products_for_you`` synthesis entirely (returns
+    null in the JSON envelope).
+
+    Pulls:
+    - profile.summary + seniority (resume-level context)
+    - last N work_history rows (title + company + bullets)
+    - top M skills
+
+    Bounds (``_MAX_*``) keep the prompt size predictable. The returned
+    string is plain markdown.
+    """
+    profile = await profile_repository.get_by_user_id(db, user_id)
+    if profile is None:
+        return None
+
+    work_history = await work_history_repository.list_by_user(db, user_id)
+    skills = await skill_repository.list_by_user(db, user_id)
+
+    has_summary = bool((profile.summary or "").strip())
+    has_history = bool(work_history)
+    has_skills = bool(skills)
+    if not (has_summary or has_history or has_skills):
+        return None
+
+    parts = ["# User profile (job seeker requesting this research)\n"]
+
+    if profile.seniority:
+        parts.append(f"Seniority: {profile.seniority}\n")
+    if has_summary:
+        parts.append(f"Resume summary:\n{profile.summary}\n")
+
+    if has_history:
+        # Most-recent first. ``end_date IS NULL`` (current role) sorts above
+        # any specific date, so map None to a far-future sentinel for sort.
+        sorted_history = sorted(
+            work_history,
+            key=lambda w: (w.end_date or datetime.now(timezone.utc).date()),
+            reverse=True,
+        )[:_MAX_USER_ROLES]
+        parts.append("Recent roles:")
+        bullets_used = 0
+        for w in sorted_history:
+            end_label = w.end_date.isoformat() if w.end_date else "Present"
+            parts.append(
+                f"- {w.title} at {w.company_name} "
+                f"({w.start_date.isoformat()} → {end_label})"
+            )
+            for bullet in (w.bullets or []):
+                if bullets_used >= _MAX_USER_BULLETS:
+                    break
+                trimmed = bullet.strip()
+                if not trimmed:
+                    continue
+                if len(trimmed) > _MAX_BULLET_CHARS:
+                    trimmed = trimmed[: _MAX_BULLET_CHARS - 1] + "…"
+                parts.append(f"    • {trimmed}")
+                bullets_used += 1
+            if bullets_used >= _MAX_USER_BULLETS:
+                break
+        parts.append("")
+
+    if has_skills:
+        # Skills are simple strings; cap to keep prompt tight.
+        top_skills = [s.name for s in skills[:_MAX_USER_SKILLS]]
+        parts.append(f"Top skills: {', '.join(top_skills)}\n")
+
+    return "\n".join(parts)
+
+
 async def run_research(
     db: AsyncSession,
     *,
@@ -85,20 +173,55 @@ async def run_research(
     if company is None:
         return None
 
-    # 1. Fetch Tavily search results.
+    # 1. Fetch Tavily search results — review-site search + overview
+    #    search run in parallel. The overview call is what powers the
+    #    new ``description`` and ``products_for_you`` fields; without
+    #    it the prompt would only see review-site content (Glassdoor /
+    #    Blind / Reddit) and have nothing concrete to say about the
+    #    company's products or business model.
     fetched_at = datetime.now(timezone.utc)
-    tavily_results = await search_company(
-        company_name=company.name,
-        domain=company.primary_domain,
+    review_results, overview_results = await asyncio.gather(
+        search_company(
+            company_name=company.name,
+            domain=company.primary_domain,
+        ),
+        search_company_overview(
+            company_name=company.name,
+            domain=company.primary_domain,
+        ),
     )
     logger.info(
-        "Tavily returned %d results for company %s",
-        len(tavily_results),
+        "Tavily returned %d review results + %d overview results for company %s",
+        len(review_results),
+        len(overview_results),
         company_id,
     )
 
-    # 2. Build context + call Claude.
-    context = _build_tavily_context(company.name, list(tavily_results))
+    # 2. Load the user's profile context (resume summary + recent
+    #    roles + top skills). None if the user has no resume content
+    #    uploaded — the prompt then skips ``products_for_you``.
+    user_context = await _build_user_context(db, user_id)
+
+    # 3. Build context + call Claude. Both Tavily result sets feed
+    #    the same prompt so Claude can correlate review-side signals
+    #    against company-info signals (e.g. comp on Glassdoor + product
+    #    info from the official site → personalised recommendation).
+    review_context = _build_tavily_context(
+        f"{company.name} (employee reviews)", list(review_results)
+    )
+    overview_context = _build_tavily_context(
+        f"{company.name} (company overview)", list(overview_results)
+    )
+    context_parts = [review_context, "", overview_context]
+    if user_context:
+        context_parts += ["", user_context]
+    else:
+        context_parts += [
+            "",
+            "# User profile",
+            "(no resume content uploaded — return null for products_for_you)",
+        ]
+    context = "\n".join(context_parts)
     raw: dict = await claude_service.call_claude(
         system_prompt=COMPANY_RESEARCH_PROMPT,
         user_content=context,
@@ -107,7 +230,7 @@ async def run_research(
         user_id=user_id,
     )
 
-    # 3. Map Claude output to DB fields.
+    # 4. Map Claude output to DB fields.
     sentiment = _safe_sentiment(raw.get("sentiment"))
 
     # senior_engineer_sentiment lives in the model as the free-text analysis
@@ -117,6 +240,9 @@ async def run_research(
     # interview_process: not directly returned by Claude today; use headline
     # as a brief summary if present.
     interview_process = raw.get("summary")
+
+    description = raw.get("description")
+    products_for_you = raw.get("products_for_you")
 
     red_flags: list[str] = raw.get("red_flags") or []
     green_flags: list[str] = raw.get("green_flags") or []
@@ -130,7 +256,7 @@ async def run_research(
     if raw.get("compensation_signals"):
         comp_confidence = "low"
 
-    # 4. Persist CompanyResearch.
+    # 5. Persist CompanyResearch.
     research = await company_research_repository.upsert_for_company(
         db,
         company_id=company_id,
@@ -138,6 +264,8 @@ async def run_research(
         overall_sentiment=sentiment,
         senior_engineer_sentiment=senior_engineer_sentiment,
         interview_process=interview_process,
+        description=description,
+        products_for_you=products_for_you,
         red_flags=red_flags[:20],   # Enforce model constraint
         green_flags=green_flags[:20],
         reported_comp_range_min=reported_comp_range_min,
@@ -147,7 +275,9 @@ async def run_research(
         raw_synthesis=raw,
     )
 
-    # 5. Persist sources (previous sources cascade-deleted on upsert).
+    # 6. Persist sources (review + overview combined; old ones deleted
+    #    by the upsert path before this).
+    all_results: list[dict] = list(review_results) + list(overview_results)
     source_dicts = [
         {
             "url": r["url"],
@@ -156,7 +286,7 @@ async def run_research(
             "source_type": r["source_type"],
             "fetched_at": fetched_at,
         }
-        for r in tavily_results
+        for r in all_results
         if r.get("url")
     ]
     await company_research_repository.create_sources(

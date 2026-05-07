@@ -46,6 +46,28 @@ export default function ReadyState({ research, onRunResearch, isRunning }: Ready
         </LoadingButton>
       </div>
 
+      {/* What the company does */}
+      {research.description ? (
+        <section>
+          <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">
+            What they do
+          </p>
+          <p className="text-sm whitespace-pre-wrap">{research.description}</p>
+        </section>
+      ) : null}
+
+      {/* Personalised: products that match the user's background.
+          Uses an emerald accent so it visually anchors as the
+          "this is about YOU" section. */}
+      {research.products_for_you ? (
+        <section className="border-l-2 border-emerald-500/60 pl-3">
+          <p className="text-xs uppercase tracking-wide text-emerald-700 dark:text-emerald-400 mb-1">
+            Products that match your background
+          </p>
+          <p className="text-sm whitespace-pre-wrap">{research.products_for_you}</p>
+        </section>
+      ) : null}
+
       {/* Summary */}
       {research.interview_process ? (
         <section>

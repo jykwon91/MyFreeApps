@@ -39,6 +39,19 @@ class CompanyResearch(Base):
     senior_engineer_sentiment: Mapped[str | None] = mapped_column(Text, nullable=True)
     interview_process: Mapped[str | None] = mapped_column(Text, nullable=True)
 
+    # What the company does — products, business model, customers.
+    # Synthesised from a Tavily search without the review-site domain
+    # filter so company-info sources (official site, news, wikipedia,
+    # crunchbase) can land in the prompt context.
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # Personalised: which of the company's products / teams / role
+    # families align with the requesting user's resume background.
+    # Synthesised by passing the user's profile summary + recent roles
+    # + top skills into the Claude prompt alongside the company
+    # context. Null when the user has no resume content uploaded.
+    products_for_you: Mapped[str | None] = mapped_column(Text, nullable=True)
+
     red_flags: Mapped[list[str]] = mapped_column(
         ARRAY(Text),
         default=list,

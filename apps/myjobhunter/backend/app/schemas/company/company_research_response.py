@@ -25,6 +25,8 @@ class CompanyResearchResponse(BaseModel):
     overall_sentiment: str
     senior_engineer_sentiment: str | None
     interview_process: str | None
+    description: str | None
+    products_for_you: str | None
     red_flags: list[str]
     green_flags: list[str]
     reported_comp_range_min: float | None
