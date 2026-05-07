@@ -180,51 +180,53 @@ export default function LeaseDetail() {
             }
           />
 
-          {/* Templates list — only for generated leases */}
-          {lease.kind === "generated" ? (
-            <section
-              className="border rounded-lg p-4"
-              data-testid="lease-templates-card"
-            >
-              <div className="flex items-center justify-between gap-2 mb-2">
-                <p className="text-xs text-muted-foreground uppercase font-medium tracking-wide">
-                  {lease.templates.length === 1 ? "Template" : "Templates"}
-                </p>
-                {canWrite ? (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowAddTemplateModal(true)}
-                    data-testid="lease-add-template-button"
-                    className="h-7 px-2 text-xs"
-                  >
-                    <Plus size={12} className="mr-1" />
-                    Add template
-                  </Button>
-                ) : null}
-              </div>
-              {lease.templates.length > 0 ? (
-                <ul className="flex flex-wrap gap-2">
-                  {lease.templates.map((t) => (
-                    <li key={t.id}>
-                      <Link
-                        to={`/lease-templates/${t.id}`}
-                        data-testid={`lease-template-link-${t.id}`}
-                        className="inline-block text-xs px-2 py-1 rounded-md bg-muted text-foreground hover:bg-muted/70"
-                      >
-                        {t.name}{" "}
-                        <span className="text-muted-foreground">v{t.version}</span>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-xs text-muted-foreground">
-                  No templates yet — add one to generate documents.
-                </p>
-              )}
-            </section>
-          ) : null}
+          {/* Templates list — generated leases use templates as the source of
+              truth; imported leases can attach addendum templates that render
+              alongside the original PDF. */}
+          <section
+            className="border rounded-lg p-4"
+            data-testid="lease-templates-card"
+          >
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <p className="text-xs text-muted-foreground uppercase font-medium tracking-wide">
+                {lease.templates.length === 1 ? "Template" : "Templates"}
+              </p>
+              {canWrite ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowAddTemplateModal(true)}
+                  data-testid="lease-add-template-button"
+                  className="h-7 px-2 text-xs"
+                >
+                  <Plus size={12} className="mr-1" />
+                  {lease.kind === "imported" ? "Add addendum" : "Add template"}
+                </Button>
+              ) : null}
+            </div>
+            {lease.templates.length > 0 ? (
+              <ul className="flex flex-wrap gap-2">
+                {lease.templates.map((t) => (
+                  <li key={t.id}>
+                    <Link
+                      to={`/lease-templates/${t.id}`}
+                      data-testid={`lease-template-link-${t.id}`}
+                      className="inline-block text-xs px-2 py-1 rounded-md bg-muted text-foreground hover:bg-muted/70"
+                    >
+                      {t.name}{" "}
+                      <span className="text-muted-foreground">v{t.version}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                {lease.kind === "imported"
+                  ? "No addenda yet — add one to generate a document like a lease extension."
+                  : "No templates yet — add one to generate documents."}
+              </p>
+            )}
+          </section>
 
           {showAddTemplateModal && lease ? (
             <LeaseAddTemplateModal

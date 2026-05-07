@@ -6,6 +6,7 @@ import type { SignedLeaseDetail } from "@/shared/types/lease/signed-lease-detail
 import type { SignedLeaseImportRequest } from "@/shared/types/lease/signed-lease-import-request";
 import type { SignedLeaseListArgs } from "@/shared/types/lease/signed-lease-list-args";
 import type { SignedLeaseListResponse } from "@/shared/types/lease/signed-lease-list-response";
+import type { SignedLeaseTemplatePrefillResponse } from "@/shared/types/lease/signed-lease-template-prefill";
 import type { SignedLeaseUpdateRequest } from "@/shared/types/lease/signed-lease-update-request";
 
 /**
@@ -162,17 +163,35 @@ const signedLeasesApi = baseApi.injectEndpoints({
 
     addSignedLeaseTemplates: builder.mutation<
       SignedLeaseDetail,
-      { leaseId: string; templateIds: string[] }
+      {
+        leaseId: string;
+        templateIds: string[];
+        values?: Record<string, string>;
+      }
     >({
-      query: ({ leaseId, templateIds }) => ({
+      query: ({ leaseId, templateIds, values }) => ({
         url: `/signed-leases/${leaseId}/templates`,
         method: "POST",
-        data: { template_ids: templateIds },
+        data: {
+          template_ids: templateIds,
+          ...(values ? { values } : {}),
+        },
       }),
       invalidatesTags: (_r, _e, { leaseId }) => [
         { type: "SignedLease", id: leaseId },
         { type: "SignedLease", id: "LIST" },
       ],
+    }),
+
+    prefillAddendumPlaceholders: builder.mutation<
+      SignedLeaseTemplatePrefillResponse,
+      { leaseId: string; templateIds: string[] }
+    >({
+      query: ({ leaseId, templateIds }) => ({
+        url: `/signed-leases/${leaseId}/template-prefill`,
+        method: "POST",
+        data: { template_ids: templateIds },
+      }),
     }),
   }),
 });
@@ -190,4 +209,5 @@ export const {
   useImportSignedLeaseMutation,
   useUpdateLeaseAttachmentMutation,
   useAddSignedLeaseTemplatesMutation,
+  usePrefillAddendumPlaceholdersMutation,
 } = signedLeasesApi;

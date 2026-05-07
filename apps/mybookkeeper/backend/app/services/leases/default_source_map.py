@@ -46,6 +46,13 @@ _TEXT_EMPLOYER = PlaceholderDefault(
 )
 _DATE_TODAY = PlaceholderDefault("date", "today")
 
+# Existing-lease defaults — used when an addendum template is attached to a
+# signed lease that already has known term dates and a linked property.
+_DATE_LEASE_START = PlaceholderDefault("date", "lease.starts_on")
+_DATE_LEASE_END = PlaceholderDefault("date", "lease.ends_on")
+_TEXT_PROPERTY_ADDRESS = PlaceholderDefault("text", "property.address")
+_TEXT_LANDLORD_NAME = PlaceholderDefault("text", "user.name")
+
 
 # Single source of truth — every concern (input_type, default_source,
 # computed_expr) lives on one row per key.
@@ -90,6 +97,20 @@ DEFAULT_SOURCE_MAP: dict[str, PlaceholderDefault] = {
     # doc never shows literal ``[LANDLORD SIGNATURE]`` text.
     "LANDLORD SIGNATURE": PlaceholderDefault("signature", None),
     "TENANT SIGNATURE": PlaceholderDefault("signature", None),
+    # Addendum placeholders — used when a template is attached to an existing
+    # signed lease (e.g. a Lease Extension Addendum). These pull from the
+    # parent lease and its linked property/landlord so the host doesn't
+    # re-type information already on file.
+    "ORIGINAL LEASE START DATE": _DATE_LEASE_START,
+    "ORIGINAL LEASE END DATE": _DATE_LEASE_END,
+    "LEASE START DATE": _DATE_LEASE_START,
+    "LEASE END DATE": _DATE_LEASE_END,
+    "PROPERTY ADDRESS": _TEXT_PROPERTY_ADDRESS,
+    "PREMISES ADDRESS": _TEXT_PROPERTY_ADDRESS,
+    "PROPERTY NAME": PlaceholderDefault("text", "property.name"),
+    "LANDLORD FULL NAME": _TEXT_LANDLORD_NAME,
+    "LANDLORD NAME": _TEXT_LANDLORD_NAME,
+    "LANDLORD EMAIL": PlaceholderDefault("email", "user.email"),
 }
 
 _FALLBACK = PlaceholderDefault("text", None)

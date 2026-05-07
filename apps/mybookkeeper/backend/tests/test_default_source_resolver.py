@@ -240,3 +240,108 @@ class TestValidateDefaultSourceSpec:
     def test_whitespace_only_raises_value_error(self) -> None:
         with pytest.raises(ValueError):
             validate_default_source_spec("   ")
+
+    def test_valid_lease_starts_on(self) -> None:
+        validate_default_source_spec("lease.starts_on")  # must not raise
+
+    def test_valid_lease_ends_on(self) -> None:
+        validate_default_source_spec("lease.ends_on")  # must not raise
+
+    def test_valid_property_address(self) -> None:
+        validate_default_source_spec("property.address")  # must not raise
+
+    def test_valid_user_name(self) -> None:
+        validate_default_source_spec("user.name")  # must not raise
+
+    def test_unknown_lease_field_raises_value_error(self) -> None:
+        with pytest.raises(ValueError, match="Unknown lease field"):
+            validate_default_source_spec("lease.nonexistent")
+
+    def test_unknown_property_field_raises_value_error(self) -> None:
+        with pytest.raises(ValueError, match="Unknown property field"):
+            validate_default_source_spec("property.nonexistent")
+
+    def test_unknown_user_field_raises_value_error(self) -> None:
+        with pytest.raises(ValueError, match="Unknown user field"):
+            validate_default_source_spec("user.nonexistent")
+
+
+# ---------------------------------------------------------------------------
+# resolve_default_source — lease / property / user namespaces
+#
+# Added 2026-05-07 with the imported-lease-addendum feature. The new
+# namespaces let addendum templates resolve ``[ORIGINAL LEASE START DATE]``
+# / ``[PROPERTY ADDRESS]`` / ``[LANDLORD FULL NAME]`` from the parent lease
+# row + linked property + host user without forcing the host to retype.
+# ---------------------------------------------------------------------------
+
+class TestResolveLeasePropertyUser:
+    def test_lease_starts_on_returns_iso_date(self) -> None:
+        applicant = _make_applicant()
+        lease = MagicMock()
+        lease.starts_on = datetime.date(2026, 5, 3)
+        lease.ends_on = None
+        value, prov = resolve_default_source(
+            "lease.starts_on", applicant, None, lease=lease,
+        )
+        assert value == "2026-05-03"
+        assert prov == "lease"
+
+    def test_lease_ends_on_returns_iso_date(self) -> None:
+        applicant = _make_applicant()
+        lease = MagicMock()
+        lease.starts_on = None
+        lease.ends_on = datetime.date(2026, 5, 17)
+        value, prov = resolve_default_source(
+            "lease.ends_on", applicant, None, lease=lease,
+        )
+        assert value == "2026-05-17"
+        assert prov == "lease"
+
+    def test_lease_attribute_none_returns_none(self) -> None:
+        applicant = _make_applicant()
+        lease = MagicMock()
+        lease.starts_on = None
+        value, prov = resolve_default_source(
+            "lease.starts_on", applicant, None, lease=lease,
+        )
+        assert value is None
+        assert prov is None
+
+    def test_lease_namespace_without_lease_returns_none(self) -> None:
+        """If the spec references lease.* but no lease was passed, resolve to None."""
+        applicant = _make_applicant()
+        value, prov = resolve_default_source(
+            "lease.starts_on", applicant, None,
+        )
+        assert value is None
+        assert prov is None
+
+    def test_property_address_resolves(self) -> None:
+        applicant = _make_applicant()
+        prop = MagicMock()
+        prop.address = "123 Main St, Austin TX"
+        value, prov = resolve_default_source(
+            "property.address", applicant, None, property_record=prop,
+        )
+        assert value == "123 Main St, Austin TX"
+        assert prov == "property"
+
+    def test_user_name_resolves(self) -> None:
+        applicant = _make_applicant()
+        user = MagicMock()
+        user.name = "Jason Kwon"
+        value, prov = resolve_default_source(
+            "user.name", applicant, None, user_record=user,
+        )
+        assert value == "Jason Kwon"
+        assert prov == "user"
+
+    def test_existing_callers_unaffected_by_new_kwargs(self) -> None:
+        """Pre-2026-05-07 callers (no lease/property/user kwargs) keep working."""
+        applicant = _make_applicant(legal_name="Jane Doe")
+        value, prov = resolve_default_source(
+            "applicant.legal_name", applicant, None,
+        )
+        assert value == "Jane Doe"
+        assert prov == "applicant"

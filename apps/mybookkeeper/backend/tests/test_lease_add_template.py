@@ -1,8 +1,10 @@
 """Tests for the "add template to existing lease" feature.
 
 Covers:
-- Service: happy path, duplicate rejection, imported-lease rejection,
-  missing template rejection
+- Service: happy path, duplicate rejection, missing template rejection
+- Service: imported leases now ALLOW templates (post-2026-05-07) — the
+  ``ImportedLeaseTemplateError`` class is retained for back-compat but the
+  flow no longer raises it.
 - Repo: max_display_order_for_lease helper
 - API: 200, 404, 409, 422 contract tests
 - Schema: SignedLeaseAddTemplatesRequest validates non-empty list
@@ -143,7 +145,15 @@ async def test_add_templates_raises_not_found_for_unknown_lease(db) -> None:
 
 
 @pytest.mark.asyncio
-async def test_add_templates_rejects_imported_lease(db) -> None:
+async def test_add_templates_imported_lease_accepted(db) -> None:
+    """Imported leases now ALLOW templates (addendum support).
+
+    The flow no longer raises ``ImportedLeaseTemplateError`` purely because
+    ``lease.kind == "imported"``. The error class is retained for back-compat
+    but is unreachable from this code path. Verify by passing a non-existent
+    template — the failure must be ``TemplateNotFoundError`` (the actual
+    problem) rather than the old kind-rejection error.
+    """
     user_id = uuid.uuid4()
     org_id = uuid.uuid4()
     lease = await signed_lease_repo.create(
@@ -164,7 +174,7 @@ async def test_add_templates_rejects_imported_lease(db) -> None:
         "app.services.leases.signed_lease_service.unit_of_work",
         _make_fake_uow(db),
     ):
-        with pytest.raises(ImportedLeaseTemplateError):
+        with pytest.raises(TemplateNotFoundError):
             await add_templates_and_generate(
                 user_id=user_id,
                 organization_id=org_id,
