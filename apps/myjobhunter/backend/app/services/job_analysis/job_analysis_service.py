@@ -157,7 +157,13 @@ async def analyze(
     """Run a fit-analysis for ``user_id`` on the given JD.
 
     Exactly one of ``url`` / ``jd_text`` must be non-empty (the request
-    schema enforces this; this layer re-checks defensively).
+    schema enforces this; this layer re-checks defensively). When ``url``
+    is given, this function fetches it via ``jd_url_extractor.extract_from_url``
+    and composes a JD text body from the structured extraction.
+
+    For callers that already have JD text in hand (the discovery worker,
+    the chrome extension), prefer :func:`score` directly — it skips URL
+    resolution and accepts pre-extracted fields as a hint.
 
     Returns the persisted :class:`JobAnalysis` row.
 
@@ -175,7 +181,6 @@ async def analyze(
             "analyze() requires exactly one of url / jd_text",
         )
 
-    # ---- Step 1: resolve the JD source ----
     source_url: str | None
     resolved_jd_text: str
     if has_url:
@@ -191,52 +196,96 @@ async def analyze(
             raise JobAnalysisError(str(exc)) from exc
         except ValueError as exc:
             raise JobAnalysisInvalidUrlError(str(exc)) from exc
-        # Compose a single text body from the extracted fields. The
-        # analysis prompt only needs the JD content; everything else is
-        # auxiliary metadata we'll merge into the response's
-        # ``extracted`` field after Claude runs.
         resolved_jd_text = _join_extracted_text(extracted)
     else:
         assert jd_text is not None
         source_url = None
         resolved_jd_text = jd_text.strip()
 
-    if not resolved_jd_text:
+    return await score(
+        db,
+        user_id,
+        jd_text=resolved_jd_text,
+        source_url=source_url,
+    )
+
+
+async def score(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    *,
+    jd_text: str,
+    source_url: str | None = None,
+    extracted_hint: dict | None = None,
+    discovered_job_id: uuid.UUID | None = None,
+) -> JobAnalysis:
+    """Score pre-resolved JD text against ``user_id``'s profile.
+
+    Pure JD-text-in, JobAnalysis-out: no URL fetching, no extra IO. Both
+    :func:`analyze` (paste-URL flow) and the discovery score worker call
+    this function so the scoring rubric, validation, and persistence
+    shape stay consistent across surfaces.
+
+    Args:
+        jd_text: The full JD text body. Must be non-empty after stripping.
+        source_url: Optional canonical URL the JD came from. Used for the
+            fingerprint and persisted on the JobAnalysis row.
+        extracted_hint: Optional pre-extracted fields the caller already
+            knows (title, company, location, salary, etc.) — Claude's
+            ``extracted`` block is merged with this hint, hint values
+            overriding for the fields it provides. The discovery worker
+            uses this so we don't pay Claude to re-extract structural
+            fields the source API already returned.
+        discovered_job_id: Optional FK back to the discovered_jobs row
+            this scoring run was triggered for. Stored as ``context_id``
+            on the extraction_log entry so per-feature cost rollups can
+            join.
+
+    Raises:
+        JobAnalysisError: Claude failed, returned malformed JSON, or
+            returned an envelope that didn't pass validation.
+    """
+    cleaned_jd = jd_text.strip() if jd_text else ""
+    if not cleaned_jd:
         raise JobAnalysisError(
-            "Resolved JD text is empty — refusing to call Claude on no content",
+            "score() requires non-empty jd_text",
         )
 
-    # ---- Step 2: load the operator's profile snapshot ----
     snapshot = await _load_profile_snapshot(db, user_id)
 
-    # ---- Step 3: call Claude ----
-    user_content = _build_user_content(snapshot=snapshot, jd_text=resolved_jd_text)
+    user_content = _build_user_content(snapshot=snapshot, jd_text=cleaned_jd)
     try:
         meta = await claude_service.call_claude_with_meta(
             system_prompt=JOB_ANALYSIS_PROMPT,
             user_content=user_content,
-            # extraction_logs check constraint doesn't yet include
-            # "job_analysis"; "other" is the legal bucket today.
+            # ``"job_analysis"`` is the dedicated bucket once migration
+            # disco260507 lands. Until then ``"other"`` is the legal
+            # value (extraction_logs CHECK constraint enforces).
             context_type="other",
             user_id=user_id,
-            context_id=None,
+            context_id=discovered_job_id,
         )
     except (anthropic.APIError, ValueError) as exc:
         logger.warning("Claude job-analysis call failed: %s", exc)
         raise JobAnalysisError(f"AI analysis failed: {exc}") from exc
 
-    parsed = meta["parsed"]
+    validated = _validate_response(meta["parsed"])
 
-    # ---- Step 4: validate the envelope ----
-    validated = _validate_response(parsed)
+    if extracted_hint:
+        merged = dict(validated["extracted"])
+        for key, value in extracted_hint.items():
+            if value is not None:
+                merged[key] = value
+        validated["extracted"] = merged
 
-    # ---- Step 5: persist + commit ----
-    fingerprint = _compute_fingerprint(source_url=source_url, jd_text=resolved_jd_text)
+    fingerprint = _compute_fingerprint(
+        source_url=source_url, jd_text=cleaned_jd,
+    )
 
     analysis = JobAnalysis(
         user_id=user_id,
         source_url=source_url,
-        jd_text=resolved_jd_text,
+        jd_text=cleaned_jd,
         fingerprint=fingerprint,
         extracted=validated["extracted"],
         verdict=validated["verdict"],
