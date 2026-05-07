@@ -11,6 +11,8 @@ const mockApplicant: ApplicantDetailResponse = {
   dob: null,
   employer_or_hospital: null,
   vehicle_make_model: null,
+  contact_email: null,
+  contact_phone: null,
   id_document_storage_key: null,
   contract_start: null,
   contract_end: null,

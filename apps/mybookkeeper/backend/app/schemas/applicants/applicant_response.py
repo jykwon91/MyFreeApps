@@ -23,6 +23,8 @@ class ApplicantResponse(BaseModel):
     dob: str | None = None
     employer_or_hospital: str | None = None
     vehicle_make_model: str | None = None
+    contact_email: str | None = None
+    contact_phone: str | None = None
     id_document_storage_key: str | None = None
 
     contract_start: _dt.date | None = None

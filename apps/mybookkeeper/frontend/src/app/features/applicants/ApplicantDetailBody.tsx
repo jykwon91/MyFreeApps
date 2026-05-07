@@ -274,6 +274,36 @@ export default function ApplicantDetailBody({ applicant }: ApplicantDetailBodyPr
               {applicant.vehicle_make_model ?? "—"}
             </dd>
           </div>
+          <div>
+            <dt className="text-xs text-muted-foreground">Email</dt>
+            <dd data-testid="sensitive-contact-email">
+              {applicant.contact_email ? (
+                <a
+                  href={`mailto:${applicant.contact_email}`}
+                  className="text-primary hover:underline"
+                >
+                  {applicant.contact_email}
+                </a>
+              ) : (
+                "—"
+              )}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-xs text-muted-foreground">Phone</dt>
+            <dd data-testid="sensitive-contact-phone">
+              {applicant.contact_phone ? (
+                <a
+                  href={`tel:${applicant.contact_phone}`}
+                  className="text-primary hover:underline"
+                >
+                  {applicant.contact_phone}
+                </a>
+              ) : (
+                "—"
+              )}
+            </dd>
+          </div>
         </div>
       </SensitiveDataUnlock>
 

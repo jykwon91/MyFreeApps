@@ -124,6 +124,8 @@ async def promote_from_inquiry(
         employer = _coalesce(
             overrides.employer_or_hospital, inquiry.inquirer_employer,
         )
+        contact_email = _coalesce(overrides.contact_email, inquiry.inquirer_email)
+        contact_phone = _coalesce(overrides.contact_phone, inquiry.inquirer_phone)
         contract_start = _coalesce_date(
             overrides.contract_start, inquiry.desired_start_date,
         )
@@ -149,6 +151,8 @@ async def promote_from_inquiry(
             dob=dob_iso,
             employer_or_hospital=employer,
             vehicle_make_model=overrides.vehicle_make_model,
+            contact_email=contact_email,
+            contact_phone=contact_phone,
             contract_start=contract_start,
             contract_end=contract_end,
             smoker=overrides.smoker,
