@@ -59,6 +59,8 @@ async def upsert_for_company(
     overall_sentiment: str,
     senior_engineer_sentiment: str | None,
     interview_process: str | None,
+    description: str | None = None,
+    products_for_you: str | None = None,
     red_flags: list[str],
     green_flags: list[str],
     reported_comp_range_min: float | None,
@@ -83,6 +85,8 @@ async def upsert_for_company(
         existing.overall_sentiment = overall_sentiment
         existing.senior_engineer_sentiment = senior_engineer_sentiment
         existing.interview_process = interview_process
+        existing.description = description
+        existing.products_for_you = products_for_you
         existing.red_flags = red_flags
         existing.green_flags = green_flags
         existing.reported_comp_range_min = reported_comp_range_min
@@ -113,6 +117,8 @@ async def upsert_for_company(
         overall_sentiment=overall_sentiment,
         senior_engineer_sentiment=senior_engineer_sentiment,
         interview_process=interview_process,
+        description=description,
+        products_for_you=products_for_you,
         red_flags=red_flags,
         green_flags=green_flags,
         reported_comp_range_min=reported_comp_range_min,

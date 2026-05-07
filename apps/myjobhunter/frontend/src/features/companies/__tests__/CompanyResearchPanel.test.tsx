@@ -58,6 +58,8 @@ const MOCK_RESEARCH: CompanyResearch = {
   overall_sentiment: "positive",
   senior_engineer_sentiment: "Engineering culture is collaborative and fast-paced.",
   interview_process: "Three rounds including a technical screen. Well-organised process.",
+  description: "XYZ Corp builds workflow automation software for mid-market customers.",
+  products_for_you: "Your distributed-systems experience maps to the workflow automation core.",
   red_flags: ["Promotion cycles can be slow"],
   green_flags: ["Competitive pay", "Strong engineering culture"],
   reported_comp_range_min: null,
@@ -170,6 +172,30 @@ describe("CompanyResearchPanelBody", () => {
     it("renders culture signals", () => {
       renderBody({ mode: "ready", research: MOCK_RESEARCH });
       expect(screen.getByText(/collaborative and fast-paced/)).toBeInTheDocument();
+    });
+
+    it("renders the company description", () => {
+      renderBody({ mode: "ready", research: MOCK_RESEARCH });
+      expect(screen.getByText(/workflow automation software for mid-market/)).toBeInTheDocument();
+      expect(screen.getByText(/What they do/i)).toBeInTheDocument();
+    });
+
+    it("renders products_for_you when present", () => {
+      renderBody({ mode: "ready", research: MOCK_RESEARCH });
+      expect(screen.getByText(/distributed-systems experience maps/)).toBeInTheDocument();
+      expect(screen.getByText(/Products that match your background/i)).toBeInTheDocument();
+    });
+
+    it("hides products_for_you section when null", () => {
+      const noPersonal: CompanyResearch = { ...MOCK_RESEARCH, products_for_you: null };
+      renderBody({ mode: "ready", research: noPersonal });
+      expect(screen.queryByText(/Products that match your background/i)).not.toBeInTheDocument();
+    });
+
+    it("hides description section when null", () => {
+      const noDescription: CompanyResearch = { ...MOCK_RESEARCH, description: null };
+      renderBody({ mode: "ready", research: noDescription });
+      expect(screen.queryByText(/What they do/i)).not.toBeInTheDocument();
     });
 
     it("renders green flags as a list", () => {
