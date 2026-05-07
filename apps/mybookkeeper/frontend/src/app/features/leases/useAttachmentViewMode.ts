@@ -21,5 +21,10 @@ export function useAttachmentViewMode({
   if (!url) return "unavailable";
   if (contentType === "application/pdf") return "pdf";
   if (contentType.startsWith("image/")) return "image";
+  if (
+    contentType ===
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+  )
+    return "docx";
   return "other";
 }

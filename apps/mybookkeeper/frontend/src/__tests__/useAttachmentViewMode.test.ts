@@ -27,14 +27,14 @@ describe("useAttachmentViewMode", () => {
     expect(useAttachmentViewMode({ url: URL, contentType: "image/webp" })).toBe("image");
   });
 
-  it("returns 'other' for DOCX with a URL", () => {
+  it("returns 'docx' for DOCX content type with a URL", () => {
     expect(
       useAttachmentViewMode({
         url: URL,
         contentType:
           "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       }),
-    ).toBe("other");
+    ).toBe("docx");
   });
 
   it("returns 'other' for unknown content types with a URL", () => {
@@ -45,5 +45,12 @@ describe("useAttachmentViewMode", () => {
     expect(useAttachmentViewMode({ url: "", contentType: "application/pdf" })).toBe("unavailable");
     expect(useAttachmentViewMode({ url: "", contentType: "image/png" })).toBe("unavailable");
     expect(useAttachmentViewMode({ url: "", contentType: "text/plain" })).toBe("unavailable");
+    expect(
+      useAttachmentViewMode({
+        url: "",
+        contentType:
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      }),
+    ).toBe("unavailable");
   });
 });

@@ -1,4 +1,5 @@
 import type { AttachmentViewMode } from "@/shared/types/lease/attachment-view-mode";
+import AttachmentViewerDocxBody from "./AttachmentViewerDocxBody";
 import AttachmentViewerImageBody from "./AttachmentViewerImageBody";
 import AttachmentViewerOtherBody from "./AttachmentViewerOtherBody";
 import AttachmentViewerPdfBody from "./AttachmentViewerPdfBody";
@@ -20,6 +21,8 @@ export default function AttachmentViewerBody({
       return <AttachmentViewerPdfBody url={url} filename={filename} />;
     case "image":
       return <AttachmentViewerImageBody url={url} filename={filename} />;
+    case "docx":
+      return <AttachmentViewerDocxBody url={url} filename={filename} />;
     case "other":
       return <AttachmentViewerOtherBody url={url} filename={filename} />;
     case "unavailable":
