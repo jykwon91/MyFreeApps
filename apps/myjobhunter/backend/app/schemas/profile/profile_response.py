@@ -40,6 +40,10 @@ class ProfileResponse(BaseModel):
     summary: str | None = None
     timezone: str | None = None
 
+    # /discover saved-search defaults (Phase B). Loose JSONB so the
+    # frontend can evolve keys faster than backend migrations.
+    discovery_defaults: dict = {}
+
     created_at: datetime
     updated_at: datetime
 

@@ -1,3 +1,5 @@
+import type { DiscoveryDefaults } from "./profile";
+
 /**
  * Body for PATCH /profile. All fields optional.
  * Mirrors ProfileUpdateRequest in backend/app/schemas/profile/profile_update_request.py.
@@ -13,4 +15,5 @@ export interface ProfileUpdateRequest {
   seniority?: string | null;
   summary?: string | null;
   timezone?: string | null;
+  discovery_defaults?: DiscoveryDefaults | null;
 }
