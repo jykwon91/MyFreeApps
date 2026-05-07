@@ -65,6 +65,8 @@ class Applicant(Base):
     )
 
     # PII — encrypted at rest via EncryptedString TypeDecorator.
+    # ``key_version`` (further down) is per-row and covers ALL PII
+    # columns below; one rotation re-encrypts the whole row.
     legal_name: Mapped[str | None] = mapped_column(EncryptedString(255), nullable=True)
     # ``dob`` is stored as ISO-8601 date string so it can be encrypted as text.
     # The repo / service layer is responsible for ISO formatting on write.
@@ -74,6 +76,17 @@ class Applicant(Base):
     )
     vehicle_make_model: Mapped[str | None] = mapped_column(
         EncryptedString(255), nullable=True,
+    )
+    # Contact channels — copied from inquiries.inquirer_email /
+    # inquirer_phone on inquiry → applicant promotion (see
+    # promote_service). Named ``contact_*`` (not bare ``email``/``phone``)
+    # so the audit-mask global field-name match doesn't collide with
+    # users.email which is intentionally plaintext for login.
+    contact_email: Mapped[str | None] = mapped_column(
+        EncryptedString(255), nullable=True,
+    )
+    contact_phone: Mapped[str | None] = mapped_column(
+        EncryptedString(50), nullable=True,
     )
 
     # Opaque MinIO key — NOT encrypted (key reveals nothing about contents).

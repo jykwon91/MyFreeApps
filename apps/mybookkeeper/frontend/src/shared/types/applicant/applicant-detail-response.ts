@@ -9,10 +9,10 @@ import type { VideoCallNote } from "./video-call-note";
  * shape with all 1:N children nested.
  *
  * PII fields (``legal_name``, ``dob``, ``employer_or_hospital``,
- * ``vehicle_make_model``) come over the wire as plaintext — the backend's
- * ``EncryptedString`` TypeDecorator decrypts on read. The frontend renders
- * them behind a sensitive-unlock toggle so they're hidden by default per
- * RENTALS_PLAN.md §9.1.
+ * ``vehicle_make_model``, ``contact_email``, ``contact_phone``) come over the
+ * wire as plaintext — the backend's ``EncryptedString`` TypeDecorator decrypts
+ * on read. The frontend renders them behind a sensitive-unlock toggle so
+ * they're hidden by default per RENTALS_PLAN.md §9.1.
  */
 export interface ApplicantDetailResponse {
   id: string;
@@ -24,6 +24,8 @@ export interface ApplicantDetailResponse {
   dob: string | null;
   employer_or_hospital: string | null;
   vehicle_make_model: string | null;
+  contact_email: string | null;
+  contact_phone: string | null;
   id_document_storage_key: string | null;
 
   contract_start: string | null;

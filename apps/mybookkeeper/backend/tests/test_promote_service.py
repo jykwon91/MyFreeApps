@@ -71,6 +71,7 @@ async def _seed_inquiry(
     inquirer_name: str | None = "Alice Tester",
     inquirer_email: str | None = "alice@example.com",
     inquirer_employer: str | None = "Memorial Hermann",
+    inquirer_phone: str | None = None,
     desired_start_date: _dt.date | None = None,
     desired_end_date: _dt.date | None = None,
 ) -> Inquiry:
@@ -82,6 +83,7 @@ async def _seed_inquiry(
         received_at=_dt.datetime.now(_dt.timezone.utc),
         inquirer_name=inquirer_name,
         inquirer_email=inquirer_email,
+        inquirer_phone=inquirer_phone,
         inquirer_employer=inquirer_employer,
         desired_start_date=desired_start_date,
         desired_end_date=desired_end_date,
@@ -450,3 +452,80 @@ async def test_promote_atomicity_rolls_back_when_post_create_step_fails(
     refreshed = await inquiry_repo.get_by_id(db, inquiry.id, test_org.id)
     assert refreshed is not None
     assert refreshed.stage == "new"
+
+@pytest.mark.asyncio
+async def test_promote_copies_inquirer_email_and_phone_to_applicant(
+    db: AsyncSession, test_user: User, test_org: Organization, patch_session,
+) -> None:
+    """contact_email and contact_phone are copied from the inquiry when no override is given."""
+    inquiry = await _seed_inquiry(
+        db,
+        org=test_org,
+        user=test_user,
+        inquirer_email="alice@example.com",
+        inquirer_phone="555-1234",
+    )
+    await db.flush()
+
+    applicant = await promote_service.promote_from_inquiry(
+        organization_id=test_org.id,
+        user_id=test_user.id,
+        inquiry_id=inquiry.id,
+        overrides=ApplicantPromoteRequest(),
+    )
+
+    assert applicant.contact_email == "alice@example.com"
+    assert applicant.contact_phone == "555-1234"
+
+
+@pytest.mark.asyncio
+async def test_promote_host_override_wins_over_inquiry_email(
+    db: AsyncSession, test_user: User, test_org: Organization, patch_session,
+) -> None:
+    """An explicit override in ApplicantPromoteRequest takes precedence over the inquiry value."""
+    inquiry = await _seed_inquiry(
+        db,
+        org=test_org,
+        user=test_user,
+        inquirer_email="from-inquiry@example.com",
+        inquirer_phone="555-9999",
+    )
+    await db.flush()
+
+    applicant = await promote_service.promote_from_inquiry(
+        organization_id=test_org.id,
+        user_id=test_user.id,
+        inquiry_id=inquiry.id,
+        overrides=ApplicantPromoteRequest(
+            contact_email="overridden@example.com",
+            contact_phone="555-0001",
+        ),
+    )
+
+    assert applicant.contact_email == "overridden@example.com"
+    assert applicant.contact_phone == "555-0001"
+
+
+@pytest.mark.asyncio
+async def test_promote_handles_null_inquirer_email_and_phone(
+    db: AsyncSession, test_user: User, test_org: Organization, patch_session,
+) -> None:
+    """When both inquiry fields are None and no override is given, applicant fields stay None."""
+    inquiry = await _seed_inquiry(
+        db,
+        org=test_org,
+        user=test_user,
+        inquirer_email=None,
+        inquirer_phone=None,
+    )
+    await db.flush()
+
+    applicant = await promote_service.promote_from_inquiry(
+        organization_id=test_org.id,
+        user_id=test_user.id,
+        inquiry_id=inquiry.id,
+        overrides=ApplicantPromoteRequest(),
+    )
+
+    assert applicant.contact_email is None
+    assert applicant.contact_phone is None

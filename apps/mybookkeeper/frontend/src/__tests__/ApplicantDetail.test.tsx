@@ -17,6 +17,8 @@ const baseApplicant: ApplicantDetailResponse = {
   dob: "1990-05-15",
   employer_or_hospital: "Memorial Hermann",
   vehicle_make_model: "Toyota Camry",
+  contact_email: null,
+  contact_phone: null,
   id_document_storage_key: null,
   contract_start: "2026-01-01",
   contract_end: "2026-12-31",

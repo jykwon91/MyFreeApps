@@ -17,6 +17,8 @@ import datetime as _dt
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.core.applicant_constants import (
+    APPLICANT_CONTACT_EMAIL_MAX,
+    APPLICANT_CONTACT_PHONE_MAX,
     APPLICANT_EMPLOYER_MAX,
     APPLICANT_LEGAL_NAME_MAX,
     APPLICANT_MINIMUM_AGE_YEARS,
@@ -42,6 +44,15 @@ class ApplicantPromoteRequest(BaseModel):
     dob: _dt.date | None = None
     employer_or_hospital: str | None = Field(
         default=None, max_length=APPLICANT_EMPLOYER_MAX,
+    )
+
+    # Contact channels — auto-filled from the inquiry's inquirer_email /
+    # inquirer_phone if not provided here.
+    contact_email: str | None = Field(
+        default=None, max_length=APPLICANT_CONTACT_EMAIL_MAX,
+    )
+    contact_phone: str | None = Field(
+        default=None, max_length=APPLICANT_CONTACT_PHONE_MAX,
     )
 
     contract_start: _dt.date | None = None

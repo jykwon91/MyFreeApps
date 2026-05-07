@@ -12,6 +12,8 @@ APPLICANT_EMPLOYER_MAX = 255
 APPLICANT_VEHICLE_MAX = 255
 APPLICANT_PETS_MAX = 1000
 APPLICANT_REFERRED_BY_MAX = 255
+APPLICANT_CONTACT_EMAIL_MAX = 255
+APPLICANT_CONTACT_PHONE_MAX = 50
 
 # Minimum applicant age for rental eligibility — codified per typical rental
 # policy. Tunable here so a future per-org override can layer on top without
