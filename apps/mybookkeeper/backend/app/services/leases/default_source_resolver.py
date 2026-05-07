@@ -37,6 +37,8 @@ from app.models.inquiries.inquiry import Inquiry
 _APPLICANT_ATTRS: frozenset[str] = frozenset({
     "legal_name",
     "employer_or_hospital",
+    "contact_email",
+    "contact_phone",
     "contract_start",
     "contract_end",
     "dob",

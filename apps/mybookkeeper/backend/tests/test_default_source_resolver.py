@@ -26,12 +26,16 @@ from app.services.leases.default_source_resolver import (
 def _make_applicant(
     legal_name: str | None = None,
     employer_or_hospital: str | None = None,
+    contact_email: str | None = None,
+    contact_phone: str | None = None,
     contract_start: datetime.date | None = None,
     contract_end: datetime.date | None = None,
 ) -> MagicMock:
     a = MagicMock()
     a.legal_name = legal_name
     a.employer_or_hospital = employer_or_hospital
+    a.contact_email = contact_email
+    a.contact_phone = contact_phone
     a.contract_start = contract_start
     a.contract_end = contract_end
     a.dob = None
@@ -125,13 +129,32 @@ class TestResolveDefaultSource:
         assert value == "2026-03-01"
         assert prov == "applicant"
 
-    def test_inquiry_email_no_applicant_field(self) -> None:
-        """Email only exists on Inquiry — single inquiry source."""
-        applicant = _make_applicant()
-        inquiry = _make_inquiry(inquirer_email="tenant@example.com")
-        value, prov = resolve_default_source("inquiry.inquirer_email", applicant, inquiry)
-        assert value == "tenant@example.com"
+    def test_applicant_contact_email_wins_over_inquiry_inquirer_email(self) -> None:
+        applicant = _make_applicant(contact_email="tenant@applicant.com")
+        inquiry = _make_inquiry(inquirer_email="tenant@inquiry.com")
+        value, prov = resolve_default_source(
+            "applicant.contact_email || inquiry.inquirer_email", applicant, inquiry,
+        )
+        assert value == "tenant@applicant.com"
+        assert prov == "applicant"
+
+    def test_applicant_contact_email_falls_back_to_inquiry(self) -> None:
+        applicant = _make_applicant(contact_email=None)
+        inquiry = _make_inquiry(inquirer_email="tenant@inquiry.com")
+        value, prov = resolve_default_source(
+            "applicant.contact_email || inquiry.inquirer_email", applicant, inquiry,
+        )
+        assert value == "tenant@inquiry.com"
         assert prov == "inquiry"
+
+    def test_applicant_contact_phone_wins_over_inquiry_inquirer_phone(self) -> None:
+        applicant = _make_applicant(contact_phone="555-0100")
+        inquiry = _make_inquiry(inquirer_phone="555-0200")
+        value, prov = resolve_default_source(
+            "applicant.contact_phone || inquiry.inquirer_phone", applicant, inquiry,
+        )
+        assert value == "555-0100"
+        assert prov == "applicant"
 
     def test_empty_string_treated_as_none_falls_through_to_fallback(self) -> None:
         applicant = _make_applicant(legal_name="")
@@ -170,6 +193,16 @@ class TestValidateDefaultSourceSpec:
     def test_valid_chain_with_spaces(self) -> None:
         validate_default_source_spec(
             "applicant.legal_name || inquiry.inquirer_name"
+        )  # must not raise
+
+    def test_valid_applicant_contact_email_chain(self) -> None:
+        validate_default_source_spec(
+            "applicant.contact_email || inquiry.inquirer_email"
+        )  # must not raise
+
+    def test_valid_applicant_contact_phone_chain(self) -> None:
+        validate_default_source_spec(
+            "applicant.contact_phone || inquiry.inquirer_phone"
         )  # must not raise
 
     def test_valid_chain_without_spaces(self) -> None:
