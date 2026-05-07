@@ -16,7 +16,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import desc, select, update
+from sqlalchemy import desc, nulls_last, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -266,8 +266,9 @@ async def list_discovered(
     # else "all": no extra filter
     stmt = (
         stmt.order_by(
-            desc(DiscoveredJob.score.is_(None)),  # scored rows first
-            desc(DiscoveredJob.score),
+            # Highest score first; unscored rows fall to the bottom
+            # (nulls_last so an unscored row never beats a scored one).
+            nulls_last(desc(DiscoveredJob.score)),
             desc(DiscoveredJob.discovered_at),
         )
         .limit(limit)
@@ -289,9 +290,18 @@ async def get_discovered(
 
 
 async def dismiss_discovered(
-    db: AsyncSession, job_id: uuid.UUID, user_id: uuid.UUID,
+    db: AsyncSession,
+    job_id: uuid.UUID,
+    user_id: uuid.UUID,
+    *,
+    reason: str | None = None,
 ) -> bool:
-    """Mark a discovered job as dismissed. Idempotent."""
+    """Mark a discovered job as dismissed. Idempotent.
+
+    ``reason`` is an optional structured signal used for future scoring
+    iterations. The CHECK constraint enforces the enum at the DB layer;
+    callers should validate / coerce before calling.
+    """
     job = await get_discovered(db, job_id, user_id)
     if job is None:
         return False
@@ -300,7 +310,9 @@ async def dismiss_discovered(
         job.saved_at = None
     if job.dismissed_at is None:
         job.dismissed_at = datetime.now(timezone.utc)
-        await db.flush()
+    if reason is not None:
+        job.dismissed_reason = reason
+    await db.flush()
     return True
 
 
@@ -318,3 +330,29 @@ async def save_discovered(
         job.saved_at = datetime.now(timezone.utc)
         await db.flush()
     return True
+
+
+async def list_unscored_for_user(
+    db: AsyncSession, user_id: uuid.UUID, *, limit: int = 20,
+) -> list[DiscoveredJob]:
+    """Return the freshest unscored postings for the user.
+
+    Used by the Phase C scoring loop after a fetch cycle. Filters out
+    rows the operator has already triaged (dismissed / saved / promoted)
+    so we don't waste tokens scoring rows the operator no longer cares
+    about.
+    """
+    stmt = (
+        select(DiscoveredJob)
+        .where(
+            DiscoveredJob.user_id == user_id,
+            DiscoveredJob.score.is_(None),
+            DiscoveredJob.dismissed_at.is_(None),
+            DiscoveredJob.saved_at.is_(None),
+            DiscoveredJob.promoted_application_id.is_(None),
+        )
+        .order_by(desc(DiscoveredJob.discovered_at))
+        .limit(limit)
+    )
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
