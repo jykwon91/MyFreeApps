@@ -102,11 +102,13 @@ class SignedLease(Base):
 
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
-    # Auto-email-tenant behaviour. Default TRUE so the feature is opt-out.
-    # Cleared to FALSE per-lease via ``PATCH /signed-leases/{id}`` when the
-    # host wants to deliver the document by another channel.
+    # Auto-email-tenant behaviour. Default FALSE — the host opts in per-lease
+    # via ``PATCH /signed-leases/{id}`` (or sends manually via the
+    # "Email to tenant" button on the detail page). Default flipped from
+    # TRUE → FALSE on 2026-05-07 because the operator preferred manual
+    # control over every send.
     auto_email_tenant: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=True, server_default=text("true"),
+        Boolean, nullable=False, default=False, server_default=text("false"),
     )
     # Stamped on first successful auto-email send. Used as the idempotency
     # gate so a Regenerate does not re-send. ``POST /signed-leases/{id}/email-tenant``
