@@ -50,6 +50,14 @@ class Profile(Base):
     summary: Mapped[str | None] = mapped_column(Text, nullable=True)
     timezone: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
+    # Per-operator defaults for the New Saved Search dialog. Loose
+    # JSONB so the frontend can evolve keys faster than migrations.
+    # Phase B of /discover. Phase C reads preferred_industries /
+    # preferred_stack / rejected_stack as scoring inputs.
+    discovery_defaults: Mapped[dict] = mapped_column(
+        JSONB, nullable=False, server_default=func.jsonb_build_object(),
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),

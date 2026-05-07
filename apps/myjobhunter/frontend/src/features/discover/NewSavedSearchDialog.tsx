@@ -7,7 +7,7 @@ import {
   extractErrorMessage,
 } from "@platform/ui";
 import { useCreateDiscoverySourceMutation } from "@/store/discoverApi";
-import { useGetProfileQuery } from "@/lib/profileApi";
+import { useGetProfileQuery, useUpdateProfileMutation } from "@/lib/profileApi";
 import { useListSkillsQuery } from "@/lib/skillsApi";
 import { useListWorkHistoryQuery } from "@/lib/workHistoryApi";
 import MultiChipInput from "./MultiChipInput";
@@ -69,8 +69,11 @@ export default function NewSavedSearchDialog({
   );
   const [excludedKeywords, setExcludedKeywords] = useState<string[]>([]);
   const [didPrefill, setDidPrefill] = useState(false);
+  const [saveAsDefaults, setSaveAsDefaults] = useState(false);
 
-  const [createSource, { isLoading }] = useCreateDiscoverySourceMutation();
+  const [createSource, { isLoading: isCreating }] = useCreateDiscoverySourceMutation();
+  const [updateProfile, { isLoading: isUpdatingProfile }] = useUpdateProfileMutation();
+  const isLoading = isCreating || isUpdatingProfile;
 
   const recentRoleSuggestions = useMemo(() => {
     if (!workHistoryData?.items) return [];
@@ -96,10 +99,14 @@ export default function NewSavedSearchDialog({
   }, [skillsData]);
 
   // One-shot pre-fill on first open after profile loads.
+  // Preference order: profile.discovery_defaults (operator-saved) >
+  // heuristic from profile fields (seniority, salary, etc.).
   useEffect(() => {
     if (!open) return;
     if (didPrefill) return;
     if (!profile) return;
+
+    const defaults = profile.discovery_defaults ?? {};
 
     // Roles: most-recent work history title.
     if (recentRoleSuggestions.length > 0) {
@@ -117,8 +124,13 @@ export default function NewSavedSearchDialog({
       }
     }
 
-    // Experience: map profile.seniority into JSearch's enum.
-    if (profile.seniority) {
+    // Saved defaults override the heuristics for fields they cover.
+    if (defaults.country) setCountry(defaults.country);
+    if (defaults.date_posted) setDatePosted(defaults.date_posted as DatePosted);
+    if (defaults.employment_type !== undefined) setEmploymentType(defaults.employment_type);
+    if (defaults.experience !== undefined) {
+      setExperience(defaults.experience as Experience);
+    } else if (profile.seniority) {
       const s = profile.seniority.toLowerCase();
       if (s.includes("senior") || s.includes("staff") || s.includes("principal") || s.includes("lead")) {
         setExperience("more_than_3_years_experience");
@@ -127,6 +139,12 @@ export default function NewSavedSearchDialog({
       } else if (s.includes("mid")) {
         setExperience("under_3_years_experience");
       }
+    }
+    if (Array.isArray(defaults.excluded_industry_chips)) {
+      setExcludedIndustryChips(defaults.excluded_industry_chips);
+    }
+    if (Array.isArray(defaults.excluded_keywords)) {
+      setExcludedKeywords(defaults.excluded_keywords);
     }
 
     setDidPrefill(true);
@@ -145,6 +163,7 @@ export default function NewSavedSearchDialog({
     setExcludedIndustryChips([]);
     setExcludedKeywords([]);
     setDidPrefill(false);
+    setSaveAsDefaults(false);
   }
 
   async function handleConfirm() {
@@ -178,6 +197,30 @@ export default function NewSavedSearchDialog({
 
     try {
       await createSource({ source: "jsearch", config }).unwrap();
+
+      // Optionally persist the filter set as the operator's default
+      // for future searches. Best-effort — if it fails, the saved
+      // search still exists; we just toast a soft warning.
+      if (saveAsDefaults) {
+        const defaults: Record<string, unknown> = {
+          ...(profile?.discovery_defaults ?? {}),
+          country,
+          date_posted: datePosted,
+          employment_type: employmentType,
+          experience,
+          excluded_industry_chips: excludedIndustryChips,
+          excluded_keywords: excludedKeywords,
+        };
+        try {
+          await updateProfile({ discovery_defaults: defaults }).unwrap();
+        } catch (defaultsErr) {
+          showError(
+            extractErrorMessage(defaultsErr) ??
+              "Saved search created, but couldn't update your defaults",
+          );
+        }
+      }
+
       showSuccess("Saved search created");
       reset();
       onClose();
@@ -364,6 +407,19 @@ export default function NewSavedSearchDialog({
             className="rounded"
           />
           <span>Remote jobs only</span>
+        </label>
+
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={saveAsDefaults}
+            onChange={(e) => setSaveAsDefaults(e.target.checked)}
+            className="rounded"
+          />
+          <span>
+            Save these filters (industries, employment, experience, etc.)
+            as my defaults for new searches
+          </span>
         </label>
 
         {summary && (

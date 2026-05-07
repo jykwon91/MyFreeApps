@@ -35,6 +35,11 @@ class ProfileUpdateRequest(BaseModel):
     summary: str | None = None
     timezone: str | None = Field(default=None, max_length=_TIMEZONE_MAX)
 
+    # /discover saved-search defaults (Phase B). Replaces the entire
+    # JSONB blob when set — frontend reads-modifies-writes the whole
+    # object, which is fine at this size (<2KB).
+    discovery_defaults: dict | None = Field(default=None)
+
     model_config = ConfigDict(extra="forbid")
 
     @field_validator("work_auth_status")
