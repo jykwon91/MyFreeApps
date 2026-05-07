@@ -989,6 +989,47 @@ async def list_attachments(
     return _attachment_responses(rows)
 
 
+async def update_attachment_signing_state(
+    *,
+    user_id: uuid.UUID,
+    organization_id: uuid.UUID,
+    lease_id: uuid.UUID,
+    attachment_id: uuid.UUID,
+    signing_fields: dict[str, _dt.datetime | None],
+) -> SignedLeaseAttachmentResponse:
+    """Set / clear signing-state timestamps on a lease attachment.
+
+    ``signing_fields`` is the subset of ``{"signed_by_tenant_at",
+    "signed_by_landlord_at"}`` the host explicitly set on the request
+    body — keys absent from the body are left untouched. ``None`` values
+    explicitly clear that party's signature. Field-name validation is
+    enforced at the schema layer (Pydantic ``extra="forbid"``); this
+    function trusts the keys it receives.
+    """
+    async with unit_of_work() as db:
+        lease = await signed_lease_repo.get(
+            db,
+            lease_id=lease_id,
+            user_id=user_id,
+            organization_id=organization_id,
+        )
+        if lease is None:
+            raise SignedLeaseNotFoundError(f"Lease {lease_id} not found")
+
+        row = await signed_lease_attachment_repo.update_signing_state_scoped_to_lease(
+            db,
+            attachment_id=attachment_id,
+            lease_id=lease_id,
+            fields=signing_fields,
+        )
+        if row is None:
+            raise AttachmentNotFoundError(f"Attachment {attachment_id} not found")
+
+        response = SignedLeaseAttachmentResponse.model_validate(row)
+
+    return attach_presigned_urls_to_attachments([response])[0]
+
+
 async def update_attachment_kind(
     *,
     user_id: uuid.UUID,
