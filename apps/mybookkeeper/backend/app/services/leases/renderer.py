@@ -167,6 +167,47 @@ def _substitute_in_paragraphs(paragraphs, pattern: list[tuple[str, str]]) -> Non
             run.text = ""
 
 
+def render_docx_bytes_to_pdf(
+    docx_bytes: bytes, values: dict[str, str],
+) -> tuple[bytes, bool]:
+    """Render a DOCX template into a PDF after placeholder substitution.
+
+    Pipeline: ``docx_bytes`` → python-docx (substitute placeholders, merge
+    runs) → mammoth (DOCX → markdown) → reportlab (markdown → PDF).
+
+    Returns ``(pdf_bytes, used_docx_library)``. Falls back to a markdown
+    render of the extracted text if either python-docx or mammoth aren't
+    installed — same contract as ``render_docx_bytes``.
+    """
+    rendered_docx, used_docx = render_docx_bytes(docx_bytes, values)
+    if not used_docx:
+        # python-docx not installed; we never substituted. Best we can do
+        # is render the raw bytes' decoded text.
+        text = docx_bytes.decode("utf-8", errors="replace")
+        substituted = render_md(text, values)
+        return render_pdf_from_text(substituted), False
+
+    try:
+        import mammoth  # type: ignore[import-untyped]
+    except ImportError:  # pragma: no cover — mammoth is in pyproject deps
+        logger.warning(
+            "mammoth not installed — falling back to plain-text PDF render",
+        )
+        # Last-resort: extract text via python-docx and render as PDF.
+        try:
+            import docx  # type: ignore[import-untyped]
+            doc = docx.Document(io.BytesIO(rendered_docx))
+            extracted = "\n\n".join(p.text for p in doc.paragraphs if p.text.strip())
+            return render_pdf_from_text(extracted), True
+        except Exception:  # noqa: BLE001
+            return render_pdf_from_text(""), True
+
+    # mammoth converts DOCX → markdown preserving headings, lists, tables.
+    result = mammoth.convert_to_markdown(io.BytesIO(rendered_docx))
+    md_text = result.value
+    return render_pdf_from_text(md_text), True
+
+
 def render_pdf_from_text(rendered_text: str) -> bytes:
     """Generate a simple PDF from rendered plain/markdown text via ``reportlab``.
 

@@ -43,7 +43,7 @@ from app.services.leases.attachment_response_builder import (
 )
 from app.services.leases.computed import ComputedExprError, evaluate
 from app.services.leases.renderer import (
-    render_docx_bytes,
+    render_docx_bytes_to_pdf,
     render_md,
     render_pdf_from_text,
 )
@@ -586,17 +586,13 @@ async def generate_lease(
         for f in files:
             raw = storage.download_file(f.storage_key)
             if f.content_type == DOCX_MIME:
-                rendered_bytes, used_docx = render_docx_bytes(raw, substitutions)
-                if used_docx:
-                    out_filename = _ensure_suffix(f.filename, ".docx")
-                    out_ct = DOCX_MIME
-                else:
-                    # Fall back to a markdown render of an empty body — log as
-                    # a Phase 1.5 limitation (DOCX rendering disabled).
-                    text = raw.decode("utf-8", errors="replace")
-                    rendered_bytes = render_md(text, substitutions).encode("utf-8")
-                    out_filename = _ensure_suffix(f.filename, ".md")
-                    out_ct = "text/markdown"
+                # DOCX templates render to PDF: substitute placeholders via
+                # python-docx, convert to markdown via mammoth, then to PDF
+                # via reportlab. Single output format (PDF) for every
+                # generated lease — easier for hosts and tenants to handle.
+                rendered_bytes, _ = render_docx_bytes_to_pdf(raw, substitutions)
+                out_filename = _swap_extension(f.filename, ".pdf")
+                out_ct = "application/pdf"
             elif f.content_type in ("text/markdown", "text/plain"):
                 text = raw.decode("utf-8", errors="replace")
                 rendered_md_text = render_md(text, substitutions)
