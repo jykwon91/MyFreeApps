@@ -24,7 +24,7 @@ will lose the secondary template links on downgrade — this is documented
 in the PR's operational-migration section.
 
 Revision ID: leasemulti260507
-Revises: moveout260507
+Revises: mrgheads260507
 Create Date: 2026-05-07 00:00:00.000000
 """
 from typing import Sequence, Union
@@ -34,7 +34,7 @@ from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision: str = "leasemulti260507"
-down_revision: Union[str, None] = "moveout260507"
+down_revision: Union[str, None] = "mrgheads260507"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
