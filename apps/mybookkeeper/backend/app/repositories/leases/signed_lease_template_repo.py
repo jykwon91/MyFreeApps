@@ -93,6 +93,25 @@ async def delete_all_for_lease(
     )
 
 
+async def max_display_order_for_lease(
+    db: AsyncSession,
+    *,
+    lease_id: uuid.UUID,
+) -> int:
+    """Return the current maximum display_order for a lease's template links.
+
+    Returns -1 when the lease has no template links so callers can safely
+    do ``max_order + 1`` for the first insertion.
+    """
+    result = await db.execute(
+        select(func.max(SignedLeaseTemplate.display_order)).where(
+            SignedLeaseTemplate.lease_id == lease_id,
+        )
+    )
+    value = result.scalar_one_or_none()
+    return value if value is not None else -1
+
+
 async def has_active_lease_for_template(
     db: AsyncSession,
     *,

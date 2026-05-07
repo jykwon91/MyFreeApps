@@ -42,6 +42,9 @@ from app.schemas.leases.signed_lease_list_response import (
     SignedLeaseListResponse,
 )
 from app.schemas.leases.signed_lease_response import SignedLeaseResponse
+from app.schemas.leases.signed_lease_add_templates_request import (
+    SignedLeaseAddTemplatesRequest,
+)
 from app.schemas.leases.signed_lease_update_request import (
     SignedLeaseUpdateRequest,
 )
@@ -195,6 +198,44 @@ async def delete_lease(
     except signed_lease_service.SignedLeaseNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Lease not found") from exc
     return Response(status_code=204)
+
+
+@router.post("/{lease_id}/templates", response_model=SignedLeaseResponse)
+async def add_templates_to_lease(
+    lease_id: uuid.UUID,
+    payload: SignedLeaseAddTemplatesRequest,
+    ctx: RequestContext = Depends(require_write_access),
+) -> SignedLeaseResponse:
+    """Add one or more templates to an existing generated lease and render them.
+
+    Only templates not already linked to the lease may be added. Returns the
+    updated ``SignedLeaseResponse`` (templates + attachments refreshed).
+    """
+    try:
+        return await signed_lease_service.add_templates_and_generate(
+            user_id=ctx.user_id,
+            organization_id=ctx.organization_id,
+            lease_id=lease_id,
+            template_ids=payload.template_ids,
+        )
+    except signed_lease_service.SignedLeaseNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Lease not found") from exc
+    except signed_lease_service.ImportedLeaseTemplateError as exc:
+        raise HTTPException(
+            status_code=422, detail="imported_lease_cannot_add_templates",
+        ) from exc
+    except signed_lease_service.TemplatesAlreadyLinkedError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "error": "templates_already_linked",
+                "template_ids": [str(tid) for tid in exc.duplicate_ids],
+            },
+        ) from exc
+    except lease_template_service.TemplateNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Template not found") from exc
+    except signed_lease_service.StorageNotConfiguredError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 @router.post("/{lease_id}/generate", response_model=SignedLeaseResponse)

@@ -159,6 +159,21 @@ const signedLeasesApi = baseApi.injectEndpoints({
         { type: "SignedLease", id: leaseId },
       ],
     }),
+
+    addSignedLeaseTemplates: builder.mutation<
+      SignedLeaseDetail,
+      { leaseId: string; templateIds: string[] }
+    >({
+      query: ({ leaseId, templateIds }) => ({
+        url: `/signed-leases/${leaseId}/templates`,
+        method: "POST",
+        data: { template_ids: templateIds },
+      }),
+      invalidatesTags: (_r, _e, { leaseId }) => [
+        { type: "SignedLease", id: leaseId },
+        { type: "SignedLease", id: "LIST" },
+      ],
+    }),
   }),
 });
 
@@ -174,4 +189,5 @@ export const {
   useDeleteSignedLeaseAttachmentMutation,
   useImportSignedLeaseMutation,
   useUpdateLeaseAttachmentMutation,
+  useAddSignedLeaseTemplatesMutation,
 } = signedLeasesApi;
