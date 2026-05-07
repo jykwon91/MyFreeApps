@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, FileText, Mail, User } from "lucide-react";
+import { ArrowLeft, FileText, Mail, Plus, User } from "lucide-react";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import AlertBox from "@/shared/components/ui/AlertBox";
 import Badge from "@/shared/components/ui/Badge";
+import Button from "@/shared/components/ui/Button";
 import Skeleton from "@/shared/components/ui/Skeleton";
 import LoadingButton from "@/shared/components/ui/LoadingButton";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
@@ -17,6 +18,7 @@ import {
 import { useGetApplicantByIdQuery } from "@/shared/store/applicantsApi";
 import SignedLeaseStatusBadge from "@/app/features/leases/SignedLeaseStatusBadge";
 import LeaseAttachmentsSection from "@/app/features/leases/LeaseAttachmentsSection";
+import LeaseAddTemplateModal from "@/app/features/leases/LeaseAddTemplateModal";
 
 type Tab = "files" | "details" | "notes";
 
@@ -24,6 +26,7 @@ export default function LeaseDetail() {
   const { leaseId } = useParams<{ leaseId: string }>();
   const canWrite = useCanWrite();
   const [tab, setTab] = useState<Tab>("files");
+  const [showAddTemplateModal, setShowAddTemplateModal] = useState(false);
   const {
     data: lease,
     isLoading,
@@ -178,29 +181,57 @@ export default function LeaseDetail() {
           />
 
           {/* Templates list — only for generated leases */}
-          {lease.kind === "generated" && lease.templates.length > 0 ? (
+          {lease.kind === "generated" ? (
             <section
               className="border rounded-lg p-4"
               data-testid="lease-templates-card"
             >
-              <p className="text-xs text-muted-foreground uppercase font-medium tracking-wide mb-2">
-                {lease.templates.length === 1 ? "Template" : "Templates"}
-              </p>
-              <ul className="flex flex-wrap gap-2">
-                {lease.templates.map((t) => (
-                  <li key={t.id}>
-                    <Link
-                      to={`/lease-templates/${t.id}`}
-                      data-testid={`lease-template-link-${t.id}`}
-                      className="inline-block text-xs px-2 py-1 rounded-md bg-muted text-foreground hover:bg-muted/70"
-                    >
-                      {t.name}{" "}
-                      <span className="text-muted-foreground">v{t.version}</span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <p className="text-xs text-muted-foreground uppercase font-medium tracking-wide">
+                  {lease.templates.length === 1 ? "Template" : "Templates"}
+                </p>
+                {canWrite ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowAddTemplateModal(true)}
+                    data-testid="lease-add-template-button"
+                    className="h-7 px-2 text-xs"
+                  >
+                    <Plus size={12} className="mr-1" />
+                    Add template
+                  </Button>
+                ) : null}
+              </div>
+              {lease.templates.length > 0 ? (
+                <ul className="flex flex-wrap gap-2">
+                  {lease.templates.map((t) => (
+                    <li key={t.id}>
+                      <Link
+                        to={`/lease-templates/${t.id}`}
+                        data-testid={`lease-template-link-${t.id}`}
+                        className="inline-block text-xs px-2 py-1 rounded-md bg-muted text-foreground hover:bg-muted/70"
+                      >
+                        {t.name}{" "}
+                        <span className="text-muted-foreground">v{t.version}</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  No templates yet — add one to generate documents.
+                </p>
+              )}
             </section>
+          ) : null}
+
+          {showAddTemplateModal && lease ? (
+            <LeaseAddTemplateModal
+              leaseId={lease.id}
+              existingTemplateIds={lease.templates.map((t) => t.id)}
+              onClose={() => setShowAddTemplateModal(false)}
+            />
           ) : null}
 
           {/* Applicant / Tenant card */}

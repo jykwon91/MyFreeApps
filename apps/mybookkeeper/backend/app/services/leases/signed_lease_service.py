@@ -527,6 +527,203 @@ async def update_lease(
 # Generate (renders the template files into MinIO + creates attachments)
 # ---------------------------------------------------------------------------
 
+class TemplatesAlreadyLinkedError(ValueError):
+    """One or more template_ids are already linked to this lease."""
+
+    def __init__(self, duplicate_ids: list[uuid.UUID]) -> None:
+        self.duplicate_ids = duplicate_ids
+        super().__init__(f"Templates already linked: {duplicate_ids}")
+
+
+class ImportedLeaseTemplateError(ValueError):
+    """Cannot add templates to an imported lease."""
+
+
+# ---------------------------------------------------------------------------
+# Add templates to an existing generated lease + render only the new files
+# ---------------------------------------------------------------------------
+
+async def add_templates_and_generate(
+    *,
+    user_id: uuid.UUID,
+    organization_id: uuid.UUID,
+    lease_id: uuid.UUID,
+    template_ids: list[uuid.UUID],
+) -> SignedLeaseResponse:
+    """Link additional templates to an existing lease and render only their files.
+
+    Validates:
+    - All ``template_ids`` exist and belong to the same org as the lease.
+    - None are already linked to the lease (returns the duplicates in the error).
+    - ``lease.kind == "generated"`` (imported leases don't support templates).
+
+    Then, for each new template:
+    - Inserts a row in ``signed_lease_templates`` with display_order = max + N.
+    - Downloads each template file, runs placeholder substitution using
+      ``lease.values``, and uploads the rendered output as a new
+      ``SignedLeaseAttachment`` (kind=``rendered_original``).
+    - Does NOT touch existing attachments.
+
+    Partial success: if one template's render fails the DB row and MinIO
+    objects for that template are rolled back; others succeed. Failures are
+    logged and returned in the response's ``failed_template_ids`` field.
+    """
+    storage = get_storage()
+    if storage is None:
+        raise StorageNotConfiguredError("Object storage is not configured")
+
+    async with unit_of_work() as db:
+        lease = await signed_lease_repo.get(
+            db,
+            lease_id=lease_id,
+            user_id=user_id,
+            organization_id=organization_id,
+        )
+        if lease is None:
+            raise SignedLeaseNotFoundError(f"Lease {lease_id} not found")
+        if lease.kind != "generated":
+            raise ImportedLeaseTemplateError(
+                "Cannot add templates to an imported lease"
+            )
+
+        # Validate every template is in scope.
+        for tid in template_ids:
+            template = await lease_template_repo.get(
+                db,
+                template_id=tid,
+                user_id=user_id,
+                organization_id=organization_id,
+            )
+            if template is None:
+                raise TemplateNotFoundError(f"Template {tid} not found")
+
+        # Reject any that are already linked.
+        existing_rows = await signed_lease_template_repo.list_for_lease(
+            db, lease_id=lease_id,
+        )
+        existing_ids = {r.template_id for r in existing_rows}
+        duplicates = [tid for tid in template_ids if tid in existing_ids]
+        if duplicates:
+            raise TemplatesAlreadyLinkedError(duplicates)
+
+        # Compute the starting display_order for the new links.
+        max_order = await signed_lease_template_repo.max_display_order_for_lease(
+            db, lease_id=lease_id,
+        )
+
+        # Load files + placeholders for only the new templates.
+        new_files: list = []         # (template_file_row, template_id)
+        placeholders: list = []
+        seen_placeholder_keys: set[str] = set()
+        # Also include placeholders from already-linked templates so computed
+        # expressions that reference existing keys still resolve correctly.
+        for r in existing_rows:
+            for p in await lease_template_placeholder_repo.list_for_template(
+                db, template_id=r.template_id,
+            ):
+                if p.key not in seen_placeholder_keys:
+                    seen_placeholder_keys.add(p.key)
+                    placeholders.append(p)
+
+        for order_offset, tid in enumerate(template_ids):
+            tpl_files = await lease_template_file_repo.list_for_template(
+                db, template_id=tid,
+            )
+            for f in tpl_files:
+                new_files.append((f, tid))
+            for p in await lease_template_placeholder_repo.list_for_template(
+                db, template_id=tid,
+            ):
+                if p.key not in seen_placeholder_keys:
+                    seen_placeholder_keys.add(p.key)
+                    placeholders.append(p)
+
+        # Persist the new template links before rendering (render can be long).
+        for order_offset, tid in enumerate(template_ids):
+            await signed_lease_template_repo.create(
+                db,
+                lease_id=lease_id,
+                template_id=tid,
+                display_order=max_order + 1 + order_offset,
+            )
+
+        values_snapshot = dict(lease.values or {})
+
+    # Build substitution dict from the lease's existing values.
+    substitutions: dict[str, str] = {
+        k: "" if v is None else str(v) for k, v in values_snapshot.items()
+    }
+    for p in placeholders:
+        if p.input_type == "computed" and p.computed_expr:
+            try:
+                substitutions[p.key] = evaluate(p.computed_expr, values_snapshot)
+            except ComputedExprError as exc:
+                logger.warning(
+                    "Computed placeholder %s failed to evaluate: %s", p.key, exc,
+                )
+                substitutions[p.key] = ""
+
+    # Render each new template's files individually; partial success is fine.
+    now = _dt.datetime.now(_dt.timezone.utc)
+    for f, tid in new_files:
+        uploaded_key: str | None = None
+        try:
+            raw = storage.download_file(f.storage_key)
+            if f.content_type == DOCX_MIME:
+                rendered_bytes, _ = render_docx_bytes_to_pdf(raw, substitutions)
+                out_filename = _swap_extension(f.filename, ".pdf")
+                out_ct = "application/pdf"
+            elif f.content_type in ("text/markdown", "text/plain"):
+                text = raw.decode("utf-8", errors="replace")
+                rendered_md_text = render_md(text, substitutions)
+                rendered_bytes = render_md_text_to_pdf_or_keep(rendered_md_text)
+                out_filename = _swap_extension(f.filename, ".pdf")
+                out_ct = "application/pdf"
+            else:
+                rendered_bytes = raw
+                out_filename = f.filename
+                out_ct = f.content_type
+
+            attachment_id = uuid.uuid4()
+            storage_key = f"signed-leases/{lease_id}/{attachment_id}"
+            storage.upload_file(storage_key, rendered_bytes, out_ct)
+            uploaded_key = storage_key
+
+            async with unit_of_work() as db:
+                await signed_lease_attachment_repo.create(
+                    db,
+                    lease_id=lease_id,
+                    storage_key=storage_key,
+                    filename=out_filename,
+                    content_type=out_ct,
+                    size_bytes=len(rendered_bytes),
+                    kind="rendered_original",
+                    uploaded_by_user_id=user_id,
+                    uploaded_at=now,
+                )
+        except Exception:  # noqa: BLE001
+            logger.error(
+                "Failed to render/upload file %s for template %s on lease %s",
+                f.filename,
+                tid,
+                lease_id,
+                exc_info=True,
+            )
+            if uploaded_key is not None:
+                try:
+                    storage.delete_file(uploaded_key)
+                except Exception:  # noqa: BLE001
+                    logger.warning(
+                        "Failed to clean up partially-uploaded file %s", uploaded_key,
+                    )
+
+    return await get_lease(
+        user_id=user_id,
+        organization_id=organization_id,
+        lease_id=lease_id,
+    )
+
+
 def should_auto_email_after_generate(
     *, previous_status: str, auto_email_tenant: bool, last_emailed_to_tenant_at,
 ) -> bool:
