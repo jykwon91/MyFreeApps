@@ -5,10 +5,15 @@ import AlertBox from "@/shared/components/ui/AlertBox";
 import LoadingButton from "@/shared/components/ui/LoadingButton";
 import Button from "@/shared/components/ui/Button";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
-import { useGetSignedLeasesQuery } from "@/shared/store/signedLeasesApi";
+import {
+  useGetSignedLeasesQuery,
+  useDeleteSignedLeaseMutation,
+} from "@/shared/store/signedLeasesApi";
+import { showError, showSuccess } from "@/shared/lib/toast-store";
 import LeaseImportDialog from "@/app/features/leases/LeaseImportDialog";
 import { useLeasesListMode } from "@/app/features/leases/useLeasesListMode";
 import LeasesListBody from "@/app/features/leases/LeasesListBody";
+import type { SignedLeaseSummary } from "@/shared/types/lease/signed-lease-summary";
 
 export default function Leases() {
   const canWrite = useCanWrite();
@@ -16,8 +21,18 @@ export default function Leases() {
   const [showImportDialog, setShowImportDialog] = useState(false);
   const { data, isLoading, isFetching, isError, refetch } =
     useGetSignedLeasesQuery();
+  const [deleteLease, { isLoading: isDeleting }] = useDeleteSignedLeaseMutation();
   const leases = data?.items ?? [];
   const mode = useLeasesListMode({ isLoading, isError, leaseCount: leases.length });
+
+  async function handleDelete(lease: SignedLeaseSummary) {
+    try {
+      await deleteLease(lease.id).unwrap();
+      showSuccess("Lease deleted.");
+    } catch {
+      showError("Couldn't delete that lease. Please try again.");
+    }
+  }
 
   return (
     <main className="p-4 sm:p-8 space-y-6">
@@ -65,7 +80,13 @@ export default function Leases() {
         </AlertBox>
       ) : null}
 
-      <LeasesListBody mode={mode} leases={leases} />
+      <LeasesListBody
+        mode={mode}
+        leases={leases}
+        canWrite={canWrite}
+        onDelete={handleDelete}
+        isDeleting={isDeleting}
+      />
     </main>
   );
 }
