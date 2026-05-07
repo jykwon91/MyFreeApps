@@ -15,6 +15,7 @@ import { inferKindsForFiles } from "@/shared/lib/infer-attachment-kind";
 import type { SignedLeaseAttachment } from "@/shared/types/lease/signed-lease-attachment";
 import AttachmentViewer from "@/app/features/leases/AttachmentViewer";
 import LeaseAttachmentRow from "@/app/features/leases/LeaseAttachmentRow";
+import ConfirmDialog from "@/shared/components/ui/ConfirmDialog";
 
 export interface LeaseAttachmentsSectionProps {
   leaseId: string;
@@ -33,12 +34,14 @@ const ALLOWED_MIME = [
 export default function LeaseAttachmentsSection({ leaseId, attachments, canWrite }: LeaseAttachmentsSectionProps) {
   const [uploadAttachment, { isLoading: isUploading }] =
     useUploadSignedLeaseAttachmentMutation();
-  const [deleteAttachment] = useDeleteSignedLeaseAttachmentMutation();
+  const [deleteAttachment, { isLoading: isDeleting }] =
+    useDeleteSignedLeaseAttachmentMutation();
   const [updateAttachment] = useUpdateLeaseAttachmentMutation();
 
   const [manualKind, setManualKind] = useState<LeaseAttachmentKind>("signed_lease");
   const [isDragging, setIsDragging] = useState(false);
   const [viewingAttachment, setViewingAttachment] = useState<SignedLeaseAttachment | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<SignedLeaseAttachment | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function handleFiles(files: File[]) {
@@ -74,11 +77,17 @@ export default function LeaseAttachmentsSection({ leaseId, attachments, canWrite
     }
   }
 
-  async function handleDelete(att: SignedLeaseAttachment) {
-    if (!window.confirm(`Remove ${att.filename}?`)) return;
+  function handleDelete(att: SignedLeaseAttachment) {
+    setPendingDelete(att);
+  }
+
+  async function confirmDelete() {
+    if (!pendingDelete) return;
+    const att = pendingDelete;
     try {
       await deleteAttachment({ leaseId, attachmentId: att.id }).unwrap();
       showSuccess("Attachment removed.");
+      setPendingDelete(null);
     } catch {
       showError("Couldn't remove that file.");
     }
@@ -201,6 +210,21 @@ export default function LeaseAttachmentsSection({ leaseId, attachments, canWrite
           onClose={() => setViewingAttachment(null)}
         />
       ) : null}
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title="Remove attachment?"
+        description={
+          pendingDelete
+            ? `${pendingDelete.filename} will be permanently deleted. The lease record itself will not be affected.`
+            : ""
+        }
+        confirmLabel="Remove"
+        variant="danger"
+        isLoading={isDeleting}
+        onConfirm={confirmDelete}
+        onCancel={() => setPendingDelete(null)}
+      />
     </section>
   );
 }
