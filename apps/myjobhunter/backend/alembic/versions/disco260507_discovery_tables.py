@@ -45,7 +45,7 @@ _DISCOVERY_SOURCE_KINDS = (
     "remoteok",
     "hn_who_is_hiring",
     "workatastartup",
-    "flybyapis",
+    "jsearch",
     "other",
 )
 _FETCH_STATUSES = ("running", "success", "partial", "error")

@@ -2,7 +2,7 @@
 
 Each row is one source the operator has activated for proactive
 discovery. The ``source`` enum names the adapter we run (greenhouse,
-lever, ashby, remoteok, hn_who_is_hiring, workatastartup, flybyapis).
+lever, ashby, remoteok, hn_who_is_hiring, workatastartup, jsearch).
 ``config`` carries adapter-specific settings (board slugs for ATS feeds,
 Boolean keyword strings for aggregator queries).
 
@@ -90,7 +90,7 @@ class DiscoverySource(Base):
     __table_args__ = (
         CheckConstraint(
             "source IN ('greenhouse','lever','ashby','remoteok',"
-            "'hn_who_is_hiring','workatastartup','flybyapis','other')",
+            "'hn_who_is_hiring','workatastartup','jsearch','other')",
             name="chk_discovery_source",
         ),
         CheckConstraint(

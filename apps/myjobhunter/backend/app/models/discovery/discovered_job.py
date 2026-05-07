@@ -169,7 +169,7 @@ class DiscoveredJob(Base):
     __table_args__ = (
         CheckConstraint(
             "source IN ('greenhouse','lever','ashby','remoteok',"
-            "'hn_who_is_hiring','workatastartup','flybyapis','other')",
+            "'hn_who_is_hiring','workatastartup','jsearch','other')",
             name="chk_discovered_source",
         ),
         CheckConstraint(

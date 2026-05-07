@@ -41,7 +41,7 @@ async def test_discovery_source_create(db: AsyncSession, user_factory):
     user = await user_factory()
     src = DiscoverySource(
         user_id=_uid(user),
-        source="flybyapis",
+        source="jsearch",
         config={"query": "senior backend engineer python remote"},
     )
     db.add(src)
@@ -91,7 +91,7 @@ async def test_discovered_job_create_minimal(db: AsyncSession, user_factory):
     user = await user_factory()
     job = DiscoveredJob(
         user_id=_uid(user),
-        source="flybyapis",
+        source="jsearch",
         source_external_id="abc123",
         title="Senior Backend Engineer",
         company_name="Acme Corp",
@@ -114,7 +114,7 @@ async def test_discovered_job_dedup_unique_constraint(
     db.add(
         DiscoveredJob(
             user_id=_uid(user),
-            source="flybyapis",
+            source="jsearch",
             source_external_id="dup-1",
             title="Job A",
             company_name="Acme",
@@ -125,7 +125,7 @@ async def test_discovered_job_dedup_unique_constraint(
     db.add(
         DiscoveredJob(
             user_id=_uid(user),
-            source="flybyapis",
+            source="jsearch",
             source_external_id="dup-1",
             title="Job A re-fetch",
             company_name="Acme",
@@ -142,7 +142,7 @@ async def test_discovered_job_state_mutex_constraint(
     user = await user_factory()
     job = DiscoveredJob(
         user_id=_uid(user),
-        source="flybyapis",
+        source="jsearch",
         source_external_id="state-1",
         title="X",
         company_name="Y",
@@ -179,7 +179,7 @@ async def test_discovered_job_promote_consistency_constraint(
     db.add(
         DiscoveredJob(
             user_id=_uid(user),
-            source="flybyapis",
+            source="jsearch",
             source_external_id="promote-1",
             title="Z",
             company_name="Acme",
@@ -199,7 +199,7 @@ async def test_discovered_job_score_range_constraint(
     db.add(
         DiscoveredJob(
             user_id=_uid(user),
-            source="flybyapis",
+            source="jsearch",
             source_external_id="score-1",
             title="X",
             company_name="Y",
@@ -274,7 +274,7 @@ async def test_inbox_index_query_pattern(db: AsyncSession, user_factory):
     db.add(
         DiscoveredJob(
             user_id=_uid(user),
-            source="flybyapis",
+            source="jsearch",
             source_external_id="active-1",
             title="Active",
             company_name="Acme",
@@ -285,7 +285,7 @@ async def test_inbox_index_query_pattern(db: AsyncSession, user_factory):
     db.add(
         DiscoveredJob(
             user_id=_uid(user),
-            source="flybyapis",
+            source="jsearch",
             source_external_id="dismissed-1",
             title="Dismissed",
             company_name="Acme",
