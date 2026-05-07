@@ -635,6 +635,7 @@
         "LeaseImportDialog.test.tsx",
         "LeaseGenerateForm.test.tsx",
         "LeaseNew.test.tsx",
+        "LeasesListBody.test.tsx",
         "AISuggestionsPanel.test.tsx",
         "LeaseTemplateUploadDialog.test.tsx",
         "AttachmentViewer.test.tsx",
