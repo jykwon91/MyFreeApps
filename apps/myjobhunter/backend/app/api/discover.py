@@ -147,12 +147,7 @@ async def refresh_source(
     - 503 — JSEARCH_API_KEY not configured (or invalid)
     - 501 — no adapter for this source kind (shouldn't happen; defensive)
     """
-    ip = get_client_ip(request)
-    if not _REFRESH_LIMITER.allow(ip):
-        raise HTTPException(
-            status_code=429,
-            detail="Refresh rate limit exceeded — try again in a few minutes",
-        )
+    _REFRESH_LIMITER.check(get_client_ip(request))
 
     try:
         result = await discovery_fetch_service.fetch_source(
