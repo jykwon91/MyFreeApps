@@ -118,7 +118,7 @@ class Inquiry(Base):
     # Public form fields — collected on the prospect-facing form. NULL on
     # Gmail-parsed and manually-entered inquiries.
     move_in_date: Mapped[_dt.date | None] = mapped_column(Date, nullable=True)
-    lease_length_months: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
+    move_out_date: Mapped[_dt.date | None] = mapped_column(Date, nullable=True)
     occupant_count: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
     has_pets: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     pets_description: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -190,10 +190,6 @@ class Inquiry(Base):
         CheckConstraint(
             "spam_score IS NULL OR (spam_score >= 0 AND spam_score <= 100)",
             name="chk_inquiry_spam_score_range",
-        ),
-        CheckConstraint(
-            "lease_length_months IS NULL OR (lease_length_months BETWEEN 1 AND 24)",
-            name="chk_inquiry_lease_length_months",
         ),
         CheckConstraint(
             "occupant_count IS NULL OR (occupant_count BETWEEN 1 AND 10)",

@@ -51,7 +51,7 @@ export interface InquiryResponse {
   spam_status: InquirySpamStatus;
   spam_score: number | null;
   move_in_date: string | null;
-  lease_length_months: number | null;
+  move_out_date: string | null;
   occupant_count: number | null;
   has_pets: boolean | null;
   pets_description: string | null;

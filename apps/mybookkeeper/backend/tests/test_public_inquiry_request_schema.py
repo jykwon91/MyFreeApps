@@ -22,7 +22,7 @@ def _payload(**overrides) -> dict:
         "email": "alice@example.com",
         "phone": "555-123-4567",
         "move_in_date": _dt.date.today() + _dt.timedelta(days=14),
-        "lease_length_months": 6,
+        "move_out_date": _dt.date.today() + _dt.timedelta(days=14 + 180),
         "occupant_count": 1,
         "has_pets": False,
         "vehicle_count": 1,
@@ -74,3 +74,29 @@ class TestUsRegionValidation:
         del payload["current_country"]
         req = PublicInquiryRequest(**payload)
         assert req.current_country == "US"
+
+
+class TestMoveDateValidation:
+    def test_rejects_move_out_equal_to_move_in(self) -> None:
+        today = _dt.date.today()
+        with pytest.raises(ValidationError):
+            PublicInquiryRequest(**_payload(
+                move_in_date=today + _dt.timedelta(days=14),
+                move_out_date=today + _dt.timedelta(days=14),
+            ))
+
+    def test_rejects_move_out_before_move_in(self) -> None:
+        today = _dt.date.today()
+        with pytest.raises(ValidationError):
+            PublicInquiryRequest(**_payload(
+                move_in_date=today + _dt.timedelta(days=20),
+                move_out_date=today + _dt.timedelta(days=14),
+            ))
+
+    def test_accepts_short_stay_under_30_days(self) -> None:
+        today = _dt.date.today()
+        req = PublicInquiryRequest(**_payload(
+            move_in_date=today + _dt.timedelta(days=14),
+            move_out_date=today + _dt.timedelta(days=21),
+        ))
+        assert (req.move_out_date - req.move_in_date).days == 7

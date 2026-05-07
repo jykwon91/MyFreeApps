@@ -19,6 +19,10 @@ from app.core.config import settings
 from app.db.session import AsyncSessionLocal
 from app.repositories.inquiries import inquiry_repo
 from app.repositories.listings import listing_repo
+from app.services.inquiries.inquiry_rent_proration import (
+    estimated_total_rent,
+    stay_duration_days,
+)
 from app.services.system import email_service
 
 logger = logging.getLogger(__name__)
@@ -31,7 +35,9 @@ def _build_email_body(
     spam_status: str,
     spam_score: float | None,
     move_in_date: str,
-    lease_length_months: int,
+    move_out_date: str,
+    duration_days: int | None,
+    estimated_rent: str | None,
     occupant_count: int,
     has_pets: bool,
     why_this_room: str,
@@ -60,8 +66,12 @@ def _build_email_body(
         </p>
         <p style="margin: 0 0 8px 0; font-size: 14px; color: #6b7280;">
           <strong>Move-in:</strong> {html_mod.escape(move_in_date)}
-          &nbsp;·&nbsp; <strong>Lease:</strong> {lease_length_months} months
-          &nbsp;·&nbsp; <strong>Occupants:</strong> {occupant_count}
+          &nbsp;·&nbsp; <strong>Move-out:</strong> {html_mod.escape(move_out_date)}
+          {f"&nbsp;·&nbsp; <strong>Duration:</strong> {duration_days} days" if duration_days is not None else ""}
+        </p>
+        {f'<p style="margin: 0 0 8px 0; font-size: 14px; color: #6b7280;"><strong>Estimated total rent:</strong> ${estimated_rent}</p>' if estimated_rent else ""}
+        <p style="margin: 0 0 8px 0; font-size: 14px; color: #6b7280;">
+          <strong>Occupants:</strong> {occupant_count}
           &nbsp;·&nbsp; <strong>Pets:</strong> {pets_label}
         </p>
         <p style="margin: 12px 0 0 0; font-size: 14px; color: #374151; white-space: pre-wrap;">
@@ -138,6 +148,15 @@ async def send_inquiry_notification(
         f"{subject_prefix}[New Inquiry] {inquiry.inquirer_name or 'Anonymous'} — "
         f"{listing_title}"
     )
+    duration = stay_duration_days(inquiry.move_in_date, inquiry.move_out_date)
+    estimated = (
+        estimated_total_rent(
+            monthly_rate=listing.monthly_rate if listing is not None else None,
+            move_in_date=inquiry.move_in_date,
+            move_out_date=inquiry.move_out_date,
+        )
+        if listing is not None else None
+    )
     body = _build_email_body(
         name=inquiry.inquirer_name or "Anonymous",
         listing_title=listing_title,
@@ -148,7 +167,11 @@ async def send_inquiry_notification(
         move_in_date=(
             inquiry.move_in_date.isoformat() if inquiry.move_in_date else "(not set)"
         ),
-        lease_length_months=inquiry.lease_length_months or 0,
+        move_out_date=(
+            inquiry.move_out_date.isoformat() if inquiry.move_out_date else "(not set)"
+        ),
+        duration_days=duration,
+        estimated_rent=f"{estimated:,.2f}" if estimated is not None else None,
         occupant_count=inquiry.occupant_count or 0,
         has_pets=bool(inquiry.has_pets),
         why_this_room=inquiry.why_this_room or "",

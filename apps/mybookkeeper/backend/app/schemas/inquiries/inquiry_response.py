@@ -51,7 +51,7 @@ class InquiryResponse(BaseModel):
     spam_score: float | None = None
 
     move_in_date: _dt.date | None = None
-    lease_length_months: int | None = None
+    move_out_date: _dt.date | None = None
     occupant_count: int | None = None
     has_pets: bool | None = None
     pets_description: str | None = None

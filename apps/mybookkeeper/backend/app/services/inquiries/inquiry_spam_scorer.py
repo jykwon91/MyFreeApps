@@ -80,7 +80,7 @@ def _build_prompt(
     current_region: str,
     employment_status: str,
     move_in_date: str,
-    lease_length_months: int,
+    move_out_date: str,
     occupant_count: int,
     has_pets: bool,
     pets_description: str | None,
@@ -120,7 +120,7 @@ def _build_prompt(
         f"- Current location: {current_city}, {current_region}, {current_country}\n"
         f"- Employment: {employment_status}\n"
         f"- Move-in: {move_in_date}\n"
-        f"- Lease length: {lease_length_months} months\n"
+        f"- Move-out: {move_out_date}\n"
         f"- Occupants: {occupant_count}\n"
         f"- Pets: {pets_line}\n"
         f"- Vehicles: {vehicle_count}\n"
@@ -169,7 +169,7 @@ async def score_inquiry(
     current_region: str,
     employment_status: str,
     move_in_date: str,
-    lease_length_months: int,
+    move_out_date: str,
     occupant_count: int,
     has_pets: bool,
     pets_description: str | None,
@@ -191,7 +191,7 @@ async def score_inquiry(
         current_region=current_region,
         employment_status=employment_status,
         move_in_date=move_in_date,
-        lease_length_months=lease_length_months,
+        move_out_date=move_out_date,
         occupant_count=occupant_count,
         has_pets=has_pets,
         pets_description=pets_description,

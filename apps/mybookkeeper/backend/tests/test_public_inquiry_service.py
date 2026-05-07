@@ -98,7 +98,7 @@ def _payload(slug: str = "master-bedroom-abc123", **overrides) -> PublicInquiryR
         "email": "alice@example.com",
         "phone": "555-123-4567",
         "move_in_date": _dt.date.today() + _dt.timedelta(days=14),
-        "lease_length_months": 6,
+        "move_out_date": _dt.date.today() + _dt.timedelta(days=14 + 180),
         "occupant_count": 1,
         "has_pets": False,
         "pets_description": None,
@@ -161,7 +161,8 @@ class TestPublicInquiryHappyPath:
         assert inquiry.spam_score is not None
         assert float(inquiry.spam_score) == 85.0
         assert inquiry.move_in_date is not None
-        assert inquiry.lease_length_months == 6
+        assert inquiry.move_out_date is not None
+        assert (inquiry.move_out_date - inquiry.move_in_date).days == 180
         assert inquiry.listing_id == test_listing.id
 
         # Assessments — turnstile, honeypot, submit_timing, disposable_email, claude_score

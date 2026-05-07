@@ -29,7 +29,7 @@ interface FormState {
   email: string;
   phone: string;
   moveInDate: string;
-  leaseLengthMonths: string;
+  moveOutDate: string;
   occupantCount: string;
   hasPets: string; // "" | "yes" | "no"
   petsDescription: string;
@@ -48,7 +48,7 @@ type ValidatedField =
   | "email"
   | "phone"
   | "moveInDate"
-  | "leaseLengthMonths"
+  | "moveOutDate"
   | "occupantCount"
   | "hasPets"
   | "currentCity"
@@ -65,7 +65,7 @@ const INITIAL_FORM: FormState = {
   email: "",
   phone: "",
   moveInDate: "",
-  leaseLengthMonths: "",
+  moveOutDate: "",
   occupantCount: "1",
   hasPets: "",
   petsDescription: "",
@@ -85,7 +85,7 @@ const FIELD_FOCUS_TARGETS: { key: ValidatedField; id: string }[] = [
   { key: "email", id: "email" },
   { key: "phone", id: "phone" },
   { key: "moveInDate", id: "move-in" },
-  { key: "leaseLengthMonths", id: "lease" },
+  { key: "moveOutDate", id: "move-out" },
   { key: "occupantCount", id: "occupants" },
   { key: "hasPets", id: "has-pets-no" },
   { key: "currentCity", id: "city" },
@@ -94,6 +94,31 @@ const FIELD_FOCUS_TARGETS: { key: ValidatedField; id: string }[] = [
   { key: "employmentStatus", id: "employment" },
   { key: "whyThisRoom", id: "why" },
 ];
+
+const PRORATION_DAYS_PER_MONTH = 30;
+
+interface RentEstimate {
+  days: number;
+  total: string;
+}
+
+function rentEstimate(
+  monthlyRate: number | string,
+  moveInISO: string,
+  moveOutISO: string,
+): RentEstimate | null {
+  if (moveInISO.length !== 10 || moveOutISO.length !== 10) return null;
+  const monthly = typeof monthlyRate === "string"
+    ? Number.parseFloat(monthlyRate)
+    : monthlyRate;
+  if (!Number.isFinite(monthly) || monthly <= 0) return null;
+  const inMs = Date.parse(moveInISO);
+  const outMs = Date.parse(moveOutISO);
+  if (Number.isNaN(inMs) || Number.isNaN(outMs) || outMs <= inMs) return null;
+  const days = Math.round((outMs - inMs) / (1000 * 60 * 60 * 24));
+  const total = (monthly * days) / PRORATION_DAYS_PER_MONTH;
+  return { days, total: total.toFixed(2) };
+}
 
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
@@ -125,11 +150,10 @@ function validateForm(state: FormState): FieldErrors {
     errors.moveInDate = "Move-in date can't be in the past.";
   }
 
-  const lease = Number.parseInt(state.leaseLengthMonths, 10);
-  if (!Number.isFinite(lease) || lease < 1) {
-    errors.leaseLengthMonths = "Please enter at least 1 month.";
-  } else if (lease > 24) {
-    errors.leaseLengthMonths = "Maximum lease length is 24 months.";
+  if (state.moveOutDate.length !== 10) {
+    errors.moveOutDate = "Please choose a move-out date.";
+  } else if (state.moveInDate && state.moveOutDate <= state.moveInDate) {
+    errors.moveOutDate = "Move-out must be after move-in.";
   }
 
   const occupants = Number.parseInt(state.occupantCount, 10);
@@ -301,7 +325,7 @@ export default function PublicInquiryForm() {
       email: form.email.trim(),
       phone: form.phone.trim(),
       move_in_date: form.moveInDate,
-      lease_length_months: Number.parseInt(form.leaseLengthMonths, 10),
+      move_out_date: form.moveOutDate,
       occupant_count: Number.parseInt(form.occupantCount, 10),
       has_pets: form.hasPets === "yes",
       pets_description:
@@ -511,28 +535,44 @@ export default function PublicInquiryForm() {
               </Field>
 
               <Field
-                label="Lease length (months)"
-                htmlFor="lease"
-                error={visibleErrors.leaseLengthMonths}
+                label="Move-out date"
+                htmlFor="move-out"
+                error={visibleErrors.moveOutDate}
               >
                 <input
-                  id="lease"
-                  type="number"
+                  id="move-out"
+                  type="date"
                   required
-                  min={1}
-                  max={24}
-                  value={form.leaseLengthMonths}
-                  onChange={(e) => update("leaseLengthMonths", e.target.value)}
-                  onBlur={() => markTouched("leaseLengthMonths")}
-                  aria-invalid={!!visibleErrors.leaseLengthMonths}
+                  value={form.moveOutDate}
+                  onChange={(e) => update("moveOutDate", e.target.value)}
+                  onBlur={() => markTouched("moveOutDate")}
+                  aria-invalid={!!visibleErrors.moveOutDate}
                   aria-describedby={
-                    visibleErrors.leaseLengthMonths ? "lease-error" : undefined
+                    visibleErrors.moveOutDate ? "move-out-error" : undefined
                   }
-                  className={inputClasses(!!visibleErrors.leaseLengthMonths)}
-                  data-testid="public-inquiry-lease-length"
+                  className={inputClasses(!!visibleErrors.moveOutDate)}
+                  data-testid="public-inquiry-move-out-date"
                 />
               </Field>
             </div>
+
+            {(() => {
+              const est = rentEstimate(
+                listing.monthly_rate,
+                form.moveInDate,
+                form.moveOutDate,
+              );
+              if (est === null) return null;
+              return (
+                <p
+                  className="text-sm text-muted-foreground"
+                  data-testid="public-inquiry-estimated-rent"
+                >
+                  Estimated total for {est.days} days: ${est.total}
+                  {est.days < PRORATION_DAYS_PER_MONTH ? " (prorated)" : ""}
+                </p>
+              );
+            })()}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Field

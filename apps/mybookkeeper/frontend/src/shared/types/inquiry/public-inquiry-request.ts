@@ -11,7 +11,7 @@ export interface PublicInquiryRequest {
   email: string;
   phone: string;
   move_in_date: string;
-  lease_length_months: number;
+  move_out_date: string;
   occupant_count: number;
   has_pets: boolean;
   pets_description: string | null;
