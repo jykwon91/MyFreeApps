@@ -4,10 +4,11 @@
  * Verifies:
  * - PDF shows iframe + "Open in new tab" link.
  * - Image shows <img> element.
- * - Other content type (DOCX) shows the download fallback.
+ * - DOCX shows the loading skeleton while conversion is in progress.
+ * - Other content types show the download fallback.
  */
 import { render, screen } from "@testing-library/react";
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import AttachmentViewer from "@/app/features/leases/AttachmentViewer";
 
 const BASE_PROPS = {
@@ -75,14 +76,56 @@ describe("AttachmentViewer — image", () => {
   });
 });
 
-describe("AttachmentViewer — DOCX fallback", () => {
-  it("shows download fallback for non-previewable content type", () => {
+describe("AttachmentViewer — DOCX", () => {
+  beforeEach(() => {
+    // fetch is called inside useEffect; suppress jsdom fetch errors by
+    // returning a rejected promise (the component handles this as "error" state).
+    vi.stubGlobal("fetch", vi.fn(() => Promise.reject(new Error("fetch not available in jsdom"))));
+  });
+
+  it("renders the DOCX loading skeleton immediately on mount", () => {
     render(
       <AttachmentViewer
         {...BASE_PROPS}
         url="https://storage.example.com/presigned/lease.docx"
         filename="lease.docx"
         contentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+      />,
+    );
+
+    // The skeleton should be present immediately (before the async fetch resolves)
+    expect(screen.getByTestId("attachment-viewer-docx-loading")).toBeInTheDocument();
+
+    // Should NOT show the generic download fallback or an iframe
+    expect(screen.queryByTestId("attachment-viewer-download-fallback")).toBeNull();
+    expect(screen.queryByTestId("attachment-viewer-iframe")).toBeNull();
+    expect(screen.queryByTestId("attachment-viewer-img")).toBeNull();
+  });
+
+  it("still shows the 'Open in new tab' link for DOCX", () => {
+    render(
+      <AttachmentViewer
+        {...BASE_PROPS}
+        url="https://storage.example.com/presigned/lease.docx"
+        filename="lease.docx"
+        contentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+      />,
+    );
+
+    const link = screen.getByTestId("attachment-viewer-open-in-new-tab");
+    expect(link).toBeInTheDocument();
+    expect(link.getAttribute("href")).toBe("https://storage.example.com/presigned/lease.docx");
+  });
+});
+
+describe("AttachmentViewer — other content types", () => {
+  it("shows download fallback for non-previewable content type", () => {
+    render(
+      <AttachmentViewer
+        {...BASE_PROPS}
+        url="https://storage.example.com/presigned/notes.txt"
+        filename="notes.txt"
+        contentType="text/plain"
       />,
     );
 
