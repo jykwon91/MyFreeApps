@@ -223,10 +223,28 @@ async def search(
             f"JSearch returned non-OK envelope: status={body.get('status') if isinstance(body, dict) else None!r}",
         )
 
-    raw_jobs = body.get("data", {}).get("jobs", [])
-    if not isinstance(raw_jobs, list):
+    # The "data" field has been observed in two shapes:
+    #   1. ``{"jobs": [...]}`` — documented + the shape returned by the
+    #      free-tier playground we tested against during PR #405
+    #   2. ``[posting, ...]`` — observed in production for some queries;
+    #      the wrapper dict is dropped and data is the job list directly
+    # Defensively handle both. A third hypothetical shape (data missing
+    # or non-list/dict) raises so we hear about it rather than silently
+    # returning zero results.
+    data = body.get("data")
+    if data is None:
+        raw_jobs: list = []
+    elif isinstance(data, list):
+        raw_jobs = data
+    elif isinstance(data, dict):
+        raw_jobs = data.get("jobs", [])
+        if not isinstance(raw_jobs, list):
+            raise JSearchInvalidResponseError(
+                f"JSearch data.jobs is not a list: {type(raw_jobs).__name__}",
+            )
+    else:
         raise JSearchInvalidResponseError(
-            f"JSearch jobs payload is not a list: {type(raw_jobs).__name__}",
+            f"JSearch data field is unexpected type: {type(data).__name__}",
         )
 
     normalized: list[dict] = []

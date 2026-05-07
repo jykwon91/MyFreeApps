@@ -3,7 +3,30 @@
 Issues discovered during development. New entries are appended; resolved entries are
 removed and the counts in this header are updated.
 
-**Open issues: 14 (Critical: 1 / High: 2 / Medium: 5 / Low: 6)**
+**Open issues: 15 (Critical: 1 / High: 2 / Medium: 5 / Low: 7)**
+
+---
+
+### [Admin Invites UX] "Cannot send invite to this email." doesn't tell operator why
+
+**Severity:** Low
+**Effort:** S
+**Location:** `apps/myjobhunter/backend/app/services/platform/invite_service.py` (raises) + `apps/myjobhunter/frontend/src/features/invite/...` (renders error)
+**Discovered:** 2026-05-07 — operator hit it after deploying the discovery feature
+
+**Problem:** The 409 message is intentionally generic — fires when (a) the email is already a registered user OR (b) there's already a pending invite for that email. The privacy reasoning (don't leak "is this email registered?" via the invite form) is right for end users, but the operator on `/admin/invites` is the only one who sees this UI and would benefit from knowing which case fired so they can act:
+
+- Already-registered → "User already exists; nothing to invite"
+- Pending invite → "Invite already pending; cancel it from the row above to resend"
+
+**Recommendation:** Two options, in increasing scope:
+
+1. **Backend exposes a distinct error code only on the admin route.** Keep the generic message for any non-admin caller (via the existing `register` flow), but on `POST /admin/invites` map the two cases to specific 409 detail strings. The admin role gate already means leakage is bounded to operators.
+2. **Frontend pre-flight:** before submitting, check if the email already appears in the visible pending-invites list and short-circuit with a UI hint. Doesn't help the registered-user case.
+
+Pick option 1; it's the cleaner and more informative path.
+
+**Why Low:** Doesn't break functionality — the operator can re-look at the pending list or query the DB to figure out which case fired. Just a UX paper-cut on a low-volume admin surface.
 
 ---
 
