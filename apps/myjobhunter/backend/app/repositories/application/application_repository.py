@@ -25,12 +25,28 @@ import datetime as _dt
 import uuid
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import literal_column, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.application.application import Application
 from app.models.application.application_event import ApplicationEvent
+from app.models.company.company import Company
+from app.models.job_analysis.job_analysis import JobAnalysis
+
+
+# Event types that DEFINE a kanban stage. Filtered out: ``note_added``,
+# ``email_received``, ``follow_up_sent`` — these record activity but
+# don't transition the application to a different column.
+_STAGE_EVENT_TYPES: tuple[str, ...] = (
+    "applied",
+    "interview_scheduled",
+    "interview_completed",
+    "offer_received",
+    "rejected",
+    "withdrawn",
+    "ghosted",
+)
 
 # Allowlist of columns that can be applied via the dynamic ``update``
 # function. Per the project security rule: "Always validate field names
@@ -199,6 +215,80 @@ async def list_with_status(
         rows = [(app, status) for app, status in rows if status == status_filter]
 
     return rows
+
+
+async def list_for_kanban(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+) -> list[dict[str, Any]]:
+    """Return non-archived, non-deleted applications shaped for the kanban.
+
+    Joins:
+    - ``companies`` (INNER) — for the company name + logo on each card
+    - ``application_events`` (LATERAL) — for the most-recent
+      *stage-defining* event (note_added / email_received /
+      follow_up_sent are excluded)
+    - ``job_analyses`` (LEFT) — for the verdict on the analysis that
+      spawned the application, if any
+
+    Tenant isolation: ``user_id`` is filtered on the application AND
+    on the lateral subquery's ``application_events`` join AND on the
+    ``job_analyses`` join. Per the security agent's "filter on both
+    sides of the join" rule, this is mandatory — without the
+    ``ja.user_id = a.user_id`` predicate, a misuse case where two
+    users have a colliding ``applied_application_id`` would leak the
+    other user's verdict.
+
+    Returns a list of dicts (not ORM objects) because the shape spans
+    three tables and the kanban schema is read-only — there's no
+    benefit to instantiating ORM rows we'll never mutate.
+    """
+    # LATERAL subquery: most-recent stage-defining event per application.
+    latest_event = (
+        select(
+            ApplicationEvent.event_type.label("latest_event_type"),
+            ApplicationEvent.occurred_at.label("stage_entered_at"),
+        )
+        .where(
+            ApplicationEvent.application_id == Application.id,
+            ApplicationEvent.user_id == user_id,
+            ApplicationEvent.event_type.in_(_STAGE_EVENT_TYPES),
+        )
+        .order_by(ApplicationEvent.occurred_at.desc())
+        .limit(1)
+        .lateral("e")
+    )
+
+    stmt = (
+        select(
+            Application.id,
+            Application.role_title,
+            Application.applied_at,
+            Application.archived,
+            Company.id.label("company_id"),
+            Company.name.label("company_name"),
+            Company.logo_url.label("company_logo_url"),
+            literal_column("e.latest_event_type").label("latest_event_type"),
+            literal_column("e.stage_entered_at").label("stage_entered_at"),
+            JobAnalysis.verdict,
+        )
+        .join(Company, Company.id == Application.company_id)
+        .outerjoin(latest_event, literal_column("true"))
+        .outerjoin(
+            JobAnalysis,
+            (JobAnalysis.applied_application_id == Application.id)
+            & (JobAnalysis.user_id == Application.user_id)
+            & (JobAnalysis.deleted_at.is_(None)),
+        )
+        .where(
+            Application.user_id == user_id,
+            Application.archived.is_(False),
+            Application.deleted_at.is_(None),
+        )
+        .order_by(Application.applied_at.desc().nullslast(), Application.created_at.desc())
+    )
+    result = await db.execute(stmt)
+    return [dict(row._mapping) for row in result.all()]
 
 
 async def create(db: AsyncSession, application: Application) -> Application:

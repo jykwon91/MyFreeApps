@@ -8,9 +8,12 @@ import type { ApplicationEventListResponse } from "@/types/application-event-lis
 import type { JdParseResponse } from "@/types/application/jd-parse-response";
 import type { JdUrlExtractRequest } from "@/types/application/jd-url-extract-request";
 import type { JdUrlExtractResponse } from "@/types/application/jd-url-extract-response";
+import type { KanbanColumn } from "@/types/kanban/kanban-column";
+import type { KanbanListResponse } from "@/types/kanban/kanban-item";
 
 const APPLICATIONS_TAG = "Applications";
 const APPLICATION_EVENTS_TAG = "ApplicationEvents";
+const APPLICATIONS_KANBAN_LIST_ID = "KANBAN_LIST" as const;
 
 /** Optional filters accepted by GET /applications. */
 export interface ApplicationsFilter {
@@ -21,6 +24,25 @@ const applicationsApi = baseApi.enhanceEndpoints({
   addTagTypes: [APPLICATIONS_TAG, APPLICATION_EVENTS_TAG],
 }).injectEndpoints({
   endpoints: (build) => ({
+    /**
+     * GET /applications?view=kanban
+     *
+     * Board-shaped rows: company name + logo, latest stage-defining
+     * event, and verdict from the analysis that spawned the application
+     * (if any). Refetches on focus so the drawer's mutations propagate
+     * to the board automatically.
+     */
+    listApplicationsKanban: build.query<KanbanListResponse, void>({
+      query: () => ({ url: "/applications?view=kanban", method: "GET" }),
+      providesTags: (result) =>
+        result
+          ? [
+              ...result.items.map(({ id }) => ({ type: APPLICATIONS_TAG, id }) as const),
+              { type: APPLICATIONS_TAG, id: APPLICATIONS_KANBAN_LIST_ID } as const,
+            ]
+          : [{ type: APPLICATIONS_TAG, id: APPLICATIONS_KANBAN_LIST_ID } as const],
+    }),
+
     listApplications: build.query<ApplicationListResponse, ApplicationsFilter | void>({
       query: (filter) => {
         const params = new URLSearchParams();
@@ -94,6 +116,45 @@ const applicationsApi = baseApi.enhanceEndpoints({
         { type: APPLICATION_EVENTS_TAG, id: applicationId },
         { type: APPLICATIONS_TAG, id: applicationId },
         { type: APPLICATIONS_TAG, id: "LIST" },
+        { type: APPLICATIONS_TAG, id: APPLICATIONS_KANBAN_LIST_ID },
+      ],
+    }),
+
+    /**
+     * POST /applications/{id}/transitions
+     *
+     * Persists a kanban-column drag as an event_log row. The drag handler
+     * fires this on every drop. Backend translates target_column ->
+     * event_type, applies a server-side ``occurred_at``, and dedups via
+     * ``idempotency_key`` inside a 30s window.
+     *
+     * Returns:
+     * - 201 with the created (or idempotency-resolved) ApplicationEvent
+     * - 400 when transition is not allowed from the current column
+     * - 404 when the application doesn't exist or belongs to another user
+     * - 429 when the per-user rate limit is exceeded (30/min)
+     *
+     * The drag handler patches the kanban list cache optimistically and
+     * relies on ``invalidatesTags`` only for the eventual-consistency
+     * fallback when the optimistic patch is wrong.
+     */
+    transitionApplication: build.mutation<
+      ApplicationEvent,
+      { applicationId: string; target_column: KanbanColumn; idempotency_key?: string }
+    >({
+      query: ({ applicationId, target_column, idempotency_key }) => ({
+        url: `/applications/${applicationId}/transitions`,
+        method: "POST",
+        data: {
+          target_column,
+          ...(idempotency_key !== undefined ? { idempotency_key } : {}),
+        },
+      }),
+      invalidatesTags: (_result, _err, { applicationId }) => [
+        { type: APPLICATION_EVENTS_TAG, id: applicationId },
+        { type: APPLICATIONS_TAG, id: applicationId },
+        { type: APPLICATIONS_TAG, id: "LIST" },
+        { type: APPLICATIONS_TAG, id: APPLICATIONS_KANBAN_LIST_ID },
       ],
     }),
 
@@ -142,12 +203,16 @@ const applicationsApi = baseApi.enhanceEndpoints({
 
 export const {
   useListApplicationsQuery,
+  useListApplicationsKanbanQuery,
   useGetApplicationQuery,
   useCreateApplicationMutation,
   useUpdateApplicationMutation,
   useDeleteApplicationMutation,
   useListApplicationEventsQuery,
   useLogApplicationEventMutation,
+  useTransitionApplicationMutation,
   useParseJobDescriptionMutation,
   useExtractJdFromUrlMutation,
 } = applicationsApi;
+
+export { applicationsApi };

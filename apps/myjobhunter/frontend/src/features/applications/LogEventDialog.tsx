@@ -15,6 +15,7 @@ const EVENT_TYPE_OPTIONS: { value: ApplicationEventType; label: string }[] = [
   { value: "withdrawn", label: "Withdrawn" },
   { value: "ghosted", label: "Ghosted" },
   { value: "note_added", label: "Note added" },
+  { value: "follow_up_sent", label: "Follow-up sent" },
   // `email_received` intentionally omitted from manual logging — that's
   // the Gmail sync worker's lane.
 ];

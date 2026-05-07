@@ -33,6 +33,7 @@ export { default as Card } from "./components/ui/Card";
 export { default as FormField } from "./components/ui/FormField";
 export { default as Toaster } from "./components/ui/Toaster";
 export { default as TurnstileWidget } from "./components/ui/TurnstileWidget";
+export { default as ConfirmDialog } from "./components/ui/ConfirmDialog";
 
 // Layout components
 export { default as AppShell } from "./components/layout/AppShell";

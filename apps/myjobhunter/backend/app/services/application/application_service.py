@@ -36,6 +36,7 @@ from app.schemas.application.application_create_request import ApplicationCreate
 from app.schemas.application.application_detail_response import ApplicationDetailResponse
 from app.schemas.application.application_event_create_request import ApplicationEventCreateRequest
 from app.schemas.application.application_event_response import ApplicationEventResponse
+from app.schemas.application.application_kanban_item import ApplicationKanbanItem
 from app.schemas.application.application_list_item import ApplicationListItem
 from app.schemas.application.application_update_request import ApplicationUpdateRequest
 
@@ -90,6 +91,22 @@ async def list_applications(
         ApplicationListItem.model_validate(app).model_copy(update={"latest_status": status})
         for app, status in rows
     ]
+
+
+async def list_kanban_items(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+) -> list[ApplicationKanbanItem]:
+    """Return non-archived applications shaped for the kanban dashboard.
+
+    Each row carries the company display fields, the most-recent
+    stage-defining event, and the verdict from the analysis that
+    spawned the application (if any). The frontend derives the column
+    id from ``latest_event_type`` via the same mapping the transition
+    service uses so the read and write sides stay in sync.
+    """
+    rows = await application_repository.list_for_kanban(db, user_id)
+    return [ApplicationKanbanItem.model_validate(row) for row in rows]
 
 
 async def get_application_detail(

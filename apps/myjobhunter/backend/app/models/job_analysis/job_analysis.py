@@ -173,4 +173,15 @@ class JobAnalysis(Base):
             "fingerprint",
             postgresql_where=text("deleted_at IS NULL"),
         ),
+        # Kanban LEFT JOIN: ``applications`` -> ``job_analyses`` resolves
+        # the operator's verdict for each application that originated
+        # from an analysis. Without this index the join sequentially
+        # scans the analyses table for every kanban load. Partial WHERE
+        # filters out soft-deleted analyses so the index stays tight.
+        # See alembic/versions/kanban260507_follow_up_sent_event.py.
+        Index(
+            "ix_job_analyses_applied_application_id_active",
+            "applied_application_id",
+            postgresql_where=text("deleted_at IS NULL"),
+        ),
     )

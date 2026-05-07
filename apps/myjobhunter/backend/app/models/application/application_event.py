@@ -51,7 +51,7 @@ class ApplicationEvent(Base):
 
     __table_args__ = (
         CheckConstraint(
-            "event_type IN ('applied','email_received','interview_scheduled','interview_completed','rejected','offer_received','withdrawn','ghosted','note_added')",
+            "event_type IN ('applied','email_received','interview_scheduled','interview_completed','rejected','offer_received','withdrawn','ghosted','note_added','follow_up_sent')",
             name="chk_appevent_event_type",
         ),
         CheckConstraint(

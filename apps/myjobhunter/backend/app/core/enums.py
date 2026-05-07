@@ -133,8 +133,58 @@ class EventType:
     WITHDRAWN = "withdrawn"
     GHOSTED = "ghosted"
     NOTE_ADDED = "note_added"
+    FOLLOW_UP_SENT = "follow_up_sent"
 
-    ALL = ("applied", "email_received", "interview_scheduled", "interview_completed", "rejected", "offer_received", "withdrawn", "ghosted", "note_added")
+    ALL = (
+        "applied",
+        "email_received",
+        "interview_scheduled",
+        "interview_completed",
+        "rejected",
+        "offer_received",
+        "withdrawn",
+        "ghosted",
+        "note_added",
+        "follow_up_sent",
+    )
+
+
+class KanbanColumn:
+    """Coarse-grained pipeline stages used by the kanban dashboard.
+
+    The kanban surface collapses the fine-grained ``EventType`` allowlist
+    into four buckets so the operator sees applications grouped by the
+    decision they need to make next, not by the last log entry.
+
+    Mapping (event_type -> kanban_column):
+    - applied -> "applied"
+    - interview_scheduled, interview_completed -> "interviewing"
+    - offer_received -> "offer"
+    - rejected, withdrawn, ghosted -> "closed"
+    - None (no event) -> "applied" (legacy data)
+    - note_added, email_received, follow_up_sent -> ignored (don't define a stage)
+    """
+
+    APPLIED = "applied"
+    INTERVIEWING = "interviewing"
+    OFFER = "offer"
+    CLOSED = "closed"
+
+    ALL = ("applied", "interviewing", "offer", "closed")
+
+
+# Allowed transitions for drag-drop on the kanban board. Keyed by current
+# column, value is the set of target columns the operator can reach via
+# a drag. We deliberately allow every transition except no-op moves and
+# moves that don't make sense (e.g., closed back to applied without an
+# explicit "reopen" affordance). This is intentionally permissive — the
+# operator owns the workflow; the kanban shouldn't enforce a rigid funnel.
+ALLOWED_TRANSITIONS: dict[str, frozenset[str]] = {
+    KanbanColumn.APPLIED: frozenset({KanbanColumn.INTERVIEWING, KanbanColumn.OFFER, KanbanColumn.CLOSED}),
+    KanbanColumn.INTERVIEWING: frozenset({KanbanColumn.APPLIED, KanbanColumn.OFFER, KanbanColumn.CLOSED}),
+    KanbanColumn.OFFER: frozenset({KanbanColumn.APPLIED, KanbanColumn.INTERVIEWING, KanbanColumn.CLOSED}),
+    KanbanColumn.CLOSED: frozenset({KanbanColumn.APPLIED, KanbanColumn.INTERVIEWING, KanbanColumn.OFFER}),
+}
 
 
 class EventSource:

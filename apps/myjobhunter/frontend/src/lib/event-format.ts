@@ -18,6 +18,7 @@ const EVENT_TYPE_LABELS: Record<string, string> = {
   withdrawn: "Withdrawn",
   ghosted: "Ghosted",
   note_added: "Note added",
+  follow_up_sent: "Follow-up sent",
 };
 
 /**
@@ -45,6 +46,7 @@ const EVENT_TYPE_COLORS: Record<string, BadgeColor> = {
   withdrawn: "gray",
   ghosted: "gray",
   note_added: "gray",
+  follow_up_sent: "blue",
 };
 
 /**
@@ -74,6 +76,7 @@ const EVENT_TYPE_SORT_ORDER: Record<string, number> = {
   withdrawn: 6,
   ghosted: 7,
   note_added: 8,
+  follow_up_sent: 9,
 };
 
 /**
