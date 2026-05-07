@@ -106,6 +106,7 @@ async def search(
     country: str = "us",
     remote_jobs_only: bool = False,
     employment_types: str | None = None,
+    job_requirements: str | None = None,
     api_key: str | None = None,
 ) -> list[dict]:
     """Run a JSearch query and return normalized RawPosting dicts.
@@ -123,6 +124,9 @@ async def search(
         country: 2-letter ISO code. Defaults to ``us``.
         remote_jobs_only: When True, sets the source-side filter.
         employment_types: Comma-separated filter, e.g. ``FULLTIME,CONTRACTOR``.
+        job_requirements: One or more (comma-separated) of
+            ``no_experience``, ``under_3_years_experience``,
+            ``more_than_3_years_experience``, ``no_degree``.
         api_key: Override for tests. Production reads ``settings.jsearch_api_key``.
 
     Returns:
@@ -156,6 +160,8 @@ async def search(
         params["remote_jobs_only"] = "true"
     if employment_types:
         params["employment_types"] = employment_types
+    if job_requirements:
+        params["job_requirements"] = job_requirements
 
     headers = {
         "X-RapidAPI-Key": key,
