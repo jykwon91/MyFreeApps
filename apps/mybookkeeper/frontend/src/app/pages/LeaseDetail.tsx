@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, FileText, User } from "lucide-react";
+import { ArrowLeft, FileText, Mail, User } from "lucide-react";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import AlertBox from "@/shared/components/ui/AlertBox";
 import Badge from "@/shared/components/ui/Badge";
@@ -9,6 +9,7 @@ import LoadingButton from "@/shared/components/ui/LoadingButton";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import {
+  useEmailSignedLeaseToTenantMutation,
   useGenerateSignedLeaseMutation,
   useGetSignedLeaseByIdQuery,
   useUpdateSignedLeaseMutation,
@@ -33,11 +34,17 @@ export default function LeaseDetail() {
   const [generateLease, { isLoading: isGenerating }] =
     useGenerateSignedLeaseMutation();
   const [updateLease] = useUpdateSignedLeaseMutation();
+  const [emailLeaseToTenant, { isLoading: isEmailing }] =
+    useEmailSignedLeaseToTenantMutation();
 
   const { data: applicant } = useGetApplicantByIdQuery(
     lease?.applicant_id ?? "",
     { skip: !lease?.applicant_id },
   );
+
+  const tenantHasEmail = Boolean(applicant?.contact_email);
+  const showEmailButton =
+    canWrite && lease?.kind === "generated" && lease?.attachments.length > 0;
 
   async function handleGenerate() {
     if (!lease) return;
@@ -46,6 +53,16 @@ export default function LeaseDetail() {
       showSuccess("Lease generated.");
     } catch {
       showError("Couldn't generate the lease. Want to try again?");
+    }
+  }
+
+  async function handleEmailToTenant() {
+    if (!lease) return;
+    try {
+      await emailLeaseToTenant(lease.id).unwrap();
+      showSuccess("Email queued — should arrive in a few minutes.");
+    } catch {
+      showError("Couldn't queue the tenant email. Want to try again?");
     }
   }
 
@@ -124,19 +141,39 @@ export default function LeaseDetail() {
               </span>
             }
             actions={
-              canWrite
-              && lease.kind === "generated"
-              && (lease.status === "draft" || lease.attachments.length === 0) ? (
-                <LoadingButton
-                  isLoading={isGenerating}
-                  loadingText="Generating..."
-                  onClick={handleGenerate}
-                  data-testid="lease-generate-button"
-                >
-                  <FileText size={16} className="mr-1" />
-                  {lease.status === "draft" ? "Generate" : "Regenerate"}
-                </LoadingButton>
-              ) : null
+              <div className="flex items-center gap-2 flex-wrap">
+                {canWrite
+                && lease.kind === "generated"
+                && (lease.status === "draft" || lease.attachments.length === 0) ? (
+                  <LoadingButton
+                    isLoading={isGenerating}
+                    loadingText="Generating..."
+                    onClick={handleGenerate}
+                    data-testid="lease-generate-button"
+                  >
+                    <FileText size={16} className="mr-1" />
+                    {lease.status === "draft" ? "Generate" : "Regenerate"}
+                  </LoadingButton>
+                ) : null}
+                {showEmailButton ? (
+                  <LoadingButton
+                    variant="secondary"
+                    isLoading={isEmailing}
+                    loadingText="Queueing..."
+                    disabled={!tenantHasEmail}
+                    title={
+                      tenantHasEmail
+                        ? "Email the rendered lease to the tenant"
+                        : "The applicant has no email on file. Add one on the applicant page first."
+                    }
+                    onClick={handleEmailToTenant}
+                    data-testid="lease-email-tenant-button"
+                  >
+                    <Mail size={16} className="mr-1" />
+                    Email to tenant
+                  </LoadingButton>
+                ) : null}
+              </div>
             }
           />
 

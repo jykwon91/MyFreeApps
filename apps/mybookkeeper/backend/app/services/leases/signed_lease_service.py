@@ -207,6 +207,8 @@ def _to_detail(lease, attachments, template_links: list[SignedLeaseTemplateLink]
         sent_at=lease.sent_at,
         signed_at=lease.signed_at,
         ended_at=lease.ended_at,
+        auto_email_tenant=lease.auto_email_tenant,
+        last_emailed_to_tenant_at=lease.last_emailed_to_tenant_at,
         created_at=lease.created_at,
         updated_at=lease.updated_at,
         attachments=_attachment_responses(attachments),
@@ -458,6 +460,7 @@ async def update_lease(
     notes: str | None,
     status: str | None,
     values: dict[str, Any] | None,
+    auto_email_tenant: bool | None = None,
 ) -> SignedLeaseResponse:
     async with unit_of_work() as db:
         lease = await signed_lease_repo.get(
@@ -483,6 +486,9 @@ async def update_lease(
                 fields["signed_at"] = now
             if status in ("ended", "terminated") and lease.ended_at is None:
                 fields["ended_at"] = now
+
+        if auto_email_tenant is not None:
+            fields["auto_email_tenant"] = auto_email_tenant
 
         if values is not None:
             if lease.status != "draft":
@@ -521,12 +527,53 @@ async def update_lease(
 # Generate (renders the template files into MinIO + creates attachments)
 # ---------------------------------------------------------------------------
 
+def should_auto_email_after_generate(
+    *, previous_status: str, auto_email_tenant: bool, last_emailed_to_tenant_at,
+) -> bool:
+    """Pure predicate: should the tenant auto-email fire after generate?
+
+    The four gates that must all be TRUE:
+
+    1. ``previous_status != "generated"`` — Regenerate of an
+       already-generated lease must not re-email. (The user clicked
+       "Regenerate" on purpose; if they want to re-send they use the
+       manual button.)
+    2. ``auto_email_tenant`` — host hasn't opted this lease out of the
+       feature.
+    3. ``last_emailed_to_tenant_at`` is NULL — defensive: even if some
+       prior path (manual? import?) sent a tenant email, don't auto-
+       send again.
+
+    The applicant-has-contact_email check is enforced inside
+    ``lease_email_service.send_lease_to_tenant`` (it skips silently
+    with an info-level event row) — keeping it there means this
+    predicate stays cheap and side-effect-free.
+    """
+    if previous_status == "generated":
+        return False
+    if not auto_email_tenant:
+        return False
+    if last_emailed_to_tenant_at is not None:
+        return False
+    return True
+
+
 async def generate_lease(
     *,
     user_id: uuid.UUID,
     organization_id: uuid.UUID,
     lease_id: uuid.UUID,
-) -> SignedLeaseResponse:
+) -> tuple[SignedLeaseResponse, bool]:
+    """Render the lease and transition status to ``generated``.
+
+    Returns a tuple of ``(detail, should_auto_email)``. The boolean
+    flag is the auto-email gate decision computed BEFORE the status
+    transition (so a Regenerate is correctly identified as
+    ``previous_status="generated"`` and returns False).
+
+    The route handler is responsible for scheduling the auto-email
+    background task; this service stays I/O-pure on the SMTP side.
+    """
     storage = get_storage()
     if storage is None:
         raise StorageNotConfiguredError("Object storage is not configured")
@@ -540,6 +587,10 @@ async def generate_lease(
         )
         if lease is None:
             raise SignedLeaseNotFoundError(f"Lease {lease_id} not found")
+        # Snapshot the gate inputs BEFORE we mutate the lease.
+        previous_status = lease.status
+        auto_email_tenant = lease.auto_email_tenant
+        last_emailed_to_tenant_at = lease.last_emailed_to_tenant_at
 
         # Load every template linked to this lease, then load each template's
         # files + placeholders. Files are processed in template-display-order
@@ -642,11 +693,17 @@ async def generate_lease(
                 logger.warning("Failed to clean up rendered file %s", storage_key)
         raise
 
-    return await get_lease(
+    detail = await get_lease(
         user_id=user_id,
         organization_id=organization_id,
         lease_id=lease_id,
     )
+    should_auto_email = should_auto_email_after_generate(
+        previous_status=previous_status,
+        auto_email_tenant=auto_email_tenant,
+        last_emailed_to_tenant_at=last_emailed_to_tenant_at,
+    )
+    return detail, should_auto_email
 
 
 def render_md_text_to_pdf_or_keep(rendered_md: str) -> bytes:

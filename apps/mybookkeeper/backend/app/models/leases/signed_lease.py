@@ -14,6 +14,7 @@ import datetime as _dt
 import uuid
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     Date,
     DateTime,
@@ -100,6 +101,19 @@ class SignedLease(Base):
     )
 
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # Auto-email-tenant behaviour. Default TRUE so the feature is opt-out.
+    # Cleared to FALSE per-lease via ``PATCH /signed-leases/{id}`` when the
+    # host wants to deliver the document by another channel.
+    auto_email_tenant: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default=text("true"),
+    )
+    # Stamped on first successful auto-email send. Used as the idempotency
+    # gate so a Regenerate does not re-send. ``POST /signed-leases/{id}/email-tenant``
+    # bypasses this gate (manual re-send is always allowed).
+    last_emailed_to_tenant_at: Mapped[_dt.datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True,
+    )
 
     deleted_at: Mapped[_dt.datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True,

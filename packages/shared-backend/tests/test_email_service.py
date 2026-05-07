@@ -179,3 +179,124 @@ class TestSendDelegatesToSendOrRaise:
         service = _configured_service()
         with patch("smtplib.SMTP", side_effect=OSError("network")):
             assert service.send(["x@example.com"], "subj", "<p>body</p>") is False
+
+
+class TestAttachments:
+    """Attachments support: PDFs, images, and generic binary parts.
+
+    The shared service builds a ``multipart/mixed`` envelope when any
+    attachments are passed; without attachments it stays
+    ``multipart/alternative`` (the historical wire shape).
+    """
+
+    def test_no_attachments_keeps_alternative_envelope(self) -> None:
+        service = _configured_service()
+        mock_server = MagicMock()
+        captured: list[str] = []
+        mock_server.sendmail.side_effect = (
+            lambda from_addr, to, raw: captured.append(raw)
+        )
+
+        with patch("smtplib.SMTP") as mock_smtp_cls:
+            mock_smtp_cls.return_value.__enter__ = lambda s: mock_server
+            mock_smtp_cls.return_value.__exit__ = MagicMock(return_value=False)
+            service.send_or_raise(
+                ["x@example.com"], "subj", "<p>body</p>",
+            )
+
+        assert len(captured) == 1
+        assert "Content-Type: multipart/alternative" in captured[0]
+
+    def test_attachments_use_mixed_envelope(self) -> None:
+        from platform_shared.services.email_attachment import EmailAttachment
+
+        service = _configured_service()
+        mock_server = MagicMock()
+        captured: list[str] = []
+        mock_server.sendmail.side_effect = (
+            lambda from_addr, to, raw: captured.append(raw)
+        )
+
+        with patch("smtplib.SMTP") as mock_smtp_cls:
+            mock_smtp_cls.return_value.__enter__ = lambda s: mock_server
+            mock_smtp_cls.return_value.__exit__ = MagicMock(return_value=False)
+            service.send_or_raise(
+                ["x@example.com"], "subj", "<p>body</p>",
+                attachments=[
+                    EmailAttachment(
+                        filename="lease.pdf",
+                        content=b"%PDF-1.4 fake",
+                        content_type="application/pdf",
+                    ),
+                ],
+            )
+
+        assert len(captured) == 1
+        raw = captured[0]
+        # Outer envelope is mixed, inner alternative wraps the body.
+        assert "Content-Type: multipart/mixed" in raw
+        assert "Content-Type: multipart/alternative" in raw
+        # Attachment landed with the right Content-Disposition + filename.
+        assert "Content-Disposition: attachment" in raw
+        assert "lease.pdf" in raw
+
+    def test_image_attachment_uses_image_subtype(self) -> None:
+        from platform_shared.services.email_attachment import EmailAttachment
+
+        service = _configured_service()
+        mock_server = MagicMock()
+        captured: list[str] = []
+        mock_server.sendmail.side_effect = (
+            lambda from_addr, to, raw: captured.append(raw)
+        )
+
+        # 1x1 PNG header bytes — minimal valid image.
+        png_bytes = (
+            b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01"
+            b"\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89"
+        )
+
+        with patch("smtplib.SMTP") as mock_smtp_cls:
+            mock_smtp_cls.return_value.__enter__ = lambda s: mock_server
+            mock_smtp_cls.return_value.__exit__ = MagicMock(return_value=False)
+            service.send_or_raise(
+                ["x@example.com"], "subj", "<p>body</p>",
+                attachments=[
+                    EmailAttachment(
+                        filename="photo.png",
+                        content=png_bytes,
+                        content_type="image/png",
+                    ),
+                ],
+            )
+
+        assert len(captured) == 1
+        raw = captured[0]
+        assert "Content-Type: image/png" in raw
+        assert "photo.png" in raw
+
+    def test_send_best_effort_passes_attachments_through(self) -> None:
+        from platform_shared.services.email_attachment import EmailAttachment
+
+        service = _configured_service()
+        mock_server = MagicMock()
+        captured: list[str] = []
+        mock_server.sendmail.side_effect = (
+            lambda from_addr, to, raw: captured.append(raw)
+        )
+
+        with patch("smtplib.SMTP") as mock_smtp_cls:
+            mock_smtp_cls.return_value.__enter__ = lambda s: mock_server
+            mock_smtp_cls.return_value.__exit__ = MagicMock(return_value=False)
+            ok = service.send(
+                ["x@example.com"], "subj", "<p>body</p>",
+                attachments=[
+                    EmailAttachment(
+                        filename="x.pdf", content=b"%PDF",
+                        content_type="application/pdf",
+                    ),
+                ],
+            )
+
+        assert ok is True
+        assert "lease" in captured[0] or "x.pdf" in captured[0]

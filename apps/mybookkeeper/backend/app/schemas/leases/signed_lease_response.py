@@ -32,6 +32,8 @@ class SignedLeaseResponse(BaseModel):
     sent_at: _dt.datetime | None = None
     signed_at: _dt.datetime | None = None
     ended_at: _dt.datetime | None = None
+    auto_email_tenant: bool = True
+    last_emailed_to_tenant_at: _dt.datetime | None = None
     created_at: _dt.datetime
     updated_at: _dt.datetime
     attachments: list[SignedLeaseAttachmentResponse]
