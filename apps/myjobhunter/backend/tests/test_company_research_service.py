@@ -345,6 +345,58 @@ class TestTriggerCompanyResearchEndpoint:
         assert len(body["sources"]) == len(MOCK_TAVILY_RESULTS)
 
     @pytest.mark.asyncio
+    async def test_get_after_post_renders_sources_without_missing_greenlet(
+        self,
+        user_factory,
+        as_user,
+    ) -> None:
+        """Regression: GET /research after POST in a new session must
+        not trigger SQLAlchemy MissingGreenlet via Pydantic lazy-load
+        of the sources relationship.
+
+        Reproduction (before set_committed_value fix): the service
+        manually assigned ``research.sources = sources`` but SQLAlchemy
+        treated the relationship as un-loaded. Pydantic's
+        ``from_attributes=True`` getter was sync; SQLAlchemy tried
+        async I/O for the lazy-load and raised
+        sqlalchemy.exc.MissingGreenlet."""
+        user = await user_factory()
+
+        async with await as_user(user) as authed:
+            create = await authed.post("/companies", json=_make_company_payload())
+            assert create.status_code == 201
+            company_id = create.json()["id"]
+
+        with (
+            patch(
+                "app.services.company.company_research_service.search_company",
+                new=AsyncMock(return_value=MOCK_TAVILY_RESULTS),
+            ),
+            patch(
+                "app.services.company.company_research_service.claude_service.call_claude",
+                new=AsyncMock(return_value=MOCK_CLAUDE_RESPONSE),
+            ),
+        ):
+            async with await as_user(user) as authed:
+                post_resp = await authed.post(f"/companies/{company_id}/research")
+        assert post_resp.status_code == 200
+
+        # New session — this is the actual reproduction. Until the
+        # set_committed_value fix landed, this returned 500
+        # MissingGreenlet from Pydantic accessing research.sources.
+        async with await as_user(user) as authed:
+            get_resp = await authed.get(f"/companies/{company_id}/research")
+
+        assert get_resp.status_code == 200, (
+            f"GET /research expected 200, got {get_resp.status_code}: "
+            f"{get_resp.text[:300]}"
+        )
+        body = get_resp.json()
+        assert body["overall_sentiment"] == "positive"
+        assert isinstance(body["sources"], list)
+        assert len(body["sources"]) == len(MOCK_TAVILY_RESULTS)
+
+    @pytest.mark.asyncio
     async def test_trigger_returns_404_for_unknown_company(
         self,
         user_factory,

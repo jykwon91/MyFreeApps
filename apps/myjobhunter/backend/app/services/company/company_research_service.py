@@ -25,6 +25,7 @@ import uuid
 from datetime import datetime, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm.attributes import set_committed_value
 
 from app.models.company.company_research import CompanyResearch
 from app.repositories.company import company_repository, company_research_repository
@@ -201,6 +202,14 @@ async def get_research(
     sources = await company_research_repository.list_sources_for_research(
         db, research.id, user_id
     )
-    # Attach sources directly to avoid a second round-trip via relationship.
-    research.sources = sources
+    # ``research.sources = sources`` LOOKS like it loads the relationship
+    # but SQLAlchemy tracks load-state separately from the attribute
+    # value. A plain assignment leaves the relationship marked as
+    # un-loaded, so when Pydantic later accesses ``research.sources``
+    # via ``from_attributes=True`` it triggers a lazy-load —
+    # MissingGreenlet because Pydantic's getter is sync and async I/O
+    # can't run there. ``set_committed_value`` writes the value AND
+    # marks the relationship loaded, so subsequent access is a plain
+    # attribute read with no DB hit.
+    set_committed_value(research, "sources", sources)
     return research
