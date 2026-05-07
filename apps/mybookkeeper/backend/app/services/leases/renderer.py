@@ -15,13 +15,40 @@ Supports three input forms:
 When ``python-docx`` is not installed (e.g. in CI without the optional dep),
 ``render_docx_bytes`` falls back to MD rendering of the extracted text — the
 caller is told the fallback fired so it can record the limitation.
+
+Signature placeholders (any bracketed key matching ``*SIGNATURE``) get a
+special substitution: a long underscore line, drawn at render time, so the
+rendered doc has a blank signing line in place of literal
+``[LANDLORD SIGNATURE]`` text. Signatures are applied at signing time, not
+generation time.
 """
 from __future__ import annotations
 
 import io
 import logging
+import re
 
 logger = logging.getLogger(__name__)
+
+SIGNATURE_LINE = "_______________________________"
+_SIGNATURE_KEY_RE = re.compile(r"\[([A-Z][A-Z0-9 _\-]*?SIGNATURE)\]")
+
+
+def _augment_with_signature_lines(
+    template_text: str, values: dict[str, str],
+) -> dict[str, str]:
+    """Return ``values`` with any unfilled ``*SIGNATURE`` keys mapped to a blank line.
+
+    Scans ``template_text`` for bracketed signature keys not already in
+    ``values`` and adds them with the underscore signature line. The
+    caller's ``values`` dict is not mutated.
+    """
+    augmented = dict(values)
+    for match in _SIGNATURE_KEY_RE.finditer(template_text):
+        key = match.group(1)
+        if key not in augmented:
+            augmented[key] = SIGNATURE_LINE
+    return augmented
 
 
 def _build_substitution_pattern(values: dict[str, str]) -> list[tuple[str, str]]:
@@ -39,10 +66,13 @@ def render_md(template_text: str, values: dict[str, str]) -> str:
     """Replace ``[KEY]`` tokens in ``template_text`` with ``values[KEY]``.
 
     Pure function. Unknown keys (placeholders not in ``values``) are left as
-    bracketed text so the host can spot them in the rendered output.
+    bracketed text so the host can spot them in the rendered output. Any
+    ``*SIGNATURE`` placeholder absent from ``values`` is replaced with a
+    blank signature line.
     """
+    augmented = _augment_with_signature_lines(template_text, values)
     output = template_text
-    for needle, replacement in _build_substitution_pattern(values):
+    for needle, replacement in _build_substitution_pattern(augmented):
         output = output.replace(needle, replacement)
     return output
 
@@ -71,7 +101,23 @@ def render_docx_bytes(
         logger.warning("Failed to parse DOCX bytes — returning original", exc_info=True)
         return docx_bytes, False
 
-    pattern = _build_substitution_pattern(values)
+    # Walk every paragraph (top-level + table cells) to find SIGNATURE keys
+    # the caller didn't supply, so the rendered doc shows a blank signing line.
+    # Known limitation: section headers/footers and tables nested inside table
+    # cells are not walked. The same paragraphs are also untouched by
+    # ``_substitute_in_paragraphs`` below, so this mirrors the existing
+    # substitution scope rather than expanding it.
+    all_text_chunks: list[str] = []
+    for paragraph in document.paragraphs:
+        all_text_chunks.append("".join(run.text for run in paragraph.runs))
+    for table in document.tables:
+        for row in table.rows:
+            for cell in row.cells:
+                for paragraph in cell.paragraphs:
+                    all_text_chunks.append("".join(run.text for run in paragraph.runs))
+    augmented = _augment_with_signature_lines("\n".join(all_text_chunks), values)
+
+    pattern = _build_substitution_pattern(augmented)
     _substitute_in_paragraphs(document.paragraphs, pattern)
     for table in document.tables:
         for row in table.rows:

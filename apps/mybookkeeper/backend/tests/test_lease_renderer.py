@@ -19,7 +19,7 @@ from app.services.leases.placeholder_extractor import (
     extract_placeholders_across_files,
     normalise_key,
 )
-from app.services.leases.renderer import render_md
+from app.services.leases.renderer import SIGNATURE_LINE, render_md
 
 
 # ---------------------------------------------------------------------------
@@ -60,6 +60,35 @@ class TestRenderMd:
         # Both should substitute correctly — TENANT EMAIL takes precedence
         # because longest-first ordering processes it before EMAIL.
         assert out == "alice@example.com vs noreply@x.com"
+
+    def test_signature_placeholder_renders_blank_line_when_unset(self) -> None:
+        """``[*SIGNATURE]`` keys absent from values get a blank signing line."""
+        text = "Landlord: [LANDLORD SIGNATURE]\nTenant: [TENANT SIGNATURE]"
+        out = render_md(text, {})
+        assert "[LANDLORD SIGNATURE]" not in out
+        assert "[TENANT SIGNATURE]" not in out
+        assert SIGNATURE_LINE in out
+        # Two signing lines, one per placeholder.
+        assert out.count(SIGNATURE_LINE) == 2
+
+    def test_signature_placeholder_value_wins_over_blank_line(self) -> None:
+        """A caller-supplied signature value takes precedence over the blank-line default."""
+        out = render_md(
+            "Landlord: [LANDLORD SIGNATURE]",
+            {"LANDLORD SIGNATURE": "/s/ Jason Kwon/"},
+        )
+        assert out == "Landlord: /s/ Jason Kwon/"
+        assert SIGNATURE_LINE not in out
+
+    def test_duplicate_signature_placeholder_each_replaced(self) -> None:
+        """Each occurrence of the same SIGNATURE key must be replaced — not just the first."""
+        text = (
+            "Landlord: [LANDLORD SIGNATURE] (initial here too: [LANDLORD SIGNATURE])"
+            "\nAnd one more: [LANDLORD SIGNATURE]"
+        )
+        out = render_md(text, {})
+        assert "[LANDLORD SIGNATURE]" not in out
+        assert out.count(SIGNATURE_LINE) == 3
 
 
 # ---------------------------------------------------------------------------
