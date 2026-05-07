@@ -29,6 +29,10 @@ from app.models.resume_refinement.turn import ResumeRefinementTurn  # noqa: F401
 
 from app.models.system.extraction_log import ExtractionLog  # noqa: F401
 
+from app.models.discovery.discovery_source import DiscoverySource  # noqa: F401
+from app.models.discovery.discovery_fetch import DiscoveryFetch  # noqa: F401
+from app.models.discovery.discovered_job import DiscoveredJob  # noqa: F401
+
 from app.models.platform.invite import PlatformInvite  # noqa: F401
 
 # Shared models from platform_shared. Importing them here registers their
