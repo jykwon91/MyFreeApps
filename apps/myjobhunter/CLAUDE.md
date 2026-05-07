@@ -177,19 +177,19 @@ vim apps/myjobhunter/backend/.env.docker
 
 The seed script reads safe-to-reuse keys from MBK's running config (Anthropic API key, lockout
 tunables, log level) and generates fresh secrets for per-app values (SECRET_KEY, ENCRYPTION_KEY,
-DB_PASSWORD). FRONTEND_URL and CORS_ORIGINS are pre-filled with the sslip.io domain.
+DB_PASSWORD). FRONTEND_URL and CORS_ORIGINS are pre-filled with the myfreeapps.org domain.
 
 **Day-to-day deploys:** Push to main or merge a PR — GitHub Actions deploys automatically.
 
 **Routing:**
-- Domain: `myjobhunter.165-245-134-251.sslip.io`
+- Domain: `myjobhunter.myfreeapps.org`
 - Host Caddy (TLS termination at `/etc/caddy/Caddyfile`) proxies to docker Caddy on `127.0.0.1:8092`
 - Docker Caddy (baked into caddy image) owns routing, security headers, CSP, SPA fallback, and `/api/*` → backend proxy
 
 **Health check:**
 ```bash
 curl http://127.0.0.1:8092/health    # from VPS (bypasses host Caddy)
-curl https://myjobhunter.165-245-134-251.sslip.io/health  # public
+curl https://myjobhunter.myfreeapps.org/health  # public
 ```
 
 **Database backup/restore:**
