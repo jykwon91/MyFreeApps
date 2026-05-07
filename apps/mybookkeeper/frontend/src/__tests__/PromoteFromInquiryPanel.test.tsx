@@ -65,7 +65,7 @@ function buildInquiry(overrides: Partial<InquiryResponse> = {}): InquiryResponse
     spam_status: "unscored",
     spam_score: null,
     move_in_date: null,
-    lease_length_months: null,
+    move_out_date: null,
     occupant_count: null,
     has_pets: null,
     pets_description: null,

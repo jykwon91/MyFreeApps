@@ -41,7 +41,7 @@ class PublicInquiryRequest(BaseModel):
     phone: str = Field(min_length=7, max_length=_PHONE_MAX)
 
     move_in_date: _dt.date
-    lease_length_months: int = Field(ge=1, le=24)
+    move_out_date: _dt.date
     occupant_count: int = Field(ge=1, le=10)
     has_pets: bool
     pets_description: str | None = Field(default=None, max_length=_FREE_TEXT_MAX)
@@ -86,6 +86,14 @@ class PublicInquiryRequest(BaseModel):
             raise ValueError(
                 "current_region must be one of the 50 US states or DC when current_country is US",
             )
+        return self
+
+    @model_validator(mode="after")
+    def _check_move_dates(self) -> PublicInquiryRequest:
+        """Move-out must be strictly after move-in (single-day stays count as
+        ``move_out_date == move_in_date + 1``)."""
+        if self.move_out_date <= self.move_in_date:
+            raise ValueError("move_out_date must be after move_in_date")
         return self
 
 

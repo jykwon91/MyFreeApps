@@ -127,10 +127,14 @@ async def promote_from_inquiry(
         contact_email = _coalesce(overrides.contact_email, inquiry.inquirer_email)
         contact_phone = _coalesce(overrides.contact_phone, inquiry.inquirer_phone)
         contract_start = _coalesce_date(
-            overrides.contract_start, inquiry.desired_start_date,
+            overrides.contract_start,
+            inquiry.desired_start_date,
+            inquiry.move_in_date,
         )
         contract_end = _coalesce_date(
-            overrides.contract_end, inquiry.desired_end_date,
+            overrides.contract_end,
+            inquiry.desired_end_date,
+            inquiry.move_out_date,
         )
 
         # ``dob`` is stored as ISO-8601 text on an EncryptedString column

@@ -41,7 +41,7 @@ def _valid_body(slug: str = "abc-123") -> dict:
         "email": "alice@example.com",
         "phone": "555-123-4567",
         "move_in_date": (today + _dt.timedelta(days=30)).isoformat(),
-        "lease_length_months": 6,
+        "move_out_date": (today + _dt.timedelta(days=30 + 180)).isoformat(),
         "occupant_count": 1,
         "has_pets": False,
         "pets_description": None,
