@@ -64,11 +64,26 @@ class DiscoveryUnsupportedSourceError(DiscoveryFetchError):
 # and returning a list[RawPosting] dict. Add new entries here as adapters
 # come online.
 async def _run_jsearch(config: dict[str, Any]) -> list[dict]:
-    query = (config.get("query") or "").strip()
-    if not query:
+    base_query = (config.get("query") or "").strip()
+    if not base_query:
         raise DiscoveryFetchError(
             "JSearch source missing required config.query",
         )
+
+    # JSearch's /search endpoint takes location inside the query string
+    # (e.g. "developer in Chicago"). If the operator filled the dedicated
+    # location field, fold it into the query so the source-side filter
+    # narrows results instead of returning the world and filtering later.
+    location = (config.get("location") or "").strip()
+    if location:
+        # Don't double-append "in <X>" if the operator already wrote it.
+        if " in " not in base_query.lower():
+            query = f"{base_query} in {location}"
+        else:
+            query = base_query
+    else:
+        query = base_query
+
     return await jsearch.search(
         query=query,
         page=int(config.get("page", 1)),
@@ -77,7 +92,75 @@ async def _run_jsearch(config: dict[str, Any]) -> list[dict]:
         country=config.get("country", "us"),
         remote_jobs_only=bool(config.get("remote_jobs_only", False)),
         employment_types=config.get("employment_types"),
+        job_requirements=config.get("job_requirements"),
     )
+
+
+# ---------------------------------------------------------------------------
+# Post-fetch filtering — operator preferences applied before upsert.
+# ---------------------------------------------------------------------------
+
+
+def _apply_post_fetch_filters(
+    postings: list[dict],
+    config: dict[str, Any],
+) -> list[dict]:
+    """Drop postings that match operator-configured exclusions.
+
+    Two filters today, both stored on ``discovery_sources.config``:
+
+    1. ``min_salary_usd`` (int, optional) — drop postings whose
+       ``salary_min`` is set AND below the floor. Postings with no
+       salary information pass through (the source didn't disclose;
+       we don't punish the listing for that).
+
+    2. ``excluded_keywords`` (list[str], optional) — case-insensitive
+       substring match against title + company_name + description +
+       source_publisher. One unified list lets the operator block
+       specific companies ("lockheed"), industries ("defense",
+       "government"), and title words ("junior", "intern") through one
+       UI.
+    """
+    min_salary_raw = config.get("min_salary_usd")
+    try:
+        min_salary = float(min_salary_raw) if min_salary_raw is not None else None
+    except (TypeError, ValueError):
+        min_salary = None
+
+    excluded = config.get("excluded_keywords")
+    if isinstance(excluded, list):
+        excluded_lower = [
+            kw.strip().lower() for kw in excluded
+            if isinstance(kw, str) and kw.strip()
+        ]
+    else:
+        excluded_lower = []
+
+    if min_salary is None and not excluded_lower:
+        return postings
+
+    kept: list[dict] = []
+    for p in postings:
+        # Salary floor: skip when the source disclosed a min and it's
+        # below the floor. None salary = unknown = pass-through.
+        if min_salary is not None:
+            posting_min = p.get("salary_min")
+            if posting_min is not None and posting_min < min_salary:
+                continue
+
+        # Excluded keywords: substring match in any of the visible
+        # text fields. A single match is enough to drop the posting.
+        if excluded_lower:
+            haystack = " ".join(
+                str(p.get(field) or "").lower()
+                for field in ("title", "company_name", "description", "source_publisher")
+            )
+            if any(kw in haystack for kw in excluded_lower):
+                continue
+
+        kept.append(p)
+
+    return kept
 
 
 _ADAPTERS: dict[str, Callable[[dict[str, Any]], Awaitable[list[dict]]]] = {
@@ -168,6 +251,9 @@ async def fetch_source(
         raise DiscoveryFetchError(str(exc)) from exc
 
     fetched_count = len(postings)
+
+    # ---- Apply operator's post-fetch filters (min salary, excluded keywords) ----
+    postings = _apply_post_fetch_filters(postings, source.config or {})
 
     # ---- Upsert ----
     if postings:
