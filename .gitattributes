@@ -1,0 +1,8 @@
+# Force LF line endings for files that CI verifies byte-for-byte.
+# uv lock --check rewrites uv.lock with LF on Linux; if a Windows
+# contributor commits with CRLF, the check fails forever.
+apps/mybookkeeper/backend/uv.lock text eol=lf
+apps/myjobhunter/backend/uv.lock text eol=lf
+apps/*/backend/requirements.txt text eol=lf
+package-lock.json text eol=lf
+apps/*/frontend/package-lock.json text eol=lf
