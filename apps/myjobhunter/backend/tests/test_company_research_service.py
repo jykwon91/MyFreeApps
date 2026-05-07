@@ -429,3 +429,96 @@ class TestTriggerCompanyResearchEndpoint:
 
         assert resp.status_code == 500
         assert "KeyError" in resp.json()["detail"]
+
+    @pytest.mark.asyncio
+    async def test_get_returns_500_with_type_on_unexpected_error(
+        self,
+        user_factory,
+        as_user,
+    ) -> None:
+        """The GET research endpoint had no exception coverage — same
+        bare-500 problem the POST endpoint had. Verify the new fallback
+        surfaces the exception type."""
+        user = await user_factory()
+
+        async with await as_user(user) as authed:
+            create = await authed.post("/companies", json=_make_company_payload())
+            assert create.status_code == 201
+            company_id = create.json()["id"]
+
+        with patch(
+            "app.services.company.company_research_service.get_research",
+            new=AsyncMock(side_effect=RuntimeError("boom")),
+        ):
+            async with await as_user(user) as authed:
+                resp = await authed.get(f"/companies/{company_id}/research")
+
+        assert resp.status_code == 500
+        assert "RuntimeError" in resp.json()["detail"]
+        assert "boom" in resp.json()["detail"]
+
+
+# ---------------------------------------------------------------------------
+# Source de-duplication on rerun
+# ---------------------------------------------------------------------------
+
+
+class TestResearchSourceDedup:
+    """The upsert path was APPENDING sources on rerun without deleting
+    the old ones. Verify the fix: rerunning research replaces sources
+    rather than accumulating."""
+
+    @pytest.mark.asyncio
+    async def test_rerun_replaces_sources_instead_of_appending(
+        self,
+        user_factory,
+        as_user,
+        db: AsyncSession,
+    ) -> None:
+        user = await user_factory()
+
+        async with await as_user(user) as authed:
+            create = await authed.post("/companies", json=_make_company_payload())
+            assert create.status_code == 201
+            company_id_str = create.json()["id"]
+            company_id = uuid.UUID(company_id_str)
+
+        from app.services.company import company_research_service
+
+        with (
+            patch(
+                "app.services.company.company_research_service.search_company",
+                new=AsyncMock(return_value=MOCK_TAVILY_RESULTS),
+            ),
+            patch(
+                "app.services.company.company_research_service.claude_service.call_claude",
+                new=AsyncMock(return_value=MOCK_CLAUDE_RESPONSE),
+            ),
+        ):
+            r1 = await company_research_service.run_research(
+                db, company_id=company_id, user_id=uuid.UUID(user["id"])
+            )
+
+        with (
+            patch(
+                "app.services.company.company_research_service.search_company",
+                new=AsyncMock(return_value=MOCK_TAVILY_RESULTS),
+            ),
+            patch(
+                "app.services.company.company_research_service.claude_service.call_claude",
+                new=AsyncMock(return_value=MOCK_CLAUDE_RESPONSE),
+            ),
+        ):
+            r2 = await company_research_service.run_research(
+                db, company_id=company_id, user_id=uuid.UUID(user["id"])
+            )
+
+        assert r1.id == r2.id
+        sources = await company_research_repository.list_sources_for_research(
+            db, r2.id, uuid.UUID(user["id"])
+        )
+        assert len(sources) == len(MOCK_TAVILY_RESULTS), (
+            f"Expected {len(MOCK_TAVILY_RESULTS)} sources after rerun, got "
+            f"{len(sources)} — sources are accumulating instead of being "
+            "replaced on upsert."
+        )
