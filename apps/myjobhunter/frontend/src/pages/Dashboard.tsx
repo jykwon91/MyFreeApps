@@ -1,34 +1,60 @@
-import { useNavigate } from "react-router-dom";
-import { Briefcase } from "lucide-react";
-import { EmptyState } from "@platform/ui";
+/**
+ * Dashboard page — kanban board + side-drawer detail.
+ *
+ * URL state lives here (not in RootLayout): ``?app=<id>`` opens the drawer
+ * for that application. Mount-time read enables deep-linking. Closing the
+ * drawer ``replace``s the URL so back-button doesn't re-open it.
+ */
+import { useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
+import KanbanBoard from "@/features/kanban/KanbanBoard";
+import ApplicationDrawer from "@/features/applications/ApplicationDrawer";
 import DashboardSkeleton from "@/features/dashboard/DashboardSkeleton";
-import { EMPTY_STATES } from "@/constants/empty-states";
-import { showSuccess } from "@platform/ui";
+import { useListApplicationsKanbanQuery } from "@/lib/applicationsApi";
 
-// Phase 1: no data yet — simulate instant load then show empty state
-const IS_LOADING = false;
+const APP_QUERY_PARAM = "app";
 
 export default function Dashboard() {
-  const navigate = useNavigate();
-  const copy = EMPTY_STATES.dashboard;
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selectedAppId = searchParams.get(APP_QUERY_PARAM);
 
-  if (IS_LOADING) {
+  const { data, isLoading } = useListApplicationsKanbanQuery();
+
+  const selectCard = useCallback(
+    (id: string) => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.set(APP_QUERY_PARAM, id);
+          return next;
+        },
+        { replace: false },
+      );
+    },
+    [setSearchParams],
+  );
+
+  const closeDrawer = useCallback(() => {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete(APP_QUERY_PARAM);
+        return next;
+      },
+      { replace: true },
+    );
+  }, [setSearchParams]);
+
+  if (isLoading) {
     return <DashboardSkeleton />;
   }
 
-  function handleAddApplication() {
-    showSuccess("Application tracking coming in Phase 2!");
-    navigate("/applications");
-  }
+  const items = data?.items ?? [];
 
   return (
-    <main className="p-4 sm:p-8 space-y-6">
-      <EmptyState
-        icon={<Briefcase className="w-12 h-12" />}
-        heading={copy.heading}
-        body={copy.body}
-        action={{ label: copy.actionLabel, onClick: handleAddApplication }}
-      />
-    </main>
+    <>
+      <KanbanBoard items={items} onSelectCard={selectCard} />
+      <ApplicationDrawer applicationId={selectedAppId} onClose={closeDrawer} />
+    </>
   );
 }

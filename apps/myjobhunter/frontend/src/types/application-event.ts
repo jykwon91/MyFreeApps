@@ -12,7 +12,8 @@ export type ApplicationEventType =
   | "offer_received"
   | "withdrawn"
   | "ghosted"
-  | "note_added";
+  | "note_added"
+  | "follow_up_sent";
 
 export type ApplicationEventSource =
   | "manual"

@@ -45,6 +45,7 @@ from app.schemas.application.application_event_create_request import Application
 from app.schemas.application.application_event_response import ApplicationEventResponse
 from app.schemas.application.application_list_item import ApplicationListItem
 from app.schemas.application.application_response import ApplicationResponse
+from app.schemas.application.application_transition_request import ApplicationTransitionRequest
 from app.schemas.application.application_update_request import ApplicationUpdateRequest
 from app.schemas.application.jd_parse_request import JdParseRequest
 from app.schemas.application.jd_parse_response import JdParseResponse
@@ -52,6 +53,10 @@ from app.schemas.application.jd_url_extract_request import JdUrlExtractRequest
 from app.schemas.application.jd_url_extract_response import JdUrlExtractResponse
 from app.services.application import application_service
 from app.services.application.application_service import CompanyNotOwnedError
+from app.services.application.application_transition_service import (
+    TransitionNotAllowedError,
+    transition_application,
+)
 from app.services.application.jd_parsing_service import JdParseError, parse_jd
 from app.services.extraction.jd_url_extractor import (
     JDFetchAuthRequiredError,
@@ -76,6 +81,30 @@ _MAX_LIMIT = 500
 # admin_invites._INVITE_INFO_LIMITER.
 _JD_URL_EXTRACT_LIMITER = RateLimiter(max_attempts=10, window_seconds=300)
 
+# Per-user transition write limit for the kanban dashboard. Drag-drop on
+# a flaky network can fire dozens of identical writes; the auto-save on
+# the drawer's Notes textarea adds another stream. Keying on user.id
+# (not IP) is correct for bearer-auth — the IP is network noise behind
+# any NAT or VPN. Two limiters: a tight per-minute cap to soak burst
+# misclicks, plus a wider per-hour cap to defend against a wedged client
+# that retries forever.
+_TRANSITION_LIMITER_PER_MIN = RateLimiter(max_attempts=30, window_seconds=60)
+_TRANSITION_LIMITER_PER_HOUR = RateLimiter(max_attempts=200, window_seconds=3600)
+_NOTES_PATCH_LIMITER_PER_MIN = RateLimiter(max_attempts=30, window_seconds=60)
+_NOTES_PATCH_LIMITER_PER_HOUR = RateLimiter(max_attempts=200, window_seconds=3600)
+
+
+def _check_per_user_limit(user_id: uuid.UUID, *limiters: RateLimiter) -> None:
+    """Apply each per-user limiter under the same user-keyed bucket.
+
+    Each limiter raises HTTPException(429) on its own; we run them in
+    order from tightest window to widest so the tighter one fires first
+    when both are saturated.
+    """
+    key = str(user_id)
+    for limiter in limiters:
+        limiter.check(key)
+
 
 @router.get("/applications")
 async def list_applications(
@@ -87,22 +116,38 @@ async def list_applications(
     since: _dt.datetime | None = Query(default=None, description="applied_at >= since (ISO-8601)"),
     limit: int = Query(default=100, ge=1, le=_MAX_LIMIT),
     offset: int = Query(default=0, ge=0),
+    view: str | None = Query(
+        default=None,
+        description="When 'kanban', return board-shaped rows with company + verdict joined.",
+    ),
 ) -> dict:
-    """Return the caller's non-deleted applications with latest event status.
+    """Return the caller's non-deleted applications.
 
-    Response shape: ``{"items": [ApplicationListItem...], "total": int}``.
-    Each item includes ``latest_status: str | None`` — the ``event_type``
-    of the most-recent ``application_events`` row, computed via a correlated
-    sub-select on the covering index ``ix_appevent_app_occurred``.  ``None``
-    when the application has no events yet.
+    Default response shape: ``{"items": [ApplicationListItem...], "total": int}``.
+    Each item includes ``latest_status: str | None`` — the ``event_type`` of
+    the most-recent ``application_events`` row.
 
-    Filters:
+    When ``view=kanban`` is supplied the response shape changes to
+    ``{"items": [ApplicationKanbanItem...], "total": int}`` — board-shaped
+    rows with the company name + logo and the verdict from the analysis
+    that spawned the application (when present) joined in. Other filters
+    are ignored in kanban view; the board always renders all non-archived,
+    non-deleted applications for the user.
+
+    Filters (default view only):
     - ``company_id``: narrow to a single company (tenant-safe empty list on miss).
     - ``status``: keep only rows whose latest event_type matches (e.g. "applied").
     - ``archived``: ``true`` = archived only; ``false`` = active only; omit = all.
     - ``since``: include only applications with ``applied_at >= since``.
     - ``limit`` / ``offset``: pagination (default 100 / 0; max limit 500).
     """
+    if view == "kanban":
+        kanban_items = await application_service.list_kanban_items(db, user.id)
+        return {
+            "items": [item.model_dump(mode="json") for item in kanban_items],
+            "total": len(kanban_items),
+        }
+
     items = await application_service.list_applications(
         db,
         user.id,
@@ -283,7 +328,18 @@ async def update_application(
 
     Returns 404 if the application is missing OR belongs to another user —
     callers cannot distinguish the two cases (no existence leak).
+
+    Rate limited per user (30/min, 200/hr). The drawer's Notes field
+    auto-saves on debounced change, which can fire dozens of patches in
+    quick succession when the operator tabs through fields. Keying on
+    ``user.id`` (not IP) is correct for bearer-auth — IP is network
+    noise behind any NAT/VPN.
     """
+    _check_per_user_limit(
+        user.id,
+        _NOTES_PATCH_LIMITER_PER_MIN,
+        _NOTES_PATCH_LIMITER_PER_HOUR,
+    )
     try:
         application = await application_service.update_application(
             db, user.id, application_id, payload,
@@ -296,6 +352,54 @@ async def update_application(
     if application is None:
         raise HTTPException(status_code=404, detail=_NOT_FOUND_DETAIL)
     return ApplicationResponse.model_validate(application)
+
+
+@router.post(
+    "/applications/{application_id}/transitions",
+    response_model=ApplicationEventResponse,
+    status_code=201,
+)
+async def create_application_transition(
+    application_id: uuid.UUID,
+    payload: ApplicationTransitionRequest,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(current_active_user),
+) -> ApplicationEventResponse:
+    """Persist a kanban-column drag as an event_log row.
+
+    The kanban dashboard fires this on every drag-drop. The body carries
+    the coarse-grained target column ("applied" / "interviewing" /
+    "offer" / "closed") and an optional client-generated ``idempotency_key``.
+    The service translates the column to a fine-grained event_type
+    ("applied" / "interview_scheduled" / "offer_received" / "rejected"
+    by default) and inserts the event with a server-side ``occurred_at``.
+
+    Rate limited per user (30/min, 200/hr). Returns:
+    - 201 with the created (or idempotency-resolved) ApplicationEventResponse.
+    - 400 when the proposed transition is not allowed from the current column.
+    - 404 when the application is missing or belongs to another user.
+    - 429 when the per-user rate limit is exceeded.
+    """
+    _check_per_user_limit(
+        user.id,
+        _TRANSITION_LIMITER_PER_MIN,
+        _TRANSITION_LIMITER_PER_HOUR,
+    )
+
+    try:
+        event = await transition_application(
+            db,
+            application_id=application_id,
+            target_column=payload.target_column,
+            user_id=user.id,
+            idempotency_key=payload.idempotency_key,
+        )
+    except TransitionNotAllowedError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    if event is None:
+        raise HTTPException(status_code=404, detail=_NOT_FOUND_DETAIL)
+    return ApplicationEventResponse.model_validate(event)
 
 
 @router.delete("/applications/{application_id}", status_code=204)
