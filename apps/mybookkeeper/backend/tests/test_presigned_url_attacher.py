@@ -30,6 +30,7 @@ from app.schemas.applicants.screening_result_response import (
 )
 from app.services.storage.presigned_url_attacher import (
     attach_presigned_url_with_head_check,
+    build_attachment_disposition,
 )
 
 
@@ -146,6 +147,53 @@ class TestSharedHelper:
         assert out.presigned_url is None
         storage.object_exists.assert_not_called()
 
+    def test_resolver_attaches_content_disposition(self) -> None:
+        row = _row(filename="Lease Agreement.pdf")
+        storage = _mock_storage(exists=True)
+        with patch(
+            "app.services.storage.presigned_url_attacher.get_storage",
+            return_value=storage,
+        ):
+            attach_presigned_url_with_head_check(
+                [row],
+                sentry_event_name="test_event",
+                download_filename_resolver=lambda r: f"{r.filename}",
+            )
+        call = storage.generate_presigned_url.call_args
+        assert call.kwargs["response_content_disposition"] == (
+            'attachment; filename="Lease Agreement.pdf"; '
+            "filename*=UTF-8''Lease%20Agreement.pdf"
+        )
+
+    def test_resolver_returning_none_skips_disposition(self) -> None:
+        row = _row()
+        storage = _mock_storage(exists=True)
+        with patch(
+            "app.services.storage.presigned_url_attacher.get_storage",
+            return_value=storage,
+        ):
+            attach_presigned_url_with_head_check(
+                [row],
+                sentry_event_name="test_event",
+                download_filename_resolver=lambda r: None,
+            )
+        call = storage.generate_presigned_url.call_args
+        assert call.kwargs["response_content_disposition"] is None
+
+    def test_no_resolver_passes_no_disposition(self) -> None:
+        row = _row()
+        storage = _mock_storage(exists=True)
+        with patch(
+            "app.services.storage.presigned_url_attacher.get_storage",
+            return_value=storage,
+        ):
+            attach_presigned_url_with_head_check(
+                [row],
+                sentry_event_name="test_event",
+            )
+        call = storage.generate_presigned_url.call_args
+        assert call.kwargs["response_content_disposition"] is None
+
     def test_mixed_present_and_missing(self) -> None:
         present = _row()
         missing = _row()
@@ -170,3 +218,25 @@ class TestSharedHelper:
         by_id = {r.id: r for r in results}
         assert by_id[present.id].is_available is True
         assert by_id[missing.id].is_available is False
+
+
+class TestBuildAttachmentDisposition:
+    def test_ascii_filename(self) -> None:
+        assert build_attachment_disposition("Lease.pdf") == (
+            'attachment; filename="Lease.pdf"; filename*=UTF-8\'\'Lease.pdf'
+        )
+
+    def test_filename_with_spaces_percent_encoded_in_filename_star(self) -> None:
+        out = build_attachment_disposition("Lease Agreement.pdf")
+        assert 'filename="Lease Agreement.pdf"' in out
+        assert "filename*=UTF-8''Lease%20Agreement.pdf" in out
+
+    def test_filename_with_quotes_escaped_in_ascii_form(self) -> None:
+        out = build_attachment_disposition('a"b.pdf')
+        assert 'filename="a\\"b.pdf"' in out
+
+    def test_unicode_filename_uses_filename_star(self) -> None:
+        out = build_attachment_disposition("계약서.pdf")
+        # Korean chars become %-escaped in the RFC 5987 form.
+        assert "filename*=UTF-8''" in out
+        assert "%EA%B3%84%EC%95%BD%EC%84%9C.pdf" in out

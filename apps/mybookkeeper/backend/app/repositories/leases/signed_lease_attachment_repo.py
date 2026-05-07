@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from typing import Any
 
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -95,6 +96,44 @@ async def update_kind_scoped_to_lease(
         .values(kind=kind)
     )
     await db.refresh(row)
+    return row
+
+
+async def update_signing_state_scoped_to_lease(
+    db: AsyncSession,
+    attachment_id: uuid.UUID,
+    lease_id: uuid.UUID,
+    fields: dict[str, Any],
+) -> SignedLeaseAttachment | None:
+    """Update signing-state fields on an attachment, scoped to its lease.
+
+    ``fields`` must only contain ``signed_by_tenant_at`` and/or
+    ``signed_by_landlord_at``; the caller is responsible for the
+    allowlist. Both ``attachment_id`` AND ``lease_id`` must match —
+    same composite-WHERE IDOR guard as ``update_kind_scoped_to_lease``.
+
+    Empty ``fields`` is a no-op that still loads + returns the row so
+    the caller can render the unchanged response without an extra query.
+    """
+    result = await db.execute(
+        select(SignedLeaseAttachment).where(
+            SignedLeaseAttachment.id == attachment_id,
+            SignedLeaseAttachment.lease_id == lease_id,
+        )
+    )
+    row = result.scalar_one_or_none()
+    if row is None:
+        return None
+    if fields:
+        await db.execute(
+            update(SignedLeaseAttachment)
+            .where(
+                SignedLeaseAttachment.id == attachment_id,
+                SignedLeaseAttachment.lease_id == lease_id,
+            )
+            .values(**fields)
+        )
+        await db.refresh(row)
     return row
 
 

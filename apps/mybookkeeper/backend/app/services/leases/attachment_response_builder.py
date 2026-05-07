@@ -30,6 +30,7 @@ from app.schemas.leases.lease_template_file_response import (
 from app.schemas.leases.signed_lease_attachment_response import (
     SignedLeaseAttachmentResponse,
 )
+from app.services.leases.lease_filename import friendly_download_filename
 from app.services.storage.presigned_url_attacher import (
     attach_presigned_url_with_head_check,
 )
@@ -50,4 +51,5 @@ def attach_presigned_urls_to_attachments(
     return attach_presigned_url_with_head_check(
         attachments,
         sentry_event_name="lease_attachment_storage_object_missing",
+        download_filename_resolver=friendly_download_filename,
     )

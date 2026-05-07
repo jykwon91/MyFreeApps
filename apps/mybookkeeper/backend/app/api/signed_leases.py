@@ -17,6 +17,9 @@ from app.core.permissions import current_org_member, require_write_access
 from app.schemas.leases.signed_lease_attachment_response import (
     SignedLeaseAttachmentResponse,
 )
+from app.schemas.leases.signed_lease_attachment_signing_state_request import (
+    SignedLeaseAttachmentSigningStateRequest,
+)
 from app.schemas.leases.signed_lease_attachment_update_request import (
     SignedLeaseAttachmentUpdateRequest,
 )
@@ -273,6 +276,38 @@ async def update_attachment(
         raise HTTPException(status_code=404, detail="Not found") from exc
     except signed_lease_service.InvalidAttachmentKindError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.patch(
+    "/{lease_id}/attachments/{attachment_id}/signing-state",
+    response_model=SignedLeaseAttachmentResponse,
+)
+async def update_attachment_signing_state(
+    lease_id: uuid.UUID,
+    attachment_id: uuid.UUID,
+    payload: SignedLeaseAttachmentSigningStateRequest,
+    ctx: RequestContext = Depends(require_write_access),
+) -> SignedLeaseAttachmentResponse:
+    # Only forward the keys the caller explicitly sent so omitted keys
+    # leave the existing column untouched (sentinel-based partial PATCH).
+    signing_fields = {
+        key: getattr(payload, key)
+        for key in payload.model_fields_set
+        if key in {"signed_by_tenant_at", "signed_by_landlord_at"}
+    }
+    try:
+        return await signed_lease_service.update_attachment_signing_state(
+            user_id=ctx.user_id,
+            organization_id=ctx.organization_id,
+            lease_id=lease_id,
+            attachment_id=attachment_id,
+            signing_fields=signing_fields,
+        )
+    except (
+        signed_lease_service.SignedLeaseNotFoundError,
+        signed_lease_service.AttachmentNotFoundError,
+    ) as exc:
+        raise HTTPException(status_code=404, detail="Not found") from exc
 
 
 @router.delete(

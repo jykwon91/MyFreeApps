@@ -60,7 +60,9 @@ def _patch_storage_for_tests(monkeypatch):
     """
     fake = MagicMock()
     fake.bucket = "test-bucket"
-    fake.generate_presigned_url.side_effect = lambda key, ttl: f"https://signed/{key}"
+    fake.generate_presigned_url.side_effect = (
+        lambda key, ttl, **_kwargs: f"https://signed/{key}"
+    )
     fake.ensure_bucket.return_value = None
     # ``generate_key`` is the storage key generator used by upload paths;
     # returning a MagicMock from it would fail downstream INSERTs that

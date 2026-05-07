@@ -41,7 +41,9 @@ def _patch_builder_storage(monkeypatch):
 
     fake = MagicMock()
     fake.object_exists.return_value = True
-    fake.generate_presigned_url.side_effect = lambda key, ttl: f"https://signed/{key}"
+    fake.generate_presigned_url.side_effect = (
+        lambda key, ttl, **_kwargs: f"https://signed/{key}"
+    )
     monkeypatch.setattr(presigned_url_attacher, "get_storage", lambda: fake)
 
 
