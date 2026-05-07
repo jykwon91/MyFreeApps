@@ -20,12 +20,15 @@ Companies use HARD delete (no ``deleted_at``) per the data model.
 """
 from __future__ import annotations
 
+import logging
 import uuid
 
 import anthropic
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
+
+logger = logging.getLogger(__name__)
 
 from app.core.auth import current_active_user
 from app.db.session import get_db
@@ -206,14 +209,48 @@ async def trigger_company_research(
             detail=f"Tavily research is not configured: {exc}",
         ) from exc
     except (anthropic.APIError, ValueError) as exc:
+        logger.exception(
+            "Company research failed: AI synthesis error company_id=%s",
+            company_id,
+        )
         raise HTTPException(
             status_code=502,
             detail=f"AI synthesis failed: {exc}",
         ) from exc
     except httpx.HTTPStatusError as exc:
+        logger.exception(
+            "Company research failed: Tavily HTTP %s company_id=%s",
+            exc.response.status_code,
+            company_id,
+        )
         raise HTTPException(
             status_code=502,
             detail=f"Tavily request failed: {exc.response.status_code}",
+        ) from exc
+    except httpx.RequestError as exc:
+        # Covers ConnectError, ReadTimeout, WriteTimeout, ConnectTimeout, etc.
+        # (parent of HTTPStatusError so this handler MUST come after the
+        # HTTPStatusError handler above.)
+        logger.exception(
+            "Company research failed: Tavily network error company_id=%s",
+            company_id,
+        )
+        raise HTTPException(
+            status_code=504,
+            detail=f"Research service network error: {type(exc).__name__}",
+        ) from exc
+    except Exception as exc:
+        # Final safety net — anything else (DB IntegrityError, KeyError,
+        # etc.) returned a bare 500 with no detail before. Log + propagate
+        # the exception type to the client so the next failure is
+        # diagnosable from DevTools alone.
+        logger.exception(
+            "Company research failed: unexpected error company_id=%s",
+            company_id,
+        )
+        raise HTTPException(
+            status_code=500,
+            detail=f"Research failed: {type(exc).__name__}: {exc}",
         ) from exc
 
     if research is None:
