@@ -627,6 +627,7 @@
         "test_lease_import_api.py",
         "test_lease_import_heuristic.py",
         "test_default_source_resolver.py",
+        "test_signed_lease_multi_template.py",
         "test_suggest_placeholders_api.py"
       ],
       "frontend_tests": [

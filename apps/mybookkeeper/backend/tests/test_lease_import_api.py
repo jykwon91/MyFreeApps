@@ -45,7 +45,7 @@ def _ok_lease_response(
         id=lease_id,
         user_id=user_id,
         organization_id=org_id,
-        template_id=None,
+        templates=[],
         applicant_id=applicant_id,
         listing_id=None,
         kind=kind,
@@ -112,7 +112,7 @@ class TestImportSignedLease:
             body = resp.json()
             assert body["kind"] == "imported"
             assert body["status"] == "signed"
-            assert body["template_id"] is None
+            assert body["templates"] == []
         finally:
             app.dependency_overrides.clear()
 

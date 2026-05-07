@@ -49,16 +49,10 @@ class SignedLease(Base):
         index=True,
         nullable=False,
     )
-    # RESTRICT on template — preserve generated leases when a template is
-    # soft-deleted. The application layer enforces "soft-delete blocked when
-    # active leases reference this template" with a 409 response.
-    # NULL is allowed for imported leases (kind='imported') that were signed
-    # externally before MBK existed.
-    template_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("lease_templates.id", ondelete="RESTRICT"),
-        nullable=True,
-    )
+    # Templates contributing to this lease are tracked through the M:N join
+    # table ``signed_lease_templates``. Imported leases (kind='imported') have
+    # zero template links. Generated leases have 1+ links — one per template
+    # the host selected when creating the draft.
     applicant_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("applicants.id", ondelete="RESTRICT"),

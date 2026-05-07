@@ -11,7 +11,9 @@ class SignedLeaseSummary(BaseModel):
     id: uuid.UUID
     user_id: uuid.UUID
     organization_id: uuid.UUID
-    template_id: uuid.UUID | None = None
+    # Ordered list of contributing template IDs (display_order ascending).
+    # Empty for imported leases.
+    template_ids: list[uuid.UUID] = []
     applicant_id: uuid.UUID
     listing_id: uuid.UUID | None = None
     kind: str

@@ -16,7 +16,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { Provider } from "react-redux";
 import { store } from "@/shared/store";
 import LeaseNew from "@/app/pages/LeaseNew";
-import TemplatePicker from "@/app/features/leases/TemplatePicker";
+import MultiTemplatePicker from "@/app/features/leases/MultiTemplatePicker";
 import ApplicantPicker from "@/app/features/leases/ApplicantPicker";
 import type { LeaseTemplateSummary } from "@/shared/types/lease/lease-template-summary";
 import type { ApplicantSummary } from "@/shared/types/applicant/applicant-summary";
@@ -30,6 +30,7 @@ const mockUseGetLeaseTemplateByIdQuery = vi.fn();
 const mockUseGetApplicantsQuery = vi.fn();
 const mockUseGetApplicantByIdQuery = vi.fn();
 const mockUseGetGenerateDefaultsQuery = vi.fn();
+const mockUseGetMultiGenerateDefaultsQuery = vi.fn();
 const mockUseCreateSignedLeaseMutation = vi.fn();
 const mockUseCanWrite = vi.fn();
 
@@ -39,6 +40,8 @@ vi.mock("@/shared/store/leaseTemplatesApi", () => ({
     mockUseGetLeaseTemplateByIdQuery(id, opts),
   useGetGenerateDefaultsQuery: (args: unknown, opts: unknown) =>
     mockUseGetGenerateDefaultsQuery(args, opts),
+  useGetMultiGenerateDefaultsQuery: (args: unknown, opts: unknown) =>
+    mockUseGetMultiGenerateDefaultsQuery(args, opts),
 }));
 
 vi.mock("@/shared/store/applicantsApi", () => ({
@@ -222,6 +225,11 @@ describe("LeaseNew page", () => {
       isLoading: false,
       isFetching: false,
     });
+    mockUseGetMultiGenerateDefaultsQuery.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isFetching: false,
+    });
     mockUseCreateSignedLeaseMutation.mockReturnValue([vi.fn(), { isLoading: false }]);
   });
 
@@ -235,36 +243,28 @@ describe("LeaseNew page", () => {
     expect(screen.getByTestId("lease-new-back-link")).toBeInTheDocument();
   });
 
-  it("shows template picker when no template_id in URL", () => {
+  it("always shows the multi-template picker", () => {
     renderLeaseNew();
     expect(screen.getByTestId("template-picker-section")).toBeInTheDocument();
+    expect(screen.getByTestId("multi-template-picker-list")).toBeInTheDocument();
   });
 
-  it("does not show applicant picker when no template selected yet", () => {
+  it("does not show applicant picker until at least one template is selected", () => {
     renderLeaseNew();
     expect(screen.queryByTestId("applicant-picker-section")).not.toBeInTheDocument();
   });
 
-  it("shows applicant picker after template_id is in URL", () => {
-    mockUseGetLeaseTemplateByIdQuery.mockReturnValue({
-      data: TEMPLATE_DETAIL,
-      isLoading: false,
-      isFetching: false,
-      isError: false,
-      refetch: vi.fn(),
-    });
+  it("shows applicant picker when template_ids has 1+ id in the URL", () => {
+    renderLeaseNew("/leases/new?template_ids=tpl-1");
+    expect(screen.getByTestId("applicant-picker-section")).toBeInTheDocument();
+  });
+
+  it("accepts the legacy single template_id URL param", () => {
     renderLeaseNew("/leases/new?template_id=tpl-1");
     expect(screen.getByTestId("applicant-picker-section")).toBeInTheDocument();
   });
 
-  it("shows form section when both template_id and applicant_id are in URL", () => {
-    mockUseGetLeaseTemplateByIdQuery.mockReturnValue({
-      data: TEMPLATE_DETAIL,
-      isLoading: false,
-      isFetching: false,
-      isError: false,
-      refetch: vi.fn(),
-    });
+  it("shows form section when template_ids and applicant_id are in URL", () => {
     mockUseGetApplicantByIdQuery.mockReturnValue({
       data: APPROVED_APPLICANT_DETAIL,
       isLoading: false,
@@ -272,35 +272,16 @@ describe("LeaseNew page", () => {
       isError: false,
       refetch: vi.fn(),
     });
-    mockUseGetGenerateDefaultsQuery.mockReturnValue({
-      data: { defaults: [] },
+    mockUseGetMultiGenerateDefaultsQuery.mockReturnValue({
+      data: { placeholders: [] },
       isLoading: false,
       isFetching: false,
     });
-    renderLeaseNew("/leases/new?template_id=tpl-1&applicant_id=app-approved");
+    renderLeaseNew("/leases/new?template_ids=tpl-1&applicant_id=app-approved");
     expect(screen.getByTestId("lease-generate-form-section")).toBeInTheDocument();
   });
 
-  it("shows template error banner when template fetch fails", () => {
-    mockUseGetLeaseTemplateByIdQuery.mockReturnValue({
-      data: undefined,
-      isLoading: false,
-      isFetching: false,
-      isError: true,
-      refetch: vi.fn(),
-    });
-    renderLeaseNew("/leases/new?template_id=tpl-bad");
-    expect(screen.getByTestId("lease-new-template-error")).toBeInTheDocument();
-  });
-
   it("shows applicant error banner when applicant fetch fails", () => {
-    mockUseGetLeaseTemplateByIdQuery.mockReturnValue({
-      data: TEMPLATE_DETAIL,
-      isLoading: false,
-      isFetching: false,
-      isError: false,
-      refetch: vi.fn(),
-    });
     mockUseGetApplicantByIdQuery.mockReturnValue({
       data: undefined,
       isLoading: false,
@@ -308,21 +289,30 @@ describe("LeaseNew page", () => {
       isError: true,
       refetch: vi.fn(),
     });
-    renderLeaseNew("/leases/new?template_id=tpl-1&applicant_id=app-bad");
+    renderLeaseNew("/leases/new?template_ids=tpl-1&applicant_id=app-bad");
     expect(screen.getByTestId("lease-new-applicant-error")).toBeInTheDocument();
   });
 });
 
 // ---------------------------------------------------------------------------
-// Tests — TemplatePicker
+// Tests — MultiTemplatePicker
 // ---------------------------------------------------------------------------
 
-describe("TemplatePicker", () => {
-  const onSelect = vi.fn();
+const TEMPLATE_SUMMARY_2: LeaseTemplateSummary = {
+  ...TEMPLATE_SUMMARY,
+  id: "tpl-2",
+  name: "Move-in Inspection",
+};
 
-  function renderPicker(overrides: Partial<ReturnType<typeof mockUseGetLeaseTemplatesQuery>> = {}) {
+describe("MultiTemplatePicker", () => {
+  const onToggle = vi.fn();
+
+  function renderPicker(
+    overrides: Partial<ReturnType<typeof mockUseGetLeaseTemplatesQuery>> = {},
+    selectedIds: string[] = [],
+  ) {
     mockUseGetLeaseTemplatesQuery.mockReturnValue({
-      data: { items: [TEMPLATE_SUMMARY] },
+      data: { items: [TEMPLATE_SUMMARY, TEMPLATE_SUMMARY_2] },
       isLoading: false,
       isFetching: false,
       isError: false,
@@ -332,38 +322,56 @@ describe("TemplatePicker", () => {
     return render(
       <Provider store={store}>
         <MemoryRouter>
-          <TemplatePicker selectedId={null} onSelect={onSelect} />
+          <MultiTemplatePicker
+            selectedIds={selectedIds}
+            onToggle={onToggle}
+          />
         </MemoryRouter>
       </Provider>,
     );
   }
 
   beforeEach(() => {
-    onSelect.mockClear();
+    onToggle.mockClear();
   });
 
-  it("shows template options", () => {
+  it("shows all template options as checkboxes", () => {
     renderPicker();
-    expect(screen.getByTestId("template-picker-list")).toBeInTheDocument();
-    expect(screen.getByTestId(`template-option-${TEMPLATE_SUMMARY.id}`)).toBeInTheDocument();
+    expect(screen.getByTestId("multi-template-picker-list")).toBeInTheDocument();
+    expect(
+      screen.getByTestId(`multi-template-checkbox-${TEMPLATE_SUMMARY.id}`),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId(`multi-template-checkbox-${TEMPLATE_SUMMARY_2.id}`),
+    ).toBeInTheDocument();
   });
 
   it("shows skeleton while loading", () => {
     renderPicker({ data: undefined, isLoading: true });
-    expect(screen.getByTestId("template-picker-skeleton")).toBeInTheDocument();
+    expect(screen.getByTestId("multi-template-picker-skeleton")).toBeInTheDocument();
   });
 
   it("shows empty message when no templates exist", () => {
     renderPicker({ data: { items: [] }, isLoading: false });
-    expect(screen.getByTestId("template-picker-empty")).toBeInTheDocument();
+    expect(screen.getByTestId("multi-template-picker-empty")).toBeInTheDocument();
   });
 
-  it("calls onSelect when a template is clicked", async () => {
+  it("calls onToggle with the template when a checkbox is clicked", async () => {
     renderPicker();
     await userEvent.click(
-      screen.getByTestId(`template-option-${TEMPLATE_SUMMARY.id}`),
+      screen.getByTestId(`multi-template-checkbox-${TEMPLATE_SUMMARY.id}`),
     );
-    expect(onSelect).toHaveBeenCalledWith(TEMPLATE_SUMMARY);
+    expect(onToggle).toHaveBeenCalledWith(TEMPLATE_SUMMARY);
+  });
+
+  it("renders the selected order badge for picked templates", () => {
+    renderPicker({}, [TEMPLATE_SUMMARY_2.id, TEMPLATE_SUMMARY.id]);
+    expect(
+      screen.getByTestId(`multi-template-order-${TEMPLATE_SUMMARY_2.id}`),
+    ).toHaveTextContent("Selected #1");
+    expect(
+      screen.getByTestId(`multi-template-order-${TEMPLATE_SUMMARY.id}`),
+    ).toHaveTextContent("Selected #2");
   });
 
   it("shows error state", () => {

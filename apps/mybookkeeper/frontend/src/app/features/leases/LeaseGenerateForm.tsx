@@ -3,13 +3,22 @@ import { useNavigate } from "react-router-dom";
 import LoadingButton from "@/shared/components/ui/LoadingButton";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import { useCreateSignedLeaseMutation } from "@/shared/store/signedLeasesApi";
-import { useGetGenerateDefaultsQuery } from "@/shared/store/leaseTemplatesApi";
+import {
+  useGetGenerateDefaultsQuery,
+  useGetMultiGenerateDefaultsQuery,
+} from "@/shared/store/leaseTemplatesApi";
 import type { LeaseTemplateDetail } from "@/shared/types/lease/lease-template-detail";
+import type { LeaseTemplatePlaceholder } from "@/shared/types/lease/lease-template-placeholder";
 import type { PlaceholderProvenance } from "@/shared/types/lease/placeholder-provenance";
 import PlaceholderInput from "@/app/features/leases/PlaceholderInput";
 
 export interface LeaseGenerateFormProps {
-  template: LeaseTemplateDetail;
+  /** Single-template legacy mode. Mutually exclusive with `templateIds`. */
+  template?: LeaseTemplateDetail;
+  /** Multi-template mode — IDs in pick order; first wins on key conflicts. */
+  templateIds?: string[];
+  /** Display labels for the picked templates (for the "Used by" hint). */
+  templateLabels?: Record<string, string>;
   applicantId: string;
   listingId?: string | null;
 }
@@ -17,29 +26,29 @@ export interface LeaseGenerateFormProps {
 type ProvenanceMap = Record<string, PlaceholderProvenance>;
 type ValuesMap = Record<string, string>;
 
+interface MergedField {
+  placeholder: LeaseTemplatePlaceholder;
+  templateIds: string[];
+}
+
 /**
- * Form for filling in a template's placeholders to generate a draft lease.
+ * Form for filling in placeholder values to generate a draft lease.
  *
- * Three enhancements over PR #175:
+ * Two modes:
+ *   1. **Single-template** — pass `template` (legacy callers / tests).
+ *   2. **Multi-template** — pass `templateIds` (the canonical flow on
+ *      `/leases/new`). The form merges placeholders across all selected
+ *      templates using first-template-wins on key conflicts and shows the
+ *      list of contributing templates next to the field as a hint.
  *
- * 1. **Auto-pull on applicant change** — when ``applicantId`` changes, all
- *    fields with a ``default_source`` re-pull from the new applicant + linked
- *    inquiry. Manual edits are overwritten by design.
- *
- * 2. **Inquiry fallback** — ``default_source`` chains (``applicant.X ||
- *    inquiry.Y``) are evaluated server-side; the resolved value and provenance
- *    are returned by ``GET /lease-templates/{id}/generate-defaults``.
- *
- * 3. **Provenance badges** — each field shows where its value came from
- *    (applicant / inquiry / manually edited). Editing a field transitions its
- *    badge to "manually edited". A "Pull from source" button re-runs the
- *    resolution and overwrites all fields.
- *
- * Computed and signature placeholders are hidden in this form — they're
- * resolved at generate / signing time.
+ * Auto-pull / provenance / pull-from-source behaviour mirrors single-template
+ * mode — keystrokes flip provenance to "manual"; the "Pull from source"
+ * button restores the resolved defaults.
  */
 export default function LeaseGenerateForm({
   template,
+  templateIds,
+  templateLabels,
   applicantId,
   listingId,
 }: LeaseGenerateFormProps) {
@@ -52,39 +61,111 @@ export default function LeaseGenerateForm({
   // Track whether we're showing the "Pull from source" confirmation inline.
   const [showPullConfirm, setShowPullConfirm] = useState(false);
 
-  const editablePlaceholders = useMemo(
-    () =>
-      template.placeholders.filter(
-        (p) => p.input_type !== "signature" && p.input_type !== "computed",
-      ),
-    [template.placeholders],
-  );
+  const isMulti = templateIds !== undefined;
 
-  const computedPlaceholders = useMemo(
-    () => template.placeholders.filter((p) => p.input_type === "computed"),
-    [template.placeholders],
-  );
+  // Resolve the canonical list of template IDs the form should submit with.
+  // Memoise so referential equality holds across renders unless the input changes.
+  const submitTemplateIds = useMemo<string[]>(() => {
+    if (templateIds && templateIds.length > 0) return templateIds;
+    if (template) return [template.id];
+    return [];
+  }, [templateIds, template]);
 
-  // Fetch resolved defaults for the current applicant.
+  // ---------------------------------------------------------------------
+  // Single-template defaults fetch (legacy path).
+  // ---------------------------------------------------------------------
+  const singleQueryArgs =
+    template && !isMulti ? { templateId: template.id, applicantId } : undefined;
   const {
-    data: defaultsData,
-    isLoading: isLoadingDefaults,
-    isFetching: isFetchingDefaults,
-  } = useGetGenerateDefaultsQuery(
-    { templateId: template.id, applicantId },
-    { skip: !applicantId },
-  );
+    data: singleDefaults,
+    isLoading: isLoadingSingle,
+    isFetching: isFetchingSingle,
+  } = useGetGenerateDefaultsQuery(singleQueryArgs!, {
+    skip: !singleQueryArgs || !applicantId,
+  });
 
-  // Re-pull all fields whenever the resolved defaults change (i.e., applicantId
-  // changed and a fresh fetch completed). This covers both the initial mount
-  // and subsequent applicant switches.
+  // ---------------------------------------------------------------------
+  // Multi-template defaults fetch.
+  // ---------------------------------------------------------------------
+  const multiQueryArgs =
+    isMulti && submitTemplateIds.length > 0
+      ? { template_ids: submitTemplateIds, applicant_id: applicantId }
+      : undefined;
+  const {
+    data: multiDefaults,
+    isLoading: isLoadingMulti,
+    isFetching: isFetchingMulti,
+  } = useGetMultiGenerateDefaultsQuery(multiQueryArgs!, {
+    skip: !multiQueryArgs || !applicantId,
+  });
+
+  // ---------------------------------------------------------------------
+  // Derive the form's placeholder list + initial defaults from whichever
+  // query fired.
+  // ---------------------------------------------------------------------
+  const editableFields = useMemo<MergedField[]>(() => {
+    if (isMulti) {
+      if (!multiDefaults) return [];
+      return multiDefaults.placeholders
+        .filter(
+          (m) =>
+            m.placeholder.input_type !== "signature" &&
+            m.placeholder.input_type !== "computed",
+        )
+        .map((m) => ({
+          placeholder: m.placeholder,
+          templateIds: m.template_ids,
+        }));
+    }
+    if (!template) return [];
+    return template.placeholders
+      .filter(
+        (p) => p.input_type !== "signature" && p.input_type !== "computed",
+      )
+      .map((p) => ({ placeholder: p, templateIds: [template.id] }));
+  }, [isMulti, multiDefaults, template]);
+
+  const computedPlaceholders = useMemo<LeaseTemplatePlaceholder[]>(() => {
+    if (isMulti) {
+      if (!multiDefaults) return [];
+      return multiDefaults.placeholders
+        .filter((m) => m.placeholder.input_type === "computed")
+        .map((m) => m.placeholder);
+    }
+    if (!template) return [];
+    return template.placeholders.filter((p) => p.input_type === "computed");
+  }, [isMulti, multiDefaults, template]);
+
+  // ---------------------------------------------------------------------
+  // Apply defaults whenever the resolved data changes.
+  // ---------------------------------------------------------------------
   useEffect(() => {
-    if (!defaultsData) return;
-    applyDefaults(defaultsData.defaults);
-  }, [defaultsData]); // applyDefaults uses only setState dispatch calls — stable, safe to omit
+    if (isMulti) {
+      if (!multiDefaults) return;
+      const flattened = multiDefaults.placeholders
+        .filter(
+          (m) =>
+            m.placeholder.input_type !== "signature" &&
+            m.placeholder.input_type !== "computed",
+        )
+        .map((m) => ({
+          key: m.placeholder.key,
+          value: m.value,
+          provenance: m.provenance,
+        }));
+      applyDefaults(flattened);
+    } else {
+      if (!singleDefaults) return;
+      applyDefaults(singleDefaults.defaults);
+    }
+  }, [isMulti, singleDefaults, multiDefaults]); // applyDefaults is stable
 
   function applyDefaults(
-    defaults: Array<{ key: string; value: string | null; provenance: PlaceholderProvenance }>,
+    defaults: Array<{
+      key: string;
+      value: string | null;
+      provenance: PlaceholderProvenance;
+    }>,
   ): void {
     const nextValues: ValuesMap = {};
     const nextProvenance: ProvenanceMap = {};
@@ -100,7 +181,6 @@ export default function LeaseGenerateForm({
 
   function handleFieldChange(key: string, next: string): void {
     setValues((prev) => ({ ...prev, [key]: next }));
-    // Any keystroke transitions provenance → "manual" if a source had populated it.
     setProvenance((prev) => {
       const current = prev[key];
       if (current === null || current === "manual") return prev;
@@ -109,35 +189,56 @@ export default function LeaseGenerateForm({
   }
 
   function handlePullFromSource(): void {
-    // Re-apply the latest resolved defaults, overwriting all current values.
-    if (defaultsData) {
-      applyDefaults(defaultsData.defaults);
+    if (isMulti && multiDefaults) {
+      applyDefaults(
+        multiDefaults.placeholders
+          .filter(
+            (m) =>
+              m.placeholder.input_type !== "signature" &&
+              m.placeholder.input_type !== "computed",
+          )
+          .map((m) => ({
+            key: m.placeholder.key,
+            value: m.value,
+            provenance: m.provenance,
+          })),
+      );
+    } else if (singleDefaults) {
+      applyDefaults(singleDefaults.defaults);
     }
     setShowPullConfirm(false);
   }
 
   const missingRequired = useMemo(
     () =>
-      editablePlaceholders.filter(
-        (p) => p.required && !(values[p.key] ?? "").trim(),
+      editableFields.filter(
+        (f) => f.placeholder.required && !(values[f.placeholder.key] ?? "").trim(),
       ),
-    [editablePlaceholders, values],
+    [editableFields, values],
   );
 
   async function handleSubmit(e: React.FormEvent): Promise<void> {
     e.preventDefault();
     if (missingRequired.length > 0) {
-      showError(`Missing: ${missingRequired.map((p) => p.display_label).join(", ")}`);
+      showError(
+        `Missing: ${missingRequired
+          .map((f) => f.placeholder.display_label)
+          .join(", ")}`,
+      );
       return;
     }
     try {
       const created = await createLease({
-        template_id: template.id,
+        template_ids: submitTemplateIds,
         applicant_id: applicantId,
         listing_id: listingId ?? null,
         values,
       }).unwrap();
-      showSuccess("Draft lease created.");
+      showSuccess(
+        submitTemplateIds.length > 1
+          ? `Draft lease created with ${submitTemplateIds.length} documents.`
+          : "Draft lease created.",
+      );
       navigate(`/leases/${created.id}`);
     } catch (e: unknown) {
       const status = (e as { status?: number }).status;
@@ -146,7 +247,9 @@ export default function LeaseGenerateForm({
     }
   }
 
-  const isPulling = isLoadingDefaults || isFetchingDefaults;
+  const isPulling = isMulti
+    ? isLoadingMulti || isFetchingMulti
+    : isLoadingSingle || isFetchingSingle;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4" data-testid="lease-generate-form">
@@ -194,15 +297,32 @@ export default function LeaseGenerateForm({
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {editablePlaceholders.map((p) => (
-          <PlaceholderInput
-            key={p.id}
-            placeholder={p}
-            value={values[p.key] ?? ""}
-            provenance={provenance[p.key] ?? null}
-            onChange={(v) => handleFieldChange(p.key, v)}
-          />
-        ))}
+        {editableFields.map((f) => {
+          const usedByLabels =
+            isMulti && templateLabels && f.templateIds.length > 1
+              ? f.templateIds
+                  .map((id) => templateLabels[id])
+                  .filter((label): label is string => Boolean(label))
+              : [];
+          return (
+            <div key={f.placeholder.id}>
+              <PlaceholderInput
+                placeholder={f.placeholder}
+                value={values[f.placeholder.key] ?? ""}
+                provenance={provenance[f.placeholder.key] ?? null}
+                onChange={(v) => handleFieldChange(f.placeholder.key, v)}
+              />
+              {usedByLabels.length > 0 ? (
+                <p
+                  className="mt-1 text-xs text-muted-foreground"
+                  data-testid={`placeholder-used-by-${f.placeholder.key}`}
+                >
+                  Used by: {usedByLabels.join(", ")}
+                </p>
+              ) : null}
+            </div>
+          );
+        })}
       </div>
 
       {computedPlaceholders.length > 0 ? (

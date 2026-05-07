@@ -4,7 +4,8 @@ export interface SignedLeaseSummary {
   id: string;
   user_id: string;
   organization_id: string;
-  template_id: string | null;
+  /** Ordered template IDs (display_order ascending). Empty for imported leases. */
+  template_ids: string[];
   applicant_id: string;
   listing_id: string | null;
   kind: "generated" | "imported";
