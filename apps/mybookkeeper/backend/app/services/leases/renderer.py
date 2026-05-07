@@ -16,11 +16,17 @@ When ``python-docx`` is not installed (e.g. in CI without the optional dep),
 ``render_docx_bytes`` falls back to MD rendering of the extracted text — the
 caller is told the fallback fired so it can record the limitation.
 
-Signature placeholders (any bracketed key matching ``*SIGNATURE``) get a
-special substitution: a long underscore line, drawn at render time, so the
-rendered doc has a blank signing line in place of literal
-``[LANDLORD SIGNATURE]`` text. Signatures are applied at signing time, not
-generation time.
+Blank-line substitution rules:
+- Signature placeholders (any bracketed key matching ``*SIGNATURE``) get a
+  blank underscore line so the rendered doc shows a signing line in place of
+  literal ``[LANDLORD SIGNATURE]`` text. Signatures are applied at signing
+  time, not generation time.
+- The bare ``[DATE]`` placeholder (as distinct from ``[EFFECTIVE DATE]``)
+  appears next to signature lines ("Date: ____"). It must be left blank for
+  the physical signer to write in — the same rule as SIGNATURE keys.
+  ``default_source_map`` intentionally has no ``default_source`` for ``DATE``
+  so the resolver does not fill it at generate time; this renderer substitutes
+  any unfilled ``[DATE]`` with a blank underscore line.
 """
 from __future__ import annotations
 
@@ -32,22 +38,34 @@ logger = logging.getLogger(__name__)
 
 SIGNATURE_LINE = "_______________________________"
 _SIGNATURE_KEY_RE = re.compile(r"\[([A-Z][A-Z0-9 _\-]*?SIGNATURE)\]")
+# ``[DATE]`` (bare) next to a signature line must be left blank for the signer
+# to write in — same treatment as SIGNATURE keys. ``[EFFECTIVE DATE]`` is a
+# document property filled at generation time and is NOT matched here.
+_DATE_KEY_RE = re.compile(r"\[DATE\]")
 
 
 def _augment_with_signature_lines(
     template_text: str, values: dict[str, str],
 ) -> dict[str, str]:
-    """Return ``values`` with any unfilled ``*SIGNATURE`` keys mapped to a blank line.
+    """Return ``values`` with any unfilled blank-line placeholders substituted.
 
-    Scans ``template_text`` for bracketed signature keys not already in
-    ``values`` and adds them with the underscore signature line. The
-    caller's ``values`` dict is not mutated.
+    Covers two classes of placeholder that must be left blank for the physical
+    signer to fill in:
+
+    - ``*SIGNATURE`` keys (e.g. ``[LANDLORD SIGNATURE]``, ``[TENANT SIGNATURE]``)
+    - The bare ``[DATE]`` key (date-of-signing, distinct from ``[EFFECTIVE DATE]``)
+
+    Scans ``template_text`` for matching keys not already in ``values`` and
+    maps them to the underscore blank line. The caller's ``values`` dict is
+    not mutated.
     """
     augmented = dict(values)
     for match in _SIGNATURE_KEY_RE.finditer(template_text):
         key = match.group(1)
         if key not in augmented:
             augmented[key] = SIGNATURE_LINE
+    if _DATE_KEY_RE.search(template_text) and "DATE" not in augmented:
+        augmented["DATE"] = SIGNATURE_LINE
     return augmented
 
 

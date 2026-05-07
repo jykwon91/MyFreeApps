@@ -36,6 +36,18 @@ class TestGetDefault:
             assert d.default_source is None
             assert d.computed_expr is None
 
+    def test_bare_date_has_no_default_source(self) -> None:
+        """``[DATE]`` next to a signature line stays blank for the signer."""
+        d = get_default("DATE")
+        assert d.input_type == "text"
+        assert d.default_source is None
+
+    def test_effective_date_still_defaults_to_today(self) -> None:
+        """``[EFFECTIVE DATE]`` is a document property — keeps today's-date default."""
+        d = get_default("EFFECTIVE DATE")
+        assert d.input_type == "date"
+        assert d.default_source == "today"
+
 
 class TestBackCompatShim:
     def test_returns_input_type_and_default_source(self) -> None:

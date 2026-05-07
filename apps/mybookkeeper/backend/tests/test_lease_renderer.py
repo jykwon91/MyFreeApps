@@ -80,6 +80,25 @@ class TestRenderMd:
         assert out == "Landlord: /s/ Jason Kwon/"
         assert SIGNATURE_LINE not in out
 
+    def test_bare_date_renders_as_blank_line_when_unset(self) -> None:
+        """``[DATE]`` next to a signature must render as a blank signing line."""
+        out = render_md("Landlord: [LANDLORD SIGNATURE]  Date: [DATE]", {})
+        assert "[DATE]" not in out
+        # Two underscore lines: one for the signature, one for the date slot.
+        assert out.count(SIGNATURE_LINE) == 2
+
+    def test_bare_date_value_wins_over_blank_line(self) -> None:
+        """A caller-supplied DATE value still wins over the blank-line default."""
+        out = render_md("Date: [DATE]", {"DATE": "2026-05-30"})
+        assert out == "Date: 2026-05-30"
+        assert SIGNATURE_LINE not in out
+
+    def test_effective_date_does_not_get_blank_line_treatment(self) -> None:
+        """``[EFFECTIVE DATE]`` must NOT match the bare DATE blank-line rule."""
+        out = render_md("Effective: [EFFECTIVE DATE]", {})
+        assert "[EFFECTIVE DATE]" in out
+        assert SIGNATURE_LINE not in out
+
     def test_duplicate_signature_placeholder_each_replaced(self) -> None:
         """Each occurrence of the same SIGNATURE key must be replaced — not just the first."""
         text = (

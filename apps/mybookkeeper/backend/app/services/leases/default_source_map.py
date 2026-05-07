@@ -70,8 +70,16 @@ DEFAULT_SOURCE_MAP: dict[str, PlaceholderDefault] = {
     "MOVE-OUT DATE": _DATE_CONTRACT_END,
     "MOVE_OUT_DATE": _DATE_CONTRACT_END,
     "MOVE OUT DATE": _DATE_CONTRACT_END,
+    # ``EFFECTIVE DATE`` is the lease commencement date — auto-filled from
+    # today's date at generation time because it is a document property, not
+    # a field the signer fills in.
+    #
+    # ``DATE`` (bare) appears next to signature lines ("Landlord: ___  Date:
+    # ___"). It must be left blank so the physical signer writes in the date
+    # they sign — the same treatment as LANDLORD SIGNATURE / TENANT SIGNATURE.
+    # The renderer substitutes unfilled [DATE] placeholders with a blank
+    # underscore line via ``_augment_with_date_lines`` in renderer.py.
     "EFFECTIVE DATE": _DATE_TODAY,
-    "DATE": _DATE_TODAY,
     # Computed — auto-evaluated at generate time via the computed.py DSL.
     "NUMBER OF DAYS": PlaceholderDefault(
         "computed", None, computed_expr="(MOVE-OUT DATE - MOVE-IN DATE).days",
