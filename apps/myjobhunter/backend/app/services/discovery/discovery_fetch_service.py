@@ -29,6 +29,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.discovery.discovery_source import DiscoverySource
 from app.repositories.discovery import discovery_repository
+from app.services.discovery.industry_denylists import expand_excluded_keywords
 from app.services.discovery.sources import jsearch
 
 logger = logging.getLogger(__name__)
@@ -64,10 +65,10 @@ class DiscoveryUnsupportedSourceError(DiscoveryFetchError):
 # and returning a list[RawPosting] dict. Add new entries here as adapters
 # come online.
 async def _run_jsearch(config: dict[str, Any]) -> list[dict]:
-    base_query = (config.get("query") or "").strip()
+    base_query = _build_jsearch_query(config)
     if not base_query:
         raise DiscoveryFetchError(
-            "JSearch source missing required config.query",
+            "JSearch source missing required config.query (or config.roles)",
         )
 
     # JSearch's /search endpoint takes location inside the query string
@@ -91,9 +92,58 @@ async def _run_jsearch(config: dict[str, Any]) -> list[dict]:
         date_posted=config.get("date_posted", "all"),
         country=config.get("country", "us"),
         remote_jobs_only=bool(config.get("remote_jobs_only", False)),
-        employment_types=config.get("employment_types"),
-        job_requirements=config.get("job_requirements"),
+        employment_types=config.get("employment_types") or config.get("employment_type"),
+        job_requirements=config.get("job_requirements") or config.get("experience"),
     )
+
+
+def _build_jsearch_query(config: dict[str, Any]) -> str:
+    """Assemble the JSearch query string from structured config.
+
+    Two shapes accepted:
+
+    1. **Legacy** — caller pre-built the Boolean string in
+       ``config.query``. We use it verbatim.
+    2. **Structured** — caller supplied ``roles`` (list of titles)
+       and/or ``skills`` (list of skill names). We assemble:
+
+           ("Role 1" OR "Role 2") (Skill1 OR Skill2)
+
+       Quoted phrases for multi-word roles, parens around the OR
+       group so JSearch treats it as a single clause. Skills are
+       not quoted (single tokens) and are also OR'd.
+
+    Empty / missing → returns an empty string and the caller raises.
+    """
+    raw_query = (config.get("query") or "").strip()
+    if raw_query:
+        return raw_query
+
+    roles_raw = config.get("roles") or []
+    skills_raw = config.get("skills") or []
+
+    role_parts = [r.strip() for r in roles_raw if isinstance(r, str) and r.strip()]
+    skill_parts = [s.strip() for s in skills_raw if isinstance(s, str) and s.strip()]
+
+    parts: list[str] = []
+
+    if role_parts:
+        # Quote multi-word role titles so JSearch matches the phrase.
+        quoted = [
+            f'"{r}"' if " " in r else r for r in role_parts
+        ]
+        if len(quoted) == 1:
+            parts.append(quoted[0])
+        else:
+            parts.append("(" + " OR ".join(quoted) + ")")
+
+    if skill_parts:
+        if len(skill_parts) == 1:
+            parts.append(skill_parts[0])
+        else:
+            parts.append("(" + " OR ".join(skill_parts) + ")")
+
+    return " ".join(parts).strip()
 
 
 # ---------------------------------------------------------------------------
@@ -127,14 +177,16 @@ def _apply_post_fetch_filters(
     except (TypeError, ValueError):
         min_salary = None
 
-    excluded = config.get("excluded_keywords")
-    if isinstance(excluded, list):
-        excluded_lower = [
-            kw.strip().lower() for kw in excluded
-            if isinstance(kw, str) and kw.strip()
-        ]
-    else:
-        excluded_lower = []
+    # Two sources of excluded keywords merged together:
+    #   - operator's custom strings on ``config.excluded_keywords``
+    #   - industry chip expansions on ``config.excluded_industry_chips``
+    # ``expand_excluded_keywords`` deduplicates + lowercases.
+    raw_custom = config.get("excluded_keywords")
+    raw_chips = config.get("excluded_industry_chips")
+    excluded_lower = expand_excluded_keywords(
+        chips=raw_chips if isinstance(raw_chips, list) else None,
+        custom_keywords=raw_custom if isinstance(raw_custom, list) else None,
+    )
 
     if min_salary is None and not excluded_lower:
         return postings
