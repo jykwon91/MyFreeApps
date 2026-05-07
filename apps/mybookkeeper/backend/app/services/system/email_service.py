@@ -14,8 +14,10 @@ best-effort split live in the shared layer. This module:
 
 import html as html_mod
 import logging
+from collections.abc import Sequence
 from functools import lru_cache
 
+from platform_shared.services.email_attachment import EmailAttachment
 from platform_shared.services.email_service import (
     EmailNotConfiguredError,
     EmailSendError,
@@ -56,7 +58,13 @@ def get_recipients() -> list[str]:
     return [addr.strip() for addr in raw.split(",") if addr.strip()]
 
 
-def send_email(to: list[str], subject: str, body_html: str) -> bool:
+def send_email(
+    to: list[str],
+    subject: str,
+    body_html: str,
+    *,
+    attachments: Sequence[EmailAttachment] | None = None,
+) -> bool:
     """Best-effort send. Returns True on success, False on failure.
 
     Use for non-critical emails (cost alerts, demos, inquiry
@@ -65,10 +73,16 @@ def send_email(to: list[str], subject: str, body_html: str) -> bool:
     """
     if not to:
         return False
-    return _get_email_service().send(to, subject, body_html)
+    return _get_email_service().send(to, subject, body_html, attachments=attachments)
 
 
-def send_email_or_raise(to: list[str], subject: str, body_html: str) -> None:
+def send_email_or_raise(
+    to: list[str],
+    subject: str,
+    body_html: str,
+    *,
+    attachments: Sequence[EmailAttachment] | None = None,
+) -> None:
     """Fail-loud send. Raises on any failure.
 
     Raises:
@@ -77,7 +91,9 @@ def send_email_or_raise(to: list[str], subject: str, body_html: str) -> None:
         EmailSendError: If SMTP send fails (network, auth, recipient
             rejected).
     """
-    _get_email_service().send_or_raise(to, subject, body_html)
+    _get_email_service().send_or_raise(
+        to, subject, body_html, attachments=attachments,
+    )
 
 
 def send_cost_alert(severity: str, message: str, cost: float, budget: float) -> bool:
@@ -136,6 +152,7 @@ def send_test_email(to: str) -> bool:
 
 
 __all__ = [
+    "EmailAttachment",
     "EmailNotConfiguredError",
     "EmailSendError",
     "is_configured",

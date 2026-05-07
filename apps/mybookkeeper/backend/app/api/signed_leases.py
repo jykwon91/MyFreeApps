@@ -10,10 +10,22 @@ from __future__ import annotations
 import datetime as _dt
 import uuid
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Query,
+    Response,
+    UploadFile,
+)
 
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member, require_write_access
+from app.services.leases import lease_email_service
+from app.services.leases.lease_email_service import send_lease_to_tenant
 from app.schemas.leases.signed_lease_attachment_response import (
     SignedLeaseAttachmentResponse,
 )
@@ -159,6 +171,7 @@ async def update_lease(
             notes=payload.notes,
             status=payload.status,
             values=payload.values,
+            auto_email_tenant=payload.auto_email_tenant,
         )
     except signed_lease_service.SignedLeaseNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Lease not found") from exc
@@ -187,10 +200,11 @@ async def delete_lease(
 @router.post("/{lease_id}/generate", response_model=SignedLeaseResponse)
 async def generate_lease(
     lease_id: uuid.UUID,
+    background_tasks: BackgroundTasks,
     ctx: RequestContext = Depends(require_write_access),
 ) -> SignedLeaseResponse:
     try:
-        return await signed_lease_service.generate_lease(
+        detail, should_auto_email = await signed_lease_service.generate_lease(
             user_id=ctx.user_id,
             organization_id=ctx.organization_id,
             lease_id=lease_id,
@@ -199,6 +213,56 @@ async def generate_lease(
         raise HTTPException(status_code=404, detail="Lease not found") from exc
     except signed_lease_service.StorageNotConfiguredError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    # Schedule auto-email out-of-band — never blocks the HTTP response.
+    # send_lease_to_tenant is fail-soft: skips silently with a logged
+    # event row when the applicant has no contact_email or when SMTP
+    # isn't configured.
+    if should_auto_email:
+        background_tasks.add_task(
+            send_lease_to_tenant,
+            lease_id=lease_id,
+            user_id=ctx.user_id,
+            organization_id=ctx.organization_id,
+        )
+
+    return detail
+
+
+@router.post("/{lease_id}/email-tenant", status_code=202)
+async def email_lease_to_tenant(
+    lease_id: uuid.UUID,
+    background_tasks: BackgroundTasks,
+    ctx: RequestContext = Depends(require_write_access),
+) -> dict[str, bool]:
+    """Manually queue a tenant email for an existing lease.
+
+    Returns 202 ``{"queued": true}`` — the actual SMTP send happens in
+    a background task. Returns 422 ``"applicant_email_missing"`` when
+    the applicant has no contact_email so the host knows to fix the
+    applicant record before retrying. 404 if the lease isn't visible
+    to the caller.
+    """
+    try:
+        await lease_email_service.assert_can_email_tenant(
+            lease_id=lease_id,
+            user_id=ctx.user_id,
+            organization_id=ctx.organization_id,
+        )
+    except lease_email_service.LeaseNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Lease not found") from exc
+    except lease_email_service.ApplicantEmailMissingError as exc:
+        raise HTTPException(
+            status_code=422, detail="applicant_email_missing",
+        ) from exc
+
+    background_tasks.add_task(
+        send_lease_to_tenant,
+        lease_id=lease_id,
+        user_id=ctx.user_id,
+        organization_id=ctx.organization_id,
+    )
+    return {"queued": True}
 
 
 @router.post(

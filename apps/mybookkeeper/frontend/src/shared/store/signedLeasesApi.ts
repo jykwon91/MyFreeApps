@@ -81,6 +81,18 @@ const signedLeasesApi = baseApi.injectEndpoints({
       ],
     }),
 
+    emailSignedLeaseToTenant: builder.mutation<{ queued: boolean }, string>({
+      query: (id) => ({
+        url: `/signed-leases/${id}/email-tenant`,
+        method: "POST",
+      }),
+      // The send happens out-of-band; the lease row only updates
+      // ``last_emailed_to_tenant_at`` after the SMTP round-trip.
+      // Invalidate so the UI refetches and reflects the new stamp
+      // (next user navigation or polling will pick it up).
+      invalidatesTags: (_r, _e, id) => [{ type: "SignedLease", id }],
+    }),
+
     uploadSignedLeaseAttachment: builder.mutation<
       SignedLeaseAttachment,
       { leaseId: string; file: File; kind: LeaseAttachmentKind }
@@ -157,6 +169,7 @@ export const {
   useUpdateSignedLeaseMutation,
   useDeleteSignedLeaseMutation,
   useGenerateSignedLeaseMutation,
+  useEmailSignedLeaseToTenantMutation,
   useUploadSignedLeaseAttachmentMutation,
   useDeleteSignedLeaseAttachmentMutation,
   useImportSignedLeaseMutation,

@@ -27,6 +27,7 @@ const useGetSignedLeaseByIdQueryMock = vi.fn();
 vi.mock("@/shared/store/signedLeasesApi", () => ({
   useGenerateSignedLeaseMutation: () => [generateMock, { isLoading: false }],
   useUpdateSignedLeaseMutation: () => [updateMock, { isLoading: false }],
+  useEmailSignedLeaseToTenantMutation: () => [vi.fn(() => ({ unwrap: () => Promise.resolve() })), { isLoading: false }],
   useUploadSignedLeaseAttachmentMutation: () => [vi.fn(), { isLoading: false }],
   useDeleteSignedLeaseAttachmentMutation: () => [vi.fn(), {}],
   useUpdateLeaseAttachmentMutation: () => [vi.fn(), {}],
@@ -68,6 +69,8 @@ function buildLease(overrides: Partial<SignedLeaseDetail> = {}): SignedLeaseDeta
     sent_at: null,
     signed_at: null,
     ended_at: null,
+    auto_email_tenant: true,
+    last_emailed_to_tenant_at: null,
     created_at: "2026-05-01T00:00:00Z",
     updated_at: "2026-05-01T00:00:00Z",
     attachments: [],

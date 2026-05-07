@@ -20,6 +20,10 @@ export interface SignedLeaseDetail {
   sent_at: string | null;
   signed_at: string | null;
   ended_at: string | null;
+  /** Per-lease toggle for the auto-email-tenant-on-first-generate behavior. */
+  auto_email_tenant: boolean;
+  /** Stamped on the most recent successful tenant email send (auto or manual). */
+  last_emailed_to_tenant_at: string | null;
   created_at: string;
   updated_at: string;
   attachments: SignedLeaseAttachment[];
