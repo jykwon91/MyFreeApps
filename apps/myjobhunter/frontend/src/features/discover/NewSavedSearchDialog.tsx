@@ -1,6 +1,19 @@
-import { useState } from "react";
-import { ConfirmDialog, FormField, showError, showSuccess, extractErrorMessage } from "@platform/ui";
+import { useEffect, useMemo, useState } from "react";
+import {
+  ConfirmDialog,
+  FormField,
+  showError,
+  showSuccess,
+  extractErrorMessage,
+} from "@platform/ui";
 import { useCreateDiscoverySourceMutation } from "@/store/discoverApi";
+import { useGetProfileQuery } from "@/lib/profileApi";
+import { useListSkillsQuery } from "@/lib/skillsApi";
+import { useListWorkHistoryQuery } from "@/lib/workHistoryApi";
+import MultiChipInput from "./MultiChipInput";
+import ToggleChipGroup from "./ToggleChipGroup";
+import { INDUSTRY_CHIPS } from "./industry-chips";
+import { buildSavedSearchSummary } from "./saved-search-summary";
 
 interface NewSavedSearchDialogProps {
   open: boolean;
@@ -8,7 +21,12 @@ interface NewSavedSearchDialogProps {
 }
 
 type DatePosted = "all" | "today" | "3days" | "week" | "month";
-type Experience = "" | "no_experience" | "under_3_years_experience" | "more_than_3_years_experience" | "no_degree";
+type Experience =
+  | ""
+  | "no_experience"
+  | "under_3_years_experience"
+  | "more_than_3_years_experience"
+  | "no_degree";
 
 const INPUT_CLASS =
   "w-full px-3 py-2 border border-input rounded-md bg-background text-foreground";
@@ -16,24 +34,29 @@ const INPUT_CLASS =
 /**
  * Dialog for creating a new JSearch saved search.
  *
- * Filter axes (passed to JSearch query-time):
- *   - query (Boolean keywords)
- *   - location (folded into query as "in <X>" when set)
- *   - country, date_posted, remote_jobs_only
- *   - employment_types (FULLTIME default)
- *   - job_requirements (experience level)
- *
- * Filter axes (applied post-fetch, before upsert):
- *   - min_salary_usd
- *   - excluded_keywords (substring match against title + company +
- *     description + source_publisher; one unified denylist for blocked
- *     companies, industries, and title words)
+ * Phase A redesign:
+ *   - Pre-fills every field from the operator's existing profile so they
+ *     review/confirm rather than start from blank.
+ *   - Replaces the free-form Boolean query field with structured Role +
+ *     Skill chip inputs. The Boolean query is assembled server-side.
+ *   - Industry exclusions surface as toggle chips backed by curated
+ *     server-side keyword lists.
+ *   - Plain-English summary updates reactively below the form so the
+ *     operator confirms what they're about to save.
  */
 export default function NewSavedSearchDialog({
   open,
   onClose,
 }: NewSavedSearchDialogProps) {
-  const [query, setQuery] = useState("");
+  const { data: profile } = useGetProfileQuery(undefined, { skip: !open });
+  const { data: skillsData } = useListSkillsQuery(undefined, { skip: !open });
+  const { data: workHistoryData } = useListWorkHistoryQuery(undefined, {
+    skip: !open,
+  });
+
+  // Form state — owned here, not in parent.
+  const [roles, setRoles] = useState<string[]>([]);
+  const [skills, setSkills] = useState<string[]>([]);
   const [location, setLocation] = useState("");
   const [country, setCountry] = useState("us");
   const [datePosted, setDatePosted] = useState<DatePosted>("week");
@@ -41,12 +64,77 @@ export default function NewSavedSearchDialog({
   const [employmentType, setEmploymentType] = useState("FULLTIME");
   const [experience, setExperience] = useState<Experience>("");
   const [minSalary, setMinSalary] = useState("");
-  const [excludedKeywordsRaw, setExcludedKeywordsRaw] = useState("");
+  const [excludedIndustryChips, setExcludedIndustryChips] = useState<string[]>(
+    [],
+  );
+  const [excludedKeywords, setExcludedKeywords] = useState<string[]>([]);
+  const [didPrefill, setDidPrefill] = useState(false);
 
   const [createSource, { isLoading }] = useCreateDiscoverySourceMutation();
 
+  const recentRoleSuggestions = useMemo(() => {
+    if (!workHistoryData?.items) return [];
+    // Most recent 3 distinct role titles from work history.
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const w of workHistoryData.items) {
+      const t = w.title?.trim();
+      if (!t || seen.has(t)) continue;
+      seen.add(t);
+      out.push(t);
+      if (out.length >= 3) break;
+    }
+    return out;
+  }, [workHistoryData]);
+
+  const skillSuggestions = useMemo(() => {
+    if (!skillsData?.items) return [];
+    return skillsData.items
+      .map((s) => s.name)
+      .filter((n): n is string => !!n && n.trim().length > 0)
+      .slice(0, 8);
+  }, [skillsData]);
+
+  // One-shot pre-fill on first open after profile loads.
+  useEffect(() => {
+    if (!open) return;
+    if (didPrefill) return;
+    if (!profile) return;
+
+    // Roles: most-recent work history title.
+    if (recentRoleSuggestions.length > 0) {
+      setRoles([recentRoleSuggestions[0]]);
+    }
+
+    // Remote: from profile preference.
+    setRemoteOnly(profile.remote_preference === "remote_only");
+
+    // Salary: from desired_salary_min.
+    if (profile.desired_salary_min) {
+      const parsed = Number(profile.desired_salary_min);
+      if (Number.isFinite(parsed) && parsed > 0) {
+        setMinSalary(String(Math.floor(parsed)));
+      }
+    }
+
+    // Experience: map profile.seniority into JSearch's enum.
+    if (profile.seniority) {
+      const s = profile.seniority.toLowerCase();
+      if (s.includes("senior") || s.includes("staff") || s.includes("principal") || s.includes("lead")) {
+        setExperience("more_than_3_years_experience");
+      } else if (s.includes("junior") || s.includes("entry")) {
+        setExperience("no_experience");
+      } else if (s.includes("mid")) {
+        setExperience("under_3_years_experience");
+      }
+    }
+
+    setDidPrefill(true);
+  }, [open, profile, recentRoleSuggestions, didPrefill]);
+
   function reset() {
-    setQuery("");
+    setRoles([]);
+    setSkills([]);
     setLocation("");
     setCountry("us");
     setDatePosted("week");
@@ -54,36 +142,39 @@ export default function NewSavedSearchDialog({
     setEmploymentType("FULLTIME");
     setExperience("");
     setMinSalary("");
-    setExcludedKeywordsRaw("");
+    setExcludedIndustryChips([]);
+    setExcludedKeywords([]);
+    setDidPrefill(false);
   }
 
   async function handleConfirm() {
-    const trimmed = query.trim();
-    if (!trimmed) {
-      showError("Enter a search query");
+    if (roles.length === 0) {
+      showError("Add at least one role title");
       return;
     }
 
     const config: Record<string, unknown> = {
-      query: trimmed,
+      roles,
+      skills,
       country,
       date_posted: datePosted,
       remote_jobs_only: remoteOnly,
     };
     if (location.trim()) config.location = location.trim();
-    if (employmentType) config.employment_types = employmentType;
-    if (experience) config.job_requirements = experience;
+    if (employmentType) config.employment_type = employmentType;
+    if (experience) config.experience = experience;
 
     const minSalaryNum = Number(minSalary);
     if (minSalary && Number.isFinite(minSalaryNum) && minSalaryNum > 0) {
       config.min_salary_usd = Math.floor(minSalaryNum);
     }
 
-    const excluded = excludedKeywordsRaw
-      .split(/[,\n]/)
-      .map((s) => s.trim())
-      .filter(Boolean);
-    if (excluded.length > 0) config.excluded_keywords = excluded;
+    if (excludedIndustryChips.length > 0) {
+      config.excluded_industry_chips = excludedIndustryChips;
+    }
+    if (excludedKeywords.length > 0) {
+      config.excluded_keywords = excludedKeywords;
+    }
 
     try {
       await createSource({ source: "jsearch", config }).unwrap();
@@ -100,6 +191,20 @@ export default function NewSavedSearchDialog({
     onClose();
   }
 
+  const summary = buildSavedSearchSummary({
+    roles,
+    skills,
+    location,
+    country,
+    datePosted,
+    remoteOnly,
+    employmentType,
+    experience,
+    minSalary,
+    excludedIndustryChips,
+    excludedKeywords,
+  });
+
   return (
     <ConfirmDialog
       open={open}
@@ -110,19 +215,31 @@ export default function NewSavedSearchDialog({
       onConfirm={handleConfirm}
       onCancel={handleCancel}
     >
-      <div className="space-y-4">
-        <FormField label="Search query" required>
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder='"Senior Backend Engineer" Python'
-            className={INPUT_CLASS}
-            autoFocus
-          />
-          <p className="text-xs text-muted-foreground mt-1">
-            Boolean operators supported. Example: "Senior Backend Engineer" Python
+      <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
+        {didPrefill && (
+          <p className="text-xs text-muted-foreground bg-muted/40 px-3 py-2 rounded">
+            Pre-filled from your profile. Edit anything below.
           </p>
+        )}
+
+        <FormField label="Role(s)" required>
+          <MultiChipInput
+            value={roles}
+            onChange={setRoles}
+            placeholder='e.g. "Senior Backend Engineer"'
+            ariaLabel="Role titles"
+            suggestions={recentRoleSuggestions}
+          />
+        </FormField>
+
+        <FormField label="Skills (optional)">
+          <MultiChipInput
+            value={skills}
+            onChange={setSkills}
+            placeholder="Python, FastAPI, PostgreSQL"
+            ariaLabel="Skills"
+            suggestions={skillSuggestions}
+          />
         </FormField>
 
         <FormField label="Location (optional)">
@@ -130,12 +247,15 @@ export default function NewSavedSearchDialog({
             type="text"
             value={location}
             onChange={(e) => setLocation(e.target.value)}
-            placeholder="Remote, San Francisco, New York, etc."
+            placeholder="City or 'Remote'"
             className={INPUT_CLASS}
+            disabled={remoteOnly}
           />
-          <p className="text-xs text-muted-foreground mt-1">
-            Folded into the query as "in &lt;location&gt;". Leave blank for any.
-          </p>
+          {remoteOnly && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Disabled — you have remote-only on.
+            </p>
+          )}
         </FormField>
 
         <div className="grid grid-cols-2 gap-4">
@@ -202,29 +322,37 @@ export default function NewSavedSearchDialog({
             type="number"
             value={minSalary}
             onChange={(e) => setMinSalary(e.target.value)}
-            placeholder="e.g. 150000"
+            placeholder="150000"
             min={0}
             step={1000}
             className={INPUT_CLASS}
           />
           <p className="text-xs text-muted-foreground mt-1">
-            Drops postings below this floor when the source posts a salary range.
-            Postings with no salary disclosed are kept.
+            Drops postings below the floor when source posts a salary range.
+            Postings without disclosed salary are kept.
           </p>
         </FormField>
 
-        <FormField label="Excluded keywords (optional)">
-          <textarea
-            value={excludedKeywordsRaw}
-            onChange={(e) => setExcludedKeywordsRaw(e.target.value)}
-            placeholder={"lockheed, peraton, defense, government,\njunior, intern, contract"}
-            rows={3}
-            className={INPUT_CLASS}
+        <div>
+          <label className="block text-xs font-medium mb-1.5">
+            Exclude industries (one click skips all related companies + keywords)
+          </label>
+          <ToggleChipGroup
+            options={INDUSTRY_CHIPS}
+            value={excludedIndustryChips}
+            onChange={setExcludedIndustryChips}
+          />
+        </div>
+
+        <FormField label="Also exclude keywords (optional)">
+          <MultiChipInput
+            value={excludedKeywords}
+            onChange={setExcludedKeywords}
+            placeholder="junior, intern, ad hoc company name…"
+            ariaLabel="Excluded keywords"
           />
           <p className="text-xs text-muted-foreground mt-1">
-            Comma- or newline-separated. Drops postings whose title, company,
-            description, or publisher contains any of these (case-insensitive).
-            Use this to skip industries, companies, or seniority levels you don't want.
+            Case-insensitive substring match against title, company, description, publisher.
           </p>
         </FormField>
 
@@ -237,7 +365,42 @@ export default function NewSavedSearchDialog({
           />
           <span>Remote jobs only</span>
         </label>
+
+        {summary && (
+          <div className="border-t pt-3 mt-2">
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              {renderInlineMarkdown(summary)}
+            </p>
+          </div>
+        )}
       </div>
     </ConfirmDialog>
   );
+}
+
+/**
+ * Render a tiny subset of markdown (only **bold**) inline.
+ *
+ * Avoids pulling in a markdown library for one rendering. The summary
+ * is operator-controlled text passed through {@link buildSavedSearchSummary},
+ * so the only risk surface is the operator's own input — which is bounded
+ * (role / skill / location / keyword strings, all already trimmed).
+ */
+function renderInlineMarkdown(s: string): React.ReactNode {
+  const parts: React.ReactNode[] = [];
+  const re = /\*\*(.+?)\*\*/g;
+  let last = 0;
+  let m: RegExpExecArray | null;
+  let key = 0;
+  while ((m = re.exec(s)) !== null) {
+    if (m.index > last) parts.push(s.slice(last, m.index));
+    parts.push(
+      <strong key={`b-${key++}`} className="text-foreground">
+        {m[1]}
+      </strong>,
+    );
+    last = m.index + m[0].length;
+  }
+  if (last < s.length) parts.push(s.slice(last));
+  return parts;
 }
