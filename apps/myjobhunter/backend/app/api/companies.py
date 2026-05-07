@@ -168,12 +168,28 @@ async def get_company_research(
 
     Use ``POST /companies/{id}/research`` to trigger the first research run.
     """
-    research = await company_research_service.get_research(
-        db, company_id=company_id, user_id=user.id
-    )
-    if research is None:
-        raise HTTPException(status_code=404, detail=_RESEARCH_NOT_FOUND_DETAIL)
-    return CompanyResearchResponse.model_validate(research)
+    try:
+        research = await company_research_service.get_research(
+            db, company_id=company_id, user_id=user.id
+        )
+        if research is None:
+            raise HTTPException(status_code=404, detail=_RESEARCH_NOT_FOUND_DETAIL)
+        return CompanyResearchResponse.model_validate(research)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        # Without this fallback, an uncaught exception in get_research or
+        # model_validate falls through to FastAPI's default handler which
+        # returns a typeless 500 with no JSON detail — the operator can
+        # only see "Internal Server Error" in DevTools.
+        logger.exception(
+            "GET company research failed: company_id=%s",
+            company_id,
+        )
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to load research: {type(exc).__name__}: {exc}",
+        ) from exc
 
 
 @router.post(

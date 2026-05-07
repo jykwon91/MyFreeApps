@@ -15,7 +15,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.company.company_research import CompanyResearch
@@ -93,6 +93,18 @@ async def upsert_for_company(
         existing.last_researched_at = now
         existing.updated_at = now
         db.add(existing)
+        # Cascade-delete only fires when the parent row is DELETED. On
+        # rerun we UPDATE the parent and APPEND new sources, so the old
+        # ones must be explicitly deleted here. Otherwise sources
+        # accumulate every research run (38 rows of dup URLs after 4
+        # reruns observed in production).
+        await db.execute(
+            delete(ResearchSource).where(
+                ResearchSource.company_research_id == existing.id,
+                ResearchSource.user_id == user_id,
+            )
+        )
+        await db.flush()
         return existing
 
     record = CompanyResearch(
