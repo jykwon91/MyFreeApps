@@ -376,3 +376,56 @@ class TestTriggerCompanyResearchEndpoint:
 
         resp = await client.post(f"/companies/{company_id}/research")
         assert resp.status_code == 401
+
+    @pytest.mark.asyncio
+    async def test_trigger_returns_504_on_tavily_timeout(
+        self,
+        user_factory,
+        as_user,
+    ) -> None:
+        """A Tavily ReadTimeout (httpx.RequestError, not HTTPStatusError)
+        must surface as 504 with a typed detail — NOT a bare 500."""
+        import httpx
+
+        user = await user_factory()
+
+        async with await as_user(user) as authed:
+            create = await authed.post("/companies", json=_make_company_payload())
+            assert create.status_code == 201
+            company_id = create.json()["id"]
+
+        with patch(
+            "app.services.company.company_research_service.search_company",
+            new=AsyncMock(side_effect=httpx.ReadTimeout("read timeout")),
+        ):
+            async with await as_user(user) as authed:
+                resp = await authed.post(f"/companies/{company_id}/research")
+
+        assert resp.status_code == 504
+        assert "ReadTimeout" in resp.json()["detail"]
+
+    @pytest.mark.asyncio
+    async def test_trigger_returns_500_with_type_on_unexpected_error(
+        self,
+        user_factory,
+        as_user,
+    ) -> None:
+        """Unexpected exceptions (DB IntegrityError, KeyError, etc.)
+        surface 500 WITH the exception type+message — not a bare
+        'Internal Server Error' that gives the operator no signal."""
+        user = await user_factory()
+
+        async with await as_user(user) as authed:
+            create = await authed.post("/companies", json=_make_company_payload())
+            assert create.status_code == 201
+            company_id = create.json()["id"]
+
+        with patch(
+            "app.services.company.company_research_service.search_company",
+            new=AsyncMock(side_effect=KeyError("results")),
+        ):
+            async with await as_user(user) as authed:
+                resp = await authed.post(f"/companies/{company_id}/research")
+
+        assert resp.status_code == 500
+        assert "KeyError" in resp.json()["detail"]
