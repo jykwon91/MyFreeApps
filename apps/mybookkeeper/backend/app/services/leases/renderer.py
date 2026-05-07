@@ -173,12 +173,20 @@ def render_docx_bytes_to_pdf(
     """Render a DOCX template into a PDF after placeholder substitution.
 
     Pipeline: ``docx_bytes`` → python-docx (substitute placeholders, merge
-    runs) → mammoth (DOCX → markdown) → reportlab (markdown → PDF).
+    runs) → LibreOffice headless (`soffice --convert-to pdf`) for a
+    1:1-fidelity PDF that mirrors the source DOCX's layout, fonts,
+    tables, and headings.
 
-    Returns ``(pdf_bytes, used_docx_library)``. Falls back to a markdown
-    render of the extracted text if either python-docx or mammoth aren't
-    installed — same contract as ``render_docx_bytes``.
+    Returns ``(pdf_bytes, used_docx_library)``. Falls back to a plain-
+    text PDF render via reportlab when LibreOffice is unavailable
+    (typically: pytest on a dev machine without the soffice binary). In
+    production the docker image installs ``libreoffice-writer`` so the
+    high-fidelity branch is the live path.
     """
+    import shutil
+    import subprocess
+    import tempfile
+
     rendered_docx, used_docx = render_docx_bytes(docx_bytes, values)
     if not used_docx:
         # python-docx not installed; we never substituted. Best we can do
@@ -187,13 +195,12 @@ def render_docx_bytes_to_pdf(
         substituted = render_md(text, values)
         return render_pdf_from_text(substituted), False
 
-    try:
-        import mammoth  # type: ignore[import-untyped]
-    except ImportError:  # pragma: no cover — mammoth is in pyproject deps
+    soffice = shutil.which("soffice") or shutil.which("libreoffice")
+    if soffice is None:
         logger.warning(
-            "mammoth not installed — falling back to plain-text PDF render",
+            "LibreOffice (soffice) not found on PATH — falling back to "
+            "plain-text PDF. Install libreoffice-writer for full fidelity.",
         )
-        # Last-resort: extract text via python-docx and render as PDF.
         try:
             import docx  # type: ignore[import-untyped]
             doc = docx.Document(io.BytesIO(rendered_docx))
@@ -202,10 +209,45 @@ def render_docx_bytes_to_pdf(
         except Exception:  # noqa: BLE001
             return render_pdf_from_text(""), True
 
-    # mammoth converts DOCX → markdown preserving headings, lists, tables.
-    result = mammoth.convert_to_markdown(io.BytesIO(rendered_docx))
-    md_text = result.value
-    return render_pdf_from_text(md_text), True
+    with tempfile.TemporaryDirectory(prefix="lease-pdf-") as tmpdir:
+        docx_path = f"{tmpdir}/lease.docx"
+        with open(docx_path, "wb") as fh:
+            fh.write(rendered_docx)
+        # ``--headless`` runs without an X server. ``--convert-to pdf``
+        # writes ``lease.pdf`` to ``--outdir``. We use a fresh
+        # ``-env:UserInstallation`` per call so concurrent renders don't
+        # contend on a shared profile lock (LibreOffice serializes
+        # otherwise).
+        try:
+            subprocess.run(
+                [
+                    soffice,
+                    "--headless",
+                    f"-env:UserInstallation=file://{tmpdir}/profile",
+                    "--convert-to", "pdf",
+                    "--outdir", tmpdir,
+                    docx_path,
+                ],
+                check=True,
+                capture_output=True,
+                timeout=60,
+            )
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
+            logger.warning(
+                "soffice DOCX → PDF conversion failed (%s) — falling back "
+                "to plain-text PDF.", exc,
+            )
+            try:
+                import docx  # type: ignore[import-untyped]
+                doc = docx.Document(io.BytesIO(rendered_docx))
+                extracted = "\n\n".join(p.text for p in doc.paragraphs if p.text.strip())
+                return render_pdf_from_text(extracted), True
+            except Exception:  # noqa: BLE001
+                return render_pdf_from_text(""), True
+
+        with open(f"{tmpdir}/lease.pdf", "rb") as fh:
+            pdf_bytes = fh.read()
+    return pdf_bytes, True
 
 
 def render_pdf_from_text(rendered_text: str) -> bytes:

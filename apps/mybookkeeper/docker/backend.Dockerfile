@@ -23,9 +23,19 @@ FROM python:3.12-slim AS runtime
 ARG GIT_COMMIT=unknown
 ENV GIT_COMMIT=${GIT_COMMIT}
 
-# Install postgresql-client for pg_dump/pg_restore (backup/restore scripts)
+# Install:
+# - postgresql-client for pg_dump/pg_restore (backup/restore scripts)
+# - libreoffice for high-fidelity DOCX → PDF conversion of generated leases
+#   (called via `soffice --headless --convert-to pdf` from
+#   services/leases/renderer.py:render_docx_bytes_to_pdf)
+# - fonts-liberation gives Times/Arial/Courier fallbacks so rendered PDFs
+#   look the same regardless of which fonts the source DOCX requested
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends postgresql-client \
+    && apt-get install -y --no-install-recommends \
+        postgresql-client \
+        libreoffice-writer \
+        libreoffice-core \
+        fonts-liberation \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
