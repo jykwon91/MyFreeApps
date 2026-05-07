@@ -45,8 +45,8 @@ from app.services.leases.attachment_response_builder import (
 )
 from app.services.leases.computed import ComputedExprError, validate_expr
 from app.services.leases.default_source_map import (
+    get_default,
     guess_display_label,
-    guess_input_type_and_default,
 )
 from app.services.leases.default_source_resolver import (
     resolve_default_source,
@@ -289,16 +289,16 @@ async def upload_template(
         keys = extract_placeholders_across_files(extracted_texts)
         async with unit_of_work() as db:
             for order, key in enumerate(keys):
-                input_type, default_source = guess_input_type_and_default(key)
+                seed = get_default(key)
                 await lease_template_placeholder_repo.create(
                     db,
                     template_id=template_id,
                     key=key,
                     display_label=guess_display_label(key),
-                    input_type=input_type,
+                    input_type=seed.input_type,
                     required=True,
-                    default_source=default_source,
-                    computed_expr=None,
+                    default_source=seed.default_source,
+                    computed_expr=seed.computed_expr,
                     display_order=order,
                 )
     except Exception:
@@ -705,16 +705,16 @@ async def replace_template_files(
                         display_order=order,
                     )
                 else:
-                    input_type, default_source = guess_input_type_and_default(key)
+                    seed = get_default(key)
                     await lease_template_placeholder_repo.create(
                         db,
                         template_id=template_id,
                         key=key,
                         display_label=guess_display_label(key),
-                        input_type=input_type,
+                        input_type=seed.input_type,
                         required=True,
-                        default_source=default_source,
-                        computed_expr=None,
+                        default_source=seed.default_source,
+                        computed_expr=seed.computed_expr,
                         display_order=order,
                     )
 

@@ -608,8 +608,8 @@ async def seed_lease_template(
         lease_template_repo,
     )
     from app.services.leases.default_source_map import (
+        get_default,
         guess_display_label,
-        guess_input_type_and_default,
     )
     from app.services.leases.placeholder_extractor import extract_placeholder_keys
 
@@ -632,16 +632,16 @@ async def seed_lease_template(
         )
         keys = extract_placeholder_keys(payload.source_text)
         for order, key in enumerate(keys):
-            input_type, default_source = guess_input_type_and_default(key)
+            seed = get_default(key)
             await lease_template_placeholder_repo.create(
                 db,
                 template_id=template.id,
                 key=key,
                 display_label=guess_display_label(key),
-                input_type=input_type,
+                input_type=seed.input_type,
                 required=True,
-                default_source=default_source,
-                computed_expr=None,
+                default_source=seed.default_source,
+                computed_expr=seed.computed_expr,
                 display_order=order,
             )
         return _SeedLeaseTemplateResponse(id=template.id)
