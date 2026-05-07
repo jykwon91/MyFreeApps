@@ -131,6 +131,30 @@ jobs:
       - name: Build frontend
         run: npm run build --workspace=mybookkeeper-frontend
 
+  frontend-lockfile-drift:
+    # The caddy Dockerfile copies apps/mybookkeeper/frontend/package-lock.json
+    # and runs `npm ci` against it (NOT against the workspace root). If a dep
+    # is added via the workspace root only — as the DOCX-preview agent did
+    # with `mammoth` on 2026-05-07 — the per-app lockfile silently misses the
+    # entry and every deploy after fails at docker-build's `npm ci`. This
+    # job mimics the docker step so the gap surfaces at PR time.
+    name: frontend-lockfile-drift / mybookkeeper
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: '20'
+
+      - name: Verify per-app lockfile resolves with strict npm ci
+        run: |
+          cd apps/mybookkeeper/frontend
+          npm ci --no-workspaces
+
   frontend-layout-e2e:
     name: frontend-layout-e2e / mybookkeeper
     runs-on: ubuntu-latest
