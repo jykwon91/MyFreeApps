@@ -9,6 +9,7 @@ import {
   Settings,
   Shield,
   Sparkles,
+  Telescope,
   UserCircle,
 } from "lucide-react";
 import { AppShell, RequireAuth, Toaster, useIsAuthenticated } from "@platform/ui";
@@ -55,6 +56,7 @@ const ICONS: Record<string, React.ReactNode> = {
   Settings: <Settings className="w-5 h-5" />,
   Shield: <Shield className="w-5 h-5" />,
   Sparkles: <Sparkles className="w-5 h-5" />,
+  Telescope: <Telescope className="w-5 h-5" />,
   UserCircle: <UserCircle className="w-5 h-5" />,
 };
 

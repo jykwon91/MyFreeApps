@@ -19,6 +19,7 @@ export const NAV_DESCRIPTORS: NavDescriptor[] = [
   // Listed first per session decision: the application page is no
   // longer the first step in the new-job workflow.
   { path: "/analyze", label: "Analyze a job", iconName: "Search" },
+  { path: "/discover", label: "Discover", iconName: "Telescope" },
   { path: "/dashboard", label: "Dashboard", iconName: "LayoutDashboard" },
   { path: "/applications", label: "Applications", iconName: "Briefcase" },
   { path: "/companies", label: "Companies", iconName: "Building2" },
