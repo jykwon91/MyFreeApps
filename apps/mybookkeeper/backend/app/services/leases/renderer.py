@@ -36,7 +36,13 @@ import re
 
 logger = logging.getLogger(__name__)
 
-SIGNATURE_LINE = "_______________________________"
+# Signature underscore line — kept moderate (20 chars) so a typical
+# "Landlord (Name): _____ Date: _____" row fits on a single line in
+# the rendered PDF without wrapping. Signers write across this width.
+SIGNATURE_LINE = "____________________"
+# Bare [DATE] gets a shorter line — dates are short ("MM/DD/YYYY") so
+# a 12-underscore slot is plenty.
+DATE_LINE = "____________"
 _SIGNATURE_KEY_RE = re.compile(r"\[([A-Z][A-Z0-9 _\-]*?SIGNATURE)\]")
 # ``[DATE]`` (bare) next to a signature line must be left blank for the signer
 # to write in — same treatment as SIGNATURE keys. ``[EFFECTIVE DATE]`` is a
@@ -65,7 +71,7 @@ def _augment_with_signature_lines(
         if key not in augmented:
             augmented[key] = SIGNATURE_LINE
     if _DATE_KEY_RE.search(template_text) and "DATE" not in augmented:
-        augmented["DATE"] = SIGNATURE_LINE
+        augmented["DATE"] = DATE_LINE
     return augmented
 
 

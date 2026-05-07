@@ -19,7 +19,7 @@ from app.services.leases.placeholder_extractor import (
     extract_placeholders_across_files,
     normalise_key,
 )
-from app.services.leases.renderer import SIGNATURE_LINE, render_md
+from app.services.leases.renderer import DATE_LINE, SIGNATURE_LINE, render_md
 
 
 # ---------------------------------------------------------------------------
@@ -81,16 +81,21 @@ class TestRenderMd:
         assert SIGNATURE_LINE not in out
 
     def test_bare_date_renders_as_blank_line_when_unset(self) -> None:
-        """``[DATE]`` next to a signature must render as a blank signing line."""
+        """``[DATE]`` next to a signature must render as a blank date slot.
+
+        Distinct from SIGNATURE_LINE: dates are short (MM/DD/YYYY) so we
+        use a narrower DATE_LINE to keep the row from wrapping in the PDF.
+        """
         out = render_md("Landlord: [LANDLORD SIGNATURE]  Date: [DATE]", {})
         assert "[DATE]" not in out
-        # Two underscore lines: one for the signature, one for the date slot.
-        assert out.count(SIGNATURE_LINE) == 2
+        assert SIGNATURE_LINE in out
+        assert DATE_LINE in out
 
     def test_bare_date_value_wins_over_blank_line(self) -> None:
         """A caller-supplied DATE value still wins over the blank-line default."""
         out = render_md("Date: [DATE]", {"DATE": "2026-05-30"})
         assert out == "Date: 2026-05-30"
+        assert DATE_LINE not in out
         assert SIGNATURE_LINE not in out
 
     def test_effective_date_does_not_get_blank_line_treatment(self) -> None:
@@ -98,6 +103,7 @@ class TestRenderMd:
         out = render_md("Effective: [EFFECTIVE DATE]", {})
         assert "[EFFECTIVE DATE]" in out
         assert SIGNATURE_LINE not in out
+        assert DATE_LINE not in out
 
     def test_duplicate_signature_placeholder_each_replaced(self) -> None:
         """Each occurrence of the same SIGNATURE key must be replaced — not just the first."""
