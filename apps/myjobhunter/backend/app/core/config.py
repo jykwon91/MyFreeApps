@@ -26,6 +26,12 @@ class Settings(BaseAppSettings):
     anthropic_api_key: str = ""
     tavily_api_key: str = ""
 
+    # JSearch (RapidAPI / Google Jobs aggregator) — wraps LinkedIn /
+    # Indeed / Glassdoor / ZipRecruiter / Dice into one structured JSON
+    # endpoint. Used by the discovery worker (Phase 4+). Empty in dev;
+    # required in production for the discovery feature to fetch.
+    jsearch_api_key: str = ""
+
     # ------------------------------------------------------------------
     # Google OAuth (Gmail integration — Phase 3)
     # ------------------------------------------------------------------
