@@ -45,16 +45,22 @@ async def update_contract_dates(
     applicant_id: uuid.UUID,
     contract_start: _dt.date | None,
     contract_end: _dt.date | None,
+    contract_start_sent: bool,
+    contract_end_sent: bool,
 ) -> ApplicantDetailResponse:
     """Update contract dates for an applicant.
 
-    ``contract_start`` and ``contract_end`` are the values from the request
-    (``None`` means "set the field to NULL", not "leave it unchanged").
-    Partial updates — where only one date is sent — resolve by merging with
-    the current DB value inside this function before writing.
+    Each field has BOTH a value and a ``*_sent`` boolean. The pair lets the
+    service distinguish three caller intents:
 
-    The route passes the raw Pydantic-parsed values; this function is
-    responsible for the merge, the lock check, the DB write, and the event.
+    - ``contract_start_sent=False`` → field omitted from the request; preserve
+      the existing DB value (partial-update semantics).
+    - ``contract_start_sent=True, contract_start=<date>`` → set to that date.
+    - ``contract_start_sent=True, contract_start=None`` → explicitly clear
+      the field (set DB column to NULL).
+
+    The route is responsible for inspecting ``payload.model_fields_set`` and
+    passing the booleans; the service stays Pydantic-agnostic.
 
     Raises:
         LookupError: applicant not found for (organization_id, user_id).
@@ -81,19 +87,11 @@ async def update_contract_dates(
         old_start = _iso_or_none(applicant.contract_start)
         old_end = _iso_or_none(applicant.contract_end)
 
-        # Resolve final values: None from the request means "set to NULL".
-        # The request schema uses None as the absent sentinel, so we must
-        # distinguish "not sent" from "explicitly set to null". Since we
-        # receive Python None for both, we treat None as "use existing" here
-        # to support partial updates (the most common case is "only change
-        # contract_end"). To explicitly null a date, the caller would need to
-        # send a different signal; for now partial-update semantics is the
-        # correct UX (setting a date to null from the date picker is unusual).
         resolved_start = (
-            contract_start if contract_start is not None else applicant.contract_start
+            contract_start if contract_start_sent else applicant.contract_start
         )
         resolved_end = (
-            contract_end if contract_end is not None else applicant.contract_end
+            contract_end if contract_end_sent else applicant.contract_end
         )
 
         await applicant_repo.update_contract_dates(
