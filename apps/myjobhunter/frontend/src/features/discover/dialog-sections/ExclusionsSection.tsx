@@ -1,6 +1,4 @@
-import { FormField } from "@platform/ui";
-import MultiChipInput from "../MultiChipInput";
-import ToggleChipGroup from "../ToggleChipGroup";
+import { FormField, MultiChipInput, ToggleChipGroup } from "@platform/ui";
 import { INDUSTRY_CHIPS } from "../industry-chips";
 
 const INPUT_CLASS =

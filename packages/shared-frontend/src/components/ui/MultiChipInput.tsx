@@ -18,9 +18,6 @@ interface MultiChipInputProps {
  * becomes a chip. Backspace on an empty input removes the last chip.
  *
  * Mobile-friendly: each chip's remove button is a 36px tap target.
- *
- * Local to features/discover for now; promote to ``@platform/ui`` when
- * MBK needs the same primitive.
  */
 export default function MultiChipInput({
   value,

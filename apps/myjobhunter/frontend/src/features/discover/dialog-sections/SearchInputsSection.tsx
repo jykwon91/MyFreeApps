@@ -1,5 +1,4 @@
-import { FormField } from "@platform/ui";
-import MultiChipInput from "../MultiChipInput";
+import { FormField, MultiChipInput } from "@platform/ui";
 
 const INPUT_CLASS =
   "w-full px-3 py-2 border border-input rounded-md bg-background text-foreground";
