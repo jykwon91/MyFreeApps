@@ -367,7 +367,12 @@ async def attribute_manually(
     organization_id: uuid.UUID,
     user_id: uuid.UUID,
 ) -> dict:
-    """Manually attribute a transaction to an applicant."""
+    """Manually attribute a transaction to an applicant.
+
+    If a pending review-queue row exists for this transaction (because the
+    auto-pipeline previously couldn't decide), it is resolved as ``confirmed``
+    in the same transaction so the host doesn't have to reject it separately.
+    """
     async with unit_of_work() as db:
         txn = await txn_repo.get_by_id(db, transaction_id, organization_id)
         if not txn:
@@ -390,6 +395,12 @@ async def attribute_manually(
             property_id = await _get_property_id_for_applicant(db, applicant, organization_id)
             if property_id:
                 txn.property_id = property_id
+
+        review_row = await attribution_repo.get_by_transaction_id(
+            db, transaction_id, organization_id
+        )
+        if review_row and review_row.status == "pending":
+            await attribution_repo.resolve(db, review_row, status="confirmed")
 
         await receipt_service.create_pending_receipt_in_session(
             db,
