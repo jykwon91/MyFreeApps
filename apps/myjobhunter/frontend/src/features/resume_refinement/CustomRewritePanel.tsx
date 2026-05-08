@@ -1,3 +1,4 @@
+import { type KeyboardEvent } from "react";
 import { LoadingButton } from "@platform/ui";
 
 interface CustomRewritePanelProps {
@@ -15,13 +16,21 @@ export default function CustomRewritePanel({
   onSubmit,
   isPending,
 }: CustomRewritePanelProps) {
+  function handleKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
+    if (e.key !== "Enter" || e.shiftKey) return;
+    e.preventDefault();
+    if (isPending || !customText.trim()) return;
+    onSubmit();
+  }
+
   return (
     <div className="space-y-2 border-t border-border pt-3">
       <textarea
         value={customText}
         onChange={(e) => onChange(e.target.value)}
+        onKeyDown={handleKeyDown}
         rows={3}
-        placeholder="Type the version you want…"
+        placeholder="Type the version you want… Enter to send, Shift+Enter for newline."
         className="w-full rounded-md border border-border bg-background p-2 text-sm"
       />
       <div className="flex gap-2 justify-end">
