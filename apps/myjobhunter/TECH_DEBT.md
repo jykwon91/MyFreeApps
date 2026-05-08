@@ -100,11 +100,14 @@ re-export shim (101 LOC); no import-site changes required.
 
 ---
 
-#### MEDIUM — `apps/myjobhunter/backend/app/services/job_analysis/job_analysis_service.py` (786 LOC)
+#### ✅ RESOLVED — `apps/myjobhunter/backend/app/services/job_analysis/job_analysis_service.py` (786 LOC)
 
-**Effort:** M
-**Problem:** Analyze + score + promote + extraction-log management all together.
-**Recommendation:** Split into `job_analysis_service.py` (analyze + score), `job_analysis_promote_service.py` (promote-to-application).
+Split on 2026-05-08 (PR #479) into:
+- `job_analysis_service.py` (~470 LOC): analyze/score/get_analysis/soft_delete_analysis + all validation/prompt helpers
+- `job_analysis_promote_service.py` (~115 LOC): apply_to_application + _find_or_create_company
+- `_job_analysis_utils.py` (~50 LOC): shared tiny utilities (_str_or_none, _safe_float, _safe_remote_type, _map_salary_period) to avoid circular imports
+
+`apply_to_application` re-exported from job_analysis_service for backward compat — no caller changes required. 37/37 tests pass.
 
 ---
 
