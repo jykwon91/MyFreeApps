@@ -180,52 +180,6 @@ export default function LeaseDetail() {
             }
           />
 
-          {/* Documents generated from templates — extensions, addenda, disclosures,
-              etc. Section is shown for both generated and imported leases; the
-              underlying flow is the same. */}
-          <section
-            className="border rounded-lg p-4"
-            data-testid="lease-templates-card"
-          >
-            <div className="flex items-center justify-between gap-2 mb-2">
-              <p className="text-xs text-muted-foreground uppercase font-medium tracking-wide">
-                {lease.templates.length === 1 ? "Document" : "Documents"}
-              </p>
-              {canWrite ? (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowAddTemplateModal(true)}
-                  data-testid="lease-add-template-button"
-                  className="h-7 px-2 text-xs"
-                >
-                  <Plus size={12} className="mr-1" />
-                  Add document
-                </Button>
-              ) : null}
-            </div>
-            {lease.templates.length > 0 ? (
-              <ul className="flex flex-wrap gap-2">
-                {lease.templates.map((t) => (
-                  <li key={t.id}>
-                    <Link
-                      to={`/lease-templates/${t.id}`}
-                      data-testid={`lease-template-link-${t.id}`}
-                      className="inline-block text-xs px-2 py-1 rounded-md bg-muted text-foreground hover:bg-muted/70"
-                    >
-                      {t.name}{" "}
-                      <span className="text-muted-foreground">v{t.version}</span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-xs text-muted-foreground">
-                No documents yet — add one to generate things like a lease extension or pet addendum.
-              </p>
-            )}
-          </section>
-
           {showAddTemplateModal && lease ? (
             <LeaseAddTemplateModal
               leaseId={lease.id}
@@ -283,11 +237,26 @@ export default function LeaseDetail() {
           </div>
 
           {tab === "files" ? (
-            <LeaseAttachmentsSection
-              leaseId={lease.id}
-              attachments={lease.attachments}
-              canWrite={canWrite}
-            />
+            <div className="space-y-3">
+              {canWrite ? (
+                <div className="flex justify-end">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setShowAddTemplateModal(true)}
+                    data-testid="lease-add-template-button"
+                  >
+                    <Plus size={14} className="mr-1" />
+                    Add document
+                  </Button>
+                </div>
+              ) : null}
+              <LeaseAttachmentsSection
+                leaseId={lease.id}
+                attachments={lease.attachments}
+                canWrite={canWrite}
+              />
+            </div>
           ) : null}
 
           {tab === "details" ? (

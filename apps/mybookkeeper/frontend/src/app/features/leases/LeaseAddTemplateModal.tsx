@@ -65,8 +65,8 @@ export default function LeaseAddTemplateModal({
     refetch,
   } = useGetLeaseTemplatesQuery();
 
-  const excludeSet = new Set(existingTemplateIds);
-  const available = (data?.items ?? []).filter((t) => !excludeSet.has(t.id));
+  const linkedSet = new Set(existingTemplateIds);
+  const available = data?.items ?? [];
 
   function handleToggle(t: LeaseTemplateSummary) {
     setSelectedIds((prev) =>
@@ -116,25 +116,21 @@ export default function LeaseAddTemplateModal({
       return;
     }
 
+    const anyAlreadyLinked = selectedIds.some((id) => linkedSet.has(id));
+
     try {
       await addTemplates({
         leaseId,
         templateIds: selectedIds,
         values: valuesState.values,
       }).unwrap();
-      showSuccess(
-        `${selectedIds.length} template${selectedIds.length === 1 ? "" : "s"} added.`,
-      );
+      const noun =
+        selectedIds.length === 1 ? "Document" : `${selectedIds.length} documents`;
+      const verb = anyAlreadyLinked ? "regenerated" : "added";
+      showSuccess(`${noun} ${verb}.`);
       onClose();
-    } catch (err: unknown) {
-      const status = (err as { status?: number })?.status;
-      if (status === 409) {
-        showError(
-          "Some templates were already on this lease — pick different ones.",
-        );
-      } else {
-        showError("Couldn't add the templates. Want to try again?");
-      }
+    } catch {
+      showError("Couldn't generate the document. Want to try again?");
     }
   }
 
@@ -199,6 +195,7 @@ export default function LeaseAddTemplateModal({
                 >
                   {available.map((t) => {
                     const checked = selectedIds.includes(t.id);
+                    const alreadyLinked = linkedSet.has(t.id);
                     return (
                       <li key={t.id}>
                         <label
@@ -230,11 +227,18 @@ export default function LeaseAddTemplateModal({
                                 {t.description}
                               </p>
                             ) : null}
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {t.placeholder_count}{" "}
-                              {t.placeholder_count === 1
-                                ? "placeholder"
-                                : "placeholders"}
+                            <p className="text-xs text-muted-foreground mt-1 flex items-center gap-2 flex-wrap">
+                              <span>
+                                {t.placeholder_count}{" "}
+                                {t.placeholder_count === 1
+                                  ? "placeholder"
+                                  : "placeholders"}
+                              </span>
+                              {alreadyLinked ? (
+                                <span className="text-[10px] uppercase tracking-wide bg-muted rounded px-1.5 py-0.5 font-medium">
+                                  on this lease — picking will regenerate
+                                </span>
+                              ) : null}
                             </p>
                           </div>
                         </label>

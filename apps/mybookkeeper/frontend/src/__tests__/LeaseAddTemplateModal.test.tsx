@@ -11,7 +11,9 @@
  * - Continue → prefill mutation → values step with prefilled inputs
  * - Generate fires add-templates mutation with template_ids + values
  * - Success toast + modal close on 200
- * - 409 error toast on duplicate template conflict
+ * - Generic error toast when the mutation rejects (post-2026-05-08 the
+ *   backend treats already-linked templates as a regenerate, so 409 no
+ *   longer fires from this path)
  */
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -344,17 +346,45 @@ describe("LeaseAddTemplateModal", () => {
       target: { value: "2026-08-31" },
     });
     fireEvent.click(screen.getByTestId("lease-add-template-confirm"));
-    await waitFor(() => expect(showSuccessMock).toHaveBeenCalledWith("1 template added."));
+    await waitFor(() => expect(showSuccessMock).toHaveBeenCalledWith("Document added."));
     await waitFor(() =>
       expect(screen.queryByTestId("lease-add-template-modal")).toBeNull(),
     );
   });
 
-  it("shows 409-specific error toast on duplicate conflict", async () => {
+  it("shows a regenerate success toast when re-picking an already-linked template", async () => {
+    canWriteValue = true;
+    // Lease already has tpl-new attached — re-picking it should regenerate.
+    mockLease = buildLease({
+      templates: [
+        { id: "tpl-existing", name: "Master Lease", version: 1, display_order: 0 },
+        { id: "tpl-new", name: "Addendum", version: 2, display_order: 1 },
+      ],
+    });
+    renderDetail();
+    fireEvent.click(screen.getByTestId("lease-add-template-button"));
+    await waitFor(() =>
+      expect(screen.getByTestId("add-template-checkbox-tpl-new")).toBeInTheDocument(),
+    );
+    fireEvent.click(screen.getByTestId("add-template-checkbox-tpl-new"));
+    fireEvent.click(screen.getByTestId("lease-add-template-continue"));
+    await waitFor(() =>
+      expect(screen.getByTestId("addendum-input-NEW LEASE END DATE")).toBeInTheDocument(),
+    );
+    fireEvent.change(screen.getByTestId("addendum-input-NEW LEASE END DATE"), {
+      target: { value: "2026-08-31" },
+    });
+    fireEvent.click(screen.getByTestId("lease-add-template-confirm"));
+    await waitFor(() =>
+      expect(showSuccessMock).toHaveBeenCalledWith("Document regenerated."),
+    );
+  });
+
+  it("shows a generic error toast when the mutation rejects", async () => {
     canWriteValue = true;
     mockLease = buildLease();
     addTemplatesMock.mockReturnValue({
-      unwrap: () => Promise.reject({ status: 409 }),
+      unwrap: () => Promise.reject({ status: 500 }),
     });
     renderDetail();
     fireEvent.click(screen.getByTestId("lease-add-template-button"));
@@ -372,7 +402,7 @@ describe("LeaseAddTemplateModal", () => {
     fireEvent.click(screen.getByTestId("lease-add-template-confirm"));
     await waitFor(() =>
       expect(showErrorMock).toHaveBeenCalledWith(
-        "Some templates were already on this lease — pick different ones.",
+        "Couldn't generate the document. Want to try again?",
       ),
     );
   });
