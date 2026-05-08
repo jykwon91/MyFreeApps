@@ -215,7 +215,16 @@ async def test_add_templates_raises_not_found_for_unknown_template(db) -> None:
 
 
 @pytest.mark.asyncio
-async def test_add_templates_rejects_already_linked(db) -> None:
+async def test_add_templates_already_linked_treated_as_regenerate(db) -> None:
+    """Re-attaching an already-linked template is now a regenerate.
+
+    Pre-2026-05-08 the service raised ``TemplatesAlreadyLinkedError``. The
+    new behaviour: skip creating a duplicate join row and proceed with
+    rendering — so the host can edit values and re-render via the same
+    "Add document" path. Verify here at the unit level that the call no
+    longer raises (the full render is exercised by the storage-mocked test
+    further down).
+    """
     user_id = uuid.uuid4()
     org_id = uuid.uuid4()
     t1 = await lease_template_repo.create(
@@ -238,18 +247,30 @@ async def test_add_templates_rejects_already_linked(db) -> None:
     )
     await db.commit()
 
+    storage = MagicMock()
+    storage.upload_file = MagicMock(return_value=None)
+    storage.delete_file = MagicMock(return_value=None)
+    storage.download_file = MagicMock(return_value=b"")
+
     with _patch(
         "app.services.leases.signed_lease_service.unit_of_work",
         _make_fake_uow(db),
+    ), _patch(
+        "app.services.leases.signed_lease_service.get_storage",
+        return_value=storage,
     ):
-        with pytest.raises(TemplatesAlreadyLinkedError) as exc_info:
-            await add_templates_and_generate(
-                user_id=user_id,
-                organization_id=org_id,
-                lease_id=lease.id,
-                template_ids=[t1.id],
-            )
-    assert t1.id in exc_info.value.duplicate_ids
+        # Should NOT raise. The applicant lookup will return None because
+        # we passed a random uuid for applicant_id; the resolver loop
+        # tolerates a missing applicant.
+        result = await add_templates_and_generate(
+            user_id=user_id,
+            organization_id=org_id,
+            lease_id=lease.id,
+            template_ids=[t1.id],
+        )
+    # Regenerate did not create a duplicate join row.
+    assert len(result.templates) == 1
+    assert result.templates[0].id == t1.id
 
 
 @pytest.mark.asyncio

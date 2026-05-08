@@ -608,26 +608,31 @@ async def add_templates_and_generate(
             if template is None:
                 raise TemplateNotFoundError(f"Template {tid} not found")
 
-        # Reject any that are already linked.
+        # Already-linked templates being re-attached are treated as a
+        # regenerate request: their existing rendered files will be
+        # replaced rather than 409-rejected. Genuine new templates get
+        # join rows; duplicates skip the join row create (already linked).
         existing_rows = await signed_lease_template_repo.list_for_lease(
             db, lease_id=lease_id,
         )
         existing_ids = {r.template_id for r in existing_rows}
-        duplicates = [tid for tid in template_ids if tid in existing_ids]
-        if duplicates:
-            raise TemplatesAlreadyLinkedError(duplicates)
+        new_template_ids = [tid for tid in template_ids if tid not in existing_ids]
+        is_regenerate = any(tid in existing_ids for tid in template_ids)
 
         # Compute the starting display_order for the new links.
         max_order = await signed_lease_template_repo.max_display_order_for_lease(
             db, lease_id=lease_id,
         )
 
-        # Load files + placeholders for only the new templates.
-        new_files: list = []         # (template_file_row, template_id)
+        # Load files + placeholders. On regenerate (any template_id matches an
+        # existing link), re-render ALL linked templates' files so the
+        # generated documents stay internally consistent with lease.values.
+        # On a pure add (no duplicates), only render the new templates' files.
+        files_to_render: list = []         # (template_file_row, template_id)
         placeholders: list = []
         seen_placeholder_keys: set[str] = set()
-        # Also include placeholders from already-linked templates so computed
-        # expressions that reference existing keys still resolve correctly.
+        seen_file_template_ids: set[uuid.UUID] = set()
+
         for r in existing_rows:
             for p in await lease_template_placeholder_repo.list_for_template(
                 db, template_id=r.template_id,
@@ -635,13 +640,22 @@ async def add_templates_and_generate(
                 if p.key not in seen_placeholder_keys:
                     seen_placeholder_keys.add(p.key)
                     placeholders.append(p)
+            if is_regenerate and r.template_id not in seen_file_template_ids:
+                seen_file_template_ids.add(r.template_id)
+                tpl_files = await lease_template_file_repo.list_for_template(
+                    db, template_id=r.template_id,
+                )
+                for f in tpl_files:
+                    files_to_render.append((f, r.template_id))
 
-        for order_offset, tid in enumerate(template_ids):
-            tpl_files = await lease_template_file_repo.list_for_template(
-                db, template_id=tid,
-            )
-            for f in tpl_files:
-                new_files.append((f, tid))
+        for tid in template_ids:
+            if tid not in seen_file_template_ids:
+                seen_file_template_ids.add(tid)
+                tpl_files = await lease_template_file_repo.list_for_template(
+                    db, template_id=tid,
+                )
+                for f in tpl_files:
+                    files_to_render.append((f, tid))
             for p in await lease_template_placeholder_repo.list_for_template(
                 db, template_id=tid,
             ):
@@ -736,7 +750,9 @@ async def add_templates_and_generate(
             )
 
         # Persist the new template links before rendering (render can be long).
-        for order_offset, tid in enumerate(template_ids):
+        # Already-linked templates being regenerated skip this step — their
+        # join row already exists.
+        for order_offset, tid in enumerate(new_template_ids):
             await signed_lease_template_repo.create(
                 db,
                 lease_id=lease_id,
@@ -744,7 +760,36 @@ async def add_templates_and_generate(
                 display_order=max_order + 1 + order_offset,
             )
 
+        # On regenerate, delete the existing rendered_original attachments
+        # so the new render replaces them. The original imported PDFs (kind=
+        # ``signed_lease`` / ``signed_addendum``) are untouched.
+        rendered_keys_to_delete: list[str] = []
+        if is_regenerate:
+            existing_attachments = await signed_lease_attachment_repo.list_by_lease(
+                db, lease_id,
+            )
+            for att in existing_attachments:
+                if att.kind == "rendered_original":
+                    rendered_keys_to_delete.append(att.storage_key)
+                    await signed_lease_attachment_repo.delete_by_id_scoped_to_lease(
+                        db,
+                        attachment_id=att.id,
+                        lease_id=lease_id,
+                    )
+
         values_snapshot = dict(merged_values)
+
+    # Best-effort delete of the old rendered objects in MinIO. Run outside the
+    # DB unit-of-work so a storage outage doesn't roll back the DB delete; a
+    # leftover orphan in MinIO is preferable to losing the regenerate.
+    for key in rendered_keys_to_delete:
+        try:
+            storage.delete_file(key)
+        except Exception:  # noqa: BLE001
+            logger.warning(
+                "Failed to delete superseded rendered file %s on regenerate",
+                key, exc_info=True,
+            )
 
     # Build substitution dict from the merged values (existing + resolved + override).
     substitutions: dict[str, str] = {
@@ -762,7 +807,7 @@ async def add_templates_and_generate(
 
     # Render each new template's files individually; partial success is fine.
     now = _dt.datetime.now(_dt.timezone.utc)
-    for f, tid in new_files:
+    for f, tid in files_to_render:
         uploaded_key: str | None = None
         try:
             raw = storage.download_file(f.storage_key)

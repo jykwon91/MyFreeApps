@@ -257,14 +257,6 @@ async def add_templates_to_lease(
         )
     except signed_lease_service.SignedLeaseNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Lease not found") from exc
-    except signed_lease_service.TemplatesAlreadyLinkedError as exc:
-        raise HTTPException(
-            status_code=409,
-            detail={
-                "error": "templates_already_linked",
-                "template_ids": [str(tid) for tid in exc.duplicate_ids],
-            },
-        ) from exc
     except lease_template_service.TemplateNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Template not found") from exc
     except signed_lease_service.StorageNotConfiguredError as exc:
