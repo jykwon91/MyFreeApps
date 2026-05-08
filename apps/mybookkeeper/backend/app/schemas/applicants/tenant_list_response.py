@@ -1,14 +1,10 @@
 """Paginated envelope for GET /applicants/tenants."""
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict
+from platform_shared.schemas.pagination import ListResponse
 
 from app.schemas.applicants.applicant_summary import ApplicantSummary
 
 
-class TenantListResponse(BaseModel):
-    items: list[ApplicantSummary]
-    total: int
-    has_more: bool
-
-    model_config = ConfigDict(from_attributes=True)
+class TenantListResponse(ListResponse[ApplicantSummary]):
+    pass
