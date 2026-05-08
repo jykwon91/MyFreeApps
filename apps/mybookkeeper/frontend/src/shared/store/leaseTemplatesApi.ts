@@ -28,8 +28,8 @@ const leaseTemplatesApi = baseApi.injectEndpoints({
       query: (args) => ({
         url: "/lease-templates",
         params: {
-          ...(args?.limit !== undefined ? { limit: args.limit } : {}),
-          ...(args?.offset !== undefined ? { offset: args.offset } : {}),
+          limit: args?.limit,
+          offset: args?.offset,
         },
       }),
       providesTags: (result) =>

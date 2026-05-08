@@ -20,13 +20,11 @@ const vendorsApi = baseApi.injectEndpoints({
       query: (args) => ({
         url: "/vendors",
         params: {
-          ...(args?.category ? { category: args.category } : {}),
-          ...(args?.preferred !== undefined ? { preferred: args.preferred } : {}),
-          ...(args?.include_deleted !== undefined
-            ? { include_deleted: args.include_deleted }
-            : {}),
-          ...(args?.limit !== undefined ? { limit: args.limit } : {}),
-          ...(args?.offset !== undefined ? { offset: args.offset } : {}),
+          category: args?.category,
+          preferred: args?.preferred,
+          include_deleted: args?.include_deleted,
+          limit: args?.limit,
+          offset: args?.offset,
         },
       }),
       providesTags: (result) =>

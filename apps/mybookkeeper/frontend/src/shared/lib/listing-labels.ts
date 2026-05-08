@@ -63,7 +63,7 @@ const USD_FORMATTER = new Intl.NumberFormat("en-US", {
 });
 
 export function formatRate(rate: string | null | undefined): string {
-  if (rate === null || rate === undefined || rate === "") return "—";
+  if (!rate) return "—";
   const value = Number(rate);
   if (!Number.isFinite(value)) return "—";
   return USD_FORMATTER.format(value);

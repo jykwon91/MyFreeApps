@@ -29,10 +29,10 @@ const insurancePoliciesApi = baseApi.injectEndpoints({
       query: (args) => ({
         url: "/insurance-policies",
         params: {
-          ...(args?.listing_id ? { listing_id: args.listing_id } : {}),
-          ...(args?.expiring_before ? { expiring_before: args.expiring_before } : {}),
-          ...(args?.limit !== undefined ? { limit: args.limit } : {}),
-          ...(args?.offset !== undefined ? { offset: args.offset } : {}),
+          listing_id: args?.listing_id,
+          expiring_before: args?.expiring_before,
+          limit: args?.limit,
+          offset: args?.offset,
         },
       }),
       providesTags: (result) =>

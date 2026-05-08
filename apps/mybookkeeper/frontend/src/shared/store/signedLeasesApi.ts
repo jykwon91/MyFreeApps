@@ -25,11 +25,11 @@ const signedLeasesApi = baseApi.injectEndpoints({
       query: (args) => ({
         url: "/signed-leases",
         params: {
-          ...(args?.applicant_id ? { applicant_id: args.applicant_id } : {}),
-          ...(args?.listing_id ? { listing_id: args.listing_id } : {}),
-          ...(args?.status ? { status: args.status } : {}),
-          ...(args?.limit !== undefined ? { limit: args.limit } : {}),
-          ...(args?.offset !== undefined ? { offset: args.offset } : {}),
+          applicant_id: args?.applicant_id,
+          listing_id: args?.listing_id,
+          status: args?.status,
+          limit: args?.limit,
+          offset: args?.offset,
         },
       }),
       providesTags: (result) =>

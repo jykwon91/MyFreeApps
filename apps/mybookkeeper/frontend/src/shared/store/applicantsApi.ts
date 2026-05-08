@@ -26,12 +26,10 @@ const applicantsApi = baseApi.injectEndpoints({
       query: (args) => ({
         url: "/applicants",
         params: {
-          ...(args?.stage ? { stage: args.stage } : {}),
-          ...(args?.include_deleted !== undefined
-            ? { include_deleted: args.include_deleted }
-            : {}),
-          ...(args?.limit !== undefined ? { limit: args.limit } : {}),
-          ...(args?.offset !== undefined ? { offset: args.offset } : {}),
+          stage: args?.stage,
+          include_deleted: args?.include_deleted,
+          limit: args?.limit,
+          offset: args?.offset,
         },
       }),
       providesTags: (result) =>
@@ -84,11 +82,9 @@ const applicantsApi = baseApi.injectEndpoints({
       query: (args) => ({
         url: "/applicants/tenants",
         params: {
-          ...(args?.include_ended !== undefined
-            ? { include_ended: args.include_ended }
-            : {}),
-          ...(args?.limit !== undefined ? { limit: args.limit } : {}),
-          ...(args?.offset !== undefined ? { offset: args.offset } : {}),
+          include_ended: args?.include_ended,
+          limit: args?.limit,
+          offset: args?.offset,
         },
       }),
       providesTags: (result) =>

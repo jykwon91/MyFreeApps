@@ -19,9 +19,9 @@ const listingsApi = baseApi.injectEndpoints({
       query: (args) => ({
         url: "/listings",
         params: {
-          ...(args?.status ? { status: args.status } : {}),
-          ...(args?.limit !== undefined ? { limit: args.limit } : {}),
-          ...(args?.offset !== undefined ? { offset: args.offset } : {}),
+          status: args?.status,
+          limit: args?.limit,
+          offset: args?.offset,
         },
       }),
       providesTags: (result) =>
@@ -100,10 +100,7 @@ const listingsApi = baseApi.injectEndpoints({
       query: ({ listingId, photoId, caption, display_order }) => ({
         url: `/listings/${listingId}/photos/${photoId}`,
         method: "PATCH",
-        data: {
-          ...(caption !== undefined ? { caption } : {}),
-          ...(display_order !== undefined ? { display_order } : {}),
-        },
+        data: { caption, display_order },
       }),
       invalidatesTags: (_result, _err, arg) => [
         { type: "Listing", id: arg.listingId },

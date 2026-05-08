@@ -29,10 +29,10 @@ const inquiriesApi = baseApi.injectEndpoints({
       query: (args) => ({
         url: "/inquiries",
         params: {
-          ...(args?.stage ? { stage: args.stage } : {}),
-          ...(args?.spam_status ? { spam_status: args.spam_status } : {}),
-          ...(args?.limit !== undefined ? { limit: args.limit } : {}),
-          ...(args?.offset !== undefined ? { offset: args.offset } : {}),
+          stage: args?.stage,
+          spam_status: args?.spam_status,
+          limit: args?.limit,
+          offset: args?.offset,
         },
       }),
       providesTags: (result) =>
