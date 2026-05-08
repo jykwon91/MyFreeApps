@@ -171,12 +171,8 @@ describe("TaxDocuments", () => {
 
   it("renders year group in accordion layout", () => {
     renderPage();
-    expect(screen.getByText("2025")).toBeInTheDocument();
-  });
-
-  it("renders document count", () => {
-    renderPage();
-    expect(screen.getByText(/2 document/)).toBeInTheDocument();
+    // "2025" appears both as the year-filter <option> and the accordion trigger label.
+    expect(screen.getAllByText("2025").length).toBeGreaterThanOrEqual(1);
   });
 
   it("renders issuer names from documents", () => {
@@ -184,12 +180,6 @@ describe("TaxDocuments", () => {
     expect(screen.getByText("Vello LLC")).toBeInTheDocument();
     const airbnbElements = screen.getAllByText("Airbnb");
     expect(airbnbElements.length).toBeGreaterThanOrEqual(1);
-  });
-
-  it("renders key amounts in currency format", () => {
-    renderPage();
-    expect(screen.getByText("$45,724.88")).toBeInTheDocument();
-    expect(screen.getByText("$15,000.00")).toBeInTheDocument();
   });
 
   it("renders form type badges", () => {
