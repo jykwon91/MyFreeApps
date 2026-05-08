@@ -23,7 +23,12 @@ import asyncio
 import logging
 import uuid
 from datetime import datetime, timezone
-from typing import Any
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+    from app.models.profile.skill import Skill as _Skill
 
 import anthropic
 import sqlalchemy.exc
@@ -180,7 +185,7 @@ async def _run_extraction(
     )
 
 
-async def _upsert_skill_ignore_conflict(db: Any, skill: Any) -> None:
+async def _upsert_skill_ignore_conflict(db: "AsyncSession", skill: "_Skill") -> None:
     """Add a skill row; silently ignore UNIQUE(user_id, lower(name)) violations."""
     from sqlalchemy.dialects.postgresql import insert as pg_insert  # noqa: PLC0415
     from app.models.profile.skill import Skill  # noqa: PLC0415
