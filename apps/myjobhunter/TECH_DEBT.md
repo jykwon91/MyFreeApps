@@ -3,7 +3,7 @@
 Issues discovered during development. New entries are appended; resolved entries are
 removed and the counts in this header are updated.
 
-**Open issues: 41 (Critical: 1 / High: 4 / Medium: 22 / Low: 15)**
+**Open issues: 40 (Critical: 1 / High: 3 / Medium: 22 / Low: 15)**
 
 > Last comprehensive audit: 2026-05-07 (post-discovery feature ship). All Critical and 7 of 8 audit-High findings RESOLVED in PRs #421-#432 (2026-05-07). Remaining audit findings preserved below under "## High (audit 2026-05-07)" / "## Medium (audit 2026-05-07)" / "## Low (audit 2026-05-07)" sections; pre-existing findings preserved under "## Pre-existing".
 
@@ -56,12 +56,9 @@ See sister entry in `apps/mybookkeeper/TECH_DEBT.md`. MJH side: `apps/myjobhunte
 
 > MJH already imports from `@platform/ui`, so these extractions are NOT blocked-on-react-19 from the MJH side. They become unblocked-for-MBK once MBK upgrades to React 19.
 
-#### HIGH — Extract `InlineBoldText` to `@platform/ui` now
+#### ~~HIGH — Extract `InlineBoldText` to `@platform/ui` now~~ RESOLVED
 
-**Effort:** S
-**Location:** `apps/myjobhunter/frontend/src/features/discover/InlineBoldText.tsx` (65 LOC).
-**Problem:** Generic markdown-bold renderer (parses `**text**`) living in a feature folder. MJH-only consumer today, but obviously reusable.
-**Recommendation:** Move to `packages/shared-frontend/src/components/InlineBoldText.tsx`. Re-export from `@platform/ui` index. Update MJH import.
+**Resolved:** PR #476 (2026-05-08). Component moved to `packages/shared-frontend/src/components/ui/InlineBoldText.tsx`, re-exported from `@platform/ui` index. MJH `NewSavedSearchDialog` import updated. Unit tests added in `packages/shared-frontend/src/__tests__/InlineBoldText.test.tsx`.
 
 ---
 
