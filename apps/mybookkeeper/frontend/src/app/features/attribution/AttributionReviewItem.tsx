@@ -1,12 +1,14 @@
 import { useState } from "react";
-import { CheckCircle, XCircle, HelpCircle } from "lucide-react";
+import { CheckCircle, XCircle, HelpCircle, UserCheck } from "lucide-react";
 import LoadingButton from "@/shared/components/ui/LoadingButton";
 import { formatCurrency } from "@/shared/utils/currency";
 import type { AttributionReviewItem as ReviewItemType } from "@/shared/types/attribution/attribution-review";
 import {
   useConfirmAttributionReviewMutation,
   useRejectAttributionReviewMutation,
+  useAttributeTransactionManuallyMutation,
 } from "@/shared/store/attributionApi";
+import { useGetApplicantsQuery } from "@/shared/store/applicantsApi";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 
 export interface AttributionReviewItemProps {
@@ -16,7 +18,19 @@ export interface AttributionReviewItemProps {
 export default function AttributionReviewItem({ item }: AttributionReviewItemProps) {
   const [confirmReview, { isLoading: isConfirming }] = useConfirmAttributionReviewMutation();
   const [rejectReview, { isLoading: isRejecting }] = useRejectAttributionReviewMutation();
+  const [attributeManually, { isLoading: isAttributing }] = useAttributeTransactionManuallyMutation();
   const [isActing, setIsActing] = useState(false);
+  const [pickedApplicantId, setPickedApplicantId] = useState<string>("");
+
+  const isUnmatched = item.confidence === "unmatched";
+
+  // Only fetch the applicants list for unmatched items — otherwise this
+  // mounts on every fuzzy row in the queue and burns RTK cache pressure.
+  const { data: applicantsResponse, isLoading: loadingApplicants } = useGetApplicantsQuery(
+    { stage: "lease_signed", limit: 200 },
+    { skip: !isUnmatched },
+  );
+  const applicants = applicantsResponse?.items ?? [];
 
   const handleConfirm = async () => {
     setIsActing(true);
@@ -42,6 +56,24 @@ export default function AttributionReviewItem({ item }: AttributionReviewItemPro
     }
   };
 
+  const handleLink = async () => {
+    if (!pickedApplicantId || !item.transaction) return;
+    setIsActing(true);
+    try {
+      // Service also resolves the review-queue row, so no separate reject
+      // call is needed.
+      await attributeManually({
+        transaction_id: item.transaction.id,
+        applicant_id: pickedApplicantId,
+      }).unwrap();
+      showSuccess("Payment linked to tenant.");
+    } catch {
+      showError("Couldn't link that payment. Try again?");
+    } finally {
+      setIsActing(false);
+    }
+  };
+
   const txn = item.transaction;
   const proposed = item.proposed_applicant;
   const displayName = txn?.payer_name ?? txn?.vendor ?? "Unknown sender";
@@ -49,6 +81,9 @@ export default function AttributionReviewItem({ item }: AttributionReviewItemPro
   const txnDate = txn?.transaction_date
     ? new Date(txn.transaction_date).toLocaleDateString()
     : "—";
+
+  const anyLoading = (isConfirming || isRejecting || isAttributing) && isActing;
+  const showInlinePicker = isUnmatched && txn != null;
 
   return (
     <div className="flex flex-col sm:flex-row sm:items-start gap-4 p-4 border rounded-lg bg-card">
@@ -74,6 +109,35 @@ export default function AttributionReviewItem({ item }: AttributionReviewItemPro
             <span>Couldn't match this to any of your tenants.</span>
           </div>
         )}
+        {showInlinePicker && !loadingApplicants && applicants.length > 0 ? (
+          <div className="flex items-center gap-2 flex-wrap pt-1">
+            <select
+              value={pickedApplicantId}
+              onChange={(e) => setPickedApplicantId(e.target.value)}
+              className="border rounded px-2 py-1.5 text-sm bg-background min-h-[36px] max-w-[220px]"
+              aria-label="Pick a tenant for this payment"
+              disabled={anyLoading}
+            >
+              <option value="">— pick a tenant —</option>
+              {applicants.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.legal_name ?? "Unnamed"}
+                </option>
+              ))}
+            </select>
+            <LoadingButton
+              variant="primary"
+              size="sm"
+              isLoading={isAttributing && isActing}
+              loadingText="Linking..."
+              onClick={handleLink}
+              disabled={!pickedApplicantId || anyLoading}
+            >
+              <UserCheck className="h-3.5 w-3.5 mr-1" aria-hidden="true" />
+              Link
+            </LoadingButton>
+          </div>
+        ) : null}
       </div>
       <div className="flex items-center gap-2 shrink-0">
         {item.confidence === "fuzzy" && proposed ? (
@@ -83,7 +147,7 @@ export default function AttributionReviewItem({ item }: AttributionReviewItemPro
             isLoading={isConfirming && isActing}
             loadingText="Saving..."
             onClick={handleConfirm}
-            disabled={isRejecting && isActing}
+            disabled={(isRejecting || isAttributing) && isActing}
           >
             <CheckCircle className="h-4 w-4 mr-1" aria-hidden="true" />
             Yes, that's them
@@ -95,7 +159,7 @@ export default function AttributionReviewItem({ item }: AttributionReviewItemPro
           isLoading={isRejecting && isActing}
           loadingText="Skipping..."
           onClick={handleReject}
-          disabled={isConfirming && isActing}
+          disabled={(isConfirming || isAttributing) && isActing}
         >
           <XCircle className="h-4 w-4 mr-1" aria-hidden="true" />
           Not them

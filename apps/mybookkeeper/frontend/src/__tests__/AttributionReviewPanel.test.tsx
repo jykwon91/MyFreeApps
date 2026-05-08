@@ -64,6 +64,17 @@ vi.mock("@/shared/store/attributionApi", () => ({
   useGetAttributionReviewQueueQuery: vi.fn(),
   useConfirmAttributionReviewMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useRejectAttributionReviewMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useAttributeTransactionManuallyMutation: vi.fn(() => [
+    vi.fn(() => ({ unwrap: () => Promise.resolve({ ok: true, transaction_id: "txn-2" }) })),
+    { isLoading: false },
+  ]),
+}));
+
+vi.mock("@/shared/store/applicantsApi", () => ({
+  useGetApplicantsQuery: vi.fn(() => ({
+    data: { items: [{ id: "applicant-9", legal_name: "Bob Tenant" }], total: 1, has_more: false },
+    isLoading: false,
+  })),
 }));
 
 import {
@@ -174,5 +185,30 @@ describe("AttributionReviewPanel", () => {
     renderWithProviders(<AttributionReviewPanel />);
     const rejectButtons = screen.getAllByText("Not them");
     expect(rejectButtons).toHaveLength(2);
+  });
+
+  it("renders inline tenant picker for unmatched items", () => {
+    vi.mocked(useGetAttributionReviewQueueQuery).mockReturnValue({
+      data: queueWithItems,
+      isLoading: false,
+    } as unknown as ReturnType<typeof useGetAttributionReviewQueueQuery>);
+
+    renderWithProviders(<AttributionReviewPanel />);
+    // Only the unmatched item gets a Link button + tenant select.
+    expect(screen.getByRole("combobox", { name: /pick a tenant/i })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Bob Tenant" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Link$/ })).toBeInTheDocument();
+  });
+
+  it("does not render inline picker on fuzzy items", () => {
+    // Show only the fuzzy item — picker should NOT appear.
+    vi.mocked(useGetAttributionReviewQueueQuery).mockReturnValue({
+      data: { ...queueWithItems, items: [queueWithItems.items[0]], pending_count: 1, total: 1 },
+      isLoading: false,
+    } as unknown as ReturnType<typeof useGetAttributionReviewQueueQuery>);
+
+    renderWithProviders(<AttributionReviewPanel />);
+    expect(screen.queryByRole("combobox", { name: /pick a tenant/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Link$/ })).not.toBeInTheDocument();
   });
 });

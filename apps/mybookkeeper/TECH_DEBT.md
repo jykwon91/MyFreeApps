@@ -54,11 +54,8 @@
 
 ---
 
-### [Attribution] Unmatched review items have no inline tenant-assign flow on the review panel
-**Effort:** S
-**Location:** `apps/mybookkeeper/frontend/src/app/features/attribution/AttributionReviewItem.tsx`, `AttributionReviewPanel.tsx`
-**Problem:** For `confidence="unmatched"` queue items (no proposed candidate), the review panel only shows a Reject button. To attribute an unmatched income transaction to a tenant the user must: (1) reject the queue item, (2) navigate to the Transactions page, (3) find the transaction, (4) open it, and (5) use the `AttributeTenantPicker`. This 5-step flow was intentional for Phase 1 but creates friction for the main "I got a Venmo payment and don't know who it's from" use case.
-**Recommendation:** Add an inline applicant select to `AttributionReviewItem` for `unmatched` items — reuse the same `lease_signed` applicants query already used by `AttributeTenantPicker`. On confirm, call `useAttributeTransactionManuallyMutation` (which also closes the queue item server-side). This collapses the 5-step flow to 2 steps on the review panel.
+### ~~[Attribution] Unmatched review items have no inline tenant-assign flow on the review panel~~ RESOLVED
+**Resolved:** PR feat/mbk-attribution-inline-picker (2026-05-08) — `AttributionReviewItem` now renders an inline `<select>` of `lease_signed` applicants for `unmatched` items, with a Link button that calls `useAttributeTransactionManuallyMutation`. The `attribute_manually` service was extended to also resolve any pending review-queue row for the txn in the same DB transaction (so the host doesn't have to also reject from the queue). 5-step flow collapsed to 2 steps on the review panel.
 
 ---
 
