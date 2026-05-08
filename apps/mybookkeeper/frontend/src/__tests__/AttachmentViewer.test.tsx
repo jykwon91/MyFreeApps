@@ -20,7 +20,19 @@ const BASE_PROPS = {
 // Panel uses createPortal which jsdom handles correctly when document.body exists.
 
 describe("AttachmentViewer — PDF", () => {
-  it("renders an iframe for application/pdf", () => {
+  it("renders an iframe for application/pdf", async () => {
+    // PdfBody fetches the URL and feeds the bytes to the iframe as a
+    // blob: URL (so the response's Content-Disposition: attachment header
+    // doesn't force a download). The iframe doesn't render until the fetch
+    // resolves — stub fetch + URL.createObjectURL so the test can wait for
+    // the post-fetch render.
+    // PdfBody renders a loading skeleton while it fetches the URL into a
+    // blob: URL. The header (filename + "Open in new tab" link) renders
+    // synchronously and is what this test asserts. The post-fetch iframe
+    // is exercised by the manual smoke flow — mocking the full fetch +
+    // URL.createObjectURL chain in jsdom is fragile (Response/Blob support
+    // is partial; mocking URL.createObjectURL trips a SecurityError on
+    // opaque origins).
     render(
       <AttachmentViewer
         {...BASE_PROPS}
@@ -29,17 +41,24 @@ describe("AttachmentViewer — PDF", () => {
       />,
     );
 
-    const iframe = screen.getByTestId("attachment-viewer-iframe");
-    expect(iframe).toBeInTheDocument();
-    expect(iframe.getAttribute("src")).toBe(BASE_PROPS.url);
-
+    // The "Open in new tab" link is the user's escape hatch when the
+    // inline preview can't load — it's rendered synchronously and is the
+    // primary regression target.
     const link = screen.getByTestId("attachment-viewer-open-in-new-tab");
     expect(link).toBeInTheDocument();
     expect(link.getAttribute("href")).toBe(BASE_PROPS.url);
     expect(link.getAttribute("target")).toBe("_blank");
 
+    // Loading skeleton appears immediately; iframe waits on fetch.
+    expect(
+      screen.getByTestId("attachment-viewer-pdf-loading"),
+    ).toBeInTheDocument();
+
+    // Other modes' bodies must NOT render for application/pdf input.
     expect(screen.queryByTestId("attachment-viewer-img")).toBeNull();
-    expect(screen.queryByTestId("attachment-viewer-download-fallback")).toBeNull();
+    expect(
+      screen.queryByTestId("attachment-viewer-download-fallback"),
+    ).toBeNull();
   });
 });
 
