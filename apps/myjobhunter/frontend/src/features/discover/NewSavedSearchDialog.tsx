@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import {
   ConfirmDialog,
   FormField,
@@ -7,13 +7,13 @@ import {
   extractErrorMessage,
 } from "@platform/ui";
 import { useCreateDiscoverySourceMutation } from "@/store/discoverApi";
-import { useGetProfileQuery, useUpdateProfileMutation } from "@/lib/profileApi";
-import { useListSkillsQuery } from "@/lib/skillsApi";
-import { useListWorkHistoryQuery } from "@/lib/workHistoryApi";
+import { useUpdateProfileMutation } from "@/lib/profileApi";
 import MultiChipInput from "./MultiChipInput";
 import ToggleChipGroup from "./ToggleChipGroup";
 import { INDUSTRY_CHIPS } from "./industry-chips";
 import { buildSavedSearchSummary } from "./saved-search-summary";
+import InlineBoldText from "./InlineBoldText";
+import { useDiscoveryDefaultsPrefill } from "./useDiscoveryDefaultsPrefill";
 
 interface NewSavedSearchDialogProps {
   open: boolean;
@@ -34,26 +34,21 @@ const INPUT_CLASS =
 /**
  * Dialog for creating a new JSearch saved search.
  *
- * Phase A redesign:
- *   - Pre-fills every field from the operator's existing profile so they
- *     review/confirm rather than start from blank.
- *   - Replaces the free-form Boolean query field with structured Role +
- *     Skill chip inputs. The Boolean query is assembled server-side.
- *   - Industry exclusions surface as toggle chips backed by curated
- *     server-side keyword lists.
- *   - Plain-English summary updates reactively below the form so the
- *     operator confirms what they're about to save.
+ * Pre-fills every field from the operator's profile + saved
+ * discovery_defaults so they review/confirm rather than start from
+ * blank. Replaces a free-form Boolean query field with structured
+ * Role + Skill chip inputs (the Boolean query is assembled
+ * server-side). Industry exclusions surface as toggle chips backed
+ * by curated server-side keyword lists.
+ *
+ * Prefill orchestration (profile loading, suggestion derivation,
+ * one-shot apply) lives in the ``useDiscoveryDefaultsPrefill`` hook.
+ * Markdown bold rendering for the summary lives in ``InlineBoldText``.
  */
 export default function NewSavedSearchDialog({
   open,
   onClose,
 }: NewSavedSearchDialogProps) {
-  const { data: profile } = useGetProfileQuery(undefined, { skip: !open });
-  const { data: skillsData } = useListSkillsQuery(undefined, { skip: !open });
-  const { data: workHistoryData } = useListWorkHistoryQuery(undefined, {
-    skip: !open,
-  });
-
   // Form state — owned here, not in parent.
   const [roles, setRoles] = useState<string[]>([]);
   const [skills, setSkills] = useState<string[]>([]);
@@ -68,87 +63,33 @@ export default function NewSavedSearchDialog({
     [],
   );
   const [excludedKeywords, setExcludedKeywords] = useState<string[]>([]);
-  const [didPrefill, setDidPrefill] = useState(false);
   const [saveAsDefaults, setSaveAsDefaults] = useState(false);
 
   const [createSource, { isLoading: isCreating }] = useCreateDiscoverySourceMutation();
   const [updateProfile, { isLoading: isUpdatingProfile }] = useUpdateProfileMutation();
   const isLoading = isCreating || isUpdatingProfile;
 
-  const recentRoleSuggestions = useMemo(() => {
-    if (!workHistoryData?.items) return [];
-    // Most recent 3 distinct role titles from work history.
-    const seen = new Set<string>();
-    const out: string[] = [];
-    for (const w of workHistoryData.items) {
-      const t = w.title?.trim();
-      if (!t || seen.has(t)) continue;
-      seen.add(t);
-      out.push(t);
-      if (out.length >= 3) break;
-    }
-    return out;
-  }, [workHistoryData]);
-
-  const skillSuggestions = useMemo(() => {
-    if (!skillsData?.items) return [];
-    return skillsData.items
-      .map((s) => s.name)
-      .filter((n): n is string => !!n && n.trim().length > 0)
-      .slice(0, 8);
-  }, [skillsData]);
-
-  // One-shot pre-fill on first open after profile loads.
-  // Preference order: profile.discovery_defaults (operator-saved) >
-  // heuristic from profile fields (seniority, salary, etc.).
-  useEffect(() => {
-    if (!open) return;
-    if (didPrefill) return;
-    if (!profile) return;
-
-    const defaults = profile.discovery_defaults ?? {};
-
-    // Roles: most-recent work history title.
-    if (recentRoleSuggestions.length > 0) {
-      setRoles([recentRoleSuggestions[0]]);
-    }
-
-    // Remote: from profile preference.
-    setRemoteOnly(profile.remote_preference === "remote_only");
-
-    // Salary: from desired_salary_min.
-    if (profile.desired_salary_min) {
-      const parsed = Number(profile.desired_salary_min);
-      if (Number.isFinite(parsed) && parsed > 0) {
-        setMinSalary(String(Math.floor(parsed)));
-      }
-    }
-
-    // Saved defaults override the heuristics for fields they cover.
-    if (defaults.country) setCountry(defaults.country);
-    if (defaults.date_posted) setDatePosted(defaults.date_posted as DatePosted);
-    if (defaults.employment_type !== undefined) setEmploymentType(defaults.employment_type);
-    if (defaults.experience !== undefined) {
-      setExperience(defaults.experience as Experience);
-    } else if (profile.seniority) {
-      const s = profile.seniority.toLowerCase();
-      if (s.includes("senior") || s.includes("staff") || s.includes("principal") || s.includes("lead")) {
-        setExperience("more_than_3_years_experience");
-      } else if (s.includes("junior") || s.includes("entry")) {
-        setExperience("no_experience");
-      } else if (s.includes("mid")) {
-        setExperience("under_3_years_experience");
-      }
-    }
-    if (Array.isArray(defaults.excluded_industry_chips)) {
-      setExcludedIndustryChips(defaults.excluded_industry_chips);
-    }
-    if (Array.isArray(defaults.excluded_keywords)) {
-      setExcludedKeywords(defaults.excluded_keywords);
-    }
-
-    setDidPrefill(true);
-  }, [open, profile, recentRoleSuggestions, didPrefill]);
+  // Hook owns: profile/skills/work-history fetches, suggestion
+  // derivation, one-shot prefill, and the "did this run" latch
+  // (useRef, not useState — ref is the right primitive for a flag
+  // that doesn't trigger re-renders).
+  const {
+    profile,
+    recentRoleSuggestions,
+    skillSuggestions,
+    didPrefill,
+    resetPrefill,
+  } = useDiscoveryDefaultsPrefill(open, {
+    setRoles,
+    setRemoteOnly,
+    setMinSalary,
+    setCountry,
+    setDatePosted,
+    setEmploymentType,
+    setExperience,
+    setExcludedIndustryChips,
+    setExcludedKeywords,
+  });
 
   function reset() {
     setRoles([]);
@@ -162,8 +103,8 @@ export default function NewSavedSearchDialog({
     setMinSalary("");
     setExcludedIndustryChips([]);
     setExcludedKeywords([]);
-    setDidPrefill(false);
     setSaveAsDefaults(false);
+    resetPrefill();
   }
 
   async function handleConfirm() {
@@ -425,38 +366,11 @@ export default function NewSavedSearchDialog({
         {summary && (
           <div className="border-t pt-3 mt-2">
             <p className="text-xs leading-relaxed text-muted-foreground">
-              {renderInlineMarkdown(summary)}
+              <InlineBoldText text={summary} />
             </p>
           </div>
         )}
       </div>
     </ConfirmDialog>
   );
-}
-
-/**
- * Render a tiny subset of markdown (only **bold**) inline.
- *
- * Avoids pulling in a markdown library for one rendering. The summary
- * is operator-controlled text passed through {@link buildSavedSearchSummary},
- * so the only risk surface is the operator's own input — which is bounded
- * (role / skill / location / keyword strings, all already trimmed).
- */
-function renderInlineMarkdown(s: string): React.ReactNode {
-  const parts: React.ReactNode[] = [];
-  const re = /\*\*(.+?)\*\*/g;
-  let last = 0;
-  let m: RegExpExecArray | null;
-  let key = 0;
-  while ((m = re.exec(s)) !== null) {
-    if (m.index > last) parts.push(s.slice(last, m.index));
-    parts.push(
-      <strong key={`b-${key++}`} className="text-foreground">
-        {m[1]}
-      </strong>,
-    );
-    last = m.index + m[0].length;
-  }
-  if (last < s.length) parts.push(s.slice(last));
-  return parts;
 }
