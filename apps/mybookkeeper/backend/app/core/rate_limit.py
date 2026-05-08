@@ -35,7 +35,7 @@ from app.core.config import settings
 from app.core.request_utils import get_client_ip
 from app.db.session import get_db
 from app.repositories.user.user_repo import get_by_email as get_user_by_email
-from app.services.system.auth_event_service import log_auth_event
+from platform_shared.services.auth_event_service import log_auth_event
 
 
 __all__ = [

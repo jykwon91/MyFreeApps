@@ -27,7 +27,7 @@ from app.models.organization.organization import Organization
 from app.models.organization.organization_member import OrganizationMember
 from app.models.organization.tax_profile import TaxProfile
 from app.models.user.user import User
-from app.services.system.auth_event_service import log_auth_event
+from platform_shared.services.auth_event_service import log_auth_event
 from app.services.system.password_reset_email import send_password_reset_email
 from app.services.system.verification_email import send_verification_email
 

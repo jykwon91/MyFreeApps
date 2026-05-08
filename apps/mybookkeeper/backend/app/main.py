@@ -219,7 +219,7 @@ from platform_shared.services.totp_service import (
     verify_recovery_code as _verify_recovery_code,
 )
 from app.core.permissions import current_admin
-from app.services.system.admin_user_service_factory import shared_admin_user_service
+from app.services.system.admin_service import shared_admin_user_service
 from app.services.user.totp_service import _decrypt as _decrypt_totp_secret
 
 
