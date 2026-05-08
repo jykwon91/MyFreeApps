@@ -160,9 +160,15 @@ async def update_applicant(
 ) -> ApplicantDetailResponse:
     """Update an applicant's contract dates.
 
-    Both ``contract_start`` and ``contract_end`` are optional. Omitting a
-    field means "leave it unchanged" — the service resolves the existing
-    value from the DB and writes the merged result.
+    Both ``contract_start`` and ``contract_end`` are optional. Three
+    semantically-distinct caller intents are supported:
+    - omit a field → preserve the existing DB value (partial update).
+    - send a date → set the field to that date.
+    - send ``null`` → clear the field (set the DB column to NULL).
+
+    The route inspects ``payload.model_fields_set`` to distinguish "omitted"
+    from "explicitly null"; the service receives both the value and a
+    ``*_sent`` boolean per field.
 
     Errors:
         404 — applicant not found in the calling tenant.
@@ -170,6 +176,7 @@ async def update_applicant(
         422 — ``contract_end`` is not after ``contract_start`` when both
               are provided, or extra fields were sent.
     """
+    sent = payload.model_fields_set
     try:
         return await applicant_contract_service.update_contract_dates(
             organization_id=ctx.organization_id,
@@ -177,6 +184,8 @@ async def update_applicant(
             applicant_id=applicant_id,
             contract_start=payload.contract_start,
             contract_end=payload.contract_end,
+            contract_start_sent="contract_start" in sent,
+            contract_end_sent="contract_end" in sent,
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail="Applicant not found") from exc

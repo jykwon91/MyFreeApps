@@ -1,7 +1,7 @@
 # Tech Debt
 
 > Last scanned: 2026-05-08
-> Issues: 0 critical, 6 high, 6 medium (1 deferred + 5 active), 0 low
+> Issues: 0 critical, 6 high, 5 medium (1 deferred + 4 active), 0 low
 
 ## High
 
@@ -39,11 +39,8 @@
 
 ---
 
-### [Contract dates] Partial-update cannot explicitly null a date field
-**Effort:** S
-**Location:** `apps/mybookkeeper/backend/app/services/applicants/applicant_contract_service.py` — `update_contract_dates()`, comment at line 84-91; `apps/mybookkeeper/backend/app/schemas/applicants/applicant_update_request.py`
-**Problem:** The PATCH schema uses `None` as the default for both `contract_start` and `contract_end`, making it impossible to distinguish "field not sent" from "field explicitly set to null". The service treats `None` as "keep existing value", which is the correct UX for the inline date picker (users rarely want to null a date). However, if a future UX needs a "clear date" action, the API cannot express it without a schema change (e.g., using `UNSET` sentinel or a separate `clear_contract_start: bool` field).
-**Recommendation:** When a "clear date" UX is needed, extend the request schema to use `Annotated[date | None, Field(default=UNSET)]` with a custom sentinel, or add a separate `clear_fields: list[str]` parameter. Document this limitation in the schema docstring until then.
+### ~~[Contract dates] Partial-update cannot explicitly null a date field~~ RESOLVED
+**Resolved:** PR fix/mbk-contract-dates-nullable-patch (2026-05-08) — route now inspects `payload.model_fields_set` and passes per-field `*_sent` booleans to the service. Three caller intents are now distinguishable: omit → preserve, send date → set, send `null` → clear. New service test `test_explicit_null_clears_contract_end` covers the previously-impossible path.
 
 ---
 
