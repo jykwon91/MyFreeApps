@@ -10,7 +10,7 @@
  * - Success toast when the mutation resolves
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent, act, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 import { Provider } from "react-redux";
 import { store } from "@/shared/store";
 import ContractDatesEditor from "@/app/features/applicants/ContractDatesEditor";
@@ -127,7 +127,6 @@ describe("ContractDatesEditor", () => {
   });
 
   it("shows success toast after successful save", async () => {
-    vi.useRealTimers(); // Switch to real timers for async resolution.
     mockUpdateDates.mockReturnValue({ unwrap: () => Promise.resolve({}) });
     renderEditor({ stage: "approved", value: "2026-12-31" });
     const input = screen.getByTestId("contract-date-input-contract_end");
@@ -135,14 +134,18 @@ describe("ContractDatesEditor", () => {
     fireEvent.change(input, { target: { value: "2026-11-30" } });
     fireEvent.blur(input);
 
-    // Wait for the debounce + async mutation.
-    await waitFor(() => expect(mockShowSuccess).toHaveBeenCalledOnce(), {
-      timeout: 2000,
+    // runAllTimersAsync advances fake timers AND drains the microtask queue
+    // atomically, so the debounce fires + the unwrap() promise resolves +
+    // the toast effect lands in one step. Avoids the brittle fake/real timer
+    // toggling pattern that mixed timer modes per-test.
+    await act(async () => {
+      await vi.runAllTimersAsync();
     });
+
+    expect(mockShowSuccess).toHaveBeenCalledOnce();
   });
 
   it("shows error toast and reverts value on mutation failure", async () => {
-    vi.useRealTimers(); // Switch to real timers for async resolution.
     mockUpdateDates.mockReturnValue({
       unwrap: () => Promise.reject({ data: { detail: { message: "Something went wrong" } } }),
     });
@@ -152,11 +155,11 @@ describe("ContractDatesEditor", () => {
     fireEvent.change(input, { target: { value: "2026-11-30" } });
     fireEvent.blur(input);
 
-    // Wait for the debounce + async mutation.
-    await waitFor(() => expect(mockShowError).toHaveBeenCalledOnce(), {
-      timeout: 2000,
+    await act(async () => {
+      await vi.runAllTimersAsync();
     });
 
+    expect(mockShowError).toHaveBeenCalledOnce();
     // Value should revert to the original.
     expect(input.value).toBe("2026-12-31");
   });

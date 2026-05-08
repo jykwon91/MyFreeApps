@@ -1,7 +1,7 @@
 # Tech Debt
 
 > Last scanned: 2026-05-08
-> Issues: 0 critical, 3 high, 6 medium (1 deferred + 5 active), 0 low
+> Issues: 0 critical, 3 high, 5 medium (1 deferred + 4 active), 0 low
 
 ## High
 
@@ -62,11 +62,8 @@
 
 ---
 
-### [Frontend tests] Debounce + async toast tests require switching between fake/real timers per test [DEFERRED]
-**Effort:** S
-**Location:** `apps/mybookkeeper/frontend/src/__tests__/ContractDatesEditor.test.tsx` — `shows success toast` and `shows error toast` tests (lines 129-162)
-**Problem:** Tests that verify debounce behavior use `vi.useFakeTimers()` (to control `setTimeout`), but toast-verification tests must call `vi.useRealTimers()` at the top of the test because `waitFor` with fake timers doesn't flush async promise chains reliably. This creates a brittle pattern: if a new test forgets to switch, it silently passes or flakes. The root cause is mixing synchronous timer control with async RTK mutation resolution.
-**Recommendation:** Refactor toast tests to use `vi.runAllTimersAsync()` (Vitest ≥ 1.6) which advances both fake timers and microtask queue atomically. This would allow all tests to keep `vi.useFakeTimers()` throughout the describe block.
+### ~~[Frontend tests] Debounce + async toast tests require switching between fake/real timers per test~~ RESOLVED
+**Resolved:** PR fix/mbk-contract-dates-timer-tests (2026-05-08) — both toast tests now use `vi.runAllTimersAsync()` inside an `act()` block, draining fake timers + microtasks atomically. The fake/real timer toggling is gone; all 8 tests in the file run under the same timer mode set by the describe-level `beforeEach`.
 
 ---
 
