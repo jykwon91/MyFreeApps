@@ -9,6 +9,7 @@ import {
   timeAgo,
   extractErrorMessage,
 } from "@platform/ui";
+import SavedSearchesSkeleton from "@/features/discover/SavedSearchesSkeleton";
 import {
   useDeactivateDiscoverySourceMutation,
   useListDiscoverySourcesQuery,
@@ -20,11 +21,7 @@ export default function SavedSearchesPanel() {
   const { data: sources, isLoading } = useListDiscoverySourcesQuery();
 
   if (isLoading) {
-    return (
-      <Card className="p-4 text-sm text-muted-foreground">
-        Loading saved searches…
-      </Card>
-    );
+    return <SavedSearchesSkeleton />;
   }
   if (!sources || sources.length === 0) {
     return null;
