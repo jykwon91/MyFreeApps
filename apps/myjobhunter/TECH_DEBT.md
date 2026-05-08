@@ -3,7 +3,7 @@
 Issues discovered during development. New entries are appended; resolved entries are
 removed and the counts in this header are updated.
 
-**Open issues: 38 (Critical: 1 / High: 3 / Medium: 20 / Low: 15)**
+**Open issues: 37 (Critical: 1 / High: 3 / Medium: 19 / Low: 15)**
 
 > Last comprehensive audit: 2026-05-07 (post-discovery feature ship). All Critical and 7 of 8 audit-High findings RESOLVED in PRs #421-#432 (2026-05-07). Remaining audit findings preserved below under "## High (audit 2026-05-07)" / "## Medium (audit 2026-05-07)" / "## Low (audit 2026-05-07)" sections; pre-existing findings preserved under "## Pre-existing".
 
@@ -217,26 +217,13 @@ _Still open (downgraded from High to Medium since the immediate cost concern is 
 
 ## Medium (audit 2026-05-07)
 
-### [Backend / Discovery] Repository tenant scoping correct but route layer commits — service-layer commit convention violated
+### ~~[Backend / Discovery] Repository tenant scoping correct but route layer commits — service-layer commit convention violated~~ RESOLVED
 
-**Severity:** Medium
-**Effort:** S
-**Location:** `apps/myjobhunter/backend/app/api/discover.py:97, 129, 246, 261`
+**Resolved:** PR (refactor/mjh-discover-service-layer-commits). Four `db.commit()` calls moved from route handlers into two new thin service modules:
+- `app/services/discovery/discovery_source_service.py` — `create_source`, `deactivate_source`
+- `app/services/discovery/discovery_inbox_service.py` — `dismiss_discovered`, `save_discovered`
 
-**Problem:** Per project CLAUDE.md and PreToolUse Check #3, MJH uses service-layer commits (services own transaction boundary, repositories only `add/flush`). `discover.py` violates this on four routes: `create_source`, `deactivate_source`, `dismiss_job`, `save_job` all call a repository function then `await db.commit()` in the route handler.
-
-**Recommendation:** Move each commit into a thin service wrapper:
-
-    # app/services/discovery/discovery_source_service.py
-    async def create_source(db, *, user_id, source, config, fetch_interval_minutes):
-        src = await discovery_repository.create_source(db, user_id=user_id, ...)
-        await db.commit()
-        await db.refresh(src)
-        return src
-
-Aligns with `discovery_fetch_service` and `discovery_promote_service` patterns already in place.
-
-**Why Medium:** Inconsistency rather than defect. Future refactors adding cross-table operations to dismiss/save will hit this seam and bandaid around it.
+Route handlers now delegate to services; no `db.commit()` remains in `discover.py`.
 
 ---
 
