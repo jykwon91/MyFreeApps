@@ -212,8 +212,6 @@ async def dismiss_item(
     Raises:
         QueueItemNotFound: item doesn't exist / wrong org.
     """
-    now = datetime.now(timezone.utc)
-
     async with AsyncSessionLocal() as db:
         item = await review_queue_repo.get_by_id_scoped(
             db, item_id, organization_id,
@@ -221,5 +219,5 @@ async def dismiss_item(
         if item is None:
             raise QueueItemNotFound(f"Queue item {item_id} not found")
 
-        await review_queue_repo.soft_delete(db, item, deleted_at=now)
+        await review_queue_repo.soft_delete(db, item)
         await db.commit()

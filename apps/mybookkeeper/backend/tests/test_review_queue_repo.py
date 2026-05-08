@@ -111,8 +111,7 @@ class TestListPending:
             db, user_id=test_user.id, org_id=test_org.id, message_id="m-del",
         )
         assert item is not None
-        now = datetime.now(timezone.utc)
-        await review_queue_repo.soft_delete(db, item, deleted_at=now)
+        await review_queue_repo.soft_delete(db, item)
 
         items = await review_queue_repo.list_pending(db, organization_id=test_org.id)
         assert all(i.id != item.id for i in items)
@@ -161,9 +160,7 @@ class TestGetByIdScoped:
             db, user_id=test_user.id, org_id=test_org.id, message_id="scoped-del",
         )
         assert item is not None
-        await review_queue_repo.soft_delete(
-            db, item, deleted_at=datetime.now(timezone.utc),
-        )
+        await review_queue_repo.soft_delete(db, item)
         found = await review_queue_repo.get_by_id_scoped(db, item.id, test_org.id)
         assert found is None
 
@@ -220,8 +217,7 @@ class TestStatusTransitions:
             db, user_id=test_user.id, org_id=test_org.id, message_id="tr-3",
         )
         assert item is not None
-        now = datetime.now(timezone.utc)
-        await review_queue_repo.soft_delete(db, item, deleted_at=now)
+        await review_queue_repo.soft_delete(db, item)
         assert item.deleted_at is not None
         # Status not changed by soft_delete — item remains "pending" but hidden.
         assert item.status == "pending"

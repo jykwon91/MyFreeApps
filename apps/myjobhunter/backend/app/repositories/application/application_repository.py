@@ -29,6 +29,8 @@ from sqlalchemy import literal_column, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from platform_shared.repositories import soft_delete as _soft_delete
+
 from app.models.application.application import Application
 from app.models.application.application_event import ApplicationEvent
 from app.models.company.company import Company
@@ -335,8 +337,7 @@ async def soft_delete(db: AsyncSession, application: Application) -> Application
     returned unchanged (no second timestamp update). Hard deletes are
     forbidden by convention; rows persist for audit + restore.
     """
-    if application.deleted_at is None:
-        application.deleted_at = _dt.datetime.now(_dt.timezone.utc)
-        await db.flush()
+    was_deleted = await _soft_delete(db, application)
+    if was_deleted:
         await db.refresh(application)
     return application

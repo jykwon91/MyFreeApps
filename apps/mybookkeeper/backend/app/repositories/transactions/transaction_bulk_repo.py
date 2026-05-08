@@ -4,6 +4,8 @@ from datetime import datetime, timezone
 from sqlalchemy import delete as sa_delete, select, update as sa_update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from platform_shared.repositories import soft_delete as _soft_delete
+
 from app.models.transactions.transaction import Transaction
 from app.models.transactions.transaction_document import TransactionDocument
 from app.models.extraction.extraction import Extraction
@@ -85,10 +87,9 @@ async def soft_delete_by_document_id(
     result = await db.execute(stmt)
     transactions = list(result.scalars().all())
 
-    now = datetime.now(timezone.utc)
     for txn in transactions:
-        txn.deleted_at = now
         txn.status = "duplicate"
+        await _soft_delete(db, txn)
 
     return transactions
 
@@ -110,8 +111,8 @@ async def soft_delete_by_external_id(
     )
     txn = result.scalar_one_or_none()
     if txn:
-        txn.deleted_at = datetime.now(timezone.utc)
         txn.status = "duplicate"
+        await _soft_delete(db, txn)
 
 
 async def get_existing_external_ids(
