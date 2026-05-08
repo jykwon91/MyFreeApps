@@ -8,6 +8,7 @@ Covers:
 - Critical-path send_or_raise() raising on any failure (for verification,
   password reset, and other emails where silent loss leaves the user broken).
 """
+import smtplib
 import ssl
 from unittest.mock import MagicMock, patch
 
@@ -148,6 +149,19 @@ class TestSendOrRaise:
             with pytest.raises(EmailSendError) as exc:
                 service.send_or_raise(["x@example.com"], "subj", "<p>body</p>")
         assert exc.value.__cause__ is underlying
+
+    def test_smtp_reply_code_survives_in_cause(self) -> None:
+        """smtplib reply code (smtp_code, smtp_error) must survive on __cause__
+        so Sentry can distinguish 550 Mailbox unavailable from 421 rate-limit."""
+        service = _configured_service()
+        underlying = smtplib.SMTPDataError(550, b"Mailbox unavailable")
+        with patch("smtplib.SMTP", side_effect=underlying):
+            with pytest.raises(EmailSendError) as exc:
+                service.send_or_raise(["x@example.com"], "subj", "<p>body</p>")
+        cause = exc.value.__cause__
+        assert isinstance(cause, smtplib.SMTPDataError)
+        assert cause.smtp_code == 550
+        assert b"Mailbox unavailable" in cause.smtp_error
 
     def test_returns_none_on_success(self) -> None:
         service = _configured_service()

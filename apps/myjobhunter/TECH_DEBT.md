@@ -150,13 +150,11 @@ Failures log structured `error-codes` at WARNING so Sentry can group by reason. 
 
 **Fix:** Either fail-loud (raise so the whole sync rolls back) or write an audit row to a `gmail_skipped_messages` table with the exception type. Per `rules/no-bandaid-solutions.md` the latter is the right shape — it preserves the partial sync but audits the gap.
 
-### HIGH — SMTP `send_or_raise` truncates exception chain to `f"{e}"`
+### ~~HIGH — SMTP `send_or_raise` truncates exception chain to `f"{e}"`~~ ✓ Resolved
 
 **Location:** `packages/shared-backend/platform_shared/services/email_service.py:154-162`
 **Effort:** XS
-**Problem:** `EmailSendError(f"SMTP send to {to} failed: {e}")` stringifies the exception, losing the structured smtplib reply code (e.g. `421 Service not available` vs `550 Mailbox unavailable`). Sentry sees a generic message; operator can't tell rate-limit from rejected-sender.
-
-**Fix:** Use `EmailSendError(...) from e` (already correct at line 160 — line 154 is the lossy site). One-line fix.
+**Resolved:** `from e` was already present; added `test_smtp_reply_code_survives_in_cause` asserting the smtplib reply code (smtp_code, smtp_error) survives on `__cause__`.
 
 ### MEDIUM — Claude prompt loading swallows DB errors during user-rule fetch
 
