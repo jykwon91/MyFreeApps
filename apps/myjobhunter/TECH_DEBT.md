@@ -492,27 +492,17 @@ or documenting the gap prominently in `auth.py`.
 
 ---
 
-### [E2E Tests] E2E spec files shared a browser context with no isolation between tests
+### ~~[E2E Tests] E2E spec files shared a browser context with no isolation between tests~~
 
-**Severity:** Medium
+**Severity:** Medium — RESOLVED
 **Effort:** S
-**Location:** `apps/myjobhunter/frontend/e2e/playwright.config.ts` — missing `storageState`
+**Location:** `apps/myjobhunter/frontend/e2e/playwright.config.ts`
 **Discovered:** PR profile-wiring — `2026-05-02`
+**Resolved:** PR#TBD — `2026-05-08`
 
-**Problem:** All E2E specs share the same Playwright browser context. Tests that log in leave
-a JWT in `localStorage`. If a subsequent test navigates to `/login` while a token is still
-present, the Login page's `useIsAuthenticated` `useEffect` immediately redirects to `/dashboard`,
-bypassing the test's intended flow. The `auth.spec.ts` "unverified user" test was failing for
-this reason — it had to navigate to `/verify-email` (a public route) first to clear the token.
-
-**Recommendation:** Either:
-1. Add `storageState: { cookies: [], origins: [] }` to the playwright config's `use` block
-   to start each test with a clean context. This is the simplest fix and aligns with best
-   practices.
-2. Or configure `use.actionTimeout` and ensure every test that modifies auth state calls
-   `localStorage.removeItem("token")` via a shared `beforeEach` fixture.
-
-Option 1 is preferred — zero per-test overhead and prevents the class of bug entirely.
+Added `storageState: { cookies: [], origins: [] }` to the playwright config `use` block.
+Each test now starts with a clean browser context. No per-test changes needed — all specs
+already called `loginViaUI` explicitly.
 
 ---
 

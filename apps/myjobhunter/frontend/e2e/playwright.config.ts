@@ -13,6 +13,7 @@ export default defineConfig({
     baseURL: process.env.BASE_URL ?? "http://localhost:5174",
     trace: "on-first-retry",
     screenshot: "only-on-failure",
+    storageState: { cookies: [], origins: [] },
   },
   projects: [
     {
