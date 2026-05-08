@@ -3,7 +3,7 @@
 Issues discovered during development. New entries are appended; resolved entries are
 removed and the counts in this header are updated.
 
-**Open issues: 40 (Critical: 1 / High: 3 / Medium: 22 / Low: 15)**
+**Open issues: 38 (Critical: 1 / High: 3 / Medium: 20 / Low: 15)**
 
 > Last comprehensive audit: 2026-05-07 (post-discovery feature ship). All Critical and 7 of 8 audit-High findings RESOLVED in PRs #421-#432 (2026-05-07). Remaining audit findings preserved below under "## High (audit 2026-05-07)" / "## Medium (audit 2026-05-07)" / "## Low (audit 2026-05-07)" sections; pre-existing findings preserved under "## Pre-existing".
 
@@ -157,21 +157,13 @@ Failures log structured `error-codes` at WARNING so Sentry can group by reason. 
 
 **Fix:** Catch only `SQLAlchemyError`, log the actual exception type, surface to caller via `(prompt, error)` tuple so a user-facing error toast can fire.
 
-### MEDIUM — JSearch `response.json()` uncaught ValueError on malformed 200
+### ~~MEDIUM — JSearch `response.json()` uncaught ValueError on malformed 200~~ RESOLVED
 
-**Location:** `apps/myjobhunter/backend/app/services/discovery/sources/jsearch.py:217`
-**Effort:** XS
-**Problem:** Otherwise-good typed exception hierarchy (`JSearchAuthError`, `JSearchTransientError`, `JSearchInvalidResponseError`), but `response.json()` is unwrapped. A 200 with truncated body raises `ValueError` outside the hierarchy → retry decorator treats it as fatal.
+**Resolved:** PR fix/jsearch-tavily-json-error (2026-05-08). `response.json()` at jsearch.py:217 was already wrapped in `try/except ValueError as e: raise JSearchInvalidResponseError(...) from e` — the TECH_DEBT entry pre-dated the fix. Confirmed by `test_search_raises_on_non_json_body` in `test_jsearch_adapter.py`.
 
-**Fix:** Wrap the `.json()` call in `try/except ValueError as e: raise JSearchInvalidResponseError(...) from e`.
+### ~~MEDIUM — Tavily `response.json()` uncaught ValueError on malformed 200~~ RESOLVED
 
-### MEDIUM — Tavily `response.json()` uncaught ValueError on malformed 200
-
-**Location:** `apps/myjobhunter/backend/app/services/integrations/tavily_service.py:136, 194`
-**Effort:** XS
-**Problem:** Identical shape to the JSearch one above. `response.json()` outside the typed-error hierarchy. Two call sites (search + extract).
-
-**Fix:** Wrap both `.json()` calls; raise `TavilyInvalidResponseError`.
+**Resolved:** PR fix/jsearch-tavily-json-error (2026-05-08). Added `TavilyInvalidResponseError` class and wrapped both `response.json()` call sites in `search_company` and `search_company_overview` with `try/except ValueError as e: raise TavilyInvalidResponseError(...) from e`. Tests: `TestTavilyMalformedBody` in `test_tavily_service.py` (two cases, one per call site).
 
 ### MEDIUM — Gmail discovery lacks transient-vs-fatal categorization
 
