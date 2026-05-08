@@ -1,5 +1,24 @@
 import { INDUSTRY_CHIPS } from "./industry-chips";
 
+/**
+ * Render a ``DiscoverySource.config`` object as a short display string
+ * for the SavedSearchesPanel row.
+ *
+ * New configs store ``roles`` (string[]); legacy configs store ``query``
+ * (string). Falls back to "(no query)" when neither is present.
+ */
+export function summarizeSearchQuery(config: Record<string, unknown>): string {
+  const roles = config?.roles;
+  if (Array.isArray(roles) && roles.length > 0) {
+    const validRoles = roles.filter((r): r is string => typeof r === "string");
+    if (validRoles.length > 0) return validRoles.join(" / ");
+  }
+  if (typeof config?.query === "string" && config.query) {
+    return config.query;
+  }
+  return "(no query)";
+}
+
 interface SummaryInput {
   roles: string[];
   skills: string[];

@@ -16,6 +16,7 @@ import {
   useRefreshDiscoverySourceMutation,
 } from "@/store/discoverApi";
 import type { DiscoverySource } from "@/types/discovery/discovery-source";
+import { summarizeSearchQuery } from "./saved-search-summary";
 
 export default function SavedSearchesPanel() {
   const { data: sources, isLoading } = useListDiscoverySourcesQuery();
@@ -43,19 +44,7 @@ function SavedSearchRow({ source }: { source: DiscoverySource }) {
   const [refresh, { isLoading: isRefreshing }] = useRefreshDiscoverySourceMutation();
   const [deactivate, { isLoading: isDeactivating }] = useDeactivateDiscoverySourceMutation();
 
-  // New saved searches use ``roles`` (list); legacy ones use ``query`` (string).
-  // Show whatever's available with a sensible fallback.
-  const query = (() => {
-    const roles = source.config?.roles;
-    if (Array.isArray(roles) && roles.length > 0) {
-      const validRoles = roles.filter((r): r is string => typeof r === "string");
-      if (validRoles.length > 0) return validRoles.join(" / ");
-    }
-    if (typeof source.config?.query === "string" && source.config.query) {
-      return source.config.query;
-    }
-    return "(no query)";
-  })();
+  const query = summarizeSearchQuery(source.config ?? {});
   const lastFetched = source.last_fetched_at
     ? `Last fetched ${timeAgo(source.last_fetched_at)}`
     : "Never fetched";

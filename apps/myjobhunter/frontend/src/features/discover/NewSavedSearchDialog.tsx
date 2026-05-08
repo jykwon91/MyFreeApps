@@ -4,11 +4,12 @@ import {
   showError,
   showSuccess,
   extractErrorMessage,
+  InlineBoldText,
+  Skeleton,
 } from "@platform/ui";
 import { useCreateDiscoverySourceMutation } from "@/store/discoverApi";
 import { useUpdateProfileMutation } from "@/lib/profileApi";
 import { buildSavedSearchSummary } from "./saved-search-summary";
-import { InlineBoldText } from "@platform/ui";
 import { useDiscoveryDefaultsPrefill } from "./useDiscoveryDefaultsPrefill";
 import SearchInputsSection from "./dialog-sections/SearchInputsSection";
 import WhereWhenSection from "./dialog-sections/WhereWhenSection";
@@ -76,6 +77,7 @@ export default function NewSavedSearchDialog({
     profile,
     recentRoleSuggestions,
     skillSuggestions,
+    isPrefillLoading,
     didPrefill,
     resetPrefill,
   } = useDiscoveryDefaultsPrefill(open, {
@@ -205,6 +207,16 @@ export default function NewSavedSearchDialog({
       onCancel={handleCancel}
     >
       <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
+        {isPrefillLoading ? (
+          <div className="space-y-3" aria-busy="true">
+            <Skeleton className="h-9 w-full" />
+            <Skeleton className="h-9 w-full" />
+            <Skeleton className="h-9 w-3/4" />
+            <Skeleton className="h-9 w-full" />
+            <Skeleton className="h-9 w-1/2" />
+          </div>
+        ) : (
+          <>
         {didPrefill && (
           <p className="text-xs text-muted-foreground bg-muted/40 px-3 py-2 rounded">
             Pre-filled from your profile. Edit anything below.
@@ -275,6 +287,8 @@ export default function NewSavedSearchDialog({
               <InlineBoldText text={summary} />
             </p>
           </div>
+        )}
+          </>
         )}
       </div>
     </ConfirmDialog>

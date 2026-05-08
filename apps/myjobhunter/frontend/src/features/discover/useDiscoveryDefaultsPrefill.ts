@@ -31,6 +31,8 @@ interface PrefillResult {
   recentRoleSuggestions: string[];
   /** Top profile.skills (autocomplete suggestions). */
   skillSuggestions: string[];
+  /** True while any of the three prefill queries is in flight. */
+  isPrefillLoading: boolean;
   /** True after the one-shot prefill has run for this open session. */
   didPrefill: boolean;
   /** Reset the prefill latch on dialog close. */
@@ -63,11 +65,12 @@ export function useDiscoveryDefaultsPrefill(
   open: boolean,
   setters: PrefillSetters,
 ): PrefillResult {
-  const { data: profile } = useGetProfileQuery(undefined, { skip: !open });
-  const { data: skillsData } = useListSkillsQuery(undefined, { skip: !open });
-  const { data: workHistoryData } = useListWorkHistoryQuery(undefined, {
+  const { data: profile, isLoading: profileLoading } = useGetProfileQuery(undefined, { skip: !open });
+  const { data: skillsData, isLoading: skillsLoading } = useListSkillsQuery(undefined, { skip: !open });
+  const { data: workHistoryData, isLoading: workHistoryLoading } = useListWorkHistoryQuery(undefined, {
     skip: !open,
   });
+  const isPrefillLoading = open && (profileLoading || skillsLoading || workHistoryLoading);
 
   // useRef instead of useState — flipping this latch shouldn't trigger
   // a re-render. The dialog reads the value to decide whether to show
@@ -119,6 +122,7 @@ export function useDiscoveryDefaultsPrefill(
     profile,
     recentRoleSuggestions,
     skillSuggestions,
+    isPrefillLoading,
     didPrefill: didPrefillRef.current,
     resetPrefill,
   };

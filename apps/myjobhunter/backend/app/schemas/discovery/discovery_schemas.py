@@ -5,7 +5,7 @@ import uuid
 from datetime import datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
 
 from app.schemas.discovery.jsearch_source_config import JSearchSourceConfig
 
@@ -92,6 +92,14 @@ class DiscoveryFetchResultResponse(BaseModel):
     error_message: str | None
 
 
+_SCORE_TO_VERDICT: dict[int, str] = {
+    90: "strong_fit",
+    70: "worth_considering",
+    40: "stretch",
+    15: "mismatch",
+}
+
+
 class DiscoveredJobResponse(BaseModel):
     """One DiscoveredJob row in the inbox view."""
 
@@ -117,6 +125,18 @@ class DiscoveredJobResponse(BaseModel):
     dismissed_reason: str | None = None
     saved_at: datetime | None
     promoted_application_id: uuid.UUID | None
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def verdict(self) -> str | None:
+        """Human-readable verdict label derived from the numeric score.
+
+        ``_verdict_to_score`` in discovery_score_service is the single
+        source of truth; this is the inverse mapping so the frontend
+        renders the label directly without duplicating the thresholds.
+        Returns None for unscored rows.
+        """
+        return _SCORE_TO_VERDICT.get(self.score) if self.score is not None else None
 
     model_config = ConfigDict(from_attributes=True)
 
