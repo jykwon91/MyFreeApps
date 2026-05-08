@@ -6,7 +6,7 @@ part to get right without real data.
 """
 from types import SimpleNamespace
 
-from app.services.resume_refinement.session_service import (
+from app.services.resume_refinement.session_helpers import (
     _apply_rewrite,
     _build_prior_context,
 )
