@@ -1,5 +1,10 @@
 from datetime import datetime, timezone
-from typing import Any, Protocol
+from typing import Any, Coroutine, Protocol
+
+
+class SupportsAddAndFlush(Protocol):
+    def add(self, instance: Any) -> None: ...
+    def flush(self) -> Coroutine[Any, Any, None]: ...
 
 
 class SupportsSoftDelete(Protocol):
@@ -7,7 +12,7 @@ class SupportsSoftDelete(Protocol):
 
 
 async def soft_delete(
-    db: Any,
+    db: SupportsAddAndFlush,
     instance: SupportsSoftDelete,
     *,
     deleted_at_field: str = "deleted_at",
