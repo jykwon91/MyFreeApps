@@ -144,13 +144,28 @@ class TestStorageClientMethods:
         client.delete_file("org/uuid/file.pdf")
         mock_minio.remove_object.assert_called_once_with("test-bucket", "org/uuid/file.pdf")
 
-    def test_delete_file_does_not_raise_on_s3_error(self) -> None:
+    def test_delete_file_logs_s3_error_code_and_does_not_raise(self) -> None:
         from minio.error import S3Error
         client, mock_minio = self._make_client()
-        mock_minio.remove_object.side_effect = S3Error(
-            "NoSuchKey", "The specified key does not exist.", "", "", "", ""
-        )
-        client.delete_file("org/uuid/nonexistent.pdf")
+        # S3Error(response, code, message, ...) — first arg is the HTTP response object.
+        # Passing a dummy string keeps the constructor happy for unit tests.
+        error = S3Error("_response", "AccessDenied", "Access Denied.", "", "", "")
+        mock_minio.remove_object.side_effect = error
+        with patch("app.core.storage.logger") as mock_logger:
+            client.delete_file("org/uuid/file.pdf")
+            mock_logger.warning.assert_called_once()
+            call_args = mock_logger.warning.call_args
+            # Structured log must include bucket, key, and the S3 error code so
+            # Sentry can group failures by reason (AccessDenied vs NoSuchKey etc.)
+            assert "AccessDenied" in str(call_args)
+            assert "org/uuid/file.pdf" in str(call_args)
+            assert "test-bucket" in str(call_args)
+
+    def test_delete_file_propagates_non_s3_errors(self) -> None:
+        client, mock_minio = self._make_client()
+        mock_minio.remove_object.side_effect = ConnectionError("network failure")
+        with pytest.raises(ConnectionError, match="network failure"):
+            client.delete_file("org/uuid/file.pdf")
 
     def test_generate_presigned_url_delegates_to_minio_with_timedelta(self) -> None:
         client, mock_minio = self._make_client()
@@ -197,9 +212,7 @@ class TestStorageClientMethods:
     def test_head_object_returns_none_when_missing(self) -> None:
         from minio.error import S3Error
         client, mock_minio = self._make_client()
-        mock_minio.stat_object.side_effect = S3Error(
-            "NoSuchKey", "missing", "", "", "", "",
-        )
+        mock_minio.stat_object.side_effect = S3Error("_response", "NoSuchKey", "missing", "", "", "")
         assert client.head_object("k") is None
 
     def test_ensure_bucket_creates_when_missing(self) -> None:
