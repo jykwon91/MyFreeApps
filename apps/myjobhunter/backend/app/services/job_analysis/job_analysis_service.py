@@ -258,10 +258,7 @@ async def score(
         meta = await claude_service.call_claude_with_meta(
             system_prompt=JOB_ANALYSIS_PROMPT,
             user_content=user_content,
-            # ``"job_analysis"`` is the dedicated bucket once migration
-            # disco260507 lands. Until then ``"other"`` is the legal
-            # value (extraction_logs CHECK constraint enforces).
-            context_type="other",
+            context_type="job_analysis",
             user_id=user_id,
             context_id=discovered_job_id,
         )
