@@ -24,7 +24,7 @@ import type { ResumeUploadJob } from "@/types/resume-upload-job/resume-upload-jo
 vi.mock("@/lib/resumesApi", () => ({
   useUploadResumeMutation: vi.fn(),
   useListResumeJobsQuery: vi.fn(),
-  useGetResumeDownloadUrlQuery: vi.fn(),
+  useLazyGetResumeDownloadUrlQuery: vi.fn(),
 }));
 
 // ---------------------------------------------------------------------------
@@ -81,7 +81,7 @@ vi.mock("@platform/ui", () => ({
 import {
   useUploadResumeMutation,
   useListResumeJobsQuery,
-  useGetResumeDownloadUrlQuery,
+  useLazyGetResumeDownloadUrlQuery,
 } from "@/lib/resumesApi";
 import { showSuccess, showError } from "@platform/ui";
 import ResumeJobRow from "@/features/profile/ResumeJobRow";
@@ -90,7 +90,7 @@ import ResumeUploadSection from "@/features/profile/ResumeUploadSection";
 
 const mockUseUploadResume = vi.mocked(useUploadResumeMutation);
 const mockUseListResumeJobs = vi.mocked(useListResumeJobsQuery);
-const mockUseGetDownloadUrl = vi.mocked(useGetResumeDownloadUrlQuery);
+const mockUseLazyGetDownloadUrl = vi.mocked(useLazyGetResumeDownloadUrlQuery);
 const mockShowSuccess = vi.mocked(showSuccess);
 const mockShowError = vi.mocked(showError);
 const mockResumeJobRow = vi.mocked(ResumeJobRow);
@@ -119,16 +119,19 @@ const STUB_JOB: ResumeUploadJob = {
   updated_at: "2026-05-04T12:00:00Z",
 };
 
+const stubLazyDownloadTrigger = vi.fn().mockReturnValue({
+  unwrap: vi.fn().mockResolvedValue({ url: "https://example.com/resume.pdf" }),
+});
+
 function setupDefaultMocks() {
   mockUseListResumeJobs.mockReturnValue({
     data: [],
     isLoading: false,
   } as unknown as ReturnType<typeof useListResumeJobsQuery>);
   mockUseUploadResume.mockReturnValue(stubMutation);
-  mockUseGetDownloadUrl.mockReturnValue({
-    data: undefined,
-    isLoading: false,
-  } as unknown as ReturnType<typeof useGetResumeDownloadUrlQuery>);
+  mockUseLazyGetDownloadUrl.mockReturnValue(
+    [stubLazyDownloadTrigger, { isUninitialized: true }, vi.fn()] as unknown as ReturnType<typeof useLazyGetResumeDownloadUrlQuery>,
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -160,10 +163,9 @@ describe("ResumeUploadSection", () => {
       isLoading: false,
     } as unknown as ReturnType<typeof useListResumeJobsQuery>);
     mockUseUploadResume.mockReturnValue(stubMutation);
-    mockUseGetDownloadUrl.mockReturnValue({
-      data: undefined,
-      isLoading: false,
-    } as unknown as ReturnType<typeof useGetResumeDownloadUrlQuery>);
+    mockUseLazyGetDownloadUrl.mockReturnValue(
+      [stubLazyDownloadTrigger, { isUninitialized: true }, vi.fn()] as unknown as ReturnType<typeof useLazyGetResumeDownloadUrlQuery>,
+    );
 
     render(<ResumeUploadSection profileId="profile-1" />);
 
@@ -247,10 +249,9 @@ describe("ResumeUploadSection", () => {
       isLoading: true,
     } as unknown as ReturnType<typeof useListResumeJobsQuery>);
     mockUseUploadResume.mockReturnValue(stubMutation);
-    mockUseGetDownloadUrl.mockReturnValue({
-      data: undefined,
-      isLoading: false,
-    } as unknown as ReturnType<typeof useGetResumeDownloadUrlQuery>);
+    mockUseLazyGetDownloadUrl.mockReturnValue(
+      [stubLazyDownloadTrigger, { isUninitialized: true }, vi.fn()] as unknown as ReturnType<typeof useLazyGetResumeDownloadUrlQuery>,
+    );
 
     render(<ResumeUploadSection profileId="profile-1" />);
 

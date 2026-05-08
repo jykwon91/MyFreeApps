@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Plus, Telescope } from "lucide-react";
 import { Button, EmptyState } from "@platform/ui";
+import { DISCOVER_EMPTY_STATES } from "@/constants/empty-states";
 import DiscoveredJobCard from "@/features/discover/DiscoveredJobCard";
 import DiscoveredJobsSkeleton from "@/features/discover/DiscoveredJobsSkeleton";
 import NewSavedSearchDialog from "@/features/discover/NewSavedSearchDialog";
@@ -65,12 +66,8 @@ export default function Discover() {
       {!hasSources && (
         <EmptyState
           icon={<Telescope className="w-12 h-12 text-muted-foreground" />}
-          heading="No saved searches yet"
-          body={
-            "Create a saved search and I'll pull tailored postings from " +
-            "Google Jobs (LinkedIn, Indeed, Glassdoor, ZipRecruiter) every " +
-            "time you click Refresh."
-          }
+          heading={DISCOVER_EMPTY_STATES.no_saved_searches.heading}
+          body={DISCOVER_EMPTY_STATES.no_saved_searches.body}
         />
       )}
 
@@ -79,8 +76,8 @@ export default function Discover() {
       {hasSources && !isLoading && !hasJobs && (
         <EmptyState
           icon={<Telescope className="w-12 h-12 text-muted-foreground" />}
-          heading="Inbox empty"
-          body="Click Refresh on a saved search above to fetch the latest postings."
+          heading={DISCOVER_EMPTY_STATES.inbox_empty.heading}
+          body={DISCOVER_EMPTY_STATES.inbox_empty.body}
         />
       )}
 

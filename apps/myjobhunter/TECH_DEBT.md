@@ -416,25 +416,9 @@ Updated consumers: `store/discoverApi.ts`, `types/profile/profile.ts`, `types/pr
 
 ---
 
-### [Frontend / Profile] `ResumeUploadSection` opens download URL via useEffect-on-cached-query — re-fires on remount
+### ~~[Frontend / Profile] `ResumeUploadSection` opens download URL via useEffect-on-cached-query — re-fires on remount~~ RESOLVED
 
-**Severity:** Medium
-**Effort:** S
-**Location:** `apps/myjobhunter/frontend/src/features/profile/ResumeUploadSection.tsx:43-54`
-
-**Problem:** Download flow uses a query with `skip: !downloadingJobId`, then `useEffect` watches `[downloadUrlData, downloadingJobId]` to call `window.open(...)` and clear the id. If component re-renders while URL is still cached, the effect re-fires opening another tab. Same imperative-action-via-effect anti-pattern as PR #418.
-
-**Recommendation:** Use RTK Query's `useLazyQuery`:
-
-    const [getDownloadUrl] = useGetResumeDownloadUrlQuery.useLazyQuery();
-    async function handleDownload(jobId: string) {
-      const result = await getDownloadUrl(jobId).unwrap();
-      window.open(result.url, "_blank", "noopener,noreferrer");
-    }
-
-No state, no effect, no risk of double-open.
-
-**Why Medium:** Same operator-flagged anti-pattern as PR #418 (useState+useEffect ping-pong for imperative side-effects).
+**Resolved:** PR (chore/mjh-test-and-empty-state-fixes). Replaced `useGetResumeDownloadUrlQuery` + `useEffect` pattern with `useLazyGetResumeDownloadUrlQuery`. `handleDownload` is now `async` — calls `getDownloadUrl(jobId).unwrap()` directly and opens the URL in the same handler. A minimal `downloadingJobId` state remains solely to drive `isDownloading` on `ResumeJobRow`'s download button (disabled state). The re-fire-on-remount risk is eliminated. `useLazyGetResumeDownloadUrlQuery` exported from `resumesApi.ts`. Test mock updated to stub the lazy hook signature.
 
 ---
 
@@ -514,15 +498,9 @@ No state, no effect, no risk of double-open.
 
 ---
 
-### [Frontend / Discover] Empty-state copy is inline — should live in `constants/empty-states.ts`
+### ~~[Frontend / Discover] Empty-state copy is inline — should live in `constants/empty-states.ts`~~ RESOLVED
 
-**Severity:** Low
-**Effort:** XS
-**Location:** `apps/myjobhunter/frontend/src/pages/Discover.tsx:60-65, 73-77` + `apps/myjobhunter/frontend/src/constants/empty-states.ts`
-
-**Problem:** Project CLAUDE.md says: "Exact approved copy lives in `src/constants/empty-states.ts`. Never change inline." Discover defines copy inline.
-
-**Recommendation:** Add `DISCOVER_EMPTY_STATES` to `constants/empty-states.ts` with two entries (no saved searches, inbox empty). Import in Discover.tsx.
+**Resolved:** PR (chore/mjh-test-and-empty-state-fixes). Added `DISCOVER_EMPTY_STATES` constant and `EmptyStateCopyNoAction` interface to `constants/empty-states.ts`. `Discover.tsx` now imports and uses the constants for both empty-state variants (no saved searches, inbox empty).
 
 ---
 
@@ -679,23 +657,9 @@ local test runs unreliable on Windows.
 
 ---
 
-### [Frontend Tests] Applications.test.tsx — "Applied" text collision between column header and status badge
+### ~~[Frontend Tests] Applications.test.tsx — "Applied" text collision between column header and status badge~~ RESOLVED
 
-**Severity:** Medium
-**Effort:** XS
-**Location:** `apps/myjobhunter/frontend/src/pages/__tests__/Applications.test.tsx`
-**Discovered:** PR #170 (CompanyForm refactor) — `2026-05-02`
-
-**Problem:** Two unit tests use `screen.getByText("Applied")` but the DataTable
-renders an "Applied" column header (sortable button) alongside the "Applied" status
-badge. `getByText` finds both and throws "Found multiple elements". These tests have
-been failing since the status column was added in PR #167 — they were just masked by
-the Redux Provider crash (missing `companiesApi` mock) until this PR fixed that.
-
-**Recommendation:** Use `screen.getByRole("cell", { name: "Applied" })` or
-`within(row).getByText("Applied")` to scope the query to the badge cell. Also
-update the column header test to use `getByRole("columnheader", { name: "Applied" })`
-to avoid future collisions.
+**Resolved:** PR (chore/mjh-test-and-empty-state-fixes). Changed `screen.getByText("Applied")` to `screen.getByRole("cell", { name: "Applied" })` in both tests that check the "applied" status badge. Note: the remaining Applications.test.tsx failures are a separate pre-existing issue — the `companiesApi` mock is missing `useTriggerCompanyResearchMutation` (added after the test was written). That gap is distinct from this "Applied" text collision fix.
 
 ---
 
@@ -718,23 +682,9 @@ an example config if one exists.
 
 ---
 
-### [Frontend Tests] `auth.test.ts` — register call assertion is brittle
+### ~~[Frontend Tests] `auth.test.ts` — register call assertion is brittle~~ RESOLVED
 
-**Severity:** Low
-**Effort:** XS
-**Location:** `apps/myjobhunter/frontend/src/lib/__tests__/auth.test.ts:109`
-**Discovered:** PR #170 (CompanyForm refactor) — `2026-05-02`
-
-**Problem:** The test asserts `toHaveBeenCalledWith("/auth/register", { email, password })`
-but the underlying `api.post` call now passes a 3rd argument `{ headers: {} }`. The
-assertion fails because `toHaveBeenCalledWith` checks exact argument equality. Probably
-a recent upstream change to the shared axios wrapper in `@platform/ui` added default
-headers to all POST calls.
-
-**Recommendation:** Change the assertion to `toHaveBeenCalledWith("/auth/register",
-expect.objectContaining({ email, password }))` to ignore the extra headers argument,
-or use `toHaveBeenLastCalledWith` with `expect.objectContaining`. Also investigate
-whether the `{ headers: {} }` is intentional or a regression in `@platform/ui`.
+**Resolved:** PR (chore/mjh-test-and-empty-state-fixes). Investigation found the test was already correct — the register test assertions at lines 141-164 already use the 3-argument form with `{ headers: {} }` explicitly. All 16 auth tests pass. The TECH_DEBT entry was describing a state that was fixed when the test was initially written.
 
 ---
 
