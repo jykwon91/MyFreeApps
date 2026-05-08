@@ -227,7 +227,12 @@ describe("LeaseAddTemplateModal", () => {
     );
   });
 
-  it("only shows templates NOT already on the lease", async () => {
+  it("shows all templates including ones already on the lease (regenerate flow)", async () => {
+    // Post-PR-#429 the picker no longer hides already-linked templates —
+    // re-picking is treated as a regenerate. Both should appear; the
+    // already-linked one carries an inline "picking will regenerate" hint
+    // (not asserted here — covered by the regenerate-success-toast test
+    // below).
     canWriteValue = true;
     mockLease = buildLease(); // already has tpl-existing
     renderDetail();
@@ -235,9 +240,12 @@ describe("LeaseAddTemplateModal", () => {
     await waitFor(() =>
       expect(screen.getByTestId("lease-add-template-modal")).toBeInTheDocument(),
     );
-    // tpl-new should appear, tpl-existing should NOT
-    expect(screen.queryByTestId("add-template-option-tpl-existing")).toBeNull();
-    expect(screen.getByTestId("add-template-option-tpl-new")).toBeInTheDocument();
+    expect(
+      screen.getByTestId("add-template-option-tpl-existing"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId("add-template-option-tpl-new"),
+    ).toBeInTheDocument();
   });
 
   it("'Continue' button is disabled when nothing selected", async () => {
