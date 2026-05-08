@@ -90,13 +90,15 @@ async def score_user_inbox(user_id: uuid.UUID, *, batch: int = DEFAULT_SCORE_BAT
             user_id, len(candidates), daily_cap - spent_today,
         )
 
+        # Track in-loop spend locally instead of re-querying
+        # extraction_logs each iteration. ``score_jd`` returns the
+        # JobAnalysis with ``total_cost_usd`` populated; sum into
+        # ``spent_today`` so the next-iteration cap check is current
+        # without an extra round-trip.
         scored = 0
         budget_hits = False
 
         for job in candidates:
-            # Re-check budget each iteration — earlier scoring calls
-            # added cost, the hard cap may now be reached.
-            spent_today = await _spent_today(db, user_id)
             if spent_today >= daily_cap:
                 budget_hits = True
                 break
@@ -121,19 +123,32 @@ async def score_user_inbox(user_id: uuid.UUID, *, batch: int = DEFAULT_SCORE_BAT
                 )
                 continue
 
-            # Map the verdict to a 0-100 score for sorting. Per the
-            # JD-analysis rubric, only four values are possible.
+            # ``score_jd`` already committed the JobAnalysis row + the
+            # extraction_logs entry. Mutate the discovered_job and
+            # commit once more; this is a separate transaction (cheap)
+            # but the prior commit means the cost is already recorded
+            # so a crash here doesn't lose accounting — only loses the
+            # ``score`` pointer, which the next refresh re-discovers
+            # via list_unscored_for_user. Idempotent on retry: the
+            # JobAnalysis exists, score_jd is called again, second
+            # JobAnalysis row is created, only the latest links via
+            # discovered_job.score.
+            #
+            # Future improvement: thread the discovered_job mutation
+            # INTO score_jd so both writes share one commit. Larger
+            # refactor — flagged in TECH_DEBT.md.
             score_int = _verdict_to_score(analysis.verdict)
             job.score = score_int
             job.score_reason = (analysis.verdict_summary or "")[:1000]
             job.scored_at = datetime.now(timezone.utc)
-            await db.flush()
             await db.commit()
+
+            spent_today += float(analysis.total_cost_usd or 0)
             scored += 1
 
         logger.info(
-            "discovery score: complete user=%s scored=%d budget_hit=%s",
-            user_id, scored, budget_hits,
+            "discovery score: complete user=%s scored=%d budget_hit=%s spent_session=%.4f",
+            user_id, scored, budget_hits, spent_today,
         )
 
 
