@@ -285,11 +285,7 @@ export default function LeaseDetail() {
           {tab === "files" ? (
             <LeaseAttachmentsSection
               leaseId={lease.id}
-              attachments={
-                lease.kind === "imported"
-                  ? lease.attachments.filter((a) => a.kind !== "rendered_original")
-                  : lease.attachments
-              }
+              attachments={lease.attachments}
               canWrite={canWrite}
             />
           ) : null}
