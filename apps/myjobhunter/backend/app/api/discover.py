@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from platform_shared.core.request_utils import get_client_ip
@@ -32,14 +32,23 @@ from app.core.rate_limit import RateLimiter
 from app.db.session import get_db
 from app.models.user.user import User
 from app.repositories.discovery import discovery_repository
+from app.schemas.application.application_response import ApplicationResponse
 from app.schemas.discovery.discovery_schemas import (
+    DiscoveredJobDismissRequest,
     DiscoveredJobListResponse,
     DiscoveredJobResponse,
     DiscoveryFetchResultResponse,
     DiscoverySourceCreate,
     DiscoverySourceResponse,
 )
-from app.services.discovery import discovery_fetch_service
+from app.services.discovery.discovery_promote_service import (
+    DiscoveryPromoteError,
+)
+from app.services.discovery import (
+    discovery_fetch_service,
+    discovery_promote_service,
+    discovery_score_service,
+)
 from app.services.discovery.discovery_fetch_service import (
     DiscoveryFetchError,
     DiscoverySourceInactiveError,
@@ -133,6 +142,7 @@ async def deactivate_source(
 async def refresh_source(
     source_id: uuid.UUID,
     request: Request,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> DiscoveryFetchResultResponse:
@@ -177,6 +187,15 @@ async def refresh_source(
     except (JSearchInvalidResponseError, DiscoveryFetchError) as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
+    # Phase C: kick off scoring of the freshly-fetched postings as a
+    # background task so /refresh returns immediately. The frontend
+    # polls /discover and watches scores fill in. The task uses its
+    # own DB session; failures are logged + swallowed.
+    if result.get("new_count", 0) > 0:
+        background_tasks.add_task(
+            discovery_score_service.score_user_inbox, user.id,
+        )
+
     return DiscoveryFetchResultResponse(**result)
 
 
@@ -212,10 +231,16 @@ async def list_discovered(
 )
 async def dismiss_job(
     job_id: uuid.UUID,
+    payload: DiscoveredJobDismissRequest | None = None,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> None:
-    ok = await discovery_repository.dismiss_discovered(db, job_id, user.id)
+    """Dismiss a discovered job. Optional ``reason`` is captured as a
+    teaching signal for future scoring."""
+    reason = payload.reason if payload else None
+    ok = await discovery_repository.dismiss_discovered(
+        db, job_id, user.id, reason=reason,
+    )
     if not ok:
         raise HTTPException(status_code=404, detail=_NOT_FOUND_DETAIL)
     await db.commit()
@@ -234,3 +259,31 @@ async def save_job(
     if not ok:
         raise HTTPException(status_code=404, detail=_NOT_FOUND_DETAIL)
     await db.commit()
+
+
+@router.post(
+    "/{job_id}/promote",
+    response_model=ApplicationResponse,
+    status_code=201,
+)
+async def promote_job(
+    job_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(current_active_user),
+) -> ApplicationResponse:
+    """Convert a discovered job into a tracked Application.
+
+    Idempotent — a second call for the same discovered_job returns the
+    existing application instead of creating a duplicate.
+
+    Status codes:
+    - 201 — Application created (or returned existing one)
+    - 404 — discovered_job not found / not owned by caller
+    """
+    try:
+        application = await discovery_promote_service.promote_discovered_job(
+            db, user.id, job_id,
+        )
+    except DiscoveryPromoteError:
+        raise HTTPException(status_code=404, detail=_NOT_FOUND_DETAIL)
+    return ApplicationResponse.model_validate(application)

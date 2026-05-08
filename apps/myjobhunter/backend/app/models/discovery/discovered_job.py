@@ -135,6 +135,9 @@ class DiscoveredJob(Base):
     dismissed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True,
     )
+    dismissed_reason: Mapped[str | None] = mapped_column(
+        String(30), nullable=True,
+    )
     saved_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True,
     )
@@ -188,6 +191,12 @@ class DiscoveredJob(Base):
         CheckConstraint(
             "NOT (dismissed_at IS NOT NULL AND saved_at IS NOT NULL)",
             name="chk_discovered_state",
+        ),
+        CheckConstraint(
+            "dismissed_reason IS NULL OR dismissed_reason IN ("
+            "'wrong_stack','too_small_company','wrong_sector',"
+            "'wrong_comp','not_remote','not_interested','other')",
+            name="chk_discovered_dismissed_reason",
         ),
         CheckConstraint(
             "(promoted_application_id IS NULL) = (promoted_at IS NULL)",

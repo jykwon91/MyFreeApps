@@ -32,6 +32,13 @@ class Settings(BaseAppSettings):
     # required in production for the discovery feature to fetch.
     jsearch_api_key: str = ""
 
+    # /discover scoring budget (Phase C). The per-user daily cap is the
+    # smaller of these two values. ``discovery_daily_budget_usd`` is the
+    # default operator-friendly cap; ``..._hard_cap`` is the absolute
+    # ceiling no per-profile override may exceed.
+    discovery_daily_budget_usd: float = 0.30
+    discovery_daily_budget_usd_hard_cap: float = 2.00
+
     # ------------------------------------------------------------------
     # Google OAuth (Gmail integration — Phase 3)
     # ------------------------------------------------------------------
