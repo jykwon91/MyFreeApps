@@ -3,7 +3,7 @@
 Issues discovered during development. New entries are appended; resolved entries are
 removed and the counts in this header are updated.
 
-**Open issues: 41 (Critical: 1 / High: 4 / Medium: 22 / Low: 15)**
+**Open issues: 40 (Critical: 1 / High: 3 / Medium: 22 / Low: 15)**
 
 > Last comprehensive audit: 2026-05-07 (post-discovery feature ship). All Critical and 7 of 8 audit-High findings RESOLVED in PRs #421-#432 (2026-05-07). Remaining audit findings preserved below under "## High (audit 2026-05-07)" / "## Medium (audit 2026-05-07)" / "## Low (audit 2026-05-07)" sections; pre-existing findings preserved under "## Pre-existing".
 
@@ -134,13 +134,9 @@ Wrappers around third-party APIs (Turnstile, MinIO, Gmail, Plaid, Anthropic, JSe
 
 Failures log structured `error-codes` at WARNING so Sentry can group by reason. 35 tests pass across shared + MBK + MJH (8/9/10/8 per file). The `public_inquiries.py` site that intentionally feeds the bool to a spam scorer was updated to unpack with `success, _ = ...` — that file's architecture deliberately keeps bots unaware they were caught.
 
-### HIGH — MinIO `delete_file` swallows S3Error, no audit trail for orphaned objects
+#### ~~HIGH — MinIO `delete_file` swallows S3Error, no audit trail for orphaned objects~~ RESOLVED
 
-**Location:** `apps/mybookkeeper/backend/app/core/storage.py:89-93`
-**Effort:** S
-**Problem:** `S3Error` is caught + logged warning, then the function returns silently. Used during error cleanup in listing photo uploads. A transient network failure looks identical to a permission-denied — no way to retry vs. give up. Orphaned S3 objects accumulate over time with no count.
-
-**Fix:** Re-raise `S3Error` after logging, OR return `tuple[bool, str | None]` where the second element is `S3Error.code`. Caller decides retry policy.
+**Resolved:** PR (mbk-storage-delete-error-codes). Structured warning log now emits `bucket`, `key`, `code`, and `message` so Sentry can group failures by S3 error code (`AccessDenied` vs `NoSuchKey` vs transient). Fixed in all three StorageClient implementations: `platform_shared/core/storage.py`, `apps/mybookkeeper/backend/app/core/storage.py`, and `apps/myjobhunter/backend/app/core/storage.py`. Non-S3 exceptions now propagate instead of being silently swallowed. Return type unchanged (`None`) so all 20+ call sites are unaffected.
 
 ### HIGH — Gmail email enumeration silently skips messages on fetch failure
 

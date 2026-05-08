@@ -49,8 +49,14 @@ class StorageClient:
     def delete_file(self, key: str) -> None:
         try:
             self._client.remove_object(self._bucket, key)
-        except S3Error:
-            logger.warning("Failed to delete object %s from MinIO", key, exc_info=True)
+        except S3Error as exc:
+            logger.warning(
+                "MinIO delete_file failed: bucket=%s key=%s code=%s message=%s",
+                self._bucket,
+                key,
+                exc.code,
+                exc.message,
+            )
 
     @staticmethod
     def generate_key(prefix: str, filename: str) -> str:

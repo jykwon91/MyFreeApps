@@ -80,8 +80,14 @@ class StorageClient:
     def delete_file(self, key: str) -> None:
         try:
             self._client.remove_object(self._bucket, key)
-        except S3Error:
-            logger.warning("Failed to delete object %s from MinIO", key, exc_info=True)
+        except S3Error as exc:
+            logger.warning(
+                "MinIO delete_file failed: bucket=%s key=%s code=%s message=%s",
+                self._bucket,
+                key,
+                exc.code,
+                exc.message,
+            )
 
     def head_object(self, key: str) -> dict[str, Any] | None:
         """Return object metadata, or None if the object does not exist."""
