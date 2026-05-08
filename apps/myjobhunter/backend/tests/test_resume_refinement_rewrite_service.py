@@ -155,3 +155,88 @@ async def test_hint_passes_through_to_user_content():
             session_id=_FAKE_SESSION_ID,
         )
     assert any("more concise" in c for c in captured_user_content)
+
+
+@pytest.mark.asyncio
+async def test_prior_context_passes_through_to_user_content():
+    """Session-level prior_context entries land in the prompt as a Prior
+    conversation block, so Claude honours user-stated constraints across
+    every target — not just the one a hint was attached to."""
+    parsed = {"kind": "proposal", "rewritten_text": "ok", "rationale": "ok"}
+
+    captured: list[str] = []
+
+    async def fake_call(*, system_prompt, user_content, **_):
+        captured.append(user_content)
+        return _claude_response(parsed)
+
+    prior_context = [
+        {"kind": "ai_critique", "section": None, "text": "5 of 14 bullets need stronger verbs."},
+        {
+            "kind": "user_hint",
+            "section": "Staff Engineer @ Acme — bullet 1",
+            "text": "I left R1Soft out to keep the resume to one page.",
+        },
+        {
+            "kind": "user_custom_rewrite",
+            "section": "Senior Engineer @ Acme — bullet 2",
+            "text": "Owned the migration end-to-end.",
+        },
+    ]
+
+    with patch.object(
+        rewrite_service, "call_claude_with_meta", new=AsyncMock(side_effect=fake_call)
+    ):
+        await rewrite_service.run_rewrite(
+            resume_markdown=_RESUME,
+            target=_TARGET,
+            hint=None,
+            user_id=_FAKE_USER_ID,
+            session_id=_FAKE_SESSION_ID,
+            prior_context=prior_context,
+        )
+
+    body = captured[0]
+    assert "Prior conversation" in body
+    assert "one page" in body
+    assert "Owned the migration end-to-end" in body
+    assert "[ai_critique]" in body
+    assert "[user_hint]" in body
+    assert "[user_custom_rewrite]" in body
+
+
+@pytest.mark.asyncio
+async def test_empty_prior_context_omits_block():
+    """No prior_context (or an empty list) should NOT inject the heading
+    — Claude shouldn't see a misleading 'Prior conversation' label with
+    nothing under it."""
+    parsed = {"kind": "proposal", "rewritten_text": "ok", "rationale": "ok"}
+
+    captured: list[str] = []
+
+    async def fake_call(*, system_prompt, user_content, **_):
+        captured.append(user_content)
+        return _claude_response(parsed)
+
+    with patch.object(
+        rewrite_service, "call_claude_with_meta", new=AsyncMock(side_effect=fake_call)
+    ):
+        await rewrite_service.run_rewrite(
+            resume_markdown=_RESUME,
+            target=_TARGET,
+            hint=None,
+            user_id=_FAKE_USER_ID,
+            session_id=_FAKE_SESSION_ID,
+            prior_context=[],
+        )
+        await rewrite_service.run_rewrite(
+            resume_markdown=_RESUME,
+            target=_TARGET,
+            hint=None,
+            user_id=_FAKE_USER_ID,
+            session_id=_FAKE_SESSION_ID,
+            prior_context=None,
+        )
+
+    for body in captured:
+        assert "Prior conversation" not in body

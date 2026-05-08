@@ -387,12 +387,22 @@ async def test_start_session_draft_contains_company_and_skill_names():
             new_callable=AsyncMock,
         ),
         patch(
+            "app.services.resume_refinement.session_service.turn_repo.list_for_session",
+            new_callable=AsyncMock,
+            return_value=[],
+        ),
+        patch(
             "app.services.resume_refinement.session_service.rewrite_service.run_rewrite",
             new_callable=AsyncMock,
             return_value=fake_rewrite,
         ),
         patch(
             "app.services.resume_refinement.session_service.session_repo.update_pending_proposal",
+            new_callable=AsyncMock,
+            return_value=fake_session,
+        ),
+        patch(
+            "app.services.resume_refinement.session_service.session_repo.get_with_turns_for_user",
             new_callable=AsyncMock,
             return_value=fake_session,
         ),
