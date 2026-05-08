@@ -11,6 +11,8 @@ from sqlalchemy import or_, select, func, update as sa_update, delete as sa_dele
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import undefer
 
+from platform_shared.repositories import soft_delete as _soft_delete
+
 from app.models.documents.document import Document
 
 
@@ -117,8 +119,8 @@ async def refresh(db: AsyncSession, document: Document) -> None:
 
 
 async def delete(db: AsyncSession, document: Document) -> None:
-    document.deleted_at = datetime.now(timezone.utc)
     document.status = "deleted"
+    await _soft_delete(db, document)
 
 
 async def find_by_content_hash(

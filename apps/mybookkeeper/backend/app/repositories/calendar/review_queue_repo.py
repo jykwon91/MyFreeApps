@@ -13,6 +13,8 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from platform_shared.repositories import soft_delete as _soft_delete
+
 from app.models.calendar.calendar_email_review_queue import CalendarEmailReviewQueue
 
 
@@ -130,9 +132,6 @@ async def mark_ignored(
 async def soft_delete(
     db: AsyncSession,
     item: CalendarEmailReviewQueue,
-    *,
-    deleted_at: datetime,
 ) -> None:
     """Soft-delete a queue item (user dismissed without acting)."""
-    item.deleted_at = deleted_at
-    await db.flush()
+    await _soft_delete(db, item)

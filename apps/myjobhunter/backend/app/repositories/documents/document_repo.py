@@ -10,12 +10,13 @@ soft-delete service function to make DELETE idempotent).
 """
 from __future__ import annotations
 
-import datetime as _dt
 import uuid
 from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from platform_shared.repositories import soft_delete as _soft_delete
 
 from app.models.application.document import Document
 
@@ -138,8 +139,7 @@ async def soft_delete(db: AsyncSession, document: Document) -> Document:
     Idempotent — if ``deleted_at`` is already set, the existing timestamp
     is preserved.
     """
-    if document.deleted_at is None:
-        document.deleted_at = _dt.datetime.now(_dt.timezone.utc)
-        await db.flush()
+    was_deleted = await _soft_delete(db, document)
+    if was_deleted:
         await db.refresh(document)
     return document
