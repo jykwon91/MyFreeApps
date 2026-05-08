@@ -23,6 +23,7 @@ import { useToast } from "@/shared/hooks/useToast";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
 import { useInvalidateOnExtractionComplete } from "@/shared/hooks/useInvalidateOnExtractionComplete";
 import IntegrationsSkeleton from "@/app/features/integrations/IntegrationsSkeleton";
+import GmailHeaderActions from "@/app/features/integrations/GmailHeaderActions";
 import LoadingButton from "@/shared/components/ui/LoadingButton";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import AlertBox from "@/shared/components/ui/AlertBox";
@@ -97,18 +98,13 @@ export default function Integrations() {
       .catch((err) => showError(`Connect failed: ${extractErrorMessage(err)}`));
   }, [connectGmail, showError]);
 
-  const [confirmSync, setConfirmSync] = useState(false);
-  const [confirmDisconnect, setConfirmDisconnect] = useState(false);
-
   const handleSync = useCallback(() => {
-    setConfirmSync(false);
     syncGmail()
       .unwrap()
       .catch((err) => showError(`Sync failed: ${extractErrorMessage(err)}`));
   }, [syncGmail, showError]);
 
   const handleDisconnect = useCallback(() => {
-    setConfirmDisconnect(false);
     disconnectGmail()
       .unwrap()
       .then(() => showSuccess("Disconnected from Gmail. You can reconnect anytime."))
@@ -211,83 +207,19 @@ export default function Integrations() {
 
               {canWrite ? (
                 <div className="flex gap-2">
-                  {gmail ? (
-                    <>
-                      {gmail.needs_reauth ? (
-                        /* Token expired — show Reconnect instead of Sync/Disconnect.
-                           The OAuth flow replaces the tokens without requiring a disconnect. */
-                        <LoadingButton
-                          onClick={handleConnect}
-                          isLoading={isConnecting}
-                          loadingText="Reconnecting..."
-                          data-testid="gmail-reconnect-button"
-                        >
-                          Reconnect Gmail
-                        </LoadingButton>
-                      ) : (
-                        <>
-                          {confirmSync ? (
-                            <div className="flex items-center gap-2 border rounded-md px-3 py-1.5 text-sm">
-                              <span className="text-muted-foreground">Start email sync?</span>
-                              <button onClick={handleSync} className="text-primary font-medium hover:underline">Yes</button>
-                              <button onClick={() => setConfirmSync(false)} className="text-muted-foreground hover:text-foreground">No</button>
-                            </div>
-                          ) : (
-                            <LoadingButton
-                              variant="secondary"
-                              onClick={() => setConfirmSync(true)}
-                              disabled={isSyncing}
-                              isLoading={isSyncing || isSyncStarting}
-                              loadingText="Syncing..."
-                            >
-                              Sync now
-                            </LoadingButton>
-                          )}
-                          {isSyncing ? (
-                            <LoadingButton
-                              variant="ghost"
-                              onClick={() => handleCancel(latestLog?.id)}
-                              isLoading={isCancelling}
-                              loadingText="Cancelling..."
-                              className="text-destructive hover:text-destructive"
-                            >
-                              Cancel
-                            </LoadingButton>
-                          ) : confirmDisconnect ? (
-                            <div className="flex items-center gap-2 border rounded-md px-3 py-1.5 text-sm">
-                              <span className="text-muted-foreground">Disconnect Gmail?</span>
-                              <button
-                                onClick={handleDisconnect}
-                                className="text-destructive font-medium hover:underline"
-                              >
-                                Yes
-                              </button>
-                              <button
-                                onClick={() => setConfirmDisconnect(false)}
-                                className="text-muted-foreground hover:text-foreground"
-                              >
-                                No
-                              </button>
-                            </div>
-                          ) : (
-                            <LoadingButton
-                              variant="ghost"
-                              onClick={() => setConfirmDisconnect(true)}
-                              isLoading={isDisconnecting}
-                              loadingText="Disconnecting..."
-                              className="text-destructive hover:text-destructive"
-                            >
-                              Disconnect
-                            </LoadingButton>
-                          )}
-                        </>
-                      )}
-                    </>
-                  ) : (
-                    <LoadingButton onClick={handleConnect} isLoading={isConnecting} loadingText="Connecting...">
-                      Connect Gmail
-                    </LoadingButton>
-                  )}
+                  <GmailHeaderActions
+                    gmail={gmail}
+                    isConnecting={isConnecting}
+                    isSyncing={isSyncing}
+                    isSyncStarting={isSyncStarting}
+                    isCancelling={isCancelling}
+                    isDisconnecting={isDisconnecting}
+                    latestSyncLogId={latestLog?.id ?? null}
+                    onConnect={handleConnect}
+                    onSync={handleSync}
+                    onCancel={handleCancel}
+                    onDisconnect={handleDisconnect}
+                  />
                 </div>
               ) : null}
             </div>
