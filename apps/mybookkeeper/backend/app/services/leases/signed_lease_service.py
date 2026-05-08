@@ -31,6 +31,10 @@ from app.repositories.leases import (
 )
 from app.repositories.listings import listing_repo
 from app.repositories.properties import property_repo
+from app.repositories.user import user_repo
+from app.models.applicants.applicant import Applicant
+from app.models.inquiries.inquiry import Inquiry
+from app.models.properties.property import Property
 from app.models.user.user import User
 from app.schemas.leases.signed_lease_attachment_response import (
     SignedLeaseAttachmentResponse,
@@ -274,6 +278,47 @@ def _denormalise_dates(values: dict[str, Any]) -> tuple[_dt.date | None, _dt.dat
     starts = next((_coerce(values[k]) for k in candidates_start if k in values), None)
     ends = next((_coerce(values[k]) for k in candidates_end if k in values), None)
     return starts, ends
+
+
+async def _load_resolution_context(
+    db,
+    *,
+    lease,
+    organization_id: uuid.UUID,
+    user_id: uuid.UUID,
+) -> tuple[Applicant | None, Inquiry | None, Property | None, User | None]:
+    """Load applicant + inquiry + property + host user for placeholder resolution.
+
+    Used by ``add_templates_and_generate`` and ``prefill_addendum_placeholders``
+    to populate ``default_source`` resolution against live ORM rows. All four
+    return values may be ``None`` — the resolver is expected to tolerate
+    missing context (e.g. an imported lease with no listing has no property).
+    """
+    applicant = await applicant_repo.get(
+        db,
+        applicant_id=lease.applicant_id,
+        organization_id=organization_id,
+        user_id=user_id,
+    )
+    inquiry = None
+    if applicant is not None and applicant.inquiry_id is not None:
+        inquiry = await get_by_applicant_inquiry_id(
+            db,
+            inquiry_id=applicant.inquiry_id,
+            organization_id=organization_id,
+            user_id=user_id,
+        )
+    property_record = None
+    if lease.listing_id is not None:
+        listing = await listing_repo.get_by_id(
+            db, lease.listing_id, organization_id,
+        )
+        if listing is not None and listing.property_id is not None:
+            property_record = await property_repo.get_by_id(
+                db, listing.property_id, organization_id,
+            )
+    user_record = await user_repo.get_by_id(db, user_id)
+    return applicant, inquiry, property_record, user_record
 
 
 # ---------------------------------------------------------------------------
@@ -667,31 +712,14 @@ async def add_templates_and_generate(
         # for any placeholder with a ``default_source`` set. This populates
         # ``[ORIGINAL LEASE START DATE]``, ``[PROPERTY ADDRESS]``, etc. on
         # addendum templates without forcing the host to retype them.
-        applicant = await applicant_repo.get(
-            db,
-            applicant_id=lease.applicant_id,
-            organization_id=organization_id,
-            user_id=user_id,
-        )
-        inquiry = None
-        if applicant is not None and applicant.inquiry_id is not None:
-            inquiry = await get_by_applicant_inquiry_id(
+        applicant, inquiry, property_record, user_record = (
+            await _load_resolution_context(
                 db,
-                inquiry_id=applicant.inquiry_id,
+                lease=lease,
                 organization_id=organization_id,
                 user_id=user_id,
             )
-        listing = None
-        property_record = None
-        if lease.listing_id is not None:
-            listing = await listing_repo.get_by_id(
-                db, lease.listing_id, organization_id,
-            )
-            if listing is not None and listing.property_id is not None:
-                property_record = await property_repo.get_by_id(
-                    db, listing.property_id, organization_id,
-                )
-        user_record = await db.get(User, user_id)
+        )
 
         merged_values: dict[str, str] = {
             k: ("" if v is None else str(v))
@@ -712,7 +740,7 @@ async def add_templates_and_generate(
                     property_record=property_record,
                     user_record=user_record,
                 )
-            except Exception:  # noqa: BLE001
+            except (ValueError, AttributeError):
                 logger.warning(
                     "default_source resolution failed for placeholder %s on lease %s",
                     p.key, lease_id, exc_info=True,
@@ -733,20 +761,17 @@ async def add_templates_and_generate(
         # consistent and the Details tab reflects what was used at render time.
         if merged_values != (lease.values or {}):
             new_start, new_end = _denormalise_dates(merged_values)
+            fields_to_update: dict[str, Any] = {"values": merged_values}
+            if new_start is not None and lease.starts_on is None:
+                fields_to_update["starts_on"] = new_start
+            if new_end is not None and lease.ends_on is None:
+                fields_to_update["ends_on"] = new_end
             await signed_lease_repo.update_lease(
                 db,
                 lease_id=lease_id,
                 user_id=user_id,
                 organization_id=organization_id,
-                fields={
-                    "values": merged_values,
-                    **(
-                        {"starts_on": new_start} if new_start is not None and lease.starts_on is None else {}
-                    ),
-                    **(
-                        {"ends_on": new_end} if new_end is not None and lease.ends_on is None else {}
-                    ),
-                },
+                fields=fields_to_update,
             )
 
         # Persist the new template links before rendering (render can be long).
@@ -919,30 +944,14 @@ async def prefill_addendum_placeholders(
                 placeholders.append(p)
 
         # Load resolution context once.
-        applicant = await applicant_repo.get(
-            db,
-            applicant_id=lease.applicant_id,
-            organization_id=organization_id,
-            user_id=user_id,
-        )
-        inquiry = None
-        if applicant is not None and applicant.inquiry_id is not None:
-            inquiry = await get_by_applicant_inquiry_id(
+        applicant, inquiry, property_record, user_record = (
+            await _load_resolution_context(
                 db,
-                inquiry_id=applicant.inquiry_id,
+                lease=lease,
                 organization_id=organization_id,
                 user_id=user_id,
             )
-        property_record = None
-        if lease.listing_id is not None:
-            listing = await listing_repo.get_by_id(
-                db, lease.listing_id, organization_id,
-            )
-            if listing is not None and listing.property_id is not None:
-                property_record = await property_repo.get_by_id(
-                    db, listing.property_id, organization_id,
-                )
-        user_record = await db.get(User, user_id)
+        )
 
         existing_values = lease.values or {}
 
@@ -962,7 +971,8 @@ async def prefill_addendum_placeholders(
                         input_type=p.input_type,
                         required=p.required,
                         value=str(existing),
-                        provenance="lease.values",
+                        provenance=None,
+                        is_from_existing_values=True,
                     )
                 )
                 continue
@@ -982,7 +992,7 @@ async def prefill_addendum_placeholders(
                     if resolved is not None and resolved != "":
                         value = str(resolved)
                         provenance = prov
-                except Exception:  # noqa: BLE001
+                except (ValueError, AttributeError):
                     logger.warning(
                         "default_source resolution failed for placeholder %s",
                         p.key, exc_info=True,

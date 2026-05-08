@@ -1,10 +1,5 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { ArrowLeft, Plus } from "lucide-react";
-import AlertBox from "@/shared/components/ui/AlertBox";
-import LoadingButton from "@/shared/components/ui/LoadingButton";
-import Button from "@/shared/components/ui/Button";
-import Skeleton from "@/shared/components/ui/Skeleton";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import { useGetLeaseTemplatesQuery } from "@/shared/store/leaseTemplatesApi";
 import {
@@ -13,10 +8,15 @@ import {
 } from "@/shared/store/signedLeasesApi";
 import type { LeaseTemplateSummary } from "@/shared/types/lease/lease-template-summary";
 import type { SignedLeaseTemplatePrefillItem } from "@/shared/types/lease/signed-lease-template-prefill";
+import LeaseAddTemplatePickStep from "./LeaseAddTemplatePickStep";
+import LeaseAddTemplateValuesStep from "./LeaseAddTemplateValuesStep";
 
 export interface LeaseAddTemplateModalProps {
   leaseId: string;
-  /** IDs of templates already linked to this lease — excluded from the picker. */
+  /**
+   * IDs of templates already linked to this lease. They still appear in
+   * the picker — selecting one is a regenerate, not a duplicate-add.
+   */
   existingTemplateIds: string[];
   onClose: () => void;
 }
@@ -29,19 +29,18 @@ interface ValuesFormState {
 }
 
 /**
- * Two-step modal for adding lease templates to an existing signed lease.
+ * Two-step modal for attaching lease templates to a signed lease and
+ * generating their rendered output.
  *
- * Step 1 — pick: host picks one or more templates from a checklist of
- * templates not already linked to the lease.
+ * Step 1 (``LeaseAddTemplatePickStep``) — pick one or more templates.
+ * Already-linked templates are flagged so the host knows they'll regenerate.
  *
- * Step 2 — values: backend pre-fills as many placeholders as possible from
- * the parent lease, applicant, linked property, and host user. Host fills in
- * any genuinely-unknown fields (rent, dates, payment method, etc.) and
- * submits. Backend persists merged values to ``lease.values`` and renders
- * the new template files as additional attachments.
+ * Step 2 (``LeaseAddTemplateValuesStep``) — fill in placeholder values.
+ * The prefill endpoint pre-populates as many as it can from the applicant,
+ * lease, linked property, and host user; the host edits the rest.
  *
  * Works for both generated and imported leases. Imported leases use this
- * flow to attach addenda (e.g. extension addendums) without touching the
+ * flow to attach addenda (extension, pet rules, etc.) without touching the
  * original signed PDF.
  */
 export default function LeaseAddTemplateModal({
@@ -65,7 +64,10 @@ export default function LeaseAddTemplateModal({
     refetch,
   } = useGetLeaseTemplatesQuery();
 
-  const linkedSet = new Set(existingTemplateIds);
+  const linkedSet = useMemo(
+    () => new Set(existingTemplateIds),
+    [existingTemplateIds],
+  );
   const available = data?.items ?? [];
 
   function handleToggle(t: LeaseTemplateSummary) {
@@ -134,13 +136,6 @@ export default function LeaseAddTemplateModal({
     }
   }
 
-  function inputTypeAttr(t: string): string {
-    if (t === "date") return "date";
-    if (t === "email") return "email";
-    if (t === "phone") return "tel";
-    return "text";
-  }
-
   return (
     <Dialog.Root open onOpenChange={(isOpen) => { if (!isOpen) onClose(); }}>
       <Dialog.Portal>
@@ -159,203 +154,29 @@ export default function LeaseAddTemplateModal({
           </Dialog.Description>
 
           {step === "pick" ? (
-            <>
-              {isError ? (
-                <AlertBox
-                  variant="error"
-                  className="flex items-center justify-between gap-3"
-                >
-                  <span>I couldn't load your templates. Want me to try again?</span>
-                  <LoadingButton
-                    variant="secondary"
-                    size="sm"
-                    isLoading={isFetching}
-                    loadingText="Retrying..."
-                    onClick={() => refetch()}
-                  >
-                    Retry
-                  </LoadingButton>
-                </AlertBox>
-              ) : isLoading ? (
-                <div className="space-y-2" data-testid="lease-add-template-skeleton">
-                  <Skeleton className="h-14 w-full" />
-                  <Skeleton className="h-14 w-full" />
-                </div>
-              ) : available.length === 0 ? (
-                <p
-                  className="text-sm text-muted-foreground py-4 text-center"
-                  data-testid="lease-add-template-empty"
-                >
-                  All your templates are already on this lease.
-                </p>
-              ) : (
-                <ul
-                  className="space-y-2 max-h-72 overflow-y-auto"
-                  data-testid="lease-add-template-list"
-                >
-                  {available.map((t) => {
-                    const checked = selectedIds.includes(t.id);
-                    const alreadyLinked = linkedSet.has(t.id);
-                    return (
-                      <li key={t.id}>
-                        <label
-                          className={[
-                            "w-full flex items-start gap-3 border rounded-lg px-4 py-3 transition-colors min-h-[44px] cursor-pointer",
-                            checked
-                              ? "border-primary bg-primary/5"
-                              : "hover:bg-muted/50",
-                          ].join(" ")}
-                          data-testid={`add-template-option-${t.id}`}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={() => handleToggle(t)}
-                            className="mt-1 h-4 w-4 cursor-pointer"
-                            aria-label={`Select template ${t.name}`}
-                            data-testid={`add-template-checkbox-${t.id}`}
-                          />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between gap-2 flex-wrap">
-                              <span className="font-medium text-sm">{t.name}</span>
-                              <span className="text-xs text-muted-foreground shrink-0">
-                                v{t.version}
-                              </span>
-                            </div>
-                            {t.description ? (
-                              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
-                                {t.description}
-                              </p>
-                            ) : null}
-                            <p className="text-xs text-muted-foreground mt-1 flex items-center gap-2 flex-wrap">
-                              <span>
-                                {t.placeholder_count}{" "}
-                                {t.placeholder_count === 1
-                                  ? "placeholder"
-                                  : "placeholders"}
-                              </span>
-                              {alreadyLinked ? (
-                                <span className="text-[10px] uppercase tracking-wide bg-muted rounded px-1.5 py-0.5 font-medium">
-                                  on this lease — picking will regenerate
-                                </span>
-                              ) : null}
-                            </p>
-                          </div>
-                        </label>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-
-              <div className="flex justify-end gap-2 pt-2">
-                <Button variant="ghost" size="sm" onClick={onClose}>
-                  Cancel
-                </Button>
-                <LoadingButton
-                  isLoading={isPrefilling}
-                  loadingText="Loading fields..."
-                  disabled={selectedIds.length === 0 || isPrefilling}
-                  onClick={() => void handleContinue()}
-                  data-testid="lease-add-template-continue"
-                >
-                  Continue
-                </LoadingButton>
-              </div>
-            </>
+            <LeaseAddTemplatePickStep
+              available={available}
+              linkedSet={linkedSet}
+              selectedIds={selectedIds}
+              onToggle={handleToggle}
+              isError={isError}
+              isLoading={isLoading}
+              isFetching={isFetching}
+              isPrefilling={isPrefilling}
+              onRetry={() => void refetch()}
+              onContinue={() => void handleContinue()}
+              onClose={onClose}
+            />
           ) : (
-            <>
-              {valuesState !== null && valuesState.items.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-4 text-center">
-                  This template has nothing for you to fill in — everything is
-                  auto-handled. Click Generate to render it.
-                </p>
-              ) : (
-                <ul
-                  className="space-y-3 max-h-[60vh] overflow-y-auto pr-1"
-                  data-testid="lease-add-template-values-list"
-                >
-                  {(valuesState?.items ?? []).map((item) => {
-                    const value = valuesState?.values[item.key] ?? "";
-                    const provenance = item.provenance;
-                    const provenanceLabel =
-                      provenance === "applicant"
-                        ? "from applicant"
-                        : provenance === "lease"
-                          ? "from lease"
-                          : provenance === "property"
-                            ? "from property"
-                            : provenance === "user"
-                              ? "from your profile"
-                              : provenance === "today"
-                                ? "today's date"
-                                : provenance === "lease.values"
-                                  ? "saved on lease"
-                                  : null;
-                    return (
-                      <li key={item.key} className="flex flex-col gap-1">
-                        <label
-                          htmlFor={`addendum-input-${item.key}`}
-                          className="text-xs font-medium flex items-center gap-2 flex-wrap"
-                        >
-                          {item.display_label}
-                          {item.required ? (
-                            <span className="text-destructive" aria-hidden>
-                              *
-                            </span>
-                          ) : null}
-                          {provenanceLabel !== null ? (
-                            <span className="text-[10px] uppercase tracking-wide text-muted-foreground bg-muted rounded px-1.5 py-0.5 font-normal">
-                              {provenanceLabel}
-                            </span>
-                          ) : null}
-                        </label>
-                        <input
-                          id={`addendum-input-${item.key}`}
-                          type={inputTypeAttr(item.input_type)}
-                          value={value}
-                          onChange={(e) =>
-                            handleValueChange(item.key, e.target.value)
-                          }
-                          className="px-3 py-2 text-sm border rounded-md bg-background"
-                          data-testid={`addendum-input-${item.key}`}
-                          placeholder={
-                            item.required ? "Required" : "Optional"
-                          }
-                        />
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-
-              <div className="flex items-center justify-between gap-2 pt-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setStep("pick")}
-                  data-testid="lease-add-template-back"
-                >
-                  <ArrowLeft size={14} className="mr-1" />
-                  Back
-                </Button>
-                <div className="flex gap-2">
-                  <Button variant="ghost" size="sm" onClick={onClose}>
-                    Cancel
-                  </Button>
-                  <LoadingButton
-                    isLoading={isAdding}
-                    loadingText="Generating..."
-                    disabled={isAdding}
-                    onClick={() => void handleGenerate()}
-                    data-testid="lease-add-template-confirm"
-                  >
-                    <Plus size={14} className="mr-1" />
-                    Generate
-                  </LoadingButton>
-                </div>
-              </div>
-            </>
+            <LeaseAddTemplateValuesStep
+              items={valuesState?.items ?? []}
+              values={valuesState?.values ?? {}}
+              onValueChange={handleValueChange}
+              isAdding={isAdding}
+              onBack={() => setStep("pick")}
+              onClose={onClose}
+              onGenerate={() => void handleGenerate()}
+            />
           )}
         </Dialog.Content>
       </Dialog.Portal>

@@ -16,12 +16,20 @@ class SignedLeaseTemplatePrefillItem(BaseModel):
     input_type: str
     required: bool
     # Resolved value (auto-filled from default_source against applicant /
-    # lease / property / user). Empty string when no source resolved or no
-    # default_source was set on the placeholder.
+    # lease / property / user, or carried over from an earlier
+    # ``lease.values`` entry on regenerate). Empty string when no source
+    # resolved and no default_source was set.
     value: str
     # ``"applicant"`` / ``"inquiry"`` / ``"lease"`` / ``"property"`` /
-    # ``"user"`` / ``"today"`` if a value was resolved, else ``None``.
+    # ``"user"`` / ``"today"`` when ``resolve_default_source`` produced the
+    # value. ``None`` when the value either could not be resolved or was
+    # carried over from ``lease.values`` (in which case
+    # ``is_from_existing_values=True``).
     provenance: str | None
+    # True when ``value`` came from the lease's existing ``values`` dict
+    # (typical on a regenerate). The frontend uses this to label the field
+    # as "saved on lease" — outside the resolver's provenance contract.
+    is_from_existing_values: bool = False
 
 
 class SignedLeaseTemplatePrefillResponse(BaseModel):

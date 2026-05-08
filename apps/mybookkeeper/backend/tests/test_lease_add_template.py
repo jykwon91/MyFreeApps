@@ -274,6 +274,96 @@ async def test_add_templates_already_linked_treated_as_regenerate(db) -> None:
 
 
 @pytest.mark.asyncio
+async def test_regenerate_deletes_old_rendered_attachments(db) -> None:
+    """Regenerate replaces old ``rendered_original`` attachments.
+
+    Closes the audit gap from 2026-05-08: the previous test only verified
+    that no error was raised, not that the deletion side-effect actually
+    fired. This one seeds an existing rendered attachment and asserts both
+    (a) the old DB row is gone after regenerate, and (b) the storage
+    delete_file was called for its key. Other attachment kinds (e.g.
+    ``signed_addendum`` from a prior import) MUST be preserved.
+    """
+    from app.repositories.leases import signed_lease_attachment_repo
+
+    user_id = uuid.uuid4()
+    org_id = uuid.uuid4()
+    t1 = await lease_template_repo.create(
+        db, user_id=user_id, organization_id=org_id, name="Extension",
+    )
+    lease = await signed_lease_repo.create(
+        db,
+        user_id=user_id,
+        organization_id=org_id,
+        applicant_id=uuid.uuid4(),
+        listing_id=None,
+        values={},
+        starts_on=None,
+        ends_on=None,
+        status="draft",
+        kind="generated",
+    )
+    await signed_lease_template_repo.create(
+        db, lease_id=lease.id, template_id=t1.id, display_order=0,
+    )
+    # Seed two attachments: one rendered_original (should be deleted on
+    # regenerate) and one signed_addendum (must survive).
+    import datetime as _dt
+    now = _dt.datetime.now(_dt.timezone.utc)
+    old_rendered = await signed_lease_attachment_repo.create(
+        db,
+        lease_id=lease.id,
+        storage_key="signed-leases/lease/old-rendered",
+        filename="extension.pdf",
+        content_type="application/pdf",
+        size_bytes=1024,
+        kind="rendered_original",
+        uploaded_by_user_id=user_id,
+        uploaded_at=now,
+    )
+    preserved_addendum = await signed_lease_attachment_repo.create(
+        db,
+        lease_id=lease.id,
+        storage_key="signed-leases/lease/preserved",
+        filename="house-rules.pdf",
+        content_type="application/pdf",
+        size_bytes=2048,
+        kind="signed_addendum",
+        uploaded_by_user_id=user_id,
+        uploaded_at=now,
+    )
+    await db.commit()
+
+    storage = MagicMock()
+    storage.upload_file = MagicMock(return_value=None)
+    storage.delete_file = MagicMock(return_value=None)
+    storage.download_file = MagicMock(return_value=b"")
+
+    with _patch(
+        "app.services.leases.signed_lease_service.unit_of_work",
+        _make_fake_uow(db),
+    ), _patch(
+        "app.services.leases.signed_lease_service.get_storage",
+        return_value=storage,
+    ):
+        await add_templates_and_generate(
+            user_id=user_id,
+            organization_id=org_id,
+            lease_id=lease.id,
+            template_ids=[t1.id],
+        )
+
+    # The old rendered_original DB row is gone.
+    remaining = await signed_lease_attachment_repo.list_by_lease(db, lease.id)
+    remaining_ids = {a.id for a in remaining}
+    assert old_rendered.id not in remaining_ids
+    # The non-rendered attachment is preserved.
+    assert preserved_addendum.id in remaining_ids
+    # Storage was asked to delete the old rendered object.
+    storage.delete_file.assert_any_call("signed-leases/lease/old-rendered")
+
+
+@pytest.mark.asyncio
 async def test_add_templates_happy_path_links_and_renders(db) -> None:
     """End-to-end: new template link inserted, attachment created via mocked storage."""
     user_id = uuid.uuid4()

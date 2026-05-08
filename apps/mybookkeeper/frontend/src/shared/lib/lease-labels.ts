@@ -79,3 +79,18 @@ export const SIGNED_LEASE_STATUS_NEXT: Record<SignedLeaseStatus, readonly Signed
   ended: [],
   terminated: [],
 };
+
+/**
+ * Human-friendly labels for the ``provenance`` field on
+ * ``SignedLeaseTemplatePrefillItem``. Mirrors the backend
+ * ``ProvenanceLabel`` type in ``default_source_resolver.py``. Unknown
+ * values fall through to ``null`` and no chip is rendered.
+ */
+export const PREFILL_PROVENANCE_LABELS: Record<string, string> = {
+  applicant: "from applicant",
+  inquiry: "from inquiry",
+  lease: "from lease",
+  property: "from property",
+  user: "from your profile",
+  today: "today's date",
+};
