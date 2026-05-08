@@ -21,6 +21,9 @@ class StorageNotConfiguredError(RuntimeError):
     class, instead of each app defining its own and pattern-matching on
     string content.
     """
+
+
+class StorageClient:
     def __init__(self, client: Minio, bucket: str) -> None:
         self._client = client
         self._bucket = bucket
