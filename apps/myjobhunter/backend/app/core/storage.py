@@ -22,19 +22,13 @@ from urllib.parse import urlparse
 from minio import Minio
 from minio.error import S3Error
 
+from platform_shared.core.storage import StorageNotConfiguredError  # noqa: F401 — re-exported for back-compat
+
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
 _client: "StorageClient | None" = None
-
-
-class StorageNotConfiguredError(RuntimeError):
-    """Raised when MinIO env vars are missing or incomplete.
-
-    Distinct from a transient outage: this is a *deployment-time* fault
-    that should crash the app at boot, not a per-request degradation.
-    """
 
 
 def _parse_endpoint(url: str) -> tuple[str, bool]:

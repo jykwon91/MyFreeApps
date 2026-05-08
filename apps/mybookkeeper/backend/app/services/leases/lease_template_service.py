@@ -18,6 +18,8 @@ from __future__ import annotations
 import logging
 import uuid
 
+from platform_shared.core.storage import StorageNotConfiguredError
+
 from app.core.config import settings
 from app.core.storage import StorageClient, get_storage
 from app.db.session import unit_of_work
@@ -84,10 +86,6 @@ DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.docu
 # ---------------------------------------------------------------------------
 
 class TemplateNotFoundError(LookupError):
-    pass
-
-
-class StorageNotConfiguredError(RuntimeError):
     pass
 
 

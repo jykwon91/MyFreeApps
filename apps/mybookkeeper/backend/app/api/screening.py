@@ -169,10 +169,12 @@ async def upload_screening_result(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except screening_service.UnknownProviderError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except screening_service.StorageNotConfiguredError as exc:
+        # Storage is a deploy-time config issue — distinct from a request
+        # error. 503 lets the operator distinguish "missing config" from
+        # "client did something wrong".
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
     except screening_service.ScreeningServiceError as exc:
-        # Includes StorageNotConfiguredError → 503.
-        if "storage" in str(exc).lower():
-            raise HTTPException(status_code=503, detail=str(exc)) from exc
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
         # Defer to the report-processor exception class via duck typing —

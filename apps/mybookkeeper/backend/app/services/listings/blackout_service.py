@@ -17,6 +17,8 @@ import logging
 import uuid
 from datetime import datetime, timezone
 
+from platform_shared.core.storage import StorageNotConfiguredError  # noqa: F401 — re-exported for back-compat
+
 from app.core.config import settings
 from app.core.storage import get_storage
 from app.db.session import unit_of_work
@@ -64,10 +66,6 @@ class AttachmentTooLargeError(ValueError):
 
 class AttachmentTypeRejectedError(ValueError):
     """Raised when the sniffed content type is not in the allowlist."""
-
-
-class StorageNotConfiguredError(RuntimeError):
-    """Raised when MinIO/S3 storage is not configured."""
 
 
 # ---------------------------------------------------------------------------
