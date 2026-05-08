@@ -171,7 +171,7 @@ class TestMakeRequireTurnstile:
     @pytest.mark.anyio
     async def test_dev_mode_passes_without_token(self) -> None:
         """Empty secret_key (dev / CI) skips the check entirely."""
-        verify = AsyncMock(return_value=True)
+        verify = AsyncMock(return_value=(True, []))
         dep = make_require_turnstile(lambda: "", verify=verify)
 
         request = _make_request()
@@ -180,7 +180,7 @@ class TestMakeRequireTurnstile:
 
     @pytest.mark.anyio
     async def test_missing_token_header_raises_400(self) -> None:
-        verify = AsyncMock(return_value=True)
+        verify = AsyncMock(return_value=(True, []))
         dep = make_require_turnstile(lambda: "secret", verify=verify)
 
         request = _make_request()
@@ -192,18 +192,44 @@ class TestMakeRequireTurnstile:
 
     @pytest.mark.anyio
     async def test_invalid_token_raises_400(self) -> None:
-        verify = AsyncMock(return_value=False)
+        verify = AsyncMock(return_value=(False, []))
         dep = make_require_turnstile(lambda: "secret", verify=verify)
 
         request = _make_request(headers={"x-turnstile-token": "bad"})
         with pytest.raises(HTTPException) as exc_info:
             await dep(request)
         assert exc_info.value.status_code == 400
-        assert exc_info.value.detail == "Captcha verification failed"
+        assert exc_info.value.detail == "captcha_verification_failed"
+
+    @pytest.mark.anyio
+    async def test_misconfigured_secret_raises_503(self) -> None:
+        """``invalid-input-secret`` is a config bug, not a user failure —
+        surface as 503 so ops gets paged instead of blaming the visitor."""
+        verify = AsyncMock(return_value=(False, ["invalid-input-secret"]))
+        dep = make_require_turnstile(lambda: "secret", verify=verify)
+
+        request = _make_request(headers={"x-turnstile-token": "anything"})
+        with pytest.raises(HTTPException) as exc_info:
+            await dep(request)
+        assert exc_info.value.status_code == 503
+        assert exc_info.value.detail == "captcha_service_misconfigured"
+
+    @pytest.mark.anyio
+    async def test_expired_token_raises_400_retry(self) -> None:
+        """``timeout-or-duplicate`` is user-recoverable — retry with a
+        fresh token."""
+        verify = AsyncMock(return_value=(False, ["timeout-or-duplicate"]))
+        dep = make_require_turnstile(lambda: "secret", verify=verify)
+
+        request = _make_request(headers={"x-turnstile-token": "expired"})
+        with pytest.raises(HTTPException) as exc_info:
+            await dep(request)
+        assert exc_info.value.status_code == 400
+        assert exc_info.value.detail == "captcha_expired_please_retry"
 
     @pytest.mark.anyio
     async def test_valid_token_passes(self) -> None:
-        verify = AsyncMock(return_value=True)
+        verify = AsyncMock(return_value=(True, []))
         dep = make_require_turnstile(lambda: "secret", verify=verify)
 
         request = _make_request(headers={"x-turnstile-token": "good"})
@@ -223,7 +249,7 @@ class TestMakeRequireTurnstile:
             provider_calls += 1
             return ""  # stays in dev mode
 
-        verify = AsyncMock(return_value=True)
+        verify = AsyncMock(return_value=(True, []))
         dep = make_require_turnstile(_provider, verify=verify)
 
         request = _make_request()
@@ -237,7 +263,7 @@ class TestMakeRequireTurnstile:
     async def test_uses_x_forwarded_for_as_remote_ip(self) -> None:
         """Reverse-proxy deployments rely on ``X-Forwarded-For`` for the
         real caller IP — that's what gets sent to Cloudflare."""
-        verify = AsyncMock(return_value=True)
+        verify = AsyncMock(return_value=(True, []))
         dep = make_require_turnstile(lambda: "secret", verify=verify)
 
         request = _make_request(
