@@ -41,7 +41,7 @@ from app.repositories.integrations import integration_repo
 from app.repositories.properties import property_repo
 from app.repositories.transactions import transaction_repo
 from app.repositories.user import user_repo
-from app.services.system.auth_event_service import log_auth_event
+from platform_shared.services.auth_event_service import log_auth_event
 
 logger = logging.getLogger(__name__)
 

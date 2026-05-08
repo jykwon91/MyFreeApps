@@ -16,7 +16,7 @@ from app.models.responses.queue_item_info import QueueItemInfo
 from app.models.responses.retry_result import RetryResult
 from app.models.responses.sync_log_info import SyncLogInfo
 from app.repositories import email_queue_repo, integration_repo, sync_log_repo
-from app.services.system.auth_event_service import log_auth_event
+from platform_shared.services.auth_event_service import log_auth_event
 
 logger = logging.getLogger(__name__)
 

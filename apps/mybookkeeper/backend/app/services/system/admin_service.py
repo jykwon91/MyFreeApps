@@ -7,14 +7,23 @@ the MBK-domain operations: clean re-extract, list orgs with member /
 transaction counts, and the composite ``get_platform_stats`` that
 extends the shared user-stats with MBK's per-domain counts.
 """
+from __future__ import annotations
+
 import logging
 import uuid
+
+from platform_shared.services.admin_user_service import AdminUserService
 
 from app.db.session import AsyncSessionLocal, unit_of_work
 from app.models.user.user import User
 from app.repositories import admin_repo, document_repo, extraction_repo, transaction_repo
 from app.schemas.system.admin import AdminOrgRead, CleanReExtractResponse, PlatformStats
-from app.services.system.admin_user_service_factory import shared_admin_user_service
+
+shared_admin_user_service: AdminUserService[User] = AdminUserService(
+    user_model=User,
+    unit_of_work=unit_of_work,
+    async_session_factory=AsyncSessionLocal,
+)
 
 logger = logging.getLogger(__name__)
 

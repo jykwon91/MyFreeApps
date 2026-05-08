@@ -21,7 +21,7 @@ from app.models.organization.organization_member import OrganizationMember
 from app.models.user.user import Role, User
 from app.repositories import admin_repo, user_repo
 from app.services.system import admin_service
-from app.services.system.admin_user_service_factory import shared_admin_user_service
+from app.services.system.admin_service import shared_admin_user_service
 
 
 @pytest_asyncio.fixture()
