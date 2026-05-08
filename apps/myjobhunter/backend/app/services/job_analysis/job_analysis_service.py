@@ -29,6 +29,17 @@ Cost accounting
 / ``cost_usd``. We persist them on the JobAnalysis row so the operator
 sees per-analysis cost in the UI, matching the resume-refinement
 session pattern.
+
+Module layout
+=============
+This module owns: ``analyze``, ``score``, ``get_analysis``,
+``soft_delete_analysis``, and all response-validation / prompt-building
+helpers.
+
+Promote logic (creating an Application from a JobAnalysis) lives in the
+sibling :mod:`job_analysis_promote_service`. ``apply_to_application`` is
+re-exported here for backward compatibility so existing callers
+(``app.api.job_analysis``, tests) need no import changes.
 """
 from __future__ import annotations
 
@@ -41,12 +52,8 @@ from typing import Any
 import anthropic
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.application.application import Application
-from app.models.application.application_event import ApplicationEvent
 from app.models.job_analysis.job_analysis import JobAnalysis
 from app.models.profile.profile import Profile
-from app.repositories.application import application_event_repository, application_repository
-from app.repositories.company import company_repository
 from app.repositories.job_analysis import job_analysis_repository
 from app.repositories.profile import (
     education_repository,
@@ -62,8 +69,40 @@ from app.services.extraction.jd_url_extractor import (
     extract_from_url,
 )
 from app.services.extraction.prompts.job_analysis_prompt import JOB_ANALYSIS_PROMPT
+from app.services.job_analysis._job_analysis_utils import (
+    _SALARY_PERIOD_MAP,
+    _VALID_REMOTE_TYPE,
+    _map_salary_period,
+    _safe_float,
+    _safe_remote_type,
+    _str_or_none,
+)
 
 logger = logging.getLogger(__name__)
+
+# Re-export so callers that import ``apply_to_application`` from this
+# module keep working without change (the implementation moved to the
+# sibling promote module). The promote module does NOT import from this
+# module (it uses _job_analysis_utils directly), so there is no circular
+# import.
+from app.services.job_analysis.job_analysis_promote_service import (  # noqa: E402
+    apply_to_application,
+)
+
+__all__ = [
+    # Core analyze / score surface
+    "analyze",
+    "score",
+    "get_analysis",
+    "soft_delete_analysis",
+    # Re-exported from promote module for backward compat
+    "apply_to_application",
+    # Public error types
+    "JobAnalysisError",
+    "JobAnalysisFetchAuthRequiredError",
+    "JobAnalysisFetchTimeoutError",
+    "JobAnalysisInvalidUrlError",
+]
 
 
 # ---------------------------------------------------------------------------
@@ -114,16 +153,6 @@ _DIMENSION_STATUS: dict[str, frozenset[str]] = {
         ("compatible", "stretch", "incompatible", "unclear"),
     ),
     "work_auth": frozenset(("compatible", "blocker", "unclear")),
-}
-
-_VALID_REMOTE_TYPE: frozenset[str] = frozenset(("remote", "hybrid", "onsite"))
-
-# Salary period values from the prompt are mapped to the application
-# model's check-constraint values (annual / monthly / hourly).
-_SALARY_PERIOD_MAP: dict[str, str] = {
-    "year": "annual",
-    "month": "monthly",
-    "hour": "hourly",
 }
 
 # Bound the profile snapshot we send to Claude. Operators with very long
@@ -308,88 +337,6 @@ async def get_analysis(
     return await job_analysis_repository.get_by_id(db, analysis_id, user_id)
 
 
-async def apply_to_application(
-    db: AsyncSession,
-    user_id: uuid.UUID,
-    analysis_id: uuid.UUID,
-) -> Application | None:
-    """Create an Application from a stored analysis.
-
-    Looks up or creates the Company by name (using the same
-    ``primary_domain``-or-``name`` heuristic the AddApplicationDialog
-    uses), creates the Application with the extracted role title +
-    salary + location + remote_type fields, logs an initial
-    ``applied`` event, sets ``analysis.applied_application_id``, and
-    commits.
-
-    Returns ``None`` if the analysis doesn't exist or belongs to
-    another user. Returns the created Application otherwise.
-
-    Idempotency: if ``analysis.applied_application_id`` is already set,
-    returns the existing application without creating a duplicate.
-    """
-    analysis = await job_analysis_repository.get_by_id(db, analysis_id, user_id)
-    if analysis is None:
-        return None
-
-    if analysis.applied_application_id is not None:
-        existing = await application_repository.get_by_id(
-            db, analysis.applied_application_id, user_id,
-        )
-        if existing is not None:
-            return existing
-        # The previous link points at a deleted/missing app — fall
-        # through and create a fresh one.
-
-    extracted = analysis.extracted or {}
-    company_name = (extracted.get("company") or "Unknown company").strip() or "Unknown company"
-    role_title = (extracted.get("title") or "Untitled role").strip() or "Untitled role"
-
-    # Find-or-create the company. Match by case-insensitive name first
-    # (cheap, mirrors the dialog's behavior), fall back to creating a
-    # fresh row.
-    company = await _find_or_create_company(
-        db, user_id=user_id, name=company_name,
-    )
-
-    application = Application(
-        user_id=user_id,
-        company_id=company.id,
-        role_title=role_title[:200],
-        url=analysis.source_url,
-        jd_text=analysis.jd_text,
-        location=(extracted.get("location") or None),
-        remote_type=_safe_remote_type(extracted.get("remote_type")),
-        posted_salary_min=_safe_float(extracted.get("posted_salary_min")),
-        posted_salary_max=_safe_float(extracted.get("posted_salary_max")),
-        posted_salary_currency=(
-            (extracted.get("posted_salary_currency") or "USD")[:3].upper()
-        ),
-        posted_salary_period=_map_salary_period(extracted.get("posted_salary_period")),
-        notes=(analysis.verdict_summary or None),
-    )
-    application = await application_repository.create(db, application)
-
-    # Mirror application_service.create_application's auto-event so
-    # latest_status is never None after this path.
-    initial_event = ApplicationEvent(
-        user_id=user_id,
-        application_id=application.id,
-        event_type="applied",
-        # No applied_at on JobAnalysis — use the analysis creation time.
-        occurred_at=analysis.created_at,
-        source="system",
-    )
-    await application_event_repository.create(db, initial_event)
-
-    await job_analysis_repository.update(
-        db, analysis, {"applied_application_id": application.id},
-    )
-
-    await db.commit()
-    return application
-
-
 async def soft_delete_analysis(
     db: AsyncSession,
     user_id: uuid.UUID,
@@ -414,26 +361,6 @@ async def soft_delete_analysis(
 # ---------------------------------------------------------------------------
 # Internal helpers — kept module-private so tests can hit them directly.
 # ---------------------------------------------------------------------------
-
-
-async def _find_or_create_company(
-    db: AsyncSession,
-    *,
-    user_id: uuid.UUID,
-    name: str,
-) -> Any:
-    """Find a company by case-insensitive name, or create one."""
-    from app.models.company.company import Company
-
-    matches = await company_repository.list_by_user(
-        db, user_id, name_search=name,
-    )
-    needle = name.strip().lower()
-    for c in matches:
-        if c.name.strip().lower() == needle:
-            return c
-    fresh = Company(user_id=user_id, name=name[:200])
-    return await company_repository.create(db, fresh)
 
 
 def _join_extracted_text(extracted: Any) -> str:
@@ -753,34 +680,5 @@ def _compute_fingerprint(*, source_url: str | None, jd_text: str) -> str:
     return hashlib.sha256(material.encode("utf-8")).hexdigest()
 
 
-def _str_or_none(value: object) -> str | None:
-    if not value or not isinstance(value, str):
-        return None
-    stripped = value.strip()
-    return stripped if stripped else None
-
-
-def _safe_float(value: object) -> float | None:
-    if value is None:
-        return None
-    try:
-        result = float(value)  # type: ignore[arg-type]
-    except (TypeError, ValueError):
-        return None
-    if result < 0:
-        return None
-    return result
-
-
-def _safe_remote_type(value: object) -> str:
-    cleaned = _str_or_none(value)
-    if cleaned in _VALID_REMOTE_TYPE:
-        return cleaned  # type: ignore[return-value]
-    return "unknown"
-
-
-def _map_salary_period(value: object) -> str | None:
-    cleaned = _str_or_none(value)
-    if cleaned is None:
-        return None
-    return _SALARY_PERIOD_MAP.get(cleaned)
+# _str_or_none, _safe_float, _safe_remote_type, _map_salary_period
+# are imported from _job_analysis_utils at the top of this module.
