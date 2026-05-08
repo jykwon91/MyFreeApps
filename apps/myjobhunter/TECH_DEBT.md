@@ -398,7 +398,7 @@ Updated consumers: `store/discoverApi.ts`, `types/profile/profile.ts`, `types/pr
 
 ### ~~[Frontend / Discover] `MultiChipInput` and `ToggleChipGroup` are generic — should live in `@platform/ui`~~ RESOLVED
 
-**Resolved:** PR #TBD (2026-05-08). Both components moved to `packages/shared-frontend/src/components/ui/`. Re-exported from `@platform/ui` index. `ExclusionsSection` and `SearchInputsSection` imports updated. Unit tests added in `packages/shared-frontend/src/__tests__/`.
+**Resolved:** PR #515 (2026-05-08). Both components moved to `packages/shared-frontend/src/components/ui/`. Re-exported from `@platform/ui` index. `ExclusionsSection` and `SearchInputsSection` imports updated. Unit tests added in `packages/shared-frontend/src/__tests__/`.
 
 ---
 
