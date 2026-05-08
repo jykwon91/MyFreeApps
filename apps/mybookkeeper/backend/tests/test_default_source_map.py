@@ -36,6 +36,22 @@ class TestGetDefault:
             assert d.default_source is None
             assert d.computed_expr is None
 
+    def test_bare_date_uses_signature_input_type(self) -> None:
+        """``[DATE]`` is hidden from the generate-lease form (filled at signing time).
+
+        Marking it ``input_type="signature"`` reuses the existing signature
+        filter so the form auto-hides DATE without new form-side code.
+        """
+        d = get_default("DATE")
+        assert d.input_type == "signature"
+        assert d.default_source is None
+
+    def test_effective_date_still_defaults_to_today(self) -> None:
+        """``[EFFECTIVE DATE]`` is a document property — keeps today's-date default."""
+        d = get_default("EFFECTIVE DATE")
+        assert d.input_type == "date"
+        assert d.default_source == "today"
+
 
 class TestBackCompatShim:
     def test_returns_input_type_and_default_source(self) -> None:

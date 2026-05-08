@@ -22,7 +22,8 @@ of the PR #201–#204 outage trail and are no longer permitted.
 from __future__ import annotations
 
 import logging
-from typing import TypeVar
+from typing import Callable, TypeVar
+from urllib.parse import quote
 
 import sentry_sdk
 from pydantic import BaseModel
@@ -35,6 +36,21 @@ logger = logging.getLogger(__name__)
 _T = TypeVar("_T", bound=BaseModel)
 
 
+def build_attachment_disposition(filename: str) -> str:
+    """Build a ``Content-Disposition: attachment`` header value.
+
+    Emits both the legacy ASCII ``filename=`` and the RFC 5987
+    ``filename*=UTF-8''<percent-encoded>`` form so non-ASCII names round-
+    trip cleanly across browsers. Inner double-quotes and backslashes in
+    the ASCII form are escaped per RFC 6266; falling back to the
+    percent-encoded form on browsers that respect ``filename*`` covers
+    everything else (e.g. accented characters, emoji).
+    """
+    safe_ascii = filename.replace("\\", "\\\\").replace('"', '\\"')
+    encoded = quote(filename, safe="")
+    return f'attachment; filename="{safe_ascii}"; filename*=UTF-8\'\'{encoded}'
+
+
 def attach_presigned_url_with_head_check(
     items: list[_T],
     *,
@@ -43,6 +59,7 @@ def attach_presigned_url_with_head_check(
     is_available_attr: str = "is_available",
     sentry_event_name: str,
     extra_sentry_tags: dict[str, str] | None = None,
+    download_filename_resolver: Callable[[_T], str | None] | None = None,
 ) -> list[_T]:
     """Attach a presigned URL + is_available flag to each item in-place
     (returns new model copies — Pydantic models are immutable).
@@ -62,6 +79,14 @@ def attach_presigned_url_with_head_check(
             Sentry event (e.g., ``{"domain": "insurance"}``). Per-row
             tags such as ``lease_id`` / ``attachment_id`` are wired
             automatically when the model exposes those attributes.
+        download_filename_resolver: optional callable that maps a row to
+            the human-readable download filename. When provided and it
+            returns a non-empty string, the presigned URL is signed with
+            ``response-content-disposition: attachment; filename="..."``
+            so MinIO emits the header on the GET — the browser saves the
+            file under that name instead of the storage-key GUID.
+            Returning ``None`` skips the disposition for that row (used
+            by inline-displayed assets like listing photos).
 
     Returns:
         New list of model copies with the two fields set. Items whose
@@ -103,7 +128,16 @@ def attach_presigned_url_with_head_check(
                 is_available_attr: False,
             }))
             continue
-        url = storage.generate_presigned_url(key, settings.presigned_url_ttl_seconds)
+        disposition: str | None = None
+        if download_filename_resolver is not None:
+            resolved = download_filename_resolver(item)
+            if resolved:
+                disposition = build_attachment_disposition(resolved)
+        url = storage.generate_presigned_url(
+            key,
+            settings.presigned_url_ttl_seconds,
+            response_content_disposition=disposition,
+        )
         out.append(item.model_copy(update={
             presigned_url_attr: url,
             is_available_attr: True,

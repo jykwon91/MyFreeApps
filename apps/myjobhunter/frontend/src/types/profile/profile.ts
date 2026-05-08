@@ -24,6 +24,23 @@ export interface Profile {
   summary: string | null;
   timezone: string | null;
 
+  /** Per-operator defaults for the /discover New Saved Search dialog
+   *  (Phase B). Loose shape; see {@link DiscoveryDefaults}. */
+  discovery_defaults: DiscoveryDefaults;
+
   created_at: string;
   updated_at: string;
+}
+
+export interface DiscoveryDefaults {
+  excluded_industry_chips?: string[];
+  excluded_keywords?: string[];
+  employment_type?: string;
+  experience?: string;
+  country?: string;
+  date_posted?: string;
+  // Phase C scoring inputs (written by Phase C).
+  preferred_industries?: string[];
+  preferred_stack?: string[];
+  rejected_stack?: string[];
 }

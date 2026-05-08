@@ -30,7 +30,12 @@ def _ctx(org_id: uuid.UUID, user_id: uuid.UUID) -> RequestContext:
     )
 
 
-def _attachment_response(kind: str = "signed_lease") -> dict:
+def _attachment_response(
+    kind: str = "signed_lease",
+    *,
+    signed_by_tenant_at: _dt.datetime | None = None,
+    signed_by_landlord_at: _dt.datetime | None = None,
+) -> dict:
     """Build a minimal SignedLeaseAttachmentResponse payload."""
     from app.schemas.leases.signed_lease_attachment_response import (
         SignedLeaseAttachmentResponse,
@@ -46,6 +51,8 @@ def _attachment_response(kind: str = "signed_lease") -> dict:
         kind=kind,
         uploaded_by_user_id=uuid.uuid4(),
         uploaded_at=_dt.datetime.now(_dt.timezone.utc),
+        signed_by_tenant_at=signed_by_tenant_at,
+        signed_by_landlord_at=signed_by_landlord_at,
         presigned_url=None,
     ).model_dump(mode="json")
 
@@ -207,6 +214,128 @@ class TestUpdateAttachmentKind:
                 resp = client.patch(
                     f"/signed-leases/{lease_id}/attachments/{attachment_id}",
                     json={"kind": "signed_addendum"},
+                )
+            assert resp.status_code == 404
+        finally:
+            app.dependency_overrides.clear()
+
+
+class TestUpdateAttachmentSigningState:
+    def test_partial_patch_only_forwards_set_keys(self) -> None:
+        """Omitted keys must NOT be forwarded — they preserve the existing value.
+
+        The frontend can ``PATCH {"signed_by_tenant_at": "..."}`` to mark
+        the tenant signature without clobbering the landlord timestamp.
+        """
+        org_id, user_id = uuid.uuid4(), uuid.uuid4()
+        lease_id, attachment_id = uuid.uuid4(), uuid.uuid4()
+        tenant_at = _dt.datetime(2026, 5, 7, tzinfo=_dt.timezone.utc)
+
+        app.dependency_overrides[require_write_access] = lambda: _ctx(org_id, user_id)
+        try:
+            with patch(
+                "app.api.signed_leases.signed_lease_service.update_attachment_signing_state",
+                return_value=_attachment_response(
+                    "signed_lease", signed_by_tenant_at=tenant_at,
+                ),
+            ) as mock_call:
+                client = TestClient(app)
+                resp = client.patch(
+                    f"/signed-leases/{lease_id}/attachments/{attachment_id}/signing-state",
+                    json={"signed_by_tenant_at": tenant_at.isoformat()},
+                )
+            assert resp.status_code == 200, resp.text
+            kwargs = mock_call.call_args.kwargs
+            assert kwargs["signing_fields"] == {
+                "signed_by_tenant_at": tenant_at,
+            }
+            # ``signed_by_landlord_at`` was omitted from the body and must NOT
+            # appear in the dict forwarded to the service — that's how the
+            # service knows to leave the column untouched.
+            assert "signed_by_landlord_at" not in kwargs["signing_fields"]
+        finally:
+            app.dependency_overrides.clear()
+
+    def test_explicit_null_clears_signature(self) -> None:
+        """Sending null explicitly must clear the column."""
+        org_id, user_id = uuid.uuid4(), uuid.uuid4()
+        lease_id, attachment_id = uuid.uuid4(), uuid.uuid4()
+
+        app.dependency_overrides[require_write_access] = lambda: _ctx(org_id, user_id)
+        try:
+            with patch(
+                "app.api.signed_leases.signed_lease_service.update_attachment_signing_state",
+                return_value=_attachment_response("signed_lease"),
+            ) as mock_call:
+                client = TestClient(app)
+                resp = client.patch(
+                    f"/signed-leases/{lease_id}/attachments/{attachment_id}/signing-state",
+                    json={"signed_by_tenant_at": None},
+                )
+            assert resp.status_code == 200
+            assert mock_call.call_args.kwargs["signing_fields"] == {
+                "signed_by_tenant_at": None,
+            }
+        finally:
+            app.dependency_overrides.clear()
+
+    def test_unknown_field_returns_422(self) -> None:
+        """Pydantic ``extra=forbid`` rejects unknown fields."""
+        org_id, user_id = uuid.uuid4(), uuid.uuid4()
+        lease_id, attachment_id = uuid.uuid4(), uuid.uuid4()
+
+        app.dependency_overrides[require_write_access] = lambda: _ctx(org_id, user_id)
+        try:
+            client = TestClient(app)
+            resp = client.patch(
+                f"/signed-leases/{lease_id}/attachments/{attachment_id}/signing-state",
+                json={"signed_by_random_third_party_at": "2026-01-01T00:00:00Z"},
+            )
+            assert resp.status_code == 422
+        finally:
+            app.dependency_overrides.clear()
+
+    def test_cross_tenant_returns_404(self) -> None:
+        org_id, user_id = uuid.uuid4(), uuid.uuid4()
+        lease_id, attachment_id = uuid.uuid4(), uuid.uuid4()
+
+        from app.services.leases.signed_lease_service import (
+            SignedLeaseNotFoundError,
+        )
+
+        app.dependency_overrides[require_write_access] = lambda: _ctx(org_id, user_id)
+        try:
+            with patch(
+                "app.api.signed_leases.signed_lease_service.update_attachment_signing_state",
+                side_effect=SignedLeaseNotFoundError("not found"),
+            ):
+                client = TestClient(app)
+                resp = client.patch(
+                    f"/signed-leases/{lease_id}/attachments/{attachment_id}/signing-state",
+                    json={"signed_by_tenant_at": "2026-05-07T00:00:00Z"},
+                )
+            assert resp.status_code == 404
+        finally:
+            app.dependency_overrides.clear()
+
+    def test_attachment_not_found_returns_404(self) -> None:
+        org_id, user_id = uuid.uuid4(), uuid.uuid4()
+        lease_id, attachment_id = uuid.uuid4(), uuid.uuid4()
+
+        from app.services.leases.signed_lease_service import (
+            AttachmentNotFoundError,
+        )
+
+        app.dependency_overrides[require_write_access] = lambda: _ctx(org_id, user_id)
+        try:
+            with patch(
+                "app.api.signed_leases.signed_lease_service.update_attachment_signing_state",
+                side_effect=AttachmentNotFoundError("not found"),
+            ):
+                client = TestClient(app)
+                resp = client.patch(
+                    f"/signed-leases/{lease_id}/attachments/{attachment_id}/signing-state",
+                    json={"signed_by_landlord_at": "2026-05-07T00:00:00Z"},
                 )
             assert resp.status_code == 404
         finally:

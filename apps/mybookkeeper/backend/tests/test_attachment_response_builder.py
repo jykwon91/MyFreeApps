@@ -33,6 +33,8 @@ def _row(**overrides) -> SignedLeaseAttachmentResponse:
         "kind": "signed_lease",
         "uploaded_by_user_id": uuid.uuid4(),
         "uploaded_at": _dt.datetime.now(_dt.timezone.utc),
+        "signed_by_tenant_at": None,
+        "signed_by_landlord_at": None,
         "presigned_url": None,
         "is_available": True,
     }
@@ -71,6 +73,79 @@ class TestAttachPresignedUrlsToAttachments:
         assert out.presigned_url == "https://example.com/signed-url"
         storage.object_exists.assert_called_once_with(row.storage_key)
         storage.generate_presigned_url.assert_called_once()
+
+    def test_unsigned_lease_uses_original_filename_in_disposition(self) -> None:
+        row = _row(filename="Lease Agreement.pdf", kind="signed_lease")
+        storage = _mock_storage(exists=True)
+        with patch(
+            "app.services.storage.presigned_url_attacher.get_storage",
+            return_value=storage,
+        ):
+            attach_presigned_urls_to_attachments([row])
+        disposition = storage.generate_presigned_url.call_args.kwargs[
+            "response_content_disposition"
+        ]
+        assert 'filename="Lease Agreement.pdf"' in disposition
+        assert "tenant signed" not in disposition
+        assert "fully signed" not in disposition
+
+    def test_tenant_signed_lease_appends_tenant_signed_suffix(self) -> None:
+        row = _row(
+            filename="Lease Agreement.pdf",
+            kind="signed_lease",
+            signed_by_tenant_at=_dt.datetime.now(_dt.timezone.utc),
+        )
+        storage = _mock_storage(exists=True)
+        with patch(
+            "app.services.storage.presigned_url_attacher.get_storage",
+            return_value=storage,
+        ):
+            attach_presigned_urls_to_attachments([row])
+        disposition = storage.generate_presigned_url.call_args.kwargs[
+            "response_content_disposition"
+        ]
+        assert 'filename="Lease Agreement - tenant signed.pdf"' in disposition
+
+    def test_fully_signed_lease_appends_fully_signed_suffix(self) -> None:
+        now = _dt.datetime.now(_dt.timezone.utc)
+        row = _row(
+            filename="Lease Agreement.pdf",
+            kind="signed_lease",
+            signed_by_tenant_at=now,
+            signed_by_landlord_at=now,
+        )
+        storage = _mock_storage(exists=True)
+        with patch(
+            "app.services.storage.presigned_url_attacher.get_storage",
+            return_value=storage,
+        ):
+            attach_presigned_urls_to_attachments([row])
+        disposition = storage.generate_presigned_url.call_args.kwargs[
+            "response_content_disposition"
+        ]
+        assert 'filename="Lease Agreement - fully signed.pdf"' in disposition
+
+    def test_inspection_kind_keeps_original_filename(self) -> None:
+        # Even if the signing-state columns are populated by accident,
+        # non-lease kinds must not get the suffix.
+        now = _dt.datetime.now(_dt.timezone.utc)
+        row = _row(
+            filename="Move-In Inspection.pdf",
+            kind="move_in_inspection",
+            signed_by_tenant_at=now,
+            signed_by_landlord_at=now,
+        )
+        storage = _mock_storage(exists=True)
+        with patch(
+            "app.services.storage.presigned_url_attacher.get_storage",
+            return_value=storage,
+        ):
+            attach_presigned_urls_to_attachments([row])
+        disposition = storage.generate_presigned_url.call_args.kwargs[
+            "response_content_disposition"
+        ]
+        assert 'filename="Move-In Inspection.pdf"' in disposition
+        assert "signed" not in disposition
 
     def test_missing_object_flips_is_available_and_skips_url(self) -> None:
         row = _row(presigned_url=None, is_available=True)

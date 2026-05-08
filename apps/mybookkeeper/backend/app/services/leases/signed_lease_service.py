@@ -20,6 +20,7 @@ from app.core.lease_enums import LEASE_ATTACHMENT_KINDS, SIGNED_LEASE_STATUSES
 from app.core.storage import get_storage
 from app.db.session import unit_of_work
 from app.repositories.applicants import applicant_repo
+from app.repositories.inquiries.inquiry_repo import get_by_applicant_inquiry_id
 from app.repositories.leases import (
     lease_template_file_repo,
     lease_template_placeholder_repo,
@@ -29,6 +30,8 @@ from app.repositories.leases import (
     signed_lease_template_repo,
 )
 from app.repositories.listings import listing_repo
+from app.repositories.properties import property_repo
+from app.models.user.user import User
 from app.schemas.leases.signed_lease_attachment_response import (
     SignedLeaseAttachmentResponse,
 )
@@ -38,12 +41,17 @@ from app.schemas.leases.signed_lease_list_response import (
 from app.schemas.leases.signed_lease_response import SignedLeaseResponse
 from app.schemas.leases.signed_lease_summary import SignedLeaseSummary
 from app.schemas.leases.signed_lease_template_link import SignedLeaseTemplateLink
+from app.schemas.leases.signed_lease_template_prefill_response import (
+    SignedLeaseTemplatePrefillItem,
+    SignedLeaseTemplatePrefillResponse,
+)
 from app.services.leases.attachment_response_builder import (
     attach_presigned_urls_to_attachments,
 )
 from app.services.leases.computed import ComputedExprError, evaluate
+from app.services.leases.default_source_resolver import resolve_default_source
 from app.services.leases.renderer import (
-    render_docx_bytes,
+    render_docx_bytes_to_pdf,
     render_md,
     render_pdf_from_text,
 )
@@ -207,6 +215,8 @@ def _to_detail(lease, attachments, template_links: list[SignedLeaseTemplateLink]
         sent_at=lease.sent_at,
         signed_at=lease.signed_at,
         ended_at=lease.ended_at,
+        auto_email_tenant=lease.auto_email_tenant,
+        last_emailed_to_tenant_at=lease.last_emailed_to_tenant_at,
         created_at=lease.created_at,
         updated_at=lease.updated_at,
         attachments=_attachment_responses(attachments),
@@ -458,6 +468,7 @@ async def update_lease(
     notes: str | None,
     status: str | None,
     values: dict[str, Any] | None,
+    auto_email_tenant: bool | None = None,
 ) -> SignedLeaseResponse:
     async with unit_of_work() as db:
         lease = await signed_lease_repo.get(
@@ -483,6 +494,9 @@ async def update_lease(
                 fields["signed_at"] = now
             if status in ("ended", "terminated") and lease.ended_at is None:
                 fields["ended_at"] = now
+
+        if auto_email_tenant is not None:
+            fields["auto_email_tenant"] = auto_email_tenant
 
         if values is not None:
             if lease.status != "draft":
@@ -521,12 +535,54 @@ async def update_lease(
 # Generate (renders the template files into MinIO + creates attachments)
 # ---------------------------------------------------------------------------
 
-async def generate_lease(
+class TemplatesAlreadyLinkedError(ValueError):
+    """One or more template_ids are already linked to this lease."""
+
+    def __init__(self, duplicate_ids: list[uuid.UUID]) -> None:
+        self.duplicate_ids = duplicate_ids
+        super().__init__(f"Templates already linked: {duplicate_ids}")
+
+
+class ImportedLeaseTemplateError(ValueError):
+    """Cannot add templates to an imported lease."""
+
+
+# ---------------------------------------------------------------------------
+# Add templates to an existing generated lease + render only the new files
+# ---------------------------------------------------------------------------
+
+async def add_templates_and_generate(
     *,
     user_id: uuid.UUID,
     organization_id: uuid.UUID,
     lease_id: uuid.UUID,
+    template_ids: list[uuid.UUID],
+    values_override: dict[str, str] | None = None,
 ) -> SignedLeaseResponse:
+    """Link additional templates to an existing lease and render only their files.
+
+    Validates:
+    - All ``template_ids`` exist and belong to the same org as the lease.
+    - None are already linked to the lease (returns the duplicates in the error).
+
+    Both generated and imported leases are supported. For imported leases
+    ``lease.values`` is empty by construction (the original was uploaded as a
+    PDF) — the caller may pass ``values_override`` to provide values for the
+    addendum's placeholders, and the resolver will additionally pre-fill any
+    placeholder whose ``default_source`` resolves against the parent lease,
+    its applicant, the linked property, or the host user.
+
+    Then, for each new template:
+    - Inserts a row in ``signed_lease_templates`` with display_order = max + N.
+    - Downloads each template file, runs placeholder substitution, and uploads
+      the rendered output as a new ``SignedLeaseAttachment``
+      (kind=``rendered_original``).
+    - Does NOT touch existing attachments.
+
+    Partial success: if one template's render fails the DB row and MinIO
+    objects for that template are rolled back; others succeed. Failures are
+    logged and returned in the response's ``failed_template_ids`` field.
+    """
     storage = get_storage()
     if storage is None:
         raise StorageNotConfiguredError("Object storage is not configured")
@@ -540,6 +596,476 @@ async def generate_lease(
         )
         if lease is None:
             raise SignedLeaseNotFoundError(f"Lease {lease_id} not found")
+
+        # Validate every template is in scope.
+        for tid in template_ids:
+            template = await lease_template_repo.get(
+                db,
+                template_id=tid,
+                user_id=user_id,
+                organization_id=organization_id,
+            )
+            if template is None:
+                raise TemplateNotFoundError(f"Template {tid} not found")
+
+        # Already-linked templates being re-attached are treated as a
+        # regenerate request: their existing rendered files will be
+        # replaced rather than 409-rejected. Genuine new templates get
+        # join rows; duplicates skip the join row create (already linked).
+        existing_rows = await signed_lease_template_repo.list_for_lease(
+            db, lease_id=lease_id,
+        )
+        existing_ids = {r.template_id for r in existing_rows}
+        new_template_ids = [tid for tid in template_ids if tid not in existing_ids]
+        is_regenerate = any(tid in existing_ids for tid in template_ids)
+
+        # Compute the starting display_order for the new links.
+        max_order = await signed_lease_template_repo.max_display_order_for_lease(
+            db, lease_id=lease_id,
+        )
+
+        # Load files + placeholders. On regenerate (any template_id matches an
+        # existing link), re-render ALL linked templates' files so the
+        # generated documents stay internally consistent with lease.values.
+        # On a pure add (no duplicates), only render the new templates' files.
+        files_to_render: list = []         # (template_file_row, template_id)
+        placeholders: list = []
+        seen_placeholder_keys: set[str] = set()
+        seen_file_template_ids: set[uuid.UUID] = set()
+
+        for r in existing_rows:
+            for p in await lease_template_placeholder_repo.list_for_template(
+                db, template_id=r.template_id,
+            ):
+                if p.key not in seen_placeholder_keys:
+                    seen_placeholder_keys.add(p.key)
+                    placeholders.append(p)
+            if is_regenerate and r.template_id not in seen_file_template_ids:
+                seen_file_template_ids.add(r.template_id)
+                tpl_files = await lease_template_file_repo.list_for_template(
+                    db, template_id=r.template_id,
+                )
+                for f in tpl_files:
+                    files_to_render.append((f, r.template_id))
+
+        for tid in template_ids:
+            if tid not in seen_file_template_ids:
+                seen_file_template_ids.add(tid)
+                tpl_files = await lease_template_file_repo.list_for_template(
+                    db, template_id=tid,
+                )
+                for f in tpl_files:
+                    files_to_render.append((f, tid))
+            for p in await lease_template_placeholder_repo.list_for_template(
+                db, template_id=tid,
+            ):
+                if p.key not in seen_placeholder_keys:
+                    seen_placeholder_keys.add(p.key)
+                    placeholders.append(p)
+
+        # Resolve auto-fillable defaults (applicant / lease / property / user)
+        # for any placeholder with a ``default_source`` set. This populates
+        # ``[ORIGINAL LEASE START DATE]``, ``[PROPERTY ADDRESS]``, etc. on
+        # addendum templates without forcing the host to retype them.
+        applicant = await applicant_repo.get(
+            db,
+            applicant_id=lease.applicant_id,
+            organization_id=organization_id,
+            user_id=user_id,
+        )
+        inquiry = None
+        if applicant is not None and applicant.inquiry_id is not None:
+            inquiry = await get_by_applicant_inquiry_id(
+                db,
+                inquiry_id=applicant.inquiry_id,
+                organization_id=organization_id,
+                user_id=user_id,
+            )
+        listing = None
+        property_record = None
+        if lease.listing_id is not None:
+            listing = await listing_repo.get_by_id(
+                db, lease.listing_id, organization_id,
+            )
+            if listing is not None and listing.property_id is not None:
+                property_record = await property_repo.get_by_id(
+                    db, listing.property_id, organization_id,
+                )
+        user_record = await db.get(User, user_id)
+
+        merged_values: dict[str, str] = {
+            k: ("" if v is None else str(v))
+            for k, v in (lease.values or {}).items()
+        }
+        for p in placeholders:
+            existing = merged_values.get(p.key)
+            if existing not in (None, ""):
+                continue
+            if not p.default_source:
+                continue
+            try:
+                resolved, _ = resolve_default_source(
+                    p.default_source,
+                    applicant,
+                    inquiry,
+                    lease=lease,
+                    property_record=property_record,
+                    user_record=user_record,
+                )
+            except Exception:  # noqa: BLE001
+                logger.warning(
+                    "default_source resolution failed for placeholder %s on lease %s",
+                    p.key, lease_id, exc_info=True,
+                )
+                continue
+            if resolved is not None and resolved != "":
+                merged_values[p.key] = str(resolved)
+
+        # Caller-supplied values win over both existing values and resolved
+        # defaults — they represent the host's explicit choice for this render.
+        if values_override:
+            for k, v in values_override.items():
+                if v is None:
+                    continue
+                merged_values[k] = str(v)
+
+        # Persist merged values to the lease so subsequent regenerations stay
+        # consistent and the Details tab reflects what was used at render time.
+        if merged_values != (lease.values or {}):
+            new_start, new_end = _denormalise_dates(merged_values)
+            await signed_lease_repo.update_lease(
+                db,
+                lease_id=lease_id,
+                user_id=user_id,
+                organization_id=organization_id,
+                fields={
+                    "values": merged_values,
+                    **(
+                        {"starts_on": new_start} if new_start is not None and lease.starts_on is None else {}
+                    ),
+                    **(
+                        {"ends_on": new_end} if new_end is not None and lease.ends_on is None else {}
+                    ),
+                },
+            )
+
+        # Persist the new template links before rendering (render can be long).
+        # Already-linked templates being regenerated skip this step — their
+        # join row already exists.
+        for order_offset, tid in enumerate(new_template_ids):
+            await signed_lease_template_repo.create(
+                db,
+                lease_id=lease_id,
+                template_id=tid,
+                display_order=max_order + 1 + order_offset,
+            )
+
+        # On regenerate, delete the existing rendered_original attachments
+        # so the new render replaces them. The original imported PDFs (kind=
+        # ``signed_lease`` / ``signed_addendum``) are untouched.
+        rendered_keys_to_delete: list[str] = []
+        if is_regenerate:
+            existing_attachments = await signed_lease_attachment_repo.list_by_lease(
+                db, lease_id,
+            )
+            for att in existing_attachments:
+                if att.kind == "rendered_original":
+                    rendered_keys_to_delete.append(att.storage_key)
+                    await signed_lease_attachment_repo.delete_by_id_scoped_to_lease(
+                        db,
+                        attachment_id=att.id,
+                        lease_id=lease_id,
+                    )
+
+        values_snapshot = dict(merged_values)
+
+    # Best-effort delete of the old rendered objects in MinIO. Run outside the
+    # DB unit-of-work so a storage outage doesn't roll back the DB delete; a
+    # leftover orphan in MinIO is preferable to losing the regenerate.
+    for key in rendered_keys_to_delete:
+        try:
+            storage.delete_file(key)
+        except Exception:  # noqa: BLE001
+            logger.warning(
+                "Failed to delete superseded rendered file %s on regenerate",
+                key, exc_info=True,
+            )
+
+    # Build substitution dict from the merged values (existing + resolved + override).
+    substitutions: dict[str, str] = {
+        k: "" if v is None else str(v) for k, v in values_snapshot.items()
+    }
+    for p in placeholders:
+        if p.input_type == "computed" and p.computed_expr:
+            try:
+                substitutions[p.key] = evaluate(p.computed_expr, values_snapshot)
+            except ComputedExprError as exc:
+                logger.warning(
+                    "Computed placeholder %s failed to evaluate: %s", p.key, exc,
+                )
+                substitutions[p.key] = ""
+
+    # Render each new template's files individually; partial success is fine.
+    now = _dt.datetime.now(_dt.timezone.utc)
+    for f, tid in files_to_render:
+        uploaded_key: str | None = None
+        try:
+            raw = storage.download_file(f.storage_key)
+            if f.content_type == DOCX_MIME:
+                rendered_bytes, _ = render_docx_bytes_to_pdf(raw, substitutions)
+                out_filename = _swap_extension(f.filename, ".pdf")
+                out_ct = "application/pdf"
+            elif f.content_type in ("text/markdown", "text/plain"):
+                text = raw.decode("utf-8", errors="replace")
+                rendered_md_text = render_md(text, substitutions)
+                rendered_bytes = render_md_text_to_pdf_or_keep(rendered_md_text)
+                out_filename = _swap_extension(f.filename, ".pdf")
+                out_ct = "application/pdf"
+            else:
+                rendered_bytes = raw
+                out_filename = f.filename
+                out_ct = f.content_type
+
+            attachment_id = uuid.uuid4()
+            storage_key = f"signed-leases/{lease_id}/{attachment_id}"
+            storage.upload_file(storage_key, rendered_bytes, out_ct)
+            uploaded_key = storage_key
+
+            async with unit_of_work() as db:
+                await signed_lease_attachment_repo.create(
+                    db,
+                    lease_id=lease_id,
+                    storage_key=storage_key,
+                    filename=out_filename,
+                    content_type=out_ct,
+                    size_bytes=len(rendered_bytes),
+                    kind="rendered_original",
+                    uploaded_by_user_id=user_id,
+                    uploaded_at=now,
+                )
+        except Exception:  # noqa: BLE001
+            logger.error(
+                "Failed to render/upload file %s for template %s on lease %s",
+                f.filename,
+                tid,
+                lease_id,
+                exc_info=True,
+            )
+            if uploaded_key is not None:
+                try:
+                    storage.delete_file(uploaded_key)
+                except Exception:  # noqa: BLE001
+                    logger.warning(
+                        "Failed to clean up partially-uploaded file %s", uploaded_key,
+                    )
+
+    return await get_lease(
+        user_id=user_id,
+        organization_id=organization_id,
+        lease_id=lease_id,
+    )
+
+
+async def prefill_addendum_placeholders(
+    *,
+    user_id: uuid.UUID,
+    organization_id: uuid.UUID,
+    lease_id: uuid.UUID,
+    template_ids: list[uuid.UUID],
+) -> SignedLeaseTemplatePrefillResponse:
+    """Compute resolved + unresolved placeholder values for a template + lease pair.
+
+    Walks the placeholders for the requested templates (deduped) and resolves
+    each via ``default_source`` against the parent lease, its applicant /
+    inquiry, the linked property, and the host user. Returns one row per
+    placeholder so the frontend can render a values form that is mostly
+    pre-filled and editable, with empty inputs for genuinely unknown fields.
+
+    Skips placeholders with ``input_type`` of ``signature`` or ``computed`` —
+    those are filled at signing time or evaluated at render time, not by the
+    host in the form.
+    """
+    async with unit_of_work() as db:
+        lease = await signed_lease_repo.get(
+            db,
+            lease_id=lease_id,
+            user_id=user_id,
+            organization_id=organization_id,
+        )
+        if lease is None:
+            raise SignedLeaseNotFoundError(f"Lease {lease_id} not found")
+
+        # Validate every template belongs to the org (cheap, prevents cross-org leak).
+        for tid in template_ids:
+            template = await lease_template_repo.get(
+                db,
+                template_id=tid,
+                user_id=user_id,
+                organization_id=organization_id,
+            )
+            if template is None:
+                raise TemplateNotFoundError(f"Template {tid} not found")
+
+        # Gather + dedupe placeholders across requested templates.
+        placeholders: list = []
+        seen_keys: set[str] = set()
+        for tid in template_ids:
+            for p in await lease_template_placeholder_repo.list_for_template(
+                db, template_id=tid,
+            ):
+                if p.key in seen_keys:
+                    continue
+                seen_keys.add(p.key)
+                placeholders.append(p)
+
+        # Load resolution context once.
+        applicant = await applicant_repo.get(
+            db,
+            applicant_id=lease.applicant_id,
+            organization_id=organization_id,
+            user_id=user_id,
+        )
+        inquiry = None
+        if applicant is not None and applicant.inquiry_id is not None:
+            inquiry = await get_by_applicant_inquiry_id(
+                db,
+                inquiry_id=applicant.inquiry_id,
+                organization_id=organization_id,
+                user_id=user_id,
+            )
+        property_record = None
+        if lease.listing_id is not None:
+            listing = await listing_repo.get_by_id(
+                db, lease.listing_id, organization_id,
+            )
+            if listing is not None and listing.property_id is not None:
+                property_record = await property_repo.get_by_id(
+                    db, listing.property_id, organization_id,
+                )
+        user_record = await db.get(User, user_id)
+
+        existing_values = lease.values or {}
+
+        items: list[SignedLeaseTemplatePrefillItem] = []
+        for p in placeholders:
+            if p.input_type in ("signature", "computed"):
+                continue
+
+            # Existing lease.values wins over default_source so the user's
+            # earlier choices on a generated lease aren't silently overridden.
+            existing = existing_values.get(p.key)
+            if existing not in (None, ""):
+                items.append(
+                    SignedLeaseTemplatePrefillItem(
+                        key=p.key,
+                        display_label=p.display_label,
+                        input_type=p.input_type,
+                        required=p.required,
+                        value=str(existing),
+                        provenance="lease.values",
+                    )
+                )
+                continue
+
+            value: str = ""
+            provenance: str | None = None
+            if p.default_source:
+                try:
+                    resolved, prov = resolve_default_source(
+                        p.default_source,
+                        applicant,
+                        inquiry,
+                        lease=lease,
+                        property_record=property_record,
+                        user_record=user_record,
+                    )
+                    if resolved is not None and resolved != "":
+                        value = str(resolved)
+                        provenance = prov
+                except Exception:  # noqa: BLE001
+                    logger.warning(
+                        "default_source resolution failed for placeholder %s",
+                        p.key, exc_info=True,
+                    )
+
+            items.append(
+                SignedLeaseTemplatePrefillItem(
+                    key=p.key,
+                    display_label=p.display_label,
+                    input_type=p.input_type,
+                    required=p.required,
+                    value=value,
+                    provenance=provenance,
+                )
+            )
+
+    return SignedLeaseTemplatePrefillResponse(items=items)
+
+
+def should_auto_email_after_generate(
+    *, previous_status: str, auto_email_tenant: bool, last_emailed_to_tenant_at,
+) -> bool:
+    """Pure predicate: should the tenant auto-email fire after generate?
+
+    The four gates that must all be TRUE:
+
+    1. ``previous_status != "generated"`` — Regenerate of an
+       already-generated lease must not re-email. (The user clicked
+       "Regenerate" on purpose; if they want to re-send they use the
+       manual button.)
+    2. ``auto_email_tenant`` — host hasn't opted this lease out of the
+       feature.
+    3. ``last_emailed_to_tenant_at`` is NULL — defensive: even if some
+       prior path (manual? import?) sent a tenant email, don't auto-
+       send again.
+
+    The applicant-has-contact_email check is enforced inside
+    ``lease_email_service.send_lease_to_tenant`` (it skips silently
+    with an info-level event row) — keeping it there means this
+    predicate stays cheap and side-effect-free.
+    """
+    if previous_status == "generated":
+        return False
+    if not auto_email_tenant:
+        return False
+    if last_emailed_to_tenant_at is not None:
+        return False
+    return True
+
+
+async def generate_lease(
+    *,
+    user_id: uuid.UUID,
+    organization_id: uuid.UUID,
+    lease_id: uuid.UUID,
+) -> tuple[SignedLeaseResponse, bool]:
+    """Render the lease and transition status to ``generated``.
+
+    Returns a tuple of ``(detail, should_auto_email)``. The boolean
+    flag is the auto-email gate decision computed BEFORE the status
+    transition (so a Regenerate is correctly identified as
+    ``previous_status="generated"`` and returns False).
+
+    The route handler is responsible for scheduling the auto-email
+    background task; this service stays I/O-pure on the SMTP side.
+    """
+    storage = get_storage()
+    if storage is None:
+        raise StorageNotConfiguredError("Object storage is not configured")
+
+    async with unit_of_work() as db:
+        lease = await signed_lease_repo.get(
+            db,
+            lease_id=lease_id,
+            user_id=user_id,
+            organization_id=organization_id,
+        )
+        if lease is None:
+            raise SignedLeaseNotFoundError(f"Lease {lease_id} not found")
+        # Snapshot the gate inputs BEFORE we mutate the lease.
+        previous_status = lease.status
+        auto_email_tenant = lease.auto_email_tenant
+        last_emailed_to_tenant_at = lease.last_emailed_to_tenant_at
 
         # Load every template linked to this lease, then load each template's
         # files + placeholders. Files are processed in template-display-order
@@ -586,17 +1112,13 @@ async def generate_lease(
         for f in files:
             raw = storage.download_file(f.storage_key)
             if f.content_type == DOCX_MIME:
-                rendered_bytes, used_docx = render_docx_bytes(raw, substitutions)
-                if used_docx:
-                    out_filename = _ensure_suffix(f.filename, ".docx")
-                    out_ct = DOCX_MIME
-                else:
-                    # Fall back to a markdown render of an empty body — log as
-                    # a Phase 1.5 limitation (DOCX rendering disabled).
-                    text = raw.decode("utf-8", errors="replace")
-                    rendered_bytes = render_md(text, substitutions).encode("utf-8")
-                    out_filename = _ensure_suffix(f.filename, ".md")
-                    out_ct = "text/markdown"
+                # DOCX templates render to PDF: substitute placeholders via
+                # python-docx, convert to markdown via mammoth, then to PDF
+                # via reportlab. Single output format (PDF) for every
+                # generated lease — easier for hosts and tenants to handle.
+                rendered_bytes, _ = render_docx_bytes_to_pdf(raw, substitutions)
+                out_filename = _swap_extension(f.filename, ".pdf")
+                out_ct = "application/pdf"
             elif f.content_type in ("text/markdown", "text/plain"):
                 text = raw.decode("utf-8", errors="replace")
                 rendered_md_text = render_md(text, substitutions)
@@ -646,11 +1168,17 @@ async def generate_lease(
                 logger.warning("Failed to clean up rendered file %s", storage_key)
         raise
 
-    return await get_lease(
+    detail = await get_lease(
         user_id=user_id,
         organization_id=organization_id,
         lease_id=lease_id,
     )
+    should_auto_email = should_auto_email_after_generate(
+        previous_status=previous_status,
+        auto_email_tenant=auto_email_tenant,
+        last_emailed_to_tenant_at=last_emailed_to_tenant_at,
+    )
+    return detail, should_auto_email
 
 
 def render_md_text_to_pdf_or_keep(rendered_md: str) -> bytes:
@@ -991,6 +1519,47 @@ async def list_attachments(
             raise SignedLeaseNotFoundError(f"Lease {lease_id} not found")
         rows = await signed_lease_attachment_repo.list_by_lease(db, lease_id)
     return _attachment_responses(rows)
+
+
+async def update_attachment_signing_state(
+    *,
+    user_id: uuid.UUID,
+    organization_id: uuid.UUID,
+    lease_id: uuid.UUID,
+    attachment_id: uuid.UUID,
+    signing_fields: dict[str, _dt.datetime | None],
+) -> SignedLeaseAttachmentResponse:
+    """Set / clear signing-state timestamps on a lease attachment.
+
+    ``signing_fields`` is the subset of ``{"signed_by_tenant_at",
+    "signed_by_landlord_at"}`` the host explicitly set on the request
+    body — keys absent from the body are left untouched. ``None`` values
+    explicitly clear that party's signature. Field-name validation is
+    enforced at the schema layer (Pydantic ``extra="forbid"``); this
+    function trusts the keys it receives.
+    """
+    async with unit_of_work() as db:
+        lease = await signed_lease_repo.get(
+            db,
+            lease_id=lease_id,
+            user_id=user_id,
+            organization_id=organization_id,
+        )
+        if lease is None:
+            raise SignedLeaseNotFoundError(f"Lease {lease_id} not found")
+
+        row = await signed_lease_attachment_repo.update_signing_state_scoped_to_lease(
+            db,
+            attachment_id=attachment_id,
+            lease_id=lease_id,
+            fields=signing_fields,
+        )
+        if row is None:
+            raise AttachmentNotFoundError(f"Attachment {attachment_id} not found")
+
+        response = SignedLeaseAttachmentResponse.model_validate(row)
+
+    return attach_presigned_urls_to_attachments([response])[0]
 
 
 async def update_attachment_kind(

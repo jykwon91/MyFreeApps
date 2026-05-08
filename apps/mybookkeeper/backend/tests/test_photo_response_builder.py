@@ -48,7 +48,9 @@ class TestAttachPresignedUrls:
         photos = [_make_response("a"), _make_response("b")]
         storage = MagicMock()
         storage.object_exists.return_value = True
-        storage.generate_presigned_url.side_effect = lambda key, ttl: f"https://signed/{key}"
+        storage.generate_presigned_url.side_effect = (
+            lambda key, ttl, **_kwargs: f"https://signed/{key}"
+        )
         with patch(
             "app.services.storage.presigned_url_attacher.get_storage",
             return_value=storage,

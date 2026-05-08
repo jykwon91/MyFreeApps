@@ -16,11 +16,17 @@ When ``python-docx`` is not installed (e.g. in CI without the optional dep),
 ``render_docx_bytes`` falls back to MD rendering of the extracted text — the
 caller is told the fallback fired so it can record the limitation.
 
-Signature placeholders (any bracketed key matching ``*SIGNATURE``) get a
-special substitution: a long underscore line, drawn at render time, so the
-rendered doc has a blank signing line in place of literal
-``[LANDLORD SIGNATURE]`` text. Signatures are applied at signing time, not
-generation time.
+Blank-line substitution rules:
+- Signature placeholders (any bracketed key matching ``*SIGNATURE``) get a
+  blank underscore line so the rendered doc shows a signing line in place of
+  literal ``[LANDLORD SIGNATURE]`` text. Signatures are applied at signing
+  time, not generation time.
+- The bare ``[DATE]`` placeholder (as distinct from ``[EFFECTIVE DATE]``)
+  appears next to signature lines ("Date: ____"). It must be left blank for
+  the physical signer to write in — the same rule as SIGNATURE keys.
+  ``default_source_map`` intentionally has no ``default_source`` for ``DATE``
+  so the resolver does not fill it at generate time; this renderer substitutes
+  any unfilled ``[DATE]`` with a blank underscore line.
 """
 from __future__ import annotations
 
@@ -30,24 +36,42 @@ import re
 
 logger = logging.getLogger(__name__)
 
-SIGNATURE_LINE = "_______________________________"
+# Signature underscore line — kept moderate (20 chars) so a typical
+# "Landlord (Name): _____ Date: _____" row fits on a single line in
+# the rendered PDF without wrapping. Signers write across this width.
+SIGNATURE_LINE = "____________________"
+# Bare [DATE] gets a shorter line — dates are short ("MM/DD/YYYY") so
+# a 12-underscore slot is plenty.
+DATE_LINE = "____________"
 _SIGNATURE_KEY_RE = re.compile(r"\[([A-Z][A-Z0-9 _\-]*?SIGNATURE)\]")
+# ``[DATE]`` (bare) next to a signature line must be left blank for the signer
+# to write in — same treatment as SIGNATURE keys. ``[EFFECTIVE DATE]`` is a
+# document property filled at generation time and is NOT matched here.
+_DATE_KEY_RE = re.compile(r"\[DATE\]")
 
 
 def _augment_with_signature_lines(
     template_text: str, values: dict[str, str],
 ) -> dict[str, str]:
-    """Return ``values`` with any unfilled ``*SIGNATURE`` keys mapped to a blank line.
+    """Return ``values`` with any unfilled blank-line placeholders substituted.
 
-    Scans ``template_text`` for bracketed signature keys not already in
-    ``values`` and adds them with the underscore signature line. The
-    caller's ``values`` dict is not mutated.
+    Covers two classes of placeholder that must be left blank for the physical
+    signer to fill in:
+
+    - ``*SIGNATURE`` keys (e.g. ``[LANDLORD SIGNATURE]``, ``[TENANT SIGNATURE]``)
+    - The bare ``[DATE]`` key (date-of-signing, distinct from ``[EFFECTIVE DATE]``)
+
+    Scans ``template_text`` for matching keys not already in ``values`` and
+    maps them to the underscore blank line. The caller's ``values`` dict is
+    not mutated.
     """
     augmented = dict(values)
     for match in _SIGNATURE_KEY_RE.finditer(template_text):
         key = match.group(1)
         if key not in augmented:
             augmented[key] = SIGNATURE_LINE
+    if _DATE_KEY_RE.search(template_text) and "DATE" not in augmented:
+        augmented["DATE"] = DATE_LINE
     return augmented
 
 
@@ -147,6 +171,89 @@ def _substitute_in_paragraphs(paragraphs, pattern: list[tuple[str, str]]) -> Non
         runs[0].text = merged_text
         for run in runs[1:]:
             run.text = ""
+
+
+def render_docx_bytes_to_pdf(
+    docx_bytes: bytes, values: dict[str, str],
+) -> tuple[bytes, bool]:
+    """Render a DOCX template into a PDF after placeholder substitution.
+
+    Pipeline: ``docx_bytes`` → python-docx (substitute placeholders, merge
+    runs) → LibreOffice headless (`soffice --convert-to pdf`) for a
+    1:1-fidelity PDF that mirrors the source DOCX's layout, fonts,
+    tables, and headings.
+
+    Returns ``(pdf_bytes, used_docx_library)``. Falls back to a plain-
+    text PDF render via reportlab when LibreOffice is unavailable
+    (typically: pytest on a dev machine without the soffice binary). In
+    production the docker image installs ``libreoffice-writer`` so the
+    high-fidelity branch is the live path.
+    """
+    import shutil
+    import subprocess
+    import tempfile
+
+    rendered_docx, used_docx = render_docx_bytes(docx_bytes, values)
+    if not used_docx:
+        # python-docx not installed; we never substituted. Best we can do
+        # is render the raw bytes' decoded text.
+        text = docx_bytes.decode("utf-8", errors="replace")
+        substituted = render_md(text, values)
+        return render_pdf_from_text(substituted), False
+
+    soffice = shutil.which("soffice") or shutil.which("libreoffice")
+    if soffice is None:
+        logger.warning(
+            "LibreOffice (soffice) not found on PATH — falling back to "
+            "plain-text PDF. Install libreoffice-writer for full fidelity.",
+        )
+        try:
+            import docx  # type: ignore[import-untyped]
+            doc = docx.Document(io.BytesIO(rendered_docx))
+            extracted = "\n\n".join(p.text for p in doc.paragraphs if p.text.strip())
+            return render_pdf_from_text(extracted), True
+        except Exception:  # noqa: BLE001
+            return render_pdf_from_text(""), True
+
+    with tempfile.TemporaryDirectory(prefix="lease-pdf-") as tmpdir:
+        docx_path = f"{tmpdir}/lease.docx"
+        with open(docx_path, "wb") as fh:
+            fh.write(rendered_docx)
+        # ``--headless`` runs without an X server. ``--convert-to pdf``
+        # writes ``lease.pdf`` to ``--outdir``. We use a fresh
+        # ``-env:UserInstallation`` per call so concurrent renders don't
+        # contend on a shared profile lock (LibreOffice serializes
+        # otherwise).
+        try:
+            subprocess.run(
+                [
+                    soffice,
+                    "--headless",
+                    f"-env:UserInstallation=file://{tmpdir}/profile",
+                    "--convert-to", "pdf",
+                    "--outdir", tmpdir,
+                    docx_path,
+                ],
+                check=True,
+                capture_output=True,
+                timeout=60,
+            )
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
+            logger.warning(
+                "soffice DOCX → PDF conversion failed (%s) — falling back "
+                "to plain-text PDF.", exc,
+            )
+            try:
+                import docx  # type: ignore[import-untyped]
+                doc = docx.Document(io.BytesIO(rendered_docx))
+                extracted = "\n\n".join(p.text for p in doc.paragraphs if p.text.strip())
+                return render_pdf_from_text(extracted), True
+            except Exception:  # noqa: BLE001
+                return render_pdf_from_text(""), True
+
+        with open(f"{tmpdir}/lease.pdf", "rb") as fh:
+            pdf_bytes = fh.read()
+    return pdf_bytes, True
 
 
 def render_pdf_from_text(rendered_text: str) -> bytes:

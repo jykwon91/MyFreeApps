@@ -26,6 +26,26 @@ class Settings(BaseAppSettings):
     anthropic_api_key: str = ""
     tavily_api_key: str = ""
 
+    # JSearch (RapidAPI / Google Jobs aggregator) — wraps LinkedIn /
+    # Indeed / Glassdoor / ZipRecruiter / Dice into one structured JSON
+    # endpoint. Used by the discovery worker (Phase 4+). Empty in dev;
+    # required in production for the discovery feature to fetch.
+    jsearch_api_key: str = ""
+
+    # /discover scoring budget (Phase C). The per-user daily cap is the
+    # smaller of these two values. ``discovery_daily_budget_usd`` is the
+    # default operator-friendly cap; ``..._hard_cap`` is the absolute
+    # ceiling no per-profile override may exceed.
+    discovery_daily_budget_usd: float = 0.30
+    discovery_daily_budget_usd_hard_cap: float = 2.00
+
+    # /discover refresh rate-limit (per IP). JSearch is paid; cap how
+    # often an operator can hit /refresh in a window to bound runaway
+    # cost from a stuck retry loop or a leaked credential. Defaults
+    # mirror the previous hardcoded values in api/discover.py.
+    discovery_refresh_rate_limit_threshold: int = 30
+    discovery_refresh_rate_limit_window_seconds: int = 300
+
     # ------------------------------------------------------------------
     # Google OAuth (Gmail integration — Phase 3)
     # ------------------------------------------------------------------

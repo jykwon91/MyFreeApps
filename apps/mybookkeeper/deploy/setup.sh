@@ -24,7 +24,8 @@ read -rp "Google Client Secret: " GOOGLE_CLIENT_SECRET
 
 APP_DIR=/srv/mybookkeeper
 SERVER_IP=$(curl -s ifconfig.me 2>/dev/null || hostname -I | awk '{print $1}')
-DOMAIN=$(echo $SERVER_IP | tr '.' '-').sslip.io
+# Default to the production domain; override with DOMAIN env var for staging/dev VPS.
+DOMAIN=${DOMAIN:-mybookkeeper.myfreeapps.org}
 DB_URL="postgresql+asyncpg://mybookkeeper:${DB_PASSWORD}@localhost/mybookkeeper"
 SECRET_KEY=$(openssl rand -hex 32)
 ENCRYPTION_KEY=$(openssl rand -hex 32)

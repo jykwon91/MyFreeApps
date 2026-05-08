@@ -126,17 +126,34 @@ class StorageClient:
             raise
         return True
 
-    def generate_presigned_url(self, key: str, expires_in_seconds: int) -> str:
+    def generate_presigned_url(
+        self,
+        key: str,
+        expires_in_seconds: int,
+        *,
+        response_content_disposition: str | None = None,
+    ) -> str:
         """Sign a GET URL for `key` valid for `expires_in_seconds`.
 
         The URL points at whatever endpoint this client was constructed
         with — for `_DualEndpointStorageClient` the inner public client is
         used so the browser can reach it.
+
+        When ``response_content_disposition`` is set (e.g. ``'attachment;
+        filename="Lease Agreement - tenant signed.pdf"'``), the value is
+        signed into the URL via the ``response-content-disposition``
+        S3 query parameter so MinIO emits it as a response header on the
+        GET. Browsers honor this for filename selection on download.
         """
         return self._client.presigned_get_object(
             self._bucket,
             key,
             expires=timedelta(seconds=expires_in_seconds),
+            response_headers=(
+                {"response-content-disposition": response_content_disposition}
+                if response_content_disposition
+                else None
+            ),
         )
 
     def ensure_bucket(self) -> None:
@@ -169,11 +186,22 @@ class _DualEndpointStorageClient(StorageClient):
         super().__init__(internal_client, bucket)
         self._public_client = public_client
 
-    def generate_presigned_url(self, key: str, expires_in_seconds: int) -> str:
+    def generate_presigned_url(
+        self,
+        key: str,
+        expires_in_seconds: int,
+        *,
+        response_content_disposition: str | None = None,
+    ) -> str:
         return self._public_client.presigned_get_object(
             self._bucket,
             key,
             expires=timedelta(seconds=expires_in_seconds),
+            response_headers=(
+                {"response-content-disposition": response_content_disposition}
+                if response_content_disposition
+                else None
+            ),
         )
 
 

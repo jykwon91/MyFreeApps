@@ -12,7 +12,6 @@ import {
 } from "@/shared/lib/inquiry-date-format";
 import type { ApplicantDetailResponse } from "@/shared/types/applicant/applicant-detail-response";
 import type { SignedLeaseSummary } from "@/shared/types/lease/signed-lease-summary";
-import SectionHeader from "@/shared/components/ui/SectionHeader";
 import Button from "@/shared/components/ui/Button";
 import LoadingButton from "@/shared/components/ui/LoadingButton";
 import ApplicantStatusControl from "./ApplicantStatusControl";
@@ -44,21 +43,47 @@ export default function ApplicantDetailBody({ applicant }: ApplicantDetailBodyPr
 
   return (
     <>
-      <SectionHeader
-        title={applicant.legal_name ?? "Unnamed applicant"}
-        subtitle={
-          <span className="inline-flex items-center gap-2 flex-wrap">
-            <ApplicantStatusControl
-              applicantId={applicant.id}
-              currentStage={applicant.stage}
-            />
-            <span
-              className="text-xs text-muted-foreground"
-              title={formatAbsoluteTime(applicant.created_at)}
+      {/* Two-row header. SectionHeader's vertical-center alignment misbehaves
+          when the subtitle row wraps, leaving the action button floating
+          mid-block. Inline two-row layout aligns the action with the title
+          and reduces the meta row to a single muted line. */}
+      <div className="flex flex-col gap-1">
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="text-2xl font-semibold truncate">
+            {applicant.legal_name ?? "Unnamed applicant"}
+          </h1>
+          {canWrite &&
+          (applicant.stage === "approved" || applicant.stage === "lease_sent") ? (
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              className="shrink-0"
+              onClick={() =>
+                navigate(`/leases/new?applicant_id=${applicant.id}`)
+              }
+              data-testid="generate-lease-from-applicant"
             >
-              Promoted {formatRelativeTime(applicant.created_at)}
-            </span>
-            {applicant.inquiry_id ? (
+              Generate lease
+            </Button>
+          ) : null}
+        </div>
+
+        <div className="flex items-center gap-2 flex-wrap">
+          <ApplicantStatusControl
+            applicantId={applicant.id}
+            currentStage={applicant.stage}
+          />
+          <span className="text-muted-foreground/50 select-none">·</span>
+          <span
+            className="text-xs text-muted-foreground"
+            title={formatAbsoluteTime(applicant.created_at)}
+          >
+            Promoted {formatRelativeTime(applicant.created_at)}
+          </span>
+          {applicant.inquiry_id ? (
+            <>
+              <span className="text-muted-foreground/50 select-none">·</span>
               <Link
                 to={`/inquiries/${applicant.inquiry_id}`}
                 data-testid="applicant-source-inquiry-link"
@@ -67,26 +92,10 @@ export default function ApplicantDetailBody({ applicant }: ApplicantDetailBodyPr
                 <ExternalLink className="h-3 w-3" aria-hidden="true" />
                 View source inquiry
               </Link>
-            ) : null}
-          </span>
-        }
-        actions={
-          canWrite &&
-          (applicant.stage === "approved" || applicant.stage === "lease_sent") ? (
-            <Button
-              type="button"
-              variant="primary"
-              size="sm"
-              onClick={() =>
-                navigate(`/leases/new?applicant_id=${applicant.id}`)
-              }
-              data-testid="generate-lease-from-applicant"
-            >
-              Generate lease
-            </Button>
-          ) : null
-        }
-      />
+            </>
+          ) : null}
+        </div>
+      </div>
 
       {/* Tenant lifecycle controls — only for lease_signed stage */}
       {applicant.stage === "lease_signed" && canWrite ? (

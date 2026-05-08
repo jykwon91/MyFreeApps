@@ -46,6 +46,13 @@ _TEXT_EMPLOYER = PlaceholderDefault(
 )
 _DATE_TODAY = PlaceholderDefault("date", "today")
 
+# Existing-lease defaults — used when an addendum template is attached to a
+# signed lease that already has known term dates and a linked property.
+_DATE_LEASE_START = PlaceholderDefault("date", "lease.starts_on")
+_DATE_LEASE_END = PlaceholderDefault("date", "lease.ends_on")
+_TEXT_PROPERTY_ADDRESS = PlaceholderDefault("text", "property.address")
+_TEXT_LANDLORD_NAME = PlaceholderDefault("text", "user.name")
+
 
 # Single source of truth — every concern (input_type, default_source,
 # computed_expr) lives on one row per key.
@@ -70,8 +77,17 @@ DEFAULT_SOURCE_MAP: dict[str, PlaceholderDefault] = {
     "MOVE-OUT DATE": _DATE_CONTRACT_END,
     "MOVE_OUT_DATE": _DATE_CONTRACT_END,
     "MOVE OUT DATE": _DATE_CONTRACT_END,
+    # ``EFFECTIVE DATE`` is the lease commencement date — auto-filled from
+    # today's date at generation time because it is a document property, not
+    # a field the signer fills in.
     "EFFECTIVE DATE": _DATE_TODAY,
-    "DATE": _DATE_TODAY,
+    # ``DATE`` (bare) appears next to signature lines ("Landlord: ___  Date:
+    # ___"). Marked ``input_type="signature"`` so the generate-lease form
+    # hides it (filled at signing time, not at generation), matching the
+    # treatment of LANDLORD SIGNATURE / TENANT SIGNATURE. The renderer
+    # substitutes unfilled ``[DATE]`` with a blank underscore line at render
+    # time via ``_augment_with_signature_lines`` in renderer.py.
+    "DATE": PlaceholderDefault("signature", None),
     # Computed — auto-evaluated at generate time via the computed.py DSL.
     "NUMBER OF DAYS": PlaceholderDefault(
         "computed", None, computed_expr="(MOVE-OUT DATE - MOVE-IN DATE).days",
@@ -81,6 +97,20 @@ DEFAULT_SOURCE_MAP: dict[str, PlaceholderDefault] = {
     # doc never shows literal ``[LANDLORD SIGNATURE]`` text.
     "LANDLORD SIGNATURE": PlaceholderDefault("signature", None),
     "TENANT SIGNATURE": PlaceholderDefault("signature", None),
+    # Addendum placeholders — used when a template is attached to an existing
+    # signed lease (e.g. a Lease Extension Addendum). These pull from the
+    # parent lease and its linked property/landlord so the host doesn't
+    # re-type information already on file.
+    "ORIGINAL LEASE START DATE": _DATE_LEASE_START,
+    "ORIGINAL LEASE END DATE": _DATE_LEASE_END,
+    "LEASE START DATE": _DATE_LEASE_START,
+    "LEASE END DATE": _DATE_LEASE_END,
+    "PROPERTY ADDRESS": _TEXT_PROPERTY_ADDRESS,
+    "PREMISES ADDRESS": _TEXT_PROPERTY_ADDRESS,
+    "PROPERTY NAME": PlaceholderDefault("text", "property.name"),
+    "LANDLORD FULL NAME": _TEXT_LANDLORD_NAME,
+    "LANDLORD NAME": _TEXT_LANDLORD_NAME,
+    "LANDLORD EMAIL": PlaceholderDefault("email", "user.email"),
 }
 
 _FALLBACK = PlaceholderDefault("text", None)

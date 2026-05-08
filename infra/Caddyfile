@@ -15,7 +15,11 @@
 #   3. Make sure the app's docker compose binds that port on 127.0.0.1.
 
 # MyBookkeeper — primary domain.
-165-245-134-251.sslip.io {
+# Both addresses listed during the myfreeapps.org cutover so existing
+# bookmarks on the sslip.io URL keep working. Caddy auto-provisions TLS
+# certs for both via Let's Encrypt. Drop the sslip.io address once the
+# new domain is verified live.
+mybookkeeper.myfreeapps.org, 165-245-134-251.sslip.io {
     header {
         Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
         X-Content-Type-Options "nosniff"
@@ -31,7 +35,7 @@
 # host Caddy terminates TLS for storage.<domain> and proxies plaintext to
 # MinIO. Backends sign presigned URLs against this hostname so the browser
 # can fetch attachments directly without round-tripping through any API.
-storage.165-245-134-251.sslip.io {
+storage.myfreeapps.org, storage.165-245-134-251.sslip.io {
     header {
         Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
         X-Content-Type-Options "nosniff"
@@ -43,7 +47,7 @@ storage.165-245-134-251.sslip.io {
 }
 
 # MyJobHunter — separate subdomain.
-myjobhunter.165-245-134-251.sslip.io {
+myjobhunter.myfreeapps.org, myjobhunter.165-245-134-251.sslip.io {
     header {
         Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
         X-Content-Type-Options "nosniff"

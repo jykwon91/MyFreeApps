@@ -17,6 +17,10 @@ class SignedLeaseAttachmentResponse(BaseModel):
     kind: str
     uploaded_by_user_id: uuid.UUID
     uploaded_at: _dt.datetime
+    # Signing-state timestamps. NULL = not yet signed by that party.
+    # Drives the friendly download filename suffix.
+    signed_by_tenant_at: _dt.datetime | None = None
+    signed_by_landlord_at: _dt.datetime | None = None
     presigned_url: str | None = None
     # ``False`` means the row exists in the DB but the underlying MinIO
     # object is missing (NoSuchKey on HEAD). Set by the response builder so

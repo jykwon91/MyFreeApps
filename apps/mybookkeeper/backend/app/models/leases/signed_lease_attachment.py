@@ -60,6 +60,19 @@ class SignedLeaseAttachment(Base):
         server_default=func.now(),
     )
 
+    # Signing state. NULL = not yet signed by that party. Drives the
+    # friendly download filename suffix (" - tenant signed" / " - fully
+    # signed") so a downloaded file is self-describing instead of a bare
+    # GUID. Only meaningful for the lease document itself
+    # (``rendered_original`` / ``signed_lease`` kinds); other kinds
+    # (inspections, insurance, etc.) ignore these columns.
+    signed_by_tenant_at: Mapped[_dt.datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True,
+    )
+    signed_by_landlord_at: Mapped[_dt.datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True,
+    )
+
     __table_args__ = (
         CheckConstraint(
             f"kind IN {LEASE_ATTACHMENT_KINDS_SQL}",

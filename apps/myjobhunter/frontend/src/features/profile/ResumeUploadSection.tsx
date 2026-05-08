@@ -16,12 +16,26 @@ const ACCEPTED_RESUME_TYPES =
 // 25 MB — must match settings.max_resume_upload_bytes on the backend
 const MAX_RESUME_BYTES = 25 * 1024 * 1024;
 
+// Poll the list every 5s while the component is mounted so a row
+// transitions queued → processing → complete without the operator
+// having to refresh. RTK Query stops the timer on unmount.
+//
+// 5s is a deliberate compromise: fast enough that the first visible
+// status flip happens within a normal pause, slow enough that an
+// open Profile tab burns ~12 lightweight requests/minute (a list
+// endpoint, sub-1KB response). Conditional "only poll while in-flight"
+// was the previous shape — readability wasn't worth the saved polls.
+const POLL_INTERVAL_MS = 5000;
+
 export interface ResumeUploadSectionProps {
   profileId: string;
 }
 
 export default function ResumeUploadSection({ profileId: _profileId }: ResumeUploadSectionProps) {
-  const { data: jobs, isLoading } = useListResumeJobsQuery();
+  const { data: jobs, isLoading } = useListResumeJobsQuery(undefined, {
+    pollingInterval: POLL_INTERVAL_MS,
+  });
+
   const [uploadResume, { isLoading: isUploading }] = useUploadResumeMutation();
   const [downloadingJobId, setDownloadingJobId] = useState<string | null>(null);
 

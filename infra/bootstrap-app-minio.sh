@@ -78,7 +78,7 @@ APP_COMPOSE="$APP_DIR/docker-compose.yml"
 INFRA_ENV="$REPO_ROOT/infra/.env"
 MINIO_CONTAINER="myfreeapps-minio"
 BUCKET="${APP_SLUG}-files"
-PUBLIC_ENDPOINT="https://storage.165-245-134-251.sslip.io"
+PUBLIC_ENDPOINT="https://storage.myfreeapps.org"
 
 [[ -d "$APP_DIR" ]]      || { red "missing: $APP_DIR"; exit 1; }
 [[ -f "$APP_ENV_FILE" ]] || { red "missing: $APP_ENV_FILE"; exit 1; }

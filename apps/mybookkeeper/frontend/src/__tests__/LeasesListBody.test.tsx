@@ -1,5 +1,6 @@
 /**
- * Unit tests for LeasesListBody — covers the delete affordance.
+ * Unit tests for LeasesListBody — covers the delete affordance and the
+ * quick-upload affordance added in feat(leases): upload from list.
  *
  * Coverage:
  * - Delete button absent when canWrite is false
@@ -7,6 +8,10 @@
  * - Clicking delete button opens the ConfirmDialog
  * - Confirming calls onDelete with the correct lease
  * - Cancelling closes the dialog without calling onDelete
+ * - Upload button absent when canWrite is false
+ * - Upload button present when canWrite is true
+ * - Clicking upload button opens the quick-upload modal for the correct lease
+ * - Closing the modal removes it from the DOM
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
@@ -14,6 +19,23 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import LeasesListBody from "@/app/features/leases/LeasesListBody";
 import type { SignedLeaseSummary } from "@/shared/types/lease/signed-lease-summary";
+
+// ---------------------------------------------------------------------------
+// Mocks — the quick-upload modal renders LeaseAttachmentDropzone which needs
+// the upload mutation; stub the whole API module to keep this test focused.
+// ---------------------------------------------------------------------------
+
+const mockUpload = vi.fn();
+vi.mock("@/shared/store/signedLeasesApi", () => ({
+  useUploadSignedLeaseAttachmentMutation: () => [mockUpload, { isLoading: false }],
+  useDeleteSignedLeaseAttachmentMutation: () => [vi.fn(), {}],
+  useUpdateLeaseAttachmentMutation: () => [vi.fn(), {}],
+}));
+
+vi.mock("@/shared/lib/toast-store", () => ({
+  showError: vi.fn(),
+  showSuccess: vi.fn(),
+}));
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -117,7 +139,6 @@ describe("LeasesListBody — delete affordance", () => {
 
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     expect(screen.getByText(/delete this lease/i)).toBeInTheDocument();
-    // The dialog description mentions the short ID and permanence warning
     expect(screen.getByText(/permanently remove Lease aaaaaaaa/i)).toBeInTheDocument();
   });
 
@@ -163,10 +184,8 @@ describe("LeasesListBody — delete affordance", () => {
       </MemoryRouter>,
     );
 
-    // Open the dialog first (synchronous state set)
     screen.getByTestId(`lease-delete-btn-${LEASE_A.id}`).click();
 
-    // Rerender with isDeleting=true while dialog is open
     rerender(
       <MemoryRouter>
         <LeasesListBody
@@ -199,5 +218,62 @@ describe("LeasesListBody — delete affordance", () => {
       </MemoryRouter>,
     );
     expect(screen.getByText(/no leases yet/i)).toBeInTheDocument();
+  });
+});
+
+describe("LeasesListBody — upload affordance", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("hides upload buttons when canWrite is false", () => {
+    renderList({ canWrite: false });
+    expect(screen.queryByTestId(`lease-upload-btn-${LEASE_A.id}`)).not.toBeInTheDocument();
+    expect(screen.queryByTestId(`lease-upload-btn-${LEASE_B.id}`)).not.toBeInTheDocument();
+  });
+
+  it("shows upload buttons when canWrite is true", () => {
+    renderList({ canWrite: true });
+    expect(screen.getByTestId(`lease-upload-btn-${LEASE_A.id}`)).toBeInTheDocument();
+    expect(screen.getByTestId(`lease-upload-btn-${LEASE_B.id}`)).toBeInTheDocument();
+  });
+
+  it("opens the quick-upload modal when upload button is clicked", async () => {
+    renderList({ canWrite: true });
+
+    await userEvent.click(screen.getByTestId(`lease-upload-btn-${LEASE_A.id}`));
+
+    expect(screen.getByTestId("lease-quick-upload-modal")).toBeInTheDocument();
+    // Modal title includes the short ID
+    expect(screen.getByText(/add documents to lease aaaaaaaa/i)).toBeInTheDocument();
+  });
+
+  it("opens the modal for the correct lease when second row upload is clicked", async () => {
+    renderList({ canWrite: true });
+
+    await userEvent.click(screen.getByTestId(`lease-upload-btn-${LEASE_B.id}`));
+
+    expect(screen.getByTestId("lease-quick-upload-modal")).toBeInTheDocument();
+    expect(screen.getByText(/add documents to lease bbbbbbbb/i)).toBeInTheDocument();
+  });
+
+  it("closes the upload modal when the close button is clicked", async () => {
+    renderList({ canWrite: true });
+
+    await userEvent.click(screen.getByTestId(`lease-upload-btn-${LEASE_A.id}`));
+    expect(screen.getByTestId("lease-quick-upload-modal")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /close/i }));
+
+    await waitFor(() => {
+      expect(screen.queryByTestId("lease-quick-upload-modal")).not.toBeInTheDocument();
+    });
+  });
+
+  it("does not open both modals simultaneously", async () => {
+    renderList({ canWrite: true });
+
+    await userEvent.click(screen.getByTestId(`lease-upload-btn-${LEASE_A.id}`));
+    expect(screen.getAllByTestId("lease-quick-upload-modal")).toHaveLength(1);
   });
 });

@@ -1,21 +1,26 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, FileText, User } from "lucide-react";
+import { ArrowLeft, FileText, Mail, Plus, User } from "lucide-react";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import AlertBox from "@/shared/components/ui/AlertBox";
 import Badge from "@/shared/components/ui/Badge";
+import Button from "@/shared/components/ui/Button";
 import Skeleton from "@/shared/components/ui/Skeleton";
 import LoadingButton from "@/shared/components/ui/LoadingButton";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import {
+  useEmailSignedLeaseToTenantMutation,
   useGenerateSignedLeaseMutation,
   useGetSignedLeaseByIdQuery,
   useUpdateSignedLeaseMutation,
 } from "@/shared/store/signedLeasesApi";
 import { useGetApplicantByIdQuery } from "@/shared/store/applicantsApi";
 import SignedLeaseStatusBadge from "@/app/features/leases/SignedLeaseStatusBadge";
+import SignedLeaseStatusPicker from "@/app/features/leases/SignedLeaseStatusPicker";
 import LeaseAttachmentsSection from "@/app/features/leases/LeaseAttachmentsSection";
+import LeaseAddTemplateModal from "@/app/features/leases/LeaseAddTemplateModal";
+import type { SignedLeaseStatus } from "@/shared/types/lease/signed-lease-status";
 
 type Tab = "files" | "details" | "notes";
 
@@ -23,6 +28,7 @@ export default function LeaseDetail() {
   const { leaseId } = useParams<{ leaseId: string }>();
   const canWrite = useCanWrite();
   const [tab, setTab] = useState<Tab>("files");
+  const [showAddTemplateModal, setShowAddTemplateModal] = useState(false);
   const {
     data: lease,
     isLoading,
@@ -33,11 +39,24 @@ export default function LeaseDetail() {
   const [generateLease, { isLoading: isGenerating }] =
     useGenerateSignedLeaseMutation();
   const [updateLease] = useUpdateSignedLeaseMutation();
+  const [emailLeaseToTenant, { isLoading: isEmailing }] =
+    useEmailSignedLeaseToTenantMutation();
 
   const { data: applicant } = useGetApplicantByIdQuery(
     lease?.applicant_id ?? "",
     { skip: !lease?.applicant_id },
   );
+
+  const tenantHasEmail = Boolean(applicant?.contact_email);
+  // Show "Email to tenant" whenever the lease has a renderable attachment
+  // (rendered_original from a template flow, or signed_lease from import).
+  // Imported leases with addenda generated post-#415 also qualify — the
+  // email service already includes ``rendered_original`` in
+  // ``LEASE_EMAIL_ATTACHMENT_KINDS`` regardless of lease.kind.
+  const hasEmailableAttachment = (lease?.attachments ?? []).some(
+    (a) => a.kind === "rendered_original" || a.kind === "signed_lease",
+  );
+  const showEmailButton = canWrite && hasEmailableAttachment;
 
   async function handleGenerate() {
     if (!lease) return;
@@ -46,6 +65,16 @@ export default function LeaseDetail() {
       showSuccess("Lease generated.");
     } catch {
       showError("Couldn't generate the lease. Want to try again?");
+    }
+  }
+
+  async function handleEmailToTenant() {
+    if (!lease) return;
+    try {
+      await emailLeaseToTenant(lease.id).unwrap();
+      showSuccess("Email queued — should arrive in a few minutes.");
+    } catch {
+      showError("Couldn't queue the tenant email. Want to try again?");
     }
   }
 
@@ -59,12 +88,12 @@ export default function LeaseDetail() {
     }
   }
 
-  async function handleStatusChange(next: string) {
+  async function handleStatusChange(next: SignedLeaseStatus) {
     if (!lease) return;
     try {
       await updateLease({
         leaseId: lease.id,
-        data: { status: next as typeof lease.status },
+        data: { status: next },
       }).unwrap();
       showSuccess("Status updated.");
     } catch {
@@ -111,7 +140,14 @@ export default function LeaseDetail() {
             title={`Lease ${lease.id.slice(0, 8)}`}
             subtitle={
               <span className="inline-flex items-center gap-2 flex-wrap">
-                <SignedLeaseStatusBadge status={lease.status} />
+                {canWrite ? (
+                  <SignedLeaseStatusPicker
+                    status={lease.status}
+                    onChange={(next) => void handleStatusChange(next)}
+                  />
+                ) : (
+                  <SignedLeaseStatusBadge status={lease.status} />
+                )}
                 <span data-testid="lease-kind-badge">
                   <Badge
                     label={lease.kind === "imported" ? "Imported" : "Generated"}
@@ -124,44 +160,48 @@ export default function LeaseDetail() {
               </span>
             }
             actions={
-              canWrite && lease.status === "draft" && lease.kind === "generated" ? (
-                <LoadingButton
-                  isLoading={isGenerating}
-                  loadingText="Generating..."
-                  onClick={handleGenerate}
-                  data-testid="lease-generate-button"
-                >
-                  <FileText size={16} className="mr-1" />
-                  Generate
-                </LoadingButton>
-              ) : null
+              <div className="flex items-center gap-2 flex-wrap">
+                {canWrite
+                && lease.kind === "generated"
+                && (lease.status === "draft" || lease.attachments.length === 0) ? (
+                  <LoadingButton
+                    isLoading={isGenerating}
+                    loadingText="Generating..."
+                    onClick={handleGenerate}
+                    data-testid="lease-generate-button"
+                  >
+                    <FileText size={16} className="mr-1" />
+                    {lease.status === "draft" ? "Generate" : "Regenerate"}
+                  </LoadingButton>
+                ) : null}
+                {showEmailButton ? (
+                  <LoadingButton
+                    variant="secondary"
+                    isLoading={isEmailing}
+                    loadingText="Queueing..."
+                    disabled={!tenantHasEmail}
+                    title={
+                      tenantHasEmail
+                        ? "Email the rendered lease to the tenant"
+                        : "The applicant has no email on file. Add one on the applicant page first."
+                    }
+                    onClick={handleEmailToTenant}
+                    data-testid="lease-email-tenant-button"
+                  >
+                    <Mail size={16} className="mr-1" />
+                    Email to tenant
+                  </LoadingButton>
+                ) : null}
+              </div>
             }
           />
 
-          {/* Templates list — only for generated leases */}
-          {lease.kind === "generated" && lease.templates.length > 0 ? (
-            <section
-              className="border rounded-lg p-4"
-              data-testid="lease-templates-card"
-            >
-              <p className="text-xs text-muted-foreground uppercase font-medium tracking-wide mb-2">
-                {lease.templates.length === 1 ? "Template" : "Templates"}
-              </p>
-              <ul className="flex flex-wrap gap-2">
-                {lease.templates.map((t) => (
-                  <li key={t.id}>
-                    <Link
-                      to={`/lease-templates/${t.id}`}
-                      data-testid={`lease-template-link-${t.id}`}
-                      className="inline-block text-xs px-2 py-1 rounded-md bg-muted text-foreground hover:bg-muted/70"
-                    >
-                      {t.name}{" "}
-                      <span className="text-muted-foreground">v{t.version}</span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </section>
+          {showAddTemplateModal && lease ? (
+            <LeaseAddTemplateModal
+              leaseId={lease.id}
+              existingTemplateIds={lease.templates.map((t) => t.id)}
+              onClose={() => setShowAddTemplateModal(false)}
+            />
           ) : null}
 
           {/* Applicant / Tenant card */}
@@ -213,15 +253,26 @@ export default function LeaseDetail() {
           </div>
 
           {tab === "files" ? (
-            <LeaseAttachmentsSection
-              leaseId={lease.id}
-              attachments={
-                lease.kind === "imported"
-                  ? lease.attachments.filter((a) => a.kind !== "rendered_original")
-                  : lease.attachments
-              }
-              canWrite={canWrite}
-            />
+            <div className="space-y-3">
+              {canWrite ? (
+                <div className="flex justify-end">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setShowAddTemplateModal(true)}
+                    data-testid="lease-add-template-button"
+                  >
+                    <Plus size={14} className="mr-1" />
+                    Add document
+                  </Button>
+                </div>
+              ) : null}
+              <LeaseAttachmentsSection
+                leaseId={lease.id}
+                attachments={lease.attachments}
+                canWrite={canWrite}
+              />
+            </div>
           ) : null}
 
           {tab === "details" ? (
@@ -236,28 +287,6 @@ export default function LeaseDetail() {
                   </div>
                 ))}
               </div>
-              {canWrite ? (
-                <div className="pt-3 border-t">
-                  <label htmlFor="lease-status" className="block text-sm font-medium mb-1">
-                    Status
-                  </label>
-                  <select
-                    id="lease-status"
-                    value={lease.status}
-                    onChange={(e) => void handleStatusChange(e.target.value)}
-                    className="px-3 py-2 text-sm border rounded-md"
-                    data-testid="lease-status-select"
-                  >
-                    <option value="draft">Draft</option>
-                    <option value="generated">Generated</option>
-                    <option value="sent">Sent</option>
-                    <option value="signed">Signed</option>
-                    <option value="active">Active</option>
-                    <option value="ended">Ended</option>
-                    <option value="terminated">Terminated</option>
-                  </select>
-                </div>
-              ) : null}
             </section>
           ) : null}
 

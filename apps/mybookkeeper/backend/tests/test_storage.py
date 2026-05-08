@@ -161,6 +161,22 @@ class TestStorageClientMethods:
         assert call[0][0] == "test-bucket"
         assert call[0][1] == "org/uuid/photo.jpg"
         assert call.kwargs["expires"] == timedelta(seconds=3600)
+        # No response-content-disposition by default — listing photos
+        # rely on the omitted query param so the browser displays inline.
+        assert call.kwargs["response_headers"] is None
+
+    def test_generate_presigned_url_passes_content_disposition(self) -> None:
+        client, mock_minio = self._make_client()
+        mock_minio.presigned_get_object.return_value = "https://signed-url"
+        client.generate_presigned_url(
+            "signed-leases/x/y",
+            3600,
+            response_content_disposition='attachment; filename="Lease.pdf"',
+        )
+        call = mock_minio.presigned_get_object.call_args
+        assert call.kwargs["response_headers"] == {
+            "response-content-disposition": 'attachment; filename="Lease.pdf"',
+        }
 
     def test_head_object_returns_metadata_when_present(self) -> None:
         client, mock_minio = self._make_client()
@@ -212,6 +228,23 @@ class TestDualEndpointStorageClient:
         assert url == "https://storage.example.com/signed"
         public.presigned_get_object.assert_called_once()
         internal.presigned_get_object.assert_not_called()
+
+    def test_presigned_url_disposition_propagates_to_public_client(self) -> None:
+        internal = MagicMock()
+        public = MagicMock()
+        public.presigned_get_object.return_value = "https://storage.example.com/signed"
+        client = _DualEndpointStorageClient(internal, public, "bucket")
+
+        client.generate_presigned_url(
+            "signed-leases/x/y",
+            3600,
+            response_content_disposition='attachment; filename="Lease.pdf"',
+        )
+
+        call = public.presigned_get_object.call_args
+        assert call.kwargs["response_headers"] == {
+            "response-content-disposition": 'attachment; filename="Lease.pdf"',
+        }
 
     def test_uploads_go_to_internal_client(self) -> None:
         internal = MagicMock()

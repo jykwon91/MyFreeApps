@@ -1,9 +1,17 @@
 # Tech Debt
 
-> Last scanned: 2026-05-04
-> Issues: 0 critical, 5 high, 6 medium (1 deferred + 5 active), 0 low
+> Last scanned: 2026-05-07
+> Issues: 0 critical, 6 high, 6 medium (1 deferred + 5 active), 0 low
 
 ## High
+
+### [Frontend tests] AttachmentViewer.test.tsx pre-existing failure on main
+**Effort:** S
+**Location:** `apps/mybookkeeper/frontend/src/__tests__/AttachmentViewer.test.tsx` — test `"renders an iframe for application/pdf"`
+**Problem:** The test queries `screen.getByTestId("attachment-viewer-iframe")` but the rendered component is stuck in a "Loading…" state, so the iframe never mounts before the assertion fires. Reproduces on `origin/main` with no modifications. Likely a missing `await waitFor(...)` around the assertion — the component appears to defer iframe insertion (probably until the URL is presigned or the lazy import resolves).
+**Recommendation:** Wrap the assertion in `await screen.findByTestId(...)` or wait for the loading-text element to disappear before querying. The other 5 tests in the file pass; this is a single-test regression in this file.
+
+---
 
 ### [E2E] Lease import E2E test skips actual file upload (requires MinIO)
 **Effort:** S

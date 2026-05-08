@@ -1,6 +1,7 @@
 import { Navigate, type RouteObject } from "react-router-dom";
 import Dashboard from "@/pages/Dashboard";
 import Analyze from "@/pages/Analyze";
+import Discover from "@/pages/Discover";
 import Applications from "@/pages/Applications";
 import ApplicationDetail from "@/pages/ApplicationDetail";
 import Companies from "@/pages/Companies";
@@ -30,6 +31,7 @@ export const routes: RouteObject[] = [
       { index: true, element: <Navigate to="/dashboard" replace /> },
       { path: "/dashboard", element: <Dashboard /> },
       { path: "/analyze", element: <Analyze /> },
+      { path: "/discover", element: <Discover /> },
       { path: "/applications", element: <Applications /> },
       { path: "/applications/:id", element: <ApplicationDetail /> },
       { path: "/companies", element: <Companies /> },

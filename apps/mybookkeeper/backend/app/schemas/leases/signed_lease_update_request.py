@@ -11,5 +11,9 @@ class SignedLeaseUpdateRequest(BaseModel):
     status: str | None = None
     # Only honoured when current status == "draft" — service enforces.
     values: dict[str, Any] | None = None
+    # Per-lease toggle for the auto-email-tenant-on-generate feature.
+    # ``None`` (omitted) leaves the existing value alone; ``True`` /
+    # ``False`` overwrites it.
+    auto_email_tenant: bool | None = None
 
     model_config = ConfigDict(extra="forbid")

@@ -10,12 +10,27 @@ from __future__ import annotations
 import datetime as _dt
 import uuid
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Query,
+    Response,
+    UploadFile,
+)
 
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member, require_write_access
+from app.services.leases import lease_email_service
+from app.services.leases.lease_email_service import send_lease_to_tenant
 from app.schemas.leases.signed_lease_attachment_response import (
     SignedLeaseAttachmentResponse,
+)
+from app.schemas.leases.signed_lease_attachment_signing_state_request import (
+    SignedLeaseAttachmentSigningStateRequest,
 )
 from app.schemas.leases.signed_lease_attachment_update_request import (
     SignedLeaseAttachmentUpdateRequest,
@@ -27,6 +42,12 @@ from app.schemas.leases.signed_lease_list_response import (
     SignedLeaseListResponse,
 )
 from app.schemas.leases.signed_lease_response import SignedLeaseResponse
+from app.schemas.leases.signed_lease_add_templates_request import (
+    SignedLeaseAddTemplatesRequest,
+)
+from app.schemas.leases.signed_lease_template_prefill_response import (
+    SignedLeaseTemplatePrefillResponse,
+)
 from app.schemas.leases.signed_lease_update_request import (
     SignedLeaseUpdateRequest,
 )
@@ -156,6 +177,7 @@ async def update_lease(
             notes=payload.notes,
             status=payload.status,
             values=payload.values,
+            auto_email_tenant=payload.auto_email_tenant,
         )
     except signed_lease_service.SignedLeaseNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Lease not found") from exc
@@ -181,13 +203,74 @@ async def delete_lease(
     return Response(status_code=204)
 
 
+@router.post(
+    "/{lease_id}/template-prefill",
+    response_model=SignedLeaseTemplatePrefillResponse,
+)
+async def prefill_addendum_placeholders(
+    lease_id: uuid.UUID,
+    payload: SignedLeaseAddTemplatesRequest,
+    ctx: RequestContext = Depends(require_write_access),
+) -> SignedLeaseTemplatePrefillResponse:
+    """Return resolved + unresolved placeholder values for adding templates.
+
+    The frontend calls this after the host picks templates in the "Add
+    template" modal. Returns one row per non-signature, non-computed
+    placeholder so the values form can render with auto-filled defaults
+    for known fields (tenant name, lease dates, property address, etc.)
+    and empty inputs for fields that need manual entry.
+    """
+    try:
+        return await signed_lease_service.prefill_addendum_placeholders(
+            user_id=ctx.user_id,
+            organization_id=ctx.organization_id,
+            lease_id=lease_id,
+            template_ids=payload.template_ids,
+        )
+    except signed_lease_service.SignedLeaseNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Lease not found") from exc
+    except lease_template_service.TemplateNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Template not found") from exc
+
+
+@router.post("/{lease_id}/templates", response_model=SignedLeaseResponse)
+async def add_templates_to_lease(
+    lease_id: uuid.UUID,
+    payload: SignedLeaseAddTemplatesRequest,
+    ctx: RequestContext = Depends(require_write_access),
+) -> SignedLeaseResponse:
+    """Add one or more templates to an existing lease and render them.
+
+    Works for both generated and imported leases. For imported leases the
+    caller MUST pass ``values`` covering at least the required, non-signature,
+    non-computed placeholders that don't have an auto-resolvable
+    ``default_source``. Returns the updated ``SignedLeaseResponse`` (templates
+    + attachments refreshed).
+    """
+    try:
+        return await signed_lease_service.add_templates_and_generate(
+            user_id=ctx.user_id,
+            organization_id=ctx.organization_id,
+            lease_id=lease_id,
+            template_ids=payload.template_ids,
+            values_override=payload.values,
+        )
+    except signed_lease_service.SignedLeaseNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Lease not found") from exc
+    except lease_template_service.TemplateNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Template not found") from exc
+    except signed_lease_service.StorageNotConfiguredError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
 @router.post("/{lease_id}/generate", response_model=SignedLeaseResponse)
 async def generate_lease(
     lease_id: uuid.UUID,
+    background_tasks: BackgroundTasks,
     ctx: RequestContext = Depends(require_write_access),
 ) -> SignedLeaseResponse:
     try:
-        return await signed_lease_service.generate_lease(
+        detail, should_auto_email = await signed_lease_service.generate_lease(
             user_id=ctx.user_id,
             organization_id=ctx.organization_id,
             lease_id=lease_id,
@@ -196,6 +279,56 @@ async def generate_lease(
         raise HTTPException(status_code=404, detail="Lease not found") from exc
     except signed_lease_service.StorageNotConfiguredError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    # Schedule auto-email out-of-band — never blocks the HTTP response.
+    # send_lease_to_tenant is fail-soft: skips silently with a logged
+    # event row when the applicant has no contact_email or when SMTP
+    # isn't configured.
+    if should_auto_email:
+        background_tasks.add_task(
+            send_lease_to_tenant,
+            lease_id=lease_id,
+            user_id=ctx.user_id,
+            organization_id=ctx.organization_id,
+        )
+
+    return detail
+
+
+@router.post("/{lease_id}/email-tenant", status_code=202)
+async def email_lease_to_tenant(
+    lease_id: uuid.UUID,
+    background_tasks: BackgroundTasks,
+    ctx: RequestContext = Depends(require_write_access),
+) -> dict[str, bool]:
+    """Manually queue a tenant email for an existing lease.
+
+    Returns 202 ``{"queued": true}`` — the actual SMTP send happens in
+    a background task. Returns 422 ``"applicant_email_missing"`` when
+    the applicant has no contact_email so the host knows to fix the
+    applicant record before retrying. 404 if the lease isn't visible
+    to the caller.
+    """
+    try:
+        await lease_email_service.assert_can_email_tenant(
+            lease_id=lease_id,
+            user_id=ctx.user_id,
+            organization_id=ctx.organization_id,
+        )
+    except lease_email_service.LeaseNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Lease not found") from exc
+    except lease_email_service.ApplicantEmailMissingError as exc:
+        raise HTTPException(
+            status_code=422, detail="applicant_email_missing",
+        ) from exc
+
+    background_tasks.add_task(
+        send_lease_to_tenant,
+        lease_id=lease_id,
+        user_id=ctx.user_id,
+        organization_id=ctx.organization_id,
+    )
+    return {"queued": True}
 
 
 @router.post(
@@ -273,6 +406,38 @@ async def update_attachment(
         raise HTTPException(status_code=404, detail="Not found") from exc
     except signed_lease_service.InvalidAttachmentKindError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.patch(
+    "/{lease_id}/attachments/{attachment_id}/signing-state",
+    response_model=SignedLeaseAttachmentResponse,
+)
+async def update_attachment_signing_state(
+    lease_id: uuid.UUID,
+    attachment_id: uuid.UUID,
+    payload: SignedLeaseAttachmentSigningStateRequest,
+    ctx: RequestContext = Depends(require_write_access),
+) -> SignedLeaseAttachmentResponse:
+    # Only forward the keys the caller explicitly sent so omitted keys
+    # leave the existing column untouched (sentinel-based partial PATCH).
+    signing_fields = {
+        key: getattr(payload, key)
+        for key in payload.model_fields_set
+        if key in {"signed_by_tenant_at", "signed_by_landlord_at"}
+    }
+    try:
+        return await signed_lease_service.update_attachment_signing_state(
+            user_id=ctx.user_id,
+            organization_id=ctx.organization_id,
+            lease_id=lease_id,
+            attachment_id=attachment_id,
+            signing_fields=signing_fields,
+        )
+    except (
+        signed_lease_service.SignedLeaseNotFoundError,
+        signed_lease_service.AttachmentNotFoundError,
+    ) as exc:
+        raise HTTPException(status_code=404, detail="Not found") from exc
 
 
 @router.delete(
