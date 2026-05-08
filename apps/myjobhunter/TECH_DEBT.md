@@ -3,9 +3,81 @@
 Issues discovered during development. New entries are appended; resolved entries are
 removed and the counts in this header are updated.
 
-**Open issues: 38 (Critical: 1 / High: 2 / Medium: 20 / Low: 15)**
+**Open issues: 41 (Critical: 1 / High: 4 / Medium: 22 / Low: 15)**
 
 > Last comprehensive audit: 2026-05-07 (post-discovery feature ship). All Critical and 7 of 8 audit-High findings RESOLVED in PRs #421-#432 (2026-05-07). Remaining audit findings preserved below under "## High (audit 2026-05-07)" / "## Medium (audit 2026-05-07)" / "## Low (audit 2026-05-07)" sections; pre-existing findings preserved under "## Pre-existing".
+
+> Silent-fail follow-up audit: 2026-05-08 (post-#426 ripple investigation, triggered by today's resume-refinement 500 in PR #435). 8 new findings spanning shared platform + both apps; tracked under "## Silent-fail audit (2026-05-08)" below. PR #426 ripped silent-fail from `_record_log` only — same pattern survives in 8 other third-party wrappers across the monorepo.
+
+---
+
+## Silent-fail audit (2026-05-08)
+
+Wrappers around third-party APIs (Turnstile, MinIO, Gmail, Plaid, Anthropic, JSearch, Tavily, SMTP) that swallow structured errors. Eight findings; one Critical, three High, four Medium. The Critical Turnstile finding directly violates `rules/check-third-party-error-codes.md` — Cloudflare returns `error-codes: string[]` per its docs, and the wrapper throws all of it away.
+
+### CRITICAL — Turnstile verify returns bare bool, discards Cloudflare error-codes
+
+**Location:** `packages/shared-backend/platform_shared/services/turnstile_service.py:35-38`
+**Effort:** S
+**Why Critical:** Used by `require_turnstile` dependency on MBK + MJH registration / forgot-password / login flows. When Turnstile fails, the wrapper returns `False` and the caller raises a generic 400 — operator cannot distinguish `timeout-or-duplicate` (token reuse, retry user) from `invalid-input-secret` (config bug, alert ops). Same failure shape as the MyFreeApps 2026-05-05 incident the rule was written to prevent.
+
+**Fix:** Return `tuple[bool, list[str]]` where the second element is the Cloudflare `error-codes` array. Update `require_turnstile` to route on specific codes per the rule's example block.
+
+### HIGH — MinIO `delete_file` swallows S3Error, no audit trail for orphaned objects
+
+**Location:** `apps/mybookkeeper/backend/app/core/storage.py:89-93`
+**Effort:** S
+**Problem:** `S3Error` is caught + logged warning, then the function returns silently. Used during error cleanup in listing photo uploads. A transient network failure looks identical to a permission-denied — no way to retry vs. give up. Orphaned S3 objects accumulate over time with no count.
+
+**Fix:** Re-raise `S3Error` after logging, OR return `tuple[bool, str | None]` where the second element is `S3Error.code`. Caller decides retry policy.
+
+### HIGH — Gmail email enumeration silently skips messages on fetch failure
+
+**Location:** `apps/mybookkeeper/backend/app/services/email/email_discovery_service.py:121-127`
+**Effort:** M
+**Problem:** Bare `except Exception:` inside the message loop. If a single envelope fetch fails (auth edge case, permission flicker), the message is silently skipped and never enters the attachment queue. No audit trail. Operator sees "Gmail discovery: 3 new emails" when it should have been 4.
+
+**Fix:** Either fail-loud (raise so the whole sync rolls back) or write an audit row to a `gmail_skipped_messages` table with the exception type. Per `rules/no-bandaid-solutions.md` the latter is the right shape — it preserves the partial sync but audits the gap.
+
+### HIGH — SMTP `send_or_raise` truncates exception chain to `f"{e}"`
+
+**Location:** `packages/shared-backend/platform_shared/services/email_service.py:154-162`
+**Effort:** XS
+**Problem:** `EmailSendError(f"SMTP send to {to} failed: {e}")` stringifies the exception, losing the structured smtplib reply code (e.g. `421 Service not available` vs `550 Mailbox unavailable`). Sentry sees a generic message; operator can't tell rate-limit from rejected-sender.
+
+**Fix:** Use `EmailSendError(...) from e` (already correct at line 160 — line 154 is the lossy site). One-line fix.
+
+### MEDIUM — Claude prompt loading swallows DB errors during user-rule fetch
+
+**Location:** `apps/mybookkeeper/backend/app/services/extraction/claude_service.py:82-88`
+**Effort:** S
+**Problem:** Bare `except Exception:` when loading user-specific extraction rules. On DB failure, falls back to base prompt silently. Extraction proceeds with incomplete user customization; user thinks their rules apply when they don't.
+
+**Fix:** Catch only `SQLAlchemyError`, log the actual exception type, surface to caller via `(prompt, error)` tuple so a user-facing error toast can fire.
+
+### MEDIUM — JSearch `response.json()` uncaught ValueError on malformed 200
+
+**Location:** `apps/myjobhunter/backend/app/services/discovery/sources/jsearch.py:217`
+**Effort:** XS
+**Problem:** Otherwise-good typed exception hierarchy (`JSearchAuthError`, `JSearchTransientError`, `JSearchInvalidResponseError`), but `response.json()` is unwrapped. A 200 with truncated body raises `ValueError` outside the hierarchy → retry decorator treats it as fatal.
+
+**Fix:** Wrap the `.json()` call in `try/except ValueError as e: raise JSearchInvalidResponseError(...) from e`.
+
+### MEDIUM — Tavily `response.json()` uncaught ValueError on malformed 200
+
+**Location:** `apps/myjobhunter/backend/app/services/integrations/tavily_service.py:136, 194`
+**Effort:** XS
+**Problem:** Identical shape to the JSearch one above. `response.json()` outside the typed-error hierarchy. Two call sites (search + extract).
+
+**Fix:** Wrap both `.json()` calls; raise `TavilyInvalidResponseError`.
+
+### MEDIUM — Gmail discovery lacks transient-vs-fatal categorization
+
+**Location:** `apps/mybookkeeper/backend/app/services/listings/channel_sync_service.py:73-90`
+**Effort:** S
+**Problem:** Catches bare `Exception`, records `last_import_error` on the row (good — audited), but does not differentiate `httpx.RequestError` (transient, retry next sync) from auth / config errors (permanent until user fixes). Operator sees a flat list of errors with no priority signal.
+
+**Fix:** Branch on `httpx.RequestError` vs everything else; record the category alongside the message.
 
 ---
 
