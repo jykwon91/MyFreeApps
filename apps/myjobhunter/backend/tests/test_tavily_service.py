@@ -17,8 +17,10 @@ import httpx
 import pytest
 
 from app.services.integrations.tavily_service import (
+    TavilyInvalidResponseError,
     TavilyNotConfiguredError,
     search_company,
+    search_company_overview,
 )
 
 
@@ -159,3 +161,56 @@ class TestTavilyHappyPath:
 
         assert len(results) == 1
         assert results[0]["url"] == "https://glassdoor.com/reviews/acme"
+
+
+# ---------------------------------------------------------------------------
+# Malformed-body handling — 2xx with non-JSON body raises typed error
+# ---------------------------------------------------------------------------
+
+
+class TestTavilyMalformedBody:
+    @pytest.mark.asyncio
+    async def test_search_company_raises_typed_error_on_non_json_body(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """search_company raises TavilyInvalidResponseError (not bare ValueError) on truncated body."""
+        from app.core.config import settings
+        monkeypatch.setattr(settings, "tavily_api_key", "test-key-abc")
+        monkeypatch.delenv("MYJOBHUNTER_ENV", raising=False)
+
+        mock_response = MagicMock()
+        mock_response.json.side_effect = ValueError("No JSON object could be decoded")
+        mock_response.content = b"not-json"
+        mock_response.raise_for_status = MagicMock()
+
+        mock_client = AsyncMock()
+        mock_client.post = AsyncMock(return_value=mock_response)
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+
+        with patch("app.services.integrations.tavily_service.httpx.AsyncClient", return_value=mock_client):
+            with pytest.raises(TavilyInvalidResponseError):
+                await search_company("Acme Corp")
+
+    @pytest.mark.asyncio
+    async def test_search_company_overview_raises_typed_error_on_non_json_body(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """search_company_overview raises TavilyInvalidResponseError (not bare ValueError) on truncated body."""
+        from app.core.config import settings
+        monkeypatch.setattr(settings, "tavily_api_key", "test-key-abc")
+        monkeypatch.delenv("MYJOBHUNTER_ENV", raising=False)
+
+        mock_response = MagicMock()
+        mock_response.json.side_effect = ValueError("No JSON object could be decoded")
+        mock_response.content = b"not-json"
+        mock_response.raise_for_status = MagicMock()
+
+        mock_client = AsyncMock()
+        mock_client.post = AsyncMock(return_value=mock_response)
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+
+        with patch("app.services.integrations.tavily_service.httpx.AsyncClient", return_value=mock_client):
+            with pytest.raises(TavilyInvalidResponseError):
+                await search_company_overview("Acme Corp")

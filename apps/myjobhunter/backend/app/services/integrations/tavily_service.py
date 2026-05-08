@@ -31,6 +31,10 @@ class TavilyNotConfiguredError(RuntimeError):
     """Raised when TAVILY_API_KEY is absent in a non-development environment."""
 
 
+class TavilyInvalidResponseError(RuntimeError):
+    """Raised when Tavily returns a 2xx with a non-JSON or unparseable body."""
+
+
 class TavilyResult(TypedDict):
     url: str
     title: str | None
@@ -133,7 +137,13 @@ async def search_company(company_name: str, domain: str | None = None) -> list[T
             },
         )
         response.raise_for_status()
-        data = response.json()
+        try:
+            data = response.json()
+        except ValueError as exc:
+            raise TavilyInvalidResponseError(
+                f"Tavily search returned 2xx but body could not be parsed as JSON"
+                f" (len={len(response.content)}): {exc}"
+            ) from exc
 
     results = data.get("results", [])
     return [
@@ -191,7 +201,13 @@ async def search_company_overview(
             },
         )
         response.raise_for_status()
-        data = response.json()
+        try:
+            data = response.json()
+        except ValueError as exc:
+            raise TavilyInvalidResponseError(
+                f"Tavily extract returned 2xx but body could not be parsed as JSON"
+                f" (len={len(response.content)}): {exc}"
+            ) from exc
 
     results = data.get("results", [])
     return [
