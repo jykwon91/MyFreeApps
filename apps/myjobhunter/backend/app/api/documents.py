@@ -21,7 +21,7 @@ from app.core.auth import current_active_user
 from app.core.storage import StorageNotConfiguredError
 from app.db.session import get_db
 from app.models.user.user import User
-from app.schemas.documents.document_create_request import DocumentCreateRequest
+from app.schemas.documents.document_text_create_request import DocumentTextCreateRequest
 from app.schemas.documents.document_response import DocumentResponse
 from app.schemas.documents.document_update_request import DocumentUpdateRequest
 from app.services.documents import document_service
@@ -41,7 +41,7 @@ _MAX_LIMIT = 500
 
 @router.post("", response_model=DocumentResponse, status_code=201)
 async def create_document(
-    payload: DocumentCreateRequest,
+    payload: DocumentTextCreateRequest,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> DocumentResponse:
@@ -50,9 +50,6 @@ async def create_document(
     ``body`` must be non-empty. To upload a file, use ``POST /documents/upload``.
     Returns 422 if ``application_id`` does not belong to the caller.
     """
-    if not payload.body:
-        raise HTTPException(status_code=422, detail="body is required for text-only documents")
-
     try:
         return await document_service.create_text_document(db, user.id, payload)
     except ApplicationNotOwnedError as exc:
