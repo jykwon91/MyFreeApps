@@ -168,6 +168,32 @@ async def complete_fetch(
     await db.flush()
 
 
+async def reap_stale_fetches(
+    db: AsyncSession,
+    *,
+    cutoff: datetime,
+) -> int:
+    """Bulk-update discovery_fetches stuck in 'running' before ``cutoff`` to 'error'.
+
+    Called at startup to clean up zombie rows left by a crashed backend.
+    Returns the number of rows updated so the caller can log it.
+    """
+    stmt = (
+        update(DiscoveryFetch)
+        .where(
+            DiscoveryFetch.status == "running",
+            DiscoveryFetch.started_at < cutoff,
+        )
+        .values(
+            status="error",
+            error_message="reaped: server restart or stuck >30min",
+        )
+    )
+    result = await db.execute(stmt)
+    await db.flush()
+    return result.rowcount or 0
+
+
 # ===========================================================================
 # discovered_jobs
 # ===========================================================================

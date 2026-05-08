@@ -22,7 +22,19 @@ from app.core.rate_limit import (
     require_turnstile,
 )
 from app.schemas.user import UserCreate, UserRead, UserUpdate
+from app.db.session import AsyncSessionLocal
+from app.services.discovery.discovery_fetch_reaper import reap_stale_running_fetches
 from app.services.storage.bucket_initializer import ensure_bucket
+
+
+async def _on_startup() -> None:
+    """Run once at backend boot — reap discovery_fetches stuck in 'running'."""
+    async with AsyncSessionLocal() as db:
+        reaped = await reap_stale_running_fetches(db)
+        if reaped > 0:
+            logger.info(
+                "discovery_fetch_reaper: reaped %d stale rows on startup", reaped
+            )
 
 
 def _resolve_git_commit() -> str:
@@ -60,6 +72,7 @@ lifespan = create_app_lifespan(
     settings=settings,
     init_sentry=init_sentry,
     bucket_init=ensure_bucket,
+    on_startup=_on_startup,
 )
 
 
@@ -193,7 +206,6 @@ app.include_router(discover.router)
 # mount alongside this under the same /admin prefix.
 from platform_shared.api.admin_router import build_admin_router
 from app.core.permissions import current_admin
-from app.db.session import AsyncSessionLocal
 from app.services.system.admin_user_service_factory import shared_admin_user_service
 from app.services.user.totp_service import verify_totp_code as _verify_totp_code
 
