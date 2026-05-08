@@ -1,10 +1,8 @@
 import { baseApi } from "@platform/ui";
 import type { Application } from "@/types/application";
-import type { DiscoveredJobListResponse } from "@/types/discovery/discovered-job";
-import type {
-  DiscoverySource,
-  DiscoverySourceCreate,
-} from "@/types/discovery/discovery-source";
+import type { DiscoveredJobListResponse } from "@/types/discovery/discovered-job-list-response";
+import type { DiscoverySource } from "@/types/discovery/discovery-source";
+import type { DiscoverySourceCreate } from "@/types/discovery/discovery-source-create-request";
 import type { DiscoveryFetchResult } from "@/types/discovery/discovery-fetch-result";
 
 export type DismissalReason =

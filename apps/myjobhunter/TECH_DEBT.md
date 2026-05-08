@@ -263,20 +263,13 @@ EXPLAIN ANALYZE before/after.
 
 ---
 
-### [Frontend / Types] One-type-per-file convention violated in 3 files
+### ~~[Frontend / Types] One-type-per-file convention violated in 3 files~~ RESOLVED
 
-**Severity:** Medium
-**Effort:** XS
-**Location:**
-- `apps/myjobhunter/frontend/src/types/discovery/discovered-job.ts` (`DiscoveredJob` + `DiscoveredJobListResponse`)
-- `apps/myjobhunter/frontend/src/types/discovery/discovery-source.ts` (`DiscoverySource` + `DiscoverySourceCreate`)
-- `apps/myjobhunter/frontend/src/types/profile/profile.ts` (`Profile` + `DiscoveryDefaults`)
-
-**Problem:** Project CLAUDE.md requires one interface per file in `src/types/`. Six interfaces co-located in three files.
-
-**Recommendation:** Split each file. Example: `types/discovery/discovered-job.ts` (entity), `types/discovery/discovered-job-list-response.ts`, `types/discovery/discovery-source-create-request.ts`, `types/profile/discovery-defaults.ts`.
-
-**Why Medium:** Pure convention drift, but operator has called this out before.
+**Severity:** ~~Medium~~ RESOLVED
+**Resolved:** 2026-05-08 — PR TBD
+**How:** Split 3 multi-interface files into 6 single-interface files.
+New files: `discovered-job-list-response.ts`, `discovery-source-create-request.ts`, `profile/discovery-defaults.ts`.
+Updated consumers: `store/discoverApi.ts`, `types/profile/profile.ts`, `types/profile/profile-update-request.ts`.
 
 ---
 

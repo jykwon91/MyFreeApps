@@ -23,9 +23,3 @@ export interface DiscoveredJob {
   saved_at: string | null;
   promoted_application_id: string | null;
 }
-
-export interface DiscoveredJobListResponse {
-  items: DiscoveredJob[];
-  total: number;
-  state: "inbox" | "saved" | "all";
-}

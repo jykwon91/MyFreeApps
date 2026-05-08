@@ -1,4 +1,4 @@
-import type { DiscoveryDefaults } from "./profile";
+import type { DiscoveryDefaults } from "./discovery-defaults";
 
 /**
  * Body for PATCH /profile. All fields optional.
