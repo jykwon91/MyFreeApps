@@ -17,8 +17,10 @@ import {
 } from "@/shared/store/signedLeasesApi";
 import { useGetApplicantByIdQuery } from "@/shared/store/applicantsApi";
 import SignedLeaseStatusBadge from "@/app/features/leases/SignedLeaseStatusBadge";
+import SignedLeaseStatusPicker from "@/app/features/leases/SignedLeaseStatusPicker";
 import LeaseAttachmentsSection from "@/app/features/leases/LeaseAttachmentsSection";
 import LeaseAddTemplateModal from "@/app/features/leases/LeaseAddTemplateModal";
+import type { SignedLeaseStatus } from "@/shared/types/lease/signed-lease-status";
 
 type Tab = "files" | "details" | "notes";
 
@@ -86,12 +88,12 @@ export default function LeaseDetail() {
     }
   }
 
-  async function handleStatusChange(next: string) {
+  async function handleStatusChange(next: SignedLeaseStatus) {
     if (!lease) return;
     try {
       await updateLease({
         leaseId: lease.id,
-        data: { status: next as typeof lease.status },
+        data: { status: next },
       }).unwrap();
       showSuccess("Status updated.");
     } catch {
@@ -138,7 +140,14 @@ export default function LeaseDetail() {
             title={`Lease ${lease.id.slice(0, 8)}`}
             subtitle={
               <span className="inline-flex items-center gap-2 flex-wrap">
-                <SignedLeaseStatusBadge status={lease.status} />
+                {canWrite ? (
+                  <SignedLeaseStatusPicker
+                    status={lease.status}
+                    onChange={(next) => void handleStatusChange(next)}
+                  />
+                ) : (
+                  <SignedLeaseStatusBadge status={lease.status} />
+                )}
                 <span data-testid="lease-kind-badge">
                   <Badge
                     label={lease.kind === "imported" ? "Imported" : "Generated"}
@@ -278,28 +287,6 @@ export default function LeaseDetail() {
                   </div>
                 ))}
               </div>
-              {canWrite ? (
-                <div className="pt-3 border-t">
-                  <label htmlFor="lease-status" className="block text-sm font-medium mb-1">
-                    Status
-                  </label>
-                  <select
-                    id="lease-status"
-                    value={lease.status}
-                    onChange={(e) => void handleStatusChange(e.target.value)}
-                    className="px-3 py-2 text-sm border rounded-md"
-                    data-testid="lease-status-select"
-                  >
-                    <option value="draft">Draft</option>
-                    <option value="generated">Generated</option>
-                    <option value="sent">Sent</option>
-                    <option value="signed">Signed</option>
-                    <option value="active">Active</option>
-                    <option value="ended">Ended</option>
-                    <option value="terminated">Terminated</option>
-                  </select>
-                </div>
-              ) : null}
             </section>
           ) : null}
 
