@@ -29,9 +29,9 @@ See sister entry in `apps/mybookkeeper/TECH_DEBT.md`. MJH side: `apps/myjobhunte
 
 ---
 
-#### HIGH — `StorageNotConfiguredError` defined identically across 5 files
+#### ~~HIGH — `StorageNotConfiguredError` defined identically across 5 files~~ RESOLVED
 
-See sister entry in MBK. MJH side: `core/storage.py`. Consolidate as a re-export from `platform_shared/core/storage.py`.
+**Resolved:** PR #496 (2026-05-08). MJH-side `core/storage.py` was already a re-export from `platform_shared.core.storage`; this PR cleaned up the one remaining MBK duplicate. See sister entry in MBK.
 
 ---
 
@@ -125,13 +125,14 @@ required. Tests updated to patch at the correct module boundaries.
 
 Wrappers around third-party APIs (Turnstile, MinIO, Gmail, Plaid, Anthropic, JSearch, Tavily, SMTP) that swallow structured errors. Eight findings; one Critical, three High, four Medium. The Critical Turnstile finding directly violates `rules/check-third-party-error-codes.md` — Cloudflare returns `error-codes: string[]` per its docs, and the wrapper throws all of it away.
 
-### CRITICAL — Turnstile verify returns bare bool, discards Cloudflare error-codes
+### ~~CRITICAL — Turnstile verify returns bare bool, discards Cloudflare error-codes~~ RESOLVED
 
-**Location:** `packages/shared-backend/platform_shared/services/turnstile_service.py:35-38`
-**Effort:** S
-**Why Critical:** Used by `require_turnstile` dependency on MBK + MJH registration / forgot-password / login flows. When Turnstile fails, the wrapper returns `False` and the caller raises a generic 400 — operator cannot distinguish `timeout-or-duplicate` (token reuse, retry user) from `invalid-input-secret` (config bug, alert ops). Same failure shape as the MyFreeApps 2026-05-05 incident the rule was written to prevent.
+**Resolved:** PR #498 (2026-05-08). `verify_turnstile_token` now returns `tuple[bool, list[str]]` with the Cloudflare `error-codes` array. The shared `require_turnstile` dependency now routes on documented codes:
+- `invalid-input-secret` / `missing-input-secret` → 503 `captcha_service_misconfigured` (config bug, alerts ops)
+- `timeout-or-duplicate` → 400 `captcha_expired_please_retry` (user-recoverable)
+- everything else → 400 `captcha_verification_failed`
 
-**Fix:** Return `tuple[bool, list[str]]` where the second element is the Cloudflare `error-codes` array. Update `require_turnstile` to route on specific codes per the rule's example block.
+Failures log structured `error-codes` at WARNING so Sentry can group by reason. 35 tests pass across shared + MBK + MJH (8/9/10/8 per file). The `public_inquiries.py` site that intentionally feeds the bool to a spam scorer was updated to unpack with `success, _ = ...` — that file's architecture deliberately keeps bots unaware they were caught.
 
 ### HIGH — MinIO `delete_file` swallows S3Error, no audit trail for orphaned objects
 

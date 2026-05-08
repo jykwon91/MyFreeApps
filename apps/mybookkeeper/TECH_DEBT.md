@@ -11,12 +11,9 @@ Output of two parallel scans (backend + frontend) for code that should live in `
 
 ### Backend reusability
 
-#### CRITICAL — Test fixtures duplicated between MBK + MJH
+#### ~~CRITICAL — Test fixtures duplicated between MBK + MJH~~ RESOLVED
 
-**Effort:** M
-**Location:** `apps/mybookkeeper/backend/tests/conftest.py:121-135` (`test_user`, `test_org`) and `apps/myjobhunter/backend/tests/conftest.py:200-246` (`user_factory`).
-**Problem:** Both apps implement near-identical user/org factory fixtures with email confirmation + password hashing setup. MJH's version is more sophisticated (hard-delete cleanup, monkeypatch fast hasher); MBK's is older / simpler. Drift will accumulate as new auth fields land.
-**Recommendation:** Extract canonical fixtures to `packages/shared-backend/platform_shared/testing/factories.py` + `platform_shared/testing/conftest.py`. Provide an integration guide so per-app conftests register the shared factories with one import.
+**Resolved:** PR #491 (2026-05-08). Canonical user/org factories extracted to `packages/shared-backend/platform_shared/testing/factories.py`. Per-app conftests register them with one import.
 
 ---
 
@@ -26,25 +23,20 @@ Output of two parallel scans (backend + frontend) for code that should live in `
 
 ---
 
-#### HIGH — `StorageNotConfiguredError` defined identically across 5 files
+#### ~~HIGH — `StorageNotConfiguredError` defined identically across 5 files~~ RESOLVED
 
-**Effort:** XS
-**Location:** MBK: `core/storage.py`, `services/leases/lease_template_service.py`, `services/listings/listing_photo_service.py`, `services/screening/screening_service.py` (4 places). MJH: `core/storage.py`.
-**Problem:** Same exception class declared in 5 files. Already partially in `platform_shared/core/storage.py`.
-**Recommendation:** Consolidate as a re-export from `platform_shared/core/storage.py` and delete the local copies. One-line import change per call site.
+**Resolved:** PR #496 (2026-05-08). Audit overstated the count — only 1 active duplicate remained (in `app/services/leases/_lease_helpers.py`, where it had migrated during the PR #487 signed_lease split). The other 4 sites the audit referenced had already been converted to re-exports in earlier work. The remaining duplicate is now a re-export from `platform_shared.core.storage`. All 5 import paths verified to resolve to the same class object via `is` identity. 133 targeted tests passed.
 
 ---
 
-#### HIGH — MBK has local copies of code already in `platform_shared`
+#### HIGH — MBK has local copies of code already in `platform_shared` (partially resolved)
 
-**Effort:** S
-**Location:**
-- `app/services/user/totp_service.py` — duplicate of `platform_shared/services/totp_service.py` (MJH already imports from shared)
-- `app/services/system/auth_event_service.py` — mirrors `platform_shared/services/auth_event_service.py`
-- `app/services/system/admin_user_service_factory.py` — stub re-export wrapping `platform_shared/services/admin_user_service.py`
+**Partially resolved:** PR #497 (2026-05-08).
+- ✅ `app/services/system/auth_event_service.py` — was a single-line passthrough stub. Deleted; 5 consumers now import from `platform_shared.services.auth_event_service` directly.
+- ✅ `app/services/system/admin_user_service_factory.py` — was a 3-line DI wiring singleton. Deleted; the singleton instantiation moved into `app/services/system/admin_service.py` (the primary consumer); 3 consumers updated.
+- ❌ `app/services/user/totp_service.py` — **NOT a duplicate.** The audit was wrong. The file owns the DB-coupled orchestration tier (`_TOTP_ISSUER`, `_encrypt`/`_decrypt` bound to `settings.encryption_key`, plus 5 async DB coordinators using `unit_of_work` + `user_repo`). The shared module's own docstring explicitly states the DB-coupled half stays in MBK. Consolidating this would require promoting the DB coordinators into a shared pattern (per-app issuer injection + per-app key binding), a separate design decision. Keeping the file as-is is correct.
 
-**Problem:** Parity drift, not extraction work. Each local copy risks divergence on the next bug fix.
-**Recommendation:** Delete the local files; update imports across `app/api/totp.py` and any other consumers to import directly from `platform_shared`. Verify with `grep -r "app.services.user.totp_service" apps/mybookkeeper`.
+158 targeted tests passed (100 in totp/auth_event/admin_user, 58 in auth smoke). No mocks needed updating.
 
 ---
 
@@ -114,35 +106,27 @@ Output of two parallel scans (backend + frontend) for code that should live in `
 
 ### Long files (>500 LOC) — production code
 
-#### HIGH — `app/services/leases/signed_lease_service.py` (1,647 LOC)
+#### ~~HIGH — `app/services/leases/signed_lease_service.py` (1,647 LOC)~~ RESOLVED
 
-**Effort:** L
-**Problem:** Whole lease lifecycle in one file: apply → generate PDF → email → sign → store → lookup → renew. Hardest file to navigate in the repo.
-**Recommendation:** Split into `lease_apply_service.py`, `lease_pdf_service.py`, `lease_email_service.py`, `lease_lifecycle_service.py`. Highest payoff in the audit.
+**Resolved:** PR #487 (pre-this-session). File now 109 LOC after split into `lease_apply_service.py`, `lease_pdf_service.py`, `lease_email_service.py`, `lease_lifecycle_service.py`, `lease_attachment_service.py`, `lease_import_service.py`, `lease_prefill_service.py`, etc.
 
 ---
 
-#### HIGH — `app/api/test_utils.py` (1,069 LOC)
+#### ~~HIGH — `app/api/test_utils.py` (1,069 LOC)~~ RESOLVED
 
-**Effort:** M
-**Problem:** Test-helper endpoints mounted in production routing. Gated behind `MYBOOKKEEPER_ENABLE_TEST_HELPERS=1` env flag, but they're discoverable in `app/api/` alongside real routes.
-**Recommendation:** Move to `app/test_helpers/` (separate package). Mount conditionally in `main.py`. Reduces blast radius if the env flag ever ships true.
+**Resolved:** PR #485 (pre-this-session). Moved to `app/test_helpers/` package; mounted conditionally in `main.py` behind the `MYBOOKKEEPER_ENABLE_TEST_HELPERS` env flag.
 
 ---
 
-#### MEDIUM — `app/repositories/transactions/transaction_repo.py` (943 LOC)
+#### ~~MEDIUM — `app/repositories/transactions/transaction_repo.py` (943 LOC)~~ RESOLVED
 
-**Effort:** M
-**Problem:** List filters + bulk ops + reconciliation queries all in one repo file.
-**Recommendation:** Split into `transaction_list_repo.py` (filters/queries), `transaction_bulk_repo.py` (bulk ops), `transaction_reconciliation_repo.py`.
+**Resolved:** PR #488 (pre-this-session). File now 179 LOC after split into `transaction_list_repo.py`, `transaction_bulk_repo.py`, `transaction_reconciliation_repo.py`.
 
 ---
 
-#### MEDIUM — `frontend/src/app/pages/PublicInquiryForm.tsx` (934 LOC)
+#### ~~MEDIUM — `frontend/src/app/pages/PublicInquiryForm.tsx` (934 LOC)~~ RESOLVED
 
-**Effort:** M
-**Problem:** Form + listing detail + auto-fill + submit flow all inline in the page.
-**Recommendation:** Extract step components (`PublicInquiryListingPanel`, `PublicInquiryFormStep`, `PublicInquirySuccessStep`) and a state-machine hook.
+**Resolved:** PR #486 (pre-this-session). File now 104 LOC after extraction of per-step components.
 
 ---
 
