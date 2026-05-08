@@ -46,8 +46,15 @@ export default function LeaseDetail() {
   );
 
   const tenantHasEmail = Boolean(applicant?.contact_email);
-  const showEmailButton =
-    canWrite && lease?.kind === "generated" && lease?.attachments.length > 0;
+  // Show "Email to tenant" whenever the lease has a renderable attachment
+  // (rendered_original from a template flow, or signed_lease from import).
+  // Imported leases with addenda generated post-#415 also qualify — the
+  // email service already includes ``rendered_original`` in
+  // ``LEASE_EMAIL_ATTACHMENT_KINDS`` regardless of lease.kind.
+  const hasEmailableAttachment = (lease?.attachments ?? []).some(
+    (a) => a.kind === "rendered_original" || a.kind === "signed_lease",
+  );
+  const showEmailButton = canWrite && hasEmailableAttachment;
 
   async function handleGenerate() {
     if (!lease) return;
