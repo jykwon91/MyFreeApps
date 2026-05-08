@@ -149,13 +149,11 @@ Failures log structured `error-codes` at WARNING so Sentry can group by reason. 
 **Effort:** XS
 **Resolved:** `from e` was already present; added `test_smtp_reply_code_survives_in_cause` asserting the smtplib reply code (smtp_code, smtp_error) survives on `__cause__`.
 
-### MEDIUM — Claude prompt loading swallows DB errors during user-rule fetch
+### ✅ MEDIUM — Claude prompt loading swallows DB errors during user-rule fetch
 
 **Location:** `apps/mybookkeeper/backend/app/services/extraction/claude_service.py:82-88`
 **Effort:** S
-**Problem:** Bare `except Exception:` when loading user-specific extraction rules. On DB failure, falls back to base prompt silently. Extraction proceeds with incomplete user customization; user thinks their rules apply when they don't.
-
-**Fix:** Catch only `SQLAlchemyError`, log the actual exception type, surface to caller via `(prompt, error)` tuple so a user-facing error toast can fire.
+**Resolved:** Fixed in PR #TBD — narrowed bare `except Exception:` to `except SQLAlchemyError`, added WARNING log with exception type + message, changed `get_extraction_prompt` return type to `tuple[str, str | None]` so callers receive an error tag (`"user_rules_db_error"`) when the DB call fails. Non-SQLAlchemy exceptions now propagate. Covered by `tests/test_claude_service_prompt.py` (6 tests).
 
 ### MEDIUM — JSearch `response.json()` uncaught ValueError on malformed 200
 

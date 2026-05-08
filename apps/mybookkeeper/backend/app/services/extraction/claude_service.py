@@ -8,6 +8,7 @@ from dataclasses import dataclass
 
 import anthropic
 from anthropic import Timeout
+from sqlalchemy.exc import SQLAlchemyError
 from app.core.config import settings
 from app.db.session import AsyncSessionLocal
 from app.repositories import extraction_prompt_repo
@@ -59,12 +60,15 @@ async def get_extraction_prompt(
     user_id: uuid.UUID | None = None,
     filename: str | None = None,
     property_classification: str | None = None,
-) -> str:
+) -> tuple[str, str | None]:
     """Assemble extraction prompt: base + document-type addendum + property context + user-specific rules.
 
     DEFAULT_PROMPT is always the foundation. Document-type addendums provide
     focused instructions for specific form types. Property context narrows
     tax_relevant decisions. DB-stored rules are additive.
+
+    Returns (prompt, error_tag) where error_tag is None on success or
+    "user_rules_db_error" when the DB call to load user rules fails.
     """
     prompt = DEFAULT_PROMPT
 
@@ -80,14 +84,18 @@ async def get_extraction_prompt(
 
     if user_id:
         try:
-            async with AsyncSessionLocal() as db:  # Read-only — matches codebase pattern for service reads
+            async with AsyncSessionLocal() as db:
                 user_rules = await extraction_prompt_repo.get_active_for_user(db, user_id)
                 if user_rules:
                     prompt = f"{prompt}\n\n# User-specific rules\n{user_rules.prompt_text}"
-        except Exception:
-            logger.warning("Failed to load user prompt rules, using base only", exc_info=True)
+        except SQLAlchemyError as e:
+            logger.warning(
+                "claude prompt: failed to load user rules type=%s msg=%s — falling back to base prompt",
+                type(e).__name__, str(e),
+            )
+            return prompt, "user_rules_db_error"
 
-    return prompt
+    return prompt, None
 
 
 async def _create_with_backoff(**kwargs) -> anthropic.types.Message:
@@ -130,7 +138,9 @@ async def _create_with_backoff(**kwargs) -> anthropic.types.Message:
 
 
 async def extract_from_text(text: str, user_id: uuid.UUID | None = None, filename: str | None = None, property_classification: str | None = None) -> dict:
-    prompt = await get_extraction_prompt(user_id, filename=filename, property_classification=property_classification)
+    prompt, err = await get_extraction_prompt(user_id, filename=filename, property_classification=property_classification)
+    if err:
+        logger.warning("extract_from_text: proceeding without user rules (error=%s user_id=%s)", err, user_id)
     message = await _create_with_backoff(
         model="claude-sonnet-4-6",
         max_tokens=16384,
@@ -141,7 +151,9 @@ async def extract_from_text(text: str, user_id: uuid.UUID | None = None, filenam
 
 
 async def extract_from_image(image_bytes: bytes, media_type: str, user_id: uuid.UUID | None = None, filename: str | None = None, property_classification: str | None = None) -> dict:
-    prompt = await get_extraction_prompt(user_id, filename=filename, property_classification=property_classification)
+    prompt, err = await get_extraction_prompt(user_id, filename=filename, property_classification=property_classification)
+    if err:
+        logger.warning("extract_from_image: proceeding without user rules (error=%s user_id=%s)", err, user_id)
     file_b64 = base64.standard_b64encode(image_bytes).decode()
 
     is_pdf = media_type == "application/pdf"
