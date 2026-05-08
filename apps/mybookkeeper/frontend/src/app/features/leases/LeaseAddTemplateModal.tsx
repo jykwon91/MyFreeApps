@@ -154,11 +154,11 @@ export default function LeaseAddTemplateModal({
           data-testid="lease-add-template-modal"
         >
           <Dialog.Title className="text-base font-semibold">
-            {step === "pick" ? "Add template" : "Fill in details"}
+            {step === "pick" ? "Add document" : "Fill in details"}
           </Dialog.Title>
           <Dialog.Description className="text-sm text-muted-foreground -mt-2">
             {step === "pick"
-              ? "Select one or more templates to generate and append to this lease."
+              ? "Pick a template to generate a document — extension, addendum, disclosure, etc."
               : "I've pre-filled what I could. Edit anything that's wrong, and fill in the rest."}
           </Dialog.Description>
 

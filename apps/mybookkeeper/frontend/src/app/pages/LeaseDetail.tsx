@@ -180,16 +180,16 @@ export default function LeaseDetail() {
             }
           />
 
-          {/* Templates list — generated leases use templates as the source of
-              truth; imported leases can attach addendum templates that render
-              alongside the original PDF. */}
+          {/* Documents generated from templates — extensions, addenda, disclosures,
+              etc. Section is shown for both generated and imported leases; the
+              underlying flow is the same. */}
           <section
             className="border rounded-lg p-4"
             data-testid="lease-templates-card"
           >
             <div className="flex items-center justify-between gap-2 mb-2">
               <p className="text-xs text-muted-foreground uppercase font-medium tracking-wide">
-                {lease.templates.length === 1 ? "Template" : "Templates"}
+                {lease.templates.length === 1 ? "Document" : "Documents"}
               </p>
               {canWrite ? (
                 <Button
@@ -200,7 +200,7 @@ export default function LeaseDetail() {
                   className="h-7 px-2 text-xs"
                 >
                   <Plus size={12} className="mr-1" />
-                  {lease.kind === "imported" ? "Add addendum" : "Add template"}
+                  Add document
                 </Button>
               ) : null}
             </div>
@@ -221,9 +221,7 @@ export default function LeaseDetail() {
               </ul>
             ) : (
               <p className="text-xs text-muted-foreground">
-                {lease.kind === "imported"
-                  ? "No addenda yet — add one to generate a document like a lease extension."
-                  : "No templates yet — add one to generate documents."}
+                No documents yet — add one to generate things like a lease extension or pet addendum.
               </p>
             )}
           </section>
