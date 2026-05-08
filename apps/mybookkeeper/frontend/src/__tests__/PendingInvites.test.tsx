@@ -5,6 +5,10 @@ import type { OrgInvite } from "@/shared/types/organization/invite";
 
 vi.mock("@/shared/store/membersApi", () => ({
   useListInvitesQuery: vi.fn(),
+  useCancelInviteMutation: vi.fn(() => [
+    vi.fn(() => ({ unwrap: () => Promise.resolve(undefined) })),
+    { isLoading: false },
+  ]),
 }));
 
 vi.mock("@/shared/hooks/useCurrentOrg", () => ({
@@ -41,7 +45,7 @@ describe("PendingInvites", () => {
     render(<PendingInvites />);
 
     expect(screen.getByText("test@example.com")).toBeInTheDocument();
-    expect(screen.getByText("pending")).toBeInTheDocument();
+    expect(screen.getByText("Pending")).toBeInTheDocument();
   });
 
   it("shows empty message when no pending invites", () => {
