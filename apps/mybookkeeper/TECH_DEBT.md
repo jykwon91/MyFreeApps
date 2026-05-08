@@ -1,7 +1,7 @@
 # Tech Debt
 
 > Last scanned: 2026-05-08
-> Issues: 0 critical, 3 high, 4 medium (1 deferred + 3 active), 0 low
+> Issues: 0 critical, 2 high, 4 medium (1 deferred + 3 active), 0 low
 >
 > **Monorepo refactor audit (2026-05-08, post-resume-refinement work):** ~12 additional findings across three axes — backend reusability, frontend reusability, and long-files. Tracked under "## Monorepo refactor audit (2026-05-08)" below. These are extraction / split candidates, not regression bugs. Sister findings live in `apps/myjobhunter/TECH_DEBT.md`.
 
@@ -174,11 +174,8 @@ Output of two parallel scans (backend + frontend) for code that should live in `
 
 ---
 
-### [E2E] Lease import E2E test skips actual file upload (requires MinIO)
-**Effort:** S
-**Location:** `apps/mybookkeeper/frontend/e2e/lease-import.spec.ts` — "import dialog — submit triggers API call" test
-**Problem:** The lease import endpoint (`POST /signed-leases/import`) requires MinIO object storage to complete successfully. In local dev (no MinIO), the endpoint returns 503. The primary E2E test uses a seed API endpoint (`/test/seed-signed-lease`) to bypass storage, but the dialog submission test cannot verify the full happy path (navigate to detail page after upload). The test accepts either a navigation or an error toast as a valid outcome.
-**Recommendation:** Stand up a local MinIO container for E2E tests (via Docker Compose or MinIO standalone binary). Set `MINIO_ENDPOINT`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY` in the CI env and test .env. Once MinIO is available, rewrite the dialog-submit test to verify the full navigation path. Alternatively, add a `TEST_STORAGE_MOCK=true` env flag to the backend that returns a fake presigned URL without actual upload.
+### ~~[E2E] Lease import E2E test skips actual file upload (requires MinIO)~~ RESOLVED
+**Resolved:** PR fix/mbk-lease-import-e2e-tighten (2026-05-08) — local-first approach, no CI E2E job. The test now probes `/admin/storage-health` at the start of the third test and `test.skip()`s cleanly with a remediation message ("start MinIO via `docker compose -f infra/docker-compose.yml up -d minio`") when storage is unreachable. When MinIO IS up, the test asserts the full happy path strictly: navigation to `/leases/{uuid}` + the imported-kind badge on the detail page. No more "either nav or error toast" permissiveness. Documented in `apps/mybookkeeper/frontend/e2e/README.md` (new file) — full E2E suite is local-only by design (CI cost vs solo-dev value didn't justify a docker-stack CI job; the layout-config CI job still catches Caddy / iframe / layout regressions).
 
 ---
 
