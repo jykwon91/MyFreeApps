@@ -81,55 +81,62 @@ def test_all_known_chip_keys_have_non_empty_expansions() -> None:
 # ===========================================================================
 
 
+def _cfg(**kwargs) -> "JSearchSourceConfig":
+    """Tiny helper so test bodies stay focused on inputs."""
+    from app.schemas.discovery.jsearch_source_config import JSearchSourceConfig
+    return JSearchSourceConfig(**kwargs)
+
+
 def test_build_query_single_role_no_skills() -> None:
-    assert _build_jsearch_query({"roles": ["Backend Engineer"]}) == '"Backend Engineer"'
+    assert _build_jsearch_query(_cfg(roles=["Backend Engineer"])) == '"Backend Engineer"'
 
 
 def test_build_query_single_role_with_skills() -> None:
-    result = _build_jsearch_query({
-        "roles": ["Senior Backend Engineer"],
-        "skills": ["Python", "FastAPI"],
-    })
+    result = _build_jsearch_query(_cfg(
+        roles=["Senior Backend Engineer"],
+        skills=["Python", "FastAPI"],
+    ))
     assert result == '"Senior Backend Engineer" (Python OR FastAPI)'
 
 
 def test_build_query_multiple_roles() -> None:
-    result = _build_jsearch_query({
-        "roles": ["Senior Backend Engineer", "Staff Software Engineer"],
-    })
+    result = _build_jsearch_query(_cfg(
+        roles=["Senior Backend Engineer", "Staff Software Engineer"],
+    ))
     assert result == '("Senior Backend Engineer" OR "Staff Software Engineer")'
 
 
 def test_build_query_legacy_raw_query_passes_through() -> None:
-    assert _build_jsearch_query({"query": "anything goes"}) == "anything goes"
+    assert _build_jsearch_query(_cfg(query="anything goes")) == "anything goes"
 
 
 def test_build_query_legacy_takes_precedence_over_structured() -> None:
     """If both ``query`` and ``roles`` are set, ``query`` wins. Legacy
     saved searches keep their behavior; new structured ones must not
     set ``query``."""
-    result = _build_jsearch_query({
-        "query": "raw boolean",
-        "roles": ["ignored"],
-    })
+    result = _build_jsearch_query(_cfg(query="raw boolean", roles=["ignored"]))
     assert result == "raw boolean"
 
 
 def test_build_query_empty_when_nothing_set() -> None:
-    assert _build_jsearch_query({}) == ""
+    assert _build_jsearch_query(_cfg()) == ""
 
 
 def test_build_query_skips_blank_roles_and_skills() -> None:
-    result = _build_jsearch_query({
-        "roles": ["", "  ", "Real Role"],
-        "skills": [None, "", "Python"],  # type: ignore[list-item]
-    })
+    # JSearchSourceConfig's strict typing rejects None entries in lists,
+    # which is the whole point of this PR — typos / wrong types fail
+    # at validation time, not silently pass through. So this test now
+    # only exercises the blank-string handling that survives validation.
+    result = _build_jsearch_query(_cfg(
+        roles=["", "  ", "Real Role"],
+        skills=["", "Python"],
+    ))
     assert result == '"Real Role" Python'
 
 
 def test_build_query_single_word_role_not_quoted() -> None:
     """One-word role titles don't need phrase quoting."""
-    result = _build_jsearch_query({"roles": ["Engineer"]})
+    result = _build_jsearch_query(_cfg(roles=["Engineer"]))
     assert result == "Engineer"
 
 

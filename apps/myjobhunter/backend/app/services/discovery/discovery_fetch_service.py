@@ -29,6 +29,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.discovery.discovery_source import DiscoverySource
 from app.repositories.discovery import discovery_repository
+from app.schemas.discovery.jsearch_source_config import JSearchSourceConfig
 from app.services.discovery.industry_denylists import expand_excluded_keywords
 from app.services.discovery.sources import jsearch
 
@@ -65,7 +66,14 @@ class DiscoveryUnsupportedSourceError(DiscoveryFetchError):
 # and returning a list[RawPosting] dict. Add new entries here as adapters
 # come online.
 async def _run_jsearch(config: dict[str, Any]) -> list[dict]:
-    base_query = _build_jsearch_query(config)
+    # Validate the stored config through the typed schema. ``parse_or_default``
+    # logs + returns defaults on validation failure rather than crashing
+    # the worker — but at write time, ``DiscoverySourceCreate`` rejects
+    # typos with a 422, so a row reaching this code with a malformed
+    # config is either pre-validation (legacy) or a direct DB edit.
+    typed = JSearchSourceConfig.parse_or_default(config)
+
+    base_query = _build_jsearch_query(typed)
     if not base_query:
         raise DiscoveryFetchError(
             "JSearch source missing required config.query (or config.roles)",
@@ -75,10 +83,10 @@ async def _run_jsearch(config: dict[str, Any]) -> list[dict]:
     # (e.g. "developer in Chicago"). If the operator filled the dedicated
     # location field, fold it into the query so the source-side filter
     # narrows results instead of returning the world and filtering later.
-    location = (config.get("location") or "").strip()
-    if location:
+    if typed.location:
+        location = typed.location.strip()
         # Don't double-append "in <X>" if the operator already wrote it.
-        if " in " not in base_query.lower():
+        if location and " in " not in base_query.lower():
             query = f"{base_query} in {location}"
         else:
             query = base_query
@@ -87,43 +95,40 @@ async def _run_jsearch(config: dict[str, Any]) -> list[dict]:
 
     return await jsearch.search(
         query=query,
-        page=int(config.get("page", 1)),
-        num_pages=int(config.get("num_pages", 1)),
-        date_posted=config.get("date_posted", "all"),
-        country=config.get("country", "us"),
-        remote_jobs_only=bool(config.get("remote_jobs_only", False)),
-        employment_types=config.get("employment_types") or config.get("employment_type"),
-        job_requirements=config.get("job_requirements") or config.get("experience"),
+        page=1,
+        num_pages=1,
+        date_posted=typed.date_posted,
+        country=typed.country,
+        remote_jobs_only=typed.remote_jobs_only,
+        employment_types=typed.employment_type or None,
+        job_requirements=typed.experience or None,
     )
 
 
-def _build_jsearch_query(config: dict[str, Any]) -> str:
-    """Assemble the JSearch query string from structured config.
+def _build_jsearch_query(config: JSearchSourceConfig) -> str:
+    """Assemble the JSearch query string from a typed config.
 
-    Two shapes accepted:
+    Two shapes accepted (both fields are on the typed config):
 
-    1. **Legacy** — caller pre-built the Boolean string in
-       ``config.query``. We use it verbatim.
-    2. **Structured** — caller supplied ``roles`` (list of titles)
-       and/or ``skills`` (list of skill names). We assemble:
+    1. **Legacy** — caller pre-built the Boolean string in ``config.query``.
+       We use it verbatim. Sources created before the structured-input
+       redesign land here.
+    2. **Structured** — caller supplied ``config.roles`` (list of titles)
+       and/or ``config.skills`` (list of skill names). We assemble:
 
            ("Role 1" OR "Role 2") (Skill1 OR Skill2)
 
        Quoted phrases for multi-word roles, parens around the OR
-       group so JSearch treats it as a single clause. Skills are
-       not quoted (single tokens) and are also OR'd.
+       group so JSearch treats it as a single clause.
 
-    Empty / missing → returns an empty string and the caller raises.
+    Empty / missing → returns "" and the caller raises.
     """
-    raw_query = (config.get("query") or "").strip()
+    raw_query = (config.query or "").strip()
     if raw_query:
         return raw_query
 
-    roles_raw = config.get("roles") or []
-    skills_raw = config.get("skills") or []
-
-    role_parts = [r.strip() for r in roles_raw if isinstance(r, str) and r.strip()]
-    skill_parts = [s.strip() for s in skills_raw if isinstance(s, str) and s.strip()]
+    role_parts = [r.strip() for r in config.roles if r.strip()]
+    skill_parts = [s.strip() for s in config.skills if s.strip()]
 
     parts: list[str] = []
 

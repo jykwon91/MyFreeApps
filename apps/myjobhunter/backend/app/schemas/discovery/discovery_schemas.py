@@ -5,7 +5,9 @@ import uuid
 from datetime import datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+from app.schemas.discovery.jsearch_source_config import JSearchSourceConfig
 
 
 _VALID_SOURCES = (
@@ -21,7 +23,15 @@ _VALID_SOURCES = (
 
 
 class DiscoverySourceCreate(BaseModel):
-    """Body for ``POST /discover/sources``."""
+    """Body for ``POST /discover/sources``.
+
+    Per-source config validation is dispatched on ``source``: jsearch
+    sources are validated against ``JSearchSourceConfig`` (strict-typed,
+    rejects unknown keys with a 422). Other source types still accept
+    a loose dict for now — they have no adapter shipped yet, so there's
+    no schema to enforce. When their adapters land, add a typed config
+    class here and extend the dispatcher.
+    """
 
     source: Literal[_VALID_SOURCES] = Field(  # type: ignore[valid-type]
         ..., description="Adapter to run.",
@@ -29,15 +39,26 @@ class DiscoverySourceCreate(BaseModel):
     config: dict[str, Any] = Field(
         default_factory=dict,
         description=(
-            "Per-source config. JSearch needs ``query``; Greenhouse/"
-            "Lever/Ashby need ``board`` (company slug); RemoteOK has no "
-            "required keys."
+            "Per-source config. ``jsearch`` is validated against "
+            "``JSearchSourceConfig`` — typos in field names raise 422. "
+            "Other source kinds currently accept any dict."
         ),
     )
     fetch_interval_minutes: int = Field(
         default=1440, ge=15, le=10080,
         description="Minimum minutes between automatic fetches (cap = 7 days).",
     )
+
+    @model_validator(mode="after")
+    def _validate_config_per_source(self) -> "DiscoverySourceCreate":
+        """Reject typo'd or out-of-enum config values for jsearch
+        sources at request time — operator gets a 422 with the field
+        name instead of a silently-no-op saved search."""
+        if self.source == "jsearch":
+            # ``model_validate`` raises ValidationError, FastAPI
+            # converts that to a 422 response automatically.
+            JSearchSourceConfig.model_validate(self.config)
+        return self
 
 
 class DiscoverySourceResponse(BaseModel):
