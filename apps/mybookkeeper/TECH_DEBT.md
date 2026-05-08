@@ -1,7 +1,7 @@
 # Tech Debt
 
 > Last scanned: 2026-05-08
-> Issues: 0 critical, 3 high, 5 medium (1 deferred + 4 active), 0 low
+> Issues: 0 critical, 3 high, 4 medium (1 deferred + 3 active), 0 low
 >
 > **Monorepo refactor audit (2026-05-08, post-resume-refinement work):** ~12 additional findings across three axes — backend reusability, frontend reusability, and long-files. Tracked under "## Monorepo refactor audit (2026-05-08)" below. These are extraction / split candidates, not regression bugs. Sister findings live in `apps/myjobhunter/TECH_DEBT.md`.
 
@@ -241,11 +241,8 @@ Output of two parallel scans (backend + frontend) for code that should live in `
 
 ---
 
-### [Frontend] Stacked ternary chains in JSX rendering (per-file audit needed)
-**Effort:** M
-**Location:** Unknown — no clean grep heuristic. Audit per-domain (`features/transactions/`, `features/applicants/`, `features/leases/`, `features/integrations/`).
-**Problem:** Per the new global config rule (jkwon-claude-config #92), nested ternaries in JSX are unreadable past 2 levels. The canonical fix is a `useXxxMode()` hook returning a discriminated union plus a `switch` in the body component dispatching to one subcomponent per state. Reference impl: `apps/mybookkeeper/frontend/src/app/features/documents/DocumentViewer.tsx` + `useDocumentViewMode.ts` + `DocumentViewerBody.tsx` (PR #238).
-**Recommendation:** Tackle per-domain, not as a sweep — each refactor needs human judgment about the right discriminated-union shape. Start with the highest-traffic domains (transactions, integrations). Use the DocumentViewer trio as the worked example.
+### ~~[Frontend] Stacked ternary chains in JSX rendering (per-file audit needed)~~ RESOLVED
+**Resolved:** Audit (2026-05-08, Explore agent) found ONE genuine 3+-level ternary chain: `app/pages/Integrations.tsx` lines 216-282 (Gmail action button group). Fixed in PR refactor/mbk-gmail-action-mode (2026-05-08) by extracting a `GmailHeaderActions` sub-component using early returns to dispatch on `(no gmail) → Connect / (needs_reauth) → Reconnect / (active) → Sync+Disconnect group`. The confirm-sync and confirm-disconnect sub-states moved into the new component as local state. Other candidate files (LinkedLeaseDocuments, AttributionReviewPanel, CalendarEventBar, Inquiry*, ReconciliationSourcesBody, ReceivedDocumentsGrouped, FormCompletenessCard, TransactionForm) were checked — most are 2-level (acceptable per rule), one (ReconciliationSourcesBody) already uses the discriminated-union pattern.
 
 ---
 
