@@ -163,13 +163,9 @@ Failures log structured `error-codes` at WARNING so Sentry can group by reason. 
 
 **Resolved:** PR fix/jsearch-tavily-json-error (2026-05-08). Added `TavilyInvalidResponseError` class and wrapped both `response.json()` call sites in `search_company` and `search_company_overview` with `try/except ValueError as e: raise TavilyInvalidResponseError(...) from e`. Tests: `TestTavilyMalformedBody` in `test_tavily_service.py` (two cases, one per call site).
 
-### MEDIUM — Gmail discovery lacks transient-vs-fatal categorization
+### ~~MEDIUM — Gmail discovery lacks transient-vs-fatal categorization~~ RESOLVED
 
-**Location:** `apps/mybookkeeper/backend/app/services/listings/channel_sync_service.py:73-90`
-**Effort:** S
-**Problem:** Catches bare `Exception`, records `last_import_error` on the row (good — audited), but does not differentiate `httpx.RequestError` (transient, retry next sync) from auth / config errors (permanent until user fixes). Operator sees a flat list of errors with no priority signal.
-
-**Fix:** Branch on `httpx.RequestError` vs everything else; record the category alongside the message.
+**Resolved:** PR #508 (2026-05-08). Branched `poll_one` catch block into `httpx.HTTPStatusError` (401/403 → `auth`, other 4xx → `config`, 5xx → `transient`), `httpx.RequestError` (`transient`), and bare `Exception` fallthrough (`unknown`, full traceback logged). Added `last_import_error_category String(20)` column via migration `chsync260508`. 6 new tests cover all four categories.
 
 ---
 
