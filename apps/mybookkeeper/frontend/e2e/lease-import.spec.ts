@@ -16,10 +16,22 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
  * Test 2: Exercises the import dialog UI — verifies submit is disabled until
  *         both an applicant and a file are provided.
  *
- * Test 3: Exercises the dialog interaction through to the API call — verifies
- *         the form submits correctly (the response may be a storage error in
- *         local dev if MinIO is not running, but the error toast is shown).
+ * Test 3: Full happy path — submits the import dialog and asserts navigation
+ *         to the new lease detail page. Requires MinIO to be reachable;
+ *         skips with a clear message if not (start it with
+ *         `docker compose -f infra/docker-compose.yml up -d minio`).
  */
+
+async function isMinioReachable(api: APIRequestContext): Promise<boolean> {
+  try {
+    const res = await api.get("/admin/storage-health");
+    if (!res.ok()) return false;
+    const body = (await res.json()) as { bucket_reachable: boolean | null };
+    return body.bucket_reachable === true;
+  } catch {
+    return false;
+  }
+}
 
 async function seedApplicant(
   api: APIRequestContext,
@@ -147,11 +159,21 @@ test.describe("Import Signed Lease", () => {
   );
 
   test(
-    "import dialog — submit triggers API call when applicant and file are provided",
+    "import dialog — full upload happy path navigates to lease detail",
     async ({ authedPage: page, api }) => {
+      // The import endpoint requires MinIO. Skip cleanly with a clear
+      // remediation message if storage isn't reachable, instead of
+      // silently passing on an error toast.
+      const minioUp = await isMinioReachable(api);
+      test.skip(
+        !minioUp,
+        "MinIO is not reachable — start it with `docker compose -f infra/docker-compose.yml up -d minio` and re-run.",
+      );
+
       const runId = Date.now();
       const applicantName = `E2E Dialog Submit ${runId}`;
       const seededApplicantIds: string[] = [];
+      const seededLeaseIds: string[] = [];
 
       try {
         const applicantId = await seedApplicant(api, applicantName);
@@ -189,29 +211,22 @@ test.describe("Import Signed Lease", () => {
         const submitBtn = page.getByTestId("import-submit");
         await expect(submitBtn).not.toBeDisabled();
 
-        // Click submit — the API call fires. In local dev (no MinIO) this will
-        // produce a 503 and show an error toast. In CI (with MinIO) it will
-        // navigate to the lease detail page. Either outcome is valid here.
+        // Click submit — with MinIO reachable, the upload + DB insert
+        // succeeds and the page navigates to the new lease's detail page.
         await submitBtn.click();
 
-        // Wait for either navigation or an error toast to appear.
-        await Promise.race([
-          page.waitForURL(/\/leases\/[0-9a-f-]{36}$/, { timeout: 10000 }).then(
-            async () => {
-              // Success path — clean up the created lease.
-              const leaseId = page.url().split("/leases/")[1];
-              if (leaseId) await deleteSignedLease(api, leaseId);
-            },
-          ).catch(() => null),
-          expect(
-            page.locator("[data-testid='toast-error'], [role='alert']").first(),
-          ).toBeVisible({ timeout: 10000 }).catch(() => null),
-        ]);
+        await page.waitForURL(/\/leases\/[0-9a-f-]{36}$/, { timeout: 15000 });
+        const leaseId = page.url().split("/leases/")[1];
+        if (leaseId) seededLeaseIds.push(leaseId);
 
-        // Either the dialog is gone (success) or it's still visible with error.
-        // The important assertion: we got past disabled-submit validation.
-        // (The exact outcome depends on MinIO availability.)
+        // Sanity check: detail page rendered the imported lease.
+        const kindBadge = page.getByTestId("lease-kind-badge");
+        await expect(kindBadge).toBeVisible({ timeout: 10000 });
+        await expect(kindBadge).toContainText("Imported");
       } finally {
+        for (const id of seededLeaseIds) {
+          await deleteSignedLease(api, id);
+        }
         for (const id of seededApplicantIds) {
           await deleteApplicant(api, id);
         }
