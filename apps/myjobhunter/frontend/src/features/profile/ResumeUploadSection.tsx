@@ -16,34 +16,25 @@ const ACCEPTED_RESUME_TYPES =
 // 25 MB — must match settings.max_resume_upload_bytes on the backend
 const MAX_RESUME_BYTES = 25 * 1024 * 1024;
 
+// Poll the list every 5s while the component is mounted so a row
+// transitions queued → processing → complete without the operator
+// having to refresh. RTK Query stops the timer on unmount.
+//
+// 5s is a deliberate compromise: fast enough that the first visible
+// status flip happens within a normal pause, slow enough that an
+// open Profile tab burns ~12 lightweight requests/minute (a list
+// endpoint, sub-1KB response). Conditional "only poll while in-flight"
+// was the previous shape — readability wasn't worth the saved polls.
+const POLL_INTERVAL_MS = 5000;
+
 export interface ResumeUploadSectionProps {
   profileId: string;
 }
 
-// Status values that indicate the worker hasn't finished. While any
-// job is in one of these states we poll the list endpoint so the row
-// transitions from queued → processing → complete without the user
-// having to refresh the page.
-const NON_TERMINAL_STATUSES = new Set<string>(["queued", "processing"]);
-const INFLIGHT_POLL_INTERVAL_MS = 2000;
-
 export default function ResumeUploadSection({ profileId: _profileId }: ResumeUploadSectionProps) {
-  // Initial render: jobs is undefined → hasInflightJob is false →
-  // pollingInterval=0, no poll. After the first fetch resolves, if
-  // any job is in queued/processing the hook re-subscribes with
-  // pollingInterval=2000 and RTK Query starts polling. When all jobs
-  // hit a terminal status we re-render with pollingInterval=0 and
-  // polling stops automatically.
-  const [pollingInterval, setPollingInterval] = useState(0);
   const { data: jobs, isLoading } = useListResumeJobsQuery(undefined, {
-    pollingInterval,
+    pollingInterval: POLL_INTERVAL_MS,
   });
-  useEffect(() => {
-    const hasInflight = (jobs ?? []).some((j) =>
-      NON_TERMINAL_STATUSES.has(j.status),
-    );
-    setPollingInterval(hasInflight ? INFLIGHT_POLL_INTERVAL_MS : 0);
-  }, [jobs]);
 
   const [uploadResume, { isLoading: isUploading }] = useUploadResumeMutation();
   const [downloadingJobId, setDownloadingJobId] = useState<string | null>(null);
