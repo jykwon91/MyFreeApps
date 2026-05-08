@@ -3,7 +3,7 @@
 Issues discovered during development. New entries are appended; resolved entries are
 removed and the counts in this header are updated.
 
-**Open issues: 37 (Critical: 1 / High: 3 / Medium: 19 / Low: 15)**
+**Open issues: 36 (Critical: 1 / High: 3 / Medium: 18 / Low: 15)**
 
 > Last comprehensive audit: 2026-05-07 (post-discovery feature ship). All Critical and 7 of 8 audit-High findings RESOLVED in PRs #421-#432 (2026-05-07). Remaining audit findings preserved below under "## High (audit 2026-05-07)" / "## Medium (audit 2026-05-07)" / "## Low (audit 2026-05-07)" sections; pre-existing findings preserved under "## Pre-existing".
 
@@ -315,19 +315,9 @@ Updated consumers: `store/discoverApi.ts`, `types/profile/profile.ts`, `types/pr
 
 ---
 
-### [Cross-stack / Discover] `INDUSTRY_CHIPS` and backend `INDUSTRY_DENYLISTS` keys can drift silently
+### ~~[Cross-stack / Discover] `INDUSTRY_CHIPS` and backend `INDUSTRY_DENYLISTS` keys can drift silently~~ RESOLVED
 
-**Severity:** Medium
-**Effort:** S
-**Location:**
-- `apps/myjobhunter/frontend/src/features/discover/industry-chips.ts:24-30`
-- `apps/myjobhunter/backend/app/services/discovery/industry_denylists.py:50-126`
-
-**Problem:** Both files document a manual mirroring contract but nothing enforces the keys agree. Frontend chip with no backend entry is silently a no-op (per `expand_excluded_keywords` swallow-on-unknown).
-
-**Recommendation:** Add a backend test that reads frontend's `industry-chips.ts` and asserts every value appears in `INDUSTRY_DENYLISTS`. Cheapest fix: a Python test importing a JSON-exported chip list.
-
-**Why Medium:** Silent feature degradation. Operator selects chip, expects defense contractors filtered out, no signal the chip's keyword list was never wired.
+**Resolved:** PR #TBD (2026-05-08). Added `test_every_frontend_chip_has_backend_denylist_entry` to `tests/test_discovery_industry_chips.py`. The test regex-parses `industry-chips.ts` at test time and asserts every `value` field appears as a key in `INDUSTRY_DENYLISTS`. No drift found at time of resolution — all 5 current chip keys have backend entries. If a chip is added to the frontend without a backend denylist entry, CI will fail loudly.
 
 ---
 

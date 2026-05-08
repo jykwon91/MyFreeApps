@@ -203,3 +203,62 @@ def test_staffing_chip_drops_via_dice_postings() -> None:
     result = _apply_post_fetch_filters(postings, config)
     assert len(result) == 1
     assert result[0]["company_name"] == "Real Company"
+
+
+# ===========================================================================
+# Frontend / backend key drift — industry-chips.ts vs INDUSTRY_DENYLISTS
+# ===========================================================================
+
+
+def _read_frontend_chip_keys() -> list[str]:
+    """Parse industry-chips.ts to extract every chip's ``value`` field.
+
+    The TS file declares ``INDUSTRY_CHIPS: IndustryChip[]`` where each
+    element is an object literal with ``value: "<key>"`` and ``label: "..."``.
+    We regex out the ``value`` strings because they are the keys that must
+    exist in ``INDUSTRY_DENYLISTS``.
+
+    If the TS file's shape changes (e.g. the field is renamed from ``value``
+    to ``key``), this regex stops matching and the test fails loudly with
+    "Frontend industry-chips.ts produced no keys" — which is the right signal
+    to update the regex here rather than to silently pass.
+    """
+    from pathlib import Path
+    import re
+
+    chips_ts = (
+        Path(__file__).parent.parent.parent
+        / "frontend"
+        / "src"
+        / "features"
+        / "discover"
+        / "industry-chips.ts"
+    )
+    text = chips_ts.read_text(encoding="utf-8")
+    return re.findall(r'\bvalue\s*:\s*"([^"]+)"', text)
+
+
+def test_every_frontend_chip_has_backend_denylist_entry() -> None:
+    """Every chip value in ``INDUSTRY_CHIPS`` (frontend) must appear as a key
+    in ``INDUSTRY_DENYLISTS`` (backend).
+
+    Without a backend entry, ``expand_excluded_keywords`` silently skips the
+    chip and the operator's selection becomes a no-op — they believe a filter
+    is active when it isn't.
+
+    If this test fails, the missing keys must be added to
+    ``industry_denylists.py`` OR the chip removed from ``industry-chips.ts``.
+    Do NOT auto-fix in this test — the human decides which side is canonical.
+    """
+    chip_keys = _read_frontend_chip_keys()
+    assert chip_keys, (
+        "Frontend industry-chips.ts produced no keys — "
+        "the value-field regex may be stale or the file has moved"
+    )
+    missing = [k for k in chip_keys if k not in INDUSTRY_DENYLISTS]
+    assert missing == [], (
+        f"Frontend INDUSTRY_CHIPS has keys with no backend entry in "
+        f"INDUSTRY_DENYLISTS: {missing}. "
+        f"Add them to apps/myjobhunter/backend/app/services/discovery/"
+        f"industry_denylists.py or remove from industry-chips.ts."
+    )
