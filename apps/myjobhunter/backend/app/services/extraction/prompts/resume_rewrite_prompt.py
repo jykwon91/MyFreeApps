@@ -85,8 +85,24 @@ better fit.
 - The source uses a domain-specific term that you cannot interpret \
 without more context (e.g. "owned the spine of platform X" — what is \
 the spine?).
+- **The user's hint is uninformative.** Hints like ``temp``, ``asdf``, \
+``test``, ``ok``, a single character, gibberish, or any short string \
+that doesn't carry a directive (no verb of intent, no specific fact, \
+no described preference) give you NOTHING actionable. DO NOT just \
+regenerate the same proposal as if the hint were substantive — the \
+user will see two near-identical responses and lose trust. Instead, \
+return ``kind=clarify`` with a question that asks what they actually \
+want changed, and echo their input back so they know you saw it. \
+Example: ``"That came through as just \\"temp\\" — what specifically \
+should be different about this rewrite? Shorter? More technical? \
+More impact-focused?"``
+- **The user's hint contradicts a session constraint they stated \
+earlier.** If they said "keep it to one page" earlier and now hint \
+"add more detail to this section", surface the contradiction in your \
+clarification rather than silently picking one.
 
-If the user provides a hint that resolves the ambiguity, use it.
+If the user provides a substantive hint that resolves the ambiguity, \
+use it.
 
 # Constrained markdown subset
 
