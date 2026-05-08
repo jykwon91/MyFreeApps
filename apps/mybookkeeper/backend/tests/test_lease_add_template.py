@@ -132,7 +132,7 @@ def _make_fake_uow(session: AsyncSession):
 @pytest.mark.asyncio
 async def test_add_templates_raises_not_found_for_unknown_lease(db) -> None:
     with _patch(
-        "app.services.leases.signed_lease_service.unit_of_work",
+        "app.services.leases.lease_pdf_service.unit_of_work",
         _make_fake_uow(db),
     ):
         with pytest.raises(SignedLeaseNotFoundError):
@@ -171,7 +171,7 @@ async def test_add_templates_imported_lease_accepted(db) -> None:
     await db.commit()
 
     with _patch(
-        "app.services.leases.signed_lease_service.unit_of_work",
+        "app.services.leases.lease_pdf_service.unit_of_work",
         _make_fake_uow(db),
     ):
         with pytest.raises(TemplateNotFoundError):
@@ -202,7 +202,7 @@ async def test_add_templates_raises_not_found_for_unknown_template(db) -> None:
     await db.commit()
 
     with _patch(
-        "app.services.leases.signed_lease_service.unit_of_work",
+        "app.services.leases.lease_pdf_service.unit_of_work",
         _make_fake_uow(db),
     ):
         with pytest.raises(TemplateNotFoundError):
@@ -253,10 +253,13 @@ async def test_add_templates_already_linked_treated_as_regenerate(db) -> None:
     storage.download_file = MagicMock(return_value=b"")
 
     with _patch(
-        "app.services.leases.signed_lease_service.unit_of_work",
+        "app.services.leases.lease_pdf_service.unit_of_work",
         _make_fake_uow(db),
     ), _patch(
-        "app.services.leases.signed_lease_service.get_storage",
+        "app.services.leases.lease_lifecycle_service.unit_of_work",
+        _make_fake_uow(db),
+    ), _patch(
+        "app.services.leases.lease_pdf_service.get_storage",
         return_value=storage,
     ):
         # Should NOT raise. The applicant lookup will return None because
@@ -340,10 +343,13 @@ async def test_regenerate_deletes_old_rendered_attachments(db) -> None:
     storage.download_file = MagicMock(return_value=b"")
 
     with _patch(
-        "app.services.leases.signed_lease_service.unit_of_work",
+        "app.services.leases.lease_pdf_service.unit_of_work",
         _make_fake_uow(db),
     ), _patch(
-        "app.services.leases.signed_lease_service.get_storage",
+        "app.services.leases.lease_lifecycle_service.unit_of_work",
+        _make_fake_uow(db),
+    ), _patch(
+        "app.services.leases.lease_pdf_service.get_storage",
         return_value=storage,
     ):
         await add_templates_and_generate(
@@ -407,19 +413,23 @@ async def test_add_templates_happy_path_links_and_renders(db) -> None:
 
     with (
         _patch(
-            "app.services.leases.signed_lease_service.unit_of_work",
+            "app.services.leases.lease_pdf_service.unit_of_work",
             _make_fake_uow(db),
         ),
         _patch(
-            "app.services.leases.signed_lease_service.get_storage",
+            "app.services.leases.lease_lifecycle_service.unit_of_work",
+            _make_fake_uow(db),
+        ),
+        _patch(
+            "app.services.leases.lease_pdf_service.get_storage",
             return_value=fake_storage,
         ),
         _patch(
-            "app.services.leases.signed_lease_service.render_md",
+            "app.services.leases.lease_pdf_service.render_md",
             return_value="# Hello Alice",
         ),
         _patch(
-            "app.services.leases.signed_lease_service.render_md_text_to_pdf_or_keep",
+            "app.services.leases.lease_pdf_service.render_md_text_to_pdf_or_keep",
             return_value=b"%PDF-1.4 fake",
         ),
     ):
