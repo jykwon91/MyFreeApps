@@ -1,5 +1,5 @@
 /**
- * Unit tests for ``LeaseAddTemplateModal`` and the "Add template" button
+ * Unit tests for ``LeaseAddTemplateModal`` and the "Add document" button
  * visibility in ``LeaseDetail``.
  *
  * Covers:
@@ -185,7 +185,7 @@ beforeEach(() => {
 // Button visibility
 // ---------------------------------------------------------------------------
 
-describe("LeaseDetail — Add template button visibility", () => {
+describe("LeaseDetail — Add document button visibility", () => {
   it("shows the button on a generated lease when canWrite=true", () => {
     canWriteValue = true;
     mockLease = buildLease({ kind: "generated" });
@@ -213,7 +213,7 @@ describe("LeaseDetail — Add template button visibility", () => {
 // ---------------------------------------------------------------------------
 
 describe("LeaseAddTemplateModal", () => {
-  it("opens when the 'Add template' button is clicked", async () => {
+  it("opens when the 'Add document' button is clicked", async () => {
     canWriteValue = true;
     mockLease = buildLease();
     renderDetail();
