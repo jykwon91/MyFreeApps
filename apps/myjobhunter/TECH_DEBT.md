@@ -3,7 +3,7 @@
 Issues discovered during development. New entries are appended; resolved entries are
 removed and the counts in this header are updated.
 
-**Open issues: 36 (Critical: 1 / High: 3 / Medium: 18 / Low: 15)**
+**Open issues: 33 (Critical: 1 / High: 3 / Medium: 16 / Low: 14)**
 
 > Last comprehensive audit: 2026-05-07 (post-discovery feature ship). All Critical and 7 of 8 audit-High findings RESOLVED in PRs #421-#432 (2026-05-07). Remaining audit findings preserved below under "## High (audit 2026-05-07)" / "## Medium (audit 2026-05-07)" / "## Low (audit 2026-05-07)" sections; pre-existing findings preserved under "## Pre-existing".
 
@@ -266,40 +266,24 @@ Updated consumers: `store/discoverApi.ts`, `types/profile/profile.ts`, `types/pr
 
 ---
 
-### [Backend / Tests] No tests for `score_user_inbox`, `promote_discovered_job`, or the promote endpoint
+### ~~[Backend / Tests] No tests for `score_user_inbox`, `promote_discovered_job`, or the promote endpoint~~ RESOLVED
 
-**Severity:** Medium
-**Effort:** M
-**Location:**
-- Missing: `apps/myjobhunter/backend/tests/test_discovery_score_service.py`
-- Missing: `apps/myjobhunter/backend/tests/test_discovery_promote_service.py`
-- Missing: promote endpoint coverage in `tests/test_discover_endpoints.py`
-
-**Problem:** Backend test coverage is thorough for fetch + saved-search CRUD + filters + JSearch adapter, but two new services have zero tests:
-- `score_user_inbox` — budget logic, idempotency, error swallowing per posting
-- `promote_discovered_job` — idempotency on second call, find-or-create company, application_event creation, source mapping
-- `POST /discover/{job_id}/promote` route — happy path, idempotent re-promote, cross-tenant 404
-
-**Recommendation:** Add the three test files. Mock `score_jd` with `AsyncMock` for the score service; exercise publisher-to-source map and find-or-create branches for promote.
-
-**Why Medium:** Critical-path code without unit tests. Promote creates rows in three tables and updates a CHECK constraint enum.
+**Resolved:** PR refactor/mjh-promote-service-cleanup (2026-05-08).
+- `test_discovery_score_service.py` (5 tests): budget exhausted, no candidates, N-posting happy path, mid-batch budget stop, per-posting error swallowing.
+- `test_discovery_promote_service.py` (8 tests): creates application + event, creates company, reuses existing company, idempotency, source mapping (all 5 publishers + unknown fallback), cross-tenant 404, nonexistent job 404.
+- `test_discover_endpoints.py` (3 new tests): promote happy path (201 + Application), idempotent re-promote (same id), cross-tenant 404.
 
 ---
 
-### [Backend / Discovery] `promote_discovered_job` silently truncates fields without logging what was clipped
+### ~~[Backend / Discovery] `promote_discovered_job` silently truncates fields without logging what was clipped~~ RESOLVED
 
-**Severity:** Medium
-**Effort:** S
-**Location:** `apps/myjobhunter/backend/app/services/discovery/discovery_promote_service.py:90-102`
+**Resolved:** PR refactor/mjh-promote-service-cleanup (2026-05-08). Added logging at all three truncation / fallback points:
+- Empty `title` → `logger.debug` at INFO
+- `title > 200` → `logger.info` with `len`
+- `salary_currency > 3` → `logger.warning` (more likely a data error than a real value)
+- Empty `company_name` → `logger.debug`
 
-**Problem:** Several fields silently truncated:
-- `role_title=(job.title or "Untitled role")[:200]` — drops chars beyond 200
-- `posted_salary_currency=(job.salary_currency or "USD")[:3].upper()` — truncates
-- Fallbacks "Untitled role", "Unknown company" silently replace empty values
-
-**Recommendation:** Add debug log on truncation: `if len(job.title or "") > 200: logger.info("promote: title truncated user=%s job=%s len=%d", ...)`. Better long-term: align column widths — `applications.role_title` should match `discovered_jobs.title` (300 chars).
-
-**Why Medium:** Data-loss pattern. Marginal at v1 scale; right time to align column widths is now while there's no production data accumulated.
+Column-width alignment (`applications.role_title` 200 vs `discovered_jobs.title` 300) is intentionally deferred — schema migration is a separate decision, noted in PR body.
 
 ---
 
@@ -359,15 +343,9 @@ Updated consumers: `store/discoverApi.ts`, `types/profile/profile.ts`, `types/pr
 
 ---
 
-### [Backend / Tech Debt] `_PUBLISHER_TO_SOURCE` map in promote service is brittle — should reference canonical enum
+### ~~[Backend / Tech Debt] `_PUBLISHER_TO_SOURCE` map in promote service is brittle — should reference canonical enum~~ RESOLVED
 
-**Severity:** Low
-**Effort:** XS
-**Location:** `apps/myjobhunter/backend/app/services/discovery/discovery_promote_service.py:33-39`
-
-**Problem:** Map hard-codes lowercase publisher strings → `application_events.source` enum values. If the enum gains a new value, the map silently doesn't add it.
-
-**Recommendation:** Move to `app/core/enums.py` next to the source enum constants, or reference canonical enum. Add a unit test asserting every map value appears in the canonical enum.
+**Resolved:** PR refactor/mjh-promote-service-cleanup (2026-05-08). Map moved to `app/core/enums.py` as public `PUBLISHER_TO_SOURCE`, placed immediately after `JobBoard` so a new `ApplicationSource` value is adjacent. `discovery_promote_service.py` now imports and uses `PUBLISHER_TO_SOURCE`. Test `test_each_known_publisher_maps_correctly` asserts every map key produces the correct `ApplicationSource` value.
 
 ---
 

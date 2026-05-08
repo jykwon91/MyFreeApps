@@ -382,8 +382,6 @@ async def test_save_clears_dismissed_reason(
     but leaving dismissed_reason set, producing a saved job that looked dismissed
     to Phase D scoring.
     """
-    from sqlalchemy import select
-
     from app.models.discovery.discovered_job import DiscoveredJob
     from app.repositories.discovery import discovery_repository
 
@@ -415,3 +413,88 @@ async def test_save_clears_dismissed_reason(
     assert job.saved_at is not None
     assert job.dismissed_at is None
     assert job.dismissed_reason is None
+
+
+# ===========================================================================
+# Promote endpoint
+# ===========================================================================
+
+
+@pytest.mark.asyncio
+async def test_promote_job_happy_path(
+    client: AsyncClient, user_factory, as_user,
+):
+    """POST /discover/{id}/promote creates an Application (201) from a
+    DiscoveredJob and marks the job as promoted."""
+    user = await user_factory()
+    async with await as_user(user) as a:
+        created = await a.post(
+            "/discover/sources",
+            json={"source": "jsearch", "config": {"query": "python remote"}},
+        )
+        source_id = created.json()["id"]
+
+        with patch(_SEARCH_PATH, new_callable=AsyncMock, return_value=[_posting()]):
+            await a.post(f"/discover/sources/{source_id}/refresh")
+
+        listed = await a.get("/discover")
+        job_id = listed.json()["items"][0]["id"]
+
+        resp = await a.post(f"/discover/{job_id}/promote")
+
+    assert resp.status_code == 201, resp.text
+    body = resp.json()
+    assert body["role_title"] == "Senior Backend Engineer"
+    assert body["source"] == "linkedin"
+
+
+@pytest.mark.asyncio
+async def test_promote_job_idempotent(
+    client: AsyncClient, user_factory, as_user,
+):
+    """A second promote call for the same job returns the same Application
+    (same id) without creating duplicates."""
+    user = await user_factory()
+    async with await as_user(user) as a:
+        created = await a.post(
+            "/discover/sources",
+            json={"source": "jsearch", "config": {"query": "x"}},
+        )
+        source_id = created.json()["id"]
+
+        with patch(_SEARCH_PATH, new_callable=AsyncMock, return_value=[_posting()]):
+            await a.post(f"/discover/sources/{source_id}/refresh")
+
+        listed = await a.get("/discover")
+        job_id = listed.json()["items"][0]["id"]
+
+        first = await a.post(f"/discover/{job_id}/promote")
+        second = await a.post(f"/discover/{job_id}/promote")
+
+    assert first.status_code == 201
+    assert second.status_code == 201
+    assert first.json()["id"] == second.json()["id"]
+
+
+@pytest.mark.asyncio
+async def test_promote_job_cross_tenant_404(
+    client: AsyncClient, user_factory, as_user,
+):
+    """Attempting to promote another user's job returns 404."""
+    owner = await user_factory()
+    attacker = await user_factory()
+
+    async with await as_user(owner) as a:
+        created = await a.post(
+            "/discover/sources",
+            json={"source": "jsearch", "config": {"query": "x"}},
+        )
+        source_id = created.json()["id"]
+        with patch(_SEARCH_PATH, new_callable=AsyncMock, return_value=[_posting()]):
+            await a.post(f"/discover/sources/{source_id}/refresh")
+        listed = await a.get("/discover")
+        job_id = listed.json()["items"][0]["id"]
+
+    async with await as_user(attacker) as a:
+        resp = await a.post(f"/discover/{job_id}/promote")
+        assert resp.status_code == 404

@@ -14,6 +14,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.enums import PUBLISHER_TO_SOURCE
 from app.models.application.application import Application
 from app.models.application.application_event import ApplicationEvent
 from app.models.company.company import Company
@@ -25,18 +26,6 @@ from app.repositories.company import company_repository
 from app.repositories.discovery import discovery_repository
 
 logger = logging.getLogger(__name__)
-
-
-# JSearch's ``job_publisher`` strings normalized to the application source
-# enum on application_events.source. Values not in this map fall to
-# 'direct' (user followed an external apply link to apply directly).
-_PUBLISHER_TO_SOURCE: dict[str, str] = {
-    "linkedin": "linkedin",
-    "indeed": "indeed",
-    "ziprecruiter": "ziprecruiter",
-    "greenhouse": "greenhouse",
-    "lever": "lever",
-}
 
 
 _VALID_REMOTE_TYPES = frozenset({"remote", "hybrid", "onsite"})
@@ -78,23 +67,49 @@ async def promote_discovered_job(
     )
 
     publisher_norm = (job.source_publisher or "").lower()
-    application_source = _PUBLISHER_TO_SOURCE.get(publisher_norm, "direct")
+    application_source = PUBLISHER_TO_SOURCE.get(publisher_norm, "direct")
 
     remote_type = (
         job.remote_type if job.remote_type in _VALID_REMOTE_TYPES else "unknown"
     )
 
+    raw_title = job.title or ""
+    if not raw_title:
+        logger.debug(
+            "promote: empty title fallback user=%s job=%s", user_id, job.id,
+        )
+    elif len(raw_title) > 200:
+        logger.info(
+            "promote: title truncated user=%s job=%s len=%d",
+            user_id, job.id, len(raw_title),
+        )
+    role_title = (raw_title or "Untitled role")[:200]
+
+    raw_currency = job.salary_currency or ""
+    if len(raw_currency) > 3:
+        logger.warning(
+            "promote: salary_currency truncated user=%s job=%s value=%r",
+            user_id, job.id, raw_currency,
+        )
+    posted_salary_currency = (raw_currency or "USD")[:3].upper()
+
+    company_name_raw = job.company_name or ""
+    if not company_name_raw.strip():
+        logger.debug(
+            "promote: empty company_name fallback user=%s job=%s", user_id, job.id,
+        )
+
     application = Application(
         user_id=user_id,
         company_id=company.id,
-        role_title=(job.title or "Untitled role")[:200],
+        role_title=role_title,
         url=job.source_url,
         jd_text=job.description,
         location=job.location,
         remote_type=remote_type,
         posted_salary_min=float(job.salary_min) if job.salary_min is not None else None,
         posted_salary_max=float(job.salary_max) if job.salary_max is not None else None,
-        posted_salary_currency=(job.salary_currency or "USD")[:3].upper(),
+        posted_salary_currency=posted_salary_currency,
         posted_salary_period=job.salary_period,
         source=application_source,
         notes=job.score_reason,
