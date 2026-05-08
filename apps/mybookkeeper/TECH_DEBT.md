@@ -46,12 +46,9 @@ Output of two parallel scans (backend + frontend) for code that should live in `
 
 ---
 
-#### MEDIUM — `StatusResponse` / `CountResponse` / `SuccessResponse` defined only in MBK
+#### ~~MEDIUM — `StatusResponse` / `CountResponse` / `SuccessResponse` defined only in MBK~~ RESOLVED
 
-**Effort:** XS
-**Location:** `app/schemas/common.py`.
-**Problem:** Three reusable response types live in MBK only; MJH reuses `dict[str, Any]` for the same shapes (loose typing).
-**Recommendation:** Move to `platform_shared/schemas/common.py`; both apps import.
+**Resolved:** Pre-2026-05-08 platform_shared work landed `StatusResponse`, `CountResponse`, and `SuccessResponse` in `packages/shared-backend/platform_shared/schemas/common.py`. MBK's `app/schemas/common.py` is now a re-export shim plus the MBK-only `BulkIdsRequest`. MJH adoption is deferred and intentionally not blocking — MJH currently has only one `dict`-typed route (`GET /documents`) which is its own shape, not a generic Status/Count/Success case. Future MJH endpoints should import the shared types directly when they need that shape.
 
 ---
 
