@@ -47,8 +47,10 @@ from app.services.discovery.discovery_promote_service import (
 )
 from app.services.discovery import (
     discovery_fetch_service,
+    discovery_inbox_service,
     discovery_promote_service,
     discovery_score_service,
+    discovery_source_service,
 )
 from app.services.discovery.discovery_fetch_service import (
     DiscoveryFetchError,
@@ -92,15 +94,13 @@ async def create_source(
     user: User = Depends(current_active_user),
 ) -> DiscoverySourceResponse:
     """Create a new active saved search for the caller."""
-    src = await discovery_repository.create_source(
+    src = await discovery_source_service.create_source(
         db,
         user_id=user.id,
         source=payload.source,
         config=payload.config,
         fetch_interval_minutes=payload.fetch_interval_minutes,
     )
-    await db.commit()
-    await db.refresh(src)
     return DiscoverySourceResponse.model_validate(src)
 
 
@@ -128,10 +128,9 @@ async def deactivate_source(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> None:
-    ok = await discovery_repository.deactivate_source(db, source_id, user.id)
+    ok = await discovery_source_service.deactivate_source(db, source_id, user.id)
     if not ok:
         raise HTTPException(status_code=404, detail=_NOT_FOUND_DETAIL)
-    await db.commit()
 
 
 # ---------------------------------------------------------------------------
@@ -243,12 +242,11 @@ async def dismiss_job(
     """Dismiss a discovered job. Optional ``reason`` is captured as a
     teaching signal for future scoring."""
     reason = payload.reason if payload else None
-    ok = await discovery_repository.dismiss_discovered(
+    ok = await discovery_inbox_service.dismiss_discovered(
         db, job_id, user.id, reason=reason,
     )
     if not ok:
         raise HTTPException(status_code=404, detail=_NOT_FOUND_DETAIL)
-    await db.commit()
 
 
 @router.post(
@@ -260,10 +258,9 @@ async def save_job(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> None:
-    ok = await discovery_repository.save_discovered(db, job_id, user.id)
+    ok = await discovery_inbox_service.save_discovered(db, job_id, user.id)
     if not ok:
         raise HTTPException(status_code=404, detail=_NOT_FOUND_DETAIL)
-    await db.commit()
 
 
 @router.post(
