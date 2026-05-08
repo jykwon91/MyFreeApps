@@ -23,9 +23,9 @@ See sister entry in `apps/mybookkeeper/TECH_DEBT.md`. MJH side: `apps/myjobhunte
 
 ---
 
-#### HIGH — Soft-delete pattern reimplemented
+#### ~~HIGH — Soft-delete pattern reimplemented~~ RESOLVED
 
-See sister entry in MBK. MJH side: `application_repository.soft_delete()`, `document_repo.soft_delete()` (2 implementations). MJH's signature (`soft_delete(db, instance)`) is cleaner than MBK's positional-args style. When extracted, MJH's shape should be the canonical version.
+**Resolved:** PR #494 (2026-05-08). Shared helper at `packages/shared-backend/platform_shared/repositories/soft_delete.py` (signature `soft_delete(db, instance, *, deleted_at_field="deleted_at") -> bool`, MJH's cleaner shape became canonical). Both MJH ORM-flip call sites refactored: `application/application_repository.py` and `documents/document_repo.py`. See sister entry in MBK for full scope.
 
 ---
 
@@ -38,8 +38,9 @@ See sister entry in MBK. MJH side: `core/storage.py`. Consolidate as a re-export
 #### MEDIUM — Pagination response envelopes — adopt early in MJH
 
 **Effort:** S
-**Problem:** MBK has 8 hardcoded `*ListResponse` envelopes. MJH has zero pagination today and is about to start adding CRUD listings (Phase 2+).
-**Recommendation:** When the shared `ListResponse[ItemT]` Pydantic generic lands in `platform_shared/schemas/pagination.py`, MJH should adopt it for every list endpoint from the start — cheaper than backfilling later.
+**Status:** Shared generic landed in PR #492 (2026-05-08) at `platform_shared/schemas/pagination.py`. MJH adoption is the remaining work — every new list endpoint should subclass `ListResponse[ItemT]` from the start. No backfill needed today (MJH still has zero pagination); this entry stays open as a convention reminder until the first list endpoint ships.
+**Problem:** MBK had 8 hardcoded `*ListResponse` envelopes (now refactored to inherit). MJH has zero pagination today.
+**Recommendation:** For every new MJH list endpoint, `from platform_shared.schemas.pagination import ListResponse` and write `class FooListResponse(ListResponse[FooResponse]): pass`. Cheaper than backfilling.
 
 ---
 
