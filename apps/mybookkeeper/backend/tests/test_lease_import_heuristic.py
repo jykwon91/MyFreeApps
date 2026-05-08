@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import pytest
 
-from app.services.leases.signed_lease_service import _infer_attachment_kind
+from app.services.leases.lease_import_service import _infer_attachment_kind
 
 
 class TestInferAttachmentKind:
