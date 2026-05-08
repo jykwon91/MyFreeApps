@@ -267,6 +267,33 @@ async def test_extraction_log_accepts_job_analysis_context(
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "context_type",
+    ["resume_critique", "resume_rewrite", "jd_url_parse"],
+)
+async def test_extraction_log_accepts_resume_refinement_contexts(
+    db: AsyncSession, user_factory, context_type: str,
+):
+    """The extctx260507 migration permits the resume-refinement and
+    JD-URL contexts emitted by critique_service, rewrite_service, and
+    jd_url_extractor. Until that migration, these violated
+    ``chk_extraction_log_context_type`` and surfaced as 500s once the
+    silent-fail in ``_record_log`` was removed (PR #426)."""
+    user = await user_factory()
+    log = ExtractionLog(
+        user_id=_uid(user),
+        context_type=context_type,
+        model="claude-sonnet-4-6",
+        status="success",
+    )
+    db.add(log)
+    await db.commit()
+    await db.refresh(log)
+
+    assert log.context_type == context_type
+
+
+@pytest.mark.asyncio
 async def test_inbox_index_query_pattern(db: AsyncSession, user_factory):
     """Smoke-test the partial inbox index by exercising its predicate."""
     user = await user_factory()

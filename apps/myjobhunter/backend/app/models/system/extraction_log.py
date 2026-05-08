@@ -50,7 +50,11 @@ class ExtractionLog(Base):
 
     __table_args__ = (
         CheckConstraint(
-            "context_type IN ('resume_parse','jd_parse','company_research','cover_letter','resume_tailor','email_classify','other')",
+            "context_type IN ("
+            "'resume_parse','jd_parse','company_research','cover_letter',"
+            "'resume_tailor','email_classify','job_analysis','other',"
+            "'resume_critique','resume_rewrite','jd_url_parse'"
+            ")",
             name="chk_extraction_log_context_type",
         ),
         CheckConstraint(
