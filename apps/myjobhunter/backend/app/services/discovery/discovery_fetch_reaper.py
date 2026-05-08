@@ -25,10 +25,9 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.discovery.discovery_fetch import DiscoveryFetch
+from app.repositories.discovery import discovery_repository
 
 logger = logging.getLogger(__name__)
 
@@ -41,17 +40,6 @@ async def reap_stale_running_fetches(db: AsyncSession) -> int:
     Returns the number of rows reaped so the caller can log it.
     """
     cutoff = datetime.now(timezone.utc) - timedelta(minutes=REAP_AFTER_MINUTES)
-    stmt = (
-        update(DiscoveryFetch)
-        .where(
-            DiscoveryFetch.status == "running",
-            DiscoveryFetch.started_at < cutoff,
-        )
-        .values(
-            status="error",
-            error_message="reaped: server restart or stuck >30min",
-        )
-    )
-    result = await db.execute(stmt)
+    count = await discovery_repository.reap_stale_fetches(db, cutoff=cutoff)
     await db.commit()
-    return result.rowcount or 0
+    return count
