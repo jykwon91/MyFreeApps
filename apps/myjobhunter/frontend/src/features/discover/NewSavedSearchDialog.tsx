@@ -8,7 +8,7 @@ import {
 import { useCreateDiscoverySourceMutation } from "@/store/discoverApi";
 import { useUpdateProfileMutation } from "@/lib/profileApi";
 import { buildSavedSearchSummary } from "./saved-search-summary";
-import InlineBoldText from "./InlineBoldText";
+import { InlineBoldText } from "@platform/ui";
 import { useDiscoveryDefaultsPrefill } from "./useDiscoveryDefaultsPrefill";
 import SearchInputsSection from "./dialog-sections/SearchInputsSection";
 import WhereWhenSection from "./dialog-sections/WhereWhenSection";

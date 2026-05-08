@@ -1,4 +1,4 @@
-import { Fragment, type ReactNode } from "react";
+import { Fragment } from "react";
 
 interface InlineBoldTextProps {
   /** A string with **bold** segments. Other markdown is rendered as
@@ -10,13 +10,15 @@ interface InlineBoldTextProps {
 
 /**
  * Render a string with **markdown bold** segments inline. Tiny utility
- * for the saved-search summary preview — avoids pulling in a markdown
- * library when bold is the only thing we need.
+ * for places that need bold-only formatting without pulling in a full
+ * markdown library.
  *
- * The input strings are operator-controlled (role / skill / location
- * / keyword inputs all already trimmed by the form). XSS surface is
- * limited to React's text-node escaping, which handles HTML in the
- * input automatically.
+ * Use cases: chip-summary previews, plain-text callouts, anywhere you
+ * want bold emphasis on a substring without parsing block-level
+ * markdown (headings, lists, links, etc.).
+ *
+ * Input strings are caller-controlled. XSS surface is limited to React's
+ * text-node escaping, which handles HTML in the input automatically.
  */
 export default function InlineBoldText({
   text,
@@ -66,6 +68,3 @@ function parseBoldSegments(s: string): Segment[] {
 
 // Exported only for unit tests.
 export const __INTERNAL__ = { parseBoldSegments };
-
-// Suppress unused-import lint for the optional ReactNode export shape.
-export type { ReactNode };
