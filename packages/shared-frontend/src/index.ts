@@ -35,6 +35,9 @@ export { default as Toaster } from "./components/ui/Toaster";
 export { default as TurnstileWidget } from "./components/ui/TurnstileWidget";
 export { default as ConfirmDialog } from "./components/ui/ConfirmDialog";
 export { default as InlineBoldText } from "./components/ui/InlineBoldText";
+export { default as MultiChipInput } from "./components/ui/MultiChipInput";
+export { default as ToggleChipGroup } from "./components/ui/ToggleChipGroup";
+export type { ToggleOption, ToggleChipGroupProps } from "./components/ui/ToggleChipGroup";
 
 // Layout components
 export { default as AppShell } from "./components/layout/AppShell";

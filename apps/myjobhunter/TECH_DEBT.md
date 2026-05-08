@@ -403,17 +403,9 @@ EXPLAIN ANALYZE before/after.
 
 ---
 
-### [Frontend / Discover] `MultiChipInput` and `ToggleChipGroup` are generic — should live in `@platform/ui`
+### ~~[Frontend / Discover] `MultiChipInput` and `ToggleChipGroup` are generic — should live in `@platform/ui`~~ RESOLVED
 
-**Severity:** Medium
-**Effort:** S
-**Location:** `apps/myjobhunter/frontend/src/features/discover/MultiChipInput.tsx`, `ToggleChipGroup.tsx`
-
-**Problem:** Component docstring says: "Local to features/discover for now; promote to @platform/ui when MBK needs the same primitive." That's the bandaid pattern from `monorepo-parity-discipline.md` — once a primitive looks generic, it belongs in shared upfront.
-
-**Recommendation:** Extract both to `packages/shared-frontend/src/components/` and re-export from `@platform/ui`. Update discover module imports.
-
-**Why Medium:** Auto-promote rule — pattern useful in 2+ apps belongs in shared the moment it's needed twice.
+**Resolved:** PR #TBD (2026-05-08). Both components moved to `packages/shared-frontend/src/components/ui/`. Re-exported from `@platform/ui` index. `ExclusionsSection` and `SearchInputsSection` imports updated. Unit tests added in `packages/shared-frontend/src/__tests__/`.
 
 ---
 

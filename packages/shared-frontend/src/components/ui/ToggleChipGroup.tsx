@@ -13,10 +13,6 @@ interface ToggleChipGroupProps {
  * Multi-select chip group. Each chip toggles its value in/out of the
  * array. Selected chips highlight; unselected are ghost-styled.
  *
- * Used on /discover for the "Exclude industries" surface where each
- * chip semantically represents a curated denylist (defined server-side
- * in industry_denylists.py).
- *
  * Mobile-friendly: chips wrap and each one is 36px tall by default.
  */
 export default function ToggleChipGroup({
@@ -56,3 +52,5 @@ export default function ToggleChipGroup({
     </div>
   );
 }
+
+export type { ToggleOption, ToggleChipGroupProps };
