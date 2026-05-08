@@ -1,7 +1,6 @@
 import os
-import uuid
 from collections.abc import AsyncGenerator
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -37,6 +36,7 @@ from app.db.base import Base
 from app.models.organization.organization import Organization
 from app.models.organization.organization_member import OrganizationMember
 from app.models.user.user import User
+from platform_shared.testing.factories import make_user_fixture
 
 
 @pytest.fixture(scope="session")
@@ -117,39 +117,8 @@ async def db() -> AsyncGenerator[AsyncSession, None]:
     await engine.dispose()
 
 
-@pytest.fixture()
-async def test_user(db: AsyncSession) -> User:
-    """Create and return a test user."""
-    user = User(
-        id=uuid.uuid4(),
-        email="test@example.com",
-        hashed_password="fakehash",
-        is_active=True,
-        is_superuser=False,
-        is_verified=True,
-    )
-    db.add(user)
-    await db.commit()
-    await db.refresh(user)
-    return user
-
-
-@pytest.fixture()
-async def test_org(db: AsyncSession, test_user: User) -> Organization:
-    """Create a personal organization for the test user."""
-    org = Organization(
-        id=uuid.uuid4(),
-        name=f"{test_user.email}'s Workspace",
-        created_by=test_user.id,
-    )
-    db.add(org)
-    await db.flush()
-    member = OrganizationMember(
-        organization_id=org.id,
-        user_id=test_user.id,
-        org_role="owner",
-    )
-    db.add(member)
-    await db.commit()
-    await db.refresh(org)
-    return org
+test_user, test_org = make_user_fixture(
+    user_model=User,
+    org_model=Organization,
+    org_member_model=OrganizationMember,
+)
