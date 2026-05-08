@@ -3,11 +3,16 @@ from __future__ import annotations
 
 import uuid
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 
 class SignedLeaseAddTemplatesRequest(BaseModel):
     template_ids: list[uuid.UUID]
+    # Caller-supplied placeholder values, applied on top of the lease's
+    # existing values and any auto-resolved defaults. Required when
+    # attaching a template to an imported lease whose ``lease.values`` is
+    # empty by construction; optional when adding to a generated lease.
+    values: dict[str, str] | None = Field(default=None)
 
     @field_validator("template_ids")
     @classmethod

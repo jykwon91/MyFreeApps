@@ -3,12 +3,15 @@
  * visibility in ``LeaseDetail``.
  *
  * Covers:
- * - Button only visible when canWrite=true AND lease.kind="generated"
+ * - Button visible when canWrite=true on BOTH generated and imported leases
+ *   (post-2026-05-07 — imported leases can attach addendum templates)
+ * - Hidden when canWrite=false (read-only viewers)
  * - Modal renders with available templates (excluding already-linked ones)
- * - "Add and generate" button is disabled when nothing selected
- * - Fires mutation with correct template_ids on confirm
- * - Shows success toast and closes modal on 200
- * - Shows 409-specific error toast on duplicate template conflict
+ * - "Continue" disabled when nothing selected
+ * - Continue → prefill mutation → values step with prefilled inputs
+ * - Generate fires add-templates mutation with template_ids + values
+ * - Success toast + modal close on 200
+ * - 409 error toast on duplicate template conflict
  */
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -24,6 +27,7 @@ import type { LeaseTemplateSummary } from "@/shared/types/lease/lease-template-s
 // ---------------------------------------------------------------------------
 
 const addTemplatesMock = vi.fn();
+const prefillMock = vi.fn();
 const generateMock = vi.fn(() => ({ unwrap: () => Promise.resolve() }));
 const updateMock = vi.fn(() => ({ unwrap: () => Promise.resolve() }));
 
@@ -43,6 +47,7 @@ vi.mock("@/shared/store/signedLeasesApi", () => ({
   useGetSignedLeaseByIdQuery: (...args: unknown[]) =>
     useGetSignedLeaseByIdQueryMock(...args),
   useAddSignedLeaseTemplatesMutation: () => [addTemplatesMock, { isLoading: false }],
+  usePrefillAddendumPlaceholdersMutation: () => [prefillMock, { isLoading: false }],
 }));
 
 vi.mock("@/shared/store/applicantsApi", () => ({
@@ -151,6 +156,29 @@ beforeEach(() => {
   vi.clearAllMocks();
   canWriteValue = true;
   addTemplatesMock.mockReturnValue({ unwrap: () => Promise.resolve({}) });
+  prefillMock.mockReturnValue({
+    unwrap: () =>
+      Promise.resolve({
+        items: [
+          {
+            key: "TENANT FULL NAME",
+            display_label: "Tenant full name",
+            input_type: "text",
+            required: true,
+            value: "Sonu King",
+            provenance: "applicant",
+          },
+          {
+            key: "NEW LEASE END DATE",
+            display_label: "New lease end date",
+            input_type: "date",
+            required: true,
+            value: "",
+            provenance: null,
+          },
+        ],
+      }),
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -165,11 +193,11 @@ describe("LeaseDetail — Add template button visibility", () => {
     expect(screen.getByTestId("lease-add-template-button")).toBeInTheDocument();
   });
 
-  it("hides the button on an imported lease", () => {
+  it("shows the button on an imported lease (addendum support)", () => {
     canWriteValue = true;
     mockLease = buildLease({ kind: "imported", templates: [] });
     renderDetail();
-    expect(screen.queryByTestId("lease-add-template-button")).toBeNull();
+    expect(screen.getByTestId("lease-add-template-button")).toBeInTheDocument();
   });
 
   it("hides the button when canWrite=false", () => {
@@ -208,18 +236,18 @@ describe("LeaseAddTemplateModal", () => {
     expect(screen.getByTestId("add-template-option-tpl-new")).toBeInTheDocument();
   });
 
-  it("'Add and generate' button is disabled when nothing selected", async () => {
+  it("'Continue' button is disabled when nothing selected", async () => {
     canWriteValue = true;
     mockLease = buildLease();
     renderDetail();
     fireEvent.click(screen.getByTestId("lease-add-template-button"));
     await waitFor(() =>
-      expect(screen.getByTestId("lease-add-template-confirm")).toBeInTheDocument(),
+      expect(screen.getByTestId("lease-add-template-continue")).toBeInTheDocument(),
     );
-    expect(screen.getByTestId("lease-add-template-confirm")).toBeDisabled();
+    expect(screen.getByTestId("lease-add-template-continue")).toBeDisabled();
   });
 
-  it("fires the mutation with correct template_ids on confirm", async () => {
+  it("Continue → prefill → values step shows prefilled inputs", async () => {
     canWriteValue = true;
     mockLease = buildLease();
     renderDetail();
@@ -228,13 +256,75 @@ describe("LeaseAddTemplateModal", () => {
       expect(screen.getByTestId("add-template-checkbox-tpl-new")).toBeInTheDocument(),
     );
     fireEvent.click(screen.getByTestId("add-template-checkbox-tpl-new"));
+    fireEvent.click(screen.getByTestId("lease-add-template-continue"));
+    await waitFor(() =>
+      expect(prefillMock).toHaveBeenCalledWith({
+        leaseId: "lease-1",
+        templateIds: ["tpl-new"],
+      }),
+    );
+    // Values step renders inputs from the prefill response
+    await waitFor(() =>
+      expect(screen.getByTestId("addendum-input-TENANT FULL NAME")).toBeInTheDocument(),
+    );
+    expect(
+      (screen.getByTestId("addendum-input-TENANT FULL NAME") as HTMLInputElement).value,
+    ).toBe("Sonu King");
+    expect(
+      (screen.getByTestId("addendum-input-NEW LEASE END DATE") as HTMLInputElement).value,
+    ).toBe("");
+  });
+
+  it("Generate fires add-templates mutation with template_ids + values", async () => {
+    canWriteValue = true;
+    mockLease = buildLease();
+    renderDetail();
+    fireEvent.click(screen.getByTestId("lease-add-template-button"));
+    await waitFor(() =>
+      expect(screen.getByTestId("add-template-checkbox-tpl-new")).toBeInTheDocument(),
+    );
+    fireEvent.click(screen.getByTestId("add-template-checkbox-tpl-new"));
+    fireEvent.click(screen.getByTestId("lease-add-template-continue"));
+    await waitFor(() =>
+      expect(screen.getByTestId("addendum-input-NEW LEASE END DATE")).toBeInTheDocument(),
+    );
+    // Fill the required-and-empty field
+    fireEvent.change(screen.getByTestId("addendum-input-NEW LEASE END DATE"), {
+      target: { value: "2026-08-31" },
+    });
     fireEvent.click(screen.getByTestId("lease-add-template-confirm"));
     await waitFor(() =>
       expect(addTemplatesMock).toHaveBeenCalledWith({
         leaseId: "lease-1",
         templateIds: ["tpl-new"],
+        values: {
+          "TENANT FULL NAME": "Sonu King",
+          "NEW LEASE END DATE": "2026-08-31",
+        },
       }),
     );
+  });
+
+  it("blocks Generate when a required field is empty", async () => {
+    canWriteValue = true;
+    mockLease = buildLease();
+    renderDetail();
+    fireEvent.click(screen.getByTestId("lease-add-template-button"));
+    await waitFor(() =>
+      expect(screen.getByTestId("add-template-checkbox-tpl-new")).toBeInTheDocument(),
+    );
+    fireEvent.click(screen.getByTestId("add-template-checkbox-tpl-new"));
+    fireEvent.click(screen.getByTestId("lease-add-template-continue"));
+    await waitFor(() =>
+      expect(screen.getByTestId("addendum-input-NEW LEASE END DATE")).toBeInTheDocument(),
+    );
+    // NEW LEASE END DATE is required and empty — clicking Generate must
+    // surface a validation error and NOT call the mutation.
+    fireEvent.click(screen.getByTestId("lease-add-template-confirm"));
+    await waitFor(() =>
+      expect(showErrorMock).toHaveBeenCalled(),
+    );
+    expect(addTemplatesMock).not.toHaveBeenCalled();
   });
 
   it("shows success toast and closes modal on successful add", async () => {
@@ -246,6 +336,13 @@ describe("LeaseAddTemplateModal", () => {
       expect(screen.getByTestId("add-template-checkbox-tpl-new")).toBeInTheDocument(),
     );
     fireEvent.click(screen.getByTestId("add-template-checkbox-tpl-new"));
+    fireEvent.click(screen.getByTestId("lease-add-template-continue"));
+    await waitFor(() =>
+      expect(screen.getByTestId("addendum-input-NEW LEASE END DATE")).toBeInTheDocument(),
+    );
+    fireEvent.change(screen.getByTestId("addendum-input-NEW LEASE END DATE"), {
+      target: { value: "2026-08-31" },
+    });
     fireEvent.click(screen.getByTestId("lease-add-template-confirm"));
     await waitFor(() => expect(showSuccessMock).toHaveBeenCalledWith("1 template added."));
     await waitFor(() =>
@@ -265,6 +362,13 @@ describe("LeaseAddTemplateModal", () => {
       expect(screen.getByTestId("add-template-checkbox-tpl-new")).toBeInTheDocument(),
     );
     fireEvent.click(screen.getByTestId("add-template-checkbox-tpl-new"));
+    fireEvent.click(screen.getByTestId("lease-add-template-continue"));
+    await waitFor(() =>
+      expect(screen.getByTestId("addendum-input-NEW LEASE END DATE")).toBeInTheDocument(),
+    );
+    fireEvent.change(screen.getByTestId("addendum-input-NEW LEASE END DATE"), {
+      target: { value: "2026-08-31" },
+    });
     fireEvent.click(screen.getByTestId("lease-add-template-confirm"));
     await waitFor(() =>
       expect(showErrorMock).toHaveBeenCalledWith(

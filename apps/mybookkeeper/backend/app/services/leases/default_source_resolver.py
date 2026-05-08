@@ -29,6 +29,9 @@ from typing import Any
 
 from app.models.applicants.applicant import Applicant
 from app.models.inquiries.inquiry import Inquiry
+from app.models.leases.signed_lease import SignedLease
+from app.models.properties.property import Property
+from app.models.user.user import User
 
 # ---------------------------------------------------------------------------
 # Allowed namespace prefixes and their attribute allowlists
@@ -57,11 +60,35 @@ _INQUIRY_ATTRS: frozenset[str] = frozenset({
     "desired_end_date",
 })
 
+# Existing signed lease — used when attaching addendum templates to a lease
+# that already has a known term. The original lease's ``starts_on`` /
+# ``ends_on`` populate ``[ORIGINAL LEASE START DATE]`` / ``[ORIGINAL LEASE
+# END DATE]`` on extension addenda without forcing the host to re-type them.
+_LEASE_ATTRS: frozenset[str] = frozenset({
+    "starts_on",
+    "ends_on",
+})
+
+# Property the lease's listing points at — for ``[PROPERTY ADDRESS]`` style
+# placeholders on any per-property addendum.
+_PROPERTY_ATTRS: frozenset[str] = frozenset({
+    "address",
+    "name",
+})
+
+# Landlord identity — pulled from the host's user row. Today the User model
+# only stores ``name``; if the operator later adds a notice/mailing address
+# field the allowlist can be widened here.
+_USER_ATTRS: frozenset[str] = frozenset({
+    "name",
+    "email",
+})
+
 _SPECIAL_SOURCES: frozenset[str] = frozenset({"today"})
 
-# A valid single segment: "today", "applicant.<attr>", or "inquiry.<attr>".
+# A valid single segment: ``today`` or one of the supported namespaced fields.
 _SEGMENT_RE = re.compile(
-    r"^(?:today|applicant\.\w+|inquiry\.\w+)$"
+    r"^(?:today|applicant\.\w+|inquiry\.\w+|lease\.\w+|property\.\w+|user\.\w+)$"
 )
 
 
@@ -113,37 +140,69 @@ def _validate_segment(segment: str, full_spec: str) -> None:
             f"Unknown inquiry field '{attr}' in '{full_spec}'. "
             f"Allowed: {sorted(_INQUIRY_ATTRS)}"
         )
+    if namespace == "lease" and attr not in _LEASE_ATTRS:
+        raise ValueError(
+            f"Unknown lease field '{attr}' in '{full_spec}'. "
+            f"Allowed: {sorted(_LEASE_ATTRS)}"
+        )
+    if namespace == "property" and attr not in _PROPERTY_ATTRS:
+        raise ValueError(
+            f"Unknown property field '{attr}' in '{full_spec}'. "
+            f"Allowed: {sorted(_PROPERTY_ATTRS)}"
+        )
+    if namespace == "user" and attr not in _USER_ATTRS:
+        raise ValueError(
+            f"Unknown user field '{attr}' in '{full_spec}'. "
+            f"Allowed: {sorted(_USER_ATTRS)}"
+        )
 
 
 # ---------------------------------------------------------------------------
 # Resolution
 # ---------------------------------------------------------------------------
 
-ProvenanceLabel = str  # "applicant" | "inquiry" | "today"
+ProvenanceLabel = str  # "applicant" | "inquiry" | "lease" | "property" | "user" | "today"
 
 
 def resolve_default_source(
     spec: str,
     applicant: Applicant,
     inquiry: Inquiry | None,
+    *,
+    lease: SignedLease | None = None,
+    property_record: Property | None = None,
+    user_record: User | None = None,
 ) -> tuple[Any | None, ProvenanceLabel | None]:
     """Evaluate a ``default_source`` spec against live ORM rows.
 
     Returns ``(value, provenance)`` where:
     - ``value`` is the resolved plaintext (or ``None`` if nothing resolved).
-    - ``provenance`` is ``"applicant"``, ``"inquiry"``, or ``"today"`` indicating
-      which segment produced the value, or ``None`` if nothing resolved.
+    - ``provenance`` indicates which segment produced the value (``applicant``,
+      ``inquiry``, ``lease``, ``property``, ``user``, or ``today``), or
+      ``None`` if nothing resolved.
 
     PII is decrypted automatically by the ``EncryptedString`` TypeDecorator —
     callers receive plaintext.
 
     Dates are returned as ISO-8601 strings (``YYYY-MM-DD``) for consistency
     with the frontend ``<input type="date">`` format.
+
+    The keyword-only ``lease`` / ``property_record`` / ``user_record`` params
+    are optional. Existing call sites that only have applicant + inquiry
+    context (e.g. fresh-lease creation) keep working — segments referencing
+    a missing namespace simply resolve to ``None``.
     """
     segments = [s.strip() for s in spec.split("||")]
 
     for segment in segments:
-        value = _evaluate_segment(segment, applicant, inquiry)
+        value = _evaluate_segment(
+            segment,
+            applicant,
+            inquiry,
+            lease=lease,
+            property_record=property_record,
+            user_record=user_record,
+        )
         if value is not None and value != "":
             provenance = _segment_provenance(segment)
             if isinstance(value, datetime.date):
@@ -157,6 +216,10 @@ def _evaluate_segment(
     segment: str,
     applicant: Applicant,
     inquiry: Inquiry | None,
+    *,
+    lease: SignedLease | None = None,
+    property_record: Property | None = None,
+    user_record: User | None = None,
 ) -> Any | None:
     if segment == "today":
         return datetime.date.today()
@@ -168,6 +231,18 @@ def _evaluate_segment(
         if inquiry is None:
             return None
         return getattr(inquiry, attr, None)
+    if namespace == "lease":
+        if lease is None:
+            return None
+        return getattr(lease, attr, None)
+    if namespace == "property":
+        if property_record is None:
+            return None
+        return getattr(property_record, attr, None)
+    if namespace == "user":
+        if user_record is None:
+            return None
+        return getattr(user_record, attr, None)
     return None
 
 
