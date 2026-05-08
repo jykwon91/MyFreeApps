@@ -200,12 +200,30 @@ describe("LeaseDetail — Email to tenant button", () => {
     expect(screen.queryByTestId("lease-email-tenant-button")).toBeNull();
   });
 
-  it("is hidden for imported leases (their attachments aren't 'rendered')", () => {
-    // The contract is "Email to tenant" only on generated leases.
-    // Imported leases came in already-signed and the host has the file
-    // already; emailing it back to the tenant would be redundant.
+  it("is shown for imported leases that have a rendered addendum", () => {
+    // After PR #415 imported leases can attach addendum templates that
+    // produce ``rendered_original`` attachments. The host should be able to
+    // email those addenda the same way as a generated lease.
     canWriteValue = true;
     mockLease = buildLease({ kind: "imported" });
+    mockApplicant = buildApplicant();
+    renderDetail();
+    expect(screen.getByTestId("lease-email-tenant-button")).toBeInTheDocument();
+  });
+
+  it("is hidden when the imported lease has no rendered/signed-lease attachments", () => {
+    // E.g., a freshly-imported lease where the host uploaded only an
+    // inspection PDF or insurance proof — nothing to email yet.
+    canWriteValue = true;
+    mockLease = buildLease({
+      kind: "imported",
+      attachments: [
+        {
+          ...buildAttachment(),
+          kind: "move_in_inspection",
+        },
+      ],
+    });
     mockApplicant = buildApplicant();
     renderDetail();
     expect(screen.queryByTestId("lease-email-tenant-button")).toBeNull();
