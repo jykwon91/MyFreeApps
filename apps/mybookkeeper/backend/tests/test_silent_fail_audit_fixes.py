@@ -192,6 +192,10 @@ class TestEmailDiscoveryServiceExcInfo:
                 side_effect=boom,
             ),
             patch(
+                "app.services.email.email_discovery_service.gmail_skipped_message_repo.record_skip",
+                new=AsyncMock(),
+            ),
+            patch(
                 "app.services.email.email_discovery_service.sync_log_repo.create",
                 new=AsyncMock(return_value=MagicMock(id=1)),
             ),
