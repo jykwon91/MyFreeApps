@@ -20,12 +20,9 @@ Output of two parallel scans (backend + frontend) for code that should live in `
 
 ---
 
-#### HIGH — Soft-delete pattern reimplemented in 10+ MBK repos
+#### ~~HIGH — Soft-delete pattern reimplemented in 10+ MBK repos~~ RESOLVED
 
-**Effort:** S
-**Location:** MBK: `applicants_repo.soft_delete()`, `inquiry_repo.soft_delete_by_id()`, `vendor_repo.soft_delete()`, plus 7 more (10 total). MJH has 2 sister implementations.
-**Problem:** Identical logic each time — set `deleted_at=now()`, idempotent if already deleted. MJH's signature (`soft_delete(db, instance)`) is cleaner; MBK uses positional-args. Diverging tenant-scope rules: MBK enforces `user_id` + `org_id`; MJH enforces `user_id` only.
-**Recommendation:** Extract to `platform_shared/repositories/soft_delete_mixin.py` with optional scope kwargs. Refactor MBK's 10 repos + MJH's 2 to use the mixin. Lock the idempotency contract in shared tests.
+**Resolved:** PR #494 (2026-05-08, REDO of #490 after #488's transaction_repo split closed the original). Extracted `soft_delete(db, instance, *, deleted_at_field="deleted_at") -> bool` to `packages/shared-backend/platform_shared/repositories/soft_delete.py` with structural `SupportsAddAndFlush` Protocol typing + 9 unit tests locking the idempotency contract (True on first call, False if already deleted; caller owns commit). Refactored 5 ORM-flip call sites: MBK `documents/document_repo.py`, `transactions/transaction_bulk_repo.py` (post-#488 location), `calendar/review_queue_repo.py`; MJH `application/application_repository.py`, `documents/document_repo.py`. Co-located extra-field assignments (`status="duplicate"`, `status="deleted"`) preserved at call sites. The 7 MBK SQL-UPDATE repos (applicant, inquiry, insurance_policy, lease_template, signed_lease, listing, vendor) intentionally untouched — atomic `UPDATE WHERE deleted_at IS NULL` is a different correct shape.
 
 ---
 
@@ -51,12 +48,9 @@ Output of two parallel scans (backend + frontend) for code that should live in `
 
 ---
 
-#### MEDIUM — Pagination response envelopes hardcoded in 8+ MBK schemas
+#### ~~MEDIUM — Pagination response envelopes hardcoded in 8+ MBK schemas~~ RESOLVED
 
-**Effort:** M
-**Location:** `ApplicantListResponse`, `InquiryListResponse`, `ListingListResponse`, `VendorListResponse`, plus 4 more (`items: list[T], total: int, has_more: bool` shape).
-**Problem:** Each domain redefines the same envelope. MJH has zero pagination today and will repeat the mistake when it adds CRUD listings.
-**Recommendation:** Extract a generic `ListResponse[ItemT]` to `platform_shared/schemas/pagination.py`. Both apps inherit. MJH adopts the pattern as it builds its first list endpoints (cheaper to do early).
+**Resolved:** PR #492 (2026-05-08). Added `ListResponse[ItemT]` Pydantic v2 generic to `packages/shared-backend/platform_shared/schemas/pagination.py` (with `from_attributes=True` and 7 unit tests). Refactored 8 MBK list schemas to one-line subclasses: `ApplicantListResponse`, `TenantListResponse`, `InquiryListResponse`, `VendorListResponse`, `InsurancePolicyListResponse`, `SignedLeaseListResponse`, `LeaseTemplateListResponse`, `ListingListResponse`. Class names preserved so OpenAPI / RTK Query consumers needed zero changes. Two intentionally skipped because they don't match the canonical shape: `PendingReceiptListResponse` (extra `pending_count` aggregate) and `DemoUserListResponse` (`users` not `items`, no `has_more`). MJH adoption tracked separately in MJH's TECH_DEBT.md.
 
 ---
 
@@ -152,11 +146,14 @@ Output of two parallel scans (backend + frontend) for code that should live in `
 
 ---
 
-#### MEDIUM — `app/services/leases/lease_template_service.py` (926 LOC)
+#### ~~MEDIUM — `app/services/leases/lease_template_service.py` (926 LOC)~~ RESOLVED
 
-**Effort:** M
-**Problem:** Template CRUD + AI placeholder extraction + render + auto-prepend dog disclosure all together.
-**Recommendation:** Split into `lease_template_crud_service.py`, `lease_template_placeholder_service.py` (AI extraction), `lease_template_render_service.py`.
+**Resolved:** PR #493 (2026-05-08). Split into three modules following the precedent set by PR #487 (signed_lease_service split):
+- `lease_template_service.py` — Template CRUD (830 LOC; couldn't hit the 300 LOC target without breaking responsibility cohesion — `generate_defaults`, `generate_defaults_multi`, `upload_template`, and `replace_template_files` are genuinely large single-responsibility functions). Re-exports `suggest_ai_placeholders`, `load_template_source_texts`, and `TemplateNotFoundError` for back-compat.
+- `lease_template_placeholder_service.py` (138 LOC) — AI placeholder extraction. Owns `TemplateNotFoundError` and the public `extract_text_from_upload` helper (the natural shared seam — both CRUD and render need it without circular import).
+- `lease_template_render_service.py` (45 LOC) — Render + auto-prepend large_dog_disclosure.
+
+Circular-import avoided by moving `TemplateNotFoundError` and `extract_text_from_upload` into the placeholder module. Zero consumer changes required (all back-compat re-exports). 25/25 lease template tests passed.
 
 ---
 
