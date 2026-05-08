@@ -20,6 +20,8 @@ import logging
 import uuid
 from typing import Protocol
 
+from platform_shared.core.storage import StorageNotConfiguredError  # noqa: F401 — re-exported for back-compat
+
 from app.core.applicant_enums import SCREENING_PROVIDERS, SCREENING_STATUSES
 from app.core.storage import get_storage
 from app.db.session import unit_of_work
@@ -121,11 +123,11 @@ class ScreeningUploadValidationError(ScreeningServiceError):
     """
 
 
-class StorageNotConfiguredError(ScreeningServiceError):
-    """Object storage required for the screening upload is unavailable.
-
-    The route handler maps this to HTTP 503 — uploads need somewhere to go.
-    """
+# StorageNotConfiguredError previously inherited from ScreeningServiceError
+# so the route's broad catch would map it to 503 via a string-match hack
+# ("if 'storage' in str(exc).lower()"). Switched to the canonical class
+# from platform_shared (imported at top of file) so the route can catch
+# it explicitly without the string-match — see api/screening.py.
 
 
 def get_provider(name: str) -> ScreeningProvider:

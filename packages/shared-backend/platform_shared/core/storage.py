@@ -10,6 +10,19 @@ from minio.error import S3Error
 logger = logging.getLogger(__name__)
 
 
+class StorageNotConfiguredError(RuntimeError):
+    """Raised when MinIO/S3 storage is required but not configured.
+
+    Distinct from a transient storage outage — this is a deploy-time config
+    error. Endpoints that require storage should map this to a 503 so the
+    operator can distinguish a missing-config from a transient blip.
+
+    Lives in ``platform_shared`` so both apps raise (and catch) the same
+    class, instead of each app defining its own and pattern-matching on
+    string content.
+    """
+
+
 class StorageClient:
     def __init__(self, client: Minio, bucket: str) -> None:
         self._client = client

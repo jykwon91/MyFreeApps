@@ -14,6 +14,8 @@ import logging
 import uuid
 from typing import Any
 
+from platform_shared.core.storage import StorageNotConfiguredError  # noqa: F401 — re-exported for back-compat
+
 from app.core.storage import get_storage
 from app.db.session import unit_of_work
 from app.repositories import listing_photo_repo, listing_repo
@@ -26,15 +28,6 @@ logger = logging.getLogger(__name__)
 
 class ListingNotFoundError(LookupError):
     """Raised when the listing the caller scoped against does not exist."""
-
-
-class StorageNotConfiguredError(RuntimeError):
-    """Raised when MinIO/S3 storage is not configured.
-
-    Photo uploads require object storage — unlike documents which can fall back
-    to DB-side storage, photos are too large for that and benefit from CDN
-    fronting. Surfaces as HTTP 503.
-    """
 
 
 async def upload_photos(
