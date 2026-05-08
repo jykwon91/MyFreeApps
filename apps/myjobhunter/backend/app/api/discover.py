@@ -28,6 +28,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from platform_shared.core.request_utils import get_client_ip
 
 from app.core.auth import current_active_user
+from app.core.config import settings
 from app.core.rate_limit import RateLimiter
 from app.db.session import get_db
 from app.models.user.user import User
@@ -65,10 +66,14 @@ router = APIRouter(prefix="/discover", tags=["discovery"])
 
 _NOT_FOUND_DETAIL = "Discovery resource not found"
 
-# 30 / 5 min — fetches hit JSearch (paid). Cap is generous for one
-# operator running ad-hoc refreshes but limits blast radius if a key
-# leaks.
-_REFRESH_LIMITER = RateLimiter(max_attempts=30, window_seconds=300)
+# Fetches hit JSearch (paid). Cap is generous for one operator running
+# ad-hoc refreshes but limits blast radius if a key leaks. Defaults
+# (30 / 5 min) live in Settings so an operator can lower them without
+# code changes.
+_REFRESH_LIMITER = RateLimiter(
+    max_attempts=settings.discovery_refresh_rate_limit_threshold,
+    window_seconds=settings.discovery_refresh_rate_limit_window_seconds,
+)
 
 
 # ---------------------------------------------------------------------------
