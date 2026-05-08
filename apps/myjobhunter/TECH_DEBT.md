@@ -9,6 +9,113 @@ removed and the counts in this header are updated.
 
 > Silent-fail follow-up audit: 2026-05-08 (post-#426 ripple investigation, triggered by today's resume-refinement 500 in PR #435). 8 new findings spanning shared platform + both apps; tracked under "## Silent-fail audit (2026-05-08)" below. PR #426 ripped silent-fail from `_record_log` only — same pattern survives in 8 other third-party wrappers across the monorepo.
 
+> Monorepo refactor audit (2026-05-08): ~10 additional findings under "## Monorepo refactor audit (2026-05-08)" below. MJH-specific extraction / split candidates. Sister findings live in `apps/mybookkeeper/TECH_DEBT.md`.
+
+---
+
+## Monorepo refactor audit (2026-05-08)
+
+### Backend reusability (MJH-side)
+
+#### CRITICAL — Test fixtures duplicated between MBK + MJH
+
+See sister entry in `apps/mybookkeeper/TECH_DEBT.md`. MJH side: `apps/myjobhunter/backend/tests/conftest.py:200-246` (`user_factory` — the more sophisticated implementation, with hard-delete cleanup + monkeypatch fast hasher). When extracted to `platform_shared/testing/factories.py`, MJH's pattern should be the canonical version; MBK's test fixtures will need to adopt it.
+
+---
+
+#### HIGH — Soft-delete pattern reimplemented
+
+See sister entry in MBK. MJH side: `application_repository.soft_delete()`, `document_repo.soft_delete()` (2 implementations). MJH's signature (`soft_delete(db, instance)`) is cleaner than MBK's positional-args style. When extracted, MJH's shape should be the canonical version.
+
+---
+
+#### HIGH — `StorageNotConfiguredError` defined identically across 5 files
+
+See sister entry in MBK. MJH side: `core/storage.py`. Consolidate as a re-export from `platform_shared/core/storage.py`.
+
+---
+
+#### MEDIUM — Pagination response envelopes — adopt early in MJH
+
+**Effort:** S
+**Problem:** MBK has 8 hardcoded `*ListResponse` envelopes. MJH has zero pagination today and is about to start adding CRUD listings (Phase 2+).
+**Recommendation:** When the shared `ListResponse[ItemT]` Pydantic generic lands in `platform_shared/schemas/pagination.py`, MJH should adopt it for every list endpoint from the start — cheaper than backfilling later.
+
+---
+
+#### MEDIUM — `StatusResponse` / `CountResponse` / `SuccessResponse` adoption
+
+**Effort:** XS
+**Problem:** MJH currently returns `dict[str, Any]` for status/success/count responses, losing strict typing.
+**Recommendation:** When MBK's `schemas/common.py` extracts to `platform_shared/schemas/common.py`, MJH should adopt the typed responses across all endpoints that currently return dicts.
+
+---
+
+### Frontend reusability (MJH-side)
+
+> MJH already imports from `@platform/ui`, so these extractions are NOT blocked-on-react-19 from the MJH side. They become unblocked-for-MBK once MBK upgrades to React 19.
+
+#### HIGH — Extract `InlineBoldText` to `@platform/ui` now
+
+**Effort:** S
+**Location:** `apps/myjobhunter/frontend/src/features/discover/InlineBoldText.tsx` (65 LOC).
+**Problem:** Generic markdown-bold renderer (parses `**text**`) living in a feature folder. MJH-only consumer today, but obviously reusable.
+**Recommendation:** Move to `packages/shared-frontend/src/components/InlineBoldText.tsx`. Re-export from `@platform/ui` index. Update MJH import.
+
+---
+
+#### HIGH (blocked-on-react-19 from MBK side) — Status-colored Badge components
+
+See sister entry in MBK. MJH-side files: `features/admin/invites/InviteStatusBadge.tsx`, `features/documents/DocumentKindBadge.tsx`. MJH could extract its own `<StatusBadge>` to `@platform/ui` now (since MJH consumes shared); MBK adopts after React 19.
+
+---
+
+#### HIGH (blocked-on-react-19 from MBK side) — Confirm-delete dialog wrapper
+
+See sister entry in MBK. MJH-side file: `features/admin/demo/DeleteDemoConfirmDialog.tsx` (rebuilds from Radix instead of wrapping shared `ConfirmDialog`). When `DeleteConfirmDialog` lands in `@platform/ui`, MJH should refactor away from raw Radix.
+
+---
+
+#### MEDIUM — `MarkdownPreview` borderline-extractable
+
+**Effort:** M
+**Location:** `apps/myjobhunter/frontend/src/features/resume_refinement/markdown-preview.tsx` (210 LOC, full block + inline markdown).
+**Problem:** Specialized renderer; MJH-only today.
+**Recommendation:** Defer until MBK or another app needs markdown rendering.
+
+---
+
+### Long files (>500 LOC) — MJH-side production code
+
+#### HIGH — `apps/myjobhunter/frontend/src/features/applications/AddApplicationDialog.tsx` (1,070 LOC)
+
+**Effort:** M
+**Problem:** Multi-step dialog with paste-link / paste-text / manual / company-confirm states all inline.
+**Recommendation:** Extract per-step components (`PasteLinkStep`, `PasteTextStep`, `ManualEntryStep`, `CompanyConfirmStep`) and a state-machine hook (`useAddApplicationFlow`).
+
+---
+
+#### MEDIUM — `apps/myjobhunter/backend/app/services/resume_refinement/session_service.py` (795 LOC)
+
+**Effort:** M
+**Problem:** Started at ~600 LOC; my own additions in PRs #456 (chat history wrapping) and #460 (prior_context fetching) bumped it past 700 without splitting. Now has start_session + 6 mutation entry points + 5 helpers + critique/rewrite orchestration.
+**Recommendation:** Split into `session_lifecycle_service.py` (start / get / complete), `session_turn_service.py` (accept / custom / alternative / skip / navigate), and keep helpers in a third module. This entry is on me to fix first.
+
+---
+
+#### MEDIUM — `apps/myjobhunter/backend/app/services/job_analysis/job_analysis_service.py` (786 LOC)
+
+**Effort:** M
+**Problem:** Analyze + score + promote + extraction-log management all together.
+**Recommendation:** Split into `job_analysis_service.py` (analyze + score), `job_analysis_promote_service.py` (promote-to-application).
+
+---
+
+#### MEDIUM — `apps/myjobhunter/backend/app/services/extraction/jd_url_extractor.py` (590 LOC)
+
+**Effort:** S
+**Recommendation:** Borderline — likely splittable into `jd_url_fetcher.py` (HTTP fetching) + `jd_url_parser.py` (HTML→JD extraction). Watch for growth.
+
 ---
 
 ## Silent-fail audit (2026-05-08)

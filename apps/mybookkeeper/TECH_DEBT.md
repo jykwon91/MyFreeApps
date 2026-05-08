@@ -2,6 +2,170 @@
 
 > Last scanned: 2026-05-08
 > Issues: 0 critical, 3 high, 5 medium (1 deferred + 4 active), 0 low
+>
+> **Monorepo refactor audit (2026-05-08, post-resume-refinement work):** ~12 additional findings across three axes — backend reusability, frontend reusability, and long-files. Tracked under "## Monorepo refactor audit (2026-05-08)" below. These are extraction / split candidates, not regression bugs. Sister findings live in `apps/myjobhunter/TECH_DEBT.md`.
+
+## Monorepo refactor audit (2026-05-08)
+
+Output of two parallel scans (backend + frontend) for code that should live in `packages/shared-*` but doesn't, plus an audit of files exceeding 500 LOC. Both apps' findings recorded; this file owns MBK-side entries.
+
+### Backend reusability
+
+#### CRITICAL — Test fixtures duplicated between MBK + MJH
+
+**Effort:** M
+**Location:** `apps/mybookkeeper/backend/tests/conftest.py:121-135` (`test_user`, `test_org`) and `apps/myjobhunter/backend/tests/conftest.py:200-246` (`user_factory`).
+**Problem:** Both apps implement near-identical user/org factory fixtures with email confirmation + password hashing setup. MJH's version is more sophisticated (hard-delete cleanup, monkeypatch fast hasher); MBK's is older / simpler. Drift will accumulate as new auth fields land.
+**Recommendation:** Extract canonical fixtures to `packages/shared-backend/platform_shared/testing/factories.py` + `platform_shared/testing/conftest.py`. Provide an integration guide so per-app conftests register the shared factories with one import.
+
+---
+
+#### HIGH — Soft-delete pattern reimplemented in 10+ MBK repos
+
+**Effort:** S
+**Location:** MBK: `applicants_repo.soft_delete()`, `inquiry_repo.soft_delete_by_id()`, `vendor_repo.soft_delete()`, plus 7 more (10 total). MJH has 2 sister implementations.
+**Problem:** Identical logic each time — set `deleted_at=now()`, idempotent if already deleted. MJH's signature (`soft_delete(db, instance)`) is cleaner; MBK uses positional-args. Diverging tenant-scope rules: MBK enforces `user_id` + `org_id`; MJH enforces `user_id` only.
+**Recommendation:** Extract to `platform_shared/repositories/soft_delete_mixin.py` with optional scope kwargs. Refactor MBK's 10 repos + MJH's 2 to use the mixin. Lock the idempotency contract in shared tests.
+
+---
+
+#### HIGH — `StorageNotConfiguredError` defined identically across 5 files
+
+**Effort:** XS
+**Location:** MBK: `core/storage.py`, `services/leases/lease_template_service.py`, `services/listings/listing_photo_service.py`, `services/screening/screening_service.py` (4 places). MJH: `core/storage.py`.
+**Problem:** Same exception class declared in 5 files. Already partially in `platform_shared/core/storage.py`.
+**Recommendation:** Consolidate as a re-export from `platform_shared/core/storage.py` and delete the local copies. One-line import change per call site.
+
+---
+
+#### HIGH — MBK has local copies of code already in `platform_shared`
+
+**Effort:** S
+**Location:**
+- `app/services/user/totp_service.py` — duplicate of `platform_shared/services/totp_service.py` (MJH already imports from shared)
+- `app/services/system/auth_event_service.py` — mirrors `platform_shared/services/auth_event_service.py`
+- `app/services/system/admin_user_service_factory.py` — stub re-export wrapping `platform_shared/services/admin_user_service.py`
+
+**Problem:** Parity drift, not extraction work. Each local copy risks divergence on the next bug fix.
+**Recommendation:** Delete the local files; update imports across `app/api/totp.py` and any other consumers to import directly from `platform_shared`. Verify with `grep -r "app.services.user.totp_service" apps/mybookkeeper`.
+
+---
+
+#### MEDIUM — Pagination response envelopes hardcoded in 8+ MBK schemas
+
+**Effort:** M
+**Location:** `ApplicantListResponse`, `InquiryListResponse`, `ListingListResponse`, `VendorListResponse`, plus 4 more (`items: list[T], total: int, has_more: bool` shape).
+**Problem:** Each domain redefines the same envelope. MJH has zero pagination today and will repeat the mistake when it adds CRUD listings.
+**Recommendation:** Extract a generic `ListResponse[ItemT]` to `platform_shared/schemas/pagination.py`. Both apps inherit. MJH adopts the pattern as it builds its first list endpoints (cheaper to do early).
+
+---
+
+#### MEDIUM — `StatusResponse` / `CountResponse` / `SuccessResponse` defined only in MBK
+
+**Effort:** XS
+**Location:** `app/schemas/common.py`.
+**Problem:** Three reusable response types live in MBK only; MJH reuses `dict[str, Any]` for the same shapes (loose typing).
+**Recommendation:** Move to `platform_shared/schemas/common.py`; both apps import.
+
+---
+
+#### MEDIUM — Email template rendering duplicated with per-app branding
+
+**Effort:** M
+**Location:** MBK: `services/system/verification_email.py`, `services/system/password_reset_email.py`. MJH: `services/email/verification_email.py` (minimal version).
+**Problem:** Both render HTML email templates inline; both will drift over time.
+**Recommendation:** Extract template rendering to `platform_shared/services/email_templates/` with hooks for app-specific branding (logo URL, sender name). Branding stays per-app via `Settings`.
+
+---
+
+#### MEDIUM — DB session + `unit_of_work` pattern duplicated
+
+**Effort:** S
+**Location:** MBK: `db/session.py`. MJH: `db/session.py`.
+**Problem:** Both implement near-identical session factory + `unit_of_work` context manager. Already partially in `platform_shared/db/`. MBK has org-isolation hooks that need to remain.
+**Recommendation:** Reduce both local versions to thin re-exports from `platform_shared/db/session.py` plus app-specific overrides. Verify org-isolation hooks aren't lost.
+
+---
+
+#### LOW — Request context (`org_id`, `user_id` tracking) only in MBK
+
+**Effort:** S
+**Location:** `app/core/context.py::RequestContext`.
+**Problem:** MJH has user-only context today. When MJH adds multi-tenancy (Phase 4+), the pattern will be needed.
+**Recommendation:** Defer until MJH spec needs orgs. Track in this entry.
+
+---
+
+### Frontend reusability (MBK-side)
+
+> **Blocked-on-react-19.** MBK can't import from `@platform/ui` until the React 18→19 upgrade lands (two-React-copies runtime crash, see `project_mbk_platform_ui_migration_blocked` in auto-memory). MJH already uses `@platform/ui` and has the corresponding entries in its TECH_DEBT.
+
+#### HIGH (blocked-on-react-19) — Status-colored Badge component
+
+**Effort:** S (post-React-19)
+**Location:** MBK: `features/documents/StatusBadge.tsx:9-32`. Sister implementations in MJH: `features/admin/invites/InviteStatusBadge.tsx`, `features/documents/DocumentKindBadge.tsx`.
+**Problem:** Same enum→color-map→Badge render pattern in both apps, 3+ uses per app.
+**Recommendation:** Extract a generic `<StatusBadge value={...} colors={...} />` to `packages/shared-frontend/src/components/StatusBadge.tsx`. Re-enable for MBK after React 19 upgrade.
+
+---
+
+#### HIGH (blocked-on-react-19) — Confirm-delete dialog wrapper
+
+**Effort:** S (post-React-19)
+**Location:** MBK: `features/vendors/DeleteVendorModal.tsx` (wraps shared `ConfirmDialog`). MJH: `features/admin/demo/DeleteDemoConfirmDialog.tsx` (rebuilds from Radix).
+**Problem:** MBK delegates to shared, MJH reimplements. Both are the same shape with destructive styling.
+**Recommendation:** Extract a `DeleteConfirmDialog` wrapper around `ConfirmDialog` with destructive default styling (warning icon, red Confirm button) to `packages/shared-frontend/src/components/DeleteConfirmDialog.tsx`. Both apps consume.
+
+---
+
+### Long files (>500 LOC) — production code
+
+#### HIGH — `app/services/leases/signed_lease_service.py` (1,647 LOC)
+
+**Effort:** L
+**Problem:** Whole lease lifecycle in one file: apply → generate PDF → email → sign → store → lookup → renew. Hardest file to navigate in the repo.
+**Recommendation:** Split into `lease_apply_service.py`, `lease_pdf_service.py`, `lease_email_service.py`, `lease_lifecycle_service.py`. Highest payoff in the audit.
+
+---
+
+#### HIGH — `app/api/test_utils.py` (1,069 LOC)
+
+**Effort:** M
+**Problem:** Test-helper endpoints mounted in production routing. Gated behind `MYBOOKKEEPER_ENABLE_TEST_HELPERS=1` env flag, but they're discoverable in `app/api/` alongside real routes.
+**Recommendation:** Move to `app/test_helpers/` (separate package). Mount conditionally in `main.py`. Reduces blast radius if the env flag ever ships true.
+
+---
+
+#### MEDIUM — `app/repositories/transactions/transaction_repo.py` (943 LOC)
+
+**Effort:** M
+**Problem:** List filters + bulk ops + reconciliation queries all in one repo file.
+**Recommendation:** Split into `transaction_list_repo.py` (filters/queries), `transaction_bulk_repo.py` (bulk ops), `transaction_reconciliation_repo.py`.
+
+---
+
+#### MEDIUM — `frontend/src/app/pages/PublicInquiryForm.tsx` (934 LOC)
+
+**Effort:** M
+**Problem:** Form + listing detail + auto-fill + submit flow all inline in the page.
+**Recommendation:** Extract step components (`PublicInquiryListingPanel`, `PublicInquiryFormStep`, `PublicInquirySuccessStep`) and a state-machine hook.
+
+---
+
+#### MEDIUM — `app/services/leases/lease_template_service.py` (926 LOC)
+
+**Effort:** M
+**Problem:** Template CRUD + AI placeholder extraction + render + auto-prepend dog disclosure all together.
+**Recommendation:** Split into `lease_template_crud_service.py`, `lease_template_placeholder_service.py` (AI extraction), `lease_template_render_service.py`.
+
+---
+
+#### MEDIUM — `app/services/tax/tax_advisor_service.py` (590 LOC) and `services/leases/receipt_service.py` (584 LOC)
+
+**Effort:** S each
+**Recommendation:** Borderline — split if a clear seam exists. Watch for further growth.
+
+---
 
 ## High
 
