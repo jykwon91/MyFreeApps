@@ -1,7 +1,7 @@
 # Tech Debt
 
 > Last scanned: 2026-05-08
-> Issues: 0 critical, 4 high, 6 medium (1 deferred + 5 active), 0 low
+> Issues: 0 critical, 3 high, 6 medium (1 deferred + 5 active), 0 low
 
 ## High
 
@@ -18,16 +18,8 @@
 
 ---
 
-### [Frontend tests] Pre-existing frontend unit test failures (partial cleanup 2026-05-08)
-**Effort:** M (remaining)
-**Location:** frontend/src/__tests__/InviteAccept.test.tsx, PendingInvites.test.tsx, PublicInquiryForm.test.tsx, TaxDocuments.test.tsx, Transactions.test.tsx, VendorDetail.test.tsx
-**Problem:** Of the original 7-file failure list (DocumentUploadZone, InviteAccept, PendingInvites, Documents, useDashboardFilter, ApplicantDetail, ListingDetail) some were fixed organically; ListingDetail was fixed in this session by adding 4 missing `useGetChannelsQuery` / `useGetListingChannelsQuery` / channel-mutation hooks to the mock block (the actual cause turned out to be stale RTK Query mocks, not the PR #187 tenant_lifecycle backfill the prior entry guessed at). New failures emerged not in the original list:
-- **InviteAccept**, **PendingInvites**: stale mocks PLUS the components were refactored — assertions reference UI text that no longer renders ("You're in!", "Redirecting you to...", "Invite failed", "Invalid or expired invite"). Each test needs a read of the current component before rewriting.
-- **PublicInquiryForm**: looking for `data-testid="public-inquiry-lease-length"` — testid no longer exists. Form was refactored.
-- **TaxDocuments**: text-matcher drift — `2025` matches multiple elements; `/2 document/` and `$45,724.88` no longer present.
-- **Transactions**: text-matcher drift + missing tooltip titles ("Rules I've learned from your corrections — click to view or manage them", "Import transactions from a bank CSV file"). `Home Depot` matches multiple elements.
-- **VendorDetail**: same `Home Depot` multi-match — fixture has duplicates or component renders the vendor name twice.
-**Recommendation:** Per-file investigation. Each test was written against an older component shape; the fix for each is "open the current component, see what it renders, rewrite the assertion." Recommended order by effort: PendingInvites (small, self-contained) → InviteAccept (small, self-contained) → VendorDetail (probably one-line fixture fix) → Transactions, TaxDocuments, PublicInquiryForm (each needs more rewrite). Don't try to do all in one PR — one file per PR keeps each diff focused.
+### ~~[Frontend tests] Pre-existing frontend unit test failures (partial cleanup 2026-05-08)~~ RESOLVED
+**Resolved:** All 6 remaining files fixed in 2026-05-08 across PRs #463 (PendingInvites), #464 (InviteAccept rewrite), #465 (VendorDetail), #466 (Transactions), #467 (TaxDocuments), #468 (PublicInquiryForm). Verified locally: `npm test -- src/__tests__/{InviteAccept,PendingInvites,PublicInquiryForm,TaxDocuments,Transactions,VendorDetail}.test.tsx` → 70 tests passed. Each PR was per-file per the recommendation. Root causes mostly fell into 3 buckets: (1) stale RTK Query / hook mocks failing at module load, (2) UI copy / data-testid drift after component refactors (lease-length → move-out-date+occupants, "/ hour" → "/hr", etc.), (3) multi-element matches where a fixture name appeared in both desktop table and mobile card view.
 
 ---
 
