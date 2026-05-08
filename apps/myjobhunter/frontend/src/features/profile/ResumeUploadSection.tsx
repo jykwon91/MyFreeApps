@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { FileText } from "lucide-react";
 import { FileUploadDropzone, showError, showSuccess, extractErrorMessage } from "@platform/ui";
 import ResumeJobRow from "@/features/profile/ResumeJobRow";
@@ -5,9 +6,8 @@ import ResumeUploadSectionSkeleton from "@/features/profile/ResumeUploadSectionS
 import {
   useUploadResumeMutation,
   useListResumeJobsQuery,
-  useGetResumeDownloadUrlQuery,
+  useLazyGetResumeDownloadUrlQuery,
 } from "@/lib/resumesApi";
-import { useState, useEffect } from "react";
 
 // Accepted MIME types — must match the backend allowlist in resume_validator.py
 const ACCEPTED_RESUME_TYPES =
@@ -37,21 +37,8 @@ export default function ResumeUploadSection({ profileId: _profileId }: ResumeUpl
   });
 
   const [uploadResume, { isLoading: isUploading }] = useUploadResumeMutation();
+  const [getDownloadUrl] = useLazyGetResumeDownloadUrlQuery();
   const [downloadingJobId, setDownloadingJobId] = useState<string | null>(null);
-
-  // We trigger download imperatively via a separate query; hold the job id to trigger.
-  const { data: downloadUrlData } = useGetResumeDownloadUrlQuery(downloadingJobId ?? "", {
-    skip: !downloadingJobId,
-  });
-
-  // Open the presigned URL in a new tab once the query resolves, then clear the
-  // pending job id so the query is not re-triggered on subsequent renders.
-  useEffect(() => {
-    if (downloadUrlData && downloadingJobId) {
-      window.open(downloadUrlData.url, "_blank", "noopener,noreferrer");
-      setDownloadingJobId(null);
-    }
-  }, [downloadUrlData, downloadingJobId]);
 
   if (isLoading) {
     return <ResumeUploadSectionSkeleton />;
@@ -72,8 +59,16 @@ export default function ResumeUploadSection({ profileId: _profileId }: ResumeUpl
     }
   }
 
-  function handleDownload(jobId: string) {
+  async function handleDownload(jobId: string) {
     setDownloadingJobId(jobId);
+    try {
+      const result = await getDownloadUrl(jobId).unwrap();
+      window.open(result.url, "_blank", "noopener,noreferrer");
+    } catch (err) {
+      showError(`Download failed: ${extractErrorMessage(err)}`);
+    } finally {
+      setDownloadingJobId(null);
+    }
   }
 
   const jobList = jobs ?? [];

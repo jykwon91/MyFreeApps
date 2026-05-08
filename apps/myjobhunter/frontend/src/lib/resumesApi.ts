@@ -42,4 +42,5 @@ export const {
   useListResumeJobsQuery,
   useGetResumeJobQuery,
   useGetResumeDownloadUrlQuery,
+  useLazyGetResumeDownloadUrlQuery,
 } = resumesApi;

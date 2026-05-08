@@ -184,8 +184,9 @@ describe("Applications page", () => {
 
       renderApplications();
 
-      // The badge label for "applied" is "Applied"
-      expect(screen.getByText("Applied")).toBeInTheDocument();
+      // "Applied" also appears as a column header for the applied_at date column;
+      // scope to the table cell to avoid "found multiple elements" from getByText.
+      expect(screen.getByRole("cell", { name: "Applied" })).toBeInTheDocument();
     });
 
     it("renders a Status badge for an app with latest_status='interview_scheduled'", () => {
@@ -271,7 +272,7 @@ describe("Applications page", () => {
 
       renderApplications();
 
-      expect(screen.getByText("Applied")).toBeInTheDocument();
+      expect(screen.getByRole("cell", { name: "Applied" })).toBeInTheDocument();
       expect(screen.getByText("Rejected")).toBeInTheDocument();
       // The null row contributes at least one "—"
       expect(screen.getAllByText("—").length).toBeGreaterThan(0);

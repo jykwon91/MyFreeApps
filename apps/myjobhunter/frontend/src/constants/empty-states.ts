@@ -8,6 +8,28 @@ export interface EmptyStateCopy {
   actionLabel: string;
 }
 
+export interface EmptyStateCopyNoAction {
+  iconName: string;
+  heading: string;
+  body: string;
+}
+
+export const DISCOVER_EMPTY_STATES: Record<"no_saved_searches" | "inbox_empty", EmptyStateCopyNoAction> = {
+  no_saved_searches: {
+    iconName: "Telescope",
+    heading: "No saved searches yet",
+    body:
+      "Create a saved search and I'll pull tailored postings from " +
+      "Google Jobs (LinkedIn, Indeed, Glassdoor, ZipRecruiter) every " +
+      "time you click Refresh.",
+  },
+  inbox_empty: {
+    iconName: "Telescope",
+    heading: "Inbox empty",
+    body: "Click Refresh on a saved search above to fetch the latest postings.",
+  },
+};
+
 export const EMPTY_STATES = {
   dashboard: {
     iconName: "Briefcase",
