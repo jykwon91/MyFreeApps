@@ -286,8 +286,8 @@ app.include_router(taxpayer_profiles.router)
 app.include_router(demo.router)
 app.include_router(analytics.router)
 if settings.allow_test_admin_promotion:
-    from app.api import test_utils
-    app.include_router(test_utils.router)
+    from app.test_helpers.router import router as test_helpers_router
+    app.include_router(test_helpers_router)
 
 
 @app.get("/health")

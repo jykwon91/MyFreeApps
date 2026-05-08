@@ -59,7 +59,8 @@ def _patch_session(db: AsyncSession):
     # services they delegate to (inquiry_service.create_inquiry / .get_inquiry
     # etc.) — see the test in-memory SQLite session.
     with (
-        patch("app.api.test_utils.unit_of_work", _fake_uow),
+        patch("app.test_helpers.auth.unit_of_work", _fake_uow),
+        patch("app.test_helpers.seed.unit_of_work", _fake_uow),
         patch("app.services.inquiries.inquiry_service.unit_of_work", _fake_uow),
         patch(
             "app.services.inquiries.inquiry_service.AsyncSessionLocal",
@@ -93,7 +94,7 @@ class TestPromoteToAdmin:
     @pytest.mark.asyncio
     async def test_endpoint_gated_by_env_var(self) -> None:
         """The endpoint returns 404 when allow_test_admin_promotion is False."""
-        from app.api.test_utils import promote_to_admin
+        from app.test_helpers.auth import promote_to_admin
         from app.core.config import settings
         from fastapi import HTTPException
 
@@ -119,7 +120,7 @@ class TestPromoteToAdmin:
     async def test_endpoint_promotes_when_enabled(
         self, db: AsyncSession, regular_user: User,
     ) -> None:
-        from app.api.test_utils import promote_to_admin
+        from app.test_helpers.auth import promote_to_admin
         from app.core.config import settings
 
         original = settings.allow_test_admin_promotion
@@ -134,7 +135,7 @@ class TestPromoteToAdmin:
     async def test_endpoint_returns_admin_user_unchanged(
         self, db: AsyncSession, admin_user: User,
     ) -> None:
-        from app.api.test_utils import promote_to_admin
+        from app.test_helpers.auth import promote_to_admin
         from app.core.config import settings
 
         original = settings.allow_test_admin_promotion
@@ -154,7 +155,7 @@ class TestSeedInquiry:
         self, db: AsyncSession, regular_user: User,
     ) -> None:
         import datetime as _dt
-        from app.api.test_utils import seed_inquiry
+        from app.test_helpers.seed import seed_inquiry
         from app.core.config import settings
         from app.core.context import RequestContext
         from app.schemas.inquiries.inquiry_create_request import InquiryCreateRequest
@@ -186,7 +187,7 @@ class TestSeedInquiry:
         test_user: User,
     ) -> None:
         import datetime as _dt
-        from app.api.test_utils import seed_inquiry
+        from app.test_helpers.seed import seed_inquiry
         from app.core.config import settings
         from app.core.context import RequestContext
         from app.schemas.inquiries.inquiry_create_request import InquiryCreateRequest
@@ -217,7 +218,7 @@ class TestDeleteInquiry:
 
     @pytest.mark.asyncio
     async def test_endpoint_gated_by_env_var(self) -> None:
-        from app.api.test_utils import delete_inquiry
+        from app.test_helpers.seed import delete_inquiry
         from app.core.config import settings
         from app.core.context import RequestContext
         from fastapi import HTTPException
@@ -244,7 +245,7 @@ class TestDeleteInquiry:
         test_user: User,
     ) -> None:
         import datetime as _dt
-        from app.api.test_utils import delete_inquiry, seed_inquiry
+        from app.test_helpers.seed import delete_inquiry, seed_inquiry
         from app.core.config import settings
         from app.core.context import RequestContext
         from app.repositories import inquiry_repo
@@ -291,7 +292,7 @@ class TestSeedBlackout:
     ) -> None:
         import datetime as _dt
         from decimal import Decimal
-        from app.api.test_utils import (
+        from app.test_helpers.seed import (
             _SeedBlackoutRequest,
             delete_blackout,
             seed_blackout,
@@ -361,7 +362,7 @@ class TestSeedBlackout:
         import datetime as _dt
         from decimal import Decimal
         from fastapi import HTTPException
-        from app.api.test_utils import _SeedBlackoutRequest, seed_blackout
+        from app.test_helpers.seed import _SeedBlackoutRequest, seed_blackout
         from app.core.config import settings
         from app.core.context import RequestContext
         from app.models.listings.listing import Listing
