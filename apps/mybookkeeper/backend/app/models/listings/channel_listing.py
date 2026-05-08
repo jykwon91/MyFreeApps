@@ -74,6 +74,9 @@ class ChannelListing(Base):
         DateTime(timezone=True), nullable=True,
     )
     last_import_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    last_import_error_category: Mapped[str | None] = mapped_column(
+        String(20), nullable=True,
+    )
 
     ical_export_token: Mapped[str] = mapped_column(
         String(64), nullable=False, default=_generate_export_token,

@@ -9,6 +9,7 @@ Verifies:
 - Update in place when UID re-seen with new dates
 - Delete when UID disappears from feed
 - HTTP failure preserves existing rows + records last_import_error
+- Error category branching: transient / auth / config / unknown
 """
 from __future__ import annotations
 
@@ -206,6 +207,97 @@ class TestPollOne:
         assert refreshed is not None
         assert refreshed.last_import_error is not None
         assert "timeout" in refreshed.last_import_error.lower()
+        assert refreshed.last_import_error_category == "transient"
+
+    @pytest.mark.asyncio
+    async def test_request_error_recorded_as_transient(
+        self, db, seeded_channel_listing,
+    ) -> None:
+        cl = seeded_channel_listing
+        with _patched_uow(db):
+            await channel_sync_service.poll_one(
+                cl, client=_mock_client_raising(httpx.ConnectTimeout("connect timed out")),
+            )
+
+        refreshed = await channel_listing_repo.get_by_channel_listing_id(db, cl.id)
+        assert refreshed is not None
+        assert refreshed.last_import_error_category == "transient"
+        assert refreshed.last_import_error is not None
+
+    @pytest.mark.asyncio
+    async def test_http_401_recorded_as_auth(
+        self, db, seeded_channel_listing,
+    ) -> None:
+        cl = seeded_channel_listing
+        mock_response = MagicMock()
+        mock_response.status_code = 401
+        exc = httpx.HTTPStatusError("401", request=MagicMock(), response=mock_response)
+        with _patched_uow(db):
+            await channel_sync_service.poll_one(cl, client=_mock_client_raising(exc))
+
+        refreshed = await channel_listing_repo.get_by_channel_listing_id(db, cl.id)
+        assert refreshed is not None
+        assert refreshed.last_import_error_category == "auth"
+
+    @pytest.mark.asyncio
+    async def test_http_403_recorded_as_auth(
+        self, db, seeded_channel_listing,
+    ) -> None:
+        cl = seeded_channel_listing
+        mock_response = MagicMock()
+        mock_response.status_code = 403
+        exc = httpx.HTTPStatusError("403", request=MagicMock(), response=mock_response)
+        with _patched_uow(db):
+            await channel_sync_service.poll_one(cl, client=_mock_client_raising(exc))
+
+        refreshed = await channel_listing_repo.get_by_channel_listing_id(db, cl.id)
+        assert refreshed is not None
+        assert refreshed.last_import_error_category == "auth"
+
+    @pytest.mark.asyncio
+    async def test_http_400_recorded_as_config(
+        self, db, seeded_channel_listing,
+    ) -> None:
+        cl = seeded_channel_listing
+        mock_response = MagicMock()
+        mock_response.status_code = 400
+        exc = httpx.HTTPStatusError("400", request=MagicMock(), response=mock_response)
+        with _patched_uow(db):
+            await channel_sync_service.poll_one(cl, client=_mock_client_raising(exc))
+
+        refreshed = await channel_listing_repo.get_by_channel_listing_id(db, cl.id)
+        assert refreshed is not None
+        assert refreshed.last_import_error_category == "config"
+
+    @pytest.mark.asyncio
+    async def test_http_503_recorded_as_transient(
+        self, db, seeded_channel_listing,
+    ) -> None:
+        cl = seeded_channel_listing
+        mock_response = MagicMock()
+        mock_response.status_code = 503
+        exc = httpx.HTTPStatusError("503", request=MagicMock(), response=mock_response)
+        with _patched_uow(db):
+            await channel_sync_service.poll_one(cl, client=_mock_client_raising(exc))
+
+        refreshed = await channel_listing_repo.get_by_channel_listing_id(db, cl.id)
+        assert refreshed is not None
+        assert refreshed.last_import_error_category == "transient"
+
+    @pytest.mark.asyncio
+    async def test_unexpected_exception_recorded_as_unknown(
+        self, db, seeded_channel_listing,
+    ) -> None:
+        cl = seeded_channel_listing
+        with _patched_uow(db):
+            await channel_sync_service.poll_one(
+                cl, client=_mock_client_raising(RuntimeError("unexpected parse failure")),
+            )
+
+        refreshed = await channel_listing_repo.get_by_channel_listing_id(db, cl.id)
+        assert refreshed is not None
+        assert refreshed.last_import_error_category == "unknown"
+        assert refreshed.last_import_error is not None
 
     @pytest.mark.asyncio
     async def test_skip_when_url_is_none(
