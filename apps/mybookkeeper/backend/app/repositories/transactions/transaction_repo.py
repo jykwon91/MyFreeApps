@@ -13,6 +13,7 @@ from app.core.vendors import normalize_vendor
 from app.models.extraction.extraction import Extraction
 from app.models.transactions.transaction import Transaction
 from app.models.transactions.transaction_document import TransactionDocument
+from platform_shared.repositories.soft_delete import soft_delete as _shared_soft_delete
 
 
 class _date_diff_days(FunctionElement):
@@ -74,9 +75,8 @@ async def soft_delete_by_document_id(
     result = await db.execute(stmt)
     transactions = list(result.scalars().all())
 
-    now = datetime.now(timezone.utc)
     for txn in transactions:
-        txn.deleted_at = now
+        await _shared_soft_delete(db, txn)
         txn.status = "duplicate"
 
     return transactions
@@ -91,7 +91,7 @@ async def soft_delete_by_external_id(
     """Soft-delete a transaction by external source and ID."""
     txn = await find_by_external_id(db, organization_id, external_source, external_id)
     if txn:
-        txn.deleted_at = datetime.now(timezone.utc)
+        await _shared_soft_delete(db, txn)
         txn.status = "duplicate"
 
 
@@ -265,7 +265,7 @@ async def bulk_delete(
 
 
 async def mark_deleted(db: AsyncSession, transaction: Transaction) -> None:
-    transaction.deleted_at = datetime.now(timezone.utc)
+    await _shared_soft_delete(db, transaction)
     transaction.status = "duplicate"
     await db.flush()
 

@@ -30,6 +30,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.application.application import Application
+from platform_shared.repositories.soft_delete import soft_delete as _shared_soft_delete
 from app.models.application.application_event import ApplicationEvent
 from app.models.company.company import Company
 from app.models.job_analysis.job_analysis import JobAnalysis
@@ -335,8 +336,8 @@ async def soft_delete(db: AsyncSession, application: Application) -> Application
     returned unchanged (no second timestamp update). Hard deletes are
     forbidden by convention; rows persist for audit + restore.
     """
-    if application.deleted_at is None:
-        application.deleted_at = _dt.datetime.now(_dt.timezone.utc)
+    newly_deleted = await _shared_soft_delete(db, application)
+    if newly_deleted:
         await db.flush()
         await db.refresh(application)
     return application

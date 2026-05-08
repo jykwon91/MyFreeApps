@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import undefer
 
 from app.models.documents.document import Document
+from platform_shared.repositories.soft_delete import soft_delete as _shared_soft_delete
 
 
 async def list_filtered(
@@ -117,7 +118,7 @@ async def refresh(db: AsyncSession, document: Document) -> None:
 
 
 async def delete(db: AsyncSession, document: Document) -> None:
-    document.deleted_at = datetime.now(timezone.utc)
+    await _shared_soft_delete(db, document)
     document.status = "deleted"
 
 
