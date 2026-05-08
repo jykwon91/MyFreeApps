@@ -16,6 +16,7 @@ optional — ``init_sentry()`` exits silently when the DSN is empty.
 """
 
 import logging
+from typing import Any
 
 import sentry_sdk
 from sentry_sdk.integrations.logging import LoggingIntegration
@@ -23,6 +24,38 @@ from sentry_sdk.integrations.logging import LoggingIntegration
 logger = logging.getLogger(__name__)
 
 _PROD_ENV = "production"
+
+# Loggers whose WARNING+ output is library-internal cruft, not signal worth
+# burning Sentry quota on. Events whose ``logger`` field starts with any of
+# these prefixes are dropped via ``before_send`` before transport. Keep
+# this list narrow and intentional — the goal is dropping known noise, not
+# blanket-suppressing third-party libraries.
+#
+# - googleapiclient: emits an INFO/WARNING line every time it auto-refreshes
+#   a 401-expired token ("Refreshing credentials due to a 401 response.
+#   Attempt 1/2.") and a deprecation WARNING for ``file_cache is only
+#   supported with oauth2client<4.0.0`` on every Gmail API client construction.
+#   Both are normal library behaviour, not actionable signal.
+# - google.auth: same family — refresh-token / metadata-server logs.
+_NOISE_LOGGER_PREFIXES = (
+    "googleapiclient",
+    "google.auth",
+)
+
+
+def _drop_known_noise(
+    event: dict[str, Any], _hint: dict[str, Any],
+) -> dict[str, Any] | None:
+    """Sentry ``before_send`` hook — drop events from known-noisy loggers.
+
+    Returning ``None`` causes the SDK to discard the event before transport.
+    Only filters log-record events from the noise allowlist above; uncaught
+    exceptions and explicit ``capture_*`` calls are unaffected.
+    """
+    logger_name = event.get("logger") or ""
+    if any(logger_name.startswith(prefix) for prefix in _NOISE_LOGGER_PREFIXES):
+        return None
+    return event
 
 
 class SentryNotConfiguredError(RuntimeError):
@@ -83,6 +116,7 @@ def init_sentry(*, dsn: str, environment: str) -> None:
             traces_sample_rate=0.1,
             environment=environment,
             integrations=[logging_integration],
+            before_send=_drop_known_noise,
         )
     except Exception:
         logger.warning(
