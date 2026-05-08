@@ -1,7 +1,7 @@
 # Tech Debt
 
 > Last scanned: 2026-05-08
-> Issues: 0 critical, 6 high, 5 medium (1 deferred + 4 active), 0 low
+> Issues: 0 critical, 5 high, 5 medium (1 deferred + 4 active), 0 low
 
 ## High
 
@@ -44,11 +44,8 @@
 
 ---
 
-### [Auth] test_totp_enable_creates_event fails on main (pre-existing)
-**Effort:** S
-**Location:** `apps/mybookkeeper/backend/tests/test_auth_events_integration.py::test_totp_enable_creates_event`
-**Problem:** `POST /auth/totp/verify` returns 400 in this integration test. The test encrypts a TOTP secret, generates a valid TOTP code, and verifies — but the backend rejects the code. Likely a timing window (TOTP codes expire every 30s and the test may be running near a boundary) or the encrypted secret being decoded differently than expected in the test environment. Worth re-checking after PR #191 (TOTP SHA-256 migration) — the algorithm column may interact with the test fixture.
-**Recommendation:** Investigate whether the test needs to use `pyotp.TOTP(secret).at(dt.datetime.now(), 0)` + the ±1 window the backend allows, or whether the TOTP verify endpoint's clock drift tolerance differs between local and CI.
+### ~~[Auth] test_totp_enable_creates_event fails on main (pre-existing)~~ RESOLVED
+**Resolved:** Confirmed passing on `origin/main` 2026-05-08 — fixed organically (likely by PR #191 TOTP SHA-256 migration completing the algorithm-column wiring the entry suspected). All 8 tests in `test_auth_events_integration.py` now pass. No code change needed; entry retired.
 
 ---
 
