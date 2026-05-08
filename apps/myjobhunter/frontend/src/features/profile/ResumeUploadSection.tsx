@@ -20,8 +20,31 @@ export interface ResumeUploadSectionProps {
   profileId: string;
 }
 
+// Status values that indicate the worker hasn't finished. While any
+// job is in one of these states we poll the list endpoint so the row
+// transitions from queued → processing → complete without the user
+// having to refresh the page.
+const NON_TERMINAL_STATUSES = new Set<string>(["queued", "processing"]);
+const INFLIGHT_POLL_INTERVAL_MS = 2000;
+
 export default function ResumeUploadSection({ profileId: _profileId }: ResumeUploadSectionProps) {
-  const { data: jobs, isLoading } = useListResumeJobsQuery();
+  // Initial render: jobs is undefined → hasInflightJob is false →
+  // pollingInterval=0, no poll. After the first fetch resolves, if
+  // any job is in queued/processing the hook re-subscribes with
+  // pollingInterval=2000 and RTK Query starts polling. When all jobs
+  // hit a terminal status we re-render with pollingInterval=0 and
+  // polling stops automatically.
+  const [pollingInterval, setPollingInterval] = useState(0);
+  const { data: jobs, isLoading } = useListResumeJobsQuery(undefined, {
+    pollingInterval,
+  });
+  useEffect(() => {
+    const hasInflight = (jobs ?? []).some((j) =>
+      NON_TERMINAL_STATUSES.has(j.status),
+    );
+    setPollingInterval(hasInflight ? INFLIGHT_POLL_INTERVAL_MS : 0);
+  }, [jobs]);
+
   const [uploadResume, { isLoading: isUploading }] = useUploadResumeMutation();
   const [downloadingJobId, setDownloadingJobId] = useState<string | null>(null);
 

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronDown, ChevronUp, Download, FileText } from "lucide-react";
+import { ChevronDown, ChevronUp, Download, FileText, Loader2 } from "lucide-react";
 import { Badge, formatFileSize } from "@platform/ui";
 import type { ResumeUploadJob, ResumeUploadJobStatus } from "@/types/resume-upload-job/resume-upload-job";
 import ResumeJobParsedPanel from "@/features/profile/ResumeJobParsedPanel";
@@ -78,6 +78,13 @@ export default function ResumeJobRow({ job, onDownload, isDownloading }: ResumeJ
           ) : null}
         </div>
 
+        {(status === "queued" || status === "processing") && (
+          <Loader2
+            size={14}
+            className="text-muted-foreground animate-spin shrink-0"
+            aria-label="Processing"
+          />
+        )}
         <Badge label={STATUS_LABELS[status]} color={STATUS_COLORS[status]} />
 
         {mode.kind === "complete" ? (
