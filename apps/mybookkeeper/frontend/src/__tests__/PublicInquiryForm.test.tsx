@@ -73,10 +73,11 @@ async function fillValidForm(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByTestId("public-inquiry-name"), "Alice Smith");
   await user.type(screen.getByTestId("public-inquiry-email"), "alice@example.com");
   await user.type(screen.getByTestId("public-inquiry-phone"), "555-123-4567");
-  await user.type(screen.getByTestId("public-inquiry-move-in"), futureDateIso());
-  const lease = screen.getByTestId("public-inquiry-lease-length");
-  await user.clear(lease);
-  await user.type(lease, "6");
+  await user.type(screen.getByTestId("public-inquiry-move-in"), futureDateIso(30));
+  await user.type(screen.getByTestId("public-inquiry-move-out-date"), futureDateIso(210));
+  const occupants = screen.getByTestId("public-inquiry-occupants");
+  await user.clear(occupants);
+  await user.type(occupants, "1");
   await user.click(screen.getByTestId("public-inquiry-pets-no"));
   await user.type(screen.getByTestId("public-inquiry-city"), "Austin");
   // Country defaults to US — region renders as the state dropdown.
@@ -251,10 +252,11 @@ describe("PublicInquiryForm — country / region", () => {
     await user.type(screen.getByTestId("public-inquiry-name"), "Bjorn Eriksen");
     await user.type(screen.getByTestId("public-inquiry-email"), "bjorn@example.no");
     await user.type(screen.getByTestId("public-inquiry-phone"), "555-987-6543");
-    await user.type(screen.getByTestId("public-inquiry-move-in"), futureDateIso());
-    const lease = screen.getByTestId("public-inquiry-lease-length");
-    await user.clear(lease);
-    await user.type(lease, "12");
+    await user.type(screen.getByTestId("public-inquiry-move-in"), futureDateIso(30));
+    await user.type(screen.getByTestId("public-inquiry-move-out-date"), futureDateIso(390));
+    const occupants = screen.getByTestId("public-inquiry-occupants");
+    await user.clear(occupants);
+    await user.type(occupants, "1");
     await user.click(screen.getByTestId("public-inquiry-pets-no"));
     await user.type(screen.getByTestId("public-inquiry-city"), "Oslo");
     await user.selectOptions(screen.getByTestId("public-inquiry-country"), "NO");
