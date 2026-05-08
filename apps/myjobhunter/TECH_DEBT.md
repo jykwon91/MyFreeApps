@@ -111,10 +111,12 @@ See sister entry in MBK. MJH-side file: `features/admin/demo/DeleteDemoConfirmDi
 
 ---
 
-#### MEDIUM — `apps/myjobhunter/backend/app/services/extraction/jd_url_extractor.py` (590 LOC)
+#### ✅ RESOLVED — `apps/myjobhunter/backend/app/services/extraction/jd_url_extractor.py` (590 LOC)
 
-**Effort:** S
-**Recommendation:** Borderline — likely splittable into `jd_url_fetcher.py` (HTTP fetching) + `jd_url_parser.py` (HTML→JD extraction). Watch for growth.
+Split on 2026-05-08 into `jd_url_fetcher.py` (HTTP fetch, URL validation, auth-walled detection,
+error types) + `jd_url_parser.py` (schema.org fast path, HTML→text strip, Claude fallback).
+`jd_url_extractor.py` retained as thin orchestrator + re-export surface; no import-site changes
+required. Tests updated to patch at the correct module boundaries.
 
 ---
 

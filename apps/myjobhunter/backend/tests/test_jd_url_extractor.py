@@ -35,10 +35,12 @@ from app.services.extraction.jd_url_extractor import (
     JDFetchAuthRequiredError,
     JDFetchError,
     JDFetchTimeoutError,
-    _find_jobposting_schema,
-    _strip_visible_text,
-    _validate_url,
     extract_from_url,
+)
+from app.services.extraction.jd_url_fetcher import validate_url as _validate_url
+from app.services.extraction.jd_url_parser import (
+    find_jobposting_schema as _find_jobposting_schema,
+    strip_visible_text as _strip_visible_text,
 )
 from bs4 import BeautifulSoup
 
@@ -141,7 +143,7 @@ class _FakeAsyncClient:
 def _patch_httpx(client: _FakeAsyncClient) -> Any:
     """Patch httpx.AsyncClient to return ``client`` regardless of args."""
     return patch(
-        "app.services.extraction.jd_url_extractor.httpx.AsyncClient",
+        "app.services.extraction.jd_url_fetcher.httpx.AsyncClient",
         return_value=client,
     )
 
@@ -410,7 +412,7 @@ class TestExtractFromUrlSchema:
 
         mock_call = AsyncMock()
         with _patch_httpx(fake_client), patch(
-            "app.services.extraction.jd_url_extractor.claude_service.call_claude",
+            "app.services.extraction.jd_url_parser.claude_service.call_claude",
             mock_call,
         ):
             await extract_from_url(
@@ -461,7 +463,7 @@ class TestExtractFromUrlHtmlFallback:
         }
 
         with _patch_httpx(fake_client), patch(
-            "app.services.extraction.jd_url_extractor.claude_service.call_claude",
+            "app.services.extraction.jd_url_parser.claude_service.call_claude",
             new_callable=AsyncMock,
             return_value=claude_payload,
         ) as mock_call:
@@ -506,7 +508,7 @@ class TestExtractFromUrlHtmlFallback:
             response=_build_httpx_response(_NO_SCHEMA_HTML),
         )
         with _patch_httpx(fake_client), patch(
-            "app.services.extraction.jd_url_extractor.claude_service.call_claude",
+            "app.services.extraction.jd_url_parser.claude_service.call_claude",
             new_callable=AsyncMock,
             side_effect=anthropic.APIConnectionError(request=None),
         ):
@@ -522,7 +524,7 @@ class TestExtractFromUrlHtmlFallback:
             response=_build_httpx_response(_NO_SCHEMA_HTML),
         )
         with _patch_httpx(fake_client), patch(
-            "app.services.extraction.jd_url_extractor.claude_service.call_claude",
+            "app.services.extraction.jd_url_parser.claude_service.call_claude",
             new_callable=AsyncMock,
             side_effect=ValueError("invalid json"),
         ):
@@ -552,7 +554,7 @@ class TestAuthWalledShortCircuit:
         # The fetcher should never be called.
         sentinel = MagicMock()
         with patch(
-            "app.services.extraction.jd_url_extractor.httpx.AsyncClient",
+            "app.services.extraction.jd_url_fetcher.httpx.AsyncClient",
             sentinel,
         ):
             with pytest.raises(JDFetchAuthRequiredError):
