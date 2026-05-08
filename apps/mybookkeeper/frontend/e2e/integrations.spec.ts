@@ -446,15 +446,4 @@ test.describe("Integrations UI", () => {
       await expect(disconnectBtn).not.toBeVisible({ timeout: 3000 });
     });
   });
-
-  // ─── Bank Accounts Section ──────────────────────────────────────────────────
-
-  test.describe("Bank accounts (Plaid)", () => {
-    test("Bank Accounts section renders with connect button", async ({ authedPage: page }) => {
-      await expect(page.getByText("Bank Accounts").first()).toBeVisible({ timeout: 10000 });
-      await expect(
-        page.getByText(/connect your bank to automatically import transactions/i)
-      ).toBeVisible({ timeout: 5000 });
-    });
-  });
 });

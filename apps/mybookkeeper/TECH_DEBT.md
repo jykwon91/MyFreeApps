@@ -1,7 +1,7 @@
 # Tech Debt
 
 > Last scanned: 2026-05-08
-> Issues: 0 critical, 5 high, 6 medium (1 deferred + 5 active), 0 low
+> Issues: 0 critical, 4 high, 6 medium (1 deferred + 5 active), 0 low
 
 ## High
 
@@ -46,11 +46,8 @@
 
 ---
 
-### [E2E tests] "Bank Accounts section renders" fails because Plaid section no longer exists on Integrations page
-**Effort:** XS
-**Location:** frontend/e2e/integrations.spec.ts:453
-**Problem:** The E2E test expects a "Bank Accounts" heading on the Integrations page but the page only renders a Gmail section. Either the Plaid UI was removed without updating the test, or the section is conditionally rendered and the condition is never true in test env.
-**Recommendation:** Either remove the Bank Accounts test block or restore the Plaid UI section. Not fixed in this PR to keep scope to Gmail disconnect.
+### ~~[E2E tests] "Bank Accounts section renders" fails because Plaid section no longer exists on Integrations page~~ RESOLVED
+**Resolved:** PR fix/mbk-bank-accounts-e2e (2026-05-08) — Plaid UI is intentionally not rendered (see in-flight `fix/mbk-disable-plaid` branch). Removed the `test.describe("Bank accounts (Plaid)")` block from `integrations.spec.ts`. Also removed the leftover Bank Accounts skeleton section from `IntegrationsSkeleton.tsx` so the loading state matches the rendered page (Gmail-only) per the project rule about skeleton structural parity.
 
 ---
 
