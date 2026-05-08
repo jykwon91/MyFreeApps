@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timezone
+from typing import Literal
 
 import httpx
 
@@ -32,6 +33,8 @@ from app.repositories import channel_listing_repo, listing_blackout_repo
 from app.services.listings.ical_parser import parse_ical_blackouts
 
 logger = logging.getLogger(__name__)
+
+ImportErrorCategory = Literal["transient", "auth", "config", "unknown"]
 
 # Per-feed HTTP timeout. Channels' iCal exports are tiny (text), so 10s
 # is generous. Any longer and a slow channel could starve the scheduler
@@ -70,22 +73,62 @@ async def poll_one(
     if channel_listing.ical_import_url is None:
         return
 
+    category: ImportErrorCategory
     try:
         payload = await _fetch(channel_listing.ical_import_url, client=client)
         parsed = parse_ical_blackouts(payload)
-    except Exception as exc:  # noqa: BLE001 — we intentionally catch broadly
-        # HTTP error, timeout, or parse error — preserve existing data
-        # and surface the message to the operator via the UI.
+    except httpx.HTTPStatusError as exc:
+        status = exc.response.status_code
+        if status in (401, 403):
+            category = "auth"
+        elif 400 <= status < 500:
+            category = "config"
+        else:
+            category = "transient"
+        message = f"HTTPStatusError {status}: {exc}"
         logger.warning(
-            "iCal poll failed for channel_listing=%s url=%s: %s",
-            channel_listing.id, channel_listing.ical_import_url, exc,
+            "iCal poll %s for channel_listing=%s url=%s: %s",
+            category, channel_listing.id, channel_listing.ical_import_url, message,
         )
         async with unit_of_work() as db:
             await channel_listing_repo.mark_imported(
                 db,
                 channel_listing.id,
                 last_imported_at=datetime.now(timezone.utc),
-                last_import_error=str(exc)[:500],
+                last_import_error=message[:500],
+                last_import_error_category=category,
+            )
+        return
+    except httpx.RequestError as exc:
+        category = "transient"
+        message = f"{type(exc).__name__}: {exc}"
+        logger.warning(
+            "iCal poll transient for channel_listing=%s url=%s: %s",
+            channel_listing.id, channel_listing.ical_import_url, message,
+        )
+        async with unit_of_work() as db:
+            await channel_listing_repo.mark_imported(
+                db,
+                channel_listing.id,
+                last_imported_at=datetime.now(timezone.utc),
+                last_import_error=message[:500],
+                last_import_error_category=category,
+            )
+        return
+    except Exception as exc:  # noqa: BLE001 — parse errors, unexpected failures
+        category = "unknown"
+        message = f"{type(exc).__name__}: {exc}"
+        logger.exception(
+            "iCal poll unknown error for channel_listing=%s url=%s",
+            channel_listing.id, channel_listing.ical_import_url,
+        )
+        async with unit_of_work() as db:
+            await channel_listing_repo.mark_imported(
+                db,
+                channel_listing.id,
+                last_imported_at=datetime.now(timezone.utc),
+                last_import_error=message[:500],
+                last_import_error_category=category,
             )
         return
 

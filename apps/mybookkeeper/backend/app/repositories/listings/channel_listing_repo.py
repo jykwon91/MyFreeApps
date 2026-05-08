@@ -188,6 +188,7 @@ async def mark_imported(
     *,
     last_imported_at: datetime,
     last_import_error: str | None,
+    last_import_error_category: str | None = None,
 ) -> None:
     """Update poll-status columns. Called by the iCal polling worker."""
     row = await get_by_channel_listing_id(db, channel_listing_id)
@@ -195,4 +196,5 @@ async def mark_imported(
         return
     row.last_imported_at = last_imported_at
     row.last_import_error = last_import_error
+    row.last_import_error_category = last_import_error_category
     await db.flush()
