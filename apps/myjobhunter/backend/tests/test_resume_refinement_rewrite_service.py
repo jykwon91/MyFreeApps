@@ -240,3 +240,24 @@ async def test_empty_prior_context_omits_block():
 
     for body in captured:
         assert "Prior conversation" not in body
+
+
+def test_system_prompt_instructs_claude_to_clarify_on_vague_hint():
+    """The rewrite prompt must explicitly tell Claude to return a clarify
+    question when the user's hint is uninformative (e.g. ``temp``, ``asdf``).
+    Without this guard, Claude regenerates near-identical proposals and the
+    user sees what looks like a stuck loop. Reported by operator on
+    2026-05-08."""
+    from app.services.extraction.prompts.resume_rewrite_prompt import (
+        RESUME_REWRITE_PROMPT,
+    )
+    # The prompt must reference uninformative-hint detection by example
+    # so Claude has anchors for what counts as actionable signal.
+    assert "uninformative" in RESUME_REWRITE_PROMPT.lower()
+    assert "temp" in RESUME_REWRITE_PROMPT
+    assert "asdf" in RESUME_REWRITE_PROMPT
+    # And it must direct Claude to ``clarify``, not regenerate.
+    assert "kind=clarify" in RESUME_REWRITE_PROMPT or "kind=\"clarify\"" in RESUME_REWRITE_PROMPT
+    # And it must instruct echoing the user's input back, so they know
+    # their submission was observed and not silently dropped.
+    assert "echo" in RESUME_REWRITE_PROMPT.lower()
