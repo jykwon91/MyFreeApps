@@ -37,11 +37,11 @@ async def test_register_succeeds_without_token_when_secret_empty(client: AsyncCl
 async def test_register_succeeds_with_valid_turnstile_token(
     client: AsyncClient, monkeypatch,
 ) -> None:
-    """When the secret is set, a valid token (verifier returns True) lets the request through."""
+    """When the secret is set, a valid token (verifier returns (True, [])) lets the request through."""
     monkeypatch.setattr(settings, "turnstile_secret_key", "test-secret")
     with patch(
         "app.core.rate_limit.verify_turnstile_token",
-        new=AsyncMock(return_value=True),
+        new=AsyncMock(return_value=(True, [])),
     ):
         resp = await client.post(
             "/auth/register",
@@ -55,11 +55,11 @@ async def test_register_succeeds_with_valid_turnstile_token(
 async def test_register_rejected_with_invalid_turnstile_token(
     client: AsyncClient, monkeypatch,
 ) -> None:
-    """When the verifier returns False, the request is rejected with 400."""
+    """When the verifier returns (False, []), the request is rejected with 400."""
     monkeypatch.setattr(settings, "turnstile_secret_key", "test-secret")
     with patch(
         "app.core.rate_limit.verify_turnstile_token",
-        new=AsyncMock(return_value=False),
+        new=AsyncMock(return_value=(False, [])),
     ):
         resp = await client.post(
             "/auth/register",
@@ -67,7 +67,7 @@ async def test_register_rejected_with_invalid_turnstile_token(
             headers={"X-Turnstile-Token": "bad-token"},
         )
     assert resp.status_code == 400
-    assert resp.json()["detail"] == "Captcha verification failed"
+    assert resp.json()["detail"] == "captcha_verification_failed"
 
 
 @pytest.mark.asyncio
@@ -82,6 +82,44 @@ async def test_register_rejected_when_token_missing(
     )
     assert resp.status_code == 400
     assert resp.json()["detail"] == "Captcha token required"
+
+
+@pytest.mark.asyncio
+async def test_register_rejected_with_invalid_input_secret(
+    client: AsyncClient, monkeypatch,
+) -> None:
+    """Config bug (invalid-input-secret) surfaces as 503 so ops can distinguish it from user errors."""
+    monkeypatch.setattr(settings, "turnstile_secret_key", "bad-config-secret")
+    with patch(
+        "app.core.rate_limit.verify_turnstile_token",
+        new=AsyncMock(return_value=(False, ["invalid-input-secret"])),
+    ):
+        resp = await client.post(
+            "/auth/register",
+            json={"email": _email(), "password": "long-enough-password-1234"},
+            headers={"X-Turnstile-Token": "any-token"},
+        )
+    assert resp.status_code == 503
+    assert resp.json()["detail"] == "captcha_service_misconfigured"
+
+
+@pytest.mark.asyncio
+async def test_register_rejected_with_timeout_or_duplicate(
+    client: AsyncClient, monkeypatch,
+) -> None:
+    """Token reuse/expiry surfaces as 400 with a user-actionable retry detail."""
+    monkeypatch.setattr(settings, "turnstile_secret_key", "test-secret")
+    with patch(
+        "app.core.rate_limit.verify_turnstile_token",
+        new=AsyncMock(return_value=(False, ["timeout-or-duplicate"])),
+    ):
+        resp = await client.post(
+            "/auth/register",
+            json={"email": _email(), "password": "long-enough-password-1234"},
+            headers={"X-Turnstile-Token": "spent-token"},
+        )
+    assert resp.status_code == 400
+    assert resp.json()["detail"] == "captcha_expired_please_retry"
 
 
 # ---------------------------------------------------------------------------
@@ -123,7 +161,7 @@ async def test_forgot_password_succeeds_with_valid_token(
     monkeypatch.setattr(settings, "turnstile_secret_key", "test-secret")
     with patch(
         "app.core.rate_limit.verify_turnstile_token",
-        new=AsyncMock(return_value=True),
+        new=AsyncMock(return_value=(True, [])),
     ):
         resp = await client.post(
             "/auth/forgot-password",
@@ -153,4 +191,4 @@ async def test_reset_password_does_not_require_turnstile(
     )
     assert resp.status_code == 400
     assert resp.json().get("detail") != "Captcha token required"
-    assert resp.json().get("detail") != "Captcha verification failed"
+    assert resp.json().get("detail") != "captcha_verification_failed"

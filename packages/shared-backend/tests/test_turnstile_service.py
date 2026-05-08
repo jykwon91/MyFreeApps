@@ -1,9 +1,11 @@
 """Unit tests for platform_shared.services.turnstile_service.
 
 The verifier is decoupled from any app config — apps pass ``secret_key`` in.
-An empty/None key is the documented dev-mode no-op (returns True without
+An empty/None key is the documented dev-mode no-op (returns (True, []) without
 contacting Cloudflare).
 """
+import logging
+
 import httpx
 import pytest
 
@@ -30,7 +32,7 @@ class TestNoOpDevMode:
     async def test_empty_secret_returns_true_without_network(
         self, monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """When secret_key is empty, the function must short-circuit to True."""
+        """When secret_key is empty, the function must short-circuit to (True, [])."""
         called = {"hit": False}
 
         def handler(_: httpx.Request) -> httpx.Response:
@@ -39,7 +41,8 @@ class TestNoOpDevMode:
 
         _install_mock_transport(monkeypatch, handler)
 
-        assert await verify_turnstile_token("any-token", secret_key="") is True
+        result = await verify_turnstile_token("any-token", secret_key="")
+        assert result == (True, [])
         assert called["hit"] is False, "Empty secret must not contact Cloudflare"
 
     @pytest.mark.anyio
@@ -54,7 +57,8 @@ class TestNoOpDevMode:
 
         _install_mock_transport(monkeypatch, handler)
 
-        assert await verify_turnstile_token("any-token", secret_key=None) is True
+        result = await verify_turnstile_token("any-token", secret_key=None)
+        assert result == (True, [])
         assert called["hit"] is False
 
 
@@ -69,10 +73,11 @@ class TestVerification:
             return httpx.Response(200, json={"success": True})
 
         _install_mock_transport(monkeypatch, handler)
-        ok = await verify_turnstile_token(
+        success, error_codes = await verify_turnstile_token(
             "abc123", remote_ip="9.9.9.9", secret_key="real-secret",
         )
-        assert ok is True
+        assert success is True
+        assert error_codes == []
         assert captured["url"] == TURNSTILE_VERIFY_URL
         # Body is form-encoded — confirm secret + token + remote IP all flow through.
         assert "secret=real-secret" in captured["body"]
@@ -80,7 +85,10 @@ class TestVerification:
         assert "remoteip=9.9.9.9" in captured["body"]
 
     @pytest.mark.anyio
-    async def test_failure_response(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    async def test_failure_response_with_error_codes(
+        self, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Failure response with error-codes returns (False, [...codes...])."""
         def handler(_: httpx.Request) -> httpx.Response:
             return httpx.Response(
                 200,
@@ -88,7 +96,45 @@ class TestVerification:
             )
 
         _install_mock_transport(monkeypatch, handler)
-        assert await verify_turnstile_token("bad", secret_key="real-secret") is False
+        success, error_codes = await verify_turnstile_token("bad", secret_key="real-secret")
+        assert success is False
+        assert error_codes == ["invalid-input-response"]
+
+    @pytest.mark.anyio
+    async def test_failure_response_without_error_codes_field(
+        self, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """When the response has no error-codes field, returns (False, [])."""
+        def handler(_: httpx.Request) -> httpx.Response:
+            return httpx.Response(200, json={"success": False})
+
+        _install_mock_transport(monkeypatch, handler)
+        success, error_codes = await verify_turnstile_token("bad", secret_key="real-secret")
+        assert success is False
+        assert error_codes == []
+
+    @pytest.mark.anyio
+    async def test_failure_emits_warning_log(
+        self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """A failed verification must log at WARNING with the error codes."""
+        def handler(_: httpx.Request) -> httpx.Response:
+            return httpx.Response(
+                200,
+                json={
+                    "success": False,
+                    "error-codes": ["timeout-or-duplicate"],
+                    "hostname": "example.com",
+                    "action": "register",
+                },
+            )
+
+        _install_mock_transport(monkeypatch, handler)
+        with caplog.at_level(logging.WARNING, logger="platform_shared.services.turnstile_service"):
+            await verify_turnstile_token("expired", secret_key="real-secret")
+
+        assert any("timeout-or-duplicate" in r.message for r in caplog.records)
+        assert any(r.levelno == logging.WARNING for r in caplog.records)
 
     @pytest.mark.anyio
     async def test_remote_ip_optional(self, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -113,4 +159,6 @@ class TestVerification:
             return httpx.Response(200, json={"unexpected": "shape"})
 
         _install_mock_transport(monkeypatch, handler)
-        assert await verify_turnstile_token("abc", secret_key="real-secret") is False
+        success, error_codes = await verify_turnstile_token("abc", secret_key="real-secret")
+        assert success is False
+        assert error_codes == []

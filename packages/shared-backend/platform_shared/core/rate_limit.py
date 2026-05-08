@@ -19,11 +19,14 @@ In-process state — ``_buckets`` is a module-local dict on each
 ``RateLimiter`` instance, so the limiter is per-worker. Multi-worker /
 multi-host coordination (Redis backend) is intentionally out of scope.
 """
+import logging
 import time
 import threading
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Awaitable, Callable, Optional
+
+logger = logging.getLogger(__name__)
 
 from fastapi import HTTPException, Request
 from fastapi.security import OAuth2PasswordRequestForm
@@ -141,7 +144,7 @@ UserLookup = Callable[[AsyncSession, str], Awaitable[Any]]
 def make_require_turnstile(
     secret_key_provider: SecretKeyProvider,
     *,
-    verify: Callable[..., Awaitable[bool]] = verify_turnstile_token,
+    verify: Callable[..., Awaitable[tuple[bool, list[str]]]] = verify_turnstile_token,
 ) -> Callable[[Request], Awaitable[None]]:
     """Build a FastAPI dependency that enforces Turnstile CAPTCHA.
 
@@ -156,13 +159,20 @@ def make_require_turnstile(
         token = request.headers.get("X-Turnstile-Token", "")
         if not token:
             raise HTTPException(status_code=400, detail="Captcha token required")
-        valid = await verify(
+        success, error_codes = await verify(
             token,
             get_client_ip(request),
             secret_key=secret_key,
         )
-        if not valid:
-            raise HTTPException(status_code=400, detail="Captcha verification failed")
+        if not success:
+            # Config bug — alert ops, don't blame the user.
+            if any(c in error_codes for c in ("invalid-input-secret", "missing-input-secret")):
+                logger.error("Turnstile misconfigured: %s", error_codes)
+                raise HTTPException(status_code=503, detail="captcha_service_misconfigured")
+            # User-recoverable: token reused or expired.
+            if "timeout-or-duplicate" in error_codes:
+                raise HTTPException(status_code=400, detail="captcha_expired_please_retry")
+            raise HTTPException(status_code=400, detail="captcha_verification_failed")
 
     return _require_turnstile
 
