@@ -93,11 +93,12 @@ See sister entry in MBK. MJH-side file: `features/admin/demo/DeleteDemoConfirmDi
 
 ---
 
-#### MEDIUM — `apps/myjobhunter/backend/app/services/resume_refinement/session_service.py` (795 LOC)
+#### ✅ RESOLVED — `apps/myjobhunter/backend/app/services/resume_refinement/session_service.py` (795 LOC)
 
-**Effort:** M
-**Problem:** Started at ~600 LOC; my own additions in PRs #456 (chat history wrapping) and #460 (prior_context fetching) bumped it past 700 without splitting. Now has start_session + 6 mutation entry points + 5 helpers + critique/rewrite orchestration.
-**Recommendation:** Split into `session_lifecycle_service.py` (start / get / complete), `session_turn_service.py` (accept / custom / alternative / skip / navigate), and keep helpers in a third module. This entry is on me to fix first.
+Split in PR #478 into `session_lifecycle_service.py` (263 LOC — start / get / complete),
+`session_turn_service.py` (235 LOC — accept / custom / alternative / skip / navigate),
+and `session_helpers.py` (347 LOC — shared helpers). `session_service.py` retained as thin
+re-export shim (101 LOC); no import-site changes required.
 
 ---
 
