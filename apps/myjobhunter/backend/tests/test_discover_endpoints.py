@@ -365,3 +365,53 @@ async def test_dismiss_cross_tenant_404(
     async with await as_user(attacker) as a:
         resp = await a.post(f"/discover/{job_id}/dismiss")
         assert resp.status_code == 404
+
+
+# ===========================================================================
+# Repository-level: save_discovered clears dismissed_reason
+# ===========================================================================
+
+
+@pytest.mark.asyncio
+async def test_save_clears_dismissed_reason(
+    client: AsyncClient, user_factory, as_user, db,
+):
+    """Saving a previously-dismissed job clears both dismissed_at AND dismissed_reason.
+
+    Regression for the audit finding: save_discovered was setting dismissed_at=None
+    but leaving dismissed_reason set, producing a saved job that looked dismissed
+    to Phase D scoring.
+    """
+    from sqlalchemy import select
+
+    from app.models.discovery.discovered_job import DiscoveredJob
+    from app.repositories.discovery import discovery_repository
+
+    user = await user_factory()
+
+    job = DiscoveredJob(
+        user_id=uuid.UUID(user["id"]),
+        source="jsearch",
+        source_external_id="save-clears-reason-1",
+        title="Senior Backend Engineer",
+        company_name="Acme",
+    )
+    db.add(job)
+    await db.flush()
+
+    dismissed = await discovery_repository.dismiss_discovered(
+        db, job.id, uuid.UUID(user["id"]), reason="wrong_stack",
+    )
+    assert dismissed is True
+    await db.refresh(job)
+    assert job.dismissed_at is not None
+    assert job.dismissed_reason == "wrong_stack"
+
+    saved = await discovery_repository.save_discovered(
+        db, job.id, uuid.UUID(user["id"]),
+    )
+    assert saved is True
+    await db.refresh(job)
+    assert job.saved_at is not None
+    assert job.dismissed_at is None
+    assert job.dismissed_reason is None

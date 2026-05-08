@@ -139,7 +139,7 @@ async def score_user_inbox(user_id: uuid.UUID, *, batch: int = DEFAULT_SCORE_BAT
             # refactor — flagged in TECH_DEBT.md.
             score_int = _verdict_to_score(analysis.verdict)
             job.score = score_int
-            job.score_reason = (analysis.verdict_summary or "")[:1000]
+            job.score_reason = analysis.verdict_summary or ""
             job.scored_at = datetime.now(timezone.utc)
             await db.commit()
 
