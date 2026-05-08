@@ -85,11 +85,9 @@ See sister entry in MBK. MJH-side file: `features/admin/demo/DeleteDemoConfirmDi
 
 ### Long files (>500 LOC) — MJH-side production code
 
-#### HIGH — `apps/myjobhunter/frontend/src/features/applications/AddApplicationDialog.tsx` (1,070 LOC)
+#### ~~HIGH — `apps/myjobhunter/frontend/src/features/applications/AddApplicationDialog.tsx` (1,070 LOC)~~
 
-**Effort:** M
-**Problem:** Multi-step dialog with paste-link / paste-text / manual / company-confirm states all inline.
-**Recommendation:** Extract per-step components (`PasteLinkStep`, `PasteTextStep`, `ManualEntryStep`, `CompanyConfirmStep`) and a state-machine hook (`useAddApplicationFlow`).
+**RESOLVED** by PR #480 (2026-05-08). Extracted `useAddApplicationFlow` hook (zero JSX, pure state-machine logic) and four per-step components (`PasteLinkStep`, `PasteTextStep`, `ManualEntryStep`, `CompanyConfirmStep`, `ProcessingStep`) into `add-application-dialog/`. `AddApplicationDialog.tsx` is now a thin orchestrator at 153 LOC.
 
 ---
 
