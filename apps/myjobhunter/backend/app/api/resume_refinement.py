@@ -28,8 +28,8 @@ from app.db.session import get_db
 from app.models.user.user import User
 from app.schemas.resume_refinement.session import (
     NavigateRequest,
-    SessionRead,
     SessionStartRequest,
+    SessionWithTurnsRead,
     TurnAlternativeRequest,
     TurnCustomRequest,
 )
@@ -51,12 +51,12 @@ from app.services.resume_refinement.export_service import (
 router = APIRouter(prefix="/resume-refinement", tags=["resume-refinement"])
 
 
-@router.post("/sessions", response_model=SessionRead, status_code=201)
+@router.post("/sessions", response_model=SessionWithTurnsRead, status_code=201)
 async def start_session(
     body: SessionStartRequest,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
-) -> SessionRead:
+) -> SessionWithTurnsRead:
     """Start a new refinement session from a completed resume upload."""
     try:
         session = await session_service.start_session(
@@ -70,30 +70,30 @@ async def start_session(
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except CritiqueRetryExceeded as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
-    return SessionRead.model_validate(session)
+    return SessionWithTurnsRead.model_validate(session)
 
 
-@router.get("/sessions/{session_id}", response_model=SessionRead)
+@router.get("/sessions/{session_id}", response_model=SessionWithTurnsRead)
 async def get_session(
     session_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
-) -> SessionRead:
+) -> SessionWithTurnsRead:
     try:
         session = await session_service.get_session_state(
             db=db, user_id=user.id, session_id=session_id,
         )
     except SessionNotFound as exc:
         raise HTTPException(status_code=404, detail="Session not found") from exc
-    return SessionRead.model_validate(session)
+    return SessionWithTurnsRead.model_validate(session)
 
 
-@router.post("/sessions/{session_id}/accept", response_model=SessionRead)
+@router.post("/sessions/{session_id}/accept", response_model=SessionWithTurnsRead)
 async def accept_pending(
     session_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
-) -> SessionRead:
+) -> SessionWithTurnsRead:
     try:
         session = await session_service.accept_pending(
             db=db, user_id=user.id, session_id=session_id,
@@ -104,16 +104,16 @@ async def accept_pending(
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except NoPendingProposal as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
-    return SessionRead.model_validate(session)
+    return SessionWithTurnsRead.model_validate(session)
 
 
-@router.post("/sessions/{session_id}/custom", response_model=SessionRead)
+@router.post("/sessions/{session_id}/custom", response_model=SessionWithTurnsRead)
 async def supply_custom(
     session_id: uuid.UUID,
     body: TurnCustomRequest,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
-) -> SessionRead:
+) -> SessionWithTurnsRead:
     try:
         session = await session_service.accept_custom(
             db=db,
@@ -127,16 +127,16 @@ async def supply_custom(
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except NoMoreTargets as exc:
         raise HTTPException(status_code=409, detail="No remaining targets to rewrite") from exc
-    return SessionRead.model_validate(session)
+    return SessionWithTurnsRead.model_validate(session)
 
 
-@router.post("/sessions/{session_id}/alternative", response_model=SessionRead)
+@router.post("/sessions/{session_id}/alternative", response_model=SessionWithTurnsRead)
 async def request_alternative(
     session_id: uuid.UUID,
     body: TurnAlternativeRequest,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
-) -> SessionRead:
+) -> SessionWithTurnsRead:
     try:
         session = await session_service.request_alternative(
             db=db,
@@ -150,15 +150,15 @@ async def request_alternative(
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except NoMoreTargets as exc:
         raise HTTPException(status_code=409, detail="No remaining targets to rewrite") from exc
-    return SessionRead.model_validate(session)
+    return SessionWithTurnsRead.model_validate(session)
 
 
-@router.post("/sessions/{session_id}/skip", response_model=SessionRead)
+@router.post("/sessions/{session_id}/skip", response_model=SessionWithTurnsRead)
 async def skip_target(
     session_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
-) -> SessionRead:
+) -> SessionWithTurnsRead:
     try:
         session = await session_service.skip_target(
             db=db, user_id=user.id, session_id=session_id,
@@ -167,16 +167,16 @@ async def skip_target(
         raise HTTPException(status_code=404, detail="Session not found") from exc
     except SessionNotActive as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
-    return SessionRead.model_validate(session)
+    return SessionWithTurnsRead.model_validate(session)
 
 
-@router.post("/sessions/{session_id}/navigate", response_model=SessionRead)
+@router.post("/sessions/{session_id}/navigate", response_model=SessionWithTurnsRead)
 async def navigate(
     session_id: uuid.UUID,
     body: NavigateRequest,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
-) -> SessionRead:
+) -> SessionWithTurnsRead:
     """Browse suggestions without acting on them.
 
     Moves ``target_index`` forward or backward and regenerates the
@@ -198,15 +198,15 @@ async def navigate(
         raise HTTPException(status_code=409, detail="No improvement targets to navigate") from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return SessionRead.model_validate(session)
+    return SessionWithTurnsRead.model_validate(session)
 
 
-@router.post("/sessions/{session_id}/complete", response_model=SessionRead)
+@router.post("/sessions/{session_id}/complete", response_model=SessionWithTurnsRead)
 async def complete_session(
     session_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
-) -> SessionRead:
+) -> SessionWithTurnsRead:
     try:
         session = await session_service.complete_session(
             db=db, user_id=user.id, session_id=session_id,
@@ -215,7 +215,7 @@ async def complete_session(
         raise HTTPException(status_code=404, detail="Session not found") from exc
     except SessionNotActive as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
-    return SessionRead.model_validate(session)
+    return SessionWithTurnsRead.model_validate(session)
 
 
 @router.get("/sessions/{session_id}/export")

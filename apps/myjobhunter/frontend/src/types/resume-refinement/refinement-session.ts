@@ -1,4 +1,5 @@
 import type { ImprovementTarget } from "./improvement-target";
+import type { RefinementTurn } from "./refinement-turn";
 
 export type RefinementSessionStatus = "active" | "completed" | "abandoned";
 
@@ -20,4 +21,5 @@ export interface RefinementSession {
   completed_at: string | null;
   created_at: string;
   updated_at: string;
+  turns: RefinementTurn[];
 }
