@@ -244,7 +244,7 @@ Route handlers now delegate to services; no `db.commit()` remains in `discover.p
 ### ~~[Backend / Discovery] `ix_discovered_inbox` index column order doesn't match query sort — Postgres won't use it for sort~~ RESOLVED
 
 **Severity:** ~~Medium~~ RESOLVED
-**Resolved:** 2026-05-08 — PR #TBD (`ixinbox260508_recreate_ix_discovered_inbox_desc.py`)
+**Resolved:** 2026-05-08 — PR #518 (`ixinbox260508_recreate_ix_discovered_inbox_desc.py`)
 
 ---
 
