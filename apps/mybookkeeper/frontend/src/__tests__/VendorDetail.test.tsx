@@ -106,7 +106,7 @@ describe("VendorDetail page", () => {
 
   it("renders the formatted hourly rate and flat-rate notes", () => {
     renderVendorDetail();
-    expect(screen.getByTestId("vendor-hourly-rate")).toHaveTextContent("$125.00 / hour");
+    expect(screen.getByTestId("vendor-hourly-rate")).toHaveTextContent("$125.00/hr");
     expect(screen.getByTestId("vendor-flat-rate-notes")).toHaveTextContent(
       /Flat \$200 for drain unclog/,
     );
@@ -157,13 +157,13 @@ describe("VendorDetail page", () => {
     expect(screen.getByTestId("vendor-flat-rate-notes")).toHaveTextContent("—");
   });
 
-  it("falls back to 'Not set' for missing hourly rate", () => {
+  it("falls back to em dash for missing hourly rate", () => {
     vi.mocked(useGetVendorByIdQuery).mockReturnValueOnce({
       ...defaultDetailState,
       data: { ...mockVendor, hourly_rate: null },
     } as unknown as DetailQueryReturn);
     renderVendorDetail();
-    expect(screen.getByTestId("vendor-hourly-rate")).toHaveTextContent("Not set");
+    expect(screen.getByTestId("vendor-hourly-rate")).toHaveTextContent("—");
   });
 
   it("renders 'Never used' when last_used_at is null", () => {
