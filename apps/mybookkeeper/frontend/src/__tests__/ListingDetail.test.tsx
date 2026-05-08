@@ -71,6 +71,11 @@ vi.mock("@/shared/store/listingsApi", () => ({
   useCreateListingExternalIdMutation: vi.fn(() => [vi.fn(() => ({ unwrap: () => Promise.resolve(undefined) })), { isLoading: false }]),
   useUpdateListingExternalIdMutation: vi.fn(() => [vi.fn(() => ({ unwrap: () => Promise.resolve(undefined) })), { isLoading: false }]),
   useDeleteListingExternalIdMutation: vi.fn(() => [vi.fn(() => ({ unwrap: () => Promise.resolve(undefined) })), { isLoading: false }]),
+  useGetChannelsQuery: vi.fn(() => ({ data: [], isLoading: false })),
+  useGetListingChannelsQuery: vi.fn(() => ({ data: [], isLoading: false })),
+  useCreateListingChannelMutation: vi.fn(() => [vi.fn(() => ({ unwrap: () => Promise.resolve(undefined) })), { isLoading: false }]),
+  useUpdateChannelListingMutation: vi.fn(() => [vi.fn(() => ({ unwrap: () => Promise.resolve(undefined) })), { isLoading: false }]),
+  useDeleteChannelListingMutation: vi.fn(() => [vi.fn(() => ({ unwrap: () => Promise.resolve(undefined) })), { isLoading: false }]),
 }));
 
 vi.mock("@/shared/store/propertiesApi", () => ({

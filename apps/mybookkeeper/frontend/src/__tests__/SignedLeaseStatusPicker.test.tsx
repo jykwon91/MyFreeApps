@@ -10,7 +10,8 @@
  *   ``SIGNED_LEASE_STATUS_NEXT`` map.
  * - Picking a state calls ``onChange`` with the picked value.
  */
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi } from "vitest";
 import SignedLeaseStatusPicker from "@/app/features/leases/SignedLeaseStatusPicker";
 
@@ -45,10 +46,11 @@ describe("SignedLeaseStatusPicker", () => {
     expect(trigger).toHaveAttribute("aria-label", "Change status from Generated");
   });
 
-  it("opens menu showing only the allowed next states for 'generated'", () => {
+  it("opens menu showing only the allowed next states for 'generated'", async () => {
+    const user = userEvent.setup();
     const onChange = vi.fn();
     render(<SignedLeaseStatusPicker status="generated" onChange={onChange} />);
-    fireEvent.click(screen.getByTestId("signed-lease-status-picker-trigger"));
+    await user.click(screen.getByTestId("signed-lease-status-picker-trigger"));
     // Generated -> Sent or Signed (per SIGNED_LEASE_STATUS_NEXT)
     expect(
       screen.getByTestId("signed-lease-status-picker-option-sent"),
@@ -69,10 +71,11 @@ describe("SignedLeaseStatusPicker", () => {
     ).toBeNull();
   });
 
-  it("opens menu showing 'active' as the only next state from 'signed'", () => {
+  it("opens menu showing 'active' as the only next state from 'signed'", async () => {
+    const user = userEvent.setup();
     const onChange = vi.fn();
     render(<SignedLeaseStatusPicker status="signed" onChange={onChange} />);
-    fireEvent.click(screen.getByTestId("signed-lease-status-picker-trigger"));
+    await user.click(screen.getByTestId("signed-lease-status-picker-trigger"));
     expect(
       screen.getByTestId("signed-lease-status-picker-option-active"),
     ).toBeInTheDocument();
@@ -81,11 +84,14 @@ describe("SignedLeaseStatusPicker", () => {
     ).toBeNull();
   });
 
-  it("calls onChange with the picked status", () => {
+  it("calls onChange with the picked status", async () => {
+    const user = userEvent.setup();
     const onChange = vi.fn();
     render(<SignedLeaseStatusPicker status="generated" onChange={onChange} />);
-    fireEvent.click(screen.getByTestId("signed-lease-status-picker-trigger"));
-    fireEvent.click(screen.getByTestId("signed-lease-status-picker-option-signed"));
+    await user.click(screen.getByTestId("signed-lease-status-picker-trigger"));
+    await user.click(
+      screen.getByTestId("signed-lease-status-picker-option-signed"),
+    );
     expect(onChange).toHaveBeenCalledWith("signed");
     expect(onChange).toHaveBeenCalledTimes(1);
   });
