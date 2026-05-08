@@ -2,12 +2,18 @@ import { useState } from "react";
 import { Plus, Telescope } from "lucide-react";
 import { Button, EmptyState } from "@platform/ui";
 import DiscoveredJobCard from "@/features/discover/DiscoveredJobCard";
+import DiscoveredJobsSkeleton from "@/features/discover/DiscoveredJobsSkeleton";
 import NewSavedSearchDialog from "@/features/discover/NewSavedSearchDialog";
 import SavedSearchesPanel from "@/features/discover/SavedSearchesPanel";
 import {
   useListDiscoveredJobsQuery,
   useListDiscoverySourcesQuery,
 } from "@/store/discoverApi";
+
+// Background scoring runs after /refresh as a FastAPI BackgroundTask
+// (~30s for 20 postings). Poll the inbox at 4s while the page is open
+// so score badges fill in without the operator refreshing manually.
+const INBOX_POLL_INTERVAL_MS = 4000;
 
 /**
  * /discover — proactive job-posting inbox.
@@ -29,7 +35,10 @@ export default function Discover() {
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const { data: sources } = useListDiscoverySourcesQuery();
-  const { data: jobsData, isLoading } = useListDiscoveredJobsQuery({});
+  const { data: jobsData, isLoading } = useListDiscoveredJobsQuery(
+    {},
+    { pollingInterval: INBOX_POLL_INTERVAL_MS },
+  );
 
   const hasSources = (sources?.length ?? 0) > 0;
   const items = jobsData?.items ?? [];
@@ -65,9 +74,7 @@ export default function Discover() {
         />
       )}
 
-      {hasSources && isLoading && (
-        <p className="text-sm text-muted-foreground">Loading postings…</p>
-      )}
+      {hasSources && isLoading && <DiscoveredJobsSkeleton />}
 
       {hasSources && !isLoading && !hasJobs && (
         <EmptyState
