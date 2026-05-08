@@ -361,7 +361,7 @@ Column-width alignment (`applications.role_title` 200 vs `discovered_jobs.title`
 
 ---
 
-### [Backend / Discovery] No reaper for `status='running'` fetches stuck >30 min
+### ~~[Backend / Discovery] No reaper for `status='running'` fetches stuck >30 min~~ RESOLVED
 
 **Severity:** Low
 **Effort:** M
@@ -372,6 +372,8 @@ Column-width alignment (`applications.role_title` 200 vs `discovered_jobs.title`
 **Recommendation:** Add a Dramatiq periodic task (or app-startup check) that updates `discovery_fetches` rows with `status='running' AND started_at < NOW() - interval '30 minutes'` to `status='error', error_message='reaped: server restart'`.
 
 **Why Low:** Audit-trail issue only — doesn't block functionality. But the migration documents it as a feature; ship-as-described.
+
+**Resolved:** Chose Option A (startup hook) — MJH has no Dramatiq scheduler. Added `discovery_fetch_reaper.py` + wired via `create_app_lifespan(on_startup=_on_startup)` in `main.py`. 5 unit tests added (`test_discovery_fetch_reaper.py`). On next deploy, any zombie `running` rows are reaped to `error` at boot.
 
 ---
 
