@@ -201,6 +201,7 @@ export default function DocumentList({ applicationId, hideKindFilter }: Document
 
       {editingDoc ? (
         <DocumentEditDialog
+          key={editingDoc.id}
           document={editingDoc}
           open
           onOpenChange={(open) => {

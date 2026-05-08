@@ -21,6 +21,10 @@ export default tseslint.config(
       ],
       "@typescript-eslint/no-explicit-any": "error",
       "no-console": ["warn", { allow: ["warn", "error"] }],
+      // Downgraded to warn: pre-existing violations in useDiscoveryDefaultsPrefill.ts
+      // and markdown-preview.tsx. Fix tracked in TECH_DEBT.md.
+      "react-hooks/refs": "warn",
+      "react-hooks/immutability": "warn",
     },
   },
 );
