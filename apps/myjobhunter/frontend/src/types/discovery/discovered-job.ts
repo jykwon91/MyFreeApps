@@ -19,6 +19,7 @@ export interface DiscoveredJob {
   score_reason: string | null;
   scored_at: string | null;
   dismissed_at: string | null;
+  dismissed_reason: string | null;
   saved_at: string | null;
   promoted_application_id: string | null;
 }

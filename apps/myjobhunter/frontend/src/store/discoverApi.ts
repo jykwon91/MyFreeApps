@@ -1,4 +1,5 @@
 import { baseApi } from "@platform/ui";
+import type { Application } from "@/types/application";
 import type { DiscoveredJobListResponse } from "@/types/discovery/discovered-job";
 import type {
   DiscoverySource,
@@ -6,8 +7,17 @@ import type {
 } from "@/types/discovery/discovery-source";
 import type { DiscoveryFetchResult } from "@/types/discovery/discovery-fetch-result";
 
+export type DismissalReason =
+  | "wrong_stack"
+  | "too_small_company"
+  | "wrong_sector"
+  | "wrong_comp"
+  | "not_remote"
+  | "not_interested"
+  | "other";
+
 const apiWithTags = baseApi.enhanceEndpoints({
-  addTagTypes: ["DiscoverySource", "DiscoveredJob"],
+  addTagTypes: ["DiscoverySource", "DiscoveredJob", "Applications"],
 });
 
 const discoverApi = apiWithTags.injectEndpoints({
@@ -45,10 +55,14 @@ const discoverApi = apiWithTags.injectEndpoints({
       }),
       providesTags: ["DiscoveredJob"],
     }),
-    dismissDiscoveredJob: build.mutation<void, string>({
-      query: (jobId) => ({
+    dismissDiscoveredJob: build.mutation<
+      void,
+      { jobId: string; reason?: DismissalReason }
+    >({
+      query: ({ jobId, reason }) => ({
         url: `/discover/${jobId}/dismiss`,
         method: "POST",
+        data: reason ? { reason } : undefined,
       }),
       invalidatesTags: ["DiscoveredJob"],
     }),
@@ -58,6 +72,15 @@ const discoverApi = apiWithTags.injectEndpoints({
         method: "POST",
       }),
       invalidatesTags: ["DiscoveredJob"],
+    }),
+    promoteDiscoveredJob: build.mutation<Application, string>({
+      query: (jobId) => ({
+        url: `/discover/${jobId}/promote`,
+        method: "POST",
+      }),
+      // Promote creates an Application + flips the discovered_job's
+      // promoted_application_id, so both caches need invalidating.
+      invalidatesTags: ["DiscoveredJob", "Applications"],
     }),
   }),
 });
@@ -70,4 +93,5 @@ export const {
   useListDiscoveredJobsQuery,
   useDismissDiscoveredJobMutation,
   useSaveDiscoveredJobMutation,
+  usePromoteDiscoveredJobMutation,
 } = discoverApi;
