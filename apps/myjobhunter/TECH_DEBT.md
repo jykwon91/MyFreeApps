@@ -3,9 +3,9 @@
 Issues discovered during development. New entries are appended; resolved entries are
 removed and the counts in this header are updated.
 
-**Open issues: 41 (Critical: 1 / High: 5 / Medium: 20 / Low: 15)**
+**Open issues: 38 (Critical: 1 / High: 2 / Medium: 20 / Low: 15)**
 
-> Last comprehensive audit: 2026-05-07 (post-discovery feature ship). All Critical and 5 of 8 audit-High findings RESOLVED in PRs #421-#428 (2026-05-07). Remaining audit findings preserved below under "## High (audit 2026-05-07)" / "## Medium (audit 2026-05-07)" / "## Low (audit 2026-05-07)" sections; pre-existing findings preserved under "## Pre-existing".
+> Last comprehensive audit: 2026-05-07 (post-discovery feature ship). All Critical and 7 of 8 audit-High findings RESOLVED in PRs #421-#432 (2026-05-07). Remaining audit findings preserved below under "## High (audit 2026-05-07)" / "## Medium (audit 2026-05-07)" / "## Low (audit 2026-05-07)" sections; pre-existing findings preserved under "## Pre-existing".
 
 ---
 
@@ -14,65 +14,38 @@ removed and the counts in this header are updated.
 _All resolved._
 
 - ✅ **Typed JSearch errors silently downgraded to 502** — fixed in PR #421
-- ✅ **`JSEARCH_API_KEY` not in `.env.docker.example`** — fixed in PR #422 (env_file already passed it through, only the example needed documenting)
+- ✅ **`JSEARCH_API_KEY` not in `.env.docker.example`** — fixed in PR #422
 - ✅ **`score()` writes stale `context_type="other"`** — fixed in PR #423
 
 ---
 
 ## High (audit 2026-05-07)
 
-_Resolved in this round:_
+_All resolved or downgraded:_
 
 - ✅ **`_spent_today` N+1 budget query** — fixed in PR #424 (local accumulator)
 - ✅ **No score-completion polling on /discover** — fixed in PR #425 (4s polling)
-- ✅ **Plain "Loading…" text instead of skeletons** — fixed in PR #425 (DiscoveredJobsSkeleton + SavedSearchesSkeleton)
+- ✅ **Plain "Loading…" text instead of skeletons** — fixed in PR #425
 - ✅ **`claude_service._record_extraction_log` silent-fail** — fixed in PR #426
 - ✅ **Refresh rate limiter hardcoded constants** — fixed in PR #427 (env-driven Settings)
-- ⚠️ **`NewSavedSearchDialog.tsx` god-component** — partially addressed in PR #428 (extracted `useDiscoveryDefaultsPrefill` hook killing the `didPrefill` ping-pong; extracted `InlineBoldText`; dialog now 376 lines down from 462). Remaining work tracked below as a Medium tech-debt entry: form-section decomposition (SearchInputsSection / JobTypeSection / ExclusionsSection).
+- ✅ **`NewSavedSearchDialog.tsx` god-component** — fully resolved in PRs #428 + #432 (462 → 282 LOC, prefill hook + InlineBoldText + 4 dialog-section components, didPrefill ping-pong eliminated, dialog enums in dedicated type module)
+- ✅ **`DiscoverySource.config` loose `dict[str, Any]`** — fixed in PR #431 (typed `JSearchSourceConfig` Pydantic model with `extra=forbid` + Literal enums; validated at API boundary AND lenient-parsed at fetch time)
 
-_Still open (3 of 8 audit-High findings remain):_
+_Still open (downgraded from High to Medium since the immediate cost concern is gone):_
 
-### [Backend / Discovery] Scoring loop double-commits — score_jd commits, then worker commits a second time
+### [Backend / Discovery] Scoring loop two-transaction split — `score_jd` commits, then worker commits a second time
 
-**Severity:** High
-**Effort:** S
+**Severity:** Medium (downgraded from High)
+**Effort:** M
 **Location:** `apps/myjobhunter/backend/app/services/discovery/discovery_score_service.py:104-132` + `apps/myjobhunter/backend/app/services/job_analysis/job_analysis_service.py:301`
 
-**Status:** Partially addressed in PR #424 (redundant `flush()` before `commit()` removed; local spend accumulator drops the N+1 budget query). The two-transaction nature remains: `score_jd` commits the JobAnalysis + extraction_log, then the worker commits a separate transaction for the discovered_job's score pointer.
+**Status:** Partially addressed in PR #424 (redundant `flush()` removed; local spend accumulator). The two-transaction nature remains: `score_jd` commits the JobAnalysis + extraction_log, then the worker commits a separate transaction for the discovered_job's score pointer.
 
 **Problem:** If the worker crashes between the two commits, you have a JobAnalysis row but discovered_job.score is still NULL — next refresh re-pays for scoring. Cost recorded so accounting isn't lost, but billing-vs-pointer can drift.
 
 **Recommendation:** Thread the discovered_job mutation INTO `score_jd` (accept an optional `discovered_job: DiscoveredJob | None`) so both writes share one commit. Or make `score_jd` not commit (caller owns the transaction boundary) — bigger scope but better aligns with the service-layer commit convention.
 
-**Why still High:** The retry-rebills concern remains real until both writes are atomic.
-
----
-
-### [Backend / Discovery] `DiscoverySource.config` is unvalidated `dict[str, Any]` — typos silently no-op
-
-**Severity:** High
-**Effort:** M
-**Location:** `apps/myjobhunter/backend/app/schemas/discovery/discovery_schemas.py:29-36` + fetch service consumers
-
-**Problem:** `DiscoverySourceCreate.config: dict[str, Any]` accepts any payload. Fetch service does loose `config.get("X")` dispatch with no schema. Typos (`min_salary_us` vs `min_salary_usd`) silently do nothing. Type errors (`min_salary_usd: "abc"`) fall through `try/except (TypeError, ValueError)` to "no filter". Unknown chip keys for `excluded_industry_chips` silently dropped by `expand_excluded_keywords`. Operator has no signal their saved search is misconfigured.
-
-**Recommendation:** Define a `JSearchSourceConfig` Pydantic model with the exact field schema (roles, skills, location, country, date_posted, remote_jobs_only, employment_type, experience, min_salary_usd, excluded_industry_chips, excluded_keywords). Validate in `DiscoverySourceCreate` (discriminated union on `source` enum). Service consumes a typed object instead of `dict.get(...)`.
-
-**Why High:** Silent misconfiguration — the worst class of bug. Per `feedback_no_bandaid_solutions`, accepting "loose dict" is the bandaid that becomes load-bearing.
-
----
-
-### [Frontend / Discover] `NewSavedSearchDialog.tsx` form-section decomposition
-
-**Severity:** High
-**Effort:** M
-**Location:** `apps/myjobhunter/frontend/src/features/discover/NewSavedSearchDialog.tsx`
-
-**Status:** Partially addressed in PR #428. The `didPrefill` useState ping-pong is GONE (replaced with `useRef` in the extracted `useDiscoveryDefaultsPrefill` hook). Inline markdown renderer extracted to `InlineBoldText`. Dialog 462 → 376 LOC.
-
-**Remaining:** The 200+ JSX lines for the four form-section groups (search inputs, where/when, job type, exclusions) still live inline. Worth splitting into `dialog/SearchInputsSection.tsx`, `dialog/WhereWhenSection.tsx`, `dialog/JobTypeSection.tsx`, `dialog/ExclusionsSection.tsx`. Also worth migrating from 11 individual useStates to `react-hook-form` (used elsewhere in the codebase).
-
-**Why still High:** The operator-flagged anti-pattern is gone, but the file is still long enough to be a god-component. Split is mechanical once you have the design.
+**Why Medium:** Crash recovery would re-bill at most one batch (~20 postings × $0.005 = $0.10). Real but bounded. Worth fixing when reworking the score worker, not blocking on it.
 
 ---
 
