@@ -21,7 +21,7 @@ import uuid
 from platform_shared.core.storage import StorageNotConfiguredError
 
 from app.core.config import settings
-from app.core.storage import StorageClient, get_storage
+from app.core.storage import get_storage
 from app.db.session import unit_of_work
 from app.repositories.applicants import applicant_repo
 from app.repositories.inquiries.inquiry_repo import get_by_applicant_inquiry_id
@@ -54,15 +54,16 @@ from app.services.leases.default_source_resolver import (
     resolve_default_source,
     validate_default_source_spec,
 )
-from app.schemas.leases.suggest_placeholders_response import (
-    SuggestPlaceholdersResponse,
-    SuggestedPlaceholderItem,
-)
 from app.services.leases.placeholder_extractor import (
     extract_placeholders_across_files,
 )
-from app.services.leases.template_placeholder_extractor import (
-    suggest_placeholders as _ai_suggest_placeholders,
+from app.services.leases.lease_template_placeholder_service import (
+    TemplateNotFoundError,
+    extract_text_from_upload as _extract_text_from_upload,
+    suggest_ai_placeholders,
+)
+from app.services.leases.lease_template_render_service import (
+    load_template_source_texts,
 )
 
 logger = logging.getLogger(__name__)
@@ -85,9 +86,8 @@ DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.docu
 # Exceptions
 # ---------------------------------------------------------------------------
 
-class TemplateNotFoundError(LookupError):
-    pass
-
+# TemplateNotFoundError is imported from lease_template_placeholder_service
+# (the shared seam) so all three modules share the same class object.
 
 class TemplateFileTooLargeError(ValueError):
     pass
@@ -139,41 +139,6 @@ def _normalise_content_type(declared: str | None, filename: str) -> str:
     if declared:
         return declared
     return "application/octet-stream"
-
-
-def _extract_text_from_upload(content: bytes, content_type: str) -> str:
-    """Pull plain text out of the upload for placeholder extraction.
-
-    For DOCX we use python-docx if available; otherwise we can't extract
-    placeholders (the host can still edit the spec by hand later).
-    """
-    if content_type in ("text/markdown", "text/plain"):
-        try:
-            return content.decode("utf-8", errors="replace")
-        except Exception:  # noqa: BLE001
-            return ""
-    if content_type == DOCX_MIME:
-        try:
-            import io
-            import docx  # type: ignore[import-untyped]
-
-            document = docx.Document(io.BytesIO(content))
-            parts = [p.text for p in document.paragraphs]
-            for table in document.tables:
-                for row in table.rows:
-                    for cell in row.cells:
-                        for p in cell.paragraphs:
-                            parts.append(p.text)
-            return "\n".join(parts)
-        except ImportError:
-            logger.info(
-                "python-docx not installed — DOCX placeholder extraction skipped",
-            )
-            return ""
-        except Exception:  # noqa: BLE001
-            logger.warning("Failed to extract text from DOCX", exc_info=True)
-            return ""
-    return ""
 
 
 def _build_summary_from_orm(template, *, file_count: int, placeholder_count: int) -> LeaseTemplateSummary:
@@ -825,100 +790,41 @@ async def replace_template_files(
 
 
 # ---------------------------------------------------------------------------
-# Helper: load a template's source files as text (used by signed-lease render)
+# Back-compat re-exports
 # ---------------------------------------------------------------------------
+# ``suggest_ai_placeholders`` and ``load_template_source_texts`` are imported at
+# the top of this module from their focused modules and are therefore already
+# present in this namespace, satisfying any existing callers that do:
+#   from app.services.leases.lease_template_service import suggest_ai_placeholders
+#   from app.services.leases.lease_template_service import load_template_source_texts
 
-async def load_template_source_texts(
-    *,
-    user_id: uuid.UUID,
-    organization_id: uuid.UUID,
-    template_id: uuid.UUID,
-    storage: StorageClient,
-) -> list[tuple[str, str, bytes]]:
-    """Return ``[(filename, content_type, raw_bytes)]`` in display order."""
-    async with unit_of_work() as db:
-        template = await lease_template_repo.get(
-            db,
-            template_id=template_id,
-            user_id=user_id,
-            organization_id=organization_id,
-        )
-        if template is None:
-            raise TemplateNotFoundError(f"Template {template_id} not found")
-        files = await lease_template_file_repo.list_for_template(
-            db, template_id=template_id,
-        )
-    out: list[tuple[str, str, bytes]] = []
-    for f in files:
-        out.append((f.filename, f.content_type, storage.download_file(f.storage_key)))
-    return out
-
-
-# ---------------------------------------------------------------------------
-# AI placeholder suggestion (Phase 2)
-# ---------------------------------------------------------------------------
-
-async def suggest_ai_placeholders(
-    *,
-    user_id: uuid.UUID,
-    organization_id: uuid.UUID,
-    template_id: uuid.UUID,
-) -> SuggestPlaceholdersResponse:
-    """Run an AI pass over the template's files and propose placeholders.
-
-    Fetches file content from MinIO, extracts text from each file, then calls
-    Claude to propose a named + typed list of placeholders. The caller
-    (route handler) must NOT persist the result — the host reviews the list
-    and saves via the existing ``update_placeholder`` endpoint.
-
-    Returns a :class:`SuggestPlaceholdersResponse` with ``suggestions``,
-    ``truncated``, and an optional ``pages_note``.
-
-    Raises :class:`TemplateNotFoundError` if the template doesn't belong to the
-    caller. Storage errors are propagated (the route handler maps them to 503).
-    """
-    storage = get_storage()
-    if storage is None:
-        raise StorageNotConfiguredError("Object storage is not configured")
-
-    async with unit_of_work() as db:
-        template = await lease_template_repo.get(
-            db,
-            template_id=template_id,
-            user_id=user_id,
-            organization_id=organization_id,
-        )
-        if template is None:
-            raise TemplateNotFoundError(f"Template {template_id} not found")
-        files = await lease_template_file_repo.list_for_template(
-            db, template_id=template_id,
-        )
-
-    # Extract text from every file.
-    extracted_texts: list[str] = []
-    for f in files:
-        raw = storage.download_file(f.storage_key)
-        extracted_texts.append(_extract_text_from_upload(raw, f.content_type))
-
-    combined_text = "\n\n".join(t for t in extracted_texts if t.strip())
-    result = await _ai_suggest_placeholders(combined_text)
-
-    pages_note: str | None = None
-    if result.truncated:
-        pages_note = (
-            "The document was too long to analyse in full — "
-            "I read the first portion. Some placeholders near the end may be missing."
-        )
-
-    return SuggestPlaceholdersResponse(
-        suggestions=[
-            SuggestedPlaceholderItem(
-                key=s.key,
-                description=s.description,
-                input_type=s.input_type,
-            )
-            for s in result.suggestions
-        ],
-        truncated=result.truncated,
-        pages_note=pages_note,
-    )
+__all__ = [
+    # Constants
+    "ALLOWED_TEMPLATE_MIME_TYPES",
+    "DOCX_MIME",
+    # Exceptions
+    "TemplateNotFoundError",
+    "TemplateFileTooLargeError",
+    "TemplateFileTypeRejectedError",
+    "TemplateInUseError",
+    "InvalidComputedExprError",
+    "InvalidDefaultSourceError",
+    "PlaceholderNotFoundError",
+    "ApplicantNotFoundError",
+    # Also re-export StorageNotConfiguredError so route handlers that currently
+    # catch it from this module continue to work without change.
+    "StorageNotConfiguredError",
+    # CRUD
+    "upload_template",
+    "list_templates",
+    "get_template",
+    "generate_defaults",
+    "generate_defaults_multi",
+    "update_template_metadata",
+    "update_placeholder",
+    "soft_delete_template",
+    "replace_template_files",
+    # Moved to focused modules (re-exported for back-compat)
+    "load_template_source_texts",
+    "suggest_ai_placeholders",
+]
