@@ -223,21 +223,9 @@ Route handlers now delegate to services; no `db.commit()` remains in `discover.p
 
 ---
 
-### [Backend / Discovery] `save_discovered` clears `dismissed_at` but not `dismissed_reason` — orphaned reason on saved row
+### ~~[Backend / Discovery] `save_discovered` clears `dismissed_at` but not `dismissed_reason` — orphaned reason on saved row~~ RESOLVED
 
-**Severity:** Medium
-**Effort:** XS
-**Location:** `apps/myjobhunter/backend/app/repositories/discovery/discovery_repository.py:319-332`
-
-**Problem:** When operator dismisses with reason "wrong_stack" then changes their mind and saves, `save_discovered` sets `dismissed_at = None` but leaves `dismissed_reason = "wrong_stack"`. Future Phase D scoring using dismissed_reason as a signal would see a "wrong_stack" reason on a SAVED job — wrong signal.
-
-**Recommendation:** Mirror the symmetry — clear both:
-
-    if job.dismissed_at is not None:
-        job.dismissed_at = None
-        job.dismissed_reason = None
-
-**Why Medium:** Subtle data-integrity bug that won't surface until Phase D scoring uses `dismissed_reason`. Cheap to fix now; expensive to backfill if production accumulates bad rows.
+**Resolved:** PR fix/mjh-discovery-backend-cluster (2026-05-08). `save_discovered` now clears both `dismissed_at` and `dismissed_reason` together. Unit test added in `test_discover_endpoints.py::test_save_clears_dismissed_reason`.
 
 ---
 
@@ -358,17 +346,9 @@ Updated consumers: `store/discoverApi.ts`, `types/profile/profile.ts`, `types/pr
 
 ---
 
-### [Backend / Discovery] `_compose_location` joins city/state/country — JSearch contradictions garble the result
+### ~~[Backend / Discovery] `_compose_location` joins city/state/country — JSearch contradictions garble the result~~ RESOLVED
 
-**Severity:** Medium
-**Effort:** XS
-**Location:** `apps/myjobhunter/backend/app/services/discovery/sources/jsearch.py:309-320`
-
-**Problem:** When `job_location` is empty, fallback joins city + state + country. JSearch sometimes returns city="Remote" with country="United States" — produces "Remote, United States" which the dedup-by-location and remote-detection logic both garble. Length cap applied after join — could truncate mid-comma.
-
-**Recommendation:** When city is "Remote" (case-insensitive), short-circuit to "Remote" and let `_remote_type` handle structure. Apply 300-char cap to each piece BEFORE joining.
-
-**Why Medium:** Correctness edge case. Doesn't break production but makes operator-visible data inconsistent across postings.
+**Resolved:** PR fix/mjh-discovery-backend-cluster (2026-05-08). `_compose_location` now short-circuits to `"Remote"` when `job_city` is "Remote" (case-insensitive). 300-char cap applied per-piece before joining.
 
 ---
 
@@ -392,27 +372,15 @@ Updated consumers: `store/discoverApi.ts`, `types/profile/profile.ts`, `types/pr
 
 ## Low (audit 2026-05-07)
 
-### [Backend / Tech Debt] Inline `from datetime import ...` inside function body
+### ~~[Backend / Tech Debt] Inline `from datetime import ...` inside function body~~ RESOLVED
 
-**Severity:** Low
-**Effort:** XS
-**Location:** `apps/myjobhunter/backend/app/services/job_analysis/job_analysis_service.py:403`
-
-**Problem:** `soft_delete_analysis` has `from datetime import datetime, timezone` inline inside the function. Top of the file already imports datetime elsewhere.
-
-**Recommendation:** Move to module-level imports.
+**Resolved:** PR fix/mjh-discovery-backend-cluster (2026-05-08). Moved `from datetime import datetime, timezone` to module level; removed inline import from `soft_delete_analysis`.
 
 ---
 
-### [Backend / Tech Debt] `score_reason` truncated to magic 1000 chars — schema is uncapped Text
+### ~~[Backend / Tech Debt] `score_reason` truncated to magic 1000 chars — schema is uncapped Text~~ RESOLVED
 
-**Severity:** Low
-**Effort:** XS
-**Location:** `apps/myjobhunter/backend/app/services/discovery/discovery_score_service.py:128` + `apps/myjobhunter/backend/app/models/discovery/discovered_job.py:125`
-
-**Problem:** Worker truncates verdict_summary to 1000 chars before writing, but column is `Text` (no length limit). Either constrain at the column or drop the truncate.
-
-**Recommendation:** Drop the truncate; `Text` is unbounded. If retention matters, add a column-level `String(1000)` so DB enforces.
+**Resolved:** PR fix/mjh-discovery-backend-cluster (2026-05-08). Removed `[:1000]` truncation from `discovery_score_service.py`. Column is `Text` (unbounded); the truncation had no enforcing constraint.
 
 ---
 

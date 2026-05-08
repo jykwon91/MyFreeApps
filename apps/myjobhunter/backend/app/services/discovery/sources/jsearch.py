@@ -310,14 +310,16 @@ def _compose_location(raw: dict[str, Any]) -> str | None:
     explicit = _str_or_none(raw.get("job_location"))
     if explicit:
         return explicit[:300]
+    city = _str_or_none(raw.get("job_city"))
+    if city and city.lower() == "remote":
+        return "Remote"
     parts: list[str] = []
-    for key in ("job_city", "job_state", "job_country"):
-        value = _str_or_none(raw.get(key))
+    for value in (city, _str_or_none(raw.get("job_state")), _str_or_none(raw.get("job_country"))):
         if value:
-            parts.append(value)
+            parts.append(value[:300])
     if not parts:
         return None
-    return ", ".join(parts)[:300]
+    return ", ".join(parts)
 
 
 def _remote_type(raw: dict[str, Any]) -> str:
