@@ -286,9 +286,15 @@ async def fetch_source(
     try:
         postings = await adapter(source.config or {})
     except Exception as exc:
-        # Any adapter exception → mark fetch + source as failed but
-        # don't propagate beyond this service. Caller gets a typed
-        # error result.
+        # Persist the audit row + source-level failure, then re-raise
+        # the ORIGINAL exception so the route layer can map typed
+        # adapter errors (JSearchAuthError → 503, JSearchTransientError
+        # → 502 specific) to specific HTTP statuses. The previous
+        # ``raise DiscoveryFetchError(str(exc)) from exc`` pattern
+        # silently downgraded every adapter failure to the generic 502
+        # branch — operators got "JSearch upstream is unavailable"
+        # when the real issue was a missing API key (which deserves
+        # 503 + a key-config message).
         logger.warning(
             "discovery fetch failed: source=%s id=%s error=%s",
             source.source, source.id, exc,
@@ -300,7 +306,7 @@ async def fetch_source(
             db, source, success=False, error_message=str(exc),
         )
         await db.commit()
-        raise DiscoveryFetchError(str(exc)) from exc
+        raise
 
     fetched_count = len(postings)
 
