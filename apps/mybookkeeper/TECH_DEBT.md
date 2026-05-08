@@ -1,7 +1,7 @@
 # Tech Debt
 
 > Last scanned: 2026-05-08
-> Issues: 0 critical, 5 high, 5 medium (1 deferred + 4 active), 0 low
+> Issues: 0 critical, 5 high, 6 medium (1 deferred + 5 active), 0 low
 
 ## High
 
@@ -55,6 +55,15 @@
 ---
 
 ## Medium
+
+### [Lease email] "Email to tenant" sends ALL eligible attachments — no per-attachment picker
+**Effort:** M
+**Location:** `apps/mybookkeeper/backend/app/services/leases/lease_email_service.py:241` (eligible filter), `apps/mybookkeeper/frontend/src/app/pages/LeaseDetail.tsx` (button)
+**Problem:** The email-to-tenant flow attaches every file with kind `rendered_original` or `signed_lease` — a single email gets the whole "lease bundle". For an imported lease that just had an addendum generated (Sonu's case), the tenant gets the original lease PDF (already in their inbox from signing) AND the new addendum, creating noise. The host has no way to send only the new addendum.
+**Recommendation:** Add a small attachment-picker step in the email flow: clicking "Email to tenant" opens a dialog that lists each eligible attachment with checkboxes (defaulted to all selected). Backend route accepts an optional `attachment_ids: list[uuid] | None` field — when None, current behaviour (all eligible); when provided, only those. Update `send_lease_to_tenant` to filter the eligible list by the supplied IDs.
+**Why deferred:** The current "send all" behaviour is correct for the original use case (generated lease, tenant signs everything in one email). The addendum-on-imported case is a 2026-05-08 addition; manual workaround (host downloads + emails outside MBK) is a 2-minute path.
+
+---
 
 ### [Attribution] Unmatched review items have no inline tenant-assign flow on the review panel
 **Effort:** S
