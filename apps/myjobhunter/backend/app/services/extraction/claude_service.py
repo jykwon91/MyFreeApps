@@ -243,33 +243,37 @@ async def _record_log(
     status: str,
     error_message: str | None,
 ) -> None:
-    """Write a row to extraction_logs. Best-effort — never raises."""
-    try:
-        input_tokens = message.usage.input_tokens if message else None
-        output_tokens = message.usage.output_tokens if message else None
-        model_name = message.model if message else _MODEL
+    """Write a row to extraction_logs.
 
-        # Cost estimate: claude-sonnet-4-6 pricing.
-        # Input: $3 / 1M tokens, Output: $15 / 1M tokens (as of 2026-05).
-        cost_usd: float | None = None
-        if input_tokens is not None and output_tokens is not None:
-            cost_usd = (input_tokens * 3 + output_tokens * 15) / 1_000_000
+    Fails loud — no bare ``except`` swallowing. Cost-tracking writes
+    are load-bearing for per-user budget enforcement (the discovery
+    score worker reads ``SUM(cost_usd)`` to decide whether to keep
+    spending). A silent failure here = silent budget bypass = real
+    money lost. Same anti-pattern MBK removed in PR #205.
+    """
+    input_tokens = message.usage.input_tokens if message else None
+    output_tokens = message.usage.output_tokens if message else None
+    model_name = message.model if message else _MODEL
 
-        async with AsyncSessionLocal() as db:
-            log = ExtractionLog(
-                user_id=user_id,
-                context_type=context_type,
-                context_id=context_id,
-                model=model_name,
-                input_tokens=input_tokens,
-                output_tokens=output_tokens,
-                cost_usd=cost_usd,
-                duration_ms=duration_ms,
-                status=status,
-                error_message=error_message,
-                created_at=datetime.now(timezone.utc),
-            )
-            db.add(log)
-            await db.commit()
-    except Exception:
-        logger.warning("Failed to record extraction log", exc_info=True)
+    # Cost estimate: claude-sonnet-4-6 pricing.
+    # Input: $3 / 1M tokens, Output: $15 / 1M tokens (as of 2026-05).
+    cost_usd: float | None = None
+    if input_tokens is not None and output_tokens is not None:
+        cost_usd = (input_tokens * 3 + output_tokens * 15) / 1_000_000
+
+    async with AsyncSessionLocal() as db:
+        log = ExtractionLog(
+            user_id=user_id,
+            context_type=context_type,
+            context_id=context_id,
+            model=model_name,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            cost_usd=cost_usd,
+            duration_ms=duration_ms,
+            status=status,
+            error_message=error_message,
+            created_at=datetime.now(timezone.utc),
+        )
+        db.add(log)
+        await db.commit()
