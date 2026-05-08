@@ -324,8 +324,8 @@ async def save_discovered(
     if job is None:
         return False
     if job.dismissed_at is not None:
-        # Saving an already-dismissed job clears the dismissal.
         job.dismissed_at = None
+        job.dismissed_reason = None
     if job.saved_at is None:
         job.saved_at = datetime.now(timezone.utc)
         await db.flush()

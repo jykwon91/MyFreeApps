@@ -47,6 +47,7 @@ import hashlib
 import json
 import logging
 import uuid
+from datetime import datetime, timezone
 from typing import Any
 
 import anthropic
@@ -344,8 +345,6 @@ async def soft_delete_analysis(
 ) -> bool:
     """Set ``deleted_at`` on the analysis. Idempotent — second DELETE
     on an already-deleted row also returns True."""
-    from datetime import datetime, timezone
-
     analysis = await job_analysis_repository.get_by_id(
         db, analysis_id, user_id, include_deleted=True,
     )
