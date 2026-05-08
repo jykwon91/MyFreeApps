@@ -6,8 +6,8 @@ landed in PR fix/myjobhunter-invite-security-hardening:
   State machine:
     * admin creates invite (201) → public preview returns email + status
     * non-admin POST /admin/invites → 403
-    * duplicate email while a pending invite exists → 409 (generic)
-    * email already a registered user → 409 (generic — same body)
+    * duplicate email while a pending invite exists → 409 "invite_already_pending"
+    * email already a registered user → 409 "user_already_exists"
     * accept with matching email → invite consumed (accepted_at set)
     * accept twice → 409 already accepted
     * accept after expiry → 410 gone
@@ -21,10 +21,18 @@ landed in PR fix/myjobhunter-invite-security-hardening:
     * The DB persists only the sha256 hash, never the raw value.
     * Audit-log metadata uses email_domain only on create — never
       the full recipient email.
-    * The 409 collision response collapses "user exists" / "pending
-      invite" into a single generic body, so an admin token compromise
-      cannot enumerate the auth state of an arbitrary email.
+    * The admin route returns specific 409 detail codes per collision
+      reason; the parent InviteRecipientUnavailableError still maps to
+      a generic body for any non-admin caller.
     * The public preview is per-IP rate-limited.
+
+  Service-layer unit tests:
+    * create_invite raises InviteEmailAlreadyRegisteredError for an
+      existing user account.
+    * create_invite raises InvitePendingAlreadyExistsError for a
+      duplicate pending invite.
+    * Both are subclasses of InviteRecipientUnavailableError so a
+      non-admin catcher can use the parent without code changes.
 
 The unit-of-work fixture in conftest commits user-factory rows in a
 fresh engine, so the `is_verified=True` flip persists across the
@@ -260,13 +268,11 @@ async def test_create_invite_lowercases_email(
 
 
 @pytest.mark.asyncio
-async def test_create_invite_for_existing_user_returns_generic_409(
+async def test_create_invite_for_existing_user_returns_specific_409(
     client: AsyncClient, user_factory, as_user, captured_invites,
 ) -> None:
-    """Generic body — no hint that the email is already a user.
-
-    Security invariant: a compromised admin session must not be able to
-    enumerate which arbitrary emails already have accounts.
+    """Admin route returns ``user_already_exists`` so the operator knows the
+    email already belongs to a registered account and no action is needed.
     """
     admin = await user_factory()
     await _promote_to_admin(admin["email"])
@@ -276,15 +282,16 @@ async def test_create_invite_for_existing_user_returns_generic_409(
             "/admin/invites", json={"email": existing["email"]},
         )
     assert resp.status_code == 409
-    detail = resp.json()["detail"]
-    assert detail == "Cannot send invite to this email."
+    assert resp.json()["detail"] == "user_already_exists"
 
 
 @pytest.mark.asyncio
-async def test_create_invite_duplicate_pending_returns_generic_409(
+async def test_create_invite_duplicate_pending_returns_specific_409(
     client: AsyncClient, user_factory, as_user, captured_invites,
 ) -> None:
-    """Same generic body as the user-exists branch."""
+    """Admin route returns ``invite_already_pending`` so the operator knows
+    to cancel the existing row and re-send rather than creating a duplicate.
+    """
     admin = await user_factory()
     await _promote_to_admin(admin["email"])
     async with await as_user(admin) as authed:
@@ -296,7 +303,7 @@ async def test_create_invite_duplicate_pending_returns_generic_409(
             "/admin/invites", json={"email": "dupe@example.com"},
         )
     assert second.status_code == 409
-    assert second.json()["detail"] == "Cannot send invite to this email."
+    assert second.json()["detail"] == "invite_already_pending"
 
 
 # ---------------------------------------------------------------------------
@@ -614,6 +621,51 @@ async def test_create_invite_audit_log_uses_email_domain_only(
     assert "fred" not in str(metadata), (
         "local-part of recipient email must not leak"
     )
+
+
+# ---------------------------------------------------------------------------
+# Service exception hierarchy (no DB)
+# ---------------------------------------------------------------------------
+
+
+def test_email_already_registered_error_is_subclass_of_recipient_unavailable() -> None:
+    from app.services.platform.invite_service import (
+        InviteEmailAlreadyRegisteredError,
+        InviteRecipientUnavailableError,
+    )
+
+    err = InviteEmailAlreadyRegisteredError("msg")
+    assert isinstance(err, InviteRecipientUnavailableError)
+
+
+def test_pending_already_exists_error_is_subclass_of_recipient_unavailable() -> None:
+    from app.services.platform.invite_service import (
+        InvitePendingAlreadyExistsError,
+        InviteRecipientUnavailableError,
+    )
+
+    err = InvitePendingAlreadyExistsError("msg")
+    assert isinstance(err, InviteRecipientUnavailableError)
+
+
+def test_both_subclasses_caught_by_parent() -> None:
+    from app.services.platform.invite_service import (
+        InviteEmailAlreadyRegisteredError,
+        InvitePendingAlreadyExistsError,
+        InviteRecipientUnavailableError,
+    )
+
+    caught: list[str] = []
+    for exc in (InviteEmailAlreadyRegisteredError, InvitePendingAlreadyExistsError):
+        try:
+            raise exc("test")
+        except InviteRecipientUnavailableError:
+            caught.append(exc.__name__)
+
+    assert caught == [
+        "InviteEmailAlreadyRegisteredError",
+        "InvitePendingAlreadyExistsError",
+    ]
 
 
 # ---------------------------------------------------------------------------

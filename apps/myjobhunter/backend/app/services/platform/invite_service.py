@@ -74,11 +74,21 @@ class InviteError(Exception):
 class InviteRecipientUnavailableError(InviteError):
     """The recipient email cannot accept a new invite.
 
-    Collapses two underlying causes — already-registered user OR pending
-    invite already in flight — into a single error so a compromised
-    admin token cannot enumerate which case applies. The route layer
-    maps this to a single generic 409 body.
+    Parent class for the two specific collision cases. Non-admin callers
+    (e.g. a hypothetical self-register flow) should catch this parent and
+    emit a single generic 409 so a compromised token cannot enumerate
+    which case applies. The admin route catches each subclass directly
+    and returns an operator-friendly detail string — the admin role gate
+    bounds that leakage to operators only.
     """
+
+
+class InviteEmailAlreadyRegisteredError(InviteRecipientUnavailableError):
+    """The recipient email already belongs to a registered user account."""
+
+
+class InvitePendingAlreadyExistsError(InviteRecipientUnavailableError):
+    """A pending (un-accepted) invite already exists for this email."""
 
 
 class InviteNotFoundError(InviteError):
@@ -185,13 +195,13 @@ async def create_invite(
     async with unit_of_work() as db:
         existing_user = await user_repo.get_by_email(db, normalized)
         if existing_user is not None:
-            raise InviteRecipientUnavailableError(
+            raise InviteEmailAlreadyRegisteredError(
                 "Cannot send invite to this email."
             )
 
         existing_invite = await invite_repo.get_pending_for_email(db, normalized)
         if existing_invite is not None:
-            raise InviteRecipientUnavailableError(
+            raise InvitePendingAlreadyExistsError(
                 "Cannot send invite to this email."
             )
 
@@ -358,10 +368,12 @@ __all__ = [
     "INVITE_CANCELLED",
     "INVITE_CREATED",
     "InviteAlreadyAcceptedError",
+    "InviteEmailAlreadyRegisteredError",
     "InviteEmailMismatchError",
     "InviteError",
     "InviteExpiredError",
     "InviteNotFoundError",
+    "InvitePendingAlreadyExistsError",
     "InviteRecipientUnavailableError",
     "accept_invite",
     "cancel_invite",

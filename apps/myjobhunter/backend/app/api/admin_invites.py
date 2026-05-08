@@ -12,9 +12,11 @@ the appropriate HTTP status codes. No DB primitives in this file.
 Security shape (2026-05-05): the public ``GET /invites/{token}/info``
 endpoint is per-IP rate-limited so an attacker cannot use it as a
 free token-validity oracle. The 409-collision response on
-``POST /admin/invites`` returns a single generic body so even a
-compromised admin token cannot enumerate existing user accounts vs.
-in-flight invites.
+``POST /admin/invites`` now returns a specific detail code
+(``user_already_exists`` / ``invite_already_pending``) so the operator
+can act on it directly; leakage is acceptable because the admin role
+gate bounds visibility to operators. Any non-admin caller would still
+receive the parent-class generic 409 body.
 
 Status code conventions:
   * 201 — invite created
@@ -44,9 +46,11 @@ from app.services.platform import invite_service
 from app.services.platform.invite_email import send_invite_email
 from app.services.platform.invite_service import (
     InviteAlreadyAcceptedError,
+    InviteEmailAlreadyRegisteredError,
     InviteEmailMismatchError,
     InviteExpiredError,
     InviteNotFoundError,
+    InvitePendingAlreadyExistsError,
     InviteRecipientUnavailableError,
 )
 from platform_shared.core.request_utils import get_client_ip
@@ -97,6 +101,10 @@ async def create_invite(
         result = await invite_service.create_invite(
             email=body.email, admin_id=admin.id,
         )
+    except InviteEmailAlreadyRegisteredError as e:
+        raise HTTPException(status_code=409, detail="user_already_exists") from e
+    except InvitePendingAlreadyExistsError as e:
+        raise HTTPException(status_code=409, detail="invite_already_pending") from e
     except InviteRecipientUnavailableError as e:
         raise HTTPException(status_code=409, detail=str(e)) from e
 

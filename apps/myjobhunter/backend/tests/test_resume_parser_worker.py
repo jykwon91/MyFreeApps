@@ -476,3 +476,35 @@ async def test_process_one_idempotency(user_factory, as_user):
 
     assert first is True
     assert second is False  # Queue was empty
+
+
+# ---------------------------------------------------------------------------
+# _upsert_skill_ignore_conflict — typed parameter regression guard
+# ---------------------------------------------------------------------------
+
+
+def test_upsert_skill_ignore_conflict_accepts_skill_orm_type():
+    """_upsert_skill_ignore_conflict signature must use typed annotations, not Any."""
+    import inspect
+    import typing
+    from app.workers.resume_parser_worker import _upsert_skill_ignore_conflict
+
+    sig = inspect.signature(_upsert_skill_ignore_conflict)
+    db_annotation = sig.parameters["db"].annotation
+    skill_annotation = sig.parameters["skill"].annotation
+
+    # Neither should be `Any` at the raw annotation level
+    assert db_annotation is not typing.Any, "db parameter must not be typed as Any"
+    assert skill_annotation is not typing.Any, "skill parameter must not be typed as Any"
+
+    # Both must be present (forward-ref strings from TYPE_CHECKING guard)
+    assert db_annotation != inspect.Parameter.empty, "db parameter must have a type annotation"
+    assert skill_annotation != inspect.Parameter.empty, "skill parameter must have a type annotation"
+
+    # Annotations are string forward refs — verify they reference the right types
+    assert "AsyncSession" in str(db_annotation), (
+        f"db annotation should reference AsyncSession, got: {db_annotation!r}"
+    )
+    assert "Skill" in str(skill_annotation), (
+        f"skill annotation should reference Skill, got: {skill_annotation!r}"
+    )

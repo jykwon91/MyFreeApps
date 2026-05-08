@@ -23,7 +23,7 @@ from app.core.storage import StorageNotConfiguredError, get_storage
 from app.models.application.document import Document
 from app.repositories.documents import document_repo
 from app.repositories.application import application_repository
-from app.schemas.documents.document_create_request import DocumentCreateRequest
+from app.schemas.documents.document_text_create_request import DocumentTextCreateRequest
 from app.schemas.documents.document_response import DocumentResponse
 from app.schemas.documents.document_update_request import DocumentUpdateRequest
 from app.services.jobs.resume_validator import ResumeRejected, validate_resume
@@ -84,7 +84,7 @@ async def _verify_application_ownership(
 async def create_text_document(
     db: AsyncSession,
     user_id: uuid.UUID,
-    request: DocumentCreateRequest,
+    request: DocumentTextCreateRequest,
 ) -> DocumentResponse:
     """Persist a text-body-only document (no file upload).
 

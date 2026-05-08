@@ -540,3 +540,83 @@ async def test_list_filter_by_kind(user_factory, as_user):
     data = resp.json()
     assert data["total"] == 1
     assert data["items"][0]["kind"] == "cover_letter"
+
+
+# ---------------------------------------------------------------------------
+# Schema split: DocumentTextCreateRequest rejects file-storage fields
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_create_text_document_rejects_file_path_field(user_factory, as_user):
+    """POST /documents with file_path in body is rejected (extra='forbid')."""
+    user = await user_factory()
+    async with (await as_user(user)) as authed:
+        resp = await authed.post(
+            "/documents",
+            json={
+                "title": "My Doc",
+                "kind": "cover_letter",
+                "body": "Hello world",
+                "file_path": "some/storage/key",
+            },
+        )
+    assert resp.status_code == 422, resp.text
+
+
+@pytest.mark.asyncio
+async def test_create_text_document_rejects_filename_field(user_factory, as_user):
+    """POST /documents with filename in body is rejected (extra='forbid')."""
+    user = await user_factory()
+    async with (await as_user(user)) as authed:
+        resp = await authed.post(
+            "/documents",
+            json={
+                "title": "My Doc",
+                "kind": "cover_letter",
+                "body": "Hello world",
+                "filename": "resume.pdf",
+            },
+        )
+    assert resp.status_code == 422, resp.text
+
+
+def test_document_text_create_request_schema():
+    """DocumentTextCreateRequest validates body is required and non-empty."""
+    import pytest as _pytest
+    from pydantic import ValidationError
+    from app.schemas.documents.document_text_create_request import DocumentTextCreateRequest
+
+    # Happy path
+    req = DocumentTextCreateRequest(title="T", kind="other", body="Some text")
+    assert req.body == "Some text"
+    assert req.application_id is None
+
+    # Empty body raises
+    with _pytest.raises(ValidationError):
+        DocumentTextCreateRequest(title="T", kind="other", body="")
+
+    # Missing body raises (body is required, no default)
+    with _pytest.raises(ValidationError):
+        DocumentTextCreateRequest(title="T", kind="other")
+
+    # Extra field rejected
+    with _pytest.raises(ValidationError):
+        DocumentTextCreateRequest(title="T", kind="other", body="x", file_path="key")
+
+
+def test_document_file_create_internal_schema():
+    """DocumentFileCreateInternal holds all file-metadata fields."""
+    import uuid as _uuid
+    from app.schemas.documents.document_file_create_internal import DocumentFileCreateInternal
+
+    internal = DocumentFileCreateInternal(
+        title="Resume",
+        kind="tailored_resume",
+        file_path="documents/abc/resume.pdf",
+        filename="resume.pdf",
+        content_type="application/pdf",
+        size_bytes=12345,
+    )
+    assert internal.file_path == "documents/abc/resume.pdf"
+    assert internal.application_id is None
