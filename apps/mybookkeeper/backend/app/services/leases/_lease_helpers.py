@@ -9,6 +9,8 @@ import datetime as _dt
 import uuid
 from typing import Any
 
+from platform_shared.core.storage import StorageNotConfiguredError  # noqa: F401
+
 from app.models.applicants.applicant import Applicant
 from app.models.inquiries.inquiry import Inquiry
 from app.models.properties.property import Property
@@ -23,6 +25,7 @@ from app.repositories.leases import (
 from app.repositories.listings import listing_repo
 from app.repositories.properties import property_repo
 from app.repositories.user import user_repo
+
 from app.schemas.leases.signed_lease_attachment_response import (
     SignedLeaseAttachmentResponse,
 )
@@ -43,10 +46,6 @@ class SignedLeaseNotFoundError(LookupError):
 
 
 class AttachmentNotFoundError(LookupError):
-    pass
-
-
-class StorageNotConfiguredError(RuntimeError):
     pass
 
 
