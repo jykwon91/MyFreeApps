@@ -142,6 +142,11 @@ async def test_navigate_cache_hit_skips_claude_call() -> None:
             "hydrate_pending_from_cache",
             new=fake_hydrate,
         ),
+        patch.object(
+            session_service.session_repo,
+            "get_with_turns_for_user",
+            new=AsyncMock(return_value=cached_session),
+        ),
         patch.object(session_service.rewrite_service, "run_rewrite", new=rewrite_mock),
     ):
         result = await session_service.navigate(
@@ -189,6 +194,11 @@ async def test_navigate_cache_miss_falls_through_to_generation() -> None:
             new=AsyncMock(return_value=None),  # cache miss
         ),
         patch.object(session_service, "_generate_next_proposal", new=generate_mock),
+        patch.object(
+            session_service.session_repo,
+            "get_with_turns_for_user",
+            new=AsyncMock(return_value=session),
+        ),
     ):
         await session_service.navigate(
             db=db,

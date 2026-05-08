@@ -5,6 +5,7 @@ import SessionStartPanel from "@/features/resume_refinement/SessionStartPanel";
 import CurrentDraftPanel from "@/features/resume_refinement/CurrentDraftPanel";
 import PendingProposalCard from "@/features/resume_refinement/PendingProposalCard";
 import CompletePanel from "@/features/resume_refinement/CompletePanel";
+import ConversationHistory from "@/features/resume_refinement/ConversationHistory";
 import ActiveSessionLayout from "@/features/resume_refinement/ActiveSessionLayout";
 import { useGetRefinementSessionQuery } from "@/lib/resumeRefinementApi";
 import type { RefinementSession } from "@/types/resume-refinement/refinement-session";
@@ -131,6 +132,7 @@ function ActiveSessionView({ session, onStartNew }: ActiveSessionViewProps) {
   const controls = (
     <div className="flex flex-col gap-4 min-h-0">
       <div className="overflow-y-auto min-h-0 space-y-4 pr-1">
+        <ConversationHistory turns={session.turns ?? []} />
         {session.status === "active" && (
           <PendingProposalCard session={session} />
         )}

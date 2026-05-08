@@ -159,8 +159,9 @@ async def start_session(
         db, session, target_index=session.target_index,
     )
     if hydrated is not None:
-        return hydrated
-    return await _generate_next_proposal(db, session, user_id=user_id, hint=None)
+        return await _with_turns(db, hydrated)
+    session = await _generate_next_proposal(db, session, user_id=user_id, hint=None)
+    return await _with_turns(db, session)
 
 
 async def get_session_state(
@@ -169,10 +170,28 @@ async def get_session_state(
     user_id: uuid.UUID,
     session_id: uuid.UUID,
 ) -> ResumeRefinementSession:
-    session = await session_repo.get_by_id_for_user(db, session_id, user_id)
+    session = await session_repo.get_with_turns_for_user(db, session_id, user_id)
     if session is None:
         raise SessionNotFound()
     return session
+
+
+async def _with_turns(
+    db: AsyncSession, session: ResumeRefinementSession,
+) -> ResumeRefinementSession:
+    """Reload ``session`` with the ``turns`` relationship eager-loaded.
+
+    Mutation entry points return the in-memory session object whose
+    ``turns`` collection isn't loaded — touching ``session.turns`` from
+    the response shaper would raise ``MissingGreenlet`` under async
+    SQLAlchemy. Calling this once before returning to the API layer
+    guarantees the response includes the chat history without forcing
+    every upstream caller to re-fetch.
+    """
+    reloaded = await session_repo.get_with_turns_for_user(
+        db, session.id, session.user_id,
+    )
+    return reloaded if reloaded is not None else session
 
 
 async def accept_pending(
@@ -210,7 +229,8 @@ async def accept_pending(
         draft_after=new_draft,
     )
 
-    return await _generate_next_proposal(db, session, user_id=user_id, hint=None)
+    session = await _generate_next_proposal(db, session, user_id=user_id, hint=None)
+    return await _with_turns(db, session)
 
 
 async def accept_custom(
@@ -246,7 +266,8 @@ async def accept_custom(
         draft_after=new_draft,
     )
 
-    return await _generate_next_proposal(db, session, user_id=user_id, hint=None)
+    session = await _generate_next_proposal(db, session, user_id=user_id, hint=None)
+    return await _with_turns(db, session)
 
 
 async def request_alternative(
@@ -283,7 +304,8 @@ async def request_alternative(
         db, session, target_index=session.target_index,
     )
 
-    return await _generate_next_proposal(db, session, user_id=user_id, hint=hint)
+    session = await _generate_next_proposal(db, session, user_id=user_id, hint=hint)
+    return await _with_turns(db, session)
 
 
 async def skip_target(
@@ -311,7 +333,8 @@ async def skip_target(
         draft_after=session.current_draft,
     )
 
-    return await _generate_next_proposal(db, session, user_id=user_id, hint=None)
+    session = await _generate_next_proposal(db, session, user_id=user_id, hint=None)
+    return await _with_turns(db, session)
 
 
 async def navigate(
@@ -362,11 +385,12 @@ async def navigate(
         db, session, target_index=new_index,
     )
     if cached is not None:
-        return cached
+        return await _with_turns(db, cached)
 
     # Cache miss: fall through to generation. ``_generate_next_proposal``
     # writes the result back to the cache for future navigations.
-    return await _generate_next_proposal(db, session, user_id=user_id, hint=None)
+    session = await _generate_next_proposal(db, session, user_id=user_id, hint=None)
+    return await _with_turns(db, session)
 
 
 async def complete_session(
@@ -385,7 +409,7 @@ async def complete_session(
         role="session_complete",
         draft_after=session.current_draft,
     )
-    return session
+    return await _with_turns(db, session)
 
 
 # -----------------------------------------------------------------------------
