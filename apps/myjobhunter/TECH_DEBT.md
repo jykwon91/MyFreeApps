@@ -241,25 +241,10 @@ Route handlers now delegate to services; no `db.commit()` remains in `discover.p
 
 ---
 
-### [Backend / Discovery] `ix_discovered_inbox` index column order doesn't match query sort — Postgres won't use it for sort
+### ~~[Backend / Discovery] `ix_discovered_inbox` index column order doesn't match query sort — Postgres won't use it for sort~~ RESOLVED
 
-**Severity:** Medium
-**Effort:** S
-**Location:** `apps/myjobhunter/backend/app/models/discovery/discovered_job.py:222-232` + the migration
-
-**Problem:** Index defined as `(user_id, score, discovered_at)` (default ASC). Inbox query orders by `nulls_last(desc(score)), desc(discovered_at)`. Postgres CAN use the index for the user_id equality predicate but must do an in-memory sort for the score/discovered_at ordering — defeating the partial-index purpose.
-
-**Recommendation:** Follow-up migration drops the index and recreates with explicit DESC + NULLS LAST:
-
-    op.create_index(
-        "ix_discovered_inbox", "discovered_jobs",
-        [sa.text("user_id"), sa.text("score DESC NULLS LAST"), sa.text("discovered_at DESC")],
-        postgresql_where=sa.text("dismissed_at IS NULL AND saved_at IS NULL AND promoted_application_id IS NULL"),
-    )
-
-EXPLAIN ANALYZE before/after.
-
-**Why Medium:** At v1 scale (one user, < 1000 inbox rows) the planner won't blink; at 10× scale the in-memory sort dominates Discover page load.
+**Severity:** ~~Medium~~ RESOLVED
+**Resolved:** 2026-05-08 — PR #TBD (`ixinbox260508_recreate_ix_discovered_inbox_desc.py`)
 
 ---
 

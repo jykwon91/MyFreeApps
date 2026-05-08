@@ -222,8 +222,8 @@ class DiscoveredJob(Base):
         Index(
             "ix_discovered_inbox",
             "user_id",
-            "score",
-            "discovered_at",
+            text("score DESC NULLS LAST"),
+            text("discovered_at DESC"),
             postgresql_where=text(
                 "dismissed_at IS NULL "
                 "AND saved_at IS NULL "
