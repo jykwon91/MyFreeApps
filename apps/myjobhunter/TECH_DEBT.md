@@ -403,26 +403,19 @@ Column-width alignment (`applications.role_title` 200 vs `discovered_jobs.title`
 
 ## Pre-existing entries (preserved from prior scans)
 
-### [Admin Invites UX] "Cannot send invite to this email." doesn't tell operator why
+### ~~[Admin Invites UX] "Cannot send invite to this email." doesn't tell operator why~~
 
-**Severity:** Low
+**Severity:** Low — **RESOLVED** (see PR feat/mjh-admin-invite-error-codes)
 **Effort:** S
-**Location:** `apps/myjobhunter/backend/app/services/platform/invite_service.py` (raises) + `apps/myjobhunter/frontend/src/features/invite/...` (renders error)
+**Location:** `apps/myjobhunter/backend/app/services/platform/invite_service.py` (raises) + `apps/myjobhunter/frontend/src/features/admin/invites/CreateInviteDialog.tsx` (renders error)
 **Discovered:** 2026-05-07 — operator hit it after deploying the discovery feature
 
-**Problem:** The 409 message is intentionally generic — fires when (a) the email is already a registered user OR (b) there's already a pending invite for that email. The privacy reasoning (don't leak "is this email registered?" via the invite form) is right for end users, but the operator on `/admin/invites` is the only one who sees this UI and would benefit from knowing which case fired so they can act:
-
-- Already-registered → "User already exists; nothing to invite"
-- Pending invite → "Invite already pending; cancel it from the row above to resend"
-
-**Recommendation:** Two options, in increasing scope:
-
-1. **Backend exposes a distinct error code only on the admin route.** Keep the generic message for any non-admin caller (via the existing `register` flow), but on `POST /admin/invites` map the two cases to specific 409 detail strings. The admin role gate already means leakage is bounded to operators.
-2. **Frontend pre-flight:** before submitting, check if the email already appears in the visible pending-invites list and short-circuit with a UI hint. Doesn't help the registered-user case.
-
-Pick option 1; it's the cleaner and more informative path.
-
-**Why Low:** Doesn't break functionality — the operator can re-look at the pending list or query the DB to figure out which case fired. Just a UX paper-cut on a low-volume admin surface.
+Option 1 was implemented: `InviteRecipientUnavailableError` was split into
+`InviteEmailAlreadyRegisteredError` and `InvitePendingAlreadyExistsError` (both
+subclass the parent). The admin route catches each subclass and returns a specific
+409 detail code (`user_already_exists` / `invite_already_pending`). The frontend
+`CreateInviteDialog` maps those codes to operator-friendly hint messages. Non-admin
+callers would still catch the parent and see the generic body.
 
 ---
 

@@ -1,11 +1,11 @@
 import { useState } from "react";
 import {
   LoadingButton,
-  extractErrorMessage,
   showError,
   showSuccess,
 } from "@platform/ui";
 import { useCreateInviteMutation } from "@/store/invitesApi";
+import { extractInviteCreateErrorMessage } from "./inviteErrorMessages";
 
 export interface CreateInviteDialogProps {
   open: boolean;
@@ -47,7 +47,7 @@ export default function CreateInviteDialog({
       setEmail("");
       onOpenChange(false);
     } catch (err) {
-      showError(`Couldn't send invite: ${extractErrorMessage(err)}`);
+      showError(extractInviteCreateErrorMessage(err));
     }
   }
 
