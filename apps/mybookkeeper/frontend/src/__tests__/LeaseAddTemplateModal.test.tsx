@@ -169,6 +169,7 @@ beforeEach(() => {
             required: true,
             value: "Sonu King",
             provenance: "applicant",
+            is_from_existing_values: false,
           },
           {
             key: "NEW LEASE END DATE",
@@ -177,6 +178,7 @@ beforeEach(() => {
             required: true,
             value: "",
             provenance: null,
+            is_from_existing_values: false,
           },
         ],
       }),

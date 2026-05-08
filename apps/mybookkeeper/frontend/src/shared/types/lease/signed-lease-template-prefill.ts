@@ -5,6 +5,7 @@ export interface SignedLeaseTemplatePrefillItem {
   required: boolean;
   value: string;
   provenance: string | null;
+  is_from_existing_values: boolean;
 }
 
 export interface SignedLeaseTemplatePrefillResponse {

@@ -45,6 +45,9 @@ from app.schemas.leases.signed_lease_response import SignedLeaseResponse
 from app.schemas.leases.signed_lease_add_templates_request import (
     SignedLeaseAddTemplatesRequest,
 )
+from app.schemas.leases.signed_lease_template_prefill_request import (
+    SignedLeaseTemplatePrefillRequest,
+)
 from app.schemas.leases.signed_lease_template_prefill_response import (
     SignedLeaseTemplatePrefillResponse,
 )
@@ -209,7 +212,7 @@ async def delete_lease(
 )
 async def prefill_addendum_placeholders(
     lease_id: uuid.UUID,
-    payload: SignedLeaseAddTemplatesRequest,
+    payload: SignedLeaseTemplatePrefillRequest,
     ctx: RequestContext = Depends(require_write_access),
 ) -> SignedLeaseTemplatePrefillResponse:
     """Return resolved + unresolved placeholder values for adding templates.
