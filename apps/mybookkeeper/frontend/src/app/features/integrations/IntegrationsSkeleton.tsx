@@ -3,17 +3,6 @@ import Skeleton from "@/shared/components/ui/Skeleton";
 export default function IntegrationsSkeleton() {
   return (
     <div className="space-y-6">
-      {/* Bank Accounts section */}
-      <section className="border rounded-lg p-6 space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="space-y-1.5">
-            <Skeleton className="h-4 w-32" />
-            <Skeleton className="h-3 w-56" />
-          </div>
-          <Skeleton className="h-9 w-32 rounded-md" />
-        </div>
-      </section>
-
       {/* Gmail section */}
       <section className="border rounded-lg p-6 space-y-4">
         <div className="flex items-center justify-between">
