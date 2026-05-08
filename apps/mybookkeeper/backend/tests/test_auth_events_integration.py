@@ -162,7 +162,7 @@ async def test_password_reset_request_creates_event(db: AsyncSession) -> None:
 
     with (
         patch("app.core.auth.send_password_reset_email", return_value=True),
-        patch("app.core.rate_limit.verify_turnstile_token", new_callable=AsyncMock, return_value=True),
+        patch("app.core.rate_limit.verify_turnstile_token", new_callable=AsyncMock, return_value=(True, [])),
     ):
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:

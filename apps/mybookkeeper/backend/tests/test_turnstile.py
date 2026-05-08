@@ -5,6 +5,7 @@ Covers:
 - POST /auth/forgot-password with a valid token (mocked) → 202
 - POST /auth/forgot-password with an invalid token (mocked) → 400
 - Dev mode (turnstile_secret_key="") → no CAPTCHA check, succeeds without header
+- Error-code routing: invalid-input-secret → 503, timeout-or-duplicate → 400
 """
 from unittest.mock import AsyncMock, patch
 
@@ -65,13 +66,13 @@ class TestRequireTurnstile:
         with patch.object(settings, "turnstile_secret_key", "test-secret"):
             with patch(
                 "app.core.rate_limit.verify_turnstile_token",
-                new=AsyncMock(return_value=False),
+                new=AsyncMock(return_value=(False, [])),
             ):
                 request = _make_request({"x-turnstile-token": "bad-token"})
                 with pytest.raises(HTTPException) as exc_info:
                     await require_turnstile(request)
                 assert exc_info.value.status_code == 400
-                assert exc_info.value.detail == "Captcha verification failed"
+                assert exc_info.value.detail == "captcha_verification_failed"
 
     @pytest.mark.anyio
     async def test_valid_token_passes(self) -> None:
@@ -79,7 +80,7 @@ class TestRequireTurnstile:
         with patch.object(settings, "turnstile_secret_key", "test-secret"):
             with patch(
                 "app.core.rate_limit.verify_turnstile_token",
-                new=AsyncMock(return_value=True),
+                new=AsyncMock(return_value=(True, [])),
             ):
                 request = _make_request({"x-turnstile-token": "good-token"})
                 await require_turnstile(request)  # must not raise
@@ -90,7 +91,7 @@ class TestRequireTurnstile:
         with patch.object(settings, "turnstile_secret_key", "test-secret"):
             with patch(
                 "app.core.rate_limit.verify_turnstile_token",
-                new=AsyncMock(return_value=True),
+                new=AsyncMock(return_value=(True, [])),
             ) as mock_verify:
                 request = _make_request({
                     "x-turnstile-token": "good-token",
@@ -100,6 +101,34 @@ class TestRequireTurnstile:
                 mock_verify.assert_awaited_once_with(
                     "good-token", "9.9.9.9", secret_key="test-secret",
                 )
+
+    @pytest.mark.anyio
+    async def test_invalid_input_secret_raises_503(self) -> None:
+        """Config bug (invalid-input-secret) surfaces as 503, not a user-facing 400."""
+        with patch.object(settings, "turnstile_secret_key", "test-secret"):
+            with patch(
+                "app.core.rate_limit.verify_turnstile_token",
+                new=AsyncMock(return_value=(False, ["invalid-input-secret"])),
+            ):
+                request = _make_request({"x-turnstile-token": "any-token"})
+                with pytest.raises(HTTPException) as exc_info:
+                    await require_turnstile(request)
+                assert exc_info.value.status_code == 503
+                assert exc_info.value.detail == "captcha_service_misconfigured"
+
+    @pytest.mark.anyio
+    async def test_timeout_or_duplicate_raises_400_retry(self) -> None:
+        """Token reuse / expiry surfaces as 400 with a user-actionable detail."""
+        with patch.object(settings, "turnstile_secret_key", "test-secret"):
+            with patch(
+                "app.core.rate_limit.verify_turnstile_token",
+                new=AsyncMock(return_value=(False, ["timeout-or-duplicate"])),
+            ):
+                request = _make_request({"x-turnstile-token": "spent-token"})
+                with pytest.raises(HTTPException) as exc_info:
+                    await require_turnstile(request)
+                assert exc_info.value.status_code == 400
+                assert exc_info.value.detail == "captcha_expired_please_retry"
 
 
 # ---------------------------------------------------------------------------
@@ -132,7 +161,7 @@ class TestRegisterRateLimitStillVerifies:
         with patch.object(settings, "turnstile_secret_key", "test-secret"):
             with patch(
                 "app.core.rate_limit.verify_turnstile_token",
-                new=AsyncMock(return_value=True),
+                new=AsyncMock(return_value=(True, [])),
             ):
                 request = _make_request({"x-turnstile-token": "good-token"})
                 await check_register_rate_limit(request)  # must not raise

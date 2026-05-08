@@ -161,13 +161,19 @@ async def require_turnstile(request: Request) -> None:
     token = request.headers.get("X-Turnstile-Token", "")
     if not token:
         raise HTTPException(status_code=400, detail="Captcha token required")
-    valid = await verify_turnstile_token(
+    success, error_codes = await verify_turnstile_token(
         token,
         get_client_ip(request),
         secret_key=settings.turnstile_secret_key,
     )
-    if not valid:
-        raise HTTPException(status_code=400, detail="Captcha verification failed")
+    if not success:
+        # Config bug — alert ops, don't blame the user.
+        if any(c in error_codes for c in ("invalid-input-secret", "missing-input-secret")):
+            raise HTTPException(status_code=503, detail="captcha_service_misconfigured")
+        # User-recoverable: token reused or expired.
+        if "timeout-or-duplicate" in error_codes:
+            raise HTTPException(status_code=400, detail="captcha_expired_please_retry")
+        raise HTTPException(status_code=400, detail="captcha_verification_failed")
 
 
 async def check_register_rate_limit(request: Request) -> None:

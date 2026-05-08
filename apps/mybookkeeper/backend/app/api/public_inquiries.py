@@ -115,13 +115,13 @@ async def submit_public_inquiry(
         raise
 
     # Step 2: Turnstile (no-op when secret is empty).
-    turnstile_passed = await verify_turnstile_token(
+    # Don't reject on failure here — pass the result into the spam pipeline so
+    # it can log the assessment row + flip spam_status. The bot still sees a 200.
+    turnstile_passed, _ = await verify_turnstile_token(
         payload.turnstile_token,
         client_ip,
         secret_key=settings.turnstile_secret_key,
     )
-    # Don't reject on turnstile fail here — let the pipeline log the
-    # assessment row + flip spam_status. The bot still sees a 200 success.
 
     # Steps 3-11 happen in the service.
     result = await public_inquiry_service.submit_public_inquiry(
