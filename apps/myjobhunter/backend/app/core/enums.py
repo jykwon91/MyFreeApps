@@ -244,6 +244,20 @@ class JobBoard:
     ALL = ("linkedin", "indeed", "ziprecruiter", "greenhouse", "lever", "workday", "other")
 
 
+# Maps JSearch ``job_publisher`` strings (lowercased) to the canonical
+# ApplicationSource enum values stored in application_events.source.
+# Publishers NOT in this map fall through to "direct" (user followed an
+# external apply link). Kept here so a new ApplicationSource value
+# triggers review of whether the publisher map needs updating.
+PUBLISHER_TO_SOURCE: dict[str, str] = {
+    "linkedin": ApplicationSource.LINKEDIN,
+    "indeed": ApplicationSource.INDEED,
+    "ziprecruiter": ApplicationSource.ZIPRECRUITER,
+    "greenhouse": ApplicationSource.GREENHOUSE,
+    "lever": ApplicationSource.LEVER,
+}
+
+
 class JobStatus:
     QUEUED = "queued"
     PROCESSING = "processing"
