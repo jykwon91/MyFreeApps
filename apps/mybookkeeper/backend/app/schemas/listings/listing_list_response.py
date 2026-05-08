@@ -8,16 +8,10 @@ signal.
 """
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict
+from platform_shared.schemas.pagination import ListResponse
 
 from app.schemas.listings.listing_summary import ListingSummary
 
 
-class ListingListResponse(BaseModel):
+class ListingListResponse(ListResponse[ListingSummary]):
     """Paginated response envelope for GET /listings."""
-
-    items: list[ListingSummary]
-    total: int
-    has_more: bool
-
-    model_config = ConfigDict(from_attributes=True)
