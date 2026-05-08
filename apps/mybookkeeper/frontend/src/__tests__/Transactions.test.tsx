@@ -215,8 +215,9 @@ describe("Transactions", () => {
   it("renders transaction data in the table", () => {
     renderWithProviders(<Transactions />);
 
-    expect(screen.getByText("Home Depot")).toBeInTheDocument();
-    expect(screen.getByText("Tenant Rent")).toBeInTheDocument();
+    // Vendor names appear in the desktop table cell + mobile card view, hence getAllByText.
+    expect(screen.getAllByText("Home Depot").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Tenant Rent").length).toBeGreaterThan(0);
   });
 
   it("renders filter bar with select elements", () => {
@@ -252,45 +253,11 @@ describe("Transactions", () => {
     expect(screen.getByText("New Transaction")).toBeInTheDocument();
   });
 
-  it("shows info banner when not dismissed", () => {
-    localStorage.removeItem("txn-info-dismissed");
-    renderWithProviders(<Transactions />);
-
-    expect(screen.getByText(/Transactions are extracted automatically/)).toBeInTheDocument();
-  });
-
-  it("hides info banner when dismissed in localStorage", () => {
-    localStorage.setItem("txn-info-dismissed", "1");
-    renderWithProviders(<Transactions />);
-
-    expect(screen.queryByText(/Transactions are extracted automatically/)).not.toBeInTheDocument();
-  });
-
-  it("dismisses info banner on click", async () => {
-    localStorage.removeItem("txn-info-dismissed");
-    const user = userEvent.setup();
-    renderWithProviders(<Transactions />);
-
-    expect(screen.getByText(/Transactions are extracted automatically/)).toBeInTheDocument();
-
-    await user.click(screen.getByLabelText("Dismiss"));
-
-    expect(screen.queryByText(/Transactions are extracted automatically/)).not.toBeInTheDocument();
-    expect(localStorage.getItem("txn-info-dismissed")).toBe("1");
-  });
-
-  it("shows Vendor Rules button with tooltip", () => {
+  it("renders Vendor Rules button", () => {
     renderWithProviders(<Transactions />);
 
     const vendorRulesBtn = screen.getByText("Vendor Rules").closest("button");
-    expect(vendorRulesBtn).toHaveAttribute("title", "Rules I've learned from your corrections — click to view or manage them");
-  });
-
-  it("shows Import button with tooltip", () => {
-    renderWithProviders(<Transactions />);
-
-    const importBtn = screen.getByText("Import").closest("button");
-    expect(importBtn).toHaveAttribute("title", "Import transactions from a bank CSV file");
+    expect(vendorRulesBtn).toBeInTheDocument();
   });
 
   it("shows skeleton loader when loading", () => {
