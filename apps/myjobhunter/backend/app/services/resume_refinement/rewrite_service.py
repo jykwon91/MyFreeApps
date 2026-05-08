@@ -27,16 +27,27 @@ async def run_rewrite(
     hint: str | None,
     user_id: uuid.UUID,
     session_id: uuid.UUID,
+    prior_context: list[dict] | None = None,
 ) -> dict:
     """Run one rewrite pass.
 
     Args:
         resume_markdown: The current resume draft (full context).
         target: One element from ``improvement_targets``.
-        hint: Optional user nudge for the regeneration ("more concise",
-            "emphasize technical leadership"). None for the first proposal.
+        hint: Optional user nudge for THIS regeneration ("more concise",
+            "emphasize technical leadership"). None for the first
+            proposal. Distinct from ``prior_context`` — the hint is the
+            user's intent for THIS turn; ``prior_context`` is the
+            session-level history of stated preferences.
         user_id: Scopes the extraction_log row.
         session_id: Used as ``context_id``.
+        prior_context: Optional list of previous-turn distillations for
+            session-level memory. Each entry is
+            ``{"kind": str, "section": str | None, "text": str}``.
+            Passed straight into the user content as a "Prior
+            conversation" block so Claude can honour user-stated
+            constraints across targets (e.g. "keep it to one page",
+            "I left X out for length").
 
     Returns:
         Dict with shape:
@@ -55,7 +66,7 @@ async def run_rewrite(
         ``rewritten_text`` for traceability but should NOT be applied
         to the draft.
     """
-    user_content = _build_user_content(resume_markdown, target, hint)
+    user_content = _build_user_content(resume_markdown, target, hint, prior_context)
 
     result = await call_claude_with_meta(
         system_prompt=RESUME_REWRITE_PROMPT,
@@ -129,6 +140,7 @@ def _build_user_content(
     resume_markdown: str,
     target: dict,
     hint: str | None,
+    prior_context: list[dict] | None = None,
 ) -> str:
     target_blob = json.dumps(
         {
@@ -141,7 +153,21 @@ def _build_user_content(
         indent=2,
     )
 
-    parts = [
+    parts: list[str] = []
+    if prior_context:
+        rendered = _render_prior_context(prior_context)
+        if rendered:
+            parts.extend([
+                "Prior conversation in this refinement session "
+                "(oldest first — apply any user-stated constraints to this rewrite):",
+                "",
+                rendered,
+                "",
+                "----",
+                "",
+            ])
+
+    parts.extend([
         "Resume markdown (full context):",
         "",
         resume_markdown,
@@ -151,10 +177,22 @@ def _build_user_content(
         "Target to rewrite:",
         "",
         target_blob,
-    ]
+    ])
     if hint:
         parts.extend(["", "----", "", f"User hint for the regeneration: {hint}"])
     return "\n".join(parts)
+
+
+def _render_prior_context(entries: list[dict]) -> str:
+    lines: list[str] = []
+    for entry in entries:
+        kind = entry.get("kind", "")
+        section = entry.get("section") or "(general)"
+        text = (entry.get("text") or "").strip()
+        if not text:
+            continue
+        lines.append(f"- [{kind}] for {section}: {text}")
+    return "\n".join(lines)
 
 
 def _clarify_for_hallucination(missing: list[str]) -> str:

@@ -237,6 +237,11 @@ async def test_prefetch_writes_each_target_to_cache() -> None:
             "cache_proposal",
             new=fake_cache_proposal,
         ),
+        patch.object(
+            session_service.turn_repo,
+            "list_for_session",
+            new=AsyncMock(return_value=[]),
+        ),
     ):
         await session_service._prefetch_all_proposals(
             db, session, user_id=session.user_id,
@@ -285,6 +290,11 @@ async def test_prefetch_one_target_failure_does_not_block_others() -> None:
             session_service.session_repo,
             "cache_proposal",
             new=fake_cache_proposal,
+        ),
+        patch.object(
+            session_service.turn_repo,
+            "list_for_session",
+            new=AsyncMock(return_value=[]),
         ),
     ):
         result = await session_service._prefetch_all_proposals(
@@ -340,6 +350,11 @@ async def test_prefetch_caps_in_flight_claude_calls() -> None:
             session_service.session_repo,
             "cache_proposal",
             new=fake_cache_proposal,
+        ),
+        patch.object(
+            session_service.turn_repo,
+            "list_for_session",
+            new=AsyncMock(return_value=[]),
         ),
     ):
         await session_service._prefetch_all_proposals(

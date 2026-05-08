@@ -488,6 +488,58 @@ async def _load_active(
     return session
 
 
+def _build_prior_context(turns: list[Any]) -> list[dict[str, Any]]:
+    """Distill turn rows into the lightweight ``prior_context`` shape the
+    rewrite service feeds into Claude's user content.
+
+    Filters to the entries that carry signal Claude needs across targets:
+
+    - ``ai_critique`` rationale — the framing of the whole session
+    - ``ai_proposal`` clarifying questions — what was already asked
+    - ``user_custom`` text — the user's voice / preferred phrasing
+    - ``user_request_alternative`` hint — the user's stated nudges
+
+    Skips ``ai_proposal`` proposed_text (already reflected in
+    current_draft if accepted), ``user_accept`` (same), ``user_skip``
+    (no info), and ``session_complete`` (terminal). Keeping the list
+    narrow controls token cost — full transcripts grow linearly with
+    target count and would cost ~2x by the end of a 14-target session.
+    """
+    out: list[dict[str, Any]] = []
+    for turn in turns:
+        role = turn.role
+        section = turn.target_section
+        if role == "ai_critique":
+            text = (turn.rationale or "").strip()
+            if text:
+                out.append({"kind": "ai_critique", "section": None, "text": text})
+        elif role == "ai_proposal":
+            text = (turn.clarifying_question or "").strip()
+            if text:
+                out.append({
+                    "kind": "ai_clarification_question",
+                    "section": section,
+                    "text": text,
+                })
+        elif role == "user_custom":
+            text = (turn.user_text or "").strip()
+            if text:
+                out.append({
+                    "kind": "user_custom_rewrite",
+                    "section": section,
+                    "text": text,
+                })
+        elif role == "user_request_alternative":
+            text = (turn.user_text or "").strip()
+            if text:
+                out.append({
+                    "kind": "user_hint",
+                    "section": section,
+                    "text": text,
+                })
+    return out
+
+
 def _current_target(session: ResumeRefinementSession) -> dict | None:
     targets = session.improvement_targets or []
     if session.target_index >= len(targets):
@@ -521,6 +573,9 @@ async def _generate_next_proposal(
         await db.refresh(session)
         return session
 
+    prior_turns = await turn_repo.list_for_session(db, session.id)
+    prior_context = _build_prior_context(prior_turns)
+
     try:
         rewrite = await rewrite_service.run_rewrite(
             resume_markdown=session.current_draft,
@@ -528,6 +583,7 @@ async def _generate_next_proposal(
             hint=hint,
             user_id=user_id,
             session_id=session.id,
+            prior_context=prior_context,
         )
     except Exception as exc:  # noqa: BLE001 — graceful-degrade for the iteration loop
         # Don't fail the user's action if Claude is flaky. Leave pending
@@ -611,6 +667,13 @@ async def _prefetch_all_proposals(
     semaphore = asyncio.Semaphore(_PREFETCH_CONCURRENCY)
     current_draft = session.current_draft
 
+    # Prefetch fires right after the critique pass appends the
+    # ai_critique turn, so prior_context here will contain at most the
+    # critique rationale. Computing it once lets all parallel rewrites
+    # share the same session framing.
+    prior_turns = await turn_repo.list_for_session(db, session.id)
+    prior_context = _build_prior_context(prior_turns)
+
     async def _one(target_index: int, target: dict[str, Any]) -> dict[str, Any] | None:
         async with semaphore:
             try:
@@ -620,6 +683,7 @@ async def _prefetch_all_proposals(
                     hint=None,
                     user_id=user_id,
                     session_id=session.id,
+                    prior_context=prior_context,
                 )
             except Exception as exc:  # noqa: BLE001 — graceful per-target degrade
                 logger.warning(
