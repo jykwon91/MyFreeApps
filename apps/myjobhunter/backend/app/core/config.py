@@ -39,6 +39,13 @@ class Settings(BaseAppSettings):
     discovery_daily_budget_usd: float = 0.30
     discovery_daily_budget_usd_hard_cap: float = 2.00
 
+    # /discover refresh rate-limit (per IP). JSearch is paid; cap how
+    # often an operator can hit /refresh in a window to bound runaway
+    # cost from a stuck retry loop or a leaked credential. Defaults
+    # mirror the previous hardcoded values in api/discover.py.
+    discovery_refresh_rate_limit_threshold: int = 30
+    discovery_refresh_rate_limit_window_seconds: int = 300
+
     # ------------------------------------------------------------------
     # Google OAuth (Gmail integration — Phase 3)
     # ------------------------------------------------------------------
