@@ -3,6 +3,7 @@ from app.repositories.extraction import extraction_prompt_repo
 from app.repositories.documents import document_repo
 from app.repositories.email import email_queue_repo
 from app.repositories.email import email_filter_log_repo
+from app.repositories.email import gmail_skipped_message_repo
 from app.repositories.email import processed_email_repo
 from app.repositories.email import sync_log_repo
 from app.repositories.transactions import transaction_repo

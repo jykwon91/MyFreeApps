@@ -12,7 +12,7 @@ from app.models.email.bounce_detection_result import BounceDetectionResult
 from app.models.email.email_types import DiscoverResult, EmailSourcesData
 from app.models.email.inbound_email_signals import InboundEmailSignals
 from app.core.config import settings
-from app.repositories import document_repo, email_filter_log_repo, email_queue_repo, integration_repo, sync_log_repo
+from app.repositories import document_repo, email_filter_log_repo, email_queue_repo, gmail_skipped_message_repo, integration_repo, sync_log_repo
 from app.services.email.bounce_detector import BounceDetector
 from app.services.email.constants import (
     EMAIL_FILTER_LOG_FROM_ADDRESS_MAX_LEN,
@@ -118,11 +118,18 @@ async def discover_gmail_emails(ctx: RequestContext) -> DiscoverResult:
                     org_id, ctx.user_id, message_id, exc,
                 )
                 raise GmailAuthExpiredError(str(exc)) from exc
-            except Exception:
+            except Exception as e:
                 logger.warning(
-                    "Failed to enumerate sources for email %s, skipping",
-                    message_id,
+                    "gmail_discovery: skipped message_id=%s org=%s user=%s exc=%s msg=%s",
+                    message_id, org_id, ctx.user_id, type(e).__name__, e,
                     exc_info=True,
+                )
+                await gmail_skipped_message_repo.record_skip(
+                    db,
+                    organization_id=org_id,
+                    user_id=ctx.user_id,
+                    gmail_message_id=message_id,
+                    exc=e,
                 )
                 continue
 

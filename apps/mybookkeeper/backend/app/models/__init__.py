@@ -62,6 +62,7 @@ from app.models.integrations.plaid_item import PlaidItem
 from app.models.integrations.plaid_account import PlaidAccount
 from app.models.email.processed_email import ProcessedEmail
 from app.models.email.email_filter_log import EmailFilterLog
+from app.models.email.gmail_skipped_message import GmailSkippedMessage
 from app.models.system.usage_log import UsageLog
 from app.models.integrations.sync_log import SyncLog
 from app.models.email.email_queue import EmailQueue

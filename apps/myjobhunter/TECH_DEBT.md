@@ -137,13 +137,9 @@ Failures log structured `error-codes` at WARNING so Sentry can group by reason. 
 
 **Resolved:** PR (mbk-storage-delete-error-codes). Structured warning log now emits `bucket`, `key`, `code`, and `message` so Sentry can group failures by S3 error code (`AccessDenied` vs `NoSuchKey` vs transient). Fixed in all three StorageClient implementations: `platform_shared/core/storage.py`, `apps/mybookkeeper/backend/app/core/storage.py`, and `apps/myjobhunter/backend/app/core/storage.py`. Non-S3 exceptions now propagate instead of being silently swallowed. Return type unchanged (`None`) so all 20+ call sites are unaffected.
 
-### HIGH — Gmail email enumeration silently skips messages on fetch failure
+### ~~HIGH — Gmail email enumeration silently skips messages on fetch failure~~ RESOLVED
 
-**Location:** `apps/mybookkeeper/backend/app/services/email/email_discovery_service.py:121-127`
-**Effort:** M
-**Problem:** Bare `except Exception:` inside the message loop. If a single envelope fetch fails (auth edge case, permission flicker), the message is silently skipped and never enters the attachment queue. No audit trail. Operator sees "Gmail discovery: 3 new emails" when it should have been 4.
-
-**Fix:** Either fail-loud (raise so the whole sync rolls back) or write an audit row to a `gmail_skipped_messages` table with the exception type. Per `rules/no-bandaid-solutions.md` the latter is the right shape — it preserves the partial sync but audits the gap.
+**Resolved:** PR feat/mbk-gmail-skipped-messages-audit. Added `gmail_skipped_messages` table (migration `a1b2c3d4e5f6`). Every bare-exception skip in the discovery loop now writes an audit row (`organization_id`, `user_id`, `gmail_message_id`, `exception_type`, `exception_message`) and emits a WARNING log with `exc_info=True`. Partial sync behavior is preserved. 6 new tests in `test_gmail_skipped_messages.py`. Monitor via `SELECT * FROM gmail_skipped_messages ORDER BY skipped_at DESC LIMIT 50;` — no UI surface in this PR.
 
 ### ~~HIGH — SMTP `send_or_raise` truncates exception chain to `f"{e}"`~~ ✓ Resolved
 
