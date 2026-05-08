@@ -3,7 +3,7 @@
 Issues discovered during development. New entries are appended; resolved entries are
 removed and the counts in this header are updated.
 
-**Open issues: 33 (Critical: 1 / High: 3 / Medium: 16 / Low: 14)**
+**Open issues: 32 (Critical: 1 / High: 3 / Medium: 15 / Low: 14)**
 
 > Last comprehensive audit: 2026-05-07 (post-discovery feature ship). All Critical and 7 of 8 audit-High findings RESOLVED in PRs #421-#432 (2026-05-07). Remaining audit findings preserved below under "## High (audit 2026-05-07)" / "## Medium (audit 2026-05-07)" / "## Low (audit 2026-05-07)" sections; pre-existing findings preserved under "## Pre-existing".
 
@@ -546,22 +546,13 @@ local test runs unreliable on Windows.
 
 ---
 
-### [Frontend] `npm run lint` is broken — missing ESLint config
+### ~~[Frontend] `npm run lint` is broken — missing ESLint config~~ RESOLVED
 
-**Severity:** Medium
-**Effort:** S
-**Location:** `apps/myjobhunter/frontend/` — `package.json` scripts `"lint": "eslint ."`
-**Discovered:** PR #170 (CompanyForm refactor) — `2026-05-02`
-
-**Problem:** Running `npm run lint` fails with "ESLint couldn't find an eslint.config.js
-file." The project has no `eslint.config.js`, `.eslintrc.js`, or `.eslintrc.json`. The
-lint script has been a no-op (or broken) for some time; it's not caught in CI because
-the frontend CI workflow may not run `npm run lint`.
-
-**Recommendation:** Add a minimal `eslint.config.js` (ESLint v9 flat config format)
-with `@typescript-eslint` and `eslint-plugin-react-hooks`. The project already has
-TypeScript configured so minimal rules needed. See `apps/mybookkeeper/frontend/` for
-an example config if one exists.
+**Resolved:** PR chore/mjh-eslint-and-setstate-fixes (2026-05-08). Added `eslint.config.js`
+(ESLint v9 flat config, mirrors MBK's config exactly). Installed `@eslint/js`, `typescript-eslint`,
+`eslint-plugin-react-hooks`, `eslint-plugin-react-refresh`. Two pre-existing rules
+(`react-hooks/refs`, `react-hooks/immutability`) downgraded to "warn" in the config for
+violations in `useDiscoveryDefaultsPrefill.ts` and `markdown-preview.tsx` — fix tracked separately.
 
 ---
 
@@ -703,22 +694,35 @@ with the correct type at the mock definition level so the stub doesn't need cast
 
 ---
 
-### [Frontend Lint] setState called synchronously inside useEffect in 3 files
+### [Frontend Lint] `react-hooks/refs` + `react-hooks/immutability` violations — 9 warnings
 
 **Severity:** Medium
-**Effort:** S
+**Effort:** S–M
 **Location:**
-- `apps/myjobhunter/frontend/src/features/documents/DocumentEditDialog.tsx` (lines 26, 38)
-- `apps/myjobhunter/frontend/src/features/profile/ResumeUploadSection.tsx` (line 38)
-- `apps/myjobhunter/frontend/src/features/security/DisplayNameSetting.tsx` (line 19)
-**Discovered:** PR #284 (shared-frontend utils refactor) — 2026-05-05
+- `apps/myjobhunter/frontend/src/features/discover/useDiscoveryDefaultsPrefill.ts` — reads `didPrefillRef.current` during render at lines 121 and 126
+- `apps/myjobhunter/frontend/src/features/resume_refinement/markdown-preview.tsx` — reads/writes `firstHighlightAssigned` and `firstHighlightRef.current` inside ref callbacks during render (lines 107, 119, 150, 164, 178, 191)
+**Discovered:** PR chore/mjh-eslint-and-setstate-fixes (2026-05-08) — first time ESLint ran
 
-**Problem:** `react-hooks/set-state-in-effect` ESLint rule flags these files because
-`setState()` is called directly inside a `useEffect` body. This creates cascading re-renders
-and can hurt performance. The lint rule blocks clean CI (`npm run lint` exits 1).
+**Problem:** `react-hooks/refs` (cannot access ref.current during render) and `react-hooks/immutability`
+(cannot reassign local variables after render) rules downgraded to "warn" in `eslint.config.js` to
+keep lint green while the underlying patterns are fixed. These are warnings, not errors — CI passes.
 
-**Recommendation:** Refactor each `useEffect` that calls `setState` to use a derived value
-instead (compute from props/state directly without a synchronous effect), or use `useEffect`
-with a proper dependency array that prevents the cascade. Pattern: replace
-`useEffect(() => { setState(derived); }, [dep])` with `const value = useMemo(() => derived, [dep])`.
+**Recommendation:**
+- `useDiscoveryDefaultsPrefill.ts`: replace `didPrefillRef.current` in the return value with a `useState`
+  boolean (`didPrefill`) updated in the effect where prefill fires. Refs must not be read during render.
+- `markdown-preview.tsx`: refactor `attachIfFirst` / `firstHighlightAssigned` to use `useCallback` +
+  `useRef` accessed only in an effect or event handler, not inside a render-time ref callback.
+
+---
+
+### ~~[Frontend Lint] setState called synchronously inside useEffect in 3 files~~ RESOLVED
+
+**Resolved:** PR chore/mjh-eslint-and-setstate-fixes (2026-05-08).
+- `DocumentEditDialog.tsx`: removed `useEffect` sync; added `key={editingDoc.id}` at callsite
+  in `DocumentList.tsx` to reset form state on doc change via remount.
+- `ResumeUploadSection.tsx`: already resolved in a prior PR (`useLazyGetResumeDownloadUrlQuery`
+  refactor) — TECH_DEBT entry was stale.
+- `DisplayNameSetting.tsx`: split into `DisplayNameForm` (inner, accepts `initialName` prop,
+  manages own state) + outer shell that passes `key={currentUser?.id}` to force remount when
+  data arrives. Eliminates the `useEffect` + `useState` initialization pattern entirely.
 

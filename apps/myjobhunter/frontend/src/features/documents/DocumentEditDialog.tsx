@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { LoadingButton, showError, showSuccess, extractErrorMessage } from "@platform/ui";
 import type { Document } from "@/types/document/document";
 import type { DocumentKind } from "@/types/document/document-kind";
@@ -20,13 +20,6 @@ export default function DocumentEditDialog({
   const [kind, setKind] = useState<DocumentKind>(document.kind);
   const [body, setBody] = useState(document.body ?? "");
   const [updateDocument, { isLoading }] = useUpdateDocumentMutation();
-
-  // Sync state when the document prop changes (e.g. opening a different doc).
-  useEffect(() => {
-    setTitle(document.title);
-    setKind(document.kind);
-    setBody(document.body ?? "");
-  }, [document.id, document.title, document.kind, document.body]);
 
   if (!open) return null;
 
