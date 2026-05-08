@@ -1,3 +1,5 @@
+import type { JobAnalysisVerdict } from "@/types/job-analysis/job-analysis-verdict";
+
 /** A single discovered posting in the inbox. Mirrors backend DiscoveredJobResponse. */
 export interface DiscoveredJob {
   id: string;
@@ -22,6 +24,8 @@ export interface DiscoveredJob {
   dismissed_reason: string | null;
   saved_at: string | null;
   promoted_application_id: string | null;
+  /** Derived by the backend from ``score``. Null for unscored rows. */
+  verdict: JobAnalysisVerdict | null;
 }
 
 export interface DiscoveredJobListResponse {

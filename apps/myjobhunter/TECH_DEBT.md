@@ -280,17 +280,9 @@ EXPLAIN ANALYZE before/after.
 
 ---
 
-### [Frontend / Discover] `SavedSearchesPanel` query extraction is an inline IIFE — extract to named helper
+### ~~[Frontend / Discover] `SavedSearchesPanel` query extraction is an inline IIFE — extract to named helper~~
 
-**Severity:** Medium
-**Effort:** XS
-**Location:** `apps/myjobhunter/frontend/src/features/discover/SavedSearchesPanel.tsx:51-61`
-
-**Problem:** An IIFE `const query = (() => { ... })();` resolves the legacy `config.query` vs new `config.roles` shape. The IIFE pattern obscures the logic.
-
-**Recommendation:** Extract `summarizeSearchQuery(config)` to `features/discover/saved-search-summary.ts` (or `saved-search-display.ts`) so it's testable and reusable. Add a unit test for both shapes.
-
-**Why Medium:** Combined with `source.config` being typed `Record<string, unknown>`, this is the kind of weakly-typed extraction that should have a single source of truth.
+**Resolved:** PR #BUNDLE5 (2026-05-08). Extracted `summarizeSearchQuery(config)` to `features/discover/saved-search-summary.ts`. Eight-case unit test added in `features/discover/__tests__/saved-search-summary.test.ts`. IIFE removed from `SavedSearchesPanel.tsx`.
 
 ---
 
@@ -345,31 +337,15 @@ EXPLAIN ANALYZE before/after.
 
 ---
 
-### [Frontend / Discover] `DiscoveredJobCard` mixes posting render + dismissal popover — split popover
+### ~~[Frontend / Discover] `DiscoveredJobCard` mixes posting render + dismissal popover — split popover~~
 
-**Severity:** Medium
-**Effort:** S
-**Location:** `apps/myjobhunter/frontend/src/features/discover/DiscoveredJobCard.tsx:150-183`
-
-**Problem:** Dismissal-reason popover is 33 lines of inline JSX inside the card component. Owns its own conditional render (`showReasons` ternary at line 150); trigger lives in another action bar (line 227). Mixes two concerns.
-
-**Recommendation:** Extract `DismissReasonPopover.tsx` (props: `onDismiss(reason?)`, `onCancel()`, `isLoading`). Card swaps between action-bar and popover via single `mode` state.
-
-**Why Medium:** Card is 238 lines, on the edge of the ~200-line maintainability threshold.
+**Resolved:** PR #BUNDLE5 (2026-05-08). Extracted `DismissReasonPopover.tsx` with props `onDismiss(reason?)`, `onCancel()`, `isLoading`. Five-case unit test added in `features/discover/__tests__/DismissReasonPopover.test.tsx`. Card now swaps via single `showReasons` state.
 
 ---
 
-### [Frontend / Discover] `bandForScore` hardcodes thresholds that mirror backend `_verdict_to_score` — duplicated logic
+### ~~[Frontend / Discover] `bandForScore` hardcodes thresholds that mirror backend `_verdict_to_score` — duplicated logic~~
 
-**Severity:** Medium
-**Effort:** S
-**Location:** `apps/myjobhunter/frontend/src/features/discover/DiscoveredJobCard.tsx:48-54` + `apps/myjobhunter/backend/app/services/discovery/discovery_score_service.py:140-147`
-
-**Problem:** Backend maps verdict → score: `strong_fit=90, worth_considering=70, stretch=40, mismatch=15`. Frontend maps score → band: `>=85 strong, >=60 good, >=30 stretch, else low`. Both must agree on thresholds.
-
-**Recommendation:** Add `verdict: string` to `DiscoveredJobResponse` schema (already on JobAnalysis row), serialize on score worker write, render directly in card. Remove `bandForScore`. `_verdict_to_score` is single source of truth.
-
-**Why Medium:** Cross-stack coupling on numeric thresholds. Per `feedback_enum_changes_cross_stack`, this is exactly what typed unions exist to prevent.
+**Resolved:** PR #BUNDLE5 (2026-05-08). Added `verdict: str | None` as a `@computed_field` on `DiscoveredJobResponse` (derived from `_SCORE_TO_VERDICT` inverse map). Frontend `DiscoveredJob` type updated with `verdict: JobAnalysisVerdict | null`. `bandForScore` helper removed; `VERDICT_VISUAL` record now drives badge rendering. Six-case unit test in `features/discover/__tests__/DiscoveredJobCard.test.tsx`.
 
 ---
 
@@ -417,17 +393,9 @@ EXPLAIN ANALYZE before/after.
 
 ---
 
-### [Frontend / Discover] No skeleton on dialog while profile loads — fields jump from blank to populated
+### ~~[Frontend / Discover] No skeleton on dialog while profile loads — fields jump from blank to populated~~
 
-**Severity:** Medium
-**Effort:** S
-**Location:** `apps/myjobhunter/frontend/src/features/discover/NewSavedSearchDialog.tsx:51-55, 104-151`
-
-**Problem:** Three queries fire on dialog open with `skip: !open`. While loading, form renders empty. When data arrives, prefill effect populates fields — operator sees a sudden "fields fill in" jump.
-
-**Recommendation:** Either (a) gate form fields behind `isLoading` and show a small skeleton, or (b) prefetch profile when dialog mounts (not opens) so cache is warm. Option (a) is the smaller change.
-
-**Why Medium:** Direct violation of `visible-loading-feedback` — not catastrophic but jarring on first open.
+**Resolved:** PR #BUNDLE5 (2026-05-08). `useDiscoveryDefaultsPrefill` now exposes `isPrefillLoading`. `NewSavedSearchDialog` gates form behind `isPrefillLoading` and shows a 5-row skeleton while the three queries (profile, skills, work history) are in flight.
 
 ---
 
@@ -491,15 +459,9 @@ No state, no effect, no risk of double-open.
 
 ---
 
-### [Frontend / Tech Debt] Inline `renderInlineMarkdown` in NewSavedSearchDialog — extract or use existing markdown lib
+### ~~[Frontend / Tech Debt] Inline `renderInlineMarkdown` in NewSavedSearchDialog — extract or use existing markdown lib~~
 
-**Severity:** Low
-**Effort:** XS
-**Location:** `apps/myjobhunter/frontend/src/features/discover/NewSavedSearchDialog.tsx:445-462`
-
-**Problem:** 18-line inline regex-based bold parser at the bottom of a 462-line component. Operator-controlled summary text uses `**bold**` markers.
-
-**Recommendation:** Extract to `packages/shared-frontend/src/lib/inline-markdown.tsx` or use react-markdown (already in package.json for resume refinement).
+**Resolved:** PR #501 (2026-05-08). `InlineBoldText` component added to `@platform/ui`; `renderInlineMarkdown` helper removed from `NewSavedSearchDialog.tsx`; import updated to `{ InlineBoldText } from "@platform/ui"`.
 
 ---
 
