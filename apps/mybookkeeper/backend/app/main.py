@@ -119,7 +119,12 @@ async def set_audit_user(request: Request, call_next):
     user_id = None
     if token:
         try:
-            payload = jwt.decode(token, settings.secret_key, algorithms=["HS256"])
+            payload = jwt.decode(
+                token,
+                settings.secret_key,
+                algorithms=["HS256"],
+                audience="fastapi-users:auth",
+            )
             user_id = payload.get("sub")
             token_ctx = current_user_id.set(user_id)
             try:
