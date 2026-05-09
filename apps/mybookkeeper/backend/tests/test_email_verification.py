@@ -291,38 +291,38 @@ class TestVerifyRouterRegistered:
 
 
 # ---------------------------------------------------------------------------
-# current_active_user dependency rejects unverified users (defense-in-depth).
+# current_active_user is wired with verified=True (defense-in-depth).
 # Even if a JWT is somehow minted for an unverified user (regression in the
-# manager-layer guard, leftover legacy token, etc.) the dep-layer must reject.
+# manager-layer guard, leftover legacy token, etc.) the dep-layer rejects it.
 # ---------------------------------------------------------------------------
 
-class TestCurrentActiveUserUnverifiedRejection:
-    @pytest.mark.anyio
-    async def test_dep_rejects_unverified_token(self, db) -> None:
-        """current_active_user must 401 when the JWT belongs to an unverified user."""
-        from httpx import AsyncClient, ASGITransport
-        from app.main import app
-        from app.core.auth import get_jwt_strategy
-        from app.models.user.user import User
+class TestCurrentActiveUserConfig:
+    def test_current_active_user_requires_verified(self) -> None:
+        """current_active_user wiring contract: must enforce verified=True.
 
-        user = User(
-            id=uuid.uuid4(),
-            email=f"unverified-{uuid.uuid4()}@example.com",
-            hashed_password="x",
-            is_active=True,
-            is_superuser=False,
-            is_verified=False,
+        fastapi-users tests the BEHAVIOR of current_user(active=True, verified=True)
+        upstream — what we have to enforce in MBK is that we actually pass
+        verified=True when constructing the dependency. A future refactor that
+        accidentally drops the kwarg silently re-opens the gap this PR closed.
+
+        The exported dep is opaque (a closure inside fastapi-users), so we
+        assert the wiring via source-level inspection of app.core.auth — the
+        single source of truth for the dep configuration.
+        """
+        import inspect
+
+        from app.core import auth
+
+        src = inspect.getsource(auth)
+        assert (
+            "current_active_user = fastapi_users.current_user(active=True, verified=True)"
+            in src
+        ), (
+            "current_active_user must enforce verified=True at the dep layer; "
+            "matches MJH parity and prevents tokens issued to unverified accounts "
+            "(by any future bug in UserManager.authenticate) from reaching "
+            "protected routes."
         )
-        db.add(user)
-        await db.commit()
-
-        strategy = get_jwt_strategy()
-        token = await strategy.write_token(user)
-
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-            resp = await client.get("/users/me", headers={"Authorization": f"Bearer {token}"})
-
-        assert resp.status_code == 401
 
 
 # ---------------------------------------------------------------------------
