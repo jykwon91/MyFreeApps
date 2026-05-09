@@ -291,6 +291,41 @@ class TestVerifyRouterRegistered:
 
 
 # ---------------------------------------------------------------------------
+# current_active_user dependency rejects unverified users (defense-in-depth).
+# Even if a JWT is somehow minted for an unverified user (regression in the
+# manager-layer guard, leftover legacy token, etc.) the dep-layer must reject.
+# ---------------------------------------------------------------------------
+
+class TestCurrentActiveUserUnverifiedRejection:
+    @pytest.mark.anyio
+    async def test_dep_rejects_unverified_token(self, db) -> None:
+        """current_active_user must 401 when the JWT belongs to an unverified user."""
+        from httpx import AsyncClient, ASGITransport
+        from app.main import app
+        from app.core.auth import get_jwt_strategy
+        from app.models.user.user import User
+
+        user = User(
+            id=uuid.uuid4(),
+            email=f"unverified-{uuid.uuid4()}@example.com",
+            hashed_password="x",
+            is_active=True,
+            is_superuser=False,
+            is_verified=False,
+        )
+        db.add(user)
+        await db.commit()
+
+        strategy = get_jwt_strategy()
+        token = await strategy.write_token(user)
+
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            resp = await client.get("/users/me", headers={"Authorization": f"Bearer {token}"})
+
+        assert resp.status_code == 401
+
+
+# ---------------------------------------------------------------------------
 # TOTP login endpoint blocks unverified users
 # ---------------------------------------------------------------------------
 
