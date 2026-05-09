@@ -151,7 +151,7 @@ class TestStorageClientMethods:
         # Passing a dummy string keeps the constructor happy for unit tests.
         error = S3Error("_response", "AccessDenied", "Access Denied.", "", "", "")
         mock_minio.remove_object.side_effect = error
-        with patch("app.core.storage.logger") as mock_logger:
+        with patch("platform_shared.core.storage.logger") as mock_logger:
             client.delete_file("org/uuid/file.pdf")
             mock_logger.warning.assert_called_once()
             call_args = mock_logger.warning.call_args
@@ -272,7 +272,7 @@ class TestDualEndpointStorageClient:
 
 class TestGetStorageInitialization:
     @patch("app.core.storage.settings")
-    @patch("app.core.storage.Minio")
+    @patch("platform_shared.core.storage.Minio")
     def test_creates_dual_endpoint_when_public_endpoint_set(
         self, mock_minio_cls: MagicMock, mock_settings: MagicMock,
     ) -> None:
@@ -295,7 +295,7 @@ class TestGetStorageInitialization:
             reset_client_cache()
 
     @patch("app.core.storage.settings")
-    @patch("app.core.storage.Minio")
+    @patch("platform_shared.core.storage.Minio")
     def test_creates_single_endpoint_when_no_public_endpoint(
         self, mock_minio_cls: MagicMock, mock_settings: MagicMock,
     ) -> None:
@@ -322,7 +322,7 @@ class TestGetStorageInitialization:
             reset_client_cache()
 
     @patch("app.core.storage.settings")
-    @patch("app.core.storage.Minio")
+    @patch("platform_shared.core.storage.Minio")
     def test_does_not_call_bucket_check_on_get_storage(
         self, mock_minio_cls: MagicMock, mock_settings: MagicMock,
     ) -> None:
