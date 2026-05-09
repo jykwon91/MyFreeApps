@@ -87,7 +87,7 @@ export default function LeaseAttachmentsSection({ leaseId, attachments, canWrite
       ) : null}
 
       <ConfirmDialog
-        open={pendingDelete !== null}
+        open={!!pendingDelete}
         title="Remove attachment?"
         description={
           pendingDelete

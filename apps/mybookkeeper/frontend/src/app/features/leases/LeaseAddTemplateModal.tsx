@@ -96,14 +96,12 @@ export default function LeaseAddTemplateModal({
 
   function handleValueChange(key: string, value: string) {
     setValuesState((prev) =>
-      prev === null
-        ? prev
-        : { ...prev, values: { ...prev.values, [key]: value } },
+      prev ? { ...prev, values: { ...prev.values, [key]: value } } : prev,
     );
   }
 
   async function handleGenerate() {
-    if (valuesState === null) return;
+    if (!valuesState) return;
 
     const missingRequired = valuesState.items
       .filter((it) => it.required && it.input_type !== "signature")
