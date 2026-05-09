@@ -14,12 +14,9 @@ test.describe("MyJobHunter smoke tests", () => {
       await loginViaUI(page, user, request);
       await expect(page).toHaveURL(/\/dashboard/);
 
-      // 3. Dashboard — check heading and empty state
+      // 3. Dashboard — KanbanEmptyState heading (body copy changed in PR #371 redesign)
       await expect(
         page.getByRole("heading", { name: "Your hunt starts here" })
-      ).toBeVisible();
-      await expect(
-        page.getByText(/I don't have anything to track yet/)
       ).toBeVisible();
 
       // 4. Applications page

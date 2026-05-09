@@ -82,8 +82,8 @@ test.describe("Document CRUD — text document", () => {
       // Open the add document dialog
       await page.getByRole("button", { name: /add document/i }).click();
 
-      // The dialog should open
-      await expect(page.getByText("Add Document")).toBeVisible({ timeout: 5_000 });
+      // The dialog heading disambiguates from the trigger button (strict mode)
+      await expect(page.getByRole("heading", { name: "Add Document" })).toBeVisible({ timeout: 5_000 });
 
       // Switch to text mode
       await page.getByRole("button", { name: "Write text" }).click();
@@ -95,8 +95,8 @@ test.describe("Document CRUD — text document", () => {
       // Submit
       await page.getByRole("button", { name: /create/i }).click();
 
-      // Dialog should close and document should appear in the list
-      await expect(page.getByText("Add Document")).not.toBeVisible({ timeout: 5_000 });
+      // Dialog should close
+      await expect(page.getByRole("heading", { name: "Add Document" })).not.toBeVisible({ timeout: 5_000 });
       await expect(page.getByText("My E2E Cover Letter")).toBeVisible({ timeout: 5_000 });
     } finally {
       await deleteTestUser(request, user);
