@@ -1,42 +1,32 @@
 """Eager bucket setup, called from FastAPI lifespan.
 
+Thin wrapper over ``platform_shared.services.storage.bucket_initializer``.
+The shared helper owns the skip-check + ``ensure_bucket`` call + logging
+contract; this module wires MJH's ``get_storage`` + skip predicate.
+
+MJH skip condition: ``minio_skip_startup_check`` alone — looser than MBK's
+which also requires ``allow_test_admin_promotion``. MJH doesn't have an
+admin-promotion test escape hatch so the single flag is enough.
+
 Storage is a hard requirement for MJH — resume files all depend on MinIO.
 If env vars are missing or MinIO is unreachable at boot, the app MUST refuse
 to start so the deploy healthcheck fails and the rollout aborts.
-
-Exception: when ``minio_skip_startup_check=True`` the bucket check is skipped
-so unit test suites can run against a backend that has no local MinIO.
 """
-from __future__ import annotations
-
-import logging
+from platform_shared.services.storage.bucket_initializer import (
+    ensure_bucket as _shared_ensure_bucket,
+)
 
 from app.core.config import settings
-from app.core.storage import StorageNotConfiguredError, get_storage
-
-logger = logging.getLogger(__name__)
+from app.core.storage import get_storage
 
 
 def ensure_bucket() -> None:
-    """Ensure the configured bucket exists. Raises on any error.
+    """Ensure the configured MJH bucket exists. Raises on any error.
 
-    The lifespan calls this at startup. If ``get_storage()`` raises (env
-    vars missing, etc.) or ``bucket_exists()`` raises (MinIO unreachable),
-    the exception propagates and FastAPI startup fails. The deploy
-    healthcheck catches this and rolls back.
-
-    The check is intentionally skipped when ``MINIO_SKIP_STARTUP_CHECK=true``
-    is set — test-only escape hatch.
+    Skipped when ``MINIO_SKIP_STARTUP_CHECK=true`` is set — test-only
+    escape hatch so unit-test suites without local MinIO can boot.
     """
-    if settings.minio_skip_startup_check:
-        logger.warning(
-            "MinIO startup check skipped (MINIO_SKIP_STARTUP_CHECK=true in test mode)"
-        )
-        return
-
-    try:
-        storage = get_storage()
-    except StorageNotConfiguredError:
-        raise
-    storage.ensure_bucket()
-    logger.info("MinIO bucket %s ready", storage.bucket)
+    _shared_ensure_bucket(
+        get_storage=get_storage,
+        skip_check=lambda: settings.minio_skip_startup_check,
+    )
