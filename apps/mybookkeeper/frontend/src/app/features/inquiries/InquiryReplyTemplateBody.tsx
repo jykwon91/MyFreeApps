@@ -46,7 +46,7 @@ export default function InquiryReplyTemplateBody({
           />
         )}
       </div>
-      {selectedTemplateId !== null ? (
+      {selectedTemplateId ? (
         <div className="border-t pt-4">
           <h4 className="text-sm font-medium mb-2">Preview &amp; edit</h4>
           {isRenderFetching ? (

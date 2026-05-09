@@ -27,7 +27,7 @@ export default function TransactionDuplicateActions({ transactionId, dupOther, o
       <div className="flex gap-2">
         <button
           type="button"
-          disabled={dupBusy !== null}
+          disabled={!!dupBusy}
           onClick={async () => {
             setDupBusy("keep");
             try {
@@ -43,7 +43,7 @@ export default function TransactionDuplicateActions({ transactionId, dupOther, o
         </button>
         <button
           type="button"
-          disabled={dupBusy !== null}
+          disabled={!!dupBusy}
           onClick={async () => {
             setDupBusy("dismiss");
             try {

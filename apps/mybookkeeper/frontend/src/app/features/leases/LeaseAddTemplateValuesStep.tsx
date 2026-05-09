@@ -70,7 +70,7 @@ export default function LeaseAddTemplateValuesStep({
                       *
                     </span>
                   ) : null}
-                  {provenanceLabel !== null ? (
+                  {provenanceLabel ? (
                     <span className="text-[10px] uppercase tracking-wide text-muted-foreground bg-muted rounded px-1.5 py-0.5 font-normal">
                       {provenanceLabel}
                     </span>

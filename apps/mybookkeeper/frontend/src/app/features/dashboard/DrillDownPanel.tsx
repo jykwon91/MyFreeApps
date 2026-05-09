@@ -37,7 +37,7 @@ export default function DrillDownPanel({ filter, onClose }: DrillDownPanelProps)
     }
     if (filter.propertyIds?.length) {
       const ids = new Set(filter.propertyIds);
-      filtered = filtered.filter((txn) => txn.property_id !== null && ids.has(txn.property_id));
+      filtered = filtered.filter((txn) => !!txn.property_id && ids.has(txn.property_id));
     }
     return filtered;
   }, [allTransactions, filter.type, filter.propertyIds]);
