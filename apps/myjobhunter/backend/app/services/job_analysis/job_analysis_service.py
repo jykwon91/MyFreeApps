@@ -53,6 +53,7 @@ from typing import Any
 import anthropic
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.discovery.discovered_job import DiscoveredJob
 from app.models.job_analysis.job_analysis import JobAnalysis
 from app.models.profile.profile import Profile
 from app.repositories.job_analysis import job_analysis_repository
@@ -248,6 +249,7 @@ async def score(
     source_url: str | None = None,
     extracted_hint: dict | None = None,
     discovered_job_id: uuid.UUID | None = None,
+    discovered_job: DiscoveredJob | None = None,
 ) -> JobAnalysis:
     """Score pre-resolved JD text against ``user_id``'s profile.
 
@@ -270,6 +272,13 @@ async def score(
             this scoring run was triggered for. Stored as ``context_id``
             on the extraction_log entry so per-feature cost rollups can
             join.
+        discovered_job: Optional ORM row for the same discovered_jobs
+            posting. When provided, ``score``, ``score_reason``, and
+            ``scored_at`` are written to the row within the same
+            ``db.commit()`` that persists the JobAnalysis — collapsing
+            what was previously two separate transactions into one so a
+            crash between them cannot leave ``discovered_job.score`` NULL
+            while the JobAnalysis + cost record already exist.
 
     Raises:
         JobAnalysisError: Claude failed, returned malformed JSON, or
@@ -325,6 +334,18 @@ async def score(
         total_cost_usd=meta["cost_usd"],
     )
     analysis = await job_analysis_repository.create(db, analysis)
+
+    # If the caller provided the DiscoveredJob row, mutate it here so the
+    # score pointer and the JobAnalysis row land in a single commit. Without
+    # this, a crash between the two formerly separate commits left
+    # discovered_job.score = NULL while the JobAnalysis + cost record
+    # already existed, causing the next refresh to re-pay for scoring.
+    if discovered_job is not None:
+        discovered_job.score = _verdict_to_score(validated["verdict"])
+        discovered_job.score_reason = validated["verdict_summary"]
+        discovered_job.scored_at = datetime.now(timezone.utc)
+        db.add(discovered_job)
+
     await db.commit()
     return analysis
 
@@ -677,6 +698,22 @@ def _compute_fingerprint(*, source_url: str | None, jd_text: str) -> str:
     if not material:
         material = jd_text[:256].strip()
     return hashlib.sha256(material.encode("utf-8")).hexdigest()
+
+
+def _verdict_to_score(verdict: str) -> int:
+    """Collapse a job-analysis verdict into a 0–100 integer sort key.
+
+    Used by both the discovery inbox (ordering posted jobs by fit) and
+    ``score()`` when writing back to a DiscoveredJob row in the same
+    transaction. Keeping the mapping here ensures it stays co-located
+    with the verdict enum values it references.
+    """
+    return {
+        "strong_fit": 90,
+        "worth_considering": 70,
+        "stretch": 40,
+        "mismatch": 15,
+    }.get(verdict, 50)
 
 
 # _str_or_none, _safe_float, _safe_remote_type, _map_salary_period

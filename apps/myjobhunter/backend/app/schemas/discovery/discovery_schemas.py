@@ -131,7 +131,7 @@ class DiscoveredJobResponse(BaseModel):
     def verdict(self) -> str | None:
         """Human-readable verdict label derived from the numeric score.
 
-        ``_verdict_to_score`` in discovery_score_service is the single
+        ``_verdict_to_score`` in job_analysis_service is the single
         source of truth; this is the inverse mapping so the frontend
         renders the label directly without duplicating the thresholds.
         Returns None for unscored rows.

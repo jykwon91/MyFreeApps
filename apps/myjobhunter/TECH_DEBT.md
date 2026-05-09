@@ -3,7 +3,7 @@
 Issues discovered during development. New entries are appended; resolved entries are
 removed and the counts in this header are updated.
 
-**Open issues: 29 (Critical: 1 / High: 3 / Medium: 15 / Low: 11)**
+**Open issues: 28 (Critical: 1 / High: 3 / Medium: 14 / Low: 11)**
 
 > Last comprehensive audit: 2026-05-07 (post-discovery feature ship). All Critical and 7 of 8 audit-High findings RESOLVED in PRs #421-#432 (2026-05-07). Remaining audit findings preserved below under "## High (audit 2026-05-07)" / "## Medium (audit 2026-05-07)" / "## Low (audit 2026-05-07)" sections; pre-existing findings preserved under "## Pre-existing".
 
@@ -195,19 +195,9 @@ _All resolved or downgraded:_
 
 _Still open (downgraded from High to Medium since the immediate cost concern is gone):_
 
-### [Backend / Discovery] Scoring loop two-transaction split — `score_jd` commits, then worker commits a second time
+### ~~[Backend / Discovery] Scoring loop two-transaction split — `score_jd` commits, then worker commits a second time~~ RESOLVED
 
-**Severity:** Medium (downgraded from High)
-**Effort:** M
-**Location:** `apps/myjobhunter/backend/app/services/discovery/discovery_score_service.py:104-132` + `apps/myjobhunter/backend/app/services/job_analysis/job_analysis_service.py:301`
-
-**Status:** Partially addressed in PR #424 (redundant `flush()` removed; local spend accumulator). The two-transaction nature remains: `score_jd` commits the JobAnalysis + extraction_log, then the worker commits a separate transaction for the discovered_job's score pointer.
-
-**Problem:** If the worker crashes between the two commits, you have a JobAnalysis row but discovered_job.score is still NULL — next refresh re-pays for scoring. Cost recorded so accounting isn't lost, but billing-vs-pointer can drift.
-
-**Recommendation:** Thread the discovered_job mutation INTO `score_jd` (accept an optional `discovered_job: DiscoveredJob | None`) so both writes share one commit. Or make `score_jd` not commit (caller owns the transaction boundary) — bigger scope but better aligns with the service-layer commit convention.
-
-**Why Medium:** Crash recovery would re-bill at most one batch (~20 postings × $0.005 = $0.10). Real but bounded. Worth fixing when reworking the score worker, not blocking on it.
+**Resolved:** PR refactor/mjh-score-single-transaction (2026-05-08). `score()` in `job_analysis_service.py` now accepts `discovered_job: DiscoveredJob | None = None`. When provided, `score`, `score_reason`, and `scored_at` are written to the row within the same `db.commit()` that persists the JobAnalysis — collapsing the former two-transaction split into one. `_verdict_to_score` moved from `discovery_score_service` to `job_analysis_service` (co-located with the verdict enum). The worker now passes `discovered_job=job` and no longer calls `db.commit()` itself. 4 new tests: `test_score_with_discovered_job_sets_score_fields_atomically`, `test_score_without_discovered_job_leaves_no_score_fields` (job_analysis_score.py) + `test_score_jd_receives_discovered_job_kwarg` (discovery_score_service.py). 53/53 pass.
 
 ---
 
