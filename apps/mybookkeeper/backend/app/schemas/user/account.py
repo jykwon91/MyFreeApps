@@ -1,7 +1,7 @@
-from pydantic import BaseModel, Field
+"""Re-export of the shared ``DeleteAccountRequest`` schema.
 
-
-class DeleteAccountRequest(BaseModel):
-    password: str = Field(min_length=1)
-    confirm_email: str = Field(min_length=1)
-    totp_code: str | None = Field(default=None, min_length=6, max_length=8)
+Implementation lives in ``platform_shared.schemas.account``. Existing
+MBK call sites (route handler, tests) import from
+``app.schemas.user.account`` and reach the same class.
+"""
+from platform_shared.schemas.account import DeleteAccountRequest  # noqa: F401

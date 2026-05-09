@@ -112,7 +112,7 @@ async def test_delete_requires_correct_password(db: AsyncSession) -> None:
     db.add(user)
     await db.flush()
 
-    with patch("app.api.account.PasswordHelper") as mock_helper_cls:
+    with patch("platform_shared.api.account_deletion_router.PasswordHelper") as mock_helper_cls:
         mock_helper = mock_helper_cls.return_value
         mock_helper.verify_and_update.return_value = (False, None)
 
@@ -141,7 +141,7 @@ async def test_delete_requires_email_confirmation(db: AsyncSession) -> None:
     db.add(user)
     await db.flush()
 
-    with patch("app.api.account.PasswordHelper") as mock_helper_cls:
+    with patch("platform_shared.api.account_deletion_router.PasswordHelper") as mock_helper_cls:
         mock_helper = mock_helper_cls.return_value
         mock_helper.verify_and_update.return_value = (True, None)
 
@@ -170,7 +170,7 @@ async def test_delete_requires_totp_when_enabled_missing_code(db: AsyncSession) 
     db.add(user)
     await db.flush()
 
-    with patch("app.api.account.PasswordHelper") as mock_helper_cls:
+    with patch("platform_shared.api.account_deletion_router.PasswordHelper") as mock_helper_cls:
         mock_helper = mock_helper_cls.return_value
         mock_helper.verify_and_update.return_value = (True, None)
 
@@ -201,9 +201,9 @@ async def test_delete_requires_totp_when_enabled_wrong_code(db: AsyncSession) ->
     await db.flush()
 
     with (
-        patch("app.api.account.PasswordHelper") as mock_helper_cls,
+        patch("platform_shared.api.account_deletion_router.PasswordHelper") as mock_helper_cls,
         patch(
-            "app.api.account.verify_totp_code",
+            "app.services.user.totp_service.verify_totp_code",
             new_callable=AsyncMock,
             return_value=False,
         ),
@@ -238,9 +238,9 @@ async def test_delete_succeeds_with_valid_totp(db: AsyncSession) -> None:
     await db.flush()
 
     with (
-        patch("app.api.account.PasswordHelper") as mock_helper_cls,
+        patch("platform_shared.api.account_deletion_router.PasswordHelper") as mock_helper_cls,
         patch(
-            "app.api.account.verify_totp_code",
+            "app.services.user.totp_service.verify_totp_code",
             new_callable=AsyncMock,
             return_value=True,
         ),
@@ -278,7 +278,7 @@ async def test_delete_succeeds_with_correct_creds(db: AsyncSession) -> None:
     ).scalar_one_or_none()
     assert user_row is not None
 
-    with patch("app.api.account.PasswordHelper") as mock_helper_cls:
+    with patch("platform_shared.api.account_deletion_router.PasswordHelper") as mock_helper_cls:
         mock_helper = mock_helper_cls.return_value
         mock_helper.verify_and_update.return_value = (True, None)
 
@@ -315,7 +315,7 @@ async def test_delete_email_match_is_case_insensitive(db: AsyncSession) -> None:
     db.add(user)
     await db.flush()
 
-    with patch("app.api.account.PasswordHelper") as mock_helper_cls:
+    with patch("platform_shared.api.account_deletion_router.PasswordHelper") as mock_helper_cls:
         mock_helper = mock_helper_cls.return_value
         mock_helper.verify_and_update.return_value = (True, None)
 
@@ -428,7 +428,7 @@ async def test_delete_cascades_all_domain_rows(db: AsyncSession) -> None:
     user_row = (await db.execute(select(User).where(User.id == user.id))).scalar_one_or_none()
     assert user_row is not None
 
-    with patch("app.api.account.PasswordHelper") as mock_helper_cls:
+    with patch("platform_shared.api.account_deletion_router.PasswordHelper") as mock_helper_cls:
         mock_helper = mock_helper_cls.return_value
         mock_helper.verify_and_update.return_value = (True, None)
 
@@ -481,7 +481,7 @@ async def test_account_deleted_event_survives_cascade(db: AsyncSession) -> None:
     db.add(user)
     await db.flush()
 
-    with patch("app.api.account.PasswordHelper") as mock_helper_cls:
+    with patch("platform_shared.api.account_deletion_router.PasswordHelper") as mock_helper_cls:
         mock_helper = mock_helper_cls.return_value
         mock_helper.verify_and_update.return_value = (True, None)
 
