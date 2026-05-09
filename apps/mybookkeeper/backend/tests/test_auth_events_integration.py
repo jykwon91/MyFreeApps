@@ -305,7 +305,7 @@ async def test_account_delete_creates_event(db: AsyncSession) -> None:
 
     with (
         patch("app.api.account.unit_of_work", _fake_uow),
-        patch("app.api.account.PasswordHelper") as mock_helper_cls,
+        patch("platform_shared.api.account_deletion_router.PasswordHelper") as mock_helper_cls,
     ):
         mock_helper = mock_helper_cls.return_value
         mock_helper.verify_and_update.return_value = (True, None)

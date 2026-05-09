@@ -72,6 +72,10 @@ def _patch_session(db: AsyncSession):
         yield db
         await db.flush()
 
+    # The shared account-deletion router (audit C1+H9) opens
+    # `unit_of_work_factory()` for the cascade. The factory wraps a
+    # lambda that re-resolves `unit_of_work` from
+    # `app.api.account` at call time, so this patch still takes effect.
     with patch("app.api.account.unit_of_work", _fake_uow):
         yield
 
@@ -86,7 +90,7 @@ async def test_delete_requires_correct_password(db: AsyncSession) -> None:
     db.add(user)
     await db.flush()
 
-    with patch("app.api.account.PasswordHelper") as mock_helper_cls:
+    with patch("platform_shared.api.account_deletion_router.PasswordHelper") as mock_helper_cls:
         mock_helper = mock_helper_cls.return_value
         mock_helper.verify_and_update.return_value = (False, None)
 
@@ -114,7 +118,7 @@ async def test_delete_requires_email_confirmation(db: AsyncSession) -> None:
     db.add(user)
     await db.flush()
 
-    with patch("app.api.account.PasswordHelper") as mock_helper_cls:
+    with patch("platform_shared.api.account_deletion_router.PasswordHelper") as mock_helper_cls:
         mock_helper = mock_helper_cls.return_value
         mock_helper.verify_and_update.return_value = (True, None)
 
@@ -142,7 +146,7 @@ async def test_delete_requires_totp_when_enabled_missing_code(db: AsyncSession) 
     db.add(user)
     await db.flush()
 
-    with patch("app.api.account.PasswordHelper") as mock_helper_cls:
+    with patch("platform_shared.api.account_deletion_router.PasswordHelper") as mock_helper_cls:
         mock_helper = mock_helper_cls.return_value
         mock_helper.verify_and_update.return_value = (True, None)
 
@@ -172,8 +176,8 @@ async def test_delete_requires_totp_when_enabled_wrong_code(db: AsyncSession) ->
     await db.flush()
 
     with (
-        patch("app.api.account.PasswordHelper") as mock_helper_cls,
-        patch("app.api.account.validate_totp_for_login", new_callable=AsyncMock, return_value=(False, False)),
+        patch("platform_shared.api.account_deletion_router.PasswordHelper") as mock_helper_cls,
+        patch("app.services.user.totp_service.verify_totp_code", new_callable=AsyncMock, return_value=False),
     ):
         mock_helper = mock_helper_cls.return_value
         mock_helper.verify_and_update.return_value = (True, None)
@@ -215,7 +219,7 @@ async def test_delete_succeeds_with_correct_creds(db: AsyncSession) -> None:
     user_row = (await db.execute(select(User).where(User.id == user.id))).scalar_one_or_none()
     assert user_row is not None
 
-    with patch("app.api.account.PasswordHelper") as mock_helper_cls:
+    with patch("platform_shared.api.account_deletion_router.PasswordHelper") as mock_helper_cls:
         mock_helper = mock_helper_cls.return_value
         mock_helper.verify_and_update.return_value = (True, None)
 
