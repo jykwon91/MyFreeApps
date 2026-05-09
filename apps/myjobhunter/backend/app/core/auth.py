@@ -27,11 +27,6 @@ from fastapi_users import (
     exceptions,
     models,
 )
-from fastapi_users.authentication import (
-    AuthenticationBackend,
-    BearerTransport,
-    JWTStrategy,
-)
 from fastapi_users.db import SQLAlchemyUserDatabase
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -314,21 +309,19 @@ async def get_user_manager(user_db=Depends(get_user_db)):
     yield UserManager(user_db)
 
 
-bearer_transport = BearerTransport(tokenUrl="auth/jwt/login")
+from platform_shared.auth.jwt_backend import build_jwt_auth_backend
 
-
-def get_jwt_strategy() -> JWTStrategy:
-    return JWTStrategy(
-        secret=settings.secret_key,
-        lifetime_seconds=settings.jwt_lifetime_seconds,
-    )
-
-
-auth_backend = AuthenticationBackend(
-    name="jwt",
-    transport=bearer_transport,
-    get_strategy=get_jwt_strategy,
+# Constructed via the shared factory so future apps inherit the wiring.
+# Destructure into module-level names so existing
+# ``from app.core.auth import bearer_transport / get_jwt_strategy / auth_backend``
+# imports keep resolving unchanged.
+_jwt = build_jwt_auth_backend(
+    secret_key=settings.secret_key,
+    lifetime_seconds=settings.jwt_lifetime_seconds,
 )
+bearer_transport = _jwt.bearer_transport
+get_jwt_strategy = _jwt.get_jwt_strategy
+auth_backend = _jwt.auth_backend
 
 fastapi_users = FastAPIUsers[User, uuid.UUID](get_user_manager, [auth_backend])
 current_active_user = fastapi_users.current_user(active=True, verified=True)
