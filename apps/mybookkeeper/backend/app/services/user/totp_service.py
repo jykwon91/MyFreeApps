@@ -30,6 +30,8 @@ Algorithm handling (audit 2026-05-02):
 """
 import uuid
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from platform_shared.services.totp_service import (
     DEFAULT_TOTP_ALGORITHM,
     TotpAlgorithm,
@@ -66,6 +68,7 @@ __all__ = [
     "get_provisioning_uri",
     "verify_code",
     "verify_recovery_code",
+    "verify_totp_code",
     "generate_recovery_codes",
     "setup_totp",
     "confirm_totp",
@@ -184,6 +187,43 @@ async def disable_totp(user_id: uuid.UUID, code: str) -> bool:
         # overwrite to sha256 on the next enrollment.
         user.totp_algorithm = "sha1"
         return True
+
+
+async def verify_totp_code(db: AsyncSession, user_id: uuid.UUID, code: str) -> bool:
+    """Return True if ``code`` is a valid TOTP or recovery code for the user.
+
+    Used by the superuser-step-up flow in ``main.py`` to keep the verifier
+    shape aligned with MJH's ``app.services.user.totp_service.verify_totp_code``
+    (audit 2026-05-09 H5 reconciliation). The previous inline implementation
+    in ``main.py::_superuser_step_up`` did the same work — manual decrypt +
+    ``verify_code`` + recovery-code fallback — but exposed the encryption
+    plumbing at the call site. Hoisting into the service layer keeps the
+    coordinator's responsibilities inside this module.
+
+    Does NOT consume the recovery code on match — the caller (step-up) is
+    expected to be a one-shot operation; deletion of the user (which also
+    happens to use this function via account_deletion) cascades the row
+    away anyway.
+    """
+    if not code:
+        return False
+
+    user = await user_repo.get_by_id(db, user_id)
+    if user is None or not user.totp_enabled or not user.totp_secret:
+        return False
+
+    secret = _decrypt(user.totp_secret, user_id)
+    algorithm: TotpAlgorithm = user.totp_algorithm  # type: ignore[assignment]
+    if verify_code(secret, code, algorithm=algorithm):
+        return True
+
+    if user.totp_recovery_codes:
+        recovery_str = _decrypt(user.totp_recovery_codes, user_id)
+        valid, _ = verify_recovery_code(recovery_str, code)
+        if valid:
+            return True
+
+    return False
 
 
 async def validate_totp_for_login(email: str, code: str) -> tuple[bool, bool]:
