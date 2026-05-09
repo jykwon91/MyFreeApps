@@ -6,9 +6,9 @@
  * the correct status badge.
  */
 import { test, expect } from "@playwright/test";
-import { createTestUser, deleteTestUser, loginViaUI } from "./fixtures/auth";
+import { createTestUser, deleteTestUser, loginViaUI, resetRateLimit } from "./fixtures/auth";
 
-const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:8004";
+const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:8002";
 
 /**
  * Create a company via the API (faster than UI flow for test setup).
@@ -82,12 +82,14 @@ async function logEventViaApi(
 
 /**
  * Log in via the backend API and return the JWT token.
+ * Resets the per-IP rate limit first to prevent 429s during parallel runs.
  */
 async function getToken(
   request: import("@playwright/test").APIRequestContext,
   email: string,
   password: string,
 ): Promise<string> {
+  await resetRateLimit(request);
   const res = await request.post(`${BACKEND_URL}/api/auth/jwt/login`, {
     form: { username: email, password },
   });
@@ -145,7 +147,7 @@ test.describe("Applications list — Status column", () => {
     }
   });
 
-  test("shows em-dash for an application with no events", async ({
+  test("shows 'Applied' status for a new application (backend auto-logs initial event)", async ({
     page,
     request,
   }) => {
@@ -163,14 +165,12 @@ test.describe("Applications list — Status column", () => {
 
       await expect(page.getByText("No Events Role")).toBeVisible({ timeout: 8_000 });
 
-      // The Status column should show an em-dash for zero events.
-      // DataTable renders each row as a <button> (clickable), so use getByRole("button")
-      // scoped to the row, then assert the second cell (Status) contains "—".
+      // The backend auto-logs an "applied" event when an application is created,
+      // so the Status column always shows "Applied" for a new application even when
+      // no explicit events are logged via the API. The row uses role="button" so
+      // td.nth(1) targets the Status cell (column index 1).
       const row = page.getByRole("button").filter({ hasText: "No Events Role" });
-      // The Status cell is the second <td> (index 1: 0=role_title, 1=latest_status).
-      // getByRole("cell") doesn't work when the <tr> overrides to role="button",
-      // which breaks table semantics for the child <td> elements.
-      await expect(row.locator("td").nth(1)).toHaveText("—");
+      await expect(row.locator("td").nth(1)).toHaveText("Applied");
     } finally {
       await deleteTestUser(request, user);
     }

@@ -31,7 +31,7 @@ import uuid
 from datetime import date, datetime, timedelta, timezone
 from typing import TypedDict
 
-DEMO_EMAIL_DOMAIN = "myjobhunter.local"
+DEMO_EMAIL_DOMAIN = "myjobhunter-demo.example.com"
 DEMO_EMAIL_PREFIX = "demo"
 DEMO_DEFAULT_DISPLAY_NAME = "Alex Demo"
 
@@ -48,12 +48,15 @@ def generate_demo_password() -> str:
 
 
 def make_demo_email() -> str:
-    """Generate a unique demo email under ``myjobhunter.local``.
+    """Generate a unique demo email under ``myjobhunter-demo.example.com``.
 
-    ``.local`` is RFC 6762 reserved (mDNS) so it will never collide
-    with a real deliverable inbox. The UUID slice keeps the email
-    short enough to display comfortably in the credentials modal but
-    long enough to avoid collisions across many demo accounts.
+    ``example.com`` is RFC 2606 reserved so it will never collide with
+    a real deliverable inbox, AND it passes Pydantic's ``EmailStr``
+    syntactic validation (unlike ``.local`` / ``.test`` / ``.invalid``
+    which ``email_validator`` rejects as special-use TLDs). The UUID
+    slice keeps the email short enough to display comfortably in the
+    credentials modal but long enough to avoid collisions across many
+    demo accounts.
     """
     slug = uuid.uuid4().hex[:12]
     return f"{DEMO_EMAIL_PREFIX}+{slug}@{DEMO_EMAIL_DOMAIN}"

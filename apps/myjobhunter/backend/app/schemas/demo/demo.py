@@ -40,16 +40,16 @@ class DemoCreateRequest(BaseModel):
     """Body of ``POST /admin/demo/users``.
 
     ``email`` is optional — when omitted the service auto-generates a
-    ``demo+<uuid>@myjobhunter.local`` address. ``display_name`` is
-    optional — when omitted the service synthesizes a plausible name
-    from the seed data.
+    ``demo+<uuid>@myjobhunter-demo.example.com`` address.
+    ``display_name`` is optional — when omitted the service
+    synthesizes a plausible name from the seed data.
     """
 
     email: EmailStr | None = Field(
         default=None,
         description=(
             "Optional. Demo account email. Auto-generated as "
-            "'demo+<uuid>@myjobhunter.local' when omitted."
+            "'demo+<uuid>@myjobhunter-demo.example.com' when omitted."
         ),
     )
     display_name: str | None = Field(

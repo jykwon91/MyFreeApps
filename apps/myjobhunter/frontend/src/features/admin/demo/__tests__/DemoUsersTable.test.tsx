@@ -21,7 +21,7 @@ vi.mock("@platform/ui", () => ({
 const SAMPLE_USERS: DemoUser[] = [
   {
     user_id: "11111111-1111-1111-1111-111111111111",
-    email: "demo+abc@myjobhunter.local",
+    email: "demo+abc@myjobhunter-demo.example.com",
     display_name: "Alex Demo",
     created_at: "2026-05-05T12:00:00Z",
     application_count: 4,
@@ -29,7 +29,7 @@ const SAMPLE_USERS: DemoUser[] = [
   },
   {
     user_id: "22222222-2222-2222-2222-222222222222",
-    email: "demo+xyz@myjobhunter.local",
+    email: "demo+xyz@myjobhunter-demo.example.com",
     display_name: "Jordan Sandbox",
     created_at: "2026-05-04T08:30:00Z",
     application_count: 0,
@@ -44,7 +44,7 @@ describe("DemoUsersTable", () => {
     expect(screen.getAllByTestId("demo-user-row")).toHaveLength(2);
     expect(screen.getByText("Alex Demo")).toBeInTheDocument();
     expect(screen.getByText("Jordan Sandbox")).toBeInTheDocument();
-    expect(screen.getByText("demo+abc@myjobhunter.local")).toBeInTheDocument();
+    expect(screen.getByText("demo+abc@myjobhunter-demo.example.com")).toBeInTheDocument();
   });
 
   it("invokes onDelete with the matching row when Delete is clicked", async () => {
@@ -55,7 +55,7 @@ describe("DemoUsersTable", () => {
 
     await user.click(
       screen.getByRole("button", {
-        name: /Delete demo\+abc@myjobhunter.local/i,
+        name: /Delete demo\+abc@myjobhunter-demo.example.com/i,
       }),
     );
 

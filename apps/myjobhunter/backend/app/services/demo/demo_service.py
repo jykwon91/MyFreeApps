@@ -79,7 +79,7 @@ async def create_demo_user(
 
     Args:
         email: Optional override. When ``None`` the service auto-
-            generates ``demo+<uuid>@myjobhunter.local``.
+            generates ``demo+<uuid>@myjobhunter-demo.example.com``.
         display_name: Optional override. When ``None`` the service
             uses ``DEMO_DEFAULT_DISPLAY_NAME``.
 
@@ -147,8 +147,9 @@ async def create_demo_user(
         user_id = user.id
 
     # Log only the email domain — demo emails today are non-deliverable
-    # (`.local`), but the same log shape would copy-paste into a real
-    # signup flow if extracted later. PII redaction by default.
+    # (RFC 2606 ``example.com``), but the same log shape would copy-
+    # paste into a real signup flow if extracted later. PII redaction
+    # by default.
     _, _, _domain = final_email.rpartition("@")
     logger.info(
         "DEMO_ACTION created demo user user_id=%s email_domain=%s",

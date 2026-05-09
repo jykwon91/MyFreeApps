@@ -56,18 +56,31 @@ async def reset_rate_limit() -> None:
 
 @router.post("/_test/promote-to-admin", status_code=204)
 async def promote_to_admin(email: EmailStr = Body(..., embed=True)) -> None:
-    """Flip a user's role to admin.
+    """Flip a user's ``is_superuser`` flag to True.
 
     Used by E2E tests that exercise admin-gated routes (e.g.
     ``/admin/demo/users``) so a fresh test user can be granted the
-    role without seeding via SQL. Gated by
+    superuser bit without seeding via SQL. Gated by
     ``MYJOBHUNTER_ENABLE_TEST_HELPERS=1`` — never mounted in production.
+
+    The admin gate (``app.core.permissions.current_superuser``) reads
+    ``user.is_superuser``, so this is the column we flip. The legacy
+    ``role`` column on the user model is platform-level metadata and
+    is NOT what gates admin routes.
+
+    Caller ordering note: callers must promote AFTER any login the user
+    will perform during the test. fastapi-users' ``UserManager`` issues
+    an ORM ``user_db.update(...)`` on successful login flows, which can
+    overwrite a fresh promotion with the in-memory user copy that still
+    has ``is_superuser=False``. Promote last; subsequent requests use
+    the existing JWT and read ``is_superuser`` fresh from the DB on
+    every authenticated request.
     """
     async with AsyncSessionLocal() as session:
         async with session.begin():
             result = await session.execute(
                 text(
-                    "UPDATE users SET role = 'admin' "
+                    "UPDATE users SET is_superuser = TRUE "
                     "WHERE email = :email RETURNING id"
                 ),
                 {"email": email},

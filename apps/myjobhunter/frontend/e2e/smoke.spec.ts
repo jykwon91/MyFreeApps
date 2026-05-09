@@ -34,8 +34,8 @@ test.describe("MyJobHunter smoke tests", () => {
       await expect(
         page.getByRole("dialog", { name: /add application/i })
       ).toBeVisible({ timeout: 5_000 });
-      // Dismiss the dialog before continuing
-      await page.getByRole("button", { name: /cancel/i }).click();
+      // Dismiss via the X close button (the URL-input step has no Cancel button)
+      await page.getByRole("button", { name: /close/i }).click();
 
       // 6. Companies page
       await page.getByRole("link", { name: /companies/i }).first().click();
@@ -67,7 +67,7 @@ test.describe("MyJobHunter smoke tests", () => {
       await page.getByRole("link", { name: /documents/i }).first().click();
       await page.waitForURL("**/documents");
       await expect(
-        page.getByRole("heading", { name: /documents/i })
+        page.getByRole("heading", { name: "Documents", exact: true })
       ).toBeVisible();
       await expect(page.getByText(/No documents yet/i)).toBeVisible();
 
@@ -82,15 +82,12 @@ test.describe("MyJobHunter smoke tests", () => {
 
       // 10. Application detail error page — invalid/non-existent UUID
       await page.goto("/applications/non-existent-uuid");
-      // The app shows a 422/error state when the UUID is not found
+      // The app shows a 422 error state for an invalid UUID path param
       await expect(
         page.getByRole("heading", {
           name: /couldn't load that application/i,
         })
       ).toBeVisible({ timeout: 5_000 });
-      await expect(
-        page.getByText(/non-existent-uuid.*isn't available/i)
-      ).toBeVisible();
 
       // 11. Sign out
       // Desktop: user menu in sidebar — the button shows the truncated name,

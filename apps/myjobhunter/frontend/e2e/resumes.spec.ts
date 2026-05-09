@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { createTestUser, deleteTestUser, loginViaUI } from "./fixtures/auth";
+import { createTestUser, deleteTestUser, loginViaUI, resetRateLimit } from "./fixtures/auth";
 import path from "path";
 import fs from "fs";
 import os from "os";
@@ -26,6 +26,9 @@ async function loginAndGetToken(
   request: import("@playwright/test").APIRequestContext,
   user: { email: string; password: string },
 ): Promise<string> {
+  // Reset the per-IP rate limit before each login to prevent 429s when many
+  // tests share 127.0.0.1 as the client IP during parallel runs.
+  await resetRateLimit(request);
   const resp = await request.post(`${BACKEND_URL}/api/auth/jwt/login`, {
     form: { username: user.email, password: user.password },
   });

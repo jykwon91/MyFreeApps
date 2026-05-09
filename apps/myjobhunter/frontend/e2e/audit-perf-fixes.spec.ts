@@ -19,9 +19,9 @@
  * description).
  */
 import { test, expect } from "@playwright/test";
-import { createTestUser, deleteTestUser, loginViaUI } from "./fixtures/auth";
+import { createTestUser, deleteTestUser, loginViaUI, resetRateLimit } from "./fixtures/auth";
 
-const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:8004";
+const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:8002";
 
 // ---------------------------------------------------------------------------
 // API helpers (mirrors applications-status.spec.ts)
@@ -32,6 +32,8 @@ async function getToken(
   email: string,
   password: string,
 ): Promise<string> {
+  // Reset per-IP rate limit before each API login to prevent 429s during parallel runs.
+  await resetRateLimit(request);
   const res = await request.post(`${BACKEND_URL}/api/auth/jwt/login`, {
     form: { username: email, password },
   });
@@ -228,7 +230,8 @@ test.describe("Applications list — status badge updates after logging event (a
 
       // Status badge should now show "Applied" — no manual refresh needed.
       // This verifies that logApplicationEvent invalidates the Applications list cache.
-      await expect(page.getByText("Applied")).toBeVisible({ timeout: 8_000 });
+      // Use .first() because the list may show multiple badge elements (strict-mode guard).
+      await expect(page.getByText("Applied").first()).toBeVisible({ timeout: 8_000 });
     } finally {
       await deleteTestUser(request, user);
     }

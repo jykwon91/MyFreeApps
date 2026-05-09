@@ -159,9 +159,11 @@ test.describe("Skills", () => {
       await page.getByLabel("Skill name").fill("python");
       await page.getByLabel("Skill name").press("Enter");
 
-      // Error toast appears
+      // Error toast appears. Match the visible toast body, not the
+      // aria-live announcement (which renders a sibling element with the
+      // same substring and would trip strict-mode locators).
       await expect(
-        page.getByText(/already exists/i),
+        page.getByText(/already exists/i).first(),
       ).toBeVisible({ timeout: 5_000 });
     } finally {
       await deleteTestUser(request, user);

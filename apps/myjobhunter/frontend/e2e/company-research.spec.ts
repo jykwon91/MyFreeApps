@@ -27,8 +27,8 @@ test.describe("Company Research panel", () => {
       await page.getByRole("link", { name: /companies/i }).first().click();
       await page.waitForURL("**/companies");
       await page.getByRole("button", { name: /add a company/i }).click();
-      await page.locator("#ac-name").fill("Research Test Corp");
-      await page.locator("#ac-domain").fill("researchtestcorp.example.com");
+      await page.getByLabel(/^name/i).fill("Research Test Corp");
+      await page.getByLabel(/domain/i).fill("researchtestcorp.example.com");
       await page.getByRole("button", { name: /^add company$/i }).click();
 
       // Navigate to the company detail page
@@ -60,7 +60,7 @@ test.describe("Company Research panel", () => {
       await page.getByRole("link", { name: /companies/i }).first().click();
       await page.waitForURL("**/companies");
       await page.getByRole("button", { name: /add a company/i }).click();
-      await page.locator("#ac-name").fill("Research Error Corp");
+      await page.getByLabel(/^name/i).fill("Research Error Corp");
       await page.getByRole("button", { name: /^add company$/i }).click();
 
       const row = page.getByRole("button").filter({ hasText: "Research Error Corp" }).first();

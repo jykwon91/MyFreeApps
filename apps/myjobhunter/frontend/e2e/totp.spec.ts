@@ -1,6 +1,43 @@
 import { test, expect } from "@playwright/test";
-import { authenticator } from "otplib";
-import { createTestUser, deleteTestUser, loginViaUI } from "./fixtures/auth";
+import { createHmac } from "crypto";
+import { createTestUser, deleteTestUser, loginViaUI, resetRateLimit } from "./fixtures/auth";
+
+// The backend enrolls TOTP with SHA-256 (platform_shared default since the
+// 2026-05-02 TOTP algorithm upgrade). Generate codes here with the same
+// algorithm so the challenge step doesn't fail with "Invalid verification code".
+//
+// otplib's default authenticator and its plugin-crypto/plugin-thirty-two
+// combination produce different codes than pyotp for SHA-256 due to
+// differences in base32 decoding. Using a direct implementation avoids that
+// mismatch entirely.
+function base32decode(secret: string): Buffer {
+  const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+  let bits = 0;
+  let value = 0;
+  const output: number[] = [];
+  for (const ch of secret.toUpperCase().replace(/=/g, "")) {
+    const idx = ALPHABET.indexOf(ch);
+    if (idx < 0) throw new Error(`Invalid base32 character: ${ch}`);
+    value = (value << 5) | idx;
+    bits += 5;
+    if (bits >= 8) {
+      output.push((value >>> (bits - 8)) & 255);
+      bits -= 8;
+    }
+  }
+  return Buffer.from(output);
+}
+
+function generateTotp256(secret: string): string {
+  const key = base32decode(secret);
+  const step = BigInt(Math.floor(Date.now() / 30_000));
+  const msg = Buffer.alloc(8);
+  msg.writeBigUInt64BE(step);
+  const h = createHmac("sha256", key).update(msg).digest();
+  const offset = h[h.length - 1] & 0x0f;
+  const code = (h.readUInt32BE(offset) & 0x7fff_ffff) % 1_000_000;
+  return code.toString().padStart(6, "0");
+}
 
 const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:8002";
 
@@ -67,7 +104,7 @@ test.describe("MyJobHunter TOTP 2FA", () => {
       await expect(page.getByText(setup.secret)).toBeVisible();
 
       // 4. Enter a fresh 6-digit code derived from the same secret
-      const code = authenticator.generate(setup.secret);
+      const code = generateTotp256(setup.secret);
       await page.getByPlaceholder("000000").fill(code);
       await page.getByRole("button", { name: /verify & enable/i }).click();
 
@@ -86,7 +123,10 @@ test.describe("MyJobHunter TOTP 2FA", () => {
       await page.getByRole("menuitem", { name: /sign out/i }).click();
       await page.waitForURL("**/login", { timeout: 5_000 });
 
-      // 7. Sign in again — TOTP challenge should appear
+      // 7. Sign in again — TOTP challenge should appear.
+      // Reset rate limit first — prior loginViaUI call exhausts the per-IP
+      // throttle when all tests share 127.0.0.1 as the client IP.
+      await resetRateLimit(request);
       await page.getByLabel(/email/i).fill(user.email);
       await page.locator("#login-password").fill(user.password);
       await page.getByRole("button", { name: /^sign in$/i }).click();
@@ -96,7 +136,7 @@ test.describe("MyJobHunter TOTP 2FA", () => {
 
       // 8. Provide a fresh TOTP code (must regenerate — the previous one may
       //    have rolled past its 30s window during recovery-code display)
-      const challengeCode = authenticator.generate(setup.secret);
+      const challengeCode = generateTotp256(setup.secret);
       await page.getByLabel(/authentication code/i).fill(challengeCode);
       await page.getByRole("button", { name: /^verify$/i }).click();
       // After TOTP verify, navigate goes to the "from" state (last visited page
@@ -111,6 +151,10 @@ test.describe("MyJobHunter TOTP 2FA", () => {
       await page.locator("aside").getByRole("button").last().click();
       await page.getByRole("menuitem", { name: /sign out/i }).click();
       await page.waitForURL("**/login", { timeout: 5_000 });
+
+      // Reset rate limit — the previous TOTP challenge login exhausts the
+      // per-IP throttle when all tests share 127.0.0.1 as the client IP.
+      await resetRateLimit(request);
 
       await page.getByLabel(/email/i).fill(user.email);
       await page.locator("#login-password").fill(user.password);

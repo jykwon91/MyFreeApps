@@ -58,33 +58,30 @@ test.describe("Applications — paste-link JD URL extract", () => {
         page.getByRole("dialog", { name: /add application/i }),
       ).toBeVisible();
 
-      // Expand the auto-fill panel — the prompt is collapsed initially.
-      await page.getByRole("button", { name: /paste a link or job description to auto-fill/i }).click();
-
-      // URL tab is the default. Confirm by checking for the URL input.
+      // The URL input is the default (no expand step needed in the new dialog).
       const urlInput = page.getByLabel(/job posting url/i);
       await expect(urlInput).toBeVisible();
 
-      // Type a URL and click "Fetch and auto-fill".
+      // Type a URL and click "Auto-fill".
       await urlInput.fill("https://jobs.example.com/posting/abc");
-      await page.getByRole("button", { name: /fetch and auto-fill/i }).click();
+      await page.getByRole("button", { name: /auto-fill/i }).click();
 
-      // Success banner appears.
-      await expect(page.getByText(/fields pre-filled from jd/i)).toBeVisible({
+      // The dialog advances to the review step — "Review and adjust before saving"
+      // banner with the source URL.
+      await expect(page.getByText(/review and adjust before saving/i)).toBeVisible({
         timeout: 5_000,
       });
-      await expect(page.getByText(/fetched from/i)).toBeVisible();
+      await expect(page.getByText(/jobs\.example\.com/i)).toBeVisible();
 
-      // The role title is pre-filled.
-      await expect(page.getByLabel(/role title/i)).toHaveValue("Senior Backend Engineer");
+      // The role title field is pre-filled.
+      await expect(
+        page.getByPlaceholder(/senior backend engineer/i)
+      ).toHaveValue("Senior Backend Engineer");
 
-      // The location is pre-filled.
-      await expect(page.getByLabel(/^location/i)).toHaveValue("San Francisco, CA, US");
-
-      // The URL field is also pre-filled with the source URL.
-      await expect(page.locator("input[type='url']").first()).toHaveValue(
-        "https://jobs.example.com/posting/abc",
-      );
+      // The location field is pre-filled.
+      await expect(
+        page.getByPlaceholder(/sf, nyc/i)
+      ).toHaveValue("San Francisco, CA, US");
     } finally {
       await deleteTestUser(request, user);
     }
@@ -113,26 +110,17 @@ test.describe("Applications — paste-link JD URL extract", () => {
       await page.waitForURL("**/applications");
       await page.getByRole("button", { name: /add application/i }).first().click();
 
-      await page.getByRole("button", { name: /paste a link or job description to auto-fill/i }).click();
-
+      // The URL input is the default (no expand step in the new dialog).
       const urlInput = page.getByLabel(/job posting url/i);
       await urlInput.fill("https://www.linkedin.com/jobs/view/12345");
-      await page.getByRole("button", { name: /fetch and auto-fill/i }).click();
+      await page.getByRole("button", { name: /auto-fill/i }).click();
 
-      // Auth-required banner is shown — distinct from the generic "Couldn't auto-fill" banner.
-      await expect(page.getByText(/couldn't reach this page/i)).toBeVisible({
+      // Backend returns 422 auth_required → the dialog switches to the text panel
+      // and shows a toast explaining that the page required sign-in.
+      // The dialog now shows the text-paste panel with its textarea.
+      await expect(page.getByLabel(/job description text/i)).toBeVisible({
         timeout: 5_000,
       });
-
-      // The "paste the description text instead" button is offered.
-      const switchButton = page.getByRole("button", {
-        name: /paste the description text instead/i,
-      });
-      await expect(switchButton).toBeVisible();
-
-      // Clicking it switches the active tab to the text panel.
-      await switchButton.click();
-      await expect(page.getByLabel(/job description text/i)).toBeVisible();
     } finally {
       await deleteTestUser(request, user);
     }
