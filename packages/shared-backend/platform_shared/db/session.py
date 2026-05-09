@@ -1,10 +1,21 @@
 """Async SQLAlchemy session factory.
 
+Per-app db/session.py modules call create_session_factory(...) once at import
+time and re-export the four members (engine, session_maker, get_db,
+unit_of_work) as module-level names so existing `from app.db.session import X`
+imports continue to work.
+
 Usage:
-    engine, AsyncSessionLocal, get_db, uow = create_session_factory("postgresql+asyncpg://...")
+    from platform_shared.db.session import create_session_factory
+
+    _factory = create_session_factory(settings.database_url)
+    engine = _factory.engine
+    AsyncSessionLocal = _factory.session_maker
+    get_db = _factory.get_db
+    unit_of_work = _factory.unit_of_work
 """
-from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
+from collections.abc import AsyncIterator, Callable
+from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from typing import NamedTuple
 
 from sqlalchemy.ext.asyncio import (
@@ -18,8 +29,8 @@ from sqlalchemy.ext.asyncio import (
 class SessionFactory(NamedTuple):
     engine: AsyncEngine
     session_maker: async_sessionmaker[AsyncSession]
-    get_db: object  # AsyncIterator[AsyncSession] dependency
-    unit_of_work: object  # async context manager
+    get_db: Callable[[], AsyncIterator[AsyncSession]]
+    unit_of_work: Callable[[], AbstractAsyncContextManager[AsyncSession]]
 
 
 def create_session_factory(
@@ -53,6 +64,7 @@ def create_session_factory(
 
     @asynccontextmanager
     async def unit_of_work() -> AsyncIterator[AsyncSession]:
+        """Transactional scope: commits on clean exit, rolls back on exception."""
         async with session_maker() as session:
             async with session.begin():
                 yield session
