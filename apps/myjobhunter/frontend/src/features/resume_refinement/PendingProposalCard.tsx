@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Sparkles } from "lucide-react";
 import {
-  Badge,
   showError,
   showSuccess,
   extractErrorMessage,
@@ -13,14 +12,17 @@ import {
   useSkipTargetMutation,
 } from "@/lib/resumeRefinementApi";
 import { SuggestionMode } from "@/features/resume_refinement/suggestion-mode";
-import CurrentTargetBlock from "@/features/resume_refinement/CurrentTargetBlock";
 import SuggestionBody from "@/features/resume_refinement/SuggestionBody";
 import SuggestionActions from "@/features/resume_refinement/SuggestionActions";
 import CustomRewritePanel from "@/features/resume_refinement/CustomRewritePanel";
 import AlternativePanel from "@/features/resume_refinement/AlternativePanel";
-import TargetMetaBadges from "@/features/resume_refinement/TargetMetaBadges";
 import SuggestionProgressBar from "@/features/resume_refinement/SuggestionProgressBar";
 import NavigationButtons from "@/features/resume_refinement/NavigationButtons";
+import {
+  IMPROVEMENT_TYPE_LABEL,
+  SEVERITY_BADGE_CLASS,
+  SEVERITY_LABEL,
+} from "@/features/resume_refinement/improvement-target-labels";
 import type { RefinementSession } from "@/types/resume-refinement/refinement-session";
 
 interface PendingProposalCardProps {
@@ -41,13 +43,10 @@ export default function PendingProposalCard({ session }: PendingProposalCardProp
   const [skipTarget, skip] = useSkipTargetMutation();
 
   const totalTargets = session.improvement_targets?.length ?? 0;
-  const remaining = Math.max(totalTargets - session.target_index, 0);
-  const targetSection = session.pending_target_section;
   const activeTarget =
     session.improvement_targets && session.target_index < session.improvement_targets.length
       ? session.improvement_targets[session.target_index]
       : null;
-  const currentText = activeTarget?.current_text ?? null;
   const proposal = session.pending_proposal;
   const rationale = session.pending_rationale;
   const clarifyingQuestion = session.pending_clarifying_question;
@@ -129,15 +128,22 @@ export default function PendingProposalCard({ session }: PendingProposalCardProp
 
   return (
     <section className="rounded-lg border border-border bg-card p-4 space-y-3">
+      {/* Header: "Suggestion N / M" + severity pill + Prev/Next */}
       <header className="flex items-center justify-between gap-2">
         <h2 className="text-sm font-semibold flex items-center gap-2 min-w-0">
           <Sparkles className="size-4 text-primary shrink-0" />
           <span className="truncate">
-            Suggestion {session.target_index + 1} of {totalTargets}
+            Suggestion {session.target_index + 1} / {totalTargets}
           </span>
+          {activeTarget && (
+            <span
+              className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium shrink-0 ${SEVERITY_BADGE_CLASS[activeTarget.severity]}`}
+            >
+              {SEVERITY_LABEL[activeTarget.severity]}
+            </span>
+          )}
         </h2>
         <div className="flex items-center gap-2 shrink-0">
-          <Badge label={`${remaining} left`} color="gray" />
           <NavigationButtons
             sessionId={session.id}
             targetIndex={session.target_index}
@@ -152,21 +158,14 @@ export default function PendingProposalCard({ session }: PendingProposalCardProp
         total={totalTargets}
       />
 
-      {targetSection && (
-        <p className="text-xs uppercase tracking-wide text-muted-foreground">
-          Section: <span className="font-medium normal-case">{targetSection}</span>
+      {/* Improvement type pill as subtitle */}
+      {activeTarget && (
+        <p className="text-xs">
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-primary/10 text-primary">
+            {IMPROVEMENT_TYPE_LABEL[activeTarget.improvement_type]}
+          </span>
         </p>
       )}
-
-      {activeTarget && (
-        <TargetMetaBadges
-          improvementType={activeTarget.improvement_type}
-          severity={activeTarget.severity}
-          notes={activeTarget.notes}
-        />
-      )}
-
-      {currentText && <CurrentTargetBlock text={currentText} />}
 
       <SuggestionBody
         clarifyingQuestion={clarifyingQuestion}
@@ -176,28 +175,10 @@ export default function PendingProposalCard({ session }: PendingProposalCardProp
         proposal={proposal}
         rationale={rationale}
         isPending={isPending}
+        isRegenerating={alternative.isLoading}
       />
 
-      {mode === SuggestionMode.CUSTOM && (
-        <CustomRewritePanel
-          customText={customText}
-          onChange={setCustomText}
-          onCancel={resetMode}
-          onSubmit={handleCustom}
-          isPending={isPending}
-        />
-      )}
-
-      {mode === SuggestionMode.ALTERNATIVE && (
-        <AlternativePanel
-          hint={hint}
-          onChange={setHint}
-          onCancel={resetMode}
-          onSubmit={handleAlternative}
-          isPending={isPending}
-        />
-      )}
-
+      {/* Exactly one of the three action panels — mutually exclusive via mode state */}
       {mode === SuggestionMode.VIEW && (
         <SuggestionActions
           onAccept={handleAccept}
@@ -207,6 +188,24 @@ export default function PendingProposalCard({ session }: PendingProposalCardProp
           isPending={isPending}
           acceptIsLoading={accept.isLoading}
           hasProposal={!!proposal}
+        />
+      )}
+      {mode === SuggestionMode.CUSTOM && (
+        <CustomRewritePanel
+          customText={customText}
+          onChange={setCustomText}
+          onCancel={resetMode}
+          onSubmit={handleCustom}
+          isPending={isPending}
+        />
+      )}
+      {mode === SuggestionMode.ALTERNATIVE && (
+        <AlternativePanel
+          hint={hint}
+          onChange={setHint}
+          onCancel={resetMode}
+          onSubmit={handleAlternative}
+          isPending={isPending}
         />
       )}
     </section>
