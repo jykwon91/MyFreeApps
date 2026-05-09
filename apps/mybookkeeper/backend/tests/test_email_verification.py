@@ -291,6 +291,41 @@ class TestVerifyRouterRegistered:
 
 
 # ---------------------------------------------------------------------------
+# current_active_user is wired with verified=True (defense-in-depth).
+# Even if a JWT is somehow minted for an unverified user (regression in the
+# manager-layer guard, leftover legacy token, etc.) the dep-layer rejects it.
+# ---------------------------------------------------------------------------
+
+class TestCurrentActiveUserConfig:
+    def test_current_active_user_requires_verified(self) -> None:
+        """current_active_user wiring contract: must enforce verified=True.
+
+        fastapi-users tests the BEHAVIOR of current_user(active=True, verified=True)
+        upstream — what we have to enforce in MBK is that we actually pass
+        verified=True when constructing the dependency. A future refactor that
+        accidentally drops the kwarg silently re-opens the gap this PR closed.
+
+        The exported dep is opaque (a closure inside fastapi-users), so we
+        assert the wiring via source-level inspection of app.core.auth — the
+        single source of truth for the dep configuration.
+        """
+        import inspect
+
+        from app.core import auth
+
+        src = inspect.getsource(auth)
+        assert (
+            "current_active_user = fastapi_users.current_user(active=True, verified=True)"
+            in src
+        ), (
+            "current_active_user must enforce verified=True at the dep layer; "
+            "matches MJH parity and prevents tokens issued to unverified accounts "
+            "(by any future bug in UserManager.authenticate) from reaching "
+            "protected routes."
+        )
+
+
+# ---------------------------------------------------------------------------
 # TOTP login endpoint blocks unverified users
 # ---------------------------------------------------------------------------
 
