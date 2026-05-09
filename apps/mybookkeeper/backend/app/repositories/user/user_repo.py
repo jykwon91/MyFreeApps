@@ -5,6 +5,12 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import load_only
 
+from platform_shared.repositories.user_repo import (
+    get_by_email as _shared_get_by_email,
+    get_by_id as _shared_get_by_id,
+    get_totp_enabled as _shared_get_totp_enabled,
+)
+
 from app.models.user.user import Role, User
 
 
@@ -21,19 +27,15 @@ async def list_all(db: AsyncSession) -> Sequence[User]:
 
 
 async def get_by_id(db: AsyncSession, user_id: uuid.UUID) -> User | None:
-    result = await db.execute(select(User).where(User.id == user_id))
-    return result.scalar_one_or_none()
+    return await _shared_get_by_id(db, user_id, user_model=User)
 
 
 async def get_by_email(db: AsyncSession, email: str) -> User | None:
-    result = await db.execute(select(User).where(User.email == email))
-    return result.scalar_one_or_none()
+    return await _shared_get_by_email(db, email, user_model=User)
 
 
 async def get_totp_enabled(db: AsyncSession, email: str) -> bool:
-    result = await db.execute(select(User.totp_enabled).where(User.email == email))
-    row = result.scalar_one_or_none()
-    return bool(row)
+    return await _shared_get_totp_enabled(db, email, user_model=User)
 
 
 async def update_role(db: AsyncSession, user: User, role: Role) -> User:

@@ -2,27 +2,31 @@
 
 Generic admin user-management endpoints (list users, change role,
 activate/deactivate, toggle superuser, user-count stats) are mounted
-from ``platform_shared.api.admin_router`` in ``app.main``. This module
-owns only the MBK-specific admin surface area.
+from ``platform_shared.api.admin_router`` in ``app.main``. The auth-events
+listing route is mounted from ``platform_shared.api.admin_auth_events_router``
+in this file. This module owns only the MBK-specific admin surface area.
 """
-import uuid
-from datetime import datetime
-from typing import Optional
+from fastapi import APIRouter, Depends
 
-from fastapi import APIRouter, Depends, Query
-from sqlalchemy.ext.asyncio import AsyncSession
+from platform_shared.api.admin_auth_events_router import (
+    build_admin_auth_events_router,
+)
 
 from app.core.config import settings
 from app.core.permissions import current_admin
 from app.core.storage import get_storage
 from app.db.session import get_db
 from app.models.user.user import User
-from app.repositories.system import auth_event_repo
 from app.schemas.system.admin import AdminOrgRead, CleanReExtractRequest, CleanReExtractResponse, PlatformStats
-from app.schemas.system.auth_event import AuthEventRead
 from app.services.system import admin_service
 
 router = APIRouter(prefix="/admin", tags=["admin"])
+router.include_router(
+    build_admin_auth_events_router(
+        admin_dependency=current_admin,
+        get_db_dependency=get_db,
+    ),
+)
 
 
 @router.get("/storage-health")
@@ -108,25 +112,3 @@ async def list_all_orgs(
     user: User = Depends(current_admin),
 ) -> list[AdminOrgRead]:
     return await admin_service.list_all_orgs()
-
-
-@router.get("/auth-events", response_model=list[AuthEventRead])
-async def list_auth_events(
-    user_id: Optional[uuid.UUID] = None,
-    event_type: Optional[str] = None,
-    since: Optional[datetime] = None,
-    limit: int = Query(100, le=500),
-    offset: int = 0,
-    admin: User = Depends(current_admin),
-    db: AsyncSession = Depends(get_db),
-) -> list[AuthEventRead]:
-    """List auth events. Superuser-only endpoint for security incident review."""
-    events = await auth_event_repo.list_filtered(
-        db,
-        user_id=user_id,
-        event_type=event_type,
-        since=since,
-        limit=limit,
-        offset=offset,
-    )
-    return list(events)
