@@ -1,7 +1,5 @@
 import asyncio
 import logging
-import os
-import subprocess
 import time
 from datetime import datetime, timezone
 
@@ -12,6 +10,7 @@ import jwt
 from jwt.exceptions import PyJWTError as JWTError
 from sqlalchemy import text
 
+from platform_shared.core.git import resolve_git_commit
 from platform_shared.core.lifespan import create_app_lifespan
 
 from app.core.auth import fastapi_users, auth_backend
@@ -19,21 +18,7 @@ from app.core.config import settings
 from app.core.observability import init_sentry
 
 
-def _resolve_git_commit() -> str:
-    env_commit = os.environ.get("GIT_COMMIT", "").strip()
-    if env_commit:
-        return env_commit
-    try:
-        return subprocess.check_output(
-            ["git", "rev-parse", "--short", "HEAD"],
-            text=True,
-            stderr=subprocess.DEVNULL,
-        ).strip()
-    except Exception:
-        return "unknown"
-
-
-GIT_COMMIT = _resolve_git_commit()
+GIT_COMMIT = resolve_git_commit()
 STARTUP_TIMESTAMP = datetime.now(timezone.utc).isoformat()
 
 from app.core.audit import current_user_id
