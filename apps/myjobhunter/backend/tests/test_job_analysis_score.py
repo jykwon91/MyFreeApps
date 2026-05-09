@@ -23,6 +23,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.discovery.discovered_job import DiscoveredJob
 from app.models.job_analysis.job_analysis import JobAnalysis
 from app.services.job_analysis import job_analysis_service
 from app.services.job_analysis.job_analysis_service import (
@@ -231,4 +232,73 @@ async def test_analyze_text_path_still_works_after_refactor(
     assert isinstance(result, JobAnalysis)
     assert result.user_id == user_id
     assert result.source_url is None
+    assert result.verdict == "worth_considering"
+
+
+@pytest.mark.asyncio
+async def test_score_with_discovered_job_sets_score_fields_atomically(
+    db: AsyncSession, user_factory,
+) -> None:
+    """score() with discovered_job= writes score, score_reason, and scored_at
+    on the DiscoveredJob in the same commit as the JobAnalysis row.
+
+    This is the single-commit guarantee: before this refactor the worker
+    committed the JobAnalysis first then wrote discovered_job.score in a
+    separate transaction. A process crash between those two commits would
+    leave discovered_job.score = NULL while the cost record already existed,
+    causing a re-bill on the next refresh cycle.
+    """
+    user = await user_factory()
+    user_id = uuid.UUID(user["id"])
+
+    job = DiscoveredJob(
+        user_id=user_id,
+        source="jsearch",
+        source_external_id="test-ext-id-score-atomic",
+        title="Senior Backend Engineer",
+        company_name="Acme",
+        remote_type="remote",
+    )
+    db.add(job)
+    await db.flush()
+
+    with patch(_FAKE_PATH, new_callable=AsyncMock, return_value=_meta()):
+        analysis = await score(
+            db,
+            user_id,
+            jd_text="Senior Backend Engineer at Acme. Python required.",
+            discovered_job=job,
+        )
+
+    assert isinstance(analysis, JobAnalysis)
+    assert analysis.verdict == "worth_considering"
+
+    # The DiscoveredJob must have all three score fields set in the same commit.
+    assert job.score is not None, "discovered_job.score must be set"
+    assert job.score_reason is not None, "discovered_job.score_reason must be set"
+    assert job.scored_at is not None, "discovered_job.scored_at must be set"
+
+    # verdict → score mapping: "worth_considering" maps to 70.
+    assert job.score == 70
+    assert job.score_reason == analysis.verdict_summary
+
+
+@pytest.mark.asyncio
+async def test_score_without_discovered_job_leaves_no_score_fields(
+    db: AsyncSession, user_factory,
+) -> None:
+    """score() called without discovered_job= (the analyze-from-URL / paste-text
+    flow) must NOT touch any DiscoveredJob row — the parameter is opt-in only."""
+    user = await user_factory()
+    user_id = uuid.UUID(user["id"])
+
+    with patch(_FAKE_PATH, new_callable=AsyncMock, return_value=_meta()):
+        result = await score(
+            db,
+            user_id,
+            jd_text="Senior Backend Engineer at Acme.",
+        )
+
+    # No exception, normal analysis persisted.
+    assert isinstance(result, JobAnalysis)
     assert result.verdict == "worth_considering"

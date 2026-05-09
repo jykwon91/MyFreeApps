@@ -42,7 +42,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.db.session import AsyncSessionLocal
-from app.models.discovery.discovered_job import DiscoveredJob
 from app.models.system.extraction_log import ExtractionLog
 from app.repositories.discovery import discovery_repository
 from app.services.job_analysis.job_analysis_service import (
@@ -115,6 +114,7 @@ async def score_user_inbox(user_id: uuid.UUID, *, batch: int = DEFAULT_SCORE_BAT
                         "location": job.location,
                     },
                     discovered_job_id=job.id,
+                    discovered_job=job,
                 )
             except JobAnalysisError as exc:
                 logger.warning(
@@ -123,26 +123,6 @@ async def score_user_inbox(user_id: uuid.UUID, *, batch: int = DEFAULT_SCORE_BAT
                 )
                 continue
 
-            # ``score_jd`` already committed the JobAnalysis row + the
-            # extraction_logs entry. Mutate the discovered_job and
-            # commit once more; this is a separate transaction (cheap)
-            # but the prior commit means the cost is already recorded
-            # so a crash here doesn't lose accounting — only loses the
-            # ``score`` pointer, which the next refresh re-discovers
-            # via list_unscored_for_user. Idempotent on retry: the
-            # JobAnalysis exists, score_jd is called again, second
-            # JobAnalysis row is created, only the latest links via
-            # discovered_job.score.
-            #
-            # Future improvement: thread the discovered_job mutation
-            # INTO score_jd so both writes share one commit. Larger
-            # refactor — flagged in TECH_DEBT.md.
-            score_int = _verdict_to_score(analysis.verdict)
-            job.score = score_int
-            job.score_reason = analysis.verdict_summary or ""
-            job.scored_at = datetime.now(timezone.utc)
-            await db.commit()
-
             spent_today += float(analysis.total_cost_usd or 0)
             scored += 1
 
@@ -150,16 +130,6 @@ async def score_user_inbox(user_id: uuid.UUID, *, batch: int = DEFAULT_SCORE_BAT
             "discovery score: complete user=%s scored=%d budget_hit=%s spent_session=%.4f",
             user_id, scored, budget_hits, spent_today,
         )
-
-
-def _verdict_to_score(verdict: str) -> int:
-    """Collapse the JD-analysis verdict into a 0-100 sort key."""
-    return {
-        "strong_fit": 90,
-        "worth_considering": 70,
-        "stretch": 40,
-        "mismatch": 15,
-    }.get(verdict, 50)
 
 
 def _resolve_daily_budget() -> float:
