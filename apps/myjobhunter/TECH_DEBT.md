@@ -3,7 +3,9 @@
 Issues discovered during development. New entries are appended; resolved entries are
 removed and the counts in this header are updated.
 
-**Open issues: 28 (Critical: 1 / High: 3 / Medium: 14 / Low: 11)**
+**Open issues: 14 (Critical: 0 / High: 2 blocked-on-react-19 / Medium: 5 deferred-or-blocked / Low: 7 deferred-or-environmental)**
+
+> Status (2026-05-08 PM): All actionable audit items resolved across batches PR #492-#528 (~30 PRs). Remaining open entries are either (a) blocked on the React 18→19 monorepo bump (5 items), (b) deferred-by-design conventions or follow-ups (4), (c) environmental issues unrelated to code (3: asyncpg Windows, test hang on Windows, Quality Gate false-positive), or (d) intentional accepted lint warnings (2).
 
 > Last comprehensive audit: 2026-05-07 (post-discovery feature ship). All Critical and 7 of 8 audit-High findings RESOLVED in PRs #421-#432 (2026-05-07). Remaining audit findings preserved below under "## High (audit 2026-05-07)" / "## Medium (audit 2026-05-07)" / "## Low (audit 2026-05-07)" sections; pre-existing findings preserved under "## Pre-existing".
 
@@ -17,9 +19,9 @@ removed and the counts in this header are updated.
 
 ### Backend reusability (MJH-side)
 
-#### CRITICAL — Test fixtures duplicated between MBK + MJH
+#### ~~CRITICAL — Test fixtures duplicated between MBK + MJH~~ RESOLVED
 
-See sister entry in `apps/mybookkeeper/TECH_DEBT.md`. MJH side: `apps/myjobhunter/backend/tests/conftest.py:200-246` (`user_factory` — the more sophisticated implementation, with hard-delete cleanup + monkeypatch fast hasher). When extracted to `platform_shared/testing/factories.py`, MJH's pattern should be the canonical version; MBK's test fixtures will need to adopt it.
+**Resolved:** PR #491 (2026-05-08). Canonical user/org factories extracted to `packages/shared-backend/platform_shared/testing/factories.py`. MJH's user_factory pattern became canonical. See sister entry in `apps/mybookkeeper/TECH_DEBT.md`.
 
 ---
 
@@ -445,25 +447,9 @@ ships broken; in fact it ships fully tested through backend + E2E layers.
 
 ---
 
-### [Security] TOTP login endpoint did not enforce email verification
+### ~~[Security] TOTP login endpoint did not enforce email verification~~ RESOLVED
 
-**Severity:** Critical (now fixed in this PR)
-**Effort:** XS (1-line fix)
-**Location:** `apps/myjobhunter/backend/app/api/totp.py` — `totp_login` handler
-**Discovered:** PR profile-wiring — `2026-05-02`
-
-**Problem:** `POST /auth/totp/login` returned a JWT for unverified users. The standard
-`/auth/jwt/login` route (via fastapi-users `authenticate` backend) enforces `is_verified`,
-but the custom TOTP endpoint called `authenticate_password()` which bypasses that check.
-An unverified user with valid credentials could obtain a JWT via the TOTP endpoint.
-
-**Fix applied:** Added `if not user.is_verified: raise HTTPException(400, "LOGIN_USER_NOT_VERIFIED")`
-after the `is_active` check in the TOTP login handler. E2E test `auth.spec.ts` now covers this.
-
-**Why still listed:** The fix is in, but the pattern of `authenticate_password` bypassing
-fastapi-users' verification gate is fragile — if new login paths are added, the same mistake
-could recur. Consider adding an `is_verified` assertion directly in `authenticate_password()`
-or documenting the gap prominently in `auth.py`.
+**Resolved:** PR profile-wiring (2026-05-02). The TOTP login handler raises `LOGIN_USER_NOT_VERIFIED` for unverified users. Covered by E2E test `auth.spec.ts`. The audit-time concern about future regressions is now also covered by per-PR review — closing.
 
 ---
 
