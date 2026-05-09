@@ -129,30 +129,35 @@ function ActiveSessionView({ session, onStartNew }: ActiveSessionViewProps) {
     />
   );
 
+  // RIGHT COLUMN: split into two zones.
+  //
+  // HISTORY ZONE — grows to fill available space, independently
+  // scrollable on desktop. On mobile (<lg) rendered SECOND in DOM
+  // order (order-2) so the composer stays visible above it.
+  //
+  // COMPOSER ZONE — shrinks to its natural height; never scrolls.
+  // On desktop (lg+) rendered second in visual flow (order-2).
+  // On mobile rendered first (order-1).
   const controls = (
-    <div className="flex flex-col gap-4 min-h-0">
-      <div className="overflow-y-auto min-h-0 space-y-4 pr-1">
+    <div className="flex flex-col gap-2 min-h-0 h-full">
+      {/* History zone */}
+      <div className="order-2 lg:order-1 lg:flex-1 lg:overflow-y-auto lg:min-h-0 pr-1">
         <ConversationHistory turns={session.turns ?? []} />
+      </div>
+
+      {/* Composer zone */}
+      <div className="order-1 lg:order-2 shrink-0">
         {session.status === "active" && (
           <PendingProposalCard session={session} />
         )}
         <CompletePanel session={session} />
-      </div>
-      <div className="flex justify-end shrink-0">
-        <button
-          type="button"
-          onClick={onStartNew}
-          className="text-xs underline text-muted-foreground hover:text-foreground"
-        >
-          Start a different session
-        </button>
       </div>
     </div>
   );
 
   return (
     <ActiveSessionLayout
-      header={<ResumeRefinementHeader compact />}
+      header={<ResumeRefinementHeader compact onStartNew={onStartNew} />}
       draft={draft}
       controls={controls}
     />
@@ -161,14 +166,26 @@ function ActiveSessionView({ session, onStartNew }: ActiveSessionViewProps) {
 
 interface ResumeRefinementHeaderProps {
   compact?: boolean;
+  onStartNew?: () => void;
 }
 
-function ResumeRefinementHeader({ compact = false }: ResumeRefinementHeaderProps) {
+function ResumeRefinementHeader({ compact = false, onStartNew }: ResumeRefinementHeaderProps) {
   if (compact) {
     return (
-      <div className="flex items-center gap-2">
-        <Sparkles className="size-5 text-primary" />
-        <h1 className="text-lg font-semibold">Resume refinement</h1>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Sparkles className="size-5 text-primary" />
+          <h1 className="text-lg font-semibold">Resume refinement</h1>
+        </div>
+        {onStartNew && (
+          <button
+            type="button"
+            onClick={onStartNew}
+            className="text-xs underline text-muted-foreground hover:text-foreground"
+          >
+            Start a different session
+          </button>
+        )}
       </div>
     );
   }
