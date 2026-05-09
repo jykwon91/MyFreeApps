@@ -39,40 +39,45 @@ class TestPasswordResetEmailTemplate:
 class TestSendPasswordResetEmail:
     """send_password_reset_email function tests."""
 
-    @patch("app.services.system.password_reset_email.email_service")
+    @patch("app.services.system.password_reset_email.send_email_or_raise")
     @patch("app.services.system.password_reset_email.settings")
-    def test_sends_email_with_correct_params(self, mock_settings, mock_email_svc):
+    def test_sends_email_with_correct_params(self, mock_settings, mock_send):
         mock_settings.frontend_url = "https://app.example.com"
-        mock_email_svc.send_email.return_value = True
 
         result = send_password_reset_email("user@example.com", "token123")
 
-        assert result is True
-        mock_email_svc.send_email.assert_called_once()
-        args = mock_email_svc.send_email.call_args
+        assert result is None  # fail-loud contract: returns None on success, raises on failure
+        mock_send.assert_called_once()
+        args = mock_send.call_args
         assert args[0][0] == ["user@example.com"]
         assert "Reset" in args[0][1] or "reset" in args[0][1]
         assert "token123" in args[0][2]
 
-    @patch("app.services.system.password_reset_email.email_service")
+    @patch("app.services.system.password_reset_email.send_email_or_raise")
     @patch("app.services.system.password_reset_email.settings")
-    def test_returns_false_on_failure(self, mock_settings, mock_email_svc):
+    def test_raises_on_send_failure(self, mock_settings, mock_send):
+        """Critical-path email — failures must propagate, never be swallowed.
+
+        Regression contract for the kennethmontgo@gmail.com bug class
+        applied to the password-reset path (sister to H6's verification
+        email fix in #540).
+        """
+        from app.services.system.email_service import EmailSendError
+
         mock_settings.frontend_url = "https://app.example.com"
-        mock_email_svc.send_email.return_value = False
+        mock_send.side_effect = EmailSendError("smtp connect failed")
 
-        result = send_password_reset_email("user@example.com", "token123")
+        with pytest.raises(EmailSendError, match="smtp connect failed"):
+            send_password_reset_email("user@example.com", "token123")
 
-        assert result is False
-
-    @patch("app.services.system.password_reset_email.email_service")
+    @patch("app.services.system.password_reset_email.send_email_or_raise")
     @patch("app.services.system.password_reset_email.settings")
-    def test_reset_url_uses_frontend_url(self, mock_settings, mock_email_svc):
+    def test_reset_url_uses_frontend_url(self, mock_settings, mock_send):
         mock_settings.frontend_url = "https://mybookkeeper.app/"
-        mock_email_svc.send_email.return_value = True
 
         send_password_reset_email("user@example.com", "abc")
 
-        html = mock_email_svc.send_email.call_args[0][2]
+        html = mock_send.call_args[0][2]
         assert "https://mybookkeeper.app/reset-password?token=abc" in html
 
 

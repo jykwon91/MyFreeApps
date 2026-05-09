@@ -263,11 +263,16 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
     async def on_after_forgot_password(
         self, user: User, token: str, request: Optional[Request] = None,
     ) -> None:
-        success = send_password_reset_email(user.email, token)
-        if success:
-            logger.info("Password reset email sent to %s", user.email)
-        else:
-            logger.warning("Failed to send password reset email to %s", user.email)
+        """Send password-reset email when a token is generated.
+
+        Raises on any send failure so the forgot-password HTTP request
+        fails 5xx and the user retries — never returns 2xx with the reset
+        email lost. The pre-2026-05-09 bool-returning version silently
+        swallowed failures (sister to the kennethmontgo@gmail.com
+        verification-email gap fixed in PR #540).
+        """
+        send_password_reset_email(user.email, token)
+        logger.info("Password reset email sent to %s", user.email)
         await log_auth_event(
             self.user_db.session,
             event_type=AuthEventType.PASSWORD_RESET_REQUEST,
