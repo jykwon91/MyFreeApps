@@ -22,11 +22,15 @@ export async function createTestUser(
   overrides: Partial<TestUser> & { verify?: boolean } = {},
 ): Promise<TestUser> {
   const timestamp = Date.now();
+  // Suffix a short random token so two parallel workers that hit Date.now()
+  // in the same millisecond don't collide on the unique email index.
+  const nonce = Math.random().toString(36).slice(2, 10);
   const verify = overrides.verify ?? true;
   const user: TestUser = {
     email:
-      overrides.email ?? `e2e-test-${timestamp}@myjobhunter-test.example.com`,
-    password: overrides.password ?? `TestPass${timestamp}!`,
+      overrides.email ??
+      `e2e-test-${timestamp}-${nonce}@myjobhunter-test.example.com`,
+    password: overrides.password ?? `TestPass${timestamp}-${nonce}!`,
   };
 
   const response = await request.post(`${BACKEND_URL}/api/auth/register`, {

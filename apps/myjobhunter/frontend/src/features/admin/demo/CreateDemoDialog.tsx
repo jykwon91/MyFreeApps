@@ -13,7 +13,7 @@ export interface CreateDemoDialogProps {
  * Modal for creating a new demo account.
  *
  * Both inputs (email + display name) are optional — the backend
- * generates sensible defaults when omitted (`demo+<uuid>@myjobhunter.local`
+ * generates sensible defaults when omitted (`demo+<uuid>@myjobhunter-demo.example.com`
  * and `Alex Demo` respectively). The form is intentionally minimal
  * because the seeded data does the heavy lifting.
  *
@@ -83,7 +83,7 @@ export default function CreateDemoDialog({
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="demo+<id>@myjobhunter.local (auto-generated)"
+                placeholder="demo+<id>@myjobhunter-demo.example.com (auto-generated)"
                 className="w-full border rounded-md px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
                 autoFocus
                 disabled={isLoading}

@@ -63,7 +63,7 @@ async def test_create_demo_user_returns_credentials_and_seeds_data() -> None:
     """``create_demo_user`` writes a real user, profile, and applications."""
     response = await demo_service.create_demo_user()
 
-    assert response.credentials.email.endswith("@myjobhunter.local")
+    assert response.credentials.email.endswith("@myjobhunter-demo.example.com")
     assert len(response.credentials.password) >= 16
     assert response.user_id is not None
 
@@ -153,11 +153,11 @@ async def test_create_demo_user_returns_credentials_and_seeds_data() -> None:
 
 async def test_create_demo_user_rejects_duplicate_email() -> None:
     """Passing the same email twice raises ValueError (409)."""
-    first = await demo_service.create_demo_user(email="demo+dupe@myjobhunter.local")
-    assert first.credentials.email == "demo+dupe@myjobhunter.local"
+    first = await demo_service.create_demo_user(email="demo+dupe@myjobhunter-demo.example.com")
+    assert first.credentials.email == "demo+dupe@myjobhunter-demo.example.com"
 
     with pytest.raises(ValueError, match="already exists"):
-        await demo_service.create_demo_user(email="demo+dupe@myjobhunter.local")
+        await demo_service.create_demo_user(email="demo+dupe@myjobhunter-demo.example.com")
 
 
 async def test_list_demo_users_returns_only_demo_rows() -> None:
@@ -291,7 +291,7 @@ async def test_post_demo_users_admin_can_create(user_factory) -> None:
     assert resp.status_code == 201, resp.text
     body = resp.json()
     assert "credentials" in body
-    assert body["credentials"]["email"].endswith("@myjobhunter.local")
+    assert body["credentials"]["email"].endswith("@myjobhunter-demo.example.com")
     assert body["user_id"]
 
 

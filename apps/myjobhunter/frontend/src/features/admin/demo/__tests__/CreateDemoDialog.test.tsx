@@ -91,13 +91,13 @@ describe("CreateDemoDialog", () => {
 
     await user.type(
       screen.getByLabelText(/email/i),
-      "  demo@myjobhunter.local  ",
+      "  demo@myjobhunter-demo.example.com  ",
     );
     await user.type(screen.getByLabelText(/display name/i), "  Demo Boss  ");
     await user.click(screen.getByRole("button", { name: /^create$/i }));
 
     expect(onSubmit).toHaveBeenCalledWith({
-      email: "demo@myjobhunter.local",
+      email: "demo@myjobhunter-demo.example.com",
       displayName: "Demo Boss",
     });
   });

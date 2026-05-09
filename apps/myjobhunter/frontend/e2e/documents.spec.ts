@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { createTestUser, deleteTestUser, loginViaUI } from "./fixtures/auth";
+import { createTestUser, deleteTestUser, loginViaUI, resetRateLimit } from "./fixtures/auth";
 
 const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:8002";
 
@@ -22,6 +22,8 @@ async function loginAndGetToken(
   request: import("@playwright/test").APIRequestContext,
   user: { email: string; password: string },
 ): Promise<string> {
+  // Reset per-IP rate limit before each API login to prevent 429s during parallel runs.
+  await resetRateLimit(request);
   const resp = await request.post(`${BACKEND_URL}/api/auth/jwt/login`, {
     form: { username: user.email, password: user.password },
   });
@@ -50,8 +52,8 @@ test.describe("Documents page", () => {
       await page.getByRole("link", { name: /documents/i }).first().click();
       await page.waitForURL("**/documents");
 
-      // Page heading
-      await expect(page.getByRole("heading", { name: /documents/i })).toBeVisible();
+      // Page heading — use exact match to avoid matching "No documents yet" heading
+      await expect(page.getByRole("heading", { name: "Documents", exact: true })).toBeVisible();
 
       // Empty state — no documents yet
       await expect(page.getByText(/No documents yet/i)).toBeVisible();

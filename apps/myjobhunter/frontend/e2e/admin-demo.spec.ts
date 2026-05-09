@@ -18,7 +18,7 @@
  * demo accounts from the page.
  */
 import { test, expect, type APIRequestContext } from "@playwright/test";
-import { createTestUser, deleteTestUser, loginViaUI } from "./fixtures/auth";
+import { createTestUser, deleteTestUser, loginViaUI, resetRateLimit } from "./fixtures/auth";
 
 const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:8002";
 
@@ -72,9 +72,18 @@ test.describe("Admin demo accounts", () => {
     let adminToken = "";
 
     try {
-      await promoteToAdmin(request, adminUser.email);
+      // Step 1: Log in first (both API and UI), THEN promote.
+      //
+      // Why this order matters: fastapi-users' UserManager.authenticate() calls
+      // user_db.update(result, clear_update) on every successful login, which
+      // issues session.commit() against an ORM-cached user object that still has
+      // is_superuser=False. That commit overwrites any raw-SQL promotion that
+      // happened before the login. Promoting AFTER all logins avoids the race.
 
-      // Get a token for cleanup later.
+      // Get a token for cleanup — this login happens before promotion so it
+      // won't interfere.
+      // Reset rate limit before API login to prevent 429s during parallel runs.
+      await resetRateLimit(request);
       const loginResp = await request.post(
         `${BACKEND_URL}/api/auth/jwt/login`,
         {
@@ -86,16 +95,25 @@ test.describe("Admin demo accounts", () => {
         (await loginResp.json()) as { access_token: string }
       ).access_token;
 
-      // Make sure no leftover demo accounts pollute the listing.
-      await bulkDeleteDemoUsers(request, adminToken);
-
-      // Step 1: Log in via UI as the admin and navigate to /admin/demo.
+      // Log in via UI so the browser has an auth session.
       await loginViaUI(page, adminUser, request);
       await expect(page).toHaveURL(/\/dashboard/);
 
+      // NOW promote — no more logins will happen for this user after this point,
+      // so the ORM-commit overwrite can't strike again.
+      await promoteToAdmin(request, adminUser.email);
+
+      // Clean up leftover demo accounts from previous broken runs.
+      // Must happen AFTER promotion — the JWT token is checked against DB
+      // is_superuser on every request, so the same token now grants admin access.
+      await bulkDeleteDemoUsers(request, adminToken);
+
+      // Navigate to /admin/demo. The page load triggers a fresh /users/me fetch
+      // which will see is_superuser=true. RequireSuperuser waits for that fetch
+      // before allowing or redirecting, so this is race-free.
       await page.goto("/admin/demo");
       await expect(
-        page.getByRole("heading", { name: "Demo accounts" }),
+        page.getByRole("heading", { name: "Demo accounts", exact: true }),
       ).toBeVisible({ timeout: 10_000 });
 
       // Step 2: Empty state shows the CTA.
@@ -125,7 +143,7 @@ test.describe("Admin demo accounts", () => {
       const credsText = await credsDialog.textContent();
       expect(credsText).toBeTruthy();
       const emailMatch = credsText!.match(
-        /demo\+[a-z0-9]+@myjobhunter\.local/i,
+        /demo\+[a-z0-9]+@myjobhunter-demo\.example\.com/i,
       );
       expect(emailMatch).not.toBeNull();
       const demoEmail = emailMatch![0];
