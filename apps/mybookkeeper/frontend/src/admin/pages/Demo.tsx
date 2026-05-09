@@ -137,7 +137,7 @@ export default function Demo() {
       )}
 
       <ConfirmDialog
-        open={confirmAction !== null}
+        open={!!confirmAction}
         title={
           confirmAction?.type === "delete"
             ? "Delete demo user?"

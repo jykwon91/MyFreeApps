@@ -53,7 +53,7 @@ export default function ReplyTemplateForm({ template, onClose }: ReplyTemplateFo
     }
   }, [template]);
 
-  const isEdit = template !== null;
+  const isEdit = !!template;
   const isSubmitting = isCreating || isUpdating;
   const canSave = name.trim() && subject.trim() && body.trim() && !isSubmitting;
 

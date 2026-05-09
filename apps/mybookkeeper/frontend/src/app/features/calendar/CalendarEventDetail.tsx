@@ -17,7 +17,7 @@ export interface CalendarEventDetailProps {
  * CalendarEventAttachmentsSection for the editable sections.
  */
 export default function CalendarEventDetail({ event, onClose }: CalendarEventDetailProps) {
-  const open = event !== null;
+  const open = !!event;
 
   return (
     <Dialog.Root open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
