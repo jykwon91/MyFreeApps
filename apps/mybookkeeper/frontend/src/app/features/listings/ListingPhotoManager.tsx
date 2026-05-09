@@ -279,7 +279,7 @@ export default function ListingPhotoManager({
       )}
 
       <ConfirmDialog
-        open={confirmDeleteId !== null}
+        open={!!confirmDeleteId}
         title="Remove this photo?"
         description="The photo will be deleted from this listing. This can't be undone."
         confirmLabel="Remove"

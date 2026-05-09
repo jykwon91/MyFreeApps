@@ -23,7 +23,7 @@ function inputTypeAttr(t: string): string {
 
 function provenanceLabelFor(item: SignedLeaseTemplatePrefillItem): string | null {
   if (item.is_from_existing_values) return "saved on lease";
-  if (item.provenance === null) return null;
+  if (!item.provenance) return null;
   return PREFILL_PROVENANCE_LABELS[item.provenance] ?? null;
 }
 
@@ -70,7 +70,7 @@ export default function LeaseAddTemplateValuesStep({
                       *
                     </span>
                   ) : null}
-                  {provenanceLabel !== null ? (
+                  {provenanceLabel ? (
                     <span className="text-[10px] uppercase tracking-wide text-muted-foreground bg-muted rounded px-1.5 py-0.5 font-normal">
                       {provenanceLabel}
                     </span>

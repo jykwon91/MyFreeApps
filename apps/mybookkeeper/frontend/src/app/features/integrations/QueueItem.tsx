@@ -49,7 +49,7 @@ export default function QueueItem({ item, onRetry, onDismiss }: QueueItemProps) 
         {item.status === "failed" ? (
           <button
             onClick={handleRetry}
-            disabled={busy !== null}
+            disabled={!!busy}
             className="text-muted-foreground hover:text-foreground disabled:opacity-50"
             title="Retry"
           >
@@ -59,7 +59,7 @@ export default function QueueItem({ item, onRetry, onDismiss }: QueueItemProps) 
         {item.status !== "done" ? (
           <button
             onClick={handleDismiss}
-            disabled={busy !== null}
+            disabled={!!busy}
             className="text-muted-foreground hover:text-destructive disabled:opacity-50"
             title="Dismiss"
           >

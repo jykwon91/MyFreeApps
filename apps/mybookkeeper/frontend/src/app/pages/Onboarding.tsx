@@ -20,7 +20,7 @@ export default function Onboarding() {
     step === 0
       ? data.tax_situations.length > 0
       : step === 1
-      ? data.filing_status !== null
+      ? !!data.filing_status
       : true;
 
   async function handleNext() {

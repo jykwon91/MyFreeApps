@@ -45,7 +45,7 @@ export default function InquiryStageDropdown({ inquiryId, currentStage }: Inquir
         data-testid="inquiry-stage-dropdown"
         value={display}
         onChange={(e) => void handleChange(e.target.value as InquiryStage)}
-        disabled={pending !== null}
+        disabled={!!pending}
         className="border rounded-md px-3 py-2 text-sm min-h-[44px]"
       >
         {INQUIRY_STAGES.map((s) => (

@@ -112,7 +112,7 @@ export default function MemberList({ onError, onSuccess }: MemberListProps) {
       </div>
 
       <ConfirmDialog
-        open={confirmRemove !== null}
+        open={!!confirmRemove}
         title="Remove member"
         description={`Are you sure you want to remove ${confirmRemove?.user_email ?? "this member"} from the organization?`}
         confirmLabel="Remove"

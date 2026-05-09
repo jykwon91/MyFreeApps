@@ -97,7 +97,7 @@ export default function Inquiries() {
 
   function handleSpamFilterChange(next: InquirySpamStatus | null) {
     const params = new URLSearchParams(searchParams);
-    if (next === null) {
+    if (!next) {
       params.set(SPAM_PARAM, "all");
     } else if (next === DEFAULT_SPAM_FILTER) {
       // Default tab — drop the param so the URL stays clean.
@@ -113,8 +113,8 @@ export default function Inquiries() {
     setPageCount((prev) => prev + 1);
   }
 
-  const showStageBadge = stage === null;
-  const isFiltered = stage !== null;
+  const showStageBadge = !stage;
+  const isFiltered = !!stage;
 
   const mode = useInquiriesListMode({ isLoading, isError, inquiryCount: inquiries.length });
 

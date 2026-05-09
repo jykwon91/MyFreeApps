@@ -25,7 +25,7 @@ export function useInquiryReplyMode({
   reconnectReason,
   tab,
 }: UseInquiryReplyModeArgs): InquiryReplyMode {
-  if (reconnectReason !== null) return "reconnect";
+  if (reconnectReason) return "reconnect";
   if (tab === "template") return "template";
   return "custom";
 }

@@ -25,7 +25,7 @@ export default function ExportDropdown({ onExportCSV, onExportPDF }: ExportDropd
   return (
     <DropdownMenu.Root>
       <DropdownMenu.Trigger asChild>
-        <Button size="sm" variant="secondary" disabled={exporting !== null}>
+        <Button size="sm" variant="secondary" disabled={!!exporting}>
           {exporting ? <Spinner className="mr-1.5" /> : <Download size={14} className="mr-1.5" />}
           {exporting ? "Exporting..." : "Export"}
           <ChevronDown size={12} className="ml-1" />
@@ -40,14 +40,14 @@ export default function ExportDropdown({ onExportCSV, onExportPDF }: ExportDropd
           <DropdownMenu.Item
             className="w-full text-left px-4 py-2 text-sm cursor-pointer outline-none hover:bg-muted"
             onSelect={() => handleExport("csv")}
-            disabled={exporting !== null}
+            disabled={!!exporting}
           >
             {exporting === "csv" ? "Exporting CSV..." : "Export CSV"}
           </DropdownMenu.Item>
           <DropdownMenu.Item
             className="w-full text-left px-4 py-2 text-sm cursor-pointer outline-none hover:bg-muted"
             onSelect={() => handleExport("pdf")}
-            disabled={exporting !== null}
+            disabled={!!exporting}
           >
             {exporting === "pdf" ? "Exporting PDF..." : "Export PDF"}
           </DropdownMenu.Item>

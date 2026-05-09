@@ -88,7 +88,7 @@ export default function ReplyTemplatesManager() {
       ) : null}
 
       <ConfirmDialog
-        open={archiveCandidate !== null}
+        open={!!archiveCandidate}
         title="Archive this template?"
         description={
           archiveCandidate

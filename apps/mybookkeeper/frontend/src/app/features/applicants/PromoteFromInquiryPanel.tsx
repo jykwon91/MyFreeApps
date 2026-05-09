@@ -343,11 +343,11 @@ export default function PromoteFromInquiryPanel({ inquiry, onClose }: PromoteFro
 function extractConflictDetail(
   err: unknown,
 ): ApplicantPromoteConflictDetail | null {
-  if (typeof err !== "object" || err === null) return null;
+  if (!err || typeof err !== "object") return null;
   const errObj = err as { status?: number; data?: { detail?: unknown } };
   if (errObj.status !== 409) return null;
   const detail = errObj.data?.detail;
-  if (typeof detail !== "object" || detail === null) return null;
+  if (!detail || typeof detail !== "object") return null;
   const code = (detail as { code?: unknown }).code;
   if (code === "already_promoted" || code === "not_promotable") {
     return detail as ApplicantPromoteConflictDetail;

@@ -41,8 +41,8 @@ export default function Applicants() {
 
   const applicants = data?.items ?? [];
   const hasMore = data?.has_more ?? false;
-  const isFiltered = stage !== null;
-  const showStageBadge = stage === null;
+  const isFiltered = !!stage;
+  const showStageBadge = !stage;
 
   const mode = useApplicantsListMode({
     isLoading,

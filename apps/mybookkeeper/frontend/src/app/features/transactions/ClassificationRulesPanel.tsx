@@ -72,7 +72,7 @@ export default function ClassificationRulesPanel({ onClose }: ClassificationRule
         description={`Remove the rule for "${deleteTarget?.match_pattern ?? ""}"? Future transactions matching this pattern won't be auto-categorized.`}
         confirmLabel="Delete"
         variant="danger"
-        isLoading={deletingId !== null}
+        isLoading={!!deletingId}
         onConfirm={handleDelete}
         onCancel={() => setConfirmDeleteId(null)}
       />

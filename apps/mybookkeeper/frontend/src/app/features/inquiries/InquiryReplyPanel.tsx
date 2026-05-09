@@ -124,7 +124,7 @@ export default function InquiryReplyPanel({ inquiryId, onClose }: InquiryReplyPa
   }
 
   const canSend =
-    reconnectReason === null &&
+    !reconnectReason &&
     subject.trim().length > 0 &&
     body.trim().length > 0 &&
     !isSending &&

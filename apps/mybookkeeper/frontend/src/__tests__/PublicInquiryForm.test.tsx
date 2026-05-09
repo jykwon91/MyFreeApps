@@ -24,9 +24,9 @@ vi.mock("@/shared/lib/api", () => ({
 
 vi.mock("@/shared/utils/errorMessage", () => ({
   extractErrorMessage: (err: unknown) => {
-    if (typeof err === "object" && err !== null) {
+    if (err && typeof err === "object") {
       const obj = err as Record<string, unknown>;
-      if (typeof obj.data === "object" && obj.data !== null) {
+      if (obj.data && typeof obj.data === "object") {
         const data = obj.data as Record<string, unknown>;
         if (typeof data.detail === "string") return data.detail;
       }

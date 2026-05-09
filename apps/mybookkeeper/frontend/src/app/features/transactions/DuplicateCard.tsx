@@ -96,7 +96,7 @@ export default function DuplicateCard({ pair, propertyMap, onMerge, onDismiss }:
     }
   }
 
-  const isBusy = busy !== null;
+  const isBusy = !!busy;
 
   return (
     <div className="border rounded-lg overflow-hidden">

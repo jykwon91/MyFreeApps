@@ -50,7 +50,7 @@ export default function ScreeningResultRow({ result }: ScreeningResultRowProps) 
   };
   const providerLabel = PROVIDER_LABELS[result.provider] ?? result.provider;
   const isMissing =
-    result.is_available === false && result.report_storage_key !== null;
+    result.is_available === false && !!result.report_storage_key;
   const downloadHref = isMissing ? null : result.presigned_url;
 
   useEffect(() => {

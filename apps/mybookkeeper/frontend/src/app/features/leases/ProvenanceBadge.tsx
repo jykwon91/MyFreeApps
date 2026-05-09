@@ -33,7 +33,7 @@ const BADGE_CONFIG: Record<
  * the placeholder — manual entry only).
  */
 export default function ProvenanceBadge({ provenance }: ProvenanceBadgeProps) {
-  if (provenance === null) return null;
+  if (!provenance) return null;
 
   const config = BADGE_CONFIG[provenance];
   if (!config) return null;

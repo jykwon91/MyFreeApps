@@ -37,7 +37,7 @@ export default function AttachmentViewerPdfBody({
     };
   }, [url]);
 
-  if (blobUrl === null) {
+  if (!blobUrl) {
     return (
       <div
         className="h-full bg-white rounded-b-lg flex items-center justify-center"

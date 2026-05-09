@@ -141,7 +141,7 @@ export default function Admin() {
       )}
 
       <ConfirmDialog
-        open={confirmAction !== null}
+        open={!!confirmAction}
         title={getConfirmTitle()}
         description={getConfirmDescription()}
         confirmLabel={
