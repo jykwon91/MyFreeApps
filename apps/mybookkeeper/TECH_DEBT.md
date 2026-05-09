@@ -55,12 +55,9 @@ Output of two parallel scans (backend + frontend) for code that should live in `
 
 ---
 
-#### MEDIUM — Email template rendering duplicated with per-app branding
+#### ~~MEDIUM — Email template rendering duplicated with per-app branding~~ RESOLVED
 
-**Effort:** M
-**Location:** MBK: `services/system/verification_email.py`, `services/system/password_reset_email.py`. MJH: `services/email/verification_email.py` (minimal version).
-**Problem:** Both render HTML email templates inline; both will drift over time.
-**Recommendation:** Extract template rendering to `platform_shared/services/email_templates/` with hooks for app-specific branding (logo URL, sender name). Branding stays per-app via `Settings`.
+**Resolved:** PR refactor/shared-email-templates (2026-05-08). Extracted `build_verification_html` + `build_password_reset_html` to `packages/shared-backend/platform_shared/services/email_templates/` with a frozen `Branding` dataclass (app_name, accent_color, tagline, header_prefix_html, footer_suffix). Per-app `MBK_BRANDING` / `MJH_BRANDING` constants live in each app's `app/core/branding.py`. MBK's `verification_email.py` + `password_reset_email.py` and MJH's `verification_email.py` are now thin senders that delegate HTML to the shared builder; the `_build_verification_html` / `_build_reset_html` symbols are preserved as one-line wrappers so existing tests import unchanged. 18 new shared-package tests cover URL escaping, branding injection, and the no-prefix/no-suffix path; existing MBK email tests (28) and MJH email tests (6 — minus a pre-existing-on-main `register_triggers_verification_email` failure unrelated to this PR) continue to pass.
 
 ---
 
