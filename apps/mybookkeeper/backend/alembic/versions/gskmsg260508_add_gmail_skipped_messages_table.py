@@ -1,7 +1,7 @@
 """add gmail_skipped_messages table
 
-Revision ID: a1b2c3d4e5f6
-Revises: z0a1b2c3d4e5
+Revision ID: gskmsg260508
+Revises: chsync260508
 Create Date: 2026-05-08 00:00:00.000000
 
 Audit log table for Gmail message envelope fetches that fail during discovery.
@@ -9,6 +9,10 @@ Previously these were silently skipped (bare except + continue); now every skip
 lands a row here so the operator can see which user/message combinations are
 failing and at what frequency. Partial sync behavior is preserved — the sync
 continues with the remaining messages.
+
+Renamed from the original `a1b2c3d4e5f6` revision id (which collided with
+`a1b2c3d4e5f6_add_invoice_line_items.py`) and re-pointed off `chsync260508`
+to linearize the chain after the parallel head left by PR #508 + PR #526.
 """
 from typing import Sequence, Union
 
@@ -16,8 +20,8 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision: str = "a1b2c3d4e5f6"
-down_revision: Union[str, None] = "z0a1b2c3d4e5"
+revision: str = "gskmsg260508"
+down_revision: Union[str, None] = "chsync260508"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
