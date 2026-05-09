@@ -9,10 +9,10 @@ import LegalFooter from "@/app/components/LegalFooter";
 const LOCKOUT_COOLDOWN_SECONDS = 30;
 
 function isLockoutResponse(err: unknown): boolean {
-  if (typeof err === "object" && err !== null) {
+  if (err && typeof err === "object") {
     const obj = err as Record<string, unknown>;
     if (obj.status === 429) return true;
-    if (typeof obj.data === "object" && obj.data !== null) {
+    if (obj.data && typeof obj.data === "object") {
       const data = obj.data as Record<string, unknown>;
       if (typeof data.detail === "string" && data.detail.toLowerCase().includes("too many")) return true;
     }
@@ -21,9 +21,9 @@ function isLockoutResponse(err: unknown): boolean {
 }
 
 function isUnverifiedResponse(err: unknown): boolean {
-  if (typeof err === "object" && err !== null) {
+  if (err && typeof err === "object") {
     const obj = err as Record<string, unknown>;
-    if (typeof obj.data === "object" && obj.data !== null) {
+    if (obj.data && typeof obj.data === "object") {
       const data = obj.data as Record<string, unknown>;
       if (data.detail === "LOGIN_USER_NOT_VERIFIED") return true;
     }
