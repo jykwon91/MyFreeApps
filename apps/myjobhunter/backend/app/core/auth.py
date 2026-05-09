@@ -49,6 +49,7 @@ from platform_shared.services.hibp_service import HIBPCheckError, is_password_pw
 from app.core.config import settings
 from app.db.session import get_db
 from app.models.user.user import User
+from app.services.email.password_reset_email import send_password_reset_email
 from app.services.email.verification_email import send_verification_email
 from app.services.system.auth_event_service import log_auth_event
 
@@ -287,6 +288,21 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
         """
         send_verification_email(user.email, token)
         logger.info("Verification email sent to user_id=%s", user.id)
+
+    async def on_after_forgot_password(
+        self, user: User, token: str, request: Optional[Request] = None,
+    ) -> None:
+        """Send password-reset email when a token is generated.
+
+        Without this hook wired, fastapi-users issues a token but never
+        delivers it — the operator's forgot-password flow is silently
+        broken. Identified in the 2026-05-09 parity audit (H7).
+
+        Raises on any send failure so the forgot-password HTTP request
+        fails 5xx and the user retries.
+        """
+        send_password_reset_email(user.email, token)
+        logger.info("Password-reset email sent to user_id=%s", user.id)
 
     async def on_after_verify(
         self, user: User, request: Optional[Request] = None,
