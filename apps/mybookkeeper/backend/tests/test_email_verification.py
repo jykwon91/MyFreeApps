@@ -103,40 +103,44 @@ class TestVerificationEmailTemplate:
 # ---------------------------------------------------------------------------
 
 class TestSendVerificationEmail:
-    @patch("app.services.system.verification_email.email_service")
+    @patch("app.services.system.verification_email.send_email_or_raise")
     @patch("app.services.system.verification_email.settings")
-    def test_sends_email_with_correct_params(self, mock_settings, mock_email_svc):
+    def test_sends_email_with_correct_params(self, mock_settings, mock_send):
         mock_settings.frontend_url = "https://app.example.com"
-        mock_email_svc.send_email.return_value = True
 
         result = send_verification_email("user@example.com", "token123")
 
-        assert result is True
-        mock_email_svc.send_email.assert_called_once()
-        args = mock_email_svc.send_email.call_args
+        assert result is None  # fail-loud contract: returns None on success, raises on failure
+        mock_send.assert_called_once()
+        args = mock_send.call_args
         assert args[0][0] == ["user@example.com"]
         assert "Verify" in args[0][1]
         assert "token123" in args[0][2]
 
-    @patch("app.services.system.verification_email.email_service")
+    @patch("app.services.system.verification_email.send_email_or_raise")
     @patch("app.services.system.verification_email.settings")
-    def test_returns_false_on_failure(self, mock_settings, mock_email_svc):
+    def test_raises_on_send_failure(self, mock_settings, mock_send):
+        """Critical-path email — failures must propagate, never be swallowed.
+
+        Regression contract for the kennethmontgo@gmail.com bug class
+        (registered-but-unverified account with no recovery path).
+        """
+        from app.services.system.email_service import EmailSendError
+
         mock_settings.frontend_url = "https://app.example.com"
-        mock_email_svc.send_email.return_value = False
+        mock_send.side_effect = EmailSendError("smtp connect failed")
 
-        result = send_verification_email("user@example.com", "token123")
+        with pytest.raises(EmailSendError, match="smtp connect failed"):
+            send_verification_email("user@example.com", "token123")
 
-        assert result is False
-
-    @patch("app.services.system.verification_email.email_service")
+    @patch("app.services.system.verification_email.send_email_or_raise")
     @patch("app.services.system.verification_email.settings")
-    def test_verify_url_uses_frontend_url(self, mock_settings, mock_email_svc):
+    def test_verify_url_uses_frontend_url(self, mock_settings, mock_send):
         mock_settings.frontend_url = "https://mybookkeeper.app/"
-        mock_email_svc.send_email.return_value = True
 
         send_verification_email("user@example.com", "abc")
 
-        html = mock_email_svc.send_email.call_args[0][2]
+        html = mock_send.call_args[0][2]
         assert "https://mybookkeeper.app/verify-email?token=abc" in html
 
 
@@ -159,17 +163,20 @@ class TestOnAfterRequestVerify:
 
     @pytest.mark.anyio
     @patch("app.core.auth.send_verification_email")
-    async def test_logs_warning_on_send_failure(self, mock_send, caplog):
-        import logging
-        mock_send.return_value = False
+    async def test_raises_on_send_failure(self, mock_send):
+        """Send failure must propagate so the registration HTTP request
+        fails 5xx and the user retries — never returns 2xx with the email
+        lost. Regression contract for kennethmontgo@gmail.com.
+        """
+        from app.services.system.email_service import EmailSendError
+
+        mock_send.side_effect = EmailSendError("smtp down")
         manager = UserManager.__new__(UserManager)
         manager.user_db = MagicMock()
 
         user = _make_user(email="fail@example.com")
-        with caplog.at_level(logging.WARNING, logger="app.core.auth"):
+        with pytest.raises(EmailSendError, match="smtp down"):
             await manager.on_after_request_verify(user, "token")
-
-        assert any("fail@example.com" in r.message for r in caplog.records)
 
 
 # ---------------------------------------------------------------------------
