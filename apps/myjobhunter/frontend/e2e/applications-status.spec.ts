@@ -167,8 +167,10 @@ test.describe("Applications list — Status column", () => {
       // DataTable renders each row as a <button> (clickable), so use getByRole("button")
       // scoped to the row, then assert the second cell (Status) contains "—".
       const row = page.getByRole("button").filter({ hasText: "No Events Role" });
-      // The Status cell is the first "—" inside this row button
-      await expect(row.getByRole("cell").nth(1)).toHaveText("—");
+      // The Status cell is the second <td> (index 1: 0=role_title, 1=latest_status).
+      // getByRole("cell") doesn't work when the <tr> overrides to role="button",
+      // which breaks table semantics for the child <td> elements.
+      await expect(row.locator("td").nth(1)).toHaveText("—");
     } finally {
       await deleteTestUser(request, user);
     }

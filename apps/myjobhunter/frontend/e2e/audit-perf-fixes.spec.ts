@@ -217,7 +217,7 @@ test.describe("Applications list — status badge updates after logging event (a
       ).toBeVisible({ timeout: 5_000 });
 
       // Select "Applied" from the event type dropdown.
-      await page.getByRole("combobox", { name: /event type/i }).selectOption("applied");
+      await page.getByRole("combobox").selectOption("applied");
 
       // Submit.
       await page.getByRole("button", { name: /log event/i }).last().click();
