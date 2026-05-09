@@ -11,7 +11,7 @@ export interface VendorRowProps {
 }
 
 function formatLastUsed(lastUsedAt: string | null): string {
-  return lastUsedAt === null ? "Never used" : formatRelativeTime(lastUsedAt);
+  return !lastUsedAt ? "Never used" : formatRelativeTime(lastUsedAt);
 }
 
 /**
