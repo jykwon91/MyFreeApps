@@ -29,9 +29,9 @@ test.describe("Companies CRUD", () => {
       ).toBeVisible();
 
       // Fill in name (required) and domain
-      await page.locator("#ac-name").fill("Test Company Inc");
-      await page.locator("#ac-domain").fill("testcompany.example.com");
-      await page.locator("#ac-industry").fill("SaaS");
+      await page.getByLabel(/^name/i).fill("Test Company Inc");
+      await page.getByLabel(/^domain/i).fill("testcompany.example.com");
+      await page.getByLabel(/^industry/i).fill("SaaS");
 
       // Submit
       await page.getByRole("button", { name: /^add company$/i }).click();
@@ -67,8 +67,8 @@ test.describe("Companies CRUD", () => {
 
       // Add a company via dialog
       await page.getByRole("button", { name: /add a company/i }).click();
-      await page.locator("#ac-name").fill("Detail Test Corp");
-      await page.locator("#ac-domain").fill("detailtest.example.com");
+      await page.getByLabel(/^name/i).fill("Detail Test Corp");
+      await page.getByLabel(/^domain/i).fill("detailtest.example.com");
       await page.getByRole("button", { name: /^add company$/i }).click();
 
       // Wait for the row to appear in the table (the button role row contains the name)
@@ -108,7 +108,7 @@ test.describe("Companies CRUD", () => {
 
       // Add a company
       await page.getByRole("button", { name: /add a company/i }).click();
-      await page.locator("#ac-name").fill("To Delete Corp");
+      await page.getByLabel(/^name/i).fill("To Delete Corp");
       await page.getByRole("button", { name: /^add company$/i }).click();
 
       const deleteRow = page.getByRole("button").filter({ hasText: "To Delete Corp" }).first();
