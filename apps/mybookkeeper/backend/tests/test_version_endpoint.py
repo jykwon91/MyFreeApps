@@ -4,19 +4,19 @@ from unittest.mock import patch
 
 import pytest
 
+from platform_shared.core.git import resolve_git_commit
+
 
 def test_resolve_git_commit_from_env():
     """When GIT_COMMIT env var is set, it takes precedence."""
     with patch.dict(os.environ, {"GIT_COMMIT": "abc1234"}):
-        from app.main import _resolve_git_commit
-        assert _resolve_git_commit() == "abc1234"
+        assert resolve_git_commit() == "abc1234"
 
 
 def test_resolve_git_commit_falls_back_to_git():
     """When no env var, falls back to git rev-parse."""
     with patch.dict(os.environ, {"GIT_COMMIT": ""}):
-        from app.main import _resolve_git_commit
-        result = _resolve_git_commit()
+        result = resolve_git_commit()
         assert len(result) > 0
         assert result != "unknown"
 
@@ -24,16 +24,17 @@ def test_resolve_git_commit_falls_back_to_git():
 def test_resolve_git_commit_returns_unknown_when_no_git():
     """When both env var and git are unavailable, returns 'unknown'."""
     with patch.dict(os.environ, {"GIT_COMMIT": ""}):
-        with patch("subprocess.check_output", side_effect=FileNotFoundError):
-            from app.main import _resolve_git_commit
-            assert _resolve_git_commit() == "unknown"
+        with patch(
+            "platform_shared.core.git.subprocess.check_output",
+            side_effect=FileNotFoundError,
+        ):
+            assert resolve_git_commit() == "unknown"
 
 
 def test_resolve_git_commit_strips_whitespace():
     """Env var value is stripped of whitespace."""
     with patch.dict(os.environ, {"GIT_COMMIT": "  abc1234  "}):
-        from app.main import _resolve_git_commit
-        assert _resolve_git_commit() == "abc1234"
+        assert resolve_git_commit() == "abc1234"
 
 
 def test_git_commit_module_level_is_set():

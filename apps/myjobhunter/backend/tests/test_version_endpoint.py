@@ -1,4 +1,4 @@
-"""Tests for the deploy-verification surfaces — _resolve_git_commit, /version,
+"""Tests for the deploy-verification surfaces — resolve_git_commit, /version,
 and the version field on /health.
 
 Mirrors apps/mybookkeeper/backend/tests/test_version_endpoint.py — keep the
@@ -11,6 +11,10 @@ Note that MJH mounts FastAPI with ``root_path="/api"``, so:
   client at the bare path `/version` (the test client does NOT prepend the
   root_path — that's added by the upstream Caddy proxy in production).
 - The same applies to the `/health` route mounted via app/api/health.py.
+
+The ``resolve_git_commit`` helper itself lives in
+``platform_shared.core.git`` (extracted in PR after 2026-05-09 H4 audit) —
+both apps wire ``GIT_COMMIT = resolve_git_commit()`` at module load.
 """
 import os
 import subprocess  # noqa: F401 — used by patch path
@@ -20,19 +24,19 @@ from unittest.mock import patch
 import pytest
 from httpx import ASGITransport, AsyncClient
 
+from platform_shared.core.git import resolve_git_commit
+
 
 def test_resolve_git_commit_from_env() -> None:
     """When GIT_COMMIT env var is set, it takes precedence."""
     with patch.dict(os.environ, {"GIT_COMMIT": "abc1234"}):
-        from app.main import _resolve_git_commit
-        assert _resolve_git_commit() == "abc1234"
+        assert resolve_git_commit() == "abc1234"
 
 
 def test_resolve_git_commit_falls_back_to_git() -> None:
     """When no env var, falls back to git rev-parse."""
     with patch.dict(os.environ, {"GIT_COMMIT": ""}):
-        from app.main import _resolve_git_commit
-        result = _resolve_git_commit()
+        result = resolve_git_commit()
         assert len(result) > 0
         assert result != "unknown"
 
@@ -40,16 +44,17 @@ def test_resolve_git_commit_falls_back_to_git() -> None:
 def test_resolve_git_commit_returns_unknown_when_no_git() -> None:
     """When both env var and git are unavailable, returns 'unknown'."""
     with patch.dict(os.environ, {"GIT_COMMIT": ""}):
-        with patch("subprocess.check_output", side_effect=FileNotFoundError):
-            from app.main import _resolve_git_commit
-            assert _resolve_git_commit() == "unknown"
+        with patch(
+            "platform_shared.core.git.subprocess.check_output",
+            side_effect=FileNotFoundError,
+        ):
+            assert resolve_git_commit() == "unknown"
 
 
 def test_resolve_git_commit_strips_whitespace() -> None:
     """Env var value is stripped of whitespace."""
     with patch.dict(os.environ, {"GIT_COMMIT": "  abc1234  "}):
-        from app.main import _resolve_git_commit
-        assert _resolve_git_commit() == "abc1234"
+        assert resolve_git_commit() == "abc1234"
 
 
 def test_git_commit_module_level_is_set() -> None:

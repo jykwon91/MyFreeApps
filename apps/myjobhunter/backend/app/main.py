@@ -1,6 +1,5 @@
 import logging
 import os
-import subprocess
 import time
 from datetime import datetime, timezone
 
@@ -9,6 +8,7 @@ from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from jwt.exceptions import PyJWTError as JWTError
 
+from platform_shared.core.git import resolve_git_commit
 from platform_shared.core.lifespan import create_app_lifespan
 
 from app.api import account, admin, admin_invites, applications, companies, demo, discover, documents, health, integrations, job_analysis, profile, resume_refinement, resumes, totp
@@ -37,27 +37,9 @@ async def _on_startup() -> None:
             )
 
 
-def _resolve_git_commit() -> str:
-    """Resolve the deployed git commit short SHA.
-
-    Mirrors apps/mybookkeeper/backend/app/main.py — used by the deploy
-    workflow's freshness tripwire and by /api/version + /health for
-    deploy verification.
-    """
-    env_commit = os.environ.get("GIT_COMMIT", "").strip()
-    if env_commit:
-        return env_commit
-    try:
-        return subprocess.check_output(
-            ["git", "rev-parse", "--short", "HEAD"],
-            text=True,
-            stderr=subprocess.DEVNULL,
-        ).strip()
-    except Exception:
-        return "unknown"
-
-
-GIT_COMMIT = _resolve_git_commit()
+# Used by the deploy workflow's freshness tripwire and by /api/version +
+# /health for deploy verification.
+GIT_COMMIT = resolve_git_commit()
 STARTUP_TIMESTAMP = datetime.now(timezone.utc).isoformat()
 
 logging.basicConfig(
