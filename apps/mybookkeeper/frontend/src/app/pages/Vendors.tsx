@@ -53,8 +53,8 @@ export default function Vendors() {
 
   const vendors = data?.items ?? [];
   const hasMore = data?.has_more ?? false;
-  const isFiltered = category !== null || preferredOnly;
-  const showCategoryBadge = category === null;
+  const isFiltered = !!category || preferredOnly;
+  const showCategoryBadge = !category;
 
   const mode = useVendorsListMode({ isLoading, isError, vendorCount: vendors.length });
 
