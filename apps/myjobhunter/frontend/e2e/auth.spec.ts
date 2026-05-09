@@ -46,7 +46,7 @@ test.describe("Email verification at registration", () => {
 
       // 5. Force-verify via the test helper (simulates the user clicking the email link)
       await request.post(
-        `${process.env.BACKEND_URL ?? "http://localhost:8004"}/api/_test/verify-email`,
+        `${process.env.BACKEND_URL ?? "http://localhost:8002"}/api/_test/verify-email`,
         { data: { email: user.email } },
       );
 

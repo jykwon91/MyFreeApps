@@ -46,7 +46,7 @@ test.describe("MyJobHunter account deletion + data export", () => {
       const tokenCookie = await page.evaluate(() => localStorage.getItem("token"));
       expect(tokenCookie).not.toBeNull();
       const exportResponse = await request.get(
-        `${process.env.BACKEND_URL ?? "http://localhost:8004"}/api/users/me/export`,
+        `${process.env.BACKEND_URL ?? "http://localhost:8002"}/api/users/me/export`,
         {
           headers: { Authorization: `Bearer ${tokenCookie}` },
         },
