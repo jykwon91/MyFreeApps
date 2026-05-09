@@ -2,6 +2,11 @@ import uuid
 
 from fastapi import Depends, Header, HTTPException
 
+from platform_shared.core.permissions import (
+    make_current_superuser,
+    require_role as _shared_require_role,
+)
+
 from app.core.auth import current_active_user
 from app.core.context import RequestContext
 from app.db.session import AsyncSessionLocal
@@ -12,20 +17,11 @@ from app.repositories.demo import demo_repo
 
 
 def require_role(*roles: Role):
-    async def _check(user: User = Depends(current_active_user)) -> User:
-        if user.role not in roles:
-            raise HTTPException(status_code=403, detail="Insufficient permissions")
-        return user
-    return _check
+    return _shared_require_role(*roles, current_active_user=current_active_user)
 
 
 current_admin = require_role(Role.ADMIN)
-
-
-async def current_superuser(user: User = Depends(current_active_user)) -> User:
-    if not user.is_superuser:
-        raise HTTPException(status_code=403, detail="Superuser access required")
-    return user
+current_superuser = make_current_superuser(current_active_user)
 
 
 async def current_org_member(
