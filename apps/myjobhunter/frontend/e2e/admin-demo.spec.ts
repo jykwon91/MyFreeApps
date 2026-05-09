@@ -190,7 +190,7 @@ test.describe("Admin demo accounts", () => {
 
       // Step 7: Back on the admin page, delete the demo account.
       await page
-        .getByRole("button", { name: new RegExp(`Delete ${demoEmail}`, "i") })
+        .getByRole("button", { name: `Delete ${demoEmail}` })
         .click();
 
       const confirmDialog = page.getByRole("dialog", {

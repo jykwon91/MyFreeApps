@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import { authenticator } from "otplib";
 import { createTestUser, deleteTestUser, loginViaUI } from "./fixtures/auth";
 
-const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:8004";
+const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:8002";
 
 /**
  * End-to-end TOTP enrollment + login challenge.
