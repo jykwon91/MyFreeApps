@@ -22,3 +22,13 @@ class AuthEventType:
     OAUTH_DISCONNECT = "oauth.disconnect"
     ACCOUNT_DELETED = "account.deleted"
     DATA_EXPORTED = "data.exported"
+    # Strict superuser-gate evaluations. Every gate hit emits one of these,
+    # whether it passed or which failure mode tripped. See
+    # platform_shared.core.permissions.make_strict_superuser_gate for the
+    # defense-in-depth rationale.
+    SUPERUSER_GATE_PASSED = "superuser.gate.passed"
+    SUPERUSER_GATE_DENIED_NOT_SUPERUSER = "superuser.gate.denied.not_superuser"
+    SUPERUSER_GATE_DENIED_TOKEN_NO_IAT = "superuser.gate.denied.token_no_iat"
+    SUPERUSER_GATE_DENIED_TOKEN_STALE = "superuser.gate.denied.token_stale"
+    SUPERUSER_GATE_DENIED_MISSING_TOTP = "superuser.gate.denied.missing_totp"
+    SUPERUSER_GATE_DENIED_BAD_TOTP = "superuser.gate.denied.bad_totp"

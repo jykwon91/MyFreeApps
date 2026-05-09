@@ -14,24 +14,11 @@ Provides:
 """
 from __future__ import annotations
 
-from fastapi import Depends, HTTPException
+from platform_shared.core.permissions import make_current_superuser
 
 from app.core.auth import current_active_user
-from app.models.user.user import User
 
-
-async def current_superuser(user: User = Depends(current_active_user)) -> User:
-    """Allow only users with ``is_superuser=True``.
-
-    Returns the user when the gate passes; raises 403 otherwise. Mirrors
-    apps/mybookkeeper/backend/app/core/permissions.py:current_superuser
-    so the two apps stay shape-aligned even though MJH only ever uses
-    this dependency (no role-based admin tier).
-    """
-    if not user.is_superuser:
-        raise HTTPException(status_code=403, detail="Superuser access required")
-    return user
-
+current_superuser = make_current_superuser(current_active_user)
 
 # Back-compat alias. Existing code that imports ``current_admin`` keeps
 # resolving to the same dependency. New code should import
