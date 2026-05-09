@@ -58,12 +58,9 @@ Output of two parallel scans (backend + frontend) for code that should live in `
 
 ---
 
-#### MEDIUM — DB session + `unit_of_work` pattern duplicated
+#### ~~MEDIUM — DB session + `unit_of_work` pattern duplicated~~ RESOLVED
 
-**Effort:** S
-**Location:** MBK: `db/session.py`. MJH: `db/session.py`.
-**Problem:** Both implement near-identical session factory + `unit_of_work` context manager. Already partially in `platform_shared/db/`. MBK has org-isolation hooks that need to remain.
-**Recommendation:** Reduce both local versions to thin re-exports from `platform_shared/db/session.py` plus app-specific overrides. Verify org-isolation hooks aren't lost.
+**Resolved:** PR refactor/mbk-db-session-shared (2026-05-09). MJH already used the shared factory cleanly; only MBK had a divergent 41-line local copy. MBK's `app/db/session.py` is now an 11-line thin wrapper that calls `create_session_factory(settings.database_url)` and re-binds the four members (`engine`, `AsyncSessionLocal`, `get_db`, `unit_of_work`) at module level — all 97 importers (`from app.db.session import ...`) keep working unchanged. The shared factory's typing was strengthened: `get_db` is now `Callable[[], AsyncIterator[AsyncSession]]` and `unit_of_work` is `Callable[[], AbstractAsyncContextManager[AsyncSession]]` instead of bare `object`. The org-isolation-hooks concern in the original entry was speculative — grep confirms zero `event.listen` listeners in either app's `db/` directory today; when they land, extend the factory with an optional hook surface rather than fork. 6 new contract tests in `packages/shared-backend/tests/test_session_factory.py` lock the shape so future per-app thin wrappers can rely on it.
 
 ---
 
