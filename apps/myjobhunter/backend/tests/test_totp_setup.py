@@ -24,9 +24,10 @@ from app.core.config import settings
 
 
 @pytest.mark.asyncio
-async def test_setup_returns_secret_uri_and_recovery_codes(
+async def test_setup_returns_secret_and_uri_only(
     client: AsyncClient, user_factory, as_user,
 ) -> None:
+    """Setup returns secret + URI; recovery codes come from /verify (post-confirm)."""
     user = await user_factory()
     async with await as_user(user) as authed:
         resp = await authed.post("/auth/totp/setup")
@@ -36,12 +37,45 @@ async def test_setup_returns_secret_uri_and_recovery_codes(
     assert "secret" in body
     assert body["provisioning_uri"].startswith("otpauth://totp/")
     assert "issuer=MyJobHunter" in body["provisioning_uri"]
+    # Recovery codes are NOT issued at setup — only after /verify confirms.
+    assert "recovery_codes" not in body
+
+
+@pytest.mark.asyncio
+async def test_verify_returns_recovery_codes_on_success(
+    client: AsyncClient, user_factory, as_user,
+) -> None:
+    """First successful /verify call returns the freshly-generated recovery codes."""
+    user = await user_factory()
+    async with await as_user(user) as authed:
+        setup = await authed.post("/auth/totp/setup")
+        secret = setup.json()["secret"]
+        verify = await authed.post(
+            "/auth/totp/verify",
+            json={"code": pyotp.TOTP(secret, digest=hashlib.sha256).now()},
+        )
+
+    assert verify.status_code == 200
+    body = verify.json()
+    assert body["verified"] is True
     assert isinstance(body["recovery_codes"], list)
     assert len(body["recovery_codes"]) == 8
-    # Recovery codes are 8 uppercase hex characters
     for code in body["recovery_codes"]:
         assert len(code) == 8
-        assert code.isupper() or code.isdigit() or all(c in "0123456789ABCDEF" for c in code)
+        assert all(c in "0123456789ABCDEF" for c in code)
+
+
+@pytest.mark.asyncio
+async def test_verify_failed_returns_no_recovery_codes(
+    client: AsyncClient, user_factory, as_user,
+) -> None:
+    """Failed /verify must not leak recovery codes."""
+    user = await user_factory()
+    async with await as_user(user) as authed:
+        await authed.post("/auth/totp/setup")
+        verify = await authed.post("/auth/totp/verify", json={"code": "000000"})
+
+    assert verify.status_code == 400
 
 
 @pytest.mark.asyncio
@@ -86,7 +120,9 @@ async def test_verify_with_correct_code_enables_totp(
         status = await authed.get("/auth/totp/status")
 
     assert verify.status_code == 200
-    assert verify.json() == {"verified": True}
+    body = verify.json()
+    assert body["verified"] is True
+    assert len(body["recovery_codes"]) == 8
     assert status.json()["enabled"] is True
 
 
@@ -168,13 +204,18 @@ async def test_totp_secret_encrypted_at_rest(
     """Read the raw column bytes and confirm they are NOT the plaintext secret.
 
     This is the contract that justifies storing the secret in the DB at all —
-    a leaked database dump must not yield usable TOTP secrets.
+    a leaked database dump must not yield usable TOTP secrets. Recovery codes
+    are issued on /verify (post-confirm) and verified the same way.
     """
     user = await user_factory()
     async with await as_user(user) as authed:
         setup = await authed.post("/auth/totp/setup")
         plaintext_secret = setup.json()["secret"]
-        plaintext_recovery = setup.json()["recovery_codes"]
+        verify = await authed.post(
+            "/auth/totp/verify",
+            json={"code": pyotp.TOTP(plaintext_secret, digest=hashlib.sha256).now()},
+        )
+        plaintext_recovery = verify.json()["recovery_codes"]
 
     eng = create_async_engine(settings.database_url, poolclass=NullPool)
     factory = async_sessionmaker(eng, expire_on_commit=False)

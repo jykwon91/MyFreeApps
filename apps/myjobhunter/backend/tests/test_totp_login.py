@@ -148,11 +148,11 @@ async def test_recovery_code_accepted_and_consumed(
     async with await as_user(user) as authed:
         setup = await authed.post("/auth/totp/setup")
         secret = setup.json()["secret"]
-        recovery_codes = setup.json()["recovery_codes"]
-        await authed.post(
+        verify = await authed.post(
             "/auth/totp/verify",
             json={"code": pyotp.TOTP(secret, digest=hashlib.sha256).now()},
         )
+        recovery_codes = verify.json()["recovery_codes"]
 
     # Use the first recovery code
     first_code = recovery_codes[0]
@@ -239,11 +239,11 @@ async def test_auth_events_written_on_totp_recovery_used(
     async with await as_user(user) as authed:
         setup = await authed.post("/auth/totp/setup")
         secret = setup.json()["secret"]
-        recovery_codes = setup.json()["recovery_codes"]
-        await authed.post(
+        verify = await authed.post(
             "/auth/totp/verify",
             json={"code": pyotp.TOTP(secret, digest=hashlib.sha256).now()},
         )
+        recovery_codes = verify.json()["recovery_codes"]
     await client.post(
         "/auth/totp/login",
         json={

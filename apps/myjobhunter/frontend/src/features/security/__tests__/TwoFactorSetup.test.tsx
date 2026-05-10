@@ -132,7 +132,6 @@ describe("TwoFactorSetup — enrollment flow", () => {
         Promise.resolve({
           secret: "MYSECRET123",
           provisioning_uri: "otpauth://totp/test?secret=MYSECRET123",
-          recovery_codes: ["AAAA1111", "BBBB2222"],
         }),
     });
 
@@ -153,11 +152,14 @@ describe("TwoFactorSetup — enrollment flow", () => {
         Promise.resolve({
           secret: "ABCDEF",
           provisioning_uri: "otpauth://totp/test",
-          recovery_codes: ["CODE0001", "CODE0002", "CODE0003"],
         }),
     });
     mockVerifyTotp.mockReturnValue({
-      unwrap: () => Promise.resolve({ verified: true }),
+      unwrap: () =>
+        Promise.resolve({
+          verified: true,
+          recovery_codes: ["CODE0001", "CODE0002", "CODE0003"],
+        }),
     });
 
     renderComponent();
@@ -183,7 +185,6 @@ describe("TwoFactorSetup — enrollment flow", () => {
         Promise.resolve({
           secret: "ABCDEF",
           provisioning_uri: "otpauth://totp/test",
-          recovery_codes: ["X1", "X2"],
         }),
     });
 
@@ -208,7 +209,6 @@ describe("TwoFactorSetup — enrollment flow", () => {
         Promise.resolve({
           secret: "ABC",
           provisioning_uri: "otpauth://totp/test",
-          recovery_codes: ["A1"],
         }),
     });
 
@@ -231,7 +231,6 @@ describe("TwoFactorSetup — enrollment flow", () => {
         Promise.resolve({
           secret: "X",
           provisioning_uri: "otpauth://totp/test",
-          recovery_codes: ["a"],
         }),
     });
     mockVerifyTotp.mockReturnValue({
