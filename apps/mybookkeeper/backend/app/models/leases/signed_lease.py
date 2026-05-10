@@ -67,6 +67,21 @@ class SignedLease(Base):
         nullable=True,
     )
 
+    # Successor-lease pointer: when the host creates a new lease that
+    # supersedes this one (rent change, term change, occupants change),
+    # the new lease's ``parent_lease_id`` references the prior lease. The
+    # back-pointer is intentionally one-way — a bidirectional FK would
+    # encode an invariant the database cannot enforce. Forward navigation
+    # ("does this lease have a successor?") is a single indexed query.
+    # ``ondelete=SET NULL`` so deleting an old lease never blocks the
+    # successor; the historical link is best-effort.
+    parent_lease_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("signed_leases.id", ondelete="SET NULL"),
+        index=True,
+        nullable=True,
+    )
+
     # 'generated' = created via template substitution pipeline.
     # 'imported'  = uploaded externally-signed PDF(s) with no template.
     kind: Mapped[str] = mapped_column(
@@ -155,5 +170,17 @@ class SignedLease(Base):
             "ix_signed_leases_org_status_active",
             "organization_id", "status",
             postgresql_where=text("deleted_at IS NULL"),
+        ),
+        # Drives "expiring lease" queries (e.g. listing all leases ending
+        # within the next N days for a given org). ``ends_on`` only fills
+        # in once the lease is signed/active, so the partial predicate
+        # additionally scopes to the live-non-draft set the index is
+        # actually queried for.
+        Index(
+            "ix_signed_leases_org_ends_on_active",
+            "organization_id", "ends_on",
+            postgresql_where=text(
+                "deleted_at IS NULL AND ends_on IS NOT NULL"
+            ),
         ),
     )
