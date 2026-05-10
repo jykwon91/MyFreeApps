@@ -33,13 +33,21 @@ async def test_new_user_is_unverified(
 async def test_unverified_user_cannot_login(
     client: AsyncClient, user_factory,
 ) -> None:
+    """Unverified users hitting /auth/jwt/login get a generic LOGIN_BAD_CREDENTIALS.
+
+    Post-PR-#E (shared UserManager base), the manager-layer ``authenticate``
+    rejects unverified users by returning None, which produces fastapi-users'
+    standard ``LOGIN_BAD_CREDENTIALS`` detail. The verification-aware UX path
+    is on ``/auth/totp/login`` (which surfaces ``LOGIN_USER_NOT_VERIFIED``);
+    MJH's frontend always calls /auth/totp/login as its primary login path.
+    """
     user = await user_factory(verified=False)
     resp = await client.post(
         "/auth/jwt/login",
         data={"username": user["email"], "password": user["password"]},
     )
     assert resp.status_code == 400
-    assert resp.json()["detail"] == "LOGIN_USER_NOT_VERIFIED"
+    assert resp.json()["detail"] == "LOGIN_BAD_CREDENTIALS"
 
 
 @pytest.mark.asyncio

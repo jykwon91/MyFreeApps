@@ -221,7 +221,7 @@ class TestLockedAttemptEmitsAuditEvent:
         async def _capture_emit(*, db, user_id=None, **kwargs):  # noqa: ANN001
             captured_events.append(AuthEventType.LOGIN_BLOCKED_LOCKED)
 
-        with patch("app.core.auth.emit_locked_login_event", new=_capture_emit):
+        with patch("platform_shared.auth.user_manager.emit_locked_login_event", new=_capture_emit):
             with patch(
                 "fastapi_users.BaseUserManager.authenticate",
                 new_callable=AsyncMock,

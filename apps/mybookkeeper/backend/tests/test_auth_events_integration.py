@@ -100,7 +100,7 @@ async def test_register_creates_event(db: AsyncSession) -> None:
     try:
         with (
             patch("app.core.auth.send_verification_email", return_value=True),
-            patch("app.core.auth.is_password_pwned", new_callable=AsyncMock, return_value=False),
+            patch("platform_shared.auth.user_manager.is_password_pwned", new_callable=AsyncMock, return_value=False),
         ):
             transport = ASGITransport(app=app)
             async with AsyncClient(transport=transport, base_url="http://test") as client:

@@ -230,8 +230,9 @@ class TestLoginGating:
         credentials.username = "user@example.com"
         credentials.password = "secret"
 
+        from fastapi_users import BaseUserManager as _FastApiUsersBaseUserManager
         with patch.object(
-            UserManager.__bases__[1],  # BaseUserManager
+            _FastApiUsersBaseUserManager,
             "authenticate",
             new=AsyncMock(return_value=unverified_user),
         ):
@@ -262,8 +263,9 @@ class TestLoginGating:
         credentials.username = "user@example.com"
         credentials.password = "secret"
 
+        from fastapi_users import BaseUserManager as _FastApiUsersBaseUserManager
         with patch.object(
-            UserManager.__bases__[1],
+            _FastApiUsersBaseUserManager,
             "authenticate",
             new=AsyncMock(return_value=verified_user),
         ):

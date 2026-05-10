@@ -110,7 +110,7 @@ class TestNoEmailInLockedAccountLogs:
 
         try:
             with patch(
-                "app.core.auth.emit_locked_login_event",
+                "platform_shared.auth.user_manager.emit_locked_login_event",
                 new_callable=AsyncMock,
             ):
                 await manager.authenticate(creds)
@@ -168,7 +168,7 @@ class TestNoEmailInLockedAccountLogs:
 
         try:
             with patch(
-                "app.core.auth.emit_locked_login_event",
+                "platform_shared.auth.user_manager.emit_locked_login_event",
                 new_callable=AsyncMock,
             ):
                 await manager.authenticate_password(creds, request)
@@ -221,7 +221,7 @@ class TestLockedLoginEventCapturesRequestContext:
         creds.username = "locked@example.com"
         creds.password = "anything"
 
-        with patch("app.core.auth.emit_locked_login_event", new=_capture_emit):
+        with patch("platform_shared.auth.user_manager.emit_locked_login_event", new=_capture_emit):
             await manager.authenticate_password(creds, request)
 
         assert len(captured_requests) == 1
