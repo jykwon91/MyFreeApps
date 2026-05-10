@@ -1,4 +1,5 @@
 import { baseApi } from "./baseApi";
+import type { ExtendLeaseRequest } from "@/shared/types/lease/extend-lease-request";
 import type { LeaseAttachmentKind } from "@/shared/types/lease/lease-attachment-kind";
 import type { SignedLeaseAttachment } from "@/shared/types/lease/signed-lease-attachment";
 import type { SignedLeaseCreateRequest } from "@/shared/types/lease/signed-lease-create-request";
@@ -92,6 +93,21 @@ const signedLeasesApi = baseApi.injectEndpoints({
       // Invalidate so the UI refetches and reflects the new stamp
       // (next user navigation or polling will pick it up).
       invalidatesTags: (_r, _e, id) => [{ type: "SignedLease", id }],
+    }),
+
+    extendSignedLease: builder.mutation<
+      SignedLeaseDetail,
+      { leaseId: string; data: ExtendLeaseRequest }
+    >({
+      query: ({ leaseId, data }) => ({
+        url: `/signed-leases/${leaseId}/extend`,
+        method: "POST",
+        data,
+      }),
+      invalidatesTags: (_r, _e, { leaseId }) => [
+        { type: "SignedLease", id: leaseId },
+        { type: "SignedLease", id: "LIST" },
+      ],
     }),
 
     uploadSignedLeaseAttachment: builder.mutation<
@@ -204,6 +220,7 @@ export const {
   useDeleteSignedLeaseMutation,
   useGenerateSignedLeaseMutation,
   useEmailSignedLeaseToTenantMutation,
+  useExtendSignedLeaseMutation,
   useUploadSignedLeaseAttachmentMutation,
   useDeleteSignedLeaseAttachmentMutation,
   useImportSignedLeaseMutation,
