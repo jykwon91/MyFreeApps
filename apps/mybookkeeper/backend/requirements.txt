@@ -4,6 +4,7 @@
     # via mybookkeeper-backend
 aiofiles==25.1.0
     # via mybookkeeper-backend
+aiosqlite==0.22.1
 alembic==1.18.4
     # via mybookkeeper-backend
 annotated-doc==0.0.4
@@ -212,6 +213,7 @@ pyjwt==2.12.1
     # via
     #   fastapi-users
     #   mybookkeeper-backend
+    #   platform-shared
 pyotp==2.9.0
     # via
     #   mybookkeeper-backend
