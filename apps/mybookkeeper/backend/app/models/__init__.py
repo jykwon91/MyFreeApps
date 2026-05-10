@@ -34,6 +34,7 @@ from app.models.leases.lease_template_placeholder import LeaseTemplatePlaceholde
 from app.models.leases.signed_lease import SignedLease
 from app.models.leases.signed_lease_attachment import SignedLeaseAttachment
 from app.models.leases.signed_lease_template import SignedLeaseTemplate
+from app.models.leases.lease_term_version import LeaseTermVersion
 from app.models.insurance.insurance_policy import InsurancePolicy
 from app.models.insurance.insurance_policy_attachment import InsurancePolicyAttachment
 from app.models.vendors.vendor import Vendor
