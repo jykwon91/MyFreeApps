@@ -155,7 +155,12 @@ jobs:
             -d "{\"email\":\"$EMAIL\",\"password\":\"$PASSWORD\"}")
           echo "Registered: $REGISTER_RES" | head -c 200; echo
 
-          # Unverified login MUST be rejected with LOGIN_USER_NOT_VERIFIED.
+          # Unverified login MUST be rejected. Post-PR-#554 the shared
+          # PlatformBaseUserManager.authenticate returns None for unverified
+          # users, which produces fastapi-users' generic LOGIN_BAD_CREDENTIALS
+          # via /auth/jwt/login. The verification-aware UX path is on
+          # /auth/totp/login (which surfaces LOGIN_USER_NOT_VERIFIED) — that's
+          # the path the MJH frontend uses.
           UNVERIFIED_RES=$(curl -s -o /tmp/unverified.json -w "%{http_code}" \
             -X POST http://localhost:8092/api/auth/jwt/login \
             -H 'Content-Type: application/x-www-form-urlencoded' \
@@ -165,8 +170,8 @@ jobs:
             cat /tmp/unverified.json >&2
             exit 1
           fi
-          grep -q "LOGIN_USER_NOT_VERIFIED" /tmp/unverified.json
-          echo "Unverified login correctly rejected"
+          grep -q "LOGIN_BAD_CREDENTIALS" /tmp/unverified.json
+          echo "Unverified login correctly rejected (LOGIN_BAD_CREDENTIALS)"
 
           # Force-verify via the test helper, then login should succeed.
           curl -fsS -X POST http://localhost:8092/api/_test/verify-email \
