@@ -30,6 +30,11 @@ from app.core.auth import (
     get_jwt_strategy,
     get_user_manager,
 )
+from app.core.rate_limit import (
+    check_login_rate_limit,
+    check_totp_account_not_locked,
+    check_totp_rate_limit,
+)
 from app.db.session import get_db
 from app.models.user.user import User
 from app.schemas.totp import (
@@ -141,6 +146,11 @@ async def totp_status(
 
 @router.post(
     "/login",
+    dependencies=[
+        Depends(check_login_rate_limit),
+        Depends(check_totp_rate_limit),
+        Depends(check_totp_account_not_locked),
+    ],
     response_model=TotpLoginResponse,
     response_model_exclude_none=True,
 )
@@ -223,7 +233,7 @@ async def totp_login(
                 succeeded=False,
             )
             await db.commit()
-            raise HTTPException(status_code=400, detail="invalid_totp")
+            raise HTTPException(status_code=401, detail="invalid_totp")
 
         event_type = (
             AuthEventType.TOTP_RECOVERY_USED if used_recovery

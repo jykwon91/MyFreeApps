@@ -41,8 +41,11 @@ __all__ = [
     "RATE_LIMIT_GENERIC_DETAIL",
     "get_user_by_email",
     "login_limiter",
+    "totp_limiter",
     "check_login_rate_limit",
+    "check_totp_rate_limit",
     "check_account_not_locked",
+    "check_totp_account_not_locked",
     "verify_turnstile_token",
     "require_turnstile",
 ]
@@ -56,6 +59,11 @@ login_limiter = RateLimiter(
     max_attempts=settings.login_rate_limit_threshold,
     window_seconds=settings.login_rate_limit_window_seconds,
 )
+
+# Mirrors MBK's totp_limiter (20 / 300s) — separate from login_limiter so
+# the TOTP path can be tuned independently. Hardcoded to match MBK exactly;
+# move to settings if MJH ever needs operator-tunable TOTP throttle.
+totp_limiter = RateLimiter(max_attempts=20, window_seconds=300)
 
 
 # ---------------------------------------------------------------------------
@@ -123,6 +131,38 @@ async def check_login_rate_limit(
         raise
 
 
+async def check_totp_rate_limit(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """Per-IP rate limit for the TOTP login endpoint with audit logging.
+
+    Mirrors ``check_login_rate_limit`` — on block, writes a
+    ``LOGIN_BLOCKED_RATE_LIMIT`` auth event with ``gate="totp"`` so SOC/admin
+    tooling can distinguish TOTP-path credential stuffing from standard-login
+    stuffing. The 429 body is intentionally identical to all other
+    rate-limit / lockout responses.
+    """
+    ip = get_client_ip(request)
+    try:
+        totp_limiter.check(ip)
+    except HTTPException:
+        metadata: dict[str, str] = {"ip": ip, "gate": "totp"}
+        domain = email_domain_from_request(request)
+        if domain is not None:
+            metadata["email_domain"] = domain
+        await log_auth_event(
+            db,
+            event_type=AuthEventType.LOGIN_BLOCKED_RATE_LIMIT,
+            user_id=None,
+            request=request,
+            succeeded=False,
+            metadata=metadata,
+        )
+        await db.commit()
+        raise
+
+
 async def check_account_not_locked(
     credentials: OAuth2PasswordRequestForm = Depends(),
     db: AsyncSession = Depends(get_db),
@@ -132,6 +172,45 @@ async def check_account_not_locked(
     if user is None:
         return
     if user.locked_until and user.locked_until > datetime.now(tz=timezone.utc):
+        raise HTTPException(
+            status_code=429,
+            detail=RATE_LIMIT_GENERIC_DETAIL,
+        )
+
+
+async def check_totp_account_not_locked(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """Reject ``POST /auth/totp/login`` attempts for locked accounts.
+
+    Parallel to ``check_account_not_locked`` for the form-encoded JWT login
+    path, but reads ``email`` from the JSON ``TotpLoginRequest`` body instead
+    of an ``OAuth2PasswordRequestForm``.
+
+    On block, writes a ``LOGIN_BLOCKED_LOCKED`` auth event so SOC/admin
+    tooling sees the same signal whether the attacker uses the JWT or TOTP
+    login endpoint. The 429 body is intentionally identical to all other
+    rate-limit / lockout responses — callers cannot infer which gate fired.
+    """
+    body = await request.json()
+    email: str = body.get("email", "")
+    if not email:
+        return
+
+    user = await get_user_by_email(db, email)
+    if user is None:
+        return
+
+    if user.locked_until and user.locked_until > datetime.now(tz=timezone.utc):
+        await log_auth_event(
+            db,
+            event_type=AuthEventType.LOGIN_BLOCKED_LOCKED,
+            user_id=user.id,
+            request=request,
+            succeeded=False,
+        )
+        await db.commit()
         raise HTTPException(
             status_code=429,
             detail=RATE_LIMIT_GENERIC_DETAIL,
