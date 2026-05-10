@@ -50,6 +50,12 @@ export type { LoginFormProps } from "./components/auth/LoginForm";
 export { default as PasswordPair } from "./components/auth/PasswordPair";
 export type { PasswordPairProps } from "./components/auth/PasswordPair";
 
+// Step-up auth (PR F1)
+export { default as StepUpModal } from "./auth/StepUpModal";
+export { installStepUpInterceptor } from "./auth/stepUpInterceptor";
+export { StepUpCancelledError } from "./auth/errors/StepUpCancelledError";
+export { StepUpReauthRequiredError } from "./auth/errors/StepUpReauthRequiredError";
+
 // Data components
 export { default as DataTable } from "./components/data/DataTable";
 export type { DataTableProps, ColumnDef, SortingState, PaginationState } from "./components/data/DataTable";

@@ -229,18 +229,63 @@ async def test_delete_demo_user_refuses_unknown_id() -> None:
 
 
 async def _promote_to_admin(email: str) -> None:
-    """Flip a user's role to admin via raw SQL (bypasses any service guard)."""
+    """Flip a user's role to admin AND set is_superuser=True via raw SQL.
+
+    Both flags are needed: the demo router gates writes on
+    ``current_strict_superuser`` (PR F1) which checks ``is_superuser``,
+    and the GET endpoint gates on ``current_superuser`` which also
+    checks ``is_superuser``. Pre-F1 this fixture only set ``role`` —
+    the test was masked by an unrelated bug in the gate (it was
+    returning 403 even before the strict-gate change). Fixed here as
+    part of F1 so the test exercises a real authorized admin flow.
+    """
     engine = create_async_engine(settings.database_url, poolclass=NullPool)
     factory = async_sessionmaker(engine, expire_on_commit=False)
     try:
         async with factory() as sess:
             async with sess.begin():
                 await sess.execute(
-                    text("UPDATE users SET role = 'admin' WHERE email = :e"),
+                    text(
+                        "UPDATE users SET role = 'admin', is_superuser = TRUE "
+                        "WHERE email = :e"
+                    ),
                     {"e": email},
                 )
     finally:
         await engine.dispose()
+
+
+@pytest.fixture()
+def _bypass_strict_gate():
+    """Override the strict-superuser dependency so HTTP-layer demo tests
+    don't have to enroll TOTP + generate a fresh code on every run.
+
+    The strict-gate's three checks (is_superuser + recent iat +
+    X-TOTP-Code) are exhaustively tested at the unit level in
+    ``packages/shared-backend/tests/test_permissions.py`` and at the
+    router-wiring level in ``test_admin_router_stepup.py``. Re-testing
+    them here would just duplicate that surface; what these HTTP tests
+    actually verify is the demo-service contract, not the auth chain.
+    """
+    from app.core.permissions import current_strict_superuser
+    from app.main import app
+    from app.models.user.user import User
+
+    async def _admin_passthrough() -> User:
+        from app.db.session import AsyncSessionLocal
+        from sqlalchemy import select
+
+        async with AsyncSessionLocal() as db:
+            row = await db.execute(
+                select(User).where(User.is_superuser.is_(True)).limit(1),
+            )
+            user = row.scalar_one_or_none()
+            assert user is not None, "no superuser admin found in test DB"
+            return user
+
+    app.dependency_overrides[current_strict_superuser] = _admin_passthrough
+    yield
+    app.dependency_overrides.pop(current_strict_superuser, None)
 
 
 async def _login(email: str, password: str) -> str:
@@ -273,7 +318,7 @@ async def test_post_demo_users_rejects_non_admin(user_factory) -> None:
     assert resp.status_code == 403
 
 
-async def test_post_demo_users_admin_can_create(user_factory) -> None:
+async def test_post_demo_users_admin_can_create(user_factory, _bypass_strict_gate) -> None:
     """Admin gets 201 + credentials and the seed data persists."""
     admin_user = await user_factory()
     await _promote_to_admin(admin_user["email"])

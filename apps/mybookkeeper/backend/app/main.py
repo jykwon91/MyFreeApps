@@ -204,33 +204,15 @@ app.include_router(audit.router)
 # the MBK-specific admin router so both sets of routes live under
 # /admin without path collisions.
 from platform_shared.api.admin_router import build_admin_router
-from app.core.permissions import current_admin
+from app.core.permissions import current_admin, current_strict_superuser
 from app.services.system.admin_service import shared_admin_user_service
-from app.services.user.totp_service import verify_totp_code as _verify_totp_code
-
-
-# Step-up verifier for the shared toggle_superuser endpoint. Operators
-# without TOTP enrollment cannot perform the highest-privilege op —
-# forces the right shape: any user with ``is_superuser=True`` must
-# also have TOTP set up. Mirrors the MJH wiring in apps/myjobhunter
-# /backend/app/main.py::_superuser_step_up after the 2026-05-09 H5
-# reconciliation: both apps now call the service-layer ``verify_totp_code``
-# with the same signature instead of the previous bespoke decrypt + verify
-# inline implementation.
-async def _superuser_step_up(admin, totp_code: str) -> bool:
-    if not getattr(admin, "totp_enabled", False) or not admin.totp_secret:
-        return False
-    if not totp_code:
-        return False
-    async with AsyncSessionLocal() as db:
-        return await _verify_totp_code(db, admin.id, totp_code)
 
 
 app.include_router(
     build_admin_router(
         service=shared_admin_user_service,
         current_admin=current_admin,
-        step_up_verify=_superuser_step_up,
+        current_strict_superuser=current_strict_superuser,
     )
 )
 app.include_router(admin.router)

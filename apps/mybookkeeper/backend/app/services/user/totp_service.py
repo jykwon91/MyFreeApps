@@ -192,18 +192,20 @@ async def disable_totp(user_id: uuid.UUID, code: str) -> bool:
 async def verify_totp_code(db: AsyncSession, user_id: uuid.UUID, code: str) -> bool:
     """Return True if ``code`` is a valid TOTP or recovery code for the user.
 
-    Used by the superuser-step-up flow in ``main.py`` to keep the verifier
-    shape aligned with MJH's ``app.services.user.totp_service.verify_totp_code``
-    (audit 2026-05-09 H5 reconciliation). The previous inline implementation
-    in ``main.py::_superuser_step_up`` did the same work — manual decrypt +
-    ``verify_code`` + recovery-code fallback — but exposed the encryption
-    plumbing at the call site. Hoisting into the service layer keeps the
-    coordinator's responsibilities inside this module.
+    Used by:
+      - the account-deletion flow (``DELETE /users/me``) for the third
+        confirmation factor;
+      - the strict superuser gate (PR F1) via the
+        ``_verify_totp_step_up`` adapter in ``app.core.permissions``.
 
-    Does NOT consume the recovery code on match — the caller (step-up) is
-    expected to be a one-shot operation; deletion of the user (which also
-    happens to use this function via account_deletion) cascades the row
-    away anyway.
+    Mirrors the MJH equivalent (``apps/myjobhunter/backend/app/services/
+    user/totp_service.py::verify_totp_code``) byte-for-byte after the
+    audit 2026-05-09 H5 reconciliation.
+
+    Does NOT consume the recovery code on match — both call sites are
+    one-shot operations; deletion of the user (account_deletion) cascades
+    the row away anyway, and step-up is naturally rate-limited by the
+    operator's willingness to type fresh codes.
     """
     if not code:
         return False

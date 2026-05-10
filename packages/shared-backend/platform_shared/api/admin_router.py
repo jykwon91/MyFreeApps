@@ -1,14 +1,15 @@
 """Shared admin user-management router factory.
 
 Each app calls ``build_admin_router(...)`` with its own ``current_admin``
-dependency, an instantiated ``AdminUserService``, and a ``step_up_verify``
-callable, then mounts the returned router. Routes:
+dependency, an instantiated ``AdminUserService``, and a
+``current_strict_superuser`` dependency, then mounts the returned router.
+Routes:
 
     GET    /admin/users                       — list users
     PATCH  /admin/users/{id}/role             — change role
     PATCH  /admin/users/{id}/activate         — set is_active=true
     PATCH  /admin/users/{id}/deactivate       — set is_active=false
-    PATCH  /admin/users/{id}/superuser        — toggle is_superuser (TOTP step-up required)
+    PATCH  /admin/users/{id}/superuser        — toggle is_superuser (strict gate)
     GET    /admin/stats/users                 — user count summary
 
 Apps remain free to mount additional admin endpoints under the same
@@ -16,22 +17,22 @@ Apps remain free to mount additional admin endpoints under the same
 stats, domain cleanups, etc.). FastAPI handles overlapping prefixes
 across routers fine as long as paths don't collide.
 
-Step-up verification (PR fix/myjobhunter-superuser-totp-stepup):
-The ``toggle_superuser`` endpoint requires a TOTP code in the request
-body. The factory's ``step_up_verify`` callable is responsible for
-checking the code against the calling admin's enrolled secret. This
-keeps shared code free of TOTP-specific imports while letting each app
-plug in its own verifier (e.g. MJH's ``verify_totp_code`` from
-``app.services.user.totp_service``). A consumer that does NOT have TOTP
-infrastructure cannot mount this router safely — by design, since the
-audit flagged unconditional ``toggle_superuser`` flips as a Medium-
-severity defect (a leaked admin session token grants permanent
-superuser persistence).
+Step-up verification (PR F1, 2026-05-10):
+The ``toggle_superuser`` endpoint is gated by ``current_strict_superuser``
+— the shared ``make_strict_superuser_gate`` from ``platform_shared.core
+.permissions``. The gate enforces three independent checks: is_superuser,
+recent JWT iat (re-auth window), and a fresh ``X-TOTP-Code`` header.
+TOTP code travels in the request HEADER (not the body) so the same gate
+can be applied uniformly to GET / PATCH / DELETE endpoints across the
+admin surface — including endpoints that have no natural body shape.
+The previous ``step_up_verify`` body-based pattern is removed; apps that
+need a body payload still pass it through the route's own body schema
+(e.g. ``AdminUserRoleUpdate`` on ``/role``).
 """
 from __future__ import annotations
 
 import uuid
-from collections.abc import Awaitable, Callable
+from collections.abc import Callable
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -39,25 +40,16 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from platform_shared.schemas.admin_user import (
     AdminUserRead,
     AdminUserRoleUpdate,
-    SuperuserToggleRequest,
     UserStats,
 )
 from platform_shared.services.admin_user_service import AdminUserService
-
-
-StepUpVerifier = Callable[[Any, str], Awaitable[bool]]
-"""Signature: ``(admin_user, totp_code) -> bool``.
-
-Returns True when the code is valid for the given admin, False
-otherwise. The router treats False as a 403 step-up failure.
-"""
 
 
 def build_admin_router(
     *,
     service: AdminUserService,
     current_admin: Callable[..., Any],
-    step_up_verify: StepUpVerifier,
+    current_strict_superuser: Callable[..., Any],
     response_model: type[Any] = AdminUserRead,
 ) -> APIRouter:
     """Construct the shared admin router.
@@ -67,10 +59,14 @@ def build_admin_router(
             User class + unit_of_work / session_factory).
         current_admin: The app's FastAPI dependency that yields a User
             after gating on ``Role.ADMIN`` / ``is_superuser``. Each app
-            builds its own.
-        step_up_verify: Callable that verifies a TOTP code against the
-            calling admin's enrolled secret. REQUIRED — the router
-            refuses to flip ``is_superuser`` without it.
+            builds its own. Used for read endpoints and routine admin
+            mutations (role / activate / deactivate).
+        current_strict_superuser: The app's FastAPI dependency built by
+            ``make_strict_superuser_gate`` — yields a User after passing
+            the three-gate strict check (is_superuser + recent iat +
+            X-TOTP-Code header). Used for the highest-risk endpoints
+            (superuser toggle today, more in PR F2). REQUIRED — the
+            router refuses to flip ``is_superuser`` without it.
         response_model: Optional override for the user response schema.
             Defaults to ``AdminUserRead``. Apps that want to return
             richer per-user fields can subclass it and pass the
@@ -138,19 +134,8 @@ def build_admin_router(
     )
     async def toggle_superuser(
         user_id: uuid.UUID,
-        body: SuperuserToggleRequest,
-        admin: Any = Depends(current_admin),
+        admin: Any = Depends(current_strict_superuser),
     ) -> Any:
-        # Step-up gate: the highest-privilege op in the system requires
-        # a fresh TOTP code, not just an active session token. Audit-flagged
-        # 2026-05-06 — a leaked admin session token would otherwise grant
-        # permanent superuser persistence.
-        ok = await step_up_verify(admin, body.totp_code)
-        if not ok:
-            raise HTTPException(
-                status_code=403,
-                detail="step_up_failed",
-            )
         try:
             return await service.toggle_superuser(user_id, admin)
         except PermissionError as exc:

@@ -1,20 +1,21 @@
-"""Tests for the ``toggle_superuser`` step-up gate in
+"""Tests for the ``toggle_superuser`` strict-gate wiring in
 ``platform_shared.api.admin_router``.
 
-Verifies that the router refuses to flip ``is_superuser`` without a
-valid TOTP code, and that the validation surfaces as the right HTTP
-status. Service-layer behaviour (self-target, missing-user, etc.) is
-tested separately in ``test_admin_user_service.py``.
+The router gates ``PATCH /admin/users/{id}/superuser`` on the app's
+``current_strict_superuser`` dependency (built from
+``make_strict_superuser_gate``). The gate's own three-check semantics
+(is_superuser + recent iat + valid X-TOTP-Code) are tested in
+``test_permissions.py``. This file verifies only the router-level
+contract: gate failure → 401/403 surface, gate pass → service runs.
 """
 from __future__ import annotations
 
 import uuid
 from contextlib import asynccontextmanager
-from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from httpx import ASGITransport, AsyncClient
 
 from platform_shared.api.admin_router import build_admin_router
@@ -47,8 +48,11 @@ def _build_app(
     *,
     target_user: _FakeUser,
     admin_user: _FakeUser,
-    step_up_verify: AsyncMock,
+    strict_gate_outcome: HTTPException | None,
 ) -> FastAPI:
+    """Build a FastAPI app whose strict gate either passes (returns the
+    admin) or fails (raises the supplied HTTPException).
+    """
     fake_db = MagicMock(name="db")
 
     @asynccontextmanager
@@ -68,8 +72,11 @@ def _build_app(
     async def fake_current_admin() -> _FakeUser:
         return admin_user
 
-    # Patch the repo on the imported module — must match the path the
-    # service uses internally.
+    async def fake_current_strict_superuser() -> _FakeUser:
+        if strict_gate_outcome is not None:
+            raise strict_gate_outcome
+        return admin_user
+
     from platform_shared.repositories import admin_user_repo
 
     admin_user_repo.get_by_id = AsyncMock(return_value=target_user)  # type: ignore[assignment]
@@ -77,7 +84,7 @@ def _build_app(
     router = build_admin_router(
         service=service,
         current_admin=fake_current_admin,
-        step_up_verify=step_up_verify,
+        current_strict_superuser=fake_current_strict_superuser,
     )
     app = FastAPI()
     app.include_router(router)
@@ -85,78 +92,112 @@ def _build_app(
 
 
 @pytest.mark.asyncio
-async def test_toggle_superuser_rejects_missing_totp_code() -> None:
-    """No body → 422 (Pydantic validation; totp_code is required)."""
+async def test_toggle_superuser_returns_401_when_missing_totp_header() -> None:
+    """Strict gate raises 401 with X-Require-Step-Up: totp → router surfaces 401."""
     target = _FakeUser(is_superuser=False)
     admin = _FakeUser()
-    verifier = AsyncMock(return_value=True)
-    app = _build_app(target_user=target, admin_user=admin, step_up_verify=verifier)
+    gate_outcome = HTTPException(
+        status_code=401,
+        detail="TOTP step-up required",
+        headers={"X-Require-Step-Up": "totp"},
+    )
+    app = _build_app(
+        target_user=target, admin_user=admin, strict_gate_outcome=gate_outcome,
+    )
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as client:
-        resp = await client.patch(
-            f"/admin/users/{target.id}/superuser",
-            json={},
-        )
-    assert resp.status_code == 422
-    assert verifier.await_count == 0
+        resp = await client.patch(f"/admin/users/{target.id}/superuser")
+
+    assert resp.status_code == 401
+    assert resp.headers.get("X-Require-Step-Up") == "totp"
+    assert resp.json()["detail"] == "TOTP step-up required"
     assert target.is_superuser is False
 
 
 @pytest.mark.asyncio
-async def test_toggle_superuser_rejects_invalid_totp_code() -> None:
-    """Step-up verifier returns False → 403 step_up_failed."""
+async def test_toggle_superuser_returns_401_when_token_too_old() -> None:
+    """Strict gate raises 401 with X-Require-Step-Up: reauth → router surfaces 401."""
     target = _FakeUser(is_superuser=False)
     admin = _FakeUser()
-    verifier = AsyncMock(return_value=False)
-    app = _build_app(target_user=target, admin_user=admin, step_up_verify=verifier)
+    gate_outcome = HTTPException(
+        status_code=401,
+        detail="Re-authenticate (session too old for this action)",
+        headers={"X-Require-Step-Up": "reauth"},
+    )
+    app = _build_app(
+        target_user=target, admin_user=admin, strict_gate_outcome=gate_outcome,
+    )
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as client:
         resp = await client.patch(
             f"/admin/users/{target.id}/superuser",
-            json={"totp_code": "000000"},
+            headers={"X-TOTP-Code": "123456"},
         )
+
+    assert resp.status_code == 401
+    assert resp.headers.get("X-Require-Step-Up") == "reauth"
+    assert target.is_superuser is False
+
+
+@pytest.mark.asyncio
+async def test_toggle_superuser_returns_403_when_not_superuser() -> None:
+    """Strict gate raises 403 when calling user lacks is_superuser → router surfaces 403."""
+    target = _FakeUser(is_superuser=False)
+    admin = _FakeUser(is_superuser=False)
+    gate_outcome = HTTPException(status_code=403, detail="Superuser access required")
+    app = _build_app(
+        target_user=target, admin_user=admin, strict_gate_outcome=gate_outcome,
+    )
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as client:
+        resp = await client.patch(
+            f"/admin/users/{target.id}/superuser",
+            headers={"X-TOTP-Code": "123456"},
+        )
+
     assert resp.status_code == 403
-    assert resp.json()["detail"] == "step_up_failed"
-    verifier.assert_awaited_once_with(admin, "000000")
-    # Service must NOT have flipped the flag.
+    assert resp.json()["detail"] == "Superuser access required"
     assert target.is_superuser is False
 
 
 @pytest.mark.asyncio
-async def test_toggle_superuser_succeeds_with_valid_totp_code() -> None:
-    """Step-up verifier returns True → service flips the flag."""
+async def test_toggle_superuser_succeeds_when_strict_gate_passes() -> None:
+    """Strict gate returns admin → service flips the flag."""
     target = _FakeUser(is_superuser=False)
     admin = _FakeUser()
-    verifier = AsyncMock(return_value=True)
-    app = _build_app(target_user=target, admin_user=admin, step_up_verify=verifier)
+    app = _build_app(
+        target_user=target, admin_user=admin, strict_gate_outcome=None,
+    )
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as client:
         resp = await client.patch(
             f"/admin/users/{target.id}/superuser",
-            json={"totp_code": "123456"},
+            headers={"X-TOTP-Code": "123456"},
         )
+
     assert resp.status_code == 200
-    verifier.assert_awaited_once_with(admin, "123456")
     assert target.is_superuser is True
 
 
 @pytest.mark.asyncio
-async def test_toggle_superuser_step_up_runs_before_self_target_check() -> None:
-    """Self-target attempts must still pay the step-up cost.
-
-    Belt-and-braces: even if a malicious flow somehow bypasses the
-    service-layer self-target guard, the step-up gate fires first.
+async def test_toggle_superuser_no_body_field_required() -> None:
+    """Empty body is accepted — TOTP travels in the X-TOTP-Code header,
+    not in the request body. Belt-and-braces regression test against
+    accidentally re-introducing a body schema.
     """
+    target = _FakeUser(is_superuser=False)
     admin = _FakeUser()
-    verifier = AsyncMock(return_value=False)
-    # target == admin — service would raise ValueError, but we should
-    # 403 on step-up failure FIRST and never reach the service.
-    app = _build_app(target_user=admin, admin_user=admin, step_up_verify=verifier)
+    app = _build_app(
+        target_user=target, admin_user=admin, strict_gate_outcome=None,
+    )
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as client:
+        # Sending a body field at all (extra field) should not break
+        # the request — the route does not declare a body model.
         resp = await client.patch(
-            f"/admin/users/{admin.id}/superuser",
-            json={"totp_code": "wrong"},
+            f"/admin/users/{target.id}/superuser",
+            headers={"X-TOTP-Code": "123456"},
+            json={"unrelated": "field"},
         )
-    assert resp.status_code == 403
-    assert resp.json()["detail"] == "step_up_failed"
+
+    assert resp.status_code == 200

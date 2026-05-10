@@ -1,19 +1,24 @@
 """Superuser demo-management routes.
 
-Every route here is gated by ``current_superuser`` (operator only).
-Demo accounts are an internal showcase tool — they MUST never be
-reachable from a regular user session.
+Write routes (create, delete) are gated by ``current_strict_superuser``
+(PR F1) — three-check defense-in-depth (is_superuser + recent JWT iat +
+X-TOTP-Code header). The list endpoint stays on ``current_superuser``
+so opening the demo admin page does not require a TOTP step-up — same
+convention as ``GET /admin/users`` in the shared admin router. Demo
+accounts are an internal showcase tool; they MUST never be reachable
+from a regular user session.
 
 Routes:
 
   - ``POST /admin/demo/users`` — create a fully-seeded demo account,
     returns the credentials (email + plaintext password) ONCE.
+    [strict gate]
   - ``GET /admin/demo/users`` — list all demo accounts with summary
-    counts.
+    counts. [superuser only]
   - ``DELETE /admin/demo/users/{id}`` — delete a demo account and
     cascade every domain row they own. Refuses with 404 if the id
     refers to a real user (the repository enforces this at the SQL
-    layer too).
+    layer too). [strict gate]
 
 Mirrors the MBK ``/admin/demo`` route shape with two divergences:
   1. No ``/reset`` endpoint — MJH's demo accounts are cheap to recreate
@@ -28,7 +33,7 @@ import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from app.core.permissions import current_superuser
+from app.core.permissions import current_strict_superuser, current_superuser
 from app.models.user.user import User
 from app.schemas.demo.demo import (
     DemoCreateRequest,
@@ -45,7 +50,7 @@ router = APIRouter(prefix="/admin/demo", tags=["admin", "demo"])
 @router.post("/users", response_model=DemoCreateResponse, status_code=201)
 async def create_demo_user(
     body: DemoCreateRequest,
-    _admin: User = Depends(current_superuser),
+    _admin: User = Depends(current_strict_superuser),
 ) -> DemoCreateResponse:
     """Create a new fully-seeded demo account.
 
@@ -74,7 +79,7 @@ async def list_demo_users(
 )
 async def delete_demo_user(
     user_id: uuid.UUID,
-    _admin: User = Depends(current_superuser),
+    _admin: User = Depends(current_strict_superuser),
 ) -> DemoDeleteResponse:
     """Hard-delete a demo account and all cascade-able rows.
 
