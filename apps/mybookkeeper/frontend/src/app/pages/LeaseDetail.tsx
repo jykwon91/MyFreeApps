@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, FileText, Mail, Plus, User } from "lucide-react";
+import { ArrowLeft, CalendarPlus, FileText, Mail, Plus, User } from "lucide-react";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import AlertBox from "@/shared/components/ui/AlertBox";
 import Badge from "@/shared/components/ui/Badge";
@@ -18,6 +18,7 @@ import {
 import { useGetApplicantByIdQuery } from "@/shared/store/applicantsApi";
 import SignedLeaseStatusBadge from "@/app/features/leases/SignedLeaseStatusBadge";
 import SignedLeaseStatusPicker from "@/app/features/leases/SignedLeaseStatusPicker";
+import ExtendLeaseDialog from "@/app/features/leases/ExtendLeaseDialog";
 import LeaseAttachmentsSection from "@/app/features/leases/LeaseAttachmentsSection";
 import LeaseAddTemplateModal from "@/app/features/leases/LeaseAddTemplateModal";
 import type { SignedLeaseStatus } from "@/shared/types/lease/signed-lease-status";
@@ -29,6 +30,7 @@ export default function LeaseDetail() {
   const canWrite = useCanWrite();
   const [tab, setTab] = useState<Tab>("files");
   const [showAddTemplateModal, setShowAddTemplateModal] = useState(false);
+  const [showExtendDialog, setShowExtendDialog] = useState(false);
   const {
     data: lease,
     isLoading,
@@ -57,6 +59,10 @@ export default function LeaseDetail() {
     (a) => a.kind === "rendered_original" || a.kind === "signed_lease",
   );
   const showEmailButton = canWrite && hasEmailableAttachment;
+  const canExtend =
+    canWrite
+    && (lease?.status === "signed" || lease?.status === "active")
+    && Boolean(lease?.ends_on);
 
   async function handleGenerate() {
     if (!lease) return;
@@ -192,9 +198,28 @@ export default function LeaseDetail() {
                     Email to tenant
                   </LoadingButton>
                 ) : null}
+                {canExtend ? (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => setShowExtendDialog(true)}
+                    data-testid="lease-extend-button"
+                  >
+                    <CalendarPlus size={16} className="mr-1" />
+                    Extend lease
+                  </Button>
+                ) : null}
               </div>
             }
           />
+
+          {showExtendDialog && lease?.ends_on ? (
+            <ExtendLeaseDialog
+              leaseId={lease.id}
+              currentEndsOn={lease.ends_on}
+              onClose={() => setShowExtendDialog(false)}
+            />
+          ) : null}
 
           {showAddTemplateModal && lease ? (
             <LeaseAddTemplateModal

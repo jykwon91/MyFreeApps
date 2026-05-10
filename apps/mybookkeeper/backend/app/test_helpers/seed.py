@@ -585,6 +585,8 @@ class _SeedSignedLeaseRequest(BaseModel):
     applicant_id: uuid.UUID | None = None
     kind: str = "imported"
     status: str = "signed"
+    starts_on: _dt.date | None = None
+    ends_on: _dt.date | None = None
     attachments: list[_SeedAttachmentSpec] = []
 
 
@@ -619,6 +621,8 @@ async def seed_signed_lease(
             kind=payload.kind,
             values={},
             status=payload.status,
+            starts_on=payload.starts_on,
+            ends_on=payload.ends_on,
             signed_at=now,
             created_at=now,
             updated_at=now,
