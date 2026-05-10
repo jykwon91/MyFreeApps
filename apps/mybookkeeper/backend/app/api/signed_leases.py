@@ -24,8 +24,9 @@ from fastapi import (
 
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member, require_write_access
-from app.services.leases import lease_email_service
+from app.services.leases import lease_email_service, lease_extension_service
 from app.services.leases.lease_email_service import send_lease_to_tenant
+from app.schemas.leases.extend_lease_request import ExtendLeaseRequest
 from app.schemas.leases.signed_lease_attachment_response import (
     SignedLeaseAttachmentResponse,
 )
@@ -332,6 +333,65 @@ async def email_lease_to_tenant(
         organization_id=ctx.organization_id,
     )
     return {"queued": True}
+
+
+@router.post("/{lease_id}/extend", response_model=SignedLeaseResponse)
+async def extend_lease(
+    lease_id: uuid.UUID,
+    payload: ExtendLeaseRequest,
+    background_tasks: BackgroundTasks,
+    ctx: RequestContext = Depends(require_write_access),
+) -> SignedLeaseResponse:
+    """Extend a signed/active lease's end date.
+
+    Renders an extension addendum PDF from the system-default boilerplate,
+    attaches it to the lease as ``signed_addendum``, appends a
+    ``lease_term_versions`` row, and updates ``signed_leases.ends_on``.
+    Optionally schedules a best-effort tenant email after commit.
+
+    Errors:
+        404 — lease not found / not in the calling tenant.
+        409 — lease status is not signed/active, or ``new_ends_on`` is not
+              strictly after the current ``ends_on``, or the lease has no
+              current end date set.
+        422 — request body validation (missing date, bad format, ``notes``
+              over the length cap, unknown field).
+    """
+    try:
+        detail, _extended_at = await lease_extension_service.extend_lease(
+            user_id=ctx.user_id,
+            organization_id=ctx.organization_id,
+            lease_id=lease_id,
+            new_ends_on=payload.new_ends_on,
+            notes=payload.notes,
+        )
+    except lease_extension_service.SignedLeaseNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Lease not found") from exc
+    except lease_extension_service.InvalidLeaseStatusForExtensionError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={"code": "INVALID_STATUS_FOR_EXTENSION", "message": str(exc)},
+        ) from exc
+    except lease_extension_service.MissingCurrentEndDateError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={"code": "MISSING_CURRENT_END_DATE", "message": str(exc)},
+        ) from exc
+    except lease_extension_service.NewEndDateNotAfterCurrentError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={"code": "NEW_END_DATE_NOT_AFTER_CURRENT", "message": str(exc)},
+        ) from exc
+
+    if payload.email_tenant:
+        background_tasks.add_task(
+            send_lease_to_tenant,
+            lease_id=lease_id,
+            user_id=ctx.user_id,
+            organization_id=ctx.organization_id,
+        )
+
+    return detail
 
 
 @router.post(
