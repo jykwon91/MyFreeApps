@@ -15,7 +15,7 @@ from app.schemas.demo.demo import (
 )
 from app.services.demo import demo_service
 
-router = APIRouter(prefix="/demo", tags=["demo"])
+router = APIRouter(prefix="/admin/demo", tags=["admin", "demo"])
 
 
 @router.post("/create", response_model=DemoCreateResponse)

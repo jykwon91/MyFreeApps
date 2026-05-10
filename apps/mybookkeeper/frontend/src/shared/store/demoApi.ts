@@ -7,12 +7,12 @@ import type { DemoResetUserResponse } from "@/shared/types/demo/demo-reset-user"
 export const demoApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
     listDemoUsers: build.query<DemoUserListResponse, void>({
-      query: () => ({ url: "/demo/users", method: "GET" }),
+      query: () => ({ url: "/admin/demo/users", method: "GET" }),
       providesTags: ["Demo"],
     }),
     createTaggedDemo: build.mutation<DemoCreateTaggedResponse, DemoCreateTaggedRequest>({
       query: (body) => ({
-        url: "/demo/create",
+        url: "/admin/demo/create",
         method: "POST",
         data: body,
       }),
@@ -20,14 +20,14 @@ export const demoApi = baseApi.injectEndpoints({
     }),
     deleteDemoUser: build.mutation<DemoDeleteResponse, string>({
       query: (userId) => ({
-        url: `/demo/users/${userId}`,
+        url: `/admin/demo/users/${userId}`,
         method: "DELETE",
       }),
       invalidatesTags: ["Demo"],
     }),
     resetDemoUser: build.mutation<DemoResetUserResponse, string>({
       query: (userId) => ({
-        url: `/demo/reset/${userId}`,
+        url: `/admin/demo/reset/${userId}`,
         method: "POST",
       }),
       invalidatesTags: ["Demo"],

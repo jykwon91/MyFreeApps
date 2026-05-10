@@ -53,11 +53,11 @@ test.describe("Demo Users Management (consolidated page)", () => {
   });
 
   test("table shows correct columns when users exist", async ({ authedPage: page, api }) => {
-    const res = await api.get("/demo/users");
+    const res = await api.get("/admin/demo/users");
     const data = await res.json();
 
     if (data.total === 0) {
-      await api.post("/demo/create", { data: { tag: "E2E Column Test" } });
+      await api.post("/admin/demo/create", { data: { tag: "E2E Column Test" } });
       await page.reload();
       await expect(page.getByRole("heading", { name: "Demo Management" })).toBeVisible({ timeout: 15000 });
     }
@@ -70,7 +70,7 @@ test.describe("Demo Users Management (consolidated page)", () => {
 
   test("delete demo user removes from table", async ({ authedPage: page, api }) => {
     const tag = `E2E Delete ${Date.now()}`;
-    await api.post("/demo/create", { data: { tag } });
+    await api.post("/admin/demo/create", { data: { tag } });
     await page.reload();
     await expect(page.getByRole("heading", { name: "Demo Management" })).toBeVisible({ timeout: 15000 });
     await expect(page.getByText(tag)).toBeVisible({ timeout: 10000 });
@@ -87,12 +87,12 @@ test.describe("Demo Users Management (consolidated page)", () => {
   });
 
   test.afterAll(async ({ api }) => {
-    const res = await api.get("/demo/users");
+    const res = await api.get("/admin/demo/users");
     if (res.ok()) {
       const data = await res.json();
       for (const user of data.users) {
         if (user.tag.startsWith("E2E")) {
-          await api.delete(`/demo/users/${user.user_id}`).catch(() => {});
+          await api.delete(`/admin/demo/users/${user.user_id}`).catch(() => {});
         }
       }
     }

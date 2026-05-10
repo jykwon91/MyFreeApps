@@ -6,12 +6,12 @@ async function cleanupDemoUsersByTag(
   api: import("@playwright/test").APIRequestContext,
   tag: string,
 ): Promise<void> {
-  const res = await api.get("/demo/users");
+  const res = await api.get("/admin/demo/users");
   if (res.ok()) {
     const data = await res.json();
     for (const user of data.users ?? []) {
       if (user.tag === tag) {
-        await api.delete(`/demo/users/${user.user_id}`).catch(() => {});
+        await api.delete(`/admin/demo/users/${user.user_id}`).catch(() => {});
       }
     }
   }
@@ -26,7 +26,7 @@ test.describe("Demo Seed Data Verification", () => {
 
   test.beforeAll(async ({ api }) => {
     await cleanupDemoUsersByTag(api, TAG);
-    const createRes = await api.post("/demo/create", { data: { tag: TAG } });
+    const createRes = await api.post("/admin/demo/create", { data: { tag: TAG } });
     if (createRes.ok()) {
       const createData = await createRes.json();
       const loginRes = await fetch(`${BACKEND_URL}/auth/jwt/login`, {
