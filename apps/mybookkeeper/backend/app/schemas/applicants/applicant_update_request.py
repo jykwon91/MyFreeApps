@@ -1,34 +1,22 @@
 """Pydantic schema for PATCH /applicants/{applicant_id} — contract date update.
 
-Only ``contract_start`` and ``contract_end`` are accepted in this request.
-Both fields are optional — a partial update (e.g. only updating ``contract_end``)
-is fully supported. Omitting a field entirely means "leave it unchanged".
+Only ``contract_start`` is accepted. ``contract_end`` is derived from the
+latest signed lease's ``ends_on`` and is read-only on the applicant — the
+host enters it when creating the lease draft, not on the applicant page.
 
-Cross-field validation: if both dates are provided, ``contract_end`` must be
-strictly after ``contract_start``. If only one is provided, no cross-field
-check is possible (we don't know what the current DB value of the other field
-is here), so that check is delegated to the service layer if needed.
-
-``extra="forbid"`` ensures attackers cannot inject unexpected fields.
+``extra="forbid"`` ensures attackers cannot inject unexpected fields and
+also catches stale frontend payloads that still ship ``contract_end``
+(returns 422 with a clear field-not-allowed error rather than silently
+ignoring the value).
 """
 from __future__ import annotations
 
 import datetime as _dt
 
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict
 
 
 class ApplicantUpdateRequest(BaseModel):
     contract_start: _dt.date | None = None
-    contract_end: _dt.date | None = None
 
     model_config = ConfigDict(extra="forbid")
-
-    @model_validator(mode="after")
-    def check_end_after_start(self) -> "ApplicantUpdateRequest":
-        if self.contract_start is not None and self.contract_end is not None:
-            if self.contract_end <= self.contract_start:
-                raise ValueError(
-                    "contract_end must be after contract_start"
-                )
-        return self

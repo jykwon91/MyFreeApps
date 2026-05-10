@@ -199,25 +199,17 @@ export default function ApplicantDetailBody({ applicant }: ApplicantDetailBodyPr
               </dd>
             </div>
           )}
-          {canWrite ? (
-            <ContractDatesEditor
-              key={`contract_end-${applicant.updated_at}`}
-              applicantId={applicant.id}
-              field="contract_end"
-              value={applicant.contract_end}
-              stage={applicant.stage}
-              label="End"
-            />
-          ) : (
-            <div>
-              <dt className="text-xs text-muted-foreground">End</dt>
-              <dd>
-                {applicant.contract_end
-                  ? formatLongDate(applicant.contract_end)
-                  : "—"}
-              </dd>
-            </div>
-          )}
+          {/* End date is derived from the latest signed lease's end date —
+              it is not editable on the applicant. The host enters the end
+              date when creating the lease draft. */}
+          <div>
+            <dt className="text-xs text-muted-foreground">End</dt>
+            <dd data-testid="contract-end-display">
+              {applicant.contract_end
+                ? formatLongDate(applicant.contract_end)
+                : "—"}
+            </dd>
+          </div>
           <div>
             <dt className="text-xs text-muted-foreground">Pets</dt>
             <dd>{applicant.pets ?? "—"}</dd>

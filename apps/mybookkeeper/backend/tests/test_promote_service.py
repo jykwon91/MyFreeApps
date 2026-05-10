@@ -115,7 +115,10 @@ async def test_promote_happy_path_autofills_pii_and_dates(
     assert applicant.legal_name == "Alice Tester"
     assert applicant.employer_or_hospital == "Memorial Hermann"
     assert applicant.contract_start == _dt.date(2026, 6, 1)
-    assert applicant.contract_end == _dt.date(2026, 12, 1)
+    # ``contract_end`` is no longer stored on the applicant — it is derived
+    # from the latest signed lease and there is no signed lease yet for a
+    # newly-promoted applicant, so the property returns None.
+    assert applicant.contract_end is None
     assert applicant.stage == "lead"
     assert applicant.inquiry_id == inquiry.id
 

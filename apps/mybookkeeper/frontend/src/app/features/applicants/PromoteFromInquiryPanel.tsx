@@ -31,7 +31,6 @@ interface PromoteFormValues {
   dob: string;
   employer_or_hospital: string;
   contract_start: string;
-  contract_end: string;
   vehicle_make_model: string;
   smoker_choice: "" | "yes" | "no";
   pets: string;
@@ -59,7 +58,6 @@ function buildDefaults(inquiry: InquiryResponse): PromoteFormValues {
     dob: "",
     employer_or_hospital: inquiry.inquirer_employer ?? "",
     contract_start: inquiry.desired_start_date ?? "",
-    contract_end: inquiry.desired_end_date ?? "",
     vehicle_make_model: "",
     smoker_choice: "",
     pets: "",
@@ -76,7 +74,6 @@ function formValuesToRequest(values: PromoteFormValues): ApplicantPromoteRequest
     dob: values.dob === "" ? null : values.dob,
     employer_or_hospital: trim(values.employer_or_hospital),
     contract_start: values.contract_start === "" ? null : values.contract_start,
-    contract_end: values.contract_end === "" ? null : values.contract_end,
     vehicle_make_model: trim(values.vehicle_make_model),
     smoker:
       values.smoker_choice === ""
@@ -113,11 +110,7 @@ export default function PromoteFromInquiryPanel({ inquiry, onClose }: PromoteFro
   const {
     register,
     handleSubmit,
-    watch,
-    formState: { errors },
   } = useForm<PromoteFormValues>({ defaultValues: defaults });
-
-  const startDate = watch("contract_start");
 
   async function onSubmit(values: PromoteFormValues) {
     try {
@@ -222,52 +215,23 @@ export default function PromoteFromInquiryPanel({ inquiry, onClose }: PromoteFro
             </FormField>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <FormField
-              label="Contract start"
-              highlight={!inquiry.desired_start_date}
-            >
-              <div className="flex items-center gap-2">
-                <input
-                  type="date"
-                  {...register("contract_start")}
-                  data-testid="promote-form-contract-start"
-                  className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
-                />
-                {!inquiry.desired_start_date ? <MissingHint /> : null}
-              </div>
-            </FormField>
-            <FormField
-              label="Contract end"
-              highlight={!inquiry.desired_end_date}
-            >
-              <div className="flex items-center gap-2">
-                <input
-                  type="date"
-                  {...register("contract_end", {
-                    validate: (value) => {
-                      if (!value || !startDate) return true;
-                      return (
-                        value >= startDate ||
-                        "End date can't be before start date"
-                      );
-                    },
-                  })}
-                  data-testid="promote-form-contract-end"
-                  className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
-                />
-                {!inquiry.desired_end_date ? <MissingHint /> : null}
-              </div>
-              {errors.contract_end ? (
-                <p
-                  className="text-xs text-red-600 mt-1"
-                  data-testid="promote-form-contract-end-error"
-                >
-                  {errors.contract_end.message}
-                </p>
-              ) : null}
-            </FormField>
-          </div>
+          {/* Contract end is no longer captured at promotion time — it is
+              derived from the latest signed lease's end date. The host
+              enters the end date when creating the lease draft. */}
+          <FormField
+            label="Contract start"
+            highlight={!inquiry.desired_start_date}
+          >
+            <div className="flex items-center gap-2">
+              <input
+                type="date"
+                {...register("contract_start")}
+                data-testid="promote-form-contract-start"
+                className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px]"
+              />
+              {!inquiry.desired_start_date ? <MissingHint /> : null}
+            </div>
+          </FormField>
 
           <FormField label="Vehicle (make / model)" highlight>
             <div className="flex items-center gap-2">

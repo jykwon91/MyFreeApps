@@ -1,18 +1,19 @@
 """Unit tests for applicant_contract_service.
 
+Post-PR-1b scope: only ``contract_start`` is mutable on the applicant.
+``contract_end`` is derived from the latest signed lease's ``ends_on`` and
+is therefore not accepted by the service.
+
 Tests:
-- Happy path (lead): both dates updated, applicant_events row written with
-  correct payload (from / to).
-- Partial update (only contract_end): contract_start untouched in DB.
+- Happy path (lead): ``contract_start`` updated, applicant_events row written.
+- Partial update: omitted ``contract_start`` preserves existing value.
 - Lock check: lease_signed stage raises ContractDatesLockedError, DB unchanged.
 - Tenant isolation: unknown applicant raises LookupError.
 - event_type is 'contract_dates_changed', actor is 'host'.
 
 The service uses ``unit_of_work()`` which normally opens its own DB session.
 We patch it with ``_fake_uow(db)`` — a context manager that yields the
-already-open test session so writes go to the in-memory SQLite fixture,
-mirroring the pattern used in test_channel_sync_service.py and
-test_demo_service.py.
+already-open test session so writes go to the in-memory SQLite fixture.
 """
 from __future__ import annotations
 
@@ -48,7 +49,6 @@ def _make_applicant(
     user_id: uuid.UUID,
     stage: str = "lead",
     contract_start: _dt.date | None = None,
-    contract_end: _dt.date | None = None,
 ) -> Applicant:
     applicant = Applicant(
         id=uuid.uuid4(),
@@ -56,19 +56,17 @@ def _make_applicant(
         user_id=user_id,
         stage=stage,
         contract_start=contract_start,
-        contract_end=contract_end,
     )
     session.add(applicant)
     return applicant
 
 
 @pytest.mark.asyncio
-async def test_happy_path_both_dates_updated(db: AsyncSession) -> None:
-    """Happy path: lead applicant, both dates sent, DB updated, event written."""
+async def test_happy_path_contract_start_updated(db: AsyncSession) -> None:
+    """Happy path: lead applicant, contract_start sent, DB updated, event written."""
     org_id = uuid.uuid4()
     user_id = uuid.uuid4()
     start = _dt.date(2026, 6, 1)
-    end = _dt.date(2026, 12, 31)
 
     applicant = _make_applicant(db, org_id=org_id, user_id=user_id, stage="lead")
     await db.flush()
@@ -81,8 +79,6 @@ async def test_happy_path_both_dates_updated(db: AsyncSession) -> None:
         "app.services.applicants.applicant_service.get_applicant",
         new_callable=AsyncMock,
     ) as mock_get:
-        # The service re-loads via applicant_service.get_applicant after write.
-        # Return a minimal stub so we can assert on dates.
         from app.schemas.applicants.applicant_detail_response import ApplicantDetailResponse
         now = _dt.datetime.now(_dt.timezone.utc)
         mock_get.return_value = ApplicantDetailResponse(
@@ -91,7 +87,7 @@ async def test_happy_path_both_dates_updated(db: AsyncSession) -> None:
             user_id=user_id,
             stage="lead",
             contract_start=start,
-            contract_end=end,
+            contract_end=None,
             created_at=now,
             updated_at=now,
         )
@@ -101,15 +97,11 @@ async def test_happy_path_both_dates_updated(db: AsyncSession) -> None:
             user_id=user_id,
             applicant_id=applicant_id,
             contract_start=start,
-            contract_end=end,
             contract_start_sent=True,
-            contract_end_sent=True,
         )
 
     assert result.contract_start == start
-    assert result.contract_end == end
 
-    # Verify applicant_events row was written in the test DB.
     events_result = await db.execute(
         select(ApplicantEvent).where(ApplicantEvent.applicant_id == applicant_id)
     )
@@ -120,18 +112,15 @@ async def test_happy_path_both_dates_updated(db: AsyncSession) -> None:
     assert evt.actor == "host"
     assert evt.payload is not None
     assert evt.payload["to"]["contract_start"] == "2026-06-01"
-    assert evt.payload["to"]["contract_end"] == "2026-12-31"
     assert evt.payload["from"]["contract_start"] is None
-    assert evt.payload["from"]["contract_end"] is None
 
 
 @pytest.mark.asyncio
-async def test_partial_update_only_contract_end(db: AsyncSession) -> None:
-    """Only contract_end sent (contract_start=None) → contract_start unchanged."""
+async def test_partial_update_contract_start_omitted(db: AsyncSession) -> None:
+    """``contract_start_sent=False`` → existing value preserved."""
     org_id = uuid.uuid4()
     user_id = uuid.uuid4()
     existing_start = _dt.date(2026, 5, 1)
-    new_end = _dt.date(2026, 11, 30)
 
     applicant = _make_applicant(
         db,
@@ -139,82 +128,6 @@ async def test_partial_update_only_contract_end(db: AsyncSession) -> None:
         user_id=user_id,
         stage="approved",
         contract_start=existing_start,
-    )
-    await db.flush()
-    applicant_id = applicant.id
-
-    with patch(
-        "app.services.applicants.applicant_contract_service.unit_of_work",
-        _make_fake_uow(db),
-    ), patch(
-        "app.services.applicants.applicant_service.get_applicant",
-        new_callable=AsyncMock,
-    ) as mock_get:
-        from app.schemas.applicants.applicant_detail_response import ApplicantDetailResponse
-        now = _dt.datetime.now(_dt.timezone.utc)
-        mock_get.return_value = ApplicantDetailResponse(
-            id=applicant_id,
-            organization_id=org_id,
-            user_id=user_id,
-            stage="approved",
-            contract_start=existing_start,
-            contract_end=new_end,
-            created_at=now,
-            updated_at=now,
-        )
-
-        result = await update_contract_dates(
-            organization_id=org_id,
-            user_id=user_id,
-            applicant_id=applicant_id,
-            contract_start=None,  # not in the request → keep existing
-            contract_end=new_end,
-            contract_start_sent=False,
-            contract_end_sent=True,
-        )
-
-    # contract_start must be preserved.
-    assert result.contract_start == existing_start
-    assert result.contract_end == new_end
-
-    # Applicant row must reflect the merge.
-    await db.refresh(applicant)
-    assert applicant.contract_start == existing_start
-    assert applicant.contract_end == new_end
-
-    # Event payload must reflect the resolved values.
-    events_result = await db.execute(
-        select(ApplicantEvent).where(ApplicantEvent.applicant_id == applicant_id)
-    )
-    change_events = [
-        e for e in events_result.scalars().all()
-        if e.event_type == "contract_dates_changed"
-    ]
-    assert len(change_events) == 1
-    assert change_events[0].payload["to"]["contract_start"] == "2026-05-01"
-    assert change_events[0].payload["to"]["contract_end"] == "2026-11-30"
-
-
-@pytest.mark.asyncio
-async def test_explicit_null_clears_contract_end(db: AsyncSession) -> None:
-    """contract_end_sent=True with contract_end=None → DB column set to NULL.
-
-    Verifies the audit fix from 2026-05-08 — previously sending ``null`` for
-    a date field was indistinguishable from omitting it, so the field could
-    only be set, never cleared.
-    """
-    org_id = uuid.uuid4()
-    user_id = uuid.uuid4()
-    existing_start = _dt.date(2026, 5, 1)
-    existing_end = _dt.date(2026, 11, 30)
-
-    applicant = _make_applicant(
-        db,
-        org_id=org_id,
-        user_id=user_id,
-        stage="approved",
-        contract_start=existing_start,
-        contract_end=existing_end,
     )
     await db.flush()
     applicant_id = applicant.id
@@ -244,17 +157,62 @@ async def test_explicit_null_clears_contract_end(db: AsyncSession) -> None:
             user_id=user_id,
             applicant_id=applicant_id,
             contract_start=None,
-            contract_end=None,
-            contract_start_sent=False,  # not in request → preserve
-            contract_end_sent=True,    # in request, value=None → clear
+            contract_start_sent=False,
         )
 
     assert result.contract_start == existing_start
-    assert result.contract_end is None
 
     await db.refresh(applicant)
     assert applicant.contract_start == existing_start
-    assert applicant.contract_end is None
+
+
+@pytest.mark.asyncio
+async def test_explicit_null_clears_contract_start(db: AsyncSession) -> None:
+    """``contract_start_sent=True`` with ``None`` value → DB column cleared."""
+    org_id = uuid.uuid4()
+    user_id = uuid.uuid4()
+    existing_start = _dt.date(2026, 5, 1)
+
+    applicant = _make_applicant(
+        db,
+        org_id=org_id,
+        user_id=user_id,
+        stage="approved",
+        contract_start=existing_start,
+    )
+    await db.flush()
+    applicant_id = applicant.id
+
+    with patch(
+        "app.services.applicants.applicant_contract_service.unit_of_work",
+        _make_fake_uow(db),
+    ), patch(
+        "app.services.applicants.applicant_service.get_applicant",
+        new_callable=AsyncMock,
+    ) as mock_get:
+        from app.schemas.applicants.applicant_detail_response import ApplicantDetailResponse
+        now = _dt.datetime.now(_dt.timezone.utc)
+        mock_get.return_value = ApplicantDetailResponse(
+            id=applicant_id,
+            organization_id=org_id,
+            user_id=user_id,
+            stage="approved",
+            contract_start=None,
+            contract_end=None,
+            created_at=now,
+            updated_at=now,
+        )
+
+        await update_contract_dates(
+            organization_id=org_id,
+            user_id=user_id,
+            applicant_id=applicant_id,
+            contract_start=None,
+            contract_start_sent=True,
+        )
+
+    await db.refresh(applicant)
+    assert applicant.contract_start is None
 
     events_result = await db.execute(
         select(ApplicantEvent).where(ApplicantEvent.applicant_id == applicant_id)
@@ -264,8 +222,8 @@ async def test_explicit_null_clears_contract_end(db: AsyncSession) -> None:
         if e.event_type == "contract_dates_changed"
     ]
     assert len(change_events) == 1
-    assert change_events[0].payload["from"]["contract_end"] == "2026-11-30"
-    assert change_events[0].payload["to"]["contract_end"] is None
+    assert change_events[0].payload["from"]["contract_start"] == "2026-05-01"
+    assert change_events[0].payload["to"]["contract_start"] is None
 
 
 @pytest.mark.asyncio
@@ -274,7 +232,6 @@ async def test_lock_check_lease_signed_raises(db: AsyncSession) -> None:
     org_id = uuid.uuid4()
     user_id = uuid.uuid4()
     original_start = _dt.date(2026, 3, 1)
-    original_end = _dt.date(2026, 8, 31)
 
     applicant = _make_applicant(
         db,
@@ -282,7 +239,6 @@ async def test_lock_check_lease_signed_raises(db: AsyncSession) -> None:
         user_id=user_id,
         stage="lease_signed",
         contract_start=original_start,
-        contract_end=original_end,
     )
     await db.flush()
     applicant_id = applicant.id
@@ -296,17 +252,12 @@ async def test_lock_check_lease_signed_raises(db: AsyncSession) -> None:
             user_id=user_id,
             applicant_id=applicant_id,
             contract_start=_dt.date(2026, 4, 1),
-            contract_end=_dt.date(2026, 9, 30),
             contract_start_sent=True,
-            contract_end_sent=True,
         )
 
-    # Dates must be unchanged — no partial write should have occurred.
     await db.refresh(applicant)
     assert applicant.contract_start == original_start
-    assert applicant.contract_end == original_end
 
-    # No event should have been written.
     events_result = await db.execute(
         select(ApplicantEvent).where(
             ApplicantEvent.applicant_id == applicant_id,
@@ -328,9 +279,7 @@ async def test_unknown_applicant_raises_lookup_error(db: AsyncSession) -> None:
             user_id=uuid.uuid4(),
             applicant_id=uuid.uuid4(),
             contract_start=_dt.date(2026, 6, 1),
-            contract_end=_dt.date(2026, 12, 31),
             contract_start_sent=True,
-            contract_end_sent=True,
         )
 
 
@@ -367,9 +316,7 @@ async def test_event_actor_is_host(db: AsyncSession) -> None:
             user_id=user_id,
             applicant_id=applicant_id,
             contract_start=_dt.date(2026, 6, 1),
-            contract_end=_dt.date(2026, 12, 31),
             contract_start_sent=True,
-            contract_end_sent=True,
         )
 
     events_result = await db.execute(
