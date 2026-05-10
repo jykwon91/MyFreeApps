@@ -389,7 +389,7 @@ class TestTotpLogin:
         finally:
             app.dependency_overrides.clear()
         assert resp.status_code == 401
-        assert "Invalid" in resp.json()["detail"]
+        assert resp.json()["detail"] == "invalid_totp"
 
     @pytest.mark.asyncio
     async def test_login_with_valid_recovery_code_returns_token(

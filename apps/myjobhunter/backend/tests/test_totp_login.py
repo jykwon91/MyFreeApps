@@ -121,7 +121,7 @@ async def test_login_with_invalid_totp_returns_invalid_totp(
             "totp_code": "000000",
         },
     )
-    assert resp.status_code == 400
+    assert resp.status_code == 401
     assert resp.json()["detail"] == "invalid_totp"
 
 
@@ -176,7 +176,7 @@ async def test_recovery_code_accepted_and_consumed(
             "totp_code": first_code,
         },
     )
-    assert resp_reuse.status_code == 400
+    assert resp_reuse.status_code == 401
     assert resp_reuse.json()["detail"] == "invalid_totp"
 
     # A different recovery code should still work

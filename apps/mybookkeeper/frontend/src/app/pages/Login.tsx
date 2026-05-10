@@ -101,7 +101,12 @@ export default function Login() {
         setNeedsVerification(true);
         setResendStatus("idle");
       } else {
-        setError(needsTotp ? extractErrorMessage(err) : "Invalid email or password");
+        const detail = extractErrorMessage(err);
+        const totpMsg =
+          detail === "invalid_totp"
+            ? "Invalid authentication code. Please try again."
+            : detail;
+        setError(needsTotp ? totpMsg : "Invalid email or password");
       }
       setIsLoading(false);
     }

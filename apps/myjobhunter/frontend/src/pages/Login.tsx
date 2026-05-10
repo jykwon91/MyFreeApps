@@ -131,7 +131,12 @@ export default function Login() {
         setTotpError("Authentication code didn't go through. Please try again.");
       }
     } catch (err) {
-      setTotpError(extractErrorMessage(err));
+      const detail = extractErrorMessage(err);
+      setTotpError(
+        detail === "invalid_totp"
+          ? "Invalid authentication code. Please try again."
+          : detail,
+      );
     } finally {
       setIsVerifyingTotp(false);
     }

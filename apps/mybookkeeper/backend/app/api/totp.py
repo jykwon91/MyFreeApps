@@ -169,7 +169,7 @@ async def totp_login(
                 succeeded=False,
             )
             await db.commit()
-            raise HTTPException(status_code=401, detail="Invalid authentication code")
+            raise HTTPException(status_code=401, detail="invalid_totp")
 
         event_type = AuthEventType.TOTP_RECOVERY_USED if used_recovery else AuthEventType.TOTP_VERIFY_SUCCESS
         await log_auth_event(
@@ -190,4 +190,9 @@ async def totp_login(
         request=request,
         succeeded=True,
     )
+    # Persist the LOGIN_SUCCESS event — without this commit the row is
+    # discarded when the get_db dependency tears down the session, and
+    # the credential-stuffing detection signal is lost. Failure paths
+    # already commit explicitly above; success was missing parity.
+    await db.commit()
     return TotpLoginResponse(access_token=token, token_type="bearer")
