@@ -74,42 +74,55 @@ def get_provisioning_uri(
 # DB-coupled coordinators
 # ---------------------------------------------------------------------------
 
-async def setup_totp(user_id: uuid.UUID) -> tuple[str, str, list[str]]:
-    """Generate a fresh SHA-256 TOTP enrollment and stash it on the user row.
+async def setup_totp(user_id: uuid.UUID) -> tuple[str, str]:
+    """Generate a fresh SHA-256 TOTP enrollment and stash the secret + URI.
+
+    Returns ``(secret, provisioning_uri)``. Recovery codes are NOT generated
+    here — they're issued by :func:`confirm_totp` once the user has proven
+    their authenticator can produce a valid code, so the user never walks
+    away with codes for an enrollment that doesn't actually work.
 
     Writes ``users.totp_algorithm = "sha256"`` alongside the new secret so
-    subsequent verifications use the correct HMAC digest.
+    subsequent verifications use the correct HMAC digest. ``totp_enabled``
+    stays False — the user still has to call :func:`confirm_totp`.
     """
     async with unit_of_work() as db:
         user = await user_repo.get_by_id(db, user_id)
         if user is None:
             raise ValueError("User not found")
-        secret, uri, recovery = _shared_enroll_totp(
-            label=user.email,
-            issuer=settings.totp_issuer,
-            algorithm=DEFAULT_TOTP_ALGORITHM,
-        )
+        secret = generate_secret()
         user.totp_secret = secret
-        user.totp_recovery_codes = ",".join(recovery)
+        user.totp_recovery_codes = None
         user.totp_algorithm = DEFAULT_TOTP_ALGORITHM
-        return secret, uri, recovery
+        uri = get_provisioning_uri(
+            secret, user.email, algorithm=DEFAULT_TOTP_ALGORITHM,
+        )
+        return secret, uri
 
 
-async def confirm_totp(user_id: uuid.UUID, code: str) -> bool:
-    """Verify the first TOTP code from a freshly-enrolled user.
+async def confirm_totp(user_id: uuid.UUID, code: str) -> tuple[bool, list[str]]:
+    """Verify a TOTP code and, on success, enable 2FA + issue recovery codes.
 
-    Flips ``totp_enabled`` on success. Uses ``user.totp_algorithm`` so
-    grandfathered SHA-1 users can still confirm during their grace period.
+    Returns ``(verified, recovery_codes)``. On failure or unknown user,
+    returns ``(False, [])`` and leaves all flags unchanged. Recovery codes
+    are emitted only after the authenticator is proven to work — this
+    matches MBK's posture and prevents the user from saving codes for a
+    secret they typed wrong.
+
+    Uses the algorithm stored in ``user.totp_algorithm`` so grandfathered
+    SHA-1 users can still confirm during their grace period.
     """
     async with unit_of_work() as db:
         user = await user_repo.get_by_id(db, user_id)
         if user is None or not user.totp_secret:
-            return False
+            return False, []
         algorithm: TotpAlgorithm = user.totp_algorithm  # type: ignore[assignment]
         if not verify_code(user.totp_secret, code, algorithm=algorithm):
-            return False
+            return False, []
+        recovery = generate_recovery_codes()
         user.totp_enabled = True
-        return True
+        user.totp_recovery_codes = ",".join(recovery)
+        return True, recovery
 
 
 async def disable_totp(user_id: uuid.UUID, code: str) -> bool:

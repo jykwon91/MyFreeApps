@@ -59,22 +59,17 @@ async def setup_totp(
 ) -> TotpSetupResponse:
     """Begin TOTP enrollment.
 
-    Generates a fresh secret + provisioning URI + 8 recovery codes and stashes
-    all three on the user row (encrypted at rest by the column type). Does
-    NOT yet flip ``totp_enabled`` — the user must call ``/verify`` with a
-    valid code first.
-
-    Recovery codes are returned exactly once. The user is responsible for
-    saving them — the backend never re-displays individual codes.
+    Generates a fresh secret + provisioning URI and stashes them on the
+    user row (encrypted at rest by the column type). Does NOT yet flip
+    ``totp_enabled`` and does NOT issue recovery codes — the user must
+    call ``/verify`` with a valid code first. Recovery codes are emitted
+    only after the authenticator is proven to work, so the user never
+    walks away with codes for an enrollment that doesn't actually work.
     """
     if user.totp_enabled:
         raise HTTPException(400, "2FA is already enabled")
-    secret, uri, recovery = await totp_service.setup_totp(user.id)
-    return TotpSetupResponse(
-        secret=secret,
-        provisioning_uri=uri,
-        recovery_codes=recovery,
-    )
+    secret, uri = await totp_service.setup_totp(user.id)
+    return TotpSetupResponse(secret=secret, provisioning_uri=uri)
 
 
 @router.post("/verify", response_model=TotpVerifyResponse)
@@ -86,11 +81,13 @@ async def verify_totp(
 ) -> TotpVerifyResponse:
     """Confirm enrollment by validating the first 6-digit code.
 
-    On success: ``totp_enabled`` is set to True and a TOTP_ENABLED auth event
-    is logged. On failure: returns 400 — the user can try again without
-    losing their pending secret.
+    On success: ``totp_enabled`` is set to True, recovery codes are
+    generated + persisted, and the response carries them so the user can
+    save them. The codes are emitted exactly once — the backend never
+    re-displays individual codes. On failure: returns 400 — the user can
+    try again without losing their pending secret.
     """
-    verified = await totp_service.confirm_totp(user.id, body.code)
+    verified, recovery_codes = await totp_service.confirm_totp(user.id, body.code)
     if not verified:
         raise HTTPException(400, "Invalid verification code")
     await log_auth_event(
@@ -104,7 +101,7 @@ async def verify_totp(
     # handler is the natural commit boundary for audit-only writes that
     # don't share a transaction with any business write.
     await db.commit()
-    return TotpVerifyResponse(verified=True)
+    return TotpVerifyResponse(verified=True, recovery_codes=recovery_codes)
 
 
 @router.post("/disable", response_model=TotpDisableResponse)

@@ -13,12 +13,11 @@ class TotpSetupResponse(BaseModel):
 
     The plaintext secret + provisioning URI are shown to the user in the
     enrollment UI (manual-entry fallback + QR code). Recovery codes are
-    surfaced once at enrollment and never re-displayed — the user must save
-    them or they're lost.
+    NOT issued here — they're returned by ``POST /auth/totp/verify`` once
+    the user has proven the authenticator works.
     """
     secret: str
     provisioning_uri: str
-    recovery_codes: list[str]
 
 
 class TotpVerifyRequest(BaseModel):
@@ -27,7 +26,14 @@ class TotpVerifyRequest(BaseModel):
 
 
 class TotpVerifyResponse(BaseModel):
+    """Returned from ``POST /auth/totp/verify``.
+
+    On successful confirmation, the response carries the freshly-generated
+    recovery codes. The user is responsible for saving them — the backend
+    never re-displays individual codes.
+    """
     verified: bool
+    recovery_codes: list[str] = Field(default_factory=list)
 
 
 class TotpDisableRequest(BaseModel):

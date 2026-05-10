@@ -49,7 +49,6 @@ export default function TwoFactorSetup() {
       .unwrap()
       .then((data) => {
         setSetup(data);
-        setRecoveryCodes(data.recovery_codes);
         setStep("verify");
       })
       .catch((err: unknown) => setError(extractErrorMessage(err)));
@@ -61,6 +60,7 @@ export default function TwoFactorSetup() {
       .unwrap()
       .then((data) => {
         if (data.verified) {
+          setRecoveryCodes(data.recovery_codes);
           setStep("recovery");
           showSuccess("2FA enabled successfully");
         }
