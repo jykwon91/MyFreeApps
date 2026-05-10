@@ -1,24 +1,18 @@
 import logging
 import uuid
-from datetime import datetime, timedelta, timezone
-from typing import Any, Optional, Union
+from datetime import timedelta
+from typing import Any, Optional
 
 from fastapi import Depends, Request
-from fastapi.security import OAuth2PasswordRequestForm
-from fastapi_users import BaseUserManager, FastAPIUsers, InvalidPasswordException, UUIDIDMixin, exceptions, models, schemas
+from fastapi_users import FastAPIUsers
 from fastapi_users.db import SQLAlchemyUserDatabase
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from platform_shared.auth.jwt_backend import build_jwt_auth_backend
+from platform_shared.auth.user_manager import PlatformBaseUserManager
 from platform_shared.core.auth_events import AuthEventType
-from platform_shared.services.account_lockout import (
-    autoreset_update_if_stale,
-    emit_locked_login_event,
-    is_locked as account_is_locked,
-    lock_duration_for,
-    record_failed_login,
-    record_successful_login_update,
-)
-from platform_shared.services.hibp_service import HIBPCheckError, is_password_pwned
+from platform_shared.services.account_lockout import lock_duration_for
+from platform_shared.services.auth_event_service import log_auth_event
 
 from app.core.config import settings
 from app.db.session import get_db
@@ -26,12 +20,14 @@ from app.models.organization.organization import Organization
 from app.models.organization.organization_member import OrganizationMember
 from app.models.organization.tax_profile import TaxProfile
 from app.models.user.user import User
-from platform_shared.services.auth_event_service import log_auth_event
 from app.services.system.password_reset_email import send_password_reset_email
 from app.services.system.verification_email import send_verification_email
 
 logger = logging.getLogger(__name__)
 
+# Module-level back-compat alias — test_password_validation.py and other
+# call sites import this. The value lives in
+# :class:`PlatformBaseUserManager.min_password_length`.
 MIN_PASSWORD_LENGTH = 12
 
 
@@ -50,214 +46,66 @@ async def get_user_db(session: AsyncSession = Depends(get_db)):
     yield SQLAlchemyUserDatabase(session, User)
 
 
-class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
+class UserManager(PlatformBaseUserManager[User]):
     reset_password_token_secret = settings.secret_key
     verification_token_secret = settings.secret_key
 
-    async def authenticate(
-        self, credentials: OAuth2PasswordRequestForm,
-    ) -> Optional[models.UP]:
-        """Authenticate a user with account-level lockout enforcement.
+    # Properties read settings at call time so tests that monkeypatch
+    # ``app.core.auth.settings`` (or the underlying field) still take effect
+    # on the next request.
+    @property
+    def lockout_threshold(self) -> int:
+        return settings.lockout_threshold
 
-        Layers on top of the standard fastapi-users authenticate():
-        1. Check if account is locked — reject without checking password.
-        2. Auto-reset stale failure counter (no activity in >24 h).
-        3. Delegate to parent for password verification.
-        4. On failure: increment counter, apply exponential lock at threshold.
-        5. On success: clear counter and lock.
+    @property
+    def lockout_autoreset_hours(self) -> int:
+        return settings.lockout_autoreset_hours
 
-        Also blocks TOTP-enabled users — they must use /auth/totp/login.
-        """
-        db = self.user_db.session
+    @property
+    def hibp_enabled(self) -> bool:
+        return settings.hibp_enabled
 
-        try:
-            user = await self.get_by_email(credentials.username)
-        except exceptions.UserNotExists:
-            # Unknown email — mimic parent's timing mitigation and return None.
-            self.password_helper.hash(credentials.password)
-            # Log without a user_id; store only the domain to avoid full-email PII.
-            email_domain = credentials.username.split("@", 1)[-1] if "@" in credentials.username else ""
-            await log_auth_event(
-                db,
-                event_type=AuthEventType.LOGIN_FAILURE,
-                user_id=None,
-                succeeded=False,
-                metadata={"email_domain": email_domain, "reason": "unknown_email"},
-            )
-            return None
-
-        now = datetime.now(tz=timezone.utc)
-
-        # Reject immediately if a lock is still in effect.
-        if account_is_locked(user, now=now):
-            logger.info(
-                "Login rejected for locked account user_id=%s (locked until %s)",
-                user.id,
-                user.locked_until,
-            )
-            await emit_locked_login_event(db=db, user_id=user.id)
-            return None
-
-        # Auto-reset a stale counter — occasional typos should not compound forever.
-        autoreset = autoreset_update_if_stale(
-            user,
-            now=now,
-            autoreset_hours=settings.lockout_autoreset_hours,
+    async def on_after_register(self, user: User, request=None) -> None:
+        """Auto-create a personal organization for every new user, then send verification email."""
+        org = Organization(name=f"{user.email}'s Workspace", created_by=user.id)
+        self.user_db.session.add(org)
+        await self.user_db.session.flush()
+        member = OrganizationMember(
+            organization_id=org.id, user_id=user.id, org_role="owner",
         )
-        if autoreset is not None:
-            await self.user_db.update(user, autoreset)
-            user.failed_login_count = 0
-            user.last_failed_login_at = None
-            user.locked_until = None
-
-        # Delegate to parent for password verification.
-        result = await super().authenticate(credentials)
-
-        if result is None:
-            # Bad password — increment failure counter and apply exponential
-            # lock at threshold via the shared policy module.
-            update = await record_failed_login(
-                user,
-                db=db,
-                user_id=user.id,
-                lockout_threshold=settings.lockout_threshold,
-                metadata={"reason": "bad_password"},
-                now=now,
-            )
-            if "locked_until" in update:
-                logger.warning(
-                    "Account locked: user_id=%s until %s (consecutive failures: %d)",
-                    user.id,
-                    update["locked_until"],
-                    update["failed_login_count"],
-                )
-            await self.user_db.update(user, update)
-            return None
-
-        # Successful password match — clear lockout state if any.
-        clear_update = record_successful_login_update(result)
-        if clear_update is not None:
-            await self.user_db.update(result, clear_update)
-
-        # Block unverified users — they must click the verification link first.
-        # The TOTP login endpoint surfaces LOGIN_USER_NOT_VERIFIED to the frontend.
-        # The standard JWT endpoint gets generic 400 (bad credentials) which is acceptable.
-        if not result.is_verified:
-            await log_auth_event(
-                db,
-                event_type=AuthEventType.LOGIN_BLOCKED_UNVERIFIED,
-                user_id=result.id,
-                succeeded=False,
-            )
-            return None
-
-        # Block TOTP-enabled users from the standard login endpoint.
-        # They must use /auth/totp/login which validates the TOTP code first.
-        if getattr(result, "totp_enabled", False):
-            return None
-
+        self.user_db.session.add(member)
+        await self.user_db.session.flush()
+        tax_profile = TaxProfile(organization_id=org.id)
+        self.user_db.session.add(tax_profile)
+        await self.user_db.session.flush()
         await log_auth_event(
-            db,
-            event_type=AuthEventType.LOGIN_SUCCESS,
-            user_id=result.id,
+            self.user_db.session,
+            event_type=AuthEventType.REGISTER_SUCCESS,
+            user_id=user.id,
             succeeded=True,
         )
-        return result
+        await self.request_verify(user, request)
 
-    async def authenticate_password(
-        self,
-        credentials: OAuth2PasswordRequestForm,
-        request: Optional[Request] = None,
-    ) -> Optional[models.UP]:
-        """Authenticate password only (no TOTP check), with full lockout tracking.
-
-        Used by the unified /auth/totp/login endpoint.  Replicates the
-        lockout-counter logic from :meth:`authenticate` so that bad-password
-        attempts via this path increment ``failed_login_count`` and ultimately
-        lock the account — closing the bypass that existed when this method
-        called ``super().authenticate()`` directly.
-
-        The route-level ``check_totp_account_not_locked`` dependency handles the
-        early-reject case; this method handles the counter update on failure and
-        the counter clear on success.
-
-        Pass ``request`` so that ``emit_locked_login_event`` can capture
-        ``ip_address`` and ``user_agent`` in the audit row.
-        """
-        db = self.user_db.session
-
-        try:
-            user = await self.get_by_email(credentials.username)
-        except exceptions.UserNotExists:
-            self.password_helper.hash(credentials.password)
-            return None
-
-        now = datetime.now(tz=timezone.utc)
-
-        # Auto-reset stale counter before the password check.
-        autoreset = autoreset_update_if_stale(
-            user,
-            now=now,
-            autoreset_hours=settings.lockout_autoreset_hours,
-        )
-        if autoreset is not None:
-            await self.user_db.update(user, autoreset)
-            user.failed_login_count = 0
-            user.last_failed_login_at = None
-            user.locked_until = None
-
-        # Delegate to parent for password verification only (no TOTP gate).
-        result = await super().authenticate(credentials)
-
-        if result is None:
-            update = await record_failed_login(
-                user,
-                db=db,
-                user_id=user.id,
-                lockout_threshold=settings.lockout_threshold,
-                metadata={"reason": "bad_password"},
-                now=now,
-            )
-            if "locked_until" in update:
-                logger.warning(
-                    "Account locked: user_id=%s until %s (consecutive failures: %d)",
-                    user.id,
-                    update["locked_until"],
-                    update["failed_login_count"],
-                )
-            await self.user_db.update(user, update)
-            return None
-
-        # Successful password match — clear lockout state if any.
-        clear_update = record_successful_login_update(result)
-        if clear_update is not None:
-            await self.user_db.update(result, clear_update)
-
-        return result
-
-    async def validate_password(
-        self, password: str, user: Union[schemas.UC, models.UP],
+    async def on_after_request_verify(
+        self, user: User, token: str, request=None,
     ) -> None:
-        if len(password) < MIN_PASSWORD_LENGTH:
-            raise InvalidPasswordException(
-                reason=f"Password must be at least {MIN_PASSWORD_LENGTH} characters",
-            )
+        """Send verification email when a token is generated (registration or resend).
 
-        if settings.hibp_enabled:
-            try:
-                if await is_password_pwned(password):
-                    raise InvalidPasswordException(
-                        reason=(
-                            "This password has appeared in a known data breach. "
-                            "Please pick a different one. "
-                            "(We checked anonymously — your password never left our server in plaintext.)"
-                        ),
-                    )
-            except HIBPCheckError:
-                # Fail-open: a HIBP outage must not block registrations or password resets.
-                # The tradeoff is a narrow window where a breached password slips through;
-                # the alternative (fail-closed) means any HIBP downtime = no signups.
-                logger.warning("HIBP check failed; accepting password without breach check", exc_info=True)
+        Raises on any send failure so the registration / resend HTTP request
+        fails 5xx and the user retries — never returns a 2xx with the
+        verification email lost. The pre-2026-05-09 bool-returning version
+        silently swallowed failures, which produced the
+        kennethmontgo@gmail.com bug class (registered-but-unverified
+        account with no recovery path).
+        """
+        send_verification_email(user.email, token)
+        logger.info("Verification email sent to %s", user.email)
+        await log_auth_event(
+            self.user_db.session,
+            event_type=AuthEventType.EMAIL_VERIFY_RESEND,
+            user_id=user.id,
+            succeeded=True,
+        )
 
     async def on_after_forgot_password(
         self, user: User, token: str, request: Optional[Request] = None,
@@ -266,9 +114,7 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
 
         Raises on any send failure so the forgot-password HTTP request
         fails 5xx and the user retries — never returns 2xx with the reset
-        email lost. The pre-2026-05-09 bool-returning version silently
-        swallowed failures (sister to the kennethmontgo@gmail.com
-        verification-email gap fixed in PR #540).
+        email lost.
         """
         send_password_reset_email(user.email, token)
         logger.info("Password reset email sent to %s", user.email)
@@ -314,48 +160,6 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
                 succeeded=True,
             )
 
-    async def on_after_register(self, user: User, request=None):
-        """Auto-create a personal organization for every new user, then send verification email."""
-        org = Organization(name=f"{user.email}'s Workspace", created_by=user.id)
-        self.user_db.session.add(org)
-        await self.user_db.session.flush()
-        member = OrganizationMember(
-            organization_id=org.id, user_id=user.id, org_role="owner",
-        )
-        self.user_db.session.add(member)
-        await self.user_db.session.flush()
-        tax_profile = TaxProfile(organization_id=org.id)
-        self.user_db.session.add(tax_profile)
-        await self.user_db.session.flush()
-        await log_auth_event(
-            self.user_db.session,
-            event_type=AuthEventType.REGISTER_SUCCESS,
-            user_id=user.id,
-            succeeded=True,
-        )
-        await self.request_verify(user, request)
-
-    async def on_after_request_verify(
-        self, user: User, token: str, request=None,
-    ) -> None:
-        """Send verification email when a token is generated (registration or resend).
-
-        Raises on any send failure so the registration / resend HTTP request
-        fails 5xx and the user retries — never returns a 2xx with the
-        verification email lost. The pre-2026-05-09 bool-returning version
-        silently swallowed failures, which produced the
-        kennethmontgo@gmail.com bug class (registered-but-unverified
-        account with no recovery path).
-        """
-        send_verification_email(user.email, token)
-        logger.info("Verification email sent to %s", user.email)
-        await log_auth_event(
-            self.user_db.session,
-            event_type=AuthEventType.EMAIL_VERIFY_RESEND,
-            user_id=user.id,
-            succeeded=True,
-        )
-
     async def on_after_verify(
         self, user: User, request=None,
     ) -> None:
@@ -372,8 +176,6 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
 async def get_user_manager(user_db: SQLAlchemyUserDatabase = Depends(get_user_db)):
     yield UserManager(user_db)
 
-
-from platform_shared.auth.jwt_backend import build_jwt_auth_backend
 
 # Constructed via the shared factory so future apps inherit the wiring.
 # Destructure into module-level names so existing

@@ -30,7 +30,7 @@ def _enable_hibp(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.mark.asyncio
 async def test_pwned_password_rejected_with_breach_message(client: AsyncClient) -> None:
-    with patch("app.core.auth.is_password_pwned", new=AsyncMock(return_value=True)):
+    with patch("platform_shared.auth.user_manager.is_password_pwned", new=AsyncMock(return_value=True)):
         resp = await client.post(
             "/auth/register",
             json={"email": _email(), "password": "correct horse battery staple"},
@@ -49,7 +49,7 @@ async def test_pwned_password_rejected_with_breach_message(client: AsyncClient) 
 async def test_clean_password_passes_hibp_check(client: AsyncClient) -> None:
     """A password not in the HIBP corpus should not be rejected on HIBP grounds."""
     email = _email()
-    with patch("app.core.auth.is_password_pwned", new=AsyncMock(return_value=False)):
+    with patch("platform_shared.auth.user_manager.is_password_pwned", new=AsyncMock(return_value=False)):
         resp = await client.post(
             "/auth/register",
             json={"email": email, "password": "this-is-a-strong-unique-pass-9173"},
@@ -70,7 +70,7 @@ async def test_hibp_disabled_skips_check(client: AsyncClient, monkeypatch) -> No
     """When HIBP_ENABLED=false the network check is skipped entirely."""
     monkeypatch.setattr(settings, "hibp_enabled", False)
     mock_check = AsyncMock(return_value=True)
-    with patch("app.core.auth.is_password_pwned", new=mock_check):
+    with patch("platform_shared.auth.user_manager.is_password_pwned", new=mock_check):
         resp = await client.post(
             "/auth/register",
             json={"email": _email(), "password": "any-password-1234"},
@@ -85,7 +85,7 @@ async def test_hibp_outage_fails_open(client: AsyncClient, caplog) -> None:
     """If HIBP raises HIBPCheckError, registration succeeds with a WARNING log."""
     raise_outage = AsyncMock(side_effect=HIBPCheckError("simulated outage"))
     with caplog.at_level(logging.WARNING, logger="app.core.auth"):
-        with patch("app.core.auth.is_password_pwned", new=raise_outage):
+        with patch("platform_shared.auth.user_manager.is_password_pwned", new=raise_outage):
             resp = await client.post(
                 "/auth/register",
                 json={"email": _email(), "password": "another-strong-password-7777"},
@@ -101,7 +101,7 @@ async def test_hibp_outage_fails_open(client: AsyncClient, caplog) -> None:
 async def test_short_password_rejected_before_hibp(client: AsyncClient) -> None:
     """Length check must fire first so HIBP isn't called for trivially short passwords."""
     mock_check = AsyncMock(return_value=False)
-    with patch("app.core.auth.is_password_pwned", new=mock_check):
+    with patch("platform_shared.auth.user_manager.is_password_pwned", new=mock_check):
         resp = await client.post(
             "/auth/register",
             json={"email": _email(), "password": "short"},

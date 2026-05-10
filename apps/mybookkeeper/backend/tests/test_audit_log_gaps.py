@@ -188,7 +188,7 @@ class TestNoEmailInLockedAccountLogs:
 
         try:
             with patch(
-                "app.core.auth.emit_locked_login_event",
+                "platform_shared.auth.user_manager.emit_locked_login_event",
                 new_callable=AsyncMock,
             ):
                 await manager.authenticate(creds)

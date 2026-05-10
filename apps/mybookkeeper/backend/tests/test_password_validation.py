@@ -40,7 +40,7 @@ class TestPasswordLengthValidation:
         assert "at least" in exc_info.value.reason
 
     @pytest.mark.anyio
-    @patch("app.core.auth.is_password_pwned", new_callable=AsyncMock)
+    @patch("platform_shared.auth.user_manager.is_password_pwned", new_callable=AsyncMock)
     @patch("app.core.auth.settings")
     async def test_exactly_min_length_accepted_when_not_pwned(
         self, mock_settings, mock_hibp: AsyncMock
@@ -53,7 +53,7 @@ class TestPasswordLengthValidation:
         mock_hibp.assert_awaited_once()
 
     @pytest.mark.anyio
-    @patch("app.core.auth.is_password_pwned", new_callable=AsyncMock)
+    @patch("platform_shared.auth.user_manager.is_password_pwned", new_callable=AsyncMock)
     @patch("app.core.auth.settings")
     async def test_long_password_accepted_when_not_pwned(
         self, mock_settings, mock_hibp: AsyncMock
@@ -66,7 +66,7 @@ class TestPasswordLengthValidation:
 
 class TestHIBPCheck:
     @pytest.mark.anyio
-    @patch("app.core.auth.is_password_pwned", new_callable=AsyncMock)
+    @patch("platform_shared.auth.user_manager.is_password_pwned", new_callable=AsyncMock)
     @patch("app.core.auth.settings")
     async def test_pwned_password_rejected(
         self, mock_settings, mock_hibp: AsyncMock
@@ -82,7 +82,7 @@ class TestHIBPCheck:
         mock_hibp.assert_awaited_once_with("P@ssw0rd1234")
 
     @pytest.mark.anyio
-    @patch("app.core.auth.is_password_pwned", new_callable=AsyncMock)
+    @patch("platform_shared.auth.user_manager.is_password_pwned", new_callable=AsyncMock)
     @patch("app.core.auth.settings")
     async def test_hibp_failure_fails_open(
         self, mock_settings, mock_hibp: AsyncMock, caplog: pytest.LogCaptureFixture
@@ -97,7 +97,7 @@ class TestHIBPCheck:
         assert any("HIBP check failed" in r.message for r in caplog.records)
 
     @pytest.mark.anyio
-    @patch("app.core.auth.is_password_pwned", new_callable=AsyncMock)
+    @patch("platform_shared.auth.user_manager.is_password_pwned", new_callable=AsyncMock)
     @patch("app.core.auth.settings")
     async def test_hibp_disabled_skips_check(
         self, mock_settings, mock_hibp: AsyncMock
