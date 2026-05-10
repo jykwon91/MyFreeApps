@@ -37,16 +37,21 @@ this enum:
 from __future__ import annotations
 
 import enum
+import logging
 import time
 import uuid
 from collections.abc import AsyncIterator
 from typing import Awaitable, Callable, Optional, Protocol
 
+import jwt
 from fastapi import Depends, Header, HTTPException, Request
+from jwt.exceptions import PyJWTError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from platform_shared.core.auth_events import AuthEventType
 from platform_shared.services.auth_event_service import log_auth_event
+
+_iat_logger = logging.getLogger(__name__)
 
 
 class Role(str, enum.Enum):
@@ -163,6 +168,65 @@ class _StrictSuperuserUser(Protocol):
 
     id: uuid.UUID
     is_superuser: bool
+
+
+def make_decode_token_iat(
+    *,
+    secret_key: str,
+    audience: str = "fastapi-users:auth",
+    algorithms: tuple[str, ...] = ("HS256",),
+) -> Callable[[Request], Optional[float]]:
+    """Build a callable that returns the JWT iat from a request, or None.
+
+    Used as the ``decode_token_iat`` dependency of
+    :func:`make_strict_superuser_gate`. Each app calls this once at
+    module-import time with its own ``settings.secret_key`` and stores
+    the resulting callable as a module-level value.
+
+    The callable is intentionally tolerant: any failure to decode (no
+    ``Authorization`` header, malformed token, expired, wrong audience,
+    etc.) returns ``None`` rather than raising. The strict-gate then
+    treats ``None`` as a Gate 2 failure and emits the dedicated
+    ``SUPERUSER_GATE_DENIED_TOKEN_NO_IAT`` audit event — the gate is
+    the single point of error handling.
+
+    Args:
+        secret_key: The HS256 signing key (each app's ``settings.secret_key``).
+        audience: The expected ``aud`` claim. fastapi-users defaults to
+            ``"fastapi-users:auth"`` for the bearer-JWT backend.
+        algorithms: Acceptable signing algorithms. Default ``("HS256",)``.
+
+    Returns:
+        A pure-function callable suitable for the gate's
+        ``decode_token_iat`` parameter.
+    """
+
+    def _decode(request: Request) -> Optional[float]:
+        auth = request.headers.get("Authorization", "")
+        if not auth.startswith("Bearer "):
+            return None
+        token = auth.removeprefix("Bearer ").strip()
+        if not token:
+            return None
+        try:
+            payload = jwt.decode(
+                token,
+                secret_key,
+                algorithms=list(algorithms),
+                audience=audience,
+            )
+        except PyJWTError as exc:
+            _iat_logger.debug("decode_token_iat: jwt decode failed: %s", exc)
+            return None
+        iat = payload.get("iat")
+        if iat is None:
+            return None
+        try:
+            return float(iat)
+        except (TypeError, ValueError):
+            return None
+
+    return _decode
 
 
 def make_strict_superuser_gate(
