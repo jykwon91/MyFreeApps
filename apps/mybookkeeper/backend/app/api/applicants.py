@@ -173,8 +173,8 @@ async def update_applicant(
     Errors:
         404 — applicant not found in the calling tenant.
         409 — applicant is in ``lease_signed`` stage (dates are locked).
-        422 — ``contract_end`` is not after ``contract_start`` when both
-              are provided, or extra fields were sent.
+        422 — extra fields were sent (``contract_end`` is not accepted —
+              it is derived from the latest signed lease).
     """
     sent = payload.model_fields_set
     try:
@@ -183,9 +183,7 @@ async def update_applicant(
             user_id=ctx.user_id,
             applicant_id=applicant_id,
             contract_start=payload.contract_start,
-            contract_end=payload.contract_end,
             contract_start_sent="contract_start" in sent,
-            contract_end_sent="contract_end" in sent,
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail="Applicant not found") from exc

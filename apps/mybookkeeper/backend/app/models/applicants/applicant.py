@@ -18,6 +18,8 @@ from __future__ import annotations
 import datetime as _dt
 import uuid
 
+from typing import TYPE_CHECKING
+
 from sqlalchemy import (
     Boolean,
     CheckConstraint,
@@ -31,12 +33,16 @@ from sqlalchemy import (
     func,
     text,
 )
+from sqlalchemy import inspect as sa_inspect
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.applicant_enums import APPLICANT_STAGES_SQL
 from app.core.encrypted_string_type import EncryptedString
 from app.db.base import Base
+
+if TYPE_CHECKING:
+    from app.models.leases.signed_lease import SignedLease
 
 
 class Applicant(Base):
@@ -95,7 +101,12 @@ class Applicant(Base):
     )
 
     contract_start: Mapped[_dt.date | None] = mapped_column(Date, nullable=True)
-    contract_end: Mapped[_dt.date | None] = mapped_column(Date, nullable=True)
+    # ``contract_end`` is no longer stored — it's derived from the latest
+    # non-deleted signed lease's ``ends_on`` via the ``contract_end``
+    # property below. Pre-signature there is no lease, so the value is
+    # ``None`` (the host enters the end date when creating the lease).
+    # The frontend continues to display ``contract_end`` as a read-only
+    # field surfaced through the response schemas.
 
     smoker: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     pets: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -140,6 +151,47 @@ class Applicant(Base):
         onupdate=lambda: _dt.datetime.now(_dt.timezone.utc),
         server_default=func.now(),
     )
+
+    # All signed leases for this applicant. Ordered descending by
+    # ``ends_on`` so ``signed_leases[0]`` is the latest term — the
+    # source of the derived ``contract_end`` below. Read paths that
+    # surface ``contract_end`` MUST eager-load this relationship
+    # (``selectinload(Applicant.signed_leases)``) — without the load
+    # the property silently returns ``None``.
+    signed_leases: Mapped[list["SignedLease"]] = relationship(
+        "SignedLease",
+        primaryjoin=(
+            "and_(Applicant.id == foreign(SignedLease.applicant_id), "
+            "SignedLease.deleted_at.is_(None))"
+        ),
+        order_by="SignedLease.ends_on.desc().nullslast()",
+        viewonly=True,
+        lazy="select",
+    )
+
+    @property
+    def contract_end(self) -> _dt.date | None:
+        """Latest non-deleted signed lease's ``ends_on`` for this applicant.
+
+        Returns ``None`` when:
+        - no signed lease exists yet (pre-signature),
+        - no signed lease has an ``ends_on`` populated, OR
+        - the ``signed_leases`` relationship has not been eager-loaded —
+          we deliberately do NOT trigger a lazy-load here because the
+          ORM is wired to an async session and a sync lazy-load raises
+          ``MissingGreenlet``. Callers must ``selectinload`` to get a
+          non-None result.
+
+        The relationship is ordered ``ends_on DESC NULLS LAST`` so the
+        head row is the latest.
+        """
+        state = sa_inspect(self)
+        if "signed_leases" not in state.dict:
+            return None
+        for lease in self.signed_leases:
+            if lease.ends_on is not None:
+                return lease.ends_on
+        return None
 
     __table_args__ = (
         CheckConstraint(

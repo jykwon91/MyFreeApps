@@ -9,7 +9,10 @@ const LOCKED_STAGE: ApplicantStage = "lease_signed";
 
 export interface ContractDatesEditorProps {
   applicantId: string;
-  field: "contract_start" | "contract_end";
+  /** Only ``contract_start`` is editable on the applicant. ``contract_end``
+   *  is derived from the latest signed lease's end date and rendered as
+   *  read-only on the detail page. */
+  field: "contract_start";
   value: string | null;
   stage: ApplicantStage;
   label: string;

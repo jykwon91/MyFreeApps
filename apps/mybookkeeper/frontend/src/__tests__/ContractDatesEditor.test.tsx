@@ -1,6 +1,10 @@
 /**
  * Unit tests for ContractDatesEditor.
  *
+ * Post-PR-1b scope: ``contract_end`` is no longer editable on the applicant
+ * (it's derived from the latest signed lease). The editor only handles
+ * ``contract_start`` now.
+ *
  * Tests:
  * - Editable when stage !== 'lease_signed'
  * - Read-only with lock icon when stage === 'lease_signed'
@@ -38,16 +42,15 @@ vi.mock("@/shared/hooks/useToast", () => ({
 function renderEditor(
   overrides: Partial<{
     stage: ApplicantStage;
-    field: "contract_start" | "contract_end";
     value: string | null;
   }> = {},
 ) {
   const props = {
     applicantId: "app-123",
-    field: "contract_end" as const,
-    value: "2026-12-31",
+    field: "contract_start" as const,
+    value: "2026-06-01",
     stage: "lead" as ApplicantStage,
-    label: "End",
+    label: "Start",
     ...overrides,
   };
   return render(
@@ -71,37 +74,39 @@ describe("ContractDatesEditor", () => {
 
   it("renders an editable date input when stage is not lease_signed", () => {
     renderEditor({ stage: "lead" });
-    const input = screen.getByTestId("contract-date-input-contract_end");
+    const input = screen.getByTestId("contract-date-input-contract_start");
     expect(input).toBeInTheDocument();
     expect(input).not.toBeDisabled();
-    expect((input as HTMLInputElement).value).toBe("2026-12-31");
+    expect((input as HTMLInputElement).value).toBe("2026-06-01");
   });
 
   it("renders read-only span + lock icon when stage is lease_signed", () => {
     renderEditor({ stage: "lease_signed" });
-    expect(screen.queryByTestId("contract-date-input-contract_end")).toBeNull();
-    expect(screen.getByTestId("contract-dates-locked-contract_end")).toBeInTheDocument();
-    expect(screen.getByTestId("contract-dates-lock-icon-contract_end")).toBeInTheDocument();
+    expect(screen.queryByTestId("contract-date-input-contract_start")).toBeNull();
+    expect(
+      screen.getByTestId("contract-dates-locked-contract_start"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId("contract-dates-lock-icon-contract_start"),
+    ).toBeInTheDocument();
   });
 
   it("lock icon title mentions lease and update", () => {
     renderEditor({ stage: "lease_signed" });
-    const lockEl = screen.getByTestId("contract-dates-lock-icon-contract_end");
+    const lockEl = screen.getByTestId("contract-dates-lock-icon-contract_start");
     expect(lockEl.getAttribute("title")).toMatch(/lease/i);
   });
 
   it("calls the mutation after blur + debounce when value changes", async () => {
     mockUpdateDates.mockReturnValue({ unwrap: () => Promise.resolve({}) });
-    renderEditor({ stage: "approved", value: "2026-12-31" });
-    const input = screen.getByTestId("contract-date-input-contract_end");
+    renderEditor({ stage: "approved", value: "2026-06-01" });
+    const input = screen.getByTestId("contract-date-input-contract_start");
 
-    fireEvent.change(input, { target: { value: "2026-11-30" } });
+    fireEvent.change(input, { target: { value: "2026-07-01" } });
     fireEvent.blur(input);
 
-    // Before debounce fires — mutation not yet called.
     expect(mockUpdateDates).not.toHaveBeenCalled();
 
-    // Advance past the 600ms debounce.
     await act(async () => {
       vi.advanceTimersByTime(700);
     });
@@ -109,13 +114,13 @@ describe("ContractDatesEditor", () => {
     expect(mockUpdateDates).toHaveBeenCalledOnce();
     expect(mockUpdateDates).toHaveBeenCalledWith({
       applicantId: "app-123",
-      data: { contract_end: "2026-11-30" },
+      data: { contract_start: "2026-07-01" },
     });
   });
 
   it("does NOT call the mutation when value is unchanged on blur", async () => {
-    renderEditor({ stage: "approved", value: "2026-12-31" });
-    const input = screen.getByTestId("contract-date-input-contract_end");
+    renderEditor({ stage: "approved", value: "2026-06-01" });
+    const input = screen.getByTestId("contract-date-input-contract_start");
 
     fireEvent.blur(input);
 
@@ -128,16 +133,12 @@ describe("ContractDatesEditor", () => {
 
   it("shows success toast after successful save", async () => {
     mockUpdateDates.mockReturnValue({ unwrap: () => Promise.resolve({}) });
-    renderEditor({ stage: "approved", value: "2026-12-31" });
-    const input = screen.getByTestId("contract-date-input-contract_end");
+    renderEditor({ stage: "approved", value: "2026-06-01" });
+    const input = screen.getByTestId("contract-date-input-contract_start");
 
-    fireEvent.change(input, { target: { value: "2026-11-30" } });
+    fireEvent.change(input, { target: { value: "2026-07-01" } });
     fireEvent.blur(input);
 
-    // runAllTimersAsync advances fake timers AND drains the microtask queue
-    // atomically, so the debounce fires + the unwrap() promise resolves +
-    // the toast effect lands in one step. Avoids the brittle fake/real timer
-    // toggling pattern that mixed timer modes per-test.
     await act(async () => {
       await vi.runAllTimersAsync();
     });
@@ -147,12 +148,15 @@ describe("ContractDatesEditor", () => {
 
   it("shows error toast and reverts value on mutation failure", async () => {
     mockUpdateDates.mockReturnValue({
-      unwrap: () => Promise.reject({ data: { detail: { message: "Something went wrong" } } }),
+      unwrap: () =>
+        Promise.reject({ data: { detail: { message: "Something went wrong" } } }),
     });
-    renderEditor({ stage: "approved", value: "2026-12-31" });
-    const input = screen.getByTestId("contract-date-input-contract_end") as HTMLInputElement;
+    renderEditor({ stage: "approved", value: "2026-06-01" });
+    const input = screen.getByTestId(
+      "contract-date-input-contract_start",
+    ) as HTMLInputElement;
 
-    fireEvent.change(input, { target: { value: "2026-11-30" } });
+    fireEvent.change(input, { target: { value: "2026-07-01" } });
     fireEvent.blur(input);
 
     await act(async () => {
@@ -160,12 +164,6 @@ describe("ContractDatesEditor", () => {
     });
 
     expect(mockShowError).toHaveBeenCalledOnce();
-    // Value should revert to the original.
-    expect(input.value).toBe("2026-12-31");
-  });
-
-  it("uses field name in the test id for contract_start", () => {
-    renderEditor({ field: "contract_start", value: "2026-06-01", stage: "lead" });
-    expect(screen.getByTestId("contract-date-input-contract_start")).toBeInTheDocument();
+    expect(input.value).toBe("2026-06-01");
   });
 });

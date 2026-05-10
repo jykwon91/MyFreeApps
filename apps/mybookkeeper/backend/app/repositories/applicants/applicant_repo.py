@@ -17,8 +17,28 @@ import uuid
 
 from sqlalchemy import and_, desc, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.models.applicants.applicant import Applicant
+from app.models.leases.signed_lease import SignedLease
+
+
+def _latest_lease_ends_on_subquery():
+    """Scalar subquery: max ``ends_on`` from non-deleted signed leases.
+
+    Used by tenant-list filters that need to know "is this applicant's
+    contract still in force?" — replaces the old ``Applicant.contract_end``
+    column predicate after the column was dropped in PR 1b.
+    """
+    return (
+        select(func.max(SignedLease.ends_on))
+        .where(
+            SignedLease.applicant_id == Applicant.id,
+            SignedLease.deleted_at.is_(None),
+        )
+        .correlate(Applicant)
+        .scalar_subquery()
+    )
 
 
 async def create(
@@ -35,13 +55,18 @@ async def create(
     contact_phone: str | None = None,
     id_document_storage_key: str | None = None,
     contract_start: _dt.date | None = None,
-    contract_end: _dt.date | None = None,
     smoker: bool | None = None,
     pets: str | None = None,
     referred_by: str | None = None,
     stage: str = "lead",
 ) -> Applicant:
-    """Persist an Applicant. PII args are plaintext — encryption is automatic."""
+    """Persist an Applicant. PII args are plaintext — encryption is automatic.
+
+    ``contract_end`` is intentionally absent: it is derived from the
+    latest signed lease's ``ends_on`` (see ``Applicant.contract_end``
+    property). Callers that want the post-signature end date should
+    look at the lease, not write to the applicant.
+    """
     applicant = Applicant(
         organization_id=organization_id,
         user_id=user_id,
@@ -54,7 +79,6 @@ async def create(
         contact_phone=contact_phone,
         id_document_storage_key=id_document_storage_key,
         contract_start=contract_start,
-        contract_end=contract_end,
         smoker=smoker,
         pets=pets,
         referred_by=referred_by,
@@ -85,6 +109,7 @@ async def get(
     )
     if not include_deleted:
         stmt = stmt.where(Applicant.deleted_at.is_(None))
+    stmt = stmt.options(selectinload(Applicant.signed_leases))
     result = await db.execute(stmt)
     return result.scalar_one_or_none()
 
@@ -116,7 +141,12 @@ async def list_for_user(
         stmt = stmt.where(Applicant.stage == stage)
     if exclude_stage is not None:
         stmt = stmt.where(Applicant.stage != exclude_stage)
-    stmt = stmt.order_by(desc(Applicant.created_at)).limit(limit).offset(offset)
+    stmt = (
+        stmt.options(selectinload(Applicant.signed_leases))
+        .order_by(desc(Applicant.created_at))
+        .limit(limit)
+        .offset(offset)
+    )
     result = await db.execute(stmt)
     return list(result.scalars().all())
 
@@ -145,6 +175,7 @@ async def list_by_ids(
     )
     if not include_deleted:
         stmt = stmt.where(Applicant.deleted_at.is_(None))
+    stmt = stmt.options(selectinload(Applicant.signed_leases))
     result = await db.execute(stmt)
     return list(result.scalars().all())
 
@@ -187,12 +218,14 @@ async def get_by_inquiry(
     declined-then-purged applicant should not block a re-promotion.
     """
     result = await db.execute(
-        select(Applicant).where(
+        select(Applicant)
+        .where(
             Applicant.inquiry_id == inquiry_id,
             Applicant.organization_id == organization_id,
             Applicant.user_id == user_id,
             Applicant.deleted_at.is_(None),
         )
+        .options(selectinload(Applicant.signed_leases))
     )
     return result.scalar_one_or_none()
 
@@ -235,25 +268,24 @@ async def update_stage(
     applicant.updated_at = now
 
 
-async def update_contract_dates(
+async def update_contract_start(
     db: AsyncSession,
     *,
     applicant: Applicant,
     contract_start: _dt.date | None,
-    contract_end: _dt.date | None,
     now: _dt.datetime,
 ) -> None:
-    """Update contract_start / contract_end on an already-loaded Applicant row.
+    """Update ``contract_start`` on an already-loaded Applicant row.
 
-    Only the fields explicitly passed (non-sentinel) are written — but this
-    function always receives the final resolved values from the service layer,
-    so it does a simple assignment on both.
+    ``contract_end`` is no longer mutable on the applicant — it is
+    derived from the latest signed lease. Callers that need to change
+    the contract end date update the lease (and, in the extension flow,
+    create a ``lease_term_versions`` row).
 
     Caller is responsible for verifying tenant scope and the lock check
     (``stage != 'lease_signed'``) before calling.
     """
     applicant.contract_start = contract_start
-    applicant.contract_end = contract_end
     applicant.updated_at = now
 
 
@@ -287,7 +319,10 @@ def is_ended(applicant: Applicant, today: _dt.date) -> bool:
 
     True if:
     - ``tenant_ended_at`` is set (manual end by host), OR
-    - ``contract_end`` is set and is before today (contract expired)
+    - the latest signed lease's ``ends_on`` is set and is before today
+      (contract expired). Reads ``applicant.contract_end`` — caller MUST
+      eager-load ``signed_leases`` or this returns ``False`` regardless
+      of the actual lease state.
     """
     if applicant.tenant_ended_at is not None:
         return True
@@ -318,14 +353,17 @@ async def list_tenants(
         Applicant.deleted_at.is_(None),
     )
     if not include_ended:
+        latest_ends_on = _latest_lease_ends_on_subquery()
         stmt = stmt.where(
             Applicant.tenant_ended_at.is_(None),
-            or_(
-                Applicant.contract_end.is_(None),
-                Applicant.contract_end >= today,
-            ),
+            or_(latest_ends_on.is_(None), latest_ends_on >= today),
         )
-    stmt = stmt.order_by(desc(Applicant.created_at)).limit(limit).offset(offset)
+    stmt = (
+        stmt.options(selectinload(Applicant.signed_leases))
+        .order_by(desc(Applicant.created_at))
+        .limit(limit)
+        .offset(offset)
+    )
     result = await db.execute(stmt)
     return list(result.scalars().all())
 
@@ -346,12 +384,10 @@ async def count_tenants(
         Applicant.deleted_at.is_(None),
     )
     if not include_ended:
+        latest_ends_on = _latest_lease_ends_on_subquery()
         stmt = stmt.where(
             Applicant.tenant_ended_at.is_(None),
-            or_(
-                Applicant.contract_end.is_(None),
-                Applicant.contract_end >= today,
-            ),
+            or_(latest_ends_on.is_(None), latest_ends_on >= today),
         )
     result = await db.execute(stmt)
     return int(result.scalar_one())

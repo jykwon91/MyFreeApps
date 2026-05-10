@@ -1,11 +1,17 @@
 import { test, expect, type APIRequestContext } from "./fixtures/auth";
 
 /**
- * E2E tests for editable contract dates (PR mbk-applicant-contract-dates-editable).
+ * E2E tests for editable contract dates on the applicant detail page.
+ *
+ * Post-PR-1b scope: only ``contract_start`` is editable. ``contract_end``
+ * is derived from the latest signed lease's ``ends_on`` and is rendered
+ * as a read-only display on the detail page.
  *
  * Covers:
- * 1. Happy path: edit contract_end → blur → DB updated + applicant_event written.
- * 2. Locked state: lease_signed applicant → date inputs are read-only + lock icon visible.
+ * 1. Happy path: edit contract_start → blur → DB updated + applicant_event written.
+ * 2. Locked state: lease_signed applicant → contract_start input is read-only
+ *    with a lock icon; contract_end is rendered as a plain read-only display
+ *    (no lock icon — it has never been editable on the applicant).
  */
 
 async function seedApplicant(
@@ -13,16 +19,12 @@ async function seedApplicant(
   stage: string,
   opts: {
     legalName?: string;
-    contractStart?: string;
-    contractEnd?: string;
   } = {},
 ): Promise<string> {
   const res = await api.post("/test/seed-applicant", {
     data: {
       stage,
       legal_name: opts.legalName ?? `E2E Contract ${Date.now()}`,
-      contract_start: opts.contractStart ?? null,
-      contract_end: opts.contractEnd ?? null,
       seed_event: true,
     },
   });
@@ -57,8 +59,8 @@ async function getApplicant(
   }>;
 }
 
-test.describe("Contract dates editing (PR mbk-applicant-contract-dates-editable)", () => {
-  test("edit contract_end on a lead applicant — DB updated + event written", async ({
+test.describe("Contract dates editing", () => {
+  test("edit contract_start on a lead applicant — DB updated + event written", async ({
     authedPage: page,
     api,
   }) => {
@@ -68,54 +70,72 @@ test.describe("Contract dates editing (PR mbk-applicant-contract-dates-editable)
     try {
       applicantId = await seedApplicant(api, "lead", {
         legalName: `E2E Contract Edit ${runId}`,
-        contractStart: "2026-06-01",
-        contractEnd: "2026-12-31",
       });
 
       await page.goto(`/applicants/${applicantId}`);
       await page.waitForLoadState("networkidle");
 
-      // Contract section must be visible.
-      await expect(page.getByTestId("contract-section")).toBeVisible({ timeout: 10000 });
+      await expect(page.getByTestId("contract-section")).toBeVisible({
+        timeout: 10000,
+      });
 
-      // The contract_end input should be visible and editable.
-      const endInput = page.getByTestId("contract-date-input-contract_end");
-      await expect(endInput).toBeVisible();
-      await expect(endInput).not.toBeDisabled();
+      const startInput = page.getByTestId("contract-date-input-contract_start");
+      await expect(startInput).toBeVisible();
+      await expect(startInput).not.toBeDisabled();
 
-      // Clear and type a new date.
-      await endInput.fill("2026-11-30");
+      await startInput.fill("2026-07-01");
+      await startInput.blur();
 
-      // Blur the input to trigger the debounced save.
-      await endInput.blur();
-
-      // Wait for the save to complete (network idle or toast).
       await page.waitForLoadState("networkidle");
 
-      // Verify via API that the DB has the new value.
       const updated = await getApplicant(api, applicantId);
-      expect(updated.contract_end).toBe("2026-11-30");
+      expect(updated.contract_start).toBe("2026-07-01");
 
-      // contract_start must be untouched.
-      expect(updated.contract_start).toBe("2026-06-01");
-
-      // A contract_dates_changed event must have been written.
       const changeEvent = updated.events.find(
         (e) => e.event_type === "contract_dates_changed",
       );
       expect(changeEvent).toBeDefined();
       expect(changeEvent?.actor).toBe("host");
       const to = changeEvent?.payload?.to as
-        | { contract_start: string; contract_end: string }
+        | { contract_start: string }
         | undefined;
-      expect(to?.contract_end).toBe("2026-11-30");
-      expect(to?.contract_start).toBe("2026-06-01");
+      expect(to?.contract_start).toBe("2026-07-01");
     } finally {
       if (applicantId) await deleteApplicant(api, applicantId);
     }
   });
 
-  test("lease_signed applicant — date inputs are read-only with lock icon", async ({
+  test("contract_end has no editable input — always rendered as read-only display", async ({
+    authedPage: page,
+    api,
+  }) => {
+    const runId = Date.now();
+    let applicantId = "";
+
+    try {
+      applicantId = await seedApplicant(api, "lead", {
+        legalName: `E2E Contract End ReadOnly ${runId}`,
+      });
+
+      await page.goto(`/applicants/${applicantId}`);
+      await page.waitForLoadState("networkidle");
+
+      await expect(page.getByTestId("contract-section")).toBeVisible({
+        timeout: 10000,
+      });
+
+      // contract_end is never editable on the applicant — it's derived
+      // from the latest signed lease.
+      await expect(
+        page.getByTestId("contract-date-input-contract_end"),
+      ).toHaveCount(0);
+      await expect(page.getByTestId("contract-end-display")).toBeVisible();
+    } finally {
+      if (applicantId) await deleteApplicant(api, applicantId);
+    }
+  });
+
+  test("lease_signed applicant — contract_start is locked with lock icon", async ({
     authedPage: page,
     api,
   }) => {
@@ -125,32 +145,28 @@ test.describe("Contract dates editing (PR mbk-applicant-contract-dates-editable)
     try {
       applicantId = await seedApplicant(api, "lease_signed", {
         legalName: `E2E Contract Locked ${runId}`,
-        contractStart: "2026-06-01",
-        contractEnd: "2026-12-31",
       });
 
       await page.goto(`/applicants/${applicantId}`);
       await page.waitForLoadState("networkidle");
 
-      await expect(page.getByTestId("contract-section")).toBeVisible({ timeout: 10000 });
+      await expect(page.getByTestId("contract-section")).toBeVisible({
+        timeout: 10000,
+      });
 
-      // Editable inputs should NOT be present.
-      await expect(page.getByTestId("contract-date-input-contract_start")).toHaveCount(0);
-      await expect(page.getByTestId("contract-date-input-contract_end")).toHaveCount(0);
-
-      // Locked read-only elements with lock icons must be present.
+      await expect(
+        page.getByTestId("contract-date-input-contract_start"),
+      ).toHaveCount(0);
       await expect(
         page.getByTestId("contract-dates-locked-contract_start"),
       ).toBeVisible();
       await expect(
-        page.getByTestId("contract-dates-locked-contract_end"),
-      ).toBeVisible();
-      await expect(
         page.getByTestId("contract-dates-lock-icon-contract_start"),
       ).toBeVisible();
-      await expect(
-        page.getByTestId("contract-dates-lock-icon-contract_end"),
-      ).toBeVisible();
+
+      // contract_end has its own read-only display path (no lock icon —
+      // the field has never been editable on the applicant).
+      await expect(page.getByTestId("contract-end-display")).toBeVisible();
     } finally {
       if (applicantId) await deleteApplicant(api, applicantId);
     }

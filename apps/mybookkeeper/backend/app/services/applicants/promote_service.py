@@ -131,11 +131,6 @@ async def promote_from_inquiry(
             inquiry.desired_start_date,
             inquiry.move_in_date,
         )
-        contract_end = _coalesce_date(
-            overrides.contract_end,
-            inquiry.desired_end_date,
-            inquiry.move_out_date,
-        )
 
         # ``dob`` is stored as ISO-8601 text on an EncryptedString column
         # so the type decorator can encrypt it. The Pydantic schema accepts
@@ -158,7 +153,6 @@ async def promote_from_inquiry(
             contact_email=contact_email,
             contact_phone=contact_phone,
             contract_start=contract_start,
-            contract_end=contract_end,
             smoker=overrides.smoker,
             pets=overrides.pets,
             referred_by=overrides.referred_by,

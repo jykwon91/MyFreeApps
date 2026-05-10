@@ -2,11 +2,14 @@
 
 All fields are optional. The promotion service auto-fills missing values
 from the source inquiry where possible (legal_name, employer_or_hospital,
-contract dates) — fields with no inquiry source (dob, vehicle_make_model,
+contract_start) — fields with no inquiry source (dob, vehicle_make_model,
 smoker, pets, referred_by) come from this payload only.
 
+``contract_end`` is no longer accepted: it is derived from the latest
+signed lease's ``ends_on`` and is therefore an output, not an input. The
+host enters the end date when creating the lease draft.
+
 Validators:
-- ``contract_end >= contract_start`` when both set.
 - ``dob`` must place the applicant at or above ``APPLICANT_MINIMUM_AGE_YEARS``
   on the day of promotion. Violations raise 422 — never silently coerce.
 """
@@ -34,8 +37,7 @@ class ApplicantPromoteRequest(BaseModel):
     Auto-fill behaviour (handled by ``promote_service``):
     - ``legal_name`` falls back to the inquiry's ``inquirer_name``.
     - ``employer_or_hospital`` falls back to the inquiry's ``inquirer_employer``.
-    - ``contract_start`` / ``contract_end`` fall back to the inquiry's
-      ``desired_start_date`` / ``desired_end_date``.
+    - ``contract_start`` falls back to the inquiry's ``desired_start_date``.
     - All other fields default to ``None`` and stay ``None`` if the host
       didn't supply them.
     """
@@ -56,7 +58,6 @@ class ApplicantPromoteRequest(BaseModel):
     )
 
     contract_start: _dt.date | None = None
-    contract_end: _dt.date | None = None
 
     vehicle_make_model: str | None = Field(
         default=None, max_length=APPLICANT_VEHICLE_MAX,
@@ -69,13 +70,6 @@ class ApplicantPromoteRequest(BaseModel):
 
     @model_validator(mode="after")
     def _validate_business_rules(self) -> "ApplicantPromoteRequest":
-        if (
-            self.contract_start is not None
-            and self.contract_end is not None
-            and self.contract_end < self.contract_start
-        ):
-            raise ValueError("contract_end cannot be before contract_start")
-
         if self.dob is not None:
             today = _dt.date.today()
             # Compute age the way humans do — has the birthday already

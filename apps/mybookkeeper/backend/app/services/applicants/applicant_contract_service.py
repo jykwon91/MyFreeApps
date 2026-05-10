@@ -1,20 +1,20 @@
-"""Service for updating applicant contract dates.
+"""Service for updating an applicant's ``contract_start`` date.
 
-Contract dates (contract_start / contract_end) are mutable during the
-negotiation phase (any stage prior to ``lease_signed``). Once a lease is
-signed, the dates are locked — the signed lease document becomes the source
-of truth and updating the applicant-level dates would create a divergence
-from the legal record.
+``contract_end`` is no longer mutable on the applicant — it is derived from
+the latest signed lease's ``ends_on`` (see ``Applicant.contract_end``
+property). Pre-signature, the host enters the end date when creating the
+lease draft; post-signature, the lease is the source of truth and an
+extension creates a new ``lease_term_versions`` row.
 
-Lock semantics:
+Lock semantics (unchanged from prior versions):
     ``applicant.stage == 'lease_signed'`` → raise ``ContractDatesLockedError``
     which the route maps to HTTP 409 with detail ``CONTRACT_DATES_LOCKED``.
 
 On success:
-    - Updates ``contract_start``, ``contract_end``, and ``updated_at``.
+    - Updates ``contract_start`` and ``updated_at``.
     - Appends an ``applicant_events`` row with ``event_type =
-      'contract_dates_changed'``, ``actor = 'host'``, and a payload
-      recording the before / after state.
+      'contract_dates_changed'``, ``actor = 'host'``, recording the
+      before / after values of ``contract_start``.
     - Commits atomically via ``unit_of_work``.
 """
 from __future__ import annotations
@@ -44,23 +44,15 @@ async def update_contract_dates(
     user_id: uuid.UUID,
     applicant_id: uuid.UUID,
     contract_start: _dt.date | None,
-    contract_end: _dt.date | None,
     contract_start_sent: bool,
-    contract_end_sent: bool,
 ) -> ApplicantDetailResponse:
-    """Update contract dates for an applicant.
+    """Update ``contract_start`` for an applicant.
 
-    Each field has BOTH a value and a ``*_sent`` boolean. The pair lets the
-    service distinguish three caller intents:
-
-    - ``contract_start_sent=False`` → field omitted from the request; preserve
-      the existing DB value (partial-update semantics).
-    - ``contract_start_sent=True, contract_start=<date>`` → set to that date.
-    - ``contract_start_sent=True, contract_start=None`` → explicitly clear
-      the field (set DB column to NULL).
-
-    The route is responsible for inspecting ``payload.model_fields_set`` and
-    passing the booleans; the service stays Pydantic-agnostic.
+    The ``contract_start_sent`` boolean lets the route distinguish
+    "field omitted from the request" (preserve existing value) from
+    "field set to null" (clear the column). The route inspects
+    ``payload.model_fields_set`` and forwards the boolean; the service
+    stays Pydantic-agnostic.
 
     Raises:
         LookupError: applicant not found for (organization_id, user_id).
@@ -85,20 +77,15 @@ async def update_contract_dates(
             )
 
         old_start = _iso_or_none(applicant.contract_start)
-        old_end = _iso_or_none(applicant.contract_end)
 
         resolved_start = (
             contract_start if contract_start_sent else applicant.contract_start
         )
-        resolved_end = (
-            contract_end if contract_end_sent else applicant.contract_end
-        )
 
-        await applicant_repo.update_contract_dates(
+        await applicant_repo.update_contract_start(
             db,
             applicant=applicant,
             contract_start=resolved_start,
-            contract_end=resolved_end,
             now=now,
         )
 
@@ -109,16 +96,11 @@ async def update_contract_dates(
             actor="host",
             occurred_at=now,
             payload={
-                "from": {"contract_start": old_start, "contract_end": old_end},
-                "to": {
-                    "contract_start": _iso_or_none(resolved_start),
-                    "contract_end": _iso_or_none(resolved_end),
-                },
+                "from": {"contract_start": old_start},
+                "to": {"contract_start": _iso_or_none(resolved_start)},
             },
         )
 
-    # Re-load via the read service so the response shape is identical to
-    # GET /applicants/{id} — same schema, same nested children.
     return await applicant_service.get_applicant(
         organization_id, user_id, applicant_id,
     )
