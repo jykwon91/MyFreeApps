@@ -27,17 +27,28 @@ async def create(
     kind: str,
     uploaded_by_user_id: uuid.UUID,
     uploaded_at: datetime,
+    id: uuid.UUID | None = None,
 ) -> SignedLeaseAttachment:
-    row = SignedLeaseAttachment(
-        lease_id=lease_id,
-        storage_key=storage_key,
-        filename=filename,
-        content_type=content_type,
-        size_bytes=size_bytes,
-        kind=kind,
-        uploaded_by_user_id=uploaded_by_user_id,
-        uploaded_at=uploaded_at,
-    )
+    """Insert a signed-lease attachment row.
+
+    ``id`` may be passed in when the caller has pre-generated the UUID so
+    it can be embedded in the storage key (used by the lease-extension
+    service so the storage key and the DB id stay aligned). When omitted,
+    the model's ``uuid.uuid4`` default fires.
+    """
+    kwargs: dict = {
+        "lease_id": lease_id,
+        "storage_key": storage_key,
+        "filename": filename,
+        "content_type": content_type,
+        "size_bytes": size_bytes,
+        "kind": kind,
+        "uploaded_by_user_id": uploaded_by_user_id,
+        "uploaded_at": uploaded_at,
+    }
+    if id is not None:
+        kwargs["id"] = id
+    row = SignedLeaseAttachment(**kwargs)
     db.add(row)
     await db.flush()
     return row
