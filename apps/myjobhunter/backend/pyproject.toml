@@ -10,8 +10,8 @@ dependencies = [
     "alembic==1.18.4",
     "asyncpg==0.31.0",
     "psycopg2-binary==2.9.12",
-    "pydantic==2.13.3",
-    "pydantic-settings==2.14.0",
+    "pydantic==2.13.4",
+    "pydantic-settings==2.14.1",
     "email-validator==2.3.0",
     "fastapi-users[sqlalchemy]==15.0.5",
     "pyjwt[crypto]==2.12.1",
@@ -36,7 +36,7 @@ dependencies = [
     "weasyprint>=62.0",
     # Sentry — fail-loud production enforcement. See app/core/observability.py.
     # Mirrors apps/mybookkeeper/backend/pyproject.toml.
-    "sentry-sdk[fastapi]==2.58.0",
+    "sentry-sdk[fastapi]==2.59.0",
     # Discovery source adapters: tenacity wraps every outbound HTTP
     # call with exponential-backoff retry on 429 / 5xx so a transient
     # provider blip doesn't tank a fetch cycle.

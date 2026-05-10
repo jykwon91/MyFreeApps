@@ -8,7 +8,7 @@ annotated-doc==0.0.4
     # via fastapi
 annotated-types==0.7.0
     # via pydantic
-anthropic==0.98.1
+anthropic==0.100.0
     # via myjobhunter-backend
 anyio==4.13.0
     # via
@@ -145,16 +145,16 @@ pycparser==3.0 ; implementation_name != 'PyPy'
     # via cffi
 pycryptodome==3.23.0
     # via minio
-pydantic==2.13.3
+pydantic==2.13.4
     # via
     #   anthropic
     #   fastapi
     #   myjobhunter-backend
     #   platform-shared
     #   pydantic-settings
-pydantic-core==2.46.3
+pydantic-core==2.46.4
     # via pydantic
-pydantic-settings==2.14.0
+pydantic-settings==2.14.1
     # via
     #   myjobhunter-backend
     #   platform-shared
@@ -169,7 +169,7 @@ pyjwt==2.12.1
     #   platform-shared
 pyotp==2.9.0
     # via platform-shared
-pypdf==6.10.2
+pypdf==6.11.0
     # via myjobhunter-backend
 pyphen==0.17.2
     # via weasyprint
@@ -183,13 +183,13 @@ python-dotenv==1.2.2
     # via
     #   pydantic-settings
     #   uvicorn
-python-multipart==0.0.27
+python-multipart==0.0.28
     # via fastapi-users
 pyyaml==6.0.3
     # via uvicorn
 qrcode==8.2
     # via platform-shared
-sentry-sdk==2.58.0
+sentry-sdk==2.59.0
     # via
     #   myjobhunter-backend
     #   platform-shared
@@ -232,7 +232,7 @@ typing-inspection==0.4.2
     #   fastapi
     #   pydantic
     #   pydantic-settings
-urllib3==2.6.3
+urllib3==2.7.0
     # via
     #   minio
     #   sentry-sdk
