@@ -22,7 +22,7 @@
 # NOTE: Build context is the monorepo root (see docker-compose.yml).
 # All COPY paths are relative to MyFreeApps/, not apps/mybookkeeper/.
 
-FROM node:20-alpine AS frontend-build
+FROM node:22-alpine AS frontend-build
 WORKDIR /build
 COPY apps/mybookkeeper/frontend/package.json apps/mybookkeeper/frontend/package-lock.json ./
 RUN npm ci
