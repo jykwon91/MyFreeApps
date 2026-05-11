@@ -29,9 +29,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.discovery.discovery_source import DiscoverySource
 from app.repositories.discovery import discovery_repository
+from app.schemas.discovery.greenhouse_source_config import GreenhouseSourceConfig
 from app.schemas.discovery.jsearch_source_config import JSearchSourceConfig
+from app.schemas.discovery.lever_source_config import LeverSourceConfig
 from app.services.discovery.industry_denylists import expand_excluded_keywords
-from app.services.discovery.sources import jsearch
+from app.services.discovery.sources import greenhouse, jsearch, lever
 
 logger = logging.getLogger(__name__)
 
@@ -220,8 +222,31 @@ def _apply_post_fetch_filters(
     return kept
 
 
+async def _run_greenhouse(config: dict[str, Any]) -> list[dict]:
+    """Validate Greenhouse config and invoke the adapter.
+
+    Unlike JSearch, there is no meaningful default config to fall back to
+    if the board_token is missing — we let ``parse_or_default`` raise
+    and the fetch-service error handler marks the source as errored.
+    """
+    typed = GreenhouseSourceConfig.parse_or_default(config)
+    return await greenhouse.fetch_board(board_token=typed.board_token, config=typed)
+
+
+async def _run_lever(config: dict[str, Any]) -> list[dict]:
+    """Validate Lever config and invoke the adapter.
+
+    Same reasoning as _run_greenhouse: no meaningful default when
+    company_slug is missing.
+    """
+    typed = LeverSourceConfig.parse_or_default(config)
+    return await lever.fetch_postings(company_slug=typed.company_slug, config=typed)
+
+
 _ADAPTERS: dict[str, Callable[[dict[str, Any]], Awaitable[list[dict]]]] = {
     "jsearch": _run_jsearch,
+    "greenhouse": _run_greenhouse,
+    "lever": _run_lever,
 }
 
 

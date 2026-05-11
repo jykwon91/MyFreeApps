@@ -15,6 +15,8 @@ import SearchInputsSection from "./dialog-sections/SearchInputsSection";
 import WhereWhenSection from "./dialog-sections/WhereWhenSection";
 import JobTypeSection from "./dialog-sections/JobTypeSection";
 import ExclusionsSection from "./dialog-sections/ExclusionsSection";
+import GreenhouseConfigSection from "./dialog-sections/GreenhouseConfigSection";
+import LeverConfigSection from "./dialog-sections/LeverConfigSection";
 import type {
   Country,
   DatePosted,
@@ -22,38 +24,58 @@ import type {
   Experience,
 } from "@/types/discovery/dialog-enums";
 
+/** The three source types that have shipped adapters. */
+type SourceKind = "jsearch" | "greenhouse" | "lever";
+
+const SOURCE_OPTIONS: Array<{ value: SourceKind; label: string }> = [
+  { value: "jsearch", label: "JSearch (Google Jobs)" },
+  { value: "greenhouse", label: "Greenhouse" },
+  { value: "lever", label: "Lever" },
+];
+
+const SOURCE_DESCRIPTIONS: Record<SourceKind, string> = {
+  jsearch:
+    "JSearch will run this query against Google Jobs (LinkedIn, Indeed, Glassdoor, ZipRecruiter).",
+  greenhouse:
+    "Fetch all active postings from a company's official Greenhouse job board. No API key required.",
+  lever:
+    "Fetch all active postings from a company's official Lever job board. No API key required.",
+};
+
 interface NewSavedSearchDialogProps {
   open: boolean;
   onClose: () => void;
 }
 
 /**
- * Dialog for creating a new JSearch saved search.
+ * Dialog for creating a new saved search.
  *
- * Pre-fills every field from the operator's profile + saved
- * discovery_defaults so they review/confirm rather than start from
- * blank. Replaces a free-form Boolean query field with structured
- * Role + Skill chip inputs (the Boolean query is assembled
- * server-side). Industry exclusions surface as toggle chips backed
- * by curated server-side keyword lists.
+ * Supports three sources: JSearch, Greenhouse, and Lever.
+ * A source picker at the top of the dialog controls which config form is shown.
+ *
+ * JSearch: full structured config (roles, skills, location, filters)
+ * Greenhouse: single board_token field
+ * Lever: single company_slug field
+ *
+ * Profile prefill only applies to JSearch; Greenhouse/Lever require manual
+ * board_token / company_slug input.
  *
  * Composition:
  *   - ``useDiscoveryDefaultsPrefill`` — owns profile/skills/work-history
- *     fetches, suggestion derivation, one-shot prefill (useRef-backed
- *     latch, not useState — flagged anti-pattern is gone)
+ *     fetches, suggestion derivation, one-shot prefill (useRef-backed latch)
  *   - ``SearchInputsSection``, ``WhereWhenSection``, ``JobTypeSection``,
- *     ``ExclusionsSection`` — JSX form-field clusters extracted by topic
- *   - ``InlineBoldText`` — markdown-bold rendering for the summary
- *   - ``buildSavedSearchSummary`` — pure helper that composes the
- *     plain-English preview line
+ *     ``ExclusionsSection`` — JSearch form-field clusters
+ *   - ``GreenhouseConfigSection``, ``LeverConfigSection`` — per-source config forms
+ *   - ``buildSavedSearchSummary`` — pure helper for the JSearch preview line
  */
 export default function NewSavedSearchDialog({
   open,
   onClose,
 }: NewSavedSearchDialogProps) {
-  // Form state — owned here, not in parent. Future cleanup: migrate
-  // to react-hook-form (used elsewhere in the codebase) so 11 useState
-  // hooks collapse to one form context.
+  // Source selection — defaults to jsearch to preserve existing behaviour.
+  const [source, setSource] = useState<SourceKind>("jsearch");
+
+  // JSearch form state
   const [roles, setRoles] = useState<string[]>([]);
   const [skills, setSkills] = useState<string[]>([]);
   const [location, setLocation] = useState("");
@@ -63,11 +85,15 @@ export default function NewSavedSearchDialog({
   const [employmentType, setEmploymentType] = useState<EmploymentType>("FULLTIME");
   const [experience, setExperience] = useState<Experience>("");
   const [minSalary, setMinSalary] = useState("");
-  const [excludedIndustryChips, setExcludedIndustryChips] = useState<string[]>(
-    [],
-  );
+  const [excludedIndustryChips, setExcludedIndustryChips] = useState<string[]>([]);
   const [excludedKeywords, setExcludedKeywords] = useState<string[]>([]);
   const [saveAsDefaults, setSaveAsDefaults] = useState(false);
+
+  // Greenhouse form state
+  const [boardToken, setBoardToken] = useState("");
+
+  // Lever form state
+  const [companySlug, setCompanySlug] = useState("");
 
   const [createSource, { isLoading: isCreating }] = useCreateDiscoverySourceMutation();
   const [updateProfile, { isLoading: isUpdatingProfile }] = useUpdateProfileMutation();
@@ -80,7 +106,7 @@ export default function NewSavedSearchDialog({
     isPrefillLoading,
     didPrefill,
     resetPrefill,
-  } = useDiscoveryDefaultsPrefill(open, {
+  } = useDiscoveryDefaultsPrefill(open && source === "jsearch", {
     setRoles,
     setRemoteOnly,
     setMinSalary,
@@ -92,7 +118,8 @@ export default function NewSavedSearchDialog({
     setExcludedKeywords,
   });
 
-  function reset() {
+  function resetAll() {
+    setSource("jsearch");
     setRoles([]);
     setSkills([]);
     setLocation("");
@@ -105,10 +132,19 @@ export default function NewSavedSearchDialog({
     setExcludedIndustryChips([]);
     setExcludedKeywords([]);
     setSaveAsDefaults(false);
+    setBoardToken("");
+    setCompanySlug("");
     resetPrefill();
   }
 
   function buildConfig(): Record<string, unknown> {
+    if (source === "greenhouse") {
+      return { board_token: boardToken.trim() };
+    }
+    if (source === "lever") {
+      return { company_slug: companySlug.trim().toLowerCase() };
+    }
+    // jsearch
     const config: Record<string, unknown> = {
       roles,
       skills,
@@ -124,7 +160,6 @@ export default function NewSavedSearchDialog({
     if (minSalary && Number.isFinite(minSalaryNum) && minSalaryNum > 0) {
       config.min_salary_usd = Math.floor(minSalaryNum);
     }
-
     if (excludedIndustryChips.length > 0) {
       config.excluded_industry_chips = excludedIndustryChips;
     }
@@ -146,19 +181,38 @@ export default function NewSavedSearchDialog({
     };
   }
 
+  function validate(): string | null {
+    if (source === "greenhouse") {
+      if (!boardToken.trim()) return "Enter a Greenhouse board token";
+      if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$/.test(boardToken.trim())) {
+        return "Invalid board token — use letters, digits, hyphens, and underscores only";
+      }
+    } else if (source === "lever") {
+      const slug = companySlug.trim().toLowerCase();
+      if (!slug) return "Enter a Lever company slug";
+      if (!/^[a-z0-9][a-z0-9-]{0,63}$/.test(slug)) {
+        return "Invalid company slug — use lowercase letters, digits, and hyphens only";
+      }
+    } else {
+      if (roles.length === 0) return "Add at least one role title";
+    }
+    return null;
+  }
+
   async function handleConfirm() {
-    if (roles.length === 0) {
-      showError("Add at least one role title");
+    const validationError = validate();
+    if (validationError) {
+      showError(validationError);
       return;
     }
 
     try {
-      await createSource({ source: "jsearch", config: buildConfig() }).unwrap();
+      await createSource({ source, config: buildConfig() }).unwrap();
 
-      // Optionally persist the filter set as the operator's default
-      // for future searches. Best-effort — if it fails, the saved
-      // search still exists; we just toast a soft warning.
-      if (saveAsDefaults) {
+      // Optionally persist the JSearch filter set as the operator's default.
+      // Only makes sense for JSearch (Greenhouse/Lever have no shareable
+      // filter preferences).
+      if (source === "jsearch" && saveAsDefaults) {
         try {
           await updateProfile({ discovery_defaults: buildDefaults() }).unwrap();
         } catch (defaultsErr) {
@@ -170,7 +224,7 @@ export default function NewSavedSearchDialog({
       }
 
       showSuccess("Saved search created");
-      reset();
+      resetAll();
       onClose();
     } catch (err) {
       showError(extractErrorMessage(err) ?? "Failed to create saved search");
@@ -178,116 +232,159 @@ export default function NewSavedSearchDialog({
   }
 
   function handleCancel() {
-    reset();
+    resetAll();
     onClose();
   }
 
-  const summary = buildSavedSearchSummary({
-    roles,
-    skills,
-    location,
-    country,
-    datePosted,
-    remoteOnly,
-    employmentType,
-    experience,
-    minSalary,
-    excludedIndustryChips,
-    excludedKeywords,
-  });
+  const summary =
+    source === "jsearch"
+      ? buildSavedSearchSummary({
+          roles,
+          skills,
+          location,
+          country,
+          datePosted,
+          remoteOnly,
+          employmentType,
+          experience,
+          minSalary,
+          excludedIndustryChips,
+          excludedKeywords,
+        })
+      : null;
 
   return (
     <ConfirmDialog
       open={open}
       title="New saved search"
-      description="JSearch will run this query against Google Jobs (LinkedIn, Indeed, Glassdoor, ZipRecruiter)."
+      description={SOURCE_DESCRIPTIONS[source]}
       confirmLabel="Create"
       isLoading={isLoading}
       onConfirm={handleConfirm}
       onCancel={handleCancel}
     >
       <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
-        {isPrefillLoading ? (
-          <div className="space-y-3" aria-busy="true">
-            <Skeleton className="h-9 w-full" />
-            <Skeleton className="h-9 w-full" />
-            <Skeleton className="h-9 w-3/4" />
-            <Skeleton className="h-9 w-full" />
-            <Skeleton className="h-9 w-1/2" />
-          </div>
-        ) : (
+        {/* Source picker */}
+        <div className="space-y-1">
+          <label htmlFor="source-select" className="block text-sm font-medium">
+            Job source
+          </label>
+          <select
+            id="source-select"
+            className="w-full rounded border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            value={source}
+            onChange={(e) => setSource(e.target.value as SourceKind)}
+          >
+            {SOURCE_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Greenhouse config */}
+        {source === "greenhouse" && (
+          <GreenhouseConfigSection
+            boardToken={boardToken}
+            onBoardTokenChange={setBoardToken}
+          />
+        )}
+
+        {/* Lever config */}
+        {source === "lever" && (
+          <LeverConfigSection
+            companySlug={companySlug}
+            onCompanySlugChange={setCompanySlug}
+          />
+        )}
+
+        {/* JSearch config */}
+        {source === "jsearch" && (
           <>
-        {didPrefill && (
-          <p className="text-xs text-muted-foreground bg-muted/40 px-3 py-2 rounded">
-            Pre-filled from your profile. Edit anything below.
-          </p>
-        )}
+            {isPrefillLoading ? (
+              <div className="space-y-3" aria-busy="true">
+                <Skeleton className="h-9 w-full" />
+                <Skeleton className="h-9 w-full" />
+                <Skeleton className="h-9 w-3/4" />
+                <Skeleton className="h-9 w-full" />
+                <Skeleton className="h-9 w-1/2" />
+              </div>
+            ) : (
+              <>
+                {didPrefill && (
+                  <p className="text-xs text-muted-foreground bg-muted/40 px-3 py-2 rounded">
+                    Pre-filled from your profile. Edit anything below.
+                  </p>
+                )}
 
-        <SearchInputsSection
-          roles={roles}
-          onRolesChange={setRoles}
-          roleSuggestions={recentRoleSuggestions}
-          skills={skills}
-          onSkillsChange={setSkills}
-          skillSuggestions={skillSuggestions}
-          location={location}
-          onLocationChange={setLocation}
-          locationDisabled={remoteOnly}
-        />
+                <SearchInputsSection
+                  roles={roles}
+                  onRolesChange={setRoles}
+                  roleSuggestions={recentRoleSuggestions}
+                  skills={skills}
+                  onSkillsChange={setSkills}
+                  skillSuggestions={skillSuggestions}
+                  location={location}
+                  onLocationChange={setLocation}
+                  locationDisabled={remoteOnly}
+                />
 
-        <WhereWhenSection
-          country={country}
-          onCountryChange={setCountry}
-          datePosted={datePosted}
-          onDatePostedChange={setDatePosted}
-        />
+                <WhereWhenSection
+                  country={country}
+                  onCountryChange={setCountry}
+                  datePosted={datePosted}
+                  onDatePostedChange={setDatePosted}
+                />
 
-        <JobTypeSection
-          employmentType={employmentType}
-          onEmploymentTypeChange={setEmploymentType}
-          experience={experience}
-          onExperienceChange={setExperience}
-        />
+                <JobTypeSection
+                  employmentType={employmentType}
+                  onEmploymentTypeChange={setEmploymentType}
+                  experience={experience}
+                  onExperienceChange={setExperience}
+                />
 
-        <ExclusionsSection
-          minSalary={minSalary}
-          onMinSalaryChange={setMinSalary}
-          excludedIndustryChips={excludedIndustryChips}
-          onExcludedIndustryChipsChange={setExcludedIndustryChips}
-          excludedKeywords={excludedKeywords}
-          onExcludedKeywordsChange={setExcludedKeywords}
-        />
+                <ExclusionsSection
+                  minSalary={minSalary}
+                  onMinSalaryChange={setMinSalary}
+                  excludedIndustryChips={excludedIndustryChips}
+                  onExcludedIndustryChipsChange={setExcludedIndustryChips}
+                  excludedKeywords={excludedKeywords}
+                  onExcludedKeywordsChange={setExcludedKeywords}
+                />
 
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={remoteOnly}
-            onChange={(e) => setRemoteOnly(e.target.checked)}
-            className="rounded"
-          />
-          <span>Remote jobs only</span>
-        </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={remoteOnly}
+                    onChange={(e) => setRemoteOnly(e.target.checked)}
+                    className="rounded"
+                  />
+                  <span>Remote jobs only</span>
+                </label>
 
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={saveAsDefaults}
-            onChange={(e) => setSaveAsDefaults(e.target.checked)}
-            className="rounded"
-          />
-          <span>
-            Save these filters (industries, employment, experience, etc.)
-            as my defaults for new searches
-          </span>
-        </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={saveAsDefaults}
+                    onChange={(e) => setSaveAsDefaults(e.target.checked)}
+                    className="rounded"
+                  />
+                  <span>
+                    Save these filters (industries, employment, experience, etc.)
+                    as my defaults for new searches
+                  </span>
+                </label>
 
-        {summary && (
-          <div className="border-t pt-3 mt-2">
-            <p className="text-xs leading-relaxed text-muted-foreground">
-              <InlineBoldText text={summary} />
-            </p>
-          </div>
-        )}
+                {summary && (
+                  <div className="border-t pt-3 mt-2">
+                    <p className="text-xs leading-relaxed text-muted-foreground">
+                      <InlineBoldText text={summary} />
+                    </p>
+                  </div>
+                )}
+              </>
+            )}
           </>
         )}
       </div>

@@ -1,13 +1,55 @@
 import { INDUSTRY_CHIPS } from "./industry-chips";
 
+/** Human-readable label for each source adapter. */
+const SOURCE_LABELS: Record<string, string> = {
+  jsearch: "JSearch",
+  greenhouse: "Greenhouse",
+  lever: "Lever",
+  ashby: "Ashby",
+  remoteok: "RemoteOK",
+  hn_who_is_hiring: "HN: Who's Hiring",
+  workatastartup: "Work at a Startup",
+  other: "Other",
+};
+
+/** Badge color for each source — Greenhouse/Lever get distinct colors so the
+ *  operator can tell official feeds from aggregators at a glance. */
+const SOURCE_BADGE_COLORS: Record<string, "gray" | "green" | "blue"> = {
+  jsearch: "gray",
+  greenhouse: "green",
+  lever: "blue",
+};
+
+export function getSourceLabel(source: string): string {
+  return SOURCE_LABELS[source] ?? source;
+}
+
+export function getSourceBadgeColor(source: string): "gray" | "green" | "blue" {
+  return SOURCE_BADGE_COLORS[source] ?? "gray";
+}
+
 /**
  * Render a ``DiscoverySource.config`` object as a short display string
  * for the SavedSearchesPanel row.
  *
- * New configs store ``roles`` (string[]); legacy configs store ``query``
- * (string). Falls back to "(no query)" when neither is present.
+ * Source-aware: Greenhouse rows show the board_token, Lever rows show the
+ * company_slug, JSearch rows show roles / legacy query.
  */
-export function summarizeSearchQuery(config: Record<string, unknown>): string {
+export function summarizeSearchQuery(
+  config: Record<string, unknown>,
+  source?: string,
+): string {
+  if (source === "greenhouse") {
+    const token = config?.board_token;
+    if (typeof token === "string" && token) return `Board: ${token}`;
+    return "(no board token)";
+  }
+  if (source === "lever") {
+    const slug = config?.company_slug;
+    if (typeof slug === "string" && slug) return `Company: ${slug}`;
+    return "(no company slug)";
+  }
+  // JSearch / legacy: roles array or raw query string.
   const roles = config?.roles;
   if (Array.isArray(roles) && roles.length > 0) {
     const validRoles = roles.filter((r): r is string => typeof r === "string");

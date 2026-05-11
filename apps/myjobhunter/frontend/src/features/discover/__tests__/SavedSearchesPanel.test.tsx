@@ -69,6 +69,8 @@ vi.mock("../SavedSearchesSkeleton", () => ({
 
 vi.mock("../saved-search-summary", () => ({
   summarizeSearchQuery: () => "Software Engineer — Remote",
+  getSourceLabel: (s: string) => s,
+  getSourceBadgeColor: () => "gray",
 }));
 
 import {
