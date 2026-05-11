@@ -98,9 +98,15 @@ export default function NewSavedSearchDialog({
 
   // Greenhouse form state
   const [boardToken, setBoardToken] = useState("");
+  const [greenhouseExcludedKeywords, setGreenhouseExcludedKeywords] = useState<
+    string[]
+  >([]);
 
   // Lever form state
   const [companySlug, setCompanySlug] = useState("");
+  const [leverExcludedKeywords, setLeverExcludedKeywords] = useState<string[]>(
+    [],
+  );
 
   // Refresh-frequency picker (PR 5). Applies to every source type — the
   // backend scheduler runs the same fetch chain for jsearch / greenhouse /
@@ -148,17 +154,31 @@ export default function NewSavedSearchDialog({
     setExcludedKeywords([]);
     setSaveAsDefaults(false);
     setBoardToken("");
+    setGreenhouseExcludedKeywords([]);
     setCompanySlug("");
+    setLeverExcludedKeywords([]);
     setFetchIntervalMinutes(DEFAULT_REFRESH_INTERVAL_MINUTES);
     resetPrefill();
   }
 
   function buildConfig(): Record<string, unknown> {
     if (source === "greenhouse") {
-      return { board_token: boardToken.trim() };
+      const ghConfig: Record<string, unknown> = {
+        board_token: boardToken.trim(),
+      };
+      if (greenhouseExcludedKeywords.length > 0) {
+        ghConfig.excluded_keywords = greenhouseExcludedKeywords;
+      }
+      return ghConfig;
     }
     if (source === "lever") {
-      return { company_slug: companySlug.trim().toLowerCase() };
+      const leverConfig: Record<string, unknown> = {
+        company_slug: companySlug.trim().toLowerCase(),
+      };
+      if (leverExcludedKeywords.length > 0) {
+        leverConfig.excluded_keywords = leverExcludedKeywords;
+      }
+      return leverConfig;
     }
     // jsearch
     const config: Record<string, unknown> = {
@@ -355,6 +375,8 @@ export default function NewSavedSearchDialog({
           <GreenhouseConfigSection
             boardToken={boardToken}
             onBoardTokenChange={setBoardToken}
+            excludedKeywords={greenhouseExcludedKeywords}
+            onExcludedKeywordsChange={setGreenhouseExcludedKeywords}
           />
         )}
 
@@ -363,6 +385,8 @@ export default function NewSavedSearchDialog({
           <LeverConfigSection
             companySlug={companySlug}
             onCompanySlugChange={setCompanySlug}
+            excludedKeywords={leverExcludedKeywords}
+            onExcludedKeywordsChange={setLeverExcludedKeywords}
           />
         )}
 

@@ -16,6 +16,9 @@ HTTP calls happen. Verifies:
 - Description truncation at 12k char cap
 - company_name fetched from board metadata endpoint
 - Empty jobs array → empty result list
+- company_name cache hit: skips metadata call, uses cached name
+- company_name cache miss: calls metadata, returns resolved name
+- resolved_company_name returned in result tuple
 """
 from __future__ import annotations
 
@@ -24,6 +27,10 @@ from unittest.mock import patch
 import httpx
 import pytest
 
+from app.schemas.discovery.greenhouse_source_config import (
+    GreenhouseFetchConfig,
+    GreenhouseSourceConfig,
+)
 from app.services.discovery.sources import greenhouse
 from app.services.discovery.sources.greenhouse import (
     GreenhouseError,
@@ -92,7 +99,7 @@ async def test_fetch_board_happy_path() -> None:
     handler = _TwoCallHandler(_company_response(), _board_response())
 
     with patch.object(httpx, "AsyncClient", lambda *a, **kw: _client_with_handler(handler)):
-        results = await fetch_board(board_token="stripe")
+        results, resolved_name = await fetch_board(board_token="stripe")
 
     assert len(results) == 1
     posting = results[0]
@@ -110,6 +117,8 @@ async def test_fetch_board_happy_path() -> None:
     assert posting["salary_max"] is None
     # raw_payload preserved
     assert posting["raw_payload"]["id"] == 4001234
+    # resolved name returned for caller to cache
+    assert resolved_name == "Stripe"
 
 
 @pytest.mark.asyncio
@@ -121,7 +130,7 @@ async def test_fetch_board_strips_html_from_description() -> None:
     handler = _TwoCallHandler(_company_response(), _board_response([job]))
 
     with patch.object(httpx, "AsyncClient", lambda *a, **kw: _client_with_handler(handler)):
-        results = await fetch_board(board_token="stripe")
+        results, _ = await fetch_board(board_token="stripe")
 
     desc = results[0]["description"]
     assert desc is not None
@@ -137,7 +146,7 @@ async def test_fetch_board_returns_empty_list_for_empty_jobs() -> None:
     handler = _TwoCallHandler(_company_response(), {"jobs": []})
 
     with patch.object(httpx, "AsyncClient", lambda *a, **kw: _client_with_handler(handler)):
-        results = await fetch_board(board_token="stripe")
+        results, _ = await fetch_board(board_token="stripe")
 
     assert results == []
 
@@ -150,7 +159,7 @@ async def test_fetch_board_skips_jobs_missing_id() -> None:
     handler = _TwoCallHandler(_company_response(), _board_response([bad_job, good_job]))
 
     with patch.object(httpx, "AsyncClient", lambda *a, **kw: _client_with_handler(handler)):
-        results = await fetch_board(board_token="stripe")
+        results, _ = await fetch_board(board_token="stripe")
 
     assert len(results) == 1
     assert results[0]["source_external_id"] == "9999"
@@ -162,7 +171,7 @@ async def test_fetch_board_truncates_long_description() -> None:
     handler = _TwoCallHandler(_company_response(), _board_response([job]))
 
     with patch.object(httpx, "AsyncClient", lambda *a, **kw: _client_with_handler(handler)):
-        results = await fetch_board(board_token="stripe")
+        results, _ = await fetch_board(board_token="stripe")
 
     desc = results[0]["description"]
     assert desc is not None
@@ -256,7 +265,7 @@ async def test_fetch_board_succeeds_after_one_transient(monkeypatch) -> None:
         return httpx.Response(200, json=_company_response())
 
     with patch.object(httpx, "AsyncClient", lambda *a, **kw: _client_with_handler(handler)):
-        results = await greenhouse.fetch_board(board_token="stripe")
+        results, _ = await greenhouse.fetch_board(board_token="stripe")
 
     assert len(results) == 1
     assert call_count["n"] == 2
@@ -302,7 +311,7 @@ async def test_fetch_board_remote_type_from_location_remote() -> None:
     handler = _TwoCallHandler(_company_response(), _board_response([job]))
 
     with patch.object(httpx, "AsyncClient", lambda *a, **kw: _client_with_handler(handler)):
-        results = await fetch_board(board_token="stripe")
+        results, _ = await fetch_board(board_token="stripe")
 
     assert results[0]["remote_type"] == "remote"
 
@@ -313,7 +322,7 @@ async def test_fetch_board_remote_type_hybrid() -> None:
     handler = _TwoCallHandler(_company_response(), _board_response([job]))
 
     with patch.object(httpx, "AsyncClient", lambda *a, **kw: _client_with_handler(handler)):
-        results = await fetch_board(board_token="stripe")
+        results, _ = await fetch_board(board_token="stripe")
 
     assert results[0]["remote_type"] == "hybrid"
 
@@ -324,7 +333,7 @@ async def test_fetch_board_remote_type_unknown_when_no_location() -> None:
     handler = _TwoCallHandler(_company_response(), _board_response([job]))
 
     with patch.object(httpx, "AsyncClient", lambda *a, **kw: _client_with_handler(handler)):
-        results = await fetch_board(board_token="stripe")
+        results, _ = await fetch_board(board_token="stripe")
 
     assert results[0]["remote_type"] == "unknown"
 
@@ -344,6 +353,112 @@ async def test_fetch_board_falls_back_to_board_token_when_company_fetch_fails() 
         return httpx.Response(500, text="server error")
 
     with patch.object(httpx, "AsyncClient", lambda *a, **kw: _client_with_handler(handler)):
-        results = await fetch_board(board_token="stripe")
+        results, resolved_name = await fetch_board(board_token="stripe")
 
     assert results[0]["company_name"] == "stripe"
+    # Fallback name equals board_token, so resolved_company_name is None
+    # (nothing new to cache — it's already implied by the board_token).
+    assert resolved_name is None
+
+
+# ===========================================================================
+# Company name caching — Item 1 from tech debt cleanup (2026-05-11)
+# ===========================================================================
+
+
+@pytest.mark.asyncio
+async def test_fetch_board_uses_cached_name_and_skips_metadata_call() -> None:
+    """When resolved_company_name is cached in config, no metadata HTTP call."""
+    metadata_call_count = {"n": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if "jobs" in request.url.path:
+            return httpx.Response(200, json=_board_response())
+        # Should not be reached — metadata call should be skipped.
+        metadata_call_count["n"] += 1
+        return httpx.Response(200, json=_company_response())
+
+    config = GreenhouseFetchConfig(
+        board_token="stripe",
+        resolved_company_name="Stripe (cached)",
+    )
+
+    with patch.object(httpx, "AsyncClient", lambda *a, **kw: _client_with_handler(handler)):
+        results, resolved_name = await fetch_board(board_token="stripe", config=config)
+
+    # Cached name used; metadata endpoint never called.
+    assert metadata_call_count["n"] == 0
+    assert results[0]["company_name"] == "Stripe (cached)"
+    # resolved_name echoes the cache — no update needed.
+    assert resolved_name == "Stripe (cached)"
+
+
+@pytest.mark.asyncio
+async def test_fetch_board_returns_resolved_name_for_caller_to_cache() -> None:
+    """On first fetch (no cached name), resolved_company_name is returned."""
+    handler = _TwoCallHandler(_company_response(), _board_response())
+
+    with patch.object(httpx, "AsyncClient", lambda *a, **kw: _client_with_handler(handler)):
+        results, resolved_name = await fetch_board(board_token="stripe")
+
+    # The metadata endpoint returned "Stripe"; caller should cache it.
+    assert resolved_name == "Stripe"
+    assert results[0]["company_name"] == "Stripe"
+
+
+@pytest.mark.asyncio
+async def test_fetch_board_metadata_call_count_without_cache() -> None:
+    """Without a cached name exactly one metadata call is made per fetch_board."""
+    handler = _TwoCallHandler(_company_response(), _board_response())
+    calls = []
+
+    original_init = _OriginalAsyncClient.__init__
+
+    def tracking_handler(request: httpx.Request) -> httpx.Response:
+        calls.append(request.url.path)
+        if "jobs" in request.url.path:
+            return httpx.Response(200, json=_board_response())
+        return httpx.Response(200, json=_company_response())
+
+    with patch.object(httpx, "AsyncClient", lambda *a, **kw: _client_with_handler(tracking_handler)):
+        await fetch_board(board_token="stripe")
+
+    metadata_calls = [p for p in calls if "jobs" not in p]
+    jobs_calls = [p for p in calls if "jobs" in p]
+    assert len(metadata_calls) == 1
+    assert len(jobs_calls) == 1
+
+
+# ===========================================================================
+# excluded_keywords filter (Item 2 — Greenhouse config field)
+# ===========================================================================
+
+
+@pytest.mark.asyncio
+async def test_greenhouse_source_config_accepts_excluded_keywords() -> None:
+    """excluded_keywords is a valid field on GreenhouseSourceConfig."""
+    cfg = GreenhouseSourceConfig(
+        board_token="stripe",
+        excluded_keywords=["junior", "intern"],
+    )
+    assert cfg.excluded_keywords == ["junior", "intern"]
+
+
+@pytest.mark.asyncio
+async def test_greenhouse_source_config_excluded_keywords_defaults_empty() -> None:
+    """excluded_keywords defaults to [] when not supplied."""
+    cfg = GreenhouseSourceConfig(board_token="stripe")
+    assert cfg.excluded_keywords == []
+
+
+@pytest.mark.asyncio
+async def test_greenhouse_fetch_config_round_trips_excluded_keywords() -> None:
+    """GreenhouseFetchConfig parses excluded_keywords from raw JSONB dict."""
+    raw = {
+        "board_token": "stripe",
+        "excluded_keywords": ["junior"],
+        "resolved_company_name": "Stripe",
+    }
+    cfg = GreenhouseFetchConfig.model_validate(raw)
+    assert cfg.excluded_keywords == ["junior"]
+    assert cfg.resolved_company_name == "Stripe"

@@ -30,12 +30,26 @@ export interface JSearchConfig {
 export interface GreenhouseConfig {
   /** The board token from the URL: boards.greenhouse.io/<board_token> */
   board_token: string;
+  /**
+   * Case-insensitive substrings to drop from fetched postings.
+   * Matched against title, company, description, and publisher.
+   * min_salary_usd is intentionally absent — Greenhouse feeds don't
+   * reliably include salary data.
+   */
+  excluded_keywords?: string[];
 }
 
 /** Config for a Lever public job-board saved search. */
 export interface LeverConfig {
   /** The company slug from the URL: jobs.lever.co/<company_slug> */
   company_slug: string;
+  /**
+   * Case-insensitive substrings to drop from fetched postings.
+   * Matched against title, company, description, and publisher.
+   * min_salary_usd is intentionally absent — Lever feeds don't
+   * reliably include salary data.
+   */
+  excluded_keywords?: string[];
 }
 
 /**

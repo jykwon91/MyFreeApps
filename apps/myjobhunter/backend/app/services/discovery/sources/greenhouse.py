@@ -46,7 +46,10 @@ from tenacity import (
     wait_exponential,
 )
 
-from app.schemas.discovery.greenhouse_source_config import GreenhouseSourceConfig
+from app.schemas.discovery.greenhouse_source_config import (
+    GreenhouseFetchConfig,
+    GreenhouseSourceConfig,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -101,17 +104,26 @@ async def fetch_board(
     *,
     board_token: str,
     config: GreenhouseSourceConfig | None = None,
-) -> list[dict]:
+) -> tuple[list[dict], str | None]:
     """Fetch all active postings from a Greenhouse public board.
 
     Args:
         board_token: The slug from ``boards.greenhouse.io/<board_token>``.
-        config: Validated GreenhouseSourceConfig (optional — used for
-            any future per-source overrides like date filtering).
+        config: Validated GreenhouseSourceConfig (or GreenhouseFetchConfig
+            with a cached ``resolved_company_name``).  When a cached name
+            is present the metadata HTTP call is skipped, halving per-fetch
+            latency.
 
     Returns:
-        List of normalized posting dicts whose keys map directly onto
-        ``DiscoveredJob`` columns (plus ``raw_payload``).
+        A 2-tuple ``(postings, resolved_company_name)`` where:
+
+        - ``postings`` is a list of normalized posting dicts whose keys map
+          directly onto ``DiscoveredJob`` columns (plus ``raw_payload``).
+        - ``resolved_company_name`` is the company display name that was
+          used for this fetch — the caller should persist it back into the
+          source's ``config`` JSONB so the next fetch can skip the metadata
+          call.  ``None`` if the metadata call failed (board_token used
+          instead; still worth persisting to avoid retrying every time).
 
     Raises:
         GreenhouseInvalidBoardError: 404 — board_token is unknown.
@@ -186,10 +198,25 @@ async def fetch_board(
             f"Greenhouse returned non-JSON body for board {board_token!r}: {exc}",
         ) from exc
 
-    # Try to get company name from the board metadata endpoint.  This is a
-    # best-effort call — if it fails we fall back to the board_token as the
-    # company name (ugly but safe).
-    company_name = await _fetch_company_name(board_token, headers)
+    # Use cached company name when available to skip the metadata round-trip.
+    # ``config`` may be a ``GreenhouseFetchConfig`` (fetched from DB) or a
+    # plain ``GreenhouseSourceConfig`` (e.g. in tests).  Guard with getattr
+    # so both types are accepted without isinstance coupling.
+    cached_name: str | None = getattr(config, "resolved_company_name", None)
+    if cached_name:
+        company_name = cached_name
+        resolved_company_name: str | None = cached_name
+        logger.debug(
+            "Greenhouse company name from cache: board_token=%s name=%r",
+            board_token,
+            company_name,
+        )
+    else:
+        # First fetch for this source — call the metadata endpoint.
+        company_name = await _fetch_company_name(board_token, headers)
+        # Persist back if the name differs from the board_token (i.e. the
+        # metadata call succeeded and returned a real display name).
+        resolved_company_name = company_name if company_name != board_token else None
 
     raw_jobs = body.get("jobs", [])
     if not isinstance(raw_jobs, list):
@@ -212,11 +239,12 @@ async def fetch_board(
         normalized.append(_normalize(raw, company_name=company_name))
 
     logger.info(
-        "Greenhouse fetch ok: board_token=%s returned=%d",
+        "Greenhouse fetch ok: board_token=%s returned=%d cached_name=%s",
         board_token,
         len(normalized),
+        cached_name is not None,
     )
-    return normalized
+    return normalized, resolved_company_name
 
 
 async def _fetch_company_name(board_token: str, headers: dict) -> str:

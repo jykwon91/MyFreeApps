@@ -354,3 +354,36 @@ async def test_fetch_postings_remote_type_unknown_when_no_location() -> None:
         results = await fetch_postings(company_slug="stripe")
 
     assert results[0]["remote_type"] == "unknown"
+
+
+# ===========================================================================
+# excluded_keywords config field (tech debt 2026-05-11)
+# ===========================================================================
+
+
+def test_lever_source_config_accepts_excluded_keywords() -> None:
+    """excluded_keywords is a valid field on LeverSourceConfig."""
+    from app.schemas.discovery.lever_source_config import LeverSourceConfig
+
+    cfg = LeverSourceConfig(
+        company_slug="openai",
+        excluded_keywords=["junior", "intern"],
+    )
+    assert cfg.excluded_keywords == ["junior", "intern"]
+
+
+def test_lever_source_config_excluded_keywords_defaults_empty() -> None:
+    """excluded_keywords defaults to [] when not supplied."""
+    from app.schemas.discovery.lever_source_config import LeverSourceConfig
+
+    cfg = LeverSourceConfig(company_slug="openai")
+    assert cfg.excluded_keywords == []
+
+
+def test_lever_source_config_parse_or_default_accepts_excluded_keywords() -> None:
+    """parse_or_default round-trips excluded_keywords from raw JSONB."""
+    from app.schemas.discovery.lever_source_config import LeverSourceConfig
+
+    raw = {"company_slug": "openai", "excluded_keywords": ["junior"]}
+    cfg = LeverSourceConfig.parse_or_default(raw)
+    assert cfg.excluded_keywords == ["junior"]
