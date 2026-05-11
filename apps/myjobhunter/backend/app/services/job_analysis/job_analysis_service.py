@@ -104,7 +104,29 @@ __all__ = [
     "JobAnalysisFetchAuthRequiredError",
     "JobAnalysisFetchTimeoutError",
     "JobAnalysisInvalidUrlError",
+    # Error classification helpers (used by score loop + tests)
+    "TRANSIENT_ANTHROPIC_CODES",
+    "PERMANENT_ANTHROPIC_CODES",
 ]
+
+
+# ---------------------------------------------------------------------------
+# Error classification constants — used by the score loop and tests.
+# ---------------------------------------------------------------------------
+
+#: Anthropic error.type values that are transient — the score loop should
+#: count them toward the circuit-breaker but not fail-loud. The next
+#: scheduled pass will retry the affected postings.
+TRANSIENT_ANTHROPIC_CODES: frozenset[str] = frozenset(
+    ("rate_limit_error", "overloaded_error", "api_error", "connection_error"),
+)
+
+#: Anthropic error.type values that indicate a permanent config bug —
+#: the score loop should raise immediately so a broken deploy doesn't
+#: silently produce zero scores forever.
+PERMANENT_ANTHROPIC_CODES: frozenset[str] = frozenset(
+    ("authentication_error", "invalid_request_error"),
+)
 
 
 # ---------------------------------------------------------------------------
@@ -113,7 +135,60 @@ __all__ = [
 
 
 class JobAnalysisError(RuntimeError):
-    """Generic analysis failure — HTTP 502."""
+    """Generic analysis failure — HTTP 502.
+
+    Carries structured Anthropic error metadata so the discovery score
+    loop (and any future caller) can differentiate transient errors
+    (rate-limit, overloaded) from permanent config bugs
+    (authentication, invalid-request) without parsing the message string.
+
+    ``code`` mirrors Anthropic's documented ``error.type`` values:
+        - ``rate_limit_error``     — transient; retry at next scheduled pass
+        - ``overloaded_error``     — transient; retry at next scheduled pass
+        - ``authentication_error`` — config bug; fail-loud immediately
+        - ``invalid_request_error``— config bug; fail-loud immediately
+        - ``api_error``            — generic server error; treat as transient
+        - None                     — non-Anthropic failure (validation, JSON)
+
+    ``retryable`` is pre-computed from ``code`` so the loop doesn't need
+    to know the full code taxonomy — just check this flag.
+    """
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        code: str | None = None,
+        retryable: bool = True,
+    ) -> None:
+        super().__init__(message)
+        self.code = code
+        self.retryable = retryable
+
+    @classmethod
+    def from_anthropic(cls, exc: Exception) -> "JobAnalysisError":
+        """Wrap an ``anthropic.APIError`` into a ``JobAnalysisError``.
+
+        Extracts ``error.type`` from the Anthropic response body, maps it
+        to ``retryable``, and preserves it as ``code``.  Called from the
+        ``score()`` function's except block so every Anthropic failure path
+        produces a ``JobAnalysisError`` with structured metadata.
+        """
+        code: str | None = None
+        retryable: bool = True
+
+        if isinstance(exc, anthropic.APIStatusError):
+            # ``exc.type`` is the Anthropic ``error.type`` string or None.
+            code = str(exc.type) if exc.type else None
+            # Permanent config bugs — fail-loud immediately so a broken deploy
+            # does not silently produce zero scores forever.
+            if code in PERMANENT_ANTHROPIC_CODES:
+                retryable = False
+        elif isinstance(exc, (anthropic.APIConnectionError, anthropic.APITimeoutError)):
+            code = "connection_error"
+            retryable = True
+
+        return cls(str(exc), code=code, retryable=retryable)
 
 
 class JobAnalysisFetchAuthRequiredError(JobAnalysisError):
@@ -301,9 +376,16 @@ async def score(
             user_id=user_id,
             context_id=discovered_job_id,
         )
-    except (anthropic.APIError, ValueError) as exc:
-        logger.warning("Claude job-analysis call failed: %s", exc)
-        raise JobAnalysisError(f"AI analysis failed: {exc}") from exc
+    except anthropic.APIError as exc:
+        wrapped = JobAnalysisError.from_anthropic(exc)
+        logger.warning(
+            "Claude job-analysis call failed: code=%s retryable=%s err=%s",
+            wrapped.code, wrapped.retryable, exc,
+        )
+        raise wrapped from exc
+    except ValueError as exc:
+        logger.warning("Claude job-analysis response invalid: %s", exc)
+        raise JobAnalysisError(str(exc), code=None, retryable=False) from exc
 
     validated = _validate_response(meta["parsed"])
 

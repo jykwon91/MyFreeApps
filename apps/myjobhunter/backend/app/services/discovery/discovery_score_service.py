@@ -18,6 +18,33 @@ runaway cost we:
 3. The hard ceiling lives in env (``DISCOVERY_DAILY_BUDGET_USD_HARD_CAP``,
    default $2.00). The per-user setting may not exceed this.
 
+Error handling and circuit-breaker
+===================================
+
+Transient Anthropic errors (``rate_limit_error``, ``overloaded_error``,
+``api_error``, ``connection_error``) are treated as per-row failures:
+
+- Each failure increments the consecutive-failure counter.
+- If three rows in a row fail, the loop aborts with a Sentry warning
+  so the operator can diagnose from the dashboard alone, without grepping
+  logs. Remaining rows stay with ``score IS NULL`` — the next scheduled
+  pass picks them up.
+
+Permanent Anthropic errors (``authentication_error``,
+``invalid_request_error``) indicate a configuration bug — the loop
+fails-loud immediately by re-raising, so a broken deploy doesn't
+silently produce zero scores forever.
+
+Non-Anthropic failures (validation errors, malformed JSON) are treated
+as transient per-row failures (``retryable=True`` on JobAnalysisError
+when ``code`` is None) so a single bad posting doesn't abort the batch.
+
+Sentry tags emitted on every failure:
+
+- ``discovery.score_error_type``  — Anthropic ``error.type`` or ``None``
+- ``discovery.score_error_message`` — first 200 chars of the error message
+- ``discovery.score_attempt_index`` — 0-based index of the failed posting
+
 Async + isolated session
 ========================
 
@@ -37,6 +64,7 @@ import logging
 import uuid
 from datetime import datetime, time, timezone
 
+import sentry_sdk
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -46,6 +74,7 @@ from app.models.system.extraction_log import ExtractionLog
 from app.repositories.discovery import discovery_repository
 from app.services.job_analysis.job_analysis_service import (
     JobAnalysisError,
+    PERMANENT_ANTHROPIC_CODES,
     score as score_jd,
 )
 
@@ -55,13 +84,23 @@ logger = logging.getLogger(__name__)
 DEFAULT_SCORE_BATCH = 20
 DEFAULT_DAILY_BUDGET_USD = 0.30
 
+# Abort the scoring loop after this many consecutive failures so a
+# sustained Anthropic outage doesn't waste the full batch budget and
+# spams logs. Remaining rows stay unscored for the next pass.
+_CIRCUIT_BREAKER_THRESHOLD = 3
+
 
 async def score_user_inbox(user_id: uuid.UUID, *, batch: int = DEFAULT_SCORE_BATCH) -> None:
     """Score up to ``batch`` unscored postings for ``user_id``.
 
-    Stops early when the per-user daily budget is exhausted. Per-call
-    failures are logged + swallowed; one bad posting does not abort the
-    rest of the batch.
+    Stops early when the per-user daily budget is exhausted. Per-row
+    transient failures are logged + counted toward the circuit-breaker;
+    one bad posting does not abort the rest of the batch unless three
+    consecutive rows fail (circuit-breaker trips).
+
+    Permanent config-bug errors (``authentication_error``,
+    ``invalid_request_error``) are re-raised immediately — a deploy with
+    a broken API key should fail loud, not silently produce zero scores.
 
     Designed to run as a FastAPI ``BackgroundTask`` after /refresh
     returns. No-op when there are no unscored postings or the budget
@@ -96,8 +135,10 @@ async def score_user_inbox(user_id: uuid.UUID, *, batch: int = DEFAULT_SCORE_BAT
         # without an extra round-trip.
         scored = 0
         budget_hits = False
+        consecutive_failures = 0
+        last_failure_code: str | None = None
 
-        for job in candidates:
+        for attempt_index, job in enumerate(candidates):
             if spent_today >= daily_cap:
                 budget_hits = True
                 break
@@ -117,12 +158,49 @@ async def score_user_inbox(user_id: uuid.UUID, *, batch: int = DEFAULT_SCORE_BAT
                     discovered_job=job,
                 )
             except JobAnalysisError as exc:
-                logger.warning(
-                    "discovery score: failed user=%s job=%s err=%s",
-                    user_id, job.id, exc,
+                _emit_sentry_failure(
+                    exc=exc,
+                    user_id=user_id,
+                    job_id=job.id,
+                    attempt_index=attempt_index,
                 )
+
+                # Permanent errors are config bugs — fail-loud so the operator
+                # sees a crash on the next Sentry alert instead of a silent
+                # zero-score inbox. The BackgroundTask runner will log the
+                # exception; the current iteration's remaining rows stay
+                # unscored for the next pass.
+                if exc.code in PERMANENT_ANTHROPIC_CODES:
+                    logger.error(
+                        "discovery score: permanent error — aborting loop "
+                        "user=%s job=%s code=%s err=%s",
+                        user_id, job.id, exc.code, exc,
+                    )
+                    raise
+
+                # Transient failure — count toward the circuit-breaker.
+                consecutive_failures += 1
+                last_failure_code = exc.code
+                logger.warning(
+                    "discovery score: transient failure user=%s job=%s "
+                    "code=%s consecutive=%d err=%s",
+                    user_id, job.id, exc.code, consecutive_failures, exc,
+                )
+
+                if consecutive_failures >= _CIRCUIT_BREAKER_THRESHOLD:
+                    _emit_circuit_break_warning(
+                        user_id=user_id,
+                        consecutive=consecutive_failures,
+                        last_code=last_failure_code,
+                        attempt_index=attempt_index,
+                    )
+                    break
+
                 continue
 
+            # Successful score — reset the consecutive-failure counter.
+            consecutive_failures = 0
+            last_failure_code = None
             spent_today += float(analysis.total_cost_usd or 0)
             scored += 1
 
@@ -130,6 +208,63 @@ async def score_user_inbox(user_id: uuid.UUID, *, batch: int = DEFAULT_SCORE_BAT
             "discovery score: complete user=%s scored=%d budget_hit=%s spent_session=%.4f",
             user_id, scored, budget_hits, spent_today,
         )
+
+
+def _emit_sentry_failure(
+    *,
+    exc: JobAnalysisError,
+    user_id: uuid.UUID,
+    job_id: uuid.UUID,
+    attempt_index: int,
+) -> None:
+    """Capture a per-row scoring failure to Sentry with structured tags.
+
+    Tags are specific enough to filter by error type in the Sentry dashboard
+    without grepping logs — operators can diagnose a scoring outage from
+    Sentry alone (per feedback_check_sentry_first.md).
+    """
+    with sentry_sdk.new_scope() as scope:
+        scope.set_tag("discovery.score_error_type", str(exc.code or "unknown"))
+        scope.set_tag(
+            "discovery.score_error_message",
+            str(exc)[:200],
+        )
+        scope.set_tag("discovery.score_attempt_index", str(attempt_index))
+        scope.set_tag("discovery.score_retryable", str(exc.retryable))
+        scope.set_extra("user_id", str(user_id))
+        scope.set_extra("job_id", str(job_id))
+        sentry_sdk.capture_exception(exc)
+
+
+def _emit_circuit_break_warning(
+    *,
+    user_id: uuid.UUID,
+    consecutive: int,
+    last_code: str | None,
+    attempt_index: int,
+) -> None:
+    """Emit a Sentry warning event when the circuit-breaker trips.
+
+    This is a separate event (not an exception) because the loop is aborting
+    gracefully — remaining rows stay unscored for the next pass.  The warning
+    is detectable in Sentry dashboards for alerting on sustained outages.
+    """
+    with sentry_sdk.new_scope() as scope:
+        scope.set_tag("discovery.circuit_break", "true")
+        scope.set_tag("discovery.circuit_break_code", str(last_code or "unknown"))
+        scope.set_tag("discovery.circuit_break_at_index", str(attempt_index))
+        scope.set_extra("user_id", str(user_id))
+        scope.set_extra("consecutive_failures", consecutive)
+        sentry_sdk.capture_message(
+            f"discovery score loop aborted: {consecutive} consecutive failures, "
+            f"type={last_code or 'unknown'}",
+            level="warning",
+        )
+    logger.warning(
+        "discovery score: circuit breaker tripped user=%s "
+        "consecutive=%d last_code=%s — remaining postings deferred to next pass",
+        user_id, consecutive, last_code,
+    )
 
 
 def _resolve_daily_budget() -> float:
