@@ -33,10 +33,26 @@ class DiscoverySourceCreate(BaseModel):
     a loose dict for now — they have no adapter shipped yet, so there's
     no schema to enforce. When their adapters land, add a typed config
     class here and extend the dispatcher.
+
+    ``name`` is an optional human-readable label. Two active sources for
+    the same user + kind must have distinct names. Callers that don't
+    supply a name get the empty-string default, which is fine as long as
+    they only have one active source per kind. To register a second
+    Greenhouse board (for example) the caller must give each source a
+    unique name.
     """
 
     source: Literal[_VALID_SOURCES] = Field(  # type: ignore[valid-type]
         ..., description="Adapter to run.",
+    )
+    name: str = Field(
+        default="",
+        max_length=100,
+        description=(
+            "Optional human-readable label. Required only when the operator "
+            "wants more than one active source of the same kind. Leading and "
+            "trailing whitespace is stripped."
+        ),
     )
     config: dict[str, Any] = Field(
         default_factory=dict,
@@ -50,6 +66,12 @@ class DiscoverySourceCreate(BaseModel):
         default=1440, ge=15, le=10080,
         description="Minimum minutes between automatic fetches (cap = 7 days).",
     )
+
+    @model_validator(mode="after")
+    def _normalise_and_validate(self) -> "DiscoverySourceCreate":
+        # Strip whitespace from name. Pydantic v2 doesn't strip by default.
+        self.name = self.name.strip()
+        return self
 
     @model_validator(mode="after")
     def _validate_config_per_source(self) -> "DiscoverySourceCreate":
@@ -76,6 +98,7 @@ class DiscoverySourceResponse(BaseModel):
 
     id: uuid.UUID
     source: str
+    name: str
     config: dict[str, Any]
     is_active: bool
     fetch_interval_minutes: int
