@@ -33,6 +33,12 @@ export default function LeaseNew() {
   const urlTemplateIdsParam = searchParams.get("template_ids");
   const urlSingleTemplateId = searchParams.get("template_id");
   const urlApplicantId = searchParams.get("applicant_id");
+  // When the host clicked "New lease" from a parent lease's detail page,
+  // this URL param carries the parent's ID through to the create
+  // mutation. Surfaced via a small banner so the host knows what they're
+  // creating — and submitted to the backend so the new lease is wired
+  // up as a successor.
+  const urlParentLeaseId = searchParams.get("parent_lease_id");
 
   const initialTemplateIds: string[] = useMemo(() => {
     if (urlTemplateIdsParam) {
@@ -147,6 +153,23 @@ export default function LeaseNew() {
         subtitle="Pick one or more templates and an applicant, then fill in the placeholders."
       />
 
+      {urlParentLeaseId ? (
+        <div
+          className="rounded-md border bg-muted/50 px-3 py-2 text-xs"
+          data-testid="lease-new-successor-banner"
+        >
+          Creating a successor to{" "}
+          <Link
+            to={`/leases/${urlParentLeaseId}`}
+            className="font-medium text-primary hover:underline"
+            data-testid="lease-new-parent-link"
+          >
+            the prior lease
+          </Link>
+          . The original stays in place; this new draft becomes the successor.
+        </div>
+      ) : null}
+
       {/* ------------------------------------------------------------------ */}
       {/* Step 1 — Template multi-picker (always visible while picking)       */}
       {/* ------------------------------------------------------------------ */}
@@ -249,6 +272,7 @@ export default function LeaseNew() {
             templateIds={selectedTemplateIds}
             templateLabels={templateLabels}
             applicantId={resolvedApplicantId!}
+            parentLeaseId={urlParentLeaseId}
           />
         </section>
       ) : null}

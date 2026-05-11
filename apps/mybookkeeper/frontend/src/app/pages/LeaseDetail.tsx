@@ -1,6 +1,15 @@
 import { useState } from "react";
-import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, CalendarPlus, FileText, Mail, Plus, Undo2, User } from "lucide-react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import {
+  ArrowLeft,
+  CalendarPlus,
+  FilePlus2,
+  FileText,
+  Mail,
+  Plus,
+  Undo2,
+  User,
+} from "lucide-react";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import AlertBox from "@/shared/components/ui/AlertBox";
 import Badge from "@/shared/components/ui/Badge";
@@ -28,6 +37,7 @@ type Tab = "files" | "details" | "notes";
 
 export default function LeaseDetail() {
   const { leaseId } = useParams<{ leaseId: string }>();
+  const navigate = useNavigate();
   const canWrite = useCanWrite();
   const [tab, setTab] = useState<Tab>("files");
   const [showAddTemplateModal, setShowAddTemplateModal] = useState(false);
@@ -77,6 +87,26 @@ export default function LeaseDetail() {
     && latestExtension !== null
     && ageMs !== null
     && ageMs < UNDO_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+  // A successor lease can be created when the parent is far enough along
+  // to be considered "real" (signed / active / ended) AND does not already
+  // have one. ``draft`` / ``generated`` / ``sent`` should still be edited
+  // in place; ``terminated`` is closed-and-final.
+  const canCreateSuccessor =
+    canWrite
+    && lease !== undefined
+    && (
+      lease.status === "signed"
+      || lease.status === "active"
+      || lease.status === "ended"
+    )
+    && lease.successor_lease_id === null;
+
+  function handleCreateSuccessor() {
+    if (!lease) return;
+    navigate(
+      `/leases/new?applicant_id=${lease.applicant_id}&parent_lease_id=${lease.id}`,
+    );
+  }
 
   async function handleGenerate() {
     if (!lease) return;
@@ -235,9 +265,43 @@ export default function LeaseDetail() {
                     Undo extension
                   </Button>
                 ) : null}
+                {canCreateSuccessor ? (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={handleCreateSuccessor}
+                    data-testid="lease-new-successor-button"
+                    title="Create a new lease that supersedes this one (rent change, term change, etc.)"
+                  >
+                    <FilePlus2 size={16} className="mr-1" />
+                    New lease
+                  </Button>
+                ) : null}
               </div>
             }
           />
+
+          {lease.parent_lease_id ? (
+            <Link
+              to={`/leases/${lease.parent_lease_id}`}
+              data-testid="lease-parent-link"
+              className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+            >
+              <ArrowLeft className="h-3 w-3" aria-hidden="true" />
+              View prior lease this supersedes
+            </Link>
+          ) : null}
+
+          {lease.successor_lease_id ? (
+            <Link
+              to={`/leases/${lease.successor_lease_id}`}
+              data-testid="lease-successor-link"
+              className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+            >
+              <FilePlus2 className="h-3 w-3" aria-hidden="true" />
+              View successor lease
+            </Link>
+          ) : null}
 
           {showExtendDialog && lease?.ends_on ? (
             <ExtendLeaseDialog
