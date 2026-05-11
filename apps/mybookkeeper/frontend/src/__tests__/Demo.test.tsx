@@ -77,7 +77,7 @@ vi.mock("@/shared/hooks/useToast", () => ({
 
 import { useListDemoUsersQuery } from "@/shared/store/demoApi";
 
-function renderWithProviders(ui: React.ReactElement) {
+function renderWithProviders(ui: React.ReactElement<any>) {
   return render(
     <Provider store={store}>
       <BrowserRouter>{ui}</BrowserRouter>

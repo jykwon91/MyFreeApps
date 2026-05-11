@@ -81,7 +81,7 @@ import {
   useGetAttributionReviewQueueQuery,
 } from "@/shared/store/attributionApi";
 
-function renderWithProviders(ui: React.ReactElement) {
+function renderWithProviders(ui: React.ReactElement<any>) {
   return render(
     <Provider store={store}>
       <BrowserRouter>{ui}</BrowserRouter>

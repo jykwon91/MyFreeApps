@@ -114,7 +114,7 @@ vi.mock('@/shared/hooks/useOrgRole', () => ({
 import { useGetDocumentsQuery } from '@/shared/store/documentsApi';
 import { useCanWrite } from '@/shared/hooks/useOrgRole';
 
-function renderWithProviders(ui: React.ReactElement) {
+function renderWithProviders(ui: React.ReactElement<any>) {
   return render(
     <Provider store={store}>
       <BrowserRouter>{ui}</BrowserRouter>

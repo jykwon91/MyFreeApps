@@ -70,7 +70,7 @@ vi.mock('@/shared/hooks/useToast', () => ({
 import { useGetTaxSummaryQuery } from '@/shared/store/summaryApi';
 import { downloadFile } from '@/shared/utils/download';
 
-function renderWithProviders(ui: React.ReactElement) {
+function renderWithProviders(ui: React.ReactElement<any>) {
   return render(
     <Provider store={store}>
       <BrowserRouter>{ui}</BrowserRouter>

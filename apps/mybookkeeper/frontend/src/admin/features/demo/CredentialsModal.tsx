@@ -12,7 +12,7 @@ export interface CredentialsModalProps {
 
 export default function CredentialsModal({ open, email, password, onClose }: CredentialsModalProps) {
   const [copied, setCopied] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   useEffect(() => {
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
