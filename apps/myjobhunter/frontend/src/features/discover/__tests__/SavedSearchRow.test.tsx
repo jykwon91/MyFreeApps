@@ -5,7 +5,7 @@
  * source badge becomes secondary. When name is empty the badge is primary.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import SavedSearchRow from "../SavedSearchRow";
 import type { DiscoverySource } from "@/types/discovery/discovery-source";
 
@@ -20,12 +20,21 @@ vi.mock("@platform/ui", () => ({
     children,
     onClick,
     disabled,
+    "aria-label": ariaLabel,
+    "data-testid": testId,
   }: {
     children: React.ReactNode;
     onClick?: () => void;
     disabled?: boolean;
+    "aria-label"?: string;
+    "data-testid"?: string;
   }) => (
-    <button onClick={onClick} disabled={disabled}>
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={ariaLabel}
+      data-testid={testId}
+    >
       {children}
     </button>
   ),
@@ -51,6 +60,7 @@ vi.mock("@platform/ui", () => ({
 
 vi.mock("lucide-react", () => ({
   AlertTriangle: () => <svg data-testid="alert-icon" />,
+  Pencil: () => <svg data-testid="pencil-icon" />,
   RefreshCw: () => null,
   Trash2: () => null,
 }));
@@ -63,6 +73,24 @@ vi.mock("@/store/discoverApi", () => ({
 
 vi.mock("../EditFrequencyPopover", () => ({
   default: () => <div data-testid="edit-frequency-popover" />,
+}));
+
+vi.mock("../EditSavedSearchDialog", () => ({
+  default: ({
+    open,
+    onClose,
+  }: {
+    source: unknown;
+    open: boolean;
+    onClose: () => void;
+  }) =>
+    open ? (
+      <div data-testid="edit-saved-search-dialog">
+        <button data-testid="edit-dialog-close-btn" onClick={onClose}>
+          Close
+        </button>
+      </div>
+    ) : null,
 }));
 
 vi.mock("../saved-search-summary", () => ({
@@ -159,5 +187,44 @@ describe("SavedSearchRow — name rendering", () => {
     const allQueryEls = screen.queryAllByText("Software Engineer — Remote");
     // It should appear exactly once (as the main span, not as a subtitle too)
     expect(allQueryEls.length).toBe(1);
+  });
+});
+
+describe("SavedSearchRow — edit affordance", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("renders an edit button on the row", () => {
+    render(<SavedSearchRow source={makeSource()} />);
+
+    expect(screen.getByTestId("edit-source-btn")).toBeInTheDocument();
+  });
+
+  it("opens the EditSavedSearchDialog when edit button is clicked", async () => {
+    render(<SavedSearchRow source={makeSource()} />);
+
+    // Dialog should be closed initially.
+    expect(screen.queryByTestId("edit-saved-search-dialog")).not.toBeInTheDocument();
+
+    const editBtn = screen.getByTestId("edit-source-btn");
+    fireEvent.click(editBtn);
+
+    // Dialog should now be open.
+    expect(screen.getByTestId("edit-saved-search-dialog")).toBeInTheDocument();
+  });
+
+  it("closes the EditSavedSearchDialog when dialog calls onClose", async () => {
+    render(<SavedSearchRow source={makeSource()} />);
+
+    const editBtn = screen.getByTestId("edit-source-btn");
+    fireEvent.click(editBtn);
+
+    expect(screen.getByTestId("edit-saved-search-dialog")).toBeInTheDocument();
+
+    const closeBtn = screen.getByTestId("edit-dialog-close-btn");
+    fireEvent.click(closeBtn);
+
+    expect(screen.queryByTestId("edit-saved-search-dialog")).not.toBeInTheDocument();
   });
 });

@@ -37,6 +37,18 @@ class DiscoverySourcePatch(BaseModel):
     deactivation (``false``). For standard deactivation, prefer the
     ``DELETE /discover/sources/{id}`` endpoint — this field is for
     programmatic toggle scenarios.
+    ``config``: when provided, **replaces** the entire config JSONB blob
+    for the source.  The caller must supply a complete, valid config for
+    the source's kind — the same per-source validation rules as creation
+    are applied.  Partial config merge is intentionally NOT supported:
+    the frontend dialog pre-fills all fields from the existing row and
+    sends a full replacement, so the server always receives a well-formed
+    shape. The source kind itself cannot be changed via PATCH — callers
+    should delete and recreate for a kind change.
+
+    ``source_kind``: the source kind of the row being patched, required
+    when ``config`` is provided so the server can dispatch config
+    validation without a separate round-trip to read the row.
     """
 
     fetch_interval_minutes: int | None = Field(
@@ -52,6 +64,21 @@ class DiscoverySourcePatch(BaseModel):
         default=None,
         description="Activate (true) or deactivate (false) this source.",
     )
+    config: dict[str, Any] | None = Field(
+        default=None,
+        description=(
+            "Full replacement config for the source. When provided, "
+            "``source_kind`` must also be supplied for per-source validation."
+        ),
+    )
+    source_kind: str | None = Field(
+        default=None,
+        description=(
+            "Source kind of the row being patched (e.g. 'jsearch', 'greenhouse', "
+            "'lever'). Required when ``config`` is provided so the server can "
+            "dispatch per-source config validation."
+        ),
+    )
 
     @model_validator(mode="after")
     def _at_least_one_field(self) -> "DiscoverySourcePatch":
@@ -59,12 +86,34 @@ class DiscoverySourcePatch(BaseModel):
             self.fetch_interval_minutes is None
             and self.name is None
             and self.is_active is None
+            and self.config is None
         ):
             raise ValueError(
-                "At least one field (fetch_interval_minutes, name, is_active) must be provided."
+                "At least one field (fetch_interval_minutes, name, is_active, config) must be provided."
             )
         if self.name is not None:
             self.name = self.name.strip()
+        if self.config is not None and self.source_kind is None:
+            raise ValueError(
+                "source_kind is required when config is provided."
+            )
+        return self
+
+    @model_validator(mode="after")
+    def _validate_config_per_source(self) -> "DiscoverySourcePatch":
+        """Apply per-source config validation when config is being updated.
+
+        Mirrors the same dispatch logic in ``DiscoverySourceCreate`` so
+        config edits are held to the same validation standard as creation.
+        """
+        if self.config is None:
+            return self
+        if self.source_kind == "jsearch":
+            JSearchSourceConfig.model_validate(self.config)
+        elif self.source_kind == "greenhouse":
+            GreenhouseSourceConfig.model_validate(self.config)
+        elif self.source_kind == "lever":
+            LeverSourceConfig.model_validate(self.config)
         return self
 
 

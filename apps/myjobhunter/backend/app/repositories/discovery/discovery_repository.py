@@ -117,12 +117,19 @@ async def update_source(
     fetch_interval_minutes: int | None = None,
     name: str | None = None,
     is_active: bool | None = None,
+    config: dict | None = None,
 ) -> DiscoverySource | None:
     """Partial-update a saved search. Returns None when not found / wrong owner.
 
     Only applies the fields that are explicitly provided (not None). This
     allows the PATCH route to accept a sparse body — fields omitted by
     the caller are left unchanged. Callers are responsible for committing.
+
+    ``config`` replaces the entire JSONB blob when provided. The caller
+    (service layer, dispatched from the schema validator) is responsible
+    for ensuring the config is valid for the source kind before calling.
+    SQLAlchemy does not detect in-place dict mutations on JSONB columns,
+    so we assign a new dict object to trigger change tracking.
     """
     src = await get_source(db, source_id, user_id)
     if src is None:
@@ -133,6 +140,11 @@ async def update_source(
         src.name = name
     if is_active is not None:
         src.is_active = is_active
+    if config is not None:
+        # Assign a new dict to ensure SQLAlchemy detects the change.
+        # In-place mutation of a JSONB dict is silently ignored by the
+        # ORM because the identity hasn't changed.
+        src.config = dict(config)
     await db.flush()
     await db.refresh(src)
     return src
