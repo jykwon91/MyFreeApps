@@ -29,8 +29,10 @@ from app.services.leases._lease_helpers import (
     _build_summary,
     _denormalise_dates,
     _resolve_latest_extension,
+    _resolve_successor_lease_id,
     _resolve_template_links,
     _to_detail,
+    _validate_parent_lease,
     _validate_status_transition,
 )
 from app.services.leases.lease_template_service import TemplateNotFoundError
@@ -48,6 +50,7 @@ async def create_lease(
     applicant_id: uuid.UUID,
     listing_id: uuid.UUID | None,
     values: dict[str, Any],
+    parent_lease_id: uuid.UUID | None = None,
 ) -> SignedLeaseResponse:
     """Create a draft signed lease from one or more templates.
 
@@ -55,11 +58,25 @@ async def create_lease(
     templates. Persists ONE ``signed_leases`` row plus N rows in
     ``signed_lease_templates`` (one per template, ordered by
     ``display_order`` matching the host's pick order).
+
+    When ``parent_lease_id`` is set, the new lease is created as a
+    successor: the parent's status must be signed / active / ended and
+    must not already have a live successor. The route maps
+    ``InvalidParentLeaseError`` to 422 and ``SuccessorAlreadyExistsError``
+    to 409.
     """
     if not template_ids:
         raise TemplateNotFoundError("At least one template_id is required")
 
     async with unit_of_work() as db:
+        if parent_lease_id is not None:
+            await _validate_parent_lease(
+                db,
+                parent_lease_id=parent_lease_id,
+                user_id=user_id,
+                organization_id=organization_id,
+            )
+
         seen_keys: set[str] = set()
         merged_required: list = []
         for tid in template_ids:
@@ -108,6 +125,7 @@ async def create_lease(
             ends_on=ends,
             status="draft",
             kind="generated",
+            parent_lease_id=parent_lease_id,
         )
         for order, tid in enumerate(template_ids):
             await signed_lease_template_repo.create(
@@ -120,7 +138,10 @@ async def create_lease(
         attachments = await signed_lease_attachment_repo.list_by_lease(db, lease.id)
         template_links = await _resolve_template_links(db, lease_id=lease.id)
         latest_extension = await _resolve_latest_extension(db, lease_id=lease.id)
-    return _to_detail(lease, attachments, template_links, latest_extension)
+        successor_lease_id = await _resolve_successor_lease_id(db, lease_id=lease.id)
+    return _to_detail(
+        lease, attachments, template_links, latest_extension, successor_lease_id,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -205,7 +226,10 @@ async def get_lease(
         )
         template_links = await _resolve_template_links(db, lease_id=lease.id)
         latest_extension = await _resolve_latest_extension(db, lease_id=lease.id)
-    return _to_detail(lease, attachments, template_links, latest_extension)
+        successor_lease_id = await _resolve_successor_lease_id(db, lease_id=lease.id)
+    return _to_detail(
+        lease, attachments, template_links, latest_extension, successor_lease_id,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -280,7 +304,10 @@ async def update_lease(
         )
         template_links = await _resolve_template_links(db, lease_id=lease_id)
         latest_extension = await _resolve_latest_extension(db, lease_id=lease_id)
-    return _to_detail(lease, attachments, template_links, latest_extension)
+        successor_lease_id = await _resolve_successor_lease_id(db, lease_id=lease_id)
+    return _to_detail(
+        lease, attachments, template_links, latest_extension, successor_lease_id,
+    )
 
 
 # ---------------------------------------------------------------------------

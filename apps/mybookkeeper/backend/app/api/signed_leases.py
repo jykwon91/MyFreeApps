@@ -74,11 +74,22 @@ async def create_lease(
             applicant_id=payload.applicant_id,
             listing_id=payload.listing_id,
             values=payload.values,
+            parent_lease_id=payload.parent_lease_id,
         )
     except lease_template_service.TemplateNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Template not found") from exc
     except signed_lease_service.MissingRequiredValuesError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except signed_lease_service.InvalidParentLeaseError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail={"code": "INVALID_PARENT_LEASE", "message": str(exc)},
+        ) from exc
+    except signed_lease_service.SuccessorAlreadyExistsError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={"code": "SUCCESSOR_ALREADY_EXISTS", "message": str(exc)},
+        ) from exc
 
 
 @router.post("/import", response_model=SignedLeaseResponse, status_code=201)
@@ -89,6 +100,7 @@ async def import_lease(
     ends_on: _dt.date | None = Form(None),
     notes: str | None = Form(None),
     status: str = Form("signed"),
+    parent_lease_id: uuid.UUID | None = Form(None),
     files: list[UploadFile] = File(...),
     ctx: RequestContext = Depends(require_write_access),
 ) -> SignedLeaseResponse:
@@ -115,11 +127,22 @@ async def import_lease(
             notes=notes,
             status=status,
             files=file_tuples,
+            parent_lease_id=parent_lease_id,
         )
     except signed_lease_service.ApplicantNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Applicant not found") from exc
     except signed_lease_service.ListingNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Listing not found") from exc
+    except signed_lease_service.InvalidParentLeaseError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail={"code": "INVALID_PARENT_LEASE", "message": str(exc)},
+        ) from exc
+    except signed_lease_service.SuccessorAlreadyExistsError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={"code": "SUCCESSOR_ALREADY_EXISTS", "message": str(exc)},
+        ) from exc
     except signed_lease_service.AttachmentTooLargeError as exc:
         raise HTTPException(status_code=413, detail=str(exc)) from exc
     except signed_lease_service.AttachmentTypeRejectedError as exc:

@@ -75,6 +75,23 @@ class InvalidAttachmentKindError(ValueError):
     pass
 
 
+class InvalidParentLeaseError(ValueError):
+    """``parent_lease_id`` doesn't exist, belongs to another tenant, or is
+    in a status that can't have a successor (only signed / active / ended)."""
+
+
+class SuccessorAlreadyExistsError(ValueError):
+    """``parent_lease_id`` already has a live successor — only one allowed."""
+
+
+# Statuses a parent lease must be in for the host to create a successor.
+# ``draft`` / ``generated`` / ``sent`` are still being edited — the host
+# should finish the original instead. ``terminated`` is closed-and-final.
+PARENT_ALLOWED_STATUSES: frozenset[str] = frozenset(
+    {"signed", "active", "ended"},
+)
+
+
 # ---------------------------------------------------------------------------
 # Allowlist for signed-lease attachment uploads.
 # ---------------------------------------------------------------------------
@@ -143,6 +160,7 @@ def _to_detail(
     attachments,
     template_links: list[SignedLeaseTemplateLink],
     latest_extension: "LeaseExtensionSummary | None" = None,
+    successor_lease_id: uuid.UUID | None = None,
 ) -> SignedLeaseResponse:
     return SignedLeaseResponse(
         id=lease.id,
@@ -167,7 +185,23 @@ def _to_detail(
         updated_at=lease.updated_at,
         attachments=_attachment_responses(attachments),
         latest_extension=latest_extension,
+        parent_lease_id=lease.parent_lease_id,
+        successor_lease_id=successor_lease_id,
     )
+
+
+async def _resolve_successor_lease_id(
+    db,
+    *,
+    lease_id: uuid.UUID,
+) -> uuid.UUID | None:
+    """Return the id of the live successor lease, or None."""
+    from app.repositories.leases import signed_lease_repo  # local: dodge cycle
+
+    successor = await signed_lease_repo.find_successor(
+        db, parent_lease_id=lease_id,
+    )
+    return successor.id if successor is not None else None
 
 
 async def _resolve_latest_extension(
@@ -231,6 +265,48 @@ def _denormalise_dates(values: dict[str, Any]) -> tuple[_dt.date | None, _dt.dat
     starts = next((_coerce(values[k]) for k in candidates_start if k in values), None)
     ends = next((_coerce(values[k]) for k in candidates_end if k in values), None)
     return starts, ends
+
+
+async def _validate_parent_lease(
+    db,
+    *,
+    parent_lease_id: uuid.UUID,
+    user_id: uuid.UUID,
+    organization_id: uuid.UUID,
+) -> None:
+    """Confirm the parent exists, is owned by the caller, has a successor-
+    eligible status, and does not already have a live successor.
+
+    Raises:
+        InvalidParentLeaseError: parent not found in this tenant, or its
+            status is outside ``PARENT_ALLOWED_STATUSES``.
+        SuccessorAlreadyExistsError: parent already has a live successor.
+    """
+    from app.repositories.leases import signed_lease_repo  # local: dodge cycle
+
+    parent = await signed_lease_repo.get(
+        db,
+        lease_id=parent_lease_id,
+        user_id=user_id,
+        organization_id=organization_id,
+    )
+    if parent is None:
+        raise InvalidParentLeaseError(
+            f"Parent lease {parent_lease_id} not found in this tenant.",
+        )
+    if parent.status not in PARENT_ALLOWED_STATUSES:
+        raise InvalidParentLeaseError(
+            f"Parent lease is in status '{parent.status}'. Only signed, "
+            "active, or ended leases can have a successor.",
+        )
+    existing = await signed_lease_repo.find_successor(
+        db, parent_lease_id=parent_lease_id,
+    )
+    if existing is not None:
+        raise SuccessorAlreadyExistsError(
+            f"Parent lease already has a successor ({existing.id}). "
+            "Delete or supersede that lease before creating another.",
+        )
 
 
 async def _load_resolution_context(

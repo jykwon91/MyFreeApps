@@ -20,6 +20,7 @@ from app.services.leases._lease_helpers import (
     AttachmentTooLargeError,
     AttachmentTypeRejectedError,
     StorageNotConfiguredError,
+    _validate_parent_lease,
 )
 from app.services.leases.lease_lifecycle_service import get_lease
 
@@ -149,6 +150,7 @@ async def import_signed_lease(
     notes: str | None,
     status: str,
     files: list[tuple[bytes, str, str | None]],  # (content, filename, declared_ct)
+    parent_lease_id: uuid.UUID | None = None,
 ) -> SignedLeaseResponse:
     """Create an imported signed lease from externally-signed PDFs.
 
@@ -200,6 +202,14 @@ async def import_signed_lease(
             if listing is None:
                 raise ListingNotFoundError(f"Listing {listing_id} not found")
 
+        if parent_lease_id is not None:
+            await _validate_parent_lease(
+                db,
+                parent_lease_id=parent_lease_id,
+                user_id=user_id,
+                organization_id=organization_id,
+            )
+
         now = _dt.datetime.now(_dt.timezone.utc)
         lease = await signed_lease_repo.create(
             db,
@@ -212,6 +222,7 @@ async def import_signed_lease(
             ends_on=ends_on,
             status=status,
             kind="imported",
+            parent_lease_id=parent_lease_id,
         )
         await signed_lease_repo.update_lease(
             db,

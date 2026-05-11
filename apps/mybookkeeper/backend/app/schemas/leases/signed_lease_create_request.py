@@ -24,6 +24,10 @@ class SignedLeaseCreateRequest(BaseModel):
     template_id: uuid.UUID | None = None
     applicant_id: uuid.UUID
     listing_id: uuid.UUID | None = None
+    # Successor-lease pointer: when set, the new draft is positioned as the
+    # successor to ``parent_lease_id``. The service validates that the
+    # parent is in a status that allows succession (signed / active / ended).
+    parent_lease_id: uuid.UUID | None = None
     values: dict[str, Any] = Field(default_factory=dict)
 
     model_config = ConfigDict(extra="forbid")
