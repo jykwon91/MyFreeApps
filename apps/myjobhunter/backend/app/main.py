@@ -23,12 +23,27 @@ from app.core.rate_limit import (
 )
 from app.schemas.user import UserCreate, UserRead, UserUpdate
 from app.db.session import AsyncSessionLocal
+from app.services.discovery import discovery_embedding_service
 from app.services.discovery.discovery_fetch_reaper import reap_stale_running_fetches
 from app.services.storage.bucket_initializer import ensure_bucket
 
 
 async def _on_startup() -> None:
-    """Run once at backend boot — reap discovery_fetches stuck in 'running'."""
+    """Run once at backend boot — reap stale fetches + eager-load the
+    embedding model.
+
+    The embedding model load runs FIRST so a missing / corrupt fastembed
+    cache fails the lifespan before we touch the DB — the failure mode
+    is then a clean "deploy rollback to previous image" rather than the
+    backend booting in a half-broken state where discovery fetches
+    succeed but the post-fetch embed task crashes for every user.
+
+    Per rules/no-bandaid-solutions.md: any embedding model failure
+    raises ``EmbeddingModelLoadError`` and crashes the lifespan. There
+    is no silent fallback.
+    """
+    discovery_embedding_service.load_model_eager()
+
     async with AsyncSessionLocal() as db:
         reaped = await reap_stale_running_fetches(db)
         if reaped > 0:

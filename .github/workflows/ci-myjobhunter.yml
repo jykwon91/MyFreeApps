@@ -107,7 +107,10 @@ jobs:
 
     services:
       postgres:
-        image: postgres:16-alpine
+        # pgvector/pgvector:pg16 — required by the discemb260511 migration
+        # which runs ``CREATE EXTENSION vector``. Stock postgres:16 fails
+        # at extension creation. Mirror of docker-compose.yml.
+        image: pgvector/pgvector:pg16
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres

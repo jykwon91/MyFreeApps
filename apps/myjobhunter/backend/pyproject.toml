@@ -41,6 +41,14 @@ dependencies = [
     # call with exponential-backoff retry on 429 / 5xx so a transient
     # provider blip doesn't tank a fetch cycle.
     "tenacity>=9.0",
+    # Discovery embeddings (PR 4a). fastembed runs sentence-transformers
+    # models locally via ONNX — no external API, no per-call cost. The
+    # default model is all-MiniLM-L6-v2 (384 dims, ~90MB ONNX). The
+    # pgvector Python client integrates the Postgres ``vector`` column
+    # type with SQLAlchemy 2.0 so the ORM can read/write list[float].
+    # Both are wired in app.services.discovery.discovery_embedding_service.
+    "fastembed>=0.8",
+    "pgvector>=0.4",
 ]
 
 [tool.uv]

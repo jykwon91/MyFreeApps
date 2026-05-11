@@ -22,12 +22,18 @@ import uuid
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+import logging
+
 from app.core.screening_questions import ALLOWED_KEYS, is_eeoc as _is_eeoc
 from app.models.profile.education import Education
 from app.models.profile.profile import Profile
 from app.models.profile.screening_answer import ScreeningAnswer
 from app.models.profile.skill import Skill
 from app.models.profile.work_history import WorkHistory
+from app.services.discovery import discovery_embedding_service
+from app.services.discovery.discovery_embedding_service import (
+    EmbeddingModelLoadError,
+)
 from app.repositories.profile import (
     education_repository,
     profile_repository,
@@ -43,6 +49,54 @@ from app.schemas.profile.screening_answer_update_request import ScreeningAnswerU
 from app.schemas.profile.skill_create_request import SkillCreateRequest
 from app.schemas.profile.work_history_create_request import WorkHistoryCreateRequest
 from app.schemas.profile.work_history_update_request import WorkHistoryUpdateRequest
+
+
+logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Discovery-embedding refresh — fields that affect job matching
+# ---------------------------------------------------------------------------
+
+# Fields on ProfileUpdateRequest that, when present, affect what
+# ``discovery_embedding_service._assemble_profile_text`` produces.
+# Keep this in sync with that assembler — if you add a field there,
+# add it here too.
+_PROFILE_EMBED_FIELDS = frozenset({"summary"})
+
+
+def _profile_update_affects_embedding(updates: dict) -> bool:
+    """True when the patch touches a field that goes into the profile
+    embedding. Used to skip the ~100ms ONNX inference on cheap field
+    changes (e.g. salary preference, work_auth_status).
+    """
+    return bool(_PROFILE_EMBED_FIELDS & set(updates))
+
+
+async def _refresh_profile_embedding_best_effort(
+    db: AsyncSession, user_id: uuid.UUID,
+) -> None:
+    """Refresh the embedding; log + swallow ``EmbeddingModelLoadError``
+    so the caller's commit still succeeds.
+
+    This is the ONE place where embedding failures are caught — and
+    only because the alternative (failing the user-facing profile save
+    because fastembed couldn't load) is worse. The error is captured
+    by the logger which Sentry picks up; the boot guard ensures the
+    model has already loaded successfully, so reaching this branch in
+    production indicates a transient runtime problem worth a Sentry
+    page rather than a permanent service degradation.
+    """
+    try:
+        await discovery_embedding_service.refresh_profile_embedding(
+            db, user_id,
+        )
+    except EmbeddingModelLoadError:
+        logger.exception(
+            "profile embedding refresh failed user=%s — profile change "
+            "committed but embedding is stale",
+            user_id,
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -105,6 +159,8 @@ async def update_profile(
     if updates:
         profile = await profile_repository.update(db, profile, updates)
         await db.commit()
+        if _profile_update_affects_embedding(updates):
+            await _refresh_profile_embedding_best_effort(db, user_id)
     return profile
 
 
@@ -140,6 +196,7 @@ async def create_work_history(
     )
     entry = await work_history_repository.create(db, entry)
     await db.commit()
+    await _refresh_profile_embedding_best_effort(db, user_id)
     return entry
 
 
@@ -156,6 +213,7 @@ async def update_work_history(
     if updates:
         entry = await work_history_repository.update(db, entry, updates)
         await db.commit()
+        await _refresh_profile_embedding_best_effort(db, user_id)
     return entry
 
 
@@ -169,6 +227,7 @@ async def delete_work_history(
         return False
     await work_history_repository.delete(db, entry)
     await db.commit()
+    await _refresh_profile_embedding_best_effort(db, user_id)
     return True
 
 
@@ -267,6 +326,7 @@ async def create_skill(
         raise DuplicateSkillError(
             f"A skill named {request.name!r} already exists (case-insensitive).",
         ) from exc
+    await _refresh_profile_embedding_best_effort(db, user_id)
     return skill
 
 
@@ -280,6 +340,7 @@ async def delete_skill(
         return False
     await skill_repository.delete(db, skill)
     await db.commit()
+    await _refresh_profile_embedding_best_effort(db, user_id)
     return True
 
 

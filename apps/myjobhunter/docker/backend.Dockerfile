@@ -36,6 +36,22 @@ COPY apps/myjobhunter/backend/ /app/
 COPY apps/myjobhunter/docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
+# Bake the fastembed model into the image so container startup is
+# predictable — no network call on first boot, no risk of a download
+# failure leaving the API up but unable to embed. The model is
+# all-MiniLM-L6-v2 (~90MB ONNX). Cached under
+# /root/.cache/fastembed by default; we pin the cache path explicitly
+# so it survives even if HOME changes at runtime.
+#
+# This adds ~250MB to the final image. The alternative (download on
+# first boot) is smaller-on-disk but adds ~10s to first-request latency
+# and a silent-failure surface on networks that block model downloads
+# (e.g. corp proxies). Per rules/no-bandaid-solutions.md, predictable
+# startup wins.
+ENV FASTEMBED_CACHE_PATH=/opt/fastembed-cache
+RUN mkdir -p "$FASTEMBED_CACHE_PATH" \
+    && python -c "from fastembed import TextEmbedding; TextEmbedding(model_name='sentence-transformers/all-MiniLM-L6-v2', cache_dir='$FASTEMBED_CACHE_PATH')"
+
 EXPOSE 8002
 
 ENTRYPOINT ["/entrypoint.sh"]

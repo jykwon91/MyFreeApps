@@ -52,6 +52,49 @@ def _disable_external_auth_gates(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Default-disable the discovery embedding model for the whole test session.
+#
+# Loading the real fastembed all-MiniLM-L6-v2 model takes ~1s and ~250MB
+# of RAM. The model is exercised by background tasks scheduled from
+# /discover/sources/{id}/refresh, so an unmocked endpoint test would
+# pull in the model on first hit and slow every subsequent shard.
+#
+# Tests that genuinely need to verify embedding behaviour
+# (test_discovery_embedding_service.py) override this with their own
+# autouse fixture that injects a deterministic fake.
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(autouse=True)
+def _disable_discovery_embedding_background(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Replace the embedding background-task entry point with an async no-op.
+
+    Also no-ops the synchronous profile-refresh path so service-layer
+    tests of profile mutations don't spin up fastembed. The dedicated
+    embedding-service tests override these by re-patching the module
+    with a deterministic fake.
+    """
+    from app.services.discovery import discovery_embedding_service
+
+    async def _noop_embed_pending(*args, **kwargs) -> None:
+        return None
+
+    async def _noop_refresh(*args, **kwargs) -> bool:
+        return False
+
+    monkeypatch.setattr(
+        discovery_embedding_service,
+        "embed_pending_for_user_background",
+        _noop_embed_pending,
+    )
+    monkeypatch.setattr(
+        discovery_embedding_service,
+        "refresh_profile_embedding",
+        _noop_refresh,
+    )
+
+
+# ---------------------------------------------------------------------------
 # Reset module-level limiter state between tests (PR C3)
 # ---------------------------------------------------------------------------
 
