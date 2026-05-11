@@ -79,8 +79,14 @@ import {
 
 const mockListSources = vi.mocked(useListDiscoverySourcesQuery);
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const stubMutation = [vi.fn(), { isLoading: false }] as any;
+// Stub mutations as unknown casts — the actual return type differs per hook
+// but the tests never invoke the trigger so the shape doesn't matter.
+const stubRefreshMutation = [vi.fn(), { isLoading: false }] as unknown as ReturnType<
+  typeof useRefreshDiscoverySourceMutation
+>;
+const stubDeactivateMutation = [vi.fn(), { isLoading: false }] as unknown as ReturnType<
+  typeof useDeactivateDiscoverySourceMutation
+>;
 
 function makeSource(
   overrides: Partial<DiscoverySource> = {},
@@ -105,9 +111,9 @@ function makeSource(
 describe("SavedSearchesPanel", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(useRefreshDiscoverySourceMutation).mockReturnValue(stubMutation);
+    vi.mocked(useRefreshDiscoverySourceMutation).mockReturnValue(stubRefreshMutation);
     vi.mocked(useDeactivateDiscoverySourceMutation).mockReturnValue(
-      stubMutation,
+      stubDeactivateMutation,
     );
   });
 

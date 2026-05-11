@@ -8,22 +8,17 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import Discover from "@/pages/Discover";
 
 // ---------------------------------------------------------------------------
-// Mock RTK Query hooks
+// Mock RTK Query hooks — only the two query hooks are used directly by
+// Discover.tsx; mutations live in sub-components that are mocked below.
 // ---------------------------------------------------------------------------
 
 vi.mock("@/store/discoverApi", () => ({
   useListDiscoverySourcesQuery: vi.fn(),
   useListDiscoveredJobsQuery: vi.fn(),
-  useCreateDiscoverySourceMutation: vi.fn(),
-  useDeactivateDiscoverySourceMutation: vi.fn(),
-  useRefreshDiscoverySourceMutation: vi.fn(),
-  useDismissDiscoveredJobMutation: vi.fn(),
-  useSaveDiscoveredJobMutation: vi.fn(),
-  usePromoteDiscoveredJobMutation: vi.fn(),
 }));
 
-// NewSavedSearchDialog and SavedSearchesPanel use RTK mutations + profileApi
-// not worth wiring in page-level unit tests — behaviour tested in their own files.
+// Sub-components with their own RTK wiring are mocked so this test file
+// stays lean and doesn't need a Redux Provider.
 vi.mock("@/features/discover/NewSavedSearchDialog", () => ({
   default: ({ open }: { open: boolean; onClose: () => void }) =>
     open ? <div data-testid="new-search-dialog" /> : null,
@@ -33,14 +28,15 @@ vi.mock("@/features/discover/SavedSearchesPanel", () => ({
   default: () => <div data-testid="saved-searches-panel" />,
 }));
 
-// Suppress radix-dialog portal errors in jsdom.
-vi.mock("@radix-ui/react-dialog", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@radix-ui/react-dialog")>();
-  return {
-    ...actual,
-    Portal: ({ children }: { children: React.ReactNode }) => children,
-  };
-});
+vi.mock("@/features/discover/DiscoverInboxView", () => ({
+  default: ({ hasSources }: { hasSources: boolean }) => (
+    <div data-testid="inbox-view" data-has-sources={String(hasSources)} />
+  ),
+}));
+
+vi.mock("@/features/discover/DiscoverSavedView", () => ({
+  default: () => <div data-testid="saved-view" />,
+}));
 
 vi.mock("@platform/ui", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@platform/ui")>();
@@ -54,29 +50,10 @@ vi.mock("@platform/ui", async (importOriginal) => {
 import {
   useListDiscoverySourcesQuery,
   useListDiscoveredJobsQuery,
-  useCreateDiscoverySourceMutation,
-  useDeactivateDiscoverySourceMutation,
-  useRefreshDiscoverySourceMutation,
-  useDismissDiscoveredJobMutation,
-  useSaveDiscoveredJobMutation,
-  usePromoteDiscoveredJobMutation,
 } from "@/store/discoverApi";
 
 const mockListSources = vi.mocked(useListDiscoverySourcesQuery);
 const mockListJobs = vi.mocked(useListDiscoveredJobsQuery);
-
-// Stub mutations — none of the tests exercise them; they just need to not crash.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const stubMutation = [vi.fn(), { isLoading: false }] as any;
-
-function stubAllMutations() {
-  vi.mocked(useCreateDiscoverySourceMutation).mockReturnValue(stubMutation);
-  vi.mocked(useDeactivateDiscoverySourceMutation).mockReturnValue(stubMutation);
-  vi.mocked(useRefreshDiscoverySourceMutation).mockReturnValue(stubMutation);
-  vi.mocked(useDismissDiscoveredJobMutation).mockReturnValue(stubMutation);
-  vi.mocked(useSaveDiscoveredJobMutation).mockReturnValue(stubMutation);
-  vi.mocked(usePromoteDiscoveredJobMutation).mockReturnValue(stubMutation);
-}
 
 function renderDiscover(initialUrl = "/discover") {
   return render(
@@ -104,37 +81,23 @@ const aSource = {
   updated_at: "2026-05-01T00:00:00Z",
 };
 
-// Minimal discovered-job fixture
-const aJob = {
-  id: "job-1",
-  source: "jsearch",
-  source_publisher: null,
-  source_url: null,
-  title: "Senior Backend Engineer",
-  company_name: "Acme Corp",
-  location: "Remote",
-  remote_type: "remote",
-  description: null,
-  posted_at: null,
-  discovered_at: "2026-05-08T10:00:00Z",
-  salary_min: null,
-  salary_max: null,
-  salary_currency: "USD",
-  salary_period: null,
-  score: null,
-  score_reason: null,
-  scored_at: null,
-  dismissed_at: null,
-  dismissed_reason: null,
-  saved_at: "2026-05-09T10:00:00Z",
-  promoted_application_id: null,
-  verdict: null,
-};
+function stubQueries(opts: { hasSources?: boolean } = {}) {
+  const sources = opts.hasSources ? [aSource] : [];
+  mockListSources.mockReturnValue({
+    data: sources,
+    isLoading: false,
+    isError: false,
+  } as unknown as ReturnType<typeof useListDiscoverySourcesQuery>);
+  mockListJobs.mockReturnValue({
+    data: { items: [], total: 0 },
+    isLoading: false,
+    isError: false,
+  } as unknown as ReturnType<typeof useListDiscoveredJobsQuery>);
+}
 
 describe("Discover page", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    stubAllMutations();
   });
 
   // -------------------------------------------------------------------------
@@ -143,17 +106,7 @@ describe("Discover page", () => {
 
   describe("tab bar", () => {
     it("renders Inbox and Saved tabs", () => {
-      mockListSources.mockReturnValue({
-        data: [],
-        isLoading: false,
-        isError: false,
-      } as unknown as ReturnType<typeof useListDiscoverySourcesQuery>);
-      mockListJobs.mockReturnValue({
-        data: { items: [], total: 0 },
-        isLoading: false,
-        isError: false,
-      } as unknown as ReturnType<typeof useListDiscoveredJobsQuery>);
-
+      stubQueries();
       renderDiscover();
 
       expect(screen.getByRole("tab", { name: "Inbox" })).toBeInTheDocument();
@@ -161,17 +114,7 @@ describe("Discover page", () => {
     });
 
     it("defaults to Inbox tab (no ?view param)", () => {
-      mockListSources.mockReturnValue({
-        data: [],
-        isLoading: false,
-        isError: false,
-      } as unknown as ReturnType<typeof useListDiscoverySourcesQuery>);
-      mockListJobs.mockReturnValue({
-        data: { items: [], total: 0 },
-        isLoading: false,
-        isError: false,
-      } as unknown as ReturnType<typeof useListDiscoveredJobsQuery>);
-
+      stubQueries();
       renderDiscover();
 
       expect(screen.getByRole("tab", { name: "Inbox" })).toHaveAttribute(
@@ -185,17 +128,7 @@ describe("Discover page", () => {
     });
 
     it("activates the Saved tab when ?view=saved is in the URL", () => {
-      mockListSources.mockReturnValue({
-        data: [aSource],
-        isLoading: false,
-        isError: false,
-      } as unknown as ReturnType<typeof useListDiscoverySourcesQuery>);
-      mockListJobs.mockReturnValue({
-        data: { items: [], total: 0 },
-        isLoading: false,
-        isError: false,
-      } as unknown as ReturnType<typeof useListDiscoveredJobsQuery>);
-
+      stubQueries({ hasSources: true });
       renderDiscover("/discover?view=saved");
 
       expect(screen.getByRole("tab", { name: "Saved" })).toHaveAttribute(
@@ -206,147 +139,44 @@ describe("Discover page", () => {
   });
 
   // -------------------------------------------------------------------------
-  // Inbox tab — empty state
+  // View routing
   // -------------------------------------------------------------------------
 
-  describe("inbox tab — empty state", () => {
-    it("shows no-saved-searches empty state when there are no sources", () => {
-      mockListSources.mockReturnValue({
-        data: [],
-        isLoading: false,
-        isError: false,
-      } as unknown as ReturnType<typeof useListDiscoverySourcesQuery>);
-      mockListJobs.mockReturnValue({
-        data: { items: [], total: 0 },
-        isLoading: false,
-        isError: false,
-      } as unknown as ReturnType<typeof useListDiscoveredJobsQuery>);
-
+  describe("view routing", () => {
+    it("renders InboxView when ?view is absent", () => {
+      stubQueries();
       renderDiscover();
 
-      expect(
-        screen.getByRole("heading", { name: "No saved searches yet" }),
-      ).toBeInTheDocument();
+      expect(screen.getByTestId("inbox-view")).toBeInTheDocument();
+      expect(screen.queryByTestId("saved-view")).toBeNull();
     });
 
-    it("shows inbox-empty state when sources exist but inbox has no jobs", () => {
-      mockListSources.mockReturnValue({
-        data: [aSource],
-        isLoading: false,
-        isError: false,
-      } as unknown as ReturnType<typeof useListDiscoverySourcesQuery>);
-      mockListJobs.mockReturnValue({
-        data: { items: [], total: 0 },
-        isLoading: false,
-        isError: false,
-      } as unknown as ReturnType<typeof useListDiscoveredJobsQuery>);
+    it("renders SavedView when ?view=saved", () => {
+      stubQueries({ hasSources: true });
+      renderDiscover("/discover?view=saved");
 
+      expect(screen.getByTestId("saved-view")).toBeInTheDocument();
+      expect(screen.queryByTestId("inbox-view")).toBeNull();
+    });
+
+    it("passes hasSources=true to InboxView when sources exist", () => {
+      stubQueries({ hasSources: true });
       renderDiscover();
 
-      expect(
-        screen.getByRole("heading", { name: "Inbox empty" }),
-      ).toBeInTheDocument();
+      expect(screen.getByTestId("inbox-view")).toHaveAttribute(
+        "data-has-sources",
+        "true",
+      );
     });
-  });
 
-  // -------------------------------------------------------------------------
-  // Inbox tab — error branch
-  // -------------------------------------------------------------------------
-
-  describe("inbox tab — error state", () => {
-    it("shows error message when inbox query fails", () => {
-      mockListSources.mockReturnValue({
-        data: [aSource],
-        isLoading: false,
-        isError: false,
-      } as unknown as ReturnType<typeof useListDiscoverySourcesQuery>);
-      mockListJobs.mockReturnValue({
-        data: undefined,
-        isLoading: false,
-        isError: true,
-      } as unknown as ReturnType<typeof useListDiscoveredJobsQuery>);
-
+    it("passes hasSources=false to InboxView when no sources", () => {
+      stubQueries({ hasSources: false });
       renderDiscover();
 
-      expect(
-        screen.getByText(/Couldn't load the inbox/i),
-      ).toBeInTheDocument();
-    });
-  });
-
-  // -------------------------------------------------------------------------
-  // Saved tab — empty state
-  // -------------------------------------------------------------------------
-
-  describe("saved tab — empty state", () => {
-    it("shows saved-empty state when there are no saved jobs", async () => {
-      mockListSources.mockReturnValue({
-        data: [aSource],
-        isLoading: false,
-        isError: false,
-      } as unknown as ReturnType<typeof useListDiscoverySourcesQuery>);
-      mockListJobs.mockReturnValue({
-        data: { items: [], total: 0 },
-        isLoading: false,
-        isError: false,
-      } as unknown as ReturnType<typeof useListDiscoveredJobsQuery>);
-
-      renderDiscover("/discover?view=saved");
-
-      expect(
-        screen.getByRole("heading", { name: "No saved jobs" }),
-      ).toBeInTheDocument();
-      expect(
-        screen.getByText(/When you save a posting from the inbox/i),
-      ).toBeInTheDocument();
-    });
-  });
-
-  // -------------------------------------------------------------------------
-  // Saved tab — populated state
-  // -------------------------------------------------------------------------
-
-  describe("saved tab — populated", () => {
-    it("renders saved job cards when saved jobs exist", () => {
-      mockListSources.mockReturnValue({
-        data: [aSource],
-        isLoading: false,
-        isError: false,
-      } as unknown as ReturnType<typeof useListDiscoverySourcesQuery>);
-      mockListJobs.mockReturnValue({
-        data: { items: [aJob], total: 1 },
-        isLoading: false,
-        isError: false,
-      } as unknown as ReturnType<typeof useListDiscoveredJobsQuery>);
-
-      renderDiscover("/discover?view=saved");
-
-      expect(screen.getByText("Senior Backend Engineer")).toBeInTheDocument();
-    });
-  });
-
-  // -------------------------------------------------------------------------
-  // Saved tab — error branch
-  // -------------------------------------------------------------------------
-
-  describe("saved tab — error state", () => {
-    it("shows error message when saved jobs query fails", () => {
-      mockListSources.mockReturnValue({
-        data: [aSource],
-        isLoading: false,
-        isError: false,
-      } as unknown as ReturnType<typeof useListDiscoverySourcesQuery>);
-      mockListJobs.mockReturnValue({
-        data: undefined,
-        isLoading: false,
-        isError: true,
-      } as unknown as ReturnType<typeof useListDiscoveredJobsQuery>);
-
-      renderDiscover("/discover?view=saved");
-
-      expect(
-        screen.getByText(/Couldn't load saved jobs/i),
-      ).toBeInTheDocument();
+      expect(screen.getByTestId("inbox-view")).toHaveAttribute(
+        "data-has-sources",
+        "false",
+      );
     });
   });
 
@@ -355,20 +185,9 @@ describe("Discover page", () => {
   // -------------------------------------------------------------------------
 
   describe("tab switching", () => {
-    it("switches to Saved tab when the Saved tab is clicked", async () => {
+    it("switches to Saved view when the Saved tab is clicked", async () => {
       const user = userEvent.setup();
-
-      mockListSources.mockReturnValue({
-        data: [aSource],
-        isLoading: false,
-        isError: false,
-      } as unknown as ReturnType<typeof useListDiscoverySourcesQuery>);
-      mockListJobs.mockReturnValue({
-        data: { items: [], total: 0 },
-        isLoading: false,
-        isError: false,
-      } as unknown as ReturnType<typeof useListDiscoveredJobsQuery>);
-
+      stubQueries({ hasSources: true });
       renderDiscover();
 
       // Initially on Inbox
@@ -376,6 +195,7 @@ describe("Discover page", () => {
         "aria-selected",
         "true",
       );
+      expect(screen.getByTestId("inbox-view")).toBeInTheDocument();
 
       await user.click(screen.getByRole("tab", { name: "Saved" }));
 
@@ -383,9 +203,25 @@ describe("Discover page", () => {
         "aria-selected",
         "true",
       );
-      expect(
-        screen.getByRole("heading", { name: "No saved jobs" }),
-      ).toBeInTheDocument();
+      expect(screen.getByTestId("saved-view")).toBeInTheDocument();
+      expect(screen.queryByTestId("inbox-view")).toBeNull();
+    });
+
+    it("switches back to Inbox view when the Inbox tab is clicked from Saved", async () => {
+      const user = userEvent.setup();
+      stubQueries({ hasSources: true });
+      renderDiscover("/discover?view=saved");
+
+      // Initially on Saved
+      expect(screen.getByTestId("saved-view")).toBeInTheDocument();
+
+      await user.click(screen.getByRole("tab", { name: "Inbox" }));
+
+      expect(screen.getByRole("tab", { name: "Inbox" })).toHaveAttribute(
+        "aria-selected",
+        "true",
+      );
+      expect(screen.getByTestId("inbox-view")).toBeInTheDocument();
     });
   });
 });
