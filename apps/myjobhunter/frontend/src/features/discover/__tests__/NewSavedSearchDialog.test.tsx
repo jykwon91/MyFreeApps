@@ -255,6 +255,7 @@ describe("NewSavedSearchDialog — Greenhouse validation", () => {
       expect(mockCreateSource).toHaveBeenCalledWith({
         source: "greenhouse",
         config: { board_token: "stripe" },
+        fetch_interval_minutes: 1440,
       });
     });
     expect(mockShowSuccess).toHaveBeenCalledWith("Saved search created");
@@ -306,6 +307,7 @@ describe("NewSavedSearchDialog — Lever validation", () => {
       expect(mockCreateSource).toHaveBeenCalledWith({
         source: "lever",
         config: { company_slug: "openai" },
+        fetch_interval_minutes: 1440,
       });
     });
     expect(mockShowSuccess).toHaveBeenCalledWith("Saved search created");
@@ -325,6 +327,38 @@ describe("NewSavedSearchDialog — Lever validation", () => {
           config: { company_slug: "openai" },
         }),
       );
+    });
+  });
+});
+
+describe("NewSavedSearchDialog — refresh frequency (PR 5)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockCreateSource.mockReturnValue(makeUnwrappableMutation({}));
+  });
+
+  it("defaults the refresh-frequency picker to Daily (1440m)", async () => {
+    renderDialog();
+    const picker = screen.getByLabelText("Refresh frequency") as HTMLSelectElement;
+    expect(picker.value).toBe("1440");
+  });
+
+  it("sends the selected fetch_interval_minutes on create", async () => {
+    renderDialog();
+    await userEvent.selectOptions(getSourceSelect(), "greenhouse");
+    await userEvent.type(screen.getByLabelText("Greenhouse board token"), "stripe");
+    await userEvent.selectOptions(
+      screen.getByLabelText("Refresh frequency"),
+      "360",
+    );
+    fireEvent.click(screen.getByTestId("confirm-btn"));
+
+    await waitFor(() => {
+      expect(mockCreateSource).toHaveBeenCalledWith({
+        source: "greenhouse",
+        config: { board_token: "stripe" },
+        fetch_interval_minutes: 360,
+      });
     });
   });
 });

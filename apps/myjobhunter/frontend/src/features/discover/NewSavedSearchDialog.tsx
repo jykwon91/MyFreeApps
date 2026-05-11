@@ -17,6 +17,10 @@ import JobTypeSection from "./dialog-sections/JobTypeSection";
 import ExclusionsSection from "./dialog-sections/ExclusionsSection";
 import GreenhouseConfigSection from "./dialog-sections/GreenhouseConfigSection";
 import LeverConfigSection from "./dialog-sections/LeverConfigSection";
+import {
+  DEFAULT_REFRESH_INTERVAL_MINUTES,
+  REFRESH_INTERVAL_OPTIONS,
+} from "./refresh-interval";
 import type {
   Country,
   DatePosted,
@@ -95,6 +99,13 @@ export default function NewSavedSearchDialog({
   // Lever form state
   const [companySlug, setCompanySlug] = useState("");
 
+  // Refresh-frequency picker (PR 5). Applies to every source type — the
+  // backend scheduler runs the same fetch chain for jsearch / greenhouse /
+  // lever. Defaults to daily.
+  const [fetchIntervalMinutes, setFetchIntervalMinutes] = useState<number>(
+    DEFAULT_REFRESH_INTERVAL_MINUTES,
+  );
+
   const [createSource, { isLoading: isCreating }] = useCreateDiscoverySourceMutation();
   const [updateProfile, { isLoading: isUpdatingProfile }] = useUpdateProfileMutation();
   const isLoading = isCreating || isUpdatingProfile;
@@ -134,6 +145,7 @@ export default function NewSavedSearchDialog({
     setSaveAsDefaults(false);
     setBoardToken("");
     setCompanySlug("");
+    setFetchIntervalMinutes(DEFAULT_REFRESH_INTERVAL_MINUTES);
     resetPrefill();
   }
 
@@ -207,7 +219,11 @@ export default function NewSavedSearchDialog({
     }
 
     try {
-      await createSource({ source, config: buildConfig() }).unwrap();
+      await createSource({
+        source,
+        config: buildConfig(),
+        fetch_interval_minutes: fetchIntervalMinutes,
+      }).unwrap();
 
       // Optionally persist the JSearch filter set as the operator's default.
       // Only makes sense for JSearch (Greenhouse/Lever have no shareable
@@ -281,6 +297,31 @@ export default function NewSavedSearchDialog({
               </option>
             ))}
           </select>
+        </div>
+
+        {/* Refresh frequency — applies to every source type. Sits
+            above the source-specific fields so it's the first thing
+            the operator sees after picking a source. */}
+        <div className="space-y-1">
+          <label htmlFor="refresh-frequency" className="block text-sm font-medium">
+            Refresh frequency
+          </label>
+          <select
+            id="refresh-frequency"
+            className="w-full rounded border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            value={fetchIntervalMinutes}
+            onChange={(e) => setFetchIntervalMinutes(Number(e.target.value))}
+          >
+            {REFRESH_INTERVAL_OPTIONS.map((opt) => (
+              <option key={opt.minutes} value={opt.minutes}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-muted-foreground">
+            How often this saved search will fetch new postings automatically.
+            You can also refresh on demand from the saved-search list.
+          </p>
         </div>
 
         {/* Greenhouse config */}

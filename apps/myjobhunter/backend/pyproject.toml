@@ -49,6 +49,14 @@ dependencies = [
     # Both are wired in app.services.discovery.discovery_embedding_service.
     "fastembed>=0.8",
     "pgvector>=0.4",
+    # Scheduled discovery passes (PR 5). In-process AsyncIOScheduler with a
+    # Postgres SQLAlchemyJobStore so jobs survive restarts and are visible to
+    # the operator via the same DB. apscheduler[sqlalchemy] pulls in the
+    # SQLAlchemyJobStore variant. When MJH outgrows the single-process model
+    # (cross-process retries, >50 daily passes/min globally, asyncio lag >200ms
+    # p95) — promote to Dramatiq per the migration triggers documented in
+    # app/services/discovery/discovery_scheduler_service.py.
+    "apscheduler[sqlalchemy]>=3.11.2",
 ]
 
 [tool.uv]
