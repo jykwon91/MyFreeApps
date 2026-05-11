@@ -19,6 +19,7 @@ from app.repositories.applicants import applicant_repo
 from app.repositories.inquiries.inquiry_repo import get_by_applicant_inquiry_id
 from app.repositories.leases import (
     lease_template_repo,
+    lease_term_version_repo,
     signed_lease_attachment_repo,
     signed_lease_template_repo,
 )
@@ -26,6 +27,7 @@ from app.repositories.listings import listing_repo
 from app.repositories.properties import property_repo
 from app.repositories.user import user_repo
 
+from app.schemas.leases.lease_extension_summary import LeaseExtensionSummary
 from app.schemas.leases.signed_lease_attachment_response import (
     SignedLeaseAttachmentResponse,
 )
@@ -136,7 +138,12 @@ def _attachment_responses(rows) -> list[SignedLeaseAttachmentResponse]:
     )
 
 
-def _to_detail(lease, attachments, template_links: list[SignedLeaseTemplateLink]) -> SignedLeaseResponse:
+def _to_detail(
+    lease,
+    attachments,
+    template_links: list[SignedLeaseTemplateLink],
+    latest_extension: "LeaseExtensionSummary | None" = None,
+) -> SignedLeaseResponse:
     return SignedLeaseResponse(
         id=lease.id,
         user_id=lease.user_id,
@@ -159,7 +166,20 @@ def _to_detail(lease, attachments, template_links: list[SignedLeaseTemplateLink]
         created_at=lease.created_at,
         updated_at=lease.updated_at,
         attachments=_attachment_responses(attachments),
+        latest_extension=latest_extension,
     )
+
+
+async def _resolve_latest_extension(
+    db,
+    *,
+    lease_id: uuid.UUID,
+) -> "LeaseExtensionSummary | None":
+    """Load the newest live extension (seed excluded) for inclusion in detail responses."""
+    row = await lease_term_version_repo.get_latest_extension(db, lease_id=lease_id)
+    if row is None:
+        return None
+    return LeaseExtensionSummary.model_validate(row)
 
 
 async def _resolve_template_links(

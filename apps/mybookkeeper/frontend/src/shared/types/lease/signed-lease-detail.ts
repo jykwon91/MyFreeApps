@@ -1,3 +1,4 @@
+import type { LeaseExtensionSummary } from "@/shared/types/lease/lease-extension-summary";
 import type { SignedLeaseAttachment } from "@/shared/types/lease/signed-lease-attachment";
 import type { SignedLeaseStatus } from "@/shared/types/lease/signed-lease-status";
 import type { SignedLeaseTemplateLink } from "@/shared/types/lease/signed-lease-template-link";
@@ -27,4 +28,7 @@ export interface SignedLeaseDetail {
   created_at: string;
   updated_at: string;
   attachments: SignedLeaseAttachment[];
+  /** The most-recent live extension (seed excluded), or null when the lease
+   *  is at its original term. Drives the Undo button's 30-day gating. */
+  latest_extension: LeaseExtensionSummary | null;
 }

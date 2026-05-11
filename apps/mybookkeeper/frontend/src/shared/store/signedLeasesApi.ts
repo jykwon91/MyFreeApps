@@ -110,6 +110,20 @@ const signedLeasesApi = baseApi.injectEndpoints({
       ],
     }),
 
+    undoSignedLeaseExtension: builder.mutation<
+      SignedLeaseDetail,
+      { leaseId: string; versionId: string }
+    >({
+      query: ({ leaseId, versionId }) => ({
+        url: `/signed-leases/${leaseId}/extensions/${versionId}/undo`,
+        method: "POST",
+      }),
+      invalidatesTags: (_r, _e, { leaseId }) => [
+        { type: "SignedLease", id: leaseId },
+        { type: "SignedLease", id: "LIST" },
+      ],
+    }),
+
     uploadSignedLeaseAttachment: builder.mutation<
       SignedLeaseAttachment,
       { leaseId: string; file: File; kind: LeaseAttachmentKind }
@@ -221,6 +235,7 @@ export const {
   useGenerateSignedLeaseMutation,
   useEmailSignedLeaseToTenantMutation,
   useExtendSignedLeaseMutation,
+  useUndoSignedLeaseExtensionMutation,
   useUploadSignedLeaseAttachmentMutation,
   useDeleteSignedLeaseAttachmentMutation,
   useImportSignedLeaseMutation,

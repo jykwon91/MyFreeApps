@@ -28,6 +28,7 @@ from app.services.leases._lease_helpers import (
     _attachment_responses,
     _build_summary,
     _denormalise_dates,
+    _resolve_latest_extension,
     _resolve_template_links,
     _to_detail,
     _validate_status_transition,
@@ -118,7 +119,8 @@ async def create_lease(
 
         attachments = await signed_lease_attachment_repo.list_by_lease(db, lease.id)
         template_links = await _resolve_template_links(db, lease_id=lease.id)
-    return _to_detail(lease, attachments, template_links)
+        latest_extension = await _resolve_latest_extension(db, lease_id=lease.id)
+    return _to_detail(lease, attachments, template_links, latest_extension)
 
 
 # ---------------------------------------------------------------------------
@@ -202,7 +204,8 @@ async def get_lease(
             db, lease.id,
         )
         template_links = await _resolve_template_links(db, lease_id=lease.id)
-    return _to_detail(lease, attachments, template_links)
+        latest_extension = await _resolve_latest_extension(db, lease_id=lease.id)
+    return _to_detail(lease, attachments, template_links, latest_extension)
 
 
 # ---------------------------------------------------------------------------
@@ -276,7 +279,8 @@ async def update_lease(
             organization_id=organization_id,
         )
         template_links = await _resolve_template_links(db, lease_id=lease_id)
-    return _to_detail(lease, attachments, template_links)
+        latest_extension = await _resolve_latest_extension(db, lease_id=lease_id)
+    return _to_detail(lease, attachments, template_links, latest_extension)
 
 
 # ---------------------------------------------------------------------------

@@ -101,6 +101,7 @@ function buildLease(overrides: Partial<SignedLeaseDetail> = {}): SignedLeaseDeta
     created_at: "2026-05-07T00:00:00Z",
     updated_at: "2026-05-07T00:00:00Z",
     attachments: [buildAttachment()],
+    latest_extension: null,
     ...overrides,
   };
 }

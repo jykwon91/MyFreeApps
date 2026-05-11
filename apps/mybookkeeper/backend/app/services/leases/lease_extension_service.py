@@ -63,6 +63,28 @@ class MissingCurrentEndDateError(ValueError):
     """The lease has no ``ends_on`` set — cannot extend from an unknown date."""
 
 
+class ExtensionNotFoundError(LookupError):
+    """The requested ``lease_term_versions`` row is not in the lease's live set."""
+
+
+class CannotUndoSeedRowError(ValueError):
+    """Refused to undo the seed term (would lose the original lease term)."""
+
+
+class NotLatestExtensionError(ValueError):
+    """The requested version is not the latest extension — undo is FIFO only."""
+
+
+class UndoWindowExpiredError(ValueError):
+    """The extension was committed more than ``UNDO_WINDOW_DAYS`` ago."""
+
+
+# How long after an extension was committed the host can still undo it.
+# Generous window — tenants sometimes change their mind weeks after
+# signing the addendum. Undo is strictly reversible (re-extend if needed).
+UNDO_WINDOW_DAYS: int = 30
+
+
 # 1-page boilerplate. Placeholders match the addendum-aware keys already
 # present in ``default_source_map.py``. Unknown keys remain bracketed in
 # the rendered output (per ``render_md`` contract), which is the right
@@ -225,6 +247,109 @@ async def extend_lease(
         lease_id=lease_id,
     )
     return detail, now
+
+
+async def undo_extension(
+    *,
+    user_id: uuid.UUID,
+    organization_id: uuid.UUID,
+    lease_id: uuid.UUID,
+    version_id: uuid.UUID,
+) -> SignedLeaseResponse:
+    """Roll back a recent extension within the ``UNDO_WINDOW_DAYS`` window.
+
+    Soft-deletes the ``lease_term_versions`` row and recomputes
+    ``signed_leases.ends_on`` from the now-latest live version. The
+    rendered addendum attachment is intentionally preserved as an audit
+    trail — soft-deleted versions still reference it via
+    ``source_attachment_id``.
+
+    Raises:
+        SignedLeaseNotFoundError: lease not in (user_id, organization_id).
+        ExtensionNotFoundError: version_id is not a live row on this lease.
+        CannotUndoSeedRowError: version is the seed (would lose original term).
+        NotLatestExtensionError: a newer live extension exists; undo is FIFO.
+        UndoWindowExpiredError: version was committed >UNDO_WINDOW_DAYS ago.
+    """
+    now = _dt.datetime.now(_dt.timezone.utc)
+
+    async with unit_of_work() as db:
+        lease = await signed_lease_repo.get(
+            db,
+            lease_id=lease_id,
+            user_id=user_id,
+            organization_id=organization_id,
+        )
+        if lease is None:
+            raise SignedLeaseNotFoundError(f"Lease {lease_id} not found")
+
+        version = await lease_term_version_repo.get(
+            db,
+            version_id=version_id,
+            lease_id=lease_id,
+        )
+        if version is None:
+            raise ExtensionNotFoundError(
+                f"Extension {version_id} not found on lease {lease_id}",
+            )
+
+        if version.source_attachment_id is None:
+            raise CannotUndoSeedRowError(
+                "The original lease term cannot be undone — it's not an extension.",
+            )
+
+        latest = await lease_term_version_repo.get_latest_extension(
+            db, lease_id=lease_id,
+        )
+        if latest is None or latest.id != version.id:
+            raise NotLatestExtensionError(
+                "Only the most recent extension can be undone. "
+                "Undo the latest extension first if you need to roll back further.",
+            )
+
+        age = now - version.created_at
+        if age.days >= UNDO_WINDOW_DAYS:
+            raise UndoWindowExpiredError(
+                f"This extension was committed more than {UNDO_WINDOW_DAYS} "
+                "days ago and can no longer be undone.",
+            )
+
+        await lease_term_version_repo.soft_delete(db, version=version, now=now)
+
+        # Recompute lease.ends_on from the next-latest live version. If no
+        # other extension exists, fall back to the seed row (which always
+        # exists for an extended lease — the seed was created at the
+        # original signature time per PR 1a's backfill).
+        next_latest = await lease_term_version_repo.get_latest_extension(
+            db, lease_id=lease_id,
+        )
+        if next_latest is not None:
+            new_ends_on = next_latest.ends_on
+        else:
+            seed = next(
+                (
+                    v for v in await lease_term_version_repo.list_by_lease(
+                        db, lease_id=lease_id,
+                    )
+                    if v.source_attachment_id is None
+                ),
+                None,
+            )
+            new_ends_on = seed.ends_on if seed is not None else lease.ends_on
+
+        await signed_lease_repo.update_lease(
+            db,
+            lease_id=lease_id,
+            user_id=user_id,
+            organization_id=organization_id,
+            fields={"ends_on": new_ends_on, "updated_at": now},
+        )
+
+    return await get_lease(
+        user_id=user_id,
+        organization_id=organization_id,
+        lease_id=lease_id,
+    )
 
 
 def _addendum_filename(new_ends_on: _dt.date) -> str:

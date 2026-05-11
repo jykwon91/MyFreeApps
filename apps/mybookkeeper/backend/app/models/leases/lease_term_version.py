@@ -83,6 +83,7 @@ class LeaseTermVersion(Base):
             "lease_id", "source_attachment_id",
             unique=True,
             postgresql_where=text("source_attachment_id IS NOT NULL"),
+            sqlite_where=text("source_attachment_id IS NOT NULL"),
         ),
         # Exactly one live seed row per lease — guards the invariant that
         # a lease has a single canonical original term.
@@ -93,11 +94,15 @@ class LeaseTermVersion(Base):
             postgresql_where=text(
                 "source_attachment_id IS NULL AND deleted_at IS NULL"
             ),
+            sqlite_where=text(
+                "source_attachment_id IS NULL AND deleted_at IS NULL"
+            ),
         ),
         # Lookup the latest live version for a given lease.
         Index(
             "ix_lease_term_versions_lease_active",
             "lease_id", "created_at",
             postgresql_where=text("deleted_at IS NULL"),
+            sqlite_where=text("deleted_at IS NULL"),
         ),
     )
