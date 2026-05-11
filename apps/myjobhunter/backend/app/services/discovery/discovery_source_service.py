@@ -102,6 +102,57 @@ async def create_source(
     return src
 
 
+async def update_source(
+    db: AsyncSession,
+    source_id: uuid.UUID,
+    user_id: uuid.UUID,
+    *,
+    fetch_interval_minutes: int | None = None,
+    name: str | None = None,
+    is_active: bool | None = None,
+) -> DiscoverySource | None:
+    """Partially update a saved search and commit the transaction.
+
+    Returns the updated row, or None when not found / wrong owner.
+
+    After committing, re-registers the APScheduler job with the new
+    interval when ``fetch_interval_minutes`` is changing. A scheduler
+    failure is logged but does NOT rollback the DB update — the row is
+    the source of truth; the schedule is reconciled on next process start.
+    """
+    src = await discovery_repository.update_source(
+        db,
+        source_id,
+        user_id,
+        fetch_interval_minutes=fetch_interval_minutes,
+        name=name,
+        is_active=is_active,
+    )
+    if src is None:
+        return None
+
+    await db.commit()
+    await db.refresh(src)
+
+    if fetch_interval_minutes is not None:
+        # Re-register the scheduler job with the new interval so the
+        # change takes effect immediately (not only on next process start).
+        try:
+            discovery_scheduler_service.update_source_job(
+                source_id=src.id,
+                user_id=src.user_id,
+                interval_minutes=src.fetch_interval_minutes,
+            )
+        except SchedulerNotStartedError:
+            logger.warning(
+                "update_source: scheduler not started; source %s updated "
+                "but schedule will be picked up on next process start",
+                src.id,
+            )
+
+    return src
+
+
 async def deactivate_source(
     db: AsyncSession,
     source_id: uuid.UUID,

@@ -40,6 +40,7 @@ from app.schemas.discovery.discovery_schemas import (
     DiscoveredJobResponse,
     DiscoveryFetchResultResponse,
     DiscoverySourceCreate,
+    DiscoverySourcePatch,
     DiscoverySourceResponse,
 )
 from app.services.discovery.discovery_promote_service import (
@@ -131,6 +132,36 @@ async def list_sources(
         db, user.id, active_only=not include_inactive,
     )
     return [DiscoverySourceResponse.model_validate(r) for r in rows]
+
+
+@router.patch(
+    "/sources/{source_id}",
+    response_model=DiscoverySourceResponse,
+)
+async def patch_source(
+    source_id: uuid.UUID,
+    payload: DiscoverySourcePatch,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(current_active_user),
+) -> DiscoverySourceResponse:
+    """Partially update a saved search (frequency, name, or active state).
+
+    Status codes:
+    - 200 — updated source returned
+    - 404 — source not found or doesn't belong to caller
+    - 422 — invalid payload (out-of-range interval, no fields provided, etc.)
+    """
+    src = await discovery_source_service.update_source(
+        db,
+        source_id,
+        user.id,
+        fetch_interval_minutes=payload.fetch_interval_minutes,
+        name=payload.name,
+        is_active=payload.is_active,
+    )
+    if src is None:
+        raise HTTPException(status_code=404, detail=_NOT_FOUND_DETAIL)
+    return DiscoverySourceResponse.model_validate(src)
 
 
 @router.delete(
