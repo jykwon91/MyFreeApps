@@ -1,10 +1,25 @@
 """Discovery scoring loop — runs after a fetch cycle to rate new postings.
 
 After ``discovery_fetch_service.fetch_source`` upserts new rows, this
-loop pulls the freshest unscored postings for the user, calls the
-shared ``job_analysis_service.score()`` against the operator's profile
-snapshot, and persists the score + reasoning back onto the
-``discovered_jobs`` row.
+loop calls the two-stage prefilter
+(``discovery_prefilter_service.rank_unscored_for_user``) to narrow the
+candidate set, then calls the shared ``job_analysis_service.score()``
+against the operator's profile snapshot for each remaining row, and
+persists the score + reasoning back onto the ``discovered_jobs`` row.
+
+Two-stage scoring (PR 4b)
+=========================
+
+Before PR 4b, the loop iterated every unscored row in
+``discovered_at DESC`` order until the daily budget ran out. At
+500-2000 postings/day per user this hit the per-user budget cap fast
+and silently dropped the tail.
+
+Now the prefilter narrows the candidate set to ``top_n=20`` rows
+(default; tunable via ``settings.discovery_score_top_n``) before this
+loop ever calls Anthropic. The cosine-similarity ranking ensures the
+operator's budget is spent on the postings most likely to be a good
+fit; the budget cap and circuit-breaker still apply on top.
 
 Cost guard
 ==========
@@ -12,10 +27,12 @@ Cost guard
 Each scoring call costs ~$0.005-$0.01 in Anthropic tokens. To bound
 runaway cost we:
 
-1. Cap how many postings we score per cycle (``DEFAULT_SCORE_BATCH``).
-2. Aggregate today's spend from ``extraction_logs`` and stop the loop
+1. Prefilter to top-N by cosine similarity (PR 4b).
+2. Cap how many postings we score per cycle (``DEFAULT_SCORE_BATCH``;
+   acts as a safety ceiling even if the prefilter returns more).
+3. Aggregate today's spend from ``extraction_logs`` and stop the loop
    when it exceeds the per-user daily budget.
-3. The hard ceiling lives in env (``DISCOVERY_DAILY_BUDGET_USD_HARD_CAP``,
+4. The hard ceiling lives in env (``DISCOVERY_DAILY_BUDGET_USD_HARD_CAP``,
    default $2.00). The per-user setting may not exceed this.
 
 Error handling and circuit-breaker
@@ -54,9 +71,9 @@ We open a fresh ``AsyncSessionLocal`` here so DB work is owned by the
 loop and cleaned up cleanly.
 
 If the FastAPI process restarts mid-loop, unscored postings just stay
-unscored. The next /refresh picks them up because
-``list_unscored_for_user`` orders by ``discovered_at DESC`` and the
-loop is idempotent (only writes ``score`` when it was previously NULL).
+unscored. The next /refresh picks them up because the prefilter
+re-ranks by ``score IS NULL`` and the loop is idempotent (only writes
+``score`` when it was previously NULL).
 """
 from __future__ import annotations
 
@@ -71,7 +88,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.db.session import AsyncSessionLocal
 from app.models.system.extraction_log import ExtractionLog
-from app.repositories.discovery import discovery_repository
+from app.services.discovery import discovery_prefilter_service
 from app.services.job_analysis.job_analysis_service import (
     JobAnalysisError,
     PERMANENT_ANTHROPIC_CODES,
@@ -91,7 +108,16 @@ _CIRCUIT_BREAKER_THRESHOLD = 3
 
 
 async def score_user_inbox(user_id: uuid.UUID, *, batch: int = DEFAULT_SCORE_BATCH) -> None:
-    """Score up to ``batch`` unscored postings for ``user_id``.
+    """Score up to ``top_n`` prefiltered postings for ``user_id``.
+
+    The prefilter (``discovery_prefilter_service.rank_unscored_for_user``)
+    selects the top N candidates by cosine similarity to the user's
+    profile embedding (or by ``discovered_at DESC`` when the user has
+    no profile embedding yet). This loop then scores each via Anthropic.
+
+    ``batch`` is the legacy upper bound on per-pass scoring — kept as a
+    safety ceiling. The prefilter's ``top_n`` (default 20) is the real
+    governor; in practice ``min(top_n, batch)`` rows are scored.
 
     Stops early when the per-user daily budget is exhausted. Per-row
     transient failures are logged + counted toward the circuit-breaker;
@@ -103,10 +129,11 @@ async def score_user_inbox(user_id: uuid.UUID, *, batch: int = DEFAULT_SCORE_BAT
     a broken API key should fail loud, not silently produce zero scores.
 
     Designed to run as a FastAPI ``BackgroundTask`` after /refresh
-    returns. No-op when there are no unscored postings or the budget
+    returns. No-op when there are no eligible postings or the budget
     is already spent.
     """
     daily_cap = _resolve_daily_budget()
+    top_n = _resolve_top_n(batch)
 
     async with AsyncSessionLocal() as db:
         spent_today = await _spent_today(db, user_id)
@@ -117,15 +144,33 @@ async def score_user_inbox(user_id: uuid.UUID, *, batch: int = DEFAULT_SCORE_BAT
             )
             return
 
-        candidates = await discovery_repository.list_unscored_for_user(
-            db, user_id, limit=batch,
+        prefilter_result = (
+            await discovery_prefilter_service.rank_unscored_for_user(
+                db, user_id, top_n=top_n,
+            )
         )
+        candidates = prefilter_result.rows
         if not candidates:
             return
 
+        # Attach per-pass Sentry tags so the operator can filter by branch
+        # and top_n in the dashboard. The tags live on the current scope
+        # so any per-row failure inherits them.
+        sentry_sdk.set_tag(
+            "discovery.score_prefilter_branch", prefilter_result.branch,
+        )
+        sentry_sdk.set_tag(
+            "discovery.score_prefilter_top_n", str(top_n),
+        )
+
         logger.info(
-            "discovery score: starting user=%s candidates=%d budget_remaining=%.4f",
-            user_id, len(candidates), daily_cap - spent_today,
+            "discovery score: starting user=%s candidates=%d "
+            "prefilter_branch=%s prefilter_eligible=%d budget_remaining=%.4f",
+            user_id,
+            len(candidates),
+            prefilter_result.branch,
+            prefilter_result.eligible_count,
+            daily_cap - spent_today,
         )
 
         # Track in-loop spend locally instead of re-querying
@@ -265,6 +310,25 @@ def _emit_circuit_break_warning(
         "consecutive=%d last_code=%s — remaining postings deferred to next pass",
         user_id, consecutive, last_code,
     )
+
+
+def _resolve_top_n(batch: int) -> int:
+    """Resolve the effective prefilter top-N for this pass.
+
+    The prefilter respects ``settings.discovery_score_top_n`` (default
+    20) but never exceeds the legacy ``batch`` ceiling — so a misconfigured
+    env (e.g. ``DISCOVERY_SCORE_TOP_N=10000``) can't bypass the per-pass
+    safety cap. Returns the smaller of the two, clamped to >= 1 so an
+    operator setting 0 or negative doesn't silently disable scoring.
+    """
+    raw = getattr(settings, "discovery_score_top_n", 20)
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        value = 20
+    if value < 1:
+        value = 20
+    return min(value, batch)
 
 
 def _resolve_daily_budget() -> float:

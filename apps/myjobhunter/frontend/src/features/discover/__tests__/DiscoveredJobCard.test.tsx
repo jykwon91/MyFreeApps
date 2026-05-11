@@ -12,6 +12,7 @@ vi.mock("lucide-react", () => ({
   Briefcase: () => null,
   Check: () => null,
   ExternalLink: () => null,
+  Loader2: () => null,
   X: () => null,
 }));
 
@@ -95,5 +96,60 @@ describe("DiscoveredJobCard — verdict badge", () => {
     render(<DiscoveredJobCard job={makeJob()} />);
     expect(screen.getByText("Senior Backend Engineer")).toBeInTheDocument();
     expect(screen.getByText(/Acme Corp/)).toBeInTheDocument();
+  });
+});
+
+describe("DiscoveredJobCard — unscored visual signal (PR 4b)", () => {
+  it("shows 'Awaiting AI score' pill when unscored and polling is idle", () => {
+    render(
+      <DiscoveredJobCard
+        job={makeJob({ verdict: null, score: null })}
+        isScoringInFlight={false}
+      />,
+    );
+    expect(
+      screen.getByTestId("discovered-job-awaiting-score"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("discovered-job-scoring-spinner"),
+    ).toBeNull();
+  });
+
+  it("shows a spinner when unscored and polling is in flight", () => {
+    render(
+      <DiscoveredJobCard
+        job={makeJob({ verdict: null, score: null })}
+        isScoringInFlight={true}
+      />,
+    );
+    expect(
+      screen.getByTestId("discovered-job-scoring-spinner"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("discovered-job-awaiting-score"),
+    ).toBeNull();
+  });
+
+  it("shows neither pill nor spinner when the job already has a verdict", () => {
+    render(
+      <DiscoveredJobCard
+        job={makeJob({ verdict: "strong_fit", score: 90 })}
+        isScoringInFlight={true}
+      />,
+    );
+    expect(
+      screen.queryByTestId("discovered-job-awaiting-score"),
+    ).toBeNull();
+    expect(
+      screen.queryByTestId("discovered-job-scoring-spinner"),
+    ).toBeNull();
+  });
+
+  it("defaults isScoringInFlight to false when omitted", () => {
+    render(<DiscoveredJobCard job={makeJob({ verdict: null, score: null })} />);
+    // Default falsy → static pill, not the spinner.
+    expect(
+      screen.getByTestId("discovered-job-awaiting-score"),
+    ).toBeInTheDocument();
   });
 });
