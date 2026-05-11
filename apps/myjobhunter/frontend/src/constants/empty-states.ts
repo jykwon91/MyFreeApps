@@ -14,7 +14,10 @@ export interface EmptyStateCopyNoAction {
   body: string;
 }
 
-export const DISCOVER_EMPTY_STATES: Record<"no_saved_searches" | "inbox_empty", EmptyStateCopyNoAction> = {
+export const DISCOVER_EMPTY_STATES: Record<
+  "no_saved_searches" | "inbox_empty" | "saved_empty",
+  EmptyStateCopyNoAction
+> = {
   no_saved_searches: {
     iconName: "Telescope",
     heading: "No saved searches yet",
@@ -27,6 +30,11 @@ export const DISCOVER_EMPTY_STATES: Record<"no_saved_searches" | "inbox_empty", 
     iconName: "Telescope",
     heading: "Inbox empty",
     body: "Click Refresh on a saved search above to fetch the latest postings.",
+  },
+  saved_empty: {
+    iconName: "Telescope",
+    heading: "No saved jobs",
+    body: "When you save a posting from the inbox it shows up here — hold it until you're ready to apply.",
   },
 };
 
