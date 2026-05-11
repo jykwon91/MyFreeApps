@@ -128,3 +128,82 @@ def test_min_salary_invalid_raw_falls_back_to_no_filter() -> None:
         postings, {"min_salary_usd": "not a number"},
     )
     assert len(result) == 1
+
+
+# ===========================================================================
+# Greenhouse / Lever excluded_keywords integration (tech debt 2026-05-11)
+# ===========================================================================
+
+
+def _greenhouse_posting(**overrides):
+    """Greenhouse posting shape — no salary fields."""
+    base = {
+        "source": "greenhouse",
+        "source_external_id": "gh-123",
+        "source_publisher": "Greenhouse",
+        "title": "Senior Software Engineer",
+        "company_name": "Stripe",
+        "description": "We are looking for a strong engineer.",
+        "salary_min": None,
+        "salary_max": None,
+    }
+    base.update(overrides)
+    return base
+
+
+def test_greenhouse_excluded_keywords_drops_matching_posting() -> None:
+    """excluded_keywords filter works for Greenhouse postings (same code path)."""
+    postings = [
+        _greenhouse_posting(title="Junior Software Engineer"),
+        _greenhouse_posting(title="Senior Software Engineer"),
+    ]
+    result = _apply_post_fetch_filters(postings, {"excluded_keywords": ["junior"]})
+    assert len(result) == 1
+    assert result[0]["title"] == "Senior Software Engineer"
+
+
+def test_greenhouse_excluded_keywords_matches_company_name() -> None:
+    """Company name is checked even for Greenhouse postings."""
+    postings = [
+        _greenhouse_posting(company_name="Palantir"),
+        _greenhouse_posting(company_name="Stripe"),
+    ]
+    result = _apply_post_fetch_filters(
+        postings, {"excluded_keywords": ["palantir"]},
+    )
+    assert len(result) == 1
+    assert result[0]["company_name"] == "Stripe"
+
+
+def test_greenhouse_no_excluded_keywords_passes_all() -> None:
+    """Greenhouse postings with no filter set are all kept."""
+    postings = [_greenhouse_posting(), _greenhouse_posting(title="Intern")]
+    result = _apply_post_fetch_filters(postings, {"board_token": "stripe"})
+    assert len(result) == 2
+
+
+def _lever_posting(**overrides):
+    """Lever posting shape — no salary fields."""
+    base = {
+        "source": "lever",
+        "source_external_id": "lv-456",
+        "source_publisher": "Lever",
+        "title": "Backend Engineer",
+        "company_name": "OpenAI",
+        "description": "Looking for a backend engineer.",
+        "salary_min": None,
+        "salary_max": None,
+    }
+    base.update(overrides)
+    return base
+
+
+def test_lever_excluded_keywords_drops_matching_posting() -> None:
+    """excluded_keywords filter works for Lever postings (same code path)."""
+    postings = [
+        _lever_posting(title="Intern Backend Engineer"),
+        _lever_posting(title="Backend Engineer"),
+    ]
+    result = _apply_post_fetch_filters(postings, {"excluded_keywords": ["intern"]})
+    assert len(result) == 1
+    assert result[0]["title"] == "Backend Engineer"

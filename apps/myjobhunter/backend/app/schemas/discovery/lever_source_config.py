@@ -55,6 +55,17 @@ class LeverSourceConfig(BaseModel):
         ),
     )
 
+    # Post-fetch keyword filter — same semantics as Greenhouse and JSearch.
+    # ``min_salary_usd`` is intentionally omitted: Lever's v0 postings feed
+    # does not reliably include salary data.
+    excluded_keywords: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Case-insensitive substrings to drop from fetched postings. "
+            "Matched against title, company, description, and publisher."
+        ),
+    )
+
     model_config = ConfigDict(extra="forbid")
 
     @field_validator("company_slug")

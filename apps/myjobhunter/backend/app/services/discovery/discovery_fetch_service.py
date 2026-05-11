@@ -29,7 +29,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.discovery.discovery_source import DiscoverySource
 from app.repositories.discovery import discovery_repository
-from app.schemas.discovery.greenhouse_source_config import GreenhouseSourceConfig
+from app.schemas.discovery.greenhouse_source_config import (
+    GreenhouseSourceConfig,
+    GreenhouseFetchConfig,
+)
 from app.schemas.discovery.jsearch_source_config import JSearchSourceConfig
 from app.schemas.discovery.lever_source_config import LeverSourceConfig
 from app.services.discovery.industry_denylists import expand_excluded_keywords
@@ -222,12 +225,19 @@ def _apply_post_fetch_filters(
     return kept
 
 
-async def _run_greenhouse(config: dict[str, Any]) -> list[dict]:
+async def _run_greenhouse(
+    config: dict[str, Any],
+) -> tuple[list[dict], str | None]:
     """Validate Greenhouse config and invoke the adapter.
 
     Unlike JSearch, there is no meaningful default config to fall back to
     if the board_token is missing — we let ``parse_or_default`` raise
     and the fetch-service error handler marks the source as errored.
+
+    Returns a ``(postings, resolved_company_name)`` tuple.
+    ``resolved_company_name`` is non-None when the fetch service should
+    write it back to the source's config JSONB to skip the metadata call
+    on the next fetch.
     """
     typed = GreenhouseSourceConfig.parse_or_default(config)
     return await greenhouse.fetch_board(board_token=typed.board_token, config=typed)
@@ -245,9 +255,14 @@ async def _run_lever(config: dict[str, Any]) -> list[dict]:
 
 _ADAPTERS: dict[str, Callable[[dict[str, Any]], Awaitable[list[dict]]]] = {
     "jsearch": _run_jsearch,
-    "greenhouse": _run_greenhouse,
     "lever": _run_lever,
 }
+
+# Greenhouse gets a dedicated slot because its adapter returns a tuple
+# ``(postings, resolved_company_name)`` — the second element lets the
+# fetch service persist the company display name back to the JSONB config
+# so subsequent fetches skip the metadata round-trip.
+_GREENHOUSE_ADAPTER = _run_greenhouse
 
 
 # ---------------------------------------------------------------------------
@@ -291,8 +306,12 @@ async def fetch_source(
             f"discovery_source {source_id} is inactive",
         )
 
-    adapter = _ADAPTERS.get(source.source)
-    if adapter is None:
+    is_greenhouse = source.source == "greenhouse"
+    if is_greenhouse:
+        # Greenhouse adapter returns (postings, resolved_company_name) so it
+        # bypasses the generic _ADAPTERS dispatch.
+        pass
+    elif source.source not in _ADAPTERS:
         raise DiscoveryUnsupportedSourceError(
             f"no adapter registered for source kind {source.source!r}",
         )
@@ -312,9 +331,18 @@ async def fetch_source(
     status = "success"
     error_message: str | None = None
     max_posted_at = None
+    # Greenhouse: company name resolved from metadata or cache.  Non-None
+    # signals the fetch service should write it back to the config JSONB.
+    greenhouse_resolved_name: str | None = None
 
     try:
-        postings = await adapter(source.config or {})
+        if is_greenhouse:
+            postings, greenhouse_resolved_name = await _GREENHOUSE_ADAPTER(
+                source.config or {},
+            )
+        else:
+            adapter = _ADAPTERS[source.source]
+            postings = await adapter(source.config or {})
     except Exception as exc:
         # Persist the audit row + source-level failure, then re-raise
         # the ORIGINAL exception so the route layer can map typed
@@ -358,6 +386,22 @@ async def fetch_source(
                 max_posted_at is None or posted_at > max_posted_at
             ):
                 max_posted_at = posted_at
+
+    # ---- Persist Greenhouse company name cache ----
+    # When the adapter resolved a company display name that differs from
+    # whatever was previously cached (or it's the first fetch), write it
+    # back into the source's config JSONB so the next fetch can skip the
+    # metadata round-trip.  We mutate the ORM instance directly — the
+    # same db.commit() below will persist the change.
+    if is_greenhouse and greenhouse_resolved_name is not None:
+        current_cached = (source.config or {}).get("resolved_company_name")
+        if greenhouse_resolved_name != current_cached:
+            # SQLAlchemy won't detect in-place dict mutation on JSONB columns;
+            # replace the column reference entirely to trigger change detection.
+            updated_config = dict(source.config or {})
+            updated_config["resolved_company_name"] = greenhouse_resolved_name
+            source.config = updated_config
+            await db.flush()
 
     # ---- Audit complete + source watermark ----
     await discovery_repository.complete_fetch(

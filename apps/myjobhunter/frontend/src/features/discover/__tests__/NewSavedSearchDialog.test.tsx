@@ -63,6 +63,34 @@ vi.mock("@platform/ui", () => ({
     e instanceof Error ? e.message : String(e),
   InlineBoldText: ({ text }: { text: string }) => <span>{text}</span>,
   Skeleton: () => <div data-testid="skeleton" />,
+  // Used by GreenhouseConfigSection + LeverConfigSection
+  FormField: ({
+    label,
+    children,
+  }: {
+    label: string;
+    children: React.ReactNode;
+  }) => (
+    <div>
+      <label>{label}</label>
+      {children}
+    </div>
+  ),
+  MultiChipInput: ({
+    value,
+    ariaLabel,
+  }: {
+    value: string[];
+    onChange: (v: string[]) => void;
+    ariaLabel?: string;
+    placeholder?: string;
+  }) => (
+    <div data-testid="multi-chip-input" aria-label={ariaLabel}>
+      {value.map((v: string) => (
+        <span key={v}>{v}</span>
+      ))}
+    </div>
+  ),
 }));
 
 // ---------------------------------------------------------------------------
@@ -447,5 +475,49 @@ describe("NewSavedSearchDialog — name field (PR 6)", () => {
     fireEvent.click(screen.getByTestId("cancel-btn"));
     // After close the form is reset; re-open would show blank name
     // (tested at DOM level since open=true re-renders)
+  });
+});
+
+describe("NewSavedSearchDialog — Greenhouse excluded_keywords payload", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockCreateSource.mockReturnValue(makeUnwrappableMutation({}));
+  });
+
+  it("omits excluded_keywords from Greenhouse payload when none set", async () => {
+    renderDialog();
+    await userEvent.selectOptions(getSourceSelect(), "greenhouse");
+    const tokenInput = screen.getByLabelText("Greenhouse board token");
+    await userEvent.type(tokenInput, "stripe");
+    fireEvent.click(screen.getByTestId("confirm-btn"));
+
+    await waitFor(() => {
+      expect(mockCreateSource).toHaveBeenCalledWith({
+        source: "greenhouse",
+        config: { board_token: "stripe" },
+        fetch_interval_minutes: 1440,
+      });
+    });
+    // config should NOT have excluded_keywords key when empty
+    const callArgs = mockCreateSource.mock.calls[0][0];
+    expect(callArgs.config).not.toHaveProperty("excluded_keywords");
+  });
+
+  it("omits excluded_keywords from Lever payload when none set", async () => {
+    renderDialog();
+    await userEvent.selectOptions(getSourceSelect(), "lever");
+    const slugInput = screen.getByLabelText("Lever company slug");
+    await userEvent.type(slugInput, "openai");
+    fireEvent.click(screen.getByTestId("confirm-btn"));
+
+    await waitFor(() => {
+      expect(mockCreateSource).toHaveBeenCalledWith({
+        source: "lever",
+        config: { company_slug: "openai" },
+        fetch_interval_minutes: 1440,
+      });
+    });
+    const callArgs = mockCreateSource.mock.calls[0][0];
+    expect(callArgs.config).not.toHaveProperty("excluded_keywords");
   });
 });
