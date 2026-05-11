@@ -498,3 +498,114 @@ async def test_promote_job_cross_tenant_404(
     async with await as_user(attacker) as a:
         resp = await a.post(f"/discover/{job_id}/promote")
         assert resp.status_code == 404
+
+
+# ===========================================================================
+# Undo-dismiss endpoint (PR 8)
+# ===========================================================================
+
+_SCORE_PATH = "app.services.discovery.discovery_score_service.score_user_inbox"
+
+
+async def _seed_dismissed_job(
+    a,
+    source_id_resp,
+    *,
+    reason: str | None = None,
+) -> str:
+    """Helper: refresh to get one job then dismiss it. Returns job_id.
+
+    Patches score_user_inbox (Anthropic) so no real API call fires — the
+    scoring background task is exercised by test_discovery_score_service.py;
+    here we only care about the inbox state transitions.
+    """
+    source_id = source_id_resp.json()["id"]
+    with (
+        patch(_SEARCH_PATH, new_callable=AsyncMock, return_value=[_posting()]),
+        patch(_SCORE_PATH, new_callable=AsyncMock, return_value=None),
+    ):
+        await a.post(f"/discover/sources/{source_id}/refresh")
+    listed = await a.get("/discover")
+    job_id = listed.json()["items"][0]["id"]
+    dismiss_payload = {"reason": reason} if reason else {}
+    resp = await a.post(f"/discover/{job_id}/dismiss", json=dismiss_payload)
+    assert resp.status_code == 204
+    return job_id
+
+
+@pytest.mark.asyncio
+async def test_undo_dismiss_happy_path(
+    client: AsyncClient, user_factory, as_user,
+):
+    """POST /discover/{id}/undo-dismiss clears dismissed_at and dismissed_reason,
+    returning the job to the inbox."""
+    user = await user_factory()
+    async with await as_user(user) as a:
+        created = await a.post(
+            "/discover/sources",
+            json={"source": "jsearch", "config": {"query": "x"}},
+        )
+        job_id = await _seed_dismissed_job(a, created, reason="wrong_stack")
+
+        # Inbox should be empty after dismiss.
+        inbox_before = await a.get("/discover")
+        assert inbox_before.json()["total"] == 0
+
+        resp = await a.post(f"/discover/{job_id}/undo-dismiss")
+        assert resp.status_code == 204
+
+        # Job must reappear in the inbox after undo.
+        inbox_after = await a.get("/discover")
+        assert inbox_after.json()["total"] == 1
+        item = inbox_after.json()["items"][0]
+        assert item["id"] == job_id
+        assert item["dismissed_at"] is None
+        assert item["dismissed_reason"] is None
+
+
+@pytest.mark.asyncio
+async def test_undo_dismiss_on_never_dismissed_returns_404(
+    client: AsyncClient, user_factory, as_user,
+):
+    """Calling undo-dismiss on an inbox job (never dismissed) returns 404.
+
+    This is the idempotency decision: a job that was never dismissed has
+    nothing to undo, so we return 404 rather than silently succeeding.
+    """
+    user = await user_factory()
+    async with await as_user(user) as a:
+        created = await a.post(
+            "/discover/sources",
+            json={"source": "jsearch", "config": {"query": "x"}},
+        )
+        source_id = created.json()["id"]
+        with (
+            patch(_SEARCH_PATH, new_callable=AsyncMock, return_value=[_posting()]),
+            patch(_SCORE_PATH, new_callable=AsyncMock, return_value=None),
+        ):
+            await a.post(f"/discover/sources/{source_id}/refresh")
+        listed = await a.get("/discover")
+        job_id = listed.json()["items"][0]["id"]
+
+        resp = await a.post(f"/discover/{job_id}/undo-dismiss")
+        assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_undo_dismiss_cross_tenant_404(
+    client: AsyncClient, user_factory, as_user,
+):
+    """A user cannot undo another user's dismiss — tenant isolation."""
+    owner = await user_factory()
+    attacker = await user_factory()
+
+    async with await as_user(owner) as a:
+        created = await a.post(
+            "/discover/sources",
+            json={"source": "jsearch", "config": {"query": "x"}},
+        )
+        job_id = await _seed_dismissed_job(a, created)
+
+    async with await as_user(attacker) as a:
+        resp = await a.post(f"/discover/{job_id}/undo-dismiss")
+        assert resp.status_code == 404

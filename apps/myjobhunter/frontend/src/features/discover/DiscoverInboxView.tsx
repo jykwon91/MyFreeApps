@@ -3,7 +3,10 @@ import { EmptyState } from "@platform/ui";
 import { DISCOVER_EMPTY_STATES } from "@/constants/empty-states";
 import DiscoveredJobCard from "@/features/discover/DiscoveredJobCard";
 import DiscoveredJobsSkeleton from "@/features/discover/DiscoveredJobsSkeleton";
+import ProfileCompletenessBanner from "@/features/discover/ProfileCompletenessBanner";
 import { useListDiscoveredJobsQuery } from "@/store/discoverApi";
+import { useGetProfileQuery } from "@/lib/profileApi";
+import { useListSkillsQuery } from "@/lib/skillsApi";
 
 // Background scoring runs after /refresh as a FastAPI BackgroundTask
 // (~30s for 20 postings). Poll while the inbox is visible so score badges
@@ -20,6 +23,12 @@ export default function DiscoverInboxView({ hasSources }: DiscoverInboxViewProps
     { pollingInterval: INBOX_POLL_INTERVAL_MS },
   );
 
+  const { data: profile } = useGetProfileQuery();
+  const { data: skillsData } = useListSkillsQuery();
+
+  const hasResume = profile?.resume_file_path != null;
+  const hasSkills = (skillsData?.total ?? 0) > 0;
+
   if (!hasSources) {
     return (
       <EmptyState
@@ -30,27 +39,42 @@ export default function DiscoverInboxView({ hasSources }: DiscoverInboxViewProps
     );
   }
 
+  const profileBanner = (
+    <ProfileCompletenessBanner hasResume={hasResume} hasSkills={hasSkills} />
+  );
+
   if (isError) {
     return (
-      <p className="text-sm text-destructive">
-        Couldn't load the inbox — try refreshing the page.
-      </p>
+      <>
+        {profileBanner}
+        <p className="text-sm text-destructive">
+          Couldn't load the inbox — try refreshing the page.
+        </p>
+      </>
     );
   }
 
   if (isLoading) {
-    return <DiscoveredJobsSkeleton />;
+    return (
+      <>
+        {profileBanner}
+        <DiscoveredJobsSkeleton />
+      </>
+    );
   }
 
   const items = jobsData?.items ?? [];
 
   if (items.length === 0) {
     return (
-      <EmptyState
-        icon={<Telescope className="w-12 h-12 text-muted-foreground" />}
-        heading={DISCOVER_EMPTY_STATES.inbox_empty.heading}
-        body={DISCOVER_EMPTY_STATES.inbox_empty.body}
-      />
+      <>
+        {profileBanner}
+        <EmptyState
+          icon={<Telescope className="w-12 h-12 text-muted-foreground" />}
+          heading={DISCOVER_EMPTY_STATES.inbox_empty.heading}
+          body={DISCOVER_EMPTY_STATES.inbox_empty.body}
+        />
+      </>
     );
   }
 
@@ -65,6 +89,7 @@ export default function DiscoverInboxView({ hasSources }: DiscoverInboxViewProps
 
   return (
     <div className="space-y-3">
+      {profileBanner}
       {items.map((job) => (
         <DiscoveredJobCard
           key={job.id}

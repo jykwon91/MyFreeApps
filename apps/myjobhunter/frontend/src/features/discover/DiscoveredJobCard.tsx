@@ -20,6 +20,7 @@ import {
 import type { DiscoveredJob } from "@/types/discovery/discovered-job";
 import type { JobAnalysisVerdict } from "@/types/job-analysis/job-analysis-verdict";
 import DismissReasonPopover from "./DismissReasonPopover";
+import UndoDismissToast from "./UndoDismissToast";
 
 interface DiscoveredJobCardProps {
   job: DiscoveredJob;
@@ -64,11 +65,13 @@ export default function DiscoveredJobCard({
   const [save, { isLoading: isSaving }] = useSaveDiscoveredJobMutation();
   const [promote, { isLoading: isPromoting }] = usePromoteDiscoveredJobMutation();
   const [showReasons, setShowReasons] = useState(false);
+  const [undoToastOpen, setUndoToastOpen] = useState(false);
 
   async function doDismiss(reason?: DismissalReason) {
     try {
       await dismiss({ jobId: job.id, reason }).unwrap();
       setShowReasons(false);
+      setUndoToastOpen(true);
     } catch (err) {
       showError(extractErrorMessage(err) ?? "Couldn't dismiss this posting");
     }
@@ -107,6 +110,12 @@ export default function DiscoveredJobCard({
   const isUnscored = job.verdict === null && job.score === null;
 
   return (
+    <>
+    <UndoDismissToast
+      jobId={job.id}
+      open={undoToastOpen}
+      onOpenChange={setUndoToastOpen}
+    />
     <Card className="p-4 sm:p-5 space-y-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
@@ -244,5 +253,6 @@ export default function DiscoveredJobCard({
         </div>
       )}
     </Card>
+    </>
   );
 }
