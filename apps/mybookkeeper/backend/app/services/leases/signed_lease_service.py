@@ -22,10 +22,12 @@ from app.services.leases._lease_helpers import (
     ALLOWED_ATTACHMENT_MIME_TYPES,
     CannotEditValuesError,
     InvalidAttachmentKindError,
+    InvalidParentLeaseError,
     InvalidStatusTransitionError,
     MissingRequiredValuesError,
     SignedLeaseNotFoundError,
     StorageNotConfiguredError,
+    SuccessorAlreadyExistsError,
 )
 
 # Lifecycle
@@ -76,10 +78,12 @@ __all__ = [
     "ALLOWED_ATTACHMENT_MIME_TYPES",
     "CannotEditValuesError",
     "InvalidAttachmentKindError",
+    "InvalidParentLeaseError",
     "InvalidStatusTransitionError",
     "MissingRequiredValuesError",
     "SignedLeaseNotFoundError",
     "StorageNotConfiguredError",
+    "SuccessorAlreadyExistsError",
     "ImportedLeaseTemplateError",
     "TemplatesAlreadyLinkedError",
     "ApplicantNotFoundError",

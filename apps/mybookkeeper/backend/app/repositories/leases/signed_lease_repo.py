@@ -7,6 +7,7 @@ from typing import Any
 
 from sqlalchemy import desc, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
 from app.models.leases.signed_lease import SignedLease
 
@@ -23,7 +24,16 @@ async def create(
     ends_on: _dt.date | None,
     status: str = "draft",
     kind: str = "generated",
+    parent_lease_id: uuid.UUID | None = None,
 ) -> SignedLease:
+    """Insert a signed_leases row.
+
+    ``parent_lease_id`` may be set when the new lease is a successor to
+    an existing lease (rent change, term change, etc.). The repository
+    does NOT validate that the parent exists or belongs to the same
+    tenant — that's a service-layer responsibility so the route can
+    return a clean 422/404 before the insert.
+    """
     lease = SignedLease(
         user_id=user_id,
         organization_id=organization_id,
@@ -34,10 +44,62 @@ async def create(
         ends_on=ends_on,
         status=status,
         kind=kind,
+        parent_lease_id=parent_lease_id,
     )
     db.add(lease)
     await db.flush()
     return lease
+
+
+async def find_successor(
+    db: AsyncSession,
+    *,
+    parent_lease_id: uuid.UUID,
+) -> SignedLease | None:
+    """Return the live successor lease for a given parent, if any.
+
+    A lease has at most one successor at a time; the schema doesn't
+    enforce it, but the service layer rejects creation when one already
+    exists. Returns ``None`` when the parent has no successor (or its
+    successor was soft-deleted).
+    """
+    result = await db.execute(
+        select(SignedLease)
+        .where(
+            SignedLease.parent_lease_id == parent_lease_id,
+            SignedLease.deleted_at.is_(None),
+        )
+        .order_by(desc(SignedLease.created_at))
+        .limit(1)
+    )
+    return result.scalar_one_or_none()
+
+
+async def list_replaced_by_successor_starting_on_or_before(
+    db: AsyncSession,
+    *,
+    cutoff: _dt.date,
+) -> list[SignedLease]:
+    """Return live parent leases whose live successor's starts_on <= cutoff.
+
+    Used by the auto-end scheduler job to find leases in signed/active
+    status that should transition to ``ended`` because their successor's
+    start date has arrived. Tenancy-agnostic — the scheduler runs across
+    all users.
+    """
+    successor = aliased(SignedLease)
+    result = await db.execute(
+        select(SignedLease)
+        .join(successor, successor.parent_lease_id == SignedLease.id)
+        .where(
+            SignedLease.deleted_at.is_(None),
+            SignedLease.status.in_(("signed", "active")),
+            successor.deleted_at.is_(None),
+            successor.starts_on.is_not(None),
+            successor.starts_on <= cutoff,
+        )
+    )
+    return list(result.scalars().all())
 
 
 async def get(

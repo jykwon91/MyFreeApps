@@ -43,5 +43,14 @@ class SignedLeaseResponse(BaseModel):
     # client checks ``created_at`` against the 30-day undo window to decide
     # whether to render the button.
     latest_extension: LeaseExtensionSummary | None = None
+    # When this lease IS a successor, ``parent_lease_id`` references the
+    # prior lease it supersedes. NULL for original (non-successor) leases.
+    # Surfaced so the frontend can render a "← prior lease" breadcrumb.
+    parent_lease_id: uuid.UUID | None = None
+    # ID of the live successor lease (one whose ``parent_lease_id`` points
+    # at this row). NULL when no successor exists. Drives the "New lease"
+    # button's enabled state on the frontend — a lease that already has a
+    # successor cannot have a second one created.
+    successor_lease_id: uuid.UUID | None = None
 
     model_config = ConfigDict(from_attributes=True)

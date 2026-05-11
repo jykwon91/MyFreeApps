@@ -11,12 +11,14 @@ existing scheduler loop; a dedicated 15-minute timer can be split out
 in a follow-up if cycle drift becomes an issue.
 """
 import asyncio
+import datetime as _dt
 import logging
 import time
 
 from app.core.config import settings
 from app.db.session import AsyncSessionLocal, unit_of_work
 from app.repositories import integration_repo, plaid_repo
+from app.repositories.leases import signed_lease_repo
 from app.services.integrations.plaid_sync_service import sync_plaid_item
 from app.services.listings.channel_sync_service import poll_all as poll_all_channels
 from app.workers.email_sync_worker import sync_gmail_for_user
@@ -56,6 +58,50 @@ async def sync_all_channel_calendars() -> None:
         logger.exception("Channel iCal sync cycle failed")
 
 
+async def auto_end_replaced_leases() -> int:
+    """Transition signed/active parent leases to ``ended`` when their
+    successor's ``starts_on`` has arrived.
+
+    Returns the number of leases that were transitioned. Tenancy-agnostic
+    — runs across every user. Errors on individual rows are logged but
+    do not stop the cycle (one bad row should never block the rest).
+    """
+    today = _dt.date.today()
+    now = _dt.datetime.now(_dt.timezone.utc)
+    transitioned = 0
+    try:
+        async with unit_of_work() as db:
+            rows = await signed_lease_repo.list_replaced_by_successor_starting_on_or_before(
+                db, cutoff=today,
+            )
+            for parent in rows:
+                try:
+                    await signed_lease_repo.update_lease(
+                        db,
+                        lease_id=parent.id,
+                        user_id=parent.user_id,
+                        organization_id=parent.organization_id,
+                        fields={
+                            "status": "ended",
+                            "ended_at": now,
+                            "updated_at": now,
+                        },
+                    )
+                    transitioned += 1
+                    logger.info(
+                        "Auto-ended lease %s (successor's starts_on reached)",
+                        parent.id,
+                    )
+                except Exception:  # noqa: BLE001
+                    logger.exception(
+                        "Failed to auto-end lease %s — leaving for next cycle",
+                        parent.id,
+                    )
+    except Exception:
+        logger.exception("auto_end_replaced_leases cycle failed")
+    return transitioned
+
+
 async def run_sync_cycle() -> None:
     """Run one full sync cycle for all integration types."""
     gmail_user_ids = await get_gmail_user_ids()
@@ -65,6 +111,7 @@ async def run_sync_cycle() -> None:
 
     await sync_all_plaid_items()
     await sync_all_channel_calendars()
+    await auto_end_replaced_leases()
 
 
 def run() -> None:

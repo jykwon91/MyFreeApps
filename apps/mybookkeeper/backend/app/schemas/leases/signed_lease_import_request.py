@@ -15,5 +15,10 @@ class SignedLeaseImportRequest(BaseModel):
     notes: str | None = Field(default=None, max_length=2000)
     # Default to 'signed' — by definition, imported leases are already signed.
     status: str = "signed"
+    # Successor-lease pointer: when set, this imported lease is positioned
+    # as the successor to ``parent_lease_id``. The service validates that
+    # the parent is in a status that allows succession (signed / active /
+    # ended).
+    parent_lease_id: uuid.UUID | None = None
 
     model_config = ConfigDict(extra="forbid")
