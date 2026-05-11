@@ -31,4 +31,10 @@ export interface SignedLeaseDetail {
   /** The most-recent live extension (seed excluded), or null when the lease
    *  is at its original term. Drives the Undo button's 30-day gating. */
   latest_extension: LeaseExtensionSummary | null;
+  /** When this lease IS a successor, references the prior lease it supersedes. */
+  parent_lease_id: string | null;
+  /** ID of the live successor (a lease whose parent_lease_id points at this
+   *  one). Null when no successor exists yet. Drives the "New lease"
+   *  button's enabled state. */
+  successor_lease_id: string | null;
 }

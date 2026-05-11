@@ -6,4 +6,6 @@ export interface SignedLeaseImportRequest {
   notes?: string;
   status?: string;
   files: File[];
+  /** Optional successor pointer (same semantics as the create flow). */
+  parent_lease_id?: string;
 }

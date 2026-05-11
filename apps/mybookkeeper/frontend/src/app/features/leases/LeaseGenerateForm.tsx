@@ -21,6 +21,8 @@ export interface LeaseGenerateFormProps {
   templateLabels?: Record<string, string>;
   applicantId: string;
   listingId?: string | null;
+  /** When set, the new lease is created as a successor to this parent. */
+  parentLeaseId?: string | null;
 }
 
 type ProvenanceMap = Record<string, PlaceholderProvenance>;
@@ -51,6 +53,7 @@ export default function LeaseGenerateForm({
   templateLabels,
   applicantId,
   listingId,
+  parentLeaseId,
 }: LeaseGenerateFormProps) {
   const navigate = useNavigate();
   const [createLease, { isLoading: isCreating }] = useCreateSignedLeaseMutation();
@@ -233,6 +236,7 @@ export default function LeaseGenerateForm({
         applicant_id: applicantId,
         listing_id: listingId ?? null,
         values,
+        ...(parentLeaseId ? { parent_lease_id: parentLeaseId } : {}),
       }).unwrap();
       showSuccess(
         submitTemplateIds.length > 1
@@ -241,9 +245,28 @@ export default function LeaseGenerateForm({
       );
       navigate(`/leases/${created.id}`);
     } catch (e: unknown) {
-      const status = (e as { status?: number }).status;
-      if (status === 422) showError("Some required fields are still missing.");
-      else showError("Couldn't create the lease. Want to try again?");
+      const err = e as {
+        status?: number;
+        data?: { detail?: unknown };
+      };
+      const detail = err.data?.detail;
+      const code =
+        detail && typeof detail === "object"
+          ? (detail as { code?: unknown }).code
+          : undefined;
+      if (code === "INVALID_PARENT_LEASE") {
+        showError(
+          "The parent lease can't have a successor in its current state.",
+        );
+      } else if (code === "SUCCESSOR_ALREADY_EXISTS") {
+        showError(
+          "That lease already has a successor — open the existing one instead.",
+        );
+      } else if (err.status === 422) {
+        showError("Some required fields are still missing.");
+      } else {
+        showError("Couldn't create the lease. Want to try again?");
+      }
     }
   }
 
