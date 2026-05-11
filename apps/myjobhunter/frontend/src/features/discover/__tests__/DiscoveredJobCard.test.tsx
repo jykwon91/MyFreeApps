@@ -163,6 +163,108 @@ describe("DiscoveredJobCard — unscored visual signal (PR 4b)", () => {
   });
 });
 
+describe("DiscoveredJobCard — score-staleness pill (score-staleness-signal PR)", () => {
+  // A scored job with a profile-updated-at that is NEWER than scored_at
+  // → the score is stale, the "Re-scoring soon" pill should appear.
+  it("shows 'Re-scoring soon' pill when scored_at is older than profileUpdatedAt", () => {
+    renderInRouter(
+      <DiscoveredJobCard
+        job={makeJob({
+          verdict: "strong_fit",
+          score: 90,
+          scored_at: "2026-05-08T10:00:00Z",
+        })}
+        profileUpdatedAt="2026-05-09T12:00:00Z"
+      />,
+    );
+    expect(
+      screen.getByTestId("discovered-job-score-stale"),
+    ).toBeInTheDocument();
+  });
+
+  it("does NOT show the staleness pill when scored_at is newer than profileUpdatedAt", () => {
+    renderInRouter(
+      <DiscoveredJobCard
+        job={makeJob({
+          verdict: "strong_fit",
+          score: 90,
+          scored_at: "2026-05-10T10:00:00Z",
+        })}
+        profileUpdatedAt="2026-05-09T12:00:00Z"
+      />,
+    );
+    expect(
+      screen.queryByTestId("discovered-job-score-stale"),
+    ).toBeNull();
+  });
+
+  it("does NOT show the staleness pill when profileUpdatedAt is null", () => {
+    renderInRouter(
+      <DiscoveredJobCard
+        job={makeJob({
+          verdict: "strong_fit",
+          score: 90,
+          scored_at: "2026-05-08T10:00:00Z",
+        })}
+        profileUpdatedAt={null}
+      />,
+    );
+    expect(
+      screen.queryByTestId("discovered-job-score-stale"),
+    ).toBeNull();
+  });
+
+  it("does NOT show the staleness pill when profileUpdatedAt is omitted (default)", () => {
+    renderInRouter(
+      <DiscoveredJobCard
+        job={makeJob({
+          verdict: "strong_fit",
+          score: 90,
+          scored_at: "2026-05-08T10:00:00Z",
+        })}
+      />,
+    );
+    expect(
+      screen.queryByTestId("discovered-job-score-stale"),
+    ).toBeNull();
+  });
+
+  it("does NOT show the staleness pill for a truly unscored card (score=null) even if profile is newer", () => {
+    // An unscored card already shows "Awaiting AI score". The staleness pill
+    // is only meaningful when there IS an existing score to call stale.
+    renderInRouter(
+      <DiscoveredJobCard
+        job={makeJob({ verdict: null, score: null, scored_at: null })}
+        profileUpdatedAt="2026-05-09T12:00:00Z"
+      />,
+    );
+    expect(
+      screen.queryByTestId("discovered-job-score-stale"),
+    ).toBeNull();
+    // The regular "Awaiting AI score" pill should still be there.
+    expect(
+      screen.getByTestId("discovered-job-awaiting-score"),
+    ).toBeInTheDocument();
+  });
+
+  it("shows both the verdict badge AND the staleness pill for a stale scored card", () => {
+    renderInRouter(
+      <DiscoveredJobCard
+        job={makeJob({
+          verdict: "worth_considering",
+          score: 70,
+          scored_at: "2026-05-08T10:00:00Z",
+        })}
+        profileUpdatedAt="2026-05-09T12:00:00Z"
+      />,
+    );
+    // Verdict badge rendered (via the mocked Badge)
+    expect(screen.getByTestId("badge")).toHaveTextContent("Worth considering");
+    // Staleness pill also rendered
+    expect(screen.getByTestId("discovered-job-score-stale")).toBeInTheDocument();
+  });
+});
+
 describe("DiscoveredJobCard — post-promote view application link (PR 7)", () => {
   it("shows 'Applied' badge when job is promoted", () => {
     renderInRouter(

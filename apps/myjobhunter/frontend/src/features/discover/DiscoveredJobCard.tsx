@@ -36,6 +36,16 @@ interface DiscoveredJobCardProps {
    * existing callers (and tests) keep their current behaviour.
    */
   isScoringInFlight?: boolean;
+  /**
+   * ISO timestamp of the last profile update (from GET /profile
+   * ``updated_at``). When this is more recent than ``job.scored_at``,
+   * the card's existing score was computed against an older profile
+   * snapshot and the worker will re-score on its next pass.
+   *
+   * Optional — defaults to null so callers that don't have the
+   * profile loaded yet show no staleness signal.
+   */
+  profileUpdatedAt?: string | null;
 }
 
 const REMOTE_LABEL: Record<string, string> = {
@@ -60,6 +70,7 @@ const VERDICT_VISUAL: Record<JobAnalysisVerdict, VerdictVisual> = {
 export default function DiscoveredJobCard({
   job,
   isScoringInFlight = false,
+  profileUpdatedAt = null,
 }: DiscoveredJobCardProps) {
   const [dismiss, { isLoading: isDismissing }] = useDismissDiscoveredJobMutation();
   const [save, { isLoading: isSaving }] = useSaveDiscoveredJobMutation();
@@ -109,6 +120,18 @@ export default function DiscoveredJobCard({
   const verdictVisual = job.verdict ? VERDICT_VISUAL[job.verdict] ?? null : null;
   const isUnscored = job.verdict === null && job.score === null;
 
+  // A scored card is "stale" when the operator has updated their profile
+  // AFTER the score was computed. The worker will re-score on its next pass;
+  // this pill lets the operator know the current score may not reflect their
+  // latest skills/experience without waiting for the worker to run.
+  // Only applies when the card actually has a score — truly unscored cards
+  // already show "Awaiting AI score" / the scoring spinner.
+  const isScoreStale =
+    !isUnscored &&
+    job.scored_at !== null &&
+    profileUpdatedAt !== null &&
+    new Date(profileUpdatedAt) > new Date(job.scored_at);
+
   return (
     <>
     <UndoDismissToast
@@ -129,6 +152,15 @@ export default function DiscoveredJobCard({
         </div>
         <div className="flex items-start gap-1.5 shrink-0">
           {verdictVisual && <Badge label={verdictVisual.label} color={verdictVisual.color} />}
+          {isScoreStale && (
+            <span
+              className="px-2 py-0.5 text-xs text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-700 rounded"
+              data-testid="discovered-job-score-stale"
+              title="Your profile changed after this score was computed. It will be re-scored on the next pass."
+            >
+              Re-scoring soon
+            </span>
+          )}
           {!verdictVisual && isUnscored && isScoringInFlight && (
             <span
               className="inline-flex items-center gap-1 px-2 py-0.5 text-xs text-muted-foreground border border-muted rounded"
