@@ -12,8 +12,7 @@ import {
 } from "@/shared/store/taxReturnsApi";
 import { useToast } from "@/shared/hooks/useToast";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
-import Button from "@/shared/components/ui/Button";
-import LoadingButton from "@/shared/components/ui/LoadingButton";
+import { Button, LoadingButton } from "@platform/ui";
 import Badge from "@/shared/components/ui/Badge";
 import TaxReturnSkeleton from "@/app/features/tax/TaxReturnSkeleton";
 import FormOverviewGrid from "@/app/features/tax/FormOverviewGrid";

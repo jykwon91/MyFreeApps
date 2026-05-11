@@ -7,8 +7,7 @@ import {
 import { getAllowedTransitions } from "@/shared/lib/applicant-stage-transitions";
 import type { ApplicantStage } from "@/shared/types/applicant/applicant-stage";
 import type { BadgeColor } from "@/shared/components/ui/Badge";
-import LoadingButton from "@/shared/components/ui/LoadingButton";
-import Button from "@/shared/components/ui/Button";
+import { Button, LoadingButton } from "@platform/ui";
 import { useToast } from "@/shared/hooks/useToast";
 import { useTransitionApplicantStageMutation } from "@/shared/store/applicantsApi";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";

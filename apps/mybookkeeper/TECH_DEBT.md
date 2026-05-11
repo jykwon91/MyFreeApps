@@ -2,6 +2,7 @@
 
 > Last scanned: 2026-05-11
 > Issues: 0 critical, 4 high, 3 medium (0 deferred + 3 active), 0 low
+> 2026-05-11 (PR 6 of React 19 migration): 1 HIGH resolved (Button/LoadingButton local copies → `@platform/ui`).
 >
 > **Monorepo refactor audit (2026-05-08, post-resume-refinement work):** ~12 additional findings across three axes — backend reusability, frontend reusability, and long-files. Tracked under "## Monorepo refactor audit (2026-05-08)" below. These are extraction / split candidates, not regression bugs. Sister findings live in `apps/myjobhunter/TECH_DEBT.md`.
 
@@ -75,20 +76,26 @@ Output of two parallel scans (backend + frontend) for code that should live in `
 
 ### Frontend reusability (MBK-side)
 
-> **Blocked-on-react-19.** MBK can't import from `@platform/ui` until the React 18→19 upgrade lands (two-React-copies runtime crash, see `project_mbk_platform_ui_migration_blocked` in auto-memory). MJH already uses `@platform/ui` and has the corresponding entries in its TECH_DEBT.
+> ~~**Blocked-on-react-19.**~~ **UNBLOCKED 2026-05-11 (PR 6 of React 19 migration).** MBK is now on React 19 (PR #581) and consumes `@platform/ui` (this PR). The "two-React-copies runtime crash" referenced in `project_mbk_platform_ui_migration_blocked` (auto-memory) is no longer reachable — the workspace `overrides` block + Vite `dedupe` enforce a single React instance. The "(blocked-on-react-19)" suffix on the entries below is now stale; they are unblocked and ready for extraction.
 
-#### HIGH (blocked-on-react-19) — Status-colored Badge component
+#### ~~HIGH — MBK has local copies of Button + LoadingButton already in `@platform/ui`~~ RESOLVED
 
-**Effort:** S (post-React-19)
-**Location:** MBK: `features/documents/StatusBadge.tsx:9-32`. Sister implementations in MJH: `features/admin/invites/InviteStatusBadge.tsx`, `features/documents/DocumentKindBadge.tsx`.
-**Problem:** Same enum→color-map→Badge render pattern in both apps, 3+ uses per app.
-**Recommendation:** Extract a generic `<StatusBadge value={...} colors={...} />` to `packages/shared-frontend/src/components/StatusBadge.tsx`. Re-enable for MBK after React 19 upgrade.
+**Resolved:** PR 6 of React 19 migration (2026-05-11). Deleted `apps/mybookkeeper/frontend/src/shared/components/ui/Button.tsx` + `LoadingButton.tsx` (byte-equivalent to shared). Rewrote 107 import sites to `import { Button, LoadingButton } from "@platform/ui"`. Added `@platform/ui` workspace dep + Vite alias + tsconfig path + Tailwind content glob. Bonus parity fix: rewrote 19 files in `packages/shared-frontend/src/` from `@/shared/*` paths to relative imports so the shared package no longer depends on consumer alias setup — this was a latent bug that would have broken any new app whose tsconfig doesn't reserve `@/shared/*` for the shared package. `npm ls react` confirms single `react@19.2.6` resolution; build clean; manual `vite preview` smoke clean. Closes the original goal of the React 19 migration sequence (PRs 1-5 were prep).
 
 ---
 
-#### HIGH (blocked-on-react-19) — Confirm-delete dialog wrapper
+#### HIGH — Status-colored Badge component
 
-**Effort:** S (post-React-19)
+**Effort:** S
+**Location:** MBK: `features/documents/StatusBadge.tsx:9-32`. Sister implementations in MJH: `features/admin/invites/InviteStatusBadge.tsx`, `features/documents/DocumentKindBadge.tsx`.
+**Problem:** Same enum→color-map→Badge render pattern in both apps, 3+ uses per app.
+**Recommendation:** Extract a generic `<StatusBadge value={...} colors={...} />` to `packages/shared-frontend/src/components/StatusBadge.tsx`. Both apps consume.
+
+---
+
+#### HIGH — Confirm-delete dialog wrapper
+
+**Effort:** S
 **Location:** MBK: `features/vendors/DeleteVendorModal.tsx` (wraps shared `ConfirmDialog`). MJH: `features/admin/demo/DeleteDemoConfirmDialog.tsx` (rebuilds from Radix).
 **Problem:** MBK delegates to shared, MJH reimplements. Both are the same shape with destructive styling.
 **Recommendation:** Extract a `DeleteConfirmDialog` wrapper around `ConfirmDialog` with destructive default styling (warning icon, red Confirm button) to `packages/shared-frontend/src/components/DeleteConfirmDialog.tsx`. Both apps consume.

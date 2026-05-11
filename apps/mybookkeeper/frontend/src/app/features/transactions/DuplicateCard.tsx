@@ -2,7 +2,7 @@ import { useState } from "react";
 import { X, ArrowRight, AlertTriangle, AlertCircle, CheckCircle, GitMerge, ChevronUp } from "lucide-react";
 import type { DuplicatePair, DuplicateTransaction, MergeFieldSide } from "@/shared/types/transaction/duplicate";
 import Badge from "@/shared/components/ui/Badge";
-import LoadingButton from "@/shared/components/ui/LoadingButton";
+import { LoadingButton } from "@platform/ui";
 import TransactionSide from "@/app/features/transactions/TransactionSide";
 import MergeFieldPicker from "@/app/features/transactions/MergeFieldPicker";
 import MergePreview from "@/app/features/transactions/MergePreview";

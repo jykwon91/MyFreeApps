@@ -1,7 +1,7 @@
 import { useState } from "react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { Download, ChevronDown } from "lucide-react";
-import Button from "@/shared/components/ui/Button";
+import { Button } from "@platform/ui";
 import Spinner from "@/shared/components/icons/Spinner";
 
 interface ExportDropdownProps {

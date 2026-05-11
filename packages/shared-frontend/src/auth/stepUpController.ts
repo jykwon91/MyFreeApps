@@ -25,8 +25,8 @@
  * with the same code. This is what lets three concurrent admin
  * requests share one modal and retry with one X-TOTP-Code value.
  */
-import { StepUpCancelledError } from "@/shared/auth/errors/StepUpCancelledError";
-import type { StepUpControllerState } from "@/shared/auth/types/StepUpControllerState";
+import { StepUpCancelledError } from "./errors/StepUpCancelledError";
+import type { StepUpControllerState } from "./types/StepUpControllerState";
 
 interface PendingResolver {
   resolve: (code: string) => void;

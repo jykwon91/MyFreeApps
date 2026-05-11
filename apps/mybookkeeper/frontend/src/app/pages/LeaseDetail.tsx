@@ -13,9 +13,8 @@ import {
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import AlertBox from "@/shared/components/ui/AlertBox";
 import Badge from "@/shared/components/ui/Badge";
-import Button from "@/shared/components/ui/Button";
+import { Button, LoadingButton } from "@platform/ui";
 import Skeleton from "@/shared/components/ui/Skeleton";
-import LoadingButton from "@/shared/components/ui/LoadingButton";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import {

@@ -12,8 +12,7 @@ import {
 } from "@/shared/lib/inquiry-date-format";
 import type { ApplicantDetailResponse } from "@/shared/types/applicant/applicant-detail-response";
 import type { SignedLeaseSummary } from "@/shared/types/lease/signed-lease-summary";
-import Button from "@/shared/components/ui/Button";
-import LoadingButton from "@/shared/components/ui/LoadingButton";
+import { Button, LoadingButton } from "@platform/ui";
 import ApplicantStatusControl from "./ApplicantStatusControl";
 import ApplicantTimelineList from "./ApplicantTimelineList";
 import ContractDatesEditor from "./ContractDatesEditor";

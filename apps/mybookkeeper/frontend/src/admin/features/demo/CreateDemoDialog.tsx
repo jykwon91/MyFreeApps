@@ -1,7 +1,6 @@
 import { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import Button from "@/shared/components/ui/Button";
-import LoadingButton from "@/shared/components/ui/LoadingButton";
+import { Button, LoadingButton } from "@platform/ui";
 
 export interface CreateDemoDialogProps {
   open: boolean;

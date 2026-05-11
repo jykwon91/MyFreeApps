@@ -3,8 +3,8 @@ import { useState } from "react";
 import { NavLink, useNavigate, useLocation, type NavLinkRenderProps } from "react-router-dom";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { Search, LogOut, ChevronDown } from "lucide-react";
-import { cn } from "@/shared/utils/cn";
-import { useMediaQuery } from "@/shared/hooks/useMediaQuery";
+import { cn } from "../../utils/cn";
+import { useMediaQuery } from "../../hooks/useMediaQuery";
 
 export type NavItem = {
   path: string;

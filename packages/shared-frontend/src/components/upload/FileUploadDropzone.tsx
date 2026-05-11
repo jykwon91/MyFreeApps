@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { UploadCloud } from "lucide-react";
-import { cn } from "@/shared/utils/cn";
-import Spinner from "@/shared/components/icons/Spinner";
+import { cn } from "../../utils/cn";
+import Spinner from "../icons/Spinner";
 
 export interface FileUploadDropzoneProps {
   onFilesSelected: (files: File[]) => void;

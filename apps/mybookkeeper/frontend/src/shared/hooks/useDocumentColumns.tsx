@@ -5,7 +5,7 @@ import { FileCheck, Trash2 } from "lucide-react";
 import { formatDate, timeAgo } from "@/shared/utils/date";
 import { DOCUMENT_TYPE_LABELS } from "@/shared/lib/constants";
 import type { Document } from "@/shared/types/document/document";
-import Button from "@/shared/components/ui/Button";
+import { Button } from "@platform/ui";
 import StatusBadge from "@/app/features/documents/StatusBadge";
 import IndeterminateCheckbox from "@/shared/components/ui/IndeterminateCheckbox";
 

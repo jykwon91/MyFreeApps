@@ -4,7 +4,7 @@ import { useAcceptInviteMutation, useGetInviteInfoQuery } from "@/shared/store/m
 import { login, notifyAuthChange } from "@/shared/lib/auth";
 import { useCurrentUser } from "@/shared/hooks/useCurrentUser";
 import { extractErrorMessage } from "@/shared/utils/errorMessage";
-import LoadingButton from "@/shared/components/ui/LoadingButton";
+import { LoadingButton } from "@platform/ui";
 import Skeleton from "@/shared/components/ui/Skeleton";
 import TurnstileWidget from "@/shared/components/ui/TurnstileWidget";
 import api from "@/shared/lib/api";

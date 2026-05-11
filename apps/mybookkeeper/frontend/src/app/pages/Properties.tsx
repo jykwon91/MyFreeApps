@@ -9,7 +9,7 @@ import {
 import type { PropertyForm } from "@/shared/types/property/property-form";
 import { useToast } from "@/shared/hooks/useToast";
 import { extractErrorMessage } from "@/shared/utils/errorMessage";
-import LoadingButton from "@/shared/components/ui/LoadingButton";
+import { LoadingButton } from "@platform/ui";
 import Select from "@/shared/components/ui/Select";
 import TilePicker from "@/shared/components/ui/TilePicker";
 import FormField from "@/shared/components/ui/FormField";

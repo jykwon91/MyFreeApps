@@ -4,7 +4,7 @@ import { Inbox } from "lucide-react";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import EmptyState from "@/shared/components/ui/EmptyState";
 import AlertBox from "@/shared/components/ui/AlertBox";
-import LoadingButton from "@/shared/components/ui/LoadingButton";
+import { LoadingButton } from "@platform/ui";
 import PropertyMultiSelect from "@/shared/components/PropertyMultiSelect";
 import { useGetCalendarEventsQuery, useGetReviewQueueCountQuery } from "@/shared/store/calendarApi";
 import { useGetPropertiesQuery } from "@/shared/store/propertiesApi";

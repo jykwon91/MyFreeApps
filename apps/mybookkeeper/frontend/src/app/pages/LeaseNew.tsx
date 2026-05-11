@@ -3,7 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import AlertBox from "@/shared/components/ui/AlertBox";
-import LoadingButton from "@/shared/components/ui/LoadingButton";
+import { LoadingButton } from "@platform/ui";
 import Skeleton from "@/shared/components/ui/Skeleton";
 import { useGetLeaseTemplatesQuery } from "@/shared/store/leaseTemplatesApi";
 import { useGetApplicantByIdQuery } from "@/shared/store/applicantsApi";

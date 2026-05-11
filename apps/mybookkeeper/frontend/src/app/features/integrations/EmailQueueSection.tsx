@@ -11,8 +11,7 @@ import { extractErrorMessage } from "@/shared/utils/errorMessage";
 import { computeStatusCounts, groupBySession } from "@/shared/utils/email-queue";
 import { timeAgo } from "@/shared/utils/date";
 import { useToast } from "@/shared/hooks/useToast";
-import LoadingButton from "@/shared/components/ui/LoadingButton";
-import Button from "@/shared/components/ui/Button";
+import { Button, LoadingButton } from "@platform/ui";
 import ChevronDown from "@/shared/components/icons/ChevronDown";
 import QueueItem from "./QueueItem";
 

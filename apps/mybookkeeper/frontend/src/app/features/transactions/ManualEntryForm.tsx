@@ -8,7 +8,7 @@ import type { TransactionFormValues } from "@/shared/types/transaction/transacti
 import Panel from "@/shared/components/ui/Panel";
 import FormField from "@/shared/components/ui/FormField";
 import Select from "@/shared/components/ui/Select";
-import LoadingButton from "@/shared/components/ui/LoadingButton";
+import { LoadingButton } from "@platform/ui";
 import { useCreateTransactionMutation } from "@/shared/store/transactionsApi";
 
 export interface ManualEntryFormProps {

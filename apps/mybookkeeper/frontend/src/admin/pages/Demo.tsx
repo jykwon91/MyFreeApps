@@ -8,7 +8,7 @@ import {
 } from "@/shared/store/demoApi";
 import { useToast } from "@/shared/hooks/useToast";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
-import Button from "@/shared/components/ui/Button";
+import { Button } from "@platform/ui";
 import ConfirmDialog from "@/shared/components/ui/ConfirmDialog";
 import DemoUserTable from "@/admin/features/demo/DemoUserTable";
 import CreateDemoDialog from "@/admin/features/demo/CreateDemoDialog";

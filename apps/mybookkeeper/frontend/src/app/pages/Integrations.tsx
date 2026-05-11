@@ -24,7 +24,7 @@ import { useCanWrite } from "@/shared/hooks/useOrgRole";
 import { useInvalidateOnExtractionComplete } from "@/shared/hooks/useInvalidateOnExtractionComplete";
 import IntegrationsSkeleton from "@/app/features/integrations/IntegrationsSkeleton";
 import GmailHeaderActions from "@/app/features/integrations/GmailHeaderActions";
-import LoadingButton from "@/shared/components/ui/LoadingButton";
+import { LoadingButton } from "@platform/ui";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import AlertBox from "@/shared/components/ui/AlertBox";
 import SyncLogRow from "@/app/features/integrations/SyncLogRow";

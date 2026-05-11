@@ -1,7 +1,6 @@
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import LoadingButton from "@/shared/components/ui/LoadingButton";
-import Button from "@/shared/components/ui/Button";
+import { Button, LoadingButton } from "@platform/ui";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import { useGetApplicantsQuery } from "@/shared/store/applicantsApi";
 import { useGetListingsQuery } from "@/shared/store/listingsApi";

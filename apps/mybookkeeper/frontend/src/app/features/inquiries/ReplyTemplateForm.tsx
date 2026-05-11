@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import Panel, { PanelCloseButton } from "@/shared/components/ui/Panel";
-import LoadingButton from "@/shared/components/ui/LoadingButton";
-import Button from "@/shared/components/ui/Button";
+import { Button, LoadingButton } from "@platform/ui";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import {
   useCreateReplyTemplateMutation,

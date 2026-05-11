@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Shield, ShieldCheck, ShieldOff, Copy, Check } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { extractErrorMessage } from "@/shared/utils/errorMessage";
-import LoadingButton from "@/shared/components/ui/LoadingButton";
+import { LoadingButton } from "@platform/ui";
 import { showSuccess } from "@/shared/lib/toast-store";
 import type { Step } from "@/shared/types/security/totp-step";
 import type { TotpSetup } from "@/shared/types/security/totp-setup";

@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
-import Button from "@/shared/components/ui/Button";
-import LoadingButton from "@/shared/components/ui/LoadingButton";
+import { Button, LoadingButton } from "@platform/ui";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import { useSendReceiptMutation } from "@/shared/store/rentReceiptsApi";
 import api from "@/shared/lib/api";

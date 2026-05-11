@@ -3,8 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { Plus } from "lucide-react";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import AlertBox from "@/shared/components/ui/AlertBox";
-import Button from "@/shared/components/ui/Button";
-import LoadingButton from "@/shared/components/ui/LoadingButton";
+import { Button, LoadingButton } from "@platform/ui";
 import { useGetVendorsQuery } from "@/shared/store/vendorsApi";
 import {
   VENDOR_CATEGORIES,

@@ -3,7 +3,7 @@ import { useGetCostThresholdsQuery, useUpdateCostThresholdsMutation } from "@/sh
 import type { CostThresholds } from "@/shared/types/admin/cost";
 import { useToast } from "@/shared/hooks/useToast";
 import Card from "@/shared/components/ui/Card";
-import LoadingButton from "@/shared/components/ui/LoadingButton";
+import { LoadingButton } from "@platform/ui";
 
 type ThresholdKey = keyof CostThresholds;
 

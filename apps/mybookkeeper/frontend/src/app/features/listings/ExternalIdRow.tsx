@@ -1,6 +1,6 @@
 import { ExternalLink, Pencil, Trash2 } from "lucide-react";
 import SourceBadge from "@/shared/components/ui/SourceBadge";
-import Button from "@/shared/components/ui/Button";
+import { Button } from "@platform/ui";
 import { LISTING_SOURCE_LABELS } from "@/shared/lib/listing-labels";
 import type { ListingExternalId } from "@/shared/types/listing/listing-external-id";
 

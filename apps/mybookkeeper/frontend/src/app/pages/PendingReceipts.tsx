@@ -2,7 +2,7 @@ import { useState } from "react";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import EmptyState from "@/shared/components/ui/EmptyState";
 import AlertBox from "@/shared/components/ui/AlertBox";
-import Button from "@/shared/components/ui/Button";
+import { Button } from "@platform/ui";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import {
   useGetPendingReceiptsQuery,

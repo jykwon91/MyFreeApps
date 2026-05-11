@@ -1,7 +1,7 @@
 import { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { FlaskConical, Upload, Settings, ShieldCheck } from "lucide-react";
-import Button from "@/shared/components/ui/Button";
+import { Button } from "@platform/ui";
 import { useCurrentOrg } from "@/shared/hooks/useCurrentOrg";
 
 const STORAGE_KEY = "demo-welcome-dismissed";

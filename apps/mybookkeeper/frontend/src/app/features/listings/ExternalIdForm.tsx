@@ -1,7 +1,6 @@
 import { useState } from "react";
-import Button from "@/shared/components/ui/Button";
+import { Button, LoadingButton } from "@platform/ui";
 import FormField from "@/shared/components/ui/FormField";
-import LoadingButton from "@/shared/components/ui/LoadingButton";
 import {
   LISTING_SOURCES,
   LISTING_SOURCE_LABELS,

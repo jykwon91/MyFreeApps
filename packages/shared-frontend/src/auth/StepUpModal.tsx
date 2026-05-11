@@ -1,15 +1,15 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 
-import AlertBox from "@/shared/components/ui/AlertBox";
-import Button from "@/shared/components/ui/Button";
-import LoadingButton from "@/shared/components/ui/LoadingButton";
+import AlertBox from "../components/ui/AlertBox";
+import Button from "../components/ui/Button";
+import LoadingButton from "../components/ui/LoadingButton";
 import {
   cancel as controllerCancel,
   getState,
   submitCode,
   subscribe,
-} from "@/shared/auth/stepUpController";
+} from "./stepUpController";
 
 const HEADLINE = "Confirm your identity";
 const BODY =

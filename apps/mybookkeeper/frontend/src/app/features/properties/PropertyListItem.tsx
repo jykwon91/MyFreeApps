@@ -2,7 +2,7 @@ import { Pencil, Trash2 } from "lucide-react";
 import type { Property } from "@/shared/types/property/property";
 import { formatDate } from "@/shared/utils/date";
 import { CLASSIFICATION_LABELS, TYPE_LABELS } from "@/shared/lib/property-labels";
-import Button from "@/shared/components/ui/Button";
+import { Button } from "@platform/ui";
 import Badge from "@/shared/components/ui/Badge";
 
 export interface PropertyListItemProps {

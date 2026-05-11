@@ -2,8 +2,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 
 import AlertBox from "@/shared/components/ui/AlertBox";
-import Button from "@/shared/components/ui/Button";
-import LoadingButton from "@/shared/components/ui/LoadingButton";
+import { Button, LoadingButton } from "@platform/ui";
 import {
   cancel as controllerCancel,
   getState,

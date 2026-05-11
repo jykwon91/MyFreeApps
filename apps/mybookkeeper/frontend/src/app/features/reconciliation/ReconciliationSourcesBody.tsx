@@ -3,7 +3,7 @@ import { formatTag } from "@/shared/utils/tag";
 import { RECONCILIATION_STATUS_STYLES } from "@/shared/lib/constants";
 import type { ReconciliationSource } from "@/shared/types/reconciliation/reconciliation-source";
 import type { ReconciliationSourcesMode } from "@/shared/types/reconciliation/reconciliation-sources-mode";
-import LoadingButton from "@/shared/components/ui/LoadingButton";
+import { LoadingButton } from "@platform/ui";
 import EmptyState from "@/shared/components/ui/EmptyState";
 import Skeleton from "@/shared/components/ui/Skeleton";
 

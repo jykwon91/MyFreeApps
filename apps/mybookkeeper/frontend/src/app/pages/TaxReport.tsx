@@ -7,7 +7,7 @@ import { downloadFile } from "@/shared/utils/download";
 import { useGetTaxSummaryQuery } from "@/shared/store/summaryApi";
 import { useToast } from "@/shared/hooks/useToast";
 import Select from "@/shared/components/ui/Select";
-import Button from "@/shared/components/ui/Button";
+import { Button } from "@platform/ui";
 import TaxReportSkeleton from "@/app/features/tax/TaxReportSkeleton";
 import Card from "@/shared/components/ui/Card";
 import SectionHeader from "@/shared/components/ui/SectionHeader";

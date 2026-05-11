@@ -1,7 +1,7 @@
 import { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { AlertTriangle } from "lucide-react";
-import Button from "@/shared/components/ui/Button";
+import { Button } from "@platform/ui";
 import { extractErrorMessage } from "@/shared/utils/errorMessage";
 import { useDeleteAccountMutation } from "@/shared/store/accountApi";
 import { useGetTotpStatusQuery } from "@/shared/store/totpApi";

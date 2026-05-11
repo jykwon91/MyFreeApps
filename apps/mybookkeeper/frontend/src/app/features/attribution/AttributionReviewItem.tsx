@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { CheckCircle, XCircle, HelpCircle, UserCheck } from "lucide-react";
-import LoadingButton from "@/shared/components/ui/LoadingButton";
+import { LoadingButton } from "@platform/ui";
 import { formatCurrency } from "@/shared/utils/currency";
 import type { AttributionReviewItem as ReviewItemType } from "@/shared/types/attribution/attribution-review";
 import {

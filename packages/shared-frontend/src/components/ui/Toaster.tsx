@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import * as Toast from "@radix-ui/react-toast";
 import { XCircle, CheckCircle2, X } from "lucide-react";
-import { subscribe } from "@/shared/lib/toast-store";
-import type { ToastEvent } from "@/shared/lib/toast-store";
+import { subscribe } from "../../lib/toast-store";
+import type { ToastEvent } from "../../lib/toast-store";
 
 const DURATION_MS = 6000;
 

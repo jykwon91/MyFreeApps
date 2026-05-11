@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Plus } from "lucide-react";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import AlertBox from "@/shared/components/ui/AlertBox";
-import LoadingButton from "@/shared/components/ui/LoadingButton";
+import { LoadingButton } from "@platform/ui";
 import { useGetLeaseTemplatesQuery } from "@/shared/store/leaseTemplatesApi";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
 import LeaseTemplateUploadDialog from "@/app/features/leases/LeaseTemplateUploadDialog";

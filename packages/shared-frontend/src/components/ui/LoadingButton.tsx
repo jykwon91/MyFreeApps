@@ -1,5 +1,5 @@
-import Button from "@/shared/components/ui/Button";
-import Spinner from "@/shared/components/icons/Spinner";
+import Button from "./Button";
+import Spinner from "../icons/Spinner";
 
 interface Props extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   isLoading?: boolean;

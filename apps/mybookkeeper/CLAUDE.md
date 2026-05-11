@@ -102,7 +102,7 @@
 
 | Layer | Tech |
 |---|---|
-| Frontend | React 18, TypeScript, Vite, TailwindCSS, React Query, React Hook Form, Recharts, Radix UI |
+| Frontend | React 19, TypeScript, Vite, TailwindCSS, React Query, React Hook Form, Recharts, Radix UI, `@platform/ui` (shared components) |
 | Backend | FastAPI, Python, SQLAlchemy 2.0 (async), PostgreSQL, Alembic, Pydantic 2 |
 | Auth | fastapi-users, JWT (Bearer token) |
 | AI | Anthropic Claude SDK (`backend/app/services/extraction/claude_service.py`) |

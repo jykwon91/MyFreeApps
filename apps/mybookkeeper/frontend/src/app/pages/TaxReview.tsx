@@ -3,7 +3,7 @@ import { getYear } from "date-fns";
 import { FileText } from "lucide-react";
 import { useGetTaxCompletenessQuery } from "@/shared/store/taxCompletenessApi";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
-import Button from "@/shared/components/ui/Button";
+import { Button } from "@platform/ui";
 import ReviewSummary from "@/app/features/tax-review/ReviewSummary";
 import FormCompletenessCard from "@/app/features/tax-review/FormCompletenessCard";
 import TaxReviewSkeleton from "@/app/features/tax-review/TaxReviewSkeleton";

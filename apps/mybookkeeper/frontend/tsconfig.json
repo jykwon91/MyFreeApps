@@ -13,6 +13,8 @@
     "jsx": "react-jsx",
     "strict": true,
     "paths": {
+      "@platform/ui": ["../../../packages/shared-frontend/src/index.ts"],
+      "@platform/ui/*": ["../../../packages/shared-frontend/src/*"],
       "@/*": ["./src/*"]
     }
   },
