@@ -36,6 +36,9 @@ vi.mock("@/store/discoverApi", () => ({
   useDismissDiscoveredJobMutation: () => [vi.fn(), { isLoading: false }],
   useSaveDiscoveredJobMutation: () => [vi.fn(), { isLoading: false }],
   usePromoteDiscoveredJobMutation: () => [vi.fn(), { isLoading: false }],
+  // Added in PR 8 (undo-dismiss toast). No-op here — toast rendering is
+  // tested separately in UndoDismissToast.test.tsx.
+  useUndoDismissDiscoveredJobMutation: () => [vi.fn(), { isLoading: false }],
 }));
 
 function renderInRouter(ui: React.ReactElement) {

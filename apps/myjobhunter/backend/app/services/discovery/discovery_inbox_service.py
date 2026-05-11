@@ -31,6 +31,24 @@ async def dismiss_discovered(
     return True
 
 
+async def undo_dismiss_for_user(
+    db: AsyncSession,
+    job_id: uuid.UUID,
+    user_id: uuid.UUID,
+) -> bool:
+    """Reverse a dismiss — clears dismissed_at and dismissed_reason.
+
+    Returns False (→ 404) when:
+    - The job doesn't exist / belongs to a different user.
+    - The job is not currently dismissed (never dismissed, or already active).
+    """
+    row = await discovery_repository.undo_dismiss_discovered(db, job_id, user_id)
+    if row is None:
+        return False
+    await db.commit()
+    return True
+
+
 async def save_discovered(
     db: AsyncSession,
     job_id: uuid.UUID,

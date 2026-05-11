@@ -76,6 +76,13 @@ const discoverApi = apiWithTags.injectEndpoints({
       }),
       invalidatesTags: ["DiscoveredJob"],
     }),
+    undoDismissDiscoveredJob: build.mutation<void, string>({
+      query: (jobId) => ({
+        url: `/discover/${jobId}/undo-dismiss`,
+        method: "POST",
+      }),
+      invalidatesTags: ["DiscoveredJob"],
+    }),
     saveDiscoveredJob: build.mutation<void, string>({
       query: (jobId) => ({
         url: `/discover/${jobId}/save`,
@@ -103,6 +110,7 @@ export const {
   useRefreshDiscoverySourceMutation,
   useListDiscoveredJobsQuery,
   useDismissDiscoveredJobMutation,
+  useUndoDismissDiscoveredJobMutation,
   useSaveDiscoveredJobMutation,
   usePromoteDiscoveredJobMutation,
 } = discoverApi;

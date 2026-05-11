@@ -411,6 +411,34 @@ async def save_discovered(
     return True
 
 
+async def undo_dismiss_discovered(
+    db: AsyncSession,
+    job_id: uuid.UUID,
+    user_id: uuid.UUID,
+) -> DiscoveredJob | None:
+    """Clear dismissed_at / dismissed_reason so the job returns to the inbox.
+
+    Returns the updated row on success, or None when:
+    - The job doesn't exist or belongs to a different user (tenant isolation).
+    - The job is NOT currently dismissed (already active / saved / promoted).
+
+    Idempotency decision: a job that was never dismissed returns None (404) so
+    the frontend can distinguish "undo worked" from "nothing to undo". The
+    caller (service layer) translates None → 404.
+    """
+    job = await get_discovered(db, job_id, user_id)
+    if job is None:
+        return None
+    if job.dismissed_at is None:
+        # Not currently dismissed — nothing to undo.
+        return None
+    job.dismissed_at = None
+    job.dismissed_reason = None
+    await db.flush()
+    await db.refresh(job)
+    return job
+
+
 async def list_unscored_for_user(
     db: AsyncSession, user_id: uuid.UUID, *, limit: int = 20,
 ) -> list[DiscoveredJob]:

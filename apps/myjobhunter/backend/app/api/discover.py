@@ -306,6 +306,26 @@ async def dismiss_job(
 
 
 @router.post(
+    "/{job_id}/undo-dismiss",
+    status_code=204,
+)
+async def undo_dismiss_job(
+    job_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(current_active_user),
+) -> None:
+    """Reverse a dismiss, returning the job to the inbox.
+
+    Status codes:
+    - 204 — dismiss reversed successfully
+    - 404 — job not found, belongs to a different user, or was not dismissed
+    """
+    ok = await discovery_inbox_service.undo_dismiss_for_user(db, job_id, user.id)
+    if not ok:
+        raise HTTPException(status_code=404, detail=_NOT_FOUND_DETAIL)
+
+
+@router.post(
     "/{job_id}/save",
     status_code=204,
 )
