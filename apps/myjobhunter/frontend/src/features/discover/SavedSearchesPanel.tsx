@@ -1,4 +1,4 @@
-import { RefreshCw, Trash2 } from "lucide-react";
+import { AlertTriangle, RefreshCw, Trash2 } from "lucide-react";
 import {
   Badge,
   Button,
@@ -19,10 +19,17 @@ import type { DiscoverySource } from "@/types/discovery/discovery-source";
 import { summarizeSearchQuery } from "./saved-search-summary";
 
 export default function SavedSearchesPanel() {
-  const { data: sources, isLoading } = useListDiscoverySourcesQuery();
+  const { data: sources, isLoading, isError } = useListDiscoverySourcesQuery();
 
   if (isLoading) {
     return <SavedSearchesSkeleton />;
+  }
+  if (isError) {
+    return (
+      <p className="text-sm text-destructive">
+        Couldn't load saved searches — try refreshing the page.
+      </p>
+    );
   }
   if (!sources || sources.length === 0) {
     return null;
@@ -75,16 +82,24 @@ function SavedSearchRow({ source }: { source: DiscoverySource }) {
     }
   }
 
+  const isFailing = source.consecutive_failures > 0;
+
   return (
     <Card className="p-3 flex items-center justify-between gap-3">
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <Badge label={source.source} color="gray" />
           <span className="font-medium truncate text-sm">{query}</span>
+          {isFailing && (
+            <span className="inline-flex items-center gap-1 text-xs font-medium text-destructive shrink-0">
+              <AlertTriangle className="w-3 h-3" aria-hidden="true" />
+              Fetch failed
+            </span>
+          )}
         </div>
         <p className="text-xs text-muted-foreground mt-1">
           {lastFetched}
-          {source.last_error_message ? ` — error: ${source.last_error_message}` : ""}
+          {source.last_error_message ? ` — ${source.last_error_message}` : ""}
         </p>
       </div>
       <div className="flex items-center gap-1 shrink-0">
