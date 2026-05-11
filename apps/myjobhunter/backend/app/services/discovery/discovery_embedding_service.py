@@ -51,10 +51,8 @@ from __future__ import annotations
 import logging
 import threading
 import uuid
-from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import AsyncSessionLocal
@@ -62,6 +60,7 @@ from app.models.discovery.discovered_job import DiscoveredJob
 from app.models.profile.profile import Profile
 from app.models.profile.skill import Skill
 from app.models.profile.work_history import WorkHistory
+from app.repositories.discovery import discovery_embedding_repository
 
 if TYPE_CHECKING:
     from fastembed import TextEmbedding
@@ -289,21 +288,19 @@ async def embed_profile(
 ) -> tuple[list[float], str]:
     """Embed a profile's match-relevant fields and return (vector, model).
 
-    Loads ``skills`` and ``work_history`` from the DB so the caller
-    doesn't have to eager-load them. The returned vector is NOT
-    persisted by this function — call ``refresh_profile_embedding``
+    Loads ``skills`` and ``work_history`` via the embedding repository
+    so the caller doesn't have to eager-load them. The returned vector
+    is NOT persisted by this function — call ``refresh_profile_embedding``
     for that.
     """
-    skills_result = await db.execute(
-        select(Skill).where(Skill.user_id == profile.user_id),
+    skills = await discovery_embedding_repository.list_profile_skills(
+        db, profile.user_id,
     )
-    skills = list(skills_result.scalars().all())
-
-    wh_result = await db.execute(
-        select(WorkHistory).where(WorkHistory.user_id == profile.user_id),
+    work_history = (
+        await discovery_embedding_repository.list_profile_work_history(
+            db, profile.user_id,
+        )
     )
-    work_history = list(wh_result.scalars().all())
-
     text = _assemble_profile_text(profile, skills, work_history)
     return embed_text(text), _MODEL_NAME
 
@@ -335,26 +332,18 @@ async def embed_pending_for_user(
     """
     total = 0
     while True:
-        stmt = (
-            select(DiscoveredJob)
-            .where(
-                DiscoveredJob.user_id == user_id,
-                DiscoveredJob.embedding.is_(None),
-            )
-            .limit(batch_size)
+        rows = await discovery_embedding_repository.list_unembedded_for_user(
+            db, user_id, limit=batch_size,
         )
-        result = await db.execute(stmt)
-        rows = list(result.scalars().all())
         if not rows:
             break
-        now = datetime.now(timezone.utc)
+        vectors: list[list[float]] = []
         for row in rows:
-            vec, model = embed_posting(row)
-            row.embedding = vec
-            row.embedding_model = model
-            row.embedded_at = now
-        await db.flush()
-        await db.commit()
+            vec, _ = embed_posting(row)
+            vectors.append(vec)
+        await discovery_embedding_repository.write_posting_embeddings(
+            db, rows, vectors=vectors, model_name=_MODEL_NAME,
+        )
         total += len(rows)
         if len(rows) < batch_size:
             break
@@ -406,16 +395,13 @@ async def refresh_profile_embedding(
     are not embedded and re-running fastembed each time wastes a
     ~100ms ONNX inference.
     """
-    result = await db.execute(
-        select(Profile).where(Profile.user_id == user_id),
+    profile = await discovery_embedding_repository.get_profile_for_embedding(
+        db, user_id,
     )
-    profile = result.scalar_one_or_none()
     if profile is None:
         return False
-    vec, model = await embed_profile(db, profile)
-    profile.embedding = vec
-    profile.embedding_model = model
-    profile.embedded_at = datetime.now(timezone.utc)
-    await db.flush()
-    await db.commit()
+    vec, _ = await embed_profile(db, profile)
+    await discovery_embedding_repository.write_profile_embedding(
+        db, profile, vector=vec, model_name=_MODEL_NAME,
+    )
     return True
