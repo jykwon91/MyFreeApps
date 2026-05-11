@@ -110,10 +110,16 @@ async def update_source(
     fetch_interval_minutes: int | None = None,
     name: str | None = None,
     is_active: bool | None = None,
+    config: dict | None = None,
 ) -> DiscoverySource | None:
     """Partially update a saved search and commit the transaction.
 
     Returns the updated row, or None when not found / wrong owner.
+
+    ``config`` when provided **replaces** the entire config JSONB blob.
+    Per-source validation is the caller's responsibility — the schema
+    layer (``DiscoverySourcePatch._validate_config_per_source``) runs
+    validation at the HTTP boundary before this service is invoked.
 
     After committing, re-registers the APScheduler job with the new
     interval when ``fetch_interval_minutes`` is changing. A scheduler
@@ -127,6 +133,7 @@ async def update_source(
         fetch_interval_minutes=fetch_interval_minutes,
         name=name,
         is_active=is_active,
+        config=config,
     )
     if src is None:
         return None

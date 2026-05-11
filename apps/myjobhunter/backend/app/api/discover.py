@@ -158,6 +158,7 @@ async def patch_source(
         fetch_interval_minutes=payload.fetch_interval_minutes,
         name=payload.name,
         is_active=payload.is_active,
+        config=payload.config,
     )
     if src is None:
         raise HTTPException(status_code=404, detail=_NOT_FOUND_DETAIL)

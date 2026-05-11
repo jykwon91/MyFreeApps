@@ -11,10 +11,20 @@ vi.mock("@/store/discoverApi", () => ({
   useListDiscoverySourcesQuery: vi.fn(),
   useRefreshDiscoverySourceMutation: vi.fn(),
   useDeactivateDiscoverySourceMutation: vi.fn(),
+  useUpdateDiscoverySourceMutation: () => [vi.fn(), { isLoading: false }],
+}));
+
+vi.mock("../EditSavedSearchDialog", () => ({
+  default: () => null,
+}));
+
+vi.mock("../EditFrequencyPopover", () => ({
+  default: () => null,
 }));
 
 vi.mock("lucide-react", () => ({
   AlertTriangle: () => <svg data-testid="alert-icon" />,
+  Pencil: () => null,
   RefreshCw: () => null,
   Trash2: () => null,
 }));

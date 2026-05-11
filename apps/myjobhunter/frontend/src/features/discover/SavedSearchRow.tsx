@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { AlertTriangle, RefreshCw, Trash2 } from "lucide-react";
+import { AlertTriangle, Pencil, RefreshCw, Trash2 } from "lucide-react";
 import {
   Badge,
   Button,
@@ -18,6 +18,7 @@ import type { DiscoverySource } from "@/types/discovery/discovery-source";
 import { summarizeSearchQuery, getSourceLabel, getSourceBadgeColor } from "./saved-search-summary";
 import { refreshIntervalShortLabel } from "./refresh-interval";
 import EditFrequencyPopover from "./EditFrequencyPopover";
+import EditSavedSearchDialog from "./EditSavedSearchDialog";
 
 interface SavedSearchRowProps {
   source: DiscoverySource;
@@ -27,6 +28,7 @@ export default function SavedSearchRow({ source }: SavedSearchRowProps) {
   const [refresh, { isLoading: isRefreshing }] = useRefreshDiscoverySourceMutation();
   const [deactivate, { isLoading: isDeactivating }] = useDeactivateDiscoverySourceMutation();
   const [isEditingFrequency, setIsEditingFrequency] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   const query = summarizeSearchQuery(source.config ?? {}, source.source);
   // Schedule line: "Refreshes every 6h — last fetched 2h ago" (PR 5).
@@ -129,6 +131,15 @@ export default function SavedSearchRow({ source }: SavedSearchRowProps) {
           <Button
             size="sm"
             variant="ghost"
+            onClick={() => setIsEditDialogOpen(true)}
+            aria-label="Edit saved search"
+            data-testid="edit-source-btn"
+          >
+            <Pencil className="w-4 h-4" />
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
             onClick={handleDeactivate}
             disabled={isDeactivating}
             aria-label="Remove saved search"
@@ -138,7 +149,9 @@ export default function SavedSearchRow({ source }: SavedSearchRowProps) {
         </div>
       </div>
 
-      {/* Inline frequency editor — renders below the row content when open */}
+      {/* Inline frequency editor — renders below the row content when open.
+          Preserved as a quick path for cadence-only changes. The full
+          EditSavedSearchDialog is the path for config edits. */}
       {isEditingFrequency && (
         <EditFrequencyPopover
           sourceId={source.id}
@@ -146,6 +159,13 @@ export default function SavedSearchRow({ source }: SavedSearchRowProps) {
           onClose={() => setIsEditingFrequency(false)}
         />
       )}
+
+      {/* Full edit dialog — source kind locked; all other fields editable */}
+      <EditSavedSearchDialog
+        source={source}
+        open={isEditDialogOpen}
+        onClose={() => setIsEditDialogOpen(false)}
+      />
     </Card>
   );
 }
