@@ -41,7 +41,7 @@ export default function MonthlyChart({ data, height = 260, onBarClick }: Monthly
       <ComposedChart data={chartData} barCategoryGap="30%">
         <XAxis dataKey="displayMonth" tick={{ fontSize: 11 }} />
         <YAxis tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 11 }} />
-        <Tooltip formatter={(v: number) => formatCurrency(v)} contentStyle={{ backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))", color: "hsl(var(--foreground))", borderRadius: 8 }} />
+        <Tooltip formatter={(v) => formatCurrency(typeof v === "number" ? v : Number(v))} contentStyle={{ backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))", color: "hsl(var(--foreground))", borderRadius: 8 }} />
         <Legend wrapperStyle={{ fontSize: 12 }} />
         <Bar
           dataKey="revenue"
@@ -49,7 +49,7 @@ export default function MonthlyChart({ data, height = 260, onBarClick }: Monthly
           fill="#22c55e"
           radius={[2, 2, 0, 0]}
           cursor={onBarClick ? "pointer" : undefined}
-          onClick={(_d: Record<string, unknown>, i: number, e: React.MouseEvent) => handleClick("revenue", i, e)}
+          onClick={(_d, i, e) => handleClick("revenue", i, e)}
         />
         <Bar
           dataKey="expenses"
@@ -57,7 +57,7 @@ export default function MonthlyChart({ data, height = 260, onBarClick }: Monthly
           fill="#ef4444"
           radius={[2, 2, 0, 0]}
           cursor={onBarClick ? "pointer" : undefined}
-          onClick={(_d: Record<string, unknown>, i: number, e: React.MouseEvent) => handleClick("expenses", i, e)}
+          onClick={(_d, i, e) => handleClick("expenses", i, e)}
         />
         <Line dataKey="profit" name="Net Profit" stroke="#6366f1" strokeWidth={2} dot={false} />
       </ComposedChart>

@@ -95,7 +95,10 @@ export default function CostMonitoring() {
                   <XAxis dataKey="date" tickFormatter={(v) => format(parseISO(v), "MMM d")} className="text-xs" />
                   <YAxis tickFormatter={(v) => `$${v}`} className="text-xs" />
                   <Tooltip
-                    formatter={(value: number, name: string) => [formatCost(value), name === "input_cost" ? "Input" : "Output"]}
+                    formatter={(value, name) => [
+                      formatCost(typeof value === "number" ? value : Number(value)),
+                      name === "input_cost" ? "Input" : "Output",
+                    ]}
                     labelFormatter={(v) => {
                       const day = timeline.find((d) => d.date === v);
                       const total = day ? formatCost(day.cost) : "";
