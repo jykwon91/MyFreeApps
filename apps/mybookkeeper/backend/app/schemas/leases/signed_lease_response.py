@@ -7,6 +7,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
+from app.schemas.leases.lease_extension_summary import LeaseExtensionSummary
 from app.schemas.leases.signed_lease_attachment_response import (
     SignedLeaseAttachmentResponse,
 )
@@ -37,5 +38,10 @@ class SignedLeaseResponse(BaseModel):
     created_at: _dt.datetime
     updated_at: _dt.datetime
     attachments: list[SignedLeaseAttachmentResponse]
+    # The most-recent live extension (seed excluded), or null when the lease
+    # is at its original term. Drives the Undo button on the frontend; the
+    # client checks ``created_at`` against the 30-day undo window to decide
+    # whether to render the button.
+    latest_extension: LeaseExtensionSummary | None = None
 
     model_config = ConfigDict(from_attributes=True)

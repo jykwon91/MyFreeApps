@@ -395,6 +395,56 @@ async def extend_lease(
 
 
 @router.post(
+    "/{lease_id}/extensions/{version_id}/undo",
+    response_model=SignedLeaseResponse,
+)
+async def undo_lease_extension(
+    lease_id: uuid.UUID,
+    version_id: uuid.UUID,
+    ctx: RequestContext = Depends(require_write_access),
+) -> SignedLeaseResponse:
+    """Undo a recent lease extension (within the 30-day window).
+
+    Soft-deletes the matching ``lease_term_versions`` row and recomputes
+    ``signed_leases.ends_on`` from the now-latest version. The rendered
+    addendum attachment is preserved as an audit trail.
+
+    Errors:
+        404 — lease not found, or version_id not on this lease.
+        409 — undo refused: version is the seed row, isn't the latest
+              extension, or the 30-day window has expired.
+    """
+    try:
+        return await lease_extension_service.undo_extension(
+            user_id=ctx.user_id,
+            organization_id=ctx.organization_id,
+            lease_id=lease_id,
+            version_id=version_id,
+        )
+    except lease_extension_service.SignedLeaseNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Lease not found") from exc
+    except lease_extension_service.ExtensionNotFoundError as exc:
+        raise HTTPException(
+            status_code=404, detail="Extension not found",
+        ) from exc
+    except lease_extension_service.CannotUndoSeedRowError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={"code": "CANNOT_UNDO_SEED_ROW", "message": str(exc)},
+        ) from exc
+    except lease_extension_service.NotLatestExtensionError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={"code": "NOT_LATEST_EXTENSION", "message": str(exc)},
+        ) from exc
+    except lease_extension_service.UndoWindowExpiredError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={"code": "UNDO_WINDOW_EXPIRED", "message": str(exc)},
+        ) from exc
+
+
+@router.post(
     "/{lease_id}/attachments",
     response_model=SignedLeaseAttachmentResponse,
     status_code=201,

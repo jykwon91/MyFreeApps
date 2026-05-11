@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, CalendarPlus, FileText, Mail, Plus, User } from "lucide-react";
+import { ArrowLeft, CalendarPlus, FileText, Mail, Plus, Undo2, User } from "lucide-react";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import AlertBox from "@/shared/components/ui/AlertBox";
 import Badge from "@/shared/components/ui/Badge";
@@ -21,6 +21,7 @@ import SignedLeaseStatusPicker from "@/app/features/leases/SignedLeaseStatusPick
 import ExtendLeaseDialog from "@/app/features/leases/ExtendLeaseDialog";
 import LeaseAttachmentsSection from "@/app/features/leases/LeaseAttachmentsSection";
 import LeaseAddTemplateModal from "@/app/features/leases/LeaseAddTemplateModal";
+import UndoExtensionDialog from "@/app/features/leases/UndoExtensionDialog";
 import type { SignedLeaseStatus } from "@/shared/types/lease/signed-lease-status";
 
 type Tab = "files" | "details" | "notes";
@@ -31,6 +32,7 @@ export default function LeaseDetail() {
   const [tab, setTab] = useState<Tab>("files");
   const [showAddTemplateModal, setShowAddTemplateModal] = useState(false);
   const [showExtendDialog, setShowExtendDialog] = useState(false);
+  const [showUndoDialog, setShowUndoDialog] = useState(false);
   const {
     data: lease,
     isLoading,
@@ -63,6 +65,18 @@ export default function LeaseDetail() {
     canWrite
     && (lease?.status === "signed" || lease?.status === "active")
     && Boolean(lease?.ends_on);
+  // Match backend ``UNDO_WINDOW_DAYS``. Kept inline (single use) so the
+  // 30-day rule lives next to the button it gates.
+  const UNDO_WINDOW_DAYS = 30;
+  const latestExtension = lease?.latest_extension ?? null;
+  const ageMs = latestExtension
+    ? Date.now() - new Date(latestExtension.created_at).getTime()
+    : null;
+  const canUndoExtension =
+    canExtend
+    && latestExtension !== null
+    && ageMs !== null
+    && ageMs < UNDO_WINDOW_DAYS * 24 * 60 * 60 * 1000;
 
   async function handleGenerate() {
     if (!lease) return;
@@ -209,6 +223,18 @@ export default function LeaseDetail() {
                     Extend lease
                   </Button>
                 ) : null}
+                {canUndoExtension && latestExtension ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setShowUndoDialog(true)}
+                    data-testid="lease-undo-extension-button"
+                    title="Roll back the latest extension (within 30 days)"
+                  >
+                    <Undo2 size={16} className="mr-1" />
+                    Undo extension
+                  </Button>
+                ) : null}
               </div>
             }
           />
@@ -218,6 +244,15 @@ export default function LeaseDetail() {
               leaseId={lease.id}
               currentEndsOn={lease.ends_on}
               onClose={() => setShowExtendDialog(false)}
+            />
+          ) : null}
+
+          {showUndoDialog && lease && latestExtension ? (
+            <UndoExtensionDialog
+              leaseId={lease.id}
+              versionId={latestExtension.id}
+              currentExtendedEndsOn={latestExtension.ends_on}
+              onClose={() => setShowUndoDialog(false)}
             />
           ) : null}
 
