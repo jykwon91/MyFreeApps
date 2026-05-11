@@ -11,10 +11,17 @@ from sqlalchemy import (
     Text,
     func,
 )
+from pgvector.sqlalchemy import Vector
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+
+# Embedding dimensionality — see app/models/discovery/discovered_job.py
+# and ``app.services.discovery.discovery_embedding_service``. Both
+# tables share the same model + dim so the score loop can compute
+# cosine similarity directly.
+_EMBED_DIMS = 384
 
 
 class Profile(Base):
@@ -56,6 +63,21 @@ class Profile(Base):
     # preferred_stack / rejected_stack as scoring inputs.
     discovery_defaults: Mapped[dict] = mapped_column(
         JSONB, nullable=False, server_default=func.jsonb_build_object(),
+    )
+
+    # Embedding columns (PR 4a). Refreshed by
+    # ``discovery_embedding_service.refresh_profile_embedding`` whenever
+    # match-relevant profile fields change (skills, work_history,
+    # resume). PR 4b uses this vector as the query side of cosine
+    # similarity against ``discovered_jobs.embedding``.
+    embedding: Mapped[list[float] | None] = mapped_column(
+        Vector(_EMBED_DIMS), nullable=True,
+    )
+    embedding_model: Mapped[str | None] = mapped_column(
+        String(50), nullable=True,
+    )
+    embedded_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True,
     )
 
     created_at: Mapped[datetime] = mapped_column(

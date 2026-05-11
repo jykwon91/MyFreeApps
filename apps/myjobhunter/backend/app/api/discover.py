@@ -46,6 +46,7 @@ from app.services.discovery.discovery_promote_service import (
     DiscoveryPromoteError,
 )
 from app.services.discovery import (
+    discovery_embedding_service,
     discovery_fetch_service,
     discovery_inbox_service,
     discovery_promote_service,
@@ -195,7 +196,18 @@ async def refresh_source(
     # background task so /refresh returns immediately. The frontend
     # polls /discover and watches scores fill in. The task uses its
     # own DB session; failures are logged + swallowed.
+    #
+    # PR 4a: also embed the freshly-fetched postings on a separate
+    # background task so PR 4b's two-stage scoring has vectors to
+    # rank by. Today (4a) the embeddings are written but unread;
+    # the embed task is intentionally independent of the scoring task
+    # so a future PR can re-order them (embed → rank → score) without
+    # touching the route layer.
     if result.get("new_count", 0) > 0:
+        background_tasks.add_task(
+            discovery_embedding_service.embed_pending_for_user_background,
+            user.id,
+        )
         background_tasks.add_task(
             discovery_score_service.score_user_inbox, user.id,
         )

@@ -1,6 +1,17 @@
 services:
   postgres:
-    image: postgres:16-alpine
+    # pgvector/pgvector:pg16 is the official pgvector-on-postgres-16
+    # image — same base as postgres:16 with the ``vector`` extension
+    # pre-installed and available to ``CREATE EXTENSION vector``. The
+    # ``discemb260511_pgvector_embeddings`` migration depends on the
+    # extension being available; running on stock postgres:16 fails at
+    # ``CREATE EXTENSION`` with ``ERROR:  extension "vector" is not available``.
+    #
+    # On the VPS the running postgres instance must be migrated to this
+    # image (or have postgresql-16-pgvector installed and the extension
+    # created manually) BEFORE this PR's deploy. See the PR's
+    # "Operational migration required" section.
+    image: pgvector/pgvector:pg16
     restart: unless-stopped
     environment:
       POSTGRES_USER: myjobhunter

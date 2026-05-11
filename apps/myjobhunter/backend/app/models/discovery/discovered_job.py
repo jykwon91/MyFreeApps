@@ -58,10 +58,16 @@ from sqlalchemy import (
     func,
     text,
 )
+from pgvector.sqlalchemy import Vector
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
+
+# Embedding dimensionality — matches the all-MiniLM-L6-v2 model wired in
+# ``app.services.discovery.discovery_embedding_service``. Keep this in
+# sync with the migration ``discemb260511_pgvector_embeddings``.
+_EMBED_DIMS = 384
 
 
 class DiscoveredJob(Base):
@@ -155,6 +161,22 @@ class DiscoveredJob(Base):
         UUID(as_uuid=True),
         ForeignKey("discovery_fetches.id", ondelete="SET NULL"),
         nullable=True,
+    )
+
+    # Embedding columns (PR 4a). Written by
+    # ``discovery_embedding_service.embed_pending_for_user`` after every
+    # fetch. PR 4b will consume these via cosine-similarity ranking in
+    # ``discovery_score_service`` to narrow the candidate set before
+    # spending Anthropic tokens. Until PR 4b lands, these columns are
+    # populated but unread.
+    embedding: Mapped[list[float] | None] = mapped_column(
+        Vector(_EMBED_DIMS), nullable=True,
+    )
+    embedding_model: Mapped[str | None] = mapped_column(
+        String(50), nullable=True,
+    )
+    embedded_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True,
     )
 
     created_at: Mapped[datetime] = mapped_column(
