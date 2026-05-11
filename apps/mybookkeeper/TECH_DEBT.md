@@ -1,7 +1,7 @@
 # Tech Debt
 
-> Last scanned: 2026-05-08
-> Issues: 0 critical, 2 high, 3 medium (0 deferred + 3 active), 0 low
+> Last scanned: 2026-05-11
+> Issues: 0 critical, 4 high, 3 medium (0 deferred + 3 active), 0 low
 >
 > **Monorepo refactor audit (2026-05-08, post-resume-refinement work):** ~12 additional findings across three axes — backend reusability, frontend reusability, and long-files. Tracked under "## Monorepo refactor audit (2026-05-08)" below. These are extraction / split candidates, not regression bugs. Sister findings live in `apps/myjobhunter/TECH_DEBT.md`.
 
@@ -140,6 +140,33 @@ Circular-import avoided by moving `TemplateNotFoundError` and `extract_text_from
 ---
 
 ## High
+
+### [Frontend tests] 9 pre-existing unit test failures on main (rediscovered 2026-05-11)
+
+**Effort:** M (per-file investigation; ~30 min each)
+**Location:**
+- `apps/mybookkeeper/frontend/src/__tests__/Documents.test.tsx` — "renders document file names from API data", "still renders the document table for viewer"
+- `apps/mybookkeeper/frontend/src/__tests__/hourly-rate.test.ts` — "rounds to two decimal places", "returns em-dash for non-numeric strings"
+- `apps/mybookkeeper/frontend/src/__tests__/LeaseTemplateUploadDialog.test.tsx` — "shows AI suggesting loader after successful upload, then calls onCreated with suggestions"
+- `apps/mybookkeeper/frontend/src/__tests__/PromoteFromInquiryPanel.test.tsx` — "pre-fills name, employer, and contract dates from the inquiry", "shows an orange warning hint next to fields the inquiry didn't supply", "blocks submission and shows an inline error when end date is before start"
+- `apps/mybookkeeper/frontend/src/__tests__/PublicInquiryForm.test.tsx` — "renders the friendly tell-more error from the backend"
+**Problem:** `npm test` exits non-zero on `origin/main` with 9 failing tests / 1734 passing. Surfaced during the React 19 migration (PR 1) validation pass. The 2026-05-08 cleanup entry above marked the prior batch RESOLVED in PRs #463–#468; new failures have crept in since (the test for `PublicInquiryForm — country / region` that previously failed actually got fixed by React 19's stricter timing, so React 19 is net-positive here). No CI workflow currently runs `npm test`, so the failures haven't been blocking merges.
+**Recommendation:** Apply the same pattern as PRs #463–#468 — one PR per test file, fix the test root cause (stale mocks, data-testid drift, multi-element matches), keep the production code unchanged unless a test reveals a real regression. Add `npm test` to `ci-mybookkeeper.yml` as a gating job once green, otherwise the same regression class will reappear in 3-6 months.
+
+---
+
+### [Frontend lint] 4 pre-existing lint errors on main (rediscovered 2026-05-11)
+
+**Effort:** S (each)
+**Location:**
+- `apps/mybookkeeper/frontend/src/__tests__/LeaseNew.test.tsx:90` — `'TEMPLATE_DETAIL' is assigned a value but never used` (`@typescript-eslint/no-unused-vars`)
+- `apps/mybookkeeper/frontend/src/app/pages/LeaseDetail.tsx:83` — `Cannot call impure function during render` (`react-hooks/static-components` from eslint-plugin-react-hooks@7)
+- `apps/mybookkeeper/frontend/src/app/pages/LeaseNew.tsx:62` — `Calling setState synchronously within an effect` (`react-hooks/set-state-in-effect`)
+- `apps/mybookkeeper/frontend/src/shared/auth/StepUpModal.tsx:34` — same `react-hooks/set-state-in-effect`
+**Problem:** `npm run lint` exits non-zero on `origin/main` with 4 errors / 8 warnings. No CI workflow currently runs `npm run lint`, so the violations haven't been blocking merges. The 2026-05-04 entry above marked the prior `set-state-in-effect` audit RESOLVED — these are NEW occurrences introduced by 2026-05-09/10 work on the leases / step-up-auth features.
+**Recommendation:** Quick per-file fixes (LeaseNew test: prefix with `_TEMPLATE_DETAIL` or delete; the two set-state-in-effect cases: move state reset into the event handler that triggers the dialog instead of the effect; the impure-during-render in LeaseDetail: extract the impure call into `useEffect`). Add `npm run lint` to `ci-mybookkeeper.yml` to prevent regression — same recommendation as for `npm test`.
+
+---
 
 ### ~~[Frontend tests] AttachmentViewer.test.tsx pre-existing failure on main~~ RESOLVED
 **Resolved:** PR fix/mbk-attachment-viewer-test-pre-existing (2026-05-08) — the original recommendation (wrap in `findByTestId`) doesn't work because `PdfBody` fetches the URL into a blob and feeds the iframe a blob: URL; the fetch never resolves cleanly in jsdom (Response/Blob support is partial; mocking `URL.createObjectURL` triggers `SecurityError: localStorage is not available for opaque origins`). Pivoted: the test now asserts the synchronously-rendered "Open in new tab" link (the user's escape hatch) and the initial loading skeleton, plus negative checks that other-mode bodies don't render. The full fetch → blob → iframe chain is exercised by manual smoke.
