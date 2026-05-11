@@ -58,6 +58,11 @@ vi.mock("lucide-react", () => ({
 vi.mock("@/store/discoverApi", () => ({
   useRefreshDiscoverySourceMutation: () => [vi.fn(), { isLoading: false }],
   useDeactivateDiscoverySourceMutation: () => [vi.fn(), { isLoading: false }],
+  useUpdateDiscoverySourceMutation: () => [vi.fn(), { isLoading: false }],
+}));
+
+vi.mock("../EditFrequencyPopover", () => ({
+  default: () => <div data-testid="edit-frequency-popover" />,
 }));
 
 vi.mock("../saved-search-summary", () => ({

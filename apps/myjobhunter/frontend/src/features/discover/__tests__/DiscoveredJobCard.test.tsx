@@ -1,9 +1,10 @@
 /**
- * Tests for DiscoveredJobCard — specifically the verdict-based badge render
- * introduced in the audit cleanup (replaces the old bandForScore helper).
+ * Tests for DiscoveredJobCard — verdict badge, promoted state, and
+ * "View application" link introduced in PR 7.
  */
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import DiscoveredJobCard from "../DiscoveredJobCard";
 import type { DiscoveredJob } from "@/types/discovery/discovered-job";
 
@@ -37,6 +38,11 @@ vi.mock("@/store/discoverApi", () => ({
   usePromoteDiscoveredJobMutation: () => [vi.fn(), { isLoading: false }],
 }));
 
+function renderInRouter(ui: React.ReactElement) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return render(<MemoryRouter>{ui as any}</MemoryRouter>);
+}
+
 function makeJob(overrides: Partial<DiscoveredJob> = {}): DiscoveredJob {
   return {
     id: "job-1",
@@ -68,32 +74,32 @@ function makeJob(overrides: Partial<DiscoveredJob> = {}): DiscoveredJob {
 
 describe("DiscoveredJobCard — verdict badge", () => {
   it("shows no verdict badge when verdict is null (unscored)", () => {
-    render(<DiscoveredJobCard job={makeJob({ verdict: null })} />);
+    renderInRouter(<DiscoveredJobCard job={makeJob({ verdict: null })} />);
     expect(screen.queryByTestId("badge")).toBeNull();
   });
 
   it("shows 'Strong fit' badge for strong_fit verdict", () => {
-    render(<DiscoveredJobCard job={makeJob({ verdict: "strong_fit", score: 90 })} />);
+    renderInRouter(<DiscoveredJobCard job={makeJob({ verdict: "strong_fit", score: 90 })} />);
     expect(screen.getByTestId("badge")).toHaveTextContent("Strong fit");
   });
 
   it("shows 'Worth considering' badge for worth_considering verdict", () => {
-    render(<DiscoveredJobCard job={makeJob({ verdict: "worth_considering", score: 70 })} />);
+    renderInRouter(<DiscoveredJobCard job={makeJob({ verdict: "worth_considering", score: 70 })} />);
     expect(screen.getByTestId("badge")).toHaveTextContent("Worth considering");
   });
 
   it("shows 'Stretch' badge for stretch verdict", () => {
-    render(<DiscoveredJobCard job={makeJob({ verdict: "stretch", score: 40 })} />);
+    renderInRouter(<DiscoveredJobCard job={makeJob({ verdict: "stretch", score: 40 })} />);
     expect(screen.getByTestId("badge")).toHaveTextContent("Stretch");
   });
 
   it("shows 'Mismatch' badge for mismatch verdict", () => {
-    render(<DiscoveredJobCard job={makeJob({ verdict: "mismatch", score: 15 })} />);
+    renderInRouter(<DiscoveredJobCard job={makeJob({ verdict: "mismatch", score: 15 })} />);
     expect(screen.getByTestId("badge")).toHaveTextContent("Mismatch");
   });
 
   it("renders the job title and company name", () => {
-    render(<DiscoveredJobCard job={makeJob()} />);
+    renderInRouter(<DiscoveredJobCard job={makeJob()} />);
     expect(screen.getByText("Senior Backend Engineer")).toBeInTheDocument();
     expect(screen.getByText(/Acme Corp/)).toBeInTheDocument();
   });
@@ -101,7 +107,7 @@ describe("DiscoveredJobCard — verdict badge", () => {
 
 describe("DiscoveredJobCard — unscored visual signal (PR 4b)", () => {
   it("shows 'Awaiting AI score' pill when unscored and polling is idle", () => {
-    render(
+    renderInRouter(
       <DiscoveredJobCard
         job={makeJob({ verdict: null, score: null })}
         isScoringInFlight={false}
@@ -116,7 +122,7 @@ describe("DiscoveredJobCard — unscored visual signal (PR 4b)", () => {
   });
 
   it("shows a spinner when unscored and polling is in flight", () => {
-    render(
+    renderInRouter(
       <DiscoveredJobCard
         job={makeJob({ verdict: null, score: null })}
         isScoringInFlight={true}
@@ -131,7 +137,7 @@ describe("DiscoveredJobCard — unscored visual signal (PR 4b)", () => {
   });
 
   it("shows neither pill nor spinner when the job already has a verdict", () => {
-    render(
+    renderInRouter(
       <DiscoveredJobCard
         job={makeJob({ verdict: "strong_fit", score: 90 })}
         isScoringInFlight={true}
@@ -146,10 +152,41 @@ describe("DiscoveredJobCard — unscored visual signal (PR 4b)", () => {
   });
 
   it("defaults isScoringInFlight to false when omitted", () => {
-    render(<DiscoveredJobCard job={makeJob({ verdict: null, score: null })} />);
+    renderInRouter(<DiscoveredJobCard job={makeJob({ verdict: null, score: null })} />);
     // Default falsy → static pill, not the spinner.
     expect(
       screen.getByTestId("discovered-job-awaiting-score"),
     ).toBeInTheDocument();
+  });
+});
+
+describe("DiscoveredJobCard — post-promote view application link (PR 7)", () => {
+  it("shows 'Applied' badge when job is promoted", () => {
+    renderInRouter(
+      <DiscoveredJobCard
+        job={makeJob({ promoted_application_id: "app-abc-123" })}
+      />,
+    );
+    expect(screen.getByTestId("promoted-applied-badge")).toBeInTheDocument();
+    expect(screen.getByTestId("promoted-applied-badge")).toHaveTextContent("Applied");
+  });
+
+  it("shows 'View application' link pointing to the application detail page", () => {
+    renderInRouter(
+      <DiscoveredJobCard
+        job={makeJob({ promoted_application_id: "app-abc-123" })}
+      />,
+    );
+    const link = screen.getByTestId("view-application-link");
+    expect(link).toBeInTheDocument();
+    expect(link).toHaveAttribute("href", "/applications/app-abc-123");
+  });
+
+  it("does not show 'View application' link when not promoted", () => {
+    renderInRouter(
+      <DiscoveredJobCard job={makeJob({ promoted_application_id: null })} />,
+    );
+    expect(screen.queryByTestId("view-application-link")).toBeNull();
+    expect(screen.queryByTestId("promoted-applied-badge")).toBeNull();
   });
 });

@@ -3,6 +3,7 @@ import type { Application } from "@/types/application";
 import type { DiscoveredJobListResponse } from "@/types/discovery/discovered-job-list-response";
 import type { DiscoverySource } from "@/types/discovery/discovery-source";
 import type { DiscoverySourceCreate } from "@/types/discovery/discovery-source-create-request";
+import type { DiscoverySourcePatchRequest } from "@/types/discovery/discovery-source-patch-request";
 import type { DiscoveryFetchResult } from "@/types/discovery/discovery-fetch-result";
 
 export type DismissalReason =
@@ -26,6 +27,17 @@ const discoverApi = apiWithTags.injectEndpoints({
     }),
     createDiscoverySource: build.mutation<DiscoverySource, DiscoverySourceCreate>({
       query: (data) => ({ url: "/discover/sources", method: "POST", data }),
+      invalidatesTags: ["DiscoverySource"],
+    }),
+    updateDiscoverySource: build.mutation<
+      DiscoverySource,
+      { sourceId: string; patch: DiscoverySourcePatchRequest }
+    >({
+      query: ({ sourceId, patch }) => ({
+        url: `/discover/sources/${sourceId}`,
+        method: "PATCH",
+        data: patch,
+      }),
       invalidatesTags: ["DiscoverySource"],
     }),
     deactivateDiscoverySource: build.mutation<void, string>({
@@ -86,6 +98,7 @@ const discoverApi = apiWithTags.injectEndpoints({
 export const {
   useListDiscoverySourcesQuery,
   useCreateDiscoverySourceMutation,
+  useUpdateDiscoverySourceMutation,
   useDeactivateDiscoverySourceMutation,
   useRefreshDiscoverySourceMutation,
   useListDiscoveredJobsQuery,

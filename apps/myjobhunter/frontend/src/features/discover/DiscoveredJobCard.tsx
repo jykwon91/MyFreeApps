@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Bookmark, Briefcase, Check, ExternalLink, Loader2, X } from "lucide-react";
 import {
   Badge,
@@ -192,29 +193,40 @@ export default function DiscoveredJobCard({
               Open
             </a>
           )}
-          <Button
-            size="sm"
-            variant="primary"
-            onClick={handlePromote}
-            disabled={isPromoting || isAlreadyPromoted}
-          >
-            {isAlreadyPromoted ? (
-              <>
-                <Check className="w-4 h-4 mr-1" />
+          {isAlreadyPromoted ? (
+            <>
+              <span
+                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800 rounded min-h-[44px] sm:min-h-[32px]"
+                data-testid="promoted-applied-badge"
+              >
+                <Check className="w-4 h-4" aria-hidden="true" />
                 Applied
-              </>
-            ) : (
-              <>
-                <Briefcase className="w-4 h-4 mr-1" />
-                Apply
-              </>
-            )}
-          </Button>
+              </span>
+              <Link
+                to={`/applications/${job.promoted_application_id}`}
+                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium border rounded hover:bg-muted min-h-[44px] sm:min-h-[32px]"
+                data-testid="view-application-link"
+              >
+                View application
+              </Link>
+            </>
+          ) : (
+            <Button
+              size="sm"
+              variant="primary"
+              onClick={handlePromote}
+              disabled={isPromoting}
+            >
+              <Briefcase className="w-4 h-4 mr-1" />
+              Apply
+            </Button>
+          )}
           <Button
             size="sm"
             variant="secondary"
             onClick={handleSave}
             disabled={isSaving || isAlreadySaved || isAlreadyPromoted}
+            data-testid="save-button"
           >
             <Bookmark className="w-4 h-4 mr-1" />
             {isAlreadySaved ? "Saved" : "Save"}

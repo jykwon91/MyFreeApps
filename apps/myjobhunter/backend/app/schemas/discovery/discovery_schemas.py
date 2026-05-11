@@ -24,6 +24,50 @@ _VALID_SOURCES = (
 )
 
 
+class DiscoverySourcePatch(BaseModel):
+    """Body for ``PATCH /discover/sources/{id}``.
+
+    All fields are optional — only the fields provided are updated.
+    At least one field must be present (validated at the service layer).
+
+    ``fetch_interval_minutes``: must be in the same range as creation
+    (15–10080 minutes) when provided.
+    ``name``: trimmed; pass ``""`` to clear the label.
+    ``is_active``: allows re-activation (``true``) as well as
+    deactivation (``false``). For standard deactivation, prefer the
+    ``DELETE /discover/sources/{id}`` endpoint — this field is for
+    programmatic toggle scenarios.
+    """
+
+    fetch_interval_minutes: int | None = Field(
+        default=None, ge=15, le=10080,
+        description="Minimum minutes between automatic fetches (cap = 7 days).",
+    )
+    name: str | None = Field(
+        default=None,
+        max_length=100,
+        description="Optional human-readable label. Pass empty string to clear.",
+    )
+    is_active: bool | None = Field(
+        default=None,
+        description="Activate (true) or deactivate (false) this source.",
+    )
+
+    @model_validator(mode="after")
+    def _at_least_one_field(self) -> "DiscoverySourcePatch":
+        if (
+            self.fetch_interval_minutes is None
+            and self.name is None
+            and self.is_active is None
+        ):
+            raise ValueError(
+                "At least one field (fetch_interval_minutes, name, is_active) must be provided."
+            )
+        if self.name is not None:
+            self.name = self.name.strip()
+        return self
+
+
 class DiscoverySourceCreate(BaseModel):
     """Body for ``POST /discover/sources``.
 

@@ -109,6 +109,35 @@ async def deactivate_source(
     return True
 
 
+async def update_source(
+    db: AsyncSession,
+    source_id: uuid.UUID,
+    user_id: uuid.UUID,
+    *,
+    fetch_interval_minutes: int | None = None,
+    name: str | None = None,
+    is_active: bool | None = None,
+) -> DiscoverySource | None:
+    """Partial-update a saved search. Returns None when not found / wrong owner.
+
+    Only applies the fields that are explicitly provided (not None). This
+    allows the PATCH route to accept a sparse body — fields omitted by
+    the caller are left unchanged. Callers are responsible for committing.
+    """
+    src = await get_source(db, source_id, user_id)
+    if src is None:
+        return None
+    if fetch_interval_minutes is not None:
+        src.fetch_interval_minutes = fetch_interval_minutes
+    if name is not None:
+        src.name = name
+    if is_active is not None:
+        src.is_active = is_active
+    await db.flush()
+    await db.refresh(src)
+    return src
+
+
 async def mark_source_fetched(
     db: AsyncSession,
     source: DiscoverySource,
