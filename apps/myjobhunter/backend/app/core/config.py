@@ -39,6 +39,16 @@ class Settings(BaseAppSettings):
     discovery_daily_budget_usd: float = 0.30
     discovery_daily_budget_usd_hard_cap: float = 2.00
 
+    # /discover scoring top-N (PR 4b). After the cosine-similarity
+    # prefilter ranks unscored postings by relevance to the user's
+    # profile embedding, only the top N are sent to Anthropic per
+    # scoring pass. 20 is a sweet spot: ~25x cost reduction at 500
+    # postings/day while keeping a deep-enough cut that the operator
+    # rarely runs out of fresh high-relevance scored rows. Tune up if
+    # the budget headroom is available and the operator wants more
+    # scored rows per pass; tune down if Anthropic latency dominates.
+    discovery_score_top_n: int = 20
+
     # /discover refresh rate-limit (per IP). JSearch is paid; cap how
     # often an operator can hit /refresh in a window to bound runaway
     # cost from a stuck retry loop or a leaked credential. Defaults

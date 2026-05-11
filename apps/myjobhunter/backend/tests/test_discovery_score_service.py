@@ -32,13 +32,17 @@ from app.services.job_analysis.job_analysis_service import (
 _SCORE_JD_PATH = "app.services.discovery.discovery_score_service.score_jd"
 _SPENT_TODAY_PATH = "app.services.discovery.discovery_score_service._spent_today"
 _SESSION_LOCAL_PATH = "app.services.discovery.discovery_score_service.AsyncSessionLocal"
-_LIST_UNSCORED_PATH = (
+# PR 4b: the score loop now reads its candidate list from the prefilter
+# service rather than from ``discovery_repository.list_unscored_for_user``.
+# Tests patch the prefilter to return a fixed candidate set.
+_PREFILTER_PATH = (
     "app.services.discovery.discovery_score_service."
-    "discovery_repository.list_unscored_for_user"
+    "discovery_prefilter_service.rank_unscored_for_user"
 )
 _SENTRY_CAPTURE_EXC_PATH = "app.services.discovery.discovery_score_service.sentry_sdk.capture_exception"
 _SENTRY_CAPTURE_MSG_PATH = "app.services.discovery.discovery_score_service.sentry_sdk.capture_message"
 _SENTRY_NEW_SCOPE_PATH = "app.services.discovery.discovery_score_service.sentry_sdk.new_scope"
+_SENTRY_SET_TAG_PATH = "app.services.discovery.discovery_score_service.sentry_sdk.set_tag"
 
 
 def _make_job(user_id: uuid.UUID) -> DiscoveredJob:
@@ -68,6 +72,21 @@ def _make_transient_error(code: str = "rate_limit_error") -> JobAnalysisError:
 def _make_permanent_error(code: str = "authentication_error") -> JobAnalysisError:
     """Create a permanent JobAnalysisError (retryable=False)."""
     return JobAnalysisError(f"Anthropic error: {code}", code=code, retryable=False)
+
+
+def _prefilter_result(rows: list[DiscoveredJob], *, branch: str = "embedding"):
+    """Build a PrefilterResult stand-in matching the service contract.
+
+    The score service reads ``.rows``, ``.branch``, and
+    ``.eligible_count`` — we mimic those attributes on a MagicMock so
+    tests don't import the real dataclass (keeps the patch surface
+    narrow and avoids forcing every test to construct the typed object).
+    """
+    result = MagicMock()
+    result.rows = rows
+    result.branch = branch
+    result.eligible_count = len(rows)
+    return result
 
 
 def _noop_scope_cm() -> MagicMock:
@@ -114,7 +133,7 @@ class TestBudgetExhausted:
         with (
             patch(_SESSION_LOCAL_PATH, return_value=mock_cm),
             patch(_SPENT_TODAY_PATH, new=AsyncMock(return_value=0.0)),
-            patch(_LIST_UNSCORED_PATH, new=AsyncMock(return_value=[])),
+            patch(_PREFILTER_PATH, new=AsyncMock(return_value=_prefilter_result([]))),
             patch(_SCORE_JD_PATH, new=AsyncMock()) as mock_score,
         ):
             from app.services.discovery import discovery_score_service
@@ -140,7 +159,7 @@ class TestHappyPath:
         with (
             patch(_SESSION_LOCAL_PATH, return_value=mock_cm),
             patch(_SPENT_TODAY_PATH, new=AsyncMock(return_value=0.0)),
-            patch(_LIST_UNSCORED_PATH, new=AsyncMock(return_value=jobs)),
+            patch(_PREFILTER_PATH, new=AsyncMock(return_value=_prefilter_result(jobs))),
             patch(_SCORE_JD_PATH, new=AsyncMock(return_value=analysis)) as mock_score,
         ):
             from app.services.discovery import discovery_score_service
@@ -171,7 +190,7 @@ class TestHappyPath:
         with (
             patch(_SESSION_LOCAL_PATH, return_value=mock_cm),
             patch(_SPENT_TODAY_PATH, new=AsyncMock(return_value=0.0)),
-            patch(_LIST_UNSCORED_PATH, new=AsyncMock(return_value=[job])),
+            patch(_PREFILTER_PATH, new=AsyncMock(return_value=_prefilter_result([job]))),
             patch(_SCORE_JD_PATH, new=AsyncMock(return_value=analysis)) as mock_score,
         ):
             from app.services.discovery import discovery_score_service
@@ -203,7 +222,7 @@ class TestHappyPath:
         with (
             patch(_SESSION_LOCAL_PATH, return_value=mock_cm),
             patch(_SPENT_TODAY_PATH, new=AsyncMock(return_value=0.15)),
-            patch(_LIST_UNSCORED_PATH, new=AsyncMock(return_value=jobs)),
+            patch(_PREFILTER_PATH, new=AsyncMock(return_value=_prefilter_result(jobs))),
             patch(_SCORE_JD_PATH, new=AsyncMock(return_value=analysis)) as mock_score,
             patch.object(
                 __import__(
@@ -247,7 +266,7 @@ class TestTransientErrorHandling:
         with (
             patch(_SESSION_LOCAL_PATH, return_value=mock_cm),
             patch(_SPENT_TODAY_PATH, new=AsyncMock(return_value=0.0)),
-            patch(_LIST_UNSCORED_PATH, new=AsyncMock(return_value=jobs)),
+            patch(_PREFILTER_PATH, new=AsyncMock(return_value=_prefilter_result(jobs))),
             patch(_SCORE_JD_PATH, new=mock_score),
             patch(_SENTRY_NEW_SCOPE_PATH, return_value=_noop_scope_cm()),
             patch(_SENTRY_CAPTURE_EXC_PATH),
@@ -274,7 +293,7 @@ class TestTransientErrorHandling:
             with (
                 patch(_SESSION_LOCAL_PATH, return_value=mock_cm),
                 patch(_SPENT_TODAY_PATH, new=AsyncMock(return_value=0.0)),
-                patch(_LIST_UNSCORED_PATH, new=AsyncMock(return_value=[job])),
+                patch(_PREFILTER_PATH, new=AsyncMock(return_value=_prefilter_result([job]))),
                 patch(_SCORE_JD_PATH, new=AsyncMock(side_effect=_make_transient_error(code))),
                 patch(_SENTRY_NEW_SCOPE_PATH, return_value=_noop_scope_cm()),
                 patch(_SENTRY_CAPTURE_EXC_PATH),
@@ -305,7 +324,7 @@ class TestTransientErrorHandling:
         with (
             patch(_SESSION_LOCAL_PATH, return_value=mock_cm),
             patch(_SPENT_TODAY_PATH, new=AsyncMock(return_value=0.0)),
-            patch(_LIST_UNSCORED_PATH, new=AsyncMock(return_value=[job])),
+            patch(_PREFILTER_PATH, new=AsyncMock(return_value=_prefilter_result([job]))),
             patch(_SCORE_JD_PATH, new=AsyncMock(side_effect=err)),
             patch(_SENTRY_NEW_SCOPE_PATH, return_value=scope_cm),
             patch(_SENTRY_CAPTURE_EXC_PATH) as mock_capture_exc,
@@ -337,7 +356,7 @@ class TestCircuitBreaker:
         with (
             patch(_SESSION_LOCAL_PATH, return_value=mock_cm),
             patch(_SPENT_TODAY_PATH, new=AsyncMock(return_value=0.0)),
-            patch(_LIST_UNSCORED_PATH, new=AsyncMock(return_value=jobs)),
+            patch(_PREFILTER_PATH, new=AsyncMock(return_value=_prefilter_result(jobs))),
             patch(
                 _SCORE_JD_PATH,
                 new=AsyncMock(side_effect=_make_transient_error("rate_limit_error")),
@@ -391,7 +410,7 @@ class TestCircuitBreaker:
         with (
             patch(_SESSION_LOCAL_PATH, return_value=mock_cm),
             patch(_SPENT_TODAY_PATH, new=AsyncMock(return_value=0.0)),
-            patch(_LIST_UNSCORED_PATH, new=AsyncMock(return_value=jobs)),
+            patch(_PREFILTER_PATH, new=AsyncMock(return_value=_prefilter_result(jobs))),
             patch(_SCORE_JD_PATH, new=mock_score),
             patch(_SENTRY_NEW_SCOPE_PATH, return_value=_noop_scope_cm()),
             patch(_SENTRY_CAPTURE_EXC_PATH),
@@ -421,7 +440,7 @@ class TestCircuitBreaker:
         with (
             patch(_SESSION_LOCAL_PATH, return_value=mock_cm),
             patch(_SPENT_TODAY_PATH, new=AsyncMock(return_value=0.0)),
-            patch(_LIST_UNSCORED_PATH, new=AsyncMock(return_value=jobs)),
+            patch(_PREFILTER_PATH, new=AsyncMock(return_value=_prefilter_result(jobs))),
             patch(
                 _SCORE_JD_PATH,
                 new=AsyncMock(side_effect=_make_transient_error("overloaded_error")),
@@ -457,7 +476,7 @@ class TestPermanentErrors:
         with (
             patch(_SESSION_LOCAL_PATH, return_value=mock_cm),
             patch(_SPENT_TODAY_PATH, new=AsyncMock(return_value=0.0)),
-            patch(_LIST_UNSCORED_PATH, new=AsyncMock(return_value=jobs)),
+            patch(_PREFILTER_PATH, new=AsyncMock(return_value=_prefilter_result(jobs))),
             patch(
                 _SCORE_JD_PATH,
                 new=AsyncMock(side_effect=_make_permanent_error("authentication_error")),
@@ -489,7 +508,7 @@ class TestPermanentErrors:
         with (
             patch(_SESSION_LOCAL_PATH, return_value=mock_cm),
             patch(_SPENT_TODAY_PATH, new=AsyncMock(return_value=0.0)),
-            patch(_LIST_UNSCORED_PATH, new=AsyncMock(return_value=jobs)),
+            patch(_PREFILTER_PATH, new=AsyncMock(return_value=_prefilter_result(jobs))),
             patch(
                 _SCORE_JD_PATH,
                 new=AsyncMock(side_effect=_make_permanent_error("invalid_request_error")),
@@ -521,7 +540,7 @@ class TestPermanentErrors:
             with (
                 patch(_SESSION_LOCAL_PATH, return_value=mock_cm),
                 patch(_SPENT_TODAY_PATH, new=AsyncMock(return_value=0.0)),
-                patch(_LIST_UNSCORED_PATH, new=AsyncMock(return_value=[job])),
+                patch(_PREFILTER_PATH, new=AsyncMock(return_value=_prefilter_result([job]))),
                 patch(
                     _SCORE_JD_PATH,
                     new=AsyncMock(side_effect=_make_permanent_error(code)),
@@ -553,7 +572,7 @@ class TestPermanentErrors:
         with (
             patch(_SESSION_LOCAL_PATH, return_value=mock_cm),
             patch(_SPENT_TODAY_PATH, new=AsyncMock(return_value=0.0)),
-            patch(_LIST_UNSCORED_PATH, new=AsyncMock(return_value=[job])),
+            patch(_PREFILTER_PATH, new=AsyncMock(return_value=_prefilter_result([job]))),
             patch(_SCORE_JD_PATH, new=AsyncMock(side_effect=err)),
             patch(_SENTRY_NEW_SCOPE_PATH, return_value=_noop_scope_cm()),
             patch(_SENTRY_CAPTURE_EXC_PATH) as mock_capture_exc,
@@ -565,6 +584,180 @@ class TestPermanentErrors:
 
         # Sentry was still notified even though we re-raised.
         mock_capture_exc.assert_called_once_with(err)
+
+
+class TestPrefilterIntegration:
+    """PR 4b: the score loop reads from the prefilter and emits per-pass Sentry tags."""
+
+    @pytest.mark.asyncio
+    async def test_score_loop_calls_prefilter_with_resolved_top_n(self) -> None:
+        """``settings.discovery_score_top_n`` flows through to the prefilter call."""
+        user_id = uuid.uuid4()
+        job = _make_job(user_id)
+
+        mock_db = AsyncMock()
+        mock_cm = AsyncMock()
+        mock_cm.__aenter__ = AsyncMock(return_value=mock_db)
+        mock_cm.__aexit__ = AsyncMock(return_value=None)
+
+        analysis = _make_analysis(cost=0.005)
+
+        with (
+            patch(_SESSION_LOCAL_PATH, return_value=mock_cm),
+            patch(_SPENT_TODAY_PATH, new=AsyncMock(return_value=0.0)),
+            patch(
+                _PREFILTER_PATH,
+                new=AsyncMock(return_value=_prefilter_result([job])),
+            ) as mock_prefilter,
+            patch(_SCORE_JD_PATH, new=AsyncMock(return_value=analysis)),
+            patch(_SENTRY_SET_TAG_PATH),
+            patch.object(
+                __import__(
+                    "app.services.discovery.discovery_score_service",
+                    fromlist=["settings"],
+                ).settings,
+                "discovery_score_top_n",
+                15,
+            ),
+        ):
+            from app.services.discovery import discovery_score_service
+            # batch=50 is the legacy cap; top_n=15 should be the
+            # effective value passed to the prefilter (min(top_n, batch)).
+            await discovery_score_service.score_user_inbox(user_id, batch=50)
+
+        assert mock_prefilter.await_args.kwargs["top_n"] == 15
+
+    @pytest.mark.asyncio
+    async def test_score_loop_caps_top_n_to_batch(self) -> None:
+        """A misconfigured DISCOVERY_SCORE_TOP_N can't exceed the batch ceiling.
+
+        Defense in depth: even if env sets top_n=10000, the per-pass
+        safety cap (``batch``) still applies. ``_resolve_top_n`` returns
+        ``min(top_n, batch)``.
+        """
+        user_id = uuid.uuid4()
+        job = _make_job(user_id)
+
+        mock_db = AsyncMock()
+        mock_cm = AsyncMock()
+        mock_cm.__aenter__ = AsyncMock(return_value=mock_db)
+        mock_cm.__aexit__ = AsyncMock(return_value=None)
+
+        with (
+            patch(_SESSION_LOCAL_PATH, return_value=mock_cm),
+            patch(_SPENT_TODAY_PATH, new=AsyncMock(return_value=0.0)),
+            patch(
+                _PREFILTER_PATH,
+                new=AsyncMock(return_value=_prefilter_result([job])),
+            ) as mock_prefilter,
+            patch(_SCORE_JD_PATH, new=AsyncMock(return_value=_make_analysis())),
+            patch(_SENTRY_SET_TAG_PATH),
+            patch.object(
+                __import__(
+                    "app.services.discovery.discovery_score_service",
+                    fromlist=["settings"],
+                ).settings,
+                "discovery_score_top_n",
+                10000,
+            ),
+        ):
+            from app.services.discovery import discovery_score_service
+            await discovery_score_service.score_user_inbox(user_id, batch=20)
+
+        # 10000 misconfigured top_n is clamped down to batch=20.
+        assert mock_prefilter.await_args.kwargs["top_n"] == 20
+
+    @pytest.mark.asyncio
+    async def test_score_loop_only_iterates_prefilter_rows(self) -> None:
+        """The loop scores exactly the rows the prefilter returned, no more.
+
+        Even when the legacy batch ceiling is higher than the prefilter
+        output, the loop should stop at len(prefilter.rows). This is
+        what produces the cost reduction.
+        """
+        user_id = uuid.uuid4()
+        prefilter_jobs = [_make_job(user_id) for _ in range(3)]
+
+        mock_db = AsyncMock()
+        mock_cm = AsyncMock()
+        mock_cm.__aenter__ = AsyncMock(return_value=mock_db)
+        mock_cm.__aexit__ = AsyncMock(return_value=None)
+
+        with (
+            patch(_SESSION_LOCAL_PATH, return_value=mock_cm),
+            patch(_SPENT_TODAY_PATH, new=AsyncMock(return_value=0.0)),
+            patch(
+                _PREFILTER_PATH,
+                new=AsyncMock(return_value=_prefilter_result(prefilter_jobs)),
+            ),
+            patch(
+                _SCORE_JD_PATH,
+                new=AsyncMock(return_value=_make_analysis()),
+            ) as mock_score,
+            patch(_SENTRY_SET_TAG_PATH),
+        ):
+            from app.services.discovery import discovery_score_service
+            # batch=20 is plenty of headroom; only 3 prefilter rows
+            # exist, so only 3 should be scored.
+            await discovery_score_service.score_user_inbox(user_id, batch=20)
+
+        assert mock_score.call_count == 3
+
+    @pytest.mark.asyncio
+    async def test_score_loop_sets_prefilter_branch_tag_on_sentry(self) -> None:
+        """The per-pass tag ``discovery.score_prefilter_branch`` is set."""
+        user_id = uuid.uuid4()
+        job = _make_job(user_id)
+
+        mock_db = AsyncMock()
+        mock_cm = AsyncMock()
+        mock_cm.__aenter__ = AsyncMock(return_value=mock_db)
+        mock_cm.__aexit__ = AsyncMock(return_value=None)
+
+        with (
+            patch(_SESSION_LOCAL_PATH, return_value=mock_cm),
+            patch(_SPENT_TODAY_PATH, new=AsyncMock(return_value=0.0)),
+            patch(
+                _PREFILTER_PATH,
+                new=AsyncMock(return_value=_prefilter_result([job], branch="fifo_fallback")),
+            ),
+            patch(_SCORE_JD_PATH, new=AsyncMock(return_value=_make_analysis())),
+            patch(_SENTRY_SET_TAG_PATH) as mock_set_tag,
+        ):
+            from app.services.discovery import discovery_score_service
+            await discovery_score_service.score_user_inbox(user_id, batch=20)
+
+        mock_set_tag.assert_any_call(
+            "discovery.score_prefilter_branch", "fifo_fallback",
+        )
+        # top_n tag is set too — value depends on env but always present
+        tag_keys = {call.args[0] for call in mock_set_tag.call_args_list}
+        assert "discovery.score_prefilter_top_n" in tag_keys
+
+    @pytest.mark.asyncio
+    async def test_score_loop_skips_when_prefilter_returns_empty(self) -> None:
+        """Empty prefilter result → score_jd is never called."""
+        user_id = uuid.uuid4()
+
+        mock_db = AsyncMock()
+        mock_cm = AsyncMock()
+        mock_cm.__aenter__ = AsyncMock(return_value=mock_db)
+        mock_cm.__aexit__ = AsyncMock(return_value=None)
+
+        with (
+            patch(_SESSION_LOCAL_PATH, return_value=mock_cm),
+            patch(_SPENT_TODAY_PATH, new=AsyncMock(return_value=0.0)),
+            patch(
+                _PREFILTER_PATH,
+                new=AsyncMock(return_value=_prefilter_result([])),
+            ),
+            patch(_SCORE_JD_PATH, new=AsyncMock()) as mock_score,
+            patch(_SENTRY_SET_TAG_PATH),
+        ):
+            from app.services.discovery import discovery_score_service
+            await discovery_score_service.score_user_inbox(user_id, batch=20)
+
+        mock_score.assert_not_called()
 
 
 class TestJobAnalysisErrorStructure:

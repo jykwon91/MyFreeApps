@@ -54,10 +54,23 @@ export default function DiscoverInboxView({ hasSources }: DiscoverInboxViewProps
     );
   }
 
+  // PR 4b: when ANY card in the inbox is unscored, the inbox polls
+  // every 4s (INBOX_POLL_INTERVAL_MS) until scores fill in. Pass that
+  // signal to each unscored card so it can render a spinner in the
+  // verdict-badge slot instead of an empty space — the operator sees
+  // their fresh postings are being rated, not silently ignored.
+  // Once every card has a verdict, polling continues but the spinner
+  // simply has nothing to attach to.
+  const hasUnscored = items.some((job) => job.score === null);
+
   return (
     <div className="space-y-3">
       {items.map((job) => (
-        <DiscoveredJobCard key={job.id} job={job} />
+        <DiscoveredJobCard
+          key={job.id}
+          job={job}
+          isScoringInFlight={hasUnscored}
+        />
       ))}
     </div>
   );
