@@ -79,6 +79,9 @@ export default function NewSavedSearchDialog({
   // Source selection — defaults to jsearch to preserve existing behaviour.
   const [source, setSource] = useState<SourceKind>("jsearch");
 
+  // Name field — applies to every source type (empty = unset)
+  const [name, setName] = useState("");
+
   // JSearch form state
   const [roles, setRoles] = useState<string[]>([]);
   const [skills, setSkills] = useState<string[]>([]);
@@ -131,6 +134,7 @@ export default function NewSavedSearchDialog({
 
   function resetAll() {
     setSource("jsearch");
+    setName("");
     setRoles([]);
     setSkills([]);
     setLocation("");
@@ -221,6 +225,7 @@ export default function NewSavedSearchDialog({
     try {
       await createSource({
         source,
+        name: name.trim() || undefined,
         config: buildConfig(),
         fetch_interval_minutes: fetchIntervalMinutes,
       }).unwrap();
@@ -280,6 +285,27 @@ export default function NewSavedSearchDialog({
       onCancel={handleCancel}
     >
       <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
+        {/* Name — optional label that allows multiple sources of the same kind */}
+        <div className="space-y-1">
+          <label htmlFor="source-name" className="block text-sm font-medium">
+            Name{" "}
+            <span className="text-muted-foreground font-normal">(optional)</span>
+          </label>
+          <input
+            id="source-name"
+            type="text"
+            maxLength={100}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="e.g. 'Stripe backend roles'"
+            className="w-full rounded border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          />
+          <p className="text-xs text-muted-foreground">
+            A label for this search. Required only if you want multiple active
+            searches of the same type — each must have a unique name.
+          </p>
+        </div>
+
         {/* Source picker */}
         <div className="space-y-1">
           <label htmlFor="source-select" className="block text-sm font-medium">

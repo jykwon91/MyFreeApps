@@ -35,6 +35,7 @@ async def create_source(
     *,
     user_id: uuid.UUID,
     source: str,
+    name: str = "",
     config: dict | None = None,
     fetch_interval_minutes: int = 1440,
 ) -> DiscoverySource:
@@ -42,6 +43,7 @@ async def create_source(
     row = DiscoverySource(
         user_id=user_id,
         source=source,
+        name=name,
         config=config or {},
         fetch_interval_minutes=fetch_interval_minutes,
     )
@@ -49,6 +51,28 @@ async def create_source(
     await db.flush()
     await db.refresh(row)
     return row
+
+
+async def find_active_source_by_name(
+    db: AsyncSession,
+    *,
+    user_id: uuid.UUID,
+    source: str,
+    name: str,
+) -> DiscoverySource | None:
+    """Return the active source matching (user_id, source, name), if any.
+
+    Used by the service layer for a pre-flight uniqueness check before
+    inserting a new row. Returns ``None`` when no conflict exists.
+    """
+    stmt = select(DiscoverySource).where(
+        DiscoverySource.user_id == user_id,
+        DiscoverySource.source == source,
+        DiscoverySource.name == name,
+        DiscoverySource.is_active.is_(True),
+    )
+    result = await db.execute(stmt)
+    return result.scalar_one_or_none()
 
 
 async def get_source(

@@ -64,12 +64,26 @@ export default function SavedSearchRow({ source }: SavedSearchRowProps) {
 
   const isFailing = source.consecutive_failures > 0;
 
+  // When the operator has named this source, render the name as the primary
+  // identifier and demote the source-kind badge to secondary. When no name
+  // is set, the badge IS the primary identifier (existing UX).
+  const hasName = source.name && source.name.length > 0;
+
   return (
     <Card className="p-3 flex items-center justify-between gap-3">
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <Badge label={getSourceLabel(source.source)} color={getSourceBadgeColor(source.source)} />
-          <span className="font-medium truncate text-sm">{query}</span>
+          {hasName ? (
+            <>
+              <span className="font-medium truncate text-sm">{source.name}</span>
+              <Badge label={getSourceLabel(source.source)} color={getSourceBadgeColor(source.source)} />
+            </>
+          ) : (
+            <>
+              <Badge label={getSourceLabel(source.source)} color={getSourceBadgeColor(source.source)} />
+              <span className="font-medium truncate text-sm">{query}</span>
+            </>
+          )}
           {isFailing && (
             <span className="inline-flex items-center gap-1 text-xs font-medium text-destructive shrink-0">
               <AlertTriangle className="w-3 h-3" aria-hidden="true" />
@@ -77,6 +91,9 @@ export default function SavedSearchRow({ source }: SavedSearchRowProps) {
             </span>
           )}
         </div>
+        {hasName && query && (
+          <p className="text-xs text-muted-foreground mt-0.5">{query}</p>
+        )}
         <p className="text-xs text-muted-foreground mt-1">
           {lastFetched}
           {source.last_error_message ? ` — ${source.last_error_message}` : ""}

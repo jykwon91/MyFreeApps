@@ -45,6 +45,9 @@ from app.schemas.discovery.discovery_schemas import (
 from app.services.discovery.discovery_promote_service import (
     DiscoveryPromoteError,
 )
+from app.services.discovery.discovery_source_service import (
+    DiscoverySourceNameConflictError,
+)
 from app.services.discovery import (
     discovery_embedding_service,
     discovery_fetch_service,
@@ -94,14 +97,24 @@ async def create_source(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> DiscoverySourceResponse:
-    """Create a new active saved search for the caller."""
-    src = await discovery_source_service.create_source(
-        db,
-        user_id=user.id,
-        source=payload.source,
-        config=payload.config,
-        fetch_interval_minutes=payload.fetch_interval_minutes,
-    )
+    """Create a new active saved search for the caller.
+
+    Status codes:
+    - 201 — source created
+    - 409 — an active source with the same kind + name already exists for this user
+    - 422 — invalid payload (bad source kind, config validation failure, etc.)
+    """
+    try:
+        src = await discovery_source_service.create_source(
+            db,
+            user_id=user.id,
+            source=payload.source,
+            name=payload.name,
+            config=payload.config,
+            fetch_interval_minutes=payload.fetch_interval_minutes,
+        )
+    except DiscoverySourceNameConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     return DiscoverySourceResponse.model_validate(src)
 
 

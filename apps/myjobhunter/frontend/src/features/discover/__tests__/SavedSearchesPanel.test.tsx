@@ -96,6 +96,7 @@ function makeSource(
   return {
     id: "src-1",
     source: "jsearch",
+    name: "",
     config: {},
     is_active: true,
     fetch_interval_minutes: 60,

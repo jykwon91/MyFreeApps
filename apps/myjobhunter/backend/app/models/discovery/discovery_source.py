@@ -48,6 +48,9 @@ class DiscoverySource(Base):
     )
 
     source: Mapped[str] = mapped_column(String(30), nullable=False)
+    name: Mapped[str] = mapped_column(
+        String(100), nullable=False, server_default="",
+    )
     config: Mapped[dict] = mapped_column(
         JSONB, nullable=False, server_default=text("'{}'::jsonb"),
     )
@@ -103,9 +106,10 @@ class DiscoverySource(Base):
         ),
         Index("ix_discovery_source_user", "user_id"),
         Index(
-            "uq_discovery_source_user_kind",
+            "uq_discovery_source_user_kind_name",
             "user_id",
             "source",
+            "name",
             unique=True,
             postgresql_where=text("is_active = true"),
         ),

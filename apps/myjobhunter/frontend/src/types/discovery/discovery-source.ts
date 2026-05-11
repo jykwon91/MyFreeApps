@@ -2,6 +2,8 @@
 export interface DiscoverySource {
   id: string;
   source: string;
+  /** Human-readable label. Empty string when not set. */
+  name: string;
   config: Record<string, unknown>;
   is_active: boolean;
   fetch_interval_minutes: number;

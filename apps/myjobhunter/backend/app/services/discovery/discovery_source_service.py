@@ -29,15 +29,24 @@ from app.services.discovery.discovery_scheduler_service import (
 logger = logging.getLogger(__name__)
 
 
+class DiscoverySourceNameConflictError(Exception):
+    """Raised when an active source with the same user+kind+name already exists."""
+
+
 async def create_source(
     db: AsyncSession,
     *,
     user_id: uuid.UUID,
     source: str,
+    name: str = "",
     config: dict | None = None,
     fetch_interval_minutes: int = 1440,
 ) -> DiscoverySource:
     """Create a new active saved search and commit the transaction.
+
+    Raises ``DiscoverySourceNameConflictError`` when another active source
+    for the same user, kind, and name already exists. The caller should
+    translate this to a 409 HTTP response.
 
     After commit, registers a scheduled fetch with APScheduler so the
     source is automatically refreshed on its configured cadence. A
@@ -46,10 +55,27 @@ async def create_source(
     manual refresh. The next process restart re-syncs the schedule via
     ``register_source_jobs``.
     """
+    # Pre-flight uniqueness check at the service layer so we can surface a
+    # clean 409 with a human-readable message instead of letting the DB raise
+    # an IntegrityError that would roll back the outer transaction.
+    existing = await discovery_repository.find_active_source_by_name(
+        db, user_id=user_id, source=source, name=name,
+    )
+    if existing is not None:
+        raise DiscoverySourceNameConflictError(
+            f"An active '{source}' source named {name!r} already exists. "
+            "Pick a different name to create a second source of this kind."
+            if name
+            else
+            f"An active '{source}' source already exists. "
+            "Give this source a name to add a second one of the same kind."
+        )
+
     src = await discovery_repository.create_source(
         db,
         user_id=user_id,
         source=source,
+        name=name,
         config=config,
         fetch_interval_minutes=fetch_interval_minutes,
     )
