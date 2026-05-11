@@ -15,6 +15,7 @@ import {
 } from "@/store/discoverApi";
 import type { DiscoverySource } from "@/types/discovery/discovery-source";
 import { summarizeSearchQuery, getSourceLabel, getSourceBadgeColor } from "./saved-search-summary";
+import { refreshIntervalShortLabel } from "./refresh-interval";
 
 interface SavedSearchRowProps {
   source: DiscoverySource;
@@ -25,9 +26,15 @@ export default function SavedSearchRow({ source }: SavedSearchRowProps) {
   const [deactivate, { isLoading: isDeactivating }] = useDeactivateDiscoverySourceMutation();
 
   const query = summarizeSearchQuery(source.config ?? {}, source.source);
+  // Schedule line: "Refreshes every 6h — last fetched 2h ago" (PR 5).
+  // Each source has an APScheduler job firing on its
+  // ``fetch_interval_minutes`` cadence. Surfacing the cadence here lets
+  // the operator see at a glance how often the search runs and how
+  // recent the last automatic run was.
+  const cadence = refreshIntervalShortLabel(source.fetch_interval_minutes);
   const lastFetched = source.last_fetched_at
-    ? `Last fetched ${timeAgo(source.last_fetched_at)}`
-    : "Never fetched";
+    ? `Refreshes ${cadence.toLowerCase()} — last fetched ${timeAgo(source.last_fetched_at)}`
+    : `Refreshes ${cadence.toLowerCase()} — never fetched yet`;
 
   async function handleRefresh() {
     try {

@@ -95,6 +95,47 @@ def _disable_discovery_embedding_background(monkeypatch: pytest.MonkeyPatch) -> 
 
 
 # ---------------------------------------------------------------------------
+# Default-mock the APScheduler wiring for the whole test session.
+#
+# discovery_scheduler_service spins up an AsyncIOScheduler with a
+# SQLAlchemyJobStore on every ``create_source`` call. Tests don't need
+# (or want) real scheduling — they want to assert behaviour at the
+# service / route layer. Mocking the scheduler at the module level keeps
+# every test that creates a source running in milliseconds rather than
+# hundreds of ms.
+#
+# Tests that genuinely need to verify scheduler behaviour
+# (test_discovery_scheduler_service.py) override these by re-patching
+# the module symbols with their own fakes inside the test function.
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(autouse=True)
+def _disable_discovery_scheduler(monkeypatch: pytest.MonkeyPatch) -> None:
+    """No-op the APScheduler CRUD helpers for every test by default."""
+    from app.services.discovery import discovery_scheduler_service
+
+    def _noop_add(*args, **kwargs) -> None:
+        return None
+
+    def _noop_remove(*args, **kwargs) -> None:
+        return None
+
+    def _noop_update(*args, **kwargs) -> None:
+        return None
+
+    monkeypatch.setattr(
+        discovery_scheduler_service, "add_source_job", _noop_add,
+    )
+    monkeypatch.setattr(
+        discovery_scheduler_service, "remove_source_job", _noop_remove,
+    )
+    monkeypatch.setattr(
+        discovery_scheduler_service, "update_source_job", _noop_update,
+    )
+
+
+# ---------------------------------------------------------------------------
 # Reset module-level limiter state between tests (PR C3)
 # ---------------------------------------------------------------------------
 
