@@ -3,7 +3,7 @@
 Issues discovered during development. New entries are appended; resolved entries are
 removed and the counts in this header are updated.
 
-**Open issues: 14 (Critical: 0 / High: 2 blocked-on-react-19 / Medium: 5 deferred-or-blocked / Low: 7 deferred-or-environmental)**
+**Open issues: 16 (Critical: 0 / High: 2 blocked-on-react-19 / Medium: 7 deferred-or-blocked / Low: 7 deferred-or-environmental)**
 
 > Status (2026-05-08 PM): All actionable audit items resolved across batches PR #492-#528 (~30 PRs). Remaining open entries are either (a) blocked on the React 18→19 monorepo bump (5 items), (b) deferred-by-design conventions or follow-ups (4), (c) environmental issues unrelated to code (3: asyncpg Windows, test hang on Windows, Quality Gate false-positive), or (d) intentional accepted lint warnings (2).
 
@@ -646,3 +646,25 @@ keep lint green while the underlying patterns are fixed. These are warnings, not
   manages own state) + outer shell that passes `key={currentUser?.id}` to force remount when
   data arrives. Eliminates the `useEffect` + `useState` initialization pattern entirely.
 
+
+---
+
+## Discovery adapter follow-ups (2026-05-11)
+
+### [Discovery] Greenhouse/Lever postings not filtered by post_fetch_filters min_salary / excluded_keywords
+
+**Severity:** Medium
+**Effort:** Low
+**Location:** `apps/myjobhunter/backend/app/services/discovery/discovery_fetch_service.py`, `_apply_post_fetch_filters`
+**Problem:** `_apply_post_fetch_filters` runs for all sources including Greenhouse and Lever, but those sources never have `min_salary_usd` or `excluded_keywords` in their config (their configs only have `board_token` / `company_slug`). This is currently a no-op — correct behavior — but if we ever want to allow operators to set exclusion filters on Greenhouse/Lever sources, there's no UI path for it. The filter function would need to be made aware of per-source config shapes.
+**Recommendation:** When adding filter-by-keyword support to Greenhouse/Lever sources, add `excluded_keywords` as an optional field to `GreenhouseSourceConfig` / `LeverSourceConfig` (same field, same validation), add the UI field to `GreenhouseConfigSection` / `LeverConfigSection`, and the existing filter logic picks it up automatically. No backend service changes needed.
+
+---
+
+### [Discovery] Greenhouse company_name is fetched in a second HTTP call per board fetch
+
+**Severity:** Medium
+**Effort:** Low
+**Location:** `apps/myjobhunter/backend/app/services/discovery/sources/greenhouse.py`, `_fetch_company_name`
+**Problem:** Every `fetch_board()` call makes two HTTP requests: one for the company metadata (to get the display name) and one for the jobs list. This is correct behavior but doubles the per-source latency and Greenhouse API usage. For a single user with ~5 Greenhouse saved searches this is negligible; at scale it could matter.
+**Recommendation:** Cache the company name in the `DiscoverySource.config` JSONB column after the first successful fetch (same way `last_fetched_at` is updated). The fetch service already has a `mark_source_fetched` call that could also persist the resolved company name. Then skip the metadata call when the name is already cached. This is a low-priority optimization — only needed if Greenhouse sources become heavily used.
