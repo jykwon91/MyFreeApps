@@ -87,6 +87,11 @@ export default function DiscoverInboxView({ hasSources }: DiscoverInboxViewProps
   // simply has nothing to attach to.
   const hasUnscored = items.some((job) => job.score === null);
 
+  // Pass profile.updated_at to each card so the card can detect
+  // when its score was computed against an older profile snapshot
+  // (profile changed after scored_at → "Re-scoring soon" pill).
+  const profileUpdatedAt = profile?.updated_at ?? null;
+
   return (
     <div className="space-y-3">
       {profileBanner}
@@ -95,6 +100,7 @@ export default function DiscoverInboxView({ hasSources }: DiscoverInboxViewProps
           key={job.id}
           job={job}
           isScoringInFlight={hasUnscored}
+          profileUpdatedAt={profileUpdatedAt}
         />
       ))}
     </div>
