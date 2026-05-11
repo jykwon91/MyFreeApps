@@ -14,7 +14,7 @@ import {
   useRefreshDiscoverySourceMutation,
 } from "@/store/discoverApi";
 import type { DiscoverySource } from "@/types/discovery/discovery-source";
-import { summarizeSearchQuery } from "./saved-search-summary";
+import { summarizeSearchQuery, getSourceLabel, getSourceBadgeColor } from "./saved-search-summary";
 
 interface SavedSearchRowProps {
   source: DiscoverySource;
@@ -24,7 +24,7 @@ export default function SavedSearchRow({ source }: SavedSearchRowProps) {
   const [refresh, { isLoading: isRefreshing }] = useRefreshDiscoverySourceMutation();
   const [deactivate, { isLoading: isDeactivating }] = useDeactivateDiscoverySourceMutation();
 
-  const query = summarizeSearchQuery(source.config ?? {});
+  const query = summarizeSearchQuery(source.config ?? {}, source.source);
   const lastFetched = source.last_fetched_at
     ? `Last fetched ${timeAgo(source.last_fetched_at)}`
     : "Never fetched";
@@ -61,7 +61,7 @@ export default function SavedSearchRow({ source }: SavedSearchRowProps) {
     <Card className="p-3 flex items-center justify-between gap-3">
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <Badge label={source.source} color="gray" />
+          <Badge label={getSourceLabel(source.source)} color={getSourceBadgeColor(source.source)} />
           <span className="font-medium truncate text-sm">{query}</span>
           {isFailing && (
             <span className="inline-flex items-center gap-1 text-xs font-medium text-destructive shrink-0">

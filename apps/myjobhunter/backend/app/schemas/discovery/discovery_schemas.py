@@ -7,7 +7,9 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
 
+from app.schemas.discovery.greenhouse_source_config import GreenhouseSourceConfig
 from app.schemas.discovery.jsearch_source_config import JSearchSourceConfig
+from app.schemas.discovery.lever_source_config import LeverSourceConfig
 
 
 _VALID_SOURCES = (
@@ -51,13 +53,21 @@ class DiscoverySourceCreate(BaseModel):
 
     @model_validator(mode="after")
     def _validate_config_per_source(self) -> "DiscoverySourceCreate":
-        """Reject typo'd or out-of-enum config values for jsearch
-        sources at request time — operator gets a 422 with the field
-        name instead of a silently-no-op saved search."""
+        """Reject typo'd or out-of-enum config values at request time.
+
+        Each source with a shipped adapter gets strict config validation
+        here — the operator gets a 422 with the field name instead of a
+        silently-no-op saved search.  Sources that don't yet have an
+        adapter (``ashby``, ``remoteok``, etc.) still accept a loose dict.
+        """
         if self.source == "jsearch":
-            # ``model_validate`` raises ValidationError, FastAPI
-            # converts that to a 422 response automatically.
+            # ``model_validate`` raises ValidationError; FastAPI converts
+            # that to a 422 response automatically.
             JSearchSourceConfig.model_validate(self.config)
+        elif self.source == "greenhouse":
+            GreenhouseSourceConfig.model_validate(self.config)
+        elif self.source == "lever":
+            LeverSourceConfig.model_validate(self.config)
         return self
 
 
