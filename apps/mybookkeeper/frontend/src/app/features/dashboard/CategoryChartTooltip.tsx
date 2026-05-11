@@ -1,8 +1,8 @@
-import type { TooltipProps } from "recharts";
+import type { TooltipContentProps } from "recharts";
 import { formatCurrency } from "@/shared/utils/currency";
 import { TAG_COLORS } from "@/shared/lib/constants";
 
-export default function CategoryChartTooltip({ active, payload }: TooltipProps<number, string>) {
+export default function CategoryChartTooltip({ active, payload }: Partial<TooltipContentProps>) {
   if (!active || !payload?.length) return null;
   const entry = payload[0];
   if (!entry || typeof entry.value !== "number") return null;

@@ -8,8 +8,14 @@ export interface CategoryChartProps {
   onBarClick?: (category: string) => void;
 }
 
+interface CategoryChartRow {
+  name: string;
+  amount: number;
+  key: string;
+}
+
 export default function CategoryChart({ byCategory, onBarClick }: CategoryChartProps) {
-  const chartData = Object.entries(byCategory)
+  const chartData: CategoryChartRow[] = Object.entries(byCategory)
     .filter(([, amount]) => amount !== 0)
     .map(([key, amount]) => ({
       name: formatTag(key),
@@ -25,12 +31,15 @@ export default function CategoryChart({ byCategory, onBarClick }: CategoryChartP
       <BarChart data={chartData} layout="vertical" margin={{ left: 10 }}>
         <XAxis type="number" tickFormatter={(amount) => `$${(amount / 1000).toFixed(0)}k`} />
         <YAxis type="category" dataKey="name" width={130} tick={{ fontSize: 11 }} />
-        <Tooltip content={CategoryChartTooltip} />
+        <Tooltip content={<CategoryChartTooltip />} />
         <Bar
           dataKey="amount"
           barSize={20}
           cursor={onBarClick ? "pointer" : undefined}
-          onClick={(data: { key: string }) => onBarClick?.(data.key)}
+          onClick={(data) => {
+            const row = data.payload as CategoryChartRow | undefined;
+            if (row?.key) onBarClick?.(row.key);
+          }}
         >
           {chartData.map((entry) => (
             <Cell key={entry.key} fill={TAG_COLORS[entry.key] ?? "#94a3b8"} />

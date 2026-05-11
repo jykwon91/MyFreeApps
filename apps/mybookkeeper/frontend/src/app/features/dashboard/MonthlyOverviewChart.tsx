@@ -60,17 +60,18 @@ export default function MonthlyOverviewChart({
     return chartData.some((row) => (row[cat] as number) > 0);
   });
 
-  function handleMouseDown(e: { activeLabel?: string }) {
-    if (e.activeLabel) {
+  function handleMouseDown(e: { activeLabel?: string | number }) {
+    if (e.activeLabel != null) {
+      const label = String(e.activeLabel);
       isDragging.current = true;
-      setDragStart(e.activeLabel);
-      setDragEnd(e.activeLabel);
+      setDragStart(label);
+      setDragEnd(label);
     }
   }
 
-  function handleMouseMove(e: { activeLabel?: string }) {
-    if (isDragging.current && e.activeLabel) {
-      setDragEnd(e.activeLabel);
+  function handleMouseMove(e: { activeLabel?: string | number }) {
+    if (isDragging.current && e.activeLabel != null) {
+      setDragEnd(String(e.activeLabel));
     }
   }
 
@@ -124,7 +125,7 @@ export default function MonthlyOverviewChart({
           tick={{ fontSize: 11 }}
         />
         <Tooltip
-          content={MonthlyOverviewChartTooltip}
+          content={<MonthlyOverviewChartTooltip />}
           wrapperStyle={{ pointerEvents: "none" }}
           position={{ y: -10 }}
           offset={20}
@@ -149,11 +150,7 @@ export default function MonthlyOverviewChart({
                 fill={pk.revenueColor}
                 radius={[2, 2, 0, 0]}
                 cursor="pointer"
-                onClick={(
-                  _data: Record<string, unknown>,
-                  _index: number,
-                  e: React.MouseEvent,
-                ) => {
+                onClick={(_data, _index, e) => {
                   if (!isDragging.current) {
                     const entry = chartData[_index];
                     if (entry) onBarClick(buildFilter(`rev_${pk.propertyId}`, entry, propertyKeys));
@@ -169,11 +166,7 @@ export default function MonthlyOverviewChart({
                 fill="#22c55e"
                 radius={[2, 2, 0, 0]}
                 cursor="pointer"
-                onClick={(
-                  _data: Record<string, unknown>,
-                  _index: number,
-                  e: React.MouseEvent,
-                ) => {
+                onClick={(_data, _index, e) => {
                   if (!isDragging.current) {
                     const entry = chartData[_index];
                     if (entry) onBarClick(buildFilter("revenue", entry));
@@ -191,11 +184,7 @@ export default function MonthlyOverviewChart({
                 fill={pk.expenseColor}
                 radius={[2, 2, 0, 0]}
                 cursor="pointer"
-                onClick={(
-                  _data: Record<string, unknown>,
-                  _index: number,
-                  e: React.MouseEvent,
-                ) => {
+                onClick={(_data, _index, e) => {
                   if (!isDragging.current) {
                     const entry = chartData[_index];
                     if (entry) onBarClick(buildFilter(`exp_${pk.propertyId}`, entry, propertyKeys));
@@ -212,11 +201,7 @@ export default function MonthlyOverviewChart({
                 stackId="expenses"
                 fill={TAG_COLORS[cat] ?? "#94a3b8"}
                 cursor="pointer"
-                onClick={(
-                  _data: Record<string, unknown>,
-                  _index: number,
-                  e: React.MouseEvent,
-                ) => {
+                onClick={(_data, _index, e) => {
                   if (!isDragging.current) {
                     const entry = chartData[_index];
                     if (entry) onBarClick(buildFilter(cat, entry));

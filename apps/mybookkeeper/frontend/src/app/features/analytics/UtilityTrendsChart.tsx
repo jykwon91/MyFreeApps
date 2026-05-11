@@ -8,7 +8,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import type { Payload as LegendPayload } from "recharts/types/component/DefaultLegendContent";
+import type { LegendPayload } from "recharts";
 import { parse, format } from "date-fns";
 import { UTILITY_SUB_CATEGORY_COLORS, UTILITY_SUB_CATEGORIES } from "@/shared/lib/constants";
 import UtilityTrendsChartTooltip from "@/app/features/analytics/UtilityTrendsChartTooltip";
