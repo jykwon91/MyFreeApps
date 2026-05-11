@@ -19,7 +19,6 @@ from app.repositories.tax import tax_advisor_repo
 from app.repositories.tax import tax_carryforward_repo
 from app.repositories.tax import estimated_tax_payment_repo
 from app.repositories.integrations import integration_repo
-from app.repositories.integrations import plaid_repo
 from app.repositories.system import system_event_repo
 from app.repositories.system import usage_log_repo
 from app.repositories.system import audit_repo

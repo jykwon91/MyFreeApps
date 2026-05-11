@@ -1,6 +1,6 @@
 """
 Run with: python -m app.workers.scheduler
-Polls Gmail, Plaid, and channel iCal feeds for all connected integrations.
+Polls Gmail and channel iCal feeds for all connected integrations.
 
 Cycle cadence is driven by ``gmail_poll_interval_minutes`` (default 1440,
 i.e. once a day). The channel-iCal poll runs on every cycle — the
@@ -17,9 +17,8 @@ import time
 
 from app.core.config import settings
 from app.db.session import AsyncSessionLocal, unit_of_work
-from app.repositories import integration_repo, plaid_repo
+from app.repositories import integration_repo
 from app.repositories.leases import signed_lease_repo
-from app.services.integrations.plaid_sync_service import sync_plaid_item
 from app.services.listings.channel_sync_service import poll_all as poll_all_channels
 from app.workers.email_sync_worker import sync_gmail_for_user
 
@@ -30,16 +29,6 @@ async def get_gmail_user_ids() -> list[str]:
     """Return only user IDs whose Gmail token is still active (not in needs_reauth state)."""
     async with AsyncSessionLocal() as db:
         return await integration_repo.get_active_gmail_user_ids(db)
-
-
-async def sync_all_plaid_items() -> None:
-    async with unit_of_work() as db:
-        items = await plaid_repo.get_active_items(db)
-        for item in items:
-            try:
-                await sync_plaid_item(db, item, item.organization_id, item.user_id)
-            except Exception:
-                logger.exception("Plaid sync failed for item %s", item.plaid_item_id)
 
 
 async def sync_all_channel_calendars() -> None:
@@ -109,7 +98,6 @@ async def run_sync_cycle() -> None:
         logger.info("Running Gmail sync for user %s", user_id)
         await sync_gmail_for_user(user_id)
 
-    await sync_all_plaid_items()
     await sync_all_channel_calendars()
     await auto_end_replaced_leases()
 

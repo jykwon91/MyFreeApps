@@ -59,8 +59,6 @@ from app.models.tax.cost_basis_lot import CostBasisLot
 from app.models.tax.estimated_tax_payment import EstimatedTaxPayment
 from app.models.tax.tax_carryforward import TaxCarryforward
 from app.models.integrations.integration import Integration
-from app.models.integrations.plaid_item import PlaidItem
-from app.models.integrations.plaid_account import PlaidAccount
 from app.models.email.processed_email import ProcessedEmail
 from app.models.email.email_filter_log import EmailFilterLog
 from app.models.email.gmail_skipped_message import GmailSkippedMessage

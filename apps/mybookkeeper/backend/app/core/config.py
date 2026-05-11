@@ -3,7 +3,7 @@
 Inherits all common platform fields (database, auth, CORS, lockout, HIBP,
 Turnstile, email, MinIO, Sentry, logging) from
 platform_shared.core.settings.BaseAppSettings. Only MBK-specific fields
-(Plaid, Gmail integration, document extraction, cost accounting,
+(Gmail integration, document extraction, cost accounting,
 inquiry filters, etc.) live here.
 """
 
@@ -98,14 +98,6 @@ class Settings(BaseAppSettings):
     run_upload_worker: bool = True
     demo_max_uploads_per_day: int = 5
     max_blackout_attachment_size_bytes: int = 25 * 1024 * 1024  # 25 MB
-
-    # ------------------------------------------------------------------
-    # Plaid integration
-    # ------------------------------------------------------------------
-    plaid_client_id: str = ""
-    plaid_secret: str = ""
-    plaid_environment: str = "sandbox"
-    plaid_webhook_url: str = ""
 
     # ------------------------------------------------------------------
     # Analytics

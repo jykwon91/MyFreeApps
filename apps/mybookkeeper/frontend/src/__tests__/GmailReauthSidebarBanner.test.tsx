@@ -98,11 +98,11 @@ describe("GmailReauthSidebarBanner", () => {
 
   it("ignores a non-gmail provider with needs_reauth=true", () => {
     vi.mocked(useGetIntegrationsQuery).mockReturnValue({
-      data: [{ ...mockNeedsReauth, provider: "plaid" }],
+      data: [{ ...mockNeedsReauth, provider: "other_provider" }],
       isLoading: false,
     } as unknown as ReturnType<typeof useGetIntegrationsQuery>);
     const { container } = renderBanner();
-    // The banner only checks for gmail; a plaid provider should not trigger it.
+    // The banner only checks for gmail; other providers should not trigger it.
     expect(container.firstChild).toBeNull();
   });
 });

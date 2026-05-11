@@ -1,7 +1,7 @@
 # Tech Debt
 
 > Last scanned: 2026-05-08
-> Issues: 0 critical, 2 high, 4 medium (1 deferred + 3 active), 0 low
+> Issues: 0 critical, 2 high, 3 medium (0 deferred + 3 active), 0 low
 >
 > **Monorepo refactor audit (2026-05-08, post-resume-refinement work):** ~12 additional findings across three axes — backend reusability, frontend reusability, and long-files. Tracked under "## Monorepo refactor audit (2026-05-08)" below. These are extraction / split candidates, not regression bugs. Sister findings live in `apps/myjobhunter/TECH_DEBT.md`.
 
@@ -197,11 +197,8 @@ Circular-import avoided by moving `TemplateNotFoundError` and `extract_text_from
 
 ---
 
-### [Architecture] Inline Plaid imports -- try/except in plaid_client.py [DEFERRED]
-**Effort:** S
-**Location:** backend/app/integrations/plaid_client.py:10-23
-**Problem:** Plaid imports wrapped in try/except for optional dependency handling.
-**Recommendation:** [DEFERRED] -- Acceptable pattern for optional dependencies.
+### ~~[Architecture] Inline Plaid imports -- try/except in plaid_client.py~~ RESOLVED
+**Resolved:** feature/jkwon91/mbk-remove-plaid (2026-05-11) — entire Plaid integration removed from MBK (no longer in use). `plaid_client.py`, services, repos, models, schemas, routes, and the dependency wrapper all deleted; tables dropped via an Alembic migration. The optional-import question is moot now that the integration is gone.
 
 ---
 
