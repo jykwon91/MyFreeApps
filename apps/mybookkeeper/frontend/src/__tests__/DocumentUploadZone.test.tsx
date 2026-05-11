@@ -38,7 +38,7 @@ function buildTestStore(preloadedState?: Partial<RootState>) {
   });
 }
 
-function renderWithStore(ui: React.ReactElement<any>, storeOverride?: ReturnType<typeof buildTestStore>) {
+function renderWithStore(ui: React.ReactElement, storeOverride?: ReturnType<typeof buildTestStore>) {
   const testStore = storeOverride ?? buildTestStore();
   return render(
     <Provider store={testStore}>{ui}</Provider>,

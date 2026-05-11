@@ -68,7 +68,7 @@ const singlePeriodData: UtilityTrendsResponse = {
   total_spend: 120,
 };
 
-function renderWithProviders(ui: React.ReactElement<any>, initialEntries: string[] = ['/']) {
+function renderWithProviders(ui: React.ReactElement, initialEntries: string[] = ['/']) {
   return render(
     <Provider store={store}>
       <MemoryRouter initialEntries={initialEntries}>{ui}</MemoryRouter>

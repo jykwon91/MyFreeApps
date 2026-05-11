@@ -89,7 +89,7 @@ vi.mock("recharts", () => ({
 
 import { useGetSummaryQuery } from "@/shared/store/summaryApi";
 
-function renderWithProviders(ui: React.ReactElement<any>) {
+function renderWithProviders(ui: React.ReactElement) {
   return render(
     <Provider store={store}>
       <BrowserRouter>{ui}</BrowserRouter>

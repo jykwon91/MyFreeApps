@@ -44,7 +44,7 @@ import { useListMembersQuery, useListInvitesQuery } from '@/shared/store/members
 import { useActiveOrgId } from '@/shared/hooks/useCurrentOrg';
 import { useIsOrgAdmin } from '@/shared/hooks/useOrgRole';
 
-function renderWithProviders(ui: React.ReactElement<any>) {
+function renderWithProviders(ui: React.ReactElement) {
   return render(
     <Provider store={store}>
       <BrowserRouter>{ui}</BrowserRouter>

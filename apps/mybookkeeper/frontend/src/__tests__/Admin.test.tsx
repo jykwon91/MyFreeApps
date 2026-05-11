@@ -78,7 +78,7 @@ import {
 } from "@/shared/store/adminApi";
 import { useCurrentUser } from "@/shared/hooks/useCurrentUser";
 
-function renderWithProviders(ui: React.ReactElement<any>) {
+function renderWithProviders(ui: React.ReactElement) {
   return render(
     <Provider store={store}>
       <BrowserRouter>{ui}</BrowserRouter>

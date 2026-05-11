@@ -57,7 +57,7 @@ vi.mock('@/shared/hooks/useToast', () => ({
 
 import { useListTaxReturnsQuery } from '@/shared/store/taxReturnsApi';
 
-function renderWithProviders(ui: React.ReactElement<any>) {
+function renderWithProviders(ui: React.ReactElement) {
   return render(
     <Provider store={store}>
       <BrowserRouter>{ui}</BrowserRouter>

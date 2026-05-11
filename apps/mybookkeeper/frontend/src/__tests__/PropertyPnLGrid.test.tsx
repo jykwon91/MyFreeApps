@@ -54,7 +54,7 @@ vi.mock("@/shared/store/attributionApi", () => ({
 
 import { useGetPropertyPnlQuery } from "@/shared/store/attributionApi";
 
-function renderWithProviders(ui: React.ReactElement<any>) {
+function renderWithProviders(ui: React.ReactElement) {
   return render(
     <Provider store={store}>
       <BrowserRouter>{ui}</BrowserRouter>
