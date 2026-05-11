@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { createColumnHelper } from "@tanstack/react-table";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Trash2, Check, Landmark, Home, Copy } from "lucide-react";
+import { Trash2, Check, Home, Copy } from "lucide-react";
 import { compareAsc, parseISO } from "date-fns/fp";
 import { formatCurrency } from "@/shared/utils/currency";
 import { formatDate } from "@/shared/utils/date";
@@ -92,9 +92,7 @@ export function useTransactionColumns(propertyMap: ReadonlyMap<string, string>, 
         const pending = row.original.is_pending;
         return (
           <div className="flex items-center gap-1.5">
-            {source === "plaid" ? (
-              <span title="Bank transaction"><Landmark size={13} className="text-blue-500 shrink-0" /></span>
-            ) : source === "airbnb" ? (
+            {source === "airbnb" ? (
               <span title="Airbnb"><Home size={13} className="text-rose-500 shrink-0" /></span>
             ) : null}
             <span>{vendor}</span>

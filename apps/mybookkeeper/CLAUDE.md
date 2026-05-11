@@ -243,7 +243,7 @@ All AI-facing UI (extraction feedback, status messages, error states) should fee
 - **Gmail OAuth scope:** `gmail.readonly` + `gmail.send` (PR 2.3 widened the default). Pre-PR-2.3 integrations have no `gmail.send` scope and trigger a reconnect banner via `Integration.has_send_scope`.
 
 **OAuth token encryption:**
-- Gmail (and Plaid) OAuth tokens are encrypted at rest using Fernet symmetric encryption derived from `ENCRYPTION_KEY` via HKDF (see `backend/app/core/security.py`)
+- Gmail OAuth tokens are encrypted at rest using Fernet symmetric encryption derived from `ENCRYPTION_KEY` via HKDF (see `backend/app/core/security.py`)
 - The `Integration` model exposes `access_token` and `refresh_token` as hybrid properties that transparently encrypt on write and decrypt on read — callers interact with plaintext, the database stores ciphertext
 - Raw encrypted values live in `access_token_encrypted` and `refresh_token_encrypted` (both `Text` columns)
 - `key_version` (SmallInteger) tracks which key generation encrypted each row — currently always `1`

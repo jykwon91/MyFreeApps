@@ -4,7 +4,6 @@ import { baseApi } from "@/shared/store/baseApi";
 // Side-effect imports: register endpoints on the shared baseApi instance.
 import "@/shared/store/documentsApi";
 import "@/shared/store/integrationsApi";
-import "@/shared/store/plaidApi";
 import "@/shared/store/transactionsApi";
 import "@/shared/store/summaryApi";
 
@@ -124,12 +123,6 @@ describe("Summary cache invalidation on mutations", () => {
 
     it("extractAll triggers summary refetch", async () => {
       await assertInvalidatesSummary("extractAll", undefined);
-    });
-  });
-
-  describe("plaidApi mutations invalidate Summary", () => {
-    it("syncPlaidItem triggers summary refetch", async () => {
-      await assertInvalidatesSummary("syncPlaidItem", "item-1");
     });
   });
 

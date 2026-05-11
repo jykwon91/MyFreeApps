@@ -223,7 +223,6 @@
         "backend/app/repositories/integrations/",
         "backend/app/schemas/integrations/",
         "backend/app/api/integrations.py",
-        "backend/app/api/plaid.py",
         "frontend/src/app/pages/Integrations.tsx",
         "frontend/src/app/features/integrations/",
         "frontend/src/shared/store/integrationsApi.ts",
@@ -231,9 +230,6 @@
       ],
       "backend_tests": [
         "test_gmail_auth_expired.py",
-        "test_plaid_sync.py",
-        "test_plaid_webhook_service.py",
-        "test_plaid_webhook_verifier.py",
         "test_email_discovery_last_synced.py"
       ],
       "frontend_tests": [

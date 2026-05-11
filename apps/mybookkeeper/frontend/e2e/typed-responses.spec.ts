@@ -62,21 +62,6 @@ test.describe("Typed response shapes — common mutations", () => {
     });
   });
 
-  test.describe("Plaid sync endpoint", () => {
-    test("POST /plaid/items/{item_id}/sync returns 404 for non-existent item", async ({ api }) => {
-      const fakeId = "00000000-0000-0000-0000-000000000000";
-      const res = await api.post(`/plaid/items/${fakeId}/sync`);
-      // Either 404 (item not found) or 200 with { status, records_added }
-      if (res.ok()) {
-        const data = await res.json();
-        expect(typeof data.status).toBe("string");
-        expect(typeof data.records_added).toBe("number");
-      } else {
-        expect(res.status()).toBeLessThan(500);
-      }
-    });
-  });
-
   test.describe("TOTP status endpoint", () => {
     test("GET /auth/totp/status returns { enabled: boolean }", async ({ api }) => {
       const res = await api.get("/auth/totp/status");
