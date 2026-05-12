@@ -1,0 +1,49 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`YearFilter > matches snapshot for 'all' value 1`] = `
+<select
+  aria-label="Filter by year"
+  class="rounded-md border border-border px-3 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors cursor-pointer min-h-[36px] sm:min-h-[32px]"
+  data-testid="year-filter"
+>
+  <option
+    value="all"
+  >
+    All time
+  </option>
+  <option
+    value="2026"
+  >
+    2026
+  </option>
+  <option
+    value="2025"
+  >
+    2025
+  </option>
+</select>
+`;
+
+exports[`YearFilter > matches snapshot for numeric year value 1`] = `
+<select
+  aria-label="Filter by year"
+  class="rounded-md border border-border px-3 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors cursor-pointer min-h-[36px] sm:min-h-[32px]"
+  data-testid="year-filter"
+>
+  <option
+    value="all"
+  >
+    All time
+  </option>
+  <option
+    value="2026"
+  >
+    2026
+  </option>
+  <option
+    value="2025"
+  >
+    2025
+  </option>
+</select>
+`;

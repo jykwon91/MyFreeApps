@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { formatCurrency } from "@/shared/utils/currency";
 import { formatTag } from "@/shared/utils/tag";
@@ -7,6 +7,8 @@ import { useGetHealthSummaryQuery } from "@/shared/store/healthApi";
 import { useGetPropertiesQuery } from "@/shared/store/propertiesApi";
 import { useCurrentUser } from "@/shared/hooks/useCurrentUser";
 import { useDashboardFilter } from "@/shared/hooks/useDashboardFilter";
+import { useSelectedYear } from "@/shared/hooks/useSelectedYear";
+import { useDashboardYears } from "@/shared/hooks/useDashboardYears";
 import SummaryCard from "@/app/features/dashboard/SummaryCard";
 import MonthlyAverageCard from "@/app/features/dashboard/MonthlyAverageCard";
 import MonthlyChart from "@/app/features/dashboard/MonthlyChart";
@@ -35,11 +37,21 @@ function getThisMonthRange(): { since: string; until: string } {
   return { since, until };
 }
 
+function yearToDateRange(year: number): DateRange {
+  return {
+    startDate: `${year}-01-01`,
+    endDate: `${year}-12-31`,
+  };
+}
+
 export default function Dashboard() {
-  const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  // manualDateRange is set by chart drag; cleared when user picks a year
+  const [manualDateRange, setManualDateRange] = useState<DateRange | undefined>();
   const [drillDown, setDrillDown] = useState<DrillDownFilter | null>(null);
   const [selectedPropertyIds, setSelectedPropertyIds] = useState<string[]>([]);
   const [pnlDateRange, setPnlDateRange] = useState(getThisMonthRange);
+
+  const [selectedYear, setSelectedYear] = useSelectedYear();
 
   const { user } = useCurrentUser();
   const isAdmin = user?.role === "admin";
@@ -50,6 +62,13 @@ export default function Dashboard() {
 
   const { data: properties = [] } = useGetPropertiesQuery();
 
+  // Compute effective dateRange: manual override wins; then year selection; "all" → undefined
+  const dateRange = useMemo<DateRange | undefined>(() => {
+    if (manualDateRange) return manualDateRange;
+    if (selectedYear === "all") return undefined;
+    return yearToDateRange(selectedYear);
+  }, [manualDateRange, selectedYear]);
+
   const { data: summary, isLoading } = useGetSummaryQuery(
     {
       startDate: dateRange?.startDate,
@@ -57,6 +76,8 @@ export default function Dashboard() {
       propertyIds: selectedPropertyIds.length > 0 ? selectedPropertyIds : undefined,
     },
   );
+
+  const availableYears = useDashboardYears(summary);
 
   const {
     filterState,
@@ -72,7 +93,7 @@ export default function Dashboard() {
   const activePropertyIds = allPropertiesSelected ? undefined : selectedPropertyIds;
 
   const headerMode = useDashboardHeaderMode({
-    dateRange,
+    dateRange: manualDateRange,
     healthSummary,
     byMonthLength: summary?.by_month?.length ?? 0,
   });
@@ -81,7 +102,7 @@ export default function Dashboard() {
     headerMode.subtitle === "none" ? undefined : (
       <DashboardHeaderSubtitle
         mode={headerMode.subtitle}
-        dateRange={dateRange}
+        dateRange={manualDateRange}
         healthSummary={healthSummary}
       />
     );
@@ -90,7 +111,7 @@ export default function Dashboard() {
     headerMode.actions === "none" ? undefined : (
       <DashboardHeaderActions
         mode={headerMode.actions}
-        onResetDateRange={() => setDateRange(undefined)}
+        onResetDateRange={() => setManualDateRange(undefined)}
       />
     );
 
@@ -177,6 +198,12 @@ export default function Dashboard() {
           properties={properties}
           selectedPropertyIds={selectedPropertyIds}
           onPropertyIdsChange={setSelectedPropertyIds}
+          selectedYear={selectedYear}
+          onYearChange={(year) => {
+            setSelectedYear(year);
+            setManualDateRange(undefined);
+          }}
+          availableYears={availableYears}
         />
       )}
 
@@ -209,7 +236,7 @@ export default function Dashboard() {
                 : undefined
             }
             onBarClick={handleDrillDown}
-            onRangeSelect={setDateRange}
+            onRangeSelect={setManualDateRange}
             selectedCategories={
               isFiltered ? filterState.selectedCategories : undefined
             }
