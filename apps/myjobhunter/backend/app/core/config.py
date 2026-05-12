@@ -7,6 +7,8 @@ platform_shared.core.settings.BaseAppSettings. Only MJH-specific fields
 limits) live here.
 """
 
+from pydantic import Field
+
 from platform_shared.core.settings import BaseAppSettings
 
 
@@ -55,6 +57,17 @@ class Settings(BaseAppSettings):
     # mirror the previous hardcoded values in api/discover.py.
     discovery_refresh_rate_limit_threshold: int = 30
     discovery_refresh_rate_limit_window_seconds: int = 300
+
+    # Number of JSearch pages to retrieve per saved-search fetch cycle.
+    # JSearch charges 1 RapidAPI request per page; each page returns ~10
+    # postings. At the default of 5 pages (~50 postings per fetch), one
+    # operator with 5 saved searches fetching once per day uses ~750
+    # req/month — well within the Pro tier ($9.99/mo, 10k req/mo).
+    # Floor: 1 (minimum useful fetch). Ceiling: 20 (hard cost guard;
+    # 20 pages × 10 searches × 2 fetches/day = 4k req/month, still
+    # within Pro). Tune down if you want to conserve budget; tune up if
+    # you want deeper result diversity.
+    discovery_jsearch_pages_per_fetch: int = Field(default=5, ge=1, le=20)
 
     # ------------------------------------------------------------------
     # Google OAuth (Gmail integration — Phase 3)
