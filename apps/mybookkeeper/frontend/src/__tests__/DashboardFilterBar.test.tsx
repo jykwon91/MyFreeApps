@@ -30,6 +30,9 @@ function defaultProps(overrides?: Record<string, unknown>) {
     properties: [] as Property[],
     selectedPropertyIds: [] as string[],
     onPropertyIdsChange: vi.fn(),
+    selectedYear: new Date().getFullYear() as number | "all",
+    onYearChange: vi.fn(),
+    availableYears: [new Date().getFullYear()],
     ...overrides,
   };
 }

@@ -36,10 +36,14 @@ export default function DashboardSkeleton() {
         </div>
       </Card>
 
-      {/* Filter bar — matches DashboardFilterBar */}
+      {/* Filter bar — matches DashboardFilterBar (year filter + property + category presets) */}
       <div className="bg-card border rounded-lg px-4 py-3 flex items-center gap-3">
         <Skeleton className="h-4 w-4" />
         <Skeleton className="h-4 w-12" />
+        {/* Year filter select */}
+        <Skeleton className="h-9 w-20 rounded-md" />
+        <div className="h-6 w-px bg-muted" aria-hidden />
+        {/* Property multi-select */}
         <Skeleton className="h-9 w-36 rounded-md" />
         <div className="flex gap-2 ml-2">
           <Skeleton className="h-8 w-12 rounded-md" />

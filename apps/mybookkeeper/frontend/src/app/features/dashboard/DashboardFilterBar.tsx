@@ -4,8 +4,10 @@ import { cn } from "@/shared/utils/cn";
 import { INCOME_CATEGORY_LIST, EXPENSE_CATEGORY_LIST_FILTER } from "@/shared/lib/dashboard-filter-config";
 import PropertyMultiSelect from "@/shared/components/PropertyMultiSelect";
 import CategoryChip from "@/app/features/dashboard/CategoryChip";
+import YearFilter from "@/shared/components/ui/YearFilter";
 import type { CategoryFilterPreset, CategoryFilterState } from "@/shared/types/dashboard/category-filter";
 import type { Property } from "@/shared/types/property/property";
+import type { YearOption } from "@/shared/types/dashboard/year-option";
 
 export interface DashboardFilterBarProps {
   filterState: CategoryFilterState;
@@ -17,6 +19,9 @@ export interface DashboardFilterBarProps {
   properties: Property[];
   selectedPropertyIds: string[];
   onPropertyIdsChange: (ids: string[]) => void;
+  selectedYear: YearOption;
+  onYearChange: (year: YearOption) => void;
+  availableYears: number[];
 }
 
 const PRESETS: { key: CategoryFilterPreset; label: string }[] = [
@@ -35,6 +40,9 @@ export default function DashboardFilterBar({
   properties,
   selectedPropertyIds,
   onPropertyIdsChange,
+  selectedYear,
+  onYearChange,
+  availableYears,
 }: DashboardFilterBarProps) {
   const [expanded, setExpanded] = useState(false);
   const [touchedGroups, setTouchedGroups] = useState<Set<string>>(new Set());
@@ -68,6 +76,16 @@ export default function DashboardFilterBar({
           <Filter size={16} />
           <span className="text-sm font-medium hidden sm:inline">Filters</span>
         </div>
+
+        {/* Year filter */}
+        <YearFilter
+          value={selectedYear}
+          onChange={onYearChange}
+          availableYears={availableYears}
+        />
+
+        {/* Separator between year and property filters */}
+        <div className="h-6 w-px bg-border hidden sm:block" aria-hidden />
 
         {/* Property multi-select */}
         {properties.length > 0 && (

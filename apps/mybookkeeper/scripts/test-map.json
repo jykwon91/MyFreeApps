@@ -817,7 +817,10 @@
         "frontend/src/pages/Dashboard.tsx",
         "frontend/src/features/transactions/",
         "frontend/src/features/dashboard/",
-        "frontend/src/shared/types/dashboard/"
+        "frontend/src/shared/types/dashboard/",
+        "frontend/src/shared/components/ui/YearFilter.tsx",
+        "frontend/src/shared/hooks/useSelectedYear.ts",
+        "frontend/src/shared/hooks/useDashboardYears.ts"
       ],
       "backend_tests": [
         "test_bank_csv_parser.py",
@@ -848,6 +851,9 @@
         "MergeFieldRow.test.tsx",
         "ExportDropdown.test.tsx",
         "useDashboardFilter.test.ts",
+        "useSelectedYear.test.ts",
+        "useDashboardYears.test.ts",
+        "YearFilter.test.tsx",
         "useDocumentColumns.test.tsx",
         "chart-utils.test.ts",
         "SortIndicator.test.tsx"
@@ -856,6 +862,7 @@
         "transactions.spec.ts",
         "dashboard-filter.spec.ts",
         "dashboard.spec.ts",
+        "dashboard-year-filter.spec.ts",
         "reconciliation.spec.ts"
       ]
     },
