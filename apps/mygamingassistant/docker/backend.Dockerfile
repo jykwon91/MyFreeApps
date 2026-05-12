@@ -17,6 +17,7 @@ ENV GIT_COMMIT=${GIT_COMMIT}
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         postgresql-client \
+        ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

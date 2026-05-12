@@ -126,3 +126,30 @@ export interface ZoneDensity {
     by_utility: Record<string, number>;
   };
 }
+
+// ---------------------------------------------------------------------------
+// Source domain
+// ---------------------------------------------------------------------------
+
+export type SourceKind = "youtube_playlist" | "youtube_channel";
+
+export interface Source {
+  id: string;
+  kind: SourceKind;
+  /** Raw config JSON from the backend — contains url/channel_url, last_sync_stats. */
+  config_json: Record<string, unknown>;
+  last_synced_at: string | null;
+  created_at: string;
+}
+
+export interface SourceCreate {
+  kind: SourceKind;
+  url: string;
+}
+
+export interface SyncJobResponse {
+  job_id: string;
+  source_id: string;
+  status: string;
+  message: string;
+}

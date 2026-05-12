@@ -29,7 +29,7 @@ from app.repositories.game.lineup_repo import (
     update_lineup,
     zone_density,
 )
-from app.schemas.game.lineup_schemas import LineupCreate, LineupPatch, UploadUrlResponse
+from app.schemas.game.lineup_schemas import LineupCreate, LineupIngestCreate, LineupPatch, UploadUrlResponse
 
 # Presigned PUT URLs are valid for 15 minutes — enough time for the browser
 # to complete the upload, short enough to reduce exposure on leaked URLs.
@@ -126,15 +126,13 @@ async def create(
     payload: LineupCreate,
     lineup_id: Optional[uuid.UUID] = None,
 ) -> Lineup:
-    """Create a lineup. status='accepted' for manual uploads (no review step)."""
-    if settings.minio_skip_startup_check:
-        # Local dev with MinIO disabled — store keys as-is (no signing)
-        stand_url = payload.stand_screenshot_key
-        aim_url = payload.aim_screenshot_key
-    else:
-        # Validate that the keys exist in MinIO (optional — removes orphan rows)
-        stand_url = payload.stand_screenshot_key
-        aim_url = payload.aim_screenshot_key
+    """Create a lineup via the manual upload path.
+
+    All classification fields are required. Status is always set to 'accepted'
+    so the lineup appears in the library immediately.
+    """
+    stand_url = payload.stand_screenshot_key
+    aim_url = payload.aim_screenshot_key
 
     data: dict = {
         "game_id": payload.game_id,
@@ -159,6 +157,38 @@ async def create(
 
     lineup = await create_lineup(db, data)
     return _sign_lineup(lineup)
+
+
+async def create_from_ingestion(
+    db: AsyncSession,
+    payload: LineupIngestCreate,
+) -> Lineup:
+    """Create a lineup from the ingestion pipeline.
+
+    Classification fields are nullable — the Claude classifier (PR 5) fills
+    them in after this row is created. Status is always 'pending_review'.
+    """
+    data: dict = {
+        "source_id": payload.source_id,
+        "title": payload.title,
+        "youtube_video_id": payload.youtube_video_id,
+        "chapter_start_seconds": payload.chapter_start_seconds,
+        "chapter_title": payload.chapter_title,
+        "stand_screenshot_url": payload.stand_screenshot_url,
+        "aim_screenshot_url": payload.aim_screenshot_url,
+        "attribution_url": payload.attribution_url,
+        "attribution_author": payload.attribution_author,
+        "game_id": payload.game_id,
+        "map_id": payload.map_id,
+        # Classification fields left null (PR 5 fills these)
+        "target_zone_id": None,
+        "stand_zone_id": None,
+        "utility_type_id": None,
+        "side": None,
+        "status": "pending_review",
+    }
+    lineup = await create_lineup(db, data)
+    return lineup
 
 
 async def get(

@@ -1,6 +1,7 @@
 import { Outlet, ScrollRestoration, useSearchParams } from "react-router-dom";
 import {
   Gamepad2,
+  PlaySquare,
   Settings,
   Shield,
 } from "lucide-react";
@@ -25,6 +26,7 @@ function projectUser(user: CurrentUser | undefined): { name: string; email: stri
 
 const ICONS: Record<string, React.ReactNode> = {
   Gamepad2: <Gamepad2 className="w-5 h-5" />,
+  PlaySquare: <PlaySquare className="w-5 h-5" />,
   Settings: <Settings className="w-5 h-5" />,
   Shield: <Shield className="w-5 h-5" />,
 };

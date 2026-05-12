@@ -63,5 +63,17 @@ class Settings(BaseAppSettings):
     # ------------------------------------------------------------------
     max_lineup_screenshot_bytes: int = 10 * 1024 * 1024  # 10 MB per screenshot
 
+    # ------------------------------------------------------------------
+    # Ingestion pipeline (PR 4+)
+    # ------------------------------------------------------------------
+    # Directory where yt-dlp downloads video files before ffmpeg extraction.
+    # The ingestion orchestrator cleans up files after processing each video.
+    # Ensure this path has >= INGESTION_DOWNLOAD_DIR_MAX_GB of free space.
+    ingestion_download_dir: str = "/tmp/mga-ingestion"
+    # Disk cap in GB — ingestion refuses to start if free space falls below this.
+    # Operator can raise this if they have more disk; lower values are risky
+    # for long-form videos (CS2 full-map videos can exceed 1 GB each).
+    ingestion_download_dir_max_gb: int = 10
+
 
 settings = Settings()

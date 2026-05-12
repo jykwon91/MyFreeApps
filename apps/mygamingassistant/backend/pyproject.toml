@@ -27,6 +27,9 @@ dependencies = [
     "sentry-sdk[fastapi]==2.59.0",
     "pyotp==2.9.0",
     "qrcode[pil]==8.2",
+    # YouTube ingestion — yt-dlp for video/playlist metadata + download.
+    # Pinned to latest stable as of 2026-05. Bump on yt-dlp breakage (expected ~3-4x/year).
+    "yt-dlp==2026.3.17",
 ]
 
 [tool.uv]
