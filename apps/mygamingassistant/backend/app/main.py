@@ -49,13 +49,17 @@ logging.basicConfig(
 logger = logging.getLogger("app")
 
 
-async def _on_startup() -> None:
-    """MGA-specific startup: seed the single operator user.
+class ClassifierNotConfiguredError(RuntimeError):
+    """Raised at startup when ENABLE_CLASSIFIER=true but ANTHROPIC_API_KEY is missing."""
 
-    Boot guard (mirrors seed_user_service docstring):
-      - production: both env vars must be set or SeedUserNotConfiguredError
-        is raised, the lifespan crashes, and the deploy healthcheck fails.
-      - development: missing vars log a WARNING and the seed is skipped.
+
+async def _on_startup() -> None:
+    """MGA-specific startup: seed the single operator user + classifier boot guard.
+
+    Boot guards:
+      - production: SEED_USER_EMAIL + SEED_USER_PASSWORD_HASH required.
+      - production + ENABLE_CLASSIFIER=true: ANTHROPIC_API_KEY required.
+      - development: missing vars log WARNING and seed/classifier are skipped.
     """
     email = settings.seed_user_email
     hashed_password = settings.seed_user_password_hash
@@ -73,6 +77,20 @@ async def _on_startup() -> None:
         return
 
     await seed_operator_user(email, hashed_password)
+
+    # Classifier boot guard: fail loud in production if classifier is enabled
+    # but ANTHROPIC_API_KEY is not set.
+    if settings.enable_classifier and not settings.anthropic_api_key:
+        if settings.environment == "production":
+            raise ClassifierNotConfiguredError(
+                "ENABLE_CLASSIFIER=true but ANTHROPIC_API_KEY is not set. "
+                "Set ANTHROPIC_API_KEY in apps/mygamingassistant/backend/.env.docker "
+                "or set ENABLE_CLASSIFIER=false to disable auto-classification."
+            )
+        logger.warning(
+            "_on_startup: ENABLE_CLASSIFIER=true but ANTHROPIC_API_KEY is empty "
+            "— classifier will log warnings and skip calls in non-production environment."
+        )
 
 
 lifespan = create_app_lifespan(
@@ -214,6 +232,13 @@ for _route in totp.router.routes:
         _route.dependencies.append(Depends(check_login_rate_limit))
 app.include_router(totp.router)
 
+
+# Test helpers — only mounted when MGA_ENABLE_TEST_HELPERS=1.
+# Provides rate-limit reset + seed-lineup endpoints for E2E tests.
+# Never set this flag in production.
+if settings.mga_enable_test_helpers:
+    from app.test_helpers.router import router as _test_helpers_router
+    app.include_router(_test_helpers_router)
 
 # Deploy verification — exposes the git commit + boot timestamp so the
 # deploy workflow can confirm which commit is live without parsing logs.

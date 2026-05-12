@@ -88,9 +88,11 @@ export default function LineupCard({
                 {lineup.utility_type.name}
               </span>
             )}
-            <span className="text-xs text-muted-foreground">
-              Side: {SIDE_LABELS[lineup.side] ?? lineup.side}
-            </span>
+            {lineup.side && (
+              <span className="text-xs text-muted-foreground">
+                Side: {SIDE_LABELS[lineup.side] ?? lineup.side}
+              </span>
+            )}
             {lineup.setup_seconds != null && (
               <span className="text-xs flex items-center gap-0.5 text-muted-foreground">
                 <Clock className="w-3 h-3" />

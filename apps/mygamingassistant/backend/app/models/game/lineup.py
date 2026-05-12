@@ -118,6 +118,38 @@ class Lineup(Base):
     chapter_start_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
     chapter_title: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
+    # Classifier suggestions (PR 5) — written by classify_lineup(); user accepts
+    # or overrides in the review queue. Distinct from the "accepted" FK columns
+    # so the user can see side-by-side what was suggested vs what they chose.
+    suggested_game_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("game.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    suggested_map_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("map.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    suggested_target_zone_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("map_zone.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    suggested_stand_zone_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("map_zone.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    suggested_side: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    suggested_utility_type_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("utility_type.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    classification_confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+    classification_reasoning: Mapped[str | None] = mapped_column(Text, nullable=True)
+
     # Attribution
     source_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
@@ -145,8 +177,14 @@ class Lineup(Base):
         onupdate=lambda: datetime.now(timezone.utc),
     )
 
-    game: Mapped["Game"] = relationship("Game", back_populates="lineups")
-    map: Mapped["Map"] = relationship("Map", back_populates="lineups")
+    # Relationships — explicit foreign_keys required because suggested_* columns
+    # create multiple FK paths between lineup and game/map/map_zone/utility_type.
+    game: Mapped["Game"] = relationship(
+        "Game", foreign_keys=[game_id], back_populates="lineups"
+    )
+    map: Mapped["Map"] = relationship(
+        "Map", foreign_keys=[map_id], back_populates="lineups"
+    )
     target_zone: Mapped["MapZone | None"] = relationship(
         "MapZone", foreign_keys=[target_zone_id], back_populates="lineups_as_target"
     )
@@ -154,7 +192,7 @@ class Lineup(Base):
         "MapZone", foreign_keys=[stand_zone_id], back_populates="lineups_as_stand"
     )
     utility_type: Mapped["UtilityType | None"] = relationship(
-        "UtilityType", back_populates="lineups"
+        "UtilityType", foreign_keys=[utility_type_id], back_populates="lineups"
     )
     source: Mapped["Source | None"] = relationship("Source", back_populates="lineups")
 

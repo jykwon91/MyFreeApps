@@ -8,16 +8,20 @@
  */
 import { baseApi } from "@platform/ui";
 import type {
+  BulkAcceptBody,
+  ClassifyResponse,
   Lineup,
+  LineupAcceptBody,
   LineupCreate,
   LineupPatch,
+  PendingLineupsResponse,
   UploadUrlResponse,
   ZoneDensity,
 } from "@/types/game";
 
 // Register lineup-specific tag types on the shared api instance.
 const lineupsBaseApi = baseApi.enhanceEndpoints({
-  addTagTypes: ["Lineup", "LineupList", "ZoneDensity"],
+  addTagTypes: ["Lineup", "LineupList", "ZoneDensity", "PendingLineups"],
 });
 
 export interface ListLineupsParams {
@@ -103,6 +107,59 @@ const lineupsApi = lineupsBaseApi.injectEndpoints({
     }),
 
     // ------------------------------------------------------------------
+    // Review queue endpoints (PR 5)
+    // ------------------------------------------------------------------
+
+    getPendingLineups: build.query<
+      PendingLineupsResponse,
+      { limit?: number; offset?: number; source_id?: string; confidence_max?: number; game_slug?: string }
+    >({
+      query: ({ limit = 50, offset = 0, source_id, confidence_max, game_slug }) => {
+        const sp = new URLSearchParams();
+        sp.set("limit", String(limit));
+        sp.set("offset", String(offset));
+        if (source_id) sp.set("source_id", source_id);
+        if (confidence_max !== undefined) sp.set("confidence_max", String(confidence_max));
+        if (game_slug) sp.set("game_slug", game_slug);
+        return { url: `/lineups/pending?${sp.toString()}`, method: "GET" };
+      },
+      providesTags: ["PendingLineups"],
+    }),
+
+    reclassifyLineup: build.mutation<ClassifyResponse, string>({
+      query: (id) => ({ url: `/lineups/${id}/classify`, method: "POST" }),
+      invalidatesTags: ["PendingLineups"],
+    }),
+
+    acceptLineup: build.mutation<Lineup, { id: string; body?: LineupAcceptBody }>({
+      query: ({ id, body }) => ({
+        url: `/lineups/${id}/accept`,
+        method: "POST",
+        body: body ?? {},
+      }),
+      invalidatesTags: (_result, _err, { id }) => [
+        { type: "Lineup", id },
+        "LineupList",
+        "PendingLineups",
+        "ZoneDensity",
+      ],
+    }),
+
+    hideLineup: build.mutation<Lineup, string>({
+      query: (id) => ({ url: `/lineups/${id}/hide`, method: "POST" }),
+      invalidatesTags: (_result, _err, id) => [
+        { type: "Lineup", id },
+        "LineupList",
+        "PendingLineups",
+      ],
+    }),
+
+    bulkAcceptLineups: build.mutation<Lineup[], BulkAcceptBody>({
+      query: (body) => ({ url: "/lineups/bulk-accept", method: "POST", body }),
+      invalidatesTags: ["LineupList", "PendingLineups", "ZoneDensity"],
+    }),
+
+    // ------------------------------------------------------------------
     // Zone density (map-level aggregate for density coloring)
     // ------------------------------------------------------------------
     getZoneDensity: build.query<ZoneDensity, ZoneDensityParams>({
@@ -129,4 +186,9 @@ export const {
   useUpdateLineupMutation,
   useDeleteLineupMutation,
   useGetZoneDensityQuery,
+  useGetPendingLineupsQuery,
+  useReclassifyLineupMutation,
+  useAcceptLineupMutation,
+  useHideLineupMutation,
+  useBulkAcceptLineupsMutation,
 } = lineupsApi;

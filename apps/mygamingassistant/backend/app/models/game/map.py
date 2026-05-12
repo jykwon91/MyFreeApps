@@ -50,7 +50,12 @@ class Map(Base):
     game: Mapped["Game"] = relationship("Game", back_populates="maps")
     zones: Mapped[list["MapZone"]] = relationship("MapZone", back_populates="map", lazy="select")
     sites: Mapped[list["Site"]] = relationship("Site", back_populates="map", lazy="select")
-    lineups: Mapped[list["Lineup"]] = relationship("Lineup", back_populates="map", lazy="select")
+    lineups: Mapped[list["Lineup"]] = relationship(
+        "Lineup",
+        foreign_keys="[Lineup.map_id]",
+        back_populates="map",
+        lazy="select",
+    )
 
 
 from app.models.game.game import Game  # noqa: E402, F401

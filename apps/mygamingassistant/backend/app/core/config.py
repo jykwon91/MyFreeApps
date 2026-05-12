@@ -40,10 +40,23 @@ class Settings(BaseAppSettings):
     seed_user_password_hash: str = ""
 
     # ------------------------------------------------------------------
-    # MGA AI (Claude classifier for lineup extraction — Phase 5)
-    # Optional in Phase 1; required when the classifier is wired in.
+    # MGA AI (Claude classifier for lineup extraction — PR 5+)
+    # ANTHROPIC_API_KEY is required when ENABLE_CLASSIFIER=true.
+    # Boot guard fires at startup if key is missing and classifier enabled.
+    # Override CLAUDE_CLASSIFIER_MODEL in dev/test to use a cheaper model.
     # ------------------------------------------------------------------
     anthropic_api_key: str = ""
+    claude_classifier_model: str = "claude-haiku-4-5-20251001"
+    # Set ENABLE_CLASSIFIER=false to land lineups without auto-classification.
+    # When false, lineups arrive in pending_review with no suggestions.
+    enable_classifier: bool = True
+
+    # ------------------------------------------------------------------
+    # Test-only helpers — never set in production.
+    # When true, /api/_test/* endpoints are mounted (rate-limit reset,
+    # seed lineup for E2E tests). Guarded by the mga_enable_test_helpers flag.
+    # ------------------------------------------------------------------
+    mga_enable_test_helpers: bool = False
 
     # ------------------------------------------------------------------
     # Per-IP login throttle — matches MJH defaults
