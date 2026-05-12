@@ -87,12 +87,6 @@ const TEMPLATE_SUMMARY: LeaseTemplateSummary = {
   updated_at: "2026-05-01T00:00:00Z",
 };
 
-const TEMPLATE_DETAIL = {
-  ...TEMPLATE_SUMMARY,
-  files: [],
-  placeholders: [],
-};
-
 const APPLICANTS: ApplicantSummary[] = [
   {
     id: "app-approved",
