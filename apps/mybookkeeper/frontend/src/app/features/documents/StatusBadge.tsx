@@ -1,22 +1,22 @@
-import Badge from "@/shared/components/ui/Badge";
+import { StatusBadge } from "@platform/ui";
 import { AlertCircle } from "lucide-react";
 
-interface StatusBadgeProps {
+interface DocumentStatusBadgeProps {
   status: string;
   errorMessage?: string | null;
 }
 
-export default function StatusBadge({ status, errorMessage }: StatusBadgeProps) {
+export default function DocumentStatusBadge({ status, errorMessage }: DocumentStatusBadgeProps) {
   switch (status) {
     case "processing":
     case "extracting":
-      return <Badge label="Extracting" color="blue" />;
+      return <StatusBadge tone="info" label="Extracting" />;
     case "completed":
       return <span className="text-green-500" title="Completed">&#10003;</span>;
     case "failed":
       return (
         <span className="inline-flex items-center gap-1.5" title={errorMessage ?? "Extraction failed"}>
-          <Badge label="Failed" color="red" />
+          <StatusBadge tone="danger" label="Failed" />
           {errorMessage && (
             <span className="text-muted-foreground">
               <AlertCircle size={14} />
@@ -25,8 +25,8 @@ export default function StatusBadge({ status, errorMessage }: StatusBadgeProps) 
         </span>
       );
     case "duplicate":
-      return <Badge label="Duplicate" color="red" />;
+      return <StatusBadge tone="danger" label="Duplicate" />;
     default:
-      return <Badge label={status} color="gray" />;
+      return <StatusBadge tone="neutral" label={status} />;
   }
 }

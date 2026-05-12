@@ -1,3 +1,4 @@
+import { StatusBadge } from "@platform/ui";
 import type { ApplicantSummary } from "@/shared/types/applicant/applicant-summary";
 
 export interface TenantStatusBadgeProps {
@@ -22,21 +23,19 @@ export default function TenantStatusBadge({ tenant, today }: TenantStatusBadgePr
 
   if (ended) {
     return (
-      <span
+      <StatusBadge
+        tone="neutral"
+        label="Ended"
         data-testid="tenant-status-badge-ended"
-        className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
-      >
-        Ended
-      </span>
+      />
     );
   }
 
   return (
-    <span
+    <StatusBadge
+      tone="success"
+      label="Active"
       data-testid="tenant-status-badge-active"
-      className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
-    >
-      Active
-    </span>
+    />
   );
 }

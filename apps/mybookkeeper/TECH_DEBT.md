@@ -1,8 +1,9 @@
 # Tech Debt
 
 > Last scanned: 2026-05-11
-> Issues: 0 critical, 4 high, 3 medium (0 deferred + 3 active), 0 low
+> Issues: 0 critical, 3 high, 3 medium (0 deferred + 3 active), 0 low
 > 2026-05-11 (PR 6 of React 19 migration): 1 HIGH resolved (Button/LoadingButton local copies → `@platform/ui`).
+> 2026-05-11 (StatusBadge PR): 1 HIGH resolved (Status-colored Badge → `@platform/ui` StatusBadge).
 >
 > **Monorepo refactor audit (2026-05-08, post-resume-refinement work):** ~12 additional findings across three axes — backend reusability, frontend reusability, and long-files. Tracked under "## Monorepo refactor audit (2026-05-08)" below. These are extraction / split candidates, not regression bugs. Sister findings live in `apps/myjobhunter/TECH_DEBT.md`.
 
@@ -84,12 +85,9 @@ Output of two parallel scans (backend + frontend) for code that should live in `
 
 ---
 
-#### HIGH — Status-colored Badge component
+#### ~~HIGH — Status-colored Badge component~~ RESOLVED
 
-**Effort:** S
-**Location:** MBK: `features/documents/StatusBadge.tsx:9-32`. Sister implementations in MJH: `features/admin/invites/InviteStatusBadge.tsx`, `features/documents/DocumentKindBadge.tsx`.
-**Problem:** Same enum→color-map→Badge render pattern in both apps, 3+ uses per app.
-**Recommendation:** Extract a generic `<StatusBadge value={...} colors={...} />` to `packages/shared-frontend/src/components/StatusBadge.tsx`. Both apps consume.
+**Resolved:** PR feat(shared-frontend): extract StatusBadge to @platform/ui (2026-05-11). Extracted `StatusBadge` component with semantic `tone: "neutral" | "info" | "success" | "warning" | "danger"` prop to `packages/shared-frontend/src/components/ui/StatusBadge.tsx`, re-exported from `@platform/ui` index. Rewrote MBK consumers: `SignedLeaseStatusBadge`, `TenantStatusBadge`, `ListingStatusBadge`, `documents/StatusBadge` (formerly using raw `Badge`). Rewrote MJH consumers: `InviteStatusBadge`, `DocumentKindBadge`. `TransactionStatusBadge` kept using `Badge` directly (uses orange/purple tones not in the semantic 5-tone model). `ChannelImportStatusBadge` and `InquirySpamBadge` kept as per-feature implementations (custom shapes). 15 unit tests for `StatusBadge` in `packages/shared-frontend/src/__tests__/StatusBadge.test.tsx`.
 
 ---
 
