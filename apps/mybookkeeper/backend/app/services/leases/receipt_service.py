@@ -395,7 +395,7 @@ async def send_receipt(
             f"Amount: ${txn_amount:,.2f}\n\n"
             f"Thank you,\n{landlord_name}"
         )
-        gmail_service.send_message_with_attachment(
+        await gmail_service.send_message_with_attachment(
             integration,
             from_address=from_address,
             to_address=tenant_email,
@@ -406,19 +406,12 @@ async def send_receipt(
             attachment_content_type="application/pdf",
         )
     except GmailReauthRequiredError as exc:
-        # Roll back storage upload on failure
+        # needs_reauth is already set by send_message_with_attachment before raising.
+        # Roll back storage upload and surface the caller-facing error.
         try:
             storage.delete_file(storage_key)
         except Exception:
             logger.warning("Could not clean up orphaned receipt PDF at %s", storage_key)
-        async with unit_of_work() as db:
-            stale = await integration_repo.get_by_org_and_provider(
-                db, organization_id, "gmail",
-            )
-            if stale is not None:
-                await integration_repo.mark_needs_reauth(
-                    db, stale, repr(exc)[:200], now,
-                )
         raise ReceiptGmailReauthError(str(exc)) from exc
     except (GmailSendScopeError, GmailSendError) as exc:
         try:

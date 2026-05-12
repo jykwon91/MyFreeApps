@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from typing import cast
 
 from google.auth.exceptions import RefreshError
+from googleapiclient.errors import HttpError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -120,6 +121,32 @@ async def _fetch_next_pending(ctx: RequestContext) -> FetchResult:
             if item_ref:
                 await email_queue_repo.mark_status(db, item_ref, "failed", error="Gmail auth expired")
         raise GmailReauthRequiredError(str(exc)) from exc
+
+    except HttpError as exc:
+        status = getattr(getattr(exc, "resp", None), "status", None)
+        if status == 401:
+            logger.warning(
+                "Gmail token rejected (401) for org=%s while fetching queue item %s: status=%s",
+                ctx.organization_id, item_id, status,
+            )
+            async with unit_of_work() as db:
+                integration = await integration_repo.get_by_org_and_provider(db, ctx.organization_id, "gmail")
+                if integration:
+                    await integration_repo.mark_needs_reauth(
+                        db, integration, f"HttpError 401: {exc!r}"[:200], datetime.now(timezone.utc)
+                    )
+                item_ref = await email_queue_repo.get_by_id(db, item_id)
+                if item_ref:
+                    await email_queue_repo.mark_status(db, item_ref, "failed", error="Gmail auth expired (401)")
+            raise GmailReauthRequiredError(str(exc)) from exc
+        # Non-401 HttpError — treat as a transient failure, not a reauth event.
+        logger.exception("Gmail HttpError (status=%s) fetching queue item %s", status, item_id)
+        async with unit_of_work() as db:
+            item_ref = await email_queue_repo.get_by_id(db, item_id)
+            if item_ref:
+                await email_queue_repo.mark_status(db, item_ref, "failed", error=str(exc)[:1000])
+            await _fail_sync_log_if_done(db, sync_log_id, str(exc))
+        return FetchResult("failed", error=str(exc))
 
     except Exception as e:
         logger.exception("Failed to fetch queue item %s", item_id)

@@ -11,8 +11,10 @@ Covers:
 from __future__ import annotations
 
 import base64
+import uuid
+from contextlib import asynccontextmanager
 from typing import Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from googleapiclient.errors import HttpError
@@ -27,6 +29,7 @@ class _FakeIntegration:
     def __init__(self, *, access_token: str = "tok", refresh_token: str | None = "rt") -> None:
         self.access_token = access_token
         self.refresh_token = refresh_token
+        self.organization_id = uuid.uuid4()
 
 
 def _make_http_error(status: int) -> HttpError:
@@ -58,12 +61,24 @@ def _captured_send_call(captured: dict[str, Any]) -> Any:
     return fake_service
 
 
+def _no_op_uow():
+    """Fake unit_of_work that yields a no-op DB for the mark_needs_reauth path."""
+    fake_db = MagicMock()
+
+    @asynccontextmanager
+    async def _uow():
+        yield fake_db
+
+    return _uow
+
+
 class TestSendMessageHappyPath:
-    def test_builds_correct_rfc5322_message(self) -> None:
+    @pytest.mark.asyncio
+    async def test_builds_correct_rfc5322_message(self) -> None:
         captured: dict[str, Any] = {}
         fake = _captured_send_call(captured)
         with patch.object(gmail_service, "get_gmail_service", return_value=fake):
-            sent_id = gmail_service.send_message(
+            sent_id = await gmail_service.send_message(
                 _FakeIntegration(),
                 from_address="host@gmail.com",
                 to_address="alice@example.com",
@@ -81,11 +96,12 @@ class TestSendMessageHappyPath:
         # Message-ID is auto-generated.
         assert "Message-ID:" in decoded
 
-    def test_sets_in_reply_to_and_references_for_threading(self) -> None:
+    @pytest.mark.asyncio
+    async def test_sets_in_reply_to_and_references_for_threading(self) -> None:
         captured: dict[str, Any] = {}
         fake = _captured_send_call(captured)
         with patch.object(gmail_service, "get_gmail_service", return_value=fake):
-            gmail_service.send_message(
+            await gmail_service.send_message(
                 _FakeIntegration(),
                 from_address="h@g.com",
                 to_address="a@b.com",
@@ -98,11 +114,12 @@ class TestSendMessageHappyPath:
         assert "In-Reply-To: <orig-123@mail.example.com>" in decoded
         assert "References: <orig-123@mail.example.com>" in decoded
 
-    def test_no_threading_headers_when_no_original(self) -> None:
+    @pytest.mark.asyncio
+    async def test_no_threading_headers_when_no_original(self) -> None:
         captured: dict[str, Any] = {}
         fake = _captured_send_call(captured)
         with patch.object(gmail_service, "get_gmail_service", return_value=fake):
-            gmail_service.send_message(
+            await gmail_service.send_message(
                 _FakeIntegration(),
                 from_address="h@g.com",
                 to_address="a@b.com",
@@ -118,14 +135,15 @@ class TestSendMessageHappyPath:
 
 
 class TestSendMessageErrors:
-    def test_403_raises_send_scope_error(self) -> None:
+    @pytest.mark.asyncio
+    async def test_403_raises_send_scope_error(self) -> None:
         fake = MagicMock()
         send_chain = MagicMock()
         send_chain.execute.side_effect = _make_http_error(403)
         fake.users.return_value.messages.return_value.send.return_value = send_chain
         with patch.object(gmail_service, "get_gmail_service", return_value=fake):
             with pytest.raises(GmailSendScopeError):
-                gmail_service.send_message(
+                await gmail_service.send_message(
                     _FakeIntegration(),
                     from_address="h@g.com",
                     to_address="a@b.com",
@@ -133,14 +151,15 @@ class TestSendMessageErrors:
                     body="b",
                 )
 
-    def test_400_raises_send_error(self) -> None:
+    @pytest.mark.asyncio
+    async def test_400_raises_send_error(self) -> None:
         fake = MagicMock()
         send_chain = MagicMock()
         send_chain.execute.side_effect = _make_http_error(400)
         fake.users.return_value.messages.return_value.send.return_value = send_chain
         with patch.object(gmail_service, "get_gmail_service", return_value=fake):
             with pytest.raises(GmailSendError):
-                gmail_service.send_message(
+                await gmail_service.send_message(
                     _FakeIntegration(),
                     from_address="h@g.com",
                     to_address="a@b.com",
@@ -148,14 +167,15 @@ class TestSendMessageErrors:
                     body="b",
                 )
 
-    def test_500_raises_send_error(self) -> None:
+    @pytest.mark.asyncio
+    async def test_500_raises_send_error(self) -> None:
         fake = MagicMock()
         send_chain = MagicMock()
         send_chain.execute.side_effect = _make_http_error(500)
         fake.users.return_value.messages.return_value.send.return_value = send_chain
         with patch.object(gmail_service, "get_gmail_service", return_value=fake):
             with pytest.raises(GmailSendError):
-                gmail_service.send_message(
+                await gmail_service.send_message(
                     _FakeIntegration(),
                     from_address="h@g.com",
                     to_address="a@b.com",
@@ -163,14 +183,15 @@ class TestSendMessageErrors:
                     body="b",
                 )
 
-    def test_network_error_raises_send_error(self) -> None:
+    @pytest.mark.asyncio
+    async def test_network_error_raises_send_error(self) -> None:
         fake = MagicMock()
         send_chain = MagicMock()
         send_chain.execute.side_effect = ConnectionError("net down")
         fake.users.return_value.messages.return_value.send.return_value = send_chain
         with patch.object(gmail_service, "get_gmail_service", return_value=fake):
             with pytest.raises(GmailSendError):
-                gmail_service.send_message(
+                await gmail_service.send_message(
                     _FakeIntegration(),
                     from_address="h@g.com",
                     to_address="a@b.com",
@@ -178,14 +199,15 @@ class TestSendMessageErrors:
                     body="b",
                 )
 
-    def test_empty_response_id_raises_send_error(self) -> None:
+    @pytest.mark.asyncio
+    async def test_empty_response_id_raises_send_error(self) -> None:
         fake = MagicMock()
         send_chain = MagicMock()
         send_chain.execute.return_value = {"id": ""}
         fake.users.return_value.messages.return_value.send.return_value = send_chain
         with patch.object(gmail_service, "get_gmail_service", return_value=fake):
             with pytest.raises(GmailSendError):
-                gmail_service.send_message(
+                await gmail_service.send_message(
                     _FakeIntegration(),
                     from_address="h@g.com",
                     to_address="a@b.com",
@@ -193,9 +215,10 @@ class TestSendMessageErrors:
                     body="b",
                 )
 
-    def test_missing_access_token_raises_scope_error(self) -> None:
+    @pytest.mark.asyncio
+    async def test_missing_access_token_raises_scope_error(self) -> None:
         with pytest.raises(GmailSendScopeError):
-            gmail_service.send_message(
+            await gmail_service.send_message(
                 _FakeIntegration(access_token=""),
                 from_address="h@g.com",
                 to_address="a@b.com",

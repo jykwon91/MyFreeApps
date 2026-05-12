@@ -44,7 +44,7 @@ async def enable_mock_gmail_send(
     if getattr(gmail_service, "_real_send_message", None) is None:
         gmail_service._real_send_message = gmail_service.send_message  # type: ignore[attr-defined]
 
-    def _stub(*args: object, **kwargs: object) -> str:
+    async def _stub(*args: object, **kwargs: object) -> str:
         return f"<e2e-mock-{uuid.uuid4().hex[:12]}@mybookkeeper.app>"
 
     gmail_service.send_message = _stub  # type: ignore[assignment]
@@ -52,7 +52,7 @@ async def enable_mock_gmail_send(
     if getattr(gmail_service, "_real_send_message_with_attachment", None) is None:
         gmail_service._real_send_message_with_attachment = gmail_service.send_message_with_attachment  # type: ignore[attr-defined]
 
-    def _attachment_stub(*args: object, **kwargs: object) -> str:
+    async def _attachment_stub(*args: object, **kwargs: object) -> str:
         global _last_gmail_attachment_send
         _last_gmail_attachment_send = {
             "to_address": kwargs.get("to_address"),
