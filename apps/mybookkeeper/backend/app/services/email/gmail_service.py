@@ -1,6 +1,7 @@
 import base64
 import logging
 import re
+from datetime import datetime, timezone
 from email.message import EmailMessage
 from email.utils import make_msgid
 from pathlib import Path
@@ -11,6 +12,8 @@ from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from app.core.config import settings
+from app.db.session import unit_of_work
+from app.repositories import integration_repo
 from app.services.email.exceptions import GmailReauthRequiredError, GmailSendError, GmailSendScopeError
 
 logger = logging.getLogger(__name__)
@@ -310,7 +313,7 @@ def _collect_attachments(payload: _GmailPayload, service, message_id: str, resul
         _collect_attachments(part, service, message_id, result)
 
 
-def send_message_with_attachment(
+async def send_message_with_attachment(
     integration,  # type: ignore[no-untyped-def] — app.models.integrations.Integration, avoid circular import
     *,
     from_address: str,
@@ -329,6 +332,9 @@ def send_message_with_attachment(
     Raises the same GmailReauthRequiredError / GmailSendScopeError /
     GmailSendError hierarchy as ``send_message`` so callers can handle errors
     uniformly.
+
+    Contract: when ``GmailReauthRequiredError`` is raised, ``Integration.needs_reauth``
+    has already been set to ``True`` in the database before this function returns.
     """
     if not integration.access_token:
         raise GmailSendScopeError("Gmail integration has no access token")
@@ -359,14 +365,34 @@ def send_message_with_attachment(
             userId="me", body={"raw": raw},
         ).execute()
     except RefreshError as exc:
-        logger.warning("Gmail send rejected — refresh token invalid: %s", exc)
+        logger.warning(
+            "Gmail send rejected — refresh token invalid: %s", exc,
+        )
+        async with unit_of_work() as db:
+            stale = await integration_repo.get_by_org_and_provider(
+                db, integration.organization_id, "gmail"
+            )
+            if stale is not None:
+                await integration_repo.mark_needs_reauth(
+                    db, stale, repr(exc)[:200], datetime.now(timezone.utc)
+                )
         raise GmailReauthRequiredError(
             "Gmail token expired. Reconnect Gmail to send receipts."
         ) from exc
     except HttpError as exc:
         status = getattr(getattr(exc, "resp", None), "status", None)
         if status == 401:
-            logger.warning("Gmail send rejected with 401 — token rejected by Google")
+            logger.warning(
+                "Gmail send rejected with 401 — token rejected by Google: status=%s", status,
+            )
+            async with unit_of_work() as db:
+                stale = await integration_repo.get_by_org_and_provider(
+                    db, integration.organization_id, "gmail"
+                )
+                if stale is not None:
+                    await integration_repo.mark_needs_reauth(
+                        db, stale, f"HttpError 401: {exc!r}"[:200], datetime.now(timezone.utc)
+                    )
             raise GmailReauthRequiredError(
                 "Gmail token rejected (401). Reconnect Gmail to send receipts."
             ) from exc
@@ -389,7 +415,7 @@ def send_message_with_attachment(
     return sent_id
 
 
-def send_message(
+async def send_message(
     integration,  # type: ignore[no-untyped-def] — app.models.integrations.Integration, avoid circular import
     *,
     from_address: str,
@@ -411,6 +437,9 @@ def send_message(
 
     Returns the Gmail-issued message ID (used to dedup replies and to look
     up the message on the server later).
+
+    Contract: when ``GmailReauthRequiredError`` is raised, ``Integration.needs_reauth``
+    has already been set to ``True`` in the database before this function returns.
 
     Raises:
         GmailSendScopeError: 403 because the integration lacks ``gmail.send``.
@@ -444,14 +473,34 @@ def send_message(
             userId="me", body={"raw": raw},
         ).execute()
     except RefreshError as exc:
-        logger.warning("Gmail send rejected — refresh token invalid: %s", exc)
+        logger.warning(
+            "Gmail send rejected — refresh token invalid: %s", exc,
+        )
+        async with unit_of_work() as db:
+            stale = await integration_repo.get_by_org_and_provider(
+                db, integration.organization_id, "gmail"
+            )
+            if stale is not None:
+                await integration_repo.mark_needs_reauth(
+                    db, stale, repr(exc)[:200], datetime.now(timezone.utc)
+                )
         raise GmailReauthRequiredError(
             "Gmail token expired. Reconnect Gmail to send replies."
         ) from exc
     except HttpError as exc:
         status = getattr(getattr(exc, "resp", None), "status", None)
         if status == 401:
-            logger.warning("Gmail send rejected with 401 — token rejected by Google")
+            logger.warning(
+                "Gmail send rejected with 401 — token rejected by Google: status=%s", status,
+            )
+            async with unit_of_work() as db:
+                stale = await integration_repo.get_by_org_and_provider(
+                    db, integration.organization_id, "gmail"
+                )
+                if stale is not None:
+                    await integration_repo.mark_needs_reauth(
+                        db, stale, f"HttpError 401: {exc!r}"[:200], datetime.now(timezone.utc)
+                    )
             raise GmailReauthRequiredError(
                 "Gmail token rejected (401). Reconnect Gmail to send replies."
             ) from exc

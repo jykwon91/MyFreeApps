@@ -305,15 +305,30 @@ async def test_send_reply_scope_revoked_at_send_time_maps_to_scope_error(
 async def test_send_reply_token_expired_sets_needs_reauth_and_raises(
     db: AsyncSession, test_user: User, test_org: Organization, patch_session,
 ) -> None:
-    """When send_message raises GmailReauthRequiredError, the service sets
-    needs_reauth=True on the Integration and raises InquiryReplyAuthExpiredError.
-    No InquiryMessage row is created and the inquiry stage does not change."""
+    """When send_message raises GmailReauthRequiredError (which it does AFTER
+    setting needs_reauth=True on the Integration), InquiryReplyAuthExpiredError
+    is surfaced and no InquiryMessage row is created.
+
+    The mock simulates the real send_message contract: it writes needs_reauth
+    to the DB row before raising, so callers observe the committed state.
+    """
+    import datetime as _dt_inner
+
     integration = await _seed_integration(db, org=test_org, user=test_user)
     inquiry = await _seed_inquiry(db, org=test_org, user=test_user)
 
+    async def _fake_send_raises_after_setting_flag(*args, **kwargs):
+        # Mirror what the real send_message now does: set needs_reauth first,
+        # then raise GmailReauthRequiredError.
+        integration.needs_reauth = True
+        integration.last_reauth_error = "refresh token expired"
+        integration.last_reauth_failed_at = _dt_inner.datetime.now(_dt_inner.timezone.utc)
+        await db.flush()
+        raise GmailReauthRequiredError("refresh token expired")
+
     with patch(
         "app.services.inquiries.inquiry_reply_service.gmail_service.send_message",
-        side_effect=GmailReauthRequiredError("refresh token expired"),
+        side_effect=_fake_send_raises_after_setting_flag,
     ):
         with pytest.raises(inquiry_reply_service.InquiryReplyAuthExpiredError):
             await inquiry_reply_service.send_reply(

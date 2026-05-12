@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 from typing import cast
 
 from google.auth.exceptions import RefreshError
+from googleapiclient.errors import HttpError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.context import RequestContext
@@ -77,6 +78,19 @@ async def discover_gmail_emails(ctx: RequestContext) -> DiscoverResult:
                 org_id, ctx.user_id, exc,
             )
             raise GmailAuthExpiredError(str(exc)) from exc
+        except HttpError as exc:
+            status = getattr(getattr(exc, "resp", None), "status", None)
+            if status == 401:
+                await integration_repo.mark_needs_reauth(
+                    db, integration, f"HttpError 401: {exc!r}"[:200], datetime.now(timezone.utc)
+                )
+                await _record_auth_expired_sync_log(db, ctx)
+                logger.warning(
+                    "Gmail token rejected (401) for org=%s user=%s during discovery: status=%s",
+                    org_id, ctx.user_id, status,
+                )
+                raise GmailAuthExpiredError(str(exc)) from exc
+            raise
         logger.info(
             "Gmail discovery: matched=%d new=%d (skipped %d already-processed)",
             gmail_matches_total, len(new_ids), gmail_matches_total - len(new_ids),
@@ -118,6 +132,32 @@ async def discover_gmail_emails(ctx: RequestContext) -> DiscoverResult:
                     org_id, ctx.user_id, message_id, exc,
                 )
                 raise GmailAuthExpiredError(str(exc)) from exc
+            except HttpError as exc:
+                status = getattr(getattr(exc, "resp", None), "status", None)
+                if status == 401:
+                    await integration_repo.mark_needs_reauth(
+                        db, integration, f"HttpError 401: {exc!r}"[:200], datetime.now(timezone.utc)
+                    )
+                    await sync_log_repo.mark_completed(db, log, "failed", error=GMAIL_AUTH_EXPIRED_SYNC_LOG_ERROR)
+                    logger.warning(
+                        "Gmail token rejected (401) for org=%s user=%s while fetching sources for message %s: status=%s",
+                        org_id, ctx.user_id, message_id, status,
+                    )
+                    raise GmailAuthExpiredError(str(exc)) from exc
+                # Non-401 HttpError — skip this message, don't abort the entire sync.
+                logger.warning(
+                    "gmail_discovery: skipped message_id=%s org=%s user=%s exc=%s msg=%s",
+                    message_id, org_id, ctx.user_id, type(exc).__name__, exc,
+                    exc_info=True,
+                )
+                await gmail_skipped_message_repo.record_skip(
+                    db,
+                    organization_id=org_id,
+                    user_id=ctx.user_id,
+                    gmail_message_id=message_id,
+                    exc=exc,
+                )
+                continue
             except Exception as e:
                 logger.warning(
                     "gmail_discovery: skipped message_id=%s org=%s user=%s exc=%s msg=%s",

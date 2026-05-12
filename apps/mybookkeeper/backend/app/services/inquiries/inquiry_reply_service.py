@@ -113,7 +113,7 @@ async def send_reply(
 
     # ----- Phase 2: send via Gmail (network call, no DB) -----
     try:
-        sent_message_id = gmail_service.send_message(
+        sent_message_id = await gmail_service.send_message(
             integration,
             from_address=from_address,
             to_address=to_address,
@@ -122,18 +122,8 @@ async def send_reply(
             in_reply_to_message_id=original_email_message_id,
         )
     except GmailReauthRequiredError as exc:
-        # Token was rejected by Google. Flip the flag so the UI shows the
-        # reconnect prompt immediately. Use a short-lived session so the
-        # flag write commits even if this function is called from a route
-        # that has no enclosing transaction.
-        async with unit_of_work() as db:
-            stale = await integration_repo.get_by_org_and_provider(
-                db, organization_id, "gmail",
-            )
-            if stale is not None:
-                await integration_repo.mark_needs_reauth(
-                    db, stale, repr(exc)[:200], _dt.datetime.now(_dt.timezone.utc)
-                )
+        # needs_reauth is already set by send_message before raising.
+        # Map to the caller-facing error type for the route handler.
         raise InquiryReplyAuthExpiredError(str(exc)) from exc
     except GmailSendScopeError as exc:
         # Defensive — we already checked scope but Google may have revoked
