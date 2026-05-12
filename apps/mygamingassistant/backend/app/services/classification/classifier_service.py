@@ -39,6 +39,7 @@ from app.models.game.lineup import Lineup
 from app.models.game.map import Map
 from app.models.game.map_zone import MapZone
 from app.models.game.utility_type import UtilityType
+from app.repositories.game.lineup_repo import write_classifier_suggestions
 from app.services.classification.classification_result import ClassificationResult
 
 logger = logging.getLogger(__name__)
@@ -611,24 +612,23 @@ async def classify_lineup(
         confidence or 0.0,
     )
 
-    # Write suggestions back to the lineup row (still pending_review)
-    # game_id and map_id are set only if resolved; existing values preserved otherwise
-    update_fields: dict[str, Any] = {
-        "aim_anchor_x": aim_x,
-        "aim_anchor_y": aim_y,
-        "suggested_game_id": game_id,
-        "suggested_map_id": map_id,
-        "suggested_target_zone_id": target_zone_id,
-        "suggested_stand_zone_id": stand_zone_id,
-        "suggested_side": side,
-        "suggested_utility_type_id": utility_type_id,
-        "classification_confidence": confidence,
-        "classification_reasoning": reasoning,
-    }
-    for field_name, value in update_fields.items():
-        if hasattr(lineup, field_name):
-            setattr(lineup, field_name, value)
-    await db.flush()
+    # Write suggestions back to the lineup row via the repo (status stays pending_review)
+    await write_classifier_suggestions(
+        db,
+        lineup,
+        {
+            "aim_anchor_x": aim_x,
+            "aim_anchor_y": aim_y,
+            "suggested_game_id": game_id,
+            "suggested_map_id": map_id,
+            "suggested_target_zone_id": target_zone_id,
+            "suggested_stand_zone_id": stand_zone_id,
+            "suggested_side": side,
+            "suggested_utility_type_id": utility_type_id,
+            "classification_confidence": confidence,
+            "classification_reasoning": reasoning,
+        },
+    )
 
     return ClassificationResult(
         success=True,

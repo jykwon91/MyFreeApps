@@ -239,6 +239,22 @@ async def accept_lineup(
     return lineup
 
 
+async def write_classifier_suggestions(
+    db: AsyncSession,
+    lineup: Lineup,
+    suggestions: dict,
+) -> None:
+    """Write classifier suggestion fields to a lineup row and flush.
+
+    Only sets fields that are present in *suggestions*. Does not change
+    lineup.status — the row stays in pending_review until the user accepts.
+    """
+    for field_name, value in suggestions.items():
+        if hasattr(lineup, field_name):
+            setattr(lineup, field_name, value)
+    await db.flush()
+
+
 async def zone_density(
     db: AsyncSession,
     map_id: uuid.UUID,
