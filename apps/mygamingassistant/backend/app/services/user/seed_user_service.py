@@ -22,13 +22,9 @@ To generate the hash:
 Then set SEED_USER_PASSWORD_HASH in backend/.env.docker.
 """
 import logging
-from datetime import datetime, timezone
-
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import unit_of_work
-from app.models.user.user import User
+from app.repositories.user import user_repo
 
 logger = logging.getLogger(__name__)
 
@@ -48,19 +44,10 @@ async def seed_operator_user(email: str, hashed_password: str) -> None:
         SeedUserNotConfiguredError: If email or hashed_password is empty in production.
     """
     async with unit_of_work() as db:
-        result = await db.execute(select(User).where(User.email == email))
-        existing = result.scalar_one_or_none()
+        existing = await user_repo.get_by_email(db, email)
         if existing is not None:
             logger.info("seed_operator_user: user %s already exists — skipping", email)
             return
 
-        user = User(
-            email=email,
-            hashed_password=hashed_password,
-            is_active=True,
-            is_superuser=True,
-            is_verified=True,  # Single-user: no email flow needed on seed
-            display_name="Operator",
-        )
-        db.add(user)
+        await user_repo.create_seed_user(db, email=email, hashed_password=hashed_password)
         logger.info("seed_operator_user: created operator user %s", email)

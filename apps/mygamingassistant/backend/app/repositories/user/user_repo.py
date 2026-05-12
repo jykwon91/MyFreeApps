@@ -25,3 +25,23 @@ async def get_by_email(db: AsyncSession, email: str) -> User | None:
 
 async def get_totp_enabled(db: AsyncSession, email: str) -> bool:
     return await _shared_get_totp_enabled(db, email, user_model=User)
+
+
+async def create_seed_user(
+    db: AsyncSession,
+    *,
+    email: str,
+    hashed_password: str,
+) -> User:
+    """Insert the single operator user. Called only when the user doesn't exist yet."""
+    user = User(
+        email=email,
+        hashed_password=hashed_password,
+        is_active=True,
+        is_superuser=True,
+        is_verified=True,  # Single-user: no email verification flow needed on seed
+        display_name="Operator",
+    )
+    db.add(user)
+    await db.flush()
+    return user
