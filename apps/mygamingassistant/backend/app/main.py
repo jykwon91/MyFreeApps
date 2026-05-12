@@ -233,6 +233,13 @@ for _route in totp.router.routes:
 app.include_router(totp.router)
 
 
+# Test helpers — only mounted when MGA_ENABLE_TEST_HELPERS=1.
+# Provides rate-limit reset + seed-lineup endpoints for E2E tests.
+# Never set this flag in production.
+if settings.mga_enable_test_helpers:
+    from app.test_helpers.router import router as _test_helpers_router
+    app.include_router(_test_helpers_router)
+
 # Deploy verification — exposes the git commit + boot timestamp so the
 # deploy workflow can confirm which commit is live without parsing logs.
 # Note: this app uses ``root_path="/api"`` so the public path is /api/version.

@@ -52,6 +52,13 @@ class Settings(BaseAppSettings):
     enable_classifier: bool = True
 
     # ------------------------------------------------------------------
+    # Test-only helpers — never set in production.
+    # When true, /api/_test/* endpoints are mounted (rate-limit reset,
+    # seed lineup for E2E tests). Guarded by the mga_enable_test_helpers flag.
+    # ------------------------------------------------------------------
+    mga_enable_test_helpers: bool = False
+
+    # ------------------------------------------------------------------
     # Per-IP login throttle — matches MJH defaults
     # ------------------------------------------------------------------
     login_rate_limit_threshold: int = 10
