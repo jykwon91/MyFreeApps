@@ -17,6 +17,8 @@ anyio==4.13.0
     #   mygamingassistant-backend
     #   starlette
     #   watchfiles
+apscheduler==3.11.0
+    # via mygamingassistant-backend
 argon2-cffi==25.1.0
     # via
     #   minio
@@ -201,6 +203,10 @@ typing-inspection==0.4.2
     #   fastapi
     #   pydantic
     #   pydantic-settings
+tzdata==2026.2 ; sys_platform == 'win32'
+    # via tzlocal
+tzlocal==5.3.1
+    # via apscheduler
 urllib3==2.7.0
     # via
     #   minio
