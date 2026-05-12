@@ -29,6 +29,8 @@ export { default as LoadingButton } from "./components/ui/LoadingButton";
 export { default as Skeleton } from "./components/ui/Skeleton";
 export { default as Select } from "./components/ui/Select";
 export { default as Badge } from "./components/ui/Badge";
+export { default as StatusBadge } from "./components/ui/StatusBadge";
+export type { StatusBadgeProps, BadgeTone } from "./components/ui/StatusBadge";
 export { default as Card } from "./components/ui/Card";
 export { default as FormField } from "./components/ui/FormField";
 export { default as Toaster } from "./components/ui/Toaster";

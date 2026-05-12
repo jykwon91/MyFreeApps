@@ -1,4 +1,4 @@
-import Badge from "@/shared/components/ui/Badge";
+import { Badge } from "@platform/ui";
 import type { TransactionStatus } from "@/shared/types/transaction/transaction";
 
 export default function TransactionStatusBadge({ status }: { status: TransactionStatus }) {

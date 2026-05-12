@@ -64,9 +64,9 @@ removed and the counts in this header are updated.
 
 ---
 
-#### HIGH (blocked-on-react-19 from MBK side) — Status-colored Badge components
+#### ~~HIGH (blocked-on-react-19 from MBK side) — Status-colored Badge components~~ RESOLVED
 
-See sister entry in MBK. MJH-side files: `features/admin/invites/InviteStatusBadge.tsx`, `features/documents/DocumentKindBadge.tsx`. MJH could extract its own `<StatusBadge>` to `@platform/ui` now (since MJH consumes shared); MBK adopts after React 19.
+**Resolved:** PR feat(shared-frontend): extract StatusBadge to @platform/ui (2026-05-11). See sister entry in MBK TECH_DEBT.md. MJH consumers `InviteStatusBadge` and `DocumentKindBadge` now use `StatusBadge` from `@platform/ui`.
 
 ---
 

@@ -1,4 +1,5 @@
-import { Badge } from "@platform/ui";
+import { StatusBadge } from "@platform/ui";
+import type { BadgeTone } from "@platform/ui";
 import { INVITE_STATUS, type InviteStatus } from "@/types/invite/invite-status";
 
 const STATUS_LABELS: Record<InviteStatus, string> = {
@@ -7,10 +8,10 @@ const STATUS_LABELS: Record<InviteStatus, string> = {
   [INVITE_STATUS.EXPIRED]: "Expired",
 };
 
-const STATUS_COLORS: Record<InviteStatus, "blue" | "green" | "gray"> = {
-  [INVITE_STATUS.PENDING]: "blue",
-  [INVITE_STATUS.ACCEPTED]: "green",
-  [INVITE_STATUS.EXPIRED]: "gray",
+const STATUS_TONES: Record<InviteStatus, BadgeTone> = {
+  [INVITE_STATUS.PENDING]: "info",
+  [INVITE_STATUS.ACCEPTED]: "success",
+  [INVITE_STATUS.EXPIRED]: "neutral",
 };
 
 export interface InviteStatusBadgeProps {
@@ -22,5 +23,5 @@ export interface InviteStatusBadgeProps {
  * Lives in its own file so the InvitesList row can stay shape-only.
  */
 export default function InviteStatusBadge({ status }: InviteStatusBadgeProps) {
-  return <Badge label={STATUS_LABELS[status]} color={STATUS_COLORS[status]} />;
+  return <StatusBadge tone={STATUS_TONES[status]} label={STATUS_LABELS[status]} />;
 }
