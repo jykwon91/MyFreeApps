@@ -1,11 +1,11 @@
 import posthog from "posthog-js";
+import { notifyAuthChange, useIsAuthenticated } from "@platform/ui";
 import api from "./api";
-import { notifyAuthChange } from "./auth-store";
 import { store } from "@/shared/store";
 import { baseApi } from "@/shared/store/baseApi";
 import { clearOrganizationState } from "@/shared/store/organizationSlice";
 
-export { useIsAuthenticated, notifyAuthChange } from "./auth-store";
+export { useIsAuthenticated, notifyAuthChange };
 
 interface LoginResponse {
   access_token?: string;

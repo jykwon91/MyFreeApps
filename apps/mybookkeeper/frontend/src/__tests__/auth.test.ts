@@ -13,10 +13,14 @@ vi.mock("@/shared/lib/api", () => ({
   default: { post: vi.fn() },
 }));
 
-vi.mock("@/shared/lib/auth-store", () => ({
-  notifyAuthChange: vi.fn(),
-  useIsAuthenticated: vi.fn(),
-}));
+vi.mock("@platform/ui", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@platform/ui")>();
+  return {
+    ...actual,
+    notifyAuthChange: vi.fn(),
+    useIsAuthenticated: vi.fn(),
+  };
+});
 
 const { mockDispatch, mockResetApiState, mockClearOrganizationState } = vi.hoisted(() => ({
   mockDispatch: vi.fn(),
