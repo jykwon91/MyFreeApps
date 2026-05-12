@@ -226,12 +226,19 @@ def fetch_attachment_bytes(service, message_id: str, attachment_id: str) -> byte
 
 
 def fetch_email_body(service, message_id: str) -> dict:
-    """Fetch subject and body text of an email without downloading attachments."""
+    """Fetch subject, from address, and body text of an email.
+
+    ``from_address`` is stored alongside subject/body so the booking parser
+    can use it for channel detection even after the raw Gmail response is gone.
+    The field is optional in ``EmailBodyData`` for backward compatibility with
+    queue rows fetched before this field was added.
+    """
     detail = service.users().messages().get(userId="me", id=message_id, format="full").execute()
     headers = {h["name"]: h["value"] for h in detail["payload"].get("headers", [])}
     return {
         "message_id": message_id,
         "subject": headers.get("Subject", ""),
+        "from_address": headers.get("From"),
         "body": _extract_body(detail["payload"]),
     }
 

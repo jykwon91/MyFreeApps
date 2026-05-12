@@ -3,9 +3,13 @@
 from typing import Literal, TypedDict
 
 
-class EmailBodyData(TypedDict):
+class _EmailBodyDataRequired(TypedDict):
     subject: str
     body: str
+
+
+class EmailBodyData(_EmailBodyDataRequired, total=False):
+    from_address: str | None  # Present for emails fetched after booking parser wiring
 
 
 class EmailSource(TypedDict, total=False):

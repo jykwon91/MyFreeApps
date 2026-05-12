@@ -11,6 +11,7 @@ from app.db.session import AsyncSessionLocal, unit_of_work
 from app.models.email.email_types import Attachment, EmailBodyData, ExtractResult, ParsedEml
 from app.models.extraction.extraction_types import ExtractionResult
 from app.repositories import email_queue_repo, integration_repo, sync_log_repo
+from app.services.calendar.booking_ingestion_service import ingest_booking_email
 from app.services.extraction.claude_service import extract_from_email, extract_from_image, extract_from_text
 from app.services.extraction.extraction_persistence import save_email_extraction
 from app.services.extraction.extractor_service import (
@@ -122,6 +123,37 @@ async def _extract_next_fetched(ctx: RequestContext) -> ExtractResult:
         if attachment_id == "body":
             email_data = cast(EmailBodyData, json.loads(raw_content.decode("utf-8")))
             logger.info("Extracting body for email id=%s subject=%r", message_id, email_data.get("subject"))
+
+            # --- Booking ingestion pre-check ---
+            # Attempt to classify the email as a booking confirmation before
+            # calling Claude. If the email is routed as a booking (matched,
+            # queued, or blocked), mark the queue item terminal and skip Claude
+            # to save tokens and avoid creating spurious invoice Documents.
+            ingestion_result = await ingest_booking_email(
+                ctx=ctx,
+                email_message_id=message_id,
+                from_address=email_data.get("from_address"),
+                subject=email_data["subject"],
+                body=email_data["body"],
+            )
+            if ingestion_result.action in ("auto_matched", "queued_for_review", "blocked"):
+                logger.info(
+                    "Email routed as booking: email_id=%s action=%s — skipping Claude",
+                    message_id,
+                    ingestion_result.action,
+                )
+                async with unit_of_work() as db:
+                    item_ref = await email_queue_repo.get_by_id(db, item_id)
+                    if item_ref:
+                        await email_queue_repo.mark_status(
+                            db, item_ref, "processed_as_booking",
+                        )
+                    log = await sync_log_repo.get_by_id(db, sync_log_id)
+                    if log:
+                        await sync_log_repo.increment_records(db, log, 0)
+                return ExtractResult("done", records_added=0)
+            # action is "not_a_booking" or "unparseable" — fall through to Claude
+
             ext_result = cast(ExtractionResult, await extract_from_email(email_data["subject"], email_data["body"], user_id=ctx.user_id))
             extraction = (ext_result, None)
         else:
