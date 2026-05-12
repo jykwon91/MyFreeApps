@@ -27,6 +27,7 @@ from typing import Any, Awaitable, Callable
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.models.discovery.discovery_source import DiscoverySource
 from app.repositories.discovery import discovery_repository
 from app.schemas.discovery.greenhouse_source_config import (
@@ -101,7 +102,7 @@ async def _run_jsearch(config: dict[str, Any]) -> list[dict]:
     return await jsearch.search(
         query=query,
         page=1,
-        num_pages=1,
+        num_pages=settings.discovery_jsearch_pages_per_fetch,
         date_posted=typed.date_posted,
         country=typed.country,
         remote_jobs_only=typed.remote_jobs_only,

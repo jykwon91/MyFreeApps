@@ -13,8 +13,11 @@ Pricing tiers (RapidAPI):
 - Ultra:       $49.99/mo for 100k req
 - Mega:        $149.99/mo for 400k req
 
-Usage at MJH's expected volume (~600 req/mo for one user with 10 saved
-searches × 2 pages × 1 fetch/day) fits comfortably in Pro.
+Usage at MJH's expected volume (~750 req/mo for one user with 5 saved
+searches × 5 pages × 1 fetch/day, i.e. ``DISCOVERY_JSEARCH_PAGES_PER_FETCH=5``)
+fits comfortably in Pro. 10 searches × 5 pages × 2 fetches/day is 3 k req/mo —
+still within Pro. See ``app.core.config.Settings.discovery_jsearch_pages_per_fetch``
+to tune.
 
 Adapter shape — pure function. Returns ``list[RawPosting]`` ready for
 the worker to upsert. No DB writes here; the worker owns persistence.
