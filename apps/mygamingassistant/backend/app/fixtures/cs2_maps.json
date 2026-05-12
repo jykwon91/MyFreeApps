@@ -1,0 +1,157 @@
+[
+  {
+    "game_slug": "cs2",
+    "maps": [
+      {
+        "slug": "mirage",
+        "name": "Mirage",
+        "minimap_url": null,
+        "zones": [
+          { "slug": "a-site",     "name": "A Site",     "polygon_points": [] },
+          { "slug": "b-site",     "name": "B Site",     "polygon_points": [] },
+          { "slug": "a-ramp",     "name": "A Ramp",     "polygon_points": [] },
+          { "slug": "a-palace",   "name": "Palace",     "polygon_points": [] },
+          { "slug": "b-apts",     "name": "B Apartments","polygon_points": [] },
+          { "slug": "b-van",      "name": "Van",        "polygon_points": [] },
+          { "slug": "mid",        "name": "Mid",        "polygon_points": [] },
+          { "slug": "catwalk",    "name": "Catwalk",    "polygon_points": [] },
+          { "slug": "t-spawn",    "name": "T Spawn",    "polygon_points": [] },
+          { "slug": "ct-spawn",   "name": "CT Spawn",   "polygon_points": [] }
+        ],
+        "sites": [
+          { "slug": "a", "name": "A" },
+          { "slug": "b", "name": "B" }
+        ]
+      },
+      {
+        "slug": "inferno",
+        "name": "Inferno",
+        "minimap_url": null,
+        "zones": [
+          { "slug": "a-site",     "name": "A Site",     "polygon_points": [] },
+          { "slug": "b-site",     "name": "B Site",     "polygon_points": [] },
+          { "slug": "a-long",     "name": "A Long",     "polygon_points": [] },
+          { "slug": "banana",     "name": "Banana",     "polygon_points": [] },
+          { "slug": "mid",        "name": "Mid",        "polygon_points": [] },
+          { "slug": "second-mid", "name": "Second Mid", "polygon_points": [] },
+          { "slug": "t-spawn",    "name": "T Spawn",    "polygon_points": [] },
+          { "slug": "ct-spawn",   "name": "CT Spawn",   "polygon_points": [] }
+        ],
+        "sites": [
+          { "slug": "a", "name": "A" },
+          { "slug": "b", "name": "B" }
+        ]
+      },
+      {
+        "slug": "dust2",
+        "name": "Dust II",
+        "minimap_url": null,
+        "zones": [
+          { "slug": "a-site",     "name": "A Site",     "polygon_points": [] },
+          { "slug": "b-site",     "name": "B Site",     "polygon_points": [] },
+          { "slug": "a-long",     "name": "A Long",     "polygon_points": [] },
+          { "slug": "a-short",    "name": "A Short",    "polygon_points": [] },
+          { "slug": "b-tunnels",  "name": "B Tunnels",  "polygon_points": [] },
+          { "slug": "mid",        "name": "Mid",        "polygon_points": [] },
+          { "slug": "catwalk",    "name": "Catwalk",    "polygon_points": [] },
+          { "slug": "t-spawn",    "name": "T Spawn",    "polygon_points": [] },
+          { "slug": "ct-spawn",   "name": "CT Spawn",   "polygon_points": [] }
+        ],
+        "sites": [
+          { "slug": "a", "name": "A" },
+          { "slug": "b", "name": "B" }
+        ]
+      },
+      {
+        "slug": "overpass",
+        "name": "Overpass",
+        "minimap_url": null,
+        "zones": [
+          { "slug": "a-site",     "name": "A Site",     "polygon_points": [] },
+          { "slug": "b-site",     "name": "B Site",     "polygon_points": [] },
+          { "slug": "a-long",     "name": "A Long",     "polygon_points": [] },
+          { "slug": "b-monster",  "name": "Monster",    "polygon_points": [] },
+          { "slug": "mid",        "name": "Mid",        "polygon_points": [] },
+          { "slug": "canal",      "name": "Canal",      "polygon_points": [] },
+          { "slug": "t-spawn",    "name": "T Spawn",    "polygon_points": [] },
+          { "slug": "ct-spawn",   "name": "CT Spawn",   "polygon_points": [] }
+        ],
+        "sites": [
+          { "slug": "a", "name": "A" },
+          { "slug": "b", "name": "B" }
+        ]
+      },
+      {
+        "slug": "nuke",
+        "name": "Nuke",
+        "minimap_url": null,
+        "zones": [
+          { "slug": "upper-a",    "name": "Upper A",    "polygon_points": [] },
+          { "slug": "lower-b",    "name": "Lower B",    "polygon_points": [] },
+          { "slug": "a-ramp",     "name": "Ramp",       "polygon_points": [] },
+          { "slug": "outside",    "name": "Outside",    "polygon_points": [] },
+          { "slug": "lobby",      "name": "Lobby",      "polygon_points": [] },
+          { "slug": "t-spawn",    "name": "T Spawn",    "polygon_points": [] },
+          { "slug": "ct-spawn",   "name": "CT Spawn",   "polygon_points": [] }
+        ],
+        "sites": [
+          { "slug": "a", "name": "A (Upper)" },
+          { "slug": "b", "name": "B (Lower)" }
+        ]
+      },
+      {
+        "slug": "anubis",
+        "name": "Anubis",
+        "minimap_url": null,
+        "zones": [
+          { "slug": "a-site",     "name": "A Site",     "polygon_points": [] },
+          { "slug": "b-site",     "name": "B Site",     "polygon_points": [] },
+          { "slug": "a-main",     "name": "A Main",     "polygon_points": [] },
+          { "slug": "b-main",     "name": "B Main",     "polygon_points": [] },
+          { "slug": "mid",        "name": "Mid",        "polygon_points": [] },
+          { "slug": "t-spawn",    "name": "T Spawn",    "polygon_points": [] },
+          { "slug": "ct-spawn",   "name": "CT Spawn",   "polygon_points": [] }
+        ],
+        "sites": [
+          { "slug": "a", "name": "A" },
+          { "slug": "b", "name": "B" }
+        ]
+      },
+      {
+        "slug": "ancient",
+        "name": "Ancient",
+        "minimap_url": null,
+        "zones": [
+          { "slug": "a-site",     "name": "A Site",     "polygon_points": [] },
+          { "slug": "b-site",     "name": "B Site",     "polygon_points": [] },
+          { "slug": "a-main",     "name": "A Main",     "polygon_points": [] },
+          { "slug": "b-main",     "name": "B Main",     "polygon_points": [] },
+          { "slug": "mid",        "name": "Mid",        "polygon_points": [] },
+          { "slug": "t-spawn",    "name": "T Spawn",    "polygon_points": [] },
+          { "slug": "ct-spawn",   "name": "CT Spawn",   "polygon_points": [] }
+        ],
+        "sites": [
+          { "slug": "a", "name": "A" },
+          { "slug": "b", "name": "B" }
+        ]
+      },
+      {
+        "slug": "vertigo",
+        "name": "Vertigo",
+        "minimap_url": null,
+        "zones": [
+          { "slug": "a-site",     "name": "A Site",     "polygon_points": [] },
+          { "slug": "b-site",     "name": "B Site",     "polygon_points": [] },
+          { "slug": "a-ramp",     "name": "A Ramp",     "polygon_points": [] },
+          { "slug": "mid",        "name": "Mid",        "polygon_points": [] },
+          { "slug": "t-spawn",    "name": "T Spawn",    "polygon_points": [] },
+          { "slug": "ct-spawn",   "name": "CT Spawn",   "polygon_points": [] }
+        ],
+        "sites": [
+          { "slug": "a", "name": "A" },
+          { "slug": "b", "name": "B" }
+        ]
+      }
+    ]
+  }
+]

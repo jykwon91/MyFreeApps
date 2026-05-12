@@ -1,0 +1,14 @@
+[
+  {
+    "slug": "valorant",
+    "name": "VALORANT",
+    "side_a_label": "Attacker",
+    "side_b_label": "Defender"
+  },
+  {
+    "slug": "cs2",
+    "name": "Counter-Strike 2",
+    "side_a_label": "T",
+    "side_b_label": "CT"
+  }
+]

@@ -21,7 +21,16 @@ import pytest
 
 # Repo root, relative to this test file: tests/ -> shared-backend/ -> packages/ -> repo/
 _REPO_ROOT = Path(__file__).resolve().parents[3]
-_APPS = ["mybookkeeper", "myjobhunter"]
+_APPS = [
+    "mybookkeeper",
+    "myjobhunter",
+    # mygamingassistant is a single-user app — no /register route. The
+    # VITE_TURNSTILE_SITE_KEY build-arg chain is still required for
+    # structural parity (forgot-password Turnstile widget) even though
+    # registration is seeded from env vars at boot time rather than via
+    # a public registration page.
+    "mygamingassistant",
+]
 
 
 def _read(*parts: str) -> str:

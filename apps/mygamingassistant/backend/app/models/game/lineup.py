@@ -1,0 +1,144 @@
+"""Lineup model — a single utility throw with screenshots and metadata.
+
+status values (String + CheckConstraint, never SQLAlchemy Enum):
+  pending_review  — ingested but not yet accepted by the operator
+  accepted        — appears in the public library
+  hidden          — soft-deleted (can be un-hidden)
+
+side values:
+  side_a  — e.g. T side in CS2, Attacker in Valorant
+  side_b  — e.g. CT side in CS2, Defender in Valorant
+  any     — side-agnostic (e.g. a grenade thrown from spawn that works both ways)
+"""
+import uuid
+from datetime import datetime, timezone
+
+from sqlalchemy import (
+    CheckConstraint,
+    DateTime,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    func,
+)
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.db.base import Base
+
+_LINEUP_STATUSES = ("pending_review", "accepted", "hidden")
+_LINEUP_SIDES = ("side_a", "side_b", "any")
+
+
+class Lineup(Base):
+    __tablename__ = "lineup"
+    __table_args__ = (
+        CheckConstraint(
+            f"status IN {_LINEUP_STATUSES!r}",
+            name="ck_lineup_status",
+        ),
+        CheckConstraint(
+            f"side IN {_LINEUP_SIDES!r}",
+            name="ck_lineup_side",
+        ),
+        Index("ix_lineup_game_id", "game_id"),
+        Index("ix_lineup_map_id", "map_id"),
+        Index("ix_lineup_target_zone_id", "target_zone_id"),
+        Index("ix_lineup_status", "status"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+        server_default=func.gen_random_uuid(),
+    )
+    game_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("game.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    map_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("map.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    target_zone_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("map_zone.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    stand_zone_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("map_zone.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    side: Mapped[str] = mapped_column(String(10), nullable=False)
+    utility_type_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("utility_type.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # Screenshot URLs in MinIO (presigned at read time)
+    stand_screenshot_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    aim_screenshot_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+
+    # Normalized 0-1 crosshair position on the aim screenshot
+    aim_anchor_x: Mapped[float | None] = mapped_column(Float, nullable=True)
+    aim_anchor_y: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+    # How many seconds the throw takes to execute
+    setup_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    # Attribution
+    source_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("source.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    attribution_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    attribution_author: Mapped[str | None] = mapped_column(String(200), nullable=True)
+
+    status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="pending_review", server_default="pending_review"
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+        server_default=func.now(),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+        server_default=func.now(),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+    game: Mapped["Game"] = relationship("Game", back_populates="lineups")
+    map: Mapped["Map"] = relationship("Map", back_populates="lineups")
+    target_zone: Mapped["MapZone"] = relationship(
+        "MapZone", foreign_keys=[target_zone_id], back_populates="lineups_as_target"
+    )
+    stand_zone: Mapped["MapZone"] = relationship(
+        "MapZone", foreign_keys=[stand_zone_id], back_populates="lineups_as_stand"
+    )
+    utility_type: Mapped["UtilityType"] = relationship(
+        "UtilityType", back_populates="lineups"
+    )
+    source: Mapped["Source | None"] = relationship("Source", back_populates="lineups")
+
+
+from app.models.game.game import Game  # noqa: E402, F401
+from app.models.game.map import Map  # noqa: E402, F401
+from app.models.game.map_zone import MapZone  # noqa: E402, F401
+from app.models.game.utility_type import UtilityType  # noqa: E402, F401
+from app.models.game.source import Source  # noqa: E402, F401
