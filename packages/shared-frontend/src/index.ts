@@ -36,6 +36,7 @@ export { default as FormField } from "./components/ui/FormField";
 export { default as Toaster } from "./components/ui/Toaster";
 export { default as TurnstileWidget } from "./components/ui/TurnstileWidget";
 export { default as ConfirmDialog } from "./components/ui/ConfirmDialog";
+export type { ConfirmDialogProps } from "./components/ui/ConfirmDialog";
 export { default as InlineBoldText } from "./components/ui/InlineBoldText";
 export { default as MultiChipInput } from "./components/ui/MultiChipInput";
 export { default as ToggleChipGroup } from "./components/ui/ToggleChipGroup";

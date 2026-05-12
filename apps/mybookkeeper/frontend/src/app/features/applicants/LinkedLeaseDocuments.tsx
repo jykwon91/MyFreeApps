@@ -9,7 +9,7 @@ import type { SignedLeaseAttachment } from "@/shared/types/lease/signed-lease-at
 import type { SignedLeaseSummary } from "@/shared/types/lease/signed-lease-summary";
 import SignedLeaseStatusBadge from "@/app/features/leases/SignedLeaseStatusBadge";
 import AttachmentViewer from "@/app/features/leases/AttachmentViewer";
-import ConfirmDialog from "@/shared/components/ui/ConfirmDialog";
+import { ConfirmDialog } from "@platform/ui";
 import { formatLongDate } from "@/shared/lib/inquiry-date-format";
 import LinkedLeaseDocumentsBody from "./LinkedLeaseDocumentsBody";
 import { useLinkedLeaseDocumentsMode } from "./useLinkedLeaseDocumentsMode";

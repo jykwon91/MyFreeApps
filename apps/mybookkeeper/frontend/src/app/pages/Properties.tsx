@@ -14,7 +14,7 @@ import Select from "@/shared/components/ui/Select";
 import TilePicker from "@/shared/components/ui/TilePicker";
 import FormField from "@/shared/components/ui/FormField";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
-import ConfirmDialog from "@/shared/components/ui/ConfirmDialog";
+import { ConfirmDialog } from "@platform/ui";
 import AlertBox from "@/shared/components/ui/AlertBox";
 import type { PropertyClassification } from "@/shared/types/property/property-classification";
 import { CLASSIFICATION_OPTIONS } from "@/shared/lib/property-labels";

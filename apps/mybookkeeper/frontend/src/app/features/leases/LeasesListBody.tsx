@@ -4,7 +4,7 @@ import { Trash2, Upload } from "lucide-react";
 import type { LeasesListMode } from "@/shared/types/lease/leases-list-mode";
 import type { SignedLeaseSummary } from "@/shared/types/lease/signed-lease-summary";
 import EmptyState from "@/shared/components/ui/EmptyState";
-import ConfirmDialog from "@/shared/components/ui/ConfirmDialog";
+import { ConfirmDialog } from "@platform/ui";
 import LeasesListSkeleton from "./LeasesListSkeleton";
 import LeaseQuickUploadModal from "./LeaseQuickUploadModal";
 import SignedLeaseStatusBadge from "./SignedLeaseStatusBadge";

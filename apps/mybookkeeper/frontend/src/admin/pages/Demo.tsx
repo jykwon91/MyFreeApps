@@ -9,7 +9,7 @@ import {
 import { useToast } from "@/shared/hooks/useToast";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import { Button } from "@platform/ui";
-import ConfirmDialog from "@/shared/components/ui/ConfirmDialog";
+import { ConfirmDialog } from "@platform/ui";
 import DemoUserTable from "@/admin/features/demo/DemoUserTable";
 import CreateDemoDialog from "@/admin/features/demo/CreateDemoDialog";
 import CredentialsModal from "@/admin/features/demo/CredentialsModal";

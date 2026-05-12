@@ -7,7 +7,7 @@ import { showError, showSuccess } from "@/shared/lib/toast-store";
 import type { InsurancePolicyDetail } from "@/shared/types/insurance/insurance-policy-detail";
 import type { InsurancePolicyDetailMode } from "@/shared/types/insurance/insurance-policy-detail-mode";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
-import { Button, LoadingButton } from "@platform/ui";
+import { Button, ConfirmDialog } from "@platform/ui";
 import InsuranceExpirationBadge from "./InsuranceExpirationBadge";
 import InsurancePolicyAttachmentsSection from "./InsurancePolicyAttachmentsSection";
 import InsurancePolicyDetailSkeleton from "./InsurancePolicyDetailSkeleton";
@@ -130,40 +130,21 @@ export default function InsurancePolicyDetailBody({
             />
           </section>
 
-          {showDeleteConfirm ? (
-            <div
-              className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-              data-testid="delete-insurance-policy-confirm"
-            >
-              <div className="bg-background rounded-lg shadow-lg max-w-sm w-full p-6 space-y-4">
-                <h3 className="text-base font-semibold">Delete policy?</h3>
-                <p className="text-sm text-muted-foreground">
-                  This will permanently delete <strong>{policy.policy_name}</strong> and all
-                  attached documents. This action cannot be undone.
-                </p>
-                <div className="flex gap-3 justify-end">
-                  <Button
-                    variant="secondary"
-                    size="md"
-                    onClick={() => setShowDeleteConfirm(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <LoadingButton
-                    variant="primary"
-                    size="md"
-                    isLoading={isDeleting}
-                    loadingText="Deleting..."
-                    onClick={() => void handleDelete()}
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                    data-testid="confirm-delete-insurance-policy"
-                  >
-                    Delete
-                  </LoadingButton>
-                </div>
-              </div>
-            </div>
-          ) : null}
+          <ConfirmDialog
+            open={showDeleteConfirm}
+            title="Delete policy?"
+            description={
+              <>
+                This will permanently delete <strong>{policy.policy_name}</strong> and all
+                attached documents. This action cannot be undone.
+              </>
+            }
+            confirmLabel="Delete"
+            variant="danger"
+            isLoading={isDeleting}
+            onConfirm={() => void handleDelete()}
+            onCancel={() => setShowDeleteConfirm(false)}
+          />
         </>
       );
   }

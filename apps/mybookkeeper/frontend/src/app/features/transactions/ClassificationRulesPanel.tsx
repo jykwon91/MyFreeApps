@@ -6,7 +6,7 @@ import {
 } from "@/shared/store/classificationRulesApi";
 import { useGetPropertiesQuery } from "@/shared/store/propertiesApi";
 import Panel from "@/shared/components/ui/Panel";
-import ConfirmDialog from "@/shared/components/ui/ConfirmDialog";
+import { ConfirmDialog } from "@platform/ui";
 import { useClassificationRulesPanelMode } from "./useClassificationRulesPanelMode";
 import ClassificationRulesPanelBody from "./ClassificationRulesPanelBody";
 
