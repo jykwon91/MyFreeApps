@@ -42,7 +42,10 @@ class UtilityType(Base):
 
     game: Mapped["Game"] = relationship("Game", back_populates="utility_types")
     lineups: Mapped[list["Lineup"]] = relationship(
-        "Lineup", back_populates="utility_type", lazy="select"
+        "Lineup",
+        foreign_keys="[Lineup.utility_type_id]",
+        back_populates="utility_type",
+        lazy="select",
     )
 
 

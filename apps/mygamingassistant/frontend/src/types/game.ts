@@ -64,10 +64,10 @@ export interface Lineup {
   id: string;
   game_id: string;
   map_id: string;
-  target_zone_id: string;
-  stand_zone_id: string;
-  side: "side_a" | "side_b" | "any";
-  utility_type_id: string;
+  target_zone_id: string | null;
+  stand_zone_id: string | null;
+  side: "side_a" | "side_b" | "any" | null;
+  utility_type_id: string | null;
   title: string;
   notes: string | null;
   stand_screenshot_url: string | null;
@@ -78,9 +78,64 @@ export interface Lineup {
   attribution_url: string | null;
   attribution_author: string | null;
   status: "accepted" | "pending_review" | "hidden";
+  // YouTube ingestion metadata
+  youtube_video_id: string | null;
+  chapter_start_seconds: number | null;
+  chapter_title: string | null;
+  // Classifier suggestions (PR 5)
+  suggested_game_id: string | null;
+  suggested_map_id: string | null;
+  suggested_target_zone_id: string | null;
+  suggested_stand_zone_id: string | null;
+  suggested_side: "side_a" | "side_b" | "any" | null;
+  suggested_utility_type_id: string | null;
+  classification_confidence: number | null;
+  classification_reasoning: string | null;
   target_zone: ZoneRead | null;
   stand_zone: ZoneRead | null;
   utility_type: UtilityTypeRead | null;
+}
+
+export interface PendingLineupsResponse {
+  items: Lineup[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface LineupAcceptBody {
+  game_id?: string;
+  map_id?: string;
+  target_zone_id?: string;
+  stand_zone_id?: string;
+  side?: "side_a" | "side_b" | "any";
+  utility_type_id?: string;
+  title?: string;
+  notes?: string;
+  aim_anchor_x?: number;
+  aim_anchor_y?: number;
+  setup_seconds?: number;
+}
+
+export interface BulkAcceptBody {
+  lineup_ids: string[];
+  patches: Record<string, LineupAcceptBody>;
+}
+
+export interface ClassifyResponse {
+  lineup_id: string;
+  success: boolean;
+  suggested_game_id: string | null;
+  suggested_map_id: string | null;
+  suggested_target_zone_id: string | null;
+  suggested_stand_zone_id: string | null;
+  suggested_side: "side_a" | "side_b" | "any" | null;
+  suggested_utility_type_id: string | null;
+  aim_anchor_x: number | null;
+  aim_anchor_y: number | null;
+  confidence: number | null;
+  reasoning: string;
+  error_codes: string[];
 }
 
 export interface UploadUrlResponse {

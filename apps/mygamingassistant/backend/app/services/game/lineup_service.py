@@ -22,14 +22,23 @@ from app.core.storage import get_storage
 from app.models.game.lineup import Lineup
 from app.repositories.game.lineup_repo import (
     LineupFilters,
+    accept_lineup,
     create_lineup,
     get_lineup,
     hide_lineup,
     list_lineups,
+    list_pending_lineups,
     update_lineup,
     zone_density,
 )
-from app.schemas.game.lineup_schemas import LineupCreate, LineupIngestCreate, LineupPatch, UploadUrlResponse
+from app.schemas.game.lineup_schemas import (
+    LineupAcceptBody,
+    LineupCreate,
+    LineupIngestCreate,
+    LineupPatch,
+    PendingLineupsResponse,
+    UploadUrlResponse,
+)
 
 # Presigned PUT URLs are valid for 15 minutes — enough time for the browser
 # to complete the upload, short enough to reduce exposure on leaked URLs.
@@ -231,6 +240,99 @@ async def hide(
         return None
     hidden = await hide_lineup(db, lineup)
     return hidden
+
+
+async def get_pending(
+    db: AsyncSession,
+    *,
+    limit: int = 50,
+    offset: int = 0,
+    source_id: Optional[uuid.UUID] = None,
+    confidence_max: Optional[float] = None,
+    game_id: Optional[uuid.UUID] = None,
+) -> PendingLineupsResponse:
+    """Return paginated pending_review lineups with presigned screenshot URLs."""
+    from app.schemas.game.lineup_schemas import LineupRead
+
+    items, total = await list_pending_lineups(
+        db,
+        limit=limit,
+        offset=offset,
+        source_id=source_id,
+        confidence_max=confidence_max,
+        game_id=game_id,
+    )
+    signed_items = [_sign_lineup(l) for l in items]
+    return PendingLineupsResponse(
+        items=[LineupRead.model_validate(l) for l in signed_items],
+        total=total,
+        limit=limit,
+        offset=offset,
+    )
+
+
+async def accept(
+    db: AsyncSession,
+    lineup_id: uuid.UUID,
+    body: LineupAcceptBody,
+) -> Lineup | None:
+    """Accept a pending lineup, applying optional overrides.
+
+    Resolves suggested values as defaults, then applies overrides on top.
+    Returns None if lineup not found.
+    Raises ValueError if required classification fields are missing after merge.
+    """
+    lineup = await get_lineup(db, lineup_id)
+    if lineup is None:
+        return None
+
+    # Build the accepted field set: start with suggested values, apply overrides
+    game_id = body.game_id or lineup.suggested_game_id or lineup.game_id
+    map_id = body.map_id or lineup.suggested_map_id or lineup.map_id
+    target_zone_id = body.target_zone_id or lineup.suggested_target_zone_id
+    stand_zone_id = body.stand_zone_id or lineup.suggested_stand_zone_id
+    side = body.side or lineup.suggested_side or lineup.side
+    utility_type_id = body.utility_type_id or lineup.suggested_utility_type_id or lineup.utility_type_id
+
+    # Validate all required fields present (DB CHECK constraint would catch this
+    # but a clear error here is better UX).
+    missing = [
+        name
+        for name, val in [
+            ("target_zone_id", target_zone_id),
+            ("stand_zone_id", stand_zone_id),
+            ("side", side),
+            ("utility_type_id", utility_type_id),
+        ]
+        if val is None
+    ]
+    if missing:
+        raise ValueError(
+            f"Cannot accept lineup: missing required fields: {', '.join(missing)}. "
+            "Set them via classifier suggestions or provide them in the accept body."
+        )
+
+    overrides: dict = {
+        "game_id": game_id,
+        "map_id": map_id,
+        "target_zone_id": target_zone_id,
+        "stand_zone_id": stand_zone_id,
+        "side": side,
+        "utility_type_id": utility_type_id,
+    }
+    if body.title is not None:
+        overrides["title"] = body.title
+    if body.notes is not None:
+        overrides["notes"] = body.notes
+    if body.aim_anchor_x is not None:
+        overrides["aim_anchor_x"] = body.aim_anchor_x
+    if body.aim_anchor_y is not None:
+        overrides["aim_anchor_y"] = body.aim_anchor_y
+    if body.setup_seconds is not None:
+        overrides["setup_seconds"] = body.setup_seconds
+
+    updated = await accept_lineup(db, lineup, overrides)
+    return _sign_lineup(updated)
 
 
 async def get_zone_density(

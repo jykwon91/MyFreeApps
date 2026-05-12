@@ -39,6 +39,7 @@ from app.core.storage import get_storage
 from app.models.game.source import Source
 from app.repositories.game import lineup_repo, source_repo
 from app.schemas.game.lineup_schemas import LineupIngestCreate
+from app.services.classification.classifier_service import classify_lineup
 from app.services.game import lineup_service
 from app.services.ingestion.chapter_parser import Chapter, parse_chapters
 from app.services.ingestion.frame_extractor import FrameExtractionError, extract_frames
@@ -145,7 +146,7 @@ async def _process_chapter(
     )
 
     try:
-        await lineup_service.create_from_ingestion(db, payload)
+        lineup = await lineup_service.create_from_ingestion(db, payload)
         await db.commit()
     except Exception as exc:
         await db.rollback()
@@ -156,6 +157,45 @@ async def _process_chapter(
         )
         sentry_sdk.capture_exception(exc)
         return False
+
+    # Classifier — runs immediately after the lineup is created.
+    # Failures are logged but non-fatal: the lineup stays in pending_review
+    # with no suggestions, and the user can re-classify from the review queue.
+    if settings.enable_classifier:
+        try:
+            result = await classify_lineup(
+                db,
+                lineup.id,
+                game_hint=source.config_json.get("game_hint") if source.config_json else None,
+            )
+            if result.success:
+                await db.commit()
+                logger.info(
+                    "Classifier success: source_id=%s video_id=%s chapter_start=%d "
+                    "lineup_id=%s confidence=%.2f",
+                    source.id, video_meta.video_id, start, lineup.id,
+                    result.confidence or 0.0,
+                )
+            else:
+                logger.warning(
+                    "Classifier failed (non-fatal): source_id=%s video_id=%s "
+                    "chapter_start=%d lineup_id=%s error_codes=%s",
+                    source.id, video_meta.video_id, start, lineup.id,
+                    result.error_codes,
+                )
+        except Exception as exc:
+            logger.error(
+                "Classifier unexpected error (non-fatal): source_id=%s video_id=%s "
+                "chapter_start=%d lineup_id=%s error=%s",
+                source.id, video_meta.video_id, start, lineup.id, str(exc),
+                exc_info=True,
+            )
+            sentry_sdk.capture_exception(exc)
+            # Rollback any partial classifier flush; lineup row is already committed above.
+            try:
+                await db.rollback()
+            except Exception:
+                pass
 
     return True
 

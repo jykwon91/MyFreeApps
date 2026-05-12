@@ -38,7 +38,12 @@ class Game(Base):
     utility_types: Mapped[list["UtilityType"]] = relationship(
         "UtilityType", back_populates="game", lazy="select"
     )
-    lineups: Mapped[list["Lineup"]] = relationship("Lineup", back_populates="game", lazy="select")
+    lineups: Mapped[list["Lineup"]] = relationship(
+        "Lineup",
+        foreign_keys="[Lineup.game_id]",
+        back_populates="game",
+        lazy="select",
+    )
 
 
 # Avoid circular import at module level by importing here

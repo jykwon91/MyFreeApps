@@ -163,6 +163,82 @@ async def get_ingested_video_ids(
     return {row for (row,) in result.all() if row is not None}
 
 
+async def list_pending_lineups(
+    db: AsyncSession,
+    *,
+    limit: int = 50,
+    offset: int = 0,
+    source_id: Optional[uuid.UUID] = None,
+    confidence_max: Optional[float] = None,
+    game_id: Optional[uuid.UUID] = None,
+) -> tuple[list[Lineup], int]:
+    """Return pending_review lineups with pagination.
+
+    Returns (items, total_count).
+    Sorted newest first so freshly ingested lineups appear at top.
+    """
+    base_stmt = (
+        select(Lineup)
+        .where(Lineup.status == "pending_review")
+        .options(
+            selectinload(Lineup.target_zone),
+            selectinload(Lineup.stand_zone),
+            selectinload(Lineup.utility_type),
+        )
+    )
+    if source_id is not None:
+        base_stmt = base_stmt.where(Lineup.source_id == source_id)
+    if game_id is not None:
+        base_stmt = base_stmt.where(
+            (Lineup.game_id == game_id) | (Lineup.suggested_game_id == game_id)
+        )
+    if confidence_max is not None:
+        # "low confidence" filter — show lineups where confidence is null (not yet classified)
+        # OR below the threshold.
+        base_stmt = base_stmt.where(
+            (Lineup.classification_confidence.is_(None))
+            | (Lineup.classification_confidence <= confidence_max)
+        )
+
+    count_stmt = select(func.count()).select_from(base_stmt.subquery())
+    total: int = (await db.execute(count_stmt)).scalar_one()
+
+    items_stmt = base_stmt.order_by(Lineup.created_at.desc()).limit(limit).offset(offset)
+    result = await db.execute(items_stmt)
+    return list(result.scalars().all()), total
+
+
+async def accept_lineup(
+    db: AsyncSession,
+    lineup: Lineup,
+    overrides: dict,
+) -> Lineup:
+    """Transition lineup to 'accepted', applying any overrides.
+
+    The overrides dict should contain only fields explicitly provided by the
+    caller. The caller is responsible for verifying all required classification
+    fields are non-null before calling this.
+    """
+    for key, value in overrides.items():
+        if value is not None:
+            setattr(lineup, key, value)
+    lineup.status = "accepted"
+    await db.flush()
+    # Refresh relations that changed
+    attrs_to_refresh = [
+        attr
+        for attr, fk_field in [
+            ("target_zone", "target_zone_id"),
+            ("stand_zone", "stand_zone_id"),
+            ("utility_type", "utility_type_id"),
+        ]
+        if getattr(lineup, fk_field) is not None
+    ]
+    if attrs_to_refresh:
+        await db.refresh(lineup, attribute_names=attrs_to_refresh)
+    return lineup
+
+
 async def zone_density(
     db: AsyncSession,
     map_id: uuid.UUID,

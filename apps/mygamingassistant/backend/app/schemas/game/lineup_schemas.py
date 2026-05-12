@@ -64,6 +64,17 @@ class LineupRead(BaseModel):
     chapter_start_seconds: Optional[int] = None
     chapter_title: Optional[str] = None
 
+    # Classifier suggestions (PR 5) — set by auto-classification, edited/accepted
+    # by the operator in the review queue.
+    suggested_game_id: Optional[uuid.UUID] = None
+    suggested_map_id: Optional[uuid.UUID] = None
+    suggested_target_zone_id: Optional[uuid.UUID] = None
+    suggested_stand_zone_id: Optional[uuid.UUID] = None
+    suggested_side: Optional[str] = None
+    suggested_utility_type_id: Optional[uuid.UUID] = None
+    classification_confidence: Optional[float] = None
+    classification_reasoning: Optional[str] = None
+
     # Expanded relations (populated when available)
     target_zone: Optional[ZoneRead] = None
     stand_zone: Optional[ZoneRead] = None
@@ -159,6 +170,68 @@ class UploadUrlResponse(BaseModel):
     aim_upload_url: str
     stand_object_key: str
     aim_object_key: str
+
+
+# ---------------------------------------------------------------------------
+# Review queue schemas (PR 5)
+# ---------------------------------------------------------------------------
+
+class LineupAcceptBody(BaseModel):
+    """Optional overrides when accepting a pending lineup.
+
+    All fields optional — omit to accept the current suggested values as-is.
+    The accepted lineup must satisfy the CHECK constraint (all four classification
+    fields non-null after merging suggestions + overrides).
+    """
+    game_id: Optional[uuid.UUID] = None
+    map_id: Optional[uuid.UUID] = None
+    target_zone_id: Optional[uuid.UUID] = None
+    stand_zone_id: Optional[uuid.UUID] = None
+    side: Optional[str] = None
+    utility_type_id: Optional[uuid.UUID] = None
+    title: Optional[str] = Field(None, min_length=1, max_length=255)
+    notes: Optional[str] = None
+    aim_anchor_x: Optional[float] = Field(None, ge=0.0, le=1.0)
+    aim_anchor_y: Optional[float] = Field(None, ge=0.0, le=1.0)
+    setup_seconds: Optional[int] = Field(None, ge=0)
+
+    @field_validator("side")
+    @classmethod
+    def validate_side(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and v not in ("side_a", "side_b", "any"):
+            raise ValueError("side must be side_a, side_b, or any")
+        return v
+
+
+class BulkAcceptBody(BaseModel):
+    """Accept multiple pending lineups in one call."""
+    lineup_ids: list[uuid.UUID] = Field(..., min_length=1)
+    # Per-lineup overrides keyed by lineup_id string.
+    patches: dict[str, LineupAcceptBody] = Field(default_factory=dict)
+
+
+class ClassifyResponse(BaseModel):
+    """Returned by POST /lineups/{id}/classify — the new suggested values."""
+    lineup_id: uuid.UUID
+    success: bool
+    suggested_game_id: Optional[uuid.UUID] = None
+    suggested_map_id: Optional[uuid.UUID] = None
+    suggested_target_zone_id: Optional[uuid.UUID] = None
+    suggested_stand_zone_id: Optional[uuid.UUID] = None
+    suggested_side: Optional[str] = None
+    suggested_utility_type_id: Optional[uuid.UUID] = None
+    aim_anchor_x: Optional[float] = None
+    aim_anchor_y: Optional[float] = None
+    confidence: Optional[float] = None
+    reasoning: str = ""
+    error_codes: list[str] = Field(default_factory=list)
+
+
+class PendingLineupsResponse(BaseModel):
+    items: list[LineupRead]
+    total: int
+    limit: int
+    offset: int
 
 
 # ---------------------------------------------------------------------------
