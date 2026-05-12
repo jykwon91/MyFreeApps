@@ -1,6 +1,5 @@
 import axios from "axios";
-import { installStepUpInterceptor } from "@/shared/auth/stepUpInterceptor";
-import { notifyAuthChange } from "./auth-store";
+import { installStepUpInterceptor, notifyAuthChange } from "@platform/ui";
 
 const api = axios.create({
   baseURL: "/api",

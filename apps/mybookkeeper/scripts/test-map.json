@@ -42,7 +42,6 @@
     "auth": {
       "source_paths": [
         "frontend/src/shared/lib/auth.ts",
-        "frontend/src/shared/lib/auth-store.ts",
         "frontend/src/shared/lib/api.ts",
         "frontend/src/app/pages/Login.tsx",
         "frontend/src/app/pages/Register.tsx",
@@ -94,7 +93,6 @@
         "DeleteAccountModal.test.tsx",
         "TwoFactorSetup.test.tsx",
         "auth.test.ts",
-        "auth-store.test.ts",
         "apiInterceptor.test.ts"
       ],
       "e2e_specs": [
