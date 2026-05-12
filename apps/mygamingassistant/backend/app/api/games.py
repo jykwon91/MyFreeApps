@@ -1,13 +1,12 @@
-"""Game library read endpoints — stub implementations for PR 1.
+"""Game library read endpoints.
 
 All routes require authentication. Write endpoints (upload, review, packages)
-are implemented in Phase 2+ PRs.
+are in lineups.py.
 
 Routes:
     GET /api/games                          — list all games
     GET /api/games/{game_slug}/maps         — list maps for a game
     GET /api/games/{game_slug}/maps/{map_slug} — map detail with zones + sites + utility types
-    GET /api/lineups                        — empty list (no lineups yet)
 """
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
@@ -17,7 +16,6 @@ from sqlalchemy.orm import selectinload
 from app.core.auth import current_active_user
 from app.db.session import get_db
 from app.models.game.game import Game
-from app.models.game.lineup import Lineup
 from app.models.game.map import Map
 from app.models.game.map_zone import MapZone
 from app.models.game.site import Site
@@ -126,15 +124,3 @@ async def get_map(
     }
 
 
-@router.get("/lineups")
-async def list_lineups(
-    _user: User = Depends(current_active_user),
-    db: AsyncSession = Depends(get_db),
-) -> list[dict]:
-    """List accepted lineups. Phase 1 stub — always returns empty list.
-
-    Phase 2 will add game_slug/map_slug/side/utility_type filters and
-    populate lineups from the DB.
-    """
-    # TODO Phase 2: query accepted lineups with filters
-    return []

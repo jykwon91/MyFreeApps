@@ -1,0 +1,99 @@
+/**
+ * LineupCard unit tests.
+ *
+ * Tests:
+ * - Thumbnail variant renders title + stand screenshot
+ * - Expanded variant renders both screenshots, metadata, notes
+ * - Aim anchor overlay renders at correct position when coords are set
+ * - Aim anchor is absent when coords are null
+ */
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import LineupCard from "@/components/lineup/LineupCard";
+import type { Lineup } from "@/types/game";
+
+const BASE_LINEUP: Lineup = {
+  id: "lineup-1",
+  game_id: "game-1",
+  map_id: "map-1",
+  target_zone_id: "zone-1",
+  stand_zone_id: "zone-2",
+  side: "side_a",
+  utility_type_id: "util-1",
+  title: "A-site smoke from CT",
+  notes: "Stand on the crate",
+  stand_screenshot_url: "https://example.com/stand.png",
+  aim_screenshot_url: "https://example.com/aim.png",
+  aim_anchor_x: 0.5,
+  aim_anchor_y: 0.4,
+  setup_seconds: 8,
+  attribution_url: null,
+  attribution_author: null,
+  status: "accepted",
+  target_zone: { id: "zone-1", slug: "a-site", name: "A Site", polygon_points: [] },
+  stand_zone: { id: "zone-2", slug: "ct-spawn", name: "CT Spawn", polygon_points: [] },
+  utility_type: { id: "util-1", slug: "smoke", name: "Smoke" },
+};
+
+describe("LineupCard", () => {
+  it("thumbnail variant renders title", () => {
+    render(<LineupCard lineup={BASE_LINEUP} variant="thumbnail" />);
+    expect(screen.getByText("A-site smoke from CT")).toBeDefined();
+  });
+
+  it("thumbnail variant renders stand screenshot", () => {
+    render(<LineupCard lineup={BASE_LINEUP} variant="thumbnail" />);
+    const img = screen.getByAltText("A-site smoke from CT — stand position");
+    expect(img).toBeDefined();
+  });
+
+  it("expanded variant renders both screenshots", () => {
+    render(<LineupCard lineup={BASE_LINEUP} variant="expanded" />);
+    const standImg = screen.getByAltText("A-site smoke from CT — stand position");
+    const aimImg = screen.getByAltText("A-site smoke from CT — aim reference");
+    expect(standImg).toBeDefined();
+    expect(aimImg).toBeDefined();
+  });
+
+  it("expanded variant renders utility type badge", () => {
+    render(<LineupCard lineup={BASE_LINEUP} variant="expanded" />);
+    expect(screen.getByText("Smoke")).toBeDefined();
+  });
+
+  it("expanded variant renders notes", () => {
+    render(<LineupCard lineup={BASE_LINEUP} variant="expanded" />);
+    expect(screen.getByText("Stand on the crate")).toBeDefined();
+  });
+
+  it("expanded variant renders setup_seconds badge", () => {
+    render(<LineupCard lineup={BASE_LINEUP} variant="expanded" />);
+    expect(screen.getByText("8s")).toBeDefined();
+  });
+
+  it("expanded variant renders aim anchor when coords are set", () => {
+    render(<LineupCard lineup={BASE_LINEUP} variant="expanded" />);
+    const anchor = screen.getByLabelText(/aim anchor/i);
+    expect(anchor).toBeDefined();
+  });
+
+  it("expanded variant omits aim anchor when coords are null", () => {
+    const lineup: Lineup = { ...BASE_LINEUP, aim_anchor_x: null, aim_anchor_y: null };
+    render(<LineupCard lineup={lineup} variant="expanded" />);
+    const anchor = screen.queryByLabelText(/aim anchor/i);
+    expect(anchor).toBeNull();
+  });
+
+  it("expanded variant renders 'No screenshot' when screenshot URL is null", () => {
+    const lineup: Lineup = { ...BASE_LINEUP, stand_screenshot_url: null };
+    render(<LineupCard lineup={lineup} variant="expanded" />);
+    const noShots = screen.getAllByText("No screenshot");
+    expect(noShots.length).toBeGreaterThan(0);
+  });
+
+  it("thumbnail calls onClick when clicked", () => {
+    const onClick = vi.fn();
+    render(<LineupCard lineup={BASE_LINEUP} variant="thumbnail" onClick={onClick} />);
+    screen.getByRole("button", { name: /view a-site smoke/i }).click();
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+});
