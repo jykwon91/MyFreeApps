@@ -220,7 +220,7 @@ describe("InsurancePolicyDetail — delete flow", () => {
     const user = userEvent.setup();
     renderPage();
     await user.click(screen.getByTestId("delete-insurance-policy-button"));
-    expect(screen.getByTestId("delete-insurance-policy-confirm")).toBeInTheDocument();
+    expect(screen.getByText("Delete policy?")).toBeInTheDocument();
   });
 
   it("Cancel dismisses the confirm dialog without deleting", async () => {
@@ -228,7 +228,7 @@ describe("InsurancePolicyDetail — delete flow", () => {
     renderPage();
     await user.click(screen.getByTestId("delete-insurance-policy-button"));
     await user.click(screen.getByRole("button", { name: /cancel/i }));
-    expect(screen.queryByTestId("delete-insurance-policy-confirm")).not.toBeInTheDocument();
+    expect(screen.queryByText("Delete policy?")).not.toBeInTheDocument();
     expect(deleteMock).not.toHaveBeenCalled();
   });
 
@@ -236,7 +236,10 @@ describe("InsurancePolicyDetail — delete flow", () => {
     const user = userEvent.setup();
     renderPage();
     await user.click(screen.getByTestId("delete-insurance-policy-button"));
-    await user.click(screen.getByTestId("confirm-delete-insurance-policy"));
+    // There are two "Delete" buttons: the trigger + the confirm button inside the dialog.
+    // The confirm button is the last one rendered.
+    const deleteButtons = screen.getAllByRole("button", { name: /^delete$/i });
+    await user.click(deleteButtons[deleteButtons.length - 1]);
     await waitFor(() => {
       expect(deleteMock).toHaveBeenCalledWith("policy-abc");
     });

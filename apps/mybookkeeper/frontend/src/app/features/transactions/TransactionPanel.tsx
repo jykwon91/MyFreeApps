@@ -8,7 +8,7 @@ import type { TransactionFormValues } from "@/shared/types/transaction/transacti
 import type { DuplicatePair } from "@/shared/types/transaction/duplicate";
 import Panel from "@/shared/components/ui/Panel";
 import { LoadingButton } from "@platform/ui";
-import ConfirmDialog from "@/shared/components/ui/ConfirmDialog";
+import { ConfirmDialog } from "@platform/ui";
 import TransactionStatusBadge from "@/app/features/transactions/TransactionStatusBadge";
 import TransactionTypeBadge from "@/app/features/transactions/TransactionTypeBadge";
 import TransactionForm from "@/app/features/transactions/TransactionForm";

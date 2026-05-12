@@ -3,7 +3,7 @@
 Issues discovered during development. New entries are appended; resolved entries are
 removed and the counts in this header are updated.
 
-**Open issues: 14 (Critical: 0 / High: 2 blocked-on-react-19 / Medium: 5 deferred-or-blocked / Low: 7 deferred-or-environmental)**
+**Open issues: 13 (Critical: 0 / High: 1 blocked-on-react-19 / Medium: 5 deferred-or-blocked / Low: 7 deferred-or-environmental)**
 
 > Status (2026-05-08 PM): All actionable audit items resolved across batches PR #492-#528 (~30 PRs). Remaining open entries are either (a) blocked on the React 18→19 monorepo bump (5 items), (b) deferred-by-design conventions or follow-ups (4), (c) environmental issues unrelated to code (3: asyncpg Windows, test hang on Windows, Quality Gate false-positive), or (d) intentional accepted lint warnings (2).
 
@@ -70,9 +70,9 @@ removed and the counts in this header are updated.
 
 ---
 
-#### HIGH (blocked-on-react-19 from MBK side) — Confirm-delete dialog wrapper
+#### ~~HIGH (blocked-on-react-19 from MBK side) — Confirm-delete dialog wrapper~~ RESOLVED
 
-See sister entry in MBK. MJH-side file: `features/admin/demo/DeleteDemoConfirmDialog.tsx` (rebuilds from Radix instead of wrapping shared `ConfirmDialog`). When `DeleteConfirmDialog` lands in `@platform/ui`, MJH should refactor away from raw Radix.
+**Resolved:** shared-confirm-dialog PR (2026-05-11). `DeleteDemoConfirmDialog.tsx` rewritten to wrap the enhanced shared `ConfirmDialog` from `@platform/ui`. The "blocked-on-react-19" label was no longer applicable — MJH already consumed `@platform/ui` and did not need the MBK React 19 migration to proceed. See sister entry in MBK for full scope of changes to the shared component.
 
 ---
 

@@ -1,9 +1,10 @@
 # Tech Debt
 
 > Last scanned: 2026-05-11
-> Issues: 0 critical, 3 high, 3 medium (0 deferred + 3 active), 0 low
+> Issues: 0 critical, 2 high, 3 medium (0 deferred + 3 active), 0 low
 > 2026-05-11 (PR 6 of React 19 migration): 1 HIGH resolved (Button/LoadingButton local copies → `@platform/ui`).
 > 2026-05-11 (StatusBadge PR): 1 HIGH resolved (Status-colored Badge → `@platform/ui` StatusBadge).
+> 2026-05-11 (shared-confirm-dialog PR): 1 HIGH resolved (Confirm-delete dialog wrapper extracted to `@platform/ui`).
 >
 > **Monorepo refactor audit (2026-05-08, post-resume-refinement work):** ~12 additional findings across three axes — backend reusability, frontend reusability, and long-files. Tracked under "## Monorepo refactor audit (2026-05-08)" below. These are extraction / split candidates, not regression bugs. Sister findings live in `apps/myjobhunter/TECH_DEBT.md`.
 
@@ -91,12 +92,9 @@ Output of two parallel scans (backend + frontend) for code that should live in `
 
 ---
 
-#### HIGH — Confirm-delete dialog wrapper
+#### ~~HIGH — Confirm-delete dialog wrapper~~ RESOLVED
 
-**Effort:** S
-**Location:** MBK: `features/vendors/DeleteVendorModal.tsx` (wraps shared `ConfirmDialog`). MJH: `features/admin/demo/DeleteDemoConfirmDialog.tsx` (rebuilds from Radix).
-**Problem:** MBK delegates to shared, MJH reimplements. Both are the same shape with destructive styling.
-**Recommendation:** Extract a `DeleteConfirmDialog` wrapper around `ConfirmDialog` with destructive default styling (warning icon, red Confirm button) to `packages/shared-frontend/src/components/DeleteConfirmDialog.tsx`. Both apps consume.
+**Resolved:** shared-confirm-dialog PR (2026-05-11). Enhanced `packages/shared-frontend/src/components/ui/ConfirmDialog.tsx`: added `variant="destructive"` alias for `"danger"`, Promise-aware `onConfirm` with internal loading state (plus legacy `isLoading` prop for externally-controlled state), exported `ConfirmDialogProps`, `description` now accepts `ReactNode`. Deleted `apps/mybookkeeper/frontend/src/shared/components/ui/ConfirmDialog.tsx` and rewrote all 16 MBK consumer import sites to `import { ConfirmDialog } from "@platform/ui"`. Converted `InsurancePolicyDetailBody.tsx` inline confirm div to shared `ConfirmDialog`. Rewrote `DeleteDemoConfirmDialog.tsx` (MJH) from raw Radix to shared component. 17 new unit tests in `packages/shared-frontend/src/__tests__/ConfirmDialog.test.tsx`.
 
 ---
 

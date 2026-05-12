@@ -8,7 +8,7 @@ import type { OrgRole } from "@/shared/types/organization/org-role";
 import type { OrgMember } from "@/shared/types/organization/member";
 import Badge from "@/shared/components/ui/Badge";
 import Select from "@/shared/components/ui/Select";
-import ConfirmDialog from "@/shared/components/ui/ConfirmDialog";
+import { ConfirmDialog } from "@platform/ui";
 import { ROLE_BADGE_COLORS, ROLE_OPTIONS } from "@/shared/lib/organization-config";
 
 export interface MemberListProps {

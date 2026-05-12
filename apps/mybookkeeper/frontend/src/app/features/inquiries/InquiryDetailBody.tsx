@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Archive, Ban, Mail, UserPlus } from "lucide-react";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import { Button } from "@platform/ui";
-import ConfirmDialog from "@/shared/components/ui/ConfirmDialog";
+import { ConfirmDialog } from "@platform/ui";
 import SourceBadge from "@/shared/components/ui/SourceBadge";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import {

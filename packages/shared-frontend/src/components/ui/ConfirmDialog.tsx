@@ -1,15 +1,33 @@
+import { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import Button from "./Button";
+import Spinner from "../icons/Spinner";
 
-interface Props {
+export interface ConfirmDialogProps {
   open: boolean;
   title: string;
-  description: string;
-  confirmLabel: string;
+  description: string | React.ReactNode;
+  confirmLabel?: string;
   cancelLabel?: string;
-  variant?: "danger" | "default";
+  /** "danger" and "destructive" are equivalent — both render a red confirm button. */
+  variant?: "default" | "danger" | "destructive";
+  /**
+   * Externally-controlled loading state. Use this when the in-flight state is
+   * managed outside the dialog (e.g., from an RTK Query mutation's isLoading).
+   *
+   * Alternatively, return a Promise from `onConfirm` and the dialog will track
+   * loading state internally until the Promise settles.
+   *
+   * If both are provided, the button shows loading whenever either is true.
+   */
   isLoading?: boolean;
-  onConfirm: () => void;
+  /**
+   * Called when the user confirms. If the function returns a Promise, the
+   * confirm button enters a loading state until the Promise settles. The caller
+   * owns error handling (toast, navigation, etc.) — this component only tracks
+   * loading state and does not suppress or re-throw rejections.
+   */
+  onConfirm: () => void | Promise<void>;
   onCancel: () => void;
   children?: React.ReactNode;
 }
@@ -18,16 +36,33 @@ export default function ConfirmDialog({
   open,
   title,
   description,
-  confirmLabel,
+  confirmLabel = "Confirm",
   cancelLabel = "Cancel",
   variant = "default",
   isLoading = false,
   onConfirm,
   onCancel,
   children,
-}: Props) {
+}: ConfirmDialogProps) {
+  const [isPending, setIsPending] = useState(false);
+
+  const isDestructive = variant === "danger" || variant === "destructive";
+  const showLoading = isLoading || isPending;
+
+  function handleConfirm() {
+    const result = onConfirm();
+    if (result instanceof Promise) {
+      setIsPending(true);
+      // The caller owns error handling (toast, navigation, etc.). We suppress
+      // the rejection here so it does not become an unhandled Promise rejection
+      // in the onClick handler. The caller should attach its own .catch() for
+      // user-visible error feedback.
+      result.catch(() => undefined).finally(() => setIsPending(false));
+    }
+  }
+
   return (
-    <Dialog.Root open={open} onOpenChange={(isOpen: boolean) => { if (!isOpen) onCancel(); }}>
+    <Dialog.Root open={open} onOpenChange={(isOpen) => { if (!isOpen) onCancel(); }}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-black/50 z-[70]" />
         <Dialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[70] w-full max-w-sm rounded-lg border bg-card p-6 shadow-lg">
@@ -35,19 +70,28 @@ export default function ConfirmDialog({
           <Dialog.Description className="text-sm text-muted-foreground mt-2">
             {description}
           </Dialog.Description>
-          <>{children}</>
+          {children}
           <div className="flex justify-end gap-2 mt-6">
-            <Button variant="ghost" size="sm" onClick={onCancel}>{cancelLabel}</Button>
+            <Button variant="ghost" size="sm" onClick={onCancel} disabled={showLoading}>
+              {cancelLabel}
+            </Button>
             <button
-              onClick={onConfirm}
-              disabled={isLoading}
-              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors disabled:opacity-50 ${
-                variant === "danger"
+              onClick={handleConfirm}
+              disabled={showLoading}
+              className={`inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-colors disabled:opacity-50 ${
+                isDestructive
                   ? "bg-red-600 text-white hover:bg-red-700"
-                  : "bg-primary text-primary-foreground hover:bg-primary/90"
+                  : "bg-primary text-primary-foreground hover:opacity-90"
               }`}
             >
-              {isLoading ? "Processing..." : confirmLabel}
+              {showLoading ? (
+                <>
+                  <Spinner />
+                  Processing...
+                </>
+              ) : (
+                confirmLabel
+              )}
             </button>
           </div>
         </Dialog.Content>

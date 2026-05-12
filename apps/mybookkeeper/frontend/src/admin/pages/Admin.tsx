@@ -10,7 +10,7 @@ import {
 } from "@/shared/store/adminApi";
 import { useCurrentUser } from "@/shared/hooks/useCurrentUser";
 import { useToast } from "@/shared/hooks/useToast";
-import ConfirmDialog from "@/shared/components/ui/ConfirmDialog";
+import { ConfirmDialog } from "@platform/ui";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import type { Role } from "@/shared/types/user/role";
 import type { AdminConfirmAction } from "@/shared/types/admin/admin-confirm-action";

@@ -9,7 +9,7 @@ import type { SignedLeaseAttachment } from "@/shared/types/lease/signed-lease-at
 import AttachmentViewer from "@/app/features/leases/AttachmentViewer";
 import LeaseAttachmentDropzone from "@/app/features/leases/LeaseAttachmentDropzone";
 import LeaseAttachmentRow from "@/app/features/leases/LeaseAttachmentRow";
-import ConfirmDialog from "@/shared/components/ui/ConfirmDialog";
+import { ConfirmDialog } from "@platform/ui";
 
 export interface LeaseAttachmentsSectionProps {
   leaseId: string;

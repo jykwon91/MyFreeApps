@@ -17,7 +17,7 @@ import {
 } from "@dnd-kit/sortable";
 import { Upload } from "lucide-react";
 import { LoadingButton } from "@platform/ui";
-import ConfirmDialog from "@/shared/components/ui/ConfirmDialog";
+import { ConfirmDialog } from "@platform/ui";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import {
   useDeleteListingPhotoMutation,

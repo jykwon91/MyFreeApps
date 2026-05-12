@@ -1,4 +1,4 @@
-import ConfirmDialog from "@/shared/components/ui/ConfirmDialog";
+import { ConfirmDialog } from "@platform/ui";
 
 export interface DeleteVendorModalProps {
   open: boolean;

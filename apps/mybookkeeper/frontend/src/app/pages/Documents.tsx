@@ -25,7 +25,7 @@ import DocumentsSkeleton from "@/app/features/documents/DocumentsSkeleton";
 import DocumentTable from "@/app/features/documents/DocumentTable";
 import DocumentViewer from "@/app/features/documents/DocumentViewer";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
-import ConfirmDialog from "@/shared/components/ui/ConfirmDialog";
+import { ConfirmDialog } from "@platform/ui";
 import { Button } from "@platform/ui";
 import AlertBox from "@/shared/components/ui/AlertBox";
 import { useDismissable } from "@/shared/hooks/useDismissable";
