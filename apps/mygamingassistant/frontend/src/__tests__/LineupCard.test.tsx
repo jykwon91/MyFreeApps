@@ -6,8 +6,12 @@
  * - Expanded variant renders both screenshots, metadata, notes
  * - Aim anchor overlay renders at correct position when coords are set
  * - Aim anchor is absent when coords are null
+ * - Pin button renders when onPinToggle is provided (both variants)
+ * - Pin button absent when onPinToggle is not provided
+ * - Pin button calls onPinToggle on click
  */
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import LineupCard from "@/components/lineup/LineupCard";
 import type { Lineup } from "@/types/game";
@@ -95,5 +99,63 @@ describe("LineupCard", () => {
     render(<LineupCard lineup={BASE_LINEUP} variant="thumbnail" onClick={onClick} />);
     screen.getByRole("button", { name: /view a-site smoke/i }).click();
     expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  // --- Pin toggle ---
+
+  it("expanded variant shows pin button when onPinToggle is provided", () => {
+    render(
+      <LineupCard
+        lineup={BASE_LINEUP}
+        variant="expanded"
+        onPinToggle={vi.fn()}
+        isPinned={false}
+      />,
+    );
+    expect(screen.getByRole("button", { name: "Pin lineup" })).toBeDefined();
+  });
+
+  it("expanded variant shows 'Unpin lineup' when isPinned=true", () => {
+    render(
+      <LineupCard
+        lineup={BASE_LINEUP}
+        variant="expanded"
+        onPinToggle={vi.fn()}
+        isPinned={true}
+      />,
+    );
+    expect(screen.getByRole("button", { name: "Unpin lineup" })).toBeDefined();
+  });
+
+  it("expanded variant calls onPinToggle on pin button click", async () => {
+    const onPinToggle = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <LineupCard
+        lineup={BASE_LINEUP}
+        variant="expanded"
+        onPinToggle={onPinToggle}
+        isPinned={false}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Pin lineup" }));
+    expect(onPinToggle).toHaveBeenCalledTimes(1);
+  });
+
+  it("expanded variant hides pin button when onPinToggle is absent", () => {
+    render(<LineupCard lineup={BASE_LINEUP} variant="expanded" />);
+    expect(screen.queryByRole("button", { name: /pin lineup/i })).toBeNull();
+  });
+
+  it("thumbnail variant shows pin button when onPinToggle is provided", () => {
+    render(
+      <LineupCard
+        lineup={BASE_LINEUP}
+        variant="thumbnail"
+        onPinToggle={vi.fn()}
+        isPinned={false}
+      />,
+    );
+    expect(screen.getByRole("button", { name: "Pin lineup" })).toBeDefined();
   });
 });

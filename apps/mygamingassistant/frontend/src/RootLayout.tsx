@@ -1,4 +1,4 @@
-import { Outlet, ScrollRestoration } from "react-router-dom";
+import { Outlet, ScrollRestoration, useSearchParams } from "react-router-dom";
 import {
   Gamepad2,
   Settings,
@@ -35,6 +35,9 @@ export default function RootLayout() {
   const { data: currentUser } = useGetCurrentUserQuery(undefined, {
     skip: !isAuthenticated,
   });
+  const [searchParams] = useSearchParams();
+
+  const isCompact = searchParams.get("compact") === "1";
 
   const nav = buildNav(ICONS);
   const user = isAuthenticated ? projectUser(currentUser) : ANONYMOUS_USER;
@@ -47,6 +50,19 @@ export default function RootLayout() {
       <span className="font-semibold text-sm">MyGamingAssistant</span>
     </div>
   );
+
+  // Compact mode: strip away the app shell header/sidebar so the game UI
+  // fills the full viewport (designed for a second-monitor window).
+  if (isCompact) {
+    return (
+      <RequireAuth>
+        <ScrollRestoration />
+        <Toaster />
+        <StepUpModal />
+        <Outlet />
+      </RequireAuth>
+    );
+  }
 
   return (
     <RequireAuth>
