@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useCreateOrganizationMutation } from "@/shared/store/organizationsApi";
-import LoadingButton from "@/shared/components/ui/LoadingButton";
+import { LoadingButton } from "@platform/ui";
 
 export default function CreateOrgPrompt() {
   const [name, setName] = useState("");

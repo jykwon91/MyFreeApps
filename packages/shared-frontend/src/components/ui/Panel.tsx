@@ -1,8 +1,8 @@
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { Drawer } from "vaul";
-import { useKeyboardClose } from "@/shared/hooks/useKeyboardClose";
-import { useMediaQuery } from "@/shared/hooks/useMediaQuery";
+import { useKeyboardClose } from "../../hooks/useKeyboardClose";
+import { useMediaQuery } from "../../hooks/useMediaQuery";
 
 interface Props {
   position: "right" | "center";

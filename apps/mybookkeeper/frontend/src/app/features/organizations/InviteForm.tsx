@@ -4,7 +4,7 @@ import { useActiveOrgId } from "@/shared/hooks/useCurrentOrg";
 import { extractErrorMessage } from "@/shared/utils/errorMessage";
 import type { OrgRole } from "@/shared/types/organization/org-role";
 import { INVITE_ROLE_OPTIONS } from "@/shared/lib/organization-config";
-import LoadingButton from "@/shared/components/ui/LoadingButton";
+import { LoadingButton } from "@platform/ui";
 import Select from "@/shared/components/ui/Select";
 
 export interface InviteFormProps {

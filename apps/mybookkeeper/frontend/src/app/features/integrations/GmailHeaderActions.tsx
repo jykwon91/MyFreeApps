@@ -1,5 +1,5 @@
 import { useState } from "react";
-import LoadingButton from "@/shared/components/ui/LoadingButton";
+import { LoadingButton } from "@platform/ui";
 import type { Integration } from "@/shared/types/integration/integration";
 
 export interface GmailHeaderActionsProps {

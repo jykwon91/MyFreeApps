@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Plus } from "lucide-react";
-import Button from "@/shared/components/ui/Button";
+import { Button } from "@platform/ui";
 import ConfirmDialog from "@/shared/components/ui/ConfirmDialog";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import {

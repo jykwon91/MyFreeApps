@@ -34,15 +34,15 @@
  */
 import type { AxiosInstance, AxiosRequestConfig, AxiosResponse } from "axios";
 
-import { notifyAuthChange } from "@/shared/lib/auth-store";
-import { StepUpReauthRequiredError } from "@/shared/auth/errors/StepUpReauthRequiredError";
+import { notifyAuthChange } from "../lib/auth-store";
+import { StepUpReauthRequiredError } from "./errors/StepUpReauthRequiredError";
 import {
   cancel as controllerCancel,
   request as controllerRequest,
   signalReauth as controllerSignalReauth,
   signalSuccess as controllerSignalSuccess,
   signalWrongCode as controllerSignalWrongCode,
-} from "@/shared/auth/stepUpController";
+} from "./stepUpController";
 
 interface StepUpRetryConfig extends AxiosRequestConfig {
   _stepUpRetried?: boolean;

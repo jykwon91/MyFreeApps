@@ -1,5 +1,5 @@
 import { CheckCircle, Trash2 } from "lucide-react";
-import LoadingButton from "@/shared/components/ui/LoadingButton";
+import { LoadingButton } from "@platform/ui";
 
 export interface TransactionBulkBarProps {
   selectedCount: number;

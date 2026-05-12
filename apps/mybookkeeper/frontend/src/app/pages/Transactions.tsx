@@ -26,7 +26,7 @@ import ClassificationRulesPanel from "@/app/features/transactions/Classification
 import ExportDropdown from "@/app/features/transactions/ExportDropdown";
 import DuplicateTab from "@/app/features/transactions/DuplicateTab";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
-import Button from "@/shared/components/ui/Button";
+import { Button } from "@platform/ui";
 import ConfirmDialog from "@/shared/components/ui/ConfirmDialog";
 import { useToast } from "@/shared/hooks/useToast";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";

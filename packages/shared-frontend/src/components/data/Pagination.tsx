@@ -1,6 +1,6 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { cn } from "@/shared/utils/cn";
-import Select from "@/shared/components/ui/Select";
+import { cn } from "../../utils/cn";
+import Select from "../ui/Select";
 
 export interface PaginationProps {
   page: number;

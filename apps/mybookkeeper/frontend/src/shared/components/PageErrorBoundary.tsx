@@ -1,6 +1,6 @@
 import { Component, type ReactNode, useState } from "react";
 import { Coffee, ChevronDown, ChevronUp, Copy, Home, RotateCcw } from "lucide-react";
-import Button from "@/shared/components/ui/Button";
+import { Button } from "@platform/ui";
 import api from "@/shared/lib/api";
 
 export interface PageErrorBoundaryProps {

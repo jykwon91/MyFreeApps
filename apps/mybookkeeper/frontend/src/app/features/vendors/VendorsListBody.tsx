@@ -1,7 +1,7 @@
 import type { VendorsListMode } from "@/shared/types/vendor/vendors-list-mode";
 import type { VendorSummary } from "@/shared/types/vendor/vendor-summary";
 import EmptyState from "@/shared/components/ui/EmptyState";
-import LoadingButton from "@/shared/components/ui/LoadingButton";
+import { LoadingButton } from "@platform/ui";
 import VendorsListSkeleton from "./VendorsListSkeleton";
 import VendorCard from "./VendorCard";
 import VendorRow from "./VendorRow";

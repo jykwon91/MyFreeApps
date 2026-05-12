@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Navigate, useLocation } from "react-router-dom";
-import { useIsAuthenticated } from "@/shared/lib/auth-store";
+import { useIsAuthenticated } from "../../lib/auth-store";
 
 interface Props {
   children: ReactNode;

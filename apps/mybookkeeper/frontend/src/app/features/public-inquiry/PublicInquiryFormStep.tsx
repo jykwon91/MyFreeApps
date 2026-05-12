@@ -1,5 +1,5 @@
 import type { PublicListing } from "@/shared/types/inquiry/public-listing";
-import LoadingButton from "@/shared/components/ui/LoadingButton";
+import { LoadingButton } from "@platform/ui";
 import TurnstileWidget from "@/shared/components/ui/TurnstileWidget";
 import type { FieldErrors, FormState, ValidatedField } from "./public-inquiry-types";
 import PublicInquiryContactSection from "./PublicInquiryContactSection";

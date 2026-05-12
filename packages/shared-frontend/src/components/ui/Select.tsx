@@ -1,5 +1,5 @@
 import { forwardRef } from "react";
-import { cn } from "@/shared/utils/cn";
+import { cn } from "../../utils/cn";
 
 interface Props extends React.SelectHTMLAttributes<HTMLSelectElement> {
   children: React.ReactNode;

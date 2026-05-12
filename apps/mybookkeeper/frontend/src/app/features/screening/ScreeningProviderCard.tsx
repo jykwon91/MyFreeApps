@@ -1,5 +1,5 @@
 import { Clock, DollarSign, ExternalLink } from "lucide-react";
-import LoadingButton from "@/shared/components/ui/LoadingButton";
+import { LoadingButton } from "@platform/ui";
 import type { ScreeningProviderInfo } from "@/shared/store/screeningApi";
 
 export interface ScreeningProviderCardProps {

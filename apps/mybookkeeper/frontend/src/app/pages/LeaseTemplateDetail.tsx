@@ -4,7 +4,7 @@ import { ArrowLeft, Download, Trash2 } from "lucide-react";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import AlertBox from "@/shared/components/ui/AlertBox";
 import Skeleton from "@/shared/components/ui/Skeleton";
-import LoadingButton from "@/shared/components/ui/LoadingButton";
+import { LoadingButton } from "@platform/ui";
 import {
   useDeleteLeaseTemplateMutation,
   useGetLeaseTemplateByIdQuery,

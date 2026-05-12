@@ -1,4 +1,4 @@
-import LoadingButton from "@/shared/components/ui/LoadingButton";
+import { LoadingButton } from "@platform/ui";
 import type { ApplicantSummary } from "@/shared/types/applicant/applicant-summary";
 import ApplicantCard from "./ApplicantCard";
 import ApplicantRow from "./ApplicantRow";

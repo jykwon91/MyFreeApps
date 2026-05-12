@@ -1,9 +1,8 @@
 import { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import Button from "@/shared/components/ui/Button";
+import { Button, LoadingButton } from "@platform/ui";
 import CopyField from "@/shared/components/ui/CopyField";
 import FormField from "@/shared/components/ui/FormField";
-import LoadingButton from "@/shared/components/ui/LoadingButton";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import {
   useCreateListingChannelMutation,

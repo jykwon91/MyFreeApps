@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { Check, Copy, AlertTriangle } from "lucide-react";
-import Button from "@/shared/components/ui/Button";
+import { Button } from "@platform/ui";
 
 export interface CredentialsModalProps {
   open: boolean;

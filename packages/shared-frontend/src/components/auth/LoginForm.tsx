@@ -1,8 +1,8 @@
 import { useState, type ReactNode } from "react";
 import * as Tabs from "@radix-ui/react-tabs";
 import { Eye, EyeOff } from "lucide-react";
-import AlertBox from "@/shared/components/ui/AlertBox";
-import LoadingButton from "@/shared/components/ui/LoadingButton";
+import AlertBox from "../ui/AlertBox";
+import LoadingButton from "../ui/LoadingButton";
 
 export interface LoginFormProps {
   onSignIn: (email: string, password: string) => Promise<void>;

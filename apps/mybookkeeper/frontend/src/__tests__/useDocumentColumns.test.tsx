@@ -36,10 +36,14 @@ vi.mock("@/shared/components/ui/IndeterminateCheckbox", () => ({
   default: () => <input type="checkbox" />,
 }))
 
-vi.mock("@/shared/components/ui/Button", () => ({
-  default: ({ children, ...props }: React.PropsWithChildren<Record<string,unknown>>) =>
-    <button {...(props as object)}>{children}</button>,
-}))
+vi.mock("@platform/ui", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@platform/ui")>();
+  return {
+    ...actual,
+    Button: ({ children, ...props }: React.PropsWithChildren<Record<string,unknown>>) =>
+      <button {...(props as object)}>{children}</button>,
+  };
+})
 
 function makeDocument(overrides: Partial<Document> = {}): Document {
   return {

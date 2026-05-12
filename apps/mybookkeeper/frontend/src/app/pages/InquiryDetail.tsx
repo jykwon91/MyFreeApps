@@ -1,7 +1,7 @@
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import AlertBox from "@/shared/components/ui/AlertBox";
-import LoadingButton from "@/shared/components/ui/LoadingButton";
+import { LoadingButton } from "@platform/ui";
 import { useGetInquiryByIdQuery } from "@/shared/store/inquiriesApi";
 import { useInquiryDetailMode } from "@/app/features/inquiries/useInquiryDetailMode";
 import InquiryDetailBody from "@/app/features/inquiries/InquiryDetailBody";

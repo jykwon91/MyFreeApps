@@ -2,7 +2,7 @@ import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { X } from "lucide-react";
 import Panel from "@/shared/components/ui/Panel";
-import LoadingButton from "@/shared/components/ui/LoadingButton";
+import { LoadingButton } from "@platform/ui";
 import FormField from "@/shared/components/ui/FormField";
 import {
   LISTING_ROOM_TYPES,

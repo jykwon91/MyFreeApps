@@ -9,8 +9,8 @@ import {
   type PaginationState,
 } from "@tanstack/react-table";
 import { ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
-import { cn } from "@/shared/utils/cn";
-import Skeleton from "@/shared/components/ui/Skeleton";
+import { cn } from "../../utils/cn";
+import Skeleton from "../ui/Skeleton";
 
 export type { ColumnDef, SortingState, PaginationState };
 

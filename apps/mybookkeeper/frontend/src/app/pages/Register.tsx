@@ -2,7 +2,7 @@ import { useState, useCallback } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import api from "@/shared/lib/api";
 import { extractErrorMessage } from "@/shared/utils/errorMessage";
-import LoadingButton from "@/shared/components/ui/LoadingButton";
+import { LoadingButton } from "@platform/ui";
 import TurnstileWidget from "@/shared/components/ui/TurnstileWidget";
 import LegalFooter from "@/app/components/LegalFooter";
 

@@ -1,4 +1,4 @@
-import { cn } from "@/shared/utils/cn";
+import { cn } from "../../utils/cn";
 
 type Variant = "primary" | "secondary" | "ghost" | "destructive" | "link";
 type Size = "md" | "sm";

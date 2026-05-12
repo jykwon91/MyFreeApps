@@ -8,7 +8,7 @@ import {
 } from "@/shared/store/healthApi";
 import { useToast } from "@/shared/hooks/useToast";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
-import LoadingButton from "@/shared/components/ui/LoadingButton";
+import { LoadingButton } from "@platform/ui";
 import HealthSkeleton from "@/admin/features/health/HealthSkeleton";
 import StatusIndicator from "@/admin/features/health/StatusIndicator";
 import ActiveProblems from "@/admin/features/health/ActiveProblems";

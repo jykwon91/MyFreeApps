@@ -1,5 +1,5 @@
 import AlertBox from "@/shared/components/ui/AlertBox";
-import LoadingButton from "@/shared/components/ui/LoadingButton";
+import { LoadingButton } from "@platform/ui";
 import Skeleton from "@/shared/components/ui/Skeleton";
 import { useGetApplicantsQuery } from "@/shared/store/applicantsApi";
 import type { ApplicantSummary } from "@/shared/types/applicant/applicant-summary";

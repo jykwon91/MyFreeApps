@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { login } from "@/shared/lib/auth";
 import api from "@/shared/lib/api";
 import { extractErrorMessage } from "@/shared/utils/errorMessage";
-import LoadingButton from "@/shared/components/ui/LoadingButton";
+import { LoadingButton } from "@platform/ui";
 import LegalFooter from "@/app/components/LegalFooter";
 
 const LOCKOUT_COOLDOWN_SECONDS = 30;

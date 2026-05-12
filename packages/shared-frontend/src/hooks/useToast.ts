@@ -1,4 +1,4 @@
-import { showError, showSuccess } from "@/shared/lib/toast-store";
+import { showError, showSuccess } from "../lib/toast-store";
 
 interface UseToastReturn {
   showError: (message: string) => void;

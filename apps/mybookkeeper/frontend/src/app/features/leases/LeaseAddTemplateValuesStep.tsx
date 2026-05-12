@@ -1,6 +1,5 @@
 import { ArrowLeft, Plus } from "lucide-react";
-import Button from "@/shared/components/ui/Button";
-import LoadingButton from "@/shared/components/ui/LoadingButton";
+import { Button, LoadingButton } from "@platform/ui";
 import { PREFILL_PROVENANCE_LABELS } from "@/shared/lib/lease-labels";
 import type { SignedLeaseTemplatePrefillItem } from "@/shared/types/lease/signed-lease-template-prefill";
 

@@ -21,12 +21,23 @@
 #
 # NOTE: Build context is the monorepo root (see docker-compose.yml).
 # All COPY paths are relative to MyFreeApps/, not apps/mybookkeeper/.
+#
+# Workspace-aware build (mirrors apps/myjobhunter/docker/caddy.Dockerfile)
+# introduced 2026-05-11 (PR 6 of React 19 migration). MBK now imports from
+# `@platform/ui` (packages/shared-frontend), so the build stage must install
+# the entire workspace closure, not just MBK's per-app package-lock.json.
+# The root package-lock.json is the source of truth for `npm ci`; the
+# per-app lockfile is kept in sync by `npm install` for IDE compatibility
+# but is NOT used by the docker build path.
 
 FROM node:22-alpine AS frontend-build
-WORKDIR /build
-COPY apps/mybookkeeper/frontend/package.json apps/mybookkeeper/frontend/package-lock.json ./
-RUN npm ci
-COPY apps/mybookkeeper/frontend/ ./
+WORKDIR /repo
+COPY package.json package-lock.json ./
+COPY packages/shared-frontend/package.json ./packages/shared-frontend/
+COPY apps/mybookkeeper/frontend/package.json ./apps/mybookkeeper/frontend/
+RUN npm ci --ignore-scripts
+COPY packages/shared-frontend ./packages/shared-frontend
+COPY apps/mybookkeeper/frontend ./apps/mybookkeeper/frontend
 
 # Frontend build-time public env. Vite inlines anything prefixed with
 # VITE_ into the bundle at build time — these MUST be passed as build
@@ -43,8 +54,8 @@ COPY apps/mybookkeeper/frontend/ ./
 ARG VITE_TURNSTILE_SITE_KEY=
 ENV VITE_TURNSTILE_SITE_KEY=${VITE_TURNSTILE_SITE_KEY}
 
-RUN npm run build
+RUN npm run build --workspace=apps/mybookkeeper/frontend
 
 FROM caddy:2-alpine
-COPY --from=frontend-build /build/dist /srv/frontend
+COPY --from=frontend-build /repo/apps/mybookkeeper/frontend/dist /srv/frontend
 COPY apps/mybookkeeper/docker/Caddyfile.docker /etc/caddy/Caddyfile

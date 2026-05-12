@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import AlertBox from "@/shared/components/ui/AlertBox";
-import LoadingButton from "@/shared/components/ui/LoadingButton";
+import { LoadingButton } from "@platform/ui";
 import { useGetTenantsQuery } from "@/shared/store/applicantsApi";
 import { APPLICANT_PAGE_SIZE } from "@/shared/lib/applicant-labels";
 import { useTenantsListMode } from "@/app/features/tenants/useTenantsListMode";

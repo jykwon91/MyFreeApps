@@ -8,8 +8,7 @@ import {
 } from "@/shared/store/taxReturnsApi";
 import { useToast } from "@/shared/hooks/useToast";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
-import Button from "@/shared/components/ui/Button";
-import LoadingButton from "@/shared/components/ui/LoadingButton";
+import { Button, LoadingButton } from "@platform/ui";
 import Badge from "@/shared/components/ui/Badge";
 import Card from "@/shared/components/ui/Card";
 import Select from "@/shared/components/ui/Select";

@@ -1,5 +1,5 @@
 import AlertBox from "@/shared/components/ui/AlertBox";
-import LoadingButton from "@/shared/components/ui/LoadingButton";
+import { LoadingButton } from "@platform/ui";
 import Skeleton from "@/shared/components/ui/Skeleton";
 import { useGetLeaseTemplatesQuery } from "@/shared/store/leaseTemplatesApi";
 import type { LeaseTemplateSummary } from "@/shared/types/lease/lease-template-summary";

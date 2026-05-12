@@ -1,7 +1,7 @@
 import type { TenantsListMode } from "@/shared/types/applicant/tenants-list-mode";
 import type { ApplicantSummary } from "@/shared/types/applicant/applicant-summary";
 import EmptyState from "@/shared/components/ui/EmptyState";
-import LoadingButton from "@/shared/components/ui/LoadingButton";
+import { LoadingButton } from "@platform/ui";
 import TenantsListSkeleton from "./TenantsListSkeleton";
 import TenantCard from "./TenantCard";
 import TenantRow from "./TenantRow";

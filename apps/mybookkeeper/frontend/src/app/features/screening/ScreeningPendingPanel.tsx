@@ -1,5 +1,5 @@
 import { Loader2, Upload } from "lucide-react";
-import Button from "@/shared/components/ui/Button";
+import { Button } from "@platform/ui";
 import { formatRelativeTime } from "@/shared/lib/inquiry-date-format";
 import type { ScreeningResult } from "@/shared/types/applicant/screening-result";
 

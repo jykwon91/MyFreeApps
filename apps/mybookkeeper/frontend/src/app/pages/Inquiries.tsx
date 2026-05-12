@@ -3,7 +3,7 @@ import { FileText, Plus } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import AlertBox from "@/shared/components/ui/AlertBox";
-import LoadingButton from "@/shared/components/ui/LoadingButton";
+import { LoadingButton } from "@platform/ui";
 import { useGetInquiriesQuery } from "@/shared/store/inquiriesApi";
 import { useGetListingsQuery } from "@/shared/store/listingsApi";
 import { INQUIRY_PAGE_SIZE, INQUIRY_STAGES } from "@/shared/lib/inquiry-labels";

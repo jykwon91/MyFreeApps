@@ -2,7 +2,7 @@ import { Link, useParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { useGetInsurancePolicyByIdQuery } from "@/shared/store/insurancePoliciesApi";
 import AlertBox from "@/shared/components/ui/AlertBox";
-import LoadingButton from "@/shared/components/ui/LoadingButton";
+import { LoadingButton } from "@platform/ui";
 import { useInsurancePolicyDetailMode } from "@/app/features/insurance/useInsurancePolicyDetailMode";
 import InsurancePolicyDetailBody from "@/app/features/insurance/InsurancePolicyDetailBody";
 

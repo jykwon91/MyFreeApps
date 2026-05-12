@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Calendar } from "lucide-react";
-import Button from "@/shared/components/ui/Button";
+import { Button } from "@platform/ui";
 
 type Preset = "this_month" | "this_quarter" | "ytd" | "custom";
 

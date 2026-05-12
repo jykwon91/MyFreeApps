@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Plus } from "lucide-react";
 import { useGetInsurancePoliciesQuery } from "@/shared/store/insurancePoliciesApi";
-import Button from "@/shared/components/ui/Button";
+import { Button } from "@platform/ui";
 import InsuranceExpirationBadge from "@/app/features/insurance/InsuranceExpirationBadge";
 import AddInsurancePolicyDialog from "@/app/features/insurance/AddInsurancePolicyDialog";
 

@@ -1,7 +1,7 @@
 import type { ListingsListMode } from "@/shared/types/listing/listings-list-mode";
 import type { ListingSummary } from "@/shared/types/listing/listing-summary";
 import EmptyState from "@/shared/components/ui/EmptyState";
-import LoadingButton from "@/shared/components/ui/LoadingButton";
+import { LoadingButton } from "@platform/ui";
 import ListingsSkeleton from "./ListingsSkeleton";
 import ListingCard from "./ListingCard";
 import ListingTableRow from "./ListingTableRow";

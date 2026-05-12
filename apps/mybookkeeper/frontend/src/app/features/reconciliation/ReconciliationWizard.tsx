@@ -8,7 +8,7 @@ import {
   useGetDiscrepanciesQuery,
 } from "@/shared/store/reconciliationApi";
 import Select from "@/shared/components/ui/Select";
-import LoadingButton from "@/shared/components/ui/LoadingButton";
+import { LoadingButton } from "@platform/ui";
 import Card from "@/shared/components/ui/Card";
 import { useReconciliationSourcesMode } from "./useReconciliationSourcesMode";
 import { useReconciliationDiscrepanciesMode } from "./useReconciliationDiscrepanciesMode";

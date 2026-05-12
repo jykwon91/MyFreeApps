@@ -1,5 +1,5 @@
 import { Pencil, Archive } from "lucide-react";
-import Button from "@/shared/components/ui/Button";
+import { Button } from "@platform/ui";
 import type { ReplyTemplate } from "@/shared/types/inquiry/reply-template";
 
 export interface ReplyTemplatesListProps {

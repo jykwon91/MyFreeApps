@@ -1,5 +1,5 @@
 import { Download, Trash2 } from "lucide-react";
-import Button from "@/shared/components/ui/Button";
+import { Button } from "@platform/ui";
 
 export interface PhotoSelectionToolbarProps {
   selectedCount: number;

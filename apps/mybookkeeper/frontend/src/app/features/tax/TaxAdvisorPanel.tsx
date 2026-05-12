@@ -4,7 +4,7 @@ import {
   useGetAdvisorSuggestionsQuery,
   useGenerateAdvisorSuggestionsMutation,
 } from "@/shared/store/taxReturnsApi";
-import LoadingButton from "@/shared/components/ui/LoadingButton";
+import { LoadingButton } from "@platform/ui";
 import { SEVERITY_ORDER, SEVERITY_CONFIG } from "@/shared/lib/tax-advisor-config";
 import SuggestionCard from "@/app/features/tax/SuggestionCard";
 import TaxAdvisorPanelSkeleton from "@/app/features/tax/TaxAdvisorPanelSkeleton";

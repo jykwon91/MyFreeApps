@@ -1,5 +1,5 @@
 import * as Dialog from "@radix-ui/react-dialog";
-import Button from "./Button";
+import { Button } from "@platform/ui";
 
 export interface ConfirmDialogProps {
   open: boolean;
