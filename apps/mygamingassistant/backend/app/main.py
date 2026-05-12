@@ -21,7 +21,7 @@ from jwt.exceptions import PyJWTError as JWTError
 from platform_shared.core.git import resolve_git_commit
 from platform_shared.core.lifespan import create_app_lifespan
 
-from app.api import account, admin, games, health, totp
+from app.api import account, admin, games, health, lineups, totp
 from app.core.audit import current_user_id
 from app.core.auth import auth_backend, fastapi_users
 from app.core.config import settings
@@ -189,6 +189,7 @@ app.include_router(
 # MGA domain routes
 app.include_router(health.router, tags=["health"])
 app.include_router(games.router)
+app.include_router(lineups.router)
 app.include_router(admin.router)
 
 # Shared platform admin router — generic user-management endpoints
