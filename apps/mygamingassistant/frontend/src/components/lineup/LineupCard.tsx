@@ -5,14 +5,21 @@
  *
  * The aim anchor circle renders at (aim_anchor_x * width, aim_anchor_y * height)
  * relative to the aim screenshot, using a CSS-absolute circle overlay.
+ *
+ * Pin toggle:
+ *   Pass isPinned + onPinToggle to show the pin button in either variant.
+ *   The button appears in the card header (expanded) or top-right corner (thumbnail).
  */
 import { Clock } from "lucide-react";
 import type { Lineup } from "@/types/game";
+import PinButton from "./PinButton";
 
 interface LineupCardProps {
   lineup: Lineup;
   variant: "expanded" | "thumbnail";
   onClick?: () => void;
+  isPinned?: boolean;
+  onPinToggle?: () => void;
 }
 
 const SIDE_LABELS: Record<string, string> = {
@@ -21,32 +28,50 @@ const SIDE_LABELS: Record<string, string> = {
   any: "Both",
 };
 
-export default function LineupCard({ lineup, variant, onClick }: LineupCardProps) {
+export default function LineupCard({
+  lineup,
+  variant,
+  onClick,
+  isPinned = false,
+  onPinToggle,
+}: LineupCardProps) {
   if (variant === "thumbnail") {
     return (
-      <button
-        type="button"
-        onClick={onClick}
-        className="flex flex-col items-center gap-1.5 rounded-lg border bg-card hover:bg-muted/40 transition-colors overflow-hidden text-left w-full"
-        aria-label={`View ${lineup.title}`}
-      >
-        <div className="w-full aspect-video bg-muted/20 overflow-hidden rounded-t-lg">
-          {lineup.stand_screenshot_url ? (
-            <img
-              src={lineup.stand_screenshot_url}
-              alt={`${lineup.title} — stand position`}
-              className="w-full h-full object-cover"
+      <div className="relative rounded-lg border bg-card overflow-hidden">
+        <button
+          type="button"
+          onClick={onClick}
+          className="flex flex-col items-center gap-1.5 hover:bg-muted/40 transition-colors text-left w-full"
+          aria-label={`View ${lineup.title}`}
+        >
+          <div className="w-full aspect-video bg-muted/20 overflow-hidden rounded-t-lg">
+            {lineup.stand_screenshot_url ? (
+              <img
+                src={lineup.stand_screenshot_url}
+                alt={`${lineup.title} — stand position`}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
+                No screenshot
+              </div>
+            )}
+          </div>
+          <span className="px-2 pb-2 text-xs font-medium text-center leading-tight line-clamp-2">
+            {lineup.title}
+          </span>
+        </button>
+
+        {onPinToggle !== undefined && (
+          <div className="absolute top-1 right-1">
+            <PinButton
+              isPinned={isPinned}
+              onToggle={onPinToggle}
+              className="bg-background/80 backdrop-blur-sm"
             />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
-              No screenshot
-            </div>
-          )}
-        </div>
-        <span className="px-2 pb-2 text-xs font-medium text-center leading-tight line-clamp-2">
-          {lineup.title}
-        </span>
-      </button>
+          </div>
+        )}
+      </div>
     );
   }
 
@@ -74,6 +99,10 @@ export default function LineupCard({ lineup, variant, onClick }: LineupCardProps
             )}
           </div>
         </div>
+
+        {onPinToggle !== undefined && (
+          <PinButton isPinned={isPinned} onToggle={onPinToggle} />
+        )}
       </div>
 
       {/* Screenshots */}
