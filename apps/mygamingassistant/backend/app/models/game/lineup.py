@@ -9,6 +9,11 @@ side values:
   side_a  — e.g. T side in CS2, Attacker in Valorant
   side_b  — e.g. CT side in CS2, Defender in Valorant
   any     — side-agnostic (e.g. a grenade thrown from spawn that works both ways)
+
+Classification FK columns (target_zone_id, stand_zone_id, utility_type_id, side)
+are nullable because auto-ingested lineups arrive in pending_review status before
+classification. The CHECK constraint ck_lineup_accepted_classified enforces that
+accepted lineups always have all four fields set.
 """
 import uuid
 from datetime import datetime, timezone
@@ -41,13 +46,25 @@ class Lineup(Base):
             name="ck_lineup_status",
         ),
         CheckConstraint(
-            f"side IN {_LINEUP_SIDES!r}",
+            # NULL side is allowed for pending_review/hidden only.
+            f"side IS NULL OR side IN {_LINEUP_SIDES!r}",
             name="ck_lineup_side",
+        ),
+        CheckConstraint(
+            # Accepted lineups must have all classification fields set.
+            "status != 'accepted' OR ("
+            "target_zone_id IS NOT NULL AND "
+            "stand_zone_id IS NOT NULL AND "
+            "utility_type_id IS NOT NULL AND "
+            "side IS NOT NULL"
+            ")",
+            name="ck_lineup_accepted_classified",
         ),
         Index("ix_lineup_game_id", "game_id"),
         Index("ix_lineup_map_id", "map_id"),
         Index("ix_lineup_target_zone_id", "target_zone_id"),
         Index("ix_lineup_status", "status"),
+        Index("ix_lineup_youtube_video_id", "youtube_video_id"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -66,21 +83,21 @@ class Lineup(Base):
         ForeignKey("map.id", ondelete="CASCADE"),
         nullable=False,
     )
-    target_zone_id: Mapped[uuid.UUID] = mapped_column(
+    target_zone_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("map_zone.id", ondelete="RESTRICT"),
-        nullable=False,
+        nullable=True,
     )
-    stand_zone_id: Mapped[uuid.UUID] = mapped_column(
+    stand_zone_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("map_zone.id", ondelete="RESTRICT"),
-        nullable=False,
+        nullable=True,
     )
-    side: Mapped[str] = mapped_column(String(10), nullable=False)
-    utility_type_id: Mapped[uuid.UUID] = mapped_column(
+    side: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    utility_type_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("utility_type.id", ondelete="RESTRICT"),
-        nullable=False,
+        nullable=True,
     )
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -95,6 +112,11 @@ class Lineup(Base):
 
     # How many seconds the throw takes to execute
     setup_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    # YouTube ingestion metadata
+    youtube_video_id: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    chapter_start_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    chapter_title: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
     # Attribution
     source_id: Mapped[uuid.UUID | None] = mapped_column(
@@ -125,13 +147,13 @@ class Lineup(Base):
 
     game: Mapped["Game"] = relationship("Game", back_populates="lineups")
     map: Mapped["Map"] = relationship("Map", back_populates="lineups")
-    target_zone: Mapped["MapZone"] = relationship(
+    target_zone: Mapped["MapZone | None"] = relationship(
         "MapZone", foreign_keys=[target_zone_id], back_populates="lineups_as_target"
     )
-    stand_zone: Mapped["MapZone"] = relationship(
+    stand_zone: Mapped["MapZone | None"] = relationship(
         "MapZone", foreign_keys=[stand_zone_id], back_populates="lineups_as_stand"
     )
-    utility_type: Mapped["UtilityType"] = relationship(
+    utility_type: Mapped["UtilityType | None"] = relationship(
         "UtilityType", back_populates="lineups"
     )
     source: Mapped["Source | None"] = relationship("Source", back_populates="lineups")

@@ -213,3 +213,5 @@ watchfiles==1.1.1
     # via uvicorn
 websockets==16.0
     # via uvicorn
+yt-dlp==2026.3.17
+    # via mygamingassistant-backend

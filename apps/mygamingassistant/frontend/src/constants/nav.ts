@@ -14,6 +14,7 @@ interface NavDescriptor {
 
 const NAV_DESCRIPTORS: NavDescriptor[] = [
   { path: "/", label: "Games", iconName: "Gamepad2", exact: true },
+  { path: "/sources", label: "Sources", iconName: "PlaySquare" },
   { path: "/settings", label: "Settings", iconName: "Settings" },
   { path: "/security", label: "Security", iconName: "Shield" },
 ];

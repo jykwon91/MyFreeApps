@@ -54,11 +54,26 @@ def _apply_filters(stmt: "Select[tuple[Lineup]]", f: LineupFilters) -> "Select[t
 
 
 async def create_lineup(db: AsyncSession, data: dict) -> Lineup:
-    """Insert a new lineup row and return the refreshed ORM instance."""
+    """Insert a new lineup row and return the refreshed ORM instance.
+
+    Relationship attributes are only refreshed when the corresponding FK is
+    set — ingestion-path rows have null FKs until the classifier runs (PR 5).
+    """
     lineup = Lineup(**data)
     db.add(lineup)
     await db.flush()
-    await db.refresh(lineup, attribute_names=["target_zone", "stand_zone", "utility_type"])
+    # Only refresh relationships that have a non-null FK value.
+    attrs_to_refresh = [
+        attr
+        for attr, fk_field in [
+            ("target_zone", "target_zone_id"),
+            ("stand_zone", "stand_zone_id"),
+            ("utility_type", "utility_type_id"),
+        ]
+        if getattr(lineup, fk_field) is not None
+    ]
+    if attrs_to_refresh:
+        await db.refresh(lineup, attribute_names=attrs_to_refresh)
     return lineup
 
 
@@ -108,7 +123,18 @@ async def update_lineup(
     for key, value in patch.items():
         setattr(lineup, key, value)
     await db.flush()
-    await db.refresh(lineup, attribute_names=["target_zone", "stand_zone", "utility_type"])
+    # Only refresh relationships when the FK is set (nullable after migration).
+    attrs_to_refresh = [
+        attr
+        for attr, fk_field in [
+            ("target_zone", "target_zone_id"),
+            ("stand_zone", "stand_zone_id"),
+            ("utility_type", "utility_type_id"),
+        ]
+        if getattr(lineup, fk_field) is not None
+    ]
+    if attrs_to_refresh:
+        await db.refresh(lineup, attribute_names=attrs_to_refresh)
     return lineup
 
 
@@ -117,6 +143,24 @@ async def hide_lineup(db: AsyncSession, lineup: Lineup) -> Lineup:
     lineup.status = "hidden"
     await db.flush()
     return lineup
+
+
+async def get_ingested_video_ids(
+    db: AsyncSession,
+    video_ids: list[str],
+) -> set[str]:
+    """Return the subset of video_ids that already have lineup rows.
+
+    Used by the ingestion orchestrator to skip already-processed videos.
+    Returns an empty set when video_ids is empty.
+    """
+    if not video_ids:
+        return set()
+    stmt = select(Lineup.youtube_video_id).where(
+        Lineup.youtube_video_id.in_(video_ids),
+    )
+    result = await db.execute(stmt)
+    return {row for (row,) in result.all() if row is not None}
 
 
 async def zone_density(

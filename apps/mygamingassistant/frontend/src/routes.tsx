@@ -5,6 +5,7 @@ import MapGrid from "@/pages/MapGrid";
 import MapPage from "@/pages/MapPage";
 import Security from "@/pages/Security";
 import Settings from "@/pages/Settings";
+import Sources from "@/pages/Sources";
 import Login from "@/pages/Login";
 import ForgotPassword from "@/pages/ForgotPassword";
 import ResetPassword from "@/pages/ResetPassword";
@@ -20,6 +21,7 @@ export const routes: RouteObject[] = [
     children: [
       { index: true, element: <GameGrid /> },
       { path: "/lineups/new", element: <LineupUpload /> },
+      { path: "/sources", element: <Sources /> },
       { path: "/:gameSlug", element: <MapGrid /> },
       { path: "/:gameSlug/:mapSlug", element: <MapPage /> },
       { path: "/settings", element: <Settings /> },
