@@ -77,9 +77,13 @@ export default function LeaseDetail() {
   // Match backend ``UNDO_WINDOW_DAYS``. Kept inline (single use) so the
   // 30-day rule lives next to the button it gates.
   const UNDO_WINDOW_DAYS = 30;
+  // Freeze "now" at first render — React 19's hooks/purity rule forbids
+  // calling Date.now() during render. The 30-day undo window doesn't need
+  // sub-second accuracy; freezing at mount is fine.
+  const [nowMs] = useState(() => Date.now());
   const latestExtension = lease?.latest_extension ?? null;
   const ageMs = latestExtension
-    ? Date.now() - new Date(latestExtension.created_at).getTime()
+    ? nowMs - new Date(latestExtension.created_at).getTime()
     : null;
   const canUndoExtension =
     canExtend

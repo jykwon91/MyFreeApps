@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
@@ -55,15 +55,6 @@ export default function LeaseNew() {
     initialTemplateIds,
   );
   const [pickedApplicantId, setPickedApplicantId] = useState<string | null>(null);
-
-  // Re-sync once if the URL provided initial templates after mount.
-  useEffect(() => {
-    if (initialTemplateIds.length > 0 && selectedTemplateIds.length === 0) {
-      setSelectedTemplateIds(initialTemplateIds);
-    }
-    // Only fires once when initialTemplateIds is non-empty on first render.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const resolvedApplicantId = pickedApplicantId ?? urlApplicantId;
 
