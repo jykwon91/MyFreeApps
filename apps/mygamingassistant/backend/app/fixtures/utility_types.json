@@ -1,0 +1,21 @@
+[
+  {
+    "game_slug": "valorant",
+    "utility_types": [
+      { "slug": "smoke",   "name": "Smoke" },
+      { "slug": "flash",   "name": "Flash" },
+      { "slug": "molotov", "name": "Molotov" },
+      { "slug": "recon",   "name": "Recon Bolt" }
+    ]
+  },
+  {
+    "game_slug": "cs2",
+    "utility_types": [
+      { "slug": "smoke",   "name": "Smoke" },
+      { "slug": "flash",   "name": "Flashbang" },
+      { "slug": "molotov", "name": "Molotov / Incendiary" },
+      { "slug": "grenade", "name": "HE Grenade" },
+      { "slug": "decoy",   "name": "Decoy" }
+    ]
+  }
+]

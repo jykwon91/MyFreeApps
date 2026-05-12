@@ -49,11 +49,14 @@ async def get_message_ids(db: AsyncSession, organization_id: uuid.UUID) -> set[s
     'fetched-once-locked-forever' lockout: if an email was previously fetched
     but no Document survived (silent skip / extraction error), the message is
     eligible for re-fetch on the next sync.
+
+    ``processed_as_booking`` is treated the same as ``done`` — the email was
+    routed through the booking pipeline and should not be re-fetched.
     """
     result = await db.execute(
         select(EmailQueue.message_id).where(
             EmailQueue.organization_id == organization_id,
-            EmailQueue.status.in_(("fetched", "extracting", "done")),
+            EmailQueue.status.in_(("fetched", "extracting", "done", "processed_as_booking")),
         )
     )
     return {row[0] for row in result.all()}

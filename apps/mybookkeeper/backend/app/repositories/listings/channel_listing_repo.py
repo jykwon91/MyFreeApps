@@ -94,6 +94,37 @@ async def exists_for_channel(
     return result.scalar_one_or_none() is not None
 
 
+async def get_by_org_channel_external_id(
+    db: AsyncSession,
+    *,
+    organization_id: uuid.UUID,
+    channel_id: str,
+    external_id: str,
+) -> ChannelListing | None:
+    """Return the channel_listing matching (org, channel, external listing ID).
+
+    Used by the booking ingestion service to determine whether an incoming
+    booking email can be auto-matched to a known listing.  Tenant isolation
+    is enforced via JOIN to ``listings.organization_id`` because
+    ``channel_listings`` has no direct org column.
+
+    Returns None if no match is found.
+    """
+    from app.models.listings.listing import Listing
+
+    result = await db.execute(
+        select(ChannelListing)
+        .join(Listing, Listing.id == ChannelListing.listing_id)
+        .where(
+            Listing.organization_id == organization_id,
+            Listing.deleted_at.is_(None),
+            ChannelListing.channel_id == channel_id,
+            ChannelListing.external_id == external_id,
+        )
+    )
+    return result.scalar_one_or_none()
+
+
 async def list_pollable(db: AsyncSession) -> list[ChannelListing]:
     """Return every channel_listing with a non-NULL ``ical_import_url``.
 
