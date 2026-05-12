@@ -208,3 +208,59 @@ export interface SyncJobResponse {
   status: string;
   message: string;
 }
+
+// ---------------------------------------------------------------------------
+// LineupPackage domain
+// ---------------------------------------------------------------------------
+
+export interface LineupPackage {
+  id: string;
+  name: string;
+  game_id: string;
+  map_id: string;
+  side: "side_a" | "side_b" | "any";
+  created_at: string;
+  lineup_ids: string[];
+}
+
+export interface LineupPackageCreate {
+  name: string;
+  game_id: string;
+  map_id: string;
+  side: "side_a" | "side_b" | "any";
+  lineup_ids?: string[];
+}
+
+export interface LineupPackagePatch {
+  name?: string;
+  side?: "side_a" | "side_b" | "any";
+  lineup_ids?: string[];
+}
+
+export interface PinAllResponse {
+  package_id: string;
+  lineup_ids: string[];
+  message: string;
+}
+
+// ---------------------------------------------------------------------------
+// Scheduler domain
+// ---------------------------------------------------------------------------
+
+export interface JobStatus {
+  id: string;
+  name: string;
+  next_run_at: string | null;
+  trigger: string;
+}
+
+export interface SchedulerStatusResponse {
+  running: boolean;
+  jobs: JobStatus[];
+}
+
+export interface TriggerResponse {
+  job_id: string;
+  triggered: boolean;
+  message: string;
+}

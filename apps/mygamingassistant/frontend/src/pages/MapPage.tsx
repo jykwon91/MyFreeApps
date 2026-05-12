@@ -18,15 +18,17 @@
  */
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Plus } from "lucide-react";
-import { ToggleChipGroup } from "@platform/ui";
+import { ArrowLeft, Backpack, Package, Plus } from "lucide-react";
+import { ToggleChipGroup, showSuccess } from "@platform/ui";
 import { useGetGamesQuery, useGetMapDetailQuery } from "@/store/gamesApi";
 import { useGetLineupsQuery, useGetZoneDensityQuery } from "@/store/lineupsApi";
+import { useGetLineupPackagesQuery, usePinAllLineupPackageMutation } from "@/store/lineupPackagesApi";
 import LineupCard from "@/components/lineup/LineupCard";
 import MapZoneOverlay from "@/components/lineup/MapZoneOverlay";
 import KeyboardShortcutsHelp from "@/components/lineup/KeyboardShortcutsHelp";
 import RoundMode from "@/pages/RoundMode";
 import { usePins } from "@/hooks/usePins";
+import { useLoadout, computeEffectiveUtilFilter } from "@/hooks/useLoadout";
 import { useMapKeyboardShortcuts } from "@/hooks/useMapKeyboardShortcuts";
 import type { Lineup, ZoneDensity } from "@/types/game";
 
@@ -72,12 +74,30 @@ export default function MapPage() {
     })) ?? [];
   const selectedUtils = util ? util.split(",").filter(Boolean) : [];
 
+  // Loadout filter — per-(game, side) localStorage-backed set of utility slugs.
+  const { loadout, toggleLoadout, clearLoadout } = useLoadout(gameSlug ?? "", side);
+  const [showLoadoutPopover, setShowLoadoutPopover] = useState(false);
+
+  // Keyboard shortcut 'l' opens the loadout popover
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key !== "l" || e.ctrlKey || e.metaKey || e.altKey) return;
+      if (document.activeElement?.tagName === "INPUT" || document.activeElement?.tagName === "TEXTAREA") return;
+      setShowLoadoutPopover((v) => !v);
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, []);
+
+  // Effective utility filter: intersection of loadout + selected util chips
+  const effectiveUtils = computeEffectiveUtilFilter(loadout, selectedUtils);
+
   const { data: density = {} as ZoneDensity } = useGetZoneDensityQuery(
     {
       game_slug: gameSlug ?? "",
       map_slug: mapSlug ?? "",
       side: side !== "any" ? side : undefined,
-      util: util || undefined,
+      util: effectiveUtils.length > 0 ? effectiveUtils.join(",") : undefined,
     },
     { skip: !gameSlug || !mapSlug },
   );
@@ -89,10 +109,19 @@ export default function MapPage() {
       map_slug: mapSlug ?? "",
       target_zone_slug: zone || undefined,
       side: side !== "any" ? side : undefined,
-      utility_type_slugs: util || undefined,
+      utility_type_slugs: effectiveUtils.length > 0 ? effectiveUtils.join(",") : util || undefined,
     },
     { skip: !gameSlug || !mapSlug || !zone },
   );
+
+  // Packages — for the current map (no side filter here to show all packages)
+  const { data: packages = [] } = useGetLineupPackagesQuery(
+    {
+      map_id: mapDetail?.id,
+    },
+    { skip: !mapDetail?.id },
+  );
+  const [pinAllPackage] = usePinAllLineupPackageMutation();
 
   // --------------------------------------------------------------------------
   // Pin system
@@ -315,12 +344,56 @@ export default function MapPage() {
                 ))}
               </div>
 
+              {/* Loadout filter — "My loadout" chip group above utility chips */}
+              {utilOptions.length > 0 && (
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setShowLoadoutPopover((v) => !v)}
+                    className={[
+                      "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm border transition-colors min-h-[36px]",
+                      loadout.length > 0
+                        ? "bg-amber-500/10 border-amber-500/40 text-amber-700 dark:text-amber-400"
+                        : "bg-card hover:bg-muted/40",
+                    ].join(" ")}
+                    title="Set your current loadout utilities (keyboard: l)"
+                    aria-expanded={showLoadoutPopover}
+                  >
+                    <Backpack className="w-3.5 h-3.5" aria-hidden />
+                    {loadout.length > 0 ? `Loadout (${loadout.length})` : "My loadout"}
+                  </button>
+
+                  {showLoadoutPopover && (
+                    <LoadoutPopover
+                      utilOptions={utilOptions}
+                      loadout={loadout}
+                      onToggle={toggleLoadout}
+                      onClear={clearLoadout}
+                      onClose={() => setShowLoadoutPopover(false)}
+                    />
+                  )}
+                </div>
+              )}
+
               {/* Utility chips */}
               {utilOptions.length > 0 && (
                 <ToggleChipGroup
                   options={utilOptions}
                   value={selectedUtils}
                   onChange={handleUtilToggle}
+                />
+              )}
+
+              {/* Packages dropdown */}
+              {packages.length > 0 && (
+                <PackagesDropdown
+                  packages={packages}
+                  pins={pins}
+                  pinAllPackage={pinAllPackage}
+                  onPinAllComplete={(count) => {
+                    showSuccess(`Pinned ${count} lineup${count !== 1 ? "s" : ""} — entering round mode.`);
+                    updateParam("round", "1");
+                  }}
                 />
               )}
 
@@ -542,5 +615,145 @@ function BackButton({
     >
       <ArrowLeft className="h-5 w-5" />
     </button>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// LoadoutPopover
+// ---------------------------------------------------------------------------
+
+interface LoadoutPopoverProps {
+  utilOptions: Array<{ value: string; label: string }>;
+  loadout: string[];
+  onToggle: (slug: string) => void;
+  onClear: () => void;
+  onClose: () => void;
+}
+
+function LoadoutPopover({ utilOptions, loadout, onToggle, onClear, onClose }: LoadoutPopoverProps) {
+  return (
+    <div
+      className="absolute top-full left-0 mt-1 z-20 bg-card border rounded-lg shadow-lg p-3 min-w-[200px]"
+      role="dialog"
+      aria-label="Set your loadout utilities"
+    >
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-xs font-medium text-muted-foreground">My loadout</p>
+        <button
+          type="button"
+          onClick={onClose}
+          className="p-0.5 rounded hover:bg-muted/40 text-muted-foreground text-xs"
+          aria-label="Close loadout"
+        >
+          ✕
+        </button>
+      </div>
+      <p className="text-xs text-muted-foreground mb-2">
+        Select utilities you have this round to narrow the filter.
+      </p>
+      <div className="space-y-1">
+        {utilOptions.map((opt) => (
+          <label
+            key={opt.value}
+            className="flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer hover:bg-muted/40 text-sm"
+          >
+            <input
+              type="checkbox"
+              checked={loadout.includes(opt.value)}
+              onChange={() => onToggle(opt.value)}
+              className="h-4 w-4 rounded"
+            />
+            <span>{opt.label}</span>
+          </label>
+        ))}
+      </div>
+      {loadout.length > 0 && (
+        <button
+          type="button"
+          onClick={() => { onClear(); onClose(); }}
+          className="mt-2 w-full text-xs text-muted-foreground hover:text-foreground py-1"
+        >
+          Clear loadout
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// PackagesDropdown
+// ---------------------------------------------------------------------------
+
+import type { LineupPackage } from "@/types/game";
+
+interface PackagesDropdownProps {
+  packages: LineupPackage[];
+  pins: ReturnType<typeof usePins>;
+  pinAllPackage: ReturnType<typeof usePinAllLineupPackageMutation>[0];
+  onPinAllComplete: (count: number) => void;
+}
+
+function PackagesDropdown({ packages, pins, pinAllPackage, onPinAllComplete }: PackagesDropdownProps) {
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState<string | null>(null);
+
+  async function handlePinAll(pkg: LineupPackage) {
+    setLoading(pkg.id);
+    try {
+      const result = await pinAllPackage(pkg.id).unwrap();
+      for (const id of result.lineup_ids) {
+        pins.pin(id);
+      }
+      onPinAllComplete(result.lineup_ids.length);
+    } catch {
+      // Error silently falls through — user sees no pin
+    } finally {
+      setLoading(null);
+      setOpen(false);
+    }
+  }
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm border bg-card hover:bg-muted/40 transition-colors min-h-[36px]"
+        title="Apply a lineup package"
+        aria-expanded={open}
+      >
+        <Package className="w-3.5 h-3.5" aria-hidden />
+        Packages
+      </button>
+
+      {open && (
+        <>
+          <div
+            className="fixed inset-0 z-10"
+            aria-hidden
+            onClick={() => setOpen(false)}
+          />
+          <div className="absolute top-full left-0 mt-1 z-20 bg-card border rounded-lg shadow-lg p-2 min-w-[220px]">
+            <p className="text-xs font-medium text-muted-foreground px-2 pb-1">
+              Pin all and enter round mode
+            </p>
+            {packages.map((pkg) => (
+              <button
+                key={pkg.id}
+                type="button"
+                onClick={() => handlePinAll(pkg)}
+                disabled={loading === pkg.id}
+                className="w-full text-left px-3 py-2 rounded-md text-sm hover:bg-muted/40 flex items-center justify-between gap-2 disabled:opacity-60"
+              >
+                <span className="truncate">{pkg.name}</span>
+                <span className="text-xs text-muted-foreground shrink-0">
+                  {loading === pkg.id ? "Pinning…" : `${pkg.lineup_ids.length} lineups`}
+                </span>
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
   );
 }

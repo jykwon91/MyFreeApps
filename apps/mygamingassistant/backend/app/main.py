@@ -21,7 +21,7 @@ from jwt.exceptions import PyJWTError as JWTError
 from platform_shared.core.git import resolve_git_commit
 from platform_shared.core.lifespan import create_app_lifespan
 
-from app.api import account, admin, games, health, lineups, sources, totp
+from app.api import account, admin, games, health, lineups, lineup_packages, scheduler, sources, totp
 from app.core.audit import current_user_id
 from app.core.auth import auth_backend, fastapi_users
 from app.core.config import settings
@@ -51,6 +51,10 @@ logger = logging.getLogger("app")
 
 class ClassifierNotConfiguredError(RuntimeError):
     """Raised at startup when ENABLE_CLASSIFIER=true but ANTHROPIC_API_KEY is missing."""
+
+
+class SchedulerStartupError(RuntimeError):
+    """Raised at startup when SCHEDULER_ENABLED=true but the scheduler fails to start."""
 
 
 async def _on_startup() -> None:
@@ -92,12 +96,47 @@ async def _on_startup() -> None:
             "— classifier will log warnings and skip calls in non-production environment."
         )
 
+    # Scheduler boot guard — start APScheduler if enabled.
+    if settings.scheduler_enabled:
+        from app.services.scheduling.scheduler_service import start_scheduler
+        try:
+            start_scheduler(sync_interval_hours=settings.source_sync_interval_hours)
+            logger.info(
+                "_on_startup: scheduler started — sync_interval_hours=%d",
+                settings.source_sync_interval_hours,
+            )
+        except Exception as exc:
+            if settings.environment == "production":
+                raise SchedulerStartupError(
+                    f"SCHEDULER_ENABLED=true but scheduler failed to start: {exc}. "
+                    "Set SCHEDULER_ENABLED=false to disable the scheduler, or fix "
+                    "the underlying error."
+                ) from exc
+            logger.warning(
+                "_on_startup: SCHEDULER_ENABLED=true but scheduler failed to start "
+                "(non-production — continuing): %s", str(exc),
+            )
+    else:
+        logger.warning(
+            "_on_startup: SCHEDULER_ENABLED=false — automatic source syncs are disabled. "
+            "Use POST /api/scheduler/trigger/sync_all_sources for manual runs, or "
+            "set SCHEDULER_ENABLED=true to re-enable.",
+        )
+
+
+async def _on_shutdown() -> None:
+    """MGA-specific shutdown: stop the APScheduler."""
+    if settings.scheduler_enabled:
+        from app.services.scheduling.scheduler_service import shutdown_scheduler
+        shutdown_scheduler()
+
 
 lifespan = create_app_lifespan(
     settings=settings,
     init_sentry=init_sentry,
     bucket_init=ensure_bucket,
     on_startup=_on_startup,
+    on_shutdown=_on_shutdown,
 )
 
 
@@ -208,7 +247,9 @@ app.include_router(
 app.include_router(health.router, tags=["health"])
 app.include_router(games.router)
 app.include_router(lineups.router)
+app.include_router(lineup_packages.router)
 app.include_router(sources.router)
+app.include_router(scheduler.router)
 app.include_router(admin.router)
 
 # Shared platform admin router — generic user-management endpoints

@@ -1,6 +1,6 @@
 # MyGamingAssistant — Tech Debt Log
 
-<!-- 6 open issues -->
+<!-- 6 open issues | 2 resolved -->
 
 ---
 
@@ -48,32 +48,49 @@
 
 ---
 
-### [Ingestion] Disk space guard for download directory is unenforced
+### [Ingestion] Disk space guard for download directory is unenforced ✅ RESOLVED PR 6
 
-- **Severity:** Medium
-- **Effort:** Medium (2-3 hours)
-- **Location:** `apps/mygamingassistant/backend/app/core/config.py`, `ingestion_orchestrator.py`
-- **Problem:** `INGESTION_DOWNLOAD_DIR_MAX_GB` is stored in config but never checked. If many
-  large videos are downloaded concurrently (or cleanup fails), the download directory can fill
-  the VPS disk. The orchestrator always downloads without checking available space.
-- **Recommendation:** Before calling `download_video`, check `shutil.disk_usage(download_dir)`
-  and skip/abort if free space falls below `ingestion_download_dir_max_gb * 0.8`. Log a WARNING
-  with disk stats whenever skipping for this reason.
+- **Resolved:** `cleanup_ingestion_downloads` APScheduler job (runs every 1h) enforces
+  `INGESTION_DOWNLOAD_DIR_MAX_GB` by deleting oldest files first until under the cap.
+  Pre-download enforcement (check free space before downloading) is still a future improvement.
 
 ---
 
-### [Ingestion] Background task sync uses fire-and-forget with no status surface
+### [Ingestion] Background task sync uses fire-and-forget with no status surface ✅ RESOLVED PR 6
 
-- **Severity:** Medium
-- **Effort:** High (4-8 hours, deferred to PR 6 APScheduler work)
-- **Location:** `apps/mygamingassistant/backend/app/api/sources.py`
-- **Problem:** `POST /api/sources/{id}/sync` returns a `SyncJobResponse` with a `job_id`, but
-  that job_id is never stored or queryable. The frontend has no way to poll for sync progress
-  or learn that a sync completed vs failed. The `status` field in the response is always
-  `"started"`. Any error inside `sync_source` is only visible in server logs.
-- **Recommendation:** This is intentionally deferred to PR 6 (APScheduler). When APScheduler
-  is added, replace BackgroundTask with a proper job queue that persists job state. Until then,
-  the source's `last_synced_at` + `last_sync_stats` on the next GET /api/sources poll serves as
-  the completion signal.
+- **Resolved:** APScheduler is now wired. The `sync_all_sources` job (every 6h) replaces the
+  fire-and-forget BackgroundTask for scheduled runs. The manual `POST /api/sources/{id}/sync`
+  endpoint still uses BackgroundTask for one-off triggers — job state persistence is a future
+  enhancement (see new debt entry below).
+
+---
+
+### [Ingestion] Manual sync job_id is not persisted or queryable
+
+- **Severity:** Low
+- **Effort:** Medium (3-5 hours)
+- **Location:** `apps/mygamingassistant/backend/app/api/sources.py`, `source_service.py`
+- **Problem:** `POST /api/sources/{id}/sync` returns a synthetic `job_id` but that ID is never
+  stored. The frontend cannot poll for completion. `last_synced_at` on the source serves as the
+  only completion signal. For large playlists this can mean the user has no visibility into
+  whether a manually-triggered sync is still running or has finished.
+- **Recommendation:** When APScheduler job store is upgraded (or a lightweight jobs table added),
+  persist manual sync requests with status=running/completed/failed and expose a
+  `GET /api/sources/{id}/sync-status` endpoint. Until then, the Sources page should poll
+  `GET /api/sources` and watch `last_synced_at` for change.
+
+---
+
+### [Backend tests] LineupPackage service tests require running PostgreSQL
+
+- **Severity:** Low
+- **Effort:** Low (1-2 hours)
+- **Location:** `apps/mygamingassistant/backend/tests/test_lineup_package_service.py`
+- **Problem:** `test_lineup_package_service.py` requires a live PostgreSQL connection (same
+  `auth_client` fixture pattern as `test_lineups.py`). Tests are silently skipped when no DB
+  is available. DB-dependent tests should either auto-provision a container or emit a clear
+  skip message so CI knows it's not running them.
+- **Recommendation:** Same fix as the existing `test_lineups.py` debt — add `pytest-docker`
+  fixture or a `conftest.py` skipif guard that warns clearly when DB is unavailable.
 
 ---

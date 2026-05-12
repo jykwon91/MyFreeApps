@@ -88,5 +88,17 @@ class Settings(BaseAppSettings):
     # for long-form videos (CS2 full-map videos can exceed 1 GB each).
     ingestion_download_dir_max_gb: int = 10
 
+    # ------------------------------------------------------------------
+    # Scheduler (PR 6+)
+    # ------------------------------------------------------------------
+    # Set SCHEDULER_ENABLED=false to disable the background cron entirely
+    # (useful for tests and local dev where you don't want background jobs).
+    # In production, if SCHEDULER_ENABLED=true and sources exist but the
+    # scheduler fails to start, the lifespan fails loudly.
+    scheduler_enabled: bool = True
+    # Interval in hours between full source sync passes.
+    # Each pass iterates all active sources sequentially.
+    source_sync_interval_hours: int = 6
+
 
 settings = Settings()

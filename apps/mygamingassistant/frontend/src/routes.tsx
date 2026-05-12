@@ -1,5 +1,6 @@
 import { type RouteObject } from "react-router-dom";
 import GameGrid from "@/pages/GameGrid";
+import LineupPackages from "@/pages/LineupPackages";
 import LineupUpload from "@/pages/LineupUpload";
 import MapGrid from "@/pages/MapGrid";
 import MapPage from "@/pages/MapPage";
@@ -22,6 +23,7 @@ export const routes: RouteObject[] = [
     children: [
       { index: true, element: <GameGrid /> },
       { path: "/lineups/new", element: <LineupUpload /> },
+      { path: "/packages", element: <LineupPackages /> },
       { path: "/sources", element: <Sources /> },
       { path: "/review", element: <Review /> },
       { path: "/:gameSlug", element: <MapGrid /> },

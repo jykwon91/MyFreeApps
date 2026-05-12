@@ -30,6 +30,9 @@ dependencies = [
     # YouTube ingestion — yt-dlp for video/playlist metadata + download.
     # Pinned to latest stable as of 2026-05. Bump on yt-dlp breakage (expected ~3-4x/year).
     "yt-dlp==2026.3.17",
+    # APScheduler — in-process background cron for source syncs (PR 6+).
+    # 3.x series; 4.x is a rewrite with breaking API changes — stay on 3.x.
+    "apscheduler==3.11.0",
 ]
 
 [tool.uv]
