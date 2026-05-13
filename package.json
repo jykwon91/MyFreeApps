@@ -3,7 +3,8 @@
   "private": true,
   "workspaces": [
     "packages/shared-frontend",
-    "apps/*/frontend"
+    "apps/*/frontend",
+    "apps/*/desktop"
   ],
   "overrides": {
     "@types/react": "^19.2.14",

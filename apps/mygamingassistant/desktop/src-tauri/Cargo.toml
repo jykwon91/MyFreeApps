@@ -1,0 +1,36 @@
+[package]
+name = "mygamingassistant"
+version = "0.0.1"
+description = "MyGamingAssistant desktop shell — Tauri wrapper around the web SPA"
+authors = ["jykwon91"]
+edition = "2021"
+rust-version = "1.77"
+
+# Single-binary crate. PR 7 = shell only. Future PRs slot into the placeholder
+# modules under src/ (gsi/, capture/, cv/) without re-architecting.
+
+[lib]
+name = "mygamingassistant_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+
+# PR 8 will add (commented to document the planned shape, not yet wired):
+# tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+# axum = "0.8"   # GSI HTTP receiver runs inside Tauri
+#
+# PR 9 will add (Windows-only conditional):
+# [target.'cfg(windows)'.dependencies]
+# windows = { version = "0.59", features = ["Win32_Graphics_Dxgi", "Win32_Graphics_Direct3D11"] }
+# opencv = "0.94"
+
+[features]
+# Default features.
+default = ["custom-protocol"]
+# Required for `cargo tauri build` to produce a production binary.
+custom-protocol = ["tauri/custom-protocol"]
