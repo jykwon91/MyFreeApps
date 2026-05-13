@@ -1,3 +1,7 @@
+# GENERATED FROM infra/templates/docker-compose.yml.j2 — DO NOT EDIT.
+# Edit the template + apps/<app>/app.yaml; re-render via:
+#   python -m platform_shared.infra.render --app mybookkeeper
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -17,14 +21,13 @@ services:
       # early pg_isready failures count toward retries and Docker reports
       # the container "unhealthy" before postgres has bound the socket.
       # Dependent services (migrate, api) then bail before postgres is ready.
-      # Mirrors apps/myjobhunter/docker-compose.yml.
       start_period: 30s
 
   migrate:
     build:
       # Build context is the monorepo root so the image can pull in
       # packages/shared-backend (the `platform_shared` library) alongside
-      # apps/mybookkeeper/. Mirrors apps/myjobhunter/docker/backend.Dockerfile.
+      # apps/mybookkeeper/.
       context: ../..
       dockerfile: apps/mybookkeeper/docker/backend.Dockerfile
     command: ["alembic", "upgrade", "head"]
@@ -37,9 +40,6 @@ services:
 
   api:
     build:
-      # Build context is the monorepo root so the image can pull in
-      # packages/shared-backend (the `platform_shared` library) alongside
-      # apps/mybookkeeper/. Mirrors apps/myjobhunter/docker/backend.Dockerfile.
       context: ../..
       dockerfile: apps/mybookkeeper/docker/backend.Dockerfile
     restart: unless-stopped
@@ -49,10 +49,7 @@ services:
       RUN_UPLOAD_WORKER: "false"
       # MinIO connection — points at the shared infra/ stack's
       # ``myfreeapps-minio`` container reachable via the shared
-      # ``myfreeapps`` external network. ``MINIO_ENDPOINT`` should be
-      # ``myfreeapps-minio:9000`` (set in /srv/myfreeapps/apps/mybookkeeper/.env
-      # on the VPS); ``MINIO_PUBLIC_ENDPOINT`` is the public URL the
-      # browser uses for presigned downloads.
+      # ``myfreeapps`` external network.
       MINIO_ENDPOINT: ${MINIO_ENDPOINT}
       MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT}
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-${MINIO_ROOT_USER}}
@@ -73,9 +70,6 @@ services:
 
   upload-processor:
     build:
-      # Build context is the monorepo root so the image can pull in
-      # packages/shared-backend (the `platform_shared` library) alongside
-      # apps/mybookkeeper/. Mirrors apps/myjobhunter/docker/backend.Dockerfile.
       context: ../..
       dockerfile: apps/mybookkeeper/docker/backend.Dockerfile
     restart: unless-stopped
@@ -92,9 +86,6 @@ services:
 
   scheduler:
     build:
-      # Build context is the monorepo root so the image can pull in
-      # packages/shared-backend (the `platform_shared` library) alongside
-      # apps/mybookkeeper/. Mirrors apps/myjobhunter/docker/backend.Dockerfile.
       context: ../..
       dockerfile: apps/mybookkeeper/docker/backend.Dockerfile
     restart: unless-stopped
@@ -105,6 +96,9 @@ services:
     depends_on:
       migrate:
         condition: service_completed_successfully
+    networks:
+      - default
+      - myfreeapps
 
   caddy:
     # Custom image: caddy:2-alpine + freshly-built frontend dist baked in
@@ -118,15 +112,12 @@ services:
         # Frontend public env baked into the Vite bundle at build time.
         # Read from the host shell environment when `docker compose build`
         # runs; the deploy workflow / operator passes these via
-        # `--env-file backend/.env.docker` or by sourcing the file before
-        # build. Empty values produce a bundle where TurnstileWidget
-        # returns null and registration silently 400s — see the
-        # caddy.Dockerfile comment for the full failure mode.
+        # `--env-file backend/.env.docker`. Empty values produce a bundle
+        # where TurnstileWidget returns null and registration silently 400s.
         VITE_TURNSTILE_SITE_KEY: ${TURNSTILE_SITE_KEY:-}
     restart: unless-stopped
     ports:
       # Bind only to localhost — host Caddy is the public front door and proxies here.
-      # Port 80/443 on the host are owned by host Caddy; this container is HTTP-only on 8094.
       - "127.0.0.1:8094:80"
     environment:
       DOMAIN: ${DOMAIN:-localhost}

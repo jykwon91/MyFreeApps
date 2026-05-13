@@ -1,3 +1,7 @@
+# GENERATED FROM infra/templates/docker-compose.yml.j2 — DO NOT EDIT.
+# Edit the template + apps/<app>/app.yaml; re-render via:
+#   python -m platform_shared.infra.render --app mygamingassistant
+
 services:
   postgres:
     image: postgres:16
@@ -13,10 +17,17 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+      # initdb on a cold start can take 10–20s; without start_period the
+      # early pg_isready failures count toward retries and Docker reports
+      # the container "unhealthy" before postgres has bound the socket.
+      # Dependent services (migrate, api) then bail before postgres is ready.
       start_period: 30s
 
   migrate:
     build:
+      # Build context is the monorepo root so the image can pull in
+      # packages/shared-backend (the `platform_shared` library) alongside
+      # apps/mygamingassistant/.
       context: ../..
       dockerfile: apps/mygamingassistant/docker/backend.Dockerfile
     command: ["alembic", "upgrade", "head"]
@@ -35,10 +46,6 @@ services:
     env_file: backend/.env.docker
     environment:
       DATABASE_URL: postgresql+asyncpg://mygamingassistant:${DB_PASSWORD}@postgres/mygamingassistant
-      # MinIO connection — points at the shared infra/ stack's
-      # ``myfreeapps-minio`` container reachable via the shared
-      # ``myfreeapps`` external network. ``MINIO_ENDPOINT`` is set in
-      # backend/.env.docker on the VPS to ``myfreeapps-minio:9000``.
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -54,7 +61,8 @@ services:
   caddy:
     # Custom image: caddy:2-alpine + freshly-built frontend dist baked in
     # at /srv/frontend + Caddyfile baked at /etc/caddy/Caddyfile. No shared
-    # volume, no entrypoint copy, no drift between deploys.
+    # volume, no entrypoint copy, no drift between deploys. See
+    # docker/caddy.Dockerfile for the full rationale.
     build:
       context: ../..
       dockerfile: apps/mygamingassistant/docker/caddy.Dockerfile
@@ -62,7 +70,8 @@ services:
         # Frontend public env baked into the Vite bundle at build time.
         # Read from the host shell environment when `docker compose build`
         # runs; the deploy workflow / operator passes these via
-        # `--env-file backend/.env.docker` or by sourcing the file before build.
+        # `--env-file backend/.env.docker`. Empty values produce a bundle
+        # where TurnstileWidget returns null and registration silently 400s.
         VITE_TURNSTILE_SITE_KEY: ${TURNSTILE_SITE_KEY:-}
     restart: unless-stopped
     ports:
@@ -86,7 +95,7 @@ volumes:
   caddy_config:
 
 networks:
-  # Per-app default network for postgres + migrate.
+  # Per-app default network for postgres + migrate + workers.
   default:
   # Shared external network owned by infra/docker-compose.yml — joined
   # by services that need to reach myfreeapps-minio. Bring up the infra
