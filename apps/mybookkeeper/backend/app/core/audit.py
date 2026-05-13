@@ -21,9 +21,18 @@ from platform_shared.core.audit import (
 # in this set as ``"***"`` BEFORE it lands in the audit_logs table.
 MBK_SENSITIVE_FIELDS: frozenset[str] = frozenset({
     "hashed_password",
-    "access_token",
-    "refresh_token",
+    # OAuth tokens — masked at the actual column names (access_token /
+    # refresh_token on Integration are hybrid_property accessors, not
+    # SQLAlchemy mapped columns; the underlying columns are *_encrypted).
+    # Mask the ciphertext to avoid bloat in audit_logs.
+    "access_token_encrypted",
+    "refresh_token_encrypted",
     "issuer_ein",
+    # TOTP secrets — service-layer encrypted before reaching SQLAlchemy, but
+    # the ciphertext is still bloat + unnecessary exposure to support /
+    # analytics paths that read audit_logs. Mask to avoid both.
+    "totp_secret",
+    "totp_recovery_codes",
     # Inquiries domain PII (RENTALS_PLAN.md §8.7) — encrypted at rest via
     # EncryptedString TypeDecorator; the audit log must not capture decrypted
     # PII (or the ciphertext, which leaks the existence of a value).

@@ -17,6 +17,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from platform_shared.core import audit as audit_module
 from platform_shared.core.audit import (
+    AuditConfigurationError,
     current_user_id,
     get_sensitive_fields,
     get_skip_tables,
@@ -25,6 +26,7 @@ from platform_shared.core.audit import (
     register_skip_fields,
     register_skip_tables,
     reset_registry,
+    verify_sensitive_field_names,
 )
 from platform_shared.db.base import Base
 from platform_shared.db.models.audit_log import AuditLog
@@ -382,7 +384,7 @@ class TestRegistrationHappensBeforeListener:
         self, db: AsyncSession,
     ) -> None:
         # Listener attached BEFORE the field is registered.
-        register_audit_listeners()
+        register_audit_listeners(verify_field_names=False)
         # Now an app or test registers a field after the listener is live.
         register_sensitive_fields(["password"])
 
@@ -396,3 +398,63 @@ class TestRegistrationHappensBeforeListener:
             ),
         )).scalar_one()
         assert password_row.new_value == "***"
+
+
+class TestSensitiveFieldNameValidation:
+    """Startup sanity check — registering a name that doesn't match any ORM
+    column means the mask silently never fires. This is the typo class that
+    leaked plaintext TOTP secrets into audit_logs in MJH + MGA. The verifier
+    catches it at boot instead of letting plaintext leak in production.
+    """
+
+    def test_passes_when_all_names_match_columns(self) -> None:
+        # _Widget has 'password' + 'secret_token' columns — both known.
+        register_sensitive_fields(["password", "secret_token"])
+        verify_sensitive_field_names()  # no raise
+
+    def test_passes_with_empty_registration(self) -> None:
+        # No sensitive fields registered → vacuously valid.
+        verify_sensitive_field_names()
+
+    def test_raises_on_typo(self) -> None:
+        # 'totp_secret_encrypted' is the actual typo that shipped in MJH/MGA;
+        # the real column on those User models is 'totp_secret'.
+        register_sensitive_fields(["password", "totp_secret_encrypted"])
+        with pytest.raises(AuditConfigurationError) as exc:
+            verify_sensitive_field_names()
+        msg = str(exc.value)
+        assert "totp_secret_encrypted" in msg
+        # Known-good name must NOT appear in the unknown list.
+        assert "'password'" not in msg
+        # Error message points to the cause + the fix direction.
+        assert "audit_logs" in msg
+        assert "Check spelling" in msg
+
+    def test_register_audit_listeners_raises_on_typo_by_default(self) -> None:
+        # Default verify_field_names=True is what protects production.
+        register_sensitive_fields(["nonexistent_field"])
+        with pytest.raises(AuditConfigurationError):
+            register_audit_listeners()
+        # Listener must NOT have attached when verification failed — otherwise
+        # the typo would leak from the moment the failed boot was retried.
+        assert audit_module._listeners_registered is False
+        assert audit_module._attached_listener is None
+
+    def test_register_audit_listeners_skips_verification_when_opted_out(self) -> None:
+        # Tests that exercise the listener against ad-hoc tables not registered
+        # with Base.metadata need to opt out — but production code should
+        # never pass verify_field_names=False.
+        register_sensitive_fields(["nonexistent_field"])
+        register_audit_listeners(verify_field_names=False)  # no raise
+        assert audit_module._listeners_registered is True
+
+    def test_unknown_names_listed_sorted_for_deterministic_messages(self) -> None:
+        # Deterministic ordering makes error messages and CI logs comparable.
+        register_sensitive_fields(["zzz_unknown", "aaa_unknown", "mmm_unknown"])
+        with pytest.raises(AuditConfigurationError) as exc:
+            verify_sensitive_field_names()
+        msg = str(exc.value)
+        i_a = msg.index("'aaa_unknown'")
+        i_m = msg.index("'mmm_unknown'")
+        i_z = msg.index("'zzz_unknown'")
+        assert i_a < i_m < i_z

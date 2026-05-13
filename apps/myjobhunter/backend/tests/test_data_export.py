@@ -3,7 +3,7 @@
 Covers:
 - Returns the expected top-level keys for all 15 MJH domain tables
 - User row is exported with the public fields, not the secrets
-- Excludes hashed_password, totp_secret_encrypted, totp_recovery_codes,
+- Excludes hashed_password, totp_secret, totp_recovery_codes,
   job_board_credentials.encrypted_credentials
 - Tenant-isolated — user A's export does not contain user B's rows
 - Emits a ``DATA_EXPORTED`` auth event
@@ -182,7 +182,10 @@ async def test_export_returns_user_data(db: AsyncSession) -> None:
 @pytest.mark.asyncio
 async def test_export_excludes_user_secrets(db: AsyncSession) -> None:
     user = _make_user()
-    user.totp_secret_encrypted = "FAKE_ENCRYPTED_SECRET_BLOB"
+    # Use the actual SQLAlchemy column names (the test previously set
+    # `totp_secret_encrypted`, a non-existent attribute, so the assertion
+    # was vacuously true — fixed alongside PR #618).
+    user.totp_secret = "FAKE_ENCRYPTED_SECRET_BLOB"
     user.totp_recovery_codes = "FAKE_ENCRYPTED_RECOVERY_BLOB"
     db.add(user)
     await db.flush()

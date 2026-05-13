@@ -136,8 +136,13 @@ class TestMJHAuditRegistration:
             )
 
     def test_mjh_secrets_are_registered(self) -> None:
+        # `totp_secret` is the actual SQLAlchemy column (typed as
+        # EncryptedString — encrypts at bind-time, AFTER the audit listener
+        # captures attr.value). The mask MUST match this exact attribute
+        # name; pre-PR-#618 this set referenced `totp_secret_encrypted`
+        # (column-rename leftover), which never matched → plaintext leak.
         registered = get_sensitive_fields()
-        for field in ("hashed_password", "totp_secret_encrypted", "totp_recovery_codes"):
+        for field in ("hashed_password", "totp_secret", "totp_recovery_codes"):
             assert field in registered, (
                 f"{field!r} must be registered as sensitive — the audit "
                 "listener would otherwise capture plaintext secrets."

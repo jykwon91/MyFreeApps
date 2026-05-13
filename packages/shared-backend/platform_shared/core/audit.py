@@ -40,7 +40,16 @@ from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import NO_VALUE
 from sqlalchemy.orm.base import NEVER_SET
 
+from platform_shared.db.base import Base
 from platform_shared.db.models.audit_log import AuditLog
+
+
+class AuditConfigurationError(RuntimeError):
+    """Raised when the audit registry is misconfigured in a way that would
+    silently disable PII masking (e.g. a registered sensitive-field name that
+    doesn't match any ORM column on any mapped class).
+    """
+
 
 # Per-request actor identifier for the ``changed_by`` column. Apps' middleware
 # is responsible for setting + resetting this on each request.
@@ -91,6 +100,47 @@ def get_skip_tables() -> frozenset[str]:
     return frozenset(_skip_tables)
 
 
+def _all_mapped_column_keys() -> set[str]:
+    """Collect every SQLAlchemy column attribute key across all mapped tables.
+
+    Returns the union of ``column.key`` for every column on every table
+    registered with the shared ``Base.metadata``. Apps must import their model
+    modules before calling :func:`register_audit_listeners` so all relevant
+    tables are present in metadata at verification time.
+    """
+    return {col.key for table in Base.metadata.tables.values() for col in table.columns}
+
+
+def verify_sensitive_field_names() -> None:
+    """Raise :class:`AuditConfigurationError` if any registered sensitive-field
+    name does not match an actual column attribute on any mapped class.
+
+    The PII mask compares ``attr.key`` (the SQLAlchemy attribute name) against
+    ``_sensitive_fields`` on every flush. A name that matches no column means
+    the mask silently never fires for that field — exactly the typo class that
+    leaked plaintext TOTP secrets into ``audit_logs`` in MJH + MGA before this
+    check was added.
+
+    Called automatically by :func:`register_audit_listeners` unless
+    ``verify_field_names=False`` is passed (tests that exercise the listener
+    against ad-hoc tables may opt out).
+    """
+    known = _all_mapped_column_keys()
+    unknown = _sensitive_fields - known
+    if not unknown:
+        return
+    raise AuditConfigurationError(
+        "register_sensitive_fields() received names that don't match any ORM "
+        f"column on any mapped class: {sorted(unknown)}. The audit mask will "
+        "never fire for these names — plaintext values in the columns they were "
+        "meant to mask will leak into audit_logs. Check spelling against the "
+        "actual SQLAlchemy attribute names on your models. (Tip: this check "
+        "runs against Base.metadata, so make sure every model module is "
+        "imported before register_audit_listeners is called — apps' main.py "
+        "lifespan already does this via the import side-effect chain.)",
+    )
+
+
 def reset_registry() -> None:
     """Clear all registrations + reset to seed defaults. Test-only.
 
@@ -131,6 +181,7 @@ def register_audit_listeners(
     *,
     audit_log_model: type = AuditLog,
     get_actor: Callable[[], str | None] | None = None,
+    verify_field_names: bool = True,
 ) -> None:
     """Attach the after_flush listener that writes audit rows.
 
@@ -145,13 +196,27 @@ def register_audit_listeners(
             the ``changed_by`` column. Defaults to reading
             :data:`current_user_id`. Pass a different callable when the app
             populates a different request-context store.
+        verify_field_names: When True (default), call
+            :func:`verify_sensitive_field_names` BEFORE attaching the listener
+            so the app fails to boot if any registered sensitive-field name
+            doesn't match a real ORM column. Tests that exercise the listener
+            against ad-hoc tables not in ``Base.metadata`` can pass False.
 
     Idempotent — calling more than once (e.g. across uvicorn reloader restarts
     or pytest sessions that reuse the process) is a no-op.
+
+    Raises:
+        AuditConfigurationError: when ``verify_field_names`` is True and any
+            registered sensitive-field name has zero matches against the
+            mapped-column set. Fail-loud is intentional — silently dropping
+            the mask is how plaintext leaks happen.
     """
     global _listeners_registered, _attached_listener
     if _listeners_registered:
         return
+
+    if verify_field_names:
+        verify_sensitive_field_names()
 
     actor: Callable[[], str | None] = get_actor or (lambda: current_user_id.get())
 

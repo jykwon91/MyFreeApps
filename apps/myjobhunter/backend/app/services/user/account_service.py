@@ -66,7 +66,7 @@ def _user_to_export_dict(user: User) -> dict:
         "is_active": user.is_active,
         "is_verified": user.is_verified,
         "totp_enabled": user.totp_enabled,
-        # Excluded: hashed_password, totp_secret_encrypted, totp_recovery_codes
+        # Excluded: hashed_password, totp_secret, totp_recovery_codes
     }
 
 
