@@ -4,8 +4,8 @@
   "version": "0.0.1",
   "identifier": "org.myfreeapps.mygamingassistant",
   "build": {
-    "beforeDevCommand": "npm --workspace=apps/mygamingassistant/frontend run dev -- --port 5176 --strictPort",
-    "beforeBuildCommand": "npm --workspace=apps/mygamingassistant/frontend run build",
+    "beforeDevCommand": "npm --prefix ../../../.. --workspace=apps/mygamingassistant/frontend run dev -- --port 5176 --strictPort",
+    "beforeBuildCommand": "npm --prefix ../../../.. --workspace=apps/mygamingassistant/frontend run build",
     "devUrl": "http://localhost:5176",
     "frontendDist": "../../frontend/dist"
   },
