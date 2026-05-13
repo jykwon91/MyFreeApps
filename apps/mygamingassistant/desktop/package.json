@@ -1,0 +1,16 @@
+{
+  "name": "mygamingassistant-desktop",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Tauri desktop shell for MyGamingAssistant. Wraps apps/mygamingassistant/frontend's built bundle as a native binary.",
+  "type": "module",
+  "scripts": {
+    "tauri": "tauri",
+    "dev": "tauri dev",
+    "build": "tauri build",
+    "build:debug": "tauri build --debug"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.11.1"
+  }
+}

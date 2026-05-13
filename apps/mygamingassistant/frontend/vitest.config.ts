@@ -6,7 +6,8 @@ import viteConfig from "./vite.config";
  *
  * Key divergences from MJH:
  * - No React alias override needed (MGA already uses React 19 like shared-frontend)
- * - No test-setup.ts yet (add when the first unit test needs jest-dom matchers)
+ * - setupFiles registers jest-dom matchers (PR 7, when DesktopBadge.test.tsx
+ *   started using toBeInTheDocument / toBeEmptyDOMElement).
  */
 export default mergeConfig(
   viteConfig,
@@ -14,6 +15,7 @@ export default mergeConfig(
     test: {
       environment: "jsdom",
       globals: true,
+      setupFiles: ["./src/test/setup.ts"],
       // Exclude Playwright E2E specs — those run via npx playwright test.
       exclude: ["e2e/**", "**/node_modules/**"],
     },

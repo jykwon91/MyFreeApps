@@ -1,0 +1,9 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Default capability set for the main window. PR 7 ships the bare minimum (core IPC only). PRs 8+ will add per-plugin permissions as features require them (e.g. `shell:allow-open` for external links, `http:default` for the GSI receiver).",
+  "windows": ["main"],
+  "permissions": [
+    "core:default"
+  ]
+}

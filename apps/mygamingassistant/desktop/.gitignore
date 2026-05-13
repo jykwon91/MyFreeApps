@@ -1,0 +1,15 @@
+# Rust build artifacts
+src-tauri/target/
+
+# Tauri-generated files (created by `tauri build` from tauri.conf.json — not
+# checked in; regenerated each build).
+src-tauri/gen/
+
+# Cargo backup files
+**/*.rs.bk
+
+# Node
+node_modules/
+
+# NOTE: src-tauri/Cargo.lock IS committed (this is a binary, not a library —
+# reproducible builds matter more than dependency-range flexibility).

@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { Shield, ChevronRight } from "lucide-react";
 import { Card } from "@platform/ui";
+import DesktopBadge from "@/components/desktop/DesktopBadge";
 
 export default function Settings() {
   return (
@@ -37,6 +38,10 @@ export default function Settings() {
           Account management options coming in a future phase.
         </p>
       </Card>
+
+      {/* Desktop build smoke test — renders nothing in the web build,
+          renders a version badge under Tauri. See PR 7 of the MGA plan. */}
+      <DesktopBadge />
     </main>
   );
 }
