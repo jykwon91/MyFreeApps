@@ -90,22 +90,18 @@ async fn live_http_receiver_accepts_real_post() {
     for _ in 0..30 {
         let snap = gsi.snapshot().await;
         if snap.payloads_received == 1 {
-            // Snapshot the lock-held data into owned values inside a tight
-            // scope, then drop the guard before any further await.
-            let (state_update_count, first_event_map_slug, first_event_activity) = {
+            // Clone the captured event out of the lock so we can drop the
+            // guard before the next await. Mutex locks in tests should
+            // never bridge an await boundary.
+            let captured_event = {
                 let updates = stub.state_updates.lock().unwrap();
-                let first = updates.first().cloned();
-                (
-                    updates.len(),
-                    first.as_ref().map(|e| e.map_slug.clone()).unwrap_or_default(),
-                    first.as_ref().map(|e| e.activity.clone()).unwrap_or_default(),
-                )
+                updates.first().cloned()
             };
             let server_status_count = stub.server_statuses.lock().unwrap().len();
 
-            assert_eq!(state_update_count, 1);
-            assert_eq!(first_event_map_slug, "mirage");
-            assert_eq!(first_event_activity, "playing");
+            let event = captured_event.expect("expected one captured event");
+            assert_eq!(event.map_slug, "mirage");
+            assert_eq!(event.activity, "playing");
             // Status snapshot bumped + at least 2 server-status emits
             // (1 on startup + 1 per accepted payload).
             assert!(server_status_count >= 2);

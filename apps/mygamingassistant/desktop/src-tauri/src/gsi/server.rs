@@ -287,18 +287,14 @@ mod tests {
         // Emitter should have received exactly one state update with the
         // normalized fields. Drop the MutexGuard before the next await to
         // satisfy clippy::await_holding_lock.
-        let (update_count, event_map_slug, event_activity) = {
+        let captured_event: Option<GsiEvent> = {
             let updates = stub.state_updates.lock().unwrap();
-            let event = updates.first().cloned();
-            (
-                updates.len(),
-                event.as_ref().map(|e| e.map_slug.clone()).unwrap_or_default(),
-                event.as_ref().map(|e| e.activity.clone()).unwrap_or_default(),
-            )
+            updates.first().cloned()
         };
-        assert_eq!(update_count, 1);
-        assert_eq!(event_map_slug, "mirage");
-        assert_eq!(event_activity, "playing");
+        assert!(captured_event.is_some(), "expected exactly one event");
+        let event = captured_event.unwrap();
+        assert_eq!(event.map_slug, "mirage");
+        assert_eq!(event.activity, "playing");
         // GsiState should have logged the event.
         let snap = gsi.snapshot().await;
         assert_eq!(snap.payloads_received, 1);
