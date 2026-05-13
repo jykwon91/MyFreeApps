@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.integrations.integration import Integration
 from app.models.organization.organization import Organization
 from app.models.user.user import User
+from app.repositories import integration_repo
 
 
 class TestIntegrationTokenEncryption:
@@ -182,3 +183,75 @@ class TestIntegrationTokenEncryption:
 
         assert integration.access_token_encrypted != original_encrypted
         assert integration.access_token == "ya29.updated"
+
+
+class TestUpdateAccessToken:
+    """integration_repo.update_access_token writes a refreshed token + normalizes expiry."""
+
+    @pytest.mark.asyncio
+    async def test_persists_new_access_token_and_aware_expiry(
+        self, db: AsyncSession, test_user: User, test_org: Organization
+    ) -> None:
+        integration = Integration(
+            organization_id=test_org.id,
+            user_id=test_user.id,
+            provider="gmail_refresh1",
+            token_expiry=datetime(2026, 5, 13, 12, 0, 0, tzinfo=timezone.utc),
+        )
+        integration.access_token = "ya29.old"
+        db.add(integration)
+        await db.flush()
+        old_encrypted = integration.access_token_encrypted
+
+        new_expiry = datetime(2026, 5, 13, 13, 0, 0, tzinfo=timezone.utc)
+        await integration_repo.update_access_token(db, integration, "ya29.new", new_expiry)
+        await db.flush()
+
+        assert integration.access_token == "ya29.new"
+        assert integration.access_token_encrypted != old_encrypted
+        assert integration.token_expiry == new_expiry
+
+    @pytest.mark.asyncio
+    async def test_normalizes_naive_expiry_to_utc(
+        self, db: AsyncSession, test_user: User, test_org: Organization
+    ) -> None:
+        """google-auth returns naive datetimes for expiry — repo helper must
+        add UTC tzinfo so the DB stores a timezone-aware value."""
+        integration = Integration(
+            organization_id=test_org.id,
+            user_id=test_user.id,
+            provider="gmail_refresh2",
+            token_expiry=datetime(2026, 5, 13, 12, 0, 0, tzinfo=timezone.utc),
+        )
+        integration.access_token = "ya29.old"
+        db.add(integration)
+        await db.flush()
+
+        naive_expiry = datetime(2026, 5, 13, 14, 0, 0)  # no tzinfo
+        await integration_repo.update_access_token(db, integration, "ya29.new", naive_expiry)
+        await db.flush()
+
+        assert integration.token_expiry is not None
+        assert integration.token_expiry.tzinfo is not None
+        assert integration.token_expiry == datetime(2026, 5, 13, 14, 0, 0, tzinfo=timezone.utc)
+
+    @pytest.mark.asyncio
+    async def test_accepts_none_expiry(
+        self, db: AsyncSession, test_user: User, test_org: Organization
+    ) -> None:
+        """If google-auth returns no expiry, the repo helper should clear it."""
+        integration = Integration(
+            organization_id=test_org.id,
+            user_id=test_user.id,
+            provider="gmail_refresh3",
+            token_expiry=datetime(2026, 5, 13, 12, 0, 0, tzinfo=timezone.utc),
+        )
+        integration.access_token = "ya29.old"
+        db.add(integration)
+        await db.flush()
+
+        await integration_repo.update_access_token(db, integration, "ya29.new", None)
+        await db.flush()
+
+        assert integration.access_token == "ya29.new"
+        assert integration.token_expiry is None

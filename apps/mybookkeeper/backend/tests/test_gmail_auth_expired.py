@@ -75,7 +75,7 @@ async def test_discover_raises_gmail_auth_expired_on_refresh_error() -> None:
         ),
         patch(
             "app.services.email.email_discovery_service.get_gmail_service",
-            return_value=MagicMock(),
+            return_value=(MagicMock(), MagicMock(token="t0")),
         ),
         patch(
             "app.services.email.email_discovery_service.email_queue_repo.get_message_ids",
@@ -224,7 +224,7 @@ async def test_discovery_sets_needs_reauth_on_refresh_error() -> None:
         ),
         patch(
             "app.services.email.email_discovery_service.get_gmail_service",
-            return_value=MagicMock(),
+            return_value=(MagicMock(), MagicMock(token="t0")),
         ),
         patch(
             "app.services.email.email_discovery_service.email_queue_repo.get_message_ids",

@@ -72,7 +72,7 @@ def _base_patches(
         ),
         patch(
             "app.services.email.email_discovery_service.get_gmail_service",
-            return_value=MagicMock(),
+            return_value=(MagicMock(), MagicMock(token="t0")),
         ),
         patch(
             "app.services.email.email_discovery_service.email_queue_repo.get_message_ids",

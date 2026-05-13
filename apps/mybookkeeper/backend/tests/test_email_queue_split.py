@@ -109,7 +109,7 @@ class TestDrainGmailFetch:
             patch("app.services.email.email_fetch_service.get_gmail_service") as mock_gmail,
             patch("app.services.email.email_fetch_service.fetch_attachment_bytes", return_value=fake_bytes),
         ):
-            mock_gmail.return_value = MagicMock()
+            mock_gmail.return_value = (MagicMock(), MagicMock(token="t0"))
 
             from app.services.email.email_fetch_service import _fetch_next_pending
 

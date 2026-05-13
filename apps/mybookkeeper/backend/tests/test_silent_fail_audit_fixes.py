@@ -171,7 +171,7 @@ class TestEmailDiscoveryServiceExcInfo:
             ),
             patch(
                 "app.services.email.email_discovery_service.get_gmail_service",
-                return_value=fake_service,
+                return_value=(fake_service, MagicMock(token="t0")),
             ),
             patch(
                 "app.services.email.email_discovery_service.email_queue_repo.get_message_ids",

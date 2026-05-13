@@ -9,7 +9,7 @@ from app.db.session import AsyncSessionLocal
 from app.models.documents.document import Document
 from app.models.responses.download_result import DownloadResult
 from app.repositories import document_repo, integration_repo
-from app.services.email.gmail_service import get_gmail_service, fetch_email_by_id
+from app.services.email.gmail_service import get_gmail_service, fetch_email_by_id, persist_refreshed_token
 
 _RENDERABLE_MIME_TYPES = {"application/pdf", "image/jpeg", "image/png", "image/webp"}
 
@@ -110,10 +110,12 @@ async def get_document_download(
         if not integration:
             raise ValueError("Gmail integration not connected")
 
-        service = get_gmail_service(integration.access_token, integration.refresh_token)
+        service, creds = get_gmail_service(integration.access_token, integration.refresh_token)
+        prior_token = creds.token
         email_data = await asyncio.to_thread(fetch_email_by_id, service, doc.email_message_id)
         if not email_data:
             raise ValueError("Email no longer available in Gmail")
+        await persist_refreshed_token(integration, creds, prior_token)
 
         attachments = email_data.get("attachments", [])
         if attachments:

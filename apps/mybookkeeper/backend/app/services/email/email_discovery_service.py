@@ -21,7 +21,12 @@ from app.services.email.constants import (
     GMAIL_AUTH_EXPIRED_SYNC_LOG_ERROR,
 )
 from app.services.email.exceptions import GmailAuthExpiredError
-from app.services.email.gmail_service import get_gmail_service, list_email_document_sources, list_new_email_ids
+from app.services.email.gmail_service import (
+    get_gmail_service,
+    list_email_document_sources,
+    list_new_email_ids,
+    persist_refreshed_token,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +62,8 @@ async def discover_gmail_emails(ctx: RequestContext) -> DiscoverResult:
 
         await email_queue_repo.reset_stuck(db, org_id, ["extracting"], "fetched")
 
-        service = get_gmail_service(integration.access_token, integration.refresh_token)
+        service, creds = get_gmail_service(integration.access_token, integration.refresh_token)
+        prior_token = creds.token
 
         queued_ids = await email_queue_repo.get_message_ids(db, org_id)
         doc_ids = await document_repo.get_email_message_ids(db, org_id)
@@ -105,6 +111,7 @@ async def discover_gmail_emails(ctx: RequestContext) -> DiscoverResult:
                 gmail_matches_total=gmail_matches_total,
             )
             await integration_repo.update_last_synced(db, integration, now)
+            await persist_refreshed_token(integration, creds, prior_token)
             return DiscoverResult("nothing_new")
 
         log = await sync_log_repo.create(
@@ -215,6 +222,7 @@ async def discover_gmail_emails(ctx: RequestContext) -> DiscoverResult:
                     "Gmail discovery: filtered %d bounce/auto-reply emails for org=%s",
                     filtered_count, org_id,
                 )
+            await persist_refreshed_token(integration, creds, prior_token)
             return DiscoverResult("nothing_new")
 
         log.total_items = total_sources
@@ -223,6 +231,7 @@ async def discover_gmail_emails(ctx: RequestContext) -> DiscoverResult:
             "Gmail discovery: queued %d document sources from %d emails under sync_log_id=%d (filtered %d bounces)",
             total_sources, len(new_ids), log.id, filtered_count,
         )
+        await persist_refreshed_token(integration, creds, prior_token)
         return DiscoverResult("queued", count=total_sources, sync_log_id=log.id)
 
 
