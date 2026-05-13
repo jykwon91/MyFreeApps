@@ -30,7 +30,6 @@ use axum::{
     routing::{get, post},
     Router,
 };
-use serde::Serialize;
 use tauri::{AppHandle, Emitter};
 use time::{format_description::well_known::Rfc3339, OffsetDateTime};
 

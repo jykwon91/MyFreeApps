@@ -118,11 +118,18 @@ pub fn run() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             commands::get_app_version,
-            gsi::install_cs2_gsi_config,
-            gsi::uninstall_cs2_gsi_config,
-            gsi::gsi_server_status,
-            gsi::start_gsi_server,
-            gsi::stop_gsi_server,
+            // Reference Tauri commands at their CANONICAL path
+            // (`gsi::commands::*`) rather than the `gsi::*` re-export. The
+            // `#[tauri::command]` proc-macro generates hidden
+            // `__cmd__<name>` items in the SAME module as the function;
+            // `pub use ... from re-export` doesn't carry those companion
+            // items along, so the `generate_handler!` macro can't resolve
+            // them when called via the shortcut path.
+            gsi::commands::install_cs2_gsi_config,
+            gsi::commands::uninstall_cs2_gsi_config,
+            gsi::commands::gsi_server_status,
+            gsi::commands::start_gsi_server,
+            gsi::commands::stop_gsi_server,
         ])
         .setup(|app| {
             // Resolve the per-user app config dir. This is the canonical

@@ -39,8 +39,13 @@ pub mod payload;
 pub mod server;
 pub mod state;
 
-pub use commands::{
-    gsi_server_status, install_cs2_gsi_config, start_gsi_server, stop_gsi_server,
-    uninstall_cs2_gsi_config,
-};
-pub use state::GsiState;
+// NOTE: we intentionally do NOT re-export the `#[tauri::command]` functions
+// at this module level. Re-exporting via `pub use commands::*` looks like
+// it works, but the `tauri::generate_handler!` macro looks for hidden
+// companion items (`__cmd__<name>` + `__tauri_command_name_<name>`) in the
+// SAME module path as the function. Re-exports don't carry those companions
+// along — the macro then fails with `cannot find `__cmd__...` in `gsi``.
+//
+// Always reference Tauri commands at their canonical path:
+//   `gsi::commands::install_cs2_gsi_config`
+// not the shortcut `gsi::install_cs2_gsi_config`.
