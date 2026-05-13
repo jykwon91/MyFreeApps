@@ -259,10 +259,17 @@ mod tests {
     /// Non-Windows builds get the platform-not-supported error from the
     /// default constructor. This is the negative path the CV pipeline relies
     /// on to disable itself gracefully on Mac/Linux CI runners.
+    ///
+    /// Note: we destructure manually instead of using `expect_err` because
+    /// `Box<dyn ScreenCapturer>` (the Ok type) doesn't implement `Debug`,
+    /// which `expect_err` requires.
     #[cfg(not(target_os = "windows"))]
     #[test]
     fn new_default_capturer_returns_platform_not_supported_off_windows() {
-        let err = new_default_capturer().expect_err("non-Windows must error");
-        matches!(err, CaptureError::PlatformNotSupported);
+        match new_default_capturer() {
+            Ok(_) => panic!("non-Windows new_default_capturer must error"),
+            Err(CaptureError::PlatformNotSupported) => {}
+            Err(other) => panic!("expected PlatformNotSupported, got {other}"),
+        }
     }
 }

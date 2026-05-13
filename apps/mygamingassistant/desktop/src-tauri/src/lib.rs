@@ -62,10 +62,22 @@ use crate::cv::{
 };
 use crate::gsi::{
     installer::{auth_token_path, DEFAULT_GSI_PORT},
-    payload::GsiEvent,
     server::{run_server, EVENT_STATE_UPDATE},
     state::GsiState,
 };
+
+/// Minimal projection of `GsiEvent` that we need to drive the CV pipeline.
+///
+/// We don't deserialize the full `GsiEvent` here because that would require
+/// adding `Deserialize` to its derives — which is part of PR 8's stability
+/// contract with the frontend. Instead, we parse out only what we need
+/// (`map_slug`) using a local struct that ignores all other fields. The
+/// only downside: if PR 8 ever renames `map_slug`, this projection needs
+/// updating in lockstep.
+#[derive(serde::Deserialize)]
+struct GsiEventProjection {
+    map_slug: String,
+}
 
 /// Load the persisted auth token, or generate + persist a new one on first
 /// boot.
@@ -244,10 +256,10 @@ async fn handle_gsi_state_update(
     pipeline: Arc<CvPipeline>,
     app: tauri::AppHandle,
 ) {
-    // Parse the event payload back into a GsiEvent. We could plumb the
-    // pipeline through the GSI receiver directly, but the listener pattern
-    // keeps modules decoupled (PR 9a doesn't change PR 8's GSI receiver).
-    let event: GsiEvent = match serde_json::from_str(&payload_str) {
+    // Parse only the field we need (map_slug). Using a projection struct
+    // means we don't have to add `Deserialize` to PR 8's `GsiEvent` — the
+    // shapes stay decoupled.
+    let event: GsiEventProjection = match serde_json::from_str(&payload_str) {
         Ok(e) => e,
         Err(e) => {
             log::warn!(
