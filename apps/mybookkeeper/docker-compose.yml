@@ -1,7 +1,7 @@
 services:
   postgres:
     image: postgres:16-alpine
-    restart: always
+    restart: unless-stopped
     environment:
       POSTGRES_USER: mybookkeeper
       POSTGRES_PASSWORD: ${DB_PASSWORD}
@@ -12,7 +12,13 @@ services:
       test: ["CMD-SHELL", "pg_isready -U mybookkeeper"]
       interval: 5s
       timeout: 3s
-      retries: 5
+      retries: 10
+      # initdb on a cold start can take 10–20s; without start_period the
+      # early pg_isready failures count toward retries and Docker reports
+      # the container "unhealthy" before postgres has bound the socket.
+      # Dependent services (migrate, api) then bail before postgres is ready.
+      # Mirrors apps/myjobhunter/docker-compose.yml.
+      start_period: 30s
 
   migrate:
     build:
@@ -36,7 +42,7 @@ services:
       # apps/mybookkeeper/. Mirrors apps/myjobhunter/docker/backend.Dockerfile.
       context: ../..
       dockerfile: apps/mybookkeeper/docker/backend.Dockerfile
-    restart: always
+    restart: unless-stopped
     env_file: backend/.env.docker
     environment:
       DATABASE_URL: postgresql+asyncpg://mybookkeeper:${DB_PASSWORD}@postgres/mybookkeeper
@@ -72,7 +78,7 @@ services:
       # apps/mybookkeeper/. Mirrors apps/myjobhunter/docker/backend.Dockerfile.
       context: ../..
       dockerfile: apps/mybookkeeper/docker/backend.Dockerfile
-    restart: always
+    restart: unless-stopped
     command: ["python", "-m", "app.workers.upload_processor_worker"]
     env_file: backend/.env.docker
     environment:
@@ -91,7 +97,7 @@ services:
       # apps/mybookkeeper/. Mirrors apps/myjobhunter/docker/backend.Dockerfile.
       context: ../..
       dockerfile: apps/mybookkeeper/docker/backend.Dockerfile
-    restart: always
+    restart: unless-stopped
     command: ["python", "-m", "app.workers.scheduler_worker"]
     env_file: backend/.env.docker
     environment:
@@ -117,7 +123,7 @@ services:
         # returns null and registration silently 400s — see the
         # caddy.Dockerfile comment for the full failure mode.
         VITE_TURNSTILE_SITE_KEY: ${TURNSTILE_SITE_KEY:-}
-    restart: always
+    restart: unless-stopped
     ports:
       # Bind only to localhost — host Caddy is the public front door and proxies here.
       # Port 80/443 on the host are owned by host Caddy; this container is HTTP-only on 8094.
