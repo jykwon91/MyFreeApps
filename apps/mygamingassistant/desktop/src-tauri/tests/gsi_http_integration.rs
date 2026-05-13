@@ -84,19 +84,31 @@ async fn live_http_receiver_accepts_real_post() {
     // The receiver writes to its state synchronously inside the handler,
     // but tokio task scheduling may take a few microseconds between the
     // axum response and the state being readable. We loop briefly.
+    //
+    // The MutexGuard MUST be dropped before any `.await` to satisfy
+    // clippy::await_holding_lock (the inner scopes below guarantee this).
     for _ in 0..30 {
         let snap = gsi.snapshot().await;
         if snap.payloads_received == 1 {
-            // Verify the emitted event has the expected shape.
-            let updates = stub.state_updates.lock().unwrap();
-            assert_eq!(updates.len(), 1);
-            assert_eq!(updates[0].map_slug, "mirage");
-            assert_eq!(updates[0].activity, "playing");
+            // Snapshot the lock-held data into owned values inside a tight
+            // scope, then drop the guard before any further await.
+            let (state_update_count, first_event_map_slug, first_event_activity) = {
+                let updates = stub.state_updates.lock().unwrap();
+                let first = updates.first().cloned();
+                (
+                    updates.len(),
+                    first.as_ref().map(|e| e.map_slug.clone()).unwrap_or_default(),
+                    first.as_ref().map(|e| e.activity.clone()).unwrap_or_default(),
+                )
+            };
+            let server_status_count = stub.server_statuses.lock().unwrap().len();
 
+            assert_eq!(state_update_count, 1);
+            assert_eq!(first_event_map_slug, "mirage");
+            assert_eq!(first_event_activity, "playing");
             // Status snapshot bumped + at least 2 server-status emits
             // (1 on startup + 1 per accepted payload).
-            let statuses = stub.server_statuses.lock().unwrap();
-            assert!(statuses.len() >= 2);
+            assert!(server_status_count >= 2);
             assert_eq!(snap.payloads_received, 1);
             assert!(snap.last_event_at.is_some());
             server_handle.abort();
