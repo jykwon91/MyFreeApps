@@ -322,11 +322,11 @@ impl CvPipeline {
     /// to over-call — extras decrement nothing.
     pub fn remove_debug_subscriber(&self) {
         // Use `fetch_update` so we saturate at 0 (don't underflow to u32::MAX).
-        let _ = self.debug_subscribers.fetch_update(
-            Ordering::SeqCst,
-            Ordering::SeqCst,
-            |cur| Some(cur.saturating_sub(1)),
-        );
+        let _ = self
+            .debug_subscribers
+            .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |cur| {
+                Some(cur.saturating_sub(1))
+            });
     }
 
     /// `true` when at least one frontend listener is attached.
@@ -416,7 +416,8 @@ impl CvPipeline {
 
         // 2. Detect the player dot (with diagnostics — bounding boxes are
         //    cheap to track and used by the debug-frame emitter below).
-        let diagnostics = detect_player_dot_with_diagnostics(&frame, &pkg.calibration.dot_detection);
+        let diagnostics =
+            detect_player_dot_with_diagnostics(&frame, &pkg.calibration.dot_detection);
         let detection = diagnostics.best;
 
         // 3. Map pixel → world space.
@@ -594,7 +595,12 @@ fn encode_png_base64(frame: &CapturedFrame) -> Result<String, String> {
     let mut buf: Vec<u8> = Vec::with_capacity(frame.pixels.len());
     let encoder = PngEncoder::new(&mut buf);
     encoder
-        .write_image(&frame.pixels, frame.width, frame.height, ColorType::Rgba8.into())
+        .write_image(
+            &frame.pixels,
+            frame.width,
+            frame.height,
+            ColorType::Rgba8.into(),
+        )
         .map_err(|e| format!("PNG encode failed: {e}"))?;
     Ok(base64_encode(&buf))
 }
