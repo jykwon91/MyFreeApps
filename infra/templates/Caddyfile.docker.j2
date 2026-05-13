@@ -1,6 +1,6 @@
 # GENERATED FROM infra/templates/Caddyfile.docker.j2 — DO NOT EDIT.
 # Edit the template + apps/<app>/app.yaml; re-render via:
-#   python -m platform_shared.infra.render --app mybookkeeper
+#   python -m platform_shared.infra.render --app {{ app_slug }}
 #
 # Trust X-Forwarded-For headers from host Caddy (runs on the same machine,
 # bridges to this container). This ensures real client IPs appear in app
@@ -18,6 +18,7 @@
 # redirect from HTTP→HTTPS, but host Caddy proxies plain HTTP into this
 # container, so the redirect bounces back to the same URL → infinite loop.
 :80 {
+{%- if has_minio_subdomain %}
     # Storage subdomain — fronts MinIO for browser GETs of presigned URLs.
     # The storage matcher comes first so the per-handler security header
     # block below isn't applied to MinIO responses (CSP too tight breaks
@@ -40,9 +41,12 @@
             Permissions-Policy "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=(), interest-cohort=(), browsing-topics=()"
             -Server
         }
+
+{%- if block_api_docs %}
         # Block API docs in production
         @docs path /api/docs* /api/openapi.json /api/redoc*
         respond @docs 404
+{%- endif %}
 
         # API proxy (strip /api prefix). API responses MUST NOT carry
         # `X-Frame-Options: DENY` or CSP `frame-ancestors 'none'`. The frontend
@@ -56,7 +60,7 @@
         # designed for.
         handle /api/* {
             uri strip_prefix /api
-            reverse_proxy api:8000
+            reverse_proxy api:{{ api_port }}
         }
 
         # SPA fallback for frontend. XFO + CSP `frame-ancestors` belong on the
@@ -65,7 +69,7 @@
             header {
                 defer
                 X-Frame-Options "DENY"
-                Content-Security-Policy "default-src 'self'; script-src 'self' https://us.i.posthog.com https://challenges.cloudflare.com https://*.sentry.io; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://storage.{$DOMAIN} https:; font-src 'self'; connect-src 'self' https://storage.{$DOMAIN} https://us.i.posthog.com https://*.posthog.com https://challenges.cloudflare.com https://*.sentry.io; frame-src 'self' blob: https://storage.{$DOMAIN} https://us.posthog.com https://challenges.cloudflare.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests"
+                Content-Security-Policy "{{ csp }}"
             }
 
             # Cache strategy:
@@ -87,4 +91,46 @@
             file_server
         }
     }
+{%- else %}
+    # Security response headers — applied to every response (API + SPA).
+    # `defer` lets these headers also override anything the upstream FastAPI
+    # process might emit, so we never accidentally regress on a stricter
+    # policy because the API set a looser one.
+    header {
+        defer
+        Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+        X-Frame-Options "DENY"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=(), interest-cohort=(), browsing-topics=()"
+        Content-Security-Policy "{{ csp }}"
+        -Server
+    }
+
+    # API proxy (strip /api prefix)
+    handle /api/* {
+        uri strip_prefix /api
+        reverse_proxy api:{{ api_port }}
+    }
+
+    # SPA fallback for frontend
+    handle {
+        # Cache strategy:
+        # - HTML and the service worker MUST never be cached. They are the
+        #   entry points that reference the latest asset bundles. If they
+        #   were cached, users would be stuck on old bundles forever after
+        #   a deploy (this happened to MBK on 2026-05-01).
+        # - Hashed assets (Vite content-hashes filenames like
+        #   `index-AbCd1234.js`) ARE safe to cache forever.
+        @no_cache_html path / /index.html /sw.js /workbox-*.js /manifest.webmanifest /registerSW.js
+        header @no_cache_html Cache-Control "no-cache, no-store, must-revalidate"
+
+        @hashed_assets path_regexp \.[A-Za-z0-9_-]{8,}\.(js|css|woff2)$
+        header @hashed_assets Cache-Control "public, max-age=31536000, immutable"
+
+        root * /srv/frontend
+        try_files {path} /index.html
+        file_server
+    }
+{%- endif %}
 }

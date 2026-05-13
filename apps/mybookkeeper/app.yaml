@@ -1,0 +1,17 @@
+app_slug: mybookkeeper
+app_display_name: MyBookkeeper
+api_port: 8000
+caddy_host_port: 8094
+node_version: "22"
+postgres_image: postgres:16-alpine
+has_minio_subdomain: true
+joins_minio_network: true
+block_api_docs: true
+include_bundle_tripwire: true
+env_seed_command: run setup.sh or create env files manually first
+csp: "default-src 'self'; script-src 'self' https://us.i.posthog.com https://challenges.cloudflare.com https://*.sentry.io; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://storage.{$DOMAIN} https:; font-src 'self'; connect-src 'self' https://storage.{$DOMAIN} https://us.i.posthog.com https://*.posthog.com https://challenges.cloudflare.com https://*.sentry.io; frame-src 'self' blob: https://storage.{$DOMAIN} https://us.posthog.com https://challenges.cloudflare.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests"
+workers:
+  - name: upload-processor
+    command: ["python", "-m", "app.workers.upload_processor_worker"]
+  - name: scheduler
+    command: ["python", "-m", "app.workers.scheduler_worker"]

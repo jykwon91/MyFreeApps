@@ -1,6 +1,6 @@
 # GENERATED FROM infra/templates/docker/caddy.Dockerfile.j2 — DO NOT EDIT.
 # Edit the template + apps/<app>/app.yaml; re-render via:
-#   python -m platform_shared.infra.render --app myjobhunter
+#   python -m platform_shared.infra.render --app {{ app_slug }}
 #
 # Caddy image with the SPA dist baked in.
 #
@@ -23,7 +23,7 @@
 # entrypoint copy, no staleness class of bug.
 #
 # NOTE: Build context is the monorepo root (see docker-compose.yml).
-# All COPY paths are relative to MyFreeApps/, not apps/myjobhunter/.
+# All COPY paths are relative to MyFreeApps/, not apps/{{ app_slug }}/.
 #
 # Workspace-aware build: each app imports from `@platform/ui`
 # (packages/shared-frontend), so the build stage must install the entire
@@ -31,14 +31,14 @@
 # package-lock.json is the source of truth for `npm ci`; per-app
 # lockfiles are kept in sync for IDE compatibility but NOT used here.
 
-FROM node:20-alpine AS frontend-build
+FROM node:{{ node_version }}-alpine AS frontend-build
 WORKDIR /repo
 COPY package.json package-lock.json ./
 COPY packages/shared-frontend/package.json ./packages/shared-frontend/
-COPY apps/myjobhunter/frontend/package.json ./apps/myjobhunter/frontend/
+COPY apps/{{ app_slug }}/frontend/package.json ./apps/{{ app_slug }}/frontend/
 RUN npm ci --ignore-scripts
 COPY packages/shared-frontend ./packages/shared-frontend
-COPY apps/myjobhunter/frontend ./apps/myjobhunter/frontend
+COPY apps/{{ app_slug }}/frontend ./apps/{{ app_slug }}/frontend
 
 # Frontend build-time public env. Vite inlines anything prefixed with
 # VITE_ into the bundle at build time — these MUST be passed as build
@@ -53,8 +53,8 @@ COPY apps/myjobhunter/frontend ./apps/myjobhunter/frontend
 ARG VITE_TURNSTILE_SITE_KEY=
 ENV VITE_TURNSTILE_SITE_KEY=${VITE_TURNSTILE_SITE_KEY}
 
-RUN npm run build --workspace=apps/myjobhunter/frontend
+RUN npm run build --workspace=apps/{{ app_slug }}/frontend
 
 FROM caddy:2-alpine
-COPY --from=frontend-build /repo/apps/myjobhunter/frontend/dist /srv/frontend
-COPY apps/myjobhunter/docker/Caddyfile.docker /etc/caddy/Caddyfile
+COPY --from=frontend-build /repo/apps/{{ app_slug }}/frontend/dist /srv/frontend
+COPY apps/{{ app_slug }}/docker/Caddyfile.docker /etc/caddy/Caddyfile

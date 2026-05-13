@@ -1,3 +1,7 @@
+# GENERATED FROM infra/templates/.github/workflows/deploy.yml.j2 — DO NOT EDIT.
+# Edit the template + apps/<app>/app.yaml; re-render via:
+#   python -m platform_shared.infra.render --app mybookkeeper
+
 name: Deploy MyBookkeeper
 
 on:
@@ -34,9 +38,6 @@ jobs:
             git pull --ff-only
 
             echo "--- Preflight: verify required env files exist ---"
-            # These files must be created manually on first VPS setup (via setup.sh
-            # or equivalent). Without them docker compose starts with no secrets and
-            # the app fails at runtime. Same class of failure as PR #206 RCA for MJH.
             test -f /srv/myfreeapps/apps/mybookkeeper/.env || {
               echo "::error::Missing /srv/myfreeapps/apps/mybookkeeper/.env — run setup.sh or create env files manually first"
               exit 1
@@ -48,22 +49,18 @@ jobs:
             echo "Env files present — proceeding"
 
             echo "--- Build and deploy with Docker ---"
-            # --env-file flag exposes backend/.env.docker variables to docker
-            # compose's build args (caddy.build.args reads VITE_TURNSTILE_SITE_KEY
-            # from the shell). Without --env-file the bundle gets baked with an
-            # empty site key and TurnstileWidget renders null in production —
-            # the 2026-05-05 silent-registration-broken bug.
+            # --env-file exposes backend/.env.docker variables to docker compose's
+            # build args (caddy.build.args reads VITE_TURNSTILE_SITE_KEY from the
+            # shell). Without --env-file the bundle gets baked with an empty
+            # site key and TurnstileWidget renders null in production.
             docker compose -f apps/mybookkeeper/docker-compose.yml \
               --env-file apps/mybookkeeper/backend/.env.docker \
               build
             docker compose -f apps/mybookkeeper/docker-compose.yml up -d --remove-orphans
 
             echo "--- One-time cleanup: remove obsolete frontend_dist volume ---"
-            # The frontend_dist volume was used by the pre-2026-05-01 layout
-            # where api copied dist into a shared volume that caddy mounted.
-            # The new layout bakes dist directly into the caddy image, so the
-            # volume is orphaned. `docker volume rm` is a no-op (exit 1) if
-            # the volume is in use or doesn't exist; either way safe to run.
+            # The frontend_dist volume was used by the pre-baked-caddy layout.
+            # The new layout bakes dist into the caddy image; volume is orphaned.
             docker volume rm mybookkeeper_frontend_dist 2>/dev/null || true
 
             echo "--- Run database migrations ---"
@@ -87,7 +84,6 @@ jobs:
             # Sync the SHARED host Caddyfile (infra/Caddyfile) → /etc/caddy/Caddyfile.
             # The shared file holds blocks for every app in the monorepo so a
             # deploy of one app does not wipe another's host-Caddy entry.
-            # See infra/Caddyfile for the rationale and the per-app entries.
             if ! diff -q infra/Caddyfile /etc/caddy/Caddyfile > /dev/null 2>&1; then
               echo "Host Caddyfile differs from repo — updating"
               sudo cp infra/Caddyfile /etc/caddy/Caddyfile
@@ -98,22 +94,17 @@ jobs:
               echo "Host Caddyfile already up to date"
             fi
 
-            echo "--- Verify deployed frontend bundle is fresh ---"
-            # Sanity check: fetch the live index.html, extract the asset
-            # path it points at, verify that exact file is present where
-            # Caddy is serving from. After the 2026-05-01 architectural
-            # change that bakes the dist directly into the caddy image
-            # (eliminating the frontend_dist volume), staleness should
-            # be impossible — but keep the check as a tripwire.
+            echo "--- Bundle freshness tripwire ---"
+            # Extract the script src from the live index.html and confirm
+            # the file exists in the caddy container. After the 2026-05-01
+            # architectural change that bakes the dist into the caddy
+            # image, staleness should be impossible — keep this as a tripwire.
             DEPLOYED_JS=$(curl -sS http://127.0.0.1:8094/ | grep -oE 'src="/[^"]*index-[A-Za-z0-9_-]+\.js"' | head -1 | sed -E 's|src="/||; s|"$||')
             if [ -z "$DEPLOYED_JS" ]; then
-              echo "Could not extract deployed JS path from index.html — frontend serving may be broken"
+              echo "::warning::Could not extract script src from live index.html — skipping freshness check"
+            elif ! docker compose -f apps/mybookkeeper/docker-compose.yml exec -T caddy test -f "/srv/frontend/$DEPLOYED_JS"; then
+              echo "::error::Bundle freshness tripwire: $DEPLOYED_JS referenced by live index.html but missing from caddy container"
               exit 1
+            else
+              echo "Bundle freshness OK: $DEPLOYED_JS present in caddy"
             fi
-            if ! docker compose -f apps/mybookkeeper/docker-compose.yml exec -T caddy test -f "/srv/frontend/$DEPLOYED_JS"; then
-              echo "Deployed bundle ($DEPLOYED_JS) is missing from caddy container — image build may be broken"
-              exit 1
-            fi
-            echo "Deployed bundle: $DEPLOYED_JS (verified present in caddy image)"
-
-            echo "--- Done ---"

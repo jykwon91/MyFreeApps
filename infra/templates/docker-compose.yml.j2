@@ -1,19 +1,19 @@
 # GENERATED FROM infra/templates/docker-compose.yml.j2 — DO NOT EDIT.
 # Edit the template + apps/<app>/app.yaml; re-render via:
-#   python -m platform_shared.infra.render --app mybookkeeper
+#   python -m platform_shared.infra.render --app {{ app_slug }}
 
 services:
   postgres:
-    image: postgres:16-alpine
+    image: {{ postgres_image }}
     restart: unless-stopped
     environment:
-      POSTGRES_USER: mybookkeeper
+      POSTGRES_USER: {{ app_slug }}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: mybookkeeper
+      POSTGRES_DB: {{ app_slug }}
     volumes:
       - pg_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U mybookkeeper"]
+      test: ["CMD-SHELL", "pg_isready -U {{ app_slug }}"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -27,13 +27,13 @@ services:
     build:
       # Build context is the monorepo root so the image can pull in
       # packages/shared-backend (the `platform_shared` library) alongside
-      # apps/mybookkeeper/.
+      # apps/{{ app_slug }}/.
       context: ../..
-      dockerfile: apps/mybookkeeper/docker/backend.Dockerfile
+      dockerfile: apps/{{ app_slug }}/docker/backend.Dockerfile
     command: ["alembic", "upgrade", "head"]
     env_file: backend/.env.docker
     environment:
-      DATABASE_URL: postgresql+asyncpg://mybookkeeper:${DB_PASSWORD}@postgres/mybookkeeper
+      DATABASE_URL: postgresql+asyncpg://{{ app_slug }}:${DB_PASSWORD}@postgres/{{ app_slug }}
     depends_on:
       postgres:
         condition: service_healthy
@@ -41,11 +41,12 @@ services:
   api:
     build:
       context: ../..
-      dockerfile: apps/mybookkeeper/docker/backend.Dockerfile
+      dockerfile: apps/{{ app_slug }}/docker/backend.Dockerfile
     restart: unless-stopped
     env_file: backend/.env.docker
     environment:
-      DATABASE_URL: postgresql+asyncpg://mybookkeeper:${DB_PASSWORD}@postgres/mybookkeeper
+      DATABASE_URL: postgresql+asyncpg://{{ app_slug }}:${DB_PASSWORD}@postgres/{{ app_slug }}
+{%- if has_minio_subdomain %}
       RUN_UPLOAD_WORKER: "false"
       # MinIO connection — points at the shared infra/ stack's
       # ``myfreeapps-minio`` container reachable via the shared
@@ -56,50 +57,39 @@ services:
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-${MINIO_ROOT_PASSWORD}}
       MINIO_BUCKET: ${MINIO_BUCKET}
       PRESIGNED_URL_TTL_SECONDS: ${PRESIGNED_URL_TTL_SECONDS}
+{%- endif %}
     depends_on:
       migrate:
         condition: service_completed_successfully
+{%- if joins_minio_network %}
     networks:
       - default
       - myfreeapps
+{%- endif %}
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:{{ api_port }}/health')"]
       interval: 10s
       timeout: 5s
       retries: 3
-
-  upload-processor:
+{% for w in workers %}
+  {{ w.name }}:
     build:
       context: ../..
-      dockerfile: apps/mybookkeeper/docker/backend.Dockerfile
+      dockerfile: apps/{{ app_slug }}/docker/backend.Dockerfile
     restart: unless-stopped
-    command: ["python", "-m", "app.workers.upload_processor_worker"]
+    command: {{ w.command | tojson }}
     env_file: backend/.env.docker
     environment:
-      DATABASE_URL: postgresql+asyncpg://mybookkeeper:${DB_PASSWORD}@postgres/mybookkeeper
+      DATABASE_URL: postgresql+asyncpg://{{ app_slug }}:${DB_PASSWORD}@postgres/{{ app_slug }}
     depends_on:
       migrate:
         condition: service_completed_successfully
+{%- if joins_minio_network %}
     networks:
       - default
       - myfreeapps
-
-  scheduler:
-    build:
-      context: ../..
-      dockerfile: apps/mybookkeeper/docker/backend.Dockerfile
-    restart: unless-stopped
-    command: ["python", "-m", "app.workers.scheduler_worker"]
-    env_file: backend/.env.docker
-    environment:
-      DATABASE_URL: postgresql+asyncpg://mybookkeeper:${DB_PASSWORD}@postgres/mybookkeeper
-    depends_on:
-      migrate:
-        condition: service_completed_successfully
-    networks:
-      - default
-      - myfreeapps
-
+{%- endif %}
+{% endfor %}
   caddy:
     # Custom image: caddy:2-alpine + freshly-built frontend dist baked in
     # at /srv/frontend + Caddyfile baked at /etc/caddy/Caddyfile. No shared
@@ -107,7 +97,7 @@ services:
     # docker/caddy.Dockerfile for the full rationale.
     build:
       context: ../..
-      dockerfile: apps/mybookkeeper/docker/caddy.Dockerfile
+      dockerfile: apps/{{ app_slug }}/docker/caddy.Dockerfile
       args:
         # Frontend public env baked into the Vite bundle at build time.
         # Read from the host shell environment when `docker compose build`
@@ -118,7 +108,7 @@ services:
     restart: unless-stopped
     ports:
       # Bind only to localhost — host Caddy is the public front door and proxies here.
-      - "127.0.0.1:8094:80"
+      - "127.0.0.1:{{ caddy_host_port }}:80"
     environment:
       DOMAIN: ${DOMAIN:-localhost}
     volumes:
@@ -127,9 +117,11 @@ services:
     depends_on:
       api:
         condition: service_healthy
+{%- if joins_minio_network %}
     networks:
       - default
       - myfreeapps
+{%- endif %}
 
 volumes:
   pg_data:
@@ -139,8 +131,10 @@ volumes:
 networks:
   # Per-app default network for postgres + migrate + workers.
   default:
+{%- if joins_minio_network %}
   # Shared external network owned by infra/docker-compose.yml — joined
   # by services that need to reach myfreeapps-minio. Bring up the infra
   # stack first or compose-up will fail with "network myfreeapps not found".
   myfreeapps:
     external: true
+{%- endif %}

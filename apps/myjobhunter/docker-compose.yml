@@ -1,16 +1,9 @@
+# GENERATED FROM infra/templates/docker-compose.yml.j2 — DO NOT EDIT.
+# Edit the template + apps/<app>/app.yaml; re-render via:
+#   python -m platform_shared.infra.render --app myjobhunter
+
 services:
   postgres:
-    # pgvector/pgvector:pg16 is the official pgvector-on-postgres-16
-    # image — same base as postgres:16 with the ``vector`` extension
-    # pre-installed and available to ``CREATE EXTENSION vector``. The
-    # ``discemb260511_pgvector_embeddings`` migration depends on the
-    # extension being available; running on stock postgres:16 fails at
-    # ``CREATE EXTENSION`` with ``ERROR:  extension "vector" is not available``.
-    #
-    # On the VPS the running postgres instance must be migrated to this
-    # image (or have postgresql-16-pgvector installed and the extension
-    # created manually) BEFORE this PR's deploy. See the PR's
-    # "Operational migration required" section.
     image: pgvector/pgvector:pg16
     restart: unless-stopped
     environment:
@@ -24,14 +17,17 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
-      # initdb on a cold start can take 10–20s; without start_period the early
-      # pg_isready failures count toward retries and Docker reports the
-      # container "unhealthy" before postgres has even bound the socket.
-      # Dependent services (migrate, api) bail out before postgres is ready.
+      # initdb on a cold start can take 10–20s; without start_period the
+      # early pg_isready failures count toward retries and Docker reports
+      # the container "unhealthy" before postgres has bound the socket.
+      # Dependent services (migrate, api) then bail before postgres is ready.
       start_period: 30s
 
   migrate:
     build:
+      # Build context is the monorepo root so the image can pull in
+      # packages/shared-backend (the `platform_shared` library) alongside
+      # apps/myjobhunter/.
       context: ../..
       dockerfile: apps/myjobhunter/docker/backend.Dockerfile
     command: ["alembic", "upgrade", "head"]
@@ -50,10 +46,6 @@ services:
     env_file: backend/.env.docker
     environment:
       DATABASE_URL: postgresql+asyncpg://myjobhunter:${DB_PASSWORD}@postgres/myjobhunter
-      # MinIO connection — points at the shared infra/ stack's
-      # ``myfreeapps-minio`` container reachable via the shared
-      # ``myfreeapps`` external network. ``MINIO_ENDPOINT`` is set in
-      # backend/.env.docker on the VPS to ``myfreeapps-minio:9000``.
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -70,8 +62,8 @@ services:
     build:
       context: ../..
       dockerfile: apps/myjobhunter/docker/backend.Dockerfile
-    command: ["python", "-m", "app.workers.resume_parser_worker"]
     restart: unless-stopped
+    command: ["python", "-m", "app.workers.resume_parser_worker"]
     env_file: backend/.env.docker
     environment:
       DATABASE_URL: postgresql+asyncpg://myjobhunter:${DB_PASSWORD}@postgres/myjobhunter
@@ -94,15 +86,12 @@ services:
         # Frontend public env baked into the Vite bundle at build time.
         # Read from the host shell environment when `docker compose build`
         # runs; the deploy workflow / operator passes these via
-        # `--env-file backend/.env.docker` or by sourcing the file before
-        # build. Empty values produce a bundle where TurnstileWidget
-        # returns null and registration silently 400s — see the
-        # caddy.Dockerfile comment for the full failure mode.
+        # `--env-file backend/.env.docker`. Empty values produce a bundle
+        # where TurnstileWidget returns null and registration silently 400s.
         VITE_TURNSTILE_SITE_KEY: ${TURNSTILE_SITE_KEY:-}
     restart: unless-stopped
     ports:
       # Bind only to localhost — host Caddy is the public front door and proxies here.
-      # Port 80/443 on the host are owned by host Caddy; this container is HTTP-only on 8092.
       - "127.0.0.1:8092:80"
     environment:
       DOMAIN: ${DOMAIN:-localhost}
@@ -122,7 +111,7 @@ volumes:
   caddy_config:
 
 networks:
-  # Per-app default network for postgres + migrate.
+  # Per-app default network for postgres + migrate + workers.
   default:
   # Shared external network owned by infra/docker-compose.yml — joined
   # by services that need to reach myfreeapps-minio. Bring up the infra

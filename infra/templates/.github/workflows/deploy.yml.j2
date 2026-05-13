@@ -1,18 +1,18 @@
 # GENERATED FROM infra/templates/.github/workflows/deploy.yml.j2 — DO NOT EDIT.
 # Edit the template + apps/<app>/app.yaml; re-render via:
-#   python -m platform_shared.infra.render --app myjobhunter
+#   python -m platform_shared.infra.render --app {{ app_slug }}
 
-name: Deploy MyJobHunter
+name: Deploy {{ app_display_name }}
 
 on:
   push:
     branches: [main]
     paths:
-      - 'apps/myjobhunter/**'
+      - 'apps/{{ app_slug }}/**'
       - 'packages/**'
 
 concurrency:
-  group: deploy-myjobhunter
+  group: deploy-{{ app_slug }}
   cancel-in-progress: false
 
 jobs:
@@ -26,9 +26,9 @@ jobs:
       - name: Deploy to VPS
         uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
         with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          host: ${{ '{{' }} secrets.SSH_HOST {{ '}}' }}
+          username: ${{ '{{' }} secrets.SSH_USER {{ '}}' }}
+          key: ${{ '{{' }} secrets.SSH_PRIVATE_KEY {{ '}}' }}
           command_timeout: 10m
           script: |
             set -e
@@ -38,12 +38,12 @@ jobs:
             git pull --ff-only
 
             echo "--- Preflight: verify required env files exist ---"
-            test -f /srv/myfreeapps/apps/myjobhunter/.env || {
-              echo "::error::Missing /srv/myfreeapps/apps/myjobhunter/.env — run apps/myjobhunter/scripts/seed-env-from-mbk.sh on the VPS first"
+            test -f /srv/myfreeapps/apps/{{ app_slug }}/.env || {
+              echo "::error::Missing /srv/myfreeapps/apps/{{ app_slug }}/.env — {{ env_seed_command }}"
               exit 1
             }
-            test -f /srv/myfreeapps/apps/myjobhunter/backend/.env.docker || {
-              echo "::error::Missing /srv/myfreeapps/apps/myjobhunter/backend/.env.docker — run apps/myjobhunter/scripts/seed-env-from-mbk.sh on the VPS first"
+            test -f /srv/myfreeapps/apps/{{ app_slug }}/backend/.env.docker || {
+              echo "::error::Missing /srv/myfreeapps/apps/{{ app_slug }}/backend/.env.docker — {{ env_seed_command }}"
               exit 1
             }
             echo "Env files present — proceeding"
@@ -53,28 +53,28 @@ jobs:
             # build args (caddy.build.args reads VITE_TURNSTILE_SITE_KEY from the
             # shell). Without --env-file the bundle gets baked with an empty
             # site key and TurnstileWidget renders null in production.
-            docker compose -f apps/myjobhunter/docker-compose.yml \
-              --env-file apps/myjobhunter/backend/.env.docker \
+            docker compose -f apps/{{ app_slug }}/docker-compose.yml \
+              --env-file apps/{{ app_slug }}/backend/.env.docker \
               build
-            docker compose -f apps/myjobhunter/docker-compose.yml up -d --remove-orphans
+            docker compose -f apps/{{ app_slug }}/docker-compose.yml up -d --remove-orphans
 
             echo "--- One-time cleanup: remove obsolete frontend_dist volume ---"
             # The frontend_dist volume was used by the pre-baked-caddy layout.
             # The new layout bakes dist into the caddy image; volume is orphaned.
-            docker volume rm myjobhunter_frontend_dist 2>/dev/null || true
+            docker volume rm {{ app_slug }}_frontend_dist 2>/dev/null || true
 
             echo "--- Run database migrations ---"
-            docker compose -f apps/myjobhunter/docker-compose.yml exec -T api alembic upgrade head
+            docker compose -f apps/{{ app_slug }}/docker-compose.yml exec -T api alembic upgrade head
 
             echo "--- Wait for API health check ---"
             for i in $(seq 1 30); do
-              if docker compose -f apps/myjobhunter/docker-compose.yml exec -T api python -c "import urllib.request; urllib.request.urlopen('http://localhost:8002/health')" 2>/dev/null; then
+              if docker compose -f apps/{{ app_slug }}/docker-compose.yml exec -T api python -c "import urllib.request; urllib.request.urlopen('http://localhost:{{ api_port }}/health')" 2>/dev/null; then
                 echo "API is healthy"
                 break
               fi
               if [ $i -eq 30 ]; then
                 echo "API health check failed after 30 attempts"
-                docker compose -f apps/myjobhunter/docker-compose.yml logs api --tail=50
+                docker compose -f apps/{{ app_slug }}/docker-compose.yml logs api --tail=50
                 exit 1
               fi
               sleep 2
@@ -93,18 +93,20 @@ jobs:
             else
               echo "Host Caddyfile already up to date"
             fi
+{%- if include_bundle_tripwire %}
 
             echo "--- Bundle freshness tripwire ---"
             # Extract the script src from the live index.html and confirm
             # the file exists in the caddy container. After the 2026-05-01
             # architectural change that bakes the dist into the caddy
             # image, staleness should be impossible — keep this as a tripwire.
-            DEPLOYED_JS=$(curl -sS http://127.0.0.1:8092/ | grep -oE 'src="/[^"]*index-[A-Za-z0-9_-]+\.js"' | head -1 | sed -E 's|src="/||; s|"$||')
+            DEPLOYED_JS=$(curl -sS http://127.0.0.1:{{ caddy_host_port }}/ | grep -oE 'src="/[^"]*index-[A-Za-z0-9_-]+\.js"' | head -1 | sed -E 's|src="/||; s|"$||')
             if [ -z "$DEPLOYED_JS" ]; then
               echo "::warning::Could not extract script src from live index.html — skipping freshness check"
-            elif ! docker compose -f apps/myjobhunter/docker-compose.yml exec -T caddy test -f "/srv/frontend/$DEPLOYED_JS"; then
+            elif ! docker compose -f apps/{{ app_slug }}/docker-compose.yml exec -T caddy test -f "/srv/frontend/$DEPLOYED_JS"; then
               echo "::error::Bundle freshness tripwire: $DEPLOYED_JS referenced by live index.html but missing from caddy container"
               exit 1
             else
               echo "Bundle freshness OK: $DEPLOYED_JS present in caddy"
             fi
+{%- endif %}

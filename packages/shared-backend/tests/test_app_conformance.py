@@ -288,3 +288,34 @@ class TestTurnstileBundleWiring:
             f"Without --env-file, the build runs with no .env.docker "
             f"values and bundles get baked with empty defaults."
         )
+
+
+class TestInfraTemplateDrift:
+    """Tier 3 — rendered infra files must match the templates byte-for-byte.
+
+    Source of truth is `infra/templates/*.j2` + `apps/<slug>/app.yaml`. The
+    files checked in under `apps/<slug>/docker/`, `apps/<slug>/docker-compose.yml`,
+    and `.github/workflows/deploy-<slug>.yml` are GENERATED output. If this test
+    fails, re-run:
+
+        python -m platform_shared.infra.render --all
+
+    and commit the result. Editing the rendered files directly is a bug —
+    the template owns the shape.
+    """
+
+    @pytest.mark.parametrize("app", ["mybookkeeper", "myjobhunter", "mygamingassistant"])
+    def test_no_drift(self, app: str) -> None:
+        try:
+            from platform_shared.infra.render import diff_app, _repo_root
+        except ModuleNotFoundError as e:
+            import pytest as _pytest
+            _pytest.skip(f"infra render module unavailable ({e}); skipping drift check")
+
+        repo_root = _repo_root()
+        diffs = diff_app(repo_root, app)
+        assert not diffs, (
+            f"Rendered infra files for app '{app}' diverge from checked-in copies. "
+            f"Re-run `python -m platform_shared.infra.render --app {app}` and commit. "
+            f"Diffs:\n\n" + "\n\n".join(diffs)
+        )
