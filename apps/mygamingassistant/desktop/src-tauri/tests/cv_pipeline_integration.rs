@@ -20,7 +20,7 @@ use mygamingassistant_lib::cv::calibration::{
     MinimapCalibration, ZonePolygon,
 };
 use mygamingassistant_lib::cv::pipeline::{
-    CvEventEmitter, CvPipeline, CvZoneDetectedEvent, StubCvEmitter, TickResult,
+    CvEventEmitter, CvPipeline, StubCvEmitter, TickResult,
 };
 use mygamingassistant_lib::cv::state::CvPipelineState;
 
