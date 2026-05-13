@@ -19,9 +19,13 @@ from platform_shared.core.audit import (
 
 # MGA-specific sensitive-field allowlist. Phase 1: only generic auth secrets
 # from the shared User model.
+#
+# Field names MUST match the SQLAlchemy attribute keys on the actual ORM
+# columns — verified at boot by platform_shared.core.audit.verify_sensitive_field_names.
+# Misspellings would silently disable masking and leak plaintext into audit_logs.
 MGA_SENSITIVE_FIELDS: frozenset[str] = frozenset({
     "hashed_password",
-    "totp_secret_encrypted",
+    "totp_secret",
     "totp_recovery_codes",
 })
 
