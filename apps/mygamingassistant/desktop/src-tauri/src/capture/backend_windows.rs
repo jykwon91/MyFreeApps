@@ -36,7 +36,10 @@ use windows_capture::{
     frame::Frame,
     graphics_capture_api::InternalCaptureControl,
     monitor::Monitor,
-    settings::{ColorFormat, CursorCaptureSettings, DrawBorderSettings, Settings},
+    settings::{
+        ColorFormat, CursorCaptureSettings, DirtyRegionSettings, DrawBorderSettings,
+        MinimumUpdateIntervalSettings, SecondaryWindowSettings, Settings,
+    },
 };
 
 use super::{CaptureError, CaptureRegion, CapturedFrame, ScreenCapturer};
@@ -89,6 +92,9 @@ impl WindowsScreenCapturer {
             primary,
             CursorCaptureSettings::WithoutCursor,
             DrawBorderSettings::WithoutBorder,
+            SecondaryWindowSettings::Default,
+            MinimumUpdateIntervalSettings::Default,
+            DirtyRegionSettings::Default,
             ColorFormat::Rgba8,
             context,
         );
