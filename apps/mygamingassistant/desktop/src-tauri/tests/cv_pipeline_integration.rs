@@ -19,9 +19,7 @@ use mygamingassistant_lib::cv::calibration::{
     bundled::load_bundled_calibration, AffineTransform, DotDetectionParams, MapCalibrationPackage,
     MinimapCalibration, ZonePolygon,
 };
-use mygamingassistant_lib::cv::pipeline::{
-    CvEventEmitter, CvPipeline, StubCvEmitter, TickResult,
-};
+use mygamingassistant_lib::cv::pipeline::{CvEventEmitter, CvPipeline, StubCvEmitter, TickResult};
 use mygamingassistant_lib::cv::state::CvPipelineState;
 
 /// Build a 100x100 RGBA frame with a 6x6 yellow square at (dot_x, dot_y).
