@@ -1,0 +1,140 @@
+# GENERATED FROM infra/templates/docker-compose.yml.j2 — DO NOT EDIT.
+# Edit the template + apps/<app>/app.yaml; re-render via:
+#   python -m platform_shared.infra.render --app {{ app_slug }}
+
+services:
+  postgres:
+    image: {{ postgres_image }}
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: {{ app_slug }}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: {{ app_slug }}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U {{ app_slug }}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      # initdb on a cold start can take 10–20s; without start_period the
+      # early pg_isready failures count toward retries and Docker reports
+      # the container "unhealthy" before postgres has bound the socket.
+      # Dependent services (migrate, api) then bail before postgres is ready.
+      start_period: 30s
+
+  migrate:
+    build:
+      # Build context is the monorepo root so the image can pull in
+      # packages/shared-backend (the `platform_shared` library) alongside
+      # apps/{{ app_slug }}/.
+      context: ../..
+      dockerfile: apps/{{ app_slug }}/docker/backend.Dockerfile
+    command: ["alembic", "upgrade", "head"]
+    env_file: backend/.env.docker
+    environment:
+      DATABASE_URL: postgresql+asyncpg://{{ app_slug }}:${DB_PASSWORD}@postgres/{{ app_slug }}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api:
+    build:
+      context: ../..
+      dockerfile: apps/{{ app_slug }}/docker/backend.Dockerfile
+    restart: unless-stopped
+    env_file: backend/.env.docker
+    environment:
+      DATABASE_URL: postgresql+asyncpg://{{ app_slug }}:${DB_PASSWORD}@postgres/{{ app_slug }}
+{%- if has_minio_subdomain %}
+      RUN_UPLOAD_WORKER: "false"
+      # MinIO connection — points at the shared infra/ stack's
+      # ``myfreeapps-minio`` container reachable via the shared
+      # ``myfreeapps`` external network.
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT}
+      MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-${MINIO_ROOT_USER}}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-${MINIO_ROOT_PASSWORD}}
+      MINIO_BUCKET: ${MINIO_BUCKET}
+      PRESIGNED_URL_TTL_SECONDS: ${PRESIGNED_URL_TTL_SECONDS}
+{%- endif %}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+{%- if joins_minio_network %}
+    networks:
+      - default
+      - myfreeapps
+{%- endif %}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:{{ api_port }}/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+{% for w in workers %}
+  {{ w.name }}:
+    build:
+      context: ../..
+      dockerfile: apps/{{ app_slug }}/docker/backend.Dockerfile
+    restart: unless-stopped
+    command: {{ w.command | tojson }}
+    env_file: backend/.env.docker
+    environment:
+      DATABASE_URL: postgresql+asyncpg://{{ app_slug }}:${DB_PASSWORD}@postgres/{{ app_slug }}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+{%- if joins_minio_network %}
+    networks:
+      - default
+      - myfreeapps
+{%- endif %}
+{% endfor %}
+  caddy:
+    # Custom image: caddy:2-alpine + freshly-built frontend dist baked in
+    # at /srv/frontend + Caddyfile baked at /etc/caddy/Caddyfile. No shared
+    # volume, no entrypoint copy, no drift between deploys. See
+    # docker/caddy.Dockerfile for the full rationale.
+    build:
+      context: ../..
+      dockerfile: apps/{{ app_slug }}/docker/caddy.Dockerfile
+      args:
+        # Frontend public env baked into the Vite bundle at build time.
+        # Read from the host shell environment when `docker compose build`
+        # runs; the deploy workflow / operator passes these via
+        # `--env-file backend/.env.docker`. Empty values produce a bundle
+        # where TurnstileWidget returns null and registration silently 400s.
+        VITE_TURNSTILE_SITE_KEY: ${TURNSTILE_SITE_KEY:-}
+    restart: unless-stopped
+    ports:
+      # Bind only to localhost — host Caddy is the public front door and proxies here.
+      - "127.0.0.1:{{ caddy_host_port }}:80"
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      api:
+        condition: service_healthy
+{%- if joins_minio_network %}
+    networks:
+      - default
+      - myfreeapps
+{%- endif %}
+
+volumes:
+  pg_data:
+  caddy_data:
+  caddy_config:
+
+networks:
+  # Per-app default network for postgres + migrate + workers.
+  default:
+{%- if joins_minio_network %}
+  # Shared external network owned by infra/docker-compose.yml — joined
+  # by services that need to reach myfreeapps-minio. Bring up the infra
+  # stack first or compose-up will fail with "network myfreeapps not found".
+  myfreeapps:
+    external: true
+{%- endif %}
