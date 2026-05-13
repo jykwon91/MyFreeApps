@@ -4,7 +4,9 @@ version = "0.0.1"
 description = "MyGamingAssistant desktop shell — Tauri wrapper around the web SPA"
 authors = ["jykwon91"]
 edition = "2021"
-rust-version = "1.77"
+# Bumped from 1.77 in PR 9b. Lets us use `Option::is_none_or` (1.82) and
+# matches the floor used by current stable Rust deployed in CI.
+rust-version = "1.82"
 
 # Single-binary crate. PR 7 = shell only. Future PRs slot into the placeholder
 # modules under src/ (gsi/, capture/, cv/) without re-architecting.

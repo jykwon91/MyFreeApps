@@ -42,6 +42,36 @@ pub struct DotDetection {
     pub mean_distance: f32,
 }
 
+/// Bounding box + area for a single candidate blob. Used by the calibration
+/// UI's debug-frame viewer (PR 9b).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct BlobBoundingBox {
+    pub min_x: u32,
+    pub min_y: u32,
+    pub max_x: u32,
+    pub max_y: u32,
+    pub area: u32,
+}
+
+impl BlobBoundingBox {
+    pub fn width(&self) -> u32 {
+        self.max_x.saturating_sub(self.min_x).saturating_add(1)
+    }
+    pub fn height(&self) -> u32 {
+        self.max_y.saturating_sub(self.min_y).saturating_add(1)
+    }
+}
+
+/// Diagnostic output from a single detection pass: the winning detection
+/// (if any) PLUS every component that passed the area filter. The
+/// calibration UI uses the blob list to overlay candidate boxes; the
+/// winning detection is highlighted differently.
+#[derive(Debug, Clone, Default)]
+pub struct DetectionDiagnostics {
+    pub best: Option<DotDetection>,
+    pub accepted_blobs: Vec<BlobBoundingBox>,
+}
+
 /// Detect the player's dot in the captured minimap frame.
 ///
 /// `frame` MUST be RGBA8 (4 bytes per pixel, row-major). Returns `None` if
@@ -50,8 +80,21 @@ pub fn detect_player_dot(
     frame: &CapturedFrame,
     params: &DotDetectionParams,
 ) -> Option<DotDetection> {
+    detect_player_dot_with_diagnostics(frame, params).best
+}
+
+/// Like `detect_player_dot` but also returns bounding boxes for every
+/// component that passed the area filter. Used by PR 9b's debug-frame
+/// emitter to overlay candidate boxes on the live preview.
+///
+/// Same hot-path cost as `detect_player_dot` — we only allocate the
+/// `accepted_blobs` Vec when there are real components to record.
+pub fn detect_player_dot_with_diagnostics(
+    frame: &CapturedFrame,
+    params: &DotDetectionParams,
+) -> DetectionDiagnostics {
     if frame.width == 0 || frame.height == 0 {
-        return None;
+        return DetectionDiagnostics::default();
     }
 
     // Step 1: threshold into a binary mask (255 = candidate, 0 = background).
@@ -68,6 +111,7 @@ pub fn detect_player_dot(
     let mut acc: ComponentAccumulators = ComponentAccumulators::default();
     acc.accumulate(&labels, frame, params);
 
+    let mut accepted: Vec<BlobBoundingBox> = Vec::new();
     for (label, info) in acc.into_iter() {
         if label == 0 {
             // Label 0 = background per imageproc convention. Skip.
@@ -76,6 +120,13 @@ pub fn detect_player_dot(
         if info.area < params.min_area_px || info.area > params.max_area_px {
             continue;
         }
+        accepted.push(BlobBoundingBox {
+            min_x: info.min_x,
+            min_y: info.min_y,
+            max_x: info.max_x,
+            max_y: info.max_y,
+            area: info.area,
+        });
         let mean_distance = info.distance_sum / (info.area as f32);
         let detection = DotDetection {
             centroid_x: info.sum_x / (info.area as f32),
@@ -92,7 +143,10 @@ pub fn detect_player_dot(
             }
         }
     }
-    best
+    DetectionDiagnostics {
+        best,
+        accepted_blobs: accepted,
+    }
 }
 
 /// Per-component accumulators built up in a single pass over the labels image.
@@ -111,6 +165,13 @@ struct ComponentInfo {
     sum_x: f32,
     sum_y: f32,
     distance_sum: f32,
+    /// Tracked for the calibration UI (`detect_player_dot_with_diagnostics`).
+    /// Cheap to keep up to date in the hot loop — one cmp per pixel per
+    /// dimension.
+    min_x: u32,
+    min_y: u32,
+    max_x: u32,
+    max_y: u32,
 }
 
 impl ComponentAccumulators {
@@ -139,11 +200,35 @@ impl ComponentAccumulators {
             if self.inner.len() <= slot {
                 self.inner.resize(slot + 1, None);
             }
+            // First touch initializes min/max to (x,y); subsequent updates
+            // extend the bounding box. Initial-default min_x = 0 would be
+            // wrong if the component started at x>0, hence the explicit
+            // is_none + first-pixel branch.
+            let is_new = self.inner[slot].is_none();
             let entry = self.inner[slot].get_or_insert_with(ComponentInfo::default);
             entry.area += 1;
             entry.sum_x += x as f32;
             entry.sum_y += y as f32;
             entry.distance_sum += d;
+            if is_new {
+                entry.min_x = x;
+                entry.min_y = y;
+                entry.max_x = x;
+                entry.max_y = y;
+            } else {
+                if x < entry.min_x {
+                    entry.min_x = x;
+                }
+                if y < entry.min_y {
+                    entry.min_y = y;
+                }
+                if x > entry.max_x {
+                    entry.max_x = x;
+                }
+                if y > entry.max_y {
+                    entry.max_y = y;
+                }
+            }
         }
     }
 }

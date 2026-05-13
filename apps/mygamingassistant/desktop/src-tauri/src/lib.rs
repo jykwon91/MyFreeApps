@@ -169,6 +169,13 @@ pub fn run() {
             cv::commands::cv_stop,
             cv::commands::cv_get_calibration,
             cv::commands::cv_set_calibration,
+            // PR 9b — calibration UI commands. See `cv/commands.rs` for shapes.
+            cv::commands::cv_capture_frame,
+            cv::commands::cv_get_primary_monitor_resolution,
+            cv::commands::cv_set_dot_params_preview,
+            cv::commands::cv_reset_calibration,
+            cv::commands::cv_subscribe_debug_frames,
+            cv::commands::cv_unsubscribe_debug_frames,
         ])
         .setup(|app| {
             // Resolve the per-user app config dir. This is the canonical

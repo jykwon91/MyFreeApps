@@ -85,6 +85,17 @@ async function injectFakeTauri(
       cv_start: null,
       cv_stop: null,
       cv_get_calibration: null,
+      // PR 9b — added so the live-cs2 setup page (which dynamically imports
+      // these commands via the CV panel + cvHook) doesn't error in
+      // simulated-Tauri tests. Stub responses; tests using PR 9b commands
+      // live in live-cs2-calibrate.spec.ts.
+      cv_set_calibration: "",
+      cv_reset_calibration: { removed: false, path: "" },
+      cv_get_primary_monitor_resolution: { width: 1920, height: 1080 },
+      cv_capture_frame: { png_base64: "", width: 1920, height: 1080 },
+      cv_set_dot_params_preview: { applied: true },
+      cv_subscribe_debug_frames: null,
+      cv_unsubscribe_debug_frames: null,
     };
 
     (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__ = {

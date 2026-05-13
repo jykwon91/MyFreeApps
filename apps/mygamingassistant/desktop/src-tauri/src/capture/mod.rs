@@ -169,6 +169,22 @@ pub trait ScreenCapturer: Send + Sync + 'static {
     /// to capturing a `CaptureRegion` covering `0..max_width × 0..max_height`
     /// for backends that don't natively distinguish.
     fn capture_full_screen(&self) -> Result<CapturedFrame, CaptureError>;
+
+    /// Resolution of the primary monitor in pixels. Used by the calibration
+    /// UI (PR 9b) to preselect a matching resolution from the dropdown.
+    ///
+    /// Default impl returns `PlatformNotSupported` so backend authors must
+    /// opt in. Stub backends keep that behaviour.
+    fn primary_monitor_resolution(&self) -> Result<MonitorResolution, CaptureError> {
+        Err(CaptureError::PlatformNotSupported)
+    }
+}
+
+/// Width × height of a monitor in pixels.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct MonitorResolution {
+    pub width: u32,
+    pub height: u32,
 }
 
 // -----------------------------------------------------------------------------
@@ -271,5 +287,16 @@ mod tests {
             Err(CaptureError::PlatformNotSupported) => {}
             Err(other) => panic!("expected PlatformNotSupported, got {other}"),
         }
+    }
+
+    #[test]
+    fn monitor_resolution_serde_round_trip() {
+        let r = MonitorResolution {
+            width: 1920,
+            height: 1080,
+        };
+        let json = serde_json::to_string(&r).expect("serialize");
+        let back: MonitorResolution = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(r, back);
     }
 }

@@ -8,19 +8,27 @@
 
 use std::sync::Mutex;
 
-use super::{CaptureError, CaptureRegion, CapturedFrame, ScreenCapturer};
+use super::{CaptureError, CaptureRegion, CapturedFrame, MonitorResolution, ScreenCapturer};
 
 /// In-memory capturer. Stores a single RGBA frame and returns it (or a
 /// requested sub-region of it) on every `capture_region` call.
 pub struct FakeCapturer {
     inner: Mutex<CapturedFrame>,
+    /// Reported primary-monitor resolution. Defaults to the frame's own
+    /// dimensions; tests can override via `with_resolution`.
+    resolution: Mutex<MonitorResolution>,
 }
 
 impl FakeCapturer {
     /// Construct from an existing RGBA frame.
     pub fn from_frame(frame: CapturedFrame) -> Self {
+        let resolution = MonitorResolution {
+            width: frame.width,
+            height: frame.height,
+        };
         Self {
             inner: Mutex::new(frame),
+            resolution: Mutex::new(resolution),
         }
     }
 
@@ -50,6 +58,15 @@ impl FakeCapturer {
             *g = frame;
         }
     }
+
+    /// Override the reported primary-monitor resolution. Used by PR 9b
+    /// tests covering `cv_get_primary_monitor_resolution`.
+    pub fn with_resolution(self, resolution: MonitorResolution) -> Self {
+        if let Ok(mut g) = self.resolution.lock() {
+            *g = resolution;
+        }
+        self
+    }
 }
 
 impl ScreenCapturer for FakeCapturer {
@@ -63,11 +80,11 @@ impl ScreenCapturer for FakeCapturer {
         if region
             .x
             .checked_add(region.width)
-            .map_or(true, |x| x > g.width)
+            .is_none_or(|x| x > g.width)
             || region
                 .y
                 .checked_add(region.height)
-                .map_or(true, |y| y > g.height)
+                .is_none_or(|y| y > g.height)
         {
             return Err(CaptureError::BackendError {
                 detail: format!(
@@ -92,6 +109,13 @@ impl ScreenCapturer for FakeCapturer {
             detail: "fake-capturer mutex poisoned".into(),
         })?;
         Ok(g.clone())
+    }
+
+    fn primary_monitor_resolution(&self) -> Result<MonitorResolution, CaptureError> {
+        let g = self.resolution.lock().map_err(|_| CaptureError::BackendError {
+            detail: "fake-capturer resolution mutex poisoned".into(),
+        })?;
+        Ok(*g)
     }
 }
 
@@ -150,5 +174,24 @@ mod tests {
             .capture_region(CaptureRegion::new(5, 5, 10, 10))
             .expect_err("too big");
         matches!(err, CaptureError::BackendError { .. });
+    }
+
+    #[test]
+    fn fake_capturer_reports_default_resolution_matching_frame() {
+        let cap = FakeCapturer::solid(640, 480, [0, 0, 0, 255]);
+        let res = cap.primary_monitor_resolution().expect("resolution");
+        assert_eq!(res.width, 640);
+        assert_eq!(res.height, 480);
+    }
+
+    #[test]
+    fn fake_capturer_with_resolution_overrides_default() {
+        let cap = FakeCapturer::solid(640, 480, [0, 0, 0, 255]).with_resolution(MonitorResolution {
+            width: 2560,
+            height: 1440,
+        });
+        let res = cap.primary_monitor_resolution().expect("resolution");
+        assert_eq!(res.width, 2560);
+        assert_eq!(res.height, 1440);
     }
 }

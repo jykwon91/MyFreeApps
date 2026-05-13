@@ -24,7 +24,7 @@
 //!     guard releases before the task drops. tokio is permissive but the
 //!     explicit handshake is cheaper to reason about.
 
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
@@ -32,9 +32,11 @@ use serde::Serialize;
 use time::{format_description::well_known::Rfc3339, OffsetDateTime};
 use tokio::sync::Mutex as AsyncMutex;
 
-use crate::capture::ScreenCapturer;
-use crate::cv::calibration::MapCalibrationPackage;
-use crate::cv::dot_detector::{detect_player_dot, DotDetection};
+use crate::capture::{CapturedFrame, ScreenCapturer};
+use crate::cv::calibration::{DotDetectionParams, MapCalibrationPackage};
+use crate::cv::dot_detector::{
+    detect_player_dot_with_diagnostics, BlobBoundingBox, DetectionDiagnostics, DotDetection,
+};
 use crate::cv::polygon::find_zone;
 use crate::cv::state::CvPipelineState;
 
@@ -42,10 +44,20 @@ use crate::cv::state::CvPipelineState;
 /// subscribes to this.
 pub const EVENT_ZONE_DETECTED: &str = "cv:zone-detected";
 
+/// Tauri event name emitted at the debug-frame cadence (4 Hz) when at least
+/// one frontend listener is attached. PR 9b's calibration UI subscribes for
+/// the live tuning preview.
+pub const EVENT_DEBUG_FRAME: &str = "cv:debug-frame";
+
 /// How often the pipeline ticks. Memory note: position detection is for
 /// zone-level live filtering, not pixel-perfect tracking — 20 Hz is plenty,
 /// and well below the WGC frame delivery rate (~60+ Hz) so we never lag.
 pub const TICK_INTERVAL: Duration = Duration::from_millis(50);
+
+/// At a 20 Hz tick rate, emit the debug frame every Nth tick. 5 ticks at
+/// 50 ms = 250 ms = 4 Hz. Plenty for a UI tuning preview; keeps encode +
+/// IPC cost down (PNG-encoding 280x280 is ~1-2 ms per call).
+const DEBUG_FRAME_TICK_PERIOD: u64 = 5;
 
 /// How many consecutive ticks a zone change must be observed before we emit.
 /// 2 = ~100 ms hysteresis. Stops boundary-flapping but stays responsive.
@@ -73,10 +85,56 @@ pub struct CvZoneDetectedEvent {
     pub detected_at: String,
 }
 
+/// Per-blob bounding box payload nested inside `CvDebugFrameEvent`.
+#[derive(Debug, Clone, Serialize)]
+pub struct CvDebugBlob {
+    /// Top-left x in minimap-pixel space.
+    pub x: u32,
+    /// Top-left y in minimap-pixel space.
+    pub y: u32,
+    pub w: u32,
+    pub h: u32,
+    pub area: u32,
+}
+
+/// Live preview payload for the dot-tuning UI. Emitted at ~4 Hz while the
+/// pipeline is running AND at least one frontend listener is attached
+/// (subscriber gating; see `CvPipeline::add_debug_subscriber`).
+///
+/// `png_base64` is the captured minimap region encoded as base64 PNG so the
+/// browser side can drop it straight into an `<img src="data:image/png;...">`.
+/// We accept the encoding cost (~1-2 ms) because the alternative — sending
+/// raw RGBA bytes — requires the JS side to build a `<canvas>` and that adds
+/// boilerplate without saving meaningful CPU.
+#[derive(Debug, Clone, Serialize)]
+pub struct CvDebugFrameEvent {
+    /// Base64-encoded PNG of the captured minimap region.
+    pub png_base64: String,
+    /// All accepted blob bounding boxes for this tick.
+    pub blobs: Vec<CvDebugBlob>,
+    /// Centroid of the winning dot detection in minimap-pixel space, if any.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dot_match: Option<CvDotMatch>,
+    /// Single-tick wall-clock time in milliseconds.
+    pub tick_ms: u32,
+}
+
+/// Minimal "we found the dot" payload. Coords in minimap-pixel space.
+#[derive(Debug, Clone, Copy, Serialize)]
+pub struct CvDotMatch {
+    pub x: f32,
+    pub y: f32,
+}
+
 /// Event-emitter abstraction — mirrors `gsi::server::EventEmitter` so tests
 /// can mount the pipeline without a Tauri runtime.
 pub trait CvEventEmitter: Send + Sync + 'static {
     fn emit_zone_detected(&self, event: &CvZoneDetectedEvent) -> Result<(), String>;
+
+    /// Emit a debug-frame payload to the frontend. PR 9b only — gated by the
+    /// pipeline's subscriber counter so we don't burn CPU encoding PNGs when
+    /// no one is listening.
+    fn emit_debug_frame(&self, event: &CvDebugFrameEvent) -> Result<(), String>;
 }
 
 /// Production impl backed by Tauri's `AppHandle`.
@@ -92,19 +150,35 @@ impl CvEventEmitter for TauriCvEmitter {
             .emit(EVENT_ZONE_DETECTED, event)
             .map_err(|e| e.to_string())
     }
+
+    fn emit_debug_frame(&self, event: &CvDebugFrameEvent) -> Result<(), String> {
+        use tauri::Emitter;
+        self.app_handle
+            .emit(EVENT_DEBUG_FRAME, event)
+            .map_err(|e| e.to_string())
+    }
 }
 
-/// Test-only stub emitter that records emits into an in-memory buffer.
+/// Test-only stub emitter that records emits into in-memory buffers.
 /// Marked `pub` (not `pub(crate)`) so integration tests under `tests/` can
 /// use it.
 #[derive(Debug, Default)]
 pub struct StubCvEmitter {
     pub emits: std::sync::Mutex<Vec<CvZoneDetectedEvent>>,
+    pub debug_emits: std::sync::Mutex<Vec<CvDebugFrameEvent>>,
 }
 
 impl CvEventEmitter for StubCvEmitter {
     fn emit_zone_detected(&self, event: &CvZoneDetectedEvent) -> Result<(), String> {
         self.emits
+            .lock()
+            .map_err(|e| e.to_string())?
+            .push(event.clone());
+        Ok(())
+    }
+
+    fn emit_debug_frame(&self, event: &CvDebugFrameEvent) -> Result<(), String> {
+        self.debug_emits
             .lock()
             .map_err(|e| e.to_string())?
             .push(event.clone());
@@ -207,6 +281,16 @@ pub struct CvPipeline {
     hysteresis: Arc<AsyncMutex<ZoneHysteresis>>,
     /// Cancellation flag for the tokio task.
     stop_flag: Arc<AtomicBool>,
+    /// Number of frontend listeners attached to `cv:debug-frame`. When zero,
+    /// the tick loop skips the PNG-encode / emit step entirely. Cheap atomic
+    /// — incremented in `add_debug_subscriber`, decremented in
+    /// `remove_debug_subscriber`. Saturates at u32::MAX (a far cry from any
+    /// real-world ref count).
+    debug_subscribers: Arc<AtomicU32>,
+    /// Monotonic tick counter — independent of `CvPipelineState::ticks_total`
+    /// so we can drive the debug-frame emit cadence without taking the
+    /// state's read lock on every tick.
+    tick_seq: Arc<AtomicU64>,
 }
 
 impl CvPipeline {
@@ -223,12 +307,61 @@ impl CvPipeline {
             active: Arc::new(AsyncMutex::new(None)),
             hysteresis: Arc::new(AsyncMutex::new(ZoneHysteresis::default())),
             stop_flag: Arc::new(AtomicBool::new(false)),
+            debug_subscribers: Arc::new(AtomicU32::new(0)),
+            tick_seq: Arc::new(AtomicU64::new(0)),
         }
+    }
+
+    /// Increment the debug-frame subscriber count. Each call MUST be paired
+    /// with a `remove_debug_subscriber()` when the listener detaches.
+    pub fn add_debug_subscriber(&self) {
+        self.debug_subscribers.fetch_add(1, Ordering::SeqCst);
+    }
+
+    /// Decrement the debug-frame subscriber count, saturating at zero. Safe
+    /// to over-call — extras decrement nothing.
+    pub fn remove_debug_subscriber(&self) {
+        // Use `fetch_update` so we saturate at 0 (don't underflow to u32::MAX).
+        let _ = self.debug_subscribers.fetch_update(
+            Ordering::SeqCst,
+            Ordering::SeqCst,
+            |cur| Some(cur.saturating_sub(1)),
+        );
+    }
+
+    /// `true` when at least one frontend listener is attached.
+    pub fn has_debug_subscribers(&self) -> bool {
+        self.debug_subscribers.load(Ordering::SeqCst) > 0
     }
 
     /// Get a clone of the shared state. Useful for IPC commands.
     pub fn state(&self) -> CvPipelineState {
         self.state.clone()
+    }
+
+    /// Get a clone of the capturer handle. Used by IPC commands that need to
+    /// one-shot a frame (PR 9b: `cv_capture_frame`).
+    pub fn capturer(&self) -> Arc<dyn ScreenCapturer> {
+        self.capturer.clone()
+    }
+
+    /// Hot-swap the dot-detection parameters on the active calibration WITHOUT
+    /// restarting the pipeline. Called by the live tuning UI (`cv_set_dot_params_preview`).
+    ///
+    /// Atomic: the swap happens inside the same `active` async mutex the tick
+    /// loop reads from. The next tick will see the new params; in-flight ticks
+    /// finish on the old params.
+    ///
+    /// Returns `false` if there's no active calibration (the preview command
+    /// is a no-op until a map is loaded). Otherwise returns `true`.
+    pub async fn set_dot_params_preview(&self, params: DotDetectionParams) -> bool {
+        let mut g = self.active.lock().await;
+        if let Some(pkg) = g.as_mut() {
+            pkg.calibration.dot_detection = params;
+            true
+        } else {
+            false
+        }
     }
 
     /// Replace the active calibration. Called on GSI map-change.
@@ -281,8 +414,10 @@ impl CvPipeline {
             }
         };
 
-        // 2. Detect the player dot.
-        let detection = detect_player_dot(&frame, &pkg.calibration.dot_detection);
+        // 2. Detect the player dot (with diagnostics — bounding boxes are
+        //    cheap to track and used by the debug-frame emitter below).
+        let diagnostics = detect_player_dot_with_diagnostics(&frame, &pkg.calibration.dot_detection);
+        let detection = diagnostics.best;
 
         // 3. Map pixel → world space.
         let observed_zone: Option<String> = if let Some(d) = detection {
@@ -325,12 +460,59 @@ impl CvPipeline {
             TickResult::NoChange
         };
 
+        // 5b. Optional debug-frame emit. Subscriber-gated AND cadence-gated:
+        // we encode + emit only every Nth tick AND only when at least one
+        // frontend listener is attached. Encoding is the expensive bit
+        // (~1-2 ms on a 280x280 region); we don't want to pay it 20x/s when
+        // nobody is looking.
+        let seq = self.tick_seq.fetch_add(1, Ordering::SeqCst);
+        let cadence_hit = seq % DEBUG_FRAME_TICK_PERIOD == 0;
+        if cadence_hit && self.has_debug_subscribers() {
+            self.maybe_emit_debug_frame(&frame, &diagnostics, tick_ms);
+        }
+
         // 6. Record stats.
         self.state
             .record_tick(tick_ms, observed_zone, Some(now_rfc), false, None)
             .await;
 
         result
+    }
+
+    /// Encode the captured minimap region into a PNG and emit a `cv:debug-frame`
+    /// event. Errors are logged but never fail the tick — debug emission is
+    /// best-effort.
+    fn maybe_emit_debug_frame(
+        &self,
+        frame: &CapturedFrame,
+        diagnostics: &DetectionDiagnostics,
+        tick_ms: f32,
+    ) {
+        let png_b64 = match encode_png_base64(frame) {
+            Ok(s) => s,
+            Err(e) => {
+                log::warn!("CV: PNG encode failed for debug frame: {e}");
+                return;
+            }
+        };
+        let blobs = diagnostics
+            .accepted_blobs
+            .iter()
+            .map(blob_to_payload)
+            .collect();
+        let dot_match = diagnostics.best.map(|d| CvDotMatch {
+            x: d.centroid_x,
+            y: d.centroid_y,
+        });
+        let event = CvDebugFrameEvent {
+            png_base64: png_b64,
+            blobs,
+            dot_match,
+            tick_ms: tick_ms.max(0.0).round() as u32,
+        };
+        if let Err(e) = self.emitter.emit_debug_frame(&event) {
+            log::warn!("CV: failed to emit cv:debug-frame: {e}");
+        }
     }
 
     /// Spawn the tick loop. Returns immediately. The task runs until
@@ -395,6 +577,69 @@ pub enum TickResult {
 fn elapsed_ms(t: Instant) -> f32 {
     let elapsed = t.elapsed();
     elapsed.as_secs_f32() * 1000.0
+}
+
+/// Public wrapper for `encode_png_base64` so the IPC command layer can reuse
+/// the same encoder + base64 algorithm. Avoids splitting "what's a debug
+/// emit" from "what's a one-shot capture" — both use the exact same encoding.
+pub fn encode_png_base64_for_command(frame: &CapturedFrame) -> Result<String, String> {
+    encode_png_base64(frame)
+}
+
+/// Encode an RGBA `CapturedFrame` as base64 PNG. Used by the debug-frame
+/// emitter. Returns `Err` only if the PNG encoder itself fails (rare; usually
+/// indicates an unsupported pixel format which we don't produce).
+fn encode_png_base64(frame: &CapturedFrame) -> Result<String, String> {
+    use image::{codecs::png::PngEncoder, ColorType, ImageEncoder};
+    let mut buf: Vec<u8> = Vec::with_capacity(frame.pixels.len());
+    let encoder = PngEncoder::new(&mut buf);
+    encoder
+        .write_image(&frame.pixels, frame.width, frame.height, ColorType::Rgba8.into())
+        .map_err(|e| format!("PNG encode failed: {e}"))?;
+    Ok(base64_encode(&buf))
+}
+
+/// Minimal base64 encoder — no dep, no allocator surprises. Encodes 3 bytes
+/// at a time into 4 ASCII chars. Pure RFC 4648 standard alphabet with `=`
+/// padding. Used for the debug-frame PNG payload only.
+fn base64_encode(input: &[u8]) -> String {
+    const ALPHA: &[u8; 64] =
+        b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    // Output length = ceil(N/3) * 4.
+    let groups = input.len() / 3;
+    let remainder = input.len() % 3;
+    let out_len = groups.saturating_mul(4) + if remainder == 0 { 0 } else { 4 };
+    let mut out = String::with_capacity(out_len);
+    for chunk in input.chunks(3) {
+        let b0 = chunk[0];
+        let b1 = chunk.get(1).copied().unwrap_or(0);
+        let b2 = chunk.get(2).copied().unwrap_or(0);
+        let triple = ((b0 as u32) << 16) | ((b1 as u32) << 8) | (b2 as u32);
+        out.push(ALPHA[((triple >> 18) & 0x3F) as usize] as char);
+        out.push(ALPHA[((triple >> 12) & 0x3F) as usize] as char);
+        if chunk.len() >= 2 {
+            out.push(ALPHA[((triple >> 6) & 0x3F) as usize] as char);
+        } else {
+            out.push('=');
+        }
+        if chunk.len() >= 3 {
+            out.push(ALPHA[(triple & 0x3F) as usize] as char);
+        } else {
+            out.push('=');
+        }
+    }
+    out
+}
+
+/// Convert a `BlobBoundingBox` into the IPC event payload shape.
+fn blob_to_payload(bb: &BlobBoundingBox) -> CvDebugBlob {
+    CvDebugBlob {
+        x: bb.min_x,
+        y: bb.min_y,
+        w: bb.width(),
+        h: bb.height(),
+        area: bb.area,
+    }
 }
 
 /// Map dot-detector's `mean_distance` (lower=better, 0..tolerance) to a 0..1
@@ -659,5 +904,204 @@ mod tests {
             max_area_px: 100,
         };
         assert!(compute_confidence(None, &params).abs() < 1e-6);
+    }
+
+    // ---- PR 9b: subscriber-gated debug frames ----
+
+    #[tokio::test]
+    async fn debug_frame_not_emitted_without_subscribers() {
+        let frame = build_yellow_dot_frame(100, 100, 50, 50);
+        let cap = Arc::new(FakeCapturer::from_frame(frame));
+        let emitter = Arc::new(StubCvEmitter::default());
+        let state = CvPipelineState::new(true);
+        let pipeline = CvPipeline::new(cap, emitter.clone(), state);
+        pipeline
+            .set_active(Some(make_default_package(100, 100)))
+            .await;
+
+        // No subscribers — even though the cadence hits (seq=0 % 5 == 0),
+        // we should not emit a debug frame.
+        pipeline.tick().await;
+        assert_eq!(emitter.debug_emits.lock().unwrap().len(), 0);
+    }
+
+    #[tokio::test]
+    async fn debug_frame_emitted_when_subscriber_attached_and_cadence_hits() {
+        let frame = build_yellow_dot_frame(100, 100, 50, 50);
+        let cap = Arc::new(FakeCapturer::from_frame(frame));
+        let emitter = Arc::new(StubCvEmitter::default());
+        let state = CvPipelineState::new(true);
+        let pipeline = CvPipeline::new(cap, emitter.clone(), state);
+        pipeline
+            .set_active(Some(make_default_package(100, 100)))
+            .await;
+
+        pipeline.add_debug_subscriber();
+        // First tick: seq=0 → cadence hits → emit.
+        pipeline.tick().await;
+        let emits = emitter.debug_emits.lock().unwrap();
+        assert_eq!(emits.len(), 1);
+        assert!(emits[0].tick_ms < 100);
+        // PNG output starts with "iVBORw0KGgo" (base64 of 89 PNG...IHDR).
+        assert!(emits[0].png_base64.starts_with("iVBORw0KGgo"));
+        // The yellow square at (50, 50, 6x6) should be a single accepted blob.
+        assert_eq!(emits[0].blobs.len(), 1);
+        let b = &emits[0].blobs[0];
+        assert_eq!(b.area, 36);
+        // Dot match should reflect the yellow square's centroid (52.5, 52.5).
+        let m = emits[0].dot_match.expect("dot match");
+        assert!((m.x - 52.5).abs() < 0.5);
+        assert!((m.y - 52.5).abs() < 0.5);
+    }
+
+    #[tokio::test]
+    async fn add_and_remove_subscriber_balance_correctly() {
+        let frame = build_yellow_dot_frame(100, 100, 50, 50);
+        let cap = Arc::new(FakeCapturer::from_frame(frame));
+        let emitter = Arc::new(StubCvEmitter::default());
+        let pipeline = CvPipeline::new(cap, emitter, CvPipelineState::new(true));
+
+        assert!(!pipeline.has_debug_subscribers());
+        pipeline.add_debug_subscriber();
+        pipeline.add_debug_subscriber();
+        assert!(pipeline.has_debug_subscribers());
+        pipeline.remove_debug_subscriber();
+        assert!(pipeline.has_debug_subscribers());
+        pipeline.remove_debug_subscriber();
+        assert!(!pipeline.has_debug_subscribers());
+        // Saturate at 0 — extra remove is a no-op.
+        pipeline.remove_debug_subscriber();
+        assert!(!pipeline.has_debug_subscribers());
+    }
+
+    // ---- PR 9b: hot-swap dot params ----
+
+    #[tokio::test]
+    async fn set_dot_params_preview_swaps_atomically() {
+        let frame = build_yellow_dot_frame(100, 100, 50, 50);
+        let cap = Arc::new(FakeCapturer::from_frame(frame));
+        let emitter = Arc::new(StubCvEmitter::default());
+        let state = CvPipelineState::new(true);
+        let pipeline = CvPipeline::new(cap, emitter, state);
+        let mut pkg = make_default_package(100, 100);
+        pkg.calibration.dot_detection.color_tolerance = 30;
+        pipeline.set_active(Some(pkg)).await;
+
+        let new_params = DotDetectionParams {
+            target_rgb: [0, 200, 100],
+            color_tolerance: 7,
+            min_area_px: 11,
+            max_area_px: 12,
+        };
+        let applied = pipeline.set_dot_params_preview(new_params).await;
+        assert!(applied);
+
+        // Verify the swap stuck — peek into the active calibration.
+        let g = pipeline.active.lock().await;
+        let pkg = g.as_ref().expect("active package");
+        assert_eq!(pkg.calibration.dot_detection.target_rgb, [0, 200, 100]);
+        assert_eq!(pkg.calibration.dot_detection.color_tolerance, 7);
+        assert_eq!(pkg.calibration.dot_detection.min_area_px, 11);
+        assert_eq!(pkg.calibration.dot_detection.max_area_px, 12);
+    }
+
+    #[tokio::test]
+    async fn set_dot_params_preview_returns_false_without_active() {
+        let frame = build_yellow_dot_frame(100, 100, 50, 50);
+        let cap = Arc::new(FakeCapturer::from_frame(frame));
+        let emitter = Arc::new(StubCvEmitter::default());
+        let pipeline = CvPipeline::new(cap, emitter, CvPipelineState::new(true));
+        // No set_active call — no map loaded.
+
+        let new_params = DotDetectionParams {
+            target_rgb: [0, 200, 100],
+            color_tolerance: 7,
+            min_area_px: 4,
+            max_area_px: 80,
+        };
+        let applied = pipeline.set_dot_params_preview(new_params).await;
+        assert!(!applied);
+    }
+
+    // ---- PR 9b: base64 encoder ----
+
+    #[test]
+    fn base64_encode_empty_returns_empty() {
+        assert_eq!(base64_encode(&[]), "");
+    }
+
+    #[test]
+    fn base64_encode_one_byte_pads_two_equals() {
+        // 'A' = 0x41 = 0100_0001
+        // → 010000 010000  → 'Q' 'Q' '=' '='
+        assert_eq!(base64_encode(b"A"), "QQ==");
+    }
+
+    #[test]
+    fn base64_encode_two_bytes_pads_one_equals() {
+        // "AB" = 0x41 0x42 → "QUI="
+        assert_eq!(base64_encode(b"AB"), "QUI=");
+    }
+
+    #[test]
+    fn base64_encode_three_bytes_no_padding() {
+        // "ABC" = 0x41 0x42 0x43 → "QUJD"
+        assert_eq!(base64_encode(b"ABC"), "QUJD");
+    }
+
+    #[test]
+    fn base64_encode_round_trip_via_image_crate() {
+        // PNG header bytes — verify our encoder produces the canonical
+        // base64 prefix that image-decoder libraries can re-read.
+        let png_magic = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
+        let encoded = base64_encode(&png_magic);
+        assert_eq!(encoded, "iVBORw0KGgo=");
+    }
+
+    #[test]
+    fn encode_png_base64_roundtrips_dimensions() {
+        let frame = build_yellow_dot_frame(20, 20, 5, 5);
+        let b64 = encode_png_base64(&frame).expect("encode");
+        assert!(b64.starts_with("iVBORw0KGgo"));
+        // Re-decode the base64 + PNG to verify dimensions.
+        let bytes = decode_base64_for_test(&b64);
+        let img = image::load_from_memory(&bytes).expect("decode PNG");
+        assert_eq!(img.width(), 20);
+        assert_eq!(img.height(), 20);
+    }
+
+    /// Minimal base64 decoder for the round-trip test only. Not exposed.
+    fn decode_base64_for_test(s: &str) -> Vec<u8> {
+        const ALPHA_REV: [i8; 128] = {
+            let mut t = [-1i8; 128];
+            let mut i: i8 = 0;
+            let alpha = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+            while (i as usize) < alpha.len() {
+                t[alpha[i as usize] as usize] = i;
+                i += 1;
+            }
+            t
+        };
+        let s = s.as_bytes();
+        let mut out = Vec::with_capacity(s.len() / 4 * 3);
+        let mut i = 0;
+        while i + 4 <= s.len() {
+            let c0 = ALPHA_REV[s[i] as usize] as u32;
+            let c1 = ALPHA_REV[s[i + 1] as usize] as u32;
+            let c2_raw = s[i + 2];
+            let c3_raw = s[i + 3];
+            let c2 = if c2_raw == b'=' { 0 } else { ALPHA_REV[c2_raw as usize] as u32 };
+            let c3 = if c3_raw == b'=' { 0 } else { ALPHA_REV[c3_raw as usize] as u32 };
+            let triple = (c0 << 18) | (c1 << 12) | (c2 << 6) | c3;
+            out.push(((triple >> 16) & 0xFF) as u8);
+            if c2_raw != b'=' {
+                out.push(((triple >> 8) & 0xFF) as u8);
+            }
+            if c3_raw != b'=' {
+                out.push((triple & 0xFF) as u8);
+            }
+            i += 4;
+        }
+        out
     }
 }

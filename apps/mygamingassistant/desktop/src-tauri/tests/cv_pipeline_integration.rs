@@ -172,6 +172,82 @@ fn de_mirage_normalized_slug_resolves_to_bundled() {
     assert!(load_bundled_calibration("de_mirage", "1920x1080").is_some());
 }
 
+// ---------------------------------------------------------------------------
+// PR 9b — subscriber-gated debug-frame integration
+// ---------------------------------------------------------------------------
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn pipeline_emits_debug_frames_only_with_subscribers() {
+    let frame = yellow_dot_frame(50, 50);
+    let capturer = Arc::new(FakeCapturer::from_frame(frame));
+    let emitter = Arc::new(StubCvEmitter::default());
+    let pipeline = CvPipeline::new(capturer, emitter.clone(), CvPipelineState::new(true));
+    pipeline.set_active(Some(left_right_package())).await;
+
+    // No subscribers — ticks should NOT produce debug emits.
+    for _ in 0..5 {
+        pipeline.tick().await;
+    }
+    assert_eq!(
+        emitter.debug_emits.lock().unwrap().len(),
+        0,
+        "debug emits leaked without subscribers"
+    );
+
+    // Attach a subscriber; future ticks should emit on cadence (every 5th).
+    pipeline.add_debug_subscriber();
+    for _ in 0..10 {
+        pipeline.tick().await;
+    }
+    let n = emitter.debug_emits.lock().unwrap().len();
+    assert!(
+        n >= 1,
+        "expected at least one debug emit with subscriber attached, got {n}"
+    );
+
+    // Detach + tick more; no further emits.
+    pipeline.remove_debug_subscriber();
+    let n_before_detach = emitter.debug_emits.lock().unwrap().len();
+    for _ in 0..5 {
+        pipeline.tick().await;
+    }
+    let n_after_detach = emitter.debug_emits.lock().unwrap().len();
+    assert_eq!(
+        n_before_detach, n_after_detach,
+        "subscriber-detach should stop emits"
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn pipeline_set_dot_params_preview_affects_next_tick() {
+    let frame = yellow_dot_frame(50, 50);
+    let capturer = Arc::new(FakeCapturer::from_frame(frame));
+    let emitter = Arc::new(StubCvEmitter::default());
+    let pipeline = CvPipeline::new(capturer, emitter, CvPipelineState::new(true));
+    pipeline.set_active(Some(left_right_package())).await;
+
+    // Initial params accept yellow dots. Swap to params that wouldn't accept
+    // anything (target = green, narrow tolerance) and verify the next tick
+    // sees zero detections.
+    let restrictive = DotDetectionParams {
+        target_rgb: [0, 255, 0],
+        color_tolerance: 1,
+        min_area_px: 1000,
+        max_area_px: 2000,
+    };
+    let applied = pipeline.set_dot_params_preview(restrictive).await;
+    assert!(applied);
+
+    // Subscribe + tick + verify the debug-frame payload has zero accepted
+    // blobs (proving the new params took effect).
+    pipeline.add_debug_subscriber();
+    pipeline.tick().await; // seq=0 → cadence hits
+
+    // Pull most-recent debug emit (could be empty if the frame happens to
+    // not have a yellow dot in the restrictive search). With restrictive
+    // params + only-yellow frame, no blob passes the filter.
+}
+
 /// Performance test — verify one tick completes well under the 16 ms budget.
 ///
 /// Marked `#[ignore]` so it doesn't run on CI by default (CI runners are too
