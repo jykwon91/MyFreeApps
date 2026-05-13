@@ -211,7 +211,9 @@ impl ScreenCapturer for WindowsScreenCapturer {
         })?;
         let Some(frame) = guard.as_ref() else {
             return Err(CaptureError::BackendError {
-                detail: "no frame received from WGC yet (resolution unknown — try again in a moment)".into(),
+                detail:
+                    "no frame received from WGC yet (resolution unknown — try again in a moment)"
+                        .into(),
             });
         };
         Ok(MonitorResolution {

@@ -609,8 +609,7 @@ fn encode_png_base64(frame: &CapturedFrame) -> Result<String, String> {
 /// at a time into 4 ASCII chars. Pure RFC 4648 standard alphabet with `=`
 /// padding. Used for the debug-frame PNG payload only.
 fn base64_encode(input: &[u8]) -> String {
-    const ALPHA: &[u8; 64] =
-        b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    const ALPHA: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     // Output length = ceil(N/3) * 4.
     let groups = input.len() / 3;
     let remainder = input.len() % 3;
@@ -1096,8 +1095,16 @@ mod tests {
             let c1 = ALPHA_REV[s[i + 1] as usize] as u32;
             let c2_raw = s[i + 2];
             let c3_raw = s[i + 3];
-            let c2 = if c2_raw == b'=' { 0 } else { ALPHA_REV[c2_raw as usize] as u32 };
-            let c3 = if c3_raw == b'=' { 0 } else { ALPHA_REV[c3_raw as usize] as u32 };
+            let c2 = if c2_raw == b'=' {
+                0
+            } else {
+                ALPHA_REV[c2_raw as usize] as u32
+            };
+            let c3 = if c3_raw == b'=' {
+                0
+            } else {
+                ALPHA_REV[c3_raw as usize] as u32
+            };
             let triple = (c0 << 18) | (c1 << 12) | (c2 << 6) | c3;
             out.push(((triple >> 16) & 0xFF) as u8);
             if c2_raw != b'=' {

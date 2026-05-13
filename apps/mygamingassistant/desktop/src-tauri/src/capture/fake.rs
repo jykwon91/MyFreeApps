@@ -112,9 +112,12 @@ impl ScreenCapturer for FakeCapturer {
     }
 
     fn primary_monitor_resolution(&self) -> Result<MonitorResolution, CaptureError> {
-        let g = self.resolution.lock().map_err(|_| CaptureError::BackendError {
-            detail: "fake-capturer resolution mutex poisoned".into(),
-        })?;
+        let g = self
+            .resolution
+            .lock()
+            .map_err(|_| CaptureError::BackendError {
+                detail: "fake-capturer resolution mutex poisoned".into(),
+            })?;
         Ok(*g)
     }
 }
@@ -186,10 +189,11 @@ mod tests {
 
     #[test]
     fn fake_capturer_with_resolution_overrides_default() {
-        let cap = FakeCapturer::solid(640, 480, [0, 0, 0, 255]).with_resolution(MonitorResolution {
-            width: 2560,
-            height: 1440,
-        });
+        let cap =
+            FakeCapturer::solid(640, 480, [0, 0, 0, 255]).with_resolution(MonitorResolution {
+                width: 2560,
+                height: 1440,
+            });
         let res = cap.primary_monitor_resolution().expect("resolution");
         assert_eq!(res.width, 2560);
         assert_eq!(res.height, 1440);
