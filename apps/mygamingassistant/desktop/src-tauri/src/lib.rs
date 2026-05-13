@@ -18,12 +18,13 @@ mod commands;
 // Kept here so future PRs land as additions to existing files / modules
 // rather than restructuring the crate. `#[allow(dead_code)]` prevents
 // clippy from flagging the empty modules under `-D warnings`.
-#[allow(dead_code)]
-mod gsi;
+// Module declarations are ordered alphabetically per `rustfmt`.
 #[allow(dead_code)]
 mod capture;
 #[allow(dead_code)]
 mod cv;
+#[allow(dead_code)]
+mod gsi;
 
 /// Run the Tauri application. Called from `main.rs`.
 ///
@@ -32,9 +33,7 @@ mod cv;
 /// attribute getting in the way.
 pub fn run() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![
-            commands::get_app_version,
-        ])
+        .invoke_handler(tauri::generate_handler![commands::get_app_version])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
