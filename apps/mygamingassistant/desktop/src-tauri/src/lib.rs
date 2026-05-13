@@ -242,9 +242,11 @@ fn wire_gsi_to_cv_pipeline(app_handle: tauri::AppHandle, pipeline: Arc<CvPipelin
         let pipeline = pipeline.clone();
         let app_for_resolution = app_for_listener.clone();
         // The listener callback is sync; spawn an async task to do the
-        // actual work (state writes, calibration file IO). Discard the
-        // JoinHandle — task is fire-and-forget; failures are logged inside.
-        let _ = tauri::async_runtime::spawn(async move {
+        // actual work (state writes, calibration file IO). We DON'T bind
+        // the JoinHandle — `let _ = <future>` trips
+        // `clippy::let_underscore_future`, while a bare statement does not
+        // (matches the GSI server-spawn pattern above).
+        tauri::async_runtime::spawn(async move {
             handle_gsi_state_update(payload_str, pipeline, app_for_resolution).await;
         });
     });

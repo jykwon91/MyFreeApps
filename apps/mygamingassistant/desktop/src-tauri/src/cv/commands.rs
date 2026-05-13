@@ -2,15 +2,14 @@
 //!
 //! Exposed to the frontend via `invoke("...")`:
 //!
-//!   - `cv_status`           → returns the current `CvStatusSnapshot`.
-//!   - `cv_start`            → spins up the tick loop.
-//!   - `cv_stop`             → tears it down.
-//!   - `cv_get_calibration`  → returns the calibration for a map (bundled or
-//!                              operator-edited). Used by PR 9b's editor.
-//!   - `cv_set_calibration`  → persists an operator-edited calibration to
-//!                              `<app_config_dir>/cv_calibrations/...`. PR 9a
-//!                              wires this as functional but no UI uses it
-//!                              yet; PR 9b will hit it from the editor page.
+//! - `cv_status` — returns the current `CvStatusSnapshot`.
+//! - `cv_start` — spins up the tick loop.
+//! - `cv_stop` — tears it down.
+//! - `cv_get_calibration` — returns the calibration for a map (bundled or
+//!   operator-edited). Used by PR 9b's editor.
+//! - `cv_set_calibration` — persists an operator-edited calibration to
+//!   `<app_config_dir>/cv_calibrations/...`. PR 9a wires this as functional
+//!   but no UI uses it yet; PR 9b will hit it from the editor page.
 //!
 //! All commands MUST work both with and without a CV pipeline registered as
 //! Tauri-managed state. PR 9a registers the pipeline conditionally

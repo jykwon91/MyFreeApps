@@ -33,7 +33,7 @@ use time::{format_description::well_known::Rfc3339, OffsetDateTime};
 use tokio::sync::Mutex as AsyncMutex;
 
 use crate::capture::ScreenCapturer;
-use crate::cv::calibration::{MapCalibrationPackage, ZonePolygon};
+use crate::cv::calibration::MapCalibrationPackage;
 use crate::cv::dot_detector::{detect_player_dot, DotDetection};
 use crate::cv::polygon::find_zone;
 use crate::cv::state::CvPipelineState;
@@ -348,7 +348,10 @@ impl CvPipeline {
         self.state.mark_running(true).await;
 
         let me = self.clone();
-        let _ = tauri::async_runtime::spawn(async move {
+        // Bare statement — we don't bind the JoinHandle. `let _ = future`
+        // trips `clippy::let_underscore_future`. Task is fire-and-forget;
+        // shutdown happens through the `stop_flag` AtomicBool.
+        tauri::async_runtime::spawn(async move {
             let mut interval = tokio::time::interval(TICK_INTERVAL);
             // Skip-missed-ticks behaviour: if a tick took longer than the
             // interval, we don't pile up — we burn the slip and continue

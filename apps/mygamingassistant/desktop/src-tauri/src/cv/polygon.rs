@@ -86,7 +86,7 @@ fn point_on_segment(px: f32, py: f32, ax: f32, ay: f32, bx: f32, by: f32) -> boo
 /// Iteration order matters when zones overlap (which they shouldn't, but
 /// authoring mistakes happen). We return the FIRST match — the operator can
 /// reorder the zone list in the calibration JSON to disambiguate if needed.
-pub fn find_zone<'a>(world_x: f32, world_y: f32, zones: &'a [ZonePolygon]) -> Option<&'a str> {
+pub fn find_zone(world_x: f32, world_y: f32, zones: &[ZonePolygon]) -> Option<&str> {
     zones
         .iter()
         .find(|z| point_in_polygon(world_x, world_y, &z.points))

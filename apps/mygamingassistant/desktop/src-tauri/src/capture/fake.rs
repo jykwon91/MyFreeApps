@@ -63,11 +63,11 @@ impl ScreenCapturer for FakeCapturer {
         if region
             .x
             .checked_add(region.width)
-            .is_none_or(|x| x > g.width)
+            .map_or(true, |x| x > g.width)
             || region
                 .y
                 .checked_add(region.height)
-                .is_none_or(|y| y > g.height)
+                .map_or(true, |y| y > g.height)
         {
             return Err(CaptureError::BackendError {
                 detail: format!(
