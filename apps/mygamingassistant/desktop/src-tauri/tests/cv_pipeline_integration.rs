@@ -120,8 +120,11 @@ async fn pipeline_zone_change_emits_two_events() {
     let frame_right = yellow_dot_frame(80, 50);
     let capturer = Arc::new(FakeCapturer::from_frame(frame_left));
     let emitter = Arc::new(StubCvEmitter::default());
-    let pipeline =
-        CvPipeline::new(capturer.clone(), emitter.clone(), CvPipelineState::new(true));
+    let pipeline = CvPipeline::new(
+        capturer.clone(),
+        emitter.clone(),
+        CvPipelineState::new(true),
+    );
 
     pipeline.set_active(Some(left_right_package())).await;
 
@@ -144,7 +147,11 @@ async fn pipeline_zone_change_emits_two_events() {
 fn bundled_de_mirage_calibration_loads_and_has_expected_zones() {
     let pkg = load_bundled_calibration("mirage", "1920x1080").expect("bundled exists");
     assert_eq!(pkg.map_slug, "mirage");
-    assert!(pkg.zones.len() >= 10, "expected >=10 zones, got {}", pkg.zones.len());
+    assert!(
+        pkg.zones.len() >= 10,
+        "expected >=10 zones, got {}",
+        pkg.zones.len()
+    );
     // Spot-check the required zones from the PR brief.
     let slugs: Vec<&str> = pkg.zones.iter().map(|z| z.slug.as_str()).collect();
     for required in &["a-site", "b-site", "mid", "t-spawn", "ct-spawn"] {
@@ -218,12 +225,7 @@ async fn tick_latency_under_budget() {
         zones: vec![ZonePolygon {
             slug: "test".into(),
             name: "Test".into(),
-            points: vec![
-                (0.0, 0.0),
-                (1.0, 0.0),
-                (1.0, 1.0),
-                (0.0, 1.0),
-            ],
+            points: vec![(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)],
         }],
     };
     pipeline.set_active(Some(pkg)).await;

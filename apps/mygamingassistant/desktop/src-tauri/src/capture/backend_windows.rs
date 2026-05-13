@@ -74,9 +74,7 @@ impl WindowsScreenCapturer {
     ///   - WGC isn't available (Windows < 10 1903; we don't support those).
     pub fn new() -> Result<Self, CaptureError> {
         let primary = Monitor::primary().map_err(|e| {
-            log::warn!(
-                "WindowsScreenCapturer: failed to resolve primary monitor: {e}"
-            );
+            log::warn!("WindowsScreenCapturer: failed to resolve primary monitor: {e}");
             CaptureError::BackendError {
                 detail: format!("primary monitor lookup failed: {e}"),
             }
@@ -98,9 +96,7 @@ impl WindowsScreenCapturer {
         // `start_free_threaded` returns a CaptureControl whose Drop stops
         // the session. We MUST keep it alive.
         let control = CaptureHandler::start_free_threaded(settings).map_err(|e| {
-            log::warn!(
-                "WindowsScreenCapturer: failed to start capture session: {e}"
-            );
+            log::warn!("WindowsScreenCapturer: failed to start capture session: {e}");
             CaptureError::BackendError {
                 detail: format!("WGC start_free_threaded failed: {e}"),
             }

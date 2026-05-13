@@ -213,22 +213,10 @@ mod tests {
     #[tokio::test]
     async fn record_tick_updates_counters_and_ema() {
         let s = CvPipelineState::new(true);
-        s.record_tick(
-            10.0,
-            Some("a-site".into()),
-            Some("t1".into()),
-            false,
-            None,
-        )
-        .await;
-        s.record_tick(
-            20.0,
-            Some("a-site".into()),
-            Some("t2".into()),
-            false,
-            None,
-        )
-        .await;
+        s.record_tick(10.0, Some("a-site".into()), Some("t1".into()), false, None)
+            .await;
+        s.record_tick(20.0, Some("a-site".into()), Some("t2".into()), false, None)
+            .await;
         let snap = s.snapshot().await;
         assert_eq!(snap.ticks_total, 2);
         assert!((snap.last_tick_ms - 20.0).abs() < 1e-6);
@@ -239,22 +227,10 @@ mod tests {
     #[tokio::test]
     async fn errored_tick_increments_error_counter_and_preserves_last_zone() {
         let s = CvPipelineState::new(true);
-        s.record_tick(
-            10.0,
-            Some("a-site".into()),
-            Some("t1".into()),
-            false,
-            None,
-        )
-        .await;
-        s.record_tick(
-            20.0,
-            None,
-            None,
-            true,
-            Some("capture failed".into()),
-        )
-        .await;
+        s.record_tick(10.0, Some("a-site".into()), Some("t1".into()), false, None)
+            .await;
+        s.record_tick(20.0, None, None, true, Some("capture failed".into()))
+            .await;
         let snap = s.snapshot().await;
         assert_eq!(snap.ticks_total, 2);
         assert_eq!(snap.ticks_errored, 1);

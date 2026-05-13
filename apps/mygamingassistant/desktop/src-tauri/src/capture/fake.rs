@@ -26,11 +26,7 @@ impl FakeCapturer {
 
     /// Construct from a flat RGBA byte slice. Returns an error if the buffer
     /// length doesn't match `width * height * 4`.
-    pub fn from_rgba(
-        width: u32,
-        height: u32,
-        pixels: Vec<u8>,
-    ) -> Result<Self, CaptureError> {
+    pub fn from_rgba(width: u32, height: u32, pixels: Vec<u8>) -> Result<Self, CaptureError> {
         let frame = CapturedFrame::from_rgba(width, height, pixels)?;
         Ok(Self::from_frame(frame))
     }

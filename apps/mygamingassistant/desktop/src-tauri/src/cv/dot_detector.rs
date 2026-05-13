@@ -272,15 +272,7 @@ mod tests {
     fn detects_yellow_square_centroid() {
         // 30x30 background grey + 6x6 yellow square at (10, 10).
         // Centroid should be (12.5, 12.5) (center of pixels 10..15).
-        let frame = frame_with_square(
-            30,
-            30,
-            [80, 80, 80, 255],
-            10,
-            10,
-            6,
-            [255, 255, 0, 255],
-        );
+        let frame = frame_with_square(30, 30, [80, 80, 80, 255], 10, 10, 6, [255, 255, 0, 255]);
         let det = detect_player_dot(&frame, &make_params()).expect("detects");
         assert_eq!(det.area_px, 36);
         assert!((det.centroid_x - 12.5).abs() < 0.01);
@@ -291,30 +283,14 @@ mod tests {
     #[test]
     fn returns_none_when_no_pixels_match() {
         // All-grey frame; no yellow anywhere.
-        let frame = frame_with_square(
-            20,
-            20,
-            [80, 80, 80, 255],
-            0,
-            0,
-            0,
-            [0, 0, 0, 0],
-        );
+        let frame = frame_with_square(20, 20, [80, 80, 80, 255], 0, 0, 0, [0, 0, 0, 0]);
         assert!(detect_player_dot(&frame, &make_params()).is_none());
     }
 
     #[test]
     fn returns_none_when_components_too_small() {
         // 2x2 yellow square (area 4) — but our min_area is 5 here.
-        let frame = frame_with_square(
-            20,
-            20,
-            [80, 80, 80, 255],
-            5,
-            5,
-            2,
-            [255, 255, 0, 255],
-        );
+        let frame = frame_with_square(20, 20, [80, 80, 80, 255], 5, 5, 2, [255, 255, 0, 255]);
         let mut params = make_params();
         params.min_area_px = 5;
         assert!(detect_player_dot(&frame, &params).is_none());
@@ -323,15 +299,7 @@ mod tests {
     #[test]
     fn returns_none_when_components_too_large() {
         // Fill almost-everything yellow (area > max).
-        let frame = frame_with_square(
-            30,
-            30,
-            [80, 80, 80, 255],
-            0,
-            0,
-            29,
-            [255, 255, 0, 255],
-        );
+        let frame = frame_with_square(30, 30, [80, 80, 80, 255], 0, 0, 29, [255, 255, 0, 255]);
         let mut params = make_params();
         params.max_area_px = 50;
         assert!(detect_player_dot(&frame, &params).is_none());

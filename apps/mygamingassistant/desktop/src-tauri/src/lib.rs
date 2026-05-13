@@ -192,11 +192,8 @@ pub fn run() {
                     let emitter = Arc::new(TauriCvEmitter {
                         app_handle: app_for_cv_emit,
                     });
-                    let pipeline = Arc::new(CvPipeline::new(
-                        Arc::from(cap),
-                        emitter,
-                        cv_state.clone(),
-                    ));
+                    let pipeline =
+                        Arc::new(CvPipeline::new(Arc::from(cap), emitter, cv_state.clone()));
                     app.manage(cv_state);
                     app.manage(pipeline.clone());
 

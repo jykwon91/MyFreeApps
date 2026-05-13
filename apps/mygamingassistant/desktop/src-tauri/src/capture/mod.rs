@@ -79,10 +79,7 @@ impl CapturedFrame {
         let expected = (width as usize)
             .checked_mul(height as usize)
             .and_then(|n| n.checked_mul(4))
-            .ok_or(CaptureError::InvalidDimensions {
-                width,
-                height,
-            })?;
+            .ok_or(CaptureError::InvalidDimensions { width, height })?;
         if pixels.len() != expected {
             return Err(CaptureError::BufferSizeMismatch {
                 expected,
@@ -243,7 +240,10 @@ mod tests {
         let msg = format!("{}", CaptureError::PlatformNotSupported);
         assert!(msg.contains("Windows"));
 
-        let msg = format!("{}", CaptureError::InvalidRegion(CaptureRegion::new(0, 0, 0, 100)));
+        let msg = format!(
+            "{}",
+            CaptureError::InvalidRegion(CaptureRegion::new(0, 0, 0, 100))
+        );
         assert!(msg.contains("invalid"));
 
         let msg = format!(

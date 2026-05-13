@@ -286,7 +286,10 @@ impl CvPipeline {
 
         // 3. Map pixel → world space.
         let observed_zone: Option<String> = if let Some(d) = detection {
-            let (wx, wy) = pkg.calibration.world_transform.apply(d.centroid_x, d.centroid_y);
+            let (wx, wy) = pkg
+                .calibration
+                .world_transform
+                .apply(d.centroid_x, d.centroid_y);
             find_zone(wx, wy, &pkg.zones).map(|s| s.to_string())
         } else {
             None
@@ -489,7 +492,9 @@ mod tests {
         let state = CvPipelineState::new(true);
         let pipeline = CvPipeline::new(cap, emitter.clone(), state.clone());
 
-        pipeline.set_active(Some(make_default_package(100, 100))).await;
+        pipeline
+            .set_active(Some(make_default_package(100, 100)))
+            .await;
 
         // First tick: candidate=left, streak=1 — no emit yet
         let r1 = pipeline.tick().await;
@@ -514,7 +519,9 @@ mod tests {
         let state = CvPipelineState::new(true);
         let pipeline = CvPipeline::new(cap, emitter.clone(), state);
 
-        pipeline.set_active(Some(make_default_package(100, 100))).await;
+        pipeline
+            .set_active(Some(make_default_package(100, 100)))
+            .await;
 
         // 5 ticks of the same zone — should emit exactly once (on tick 2).
         for _ in 0..5 {
@@ -532,7 +539,9 @@ mod tests {
         let state = CvPipelineState::new(true);
         let pipeline = CvPipeline::new(cap.clone(), emitter.clone(), state);
 
-        pipeline.set_active(Some(make_default_package(100, 100))).await;
+        pipeline
+            .set_active(Some(make_default_package(100, 100)))
+            .await;
 
         // Establish "left"
         pipeline.tick().await;
@@ -585,11 +594,11 @@ mod tests {
     #[test]
     fn hysteresis_flapping_resets_streak() {
         let mut h = ZoneHysteresis::default();
+        // Single occurrence of b shouldn't emit yet — streak must reach 2.
+        // Because we never emitted anything before, observing b twice in a
+        // row is what finally satisfies the hysteresis filter.
         h.observe(Some("a".into())); // streak=1 candidate=a
         h.observe(Some("b".into())); // streak=1 candidate=b
-        // Single occurrence of b shouldn't emit yet — streak must reach 2.
-        // But because we never emitted anything, the prior was None; here
-        // observe again with b to clear.
         let r = h.observe(Some("b".into())); // streak=2 candidate=b
         assert!(matches!(r, Some(Some(ref s)) if s == "b"));
     }

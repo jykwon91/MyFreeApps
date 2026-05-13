@@ -90,7 +90,10 @@ impl AffineTransform {
 
     /// Apply the transform to a single (x, y) point.
     pub fn apply(&self, x: f32, y: f32) -> (f32, f32) {
-        (x * self.scale_x + self.offset_x, y * self.scale_y + self.offset_y)
+        (
+            x * self.scale_x + self.offset_x,
+            y * self.scale_y + self.offset_y,
+        )
     }
 
     /// Convenience: build the transform that maps the (0,0)-(width,height)
@@ -169,9 +172,8 @@ pub mod bundled {
     /// `de_mirage` @ 1920x1080 default calibration baked into the binary.
     /// The JSON file lives at `desktop/src-tauri/calibrations/de_mirage_1920x1080.json`
     /// and is included via `include_str!` so it ships in every build.
-    pub const DE_MIRAGE_1920X1080_JSON: &str = include_str!(
-        "../../calibrations/de_mirage_1920x1080.json"
-    );
+    pub const DE_MIRAGE_1920X1080_JSON: &str =
+        include_str!("../../calibrations/de_mirage_1920x1080.json");
 
     /// Load the bundled calibration for the given map slug + resolution.
     /// Returns `None` if no bundled match exists (operator must use the

@@ -23,9 +23,7 @@ use std::sync::Arc;
 
 use tauri::Manager;
 
-use crate::cv::calibration::{
-    bundled::load_bundled_calibration, MapCalibrationPackage,
-};
+use crate::cv::calibration::{bundled::load_bundled_calibration, MapCalibrationPackage};
 use crate::cv::pipeline::CvPipeline;
 use crate::cv::state::{CvPipelineState, CvStatusSnapshot};
 
