@@ -41,6 +41,8 @@ async function injectFakeTauri(
     server_status?: Record<string, unknown>;
     install_result?: Record<string, unknown>;
     uninstall_result?: Record<string, unknown>;
+    // PR 9a — CV pipeline stubs
+    cv_status?: Record<string, unknown>;
   } = {},
 ): Promise<void> {
   await page.addInitScript((payload) => {
@@ -63,7 +65,26 @@ async function injectFakeTauri(
           path: "",
           error: "Stubbed",
         },
-      get_app_version: { version: "0.0.1", build: "debug", pr: 8 },
+      get_app_version: { version: "0.0.1", build: "debug", pr: 9 },
+      // PR 9a — defaults reflect "Windows host, CV pipeline available but
+      // stopped". Tests that need the running shape override via the
+      // `cv_status` arg.
+      cv_status: payload.cv_status ?? {
+        running: false,
+        platform_supported: true,
+        current_map: null,
+        last_zone: null,
+        last_detection_at: null,
+        ticks_total: 0,
+        ticks_errored: 0,
+        avg_tick_ms: 0,
+        last_tick_ms: 0,
+        calibration_loaded: false,
+        last_error: null,
+      },
+      cv_start: null,
+      cv_stop: null,
+      cv_get_calibration: null,
     };
 
     (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__ = {
@@ -250,5 +271,118 @@ test.describe("CS2 setup page — simulated Tauri", () => {
 
     await expect(page.getByText(/Install failed/i)).toBeVisible();
     await expect(page.getByText(/Directory does not exist/i)).toBeVisible();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PR 9a — CV pipeline panel on the setup page
+// ---------------------------------------------------------------------------
+
+test.describe("CV pipeline panel on setup page — simulated Tauri", () => {
+  test.afterEach(async ({ page }) => {
+    await page.context().clearCookies();
+    await page.evaluate(() => {
+      try {
+        window.localStorage.clear();
+        window.sessionStorage.clear();
+      } catch {
+        // ignore
+      }
+    });
+  });
+
+  test("renders CV panel with platform_supported=true", async ({ page, request }) => {
+    await injectFakeTauri(page, {
+      cv_status: {
+        running: false,
+        platform_supported: true,
+        current_map: null,
+        last_zone: null,
+        last_detection_at: null,
+        ticks_total: 0,
+        ticks_errored: 0,
+        avg_tick_ms: 0,
+        last_tick_ms: 0,
+        calibration_loaded: false,
+        last_error: null,
+      },
+    });
+
+    const credentials = getOperatorCredentials();
+    await loginViaUI(page, credentials, request);
+
+    await page.goto("/live/cs2/setup");
+    await expect(
+      page.getByRole("heading", { name: /Position detection/i }),
+    ).toBeVisible();
+    // Start button is enabled when pipeline is stopped + platform supported
+    await expect(page.getByRole("button", { name: /Start CV/i })).toBeEnabled();
+    // Stop button is disabled when nothing is running
+    await expect(page.getByRole("button", { name: /Stop CV/i })).toBeDisabled();
+    // Calibration disclaimer present
+    await expect(page.getByText(/bundled default calibration is for/i)).toBeVisible();
+  });
+
+  test("renders Windows-only banner when platform_supported=false", async ({
+    page,
+    request,
+  }) => {
+    await injectFakeTauri(page, {
+      cv_status: {
+        running: false,
+        platform_supported: false,
+        current_map: null,
+        last_zone: null,
+        last_detection_at: null,
+        ticks_total: 0,
+        ticks_errored: 0,
+        avg_tick_ms: 0,
+        last_tick_ms: 0,
+        calibration_loaded: false,
+        last_error: null,
+      },
+    });
+
+    const credentials = getOperatorCredentials();
+    await loginViaUI(page, credentials, request);
+
+    await page.goto("/live/cs2/setup");
+    await expect(page.getByText(/Windows only/i)).toBeVisible();
+    // Start / Stop buttons should not render on unsupported platforms
+    await expect(page.getByRole("button", { name: /Start CV/i })).toHaveCount(0);
+  });
+
+  test("CV panel shows running state when pipeline is up", async ({ page, request }) => {
+    await injectFakeTauri(page, {
+      cv_status: {
+        running: true,
+        platform_supported: true,
+        current_map: "mirage",
+        last_zone: "a-site",
+        last_detection_at: "2026-05-13T10:00:00Z",
+        ticks_total: 42,
+        ticks_errored: 1,
+        avg_tick_ms: 7.5,
+        last_tick_ms: 8.0,
+        calibration_loaded: true,
+        last_error: null,
+      },
+    });
+
+    const credentials = getOperatorCredentials();
+    await loginViaUI(page, credentials, request);
+
+    await page.goto("/live/cs2/setup");
+    // Pipeline status row shows "Running"
+    await expect(page.getByText("Running", { exact: true })).toBeVisible();
+    // Calibration loaded for mirage
+    await expect(page.getByText(/Loaded for mirage/i)).toBeVisible();
+    // Detected zone shown (formatted)
+    await expect(page.getByText(/A Site/)).toBeVisible();
+    // Tick counters visible
+    await expect(page.getByText(/42 \/ 1/)).toBeVisible();
+    // Start is disabled when already running; Stop is enabled
+    await expect(page.getByRole("button", { name: /Start CV/i })).toBeDisabled();
+    await expect(page.getByRole("button", { name: /Stop CV/i })).toBeEnabled();
   });
 });

@@ -9,11 +9,15 @@ gates desktop-only UI.
 
 ## Status
 
-- **PR 7 (this PR):** Shell + smoke-test IPC command + cross-platform CI.
-- **PR 8 (next):** CS2 Game State Integration (GSI) HTTP receiver — slots
-  into `src-tauri/src/gsi/`.
-- **PR 9:** Windows DXGI Desktop Duplication screen capture (`capture/`) +
-  minimap CV pipeline (`cv/`).
+- **PR 7:** Shell + smoke-test IPC command + cross-platform CI.
+- **PR 8:** CS2 Game State Integration (GSI) HTTP receiver in `src-tauri/src/gsi/`.
+- **PR 9a (this PR):** Cross-platform screen-capture trait (`capture/`,
+  Windows.Graphics.Capture backend on Windows, stub on Mac/Linux) +
+  pure-Rust minimap CV pipeline (`cv/`, image/imageproc — explicitly NOT
+  opencv-rust). Bundled default calibration for `de_mirage` @ 1920×1080.
+  No calibration UI yet.
+- **PR 9b (next):** Operator-facing calibration editor — UI for tuning the
+  per-map minimap rect, world transform, and dot-detection params.
 - **PRs 10-11:** Wire live mode for CS2 then Valorant.
 - **PR 12:** Polish.
 
@@ -27,15 +31,17 @@ desktop/
 │   ├── Cargo.lock        # Committed (binary, not library)
 │   ├── build.rs          # Tauri build script
 │   ├── tauri.conf.json   # Points `frontendDist` at ../../frontend/dist
+│   ├── calibrations/     # Bundled default CV calibrations (JSON)
 │   ├── capabilities/     # Tauri 2.x permission scopes
 │   ├── icons/            # Placeholder icons + generate.py
-│   └── src/
-│       ├── main.rs       # Binary entrypoint
-│       ├── lib.rs        # tauri::Builder + module registration
-│       ├── commands.rs   # IPC commands (PR 7: get_app_version)
-│       ├── gsi/          # PR 8 — CS2 GSI receiver
-│       ├── capture/      # PR 9 — DXGI screen capture
-│       └── cv/           # PR 9 — minimap CV pipeline
+│   ├── src/
+│   │   ├── main.rs       # Binary entrypoint
+│   │   ├── lib.rs        # tauri::Builder + module registration
+│   │   ├── commands.rs   # IPC commands (PR 7: get_app_version)
+│   │   ├── gsi/          # PR 8 — CS2 GSI receiver
+│   │   ├── capture/      # PR 9a — cross-platform screen capture
+│   │   └── cv/           # PR 9a — minimap CV pipeline
+│   └── tests/            # Integration tests (TCP-bound + pipeline e2e)
 └── .gitignore
 ```
 
@@ -79,6 +85,26 @@ npm run build:debug  # cargo tauri build --debug (faster, unsigned)
 `.github/workflows/ci-mygamingassistant-desktop.yml` builds the binary on
 `ubuntu-22.04`, `windows-latest`, and `macos-latest`. Unsigned artifacts are
 uploaded per platform; signing and notarization are deferred (operator setup).
+
+The `rust-checks / linux-x64` job also runs `cargo test --all-features`,
+exercising both in-crate unit tests AND the integration tests under
+`tests/`. CV unit tests (color thresholding, polygon, affine) and the
+fixture-driven pipeline test run on every PR.
+
+## CV pipeline perf testing (local only)
+
+The pipeline ships with a perf assertion that one tick against a 1920×1080
+fixture frame completes in <16 ms (the 60 Hz budget). It's gated behind
+`#[ignore]` so CI runners (which vary in single-thread perf) don't false-fail.
+Run it locally on Windows:
+
+```bash
+cd apps/mygamingassistant/desktop/src-tauri
+cargo test --test cv_pipeline_integration tick_latency_under_budget -- --ignored --nocapture
+```
+
+The test prints `CV pipeline tick latency: avg=X.XX ms, max=Y.YY ms` so you
+can compare runs after touching the CV code.
 
 ## Icons
 

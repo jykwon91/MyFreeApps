@@ -18,6 +18,7 @@ import { Link } from "react-router-dom";
 import { ArrowLeft, CheckCircle2, ExternalLink, Trash2, XCircle } from "lucide-react";
 import { Card, LoadingButton } from "@platform/ui";
 import { useGsiState } from "@/lib/gsi";
+import { useCvState } from "@/lib/cv";
 import { invokeTauri, isTauri } from "@/lib/tauri";
 import type {
   GsiInstallResult,
@@ -25,6 +26,7 @@ import type {
   GsiUninstallResult,
 } from "@/types/desktop";
 import LiveCs2SetupStatus from "@/components/live/LiveCs2SetupStatus";
+import LiveCs2CvPanel from "@/components/live/LiveCs2CvPanel";
 
 async function refreshStatus(): Promise<GsiServerStatus | null> {
   try {
@@ -37,6 +39,10 @@ async function refreshStatus(): Promise<GsiServerStatus | null> {
 export default function LiveCs2Setup() {
   const [inTauri] = useState(() => isTauri());
   const { status: initialStatus, ready } = useGsiState();
+  // CV pipeline status — refreshed by the panel's Start/Stop callbacks AND
+  // by useCvState's 2s poll. Used for the new CV section below the GSI
+  // install card.
+  const cvHook = useCvState();
 
   // Local status copy that we can refresh manually after install/uninstall
   // without waiting for the next pushed event. Falls back to the
@@ -233,6 +239,12 @@ export default function LiveCs2Setup() {
           </a>
         </div>
       </Card>
+
+      <LiveCs2CvPanel
+        status={cvHook.status}
+        ready={cvHook.ready}
+        onRefresh={cvHook.refresh}
+      />
     </main>
   );
 }

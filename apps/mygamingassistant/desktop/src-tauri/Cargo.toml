@@ -42,10 +42,25 @@ dirs = "5"
 # Tauri's own logger via the `log` facade.
 log = "0.4"
 
-# PR 9 will add (Windows-only conditional):
-# [target.'cfg(windows)'.dependencies]
-# windows = { version = "0.59", features = ["Win32_Graphics_Dxgi", "Win32_Graphics_Direct3D11"] }
-# opencv = "0.94"
+# --- PR 9a: minimap CV pipeline ---
+# Pure-Rust image stack. We DELIBERATELY avoid `opencv-rust`:
+#   - opencv-rust needs a ~200 MB system OpenCV install on every dev/CI host
+#   - reproducible CI builds become a pinned vcpkg dance
+#   - color-thresholded blob detection (what we do) is a few hundred LOC at
+#     most; we don't need contour matching or optical flow
+# image + imageproc cover decode/encode + connected-component labelling +
+# basic morphology. Both are pure Rust, well-maintained, no native deps.
+image = { version = "0.25", default-features = false, features = ["png"] }
+imageproc = { version = "0.25", default-features = false }
+
+# Windows-only screen capture via the Windows.Graphics.Capture API. Same
+# GPU-shared frame path as DXGI Desktop Duplication — frames stay on the
+# GPU until we explicitly copy them to a CPU buffer, so the game's render
+# pipeline pays effectively zero overhead. `windows-capture` is a pure-Rust
+# binding (no C++/vcpkg) maintained by NiiightmareXD; verified active.
+# Falls back gracefully on non-Windows targets via cfg gating below.
+[target.'cfg(windows)'.dependencies]
+windows-capture = "1"
 
 [features]
 # Default features.

@@ -104,3 +104,102 @@ export interface GsiUninstallResult {
   path: string;
   error?: string;
 }
+
+// ---------------------------------------------------------------------------
+// PR 9a — Minimap CV pipeline
+// ---------------------------------------------------------------------------
+
+/**
+ * Snapshot of the CV pipeline's state, returned by the `cv_status` IPC
+ * command. Matches `CvStatusSnapshot` in `src-tauri/src/cv/state.rs`.
+ *
+ * `platform_supported` distinguishes "stopped, but Windows so the user can
+ * start it" from "stopped because Mac/Linux has no capture backend in PR 9a".
+ * The Setup page surfaces the latter with a clear message instead of a
+ * generic "stopped" UI.
+ */
+export interface CvStatus {
+  /** True when the pipeline tokio task is alive (ticking at 20 Hz). */
+  running: boolean;
+  /** True when the current platform has a working screen-capture backend. */
+  platform_supported: boolean;
+  /** Map slug the pipeline is currently tracking, or null when no map. */
+  current_map?: string | null;
+  /** Most-recently-detected zone slug, or null. */
+  last_zone?: string | null;
+  /** RFC3339 timestamp of the most recent detection, or null. */
+  last_detection_at?: string | null;
+  /** Cumulative ticks executed. */
+  ticks_total: number;
+  /** Ticks that errored. */
+  ticks_errored: number;
+  /** Exponentially-weighted average tick latency, milliseconds. */
+  avg_tick_ms: number;
+  /** Single most-recent tick latency, milliseconds. */
+  last_tick_ms: number;
+  /** True when the current map has a calibration loaded. */
+  calibration_loaded: boolean;
+  /** Last pipeline error, or null when the most recent tick succeeded. */
+  last_error?: string | null;
+}
+
+/**
+ * Event payload emitted by the Rust pipeline via `cv:zone-detected` on
+ * every zone-CHANGE (post-hysteresis). Matches `CvZoneDetectedEvent` in
+ * `src-tauri/src/cv/pipeline.rs`.
+ */
+export interface CvZoneDetectedEvent {
+  /** Map this detection applies to. */
+  map_slug: string;
+  /**
+   * Newly-detected zone slug, or null when the player has moved off all
+   * known zones. Null is a valid emit — frontend falls back to (map, side)
+   * filter in that case.
+   */
+  zone_slug?: string | null;
+  /** 0.0 (at tolerance limit) — 1.0 (perfect colour match). */
+  confidence: number;
+  /** Single-tick latency that produced this detection, milliseconds. */
+  latency_ms: number;
+  /** RFC3339 timestamp. */
+  detected_at: string;
+}
+
+/**
+ * Per-map calibration package read/written by `cv_get_calibration` and
+ * `cv_set_calibration`. Matches `MapCalibrationPackage` in
+ * `src-tauri/src/cv/calibration.rs`.
+ *
+ * PR 9a uses this read-only for the Setup page's "calibration loaded?"
+ * indicator. PR 9b's editor uses it as the editor schema.
+ */
+export interface CvMinimapCalibration {
+  schema_version: number;
+  resolution: string;
+  minimap_region: { x: number; y: number; width: number; height: number };
+  world_transform: {
+    scale_x: number;
+    scale_y: number;
+    offset_x: number;
+    offset_y: number;
+  };
+  dot_detection: {
+    target_rgb: [number, number, number];
+    color_tolerance: number;
+    min_area_px: number;
+    max_area_px: number;
+  };
+}
+
+export interface CvZonePolygon {
+  slug: string;
+  name: string;
+  /** `[x, y]` tuples in 0-1 normalized world space. */
+  points: Array<[number, number]>;
+}
+
+export interface CvMapCalibrationPackage {
+  map_slug: string;
+  calibration: CvMinimapCalibration;
+  zones: CvZonePolygon[];
+}

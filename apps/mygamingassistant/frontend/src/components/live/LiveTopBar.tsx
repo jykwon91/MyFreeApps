@@ -33,6 +33,13 @@ interface LiveTopBarProps {
   override: { enabled: boolean; mapSlug: string; side: GsiSide };
   /** Toggle the override panel. */
   onOverrideToggle: (enabled: boolean) => void;
+  /**
+   * Detected zone slug from the CV pipeline (PR 9a). When non-null, the
+   * top bar displays it as a fourth segment: "Mirage · CT · B Site · Live".
+   * When null, the segment is omitted entirely (matches PR 8 layout).
+   * Optional so the prop change is non-breaking — older callers don't pass it.
+   */
+  zoneSlug?: string | null;
 }
 
 export default function LiveTopBar({
@@ -43,11 +50,16 @@ export default function LiveTopBar({
   liveBar,
   override,
   onOverrideToggle,
+  zoneSlug,
 }: LiveTopBarProps) {
   return (
     <header className="flex items-center gap-3 px-3 py-2 border-b bg-card/70">
       <ConnectionDot ready={ready} running={running} payloadsReceived={payloadsReceived} />
-      <DetectedStateDisplay override={override} liveBar={liveBar} />
+      <DetectedStateDisplay
+        override={override}
+        liveBar={liveBar}
+        zoneSlug={zoneSlug ?? null}
+      />
 
       <button
         type="button"
@@ -106,9 +118,27 @@ function ConnectionDot({ ready, running, payloadsReceived }: ConnectionDotProps)
 interface DetectedStateDisplayProps {
   override: { enabled: boolean; mapSlug: string; side: GsiSide };
   liveBar: LiveBarFields | null;
+  /** Detected zone from CV pipeline. Null = omitted. */
+  zoneSlug: string | null;
 }
 
-function DetectedStateDisplay({ override, liveBar }: DetectedStateDisplayProps) {
+/** Format a zone slug for display. Same shape as `formatZoneDisplay` in
+ *  `lib/cv.ts` — duplicated here so the LiveTopBar component file doesn't
+ *  have to import from `lib/` (keeps it a pure presentational component). */
+function formatZone(slug: string | null): string | null {
+  if (!slug) return null;
+  return slug.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function DetectedStateDisplay({
+  override,
+  liveBar,
+  zoneSlug,
+}: DetectedStateDisplayProps) {
+  // Zone is only meaningful when we're following live detection. The
+  // override flow hides it (the operator is manually picking a map/side).
+  const zoneText = !override.enabled ? formatZone(zoneSlug) : null;
+
   if (override.enabled) {
     return (
       <span className="text-sm font-medium">
@@ -131,6 +161,12 @@ function DetectedStateDisplay({ override, liveBar }: DetectedStateDisplayProps) 
       {liveBar.mapDisplay}
       <span className="text-muted-foreground mx-1">·</span>
       {liveBar.sideDisplay}
+      {zoneText && (
+        <>
+          <span className="text-muted-foreground mx-1">·</span>
+          <span data-testid="live-zone">{zoneText}</span>
+        </>
+      )}
       <span className="text-muted-foreground mx-1">·</span>
       <span className="text-muted-foreground">{liveBar.phaseDisplay}</span>
     </span>
