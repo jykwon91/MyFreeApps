@@ -10,6 +10,13 @@ interface NavDescriptor {
   label: string;
   iconName: string;
   exact?: boolean;
+  /**
+   * When true, this nav item is only included if `inTauri` is true (i.e.
+   * the SPA is running inside the Tauri desktop binary). The web build
+   * skips Tauri-only items entirely so the sidebar doesn't advertise
+   * features the web user can't activate.
+   */
+  desktopOnly?: boolean;
 }
 
 const NAV_DESCRIPTORS: NavDescriptor[] = [
@@ -17,18 +24,29 @@ const NAV_DESCRIPTORS: NavDescriptor[] = [
   { path: "/packages", label: "Packages", iconName: "Package" },
   { path: "/sources", label: "Sources", iconName: "PlaySquare" },
   { path: "/review", label: "Review", iconName: "ClipboardList" },
+  { path: "/live/cs2", label: "Live (CS2)", iconName: "Radio", desktopOnly: true },
   { path: "/settings", label: "Settings", iconName: "Settings" },
   { path: "/security", label: "Security", iconName: "Shield" },
 ];
 
-/** Build the full NavItem array — called once in RootLayout.tsx with injected icon nodes. */
+/**
+ * Build the full NavItem array — called once in RootLayout.tsx with injected
+ * icon nodes.
+ *
+ * @param icons    Map of icon-name → ReactNode (injected at the component layer).
+ * @param inTauri  True when running inside the Tauri desktop binary; filters
+ *                 out `desktopOnly` items in the web build.
+ */
 export function buildNav(
   icons: Record<string, ReactNode>,
+  inTauri: boolean = false,
 ): NavItem[] {
-  return NAV_DESCRIPTORS.map(({ path, label, iconName, exact }) => ({
-    path,
-    label,
-    icon: icons[iconName],
-    exact,
-  }));
+  return NAV_DESCRIPTORS.filter((d) => !d.desktopOnly || inTauri).map(
+    ({ path, label, iconName, exact }) => ({
+      path,
+      label,
+      icon: icons[iconName],
+      exact,
+    }),
+  );
 }

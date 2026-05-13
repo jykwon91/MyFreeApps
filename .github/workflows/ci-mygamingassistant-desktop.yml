@@ -182,11 +182,11 @@ jobs:
   rust-checks:
     # Cheap Rust-only checks that don't need the full bundle build.
     # Run on Linux only (results are platform-independent for a pure-Rust
-    # smoke test). PR 8+ should add `cargo test` once there's a real test
-    # surface to exercise.
+    # smoke test). PR 8 added `cargo test` once GSI gave us a real test
+    # surface to exercise (parser + installer + axum router unit/integration).
     name: rust-checks / linux-x64
     runs-on: ubuntu-22.04
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -243,3 +243,10 @@ jobs:
         # `-D warnings` flips clippy lints into hard errors, matching the
         # MBK + MJH frontend lint policy.
         run: cargo clippy --all-targets --all-features -- -D warnings
+
+      - name: cargo test
+        working-directory: apps/mygamingassistant/desktop/src-tauri
+        # Runs both the in-crate unit tests (under `#[cfg(test)] mod tests`)
+        # and the standalone integration tests in `tests/`. The latter
+        # exercises the real axum + tokio TCP listener.
+        run: cargo test --all-features

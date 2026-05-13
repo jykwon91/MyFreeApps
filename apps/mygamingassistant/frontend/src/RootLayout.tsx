@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { Outlet, ScrollRestoration, useSearchParams } from "react-router-dom";
 import {
   ClipboardList,
   Gamepad2,
   Package,
   PlaySquare,
+  Radio,
   Settings,
   Shield,
 } from "lucide-react";
@@ -12,6 +14,7 @@ import { buildNav } from "@/constants/nav";
 import { signOut } from "@/lib/auth";
 import { useIsSuperuser } from "@/hooks/useIsSuperuser";
 import { useGetCurrentUserQuery } from "@/lib/userApi";
+import { isTauri } from "@/lib/tauri";
 import type { CurrentUser } from "@/lib/userApi";
 
 const ANONYMOUS_USER = { name: "You", email: "" };
@@ -31,6 +34,7 @@ const ICONS: Record<string, React.ReactNode> = {
   Gamepad2: <Gamepad2 className="w-5 h-5" />,
   Package: <Package className="w-5 h-5" />,
   PlaySquare: <PlaySquare className="w-5 h-5" />,
+  Radio: <Radio className="w-5 h-5" />,
   Settings: <Settings className="w-5 h-5" />,
   Shield: <Shield className="w-5 h-5" />,
 };
@@ -42,10 +46,13 @@ export default function RootLayout() {
     skip: !isAuthenticated,
   });
   const [searchParams] = useSearchParams();
+  // Tauri injects `window.__TAURI_INTERNALS__` before the bundle's first
+  // script eval, so the check is stable at mount. Capture once.
+  const [inTauri] = useState(() => isTauri());
 
   const isCompact = searchParams.get("compact") === "1";
 
-  const nav = buildNav(ICONS);
+  const nav = buildNav(ICONS, inTauri);
   const user = isAuthenticated ? projectUser(currentUser) : ANONYMOUS_USER;
 
   const logo = (
