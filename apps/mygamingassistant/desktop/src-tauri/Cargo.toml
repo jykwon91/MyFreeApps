@@ -17,13 +17,31 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
+# `tauri-runtime-wry` brings in tokio under the hood. We enable the tokio
+# features axum needs without taking on the full multi-thread runtime
+# separately — axum runs on Tauri's existing runtime via `tokio::spawn`.
 tauri = { version = "2", features = [] }
 serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# axum + tower for the GSI HTTP receiver. We need only the bare minimum;
+# json extraction, routing, and a TCP listener. No tower-http (security
+# headers are unnecessary — this server is loopback-only and validated by
+# shared-secret token).
+axum = { version = "0.8", default-features = false, features = ["json", "tokio", "http1"] }
+tokio = { version = "1", default-features = false, features = ["net", "rt", "sync", "time", "macros"] }
+# Time formatting for `last_event_at`. `time` is smaller than `chrono` and
+# already a transitive dep of axum's dependency tree.
+time = { version = "0.3", features = ["formatting"] }
+# UUID for the per-install auth token. v4 = random.
+uuid = { version = "1", features = ["v4", "serde"] }
+# `dirs` resolves OS-specific user dirs (Steam install path detection on
+# Linux/macOS). Tiny dep, well-maintained, used by ~everything in the Rust
+# ecosystem that needs %APPDATA% / ~/.config / etc.
+dirs = "5"
+# Structured logs for malformed payloads / install errors — captured by
+# Tauri's own logger via the `log` facade.
+log = "0.4"
 
-# PR 8 will add (commented to document the planned shape, not yet wired):
-# tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
-# axum = "0.8"   # GSI HTTP receiver runs inside Tauri
-#
 # PR 9 will add (Windows-only conditional):
 # [target.'cfg(windows)'.dependencies]
 # windows = { version = "0.59", features = ["Win32_Graphics_Dxgi", "Win32_Graphics_Direct3D11"] }
@@ -34,3 +52,19 @@ serde = { version = "1", features = ["derive"] }
 default = ["custom-protocol"]
 # Required for `cargo tauri build` to produce a production binary.
 custom-protocol = ["tauri/custom-protocol"]
+
+[dev-dependencies]
+# `reqwest` drives the integration test that POSTs to the live receiver.
+# `default-features = false` drops the system-TLS dependency — we only POST
+# to `http://127.0.0.1` so we don't need TLS at all. `json` adds serde_json
+# integration so we can `.json(&body)` from the tests.
+reqwest = { version = "0.12", default-features = false, features = ["json"] }
+# tempfile for filesystem tests against the cfg installer.
+tempfile = "3"
+# tokio macros + multi-thread runtime for `#[tokio::test(flavor = "multi_thread")]`.
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "net"] }
+# `tower::ServiceExt::oneshot` is the canonical axum-router test driver —
+# lets us exercise the full request → response pipeline without binding a
+# TCP socket. axum re-exports `tower` transitively, but the `ServiceExt`
+# trait isn't in its public surface so we depend on tower directly.
+tower = { version = "0.5", features = ["util"] }

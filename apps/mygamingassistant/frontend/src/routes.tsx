@@ -2,6 +2,8 @@ import { type RouteObject } from "react-router-dom";
 import GameGrid from "@/pages/GameGrid";
 import LineupPackages from "@/pages/LineupPackages";
 import LineupUpload from "@/pages/LineupUpload";
+import LiveCs2 from "@/pages/LiveCs2";
+import LiveCs2Setup from "@/pages/LiveCs2Setup";
 import MapGrid from "@/pages/MapGrid";
 import MapPage from "@/pages/MapPage";
 import Review from "@/pages/Review";
@@ -16,6 +18,11 @@ import NotFound from "@/pages/NotFound";
 import RootLayout from "@/RootLayout";
 
 // MGA is single-user — no /register route.
+//
+// PR 8 adds the `/live/cs2` and `/live/cs2/setup` routes. Both are mounted
+// for ALL builds (web + desktop) so the routes resolve; the page
+// components themselves runtime-gate via `isTauri()` and render a
+// "desktop-only feature" placeholder in the web bundle.
 
 export const routes: RouteObject[] = [
   {
@@ -26,6 +33,8 @@ export const routes: RouteObject[] = [
       { path: "/packages", element: <LineupPackages /> },
       { path: "/sources", element: <Sources /> },
       { path: "/review", element: <Review /> },
+      { path: "/live/cs2", element: <LiveCs2 /> },
+      { path: "/live/cs2/setup", element: <LiveCs2Setup /> },
       { path: "/:gameSlug", element: <MapGrid /> },
       { path: "/:gameSlug/:mapSlug", element: <MapPage /> },
       { path: "/settings", element: <Settings /> },
