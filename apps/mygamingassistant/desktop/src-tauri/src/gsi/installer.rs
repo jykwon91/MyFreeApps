@@ -88,7 +88,9 @@ pub fn detect_cs2_cfg_dir_with_home(home: Option<PathBuf>) -> Option<PathBuf> {
     }
     #[cfg(target_os = "macos")]
     {
-        Some(home.join("Library/Application Support/Steam/steamapps/common/Counter-Strike Global Offensive/game/csgo/cfg"))
+        Some(home.join(
+            "Library/Application Support/Steam/steamapps/common/Counter-Strike Global Offensive/game/csgo/cfg",
+        ))
     }
     #[cfg(target_os = "linux")]
     {
@@ -97,7 +99,11 @@ pub fn detect_cs2_cfg_dir_with_home(home: Option<PathBuf>) -> Option<PathBuf> {
         //   - ~/.local/share/Steam/...     (the actual on-disk location)
         // We return the first; if writing fails the user can pass
         // `custom_path` pointing at either the symlink or the resolved path.
-        Some(home.join(".steam/steam/steamapps/common/Counter-Strike Global Offensive/game/csgo/cfg"))
+        Some(
+            home.join(
+                ".steam/steam/steamapps/common/Counter-Strike Global Offensive/game/csgo/cfg",
+            ),
+        )
     }
     #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
     {
@@ -167,11 +173,7 @@ fn resolve_cfg_dir(custom_path: Option<&str>) -> Option<PathBuf> {
 /// `custom_path` (optional): override of the cfg directory. Set this when
 /// CS2 lives in a non-default Steam library location. Pass `None` to use
 /// the OS-default path.
-pub fn install_gsi_cfg(
-    custom_path: Option<&str>,
-    port: u16,
-    auth_token: &str,
-) -> InstallResult {
+pub fn install_gsi_cfg(custom_path: Option<&str>, port: u16, auth_token: &str) -> InstallResult {
     let Some(cfg_dir) = resolve_cfg_dir(custom_path) else {
         return InstallResult {
             installed: false,
@@ -327,12 +329,15 @@ mod tests {
 
         let result = install_gsi_cfg(Some(&path_str), 8765, "test-token");
 
-        assert!(result.installed, "install should succeed: {:?}", result.error);
+        assert!(
+            result.installed,
+            "install should succeed: {:?}",
+            result.error
+        );
         assert_eq!(result.error, None);
         assert!(result.path.ends_with(GSI_CFG_FILENAME));
 
-        let cfg_contents =
-            std::fs::read_to_string(&result.path).expect("cfg should be readable");
+        let cfg_contents = std::fs::read_to_string(&result.path).expect("cfg should be readable");
         assert!(cfg_contents.contains("test-token"));
         assert!(cfg_contents.contains("8765"));
     }
@@ -364,7 +369,11 @@ mod tests {
 
         // Then uninstall
         let result = uninstall_gsi_cfg(Some(&path_str));
-        assert!(result.removed, "uninstall should succeed: {:?}", result.error);
+        assert!(
+            result.removed,
+            "uninstall should succeed: {:?}",
+            result.error
+        );
         assert!(!full_path.exists(), "file should be gone");
     }
 

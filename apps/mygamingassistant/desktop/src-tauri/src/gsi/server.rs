@@ -156,7 +156,11 @@ async fn handle_gsi_post(
         let fingerprint: String = provided_token.chars().take(4).collect();
         log::warn!(
             "GSI POST rejected: bad auth token (provided_prefix={}, expected_present={})",
-            if fingerprint.is_empty() { "<empty>" } else { &fingerprint },
+            if fingerprint.is_empty() {
+                "<empty>"
+            } else {
+                &fingerprint
+            },
             !expected_token.is_empty(),
         );
         return (StatusCode::UNAUTHORIZED, "unauthorized").into_response();

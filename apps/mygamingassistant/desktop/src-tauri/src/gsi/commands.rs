@@ -52,7 +52,11 @@ pub async fn install_cs2_gsi_config(
         });
     }
 
-    Ok(install_gsi_cfg(custom_path.as_deref(), snap.port, &auth_token))
+    Ok(install_gsi_cfg(
+        custom_path.as_deref(),
+        snap.port,
+        &auth_token,
+    ))
 }
 
 /// Remove the previously-installed GSI cfg.
