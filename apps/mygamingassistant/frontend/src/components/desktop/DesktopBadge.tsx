@@ -16,6 +16,7 @@ import { Monitor } from "lucide-react";
 import { Card } from "@platform/ui";
 import { invokeTauri, isTauri } from "@/lib/tauri";
 import type { AppVersion } from "@/types/desktop";
+import DesktopBadgeStatus from "@/components/desktop/DesktopBadgeStatus";
 
 export default function DesktopBadge() {
   // Capture the runtime check once at mount so we don't recompute every
@@ -51,17 +52,7 @@ export default function DesktopBadge() {
       <div className="flex items-center gap-3">
         <Monitor className="h-5 w-5 text-muted-foreground shrink-0" aria-hidden />
         <div className="text-sm">
-          {error ? (
-            <span className="text-destructive">IPC error: {error}</span>
-          ) : version ? (
-            <>
-              <span className="font-medium">v{version.version}</span>
-              <span className="text-muted-foreground"> · {version.build}</span>
-              <span className="text-muted-foreground"> · PR {version.pr}</span>
-            </>
-          ) : (
-            <span className="text-muted-foreground">Loading...</span>
-          )}
+          <DesktopBadgeStatus version={version} error={error} />
         </div>
       </div>
     </Card>
