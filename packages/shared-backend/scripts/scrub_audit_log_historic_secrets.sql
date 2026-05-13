@@ -42,6 +42,39 @@
 --
 -- NOT REVERSIBLE: the scrubbed values cannot be recovered. That is the
 -- point — these rows should never have held the values in the first place.
+--
+-- APPEND-ONLY TRIGGER (observed 2026-05-13 on MBK prod):
+--
+-- audit_logs has a ``prevent_audit_log_mutation()`` BEFORE-UPDATE-OR-DELETE
+-- trigger that aborts the transaction with:
+--   "audit_logs table is append-only: UPDATE operations are not allowed"
+--
+-- This is the correct security design — audit trails must be tamper-proof —
+-- and it WILL block this script if rows exist. The pre-scrub count still
+-- runs (SELECT is allowed), so you can see how many rows would be touched
+-- before the UPDATE statement aborts.
+--
+-- When this happens:
+--   * If the rows are CIPHERTEXT (MBK service-layer-encrypted columns:
+--     access_token_encrypted, refresh_token_encrypted, totp_secret,
+--     totp_recovery_codes) → LOW severity. Leave them. The new audit mask
+--     stops fresh ciphertext from being added; existing rows are useless
+--     without ENCRYPTION_KEY anyway. Preserving the append-only guarantee
+--     is more valuable than scrubbing 22 rows of ciphertext.
+--   * If the rows are PLAINTEXT (MJH/MGA EncryptedString columns, where
+--     the audit listener captures the Python value before bind-time
+--     encryption fires) → real exposure. Coordinate with the operator to
+--     temporarily disable the trigger via SQL:
+--       ALTER TABLE audit_logs DISABLE TRIGGER prevent_audit_log_mutation;
+--       -- run this script's UPDATE
+--       ALTER TABLE audit_logs ENABLE TRIGGER prevent_audit_log_mutation;
+--     Document the action in the operational runbook (the audit chain
+--     for THIS scrub is now broken; the disable/enable boundary IS the
+--     evidence).
+--
+-- As of PR #618 deploy: MJH had 0 plaintext rows (no TOTP enrollments
+-- ever happened pre-fix); MGA wasn't yet deployed; MBK had 22 ciphertext
+-- rows that were left in place per the LOW-severity rule above.
 
 BEGIN;
 
