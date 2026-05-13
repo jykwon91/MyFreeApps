@@ -27,6 +27,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Monitor, Settings as SettingsIcon } from "lucide-react";
 import { useGsiState, summarizeLiveBar } from "@/lib/gsi";
+import { useCvState } from "@/lib/cv";
 import { useGetLineupsQuery } from "@/store/lineupsApi";
 import { isTauri } from "@/lib/tauri";
 import LineupCard from "@/components/lineup/LineupCard";
@@ -48,6 +49,11 @@ export default function LiveCs2() {
   }>({ enabled: false, mapSlug: "", side: "any" });
 
   const { event, status, ready } = useGsiState();
+  // CV pipeline state (PR 9a). On the web build this returns ready=true with
+  // null zone/status — same degraded shape as useGsiState — so no extra
+  // gating is required. The override flow ignores zone (operator picked
+  // map+side manually).
+  const { zone: cvZone } = useCvState();
 
   // Apply always-on-top + small window shape on mount (Tauri only). Restore
   // on unmount.
@@ -109,15 +115,22 @@ export default function LiveCs2() {
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [effectiveMapSlug, effectiveSide]);
 
-  // Fetch lineups for the effective (map, side). Skip until we have a map
-  // slug to look up.
+  // Effective zone slug: CV-detected when not overriding, undefined when
+  // overriding or no CV detection yet. Falls back gracefully to the
+  // map+side filter (PR 8 behaviour).
+  const effectiveZone = !override.enabled && cvZone ? cvZone : undefined;
+
+  // Fetch lineups for the effective (map, side, zone). Skip until we have
+  // a map slug to look up. When zone is present, the backend narrows the
+  // result further — that's what powers PR 9a's "zone-level live filter".
   const lineupQueryArgs = useMemo(
     () => ({
       game_slug: GAME_SLUG_CS2,
       map_slug: effectiveMapSlug,
       side: effectiveSide !== "any" ? effectiveSide : undefined,
+      target_zone_slug: effectiveZone,
     }),
-    [effectiveMapSlug, effectiveSide],
+    [effectiveMapSlug, effectiveSide, effectiveZone],
   );
 
   const { data: lineups = [], isFetching: lineupsFetching } =
@@ -142,6 +155,7 @@ export default function LiveCs2() {
         liveBar={liveBar}
         override={override}
         onOverrideToggle={(enabled) => setOverride((p) => ({ ...p, enabled }))}
+        zoneSlug={effectiveZone ?? null}
       />
 
       <LiveOverridePanel
@@ -161,8 +175,9 @@ export default function LiveCs2() {
           <LiveStripSkeleton />
         ) : lineups.length === 0 ? (
           <p className="text-sm text-muted-foreground p-4">
-            No lineups for {effectiveMapSlug} on {effectiveSide}. Add one in
-            plan mode (press F1).
+            No lineups for {effectiveMapSlug} on {effectiveSide}
+            {effectiveZone ? ` in ${effectiveZone}` : ""}. Add one in plan
+            mode (press F1).
           </p>
         ) : (
           <div className="flex gap-3 h-full">

@@ -126,4 +126,86 @@ describe("LiveTopBar component", () => {
     expect(headerText).toContain("(override)");
     expect(screen.getByRole("button", { pressed: true })).toBeInTheDocument();
   });
+
+  // PR 9a — zone segment
+  it("does NOT render zone segment when zoneSlug is null", () => {
+    render(
+      <LiveTopBar
+        ready={true}
+        running={true}
+        payloadsReceived={5}
+        lastEventAt={undefined}
+        liveBar={{
+          mapDisplay: "Mirage",
+          sideDisplay: "CT",
+          phaseDisplay: "Live",
+        }}
+        override={{ enabled: false, mapSlug: "", side: "any" }}
+        onOverrideToggle={() => undefined}
+        zoneSlug={null}
+      />,
+    );
+    expect(screen.queryByTestId("live-zone")).not.toBeInTheDocument();
+  });
+
+  it("renders zone segment when zoneSlug is provided", () => {
+    render(
+      <LiveTopBar
+        ready={true}
+        running={true}
+        payloadsReceived={5}
+        lastEventAt={undefined}
+        liveBar={{
+          mapDisplay: "Mirage",
+          sideDisplay: "CT",
+          phaseDisplay: "Live",
+        }}
+        override={{ enabled: false, mapSlug: "", side: "any" }}
+        onOverrideToggle={() => undefined}
+        zoneSlug="b-site"
+      />,
+    );
+    const zone = screen.getByTestId("live-zone");
+    expect(zone).toBeInTheDocument();
+    expect(zone.textContent).toBe("B Site");
+  });
+
+  it("formats kebab-case zone slugs nicely", () => {
+    render(
+      <LiveTopBar
+        ready={true}
+        running={true}
+        payloadsReceived={5}
+        lastEventAt={undefined}
+        liveBar={{
+          mapDisplay: "Mirage",
+          sideDisplay: "CT",
+          phaseDisplay: "Live",
+        }}
+        override={{ enabled: false, mapSlug: "", side: "any" }}
+        onOverrideToggle={() => undefined}
+        zoneSlug="b-apts"
+      />,
+    );
+    expect(screen.getByTestId("live-zone").textContent).toBe("B Apts");
+  });
+
+  it("hides zone segment when override is enabled (manual mode wins)", () => {
+    render(
+      <LiveTopBar
+        ready={true}
+        running={true}
+        payloadsReceived={0}
+        lastEventAt={undefined}
+        liveBar={null}
+        override={{ enabled: true, mapSlug: "dust2", side: "side_a" }}
+        onOverrideToggle={() => undefined}
+        zoneSlug="a-site"
+      />,
+    );
+    // Even though zoneSlug is set, override mode hides the zone segment —
+    // the operator is manually picking map+side; zone narrowing doesn't
+    // apply.
+    expect(screen.queryByTestId("live-zone")).not.toBeInTheDocument();
+  });
 });
