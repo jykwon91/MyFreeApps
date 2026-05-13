@@ -44,6 +44,7 @@ Thumbs.db
 *.dump
 *.sql
 !**/alembic/**/*.sql
+!packages/shared-backend/scripts/*.sql
 
 # Playwright
 **/playwright-report/
