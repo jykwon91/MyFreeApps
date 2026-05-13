@@ -1,6 +1,6 @@
 import uuid
 from collections.abc import Sequence
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -106,6 +106,27 @@ async def update_last_synced(
     db: AsyncSession, integration: Integration, synced_at: datetime
 ) -> None:
     integration.last_synced_at = synced_at
+
+
+async def update_access_token(
+    db: AsyncSession,
+    integration: Integration,
+    access_token: str,
+    expiry: datetime | None,
+) -> None:
+    """Persist a refreshed access token (and its expiry) for this integration.
+
+    Called after Google's auth library mints a new access token in-memory.
+    Without this, every Gmail call would re-trigger a refresh because the
+    DB-stored access_token stays frozen at OAuth-callback time.
+
+    ``expiry`` is normalized to timezone-aware UTC because google-auth returns
+    naive UTC datetimes.
+    """
+    integration.access_token = access_token
+    if expiry is not None and expiry.tzinfo is None:
+        expiry = expiry.replace(tzinfo=timezone.utc)
+    integration.token_expiry = expiry
 
 
 async def get_gmail_user_ids(db: AsyncSession) -> list[str]:

@@ -107,7 +107,7 @@ async def test_discovery_filters_bounce_and_logs_it(
             return_value=_bounce_sources_data(),
         ),
     ):
-        mock_gmail.return_value = MagicMock()
+        mock_gmail.return_value = (MagicMock(), MagicMock(token="t0"))
 
         from app.services.email.email_discovery_service import discover_gmail_emails
 
@@ -164,7 +164,7 @@ async def test_discovery_queues_legit_email_alongside_filtered_bounce(
             side_effect=fake_list_sources,
         ),
     ):
-        mock_gmail.return_value = MagicMock()
+        mock_gmail.return_value = (MagicMock(), MagicMock(token="t0"))
 
         from app.services.email.email_discovery_service import discover_gmail_emails
 
@@ -223,7 +223,7 @@ async def test_discovery_does_not_call_extraction_for_filtered_bounce(
             "app.services.extraction.claude_service.extract_from_image"
         ) as mock_extract_image,
     ):
-        mock_gmail.return_value = MagicMock()
+        mock_gmail.return_value = (MagicMock(), MagicMock(token="t0"))
 
         from app.services.email.email_discovery_service import discover_gmail_emails
 

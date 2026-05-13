@@ -59,7 +59,47 @@ def _normalize_filename(raw: str) -> str:
     return cleaned
 
 
-def get_gmail_service(access_token: str, refresh_token: str | None = None):
+async def persist_refreshed_token(
+    integration,  # type: ignore[no-untyped-def] — app.models.integrations.Integration, avoid circular import
+    creds: Credentials,
+    prior_token: str | None,
+) -> None:
+    """Persist Google's in-memory refreshed access token back to the DB.
+
+    Google's auth library rotates the access token whenever it expires (~1h),
+    but the rotation lives only on the in-memory ``Credentials`` instance. If
+    we don't write it back, every subsequent sync re-uses the original stored
+    token, gets a 401, and pays for another refresh. With this helper, the
+    refresh only happens once per real expiry.
+
+    Opens its own ``unit_of_work`` so it isn't entangled with whatever
+    transaction shape the caller has.
+    """
+    if not creds.token or creds.token == prior_token:
+        return
+    async with unit_of_work() as db:
+        refreshed = await integration_repo.get_by_org_and_provider(
+            db, integration.organization_id, "gmail"
+        )
+        if refreshed is not None:
+            await integration_repo.update_access_token(
+                db, refreshed, creds.token, creds.expiry
+            )
+
+
+def get_gmail_service(
+    access_token: str, refresh_token: str | None = None,
+) -> tuple[object, Credentials]:
+    """Build a Gmail API client.
+
+    Returns ``(service, creds)``. Google's auth library auto-refreshes the
+    access token in-memory when it gets a 401 — but the refreshed value lives
+    only on ``creds``. Callers must inspect ``creds.token`` after each Gmail
+    call and persist via ``integration_repo.update_access_token`` if it
+    diverges from the value originally passed in. Without that step, every
+    sync re-uses the stale DB-stored access token and re-pays the refresh
+    roundtrip on the next call.
+    """
     creds = Credentials(
         token=access_token,
         refresh_token=refresh_token,
@@ -67,7 +107,7 @@ def get_gmail_service(access_token: str, refresh_token: str | None = None):
         client_id=settings.google_client_id,
         client_secret=settings.google_client_secret,
     )
-    return build("gmail", "v1", credentials=creds)
+    return build("gmail", "v1", credentials=creds), creds
 
 
 def list_new_email_ids(
@@ -366,7 +406,8 @@ async def send_message_with_attachment(
 
     raw = base64.urlsafe_b64encode(msg.as_bytes()).decode("ascii")
 
-    service = get_gmail_service(integration.access_token, integration.refresh_token)
+    service, creds = get_gmail_service(integration.access_token, integration.refresh_token)
+    prior_token = creds.token
     try:
         sent = service.users().messages().send(
             userId="me", body={"raw": raw},
@@ -419,6 +460,7 @@ async def send_message_with_attachment(
     sent_id = sent.get("id")
     if not isinstance(sent_id, str) or not sent_id:
         raise GmailSendError("Gmail did not return a message id")
+    await persist_refreshed_token(integration, creds, prior_token)
     return sent_id
 
 
@@ -474,7 +516,8 @@ async def send_message(
 
     raw = base64.urlsafe_b64encode(message.as_bytes()).decode("ascii")
 
-    service = get_gmail_service(integration.access_token, integration.refresh_token)
+    service, creds = get_gmail_service(integration.access_token, integration.refresh_token)
+    prior_token = creds.token
     try:
         sent = service.users().messages().send(
             userId="me", body={"raw": raw},
@@ -527,4 +570,5 @@ async def send_message(
     sent_id = sent.get("id")
     if not isinstance(sent_id, str) or not sent_id:
         raise GmailSendError("Gmail did not return a message id")
+    await persist_refreshed_token(integration, creds, prior_token)
     return sent_id

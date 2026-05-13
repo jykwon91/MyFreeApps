@@ -15,7 +15,12 @@ from app.db.session import AsyncSessionLocal, unit_of_work
 from app.models.email.email_types import EmailBodyData, FetchResult
 from app.repositories import email_queue_repo, integration_repo, sync_log_repo
 from app.services.email.exceptions import GmailReauthRequiredError
-from app.services.email.gmail_service import fetch_attachment_bytes, fetch_email_body, get_gmail_service
+from app.services.email.gmail_service import (
+    fetch_attachment_bytes,
+    fetch_email_body,
+    get_gmail_service,
+    persist_refreshed_token,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -83,7 +88,8 @@ async def _fetch_next_pending(ctx: RequestContext) -> FetchResult:
         refresh_token: str | None = integration.refresh_token
 
     try:
-        service = get_gmail_service(access_token, refresh_token)
+        service, creds = get_gmail_service(access_token, refresh_token)
+        prior_token = creds.token
 
         raw_bytes: bytes
         if attachment_id == "body":
@@ -104,6 +110,7 @@ async def _fetch_next_pending(ctx: RequestContext) -> FetchResult:
 
             await _complete_sync_log_if_done(db, sync_log_id, ctx)
 
+        await persist_refreshed_token(integration, creds, prior_token)
         return FetchResult("fetched")
 
     except RefreshError as exc:

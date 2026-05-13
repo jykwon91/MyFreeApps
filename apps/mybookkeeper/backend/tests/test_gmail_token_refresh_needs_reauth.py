@@ -129,7 +129,7 @@ class TestFetchPathHttpError401:
             ),
             patch(
                 "app.services.email.email_fetch_service.get_gmail_service",
-                return_value=MagicMock(),
+                return_value=(MagicMock(), MagicMock(token="t0")),
             ),
             patch(
                 "app.services.email.email_fetch_service.fetch_attachment_bytes",
@@ -206,7 +206,7 @@ class TestFetchPathHttpError401:
             ),
             patch(
                 "app.services.email.email_fetch_service.get_gmail_service",
-                return_value=MagicMock(),
+                return_value=(MagicMock(), MagicMock(token="t0")),
             ),
             patch(
                 "app.services.email.email_fetch_service.fetch_attachment_bytes",
@@ -283,7 +283,7 @@ class TestFetchPathHttpError401:
             ),
             patch(
                 "app.services.email.email_fetch_service.get_gmail_service",
-                return_value=MagicMock(),
+                return_value=(MagicMock(), MagicMock(token="t0")),
             ),
             patch(
                 "app.services.email.email_fetch_service.fetch_attachment_bytes",
@@ -350,7 +350,7 @@ class TestSendPathNeedsReauth:
                 "app.services.email.gmail_service.integration_repo.mark_needs_reauth",
                 new=fake_mark_needs_reauth,
             ),
-            patch("app.services.email.gmail_service.get_gmail_service", return_value=mock_service),
+            patch("app.services.email.gmail_service.get_gmail_service", return_value=(mock_service, MagicMock(token="t0"))),
             stale,
         )
 
