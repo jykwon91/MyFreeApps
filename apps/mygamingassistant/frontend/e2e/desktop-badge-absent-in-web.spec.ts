@@ -19,6 +19,22 @@ import { test, expect } from "@playwright/test";
 import { getOperatorCredentials, loginViaUI } from "./fixtures/auth";
 
 test.describe("DesktopBadge — web build (PR 7)", () => {
+  test.afterEach(async ({ page }) => {
+    // Clear browser session state so the next test starts clean even if
+    // Playwright's per-test `storageState: { cookies: [], origins: [] }`
+    // isolation is ever weakened. MGA is single-user (no test users to
+    // delete server-side), so this is purely browser-side cleanup.
+    await page.context().clearCookies();
+    await page.evaluate(() => {
+      try {
+        window.localStorage.clear();
+        window.sessionStorage.clear();
+      } catch {
+        // Some pages (e.g., about:blank) deny storage access; safe to ignore.
+      }
+    });
+  });
+
   test("Settings page does NOT show the Desktop build card", async ({
     page,
     request,
