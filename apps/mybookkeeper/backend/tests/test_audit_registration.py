@@ -58,8 +58,20 @@ class TestMBKAuditRegistration:
             assert field in registered, f"{field!r} must be registered as sensitive."
 
     def test_secrets_are_registered(self) -> None:
+        # Field names MUST match the actual SQLAlchemy column attributes.
+        # `access_token` / `refresh_token` are @hybrid_property accessors on
+        # Integration, not mapped columns — the audit listener only sees the
+        # underlying `*_encrypted` columns. Pre-PR-#618 these were misregistered
+        # (the mask silently never fired); the verifier in
+        # platform_shared.core.audit now catches that class of bug at boot.
         registered = get_sensitive_fields()
-        for field in ("hashed_password", "access_token", "refresh_token"):
+        for field in (
+            "hashed_password",
+            "access_token_encrypted",
+            "refresh_token_encrypted",
+            "totp_secret",
+            "totp_recovery_codes",
+        ):
             assert field in registered
 
     def test_default_audit_logs_skip_table_is_present(self) -> None:
