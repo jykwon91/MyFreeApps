@@ -55,7 +55,9 @@ jobs:
             # Tauri's Linux webview requires GTK/WebKit system libraries.
             # See https://tauri.app/start/prerequisites/#linux for the
             # canonical list. Pinned to apt packages available in 22.04.
-            apt-deps: |
+            # `>-` folds newlines into single spaces (vs `|` which preserves
+            # them and breaks apt-get into per-line commands).
+            apt-deps: >-
               libwebkit2gtk-4.1-dev
               libssl-dev
               libayatana-appindicator3-dev
