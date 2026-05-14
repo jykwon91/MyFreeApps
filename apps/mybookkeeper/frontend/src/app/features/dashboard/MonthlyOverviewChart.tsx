@@ -22,6 +22,7 @@ import type { MonthSummary } from "@/shared/types/summary/month-summary";
 import type { MonthExpenseSummary } from "@/shared/types/summary/month-expense-summary";
 import type { DrillDownFilter } from "@/shared/types/dashboard/drill-down-filter";
 import type { DateRange } from "@/shared/types/dashboard/date-range";
+import type { MergedRow } from "@/shared/types/dashboard/merged-row";
 import type { PropertyMonthlySummary } from "@/shared/types/summary/property-monthly-summary";
 import { mergeData, buildFilter } from "@/shared/utils/chart-utils";
 
@@ -150,9 +151,9 @@ export default function MonthlyOverviewChart({
                 fill={pk.revenueColor}
                 radius={[2, 2, 0, 0]}
                 cursor="pointer"
-                onClick={(_data, _index, e) => {
+                onClick={(data, _index, e) => {
                   if (!isDragging.current) {
-                    const entry = chartData[_index];
+                    const entry = data.payload as MergedRow | undefined;
                     if (entry) onBarClick(buildFilter(`rev_${pk.propertyId}`, entry, propertyKeys));
                   }
                   e.stopPropagation();
@@ -166,9 +167,9 @@ export default function MonthlyOverviewChart({
                 fill="#22c55e"
                 radius={[2, 2, 0, 0]}
                 cursor="pointer"
-                onClick={(_data, _index, e) => {
+                onClick={(data, _index, e) => {
                   if (!isDragging.current) {
-                    const entry = chartData[_index];
+                    const entry = data.payload as MergedRow | undefined;
                     if (entry) onBarClick(buildFilter("revenue", entry));
                   }
                   e.stopPropagation();
@@ -184,9 +185,9 @@ export default function MonthlyOverviewChart({
                 fill={pk.expenseColor}
                 radius={[2, 2, 0, 0]}
                 cursor="pointer"
-                onClick={(_data, _index, e) => {
+                onClick={(data, _index, e) => {
                   if (!isDragging.current) {
-                    const entry = chartData[_index];
+                    const entry = data.payload as MergedRow | undefined;
                     if (entry) onBarClick(buildFilter(`exp_${pk.propertyId}`, entry, propertyKeys));
                   }
                   e.stopPropagation();
@@ -201,9 +202,9 @@ export default function MonthlyOverviewChart({
                 stackId="expenses"
                 fill={TAG_COLORS[cat] ?? "#94a3b8"}
                 cursor="pointer"
-                onClick={(_data, _index, e) => {
+                onClick={(data, _index, e) => {
                   if (!isDragging.current) {
-                    const entry = chartData[_index];
+                    const entry = data.payload as MergedRow | undefined;
                     if (entry) onBarClick(buildFilter(cat, entry));
                   }
                   e.stopPropagation();
