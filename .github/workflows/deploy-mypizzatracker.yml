@@ -1,0 +1,95 @@
+# GENERATED FROM infra/templates/.github/workflows/deploy.yml.j2 — DO NOT EDIT.
+# Edit the template + apps/<app>/app.yaml; re-render via:
+#   python -m platform_shared.infra.render --app mypizzatracker
+
+name: Deploy MyPizzaTracker
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/mypizzatracker/**'
+      - 'packages/**'
+
+concurrency:
+  group: deploy-mypizzatracker
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          command_timeout: 10m
+          script: |
+            set -e
+            cd /srv/myfreeapps
+
+            echo "--- Pull latest code ---"
+            git pull --ff-only
+
+            echo "--- Preflight: verify required env files exist ---"
+            test -f /srv/myfreeapps/apps/mypizzatracker/.env || {
+              echo "::error::Missing /srv/myfreeapps/apps/mypizzatracker/.env — create from .env.example first"
+              exit 1
+            }
+            test -f /srv/myfreeapps/apps/mypizzatracker/backend/.env.docker || {
+              echo "::error::Missing /srv/myfreeapps/apps/mypizzatracker/backend/.env.docker — create from .env.example first"
+              exit 1
+            }
+            echo "Env files present — proceeding"
+
+            echo "--- Build and deploy with Docker ---"
+            # --env-file exposes backend/.env.docker variables to docker compose's
+            # build args (caddy.build.args reads VITE_TURNSTILE_SITE_KEY from the
+            # shell). Without --env-file the bundle gets baked with an empty
+            # site key and TurnstileWidget renders null in production.
+            docker compose -f apps/mypizzatracker/docker-compose.yml \
+              --env-file apps/mypizzatracker/backend/.env.docker \
+              build
+            docker compose -f apps/mypizzatracker/docker-compose.yml up -d --remove-orphans
+
+            echo "--- One-time cleanup: remove obsolete frontend_dist volume ---"
+            # The frontend_dist volume was used by the pre-baked-caddy layout.
+            # The new layout bakes dist into the caddy image; volume is orphaned.
+            docker volume rm mypizzatracker_frontend_dist 2>/dev/null || true
+
+            echo "--- Run database migrations ---"
+            docker compose -f apps/mypizzatracker/docker-compose.yml exec -T api alembic upgrade head
+
+            echo "--- Wait for API health check ---"
+            for i in $(seq 1 30); do
+              if docker compose -f apps/mypizzatracker/docker-compose.yml exec -T api python -c "import urllib.request; urllib.request.urlopen('http://localhost:8006/health')" 2>/dev/null; then
+                echo "API is healthy"
+                break
+              fi
+              if [ $i -eq 30 ]; then
+                echo "API health check failed after 30 attempts"
+                docker compose -f apps/mypizzatracker/docker-compose.yml logs api --tail=50
+                exit 1
+              fi
+              sleep 2
+            done
+
+            echo "--- Update host Caddyfile ---"
+            # Sync the SHARED host Caddyfile (infra/Caddyfile) → /etc/caddy/Caddyfile.
+            # The shared file holds blocks for every app in the monorepo so a
+            # deploy of one app does not wipe another's host-Caddy entry.
+            if ! diff -q infra/Caddyfile /etc/caddy/Caddyfile > /dev/null 2>&1; then
+              echo "Host Caddyfile differs from repo — updating"
+              sudo cp infra/Caddyfile /etc/caddy/Caddyfile
+              sudo caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+              sudo caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile
+              echo "Host Caddy reloaded with new config"
+            else
+              echo "Host Caddyfile already up to date"
+            fi
