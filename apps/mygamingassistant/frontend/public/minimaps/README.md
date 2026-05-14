@@ -28,17 +28,28 @@ mirage.png    inferno.png   dust2.png     overpass.png   nuke.png
 anubis.png    ancient.png   vertigo.png
 ```
 
-Source from a local CS2 install — Valve ships the radar overviews as PNGs inside
-`pak01_dir.vpk`:
+All 8 are bundled in this repo, sourced from
+[MurkyYT/cs2-map-icons](https://github.com/MurkyYT/cs2-map-icons) — a community
+mirror that scrapes Valve's official game depot daily. The PNGs at
+`images/radars/de_<slug>_radar_psd.png` are byte-identical to the ones inside
+`pak01_dir.vpk → resource/overviews/<map>_radar.png` on disk.
+
+**Refreshing** (after a major Valve map update):
+
+```bash
+cd apps/mygamingassistant/frontend/public/minimaps/cs2/
+BASE="https://raw.githubusercontent.com/MurkyYT/cs2-map-icons/main/images/radars"
+for slug in mirage inferno dust2 overpass nuke anubis ancient vertigo; do
+  curl -sSL -o "${slug}.png" "${BASE}/de_${slug}_radar_psd.png"
+done
+```
+
+**Alternative — extract from your local CS2 install** with [Source 2 Viewer](https://valveresourceformat.github.io/):
 
 ```
 <Steam>\steamapps\common\Counter-Strike Global Offensive\game\csgo\pak01_dir.vpk
   → resource/overviews/<map>_radar.png
 ```
-
-Extract with [Source 2 Viewer](https://valveresourceformat.github.io/) (formerly
-VRF). Open the .vpk, navigate to `resource/overviews/`, right-click the relevant
-`*_radar.png` and save to this directory renamed to `<slug>.png`.
 
 Active duty maps as of 2026-05: Mirage, Inferno, Dust II, Anubis, Ancient,
 Nuke, Vertigo. Reserve pool adds Overpass.
