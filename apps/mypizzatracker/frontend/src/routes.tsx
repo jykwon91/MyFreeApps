@@ -10,6 +10,7 @@ import ResetPassword from "@/pages/ResetPassword";
 import VerifyEmail from "@/pages/VerifyEmail";
 import NotFound from "@/pages/NotFound";
 import PublicOrder from "@/pages/PublicOrder";
+import PublicOrderStatus from "@/pages/PublicOrderStatus";
 import RootLayout from "@/RootLayout";
 
 // Scaffolded app -- single-user, no /register route.
@@ -29,6 +30,8 @@ export const routes: RouteObject[] = [
     ],
   },
   { path: "/order", element: <PublicOrder /> },
+  { path: "/order/status", element: <PublicOrderStatus /> },
+  { path: "/order/status/:orderId", element: <PublicOrderStatus /> },
   { path: "/login", element: <Login /> },
   { path: "/forgot-password", element: <ForgotPassword /> },
   { path: "/reset-password", element: <ResetPassword /> },

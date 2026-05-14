@@ -1,4 +1,4 @@
-"""Tests for the customer-facing public order placement API.
+"""Tests for the customer-facing public order placement + status API.
 
 Covers:
 - GET  /public/menu surfaces only active pizzas + toppings
@@ -8,6 +8,7 @@ Covers:
 - POST /public/orders rejects: missing drop, drop not active, slot mismatch,
   capacity exceeded, empty pizza list, 86'd pizza, unknown topping, malformed phone
 - Customer upsert: same phone reuses the customer; name updates stick
+- GET  /public/orders/{id} returns the same confirmation shape; 404 when unknown
 - No auth header is needed for any /public/* route
 """
 from __future__ import annotations
@@ -489,3 +490,74 @@ async def test_order_rejected_with_no_digits_phone(
     )
     assert resp.status_code == 400
     assert "digit" in resp.json()["detail"].lower()
+
+
+# ---------------------------------------------------------------------------
+# Status check (GET /public/orders/{id})
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_get_order_returns_same_shape_as_placement(
+    client: AsyncClient, auth_client: AsyncClient,
+):
+    drop_id, slot_id = await _create_active_drop(auth_client)
+    pizza_id = await _create_pizza(auth_client, "La Clasica", "17.00")
+    topping_id = await _create_topping(auth_client, "Mushrooms", "0")
+
+    client.headers.pop("Authorization", None)
+    placement = await client.post(
+        "/public/orders",
+        json={
+            "drop_id": drop_id,
+            "slot_id": slot_id,
+            "customer_name": "Tyra",
+            "customer_phone": "(512) 555-7777",
+            "payment_method_tag": "venmo",
+            "pizzas": [
+                {
+                    "pizza_type_id": pizza_id,
+                    "topping_type_ids": [topping_id],
+                    "modifications_text": "well done",
+                },
+            ],
+        },
+    )
+    assert placement.status_code == 201
+    placed = placement.json()
+    order_id = placed["order_id"]
+
+    lookup = await client.get(f"/public/orders/{order_id}")
+    assert lookup.status_code == 200
+    fetched = lookup.json()
+
+    # Status check must surface the exact same identity + state the customer
+    # saw on placement. ``created_at`` is included in both shapes.
+    assert fetched["order_id"] == order_id
+    assert fetched["customer_name"] == placed["customer_name"]
+    assert fetched["customer_phone"] == placed["customer_phone"]
+    assert fetched["status"] == placed["status"]
+    assert fetched["payment_status"] == placed["payment_status"]
+    assert fetched["total"] == placed["total"]
+    assert len(fetched["pizzas"]) == 1
+    assert fetched["pizzas"][0]["pizza_name"] == "La Clasica"
+    assert fetched["pizzas"][0]["toppings"] == ["Mushrooms"]
+    assert fetched["pizzas"][0]["modifications_text"] == "well done"
+
+
+@pytest.mark.asyncio
+async def test_get_order_404_when_unknown(client: AsyncClient):
+    """A random UUID should not leak existence."""
+    client.headers.pop("Authorization", None)
+    resp = await client.get(
+        "/public/orders/00000000-0000-0000-0000-000000000000",
+    )
+    assert resp.status_code == 404
+    assert "not found" in resp.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_get_order_invalid_uuid_422(client: AsyncClient):
+    """Malformed UUID is a 422 from FastAPI's path-param coercion."""
+    client.headers.pop("Authorization", None)
+    resp = await client.get("/public/orders/not-a-uuid")
+    assert resp.status_code == 422
