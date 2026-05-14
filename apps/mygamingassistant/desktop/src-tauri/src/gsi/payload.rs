@@ -310,6 +310,7 @@ pub struct GsiEvent {
     /// when:
     ///   - The active weapon isn't a grenade (knife, rifle, etc.).
     ///   - The player isn't holding any weapon.
+    ///
     /// **This is the primary signal for PR 10's utility-held filter**:
     /// when present, the live lineup query narrows to lineups matching this
     /// utility slug (intersected with map + side).

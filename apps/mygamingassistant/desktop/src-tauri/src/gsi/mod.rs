@@ -33,7 +33,7 @@
 //!   - `state`      — Shared `ServerState` (auth token, status counters).
 //!   - `commands`   — Tauri IPC entry points (`gsi_server_status`, etc.).
 //!   - `weapons`    — CS2 weapon-slug → MGA utility-type-slug mapping
-//!                    (PR 10). Drives the live utility-held lineup filter.
+//!     (PR 10). Drives the live utility-held lineup filter.
 
 pub mod commands;
 pub mod installer;
