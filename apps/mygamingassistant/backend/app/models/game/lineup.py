@@ -114,6 +114,14 @@ class Lineup(Base):
     aim_anchor_x: Mapped[float | None] = mapped_column(Float, nullable=True)
     aim_anchor_y: Mapped[float | None] = mapped_column(Float, nullable=True)
 
+    # Normalized 0-1 minimap positions. NULL falls back to zone centroid at
+    # read time so existing lineups render without backfill (PR 1/3 in the
+    # lineup-pins series).
+    stand_anchor_x: Mapped[float | None] = mapped_column(Float, nullable=True)
+    stand_anchor_y: Mapped[float | None] = mapped_column(Float, nullable=True)
+    target_anchor_x: Mapped[float | None] = mapped_column(Float, nullable=True)
+    target_anchor_y: Mapped[float | None] = mapped_column(Float, nullable=True)
+
     # How many seconds the throw takes to execute
     setup_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
 

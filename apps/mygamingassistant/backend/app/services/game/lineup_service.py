@@ -156,6 +156,10 @@ async def create(
         "aim_screenshot_url": aim_url,
         "aim_anchor_x": payload.aim_anchor_x,
         "aim_anchor_y": payload.aim_anchor_y,
+        "stand_anchor_x": payload.stand_anchor_x,
+        "stand_anchor_y": payload.stand_anchor_y,
+        "target_anchor_x": payload.target_anchor_x,
+        "target_anchor_y": payload.target_anchor_y,
         "setup_seconds": payload.setup_seconds,
         "attribution_url": payload.attribution_url,
         "attribution_author": payload.attribution_author,
@@ -328,6 +332,14 @@ async def accept(
         overrides["aim_anchor_x"] = body.aim_anchor_x
     if body.aim_anchor_y is not None:
         overrides["aim_anchor_y"] = body.aim_anchor_y
+    if body.stand_anchor_x is not None:
+        overrides["stand_anchor_x"] = body.stand_anchor_x
+    if body.stand_anchor_y is not None:
+        overrides["stand_anchor_y"] = body.stand_anchor_y
+    if body.target_anchor_x is not None:
+        overrides["target_anchor_x"] = body.target_anchor_x
+    if body.target_anchor_y is not None:
+        overrides["target_anchor_y"] = body.target_anchor_y
     if body.setup_seconds is not None:
         overrides["setup_seconds"] = body.setup_seconds
 
