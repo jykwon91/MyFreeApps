@@ -25,6 +25,9 @@ import { useGetLineupsQuery, useGetZoneDensityQuery } from "@/store/lineupsApi";
 import { useGetLineupPackagesQuery, usePinAllLineupPackageMutation } from "@/store/lineupPackagesApi";
 import LineupCard from "@/components/lineup/LineupCard";
 import MapZoneOverlay from "@/components/lineup/MapZoneOverlay";
+import MapLineupPins, { type PinMode } from "@/components/lineup/MapLineupPins";
+import PinModeToggle from "@/components/lineup/PinModeToggle";
+import LineupDetailPanel from "@/components/lineup/LineupDetailPanel";
 import KeyboardShortcutsHelp from "@/components/lineup/KeyboardShortcutsHelp";
 import MinimapUploadDialog from "@/components/game/MinimapUploadDialog";
 import RoundMode from "@/pages/RoundMode";
@@ -49,6 +52,12 @@ export default function MapPage() {
   const util = searchParams.get("util") ?? "";
   const zone = searchParams.get("zone") ?? "";
   const isRoundMode = searchParams.get("round") === "1";
+  const pinModeParam = searchParams.get("pins");
+  const pinMode: PinMode | null =
+    pinModeParam === "stand" || pinModeParam === "target" || pinModeParam === "both"
+      ? pinModeParam
+      : null;
+  const selectedLineupId = searchParams.get("lineup");
 
   // Card cycling (Arrow left/right in round mode or panel)
   const [activeCardIndex, setActiveCardIndex] = useState(0);
@@ -136,14 +145,17 @@ export default function MapPage() {
   // --------------------------------------------------------------------------
   const pins = usePins(gameSlug ?? "", mapSlug ?? "", side);
 
-  // Fetch all pinned lineups for round mode (use existing getLineups with no zone filter)
+  // Fetch all map lineups for round mode AND for the pin layer (no zone filter).
+  // Pin mode shows pins across the whole map; round mode shows pinned lineups.
+  const needsAllMapLineups = isRoundMode || pinMode !== null;
   const { data: allMapLineups = [], isFetching: allMapFetching } = useGetLineupsQuery(
     {
       game_slug: gameSlug ?? "",
       map_slug: mapSlug ?? "",
       side: side !== "any" ? side : undefined,
+      utility_type_slugs: effectiveUtils.length > 0 ? effectiveUtils.join(",") : undefined,
     },
-    { skip: !gameSlug || !mapSlug || !isRoundMode },
+    { skip: !gameSlug || !mapSlug || !needsAllMapLineups },
   );
 
   const pinnedLineups = allMapLineups.filter((l) => pins.isPinned(l.id));
@@ -204,6 +216,18 @@ export default function MapPage() {
 
   function handleClosePanel() {
     updateParam("zone", null);
+  }
+
+  function handlePinModeChange(next: PinMode | null) {
+    updateParam("pins", next);
+  }
+
+  function handlePinSelect(lineupId: string) {
+    updateParam("lineup", lineupId);
+  }
+
+  function handleCloseLineupPanel() {
+    updateParam("lineup", null);
   }
 
   // --------------------------------------------------------------------------
@@ -433,11 +457,14 @@ export default function MapPage() {
                 />
               )}
 
+              {/* Pin mode toggle — show per-lineup pins on the minimap */}
+              <PinModeToggle mode={pinMode} onChange={handlePinModeChange} />
+
               {/* Round mode button */}
               <button
                 type="button"
                 onClick={() => updateParam("round", "1")}
-                className="ml-auto px-3 py-1.5 rounded-md text-sm border bg-card hover:bg-muted/40 transition-colors min-h-[36px]"
+                className="px-3 py-1.5 rounded-md text-sm border bg-card hover:bg-muted/40 transition-colors min-h-[36px]"
                 title="Enter round mode (show pinned lineups only)"
                 aria-label="Enter round mode"
               >
@@ -473,6 +500,33 @@ export default function MapPage() {
                   selectedZoneSlug={zone || null}
                   onZoneClick={handleZoneClick}
                 />
+                {pinMode && (
+                  <MapLineupPins
+                    lineups={allMapLineups}
+                    mode={pinMode}
+                    selectedLineupId={selectedLineupId}
+                    onPinSelect={handlePinSelect}
+                  />
+                )}
+                {pinMode && !allMapFetching && allMapLineups.length === 0 && (
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div className="bg-popover/95 border rounded-md px-4 py-3 text-sm text-center shadow-md pointer-events-auto">
+                      <p className="text-muted-foreground mb-2">
+                        No lineups match the current filter
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleSideChange("any");
+                          handleUtilToggle([]);
+                        }}
+                        className="text-primary hover:underline"
+                      >
+                        Clear filters
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Zone legend */}
@@ -547,6 +601,14 @@ export default function MapPage() {
           </div>
         </main>
       </div>
+
+      {selectedLineupId && (
+        <LineupDetailPanel
+          lineupId={selectedLineupId}
+          onClose={handleCloseLineupPanel}
+          pins={pins}
+        />
+      )}
     </>
   );
 }
