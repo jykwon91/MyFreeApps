@@ -35,10 +35,51 @@ export interface AppVersion {
 export type GsiSide = "side_a" | "side_b" | "any";
 
 /**
+ * CS2 utility-type slug union. Must stay in lockstep with
+ * `apps/mygamingassistant/backend/app/fixtures/utility_types.json` and
+ * with the Rust mapping in `desktop/src-tauri/src/gsi/weapons.rs`.
+ *
+ * MGA uses `grenade` (not `he`) for HE — see fixture for rationale.
+ */
+export type Cs2UtilitySlug =
+  | "smoke"
+  | "flash"
+  | "molotov"
+  | "grenade"
+  | "decoy";
+
+/** Display labels for the override panel + HUD. */
+export const CS2_UTILITY_LABELS: Record<Cs2UtilitySlug, string> = {
+  smoke: "Smoke",
+  flash: "Flash",
+  molotov: "Molotov",
+  grenade: "HE",
+  decoy: "Decoy",
+};
+
+/** Ordered list of slugs for select dropdowns — keeps "ALL" group ordering
+ *  stable so the override menu doesn't shuffle each render. */
+export const CS2_UTILITY_SLUGS: Cs2UtilitySlug[] = [
+  "smoke",
+  "flash",
+  "molotov",
+  "grenade",
+  "decoy",
+];
+
+/**
+ * Bomb state — one of CS2's three terminal states once the bomb has been
+ * touched in a round. `null` when the bomb is in nobody's hand / waiting.
+ */
+export type BombState = "planted" | "defused" | "exploded";
+
+/**
  * Normalized GSI event payload emitted by the Rust receiver via the Tauri
  * event `gsi:state-update` on every accepted POST from CS2.
  *
- * Matches the `GsiEvent` struct in `src-tauri/src/gsi/payload.rs`.
+ * Matches the `GsiEvent` struct in `src-tauri/src/gsi/payload.rs`. PR 10
+ * added explicit typed fields for `money`, `score`, `bomb_state`, and
+ * weapon-derived `active_utility` / `held_utility_slugs`.
  */
 export interface GsiEvent {
   /**
@@ -54,7 +95,47 @@ export interface GsiEvent {
   round_phase: string;
   /** `"playing" | "menu" | "textinput"` etc. */
   activity: string;
-  /** Raw CS2 player_state passthrough (money, weapons, health). */
+  // --- PR 10: explicit, strongly-typed HUD fields ---
+  /** Bomb state (`"planted" | "defused" | "exploded"`) or null. */
+  bomb_state?: BombState | null;
+  /** Wallet money (USD). Null until CS2 sends it. */
+  money?: number | null;
+  /** HP (0-100). */
+  health?: number | null;
+  /** Armor (0-100). */
+  armor?: number | null;
+  /** Helmet flag — when armor>0 AND helmet=true, HUD shows "+kit". */
+  helmet?: boolean | null;
+  /** Defuse kit flag — CT-only signal; rendered as a small "kit" badge. */
+  defuse_kit?: boolean | null;
+  /** Total $ value of currently-equipped items. Buy-tier hint. */
+  equip_value?: number | null;
+  /** CT team's current round score. */
+  ct_score?: number | null;
+  /** T team's current round score. */
+  t_score?: number | null;
+  /** Round number (1-based; CS2's 0-based round + 1). Null in warmup. */
+  round_number?: number | null;
+  /** Raw Valve slug of the active weapon (e.g., `weapon_smokegrenade`). */
+  active_weapon?: string | null;
+  /**
+   * MGA utility-type slug for the actively-held grenade. Null when the
+   * player isn't holding a grenade (knife, rifle, no weapon, etc.).
+   * Drives PR 10's utility-held lineup filter.
+   */
+  active_utility?: string | null;
+  /**
+   * MGA utility-type slugs for ALL grenades in inventory (deduplicated).
+   * When no specific grenade is active, the live filter falls back to
+   * narrowing by any of these.
+   */
+  held_utility_slugs: string[];
+  /**
+   * Unix epoch seconds from CS2's `provider.timestamp`. Useful only as
+   * a sanity-check signal — CS2 redacts the actual round timer.
+   */
+  provider_timestamp?: number | null;
+  /** Raw CS2 player_state passthrough (kept for PR 8 backward compat). */
   player_state?: Record<string, unknown>;
   /** Raw CS2 player_match_stats passthrough. */
   match_stats?: Record<string, unknown>;

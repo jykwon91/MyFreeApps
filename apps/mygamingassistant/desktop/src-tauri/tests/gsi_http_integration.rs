@@ -55,15 +55,35 @@ async fn live_http_receiver_accepts_real_post() {
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
     }
 
-    // POST a realistic CS2 GSI payload.
+    // POST a realistic CS2 GSI payload. PR 10 added weapons + scores +
+    // bomb state, so the fixture exercises every field the HUD reads.
     let payload = serde_json::json!({
-        "provider": {"name": "Counter-Strike: Global Offensive"},
-        "map": {"name": "de_mirage", "phase": "live", "round": 5},
-        "round": {"phase": "freezetime"},
+        "provider": {"name": "Counter-Strike: Global Offensive", "timestamp": 1747143600u64},
+        "map": {
+            "name": "de_mirage",
+            "phase": "live",
+            "round": 11,
+            "team_ct": {"score": 7},
+            "team_t":  {"score": 4}
+        },
+        "round": {"phase": "freezetime", "bomb": "planted"},
         "player": {
             "team": "CT",
             "activity": "playing",
-            "state": {"money": 4150, "health": 100, "armor": 100}
+            "state": {
+                "money": 4150,
+                "health": 100,
+                "armor": 100,
+                "helmet": true,
+                "defusekit": true,
+                "equip_value": 4250
+            },
+            "weapons": {
+                "weapon_0": {"name": "weapon_knife",         "type": "Knife",   "state": "holstered"},
+                "weapon_1": {"name": "weapon_m4a1",          "type": "Rifle",   "state": "holstered"},
+                "weapon_2": {"name": "weapon_smokegrenade",  "type": "Grenade", "state": "active"},
+                "weapon_3": {"name": "weapon_flashbang",     "type": "Grenade", "state": "holstered"}
+            }
         },
         "auth": {"token": token}
     });
@@ -102,6 +122,21 @@ async fn live_http_receiver_accepts_real_post() {
             let event = captured_event.expect("expected one captured event");
             assert_eq!(event.map_slug, "mirage");
             assert_eq!(event.activity, "playing");
+            // PR 10 additions: typed HUD fields extracted from the fixture.
+            assert_eq!(event.money, Some(4150));
+            assert_eq!(event.helmet, Some(true));
+            assert_eq!(event.defuse_kit, Some(true));
+            assert_eq!(event.equip_value, Some(4250));
+            assert_eq!(event.ct_score, Some(7));
+            assert_eq!(event.t_score, Some(4));
+            assert_eq!(event.round_number, Some(12)); // 0-based 11 → 1-based 12
+            assert_eq!(event.active_weapon.as_deref(), Some("weapon_smokegrenade"));
+            assert_eq!(event.active_utility.as_deref(), Some("smoke"));
+            // Both grenades show up in held_utility_slugs.
+            assert!(event.held_utility_slugs.contains(&"smoke".to_string()));
+            assert!(event.held_utility_slugs.contains(&"flash".to_string()));
+            assert_eq!(event.bomb_state.as_deref(), Some("planted"));
+            assert_eq!(event.provider_timestamp, Some(1747143600));
             // Status snapshot bumped + at least 2 server-status emits
             // (1 on startup + 1 per accepted payload).
             assert!(server_status_count >= 2);

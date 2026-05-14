@@ -1,11 +1,13 @@
 /**
  * LiveOverridePanel — collapsible row under the LiveTopBar that lets the
- * operator force a specific (map, side) without CS2 running.
+ * operator force a specific (map, side, utility) without CS2 running.
  *
  * Use cases:
  *   1. Pre-match prep — load a map on the desktop while not in-game.
  *   2. Testing — verify the lineup strip works without launching CS2.
  *   3. Spectating — drive the display manually while watching a friend.
+ *   4. (PR 10) Browsing utility — pick "show me only Smokes for B Site"
+ *      without needing CS2 to send a weapons block.
  *
  * Map options are hardcoded to the active-duty CS2 map pool; this matches
  * the backend `cs2_maps.json` fixture's existing slugs. Workshop maps and
@@ -13,12 +15,16 @@
  * mode via F1 for those.
  */
 import { useGetMapsQuery } from "@/store/gamesApi";
-import type { GsiSide } from "@/types/desktop";
+import type { Cs2UtilitySlug, GsiSide } from "@/types/desktop";
+import { CS2_UTILITY_LABELS, CS2_UTILITY_SLUGS } from "@/types/desktop";
 
 interface OverrideState {
   enabled: boolean;
   mapSlug: string;
   side: GsiSide;
+  /** Manual utility-type override (PR 10). `null` = no utility filter
+   *  applied; the operator wants to see ALL utility for the (map, side). */
+  utility: Cs2UtilitySlug | null;
 }
 
 interface LiveOverridePanelProps {
@@ -37,6 +43,21 @@ export default function LiveOverridePanel({
   const { data: maps = [], isLoading } = useGetMapsQuery("cs2", { skip: !visible });
 
   if (!visible) return null;
+
+  // Sentinel used in the utility <select>'s "All" option. The DOM <select>
+  // can't carry a real null value, so we round-trip the empty string.
+  const ALL_UTILITY_VALUE = "";
+
+  function handleUtilityChange(rawValue: string) {
+    if (rawValue === ALL_UTILITY_VALUE) {
+      onChange({ ...override, utility: null });
+      return;
+    }
+    // The <option> values are all drawn from CS2_UTILITY_SLUGS so the cast
+    // is safe; an unexpected value here would indicate DOM tampering, not
+    // a normal code path.
+    onChange({ ...override, utility: rawValue as Cs2UtilitySlug });
+  }
 
   return (
     <div
@@ -78,6 +99,24 @@ export default function LiveOverridePanel({
           <option value="any">Any</option>
           <option value="side_a">T (side_a)</option>
           <option value="side_b">CT (side_b)</option>
+        </select>
+      </label>
+
+      {/* PR 10 — utility-type override dropdown */}
+      <label className="flex items-center gap-2 text-xs">
+        <span className="text-muted-foreground">Utility:</span>
+        <select
+          value={override.utility ?? ALL_UTILITY_VALUE}
+          onChange={(e) => handleUtilityChange(e.target.value)}
+          aria-label="Override utility filter"
+          className="px-2 py-1 rounded-md border bg-card text-xs min-h-[28px]"
+        >
+          <option value={ALL_UTILITY_VALUE}>All utility</option>
+          {CS2_UTILITY_SLUGS.map((slug) => (
+            <option key={slug} value={slug}>
+              {CS2_UTILITY_LABELS[slug]}
+            </option>
+          ))}
         </select>
       </label>
 

@@ -32,12 +32,15 @@
 //!   - `server`     — axum router, port binding, request handler.
 //!   - `state`      — Shared `ServerState` (auth token, status counters).
 //!   - `commands`   — Tauri IPC entry points (`gsi_server_status`, etc.).
+//!   - `weapons`    — CS2 weapon-slug → MGA utility-type-slug mapping
+//!                    (PR 10). Drives the live utility-held lineup filter.
 
 pub mod commands;
 pub mod installer;
 pub mod payload;
 pub mod server;
 pub mod state;
+pub mod weapons;
 
 // NOTE: we intentionally do NOT re-export the `#[tauri::command]` functions
 // at this module level. Re-exporting via `pub use commands::*` looks like

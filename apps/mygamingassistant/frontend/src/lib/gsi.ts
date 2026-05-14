@@ -25,7 +25,7 @@
  */
 import { useEffect, useState } from "react";
 import { invokeTauri, isTauri } from "@/lib/tauri";
-import type { GsiEvent, GsiServerStatus } from "@/types/desktop";
+import type { Cs2UtilitySlug, GsiEvent, GsiServerStatus } from "@/types/desktop";
 
 /** Event name emitted by the Rust receiver on every accepted POST. */
 const EVENT_STATE_UPDATE = "gsi:state-update";
@@ -129,6 +129,11 @@ export function useGsiState(): UseGsiStateResult {
  *
  * Returns `null` when there's no meaningful event yet (i.e., we should
  * render the "Waiting for CS2" empty state).
+ *
+ * PR 10 extends the shape to include money / score / bomb state / round
+ * phase. None of the new fields cause the helper to return non-null
+ * on their own — the existence-check on map_slug / map_phase is still
+ * the "is there anything meaningful to show" signal.
  */
 export interface LiveBarFields {
   /** Display-formatted map name (capitalized slug). */
@@ -137,6 +142,30 @@ export interface LiveBarFields {
   sideDisplay: string;
   /** Display-formatted map phase ("Live", "Warmup", "Halftime", "Game over"). */
   phaseDisplay: string;
+  /**
+   * Round phase chip text ("Freezetime", "Live", "Over"), or null when
+   * unset / unknown. Distinct from `phaseDisplay` which is the MAP phase.
+   */
+  roundPhaseDisplay: string | null;
+  /**
+   * "12-8" formatted score (CT-first, T-second per CS2 scoreboard
+   * convention), or null when scores aren't available yet.
+   */
+  scoreDisplay: string | null;
+  /**
+   * "$4150" formatted money. Null when CS2 hasn't sent money yet.
+   */
+  moneyDisplay: string | null;
+  /**
+   * "+kit" / "+$250 kit" suffix shown next to money when armor+helmet OR
+   * defuse-kit are present. Empty string when nothing extra to surface.
+   */
+  equipExtra: string;
+  /**
+   * "💣 planted" / "defused" / "exploded" chip text, or null when the
+   * bomb hasn't been touched this round.
+   */
+  bombDisplay: string | null;
 }
 
 const MAP_PHASE_LABELS: Record<string, string> = {
@@ -146,11 +175,89 @@ const MAP_PHASE_LABELS: Record<string, string> = {
   gameover: "Game over",
 };
 
+const ROUND_PHASE_LABELS: Record<string, string> = {
+  freezetime: "Freezetime",
+  live: "Live",
+  over: "Over",
+};
+
+const BOMB_STATE_LABELS: Record<string, string> = {
+  planted: "💣 planted",
+  defused: "defused",
+  exploded: "exploded",
+};
+
 const SIDE_LABELS_CS2: Record<string, string> = {
   side_a: "T",
   side_b: "CT",
   any: "—",
 };
+
+function formatMoney(money: number | null | undefined): string | null {
+  if (money === null || money === undefined) return null;
+  return `$${money.toLocaleString("en-US")}`;
+}
+
+function formatScore(
+  ctScore: number | null | undefined,
+  tScore: number | null | undefined,
+): string | null {
+  // We require BOTH scores to render — half-shown scores would be more
+  // confusing than no score.
+  if (ctScore === null || ctScore === undefined) return null;
+  if (tScore === null || tScore === undefined) return null;
+  return `${ctScore}-${tScore}`;
+}
+
+function formatEquipExtra(
+  helmet: boolean | null | undefined,
+  defuseKit: boolean | null | undefined,
+  armor: number | null | undefined,
+): string {
+  // Helmet only matters when armor>0 (CS2 keeps helmet flag even after
+  // armor depletes; rendering "+kit" when bare-headed would mislead).
+  const hasHelmet = (armor ?? 0) > 0 && helmet === true;
+  const hasDefuseKit = defuseKit === true;
+  if (hasHelmet && hasDefuseKit) return " +kit +defuse";
+  if (hasHelmet) return " +kit";
+  if (hasDefuseKit) return " +defuse";
+  return "";
+}
+
+/**
+ * Decide which CS2 utility slugs to narrow the lineup query by.
+ *
+ * Three-tier preference, mirroring the design in PR 10:
+ *   1. Manual override (operator picked a specific utility) — wins over GSI.
+ *   2. Active utility (player is currently holding a specific grenade) —
+ *      strongest auto signal; narrow to that one.
+ *   3. Held utility (player has grenades but not actively holding any) —
+ *      narrow to anything they have in inventory.
+ *
+ * Returns:
+ *   - `string[]` of slugs when a narrowing should be applied
+ *   - `null` when the lineup query should NOT add a utility filter
+ *     (i.e., show all utility types for the map/side/zone — current PR 9a
+ *     behavior)
+ *
+ * Pure function — easy to unit test, easy to verify the three-tier
+ * preference order behaves consistently.
+ */
+export function computeLineupUtilityFilter(args: {
+  /** Operator's manual choice. `null` = no override; takes precedence. */
+  overrideSlug: Cs2UtilitySlug | null;
+  /** GSI-derived currently-held grenade slug, if any. */
+  activeUtilitySlug: string | null | undefined;
+  /** GSI-derived list of all grenades in inventory. */
+  heldUtilitySlugs: readonly string[] | null | undefined;
+}): string[] | null {
+  if (args.overrideSlug) return [args.overrideSlug];
+  if (args.activeUtilitySlug) return [args.activeUtilitySlug];
+  if (args.heldUtilitySlugs && args.heldUtilitySlugs.length > 0) {
+    return [...args.heldUtilitySlugs];
+  }
+  return null;
+}
 
 export function summarizeLiveBar(event: GsiEvent | null): LiveBarFields | null {
   if (!event) return null;
@@ -158,9 +265,23 @@ export function summarizeLiveBar(event: GsiEvent | null): LiveBarFields | null {
   const mapDisplay = event.map_slug
     ? event.map_slug.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
     : "—";
+
+  const roundPhaseDisplay = event.round_phase
+    ? ROUND_PHASE_LABELS[event.round_phase] ?? null
+    : null;
+
+  const bombDisplay = event.bomb_state
+    ? BOMB_STATE_LABELS[event.bomb_state] ?? null
+    : null;
+
   return {
     mapDisplay,
     sideDisplay: SIDE_LABELS_CS2[event.side] ?? "—",
     phaseDisplay: MAP_PHASE_LABELS[event.map_phase] ?? event.map_phase ?? "—",
+    roundPhaseDisplay,
+    scoreDisplay: formatScore(event.ct_score, event.t_score),
+    moneyDisplay: formatMoney(event.money),
+    equipExtra: formatEquipExtra(event.helmet, event.defuse_kit, event.armor),
+    bombDisplay,
   };
 }
