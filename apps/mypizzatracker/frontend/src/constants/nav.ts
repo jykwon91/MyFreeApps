@@ -14,6 +14,7 @@ interface NavDescriptor {
 
 const NAV_DESCRIPTORS: NavDescriptor[] = [
   { path: "/", label: "Home", iconName: "Home", exact: true },
+  { path: "/drops", label: "Drops", iconName: "Pizza" },
   { path: "/settings", label: "Settings", iconName: "Settings" },
   { path: "/security", label: "Security", iconName: "Shield" },
 ];

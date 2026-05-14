@@ -1,5 +1,5 @@
 import { Outlet, ScrollRestoration } from "react-router-dom";
-import { Home, Settings, Shield } from "lucide-react";
+import { Home, Pizza, Settings, Shield } from "lucide-react";
 import { AppShell, RequireAuth, StepUpModal, Toaster, useIsAuthenticated } from "@platform/ui";
 import { buildNav } from "@/constants/nav";
 import { signOut } from "@/lib/auth";
@@ -21,6 +21,7 @@ function projectUser(user: CurrentUser | undefined): { name: string; email: stri
 
 const ICONS: Record<string, React.ReactNode> = {
   Home: <Home className="w-5 h-5" />,
+  Pizza: <Pizza className="w-5 h-5" />,
   Settings: <Settings className="w-5 h-5" />,
   Shield: <Shield className="w-5 h-5" />,
 };
