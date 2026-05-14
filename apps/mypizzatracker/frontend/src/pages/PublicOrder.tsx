@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   Card,
   Button,
@@ -6,11 +7,10 @@ import {
   Skeleton,
   EmptyState,
   FormField,
-  StatusBadge,
   showError,
   extractErrorMessage,
 } from "@platform/ui";
-import { Plus, Trash2, Pizza, Phone, CheckCircle2 } from "lucide-react";
+import { Plus, Trash2, Pizza, ArrowRight } from "lucide-react";
 import {
   useGetCurrentPublicDropQuery,
   useGetPublicMenuQuery,
@@ -24,11 +24,15 @@ import type {
   PublicSlot,
   PublicTopping,
 } from "@/types/public/public";
+import { PAYMENT_METHOD_OPTIONS } from "@/types/public/public";
+import { OrderStatusCard } from "@/features/public-order/OrderStatusCard";
 import {
-  PAYMENT_METHOD_OPTIONS,
-  PUBLIC_PAYMENT_STATUS_LABELS,
-  PUBLIC_ORDER_STATUS_LABELS,
-} from "@/types/public/public";
+  formatDateLong,
+  formatMoney,
+  formatTime,
+  paymentMethodLabel,
+} from "@/features/public-order/formatters";
+import { saveOrder } from "@/features/public-order/savedOrders";
 
 /**
  * Customer-facing order placement page (mounted at /order, no auth).
@@ -38,11 +42,9 @@ import {
  *   2. If no active drop, show an empty-state with a "check back later" message.
  *   3. Render the order builder: pick a slot, add 1+ pizzas (each with optional
  *      toppings + modifications), enter name + phone + payment method, submit.
- *   4. On success, swap the builder for the confirmation card. The customer
- *      can refresh the page to place another order.
- *
- * The status-check page (PR 6) will live at /order/status and reuse the
- * confirmation card layout.
+ *   4. On success, swap the builder for the confirmation card and persist the
+ *      order ID to localStorage so /order/status can list it later. The
+ *      customer can also jump to /order/status/:id directly from here.
  */
 export default function PublicOrderPage() {
   const dropQuery = useGetCurrentPublicDropQuery();
@@ -90,7 +92,7 @@ export default function PublicOrderPage() {
   if (confirmation) {
     return (
       <PageShell>
-        <Confirmation confirmation={confirmation} />
+        <FreshConfirmation order={confirmation} />
       </PageShell>
     );
   }
@@ -238,6 +240,14 @@ function OrderBuilder({ drop, menu, onPlaced }: OrderBuilderProps) {
     };
     try {
       const result = await placeOrder(body).unwrap();
+      saveOrder({
+        order_id: result.order_id,
+        customer_name: result.customer_name,
+        drop_name: result.drop_name,
+        drop_date: result.drop_date,
+        slot_pickup_time: result.slot_pickup_time,
+        saved_at: new Date().toISOString(),
+      });
       onPlaced(result);
     } catch (err) {
       showError(extractErrorMessage(err) || "Could not place your order");
@@ -562,93 +572,30 @@ function PaymentMethodChip({ label, selected, onClick }: PaymentMethodChipProps)
 }
 
 // ---------------------------------------------------------------------------
-// Confirmation
+// Fresh-confirmation wrapper (post-placement)
 // ---------------------------------------------------------------------------
 
-interface ConfirmationProps {
-  confirmation: PublicOrderConfirmation;
+interface FreshConfirmationProps {
+  order: PublicOrderConfirmation;
 }
 
-function Confirmation({ confirmation }: ConfirmationProps) {
+function FreshConfirmation({ order }: FreshConfirmationProps) {
   return (
     <div className="space-y-4">
+      <OrderStatusCard order={order} variant="fresh" />
       <Card>
-        <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0">
-            <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-          </div>
-          <div>
-            <h2 className="text-xl font-semibold">Order placed!</h2>
-            <p className="text-sm text-muted-foreground">
-              Pickup at {formatTime(confirmation.slot_pickup_time)} on {formatDateLong(confirmation.drop_date)}
-            </p>
-          </div>
-        </div>
-        <div className="mt-4 space-y-1 text-sm">
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Order #</span>
-            <span className="font-mono">{shortId(confirmation.order_id)}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Name</span>
-            <span>{confirmation.customer_name}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">
-              <Phone className="inline h-3 w-3 mr-1" />
-              Phone
-            </span>
-            <span>{formatPhoneDisplay(confirmation.customer_phone)}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Status</span>
-            <StatusBadge tone="info" label={PUBLIC_ORDER_STATUS_LABELS[confirmation.status]} />
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Payment</span>
-            <span>
-              {paymentMethodLabel(confirmation.payment_method_tag)} (
-              {PUBLIC_PAYMENT_STATUS_LABELS[confirmation.payment_status]})
-            </span>
-          </div>
-        </div>
+        <p className="text-sm">
+          Save the link below so you can check your order status from any
+          device. We'll also text you when your pizza is ready.
+        </p>
+        <Link
+          to={`/order/status/${order.order_id}`}
+          className="mt-3 inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"
+        >
+          Track this order
+          <ArrowRight className="h-3 w-3" />
+        </Link>
       </Card>
-
-      <Card>
-        <h3 className="text-lg font-semibold mb-3">Your order</h3>
-        <ul className="divide-y">
-          {confirmation.pizzas.map((p, i) => (
-            <li key={i} className="py-2">
-              <div className="flex justify-between items-start gap-3">
-                <div>
-                  <div className="font-medium">{p.pizza_name}</div>
-                  {p.toppings.length > 0 ? (
-                    <div className="text-xs text-muted-foreground">
-                      + {p.toppings.join(", ")}
-                    </div>
-                  ) : null}
-                  {p.modifications_text ? (
-                    <div className="text-xs italic text-muted-foreground">
-                      "{p.modifications_text}"
-                    </div>
-                  ) : null}
-                </div>
-                <div className="text-sm shrink-0">
-                  ${formatMoney(p.line_total)}
-                </div>
-              </div>
-            </li>
-          ))}
-        </ul>
-        <div className="mt-3 pt-3 border-t flex justify-between text-base font-semibold">
-          <span>Total</span>
-          <span>${formatMoney(confirmation.total)}</span>
-        </div>
-      </Card>
-
-      <p className="text-xs text-muted-foreground text-center">
-        Save your order # to check status later. We'll text you when your pizza is ready.
-      </p>
     </div>
   );
 }
@@ -687,48 +634,4 @@ function cryptoRandomId(): string {
     return crypto.randomUUID();
   }
   return Math.random().toString(36).slice(2);
-}
-
-function formatMoney(value: string | number): string {
-  const n = typeof value === "number" ? value : Number(value);
-  if (Number.isNaN(n)) return String(value);
-  return n.toFixed(2);
-}
-
-function formatTime(time: string): string {
-  // Expecting "HH:MM:SS" or "HH:MM"
-  const [hh = "00", mm = "00"] = time.split(":");
-  const h = Number(hh);
-  const period = h >= 12 ? "PM" : "AM";
-  const display = h === 0 ? 12 : h > 12 ? h - 12 : h;
-  return `${display}:${mm} ${period}`;
-}
-
-function formatDateLong(iso: string): string {
-  // iso = "YYYY-MM-DD" -- build a local-date Date so we don't drift across TZ.
-  const [y, m, d] = iso.split("-").map(Number);
-  if (!y || !m || !d) return iso;
-  const date = new Date(y, m - 1, d);
-  return date.toLocaleDateString(undefined, {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-  });
-}
-
-function paymentMethodLabel(tag: string): string {
-  return (
-    PAYMENT_METHOD_OPTIONS.find((o) => o.tag === tag)?.label ?? tag
-  );
-}
-
-function formatPhoneDisplay(digits: string): string {
-  if (digits.length === 10) {
-    return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
-  }
-  return digits;
-}
-
-function shortId(id: string): string {
-  return id.slice(0, 8).toUpperCase();
 }

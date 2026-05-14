@@ -26,6 +26,12 @@ const publicApi = baseApi.injectEndpoints({
     >({
       query: (body) => ({ url: "/public/orders", method: "POST", data: body }),
     }),
+    getPublicOrder: build.query<PublicOrderConfirmation, string>({
+      query: (orderId) => ({
+        url: `/public/orders/${orderId}`,
+        method: "GET",
+      }),
+    }),
   }),
 });
 
@@ -33,4 +39,5 @@ export const {
   useGetPublicMenuQuery,
   useGetCurrentPublicDropQuery,
   usePlacePublicOrderMutation,
+  useGetPublicOrderQuery,
 } = publicApi;

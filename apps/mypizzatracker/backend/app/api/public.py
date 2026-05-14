@@ -1,7 +1,8 @@
 """Customer-facing (public) routes -- no authentication.
 
 These are the only routes the pizza app exposes without a JWT. Customers
-hit them anonymously to browse the menu, pick a slot, and place an order.
+hit them anonymously to browse the menu, pick a slot, place an order, and
+check on their order's status.
 
 Routes are registered without the ``/api`` prefix -- docker Caddy strips
 ``/api`` before forwarding to the backend (see drops.py / menu.py for the
@@ -11,15 +12,17 @@ Endpoints (production URLs prepend ``/api``):
   GET    /public/menu                     -- active pizzas + toppings
   GET    /public/drops/current            -- current active drop + slots w/ remaining capacity
   POST   /public/orders                   -- place an order; returns confirmation
-
-The order status check endpoint (GET /public/orders/{id}) lands in PR 6.
+  GET    /public/orders/{order_id}        -- look up an existing order (status check)
 """
 from __future__ import annotations
+
+import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
+from app.repositories.order import order_repo
 from app.schemas.public.public_schemas import (
     PublicDropRead,
     PublicMenuRead,
@@ -89,4 +92,28 @@ async def place_public_order(
     except OrderServiceError as exc:
         raise _service_error(exc) from exc
 
+    return await public_service.build_order_confirmation(db, order)
+
+
+@router.get("/orders/{order_id}", response_model=PublicOrderConfirmation)
+async def get_public_order(
+    order_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+) -> PublicOrderConfirmation:
+    """Look up an order by its UUID.
+
+    The order ID is the only secret; anyone holding it can read the order.
+    That mirrors the existing model -- the customer is handed it inline at
+    placement time and can revisit it to check status. There is no rate
+    limit on this endpoint by design: customers may reload the page while
+    waiting for pickup, and bots that guess UUIDs find nothing useful even
+    if they hit (only the customer's name + phone, which is what the
+    customer just typed in publicly anyway).
+    """
+    order = await order_repo.get_order(db, order_id)
+    if order is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Order not found. Double-check the order link from your confirmation.",
+        )
     return await public_service.build_order_confirmation(db, order)
