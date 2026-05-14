@@ -51,8 +51,12 @@ class Lineup(Base):
             name="ck_lineup_side",
         ),
         CheckConstraint(
-            # Accepted lineups must have all classification fields set.
+            # Accepted lineups must have all classification fields set,
+            # including game_id and map_id (nullable during pending_review
+            # while the classifier is still working).
             "status != 'accepted' OR ("
+            "game_id IS NOT NULL AND "
+            "map_id IS NOT NULL AND "
             "target_zone_id IS NOT NULL AND "
             "stand_zone_id IS NOT NULL AND "
             "utility_type_id IS NOT NULL AND "
@@ -73,15 +77,15 @@ class Lineup(Base):
         default=uuid.uuid4,
         server_default=func.gen_random_uuid(),
     )
-    game_id: Mapped[uuid.UUID] = mapped_column(
+    game_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("game.id", ondelete="CASCADE"),
-        nullable=False,
+        nullable=True,
     )
-    map_id: Mapped[uuid.UUID] = mapped_column(
+    map_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("map.id", ondelete="CASCADE"),
-        nullable=False,
+        nullable=True,
     )
     target_zone_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),

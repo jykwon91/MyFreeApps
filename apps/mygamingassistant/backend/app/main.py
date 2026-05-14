@@ -253,10 +253,14 @@ app.include_router(
 # (public read, auth write); sources + scheduler + admin stay auth-only.
 app.include_router(health.router, tags=["health"])
 app.include_router(games.router)
-app.include_router(lineups.public_router)
+# Auth-router includes literal-path routes (/lineups/pending, /lineups/bulk-accept)
+# that would otherwise be shadowed by the public_router's /lineups/{lineup_id}
+# parametric route. Include auth_router FIRST so the literal routes match before
+# the parametric one. Same rationale for lineup_packages below.
 app.include_router(lineups.auth_router)
-app.include_router(lineup_packages.public_router)
+app.include_router(lineups.public_router)
 app.include_router(lineup_packages.auth_router)
+app.include_router(lineup_packages.public_router)
 app.include_router(sources.router)
 app.include_router(scheduler.router)
 app.include_router(admin.router)
