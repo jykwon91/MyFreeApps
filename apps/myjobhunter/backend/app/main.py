@@ -103,7 +103,7 @@ lifespan = create_app_lifespan(
 app = FastAPI(
     title="MyJobHunter API",
     lifespan=lifespan,
-    root_path="/api",
+    root_path=settings.backend_root_path,
 )
 
 app.add_middleware(

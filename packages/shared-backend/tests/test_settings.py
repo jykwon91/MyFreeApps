@@ -103,6 +103,27 @@ class TestDefaults:
         assert s.environment == "development"
         assert s.sentry_dsn == ""
         assert s.log_level == "INFO"
+        assert s.backend_root_path == "/api"
+
+
+class TestBackendRootPath:
+    def test_default_matches_production_proxy_prefix(self) -> None:
+        s = BaseAppSettings(_env_file=None, **_valid_kwargs())
+        assert s.backend_root_path == "/api"
+
+    def test_explicit_override_via_kwarg(self) -> None:
+        s = BaseAppSettings(_env_file=None, backend_root_path="", **_valid_kwargs())
+        assert s.backend_root_path == ""
+
+    def test_explicit_override_via_env_var(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("BACKEND_ROOT_PATH", "")
+        s = BaseAppSettings(_env_file=None, **_valid_kwargs())
+        assert s.backend_root_path == ""
+
+    def test_custom_prefix_via_env_var(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("BACKEND_ROOT_PATH", "/v2")
+        s = BaseAppSettings(_env_file=None, **_valid_kwargs())
+        assert s.backend_root_path == "/v2"
 
 
 class TestSubclassInheritance:
