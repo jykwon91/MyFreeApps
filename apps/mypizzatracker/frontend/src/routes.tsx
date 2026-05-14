@@ -2,6 +2,7 @@ import { type RouteObject } from "react-router-dom";
 import Home from "@/pages/Home";
 import Drops from "@/pages/Drops";
 import Menu from "@/pages/Menu";
+import Service from "@/pages/Service";
 import Security from "@/pages/Security";
 import Settings from "@/pages/Settings";
 import Login from "@/pages/Login";
@@ -25,6 +26,7 @@ export const routes: RouteObject[] = [
       { index: true, element: <Home /> },
       { path: "/drops", element: <Drops /> },
       { path: "/menu", element: <Menu /> },
+      { path: "/service", element: <Service /> },
       { path: "/settings", element: <Settings /> },
       { path: "/security", element: <Security /> },
     ],

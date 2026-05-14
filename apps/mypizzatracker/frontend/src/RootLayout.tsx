@@ -1,5 +1,5 @@
 import { Outlet, ScrollRestoration } from "react-router-dom";
-import { Home, Pizza, Settings, Shield, UtensilsCrossed } from "lucide-react";
+import { ChefHat, Home, Pizza, Settings, Shield, UtensilsCrossed } from "lucide-react";
 import { AppShell, RequireAuth, StepUpModal, Toaster, useIsAuthenticated } from "@platform/ui";
 import { buildNav } from "@/constants/nav";
 import { signOut } from "@/lib/auth";
@@ -23,6 +23,7 @@ const ICONS: Record<string, React.ReactNode> = {
   Home: <Home className="w-5 h-5" />,
   Pizza: <Pizza className="w-5 h-5" />,
   UtensilsCrossed: <UtensilsCrossed className="w-5 h-5" />,
+  ChefHat: <ChefHat className="w-5 h-5" />,
   Settings: <Settings className="w-5 h-5" />,
   Shield: <Shield className="w-5 h-5" />,
 };
