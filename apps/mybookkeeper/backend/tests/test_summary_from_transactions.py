@@ -150,7 +150,7 @@ class TestGetSummary:
         assert by_tag.get("utilities") == 50.00
 
     @pytest.mark.asyncio
-    async def test_only_approved_transactions_included(self, db: AsyncSession) -> None:
+    async def test_approved_and_unverified_included_other_statuses_excluded(self, db: AsyncSession) -> None:
         user, org_id = await _setup_org_and_user(db)
         prop = _make_property(org_id, user.id)
         db.add(prop)
@@ -164,6 +164,12 @@ class TestGetSummary:
         db.add(_make_transaction(
             org_id, user.id,
             property_id=prop.id,
+            amount=Decimal("400.00"),
+            status="unverified",
+        ))
+        db.add(_make_transaction(
+            org_id, user.id,
+            property_id=prop.id,
             amount=Decimal("300.00"),
             status="pending",
         ))
@@ -172,6 +178,86 @@ class TestGetSummary:
             property_id=prop.id,
             amount=Decimal("200.00"),
             status="needs_review",
+        ))
+        db.add(_make_transaction(
+            org_id, user.id,
+            property_id=prop.id,
+            amount=Decimal("150.00"),
+            status="duplicate",
+        ))
+        await db.commit()
+
+        from app.repositories import summary_repo
+        rows = await summary_repo.txn_sum_by_category(db, org_id)
+        total = sum(float(row.total) for row in rows)
+
+        assert total == 900.00
+
+    @pytest.mark.asyncio
+    async def test_unverified_income_counted_in_revenue(self, db: AsyncSession) -> None:
+        user, org_id = await _setup_org_and_user(db)
+        prop = _make_property(org_id, user.id)
+        db.add(prop)
+
+        db.add(_make_transaction(
+            org_id, user.id,
+            property_id=prop.id,
+            amount=Decimal("1200.00"),
+            category="rental_revenue",
+            transaction_type="income",
+            schedule_e_line="line_3_rents_received",
+            status="unverified",
+            tags=["rental_revenue"],
+        ))
+        await db.commit()
+
+        from app.repositories import summary_repo
+        rows = await summary_repo.txn_sum_by_category(db, org_id)
+        by_tag = {row.tag: float(row.total) for row in rows}
+
+        assert by_tag.get("rental_revenue") == 1200.00
+
+    @pytest.mark.asyncio
+    async def test_unverified_expense_counted_in_expenses(self, db: AsyncSession) -> None:
+        user, org_id = await _setup_org_and_user(db)
+        prop = _make_property(org_id, user.id)
+        db.add(prop)
+
+        db.add(_make_transaction(
+            org_id, user.id,
+            property_id=prop.id,
+            amount=Decimal("75.00"),
+            category="maintenance",
+            transaction_type="expense",
+            status="unverified",
+            tags=["maintenance"],
+        ))
+        await db.commit()
+
+        from app.repositories import summary_repo
+        rows = await summary_repo.txn_sum_by_category(db, org_id)
+        by_tag = {row.tag: float(row.total) for row in rows}
+
+        assert by_tag.get("maintenance") == 75.00
+
+    @pytest.mark.asyncio
+    async def test_unverified_deleted_still_excluded(self, db: AsyncSession) -> None:
+        user, org_id = await _setup_org_and_user(db)
+        prop = _make_property(org_id, user.id)
+        db.add(prop)
+
+        db.add(_make_transaction(
+            org_id, user.id,
+            property_id=prop.id,
+            amount=Decimal("500.00"),
+            status="approved",
+        ))
+        db.add(_make_transaction(
+            org_id, user.id,
+            property_id=prop.id,
+            amount=Decimal("999.00"),
+            status="unverified",
+            deleted_at=datetime(2025, 6, 1, tzinfo=timezone.utc),
         ))
         await db.commit()
 
@@ -483,6 +569,75 @@ class TestGetTaxSummary:
         assert by_tag["mortgage_interest"] == 800.00
         assert by_tag["taxes"] == 300.00
         assert by_tag["rental_revenue"] == 3000.00
+
+    @pytest.mark.asyncio
+    async def test_tax_summary_includes_unverified_excludes_other_statuses(self, db: AsyncSession) -> None:
+        user, org_id = await _setup_org_and_user(db)
+        prop = _make_property(org_id, user.id)
+        db.add(prop)
+
+        db.add(_make_transaction(
+            org_id, user.id, property_id=prop.id,
+            amount=Decimal("4000.00"),
+            category="rental_revenue",
+            transaction_type="income",
+            schedule_e_line="line_3_rents_received",
+            tax_relevant=True,
+            status="approved",
+            tags=["rental_revenue"],
+        ))
+        db.add(_make_transaction(
+            org_id, user.id, property_id=prop.id,
+            amount=Decimal("1500.00"),
+            category="rental_revenue",
+            transaction_type="income",
+            schedule_e_line="line_3_rents_received",
+            tax_relevant=True,
+            status="unverified",
+            tags=["rental_revenue"],
+        ))
+        db.add(_make_transaction(
+            org_id, user.id, property_id=prop.id,
+            amount=Decimal("700.00"),
+            category="rental_revenue",
+            transaction_type="income",
+            schedule_e_line="line_3_rents_received",
+            tax_relevant=True,
+            status="pending",
+            tags=["rental_revenue"],
+        ))
+        db.add(_make_transaction(
+            org_id, user.id, property_id=prop.id,
+            amount=Decimal("250.00"),
+            category="rental_revenue",
+            transaction_type="income",
+            schedule_e_line="line_3_rents_received",
+            tax_relevant=True,
+            status="needs_review",
+            tags=["rental_revenue"],
+        ))
+        db.add(_make_transaction(
+            org_id, user.id, property_id=prop.id,
+            amount=Decimal("100.00"),
+            category="rental_revenue",
+            transaction_type="income",
+            schedule_e_line="line_3_rents_received",
+            tax_relevant=True,
+            status="duplicate",
+            tags=["rental_revenue"],
+        ))
+        await db.commit()
+
+        from app.repositories import summary_repo
+        rows = await summary_repo.txn_sum_by_category(
+            db, org_id,
+            start_date=datetime(2025, 1, 1, tzinfo=timezone.utc),
+            end_date=datetime(2025, 12, 31, 23, 59, 59, tzinfo=timezone.utc),
+            tax_relevant_only=True,
+        )
+        by_tag = {row.tag: float(row.total) for row in rows}
+
+        assert by_tag.get("rental_revenue") == 5500.00
 
     @pytest.mark.asyncio
     async def test_empty_result_for_year_with_no_transactions(self, db: AsyncSession) -> None:
