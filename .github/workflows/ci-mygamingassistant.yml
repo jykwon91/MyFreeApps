@@ -1,0 +1,170 @@
+name: MyGamingAssistant CI
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'apps/mygamingassistant/**'
+      - 'packages/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/ci-mygamingassistant.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'apps/mygamingassistant/**'
+      - 'packages/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/ci-mygamingassistant.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-mygamingassistant-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  backend-deps-resolve:
+    name: backend-deps-resolve / mygamingassistant
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: apps/mygamingassistant/backend/uv.lock
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: '3.12'
+
+      - name: Verify lockfile is consistent with pyproject.toml
+        working-directory: apps/mygamingassistant/backend
+        run: uv lock --check
+
+      - name: Sync backend dependencies from lockfile
+        working-directory: apps/mygamingassistant/backend
+        run: uv sync --frozen
+
+  backend-tests:
+    name: backend-tests / mygamingassistant
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        # Stock postgres:16 — MGA does NOT use pgvector (no embedding columns).
+        # Mirrors apps/mygamingassistant/docker-compose.yml.
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/test
+      DATABASE_URL_SYNC: postgresql://postgres:postgres@localhost:5432/test
+      SECRET_KEY: "ci-placeholder-secret-key-not-real-32chars" # gitleaks:allow
+      ENCRYPTION_KEY: "ci-placeholder-encryption-key-not-real-32" # gitleaks:allow
+      # MGA-specific — classifier + scheduler are disabled in CI so the
+      # ANTHROPIC_API_KEY + APScheduler boot guards don't fire.
+      ANTHROPIC_API_KEY: sk-ant-placeholder-not-real
+      ENABLE_CLASSIFIER: "false"
+      SCHEDULER_ENABLED: "false"
+      # Environment kept at default ("development") so the production boot
+      # guards (seed user, classifier, scheduler) stay off.
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: apps/mygamingassistant/backend/uv.lock
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: '3.12'
+
+      - name: Sync backend dependencies (incl. dev group)
+        # The `dev` dependency-group in pyproject.toml carries pytest +
+        # pytest-asyncio + pytest-timeout. ``uv sync --frozen --group dev``
+        # installs both runtime deps and dev tools from the lockfile.
+        working-directory: apps/mygamingassistant/backend
+        run: uv sync --frozen --group dev
+
+      - name: Run alembic migrations
+        working-directory: apps/mygamingassistant/backend
+        run: PYTHONPATH=. uv run alembic upgrade head
+
+      - name: Run pytest
+        working-directory: apps/mygamingassistant/backend
+        # --timeout=60 (pytest-timeout) is a safety net so a future teardown
+        # bug can't consume the whole job timeout silently.
+        run: uv run pytest -q --timeout=60
+
+  frontend-build:
+    name: frontend-build / mygamingassistant
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install workspace dependencies
+        # Root package.json is an npm workspace covering all apps' frontends.
+        # Use `npm install` rather than `npm ci`: there is a known npm bug
+        # (https://github.com/npm/cli/issues/4828) where workspace + optional
+        # platform-specific deps (rollup, esbuild) interact badly with `npm ci`'s
+        # strict lockfile validation, producing
+        # `Cannot find module '@rollup/rollup-linux-x64-gnu'` failures even when
+        # the lockfile has the entry. `npm install` is more lenient + self-heals.
+        run: npm install
+
+      - name: Build frontend
+        run: npm run build --workspace=mygamingassistant-frontend
+
+  caddy-image:
+    name: caddy-image / mygamingassistant
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Build caddy image (bakes frontend dist in)
+        run: |
+          docker build \
+            -f apps/mygamingassistant/docker/caddy.Dockerfile \
+            -t mygamingassistant-caddy:ci \
+            .
+
+      - name: Verify frontend dist is baked into image
+        # Confirms the multi-stage build produced /srv/frontend/index.html
+        # inside the caddy image. If this fails, the bake step silently didn't
+        # copy the dist (wrong COPY path, wrong build stage, etc.).
+        run: docker run --rm mygamingassistant-caddy:ci test -f /srv/frontend/index.html
