@@ -1,33 +1,34 @@
-"""Game library read endpoints.
+"""Game library read endpoints — public (no auth).
 
-All routes require authentication. Write endpoints (upload, review, packages)
-are in lineups.py.
+The game taxonomy (games, maps, zones, sites, utility types) is reference data
+that's safe to expose publicly. MGA's auth model is public-read / auth-write:
+anyone can browse the lineup library, only the operator can manage content.
 
-Routes:
+Routes (all public):
     GET /api/games                          — list all games
     GET /api/games/{game_slug}/maps         — list maps for a game
     GET /api/games/{game_slug}/maps/{map_slug} — map detail with zones + sites + utility types
+
+See ``apps/mygamingassistant/CLAUDE.md`` → Authentication Model for the
+public-read/auth-write rationale (MGA-specific Tier 3 divergence).
 """
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.core.auth import current_active_user
 from app.db.session import get_db
 from app.models.game.game import Game
 from app.models.game.map import Map
-from app.models.game.map_zone import MapZone
-from app.models.game.site import Site
+from app.models.game.map_zone import MapZone  # noqa: F401 — used via selectinload
+from app.models.game.site import Site  # noqa: F401 — used via selectinload
 from app.models.game.utility_type import UtilityType
-from app.models.user.user import User
 
 router = APIRouter(prefix="/api", tags=["games"])
 
 
 @router.get("/games")
 async def list_games(
-    _user: User = Depends(current_active_user),
     db: AsyncSession = Depends(get_db),
 ) -> list[dict]:
     """List all games seeded in the database."""
@@ -48,7 +49,6 @@ async def list_games(
 @router.get("/games/{game_slug}/maps")
 async def list_maps(
     game_slug: str,
-    _user: User = Depends(current_active_user),
     db: AsyncSession = Depends(get_db),
 ) -> list[dict]:
     """List all maps for a given game slug."""
@@ -76,7 +76,6 @@ async def list_maps(
 async def get_map(
     game_slug: str,
     map_slug: str,
-    _user: User = Depends(current_active_user),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     """Map detail: zones, sites, and utility types for the game."""
@@ -122,5 +121,3 @@ async def get_map(
             for u in utility_types
         ],
     }
-
-

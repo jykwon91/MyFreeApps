@@ -297,17 +297,26 @@ async def test_patch_lineup(
 async def test_delete_lineup_soft(
     auth_client: AsyncClient, seeded_game_map: dict
 ):
-    """DELETE /api/lineups/{id} should set status=hidden, not remove the row."""
+    """DELETE /api/lineups/{id} should set status=hidden, not remove the row.
+
+    The public GET /api/lineups/{id} 404s on hidden lineups so they don't leak
+    presigned URLs to anonymous callers. The operator-only
+    /api/lineups/{id}/admin still surfaces the row in any status.
+    """
     create_resp = await _create_lineup(auth_client, seeded_game_map)
     lineup_id = create_resp.json()["id"]
 
     del_resp = await auth_client.delete(f"/api/lineups/{lineup_id}")
     assert del_resp.status_code == 204
 
-    # Should still be fetchable (not hard-deleted)
-    detail_resp = await auth_client.get(f"/api/lineups/{lineup_id}")
-    assert detail_resp.status_code == 200
-    assert detail_resp.json()["status"] == "hidden"
+    # Public GET 404s on hidden lineups
+    public_detail = await auth_client.get(f"/api/lineups/{lineup_id}")
+    assert public_detail.status_code == 404
+
+    # Operator-only admin GET surfaces the hidden lineup
+    admin_detail = await auth_client.get(f"/api/lineups/{lineup_id}/admin")
+    assert admin_detail.status_code == 200
+    assert admin_detail.json()["status"] == "hidden"
 
 
 @pytest.mark.asyncio

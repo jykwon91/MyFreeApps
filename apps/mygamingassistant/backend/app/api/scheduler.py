@@ -1,14 +1,16 @@
-"""Scheduler admin API.
+"""Scheduler admin API — operator only.
 
 GET  /api/scheduler/status           — list jobs, next_run_at
 POST /api/scheduler/trigger/{job_id} — manually trigger a job
 
-Auth-gated to the seeded user (current_active_user). These are operational
-endpoints for the operator to inspect and trigger jobs — not test helpers.
+Operator-only. These are operational endpoints for inspecting and triggering
+jobs — they don't belong in the public surface.
 
 Available job IDs:
   sync_all_sources         — run a full source sync pass immediately
   cleanup_ingestion_downloads — run a disk-cleanup pass immediately
+
+See ``apps/mygamingassistant/CLAUDE.md`` → Authentication Model.
 """
 from __future__ import annotations
 
@@ -16,7 +18,6 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from app.core.auth import current_active_user
-from app.models.user.user import User
 from app.services.scheduling.scheduler_service import (
     JOB_CLEANUP_DOWNLOADS,
     JOB_SYNC_ALL_SOURCES,
@@ -25,7 +26,12 @@ from app.services.scheduling.scheduler_service import (
     trigger_job,
 )
 
-router = APIRouter(prefix="/api/scheduler", tags=["scheduler"])
+# Auth-gated at the router level.
+router = APIRouter(
+    prefix="/api/scheduler",
+    tags=["scheduler"],
+    dependencies=[Depends(current_active_user)],
+)
 
 KNOWN_JOB_IDS = frozenset({JOB_SYNC_ALL_SOURCES, JOB_CLEANUP_DOWNLOADS})
 
@@ -49,9 +55,7 @@ class TriggerResponse(BaseModel):
 
 
 @router.get("/status", response_model=SchedulerStatusResponse)
-async def get_scheduler_status(
-    _user: User = Depends(current_active_user),
-) -> SchedulerStatusResponse:
+async def get_scheduler_status() -> SchedulerStatusResponse:
     """Return scheduler status and job details."""
     from app.services.scheduling.scheduler_service import get_scheduler
 
@@ -66,10 +70,7 @@ async def get_scheduler_status(
 
 
 @router.post("/trigger/{job_id}", response_model=TriggerResponse)
-async def trigger_scheduler_job(
-    job_id: str,
-    _user: User = Depends(current_active_user),
-) -> TriggerResponse:
+async def trigger_scheduler_job(job_id: str) -> TriggerResponse:
     """Manually trigger a scheduler job by ID.
 
     Triggers the job to run at the next scheduler tick (effectively immediately).

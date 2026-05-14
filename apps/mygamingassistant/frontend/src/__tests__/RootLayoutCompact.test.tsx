@@ -1,11 +1,16 @@
 /**
- * Unit tests for RootLayout compact mode.
+ * Unit tests for RootLayout rendering branches.
  *
- * When ?compact=1 is in the URL, the AppShell should NOT render.
- * When compact is absent, AppShell renders.
+ * RootLayout has three branches:
+ *   - ?compact=1                 → no shell (Outlet directly)
+ *   - authenticated              → AppShell (full sidebar + user dropdown)
+ *   - unauthenticated (default)  → GuestShell (public nav + Sign in CTA)
  *
  * We mock platform/ui and react-router-dom to avoid needing a full
  * data-router context (ScrollRestoration requires one).
+ *
+ * Public-read / auth-write model: see apps/mygamingassistant/CLAUDE.md →
+ * Authentication Model.
  */
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
@@ -22,21 +27,29 @@ vi.mock("react-router-dom", async (importOriginal) => {
   };
 });
 
-// Minimal stubs for platform/ui components used in RootLayout
+const mockIsAuthenticated = vi.fn(() => false);
+
+// Minimal stubs for platform/ui components used in RootLayout.
 vi.mock("@platform/ui", () => ({
   AppShell: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="app-shell">{children}</div>
   ),
-  RequireAuth: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="require-auth">{children}</div>
-  ),
   StepUpModal: () => <div data-testid="step-up-modal" />,
   Toaster: () => <div data-testid="toaster" />,
-  useIsAuthenticated: () => false,
+  useIsAuthenticated: () => mockIsAuthenticated(),
+}));
+
+// Mock GuestShell — we just want to assert that it renders, not exercise its
+// internals (those have their own tests).
+vi.mock("@/components/auth/GuestShell", () => ({
+  default: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="guest-shell">{children}</div>
+  ),
 }));
 
 vi.mock("@/constants/nav", () => ({
   buildNav: () => [],
+  PUBLIC_NAV_PATHS: new Set(["/", "/packages", "/live/cs2"]),
 }));
 
 vi.mock("@/hooks/useIsSuperuser", () => ({
@@ -51,24 +64,57 @@ vi.mock("@/lib/auth", () => ({
   signOut: vi.fn(),
 }));
 
+vi.mock("@/lib/tauri", () => ({
+  isTauri: () => false,
+}));
+
 // Import after mocks
 import { useSearchParams } from "react-router-dom";
 import RootLayout from "@/RootLayout";
 
-describe("RootLayout compact mode", () => {
-  it("renders AppShell when compact param is absent", () => {
+describe("RootLayout branches", () => {
+  it("renders GuestShell when unauthenticated and compact is absent", () => {
+    mockIsAuthenticated.mockReturnValue(false);
+    const params = new URLSearchParams();
+    vi.mocked(useSearchParams).mockReturnValue([params, vi.fn()]);
+
+    render(<RootLayout />);
+    expect(screen.getByTestId("guest-shell")).toBeDefined();
+    expect(screen.queryByTestId("app-shell")).toBeNull();
+  });
+
+  it("renders AppShell when authenticated and compact is absent", () => {
+    mockIsAuthenticated.mockReturnValue(true);
     const params = new URLSearchParams();
     vi.mocked(useSearchParams).mockReturnValue([params, vi.fn()]);
 
     render(<RootLayout />);
     expect(screen.getByTestId("app-shell")).toBeDefined();
+    expect(screen.queryByTestId("guest-shell")).toBeNull();
   });
 
-  it("hides AppShell when ?compact=1", () => {
+  it("hides both shells when ?compact=1 (authenticated)", () => {
+    mockIsAuthenticated.mockReturnValue(true);
     const params = new URLSearchParams("compact=1");
     vi.mocked(useSearchParams).mockReturnValue([params, vi.fn()]);
 
     render(<RootLayout />);
     expect(screen.queryByTestId("app-shell")).toBeNull();
+    expect(screen.queryByTestId("guest-shell")).toBeNull();
+    // Outlet should render directly
+    expect(screen.getByTestId("outlet")).toBeDefined();
+  });
+
+  it("hides both shells when ?compact=1 (unauthenticated)", () => {
+    // Compact mode strips the shell regardless of auth state — inner routes
+    // do their own gating via <AuthRequired>.
+    mockIsAuthenticated.mockReturnValue(false);
+    const params = new URLSearchParams("compact=1");
+    vi.mocked(useSearchParams).mockReturnValue([params, vi.fn()]);
+
+    render(<RootLayout />);
+    expect(screen.queryByTestId("app-shell")).toBeNull();
+    expect(screen.queryByTestId("guest-shell")).toBeNull();
+    expect(screen.getByTestId("outlet")).toBeDefined();
   });
 });
