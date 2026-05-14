@@ -20,7 +20,7 @@ from jwt.exceptions import PyJWTError as JWTError
 from platform_shared.core.git import resolve_git_commit
 from platform_shared.core.lifespan import create_app_lifespan
 
-from app.api import account, admin, drops, health, menu, public, totp
+from app.api import account, admin, drops, health, menu, public, service, totp
 from app.core.audit import current_user_id
 from app.core.auth import auth_backend, fastapi_users
 from app.core.config import settings
@@ -189,6 +189,7 @@ app.include_router(admin.router)
 app.include_router(drops.router)
 app.include_router(menu.router)
 app.include_router(public.router)
+app.include_router(service.router)
 
 # Shared platform admin router -- generic user-management endpoints
 # (list/role/activate/deactivate/superuser/stats-users).
