@@ -15,8 +15,12 @@ import pytest_asyncio
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.game.game import Game
+from app.models.game.map import Map
+from app.models.game.map_zone import MapZone
 from app.models.game.source import Source
 from app.models.game.lineup import Lineup
+from app.models.game.utility_type import UtilityType
 from app.services.ingestion.chapter_parser import Chapter
 from app.services.ingestion.youtube_fetcher import VideoMeta
 from app.services.classification.classification_result import ClassificationResult
@@ -51,6 +55,38 @@ async def source(db: AsyncSession) -> Source:
     db.add(src)
     await db.flush()
     return src
+
+
+@pytest_asyncio.fixture(autouse=True)
+async def _seed_classifier_targets(db: AsyncSession) -> None:
+    """Seed the Game/Map/Zone/UtilityType rows that the classifier mock points at.
+
+    The mock writes suggested_game_id=_FAKE_GAME_ID etc. The lineup table has
+    FK constraints to game/map/map_zone/utility_type on every suggested_*
+    column, so without these rows the writeback fails with
+    ForeignKeyViolationError.
+    """
+    game = Game(
+        id=_FAKE_GAME_ID,
+        slug="cls-test-game",
+        name="Classifier Test Game",
+        side_a_label="T",
+        side_b_label="CT",
+    )
+    db.add(game)
+    await db.flush()
+
+    map_obj = Map(id=_FAKE_MAP_ID, game_id=game.id, slug="cls-test-map", name="Classifier Test Map")
+    db.add(map_obj)
+    await db.flush()
+
+    zone = MapZone(id=_FAKE_ZONE_ID, map_id=map_obj.id, slug="cls-zone", name="Classifier Zone", polygon_points=[])
+    db.add(zone)
+    await db.flush()
+
+    util = UtilityType(id=_FAKE_UT_ID, game_id=game.id, slug="cls-smoke", name="Classifier Smoke")
+    db.add(util)
+    await db.flush()
 
 
 class TestIngestionWithClassifier:
