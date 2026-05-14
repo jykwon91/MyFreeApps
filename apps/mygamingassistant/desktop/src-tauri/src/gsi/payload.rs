@@ -403,9 +403,7 @@ fn parse_weapons_block(map: &HashMap<String, RawGsiWeapon>) -> Vec<RawGsiWeapon>
 /// CS2 emits weapon state as `"active" | "holstered" | "reloading"`. Only
 /// ONE weapon is `"active"` at a time. If none is active (very rare —
 /// usually only in transition states), returns `(None, None)`.
-fn derive_active_weapon(
-    weapons: &[RawGsiWeapon],
-) -> (Option<String>, Option<String>) {
+fn derive_active_weapon(weapons: &[RawGsiWeapon]) -> (Option<String>, Option<String>) {
     let active = weapons
         .iter()
         .find(|w| w.state.as_deref() == Some("active"));
@@ -488,7 +486,8 @@ pub fn normalize_payload(raw: &RawGsiPayload, received_at: String) -> GsiEvent {
     // --- PR 10: derived fields ---
     let bomb_state = raw.round.as_ref().and_then(|r| r.bomb.clone());
 
-    let player_state_ref: Option<&RawGsiPlayerState> = raw.player.as_ref().and_then(|p| p.state.as_ref());
+    let player_state_ref: Option<&RawGsiPlayerState> =
+        raw.player.as_ref().and_then(|p| p.state.as_ref());
     let money = player_state_ref.and_then(|s| s.money);
     let health = player_state_ref.and_then(|s| s.health);
     let armor = player_state_ref.and_then(|s| s.armor);
@@ -640,14 +639,8 @@ mod tests {
     #[test]
     fn parse_weapons_block_skips_non_weapon_keys() {
         let mut map: HashMap<String, RawGsiWeapon> = HashMap::new();
-        map.insert(
-            "totally_unrelated_key".into(),
-            RawGsiWeapon::default(),
-        );
-        map.insert(
-            "weapon_abc".into(),
-            RawGsiWeapon::default(),
-        );
+        map.insert("totally_unrelated_key".into(), RawGsiWeapon::default());
+        map.insert("weapon_abc".into(), RawGsiWeapon::default());
         map.insert(
             "weapon_0".into(),
             RawGsiWeapon {
