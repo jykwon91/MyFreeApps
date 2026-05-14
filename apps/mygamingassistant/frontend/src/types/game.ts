@@ -84,6 +84,17 @@ export interface Lineup {
   aim_screenshot_url: string | null;
   aim_anchor_x: number | null;
   aim_anchor_y: number | null;
+  // Explicit minimap coords; fall back to zone-polygon centroid via effective_*.
+  stand_anchor_x: number | null;
+  stand_anchor_y: number | null;
+  target_anchor_x: number | null;
+  target_anchor_y: number | null;
+  // Pre-computed by the backend: explicit anchor when set, zone polygon
+  // centroid otherwise. Use these for rendering minimap pins.
+  effective_stand_x: number | null;
+  effective_stand_y: number | null;
+  effective_target_x: number | null;
+  effective_target_y: number | null;
   setup_seconds: number | null;
   attribution_url: string | null;
   attribution_author: string | null;
