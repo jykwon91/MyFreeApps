@@ -15,8 +15,12 @@ import pytest_asyncio
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.game.game import Game
+from app.models.game.map import Map
+from app.models.game.map_zone import MapZone
 from app.models.game.source import Source
 from app.models.game.lineup import Lineup
+from app.models.game.utility_type import UtilityType
 from app.services.ingestion.chapter_parser import Chapter
 from app.services.ingestion.youtube_fetcher import VideoMeta
 from app.services.classification.classification_result import ClassificationResult
@@ -53,6 +57,38 @@ async def source(db: AsyncSession) -> Source:
     return src
 
 
+@pytest_asyncio.fixture(autouse=True)
+async def _seed_classifier_targets(db: AsyncSession) -> None:
+    """Seed the Game/Map/Zone/UtilityType rows that the classifier mock points at.
+
+    The mock writes suggested_game_id=_FAKE_GAME_ID etc. The lineup table has
+    FK constraints to game/map/map_zone/utility_type on every suggested_*
+    column, so without these rows the writeback fails with
+    ForeignKeyViolationError.
+    """
+    game = Game(
+        id=_FAKE_GAME_ID,
+        slug="cls-test-game",
+        name="Classifier Test Game",
+        side_a_label="T",
+        side_b_label="CT",
+    )
+    db.add(game)
+    await db.flush()
+
+    map_obj = Map(id=_FAKE_MAP_ID, game_id=game.id, slug="cls-test-map", name="Classifier Test Map")
+    db.add(map_obj)
+    await db.flush()
+
+    zone = MapZone(id=_FAKE_ZONE_ID, map_id=map_obj.id, slug="cls-zone", name="Classifier Zone", polygon_points=[])
+    db.add(zone)
+    await db.flush()
+
+    util = UtilityType(id=_FAKE_UT_ID, game_id=game.id, slug="cls-smoke", name="Classifier Smoke")
+    db.add(util)
+    await db.flush()
+
+
 class TestIngestionWithClassifier:
     @pytest.mark.asyncio
     async def test_classifier_suggestions_written_on_success(
@@ -82,12 +118,33 @@ class TestIngestionWithClassifier:
             error_codes=[],
         )
 
+        # The real classify_lineup (see classifier_service.classify_lineup
+        # docstring) writes suggested_* fields to the Lineup row as a side
+        # effect and returns the result. AsyncMock with just return_value
+        # would skip the write, so the mock here mirrors the side effect.
+        async def _classify_with_writeback(db_arg, lineup_id, *, game_hint=None):
+            target = (
+                await db_arg.execute(select(Lineup).where(Lineup.id == lineup_id))
+            ).scalar_one()
+            target.suggested_game_id = successful_result.suggested_game_id
+            target.suggested_map_id = successful_result.suggested_map_id
+            target.suggested_target_zone_id = successful_result.suggested_target_zone_id
+            target.suggested_stand_zone_id = successful_result.suggested_stand_zone_id
+            target.suggested_side = successful_result.suggested_side
+            target.suggested_utility_type_id = successful_result.suggested_utility_type_id
+            target.aim_anchor_x = successful_result.aim_anchor_x
+            target.aim_anchor_y = successful_result.aim_anchor_y
+            target.classification_confidence = successful_result.confidence
+            target.classification_reasoning = successful_result.reasoning
+            await db_arg.flush()
+            return successful_result
+
         with (
             patch("app.services.ingestion.ingestion_orchestrator.list_videos", new_callable=AsyncMock, return_value=[FAKE_VIDEO]),
             patch("app.services.ingestion.ingestion_orchestrator.download_video", new_callable=AsyncMock, return_value=fake_video_path),
             patch("app.services.ingestion.ingestion_orchestrator.extract_frames", new_callable=AsyncMock, return_value=[_FAKE_PNG, _FAKE_PNG]),
             patch("app.services.ingestion.ingestion_orchestrator.get_storage") as mock_storage_factory,
-            patch("app.services.ingestion.ingestion_orchestrator.classify_lineup", new_callable=AsyncMock, return_value=successful_result),
+            patch("app.services.ingestion.ingestion_orchestrator.classify_lineup", new=_classify_with_writeback),
             patch.object(ingestion_orchestrator, "settings") as mock_settings,
         ):
             mock_settings.ingestion_download_dir = str(tmp_path)
