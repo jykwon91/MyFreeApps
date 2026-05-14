@@ -116,9 +116,13 @@ jobs:
 
       - name: Run pytest
         working-directory: apps/mygamingassistant/backend
+        # PYTHONPATH=. so pytest can import `app` — uv's venv-aware `uv run`
+        # doesn't add CWD to sys.path the way `python -m pytest` would, and
+        # this project is `package = false` (no installed entry point).
+        # Same shape as the alembic step above.
         # --timeout=60 (pytest-timeout) is a safety net so a future teardown
         # bug can't consume the whole job timeout silently.
-        run: uv run pytest -q --timeout=60
+        run: PYTHONPATH=. uv run pytest -q --timeout=60
 
   frontend-build:
     name: frontend-build / mygamingassistant
