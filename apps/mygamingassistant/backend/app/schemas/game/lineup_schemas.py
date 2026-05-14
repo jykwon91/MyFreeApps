@@ -12,7 +12,9 @@ from __future__ import annotations
 import uuid
 from typing import Optional
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, computed_field, field_validator, model_validator
+
+from app.services.game.polygon import polygon_centroid
 
 
 # ---------------------------------------------------------------------------
@@ -55,6 +57,13 @@ class LineupRead(BaseModel):
     aim_screenshot_url: Optional[str] = None
     aim_anchor_x: Optional[float] = None
     aim_anchor_y: Optional[float] = None
+    # Minimap anchor positions — raw values from the DB. May be NULL; use the
+    # computed effective_* fields below to render pins (they fall back to the
+    # zone polygon centroid when the explicit anchor isn't set).
+    stand_anchor_x: Optional[float] = None
+    stand_anchor_y: Optional[float] = None
+    target_anchor_x: Optional[float] = None
+    target_anchor_y: Optional[float] = None
     setup_seconds: Optional[int] = None
     attribution_url: Optional[str] = None
     attribution_author: Optional[str] = None
@@ -82,6 +91,44 @@ class LineupRead(BaseModel):
 
     model_config = {"from_attributes": True}
 
+    @computed_field  # type: ignore[misc]
+    @property
+    def effective_stand_x(self) -> Optional[float]:
+        """Minimap x for the stand pin: explicit anchor or stand_zone centroid."""
+        if self.stand_anchor_x is not None:
+            return self.stand_anchor_x
+        if self.stand_zone is not None:
+            return polygon_centroid(self.stand_zone.polygon_points)[0]
+        return None
+
+    @computed_field  # type: ignore[misc]
+    @property
+    def effective_stand_y(self) -> Optional[float]:
+        if self.stand_anchor_y is not None:
+            return self.stand_anchor_y
+        if self.stand_zone is not None:
+            return polygon_centroid(self.stand_zone.polygon_points)[1]
+        return None
+
+    @computed_field  # type: ignore[misc]
+    @property
+    def effective_target_x(self) -> Optional[float]:
+        """Minimap x for the target pin: explicit anchor or target_zone centroid."""
+        if self.target_anchor_x is not None:
+            return self.target_anchor_x
+        if self.target_zone is not None:
+            return polygon_centroid(self.target_zone.polygon_points)[0]
+        return None
+
+    @computed_field  # type: ignore[misc]
+    @property
+    def effective_target_y(self) -> Optional[float]:
+        if self.target_anchor_y is not None:
+            return self.target_anchor_y
+        if self.target_zone is not None:
+            return polygon_centroid(self.target_zone.polygon_points)[1]
+        return None
+
 
 # ---------------------------------------------------------------------------
 # Lineup create — manual upload path
@@ -102,6 +149,10 @@ class LineupCreate(BaseModel):
     aim_screenshot_key: Optional[str] = None
     aim_anchor_x: Optional[float] = Field(None, ge=0.0, le=1.0)
     aim_anchor_y: Optional[float] = Field(None, ge=0.0, le=1.0)
+    stand_anchor_x: Optional[float] = Field(None, ge=0.0, le=1.0)
+    stand_anchor_y: Optional[float] = Field(None, ge=0.0, le=1.0)
+    target_anchor_x: Optional[float] = Field(None, ge=0.0, le=1.0)
+    target_anchor_y: Optional[float] = Field(None, ge=0.0, le=1.0)
     setup_seconds: Optional[int] = Field(None, ge=0)
     attribution_url: Optional[str] = None
     attribution_author: Optional[str] = None
@@ -148,6 +199,10 @@ class LineupPatch(BaseModel):
     notes: Optional[str] = None
     aim_anchor_x: Optional[float] = Field(None, ge=0.0, le=1.0)
     aim_anchor_y: Optional[float] = Field(None, ge=0.0, le=1.0)
+    stand_anchor_x: Optional[float] = Field(None, ge=0.0, le=1.0)
+    stand_anchor_y: Optional[float] = Field(None, ge=0.0, le=1.0)
+    target_anchor_x: Optional[float] = Field(None, ge=0.0, le=1.0)
+    target_anchor_y: Optional[float] = Field(None, ge=0.0, le=1.0)
     setup_seconds: Optional[int] = Field(None, ge=0)
     attribution_url: Optional[str] = None
     attribution_author: Optional[str] = None
@@ -193,6 +248,10 @@ class LineupAcceptBody(BaseModel):
     notes: Optional[str] = None
     aim_anchor_x: Optional[float] = Field(None, ge=0.0, le=1.0)
     aim_anchor_y: Optional[float] = Field(None, ge=0.0, le=1.0)
+    stand_anchor_x: Optional[float] = Field(None, ge=0.0, le=1.0)
+    stand_anchor_y: Optional[float] = Field(None, ge=0.0, le=1.0)
+    target_anchor_x: Optional[float] = Field(None, ge=0.0, le=1.0)
+    target_anchor_y: Optional[float] = Field(None, ge=0.0, le=1.0)
     setup_seconds: Optional[int] = Field(None, ge=0)
 
     @field_validator("side")

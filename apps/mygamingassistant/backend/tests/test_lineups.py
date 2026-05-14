@@ -348,3 +348,185 @@ async def test_404_on_unknown_lineup(auth_client: AsyncClient):
     """GET /api/lineups/{unknown_id} should return 404."""
     resp = await auth_client.get(f"/api/lineups/{uuid.uuid4()}")
     assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Minimap anchor fields + effective_* fallback (PR 1 of lineup-pins series)
+# ---------------------------------------------------------------------------
+
+@pytest_asyncio.fixture
+async def seeded_with_polygons(db: AsyncSession) -> dict:
+    """Like seeded_game_map but zones have real polygon_points so centroids
+    are non-trivial and effective_* can be exercised end-to-end."""
+    game = Game(
+        slug="anchors-game",
+        name="Anchors Game",
+        side_a_label="T",
+        side_b_label="CT",
+    )
+    db.add(game)
+    await db.flush()
+
+    map_obj = Map(game_id=game.id, slug="anchors-map", name="Anchors Map")
+    db.add(map_obj)
+    await db.flush()
+
+    # Square zone centered at (0.2, 0.3) — centroid is the midpoint of bounds.
+    zone_target = MapZone(
+        map_id=map_obj.id,
+        slug="target",
+        name="Target",
+        polygon_points=[
+            {"x": 0.1, "y": 0.2},
+            {"x": 0.3, "y": 0.2},
+            {"x": 0.3, "y": 0.4},
+            {"x": 0.1, "y": 0.4},
+        ],
+    )
+    # Square zone centered at (0.8, 0.7).
+    zone_stand = MapZone(
+        map_id=map_obj.id,
+        slug="stand",
+        name="Stand",
+        polygon_points=[
+            {"x": 0.7, "y": 0.6},
+            {"x": 0.9, "y": 0.6},
+            {"x": 0.9, "y": 0.8},
+            {"x": 0.7, "y": 0.8},
+        ],
+    )
+    db.add_all([zone_target, zone_stand])
+    await db.flush()
+
+    util = UtilityType(game_id=game.id, slug="smoke", name="Smoke")
+    db.add(util)
+    await db.flush()
+
+    return {
+        "game": game,
+        "map": map_obj,
+        "zone_target": zone_target,
+        "zone_stand": zone_stand,
+        "util": util,
+    }
+
+
+@pytest.mark.asyncio
+async def test_effective_anchors_fallback_to_zone_centroid(
+    auth_client: AsyncClient, seeded_with_polygons: dict
+):
+    """When stand/target anchors are NULL, effective_* must equal zone centroid."""
+    payload = {
+        "game_id": str(seeded_with_polygons["game"].id),
+        "map_id": str(seeded_with_polygons["map"].id),
+        "target_zone_id": str(seeded_with_polygons["zone_target"].id),
+        "stand_zone_id": str(seeded_with_polygons["zone_stand"].id),
+        "side": "side_a",
+        "utility_type_id": str(seeded_with_polygons["util"].id),
+        "title": "no-anchor lineup",
+        # No anchors set — falls back to centroid
+    }
+    create_resp = await auth_client.post("/api/lineups", json=payload)
+    assert create_resp.status_code == 201, create_resp.text
+    lineup_id = create_resp.json()["id"]
+
+    resp = await auth_client.get(f"/api/lineups/{lineup_id}")
+    body = resp.json()
+
+    # Raw anchors stay NULL
+    assert body["stand_anchor_x"] is None
+    assert body["target_anchor_x"] is None
+
+    # Effective coordinates match the zone centroids (square: midpoint of bounds)
+    assert body["effective_target_x"] == pytest.approx(0.2)
+    assert body["effective_target_y"] == pytest.approx(0.3)
+    assert body["effective_stand_x"] == pytest.approx(0.8)
+    assert body["effective_stand_y"] == pytest.approx(0.7)
+
+
+@pytest.mark.asyncio
+async def test_explicit_anchors_override_centroid(
+    auth_client: AsyncClient, seeded_with_polygons: dict
+):
+    """Explicit anchors must take precedence over the zone centroid fallback."""
+    payload = {
+        "game_id": str(seeded_with_polygons["game"].id),
+        "map_id": str(seeded_with_polygons["map"].id),
+        "target_zone_id": str(seeded_with_polygons["zone_target"].id),
+        "stand_zone_id": str(seeded_with_polygons["zone_stand"].id),
+        "side": "side_a",
+        "utility_type_id": str(seeded_with_polygons["util"].id),
+        "title": "explicit-anchor lineup",
+        "stand_anchor_x": 0.55,
+        "stand_anchor_y": 0.66,
+        "target_anchor_x": 0.11,
+        "target_anchor_y": 0.22,
+    }
+    create_resp = await auth_client.post("/api/lineups", json=payload)
+    assert create_resp.status_code == 201, create_resp.text
+    body = create_resp.json()
+
+    # Raw anchors preserved
+    assert body["stand_anchor_x"] == pytest.approx(0.55)
+    assert body["target_anchor_y"] == pytest.approx(0.22)
+
+    # Effective values equal the explicit anchors, NOT the centroids
+    assert body["effective_stand_x"] == pytest.approx(0.55)
+    assert body["effective_stand_y"] == pytest.approx(0.66)
+    assert body["effective_target_x"] == pytest.approx(0.11)
+    assert body["effective_target_y"] == pytest.approx(0.22)
+
+
+@pytest.mark.asyncio
+async def test_patch_anchors_updates_effective(
+    auth_client: AsyncClient, seeded_with_polygons: dict
+):
+    """PATCH must accept anchor fields and the effective_* response reflects them."""
+    create_resp = await auth_client.post(
+        "/api/lineups",
+        json={
+            "game_id": str(seeded_with_polygons["game"].id),
+            "map_id": str(seeded_with_polygons["map"].id),
+            "target_zone_id": str(seeded_with_polygons["zone_target"].id),
+            "stand_zone_id": str(seeded_with_polygons["zone_stand"].id),
+            "side": "side_a",
+            "utility_type_id": str(seeded_with_polygons["util"].id),
+            "title": "patchable lineup",
+        },
+    )
+    lineup_id = create_resp.json()["id"]
+
+    patch_resp = await auth_client.patch(
+        f"/api/lineups/{lineup_id}",
+        json={
+            "stand_anchor_x": 0.42,
+            "stand_anchor_y": 0.43,
+        },
+    )
+    assert patch_resp.status_code == 200
+    body = patch_resp.json()
+
+    assert body["stand_anchor_x"] == pytest.approx(0.42)
+    assert body["effective_stand_x"] == pytest.approx(0.42)
+    # Target anchor still NULL → effective_ still falls back to centroid
+    assert body["target_anchor_x"] is None
+    assert body["effective_target_x"] == pytest.approx(0.2)
+
+
+@pytest.mark.asyncio
+async def test_anchor_validation_rejects_out_of_range(
+    auth_client: AsyncClient, seeded_with_polygons: dict
+):
+    """Anchors must be in [0, 1] — Pydantic Field(ge=0.0, le=1.0) rejects others."""
+    payload = {
+        "game_id": str(seeded_with_polygons["game"].id),
+        "map_id": str(seeded_with_polygons["map"].id),
+        "target_zone_id": str(seeded_with_polygons["zone_target"].id),
+        "stand_zone_id": str(seeded_with_polygons["zone_stand"].id),
+        "side": "side_a",
+        "utility_type_id": str(seeded_with_polygons["util"].id),
+        "title": "bad-anchor lineup",
+        "stand_anchor_x": 1.5,  # out of range
+    }
+    resp = await auth_client.post("/api/lineups", json=payload)
+    assert resp.status_code == 422
