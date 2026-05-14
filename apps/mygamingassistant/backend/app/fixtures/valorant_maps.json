@@ -5,7 +5,7 @@
       {
         "slug": "bind",
         "name": "Bind",
-        "minimap_url": null,
+        "minimap_url": "/minimaps/valorant/bind.png",
         "zones": [
           { "slug": "a-site",     "name": "A Site",     "polygon_points": [] },
           { "slug": "b-site",     "name": "B Site",     "polygon_points": [] },
@@ -24,7 +24,7 @@
       {
         "slug": "haven",
         "name": "Haven",
-        "minimap_url": null,
+        "minimap_url": "/minimaps/valorant/haven.png",
         "zones": [
           { "slug": "a-site",     "name": "A Site",     "polygon_points": [] },
           { "slug": "b-site",     "name": "B Site",     "polygon_points": [] },
@@ -44,7 +44,7 @@
       {
         "slug": "split",
         "name": "Split",
-        "minimap_url": null,
+        "minimap_url": "/minimaps/valorant/split.png",
         "zones": [
           { "slug": "a-site",     "name": "A Site",     "polygon_points": [] },
           { "slug": "b-site",     "name": "B Site",     "polygon_points": [] },
@@ -63,7 +63,7 @@
       {
         "slug": "ascent",
         "name": "Ascent",
-        "minimap_url": null,
+        "minimap_url": "/minimaps/valorant/ascent.png",
         "zones": [
           { "slug": "a-site",     "name": "A Site",     "polygon_points": [] },
           { "slug": "b-site",     "name": "B Site",     "polygon_points": [] },
@@ -82,7 +82,7 @@
       {
         "slug": "icebox",
         "name": "Icebox",
-        "minimap_url": null,
+        "minimap_url": "/minimaps/valorant/icebox.png",
         "zones": [
           { "slug": "a-site",     "name": "A Site",     "polygon_points": [] },
           { "slug": "b-site",     "name": "B Site",     "polygon_points": [] },
@@ -100,7 +100,7 @@
       {
         "slug": "breeze",
         "name": "Breeze",
-        "minimap_url": null,
+        "minimap_url": "/minimaps/valorant/breeze.png",
         "zones": [
           { "slug": "a-site",     "name": "A Site",     "polygon_points": [] },
           { "slug": "b-site",     "name": "B Site",     "polygon_points": [] },
@@ -118,7 +118,7 @@
       {
         "slug": "fracture",
         "name": "Fracture",
-        "minimap_url": null,
+        "minimap_url": "/minimaps/valorant/fracture.png",
         "zones": [
           { "slug": "a-site",     "name": "A Site",     "polygon_points": [] },
           { "slug": "b-site",     "name": "B Site",     "polygon_points": [] },
@@ -136,7 +136,7 @@
       {
         "slug": "pearl",
         "name": "Pearl",
-        "minimap_url": null,
+        "minimap_url": "/minimaps/valorant/pearl.png",
         "zones": [
           { "slug": "a-site",     "name": "A Site",     "polygon_points": [] },
           { "slug": "b-site",     "name": "B Site",     "polygon_points": [] },
@@ -154,7 +154,7 @@
       {
         "slug": "lotus",
         "name": "Lotus",
-        "minimap_url": null,
+        "minimap_url": "/minimaps/valorant/lotus.png",
         "zones": [
           { "slug": "a-site",     "name": "A Site",     "polygon_points": [] },
           { "slug": "b-site",     "name": "B Site",     "polygon_points": [] },
