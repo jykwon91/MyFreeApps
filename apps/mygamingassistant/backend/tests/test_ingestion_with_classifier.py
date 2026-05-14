@@ -82,12 +82,33 @@ class TestIngestionWithClassifier:
             error_codes=[],
         )
 
+        # The real classify_lineup (see classifier_service.classify_lineup
+        # docstring) writes suggested_* fields to the Lineup row as a side
+        # effect and returns the result. AsyncMock with just return_value
+        # would skip the write, so the mock here mirrors the side effect.
+        async def _classify_with_writeback(db_arg, lineup_id, *, game_hint=None):
+            target = (
+                await db_arg.execute(select(Lineup).where(Lineup.id == lineup_id))
+            ).scalar_one()
+            target.suggested_game_id = successful_result.suggested_game_id
+            target.suggested_map_id = successful_result.suggested_map_id
+            target.suggested_target_zone_id = successful_result.suggested_target_zone_id
+            target.suggested_stand_zone_id = successful_result.suggested_stand_zone_id
+            target.suggested_side = successful_result.suggested_side
+            target.suggested_utility_type_id = successful_result.suggested_utility_type_id
+            target.aim_anchor_x = successful_result.aim_anchor_x
+            target.aim_anchor_y = successful_result.aim_anchor_y
+            target.classification_confidence = successful_result.confidence
+            target.classification_reasoning = successful_result.reasoning
+            await db_arg.flush()
+            return successful_result
+
         with (
             patch("app.services.ingestion.ingestion_orchestrator.list_videos", new_callable=AsyncMock, return_value=[FAKE_VIDEO]),
             patch("app.services.ingestion.ingestion_orchestrator.download_video", new_callable=AsyncMock, return_value=fake_video_path),
             patch("app.services.ingestion.ingestion_orchestrator.extract_frames", new_callable=AsyncMock, return_value=[_FAKE_PNG, _FAKE_PNG]),
             patch("app.services.ingestion.ingestion_orchestrator.get_storage") as mock_storage_factory,
-            patch("app.services.ingestion.ingestion_orchestrator.classify_lineup", new_callable=AsyncMock, return_value=successful_result),
+            patch("app.services.ingestion.ingestion_orchestrator.classify_lineup", new=_classify_with_writeback),
             patch.object(ingestion_orchestrator, "settings") as mock_settings,
         ):
             mock_settings.ingestion_download_dir = str(tmp_path)
