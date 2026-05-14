@@ -1,21 +1,26 @@
 /**
  * Live mode for CS2 — `/live/cs2`.
  *
- * This is the first "live mode" surface in the app. It:
- *   1. Subscribes to GSI events via `useGsiState` (Tauri-only).
- *   2. Reflects the detected (map, side) into a `/api/lineups` query.
- *   3. Renders a compact horizontal lineup card strip.
- *   4. Auto-applies an always-on-top, small, borderless window shape on
- *      mount (Tauri-only) and restores it on unmount.
- *   5. Exposes a manual override toggle so the operator can lock the
- *      filter to a specific map/side when CS2 isn't running (for testing
- *      and pre-match prep).
- *   6. Wires F1 to open the full plan-mode panel in the same window.
+ * Subscribes to GSI events via `useGsiState` (Tauri-only). Reflects the
+ * detected (map, side, zone, utility) into a `/api/lineups` query and
+ * renders a compact horizontal lineup card strip.
  *
- * Constraints from the PR 8 spec:
- *   - No player position detection (PR 9 will add minimap CV).
- *   - No utility-held filter (PR 10).
- *   - No Valorant — `gsi:` events are CS2-only.
+ * PR 10 added the utility-held filter:
+ *
+ *   1. GSI emits `active_utility` (the grenade the player is currently
+ *      holding) and `held_utility_slugs` (everything in their inventory).
+ *   2. `computeLineupUtilityFilter` decides the narrowing: active wins,
+ *      then held, then no filter.
+ *   3. Operator can override with a specific slug via the override panel.
+ *
+ * The HUD top bar (LiveTopBar) was also expanded to surface money / score
+ * / bomb state / round phase — see that component for the layout.
+ *
+ * Constraints:
+ *   - No Valorant — `gsi:` events are CS2-only. Valorant lives in PR 11.
+ *   - No round clock — CS2 redacts the actual round timer for competitive
+ *     integrity. The round phase chip ("Freezetime" / "Live" / "Over") is
+ *     the closest proxy we can surface honestly.
  *
  * Web behaviour:
  *   - On the web build, this route renders a "Live mode is a desktop
@@ -26,7 +31,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Monitor, Settings as SettingsIcon } from "lucide-react";
-import { useGsiState, summarizeLiveBar } from "@/lib/gsi";
+import {
+  computeLineupUtilityFilter,
+  summarizeLiveBar,
+  useGsiState,
+} from "@/lib/gsi";
 import { useCvState } from "@/lib/cv";
 import { useGetLineupsQuery } from "@/store/lineupsApi";
 import { isTauri } from "@/lib/tauri";
@@ -34,25 +43,40 @@ import LineupCard from "@/components/lineup/LineupCard";
 import LiveTopBar from "@/components/live/LiveTopBar";
 import LiveOverridePanel from "@/components/live/LiveOverridePanel";
 import LiveStripSkeleton from "@/components/live/LiveStripSkeleton";
-import type { GsiSide } from "@/types/desktop";
+import type { Cs2UtilitySlug, GsiSide } from "@/types/desktop";
+import type { Lineup } from "@/types/game";
 
 const GAME_SLUG_CS2 = "cs2";
+
+/**
+ * Override state — what the operator manually set, regardless of GSI.
+ * Extracted into a named interface per the
+ * `feedback_minimize_ternaries_extract_types` preference.
+ */
+interface OverrideState {
+  enabled: boolean;
+  mapSlug: string;
+  side: GsiSide;
+  utility: Cs2UtilitySlug | null;
+}
+
+const INITIAL_OVERRIDE: OverrideState = {
+  enabled: false,
+  mapSlug: "",
+  side: "any",
+  utility: null,
+};
 
 export default function LiveCs2() {
   // ALL hooks must be called unconditionally; the early return for web
   // happens below the hook block so React's rules-of-hooks stay intact.
   const [inTauri] = useState(() => isTauri());
-  const [override, setOverride] = useState<{
-    enabled: boolean;
-    mapSlug: string;
-    side: GsiSide;
-  }>({ enabled: false, mapSlug: "", side: "any" });
+  const [override, setOverride] = useState<OverrideState>(INITIAL_OVERRIDE);
 
   const { event, status, ready } = useGsiState();
   // CV pipeline state (PR 9a). On the web build this returns ready=true with
   // null zone/status — same degraded shape as useGsiState — so no extra
-  // gating is required. The override flow ignores zone (operator picked
-  // map+side manually).
+  // gating is required.
   const { zone: cvZone } = useCvState();
 
   // Apply always-on-top + small window shape on mount (Tauri only). Restore
@@ -66,7 +90,6 @@ export default function LiveCs2() {
           "@tauri-apps/api/webviewWindow"
         );
         const win = getCurrentWebviewWindow();
-        // Capture previous shape so we can restore on unmount.
         await win.setAlwaysOnTop(true);
       } catch {
         // Non-fatal — Live mode still works without always-on-top. The
@@ -92,14 +115,48 @@ export default function LiveCs2() {
     };
   }, [inTauri]);
 
-  // F1 → open plan mode for the detected map in a new tab so the live
-  // overlay stays visible. Falls back to opening the current window if
-  // we're outside Tauri.
-  const effectiveMapSlug = override.enabled ? override.mapSlug : event?.map_slug ?? "";
+  // Resolve the effective (map, side, zone, utility) from override + GSI.
+  const effectiveMapSlug = override.enabled
+    ? override.mapSlug
+    : event?.map_slug ?? "";
   const effectiveSide: GsiSide = override.enabled
     ? override.side
     : event?.side ?? "any";
 
+  // Effective zone slug: CV-detected when not overriding, undefined when
+  // overriding (operator manually picks map+side, zone narrowing doesn't
+  // apply) or no CV detection yet.
+  const effectiveZone = !override.enabled && cvZone ? cvZone : undefined;
+
+  // PR 10 — utility filter narrowing.
+  //
+  // We compute the slugs in a memo so the inner `useGetLineupsQuery` cache
+  // key stays stable across renders that don't actually change inputs.
+  const utilityFilterSlugs = useMemo<string[] | null>(() => {
+    if (override.enabled) {
+      // In override mode, the operator's explicit choice wins. If they
+      // picked "All utility" (null), no narrowing — same as PR 9a.
+      return computeLineupUtilityFilter({
+        overrideSlug: override.utility,
+        activeUtilitySlug: null,
+        heldUtilitySlugs: null,
+      });
+    }
+    return computeLineupUtilityFilter({
+      overrideSlug: null,
+      activeUtilitySlug: event?.active_utility ?? null,
+      heldUtilitySlugs: event?.held_utility_slugs ?? null,
+    });
+  }, [
+    override.enabled,
+    override.utility,
+    event?.active_utility,
+    event?.held_utility_slugs,
+  ]);
+
+  // F1 → open plan mode for the detected map in a new tab so the live
+  // overlay stays visible. Falls back to opening the current window if
+  // we're outside Tauri.
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       if (e.key !== "F1") return;
@@ -115,22 +172,20 @@ export default function LiveCs2() {
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [effectiveMapSlug, effectiveSide]);
 
-  // Effective zone slug: CV-detected when not overriding, undefined when
-  // overriding or no CV detection yet. Falls back gracefully to the
-  // map+side filter (PR 8 behaviour).
-  const effectiveZone = !override.enabled && cvZone ? cvZone : undefined;
-
-  // Fetch lineups for the effective (map, side, zone). Skip until we have
-  // a map slug to look up. When zone is present, the backend narrows the
-  // result further — that's what powers PR 9a's "zone-level live filter".
+  // Fetch lineups for the effective (map, side, zone, utility). Skip until
+  // we have a map slug to look up.
   const lineupQueryArgs = useMemo(
     () => ({
       game_slug: GAME_SLUG_CS2,
       map_slug: effectiveMapSlug,
       side: effectiveSide !== "any" ? effectiveSide : undefined,
       target_zone_slug: effectiveZone,
+      utility_type_slugs:
+        utilityFilterSlugs && utilityFilterSlugs.length > 0
+          ? utilityFilterSlugs.join(",")
+          : undefined,
     }),
-    [effectiveMapSlug, effectiveSide, effectiveZone],
+    [effectiveMapSlug, effectiveSide, effectiveZone, utilityFilterSlugs],
   );
 
   const { data: lineups = [], isFetching: lineupsFetching } =
@@ -156,6 +211,7 @@ export default function LiveCs2() {
         override={override}
         onOverrideToggle={(enabled) => setOverride((p) => ({ ...p, enabled }))}
         zoneSlug={effectiveZone ?? null}
+        utilityFilter={utilityFilterSlugs}
       />
 
       <LiveOverridePanel
@@ -164,31 +220,18 @@ export default function LiveCs2() {
         onChange={setOverride}
       />
 
-      <section className="flex-1 overflow-x-auto overflow-y-hidden px-3 py-2">
-        {!hasAnyMap ? (
-          <LiveEmptyState
-            ready={ready}
-            running={status?.running ?? false}
-            payloadsReceived={status?.payloads_received ?? 0}
-          />
-        ) : lineupsFetching ? (
-          <LiveStripSkeleton />
-        ) : lineups.length === 0 ? (
-          <p className="text-sm text-muted-foreground p-4">
-            No lineups for {effectiveMapSlug} on {effectiveSide}
-            {effectiveZone ? ` in ${effectiveZone}` : ""}. Add one in plan
-            mode (press F1).
-          </p>
-        ) : (
-          <div className="flex gap-3 h-full">
-            {lineups.slice(0, 6).map((l) => (
-              <div key={l.id} className="w-64 shrink-0">
-                <LineupCard lineup={l} variant="thumbnail" />
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
+      <LiveStripSection
+        hasAnyMap={hasAnyMap}
+        ready={ready}
+        running={status?.running ?? false}
+        payloadsReceived={status?.payloads_received ?? 0}
+        effectiveMapSlug={effectiveMapSlug}
+        effectiveSide={effectiveSide}
+        effectiveZone={effectiveZone}
+        utilityFilterSlugs={utilityFilterSlugs}
+        lineupsFetching={lineupsFetching}
+        lineups={lineups}
+      />
 
       <footer className="text-xs text-muted-foreground px-3 py-1 border-t flex items-center justify-between gap-3">
         <span>
@@ -205,6 +248,96 @@ export default function LiveCs2() {
 // ---------------------------------------------------------------------------
 // Sub-components
 // ---------------------------------------------------------------------------
+
+interface LiveStripSectionProps {
+  hasAnyMap: boolean;
+  ready: boolean;
+  running: boolean;
+  payloadsReceived: number;
+  effectiveMapSlug: string;
+  effectiveSide: GsiSide;
+  effectiveZone: string | undefined;
+  utilityFilterSlugs: readonly string[] | null;
+  lineupsFetching: boolean;
+  lineups: readonly Lineup[];
+}
+
+function LiveStripSection({
+  hasAnyMap,
+  ready,
+  running,
+  payloadsReceived,
+  effectiveMapSlug,
+  effectiveSide,
+  effectiveZone,
+  utilityFilterSlugs,
+  lineupsFetching,
+  lineups,
+}: LiveStripSectionProps) {
+  if (!hasAnyMap) {
+    return (
+      <section className="flex-1 overflow-x-auto overflow-y-hidden px-3 py-2">
+        <LiveEmptyState
+          ready={ready}
+          running={running}
+          payloadsReceived={payloadsReceived}
+        />
+      </section>
+    );
+  }
+  if (lineupsFetching) {
+    return (
+      <section className="flex-1 overflow-x-auto overflow-y-hidden px-3 py-2">
+        <LiveStripSkeleton />
+      </section>
+    );
+  }
+  if (lineups.length === 0) {
+    return (
+      <section className="flex-1 overflow-x-auto overflow-y-hidden px-3 py-2">
+        <NoLineupsMessage
+          mapSlug={effectiveMapSlug}
+          side={effectiveSide}
+          zone={effectiveZone}
+          utilitySlugs={utilityFilterSlugs}
+        />
+      </section>
+    );
+  }
+  return (
+    <section className="flex-1 overflow-x-auto overflow-y-hidden px-3 py-2">
+      <div className="flex gap-3 h-full">
+        {lineups.slice(0, 6).map((l) => (
+          <div key={l.id} className="w-64 shrink-0">
+            <LineupCard lineup={l} variant="thumbnail" />
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+interface NoLineupsMessageProps {
+  mapSlug: string;
+  side: GsiSide;
+  zone: string | undefined;
+  utilitySlugs: readonly string[] | null;
+}
+
+function NoLineupsMessage({ mapSlug, side, zone, utilitySlugs }: NoLineupsMessageProps) {
+  const zonePart = zone ? ` in ${zone}` : "";
+  const utilityPart =
+    utilitySlugs && utilitySlugs.length > 0
+      ? ` for ${utilitySlugs.join("/")}`
+      : "";
+  return (
+    <p className="text-sm text-muted-foreground p-4">
+      No lineups for {mapSlug} on {side}
+      {zonePart}
+      {utilityPart}. Add one in plan mode (press F1).
+    </p>
+  );
+}
 
 interface LiveEmptyStateProps {
   ready: boolean;

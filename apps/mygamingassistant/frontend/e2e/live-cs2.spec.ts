@@ -226,6 +226,60 @@ test.describe("Live mode CS2 — simulated Tauri", () => {
     // Panel now visible.
     await expect(page.getByRole("region", { name: /manual override/i })).toBeVisible();
   });
+
+  // PR 10 — override panel now includes a utility-type dropdown.
+  test("Override panel includes utility dropdown with all CS2 grenade slugs", async ({
+    page,
+    request,
+  }) => {
+    await injectFakeTauri(page);
+
+    const credentials = getOperatorCredentials();
+    await loginViaUI(page, credentials, request);
+
+    await page.goto("/live/cs2");
+
+    await page.getByRole("button", { name: /^Override$/ }).click();
+    const panel = page.getByRole("region", { name: /manual override/i });
+    await expect(panel).toBeVisible();
+
+    // Utility dropdown has "All utility" + 5 CS2 utility types.
+    const utilitySelect = panel.getByLabel(/Override utility filter/i);
+    await expect(utilitySelect).toBeVisible();
+    await expect(utilitySelect.locator("option")).toHaveCount(6); // All + 5
+  });
+
+  // PR 10 — selecting a utility surfaces a badge in the top bar.
+  test("Override utility selection surfaces a badge in the live top bar", async ({
+    page,
+    request,
+  }) => {
+    await injectFakeTauri(page);
+
+    const credentials = getOperatorCredentials();
+    await loginViaUI(page, credentials, request);
+
+    await page.goto("/live/cs2");
+
+    await page.getByRole("button", { name: /^Override$/ }).click();
+    const panel = page.getByRole("region", { name: /manual override/i });
+    await expect(panel).toBeVisible();
+
+    // Pick smoke from the utility dropdown.
+    await panel.getByLabel(/Override utility filter/i).selectOption("smoke");
+
+    // The top bar should now show "Smoke" inside the live-utility test id.
+    await expect(page.getByTestId("live-utility")).toBeVisible();
+    await expect(page.getByTestId("live-utility")).toHaveText("Smoke");
+
+    // Switch to flash; badge updates.
+    await panel.getByLabel(/Override utility filter/i).selectOption("flash");
+    await expect(page.getByTestId("live-utility")).toHaveText("Flash");
+
+    // Switch back to "All utility"; badge disappears.
+    await panel.getByLabel(/Override utility filter/i).selectOption("");
+    await expect(page.getByTestId("live-utility")).toHaveCount(0);
+  });
 });
 
 test.describe("CS2 setup page — simulated Tauri", () => {

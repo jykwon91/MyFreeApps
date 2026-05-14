@@ -43,3 +43,37 @@ export function formatLastEventTime(rfc3339: string, now: Date = new Date()): st
   const hrs = Math.floor(mins / 60);
   return `${hrs}h ago`;
 }
+
+/**
+ * Display-format a zone slug. `null`/empty → null (caller hides the
+ * segment). Same shape as `formatZoneDisplay` in `lib/cv.ts` — duplicated
+ * here so the LiveTopBar component file doesn't pull from `lib/`. Keeps
+ * the presentational tree shallow.
+ */
+export function formatZone(slug: string | null | undefined): string | null {
+  if (!slug) return null;
+  return slug.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+/**
+ * Tailwind classes for the round-phase chip on the HUD bar.
+ *
+ * PR 10's design: freezetime=blue (cool, preparation), live=green (go),
+ * over=grey (resolved). The colors are paired with text so the chip
+ * communicates the round phase by both color AND text (a11y safe).
+ *
+ * Accepts the display string ("Freezetime", "Live", "Over") rather than
+ * the raw slug because that's what the caller already has computed.
+ */
+export function roundPhaseChipClasses(display: string): string {
+  switch (display) {
+    case "Freezetime":
+      return "bg-sky-500/15 text-sky-700 dark:text-sky-300";
+    case "Live":
+      return "bg-green-500/15 text-green-700 dark:text-green-300";
+    case "Over":
+      return "bg-muted/60 text-muted-foreground";
+    default:
+      return "bg-muted/40 text-foreground";
+  }
+}
