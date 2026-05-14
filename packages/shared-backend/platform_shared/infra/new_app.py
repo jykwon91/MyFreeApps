@@ -205,6 +205,33 @@ def _maybe_regenerate_requirements(backend_dir: Path) -> bool:
         return False
 
 
+def _maybe_npm_install(repo_root: Path) -> bool:
+    """Best-effort: run `npm install` at monorepo root so the new frontend
+    workspace lands in the root `package-lock.json`.
+
+    Without this step, the first CI run after every scaffold fails with
+    ``npm ci EUSAGE -- Missing: <slug>-frontend@0.0.1 from lock file``.
+    Hit on PR #624; see project_platform_shared_real_platform.md.
+
+    Returns True if npm install succeeded; False if npm is missing or failed.
+    """
+    npm_path = shutil.which("npm")
+    if npm_path is None:
+        return False
+
+    try:
+        subprocess.run(
+            [npm_path, "install"],
+            cwd=repo_root,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        return True
+    except subprocess.CalledProcessError:
+        return False
+
+
 def scaffold_app(
     *,
     slug: str,
@@ -217,6 +244,7 @@ def scaffold_app(
     repo_root: Path | None = None,
     skip_render: bool = False,
     skip_uv: bool = False,
+    skip_npm: bool = False,
 ) -> dict[str, object]:
     """Programmatic entry point. Used by both the CLI and the conformance test.
 
@@ -263,12 +291,17 @@ def scaffold_app(
     if not skip_uv:
         uv_ok = _maybe_regenerate_requirements(app_dir / "backend")
 
+    npm_ok = False
+    if not skip_npm:
+        npm_ok = _maybe_npm_install(root)
+
     return {
         "app_dir": str(app_dir),
         "files_written": file_count,
         "app_yaml": str(app_yaml_path),
         "rendered": rendered_paths,
         "uv_export_succeeded": uv_ok,
+        "npm_install_succeeded": npm_ok,
     }
 
 
@@ -294,6 +327,8 @@ def _cli() -> int:
                         help="Skip Tier 3 render after scaffolding (advanced).")
     parser.add_argument("--skip-uv", action="store_true",
                         help="Skip uv sync/export after scaffolding (advanced).")
+    parser.add_argument("--skip-npm", action="store_true",
+                        help="Skip npm install at monorepo root after scaffolding (advanced).")
     args = parser.parse_args()
 
     try:
@@ -307,6 +342,7 @@ def _cli() -> int:
             postgres_image=args.postgres_image,
             skip_render=args.skip_render,
             skip_uv=args.skip_uv,
+            skip_npm=args.skip_npm,
         )
     except ScaffoldError as exc:
         print(f"error: {exc}", file=sys.stderr)
@@ -321,6 +357,12 @@ def _cli() -> int:
             f"  cd {summary['app_dir']}/backend && uv sync && "
             "uv export --format requirements-txt --no-hashes --no-emit-project "
             "--output-file requirements.txt"
+        )
+    if not summary["npm_install_succeeded"]:
+        print(
+            "WARNING: npm install at monorepo root was skipped or failed.\n"
+            "  Run `npm install` from the monorepo root before pushing — "
+            "without it, CI fails on `npm ci EUSAGE` for the new workspace."
         )
     return 0
 
