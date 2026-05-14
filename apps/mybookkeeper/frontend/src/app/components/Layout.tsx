@@ -8,7 +8,7 @@ import { NAV_GROUPS } from "@/app/lib/nav";
 import type { NavItem } from "@/shared/lib/constants";
 import { useCurrentUser } from "@/shared/hooks/useCurrentUser";
 import { useIsOrgAdmin } from "@/shared/hooks/useOrgRole";
-import ThemeToggle from "@/shared/components/ThemeToggle";
+import { ThemeToggle } from "@platform/ui";
 import OrgSwitcher from "@/app/features/organizations/OrgSwitcher";
 import VersionTag from "@/app/components/VersionTag";
 import DemoWelcomeDialog from "@/app/components/DemoWelcomeDialog";

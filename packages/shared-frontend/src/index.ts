@@ -41,6 +41,7 @@ export { default as InlineBoldText } from "./components/ui/InlineBoldText";
 export { default as MultiChipInput } from "./components/ui/MultiChipInput";
 export { default as ToggleChipGroup } from "./components/ui/ToggleChipGroup";
 export type { ToggleOption, ToggleChipGroupProps } from "./components/ui/ToggleChipGroup";
+export { default as ThemeToggle } from "./components/ui/ThemeToggle";
 
 // Layout components
 export { default as AppShell } from "./components/layout/AppShell";

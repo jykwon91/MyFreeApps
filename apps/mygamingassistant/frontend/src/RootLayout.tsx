@@ -9,7 +9,7 @@ import {
   Settings,
   Shield,
 } from "lucide-react";
-import { AppShell, StepUpModal, Toaster, useIsAuthenticated } from "@platform/ui";
+import { AppShell, StepUpModal, ThemeToggle, Toaster, useIsAuthenticated } from "@platform/ui";
 import { buildNav, PUBLIC_NAV_PATHS } from "@/constants/nav";
 import { signOut } from "@/lib/auth";
 import { useIsSuperuser } from "@/hooks/useIsSuperuser";
@@ -107,7 +107,7 @@ export default function RootLayout() {
         <ScrollRestoration />
         <Toaster />
         <StepUpModal />
-        <GuestShell logo={LOGO} nav={nav}>
+        <GuestShell logo={LOGO} nav={nav} headerActions={<ThemeToggle />}>
           <Outlet />
         </GuestShell>
       </>
@@ -126,6 +126,7 @@ export default function RootLayout() {
         user={user}
         onSignOut={signOut}
         searchPlaceholder="Search lineups..."
+        headerActions={<ThemeToggle />}
       >
         <Outlet />
       </AppShell>
