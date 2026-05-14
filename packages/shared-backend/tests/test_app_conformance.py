@@ -30,6 +30,9 @@ _APPS = [
     # registration is seeded from env vars at boot time rather than via
     # a public registration page.
     "mygamingassistant",
+    # mypizzatracker is single-user, same shape as mygamingassistant.
+    # Scaffolded via `python -m platform_shared.infra.new_app` (PR #623).
+    "mypizzatracker",
 ]
 
 
@@ -304,7 +307,7 @@ class TestInfraTemplateDrift:
     the template owns the shape.
     """
 
-    @pytest.mark.parametrize("app", ["mybookkeeper", "myjobhunter", "mygamingassistant"])
+    @pytest.mark.parametrize("app", ["mybookkeeper", "myjobhunter", "mygamingassistant", "mypizzatracker"])
     def test_no_drift(self, app: str) -> None:
         try:
             from platform_shared.infra.render import diff_app, _repo_root

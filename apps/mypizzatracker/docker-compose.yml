@@ -1,0 +1,104 @@
+# GENERATED FROM infra/templates/docker-compose.yml.j2 — DO NOT EDIT.
+# Edit the template + apps/<app>/app.yaml; re-render via:
+#   python -m platform_shared.infra.render --app mypizzatracker
+
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: mypizzatracker
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: mypizzatracker
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mypizzatracker"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      # initdb on a cold start can take 10–20s; without start_period the
+      # early pg_isready failures count toward retries and Docker reports
+      # the container "unhealthy" before postgres has bound the socket.
+      # Dependent services (migrate, api) then bail before postgres is ready.
+      start_period: 30s
+
+  migrate:
+    build:
+      # Build context is the monorepo root so the image can pull in
+      # packages/shared-backend (the `platform_shared` library) alongside
+      # apps/mypizzatracker/.
+      context: ../..
+      dockerfile: apps/mypizzatracker/docker/backend.Dockerfile
+    command: ["alembic", "upgrade", "head"]
+    env_file: backend/.env.docker
+    environment:
+      DATABASE_URL: postgresql+asyncpg://mypizzatracker:${DB_PASSWORD}@postgres/mypizzatracker
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api:
+    build:
+      context: ../..
+      dockerfile: apps/mypizzatracker/docker/backend.Dockerfile
+    restart: unless-stopped
+    env_file: backend/.env.docker
+    environment:
+      DATABASE_URL: postgresql+asyncpg://mypizzatracker:${DB_PASSWORD}@postgres/mypizzatracker
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    networks:
+      - default
+      - myfreeapps
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8006/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  caddy:
+    # Custom image: caddy:2-alpine + freshly-built frontend dist baked in
+    # at /srv/frontend + Caddyfile baked at /etc/caddy/Caddyfile. No shared
+    # volume, no entrypoint copy, no drift between deploys. See
+    # docker/caddy.Dockerfile for the full rationale.
+    build:
+      context: ../..
+      dockerfile: apps/mypizzatracker/docker/caddy.Dockerfile
+      args:
+        # Frontend public env baked into the Vite bundle at build time.
+        # Read from the host shell environment when `docker compose build`
+        # runs; the deploy workflow / operator passes these via
+        # `--env-file backend/.env.docker`. Empty values produce a bundle
+        # where TurnstileWidget returns null and registration silently 400s.
+        VITE_TURNSTILE_SITE_KEY: ${TURNSTILE_SITE_KEY:-}
+    restart: unless-stopped
+    ports:
+      # Bind only to localhost — host Caddy is the public front door and proxies here.
+      - "127.0.0.1:8098:80"
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - default
+      - myfreeapps
+
+volumes:
+  pg_data:
+  caddy_data:
+  caddy_config:
+
+networks:
+  # Per-app default network for postgres + migrate + workers.
+  default:
+  # Shared external network owned by infra/docker-compose.yml — joined
+  # by services that need to reach myfreeapps-minio. Bring up the infra
+  # stack first or compose-up will fail with "network myfreeapps not found".
+  myfreeapps:
+    external: true
