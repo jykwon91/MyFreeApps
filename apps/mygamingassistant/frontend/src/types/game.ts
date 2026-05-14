@@ -43,6 +43,16 @@ export interface MapDetail {
   utility_types: UtilityType[];
 }
 
+export interface MinimapUploadUrlResponse {
+  put_url: string;
+  object_key: string;
+}
+
+export interface MapMinimapUpdated {
+  map_id: string;
+  minimap_url: string | null;
+}
+
 // ---------------------------------------------------------------------------
 // Lineup domain
 // ---------------------------------------------------------------------------

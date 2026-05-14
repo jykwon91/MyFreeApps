@@ -1,12 +1,23 @@
 # Minimap assets
 
-These PNGs are bundled directly into the frontend so the map view doesn't depend on
-a third-party CDN. Path convention is `public/minimaps/<game-slug>/<map-slug>.png`.
+Two ways to populate map minimaps. **Pick whichever is easier per map.**
 
-The fixture files (`backend/app/fixtures/{cs2,valorant}_maps.json`) reference these
-paths via `minimap_url: "/minimaps/<game>/<map>.png"`. When the file is missing,
-`MapPage.tsx` falls back to a "Minimap not available" text block via the `<img onError>`
-handler, so the page never shows a broken-image icon.
+### 1. Operator upload UI (recommended for one-off updates)
+
+Log in as the operator, navigate to any map page (`/cs2/mirage` etc.), and click
+**Replace minimap** at the top-right. Pick a PNG/JPG/WebP up to 5 MB. The file goes to
+MinIO under `maps/<map_id>/minimap.png` and `Map.minimap_url` is updated; the GET
+endpoint returns a presigned URL on each read (24 h TTL). No commit needed.
+
+### 2. Bundled PNGs (for repo-versioned defaults)
+
+Drop PNGs into `public/minimaps/<game-slug>/<map-slug>.png` and update the fixture's
+`minimap_url` to `"/minimaps/<game>/<map>.png"`. Useful for shipping defaults that ship
+with the codebase rather than living in MinIO.
+
+When the bundled file is missing AND no upload exists, `MapPage.tsx` falls back to
+"Minimap not available" text via the `<img onError>` handler — never shows a
+broken-image icon.
 
 ## CS2 (`public/minimaps/cs2/`)
 

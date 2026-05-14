@@ -18,7 +18,7 @@
  */
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Backpack, Package, Plus } from "lucide-react";
+import { ArrowLeft, Backpack, ImagePlus, Package, Plus } from "lucide-react";
 import { ToggleChipGroup, showSuccess } from "@platform/ui";
 import { useGetGamesQuery, useGetMapDetailQuery } from "@/store/gamesApi";
 import { useGetLineupsQuery, useGetZoneDensityQuery } from "@/store/lineupsApi";
@@ -26,10 +26,12 @@ import { useGetLineupPackagesQuery, usePinAllLineupPackageMutation } from "@/sto
 import LineupCard from "@/components/lineup/LineupCard";
 import MapZoneOverlay from "@/components/lineup/MapZoneOverlay";
 import KeyboardShortcutsHelp from "@/components/lineup/KeyboardShortcutsHelp";
+import MinimapUploadDialog from "@/components/game/MinimapUploadDialog";
 import RoundMode from "@/pages/RoundMode";
 import { usePins } from "@/hooks/usePins";
 import { useLoadout, computeEffectiveUtilFilter } from "@/hooks/useLoadout";
 import { useMapKeyboardShortcuts } from "@/hooks/useMapKeyboardShortcuts";
+import { useIsSuperuser } from "@/hooks/useIsSuperuser";
 import type { Lineup, ZoneDensity } from "@/types/game";
 
 const SIDE_BG: Record<string, string> = {
@@ -62,10 +64,14 @@ export default function MapPage() {
     data: mapDetail,
     isLoading: mapLoading,
     isError: mapError,
+    refetch: refetchMapDetail,
   } = useGetMapDetailQuery(
     { gameSlug: gameSlug ?? "", mapSlug: mapSlug ?? "" },
     { skip: !gameSlug || !mapSlug },
   );
+
+  const { isSuperuser } = useIsSuperuser();
+  const [showMinimapUpload, setShowMinimapUpload] = useState(false);
 
   const game = games?.find((g) => g.slug === gameSlug);
 
@@ -319,6 +325,17 @@ export default function MapPage() {
               <p className="text-xs text-muted-foreground">{game?.name ?? gameSlug}</p>
               <h1 className="text-xl font-semibold capitalize">{mapDetail.name}</h1>
             </div>
+            {isSuperuser && (
+              <button
+                type="button"
+                onClick={() => setShowMinimapUpload(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md border bg-card hover:bg-muted/40 transition-colors min-h-[36px]"
+                title="Replace this map's minimap image"
+              >
+                <ImagePlus className="w-4 h-4" />
+                Replace minimap
+              </button>
+            )}
             <Link
               to={addLineupHref}
               className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md border bg-card hover:bg-muted/40 transition-colors min-h-[36px]"
@@ -327,6 +344,18 @@ export default function MapPage() {
               Add lineup
             </Link>
           </div>
+
+          {showMinimapUpload && (
+            <MinimapUploadDialog
+              mapId={mapDetail.id}
+              mapName={mapDetail.name}
+              onClose={() => setShowMinimapUpload(false)}
+              onUploaded={() => {
+                refetchMapDetail();
+                setMinimapLoadFailed(false);
+              }}
+            />
+          )}
 
           {/* Sticky filter bar */}
           <div className="sticky top-0 z-10 bg-background/90 backdrop-blur-sm border-b pb-3 -mx-4 px-4 sm:-mx-8 sm:px-8">
