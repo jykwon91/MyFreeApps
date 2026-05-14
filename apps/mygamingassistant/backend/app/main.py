@@ -253,6 +253,10 @@ app.include_router(
 # (public read, auth write); sources + scheduler + admin stay auth-only.
 app.include_router(health.router, tags=["health"])
 app.include_router(games.router)
+# games.auth_router handles operator-only minimap-upload endpoints under
+# /api/maps/{map_id}/... — kept separate from games.router so auth gating is
+# router-level, not per-handler.
+app.include_router(games.auth_router)
 # Auth-router includes literal-path routes (/lineups/pending, /lineups/bulk-accept)
 # that would otherwise be shadowed by the public_router's /lineups/{lineup_id}
 # parametric route. Include auth_router FIRST so the literal routes match before
