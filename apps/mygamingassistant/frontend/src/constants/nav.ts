@@ -30,6 +30,22 @@ const NAV_DESCRIPTORS: NavDescriptor[] = [
 ];
 
 /**
+ * Paths that appear in the unauthenticated GuestShell sidebar.
+ *
+ * Anything not in this set is operator-only and is filtered out of the
+ * guest nav so unauthenticated visitors don't see dead links to gated
+ * pages.
+ *
+ * MGA's public-read / auth-write model: see apps/mygamingassistant/CLAUDE.md
+ * → Authentication Model.
+ */
+export const PUBLIC_NAV_PATHS: ReadonlySet<string> = new Set([
+  "/",            // Games (public lineup library)
+  "/packages",    // Packages (public — read-only browsing)
+  "/live/cs2",    // Live mode (read-only; setup/calibrate inside are gated)
+]);
+
+/**
  * Build the full NavItem array — called once in RootLayout.tsx with injected
  * icon nodes.
  *

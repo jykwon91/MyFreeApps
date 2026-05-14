@@ -22,6 +22,10 @@ from platform_shared.core.git import resolve_git_commit
 from platform_shared.core.lifespan import create_app_lifespan
 
 from app.api import account, admin, games, health, lineups, lineup_packages, scheduler, sources, totp
+# Note on lineups + lineup_packages routers:
+# MGA uses public-read / auth-write — each of those modules exports two
+# routers: ``public_router`` (no auth) and ``auth_router`` (operator only).
+# See apps/mygamingassistant/CLAUDE.md → Authentication Model.
 from app.core.audit import current_user_id
 from app.core.auth import auth_backend, fastapi_users
 from app.core.config import settings
@@ -243,11 +247,16 @@ app.include_router(
     tags=["users"],
 )
 
-# MGA domain routes
+# MGA domain routes.
+# Public read surfaces are mounted first, followed by auth-gated routers.
+# games + health are entirely public; lineups + lineup_packages split into
+# (public read, auth write); sources + scheduler + admin stay auth-only.
 app.include_router(health.router, tags=["health"])
 app.include_router(games.router)
-app.include_router(lineups.router)
-app.include_router(lineup_packages.router)
+app.include_router(lineups.public_router)
+app.include_router(lineups.auth_router)
+app.include_router(lineup_packages.public_router)
+app.include_router(lineup_packages.auth_router)
 app.include_router(sources.router)
 app.include_router(scheduler.router)
 app.include_router(admin.router)

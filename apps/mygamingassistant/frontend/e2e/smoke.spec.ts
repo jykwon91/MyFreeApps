@@ -70,11 +70,49 @@ test.describe("MyGamingAssistant smoke tests", () => {
     await expect(page).toHaveURL(/\/login/);
   });
 
-  test("redirect to login when unauthenticated", async ({ page }) => {
-    // Navigating to any protected route without a token should redirect to /login
+  test("unauthenticated visitor sees AuthRequired fallback on /settings", async ({ page }) => {
+    // MGA uses public-read / auth-write — gated routes show a Sign-in
+    // fallback in place rather than redirecting. The user clicks the
+    // Sign-in CTA to navigate to /login. See CLAUDE.md → Authentication Model.
     await page.goto("/settings");
+    // No redirect — the URL stays on /settings
+    await expect(page).toHaveURL(/\/settings/);
+    // The AuthRequired card surfaces a heading and a Sign in button
+    await expect(
+      page.getByRole("heading", { name: /sign in to manage your account/i })
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: /^sign in$/i })
+    ).toBeVisible();
+  });
+
+  test("unauthenticated visitor can browse the games page", async ({ page }) => {
+    // Public-read: the games list is reachable without auth.
+    await page.goto("/");
+    await expect(page).toHaveURL(/\/$/);
+    await expect(page.getByRole("heading", { name: "Games" })).toBeVisible();
+    // The top-bar Sign in CTA is present so the operator can authenticate
+    // when they need to manage content.
+    await expect(page.getByTestId("topbar-sign-in")).toBeVisible();
+  });
+
+  test("unauthenticated visitor reaches the gated page after sign-in", async ({ page, request }) => {
+    // The Sign-in CTA from AuthRequired should round-trip back to the
+    // originally-requested gated page after a successful login.
+    await page.goto("/sources");
+    // AuthRequired fallback is visible
+    await expect(
+      page.getByRole("heading", { name: /sign in to manage video sources/i })
+    ).toBeVisible();
+    // Click the Sign in button → /login
+    await page.getByRole("button", { name: /^sign in$/i }).click();
     await page.waitForURL("**/login", { timeout: 5_000 });
-    await expect(page).toHaveURL(/\/login/);
+
+    // Authenticate and confirm we land back on /sources
+    const credentials = getOperatorCredentials();
+    await loginViaUI(page, credentials, request, { startAtLogin: true });
+    await page.waitForURL("**/sources", { timeout: 5_000 });
+    await expect(page).toHaveURL(/\/sources/);
   });
 
   test("games page shows Valorant and CS2 after fixtures loaded", async ({ page, request }) => {

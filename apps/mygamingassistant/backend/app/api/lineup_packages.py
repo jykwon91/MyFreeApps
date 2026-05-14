@@ -1,14 +1,26 @@
 """LineupPackage CRUD API.
 
-GET  /api/lineup-packages?game_id={}&map_id={}&side={} — list
-POST /api/lineup-packages                              — create
-GET  /api/lineup-packages/{id}                         — detail
-PATCH /api/lineup-packages/{id}                        — rename / update lineups
-DELETE /api/lineup-packages/{id}                       — hard delete
-POST /api/lineup-packages/{id}/pin                     — return lineup_ids for client pin-all
+Two routers per MGA's public-read / auth-write model:
+
+    ``public_router``:
+        GET  /api/lineup-packages?game_id={}&map_id={}&side={}
+        GET  /api/lineup-packages/{id}
+        POST /api/lineup-packages/{id}/pin   — returns lineup_ids; no server state changes
+
+    ``auth_router`` (operator only):
+        POST   /api/lineup-packages
+        PATCH  /api/lineup-packages/{id}
+        DELETE /api/lineup-packages/{id}
+
+The ``/pin`` endpoint is a POST by convention (intent: "do something") but it
+mutates nothing server-side — the response payload is consumed by the client's
+localStorage ``usePins`` hook. It's safe to expose publicly so a non-operator
+viewer can pin a curated package for their own session.
 
 Note on filtering: query params accept UUID values for game_id / map_id.
 The frontend has these IDs from the game/map detail queries.
+
+See ``apps/mygamingassistant/CLAUDE.md`` → Authentication Model.
 """
 from __future__ import annotations
 
@@ -20,7 +32,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import current_active_user
 from app.db.session import get_db
-from app.models.user.user import User
 from app.schemas.game.lineup_package_schemas import (
     LineupPackageCreate,
     LineupPackagePatch,
@@ -29,25 +40,68 @@ from app.schemas.game.lineup_package_schemas import (
 )
 from app.services.game import lineup_package_service
 
-router = APIRouter(prefix="/api", tags=["lineup-packages"])
+# Public read-only routes — no auth required.
+public_router = APIRouter(prefix="/api", tags=["lineup-packages"])
+
+# Operator-only mutations — auth enforced at router level.
+auth_router = APIRouter(
+    prefix="/api",
+    tags=["lineup-packages"],
+    dependencies=[Depends(current_active_user)],
+)
 
 
-@router.get("/lineup-packages", response_model=list[LineupPackageRead])
+# ===========================================================================
+# Public routes
+# ===========================================================================
+
+@public_router.get("/lineup-packages", response_model=list[LineupPackageRead])
 async def list_lineup_packages(
     game_id: Optional[uuid.UUID] = Query(None),
     map_id: Optional[uuid.UUID] = Query(None),
     side: Optional[str] = Query(None),
-    _user: User = Depends(current_active_user),
     db: AsyncSession = Depends(get_db),
 ) -> list[LineupPackageRead]:
-    """List packages, optionally filtered by game / map / side."""
+    """List packages, optionally filtered by game / map / side. Public."""
     return await lineup_package_service.list_by_filters(db, game_id, map_id, side)
 
 
-@router.post("/lineup-packages", response_model=LineupPackageRead, status_code=201)
+@public_router.get("/lineup-packages/{package_id}", response_model=LineupPackageRead)
+async def get_lineup_package(
+    package_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+) -> LineupPackageRead:
+    """Get a single package by id. Public."""
+    pkg = await lineup_package_service.get(db, package_id)
+    if pkg is None:
+        raise HTTPException(status_code=404, detail="Package not found")
+    return pkg
+
+
+@public_router.post("/lineup-packages/{package_id}/pin", response_model=PinAllResponse)
+async def pin_all_lineup_package(
+    package_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+) -> PinAllResponse:
+    """Return lineup_ids for client-side pin-all.
+
+    Pins live in localStorage (``usePins`` hook). This endpoint returns the
+    ordered lineup_ids so the frontend can iterate and pin each in their
+    own browser. No server state is modified, so it's safe to expose publicly.
+    """
+    result = await lineup_package_service.get_pin_all(db, package_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Package not found")
+    return result
+
+
+# ===========================================================================
+# Auth-required routes
+# ===========================================================================
+
+@auth_router.post("/lineup-packages", response_model=LineupPackageRead, status_code=201)
 async def create_lineup_package(
     payload: LineupPackageCreate,
-    _user: User = Depends(current_active_user),
     db: AsyncSession = Depends(get_db),
 ) -> LineupPackageRead:
     """Create a new lineup package."""
@@ -59,24 +113,10 @@ async def create_lineup_package(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
-@router.get("/lineup-packages/{package_id}", response_model=LineupPackageRead)
-async def get_lineup_package(
-    package_id: uuid.UUID,
-    _user: User = Depends(current_active_user),
-    db: AsyncSession = Depends(get_db),
-) -> LineupPackageRead:
-    """Get a single package by id."""
-    pkg = await lineup_package_service.get(db, package_id)
-    if pkg is None:
-        raise HTTPException(status_code=404, detail="Package not found")
-    return pkg
-
-
-@router.patch("/lineup-packages/{package_id}", response_model=LineupPackageRead)
+@auth_router.patch("/lineup-packages/{package_id}", response_model=LineupPackageRead)
 async def patch_lineup_package(
     package_id: uuid.UUID,
     payload: LineupPackagePatch,
-    _user: User = Depends(current_active_user),
     db: AsyncSession = Depends(get_db),
 ) -> LineupPackageRead:
     """Rename, change side, or replace lineup list for a package.
@@ -94,10 +134,9 @@ async def patch_lineup_package(
     return pkg
 
 
-@router.delete("/lineup-packages/{package_id}", status_code=204)
+@auth_router.delete("/lineup-packages/{package_id}", status_code=204)
 async def delete_lineup_package(
     package_id: uuid.UUID,
-    _user: User = Depends(current_active_user),
     db: AsyncSession = Depends(get_db),
 ) -> None:
     """Hard-delete a package. Lineups themselves are not affected."""
@@ -107,19 +146,3 @@ async def delete_lineup_package(
     await db.commit()
 
 
-@router.post("/lineup-packages/{package_id}/pin", response_model=PinAllResponse)
-async def pin_all_lineup_package(
-    package_id: uuid.UUID,
-    _user: User = Depends(current_active_user),
-    db: AsyncSession = Depends(get_db),
-) -> PinAllResponse:
-    """Return lineup_ids for client-side pin-all.
-
-    Pins live in localStorage (``usePins`` hook). This endpoint returns the
-    ordered lineup_ids so the frontend can iterate and pin each. No server
-    state is modified.
-    """
-    result = await lineup_package_service.get_pin_all(db, package_id)
-    if result is None:
-        raise HTTPException(status_code=404, detail="Package not found")
-    return result

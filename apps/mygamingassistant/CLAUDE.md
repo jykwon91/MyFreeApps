@@ -143,6 +143,86 @@ missing. If either env var is absent in production, the app refuses to start.
 **UUIDs:**
 - `uuid.uuid4()` Python default — never `uuid-ossp` Postgres extension
 
+## Authentication Model
+
+MGA uses **public-read / auth-write** routing. The lineup library is publicly
+browsable; mutations require operator login. This is an MGA-specific Tier 3
+divergence from MBK / MJH (which remain fully auth-gated — they handle personal
+financial / job-hunt data). Rationale: single-user content curation works better
+as a public knowledge base — read-many, write-one.
+
+### Backend route split
+
+Each `app/api/*.py` module that has both reads and writes exports two routers:
+
+```python
+# Public — no auth dependency
+public_router = APIRouter(prefix="/api", tags=["..."])
+
+# Operator-only — Depends(current_active_user) at router level (NOT per-handler)
+auth_router = APIRouter(
+    prefix="/api",
+    tags=["..."],
+    dependencies=[Depends(current_active_user)],
+)
+```
+
+Modules that are purely public (e.g., `games.py`) export a single `router`.
+Modules that are purely operator-gated (e.g., `sources.py`, `scheduler.py`)
+export a single `router` with the auth dependency at the router level.
+
+`main.py` mounts both routers from split modules:
+
+```python
+app.include_router(lineups.public_router)
+app.include_router(lineups.auth_router)
+```
+
+**Why router-level dependencies, not per-handler:** adding new auth-required
+handlers cannot accidentally regress to "no auth" — the gating is declared
+once on the router. This is the no-bandaid approach (see
+`rules/no-bandaid-solutions.md`).
+
+### Endpoint inventory
+
+| Surface | Public | Auth |
+|---|---|---|
+| `/api/games/*` | All | — |
+| `/api/lineups` (list/detail/zone-density) | GET on accepted only | non-accepted via `/api/lineups/{id}/admin` |
+| `/api/lineups/*` mutations | — | All (upload-url, POST, PATCH, DELETE, classify, accept, hide, bulk-accept, pending) |
+| `/api/lineup-packages` | GET + `/pin` (no server state) | POST / PATCH / DELETE |
+| `/api/sources/*` | — | All |
+| `/api/scheduler/*` | — | All |
+| `/admin/*` | — | All |
+| `/users/me*` | — | All |
+| `/auth/*` login/forgot/reset/verify | Yes | — |
+| `/auth/jwt/logout`, TOTP setup/verify/disable/status | — | Yes |
+| `/_test/*` (when `MGA_ENABLE_TEST_HELPERS=1`) | `reset-rate-limit` only | `seed-lineup` etc. |
+| `/health`, `/version` | Yes | — |
+
+The public `GET /api/lineups/{id}` returns 404 on `pending_review` or `hidden`
+lineups so their presigned screenshot URLs don't leak before the operator
+accepts them. The operator can still inspect any lineup via the auth-only
+`/api/lineups/{id}/admin`.
+
+### Frontend gating
+
+The SPA loads for everyone — no global login redirect. Two gates:
+
+- **`<AuthRequired action="...">`** wraps write-surface routes in `routes.tsx`.
+  When unauthenticated, renders a centered card explaining what auth unlocks
+  + a "Sign in" button that routes to `/login` carrying the current pathname
+  so Login can return the user here on success.
+- **`<RootLayout>`** swaps between `AppShell` (authenticated) and `GuestShell`
+  (unauthenticated). The guest shell shows a "Sign in" CTA in place of the
+  user dropdown and a filtered nav (only `PUBLIC_NAV_PATHS` from
+  `constants/nav.ts`).
+
+When changing the auth status of an endpoint, also update the frontend route
+wrapping and the nav inclusion list — keep the backend and frontend gates
+aligned so users don't see "Sign in" prompts for pages that are actually
+public, or empty pages where they expected to see content.
+
 ## Deployment
 
 **VPS path:** `/srv/myfreeapps/apps/mygamingassistant`

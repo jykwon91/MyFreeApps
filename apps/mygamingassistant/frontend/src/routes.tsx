@@ -17,30 +17,92 @@ import ResetPassword from "@/pages/ResetPassword";
 import VerifyEmail from "@/pages/VerifyEmail";
 import NotFound from "@/pages/NotFound";
 import RootLayout from "@/RootLayout";
+import AuthRequired from "@/components/auth/AuthRequired";
 
 // MGA is single-user — no /register route.
 //
-// PR 8 adds the `/live/cs2` and `/live/cs2/setup` routes. Both are mounted
-// for ALL builds (web + desktop) so the routes resolve; the page
-// components themselves runtime-gate via `isTauri()` and render a
-// "desktop-only feature" placeholder in the web bundle.
+// MGA uses public-read / auth-write — anyone can browse the lineup library,
+// only the operator can mutate content. Public routes render inline; gated
+// routes are wrapped in <AuthRequired> which shows a Sign-in CTA when not
+// authenticated.
+//
+// See apps/mygamingassistant/CLAUDE.md → Authentication Model.
+//
+// Tauri note: The `/live/cs2` and `/live/cs2/setup` routes are mounted for
+// ALL builds (web + desktop) so the routes resolve; the page components
+// themselves runtime-gate via `isTauri()` and render a "desktop-only
+// feature" placeholder in the web bundle.
 
 export const routes: RouteObject[] = [
   {
     element: <RootLayout />,
     children: [
+      // Public routes — anyone can browse.
       { index: true, element: <GameGrid /> },
-      { path: "/lineups/new", element: <LineupUpload /> },
       { path: "/packages", element: <LineupPackages /> },
-      { path: "/sources", element: <Sources /> },
-      { path: "/review", element: <Review /> },
       { path: "/live/cs2", element: <LiveCs2 /> },
-      { path: "/live/cs2/setup", element: <LiveCs2Setup /> },
-      { path: "/live/cs2/calibrate", element: <LiveCs2Calibrate /> },
       { path: "/:gameSlug", element: <MapGrid /> },
       { path: "/:gameSlug/:mapSlug", element: <MapPage /> },
-      { path: "/settings", element: <Settings /> },
-      { path: "/security", element: <Security /> },
+
+      // Auth-required — operator only. Each is wrapped in <AuthRequired>
+      // with a tailored ``action`` string so the fallback explains exactly
+      // what signing in unlocks.
+      {
+        path: "/lineups/new",
+        element: (
+          <AuthRequired action="upload a new lineup">
+            <LineupUpload />
+          </AuthRequired>
+        ),
+      },
+      {
+        path: "/sources",
+        element: (
+          <AuthRequired action="manage video sources">
+            <Sources />
+          </AuthRequired>
+        ),
+      },
+      {
+        path: "/review",
+        element: (
+          <AuthRequired action="review pending lineups">
+            <Review />
+          </AuthRequired>
+        ),
+      },
+      {
+        path: "/live/cs2/setup",
+        element: (
+          <AuthRequired action="install the GSI config">
+            <LiveCs2Setup />
+          </AuthRequired>
+        ),
+      },
+      {
+        path: "/live/cs2/calibrate",
+        element: (
+          <AuthRequired action="calibrate the minimap CV pipeline">
+            <LiveCs2Calibrate />
+          </AuthRequired>
+        ),
+      },
+      {
+        path: "/settings",
+        element: (
+          <AuthRequired action="manage your account">
+            <Settings />
+          </AuthRequired>
+        ),
+      },
+      {
+        path: "/security",
+        element: (
+          <AuthRequired action="manage account security">
+            <Security />
+          </AuthRequired>
+        ),
+      },
     ],
   },
   { path: "/login", element: <Login /> },

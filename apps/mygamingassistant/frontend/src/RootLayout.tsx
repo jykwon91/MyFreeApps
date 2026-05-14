@@ -9,12 +9,13 @@ import {
   Settings,
   Shield,
 } from "lucide-react";
-import { AppShell, RequireAuth, StepUpModal, Toaster, useIsAuthenticated } from "@platform/ui";
-import { buildNav } from "@/constants/nav";
+import { AppShell, StepUpModal, Toaster, useIsAuthenticated } from "@platform/ui";
+import { buildNav, PUBLIC_NAV_PATHS } from "@/constants/nav";
 import { signOut } from "@/lib/auth";
 import { useIsSuperuser } from "@/hooks/useIsSuperuser";
 import { useGetCurrentUserQuery } from "@/lib/userApi";
 import { isTauri } from "@/lib/tauri";
+import GuestShell from "@/components/auth/GuestShell";
 import type { CurrentUser } from "@/lib/userApi";
 
 const ANONYMOUS_USER = { name: "You", email: "" };
@@ -39,6 +40,32 @@ const ICONS: Record<string, React.ReactNode> = {
   Shield: <Shield className="w-5 h-5" />,
 };
 
+const LOGO = (
+  <div className="flex items-center gap-2">
+    <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 text-base leading-none">
+      <span aria-hidden="true">🎮</span>
+    </div>
+    <span className="font-semibold text-sm">MyGamingAssistant</span>
+  </div>
+);
+
+/**
+ * RootLayout — top-level layout wrapper.
+ *
+ * MGA uses a public-read / auth-write model (see apps/mygamingassistant/CLAUDE.md
+ * → Authentication Model). The layout reflects that:
+ *
+ *   - Compact mode (``?compact=1``)  → strip shell entirely; show only the
+ *     game UI. Public — unauthenticated users can use compact mode too if
+ *     the inner content is public.
+ *   - Authenticated                  → full AppShell with all nav items.
+ *   - Unauthenticated (default)      → GuestShell — public nav items only,
+ *     "Sign in" CTA where the user dropdown would be.
+ *
+ * Per-route gating for write surfaces is handled by ``<AuthRequired>`` (see
+ * routes.tsx), not at the layout level. That way the layout stays decoupled
+ * from individual page auth requirements.
+ */
 export default function RootLayout() {
   const isAuthenticated = useIsAuthenticated();
   const { isSuperuser: _isSuperuser } = useIsSuperuser();
@@ -52,38 +79,49 @@ export default function RootLayout() {
 
   const isCompact = searchParams.get("compact") === "1";
 
-  const nav = buildNav(ICONS, inTauri);
+  // Authenticated callers see every nav item; guests see only the
+  // designated public paths so the sidebar doesn't dangle dead links.
+  const nav = isAuthenticated
+    ? buildNav(ICONS, inTauri)
+    : buildNav(ICONS, inTauri).filter((n) => PUBLIC_NAV_PATHS.has(n.path));
   const user = isAuthenticated ? projectUser(currentUser) : ANONYMOUS_USER;
 
-  const logo = (
-    <div className="flex items-center gap-2">
-      <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 text-base leading-none">
-        <span aria-hidden="true">🎮</span>
-      </div>
-      <span className="font-semibold text-sm">MyGamingAssistant</span>
-    </div>
-  );
-
-  // Compact mode: strip away the app shell header/sidebar so the game UI
-  // fills the full viewport (designed for a second-monitor window).
+  // Compact mode strips the shell entirely so the inner UI fills the viewport
+  // (designed for a second-monitor window). Auth is not enforced here — the
+  // inner routes use ``<AuthRequired>`` for their own gating.
   if (isCompact) {
     return (
-      <RequireAuth>
+      <>
         <ScrollRestoration />
         <Toaster />
         <StepUpModal />
         <Outlet />
-      </RequireAuth>
+      </>
     );
   }
 
+  // Unauthenticated visitor — guest shell with public nav + sign-in CTA.
+  if (!isAuthenticated) {
+    return (
+      <>
+        <ScrollRestoration />
+        <Toaster />
+        <StepUpModal />
+        <GuestShell logo={LOGO} nav={nav}>
+          <Outlet />
+        </GuestShell>
+      </>
+    );
+  }
+
+  // Authenticated — standard AppShell from @platform/ui.
   return (
-    <RequireAuth>
+    <>
       <ScrollRestoration />
       <Toaster />
       <StepUpModal />
       <AppShell
-        logo={logo}
+        logo={LOGO}
         nav={nav}
         user={user}
         onSignOut={signOut}
@@ -91,6 +129,6 @@ export default function RootLayout() {
       >
         <Outlet />
       </AppShell>
-    </RequireAuth>
+    </>
   );
 }

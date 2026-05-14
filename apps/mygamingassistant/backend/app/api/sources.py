@@ -1,12 +1,18 @@
-"""Source management API routes.
+"""Source management API routes — operator only.
 
-POST /api/sources                  — add a YouTube playlist or channel
-GET  /api/sources                  — list all sources
-GET  /api/sources/{id}             — source detail
-DELETE /api/sources/{id}           — soft-delete
-POST /api/sources/{id}/sync        — kick off a sync (runs as BackgroundTask)
+All source management is operator-only. Adding / inspecting / syncing
+YouTube playlists or channels is an operational action that doesn't belong
+in the public surface.
+
+POST   /api/sources                  — add a YouTube playlist or channel
+GET    /api/sources                  — list all sources
+GET    /api/sources/{id}             — source detail
+DELETE /api/sources/{id}             — soft-delete
+POST   /api/sources/{id}/sync        — kick off a sync (runs as BackgroundTask)
 
 Sync is synchronous in PR 4 (BackgroundTask). PR 6 adds APScheduler cron.
+
+See ``apps/mygamingassistant/CLAUDE.md`` → Authentication Model.
 """
 from __future__ import annotations
 
@@ -17,12 +23,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import current_active_user
 from app.db.session import get_db
-from app.models.user.user import User
 from app.schemas.game.lineup_schemas import SourceCreate, SourceRead, SyncJobResponse
 from app.services.game import source_service
 from app.services.ingestion import ingestion_orchestrator
 
-router = APIRouter(prefix="/api", tags=["sources"])
+# Sources are entirely operator-gated. The single auth router covers the
+# whole module — there is no public surface for source management.
+router = APIRouter(
+    prefix="/api",
+    tags=["sources"],
+    dependencies=[Depends(current_active_user)],
+)
 
 
 def _source_to_read(source) -> SourceRead:
@@ -40,7 +51,6 @@ def _source_to_read(source) -> SourceRead:
 @router.post("/sources", response_model=SourceRead, status_code=201)
 async def create_source(
     payload: SourceCreate,
-    _user: User = Depends(current_active_user),
     db: AsyncSession = Depends(get_db),
 ) -> SourceRead:
     """Add a YouTube playlist or channel as an ingestion source."""
@@ -53,7 +63,6 @@ async def create_source(
 
 @router.get("/sources", response_model=list[SourceRead])
 async def list_sources(
-    _user: User = Depends(current_active_user),
     db: AsyncSession = Depends(get_db),
 ) -> list[SourceRead]:
     """List all sources."""
@@ -64,7 +73,6 @@ async def list_sources(
 @router.get("/sources/{source_id}", response_model=SourceRead)
 async def get_source(
     source_id: uuid.UUID,
-    _user: User = Depends(current_active_user),
     db: AsyncSession = Depends(get_db),
 ) -> SourceRead:
     """Get source detail."""
@@ -77,7 +85,6 @@ async def get_source(
 @router.delete("/sources/{source_id}", status_code=204)
 async def delete_source(
     source_id: uuid.UUID,
-    _user: User = Depends(current_active_user),
     db: AsyncSession = Depends(get_db),
 ) -> None:
     """Soft-delete a source.
@@ -94,7 +101,6 @@ async def delete_source(
 async def sync_source(
     source_id: uuid.UUID,
     background_tasks: BackgroundTasks,
-    _user: User = Depends(current_active_user),
     db: AsyncSession = Depends(get_db),
 ) -> SyncJobResponse:
     """Kick off an immediate sync for a source.

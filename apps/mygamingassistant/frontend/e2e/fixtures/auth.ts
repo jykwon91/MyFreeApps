@@ -54,21 +54,41 @@ export async function resetRateLimit(
   }
 }
 
+interface LoginOptions {
+  /**
+   * When true, the helper assumes the page is already at /login (e.g.,
+   * because the test just clicked a Sign-in CTA on a gated page) and
+   * does NOT re-navigate. This preserves the ``state.from`` carried
+   * over by react-router-dom, which Login.tsx uses to return the user
+   * to the originally-requested page.
+   *
+   * Defaults to false — most tests start cold and want /login navigation.
+   */
+  startAtLogin?: boolean;
+}
+
 /**
- * Logs in via the login form UI and waits for the redirect to /.
+ * Logs in via the login form UI and waits for the redirect away from /login.
  *
  * Resets the backend rate-limit buckets before each login so tests don't
  * interfere with each other when they all share 127.0.0.1 as the client IP.
+ *
+ * Pass ``{ startAtLogin: true }`` when the page is already on /login from a
+ * prior AuthRequired Sign-in click — the helper will preserve the routing
+ * state so Login redirects back to the originally-gated page.
  */
 export async function loginViaUI(
   page: Page,
   credentials: OperatorCredentials,
   request?: APIRequestContext,
+  options: LoginOptions = {},
 ): Promise<void> {
   if (request) {
     await resetRateLimit(request);
   }
-  await page.goto("/login");
+  if (!options.startAtLogin) {
+    await page.goto("/login");
+  }
   await page.getByLabel(/email/i).fill(credentials.email);
   await page.getByLabel(/password/i).fill(credentials.password);
   await page.getByRole("button", { name: /sign in/i }).click();
