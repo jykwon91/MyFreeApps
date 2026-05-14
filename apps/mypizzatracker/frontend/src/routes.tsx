@@ -1,5 +1,6 @@
 import { type RouteObject } from "react-router-dom";
 import Home from "@/pages/Home";
+import Drops from "@/pages/Drops";
 import Security from "@/pages/Security";
 import Settings from "@/pages/Settings";
 import Login from "@/pages/Login";
@@ -17,6 +18,7 @@ export const routes: RouteObject[] = [
     element: <RootLayout />,
     children: [
       { index: true, element: <Home /> },
+      { path: "/drops", element: <Drops /> },
       { path: "/settings", element: <Settings /> },
       { path: "/security", element: <Security /> },
     ],

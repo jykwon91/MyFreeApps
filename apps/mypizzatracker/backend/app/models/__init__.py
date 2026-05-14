@@ -10,3 +10,5 @@ from platform_shared.db.models.audit_log import AuditLog  # noqa: F401
 from platform_shared.db.models.auth_event import AuthEvent  # noqa: F401
 
 # Add app-specific domain model imports below as you create them.
+from app.models.drop.drop import Drop  # noqa: F401
+from app.models.drop.slot import Slot  # noqa: F401
