@@ -246,12 +246,19 @@ function CvStatusGrid({ ready, status }: CvStatusGridProps) {
 
 function CalibrationDisclaimer() {
   return (
-    <p className="text-xs text-muted-foreground border-t pt-2">
-      The bundled default calibration is for{" "}
-      <code>de_mirage</code> at <code>1920×1080</code>. Other maps and
-      resolutions need per-map calibration — that editor is coming in the
-      next update.
-    </p>
+    <div className="border-t pt-2 space-y-1">
+      <p className="text-xs text-muted-foreground">
+        The bundled default calibration is for <code>de_mirage</code> at{" "}
+        <code>1920×1080</code>. For other maps + resolutions, use the
+        calibration editor.
+      </p>
+      <a
+        href="/live/cs2/calibrate"
+        className="text-xs text-primary hover:underline inline-flex items-center"
+      >
+        Open calibration editor →
+      </a>
+    </div>
   );
 }
 

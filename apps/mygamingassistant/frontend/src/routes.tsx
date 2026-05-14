@@ -3,6 +3,7 @@ import GameGrid from "@/pages/GameGrid";
 import LineupPackages from "@/pages/LineupPackages";
 import LineupUpload from "@/pages/LineupUpload";
 import LiveCs2 from "@/pages/LiveCs2";
+import LiveCs2Calibrate from "@/pages/LiveCs2Calibrate";
 import LiveCs2Setup from "@/pages/LiveCs2Setup";
 import MapGrid from "@/pages/MapGrid";
 import MapPage from "@/pages/MapPage";
@@ -35,6 +36,7 @@ export const routes: RouteObject[] = [
       { path: "/review", element: <Review /> },
       { path: "/live/cs2", element: <LiveCs2 /> },
       { path: "/live/cs2/setup", element: <LiveCs2Setup /> },
+      { path: "/live/cs2/calibrate", element: <LiveCs2Calibrate /> },
       { path: "/:gameSlug", element: <MapGrid /> },
       { path: "/:gameSlug/:mapSlug", element: <MapPage /> },
       { path: "/settings", element: <Settings /> },

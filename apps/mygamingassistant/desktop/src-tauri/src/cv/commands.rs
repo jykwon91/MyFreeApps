@@ -20,9 +20,13 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use serde::Serialize;
 use tauri::Manager;
 
-use crate::cv::calibration::{bundled::load_bundled_calibration, MapCalibrationPackage};
+use crate::capture::MonitorResolution;
+use crate::cv::calibration::{
+    bundled::load_bundled_calibration, DotDetectionParams, MapCalibrationPackage,
+};
 use crate::cv::pipeline::CvPipeline;
 use crate::cv::state::{CvPipelineState, CvStatusSnapshot};
 
@@ -123,6 +127,169 @@ pub async fn cv_set_calibration(
         path.display(),
     );
     Ok(path.to_string_lossy().into_owned())
+}
+
+// ===========================================================================
+// PR 9b commands
+// ===========================================================================
+
+/// Result of `cv_capture_frame` — a one-shot screen capture of the full
+/// primary display, encoded as base64 PNG. Used by PR 9b's calibration UI
+/// for the region picker + dot picker flows.
+///
+/// Returned as JSON for two reasons:
+///   1. Tauri serializes commands' returns as JSON regardless; raw bytes
+///      cost the same wire-time as base64 but force a more brittle JS-side
+///      decoder.
+///   2. The frontend drops the string straight into `<img src="data:..." />`
+///      with no further processing.
+#[derive(Debug, Serialize)]
+pub struct CvCaptureFrameResult {
+    pub png_base64: String,
+    pub width: u32,
+    pub height: u32,
+}
+
+/// One-shot capture of the primary display. Encoded as base64 PNG so the
+/// frontend can drop it into an `<img>` element directly. Used by PR 9b's
+/// region picker and dot picker.
+///
+/// Fails if the platform doesn't support capture (Mac/Linux today), or if
+/// no WGC frame has arrived yet (rare; usually <16 ms after start).
+#[tauri::command]
+pub async fn cv_capture_frame(app: tauri::AppHandle) -> Result<CvCaptureFrameResult, String> {
+    let pipeline = match app.try_state::<Arc<CvPipeline>>() {
+        Some(s) => s.inner().clone(),
+        None => return Err("cv-platform-not-supported".into()),
+    };
+    let capturer = pipeline.capturer();
+    let frame = capturer
+        .capture_full_screen()
+        .map_err(|e| format!("capture failed: {e}"))?;
+    let width = frame.width;
+    let height = frame.height;
+    let png_base64 = crate::cv::pipeline::encode_png_base64_for_command(&frame)
+        .map_err(|e| format!("PNG encode failed: {e}"))?;
+    Ok(CvCaptureFrameResult {
+        png_base64,
+        width,
+        height,
+    })
+}
+
+/// Resolve the primary monitor's resolution in pixels. Used by PR 9b's
+/// calibration UI to preselect a matching entry in the resolution dropdown.
+///
+/// Returns `cv-platform-not-supported` when no capture backend is registered.
+#[tauri::command]
+pub async fn cv_get_primary_monitor_resolution(
+    app: tauri::AppHandle,
+) -> Result<MonitorResolution, String> {
+    let pipeline = match app.try_state::<Arc<CvPipeline>>() {
+        Some(s) => s.inner().clone(),
+        None => return Err("cv-platform-not-supported".into()),
+    };
+    let capturer = pipeline.capturer();
+    capturer
+        .primary_monitor_resolution()
+        .map_err(|e| format!("monitor resolution lookup failed: {e}"))
+}
+
+/// Hot-swap the dot-detection parameters on the active calibration WITHOUT
+/// persisting them or restarting the pipeline. Used by PR 9b's live tuning
+/// loop — every slider change calls this so the next tick sees the new
+/// params. Persist with `cv_set_calibration` once the operator is happy.
+///
+/// No-op when no map is active (returns `false` in `applied`). Returns an
+/// error only on infrastructure-level failure (pipeline state missing).
+#[tauri::command]
+pub async fn cv_set_dot_params_preview(
+    params: DotDetectionParams,
+    app: tauri::AppHandle,
+) -> Result<CvSetDotParamsPreviewResult, String> {
+    let pipeline = match app.try_state::<Arc<CvPipeline>>() {
+        Some(s) => s.inner().clone(),
+        None => return Err("cv-platform-not-supported".into()),
+    };
+    let applied = pipeline.set_dot_params_preview(params).await;
+    Ok(CvSetDotParamsPreviewResult { applied })
+}
+
+#[derive(Debug, Serialize)]
+pub struct CvSetDotParamsPreviewResult {
+    /// True when an active calibration absorbed the new params. False when
+    /// no map is loaded yet — UI should still feel responsive (preview is
+    /// just a no-op).
+    pub applied: bool,
+}
+
+/// Delete an operator-edited calibration override. After this call, the
+/// `cv_get_calibration(map_slug, resolution)` command falls back to the
+/// bundled default (or returns `None` if no bundle exists for that combo).
+///
+/// Idempotent — succeeds even if the file doesn't exist.
+#[tauri::command]
+pub async fn cv_reset_calibration(
+    map_slug: String,
+    resolution: String,
+    app: tauri::AppHandle,
+) -> Result<CvResetCalibrationResult, String> {
+    let dir = calibrations_dir(&app)?;
+    let path = dir.join(format!("{map_slug}_{resolution}.json"));
+    if !path.exists() {
+        return Ok(CvResetCalibrationResult {
+            removed: false,
+            path: path.to_string_lossy().into_owned(),
+        });
+    }
+    std::fs::remove_file(&path).map_err(|e| format!("failed to remove override: {e}"))?;
+    log::info!(
+        "CV calibration override removed: map={} resolution={} path={}",
+        map_slug,
+        resolution,
+        path.display(),
+    );
+    Ok(CvResetCalibrationResult {
+        removed: true,
+        path: path.to_string_lossy().into_owned(),
+    })
+}
+
+#[derive(Debug, Serialize)]
+pub struct CvResetCalibrationResult {
+    /// True when an override file was actually deleted. False when no file
+    /// existed (idempotent success).
+    pub removed: bool,
+    /// Absolute path that was targeted. Surfaced so the frontend can show
+    /// the user exactly which file got removed.
+    pub path: String,
+}
+
+/// Register a frontend listener for `cv:debug-frame` events. The pipeline
+/// only encodes + emits debug frames while at least one subscriber is
+/// attached, to avoid burning CPU on PNG encoding when nobody is looking.
+///
+/// The frontend MUST call `cv_subscribe_debug_frames` before adding its
+/// `event.listen(...)` and call `cv_unsubscribe_debug_frames` on unmount.
+/// (See `useCvDebugFrame` in the frontend.)
+#[tauri::command]
+pub async fn cv_subscribe_debug_frames(app: tauri::AppHandle) -> Result<(), String> {
+    if let Some(pipeline) = app.try_state::<Arc<CvPipeline>>() {
+        pipeline.inner().add_debug_subscriber();
+    }
+    // No-op when pipeline isn't registered (Mac/Linux) — the listener still
+    // returns successfully so the frontend doesn't crash on subscribe.
+    Ok(())
+}
+
+/// Companion to `cv_subscribe_debug_frames` — decrement the subscriber count.
+/// Safe to call even when nothing was subscribed.
+#[tauri::command]
+pub async fn cv_unsubscribe_debug_frames(app: tauri::AppHandle) -> Result<(), String> {
+    if let Some(pipeline) = app.try_state::<Arc<CvPipeline>>() {
+        pipeline.inner().remove_debug_subscriber();
+    }
+    Ok(())
 }
 
 // -----------------------------------------------------------------------------

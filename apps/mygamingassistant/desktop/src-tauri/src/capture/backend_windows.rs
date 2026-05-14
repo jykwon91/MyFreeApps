@@ -42,7 +42,7 @@ use windows_capture::{
     },
 };
 
-use super::{CaptureError, CaptureRegion, CapturedFrame, ScreenCapturer};
+use super::{CaptureError, CaptureRegion, CapturedFrame, MonitorResolution, ScreenCapturer};
 
 /// Most-recently-arrived frame in the BGRA8 native WGC format.
 /// We hold ONE frame at a time; the next callback overwrites it. The CV
@@ -137,11 +137,11 @@ impl WindowsScreenCapturer {
         if region
             .x
             .checked_add(region.width)
-            .map_or(true, |x| x > frame.width)
+            .is_none_or(|x| x > frame.width)
             || region
                 .y
                 .checked_add(region.height)
-                .map_or(true, |y| y > frame.height)
+                .is_none_or(|y| y > frame.height)
         {
             return Err(CaptureError::BackendError {
                 detail: format!(
@@ -191,6 +191,35 @@ impl ScreenCapturer for WindowsScreenCapturer {
 
     fn capture_full_screen(&self) -> Result<CapturedFrame, CaptureError> {
         self.read_full()
+    }
+
+    fn primary_monitor_resolution(&self) -> Result<MonitorResolution, CaptureError> {
+        // We resolve monitor dimensions from the most-recent captured frame
+        // rather than querying `Monitor::width()/height()` directly. Rationale:
+        //   1. windows-capture 1.5's `Monitor` exposes width/height through
+        //      varying method signatures across patch releases — depending on
+        //      a specific shape would tie us to a single point version.
+        //   2. WGC delivers its first frame within ~16 ms of `start_free_threaded`
+        //      returning; on Mac/Linux this code path isn't compiled in.
+        //   3. The first captured frame's dimensions ARE the primary monitor's
+        //      dimensions by definition — WGC captures the full display.
+        // If no frame has arrived yet (very rare on a working display), surface
+        // a clear error so the UI can show "still initializing" rather than a
+        // zeroed reading.
+        let guard = self.latest.lock().map_err(|_| CaptureError::BackendError {
+            detail: "latest-frame mutex poisoned".into(),
+        })?;
+        let Some(frame) = guard.as_ref() else {
+            return Err(CaptureError::BackendError {
+                detail:
+                    "no frame received from WGC yet (resolution unknown — try again in a moment)"
+                        .into(),
+            });
+        };
+        Ok(MonitorResolution {
+            width: frame.width,
+            height: frame.height,
+        })
     }
 }
 
@@ -362,11 +391,11 @@ mod tests {
         if region
             .x
             .checked_add(region.width)
-            .map_or(true, |x| x > frame.width)
+            .is_none_or(|x| x > frame.width)
             || region
                 .y
                 .checked_add(region.height)
-                .map_or(true, |y| y > frame.height)
+                .is_none_or(|y| y > frame.height)
         {
             return Err(CaptureError::BackendError {
                 detail: format!(

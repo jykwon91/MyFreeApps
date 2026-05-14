@@ -203,3 +203,69 @@ export interface CvMapCalibrationPackage {
   calibration: CvMinimapCalibration;
   zones: CvZonePolygon[];
 }
+
+// ---------------------------------------------------------------------------
+// PR 9b — Calibration UI shared shapes
+// ---------------------------------------------------------------------------
+
+/** Aliased shapes for the calibration UI's reducer + helpers. Keeps the
+ *  inner types narrow + easy to test in isolation. */
+export type CvCaptureRegion = CvMinimapCalibration["minimap_region"];
+export type CvWorldTransform = CvMinimapCalibration["world_transform"];
+export type CvDotDetectionParams = CvMinimapCalibration["dot_detection"];
+
+/** Result of `cv_capture_frame`. Mirrors `CvCaptureFrameResult` in
+ *  `src-tauri/src/cv/commands.rs`. */
+export interface CvCaptureFrameResult {
+  png_base64: string;
+  width: number;
+  height: number;
+}
+
+/** Result of `cv_get_primary_monitor_resolution`. Mirrors
+ *  `MonitorResolution` in `src-tauri/src/capture/mod.rs`. */
+export interface CvMonitorResolution {
+  width: number;
+  height: number;
+}
+
+/** Result of `cv_set_dot_params_preview`. */
+export interface CvSetDotParamsPreviewResult {
+  /** True when an active calibration absorbed the new params; false when no
+   *  map is loaded yet (UI should still feel responsive — preview is a
+   *  no-op until then). */
+  applied: boolean;
+}
+
+/** Result of `cv_reset_calibration`. */
+export interface CvResetCalibrationResult {
+  removed: boolean;
+  path: string;
+}
+
+/** Per-blob bounding box payload nested inside `CvDebugFrameEvent`. */
+export interface CvDebugBlob {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  area: number;
+}
+
+/** Live preview payload for the dot-tuning UI. Emitted at ~4 Hz while the
+ *  pipeline is running AND at least one frontend listener is attached
+ *  (subscriber gating; see `useCvDebugFrame`). */
+export interface CvDebugFrameEvent {
+  /** Base64-encoded PNG of the captured minimap region. */
+  png_base64: string;
+  blobs: CvDebugBlob[];
+  dot_match?: { x: number; y: number } | null;
+  tick_ms: number;
+}
+
+/**
+ * Source of a loaded calibration package. `bundled` means the binary
+ * shipped it; `override` means the operator has saved an edit; `unknown`
+ * means we haven't queried yet OR no calibration exists at all.
+ */
+export type CalibrationSource = "bundled" | "override" | "unknown";
