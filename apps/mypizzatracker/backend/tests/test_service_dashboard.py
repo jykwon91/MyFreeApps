@@ -303,21 +303,24 @@ async def test_advance_status_happy_forward_path(
         f"/service/orders/{order_id}/advance",
         json={"target_status": "cooking"},
     )
-    assert r.status_code == 200 and r.json()["status"] == "cooking"
+    assert r.status_code == 200 and r.json()["order"]["status"] == "cooking"
+    # Non-SMS transitions report sms_dispatched: null
+    assert r.json()["sms_dispatched"] is None
 
-    # cooking -> ready_waiting (PR 7 default, skipping ready_text_sent)
+    # cooking -> ready_waiting (the no-text branch of the cooking fork)
     r = await auth_client.post(
         f"/service/orders/{order_id}/advance",
         json={"target_status": "ready_waiting"},
     )
-    assert r.status_code == 200 and r.json()["status"] == "ready_waiting"
+    assert r.status_code == 200 and r.json()["order"]["status"] == "ready_waiting"
+    assert r.json()["sms_dispatched"] is None
 
     # ready_waiting -> picked_up
     r = await auth_client.post(
         f"/service/orders/{order_id}/advance",
         json={"target_status": "picked_up"},
     )
-    assert r.status_code == 200 and r.json()["status"] == "picked_up"
+    assert r.status_code == 200 and r.json()["order"]["status"] == "picked_up"
 
 
 @pytest.mark.asyncio
@@ -339,10 +342,86 @@ async def test_advance_to_ready_text_sent_sets_timestamp(
     )
     assert r.status_code == 200
     body = r.json()
-    assert body["status"] == "ready_text_sent"
-    assert body["ready_text_sent_at"] is not None
+    assert body["order"]["status"] == "ready_text_sent"
+    assert body["order"]["ready_text_sent_at"] is not None
     # Round-trip parseable
-    datetime.fromisoformat(body["ready_text_sent_at"].replace("Z", "+00:00"))
+    datetime.fromisoformat(body["order"]["ready_text_sent_at"].replace("Z", "+00:00"))
+    # Tests run with sms_backend="console" (default) so the SMS is just
+    # logged; dispatch succeeds.
+    assert body["sms_dispatched"] is True
+    assert body["sms_error"] is None
+
+
+@pytest.mark.asyncio
+async def test_advance_to_ready_text_sent_surfaces_twilio_failure(
+    client: AsyncClient, auth_client: AsyncClient, monkeypatch,
+):
+    """When Twilio rejects the send, the order transition still commits
+    but the response surfaces sms_dispatched=False + sms_error so the
+    operator knows to text manually."""
+    from app.services.sms import sms_sender
+    from platform_shared.services.sms_service import SmsSendError
+
+    drop_id, slot_id = await _create_active_drop(auth_client)
+    pizza_id = await _create_pizza(auth_client, "La Clasica", "17.00")
+    order_id = await _place_order(
+        client, drop_id=drop_id, slot_id=slot_id, pizza_ids=[pizza_id],
+    )
+    await auth_client.post(
+        f"/service/orders/{order_id}/advance", json={"target_status": "cooking"},
+    )
+
+    def _raise(*args, **kwargs):
+        raise SmsSendError("Twilio rejected (code=21610): recipient opted out")
+
+    monkeypatch.setattr(sms_sender, "send_sms_or_raise", _raise)
+
+    r = await auth_client.post(
+        f"/service/orders/{order_id}/advance",
+        json={"target_status": "ready_text_sent"},
+    )
+    assert r.status_code == 200
+    body = r.json()
+    # Transition still committed
+    assert body["order"]["status"] == "ready_text_sent"
+    assert body["order"]["ready_text_sent_at"] is not None
+    # SMS failure surfaced to operator
+    assert body["sms_dispatched"] is False
+    assert "21610" in body["sms_error"]
+
+
+@pytest.mark.asyncio
+async def test_advance_to_ready_text_sent_handles_unconfigured_twilio(
+    client: AsyncClient, auth_client: AsyncClient, monkeypatch,
+):
+    """When Twilio creds are missing entirely the transition still
+    commits and the operator sees an operator-facing reason."""
+    from app.services.sms import sms_sender
+    from platform_shared.services.sms_service import SmsNotConfiguredError
+
+    drop_id, slot_id = await _create_active_drop(auth_client)
+    pizza_id = await _create_pizza(auth_client, "La Clasica", "17.00")
+    order_id = await _place_order(
+        client, drop_id=drop_id, slot_id=slot_id, pizza_ids=[pizza_id],
+    )
+    await auth_client.post(
+        f"/service/orders/{order_id}/advance", json={"target_status": "cooking"},
+    )
+
+    def _raise(*args, **kwargs):
+        raise SmsNotConfiguredError("Twilio creds missing")
+
+    monkeypatch.setattr(sms_sender, "send_sms_or_raise", _raise)
+
+    r = await auth_client.post(
+        f"/service/orders/{order_id}/advance",
+        json={"target_status": "ready_text_sent"},
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["order"]["status"] == "ready_text_sent"
+    assert body["sms_dispatched"] is False
+    assert "not configured" in body["sms_error"].lower()
 
 
 @pytest.mark.asyncio
@@ -382,7 +461,7 @@ async def test_advance_no_show_from_any_non_terminal_state(
             json={"target_status": "no_show"},
         )
         assert r.status_code == 200, f"{current_state} -> no_show failed: {r.text}"
-        assert r.json()["status"] == "no_show"
+        assert r.json()["order"]["status"] == "no_show"
 
 
 @pytest.mark.asyncio
@@ -426,7 +505,7 @@ async def test_advance_same_status_is_idempotent(
         json={"target_status": "not_started"},
     )
     assert r.status_code == 200
-    assert r.json()["status"] == "not_started"
+    assert r.json()["order"]["status"] == "not_started"
 
 
 @pytest.mark.asyncio

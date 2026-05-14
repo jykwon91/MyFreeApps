@@ -122,6 +122,16 @@ class BaseAppSettings(BaseSettings):
     smtp_password: str = ""
 
     # ------------------------------------------------------------------
+    # SMS delivery (opt-in per app via create_app_lifespan(sms_required=True))
+    # sms_backend = "console" prints to stdout (dev/CI default);
+    # "twilio" sends via Twilio's REST API.
+    # ------------------------------------------------------------------
+    sms_backend: str = "console"
+    twilio_account_sid: str = ""
+    twilio_auth_token: str = ""
+    twilio_from_number: str = ""
+
+    # ------------------------------------------------------------------
     # MinIO object storage
     # Apps override minio_bucket with their per-app bucket name.
     # minio_skip_startup_check is dev-only — production should always

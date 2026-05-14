@@ -10,6 +10,7 @@ from fastapi import FastAPI
 
 from platform_shared.core.boot_guards import (
     EmailNotConfiguredError,
+    SmsNotConfiguredError,
     TurnstileNotConfiguredError,
 )
 from platform_shared.core.lifespan import create_app_lifespan
@@ -23,6 +24,10 @@ def _settings(
     email_backend: str = "console",
     smtp_user: str = "",
     smtp_password: str = "",
+    sms_backend: str = "console",
+    twilio_account_sid: str = "",
+    twilio_auth_token: str = "",
+    twilio_from_number: str = "",
 ) -> SimpleNamespace:
     """Build a settings-like namespace for tests."""
     return SimpleNamespace(
@@ -32,6 +37,10 @@ def _settings(
         email_backend=email_backend,
         smtp_user=smtp_user,
         smtp_password=smtp_password,
+        sms_backend=sms_backend,
+        twilio_account_sid=twilio_account_sid,
+        twilio_auth_token=twilio_auth_token,
+        twilio_from_number=twilio_from_number,
     )
 
 
@@ -259,3 +268,100 @@ class TestBucketInit:
         async with lifespan(app):
             pass
         assert bucket_called == ["bucket"]
+
+
+class TestSmsRequired:
+    """sms_required=True gates the check_sms_configured guard."""
+
+    @pytest.mark.asyncio
+    async def test_default_sms_not_required_passes_in_prod_without_twilio(
+        self, app: FastAPI, monkeypatch,
+    ) -> None:
+        """Apps that never SMS (default) don't need Twilio creds even in prod."""
+        monkeypatch.setattr(
+            "platform_shared.core.lifespan.register_audit_listeners",
+            MagicMock(),
+        )
+        lifespan = create_app_lifespan(
+            settings=_settings(
+                environment="production",
+                sentry_dsn="https://x@y/1",
+                turnstile_secret_key="present",
+                email_backend="smtp",
+                smtp_user="u",
+                smtp_password="p" * 16,
+            ),
+            init_sentry=MagicMock(),
+        )
+        async with lifespan(app):
+            pass
+
+    @pytest.mark.asyncio
+    async def test_sms_required_with_empty_twilio_creds_raises_in_prod(
+        self, app: FastAPI, monkeypatch,
+    ) -> None:
+        monkeypatch.setattr(
+            "platform_shared.core.lifespan.register_audit_listeners",
+            MagicMock(),
+        )
+        lifespan = create_app_lifespan(
+            settings=_settings(
+                environment="production",
+                sentry_dsn="https://x@y/1",
+                turnstile_secret_key="present",
+                email_backend="smtp",
+                smtp_user="u",
+                smtp_password="p" * 16,
+                sms_backend="twilio",
+                # twilio creds intentionally empty
+            ),
+            init_sentry=MagicMock(),
+            sms_required=True,
+        )
+        with pytest.raises(SmsNotConfiguredError):
+            async with lifespan(app):
+                pass
+
+    @pytest.mark.asyncio
+    async def test_sms_required_with_full_twilio_creds_passes(
+        self, app: FastAPI, monkeypatch,
+    ) -> None:
+        monkeypatch.setattr(
+            "platform_shared.core.lifespan.register_audit_listeners",
+            MagicMock(),
+        )
+        lifespan = create_app_lifespan(
+            settings=_settings(
+                environment="production",
+                sentry_dsn="https://x@y/1",
+                turnstile_secret_key="present",
+                email_backend="smtp",
+                smtp_user="u",
+                smtp_password="p" * 16,
+                sms_backend="twilio",
+                twilio_account_sid="AC1",
+                twilio_auth_token="t",
+                twilio_from_number="+15551234567",
+            ),
+            init_sentry=MagicMock(),
+            sms_required=True,
+        )
+        async with lifespan(app):
+            pass
+
+    @pytest.mark.asyncio
+    async def test_sms_required_in_dev_with_empty_creds_passes(
+        self, app: FastAPI, monkeypatch,
+    ) -> None:
+        """Dev/test envs don't need Twilio creds even with sms_required=True."""
+        monkeypatch.setattr(
+            "platform_shared.core.lifespan.register_audit_listeners",
+            MagicMock(),
+        )
+        lifespan = create_app_lifespan(
+            settings=_settings(environment="development"),
+            init_sentry=MagicMock(),
+            sms_required=True,
+        )
+        async with lifespan(app):
+            pass

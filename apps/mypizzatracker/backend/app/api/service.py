@@ -22,6 +22,7 @@ from app.db.session import get_db
 from app.schemas.order.order_schemas import OrderRead
 from app.schemas.service.service_schemas import (
     AdvanceOrderRequest,
+    AdvanceOrderResponse,
     MoveOrderRequest,
     ServiceDashboard,
 )
@@ -52,19 +53,23 @@ async def get_dashboard(
         raise _service_error(exc) from exc
 
 
-@router.post("/orders/{order_id}/advance", response_model=OrderRead)
+@router.post("/orders/{order_id}/advance", response_model=AdvanceOrderResponse)
 async def advance_order(
     order_id: uuid.UUID,
     body: AdvanceOrderRequest,
     db: AsyncSession = Depends(get_db),
-) -> OrderRead:
+) -> AdvanceOrderResponse:
     try:
-        order = await service_dashboard_service.advance_order_status(
+        result = await service_dashboard_service.advance_order_status(
             db, order_id, body.target_status,
         )
     except DashboardServiceError as exc:
         raise _service_error(exc) from exc
-    return OrderRead.model_validate(order)
+    return AdvanceOrderResponse(
+        order=OrderRead.model_validate(result.order),
+        sms_dispatched=result.sms_dispatched,
+        sms_error=result.sms_error,
+    )
 
 
 @router.post("/orders/{order_id}/move", response_model=OrderRead)

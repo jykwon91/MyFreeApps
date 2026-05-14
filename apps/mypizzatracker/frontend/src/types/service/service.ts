@@ -87,3 +87,23 @@ export interface ServiceDashboardPayload {
   slots: DashboardSlot[];
   server_time: string;
 }
+
+/**
+ * Response shape for ``POST /service/orders/{id}/advance``.
+ *
+ * ``sms_dispatched`` is non-null only when the transition targeted
+ * ``ready_text_sent``:
+ *   - ``true``  — SMS sent successfully (or console-logged in dev).
+ *   - ``false`` — Twilio rejected; ``sms_error`` carries the reason.
+ *   - ``null``  — transition didn't involve SMS.
+ */
+export interface AdvanceOrderResponse {
+  order: {
+    id: string;
+    status: OrderStatus;
+    slot_id: string;
+    ready_text_sent_at: string | null;
+  };
+  sms_dispatched: boolean | null;
+  sms_error: string | null;
+}

@@ -31,6 +31,10 @@ dev = [
     # Dev-only: never imported from request handlers.
     "jinja2>=3.1.0",
     "pyyaml>=6.0.0",
+    # Required for tests of platform_shared.services.sms_service that need to
+    # patch the Twilio Client / TwilioRestException. Runtime apps that use
+    # SMS pull twilio in via their own pyproject.toml deps.
+    "twilio>=9.10.0",
 ]
 
 [tool.pytest.ini_options]

@@ -1,5 +1,9 @@
 import { baseApi } from "@platform/ui";
-import type { ServiceDashboardPayload, OrderStatus } from "@/types/service/service";
+import type {
+  AdvanceOrderResponse,
+  ServiceDashboardPayload,
+  OrderStatus,
+} from "@/types/service/service";
 
 const apiWithTags = baseApi.enhanceEndpoints({
   addTagTypes: ["ServiceDashboard"],
@@ -17,7 +21,7 @@ const serviceApi = apiWithTags.injectEndpoints({
       ],
     }),
     advanceOrder: build.mutation<
-      { id: string; status: OrderStatus; slot_id: string },
+      AdvanceOrderResponse,
       { dropId: string; orderId: string; targetStatus: OrderStatus }
     >({
       query: ({ orderId, targetStatus }) => ({
