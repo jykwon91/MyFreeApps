@@ -76,6 +76,17 @@ class BaseAppSettings(BaseSettings):
     cors_origins: list[str] = ["http://localhost:5173"]
 
     # ------------------------------------------------------------------
+    # FastAPI public root path. In production, host/docker Caddy strips
+    # the ``/api`` prefix before proxying to uvicorn, so FastAPI needs
+    # to know its public prefix to render the OpenAPI doc + ``Location``
+    # headers correctly. In local dev (uvicorn served directly, no proxy
+    # stripping), set ``BACKEND_ROOT_PATH=`` (empty) so routes mount at
+    # the bare path. Apps consume via
+    # ``FastAPI(root_path=settings.backend_root_path)``.
+    # ------------------------------------------------------------------
+    backend_root_path: str = "/api"
+
+    # ------------------------------------------------------------------
     # Account-level login lockout (platform_shared.services.account_lockout)
     # ------------------------------------------------------------------
     lockout_threshold: int = 5
