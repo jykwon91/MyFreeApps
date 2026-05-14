@@ -73,8 +73,6 @@ dnspython==2.8.0
     # via email-validator
 docstring-parser==0.18.0
     # via anthropic
-dramatiq==1.17.0
-    # via mybookkeeper-backend
 email-validator==2.3.0
     # via
     #   fastapi-users
@@ -173,8 +171,6 @@ pillow==12.2.0
     #   reportlab
 pluggy==1.6.0
     # via pytest
-prometheus-client==0.25.0
-    # via dramatiq
 proto-plus==1.27.2
     # via google-api-core
 protobuf==7.34.1
