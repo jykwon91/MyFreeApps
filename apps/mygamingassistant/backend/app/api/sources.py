@@ -30,7 +30,6 @@ from app.services.ingestion import ingestion_orchestrator
 # Sources are entirely operator-gated. The single auth router covers the
 # whole module — there is no public surface for source management.
 router = APIRouter(
-    prefix="/api",
     tags=["sources"],
     dependencies=[Depends(current_active_user)],
 )

@@ -61,13 +61,12 @@ from app.services.game import lineup_service
 logger = logging.getLogger(__name__)
 
 # Public read-only routes — no auth required.
-public_router = APIRouter(prefix="/api", tags=["lineups"])
+public_router = APIRouter(tags=["lineups"])
 
 # Operator-only mutations + review surfaces — auth enforced at the router level
 # rather than per-handler so the gating cannot accidentally regress when new
 # handlers are added.
 auth_router = APIRouter(
-    prefix="/api",
     tags=["lineups"],
     dependencies=[Depends(current_active_user)],
 )

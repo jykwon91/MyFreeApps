@@ -41,11 +41,10 @@ from app.schemas.game.lineup_package_schemas import (
 from app.services.game import lineup_package_service
 
 # Public read-only routes — no auth required.
-public_router = APIRouter(prefix="/api", tags=["lineup-packages"])
+public_router = APIRouter(tags=["lineup-packages"])
 
 # Operator-only mutations — auth enforced at router level.
 auth_router = APIRouter(
-    prefix="/api",
     tags=["lineup-packages"],
     dependencies=[Depends(current_active_user)],
 )

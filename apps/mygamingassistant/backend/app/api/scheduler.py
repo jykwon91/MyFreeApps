@@ -28,7 +28,7 @@ from app.services.scheduling.scheduler_service import (
 
 # Auth-gated at the router level.
 router = APIRouter(
-    prefix="/api/scheduler",
+    prefix="/scheduler",
     tags=["scheduler"],
     dependencies=[Depends(current_active_user)],
 )

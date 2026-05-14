@@ -24,7 +24,7 @@ from app.models.game.map_zone import MapZone  # noqa: F401 — used via selectin
 from app.models.game.site import Site  # noqa: F401 — used via selectinload
 from app.models.game.utility_type import UtilityType
 
-router = APIRouter(prefix="/api", tags=["games"])
+router = APIRouter(tags=["games"])
 
 
 @router.get("/games")
