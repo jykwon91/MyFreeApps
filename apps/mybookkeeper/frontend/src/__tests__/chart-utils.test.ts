@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { mergeData, buildFilter, formatMonthLabel } from "@/shared/utils/chart-utils";
+import {
+  mergeData,
+  buildFilter,
+  formatMonthLabel,
+  type PropertyBarKey,
+} from "@/shared/utils/chart-utils";
 import type { MonthSummary } from "@/shared/types/summary/month-summary";
 import type { MonthExpenseSummary } from "@/shared/types/summary/month-expense-summary";
 
@@ -168,5 +173,84 @@ describe("buildFilter", () => {
   it("formats multi-word category keys in the label", () => {
     const filter = buildFilter("mortgage_interest", entryJanuary);
     expect(filter.label).toBe("Mortgage Interest — January 2025");
+  });
+
+  // Regression for MonthlyOverviewChart bar-click drill-down (recharts 2->3 bump
+  // in PR #584 stopped passing the right row to buildFilter — handlers used to
+  // do `chartData[_index]` which drifted in recharts 3 when any bar in the
+  // displayed slice was filtered out, so click silently swallowed). The fix
+  // reads `data.payload` from the recharts BarRectangleItem the click was on
+  // and forwards that MergedRow straight into buildFilter. These tests pin
+  // the buildFilter contract for every dataKey the four bar-click handlers
+  // can produce, so the contract stays stable if recharts changes again.
+  describe("payload-driven dataKeys (MonthlyOverviewChart bar-click contract)", () => {
+    const entry = {
+      displayMonth: "Mar 25",
+      rawMonth: "2025-03",
+      revenue: 5000,
+      profit: 2000,
+      rev_prop1: 3000,
+      exp_prop1: 1500,
+      rev_prop2: 2000,
+      exp_prop2: 1500,
+      maintenance: 800,
+    };
+    const propertyKeys: PropertyBarKey[] = [
+      {
+        dataKey: "prop1",
+        name: "Lakeside Cabin",
+        propertyId: "prop1",
+        revenueColor: "#22c55e",
+        expenseColor: "#ef4444",
+      },
+      {
+        dataKey: "prop2",
+        name: "Downtown Loft",
+        propertyId: "prop2",
+        revenueColor: "#3b82f6",
+        expenseColor: "#f97316",
+      },
+    ];
+
+    it("builds a property revenue filter from a rev_<propertyId> dataKey", () => {
+      const filter = buildFilter("rev_prop1", entry, propertyKeys);
+      expect(filter.propertyId).toBe("prop1");
+      expect(filter.type).toBe("revenue");
+      expect(filter.startDate).toBe("2025-03-01");
+      expect(filter.endDate).toBe("2025-03-31");
+      expect(filter.label).toBe("Lakeside Cabin Revenue — March 2025");
+    });
+
+    it("builds a property expense filter from an exp_<propertyId> dataKey", () => {
+      const filter = buildFilter("exp_prop2", entry, propertyKeys);
+      expect(filter.propertyId).toBe("prop2");
+      expect(filter.type).toBe("expenses");
+      expect(filter.startDate).toBe("2025-03-01");
+      expect(filter.endDate).toBe("2025-03-31");
+      expect(filter.label).toBe("Downtown Loft Expenses — March 2025");
+    });
+
+    it("falls back to propertyId in the label when no PropertyBarKey matches", () => {
+      const filter = buildFilter("rev_unknownProp", entry, propertyKeys);
+      expect(filter.propertyId).toBe("unknownProp");
+      expect(filter.type).toBe("revenue");
+      expect(filter.label).toBe("unknownProp Revenue — March 2025");
+    });
+
+    it("builds a plain revenue filter from the 'revenue' dataKey", () => {
+      const filter = buildFilter("revenue", entry);
+      expect(filter.type).toBe("revenue");
+      expect(filter.category).toBeUndefined();
+      expect(filter.propertyId).toBeUndefined();
+      expect(filter.label).toBe("Revenue — March 2025");
+    });
+
+    it("builds a category expense filter from a category dataKey", () => {
+      const filter = buildFilter("maintenance", entry);
+      expect(filter.category).toBe("maintenance");
+      expect(filter.type).toBeUndefined();
+      expect(filter.propertyId).toBeUndefined();
+      expect(filter.label).toBe("Maintenance — March 2025");
+    });
   });
 });
