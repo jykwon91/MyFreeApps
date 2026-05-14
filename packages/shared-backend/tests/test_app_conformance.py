@@ -333,10 +333,11 @@ class TestScaffolderProducesBootableApp:
       2. Missing critical files. A trimmed include-list that drops, say,
          `backend/app/main.py` would scaffold an app that can't start.
 
-    Test runs the scaffolder with `skip_render=True` + `skip_uv=True` so it
-    doesn't depend on `.github/workflows/deploy.yml.j2` (which is monorepo-
-    relative and not copied into tmp_path) or on `uv` being installed.
-    Tier 3 render is covered by `TestInfraTemplateDrift`.
+    Test runs the scaffolder with skip_render=True + skip_uv=True + skip_npm=True
+    so it doesn't depend on `.github/workflows/deploy.yml.j2` (which is monorepo-
+    relative and not copied into tmp_path), uv being installed, or there being a
+    monorepo root npm workspace to sync against. Tier 3 render is covered by
+    `TestInfraTemplateDrift`.
     """
 
     def test_scaffolds_complete_substituted_skeleton(self, tmp_path) -> None:
@@ -366,6 +367,7 @@ class TestScaffolderProducesBootableApp:
             repo_root=tmp_path,
             skip_render=True,
             skip_uv=True,
+            skip_npm=True,
         )
 
         app_dir = tmp_path / "apps" / "scaffoldtest"
@@ -444,6 +446,7 @@ class TestScaffolderProducesBootableApp:
                 repo_root=tmp_path,
                 skip_render=True,
                 skip_uv=True,
+                skip_npm=True,
             )
 
     def test_rejects_invalid_slug(self, tmp_path) -> None:
