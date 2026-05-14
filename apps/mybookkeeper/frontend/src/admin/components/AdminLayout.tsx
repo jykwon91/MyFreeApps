@@ -6,7 +6,7 @@ import { cn } from "@/shared/utils/cn";
 import { ADMIN_NAV } from "@/admin/lib/nav";
 import { useCurrentUser } from "@/shared/hooks/useCurrentUser";
 import { useGetHealthSummaryQuery } from "@/shared/store/healthApi";
-import ThemeToggle from "@/shared/components/ThemeToggle";
+import { ThemeToggle } from "@platform/ui";
 import VersionTag from "@/app/components/VersionTag";
 
 export default function AdminLayout() {

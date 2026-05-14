@@ -10,6 +10,12 @@ interface GuestShellProps {
   logo: ReactNode;
   /** Nav items visible to unauthenticated visitors (public surfaces only). */
   nav: NavItem[];
+  /**
+   * Optional right-aligned topbar slot — mirrors @platform/ui AppShell's
+   * ``headerActions`` so the same node (e.g. ``<ThemeToggle />``) can be
+   * passed to either shell without conditional plumbing in RootLayout.
+   */
+  headerActions?: ReactNode;
   /** Page content. */
   children: ReactNode;
 }
@@ -31,7 +37,7 @@ interface GuestShellProps {
  * its API to handle the guest case would break parity with MBK / MJH.
  * A small local component keeps the shared layer clean.
  */
-export default function GuestShell({ logo, nav, children }: GuestShellProps) {
+export default function GuestShell({ logo, nav, headerActions, children }: GuestShellProps) {
   const isMobile = useMediaQuery("(max-width: 767px)");
   const navigate = useNavigate();
   const location = useLocation();
@@ -97,6 +103,7 @@ export default function GuestShell({ logo, nav, children }: GuestShellProps) {
         {/* Top bar */}
         <header className="flex items-center gap-4 px-4 py-3 border-b bg-background shrink-0 h-14">
           <div className="ml-auto flex items-center gap-2">
+            {headerActions}
             <Button
               onClick={onSignIn}
               size="sm"

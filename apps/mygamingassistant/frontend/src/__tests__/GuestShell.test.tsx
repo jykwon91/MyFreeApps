@@ -87,4 +87,17 @@ describe("GuestShell", () => {
       }),
     );
   });
+
+  it("renders the headerActions slot when provided", () => {
+    renderWithRouter(
+      <GuestShell
+        logo={<div>logo</div>}
+        nav={SAMPLE_NAV}
+        headerActions={<button data-testid="theme-toggle">toggle</button>}
+      >
+        <div>content</div>
+      </GuestShell>,
+    );
+    expect(screen.getByTestId("theme-toggle")).toBeDefined();
+  });
 });
