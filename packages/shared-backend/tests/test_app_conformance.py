@@ -319,3 +319,145 @@ class TestInfraTemplateDrift:
             f"Re-run `python -m platform_shared.infra.render --app {app}` and commit. "
             f"Diffs:\n\n" + "\n\n".join(diffs)
         )
+
+
+class TestScaffolderProducesBootableApp:
+    """Tier 5 -- the scaffolder must produce a complete, fully-substituted app dir.
+
+    Guards two failure modes that would otherwise leak past code review:
+      1. Token leakage. Any `__APP_SLUG__`/`__API_PORT__`/etc. that survives
+         into the scaffolded output is a substitution bug.
+      2. Missing critical files. A trimmed include-list that drops, say,
+         `backend/app/main.py` would scaffold an app that can't start.
+
+    Test runs the scaffolder with `skip_render=True` + `skip_uv=True` so it
+    doesn't depend on `.github/workflows/deploy.yml.j2` (which is monorepo-
+    relative and not copied into tmp_path) or on `uv` being installed.
+    Tier 3 render is covered by `TestInfraTemplateDrift`.
+    """
+
+    def test_scaffolds_complete_substituted_skeleton(self, tmp_path) -> None:
+        import shutil
+        try:
+            import yaml
+        except ModuleNotFoundError as e:
+            pytest.skip(f"pyyaml unavailable ({e}); skipping scaffolder check")
+
+        try:
+            from platform_shared.infra import new_app as _new_app
+        except ModuleNotFoundError as e:
+            pytest.skip(f"new_app module unavailable ({e}); skipping scaffolder check")
+
+        scaffold_src = _REPO_ROOT / "infra" / "templates" / "scaffold"
+        if not scaffold_src.exists():
+            pytest.skip(f"scaffold templates not present at {scaffold_src}")
+        scaffold_dst = tmp_path / "infra" / "templates" / "scaffold"
+        shutil.copytree(scaffold_src, scaffold_dst)
+
+        summary = _new_app.scaffold_app(
+            slug="scaffoldtest",
+            display_name="ScaffoldTest",
+            api_port=18999,
+            caddy_host_port=18998,
+            frontend_port=15999,
+            repo_root=tmp_path,
+            skip_render=True,
+            skip_uv=True,
+        )
+
+        app_dir = tmp_path / "apps" / "scaffoldtest"
+        assert app_dir.exists(), "scaffolder did not create apps/<slug>/"
+        assert summary["files_written"] > 50, (
+            f"scaffolder wrote only {summary['files_written']} files -- "
+            "include-list has regressed below sanity threshold"
+        )
+
+        for rel in (
+            "backend/app/main.py",
+            "backend/app/core/config.py",
+            "backend/app/api/health.py",
+            "backend/pyproject.toml",
+            "backend/alembic/versions/0001_initial_schema.py",
+            "frontend/package.json",
+            "frontend/src/App.tsx",
+            "frontend/src/routes.tsx",
+            "frontend/src/pages/Login.tsx",
+            "CLAUDE.md",
+            "app.yaml",
+            "docker/backend.Dockerfile",
+        ):
+            assert (app_dir / rel).exists(), f"scaffolder did not write {rel}"
+
+        tokens = (
+            "__APP_SLUG__",
+            "__APP_DISPLAY_NAME__",
+            "__API_PORT__",
+            "__FRONTEND_DEV_PORT__",
+            "__CADDY_HOST_PORT__",
+        )
+        for f in app_dir.rglob("*"):
+            if not f.is_file():
+                continue
+            try:
+                text = f.read_text(encoding="utf-8")
+            except UnicodeDecodeError:
+                continue
+            for token in tokens:
+                assert token not in text, (
+                    f"unsubstituted {token} remains in "
+                    f"{f.relative_to(app_dir)} -- scaffolder substitution failed"
+                )
+
+        main_src = (app_dir / "backend" / "app" / "main.py").read_text(encoding="utf-8")
+        assert "ScaffoldTest API" in main_src
+        assert "18999" not in main_src or "18999" in main_src  # port lives in vite.config + .env, not main.py
+
+        vite_src = (app_dir / "frontend" / "vite.config.ts").read_text(encoding="utf-8")
+        assert "15999" in vite_src, "frontend_port did not substitute into vite.config.ts"
+        assert "18999" in vite_src, "api_port did not substitute into vite.config.ts proxy"
+
+        yaml_data = yaml.safe_load((app_dir / "app.yaml").read_text(encoding="utf-8"))
+        assert yaml_data["app_slug"] == "scaffoldtest"
+        assert yaml_data["app_display_name"] == "ScaffoldTest"
+        assert yaml_data["api_port"] == 18999
+        assert yaml_data["caddy_host_port"] == 18998
+
+    def test_refuses_existing_app_dir(self, tmp_path) -> None:
+        try:
+            from platform_shared.infra import new_app as _new_app
+        except ModuleNotFoundError as e:
+            pytest.skip(f"new_app module unavailable ({e}); skipping scaffolder check")
+
+        (tmp_path / "apps" / "alreadyhere").mkdir(parents=True)
+        (tmp_path / "infra" / "templates" / "scaffold").mkdir(parents=True)
+
+        with pytest.raises(_new_app.ScaffoldError, match="already exists"):
+            _new_app.scaffold_app(
+                slug="alreadyhere",
+                display_name="AlreadyHere",
+                api_port=18999,
+                caddy_host_port=18998,
+                frontend_port=15999,
+                repo_root=tmp_path,
+                skip_render=True,
+                skip_uv=True,
+            )
+
+    def test_rejects_invalid_slug(self, tmp_path) -> None:
+        try:
+            from platform_shared.infra import new_app as _new_app
+        except ModuleNotFoundError as e:
+            pytest.skip(f"new_app module unavailable ({e}); skipping scaffolder check")
+
+        for bad in ("MyApp", "1myapp", "my_app", "ab", "x" * 41, "packages"):
+            with pytest.raises(_new_app.ScaffoldError):
+                _new_app.scaffold_app(
+                    slug=bad,
+                    display_name="Whatever",
+                    api_port=18999,
+                    caddy_host_port=18998,
+                    frontend_port=15999,
+                    repo_root=tmp_path,
+                    skip_render=True,
+                    skip_uv=True,
+                )
