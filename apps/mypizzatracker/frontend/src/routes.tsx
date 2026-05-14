@@ -9,10 +9,13 @@ import ForgotPassword from "@/pages/ForgotPassword";
 import ResetPassword from "@/pages/ResetPassword";
 import VerifyEmail from "@/pages/VerifyEmail";
 import NotFound from "@/pages/NotFound";
+import PublicOrder from "@/pages/PublicOrder";
 import RootLayout from "@/RootLayout";
 
 // Scaffolded app -- single-user, no /register route.
 // Add app-specific authenticated routes inside the RootLayout children array.
+// Customer-facing routes (e.g. /order) live OUTSIDE RootLayout so they do
+// not require auth or render the operator shell.
 
 export const routes: RouteObject[] = [
   {
@@ -25,6 +28,7 @@ export const routes: RouteObject[] = [
       { path: "/security", element: <Security /> },
     ],
   },
+  { path: "/order", element: <PublicOrder /> },
   { path: "/login", element: <Login /> },
   { path: "/forgot-password", element: <ForgotPassword /> },
   { path: "/reset-password", element: <ResetPassword /> },

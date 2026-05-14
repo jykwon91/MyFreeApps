@@ -14,3 +14,7 @@ from app.models.drop.drop import Drop  # noqa: F401
 from app.models.drop.slot import Slot  # noqa: F401
 from app.models.menu.pizza_type import PizzaType  # noqa: F401
 from app.models.menu.topping_type import ToppingType  # noqa: F401
+from app.models.customer.customer import Customer  # noqa: F401
+from app.models.order.order import Order  # noqa: F401
+from app.models.order.order_pizza import OrderPizza  # noqa: F401
+from app.models.order.order_pizza_topping import OrderPizzaTopping  # noqa: F401
