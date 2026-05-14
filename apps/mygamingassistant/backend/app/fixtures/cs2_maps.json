@@ -5,7 +5,7 @@
       {
         "slug": "mirage",
         "name": "Mirage",
-        "minimap_url": null,
+        "minimap_url": "/minimaps/cs2/mirage.png",
         "zones": [
           { "slug": "a-site",     "name": "A Site",     "polygon_points": [] },
           { "slug": "b-site",     "name": "B Site",     "polygon_points": [] },
@@ -26,7 +26,7 @@
       {
         "slug": "inferno",
         "name": "Inferno",
-        "minimap_url": null,
+        "minimap_url": "/minimaps/cs2/inferno.png",
         "zones": [
           { "slug": "a-site",     "name": "A Site",     "polygon_points": [] },
           { "slug": "b-site",     "name": "B Site",     "polygon_points": [] },
@@ -45,7 +45,7 @@
       {
         "slug": "dust2",
         "name": "Dust II",
-        "minimap_url": null,
+        "minimap_url": "/minimaps/cs2/dust2.png",
         "zones": [
           { "slug": "a-site",     "name": "A Site",     "polygon_points": [] },
           { "slug": "b-site",     "name": "B Site",     "polygon_points": [] },
@@ -65,7 +65,7 @@
       {
         "slug": "overpass",
         "name": "Overpass",
-        "minimap_url": null,
+        "minimap_url": "/minimaps/cs2/overpass.png",
         "zones": [
           { "slug": "a-site",     "name": "A Site",     "polygon_points": [] },
           { "slug": "b-site",     "name": "B Site",     "polygon_points": [] },
@@ -84,7 +84,7 @@
       {
         "slug": "nuke",
         "name": "Nuke",
-        "minimap_url": null,
+        "minimap_url": "/minimaps/cs2/nuke.png",
         "zones": [
           { "slug": "upper-a",    "name": "Upper A",    "polygon_points": [] },
           { "slug": "lower-b",    "name": "Lower B",    "polygon_points": [] },
@@ -102,7 +102,7 @@
       {
         "slug": "anubis",
         "name": "Anubis",
-        "minimap_url": null,
+        "minimap_url": "/minimaps/cs2/anubis.png",
         "zones": [
           { "slug": "a-site",     "name": "A Site",     "polygon_points": [] },
           { "slug": "b-site",     "name": "B Site",     "polygon_points": [] },
@@ -120,7 +120,7 @@
       {
         "slug": "ancient",
         "name": "Ancient",
-        "minimap_url": null,
+        "minimap_url": "/minimaps/cs2/ancient.png",
         "zones": [
           { "slug": "a-site",     "name": "A Site",     "polygon_points": [] },
           { "slug": "b-site",     "name": "B Site",     "polygon_points": [] },
@@ -138,7 +138,7 @@
       {
         "slug": "vertigo",
         "name": "Vertigo",
-        "minimap_url": null,
+        "minimap_url": "/minimaps/cs2/vertigo.png",
         "zones": [
           { "slug": "a-site",     "name": "A Site",     "polygon_points": [] },
           { "slug": "b-site",     "name": "B Site",     "polygon_points": [] },

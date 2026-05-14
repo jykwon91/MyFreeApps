@@ -54,6 +54,8 @@ export default function MapPage() {
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
   // One-time storage-unavailable toast
   const [storageUnavailableToast, setStorageUnavailableToast] = useState(false);
+  // Minimap <img> 404/network failure — falls back to text rather than broken-image icon
+  const [minimapLoadFailed, setMinimapLoadFailed] = useState(false);
 
   const { data: games } = useGetGamesQuery();
   const {
@@ -158,6 +160,11 @@ export default function MapPage() {
     window.addEventListener("mga:storage-unavailable", onStorageUnavailable);
     return () => window.removeEventListener("mga:storage-unavailable", onStorageUnavailable);
   }, []);
+
+  // Reset minimap-load failure when navigating to a different map.
+  useEffect(() => {
+    setMinimapLoadFailed(false);
+  }, [mapDetail?.minimap_url]);
 
   // --------------------------------------------------------------------------
   // URL helpers
@@ -418,12 +425,13 @@ export default function MapPage() {
                 className="relative rounded-xl border overflow-hidden bg-card"
                 style={{ aspectRatio: "1 / 1" }}
               >
-                {mapDetail.minimap_url ? (
+                {mapDetail.minimap_url && !minimapLoadFailed ? (
                   <img
                     src={mapDetail.minimap_url}
                     alt={`${mapDetail.name} minimap`}
                     className="absolute inset-0 w-full h-full object-cover"
                     draggable={false}
+                    onError={() => setMinimapLoadFailed(true)}
                   />
                 ) : (
                   <div className="absolute inset-0 flex items-center justify-center text-muted-foreground text-sm">

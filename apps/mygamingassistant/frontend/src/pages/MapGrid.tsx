@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Map } from "lucide-react";
 import { useGetGamesQuery, useGetMapsQuery } from "@/store/gamesApi";
+import type { GameMap } from "@/types/game";
 
 /**
  * Map selection grid for a specific game.
@@ -104,24 +106,38 @@ export default function MapGrid() {
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
         {maps.map((map) => (
-          <Link
-            key={map.id}
-            to={`/${gameSlug}/${map.slug}`}
-            className="group flex flex-col items-center justify-center h-24 rounded-xl border bg-card hover:bg-muted/40 transition-colors p-4 gap-2"
-          >
-            {map.minimap_url ? (
-              <img
-                src={map.minimap_url}
-                alt={map.name}
-                className="h-10 w-10 rounded object-cover group-hover:scale-105 transition-transform"
-              />
-            ) : (
-              <Map className="h-8 w-8 text-muted-foreground group-hover:text-primary transition-colors" />
-            )}
-            <span className="text-sm font-medium capitalize">{map.name}</span>
-          </Link>
+          <MapGridCard key={map.id} map={map} gameSlug={gameSlug ?? ""} />
         ))}
       </div>
     </main>
+  );
+}
+
+interface MapGridCardProps {
+  map: GameMap;
+  gameSlug: string;
+}
+
+function MapGridCard({ map, gameSlug }: MapGridCardProps) {
+  const [imageFailed, setImageFailed] = useState(false);
+  const showImage = map.minimap_url && !imageFailed;
+
+  return (
+    <Link
+      to={`/${gameSlug}/${map.slug}`}
+      className="group flex flex-col items-center justify-center h-24 rounded-xl border bg-card hover:bg-muted/40 transition-colors p-4 gap-2"
+    >
+      {showImage ? (
+        <img
+          src={map.minimap_url ?? ""}
+          alt={map.name}
+          className="h-10 w-10 rounded object-cover group-hover:scale-105 transition-transform"
+          onError={() => setImageFailed(true)}
+        />
+      ) : (
+        <Map className="h-8 w-8 text-muted-foreground group-hover:text-primary transition-colors" />
+      )}
+      <span className="text-sm font-medium capitalize">{map.name}</span>
+    </Link>
   );
 }

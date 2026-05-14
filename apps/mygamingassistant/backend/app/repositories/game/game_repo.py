@@ -131,6 +131,14 @@ async def upsert_map(
 ) -> Map:
     existing = await get_map_by_slug(db, game_id, slug)
     if existing is not None:
+        # Re-running load-fixtures after a fixture edit must propagate the
+        # change. Update mutable fields; (game_id, slug) is the natural key
+        # and stays put.
+        if existing.name != name:
+            existing.name = name
+        if existing.minimap_url != minimap_url:
+            existing.minimap_url = minimap_url
+        await db.flush()
         return existing
     m = Map(game_id=game_id, slug=slug, name=name, minimap_url=minimap_url)
     db.add(m)
