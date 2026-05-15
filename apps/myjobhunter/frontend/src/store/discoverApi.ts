@@ -56,13 +56,20 @@ const discoverApi = apiWithTags.injectEndpoints({
     }),
     listDiscoveredJobs: build.query<
       DiscoveredJobListResponse,
-      { state?: "inbox" | "saved" | "all"; limit?: number; offset?: number }
+      {
+        state?: "inbox" | "saved" | "all";
+        limit?: number;
+        offset?: number;
+        source_id?: string;
+      }
     >({
-      query: ({ state = "inbox", limit = 50, offset = 0 } = {}) => ({
-        url: "/discover",
-        method: "GET",
-        params: { state, limit, offset },
-      }),
+      query: ({ state = "inbox", limit = 50, offset = 0, source_id } = {}) => {
+        const params: Record<string, string | number> = { state, limit, offset };
+        if (source_id) {
+          params.source_id = source_id;
+        }
+        return { url: "/discover", method: "GET", params };
+      },
       providesTags: ["DiscoveredJob"],
     }),
     dismissDiscoveredJob: build.mutation<

@@ -273,11 +273,12 @@ async def list_discovered(
     state: str = Query(default="inbox", pattern="^(inbox|saved|all)$"),
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
+    source_id: uuid.UUID | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> DiscoveredJobListResponse:
     rows = await discovery_repository.list_discovered(
-        db, user.id, state=state, limit=limit, offset=offset,
+        db, user.id, state=state, limit=limit, offset=offset, source_id=source_id,
     )
     return DiscoveredJobListResponse(
         items=[DiscoveredJobResponse.model_validate(r) for r in rows],

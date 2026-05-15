@@ -1,12 +1,13 @@
 /**
- * Tests for DiscoveredJobCard — verdict badge, promoted state, and
- * "View application" link introduced in PR 7.
+ * Tests for DiscoveredJobCard — verdict badge, promoted state, source badge,
+ * and "View application" link introduced in PR 7.
  */
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import DiscoveredJobCard from "../DiscoveredJobCard";
 import type { DiscoveredJob } from "@/types/discovery/discovered-job";
+import type { DiscoverySource } from "@/types/discovery/discovery-source";
 
 vi.mock("lucide-react", () => ({
   Bookmark: () => null,
@@ -71,6 +72,7 @@ function makeJob(overrides: Partial<DiscoveredJob> = {}): DiscoveredJob {
     saved_at: null,
     promoted_application_id: null,
     verdict: null,
+    discovery_source_id: null,
     ...overrides,
   };
 }
@@ -293,5 +295,81 @@ describe("DiscoveredJobCard — post-promote view application link (PR 7)", () =
     );
     expect(screen.queryByTestId("view-application-link")).toBeNull();
     expect(screen.queryByTestId("promoted-applied-badge")).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Source-name badge (filter chips feature)
+// ---------------------------------------------------------------------------
+
+function makeSource(overrides: Partial<DiscoverySource> = {}): DiscoverySource {
+  return {
+    id: "src-1",
+    source: "jsearch",
+    name: "Python remote",
+    config: {},
+    is_active: true,
+    fetch_interval_minutes: 1440,
+    last_fetched_at: null,
+    last_success_at: null,
+    last_error_at: null,
+    last_error_message: null,
+    consecutive_failures: 0,
+    created_at: "2026-05-01T00:00:00Z",
+    updated_at: "2026-05-01T00:00:00Z",
+    ...overrides,
+  };
+}
+
+describe("DiscoveredJobCard — source-name badge", () => {
+  it("shows no source badge when discovery_source_id is null", () => {
+    renderInRouter(
+      <DiscoveredJobCard
+        job={makeJob({ discovery_source_id: null })}
+        sources={[makeSource()]}
+      />,
+    );
+    expect(screen.queryByTestId("source-name-badge")).toBeNull();
+  });
+
+  it("shows no source badge when sources list is empty (default)", () => {
+    renderInRouter(
+      <DiscoveredJobCard
+        job={makeJob({ discovery_source_id: "src-1" })}
+      />,
+    );
+    expect(screen.queryByTestId("source-name-badge")).toBeNull();
+  });
+
+  it("shows the source name badge when discovery_source_id matches a source", () => {
+    renderInRouter(
+      <DiscoveredJobCard
+        job={makeJob({ discovery_source_id: "src-1" })}
+        sources={[makeSource({ id: "src-1", name: "Python remote" })]}
+      />,
+    );
+    const badge = screen.getByTestId("source-name-badge");
+    expect(badge).toBeInTheDocument();
+    expect(badge).toHaveTextContent("Python remote");
+  });
+
+  it("falls back to source.source when source name is empty", () => {
+    renderInRouter(
+      <DiscoveredJobCard
+        job={makeJob({ discovery_source_id: "src-1" })}
+        sources={[makeSource({ id: "src-1", name: "", source: "jsearch" })]}
+      />,
+    );
+    expect(screen.getByTestId("source-name-badge")).toHaveTextContent("jsearch");
+  });
+
+  it("shows no badge when discovery_source_id does not match any source", () => {
+    renderInRouter(
+      <DiscoveredJobCard
+        job={makeJob({ discovery_source_id: "unknown-id" })}
+        sources={[makeSource({ id: "src-1" })]}
+      />,
+    );
+    expect(screen.queryByTestId("source-name-badge")).toBeNull();
   });
 });

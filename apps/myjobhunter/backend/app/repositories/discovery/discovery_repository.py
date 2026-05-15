@@ -16,7 +16,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import desc, nulls_last, select, update
+from sqlalchemy import desc, nulls_last, outerjoin, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -334,6 +334,7 @@ async def list_discovered(
     state: str = "inbox",
     limit: int = 50,
     offset: int = 0,
+    source_id: uuid.UUID | None = None,
 ) -> list[DiscoveredJob]:
     """List discovered jobs scoped to user.
 
@@ -341,8 +342,27 @@ async def list_discovered(
       - "inbox": not dismissed, not saved, not promoted (the triage view)
       - "saved": saved_at IS NOT NULL AND dismissed_at IS NULL
       - "all": every non-expired row
+
+    source_id:
+      When provided, restricts results to rows whose fetch_id points to a
+      DiscoveryFetch whose discovery_source_id matches.  Uses a LEFT JOIN
+      on discovery_fetches to also populate ``discovery_source_id`` on
+      every returned row (no N+1).
     """
-    stmt = select(DiscoveredJob).where(DiscoveredJob.user_id == user_id)
+    # Always join discovery_fetches so we can populate discovery_source_id
+    # on each row without a second round-trip.  LEFT JOIN keeps rows whose
+    # fetch_id is NULL (legacy rows or fetch reaped after SET NULL cascade).
+    stmt = (
+        select(DiscoveredJob, DiscoveryFetch.discovery_source_id.label("_dsrc_id"))
+        .select_from(
+            outerjoin(
+                DiscoveredJob,
+                DiscoveryFetch,
+                DiscoveredJob.fetch_id == DiscoveryFetch.id,
+            )
+        )
+        .where(DiscoveredJob.user_id == user_id)
+    )
     if state == "inbox":
         stmt = stmt.where(
             DiscoveredJob.dismissed_at.is_(None),
@@ -355,18 +375,26 @@ async def list_discovered(
             DiscoveredJob.dismissed_at.is_(None),
         )
     # else "all": no extra filter
-    stmt = (
-        stmt.order_by(
-            # Highest score first; unscored rows fall to the bottom
-            # (nulls_last so an unscored row never beats a scored one).
-            nulls_last(desc(DiscoveredJob.score)),
-            desc(DiscoveredJob.discovered_at),
-        )
-        .limit(limit)
-        .offset(offset)
-    )
+
+    if source_id is not None:
+        stmt = stmt.where(DiscoveryFetch.discovery_source_id == source_id)
+
+    stmt = stmt.order_by(
+        # Highest score first; unscored rows fall to the bottom
+        # (nulls_last so an unscored row never beats a scored one).
+        nulls_last(desc(DiscoveredJob.score)),
+        desc(DiscoveredJob.discovered_at),
+    ).limit(limit).offset(offset)
+
     result = await db.execute(stmt)
-    return list(result.scalars().all())
+    rows = []
+    for job, dsrc_id in result.all():
+        # Attach discovery_source_id as a plain Python attribute so the
+        # Pydantic schema (from_attributes=True, discovery_source_id field)
+        # can read it without an ORM relationship.
+        job.discovery_source_id = dsrc_id
+        rows.append(job)
+    return rows
 
 
 async def get_discovered(

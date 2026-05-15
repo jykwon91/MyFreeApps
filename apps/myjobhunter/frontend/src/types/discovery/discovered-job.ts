@@ -26,4 +26,6 @@ export interface DiscoveredJob {
   promoted_application_id: string | null;
   /** Derived by the backend from ``score``. Null for unscored rows. */
   verdict: JobAnalysisVerdict | null;
+  /** Which saved search produced this posting. Null for legacy rows. */
+  discovery_source_id: string | null;
 }
