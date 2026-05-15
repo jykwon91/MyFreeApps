@@ -248,7 +248,6 @@ class TestClassifyLineup:
             ),
             patch("app.services.classification.classifier_service.settings") as mock_settings,
             patch("app.services.classification.classifier_service.anthropic.Anthropic") as mock_cls,
-            patch("sentry_sdk.capture_exception"),
         ):
             mock_settings.anthropic_api_key = "sk-test"
             mock_settings.claude_classifier_model = "claude-haiku-4-5-20251001"
@@ -282,7 +281,6 @@ class TestClassifyLineup:
             ),
             patch("app.services.classification.classifier_service.settings") as mock_settings,
             patch("app.services.classification.classifier_service.anthropic.Anthropic") as mock_cls,
-            patch("sentry_sdk.capture_exception"),
         ):
             mock_settings.anthropic_api_key = "sk-test"
             mock_settings.claude_classifier_model = "claude-haiku-4-5-20251001"

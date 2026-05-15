@@ -15,8 +15,10 @@ call.
 
 Boot order (rationale documented inline below):
 
-  1. init_sentry()                — first, so any boot-guard failure
-                                    is captured as a Sentry event
+  1. init_sentry()                — first (if wired), so any boot-guard
+                                    failure is captured as a Sentry event.
+                                    Optional — apps that don't need error
+                                    monitoring omit it (see init_sentry arg)
   2. check_turnstile_configured() — fail loud on missing CAPTCHA in prod
   3. check_email_configured()     — fail loud on missing SMTP creds /
                                     console mode in prod
@@ -107,7 +109,7 @@ LifecycleHook = Callable[[], Awaitable[None] | None]
 def create_app_lifespan(
     *,
     settings: _SettingsProtocol,
-    init_sentry: InitSentryFn,
+    init_sentry: InitSentryFn | None = None,
     bucket_init: BucketInitFn = lambda: None,
     sms_required: bool = False,
     on_startup: LifecycleHook | None = None,
@@ -121,10 +123,14 @@ def create_app_lifespan(
             thread sentry_dsn, environment, turnstile_secret_key,
             email_backend, smtp_user, smtp_password through the boot
             guards.
-        init_sentry: The app's wrapper around
-            platform_shared.core.observability.init_sentry. Apps wire
-            their own settings.sentry_dsn / settings.environment inside
-            the wrapper so callers here don't need to thread them.
+        init_sentry: Optional. The app's wrapper around
+            platform_shared.core.observability.init_sentry, binding its
+            own settings.sentry_dsn / settings.environment internally so
+            callers here don't thread them. Defaults to None — apps that
+            don't need error monitoring (e.g. single-user casual apps)
+            omit it and the Sentry init is skipped entirely. Mirrors the
+            bucket_init opt-out shape; the SENTRY_EXEMPT allowlist in
+            tests/test_app_conformance.py records which apps opt out.
         bucket_init: Optional callable that verifies MinIO bucket
             existence at startup. Defaults to a no-op for apps that
             don't use object storage. Most apps pass their
@@ -147,9 +153,12 @@ def create_app_lifespan(
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-        # 1. Sentry first — so any boot-guard failure below is
-        #    captured as a Sentry event with the full traceback.
-        init_sentry()
+        # 1. Sentry first (if the app wired it) — so any boot-guard
+        #    failure below is captured as a Sentry event with the full
+        #    traceback. Apps that don't need error monitoring (e.g.
+        #    single-user casual apps) pass no init_sentry; skipped here.
+        if init_sentry is not None:
+            init_sentry()
 
         # 2. Boot guards — fail loud in non-dev environments. Each
         #    raises a subclass of RuntimeError that crashes the

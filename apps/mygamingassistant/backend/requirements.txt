@@ -72,7 +72,6 @@ fastapi==0.136.1
     #   fastapi-users
     #   mygamingassistant-backend
     #   platform-shared
-    #   sentry-sdk
 fastapi-users==15.0.5
     # via
     #   fastapi-users-db-sqlalchemy
@@ -172,9 +171,7 @@ qrcode==8.2
     #   mygamingassistant-backend
     #   platform-shared
 sentry-sdk==2.59.0
-    # via
-    #   mygamingassistant-backend
-    #   platform-shared
+    # via platform-shared
 sniffio==1.3.1
     # via anthropic
 sqlalchemy==2.0.49

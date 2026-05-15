@@ -35,6 +35,21 @@ _APPS = [
     "mypizzatracker",
 ]
 
+# Apps that have intentionally opted OUT of Sentry error monitoring.
+# Sentry is the one observability primitive made optional per-app — it
+# mirrors the bucket_init / sms_required opt-out shape in
+# platform_shared.core.lifespan (init_sentry now defaults to None).
+# Membership here is a deliberate, reviewed product decision; the boot
+# guards (turnstile, email, audit) are NOT optional and have no
+# equivalent allowlist. The tests below enforce the opt-out in BOTH
+# directions: an exempt app must have no Sentry wiring/wrapper, and a
+# non-exempt app must keep the canonical wiring.
+#
+# - mygamingassistant: single-user casual app for the operator + a few
+#   friends. No error-monitoring need; also conserves the shared free
+#   Sentry quota (kept for the serious apps — MBK / MJH).
+_SENTRY_EXEMPT = {"mygamingassistant"}
+
 
 def _read(*parts: str) -> str:
     return (_REPO_ROOT.joinpath(*parts)).read_text(encoding="utf-8")
@@ -133,11 +148,29 @@ class TestLifespanUsesSharedFactory:
 
     def test_passes_init_sentry_to_factory(self, app: str) -> None:
         main_src = _read("apps", app, "backend", "app", "main.py")
+        if app in _SENTRY_EXEMPT:
+            # Positively enforce the opt-out so Sentry can't silently
+            # creep back without also removing the app from
+            # _SENTRY_EXEMPT (a reviewed, intentional act).
+            assert "init_sentry=init_sentry" not in main_src, (
+                f"{app} is in _SENTRY_EXEMPT but {app}/backend/app/main.py "
+                f"still passes init_sentry=init_sentry to "
+                f"create_app_lifespan. Remove the Sentry wiring or drop "
+                f"{app} from _SENTRY_EXEMPT."
+            )
+            assert "import init_sentry" not in main_src, (
+                f"{app} is in _SENTRY_EXEMPT but {app}/backend/app/main.py "
+                f"still imports init_sentry. Remove the import or drop "
+                f"{app} from _SENTRY_EXEMPT."
+            )
+            return
         assert "init_sentry=init_sentry" in main_src, (
             f"{app}/backend/app/main.py must pass init_sentry=init_sentry "
             f"to create_app_lifespan. The wrapper from "
             f"app.core.observability binds settings.sentry_dsn / "
-            f"settings.environment internally."
+            f"settings.environment internally. (If this app is "
+            f"intentionally opting out of Sentry, add it to "
+            f"_SENTRY_EXEMPT instead.)"
         )
 
     def test_passes_bucket_init_to_factory(self, app: str) -> None:
@@ -175,7 +208,21 @@ class TestObservabilityWrapperShape:
     platform_shared.core.observability.init_sentry — not a re-implementation."""
 
     def test_wrapper_imports_shared(self, app: str) -> None:
-        wrapper_src = _read("apps", app, "backend", "app", "core", "observability.py")
+        wrapper_path = (
+            _REPO_ROOT / "apps" / app / "backend" / "app" / "core"
+            / "observability.py"
+        )
+        if app in _SENTRY_EXEMPT:
+            # Opt-out apps must NOT carry a Sentry wrapper at all.
+            # Asserting absence here is the positive enforcement; the
+            # sdk-import test below is skipped (nothing to read).
+            assert not wrapper_path.exists(), (
+                f"{app} is in _SENTRY_EXEMPT but a Sentry wrapper still "
+                f"exists at apps/{app}/backend/app/core/observability.py. "
+                f"Delete it or drop {app} from _SENTRY_EXEMPT."
+            )
+            return
+        wrapper_src = wrapper_path.read_text(encoding="utf-8")
         assert "from platform_shared.core.observability import" in wrapper_src, (
             f"{app}/backend/app/core/observability.py must import from "
             f"platform_shared.core.observability — see PR #291 for the "
@@ -183,6 +230,12 @@ class TestObservabilityWrapperShape:
         )
 
     def test_wrapper_does_not_import_sentry_sdk_directly(self, app: str) -> None:
+        if app in _SENTRY_EXEMPT:
+            pytest.skip(
+                f"{app} opted out of Sentry (_SENTRY_EXEMPT) — no wrapper "
+                f"to check; its absence is enforced by "
+                f"test_wrapper_imports_shared."
+            )
         wrapper_src = _read("apps", app, "backend", "app", "core", "observability.py")
         # Match an actual `import sentry_sdk` line — the wrapper must
         # delegate to the shared layer, not re-import sentry_sdk itself.

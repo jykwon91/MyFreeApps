@@ -164,6 +164,59 @@ class TestSentryFirst:
         assert sentry_called == ["sentry"]
 
 
+class TestInitSentryOptional:
+    """init_sentry defaults to None. Apps that opt out of Sentry (see
+    _SENTRY_EXEMPT in tests/test_app_conformance.py) omit it entirely;
+    the Sentry init is skipped without weakening the other boot guards.
+    Mirrors the bucket_init default-noop opt-out shape."""
+
+    @pytest.mark.asyncio
+    async def test_omitted_init_sentry_boots_in_production(
+        self, app: FastAPI, monkeypatch,
+    ) -> None:
+        """A prod app with valid turnstile/email but NO init_sentry wired
+        must boot cleanly — this is the MGA opt-out scenario."""
+        monkeypatch.setattr(
+            "platform_shared.core.lifespan.register_audit_listeners",
+            MagicMock(),
+        )
+        lifespan = create_app_lifespan(
+            settings=_settings(
+                environment="production",
+                sentry_dsn="",  # no DSN, and init_sentry omitted below
+                turnstile_secret_key="present",
+                email_backend="smtp",
+                smtp_user="u",
+                smtp_password="p" * 16,
+            ),
+            # init_sentry intentionally omitted (defaults to None)
+        )
+        async with lifespan(app):
+            pass
+
+    @pytest.mark.asyncio
+    async def test_opting_out_of_sentry_does_not_weaken_other_guards(
+        self, app: FastAPI, monkeypatch,
+    ) -> None:
+        """Omitting init_sentry must NOT skip the email/turnstile guards —
+        a Sentry opt-out is not a license to boot misconfigured in prod."""
+        monkeypatch.setattr(
+            "platform_shared.core.lifespan.register_audit_listeners",
+            MagicMock(),
+        )
+        lifespan = create_app_lifespan(
+            settings=_settings(
+                environment="production",
+                turnstile_secret_key="present",
+                email_backend="console",  # invalid in prod → must raise
+            ),
+            # init_sentry omitted
+        )
+        with pytest.raises(EmailNotConfiguredError):
+            async with lifespan(app):
+                pass
+
+
 class TestOptionalHooks:
     """on_startup and on_shutdown are optional; sync and async both supported."""
 

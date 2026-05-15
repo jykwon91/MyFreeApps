@@ -31,7 +31,6 @@ from io import BytesIO
 from pathlib import Path
 from typing import Optional
 
-import sentry_sdk
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -114,7 +113,6 @@ async def _process_chapter(
             source.id, video_meta.video_id, start, str(exc),
             exc_info=True,
         )
-        sentry_sdk.capture_exception(exc)
         return False
 
     stand_key = _pending_screenshot_key(video_meta.video_id, start, "stand")
@@ -130,7 +128,6 @@ async def _process_chapter(
             source.id, video_meta.video_id, start, str(exc),
             exc_info=True,
         )
-        sentry_sdk.capture_exception(exc)
         return False
 
     payload = LineupIngestCreate(
@@ -155,7 +152,6 @@ async def _process_chapter(
             source.id, video_meta.video_id, start, str(exc),
             exc_info=True,
         )
-        sentry_sdk.capture_exception(exc)
         return False
 
     # Classifier — runs immediately after the lineup is created.
@@ -190,7 +186,6 @@ async def _process_chapter(
                 source.id, video_meta.video_id, start, lineup.id, str(exc),
                 exc_info=True,
             )
-            sentry_sdk.capture_exception(exc)
             # Rollback any partial classifier flush; lineup row is already committed above.
             try:
                 await db.rollback()
@@ -221,7 +216,6 @@ async def _process_video(
             "Video download failed: source_id=%s video_id=%s error_type=%s message=%s",
             source.id, video_meta.video_id, exc.error_type, str(exc),
         )
-        sentry_sdk.capture_exception(exc)
         stats.error_count += 1
         stats.errors.append(f"{video_meta.video_id}: download failed ({exc.error_type})")
         return
@@ -304,7 +298,6 @@ async def sync_source(source_id: uuid.UUID, db: AsyncSession) -> SyncStats:
             "sync_source: failed to list videos: source_id=%s error_type=%s message=%s",
             source.id, exc.error_type, str(exc),
         )
-        sentry_sdk.capture_exception(exc)
         stats.errors.append(f"list_videos failed: {exc.error_type}: {exc}")
         stats.error_count += 1
         return stats
