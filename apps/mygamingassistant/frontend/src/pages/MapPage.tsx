@@ -18,7 +18,7 @@
  */
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Backpack, ImagePlus, Package, Plus } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Backpack, ImagePlus, Package, Pencil, Plus } from "lucide-react";
 import { ToggleChipGroup, showSuccess } from "@platform/ui";
 import { useGetGamesQuery, useGetMapDetailQuery } from "@/store/gamesApi";
 import { useGetLineupsQuery, useGetZoneDensityQuery } from "@/store/lineupsApi";
@@ -350,6 +350,16 @@ export default function MapPage() {
               <h1 className="text-xl font-semibold capitalize">{mapDetail.name}</h1>
             </div>
             {isSuperuser && (
+              <Link
+                to={`/${gameSlug}/${mapSlug}/zones/edit`}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md border bg-card hover:bg-muted/40 transition-colors min-h-[36px]"
+                title="Author the clickable zone polygons for this map"
+              >
+                <Pencil className="w-4 h-4" />
+                Edit zones
+              </Link>
+            )}
+            {isSuperuser && (
               <button
                 type="button"
                 onClick={() => setShowMinimapUpload(true)}
@@ -368,6 +378,35 @@ export default function MapPage() {
               Add lineup
             </Link>
           </div>
+
+          {isSuperuser &&
+            mapDetail.zones.length > 0 &&
+            mapDetail.zones.every((z) => z.polygon_points.length === 0) && (
+              <div
+                className="flex items-start gap-2.5 px-3 py-2.5 rounded-md border bg-amber-500/10 border-amber-500/30 text-sm"
+                role="status"
+              >
+                <AlertTriangle
+                  className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5"
+                  aria-hidden
+                />
+                <div className="flex-1">
+                  <p className="font-medium">
+                    This map's zones aren't drawn yet.
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Visitors will see a static minimap until you author the
+                    clickable zone polygons.
+                  </p>
+                </div>
+                <Link
+                  to={`/${gameSlug}/${mapSlug}/zones/edit`}
+                  className="px-3 py-1 text-sm rounded-md bg-primary text-primary-foreground hover:opacity-90 min-h-[32px] inline-flex items-center"
+                >
+                  Set up zones
+                </Link>
+              </div>
+            )}
 
           {showMinimapUpload && (
             <MinimapUploadDialog
