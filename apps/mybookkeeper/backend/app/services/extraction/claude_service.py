@@ -1,36 +1,81 @@
-import asyncio
-import base64
-import json
+"""MyBookkeeper extraction wrapper around platform_shared.extraction.
+
+The generic Anthropic-call machinery (client, throttle, 429 backoff,
+JSON-from-response parsing) now lives in ``platform_shared.extraction``.
+This module keeps only the MyBookkeeper-domain pieces:
+
+- ``get_extraction_prompt`` — DEFAULT_PROMPT + document-type addendum +
+  property context + DB-stored per-user rules. Unchanged.
+- The MBK response interpretation (year_end_statement special-case,
+  ``documents``/``invoices`` unwrap, low-confidence fallback dict on any
+  parse/shape failure) — the exact pre-extraction return contract, so
+  every caller (document_extraction_service, email_extraction_service,
+  persistence) sees byte-identical dicts.
+- ``_create_with_backoff`` — kept as a thin passthrough because
+  ``app.services.tax.tax_advisor_service`` imports it for non-extraction
+  Claude calls; it must keep using the same shared throttle.
+- ``_ThrottleState`` / ``_throttle`` — re-exported (test_self_healing
+  imports them) and ARE the shared throttle objects, so backoff state is
+  process-global exactly as before.
+
+Model is pinned to ``claude-sonnet-4-6``: changing it would alter
+extraction output AND cold-start the production prompt cache (caching is
+a prefix match keyed on model + system bytes).
+"""
 import logging
-import time
 import uuid
-from dataclasses import dataclass
 
 import anthropic
 from anthropic import Timeout
 from sqlalchemy.exc import SQLAlchemyError
+
 from app.core.config import settings
 from app.db.session import AsyncSessionLocal
 from app.repositories import extraction_prompt_repo
-from app.services.system.event_service import record_event
 from app.services.extraction.prompts.base_prompt import DEFAULT_PROMPT
 from app.services.extraction.prompts.document_type_addendums import get_addendum_for_filename
+from app.services.system.event_service import record_event
+from platform_shared.extraction import (
+    ExtractionParseError,
+    ExtractionResponse,
+    ExtractionService,
+    RateLimitEvent,
+    ThrottleState as _ThrottleState,  # re-exported: test_self_healing imports this
+    create_with_backoff,
+    throttle as _throttle,  # re-exported: same process-global throttle as before
+)
+
+# Public + back-compat surface. _ThrottleState / _throttle are
+# re-exports of the shared throttle objects, kept importable here
+# because app.services.tax.tax_advisor_service and tests/test_self_healing
+# import them from this module path.
+__all__ = [
+    "get_extraction_prompt",
+    "extract_from_text",
+    "extract_from_image",
+    "extract_from_email",
+    "_create_with_backoff",
+    "_ThrottleState",
+    "_throttle",
+    "PROPERTY_CONTEXT_ADDENDUMS",
+]
 
 logger = logging.getLogger(__name__)
 
+# Shared by extraction AND tax_advisor (via _create_with_backoff) — one
+# client / one throttle, exactly the pre-extraction behaviour.
 client = anthropic.AsyncAnthropic(
     api_key=settings.anthropic_api_key,
     timeout=Timeout(settings.claude_timeout_seconds, connect=30.0),
 )
 
+_MODEL = "claude-sonnet-4-6"
 
-@dataclass
-class _ThrottleState:
-    consecutive_429s: int = 0
-    resume_at: float = 0.0
-
-
-_throttle = _ThrottleState()
+_extraction = ExtractionService(
+    api_key=settings.anthropic_api_key,
+    model=_MODEL,
+    timeout_seconds=settings.claude_timeout_seconds,
+)
 
 
 PROPERTY_CONTEXT_ADDENDUMS: dict[str, str] = {
@@ -98,135 +143,110 @@ async def get_extraction_prompt(
     return prompt, None
 
 
-async def _create_with_backoff(**kwargs) -> anthropic.types.Message:
-    now = time.monotonic()
-    if now < _throttle.resume_at:
-        delay = _throttle.resume_at - now
-        logger.info("Throttle active, waiting %.0fs before Anthropic request", delay)
-        await asyncio.sleep(delay)
+async def _record_rate_limited(evt: RateLimitEvent) -> None:
+    """Record the MBK system event on each 429 — the exact pre-extraction payload.
 
-    for attempt in range(5):
-        try:
-            result = await client.messages.create(**kwargs)
-            _throttle.consecutive_429s = 0
-            return result
-        except anthropic.RateLimitError as e:
-            _throttle.consecutive_429s += 1
-            retry_after = getattr(getattr(e, "response", None), "headers", {}).get("retry-after")
-            wait = float(retry_after) if retry_after else 60 * (2 ** attempt)
-            _throttle.resume_at = time.monotonic() + wait
-            logger.warning(
-                "Rate limited by Anthropic, waiting %.0fs (attempt %d/5, consecutive 429s: %d)",
-                wait, attempt + 1, _throttle.consecutive_429s,
-            )
-            try:
-                await record_event(
-                    None, "rate_limited", "warning",
-                    f"Anthropic API rate limited (attempt {attempt + 1}/5, consecutive: {_throttle.consecutive_429s})",
-                    {"wait_seconds": wait, "consecutive_429s": _throttle.consecutive_429s},
-                )
-            except Exception:
-                logger.warning(
-                    "Failed to record rate_limited event (consecutive=%d) — continuing backoff",
-                    _throttle.consecutive_429s,
-                    exc_info=True,
-                )
-            if attempt == 4:
-                raise
-            await asyncio.sleep(wait)
-    raise RuntimeError("unreachable")
+    create_with_backoff already wraps this in a try/except-and-log, so a
+    failing event write never breaks the backoff (prior behaviour).
+    """
+    await record_event(
+        None,
+        "rate_limited",
+        "warning",
+        f"Anthropic API rate limited (attempt {evt.attempt}/{evt.max_attempts}, "
+        f"consecutive: {evt.consecutive_429s})",
+        {"wait_seconds": evt.wait_seconds, "consecutive_429s": evt.consecutive_429s},
+    )
+
+
+async def _create_with_backoff(**kwargs) -> anthropic.types.Message:
+    """Thin passthrough kept for app.services.tax.tax_advisor_service.
+
+    Preserves the pre-extraction surface: same module ``client``, same
+    process-global throttle, same rate-limit event recording.
+    """
+    return await create_with_backoff(client, on_rate_limit=_record_rate_limited, **kwargs)
+
+
+def _legacy_fallback() -> dict:
+    return {
+        "data": [{"tags": ["uncategorized"], "confidence": "low", "tax_relevant": False}],
+        "tokens": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "model_name": None,
+    }
+
+
+def _legacy_from_response(resp: ExtractionResponse) -> dict:
+    """Reproduce the pre-extraction _parse_response success mapping exactly.
+
+    Raises AttributeError if ``resp.data`` is not a dict (e.g. the model
+    returned a bare JSON list) — the caller catches that and returns the
+    low-confidence fallback, exactly as the pre-extraction code did.
+    """
+    parsed = resp.data
+    token_fields = {
+        "tokens": resp.total_tokens,
+        "input_tokens": resp.input_tokens,
+        "output_tokens": resp.output_tokens,
+        "model_name": resp.model,
+    }
+
+    if parsed.get("document_type") == "year_end_statement":
+        return {
+            "data": [],
+            "document_type": "year_end_statement",
+            "reservations": parsed.get("reservations", []),
+            **token_fields,
+        }
+
+    if "documents" in parsed:
+        documents = parsed["documents"]
+    elif "invoices" in parsed:
+        documents = parsed["invoices"]
+    else:
+        documents = [parsed]
+    return {"data": documents, **token_fields}
+
+
+def _to_legacy(resp: ExtractionResponse) -> dict:
+    try:
+        return _legacy_from_response(resp)
+    except (AttributeError, KeyError, TypeError):
+        return _legacy_fallback()
 
 
 async def extract_from_text(text: str, user_id: uuid.UUID | None = None, filename: str | None = None, property_classification: str | None = None) -> dict:
     prompt, err = await get_extraction_prompt(user_id, filename=filename, property_classification=property_classification)
     if err:
         logger.warning("extract_from_text: proceeding without user rules (error=%s user_id=%s)", err, user_id)
-    message = await _create_with_backoff(
-        model="claude-sonnet-4-6",
-        max_tokens=16384,
-        system=[{"type": "text", "text": prompt, "cache_control": {"type": "ephemeral"}}],
-        messages=[{"role": "user", "content": f"Document:\n{text[:settings.max_text_chars]}"}],
-    )
-    return _parse_response(message)
+    try:
+        resp = await _extraction.extract_text(
+            prompt,
+            text[:settings.max_text_chars],
+            on_rate_limit=_record_rate_limited,
+        )
+    except ExtractionParseError:
+        return _legacy_fallback()
+    return _to_legacy(resp)
 
 
 async def extract_from_image(image_bytes: bytes, media_type: str, user_id: uuid.UUID | None = None, filename: str | None = None, property_classification: str | None = None) -> dict:
     prompt, err = await get_extraction_prompt(user_id, filename=filename, property_classification=property_classification)
     if err:
         logger.warning("extract_from_image: proceeding without user rules (error=%s user_id=%s)", err, user_id)
-    file_b64 = base64.standard_b64encode(image_bytes).decode()
-
-    is_pdf = media_type == "application/pdf"
-    source_block: dict = {
-        "type": "document" if is_pdf else "image",
-        "source": {"type": "base64", "media_type": media_type, "data": file_b64},
-    }
-
-    message = await _create_with_backoff(
-        model="claude-sonnet-4-6",
-        max_tokens=16384,
-        system=[{"type": "text", "text": prompt, "cache_control": {"type": "ephemeral"}}],
-        messages=[{
-            "role": "user",
-            "content": [source_block],
-        }],
-    )
-    return _parse_response(message)
+    try:
+        resp = await _extraction.extract_document(
+            prompt,
+            image_bytes,
+            media_type,
+            on_rate_limit=_record_rate_limited,
+        )
+    except ExtractionParseError:
+        return _legacy_fallback()
+    return _to_legacy(resp)
 
 
 async def extract_from_email(subject: str, body: str, user_id: uuid.UUID | None = None) -> dict:
     return await extract_from_text(f"Email Subject: {subject}\n\nEmail Body:\n{body[:settings.max_email_body_chars]}", user_id=user_id)
-
-
-def _parse_response(message: anthropic.types.Message) -> dict:
-    try:
-        content = message.content[0].text.strip()
-        # Extract JSON from markdown code blocks anywhere in the response
-        if "```" in content:
-            parts = content.split("```")
-            for part in parts[1::2]:  # odd-indexed parts are inside code fences
-                inner = part.strip()
-                if inner.startswith("json"):
-                    inner = inner[4:].strip()
-                if inner.startswith("{"):
-                    content = inner
-                    break
-        parsed = json.loads(content)
-        input_tokens = message.usage.input_tokens
-        output_tokens = message.usage.output_tokens
-        tokens = input_tokens + output_tokens
-        token_fields = {
-            "tokens": tokens,
-            "input_tokens": input_tokens,
-            "output_tokens": output_tokens,
-            "model_name": message.model,
-        }
-
-        if parsed.get("document_type") == "year_end_statement":
-            return {
-                "data": [],
-                "document_type": "year_end_statement",
-                "reservations": parsed.get("reservations", []),
-                **token_fields,
-            }
-
-        if "documents" in parsed:
-            documents = parsed["documents"]
-        elif "invoices" in parsed:
-            documents = parsed["invoices"]
-        else:
-            documents = [parsed]
-        return {
-            "data": documents,
-            **token_fields,
-        }
-    except (json.JSONDecodeError, IndexError, AttributeError) as e:
-        raw_text = message.content[0].text[:500] if message.content else "EMPTY"
-        logger.error("Failed to parse extraction response: %s — raw: %s", e, raw_text)
-        return {
-            "data": [{"tags": ["uncategorized"], "confidence": "low", "tax_relevant": False}],
-            "tokens": 0,
-            "input_tokens": 0,
-            "output_tokens": 0,
-            "model_name": None,
-        }
