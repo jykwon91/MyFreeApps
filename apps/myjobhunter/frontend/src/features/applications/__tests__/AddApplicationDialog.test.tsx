@@ -16,18 +16,13 @@ import AddApplicationDialog from "../AddApplicationDialog";
 
 // ---- mocks ----
 
-vi.mock("lucide-react", () => ({
-  X: () => null,
-  Plus: () => null,
-  Sparkles: () => null,
-  ChevronDown: () => null,
-  ChevronUp: () => null,
-  Download: () => null,
-  FileText: () => null,
-  Link: () => null,
-  Loader2: () => null,
-  Building2: () => null,
-}));
+// lucide-react is intentionally NOT mocked. The @platform/ui mock below
+// spreads the real barrel (importOriginal), which transitively renders
+// real icons anyway (e.g. ThemeToggle's Sun/Moon, AlertBox's barrel
+// siblings); a hard-coded icon stub map just breaks the whole file with
+// "No <Icon> export" the moment a new component is pulled in. Real icons
+// render as harmless <svg> in jsdom — tests query by text/role, never by
+// icon.
 
 vi.mock("@/lib/companiesApi", () => ({
   useListCompaniesQuery: vi.fn(),
@@ -379,6 +374,202 @@ describe("AddApplicationDialog — text-paste path", () => {
     await waitFor(() => {
       expect(screen.getByText(/review and adjust before saving/i)).toBeInTheDocument();
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Auth-walled URL → persistent banner (NOT a vanishing toast)
+//
+// Regression for the "it looks broken" defect: pasting a LinkedIn /
+// Glassdoor URL returned 422 auth_required, the dialog fired a transient
+// toast and silently swapped to the blank text tab. The toast faded and
+// left the user staring at an empty textarea with no idea why. The fix
+// replaces the toast (auth-required case only) with a persistent
+// AlertBox on the text tab; it clears on tab-switch-to-url / text parse
+// / dialog reset.
+// ---------------------------------------------------------------------------
+
+describe("AddApplicationDialog — auth-walled URL banner", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUseCreateApplicationMutation.mockReturnValue(
+      defaultMutation<ReturnType<typeof useCreateApplicationMutation>>(),
+    );
+    mockUseListCompaniesQuery.mockReturnValue(emptyCompanies);
+    mockUseCreateCompanyMutation.mockReturnValue(
+      defaultMutation<ReturnType<typeof useCreateCompanyMutation>>(),
+    );
+    mockUseParseJobDescriptionMutation.mockReturnValue(
+      defaultMutation<ReturnType<typeof useParseJobDescriptionMutation>>(),
+    );
+  });
+
+  function mockAuthWalledExtract() {
+    const mockExtract = vi.fn().mockReturnValue({
+      unwrap: () =>
+        Promise.reject({ status: 422, data: { detail: "auth_required" } }),
+    });
+    mockUseExtractJdFromUrlMutation.mockReturnValue(
+      [mockExtract, { isLoading: false }] as unknown as ReturnType<
+        typeof useExtractJdFromUrlMutation
+      >,
+    );
+    return mockExtract;
+  }
+
+  it("shows a persistent banner (not a vanishing toast) when the URL is auth-walled", async () => {
+    const { showError } = await import("@platform/ui");
+    mockAuthWalledExtract();
+
+    const user = userEvent.setup();
+    renderDialog();
+
+    await user.type(
+      screen.getByLabelText(/job posting url/i),
+      "https://www.linkedin.com/jobs/view/123",
+    );
+    await user.click(screen.getByRole("button", { name: /auto-fill/i }));
+
+    // Switched to the text tab AND a persistent explanation is shown.
+    expect(
+      await screen.findByLabelText(/job description text/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/couldn't read that link/i),
+    ).toBeInTheDocument();
+    // The auth-required case must NOT use the transient toast — that
+    // vanishing was the whole "it seems broken" complaint.
+    expect(showError).not.toHaveBeenCalled();
+  });
+
+  it("clears the blocked-link banner when the user switches back to the URL tab", async () => {
+    mockAuthWalledExtract();
+
+    const user = userEvent.setup();
+    renderDialog();
+
+    await user.type(
+      screen.getByLabelText(/job posting url/i),
+      "https://www.linkedin.com/jobs/view/123",
+    );
+    await user.click(screen.getByRole("button", { name: /auto-fill/i }));
+
+    await screen.findByText(/couldn't read that link/i);
+
+    await user.click(
+      screen.getByText(/have a url instead\? paste it here/i),
+    );
+
+    expect(screen.getByLabelText(/job posting url/i)).toBeInTheDocument();
+    expect(
+      screen.queryByText(/couldn't read that link/i),
+    ).not.toBeInTheDocument();
+  });
+
+  it("clears the blocked-link banner after a text parse is started", async () => {
+    mockAuthWalledExtract();
+    const mockParse = vi.fn().mockReturnValue({
+      unwrap: () =>
+        Promise.resolve({
+          title: "Senior Engineer",
+          company: "Acme Corp",
+          location: "Remote",
+          remote_type: "remote",
+          salary_min: null,
+          salary_max: null,
+          salary_currency: null,
+          salary_period: null,
+          seniority: null,
+          must_have_requirements: [],
+          nice_to_have_requirements: [],
+          responsibilities: [],
+          summary: "Great role.",
+        }),
+    });
+    const mockCreateCompany = vi.fn().mockReturnValue({
+      unwrap: () =>
+        Promise.resolve({
+          id: "co-new",
+          user_id: "u1",
+          name: "Acme Corp",
+          primary_domain: null,
+          logo_url: null,
+          industry: null,
+          size_range: null,
+          hq_location: null,
+          description: null,
+          external_ref: null,
+          external_source: null,
+          crunchbase_id: null,
+          created_at: "",
+          updated_at: "",
+        }),
+    });
+    mockUseParseJobDescriptionMutation.mockReturnValue(
+      [mockParse, { isLoading: false }] as unknown as ReturnType<
+        typeof useParseJobDescriptionMutation
+      >,
+    );
+    mockUseCreateCompanyMutation.mockReturnValue(
+      [mockCreateCompany, { isLoading: false }] as unknown as ReturnType<
+        typeof useCreateCompanyMutation
+      >,
+    );
+
+    const user = userEvent.setup();
+    renderDialog();
+
+    await user.type(
+      screen.getByLabelText(/job posting url/i),
+      "https://www.linkedin.com/jobs/view/123",
+    );
+    await user.click(screen.getByRole("button", { name: /auto-fill/i }));
+
+    await screen.findByText(/couldn't read that link/i);
+
+    await user.type(
+      screen.getByLabelText(/job description text/i),
+      "Pasted JD text for Acme Corp",
+    );
+    await user.click(screen.getByRole("button", { name: /parse with ai/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/review and adjust before saving/i)).toBeInTheDocument();
+    });
+    expect(
+      screen.queryByText(/couldn't read that link/i),
+    ).not.toBeInTheDocument();
+  });
+
+  it("keeps the transient toast for a generic (non-auth) URL failure", async () => {
+    const { showError } = await import("@platform/ui");
+    const mockExtract = vi.fn().mockReturnValue({
+      unwrap: () => Promise.reject({ status: 502, data: {} }),
+    });
+    mockUseExtractJdFromUrlMutation.mockReturnValue(
+      [mockExtract, { isLoading: false }] as unknown as ReturnType<
+        typeof useExtractJdFromUrlMutation
+      >,
+    );
+
+    const user = userEvent.setup();
+    renderDialog();
+
+    await user.type(
+      screen.getByLabelText(/job posting url/i),
+      "https://jobs.example.com/x",
+    );
+    await user.click(screen.getByRole("button", { name: /auto-fill/i }));
+
+    // Generic failure → stays on the URL tab and DOES use the toast;
+    // no persistent blocked-link banner (that copy is auth-only).
+    await waitFor(() => {
+      expect(showError).toHaveBeenCalled();
+    });
+    expect(screen.getByLabelText(/job posting url/i)).toBeInTheDocument();
+    expect(
+      screen.queryByText(/couldn't read that link/i),
+    ).not.toBeInTheDocument();
   });
 });
 
