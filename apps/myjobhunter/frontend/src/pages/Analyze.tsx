@@ -62,34 +62,49 @@ export default function Analyze() {
   const [state, setState] = useState<PageState>(INITIAL_STATE);
   const [urlValue, setUrlValue] = useState("");
   const [textValue, setTextValue] = useState("");
+  // Persistent "we couldn't read that link" explanation. Replaces the
+  // old transient toast, which vanished and left the user on a blank
+  // text tab with no idea why — it looked like the app had broken.
+  const [urlBlockedNotice, setUrlBlockedNotice] = useState<string | null>(
+    null,
+  );
 
   // ---------------------------------------------------------------------
   // Step transitions
   // ---------------------------------------------------------------------
 
   function setInputMode(mode: AnalyzeInputMode) {
+    // Returning to the URL field means the blocked-link notice is no
+    // longer relevant; keep it while the user is on the text tab.
+    if (mode === "url") setUrlBlockedNotice(null);
     setState({ kind: "input", mode });
   }
 
   function resetToInput(mode: AnalyzeInputMode = "url") {
     setUrlValue("");
     setTextValue("");
+    setUrlBlockedNotice(null);
     setState({ kind: "input", mode });
   }
 
   async function runAnalyzeUrl(url: string) {
     const trimmed = url.trim();
     if (!trimmed) return;
+    setUrlBlockedNotice(null);
     setState({ kind: "processing", sourcePath: "url", longRunning: false });
     try {
       const result = await analyzeJob({ url: trimmed }).unwrap();
       setState({ kind: "result", analysis: result });
     } catch (err) {
       if (isAuthRequiredError(err)) {
-        showError(
-          "That page requires sign-in or blocked our request. Paste the description text instead.",
-        );
+        // Persistent in-context banner on the text tab — NOT a toast.
+        // The toast faded and the silent tab-switch read as "broken".
         setInputMode("text");
+        setUrlBlockedNotice(
+          "We couldn't read that link — it needs a sign-in. Sites like " +
+            "LinkedIn and Glassdoor block automated access. Paste the job " +
+            "description text below and we'll analyze it.",
+        );
         return;
       }
       showError(`Couldn't analyze: ${describeExtractError(err)}`);
@@ -100,6 +115,7 @@ export default function Analyze() {
   async function runAnalyzeText(text: string) {
     const trimmed = text.trim();
     if (!trimmed) return;
+    setUrlBlockedNotice(null);
     setState({ kind: "processing", sourcePath: "text", longRunning: false });
     try {
       const result = await analyzeJob({ jd_text: trimmed }).unwrap();
@@ -153,6 +169,7 @@ export default function Analyze() {
           urlValue={urlValue}
           textValue={textValue}
           analyzing={analyzing}
+          notice={urlBlockedNotice}
           onChangeMode={setInputMode}
           onChangeUrl={setUrlValue}
           onChangeText={setTextValue}
@@ -191,6 +208,7 @@ interface InputViewProps {
   urlValue: string;
   textValue: string;
   analyzing: boolean;
+  notice: string | null;
   onChangeMode: (mode: AnalyzeInputMode) => void;
   onChangeUrl: (next: string) => void;
   onChangeText: (next: string) => void;
