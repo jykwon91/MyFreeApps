@@ -6,13 +6,14 @@ anyone can browse the lineup library, only the operator can manage content.
 
 Routes:
     PUBLIC (no auth):
-        GET  /api/games                                — list all games
-        GET  /api/games/{game_slug}/maps               — list maps for a game
-        GET  /api/games/{game_slug}/maps/{map_slug}    — map detail with zones + sites + utility types
+        GET   /api/games                                — list all games
+        GET   /api/games/{game_slug}/maps               — list maps for a game
+        GET   /api/games/{game_slug}/maps/{map_slug}    — map detail with zones + sites + utility types
 
     AUTH (operator only):
-        POST /api/maps/{map_id}/minimap-upload-url     — presigned PUT for minimap
-        POST /api/maps/{map_id}/minimap                — confirm upload, update Map.minimap_url
+        POST  /api/maps/{map_id}/minimap-upload-url     — presigned PUT for minimap
+        POST  /api/maps/{map_id}/minimap                — confirm upload, update Map.minimap_url
+        PATCH /api/maps/{map_id}/zones                  — bulk update zone polygons
 
 See ``apps/mygamingassistant/CLAUDE.md`` → Authentication Model for the
 public-read/auth-write rationale (MGA-specific Tier 3 divergence).
@@ -32,10 +33,14 @@ from app.models.game.map_zone import MapZone  # noqa: F401 — used via selectin
 from app.models.game.site import Site  # noqa: F401 — used via selectinload
 from app.models.game.utility_type import UtilityType
 from app.models.user.user import User
+from app.repositories.game import game_repo
 from app.schemas.game.map_schemas import (
+    BulkUpdateZonesBody,
+    BulkUpdateZonesResult,
     MapMinimapUpdated,
     MinimapConfirmBody,
     MinimapUploadUrlResponse,
+    ZonePolygonFailure,
 )
 from app.services.game import map_service
 
@@ -208,4 +213,41 @@ async def confirm_minimap_upload(
     return MapMinimapUpdated(
         map_id=map_id,
         minimap_url=map_service.sign_minimap_url(map_obj.minimap_url),
+    )
+
+
+@auth_router.patch(
+    "/maps/{map_id}/zones",
+    response_model=BulkUpdateZonesResult,
+)
+async def update_map_zones(
+    map_id: uuid.UUID,
+    body: BulkUpdateZonesBody,
+    db: AsyncSession = Depends(get_db),
+    _user: User = Depends(current_active_user),
+) -> BulkUpdateZonesResult:
+    """Bulk-update polygon_points for one or more zones on a map.
+
+    Per-zone validation failures are returned in the ``failed`` array (HTTP
+    200) rather than 422-ing the whole request — operators commonly leave
+    a 1-2 point polygon mid-draw, and we shouldn't make them lose the rest
+    of their session because one zone is half-finished. Whole-request
+    errors (auth, unknown map) still use the standard HTTP error codes.
+    """
+    map_obj = await db.get(Map, map_id)
+    if map_obj is None:
+        raise HTTPException(status_code=404, detail="Map not found")
+
+    updates = [
+        (z.slug, [{"x": p.x, "y": p.y} for p in z.polygon_points])
+        for z in body.zones
+    ]
+    updated, failed = await game_repo.update_zone_polygons_bulk(
+        db, map_id=map_id, updates=updates
+    )
+    await db.commit()
+
+    return BulkUpdateZonesResult(
+        updated=updated,
+        failed=[ZonePolygonFailure(slug=s, reason=r) for s, r in failed],
     )
