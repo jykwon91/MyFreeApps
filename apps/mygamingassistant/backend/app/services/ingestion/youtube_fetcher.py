@@ -176,6 +176,86 @@ async def list_videos(source: Source) -> list[VideoMeta]:
         ) from exc
 
 
+async def fetch_video_detail(video_id: str) -> VideoMeta:
+    """Full per-video metadata extract (NOT extract_flat).
+
+    ``list_videos`` uses ``extract_flat`` for fast channel/playlist enumeration,
+    so flat entries carry only id/title/url — no description, duration, or
+    chapters. Chapter parsing needs the full info dict, so the orchestrator
+    calls this for each new (post-dedup) video before parsing chapters.
+
+    Per check-third-party-error-codes: yt-dlp DownloadError / ExtractorError
+    are caught, logged at ERROR with structured context, and re-raised as
+    YouTubeFetchError.
+    """
+    url = f"https://www.youtube.com/watch?v={video_id}"
+    ydl_opts = {
+        "quiet": True,
+        "no_warnings": True,
+        "skip_download": True,
+        "ignoreerrors": False,
+    }
+
+    def _fetch() -> VideoMeta:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+        if info is None:
+            raise YouTubeFetchError(
+                f"yt-dlp returned no info for video {video_id}",
+                error_type="EmptyInfo",
+                original=ValueError("empty info"),
+            )
+        return VideoMeta(
+            video_id=info.get("id") or video_id,
+            title=info.get("title") or "",
+            description=info.get("description") or "",
+            duration=int(info.get("duration") or 0),
+            published_at=info.get("upload_date"),
+            channel_name=info.get("channel") or info.get("uploader"),
+            url=f"https://www.youtube.com/watch?v={video_id}",
+            chapters=info.get("chapters") or [],
+        )
+
+    try:
+        return await asyncio.get_event_loop().run_in_executor(None, _fetch)
+    except yt_dlp.utils.DownloadError as exc:
+        error_type = type(exc).__name__
+        logger.error(
+            "yt-dlp DownloadError fetching detail video_id=%s error_type=%s message=%s",
+            video_id, error_type, str(exc),
+            exc_info=True,
+        )
+        raise YouTubeFetchError(
+            f"Failed to fetch detail for video {video_id}: {exc}",
+            error_type=error_type,
+            original=exc,
+        ) from exc
+    except yt_dlp.utils.ExtractorError as exc:
+        error_type = type(exc).__name__
+        logger.error(
+            "yt-dlp ExtractorError fetching detail video_id=%s error_type=%s message=%s",
+            video_id, error_type, str(exc),
+            exc_info=True,
+        )
+        raise YouTubeFetchError(
+            f"Failed to fetch detail for video {video_id}: {exc}",
+            error_type=error_type,
+            original=exc,
+        ) from exc
+    except Exception as exc:
+        error_type = type(exc).__name__
+        logger.error(
+            "Unexpected error fetching detail video_id=%s error_type=%s",
+            video_id, error_type,
+            exc_info=True,
+        )
+        raise YouTubeFetchError(
+            f"Unexpected error fetching detail for video {video_id}: {exc}",
+            error_type=error_type,
+            original=exc,
+        ) from exc
+
+
 async def download_video(video_id: str, download_dir: Path) -> Path:
     """Download a YouTube video to ``download_dir/{video_id}.mp4``.
 

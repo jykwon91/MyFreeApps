@@ -78,6 +78,11 @@ class TestSyncSource:
                 return_value=[FAKE_VIDEO],
             ),
             patch(
+                "app.services.ingestion.ingestion_orchestrator.fetch_video_detail",
+                new_callable=AsyncMock,
+                return_value=FAKE_VIDEO,
+            ),
+            patch(
                 "app.services.ingestion.ingestion_orchestrator.download_video",
                 new_callable=AsyncMock,
                 return_value=fake_video_path,
@@ -155,6 +160,11 @@ class TestSyncSource:
                 return_value=[FAKE_VIDEO],
             ),
             patch(
+                "app.services.ingestion.ingestion_orchestrator.fetch_video_detail",
+                new_callable=AsyncMock,
+                return_value=FAKE_VIDEO,
+            ),
+            patch(
                 "app.services.ingestion.ingestion_orchestrator.download_video",
                 new_callable=AsyncMock,
             ) as mock_download,
@@ -203,6 +213,11 @@ class TestSyncSource:
                 "app.services.ingestion.ingestion_orchestrator.list_videos",
                 new_callable=AsyncMock,
                 return_value=[FAKE_VIDEO],
+            ),
+            patch(
+                "app.services.ingestion.ingestion_orchestrator.fetch_video_detail",
+                new_callable=AsyncMock,
+                return_value=FAKE_VIDEO,
             ),
             patch(
                 "app.services.ingestion.ingestion_orchestrator.download_video",
