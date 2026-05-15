@@ -220,7 +220,6 @@ class TestSyncSource:
                 ingestion_orchestrator,
                 "settings",
             ) as mock_settings,
-            patch("sentry_sdk.capture_exception"),
         ):
             mock_settings.ingestion_download_dir = str(tmp_path)
             mock_storage = MagicMock()

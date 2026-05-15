@@ -29,7 +29,6 @@ from app.api import account, admin, games, health, lineups, lineup_packages, sch
 from app.core.audit import current_user_id
 from app.core.auth import auth_backend, fastapi_users
 from app.core.config import settings
-from app.core.observability import init_sentry
 from app.core.rate_limit import (
     check_account_not_locked,
     check_login_rate_limit,
@@ -137,7 +136,6 @@ async def _on_shutdown() -> None:
 
 lifespan = create_app_lifespan(
     settings=settings,
-    init_sentry=init_sentry,
     bucket_init=ensure_bucket,
     on_startup=_on_startup,
     on_shutdown=_on_shutdown,

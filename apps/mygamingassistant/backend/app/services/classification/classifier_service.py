@@ -29,7 +29,6 @@ from io import BytesIO
 from typing import Any, Optional
 
 import anthropic
-import sentry_sdk
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -490,7 +489,6 @@ async def classify_lineup(
             "classify_lineup: rate limit hit: lineup_id=%s error_type=%s message=%s",
             lineup_id, error_type, str(exc),
         )
-        sentry_sdk.capture_exception(exc)
         return ClassificationResult(
             success=False,
             error_codes=[error_type],
@@ -502,7 +500,6 @@ async def classify_lineup(
             "classify_lineup: API status error: lineup_id=%s error_type=%s status_code=%s message=%s",
             lineup_id, error_type, exc.status_code, str(exc),
         )
-        sentry_sdk.capture_exception(exc)
         return ClassificationResult(
             success=False,
             error_codes=[error_type],
@@ -514,7 +511,6 @@ async def classify_lineup(
             "classify_lineup: API error: lineup_id=%s error_type=%s message=%s",
             lineup_id, error_type, str(exc),
         )
-        sentry_sdk.capture_exception(exc)
         return ClassificationResult(
             success=False,
             error_codes=[error_type],
