@@ -64,7 +64,7 @@ Return ONLY valid JSON with exactly these fields (no extra keys):
 }
 
 Rules:
-- aim_anchor_x and aim_anchor_y are the normalized (0-1) crosshair position on the AIM screenshot.
+- aim_anchor_x and aim_anchor_y are the normalized (0-1) crosshair position in the screenshot provided.
   x=0 is left edge, x=1 is right edge; y=0 is top, y=1 is bottom.
 - Set a field to null and explain in reasoning if you cannot determine it confidently.
 - Only use slugs from the Valid reference lists provided; do not invent slugs.
