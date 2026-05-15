@@ -29,9 +29,33 @@ jobs:
           host: ${{ '{{' }} secrets.SSH_HOST {{ '}}' }}
           username: ${{ '{{' }} secrets.SSH_USER {{ '}}' }}
           key: ${{ '{{' }} secrets.SSH_PRIVATE_KEY {{ '}}' }}
-          command_timeout: 10m
+          # Generous: deploys are serialized via the flock below, so a
+          # later app can wait through several earlier app deploys before
+          # its own runs. 10m was too tight once deploys serialize.
+          command_timeout: 30m
           script: |
             set -e
+
+            # Serialize deploys across ALL apps on this shared VPS.
+            # Every app's deploy SSHes here and `git pull`s the SAME
+            # /srv/myfreeapps checkout; a `packages/**` change fans out
+            # to every app's deploy workflow at once. Without this lock
+            # they race on the shared git refs — observed failures:
+            #   error: cannot lock ref 'refs/remotes/origin/main'
+            #   fatal: Cannot fast-forward to multiple branches
+            # flock gives mutual exclusion WITHOUT dropping any app's
+            # deploy. A shared GitHub `concurrency` group can't be used
+            # here: it cancels intermediate *pending* runs, silently
+            # skipping some apps. So `concurrency.group` stays per-app
+            # (GitHub runs all of them) and this lock orders them. The
+            # lock auto-releases when this SSH script exits, even on
+            # failure (FD closed on process exit).
+            exec 9>/tmp/myfreeapps-deploy.lock
+            if ! flock -w 1500 9; then
+              echo "::error::Timed out (25m) waiting for the VPS deploy lock — an earlier app deploy is wedged. Investigate before retrying."
+              exit 1
+            fi
+
             cd /srv/myfreeapps
 
             echo "--- Pull latest code ---"
