@@ -4,7 +4,7 @@
  * Used when the operator doesn't have a URL (e.g. LinkedIn auth-walled
  * postings, copy-pasted email job descriptions).
  */
-import { LoadingButton } from "@platform/ui";
+import { AlertBox, LoadingButton } from "@platform/ui";
 import type { DialogInputMode } from "../useAddApplicationDialogState";
 
 interface PasteTextStepProps {
@@ -12,6 +12,13 @@ interface PasteTextStepProps {
   onTextChange: (next: string) => void;
   onTextSubmit: () => void;
   onSetInputMode: (mode: DialogInputMode) => void;
+  /**
+   * Persistent explanation shown above the textarea after a URL fetch
+   * was blocked (auth-walled site, 401/403). Survives until the user
+   * acts — unlike the old transient toast, which vanished and made the
+   * silent tab-switch look like the app had broken.
+   */
+  notice?: string | null;
 }
 
 export default function PasteTextStep({
@@ -19,11 +26,13 @@ export default function PasteTextStep({
   onTextChange,
   onTextSubmit,
   onSetInputMode,
+  notice,
 }: PasteTextStepProps) {
   const canSubmit = textValue.trim().length > 0;
 
   return (
     <div className="space-y-3">
+      {notice && <AlertBox variant="warning">{notice}</AlertBox>}
       <label htmlFor="add-app-text" className="block text-sm font-medium">
         Paste the job description text
       </label>

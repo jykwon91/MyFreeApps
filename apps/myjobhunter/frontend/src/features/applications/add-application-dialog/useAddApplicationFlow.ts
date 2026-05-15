@@ -71,6 +71,14 @@ interface UseAddApplicationFlowReturn {
   companyNameValue: string;
   pendingCompanyName: string | null;
   submittedJdText: string;
+  /**
+   * Persistent "we couldn't read that link" explanation shown on the
+   * text tab after a URL fetch was blocked (auth-walled site, 401/403).
+   * Replaces the old transient toast, which vanished and left the user
+   * on a blank text tab with no idea why — it looked like the app broke.
+   * Null when there's nothing to explain.
+   */
+  urlBlockedNotice: string | null;
   companies: Company[];
   creatingApplication: boolean;
 
@@ -118,6 +126,12 @@ export function useAddApplicationFlow(
   const [companyNameValue, setCompanyNameValue] = useState("");
   const [pendingCompanyName, setPendingCompanyName] = useState<string | null>(null);
   const [submittedJdText, setSubmittedJdText] = useState<string>("");
+  // Persistent "we couldn't read that link" explanation. Replaces the
+  // old transient toast, which vanished and left the user on a blank
+  // text tab with no idea why — it looked like the app had broken.
+  const [urlBlockedNotice, setUrlBlockedNotice] = useState<string | null>(
+    null,
+  );
 
   const companies = companiesData?.items ?? [];
 
@@ -131,12 +145,16 @@ export function useAddApplicationFlow(
     setCompanyNameValue("");
     setPendingCompanyName(null);
     setSubmittedJdText("");
+    setUrlBlockedNotice(null);
   }
 
   // -------------------------------------------------------------------------
   // Step 1 — input mode switching + paste-and-go.
   // -------------------------------------------------------------------------
   function setInputMode(mode: DialogInputMode) {
+    // Returning to the URL field means the blocked-link notice is no
+    // longer relevant; keep it while the user is on the text tab.
+    if (mode === "url") setUrlBlockedNotice(null);
     setState({ kind: "input", inputMode: mode });
   }
 
@@ -223,16 +241,21 @@ export function useAddApplicationFlow(
   // Step 2 — processing.
   // -------------------------------------------------------------------------
   async function runUrlExtract(url: string) {
+    setUrlBlockedNotice(null);
     setState({ kind: "processing", sourcePath: "url", longRunning: false });
     try {
       const result = await extractJdFromUrl({ url }).unwrap();
       await applyExtractResult(result);
     } catch (err) {
       if (isAuthRequiredError(err)) {
-        showError(
-          "That page requires sign-in or blocked our request. Paste the description text instead.",
-        );
+        // Persistent in-context banner on the text tab — NOT a toast.
+        // The toast faded and the silent tab-switch read as "broken".
         setInputMode("text");
+        setUrlBlockedNotice(
+          "We couldn't read that link — it needs a sign-in. Sites like " +
+            "LinkedIn and Glassdoor block automated access. Paste the job " +
+            "description text below and we'll auto-fill from it.",
+        );
         return;
       }
       showError(`Couldn't auto-fill: ${describeExtractError(err)}`);
@@ -241,6 +264,7 @@ export function useAddApplicationFlow(
   }
 
   async function runTextParse(text: string) {
+    setUrlBlockedNotice(null);
     setState({ kind: "processing", sourcePath: "text", longRunning: false });
     setSubmittedJdText(text);
     try {
@@ -491,6 +515,7 @@ export function useAddApplicationFlow(
     companyNameValue,
     pendingCompanyName,
     submittedJdText,
+    urlBlockedNotice,
     companies,
     creatingApplication,
     setInputMode,

@@ -110,6 +110,7 @@ export default function AddApplicationDialog({ open, onOpenChange }: AddApplicat
               onTextChange={flow.setTextValue}
               onTextSubmit={flow.handleTextSubmit}
               onSetInputMode={flow.setInputMode}
+              notice={flow.urlBlockedNotice}
             />
           ) : null}
 
