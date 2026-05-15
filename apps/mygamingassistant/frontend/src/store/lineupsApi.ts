@@ -79,7 +79,7 @@ const lineupsApi = lineupsBaseApi.injectEndpoints({
       query: ({ payload, lineup_id }) => ({
         url: lineup_id ? `/lineups?lineup_id=${lineup_id}` : "/lineups",
         method: "POST",
-        body: payload,
+        data: payload,
       }),
       invalidatesTags: ["LineupList", "ZoneDensity"],
     }),
@@ -88,7 +88,7 @@ const lineupsApi = lineupsBaseApi.injectEndpoints({
       query: ({ id, patch }) => ({
         url: `/lineups/${id}`,
         method: "PATCH",
-        body: patch,
+        data: patch,
       }),
       invalidatesTags: (_result, _err, { id }) => [
         { type: "Lineup", id },
@@ -135,7 +135,7 @@ const lineupsApi = lineupsBaseApi.injectEndpoints({
       query: ({ id, body }) => ({
         url: `/lineups/${id}/accept`,
         method: "POST",
-        body: body ?? {},
+        data: body ?? {},
       }),
       invalidatesTags: (_result, _err, { id }) => [
         { type: "Lineup", id },
@@ -155,7 +155,7 @@ const lineupsApi = lineupsBaseApi.injectEndpoints({
     }),
 
     bulkAcceptLineups: build.mutation<Lineup[], BulkAcceptBody>({
-      query: (body) => ({ url: "/lineups/bulk-accept", method: "POST", body }),
+      query: (body) => ({ url: "/lineups/bulk-accept", method: "POST", data: body }),
       invalidatesTags: ["LineupList", "PendingLineups", "ZoneDensity"],
     }),
 
