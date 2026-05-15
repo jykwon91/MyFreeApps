@@ -14,6 +14,14 @@
  * depending on whether Claude returned). This is the same shape the
  * Add Application dialog uses for its three-step flow.
  *
+ * Redux-slice persistence (in-app navigation only):
+ * When an analysis completes successfully, the result is written to the
+ * jobAnalysis slice so that navigating to another page and back does NOT
+ * lose the result — no second paid AI call needed.  On mount, if the
+ * slice holds a lastResult, the page initialises directly to RESULT
+ * (no flash of the input view).  When the user clicks "Analyze another"
+ * the slice is cleared so remounting shows the input view.
+ *
  * Operator workflow (verbatim from session notes):
  * > "the application page should not be the first step. when we paste
  *    a jd, it should be analysis. applying to the job should be the
@@ -25,6 +33,7 @@
  */
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
 import { Loader2, Sparkles } from "lucide-react";
 import { EmptyState, showError, showSuccess, extractErrorMessage } from "@platform/ui";
 import AnalyzeJdInput, {
@@ -42,6 +51,8 @@ import {
   useAnalyzeJobMutation,
   useApplyFromAnalysisMutation,
 } from "@/lib/jobAnalysisApi";
+import { setLastAnalysis, clearLastAnalysis } from "@/store/jobAnalysisSlice";
+import type { RootState } from "@/lib/store";
 import type { JobAnalysis } from "@/types/job-analysis/job-analysis";
 
 const PROCESSING_LONG_RUNNING_THRESHOLD_MS = 3000;
@@ -51,15 +62,27 @@ type PageState =
   | { kind: "processing"; sourcePath: "url" | "text"; longRunning: boolean }
   | { kind: "result"; analysis: JobAnalysis };
 
-const INITIAL_STATE: PageState = { kind: "input", mode: "url" };
+function deriveInitialState(lastResult: JobAnalysis | null): PageState {
+  if (lastResult !== null) {
+    return { kind: "result", analysis: lastResult };
+  }
+  return { kind: "input", mode: "url" };
+}
 
 export default function Analyze() {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const lastResult = useSelector((s: RootState) => s.jobAnalysis.lastResult);
+
   const [analyzeJob, { isLoading: analyzing }] = useAnalyzeJobMutation();
   const [applyFromAnalysis, { isLoading: applying }] =
     useApplyFromAnalysisMutation();
 
-  const [state, setState] = useState<PageState>(INITIAL_STATE);
+  // Initialise directly from the slice on first render — no post-mount
+  // useEffect — so the input view never flashes before the result appears.
+  const [state, setState] = useState<PageState>(() =>
+    deriveInitialState(lastResult),
+  );
   const [urlValue, setUrlValue] = useState("");
   const [textValue, setTextValue] = useState("");
 
@@ -74,6 +97,7 @@ export default function Analyze() {
   function resetToInput(mode: AnalyzeInputMode = "url") {
     setUrlValue("");
     setTextValue("");
+    dispatch(clearLastAnalysis());
     setState({ kind: "input", mode });
   }
 
@@ -83,6 +107,7 @@ export default function Analyze() {
     setState({ kind: "processing", sourcePath: "url", longRunning: false });
     try {
       const result = await analyzeJob({ url: trimmed }).unwrap();
+      dispatch(setLastAnalysis(result));
       setState({ kind: "result", analysis: result });
     } catch (err) {
       if (isAuthRequiredError(err)) {
@@ -103,6 +128,7 @@ export default function Analyze() {
     setState({ kind: "processing", sourcePath: "text", longRunning: false });
     try {
       const result = await analyzeJob({ jd_text: trimmed }).unwrap();
+      dispatch(setLastAnalysis(result));
       setState({ kind: "result", analysis: result });
     } catch (err) {
       showError(
@@ -147,7 +173,7 @@ export default function Analyze() {
   // ---------------------------------------------------------------------
   return (
     <main className="p-4 sm:p-8 space-y-6">
-      {state.kind === "input" ? (
+      {state.kind === "input" && (
         <InputView
           mode={state.mode}
           urlValue={urlValue}
@@ -160,16 +186,16 @@ export default function Analyze() {
           onSubmitText={() => runAnalyzeText(textValue)}
           onPasteUrl={handlePasteUrl}
         />
-      ) : null}
+      )}
 
-      {state.kind === "processing" ? (
+      {state.kind === "processing" && (
         <ProcessingView
           sourcePath={state.sourcePath}
           longRunning={state.longRunning}
         />
-      ) : null}
+      )}
 
-      {state.kind === "result" ? (
+      {state.kind === "result" && (
         <ResultView
           analysis={state.analysis}
           applying={applying}
@@ -177,7 +203,7 @@ export default function Analyze() {
           onAnalyzeAnother={() => resetToInput("url")}
           onViewApplications={() => navigate("/applications")}
         />
-      ) : null}
+      )}
     </main>
   );
 }
