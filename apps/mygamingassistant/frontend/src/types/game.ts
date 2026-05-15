@@ -53,6 +53,27 @@ export interface MapMinimapUpdated {
   minimap_url: string | null;
 }
 
+/** One zone's new polygon for the bulk PATCH /maps/{id}/zones request. */
+export interface ZonePolygonUpdate {
+  slug: string;
+  polygon_points: Array<{ x: number; y: number }>;
+}
+
+export interface BulkUpdateZonesBody {
+  zones: ZonePolygonUpdate[];
+}
+
+export interface ZonePolygonFailure {
+  slug: string;
+  reason: string;
+}
+
+/** Response from PATCH /maps/{id}/zones — partial successes are normal. */
+export interface BulkUpdateZonesResult {
+  updated: string[];
+  failed: ZonePolygonFailure[];
+}
+
 // ---------------------------------------------------------------------------
 // Lineup domain
 // ---------------------------------------------------------------------------

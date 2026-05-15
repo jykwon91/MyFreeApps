@@ -11,6 +11,7 @@ import Review from "@/pages/Review";
 import Security from "@/pages/Security";
 import Settings from "@/pages/Settings";
 import Sources from "@/pages/Sources";
+import ZoneEditPage from "@/pages/ZoneEditPage";
 import Login from "@/pages/Login";
 import ForgotPassword from "@/pages/ForgotPassword";
 import ResetPassword from "@/pages/ResetPassword";
@@ -84,6 +85,16 @@ export const routes: RouteObject[] = [
         element: (
           <AuthRequired action="calibrate the minimap CV pipeline">
             <LiveCs2Calibrate />
+          </AuthRequired>
+        ),
+      },
+      {
+        // Note: this MUST come AFTER `/:gameSlug/:mapSlug` so the more
+        // specific path doesn't shadow the plan-mode map view.
+        path: "/:gameSlug/:mapSlug/zones/edit",
+        element: (
+          <AuthRequired action="edit map zones">
+            <ZoneEditPage />
           </AuthRequired>
         ),
       },

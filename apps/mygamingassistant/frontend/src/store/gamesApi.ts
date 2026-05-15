@@ -1,5 +1,7 @@
 import { baseApi } from "@platform/ui";
 import type {
+  BulkUpdateZonesBody,
+  BulkUpdateZonesResult,
   Game,
   GameMap,
   MapDetail,
@@ -37,6 +39,22 @@ const gamesApi = baseApi.injectEndpoints({
         body: { object_key: objectKey },
       }),
     }),
+    // Bulk-update polygon_points across zones for a single map. On success
+    // the page should refetch getMapDetail so MapPage's clickable overlay
+    // reflects the new polygons immediately on the next visit.
+    bulkUpdateMapZones: build.mutation<
+      BulkUpdateZonesResult,
+      { mapId: string; body: BulkUpdateZonesBody }
+    >({
+      query: ({ mapId, body }) => ({
+        url: `/maps/${mapId}/zones`,
+        method: "PATCH",
+        body,
+      }),
+      // The map-detail query is keyed by (gameSlug, mapSlug), so we can't
+      // invalidate by mapId. Caller fires a refetch via the query's
+      // refetch() helper after a successful save.
+    }),
   }),
 });
 
@@ -46,4 +64,5 @@ export const {
   useGetMapDetailQuery,
   useGetMinimapUploadUrlMutation,
   useConfirmMinimapUploadMutation,
+  useBulkUpdateMapZonesMutation,
 } = gamesApi;
