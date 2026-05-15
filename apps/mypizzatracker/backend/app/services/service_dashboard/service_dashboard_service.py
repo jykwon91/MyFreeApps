@@ -4,7 +4,8 @@ Owns:
 
 1. The order-status state machine -- which transitions are allowed,
    what side effects each one carries (e.g., setting
-   ``ready_text_sent_at`` on the SMS-prep transition).
+   ``ready_text_sent_at`` AND firing the Twilio SMS on the
+   ``ready_text_sent`` transition).
 2. The slot-move policy -- target slot must belong to the same drop and
    must have enough remaining capacity for the order's pizza count.
 3. The enriched dashboard payload -- a single read returns the drop +
@@ -20,18 +21,20 @@ The 6-status order state machine (from ``app/models/order/order.py``):
     picked_up: terminal
     no_show: terminal
 
-PR 7 exposes the full state machine in this service layer; the dashboard
-UI hides ``ready_text_sent`` until PR 8 wires Twilio. PR 8 will set
-``ready_text_sent_at`` AND fire the actual SMS; for now we just record
-the timestamp so the field is populated whenever the operator chooses
-that transition.
+Transitioning into ``ready_text_sent`` stamps ``ready_text_sent_at`` AND
+fires a Twilio SMS to the customer (best-effort: a Twilio outage logs +
+returns the failure to the operator but does NOT roll back the status
+change — the operator is the authoritative record of "order is ready",
+the SMS is a courtesy notification).
 
 Mutations are rejected entirely if the drop is in ``closed`` status --
 service is over, history is frozen.
 """
 from __future__ import annotations
 
+import logging
 import uuid
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Optional
@@ -57,6 +60,14 @@ from app.schemas.service.service_schemas import (
     DashboardSlot,
     ServiceDashboard,
 )
+from app.services.sms import sms_sender
+from app.services.sms.order_ready_notification import render_order_ready_body
+from platform_shared.services.sms_service import (
+    SmsNotConfiguredError,
+    SmsSendError,
+)
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # State machine
@@ -132,6 +143,26 @@ class TargetSlotCapacityError(DashboardServiceError):
 
 
 # ---------------------------------------------------------------------------
+# Result shapes
+# ---------------------------------------------------------------------------
+
+@dataclass
+class AdvanceOrderResult:
+    """Outcome of an order-status transition.
+
+    ``sms_dispatched`` is ``None`` for every transition EXCEPT
+    ``ready_text_sent`` — the only transition that attempts an SMS. A
+    successful attempt sets it to True; a Twilio failure sets it to False
+    and populates ``sms_error`` with a short, operator-facing message so
+    the dashboard can prompt them to text manually.
+    """
+
+    order: Order
+    sms_dispatched: Optional[bool] = None
+    sms_error: Optional[str] = None
+
+
+# ---------------------------------------------------------------------------
 # Dashboard read
 # ---------------------------------------------------------------------------
 
@@ -192,11 +223,18 @@ async def get_dashboard(db: AsyncSession, drop_id: uuid.UUID) -> ServiceDashboar
 
 async def advance_order_status(
     db: AsyncSession, order_id: uuid.UUID, target_status: str,
-) -> Order:
+) -> AdvanceOrderResult:
     """Transition an order to ``target_status``.
 
-    Sets ``ready_text_sent_at = now()`` when transitioning into
-    ``ready_text_sent`` (PR 8 will additionally fire the SMS).
+    Side effects for ``target_status == "ready_text_sent"``:
+      1. Stamp ``ready_text_sent_at = now()``.
+      2. Send the customer a Twilio SMS announcing the pickup. The SMS is
+         best-effort — if Twilio rejects the message, the status change
+         still commits and the failure is surfaced via
+         ``AdvanceOrderResult.sms_error`` so the operator can text the
+         customer manually.
+
+    All other transitions return ``AdvanceOrderResult(order, None, None)``.
     """
     order = await _get_order(db, order_id)
     drop = await _get_drop(db, order.drop_id)
@@ -207,7 +245,7 @@ async def advance_order_status(
 
     if target_status == order.status:
         # Idempotent no-op rather than 409; lets the UI safely re-fire.
-        return order
+        return AdvanceOrderResult(order=order)
 
     pair = (order.status, target_status)
     if pair not in _ALLOWED_TRANSITIONS:
@@ -222,7 +260,71 @@ async def advance_order_status(
     await db.flush()
     refreshed = await order_repo.get_order(db, order.id)
     assert refreshed is not None, "Order disappeared during transition"
-    return refreshed
+
+    if target_status != "ready_text_sent":
+        return AdvanceOrderResult(order=refreshed)
+
+    # Fire the SMS AFTER the flush so a Twilio outage doesn't roll back
+    # the operator's intent. The status is the source of truth; the SMS
+    # is a courtesy.
+    sms_dispatched, sms_error = await _send_ready_text(db, refreshed, drop)
+    return AdvanceOrderResult(
+        order=refreshed,
+        sms_dispatched=sms_dispatched,
+        sms_error=sms_error,
+    )
+
+
+async def _send_ready_text(
+    db: AsyncSession, order: Order, drop: Drop,
+) -> tuple[bool, Optional[str]]:
+    """Dispatch the order-ready SMS. Returns (sent_ok, error_message).
+
+    Best-effort: every failure path returns ``(False, "<reason>")`` and
+    logs at WARNING; the caller surfaces ``error_message`` to the
+    operator. We never re-raise — the operator already advanced the
+    order and a Twilio outage shouldn't block the dashboard.
+    """
+    customer = await db.get(Customer, order.customer_id)
+    slot = await db.get(Slot, order.slot_id)
+    if customer is None or slot is None:
+        # Should be impossible given the FK constraints, but the SMS
+        # path is best-effort by design — log + return rather than
+        # raise.
+        logger.warning(
+            "Skipping ready-text SMS: missing customer or slot for order %s",
+            order.id,
+        )
+        return False, "Customer or slot missing; cannot text"
+    if not customer.phone:
+        return False, "Customer has no phone number on file"
+
+    body = render_order_ready_body(
+        customer_name=customer.name,
+        drop_name=drop.name,
+        pickup_time=slot.pickup_time,
+    )
+    try:
+        sms_sender.send_sms_or_raise(customer.phone, body)
+    except SmsNotConfiguredError as e:
+        logger.warning(
+            "Ready-text SMS skipped (Twilio not configured) for order %s: %s",
+            order.id, e,
+        )
+        return False, "SMS service is not configured"
+    except SmsSendError as e:
+        logger.warning(
+            "Ready-text SMS rejected by Twilio for order %s: %s",
+            order.id, e,
+        )
+        return False, str(e)
+    except ValueError as e:
+        logger.warning(
+            "Ready-text SMS rejected (invalid args) for order %s: %s",
+            order.id, e,
+        )
+        return False, str(e)
+    return True, None
 
 
 async def move_order_to_slot(

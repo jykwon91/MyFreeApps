@@ -13,6 +13,8 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
+from app.schemas.order.order_schemas import OrderRead
+
 
 class DashboardCustomer(BaseModel):
     id: uuid.UUID
@@ -90,3 +92,25 @@ class AdvanceOrderRequest(BaseModel):
 
 class MoveOrderRequest(BaseModel):
     slot_id: uuid.UUID
+
+
+# ---------------------------------------------------------------------------
+# Mutation response schemas
+# ---------------------------------------------------------------------------
+
+class AdvanceOrderResponse(BaseModel):
+    """Response for ``POST /service/orders/{order_id}/advance``.
+
+    ``sms_dispatched`` is non-null only when the transition targeted
+    ``ready_text_sent``:
+
+    - ``True`` -- SMS sent successfully via Twilio (or console-logged in dev).
+    - ``False`` -- Twilio rejected the send or creds were missing;
+      ``sms_error`` carries the operator-facing reason so the dashboard
+      can prompt them to text the customer manually.
+    - ``None`` -- this transition didn't involve SMS.
+    """
+
+    order: OrderRead
+    sms_dispatched: Optional[bool] = None
+    sms_error: Optional[str] = None

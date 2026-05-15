@@ -17,12 +17,13 @@ import {
 import type {
   DashboardOrder,
   DashboardSlot,
+  OrderStatus,
 } from "@/types/service/service";
 import {
   ORDER_STATUS_LABELS,
   ORDER_STATUS_TONES,
   isTerminal,
-  nextAdvanceStatus,
+  advanceChoices,
 } from "./orderStatus";
 
 interface OrderCardProps {
@@ -47,28 +48,37 @@ export function OrderCard({
   const [advance, { isLoading: isAdvancing }] = useAdvanceOrderMutation();
   const [move, { isLoading: isMoving }] = useMoveOrderMutation();
   const [confirmNoShow, setConfirmNoShow] = useState(false);
+  const [pendingChoice, setPendingChoice] = useState<OrderStatus | null>(null);
 
   const mutating = isAdvancing || isMoving;
   const terminal = isTerminal(order.status);
-  const next = nextAdvanceStatus(order.status);
+  const choices = advanceChoices(order.status);
 
   const stale = computeStale(order.updated_at, serverTime, order.status);
 
-  const onAdvance = async () => {
-    if (!next) return;
+  const onAdvance = async (target: OrderStatus) => {
+    setPendingChoice(target);
     try {
-      await advance({
+      const result = await advance({
         dropId,
         orderId: order.id,
-        targetStatus: next,
+        targetStatus: target,
       }).unwrap();
-      showSuccess(`Moved to ${ORDER_STATUS_LABELS[next]}`);
+      showSuccess(`Moved to ${ORDER_STATUS_LABELS[target]}`);
+      if (result.sms_dispatched === false) {
+        showError(
+          `SMS not sent (${result.sms_error || "unknown error"}). Please text ${order.customer.phone} manually.`,
+        );
+      }
     } catch (err) {
       showError(extractErrorMessage(err) || "Failed to advance order");
+    } finally {
+      setPendingChoice(null);
     }
   };
 
   const onNoShow = async () => {
+    setPendingChoice("no_show");
     try {
       await advance({
         dropId,
@@ -78,6 +88,8 @@ export function OrderCard({
       showSuccess("Marked no-show");
     } catch (err) {
       showError(extractErrorMessage(err) || "Failed to mark no-show");
+    } finally {
+      setPendingChoice(null);
     }
   };
 
@@ -160,17 +172,19 @@ export function OrderCard({
 
       {!readOnly && !terminal ? (
         <div className="flex items-center gap-2 flex-wrap">
-          {next ? (
+          {choices.map((choice, index) => (
             <LoadingButton
+              key={choice}
               size="sm"
-              isLoading={isAdvancing}
+              variant={index === 0 ? "primary" : "secondary"}
+              isLoading={isAdvancing && pendingChoice === choice}
               loadingText="Saving..."
-              onClick={onAdvance}
+              onClick={() => onAdvance(choice)}
               disabled={mutating}
             >
-              -&gt; {ORDER_STATUS_LABELS[next]}
+              -&gt; {ORDER_STATUS_LABELS[choice]}
             </LoadingButton>
-          ) : null}
+          ))}
           <MoveSelect
             currentSlotId={order.slot_id}
             slots={slots}

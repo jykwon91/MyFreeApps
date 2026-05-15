@@ -20,29 +20,32 @@ export const ORDER_STATUS_TONES: Record<OrderStatus, BadgeTone> = {
 };
 
 /**
- * The single "happy path" next status surfaced in PR 7's advance button.
+ * Ordered list of "happy path" advance choices for a given current state.
  *
- * `ready_text_sent` is hidden from the advance UI in PR 7 (Twilio comes
- * in PR 8). From `cooking`, the operator skips straight to
- * `ready_waiting`. From `ready_text_sent` (only reachable post-PR-8 or
- * via direct API), the operator advances to `picked_up`.
+ * The first element is the recommended primary action; any additional
+ * elements are secondary (rendered as ghost buttons). Terminal states
+ * return an empty list. `no_show` is offered separately as a sad-path
+ * action on every non-terminal card and is not part of this list.
  *
- * Terminal states have no next; `no_show` is offered separately as a
- * sad-path secondary action on every non-terminal card.
+ * Cooking forks into two choices since PR 8 wired Twilio:
+ *   - `ready_text_sent` (primary) -- transition AND send the customer
+ *     a ready-pickup SMS via Twilio.
+ *   - `ready_waiting` (secondary) -- transition only; operator will
+ *     text manually or skip the text.
  */
-export function nextAdvanceStatus(current: OrderStatus): OrderStatus | null {
+export function advanceChoices(current: OrderStatus): OrderStatus[] {
   switch (current) {
     case "not_started":
-      return "cooking";
+      return ["cooking"];
     case "cooking":
-      return "ready_waiting";
+      return ["ready_text_sent", "ready_waiting"];
     case "ready_text_sent":
-      return "picked_up";
+      return ["picked_up"];
     case "ready_waiting":
-      return "picked_up";
+      return ["picked_up"];
     case "picked_up":
     case "no_show":
-      return null;
+      return [];
   }
 }
 

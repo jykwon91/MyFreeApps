@@ -123,3 +123,74 @@ def check_email_configured(
             "EmailService silently no-ops and transactional emails never "
             "reach users. Set the credentials or set ENVIRONMENT=development."
         )
+
+
+class SmsNotConfiguredError(RuntimeError):
+    """Raised at boot when SMS is required but Twilio is not configured."""
+
+
+def check_sms_configured(
+    *,
+    sms_backend: str,
+    twilio_account_sid: str,
+    twilio_auth_token: str,
+    twilio_from_number: str,
+    environment: str,
+) -> None:
+    """Fail loud at boot if SMS isn't usable in a non-dev environment.
+
+    Only apps that opt in to SMS (via ``create_app_lifespan(sms_required=True)``)
+    invoke this guard; apps that never text users (MBK, MJH) skip it
+    entirely so they don't need to set Twilio env vars.
+
+    Two failure modes guarded:
+
+    1. ``sms_backend == "console"`` in production / staging. Console-mode
+       SMS goes to stdout — useful for dev where the operator wants to
+       see the rendered body, broken in production where customers never
+       see the text.
+    2. ``sms_backend == "twilio"`` with any of ``TWILIO_ACCOUNT_SID`` /
+       ``TWILIO_AUTH_TOKEN`` / ``TWILIO_FROM_NUMBER`` empty. The
+       ``SmsService`` raises ``SmsNotConfiguredError`` on send when any
+       credential is empty — an operator who forgot one would only
+       notice when the first customer never gets their ready-text.
+
+    Args:
+        sms_backend: ``"console"`` (dev/CI default — log to stdout) or
+            ``"twilio"`` (production — send via Twilio).
+        twilio_account_sid: Twilio Account SID. Required when
+            ``sms_backend == "twilio"``.
+        twilio_auth_token: Twilio Auth Token. Required when
+            ``sms_backend == "twilio"``.
+        twilio_from_number: The E.164-formatted Twilio number to send
+            from (e.g. ``"+15551234567"``). Required when
+            ``sms_backend == "twilio"``.
+        environment: The deployment environment name. ``"development"``
+            and ``"test"`` allow any combination; everything else
+            requires a working ``twilio`` backend.
+
+    Raises:
+        SmsNotConfiguredError: If ``environment`` is not dev/test and
+            either (a) ``sms_backend == "console"``, or (b)
+            ``sms_backend == "twilio"`` with any empty Twilio credential.
+    """
+    if environment in _DEV_ENVIRONMENTS:
+        return
+    if sms_backend == "console":
+        raise SmsNotConfiguredError(
+            "SMS_BACKEND='console' is not allowed in non-development "
+            "environments — ready-text alerts would silently log to stdout "
+            "instead of reaching customers. Set SMS_BACKEND=twilio and "
+            "configure TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN / "
+            "TWILIO_FROM_NUMBER, or set ENVIRONMENT=development."
+        )
+    if sms_backend == "twilio" and not (
+        twilio_account_sid and twilio_auth_token and twilio_from_number
+    ):
+        raise SmsNotConfiguredError(
+            "SMS_BACKEND='twilio' requires TWILIO_ACCOUNT_SID, "
+            "TWILIO_AUTH_TOKEN, and TWILIO_FROM_NUMBER to all be set in "
+            "non-development environments. Without them the SmsService "
+            "raises on every send and customers never receive ready-texts. "
+            "Set the credentials or set ENVIRONMENT=development."
+        )

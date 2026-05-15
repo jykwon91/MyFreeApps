@@ -69,6 +69,7 @@ from fastapi import FastAPI
 from platform_shared.core.audit import register_audit_listeners
 from platform_shared.core.boot_guards import (
     check_email_configured,
+    check_sms_configured,
     check_turnstile_configured,
 )
 
@@ -88,6 +89,10 @@ class _SettingsProtocol(Protocol):
     email_backend: str
     smtp_user: str
     smtp_password: str
+    sms_backend: str
+    twilio_account_sid: str
+    twilio_auth_token: str
+    twilio_from_number: str
 
 
 # init_sentry needs to be passed in as a callable rather than imported,
@@ -104,6 +109,7 @@ def create_app_lifespan(
     settings: _SettingsProtocol,
     init_sentry: InitSentryFn,
     bucket_init: BucketInitFn = lambda: None,
+    sms_required: bool = False,
     on_startup: LifecycleHook | None = None,
     on_shutdown: LifecycleHook | None = None,
 ) -> Callable[[FastAPI], Any]:
@@ -123,6 +129,10 @@ def create_app_lifespan(
             existence at startup. Defaults to a no-op for apps that
             don't use object storage. Most apps pass their
             ``services.storage.bucket_initializer.ensure_bucket``.
+        sms_required: When True, the lifespan also runs
+            ``check_sms_configured()`` so the app fails loud in
+            production if Twilio credentials are missing. Apps that
+            never text users (MBK, MJH) leave this False.
         on_startup: Optional async or sync callable invoked AFTER all
             shared boot steps but BEFORE the lifespan yields. Use for
             app-specific work like spawning background tasks.
@@ -155,6 +165,14 @@ def create_app_lifespan(
             smtp_password=settings.smtp_password,
             environment=settings.environment,
         )
+        if sms_required:
+            check_sms_configured(
+                sms_backend=settings.sms_backend,
+                twilio_account_sid=settings.twilio_account_sid,
+                twilio_auth_token=settings.twilio_auth_token,
+                twilio_from_number=settings.twilio_from_number,
+                environment=settings.environment,
+            )
 
         # 3. Side-effect inits — wire SQLAlchemy listeners before any
         #    request handler can run a write, and verify MinIO is

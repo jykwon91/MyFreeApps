@@ -77,6 +77,7 @@ lifespan = create_app_lifespan(
     settings=settings,
     init_sentry=init_sentry,
     bucket_init=ensure_bucket,
+    sms_required=True,
     on_startup=_on_startup,
 )
 
