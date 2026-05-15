@@ -24,23 +24,33 @@ from app.schemas.game.lineup_schemas import SourceCreate
 # URL validation patterns
 # ---------------------------------------------------------------------------
 
-_YOUTUBE_PLAYLIST_RE = re.compile(
-    r"^https?://(?:www\.)?youtube\.com/playlist\?list=[\w-]+",
-    re.IGNORECASE,
-)
+# A playlist id can ride on the canonical /playlist?list=ID URL OR on a
+# watch?v=VIDEO&list=ID URL (what YouTube hands you when you open a video
+# from within a playlist — the most common copy-paste form). Accept both;
+# we normalize to the canonical /playlist?list=ID form before storing.
+_YOUTUBE_PLAYLIST_ID_RE = re.compile(r"[?&]list=([\w-]+)", re.IGNORECASE)
 _YOUTUBE_CHANNEL_RE = re.compile(
     r"^https?://(?:www\.)?youtube\.com/(?:@[\w-]+|channel/[\w-]+|c/[\w-]+|user/[\w-]+)(?:/[\w-]*)?/?$",
     re.IGNORECASE,
 )
 
 
+def _extract_playlist_id(url: str) -> str | None:
+    """Return the playlist id from any YouTube URL carrying a list= param."""
+    if "youtube.com" not in url.lower() and "youtu.be" not in url.lower():
+        return None
+    match = _YOUTUBE_PLAYLIST_ID_RE.search(url)
+    return match.group(1) if match else None
+
+
 def validate_source_url(kind: str, url: str) -> str | None:
     """Return None if the URL is valid for the given kind, or an error string."""
     if kind == "youtube_playlist":
-        if not _YOUTUBE_PLAYLIST_RE.match(url):
+        if not _extract_playlist_id(url):
             return (
-                "youtube_playlist URL must be a YouTube playlist URL: "
-                "https://www.youtube.com/playlist?list=<id>"
+                "youtube_playlist URL must contain a playlist id, e.g. "
+                "https://www.youtube.com/playlist?list=<id> or "
+                "https://www.youtube.com/watch?v=<vid>&list=<id>"
             )
     elif kind == "youtube_channel":
         if not _YOUTUBE_CHANNEL_RE.match(url):
@@ -56,7 +66,9 @@ def validate_source_url(kind: str, url: str) -> str | None:
 def _build_config_json(kind: str, url: str) -> dict:
     """Build the config_json dict for a new Source."""
     if kind == "youtube_playlist":
-        return {"url": url, "last_synced_at": None}
+        pid = _extract_playlist_id(url)
+        canonical = f"https://www.youtube.com/playlist?list={pid}" if pid else url
+        return {"url": canonical, "last_synced_at": None}
     if kind == "youtube_channel":
         return {"channel_url": url, "last_synced_at": None}
     return {"url": url}
