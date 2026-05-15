@@ -4,7 +4,7 @@ import { DISCOVER_EMPTY_STATES } from "@/constants/empty-states";
 import DiscoveredJobCard from "@/features/discover/DiscoveredJobCard";
 import DiscoveredJobsSkeleton from "@/features/discover/DiscoveredJobsSkeleton";
 import ProfileCompletenessBanner from "@/features/discover/ProfileCompletenessBanner";
-import { useListDiscoveredJobsQuery } from "@/store/discoverApi";
+import { useListDiscoveredJobsQuery, useListDiscoverySourcesQuery } from "@/store/discoverApi";
 import { useGetProfileQuery } from "@/lib/profileApi";
 import { useListSkillsQuery } from "@/lib/skillsApi";
 
@@ -15,14 +15,26 @@ const INBOX_POLL_INTERVAL_MS = 4000;
 
 interface DiscoverInboxViewProps {
   hasSources: boolean;
+  /** Active source filter from ?source= URL param. Null = no filter (show all). */
+  activeSourceId: string | null;
 }
 
-export default function DiscoverInboxView({ hasSources }: DiscoverInboxViewProps) {
+export default function DiscoverInboxView({
+  hasSources,
+  activeSourceId,
+}: DiscoverInboxViewProps) {
+  // Include source_id in query args so RTK Query uses it as part of the cache key.
+  // When source_id changes the cache key changes → fresh fetch, no stale data.
+  const queryArgs = activeSourceId
+    ? { state: "inbox" as const, source_id: activeSourceId }
+    : { state: "inbox" as const };
+
   const { data: jobsData, isLoading, isError } = useListDiscoveredJobsQuery(
-    { state: "inbox" },
+    queryArgs,
     { pollingInterval: INBOX_POLL_INTERVAL_MS },
   );
 
+  const { data: sources } = useListDiscoverySourcesQuery();
   const { data: profile } = useGetProfileQuery();
   const { data: skillsData } = useListSkillsQuery();
 
@@ -101,6 +113,7 @@ export default function DiscoverInboxView({ hasSources }: DiscoverInboxViewProps
           job={job}
           isScoringInFlight={hasUnscored}
           profileUpdatedAt={profileUpdatedAt}
+          sources={sources ?? []}
         />
       ))}
     </div>

@@ -251,6 +251,10 @@ class DiscoveredJobResponse(BaseModel):
     dismissed_reason: str | None = None
     saved_at: datetime | None
     promoted_application_id: uuid.UUID | None
+    # Derived from the fetch FK: which saved search produced this posting.
+    # Null for legacy rows fetched before the fetch_id column was added, or
+    # for rows whose fetch row has been reaped.
+    discovery_source_id: uuid.UUID | None = None
 
     @computed_field  # type: ignore[prop-decorator]
     @property

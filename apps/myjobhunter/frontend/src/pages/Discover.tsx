@@ -7,6 +7,7 @@ import DiscoverSavedView from "@/features/discover/DiscoverSavedView";
 import DiscoverViewTabs from "@/features/discover/DiscoverViewTabs";
 import NewSavedSearchDialog from "@/features/discover/NewSavedSearchDialog";
 import SavedSearchesPanel from "@/features/discover/SavedSearchesPanel";
+import SourceFilterChips from "@/features/discover/SourceFilterChips";
 import { useListDiscoverySourcesQuery } from "@/store/discoverApi";
 import type { DiscoverView } from "@/types/discovery/discover-view";
 
@@ -20,14 +21,9 @@ import type { DiscoverView } from "@/types/discovery/discover-view";
  * Tab state lives in ?view=inbox (default) | ?view=saved so deep-linking
  * and back-button work correctly.
  *
- * MVP scope (PR 5):
- * - Inbox / Saved tab toggle
- * - Saved-search creation via inline dialog (no separate /preferences page)
- * - Manual "Refresh" per saved search (no auto-scheduler yet)
- * - No scoring UI (backend score() endpoint not yet wired in v1)
- * - No promote-to-application yet (operator clicks the external Open
- *   link, applies on the source, manually creates an Application via
- *   /applications when ready)
+ * Source filter lives in ?source=<uuid> — selecting a chip sets the param,
+ * selecting "All" deletes it. Uses replace: true so back-button goes to the
+ * previous page rather than cycling through chip selections.
  */
 export default function Discover() {
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -35,6 +31,8 @@ export default function Discover() {
 
   const rawView = searchParams.get("view");
   const activeView: DiscoverView = rawView === "saved" ? "saved" : "inbox";
+
+  const activeSourceId = searchParams.get("source");
 
   function setView(view: DiscoverView) {
     setSearchParams(
@@ -44,6 +42,21 @@ export default function Discover() {
           next.delete("view");
         } else {
           next.set("view", view);
+        }
+        return next;
+      },
+      { replace: true },
+    );
+  }
+
+  function setSourceFilter(sourceId: string | null) {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (sourceId === null) {
+          next.delete("source");
+        } else {
+          next.set("source", sourceId);
         }
         return next;
       },
@@ -72,10 +85,21 @@ export default function Discover() {
 
       <SavedSearchesPanel />
 
+      {hasSources && (
+        <SourceFilterChips
+          sources={sources ?? []}
+          activeSourceId={activeSourceId}
+          onSelect={setSourceFilter}
+        />
+      )}
+
       <DiscoverViewTabs activeView={activeView} onSelect={setView} />
 
       {activeView === "inbox" ? (
-        <DiscoverInboxView hasSources={hasSources} />
+        <DiscoverInboxView
+          hasSources={hasSources}
+          activeSourceId={activeSourceId}
+        />
       ) : (
         <DiscoverSavedView />
       )}

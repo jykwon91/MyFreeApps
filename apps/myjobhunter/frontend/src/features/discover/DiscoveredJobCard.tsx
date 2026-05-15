@@ -18,6 +18,7 @@ import {
   type DismissalReason,
 } from "@/store/discoverApi";
 import type { DiscoveredJob } from "@/types/discovery/discovered-job";
+import type { DiscoverySource } from "@/types/discovery/discovery-source";
 import type { JobAnalysisVerdict } from "@/types/job-analysis/job-analysis-verdict";
 import DismissReasonPopover from "./DismissReasonPopover";
 import UndoDismissToast from "./UndoDismissToast";
@@ -46,6 +47,14 @@ interface DiscoveredJobCardProps {
    * profile loaded yet show no staleness signal.
    */
   profileUpdatedAt?: string | null;
+  /**
+   * All saved searches for the current user. Used to derive the
+   * source-name badge from ``job.discovery_source_id``.
+   *
+   * Optional — defaults to empty array so tests and callers that
+   * don't thread sources show no source badge.
+   */
+  sources?: DiscoverySource[];
 }
 
 const REMOTE_LABEL: Record<string, string> = {
@@ -71,6 +80,7 @@ export default function DiscoveredJobCard({
   job,
   isScoringInFlight = false,
   profileUpdatedAt = null,
+  sources = [],
 }: DiscoveredJobCardProps) {
   const [dismiss, { isLoading: isDismissing }] = useDismissDiscoveredJobMutation();
   const [save, { isLoading: isSaving }] = useSaveDiscoveredJobMutation();
@@ -132,6 +142,16 @@ export default function DiscoveredJobCard({
     profileUpdatedAt !== null &&
     new Date(profileUpdatedAt) > new Date(job.scored_at);
 
+  // Resolve the source name for the secondary badge. Look up by
+  // discovery_source_id against the already-fetched sources list — no
+  // extra network call. Falls back to null (no badge) for legacy rows.
+  const matchedSource = job.discovery_source_id
+    ? sources.find((s) => s.id === job.discovery_source_id) ?? null
+    : null;
+  const sourceBadgeLabel = matchedSource
+    ? matchedSource.name || matchedSource.source
+    : null;
+
   return (
     <>
     <UndoDismissToast
@@ -183,6 +203,11 @@ export default function DiscoveredJobCard({
           )}
           {job.source_publisher && (
             <Badge label={job.source_publisher} color="gray" />
+          )}
+          {sourceBadgeLabel && (
+            <span data-testid="source-name-badge">
+              <Badge label={sourceBadgeLabel} color="gray" />
+            </span>
           )}
         </div>
       </div>
