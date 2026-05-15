@@ -49,12 +49,14 @@ def _make_channel_source(url: str = "https://www.youtube.com/@testchannel") -> S
     )
 
 
+# Video ids MUST be realistic 11-char YouTube ids — list_videos rejects
+# anything that isn't, so a channel/tab id can never masquerade as a video.
 _FAKE_INFO = {
     "id": "PLtest",
     "title": "Test Playlist",
     "entries": [
         {
-            "id": "vid001",
+            "id": "vid00000001",
             "title": "A-site smokes",
             "description": "0:00 Intro\n1:00 A-site smoke from CT",
             "duration": 180,
@@ -66,7 +68,7 @@ _FAKE_INFO = {
             ],
         },
         {
-            "id": "vid002",
+            "id": "vid00000002",
             "title": "B-site post-plant",
             "description": "0:00 B-site smoke",
             "duration": 90,
@@ -95,12 +97,12 @@ class TestListVideos:
             videos = await list_videos(source)
 
         assert len(videos) == 2
-        assert videos[0].video_id == "vid001"
+        assert videos[0].video_id == "vid00000001"
         assert videos[0].title == "A-site smokes"
         assert videos[0].duration == 180
         assert videos[0].channel_name == "TestChannel"
         assert len(videos[0].chapters) == 2
-        assert videos[1].video_id == "vid002"
+        assert videos[1].video_id == "vid00000002"
 
     @pytest.mark.asyncio
     async def test_raises_on_download_error(self):
@@ -169,6 +171,90 @@ class TestListVideos:
             videos = await list_videos(source)
         # Successful call with channel_url source — no error
         assert isinstance(videos, list)
+
+
+# ---------------------------------------------------------------------------
+# Channel-URL normalization + tab-id rejection
+#
+# Regression guard for the bug where syncing a channel produced 0 lineups:
+# a bare channel URL flattens to its Videos/Shorts/Live TAB playlists, each
+# carrying the 24-char channel id (not a video id). That id was fed to
+# watch?v= -> "Video unavailable" -> error_count=N, video_count=0.
+# ---------------------------------------------------------------------------
+
+from app.services.ingestion.youtube_fetcher import _normalize_listing_url  # noqa: E402
+
+
+class TestChannelUrlNormalization:
+    @pytest.mark.parametrize(
+        "raw,expected",
+        [
+            ("https://www.youtube.com/@TigerrGG", "https://www.youtube.com/@TigerrGG/videos"),
+            ("https://www.youtube.com/@TigerrGG/", "https://www.youtube.com/@TigerrGG/videos"),
+            ("https://youtube.com/channel/UCabcdefghijklmnopqrstuv",
+             "https://youtube.com/channel/UCabcdefghijklmnopqrstuv/videos"),
+            ("https://www.youtube.com/c/SomeName", "https://www.youtube.com/c/SomeName/videos"),
+            ("https://www.youtube.com/user/OldStyle", "https://www.youtube.com/user/OldStyle/videos"),
+            # Already-explicit / non-channel URLs are left untouched.
+            ("https://www.youtube.com/@TigerrGG/videos", "https://www.youtube.com/@TigerrGG/videos"),
+            ("https://www.youtube.com/@TigerrGG/shorts", "https://www.youtube.com/@TigerrGG/shorts"),
+            ("https://www.youtube.com/playlist?list=PLabc", "https://www.youtube.com/playlist?list=PLabc"),
+            ("https://www.youtube.com/watch?v=dQw4w9WgXcQ", "https://www.youtube.com/watch?v=dQw4w9WgXcQ"),
+        ],
+    )
+    def test_normalization(self, raw: str, expected: str):
+        assert _normalize_listing_url(raw) == expected
+
+    @pytest.mark.asyncio
+    async def test_channel_tab_ids_are_rejected(self):
+        """yt-dlp flattening a channel yields tab-playlists carrying the
+        24-char channel id. None of them may become a VideoMeta."""
+        channel_tabs_info = {
+            "id": "UCX_C4FYHUIYPpLTCmJ5VVYA",
+            "title": "Tigerr",
+            "entries": [
+                {"id": "UCX_C4FYHUIYPpLTCmJ5VVYA", "title": "Tigerr - Videos", "_type": "playlist"},
+                {"id": "UCX_C4FYHUIYPpLTCmJ5VVYA", "title": "Tigerr - Shorts", "_type": "playlist"},
+                {"id": "UCX_C4FYHUIYPpLTCmJ5VVYA", "title": "Tigerr - Live"},
+            ],
+        }
+        mock_ydl = MagicMock()
+        mock_ydl.__enter__ = MagicMock(return_value=mock_ydl)
+        mock_ydl.__exit__ = MagicMock(return_value=False)
+        mock_ydl.extract_info = MagicMock(return_value=channel_tabs_info)
+
+        with patch("yt_dlp.YoutubeDL", return_value=mock_ydl):
+            videos = await list_videos(_make_channel_source())
+
+        assert videos == []
+
+    @pytest.mark.asyncio
+    async def test_nested_playlist_entries_are_flattened(self):
+        """A playlist-of-playlists is descended to leaf video entries; only
+        valid 11-char ids survive."""
+        nested_info = {
+            "id": "UCsomechannelid000000001",
+            "entries": [
+                {
+                    "id": "UCsomechannelid000000001",
+                    "title": "Videos tab",
+                    "entries": [
+                        {"id": "realvideo01", "title": "Lineup 1", "duration": 100},
+                        {"id": "realvideo02", "title": "Lineup 2", "duration": 120},
+                        {"id": "PLnotavideoplaylist", "title": "nested playlist ref"},
+                    ],
+                },
+            ],
+        }
+        mock_ydl = MagicMock()
+        mock_ydl.__enter__ = MagicMock(return_value=mock_ydl)
+        mock_ydl.__exit__ = MagicMock(return_value=False)
+        mock_ydl.extract_info = MagicMock(return_value=nested_info)
+
+        with patch("yt_dlp.YoutubeDL", return_value=mock_ydl):
+            videos = await list_videos(_make_channel_source())
+
+        assert [v.video_id for v in videos] == ["realvideo01", "realvideo02"]
 
 
 # ---------------------------------------------------------------------------
