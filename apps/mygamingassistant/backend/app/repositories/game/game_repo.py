@@ -175,6 +175,49 @@ async def upsert_map_zone(
     return zone
 
 
+async def update_zone_polygons_bulk(
+    db: AsyncSession,
+    *,
+    map_id: uuid.UUID,
+    updates: list[tuple[str, list[dict[str, float]]]],
+) -> tuple[list[str], list[tuple[str, str]]]:
+    """Bulk-update polygon_points across multiple MapZones for one map.
+
+    Validation rules (per-zone, failures recorded — never raise):
+    - The zone slug must exist within this map (cross-map slugs rejected).
+    - ``polygon_points`` may be empty (clears the polygon, zone becomes
+      invisible/unclickable in plan mode) OR have >=3 entries.
+    - 1 or 2 points → rejected as "polygon needs 3+ vertices".
+
+    Caller is responsible for committing.
+
+    Returns
+    -------
+    tuple[list[str], list[tuple[str, str]]]
+        ``(updated_slugs, [(failed_slug, reason)])`` — partial successes are
+        normal and reflected by both lists having entries.
+    """
+    result = await db.execute(select(MapZone).where(MapZone.map_id == map_id))
+    zones_by_slug = {z.slug: z for z in result.scalars().all()}
+
+    updated: list[str] = []
+    failed: list[tuple[str, str]] = []
+
+    for slug, points in updates:
+        zone = zones_by_slug.get(slug)
+        if zone is None:
+            failed.append((slug, "zone slug not found on this map"))
+            continue
+        if 0 < len(points) < 3:
+            failed.append((slug, f"polygon needs 3+ vertices (got {len(points)})"))
+            continue
+        zone.polygon_points = points
+        updated.append(slug)
+
+    await db.flush()
+    return updated, failed
+
+
 # ---------------------------------------------------------------------------
 # Site
 # ---------------------------------------------------------------------------
