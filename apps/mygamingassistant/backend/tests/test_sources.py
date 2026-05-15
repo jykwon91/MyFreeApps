@@ -238,7 +238,13 @@ async def test_deleted_source_excluded_from_list_and_detail(
 
 def test_lineup_read_serializes_pending_row_with_null_game_map():
     """pending_review lineups have NULL game_id/map_id — LineupRead must
-    accept them so the review queue can load (regression: 2 uuid errors)."""
+    accept them so the review queue can load (regression: 2 uuid errors).
+
+    Asserts BOTH directions: model_validate (input) AND model_dump(mode="json")
+    (output). FastAPI's ``response_model=PendingLineupsResponse`` re-serializes
+    via model_dump, which is when the @computed_field effective_* properties
+    run — that output path, not model_validate, is where the review-queue 500
+    actually lived. Testing only model_validate left this uncovered."""
     from app.schemas.game.lineup_schemas import LineupRead
 
     model = LineupRead.model_validate(
@@ -251,3 +257,12 @@ def test_lineup_read_serializes_pending_row_with_null_game_map():
         }
     )
     assert model.game_id is None and model.map_id is None
+
+    # The FastAPI response path: must not raise, and the centroid-fallback
+    # computed fields must degrade to None when zones are absent.
+    dumped = model.model_dump(mode="json")
+    assert dumped["game_id"] is None and dumped["map_id"] is None
+    assert dumped["effective_stand_x"] is None
+    assert dumped["effective_stand_y"] is None
+    assert dumped["effective_target_x"] is None
+    assert dumped["effective_target_y"] is None
