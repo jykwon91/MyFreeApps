@@ -13,17 +13,19 @@ Endpoints (production URLs prepend ``/api``):
   GET    /public/drops/current            -- current active drop + slots w/ remaining capacity
   POST   /public/orders                   -- place an order; returns confirmation
   GET    /public/orders/{order_id}        -- look up an existing order (status check)
+  GET    /public/customers/lookup         -- "welcome back" + "the usual" by phone
 """
 from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
 from app.repositories.order import order_repo
 from app.schemas.public.public_schemas import (
+    PublicCustomerLookup,
     PublicDropRead,
     PublicMenuRead,
     PublicOrderConfirmation,
@@ -93,6 +95,27 @@ async def place_public_order(
         raise _service_error(exc) from exc
 
     return await public_service.build_order_confirmation(db, order)
+
+
+@router.get("/customers/lookup", response_model=PublicCustomerLookup)
+async def lookup_public_customer(
+    phone: str = Query(..., min_length=1, max_length=30),
+    db: AsyncSession = Depends(get_db),
+) -> PublicCustomerLookup:
+    """Phone-keyed "welcome back" lookup for the public order page.
+
+    The customer's phone is the only secret here; the response only
+    includes the name they typed in last time plus the pizza-line shape
+    of their most recent non-no-show order (no IDs they couldn't already
+    see in the public menu, no PII beyond their own first name).
+
+    404 when no customer matches -- the frontend swallows it silently so
+    the lookup is a no-op for first-time orderers.
+    """
+    payload = await public_service.build_customer_lookup(db, phone)
+    if payload is None:
+        raise HTTPException(status_code=404, detail="No customer with that phone.")
+    return payload
 
 
 @router.get("/orders/{order_id}", response_model=PublicOrderConfirmation)

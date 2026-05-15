@@ -114,3 +114,24 @@ export const PAYMENT_METHOD_OPTIONS: { tag: string; label: string }[] = [
   { tag: "applepay", label: "Apple Pay" },
   { tag: "cash", label: "Cash" },
 ];
+
+// ---------------------------------------------------------------------------
+// "The usual" lookup
+// ---------------------------------------------------------------------------
+
+export interface PublicTheUsualPizza {
+  pizza_type_id: string;
+  topping_type_ids: string[];
+  modifications_text: string | null;
+}
+
+/**
+ * Returned by GET /public/customers/lookup?phone=... when a customer
+ * matches. ``the_usual`` is the customer's most recent non-no-show order's
+ * pizza lines, filtered to items still active in today's menu -- the list
+ * may be empty if every prior item has since been 86'd.
+ */
+export interface PublicCustomerLookup {
+  customer_name: string;
+  the_usual: PublicTheUsualPizza[];
+}

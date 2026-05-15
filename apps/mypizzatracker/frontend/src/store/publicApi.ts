@@ -1,5 +1,6 @@
 import { baseApi } from "@platform/ui";
 import type {
+  PublicCustomerLookup,
   PublicDrop,
   PublicMenu,
   PublicOrderConfirmation,
@@ -32,6 +33,13 @@ const publicApi = baseApi.injectEndpoints({
         method: "GET",
       }),
     }),
+    lookupPublicCustomer: build.query<PublicCustomerLookup, string>({
+      query: (phone) => ({
+        url: "/public/customers/lookup",
+        method: "GET",
+        params: { phone },
+      }),
+    }),
   }),
 });
 
@@ -40,4 +48,5 @@ export const {
   useGetCurrentPublicDropQuery,
   usePlacePublicOrderMutation,
   useGetPublicOrderQuery,
+  useLookupPublicCustomerQuery,
 } = publicApi;
