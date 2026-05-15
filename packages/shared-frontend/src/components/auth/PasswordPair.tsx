@@ -114,9 +114,19 @@ export default function PasswordPair({
           aria-invalid={tooShort}
           disabled={disabled}
         />
-        <p id={hintId} className="text-xs text-muted-foreground mt-1">
-          At least {minLength} characters.
-        </p>
+        {tooShort ? (
+          <p
+            id={hintId}
+            role="alert"
+            className="text-xs text-destructive mt-1"
+          >
+            Password must be at least {minLength} characters.
+          </p>
+        ) : (
+          <p id={hintId} className="text-xs text-muted-foreground mt-1">
+            At least {minLength} characters.
+          </p>
+        )}
       </div>
       <div>
         <label className="block text-sm font-medium mb-1">{confirmLabel}</label>
