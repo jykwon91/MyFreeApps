@@ -22,7 +22,7 @@ def _build_txn_filters(
     filters = [
         Transaction.organization_id == organization_id,
         Transaction.deleted_at.is_(None),
-        Transaction.status.in_(["approved", "unverified"]),
+        Transaction.status == "approved",
     ]
     if start_date is not None:
         filters.append(Transaction.transaction_date >= start_date)

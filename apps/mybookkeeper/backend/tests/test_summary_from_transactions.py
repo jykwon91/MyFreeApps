@@ -150,7 +150,7 @@ class TestGetSummary:
         assert by_tag.get("utilities") == 50.00
 
     @pytest.mark.asyncio
-    async def test_approved_and_unverified_included_other_statuses_excluded(self, db: AsyncSession) -> None:
+    async def test_only_approved_summed_other_statuses_excluded(self, db: AsyncSession) -> None:
         user, org_id = await _setup_org_and_user(db)
         prop = _make_property(org_id, user.id)
         db.add(prop)
@@ -191,10 +191,10 @@ class TestGetSummary:
         rows = await summary_repo.txn_sum_by_category(db, org_id)
         total = sum(float(row.total) for row in rows)
 
-        assert total == 900.00
+        assert total == 500.00
 
     @pytest.mark.asyncio
-    async def test_unverified_income_counted_in_revenue(self, db: AsyncSession) -> None:
+    async def test_unverified_income_excluded_from_revenue(self, db: AsyncSession) -> None:
         user, org_id = await _setup_org_and_user(db)
         prop = _make_property(org_id, user.id)
         db.add(prop)
@@ -215,10 +215,10 @@ class TestGetSummary:
         rows = await summary_repo.txn_sum_by_category(db, org_id)
         by_tag = {row.tag: float(row.total) for row in rows}
 
-        assert by_tag.get("rental_revenue") == 1200.00
+        assert by_tag.get("rental_revenue") is None
 
     @pytest.mark.asyncio
-    async def test_unverified_expense_counted_in_expenses(self, db: AsyncSession) -> None:
+    async def test_unverified_expense_excluded_from_expenses(self, db: AsyncSession) -> None:
         user, org_id = await _setup_org_and_user(db)
         prop = _make_property(org_id, user.id)
         db.add(prop)
@@ -238,10 +238,10 @@ class TestGetSummary:
         rows = await summary_repo.txn_sum_by_category(db, org_id)
         by_tag = {row.tag: float(row.total) for row in rows}
 
-        assert by_tag.get("maintenance") == 75.00
+        assert by_tag.get("maintenance") is None
 
     @pytest.mark.asyncio
-    async def test_unverified_deleted_still_excluded(self, db: AsyncSession) -> None:
+    async def test_unverified_excluded_even_if_not_deleted(self, db: AsyncSession) -> None:
         user, org_id = await _setup_org_and_user(db)
         prop = _make_property(org_id, user.id)
         db.add(prop)
@@ -571,7 +571,7 @@ class TestGetTaxSummary:
         assert by_tag["rental_revenue"] == 3000.00
 
     @pytest.mark.asyncio
-    async def test_tax_summary_includes_unverified_excludes_other_statuses(self, db: AsyncSession) -> None:
+    async def test_tax_summary_only_approved_other_statuses_excluded(self, db: AsyncSession) -> None:
         user, org_id = await _setup_org_and_user(db)
         prop = _make_property(org_id, user.id)
         db.add(prop)
@@ -637,7 +637,7 @@ class TestGetTaxSummary:
         )
         by_tag = {row.tag: float(row.total) for row in rows}
 
-        assert by_tag.get("rental_revenue") == 5500.00
+        assert by_tag.get("rental_revenue") == 4000.00
 
     @pytest.mark.asyncio
     async def test_empty_result_for_year_with_no_transactions(self, db: AsyncSession) -> None:

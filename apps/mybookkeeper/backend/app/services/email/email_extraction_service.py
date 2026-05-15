@@ -120,9 +120,11 @@ async def _extract_next_fetched(ctx: RequestContext) -> ExtractResult:
 
     try:
         extraction: tuple[ExtractionResult, Attachment | None] | None
+        sender_email: str | None = None
         if attachment_id == "body":
             email_data = cast(EmailBodyData, json.loads(raw_content.decode("utf-8")))
             logger.info("Extracting body for email id=%s subject=%r", message_id, email_data.get("subject"))
+            sender_email = email_data.get("from_address")
 
             # --- Booking ingestion pre-check ---
             # Attempt to classify the email as a booking confirmation before
@@ -180,6 +182,7 @@ async def _extract_next_fetched(ctx: RequestContext) -> ExtractResult:
                     organization_id=ctx.organization_id,
                     user_id=ctx.user_id,
                     db=db,
+                    sender_email=sender_email,
                 )
 
             item_ref = await email_queue_repo.get_by_id(db, item_id)

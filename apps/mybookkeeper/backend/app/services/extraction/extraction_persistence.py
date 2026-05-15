@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.parsers import safe_date, safe_decimal
 from app.core.tags import transaction_type_for_category
+from app.core.trusted_email_senders import is_trusted_sender
 from app.models.documents.document import Document
 from app.models.email.email_types import Attachment
 from app.models.extraction.extraction import Extraction
@@ -39,6 +40,7 @@ async def save_email_extraction(
     organization_id: uuid.UUID,
     user_id: uuid.UUID,
     db: AsyncSession,
+    sender_email: str | None = None,
 ) -> int:
     """Persist extracted documents from an email. Returns count added.
 
@@ -196,8 +198,13 @@ async def save_email_extraction(
             )
 
             # Email body extractions (no PDF attachment) are less reliable —
-            # mark transactions as "unverified" so users review them
-            if is_email_body and txn:
+            # mark transactions as "unverified" so users review them. Trusted
+            # payment senders (Airbnb, Zelle, etc.) are exempt: their emails
+            # are unambiguous structured receipts and the review step is
+            # friction without value.
+            if is_email_body and txn and not (
+                sender_email and is_trusted_sender(sender_email)
+            ):
                 txn.status = "unverified"
 
             surviving = await resolve_and_link(
