@@ -7,7 +7,7 @@
  */
 import { useState } from "react";
 import { Check, EyeOff, RefreshCw } from "lucide-react";
-import { showError, showSuccess } from "@platform/ui";
+import { showError, showSuccess, extractErrorMessage } from "@platform/ui";
 import {
   useAcceptLineupMutation,
   useHideLineupMutation,
@@ -127,10 +127,7 @@ export default function ReviewCard({
       await acceptLineup({ id: lineup.id, body }).unwrap();
       showSuccess("Lineup accepted.");
     } catch (err: unknown) {
-      const detail =
-        (err as { data?: { detail?: string } })?.data?.detail ??
-        "Failed to accept lineup.";
-      showError(detail);
+      showError(extractErrorMessage(err));
     }
   };
 
