@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { PlaySquare, Trash2, RefreshCw } from "lucide-react";
-import { showError, showSuccess } from "@platform/ui";
+import { showError, showSuccess, extractErrorMessage } from "@platform/ui";
 import {
   useGetSourcesQuery,
   useCreateSourceMutation,
@@ -57,10 +57,7 @@ function AddSourceForm({ onAdded }: AddSourceFormProps) {
       setUrl("");
       onAdded();
     } catch (err: unknown) {
-      const detail =
-        (err as { data?: { detail?: string } })?.data?.detail ??
-        "Failed to add source. Check the URL and try again.";
-      showError(detail);
+      showError(extractErrorMessage(err));
     }
   };
 
