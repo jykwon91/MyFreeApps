@@ -11,6 +11,11 @@
  *                 analysis already has an applied_application_id, in
  *                 place of (1) and (2).
  *
+ * Before the user has applied, a single line of bridging copy explains
+ * what adding to applications unlocks (tracking, contacts, documents).
+ * It is intentionally minimal — the verdict and dimensions already did
+ * the heavy analytical work; this just names the next step.
+ *
  * Everything is button-style for consistency. The primary action uses
  * LoadingButton so the operator sees the spinner during the round-trip.
  */
@@ -56,22 +61,27 @@ export default function AnalysisActions({
   }
 
   return (
-    <div className="flex flex-wrap items-center justify-end gap-3 pt-2">
-      <button
-        type="button"
-        onClick={onAnalyzeAnother}
-        className="rounded-md border bg-background px-4 py-2 text-sm font-medium hover:bg-muted min-h-[44px]"
-      >
-        Analyze another
-      </button>
-      <LoadingButton
-        type="button"
-        isLoading={applying}
-        loadingText="Adding…"
-        onClick={onApply}
-      >
-        Add to applications
-      </LoadingButton>
+    <div className="space-y-3 pt-2">
+      <p className="text-sm text-muted-foreground text-right">
+        Add to applications to track interviews, contacts, and documents for this role.
+      </p>
+      <div className="flex flex-wrap items-center justify-end gap-3">
+        <button
+          type="button"
+          onClick={onAnalyzeAnother}
+          className="rounded-md border bg-background px-4 py-2 text-sm font-medium hover:bg-muted min-h-[44px]"
+        >
+          Analyze another
+        </button>
+        <LoadingButton
+          type="button"
+          isLoading={applying}
+          loadingText="Adding…"
+          onClick={onApply}
+        >
+          Add to applications
+        </LoadingButton>
+      </div>
     </div>
   );
 }
