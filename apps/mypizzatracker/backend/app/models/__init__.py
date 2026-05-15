@@ -18,3 +18,4 @@ from app.models.customer.customer import Customer  # noqa: F401
 from app.models.order.order import Order  # noqa: F401
 from app.models.order.order_pizza import OrderPizza  # noqa: F401
 from app.models.order.order_pizza_topping import OrderPizzaTopping  # noqa: F401
+from app.models.expense.expense import Expense  # noqa: F401

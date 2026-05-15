@@ -3,6 +3,7 @@ import Home from "@/pages/Home";
 import Drops from "@/pages/Drops";
 import Menu from "@/pages/Menu";
 import Service from "@/pages/Service";
+import Financials from "@/pages/Financials";
 import Security from "@/pages/Security";
 import Settings from "@/pages/Settings";
 import Login from "@/pages/Login";
@@ -27,6 +28,7 @@ export const routes: RouteObject[] = [
       { path: "/drops", element: <Drops /> },
       { path: "/menu", element: <Menu /> },
       { path: "/service", element: <Service /> },
+      { path: "/financials", element: <Financials /> },
       { path: "/settings", element: <Settings /> },
       { path: "/security", element: <Security /> },
     ],
