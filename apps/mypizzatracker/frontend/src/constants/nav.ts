@@ -18,6 +18,7 @@ const NAV_DESCRIPTORS: NavDescriptor[] = [
   { path: "/menu", label: "Menu", iconName: "UtensilsCrossed" },
   { path: "/service", label: "Service", iconName: "ChefHat" },
   { path: "/financials", label: "Financials", iconName: "DollarSign" },
+  { path: "/customers", label: "Customers", iconName: "Users" },
   { path: "/settings", label: "Settings", iconName: "Settings" },
   { path: "/security", label: "Security", iconName: "Shield" },
 ];

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Card,
@@ -10,10 +10,11 @@ import {
   showError,
   extractErrorMessage,
 } from "@platform/ui";
-import { Plus, Trash2, Pizza, ArrowRight } from "lucide-react";
+import { Plus, Trash2, Pizza, ArrowRight, Sparkles } from "lucide-react";
 import {
   useGetCurrentPublicDropQuery,
   useGetPublicMenuQuery,
+  useLookupPublicCustomerQuery,
   usePlacePublicOrderMutation,
 } from "@/store/publicApi";
 import type {
@@ -33,6 +34,11 @@ import {
   paymentMethodLabel,
 } from "@/features/public-order/formatters";
 import { saveOrder } from "@/features/public-order/savedOrders";
+import {
+  countPhoneDigits,
+  selectOrderableTheUsual,
+} from "@/features/public-order/applyTheUsual";
+import { useDebouncedValue } from "@/features/public-order/useDebouncedValue";
 
 /**
  * Customer-facing order placement page (mounted at /order, no auth).
@@ -200,7 +206,57 @@ function OrderBuilder({ drop, menu, onPlaced }: OrderBuilderProps) {
   const [paymentMethod, setPaymentMethod] = useState<string>(
     PAYMENT_METHOD_OPTIONS[0]?.tag ?? "venmo",
   );
+  // Once the customer has applied "the usual", they shouldn't be re-prompted
+  // every time they tweak the phone. Locking the banner after one apply keeps
+  // the page calm; clearing the phone field resets it.
+  const [usualApplied, setUsualApplied] = useState(false);
   const [placeOrder, { isLoading }] = usePlacePublicOrderMutation();
+
+  // Debounce + gate the customer lookup. Only fire when the customer has
+  // typed something that could realistically match a phone (>=7 digits) and
+  // when the value has been still for 400ms.
+  const debouncedPhone = useDebouncedValue(customerPhone, 400);
+  const debouncedDigits = countPhoneDigits(debouncedPhone);
+  const lookupQuery = useLookupPublicCustomerQuery(debouncedPhone, {
+    skip: debouncedDigits < 7 || usualApplied,
+  });
+
+  // If the customer name field is empty when a match returns, pre-fill it.
+  // Never overwrite something the customer typed.
+  useEffect(() => {
+    if (
+      lookupQuery.data?.customer_name
+      && customerName.trim() === ""
+    ) {
+      setCustomerName(lookupQuery.data.customer_name);
+    }
+  }, [lookupQuery.data, customerName]);
+
+  // Clearing the phone resets the "applied" lock so a different customer
+  // on a shared device can get their own "welcome back".
+  useEffect(() => {
+    if (countPhoneDigits(customerPhone) < 7 && usualApplied) {
+      setUsualApplied(false);
+    }
+  }, [customerPhone, usualApplied]);
+
+  const orderableTheUsual = useMemo(() => {
+    if (!lookupQuery.data) return [];
+    return selectOrderableTheUsual(lookupQuery.data.the_usual, menu);
+  }, [lookupQuery.data, menu]);
+
+  const applyTheUsual = () => {
+    if (orderableTheUsual.length === 0) return;
+    setLines(
+      orderableTheUsual.map((line) => ({
+        localId: cryptoRandomId(),
+        pizza_type_id: line.pizza_type_id,
+        topping_type_ids: new Set(line.topping_type_ids),
+        modifications_text: line.modifications_text,
+      })),
+    );
+    setUsualApplied(true);
+  };
 
   const selectedSlot = drop.slots.find((s) => s.id === selectedSlotId);
   const slotsWithCapacity = drop.slots.filter((s) => s.remaining_pizzas > 0);
@@ -342,6 +398,15 @@ function OrderBuilder({ drop, menu, onPlaced }: OrderBuilderProps) {
               autoComplete="tel"
             />
           </FormField>
+
+          {lookupQuery.data ? (
+            <WelcomeBack
+              name={lookupQuery.data.customer_name}
+              theUsualCount={orderableTheUsual.length}
+              applied={usualApplied}
+              onApply={applyTheUsual}
+            />
+          ) : null}
           <FormField label="How will you pay?" required>
             <div className="flex flex-wrap gap-2">
               {PAYMENT_METHOD_OPTIONS.map((opt) => (
@@ -544,6 +609,48 @@ function ToppingChip({ topping, selected, onClick }: ToppingChipProps) {
       {topping.name}
       {priceSuffix}
     </button>
+  );
+}
+
+interface WelcomeBackProps {
+  name: string;
+  theUsualCount: number;
+  applied: boolean;
+  onApply: () => void;
+}
+
+function WelcomeBack({ name, theUsualCount, applied, onApply }: WelcomeBackProps) {
+  return (
+    <div className="rounded border border-primary/40 bg-primary/5 px-3 py-2 flex items-start gap-3">
+      <Sparkles className="h-4 w-4 mt-0.5 text-primary shrink-0" />
+      <div className="flex-1">
+        <p className="text-sm font-medium">Welcome back, {name}!</p>
+        {applied ? (
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Your usual order has been loaded -- adjust the pizzas below as needed.
+          </p>
+        ) : theUsualCount > 0 ? (
+          <>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Want to order your usual? We can fill in your last order's{" "}
+              {theUsualCount === 1 ? "pizza" : `${theUsualCount} pizzas`} for you.
+            </p>
+            <Button
+              size="sm"
+              className="mt-2"
+              onClick={onApply}
+              aria-label="Order the usual"
+            >
+              Order the usual
+            </Button>
+          </>
+        ) : (
+          <p className="text-xs text-muted-foreground mt-0.5">
+            (Your previous picks aren't on the current menu -- pick fresh below.)
+          </p>
+        )}
+      </div>
+    </div>
   );
 }
 

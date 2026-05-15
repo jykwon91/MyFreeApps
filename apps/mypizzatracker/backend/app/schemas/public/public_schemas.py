@@ -102,3 +102,30 @@ class PublicOrderConfirmation(BaseModel):
     pizzas: list[PublicOrderPizzaConfirmation]
     total: Decimal
     created_at: datetime
+
+
+# ---------------------------------------------------------------------------
+# Customer "the usual" lookup
+# ---------------------------------------------------------------------------
+
+class PublicTheUsualPizza(BaseModel):
+    """One pizza line from the customer's most recent non-no-show order,
+    filtered to items still active in today's menu."""
+
+    pizza_type_id: uuid.UUID
+    topping_type_ids: list[uuid.UUID] = Field(default_factory=list)
+    modifications_text: Optional[str] = None
+
+
+class PublicCustomerLookup(BaseModel):
+    """Response for ``GET /public/customers/lookup?phone=...``.
+
+    Returned only when a customer matches the phone. The "the usual" field
+    is the filtered pizza-line list from their most recent non-no-show
+    order; it may be empty if the menu has changed enough that none of
+    their prior items are still on offer (the frontend then shows the
+    welcome banner but suppresses the "Order the usual" button).
+    """
+
+    customer_name: str
+    the_usual: list[PublicTheUsualPizza] = Field(default_factory=list)

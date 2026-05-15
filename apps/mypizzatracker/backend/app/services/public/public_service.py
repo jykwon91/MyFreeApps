@@ -18,16 +18,20 @@ from app.models.drop.drop import Drop
 from app.models.menu.pizza_type import PizzaType
 from app.models.menu.topping_type import ToppingType
 from app.models.order.order import Order
+from app.repositories.customer import customer_repo
 from app.repositories.menu import menu_repo
 from app.schemas.public.public_schemas import (
+    PublicCustomerLookup,
     PublicDropRead,
     PublicMenuRead,
     PublicOrderConfirmation,
     PublicOrderPizzaConfirmation,
     PublicPizzaRead,
     PublicSlotRead,
+    PublicTheUsualPizza,
     PublicToppingRead,
 )
+from app.services.customer import customer_service
 from app.services.order import order_service
 
 
@@ -142,6 +146,57 @@ async def build_order_confirmation(
         pizzas=pizza_lines,
         total=total,
         created_at=order.created_at,
+    )
+
+
+async def build_customer_lookup(
+    db: AsyncSession, raw_phone: str,
+) -> PublicCustomerLookup | None:
+    """Return a "welcome back" + "the usual" payload for a phone, or ``None``.
+
+    "The usual" is built from the customer's most recent non-no-show order,
+    filtered to only pizzas / toppings still ``active`` in the menu. If
+    every line had its pizza 86'd, the_usual is an empty list -- the
+    frontend treats that as "show welcome banner, hide the usual button".
+    """
+    customer = await customer_service.find_by_normalized_phone(db, raw_phone)
+    if customer is None:
+        return None
+
+    recent = await customer_repo.get_recent_order_for_customer(db, customer.id)
+    if recent is None:
+        return PublicCustomerLookup(customer_name=customer.name, the_usual=[])
+
+    pizza_type_ids = {p.pizza_type_id for p in recent.pizzas}
+    topping_type_ids: set[uuid.UUID] = set()
+    for pizza in recent.pizzas:
+        topping_type_ids.update(t.topping_type_id for t in pizza.toppings)
+
+    pizza_types = await _load_pizza_types(db, pizza_type_ids)
+    topping_types = await _load_topping_types(db, topping_type_ids)
+
+    the_usual: list[PublicTheUsualPizza] = []
+    for pizza in recent.pizzas:
+        pizza_type = pizza_types.get(pizza.pizza_type_id)
+        if pizza_type is None or not pizza_type.active:
+            continue
+        active_toppings: list[uuid.UUID] = []
+        for topping_row in pizza.toppings:
+            topping = topping_types.get(topping_row.topping_type_id)
+            if topping is None or not topping.active:
+                continue
+            active_toppings.append(topping.id)
+        the_usual.append(
+            PublicTheUsualPizza(
+                pizza_type_id=pizza_type.id,
+                topping_type_ids=active_toppings,
+                modifications_text=pizza.modifications_text,
+            ),
+        )
+
+    return PublicCustomerLookup(
+        customer_name=customer.name,
+        the_usual=the_usual,
     )
 
 
