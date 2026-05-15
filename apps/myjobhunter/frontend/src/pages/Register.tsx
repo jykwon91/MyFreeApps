@@ -4,10 +4,10 @@ import {
   LoadingButton,
   PasswordPair,
   TurnstileWidget,
-  extractErrorMessage,
 } from "@platform/ui";
 import { Briefcase } from "lucide-react";
 import { register } from "@/lib/auth";
+import { describeRegisterError } from "@/features/auth/registerErrorMessages";
 import { useGetInviteInfoQuery } from "@/store/invitesApi";
 
 const INVITE_TOKEN_STORAGE_KEY = "myjobhunter.pendingInviteToken";
@@ -129,7 +129,7 @@ function RegisterWithInvite({ token }: RegisterWithInviteProps) {
       await register(invite!.email, password, turnstileToken);
       setRegistered(true);
     } catch (err) {
-      setSubmitError(extractErrorMessage(err));
+      setSubmitError(describeRegisterError(err));
     } finally {
       setIsSubmitting(false);
     }
