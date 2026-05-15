@@ -36,7 +36,7 @@ const gamesApi = baseApi.injectEndpoints({
       query: ({ mapId, objectKey }) => ({
         url: `/maps/${mapId}/minimap`,
         method: "POST",
-        body: { object_key: objectKey },
+        data: { object_key: objectKey },
       }),
     }),
     // Bulk-update polygon_points across zones for a single map. On success
@@ -49,7 +49,7 @@ const gamesApi = baseApi.injectEndpoints({
       query: ({ mapId, body }) => ({
         url: `/maps/${mapId}/zones`,
         method: "PATCH",
-        body,
+        data: body,
       }),
       // The map-detail query is keyed by (gameSlug, mapSlug), so we can't
       // invalidate by mapId. Caller fires a refetch via the query's

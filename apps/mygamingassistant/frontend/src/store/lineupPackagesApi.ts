@@ -43,7 +43,7 @@ const lineupPackagesApi = lineupPackagesBaseApi.injectEndpoints({
       query: (payload) => ({
         url: "/lineup-packages",
         method: "POST",
-        body: payload,
+        data: payload,
       }),
       invalidatesTags: ["LineupPackageList"],
     }),
@@ -55,7 +55,7 @@ const lineupPackagesApi = lineupPackagesBaseApi.injectEndpoints({
       query: ({ id, patch }) => ({
         url: `/lineup-packages/${id}`,
         method: "PATCH",
-        body: patch,
+        data: patch,
       }),
       invalidatesTags: (_result, _err, { id }) => [
         { type: "LineupPackage", id },

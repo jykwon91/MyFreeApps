@@ -28,7 +28,7 @@ const sourcesApi = sourcesBaseApi.injectEndpoints({
       query: (payload) => ({
         url: "/sources",
         method: "POST",
-        body: payload,
+        data: payload,
       }),
       invalidatesTags: ["SourceList"],
     }),
