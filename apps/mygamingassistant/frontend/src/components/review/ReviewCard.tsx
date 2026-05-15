@@ -17,6 +17,7 @@ import type { Lineup, LineupAcceptBody } from "@/types/game";
 import ConfidenceBadge from "./ConfidenceBadge";
 import { confidenceBorderClass } from "./confidenceUtils";
 import ReviewScreenshot from "./ReviewScreenshot";
+import MinimapPinEditor from "./MinimapPinEditor";
 
 // ---------------------------------------------------------------------------
 // Classification form state helpers
@@ -33,6 +34,10 @@ interface ClassificationFields {
   notes: string;
   aim_anchor_x: string;
   aim_anchor_y: string;
+  stand_anchor_x: string;
+  stand_anchor_y: string;
+  target_anchor_x: string;
+  target_anchor_y: string;
   setup_seconds: string;
 }
 
@@ -48,6 +53,10 @@ function initFieldsFromLineup(lineup: Lineup): ClassificationFields {
     notes: lineup.notes ?? "",
     aim_anchor_x: lineup.aim_anchor_x != null ? String(lineup.aim_anchor_x) : "",
     aim_anchor_y: lineup.aim_anchor_y != null ? String(lineup.aim_anchor_y) : "",
+    stand_anchor_x: lineup.stand_anchor_x != null ? String(lineup.stand_anchor_x) : "",
+    stand_anchor_y: lineup.stand_anchor_y != null ? String(lineup.stand_anchor_y) : "",
+    target_anchor_x: lineup.target_anchor_x != null ? String(lineup.target_anchor_x) : "",
+    target_anchor_y: lineup.target_anchor_y != null ? String(lineup.target_anchor_y) : "",
     setup_seconds: lineup.setup_seconds != null ? String(lineup.setup_seconds) : "",
   };
 }
@@ -68,6 +77,14 @@ function fieldsToAcceptBody(fields: ClassificationFields): LineupAcceptBody {
   if (!isNaN(ax)) body.aim_anchor_x = ax;
   const ay = parseFloat(fields.aim_anchor_y);
   if (!isNaN(ay)) body.aim_anchor_y = ay;
+  const sax = parseFloat(fields.stand_anchor_x);
+  if (!isNaN(sax)) body.stand_anchor_x = sax;
+  const say = parseFloat(fields.stand_anchor_y);
+  if (!isNaN(say)) body.stand_anchor_y = say;
+  const tax = parseFloat(fields.target_anchor_x);
+  if (!isNaN(tax)) body.target_anchor_x = tax;
+  const tay = parseFloat(fields.target_anchor_y);
+  if (!isNaN(tay)) body.target_anchor_y = tay;
   const sec = parseInt(fields.setup_seconds, 10);
   if (!isNaN(sec)) body.setup_seconds = sec;
   return body;
@@ -81,12 +98,15 @@ export interface ReviewCardProps {
   lineup: Lineup;
   checked: boolean;
   onCheckToggle: () => void;
+  /** Resolved minimap URL for this lineup's map (MinIO URL or bundled fallback). */
+  minimapUrl: string | null;
 }
 
 export default function ReviewCard({
   lineup,
   checked,
   onCheckToggle,
+  minimapUrl,
 }: ReviewCardProps) {
   const [fields, setFields] = useState<ClassificationFields>(() =>
     initFieldsFromLineup(lineup),
@@ -244,6 +264,41 @@ export default function ReviewCard({
             </label>
           </div>
         </div>
+      </div>
+
+      {/* Minimap pin editor */}
+      <div className="px-3 pb-3">
+        <p className="text-xs text-muted-foreground mb-1.5 font-medium">
+          Minimap positions{" "}
+          {minimapUrl && (
+            <span className="opacity-60">(drag pins to refine)</span>
+          )}
+        </p>
+        <MinimapPinEditor
+          lineup={lineup}
+          minimapUrl={minimapUrl}
+          standAnchorX={fields.stand_anchor_x}
+          standAnchorY={fields.stand_anchor_y}
+          targetAnchorX={fields.target_anchor_x}
+          targetAnchorY={fields.target_anchor_y}
+          onStandChange={(x, y) => {
+            setField("stand_anchor_x", x.toFixed(4));
+            setField("stand_anchor_y", y.toFixed(4));
+          }}
+          onTargetChange={(x, y) => {
+            setField("target_anchor_x", x.toFixed(4));
+            setField("target_anchor_y", y.toFixed(4));
+          }}
+          onResetStand={() => {
+            setField("stand_anchor_x", "");
+            setField("stand_anchor_y", "");
+          }}
+          onResetTarget={() => {
+            setField("target_anchor_x", "");
+            setField("target_anchor_y", "");
+          }}
+          disabled={isAccepting}
+        />
       </div>
 
       {/* Classification fields */}

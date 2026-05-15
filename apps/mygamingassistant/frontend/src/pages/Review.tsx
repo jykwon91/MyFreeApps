@@ -12,7 +12,7 @@
  *   ReviewSkeletonCard — loading placeholder
  */
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Check,
   CheckSquare,
@@ -25,7 +25,7 @@ import {
   useGetPendingLineupsQuery,
   useBulkAcceptLineupsMutation,
 } from "@/store/lineupsApi";
-import { useGetGamesQuery } from "@/store/gamesApi";
+import { useGetGamesQuery, useGetMapsQuery } from "@/store/gamesApi";
 import ReviewCard from "@/components/review/ReviewCard";
 import ReviewSkeletonCard from "@/components/review/ReviewSkeletonCard";
 
@@ -64,7 +64,30 @@ export default function Review() {
   const [bulkAccept, { isLoading: isBulkAccepting }] =
     useBulkAcceptLineupsMutation();
 
-  const lineups = data?.items ?? [];
+  const lineups = useMemo(() => data?.items ?? [], [data?.items]);
+
+  // Resolve the game slug to fetch maps for. When a game filter is active use
+  // that slug directly; otherwise fall back to the first game in the lineup
+  // page (typically "cs2"). RTK Query deduplicates the fetch automatically.
+  const mapsGameSlug = useMemo(() => {
+    if (gameSlugFilter) return gameSlugFilter;
+    if (!games || !lineups.length) return "";
+    const firstGameId = lineups[0]?.game_id;
+    return games.find((g) => g.id === firstGameId)?.slug ?? "";
+  }, [gameSlugFilter, games, lineups]);
+
+  const { data: maps = [] } = useGetMapsQuery(mapsGameSlug, {
+    skip: !mapsGameSlug,
+  });
+
+  // map_id → minimap_url lookup (MinIO URL; MinimapPinEditor applies bundled fallback on onError).
+  const minimapByMapId = useMemo<Record<string, string | null>>(() => {
+    const out: Record<string, string | null> = {};
+    for (const m of maps) {
+      out[m.id] = m.minimap_url;
+    }
+    return out;
+  }, [maps]);
   const total = data?.total ?? 0;
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
@@ -239,6 +262,7 @@ export default function Review() {
               lineup={lineup}
               checked={selectedIds.has(lineup.id)}
               onCheckToggle={() => toggleSelect(lineup.id)}
+              minimapUrl={minimapByMapId[lineup.map_id] ?? null}
             />
           ))}
         </div>

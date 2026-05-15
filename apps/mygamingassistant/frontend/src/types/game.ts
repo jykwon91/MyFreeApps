@@ -156,6 +156,10 @@ export interface LineupAcceptBody {
   notes?: string;
   aim_anchor_x?: number;
   aim_anchor_y?: number;
+  stand_anchor_x?: number;
+  stand_anchor_y?: number;
+  target_anchor_x?: number;
+  target_anchor_y?: number;
   setup_seconds?: number;
 }
 
@@ -213,6 +217,10 @@ export interface LineupPatch {
   notes?: string;
   aim_anchor_x?: number;
   aim_anchor_y?: number;
+  stand_anchor_x?: number;
+  stand_anchor_y?: number;
+  target_anchor_x?: number;
+  target_anchor_y?: number;
   setup_seconds?: number;
 }
 

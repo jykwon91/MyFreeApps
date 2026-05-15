@@ -1,4 +1,4 @@
-"""Unit + integration tests for the lineup API (PR 2).
+"""Unit + integration tests for the lineup API (PR 2 + PR 3).
 
 Tests verify:
 - POST /api/lineups/upload-url returns two URLs + lineup_id
@@ -9,6 +9,8 @@ Tests verify:
 - DELETE /api/lineups/{id} soft-deletes (status=hidden)
 - GET /api/games/{game_slug}/maps/{map_slug}/zone-density returns correct counts
 - Side 'any' semantics: lineup.side='any' appears in side_a and side_b queries
+- Minimap anchor persistence (PR 3): accept/patch minimap anchors, classifier
+  suggestions never stomp operator-set pins, range guard at API boundary
 """
 from __future__ import annotations
 
@@ -529,4 +531,189 @@ async def test_anchor_validation_rejects_out_of_range(
         "stand_anchor_x": 1.5,  # out of range
     }
     resp = await auth_client.post("/api/lineups", json=payload)
+    assert resp.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# Minimap anchor persistence tests (PR 3/3)
+# ---------------------------------------------------------------------------
+
+@pytest_asyncio.fixture
+async def pending_lineup_for_accept(
+    db: AsyncSession,
+    seeded_with_polygons: dict,
+) -> "Lineup":
+    """A pending_review lineup whose suggested_* fields are pre-filled so
+    the accept endpoint can transition it without needing extra overrides."""
+    seeded = seeded_with_polygons
+    lineup = Lineup(
+        game_id=seeded["game"].id,
+        map_id=seeded["map"].id,
+        title="pending for accept test",
+        status="pending_review",
+        # Populate suggested fields so accept() can derive the required FKs
+        # without an explicit override body.
+        suggested_target_zone_id=seeded["zone_target"].id,
+        suggested_stand_zone_id=seeded["zone_stand"].id,
+        suggested_side="side_a",
+        suggested_utility_type_id=seeded["util"].id,
+    )
+    db.add(lineup)
+    await db.flush()
+    return lineup
+
+
+@pytest.mark.asyncio
+async def test_accept_persists_explicit_minimap_anchors(
+    auth_client: AsyncClient,
+    pending_lineup_for_accept: "Lineup",
+    db: AsyncSession,
+):
+    """POST /api/lineups/{id}/accept with explicit minimap anchors must persist them."""
+    lineup_id = str(pending_lineup_for_accept.id)
+
+    resp = await auth_client.post(
+        f"/api/lineups/{lineup_id}/accept",
+        json={
+            "stand_anchor_x": 0.31,
+            "stand_anchor_y": 0.42,
+            "target_anchor_x": 0.78,
+            "target_anchor_y": 0.65,
+        },
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+
+    assert body["status"] == "accepted"
+    assert body["stand_anchor_x"] == pytest.approx(0.31)
+    assert body["stand_anchor_y"] == pytest.approx(0.42)
+    assert body["target_anchor_x"] == pytest.approx(0.78)
+    assert body["target_anchor_y"] == pytest.approx(0.65)
+
+    # Effective_* must also equal the explicit anchors (not fall back to centroid)
+    assert body["effective_stand_x"] == pytest.approx(0.31)
+    assert body["effective_stand_y"] == pytest.approx(0.42)
+    assert body["effective_target_x"] == pytest.approx(0.78)
+    assert body["effective_target_y"] == pytest.approx(0.65)
+
+
+@pytest.mark.asyncio
+async def test_patch_persists_explicit_minimap_anchors(
+    auth_client: AsyncClient,
+    seeded_with_polygons: dict,
+):
+    """PATCH /api/lineups/{id} with minimap anchors must persist all four values."""
+    # Create a plain accepted lineup without any anchors
+    create_resp = await auth_client.post(
+        "/api/lineups",
+        json={
+            "game_id": str(seeded_with_polygons["game"].id),
+            "map_id": str(seeded_with_polygons["map"].id),
+            "target_zone_id": str(seeded_with_polygons["zone_target"].id),
+            "stand_zone_id": str(seeded_with_polygons["zone_stand"].id),
+            "side": "side_a",
+            "utility_type_id": str(seeded_with_polygons["util"].id),
+            "title": "patch-anchor lineup",
+        },
+    )
+    assert create_resp.status_code == 201, create_resp.text
+    lineup_id = create_resp.json()["id"]
+
+    # PATCH all four minimap anchor fields
+    patch_resp = await auth_client.patch(
+        f"/api/lineups/{lineup_id}",
+        json={
+            "stand_anchor_x": 0.31,
+            "stand_anchor_y": 0.42,
+            "target_anchor_x": 0.78,
+            "target_anchor_y": 0.65,
+        },
+    )
+    assert patch_resp.status_code == 200, patch_resp.text
+    body = patch_resp.json()
+
+    assert body["stand_anchor_x"] == pytest.approx(0.31)
+    assert body["stand_anchor_y"] == pytest.approx(0.42)
+    assert body["target_anchor_x"] == pytest.approx(0.78)
+    assert body["target_anchor_y"] == pytest.approx(0.65)
+
+    # Effective_* must equal the patched anchors
+    assert body["effective_stand_x"] == pytest.approx(0.31)
+    assert body["effective_stand_y"] == pytest.approx(0.42)
+    assert body["effective_target_x"] == pytest.approx(0.78)
+    assert body["effective_target_y"] == pytest.approx(0.65)
+
+
+@pytest.mark.asyncio
+async def test_classifier_suggestions_never_overwrite_operator_anchors(
+    db: AsyncSession,
+    seeded_with_polygons: dict,
+):
+    """write_classifier_suggestions must not clobber operator-set minimap anchors.
+
+    The classifier only receives the stand screenshot (it never sees the
+    minimap frame), so it cannot produce reliable top-down coords. The repo
+    function only writes keys present in its suggestions dict, which never
+    includes stand_anchor_*/target_anchor_* — this test guards that invariant.
+    """
+    from app.repositories.game.lineup_repo import write_classifier_suggestions
+    from app.services.classification.classification_result import ClassificationResult
+
+    seeded = seeded_with_polygons
+
+    # Create a lineup with operator-set minimap anchors
+    lineup = Lineup(
+        game_id=seeded["game"].id,
+        map_id=seeded["map"].id,
+        title="anchor guard lineup",
+        status="pending_review",
+        stand_anchor_x=0.3,
+        stand_anchor_y=0.4,
+        target_anchor_x=0.7,
+        target_anchor_y=0.9,
+    )
+    db.add(lineup)
+    await db.flush()
+
+    # Build the suggestions dict exactly as the classifier does — it only
+    # contains aim_anchor_x/y and suggested_* / classification_* fields.
+    classifier_suggestions: dict = {
+        "aim_anchor_x": 0.5,
+        "aim_anchor_y": 0.5,
+        "suggested_game_id": seeded["game"].id,
+        "suggested_map_id": seeded["map"].id,
+        "suggested_target_zone_id": seeded["zone_target"].id,
+        "suggested_stand_zone_id": seeded["zone_stand"].id,
+        "suggested_side": "side_a",
+        "suggested_utility_type_id": seeded["util"].id,
+        "classification_confidence": 0.88,
+        "classification_reasoning": "Clear smoke throw visible.",
+    }
+
+    await write_classifier_suggestions(db, lineup, classifier_suggestions)
+
+    # Operator-set minimap anchors must be unchanged
+    assert lineup.stand_anchor_x == pytest.approx(0.3)
+    assert lineup.stand_anchor_y == pytest.approx(0.4)
+    assert lineup.target_anchor_x == pytest.approx(0.7)
+    assert lineup.target_anchor_y == pytest.approx(0.9)
+
+    # Classifier-set aim anchor and suggestions must have landed
+    assert lineup.aim_anchor_x == pytest.approx(0.5)
+    assert lineup.suggested_side == "side_a"
+    assert lineup.classification_confidence == pytest.approx(0.88)
+
+
+@pytest.mark.asyncio
+async def test_accept_range_guard_rejects_out_of_range_anchor(
+    auth_client: AsyncClient,
+    pending_lineup_for_accept: "Lineup",
+):
+    """POST /api/lineups/{id}/accept with stand_anchor_x=1.5 must return 422."""
+    lineup_id = str(pending_lineup_for_accept.id)
+
+    resp = await auth_client.post(
+        f"/api/lineups/{lineup_id}/accept",
+        json={"stand_anchor_x": 1.5},
+    )
     assert resp.status_code == 422
