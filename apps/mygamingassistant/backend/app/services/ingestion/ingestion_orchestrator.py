@@ -47,6 +47,7 @@ from app.services.ingestion.youtube_fetcher import (
     VideoMeta,
     YouTubeFetchError,
     download_video,
+    fetch_video_detail,
     list_videos,
 )
 
@@ -202,13 +203,46 @@ async def _process_video(
     source: Source,
     stats: SyncStats,
 ) -> None:
-    """Download a video, parse chapters, and create lineup rows."""
+    """Fetch full metadata, parse chapters, download, and create lineup rows."""
     logger.info(
         "Processing video: source_id=%s video_id=%s title=%r",
         source.id, video_meta.video_id, video_meta.title,
     )
 
-    # Download
+    # list_videos() uses extract_flat, so for playlist/channel sources
+    # video_meta has no description/duration/chapters. Fetch the full per-video
+    # info dict before parsing — otherwise every video looks chapter-less and
+    # the sync produces 0 lineups.
+    try:
+        video_meta = await fetch_video_detail(video_meta.video_id)
+    except YouTubeFetchError as exc:
+        logger.error(
+            "Video detail fetch failed: source_id=%s video_id=%s error_type=%s message=%s",
+            source.id, video_meta.video_id, exc.error_type, str(exc),
+        )
+        stats.error_count += 1
+        stats.errors.append(f"{video_meta.video_id}: detail fetch failed ({exc.error_type})")
+        return
+
+    chapters = parse_chapters(
+        description=video_meta.description,
+        video_duration=video_meta.duration,
+        native_chapters=video_meta.chapters or None,
+    )
+
+    if not chapters:
+        logger.info(
+            "No chapters found: source_id=%s video_id=%s — skipping",
+            source.id, video_meta.video_id,
+        )
+        return
+
+    logger.info(
+        "Found %d chapters: source_id=%s video_id=%s",
+        len(chapters), source.id, video_meta.video_id,
+    )
+
+    # Download only now that we know there are chapters worth extracting.
     try:
         video_path = await download_video(video_meta.video_id, download_dir)
     except VideoDownloadError as exc:
@@ -221,24 +255,6 @@ async def _process_video(
         return
 
     try:
-        chapters = parse_chapters(
-            description=video_meta.description,
-            video_duration=video_meta.duration,
-            native_chapters=video_meta.chapters or None,
-        )
-
-        if not chapters:
-            logger.info(
-                "No chapters found: source_id=%s video_id=%s — skipping",
-                source.id, video_meta.video_id,
-            )
-            return
-
-        logger.info(
-            "Found %d chapters: source_id=%s video_id=%s",
-            len(chapters), source.id, video_meta.video_id,
-        )
-
         for chapter_idx, chapter in enumerate(chapters):
             ok = await _process_chapter(
                 video_meta=video_meta,

@@ -24,6 +24,7 @@ from app.services.ingestion.youtube_fetcher import (
     VideoMeta,
     YouTubeFetchError,
     download_video,
+    fetch_video_detail,
     list_videos,
 )
 
@@ -168,6 +169,57 @@ class TestListVideos:
             videos = await list_videos(source)
         # Successful call with channel_url source — no error
         assert isinstance(videos, list)
+
+
+# ---------------------------------------------------------------------------
+# fetch_video_detail — full per-video extract (NOT extract_flat)
+# ---------------------------------------------------------------------------
+
+class TestFetchVideoDetail:
+    @pytest.mark.asyncio
+    async def test_returns_full_metadata_with_chapters(self):
+        """A full extract_info dict yields description + native chapters,
+        which list_videos' extract_flat entries never carry."""
+        full_info = {
+            "id": "vid777",
+            "title": "Mirage A-site executes",
+            "description": "0:00 Intro\n0:30 Stack smoke",
+            "duration": 240,
+            "upload_date": "20260201",
+            "channel": "ProCreator",
+            "chapters": [
+                {"start_time": 0, "end_time": 30, "title": "Intro"},
+                {"start_time": 30, "end_time": 240, "title": "Stack smoke"},
+            ],
+        }
+        mock_ydl = MagicMock()
+        mock_ydl.__enter__ = MagicMock(return_value=mock_ydl)
+        mock_ydl.__exit__ = MagicMock(return_value=False)
+        mock_ydl.extract_info = MagicMock(return_value=full_info)
+
+        with patch("yt_dlp.YoutubeDL", return_value=mock_ydl):
+            meta = await fetch_video_detail("vid777")
+
+        assert meta.video_id == "vid777"
+        assert meta.description == "0:00 Intro\n0:30 Stack smoke"
+        assert meta.duration == 240
+        assert meta.channel_name == "ProCreator"
+        assert len(meta.chapters) == 2
+
+    @pytest.mark.asyncio
+    async def test_raises_on_download_error(self):
+        mock_ydl = MagicMock()
+        mock_ydl.__enter__ = MagicMock(return_value=mock_ydl)
+        mock_ydl.__exit__ = MagicMock(return_value=False)
+        mock_ydl.extract_info = MagicMock(
+            side_effect=yt_dlp.utils.DownloadError("Video unavailable")
+        )
+
+        with patch("yt_dlp.YoutubeDL", return_value=mock_ydl):
+            with pytest.raises(YouTubeFetchError) as exc_info:
+                await fetch_video_detail("vidGone")
+
+        assert "DownloadError" in exc_info.value.error_type
 
 
 # ---------------------------------------------------------------------------
