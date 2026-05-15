@@ -68,6 +68,44 @@ describe("extractErrorMessage", () => {
     ).toBe("An unexpected error occurred");
   });
 
+  it("reads axios err.response.data.detail BEFORE the Error.message fallback", () => {
+    // Regression: AxiosError IS an Error. A naive `err instanceof Error`
+    // check first returned "Request failed with status code 400" and
+    // never surfaced the server's {detail} body.
+    const axiosErr = new Error("Request failed with status code 400") as Error & {
+      response: { status: number; data: { detail: string } };
+    };
+    axiosErr.response = {
+      status: 400,
+      data: { detail: "REGISTER_USER_ALREADY_EXISTS" },
+    };
+    expect(extractErrorMessage(axiosErr)).toBe("REGISTER_USER_ALREADY_EXISTS");
+  });
+
+  it("reads RTK Query err.data.detail", () => {
+    expect(
+      extractErrorMessage({ status: 409, data: { detail: "invite_already_pending" } }),
+    ).toBe("invite_already_pending");
+  });
+
+  it("reads a string err.data body (axios timeout shape)", () => {
+    expect(extractErrorMessage({ status: 504, data: "Timeout" })).toBe("Timeout");
+  });
+
+  it("falls back to Error.message when there is no structured body", () => {
+    expect(extractErrorMessage(new Error("Email already exists"))).toBe(
+      "Email already exists",
+    );
+  });
+
+  it("ignores a blank/whitespace detail and falls through", () => {
+    const err = new Error("real message") as Error & {
+      response: { data: { detail: string } };
+    };
+    err.response = { data: { detail: "   " } };
+    expect(extractErrorMessage(err)).toBe("real message");
+  });
+
   it("falls back to a generic message for unknown shapes", () => {
     expect(extractErrorMessage(undefined)).toBe("An unexpected error occurred");
     expect(extractErrorMessage(null)).toBe("An unexpected error occurred");
