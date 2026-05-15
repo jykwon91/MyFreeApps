@@ -11,7 +11,7 @@ annotated-doc==0.0.4
     # via fastapi
 annotated-types==0.7.0
     # via pydantic
-anthropic==0.100.0
+anthropic==0.102.0
     # via mybookkeeper-backend
 anyio==4.13.0
     # via
@@ -98,7 +98,7 @@ google-api-core==2.30.3
     # via google-api-python-client
 google-api-python-client==2.196.0
     # via mybookkeeper-backend
-google-auth==2.50.0
+google-auth==2.52.0
     # via
     #   google-api-core
     #   google-api-python-client
@@ -110,7 +110,7 @@ google-auth-httplib2==0.4.0
     #   mybookkeeper-backend
 google-auth-oauthlib==1.4.0
     # via mybookkeeper-backend
-googleapis-common-protos==1.74.0
+googleapis-common-protos==1.75.0
     # via google-api-core
 greenlet==3.5.0
     # via sqlalchemy
@@ -133,7 +133,7 @@ httpx==0.28.1
     #   platform-shared
 icalendar==7.1.0
     # via mybookkeeper-backend
-idna==3.13
+idna==3.15
     # via
     #   anyio
     #   email-validator
@@ -171,7 +171,7 @@ pillow==12.2.0
     #   reportlab
 pluggy==1.6.0
     # via pytest
-proto-plus==1.27.2
+proto-plus==1.28.0
     # via google-api-core
 protobuf==7.34.1
     # via
@@ -245,15 +245,15 @@ qrcode==8.2
     # via
     #   mybookkeeper-backend
     #   platform-shared
-reportlab==4.5.0
+reportlab==4.5.1
     # via mybookkeeper-backend
-requests==2.33.1
+requests==2.34.2
     # via
     #   google-api-core
     #   requests-oauthlib
 requests-oauthlib==2.0.0
     # via google-auth-oauthlib
-sentry-sdk==2.59.0
+sentry-sdk==2.60.0
     # via
     #   mybookkeeper-backend
     #   platform-shared
@@ -300,7 +300,7 @@ urllib3==2.7.0
     #   minio
     #   requests
     #   sentry-sdk
-uvicorn==0.46.0
+uvicorn==0.47.0
     # via mybookkeeper-backend
 uvloop==0.22.1 ; platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32'
     # via uvicorn
