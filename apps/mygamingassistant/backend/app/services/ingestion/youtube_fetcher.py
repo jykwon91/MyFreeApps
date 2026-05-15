@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
@@ -78,6 +79,45 @@ def _source_url(source: Source) -> str:
     return cfg.get("url") or cfg.get("channel_url") or ""
 
 
+# A real YouTube video id is exactly 11 url-safe chars. Channel ids are 24
+# chars and start with "UC"; playlist ids start with "PL"/"UU"/etc. Filtering
+# on this shape stops a channel/tab id from masquerading as a video id.
+_VIDEO_ID_RE = re.compile(r"^[A-Za-z0-9_-]{11}$")
+
+# yt-dlp tab/segment suffixes that already point at a concrete listing — do
+# NOT rewrite these. Everything else that looks like a channel root gets
+# "/videos" appended.
+_EXPLICIT_TAB_SEGMENTS = frozenset(
+    {"videos", "shorts", "streams", "live", "playlists", "playlist", "watch"}
+)
+
+# Channel-root forms: youtube.com/@handle, /channel/UC..., /c/Name, /user/Name.
+_CHANNEL_ROOT_RE = re.compile(
+    r"^(https?://(?:www\.)?youtube\.com/(?:@[^/?#]+|channel/[^/?#]+|c/[^/?#]+|user/[^/?#]+))/?$",
+    re.IGNORECASE,
+)
+
+
+def _normalize_listing_url(url: str) -> str:
+    """Rewrite a bare channel URL to its /videos tab.
+
+    yt-dlp's ``extract_flat`` on a channel ROOT (``youtube.com/@Handle``)
+    returns the channel's *tab playlists* (Videos / Shorts / Live) as entries
+    — each carrying the **channel id**, not a video id. Downstream that id is
+    fed to ``watch?v=`` and yt-dlp reports "Video unavailable". Targeting the
+    ``/videos`` tab makes the single flat extraction return actual videos.
+
+    Playlist URLs (``playlist?list=``), ``watch?v=`` URLs, and channel URLs
+    that already name a tab are returned unchanged.
+    """
+    if "list=" in url or "watch?v=" in url:
+        return url
+    match = _CHANNEL_ROOT_RE.match(url.strip())
+    if not match:
+        return url
+    return f"{match.group(1)}/videos"
+
+
 async def list_videos(source: Source) -> list[VideoMeta]:
     """Return new video metadata for a Source without downloading anything.
 
@@ -88,13 +128,16 @@ async def list_videos(source: Source) -> list[VideoMeta]:
     exceptions are caught, logged at ERROR with structured context, and
     re-raised as YouTubeFetchError.
     """
-    url = _source_url(source)
-    if not url:
+    raw_url = _source_url(source)
+    if not raw_url:
         raise YouTubeFetchError(
             f"Source {source.id} has no URL in config_json",
             error_type="MissingURL",
             original=ValueError("missing URL"),
         )
+    # A bare channel URL flattens to tab-playlists, not videos — rewrite to
+    # the /videos tab so the flat extraction returns actual videos.
+    url = _normalize_listing_url(raw_url)
 
     ydl_opts = {
         "quiet": True,
@@ -110,18 +153,33 @@ async def list_videos(source: Source) -> list[VideoMeta]:
         if info is None:
             return []
 
-        entries = info.get("entries") or []
-        # Single video (not a playlist/channel) — wrap in a list.
-        # Only treat the root info as a video if it has no "entries" key at all
-        # (a playlist with 0 entries still has entries=[]).
-        if "entries" not in info and info.get("id"):
-            entries = [info]
+        # A channel can flatten to a playlist-of-playlists (the Videos/Shorts/
+        # Live tabs). Descend into any nested "entries" so we always end up at
+        # leaf video entries. A node with no "entries" key at all is the
+        # single watch?v= case — treat it as one leaf.
+        def _iter_leaf_entries(node: dict):
+            nested = node.get("entries")
+            if nested is None:
+                yield node
+                return
+            for child in nested:
+                if child is not None:
+                    yield from _iter_leaf_entries(child)
 
         results: list[VideoMeta] = []
-        for entry in entries:
-            vid_id = entry.get("id") or entry.get("url", "").split("v=")[-1]
-            if not vid_id:
+        seen: set[str] = set()
+        for entry in _iter_leaf_entries(info):
+            if entry.get("_type") == "playlist":
                 continue
+            vid_id = entry.get("id") or entry.get("url", "").split("v=")[-1]
+            # Reject anything that isn't a real 11-char video id — a channel
+            # id (UC…, 24 chars) or playlist id slipping through here is the
+            # exact bug that made channel syncs produce 0 lineups.
+            if not vid_id or not _VIDEO_ID_RE.match(vid_id):
+                continue
+            if vid_id in seen:
+                continue
+            seen.add(vid_id)
             results.append(
                 VideoMeta(
                     video_id=vid_id,
