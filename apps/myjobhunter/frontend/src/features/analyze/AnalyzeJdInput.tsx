@@ -19,7 +19,7 @@
  * and the test surface is small.
  */
 import { useEffect, useRef } from "react";
-import { LoadingButton } from "@platform/ui";
+import { AlertBox, LoadingButton } from "@platform/ui";
 
 const URL_REGEX = /^https?:\/\/\S+$/i;
 
@@ -36,6 +36,13 @@ export interface AnalyzeJdInputProps {
   onSubmitUrl: () => void;
   onSubmitText: () => void;
   onPasteUrl: (pasted: string) => void;
+  /**
+   * Persistent explanation shown above the textarea after a URL fetch
+   * was blocked (auth-walled site, 401/403). Survives until the user
+   * acts — unlike the old transient toast, which vanished and made the
+   * silent tab-switch look like the app had broken.
+   */
+  notice?: string | null;
 }
 
 export default function AnalyzeJdInput(props: AnalyzeJdInputProps) {
@@ -121,10 +128,12 @@ function TextPanel({
   onChangeMode,
   onChangeText,
   onSubmitText,
+  notice,
 }: AnalyzeJdInputProps) {
   const canSubmit = !isSubmitting && textValue.trim().length > 0;
   return (
     <div className="space-y-3">
+      {notice && <AlertBox variant="warning">{notice}</AlertBox>}
       <label htmlFor="analyze-text" className="block text-sm font-medium">
         Paste the job description text
       </label>

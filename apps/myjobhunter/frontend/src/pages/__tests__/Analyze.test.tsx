@@ -9,13 +9,12 @@ import type { JobAnalysis } from "@/types/job-analysis/job-analysis";
 // Mocks
 // ---------------------------------------------------------------------------
 
-vi.mock("lucide-react", () => ({
-  Loader2: () => null,
-  Sparkles: () => null,
-  ExternalLink: () => null,
-  AlertTriangle: () => null,
-  CheckCircle2: () => null,
-}));
+// lucide-react is intentionally NOT mocked. The @platform/ui mock below
+// spreads the real barrel (importOriginal), which transitively renders
+// real icons anyway; a hard-coded icon stub map just breaks the whole
+// file with "No <Icon> export" the moment a new component is pulled in.
+// Real icons render as harmless <svg> in jsdom — tests query by
+// text/role, never by icon.
 
 vi.mock("@/lib/jobAnalysisApi", () => ({
   useAnalyzeJobMutation: vi.fn(),
@@ -274,6 +273,83 @@ describe("Analyze page", () => {
 
     // Back to input
     expect(await screen.findByLabelText("Job posting URL")).toBeInTheDocument();
+  });
+
+  it("shows a persistent banner (not a vanishing toast) when the URL is auth-walled", async () => {
+    const { showError } = await import("@platform/ui");
+    const analyzeMock = vi.fn().mockReturnValue({
+      unwrap: () =>
+        Promise.reject({ status: 422, data: { detail: "auth_required" } }),
+    });
+    mockUseAnalyzeJobMutation.mockReturnValue([
+      analyzeMock,
+      { isLoading: false, reset: vi.fn() },
+    ] as unknown as ReturnType<typeof useAnalyzeJobMutation>);
+    mockUseApplyFromAnalysisMutation.mockReturnValue([
+      vi.fn(),
+      { isLoading: false, reset: vi.fn() },
+    ] as unknown as ReturnType<typeof useApplyFromAnalysisMutation>);
+
+    const user = userEvent.setup();
+    renderAnalyze();
+
+    await user.type(
+      screen.getByLabelText("Job posting URL"),
+      "https://www.linkedin.com/jobs/view/123",
+    );
+    const urlButtons = screen.getAllByRole("button", {
+      name: /Analyze this job/i,
+    });
+    await user.click(urlButtons[urlButtons.length - 1]!);
+
+    // Switched to the text tab AND a persistent explanation is shown.
+    expect(
+      await screen.findByLabelText("Job description text"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/couldn't read that link/i),
+    ).toBeInTheDocument();
+    // The auth-required case must NOT use the transient toast — that
+    // vanishing was the whole "it seems broken" complaint.
+    expect(showError).not.toHaveBeenCalled();
+  });
+
+  it("clears the blocked-link banner when the user switches back to the URL tab", async () => {
+    const analyzeMock = vi.fn().mockReturnValue({
+      unwrap: () =>
+        Promise.reject({ status: 422, data: { detail: "auth_required" } }),
+    });
+    mockUseAnalyzeJobMutation.mockReturnValue([
+      analyzeMock,
+      { isLoading: false, reset: vi.fn() },
+    ] as unknown as ReturnType<typeof useAnalyzeJobMutation>);
+    mockUseApplyFromAnalysisMutation.mockReturnValue([
+      vi.fn(),
+      { isLoading: false, reset: vi.fn() },
+    ] as unknown as ReturnType<typeof useApplyFromAnalysisMutation>);
+
+    const user = userEvent.setup();
+    renderAnalyze();
+
+    await user.type(
+      screen.getByLabelText("Job posting URL"),
+      "https://www.linkedin.com/jobs/view/123",
+    );
+    const urlButtons = screen.getAllByRole("button", {
+      name: /Analyze this job/i,
+    });
+    await user.click(urlButtons[urlButtons.length - 1]!);
+
+    await screen.findByText(/couldn't read that link/i);
+
+    await user.click(
+      screen.getByText(/Have a URL\? Paste it instead/i),
+    );
+
+    expect(screen.getByLabelText("Job posting URL")).toBeInTheDocument();
+    expect(
+      screen.queryByText(/couldn't read that link/i),
+    ).not.toBeInTheDocument();
   });
 
   it("shows the 'saved — view applications' affordance for an analysis that's already applied", async () => {
