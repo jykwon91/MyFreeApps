@@ -2,6 +2,10 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { Provider } from "react-redux";
+import { configureStore } from "@reduxjs/toolkit";
+import { baseApi } from "@platform/ui";
+import jobAnalysisReducer from "@/store/jobAnalysisSlice";
 import Analyze from "@/pages/Analyze";
 import type { JobAnalysis } from "@/types/job-analysis/job-analysis";
 
@@ -62,6 +66,24 @@ const mockUseAnalyzeJobMutation = vi.mocked(useAnalyzeJobMutation);
 const mockUseApplyFromAnalysisMutation = vi.mocked(useApplyFromAnalysisMutation);
 
 // ---------------------------------------------------------------------------
+// Test store factory
+// ---------------------------------------------------------------------------
+
+function makeTestStore(preloadedJobAnalysis?: { lastResult: JobAnalysis | null }) {
+  return configureStore({
+    reducer: {
+      [baseApi.reducerPath]: baseApi.reducer,
+      jobAnalysis: jobAnalysisReducer,
+    },
+    middleware: (getDefaultMiddleware) =>
+      getDefaultMiddleware().concat(baseApi.middleware),
+    preloadedState: preloadedJobAnalysis
+      ? { jobAnalysis: preloadedJobAnalysis }
+      : undefined,
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Fixtures
 // ---------------------------------------------------------------------------
 
@@ -104,18 +126,28 @@ function makeAnalysis(overrides: Partial<JobAnalysis> = {}): JobAnalysis {
   };
 }
 
-function renderAnalyze() {
-  return render(
-    <MemoryRouter initialEntries={["/analyze"]}>
-      <Routes>
-        <Route path="/analyze" element={<Analyze />} />
-        <Route
-          path="/applications"
-          element={<div data-testid="applications-page">Applications</div>}
-        />
-      </Routes>
-    </MemoryRouter>,
-  );
+interface RenderOptions {
+  store?: ReturnType<typeof makeTestStore>;
+}
+
+function renderAnalyze({ store }: RenderOptions = {}) {
+  const testStore = store ?? makeTestStore();
+  return {
+    store: testStore,
+    ...render(
+      <Provider store={testStore}>
+        <MemoryRouter initialEntries={["/analyze"]}>
+          <Routes>
+            <Route path="/analyze" element={<Analyze />} />
+            <Route
+              path="/applications"
+              element={<div data-testid="applications-page">Applications</div>}
+            />
+          </Routes>
+        </MemoryRouter>
+      </Provider>,
+    ),
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -390,6 +422,160 @@ describe("Analyze page", () => {
     // Primary "Add to applications" should NOT render when already saved.
     expect(
       screen.queryByRole("button", { name: /Add to applications/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  // ---------------------------------------------------------------------------
+  // Slice persistence tests (new)
+  // ---------------------------------------------------------------------------
+
+  it("re-hydrates result view from slice on remount — no flash of input", () => {
+    // Arrange: pre-populate the store with a completed analysis.
+    const store = makeTestStore({ lastResult: makeAnalysis() });
+    mockUseAnalyzeJobMutation.mockReturnValue([
+      vi.fn(),
+      { isLoading: false, reset: vi.fn() },
+    ] as unknown as ReturnType<typeof useAnalyzeJobMutation>);
+    mockUseApplyFromAnalysisMutation.mockReturnValue([
+      vi.fn(),
+      { isLoading: false, reset: vi.fn() },
+    ] as unknown as ReturnType<typeof useApplyFromAnalysisMutation>);
+
+    // Mount Analyze with the pre-populated store (simulates returning after
+    // navigation away).
+    renderAnalyze({ store });
+
+    // Should render the result immediately — no input view visible.
+    expect(screen.queryByText("Analyze a job")).not.toBeInTheDocument();
+    expect(screen.getByText("Worth considering")).toBeInTheDocument();
+    expect(screen.getByText("Senior Backend Engineer")).toBeInTheDocument();
+  });
+
+  it("slice is cleared on 'Analyze another' so remount shows input", async () => {
+    const store = makeTestStore({ lastResult: makeAnalysis() });
+    mockUseAnalyzeJobMutation.mockReturnValue([
+      vi.fn(),
+      { isLoading: false, reset: vi.fn() },
+    ] as unknown as ReturnType<typeof useAnalyzeJobMutation>);
+    mockUseApplyFromAnalysisMutation.mockReturnValue([
+      vi.fn(),
+      { isLoading: false, reset: vi.fn() },
+    ] as unknown as ReturnType<typeof useApplyFromAnalysisMutation>);
+
+    const user = userEvent.setup();
+    renderAnalyze({ store });
+
+    // Starts in result view (pre-hydrated).
+    expect(screen.getByText("Worth considering")).toBeInTheDocument();
+
+    // Click "Analyze another" — should clear the slice.
+    await user.click(screen.getByRole("button", { name: /Analyze another/i }));
+
+    // Slice should now be null.
+    const sliceState = store.getState().jobAnalysis;
+    expect(sliceState.lastResult).toBeNull();
+
+    // Page should show input.
+    expect(await screen.findByLabelText("Job posting URL")).toBeInTheDocument();
+  });
+
+  it("slice is populated after a successful analysis", async () => {
+    const analysis = makeAnalysis();
+    const analyzeMock = vi.fn().mockReturnValue({
+      unwrap: () => Promise.resolve(analysis),
+    });
+    mockUseAnalyzeJobMutation.mockReturnValue([
+      analyzeMock,
+      { isLoading: false, reset: vi.fn() },
+    ] as unknown as ReturnType<typeof useAnalyzeJobMutation>);
+    mockUseApplyFromAnalysisMutation.mockReturnValue([
+      vi.fn(),
+      { isLoading: false, reset: vi.fn() },
+    ] as unknown as ReturnType<typeof useApplyFromAnalysisMutation>);
+
+    const user = userEvent.setup();
+    const { store } = renderAnalyze();
+
+    await user.click(
+      screen.getByText("No URL? Paste the description text instead."),
+    );
+    await user.type(
+      await screen.findByLabelText("Job description text"),
+      "Some JD.",
+    );
+    const submitButtons = screen.getAllByRole("button", {
+      name: /Analyze this job/i,
+    });
+    await user.click(submitButtons[submitButtons.length - 1]!);
+
+    await screen.findByText("Worth considering");
+
+    // Slice should now hold the result.
+    const sliceState = store.getState().jobAnalysis;
+    expect(sliceState.lastResult).not.toBeNull();
+    expect(sliceState.lastResult?.id).toBe("an-1");
+  });
+
+  it("shows bridging copy framing the next step before applying", async () => {
+    const analyzeMock = vi.fn().mockReturnValue({
+      unwrap: () => Promise.resolve(makeAnalysis()),
+    });
+    mockUseAnalyzeJobMutation.mockReturnValue([
+      analyzeMock,
+      { isLoading: false, reset: vi.fn() },
+    ] as unknown as ReturnType<typeof useAnalyzeJobMutation>);
+    mockUseApplyFromAnalysisMutation.mockReturnValue([
+      vi.fn(),
+      { isLoading: false, reset: vi.fn() },
+    ] as unknown as ReturnType<typeof useApplyFromAnalysisMutation>);
+
+    const user = userEvent.setup();
+    renderAnalyze();
+
+    await user.click(
+      screen.getByText("No URL? Paste the description text instead."),
+    );
+    await user.type(
+      await screen.findByLabelText("Job description text"),
+      "Some JD.",
+    );
+    const submitButtons = screen.getAllByRole("button", {
+      name: /Analyze this job/i,
+    });
+    await user.click(submitButtons[submitButtons.length - 1]!);
+
+    await screen.findByText("Worth considering");
+
+    // Bridging copy should be visible before applying.
+    expect(
+      screen.getByText(
+        /Add to applications to track interviews, contacts, and documents/i,
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("bridging copy is absent once the analysis has been applied", async () => {
+    // Pre-populate store with an already-applied analysis.
+    const store = makeTestStore({
+      lastResult: makeAnalysis({ applied_application_id: "app-existing" }),
+    });
+    mockUseAnalyzeJobMutation.mockReturnValue([
+      vi.fn(),
+      { isLoading: false, reset: vi.fn() },
+    ] as unknown as ReturnType<typeof useAnalyzeJobMutation>);
+    mockUseApplyFromAnalysisMutation.mockReturnValue([
+      vi.fn(),
+      { isLoading: false, reset: vi.fn() },
+    ] as unknown as ReturnType<typeof useApplyFromAnalysisMutation>);
+
+    renderAnalyze({ store });
+
+    // "Saved to your applications." is shown instead of bridging copy.
+    expect(await screen.findByText(/Saved to your applications/i)).toBeInTheDocument();
+    expect(
+      screen.queryByText(
+        /Add to applications to track interviews/i,
+      ),
     ).not.toBeInTheDocument();
   });
 });
