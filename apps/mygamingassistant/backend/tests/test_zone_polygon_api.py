@@ -148,7 +148,7 @@ async def test_patch_zones_updates_polygons(
     assert payload["failed"] == []
 
     # Read back from DB and confirm shape.
-    await db.expire_all()
+    db.expire_all()
     result = await db.execute(
         select(MapZone).where(MapZone.map_id == seeded_map_with_zones.id)
     )
@@ -187,7 +187,7 @@ async def test_patch_zones_empty_polygon_clears(
     assert resp.status_code == 200, resp.text
     assert resp.json()["updated"] == ["a-site"]
 
-    await db.expire_all()
+    db.expire_all()
     result = await db.execute(
         select(MapZone).where(
             MapZone.map_id == seeded_map_with_zones.id, MapZone.slug == "a-site"
@@ -247,7 +247,7 @@ async def test_patch_zones_partial_failure(
 
     # B-site should still be empty in DB — the failure rolled the per-zone
     # change but committed the successful one.
-    await db.expire_all()
+    db.expire_all()
     result = await db.execute(
         select(MapZone).where(
             MapZone.map_id == seeded_map_with_zones.id, MapZone.slug == "b-site"
@@ -287,7 +287,7 @@ async def test_patch_zones_cannot_cross_map_boundary(
     assert resp.status_code == 200, resp.text
     assert resp.json()["updated"] == ["a-site"]
 
-    await db.expire_all()
+    db.expire_all()
     result = await db.execute(
         select(MapZone).where(
             MapZone.map_id == second_map_with_zone.id, MapZone.slug == "a-site"
