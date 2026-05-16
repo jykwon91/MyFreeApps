@@ -37,7 +37,9 @@ from app.core.rate_limit import (
 from app.schemas.user.user_base import UserCreate, UserRead, UserUpdate
 from app.services.storage.bucket_initializer import ensure_bucket
 from app.services.user.seed_user_service import (
+    SeedUserInvalidEmailError,
     SeedUserNotConfiguredError,
+    is_valid_seed_email,
     seed_operator_user,
 )
 
@@ -65,8 +67,12 @@ async def _on_startup() -> None:
 
     Boot guards:
       - production: SEED_USER_EMAIL + SEED_USER_PASSWORD_HASH required.
+      - production: SEED_USER_EMAIL must be a valid email (fastapi-users
+        serializes the operator via an EmailStr field; an invalid address
+        makes GET /users/me 500 on every authenticated request).
       - production + ENABLE_CLASSIFIER=true: ANTHROPIC_API_KEY required.
-      - development: missing vars log WARNING and seed/classifier are skipped.
+      - development: missing/invalid vars log WARNING and seed/classifier
+        are skipped.
     """
     email = settings.seed_user_email
     hashed_password = settings.seed_user_password_hash
@@ -80,6 +86,28 @@ async def _on_startup() -> None:
         logger.warning(
             "_on_startup: SEED_USER_EMAIL or SEED_USER_PASSWORD_HASH is empty "
             "— skipping seed in non-production environment."
+        )
+        return
+
+    # Email-format guard. fastapi-users' UserRead.email is EmailStr; seeding an
+    # operator with an invalid address (e.g. dev@localhost — no dot in domain)
+    # makes GET /users/me raise ResponseValidationError → 500 on every
+    # authenticated request. Fail loud in prod; in dev, log loudly and skip the
+    # seed rather than create a broken operator.
+    if not is_valid_seed_email(email):
+        if settings.environment == "production":
+            raise SeedUserInvalidEmailError(
+                f"SEED_USER_EMAIL={email!r} is not a valid email address. "
+                "fastapi-users serializes the operator through an EmailStr "
+                "field, so an invalid address makes GET /users/me return 500 "
+                "on every authenticated request. Set a valid SEED_USER_EMAIL "
+                "in apps/mygamingassistant/backend/.env.docker."
+            )
+        logger.error(
+            "_on_startup: SEED_USER_EMAIL=%r is not a valid email address "
+            "— skipping seed. GET /users/me would 500 for this operator. "
+            "Set a valid SEED_USER_EMAIL (e.g. dev@example.com).",
+            email,
         )
         return
 

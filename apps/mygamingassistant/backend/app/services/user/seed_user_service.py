@@ -5,12 +5,18 @@ On every startup the lifespan calls ``seed_operator_user()`` to ensure the
 operator's account exists. The operation is idempotent — if the user already
 exists, it's a no-op.
 
-Boot guard (enforced in main.py _on_startup):
+Boot guards (enforced in main.py _on_startup):
   - In production (ENVIRONMENT=production): if SEED_USER_EMAIL or
     SEED_USER_PASSWORD_HASH is empty the startup raises SeedUserNotConfiguredError
     so the deploy healthcheck fails immediately rather than booting a server
     the operator can never log into.
-  - In development: if either var is empty, log a WARNING and skip the seed.
+  - In production: if SEED_USER_EMAIL is set but not a syntactically valid
+    email, the startup raises SeedUserInvalidEmailError. fastapi-users
+    serializes the operator through an ``EmailStr`` field (UserRead), so an
+    invalid address makes ``GET /users/me`` return 500 on every authenticated
+    request — a silent, hard-to-diagnose failure. Fail loud at boot instead.
+  - In development: if either var is empty OR the email is invalid, log and
+    skip the seed (do not create an operator that 500s /users/me).
 
 The password is stored as a bcrypt hash. Never store plaintext.
 
@@ -31,6 +37,38 @@ logger = logging.getLogger(__name__)
 
 class SeedUserNotConfiguredError(RuntimeError):
     """Raised in production when SEED_USER_EMAIL or SEED_USER_PASSWORD_HASH is empty."""
+
+
+class SeedUserInvalidEmailError(RuntimeError):
+    """Raised in production when SEED_USER_EMAIL is set but not a valid email."""
+
+
+def is_valid_seed_email(email: str) -> bool:
+    """Return True if *email* passes the same validation fastapi-users'
+    ``UserRead.email`` (Pydantic ``EmailStr``) applies at response time.
+
+    Pydantic v2 ``EmailStr`` delegates to ``email-validator`` with
+    ``check_deliverability=False`` (no DNS/network). We mirror that exactly so
+    this boot check accepts/rejects precisely what the response schema will —
+    catching ``dev@localhost``-style addresses (no dot in the domain) before
+    they seed an operator whose ``GET /users/me`` then 500s on every call.
+
+    The DNS check is deliberately disabled: it matches Pydantic, avoids a
+    network call on the startup path, and keeps the check deterministic in CI.
+    """
+    if not email:
+        return False
+    try:
+        from email_validator import EmailNotValidError, validate_email
+    except ImportError:  # pragma: no cover - ships with pydantic[email]/fastapi-users
+        # Minimal structural fallback: local-part@domain with a dotted domain.
+        parts = email.split("@")
+        return len(parts) == 2 and bool(parts[0]) and "." in parts[1]
+    try:
+        validate_email(email, check_deliverability=False)
+        return True
+    except EmailNotValidError:
+        return False
 
 
 async def seed_operator_user(email: str, hashed_password: str) -> None:
