@@ -423,3 +423,317 @@ class TestReferenceTextBuilder:
         ref = {"games": [], "maps": [], "utility_types": []}
         text = _build_reference_text(ref, game_hint=None)
         assert "Expected game" not in text
+
+
+# ---------------------------------------------------------------------------
+# Tests: Strategy A grid classifier (classify_frames_for_lineup_decision)
+# ---------------------------------------------------------------------------
+
+_THREE_FRAMES = [_FAKE_PNG, _FAKE_PNG, _FAKE_PNG]
+
+
+# Collision-proof reference fixtures for the grid tests. The shared
+# game_val/map_bind/zone/utility fixtures hardcode slug='valorant'/'bind'
+# which collides on ix_game_slug under the SAVEPOINT-restart conftest (the
+# documented pre-existing 7 errors in TestClassifyLineup/TestSlugResolver —
+# NOT this class's bug). These grid tests deliberately use unique slugs so
+# they pass independently of that pre-existing breakage and never add to it.
+_GRID_SLUG_SUFFIX = uuid.uuid4().hex[:8]
+
+
+@pytest_asyncio.fixture
+async def grid_game(db: AsyncSession) -> Game:
+    g = Game(
+        slug=f"grid-game-{_GRID_SLUG_SUFFIX}",
+        name="Grid Test Game",
+        side_a_label="Attacker",
+        side_b_label="Defender",
+    )
+    db.add(g)
+    await db.flush()
+    return g
+
+
+@pytest_asyncio.fixture
+async def grid_map(db: AsyncSession, grid_game: Game) -> Map:
+    m = Map(
+        game_id=grid_game.id,
+        slug=f"grid-map-{_GRID_SLUG_SUFFIX}",
+        name="Grid Test Map",
+    )
+    db.add(m)
+    await db.flush()
+    return m
+
+
+@pytest_asyncio.fixture
+async def grid_zone(db: AsyncSession, grid_map: Map) -> MapZone:
+    z = MapZone(
+        map_id=grid_map.id,
+        slug=f"grid-zone-{_GRID_SLUG_SUFFIX}",
+        name="Grid Zone",
+    )
+    db.add(z)
+    await db.flush()
+    return z
+
+
+@pytest_asyncio.fixture
+async def grid_utility(db: AsyncSession, grid_game: Game) -> UtilityType:
+    ut = UtilityType(
+        game_id=grid_game.id,
+        slug=f"grid-smoke-{_GRID_SLUG_SUFFIX}",
+        name="Grid Smoke",
+    )
+    db.add(ut)
+    await db.flush()
+    return ut
+
+
+class TestClassifyFramesForLineupDecision:
+    @pytest.mark.asyncio
+    async def test_is_lineup_true_resolves_slugs_and_picks_frames(
+        self,
+        db: AsyncSession,
+        grid_game: Game,
+        grid_map: Map,
+        grid_zone: MapZone,
+        grid_utility: UtilityType,
+    ):
+        """is_lineup=True → slugs resolved to FK IDs, chosen indices returned."""
+        from app.services.classification.classifier_service import (
+            classify_frames_for_lineup_decision,
+        )
+
+        payload = {
+            "is_lineup": True,
+            "best_stand_index": 2,
+            "best_aim_index": 3,
+            "game_slug": grid_game.slug,
+            "map_slug": grid_map.slug,
+            "target_zone_slug": grid_zone.slug,
+            "stand_zone_slug": None,
+            "side": "side_a",
+            "utility_type_slug": grid_utility.slug,
+            "aim_anchor_x": 0.4,
+            "aim_anchor_y": 0.6,
+            "confidence": 0.9,
+            "reasoning": "Smoke lineup for A short.",
+        }
+
+        with (
+            patch("app.services.classification.classifier_service.settings") as mock_settings,
+            patch("app.services.classification.classifier_service.anthropic.Anthropic") as mock_cls,
+        ):
+            mock_settings.anthropic_api_key = "sk-test"
+            mock_settings.claude_classifier_model = "claude-haiku-4-5-20251001"
+            mock_client = MagicMock()
+            mock_cls.return_value = mock_client
+            mock_client.messages.create.return_value = _make_anthropic_response(payload)
+
+            result = await classify_frames_for_lineup_decision(
+                db,
+                frames=_THREE_FRAMES,
+                chapter_title="A short smoke",
+                attribution_author="TestCreator",
+            )
+
+        assert result.success is True
+        assert result.is_lineup is True
+        assert result.best_stand_index == 2
+        assert result.best_aim_index == 3
+        assert result.suggested_target_zone_id == grid_zone.id
+        assert result.suggested_utility_type_id == grid_utility.id
+        assert result.suggested_side == "side_a"
+        assert result.aim_anchor_x == pytest.approx(0.4)
+        assert result.confidence == pytest.approx(0.9)
+        assert result.error_codes == []
+
+    @pytest.mark.asyncio
+    async def test_is_lineup_false_returns_early_no_slug_resolution(
+        self,
+        db: AsyncSession,
+        grid_game: Game,
+    ):
+        """is_lineup=False → success=True, is_lineup=False, no suggested FKs."""
+        from app.services.classification.classifier_service import (
+            classify_frames_for_lineup_decision,
+        )
+
+        payload = {
+            "is_lineup": False,
+            "best_stand_index": None,
+            "best_aim_index": None,
+            "game_slug": None,
+            "confidence": 0.03,
+            "reasoning": "Intro card / webcam — not a lineup.",
+        }
+
+        with (
+            patch("app.services.classification.classifier_service.settings") as mock_settings,
+            patch("app.services.classification.classifier_service.anthropic.Anthropic") as mock_cls,
+        ):
+            mock_settings.anthropic_api_key = "sk-test"
+            mock_settings.claude_classifier_model = "claude-haiku-4-5-20251001"
+            mock_client = MagicMock()
+            mock_cls.return_value = mock_client
+            mock_client.messages.create.return_value = _make_anthropic_response(payload)
+
+            result = await classify_frames_for_lineup_decision(
+                db,
+                frames=_THREE_FRAMES,
+                chapter_title="Intro",
+                attribution_author="TestCreator",
+            )
+
+        assert result.success is True
+        assert result.is_lineup is False
+        assert result.best_stand_index is None
+        assert result.best_aim_index is None
+        assert result.suggested_game_id is None
+        assert result.confidence == pytest.approx(0.03)
+        assert result.error_codes == []
+
+    @pytest.mark.asyncio
+    async def test_out_of_range_indices_nulled(
+        self,
+        db: AsyncSession,
+        grid_game: Game,
+        grid_map: Map,
+    ):
+        """best_*_index outside [1,n] is rejected → None, note in reasoning."""
+        from app.services.classification.classifier_service import (
+            classify_frames_for_lineup_decision,
+        )
+
+        payload = {
+            "is_lineup": True,
+            "best_stand_index": 0,   # invalid (1-based)
+            "best_aim_index": 99,    # invalid (> n)
+            "game_slug": grid_game.slug,
+            "map_slug": grid_map.slug,
+            "side": "any",
+            "confidence": 0.7,
+            "reasoning": "Lineup but bad indices.",
+        }
+
+        with (
+            patch("app.services.classification.classifier_service.settings") as mock_settings,
+            patch("app.services.classification.classifier_service.anthropic.Anthropic") as mock_cls,
+        ):
+            mock_settings.anthropic_api_key = "sk-test"
+            mock_settings.claude_classifier_model = "claude-haiku-4-5-20251001"
+            mock_client = MagicMock()
+            mock_cls.return_value = mock_client
+            mock_client.messages.create.return_value = _make_anthropic_response(payload)
+
+            result = await classify_frames_for_lineup_decision(
+                db,
+                frames=_THREE_FRAMES,
+                chapter_title="A site",
+                attribution_author="TestCreator",
+            )
+
+        assert result.success is True
+        assert result.is_lineup is True
+        assert result.best_stand_index is None
+        assert result.best_aim_index is None
+        assert "best_stand_index" in result.reasoning
+        assert "best_aim_index" in result.reasoning
+
+    @pytest.mark.asyncio
+    async def test_empty_frames_returns_error(self, db: AsyncSession):
+        from app.services.classification.classifier_service import (
+            classify_frames_for_lineup_decision,
+        )
+
+        with patch("app.services.classification.classifier_service.settings") as mock_settings:
+            mock_settings.anthropic_api_key = "sk-test"
+            result = await classify_frames_for_lineup_decision(
+                db, frames=[], chapter_title="x", attribution_author="y"
+            )
+
+        assert result.success is False
+        assert "no_frames" in result.error_codes
+
+    @pytest.mark.asyncio
+    async def test_missing_api_key_returns_error(self, db: AsyncSession):
+        from app.services.classification.classifier_service import (
+            classify_frames_for_lineup_decision,
+        )
+
+        with patch("app.services.classification.classifier_service.settings") as mock_settings:
+            mock_settings.anthropic_api_key = ""
+            result = await classify_frames_for_lineup_decision(
+                db, frames=_THREE_FRAMES, chapter_title="x", attribution_author="y"
+            )
+
+        assert result.success is False
+        assert "missing_api_key" in result.error_codes
+
+    @pytest.mark.asyncio
+    async def test_json_parse_failure(self, db: AsyncSession, grid_game: Game):
+        from app.services.classification.classifier_service import (
+            classify_frames_for_lineup_decision,
+        )
+
+        bad_response = MagicMock()
+        bad_text = MagicMock()
+        bad_text.text = "I cannot classify these frames."
+        bad_response.content = [bad_text]
+
+        with (
+            patch("app.services.classification.classifier_service.settings") as mock_settings,
+            patch("app.services.classification.classifier_service.anthropic.Anthropic") as mock_cls,
+        ):
+            mock_settings.anthropic_api_key = "sk-test"
+            mock_settings.claude_classifier_model = "claude-haiku-4-5-20251001"
+            mock_client = MagicMock()
+            mock_cls.return_value = mock_client
+            mock_client.messages.create.return_value = bad_response
+
+            result = await classify_frames_for_lineup_decision(
+                db,
+                frames=_THREE_FRAMES,
+                chapter_title="x",
+                attribution_author="y",
+            )
+
+        assert result.success is False
+        assert "json_parse_error" in result.error_codes
+
+    @pytest.mark.asyncio
+    async def test_n_images_sent_to_claude(
+        self, db: AsyncSession, grid_game: Game
+    ):
+        """All N frames must be in the user content as image blocks."""
+        from app.services.classification.classifier_service import (
+            classify_frames_for_lineup_decision,
+        )
+
+        payload = {"is_lineup": False, "confidence": 0.0, "reasoning": "x"}
+
+        with (
+            patch("app.services.classification.classifier_service.settings") as mock_settings,
+            patch("app.services.classification.classifier_service.anthropic.Anthropic") as mock_cls,
+        ):
+            mock_settings.anthropic_api_key = "sk-test"
+            mock_settings.claude_classifier_model = "claude-haiku-4-5-20251001"
+            mock_client = MagicMock()
+            mock_cls.return_value = mock_client
+            mock_client.messages.create.return_value = _make_anthropic_response(payload)
+
+            await classify_frames_for_lineup_decision(
+                db,
+                frames=_THREE_FRAMES,
+                chapter_title="x",
+                attribution_author="y",
+            )
+
+        _, kwargs = mock_client.messages.create.call_args
+        content = kwargs["messages"][0]["content"]
+        image_blocks = [b for b in content if b.get("type") == "image"]
+        assert len(image_blocks) == 3
+        # Reference block is still cache_control'd (caching preserved).
+        assert any(b.get("cache_control") for b in content)
+        assert kwargs["system"][0]["cache_control"] == {"type": "ephemeral"}

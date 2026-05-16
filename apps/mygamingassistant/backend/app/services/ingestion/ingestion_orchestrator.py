@@ -6,9 +6,13 @@ Pipeline per source sync:
   3. For each new video:
      a. Download video to INGESTION_DOWNLOAD_DIR.
      b. Parse chapter timestamps (native yt-dlp or description regex).
-     c. For each chapter: extract stand frame (t=start) + aim frame (t=start+4s).
-     d. Upload both frames to MinIO under pending/{video_id}/{start}-{stand|aim}.png.
-     e. Insert Lineup row with status='pending_review'.
+     c. For each chapter (Strategy A): extract an evenly-spaced grid of
+        candidate frames; the Claude classifier decides is_lineup and picks the
+        best stand/aim frames. Chapters judged "not a lineup" are skipped with
+        no row created.
+     d. Upload the two Claude-chosen frames to MinIO under
+        pending/{video_id}/{start}-{stand|aim}.png.
+     e. Insert Lineup row with status='pending_review' + classifier suggestions.
      f. Delete downloaded video.
   4. Update source.last_synced_at + last_sync_stats.
 
@@ -37,15 +41,22 @@ from app.core.config import settings
 from app.core.storage import get_storage
 from app.models.game.source import Source
 from app.repositories.game import lineup_repo, source_repo
+from app.repositories.game.lineup_repo import write_classifier_suggestions
 from app.schemas.game.lineup_schemas import LineupIngestCreate
-from app.services.classification.classifier_service import classify_lineup
+from app.services.classification.classifier_service import (
+    classify_frames_for_lineup_decision,
+)
 from app.services.game import lineup_service
 from app.services.ingestion.chapter_parser import (
     Chapter,
     filter_lineup_chapters,
     parse_chapters,
 )
-from app.services.ingestion.frame_extractor import FrameExtractionError, extract_frames
+from app.services.ingestion.frame_extractor import (
+    FrameExtractionError,
+    extract_frames,
+    grid_timestamps,
+)
 from app.services.ingestion.youtube_fetcher import (
     VideoDownloadError,
     VideoMeta,
@@ -57,14 +68,25 @@ from app.services.ingestion.youtube_fetcher import (
 
 logger = logging.getLogger(__name__)
 
-# Phase-1 frame-timing heuristic. The exact chapter boundary is the worst
-# possible sample point — it's a deterministic fade-in / transition / black
-# frame (a t=0 "Intro" chapter is *always* a black frame). Offsetting a few
-# seconds into the chapter avoids that deterministic failure. This is still a
-# blind heuristic; Phase 2 (Strategy A: extract a grid of candidate frames and
-# let Claude pick the best stand/aim + decide is_lineup) replaces it wholesale.
-_STAND_FRAME_OFFSET_SECONDS = 3.0
-_AIM_FRAME_GAP_SECONDS = 4.0
+# Strategy A. The Phase-1 blind +3s/+7s frame-offset heuristic is GONE: a
+# single arbitrary frame is exactly the input that left ingestion unable to
+# reject junk chapters (see the g-debug-bug diagnosis). Instead we extract a
+# grid of evenly-spaced candidate frames across the chapter and let the cheap
+# Claude model both (a) decide is_lineup and (b) pick the best stand/aim frame.
+#
+# N is capped low so token cost stays bounded — a haiku call with 5 PNG frames
+# is ≈7-9K image tokens (reference data + system prompt are cache_control'd, so
+# billed once per game, not per chapter). _GRID_FRAME_COUNT is the only knob;
+# do NOT raise it without re-checking the per-chapter cost note in the PR.
+_GRID_FRAME_COUNT = 5
+
+# Pulled off each chapter edge before the grid is spaced, so no candidate ever
+# lands on the exact boundary (deterministic fade-in / title-card / black).
+_GRID_EDGE_PADDING_SECONDS = 0.5
+
+# Chapters the classifier judged a lineup but with confidence at/below this are
+# treated as junk and skipped — a weak "maybe" is not worth a review-queue row.
+_MIN_LINEUP_CONFIDENCE = 0.15
 
 
 @dataclass
@@ -103,6 +125,26 @@ def _upload_frame(storage, key: str, png_bytes: bytes) -> None:
     )
 
 
+def _classifier_suggestion_fields(result) -> dict:
+    """Map a ClassificationResult onto the lineup writeback dict.
+
+    Same field set the legacy single-image path wrote via the repo, so the
+    review UI sees identical columns regardless of which path classified it.
+    """
+    return {
+        "aim_anchor_x": result.aim_anchor_x,
+        "aim_anchor_y": result.aim_anchor_y,
+        "suggested_game_id": result.suggested_game_id,
+        "suggested_map_id": result.suggested_map_id,
+        "suggested_target_zone_id": result.suggested_target_zone_id,
+        "suggested_stand_zone_id": result.suggested_stand_zone_id,
+        "suggested_side": result.suggested_side,
+        "suggested_utility_type_id": result.suggested_utility_type_id,
+        "classification_confidence": result.confidence,
+        "classification_reasoning": result.reasoning,
+    }
+
+
 async def _process_chapter(
     video_meta: VideoMeta,
     chapter: Chapter,
@@ -111,22 +153,36 @@ async def _process_chapter(
     db: AsyncSession,
     source: Source,
 ) -> bool:
-    """Extract frames, upload to MinIO, and create a Lineup row.
+    """Strategy A: grid-extract, let Claude detect+pick, then create the row.
 
-    Returns True on success, False on any handled error.
+    Flow:
+      1. Extract ``_GRID_FRAME_COUNT`` evenly-spaced candidate frames strictly
+         inside the chapter.
+      2. Ask the classifier whether the chapter is a real lineup and which
+         frames best show the stand/aim (ONE cheap-model call, before any DB
+         write or MinIO upload).
+      3. If ``is_lineup`` is False (or confidence too low), skip the chapter
+         entirely — no pending row is created. This is the real "stop junk"
+         mechanism. Dedup is keyed by ``youtube_video_id`` (whole video), not
+         per-chapter, so skipping a chapter does not break re-sync dedup.
+      4. Upload only the two Claude-chosen frames, create the lineup row, and
+         write the classifier suggestions through the repo.
+
+    Returns True when the chapter was handled successfully (including a
+    deliberate "not a lineup" skip — that is a success, not an error). Returns
+    False only on an unexpected handled failure (ffmpeg / MinIO / DB / API).
     """
     start = chapter.start_seconds
-    # Clamp all sampling strictly inside [start, end) — never the exact
-    # boundary (fade-in/transition/black). filter_lineup_chapters already
-    # drops <15s chapters, but keep the math safe on short ones anyway.
-    chapter_end = float(chapter.end_seconds)
-    last_safe_ts = max(float(start), chapter_end - 0.5)
-    stand_ts = min(float(start) + _STAND_FRAME_OFFSET_SECONDS, last_safe_ts)
-    aim_ts = min(stand_ts + _AIM_FRAME_GAP_SECONDS, last_safe_ts)
-    aim_ts = max(aim_ts, stand_ts)
+
+    timestamps = grid_timestamps(
+        float(start),
+        float(chapter.end_seconds),
+        _GRID_FRAME_COUNT,
+        edge_padding_seconds=_GRID_EDGE_PADDING_SECONDS,
+    )
 
     try:
-        stand_bytes, aim_bytes = await extract_frames(video_path, [stand_ts, aim_ts])
+        frames = await extract_frames(video_path, timestamps)
     except FrameExtractionError as exc:
         logger.error(
             "Frame extraction failed: source_id=%s video_id=%s chapter_start=%d error=%s",
@@ -134,6 +190,84 @@ async def _process_chapter(
             exc_info=True,
         )
         return False
+
+    if not frames:
+        logger.error(
+            "Frame grid empty: source_id=%s video_id=%s chapter_start=%d",
+            source.id, video_meta.video_id, start,
+        )
+        return False
+
+    game_hint = (
+        source.config_json.get("game_hint") if source.config_json else None
+    )
+
+    # Strategy A core: the classifier IS the lineup detector + frame picker.
+    # When the classifier is disabled we cannot make the is_lineup judgement,
+    # so fall back to a defined behaviour: keep the chapter and use the first
+    # and last grid frames as stand/aim (still strictly inside the chapter,
+    # never the boundary). This keeps the classifier-disabled test/dev path
+    # working without resurrecting the discredited +3s/+7s heuristic.
+    classifier_ran = False
+    result = None
+    if settings.enable_classifier:
+        try:
+            result = await classify_frames_for_lineup_decision(
+                db,
+                frames=frames,
+                chapter_title=chapter.title,
+                attribution_author=video_meta.channel_name,
+                game_hint=game_hint,
+            )
+            classifier_ran = True
+        except Exception as exc:
+            logger.error(
+                "Grid classifier unexpected error (non-fatal): source_id=%s "
+                "video_id=%s chapter_start=%d error=%s",
+                source.id, video_meta.video_id, start, str(exc),
+                exc_info=True,
+            )
+
+    if classifier_ran and result is not None:
+        if not result.success:
+            logger.warning(
+                "Grid classifier call failed (non-fatal, skipping chapter): "
+                "source_id=%s video_id=%s chapter_start=%d error_codes=%s",
+                source.id, video_meta.video_id, start, result.error_codes,
+            )
+            # A failed classifier *call* (API/parse) — we cannot judge the
+            # chapter. Skip it rather than create an unjudged junk row; the
+            # whole point of Strategy A is to not ingest unverifiable frames.
+            return True
+
+        if not result.is_lineup or (
+            result.confidence is not None
+            and result.confidence <= _MIN_LINEUP_CONFIDENCE
+        ):
+            logger.info(
+                "Chapter judged NOT a lineup — skipping (no row created): "
+                "source_id=%s video_id=%s chapter_start=%d is_lineup=%s "
+                "confidence=%.2f title=%r",
+                source.id, video_meta.video_id, start, result.is_lineup,
+                result.confidence or 0.0, chapter.title,
+            )
+            return True
+
+        # Claude-selected best frames (1-based → 0-based). Fall back to
+        # first/last if the model omitted an index (validation already nulled
+        # out-of-range values).
+        stand_idx = (result.best_stand_index or 1) - 1
+        aim_idx = (result.best_aim_index or len(frames)) - 1
+        stand_idx = max(0, min(stand_idx, len(frames) - 1))
+        aim_idx = max(0, min(aim_idx, len(frames) - 1))
+    else:
+        # Classifier disabled or threw before returning — keep chapter, use
+        # first/last grid frame. No suggestions written.
+        stand_idx = 0
+        aim_idx = len(frames) - 1
+
+    stand_bytes = frames[stand_idx]
+    aim_bytes = frames[aim_idx]
 
     stand_key = _pending_screenshot_key(video_meta.video_id, start, "stand")
     aim_key = _pending_screenshot_key(video_meta.video_id, start, "aim")
@@ -164,6 +298,12 @@ async def _process_chapter(
 
     try:
         lineup = await lineup_service.create_from_ingestion(db, payload)
+        # If the classifier produced suggestions, write them through the repo
+        # before the single commit (status stays pending_review).
+        if classifier_ran and result is not None and result.is_lineup:
+            await write_classifier_suggestions(
+                db, lineup, _classifier_suggestion_fields(result)
+            )
         await db.commit()
     except Exception as exc:
         await db.rollback()
@@ -174,43 +314,14 @@ async def _process_chapter(
         )
         return False
 
-    # Classifier — runs immediately after the lineup is created.
-    # Failures are logged but non-fatal: the lineup stays in pending_review
-    # with no suggestions, and the user can re-classify from the review queue.
-    if settings.enable_classifier:
-        try:
-            result = await classify_lineup(
-                db,
-                lineup.id,
-                game_hint=source.config_json.get("game_hint") if source.config_json else None,
-            )
-            if result.success:
-                await db.commit()
-                logger.info(
-                    "Classifier success: source_id=%s video_id=%s chapter_start=%d "
-                    "lineup_id=%s confidence=%.2f",
-                    source.id, video_meta.video_id, start, lineup.id,
-                    result.confidence or 0.0,
-                )
-            else:
-                logger.warning(
-                    "Classifier failed (non-fatal): source_id=%s video_id=%s "
-                    "chapter_start=%d lineup_id=%s error_codes=%s",
-                    source.id, video_meta.video_id, start, lineup.id,
-                    result.error_codes,
-                )
-        except Exception as exc:
-            logger.error(
-                "Classifier unexpected error (non-fatal): source_id=%s video_id=%s "
-                "chapter_start=%d lineup_id=%s error=%s",
-                source.id, video_meta.video_id, start, lineup.id, str(exc),
-                exc_info=True,
-            )
-            # Rollback any partial classifier flush; lineup row is already committed above.
-            try:
-                await db.rollback()
-            except Exception:
-                pass
+    if classifier_ran and result is not None and result.is_lineup:
+        logger.info(
+            "Classifier success (grid): source_id=%s video_id=%s "
+            "chapter_start=%d lineup_id=%s stand_idx=%d aim_idx=%d "
+            "confidence=%.2f",
+            source.id, video_meta.video_id, start, lineup.id,
+            stand_idx, aim_idx, result.confidence or 0.0,
+        )
 
     return True
 

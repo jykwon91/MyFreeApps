@@ -28,6 +28,17 @@ class ClassificationResult:
 
     success: bool
 
+    # Strategy A grid fields (ingest-time multi-frame path only).
+    # is_lineup: did the classifier judge the chapter to be a real tactical-FPS
+    #   utility-lineup demo at all? None for the legacy single-image
+    #   re-classify path (it cannot make this judgement — see classify_lineup).
+    # best_stand_index / best_aim_index: 1-based index into the candidate frame
+    #   grid the classifier was shown. None on the single-image path or when
+    #   is_lineup is False. The orchestrator uploads these chosen frames.
+    is_lineup: Optional[bool] = None
+    best_stand_index: Optional[int] = None
+    best_aim_index: Optional[int] = None
+
     # Suggested classification — may be None if classifier could not determine
     # the field confidently (slug failed to resolve → FK stays null).
     suggested_game_id: Optional[uuid.UUID] = None
