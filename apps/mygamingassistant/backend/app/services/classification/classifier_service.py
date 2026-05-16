@@ -71,6 +71,59 @@ Rules:
 - side_a = attacking/T side; side_b = defending/CT side; any = side-agnostic.
 """
 
+# Strategy A grid schema. The model is given N numbered candidate frames
+# sampled across the chapter and must (a) decide whether the chapter is a real
+# utility-lineup demo at all, and (b) pick which frame best shows the throwing
+# stance and which best shows the aim/result. The aim_anchor_* coordinates are
+# relative to the chosen best_aim_index frame.
+_GRID_OUTPUT_SCHEMA_DOC = """\
+You are given {n} numbered candidate frames (Frame 1 .. Frame {n}) sampled at
+even intervals across ONE YouTube chapter from a tactical-FPS video. The
+chapter MIGHT be a real utility-lineup demonstration (player walks to a spot,
+lines up a smoke/molly/flash/grenade throw against a wall/skybox marker, throws
+it, and the result lands on a bombsite/choke) OR it might be junk (intro/outro,
+webcam talking-head, gameplay montage, kill highlights, menu, loading screen,
+title card). Most chapters in a mixed video are NOT lineups.
+
+Return ONLY valid JSON with exactly these fields (no extra keys):
+{{
+  "is_lineup": boolean,
+  "best_stand_index": integer (1-{n}) or null,
+  "best_aim_index": integer (1-{n}) or null,
+  "game_slug": string or null,
+  "map_slug": string or null,
+  "target_zone_slug": string or null,
+  "stand_zone_slug": string or null,
+  "side": "side_a" | "side_b" | "any" | null,
+  "utility_type_slug": string or null,
+  "aim_anchor_x": number (0.0-1.0) or null,
+  "aim_anchor_y": number (0.0-1.0) or null,
+  "confidence": number (0.0-1.0),
+  "reasoning": string
+}}
+
+Rules:
+- is_lineup: true ONLY if at least one frame clearly shows in-game tactical-FPS
+  gameplay consistent with a utility lineup (HUD/minimap visible, a throwable
+  equipped or its effect mid-air/landing, a recognizable map location). If the
+  frames are webcam, desktop, montage, menus, title cards, or unrelated
+  gameplay, set is_lineup=false and set the index/slug fields to null.
+- best_stand_index: the 1-based frame number that best shows the player STANDING
+  at the throw position lining up the utility (crosshair on the alignment
+  marker, throwable equipped, before release). null if is_lineup is false.
+- best_aim_index: the 1-based frame number that best shows the AIM/RESULT — the
+  crosshair placement for the throw or the utility landing on target. May equal
+  best_stand_index if one frame shows both. null if is_lineup is false.
+- aim_anchor_x / aim_anchor_y: normalized (0-1) crosshair position IN THE
+  best_aim_index FRAME. x=0 left, x=1 right; y=0 top, y=1 bottom. null if
+  is_lineup is false or you cannot locate the crosshair.
+- confidence: your overall confidence (0-1) that this is a usable lineup AND the
+  classification is correct. Low confidence on junk; high only when sure.
+- Set any field to null and explain in reasoning if you cannot determine it.
+- Only use slugs from the Valid reference lists provided; do not invent slugs.
+- side_a = attacking/T side; side_b = defending/CT side; any = side-agnostic.
+"""
+
 # ---------------------------------------------------------------------------
 # Reference data loader
 # ---------------------------------------------------------------------------
@@ -628,6 +681,334 @@ async def classify_lineup(
 
     return ClassificationResult(
         success=True,
+        suggested_game_id=game_id,
+        suggested_map_id=map_id,
+        suggested_target_zone_id=target_zone_id,
+        suggested_stand_zone_id=stand_zone_id,
+        suggested_side=side,
+        suggested_utility_type_id=utility_type_id,
+        aim_anchor_x=aim_x,
+        aim_anchor_y=aim_y,
+        confidence=confidence,
+        reasoning=reasoning,
+        error_codes=[],
+    )
+
+
+# ---------------------------------------------------------------------------
+# Strategy A — multi-frame grid classifier (ingest-time only)
+# ---------------------------------------------------------------------------
+#
+# The legacy classify_lineup() above runs at *re-classify* time: the source
+# video is already deleted, only the two stored screenshots survive, so it can
+# only re-judge a single stand image. It deliberately CANNOT decide is_lineup
+# (one arbitrary frame is exactly the input that made the original ingestion
+# unable to reject junk chapters — see the g-debug-bug diagnosis).
+#
+# classify_lineup_from_frames() runs at *ingest* time, while the video is still
+# on disk: it is handed N evenly-spaced candidate frames and is the actual
+# lineup detector + frame picker (Strategy A). This asymmetry is expected and
+# documented, not a bug.
+
+
+def _strip_json_fences(raw_text: str) -> str:
+    """Strip a leading ```json / ``` markdown fence if Claude added one."""
+    clean = raw_text.strip()
+    if clean.startswith("```"):
+        clean = clean.split("```", 2)[1]
+        if clean.startswith("json"):
+            clean = clean[4:]
+        clean = clean.strip()
+    return clean
+
+
+def _validate_aim_coord(
+    value: Any, axis: str, failures: list[str]
+) -> Optional[float]:
+    """Validate one normalized aim-anchor coordinate (shared with single-image path)."""
+    if value is None:
+        return None
+    try:
+        coord = float(value)
+    except (TypeError, ValueError):
+        failures.append(f"aim_anchor_{axis} '{value}' is not a number")
+        return None
+    if not (0.0 <= coord <= 1.0):
+        failures.append(f"aim_anchor_{axis}={coord} out of range [0,1]")
+        return None
+    return coord
+
+
+def _validate_grid_index(
+    value: Any, field_name: str, n: int, failures: list[str]
+) -> Optional[int]:
+    """Validate a 1-based frame index returned by the grid classifier.
+
+    Returns the 1-based int if it is an integer within [1, n], else None and
+    appends a human-readable note to *failures*.
+    """
+    if value is None:
+        return None
+    try:
+        idx = int(value)
+    except (TypeError, ValueError):
+        failures.append(f"{field_name} '{value}' is not an integer")
+        return None
+    if not (1 <= idx <= n):
+        failures.append(f"{field_name}={idx} out of range [1,{n}]")
+        return None
+    return idx
+
+
+async def classify_frames_for_lineup_decision(
+    db: AsyncSession,
+    *,
+    frames: list[bytes],
+    chapter_title: Optional[str],
+    attribution_author: Optional[str],
+    game_hint: Optional[str] = None,
+) -> ClassificationResult:
+    """Strategy A: classify a chapter from N candidate frames at ingest time.
+
+    Unlike :func:`classify_lineup`, this takes the raw frame bytes in memory
+    (the video is still on disk during ingestion) and asks Claude to:
+
+      1. decide ``is_lineup`` — is this chapter a real tactical-FPS utility
+         lineup demo at all (the real "stop junk" mechanism); and
+      2. pick ``best_stand_index`` / ``best_aim_index`` — which of the N frames
+         best shows the throw stance and the aim/result; and
+      3. classify the usual game/map/zone/side/utility/aim-anchor fields.
+
+    It does NOT touch the database (no lineup row exists yet — the orchestrator
+    creates the row only if ``is_lineup`` is True, using the chosen frames).
+    Reference data is still loaded for slug resolution.
+
+    Cost: one cheap-model (haiku) call with N images. Reference data + system
+    prompt are cache_control-marked so they're billed once per game, not per
+    chapter. N is capped by the caller (orchestrator uses N=5) to bound tokens.
+
+    Args:
+        db: Active async session (read-only here — reference data + slug resolve).
+        frames: Candidate PNG byte strings, in chapter start→end order. The
+            1-based ``best_*_index`` values index into this list.
+        chapter_title: YouTube chapter title (per-call context).
+        attribution_author: Source channel name (per-call context).
+        game_hint: Optional game slug hint from source metadata.
+
+    Returns:
+        ClassificationResult. On a successful call ``success=True`` and
+        ``is_lineup`` reflects Claude's judgement (it may be False — that is a
+        successful *call* with a "this is junk" answer, not an error).
+        ``error_codes`` is populated only on an API/parse failure.
+    """
+    if not settings.anthropic_api_key:
+        logger.warning(
+            "classify_frames: ANTHROPIC_API_KEY not configured — skipping "
+            "(chapter=%r)", chapter_title,
+        )
+        return ClassificationResult(
+            success=False,
+            error_codes=["missing_api_key"],
+            reasoning="ANTHROPIC_API_KEY not configured",
+        )
+
+    if not frames:
+        return ClassificationResult(
+            success=False,
+            error_codes=["no_frames"],
+            reasoning="No candidate frames supplied to grid classifier",
+        )
+
+    n = len(frames)
+
+    # Reference data spans all games when there's no row yet (ingest time has
+    # no lineup.game_id). The game_hint narrows the prompt textually.
+    ref = await _load_reference_data(db, game_id=None)
+    reference_text = _build_reference_text(ref, game_hint=game_hint)
+
+    chapter_context_parts: list[str] = []
+    if chapter_title:
+        chapter_context_parts.append(f"Chapter title: {chapter_title}")
+    if attribution_author:
+        chapter_context_parts.append(f"Source channel: {attribution_author}")
+    chapter_context = "\n".join(chapter_context_parts)
+
+    system_prompt = (
+        "You are classifying tactical-FPS utility lineup screenshots.\n"
+        "You will receive several numbered candidate frames from ONE video "
+        "chapter and must judge whether the chapter is a real utility-lineup "
+        "demo, pick the best frames, and classify it.\n\n"
+        + _GRID_OUTPUT_SCHEMA_DOC.format(n=n)
+    )
+
+    import base64
+
+    # Per-call content: each numbered frame as a labelled image, then chapter
+    # context, then the cache_control'd reference block. Images are the
+    # variable part (not cached); system + reference are cached.
+    user_content: list[dict] = []
+    for i, frame_bytes in enumerate(frames, start=1):
+        user_content.append({"type": "text", "text": f"Frame {i}:"})
+        user_content.append(
+            {
+                "type": "image",
+                "source": {
+                    "type": "base64",
+                    "media_type": "image/png",
+                    "data": base64.standard_b64encode(frame_bytes).decode(),
+                },
+            }
+        )
+    if chapter_context:
+        user_content.append({"type": "text", "text": chapter_context})
+    user_content.append(
+        {
+            "type": "text",
+            "text": reference_text,
+            "cache_control": {"type": "ephemeral"},
+        }
+    )
+
+    try:
+        client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+        response = client.messages.create(
+            model=settings.claude_classifier_model,
+            max_tokens=600,  # grid adds is_lineup + 2 indices vs the single-image schema
+            system=[
+                {
+                    "type": "text",
+                    "text": system_prompt,
+                    "cache_control": {"type": "ephemeral"},
+                }
+            ],
+            messages=[{"role": "user", "content": user_content}],
+        )
+    except anthropic.RateLimitError as exc:
+        error_type = getattr(exc, "type", "rate_limit_error") or "rate_limit_error"
+        logger.warning(
+            "classify_frames: rate limit hit: chapter=%r error_type=%s message=%s",
+            chapter_title, error_type, str(exc),
+        )
+        return ClassificationResult(
+            success=False,
+            error_codes=[error_type],
+            reasoning=f"Claude API rate limit: {exc}",
+        )
+    except anthropic.APIStatusError as exc:
+        error_type = getattr(exc, "type", None) or f"api_status_{exc.status_code}"
+        logger.error(
+            "classify_frames: API status error: chapter=%r error_type=%s "
+            "status_code=%s message=%s",
+            chapter_title, error_type, exc.status_code, str(exc),
+        )
+        return ClassificationResult(
+            success=False,
+            error_codes=[error_type],
+            reasoning=f"Claude API error ({exc.status_code}): {exc}",
+        )
+    except anthropic.APIError as exc:
+        error_type = getattr(exc, "type", "api_error") or "api_error"
+        logger.error(
+            "classify_frames: API error: chapter=%r error_type=%s message=%s",
+            chapter_title, error_type, str(exc),
+        )
+        return ClassificationResult(
+            success=False,
+            error_codes=[error_type],
+            reasoning=f"Claude API error: {exc}",
+        )
+
+    raw_text = response.content[0].text if response.content else ""
+    try:
+        parsed: dict[str, Any] = json.loads(_strip_json_fences(raw_text))
+    except (json.JSONDecodeError, IndexError) as exc:
+        logger.error(
+            "classify_frames: JSON parse failed: chapter=%r raw=%r error=%s",
+            chapter_title, raw_text[:200], str(exc),
+        )
+        return ClassificationResult(
+            success=False,
+            error_codes=["json_parse_error"],
+            reasoning=f"Could not parse classifier JSON: {exc}",
+        )
+
+    failures: list[str] = []
+
+    is_lineup = bool(parsed.get("is_lineup"))
+
+    best_stand_index = _validate_grid_index(
+        parsed.get("best_stand_index"), "best_stand_index", n, failures
+    )
+    best_aim_index = _validate_grid_index(
+        parsed.get("best_aim_index"), "best_aim_index", n, failures
+    )
+
+    confidence: Optional[float] = None
+    raw_conf = parsed.get("confidence")
+    if raw_conf is not None:
+        try:
+            confidence = max(0.0, min(1.0, float(raw_conf)))
+        except (TypeError, ValueError):
+            pass
+
+    model_reasoning = str(parsed.get("reasoning") or "")
+
+    # If Claude says it's not a lineup, don't bother resolving slugs — the
+    # orchestrator will skip the row entirely. Return early with the verdict.
+    if not is_lineup:
+        reasoning = model_reasoning or "Classifier judged chapter is not a lineup."
+        logger.info(
+            "classify_frames: is_lineup=False chapter=%r n=%d confidence=%.2f",
+            chapter_title, n, confidence or 0.0,
+        )
+        return ClassificationResult(
+            success=True,
+            is_lineup=False,
+            best_stand_index=None,
+            best_aim_index=None,
+            confidence=confidence,
+            reasoning=reasoning,
+            error_codes=[],
+        )
+
+    # is_lineup True → resolve the classification slugs as usual.
+    game_id, map_id, target_zone_id, stand_zone_id, utility_type_id, slug_failures = (
+        await _resolve_slugs(
+            db,
+            game_slug=parsed.get("game_slug"),
+            map_slug=parsed.get("map_slug"),
+            target_zone_slug=parsed.get("target_zone_slug"),
+            stand_zone_slug=parsed.get("stand_zone_slug"),
+            utility_type_slug=parsed.get("utility_type_slug"),
+        )
+    )
+    failures.extend(slug_failures)
+
+    side = parsed.get("side")
+    if side is not None and side not in ("side_a", "side_b", "any"):
+        failures.append(f"invalid side value '{side}' — must be side_a/side_b/any")
+        side = None
+
+    aim_x = _validate_aim_coord(parsed.get("aim_anchor_x"), "x", failures)
+    aim_y = _validate_aim_coord(parsed.get("aim_anchor_y"), "y", failures)
+
+    if failures:
+        reasoning = f"{model_reasoning}\nNotes: {'; '.join(failures)}".strip()
+    else:
+        reasoning = model_reasoning
+
+    logger.info(
+        "classify_frames: is_lineup=True chapter=%r n=%d stand_idx=%s aim_idx=%s "
+        "game=%s map=%s confidence=%.2f",
+        chapter_title, n, best_stand_index, best_aim_index,
+        parsed.get("game_slug"), parsed.get("map_slug"), confidence or 0.0,
+    )
+
+    return ClassificationResult(
+        success=True,
+        is_lineup=True,
+        best_stand_index=best_stand_index,
+        best_aim_index=best_aim_index,
         suggested_game_id=game_id,
         suggested_map_id=map_id,
         suggested_target_zone_id=target_zone_id,

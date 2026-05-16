@@ -1,11 +1,15 @@
-"""Integration test — ingestion_orchestrator calls classifier after creating lineups.
+"""Integration test — ingestion_orchestrator runs the Strategy A grid classifier.
 
-Classifier is mocked. Verifies:
-  - On classifier success, suggested FK fields are written to the Lineup row.
-  - On classifier failure, the lineup row is still committed with status=pending_review.
+The grid classifier (classify_frames_for_lineup_decision) is mocked. Verifies:
+  - is_lineup=True → row created + suggested FK fields written via the repo.
+  - Classifier call failure → chapter skipped, no row (Strategy A refuses to
+    ingest frames it could not verify).
+  - is_lineup=False → chapter skipped, no row created (the "stop junk" lever).
+  - enable_classifier=False → classifier never called, chapter still kept.
 """
 from __future__ import annotations
 
+import contextlib
 import uuid
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -89,22 +93,63 @@ async def _seed_classifier_targets(db: AsyncSession) -> None:
     await db.flush()
 
 
+@contextlib.contextmanager
+def _grid_env(tmp_path: Path, fake_video_path: Path, *, classify_mock):
+    """Enter the common ingestion patches for a grid-classifier test.
+
+    `classify_mock` is the mock to install for
+    classify_frames_for_lineup_decision (an AsyncMock). Yields
+    (mock_settings, mock_storage) for the test to configure further.
+
+    A parenthesized `with (...)` cannot mix ``*tuple`` unpacking with ``as``
+    bindings, so the shared patch set is entered via an ExitStack here.
+    """
+    with contextlib.ExitStack() as stack:
+        stack.enter_context(patch("app.services.ingestion.ingestion_orchestrator.list_videos", new_callable=AsyncMock, return_value=[FAKE_VIDEO]))
+        stack.enter_context(patch("app.services.ingestion.ingestion_orchestrator.fetch_video_detail", new_callable=AsyncMock, return_value=FAKE_VIDEO))
+        stack.enter_context(patch("app.services.ingestion.ingestion_orchestrator.download_video", new_callable=AsyncMock, return_value=fake_video_path))
+        stack.enter_context(patch("app.services.ingestion.ingestion_orchestrator.extract_frames", new_callable=AsyncMock, return_value=[_FAKE_PNG] * 5))
+        mock_storage_factory = stack.enter_context(patch("app.services.ingestion.ingestion_orchestrator.get_storage"))
+        stack.enter_context(patch("app.services.ingestion.ingestion_orchestrator.classify_frames_for_lineup_decision", new=classify_mock))
+        mock_settings = stack.enter_context(patch.object(ingestion_orchestrator_module(), "settings"))
+
+        mock_settings.ingestion_download_dir = str(tmp_path)
+        mock_storage = MagicMock()
+        mock_storage.bucket = "test-bucket"
+        mock_storage._client = MagicMock()
+        mock_storage_factory.return_value = mock_storage
+        yield mock_settings, mock_storage
+
+
+def ingestion_orchestrator_module():
+    from app.services.ingestion import ingestion_orchestrator
+    return ingestion_orchestrator
+
+
 class TestIngestionWithClassifier:
     @pytest.mark.asyncio
-    async def test_classifier_suggestions_written_on_success(
+    async def test_lineup_created_and_suggestions_written_when_is_lineup(
         self,
         db: AsyncSession,
         source: Source,
         tmp_path: Path,
     ):
-        """After successful classification, suggested_* fields populated on the Lineup."""
-        from app.services.ingestion import ingestion_orchestrator
+        """is_lineup=True → row created and suggested_* written via the repo."""
+        ingestion_orchestrator = ingestion_orchestrator_module()
 
         fake_video_path = tmp_path / "vid_cls_001.mp4"
         fake_video_path.write_bytes(b"fake")
 
-        successful_result = ClassificationResult(
+        # Strategy A: classify_frames_for_lineup_decision does NOT touch the
+        # DB (no row exists yet). It just returns the verdict + suggestions;
+        # the orchestrator creates the row and writes the suggestions via the
+        # repo. So a plain return_value mock is correct here (unlike the old
+        # single-image path which needed a writeback side effect).
+        grid_result = ClassificationResult(
             success=True,
+            is_lineup=True,
+            best_stand_index=2,
+            best_aim_index=4,
             suggested_game_id=_FAKE_GAME_ID,
             suggested_map_id=_FAKE_MAP_ID,
             suggested_target_zone_id=_FAKE_ZONE_ID,
@@ -117,44 +162,13 @@ class TestIngestionWithClassifier:
             reasoning="Clear smoke throw",
             error_codes=[],
         )
+        classify_mock = AsyncMock(return_value=grid_result)
 
-        # The real classify_lineup (see classifier_service.classify_lineup
-        # docstring) writes suggested_* fields to the Lineup row as a side
-        # effect and returns the result. AsyncMock with just return_value
-        # would skip the write, so the mock here mirrors the side effect.
-        async def _classify_with_writeback(db_arg, lineup_id, *, game_hint=None):
-            target = (
-                await db_arg.execute(select(Lineup).where(Lineup.id == lineup_id))
-            ).scalar_one()
-            target.suggested_game_id = successful_result.suggested_game_id
-            target.suggested_map_id = successful_result.suggested_map_id
-            target.suggested_target_zone_id = successful_result.suggested_target_zone_id
-            target.suggested_stand_zone_id = successful_result.suggested_stand_zone_id
-            target.suggested_side = successful_result.suggested_side
-            target.suggested_utility_type_id = successful_result.suggested_utility_type_id
-            target.aim_anchor_x = successful_result.aim_anchor_x
-            target.aim_anchor_y = successful_result.aim_anchor_y
-            target.classification_confidence = successful_result.confidence
-            target.classification_reasoning = successful_result.reasoning
-            await db_arg.flush()
-            return successful_result
-
-        with (
-            patch("app.services.ingestion.ingestion_orchestrator.list_videos", new_callable=AsyncMock, return_value=[FAKE_VIDEO]),
-            patch("app.services.ingestion.ingestion_orchestrator.fetch_video_detail", new_callable=AsyncMock, return_value=FAKE_VIDEO),
-            patch("app.services.ingestion.ingestion_orchestrator.download_video", new_callable=AsyncMock, return_value=fake_video_path),
-            patch("app.services.ingestion.ingestion_orchestrator.extract_frames", new_callable=AsyncMock, return_value=[_FAKE_PNG, _FAKE_PNG]),
-            patch("app.services.ingestion.ingestion_orchestrator.get_storage") as mock_storage_factory,
-            patch("app.services.ingestion.ingestion_orchestrator.classify_lineup", new=_classify_with_writeback),
-            patch.object(ingestion_orchestrator, "settings") as mock_settings,
+        with _grid_env(tmp_path, fake_video_path, classify_mock=classify_mock) as (
+            mock_settings,
+            _mock_storage,
         ):
-            mock_settings.ingestion_download_dir = str(tmp_path)
             mock_settings.enable_classifier = True
-            mock_storage = MagicMock()
-            mock_storage.bucket = "test-bucket"
-            mock_storage._client = MagicMock()
-            mock_storage_factory.return_value = mock_storage
-
             await ingestion_orchestrator.sync_source(source.id, db)
 
         result = await db.execute(
@@ -164,20 +178,22 @@ class TestIngestionWithClassifier:
         assert len(lineups) == 1
         lineup = lineups[0]
         assert lineup.status == "pending_review"
-        # Classifier should have written suggested values
+        # Orchestrator wrote the classifier suggestions through the repo.
         assert lineup.suggested_game_id == _FAKE_GAME_ID
         assert lineup.suggested_side == "side_a"
         assert lineup.suggested_utility_type_id == _FAKE_UT_ID
+        assert lineup.classification_confidence == pytest.approx(0.85)
 
     @pytest.mark.asyncio
-    async def test_classifier_failure_does_not_abort(
+    async def test_classifier_call_failure_skips_chapter(
         self,
         db: AsyncSession,
         source: Source,
         tmp_path: Path,
     ):
-        """Classifier failure leaves lineup in pending_review without suggestions."""
-        from app.services.ingestion import ingestion_orchestrator
+        """A failed classifier *call* skips the chapter — Strategy A refuses
+        to ingest a chapter it could not verify (no unjudged junk rows)."""
+        ingestion_orchestrator = ingestion_orchestrator_module()
 
         fake_video_path = tmp_path / "vid_cls_001.mp4"
         fake_video_path.write_bytes(b"fake")
@@ -187,38 +203,63 @@ class TestIngestionWithClassifier:
             error_codes=["rate_limit_error"],
             reasoning="Rate limit hit",
         )
+        classify_mock = AsyncMock(return_value=failed_result)
 
-        with (
-            patch("app.services.ingestion.ingestion_orchestrator.list_videos", new_callable=AsyncMock, return_value=[FAKE_VIDEO]),
-            patch("app.services.ingestion.ingestion_orchestrator.fetch_video_detail", new_callable=AsyncMock, return_value=FAKE_VIDEO),
-            patch("app.services.ingestion.ingestion_orchestrator.download_video", new_callable=AsyncMock, return_value=fake_video_path),
-            patch("app.services.ingestion.ingestion_orchestrator.extract_frames", new_callable=AsyncMock, return_value=[_FAKE_PNG, _FAKE_PNG]),
-            patch("app.services.ingestion.ingestion_orchestrator.get_storage") as mock_storage_factory,
-            patch("app.services.ingestion.ingestion_orchestrator.classify_lineup", new_callable=AsyncMock, return_value=failed_result),
-            patch.object(ingestion_orchestrator, "settings") as mock_settings,
+        with _grid_env(tmp_path, fake_video_path, classify_mock=classify_mock) as (
+            mock_settings,
+            _mock_storage,
         ):
-            mock_settings.ingestion_download_dir = str(tmp_path)
             mock_settings.enable_classifier = True
-            mock_storage = MagicMock()
-            mock_storage.bucket = "test-bucket"
-            mock_storage._client = MagicMock()
-            mock_storage_factory.return_value = mock_storage
-
             stats = await ingestion_orchestrator.sync_source(source.id, db)
 
-        # Sync should still succeed despite classifier failure
+        # Chapter skipped (handled, not an error) and NO row created.
         assert stats.chapter_count == 1
         assert stats.error_count == 0
 
         result = await db.execute(
             select(Lineup).where(Lineup.youtube_video_id == "vid_cls_001")
         )
-        lineups = result.scalars().all()
-        assert len(lineups) == 1
-        lineup = lineups[0]
-        assert lineup.status == "pending_review"
-        # No suggestions written on failure
-        assert lineup.suggested_game_id is None
+        assert result.scalars().all() == []
+
+    @pytest.mark.asyncio
+    async def test_not_a_lineup_skips_chapter_no_row(
+        self,
+        db: AsyncSession,
+        source: Source,
+        tmp_path: Path,
+    ):
+        """is_lineup=False → chapter skipped, no pending row (the junk lever)."""
+        ingestion_orchestrator = ingestion_orchestrator_module()
+
+        fake_video_path = tmp_path / "vid_cls_001.mp4"
+        fake_video_path.write_bytes(b"fake")
+
+        not_lineup = ClassificationResult(
+            success=True,
+            is_lineup=False,
+            confidence=0.02,
+            reasoning="Webcam talking-head, not a lineup.",
+            error_codes=[],
+        )
+        classify_mock = AsyncMock(return_value=not_lineup)
+
+        with _grid_env(tmp_path, fake_video_path, classify_mock=classify_mock) as (
+            mock_settings,
+            mock_storage,
+        ):
+            mock_settings.enable_classifier = True
+            stats = await ingestion_orchestrator.sync_source(source.id, db)
+
+        # Handled (not an error) but NO row — this is the "stop junk" behaviour.
+        assert stats.chapter_count == 1
+        assert stats.error_count == 0
+
+        result = await db.execute(
+            select(Lineup).where(Lineup.youtube_video_id == "vid_cls_001")
+        )
+        assert result.scalars().all() == []
+        # MinIO must NOT have been written for a skipped chapter.
+        mock_storage._client.put_object.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_classifier_skipped_when_disabled(
@@ -227,28 +268,28 @@ class TestIngestionWithClassifier:
         source: Source,
         tmp_path: Path,
     ):
-        """When enable_classifier=False, classify_lineup is never called."""
-        from app.services.ingestion import ingestion_orchestrator
+        """enable_classifier=False → grid classifier never called, row kept."""
+        ingestion_orchestrator = ingestion_orchestrator_module()
 
         fake_video_path = tmp_path / "vid_cls_001.mp4"
         fake_video_path.write_bytes(b"fake")
 
-        with (
-            patch("app.services.ingestion.ingestion_orchestrator.list_videos", new_callable=AsyncMock, return_value=[FAKE_VIDEO]),
-            patch("app.services.ingestion.ingestion_orchestrator.fetch_video_detail", new_callable=AsyncMock, return_value=FAKE_VIDEO),
-            patch("app.services.ingestion.ingestion_orchestrator.download_video", new_callable=AsyncMock, return_value=fake_video_path),
-            patch("app.services.ingestion.ingestion_orchestrator.extract_frames", new_callable=AsyncMock, return_value=[_FAKE_PNG, _FAKE_PNG]),
-            patch("app.services.ingestion.ingestion_orchestrator.get_storage") as mock_storage_factory,
-            patch("app.services.ingestion.ingestion_orchestrator.classify_lineup", new_callable=AsyncMock) as mock_classify,
-            patch.object(ingestion_orchestrator, "settings") as mock_settings,
+        classify_mock = AsyncMock()
+
+        with _grid_env(tmp_path, fake_video_path, classify_mock=classify_mock) as (
+            mock_settings,
+            _mock_storage,
         ):
-            mock_settings.ingestion_download_dir = str(tmp_path)
             mock_settings.enable_classifier = False
-            mock_storage = MagicMock()
-            mock_storage.bucket = "test-bucket"
-            mock_storage._client = MagicMock()
-            mock_storage_factory.return_value = mock_storage
+            stats = await ingestion_orchestrator.sync_source(source.id, db)
 
-            await ingestion_orchestrator.sync_source(source.id, db)
-
-        mock_classify.assert_not_called()
+        classify_mock.assert_not_called()
+        # Classifier disabled → Strategy A still keeps the chapter (first/last
+        # grid frame), so the row is created with no suggestions.
+        assert stats.chapter_count == 1
+        result = await db.execute(
+            select(Lineup).where(Lineup.youtube_video_id == "vid_cls_001")
+        )
+        lineups = result.scalars().all()
+        assert len(lineups) == 1
+        assert lineups[0].suggested_game_id is None

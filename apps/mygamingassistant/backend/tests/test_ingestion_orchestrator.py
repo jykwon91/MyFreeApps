@@ -109,7 +109,7 @@ class TestSyncSource:
             patch(
                 "app.services.ingestion.ingestion_orchestrator.extract_frames",
                 new_callable=AsyncMock,
-                return_value=[_FAKE_PNG, _FAKE_PNG],
+                return_value=[_FAKE_PNG] * 5,
             ),
             patch(
                 "app.services.ingestion.ingestion_orchestrator.get_storage",
@@ -120,6 +120,10 @@ class TestSyncSource:
             ) as mock_settings,
         ):
             mock_settings.ingestion_download_dir = str(tmp_path)
+            # Classifier disabled → Strategy A keeps the chapter and uses the
+            # first/last grid frame as stand/aim (no is_lineup gate, no
+            # suggestions). Isolates the fetch→parse→create plumbing.
+            mock_settings.enable_classifier = False
             mock_storage = MagicMock()
             mock_storage.bucket = "mygamingassistant-screenshots"
             mock_storage._client = MagicMock()
@@ -150,17 +154,21 @@ class TestSyncSource:
             assert lineup.side is None
 
     @pytest.mark.asyncio
-    async def test_structural_chapters_filtered_and_frames_offset(
+    async def test_structural_chapters_filtered_and_grid_sampled(
         self,
         db: AsyncSession,
         source: Source,
         tmp_path: Path,
     ):
         """Intro/Outro/short chapters are dropped before extraction; the
-        surviving lineup's frames are sampled a few seconds INTO the chapter,
-        never at the exact boundary (the deterministic black/transition frame).
+        surviving lineup is grid-sampled (Strategy A) — N evenly-spaced
+        frames strictly inside the chapter, never at the boundary (the
+        deterministic black/transition frame).
         """
         from app.services.ingestion import ingestion_orchestrator
+        from app.services.ingestion.ingestion_orchestrator import (
+            _GRID_FRAME_COUNT,
+        )
         from sqlalchemy import select
 
         fake_video_path = tmp_path / "vid002.mp4"
@@ -185,7 +193,7 @@ class TestSyncSource:
             patch(
                 "app.services.ingestion.ingestion_orchestrator.extract_frames",
                 new_callable=AsyncMock,
-                return_value=[_FAKE_PNG, _FAKE_PNG],
+                return_value=[_FAKE_PNG] * _GRID_FRAME_COUNT,
             ) as mock_extract,
             patch(
                 "app.services.ingestion.ingestion_orchestrator.get_storage",
@@ -217,13 +225,16 @@ class TestSyncSource:
         assert lineups[0].title == "A ramp smoke"
         assert lineups[0].chapter_start_seconds == 20  # keyed by chapter start
 
-        # extract_frames called exactly once (one surviving chapter), and the
-        # timestamps are offset INTO the chapter: stand = start+3, aim =
-        # stand+4 — never the exact boundary (start=20).
+        # extract_frames called exactly once (one surviving chapter), with a
+        # grid of _GRID_FRAME_COUNT evenly-spaced timestamps strictly inside
+        # the chapter (20, 200) — never the exact boundary.
         assert mock_extract.await_count == 1
         _video_arg, timestamps = mock_extract.await_args.args
-        assert timestamps == [23.0, 27.0]
-        assert 20.0 not in timestamps  # never the chapter boundary
+        assert len(timestamps) == _GRID_FRAME_COUNT
+        assert all(20.0 < t < 200.0 for t in timestamps)
+        assert 20.0 not in timestamps  # never the chapter start boundary
+        assert 200.0 not in timestamps  # never the chapter end boundary
+        assert timestamps == sorted(timestamps)  # chapter start→end order
 
     @pytest.mark.asyncio
     async def test_dedup_skips_existing_video(
@@ -289,12 +300,12 @@ class TestSyncSource:
         fake_video_path = tmp_path / "vid001.mp4"
         fake_video_path.write_bytes(b"fake")
 
-        # First chapter fails, second succeeds.
+        # First chapter fails, second succeeds (grid of N frames).
         frame_results = iter([
             FrameExtractionError(
                 "ffmpeg failed", timestamp=0.0, returncode=1, stderr="error"
             ),
-            (_FAKE_PNG, _FAKE_PNG),  # won't reach here due to raise
+            [_FAKE_PNG] * 5,
         ])
 
         async def _mock_extract(video_path, timestamps):
@@ -332,6 +343,9 @@ class TestSyncSource:
             ) as mock_settings,
         ):
             mock_settings.ingestion_download_dir = str(tmp_path)
+            # Classifier disabled so the surviving chapter is kept via the
+            # first/last grid frame — isolates the frame-error skip behaviour.
+            mock_settings.enable_classifier = False
             mock_storage = MagicMock()
             mock_storage.bucket = "mygamingassistant-screenshots"
             mock_storage._client = MagicMock()
