@@ -25,7 +25,7 @@ import {
   useGetPendingLineupsQuery,
   useBulkAcceptLineupsMutation,
 } from "@/store/lineupsApi";
-import { useGetGamesQuery, useGetMapsQuery } from "@/store/gamesApi";
+import { useGetGamesQuery } from "@/store/gamesApi";
 import ReviewCard from "@/components/review/ReviewCard";
 import ReviewSkeletonCard from "@/components/review/ReviewSkeletonCard";
 
@@ -66,28 +66,13 @@ export default function Review() {
 
   const lineups = useMemo(() => data?.items ?? [], [data?.items]);
 
-  // Resolve the game slug to fetch maps for. When a game filter is active use
-  // that slug directly; otherwise fall back to the first game in the lineup
-  // page (typically "cs2"). RTK Query deduplicates the fetch automatically.
-  const mapsGameSlug = useMemo(() => {
-    if (gameSlugFilter) return gameSlugFilter;
-    if (!games || !lineups.length) return "";
-    const firstGameId = lineups[0]?.game_id;
-    return games.find((g) => g.id === firstGameId)?.slug ?? "";
-  }, [gameSlugFilter, games, lineups]);
-
-  const { data: maps = [] } = useGetMapsQuery(mapsGameSlug, {
-    skip: !mapsGameSlug,
-  });
-
-  // map_id → minimap_url lookup (MinIO URL; MinimapPinEditor applies bundled fallback on onError).
-  const minimapByMapId = useMemo<Record<string, string | null>>(() => {
-    const out: Record<string, string | null> = {};
-    for (const m of maps) {
-      out[m.id] = m.minimap_url;
-    }
-    return out;
-  }, [maps]);
+  // Minimap resolution lives in ReviewCard, not here. Pending lineups carry
+  // their classification in the suggested_* columns and map_id stays null
+  // until accept, so a page-level lineup.map_id → minimap lookup resolved to
+  // null for every card — and the maps fetch was skipped entirely whenever
+  // the first card was unclassified (its game_id null). ReviewCard now
+  // fetches maps for the operator-selected game and resolves the minimap
+  // from the selected map reactively.
   const total = data?.total ?? 0;
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
@@ -262,7 +247,6 @@ export default function Review() {
               lineup={lineup}
               checked={selectedIds.has(lineup.id)}
               onCheckToggle={() => toggleSelect(lineup.id)}
-              minimapUrl={minimapByMapId[lineup.map_id] ?? null}
             />
           ))}
         </div>

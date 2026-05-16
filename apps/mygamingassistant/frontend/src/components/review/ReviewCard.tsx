@@ -13,6 +13,11 @@ import {
   useHideLineupMutation,
   useReclassifyLineupMutation,
 } from "@/store/lineupsApi";
+import {
+  useGetGamesQuery,
+  useGetMapsQuery,
+  useGetMapDetailQuery,
+} from "@/store/gamesApi";
 import type { Lineup, LineupAcceptBody } from "@/types/game";
 import ConfidenceBadge from "./ConfidenceBadge";
 import { confidenceBorderClass } from "./confidenceUtils";
@@ -90,6 +95,21 @@ function fieldsToAcceptBody(fields: ClassificationFields): LineupAcceptBody {
   return body;
 }
 
+/**
+ * First-<option> label for a dependent <select>: a "pick the parent first"
+ * hint when blocked, a loading note while its data is in flight, otherwise
+ * the normal choose-prompt.
+ */
+function placeholderLabel(
+  blockedMsg: string | null,
+  loading: boolean,
+  chooseLabel: string,
+): string {
+  if (blockedMsg) return blockedMsg;
+  if (loading) return "Loading…";
+  return chooseLabel;
+}
+
 // ---------------------------------------------------------------------------
 // ReviewCard component
 // ---------------------------------------------------------------------------
@@ -98,15 +118,12 @@ export interface ReviewCardProps {
   lineup: Lineup;
   checked: boolean;
   onCheckToggle: () => void;
-  /** Resolved minimap URL for this lineup's map (MinIO URL or bundled fallback). */
-  minimapUrl: string | null;
 }
 
 export default function ReviewCard({
   lineup,
   checked,
   onCheckToggle,
-  minimapUrl,
 }: ReviewCardProps) {
   const [fields, setFields] = useState<ClassificationFields>(() =>
     initFieldsFromLineup(lineup),
@@ -119,6 +136,55 @@ export default function ReviewCard({
 
   const setField = (key: keyof ClassificationFields, value: string) => {
     setFields((prev) => ({ ...prev, [key]: value }));
+  };
+
+  // --- Classification data (cascading: game → map → zones/utility) --------
+  const { data: games = [] } = useGetGamesQuery();
+  const gameSlug = games.find((g) => g.id === fields.game_id)?.slug ?? "";
+
+  const { data: maps = [], isFetching: isMapsFetching } = useGetMapsQuery(
+    gameSlug,
+    { skip: !gameSlug },
+  );
+  const selectedMap = maps.find((m) => m.id === fields.map_id) ?? null;
+  const mapSlug = selectedMap?.slug ?? "";
+
+  const { data: mapDetail, isFetching: isMapDetailFetching } =
+    useGetMapDetailQuery(
+      { gameSlug, mapSlug },
+      { skip: !gameSlug || !mapSlug },
+    );
+
+  // Minimap is resolved reactively from the operator-selected map. A pending
+  // lineup's own map_id is null until accept, so it cannot drive this — see
+  // the PR description for the full P1/P2 analysis.
+  const minimapUrl = selectedMap?.minimap_url ?? null;
+  const zones = mapDetail?.zones ?? [];
+  const utilityTypes = mapDetail?.utility_types ?? [];
+
+  // First-<option> hints for the dependent selects.
+  const mapBlockedMsg = gameSlug ? null : "— pick a game first —";
+  const detailBlockedMsg = mapSlug ? null : "— pick a map first —";
+
+  // A game change invalidates the chosen map (and its zones/utility); a map
+  // change invalidates the chosen zones (zones are map-scoped).
+  const handleGameChange = (gameId: string) => {
+    setFields((prev) => ({
+      ...prev,
+      game_id: gameId,
+      map_id: "",
+      stand_zone_id: "",
+      target_zone_id: "",
+      utility_type_id: "",
+    }));
+  };
+  const handleMapChange = (mapId: string) => {
+    setFields((prev) => ({
+      ...prev,
+      map_id: mapId,
+      stand_zone_id: "",
+      target_zone_id: "",
+    }));
   };
 
   const handleAccept = async () => {
@@ -267,8 +333,12 @@ export default function ReviewCard({
       <div className="px-3 pb-3">
         <p className="text-xs text-muted-foreground mb-1.5 font-medium">
           Minimap positions{" "}
-          {minimapUrl && (
+          {minimapUrl ? (
             <span className="opacity-60">(drag pins to refine)</span>
+          ) : (
+            <span className="opacity-60">
+              (pick a game and map below to load the minimap)
+            </span>
           )}
         </p>
         <MinimapPinEditor
@@ -300,6 +370,110 @@ export default function ReviewCard({
 
       {/* Classification fields */}
       <div className="px-3 pb-3 grid grid-cols-2 sm:grid-cols-3 gap-2">
+        <label className="flex flex-col gap-0.5">
+          <span className="text-xs text-muted-foreground">Game</span>
+          <select
+            value={fields.game_id}
+            onChange={(e) => handleGameChange(e.target.value)}
+            className="h-8 rounded border border-input bg-background px-2 text-xs"
+          >
+            <option value="">— choose a game —</option>
+            {games.map((g) => (
+              <option key={g.id} value={g.id}>
+                {g.name}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="flex flex-col gap-0.5">
+          <span className="text-xs text-muted-foreground">Map</span>
+          <select
+            value={fields.map_id}
+            onChange={(e) => handleMapChange(e.target.value)}
+            disabled={!gameSlug || isMapsFetching}
+            className="h-8 rounded border border-input bg-background px-2 text-xs disabled:opacity-50"
+          >
+            <option value="">
+              {placeholderLabel(mapBlockedMsg, isMapsFetching, "— choose a map —")}
+            </option>
+            {maps.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.name}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="flex flex-col gap-0.5">
+          <span className="text-xs text-muted-foreground">Utility type</span>
+          <select
+            value={fields.utility_type_id}
+            onChange={(e) => setField("utility_type_id", e.target.value)}
+            disabled={!mapSlug || isMapDetailFetching}
+            className="h-8 rounded border border-input bg-background px-2 text-xs disabled:opacity-50"
+          >
+            <option value="">
+              {placeholderLabel(
+                detailBlockedMsg,
+                isMapDetailFetching,
+                "— choose a utility —",
+              )}
+            </option>
+            {utilityTypes.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.name}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="flex flex-col gap-0.5">
+          <span className="text-xs text-muted-foreground">Stand zone</span>
+          <select
+            value={fields.stand_zone_id}
+            onChange={(e) => setField("stand_zone_id", e.target.value)}
+            disabled={!mapSlug || isMapDetailFetching}
+            className="h-8 rounded border border-input bg-background px-2 text-xs disabled:opacity-50"
+          >
+            <option value="">
+              {placeholderLabel(
+                detailBlockedMsg,
+                isMapDetailFetching,
+                "— choose a zone —",
+              )}
+            </option>
+            {zones.map((z) => (
+              <option key={z.id} value={z.id}>
+                {z.name}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="flex flex-col gap-0.5">
+          <span className="text-xs text-muted-foreground">Target zone</span>
+          <select
+            value={fields.target_zone_id}
+            onChange={(e) => setField("target_zone_id", e.target.value)}
+            disabled={!mapSlug || isMapDetailFetching}
+            className="h-8 rounded border border-input bg-background px-2 text-xs disabled:opacity-50"
+          >
+            <option value="">
+              {placeholderLabel(
+                detailBlockedMsg,
+                isMapDetailFetching,
+                "— choose a zone —",
+              )}
+            </option>
+            {zones.map((z) => (
+              <option key={z.id} value={z.id}>
+                {z.name}
+              </option>
+            ))}
+          </select>
+        </label>
+
         <label className="flex flex-col gap-0.5">
           <span className="text-xs text-muted-foreground">Side</span>
           <select
