@@ -38,6 +38,17 @@ class UtilityTypeRead(BaseModel):
     model_config = {"from_attributes": True}
 
 
+def _has_polygon(zone: Optional["ZoneRead"]) -> bool:
+    """True when *zone* exists and carries a non-empty polygon.
+
+    An empty ``polygon_points`` ([]) means the zone was seeded from a fixture
+    but never calibrated (no operator-drawn polygon, no shipped geometry).
+    In that state there is no real centroid — callers must treat the pin
+    position as unknown rather than invent the map centre.
+    """
+    return zone is not None and bool(zone.polygon_points)
+
+
 # ---------------------------------------------------------------------------
 # Lineup read
 # ---------------------------------------------------------------------------
@@ -97,10 +108,19 @@ class LineupRead(BaseModel):
     @computed_field  # type: ignore[misc]
     @property
     def effective_stand_x(self) -> Optional[float]:
-        """Minimap x for the stand pin: explicit anchor or stand_zone centroid."""
+        """Minimap x for the stand pin: explicit anchor or stand_zone centroid.
+
+        Returns None when there is neither an explicit anchor nor a zone with
+        a non-empty polygon. We deliberately do NOT fall back to the
+        polygon_centroid([]) → (0.5, 0.5) map-centre sentinel: a fabricated
+        dead-centre coordinate is indistinguishable from a real one on the
+        map, so it renders a misleading pin instead of signalling "position
+        unknown — calibrate this zone / pin this lineup". The frontend skips
+        null pins (see MapLineupPins).
+        """
         if self.stand_anchor_x is not None:
             return self.stand_anchor_x
-        if self.stand_zone is not None:
+        if _has_polygon(self.stand_zone):
             return polygon_centroid(self.stand_zone.polygon_points)[0]
         return None
 
@@ -109,17 +129,21 @@ class LineupRead(BaseModel):
     def effective_stand_y(self) -> Optional[float]:
         if self.stand_anchor_y is not None:
             return self.stand_anchor_y
-        if self.stand_zone is not None:
+        if _has_polygon(self.stand_zone):
             return polygon_centroid(self.stand_zone.polygon_points)[1]
         return None
 
     @computed_field  # type: ignore[misc]
     @property
     def effective_target_x(self) -> Optional[float]:
-        """Minimap x for the target pin: explicit anchor or target_zone centroid."""
+        """Minimap x for the target pin: explicit anchor or target_zone centroid.
+
+        Returns None when neither an explicit anchor nor a non-empty polygon
+        is available — see ``effective_stand_x`` for the rationale.
+        """
         if self.target_anchor_x is not None:
             return self.target_anchor_x
-        if self.target_zone is not None:
+        if _has_polygon(self.target_zone):
             return polygon_centroid(self.target_zone.polygon_points)[0]
         return None
 
@@ -128,7 +152,7 @@ class LineupRead(BaseModel):
     def effective_target_y(self) -> Optional[float]:
         if self.target_anchor_y is not None:
             return self.target_anchor_y
-        if self.target_zone is not None:
+        if _has_polygon(self.target_zone):
             return polygon_centroid(self.target_zone.polygon_points)[1]
         return None
 

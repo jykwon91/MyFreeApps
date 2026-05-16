@@ -14,6 +14,7 @@ from __future__ import annotations
 import uuid
 from datetime import timedelta
 from typing import Optional
+from urllib.parse import unquote, urlsplit
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -36,6 +37,7 @@ from app.schemas.game.lineup_schemas import (
     LineupCreate,
     LineupIngestCreate,
     LineupPatch,
+    LineupRead,
     PendingLineupsResponse,
     UploadUrlResponse,
 )
@@ -110,23 +112,68 @@ def _presigned_put(storage, key: str) -> str:
     )
 
 
-def _sign_screenshot_url(key: Optional[str]) -> Optional[str]:
-    """Return a presigned GET URL for *key*, or None if key is falsy."""
+def _object_key_from_value(value: str) -> str:
+    """Return the bare MinIO object key from a stored screenshot column value.
+
+    Normally *value* is already a bare key (``pending/<vid>/<n>-stand.png`` or
+    ``<user_id>/<lineup_id>/stand.png``) — the column's intended content.
+
+    A historical bug (fixed alongside migration 0007) persisted a *presigned
+    URL* into the key column: ``_sign_lineup`` assigned the signed URL back
+    onto the ORM instance, and mutating flows (accept/patch/create) committed
+    the request session, flushing that URL into the object-key column. Reads
+    then signed the URL *again*, producing a URL whose "key" was a URL-encoded
+    URL → 404 → broken image.
+
+    This peels every URL layer so signing always receives the real key. It is
+    idempotent for already-clean keys (returns them unchanged), so it doubles
+    as defense-in-depth even after the data-repair migration runs.
+    """
+    seen = 0
+    while value[:4].lower() == "http" and seen < 5:
+        parts = urlsplit(value)
+        if not parts.scheme or not parts.netloc:
+            break
+        # URL path is "/<bucket>/<key...>" — drop the leading bucket segment.
+        path = parts.path.lstrip("/")
+        _, _, key = path.partition("/")
+        value = unquote(key or path)
+        seen += 1
+    return value
+
+
+def _sign_screenshot_url(stored: Optional[str]) -> Optional[str]:
+    """Return a presigned GET URL for the screenshot, or None if unset.
+
+    Defensive: extracts the real object key first so a row whose column was
+    corrupted with a presigned URL still resolves (and never double-signs).
+    """
+    if not stored:
+        return None
+    key = _object_key_from_value(stored)
     if not key:
         return None
     storage = get_storage()
     return storage.generate_presigned_url(key, expires_in_seconds=_READ_URL_TTL)
 
 
-def _sign_lineup(lineup: Lineup) -> Lineup:
-    """Mutate lineup's screenshot URL fields to presigned GET URLs in-place.
+def _build_read(lineup: Lineup) -> LineupRead:
+    """Serialize an ORM ``Lineup`` to ``LineupRead`` with signed screenshot URLs.
 
-    The DB stores object keys (e.g. ``<user_id>/<lineup_id>/stand.png``).
-    Callers receive presigned URLs valid for 24 h.
+    CRITICAL: this never mutates the ORM instance. The previous implementation
+    assigned the signed URL back onto ``lineup.stand_screenshot_url`` /
+    ``.aim_screenshot_url``; because accept/patch/create commit the request
+    session, that persisted the presigned URL into the object-key column,
+    destroying the key and double-signing on every later read. Signing happens
+    on the Pydantic model only — the ORM column keeps the bare key.
     """
-    lineup.stand_screenshot_url = _sign_screenshot_url(lineup.stand_screenshot_url)
-    lineup.aim_screenshot_url = _sign_screenshot_url(lineup.aim_screenshot_url)
-    return lineup
+    read = LineupRead.model_validate(lineup)
+    return read.model_copy(
+        update={
+            "stand_screenshot_url": _sign_screenshot_url(read.stand_screenshot_url),
+            "aim_screenshot_url": _sign_screenshot_url(read.aim_screenshot_url),
+        }
+    )
 
 
 async def create(
@@ -134,7 +181,7 @@ async def create(
     user_id: uuid.UUID,
     payload: LineupCreate,
     lineup_id: Optional[uuid.UUID] = None,
-) -> Lineup:
+) -> LineupRead:
     """Create a lineup via the manual upload path.
 
     All classification fields are required. Status is always set to 'accepted'
@@ -169,7 +216,7 @@ async def create(
         data["id"] = lineup_id
 
     lineup = await create_lineup(db, data)
-    return _sign_lineup(lineup)
+    return _build_read(lineup)
 
 
 async def create_from_ingestion(
@@ -207,43 +254,43 @@ async def create_from_ingestion(
 async def get(
     db: AsyncSession,
     lineup_id: uuid.UUID,
-) -> Lineup | None:
+) -> LineupRead | None:
     lineup = await get_lineup(db, lineup_id)
     if lineup is None:
         return None
-    return _sign_lineup(lineup)
+    return _build_read(lineup)
 
 
 async def list_by_filters(
     db: AsyncSession,
     filters: LineupFilters,
-) -> list[Lineup]:
+) -> list[LineupRead]:
     lineups = await list_lineups(db, filters)
-    return [_sign_lineup(l) for l in lineups]
+    return [_build_read(l) for l in lineups]
 
 
 async def patch(
     db: AsyncSession,
     lineup_id: uuid.UUID,
     payload: LineupPatch,
-) -> Lineup | None:
+) -> LineupRead | None:
     lineup = await get_lineup(db, lineup_id)
     if lineup is None:
         return None
     patch_data = payload.model_dump(exclude_unset=True)
     updated = await update_lineup(db, lineup, patch_data)
-    return _sign_lineup(updated)
+    return _build_read(updated)
 
 
 async def hide(
     db: AsyncSession,
     lineup_id: uuid.UUID,
-) -> Lineup | None:
+) -> LineupRead | None:
     lineup = await get_lineup(db, lineup_id)
     if lineup is None:
         return None
     hidden = await hide_lineup(db, lineup)
-    return hidden
+    return _build_read(hidden)
 
 
 async def get_pending(
@@ -256,8 +303,6 @@ async def get_pending(
     game_id: Optional[uuid.UUID] = None,
 ) -> PendingLineupsResponse:
     """Return paginated pending_review lineups with presigned screenshot URLs."""
-    from app.schemas.game.lineup_schemas import LineupRead
-
     items, total = await list_pending_lineups(
         db,
         limit=limit,
@@ -266,9 +311,8 @@ async def get_pending(
         confidence_max=confidence_max,
         game_id=game_id,
     )
-    signed_items = [_sign_lineup(l) for l in items]
     return PendingLineupsResponse(
-        items=[LineupRead.model_validate(l) for l in signed_items],
+        items=[_build_read(l) for l in items],
         total=total,
         limit=limit,
         offset=offset,
@@ -279,7 +323,7 @@ async def accept(
     db: AsyncSession,
     lineup_id: uuid.UUID,
     body: LineupAcceptBody,
-) -> Lineup | None:
+) -> LineupRead | None:
     """Accept a pending lineup, applying optional overrides.
 
     Resolves suggested values as defaults, then applies overrides on top.
@@ -344,7 +388,7 @@ async def accept(
         overrides["setup_seconds"] = body.setup_seconds
 
     updated = await accept_lineup(db, lineup, overrides)
-    return _sign_lineup(updated)
+    return _build_read(updated)
 
 
 async def get_zone_density(

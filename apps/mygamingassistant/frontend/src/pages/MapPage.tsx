@@ -25,9 +25,13 @@ import { useGetLineupsQuery, useGetZoneDensityQuery } from "@/store/lineupsApi";
 import { useGetLineupPackagesQuery, usePinAllLineupPackageMutation } from "@/store/lineupPackagesApi";
 import LineupCard from "@/components/lineup/LineupCard";
 import MapZoneOverlay from "@/components/lineup/MapZoneOverlay";
-import MapLineupPins, { type PinMode } from "@/components/lineup/MapLineupPins";
+import MapLineupPins, {
+  type PinMode,
+  countUnplaceableLineups,
+} from "@/components/lineup/MapLineupPins";
 import PinModeToggle from "@/components/lineup/PinModeToggle";
 import LineupDetailPanel from "@/components/lineup/LineupDetailPanel";
+import UnplaceableLineupsNotice from "@/components/lineup/UnplaceableLineupsNotice";
 import KeyboardShortcutsHelp from "@/components/lineup/KeyboardShortcutsHelp";
 import MinimapUploadDialog from "@/components/game/MinimapUploadDialog";
 import RoundMode from "@/pages/RoundMode";
@@ -159,6 +163,21 @@ export default function MapPage() {
   );
 
   const pinnedLineups = allMapLineups.filter((l) => pins.isPinned(l.id));
+
+  // Unplaceable hint: lineups exist for the current filter but every one
+  // lacks a resolvable map position (no explicit anchor AND the referenced
+  // zone has no polygon). The hint is non-blocking — the results panel still
+  // lists the lineups; only the map pin is unavailable. Use the lineup set
+  // that drives the current view: the map-wide set when pins are on, the
+  // zone-filtered set otherwise.
+  const unplaceableSource = pinMode !== null ? allMapLineups : lineups;
+  const unplaceablePinMode: PinMode = pinMode ?? "both";
+  const unplaceableCount =
+    unplaceableSource.length > 0
+      ? countUnplaceableLineups(unplaceableSource, unplaceablePinMode)
+      : 0;
+  const allUnplaceable =
+    unplaceableSource.length > 0 && unplaceableCount === unplaceableSource.length;
 
   // Reset active card index when round mode is entered or pin count changes.
   // Using MessageChannel to schedule asynchronously, avoiding the
@@ -511,6 +530,10 @@ export default function MapPage() {
               </button>
             </div>
           </div>
+
+          {allUnplaceable && (
+            <UnplaceableLineupsNotice count={unplaceableCount} />
+          )}
 
           {/* Map + results layout */}
           <div className="flex flex-col lg:flex-row gap-4">

@@ -158,11 +158,27 @@ async def upsert_map_zone(
     name: str,
     polygon_points: list[list[float]] | None = None,
 ) -> MapZone:
+    """Insert a zone if missing; backfill an empty polygon if the fixture has one.
+
+    Backfill rule (idempotent, conservative):
+    - The (map_id, slug) zone already exists, AND
+    - its stored ``polygon_points`` is empty/falsy, AND
+    - the incoming ``polygon_points`` is non-empty
+      → write the incoming polygon onto the existing row and flush.
+
+    A zone that already has a non-empty polygon is NEVER overwritten — this
+    protects operator-drawn polygons (the #656 zone editor) from being
+    clobbered by a re-run of ``load-fixtures``. Re-running with the same
+    fixture is a no-op once the polygon is populated.
+    """
     result = await db.execute(
         select(MapZone).where(MapZone.map_id == map_id, MapZone.slug == slug)
     )
     existing = result.scalar_one_or_none()
     if existing is not None:
+        if not existing.polygon_points and polygon_points:
+            existing.polygon_points = polygon_points
+            await db.flush()
         return existing
     zone = MapZone(
         map_id=map_id,
