@@ -197,6 +197,27 @@ test.describe("Review queue page", () => {
 
     const acceptBtn = card.getByRole("button", { name: /^accept$/i });
     await expect(acceptBtn).toBeVisible();
+
+    // Accept must be DISABLED initially — the seeded lineup has no classification.
+    // PR #682 added classification selects but Accept was always enabled; this
+    // PR gates Accept on the four required fields being set.
+    await expect(acceptBtn).toBeDisabled();
+
+    // Fill in the four required classification fields using the cascading selects.
+    // Seed uses Valorant/Bind — pick those, then any zone/utility combination.
+    await card.getByRole("combobox").nth(0).selectOption({ label: "Valorant" });
+    // Map select becomes enabled once a game is chosen.
+    await card.getByRole("combobox").nth(1).selectOption({ label: "Bind" });
+    // Utility type, stand zone, target zone, side unlock once a map is chosen.
+    // Order matches the rendered select order: Game(0), Map(1), Utility(2), Stand(3), Target(4), Side(5)
+    await expect(card.getByRole("combobox").nth(2)).toBeEnabled({ timeout: 3_000 });
+    await card.getByRole("combobox").nth(2).selectOption({ index: 1 }); // first real utility
+    await card.getByRole("combobox").nth(3).selectOption({ index: 1 }); // first real zone (stand)
+    await card.getByRole("combobox").nth(4).selectOption({ index: 1 }); // first real zone (target)
+    await card.getByRole("combobox").nth(5).selectOption({ value: "side_a" });
+
+    // Accept should now be enabled
+    await expect(acceptBtn).toBeEnabled({ timeout: 3_000 });
     await acceptBtn.click();
 
     // After accept, a success toast should appear
@@ -216,6 +237,111 @@ test.describe("Review queue page", () => {
     }).catch(() => {
       // Non-critical teardown failure — lineup was accepted, not pending, but
       // the delete endpoint accepts any status. Log only.
+      console.warn(`[E2E teardown] Failed to delete lineup ${lineupId}`);
+    });
+  });
+
+  test("manual classification: Accept disabled until all fields set, hint disappears on completion", async ({
+    page,
+    request,
+  }) => {
+    // ── Setup ────────────────────────────────────────────────────────────
+    const token = await getAuthToken(request);
+    if (!token) {
+      test.skip(true, "Cannot obtain auth token — backend may not be running");
+      return;
+    }
+
+    const resetResp = await request.post(
+      `${BACKEND_URL}/api/_test/reset-rate-limit`,
+    );
+    if (resetResp.status() === 404) {
+      test.skip(
+        true,
+        "Test helpers not available — skipping manual classification test",
+      );
+      return;
+    }
+
+    // Seed an unclassified lineup (no suggested_* values set by the seed endpoint)
+    const seedResp = await request.post(
+      `${BACKEND_URL}/api/_test/seed-lineup`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+        data: {
+          game_slug: TEST_GAME_SLUG,
+          map_slug: TEST_MAP_SLUG,
+          title: "E2E Manual Classification Test Lineup",
+        },
+      },
+    );
+    if (!seedResp.ok()) {
+      test.skip(
+        true,
+        `Seed lineup failed (${seedResp.status()}) — skipping manual classification test`,
+      );
+      return;
+    }
+    const seeded = await seedResp.json() as { lineup_id: string };
+    const lineupId = seeded.lineup_id;
+
+    // ── Login and navigate to /review ────────────────────────────────────
+    const credentials = getOperatorCredentials();
+    await loginViaUI(page, credentials, request);
+    await page.goto("/review");
+    await page.waitForURL("**/review");
+
+    const cardTitle = page.getByText("E2E Manual Classification Test Lineup");
+    await expect(cardTitle).toBeVisible({ timeout: 8_000 });
+
+    const card = page.locator(".border-2").filter({ hasText: "E2E Manual Classification Test Lineup" }).first();
+    const acceptBtn = card.getByRole("button", { name: /^accept$/i });
+
+    // ── Step 1: Accept is disabled and hint is visible before any fields set ──
+    await expect(acceptBtn).toBeDisabled();
+    // The inline hint with role="status" should be visible
+    const hint = card.locator('[role="status"]');
+    await expect(hint).toBeVisible();
+    await expect(hint).toContainText(/set required fields to accept/i);
+
+    // ── Step 2: Fill fields one by one, verifying Accept stays disabled ──
+    // Select game
+    await card.getByRole("combobox").nth(0).selectOption({ label: "Valorant" });
+    await expect(acceptBtn).toBeDisabled();
+
+    // Select map — unlocks zones and utility
+    await card.getByRole("combobox").nth(1).selectOption({ label: "Bind" });
+    await expect(card.getByRole("combobox").nth(2)).toBeEnabled({ timeout: 3_000 });
+    await expect(acceptBtn).toBeDisabled();
+
+    // Select utility type
+    await card.getByRole("combobox").nth(2).selectOption({ index: 1 });
+    await expect(acceptBtn).toBeDisabled();
+
+    // Select stand zone
+    await card.getByRole("combobox").nth(3).selectOption({ index: 1 });
+    await expect(acceptBtn).toBeDisabled();
+
+    // Select target zone
+    await card.getByRole("combobox").nth(4).selectOption({ index: 1 });
+    await expect(acceptBtn).toBeDisabled();
+
+    // ── Step 3: Set the final field (side) — Accept must enable and hint vanish ──
+    await card.getByRole("combobox").nth(5).selectOption({ value: "side_a" });
+    await expect(acceptBtn).toBeEnabled({ timeout: 2_000 });
+    await expect(hint).toBeHidden();
+
+    // ── Step 4: Accept the lineup ─────────────────────────────────────────
+    await acceptBtn.click();
+    await page.waitForTimeout(1_000);
+
+    const cardGone = await page.getByText("E2E Manual Classification Test Lineup").isHidden().catch(() => true);
+    expect(cardGone).toBe(true);
+
+    // ── Teardown ──────────────────────────────────────────────────────────
+    await request.delete(`${BACKEND_URL}/api/_test/seed-lineup/${lineupId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }).catch(() => {
       console.warn(`[E2E teardown] Failed to delete lineup ${lineupId}`);
     });
   });

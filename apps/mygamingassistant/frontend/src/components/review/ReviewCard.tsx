@@ -4,9 +4,14 @@
  * Shows stand + aim screenshots, editable classification fields pre-populated
  * from classifier suggestions, and Accept / Re-classify / Hide action buttons.
  * Aim anchor is interactive: click the aim screenshot to reposition it.
+ *
+ * Accept button gating: the Accept button is disabled until all four
+ * backend-required fields are set (target_zone_id, stand_zone_id, side,
+ * utility_type_id). An inline hint lists the missing fields so the operator
+ * knows exactly what to fill in.
  */
 import { useState } from "react";
-import { Check, EyeOff, RefreshCw } from "lucide-react";
+import { AlertCircle, Check, EyeOff, RefreshCw } from "lucide-react";
 import {
   showError,
   showSuccess,
@@ -251,6 +256,16 @@ export default function ReviewCard({
   const aimX = fields.aim_anchor_x !== "" ? parseFloat(fields.aim_anchor_x) : null;
   const aimY = fields.aim_anchor_y !== "" ? parseFloat(fields.aim_anchor_y) : null;
   const borderClass = confidenceBorderClass(lineup.classification_confidence);
+
+  // Gate Accept until all four backend-required fields are populated.
+  // The backend raises 422 "missing required fields: target_zone_id,
+  // stand_zone_id, side, utility_type_id" when any are null.
+  const missingRequiredFields: string[] = [];
+  if (!fields.target_zone_id) missingRequiredFields.push("target zone");
+  if (!fields.stand_zone_id) missingRequiredFields.push("stand zone");
+  if (!fields.side) missingRequiredFields.push("side");
+  if (!fields.utility_type_id) missingRequiredFields.push("utility type");
+  const canAccept = missingRequiredFields.length === 0;
 
   return (
     <div className={`rounded-lg border-2 bg-card overflow-hidden ${borderClass}`}>
@@ -543,38 +558,58 @@ export default function ReviewCard({
       )}
 
       {/* Action buttons */}
-      <div className="px-3 pb-3 flex items-center gap-2 flex-wrap">
-        <button
-          type="button"
-          onClick={handleAccept}
-          disabled={isAccepting}
-          className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 h-8 text-xs font-medium text-primary-foreground disabled:opacity-50"
-        >
-          <Check className={`w-3.5 h-3.5 ${isAccepting ? "animate-pulse" : ""}`} />
-          {isAccepting ? "Accepting…" : "Accept"}
-        </button>
+      <div className="px-3 pb-3 space-y-2">
+        {/* Inline hint when Accept is blocked by missing required fields */}
+        {!canAccept && !isAccepting && (
+          <div
+            className="flex items-start gap-1.5 text-xs text-muted-foreground"
+            role="status"
+            aria-live="polite"
+          >
+            <AlertCircle
+              className="w-3.5 h-3.5 mt-0.5 shrink-0 text-amber-500"
+              aria-hidden
+            />
+            <span>
+              Set required fields to accept:{" "}
+              <span className="font-medium">{missingRequiredFields.join(", ")}</span>
+            </span>
+          </div>
+        )}
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            type="button"
+            onClick={handleAccept}
+            disabled={isAccepting || !canAccept}
+            aria-disabled={!canAccept}
+            className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 h-8 text-xs font-medium text-primary-foreground disabled:opacity-50"
+          >
+            <Check className={`w-3.5 h-3.5 ${isAccepting ? "animate-pulse" : ""}`} />
+            {isAccepting ? "Accepting…" : "Accept"}
+          </button>
 
-        <button
-          type="button"
-          onClick={handleReclassify}
-          disabled={isReclassifying}
-          className="inline-flex items-center gap-1.5 rounded-md border px-3 h-8 text-xs font-medium disabled:opacity-50"
-        >
-          <RefreshCw
-            className={`w-3.5 h-3.5 ${isReclassifying ? "animate-spin" : ""}`}
-          />
-          {isReclassifying ? "Classifying…" : "Re-classify"}
-        </button>
+          <button
+            type="button"
+            onClick={handleReclassify}
+            disabled={isReclassifying}
+            className="inline-flex items-center gap-1.5 rounded-md border px-3 h-8 text-xs font-medium disabled:opacity-50"
+          >
+            <RefreshCw
+              className={`w-3.5 h-3.5 ${isReclassifying ? "animate-spin" : ""}`}
+            />
+            {isReclassifying ? "Classifying…" : "Re-classify"}
+          </button>
 
-        <button
-          type="button"
-          onClick={() => setHideConfirmOpen(true)}
-          disabled={isHiding}
-          className="inline-flex items-center gap-1.5 rounded-md border border-destructive/30 px-3 h-8 text-xs font-medium text-destructive disabled:opacity-50 hover:bg-destructive/10 ml-auto"
-        >
-          <EyeOff className="w-3.5 h-3.5" />
-          {isHiding ? "Hiding…" : "Hide"}
-        </button>
+          <button
+            type="button"
+            onClick={() => setHideConfirmOpen(true)}
+            disabled={isHiding}
+            className="inline-flex items-center gap-1.5 rounded-md border border-destructive/30 px-3 h-8 text-xs font-medium text-destructive disabled:opacity-50 hover:bg-destructive/10 ml-auto"
+          >
+            <EyeOff className="w-3.5 h-3.5" />
+            {isHiding ? "Hiding…" : "Hide"}
+          </button>
+        </div>
       </div>
 
       <ConfirmDialog
