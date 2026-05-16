@@ -7,7 +7,12 @@
  */
 import { useState } from "react";
 import { Check, EyeOff, RefreshCw } from "lucide-react";
-import { showError, showSuccess, extractErrorMessage } from "@platform/ui";
+import {
+  showError,
+  showSuccess,
+  extractErrorMessage,
+  ConfirmDialog,
+} from "@platform/ui";
 import {
   useAcceptLineupMutation,
   useHideLineupMutation,
@@ -133,6 +138,7 @@ export default function ReviewCard({
   const [hideLineup, { isLoading: isHiding }] = useHideLineupMutation();
   const [reclassify, { isLoading: isReclassifying }] =
     useReclassifyLineupMutation();
+  const [hideConfirmOpen, setHideConfirmOpen] = useState(false);
 
   const setField = (key: keyof ClassificationFields, value: string) => {
     setFields((prev) => ({ ...prev, [key]: value }));
@@ -198,11 +204,10 @@ export default function ReviewCard({
   };
 
   const handleHide = async () => {
-    if (!window.confirm("Hide this lineup? It can be recovered from the database."))
-      return;
     try {
       await hideLineup(lineup.id).unwrap();
       showSuccess("Lineup hidden.");
+      setHideConfirmOpen(false);
     } catch {
       showError("Failed to hide lineup.");
     }
@@ -563,7 +568,7 @@ export default function ReviewCard({
 
         <button
           type="button"
-          onClick={handleHide}
+          onClick={() => setHideConfirmOpen(true)}
           disabled={isHiding}
           className="inline-flex items-center gap-1.5 rounded-md border border-destructive/30 px-3 h-8 text-xs font-medium text-destructive disabled:opacity-50 hover:bg-destructive/10 ml-auto"
         >
@@ -571,6 +576,17 @@ export default function ReviewCard({
           {isHiding ? "Hiding…" : "Hide"}
         </button>
       </div>
+
+      <ConfirmDialog
+        open={hideConfirmOpen}
+        title="Hide this lineup?"
+        description="It can be recovered from the database."
+        confirmLabel="Hide"
+        variant="destructive"
+        isLoading={isHiding}
+        onConfirm={handleHide}
+        onCancel={() => setHideConfirmOpen(false)}
+      />
     </div>
   );
 }

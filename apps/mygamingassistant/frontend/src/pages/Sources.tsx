@@ -1,6 +1,11 @@
 import { useState } from "react";
 import { PlaySquare, Trash2, RefreshCw } from "lucide-react";
-import { showError, showSuccess, extractErrorMessage } from "@platform/ui";
+import {
+  showError,
+  showSuccess,
+  extractErrorMessage,
+  ConfirmDialog,
+} from "@platform/ui";
 import {
   useGetSourcesQuery,
   useCreateSourceMutation,
@@ -128,6 +133,7 @@ interface SourceRowProps {
 function SourceRow({ source }: SourceRowProps) {
   const [syncSource, { isLoading: isSyncing }] = useSyncSourceMutation();
   const [deleteSource, { isLoading: isDeleting }] = useDeleteSourceMutation();
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   const url = extractUrl(source.config_json);
   const syncStats = source.config_json["last_sync_stats"] as
@@ -144,10 +150,10 @@ function SourceRow({ source }: SourceRowProps) {
   };
 
   const handleDelete = async () => {
-    if (!window.confirm("Remove this source? Existing lineups from it will be kept.")) return;
     try {
       await deleteSource(source.id).unwrap();
       showSuccess("Source removed.");
+      setDeleteConfirmOpen(false);
     } catch {
       showError("Failed to remove source.");
     }
@@ -194,7 +200,7 @@ function SourceRow({ source }: SourceRowProps) {
           {isSyncing ? "Syncing…" : "Sync now"}
         </button>
         <button
-          onClick={handleDelete}
+          onClick={() => setDeleteConfirmOpen(true)}
           disabled={isDeleting}
           aria-label="Delete source"
           className="inline-flex items-center rounded-md border border-destructive/30 px-3 h-8 text-xs font-medium text-destructive disabled:opacity-50 hover:bg-destructive/10"
@@ -203,6 +209,17 @@ function SourceRow({ source }: SourceRowProps) {
           <span className="sr-only">Delete</span>
         </button>
       </div>
+
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        title="Remove this source?"
+        description="Existing lineups from it will be kept."
+        confirmLabel="Remove"
+        variant="destructive"
+        isLoading={isDeleting}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteConfirmOpen(false)}
+      />
     </div>
   );
 }
