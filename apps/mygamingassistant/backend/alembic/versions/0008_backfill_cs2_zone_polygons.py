@@ -37,6 +37,7 @@ from pathlib import Path
 
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy.dialects import postgresql
 
 
 revision = "0008"
@@ -94,17 +95,19 @@ def upgrade() -> None:
         sa.column("id", sa.String),
         sa.column("map_id", sa.String),
         sa.column("slug", sa.String),
-        sa.column("polygon_points", sa.JSON),
+        sa.column("polygon_points", postgresql.JSONB),
     )
 
-    # Empty == NULL OR a zero-length JSON array. polygon_points is a JSON
-    # column (not JSONB), so use json_array_length under a type guard so the
-    # length check never raises on a non-array value.
+    # Empty == NULL OR a zero-length array. The real column is JSONB
+    # (created by migration 0001 as postgresql.JSONB with server_default
+    # '[]' — the model's loose `JSON` annotation is Python-side only), so
+    # use the jsonb_* functions. The type guard keeps the length check from
+    # raising on a non-array value.
     is_empty = sa.or_(
         map_zone.c.polygon_points.is_(None),
         sa.text(
-            "(json_typeof(map_zone.polygon_points) = 'array' "
-            "AND json_array_length(map_zone.polygon_points) = 0)"
+            "(jsonb_typeof(map_zone.polygon_points) = 'array' "
+            "AND jsonb_array_length(map_zone.polygon_points) = 0)"
         ),
     )
 
