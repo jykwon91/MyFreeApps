@@ -21,8 +21,9 @@ Two routers in this module per MGA's public-read / auth-write model:
 
 The public ``GET /api/lineups/{id}`` only returns accepted lineups — pending /
 hidden lineups 404 to unauthenticated callers, since their presigned screenshot
-URLs are baked into the response by ``lineup_service._sign_lineup``. Operators
-who need to view a pending/hidden lineup directly use the auth-gated list-pending
+URLs are baked into the response by ``lineup_service._build_read`` (which signs
+onto the Pydantic model only — never back onto the ORM column). Operators who
+need to view a pending/hidden lineup directly use the auth-gated list-pending
 endpoint or pass through the existing PATCH/accept flow.
 
 See ``apps/mygamingassistant/CLAUDE.md`` → Authentication Model.
@@ -180,8 +181,7 @@ async def list_lineups(
         # Public route forces accepted — pending/hidden are operator-only.
         status="accepted",
     )
-    lineups = await lineup_service.list_by_filters(db, filters)
-    return [LineupRead.model_validate(l) for l in lineups]
+    return await lineup_service.list_by_filters(db, filters)
 
 
 @public_router.get("/lineups/{lineup_id}", response_model=LineupRead)
@@ -202,7 +202,7 @@ async def get_lineup(
         # Treat non-accepted lineups as not-found from a public POV — they
         # have signed screenshot URLs that shouldn't leak before review.
         raise HTTPException(status_code=404, detail="Lineup not found")
-    return LineupRead.model_validate(lineup)
+    return lineup
 
 
 @public_router.get(
@@ -319,8 +319,7 @@ async def create_lineup(
     db: AsyncSession = Depends(get_db),
 ) -> LineupRead:
     """Create a lineup. Pass lineup_id from upload-url to link screenshots."""
-    lineup = await lineup_service.create(db, user.id, payload, lineup_id=lineup_id)
-    return LineupRead.model_validate(lineup)
+    return await lineup_service.create(db, user.id, payload, lineup_id=lineup_id)
 
 
 @auth_router.get("/lineups/{lineup_id}/admin", response_model=LineupRead)
@@ -338,7 +337,7 @@ async def get_lineup_admin(
     lineup = await lineup_service.get(db, lineup_id)
     if lineup is None:
         raise HTTPException(status_code=404, detail="Lineup not found")
-    return LineupRead.model_validate(lineup)
+    return lineup
 
 
 @auth_router.patch("/lineups/{lineup_id}", response_model=LineupRead)
@@ -350,7 +349,7 @@ async def patch_lineup(
     lineup = await lineup_service.patch(db, lineup_id, payload)
     if lineup is None:
         raise HTTPException(status_code=404, detail="Lineup not found")
-    return LineupRead.model_validate(lineup)
+    return lineup
 
 
 @auth_router.delete("/lineups/{lineup_id}", status_code=204)
@@ -412,7 +411,7 @@ async def accept_lineup(
     if lineup is None:
         raise HTTPException(status_code=404, detail="Lineup not found")
     await db.commit()
-    return LineupRead.model_validate(lineup)
+    return lineup
 
 
 @auth_router.post("/lineups/{lineup_id}/hide", response_model=LineupRead)
@@ -421,14 +420,11 @@ async def hide_pending_lineup(
     db: AsyncSession = Depends(get_db),
 ) -> LineupRead:
     """Soft-delete a lineup by setting status to 'hidden'."""
-    from app.repositories.game.lineup_repo import get_lineup, hide_lineup
-
-    lineup = await get_lineup(db, lineup_id)
-    if lineup is None:
+    hidden = await lineup_service.hide(db, lineup_id)
+    if hidden is None:
         raise HTTPException(status_code=404, detail="Lineup not found")
-    hidden = await hide_lineup(db, lineup)
     await db.commit()
-    return LineupRead.model_validate(hidden)
+    return hidden
 
 
 @auth_router.post("/lineups/bulk-accept", response_model=list[LineupRead])
@@ -449,7 +445,7 @@ async def bulk_accept_lineups(
             lineup = await lineup_service.accept(db, lid, patch)
             if lineup is not None:
                 await db.commit()
-                accepted.append(LineupRead.model_validate(lineup))
+                accepted.append(lineup)
         except Exception as exc:
             logger.warning(
                 "bulk_accept: skipping lineup_id=%s error=%s", lid, str(exc)
