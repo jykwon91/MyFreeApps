@@ -86,6 +86,74 @@ def _parse_chapters_from_description(
     return chapters
 
 
+# Chapter titles that are video *structure*, not lineup demonstrations. A
+# YouTube lineup tutorial interleaves real lineup chapters ("A smoke from T
+# spawn") with structural chapters (intro, outro, "Tip 3", "Subscribe"). The
+# structural ones become useless pending lineup rows AND waste a classifier
+# call, so drop them before ingestion. Matched case-insensitively, anchored to
+# the start of the stripped title so "Mid smoke (intro angle)" is NOT dropped.
+#
+# Phase-1 cheap win. Phase 2 (Strategy A: multi-frame extraction + a Claude
+# `is_lineup` decision) makes the classifier itself the lineup detector and
+# supersedes this title heuristic.
+_NON_LINEUP_TITLE_RE = re.compile(
+    r"^\s*(?:"
+    r"intro|outro|tips?|"
+    r"subscribe|like|smash|"
+    r"thanks|thank\s*you|thx|"
+    r"conclusion|summary|recap|wrap[\s-]?up|overview|"
+    r"sponsor|promo|shout[\s-]?out|"
+    r"credits|disclaimer|patreon|discord|socials?|links?|"
+    r"giveaway|announcement|update|news|donate|donation|"
+    r"the\s+end|bye|see\s*you"
+    r")\b",
+    re.IGNORECASE,
+)
+
+# Minimum chapter length for a plausible lineup demo. A real lineup
+# demonstration (walk to spot, line up the throw, throw, show result) is rarely
+# shorter than this; sub-15s chapters are almost always transitions/stings.
+_MIN_LINEUP_CHAPTER_SECONDS = 15
+
+
+def filter_lineup_chapters(
+    chapters: list[Chapter],
+    *,
+    min_duration_seconds: int = _MIN_LINEUP_CHAPTER_SECONDS,
+) -> list[Chapter]:
+    """Drop chapters that are video structure, not lineup demonstrations.
+
+    Two heuristics applied *after* ``parse_chapters``:
+
+      1. **Title denylist** — intro / outro / "tip N" / subscribe / sponsor /
+         credits / etc.
+      2. **Minimum duration** — chapters shorter than *min_duration_seconds*
+         are transitions/stings, not a walk-aim-throw demo.
+
+    ``parse_chapters`` stays a pure structural parser (its existing test
+    contract — "Intro" parses as a chapter — is intentionally preserved). This
+    is the separate "is this chapter plausibly a lineup" concern, kept as its
+    own function for single responsibility and isolated unit testing.
+
+    Args:
+        chapters: Parsed chapters from ``parse_chapters``.
+        min_duration_seconds: Chapters shorter than this are dropped.
+
+    Returns:
+        The subset of *chapters* that are plausibly real lineups, in order.
+        May be empty (the orchestrator already treats "no chapters" as
+        "skip this video").
+    """
+    kept: list[Chapter] = []
+    for ch in chapters:
+        if _NON_LINEUP_TITLE_RE.match(ch.title.strip()):
+            continue
+        if (ch.end_seconds - ch.start_seconds) < min_duration_seconds:
+            continue
+        kept.append(ch)
+    return kept
+
+
 def parse_chapters(
     description: str,
     video_duration: int,

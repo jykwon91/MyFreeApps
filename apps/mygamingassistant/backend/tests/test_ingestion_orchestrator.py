@@ -50,6 +50,25 @@ FAKE_VIDEO = VideoMeta(
     ],
 )
 
+# A video whose chapter list mixes real lineups with structural chapters
+# (intro/outro) and a too-short chapter — exercises filter_lineup_chapters
+# wiring + the frame-offset heuristic.
+FILTERED_VIDEO = VideoMeta(
+    video_id="vid002",
+    title="Mirage lineups",
+    description="",
+    duration=400,
+    published_at="20260101",
+    channel_name="TestCreator",
+    url="https://www.youtube.com/watch?v=vid002",
+    chapters=[
+        {"start_time": 0, "end_time": 20, "title": "Intro"},            # structural
+        {"start_time": 20, "end_time": 200, "title": "A ramp smoke"},   # real → kept
+        {"start_time": 200, "end_time": 210, "title": "B short smoke"}, # 10s → too short
+        {"start_time": 210, "end_time": 400, "title": "Outro"},         # structural
+    ],
+)
+
 _FAKE_PNG = b"\x89PNG\r\n\x1a\n"
 
 
@@ -129,6 +148,82 @@ class TestSyncSource:
             assert lineup.stand_zone_id is None
             assert lineup.utility_type_id is None
             assert lineup.side is None
+
+    @pytest.mark.asyncio
+    async def test_structural_chapters_filtered_and_frames_offset(
+        self,
+        db: AsyncSession,
+        source: Source,
+        tmp_path: Path,
+    ):
+        """Intro/Outro/short chapters are dropped before extraction; the
+        surviving lineup's frames are sampled a few seconds INTO the chapter,
+        never at the exact boundary (the deterministic black/transition frame).
+        """
+        from app.services.ingestion import ingestion_orchestrator
+        from sqlalchemy import select
+
+        fake_video_path = tmp_path / "vid002.mp4"
+        fake_video_path.write_bytes(b"fake video")
+
+        with (
+            patch(
+                "app.services.ingestion.ingestion_orchestrator.list_videos",
+                new_callable=AsyncMock,
+                return_value=[FILTERED_VIDEO],
+            ),
+            patch(
+                "app.services.ingestion.ingestion_orchestrator.fetch_video_detail",
+                new_callable=AsyncMock,
+                return_value=FILTERED_VIDEO,
+            ),
+            patch(
+                "app.services.ingestion.ingestion_orchestrator.download_video",
+                new_callable=AsyncMock,
+                return_value=fake_video_path,
+            ),
+            patch(
+                "app.services.ingestion.ingestion_orchestrator.extract_frames",
+                new_callable=AsyncMock,
+                return_value=[_FAKE_PNG, _FAKE_PNG],
+            ) as mock_extract,
+            patch(
+                "app.services.ingestion.ingestion_orchestrator.get_storage",
+            ) as mock_storage_factory,
+            patch.object(
+                ingestion_orchestrator,
+                "settings",
+            ) as mock_settings,
+        ):
+            mock_settings.ingestion_download_dir = str(tmp_path)
+            mock_settings.enable_classifier = False  # isolate filtering/offset
+            mock_storage = MagicMock()
+            mock_storage.bucket = "mygamingassistant-screenshots"
+            mock_storage._client = MagicMock()
+            mock_storage_factory.return_value = mock_storage
+
+            stats = await ingestion_orchestrator.sync_source(source.id, db)
+
+        # Only "A ramp smoke" survives (Intro/Outro denylisted, "B short
+        # smoke" is 10s < 15s minimum).
+        assert stats.chapter_count == 1
+        assert stats.video_count == 1
+
+        result = await db.execute(
+            select(Lineup).where(Lineup.youtube_video_id == "vid002")
+        )
+        lineups = result.scalars().all()
+        assert len(lineups) == 1
+        assert lineups[0].title == "A ramp smoke"
+        assert lineups[0].chapter_start_seconds == 20  # keyed by chapter start
+
+        # extract_frames called exactly once (one surviving chapter), and the
+        # timestamps are offset INTO the chapter: stand = start+3, aim =
+        # stand+4 — never the exact boundary (start=20).
+        assert mock_extract.await_count == 1
+        _video_arg, timestamps = mock_extract.await_args.args
+        assert timestamps == [23.0, 27.0]
+        assert 20.0 not in timestamps  # never the chapter boundary
 
     @pytest.mark.asyncio
     async def test_dedup_skips_existing_video(
