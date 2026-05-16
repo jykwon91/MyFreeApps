@@ -7,20 +7,236 @@
         "name": "Mirage",
         "minimap_url": "/minimaps/cs2/mirage.png",
         "zones": [
-          { "slug": "a-site",     "name": "A Site",     "polygon_points": [] },
-          { "slug": "b-site",     "name": "B Site",     "polygon_points": [] },
-          { "slug": "a-ramp",     "name": "A Ramp",     "polygon_points": [] },
-          { "slug": "a-palace",   "name": "Palace",     "polygon_points": [] },
-          { "slug": "b-apts",     "name": "B Apartments","polygon_points": [] },
-          { "slug": "b-van",      "name": "Van",        "polygon_points": [] },
-          { "slug": "mid",        "name": "Mid",        "polygon_points": [] },
-          { "slug": "catwalk",    "name": "Catwalk",    "polygon_points": [] },
-          { "slug": "t-spawn",    "name": "T Spawn",    "polygon_points": [] },
-          { "slug": "ct-spawn",   "name": "CT Spawn",   "polygon_points": [] }
+          {
+            "slug": "a-site",
+            "name": "A Site",
+            "polygon_points": [
+              {
+                "x": 0.17,
+                "y": 0.22
+              },
+              {
+                "x": 0.31,
+                "y": 0.22
+              },
+              {
+                "x": 0.32,
+                "y": 0.34
+              },
+              {
+                "x": 0.16,
+                "y": 0.35
+              }
+            ]
+          },
+          {
+            "slug": "b-site",
+            "name": "B Site",
+            "polygon_points": [
+              {
+                "x": 0.27,
+                "y": 0.55
+              },
+              {
+                "x": 0.42,
+                "y": 0.55
+              },
+              {
+                "x": 0.42,
+                "y": 0.7
+              },
+              {
+                "x": 0.27,
+                "y": 0.7
+              }
+            ]
+          },
+          {
+            "slug": "a-ramp",
+            "name": "A Ramp",
+            "polygon_points": [
+              {
+                "x": 0.14,
+                "y": 0.43
+              },
+              {
+                "x": 0.28,
+                "y": 0.43
+              },
+              {
+                "x": 0.28,
+                "y": 0.58
+              },
+              {
+                "x": 0.14,
+                "y": 0.58
+              }
+            ]
+          },
+          {
+            "slug": "a-palace",
+            "name": "Palace",
+            "polygon_points": [
+              {
+                "x": 0.29,
+                "y": 0.34
+              },
+              {
+                "x": 0.41,
+                "y": 0.34
+              },
+              {
+                "x": 0.41,
+                "y": 0.47
+              },
+              {
+                "x": 0.29,
+                "y": 0.47
+              }
+            ]
+          },
+          {
+            "slug": "b-apts",
+            "name": "B Apartments",
+            "polygon_points": [
+              {
+                "x": 0.26,
+                "y": 0.68
+              },
+              {
+                "x": 0.41,
+                "y": 0.68
+              },
+              {
+                "x": 0.41,
+                "y": 0.8
+              },
+              {
+                "x": 0.26,
+                "y": 0.8
+              }
+            ]
+          },
+          {
+            "slug": "b-van",
+            "name": "Van",
+            "polygon_points": [
+              {
+                "x": 0.27,
+                "y": 0.54
+              },
+              {
+                "x": 0.35,
+                "y": 0.54
+              },
+              {
+                "x": 0.35,
+                "y": 0.62
+              },
+              {
+                "x": 0.27,
+                "y": 0.62
+              }
+            ]
+          },
+          {
+            "slug": "mid",
+            "name": "Mid",
+            "polygon_points": [
+              {
+                "x": 0.46,
+                "y": 0.49
+              },
+              {
+                "x": 0.59,
+                "y": 0.49
+              },
+              {
+                "x": 0.59,
+                "y": 0.69
+              },
+              {
+                "x": 0.46,
+                "y": 0.69
+              }
+            ]
+          },
+          {
+            "slug": "catwalk",
+            "name": "Catwalk",
+            "polygon_points": [
+              {
+                "x": 0.4,
+                "y": 0.36
+              },
+              {
+                "x": 0.53,
+                "y": 0.36
+              },
+              {
+                "x": 0.53,
+                "y": 0.49
+              },
+              {
+                "x": 0.4,
+                "y": 0.49
+              }
+            ]
+          },
+          {
+            "slug": "t-spawn",
+            "name": "T Spawn",
+            "polygon_points": [
+              {
+                "x": 0.42,
+                "y": 0.76
+              },
+              {
+                "x": 0.6,
+                "y": 0.76
+              },
+              {
+                "x": 0.6,
+                "y": 0.87
+              },
+              {
+                "x": 0.42,
+                "y": 0.87
+              }
+            ]
+          },
+          {
+            "slug": "ct-spawn",
+            "name": "CT Spawn",
+            "polygon_points": [
+              {
+                "x": 0.78,
+                "y": 0.3
+              },
+              {
+                "x": 0.92,
+                "y": 0.3
+              },
+              {
+                "x": 0.92,
+                "y": 0.45
+              },
+              {
+                "x": 0.78,
+                "y": 0.45
+              }
+            ]
+          }
         ],
         "sites": [
-          { "slug": "a", "name": "A" },
-          { "slug": "b", "name": "B" }
+          {
+            "slug": "a",
+            "name": "A"
+          },
+          {
+            "slug": "b",
+            "name": "B"
+          }
         ]
       },
       {
@@ -28,18 +244,192 @@
         "name": "Inferno",
         "minimap_url": "/minimaps/cs2/inferno.png",
         "zones": [
-          { "slug": "a-site",     "name": "A Site",     "polygon_points": [] },
-          { "slug": "b-site",     "name": "B Site",     "polygon_points": [] },
-          { "slug": "a-long",     "name": "A Long",     "polygon_points": [] },
-          { "slug": "banana",     "name": "Banana",     "polygon_points": [] },
-          { "slug": "mid",        "name": "Mid",        "polygon_points": [] },
-          { "slug": "second-mid", "name": "Second Mid", "polygon_points": [] },
-          { "slug": "t-spawn",    "name": "T Spawn",    "polygon_points": [] },
-          { "slug": "ct-spawn",   "name": "CT Spawn",   "polygon_points": [] }
+          {
+            "slug": "a-site",
+            "name": "A Site",
+            "polygon_points": [
+              {
+                "x": 0.43,
+                "y": 0.17
+              },
+              {
+                "x": 0.57,
+                "y": 0.17
+              },
+              {
+                "x": 0.57,
+                "y": 0.3
+              },
+              {
+                "x": 0.43,
+                "y": 0.3
+              }
+            ]
+          },
+          {
+            "slug": "b-site",
+            "name": "B Site",
+            "polygon_points": [
+              {
+                "x": 0.74,
+                "y": 0.61
+              },
+              {
+                "x": 0.88,
+                "y": 0.61
+              },
+              {
+                "x": 0.88,
+                "y": 0.75
+              },
+              {
+                "x": 0.74,
+                "y": 0.75
+              }
+            ]
+          },
+          {
+            "slug": "a-long",
+            "name": "A Long",
+            "polygon_points": [
+              {
+                "x": 0.59,
+                "y": 0.24
+              },
+              {
+                "x": 0.72,
+                "y": 0.24
+              },
+              {
+                "x": 0.72,
+                "y": 0.38
+              },
+              {
+                "x": 0.59,
+                "y": 0.38
+              }
+            ]
+          },
+          {
+            "slug": "banana",
+            "name": "Banana",
+            "polygon_points": [
+              {
+                "x": 0.22,
+                "y": 0.42
+              },
+              {
+                "x": 0.36,
+                "y": 0.45
+              },
+              {
+                "x": 0.34,
+                "y": 0.58
+              },
+              {
+                "x": 0.21,
+                "y": 0.55
+              }
+            ]
+          },
+          {
+            "slug": "mid",
+            "name": "Mid",
+            "polygon_points": [
+              {
+                "x": 0.43,
+                "y": 0.43
+              },
+              {
+                "x": 0.57,
+                "y": 0.43
+              },
+              {
+                "x": 0.57,
+                "y": 0.57
+              },
+              {
+                "x": 0.43,
+                "y": 0.57
+              }
+            ]
+          },
+          {
+            "slug": "second-mid",
+            "name": "Second Mid",
+            "polygon_points": [
+              {
+                "x": 0.44,
+                "y": 0.33
+              },
+              {
+                "x": 0.56,
+                "y": 0.33
+              },
+              {
+                "x": 0.56,
+                "y": 0.43
+              },
+              {
+                "x": 0.44,
+                "y": 0.43
+              }
+            ]
+          },
+          {
+            "slug": "t-spawn",
+            "name": "T Spawn",
+            "polygon_points": [
+              {
+                "x": 0.27,
+                "y": 0.74
+              },
+              {
+                "x": 0.45,
+                "y": 0.74
+              },
+              {
+                "x": 0.45,
+                "y": 0.87
+              },
+              {
+                "x": 0.27,
+                "y": 0.87
+              }
+            ]
+          },
+          {
+            "slug": "ct-spawn",
+            "name": "CT Spawn",
+            "polygon_points": [
+              {
+                "x": 0.82,
+                "y": 0.29
+              },
+              {
+                "x": 0.94,
+                "y": 0.29
+              },
+              {
+                "x": 0.94,
+                "y": 0.44
+              },
+              {
+                "x": 0.82,
+                "y": 0.44
+              }
+            ]
+          }
         ],
         "sites": [
-          { "slug": "a", "name": "A" },
-          { "slug": "b", "name": "B" }
+          {
+            "slug": "a",
+            "name": "A"
+          },
+          {
+            "slug": "b",
+            "name": "B"
+          }
         ]
       },
       {
@@ -47,19 +437,214 @@
         "name": "Dust II",
         "minimap_url": "/minimaps/cs2/dust2.png",
         "zones": [
-          { "slug": "a-site",     "name": "A Site",     "polygon_points": [] },
-          { "slug": "b-site",     "name": "B Site",     "polygon_points": [] },
-          { "slug": "a-long",     "name": "A Long",     "polygon_points": [] },
-          { "slug": "a-short",    "name": "A Short",    "polygon_points": [] },
-          { "slug": "b-tunnels",  "name": "B Tunnels",  "polygon_points": [] },
-          { "slug": "mid",        "name": "Mid",        "polygon_points": [] },
-          { "slug": "catwalk",    "name": "Catwalk",    "polygon_points": [] },
-          { "slug": "t-spawn",    "name": "T Spawn",    "polygon_points": [] },
-          { "slug": "ct-spawn",   "name": "CT Spawn",   "polygon_points": [] }
+          {
+            "slug": "a-site",
+            "name": "A Site",
+            "polygon_points": [
+              {
+                "x": 0.7,
+                "y": 0.08
+              },
+              {
+                "x": 0.87,
+                "y": 0.08
+              },
+              {
+                "x": 0.87,
+                "y": 0.25
+              },
+              {
+                "x": 0.7,
+                "y": 0.25
+              }
+            ]
+          },
+          {
+            "slug": "b-site",
+            "name": "B Site",
+            "polygon_points": [
+              {
+                "x": 0.09,
+                "y": 0.06
+              },
+              {
+                "x": 0.25,
+                "y": 0.06
+              },
+              {
+                "x": 0.25,
+                "y": 0.21
+              },
+              {
+                "x": 0.09,
+                "y": 0.21
+              }
+            ]
+          },
+          {
+            "slug": "a-long",
+            "name": "A Long",
+            "polygon_points": [
+              {
+                "x": 0.71,
+                "y": 0.27
+              },
+              {
+                "x": 0.86,
+                "y": 0.27
+              },
+              {
+                "x": 0.86,
+                "y": 0.55
+              },
+              {
+                "x": 0.71,
+                "y": 0.55
+              }
+            ]
+          },
+          {
+            "slug": "a-short",
+            "name": "A Short",
+            "polygon_points": [
+              {
+                "x": 0.55,
+                "y": 0.22
+              },
+              {
+                "x": 0.69,
+                "y": 0.22
+              },
+              {
+                "x": 0.69,
+                "y": 0.4
+              },
+              {
+                "x": 0.55,
+                "y": 0.4
+              }
+            ]
+          },
+          {
+            "slug": "b-tunnels",
+            "name": "B Tunnels",
+            "polygon_points": [
+              {
+                "x": 0.1,
+                "y": 0.45
+              },
+              {
+                "x": 0.28,
+                "y": 0.45
+              },
+              {
+                "x": 0.28,
+                "y": 0.66
+              },
+              {
+                "x": 0.1,
+                "y": 0.66
+              }
+            ]
+          },
+          {
+            "slug": "mid",
+            "name": "Mid",
+            "polygon_points": [
+              {
+                "x": 0.4,
+                "y": 0.3
+              },
+              {
+                "x": 0.56,
+                "y": 0.3
+              },
+              {
+                "x": 0.56,
+                "y": 0.62
+              },
+              {
+                "x": 0.4,
+                "y": 0.62
+              }
+            ]
+          },
+          {
+            "slug": "catwalk",
+            "name": "Catwalk",
+            "polygon_points": [
+              {
+                "x": 0.52,
+                "y": 0.43
+              },
+              {
+                "x": 0.66,
+                "y": 0.43
+              },
+              {
+                "x": 0.66,
+                "y": 0.58
+              },
+              {
+                "x": 0.52,
+                "y": 0.58
+              }
+            ]
+          },
+          {
+            "slug": "t-spawn",
+            "name": "T Spawn",
+            "polygon_points": [
+              {
+                "x": 0.3,
+                "y": 0.83
+              },
+              {
+                "x": 0.52,
+                "y": 0.83
+              },
+              {
+                "x": 0.52,
+                "y": 0.95
+              },
+              {
+                "x": 0.3,
+                "y": 0.95
+              }
+            ]
+          },
+          {
+            "slug": "ct-spawn",
+            "name": "CT Spawn",
+            "polygon_points": [
+              {
+                "x": 0.55,
+                "y": 0.62
+              },
+              {
+                "x": 0.71,
+                "y": 0.62
+              },
+              {
+                "x": 0.71,
+                "y": 0.76
+              },
+              {
+                "x": 0.55,
+                "y": 0.76
+              }
+            ]
+          }
         ],
         "sites": [
-          { "slug": "a", "name": "A" },
-          { "slug": "b", "name": "B" }
+          {
+            "slug": "a",
+            "name": "A"
+          },
+          {
+            "slug": "b",
+            "name": "B"
+          }
         ]
       },
       {
@@ -67,18 +652,192 @@
         "name": "Overpass",
         "minimap_url": "/minimaps/cs2/overpass.png",
         "zones": [
-          { "slug": "a-site",     "name": "A Site",     "polygon_points": [] },
-          { "slug": "b-site",     "name": "B Site",     "polygon_points": [] },
-          { "slug": "a-long",     "name": "A Long",     "polygon_points": [] },
-          { "slug": "b-monster",  "name": "Monster",    "polygon_points": [] },
-          { "slug": "mid",        "name": "Mid",        "polygon_points": [] },
-          { "slug": "canal",      "name": "Canal",      "polygon_points": [] },
-          { "slug": "t-spawn",    "name": "T Spawn",    "polygon_points": [] },
-          { "slug": "ct-spawn",   "name": "CT Spawn",   "polygon_points": [] }
+          {
+            "slug": "a-site",
+            "name": "A Site",
+            "polygon_points": [
+              {
+                "x": 0.54,
+                "y": 0.54
+              },
+              {
+                "x": 0.71,
+                "y": 0.54
+              },
+              {
+                "x": 0.71,
+                "y": 0.71
+              },
+              {
+                "x": 0.54,
+                "y": 0.71
+              }
+            ]
+          },
+          {
+            "slug": "b-site",
+            "name": "B Site",
+            "polygon_points": [
+              {
+                "x": 0.38,
+                "y": 0.13
+              },
+              {
+                "x": 0.54,
+                "y": 0.13
+              },
+              {
+                "x": 0.54,
+                "y": 0.28
+              },
+              {
+                "x": 0.38,
+                "y": 0.28
+              }
+            ]
+          },
+          {
+            "slug": "a-long",
+            "name": "A Long",
+            "polygon_points": [
+              {
+                "x": 0.66,
+                "y": 0.45
+              },
+              {
+                "x": 0.8,
+                "y": 0.45
+              },
+              {
+                "x": 0.8,
+                "y": 0.66
+              },
+              {
+                "x": 0.66,
+                "y": 0.66
+              }
+            ]
+          },
+          {
+            "slug": "b-monster",
+            "name": "Monster",
+            "polygon_points": [
+              {
+                "x": 0.22,
+                "y": 0.32
+              },
+              {
+                "x": 0.38,
+                "y": 0.32
+              },
+              {
+                "x": 0.38,
+                "y": 0.5
+              },
+              {
+                "x": 0.22,
+                "y": 0.5
+              }
+            ]
+          },
+          {
+            "slug": "mid",
+            "name": "Mid",
+            "polygon_points": [
+              {
+                "x": 0.4,
+                "y": 0.36
+              },
+              {
+                "x": 0.55,
+                "y": 0.36
+              },
+              {
+                "x": 0.55,
+                "y": 0.55
+              },
+              {
+                "x": 0.4,
+                "y": 0.55
+              }
+            ]
+          },
+          {
+            "slug": "canal",
+            "name": "Canal",
+            "polygon_points": [
+              {
+                "x": 0.14,
+                "y": 0.54
+              },
+              {
+                "x": 0.31,
+                "y": 0.54
+              },
+              {
+                "x": 0.31,
+                "y": 0.72
+              },
+              {
+                "x": 0.14,
+                "y": 0.72
+              }
+            ]
+          },
+          {
+            "slug": "t-spawn",
+            "name": "T Spawn",
+            "polygon_points": [
+              {
+                "x": 0.58,
+                "y": 0.8
+              },
+              {
+                "x": 0.74,
+                "y": 0.8
+              },
+              {
+                "x": 0.74,
+                "y": 0.93
+              },
+              {
+                "x": 0.58,
+                "y": 0.93
+              }
+            ]
+          },
+          {
+            "slug": "ct-spawn",
+            "name": "CT Spawn",
+            "polygon_points": [
+              {
+                "x": 0.42,
+                "y": 0.05
+              },
+              {
+                "x": 0.58,
+                "y": 0.05
+              },
+              {
+                "x": 0.58,
+                "y": 0.16
+              },
+              {
+                "x": 0.42,
+                "y": 0.16
+              }
+            ]
+          }
         ],
         "sites": [
-          { "slug": "a", "name": "A" },
-          { "slug": "b", "name": "B" }
+          {
+            "slug": "a",
+            "name": "A"
+          },
+          {
+            "slug": "b",
+            "name": "B"
+          }
         ]
       },
       {
@@ -86,17 +845,170 @@
         "name": "Nuke",
         "minimap_url": "/minimaps/cs2/nuke.png",
         "zones": [
-          { "slug": "upper-a",    "name": "Upper A",    "polygon_points": [] },
-          { "slug": "lower-b",    "name": "Lower B",    "polygon_points": [] },
-          { "slug": "a-ramp",     "name": "Ramp",       "polygon_points": [] },
-          { "slug": "outside",    "name": "Outside",    "polygon_points": [] },
-          { "slug": "lobby",      "name": "Lobby",      "polygon_points": [] },
-          { "slug": "t-spawn",    "name": "T Spawn",    "polygon_points": [] },
-          { "slug": "ct-spawn",   "name": "CT Spawn",   "polygon_points": [] }
+          {
+            "slug": "upper-a",
+            "name": "Upper A",
+            "polygon_points": [
+              {
+                "x": 0.5,
+                "y": 0.42
+              },
+              {
+                "x": 0.67,
+                "y": 0.42
+              },
+              {
+                "x": 0.67,
+                "y": 0.57
+              },
+              {
+                "x": 0.5,
+                "y": 0.57
+              }
+            ]
+          },
+          {
+            "slug": "lower-b",
+            "name": "Lower B",
+            "polygon_points": [
+              {
+                "x": 0.49,
+                "y": 0.57
+              },
+              {
+                "x": 0.64,
+                "y": 0.57
+              },
+              {
+                "x": 0.64,
+                "y": 0.7
+              },
+              {
+                "x": 0.49,
+                "y": 0.7
+              }
+            ]
+          },
+          {
+            "slug": "a-ramp",
+            "name": "Ramp",
+            "polygon_points": [
+              {
+                "x": 0.62,
+                "y": 0.48
+              },
+              {
+                "x": 0.72,
+                "y": 0.48
+              },
+              {
+                "x": 0.72,
+                "y": 0.63
+              },
+              {
+                "x": 0.62,
+                "y": 0.63
+              }
+            ]
+          },
+          {
+            "slug": "outside",
+            "name": "Outside",
+            "polygon_points": [
+              {
+                "x": 0.72,
+                "y": 0.4
+              },
+              {
+                "x": 0.93,
+                "y": 0.4
+              },
+              {
+                "x": 0.93,
+                "y": 0.6
+              },
+              {
+                "x": 0.72,
+                "y": 0.6
+              }
+            ]
+          },
+          {
+            "slug": "lobby",
+            "name": "Lobby",
+            "polygon_points": [
+              {
+                "x": 0.33,
+                "y": 0.49
+              },
+              {
+                "x": 0.48,
+                "y": 0.49
+              },
+              {
+                "x": 0.48,
+                "y": 0.62
+              },
+              {
+                "x": 0.33,
+                "y": 0.62
+              }
+            ]
+          },
+          {
+            "slug": "t-spawn",
+            "name": "T Spawn",
+            "polygon_points": [
+              {
+                "x": 0.07,
+                "y": 0.48
+              },
+              {
+                "x": 0.24,
+                "y": 0.48
+              },
+              {
+                "x": 0.24,
+                "y": 0.62
+              },
+              {
+                "x": 0.07,
+                "y": 0.62
+              }
+            ]
+          },
+          {
+            "slug": "ct-spawn",
+            "name": "CT Spawn",
+            "polygon_points": [
+              {
+                "x": 0.49,
+                "y": 0.26
+              },
+              {
+                "x": 0.64,
+                "y": 0.26
+              },
+              {
+                "x": 0.64,
+                "y": 0.4
+              },
+              {
+                "x": 0.49,
+                "y": 0.4
+              }
+            ]
+          }
         ],
         "sites": [
-          { "slug": "a", "name": "A (Upper)" },
-          { "slug": "b", "name": "B (Lower)" }
+          {
+            "slug": "a",
+            "name": "A (Upper)"
+          },
+          {
+            "slug": "b",
+            "name": "B (Lower)"
+          }
         ]
       },
       {
@@ -104,17 +1016,170 @@
         "name": "Anubis",
         "minimap_url": "/minimaps/cs2/anubis.png",
         "zones": [
-          { "slug": "a-site",     "name": "A Site",     "polygon_points": [] },
-          { "slug": "b-site",     "name": "B Site",     "polygon_points": [] },
-          { "slug": "a-main",     "name": "A Main",     "polygon_points": [] },
-          { "slug": "b-main",     "name": "B Main",     "polygon_points": [] },
-          { "slug": "mid",        "name": "Mid",        "polygon_points": [] },
-          { "slug": "t-spawn",    "name": "T Spawn",    "polygon_points": [] },
-          { "slug": "ct-spawn",   "name": "CT Spawn",   "polygon_points": [] }
+          {
+            "slug": "a-site",
+            "name": "A Site",
+            "polygon_points": [
+              {
+                "x": 0.65,
+                "y": 0.2
+              },
+              {
+                "x": 0.8,
+                "y": 0.2
+              },
+              {
+                "x": 0.8,
+                "y": 0.35
+              },
+              {
+                "x": 0.65,
+                "y": 0.35
+              }
+            ]
+          },
+          {
+            "slug": "b-site",
+            "name": "B Site",
+            "polygon_points": [
+              {
+                "x": 0.23,
+                "y": 0.43
+              },
+              {
+                "x": 0.38,
+                "y": 0.43
+              },
+              {
+                "x": 0.38,
+                "y": 0.57
+              },
+              {
+                "x": 0.23,
+                "y": 0.57
+              }
+            ]
+          },
+          {
+            "slug": "a-main",
+            "name": "A Main",
+            "polygon_points": [
+              {
+                "x": 0.58,
+                "y": 0.46
+              },
+              {
+                "x": 0.73,
+                "y": 0.46
+              },
+              {
+                "x": 0.73,
+                "y": 0.64
+              },
+              {
+                "x": 0.58,
+                "y": 0.64
+              }
+            ]
+          },
+          {
+            "slug": "b-main",
+            "name": "B Main",
+            "polygon_points": [
+              {
+                "x": 0.27,
+                "y": 0.58
+              },
+              {
+                "x": 0.42,
+                "y": 0.58
+              },
+              {
+                "x": 0.42,
+                "y": 0.74
+              },
+              {
+                "x": 0.27,
+                "y": 0.74
+              }
+            ]
+          },
+          {
+            "slug": "mid",
+            "name": "Mid",
+            "polygon_points": [
+              {
+                "x": 0.43,
+                "y": 0.42
+              },
+              {
+                "x": 0.57,
+                "y": 0.42
+              },
+              {
+                "x": 0.57,
+                "y": 0.58
+              },
+              {
+                "x": 0.43,
+                "y": 0.58
+              }
+            ]
+          },
+          {
+            "slug": "t-spawn",
+            "name": "T Spawn",
+            "polygon_points": [
+              {
+                "x": 0.4,
+                "y": 0.76
+              },
+              {
+                "x": 0.57,
+                "y": 0.76
+              },
+              {
+                "x": 0.57,
+                "y": 0.88
+              },
+              {
+                "x": 0.4,
+                "y": 0.88
+              }
+            ]
+          },
+          {
+            "slug": "ct-spawn",
+            "name": "CT Spawn",
+            "polygon_points": [
+              {
+                "x": 0.37,
+                "y": 0.13
+              },
+              {
+                "x": 0.54,
+                "y": 0.13
+              },
+              {
+                "x": 0.54,
+                "y": 0.27
+              },
+              {
+                "x": 0.37,
+                "y": 0.27
+              }
+            ]
+          }
         ],
         "sites": [
-          { "slug": "a", "name": "A" },
-          { "slug": "b", "name": "B" }
+          {
+            "slug": "a",
+            "name": "A"
+          },
+          {
+            "slug": "b",
+            "name": "B"
+          }
         ]
       },
       {
@@ -122,17 +1187,170 @@
         "name": "Ancient",
         "minimap_url": "/minimaps/cs2/ancient.png",
         "zones": [
-          { "slug": "a-site",     "name": "A Site",     "polygon_points": [] },
-          { "slug": "b-site",     "name": "B Site",     "polygon_points": [] },
-          { "slug": "a-main",     "name": "A Main",     "polygon_points": [] },
-          { "slug": "b-main",     "name": "B Main",     "polygon_points": [] },
-          { "slug": "mid",        "name": "Mid",        "polygon_points": [] },
-          { "slug": "t-spawn",    "name": "T Spawn",    "polygon_points": [] },
-          { "slug": "ct-spawn",   "name": "CT Spawn",   "polygon_points": [] }
+          {
+            "slug": "a-site",
+            "name": "A Site",
+            "polygon_points": [
+              {
+                "x": 0.71,
+                "y": 0.34
+              },
+              {
+                "x": 0.86,
+                "y": 0.34
+              },
+              {
+                "x": 0.86,
+                "y": 0.5
+              },
+              {
+                "x": 0.71,
+                "y": 0.5
+              }
+            ]
+          },
+          {
+            "slug": "b-site",
+            "name": "B Site",
+            "polygon_points": [
+              {
+                "x": 0.16,
+                "y": 0.18
+              },
+              {
+                "x": 0.31,
+                "y": 0.18
+              },
+              {
+                "x": 0.31,
+                "y": 0.33
+              },
+              {
+                "x": 0.16,
+                "y": 0.33
+              }
+            ]
+          },
+          {
+            "slug": "a-main",
+            "name": "A Main",
+            "polygon_points": [
+              {
+                "x": 0.58,
+                "y": 0.5
+              },
+              {
+                "x": 0.74,
+                "y": 0.5
+              },
+              {
+                "x": 0.74,
+                "y": 0.66
+              },
+              {
+                "x": 0.58,
+                "y": 0.66
+              }
+            ]
+          },
+          {
+            "slug": "b-main",
+            "name": "B Main",
+            "polygon_points": [
+              {
+                "x": 0.16,
+                "y": 0.37
+              },
+              {
+                "x": 0.32,
+                "y": 0.37
+              },
+              {
+                "x": 0.32,
+                "y": 0.55
+              },
+              {
+                "x": 0.16,
+                "y": 0.55
+              }
+            ]
+          },
+          {
+            "slug": "mid",
+            "name": "Mid",
+            "polygon_points": [
+              {
+                "x": 0.4,
+                "y": 0.42
+              },
+              {
+                "x": 0.56,
+                "y": 0.42
+              },
+              {
+                "x": 0.56,
+                "y": 0.6
+              },
+              {
+                "x": 0.4,
+                "y": 0.6
+              }
+            ]
+          },
+          {
+            "slug": "t-spawn",
+            "name": "T Spawn",
+            "polygon_points": [
+              {
+                "x": 0.38,
+                "y": 0.74
+              },
+              {
+                "x": 0.55,
+                "y": 0.74
+              },
+              {
+                "x": 0.55,
+                "y": 0.87
+              },
+              {
+                "x": 0.38,
+                "y": 0.87
+              }
+            ]
+          },
+          {
+            "slug": "ct-spawn",
+            "name": "CT Spawn",
+            "polygon_points": [
+              {
+                "x": 0.34,
+                "y": 0.2
+              },
+              {
+                "x": 0.51,
+                "y": 0.2
+              },
+              {
+                "x": 0.51,
+                "y": 0.34
+              },
+              {
+                "x": 0.34,
+                "y": 0.34
+              }
+            ]
+          }
         ],
         "sites": [
-          { "slug": "a", "name": "A" },
-          { "slug": "b", "name": "B" }
+          {
+            "slug": "a",
+            "name": "A"
+          },
+          {
+            "slug": "b",
+            "name": "B"
+          }
         ]
       },
       {
@@ -140,16 +1358,148 @@
         "name": "Vertigo",
         "minimap_url": "/minimaps/cs2/vertigo.png",
         "zones": [
-          { "slug": "a-site",     "name": "A Site",     "polygon_points": [] },
-          { "slug": "b-site",     "name": "B Site",     "polygon_points": [] },
-          { "slug": "a-ramp",     "name": "A Ramp",     "polygon_points": [] },
-          { "slug": "mid",        "name": "Mid",        "polygon_points": [] },
-          { "slug": "t-spawn",    "name": "T Spawn",    "polygon_points": [] },
-          { "slug": "ct-spawn",   "name": "CT Spawn",   "polygon_points": [] }
+          {
+            "slug": "a-site",
+            "name": "A Site",
+            "polygon_points": [
+              {
+                "x": 0.13,
+                "y": 0.17
+              },
+              {
+                "x": 0.28,
+                "y": 0.17
+              },
+              {
+                "x": 0.28,
+                "y": 0.32
+              },
+              {
+                "x": 0.13,
+                "y": 0.32
+              }
+            ]
+          },
+          {
+            "slug": "b-site",
+            "name": "B Site",
+            "polygon_points": [
+              {
+                "x": 0.64,
+                "y": 0.51
+              },
+              {
+                "x": 0.8,
+                "y": 0.51
+              },
+              {
+                "x": 0.8,
+                "y": 0.66
+              },
+              {
+                "x": 0.64,
+                "y": 0.66
+              }
+            ]
+          },
+          {
+            "slug": "a-ramp",
+            "name": "A Ramp",
+            "polygon_points": [
+              {
+                "x": 0.14,
+                "y": 0.46
+              },
+              {
+                "x": 0.3,
+                "y": 0.46
+              },
+              {
+                "x": 0.3,
+                "y": 0.64
+              },
+              {
+                "x": 0.14,
+                "y": 0.64
+              }
+            ]
+          },
+          {
+            "slug": "mid",
+            "name": "Mid",
+            "polygon_points": [
+              {
+                "x": 0.37,
+                "y": 0.37
+              },
+              {
+                "x": 0.53,
+                "y": 0.37
+              },
+              {
+                "x": 0.53,
+                "y": 0.55
+              },
+              {
+                "x": 0.37,
+                "y": 0.55
+              }
+            ]
+          },
+          {
+            "slug": "t-spawn",
+            "name": "T Spawn",
+            "polygon_points": [
+              {
+                "x": 0.3,
+                "y": 0.72
+              },
+              {
+                "x": 0.47,
+                "y": 0.72
+              },
+              {
+                "x": 0.47,
+                "y": 0.85
+              },
+              {
+                "x": 0.3,
+                "y": 0.85
+              }
+            ]
+          },
+          {
+            "slug": "ct-spawn",
+            "name": "CT Spawn",
+            "polygon_points": [
+              {
+                "x": 0.47,
+                "y": 0.15
+              },
+              {
+                "x": 0.63,
+                "y": 0.15
+              },
+              {
+                "x": 0.63,
+                "y": 0.3
+              },
+              {
+                "x": 0.47,
+                "y": 0.3
+              }
+            ]
+          }
         ],
         "sites": [
-          { "slug": "a", "name": "A" },
-          { "slug": "b", "name": "B" }
+          {
+            "slug": "a",
+            "name": "A"
+          },
+          {
+            "slug": "b",
+            "name": "B"
+          }
         ]
       }
     ]
