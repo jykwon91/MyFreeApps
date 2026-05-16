@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { PlaySquare, Trash2, RefreshCw } from "lucide-react";
 import {
   showError,
@@ -12,7 +12,43 @@ import {
   useDeleteSourceMutation,
   useSyncSourceMutation,
 } from "@/store/sourcesApi";
-import type { SourceKind } from "@/types/game";
+import type { Source, SourceKind } from "@/types/game";
+
+// ---------------------------------------------------------------------------
+// Sync-status tracking
+//
+// POST /sources/{id}/sync enqueues a fire-and-forget backend BackgroundTask
+// and returns immediately — there is no job-status endpoint. The only honest
+// completion signal is the source's own freshness: when ingestion finishes
+// the backend advances `last_synced_at` and writes `last_sync_stats`. So the
+// page captures `last_synced_at` at kick time and polls GET /sources until it
+// changes (or a cap elapses), then surfaces the result.
+// ---------------------------------------------------------------------------
+
+const SYNC_POLL_MS = 5000;
+const SYNC_TIMEOUT_MS = 5 * 60 * 1000;
+
+interface SyncStats {
+  video_count?: number;
+  chapter_count?: number;
+  error_count?: number;
+}
+
+interface SyncWatch {
+  /** `last_synced_at` at the moment sync was kicked; completion = it changed. */
+  baseline: string | null;
+  /** Epoch ms after which we stop watching and tell the user to check back. */
+  deadline: number;
+}
+
+function readSyncStats(configJson: Record<string, unknown>): SyncStats {
+  return (configJson["last_sync_stats"] as SyncStats | undefined) ?? {};
+}
+
+function formatSyncResult(s: SyncStats): string {
+  const base = `${s.video_count ?? 0} videos, ${s.chapter_count ?? 0} lineups`;
+  return (s.error_count ?? 0) > 0 ? `${base}, ${s.error_count} errors` : base;
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -121,33 +157,20 @@ function AddSourceForm({ onAdded }: AddSourceFormProps) {
 // ---------------------------------------------------------------------------
 
 interface SourceRowProps {
-  source: {
-    id: string;
-    kind: SourceKind;
-    config_json: Record<string, unknown>;
-    last_synced_at: string | null;
-    created_at: string;
-  };
+  source: Source;
+  /** True while a kicked sync is being watched for completion (page-owned). */
+  isSyncing: boolean;
+  onSync: () => void;
 }
 
-function SourceRow({ source }: SourceRowProps) {
-  const [syncSource, { isLoading: isSyncing }] = useSyncSourceMutation();
+function SourceRow({ source, isSyncing, onSync }: SourceRowProps) {
   const [deleteSource, { isLoading: isDeleting }] = useDeleteSourceMutation();
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   const url = extractUrl(source.config_json);
   const syncStats = source.config_json["last_sync_stats"] as
-    | { video_count?: number; chapter_count?: number; error_count?: number }
+    | SyncStats
     | undefined;
-
-  const handleSync = async () => {
-    try {
-      await syncSource(source.id).unwrap();
-      showSuccess("Sync started — lineups will appear in pending review when complete.");
-    } catch {
-      showError("Could not start sync. Please try again.");
-    }
-  };
 
   const handleDelete = async () => {
     try {
@@ -175,6 +198,11 @@ function SourceRow({ source }: SourceRowProps) {
           </div>
           <div className="mt-1 text-xs text-muted-foreground space-x-3">
             <span>Last sync: {formatDate(source.last_synced_at)}</span>
+            {isSyncing && (
+              <span className="text-primary">
+                Syncing… (runs in the background)
+              </span>
+            )}
             {syncStats && (
               <>
                 <span>{syncStats.video_count ?? 0} videos</span>
@@ -191,7 +219,7 @@ function SourceRow({ source }: SourceRowProps) {
       {/* Actions */}
       <div className="flex items-center gap-2 shrink-0">
         <button
-          onClick={handleSync}
+          onClick={onSync}
           disabled={isSyncing}
           aria-label="Sync now"
           className="inline-flex items-center gap-1.5 rounded-md border px-3 h-8 text-xs font-medium disabled:opacity-50"
@@ -229,7 +257,94 @@ function SourceRow({ source }: SourceRowProps) {
 // ---------------------------------------------------------------------------
 
 export default function Sources() {
+  const [syncing, setSyncing] = useState<Record<string, SyncWatch>>({});
+  const anySyncing = Object.keys(syncing).length > 0;
+
   const { data: sources, isLoading, isError, refetch } = useGetSourcesQuery();
+  const [syncSource] = useSyncSourceMutation();
+
+  // Mirror `syncing` into a ref so the poll-tick callback reads the latest
+  // watch set without re-subscribing the interval. Updated in an effect
+  // (never during render).
+  const syncingRef = useRef(syncing);
+  useEffect(() => {
+    syncingRef.current = syncing;
+  }, [syncing]);
+
+  const handleSync = useCallback(
+    async (src: Source) => {
+      try {
+        await syncSource(src.id).unwrap();
+        setSyncing((prev) => ({
+          ...prev,
+          [src.id]: {
+            baseline: src.last_synced_at,
+            deadline: Date.now() + SYNC_TIMEOUT_MS,
+          },
+        }));
+        showSuccess(
+          "Sync started — running in the background. You'll be notified here when it finishes.",
+        );
+      } catch {
+        showError("Could not start sync. Please try again.");
+      }
+    },
+    [syncSource],
+  );
+
+  // While any sync is tracked, poll the sources list. A watched source's
+  // `last_synced_at` advancing past its baseline means the background
+  // ingestion finished; past the deadline we stop watching so this never
+  // polls forever. setState happens in the timer callback (not the effect
+  // body), and refs are read in the callback (not during render).
+  useEffect(() => {
+    if (!anySyncing) return;
+    let cancelled = false;
+
+    const tick = async () => {
+      let srcs: Source[];
+      try {
+        srcs = await refetch().unwrap();
+      } catch {
+        return;
+      }
+      if (cancelled) return;
+
+      const watches = syncingRef.current;
+      const now = Date.now();
+      const settled: Array<{ id: string; ok: boolean; msg: string }> = [];
+      for (const id of Object.keys(watches)) {
+        const watch = watches[id];
+        const src = srcs.find((s) => s.id === id);
+        if (src && src.last_synced_at !== watch.baseline) {
+          settled.push({
+            id,
+            ok: true,
+            msg: `Sync complete — ${formatSyncResult(readSyncStats(src.config_json))}.`,
+          });
+        } else if (now > watch.deadline) {
+          settled.push({
+            id,
+            ok: false,
+            msg: "Sync is still running in the background — refresh later to see results.",
+          });
+        }
+      }
+      if (settled.length === 0) return;
+      for (const s of settled) (s.ok ? showSuccess : showError)(s.msg);
+      setSyncing((prev) => {
+        const next = { ...prev };
+        for (const s of settled) delete next[s.id];
+        return next;
+      });
+    };
+
+    const handle = setInterval(tick, SYNC_POLL_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(handle);
+    };
+  }, [anySyncing, refetch]);
 
   return (
     <main className="p-4 sm:p-8 space-y-6 max-w-3xl">
@@ -270,7 +385,12 @@ export default function Sources() {
         {!isLoading && !isError && sources && sources.length > 0 && (
           <div className="space-y-3">
             {sources.map((source) => (
-              <SourceRow key={source.id} source={source} />
+              <SourceRow
+                key={source.id}
+                source={source}
+                isSyncing={Boolean(syncing[source.id])}
+                onSync={() => handleSync(source)}
+              />
             ))}
           </div>
         )}
