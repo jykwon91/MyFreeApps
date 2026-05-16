@@ -44,8 +44,11 @@ class UtilityTypeRead(BaseModel):
 
 class LineupRead(BaseModel):
     id: uuid.UUID
-    game_id: uuid.UUID
-    map_id: uuid.UUID
+    # game_id / map_id are NULL on pending_review lineups — populated only
+    # when the operator accepts (CHECK enforces non-null at status='accepted').
+    # The review queue serializes pre-accept rows, so these must be optional.
+    game_id: Optional[uuid.UUID] = None
+    map_id: Optional[uuid.UUID] = None
     # Classification fields — nullable for pending_review lineups
     target_zone_id: Optional[uuid.UUID] = None
     stand_zone_id: Optional[uuid.UUID] = None

@@ -195,3 +195,74 @@ async def test_sync_source_returns_job_id(auth_client: AsyncClient, existing_sou
 async def test_sync_source_404(auth_client: AsyncClient):
     resp = await auth_client.post(f"/api/sources/{uuid.uuid4()}/sync")
     assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Regressions: playlist watch?v=&list= URL, deleted-source exclusion,
+# LineupRead serialization of pending (null game_id/map_id) rows.
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_create_playlist_accepts_watch_list_url(auth_client: AsyncClient):
+    """The common 'open a video inside a playlist' URL must be accepted and
+    normalized to the canonical /playlist?list= form."""
+    resp = await auth_client.post(
+        "/api/sources",
+        json={
+            "kind": "youtube_playlist",
+            "url": "https://www.youtube.com/watch?v=Q4Dwg9Z0wZ0&list=PLCv9jk0KUJ",
+        },
+    )
+    assert resp.status_code == 201, resp.text
+    assert resp.json()["config_json"]["url"] == (
+        "https://www.youtube.com/playlist?list=PLCv9jk0KUJ"
+    )
+
+
+@pytest.mark.asyncio
+async def test_deleted_source_excluded_from_list_and_detail(
+    auth_client: AsyncClient, existing_source: Source
+):
+    """A soft-deleted source must vanish from the list AND 404 on detail."""
+    sid = str(existing_source.id)
+    assert (await auth_client.delete(f"/api/sources/{sid}")).status_code == 204
+
+    listed = (await auth_client.get("/api/sources")).json()
+    assert sid not in [s["id"] for s in listed]
+    assert (await auth_client.get(f"/api/sources/{sid}")).status_code == 404
+    # DELETE is idempotent — re-deleting an already-deleted source is a clean
+    # 204 (soft_delete_source still locates the row via include_deleted=True),
+    # never a 500.
+    assert (await auth_client.delete(f"/api/sources/{sid}")).status_code == 204
+
+
+def test_lineup_read_serializes_pending_row_with_null_game_map():
+    """pending_review lineups have NULL game_id/map_id — LineupRead must
+    accept them so the review queue can load (regression: 2 uuid errors).
+
+    Asserts BOTH directions: model_validate (input) AND model_dump(mode="json")
+    (output). FastAPI's ``response_model=PendingLineupsResponse`` re-serializes
+    via model_dump, which is when the @computed_field effective_* properties
+    run — that output path, not model_validate, is where the review-queue 500
+    actually lived. Testing only model_validate left this uncovered."""
+    from app.schemas.game.lineup_schemas import LineupRead
+
+    model = LineupRead.model_validate(
+        {
+            "id": uuid.uuid4(),
+            "game_id": None,
+            "map_id": None,
+            "title": "B-site smoke",
+            "status": "pending_review",
+        }
+    )
+    assert model.game_id is None and model.map_id is None
+
+    # The FastAPI response path: must not raise, and the centroid-fallback
+    # computed fields must degrade to None when zones are absent.
+    dumped = model.model_dump(mode="json")
+    assert dumped["game_id"] is None and dumped["map_id"] is None
+    assert dumped["effective_stand_x"] is None
+    assert dumped["effective_stand_y"] is None
+    assert dumped["effective_target_x"] is None
+    assert dumped["effective_target_y"] is None

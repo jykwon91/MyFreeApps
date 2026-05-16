@@ -29,19 +29,39 @@ async def create_source(
     return source
 
 
+def _is_deleted(source: Source) -> bool:
+    return bool((source.config_json or {}).get("deleted"))
+
+
 async def get_source(
     db: AsyncSession,
     source_id: uuid.UUID,
+    *,
+    include_deleted: bool = False,
 ) -> Source | None:
-    """Return a single source by id, or None."""
+    """Return a single source by id, or None.
+
+    Soft-deleted sources (config_json.deleted=True) are hidden by default so
+    they can't be fetched, synced, or shown in detail. soft_delete_source
+    passes include_deleted=True so it can still locate the row to mark.
+    """
     result = await db.execute(select(Source).where(Source.id == source_id))
-    return result.scalar_one_or_none()
+    source = result.scalar_one_or_none()
+    if source is None:
+        return None
+    if not include_deleted and _is_deleted(source):
+        return None
+    return source
 
 
 async def list_sources(db: AsyncSession) -> list[Source]:
-    """Return all sources ordered by creation date descending."""
+    """Return all non-deleted sources, newest first.
+
+    config_json is JSON (not JSONB) and sources are few, so the deleted
+    filter is applied in Python rather than via a JSON-path WHERE clause.
+    """
     result = await db.execute(select(Source).order_by(Source.created_at.desc()))
-    return list(result.scalars().all())
+    return [s for s in result.scalars().all() if not _is_deleted(s)]
 
 
 async def soft_delete_source(
@@ -54,7 +74,7 @@ async def soft_delete_source(
     reference source_id via SET NULL FK. This prevents FK errors on lineups
     that were already accepted before the source was removed.
     """
-    source = await get_source(db, source_id)
+    source = await get_source(db, source_id, include_deleted=True)
     if source is None:
         return None
     # Store deleted flag in config_json (Source has no deleted_at column).
