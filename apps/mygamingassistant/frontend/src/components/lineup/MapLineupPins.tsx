@@ -55,6 +55,26 @@ interface Cluster {
   pins: Pin[];
 }
 
+/** True when this lineup has no place on the map for the given mode. */
+function isUnplaceable(l: Lineup, mode: PinMode): boolean {
+  const standMissing = l.effective_stand_x == null || l.effective_stand_y == null;
+  const targetMissing = l.effective_target_x == null || l.effective_target_y == null;
+  if (mode === "stand") return standMissing;
+  if (mode === "target") return targetMissing;
+  // "both" — placeable if EITHER endpoint resolves.
+  return standMissing && targetMissing;
+}
+
+/**
+ * Count lineups that exist but can't be shown on the map because neither
+ * their stand nor target endpoint resolved (no explicit anchor AND the
+ * referenced zone has no polygon to take a centroid from). Used by MapPage
+ * to surface a non-blocking calibration hint.
+ */
+export function countUnplaceableLineups(lineups: Lineup[], mode: PinMode): number {
+  return lineups.reduce((acc, l) => acc + (isUnplaceable(l, mode) ? 1 : 0), 0);
+}
+
 function buildPins(
   lineups: Lineup[],
   mode: PinMode,

@@ -25,7 +25,10 @@ import { useGetLineupsQuery, useGetZoneDensityQuery } from "@/store/lineupsApi";
 import { useGetLineupPackagesQuery, usePinAllLineupPackageMutation } from "@/store/lineupPackagesApi";
 import LineupCard from "@/components/lineup/LineupCard";
 import MapZoneOverlay from "@/components/lineup/MapZoneOverlay";
-import MapLineupPins, { type PinMode } from "@/components/lineup/MapLineupPins";
+import MapLineupPins, {
+  type PinMode,
+  countUnplaceableLineups,
+} from "@/components/lineup/MapLineupPins";
 import PinModeToggle from "@/components/lineup/PinModeToggle";
 import LineupDetailPanel from "@/components/lineup/LineupDetailPanel";
 import KeyboardShortcutsHelp from "@/components/lineup/KeyboardShortcutsHelp";
@@ -159,6 +162,21 @@ export default function MapPage() {
   );
 
   const pinnedLineups = allMapLineups.filter((l) => pins.isPinned(l.id));
+
+  // Unplaceable hint: lineups exist for the current filter but every one
+  // lacks a resolvable map position (no explicit anchor AND the referenced
+  // zone has no polygon). The hint is non-blocking — the results panel still
+  // lists the lineups; only the map pin is unavailable. Use the lineup set
+  // that drives the current view: the map-wide set when pins are on, the
+  // zone-filtered set otherwise.
+  const unplaceableSource = pinMode !== null ? allMapLineups : lineups;
+  const unplaceablePinMode: PinMode = pinMode ?? "both";
+  const unplaceableCount =
+    unplaceableSource.length > 0
+      ? countUnplaceableLineups(unplaceableSource, unplaceablePinMode)
+      : 0;
+  const allUnplaceable =
+    unplaceableSource.length > 0 && unplaceableCount === unplaceableSource.length;
 
   // Reset active card index when round mode is entered or pin count changes.
   // Using MessageChannel to schedule asynchronously, avoiding the
@@ -512,6 +530,10 @@ export default function MapPage() {
             </div>
           </div>
 
+          {allUnplaceable && (
+            <UnplaceableLineupsNotice count={unplaceableCount} />
+          )}
+
           {/* Map + results layout */}
           <div className="flex flex-col lg:flex-row gap-4">
             {/* Map minimap with zone overlay */}
@@ -733,6 +755,34 @@ function StorageUnavailableBanner({ onClose }: { onClose: () => void }) {
       >
         ✕
       </button>
+    </div>
+  );
+}
+
+interface UnplaceableLineupsNoticeProps {
+  count: number;
+}
+
+function UnplaceableLineupsNotice({ count }: UnplaceableLineupsNoticeProps) {
+  const plural = count !== 1 ? "s" : "";
+  return (
+    <div
+      className="flex items-start gap-2.5 px-3 py-2.5 rounded-md border bg-amber-500/10 border-amber-500/30 text-sm"
+      role="status"
+    >
+      <AlertTriangle
+        className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5"
+        aria-hidden
+      />
+      <div className="flex-1">
+        <p className="font-medium">
+          {count} lineup{plural} can't be shown on the map yet
+        </p>
+        <p className="text-xs text-muted-foreground">
+          These zones need calibration — open the lineups in Review or the
+          zone editor to set their map position.
+        </p>
+      </div>
     </div>
   );
 }
