@@ -11,7 +11,11 @@ from __future__ import annotations
 
 import pytest
 
-from app.services.ingestion.chapter_parser import Chapter, parse_chapters
+from app.services.ingestion.chapter_parser import (
+    Chapter,
+    filter_lineup_chapters,
+    parse_chapters,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -163,3 +167,129 @@ class TestNativeChapters:
         chapters = parse_chapters("", video_duration=120, native_chapters=native)
         # "Bad" has non-numeric start_time — parser skips it gracefully
         assert all(c.title != "Bad" for c in chapters)
+
+
+# ---------------------------------------------------------------------------
+# filter_lineup_chapters — denylist + min-duration (Phase-1 cheap win)
+# ---------------------------------------------------------------------------
+
+class TestFilterLineupChapters:
+    def _ch(self, title: str, start: int = 0, end: int = 120) -> Chapter:
+        return Chapter(start_seconds=start, end_seconds=end, title=title)
+
+    def test_keeps_real_lineup_titles(self):
+        chapters = [
+            self._ch("A-site smoke from T spawn", 0, 60),
+            self._ch("Mid window flash", 60, 120),
+            self._ch("CT smoke from B site", 120, 200),
+        ]
+        kept = filter_lineup_chapters(chapters)
+        assert [c.title for c in kept] == [
+            "A-site smoke from T spawn",
+            "Mid window flash",
+            "CT smoke from B site",
+        ]
+
+    @pytest.mark.parametrize(
+        "title",
+        [
+            "Intro",
+            "intro",
+            "INTRO",
+            "Outro",
+            "Tip 1",
+            "Tip 2",
+            "Tip 3",
+            "Tips",
+            "Subscribe",
+            "Like and Subscribe",
+            "Smash that like button",
+            "Thanks for watching",
+            "Thank you",
+            "Conclusion",
+            "Summary",
+            "Recap",
+            "Wrap up",
+            "Wrap-up",
+            "Overview",
+            "Sponsor",
+            "Shoutout",
+            "Shout out",
+            "Credits",
+            "Disclaimer",
+            "Patreon",
+            "Discord",
+            "Socials",
+            "Links",
+            "Giveaway",
+            "Announcement",
+            "Update",
+            "News",
+            "Donate",
+            "The end",
+            "Bye",
+            "See you",
+        ],
+    )
+    def test_drops_structural_titles(self, title: str):
+        kept = filter_lineup_chapters([self._ch(title, 0, 120)])
+        assert kept == []
+
+    def test_observed_tigerr_video_all_dropped(self):
+        """The real video that surfaced this bug: Intro/Tip 1-3/Outro."""
+        chapters = [
+            self._ch("Intro", 0, 19),
+            self._ch("Tip 1", 19, 146),
+            self._ch("Tip 2", 146, 245),
+            self._ch("Tip 3", 245, 467),
+            self._ch("Outro", 467, 540),
+        ]
+        assert filter_lineup_chapters(chapters) == []
+
+    def test_denylist_anchored_at_start_not_substring(self):
+        """A real lineup whose title merely contains a denylist word mid-string
+        must NOT be dropped — the denylist is start-anchored."""
+        chapters = [
+            self._ch("Mid smoke (quick tip)", 0, 60),
+            self._ch("Smoke that blocks the news ticker", 60, 120),
+            self._ch("Flash for the subscribe-style peek", 120, 180),
+        ]
+        kept = filter_lineup_chapters(chapters)
+        assert len(kept) == 3
+
+    def test_min_duration_drops_short_chapters(self):
+        chapters = [
+            self._ch("A smoke", 0, 10),       # 10s — too short
+            self._ch("B smoke", 10, 30),      # 20s — kept
+            self._ch("Mid flash", 30, 44),    # 14s — too short
+            self._ch("CT smoke", 44, 200),    # long — kept
+        ]
+        kept = filter_lineup_chapters(chapters)
+        assert [c.title for c in kept] == ["B smoke", "CT smoke"]
+
+    def test_min_duration_boundary_is_inclusive(self):
+        """Exactly min_duration_seconds is kept (only strictly shorter drops)."""
+        kept = filter_lineup_chapters([self._ch("A smoke", 0, 15)])
+        assert len(kept) == 1
+
+    def test_custom_min_duration(self):
+        chapters = [self._ch("A smoke", 0, 20), self._ch("B smoke", 20, 60)]
+        kept = filter_lineup_chapters(chapters, min_duration_seconds=30)
+        assert [c.title for c in kept] == ["B smoke"]
+
+    def test_empty_input_returns_empty(self):
+        assert filter_lineup_chapters([]) == []
+
+    def test_mixed_real_and_structural(self):
+        chapters = [
+            self._ch("Intro", 0, 30),
+            self._ch("A-site smoke from CT", 30, 120),
+            self._ch("Tip 2", 120, 150),
+            self._ch("B-site flash from mid", 150, 240),
+            self._ch("Outro", 240, 300),
+        ]
+        kept = filter_lineup_chapters(chapters)
+        assert [c.title for c in kept] == [
+            "A-site smoke from CT",
+            "B-site flash from mid",
+        ]

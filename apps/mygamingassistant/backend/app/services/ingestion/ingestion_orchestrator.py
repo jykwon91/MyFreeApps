@@ -40,7 +40,11 @@ from app.repositories.game import lineup_repo, source_repo
 from app.schemas.game.lineup_schemas import LineupIngestCreate
 from app.services.classification.classifier_service import classify_lineup
 from app.services.game import lineup_service
-from app.services.ingestion.chapter_parser import Chapter, parse_chapters
+from app.services.ingestion.chapter_parser import (
+    Chapter,
+    filter_lineup_chapters,
+    parse_chapters,
+)
 from app.services.ingestion.frame_extractor import FrameExtractionError, extract_frames
 from app.services.ingestion.youtube_fetcher import (
     VideoDownloadError,
@@ -52,6 +56,15 @@ from app.services.ingestion.youtube_fetcher import (
 )
 
 logger = logging.getLogger(__name__)
+
+# Phase-1 frame-timing heuristic. The exact chapter boundary is the worst
+# possible sample point — it's a deterministic fade-in / transition / black
+# frame (a t=0 "Intro" chapter is *always* a black frame). Offsetting a few
+# seconds into the chapter avoids that deterministic failure. This is still a
+# blind heuristic; Phase 2 (Strategy A: extract a grid of candidate frames and
+# let Claude pick the best stand/aim + decide is_lineup) replaces it wholesale.
+_STAND_FRAME_OFFSET_SECONDS = 3.0
+_AIM_FRAME_GAP_SECONDS = 4.0
 
 
 @dataclass
@@ -103,11 +116,17 @@ async def _process_chapter(
     Returns True on success, False on any handled error.
     """
     start = chapter.start_seconds
-    aim_ts = min(float(start) + 4.0, float(chapter.end_seconds) - 0.5)
-    aim_ts = max(aim_ts, float(start))  # guard against end < start + 0.5
+    # Clamp all sampling strictly inside [start, end) — never the exact
+    # boundary (fade-in/transition/black). filter_lineup_chapters already
+    # drops <15s chapters, but keep the math safe on short ones anyway.
+    chapter_end = float(chapter.end_seconds)
+    last_safe_ts = max(float(start), chapter_end - 0.5)
+    stand_ts = min(float(start) + _STAND_FRAME_OFFSET_SECONDS, last_safe_ts)
+    aim_ts = min(stand_ts + _AIM_FRAME_GAP_SECONDS, last_safe_ts)
+    aim_ts = max(aim_ts, stand_ts)
 
     try:
-        stand_bytes, aim_bytes = await extract_frames(video_path, [float(start), aim_ts])
+        stand_bytes, aim_bytes = await extract_frames(video_path, [stand_ts, aim_ts])
     except FrameExtractionError as exc:
         logger.error(
             "Frame extraction failed: source_id=%s video_id=%s chapter_start=%d error=%s",
@@ -237,9 +256,30 @@ async def _process_video(
         )
         return
 
+    # Drop structural chapters (intro/outro/"tip N"/subscribe/short) before
+    # download + frame extraction + classifier calls — they only produce junk
+    # pending lineups and waste a Claude call each. See chapter_parser.
+    parsed_count = len(chapters)
+    chapters = filter_lineup_chapters(chapters)
+    dropped = parsed_count - len(chapters)
+    if dropped:
+        logger.info(
+            "Filtered %d/%d non-lineup chapters (intro/outro/tip/short): "
+            "source_id=%s video_id=%s",
+            dropped, parsed_count, source.id, video_meta.video_id,
+        )
+    if not chapters:
+        logger.info(
+            "All %d parsed chapters were non-lineup structure — source is "
+            "likely not a lineup tutorial: source_id=%s video_id=%s — skipping",
+            parsed_count, source.id, video_meta.video_id,
+        )
+        return
+
     logger.info(
-        "Found %d chapters: source_id=%s video_id=%s",
-        len(chapters), source.id, video_meta.video_id,
+        "Found %d lineup chapters (%d parsed, %d filtered): "
+        "source_id=%s video_id=%s",
+        len(chapters), parsed_count, dropped, source.id, video_meta.video_id,
     )
 
     # Download only now that we know there are chapters worth extracting.
