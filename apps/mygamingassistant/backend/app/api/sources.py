@@ -23,7 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import current_active_user
 from app.db.session import get_db
-from app.schemas.game.lineup_schemas import SourceCreate, SourceRead, SyncJobResponse
+from app.schemas.game.source_schemas import SourceCreate, SourceRead, SyncJobResponse
 from app.services.game import source_service
 from app.services.ingestion import ingestion_orchestrator
 
