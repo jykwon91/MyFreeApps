@@ -326,6 +326,19 @@ def _build_reference_text(ref: dict[str, Any], game_hint: Optional[str] = None) 
 # ---------------------------------------------------------------------------
 
 
+def _slug_failure_code(field_name: str, slug: str, *, game_slug: Optional[str]) -> str:
+    """Build a stable, machine-readable failure code for an unresolved slug.
+
+    Shape: ``unresolved_slug:<field>:<slug>:game=<game_slug or '?'>``.
+    The classifier ADVERTISED this slug in the reference list it was given,
+    yet it did not resolve against the (game-scoped) DB — so this is a
+    diagnosable signal, not prose. Surfaced via error_codes so the operator
+    sees "zone slug 'X' advertised but unresolved for game cs2" instead of
+    guessing from a reasoning blob.
+    """
+    return f"unresolved_slug:{field_name}:{slug}:game={game_slug or '?'}"
+
+
 async def _resolve_slugs(
     db: AsyncSession,
     game_slug: Optional[str],
@@ -339,17 +352,32 @@ async def _resolve_slugs(
     Optional[uuid.UUID],  # target_zone_id
     Optional[uuid.UUID],  # stand_zone_id
     Optional[uuid.UUID],  # utility_type_id
-    list[str],            # resolution_failures
+    list[str],            # resolution_failures (human prose)
+    list[str],            # structured failure codes
 ]:
     """Resolve classifier-returned slugs to database FK UUIDs.
 
-    Returns a tuple of (game_id, map_id, target_zone_id, stand_zone_id,
-    utility_type_id, resolution_failures).
+    Returns a 7-tuple of (game_id, map_id, target_zone_id, stand_zone_id,
+    utility_type_id, resolution_failures, structured_codes).
 
     resolution_failures is a list of human-readable strings for any slug that
     could not be resolved — appended to the reasoning field.
+
+    structured_codes mirrors each failure as a stable, parseable token (see
+    :func:`_slug_failure_code`) so the operator/UI gets a machine-readable
+    "this advertised slug did not resolve" signal via
+    ClassifyResponse.error_codes — not prose-only (per
+    rules/check-third-party-error-codes.md: a wrapper that knows WHY it
+    failed must not collapse to a bare null/prose blob).
+
+    Game scoping is HARD here by construction: map/zone/utility lookups are
+    gated on a successfully-resolved ``game_id`` AND every query filters by
+    that ``game_id``. A Valorant-only zone slug therefore cannot resolve in a
+    CS2 classification (different ``game_id`` → zero rows), independent of
+    what the prompt advertised.
     """
     failures: list[str] = []
+    codes: list[str] = []
 
     # Resolve game
     game_id: Optional[uuid.UUID] = None
@@ -359,8 +387,10 @@ async def _resolve_slugs(
             game_id = row.id
         else:
             failures.append(f"game slug '{game_slug}' not found in DB")
+            codes.append(_slug_failure_code("game", game_slug, game_slug=game_slug))
 
-    # Resolve map (requires game_id)
+    # Resolve map (requires game_id — hard game scope: map MUST belong to the
+    # resolved game; a cross-game map slug yields zero rows here).
     map_id: Optional[uuid.UUID] = None
     if map_slug and game_id:
         row = (
@@ -372,10 +402,13 @@ async def _resolve_slugs(
             map_id = row.id
         else:
             failures.append(f"map slug '{map_slug}' not found for game '{game_slug}'")
+            codes.append(_slug_failure_code("map", map_slug, game_slug=game_slug))
     elif map_slug and not game_id:
         failures.append(f"cannot resolve map slug '{map_slug}' — game slug failed")
+        codes.append(_slug_failure_code("map", map_slug, game_slug=game_slug))
 
-    # Resolve zones (require map_id)
+    # Resolve zones (require map_id, which already requires game_id → zones are
+    # transitively game-scoped: a Valorant zone cannot resolve on a CS2 map).
     target_zone_id: Optional[uuid.UUID] = None
     if target_zone_slug and map_id:
         row = (
@@ -389,8 +422,14 @@ async def _resolve_slugs(
             target_zone_id = row.id
         else:
             failures.append(f"target_zone slug '{target_zone_slug}' not found on map '{map_slug}'")
+            codes.append(
+                _slug_failure_code("target_zone", target_zone_slug, game_slug=game_slug)
+            )
     elif target_zone_slug and not map_id:
         failures.append(f"cannot resolve target_zone slug '{target_zone_slug}' — map slug failed")
+        codes.append(
+            _slug_failure_code("target_zone", target_zone_slug, game_slug=game_slug)
+        )
 
     stand_zone_id: Optional[uuid.UUID] = None
     if stand_zone_slug and map_id:
@@ -405,10 +444,16 @@ async def _resolve_slugs(
             stand_zone_id = row.id
         else:
             failures.append(f"stand_zone slug '{stand_zone_slug}' not found on map '{map_slug}'")
+            codes.append(
+                _slug_failure_code("stand_zone", stand_zone_slug, game_slug=game_slug)
+            )
     elif stand_zone_slug and not map_id:
         failures.append(f"cannot resolve stand_zone slug '{stand_zone_slug}' — map slug failed")
+        codes.append(
+            _slug_failure_code("stand_zone", stand_zone_slug, game_slug=game_slug)
+        )
 
-    # Resolve utility type (requires game_id)
+    # Resolve utility type (requires game_id — hard game scope identical to map).
     utility_type_id: Optional[uuid.UUID] = None
     if utility_type_slug and game_id:
         row = (
@@ -425,12 +470,26 @@ async def _resolve_slugs(
             failures.append(
                 f"utility_type slug '{utility_type_slug}' not found for game '{game_slug}'"
             )
+            codes.append(
+                _slug_failure_code("utility_type", utility_type_slug, game_slug=game_slug)
+            )
     elif utility_type_slug and not game_id:
         failures.append(
             f"cannot resolve utility_type slug '{utility_type_slug}' — game slug failed"
         )
+        codes.append(
+            _slug_failure_code("utility_type", utility_type_slug, game_slug=game_slug)
+        )
 
-    return game_id, map_id, target_zone_id, stand_zone_id, utility_type_id, failures
+    return (
+        game_id,
+        map_id,
+        target_zone_id,
+        stand_zone_id,
+        utility_type_id,
+        failures,
+        codes,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -442,14 +501,26 @@ def _check_game_map_consistency(
     parsed: dict[str, Any],
     ref: dict[str, Any],
     failures: list[str],
+    codes: Optional[list[str]] = None,
 ) -> dict[str, Any]:
-    """Post-parse consistency check: ensure returned map_slug belongs to returned game_slug.
+    """Hard cross-game rejection: returned map_slug MUST belong to returned game_slug.
 
-    If the map slug exists in the reference data but belongs to a DIFFERENT game than
-    game_slug, this is a cross-game contamination error. In that case:
-      - null out map_slug, target_zone_slug, stand_zone_slug (derived from the wrong map)
-      - reduce confidence by 0.4 (floor 0.0)
-      - append a note to failures (surfaces in reasoning)
+    This is the all-games (unknown-game / ingest grid) defence. When the
+    reference data is game-scoped (known game), this is a redundant belt — the
+    slug resolver's game_id-gated queries already make a cross-game resolution
+    return zero rows by construction. On the all-games path the resolver alone
+    cannot reject it (every game's slugs are valid rows), so this guard makes
+    cross-game contamination impossible *before* resolution: if the map slug
+    exists in the reference data under a DIFFERENT game than ``game_slug``, the
+    map/zone fields are nulled (so they cannot resolve to the wrong game's FKs)
+    and a STRUCTURED reject code is emitted (not prose-only).
+
+    Behaviour on mismatch:
+      - null out map_slug, target_zone_slug, stand_zone_slug
+      - reduce confidence by 0.4 (floor 0.0) — a mismatch is low-trust
+      - append a human note to ``failures`` (flows into reasoning)
+      - append ``cross_game_rejected:...`` to ``codes`` if provided
+        (flows into ClassifyResponse.error_codes — machine-readable)
       - leave game_slug, side, utility_type_slug, aim_anchor_* intact
     """
     game_slug = parsed.get("game_slug")
@@ -467,6 +538,11 @@ def _check_game_map_consistency(
             f"CROSS-GAME MISMATCH: game_slug='{game_slug}' but map_slug='{map_slug}' "
             f"belongs to '{actual_game}' — nulling map/zone fields; confidence reduced"
         )
+        if codes is not None:
+            codes.append(
+                f"cross_game_rejected:map={map_slug}:"
+                f"classified={game_slug}:actual={actual_game}"
+            )
         result = dict(parsed)
         result["map_slug"] = None
         result["target_zone_slug"] = None
@@ -706,7 +782,8 @@ async def classify_lineup(
     # nulled and confidence is penalized. Notes flow into the same failures list
     # that feeds the reasoning string.
     failures: list[str] = []
-    parsed = _check_game_map_consistency(parsed, ref, failures)
+    structured_codes: list[str] = []
+    parsed = _check_game_map_consistency(parsed, ref, failures, structured_codes)
 
     # Resolve slugs to FK IDs
     (
@@ -716,6 +793,7 @@ async def classify_lineup(
         stand_zone_id,
         utility_type_id,
         slug_failures,
+        slug_codes,
     ) = await _resolve_slugs(
         db,
         game_slug=parsed.get("game_slug"),
@@ -725,11 +803,13 @@ async def classify_lineup(
         utility_type_slug=parsed.get("utility_type_slug"),
     )
     failures.extend(slug_failures)
+    structured_codes.extend(slug_codes)
 
     # Validate side
     side = parsed.get("side")
     if side is not None and side not in ("side_a", "side_b", "any"):
         failures.append(f"invalid side value '{side}' — must be side_a/side_b/any")
+        structured_codes.append(f"invalid_side:{side}")
         side = None
 
     # Validate aim anchor coords
@@ -754,14 +834,25 @@ async def classify_lineup(
         except (TypeError, ValueError):
             failures.append(f"aim_anchor_y '{raw_y}' is not a number")
 
-    # Validate confidence
+    # Validate confidence. A non-numeric confidence is a real diagnosable
+    # signal (the model returned a malformed score), NOT something to silently
+    # drop — match this file's exemplary Anthropic error handling: structured
+    # log + structured code + keep going (confidence stays None, never crash).
     confidence: Optional[float] = None
     raw_conf = parsed.get("confidence")
     if raw_conf is not None:
         try:
             confidence = max(0.0, min(1.0, float(raw_conf)))
         except (TypeError, ValueError):
-            pass
+            logger.warning(
+                "classify_lineup: invalid confidence value dropped: "
+                "lineup_id=%s raw_confidence=%r",
+                lineup_id, raw_conf,
+            )
+            failures.append(
+                f"invalid confidence value '{raw_conf}' — not a number; treated as null"
+            )
+            structured_codes.append(f"invalid_confidence:{raw_conf}")
 
     # Build reasoning string
     model_reasoning = str(parsed.get("reasoning") or "")
@@ -801,6 +892,11 @@ async def classify_lineup(
         },
     )
 
+    # The call SUCCEEDED, but advertised slugs may have failed to resolve /
+    # been cross-game-rejected. Surface those as STRUCTURED codes through the
+    # existing error_codes path so the operator/UI sees machine-readable
+    # "zone slug 'X' advertised but unresolved for game cs2" rather than
+    # having to parse the reasoning blob (per check-third-party-error-codes).
     return ClassificationResult(
         success=True,
         suggested_game_id=game_id,
@@ -813,7 +909,8 @@ async def classify_lineup(
         aim_anchor_y=aim_y,
         confidence=confidence,
         reasoning=reasoning,
-        error_codes=[],
+        error_codes=list(structured_codes),
+        classification_failures=list(structured_codes),
     )
 
 
@@ -1059,12 +1156,13 @@ async def classify_frames_for_lineup_decision(
         )
 
     failures: list[str] = []
+    structured_codes: list[str] = []
 
-    # Defense-in-depth: catch cross-game contamination (e.g. game_slug='valorant'
-    # but map_slug='mirage') BEFORE confidence is read and BEFORE slug resolution
-    # so the wrong map/zones are nulled, confidence is penalized, and the note
-    # reaches the reasoning string.
-    parsed = _check_game_map_consistency(parsed, ref, failures)
+    # Hard cross-game rejection (ingest grid is the all-games path — the slug
+    # resolver alone can't reject cross-game here, so this guard makes a
+    # Valorant map under a CS2 game_slug impossible BEFORE resolution, nulling
+    # the wrong map/zones and emitting a structured cross_game_rejected code).
+    parsed = _check_game_map_consistency(parsed, ref, failures, structured_codes)
 
     is_lineup = bool(parsed.get("is_lineup"))
 
@@ -1075,13 +1173,23 @@ async def classify_frames_for_lineup_decision(
         parsed.get("best_aim_index"), "best_aim_index", n, failures
     )
 
+    # Match the single-image path: a non-numeric confidence is a diagnosable
+    # signal, not a silent drop. Structured log + structured code + keep going.
     confidence: Optional[float] = None
     raw_conf = parsed.get("confidence")
     if raw_conf is not None:
         try:
             confidence = max(0.0, min(1.0, float(raw_conf)))
         except (TypeError, ValueError):
-            pass
+            logger.warning(
+                "classify_frames: invalid confidence value dropped: "
+                "chapter=%r raw_confidence=%r",
+                chapter_title, raw_conf,
+            )
+            failures.append(
+                f"invalid confidence value '{raw_conf}' — not a number; treated as null"
+            )
+            structured_codes.append(f"invalid_confidence:{raw_conf}")
 
     model_reasoning = str(parsed.get("reasoning") or "")
 
@@ -1100,25 +1208,34 @@ async def classify_frames_for_lineup_decision(
             best_aim_index=None,
             confidence=confidence,
             reasoning=reasoning,
-            error_codes=[],
+            error_codes=list(structured_codes),
+            classification_failures=list(structured_codes),
         )
 
     # is_lineup True → resolve the classification slugs as usual.
-    game_id, map_id, target_zone_id, stand_zone_id, utility_type_id, slug_failures = (
-        await _resolve_slugs(
-            db,
-            game_slug=parsed.get("game_slug"),
-            map_slug=parsed.get("map_slug"),
-            target_zone_slug=parsed.get("target_zone_slug"),
-            stand_zone_slug=parsed.get("stand_zone_slug"),
-            utility_type_slug=parsed.get("utility_type_slug"),
-        )
+    (
+        game_id,
+        map_id,
+        target_zone_id,
+        stand_zone_id,
+        utility_type_id,
+        slug_failures,
+        slug_codes,
+    ) = await _resolve_slugs(
+        db,
+        game_slug=parsed.get("game_slug"),
+        map_slug=parsed.get("map_slug"),
+        target_zone_slug=parsed.get("target_zone_slug"),
+        stand_zone_slug=parsed.get("stand_zone_slug"),
+        utility_type_slug=parsed.get("utility_type_slug"),
     )
     failures.extend(slug_failures)
+    structured_codes.extend(slug_codes)
 
     side = parsed.get("side")
     if side is not None and side not in ("side_a", "side_b", "any"):
         failures.append(f"invalid side value '{side}' — must be side_a/side_b/any")
+        structured_codes.append(f"invalid_side:{side}")
         side = None
 
     aim_x = _validate_aim_coord(parsed.get("aim_anchor_x"), "x", failures)
@@ -1151,5 +1268,6 @@ async def classify_frames_for_lineup_decision(
         aim_anchor_y=aim_y,
         confidence=confidence,
         reasoning=reasoning,
-        error_codes=[],
+        error_codes=list(structured_codes),
+        classification_failures=list(structured_codes),
     )

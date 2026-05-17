@@ -334,7 +334,16 @@ class ClassifyResponse(BaseModel):
     aim_anchor_y: Optional[float] = None
     confidence: Optional[float] = None
     reasoning: str = ""
+    # error_codes carries Anthropic API error types on a FAILED call AND, on a
+    # successful call, the structured slug/cross-game failure codes (mirrored
+    # from classification_failures) so existing consumers keep working.
     error_codes: list[str] = Field(default_factory=list)
+    # Structured, machine-readable per-field classification failures emitted
+    # even when the call succeeded — e.g. an advertised zone slug that did not
+    # resolve for the classified game, or a cross-game-rejected map. Lets the
+    # operator/UI show "zone slug 'X' unresolved for game cs2" instead of
+    # parsing the reasoning prose (rules/check-third-party-error-codes.md).
+    classification_failures: list[str] = Field(default_factory=list)
 
 
 class PendingLineupsResponse(BaseModel):

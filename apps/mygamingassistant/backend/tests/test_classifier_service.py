@@ -17,6 +17,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 import pytest_asyncio
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.game.game import Game
@@ -29,10 +30,23 @@ from app.models.game.source import Source
 
 # ---------------------------------------------------------------------------
 # DB fixtures
+#
+# These seed by GET-OR-CREATE, never blind INSERT. The conftest `db` fixture
+# rolls back on teardown, but the shared dev DB may ALREADY contain a
+# `valorant` game / `bind` map etc. (e.g. from a diagnostic
+# `python -m app.cli load-fixtures`). A blind `db.add(Game(slug="valorant"))`
+# then raises `UniqueViolation: ix_game_slug` and errors out the whole class.
+# Get-or-create is isolation-safe regardless of pre-existing dev-DB rows and
+# matches how the 290+ other passing tests seed reference data.
 # ---------------------------------------------------------------------------
 
 @pytest_asyncio.fixture
 async def game_val(db: AsyncSession) -> Game:
+    existing = (
+        await db.execute(select(Game).where(Game.slug == "valorant"))
+    ).scalar_one_or_none()
+    if existing is not None:
+        return existing
     g = Game(slug="valorant", name="VALORANT", side_a_label="Attacker", side_b_label="Defender")
     db.add(g)
     await db.flush()
@@ -41,6 +55,13 @@ async def game_val(db: AsyncSession) -> Game:
 
 @pytest_asyncio.fixture
 async def map_bind(db: AsyncSession, game_val: Game) -> Map:
+    existing = (
+        await db.execute(
+            select(Map).where(Map.game_id == game_val.id, Map.slug == "bind")
+        )
+    ).scalar_one_or_none()
+    if existing is not None:
+        return existing
     m = Map(game_id=game_val.id, slug="bind", name="Bind")
     db.add(m)
     await db.flush()
@@ -49,6 +70,15 @@ async def map_bind(db: AsyncSession, game_val: Game) -> Map:
 
 @pytest_asyncio.fixture
 async def zone_a_short(db: AsyncSession, map_bind: Map) -> MapZone:
+    existing = (
+        await db.execute(
+            select(MapZone).where(
+                MapZone.map_id == map_bind.id, MapZone.slug == "a-short"
+            )
+        )
+    ).scalar_one_or_none()
+    if existing is not None:
+        return existing
     z = MapZone(map_id=map_bind.id, slug="a-short", name="A Short")
     db.add(z)
     await db.flush()
@@ -57,6 +87,15 @@ async def zone_a_short(db: AsyncSession, map_bind: Map) -> MapZone:
 
 @pytest_asyncio.fixture
 async def zone_b_site(db: AsyncSession, map_bind: Map) -> MapZone:
+    existing = (
+        await db.execute(
+            select(MapZone).where(
+                MapZone.map_id == map_bind.id, MapZone.slug == "b-site"
+            )
+        )
+    ).scalar_one_or_none()
+    if existing is not None:
+        return existing
     z = MapZone(map_id=map_bind.id, slug="b-site", name="B Site")
     db.add(z)
     await db.flush()
@@ -65,6 +104,15 @@ async def zone_b_site(db: AsyncSession, map_bind: Map) -> MapZone:
 
 @pytest_asyncio.fixture
 async def utility_smoke(db: AsyncSession, game_val: Game) -> UtilityType:
+    existing = (
+        await db.execute(
+            select(UtilityType).where(
+                UtilityType.game_id == game_val.id, UtilityType.slug == "smoke"
+            )
+        )
+    ).scalar_one_or_none()
+    if existing is not None:
+        return existing
     ut = UtilityType(game_id=game_val.id, slug="smoke", name="Smoke")
     db.add(ut)
     await db.flush()
@@ -73,6 +121,9 @@ async def utility_smoke(db: AsyncSession, game_val: Game) -> UtilityType:
 
 @pytest_asyncio.fixture
 async def source_fix(db: AsyncSession) -> Source:
+    # Source has no natural unique slug; a fresh row per test is fine and the
+    # conftest rollback discards it. (Source is not part of the dev-DB fixture
+    # load, so there's no cross-run collision to guard against here.)
     s = Source(kind="youtube_playlist", config_json={"url": "https://test"})
     db.add(s)
     await db.flush()
@@ -320,7 +371,7 @@ class TestSlugResolver:
         """All valid slugs → all FK IDs resolved, no failures."""
         from app.services.classification.classifier_service import _resolve_slugs
 
-        game_id, map_id, tz_id, sz_id, ut_id, failures = await _resolve_slugs(
+        game_id, map_id, tz_id, sz_id, ut_id, failures, codes = await _resolve_slugs(
             db,
             game_slug="valorant",
             map_slug="bind",
@@ -335,6 +386,7 @@ class TestSlugResolver:
         assert sz_id == zone_b_site.id
         assert ut_id == utility_smoke.id
         assert failures == []
+        assert codes == []
 
     @pytest.mark.asyncio
     async def test_unknown_zone_slug_records_failure(
@@ -346,7 +398,7 @@ class TestSlugResolver:
         """A hallucinated zone slug → map/game resolve, zone fails with message."""
         from app.services.classification.classifier_service import _resolve_slugs
 
-        _, _, tz_id, _, _, failures = await _resolve_slugs(
+        _, _, tz_id, _, _, failures, codes = await _resolve_slugs(
             db,
             game_slug="valorant",
             map_slug="bind",
@@ -357,6 +409,11 @@ class TestSlugResolver:
 
         assert tz_id is None
         assert any("hallucinated-zone" in f for f in failures)
+        # Structured code emitted alongside prose (not prose-only).
+        assert any(
+            c.startswith("unresolved_slug:target_zone:hallucinated-zone:")
+            for c in codes
+        )
 
     @pytest.mark.asyncio
     async def test_unknown_game_slug_cascades(
@@ -366,7 +423,7 @@ class TestSlugResolver:
         """Unknown game slug → game fails; map/zone/utility all fail with cascade note."""
         from app.services.classification.classifier_service import _resolve_slugs
 
-        game_id, map_id, tz_id, sz_id, ut_id, failures = await _resolve_slugs(
+        game_id, map_id, tz_id, sz_id, ut_id, failures, codes = await _resolve_slugs(
             db,
             game_slug="fortnite",
             map_slug="some-map",
@@ -382,6 +439,9 @@ class TestSlugResolver:
         assert ut_id is None
         # All four downstream failures should note the cascade
         assert len(failures) >= 1
+        # Structured codes mirror the prose failures.
+        assert len(codes) >= 1
+        assert any(c.startswith("unresolved_slug:game:fortnite:") for c in codes)
 
 
 # ---------------------------------------------------------------------------
@@ -1006,3 +1066,248 @@ class TestGridMaxTokens:
 
         _, kwargs = mock_client.messages.create.call_args
         assert kwargs["max_tokens"] == 700
+
+
+# ---------------------------------------------------------------------------
+# Tests: hard game scoping + structured failure codes (finding #4 remediation)
+# ---------------------------------------------------------------------------
+
+# Unique slug suffix so these collision-proof fixtures never trip ix_game_slug
+# against a pre-seeded dev DB (same discipline as the grid fixtures above).
+_SCOPE_SUFFIX = uuid.uuid4().hex[:8]
+
+
+@pytest_asyncio.fixture
+async def cs2_game(db: AsyncSession) -> Game:
+    """A CS2 game with a CS2-only map + zone. Slugs are suffixed to be
+    isolation-safe regardless of pre-existing dev-DB rows."""
+    g = Game(
+        slug=f"cs2-{_SCOPE_SUFFIX}",
+        name="Counter-Strike 2",
+        side_a_label="T",
+        side_b_label="CT",
+    )
+    db.add(g)
+    await db.flush()
+    m = Map(game_id=g.id, slug=f"mirage-{_SCOPE_SUFFIX}", name="Mirage")
+    db.add(m)
+    await db.flush()
+    z = MapZone(map_id=m.id, slug=f"cs2-a-site-{_SCOPE_SUFFIX}", name="A Site")
+    db.add(z)
+    await db.flush()
+    return g
+
+
+@pytest_asyncio.fixture
+async def valorant_only_zone(db: AsyncSession) -> MapZone:
+    """A Valorant game with a Valorant-ONLY zone slug that does NOT exist
+    under the CS2 game. Resolving this slug in a CS2 classification must fail
+    by construction (different game_id → zero rows), not by prompt hinting."""
+    g = Game(
+        slug=f"valorant-{_SCOPE_SUFFIX}",
+        name="VALORANT",
+        side_a_label="Attacker",
+        side_b_label="Defender",
+    )
+    db.add(g)
+    await db.flush()
+    m = Map(game_id=g.id, slug=f"ascent-{_SCOPE_SUFFIX}", name="Ascent")
+    db.add(m)
+    await db.flush()
+    z = MapZone(map_id=m.id, slug=f"val-market-{_SCOPE_SUFFIX}", name="Market")
+    db.add(z)
+    await db.flush()
+    return z
+
+
+class TestHardGameScoping:
+    """A CS2 classification CANNOT resolve a Valorant-only zone slug.
+
+    This is the structural guarantee finding #4 demanded: game scope is a
+    query filter (map/zone lookups are gated on the resolved game_id), not a
+    prompt sentence. A Valorant zone slug points at a MapZone whose map
+    belongs to the Valorant game_id; resolving it under the CS2 game_slug
+    selects zero rows and records a structured failure.
+    """
+
+    @pytest.mark.asyncio
+    async def test_cs2_cannot_resolve_valorant_zone_slug(
+        self,
+        db: AsyncSession,
+        cs2_game: Game,
+        valorant_only_zone: MapZone,
+    ):
+        from app.services.classification.classifier_service import _resolve_slugs
+
+        cs2_map_slug = f"mirage-{_SCOPE_SUFFIX}"
+        valorant_zone_slug = valorant_only_zone.slug  # f"val-market-{suffix}"
+
+        (
+            game_id,
+            map_id,
+            target_zone_id,
+            stand_zone_id,
+            utility_type_id,
+            failures,
+            codes,
+        ) = await _resolve_slugs(
+            db,
+            game_slug=f"cs2-{_SCOPE_SUFFIX}",
+            map_slug=cs2_map_slug,
+            # Valorant-only zone slug requested under a CS2 game/map:
+            target_zone_slug=valorant_zone_slug,
+            stand_zone_slug=None,
+            utility_type_slug=None,
+        )
+
+        # Game + CS2 map resolve fine...
+        assert game_id == cs2_game.id
+        assert map_id is not None
+        # ...but the Valorant zone is UNRESOLVABLE under the CS2 map_id.
+        assert target_zone_id is None
+        # And the failure is STRUCTURED, scoped to the classified game.
+        assert any(
+            c == f"unresolved_slug:target_zone:{valorant_zone_slug}:game=cs2-{_SCOPE_SUFFIX}"
+            for c in codes
+        ), codes
+        assert any(valorant_zone_slug in f for f in failures)
+
+    @pytest.mark.asyncio
+    async def test_check_game_map_consistency_emits_structured_reject_code(self):
+        """All-games path: a cross-game map is rejected with a structured code,
+        not just a prose note + confidence penalty."""
+        from app.services.classification.classifier_service import (
+            _check_game_map_consistency,
+        )
+
+        parsed = {
+            "game_slug": "valorant",
+            "map_slug": "mirage",  # mirage is cs2 in _CROSS_GAME_REF
+            "target_zone_slug": "a-site",
+            "confidence": 0.9,
+        }
+        failures: list[str] = []
+        codes: list[str] = []
+        result = _check_game_map_consistency(parsed, _CROSS_GAME_REF, failures, codes)
+
+        assert result["map_slug"] is None
+        assert result["target_zone_slug"] is None
+        # Structured code present and machine-parseable.
+        assert codes == [
+            "cross_game_rejected:map=mirage:classified=valorant:actual=cs2"
+        ]
+        # Prose still emitted (human path preserved).
+        assert any("CROSS-GAME MISMATCH" in f for f in failures)
+
+
+class TestStructuredFailureSurfacing:
+    """An advertised slug that fails to resolve produces a STRUCTURED
+    error_code on the (successful) ClassificationResult — not prose-only."""
+
+    @pytest.mark.asyncio
+    async def test_unresolved_advertised_slug_surfaces_structured_code(
+        self,
+        db: AsyncSession,
+        pending_lineup: Lineup,
+        zone_a_short: MapZone,
+    ):
+        from app.services.classification.classifier_service import classify_lineup
+
+        # game/map/target zone resolve; stand_zone is a hallucinated slug the
+        # prompt "advertised" but cannot resolve → structured code expected.
+        classifier_output = {
+            "game_slug": "valorant",
+            "map_slug": "bind",
+            "target_zone_slug": "a-short",
+            "stand_zone_slug": "hallucinated-stand-zone",
+            "side": "side_a",
+            "utility_type_slug": "smoke",
+            "aim_anchor_x": 0.5,
+            "aim_anchor_y": 0.5,
+            "confidence": 0.8,
+            "reasoning": "Smoke throw, A short.",
+        }
+
+        with (
+            patch(
+                "app.services.classification.classifier_service._fetch_screenshot_bytes",
+                return_value=_FAKE_PNG,
+            ),
+            patch("app.services.classification.classifier_service.settings") as mock_settings,
+            patch("app.services.classification.classifier_service.anthropic.Anthropic") as mock_cls,
+        ):
+            mock_settings.anthropic_api_key = "sk-test"
+            mock_settings.claude_classifier_model = "claude-haiku-4-5-20251001"
+            mock_client = MagicMock()
+            mock_cls.return_value = mock_client
+            mock_client.messages.create.return_value = _make_anthropic_response(
+                classifier_output
+            )
+
+            result = await classify_lineup(db, pending_lineup.id)
+
+        # The CALL succeeded (Claude answered); the slug just didn't resolve.
+        assert result.success is True
+        assert result.suggested_target_zone_id == zone_a_short.id
+        # Structured failure surfaced on BOTH the typed list AND error_codes
+        # (so the existing ClassifyResponse.error_codes path shows it).
+        assert any(
+            c.startswith("unresolved_slug:stand_zone:hallucinated-stand-zone:")
+            for c in result.classification_failures
+        ), result.classification_failures
+        assert any(
+            c.startswith("unresolved_slug:stand_zone:hallucinated-stand-zone:")
+            for c in result.error_codes
+        ), result.error_codes
+        # Prose still present for humans.
+        assert "hallucinated-stand-zone" in result.reasoning
+
+    @pytest.mark.asyncio
+    async def test_invalid_confidence_is_logged_not_silently_swallowed(
+        self,
+        db: AsyncSession,
+        pending_lineup: Lineup,
+    ):
+        """The former `except (TypeError, ValueError): pass` silent swallow is
+        now a structured log + structured code (matches this file's exemplary
+        Anthropic error handling). The call still succeeds, confidence is None."""
+        from app.services.classification.classifier_service import classify_lineup
+
+        classifier_output = {
+            "game_slug": "valorant",
+            "map_slug": "bind",
+            "target_zone_slug": None,
+            "stand_zone_slug": None,
+            "side": None,
+            "utility_type_slug": None,
+            "aim_anchor_x": None,
+            "aim_anchor_y": None,
+            "confidence": "very high",  # non-numeric — must NOT be swallowed
+            "reasoning": "Unsure.",
+        }
+
+        with (
+            patch(
+                "app.services.classification.classifier_service._fetch_screenshot_bytes",
+                return_value=_FAKE_PNG,
+            ),
+            patch("app.services.classification.classifier_service.settings") as mock_settings,
+            patch("app.services.classification.classifier_service.anthropic.Anthropic") as mock_cls,
+        ):
+            mock_settings.anthropic_api_key = "sk-test"
+            mock_settings.claude_classifier_model = "claude-haiku-4-5-20251001"
+            mock_client = MagicMock()
+            mock_cls.return_value = mock_client
+            mock_client.messages.create.return_value = _make_anthropic_response(
+                classifier_output
+            )
+
+            result = await classify_lineup(db, pending_lineup.id)
+
+        assert result.success is True
+        assert result.confidence is None  # dropped, but not silently
+        assert any(
+            c == "invalid_confidence:very high"
+            for c in result.classification_failures
+        ), result.classification_failures
+        assert "invalid confidence" in result.reasoning
