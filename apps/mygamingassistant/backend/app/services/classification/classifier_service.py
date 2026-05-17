@@ -71,6 +71,60 @@ Rules:
 - side_a = attacking/T side; side_b = defending/CT side; any = side-agnostic.
 """
 
+# ---------------------------------------------------------------------------
+# Visual game-identification cues (cached in system prompt — never changes)
+#
+# MAINTENANCE COUPLING: when a new game is added to the fixture data
+# (app/fixtures/), this cue list MUST be extended with that game's
+# distinguishing HUD/art-style signals and the NAME-COLLISION WARNING updated.
+# A reference list that grows a third game without a matching visual-cue block
+# reintroduces exactly the cross-game contamination this constant prevents.
+# ---------------------------------------------------------------------------
+
+_GAME_VISUAL_CUES = """\
+HOW TO IDENTIFY THE GAME FROM THE SCREEN:
+
+Look for these signals BEFORE reading any map or zone names:
+
+CS2 (Counter-Strike 2):
+- Realistic Source 2 military/urban art style — concrete, grime, realistic lighting
+- Bottom-left HUD: dollar amount like $3800 (buy money), health + armor number with
+  a small helmet/vest icon when kevlar equipped
+- Left-side weapon list (primary + secondary + grenades as small icons stacked vertically)
+- Minimap in a corner showing teammates as colored dots, bomb carrier marker
+- Round timer at top center; "Bomb" (C4) as a throwable; no agent ability icons
+- Grenades are the utility: smoke, flashbang, HE grenade, Molotov/incendiary, decoy
+- Scoreboard uses T / CT team labels with a knife/bomb icon
+
+Valorant:
+- Stylized/cel-shaded art — sharp outlines, saturated colors, sci-fi or fantasy architecture
+- Bottom-center HUD: four ability icons labeled C / Q / E / X (ultimate), often with charge
+  dots or a numeric charge counter beneath each
+- Economy shows "creds" (credits) not dollar signs; buy menu shows numbered cred costs
+- Minimap corner shows agent icons (character portraits) not generic colored dots
+- "Spike" is the bomb equivalent (not "Bomb"); spike plant animation is distinct
+- Ultimate orbs visible on minimap/map as glowing collectibles
+- Agent-specific ability effects on screen (e.g. Sage wall, Jett dash trail, Killjoy turret)
+
+NAME-COLLISION WARNING:
+Many zone names appear in BOTH games: "A Site", "B Site", "Mid", "T Spawn", "CT Spawn",
+"Market", "A Main", "B Main". Recognizing a zone name is NOT evidence of the game.
+The game must be determined from visual HUD and art-style cues ONLY.
+"""
+
+_GAME_FIRST_RULE = """\
+CLASSIFICATION ORDER — YOU MUST FOLLOW THIS SEQUENCE:
+1. DETERMINE game_slug FIRST from visual HUD and art cues (see above).
+   Do not read map or zone names yet. If you cannot confidently identify the
+   game from the visuals, set game_slug=null and all slug fields to null.
+2. Once game_slug is set, filter the reference lists to entries where
+   [game_slug] matches your determined game. IGNORE all other entries.
+3. Select map_slug, zone slugs, and utility_type_slug ONLY from the filtered set.
+   Never select a slug whose [game_slug] differs from your game_slug.
+4. In the "reasoning" field, state: (a) which visual cue(s) confirmed the game,
+   (b) which map you identified, and (c) why you chose the zones you chose.
+"""
+
 # Strategy A grid schema. The model is given N numbered candidate frames
 # sampled across the chapter and must (a) decide whether the chapter is a real
 # utility-lineup demo at all, and (b) pick which frame best shows the throwing
@@ -108,6 +162,9 @@ Rules:
   equipped or its effect mid-air/landing, a recognizable map location). If the
   frames are webcam, desktop, montage, menus, title cards, or unrelated
   gameplay, set is_lineup=false and set the index/slug fields to null.
+- game_slug: follow CLASSIFICATION ORDER above — determine from visual cues first, then
+  constrain all map/zone/utility slugs to entries tagged [<your game_slug>] in the
+  reference list.
 - best_stand_index: the 1-based frame number that best shows the player STANDING
   at the throw position lining up the utility (crosshair on the alignment
   marker, throwable equipped, before release). null if is_lineup is false.
@@ -377,6 +434,54 @@ async def _resolve_slugs(
 
 
 # ---------------------------------------------------------------------------
+# Post-parse cross-game consistency guard (defense-in-depth)
+# ---------------------------------------------------------------------------
+
+
+def _check_game_map_consistency(
+    parsed: dict[str, Any],
+    ref: dict[str, Any],
+    failures: list[str],
+) -> dict[str, Any]:
+    """Post-parse consistency check: ensure returned map_slug belongs to returned game_slug.
+
+    If the map slug exists in the reference data but belongs to a DIFFERENT game than
+    game_slug, this is a cross-game contamination error. In that case:
+      - null out map_slug, target_zone_slug, stand_zone_slug (derived from the wrong map)
+      - reduce confidence by 0.4 (floor 0.0)
+      - append a note to failures (surfaces in reasoning)
+      - leave game_slug, side, utility_type_slug, aim_anchor_* intact
+    """
+    game_slug = parsed.get("game_slug")
+    map_slug = parsed.get("map_slug")
+    if not game_slug or not map_slug:
+        return parsed
+    map_game_lookup: dict[str, str] = {
+        m["slug"]: m["game_slug"] for m in ref.get("maps", [])
+    }
+    actual_game = map_game_lookup.get(map_slug)
+    if actual_game is None:
+        return parsed  # slug resolver will catch a truly-absent slug
+    if actual_game != game_slug:
+        failures.append(
+            f"CROSS-GAME MISMATCH: game_slug='{game_slug}' but map_slug='{map_slug}' "
+            f"belongs to '{actual_game}' — nulling map/zone fields; confidence reduced"
+        )
+        result = dict(parsed)
+        result["map_slug"] = None
+        result["target_zone_slug"] = None
+        result["stand_zone_slug"] = None
+        raw_conf = result.get("confidence")
+        if raw_conf is not None:
+            try:
+                result["confidence"] = max(0.0, float(raw_conf) - 0.4)
+            except (TypeError, ValueError):
+                result["confidence"] = 0.0
+        return result
+    return parsed
+
+
+# ---------------------------------------------------------------------------
 # Screenshot loader
 # ---------------------------------------------------------------------------
 
@@ -489,6 +594,10 @@ async def classify_lineup(
         "You are classifying tactical-FPS utility lineup screenshots.\n"
         "Your task: identify the game, map, zones, side, and utility type from the screenshot "
         "and chapter metadata. Return the crosshair/aim anchor position on the aim screenshot.\n\n"
+        + _GAME_VISUAL_CUES
+        + "\n"
+        + _GAME_FIRST_RULE
+        + "\n"
         + _OUTPUT_SCHEMA_DOC
     )
 
@@ -592,17 +701,30 @@ async def classify_lineup(
             reasoning=f"Could not parse classifier JSON: {exc}",
         )
 
+    # Defense-in-depth: catch cross-game contamination (e.g. game_slug='valorant'
+    # but map_slug='mirage') BEFORE slug resolution so the wrong map/zones are
+    # nulled and confidence is penalized. Notes flow into the same failures list
+    # that feeds the reasoning string.
+    failures: list[str] = []
+    parsed = _check_game_map_consistency(parsed, ref, failures)
+
     # Resolve slugs to FK IDs
-    game_id, map_id, target_zone_id, stand_zone_id, utility_type_id, failures = (
-        await _resolve_slugs(
-            db,
-            game_slug=parsed.get("game_slug"),
-            map_slug=parsed.get("map_slug"),
-            target_zone_slug=parsed.get("target_zone_slug"),
-            stand_zone_slug=parsed.get("stand_zone_slug"),
-            utility_type_slug=parsed.get("utility_type_slug"),
-        )
+    (
+        game_id,
+        map_id,
+        target_zone_id,
+        stand_zone_id,
+        utility_type_id,
+        slug_failures,
+    ) = await _resolve_slugs(
+        db,
+        game_slug=parsed.get("game_slug"),
+        map_slug=parsed.get("map_slug"),
+        target_zone_slug=parsed.get("target_zone_slug"),
+        stand_zone_slug=parsed.get("stand_zone_slug"),
+        utility_type_slug=parsed.get("utility_type_slug"),
     )
+    failures.extend(slug_failures)
 
     # Validate side
     side = parsed.get("side")
@@ -838,6 +960,10 @@ async def classify_frames_for_lineup_decision(
         "You will receive several numbered candidate frames from ONE video "
         "chapter and must judge whether the chapter is a real utility-lineup "
         "demo, pick the best frames, and classify it.\n\n"
+        + _GAME_VISUAL_CUES
+        + "\n"
+        + _GAME_FIRST_RULE
+        + "\n"
         + _GRID_OUTPUT_SCHEMA_DOC.format(n=n)
     )
 
@@ -873,7 +999,7 @@ async def classify_frames_for_lineup_decision(
         client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
         response = client.messages.create(
             model=settings.claude_classifier_model,
-            max_tokens=600,  # grid adds is_lineup + 2 indices vs the single-image schema
+            max_tokens=700,  # grid: is_lineup + 2 indices + richer game-evidence reasoning
             system=[
                 {
                     "type": "text",
@@ -933,6 +1059,12 @@ async def classify_frames_for_lineup_decision(
         )
 
     failures: list[str] = []
+
+    # Defense-in-depth: catch cross-game contamination (e.g. game_slug='valorant'
+    # but map_slug='mirage') BEFORE confidence is read and BEFORE slug resolution
+    # so the wrong map/zones are nulled, confidence is penalized, and the note
+    # reaches the reasoning string.
+    parsed = _check_game_map_consistency(parsed, ref, failures)
 
     is_lineup = bool(parsed.get("is_lineup"))
 

@@ -737,3 +737,272 @@ class TestClassifyFramesForLineupDecision:
         # Reference block is still cache_control'd (caching preserved).
         assert any(b.get("cache_control") for b in content)
         assert kwargs["system"][0]["cache_control"] == {"type": "ephemeral"}
+
+
+# ---------------------------------------------------------------------------
+# Tests: game-first disambiguation prompt + cross-game consistency guard
+# (regression for CS2 Mirage misclassified as Valorant Ascent)
+# ---------------------------------------------------------------------------
+
+# A reference dict where 'mirage' is a CS2 map and 'ascent' is a Valorant map —
+# mirrors the real fixture asymmetry that produced the misclassification.
+_CROSS_GAME_REF: dict = {
+    "games": [
+        {"slug": "cs2", "name": "Counter-Strike 2", "side_a_label": "T", "side_b_label": "CT"},
+        {"slug": "valorant", "name": "VALORANT", "side_a_label": "Attacker", "side_b_label": "Defender"},
+    ],
+    "maps": [
+        {"slug": "mirage", "name": "Mirage", "game_slug": "cs2", "zones": [{"slug": "a-site", "name": "A Site"}]},
+        {"slug": "ascent", "name": "Ascent", "game_slug": "valorant", "zones": [{"slug": "market", "name": "Market"}]},
+    ],
+    "utility_types": [
+        {"slug": "smoke", "name": "Smoke", "game_slug": "cs2"},
+    ],
+}
+
+
+class TestGameFirstPromptWiring:
+    """Both system-prompt paths must carry the visual-cue block + game-first rule."""
+
+    def _single_image_system_prompt(self) -> str:
+        """Reconstruct the single-image (classify_lineup) system prompt."""
+        from app.services.classification import classifier_service as cs
+
+        return (
+            "You are classifying tactical-FPS utility lineup screenshots.\n"
+            "Your task: identify the game, map, zones, side, and utility type from the screenshot "
+            "and chapter metadata. Return the crosshair/aim anchor position on the aim screenshot.\n\n"
+            + cs._GAME_VISUAL_CUES
+            + "\n"
+            + cs._GAME_FIRST_RULE
+            + "\n"
+            + cs._OUTPUT_SCHEMA_DOC
+        )
+
+    def _grid_system_prompt(self, n: int = 5) -> str:
+        """Reconstruct the grid (classify_frames_for_lineup_decision) system prompt."""
+        from app.services.classification import classifier_service as cs
+
+        return (
+            "You are classifying tactical-FPS utility lineup screenshots.\n"
+            "You will receive several numbered candidate frames from ONE video "
+            "chapter and must judge whether the chapter is a real utility-lineup "
+            "demo, pick the best frames, and classify it.\n\n"
+            + cs._GAME_VISUAL_CUES
+            + "\n"
+            + cs._GAME_FIRST_RULE
+            + "\n"
+            + cs._GRID_OUTPUT_SCHEMA_DOC.format(n=n)
+        )
+
+    def test_single_image_prompt_has_game_first_and_cues(self):
+        prompt = self._single_image_system_prompt()
+        assert "DETERMINE game_slug FIRST" in prompt
+        assert "NAME-COLLISION WARNING" in prompt
+        assert "C / Q / E / X" in prompt  # Valorant ability HUD cue
+        assert "$3800" in prompt  # CS2 buy-money HUD cue
+        assert "CLASSIFICATION ORDER" in prompt
+        # Schema doc still present after the new blocks (order preserved).
+        assert "Return ONLY valid JSON" in prompt
+
+    def test_grid_prompt_has_game_first_and_cues(self):
+        prompt = self._grid_system_prompt()
+        assert "DETERMINE game_slug FIRST" in prompt
+        assert "NAME-COLLISION WARNING" in prompt
+        assert "C / Q / E / X" in prompt
+        assert "$3800" in prompt
+        assert "CLASSIFICATION ORDER" in prompt
+        # Grid schema's new game_slug bullet present and references the order rule.
+        assert "constrain all map/zone/utility slugs to entries tagged" in prompt
+        # Grid schema body still present.
+        assert "is_lineup" in prompt
+
+    def test_grid_schema_format_does_not_break(self):
+        """_GRID_OUTPUT_SCHEMA_DOC.format(n=...) must still substitute n cleanly.
+
+        The literal JSON-example braces are escaped as ``{{``/``}}`` so the only
+        substitution is ``{n}``. A stray single brace would raise KeyError/
+        ValueError here — proving the new game_slug bullet did not break the
+        .format template.
+        """
+        from app.services.classification import classifier_service as cs
+
+        rendered = cs._GRID_OUTPUT_SCHEMA_DOC.format(n=7)  # must not raise
+        assert "Frame 1 .. Frame 7" in rendered
+        assert "(1-7)" in rendered  # {n} substituted inside the JSON example
+        # The new game_slug rule bullet survived the format round-trip intact.
+        assert "constrain all map/zone/utility slugs to entries tagged" in rendered
+
+
+class TestCheckGameMapConsistency:
+    """Defense-in-depth: map_slug belonging to a different game than game_slug."""
+
+    def test_cross_game_mismatch_nulls_map_and_zones(self):
+        from app.services.classification.classifier_service import (
+            _check_game_map_consistency,
+        )
+
+        # game_slug says valorant, but 'mirage' is a cs2 map → contamination.
+        parsed = {
+            "game_slug": "valorant",
+            "map_slug": "mirage",
+            "target_zone_slug": "a-site",
+            "stand_zone_slug": "a-site",
+            "side": "side_a",
+            "utility_type_slug": "smoke",
+            "aim_anchor_x": 0.5,
+            "aim_anchor_y": 0.5,
+            "confidence": 0.9,
+        }
+        failures: list[str] = []
+        result = _check_game_map_consistency(parsed, _CROSS_GAME_REF, failures)
+
+        assert result["map_slug"] is None
+        assert result["target_zone_slug"] is None
+        assert result["stand_zone_slug"] is None
+        # confidence reduced by 0.4 (0.9 - 0.4 = 0.5), floored at 0.0
+        assert result["confidence"] == pytest.approx(0.5)
+        # game/side/utility/aim untouched
+        assert result["game_slug"] == "valorant"
+        assert result["side"] == "side_a"
+        assert result["utility_type_slug"] == "smoke"
+        assert result["aim_anchor_x"] == pytest.approx(0.5)
+        assert len(failures) == 1
+        assert "CROSS-GAME MISMATCH" in failures[0]
+        assert "mirage" in failures[0]
+        assert "valorant" in failures[0]
+        assert "cs2" in failures[0]
+        # original dict not mutated (guard returns a copy on mismatch)
+        assert parsed["map_slug"] == "mirage"
+
+    def test_consistent_game_map_unchanged(self):
+        from app.services.classification.classifier_service import (
+            _check_game_map_consistency,
+        )
+
+        parsed = {
+            "game_slug": "cs2",
+            "map_slug": "mirage",
+            "target_zone_slug": "a-site",
+            "stand_zone_slug": "a-site",
+            "confidence": 0.85,
+        }
+        failures: list[str] = []
+        result = _check_game_map_consistency(parsed, _CROSS_GAME_REF, failures)
+
+        assert result["map_slug"] == "mirage"
+        assert result["target_zone_slug"] == "a-site"
+        assert result["confidence"] == pytest.approx(0.85)
+        assert failures == []
+
+    def test_map_slug_absent_from_ref_unchanged(self):
+        """A truly-absent map slug is left for the slug resolver to catch."""
+        from app.services.classification.classifier_service import (
+            _check_game_map_consistency,
+        )
+
+        parsed = {
+            "game_slug": "cs2",
+            "map_slug": "nonexistent-map",
+            "confidence": 0.7,
+        }
+        failures: list[str] = []
+        result = _check_game_map_consistency(parsed, _CROSS_GAME_REF, failures)
+
+        assert result["map_slug"] == "nonexistent-map"
+        assert result["confidence"] == pytest.approx(0.7)
+        assert failures == []
+
+    def test_null_game_slug_unchanged(self):
+        from app.services.classification.classifier_service import (
+            _check_game_map_consistency,
+        )
+
+        parsed = {"game_slug": None, "map_slug": "mirage", "confidence": 0.5}
+        failures: list[str] = []
+        result = _check_game_map_consistency(parsed, _CROSS_GAME_REF, failures)
+
+        assert result == parsed
+        assert failures == []
+
+    def test_null_map_slug_unchanged(self):
+        from app.services.classification.classifier_service import (
+            _check_game_map_consistency,
+        )
+
+        parsed = {"game_slug": "cs2", "map_slug": None, "confidence": 0.5}
+        failures: list[str] = []
+        result = _check_game_map_consistency(parsed, _CROSS_GAME_REF, failures)
+
+        assert result == parsed
+        assert failures == []
+
+    def test_confidence_none_on_mismatch_no_crash(self):
+        """A mismatch with confidence=None must not crash; map/zones still nulled."""
+        from app.services.classification.classifier_service import (
+            _check_game_map_consistency,
+        )
+
+        parsed = {
+            "game_slug": "valorant",
+            "map_slug": "mirage",
+            "target_zone_slug": "a-site",
+            "confidence": None,
+        }
+        failures: list[str] = []
+        result = _check_game_map_consistency(parsed, _CROSS_GAME_REF, failures)
+
+        assert result["map_slug"] is None
+        assert result["target_zone_slug"] is None
+        assert result["confidence"] is None  # untouched when None
+        assert len(failures) == 1
+
+    def test_confidence_non_numeric_on_mismatch_floored(self):
+        """A mismatch with a non-numeric confidence must floor to 0.0, not crash."""
+        from app.services.classification.classifier_service import (
+            _check_game_map_consistency,
+        )
+
+        parsed = {
+            "game_slug": "valorant",
+            "map_slug": "mirage",
+            "confidence": "high",
+        }
+        failures: list[str] = []
+        result = _check_game_map_consistency(parsed, _CROSS_GAME_REF, failures)
+
+        assert result["map_slug"] is None
+        assert result["confidence"] == pytest.approx(0.0)
+        assert len(failures) == 1
+
+
+class TestGridMaxTokens:
+    """Regression: grid path bumped to 700 max_tokens for richer game evidence."""
+
+    @pytest.mark.asyncio
+    async def test_grid_max_tokens_is_700(self, db: AsyncSession, grid_game: Game):
+        from app.services.classification.classifier_service import (
+            classify_frames_for_lineup_decision,
+        )
+
+        payload = {"is_lineup": False, "confidence": 0.0, "reasoning": "x"}
+
+        with (
+            patch("app.services.classification.classifier_service.settings") as mock_settings,
+            patch("app.services.classification.classifier_service.anthropic.Anthropic") as mock_cls,
+        ):
+            mock_settings.anthropic_api_key = "sk-test"
+            mock_settings.claude_classifier_model = "claude-haiku-4-5-20251001"
+            mock_client = MagicMock()
+            mock_cls.return_value = mock_client
+            mock_client.messages.create.return_value = _make_anthropic_response(payload)
+
+            await classify_frames_for_lineup_decision(
+                db,
+                frames=_THREE_FRAMES,
+                chapter_title="x",
+                attribution_author="y",
+            )
+
+        _, kwargs = mock_client.messages.create.call_args
+        assert kwargs["max_tokens"] == 700
