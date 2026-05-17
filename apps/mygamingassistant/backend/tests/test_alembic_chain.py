@@ -2,7 +2,7 @@
 
 These run against the raw migration scripts (no live DB) so they fit the
 default pytest suite. They lock in that the chain resolves to a single head
-(currently ``0008``) and that every revision is reachable base → head — the
+(currently ``0009``) and that every revision is reachable base → head — the
 class of bug where a new migration's ``down_revision`` is stale after a
 merge and silently orphans the chain.
 """
@@ -24,16 +24,21 @@ def script_directory() -> ScriptDirectory:
     return ScriptDirectory.from_config(cfg)
 
 
-def test_single_head_is_0008(script_directory: ScriptDirectory) -> None:
-    """The DAG must resolve to exactly one head and it must be 0008."""
+def test_single_head_is_0009(script_directory: ScriptDirectory) -> None:
+    """The DAG must resolve to exactly one head and it must be 0009.
+
+    Bump this pin (and add a down_revision assertion below) in the same PR
+    that adds a new migration — same per-PR contract as the fixture
+    conformance guards.
+    """
     heads = script_directory.get_heads()
     assert len(heads) == 1, (
         f"Expected a single alembic head, got {len(heads)}: {heads}. "
         "Orphan heads usually mean a migration's down_revision is stale "
         "after a merge — rebase and re-point the down_revision."
     )
-    assert heads[0] == "0008", (
-        f"Expected head 0008 (the CS2 polygon backfill), got {heads[0]}."
+    assert heads[0] == "0009", (
+        f"Expected head 0009 (the Valorant polygon backfill), got {heads[0]}."
     )
 
 
@@ -59,3 +64,11 @@ def test_0008_down_revision_points_at_0007(
     """0008 must chain directly off 0007 (the screenshot-key repair)."""
     rev = script_directory.get_revision("0008")
     assert rev.down_revision == "0007"
+
+
+def test_0009_down_revision_points_at_0008(
+    script_directory: ScriptDirectory,
+) -> None:
+    """0009 must chain directly off 0008 (the CS2 polygon backfill)."""
+    rev = script_directory.get_revision("0009")
+    assert rev.down_revision == "0008"
