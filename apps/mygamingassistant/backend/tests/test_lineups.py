@@ -914,9 +914,19 @@ async def test_bulk_accept_partial_success_persists_only_good(
         json={"lineup_ids": [good_id, bad_id], "patches": {}},
     )
     assert resp.status_code == 200, resp.text
-    returned_ids = {item["id"] for item in resp.json()}
-    assert good_id in returned_ids, "good lineup missing from bulk-accept response"
-    assert bad_id not in returned_ids, "failed lineup leaked into the response"
+    payload = resp.json()
+    accepted_ids = {item["id"] for item in payload["accepted"]}
+    assert good_id in accepted_ids, "good lineup missing from bulk-accept response"
+    assert bad_id not in accepted_ids, "failed lineup leaked into accepted"
+
+    # The bad lineup must be reported as skipped WITH an operator-facing reason
+    # (not silently dropped) — this is the "Accepted 0" black-hole fix.
+    skipped = {item["lineup_id"]: item["reason"] for item in payload["skipped"]}
+    assert bad_id in skipped, "failed lineup must be reported in skipped[]"
+    assert good_id not in skipped, "accepted lineup must not appear in skipped[]"
+    assert "required fields" in skipped[bad_id], (
+        f"skip reason must name the missing fields, got: {skipped[bad_id]!r}"
+    )
 
     # Expire the session so the re-fetch is a real DB read, not the identity
     # map. The good lineup's per-item commit is in the outer transaction.

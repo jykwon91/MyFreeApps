@@ -26,6 +26,7 @@ import {
   useBulkAcceptLineupsMutation,
 } from "@/store/lineupsApi";
 import { useGetGamesQuery } from "@/store/gamesApi";
+import type { BulkAcceptSkip } from "@/types/game";
 import ReviewCard from "@/components/review/ReviewCard";
 import ReviewSkeletonCard from "@/components/review/ReviewSkeletonCard";
 
@@ -40,6 +41,20 @@ const CONFIDENCE_LEVELS = [
   { label: "Low (<0.5)", value: 0.49 },
   { label: "Medium (<0.75)", value: 0.74 },
 ] as const;
+
+/**
+ * Build a concise operator-facing summary of why bulk-accept skipped some
+ * lineups. Dedupes identical reasons (every "missing utility_type_id" lineup
+ * collapses to one phrase) and caps the toast length so a 10-lineup batch
+ * doesn't produce an unreadable wall of text.
+ */
+export function summarizeSkips(skipped: BulkAcceptSkip[]): string {
+  const reasons = Array.from(new Set(skipped.map((s) => s.reason)));
+  const head = reasons.slice(0, 2).join(" · ");
+  const more = reasons.length > 2 ? ` (+${reasons.length - 2} more)` : "";
+  const n = skipped.length;
+  return `${n} lineup${n === 1 ? "" : "s"} skipped — ${head}${more}`;
+}
 
 // ---------------------------------------------------------------------------
 // Review page
@@ -97,14 +112,22 @@ export default function Review() {
     if (selectedIds.size === 0) return;
     const ids = Array.from(selectedIds);
     try {
-      const accepted = await bulkAccept({
+      const { accepted, skipped } = await bulkAccept({
         lineup_ids: ids,
         patches: {},
       }).unwrap();
-      showSuccess(
-        `Accepted ${accepted.length} lineup${accepted.length === 1 ? "" : "s"}.`,
-      );
-      setSelectedIds(new Set());
+
+      if (accepted.length > 0) {
+        showSuccess(
+          `Accepted ${accepted.length} lineup${accepted.length === 1 ? "" : "s"}.`,
+        );
+      }
+      if (skipped.length > 0) {
+        showError(summarizeSkips(skipped));
+      }
+      // Keep the skipped lineups selected so the operator can fix the
+      // flagged field(s) and retry; drop the ones that went through.
+      setSelectedIds(new Set(skipped.map((s) => s.lineup_id)));
     } catch {
       showError("Bulk accept failed. Some lineups may still be pending.");
     }
