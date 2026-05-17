@@ -7,18 +7,192 @@
         "name": "Bind",
         "minimap_url": "/minimaps/valorant/bind.png",
         "zones": [
-          { "slug": "a-site",     "name": "A Site",     "polygon_points": [] },
-          { "slug": "b-site",     "name": "B Site",     "polygon_points": [] },
-          { "slug": "a-short",    "name": "A Short",    "polygon_points": [] },
-          { "slug": "b-short",    "name": "B Short",    "polygon_points": [] },
-          { "slug": "hookah",     "name": "Hookah",     "polygon_points": [] },
-          { "slug": "showers",    "name": "Showers",    "polygon_points": [] },
-          { "slug": "t-spawn",    "name": "T Spawn",    "polygon_points": [] },
-          { "slug": "ct-spawn",   "name": "CT Spawn",   "polygon_points": [] }
+          {
+            "slug": "a-site",
+            "name": "A Site",
+            "polygon_points": [
+              {
+                "x": 0.664,
+                "y": 0.263
+              },
+              {
+                "x": 0.804,
+                "y": 0.263
+              },
+              {
+                "x": 0.804,
+                "y": 0.403
+              },
+              {
+                "x": 0.664,
+                "y": 0.403
+              }
+            ]
+          },
+          {
+            "slug": "b-site",
+            "name": "B Site",
+            "polygon_points": [
+              {
+                "x": 0.222,
+                "y": 0.242
+              },
+              {
+                "x": 0.362,
+                "y": 0.242
+              },
+              {
+                "x": 0.362,
+                "y": 0.382
+              },
+              {
+                "x": 0.222,
+                "y": 0.382
+              }
+            ]
+          },
+          {
+            "slug": "a-short",
+            "name": "A Short",
+            "polygon_points": [
+              {
+                "x": 0.569,
+                "y": 0.442
+              },
+              {
+                "x": 0.679,
+                "y": 0.442
+              },
+              {
+                "x": 0.679,
+                "y": 0.552
+              },
+              {
+                "x": 0.569,
+                "y": 0.552
+              }
+            ]
+          },
+          {
+            "slug": "b-short",
+            "name": "B Short",
+            "polygon_points": [
+              {
+                "x": 0.342,
+                "y": 0.475
+              },
+              {
+                "x": 0.452,
+                "y": 0.475
+              },
+              {
+                "x": 0.452,
+                "y": 0.585
+              },
+              {
+                "x": 0.342,
+                "y": 0.585
+              }
+            ]
+          },
+          {
+            "slug": "hookah",
+            "name": "Hookah",
+            "polygon_points": [
+              {
+                "x": 0.283,
+                "y": 0.407
+              },
+              {
+                "x": 0.363,
+                "y": 0.407
+              },
+              {
+                "x": 0.363,
+                "y": 0.487
+              },
+              {
+                "x": 0.283,
+                "y": 0.487
+              }
+            ]
+          },
+          {
+            "slug": "showers",
+            "name": "Showers",
+            "polygon_points": [
+              {
+                "x": 0.799,
+                "y": 0.39
+              },
+              {
+                "x": 0.879,
+                "y": 0.39
+              },
+              {
+                "x": 0.879,
+                "y": 0.47
+              },
+              {
+                "x": 0.799,
+                "y": 0.47
+              }
+            ]
+          },
+          {
+            "slug": "t-spawn",
+            "name": "T Spawn",
+            "polygon_points": [
+              {
+                "x": 0.532,
+                "y": 0.908
+              },
+              {
+                "x": 0.632,
+                "y": 0.908
+              },
+              {
+                "x": 0.632,
+                "y": 0.98
+              },
+              {
+                "x": 0.532,
+                "y": 0.98
+              }
+            ]
+          },
+          {
+            "slug": "ct-spawn",
+            "name": "CT Spawn",
+            "polygon_points": [
+              {
+                "x": 0.467,
+                "y": 0.054
+              },
+              {
+                "x": 0.567,
+                "y": 0.054
+              },
+              {
+                "x": 0.567,
+                "y": 0.154
+              },
+              {
+                "x": 0.467,
+                "y": 0.154
+              }
+            ]
+          }
         ],
         "sites": [
-          { "slug": "a", "name": "A" },
-          { "slug": "b", "name": "B" }
+          {
+            "slug": "a",
+            "name": "A"
+          },
+          {
+            "slug": "b",
+            "name": "B"
+          }
         ]
       },
       {
@@ -26,19 +200,196 @@
         "name": "Haven",
         "minimap_url": "/minimaps/valorant/haven.png",
         "zones": [
-          { "slug": "a-site",     "name": "A Site",     "polygon_points": [] },
-          { "slug": "b-site",     "name": "B Site",     "polygon_points": [] },
-          { "slug": "c-site",     "name": "C Site",     "polygon_points": [] },
-          { "slug": "a-lobby",    "name": "A Lobby",    "polygon_points": [] },
-          { "slug": "c-lobby",    "name": "C Lobby",    "polygon_points": [] },
-          { "slug": "garage",     "name": "Garage",     "polygon_points": [] },
-          { "slug": "t-spawn",    "name": "T Spawn",    "polygon_points": [] },
-          { "slug": "ct-spawn",   "name": "CT Spawn",   "polygon_points": [] }
+          {
+            "slug": "a-site",
+            "name": "A Site",
+            "polygon_points": [
+              {
+                "x": 0.332,
+                "y": 0.1
+              },
+              {
+                "x": 0.472,
+                "y": 0.1
+              },
+              {
+                "x": 0.472,
+                "y": 0.24
+              },
+              {
+                "x": 0.332,
+                "y": 0.24
+              }
+            ]
+          },
+          {
+            "slug": "b-site",
+            "name": "B Site",
+            "polygon_points": [
+              {
+                "x": 0.331,
+                "y": 0.431
+              },
+              {
+                "x": 0.471,
+                "y": 0.431
+              },
+              {
+                "x": 0.471,
+                "y": 0.571
+              },
+              {
+                "x": 0.331,
+                "y": 0.571
+              }
+            ]
+          },
+          {
+            "slug": "c-site",
+            "name": "C Site",
+            "polygon_points": [
+              {
+                "x": 0.348,
+                "y": 0.751
+              },
+              {
+                "x": 0.488,
+                "y": 0.751
+              },
+              {
+                "x": 0.488,
+                "y": 0.891
+              },
+              {
+                "x": 0.348,
+                "y": 0.891
+              }
+            ]
+          },
+          {
+            "slug": "a-lobby",
+            "name": "A Lobby",
+            "polygon_points": [
+              {
+                "x": 0.569,
+                "y": 0.33
+              },
+              {
+                "x": 0.679,
+                "y": 0.33
+              },
+              {
+                "x": 0.679,
+                "y": 0.44
+              },
+              {
+                "x": 0.569,
+                "y": 0.44
+              }
+            ]
+          },
+          {
+            "slug": "c-lobby",
+            "name": "C Lobby",
+            "polygon_points": [
+              {
+                "x": 0.609,
+                "y": 0.711
+              },
+              {
+                "x": 0.719,
+                "y": 0.711
+              },
+              {
+                "x": 0.719,
+                "y": 0.821
+              },
+              {
+                "x": 0.609,
+                "y": 0.821
+              }
+            ]
+          },
+          {
+            "slug": "garage",
+            "name": "Garage",
+            "polygon_points": [
+              {
+                "x": 0.453,
+                "y": 0.589
+              },
+              {
+                "x": 0.533,
+                "y": 0.589
+              },
+              {
+                "x": 0.533,
+                "y": 0.669
+              },
+              {
+                "x": 0.453,
+                "y": 0.669
+              }
+            ]
+          },
+          {
+            "slug": "t-spawn",
+            "name": "T Spawn",
+            "polygon_points": [
+              {
+                "x": 0.845,
+                "y": 0.462
+              },
+              {
+                "x": 0.945,
+                "y": 0.462
+              },
+              {
+                "x": 0.945,
+                "y": 0.562
+              },
+              {
+                "x": 0.845,
+                "y": 0.562
+              }
+            ]
+          },
+          {
+            "slug": "ct-spawn",
+            "name": "CT Spawn",
+            "polygon_points": [
+              {
+                "x": 0.09,
+                "y": 0.372
+              },
+              {
+                "x": 0.19,
+                "y": 0.372
+              },
+              {
+                "x": 0.19,
+                "y": 0.472
+              },
+              {
+                "x": 0.09,
+                "y": 0.472
+              }
+            ]
+          }
         ],
         "sites": [
-          { "slug": "a", "name": "A" },
-          { "slug": "b", "name": "B" },
-          { "slug": "c", "name": "C" }
+          {
+            "slug": "a",
+            "name": "A"
+          },
+          {
+            "slug": "b",
+            "name": "B"
+          },
+          {
+            "slug": "c",
+            "name": "C"
+          }
         ]
       },
       {
@@ -46,18 +397,192 @@
         "name": "Split",
         "minimap_url": "/minimaps/valorant/split.png",
         "zones": [
-          { "slug": "a-site",     "name": "A Site",     "polygon_points": [] },
-          { "slug": "b-site",     "name": "B Site",     "polygon_points": [] },
-          { "slug": "a-main",     "name": "A Main",     "polygon_points": [] },
-          { "slug": "b-main",     "name": "B Main",     "polygon_points": [] },
-          { "slug": "mid",        "name": "Mid",        "polygon_points": [] },
-          { "slug": "mail",       "name": "Mail",       "polygon_points": [] },
-          { "slug": "t-spawn",    "name": "T Spawn",    "polygon_points": [] },
-          { "slug": "ct-spawn",   "name": "CT Spawn",   "polygon_points": [] }
+          {
+            "slug": "a-site",
+            "name": "A Site",
+            "polygon_points": [
+              {
+                "x": 0.245,
+                "y": 0.114
+              },
+              {
+                "x": 0.385,
+                "y": 0.114
+              },
+              {
+                "x": 0.385,
+                "y": 0.254
+              },
+              {
+                "x": 0.245,
+                "y": 0.254
+              }
+            ]
+          },
+          {
+            "slug": "b-site",
+            "name": "B Site",
+            "polygon_points": [
+              {
+                "x": 0.284,
+                "y": 0.797
+              },
+              {
+                "x": 0.424,
+                "y": 0.797
+              },
+              {
+                "x": 0.424,
+                "y": 0.937
+              },
+              {
+                "x": 0.284,
+                "y": 0.937
+              }
+            ]
+          },
+          {
+            "slug": "a-main",
+            "name": "A Main",
+            "polygon_points": [
+              {
+                "x": 0.437,
+                "y": 0.153
+              },
+              {
+                "x": 0.547,
+                "y": 0.153
+              },
+              {
+                "x": 0.547,
+                "y": 0.263
+              },
+              {
+                "x": 0.437,
+                "y": 0.263
+              }
+            ]
+          },
+          {
+            "slug": "b-main",
+            "name": "B Main",
+            "polygon_points": [
+              {
+                "x": 0.395,
+                "y": 0.737
+              },
+              {
+                "x": 0.505,
+                "y": 0.737
+              },
+              {
+                "x": 0.505,
+                "y": 0.847
+              },
+              {
+                "x": 0.395,
+                "y": 0.847
+              }
+            ]
+          },
+          {
+            "slug": "mid",
+            "name": "Mid",
+            "polygon_points": [
+              {
+                "x": 0.495,
+                "y": 0.489
+              },
+              {
+                "x": 0.605,
+                "y": 0.489
+              },
+              {
+                "x": 0.605,
+                "y": 0.599
+              },
+              {
+                "x": 0.495,
+                "y": 0.599
+              }
+            ]
+          },
+          {
+            "slug": "mail",
+            "name": "Mail",
+            "polygon_points": [
+              {
+                "x": 0.427,
+                "y": 0.567
+              },
+              {
+                "x": 0.507,
+                "y": 0.567
+              },
+              {
+                "x": 0.507,
+                "y": 0.647
+              },
+              {
+                "x": 0.427,
+                "y": 0.647
+              }
+            ]
+          },
+          {
+            "slug": "t-spawn",
+            "name": "T Spawn",
+            "polygon_points": [
+              {
+                "x": 0.797,
+                "y": 0.499
+              },
+              {
+                "x": 0.897,
+                "y": 0.499
+              },
+              {
+                "x": 0.897,
+                "y": 0.599
+              },
+              {
+                "x": 0.797,
+                "y": 0.599
+              }
+            ]
+          },
+          {
+            "slug": "ct-spawn",
+            "name": "CT Spawn",
+            "polygon_points": [
+              {
+                "x": 0.093,
+                "y": 0.48
+              },
+              {
+                "x": 0.193,
+                "y": 0.48
+              },
+              {
+                "x": 0.193,
+                "y": 0.58
+              },
+              {
+                "x": 0.093,
+                "y": 0.58
+              }
+            ]
+          }
         ],
         "sites": [
-          { "slug": "a", "name": "A" },
-          { "slug": "b", "name": "B" }
+          {
+            "slug": "a",
+            "name": "A"
+          },
+          {
+            "slug": "b",
+            "name": "B"
+          }
         ]
       },
       {
@@ -65,18 +590,192 @@
         "name": "Ascent",
         "minimap_url": "/minimaps/valorant/ascent.png",
         "zones": [
-          { "slug": "a-site",     "name": "A Site",     "polygon_points": [] },
-          { "slug": "b-site",     "name": "B Site",     "polygon_points": [] },
-          { "slug": "a-main",     "name": "A Main",     "polygon_points": [] },
-          { "slug": "b-main",     "name": "B Main",     "polygon_points": [] },
-          { "slug": "mid",        "name": "Mid",        "polygon_points": [] },
-          { "slug": "market",     "name": "Market",     "polygon_points": [] },
-          { "slug": "t-spawn",    "name": "T Spawn",    "polygon_points": [] },
-          { "slug": "ct-spawn",   "name": "CT Spawn",   "polygon_points": [] }
+          {
+            "slug": "a-site",
+            "name": "A Site",
+            "polygon_points": [
+              {
+                "x": 0.28,
+                "y": 0.072
+              },
+              {
+                "x": 0.42,
+                "y": 0.072
+              },
+              {
+                "x": 0.42,
+                "y": 0.212
+              },
+              {
+                "x": 0.28,
+                "y": 0.212
+              }
+            ]
+          },
+          {
+            "slug": "b-site",
+            "name": "B Site",
+            "polygon_points": [
+              {
+                "x": 0.215,
+                "y": 0.667
+              },
+              {
+                "x": 0.355,
+                "y": 0.667
+              },
+              {
+                "x": 0.355,
+                "y": 0.807
+              },
+              {
+                "x": 0.215,
+                "y": 0.807
+              }
+            ]
+          },
+          {
+            "slug": "a-main",
+            "name": "A Main",
+            "polygon_points": [
+              {
+                "x": 0.429,
+                "y": 0.146
+              },
+              {
+                "x": 0.539,
+                "y": 0.146
+              },
+              {
+                "x": 0.539,
+                "y": 0.256
+              },
+              {
+                "x": 0.429,
+                "y": 0.256
+              }
+            ]
+          },
+          {
+            "slug": "b-main",
+            "name": "B Main",
+            "polygon_points": [
+              {
+                "x": 0.35,
+                "y": 0.657
+              },
+              {
+                "x": 0.46,
+                "y": 0.657
+              },
+              {
+                "x": 0.46,
+                "y": 0.767
+              },
+              {
+                "x": 0.35,
+                "y": 0.767
+              }
+            ]
+          },
+          {
+            "slug": "mid",
+            "name": "Mid",
+            "polygon_points": [
+              {
+                "x": 0.463,
+                "y": 0.399
+              },
+              {
+                "x": 0.573,
+                "y": 0.399
+              },
+              {
+                "x": 0.573,
+                "y": 0.509
+              },
+              {
+                "x": 0.463,
+                "y": 0.509
+              }
+            ]
+          },
+          {
+            "slug": "market",
+            "name": "Market",
+            "polygon_points": [
+              {
+                "x": 0.258,
+                "y": 0.457
+              },
+              {
+                "x": 0.338,
+                "y": 0.457
+              },
+              {
+                "x": 0.338,
+                "y": 0.537
+              },
+              {
+                "x": 0.258,
+                "y": 0.537
+              }
+            ]
+          },
+          {
+            "slug": "t-spawn",
+            "name": "T Spawn",
+            "polygon_points": [
+              {
+                "x": 0.767,
+                "y": 0.519
+              },
+              {
+                "x": 0.867,
+                "y": 0.519
+              },
+              {
+                "x": 0.867,
+                "y": 0.619
+              },
+              {
+                "x": 0.767,
+                "y": 0.619
+              }
+            ]
+          },
+          {
+            "slug": "ct-spawn",
+            "name": "CT Spawn",
+            "polygon_points": [
+              {
+                "x": 0.082,
+                "y": 0.384
+              },
+              {
+                "x": 0.182,
+                "y": 0.384
+              },
+              {
+                "x": 0.182,
+                "y": 0.484
+              },
+              {
+                "x": 0.082,
+                "y": 0.484
+              }
+            ]
+          }
         ],
         "sites": [
-          { "slug": "a", "name": "A" },
-          { "slug": "b", "name": "B" }
+          {
+            "slug": "a",
+            "name": "A"
+          },
+          {
+            "slug": "b",
+            "name": "B"
+          }
         ]
       },
       {
@@ -84,17 +783,170 @@
         "name": "Icebox",
         "minimap_url": "/minimaps/valorant/icebox.png",
         "zones": [
-          { "slug": "a-site",     "name": "A Site",     "polygon_points": [] },
-          { "slug": "b-site",     "name": "B Site",     "polygon_points": [] },
-          { "slug": "a-main",     "name": "A Main",     "polygon_points": [] },
-          { "slug": "b-main",     "name": "B Main",     "polygon_points": [] },
-          { "slug": "mid",        "name": "Mid",        "polygon_points": [] },
-          { "slug": "t-spawn",    "name": "T Spawn",    "polygon_points": [] },
-          { "slug": "ct-spawn",   "name": "CT Spawn",   "polygon_points": [] }
+          {
+            "slug": "a-site",
+            "name": "A Site",
+            "polygon_points": [
+              {
+                "x": 0.621,
+                "y": 0.695
+              },
+              {
+                "x": 0.761,
+                "y": 0.695
+              },
+              {
+                "x": 0.761,
+                "y": 0.835
+              },
+              {
+                "x": 0.621,
+                "y": 0.835
+              }
+            ]
+          },
+          {
+            "slug": "b-site",
+            "name": "B Site",
+            "polygon_points": [
+              {
+                "x": 0.576,
+                "y": 0.11
+              },
+              {
+                "x": 0.716,
+                "y": 0.11
+              },
+              {
+                "x": 0.716,
+                "y": 0.25
+              },
+              {
+                "x": 0.576,
+                "y": 0.25
+              }
+            ]
+          },
+          {
+            "slug": "a-main",
+            "name": "A Main",
+            "polygon_points": [
+              {
+                "x": 0.344,
+                "y": 0.768
+              },
+              {
+                "x": 0.454,
+                "y": 0.768
+              },
+              {
+                "x": 0.454,
+                "y": 0.878
+              },
+              {
+                "x": 0.344,
+                "y": 0.878
+              }
+            ]
+          },
+          {
+            "slug": "b-main",
+            "name": "B Main",
+            "polygon_points": [
+              {
+                "x": 0.625,
+                "y": 0.228
+              },
+              {
+                "x": 0.735,
+                "y": 0.228
+              },
+              {
+                "x": 0.735,
+                "y": 0.338
+              },
+              {
+                "x": 0.625,
+                "y": 0.338
+              }
+            ]
+          },
+          {
+            "slug": "mid",
+            "name": "Mid",
+            "polygon_points": [
+              {
+                "x": 0.541,
+                "y": 0.505
+              },
+              {
+                "x": 0.651,
+                "y": 0.505
+              },
+              {
+                "x": 0.651,
+                "y": 0.615
+              },
+              {
+                "x": 0.541,
+                "y": 0.615
+              }
+            ]
+          },
+          {
+            "slug": "t-spawn",
+            "name": "T Spawn",
+            "polygon_points": [
+              {
+                "x": 0.09,
+                "y": 0.537
+              },
+              {
+                "x": 0.19,
+                "y": 0.537
+              },
+              {
+                "x": 0.19,
+                "y": 0.637
+              },
+              {
+                "x": 0.09,
+                "y": 0.637
+              }
+            ]
+          },
+          {
+            "slug": "ct-spawn",
+            "name": "CT Spawn",
+            "polygon_points": [
+              {
+                "x": 0.92,
+                "y": 0.525
+              },
+              {
+                "x": 0.98,
+                "y": 0.525
+              },
+              {
+                "x": 0.98,
+                "y": 0.625
+              },
+              {
+                "x": 0.92,
+                "y": 0.625
+              }
+            ]
+          }
         ],
         "sites": [
-          { "slug": "a", "name": "A" },
-          { "slug": "b", "name": "B" }
+          {
+            "slug": "a",
+            "name": "A"
+          },
+          {
+            "slug": "b",
+            "name": "B"
+          }
         ]
       },
       {
@@ -102,17 +954,170 @@
         "name": "Breeze",
         "minimap_url": "/minimaps/valorant/breeze.png",
         "zones": [
-          { "slug": "a-site",     "name": "A Site",     "polygon_points": [] },
-          { "slug": "b-site",     "name": "B Site",     "polygon_points": [] },
-          { "slug": "a-main",     "name": "A Main",     "polygon_points": [] },
-          { "slug": "b-main",     "name": "B Main",     "polygon_points": [] },
-          { "slug": "mid",        "name": "Mid",        "polygon_points": [] },
-          { "slug": "t-spawn",    "name": "T Spawn",    "polygon_points": [] },
-          { "slug": "ct-spawn",   "name": "CT Spawn",   "polygon_points": [] }
+          {
+            "slug": "a-site",
+            "name": "A Site",
+            "polygon_points": [
+              {
+                "x": 0.838,
+                "y": 0.425
+              },
+              {
+                "x": 0.978,
+                "y": 0.425
+              },
+              {
+                "x": 0.978,
+                "y": 0.565
+              },
+              {
+                "x": 0.838,
+                "y": 0.565
+              }
+            ]
+          },
+          {
+            "slug": "b-site",
+            "name": "B Site",
+            "polygon_points": [
+              {
+                "x": 0.02,
+                "y": 0.312
+              },
+              {
+                "x": 0.14,
+                "y": 0.312
+              },
+              {
+                "x": 0.14,
+                "y": 0.452
+              },
+              {
+                "x": 0.02,
+                "y": 0.452
+              }
+            ]
+          },
+          {
+            "slug": "a-main",
+            "name": "A Main",
+            "polygon_points": [
+              {
+                "x": 0.708,
+                "y": 0.628
+              },
+              {
+                "x": 0.818,
+                "y": 0.628
+              },
+              {
+                "x": 0.818,
+                "y": 0.738
+              },
+              {
+                "x": 0.708,
+                "y": 0.738
+              }
+            ]
+          },
+          {
+            "slug": "b-main",
+            "name": "B Main",
+            "polygon_points": [
+              {
+                "x": 0.099,
+                "y": 0.53
+              },
+              {
+                "x": 0.209,
+                "y": 0.53
+              },
+              {
+                "x": 0.209,
+                "y": 0.64
+              },
+              {
+                "x": 0.099,
+                "y": 0.64
+              }
+            ]
+          },
+          {
+            "slug": "mid",
+            "name": "Mid",
+            "polygon_points": [
+              {
+                "x": 0.445,
+                "y": 0.5
+              },
+              {
+                "x": 0.555,
+                "y": 0.5
+              },
+              {
+                "x": 0.555,
+                "y": 0.61
+              },
+              {
+                "x": 0.445,
+                "y": 0.61
+              }
+            ]
+          },
+          {
+            "slug": "t-spawn",
+            "name": "T Spawn",
+            "polygon_points": [
+              {
+                "x": 0.384,
+                "y": 0.823
+              },
+              {
+                "x": 0.484,
+                "y": 0.823
+              },
+              {
+                "x": 0.484,
+                "y": 0.923
+              },
+              {
+                "x": 0.384,
+                "y": 0.923
+              }
+            ]
+          },
+          {
+            "slug": "ct-spawn",
+            "name": "CT Spawn",
+            "polygon_points": [
+              {
+                "x": 0.662,
+                "y": 0.16
+              },
+              {
+                "x": 0.762,
+                "y": 0.16
+              },
+              {
+                "x": 0.762,
+                "y": 0.26
+              },
+              {
+                "x": 0.662,
+                "y": 0.26
+              }
+            ]
+          }
         ],
         "sites": [
-          { "slug": "a", "name": "A" },
-          { "slug": "b", "name": "B" }
+          {
+            "slug": "a",
+            "name": "A"
+          },
+          {
+            "slug": "b",
+            "name": "B"
+          }
         ]
       },
       {
@@ -120,17 +1125,170 @@
         "name": "Fracture",
         "minimap_url": "/minimaps/valorant/fracture.png",
         "zones": [
-          { "slug": "a-site",     "name": "A Site",     "polygon_points": [] },
-          { "slug": "b-site",     "name": "B Site",     "polygon_points": [] },
-          { "slug": "a-main",     "name": "A Main",     "polygon_points": [] },
-          { "slug": "b-main",     "name": "B Main",     "polygon_points": [] },
-          { "slug": "mid",        "name": "Mid",        "polygon_points": [] },
-          { "slug": "t-spawn",    "name": "T Spawn",    "polygon_points": [] },
-          { "slug": "ct-spawn",   "name": "CT Spawn",   "polygon_points": [] }
+          {
+            "slug": "a-site",
+            "name": "A Site",
+            "polygon_points": [
+              {
+                "x": 0.75,
+                "y": 0.452
+              },
+              {
+                "x": 0.89,
+                "y": 0.452
+              },
+              {
+                "x": 0.89,
+                "y": 0.592
+              },
+              {
+                "x": 0.75,
+                "y": 0.592
+              }
+            ]
+          },
+          {
+            "slug": "b-site",
+            "name": "B Site",
+            "polygon_points": [
+              {
+                "x": 0.023,
+                "y": 0.448
+              },
+              {
+                "x": 0.163,
+                "y": 0.448
+              },
+              {
+                "x": 0.163,
+                "y": 0.588
+              },
+              {
+                "x": 0.023,
+                "y": 0.588
+              }
+            ]
+          },
+          {
+            "slug": "a-main",
+            "name": "A Main",
+            "polygon_points": [
+              {
+                "x": 0.771,
+                "y": 0.642
+              },
+              {
+                "x": 0.881,
+                "y": 0.642
+              },
+              {
+                "x": 0.881,
+                "y": 0.752
+              },
+              {
+                "x": 0.771,
+                "y": 0.752
+              }
+            ]
+          },
+          {
+            "slug": "b-main",
+            "name": "B Main",
+            "polygon_points": [
+              {
+                "x": 0.085,
+                "y": 0.635
+              },
+              {
+                "x": 0.195,
+                "y": 0.635
+              },
+              {
+                "x": 0.195,
+                "y": 0.745
+              },
+              {
+                "x": 0.085,
+                "y": 0.745
+              }
+            ]
+          },
+          {
+            "slug": "mid",
+            "name": "Mid",
+            "polygon_points": [
+              {
+                "x": 0.446,
+                "y": 0.408
+              },
+              {
+                "x": 0.556,
+                "y": 0.408
+              },
+              {
+                "x": 0.556,
+                "y": 0.518
+              },
+              {
+                "x": 0.446,
+                "y": 0.518
+              }
+            ]
+          },
+          {
+            "slug": "t-spawn",
+            "name": "T Spawn",
+            "polygon_points": [
+              {
+                "x": 0.433,
+                "y": 0.767
+              },
+              {
+                "x": 0.533,
+                "y": 0.767
+              },
+              {
+                "x": 0.533,
+                "y": 0.867
+              },
+              {
+                "x": 0.433,
+                "y": 0.867
+              }
+            ]
+          },
+          {
+            "slug": "ct-spawn",
+            "name": "CT Spawn",
+            "polygon_points": [
+              {
+                "x": 0.454,
+                "y": 0.392
+              },
+              {
+                "x": 0.554,
+                "y": 0.392
+              },
+              {
+                "x": 0.554,
+                "y": 0.492
+              },
+              {
+                "x": 0.454,
+                "y": 0.492
+              }
+            ]
+          }
         ],
         "sites": [
-          { "slug": "a", "name": "A" },
-          { "slug": "b", "name": "B" }
+          {
+            "slug": "a",
+            "name": "A"
+          },
+          {
+            "slug": "b",
+            "name": "B"
+          }
         ]
       },
       {
@@ -138,17 +1296,170 @@
         "name": "Pearl",
         "minimap_url": "/minimaps/valorant/pearl.png",
         "zones": [
-          { "slug": "a-site",     "name": "A Site",     "polygon_points": [] },
-          { "slug": "b-site",     "name": "B Site",     "polygon_points": [] },
-          { "slug": "a-main",     "name": "A Main",     "polygon_points": [] },
-          { "slug": "b-main",     "name": "B Main",     "polygon_points": [] },
-          { "slug": "mid",        "name": "Mid",        "polygon_points": [] },
-          { "slug": "t-spawn",    "name": "T Spawn",    "polygon_points": [] },
-          { "slug": "ct-spawn",   "name": "CT Spawn",   "polygon_points": [] }
+          {
+            "slug": "a-site",
+            "name": "A Site",
+            "polygon_points": [
+              {
+                "x": 0.845,
+                "y": 0.33
+              },
+              {
+                "x": 0.98,
+                "y": 0.33
+              },
+              {
+                "x": 0.98,
+                "y": 0.47
+              },
+              {
+                "x": 0.845,
+                "y": 0.47
+              }
+            ]
+          },
+          {
+            "slug": "b-site",
+            "name": "B Site",
+            "polygon_points": [
+              {
+                "x": 0.188,
+                "y": 0.394
+              },
+              {
+                "x": 0.328,
+                "y": 0.394
+              },
+              {
+                "x": 0.328,
+                "y": 0.534
+              },
+              {
+                "x": 0.188,
+                "y": 0.534
+              }
+            ]
+          },
+          {
+            "slug": "a-main",
+            "name": "A Main",
+            "polygon_points": [
+              {
+                "x": 0.724,
+                "y": 0.364
+              },
+              {
+                "x": 0.834,
+                "y": 0.364
+              },
+              {
+                "x": 0.834,
+                "y": 0.474
+              },
+              {
+                "x": 0.724,
+                "y": 0.474
+              }
+            ]
+          },
+          {
+            "slug": "b-main",
+            "name": "B Main",
+            "polygon_points": [
+              {
+                "x": 0.084,
+                "y": 0.545
+              },
+              {
+                "x": 0.194,
+                "y": 0.545
+              },
+              {
+                "x": 0.194,
+                "y": 0.655
+              },
+              {
+                "x": 0.084,
+                "y": 0.655
+              }
+            ]
+          },
+          {
+            "slug": "mid",
+            "name": "Mid",
+            "polygon_points": [
+              {
+                "x": 0.48,
+                "y": 0.557
+              },
+              {
+                "x": 0.59,
+                "y": 0.557
+              },
+              {
+                "x": 0.59,
+                "y": 0.667
+              },
+              {
+                "x": 0.48,
+                "y": 0.667
+              }
+            ]
+          },
+          {
+            "slug": "t-spawn",
+            "name": "T Spawn",
+            "polygon_points": [
+              {
+                "x": 0.384,
+                "y": 0.909
+              },
+              {
+                "x": 0.484,
+                "y": 0.909
+              },
+              {
+                "x": 0.484,
+                "y": 0.98
+              },
+              {
+                "x": 0.384,
+                "y": 0.98
+              }
+            ]
+          },
+          {
+            "slug": "ct-spawn",
+            "name": "CT Spawn",
+            "polygon_points": [
+              {
+                "x": 0.46,
+                "y": 0.02
+              },
+              {
+                "x": 0.56,
+                "y": 0.02
+              },
+              {
+                "x": 0.56,
+                "y": 0.101
+              },
+              {
+                "x": 0.46,
+                "y": 0.101
+              }
+            ]
+          }
         ],
         "sites": [
-          { "slug": "a", "name": "A" },
-          { "slug": "b", "name": "B" }
+          {
+            "slug": "a",
+            "name": "A"
+          },
+          {
+            "slug": "b",
+            "name": "B"
+          }
         ]
       },
       {
@@ -156,20 +1467,218 @@
         "name": "Lotus",
         "minimap_url": "/minimaps/valorant/lotus.png",
         "zones": [
-          { "slug": "a-site",     "name": "A Site",     "polygon_points": [] },
-          { "slug": "b-site",     "name": "B Site",     "polygon_points": [] },
-          { "slug": "c-site",     "name": "C Site",     "polygon_points": [] },
-          { "slug": "a-main",     "name": "A Main",     "polygon_points": [] },
-          { "slug": "b-main",     "name": "B Main",     "polygon_points": [] },
-          { "slug": "c-main",     "name": "C Main",     "polygon_points": [] },
-          { "slug": "mid",        "name": "Mid",        "polygon_points": [] },
-          { "slug": "t-spawn",    "name": "T Spawn",    "polygon_points": [] },
-          { "slug": "ct-spawn",   "name": "CT Spawn",   "polygon_points": [] }
+          {
+            "slug": "a-site",
+            "name": "A Site",
+            "polygon_points": [
+              {
+                "x": 0.785,
+                "y": 0.291
+              },
+              {
+                "x": 0.925,
+                "y": 0.291
+              },
+              {
+                "x": 0.925,
+                "y": 0.431
+              },
+              {
+                "x": 0.785,
+                "y": 0.431
+              }
+            ]
+          },
+          {
+            "slug": "b-site",
+            "name": "B Site",
+            "polygon_points": [
+              {
+                "x": 0.433,
+                "y": 0.389
+              },
+              {
+                "x": 0.573,
+                "y": 0.389
+              },
+              {
+                "x": 0.573,
+                "y": 0.529
+              },
+              {
+                "x": 0.433,
+                "y": 0.529
+              }
+            ]
+          },
+          {
+            "slug": "c-site",
+            "name": "C Site",
+            "polygon_points": [
+              {
+                "x": 0.078,
+                "y": 0.367
+              },
+              {
+                "x": 0.218,
+                "y": 0.367
+              },
+              {
+                "x": 0.218,
+                "y": 0.507
+              },
+              {
+                "x": 0.078,
+                "y": 0.507
+              }
+            ]
+          },
+          {
+            "slug": "a-main",
+            "name": "A Main",
+            "polygon_points": [
+              {
+                "x": 0.699,
+                "y": 0.482
+              },
+              {
+                "x": 0.809,
+                "y": 0.482
+              },
+              {
+                "x": 0.809,
+                "y": 0.592
+              },
+              {
+                "x": 0.699,
+                "y": 0.592
+              }
+            ]
+          },
+          {
+            "slug": "b-main",
+            "name": "B Main",
+            "polygon_points": [
+              {
+                "x": 0.396,
+                "y": 0.512
+              },
+              {
+                "x": 0.506,
+                "y": 0.512
+              },
+              {
+                "x": 0.506,
+                "y": 0.622
+              },
+              {
+                "x": 0.396,
+                "y": 0.622
+              }
+            ]
+          },
+          {
+            "slug": "c-main",
+            "name": "C Main",
+            "polygon_points": [
+              {
+                "x": 0.173,
+                "y": 0.48
+              },
+              {
+                "x": 0.283,
+                "y": 0.48
+              },
+              {
+                "x": 0.283,
+                "y": 0.59
+              },
+              {
+                "x": 0.173,
+                "y": 0.59
+              }
+            ]
+          },
+          {
+            "slug": "mid",
+            "name": "Mid",
+            "polygon_points": [
+              {
+                "x": 0.425,
+                "y": 0.376
+              },
+              {
+                "x": 0.535,
+                "y": 0.376
+              },
+              {
+                "x": 0.535,
+                "y": 0.486
+              },
+              {
+                "x": 0.425,
+                "y": 0.486
+              }
+            ]
+          },
+          {
+            "slug": "t-spawn",
+            "name": "T Spawn",
+            "polygon_points": [
+              {
+                "x": 0.461,
+                "y": 0.767
+              },
+              {
+                "x": 0.561,
+                "y": 0.767
+              },
+              {
+                "x": 0.561,
+                "y": 0.867
+              },
+              {
+                "x": 0.461,
+                "y": 0.867
+              }
+            ]
+          },
+          {
+            "slug": "ct-spawn",
+            "name": "CT Spawn",
+            "polygon_points": [
+              {
+                "x": 0.527,
+                "y": 0.17
+              },
+              {
+                "x": 0.627,
+                "y": 0.17
+              },
+              {
+                "x": 0.627,
+                "y": 0.27
+              },
+              {
+                "x": 0.527,
+                "y": 0.27
+              }
+            ]
+          }
         ],
         "sites": [
-          { "slug": "a", "name": "A" },
-          { "slug": "b", "name": "B" },
-          { "slug": "c", "name": "C" }
+          {
+            "slug": "a",
+            "name": "A"
+          },
+          {
+            "slug": "b",
+            "name": "B"
+          },
+          {
+            "slug": "c",
+            "name": "C"
+          }
         ]
       }
     ]

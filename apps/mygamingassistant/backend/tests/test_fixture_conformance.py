@@ -48,32 +48,59 @@ def test_every_seeded_zone_has_a_polygon(filename: str):
     )
 
 
-def test_valorant_fixture_not_seeded_until_calibrated():
-    """valorant_maps.json must stay out of the seed set while its zones have
-    no polygons (PR 11 paused). Re-adding it before shipping geometry would
-    seed 69 unplaceable zones on a clean deploy. When Valorant geometry
-    lands, delete this test in the same PR that adds the file to
-    _SEEDED_MAP_FIXTURES.
+def test_manual_polygon_script_stays_deleted():
+    """Mutate-the-JSON pre-load scripts are a bandaid (geometry that only
+    exists if someone ran them). None may return for EITHER game — polygons
+    live inline in the committed ``*_maps.json`` (single source of truth),
+    enforced by ``test_every_seeded_zone_has_a_polygon``. The Valorant seed
+    was authored by a throwaway generator that was deleted in the same PR;
+    a ``.gen_*`` / ``_apply_*`` artifact reappearing means the bandaid is
+    back.
     """
-    assert "valorant_maps.json" not in _SEEDED_MAP_FIXTURES
-    empty = [
-        f"{m}/{z['slug']}"
-        for _, m, z in _all_zones("valorant_maps.json")
-        if not (z.get("polygon_points") or [])
+    forbidden = ["_apply_cs2_polygons.py", "_apply_valorant_polygons.py"]
+    offenders = [
+        f.name
+        for f in _FIXTURES_DIR.glob("*.py")
+        if f.name in forbidden or f.name.startswith(".gen_")
     ]
-    assert empty, (
-        "valorant_maps.json now has polygons — this guard is stale; add the "
-        "file to _SEEDED_MAP_FIXTURES and delete this test."
+    # ``.gen_*`` is hidden on POSIX globs; check explicitly too.
+    offenders += [
+        p.name
+        for p in _FIXTURES_DIR.iterdir()
+        if p.is_file() and p.name.startswith(".gen_")
+    ]
+    assert not offenders, (
+        f"Fixture-mutation script(s) present: {sorted(set(offenders))}. Keep "
+        f"polygon geometry inline in the committed *_maps.json; do not "
+        f"reintroduce a manual pre-load mutation step."
     )
 
 
-def test_manual_polygon_script_stays_deleted():
-    """The `_apply_cs2_polygons.py` mutate-the-JSON script was a bandaid
-    (geometry that only existed if someone ran it). It must not return —
-    polygons live inline in cs2_maps.json, enforced by the test above.
+def test_seeded_map_minimap_image_is_bundled():
+    """Every seeded map that points at a bundled radar (``/minimaps/...``)
+    must have that PNG vendored. A seeded map whose ``minimap_url`` 404s
+    renders polygons over a blank/"not available" backdrop and leaves the
+    operator unable to refine zones in the #656 editor (no reference radar).
+    Guards the radar-image link in the chain for BOTH games.
     """
-    assert not (_FIXTURES_DIR / "_apply_cs2_polygons.py").exists(), (
-        "_apply_cs2_polygons.py is back. Keep CS2 polygon geometry inline in "
-        "cs2_maps.json (single source of truth); do not reintroduce a manual "
-        "pre-load mutation step."
+    public_minimaps = (
+        Path(__file__).resolve().parents[2]
+        / "frontend"
+        / "public"
+        / "minimaps"
+    )
+    missing = []
+    for filename in _SEEDED_MAP_FIXTURES:
+        for entry in _load_json(filename):
+            for m in entry.get("maps", []):
+                url = m.get("minimap_url") or ""
+                if not url.startswith("/minimaps/"):
+                    continue  # MinIO / operator-upload path — not bundled
+                rel = url[len("/minimaps/"):]
+                if not (public_minimaps / rel).is_file():
+                    missing.append(f"{entry.get('game_slug')}/{m['slug']} -> {url}")
+    assert not missing, (
+        f"{len(missing)} seeded map(s) reference a bundled radar that is not "
+        f"vendored under frontend/public/minimaps/: {missing}. Add the PNG or "
+        f"switch the fixture's minimap_url off the bundled path."
     )

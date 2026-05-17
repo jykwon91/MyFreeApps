@@ -33,11 +33,14 @@ def _load_json(filename: str) -> list[dict]:
 # zone with no polygon yields no centroid, so its lineups are unplaceable on
 # the minimap (the honest "position unknown" path) and the operator sees a
 # permanent calibration notice. Seeding empty-polygon zones ships broken
-# content on a clean deploy. ``valorant_maps.json`` is intentionally absent:
-# all 69 Valorant zones lack polygons and Valorant live (PR 11) is paused —
-# it will be added here in the PR that ships its geometry. The
-# ``test_fixture_conformance`` suite enforces both halves of this invariant.
-_SEEDED_MAP_FIXTURES: tuple[str, ...] = ("cs2_maps.json",)
+# content on a clean deploy. ``valorant_maps.json`` now ships approximate
+# seed polygons for all 69 zones (centroid-correct, derived from official
+# valorant-api.com callout coords; operators refine edges via the #656
+# editor) — added here as the *web-library / plan-mode* slice of PR 11.
+# Valorant *live screen-capture detection* remains paused; only the
+# browsable library geometry is unblocked. The ``test_fixture_conformance``
+# suite enforces every seeded zone has a usable polygon.
+_SEEDED_MAP_FIXTURES: tuple[str, ...] = ("cs2_maps.json", "valorant_maps.json")
 
 
 async def load_fixtures(db: AsyncSession) -> None:
