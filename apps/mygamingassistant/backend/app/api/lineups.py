@@ -387,6 +387,7 @@ async def reclassify_lineup(
         confidence=result.confidence,
         reasoning=result.reasoning,
         error_codes=result.error_codes,
+        classification_failures=result.classification_failures,
     )
 
 

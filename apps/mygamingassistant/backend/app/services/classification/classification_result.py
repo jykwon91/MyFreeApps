@@ -58,3 +58,15 @@ class ClassificationResult:
     # Populated from anthropic.APIError / APIStatusError.type field.
     # Used by callers to distinguish rate limits from config errors.
     error_codes: list[str] = field(default_factory=list)
+
+    # Structured, machine-readable classification failures (per
+    # rules/check-third-party-error-codes.md: a wrapper that knows WHY it
+    # failed must not collapse to bare prose). Each entry is a stable code
+    # token suitable for grouping/alerting, e.g.
+    #   "unresolved_slug:target_zone:a-short:game=cs2"
+    #   "cross_game_rejected:map=mirage:classified=valorant:actual=cs2"
+    #   "invalid_confidence:high"
+    # These are ALSO mirrored into error_codes so the existing
+    # ClassifyResponse.error_codes path surfaces them to the operator/UI
+    # without a schema change. reasoning still carries the human prose.
+    classification_failures: list[str] = field(default_factory=list)
