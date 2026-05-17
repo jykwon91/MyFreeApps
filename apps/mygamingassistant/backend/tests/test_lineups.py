@@ -717,3 +717,219 @@ async def test_accept_range_guard_rejects_out_of_range_anchor(
         json={"stand_anchor_x": 1.5},
     )
     assert resp.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# Cross-session persistence (commit ownership relocated to lineup_repo)
+#
+# Regression guard for the silent data-loss bug: PATCH /api/lineups/{id}
+# (and create/accept/hide) returned 200 but the write was rolled back when
+# get_db closed the session, because nothing committed.
+#
+# How these tests genuinely catch the bug despite reusing one `db` session:
+# the conftest `db` fixture wraps each test in an outer transaction with a
+# re-opening SAVEPOINT (see its docstring). A mutating endpoint that only
+# *flushes* leaves its write in the CURRENT savepoint; a `await db.rollback()`
+# afterwards (which is exactly what production's get_db does on session close
+# for an uncommitted unit) discards it. A mutating endpoint that *commits*
+# releases the savepoint into the outer transaction, and the listener opens a
+# fresh savepoint — so a later rollback CANNOT discard it. Each test below
+# performs the endpoint mutation, then `await db.rollback()` to model the
+# session closing without an extra commit, then re-fetches and asserts the
+# change survived. With the pre-fix code (flush-only) the re-fetch sees the
+# old value and the assertion fails; with commit owned by the repo it passes.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_patch_lineup_persists_across_session_close(
+    auth_client: AsyncClient,
+    seeded_game_map: dict,
+    db: AsyncSession,
+):
+    """PATCH must survive the request session closing without an extra commit.
+
+    This is the core regression test for the data-loss bug. A test that
+    re-fetched on the same session WITHOUT the intervening rollback would
+    pass even with the bug (the flushed value is visible in-session) — the
+    `await db.rollback()` is what makes this test fail on the buggy code.
+    """
+    create_resp = await _create_lineup(auth_client, seeded_game_map)
+    assert create_resp.status_code == 201, create_resp.text
+    lineup_id = create_resp.json()["id"]
+    # Drop the create's identity-map state so the re-fetch is a real DB read.
+    await db.rollback()
+
+    patch_resp = await auth_client.patch(
+        f"/api/lineups/{lineup_id}",
+        json={"title": "Persisted title", "notes": "Persisted notes"},
+    )
+    assert patch_resp.status_code == 200, patch_resp.text
+
+    # Model production: get_db closes the session; any uncommitted unit is
+    # rolled back. A committed PATCH survives this; a flush-only one does not.
+    await db.rollback()
+
+    refetch = await auth_client.get(f"/api/lineups/{lineup_id}")
+    assert refetch.status_code == 200, refetch.text
+    body = refetch.json()
+    assert body["title"] == "Persisted title", (
+        "PATCH did not persist across session close — the UPDATE was rolled "
+        "back (commit ownership regression)."
+    )
+    assert body["notes"] == "Persisted notes"
+    assert body["side"] == "side_a"  # untouched field preserved
+
+
+@pytest.mark.asyncio
+async def test_create_lineup_persists_across_session_close(
+    auth_client: AsyncClient,
+    seeded_game_map: dict,
+    db: AsyncSession,
+):
+    """POST /api/lineups (manual upload path) must persist across session close."""
+    create_resp = await _create_lineup(auth_client, seeded_game_map)
+    assert create_resp.status_code == 201, create_resp.text
+    lineup_id = create_resp.json()["id"]
+
+    await db.rollback()  # model session close without an extra commit
+
+    refetch = await auth_client.get(f"/api/lineups/{lineup_id}")
+    assert refetch.status_code == 200, (
+        "Created lineup did not persist across session close — INSERT was "
+        "rolled back (commit ownership regression)."
+    )
+    assert refetch.json()["id"] == lineup_id
+
+
+@pytest.mark.asyncio
+async def test_accept_persists_across_session_close(
+    auth_client: AsyncClient,
+    pending_lineup_for_accept: "Lineup",
+    db: AsyncSession,
+):
+    """POST /api/lineups/{id}/accept must persist the status transition."""
+    lineup_id = str(pending_lineup_for_accept.id)
+
+    accept_resp = await auth_client.post(
+        f"/api/lineups/{lineup_id}/accept",
+        json={"stand_anchor_x": 0.21, "stand_anchor_y": 0.22},
+    )
+    assert accept_resp.status_code == 200, accept_resp.text
+
+    await db.rollback()  # model session close without an extra commit
+
+    admin = await auth_client.get(f"/api/lineups/{lineup_id}/admin")
+    assert admin.status_code == 200, admin.text
+    body = admin.json()
+    assert body["status"] == "accepted", (
+        "accept did not persist — status transition rolled back."
+    )
+    assert body["stand_anchor_x"] == pytest.approx(0.21)
+
+
+@pytest.mark.asyncio
+async def test_hide_persists_across_session_close(
+    auth_client: AsyncClient,
+    seeded_game_map: dict,
+    db: AsyncSession,
+):
+    """DELETE /api/lineups/{id} (soft-delete → hidden) must persist."""
+    create_resp = await _create_lineup(auth_client, seeded_game_map)
+    assert create_resp.status_code == 201
+    lineup_id = create_resp.json()["id"]
+    await db.rollback()
+
+    del_resp = await auth_client.delete(f"/api/lineups/{lineup_id}")
+    assert del_resp.status_code == 204
+
+    await db.rollback()  # model session close without an extra commit
+
+    admin = await auth_client.get(f"/api/lineups/{lineup_id}/admin")
+    assert admin.status_code == 200
+    assert admin.json()["status"] == "hidden", (
+        "hide did not persist — status='hidden' rolled back."
+    )
+
+
+@pytest.mark.asyncio
+async def test_bulk_accept_partial_success_persists_only_good(
+    auth_client: AsyncClient,
+    seeded_with_polygons: dict,
+    db: AsyncSession,
+):
+    """One acceptable + one un-acceptable lineup: the good one persists, the
+    bad one does not, and the response contains only the good one.
+
+    The "bad" lineup has no suggested_* fields and no override body, so
+    ``lineup_service.accept`` raises ValueError (missing required fields)
+    BEFORE the repo commits — it must be skipped without aborting the batch
+    or discarding the already-committed good lineup.
+
+    The cross-session durability of a committed write is already proven by
+    the four single-commit ``*_persists_across_session_close`` tests above
+    (which model the get_db session close via ``db.rollback()``). This test
+    deliberately does NOT add that post-request rollback: bulk-accept issues
+    one commit per accepted lineup in a single request, and the conftest
+    savepoint-restart listener does not cleanly survive a
+    commit→further-work→external-rollback sequence within one request
+    (a harness limitation, not a product defect). Re-fetching via the API
+    immediately after the request still proves the partial-success contract:
+    the good lineup's per-item repo commit released its SAVEPOINT into the
+    outer transaction, so it reads back as ``accepted``; the bad lineup never
+    committed and reads back as ``pending_review``.
+    """
+    seeded = seeded_with_polygons
+
+    good = Lineup(
+        game_id=seeded["game"].id,
+        map_id=seeded["map"].id,
+        title="good pending",
+        status="pending_review",
+        suggested_target_zone_id=seeded["zone_target"].id,
+        suggested_stand_zone_id=seeded["zone_stand"].id,
+        suggested_side="side_a",
+        suggested_utility_type_id=seeded["util"].id,
+    )
+    bad = Lineup(
+        game_id=seeded["game"].id,
+        map_id=seeded["map"].id,
+        title="bad pending (no suggestions → accept() raises)",
+        status="pending_review",
+    )
+    db.add(good)
+    db.add(bad)
+    await db.flush()
+    good_id = str(good.id)
+    bad_id = str(bad.id)
+    # NOTE: do NOT manually commit the seed rows here. Under the conftest
+    # savepoint harness, the good lineup's per-item repo commit (inside
+    # bulk-accept) releases the current SAVEPOINT into the outer transaction,
+    # carrying these flushed seed rows AND the auth user with it. A manual
+    # commit here would instead release a savepoint that the post-request
+    # rollback then discards, taking the auth user with it (→ 401).
+
+    resp = await auth_client.post(
+        "/api/lineups/bulk-accept",
+        json={"lineup_ids": [good_id, bad_id], "patches": {}},
+    )
+    assert resp.status_code == 200, resp.text
+    returned_ids = {item["id"] for item in resp.json()}
+    assert good_id in returned_ids, "good lineup missing from bulk-accept response"
+    assert bad_id not in returned_ids, "failed lineup leaked into the response"
+
+    # Expire the session so the re-fetch is a real DB read, not the identity
+    # map. The good lineup's per-item commit is in the outer transaction.
+    db.expire_all()
+
+    good_admin = await auth_client.get(f"/api/lineups/{good_id}/admin")
+    assert good_admin.status_code == 200, good_admin.text
+    assert good_admin.json()["status"] == "accepted", (
+        "good lineup's accept was lost — partial-success durability regression."
+    )
+
+    bad_admin = await auth_client.get(f"/api/lineups/{bad_id}/admin")
+    assert bad_admin.status_code == 200, bad_admin.text
+    assert bad_admin.json()["status"] == "pending_review", (
+        "bad lineup must remain pending_review (it was never accepted)."
+    )

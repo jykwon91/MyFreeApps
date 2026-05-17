@@ -53,16 +53,16 @@ def _apply_filters(stmt: "Select[tuple[Lineup]]", f: LineupFilters) -> "Select[t
     return stmt
 
 
-async def create_lineup(db: AsyncSession, data: dict) -> Lineup:
-    """Insert a new lineup row and return the refreshed ORM instance.
+async def _refresh_set_relations(db: AsyncSession, lineup: Lineup) -> None:
+    """Refresh the FK relationship attrs that have a non-null value.
 
-    Relationship attributes are only refreshed when the corresponding FK is
-    set — ingestion-path rows have null FKs until the classifier runs (PR 5).
+    Ingestion-path rows have null classification FKs until the classifier
+    runs (PR 5), so refreshing an unset relationship would be wasted work
+    (and ``selectinload`` already populated the loaded ones). Called while
+    the row is still attached and before commit; with
+    ``expire_on_commit=False`` the refreshed attributes stay populated for
+    the post-commit serialization in the service layer.
     """
-    lineup = Lineup(**data)
-    db.add(lineup)
-    await db.flush()
-    # Only refresh relationships that have a non-null FK value.
     attrs_to_refresh = [
         attr
         for attr, fk_field in [
@@ -74,6 +74,30 @@ async def create_lineup(db: AsyncSession, data: dict) -> Lineup:
     ]
     if attrs_to_refresh:
         await db.refresh(lineup, attribute_names=attrs_to_refresh)
+
+
+async def create_lineup(db: AsyncSession, data: dict) -> Lineup:
+    """Insert a new lineup row, commit, and return the refreshed instance.
+
+    Transaction ownership lives here in the repository layer (not the route
+    or service): ``platform_shared.db.session.get_db`` does NOT auto-commit,
+    so a flush-only write is rolled back when the request session closes.
+    Routes/services delegating here must NOT also commit. On failure the
+    transaction is rolled back and the error re-raised so the caller can
+    surface it (constraint violations become a 4xx/5xx, never a silent loss).
+
+    Relationship attributes are only refreshed when the corresponding FK is
+    set — ingestion-path rows have null FKs until the classifier runs (PR 5).
+    """
+    lineup = Lineup(**data)
+    db.add(lineup)
+    try:
+        await db.flush()
+        await _refresh_set_relations(db, lineup)
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
     return lineup
 
 
@@ -119,29 +143,34 @@ async def update_lineup(
     lineup: Lineup,
     patch: dict,
 ) -> Lineup:
-    """Apply *patch* fields to *lineup* and flush."""
+    """Apply *patch* fields to *lineup*, commit, and return it.
+
+    This is the fix for the silent data-loss bug: ``PATCH /api/lineups/{id}``
+    previously returned 200 (the in-session ORM object reflected the change)
+    but the UPDATE was rolled back when ``get_db`` closed the session because
+    nothing committed. Transaction ownership now lives here in the repo.
+    """
     for key, value in patch.items():
         setattr(lineup, key, value)
-    await db.flush()
-    # Only refresh relationships when the FK is set (nullable after migration).
-    attrs_to_refresh = [
-        attr
-        for attr, fk_field in [
-            ("target_zone", "target_zone_id"),
-            ("stand_zone", "stand_zone_id"),
-            ("utility_type", "utility_type_id"),
-        ]
-        if getattr(lineup, fk_field) is not None
-    ]
-    if attrs_to_refresh:
-        await db.refresh(lineup, attribute_names=attrs_to_refresh)
+    try:
+        await db.flush()
+        await _refresh_set_relations(db, lineup)
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
     return lineup
 
 
 async def hide_lineup(db: AsyncSession, lineup: Lineup) -> Lineup:
-    """Soft-delete: set status='hidden'."""
+    """Soft-delete: set status='hidden' and commit."""
     lineup.status = "hidden"
-    await db.flush()
+    try:
+        await db.flush()
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
     return lineup
 
 
@@ -223,19 +252,13 @@ async def accept_lineup(
         if value is not None:
             setattr(lineup, key, value)
     lineup.status = "accepted"
-    await db.flush()
-    # Refresh relations that changed
-    attrs_to_refresh = [
-        attr
-        for attr, fk_field in [
-            ("target_zone", "target_zone_id"),
-            ("stand_zone", "stand_zone_id"),
-            ("utility_type", "utility_type_id"),
-        ]
-        if getattr(lineup, fk_field) is not None
-    ]
-    if attrs_to_refresh:
-        await db.refresh(lineup, attribute_names=attrs_to_refresh)
+    try:
+        await db.flush()
+        await _refresh_set_relations(db, lineup)
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
     return lineup
 
 
@@ -253,6 +276,25 @@ async def write_classifier_suggestions(
         if hasattr(lineup, field_name):
             setattr(lineup, field_name, value)
     await db.flush()
+
+
+async def commit_classifier_run(db: AsyncSession) -> None:
+    """Commit the classifier's flushed suggestion writes for the single-lineup
+    reclassify path.
+
+    ``classifier_service.classify_lineup`` writes suggested_* fields and
+    flushes but, per its documented contract, leaves the commit to the
+    caller (the ingestion orchestrator batches many classify runs into one
+    commit; the interactive ``POST /api/lineups/{id}/classify`` route needs
+    exactly one). Transaction ownership for that interactive path lives here
+    in the repo layer — the route must NOT commit. On failure the
+    transaction is rolled back and the error re-raised.
+    """
+    try:
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
 
 
 async def zone_density(

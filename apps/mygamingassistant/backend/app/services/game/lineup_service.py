@@ -6,8 +6,13 @@ Responsibilities:
 - Orchestrate lineup create/update by delegating to lineup_repo
 - Status transition validation (accept/hide)
 
-ORM operations live exclusively in lineup_repo. This service never
-imports AsyncSession directly — it receives it from the route handler.
+ORM operations — including the commit/rollback transaction boundary — live
+exclusively in lineup_repo. This service never imports AsyncSession for
+mutation; it receives the session from the route handler and passes it
+through. Routes must NOT commit: ``get_db`` does not auto-commit, so the
+repo owns the commit so a single missing call can't silently lose writes
+(the bug this module's history records: PATCH returning 200 then rolling
+back on session close).
 """
 from __future__ import annotations
 
@@ -24,6 +29,7 @@ from app.models.game.lineup import Lineup
 from app.repositories.game.lineup_repo import (
     LineupFilters,
     accept_lineup,
+    commit_classifier_run,
     create_lineup,
     get_lineup,
     hide_lineup,
@@ -32,6 +38,8 @@ from app.repositories.game.lineup_repo import (
     update_lineup,
     zone_density,
 )
+from app.services.classification.classification_result import ClassificationResult
+from app.services.classification.classifier_service import classify_lineup
 from app.schemas.game.lineup_schemas import (
     LineupAcceptBody,
     LineupCreate,
@@ -389,6 +397,25 @@ async def accept(
 
     updated = await accept_lineup(db, lineup, overrides)
     return _build_read(updated)
+
+
+async def reclassify(
+    db: AsyncSession,
+    lineup_id: uuid.UUID,
+) -> ClassificationResult:
+    """Re-run the Claude classifier on a single lineup and persist suggestions.
+
+    ``classify_lineup`` writes suggested_* fields and flushes but, per its
+    documented contract, leaves the commit to the caller (the ingestion
+    orchestrator batches; the interactive route commits one). Commit
+    ownership for the interactive path lives in the repo
+    (``commit_classifier_run``) so the route stays free of any ORM/DB call.
+    On classifier failure nothing was flushed worth keeping, so no commit.
+    """
+    result = await classify_lineup(db, lineup_id)
+    if result.success:
+        await commit_classifier_run(db)
+    return result
 
 
 async def get_zone_density(

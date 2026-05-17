@@ -56,7 +56,6 @@ from app.schemas.game.lineup_schemas import (
     PendingLineupsResponse,
     UploadUrlResponse,
 )
-from app.services.classification.classifier_service import classify_lineup
 from app.services.game import lineup_service
 
 logger = logging.getLogger(__name__)
@@ -370,11 +369,10 @@ async def reclassify_lineup(
     """Re-run the Claude classifier on a lineup.
 
     Updates the suggested_* fields on the lineup row without accepting.
-    Returns the new suggestions directly.
+    Returns the new suggestions directly. Persistence (commit) is owned by
+    the service/repo layer — this route performs no DB transaction calls.
     """
-    result = await classify_lineup(db, lineup_id)
-    if result.success:
-        await db.commit()
+    result = await lineup_service.reclassify(db, lineup_id)
     return ClassifyResponse(
         lineup_id=lineup_id,
         success=result.success,
@@ -410,7 +408,6 @@ async def accept_lineup(
         raise HTTPException(status_code=422, detail=str(exc))
     if lineup is None:
         raise HTTPException(status_code=404, detail="Lineup not found")
-    await db.commit()
     return lineup
 
 
@@ -423,7 +420,6 @@ async def hide_pending_lineup(
     hidden = await lineup_service.hide(db, lineup_id)
     if hidden is None:
         raise HTTPException(status_code=404, detail="Lineup not found")
-    await db.commit()
     return hidden
 
 
@@ -435,8 +431,14 @@ async def bulk_accept_lineups(
     """Accept multiple pending lineups in a single request.
 
     Processes each lineup individually; failures on individual lineups are
-    returned as 207 partial success (accepted ones are in the response list).
-    Currently returns only successfully accepted lineups.
+    skipped (logged) and do NOT abort the batch. Returns only the
+    successfully accepted lineups.
+
+    Partial-success durability: ``lineup_service.accept`` → the repo's
+    ``accept_lineup`` owns a per-lineup commit/rollback. A failing lineup's
+    rollback discards only its own uncommitted unit — lineups committed by
+    earlier loop iterations are already durable in PostgreSQL and survive.
+    The route performs no DB transaction calls of its own.
     """
     accepted: list[LineupRead] = []
     for lid in body.lineup_ids:
@@ -444,11 +446,9 @@ async def bulk_accept_lineups(
         try:
             lineup = await lineup_service.accept(db, lid, patch)
             if lineup is not None:
-                await db.commit()
                 accepted.append(lineup)
         except Exception as exc:
             logger.warning(
                 "bulk_accept: skipping lineup_id=%s error=%s", lid, str(exc)
             )
-            await db.rollback()
     return accepted
