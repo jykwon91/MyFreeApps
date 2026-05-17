@@ -50,11 +50,13 @@ def _source_to_read(source) -> SourceRead:
 @router.post("/sources", response_model=SourceRead, status_code=201)
 async def create_source(
     payload: SourceCreate,
-    db: AsyncSession = Depends(get_db),
 ) -> SourceRead:
-    """Add a YouTube playlist or channel as an ingestion source."""
+    """Add a YouTube playlist or channel as an ingestion source.
+
+    Persistence + commit are owned by the service (``unit_of_work``).
+    """
     try:
-        source = await source_service.create(db, payload)
+        source = await source_service.create(payload)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return _source_to_read(source)
@@ -84,14 +86,14 @@ async def get_source(
 @router.delete("/sources/{source_id}", status_code=204)
 async def delete_source(
     source_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
 ) -> None:
     """Soft-delete a source.
 
     Lineups previously ingested from this source are NOT removed — they remain
-    in the library with source_id set to NULL (SET NULL FK constraint).
+    in the library with source_id set to NULL (SET NULL FK constraint). The
+    commit boundary is owned by the service (``unit_of_work``).
     """
-    source = await source_service.delete(db, source_id)
+    source = await source_service.delete(source_id)
     if source is None:
         raise HTTPException(status_code=404, detail="Source not found")
 

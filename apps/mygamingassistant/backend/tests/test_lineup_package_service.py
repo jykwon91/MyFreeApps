@@ -11,6 +11,7 @@ Tests verify:
 from __future__ import annotations
 
 import uuid
+from contextlib import asynccontextmanager
 
 import pytest
 import pytest_asyncio
@@ -26,6 +27,28 @@ from app.schemas.game.lineup_package_schemas import (
     LineupPackagePatch,
 )
 from app.services.game import lineup_package_service
+
+
+@pytest.fixture(autouse=True)
+def _bind_uow_to_test_session(db: AsyncSession, monkeypatch: pytest.MonkeyPatch):
+    """Bind ``lineup_package_service.unit_of_work`` to the test session.
+
+    The service owns its transaction boundary via ``unit_of_work()``
+    (canonical MBK pattern — see ``test_applicant_contract_service``). The
+    real factory opens a separate session/connection that cannot see the
+    SAVEPOINT-bound ``db`` fixture's rows. Patch the name as bound in the
+    service module (``from app.db.session import unit_of_work`` copies the
+    reference at import time, so patching ``app.db.session`` alone misses
+    it) so writes land on the test session.
+    """
+
+    @asynccontextmanager
+    async def _fake_uow():
+        yield db
+
+    monkeypatch.setattr(
+        lineup_package_service, "unit_of_work", _fake_uow
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -102,8 +125,7 @@ async def test_create_package_basic(db: AsyncSession, game_map: dict):
         side="side_a",
         lineup_ids=[gd["lineup_a"].id, gd["lineup_b"].id],
     )
-    pkg = await lineup_package_service.create(db, payload)
-    await db.commit()
+    pkg = await lineup_package_service.create(payload)
 
     assert pkg.name == "Full A exec"
     assert pkg.game_id == gd["game"].id
@@ -124,8 +146,7 @@ async def test_create_package_empty_lineup_ids(db: AsyncSession, game_map: dict)
         side="any",
         lineup_ids=[],
     )
-    pkg = await lineup_package_service.create(db, payload)
-    await db.commit()
+    pkg = await lineup_package_service.create(payload)
 
     assert pkg.lineup_ids == []
 
@@ -144,8 +165,7 @@ async def test_list_packages_filters_by_game(db: AsyncSession, game_map: dict):
         map_id=gd["map"].id,
         side="side_a",
     )
-    await lineup_package_service.create(db, payload)
-    await db.commit()
+    await lineup_package_service.create(payload)
 
     # Filter by this game — should return the package
     results = await lineup_package_service.list_by_filters(
@@ -170,9 +190,8 @@ async def test_list_packages_filters_by_side(db: AsyncSession, game_map: dict):
         map_id=gd["map"].id,
         side="side_b",
     )
-    await lineup_package_service.create(db, pkg_a)
-    await lineup_package_service.create(db, pkg_b)
-    await db.commit()
+    await lineup_package_service.create(pkg_a)
+    await lineup_package_service.create(pkg_b)
 
     results = await lineup_package_service.list_by_filters(
         db, game_id=gd["game"].id, map_id=gd["map"].id, side="side_a"
@@ -200,8 +219,7 @@ async def test_get_package_found(db: AsyncSession, game_map: dict):
         side="side_b",
         lineup_ids=[gd["lineup_a"].id],
     )
-    created = await lineup_package_service.create(db, payload)
-    await db.commit()
+    created = await lineup_package_service.create(payload)
 
     fetched = await lineup_package_service.get(db, created.id)
     assert fetched is not None
@@ -216,18 +234,16 @@ async def test_get_package_found(db: AsyncSession, game_map: dict):
 @pytest.mark.asyncio
 async def test_patch_package_rename(db: AsyncSession, game_map: dict):
     gd = game_map
-    created = await lineup_package_service.create(db, LineupPackageCreate(
+    created = await lineup_package_service.create(LineupPackageCreate(
         name="Old name",
         game_id=gd["game"].id,
         map_id=gd["map"].id,
         side="side_a",
     ))
-    await db.commit()
 
     patched = await lineup_package_service.patch(
-        db, created.id, LineupPackagePatch(name="New name")
+        created.id, LineupPackagePatch(name="New name")
     )
-    await db.commit()
 
     assert patched is not None
     assert patched.name == "New name"
@@ -236,20 +252,18 @@ async def test_patch_package_rename(db: AsyncSession, game_map: dict):
 @pytest.mark.asyncio
 async def test_patch_package_replace_lineup_ids(db: AsyncSession, game_map: dict):
     gd = game_map
-    created = await lineup_package_service.create(db, LineupPackageCreate(
+    created = await lineup_package_service.create(LineupPackageCreate(
         name="Pkg",
         game_id=gd["game"].id,
         map_id=gd["map"].id,
         side="side_a",
         lineup_ids=[gd["lineup_a"].id],
     ))
-    await db.commit()
 
     patched = await lineup_package_service.patch(
-        db, created.id,
+        created.id,
         LineupPackagePatch(lineup_ids=[gd["lineup_b"].id, gd["lineup_a"].id])
     )
-    await db.commit()
 
     assert patched is not None
     assert len(patched.lineup_ids) == 2
@@ -260,7 +274,7 @@ async def test_patch_package_replace_lineup_ids(db: AsyncSession, game_map: dict
 @pytest.mark.asyncio
 async def test_patch_package_not_found(db: AsyncSession):
     result = await lineup_package_service.patch(
-        db, uuid.uuid4(), LineupPackagePatch(name="New")
+        uuid.uuid4(), LineupPackagePatch(name="New")
     )
     assert result is None
 
@@ -272,15 +286,14 @@ async def test_patch_package_not_found(db: AsyncSession):
 @pytest.mark.asyncio
 async def test_delete_package(db: AsyncSession, game_map: dict):
     gd = game_map
-    created = await lineup_package_service.create(db, LineupPackageCreate(
+    created = await lineup_package_service.create(LineupPackageCreate(
         name="To delete",
         game_id=gd["game"].id,
         map_id=gd["map"].id,
         side="side_a",
     ))
-    await db.commit()
 
-    deleted = await lineup_package_service.delete(db, created.id)
+    deleted = await lineup_package_service.delete(created.id)
     assert deleted is True
 
     fetched = await lineup_package_service.get(db, created.id)
@@ -289,7 +302,7 @@ async def test_delete_package(db: AsyncSession, game_map: dict):
 
 @pytest.mark.asyncio
 async def test_delete_package_not_found(db: AsyncSession):
-    result = await lineup_package_service.delete(db, uuid.uuid4())
+    result = await lineup_package_service.delete(uuid.uuid4())
     assert result is False
 
 
@@ -300,14 +313,13 @@ async def test_delete_package_not_found(db: AsyncSession):
 @pytest.mark.asyncio
 async def test_get_pin_all_returns_ordered_lineup_ids(db: AsyncSession, game_map: dict):
     gd = game_map
-    created = await lineup_package_service.create(db, LineupPackageCreate(
+    created = await lineup_package_service.create(LineupPackageCreate(
         name="Pin pkg",
         game_id=gd["game"].id,
         map_id=gd["map"].id,
         side="side_a",
         lineup_ids=[gd["lineup_b"].id, gd["lineup_a"].id],
     ))
-    await db.commit()
 
     pin_all = await lineup_package_service.get_pin_all(db, created.id)
     assert pin_all is not None
