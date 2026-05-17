@@ -28,6 +28,18 @@ def _load_json(filename: str) -> list[dict]:
         return json.load(fh)
 
 
+# Map fixture files that are seeded by ``load_fixtures``. A file may only
+# appear here once EVERY zone in it has a non-empty ``polygon_points`` — a
+# zone with no polygon yields no centroid, so its lineups are unplaceable on
+# the minimap (the honest "position unknown" path) and the operator sees a
+# permanent calibration notice. Seeding empty-polygon zones ships broken
+# content on a clean deploy. ``valorant_maps.json`` is intentionally absent:
+# all 69 Valorant zones lack polygons and Valorant live (PR 11) is paused —
+# it will be added here in the PR that ships its geometry. The
+# ``test_fixture_conformance`` suite enforces both halves of this invariant.
+_SEEDED_MAP_FIXTURES: tuple[str, ...] = ("cs2_maps.json",)
+
+
 async def load_fixtures(db: AsyncSession) -> None:
     """Load all fixture data into the database. Idempotent.
 
@@ -36,8 +48,8 @@ async def load_fixtures(db: AsyncSession) -> None:
     """
     await _load_games(db)
     await _load_utility_types(db)
-    await _load_maps(db, "valorant_maps.json")
-    await _load_maps(db, "cs2_maps.json")
+    for fixture_file in _SEEDED_MAP_FIXTURES:
+        await _load_maps(db, fixture_file)
     logger.info("fixture_loader: all fixtures loaded")
 
 
