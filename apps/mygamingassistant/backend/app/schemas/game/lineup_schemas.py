@@ -296,6 +296,30 @@ class BulkAcceptBody(BaseModel):
     patches: dict[str, LineupAcceptBody] = Field(default_factory=dict)
 
 
+class BulkAcceptSkip(BaseModel):
+    """One lineup bulk-accept could not accept, with the reason why.
+
+    ``reason`` is operator-facing: it carries the same message the single
+    ``POST /lineups/{id}/accept`` endpoint returns as its 422 detail (e.g.
+    "Cannot accept lineup: missing required fields: utility_type_id ..."), so
+    the operator can fix the lineup instead of staring at a bare "Accepted 0".
+    """
+    lineup_id: uuid.UUID
+    reason: str
+
+
+class BulkAcceptResult(BaseModel):
+    """Outcome of POST /lineups/bulk-accept.
+
+    ``accepted`` carries the lineups that transitioned to 'accepted'.
+    ``skipped`` carries the ones that could not be accepted, each with a
+    human-readable reason. Skips never abort the batch — a missing-field
+    lineup in the selection does not block the valid ones from accepting.
+    """
+    accepted: list[LineupRead]
+    skipped: list[BulkAcceptSkip]
+
+
 class ClassifyResponse(BaseModel):
     """Returned by POST /lineups/{id}/classify — the new suggested values."""
     lineup_id: uuid.UUID

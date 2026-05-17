@@ -9,6 +9,7 @@
 import { baseApi } from "@platform/ui";
 import type {
   BulkAcceptBody,
+  BulkAcceptResult,
   ClassifyResponse,
   Lineup,
   LineupAcceptBody,
@@ -154,7 +155,7 @@ const lineupsApi = lineupsBaseApi.injectEndpoints({
       ],
     }),
 
-    bulkAcceptLineups: build.mutation<Lineup[], BulkAcceptBody>({
+    bulkAcceptLineups: build.mutation<BulkAcceptResult, BulkAcceptBody>({
       query: (body) => ({ url: "/lineups/bulk-accept", method: "POST", data: body }),
       invalidatesTags: ["LineupList", "PendingLineups", "ZoneDensity"],
     }),

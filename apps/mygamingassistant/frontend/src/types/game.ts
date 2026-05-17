@@ -168,6 +168,18 @@ export interface BulkAcceptBody {
   patches: Record<string, LineupAcceptBody>;
 }
 
+/** One lineup bulk-accept could not accept, with the operator-facing reason. */
+export interface BulkAcceptSkip {
+  lineup_id: string;
+  reason: string;
+}
+
+/** Outcome of POST /lineups/bulk-accept — accepted lineups + skipped + why. */
+export interface BulkAcceptResult {
+  accepted: Lineup[];
+  skipped: BulkAcceptSkip[];
+}
+
 export interface ClassifyResponse {
   lineup_id: string;
   success: boolean;

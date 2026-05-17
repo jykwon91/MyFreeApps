@@ -48,6 +48,8 @@ from app.models.user.user import User
 from app.repositories.game.lineup_repo import LineupFilters
 from app.schemas.game.lineup_schemas import (
     BulkAcceptBody,
+    BulkAcceptResult,
+    BulkAcceptSkip,
     ClassifyResponse,
     LineupAcceptBody,
     LineupCreate,
@@ -423,16 +425,19 @@ async def hide_pending_lineup(
     return hidden
 
 
-@auth_router.post("/lineups/bulk-accept", response_model=list[LineupRead])
+@auth_router.post("/lineups/bulk-accept", response_model=BulkAcceptResult)
 async def bulk_accept_lineups(
     body: BulkAcceptBody,
     db: AsyncSession = Depends(get_db),
-) -> list[LineupRead]:
+) -> BulkAcceptResult:
     """Accept multiple pending lineups in a single request.
 
-    Processes each lineup individually; failures on individual lineups are
-    skipped (logged) and do NOT abort the batch. Returns only the
-    successfully accepted lineups.
+    Processes each lineup individually. A lineup that cannot be accepted
+    (missing a required classification field, not found, etc.) is recorded
+    in ``skipped`` with an operator-facing reason instead of being silently
+    dropped — so "Accepted 0" is never a dead end: the operator sees *which*
+    lineups failed and *why*, and can fix them. Failures on individual
+    lineups never abort the batch.
 
     Partial-success durability: ``lineup_service.accept`` → the repo's
     ``accept_lineup`` owns a per-lineup commit/rollback. A failing lineup's
@@ -441,14 +446,29 @@ async def bulk_accept_lineups(
     The route performs no DB transaction calls of its own.
     """
     accepted: list[LineupRead] = []
+    skipped: list[BulkAcceptSkip] = []
     for lid in body.lineup_ids:
         patch = body.patches.get(str(lid), LineupAcceptBody())
         try:
             lineup = await lineup_service.accept(db, lid, patch)
-            if lineup is not None:
-                accepted.append(lineup)
-        except Exception as exc:
+            if lineup is None:
+                skipped.append(
+                    BulkAcceptSkip(lineup_id=lid, reason="Lineup not found")
+                )
+                continue
+            accepted.append(lineup)
+        except ValueError as exc:
+            # Expected validation failure (e.g. missing required fields) —
+            # surface the exact reason the single-accept 422 would give.
+            skipped.append(BulkAcceptSkip(lineup_id=lid, reason=str(exc)))
+        except Exception as exc:  # noqa: BLE001 - record + log, never abort batch
             logger.warning(
                 "bulk_accept: skipping lineup_id=%s error=%s", lid, str(exc)
             )
-    return accepted
+            skipped.append(
+                BulkAcceptSkip(
+                    lineup_id=lid,
+                    reason="Unexpected error accepting this lineup — see server logs.",
+                )
+            )
+    return BulkAcceptResult(accepted=accepted, skipped=skipped)
