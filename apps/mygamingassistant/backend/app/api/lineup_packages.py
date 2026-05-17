@@ -101,13 +101,15 @@ async def pin_all_lineup_package(
 @auth_router.post("/lineup-packages", response_model=LineupPackageRead, status_code=201)
 async def create_lineup_package(
     payload: LineupPackageCreate,
-    db: AsyncSession = Depends(get_db),
 ) -> LineupPackageRead:
-    """Create a new lineup package."""
+    """Create a new lineup package.
+
+    Persistence + commit are owned by the service (``unit_of_work``) — the
+    route is a thin wrapper with no DB session, mirroring the canonical MBK
+    service pattern.
+    """
     try:
-        pkg = await lineup_package_service.create(db, payload)
-        await db.commit()
-        return pkg
+        return await lineup_package_service.create(payload)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
@@ -116,32 +118,32 @@ async def create_lineup_package(
 async def patch_lineup_package(
     package_id: uuid.UUID,
     payload: LineupPackagePatch,
-    db: AsyncSession = Depends(get_db),
 ) -> LineupPackageRead:
     """Rename, change side, or replace lineup list for a package.
 
     Provide ``lineup_ids`` in the desired order to replace the current
-    lineup list. Omit to leave lineups unchanged.
+    lineup list. Omit to leave lineups unchanged. The commit boundary is
+    owned by the service.
     """
     try:
-        pkg = await lineup_package_service.patch(db, package_id, payload)
+        pkg = await lineup_package_service.patch(package_id, payload)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     if pkg is None:
         raise HTTPException(status_code=404, detail="Package not found")
-    await db.commit()
     return pkg
 
 
 @auth_router.delete("/lineup-packages/{package_id}", status_code=204)
 async def delete_lineup_package(
     package_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
 ) -> None:
-    """Hard-delete a package. Lineups themselves are not affected."""
-    deleted = await lineup_package_service.delete(db, package_id)
+    """Hard-delete a package. Lineups themselves are not affected.
+
+    The commit boundary is owned by the service (``unit_of_work``).
+    """
+    deleted = await lineup_package_service.delete(package_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Package not found")
-    await db.commit()
 
 

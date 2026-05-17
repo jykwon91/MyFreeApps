@@ -22,7 +22,17 @@ import uuid
 from datetime import timedelta
 from typing import Optional
 
+from fastapi import HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.storage import get_storage
+from app.repositories.game import game_repo
+from app.schemas.game.map_schemas import (
+    BulkUpdateZonesBody,
+    BulkUpdateZonesResult,
+    MapMinimapUpdated,
+    ZonePolygonFailure,
+)
 
 # Mirrors lineup_service: 15-minute PUT TTL, 24-hour GET TTL.
 _UPLOAD_URL_TTL = timedelta(minutes=15)
@@ -60,7 +70,7 @@ def generate_minimap_upload_url(map_id: uuid.UUID) -> tuple[str, str]:
     return put_url, key
 
 
-def confirm_minimap_upload(map_id: uuid.UUID, object_key: str) -> None:
+def _validate_uploaded_minimap(map_id: uuid.UUID, object_key: str) -> None:
     """Validate the uploaded object before persisting the key as minimap_url.
 
     Validates:
@@ -70,8 +80,8 @@ def confirm_minimap_upload(map_id: uuid.UUID, object_key: str) -> None:
       - object size <= MAX_MINIMAP_BYTES.
       - object content-type is an allowed image MIME.
 
-    Raises ``ValueError`` on any validation failure. Caller is responsible
-    for catching this and converting to an HTTP 422.
+    Raises ``ValueError`` on any validation failure. The service entrypoint
+    ``confirm_minimap_upload`` catches this and maps it to HTTP 422.
     """
     expected = minimap_object_key(map_id)
     if object_key != expected:
@@ -114,6 +124,72 @@ def sign_minimap_url(url: Optional[str]) -> Optional[str]:
         return url
     storage = get_storage()
     return storage.generate_presigned_url(url, expires_in_seconds=_READ_URL_TTL)
+
+
+async def confirm_minimap_upload(
+    db: AsyncSession, map_id: uuid.UUID, object_key: str
+) -> MapMinimapUpdated:
+    """Validate the uploaded minimap object and persist it as ``minimap_url``.
+
+    Orchestration only: looks up the map, validates the uploaded object
+    against MinIO, then delegates the write + commit to
+    ``game_repo.set_minimap_url`` (transaction ownership lives in the repo
+    per PR #687). The route stays a thin wrapper with no ORM/DB imports.
+
+    Raises:
+        HTTPException(404): no map for *map_id*.
+        HTTPException(422): the uploaded object failed validation.
+    """
+    map_obj = await game_repo.get_map(db, map_id)
+    if map_obj is None:
+        raise HTTPException(status_code=404, detail="Map not found")
+
+    try:
+        _validate_uploaded_minimap(map_id, object_key)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    updated = await game_repo.set_minimap_url(
+        db, map_obj=map_obj, object_key=object_key
+    )
+    return MapMinimapUpdated(
+        map_id=map_id,
+        minimap_url=sign_minimap_url(updated.minimap_url),
+    )
+
+
+async def update_map_zones(
+    db: AsyncSession, map_id: uuid.UUID, body: BulkUpdateZonesBody
+) -> BulkUpdateZonesResult:
+    """Bulk-update polygon_points for one or more zones on a map.
+
+    Per-zone validation failures are returned in ``failed`` (HTTP 200) —
+    operators commonly leave a 1-2 point polygon mid-draw and shouldn't lose
+    the rest of their session. Whole-request errors (unknown map) raise.
+    The repo flushes per-zone changes; the commit boundary is owned by
+    ``game_repo.commit_zone_polygon_updates`` (transaction ownership in the
+    repo layer per PR #687) so the route holds no ORM/DB imports.
+
+    Raises:
+        HTTPException(404): no map for *map_id*.
+    """
+    map_obj = await game_repo.get_map(db, map_id)
+    if map_obj is None:
+        raise HTTPException(status_code=404, detail="Map not found")
+
+    updates = [
+        (z.slug, [{"x": p.x, "y": p.y} for p in z.polygon_points])
+        for z in body.zones
+    ]
+    updated, failed = await game_repo.update_zone_polygons_bulk(
+        db, map_id=map_id, updates=updates
+    )
+    await game_repo.commit_zone_polygon_updates(db)
+
+    return BulkUpdateZonesResult(
+        updated=updated,
+        failed=[ZonePolygonFailure(slug=s, reason=r) for s, r in failed],
+    )
 
 
 # ---------------------------------------------------------------------------

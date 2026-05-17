@@ -91,11 +91,51 @@ async def db(db_engine) -> AsyncGenerator[AsyncSession, None]:
 
 
 @pytest_asyncio.fixture(scope="function")
-async def client(db: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
+async def client(
+    db: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> AsyncGenerator[AsyncClient, None]:
+    from contextlib import asynccontextmanager
+
+    import app.db.session as _session_mod
     from app.db.session import get_db as _get_db
 
     async def _override_get_db():
         yield db
+
+    # Services that own their transaction boundary call ``unit_of_work()``
+    # directly (canonical MBK pattern — the route is a thin wrapper and does
+    # NOT receive a db session). The real factory opens a brand-new session
+    # on a different pooled connection, which cannot see rows created by the
+    # test's SAVEPOINT-bound ``db`` fixture (manifest: route 404s on a
+    # fixture-created row). Bind ``unit_of_work`` to the same test session —
+    # the symmetric complement to the ``get_db`` override above — so the
+    # SAVEPOINT conftest pattern absorbs service-level commits exactly as
+    # documented for the ``get_db`` path.
+    #
+    # ``from app.db.session import unit_of_work`` binds the callable into
+    # each consuming module's namespace at import time, so patching only
+    # ``app.db.session`` would miss them. Patch the canonical module AND
+    # every consumer that imported the name by reference.
+    @asynccontextmanager
+    async def _override_unit_of_work():
+        yield db
+
+    monkeypatch.setattr(_session_mod, "unit_of_work", _override_unit_of_work)
+
+    import importlib
+
+    _uow_consumers = (
+        "app.api.account",
+        "app.services.game.fixture_loader",
+        "app.services.game.lineup_package_service",
+        "app.services.game.source_service",
+        "app.services.user.seed_user_service",
+        "app.services.user.totp_service",
+    )
+    for _mod_name in _uow_consumers:
+        _mod = importlib.import_module(_mod_name)
+        if hasattr(_mod, "unit_of_work"):
+            monkeypatch.setattr(_mod, "unit_of_work", _override_unit_of_work)
 
     app.dependency_overrides[_get_db] = _override_get_db
 

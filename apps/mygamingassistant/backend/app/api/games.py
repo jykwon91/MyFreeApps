@@ -15,23 +15,22 @@ Routes:
         POST  /api/maps/{map_id}/minimap                — confirm upload, update Map.minimap_url
         PATCH /api/maps/{map_id}/zones                  — bulk update zone polygons
 
+Handlers are thin: reads delegate to ``game_repo``, writes to ``map_service``.
+No ORM / DB primitives are imported here (layered architecture, see
+``apps/mygamingassistant/CLAUDE.md`` → Architecture Rules). Transaction
+ownership for the mutating routes lives in the repository layer (PR #687
+precedent).
+
 See ``apps/mygamingassistant/CLAUDE.md`` → Authentication Model for the
 public-read/auth-write rationale (MGA-specific Tier 3 divergence).
 """
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from app.core.auth import current_active_user
 from app.db.session import get_db
-from app.models.game.game import Game
-from app.models.game.map import Map
-from app.models.game.map_zone import MapZone  # noqa: F401 — used via selectinload
-from app.models.game.site import Site  # noqa: F401 — used via selectinload
-from app.models.game.utility_type import UtilityType
 from app.models.user.user import User
 from app.repositories.game import game_repo
 from app.schemas.game.map_schemas import (
@@ -40,7 +39,6 @@ from app.schemas.game.map_schemas import (
     MapMinimapUpdated,
     MinimapConfirmBody,
     MinimapUploadUrlResponse,
-    ZonePolygonFailure,
 )
 from app.services.game import map_service
 
@@ -61,8 +59,7 @@ async def list_games(
     db: AsyncSession = Depends(get_db),
 ) -> list[dict]:
     """List all games seeded in the database."""
-    result = await db.execute(select(Game).order_by(Game.name))
-    games = result.scalars().all()
+    games = await game_repo.list_games(db)
     return [
         {
             "id": str(g.id),
@@ -81,15 +78,11 @@ async def list_maps(
     db: AsyncSession = Depends(get_db),
 ) -> list[dict]:
     """List all maps for a given game slug."""
-    game_result = await db.execute(select(Game).where(Game.slug == game_slug))
-    game = game_result.scalar_one_or_none()
+    game = await game_repo.get_game_by_slug(db, game_slug)
     if game is None:
         raise HTTPException(status_code=404, detail="Game not found")
 
-    result = await db.execute(
-        select(Map).where(Map.game_id == game.id).order_by(Map.name)
-    )
-    maps = result.scalars().all()
+    maps = await game_repo.list_maps_for_game(db, game.id)
     return [
         {
             "id": str(m.id),
@@ -108,24 +101,15 @@ async def get_map(
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     """Map detail: zones, sites, and utility types for the game."""
-    game_result = await db.execute(select(Game).where(Game.slug == game_slug))
-    game = game_result.scalar_one_or_none()
+    game = await game_repo.get_game_by_slug(db, game_slug)
     if game is None:
         raise HTTPException(status_code=404, detail="Game not found")
 
-    map_result = await db.execute(
-        select(Map)
-        .where(Map.game_id == game.id, Map.slug == map_slug)
-        .options(selectinload(Map.zones), selectinload(Map.sites))
-    )
-    map_obj = map_result.scalar_one_or_none()
+    map_obj = await game_repo.get_map_detail(db, game.id, map_slug)
     if map_obj is None:
         raise HTTPException(status_code=404, detail="Map not found")
 
-    util_result = await db.execute(
-        select(UtilityType).where(UtilityType.game_id == game.id).order_by(UtilityType.name)
-    )
-    utility_types = util_result.scalars().all()
+    utility_types = await game_repo.list_utility_types_for_game(db, game.id)
 
     return {
         "id": str(map_obj.id),
@@ -171,7 +155,7 @@ async def get_minimap_upload_url(
     because the confirm endpoint validates it), then POSTs
     /api/maps/{map_id}/minimap with the returned ``object_key`` to persist.
     """
-    map_obj = await db.get(Map, map_id)
+    map_obj = await game_repo.get_map(db, map_id)
     if map_obj is None:
         raise HTTPException(status_code=404, detail="Map not found")
 
@@ -195,25 +179,10 @@ async def confirm_minimap_upload(
     object_key matches the canonical key for this map (cannot repoint at
     arbitrary keys). On success, ``Map.minimap_url`` becomes the object
     key — read paths resolve it to a presigned GET URL via
-    ``map_service.sign_minimap_url``.
+    ``map_service.sign_minimap_url``. Validation + persistence + commit are
+    owned by the service / repo layer.
     """
-    map_obj = await db.get(Map, map_id)
-    if map_obj is None:
-        raise HTTPException(status_code=404, detail="Map not found")
-
-    try:
-        map_service.confirm_minimap_upload(map_id, body.object_key)
-    except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc))
-
-    map_obj.minimap_url = body.object_key
-    await db.flush()
-    await db.commit()
-
-    return MapMinimapUpdated(
-        map_id=map_id,
-        minimap_url=map_service.sign_minimap_url(map_obj.minimap_url),
-    )
+    return await map_service.confirm_minimap_upload(db, map_id, body.object_key)
 
 
 @auth_router.patch(
@@ -234,20 +203,4 @@ async def update_map_zones(
     of their session because one zone is half-finished. Whole-request
     errors (auth, unknown map) still use the standard HTTP error codes.
     """
-    map_obj = await db.get(Map, map_id)
-    if map_obj is None:
-        raise HTTPException(status_code=404, detail="Map not found")
-
-    updates = [
-        (z.slug, [{"x": p.x, "y": p.y} for p in z.polygon_points])
-        for z in body.zones
-    ]
-    updated, failed = await game_repo.update_zone_polygons_bulk(
-        db, map_id=map_id, updates=updates
-    )
-    await db.commit()
-
-    return BulkUpdateZonesResult(
-        updated=updated,
-        failed=[ZonePolygonFailure(slug=s, reason=r) for s, r in failed],
-    )
+    return await map_service.update_map_zones(db, map_id, body)

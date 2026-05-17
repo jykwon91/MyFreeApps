@@ -108,3 +108,38 @@ async def update_sync_stats(
     source.config_json = config
     await db.flush()
     return source
+
+
+async def record_sync_stats(
+    db: AsyncSession,
+    source: Source,
+    *,
+    synced_at: Optional[datetime] = None,
+    video_count: int = 0,
+    chapter_count: int = 0,
+    error_count: int = 0,
+) -> Source:
+    """Write sync stats onto the source row and commit atomically.
+
+    Single transaction-owning entrypoint for the ingestion orchestrator
+    (which runs its own background session). Mirrors ``lineup_repo``'s
+    commit-owning mutators per PR #687: the flush + commit + rollback all
+    live here so neither a flush failure nor a commit failure can leave the
+    session with a half-applied ``config_json``. On any failure the
+    transaction is rolled back and the error re-raised so the caller's
+    structured-logging seam can record it (with exc_info).
+    """
+    try:
+        await update_sync_stats(
+            db,
+            source,
+            synced_at=synced_at,
+            video_count=video_count,
+            chapter_count=chapter_count,
+            error_count=error_count,
+        )
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
+    return source

@@ -136,3 +136,47 @@ Scope note: MGA is intentionally a casual single-user, public-read / auth-write 
 - ~~(0.5,0.5) map-centre sentinel masking position-unknown~~ - verified fixed: LineupRead.effective_* (lineup_schemas.py:108-157) returns None, and MapLineupPins.isUnplaceable (MapLineupPins.tsx:59-66) null-checks rather than rendering a fabricated centre pin. UnplaceableLineupsNotice surfaces the count honestly. No action needed.
 - ~~Bulk-accept silent failure~~ - fixed in PR #690 (not re-reported per scope).
 - ~~Broken documented load-fixtures CLI command~~ - fixed in PR #691 (not re-reported per scope).
+
+---
+
+### [Backend] Layering audit finding #3 — db.commit/mutation out of routes & services ✅ RESOLVED
+
+- **Resolved:** All remaining `db.commit()` / `db.flush()` / raw ORM mutation calls were
+  relocated out of route handlers and service files into the repository layer /
+  `unit_of_work()`, per the MGA "Routes → Services → Repositories; never import ORM/DB in
+  route handlers" rule and the PR #687 precedent. Touched: `api/games.py` (now thin —
+  reads via `game_repo`, minimap/zone writes via `map_service` → `game_repo`-owned
+  commit), `api/lineup_packages.py` + `lineup_package_service.py` (commit boundary moved
+  into the service via `unit_of_work()`), `api/sources.py` + `source_service.py`
+  (`unit_of_work()`), `ingestion_orchestrator.py` (commits delegated to
+  `lineup_repo.commit_classifier_run` + new `source_repo.record_sync_stats`; the stats
+  path is now atomic — a failed `update_sync_stats` rolls back instead of silently
+  degrading; the exc_info=True structured-logging seam preserved). New repo mutators
+  (`game_repo.set_minimap_url` / `commit_zone_polygon_updates` / `get_map`,
+  `source_repo.record_sync_stats`) own commit + rollback like `lineup_repo`. Conftest
+  gained a symmetric `unit_of_work` test-session binding (complements the existing
+  `get_db` override) so services owning their own transaction boundary are testable.
+  `totp.py` deliberately excluded (canonical-mirrored debt — see entry below).
+
+---
+
+### [Backend] Read-side inline ORM queries remain in `api/lineups.py`
+
+- **Severity:** Low
+- **Effort:** Medium (2-3 hours)
+- **Location:** `apps/mygamingassistant/backend/app/api/lineups.py` (`from sqlalchemy import
+  select`; inline `db.execute(select(Game/Map/MapZone/UtilityType)...)` in `_resolve_map`,
+  `list_lineups`, `get_zone_density`, `list_pending_lineups`)
+- **Problem:** Finding #3's commit/mutation relocation is complete, but `lineups.py` still
+  resolves slug→id lookups with inline `select()` statements rather than delegating to
+  `game_repo`. These are pure reads (no write/commit), so they're a layered-architecture
+  style violation, not a data-integrity risk. They were intentionally left out of the
+  finding-#3 PR to keep it coherent (≤8 files) and avoid regression risk in the most
+  complex route module.
+- **Recommendation:** Add `game_repo` resolver functions (`get_game_by_slug` already
+  exists; add map/zone/utility-by-slug-within-game helpers) and replace the four inline
+  `select()` sites in `lineups.py`, then drop the `from sqlalchemy import select` import.
+  Pair-fix with the `classifier_service.py` inline `select` (same class of read-side
+  layering debt, also out of finding-#3 scope).
+
+---

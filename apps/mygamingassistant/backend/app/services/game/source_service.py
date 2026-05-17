@@ -10,6 +10,7 @@ import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.db.session import unit_of_work
 from app.models.game.source import Source
 from app.repositories.game.source_repo import (
     create_source,
@@ -74,16 +75,20 @@ def _build_config_json(kind: str, url: str) -> dict:
     return {"url": url}
 
 
-async def create(db: AsyncSession, payload: SourceCreate) -> Source:
-    """Create a new Source after validating the URL."""
+async def create(payload: SourceCreate) -> Source:
+    """Create a new Source after validating the URL.
+
+    Commits atomically via ``unit_of_work`` — the repo flushes + refreshes;
+    the service owns the transaction boundary (route must NOT commit),
+    mirroring the canonical MBK service pattern. ``expire_on_commit=False``
+    keeps the refreshed instance usable after the UoW commits.
+    """
     error = validate_source_url(payload.kind, payload.url)
     if error:
         raise ValueError(error)
     config = _build_config_json(payload.kind, payload.url)
-    source = await create_source(db, kind=payload.kind, config_json=config)
-    await db.commit()
-    await db.refresh(source)
-    return source
+    async with unit_of_work() as db:
+        return await create_source(db, kind=payload.kind, config_json=config)
 
 
 async def get(db: AsyncSession, source_id: uuid.UUID) -> Source | None:
@@ -94,10 +99,13 @@ async def list_all(db: AsyncSession) -> list[Source]:
     return await list_sources(db)
 
 
-async def delete(db: AsyncSession, source_id: uuid.UUID) -> Source | None:
-    """Soft-delete a source (marks deleted in config_json; doesn't remove rows)."""
-    source = await soft_delete_source(db, source_id)
-    if source is None:
-        return None
-    await db.commit()
-    return source
+async def delete(source_id: uuid.UUID) -> Source | None:
+    """Soft-delete a source (marks deleted in config_json; doesn't remove rows).
+
+    Commits atomically via ``unit_of_work`` — the repo flushes; the service
+    owns the transaction boundary (route must NOT commit)."""
+    async with unit_of_work() as db:
+        source = await soft_delete_source(db, source_id)
+        if source is None:
+            return None
+        return source

@@ -299,14 +299,20 @@ async def _process_chapter(
     try:
         lineup = await lineup_service.create_from_ingestion(db, payload)
         # If the classifier produced suggestions, write them through the repo
-        # before the single commit (status stays pending_review).
+        # before the single commit (status stays pending_review). The commit
+        # boundary (with rollback-on-failure) is owned by the repo layer per
+        # PR #687 — the orchestrator never calls db.commit()/db.rollback()
+        # directly.
         if classifier_ran and result is not None and result.is_lineup:
             await write_classifier_suggestions(
                 db, lineup, _classifier_suggestion_fields(result)
             )
-        await db.commit()
+        await lineup_repo.commit_classifier_run(db)
     except Exception as exc:
-        await db.rollback()
+        # commit_classifier_run already rolled back on a commit failure;
+        # create_from_ingestion rolls back on its own failure. This catch is
+        # the structured-logging seam — the diagnostic context (source/video/
+        # chapter + exc_info) must survive, so keep it.
         logger.error(
             "DB insert failed: source_id=%s video_id=%s chapter_start=%d error=%s",
             source.id, video_meta.video_id, start, str(exc),
@@ -471,8 +477,9 @@ async def sync_source(source_id: uuid.UUID, db: AsyncSession) -> SyncStats:
 
     if not video_metas:
         logger.info("sync_source: no videos found: source_id=%s", source.id)
-        await source_repo.update_sync_stats(db, source, video_count=0, chapter_count=0, error_count=0)
-        await db.commit()
+        await source_repo.record_sync_stats(
+            db, source, video_count=0, chapter_count=0, error_count=0
+        )
         return stats
 
     # Dedup — filter to videos not already in the lineup table.
@@ -494,17 +501,23 @@ async def sync_source(source_id: uuid.UUID, db: AsyncSession) -> SyncStats:
             stats=stats,
         )
 
-    # Update source stats
+    # Update source stats. Atomic: if the stats flush OR commit fails we roll
+    # back so the source row is not left with a half-applied config_json (the
+    # old code logged-and-continued, silently degrading the session). The
+    # commit boundary + commit-failure rollback are owned by the repo layer
+    # (commit_sync_stats); a flush failure is rolled back here explicitly so
+    # neither failure mode leaves the session in a broken half-written state.
     try:
-        await source_repo.update_sync_stats(
+        await source_repo.record_sync_stats(
             db,
             source,
             video_count=stats.video_count,
             chapter_count=stats.chapter_count,
             error_count=stats.error_count,
         )
-        await db.commit()
     except Exception as exc:
+        # record_sync_stats already rolled back atomically (flush- or
+        # commit-failure) — this catch is only the structured-logging seam.
         logger.error(
             "sync_source: failed to update sync stats: source_id=%s error=%s",
             source.id, str(exc),

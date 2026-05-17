@@ -13,6 +13,7 @@ from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.db.session import unit_of_work
 from app.models.game.lineup_package import LineupPackage
 from app.repositories.game import lineup_package_repo
 from app.repositories.game.lineup_package_repo import PackageFilters
@@ -45,17 +46,20 @@ def _to_read(pkg: LineupPackage) -> LineupPackageRead:
 
 
 async def create(
-    db: AsyncSession,
     payload: LineupPackageCreate,
 ) -> LineupPackageRead:
+    """Create a package. Commits atomically via ``unit_of_work`` (the
+    repo flushes; the service owns the transaction boundary — the route
+    must NOT commit, mirroring the canonical MBK service pattern)."""
     data = {
         "name": payload.name,
         "game_id": payload.game_id,
         "map_id": payload.map_id,
         "side": payload.side,
     }
-    pkg = await lineup_package_repo.create_package(db, data, payload.lineup_ids)
-    return _to_read(pkg)
+    async with unit_of_work() as db:
+        pkg = await lineup_package_repo.create_package(db, data, payload.lineup_ids)
+        return _to_read(pkg)
 
 
 async def list_by_filters(
@@ -80,36 +84,39 @@ async def get(
 
 
 async def patch(
-    db: AsyncSession,
     package_id: uuid.UUID,
     payload: LineupPackagePatch,
 ) -> LineupPackageRead | None:
-    pkg = await lineup_package_repo.get_package(db, package_id)
-    if pkg is None:
-        return None
-
+    """Rename / re-side / replace the lineup list. Commits atomically via
+    ``unit_of_work`` — the route must NOT commit."""
     patch_data: dict = {}
     if payload.name is not None:
         patch_data["name"] = payload.name
     if payload.side is not None:
         patch_data["side"] = payload.side
 
-    updated = await lineup_package_repo.update_package(
-        db, pkg, patch_data, payload.lineup_ids
-    )
-    return _to_read(updated)
+    async with unit_of_work() as db:
+        pkg = await lineup_package_repo.get_package(db, package_id)
+        if pkg is None:
+            return None
+        updated = await lineup_package_repo.update_package(
+            db, pkg, patch_data, payload.lineup_ids
+        )
+        return _to_read(updated)
 
 
 async def delete(
-    db: AsyncSession,
     package_id: uuid.UUID,
 ) -> bool:
-    """Delete a package. Returns True if deleted, False if not found."""
-    pkg = await lineup_package_repo.get_package(db, package_id)
-    if pkg is None:
-        return False
-    await lineup_package_repo.delete_package(db, pkg)
-    return True
+    """Delete a package. Returns True if deleted, False if not found.
+
+    Commits atomically via ``unit_of_work`` — the route must NOT commit."""
+    async with unit_of_work() as db:
+        pkg = await lineup_package_repo.get_package(db, package_id)
+        if pkg is None:
+            return False
+        await lineup_package_repo.delete_package(db, pkg)
+        return True
 
 
 async def get_pin_all(

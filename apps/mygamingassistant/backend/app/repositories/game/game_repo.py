@@ -88,6 +88,49 @@ async def upsert_utility_type(
 # Map
 # ---------------------------------------------------------------------------
 
+async def get_map(db: AsyncSession, map_id: uuid.UUID) -> Map | None:
+    """Return a single Map by primary key, or None."""
+    return await db.get(Map, map_id)
+
+
+async def set_minimap_url(
+    db: AsyncSession, *, map_obj: Map, object_key: str
+) -> Map:
+    """Persist a new ``minimap_url`` on *map_obj*, commit, and return it.
+
+    Transaction ownership lives here in the repository layer (mirrors
+    ``lineup_repo`` per PR #687): ``platform_shared.db.session.get_db`` does
+    NOT auto-commit, so a flush-only write is rolled back when the request
+    session closes. Routes/services delegating here must NOT also commit. On
+    failure the transaction is rolled back and the error re-raised so the
+    caller can surface it.
+    """
+    map_obj.minimap_url = object_key
+    try:
+        await db.flush()
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
+    return map_obj
+
+
+async def commit_zone_polygon_updates(db: AsyncSession) -> None:
+    """Commit the flushed bulk zone-polygon writes.
+
+    ``update_zone_polygons_bulk`` flushes per-zone changes but, per its
+    documented contract, leaves the commit to the caller. Transaction
+    ownership for the ``PATCH /api/maps/{map_id}/zones`` path lives here in
+    the repo layer — the route/service must NOT commit. On failure the
+    transaction is rolled back and the error re-raised.
+    """
+    try:
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
+
+
 async def get_map_by_slug(
     db: AsyncSession, game_id: uuid.UUID, slug: str
 ) -> Map | None:
