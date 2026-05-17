@@ -17,7 +17,7 @@ from app.repositories.game.source_repo import (
     list_sources,
     soft_delete_source,
 )
-from app.schemas.game.lineup_schemas import SourceCreate
+from app.schemas.game.source_schemas import SourceCreate
 
 
 # ---------------------------------------------------------------------------
