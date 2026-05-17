@@ -18,12 +18,11 @@
  */
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { AlertTriangle, ArrowLeft, Backpack, ImagePlus, Package, Pencil, Plus } from "lucide-react";
+import { AlertTriangle, Backpack, ImagePlus, Pencil, Plus } from "lucide-react";
 import { ToggleChipGroup, showSuccess } from "@platform/ui";
 import { useGetGamesQuery, useGetMapDetailQuery } from "@/store/gamesApi";
 import { useGetLineupsQuery, useGetZoneDensityQuery } from "@/store/lineupsApi";
 import { useGetLineupPackagesQuery, usePinAllLineupPackageMutation } from "@/store/lineupPackagesApi";
-import LineupCard from "@/components/lineup/LineupCard";
 import MapZoneOverlay from "@/components/lineup/MapZoneOverlay";
 import MapLineupPins, {
   type PinMode,
@@ -35,11 +34,16 @@ import UnplaceableLineupsNotice from "@/components/lineup/UnplaceableLineupsNoti
 import KeyboardShortcutsHelp from "@/components/lineup/KeyboardShortcutsHelp";
 import MinimapUploadDialog from "@/components/game/MinimapUploadDialog";
 import RoundMode from "@/pages/RoundMode";
+import BackButton from "@/components/map/BackButton";
+import LoadoutPopover from "@/components/map/LoadoutPopover";
+import PackagesDropdown from "@/components/map/PackagesDropdown";
+import StorageUnavailableBanner from "@/components/map/StorageUnavailableBanner";
+import LineupResultsPanel from "@/components/map/LineupResultsPanel";
 import { usePins } from "@/hooks/usePins";
 import { useLoadout, computeEffectiveUtilFilter } from "@/hooks/useLoadout";
 import { useMapKeyboardShortcuts } from "@/hooks/useMapKeyboardShortcuts";
 import { useIsSuperuser } from "@/hooks/useIsSuperuser";
-import type { Lineup, ZoneDensity } from "@/types/game";
+import type { ZoneDensity } from "@/types/game";
 
 const SIDE_BG: Record<string, string> = {
   side_a: "rgba(239,68,68,0.05)",
@@ -630,34 +634,14 @@ export default function MapPage() {
                   </button>
                 </div>
 
-                {lineupsFetching ? (
-                  <div className="space-y-3">
-                    {[1, 2].map((i) => (
-                      <div key={i} className="h-48 rounded-lg bg-muted/40 animate-pulse" />
-                    ))}
-                  </div>
-                ) : lineups.length === 0 ? (
-                  <div className="text-center py-8 space-y-3">
-                    <p className="text-sm text-muted-foreground">No lineups match this filter.</p>
-                    <Link
-                      to={addLineupHref}
-                      className="text-sm text-primary hover:underline"
-                    >
-                      Add lineup for {targetZone.name}
-                    </Link>
-                  </div>
-                ) : lineups.length <= 3 ? (
-                  <PlanModeExpandedResults
-                    lineups={lineups}
-                    activeCardIndex={activeCardIndex}
-                    pins={pins}
-                  />
-                ) : (
-                  <PlanModeThumbnailResults
-                    lineups={lineups}
-                    pins={pins}
-                  />
-                )}
+                <LineupResultsPanel
+                  fetching={lineupsFetching}
+                  lineups={lineups}
+                  activeCardIndex={activeCardIndex}
+                  pins={pins}
+                  addLineupHref={addLineupHref}
+                  targetZoneName={targetZone.name}
+                />
               </aside>
             )}
           </div>
@@ -672,249 +656,5 @@ export default function MapPage() {
         />
       )}
     </>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Sub-components
-// ---------------------------------------------------------------------------
-
-interface PlanModeExpandedResultsProps {
-  lineups: Lineup[];
-  activeCardIndex: number;
-  pins: ReturnType<typeof usePins>;
-}
-
-function PlanModeExpandedResults({ lineups, activeCardIndex, pins }: PlanModeExpandedResultsProps) {
-  return (
-    <div className="space-y-4">
-      {lineups.map((lineup, i) => (
-        <div
-          key={lineup.id}
-          className={[
-            "rounded-xl transition-all duration-150",
-            i === activeCardIndex ? "ring-2 ring-primary" : "",
-          ].join(" ")}
-        >
-          <LineupCard
-            lineup={lineup}
-            variant="expanded"
-            isPinned={pins.isPinned(lineup.id)}
-            onPinToggle={() => {
-              if (pins.isPinned(lineup.id)) {
-                pins.unpin(lineup.id);
-              } else {
-                pins.pin(lineup.id);
-              }
-            }}
-          />
-        </div>
-      ))}
-    </div>
-  );
-}
-
-interface PlanModeThumbnailResultsProps {
-  lineups: Lineup[];
-  pins: ReturnType<typeof usePins>;
-}
-
-function PlanModeThumbnailResults({ lineups, pins }: PlanModeThumbnailResultsProps) {
-  return (
-    <div className="grid grid-cols-2 gap-2">
-      {lineups.map((lineup) => (
-        <LineupCard
-          key={lineup.id}
-          lineup={lineup}
-          variant="thumbnail"
-          isPinned={pins.isPinned(lineup.id)}
-          onPinToggle={() => {
-            if (pins.isPinned(lineup.id)) {
-              pins.unpin(lineup.id);
-            } else {
-              pins.pin(lineup.id);
-            }
-          }}
-        />
-      ))}
-    </div>
-  );
-}
-
-function StorageUnavailableBanner({ onClose }: { onClose: () => void }) {
-  return (
-    <div
-      role="alert"
-      className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-card border rounded-lg shadow-lg px-4 py-3 text-sm max-w-sm"
-    >
-      <span className="flex-1">Pins won't persist (storage unavailable)</span>
-      <button
-        type="button"
-        onClick={onClose}
-        className="p-1 rounded hover:bg-muted/40 text-muted-foreground"
-        aria-label="Dismiss"
-      >
-        ✕
-      </button>
-    </div>
-  );
-}
-
-function BackButton({
-  gameSlug,
-  navigate,
-}: {
-  gameSlug: string;
-  navigate: ReturnType<typeof useNavigate>;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={() => navigate(`/${gameSlug}`)}
-      className="p-2 rounded-md hover:bg-muted/40 transition-colors min-h-[44px]"
-      aria-label="Back to maps"
-    >
-      <ArrowLeft className="h-5 w-5" />
-    </button>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// LoadoutPopover
-// ---------------------------------------------------------------------------
-
-interface LoadoutPopoverProps {
-  utilOptions: Array<{ value: string; label: string }>;
-  loadout: string[];
-  onToggle: (slug: string) => void;
-  onClear: () => void;
-  onClose: () => void;
-}
-
-function LoadoutPopover({ utilOptions, loadout, onToggle, onClear, onClose }: LoadoutPopoverProps) {
-  return (
-    <div
-      className="absolute top-full left-0 mt-1 z-20 bg-card border rounded-lg shadow-lg p-3 min-w-[200px]"
-      role="dialog"
-      aria-label="Set your loadout utilities"
-    >
-      <div className="flex items-center justify-between mb-2">
-        <p className="text-xs font-medium text-muted-foreground">My loadout</p>
-        <button
-          type="button"
-          onClick={onClose}
-          className="p-0.5 rounded hover:bg-muted/40 text-muted-foreground text-xs"
-          aria-label="Close loadout"
-        >
-          ✕
-        </button>
-      </div>
-      <p className="text-xs text-muted-foreground mb-2">
-        Select utilities you have this round to narrow the filter.
-      </p>
-      <div className="space-y-1">
-        {utilOptions.map((opt) => (
-          <label
-            key={opt.value}
-            className="flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer hover:bg-muted/40 text-sm"
-          >
-            <input
-              type="checkbox"
-              checked={loadout.includes(opt.value)}
-              onChange={() => onToggle(opt.value)}
-              className="h-4 w-4 rounded"
-            />
-            <span>{opt.label}</span>
-          </label>
-        ))}
-      </div>
-      {loadout.length > 0 && (
-        <button
-          type="button"
-          onClick={() => { onClear(); onClose(); }}
-          className="mt-2 w-full text-xs text-muted-foreground hover:text-foreground py-1"
-        >
-          Clear loadout
-        </button>
-      )}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// PackagesDropdown
-// ---------------------------------------------------------------------------
-
-import type { LineupPackage } from "@/types/game";
-
-interface PackagesDropdownProps {
-  packages: LineupPackage[];
-  pins: ReturnType<typeof usePins>;
-  pinAllPackage: ReturnType<typeof usePinAllLineupPackageMutation>[0];
-  onPinAllComplete: (count: number) => void;
-}
-
-function PackagesDropdown({ packages, pins, pinAllPackage, onPinAllComplete }: PackagesDropdownProps) {
-  const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState<string | null>(null);
-
-  async function handlePinAll(pkg: LineupPackage) {
-    setLoading(pkg.id);
-    try {
-      const result = await pinAllPackage(pkg.id).unwrap();
-      for (const id of result.lineup_ids) {
-        pins.pin(id);
-      }
-      onPinAllComplete(result.lineup_ids.length);
-    } catch {
-      // Error silently falls through — user sees no pin
-    } finally {
-      setLoading(null);
-      setOpen(false);
-    }
-  }
-
-  return (
-    <div className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm border bg-card hover:bg-muted/40 transition-colors min-h-[36px]"
-        title="Apply a lineup package"
-        aria-expanded={open}
-      >
-        <Package className="w-3.5 h-3.5" aria-hidden />
-        Packages
-      </button>
-
-      {open && (
-        <>
-          <div
-            className="fixed inset-0 z-10"
-            aria-hidden
-            onClick={() => setOpen(false)}
-          />
-          <div className="absolute top-full left-0 mt-1 z-20 bg-card border rounded-lg shadow-lg p-2 min-w-[220px]">
-            <p className="text-xs font-medium text-muted-foreground px-2 pb-1">
-              Pin all and enter round mode
-            </p>
-            {packages.map((pkg) => (
-              <button
-                key={pkg.id}
-                type="button"
-                onClick={() => handlePinAll(pkg)}
-                disabled={loading === pkg.id}
-                className="w-full text-left px-3 py-2 rounded-md text-sm hover:bg-muted/40 flex items-center justify-between gap-2 disabled:opacity-60"
-              >
-                <span className="truncate">{pkg.name}</span>
-                <span className="text-xs text-muted-foreground shrink-0">
-                  {loading === pkg.id ? "Pinning…" : `${pkg.lineup_ids.length} lineups`}
-                </span>
-              </button>
-            ))}
-          </div>
-        </>
-      )}
-    </div>
   );
 }
