@@ -16,6 +16,7 @@ async def list_filtered(
     organization_id: uuid.UUID,
     *,
     property_id: uuid.UUID | None = None,
+    unassigned: bool = False,
     applicant_id: uuid.UUID | None = None,
     status: str | None = None,
     transaction_type: str | None = None,
@@ -41,6 +42,8 @@ async def list_filtered(
 
     if property_id is not None:
         stmt = stmt.where(Transaction.property_id == property_id)
+    if unassigned:
+        stmt = stmt.where(Transaction.property_id.is_(None))
     if applicant_id is not None:
         stmt = stmt.where(Transaction.applicant_id == applicant_id)
     if status is not None:

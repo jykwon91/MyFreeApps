@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.context import RequestContext
 from app.core.pii import mask_pii
+from app.core.property_constants import UNASSIGNED_PROPERTY_ID, UNASSIGNED_PROPERTY_NAME
 from app.core.tags import REVENUE_TAGS, EXPENSE_TAGS
 from app.db.session import AsyncSessionLocal
 from app.repositories import summary_repo, tax_return_repo
@@ -60,8 +61,8 @@ async def get_summary(
         lambda: {"name": None, "revenue": 0.0, "expenses": 0.0}
     )
     for row in prop_rows:
-        pid = str(row.property_id) if row.property_id else "unassigned"
-        property_data[pid]["name"] = row.property_name or "Unassigned"
+        pid = str(row.property_id) if row.property_id else UNASSIGNED_PROPERTY_ID
+        property_data[pid]["name"] = row.property_name or UNASSIGNED_PROPERTY_NAME
         amount = float(row.total)
         if row.tag in REVENUE_TAGS:
             property_data[pid]["revenue"] = float(property_data[pid]["revenue"] or 0) + amount
@@ -112,8 +113,8 @@ async def get_summary(
         lambda: {"name": None, "months": defaultdict(lambda: {"revenue": 0.0, "expenses": 0.0})}
     )
     for row in prop_month_rows:
-        pid = str(row.property_id)
-        prop_monthly[pid]["name"] = row.property_name
+        pid = str(row.property_id) if row.property_id else UNASSIGNED_PROPERTY_ID
+        prop_monthly[pid]["name"] = row.property_name or UNASSIGNED_PROPERTY_NAME
         key = f"{int(row.year)}-{int(row.month):02d}"
         amount = float(row.total)
         months = prop_monthly[pid]["months"]
@@ -169,8 +170,8 @@ async def get_tax_summary(
             lambda: {"name": None, "revenue": 0.0, "expenses": 0.0}
         )
         for row in prop_rows:
-            pid = str(row.property_id) if row.property_id else "unassigned"
-            property_data[pid]["name"] = row.property_name or "Unassigned"
+            pid = str(row.property_id) if row.property_id else UNASSIGNED_PROPERTY_ID
+            property_data[pid]["name"] = row.property_name or UNASSIGNED_PROPERTY_NAME
             amount = float(row.total)
             if row.tag in REVENUE_TAGS:
                 property_data[pid]["revenue"] = float(property_data[pid]["revenue"] or 0) + amount

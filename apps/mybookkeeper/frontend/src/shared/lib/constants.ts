@@ -3,6 +3,13 @@ import type { EmailQueueStatus } from "@/shared/types/integration/email-queue";
 import type { EmailQueueItem } from "@/shared/types/integration/email-queue";
 import type { BadgeColor } from "@/shared/components/ui/Badge";
 
+// Sentinel property_id used by the dashboard summary for transactions with no
+// property assignment (e.g. unattributed Airbnb payouts). Must stay in sync
+// with the backend's app/core/property_constants.py::UNASSIGNED_PROPERTY_ID.
+// When drilling into this bucket, query /transactions with `unassigned=true`
+// instead of a (non-UUID) property_id.
+export const UNASSIGNED_PROPERTY_ID = "unassigned";
+
 export const TAG_OPTIONS = [
   "rental_revenue",
   "cleaning_fee_revenue",

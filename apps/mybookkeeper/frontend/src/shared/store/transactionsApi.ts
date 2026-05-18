@@ -4,6 +4,7 @@ import type { DuplicatePairsResponse, MergeDuplicatesRequest, MergeDuplicatesRes
 
 export interface TransactionListParams {
   property_id?: string;
+  unassigned?: boolean;
   applicant_id?: string;
   status?: string;
   transaction_type?: string;

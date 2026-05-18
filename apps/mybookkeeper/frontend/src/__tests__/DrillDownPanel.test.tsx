@@ -15,6 +15,7 @@ vi.mock("@/shared/store/propertiesApi", () => ({
 }));
 
 import { useListTransactionsQuery } from "@/shared/store/transactionsApi";
+import { UNASSIGNED_PROPERTY_ID } from "@/shared/lib/constants";
 
 function makeTxn(overrides: Partial<Transaction> = {}): Transaction {
   return {
@@ -165,6 +166,72 @@ describe("DrillDownPanel", () => {
 
     expect(screen.getByText("Plumber A")).toBeInTheDocument();
     expect(screen.getByText("Plumber B")).toBeInTheDocument();
+    expect(screen.getByText(/2 transactions/)).toBeInTheDocument();
+  });
+
+  it("routes the Unassigned bucket to the unassigned filter, not a bogus property_id", () => {
+    setupMocks([]);
+
+    const unassignedFilter: DrillDownFilter = {
+      propertyId: UNASSIGNED_PROPERTY_ID,
+      type: "revenue",
+      startDate: "2026-05-01",
+      endDate: "2026-05-31",
+      label: "Unassigned — Revenue",
+    };
+
+    render(
+      <Provider store={store}>
+        <DrillDownPanel filter={unassignedFilter} onClose={vi.fn()} />
+      </Provider>,
+    );
+
+    const params = vi.mocked(useListTransactionsQuery).mock.calls[0][0];
+    expect(params).toMatchObject({ unassigned: true, property_id: undefined });
+  });
+
+  it("passes a real property_id through and leaves unassigned unset", () => {
+    setupMocks([]);
+
+    const propertyFilter: DrillDownFilter = {
+      propertyId: "prop-42",
+      type: "revenue",
+      label: "6734 Peerless — Revenue",
+    };
+
+    render(
+      <Provider store={store}>
+        <DrillDownPanel filter={propertyFilter} onClose={vi.fn()} />
+      </Provider>,
+    );
+
+    const params = vi.mocked(useListTransactionsQuery).mock.calls[0][0];
+    expect(params).toMatchObject({ property_id: "prop-42", unassigned: undefined });
+  });
+
+  it("does not apply the propertyIds client filter to the Unassigned bucket", () => {
+    const txns = [
+      makeTxn({ vendor: "Unattributed Airbnb A", property_id: null }),
+      makeTxn({ vendor: "Unattributed Airbnb B", property_id: null }),
+    ];
+    setupMocks(txns);
+
+    // activePropertyIds is spread onto every drill filter by the dashboard;
+    // for the Unassigned bucket it must NOT zero out the (null-property) rows.
+    const unassignedFilter: DrillDownFilter = {
+      propertyId: UNASSIGNED_PROPERTY_ID,
+      propertyIds: ["prop-1", "prop-2"],
+      label: "Unassigned — Revenue",
+    };
+
+    render(
+      <Provider store={store}>
+        <DrillDownPanel filter={unassignedFilter} onClose={vi.fn()} />
+      </Provider>,
+    );
+
+    expect(screen.getByText("Unattributed Airbnb A")).toBeInTheDocument();
+    expect(screen.getByText("Unattributed Airbnb B")).toBeInTheDocument();
     expect(screen.getByText(/2 transactions/)).toBeInTheDocument();
   });
 
