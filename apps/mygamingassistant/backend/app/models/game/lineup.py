@@ -109,6 +109,7 @@ class Lineup(Base):
     # Screenshot URLs in MinIO (presigned at read time)
     stand_screenshot_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     aim_screenshot_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    clip_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
     # Normalized 0-1 crosshair position on the aim screenshot
     aim_anchor_x: Mapped[float | None] = mapped_column(Float, nullable=True)

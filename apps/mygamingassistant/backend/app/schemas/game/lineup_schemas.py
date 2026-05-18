@@ -69,6 +69,7 @@ class LineupRead(BaseModel):
     notes: Optional[str] = None
     stand_screenshot_url: Optional[str] = None
     aim_screenshot_url: Optional[str] = None
+    clip_url: Optional[str] = None
     aim_anchor_x: Optional[float] = None
     aim_anchor_y: Optional[float] = None
     # Minimap anchor positions — raw values from the DB. May be NULL; use the
