@@ -1,3 +1,5 @@
+import type { AttributionPropertySummary } from "./attribution-property-summary";
+
 export interface AttributionTransactionSummary {
   id: string;
   transaction_date: string;
@@ -6,6 +8,7 @@ export interface AttributionTransactionSummary {
   payer_name: string | null;
   description: string | null;
   property_id: string | null;
+  channel: string | null;
 }
 
 export interface AttributionApplicantSummary {
@@ -17,12 +20,14 @@ export interface AttributionReviewItem {
   id: string;
   transaction_id: string;
   proposed_applicant_id: string | null;
+  proposed_property_id: string | null;
   confidence: "fuzzy" | "unmatched";
   status: "pending" | "confirmed" | "rejected";
   created_at: string;
   resolved_at: string | null;
   transaction: AttributionTransactionSummary | null;
   proposed_applicant: AttributionApplicantSummary | null;
+  proposed_property: AttributionPropertySummary | null;
 }
 
 export interface AttributionReviewQueueResponse {

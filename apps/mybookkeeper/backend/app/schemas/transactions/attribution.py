@@ -19,6 +19,10 @@ class AttributionTransactionSummary(BaseModel):
     payer_name: str | None = None
     description: str | None = None
     property_id: uuid.UUID | None = None
+    # Discriminator for the review UI: an Airbnb/OTA payout (channel set) is
+    # a property-shaped row (no tenant); a rent payment (channel null) is
+    # applicant-shaped. Read straight from Transaction.channel.
+    channel: str | None = None
 
     model_config = {"from_attributes": True}
 

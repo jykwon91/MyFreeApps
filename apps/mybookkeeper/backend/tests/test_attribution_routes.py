@@ -21,6 +21,7 @@ from app.models.organization.organization_member import OrgRole
 from app.schemas.transactions.attribution import (
     AttributionReviewQueueResponse,
     AttributionReviewItemRead,
+    AttributionTransactionSummary,
     PropertyPnLResponse,
 )
 
@@ -96,6 +97,44 @@ class TestListAttributionQueue:
         body = resp.json()
         assert body["pending_count"] == 1
         assert len(body["items"]) == 1
+
+    def test_queue_item_transaction_carries_channel(self, client, override_ctx):
+        """Regression for the PR-D schema add: an Airbnb-payout review item's
+        transaction must serialize ``channel`` so the frontend can tell a
+        property-shaped row from a rent (tenant-shaped) row."""
+        tx_id = uuid.uuid4()
+        item = AttributionReviewItemRead(
+            id=uuid.uuid4(),
+            transaction_id=tx_id,
+            proposed_property_id=uuid.uuid4(),
+            confidence="fuzzy",
+            status="pending",
+            created_at=datetime.now(timezone.utc),
+            resolved_at=None,
+            transaction=AttributionTransactionSummary(
+                id=tx_id,
+                transaction_date=date(2026, 5, 1),
+                amount=Decimal("920.00"),
+                channel="airbnb",
+            ),
+            proposed_applicant=None,
+        )
+        with (
+            patch(
+                "app.services.transactions.attribution_service.list_review_queue",
+                new_callable=AsyncMock,
+                return_value=[item],
+            ),
+            patch(
+                "app.services.transactions.attribution_service.count_pending_reviews",
+                new_callable=AsyncMock,
+                return_value=1,
+            ),
+        ):
+            resp = client.get("/transactions/attribution-review-queue")
+        assert resp.status_code == 200
+        txn = resp.json()["items"][0]["transaction"]
+        assert txn["channel"] == "airbnb"
 
     def test_empty_queue(self, client, override_ctx):
         with (
