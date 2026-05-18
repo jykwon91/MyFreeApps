@@ -23,6 +23,7 @@ from app.repositories import attribution_repo
 from app.repositories.applicants import applicant_repo
 from app.repositories.leases import signed_lease_repo
 from app.repositories.listings import listing_repo
+from app.repositories.properties import property_repo
 from app.repositories import transaction_repo as txn_repo
 from app.services.leases import receipt_service
 
@@ -287,15 +288,23 @@ async def confirm_review(
     organization_id: uuid.UUID,
     user_id: uuid.UUID,
     applicant_id: uuid.UUID | None = None,
+    property_id: uuid.UUID | None = None,
 ) -> dict:
-    """Confirm a review queue item.
+    """Confirm a review queue item against an applicant OR a property.
 
-    If ``applicant_id`` is provided it overrides ``proposed_applicant_id``
-    (supports "Pick a different tenant" flow). Uses the proposed candidate
-    otherwise.
+    Two attribution targets are supported:
+      - **applicant** (tenant rent) — sets ``txn.applicant_id`` and creates a
+        pending receipt. ``applicant_id`` overrides ``proposed_applicant_id``
+        ("pick a different tenant").
+      - **property** (Airbnb payout — no tenant) — sets ``txn.property_id``
+        only; no receipt (an Airbnb payout has no tenant to receipt).
+        ``property_id`` overrides ``proposed_property_id``.
 
-    Mutates the linked transaction: sets applicant_id, category=rental_revenue,
-    attribution_source=auto_fuzzy_confirmed, and property_id if resolvable.
+    The applicant target takes precedence: the property path is only taken
+    when there is no chosen applicant (a row never has both in practice; this
+    branch order makes the resolution deterministic if it ever does).
+
+    Mutates the linked transaction and sets category=rental_revenue.
     """
     async with unit_of_work() as db:
         row = await attribution_repo.get_by_id(db, review_id, organization_id)
@@ -304,44 +313,62 @@ async def confirm_review(
         if row.status != "pending":
             raise ValueError("Review item is already resolved")
 
-        chosen_applicant_id = applicant_id or row.proposed_applicant_id
-        if not chosen_applicant_id:
-            raise ValueError("No applicant specified and no proposed candidate")
-
-        # Fetch the applicant to verify it belongs to this org
-        applicant = await applicant_repo.get(
-            db,
-            applicant_id=chosen_applicant_id,
-            organization_id=organization_id,
-            user_id=user_id,
-        )
-        if not applicant:
-            raise ValueError("Applicant not found")
-
-        # Update the transaction
         txn = await txn_repo.get_by_id(db, row.transaction_id, organization_id)
         if not txn:
             raise ValueError("Transaction not found")
 
-        txn.applicant_id = applicant.id
-        txn.attribution_source = "auto_fuzzy_confirmed"
-        txn.category = "rental_revenue"
+        chosen_applicant_id = applicant_id or row.proposed_applicant_id
+        if chosen_applicant_id:
+            # Fetch the applicant to verify it belongs to this org
+            applicant = await applicant_repo.get(
+                db,
+                applicant_id=chosen_applicant_id,
+                organization_id=organization_id,
+                user_id=user_id,
+            )
+            if not applicant:
+                raise ValueError("Applicant not found")
 
-        # Resolve property from applicant's active lease if not already set
-        if txn.property_id is None:
-            property_id = await _get_property_id_for_applicant(db, applicant, organization_id)
-            if property_id:
-                txn.property_id = property_id
+            txn.applicant_id = applicant.id
+            txn.attribution_source = "auto_fuzzy_confirmed"
+            txn.category = "rental_revenue"
 
-        await attribution_repo.resolve(db, row, "confirmed")
-        await receipt_service.create_pending_receipt_in_session(
-            db,
-            transaction_id=txn.id,
-            applicant_id=applicant.id,
-            user_id=user_id,
-            organization_id=organization_id,
-        )
-        return {"ok": True, "transaction_id": str(txn.id)}
+            # Resolve property from applicant's active lease if not already set
+            if txn.property_id is None:
+                resolved_property_id = await _get_property_id_for_applicant(
+                    db, applicant, organization_id
+                )
+                if resolved_property_id:
+                    txn.property_id = resolved_property_id
+
+            await attribution_repo.resolve(db, row, "confirmed")
+            await receipt_service.create_pending_receipt_in_session(
+                db,
+                transaction_id=txn.id,
+                applicant_id=applicant.id,
+                user_id=user_id,
+                organization_id=organization_id,
+            )
+            return {"ok": True, "transaction_id": str(txn.id)}
+
+        # Property path — Airbnb payout, no tenant. Fail closed: a bad or
+        # cross-org property_id raises and leaves the row pending + txn untouched.
+        chosen_property_id = property_id or row.proposed_property_id
+        if chosen_property_id:
+            prop = await property_repo.get_by_id(db, chosen_property_id, organization_id)
+            if not prop:
+                raise ValueError("Property not found")
+
+            txn.property_id = prop.id
+            # An Airbnb payout has no tenant — re-attributing to a property
+            # must not leave a stale applicant link on the transaction.
+            txn.applicant_id = None
+            txn.attribution_source = "manual"
+            txn.category = "rental_revenue"
+            await attribution_repo.resolve(db, row, "confirmed")
+            return {"ok": True, "transaction_id": str(txn.id)}
+
+        raise ValueError("No applicant or property specified and no proposed candidate")
 
 
 async def reject_review(

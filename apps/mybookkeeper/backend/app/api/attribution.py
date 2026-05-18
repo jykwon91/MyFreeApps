@@ -58,6 +58,7 @@ async def confirm_attribution_review(
             organization_id=ctx.organization_id,
             user_id=ctx.user_id,
             applicant_id=body.applicant_id,
+            property_id=body.property_id,
         )
     except ValueError as e:
         detail = str(e)

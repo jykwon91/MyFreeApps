@@ -140,6 +140,35 @@ class TestConfirmAttributionReview:
         assert resp.status_code == 200
         assert resp.json()["ok"] is True
 
+    def test_confirm_with_property_id(self, client, override_ctx):
+        """An Airbnb-payout review item is confirmed by passing property_id;
+        the route forwards it to the service."""
+        review_id = uuid.uuid4()
+        property_id = uuid.uuid4()
+        with patch(
+            "app.services.transactions.attribution_service.confirm_review",
+            new_callable=AsyncMock,
+            return_value={"ok": True, "transaction_id": str(uuid.uuid4())},
+        ) as confirm_mock:
+            resp = client.post(
+                f"/transactions/attribution-review-queue/{review_id}/confirm",
+                json={"property_id": str(property_id)},
+            )
+        assert resp.status_code == 200
+        assert resp.json()["ok"] is True
+        confirm_mock.assert_awaited_once()
+        assert confirm_mock.await_args.kwargs["property_id"] == property_id
+        assert confirm_mock.await_args.kwargs["applicant_id"] is None
+
+    def test_confirm_rejects_unknown_field(self, client, override_ctx):
+        """ConfirmReviewRequest is extra=forbid — unknown keys are rejected."""
+        review_id = uuid.uuid4()
+        resp = client.post(
+            f"/transactions/attribution-review-queue/{review_id}/confirm",
+            json={"property_id": str(uuid.uuid4()), "evil": "x"},
+        )
+        assert resp.status_code == 422
+
     def test_confirm_not_found(self, client, override_ctx):
         review_id = uuid.uuid4()
         with patch(

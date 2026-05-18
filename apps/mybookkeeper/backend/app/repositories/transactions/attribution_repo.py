@@ -23,12 +23,14 @@ async def create(
     transaction_id: uuid.UUID,
     proposed_applicant_id: uuid.UUID | None,
     confidence: str,
+    proposed_property_id: uuid.UUID | None = None,
 ) -> RentAttributionReviewQueue:
     row = RentAttributionReviewQueue(
         user_id=user_id,
         organization_id=organization_id,
         transaction_id=transaction_id,
         proposed_applicant_id=proposed_applicant_id,
+        proposed_property_id=proposed_property_id,
         confidence=confidence,
         status="pending",
     )
@@ -47,6 +49,7 @@ async def get_by_id(
         .options(
             selectinload(RentAttributionReviewQueue.transaction),
             selectinload(RentAttributionReviewQueue.proposed_applicant),
+            selectinload(RentAttributionReviewQueue.proposed_property),
         )
         .where(
             RentAttributionReviewQueue.id == review_id,
@@ -85,6 +88,7 @@ async def list_pending(
         .options(
             selectinload(RentAttributionReviewQueue.transaction),
             selectinload(RentAttributionReviewQueue.proposed_applicant),
+            selectinload(RentAttributionReviewQueue.proposed_property),
         )
         .where(
             RentAttributionReviewQueue.organization_id == organization_id,

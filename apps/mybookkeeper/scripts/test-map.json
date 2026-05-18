@@ -876,6 +876,7 @@
         "backend/app/schemas/transactions/attribution.py",
         "backend/app/api/attribution.py",
         "backend/alembic/versions/txnattr260504_rent_attribution.py",
+        "backend/alembic/versions/rarqprop260517_add_proposed_property.py",
         "frontend/src/shared/store/attributionApi.ts",
         "frontend/src/shared/types/attribution/",
         "frontend/src/app/features/attribution/",
@@ -886,7 +887,9 @@
       "backend_tests": [
         "test_attribution_matcher.py",
         "test_attribution_repo.py",
-        "test_attribution_routes.py"
+        "test_attribution_routes.py",
+        "test_attribution_service_attribute_manually.py",
+        "test_attribution_service_confirm_property.py"
       ],
       "frontend_tests": [
         "AttributionReviewPanel.test.tsx",
