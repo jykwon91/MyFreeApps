@@ -36,7 +36,14 @@ def _build_txn_filters(
 
 
 def _txn_active_property_filter() -> list:
-    """Filter transactions to active properties or within activity periods."""
+    """Filter transactions to active properties or within activity periods.
+
+    A transaction with no property at all (e.g. an unattributed Airbnb payout)
+    is not tied to any property's active state, so the active-property gate
+    must not apply to it — otherwise the outer-joined NULL Property row makes
+    ``is_active == True`` evaluate to NULL and the row is silently dropped from
+    revenue totals.
+    """
     has_matching_period = select(ActivityPeriod.id).where(
         ActivityPeriod.property_id == Transaction.property_id,
         Transaction.transaction_date >= ActivityPeriod.active_from,
@@ -45,6 +52,7 @@ def _txn_active_property_filter() -> list:
 
     return [
         or_(
+            Transaction.property_id.is_(None),
             Property.is_active == True,  # noqa: E712
             has_matching_period,
         )
@@ -101,8 +109,8 @@ async def txn_sum_by_property_and_category(
             func.sum(Transaction.amount).label("total"),
         )
         .select_from(Transaction)
-        .join(Property, Transaction.property_id == Property.id)
-        .where(and_(*filters, Transaction.property_id.isnot(None), *_txn_active_property_filter()))
+        .outerjoin(Property, Transaction.property_id == Property.id)
+        .where(and_(*filters, *_txn_active_property_filter()))
         .group_by(Transaction.property_id, Property.name, Transaction.category)
     )
     return result.all()
@@ -156,8 +164,8 @@ async def txn_sum_by_property_month_and_category(
             func.sum(Transaction.amount).label("total"),
         )
         .select_from(Transaction)
-        .join(Property, Transaction.property_id == Property.id)
-        .where(and_(*filters, Transaction.property_id.isnot(None), *_txn_active_property_filter()))
+        .outerjoin(Property, Transaction.property_id == Property.id)
+        .where(and_(*filters, *_txn_active_property_filter()))
         .group_by(Transaction.property_id, Property.name, "year", "month", Transaction.category)
         .order_by(Transaction.property_id, "year", "month")
     )

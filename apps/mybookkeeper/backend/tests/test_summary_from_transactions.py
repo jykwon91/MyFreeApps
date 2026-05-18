@@ -681,3 +681,175 @@ class TestSummaryTypeAliases:
         assert sample["revenue"] == 5000.0
         assert isinstance(sample["by_category"], dict)
         assert isinstance(sample["by_property"], list)
+
+
+class TestUnassignedRevenue:
+    """Transactions with no property (e.g. unattributed Airbnb payouts) are
+    real revenue and must be counted in every dashboard aggregation — not
+    silently dropped by the active-property filter or the by-property join.
+
+    Regression for the dashboard showing $1,301.60 (assigned only) while the
+    drill-down showed $1,593.48 (assigned + $291.88 unattributed Airbnb).
+    """
+
+    @pytest.mark.asyncio
+    async def test_unassigned_revenue_in_by_category(self, db: AsyncSession) -> None:
+        user, org_id = await _setup_org_and_user(db)
+        prop = _make_property(org_id, user.id)
+        db.add(prop)
+        db.add(_make_transaction(
+            org_id, user.id, property_id=prop.id,
+            amount=Decimal("1301.60"), category="rental_revenue",
+            transaction_type="income", schedule_e_line="line_3_rents_received",
+            tags=["rental_revenue"],
+        ))
+        db.add(_make_transaction(
+            org_id, user.id, property_id=None,
+            amount=Decimal("291.88"), category="rental_revenue",
+            transaction_type="income", schedule_e_line="line_3_rents_received",
+            tags=["rental_revenue"],
+        ))
+        await db.commit()
+
+        from app.repositories import summary_repo
+        rows = await summary_repo.txn_sum_by_category(db, org_id)
+        by_tag = {row.tag: float(row.total) for row in rows}
+
+        assert by_tag.get("rental_revenue") == 1593.48
+
+    @pytest.mark.asyncio
+    async def test_unassigned_revenue_in_by_month(self, db: AsyncSession) -> None:
+        user, org_id = await _setup_org_and_user(db)
+        db.add(_make_transaction(
+            org_id, user.id, property_id=None,
+            amount=Decimal("291.88"), category="rental_revenue",
+            transaction_type="income", schedule_e_line="line_3_rents_received",
+            transaction_date=date(2026, 5, 10), tax_year=2026,
+            tags=["rental_revenue"],
+        ))
+        await db.commit()
+
+        from app.repositories import summary_repo
+        rows = await summary_repo.txn_sum_by_month_and_category(db, org_id)
+        monthly = {(int(r.year), int(r.month)): float(r.total) for r in rows}
+
+        assert monthly[(2026, 5)] == 291.88
+
+    @pytest.mark.asyncio
+    async def test_by_property_returns_null_property_row(self, db: AsyncSession) -> None:
+        user, org_id = await _setup_org_and_user(db)
+        db.add(_make_transaction(
+            org_id, user.id, property_id=None,
+            amount=Decimal("291.88"), category="rental_revenue",
+            transaction_type="income", schedule_e_line="line_3_rents_received",
+            tags=["rental_revenue"],
+        ))
+        await db.commit()
+
+        from app.repositories import summary_repo
+        rows = await summary_repo.txn_sum_by_property_and_category(db, org_id)
+        assert [(r.property_id, r.tag, float(r.total)) for r in rows] == [
+            (None, "rental_revenue", 291.88)
+        ]
+
+    @pytest.mark.asyncio
+    async def test_by_property_month_returns_null_property_row(self, db: AsyncSession) -> None:
+        user, org_id = await _setup_org_and_user(db)
+        db.add(_make_transaction(
+            org_id, user.id, property_id=None,
+            amount=Decimal("291.88"), category="rental_revenue",
+            transaction_type="income", schedule_e_line="line_3_rents_received",
+            transaction_date=date(2026, 5, 10), tax_year=2026,
+            tags=["rental_revenue"],
+        ))
+        await db.commit()
+
+        from app.repositories import summary_repo
+        rows = await summary_repo.txn_sum_by_property_month_and_category(db, org_id)
+        assert [r.property_id for r in rows] == [None]
+        assert float(rows[0].total) == 291.88
+
+    @pytest.mark.asyncio
+    async def test_by_property_reconciles_with_total(self, db: AsyncSession) -> None:
+        """sum(by_property) must equal by_category total — the invariant that
+        was broken (chart total != drill-down total)."""
+        user, org_id = await _setup_org_and_user(db)
+        prop = _make_property(org_id, user.id)
+        db.add(prop)
+        db.add(_make_transaction(
+            org_id, user.id, property_id=prop.id,
+            amount=Decimal("1301.60"), category="rental_revenue",
+            transaction_type="income", schedule_e_line="line_3_rents_received",
+            tags=["rental_revenue"],
+        ))
+        db.add(_make_transaction(
+            org_id, user.id, property_id=None,
+            amount=Decimal("291.88"), category="rental_revenue",
+            transaction_type="income", schedule_e_line="line_3_rents_received",
+            tags=["rental_revenue"],
+        ))
+        await db.commit()
+
+        from app.repositories import summary_repo
+        cat_total = sum(
+            float(r.total) for r in await summary_repo.txn_sum_by_category(db, org_id)
+        )
+        prop_total = sum(
+            float(r.total)
+            for r in await summary_repo.txn_sum_by_property_and_category(db, org_id)
+        )
+        assert cat_total == prop_total == 1593.48
+
+    @pytest.mark.asyncio
+    async def test_unassigned_tax_relevant_revenue_in_by_property(self, db: AsyncSession) -> None:
+        """get_tax_summary uses the same by-property query with
+        tax_relevant_only=True — unattributed tax-relevant income must surface
+        as the Unassigned bucket there too (it was previously dropped from the
+        tax dashboard's by-property breakdown while still in by_category)."""
+        user, org_id = await _setup_org_and_user(db)
+        db.add(_make_transaction(
+            org_id, user.id, property_id=None,
+            amount=Decimal("291.88"), category="rental_revenue",
+            transaction_type="income", schedule_e_line="line_3_rents_received",
+            tax_relevant=True,
+            transaction_date=date(2026, 5, 10), tax_year=2026,
+            tags=["rental_revenue"],
+        ))
+        await db.commit()
+
+        from app.repositories import summary_repo
+        rows = await summary_repo.txn_sum_by_property_and_category(
+            db, org_id,
+            start_date=datetime(2026, 1, 1, tzinfo=timezone.utc),
+            end_date=datetime(2026, 12, 31, 23, 59, 59, tzinfo=timezone.utc),
+            tax_relevant_only=True,
+        )
+        assert [(r.property_id, r.tag, float(r.total)) for r in rows] == [
+            (None, "rental_revenue", 291.88)
+        ]
+
+    @pytest.mark.asyncio
+    async def test_inactive_property_txn_still_excluded(self, db: AsyncSession) -> None:
+        """Relaxing the active-property gate for NULL-property rows must NOT
+        leak transactions tied to a genuinely inactive property."""
+        user, org_id = await _setup_org_and_user(db)
+        inactive = Property(
+            id=uuid.uuid4(),
+            organization_id=org_id,
+            user_id=user.id,
+            name="Archived Property",
+            address="999 Old St",
+            is_active=False,
+        )
+        db.add(inactive)
+        db.add(_make_transaction(
+            org_id, user.id, property_id=inactive.id,
+            amount=Decimal("500.00"), category="rental_revenue",
+            transaction_type="income", schedule_e_line="line_3_rents_received",
+            tags=["rental_revenue"],
+        ))
+        await db.commit()
+
+        from app.repositories import summary_repo
+        rows = await summary_repo.txn_sum_by_category(db, org_id)
+        assert list(rows) == []

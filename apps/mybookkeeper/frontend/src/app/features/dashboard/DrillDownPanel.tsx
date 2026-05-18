@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { ArrowLeft, ChevronRight } from "lucide-react";
 import { useListTransactionsQuery } from "@/shared/store/transactionsApi";
 import { useGetPropertiesQuery } from "@/shared/store/propertiesApi";
+import { UNASSIGNED_PROPERTY_ID } from "@/shared/lib/constants";
 import { useToast } from "@/shared/hooks/useToast";
 import { formatCurrency } from "@/shared/utils/currency";
 import Panel, { PanelCloseButton } from "@/shared/components/ui/Panel";
@@ -19,9 +20,12 @@ export default function DrillDownPanel({ filter, onClose }: DrillDownPanelProps)
   const { showSuccess } = useToast();
   const [selectedTxn, setSelectedTxn] = useState<Transaction | null>(null);
 
+  const isUnassigned = filter.propertyId === UNASSIGNED_PROPERTY_ID;
+
   const { data: allTransactions = [], isLoading } = useListTransactionsQuery({
     category: filter.category,
-    property_id: filter.propertyId,
+    property_id: isUnassigned ? undefined : filter.propertyId,
+    unassigned: isUnassigned ? true : undefined,
     start_date: filter.startDate,
     end_date: filter.endDate,
     status: "approved",
@@ -35,12 +39,14 @@ export default function DrillDownPanel({ filter, onClose }: DrillDownPanelProps)
       const txnType = filter.type === "revenue" ? "income" : "expense";
       filtered = filtered.filter((txn) => txn.transaction_type === txnType);
     }
-    if (filter.propertyIds?.length) {
+    // The Unassigned bucket is, by definition, transactions with no property —
+    // applying a property-id allowlist would always zero it out.
+    if (!isUnassigned && filter.propertyIds?.length) {
       const ids = new Set(filter.propertyIds);
       filtered = filtered.filter((txn) => !!txn.property_id && ids.has(txn.property_id));
     }
     return filtered;
-  }, [allTransactions, filter.type, filter.propertyIds]);
+  }, [allTransactions, filter.type, filter.propertyIds, isUnassigned]);
 
   const total = transactions.reduce((sum, txn) => {
     const amt = typeof txn.amount === "string" ? parseFloat(txn.amount) || 0 : txn.amount;

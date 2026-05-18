@@ -142,6 +142,23 @@ class TestListFiltered:
         assert results[0].property_id == prop.id
 
     @pytest.mark.asyncio
+    async def test_filters_unassigned(
+        self, db: AsyncSession, test_user: User, test_org: Organization
+    ) -> None:
+        prop = await _create_property(db, test_org.id, test_user.id)
+        assigned = _make_transaction(
+            test_org.id, test_user.id, property_id=prop.id, vendor="Assigned"
+        )
+        unassigned = _make_transaction(test_org.id, test_user.id, vendor="Unattributed Airbnb")
+        await transaction_repo.create(db, assigned)
+        await transaction_repo.create(db, unassigned)
+        await db.commit()
+
+        results = await transaction_repo.list_filtered(db, test_org.id, unassigned=True)
+        assert [t.vendor for t in results] == ["Unattributed Airbnb"]
+        assert results[0].property_id is None
+
+    @pytest.mark.asyncio
     async def test_filters_by_date_range(
         self, db: AsyncSession, test_user: User, test_org: Organization
     ) -> None:
