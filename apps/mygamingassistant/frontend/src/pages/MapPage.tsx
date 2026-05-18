@@ -1,80 +1,73 @@
 /**
- * MapPage — plan-mode lineup viewer.
+ * MapPage — CS2 lineup glance board.
  * Route: /:gameSlug/:mapSlug
  *
+ * Second-monitor design: every lineup for the open map is a full-size tile,
+ * all visible at once, grouped by target zone, vertical scroll. No click to
+ * expand anything — the detail IS the default state.
+ *
  * URL is the single source of truth for all filter state:
- *   ?side=side_a&util=smoke,molly&zone=mid&round=1&compact=1
+ *   ?side=side_a&util=smoke,molly&loadout=smoke,flash&round=1&compact=1
+ *
+ * Layout:
+ *   ┌─────────────────────────────────────────────────────┐
+ *   │ Slim sticky top bar (~40px)                         │
+ *   │ ← Game · MapName | T/CT/Both | util chips | loadout │
+ *   │                                    chips | ⚙        │
+ *   ├──────────────┬──────────────────────────────────────┤
+ *   │ Sidebar      │ Main scroll area                     │
+ *   │ (~200px)     │                                      │
+ *   │ Minimap +    │ ━━ A SITE (n) ━━                     │
+ *   │ zone SVG     │ [tile] [tile]                        │
+ *   │              │ ━━ B SITE (n) ━━                     │
+ *   │              │ ...                                  │
+ *   └──────────────┴──────────────────────────────────────┘
  *
  * Modes:
- *  - Plan mode (default): SVG zone map, side toggle, utility chips, results panel
+ *  - Glance board (default): full-size tiles, all lineups visible
  *  - Round mode (?round=1): only pinned lineups, no map, no chrome
- *  - Compact mode (?compact=1): borderless — app shell hides itself (see RootLayout)
- *
- * Features:
- *  - Pin system via usePins (localStorage, cross-tab sync)
- *  - Keyboard shortcuts via useMapKeyboardShortcuts
- *  - Keyboard shortcuts help overlay via "?" key
- *  - Storage-unavailable toast (one-time, in-memory fallback)
+ *  - Compact mode (?compact=1): borderless — app shell hides itself
  */
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { AlertTriangle, Backpack, ImagePlus, Pencil, Plus } from "lucide-react";
-import { ToggleChipGroup, showSuccess } from "@platform/ui";
+import { ArrowLeft, HelpCircle } from "lucide-react";
 import { useGetGamesQuery, useGetMapDetailQuery } from "@/store/gamesApi";
 import { useGetLineupsQuery, useGetZoneDensityQuery } from "@/store/lineupsApi";
-import { useGetLineupPackagesQuery, usePinAllLineupPackageMutation } from "@/store/lineupPackagesApi";
-import MapZoneOverlay from "@/components/lineup/MapZoneOverlay";
-import MapLineupPins, {
-  type PinMode,
-  countUnplaceableLineups,
-} from "@/components/lineup/MapLineupPins";
-import PinModeToggle from "@/components/lineup/PinModeToggle";
-import LineupDetailPanel from "@/components/lineup/LineupDetailPanel";
-import UnplaceableLineupsNotice from "@/components/lineup/UnplaceableLineupsNotice";
+import { countUnplaceableLineups } from "@/components/lineup/MapLineupPins";
+import type { PinMode } from "@/components/lineup/MapLineupPins";
 import KeyboardShortcutsHelp from "@/components/lineup/KeyboardShortcutsHelp";
+import GlanceBoard from "@/components/lineup/GlanceBoard";
+import GlanceBoardMinimapSidebar from "@/components/lineup/GlanceBoardMinimapSidebar";
+import GlanceBoardOperatorMenu from "@/components/lineup/GlanceBoardOperatorMenu";
 import MinimapUploadDialog from "@/components/game/MinimapUploadDialog";
 import RoundMode from "@/pages/RoundMode";
-import BackButton from "@/components/map/BackButton";
-import LoadoutPopover from "@/components/map/LoadoutPopover";
-import PackagesDropdown from "@/components/map/PackagesDropdown";
 import StorageUnavailableBanner from "@/components/map/StorageUnavailableBanner";
-import LineupResultsPanel from "@/components/map/LineupResultsPanel";
 import { usePins } from "@/hooks/usePins";
 import { useLoadout, computeEffectiveUtilFilter } from "@/hooks/useLoadout";
 import { useMapKeyboardShortcuts } from "@/hooks/useMapKeyboardShortcuts";
 import { useIsSuperuser } from "@/hooks/useIsSuperuser";
+import { utilDisplay } from "@/constants/utilityDisplay";
 import type { ZoneDensity } from "@/types/game";
-
-const SIDE_BG: Record<string, string> = {
-  side_a: "rgba(239,68,68,0.05)",
-  side_b: "rgba(59,130,246,0.05)",
-  any: "transparent",
-};
 
 export default function MapPage() {
   const { gameSlug, mapSlug } = useParams<{ gameSlug: string; mapSlug: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  const side = searchParams.get("side") ?? "any";
-  const util = searchParams.get("util") ?? "";
-  const zone = searchParams.get("zone") ?? "";
-  const isRoundMode = searchParams.get("round") === "1";
-  const pinModeParam = searchParams.get("pins");
+  const side               = searchParams.get("side")   ?? "any";
+  const util               = searchParams.get("util")   ?? "";
+  const isRoundMode        = searchParams.get("round")  === "1";
+  const pinModeParam       = searchParams.get("pins");
   const pinMode: PinMode | null =
     pinModeParam === "stand" || pinModeParam === "target" || pinModeParam === "both"
       ? pinModeParam
       : null;
-  const selectedLineupId = searchParams.get("lineup");
 
-  // Card cycling (Arrow left/right in round mode or panel)
-  const [activeCardIndex, setActiveCardIndex] = useState(0);
-  // Keyboard shortcuts help overlay
-  const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
-  // One-time storage-unavailable toast
+  const [showShortcutsHelp,   setShowShortcutsHelp]   = useState(false);
   const [storageUnavailableToast, setStorageUnavailableToast] = useState(false);
-  // Minimap <img> 404/network failure — falls back to text rather than broken-image icon
-  const [minimapLoadFailed, setMinimapLoadFailed] = useState(false);
+  const [showMinimapUpload,   setShowMinimapUpload]    = useState(false);
+  // Card cycling — used by round mode + keyboard shortcuts
+  const [activeCardIndex,     setActiveCardIndex]      = useState(0);
 
   const { data: games } = useGetGamesQuery();
   const {
@@ -88,104 +81,67 @@ export default function MapPage() {
   );
 
   const { isSuperuser } = useIsSuperuser();
-  const [showMinimapUpload, setShowMinimapUpload] = useState(false);
-
   const game = games?.find((g) => g.slug === gameSlug);
 
+  // ---------------------------------------------------------------------------
+  // Filter state derived from URL
+  // ---------------------------------------------------------------------------
   const utilOptions =
     mapDetail?.utility_types.map((u) => ({
       value: u.slug,
-      label: u.name,
+      label: utilDisplay(u.slug).chipLabel,
     })) ?? [];
+
   const selectedUtils = util ? util.split(",").filter(Boolean) : [];
 
-  // Loadout filter — per-(game, side) localStorage-backed set of utility slugs.
+  // Loadout filter — persistent inline chips in the top bar.
+  // Default loadout = empty = "no loadout filter applied" (show all).
+  // State lives in useLoadout (localStorage-backed). Filter chips always
+  // visible; compose with the utility chips.
   const { loadout, toggleLoadout, clearLoadout } = useLoadout(gameSlug ?? "", side);
-  const [showLoadoutPopover, setShowLoadoutPopover] = useState(false);
 
-  // Keyboard shortcut 'l' opens the loadout popover
-  useEffect(() => {
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.key !== "l" || e.ctrlKey || e.metaKey || e.altKey) return;
-      if (document.activeElement?.tagName === "INPUT" || document.activeElement?.tagName === "TEXTAREA") return;
-      setShowLoadoutPopover((v) => !v);
-    }
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, []);
-
-  // Effective utility filter: intersection of loadout + selected util chips
   const effectiveUtils = computeEffectiveUtilFilter(loadout, selectedUtils);
 
+  // ---------------------------------------------------------------------------
+  // Data fetching
+  // ---------------------------------------------------------------------------
   const { data: density = {} as ZoneDensity } = useGetZoneDensityQuery(
     {
       game_slug: gameSlug ?? "",
-      map_slug: mapSlug ?? "",
-      side: side !== "any" ? side : undefined,
-      util: effectiveUtils.length > 0 ? effectiveUtils.join(",") : undefined,
+      map_slug:  mapSlug  ?? "",
+      side:      side !== "any" ? side : undefined,
+      util:      effectiveUtils.length > 0 ? effectiveUtils.join(",") : undefined,
     },
     { skip: !gameSlug || !mapSlug },
   );
 
-  const targetZone = mapDetail?.zones.find((z) => z.slug === zone);
-  const { data: lineups = [], isFetching: lineupsFetching } = useGetLineupsQuery(
+  // Glance board always fetches all map lineups (no zone filter).
+  const {
+    data: allMapLineups = [],
+    isFetching: allMapFetching,
+  } = useGetLineupsQuery(
     {
-      game_slug: gameSlug ?? "",
-      map_slug: mapSlug ?? "",
-      target_zone_slug: zone || undefined,
-      side: side !== "any" ? side : undefined,
-      utility_type_slugs: effectiveUtils.length > 0 ? effectiveUtils.join(",") : util || undefined,
+      game_slug:            gameSlug ?? "",
+      map_slug:             mapSlug  ?? "",
+      side:                 side !== "any" ? side : undefined,
+      utility_type_slugs:   effectiveUtils.length > 0 ? effectiveUtils.join(",") : undefined,
     },
-    { skip: !gameSlug || !mapSlug || !zone },
+    { skip: !gameSlug || !mapSlug },
   );
 
-  // Packages — for the current map (no side filter here to show all packages)
-  const { data: packages = [] } = useGetLineupPackagesQuery(
-    {
-      map_id: mapDetail?.id,
-    },
-    { skip: !mapDetail?.id },
-  );
-  const [pinAllPackage] = usePinAllLineupPackageMutation();
-
-  // --------------------------------------------------------------------------
-  // Pin system
-  // --------------------------------------------------------------------------
-  const pins = usePins(gameSlug ?? "", mapSlug ?? "", side);
-
-  // Fetch all map lineups for round mode AND for the pin layer (no zone filter).
-  // Pin mode shows pins across the whole map; round mode shows pinned lineups.
-  const needsAllMapLineups = isRoundMode || pinMode !== null;
-  const { data: allMapLineups = [], isFetching: allMapFetching } = useGetLineupsQuery(
-    {
-      game_slug: gameSlug ?? "",
-      map_slug: mapSlug ?? "",
-      side: side !== "any" ? side : undefined,
-      utility_type_slugs: effectiveUtils.length > 0 ? effectiveUtils.join(",") : undefined,
-    },
-    { skip: !gameSlug || !mapSlug || !needsAllMapLineups },
-  );
-
+  // ---------------------------------------------------------------------------
+  // Pin system (used by round mode)
+  // ---------------------------------------------------------------------------
+  const pins          = usePins(gameSlug ?? "", mapSlug ?? "", side);
   const pinnedLineups = allMapLineups.filter((l) => pins.isPinned(l.id));
 
-  // Unplaceable hint: lineups exist for the current filter but every one
-  // lacks a resolvable map position (no explicit anchor AND the referenced
-  // zone has no polygon). The hint is non-blocking — the results panel still
-  // lists the lineups; only the map pin is unavailable. Use the lineup set
-  // that drives the current view: the map-wide set when pins are on, the
-  // zone-filtered set otherwise.
-  const unplaceableSource = pinMode !== null ? allMapLineups : lineups;
-  const unplaceablePinMode: PinMode = pinMode ?? "both";
+  // Unplaceable count — for operator ⚙ menu notice
   const unplaceableCount =
-    unplaceableSource.length > 0
-      ? countUnplaceableLineups(unplaceableSource, unplaceablePinMode)
+    allMapLineups.length > 0
+      ? countUnplaceableLineups(allMapLineups, pinMode ?? "both")
       : 0;
-  const allUnplaceable =
-    unplaceableSource.length > 0 && unplaceableCount === unplaceableSource.length;
 
   // Reset active card index when round mode is entered or pin count changes.
-  // Using MessageChannel to schedule asynchronously, avoiding the
-  // "set-state-in-effect" lint rule against synchronous setState in effects.
   useEffect(() => {
     const channel = new MessageChannel();
     channel.port1.onmessage = () => setActiveCardIndex(0);
@@ -202,14 +158,9 @@ export default function MapPage() {
     return () => window.removeEventListener("mga:storage-unavailable", onStorageUnavailable);
   }, []);
 
-  // Reset minimap-load failure when navigating to a different map.
-  useEffect(() => {
-    setMinimapLoadFailed(false);
-  }, [mapDetail?.minimap_url]);
-
-  // --------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
   // URL helpers
-  // --------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
   function updateParam(key: string, value: string | null) {
     setSearchParams(
       (prev) => {
@@ -233,51 +184,51 @@ export default function MapPage() {
     updateParam("util", slugs.length > 0 ? slugs.join(",") : null);
   }
 
-  function handleZoneClick(zoneSlug: string) {
-    updateParam("zone", zone === zoneSlug ? null : zoneSlug);
+  // Individual util chip toggle (for top-bar chips that toggle one at a time)
+  function handleUtilChipToggle(slug: string) {
+    const next = selectedUtils.includes(slug)
+      ? selectedUtils.filter((s) => s !== slug)
+      : [...selectedUtils, slug];
+    handleUtilToggle(next);
   }
 
-  function handleClosePanel() {
-    updateParam("zone", null);
-  }
-
-  function handlePinModeChange(next: PinMode | null) {
-    updateParam("pins", next);
-  }
-
-  function handlePinSelect(lineupId: string) {
-    updateParam("lineup", lineupId);
-  }
-
-  function handleCloseLineupPanel() {
-    updateParam("lineup", null);
-  }
-
-  // --------------------------------------------------------------------------
-  // Keyboard shortcuts
-  // --------------------------------------------------------------------------
-  const cardCount = isRoundMode ? pinnedLineups.length : lineups.length;
+  // ---------------------------------------------------------------------------
+  // Keyboard shortcuts (kept for power users — ? for help)
+  // ---------------------------------------------------------------------------
+  const cardCount = isRoundMode ? pinnedLineups.length : allMapLineups.length;
 
   useMapKeyboardShortcuts({
     utilOptions,
     selectedUtils,
     side,
-    zone,
+    zone: "",
     cardCount,
     activeCardIndex,
-    onSideChange: handleSideChange,
-    onUtilToggle: handleUtilToggle,
-    onCloseZonePanel: handleClosePanel,
-    onActiveCardIndexChange: setActiveCardIndex,
-    onToggleShortcutsHelp: () => setShowShortcutsHelp((v) => !v),
+    onSideChange:             handleSideChange,
+    onUtilToggle:             handleUtilToggle,
+    onCloseZonePanel:         () => {},
+    onActiveCardIndexChange:  setActiveCardIndex,
+    onToggleShortcutsHelp:    () => setShowShortcutsHelp((v) => !v),
   });
 
-  // --------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // Round mode exit href
+  // ---------------------------------------------------------------------------
+  const exitRoundHref = (() => {
+    const p = new URLSearchParams(searchParams);
+    p.delete("round");
+    const qs = p.toString();
+    return `/${gameSlug}/${mapSlug}${qs ? `?${qs}` : ""}`;
+  })();
+
+  const planModeHref = exitRoundHref;
+
+  // ---------------------------------------------------------------------------
   // Loading / error states
-  // --------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
   if (mapLoading) {
     return (
-      <main className="p-4 sm:p-8 space-y-4 max-w-5xl">
+      <main className="p-4 sm:p-8 space-y-4">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-md bg-muted/40 animate-pulse" />
           <div className="h-7 w-40 bg-muted/40 rounded animate-pulse" />
@@ -290,42 +241,23 @@ export default function MapPage() {
 
   if (mapError || !mapDetail) {
     return (
-      <main className="p-4 sm:p-8 max-w-5xl">
-        <BackButton gameSlug={gameSlug!} navigate={navigate} />
+      <main className="p-4 sm:p-8">
+        <button
+          type="button"
+          onClick={() => navigate(`/${gameSlug}`)}
+          className="p-2 rounded-md hover:bg-muted/40 transition-colors min-h-[44px]"
+          aria-label="Back to maps"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </button>
         <p className="text-sm text-destructive mt-4">Failed to load map. Please refresh.</p>
       </main>
     );
   }
 
-  const sideBg = SIDE_BG[side] ?? "transparent";
-
-  const sideOptions = [
-    { value: "any", label: "Any" },
-    { value: "side_a", label: game?.side_a_label ?? "Side A" },
-    { value: "side_b", label: game?.side_b_label ?? "Side B" },
-  ];
-
-  const addLineupHref = `/lineups/new?game=${gameSlug}&map=${mapSlug}${zone ? `&target_zone=${zone}` : ""}`;
-
-  // Round mode exit: removes ?round=1, keeps other params
-  const exitRoundHref = (() => {
-    const p = new URLSearchParams(searchParams);
-    p.delete("round");
-    const qs = p.toString();
-    return `/${gameSlug}/${mapSlug}${qs ? `?${qs}` : ""}`;
-  })();
-
-  // Plan mode href (for "open plan mode" link in round mode empty state)
-  const planModeHref = (() => {
-    const p = new URLSearchParams(searchParams);
-    p.delete("round");
-    const qs = p.toString();
-    return `/${gameSlug}/${mapSlug}${qs ? `?${qs}` : ""}`;
-  })();
-
-  // --------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
   // Round mode
-  // --------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
   if (isRoundMode) {
     return (
       <>
@@ -347,9 +279,21 @@ export default function MapPage() {
     );
   }
 
-  // --------------------------------------------------------------------------
-  // Plan mode
-  // --------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // Side chip helpers
+  // ---------------------------------------------------------------------------
+  const sideA  = game?.side_a_label ?? "T";
+  const sideB  = game?.side_b_label ?? "CT";
+
+  const sideChips = [
+    { value: "side_a", label: sideA },
+    { value: "side_b", label: sideB },
+    { value: "any",    label: "Both" },
+  ];
+
+  // ---------------------------------------------------------------------------
+  // Glance board
+  // ---------------------------------------------------------------------------
   return (
     <>
       {showShortcutsHelp && (
@@ -360,301 +304,206 @@ export default function MapPage() {
         <StorageUnavailableBanner onClose={() => setStorageUnavailableToast(false)} />
       )}
 
-      <div
-        className="relative min-h-screen transition-colors duration-300"
-        style={{ background: sideBg }}
-      >
-        <main className="p-4 sm:p-8 space-y-4 max-w-5xl">
-          {/* Header row */}
-          <div className="flex items-center gap-3 flex-wrap">
-            <BackButton gameSlug={gameSlug!} navigate={navigate} />
-            <div className="flex-1 min-w-0">
-              <p className="text-xs text-muted-foreground">{game?.name ?? gameSlug}</p>
-              <h1 className="text-xl font-semibold capitalize">{mapDetail.name}</h1>
-            </div>
-            {isSuperuser && (
-              <Link
-                to={`/${gameSlug}/${mapSlug}/zones/edit`}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md border bg-card hover:bg-muted/40 transition-colors min-h-[36px]"
-                title="Author the clickable zone polygons for this map"
-              >
-                <Pencil className="w-4 h-4" />
-                Edit zones
-              </Link>
-            )}
-            {isSuperuser && (
+      {showMinimapUpload && (
+        <MinimapUploadDialog
+          mapId={mapDetail.id}
+          mapName={mapDetail.name}
+          onClose={() => setShowMinimapUpload(false)}
+          onUploaded={() => {
+            refetchMapDetail();
+          }}
+        />
+      )}
+
+      {/* ── Full-height flex container ──────────────────────────────────── */}
+      <div className="flex flex-col min-h-screen">
+
+        {/* ── Slim sticky top bar (~40px) ─────────────────────────────── */}
+        <header className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm border-b h-10 flex items-center gap-2 px-3 shrink-0 overflow-x-auto">
+
+          {/* Back + map name */}
+          <button
+            type="button"
+            onClick={() => navigate(`/${gameSlug}`)}
+            className="flex items-center gap-1.5 text-sm font-medium hover:text-foreground text-muted-foreground transition-colors shrink-0"
+            aria-label="Back to maps"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" aria-hidden />
+            <span className="hidden sm:inline text-xs text-muted-foreground">{game?.name ?? gameSlug} ·</span>
+            <span className="text-sm font-semibold text-foreground capitalize">{mapDetail.name}</span>
+          </button>
+
+          <span className="text-border shrink-0">|</span>
+
+          {/* Side chips */}
+          <div className="flex items-center gap-0.5 shrink-0" role="group" aria-label="Side filter">
+            {sideChips.map((opt) => (
               <button
+                key={opt.value}
                 type="button"
-                onClick={() => setShowMinimapUpload(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md border bg-card hover:bg-muted/40 transition-colors min-h-[36px]"
-                title="Replace this map's minimap image"
+                onClick={() => handleSideChange(opt.value)}
+                className={[
+                  "px-2.5 py-0.5 rounded-full text-[11px] font-medium transition-colors",
+                  side === opt.value
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/60",
+                ].join(" ")}
+                aria-pressed={side === opt.value}
               >
-                <ImagePlus className="w-4 h-4" />
-                Replace minimap
+                {opt.label}
               </button>
-            )}
-            <Link
-              to={addLineupHref}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md border bg-card hover:bg-muted/40 transition-colors min-h-[36px]"
-            >
-              <Plus className="w-4 h-4" />
-              Add lineup
-            </Link>
+            ))}
           </div>
 
-          {isSuperuser &&
-            mapDetail.zones.length > 0 &&
-            mapDetail.zones.every((z) => z.polygon_points.length === 0) && (
-              <div
-                className="flex items-start gap-2.5 px-3 py-2.5 rounded-md border bg-amber-500/10 border-amber-500/30 text-sm"
-                role="status"
-              >
-                <AlertTriangle
-                  className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5"
-                  aria-hidden
-                />
-                <div className="flex-1">
-                  <p className="font-medium">
-                    This map's zones aren't drawn yet.
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Visitors will see a static minimap until you author the
-                    clickable zone polygons.
-                  </p>
-                </div>
-                <Link
-                  to={`/${gameSlug}/${mapSlug}/zones/edit`}
-                  className="px-3 py-1 text-sm rounded-md bg-primary text-primary-foreground hover:opacity-90 min-h-[32px] inline-flex items-center"
-                >
-                  Set up zones
-                </Link>
-              </div>
-            )}
+          <span className="text-border shrink-0">|</span>
 
-          {showMinimapUpload && (
-            <MinimapUploadDialog
-              mapId={mapDetail.id}
-              mapName={mapDetail.name}
-              onClose={() => setShowMinimapUpload(false)}
-              onUploaded={() => {
-                refetchMapDetail();
-                setMinimapLoadFailed(false);
-              }}
-            />
-          )}
-
-          {/* Sticky filter bar */}
-          <div className="sticky top-0 z-10 bg-background/90 backdrop-blur-sm border-b pb-3 -mx-4 px-4 sm:-mx-8 sm:px-8">
-            <div className="flex flex-wrap gap-3 items-center pt-2">
-              {/* Side toggle */}
-              <div className="flex gap-1">
-                {sideOptions.map((opt) => (
+          {/* Utility type chips */}
+          {utilOptions.length > 0 && (
+            <div className="flex items-center gap-0.5 shrink-0" role="group" aria-label="Utility type filter">
+              {utilOptions.map((opt) => {
+                const active = selectedUtils.includes(opt.value);
+                return (
                   <button
                     key={opt.value}
                     type="button"
-                    onClick={() => handleSideChange(opt.value)}
+                    onClick={() => handleUtilChipToggle(opt.value)}
                     className={[
-                      "px-3 py-1.5 rounded-md text-sm font-medium transition-colors min-h-[36px]",
-                      side === opt.value
+                      "px-2.5 py-0.5 rounded-full text-[11px] font-medium transition-colors",
+                      active
                         ? "bg-primary text-primary-foreground"
-                        : "bg-card border hover:bg-muted/40",
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/60",
                     ].join(" ")}
-                    aria-pressed={side === opt.value}
+                    aria-pressed={active}
                   >
                     {opt.label}
                   </button>
-                ))}
-              </div>
-
-              {/* Loadout filter — "My loadout" chip group above utility chips */}
-              {utilOptions.length > 0 && (
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setShowLoadoutPopover((v) => !v)}
-                    className={[
-                      "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm border transition-colors min-h-[36px]",
-                      loadout.length > 0
-                        ? "bg-amber-500/10 border-amber-500/40 text-amber-700 dark:text-amber-400"
-                        : "bg-card hover:bg-muted/40",
-                    ].join(" ")}
-                    title="Set your current loadout utilities (keyboard: l)"
-                    aria-expanded={showLoadoutPopover}
-                  >
-                    <Backpack className="w-3.5 h-3.5" aria-hidden />
-                    {loadout.length > 0 ? `Loadout (${loadout.length})` : "My loadout"}
-                  </button>
-
-                  {showLoadoutPopover && (
-                    <LoadoutPopover
-                      utilOptions={utilOptions}
-                      loadout={loadout}
-                      onToggle={toggleLoadout}
-                      onClear={clearLoadout}
-                      onClose={() => setShowLoadoutPopover(false)}
-                    />
-                  )}
-                </div>
-              )}
-
-              {/* Utility chips */}
-              {utilOptions.length > 0 && (
-                <ToggleChipGroup
-                  options={utilOptions}
-                  value={selectedUtils}
-                  onChange={handleUtilToggle}
-                />
-              )}
-
-              {/* Packages dropdown */}
-              {packages.length > 0 && (
-                <PackagesDropdown
-                  packages={packages}
-                  pins={pins}
-                  pinAllPackage={pinAllPackage}
-                  onPinAllComplete={(count) => {
-                    showSuccess(`Pinned ${count} lineup${count !== 1 ? "s" : ""} — entering round mode.`);
-                    updateParam("round", "1");
-                  }}
-                />
-              )}
-
-              {/* Pin mode toggle — show per-lineup pins on the minimap */}
-              <PinModeToggle mode={pinMode} onChange={handlePinModeChange} />
-
-              {/* Round mode button */}
-              <button
-                type="button"
-                onClick={() => updateParam("round", "1")}
-                className="px-3 py-1.5 rounded-md text-sm border bg-card hover:bg-muted/40 transition-colors min-h-[36px]"
-                title="Enter round mode (show pinned lineups only)"
-                aria-label="Enter round mode"
-              >
-                Round mode
-              </button>
+                );
+              })}
             </div>
-          </div>
-
-          {allUnplaceable && (
-            <UnplaceableLineupsNotice count={unplaceableCount} />
           )}
 
-          {/* Map + results layout */}
-          <div className="flex flex-col lg:flex-row gap-4">
-            {/* Map minimap with zone overlay */}
-            <div className="flex-1 min-w-0">
+          {/* Loadout chips — persistent inline toggle strip.
+              Composable with utility chips; default empty = no filter.
+              Keyboard shortcut 'l' from old popover removed; inline chips
+              are always accessible without shortcut. */}
+          {utilOptions.length > 0 && (
+            <>
+              <span className="text-border shrink-0">|</span>
               <div
-                className="relative rounded-xl border overflow-hidden bg-card"
-                style={{ aspectRatio: "1 / 1" }}
+                className="flex items-center gap-0.5 shrink-0"
+                role="group"
+                aria-label="Loadout filter — utilities you are carrying this round"
               >
-                {mapDetail.minimap_url && !minimapLoadFailed ? (
-                  <img
-                    src={mapDetail.minimap_url}
-                    alt={`${mapDetail.name} minimap`}
-                    className="absolute inset-0 w-full h-full object-cover"
-                    draggable={false}
-                    onError={() => setMinimapLoadFailed(true)}
-                  />
-                ) : (
-                  <div className="absolute inset-0 flex items-center justify-center text-muted-foreground text-sm">
-                    Minimap not available
-                  </div>
-                )}
-                <MapZoneOverlay
-                  zones={mapDetail.zones}
-                  density={density}
-                  selectedZoneSlug={zone || null}
-                  onZoneClick={handleZoneClick}
-                />
-                {pinMode && (
-                  <MapLineupPins
-                    lineups={allMapLineups}
-                    mode={pinMode}
-                    selectedLineupId={selectedLineupId}
-                    onPinSelect={handlePinSelect}
-                  />
-                )}
-                {pinMode && !allMapFetching && allMapLineups.length === 0 && (
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <div className="bg-popover/95 border rounded-md px-4 py-3 text-sm text-center shadow-md pointer-events-auto">
-                      <p className="text-muted-foreground mb-2">
-                        No lineups match the current filter
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          handleSideChange("any");
-                          handleUtilToggle([]);
-                        }}
-                        className="text-primary hover:underline"
-                      >
-                        Clear filters
-                      </button>
-                    </div>
-                  </div>
-                )}
+                {utilOptions.map((opt) => {
+                  const inLoadout = loadout.includes(opt.value);
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => toggleLoadout(opt.value)}
+                      className={[
+                        "px-2.5 py-0.5 rounded-full text-[11px] font-medium transition-colors border",
+                        inLoadout
+                          ? "bg-amber-500/20 border-amber-500/50 text-amber-700 dark:text-amber-400"
+                          : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/60",
+                      ].join(" ")}
+                      aria-pressed={inLoadout}
+                      title={`${inLoadout ? "Remove" : "Add"} ${opt.label} from loadout`}
+                    >
+                      {opt.label}
+                    </button>
+                  );
+                })}
               </div>
+            </>
+          )}
 
-              {/* Zone legend */}
-              <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <span className="w-3 h-3 rounded-sm" style={{ background: "rgba(34,197,94,0.4)" }} />
-                  Has lineups
-                </span>
-                <span className="flex items-center gap-1">
-                  <span className="w-3 h-3 rounded-sm" style={{ background: "rgba(156,163,175,0.2)" }} />
-                  Empty
-                </span>
-                <span className="flex items-center gap-1">
-                  <span className="w-3 h-3 rounded-sm" style={{ background: "rgba(251,191,36,0.4)" }} />
-                  Selected
-                </span>
+          {/* Spacer */}
+          <div className="flex-1" />
+
+          {/* Help shortcut */}
+          <button
+            type="button"
+            onClick={() => setShowShortcutsHelp(true)}
+            className="p-1 rounded hover:bg-muted/40 text-muted-foreground transition-colors shrink-0"
+            aria-label="Keyboard shortcuts (?)"
+            title="Keyboard shortcuts"
+          >
+            <HelpCircle className="w-3.5 h-3.5" aria-hidden />
+          </button>
+
+          {/* Operator ⚙ menu */}
+          <GlanceBoardOperatorMenu
+            gameSlug={gameSlug!}
+            mapSlug={mapSlug!}
+            isSuperuser={isSuperuser}
+            unplaceableCount={unplaceableCount}
+            onReplaceMinimapClick={() => setShowMinimapUpload(true)}
+          />
+        </header>
+
+        {/* ── Body: sidebar + main ─────────────────────────────────────── */}
+        <div className="flex flex-1 min-h-0">
+
+          {/* Passive minimap sidebar */}
+          <aside
+            className="hidden lg:block w-[200px] shrink-0 p-3 border-r overflow-y-auto sticky top-10 h-[calc(100vh-40px)]"
+            aria-label="Map zone navigation"
+          >
+            <GlanceBoardMinimapSidebar
+              minimapUrl={mapDetail.minimap_url}
+              zones={mapDetail.zones}
+              density={density}
+            />
+          </aside>
+
+          {/* Main scrollable area */}
+          <main className="flex-1 min-w-0 p-4 lg:p-6 overflow-y-auto">
+            {allMapLineups.length === 0 && !allMapFetching && (
+              effectiveUtils.length > 0 || side !== "any"
+            ) ? (
+              /* Filtered empty state */
+              <div className="flex flex-col items-center justify-center py-20 gap-3">
+                <p className="text-sm text-muted-foreground text-center">
+                  No{effectiveUtils.length > 0 ? ` ${effectiveUtils.join("/")}` : ""} lineups
+                  {side !== "any" ? ` for ${side === "side_a" ? sideA : sideB}` : ""} on this map.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleSideChange("any");
+                    handleUtilToggle([]);
+                    clearLoadout();
+                  }}
+                  className="text-sm text-primary hover:underline"
+                >
+                  Clear filters
+                </button>
               </div>
-            </div>
-
-            {/* Results panel */}
-            {zone && targetZone && (
-              <aside className="lg:w-80 xl:w-96 flex-shrink-0" aria-label="Lineup results">
-                <div className="flex items-center justify-between mb-3">
-                  <h2 className="text-sm font-semibold">
-                    {targetZone.name}
-                    {lineups.length > 0 && (
-                      <span className="ml-1.5 text-xs text-muted-foreground font-normal">
-                        {lineups.length} lineup{lineups.length !== 1 ? "s" : ""}
-                      </span>
-                    )}
-                  </h2>
-                  <button
-                    type="button"
-                    onClick={handleClosePanel}
-                    className="p-1 rounded hover:bg-muted/40 text-muted-foreground text-xs"
-                    aria-label="Close results panel"
-                  >
-                    ✕
-                  </button>
-                </div>
-
-                <LineupResultsPanel
-                  fetching={lineupsFetching}
-                  lineups={lineups}
-                  activeCardIndex={activeCardIndex}
-                  pins={pins}
-                  addLineupHref={addLineupHref}
-                  targetZoneName={targetZone.name}
-                />
-              </aside>
+            ) : (
+              <GlanceBoard
+                lineups={allMapLineups}
+                isFetching={allMapFetching}
+                mapName={mapDetail.name}
+                filteredUtils={effectiveUtils}
+                side={side}
+              />
             )}
-          </div>
-        </main>
-      </div>
 
-      {selectedLineupId && (
-        <LineupDetailPanel
-          lineupId={selectedLineupId}
-          onClose={handleCloseLineupPanel}
-          pins={pins}
-        />
-      )}
+            {/* Add lineup CTA at bottom if empty and no filters */}
+            {allMapLineups.length === 0 && !allMapFetching && effectiveUtils.length === 0 && side === "any" && (
+              <div className="mt-6 text-center">
+                <Link
+                  to={`/lineups/new?game=${gameSlug}&map=${mapSlug}`}
+                  className="text-sm text-primary hover:underline"
+                >
+                  Add the first lineup for {mapDetail.name}
+                </Link>
+              </div>
+            )}
+          </main>
+        </div>
+      </div>
     </>
   );
 }

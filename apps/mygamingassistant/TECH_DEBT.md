@@ -180,3 +180,37 @@ Scope note: MGA is intentionally a casual single-user, public-read / auth-write 
   layering debt, also out of finding-#3 scope).
 
 ---
+
+## Glance-board polish (deferred from PR1 code review — 2026-05-17)
+
+Stylistic items flagged in the glance-board PR1 review and intentionally deferred per log-only policy.
+
+### [Frontend] GlanceBoardMinimapSidebar — IIFE tooltip pattern in JSX
+
+- **Severity:** Low
+- **Location:** `frontend/src/components/lineup/GlanceBoardMinimapSidebar.tsx` (hover tooltip rendered via `{hoveredZoneSlug && (() => { ... })()}`)
+- **Problem:** IIFE inside JSX is non-idiomatic and lint-unfriendly. The hover state belongs in a small sub-component (`ZoneTooltip`) or early-return variable so the return is clean.
+- **Recommendation:** Extract tooltip into a `ZoneTooltip` sub-component in the same file.
+
+### [Frontend] GlanceBoardOperatorMenu — two mergeable useEffects
+
+- **Severity:** Low
+- **Location:** `frontend/src/components/lineup/GlanceBoardOperatorMenu.tsx` (two separate `useEffect` blocks both gated on `open`)
+- **Problem:** Both effects depend solely on `open` and could share one `useEffect` with two event-listener registrations and a single cleanup. Minor readability/lint friction.
+- **Recommendation:** Merge into one `useEffect` with both `addEventListener` / `removeEventListener` calls in the same block.
+
+### [Frontend] MapPage — MessageChannel deferral for `setActiveCardIndex`
+
+- **Severity:** Low
+- **Location:** `frontend/src/pages/MapPage.tsx` (MessageChannel pattern inside `useEffect` for `setActiveCardIndex(0)`)
+- **Problem:** The `MessageChannel` deferral is a non-obvious pattern. A plain `useEffect` with `setActiveCardIndex(0)` inside satisfies the react-hooks/exhaustive-deps rule; the deferral adds complexity without observable benefit at this call site.
+- **Recommendation:** Replace `MessageChannel` deferral with a direct `setActiveCardIndex(0)` call in the `useEffect` body.
+
+### [Frontend] MapPage — fragmented empty-state logic
+
+- **Severity:** Low
+- **Location:** `frontend/src/pages/MapPage.tsx` (two separate empty-state conditions in the main scroll area — filtered-empty ternary and the below-board CTA)
+- **Problem:** The two empty-state render paths (filtered empty + no-filters CTA) are evaluated in separate JSX branches using duplicated conditions. Hard to follow when both filter conditions change.
+- **Recommendation:** Extract an `EmptyStatePanel` sub-component that accepts `{ isFiltered, mapName, gameSlug, mapSlug }` props and consolidates both branches.
+
+---
