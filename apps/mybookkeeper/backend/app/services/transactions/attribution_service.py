@@ -6,9 +6,10 @@ applicant and either:
   - queues for host review (Levenshtein ≤ 2 fuzzy match), or
   - queues as unmatched (no candidate found).
 
-Airbnb payouts with the ``Properties/airbnb reservation`` Gmail label are
-auto-attributed to the matching listing / property when exactly one Airbnb
-listing is linked to the account; otherwise queued for review.
+Airbnb payouts are attributed via the cascade in ``airbnb_payout_matcher``
+(res_code → property auto; single linked listing auto; listing-title-in-text
+→ propose; else unmatched); non-auto outcomes go to the review queue, where
+the operator resolves them via the property-confirm path.
 """
 import logging
 import uuid
@@ -20,12 +21,17 @@ from app.db.session import AsyncSessionLocal, unit_of_work
 from app.models.applicants.applicant import Applicant
 from app.models.transactions.transaction import Transaction
 from app.repositories import attribution_repo
+from app.repositories import booking_statement_repo
 from app.repositories.applicants import applicant_repo
 from app.repositories.leases import signed_lease_repo
 from app.repositories.listings import listing_repo
 from app.repositories.properties import property_repo
 from app.repositories import transaction_repo as txn_repo
 from app.services.leases import receipt_service
+from app.services.transactions.airbnb_payout_matcher import (
+    decide_airbnb_attribution,
+    parse_res_code,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -222,10 +228,11 @@ async def _attribute_airbnb_payout(
     organization_id: uuid.UUID,
     user_id: uuid.UUID,
 ) -> None:
-    """Auto-attribute an Airbnb-labelled payout to the linked listing's property.
+    """Attribute an Airbnb payout to a property via the matcher cascade.
 
-    If the user has exactly one Airbnb listing, auto-attribute to it.
-    Otherwise, queue for review as "unmatched".
+    res_code→property and single-linked-listing auto-attribute; a listing
+    title found in the payout text is proposed for review; anything else is
+    queued unmatched. See ``airbnb_payout_matcher``.
     """
     airbnb_listings = await listing_repo.list_by_channel(
         db,
@@ -234,19 +241,50 @@ async def _attribute_airbnb_payout(
         channel="airbnb",
     )
 
-    if len(airbnb_listings) == 1:
-        listing = airbnb_listings[0]
-        if listing.property_id and txn.property_id is None:
-            txn.property_id = listing.property_id
+    res_code = parse_res_code(txn.description)
+    stmt = (
+        await booking_statement_repo.find_by_res_code(db, organization_id, res_code)
+        if res_code
+        else None
+    )
+    match = decide_airbnb_attribution(
+        res_code_property_id=stmt.property_id if stmt else None,
+        airbnb_listings=airbnb_listings,
+        txn_description=txn.description,
+        txn_address=txn.address,
+    )
+
+    if match.confidence == "auto":
+        # decide_airbnb_attribution only returns "auto" with a non-None
+        # property_id (both auto branches gate on `... is not None`).
+        # Preserve the idempotency guard — never overwrite a set property_id.
+        if txn.property_id is None:
+            txn.property_id = match.property_id
         txn.attribution_source = "auto_exact"
         txn.category = "rental_revenue"
         logger.info(
-            "Auto-attributed Airbnb payout %s to listing %s / property %s",
-            txn.id, listing.id, listing.property_id,
+            "Auto-attributed Airbnb payout %s to property %s (res_code=%s)",
+            txn.id, match.property_id, res_code,
         )
         return
 
-    # Multiple or zero listings — queue for review
+    if match.confidence == "propose":
+        await attribution_repo.create(
+            db,
+            user_id=user_id,
+            organization_id=organization_id,
+            transaction_id=txn.id,
+            proposed_applicant_id=None,
+            proposed_property_id=match.property_id,
+            confidence="fuzzy",
+        )
+        logger.info(
+            "Queued Airbnb payout %s for review with proposed property %s",
+            txn.id, match.property_id,
+        )
+        return
+
+    # Unmatched — queue for review with no proposal
     await attribution_repo.create(
         db,
         user_id=user_id,
@@ -256,7 +294,7 @@ async def _attribute_airbnb_payout(
         confidence="unmatched",
     )
     logger.info(
-        "Queued Airbnb payout %s for review (%d listings found)",
+        "Queued Airbnb payout %s for review (unmatched; %d airbnb listings)",
         txn.id, len(airbnb_listings),
     )
 

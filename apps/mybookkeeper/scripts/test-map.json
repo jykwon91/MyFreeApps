@@ -872,6 +872,7 @@
         "backend/app/models/transactions/rent_attribution_review_queue.py",
         "backend/app/repositories/transactions/attribution_repo.py",
         "backend/app/services/transactions/attribution_service.py",
+        "backend/app/services/transactions/airbnb_payout_matcher.py",
         "backend/app/services/transactions/property_pnl_service.py",
         "backend/app/schemas/transactions/attribution.py",
         "backend/app/api/attribution.py",
@@ -889,7 +890,9 @@
         "test_attribution_repo.py",
         "test_attribution_routes.py",
         "test_attribution_service_attribute_manually.py",
-        "test_attribution_service_confirm_property.py"
+        "test_attribution_service_confirm_property.py",
+        "test_airbnb_payout_matcher.py",
+        "test_attribution_service_airbnb_payout.py"
       ],
       "frontend_tests": [
         "AttributionReviewPanel.test.tsx",
