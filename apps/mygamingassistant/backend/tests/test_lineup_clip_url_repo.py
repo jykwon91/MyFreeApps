@@ -32,11 +32,17 @@ async def test_set_clip_url_commits(db: AsyncSession):
     )
     assert returned.clip_url == "pending/vidX/12-clip.mp4"
 
-    # Fresh query (expire_on_commit=False keeps the instance, so re-select to
-    # prove it's the committed DB state, not just the in-session attribute).
+    # Capture the PK *before* expire_all(): referencing an expired attribute
+    # (created.id) inside the query expression triggers a synchronous lazy
+    # reload — sync session.execute outside the async greenlet, i.e.
+    # MissingGreenlet. The PK as a plain local has no such hazard.
+    lineup_id = created.id
+
+    # Fresh query (expire_on_commit=False keeps the instance, so expire then
+    # re-select to prove it's the committed DB state, not the in-session attr).
     db.expire_all()
     refetched = (
-        await db.execute(select(Lineup).where(Lineup.id == created.id))
+        await db.execute(select(Lineup).where(Lineup.id == lineup_id))
     ).scalar_one()
     assert refetched.clip_url == "pending/vidX/12-clip.mp4"
 
@@ -50,9 +56,11 @@ async def test_set_clip_url_overwrite_is_idempotent(db: AsyncSession):
     await lineup_repo.set_clip_url(db, created, "pending/v/1-clip.mp4")
     await lineup_repo.set_clip_url(db, created, "pending/v/1-clip.mp4")
 
+    # PK captured before expire_all() — see test_set_clip_url_commits.
+    lineup_id = created.id
     db.expire_all()
     refetched = (
-        await db.execute(select(Lineup).where(Lineup.id == created.id))
+        await db.execute(select(Lineup).where(Lineup.id == lineup_id))
     ).scalar_one()
     assert refetched.clip_url == "pending/v/1-clip.mp4"
 
