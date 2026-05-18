@@ -18,6 +18,7 @@
  * The footer is a PR2 placeholder — structure reserved, content muted.
  * notes are NOT displayed inline; they live in a title= tooltip.
  */
+import { useEffect, useRef, useState } from "react";
 import { Clock } from "lucide-react";
 import type { Lineup } from "@/types/game";
 import { utilDisplay } from "@/constants/utilityDisplay";
@@ -105,6 +106,87 @@ function ScreenshotHalf({ url, alt, label, children }: ScreenshotHalfProps) {
 }
 
 // ---------------------------------------------------------------------------
+// Clip view (PR2) — gif-style looping throw clip, in-view autoplay
+//
+// A lineup is a *motion*; two stills structurally cannot show it. When a clip
+// exists it replaces the stand/aim split with a single muted looping video.
+// Only clips scrolled into view play (a glance board can hold dozens — letting
+// them all decode at once tanks the second-monitor frame rate). The src is
+// lazily attached on first view so off-screen clips never fetch.
+// ---------------------------------------------------------------------------
+interface ClipViewProps {
+  clipUrl: string;
+  posterUrl: string | null;
+  title: string;
+}
+
+function ClipView({ clipUrl, posterUrl, title }: ClipViewProps) {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  // Sticky: once the tile has been seen, keep the src attached (re-fetching
+  // on every scroll-by would be worse than keeping a paused decoded clip).
+  const [armed, setArmed] = useState(false);
+
+  useEffect(() => {
+    const el = videoRef.current;
+    if (!el) return;
+
+    // Degrade gracefully where IntersectionObserver is unavailable (old
+    // webviews / jsdom): arm immediately and let muted autoplay handle it.
+    if (typeof IntersectionObserver === "undefined") {
+      setArmed(true);
+      return;
+    }
+
+    const obs = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (!entry) return;
+        if (entry.isIntersecting) {
+          setArmed(true);
+          // play() can reject (autoplay policy / src not yet ready) — the
+          // muted+autoPlay attributes will start it once loaded, so the
+          // rejection is safe to swallow.
+          void el.play().catch(() => {});
+        } else {
+          el.pause();
+          // Reset so re-entering the viewport replays from the throw start
+          // (gif behaviour). Seeking before metadata loads throws — guard it.
+          try {
+            el.currentTime = 0;
+          } catch {
+            /* not seekable yet — fine, it'll start at 0 anyway */
+          }
+        }
+      },
+      { threshold: 0.25 },
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
+  return (
+    <div className="relative bg-muted/20 aspect-video overflow-hidden">
+      <video
+        ref={videoRef}
+        // Lazy: no src until the tile has been in view at least once.
+        src={armed ? clipUrl : undefined}
+        poster={posterUrl ?? undefined}
+        muted
+        loop
+        autoPlay
+        playsInline
+        preload="metadata"
+        aria-label={`${title} — looping throw clip (muted)`}
+        className="absolute inset-0 w-full h-full object-cover"
+      />
+      <span className="absolute top-1.5 left-2 text-[10px] font-semibold tracking-wider text-white/80 bg-black/40 px-1.5 py-0.5 rounded uppercase select-none pointer-events-none">
+        Clip
+      </span>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // GlanceBoardTile
 // ---------------------------------------------------------------------------
 export default function GlanceBoardTile({ lineup }: GlanceBoardTileProps) {
@@ -136,25 +218,33 @@ export default function GlanceBoardTile({ lineup }: GlanceBoardTileProps) {
         </div>
       </div>
 
-      {/* ── Images (side-by-side, 16:9 each) ──────────────────────────── */}
-      <div className="flex divide-x divide-border">
-        <ScreenshotHalf
-          url={lineup.stand_screenshot_url}
-          alt={`${lineup.title} — stand position`}
-          label="STAND"
+      {/* ── Clip (PR2) if localised, else the stand/aim stills ────────── */}
+      {lineup.clip_url ? (
+        <ClipView
+          clipUrl={lineup.clip_url}
+          posterUrl={lineup.stand_screenshot_url}
+          title={lineup.title}
         />
-        <ScreenshotHalf
-          url={lineup.aim_screenshot_url}
-          alt={`${lineup.title} — aim reference`}
-          label="AIM"
-        >
-          {lineup.aim_screenshot_url &&
-            lineup.aim_anchor_x != null &&
-            lineup.aim_anchor_y != null && (
-              <AimAnchorDot x={lineup.aim_anchor_x} y={lineup.aim_anchor_y} />
-            )}
-        </ScreenshotHalf>
-      </div>
+      ) : (
+        <div className="flex divide-x divide-border">
+          <ScreenshotHalf
+            url={lineup.stand_screenshot_url}
+            alt={`${lineup.title} — stand position`}
+            label="STAND"
+          />
+          <ScreenshotHalf
+            url={lineup.aim_screenshot_url}
+            alt={`${lineup.title} — aim reference`}
+            label="AIM"
+          >
+            {lineup.aim_screenshot_url &&
+              lineup.aim_anchor_x != null &&
+              lineup.aim_anchor_y != null && (
+                <AimAnchorDot x={lineup.aim_anchor_x} y={lineup.aim_anchor_y} />
+              )}
+          </ScreenshotHalf>
+        </div>
+      )}
 
       {/* ── Footer — PR2 throw-technique placeholder ───────────────────── */}
       {/* PR2: throw-technique fields (throw type / mouse button / movement) land here */}
