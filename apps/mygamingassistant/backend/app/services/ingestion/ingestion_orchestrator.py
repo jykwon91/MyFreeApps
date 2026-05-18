@@ -35,17 +35,20 @@ from io import BytesIO
 from pathlib import Path
 from typing import Optional
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.storage import get_storage
 from app.models.game.source import Source
+from app.models.game.utility_type import UtilityType
 from app.repositories.game import lineup_repo, source_repo
 from app.repositories.game.lineup_repo import write_classifier_suggestions
 from app.schemas.game.lineup_schemas import LineupIngestCreate
 from app.services.classification.classifier_service import (
     classify_frames_for_lineup_decision,
 )
+from app.services.ingestion.clip_generator import generate_clip_for_lineup
 from app.services.game import lineup_service
 from app.services.ingestion.chapter_parser import (
     Chapter,
@@ -143,6 +146,29 @@ def _classifier_suggestion_fields(result) -> dict:
         "classification_confidence": result.confidence,
         "classification_reasoning": result.reasoning,
     }
+
+
+async def _resolve_utility_hint(db: AsyncSession, result) -> Optional[str]:
+    """The grid-classified utility slug, only when the grid was confident.
+
+    The throw-timing prompt keys its RESULT cue on the utility (an expanding
+    smoke cloud and a molotov flame look nothing alike). Below the >0.6 gate
+    the grid wasn't sure of the utility, so a hint would mislead more than it
+    helps — pass none and let the throw-timing call judge unaided.
+    """
+    if (
+        result.suggested_utility_type_id is None
+        or result.confidence is None
+        or result.confidence <= 0.6
+    ):
+        return None
+    return (
+        await db.execute(
+            select(UtilityType.slug).where(
+                UtilityType.id == result.suggested_utility_type_id
+            )
+        )
+    ).scalar_one_or_none()
 
 
 async def _process_chapter(
@@ -328,6 +354,41 @@ async def _process_chapter(
             source.id, video_meta.video_id, start, lineup.id,
             stand_idx, aim_idx, result.confidence or 0.0,
         )
+
+        # PR2: best-effort throw clip. The source video is still on disk
+        # (_process_video deletes it once after ALL chapters), so reuse it —
+        # never re-download per chapter. This runs AFTER the row + classifier
+        # suggestions are committed: a clip failure must NOT roll back or fail
+        # the chapter — the lineup is fully usable from its two stills, and a
+        # clip is a best-effort enhancement only. generate_clip_for_lineup
+        # returns structured outcomes and doesn't raise for expected
+        # failures; the broad catch is purely defensive against an unexpected
+        # bug taking down ingestion.
+        try:
+            utility_hint = await _resolve_utility_hint(db, result)
+            clip_result = await generate_clip_for_lineup(
+                db,
+                lineup,
+                chapter_start=float(chapter.start_seconds),
+                chapter_end=float(chapter.end_seconds),
+                video_path=video_path,
+                utility_hint=utility_hint,
+            )
+            logger.info(
+                "Clip generation (ingest): source_id=%s video_id=%s "
+                "chapter_start=%d lineup_id=%s status=%s reason=%s",
+                source.id, video_meta.video_id, start, lineup.id,
+                clip_result.status,
+                clip_result.skip_reason
+                or (",".join(clip_result.error_codes) or "-"),
+            )
+        except Exception as exc:
+            logger.warning(
+                "Clip generation unexpected error (non-fatal): source_id=%s "
+                "video_id=%s chapter_start=%d lineup_id=%s error=%s",
+                source.id, video_meta.video_id, start, lineup.id, str(exc),
+                exc_info=True,
+            )
 
     return True
 

@@ -28,6 +28,7 @@ from app.models.game.utility_type import UtilityType
 from app.services.ingestion.chapter_parser import Chapter
 from app.services.ingestion.youtube_fetcher import VideoMeta
 from app.services.classification.classification_result import ClassificationResult
+from app.services.ingestion.clip_generator import ClipGenerationResult
 
 FAKE_VIDEO = VideoMeta(
     video_id="vid_cls_001",
@@ -94,16 +95,32 @@ async def _seed_classifier_targets(db: AsyncSession) -> None:
 
 
 @contextlib.contextmanager
-def _grid_env(tmp_path: Path, fake_video_path: Path, *, classify_mock):
+def _grid_env(tmp_path: Path, fake_video_path: Path, *, classify_mock, clip_mock=None):
     """Enter the common ingestion patches for a grid-classifier test.
 
     `classify_mock` is the mock to install for
     classify_frames_for_lineup_decision (an AsyncMock). Yields
     (mock_settings, mock_storage) for the test to configure further.
 
+    `clip_mock` (PR2) replaces generate_clip_for_lineup. It defaults to a
+    neutral AsyncMock returning a "skipped" result so clip generation is a
+    no-op for the existing classifier tests; clip-specific tests pass their
+    own to assert it was invoked with the reused on-disk video.
+
     A parenthesized `with (...)` cannot mix ``*tuple`` unpacking with ``as``
     bindings, so the shared patch set is entered via an ExitStack here.
     """
+    from unittest.mock import AsyncMock as _AsyncMock
+
+    from app.services.ingestion.clip_generator import ClipGenerationResult
+
+    if clip_mock is None:
+        clip_mock = _AsyncMock(
+            return_value=ClipGenerationResult(
+                status="skipped", skip_reason="test_default"
+            )
+        )
+
     with contextlib.ExitStack() as stack:
         stack.enter_context(patch("app.services.ingestion.ingestion_orchestrator.list_videos", new_callable=AsyncMock, return_value=[FAKE_VIDEO]))
         stack.enter_context(patch("app.services.ingestion.ingestion_orchestrator.fetch_video_detail", new_callable=AsyncMock, return_value=FAKE_VIDEO))
@@ -111,6 +128,7 @@ def _grid_env(tmp_path: Path, fake_video_path: Path, *, classify_mock):
         stack.enter_context(patch("app.services.ingestion.ingestion_orchestrator.extract_frames", new_callable=AsyncMock, return_value=[_FAKE_PNG] * 5))
         mock_storage_factory = stack.enter_context(patch("app.services.ingestion.ingestion_orchestrator.get_storage"))
         stack.enter_context(patch("app.services.ingestion.ingestion_orchestrator.classify_frames_for_lineup_decision", new=classify_mock))
+        stack.enter_context(patch("app.services.ingestion.ingestion_orchestrator.generate_clip_for_lineup", new=clip_mock))
         mock_settings = stack.enter_context(patch.object(ingestion_orchestrator_module(), "settings"))
 
         mock_settings.ingestion_download_dir = str(tmp_path)
@@ -293,3 +311,112 @@ class TestIngestionWithClassifier:
         lineups = result.scalars().all()
         assert len(lineups) == 1
         assert lineups[0].suggested_game_id is None
+
+
+class TestIngestClipWiring:
+    """PR2: clip generation is wired into the ingest path, best-effort."""
+
+    def _grid_result(self) -> ClassificationResult:
+        return ClassificationResult(
+            success=True,
+            is_lineup=True,
+            best_stand_index=2,
+            best_aim_index=4,
+            suggested_game_id=_FAKE_GAME_ID,
+            suggested_map_id=_FAKE_MAP_ID,
+            suggested_target_zone_id=_FAKE_ZONE_ID,
+            suggested_side="side_a",
+            suggested_utility_type_id=_FAKE_UT_ID,
+            confidence=0.85,
+            reasoning="Clear smoke throw",
+            error_codes=[],
+        )
+
+    @pytest.mark.asyncio
+    async def test_clip_gen_reuses_on_disk_video_and_gets_chapter_bounds(
+        self, db: AsyncSession, source: Source, tmp_path: Path
+    ):
+        """is_lineup → generate_clip_for_lineup invoked with the already-
+        downloaded video (no per-chapter re-download) + the chapter bounds +
+        the resolved utility hint (grid confidence 0.85 > 0.6)."""
+        ingestion_orchestrator = ingestion_orchestrator_module()
+        fake_video_path = tmp_path / "vid_cls_001.mp4"
+        fake_video_path.write_bytes(b"fake")
+
+        classify_mock = AsyncMock(return_value=self._grid_result())
+        clip_mock = AsyncMock(
+            return_value=ClipGenerationResult(
+                status="generated", clip_key="pending/vid_cls_001/0-clip.mp4"
+            )
+        )
+
+        with _grid_env(
+            tmp_path, fake_video_path,
+            classify_mock=classify_mock, clip_mock=clip_mock,
+        ) as (mock_settings, _):
+            mock_settings.enable_classifier = True
+            await ingestion_orchestrator.sync_source(source.id, db)
+
+        clip_mock.assert_awaited_once()
+        kwargs = clip_mock.call_args.kwargs
+        assert kwargs["video_path"] == fake_video_path
+        assert kwargs["chapter_start"] == 0.0
+        assert kwargs["chapter_end"] == 60.0
+        # _FAKE_UT_ID is seeded as slug "cls-smoke"; confidence 0.85 > 0.6.
+        assert kwargs["utility_hint"] == "cls-smoke"
+
+    @pytest.mark.asyncio
+    async def test_clip_gen_not_called_when_not_a_lineup(
+        self, db: AsyncSession, source: Source, tmp_path: Path
+    ):
+        ingestion_orchestrator = ingestion_orchestrator_module()
+        fake_video_path = tmp_path / "vid_cls_001.mp4"
+        fake_video_path.write_bytes(b"fake")
+
+        classify_mock = AsyncMock(
+            return_value=ClassificationResult(
+                success=True, is_lineup=False, confidence=0.02,
+                reasoning="not a lineup", error_codes=[],
+            )
+        )
+        clip_mock = AsyncMock()
+
+        with _grid_env(
+            tmp_path, fake_video_path,
+            classify_mock=classify_mock, clip_mock=clip_mock,
+        ) as (mock_settings, _):
+            mock_settings.enable_classifier = True
+            await ingestion_orchestrator.sync_source(source.id, db)
+
+        clip_mock.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_clip_failure_is_non_fatal_to_the_chapter(
+        self, db: AsyncSession, source: Source, tmp_path: Path
+    ):
+        """An unexpected clip-gen exception must NOT fail the chapter — the
+        lineup is fully usable from its stills and is already committed."""
+        ingestion_orchestrator = ingestion_orchestrator_module()
+        fake_video_path = tmp_path / "vid_cls_001.mp4"
+        fake_video_path.write_bytes(b"fake")
+
+        classify_mock = AsyncMock(return_value=self._grid_result())
+        clip_mock = AsyncMock(side_effect=RuntimeError("ffmpeg blew up"))
+
+        with _grid_env(
+            tmp_path, fake_video_path,
+            classify_mock=classify_mock, clip_mock=clip_mock,
+        ) as (mock_settings, _):
+            mock_settings.enable_classifier = True
+            stats = await ingestion_orchestrator.sync_source(source.id, db)
+
+        # Chapter still counted as handled, no error, row persisted.
+        assert stats.chapter_count == 1
+        assert stats.error_count == 0
+        rows = (
+            await db.execute(
+                select(Lineup).where(Lineup.youtube_video_id == "vid_cls_001")
+            )
+        ).scalars().all()
+        assert len(rows) == 1
+        assert rows[0].status == "pending_review"

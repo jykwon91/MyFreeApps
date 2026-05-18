@@ -103,6 +103,10 @@ export interface Lineup {
   notes: string | null;
   stand_screenshot_url: string | null;
   aim_screenshot_url: string | null;
+  // PR2: presigned URL of the short looping throw clip (gif-style). Null when
+  // the throw could not be localised or the lineup predates the clip
+  // pipeline — the tile then falls back to the stand/aim stills.
+  clip_url: string | null;
   aim_anchor_x: number | null;
   aim_anchor_y: number | null;
   // Explicit minimap coords; fall back to zone-polygon centroid via effective_*.

@@ -297,6 +297,60 @@ async def commit_classifier_run(db: AsyncSession) -> None:
         raise
 
 
+async def list_accepted_lineups_needing_clips(
+    db: AsyncSession,
+) -> list[Lineup]:
+    """Accepted, ingested lineups that don't have a clip yet.
+
+    The backfill set: ``status='accepted'`` AND a source video to re-fetch
+    (``youtube_video_id`` not null) AND no clip yet (``clip_url`` null).
+    Filtering on null ``clip_url`` is exactly what makes the backfill
+    idempotent — a generated clip drops out of this set, so re-running only
+    touches the remainder. Ordered oldest-first so a long backfill makes
+    visible monotonic progress.
+    """
+    stmt = (
+        select(Lineup)
+        .where(
+            Lineup.status == "accepted",
+            Lineup.youtube_video_id.is_not(None),
+            Lineup.clip_url.is_(None),
+        )
+        .order_by(Lineup.created_at.asc())
+    )
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
+
+
+async def set_clip_url(
+    db: AsyncSession,
+    lineup: Lineup,
+    clip_key: str,
+) -> Lineup:
+    """Persist the generated clip's bare MinIO key onto a lineup row.
+
+    Its own commit (not folded into the classifier writeback) on purpose:
+    clip generation is best-effort and orthogonal to the row's validity — a
+    lineup is fully usable from its two stills with no clip. A clip failure
+    must NEVER roll back the already-committed lineup + classifier
+    suggestions, and a successful clip must NOT wait on anything else. So the
+    clip pipeline commits exactly this one column on its own.
+
+    Transaction ownership lives here in the repo per PR #687/#695 — the
+    ingestion orchestrator and the backfill CLI never call db.commit().
+    ``clip_url`` stores a BARE object key (like stand/aim screenshot URLs);
+    presigning happens at read time in ``lineup_service._build_read``.
+    """
+    lineup.clip_url = clip_key
+    try:
+        await db.flush()
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
+    return lineup
+
+
 async def zone_density(
     db: AsyncSession,
     map_id: uuid.UUID,
