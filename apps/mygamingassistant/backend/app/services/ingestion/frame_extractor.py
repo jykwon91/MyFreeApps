@@ -265,7 +265,9 @@ async def extract_frames_downscaled(
     Same sequential thread-pool shape as :func:`extract_frames`. Raises
     :class:`FrameExtractionError` on any individual ffmpeg failure.
     """
-    loop = asyncio.get_event_loop()
+    # get_running_loop (not get_event_loop, which is deprecated in 3.10+ /
+    # raises in 3.12 when called from inside a coroutine — MGA is 3.12).
+    loop = asyncio.get_running_loop()
     results: list[bytes] = []
     for ts in timestamps:
         png_bytes = await loop.run_in_executor(
@@ -430,7 +432,7 @@ async def cut_clip(
     it doesn't block the event loop (same shape as :func:`extract_frames`).
     Raises :class:`ClipCutError` on any ffmpeg failure.
     """
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     return await loop.run_in_executor(
         None, _cut_clip_sync, video_path, start_seconds, duration_seconds
     )

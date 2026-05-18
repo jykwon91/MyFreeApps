@@ -220,6 +220,17 @@ class TestGenerateClipSkips:
         assert result.skip_reason == "no_release_frame"
 
     @pytest.mark.asyncio
+    async def test_low_conf_reported_before_missing_release(self, tmp_path: Path):
+        """Frozen-contract gate order: when BOTH confidence<0.55 and
+        release is absent, the (more actionable) low-confidence reason wins."""
+        v = tmp_path / "v.mp4"; v.write_bytes(b"x")
+        result, _, _ = await self._skip(
+            timing=_timing(release_index=None, confidence=0.4), video=v
+        )
+        assert result.status == "skipped"
+        assert result.skip_reason.startswith("low_confidence")
+
+    @pytest.mark.asyncio
     async def test_classifier_disabled_short_circuits(self):
         result, cut, _ = await self._skip(settings=_settings(enable=False))
         assert result.status == "skipped"

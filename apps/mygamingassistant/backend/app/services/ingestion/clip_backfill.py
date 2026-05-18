@@ -27,10 +27,12 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.models.game.lineup import Lineup
+from app.models.game.utility_type import UtilityType
 from app.repositories.game import lineup_repo
 from app.services.ingestion.chapter_parser import Chapter, parse_chapters
 from app.services.ingestion.clip_generator import generate_clip_for_lineup
@@ -60,6 +62,26 @@ class BackfillStats:
             f"{self.generated} generated, {self.skipped} skipped, "
             f"{self.failed} failed"
         )
+
+
+async def _utility_hint(db: AsyncSession, lineup: Lineup) -> str | None:
+    """The lineup's confirmed utility slug, for the throw-timing RESULT cue.
+
+    A backfilled lineup is ``accepted`` — the operator already confirmed
+    ``utility_type_id`` — so this hint is strictly stronger than the >0.6
+    grid suggestion the ingest path uses. The repo query doesn't eager-load
+    the relationship, so resolve the slug by id explicitly (a lazy attribute
+    access would raise under async SQLAlchemy).
+    """
+    if lineup.utility_type_id is None:
+        return None
+    return (
+        await db.execute(
+            select(UtilityType.slug).where(
+                UtilityType.id == lineup.utility_type_id
+            )
+        )
+    ).scalar_one_or_none()
 
 
 def _find_chapter(
@@ -169,6 +191,7 @@ async def backfill_clips(db: AsyncSession) -> BackfillStats:
                         # Reuse the once-downloaded file — do NOT let the
                         # generator re-download per lineup.
                         video_path=video_path,
+                        utility_hint=await _utility_hint(db, lineup),
                     )
                 except Exception as exc:  # defensive: never abort the batch
                     logger.warning(
@@ -177,7 +200,9 @@ async def backfill_clips(db: AsyncSession) -> BackfillStats:
                         lineup.id, video_id, str(exc), exc_info=True,
                     )
                     stats.failed += 1
-                    stats.errors.append(f"{lineup.id}: unexpected {exc}")
+                    stats.errors.append(
+                        f"{lineup.id}: unexpected:{type(exc).__name__} {exc}"
+                    )
                     continue
 
                 if result.status == "generated":

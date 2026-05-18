@@ -122,40 +122,42 @@ interface ClipViewProps {
 
 function ClipView({ clipUrl, posterUrl, title }: ClipViewProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  // Sticky: once the tile has been seen, keep the src attached (re-fetching
-  // on every scroll-by would be worse than keeping a paused decoded clip).
+  // Sticky once the tile has been seen: keep the src attached (re-fetching on
+  // every scroll-by is worse than keeping a paused decoded clip).
   const [armed, setArmed] = useState(false);
+  // True while the tile is on screen — drives play/pause in a separate effect
+  // so play() never runs before React has committed the src to the DOM.
+  const [inView, setInView] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
 
+  // A new clipUrl (re-processed clip / rotated presigned URL) is a different
+  // clip — restart the lazy-load + error cycle.
+  useEffect(() => {
+    setArmed(false);
+    setLoadFailed(false);
+  }, [clipUrl]);
+
+  // Observer lifecycle ONLY. disconnect() (not unobserve) is the correct
+  // teardown — it covers React Strict Mode's mount→unmount→remount.
   useEffect(() => {
     const el = videoRef.current;
     if (!el) return;
-
-    // Degrade gracefully where IntersectionObserver is unavailable (old
-    // webviews / jsdom): arm immediately and let muted autoplay handle it.
+    // Degrade where IntersectionObserver is absent (old webviews / jsdom):
+    // arm + treat as in view, let muted autoplay carry it.
     if (typeof IntersectionObserver === "undefined") {
       setArmed(true);
+      setInView(true);
       return;
     }
-
     const obs = new IntersectionObserver(
       (entries) => {
         const entry = entries[0];
         if (!entry) return;
         if (entry.isIntersecting) {
           setArmed(true);
-          // play() can reject (autoplay policy / src not yet ready) — the
-          // muted+autoPlay attributes will start it once loaded, so the
-          // rejection is safe to swallow.
-          void el.play().catch(() => {});
+          setInView(true);
         } else {
-          el.pause();
-          // Reset so re-entering the viewport replays from the throw start
-          // (gif behaviour). Seeking before metadata loads throws — guard it.
-          try {
-            el.currentTime = 0;
-          } catch {
-            /* not seekable yet — fine, it'll start at 0 anyway */
-          }
+          setInView(false);
         }
       },
       { threshold: 0.25 },
@@ -163,6 +165,27 @@ function ClipView({ clipUrl, posterUrl, title }: ClipViewProps) {
     obs.observe(el);
     return () => obs.disconnect();
   }, []);
+
+  // Play/pause AFTER src is committed (depends on armed+inView). autoPlay
+  // only fires on initial load, not on src reassignment, so re-entry needs
+  // an explicit play().
+  useEffect(() => {
+    const el = videoRef.current;
+    if (!el || !armed) return;
+    if (inView) {
+      // Rejects under autoplay policy / before the src is ready — muted
+      // autoplay will start it once loaded, so swallow the rejection.
+      void el.play().catch(() => {});
+    } else {
+      el.pause();
+      // Rewind so re-entry replays from the throw start (gif behaviour).
+      // seekable is empty for not-yet-loaded / non-seekable streams — an
+      // explicit check, not a silent try/catch (rules/no-bandaid).
+      if (el.seekable.length > 0) {
+        el.currentTime = 0;
+      }
+    }
+  }, [armed, inView]);
 
   return (
     <div className="relative bg-muted/20 aspect-video overflow-hidden">
@@ -175,13 +198,21 @@ function ClipView({ clipUrl, posterUrl, title }: ClipViewProps) {
         loop
         autoPlay
         playsInline
-        preload="metadata"
+        // Pre-view: metadata only. In view: allow buffering so the loop
+        // doesn't stall on first frame.
+        preload={armed ? "auto" : "metadata"}
         aria-label={`${title} — looping throw clip (muted)`}
+        onError={() => setLoadFailed(true)}
         className="absolute inset-0 w-full h-full object-cover"
       />
-      <span className="absolute top-1.5 left-2 text-[10px] font-semibold tracking-wider text-white/80 bg-black/40 px-1.5 py-0.5 rounded uppercase select-none pointer-events-none">
-        Clip
-      </span>
+      {/* Hide the "Clip" affordance when the clip fails to load (e.g. an
+          expired presigned URL mid-session) — the poster (stand still)
+          stays as the graceful fallback rather than a misleading badge. */}
+      {!loadFailed && (
+        <span className="absolute top-1.5 left-2 text-[10px] font-semibold tracking-wider text-white/80 bg-black/40 px-1.5 py-0.5 rounded uppercase select-none pointer-events-none">
+          Clip
+        </span>
+      )}
     </div>
   );
 }

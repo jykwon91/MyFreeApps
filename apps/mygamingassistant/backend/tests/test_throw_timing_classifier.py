@@ -181,6 +181,8 @@ class TestThrowTimingVerdictAndParser:
         )
         assert result.success is True
         assert result.confidence is None
+        # Surfaced as a structured code, not silently dropped.
+        assert "invalid_confidence:high" in result.error_codes
 
 
 class TestThrowTimingErrorHandling:

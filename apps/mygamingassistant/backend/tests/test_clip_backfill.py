@@ -30,6 +30,9 @@ def _lineup(video_id: str, chapter_start: int):
         id=uuid.uuid4(),
         youtube_video_id=video_id,
         chapter_start_seconds=chapter_start,
+        # None → _utility_hint short-circuits before any DB call (these are
+        # no-DB unit tests; hint resolution is exercised elsewhere).
+        utility_type_id=None,
         clip_url=None,
     )
 

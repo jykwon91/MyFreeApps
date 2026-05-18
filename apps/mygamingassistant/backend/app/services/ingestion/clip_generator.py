@@ -32,6 +32,7 @@ NULL and the lineup stays fully usable from its stills. Nothing silent-fails.
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -285,6 +286,10 @@ async def generate_clip_for_lineup(
             )
 
         # ---- Gate (frozen contract) ------------------------------------
+        # Gate order mirrors the frozen contract: not-a-throw → low
+        # confidence → no release frame. Low confidence is the more common
+        # (and more actionable) root cause, so it is reported ahead of a
+        # literally-absent release index.
         if not timing.is_lineup_throw:
             return ClipGenerationResult(
                 status="skipped",
@@ -293,18 +298,18 @@ async def generate_clip_for_lineup(
                 confidence=timing.confidence,
                 reasoning=timing.reasoning,
             )
-        if timing.release_index is None:
-            return ClipGenerationResult(
-                status="skipped",
-                skip_reason="no_release_frame",
-                is_lineup_throw=True,
-                confidence=timing.confidence,
-                reasoning=timing.reasoning,
-            )
         if timing.confidence is None or timing.confidence < _CLIP_CONFIDENCE_GATE:
             return ClipGenerationResult(
                 status="skipped",
                 skip_reason=f"low_confidence:{timing.confidence}",
+                is_lineup_throw=True,
+                confidence=timing.confidence,
+                reasoning=timing.reasoning,
+            )
+        if timing.release_index is None:
+            return ClipGenerationResult(
+                status="skipped",
+                skip_reason="no_release_frame",
                 is_lineup_throw=True,
                 confidence=timing.confidence,
                 reasoning=timing.reasoning,
@@ -359,7 +364,12 @@ async def generate_clip_for_lineup(
         clip_key = pending_clip_key(video_id, chapter_start)
         try:
             storage = get_storage()
-            storage.upload_file(clip_key, clip_bytes, "video/mp4")
+            # upload_file is a blocking minio put_object — a clip MP4 is far
+            # larger than a PNG screenshot, so run it off the event loop.
+            loop = asyncio.get_running_loop()
+            await loop.run_in_executor(
+                None, storage.upload_file, clip_key, clip_bytes, "video/mp4"
+            )
         except Exception as exc:
             logger.warning(
                 "clip_generator: clip upload failed: lineup=%s key=%s "

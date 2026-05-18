@@ -1517,6 +1517,7 @@ async def classify_throw_timing_from_frames(
         )
 
     failures: list[str] = []
+    structured_codes: list[str] = []
 
     confidence: Optional[float] = None
     raw_conf = parsed.get("confidence")
@@ -1524,11 +1525,20 @@ async def classify_throw_timing_from_frames(
         try:
             confidence = max(0.0, min(1.0, float(raw_conf)))
         except (TypeError, ValueError):
+            # A malformed score is a diagnosable signal — structured log +
+            # structured code (mirrors classify_lineup /
+            # classify_frames_for_lineup_decision), never a silent drop
+            # (rules/check-third-party-error-codes.md).
             logger.warning(
                 "throw_timing: invalid confidence value dropped: "
                 "chapter=%r raw_confidence=%r",
                 chapter_title, raw_conf,
             )
+            failures.append(
+                f"invalid confidence value '{raw_conf}' — not a number; "
+                f"treated as null"
+            )
+            structured_codes.append(f"invalid_confidence:{raw_conf}")
 
     model_reasoning = str(parsed.get("reasoning") or "")
     is_lineup_throw = bool(parsed.get("is_lineup_throw"))
@@ -1548,6 +1558,7 @@ async def classify_throw_timing_from_frames(
             confidence=confidence,
             reasoning=model_reasoning
             or "Classifier judged these frames are not a utility throw.",
+            error_codes=list(structured_codes),
         )
 
     release_index = _validate_grid_index(
@@ -1566,7 +1577,10 @@ async def classify_throw_timing_from_frames(
         and result_index is not None
         and result_index < release_index
     ):
-        logger.info(
+        # A result cannot precede its own release — a real model-quality
+        # signal. WARNING (not INFO) so it survives production log levels and
+        # the operator can track how often the model inverts the throw.
+        logger.warning(
             "throw_timing: result_index (%d) < release_index (%d) — forcing "
             "result_index = release_index: chapter=%r",
             result_index, release_index, chapter_title,
@@ -1591,4 +1605,5 @@ async def classify_throw_timing_from_frames(
         result_index=result_index,
         confidence=confidence,
         reasoning=reasoning,
+        error_codes=list(structured_codes),
     )

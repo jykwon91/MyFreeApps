@@ -134,12 +134,15 @@ describe("GlanceBoardTile clip view", () => {
       />,
     );
     const video = document.querySelector("video") as HTMLVideoElement;
-    // Before any intersection: no src fetched.
-    expect(video.getAttribute("src")).toBeNull();
+    // Before any intersection: the attribute is absent (not src="").
+    expect(video.hasAttribute("src")).toBe(false);
+    expect(video.getAttribute("preload")).toBe("metadata");
 
+    expect(lastIO).not.toBeNull();
     act(() => lastIO!.cb([{ isIntersecting: true }]));
 
     expect(video.getAttribute("src")).toBe("https://ex.com/clip.mp4");
+    expect(video.getAttribute("preload")).toBe("auto");
     expect(playSpy).toHaveBeenCalled();
   });
 
@@ -149,9 +152,22 @@ describe("GlanceBoardTile clip view", () => {
         lineup={makeLineup({ clip_url: "https://ex.com/clip.mp4" })}
       />,
     );
+    expect(lastIO).not.toBeNull();
     act(() => lastIO!.cb([{ isIntersecting: true }]));
     act(() => lastIO!.cb([{ isIntersecting: false }]));
     expect(pauseSpy).toHaveBeenCalled();
+  });
+
+  it("hides the Clip badge when the clip fails to load", () => {
+    render(
+      <GlanceBoardTile
+        lineup={makeLineup({ clip_url: "https://ex.com/gone.mp4" })}
+      />,
+    );
+    expect(screen.getByText("Clip")).toBeInTheDocument();
+    const video = document.querySelector("video") as HTMLVideoElement;
+    act(() => video.dispatchEvent(new Event("error")));
+    expect(screen.queryByText("Clip")).not.toBeInTheDocument();
   });
 
   it("arms immediately when IntersectionObserver is unavailable", () => {

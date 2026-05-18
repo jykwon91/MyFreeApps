@@ -231,6 +231,15 @@ class TestClipWindowTimestamps:
         # Every sample is inside [280, 400] (the last 120s), never the lead-in.
         assert all(280.0 <= t <= 400.0 for t in ts)
 
+    def test_200s_boundary_max_guard(self):
+        # duration 200 > 180. skip 30% → window_start 60, but the 120s cap
+        # (end-120 = 80) is later, so max() pulls window_start to 80, NOT 60.
+        # Pins the exact >180 boundary the cap's max() guard handles.
+        ts = clip_window_timestamps(0.0, 200.0)
+        assert len(ts) == 12
+        assert all(80.0 <= t <= 200.0 for t in ts)
+        assert min(ts) >= 80.0  # the 60-80s lead-in is excluded by the cap
+
     def test_very_short_chapter_degrades_safely(self):
         # 5s chapter: skip 15% → window [0.75, 5]; <12 → N=8; grid_timestamps
         # keeps every sample strictly inside the chapter.
