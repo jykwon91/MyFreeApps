@@ -50,6 +50,15 @@ def _applicant(user: User, org: Organization, legal_name: str) -> Applicant:
     )
 
 
+def _property(user: User, org: Organization, name: str = "Beach House") -> Property:
+    return Property(
+        id=uuid.uuid4(),
+        user_id=user.id,
+        organization_id=org.id,
+        name=name,
+    )
+
+
 def _txn(user: User, org: Organization) -> Transaction:
     return Transaction(
         id=uuid.uuid4(),
@@ -113,6 +122,37 @@ async def test_create_and_get_pending(db: AsyncSession, seed):
     assert fetched.confidence == "fuzzy"
     assert fetched.status == "pending"
     assert fetched.proposed_applicant_id == applicant.id
+
+
+@pytest.mark.asyncio
+async def test_create_with_proposed_property(db: AsyncSession, seed):
+    """Airbnb-payout review row carries a proposed property; it round-trips
+    and the proposed_property relationship is eagerly loaded by get_by_id."""
+    user = seed["user"]
+    org = seed["org"]
+    txn = seed["txn"]
+
+    prop = _property(user, org, "Lakeside Cabin")
+    db.add(prop)
+    await db.flush()
+
+    row = await attribution_repo.create(
+        db,
+        user_id=user.id,
+        organization_id=org.id,
+        transaction_id=txn.id,
+        proposed_applicant_id=None,
+        confidence="unmatched",
+        proposed_property_id=prop.id,
+    )
+    await db.commit()
+
+    fetched = await attribution_repo.get_by_id(db, row.id, org.id)
+    assert fetched is not None
+    assert fetched.proposed_applicant_id is None
+    assert fetched.proposed_property_id == prop.id
+    assert fetched.proposed_property is not None
+    assert fetched.proposed_property.name == "Lakeside Cabin"
 
 
 @pytest.mark.asyncio

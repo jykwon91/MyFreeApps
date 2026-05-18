@@ -33,6 +33,10 @@ class RentAttributionReviewQueue(Base):
     organization_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False)
     transaction_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("transactions.id", ondelete="CASCADE"), nullable=False)
     proposed_applicant_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("applicants.id", ondelete="SET NULL"), nullable=True)
+    # Airbnb payouts have no tenant/applicant — they attribute to a property.
+    # Mutually exclusive with proposed_applicant_id in practice (not constrained;
+    # precedence is resolved in attribution_service.confirm_review).
+    proposed_property_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("properties.id", ondelete="SET NULL"), nullable=True)
 
     # "fuzzy" = Levenshtein ≤ 2 candidate found; "unmatched" = no candidate
     confidence: Mapped[str] = mapped_column(String(10), nullable=False)
@@ -64,3 +68,4 @@ class RentAttributionReviewQueue(Base):
 
     transaction = relationship("Transaction", lazy="noload")
     proposed_applicant = relationship("Applicant", lazy="noload")
+    proposed_property = relationship("Property", lazy="noload")

@@ -31,16 +31,26 @@ class AttributionApplicantSummary(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class AttributionPropertySummary(BaseModel):
+    """Slim property view for the review queue (Airbnb-payout proposals)."""
+    id: uuid.UUID
+    name: str
+
+    model_config = {"from_attributes": True}
+
+
 class AttributionReviewItemRead(BaseModel):
     id: uuid.UUID
     transaction_id: uuid.UUID
     proposed_applicant_id: uuid.UUID | None = None
+    proposed_property_id: uuid.UUID | None = None
     confidence: str
     status: str
     created_at: datetime
     resolved_at: datetime | None = None
     transaction: AttributionTransactionSummary | None = None
     proposed_applicant: AttributionApplicantSummary | None = None
+    proposed_property: AttributionPropertySummary | None = None
 
     model_config = {"from_attributes": True}
 
@@ -55,6 +65,9 @@ class ConfirmReviewRequest(BaseModel):
     model_config = {"extra": "forbid"}
     # Optionally override the suggested applicant (for "pick a different tenant")
     applicant_id: uuid.UUID | None = None
+    # Optionally override the suggested property (for "pick a different room"
+    # on an Airbnb-payout review item)
+    property_id: uuid.UUID | None = None
 
 
 class AttributeManuallyRequest(BaseModel):
