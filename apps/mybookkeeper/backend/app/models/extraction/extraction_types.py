@@ -14,6 +14,12 @@ class ExtractionData(TypedDict, total=False):
     channel: str
     address: str
     line_items: list[dict[str, str]]
+    document_type: str
+    category: str
+    payment_method: str
+    payer_name: str
+    sender: str
+    file_name: str
 
 
 class ExtractionResult(TypedDict):
