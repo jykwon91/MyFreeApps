@@ -297,6 +297,35 @@ async def commit_classifier_run(db: AsyncSession) -> None:
         raise
 
 
+async def set_clip_url(
+    db: AsyncSession,
+    lineup: Lineup,
+    clip_key: str,
+) -> Lineup:
+    """Persist the generated clip's bare MinIO key onto a lineup row.
+
+    Its own commit (not folded into the classifier writeback) on purpose:
+    clip generation is best-effort and orthogonal to the row's validity — a
+    lineup is fully usable from its two stills with no clip. A clip failure
+    must NEVER roll back the already-committed lineup + classifier
+    suggestions, and a successful clip must NOT wait on anything else. So the
+    clip pipeline commits exactly this one column on its own.
+
+    Transaction ownership lives here in the repo per PR #687/#695 — the
+    ingestion orchestrator and the backfill CLI never call db.commit().
+    ``clip_url`` stores a BARE object key (like stand/aim screenshot URLs);
+    presigning happens at read time in ``lineup_service._build_read``.
+    """
+    lineup.clip_url = clip_key
+    try:
+        await db.flush()
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
+    return lineup
+
+
 async def zone_density(
     db: AsyncSession,
     map_id: uuid.UUID,

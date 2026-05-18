@@ -70,3 +70,33 @@ class ClassificationResult:
     # ClassifyResponse.error_codes path surfaces them to the operator/UI
     # without a schema change. reasoning still carries the human prose.
     classification_failures: list[str] = field(default_factory=list)
+
+
+@dataclass
+class ThrowTimingResult:
+    """Result of the PR2 throw-localization Claude call.
+
+    Deliberately a SEPARATE type from :class:`ClassificationResult` — the
+    throw-timing pass is its own code path (own prompt, own schema, no slug
+    resolution, no DB) per the frozen design contract. Conflating them would
+    couple two prompts that evolve independently.
+
+    On a successful API call ``success=True`` and ``is_lineup_throw`` reflects
+    Claude's judgement (it may be ``False`` — a real "this chapter isn't a
+    throw demo" answer, NOT an error). ``error_codes`` is populated only on an
+    API/parse failure (per rules/check-third-party-error-codes.md — never a
+    bare bool/None).
+
+    ``release_index`` / ``result_index`` are 1-based into the dense frame
+    window the call was shown. The parser guarantees
+    ``result_index >= release_index`` when both are set (a result cannot
+    precede its own release).
+    """
+
+    success: bool
+    is_lineup_throw: Optional[bool] = None
+    release_index: Optional[int] = None
+    result_index: Optional[int] = None
+    confidence: Optional[float] = None
+    reasoning: str = ""
+    error_codes: list[str] = field(default_factory=list)

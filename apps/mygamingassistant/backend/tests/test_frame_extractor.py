@@ -13,12 +13,17 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from app.services.ingestion.frame_extractor import (
+    ClipCutError,
     FrameExtractionError,
+    clip_window_timestamps,
+    cut_clip,
     extract_frames,
+    extract_frames_downscaled,
     grid_timestamps,
 )
 
 _FAKE_PNG = b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00"  # PNG magic bytes header
+_FAKE_MP4 = b"\x00\x00\x00\x18ftypmp42" + b"\x00" * 64  # MP4 ftyp box header
 
 
 class TestExtractFrames:
@@ -145,3 +150,173 @@ class TestGridTimestamps:
         ts = grid_timestamps(0.0, 100.0, 0)
         assert len(ts) == 1
         assert 0.0 < ts[0] < 100.0
+
+
+class TestExtractFramesDownscaled:
+    @pytest.mark.asyncio
+    async def test_returns_bytes_and_adds_scale_filter(self, tmp_path: Path):
+        video = tmp_path / "test.mp4"
+        video.write_bytes(b"fake")
+
+        mock_result = MagicMock()
+        mock_result.returncode = 0
+        mock_result.stdout = _FAKE_PNG
+
+        with patch("subprocess.run", return_value=mock_result) as mock_run:
+            frames = await extract_frames_downscaled(video, [3.0, 7.0])
+
+        assert frames == [_FAKE_PNG, _FAKE_PNG]
+        # Every call must carry the 640x360 scale filter — that downscale is
+        # the whole point (token cost), regressing it silently inflates spend.
+        for call in mock_run.call_args_list:
+            cmd = call[0][0]
+            assert "-vf" in cmd
+            assert cmd[cmd.index("-vf") + 1] == "scale=640:360"
+
+    @pytest.mark.asyncio
+    async def test_raises_frame_extraction_error_on_failure(self, tmp_path: Path):
+        video = tmp_path / "test.mp4"
+        video.write_bytes(b"fake")
+
+        mock_result = MagicMock()
+        mock_result.returncode = 1
+        mock_result.stdout = b""
+        mock_result.stderr = b"ffmpeg: scale failed"
+
+        with patch("subprocess.run", return_value=mock_result):
+            with pytest.raises(FrameExtractionError) as exc_info:
+                await extract_frames_downscaled(video, [4.0])
+
+        assert exc_info.value.returncode == 1
+        assert exc_info.value.timestamp == 4.0
+
+    @pytest.mark.asyncio
+    async def test_does_not_change_full_res_extract_frames(self, tmp_path: Path):
+        """The full-res path must NOT gain a scale filter (aim-anchor needs px)."""
+        video = tmp_path / "test.mp4"
+        video.write_bytes(b"fake")
+        mock_result = MagicMock()
+        mock_result.returncode = 0
+        mock_result.stdout = _FAKE_PNG
+        with patch("subprocess.run", return_value=mock_result) as mock_run:
+            await extract_frames(video, [1.0])
+        assert "-vf" not in mock_run.call_args[0][0]
+
+
+class TestClipWindowTimestamps:
+    def test_skip_fraction_30pct_for_long_chapter(self):
+        # duration 100s >= 20 → skip 30% → window [30, 100], N=12.
+        ts = clip_window_timestamps(0.0, 100.0)
+        assert len(ts) == 12
+        assert all(30.0 <= t <= 100.0 for t in ts)
+        assert ts == sorted(ts)
+
+    def test_skip_fraction_15pct_for_short_chapter(self):
+        # duration 16s < 20 → skip 15% → window [2.4, 16]; remaining 13.6 >= 12
+        # so N stays 12.
+        ts = clip_window_timestamps(0.0, 16.0)
+        assert len(ts) == 12
+        assert all(2.4 <= t <= 16.0 for t in ts)
+
+    def test_short_remaining_window_uses_8_frames(self):
+        # duration 14s < 20 → skip 15% → window_start 2.1, remaining 11.9 < 12
+        # → N = 8.
+        ts = clip_window_timestamps(0.0, 14.0)
+        assert len(ts) == 8
+
+    def test_long_chapter_caps_to_final_120s(self):
+        # duration 400s > 180 → window capped to the final 120s, N=12.
+        ts = clip_window_timestamps(0.0, 400.0)
+        assert len(ts) == 12
+        # Every sample is inside [280, 400] (the last 120s), never the lead-in.
+        assert all(280.0 <= t <= 400.0 for t in ts)
+
+    def test_very_short_chapter_degrades_safely(self):
+        # 5s chapter: skip 15% → window [0.75, 5]; <12 → N=8; grid_timestamps
+        # keeps every sample strictly inside the chapter.
+        ts = clip_window_timestamps(10.0, 15.0)
+        assert len(ts) == 8
+        assert all(10.0 < t < 15.0 for t in ts)
+
+
+class TestCutClip:
+    def _run_writes_output(self, payload: bytes = _FAKE_MP4):
+        """subprocess.run side effect: write the ffmpeg output file + succeed.
+
+        The real cut_clip reads the temp file back, so the mock must actually
+        produce it (last cmd arg is the output path).
+        """
+        def _side_effect(cmd, **kwargs):
+            Path(cmd[-1]).write_bytes(payload)
+            r = MagicMock()
+            r.returncode = 0
+            r.stderr = b""
+            return r
+        return _side_effect
+
+    @pytest.mark.asyncio
+    async def test_returns_clip_bytes_with_web_safe_encode(self, tmp_path: Path):
+        video = tmp_path / "src.mp4"
+        video.write_bytes(b"fake")
+
+        with patch("subprocess.run", side_effect=self._run_writes_output()) as mr:
+            data = await cut_clip(video, 12.0, 6.0)
+
+        assert data == _FAKE_MP4
+        cmd = mr.call_args[0][0]
+        # Muted + browser-playable + faststart are load-bearing for the
+        # autoplay <video> tile; assert they survive refactors.
+        assert "-an" in cmd
+        assert "yuv420p" in cmd
+        assert "+faststart" in cmd
+        # Input seek before -i (fast, keyframe-accurate — correct for a clip).
+        assert cmd.index("-ss") < cmd.index("-i")
+        assert cmd[cmd.index("-t") + 1] == "6.000"
+
+    @pytest.mark.asyncio
+    async def test_raises_clip_cut_error_on_nonzero_exit(self, tmp_path: Path):
+        video = tmp_path / "src.mp4"
+        video.write_bytes(b"fake")
+
+        bad = MagicMock()
+        bad.returncode = 1
+        bad.stderr = b"x264 not found"
+
+        with patch("subprocess.run", return_value=bad):
+            with pytest.raises(ClipCutError) as exc_info:
+                await cut_clip(video, 5.0, 6.0)
+
+        err = exc_info.value
+        assert err.returncode == 1
+        assert "x264 not found" in err.stderr
+        assert err.start == 5.0
+        assert err.duration == 6.0
+
+    @pytest.mark.asyncio
+    async def test_raises_clip_cut_error_on_empty_output(self, tmp_path: Path):
+        video = tmp_path / "src.mp4"
+        video.write_bytes(b"fake")
+
+        with patch(
+            "subprocess.run", side_effect=self._run_writes_output(payload=b"")
+        ):
+            with pytest.raises(ClipCutError) as exc_info:
+                await cut_clip(video, 1.0, 6.0)
+
+        assert exc_info.value.returncode == -1
+
+    @pytest.mark.asyncio
+    async def test_temp_file_cleaned_up(self, tmp_path: Path):
+        """No stray .mp4 temp files leak after a successful cut."""
+        import glob
+        import tempfile
+
+        video = tmp_path / "src.mp4"
+        video.write_bytes(b"fake")
+        before = set(glob.glob(str(Path(tempfile.gettempdir()) / "*.mp4")))
+
+        with patch("subprocess.run", side_effect=self._run_writes_output()):
+            await cut_clip(video, 2.0, 6.0)
+
+        after = set(glob.glob(str(Path(tempfile.gettempdir()) / "*.mp4")))
+        assert after == before
