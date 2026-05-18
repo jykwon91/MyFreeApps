@@ -214,15 +214,15 @@ async def save_email_extraction(
             if surviving:
                 # Attribution — attempt to link this payment to a tenant
                 payer_name = data.get("payer_name")
-                is_airbnb_label = _has_airbnb_label(data)
-                if payer_name or is_airbnb_label:
+                is_airbnb_payout = _is_airbnb_payout(data)
+                if payer_name or is_airbnb_payout:
                     await maybe_attribute_payment(
                         db,
                         txn=surviving,
                         payer_name=payer_name if isinstance(payer_name, str) else None,
                         organization_id=organization_id,
                         user_id=user_id,
-                        is_airbnb_label=is_airbnb_label,
+                        is_airbnb_payout=is_airbnb_payout,
                     )
 
                 for li in (data.get("line_items") or []):
@@ -317,18 +317,25 @@ def _resolve_attachment_content(
     return att["data"], att.get("filename"), att.get("content_type")
 
 
-def _has_airbnb_label(data: ExtractionData) -> bool:
-    """Return True if the extraction data signals an Airbnb payout label.
+def _is_airbnb_payout(data: ExtractionData) -> bool:
+    """Return True if the extraction is an Airbnb booking payout.
 
-    The email worker attaches Gmail label names to extraction data under
-    ``gmail_labels``. If 'Properties/airbnb reservation' is present and
-    the channel is 'airbnb', treat this as an Airbnb payout.
+    Airbnb payout emails have the platform itself as the sender, so the
+    extraction prompt deliberately leaves ``payer_name`` null (see
+    ``prompts/base_prompt.py``). The original design keyed off a
+    ``gmail_labels`` signal, but the email worker never attached labels to the
+    extraction data — so this path was dead and Airbnb payouts were never
+    attributed. Detect from the structured extraction itself instead of the
+    user's Gmail label hygiene: the booking channel is Airbnb and the row is
+    platform-payout / rental-revenue shaped (which excludes P2P transfers like
+    Cash App / Venmo, whose ``channel`` is null).
     """
-    labels = data.get("gmail_labels") or []
-    if not isinstance(labels, list):
+    def _norm(key: str) -> str:
+        # Claude output is untrusted — a non-string here must degrade to
+        # "not an Airbnb payout", never crash the email's persistence.
+        value = data.get(key)
+        return value.strip().lower() if isinstance(value, str) else ""
+
+    if _norm("channel") != "airbnb":
         return False
-    has_label = any(
-        isinstance(label, str) and "airbnb" in label.lower()
-        for label in labels
-    )
-    return has_label and data.get("channel") == "airbnb"
+    return _norm("category") == "rental_revenue" or _norm("payment_method") == "platform_payout"

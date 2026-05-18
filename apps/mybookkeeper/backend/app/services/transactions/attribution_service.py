@@ -149,7 +149,7 @@ async def maybe_attribute_payment(
     payer_name: str | None,
     organization_id: uuid.UUID,
     user_id: uuid.UUID,
-    is_airbnb_label: bool = False,
+    is_airbnb_payout: bool = False,
 ) -> None:
     """Attempt to attribute a newly-created transaction to a tenant.
 
@@ -164,7 +164,7 @@ async def maybe_attribute_payment(
         return  # already attributed
 
     # --- Airbnb payout path ---------------------------------------------------
-    if is_airbnb_label:
+    if is_airbnb_payout:
         await _attribute_airbnb_payout(db, txn=txn, organization_id=organization_id, user_id=user_id)
         return
 

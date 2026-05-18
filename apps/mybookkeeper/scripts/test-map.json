@@ -204,6 +204,7 @@
         "test_extraction_mapper.py",
         "test_extraction_repo.py",
         "test_extraction_to_transactions.py",
+        "test_airbnb_payout_detection.py",
         "test_prompt_service.py",
         "test_property_matcher.py",
         "test_self_healing.py",
