@@ -297,6 +297,31 @@ async def commit_classifier_run(db: AsyncSession) -> None:
         raise
 
 
+async def list_accepted_lineups_needing_clips(
+    db: AsyncSession,
+) -> list[Lineup]:
+    """Accepted, ingested lineups that don't have a clip yet.
+
+    The backfill set: ``status='accepted'`` AND a source video to re-fetch
+    (``youtube_video_id`` not null) AND no clip yet (``clip_url`` null).
+    Filtering on null ``clip_url`` is exactly what makes the backfill
+    idempotent — a generated clip drops out of this set, so re-running only
+    touches the remainder. Ordered oldest-first so a long backfill makes
+    visible monotonic progress.
+    """
+    stmt = (
+        select(Lineup)
+        .where(
+            Lineup.status == "accepted",
+            Lineup.youtube_video_id.is_not(None),
+            Lineup.clip_url.is_(None),
+        )
+        .order_by(Lineup.created_at.asc())
+    )
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
+
+
 async def set_clip_url(
     db: AsyncSession,
     lineup: Lineup,
