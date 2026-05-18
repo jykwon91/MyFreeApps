@@ -896,6 +896,7 @@
       ],
       "frontend_tests": [
         "AttributionReviewPanel.test.tsx",
+        "AttributionReviewItem.test.tsx",
         "PropertyPnLGrid.test.tsx",
         "Dashboard.test.tsx"
       ],

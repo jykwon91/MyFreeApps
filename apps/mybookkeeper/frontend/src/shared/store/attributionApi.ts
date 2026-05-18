@@ -17,12 +17,15 @@ const attributionApi = baseApi.injectEndpoints({
 
     confirmAttributionReview: builder.mutation<
       { ok: boolean; transaction_id: string },
-      { review_id: string; applicant_id?: string }
+      { review_id: string; applicant_id?: string; property_id?: string }
     >({
-      query: ({ review_id, applicant_id }) => ({
+      query: ({ review_id, applicant_id, property_id }) => ({
         url: `/transactions/attribution-review-queue/${review_id}/confirm`,
         method: "POST",
-        data: { applicant_id: applicant_id ?? null },
+        data: {
+          applicant_id: applicant_id ?? null,
+          property_id: property_id ?? null,
+        },
       }),
       invalidatesTags: [
         { type: "Transaction", id: "ATTRIBUTION_QUEUE" },
