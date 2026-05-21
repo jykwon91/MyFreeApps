@@ -25,7 +25,7 @@
  * idle (each in a different corner) — that's intentional so the operator
  * sees both options on hover.
  */
-import { useEffect, useId } from "react";
+import { useEffect, useId, useState } from "react";
 import { RotateCcw, Scissors, X } from "lucide-react";
 
 import { useClipDuration } from "@/hooks/useClipDuration";
@@ -34,6 +34,10 @@ import {
   usePaneTrim,
   type TrimmablePane,
 } from "@/hooks/usePaneTrim";
+import {
+  useTrimPreviewVideo,
+  type TrimPreviewThumb,
+} from "@/hooks/useTrimPreviewVideo";
 
 import PaneRangeScrubber from "./PaneRangeScrubber";
 
@@ -101,6 +105,7 @@ export default function PaneTrimOverlay({
         startOffsetS={phase.startOffsetS}
         endOffsetS={phase.endOffsetS}
         clipDurationS={phase.clipDurationS}
+        clipUrl={clipUrl}
         onChange={updateRange}
         onApply={apply}
         onClose={close}
@@ -133,6 +138,7 @@ interface TrimSliderPanelProps {
   startOffsetS: number;
   endOffsetS: number;
   clipDurationS: number;
+  clipUrl: string;
   onChange: (start: number, end: number) => void;
   onApply: () => void;
   onClose: () => void;
@@ -143,6 +149,7 @@ function TrimSliderPanel({
   startOffsetS,
   endOffsetS,
   clipDurationS,
+  clipUrl,
   onChange,
   onApply,
   onClose,
@@ -151,6 +158,18 @@ function TrimSliderPanel({
   const duration = endOffsetS - startOffsetS;
   const canApply = duration >= MIN_TRIM_DURATION_S;
   const headerId = useId();
+
+  // Drag-aware preview (PR3). The scrubber surfaces its active-thumb state
+  // up via onThumbChange; the preview hook seeks to the active offset and
+  // pauses on drag, then loops between [start, end] when idle.
+  const [activeThumb, setActiveThumb] = useState<TrimPreviewThumb>(null);
+  const { videoRef, isSeeking, hasError } = useTrimPreviewVideo({
+    clipUrl,
+    startOffsetS,
+    endOffsetS,
+    activeThumb,
+  });
+
   return (
     <div
       role="dialog"
@@ -163,10 +182,32 @@ function TrimSliderPanel({
         type="button"
         onClick={onClose}
         aria-label="Cancel trim"
-        className="absolute top-1.5 right-1.5 p-1 rounded bg-black/60 text-white hover:bg-black/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+        className="absolute top-1.5 right-1.5 z-20 p-1 rounded bg-black/60 text-white hover:bg-black/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
       >
         <X className="w-3 h-3" aria-hidden />
       </button>
+
+      {/* Live preview (PR3). Fills the vertical space above the slider via
+          the parent's ``flex flex-col justify-end`` layout. Always rendered
+          so the ref stays attached; if the underlying clip URL fails to
+          load, the element decays to a black box and the slider remains
+          fully operable (Apply still works, just no preview).
+          ``aria-hidden`` because the slider thumbs are the semantic
+          control surface (role=slider + aria-valuenow). */}
+      <video
+        ref={videoRef}
+        src={clipUrl}
+        muted
+        playsInline
+        preload="auto"
+        aria-hidden
+        className={[
+          "w-full aspect-video object-cover rounded-sm",
+          "transition-opacity duration-100",
+          isSeeking ? "opacity-50" : "opacity-100",
+          hasError ? "invisible" : "visible",
+        ].join(" ")}
+      />
 
       <PaneRangeScrubber
         max={clipDurationS}
@@ -174,6 +215,7 @@ function TrimSliderPanel({
         endValue={endOffsetS}
         minWindow={MIN_TRIM_DURATION_S}
         onChange={onChange}
+        onThumbChange={setActiveThumb}
       />
 
       {/* Readout — selected range / clip total */}
