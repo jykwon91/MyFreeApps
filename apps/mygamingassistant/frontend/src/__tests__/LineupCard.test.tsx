@@ -282,4 +282,65 @@ describe("LineupCard", () => {
     render(<LineupCard lineup={lineup} variant="expanded" />);
     expect(screen.getByText(/Jumpthrow \+ LMB/)).toBeInTheDocument();
   });
+
+  // -------------------------------------------------------------------------
+  // PR6 — STAND + AIM panes swap stills for 1s micro-clips (expanded only)
+  // -------------------------------------------------------------------------
+
+  it("expanded variant STAND pane renders ClipView when stand_clip_url is set", () => {
+    const lineup: Lineup = {
+      ...BASE_LINEUP,
+      stand_clip_url: "https://ex.com/stand.mp4",
+    };
+    render(<LineupCard lineup={lineup} variant="expanded" />);
+    const standVideo = document.querySelector(
+      'video[aria-label*="looping stand clip"]',
+    );
+    expect(standVideo).not.toBeNull();
+  });
+
+  it("expanded variant STAND pane keeps the still when stand_clip_url is null", () => {
+    render(<LineupCard lineup={BASE_LINEUP} variant="expanded" />);
+    expect(
+      document.querySelector('video[aria-label*="looping stand clip"]'),
+    ).toBeNull();
+    expect(
+      screen.getByAltText(/stand position/i),
+    ).toBeInTheDocument();
+  });
+
+  it("expanded variant AIM pane renders ClipView when aim_clip_url is set", () => {
+    const lineup: Lineup = {
+      ...BASE_LINEUP,
+      aim_clip_url: "https://ex.com/aim.mp4",
+    };
+    render(<LineupCard lineup={lineup} variant="expanded" />);
+    const aimVideo = document.querySelector(
+      'video[aria-label*="looping aim clip"]',
+    );
+    expect(aimVideo).not.toBeNull();
+  });
+
+  it("expanded variant AIM anchor dot still renders when aim_clip_url is set", () => {
+    // Critical PR6 invariant: the anchor dot must overlay the AIM clip just
+    // as it overlays the AIM still. See LineupPanes.AimPane.
+    const lineup: Lineup = {
+      ...BASE_LINEUP,
+      aim_clip_url: "https://ex.com/aim.mp4",
+    };
+    render(<LineupCard lineup={lineup} variant="expanded" />);
+    expect(screen.getByLabelText(/aim anchor/i)).toBeInTheDocument();
+  });
+
+  it("expanded variant renders four <video> elements when all four clip URLs are set", () => {
+    const lineup: Lineup = {
+      ...BASE_LINEUP,
+      stand_clip_url: "https://ex.com/stand.mp4",
+      aim_clip_url: "https://ex.com/aim.mp4",
+      clip_url: "https://ex.com/throw.mp4",
+      landing_clip_url: "https://ex.com/landing.mp4",
+    };
+    render(<LineupCard lineup={lineup} variant="expanded" />);
+    expect(document.querySelectorAll("video").length).toBe(4);
+  });
 });
