@@ -29,6 +29,7 @@ const BASE_LINEUP: Lineup = {
   stand_screenshot_url: "https://example.com/stand.png",
   aim_screenshot_url: "https://example.com/aim.png",
   clip_url: null,
+  technique: null,
   aim_anchor_x: 0.5,
   aim_anchor_y: 0.4,
   stand_anchor_x: null,

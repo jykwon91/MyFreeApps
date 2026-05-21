@@ -126,6 +126,15 @@ class Lineup(Base):
     # How many seconds the throw takes to execute
     setup_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
+    # Compact throw-technique phrase ("Jumpthrow + LMB", "E + 2-charge +
+    # 1-bounce") from the PR3 throw-technique Claude call — glance-board footer
+    # display only. Open-vocabulary display text, NOT a closed enum, so no
+    # CheckConstraint (same posture as notes / chapter_title). NULL for manual
+    # uploads (no source video — hard input-modality limit), lineups predating
+    # PR3, or when the call could not determine it at >=0.55 confidence. NOT in
+    # ck_lineup_accepted_classified: manual uploads accept with technique NULL.
+    technique: Mapped[str | None] = mapped_column(String(80), nullable=True)
+
     # YouTube ingestion metadata
     youtube_video_id: Mapped[str | None] = mapped_column(String(20), nullable=True)
     chapter_start_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)

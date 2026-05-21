@@ -80,6 +80,10 @@ class LineupRead(BaseModel):
     target_anchor_x: Optional[float] = None
     target_anchor_y: Optional[float] = None
     setup_seconds: Optional[int] = None
+    # PR3 compact throw-technique phrase — plain display text, NOT a MinIO
+    # key, so it is NOT presigned in _build_read (unlike clip_url). Null for
+    # manual uploads / pre-PR3 rows / low-confidence skips.
+    technique: Optional[str] = None
     attribution_url: Optional[str] = None
     attribution_author: Optional[str] = None
     status: str
