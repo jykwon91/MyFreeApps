@@ -21,13 +21,30 @@ from app.services.ingestion.clip_generator import (
     _compute_clip_bounds,
     generate_clip_for_lineup,
     pending_clip_key,
+    pending_clip_source_key,
 )
 from app.services.ingestion.frame_extractor import ClipCutError, FrameExtractionError
+from app.services.ingestion.wide_source import WideSourceResult
 from app.services.ingestion.youtube_fetcher import VideoDownloadError
 
 _MOD = "app.services.ingestion.clip_generator"
 _FAKE_PNG = b"\x89PNG\r\n\x1a\n"
 _FAKE_MP4 = b"\x00\x00\x00\x18ftypmp42"
+
+
+def _wide_ok(source_start=0.0, source_duration=60.0, source_key="pending/vid/0-clip-source.mp4"):
+    """A successful WideSourceResult for the cut_and_upload_wide_source mock."""
+    return WideSourceResult(
+        source_key=source_key,
+        source_start_s=source_start,
+        source_duration_s=source_duration,
+    )
+
+
+def _wide_fail():
+    """A failed WideSourceResult — best-effort failure leaves the row in the
+    legacy posture (clip_url_original = clip_url, NULL offsets)."""
+    return WideSourceResult(error_codes=["wide_source_cut:rc=1"])
 
 
 def _lineup(video_id="vid123", chapter_title="B smoke"):
@@ -83,6 +100,16 @@ def test_pending_clip_key_is_deterministic():
     assert pending_clip_key("abc", 42.9) == "pending/abc/42-clip.mp4"
 
 
+def test_pending_clip_source_key_is_deterministic_and_distinct():
+    # Same idempotency contract as the tight key, distinct suffix so the
+    # wide source and the tight clip coexist in MinIO.
+    assert pending_clip_source_key("abc", 42.0) == "pending/abc/42-clip-source.mp4"
+    assert pending_clip_source_key("abc", 42.9) == "pending/abc/42-clip-source.mp4"
+    # Tight and wide must NEVER share a key — overwriting one would destroy
+    # the other's bytes.
+    assert pending_clip_key("abc", 42.0) != pending_clip_source_key("abc", 42.0)
+
+
 # ---------------------------------------------------------------------------
 # generate_clip_for_lineup — orchestration
 # ---------------------------------------------------------------------------
@@ -122,6 +149,8 @@ class TestGenerateClipGeneratedPath:
             patch(f"{_MOD}.cut_clip", new=AsyncMock(return_value=_FAKE_MP4)) as mock_cut,
             patch(f"{_MOD}.get_storage", return_value=storage),
             patch(f"{_MOD}.download_video", new=AsyncMock()) as mock_dl,
+            patch(f"{_MOD}.cut_and_upload_wide_source",
+                  new=AsyncMock(return_value=_wide_fail())),
             patch(f"{_MOD}.lineup_repo.set_clip_url", new=AsyncMock()) as mock_set,
         ):
             result = await generate_clip_for_lineup(
@@ -132,6 +161,7 @@ class TestGenerateClipGeneratedPath:
         assert result.status == "generated"
         assert result.clip_key == "pending/vid123/0-clip.mp4"
         mock_dl.assert_not_awaited()  # provided video reused, no re-fetch
+        # ONE tight upload (wide is mocked out of the storage layer).
         storage.upload_file.assert_called_once()
         assert storage.upload_file.call_args[0][2] == "video/mp4"
         mock_set.assert_awaited_once()
@@ -154,6 +184,8 @@ class TestGenerateClipGeneratedPath:
             patch(f"{_MOD}.cut_clip", new=AsyncMock(return_value=_FAKE_MP4)),
             patch(f"{_MOD}.get_storage", return_value=MagicMock()),
             patch(f"{_MOD}.download_video", new=AsyncMock(return_value=fetched)) as mock_dl,
+            patch(f"{_MOD}.cut_and_upload_wide_source",
+                  new=AsyncMock(return_value=_wide_fail())),
             patch(f"{_MOD}.lineup_repo.set_clip_url", new=AsyncMock()),
         ):
             result = await generate_clip_for_lineup(
@@ -165,6 +197,103 @@ class TestGenerateClipGeneratedPath:
         mock_dl.assert_awaited_once()
         # A re-fetched (self-owned) video MUST be cleaned up.
         assert not fetched.exists()
+
+
+class TestGenerateClipWideSourceWiring:
+    """The widen-source upgrade: when the wide cut+upload succeeds, the
+    persisted ``clip_url_original`` differs from ``clip_url`` and the trim
+    offsets describe where the tight clip lives inside the wide source.
+    When it fails, the row stays in the legacy posture so the operator's
+    tight clip is unchanged. Both shapes route through ``set_clip_url``.
+    """
+
+    @pytest.mark.asyncio
+    async def test_widened_source_persists_offsets(self, tmp_path: Path):
+        """Happy path: tight is at [release-2, result+0.5]; wide spans the
+        whole chapter + padding. set_clip_url is called with source_key +
+        the offset pair so the slider opens at the tight bounds."""
+        video = tmp_path / "v.mp4"
+        video.write_bytes(b"src")
+        wide = _wide_ok(
+            source_start=0.0,
+            source_duration=60.0,
+            source_key="pending/vid123/0-clip-source.mp4",
+        )
+
+        with (
+            patch(f"{_MOD}.settings", _settings()),
+            # 6 frames spread across [9..24]; release_index=2 → release_ts=12,
+            # result_index=4 → result_ts=18. _compute_clip_bounds gives
+            # [12-2, 18+0.5] = [10, 18.5] = 8.5s within band.
+            patch(f"{_MOD}.clip_window_timestamps",
+                  return_value=[9.0, 12.0, 15.0, 18.0, 21.0, 24.0]),
+            patch(f"{_MOD}.extract_frames_downscaled",
+                  new=AsyncMock(return_value=[_FAKE_PNG] * 6)),
+            patch(f"{_MOD}.classify_throw_timing_from_frames",
+                  new=AsyncMock(return_value=_timing(
+                      release_index=2, result_index=4))),
+            patch(f"{_MOD}.cut_clip", new=AsyncMock(return_value=_FAKE_MP4)),
+            patch(f"{_MOD}.get_storage", return_value=MagicMock()),
+            patch(f"{_MOD}.cut_and_upload_wide_source",
+                  new=AsyncMock(return_value=wide)) as mock_wide,
+            patch(f"{_MOD}.lineup_repo.set_clip_url",
+                  new=AsyncMock()) as mock_set,
+        ):
+            result = await generate_clip_for_lineup(
+                MagicMock(), _lineup(), chapter_start=0.0, chapter_end=30.0,
+                video_path=video,
+            )
+
+        assert result.status == "generated"
+        mock_wide.assert_awaited_once()
+        wide_kwargs = mock_wide.await_args.kwargs
+        assert wide_kwargs["chapter_start"] == 0.0
+        assert wide_kwargs["chapter_end"] == 30.0
+        assert wide_kwargs["source_key"] == "pending/vid123/0-clip-source.mp4"
+
+        mock_set.assert_awaited_once()
+        set_kwargs = mock_set.await_args.kwargs
+        assert set_kwargs["source_key"] == "pending/vid123/0-clip-source.mp4"
+        # tight bounds: clip_start=10, clip_duration=8.5; source_start=0
+        # → trim_start_s = 10 - 0 = 10; trim_end_s = 10 + 8.5 - 0 = 18.5
+        assert set_kwargs["trim_start_s"] == pytest.approx(10.0)
+        assert set_kwargs["trim_end_s"] == pytest.approx(18.5)
+
+    @pytest.mark.asyncio
+    async def test_wide_failure_falls_back_to_legacy_posture(self, tmp_path: Path):
+        """When the wide cut fails the tight clip MUST still be persisted —
+        with source_key=None so the repo writes the legacy posture
+        (clip_url_original = clip_url, NULL offsets) and the widen-source
+        backfill can retry later. The whole call still returns 'generated'."""
+        video = tmp_path / "v.mp4"
+        video.write_bytes(b"src")
+
+        with (
+            patch(f"{_MOD}.settings", _settings()),
+            patch(f"{_MOD}.clip_window_timestamps",
+                  return_value=[1.0, 2.0, 3.0, 4.0]),
+            patch(f"{_MOD}.extract_frames_downscaled",
+                  new=AsyncMock(return_value=[_FAKE_PNG] * 4)),
+            patch(f"{_MOD}.classify_throw_timing_from_frames",
+                  new=AsyncMock(return_value=_timing(release_index=1, result_index=2))),
+            patch(f"{_MOD}.cut_clip", new=AsyncMock(return_value=_FAKE_MP4)),
+            patch(f"{_MOD}.get_storage", return_value=MagicMock()),
+            patch(f"{_MOD}.cut_and_upload_wide_source",
+                  new=AsyncMock(return_value=_wide_fail())),
+            patch(f"{_MOD}.lineup_repo.set_clip_url",
+                  new=AsyncMock()) as mock_set,
+        ):
+            result = await generate_clip_for_lineup(
+                MagicMock(), _lineup(), chapter_start=0.0, chapter_end=30.0,
+                video_path=video,
+            )
+
+        assert result.status == "generated"
+        mock_set.assert_awaited_once()
+        set_kwargs = mock_set.await_args.kwargs
+        assert set_kwargs["source_key"] is None
+        assert set_kwargs["trim_start_s"] is None
+        assert set_kwargs["trim_end_s"] is None
 
 
 class TestGenerateClipSkips:

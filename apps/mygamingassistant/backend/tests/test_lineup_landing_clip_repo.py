@@ -126,6 +126,95 @@ async def test_landing_clip_does_not_overwrite_throw_clip(db: AsyncSession):
 
 
 @pytest.mark.asyncio
+async def test_set_landing_clip_url_with_widened_source(db: AsyncSession):
+    """Widened-source ingest writes landing_clip_url (tight) +
+    landing_clip_url_original (wider) + the offset pair that locates the
+    tight landing clip inside the wider source. Mirrors the throw-clip
+    sibling test."""
+    created = await lineup_repo.create_lineup(
+        db, {"title": "widen-landing", "status": "pending_review"}
+    )
+
+    await lineup_repo.set_landing_clip_url(
+        db, created, "pending/v/0-landing.mp4",
+        source_key="pending/v/0-landing-source.mp4",
+        trim_start_s=13.5,
+        trim_end_s=17.0,
+    )
+
+    lineup_id = created.id
+    db.expire_all()
+    refetched = (
+        await db.execute(select(Lineup).where(Lineup.id == lineup_id))
+    ).scalar_one()
+    assert refetched.landing_clip_url == "pending/v/0-landing.mp4"
+    assert refetched.landing_clip_url_original == "pending/v/0-landing-source.mp4"
+    assert refetched.landing_clip_trim_start_s == 13.5
+    assert refetched.landing_clip_trim_end_s == 17.0
+
+
+@pytest.mark.asyncio
+async def test_set_landing_clip_url_original_only_moves_source_column(
+    db: AsyncSession,
+):
+    """widen-source backfill writes ONLY landing_clip_url_original — the
+    served tight landing_clip_url and trim offsets stay as they were."""
+    created = await lineup_repo.create_lineup(
+        db, {"title": "widen-bf-landing", "status": "pending_review"}
+    )
+    await lineup_repo.set_landing_clip_url(
+        db, created, "pending/v/0-landing.mp4",
+    )
+
+    await lineup_repo.set_landing_clip_url_original(
+        db, created, "pending/v/0-landing-source.mp4",
+    )
+
+    lineup_id = created.id
+    db.expire_all()
+    refetched = (
+        await db.execute(select(Lineup).where(Lineup.id == lineup_id))
+    ).scalar_one()
+    assert refetched.landing_clip_url == "pending/v/0-landing.mp4"
+    assert refetched.landing_clip_url_original == "pending/v/0-landing-source.mp4"
+    assert refetched.landing_clip_trim_start_s is None
+    assert refetched.landing_clip_trim_end_s is None
+
+
+@pytest.mark.asyncio
+async def test_set_landing_clip_url_original_preserves_existing_trim_offsets(
+    db: AsyncSession,
+):
+    """Backfill widening of landing_clip_url_original MUST NOT clobber the
+    operator's existing landing trim offsets — mirrors the throw-clip sibling
+    test."""
+    created = await lineup_repo.create_lineup(
+        db, {"title": "widen-after-landing-trim", "status": "pending_review"}
+    )
+    await lineup_repo.set_landing_clip_url(db, created, "pending/v/orig-l.mp4")
+    await lineup_repo.set_landing_clip_url_trim(
+        db, created, "edits/v/landing-trimmed.mp4", 0.5, 3.0,
+    )
+
+    await lineup_repo.set_landing_clip_url_original(
+        db, created, "pending/v/orig-landing-source.mp4",
+    )
+
+    lineup_id = created.id
+    db.expire_all()
+    refetched = (
+        await db.execute(select(Lineup).where(Lineup.id == lineup_id))
+    ).scalar_one()
+    assert refetched.landing_clip_url == "edits/v/landing-trimmed.mp4"
+    assert (
+        refetched.landing_clip_url_original
+        == "pending/v/orig-landing-source.mp4"
+    )
+    assert refetched.landing_clip_trim_start_s == 0.5
+    assert refetched.landing_clip_trim_end_s == 3.0
+
+
+@pytest.mark.asyncio
 async def test_list_accepted_lineups_needing_landing_clips_filters(
     db: AsyncSession,
 ):

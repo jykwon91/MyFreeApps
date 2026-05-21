@@ -54,6 +54,10 @@ from app.services.ingestion.frame_extractor import (
     cut_clip,
     extract_frames_downscaled,
 )
+from app.services.ingestion.wide_source import (
+    cut_and_upload_wide_source,
+    tight_offsets_within_source,
+)
 from app.services.ingestion.youtube_fetcher import (
     VideoDownloadError,
     download_video,
@@ -120,6 +124,21 @@ def pending_clip_key(video_id: str, chapter_start_seconds: float) -> str:
     orphaning a new one.
     """
     return f"pending/{video_id}/{int(chapter_start_seconds)}-clip.mp4"
+
+
+def pending_clip_source_key(video_id: str, chapter_start_seconds: float) -> str:
+    """Deterministic MinIO key for a lineup's wider source clip.
+
+    Companion to :func:`pending_clip_key` — the trim editor reads from this
+    wider clip via ``clip_url_original``. Distinct key suffix (``-source``)
+    so the tight served clip and the wider trim source coexist in MinIO and
+    a backfill run overwrites only the wide one without touching the tight
+    bytes the glance board autoplays. One key per (video, chapter start)
+    matches :func:`pending_clip_key`'s idempotence — re-running the
+    widen-source backfill overwrites the same object instead of orphaning
+    a new one.
+    """
+    return f"pending/{video_id}/{int(chapter_start_seconds)}-clip-source.mp4"
 
 
 def _compute_clip_bounds(
@@ -386,12 +405,49 @@ async def generate_clip_for_lineup(
                 clip_duration=clip_duration,
             )
 
+        # ---- Cut + upload the wider trim-editor source (best-effort) ---
+        # Failure here keeps the row in the legacy posture (clip_url_original
+        # = clip_url, NULL offsets) so the tight clip is still persisted; the
+        # widen-source backfill (``python -m app.cli widen-source``) retries
+        # later. Done AFTER the tight upload so an aborted ingest (network
+        # blip during the tight upload) doesn't leave an orphan wide source
+        # for a row that has no served clip.
+        wide = await cut_and_upload_wide_source(
+            local_video=local_video,
+            video_id=video_id,
+            chapter_start=float(chapter_start),
+            chapter_end=float(chapter_end),
+            source_key=pending_clip_source_key(video_id, chapter_start),
+            log_prefix="clip_generator",
+            lineup_id=lineup.id,
+        )
+        if wide.succeeded:
+            assert wide.source_start_s is not None  # narrow for type checker
+            trim_start_s, trim_end_s = tight_offsets_within_source(
+                tight_start=clip_start,
+                tight_duration=clip_duration,
+                source_start=wide.source_start_s,
+            )
+            source_key: str | None = wide.source_key
+        else:
+            trim_start_s = trim_end_s = None
+            source_key = None
+
         try:
-            await lineup_repo.set_clip_url(db, lineup, clip_key)
+            await lineup_repo.set_clip_url(
+                db,
+                lineup,
+                clip_key,
+                source_key=source_key,
+                trim_start_s=trim_start_s,
+                trim_end_s=trim_end_s,
+            )
         except Exception as exc:
-            # The object is uploaded but the column did not commit. The key is
-            # deterministic, so a later backfill recomputes the same key and
-            # overwrites the same object — no orphan, safe to retry.
+            # The objects are uploaded but the column did not commit. The
+            # tight key is deterministic and the wide key is too (matches
+            # ``pending_clip_source_key``), so a later backfill recomputes the
+            # same keys and overwrites the same objects — no orphan, safe to
+            # retry.
             logger.warning(
                 "clip_generator: clip_url persist failed (object uploaded, "
                 "column not committed; backfill is idempotent): lineup=%s "

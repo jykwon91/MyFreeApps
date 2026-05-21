@@ -25,12 +25,29 @@ from app.services.ingestion.landing_clip_generator import (
     _compute_landing_bounds,
     generate_landing_clip_for_lineup,
     pending_landing_clip_key,
+    pending_landing_clip_source_key,
 )
+from app.services.ingestion.wide_source import WideSourceResult
 from app.services.ingestion.youtube_fetcher import VideoDownloadError
 
 _MOD = "app.services.ingestion.landing_clip_generator"
 _FAKE_PNG = b"\x89PNG\r\n\x1a\n"
 _FAKE_MP4 = b"\x00\x00\x00\x18ftypmp42"
+
+
+def _wide_ok(source_start=10.0, source_duration=45.0,
+             source_key="pending/vid123/10-landing-source.mp4"):
+    """Successful WideSourceResult for the landing-pane wide cut+upload mock."""
+    return WideSourceResult(
+        source_key=source_key,
+        source_start_s=source_start,
+        source_duration_s=source_duration,
+    )
+
+
+def _wide_fail():
+    """Failed WideSourceResult — best-effort fall-back to legacy posture."""
+    return WideSourceResult(error_codes=["wide_source_cut:rc=1"])
 
 
 def _lineup(video_id="vid123", chapter_title="B smoke"):
@@ -92,6 +109,32 @@ def test_pending_landing_key_distinct_from_throw_clip_key():
     assert pending_landing_clip_key("abc", 42) != pending_clip_key("abc", 42)
 
 
+def test_pending_landing_source_key_is_deterministic_and_distinct():
+    """Wide landing source key is stable + distinct from the tight key AND
+    the throw wide-source key. Sharing any of those would silently destroy
+    bytes on the next backfill overwrite."""
+    from app.services.ingestion.clip_generator import pending_clip_source_key
+
+    assert (
+        pending_landing_clip_source_key("abc", 42.0)
+        == "pending/abc/42-landing-source.mp4"
+    )
+    assert (
+        pending_landing_clip_source_key("abc", 42.9)
+        == "pending/abc/42-landing-source.mp4"
+    )
+    # Wide landing != tight landing.
+    assert (
+        pending_landing_clip_source_key("abc", 42)
+        != pending_landing_clip_key("abc", 42)
+    )
+    # Wide landing != wide throw — separate columns, separate bytes.
+    assert (
+        pending_landing_clip_source_key("abc", 42)
+        != pending_clip_source_key("abc", 42)
+    )
+
+
 # ---------------------------------------------------------------------------
 # generate_landing_clip_for_lineup — ingest path (precomputed result_ts)
 # ---------------------------------------------------------------------------
@@ -121,6 +164,9 @@ async def test_ingest_path_generates_clip_without_classifier_call():
         patch(f"{_MOD}.get_storage", return_value=storage),
         patch(f"{_MOD}.lineup_repo.set_landing_clip_url", set_url_mock),
         patch(f"{_MOD}.classify_throw_timing_from_frames", classifier_mock),
+        # Wide source mocked out — it has its own explicit tests below.
+        patch(f"{_MOD}.cut_and_upload_wide_source",
+              new=AsyncMock(return_value=_wide_fail())),
     ):
         result = await generate_landing_clip_for_lineup(
             db, lineup,
@@ -217,6 +263,8 @@ async def test_backfill_path_runs_classifier_and_generates():
         patch(f"{_MOD}.cut_clip", _ffmpeg_cut_mock()),
         patch(f"{_MOD}.get_storage", return_value=storage),
         patch(f"{_MOD}.lineup_repo.set_landing_clip_url", set_url_mock),
+        patch(f"{_MOD}.cut_and_upload_wide_source",
+              new=AsyncMock(return_value=_wide_fail())),
     ):
         result = await generate_landing_clip_for_lineup(
             db, lineup,
@@ -471,6 +519,8 @@ async def test_persist_failure_returns_failed():
     with (
         patch(f"{_MOD}.cut_clip", _ffmpeg_cut_mock()),
         patch(f"{_MOD}.get_storage", return_value=storage),
+        patch(f"{_MOD}.cut_and_upload_wide_source",
+              new=AsyncMock(return_value=_wide_fail())),
         patch(
             f"{_MOD}.lineup_repo.set_landing_clip_url",
             AsyncMock(side_effect=RuntimeError("db down")),
@@ -484,3 +534,90 @@ async def test_persist_failure_returns_failed():
         )
     assert result.status == "failed"
     assert "landing_clip_url_persist_failed" in result.error_codes
+
+
+# ---------------------------------------------------------------------------
+# Wide-source wiring — mirrors test_clip_generator's TestGenerateClipWideSourceWiring
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_widen_source_persists_offsets_for_landing():
+    """Happy wide path: landing tight is [24-0.5, 24+3.0] = [23.5, 3.5]; wide
+    spans chapter + padding starting at source_start=10. set_landing_clip_url
+    is called with source_key + the offset pair so the slider opens at the
+    tight landing bounds within the wider source."""
+    db = AsyncMock()
+    lineup = _lineup()
+    storage = _storage_mock()
+    set_url_mock = AsyncMock(return_value=lineup)
+
+    wide = _wide_ok(
+        source_start=10.0,
+        source_duration=45.0,
+        source_key="pending/vid123/10-landing-source.mp4",
+    )
+
+    with (
+        patch(f"{_MOD}.cut_clip", _ffmpeg_cut_mock()),
+        patch(f"{_MOD}.get_storage", return_value=storage),
+        patch(f"{_MOD}.lineup_repo.set_landing_clip_url", set_url_mock),
+        patch(f"{_MOD}.cut_and_upload_wide_source",
+              new=AsyncMock(return_value=wide)) as mock_wide,
+    ):
+        result = await generate_landing_clip_for_lineup(
+            db, lineup,
+            chapter_start=10.0, chapter_end=40.0,
+            video_path=Path("/tmp/x.mp4"),
+            precomputed_result_ts=24.0,
+            precomputed_confidence=0.82,
+        )
+
+    assert result.status == "generated"
+    mock_wide.assert_awaited_once()
+    wide_kwargs = mock_wide.await_args.kwargs
+    assert wide_kwargs["chapter_start"] == 10.0
+    assert wide_kwargs["chapter_end"] == 40.0
+    assert (
+        wide_kwargs["source_key"] == "pending/vid123/10-landing-source.mp4"
+    )
+
+    set_url_mock.assert_awaited_once()
+    set_kwargs = set_url_mock.await_args.kwargs
+    assert set_kwargs["source_key"] == "pending/vid123/10-landing-source.mp4"
+    # Landing tight: clip_start=23.5, clip_duration=3.5; source_start=10
+    # → trim_start_s = 23.5 - 10 = 13.5; trim_end_s = 23.5 + 3.5 - 10 = 17.0
+    assert set_kwargs["trim_start_s"] == pytest.approx(13.5)
+    assert set_kwargs["trim_end_s"] == pytest.approx(17.0)
+
+
+@pytest.mark.asyncio
+async def test_wide_failure_falls_back_to_legacy_landing_posture():
+    """Wide failure leaves the row in the legacy posture — set_landing_clip_url
+    is called with source_key=None so landing_clip_url_original equals
+    landing_clip_url; the widen-source backfill can retry later."""
+    db = AsyncMock()
+    lineup = _lineup()
+    storage = _storage_mock()
+    set_url_mock = AsyncMock(return_value=lineup)
+
+    with (
+        patch(f"{_MOD}.cut_clip", _ffmpeg_cut_mock()),
+        patch(f"{_MOD}.get_storage", return_value=storage),
+        patch(f"{_MOD}.lineup_repo.set_landing_clip_url", set_url_mock),
+        patch(f"{_MOD}.cut_and_upload_wide_source",
+              new=AsyncMock(return_value=_wide_fail())),
+    ):
+        result = await generate_landing_clip_for_lineup(
+            db, lineup,
+            chapter_start=10.0, chapter_end=40.0,
+            video_path=Path("/tmp/x.mp4"),
+            precomputed_result_ts=24.0,
+        )
+
+    assert result.status == "generated"
+    set_url_mock.assert_awaited_once()
+    set_kwargs = set_url_mock.await_args.kwargs
+    assert set_kwargs["source_key"] is None
+    assert set_kwargs["trim_start_s"] is None
+    assert set_kwargs["trim_end_s"] is None
