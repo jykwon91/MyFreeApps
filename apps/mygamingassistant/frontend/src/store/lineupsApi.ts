@@ -247,6 +247,35 @@ const lineupsApi = lineupsBaseApi.injectEndpoints({
     }),
 
     // ------------------------------------------------------------------
+    // Per-pane on-demand widen-source (PR3 — frontend wiring for PR2's
+    // POST /lineups/{id}/panes/{pane}/widen-source endpoint). Operator
+    // clicks "Widen source" in the Trim editor when the source clip is
+    // too narrow to reach the frames they need; the server re-fetches the
+    // YouTube video around the chapter and writes a wider clip to
+    // ``*_url_original``. Response is the admin-shape Lineup so the Trim
+    // slider rebinds to the new bounds without a separate fetch — and
+    // the Lineup tag invalidation refreshes any other surface holding
+    // this id.
+    // ------------------------------------------------------------------
+
+    widenPaneSource: build.mutation<
+      Lineup,
+      {
+        lineup_id: string;
+        pane: "throw" | "landing";
+      }
+    >({
+      query: ({ lineup_id, pane }) => ({
+        url: `/lineups/${lineup_id}/panes/${pane}/widen-source`,
+        method: "POST",
+      }),
+      invalidatesTags: (_result, _err, { lineup_id }) => [
+        { type: "Lineup", id: lineup_id },
+        "LineupList",
+      ],
+    }),
+
+    // ------------------------------------------------------------------
     // Zone density (map-level aggregate for density coloring)
     // ------------------------------------------------------------------
     getZoneDensity: build.query<ZoneDensity, ZoneDensityParams>({
@@ -282,4 +311,5 @@ export const {
   useRequestPaneUploadUrlMutation,
   useConfirmPaneUploadMutation,
   useTrimPaneMutation,
+  useWidenPaneSourceMutation,
 } = lineupsApi;

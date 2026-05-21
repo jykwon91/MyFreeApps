@@ -33,7 +33,7 @@
  * idle (each in a different corner) — that's intentional so the operator
  * sees both options on hover.
  */
-import { useEffect, useId, useState } from "react";
+import { useCallback, useEffect, useId, useState } from "react";
 import { Loader2, RotateCcw, Scissors, X } from "lucide-react";
 
 import { useClipDuration } from "@/hooks/useClipDuration";
@@ -46,7 +46,10 @@ import {
   useTrimPreviewVideo,
   type TrimPreviewThumb,
 } from "@/hooks/useTrimPreviewVideo";
-import { useLazyGetLineupAdminQuery } from "@/store/lineupsApi";
+import {
+  useLazyGetLineupAdminQuery,
+  useWidenPaneSourceMutation,
+} from "@/store/lineupsApi";
 
 import PaneRangeScrubber from "./PaneRangeScrubber";
 
@@ -84,6 +87,20 @@ export default function PaneTrimOverlay({
   const sourceUrl = resolveSourceUrl(adminLineup, pane, clipUrl);
   const sourceDurationS = useClipDuration(sourceUrl);
   const storedOffsets = resolveStoredOffsets(adminLineup, pane);
+  // YouTube anchor: the admin payload carries the source-video id + chapter
+  // marker so the Trim slider can render approximate-in-video timestamps and
+  // expose the "Widen source" affordance. Both are null on manual-upload
+  // lineups (no YouTube source → no widen possible, no chapter to anchor on).
+  const youtubeVideoId = adminLineup?.youtube_video_id ?? null;
+  const chapterStartSeconds = adminLineup?.chapter_start_seconds ?? null;
+
+  // Per-pane on-demand widen — re-cut a wider source from the YouTube video
+  // around the chapter marker. State stays local to the orchestrator (not the
+  // usePaneTrim hook) because widening is orthogonal to the trim transaction:
+  // it changes the SOURCE the slider binds against, not the trim itself.
+  const [widenPaneSource] = useWidenPaneSourceMutation();
+  const [isWidening, setIsWidening] = useState(false);
+  const [widenError, setWidenError] = useState<string | null>(null);
 
   // Escape closes the slider when open OR clears an error.
   useEffect(() => {
@@ -124,6 +141,29 @@ export default function PaneTrimOverlay({
     setAwaitingOpen(true);
     void fetchAdmin(lineupId, /* preferCacheValue */ true);
   };
+
+  // Widen-source dispatcher. On success we close the slider and re-arm
+  // ``awaitingOpen`` so the existing open-after-source-resolves effect
+  // re-opens it once the new admin payload and ``useClipDuration`` settle on
+  // the wider source — the brief transition through the scissors-button
+  // spinner state is the natural "fetching new bounds" feedback.
+  const handleWiden = useCallback(async () => {
+    setWidenError(null);
+    setIsWidening(true);
+    try {
+      await widenPaneSource({ lineup_id: lineupId, pane }).unwrap();
+      setAwaitingOpen(true);
+      close();
+    } catch (err) {
+      setWidenError(extractError(err) ?? "Could not widen source");
+    } finally {
+      setIsWidening(false);
+    }
+  }, [widenPaneSource, lineupId, pane, close]);
+
+  const handleDismissWidenError = useCallback(() => {
+    setWidenError(null);
+  }, []);
 
   // No clip → no trim affordance. (PaneTrimOverlay never mounts in that case
   // per the parent guard, but defending here keeps the component honest
@@ -175,6 +215,12 @@ export default function PaneTrimOverlay({
         onApply={apply}
         onClose={close}
         pane={pane}
+        chapterStartSeconds={chapterStartSeconds}
+        canWiden={!!youtubeVideoId}
+        isWidening={isWidening}
+        widenError={widenError}
+        onWiden={handleWiden}
+        onDismissWidenError={handleDismissWidenError}
       />
     );
   }
@@ -230,6 +276,53 @@ function resolveStoredOffsets(
   return { startOffsetS: start, endOffsetS: end };
 }
 
+function extractError(err: unknown): string | null {
+  if (typeof err !== "object" || err === null) return null;
+  const maybe = err as { data?: { detail?: unknown } };
+  const detail = maybe.data?.detail;
+  if (typeof detail === "string") return detail;
+  return null;
+}
+
+// Format an in-video timestamp (seconds → ``M:SS.s``). Always shows
+// minutes for visual stability so a ``0:45.3`` doesn't suddenly jump shape
+// to ``1:03.4`` mid-drag. Padding the seconds to two whole digits keeps
+// the readout monospace-friendly even though the surrounding glyphs are
+// proportional.
+function formatVideoTimestamp(totalSeconds: number): string {
+  const safe = Math.max(0, totalSeconds);
+  const minutes = Math.floor(safe / 60);
+  const seconds = safe - minutes * 60;
+  return `${minutes}:${seconds.toFixed(1).padStart(4, "0")}`;
+}
+
+// Build the slider footer readout. When the source clip has a YouTube
+// chapter anchor we surface approximate-in-video timestamps (cleaner
+// mental model than ``Xs into source``); otherwise we fall back to the
+// pre-PR3 seconds-into-clip shape. The approximation note: the formula
+// adds the slider offset to ``chapter_start_seconds`` rather than the
+// true source-clip-start-in-video (which would require backend to expose
+// per-row pre-padding). The drift is ``clip_source_pre_seconds`` (~15s)
+// and the preview <video> is the operator's authoritative visual anchor;
+// the readout exists to help them remember "roughly where in the source
+// video" they are.
+function buildReadout(
+  startOffsetS: number,
+  endOffsetS: number,
+  clipDurationS: number,
+  chapterStartSeconds: number | null,
+): string {
+  if (chapterStartSeconds == null) {
+    return (
+      `${startOffsetS.toFixed(1)}s — ${endOffsetS.toFixed(1)}s / ` +
+      `${clipDurationS.toFixed(1)}s`
+    );
+  }
+  const startVideoTime = formatVideoTimestamp(chapterStartSeconds + startOffsetS);
+  const endVideoTime = formatVideoTimestamp(chapterStartSeconds + endOffsetS);
+  return `${startVideoTime} — ${endVideoTime} / source ${clipDurationS.toFixed(1)}s`;
+}
+
 
 // ---------------------------------------------------------------------------
 // Sub-components — extracted so the orchestrator's JSX stays flat (no
@@ -245,6 +338,18 @@ interface TrimSliderPanelProps {
   onApply: () => void;
   onClose: () => void;
   pane: TrimmablePane;
+  // PR3 — in-video anchor for the absolute-timestamp readout. Null on
+  // manual-upload lineups (no YouTube source); falls back to the legacy
+  // seconds-into-source format.
+  chapterStartSeconds: number | null;
+  // PR3 — gates the "Widen source" link. False when the lineup has no
+  // ``youtube_video_id``, which is the only signal the backend's 404
+  // contract gives us upfront ("manual uploads cannot be widened").
+  canWiden: boolean;
+  isWidening: boolean;
+  widenError: string | null;
+  onWiden: () => void;
+  onDismissWidenError: () => void;
 }
 
 function TrimSliderPanel({
@@ -256,9 +361,15 @@ function TrimSliderPanel({
   onApply,
   onClose,
   pane,
+  chapterStartSeconds,
+  canWiden,
+  isWidening,
+  widenError,
+  onWiden,
+  onDismissWidenError,
 }: TrimSliderPanelProps) {
   const duration = endOffsetS - startOffsetS;
-  const canApply = duration >= MIN_TRIM_DURATION_S;
+  const canApply = duration >= MIN_TRIM_DURATION_S && !isWidening;
   const headerId = useId();
 
   // Drag-aware preview (PR3). The scrubber surfaces its active-thumb state
@@ -272,6 +383,19 @@ function TrimSliderPanel({
     activeThumb,
   });
 
+  const readout = buildReadout(
+    startOffsetS,
+    endOffsetS,
+    clipDurationS,
+    chapterStartSeconds,
+  );
+
+  // Widen-source affordance is hidden — not just disabled — when the
+  // lineup has no YouTube source. The button would be permanently
+  // unclickable for manual-upload lineups; pulling it from the layout
+  // keeps the slider footer uncluttered for that majority case.
+  const widenButtonLabel = isWidening ? "Widening..." : "Widen source";
+
   return (
     <div
       role="dialog"
@@ -284,7 +408,8 @@ function TrimSliderPanel({
         type="button"
         onClick={onClose}
         aria-label="Cancel trim"
-        className="absolute top-1.5 right-1.5 z-20 p-1 rounded bg-black/60 text-white hover:bg-black/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+        disabled={isWidening}
+        className="absolute top-1.5 right-1.5 z-20 p-1 rounded bg-black/60 text-white hover:bg-black/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <X className="w-3 h-3" aria-hidden />
       </button>
@@ -320,12 +445,17 @@ function TrimSliderPanel({
         onThumbChange={setActiveThumb}
       />
 
-      {/* Readout — selected range / clip total */}
-      <div className="text-center text-[10px] text-white/80 leading-tight">
-        {startOffsetS.toFixed(1)}s — {endOffsetS.toFixed(1)}s / {clipDurationS.toFixed(1)}s
+      {/* Readout — selected range / clip total. When the lineup has a
+          YouTube chapter anchor we render approximate-in-video timestamps
+          (chapter_start_seconds + slider offset); otherwise we fall back
+          to the legacy seconds-into-source shape. See ``buildReadout``. */}
+      <div className="text-center text-[10px] text-white/80 leading-tight tabular-nums">
+        {readout}
       </div>
 
-      {/* Apply button — disabled below the min-window threshold */}
+      {/* Apply button — disabled below the min-window threshold AND
+          during a Widen request (mutating the source under an in-flight
+          trim would be a foot-gun). */}
       <button
         type="button"
         onClick={onApply}
@@ -342,7 +472,108 @@ function TrimSliderPanel({
       >
         Trim clip
       </button>
+
+      {/* Widen-source affordance (PR3). Renders as a low-emphasis text
+          link under the Apply button — operator-facing power-user feature,
+          not a primary action. Click → POST to the per-pane widen-source
+          endpoint, then the orchestrator closes the slider and re-arms
+          ``awaitingOpen`` so it re-opens with the new wider bounds once
+          the admin payload + clip-duration resolve.
+
+          Hidden entirely when the lineup has no YouTube source: a
+          permanently-disabled button is worse UX than an absent one for
+          the manual-upload majority case (per visible-loading-feedback /
+          minimize-ternaries — keep the surface uncluttered).
+
+          ``aria-live`` on the error span: the error replaces the link in
+          situ when widen fails, so the screen-reader announcement
+          surfaces the actionable reason (e.g. "chapter no longer exists
+          in the source video") without an extra modal.
+
+          Loading affordance: the link text swaps to ``Widening...`` with
+          an inline spinner the instant the request fires
+          (visible-loading-feedback.md — affordance at click time, not
+          response time). The widen call can take 5-30s (yt-dlp +
+          ffmpeg) so the spinner is the wait-shape match. */}
+      {canWiden ? (
+        <WidenSourceLink
+          isWidening={isWidening}
+          widenError={widenError}
+          label={widenButtonLabel}
+          pane={pane}
+          onWiden={onWiden}
+          onDismissError={onDismissWidenError}
+        />
+      ) : null}
     </div>
+  );
+}
+
+interface WidenSourceLinkProps {
+  isWidening: boolean;
+  widenError: string | null;
+  label: string;
+  pane: TrimmablePane;
+  onWiden: () => void;
+  onDismissError: () => void;
+}
+
+function WidenSourceLink({
+  isWidening,
+  widenError,
+  label,
+  pane,
+  onWiden,
+  onDismissError,
+}: WidenSourceLinkProps) {
+  if (widenError != null) {
+    return (
+      <div
+        role="alert"
+        className="flex flex-col items-center gap-0.5 text-[10px] leading-tight"
+      >
+        <span className="text-red-400 text-center px-1">{widenError}</span>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onWiden}
+            aria-label={`Retry widen on ${pane} source`}
+            className="inline-flex items-center gap-1 text-white/80 hover:text-white underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 rounded px-1"
+          >
+            <RotateCcw className="w-3 h-3" aria-hidden />
+            Retry
+          </button>
+          <button
+            type="button"
+            onClick={onDismissError}
+            aria-label="Dismiss widen error"
+            className="text-white/60 hover:text-white/80 underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 rounded px-1"
+          >
+            Dismiss
+          </button>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <button
+      type="button"
+      onClick={onWiden}
+      disabled={isWidening}
+      aria-label={
+        isWidening ? `Widening ${pane} source` : `Widen ${pane} source clip`
+      }
+      title="Re-cut a wider source from the YouTube video around the chapter"
+      className={[
+        "self-center inline-flex items-center gap-1",
+        "text-[10px] text-white/70 hover:text-white underline",
+        "disabled:opacity-60 disabled:cursor-wait disabled:hover:text-white/70",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 rounded px-1",
+      ].join(" ")}
+    >
+      {isWidening ? <Loader2 className="w-3 h-3 animate-spin" aria-hidden /> : null}
+      {label}
+    </button>
   );
 }
 
