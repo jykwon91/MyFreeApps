@@ -161,6 +161,51 @@ const lineupsApi = lineupsBaseApi.injectEndpoints({
     }),
 
     // ------------------------------------------------------------------
+    // Per-pane local-upload Replace flow (PR1)
+    // The browser PUTs the file directly to MinIO via the presigned URL —
+    // RTK Query is only used for the two metadata calls (request URL +
+    // confirm). The PUT itself is a plain XHR so we get upload progress.
+    // ------------------------------------------------------------------
+
+    requestPaneUploadUrl: build.mutation<
+      { upload_url: string; object_key: string },
+      {
+        lineup_id: string;
+        pane: "stand" | "aim" | "throw" | "landing";
+        kind: "still" | "clip";
+        content_type: string;
+        content_length: number;
+      }
+    >({
+      query: ({ lineup_id, pane, kind, content_type, content_length }) => ({
+        url: `/lineups/${lineup_id}/panes/${pane}/upload-url`,
+        method: "POST",
+        data: { kind, content_type, content_length },
+      }),
+    }),
+
+    confirmPaneUpload: build.mutation<
+      Lineup,
+      {
+        lineup_id: string;
+        pane: "stand" | "aim" | "throw" | "landing";
+        kind: "still" | "clip";
+        object_key: string;
+      }
+    >({
+      query: ({ lineup_id, pane, kind, object_key }) => ({
+        url: `/lineups/${lineup_id}/panes/${pane}/confirm`,
+        method: "POST",
+        data: { kind, object_key },
+      }),
+      invalidatesTags: (_result, _err, { lineup_id }) => [
+        { type: "Lineup", id: lineup_id },
+        "LineupList",
+        "PendingLineups",
+      ],
+    }),
+
+    // ------------------------------------------------------------------
     // Zone density (map-level aggregate for density coloring)
     // ------------------------------------------------------------------
     getZoneDensity: build.query<ZoneDensity, ZoneDensityParams>({
@@ -192,4 +237,6 @@ export const {
   useAcceptLineupMutation,
   useHideLineupMutation,
   useBulkAcceptLineupsMutation,
+  useRequestPaneUploadUrlMutation,
+  useConfirmPaneUploadMutation,
 } = lineupsApi;
