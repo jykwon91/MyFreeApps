@@ -65,7 +65,12 @@ from app.schemas.game.pane_upload_schemas import (
     PaneUploadUrlRequest,
     PaneUploadUrlResponse,
 )
-from app.services.game import lineup_service, pane_trim_service, pane_upload_service
+from app.services.game import (
+    lineup_service,
+    pane_trim_service,
+    pane_upload_service,
+    pane_widen_source_service,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -571,3 +576,39 @@ async def trim_pane_clip(
     if lineup is None:
         raise HTTPException(status_code=404, detail="Lineup not found")
     return await pane_trim_service.trim_pane_clip(db, lineup, pane, body)
+
+
+# ---------------------------------------------------------------------------
+# Per-pane on-demand widen-source — one-row sibling of the bulk
+# ``python -m app.cli widen-source`` backfill. The operator clicks "Widen
+# source" in the trim editor and we re-fetch the YouTube video for THIS
+# pane, cut a wider clip, and update ``*_url_original`` so the next trim
+# can drag past the previous bounds. See pane_widen_source_service.
+# ---------------------------------------------------------------------------
+
+
+@auth_router.post(
+    "/lineups/{lineup_id}/panes/{pane}/widen-source",
+    response_model=LineupRead,
+)
+async def widen_pane_source(
+    lineup_id: uuid.UUID,
+    pane: Pane,
+    db: AsyncSession = Depends(get_db),
+) -> LineupRead:
+    """Re-cut a wider trim-editor source from the lineup's YouTube video.
+
+    Pane must be ``throw`` or ``landing`` (same allow-list as ``trim``).
+    Returns the admin-shape LineupRead so the frontend can rebind the
+    slider to the (possibly wider) bounds without a separate fetch.
+
+    Failure shapes:
+      * 400 — pane outside the trimmable allow-list
+      * 404 — lineup missing / no YouTube source / chapter shifted since ingest
+      * 502 — yt-dlp metadata fetch or video download failed
+      * 500 — ffmpeg cut, MinIO upload, or DB commit failed
+    """
+    lineup = await get_lineup_orm(db, lineup_id)
+    if lineup is None:
+        raise HTTPException(status_code=404, detail="Lineup not found")
+    return await pane_widen_source_service.widen_pane_source(db, lineup, pane)
