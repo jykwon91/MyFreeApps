@@ -94,7 +94,6 @@ class FakeIO {
 }
 
 let playSpy: ReturnType<typeof vi.spyOn>;
-let pauseSpy: ReturnType<typeof vi.spyOn>;
 
 beforeEach(() => {
   lastIO = null;
@@ -104,9 +103,7 @@ beforeEach(() => {
   playSpy = vi
     .spyOn(window.HTMLMediaElement.prototype, "play")
     .mockResolvedValue(undefined);
-  pauseSpy = vi
-    .spyOn(window.HTMLMediaElement.prototype, "pause")
-    .mockImplementation(() => {});
+  vi.spyOn(window.HTMLMediaElement.prototype, "pause").mockImplementation(() => {});
 });
 
 afterEach(() => {
