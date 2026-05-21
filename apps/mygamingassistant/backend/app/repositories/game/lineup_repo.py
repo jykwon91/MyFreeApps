@@ -416,6 +416,95 @@ async def set_landing_clip_url(
     return lineup
 
 
+async def list_accepted_lineups_needing_micro_clips(
+    db: AsyncSession,
+) -> list[Lineup]:
+    """Accepted, ingested lineups missing EITHER stand or aim micro-clip.
+
+    The PR6 backfill set: ``status='accepted'`` AND a source video to re-fetch
+    (``youtube_video_id`` not null) AND at least ONE of the two micro-clip
+    columns is still null. A single composite list (rather than two separate
+    lists) means a video is fetched + downloaded ONCE per backfill run even
+    when it backs many lineups — the generator handles partial state
+    internally, skipping the side that's already populated.
+
+    Idempotent: once both columns are set, the lineup drops out of the set.
+    Re-running only touches the remainder. Ordered oldest-first so a long
+    backfill makes monotonic progress.
+
+    Mirrors :func:`list_accepted_lineups_needing_clips` (PR2) /
+    :func:`list_accepted_lineups_needing_landing_clips` (PR5) — the three
+    backfills are independent (separate operator commands, separate NULL
+    columns) and intentionally not coupled.
+    """
+    stmt = (
+        select(Lineup)
+        .where(
+            Lineup.status == "accepted",
+            Lineup.youtube_video_id.is_not(None),
+            (
+                Lineup.stand_clip_url.is_(None)
+                | Lineup.aim_clip_url.is_(None)
+            ),
+        )
+        .order_by(Lineup.created_at.asc())
+    )
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
+
+
+async def set_stand_clip_url(
+    db: AsyncSession,
+    lineup: Lineup,
+    stand_clip_key: str,
+) -> Lineup:
+    """Persist the generated stand micro-clip's bare MinIO key onto a lineup.
+
+    One-column commit on purpose — same rationale as :func:`set_clip_url` /
+    :func:`set_landing_clip_url`: the stand clip is best-effort and orthogonal
+    to lineup validity (the stand still already covers this pane; the clip is
+    a motion upgrade). A stand-clip failure must NEVER roll back the lineup
+    or the sibling aim clip; a stand-clip success must NOT wait on the aim
+    clip or any other parallel writer.
+
+    Transaction ownership lives here in the repo per PR #687/#695 — callers
+    (ingestion orchestrator + backfill CLI) never call db.commit().
+    ``stand_clip_url`` stores a BARE object key; presigning happens at read
+    time in ``lineup_service._build_read``.
+    """
+    lineup.stand_clip_url = stand_clip_key
+    try:
+        await db.flush()
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
+    return lineup
+
+
+async def set_aim_clip_url(
+    db: AsyncSession,
+    lineup: Lineup,
+    aim_clip_key: str,
+) -> Lineup:
+    """Persist the generated aim micro-clip's bare MinIO key onto a lineup.
+
+    Sibling to :func:`set_stand_clip_url` — identical contract, independent
+    column. Anchoring on the same chapter timestamp the classifier chose for
+    ``aim_screenshot_url`` is what keeps the existing ``aim_anchor_x/y``
+    overlay pixel-accurate on the clip's first frame (the first frame IS the
+    aim still).
+    """
+    lineup.aim_clip_url = aim_clip_key
+    try:
+        await db.flush()
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
+    return lineup
+
+
 async def list_accepted_lineups_needing_technique(
     db: AsyncSession,
 ) -> list[Lineup]:
