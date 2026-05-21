@@ -70,6 +70,9 @@ class LineupRead(BaseModel):
     stand_screenshot_url: Optional[str] = None
     aim_screenshot_url: Optional[str] = None
     clip_url: Optional[str] = None
+    # PR5 landing-clip key; presigned to a 24h GET URL at read time in
+    # lineup_service._build_read alongside the other MinIO keys.
+    landing_clip_url: Optional[str] = None
     aim_anchor_x: Optional[float] = None
     aim_anchor_y: Optional[float] = None
     # Minimap anchor positions — raw values from the DB. May be NULL; use the

@@ -107,6 +107,13 @@ export interface Lineup {
   // the throw could not be localised or the lineup predates the clip
   // pipeline — the tile then falls back to the stand/aim stills.
   clip_url: string | null;
+  // PR5: presigned URL of the short looping landing clip — shows the moment
+  // the utility lands/explodes (smoke deploying, molly burning, flash
+  // detonating). Null when ingest's landing pass was gated off (skipped via
+  // PR2's confidence gate), generation failed, or the lineup predates PR5 —
+  // the LandingPane then falls back to the "Lands in: <zone>" text rendering
+  // (graceful degradation, mirroring PR2's clip silent-fallback to stills).
+  landing_clip_url: string | null;
   aim_anchor_x: number | null;
   aim_anchor_y: number | null;
   // Explicit minimap coords; fall back to zone-polygon centroid via effective_*.

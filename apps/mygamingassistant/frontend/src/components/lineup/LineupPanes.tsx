@@ -76,20 +76,31 @@ export function ScreenshotHalf({ url, alt, label, children }: ScreenshotHalfProp
 }
 
 // ---------------------------------------------------------------------------
-// ClipView (PR2) — gif-style looping throw clip, in-view autoplay.
+// ClipView (PR2) — gif-style looping clip, in-view autoplay.
 //
 // The src is lazily attached on first view so off-screen clips never fetch;
 // only clips scrolled into view play (a glance board can hold dozens — letting
 // them all decode at once tanks the second-monitor frame rate). After PR4
-// this lives in the bottom-left THROW pane alongside the still panes.
+// this lives in the bottom-left THROW pane alongside the still panes, and
+// after PR5 the same primitive renders the bottom-right LANDING pane (with
+// a different label + URL).
+//
+// PR5 generalised the corner label to a prop so both THROW and LANDING use
+// the same byte-for-byte primitive. The aria-label and loading behaviour are
+// shared — only the label + URL differ between the two surfaces.
 // ---------------------------------------------------------------------------
 interface ClipViewProps {
   clipUrl: string;
   posterUrl: string | null;
   title: string;
+  // Corner label (uppercase, ~10px). PR2 callers pass "THROW"; PR5's
+  // LandingPane passes "LANDING". Default kept as "THROW" so any new caller
+  // that forgets to pass it gets the historical behaviour, not a blank
+  // label.
+  label?: string;
 }
 
-export function ClipView({ clipUrl, posterUrl, title }: ClipViewProps) {
+export function ClipView({ clipUrl, posterUrl, title, label = "THROW" }: ClipViewProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   // Sticky once the tile has been seen: keep the src attached (re-fetching on
   // every scroll-by is worse than keeping a paused decoded clip).
@@ -170,14 +181,14 @@ export function ClipView({ clipUrl, posterUrl, title }: ClipViewProps) {
         // Pre-view: metadata only. In view: allow buffering so the loop
         // doesn't stall on first frame.
         preload={armed ? "auto" : "metadata"}
-        aria-label={`${title} — looping throw clip (muted)`}
+        aria-label={`${title} — looping ${label.toLowerCase()} clip (muted)`}
         onError={() => setLoadFailed(true)}
         className="absolute inset-0 w-full h-full object-cover"
       />
-      {/* Hide the "THROW" affordance when the clip fails to load (e.g. an
-          expired presigned URL mid-session) — the poster (stand still)
-          stays as the graceful fallback rather than a misleading badge. */}
-      {!loadFailed && <CornerLabel>THROW</CornerLabel>}
+      {/* Hide the corner affordance when the clip fails to load (e.g. an
+          expired presigned URL mid-session) — the poster stays as the
+          graceful fallback rather than a misleading badge. */}
+      {!loadFailed && <CornerLabel>{label}</CornerLabel>}
     </div>
   );
 }
@@ -202,16 +213,50 @@ export function ThrowPlaceholder() {
 // ---------------------------------------------------------------------------
 // LandingPane — bottom-right pane. Shows where the utility lands.
 //
-// PR4 ships a text-only placeholder ("Lands in: <target_zone.name>") because
-// no landing-clip extraction exists yet. PR5 will replace the placeholder
-// with a real ~1-2s looping landing clip. The pane is the same dimensions
-// either way — only the inner content changes.
+// PR5: when ``landingClipUrl`` is set we render a looping muted clip via the
+// shared ``ClipView`` primitive (same lazy-load + in-view autoplay + load-
+// failure tolerance as the THROW pane — the two surfaces are byte-equivalent
+// except for the corner label and the source URL). When the clip key is
+// null — pre-PR5 lineups, ingest's landing pass skipped (PR2 confidence
+// gate didn't clear), or the chapter was too short for a clean cut — we
+// gracefully degrade to the original "Lands in: <zone>" text. This is the
+// same silent-fallback shape PR2 uses for the THROW pane (stills when clip
+// is null) — never a misleading "video unavailable" placeholder.
 // ---------------------------------------------------------------------------
 interface LandingPaneProps {
   targetZoneName: string | null;
+  // PR5 — presigned MinIO key for the landing clip. Null/undefined falls
+  // back to text rendering. Optional for backwards-compat with existing
+  // call sites that haven't been updated yet (they get the pre-PR5 text
+  // behaviour, never a runtime error).
+  landingClipUrl?: string | null;
+  // Poster shown before the clip loads / on a load failure. The aim still
+  // is the closest existing artifact to the landing view (the player's
+  // line-of-sight when throwing) — better than a blank black pane when the
+  // clip is slow or unreachable. Optional; defaults to no poster.
+  posterUrl?: string | null;
+  // Title used by ClipView's aria-label. Defaults to a derived label so
+  // existing call sites don't have to pass it; pass an explicit title (e.g.
+  // the lineup title) when one is meaningful.
+  title?: string;
 }
 
-export function LandingPane({ targetZoneName }: LandingPaneProps) {
+export function LandingPane({
+  targetZoneName,
+  landingClipUrl,
+  posterUrl = null,
+  title,
+}: LandingPaneProps) {
+  if (landingClipUrl) {
+    return (
+      <ClipView
+        clipUrl={landingClipUrl}
+        posterUrl={posterUrl}
+        title={title ?? `Lands in ${targetZoneName ?? "unknown"}`}
+        label="LANDING"
+      />
+    );
+  }
   return (
     <div className="flex-1 min-w-0 relative bg-muted/20 aspect-video overflow-hidden">
       <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 px-2 text-center">

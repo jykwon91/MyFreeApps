@@ -351,6 +351,71 @@ async def set_clip_url(
     return lineup
 
 
+async def list_accepted_lineups_needing_landing_clips(
+    db: AsyncSession,
+) -> list[Lineup]:
+    """Accepted, ingested lineups that don't have a landing clip yet.
+
+    The PR5 backfill set: ``status='accepted'`` AND a source video to
+    re-fetch (``youtube_video_id`` not null — manual uploads have no source
+    frames so a landing clip is never extractable for them) AND no landing
+    clip yet (``landing_clip_url`` null). Filtering on null
+    ``landing_clip_url`` is exactly what makes the backfill idempotent — a
+    generated landing clip drops out of this set, so re-running only touches
+    the remainder. Ordered oldest-first so a long backfill makes visible
+    monotonic progress.
+
+    Mirrors :func:`list_accepted_lineups_needing_clips` (PR2) — the two
+    backfills are independent (separate operator commands, separate NULL
+    columns) and intentionally not coupled. A lineup can have a throw clip
+    but no landing clip, or vice versa.
+    """
+    stmt = (
+        select(Lineup)
+        .where(
+            Lineup.status == "accepted",
+            Lineup.youtube_video_id.is_not(None),
+            Lineup.landing_clip_url.is_(None),
+        )
+        .order_by(Lineup.created_at.asc())
+    )
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
+
+
+async def set_landing_clip_url(
+    db: AsyncSession,
+    lineup: Lineup,
+    landing_clip_key: str,
+) -> Lineup:
+    """Persist the generated landing-clip's bare MinIO key onto a lineup row.
+
+    Its own one-column commit (not folded into the throw-clip commit, the
+    classifier writeback, or the technique commit) on purpose — identical
+    rationale to :func:`set_clip_url` and :func:`set_technique`: the landing
+    clip is best-effort and orthogonal to the row's validity (a lineup is
+    fully usable from its stills + throw clip + technique with no landing
+    clip; the LandingPane gracefully falls back to "Lands in: <zone>"
+    text). A landing-clip failure must NEVER roll back the already-committed
+    lineup, classifier suggestions, throw clip, or technique; a successful
+    landing clip must NOT wait on anything else.
+
+    Transaction ownership lives here in the repo per PR #687/#695 — the
+    ingestion orchestrator and the backfill CLI never call db.commit().
+    ``landing_clip_url`` stores a BARE object key (like stand/aim screenshot
+    URLs and ``clip_url``); presigning happens at read time in
+    ``lineup_service._build_read``.
+    """
+    lineup.landing_clip_url = landing_clip_key
+    try:
+        await db.flush()
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
+    return lineup
+
+
 async def list_accepted_lineups_needing_technique(
     db: AsyncSession,
 ) -> list[Lineup]:

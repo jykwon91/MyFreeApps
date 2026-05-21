@@ -50,6 +50,9 @@ from app.services.classification.classifier_service import (
     classify_frames_for_lineup_decision,
 )
 from app.services.ingestion.clip_generator import generate_clip_for_lineup
+from app.services.ingestion.landing_clip_generator import (
+    generate_landing_clip_for_lineup,
+)
 from app.services.ingestion.technique_extractor import (
     extract_technique_for_lineup,
 )
@@ -391,6 +394,7 @@ async def _process_chapter(
         # returns structured outcomes and doesn't raise for expected
         # failures; the broad catch is purely defensive against an unexpected
         # bug taking down ingestion.
+        clip_result = None
         try:
             utility_hint = await _resolve_utility_hint(db, result)
             clip_result = await generate_clip_for_lineup(
@@ -416,6 +420,48 @@ async def _process_chapter(
                 source.id, video_meta.video_id, start, lineup.id, str(exc),
                 exc_info=True,
             )
+
+        # PR5: best-effort landing clip. Shares PR2's classifier output —
+        # only fires when clip_result is "generated" (meaning PR2's gates
+        # cleared and result_ts is known). We pass precomputed_result_ts so
+        # landing_clip_generator does NOT make its own Claude call: the cost
+        # of adding the landing pane to ingest is one extra ffmpeg cut plus
+        # one extra MinIO upload per chapter — no extra classifier spend.
+        # Skipped landings stay NULL and render the existing zone-text
+        # fallback. Same non-fatal contract as the clip + technique blocks
+        # above (landing-clip failure must not roll back the lineup).
+        if (
+            clip_result is not None
+            and clip_result.status == "generated"
+            and clip_result.result_ts is not None
+        ):
+            try:
+                landing_result = await generate_landing_clip_for_lineup(
+                    db,
+                    lineup,
+                    chapter_start=float(chapter.start_seconds),
+                    chapter_end=float(chapter.end_seconds),
+                    video_path=video_path,
+                    precomputed_result_ts=clip_result.result_ts,
+                    precomputed_confidence=clip_result.confidence,
+                )
+                logger.info(
+                    "Landing-clip generation (ingest): source_id=%s "
+                    "video_id=%s chapter_start=%d lineup_id=%s status=%s "
+                    "reason=%s",
+                    source.id, video_meta.video_id, start, lineup.id,
+                    landing_result.status,
+                    landing_result.skip_reason
+                    or (",".join(landing_result.error_codes) or "-"),
+                )
+            except Exception as exc:
+                logger.warning(
+                    "Landing-clip generation unexpected error "
+                    "(non-fatal): source_id=%s video_id=%s chapter_start=%d "
+                    "lineup_id=%s error=%s",
+                    source.id, video_meta.video_id, start, lineup.id,
+                    str(exc), exc_info=True,
+                )
 
         # PR3: best-effort throw-technique footer text. Symmetric to the clip
         # block above and equally non-fatal — independent Claude call, own

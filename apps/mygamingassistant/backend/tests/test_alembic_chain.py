@@ -2,7 +2,7 @@
 
 These run against the raw migration scripts (no live DB) so they fit the
 default pytest suite. They lock in that the chain resolves to a single head
-(currently ``0010``) and that every revision is reachable base → head — the
+(currently ``0012``) and that every revision is reachable base → head — the
 class of bug where a new migration's ``down_revision`` is stale after a
 merge and silently orphans the chain.
 """
@@ -24,8 +24,8 @@ def script_directory() -> ScriptDirectory:
     return ScriptDirectory.from_config(cfg)
 
 
-def test_single_head_is_0011(script_directory: ScriptDirectory) -> None:
-    """The DAG must resolve to exactly one head and it must be 0011.
+def test_single_head_is_0012(script_directory: ScriptDirectory) -> None:
+    """The DAG must resolve to exactly one head and it must be 0012.
 
     Bump this pin (and add a down_revision assertion below) in the same PR
     that adds a new migration — same per-PR contract as the fixture
@@ -37,8 +37,8 @@ def test_single_head_is_0011(script_directory: ScriptDirectory) -> None:
         "Orphan heads usually mean a migration's down_revision is stale "
         "after a merge — rebase and re-point the down_revision."
     )
-    assert heads[0] == "0011", (
-        f"Expected head 0011 (the lineup technique column), got {heads[0]}."
+    assert heads[0] == "0012", (
+        f"Expected head 0012 (the lineup landing_clip_url column), got {heads[0]}."
     )
 
 
@@ -88,3 +88,11 @@ def test_0011_down_revision_points_at_0010(
     """0011 must chain directly off 0010 (the lineup technique column)."""
     rev = script_directory.get_revision("0011")
     assert rev.down_revision == "0010"
+
+
+def test_0012_down_revision_points_at_0011(
+    script_directory: ScriptDirectory,
+) -> None:
+    """0012 must chain directly off 0011 (the lineup landing_clip_url column)."""
+    rev = script_directory.get_revision("0012")
+    assert rev.down_revision == "0011"

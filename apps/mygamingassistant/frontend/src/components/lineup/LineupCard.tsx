@@ -154,7 +154,12 @@ export default function LineupCard({
           ) : (
             <ThrowPlaceholder />
           )}
-          <LandingPane targetZoneName={lineup.target_zone?.name ?? null} />
+          <LandingPane
+            targetZoneName={lineup.target_zone?.name ?? null}
+            landingClipUrl={lineup.landing_clip_url}
+            posterUrl={lineup.aim_screenshot_url}
+            title={lineup.title}
+          />
         </div>
       </div>
 

@@ -1,0 +1,486 @@
+"""Unit tests for the PR5 landing-clip generator.
+
+Pure landing-bounds math + the full generate_landing_clip_for_lineup
+orchestration with every external (download / frame extract / Claude /
+ffmpeg cut / MinIO / repo commit) mocked. Asserts the frozen-contract gate
+sharing with PR2 (precomputed_result_ts skips both the classifier call AND
+the gates) and the structured generated / skipped / failed outcomes.
+
+Mirrors :mod:`test_clip_generator` exactly so the two pipelines stay
+synchronised. Re-read PR2's tests when porting any behaviour change.
+"""
+from __future__ import annotations
+
+import types
+import uuid
+from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+
+from app.services.classification.classification_result import ThrowTimingResult
+from app.services.ingestion.frame_extractor import ClipCutError, FrameExtractionError
+from app.services.ingestion.landing_clip_generator import (
+    LandingClipGenerationResult,
+    _compute_landing_bounds,
+    generate_landing_clip_for_lineup,
+    pending_landing_clip_key,
+)
+from app.services.ingestion.youtube_fetcher import VideoDownloadError
+
+_MOD = "app.services.ingestion.landing_clip_generator"
+_FAKE_PNG = b"\x89PNG\r\n\x1a\n"
+_FAKE_MP4 = b"\x00\x00\x00\x18ftypmp42"
+
+
+def _lineup(video_id="vid123", chapter_title="B smoke"):
+    return types.SimpleNamespace(
+        id=uuid.uuid4(),
+        youtube_video_id=video_id,
+        chapter_title=chapter_title,
+        landing_clip_url=None,
+    )
+
+
+# ---------------------------------------------------------------------------
+# _compute_landing_bounds — pure math
+# ---------------------------------------------------------------------------
+
+class TestComputeLandingBounds:
+    def test_normal_window(self):
+        # result 24, chapter [10,40]: [23.5, 27] = 3.5s.
+        start, dur = _compute_landing_bounds(24.0, 10.0, 40.0)
+        assert start == pytest.approx(23.5)
+        assert dur == pytest.approx(3.5)
+
+    def test_clamped_to_chapter_start(self):
+        # result 10.2 → 10.2-0.5=9.7 but chapter starts at 10 → clamp to 10.
+        start, _dur = _compute_landing_bounds(10.2, 10.0, 40.0)
+        assert start == pytest.approx(10.0)
+
+    def test_clamped_to_chapter_end(self):
+        # result 39, chapter [10,40]: 39+3=42 → clamp to 40.
+        start, dur = _compute_landing_bounds(39.0, 10.0, 40.0)
+        assert start == pytest.approx(38.5)
+        # 40 - 38.5 = 1.5s — clamped tail but still >= 1s.
+        assert dur == pytest.approx(1.5)
+
+    def test_chapter_too_short_returns_none(self):
+        # 0.4s chapter — clamped window < 1s → skip signal.
+        assert _compute_landing_bounds(20.0, 19.9, 20.3) is None
+
+    def test_clip_never_exceeds_chapter_end(self):
+        start, dur = _compute_landing_bounds(20.0, 10.0, 22.0)
+        assert start + dur <= 22.0 + 1e-9
+
+
+def test_pending_landing_clip_key_is_deterministic():
+    """Stable key per (video, chapter start) → backfill idempotency."""
+    assert pending_landing_clip_key("abc", 42.0) == "pending/abc/42-landing.mp4"
+    assert pending_landing_clip_key("abc", 42.9) == "pending/abc/42-landing.mp4"
+
+
+def test_pending_landing_key_distinct_from_throw_clip_key():
+    """Landing and throw keys MUST differ so they don't overwrite each other.
+
+    Regression guard: a copy-paste typo that aliased both keys to
+    ``pending/{vid}/{start}-clip.mp4`` would silently destroy one clip
+    every time the other was generated.
+    """
+    from app.services.ingestion.clip_generator import pending_clip_key
+
+    assert pending_landing_clip_key("abc", 42) != pending_clip_key("abc", 42)
+
+
+# ---------------------------------------------------------------------------
+# generate_landing_clip_for_lineup — ingest path (precomputed result_ts)
+# ---------------------------------------------------------------------------
+
+def _ffmpeg_cut_mock():
+    return AsyncMock(return_value=_FAKE_MP4)
+
+
+def _storage_mock():
+    storage = MagicMock()
+    storage.upload_file = MagicMock()
+    return storage
+
+
+@pytest.mark.asyncio
+async def test_ingest_path_generates_clip_without_classifier_call():
+    """Precomputed result_ts → skip classifier; cut + upload + persist."""
+    db = AsyncMock()
+    lineup = _lineup()
+    storage = _storage_mock()
+    set_url_mock = AsyncMock(return_value=lineup)
+
+    classifier_mock = AsyncMock()  # MUST NOT be called
+
+    with (
+        patch(f"{_MOD}.cut_clip", _ffmpeg_cut_mock()) as cut,
+        patch(f"{_MOD}.get_storage", return_value=storage),
+        patch(f"{_MOD}.lineup_repo.set_landing_clip_url", set_url_mock),
+        patch(f"{_MOD}.classify_throw_timing_from_frames", classifier_mock),
+    ):
+        result = await generate_landing_clip_for_lineup(
+            db, lineup,
+            chapter_start=10.0, chapter_end=40.0,
+            video_path=Path("/tmp/x.mp4"),
+            precomputed_result_ts=24.0,
+            precomputed_confidence=0.82,
+        )
+
+    assert result.status == "generated"
+    assert result.clip_key == "pending/vid123/10-landing.mp4"
+    assert result.result_ts == pytest.approx(24.0)
+    assert result.confidence == pytest.approx(0.82)
+    cut.assert_awaited_once()
+    storage.upload_file.assert_called_once()
+    set_url_mock.assert_awaited_once()
+    classifier_mock.assert_not_awaited(), (
+        "Ingest path must NOT call the classifier — cost regression"
+    )
+
+
+@pytest.mark.asyncio
+async def test_ingest_path_failed_without_video_path_is_wiring_bug():
+    """precomputed_result_ts without video_path is a caller error.
+
+    The ingest orchestrator MUST pass the on-disk video — if it didn't, the
+    landing-clip generator does not silently work around it by downloading
+    (that would double the ingest video-fetch cost on every chapter).
+    """
+    db = AsyncMock()
+    lineup = _lineup()
+    result = await generate_landing_clip_for_lineup(
+        db, lineup,
+        chapter_start=0.0, chapter_end=30.0,
+        video_path=None,  # missing!
+        precomputed_result_ts=20.0,
+    )
+    assert result.status == "failed"
+    assert "no_video_path_with_precomputed" in result.error_codes
+
+
+@pytest.mark.asyncio
+async def test_ingest_path_chapter_too_short_skips():
+    """Even with a valid result_ts, a sliver chapter clamps below 1s → skip."""
+    db = AsyncMock()
+    lineup = _lineup()
+    result = await generate_landing_clip_for_lineup(
+        db, lineup,
+        chapter_start=19.9, chapter_end=20.3,
+        video_path=Path("/tmp/x.mp4"),
+        precomputed_result_ts=20.0,
+    )
+    assert result.status == "skipped"
+    assert result.skip_reason == "chapter_too_short_for_landing_clip"
+
+
+# ---------------------------------------------------------------------------
+# generate_landing_clip_for_lineup — backfill path (own classifier call)
+# ---------------------------------------------------------------------------
+
+def _settings(enable=True, key="sk-test"):
+    s = MagicMock()
+    s.enable_classifier = enable
+    s.anthropic_api_key = key
+    return s
+
+
+def _timing(**kw):
+    base = dict(
+        success=True, is_lineup_throw=True, release_index=2,
+        result_index=4, confidence=0.8, reasoning="ok",
+        error_codes=[],
+    )
+    base.update(kw)
+    return ThrowTimingResult(**base)
+
+
+@pytest.mark.asyncio
+async def test_backfill_path_runs_classifier_and_generates():
+    db = AsyncMock()
+    lineup = _lineup()
+    storage = _storage_mock()
+    set_url_mock = AsyncMock(return_value=lineup)
+    timing = _timing(result_index=5)
+    timestamps = [12.0, 18.0, 24.0, 30.0, 36.0]
+
+    with (
+        patch(f"{_MOD}.settings", _settings()),
+        patch(f"{_MOD}.clip_window_timestamps", return_value=timestamps),
+        patch(f"{_MOD}.extract_frames_downscaled",
+              AsyncMock(return_value=[_FAKE_PNG] * 5)),
+        patch(f"{_MOD}.classify_throw_timing_from_frames",
+              AsyncMock(return_value=timing)),
+        patch(f"{_MOD}.cut_clip", _ffmpeg_cut_mock()),
+        patch(f"{_MOD}.get_storage", return_value=storage),
+        patch(f"{_MOD}.lineup_repo.set_landing_clip_url", set_url_mock),
+    ):
+        result = await generate_landing_clip_for_lineup(
+            db, lineup,
+            chapter_start=10.0, chapter_end=40.0,
+            video_path=Path("/tmp/x.mp4"),
+            # No precomputed → backfill branch.
+        )
+
+    assert result.status == "generated"
+    # result_index 5 (1-based) → timestamps[4] = 36.0, then clamped end at 40.
+    assert result.result_ts == pytest.approx(36.0)
+
+
+@pytest.mark.asyncio
+async def test_backfill_path_skips_not_a_throw():
+    db = AsyncMock()
+    lineup = _lineup()
+    timing = _timing(is_lineup_throw=False)
+    timestamps = [12.0, 18.0, 24.0]
+
+    with (
+        patch(f"{_MOD}.settings", _settings()),
+        patch(f"{_MOD}.clip_window_timestamps", return_value=timestamps),
+        patch(f"{_MOD}.extract_frames_downscaled",
+              AsyncMock(return_value=[_FAKE_PNG] * 3)),
+        patch(f"{_MOD}.classify_throw_timing_from_frames",
+              AsyncMock(return_value=timing)),
+    ):
+        result = await generate_landing_clip_for_lineup(
+            db, lineup,
+            chapter_start=10.0, chapter_end=30.0,
+            video_path=Path("/tmp/x.mp4"),
+        )
+    assert result.status == "skipped"
+    assert result.skip_reason == "not_a_throw"
+
+
+@pytest.mark.asyncio
+async def test_backfill_path_skips_low_confidence():
+    db = AsyncMock()
+    lineup = _lineup()
+    timing = _timing(confidence=0.4)
+    timestamps = [12.0, 18.0, 24.0]
+
+    with (
+        patch(f"{_MOD}.settings", _settings()),
+        patch(f"{_MOD}.clip_window_timestamps", return_value=timestamps),
+        patch(f"{_MOD}.extract_frames_downscaled",
+              AsyncMock(return_value=[_FAKE_PNG] * 3)),
+        patch(f"{_MOD}.classify_throw_timing_from_frames",
+              AsyncMock(return_value=timing)),
+    ):
+        result = await generate_landing_clip_for_lineup(
+            db, lineup,
+            chapter_start=10.0, chapter_end=30.0,
+            video_path=Path("/tmp/x.mp4"),
+        )
+    assert result.status == "skipped"
+    assert result.skip_reason.startswith("low_confidence")
+
+
+@pytest.mark.asyncio
+async def test_backfill_path_skips_no_result_frame():
+    db = AsyncMock()
+    lineup = _lineup()
+    timing = _timing(result_index=None)
+    timestamps = [12.0, 18.0, 24.0]
+
+    with (
+        patch(f"{_MOD}.settings", _settings()),
+        patch(f"{_MOD}.clip_window_timestamps", return_value=timestamps),
+        patch(f"{_MOD}.extract_frames_downscaled",
+              AsyncMock(return_value=[_FAKE_PNG] * 3)),
+        patch(f"{_MOD}.classify_throw_timing_from_frames",
+              AsyncMock(return_value=timing)),
+    ):
+        result = await generate_landing_clip_for_lineup(
+            db, lineup,
+            chapter_start=10.0, chapter_end=30.0,
+            video_path=Path("/tmp/x.mp4"),
+        )
+    assert result.status == "skipped"
+    assert result.skip_reason == "no_result_frame"
+
+
+@pytest.mark.asyncio
+async def test_backfill_path_classifier_disabled_skips():
+    db = AsyncMock()
+    lineup = _lineup()
+    with patch(f"{_MOD}.settings", _settings(enable=False)):
+        result = await generate_landing_clip_for_lineup(
+            db, lineup,
+            chapter_start=0.0, chapter_end=30.0,
+            video_path=Path("/tmp/x.mp4"),
+        )
+    assert result.status == "skipped"
+    assert result.skip_reason == "classifier_disabled"
+
+
+@pytest.mark.asyncio
+async def test_backfill_path_classifier_missing_key_skips():
+    db = AsyncMock()
+    lineup = _lineup()
+    with patch(f"{_MOD}.settings", _settings(key="")):
+        result = await generate_landing_clip_for_lineup(
+            db, lineup,
+            chapter_start=0.0, chapter_end=30.0,
+            video_path=Path("/tmp/x.mp4"),
+        )
+    assert result.status == "skipped"
+    assert "missing_api_key" in result.skip_reason
+
+
+@pytest.mark.asyncio
+async def test_backfill_path_classifier_api_failure_returns_failed():
+    db = AsyncMock()
+    lineup = _lineup()
+    timing = ThrowTimingResult(
+        success=False, error_codes=["overloaded_error"],
+        reasoning="rate limited",
+    )
+    timestamps = [12.0, 18.0, 24.0]
+    with (
+        patch(f"{_MOD}.settings", _settings()),
+        patch(f"{_MOD}.clip_window_timestamps", return_value=timestamps),
+        patch(f"{_MOD}.extract_frames_downscaled",
+              AsyncMock(return_value=[_FAKE_PNG] * 3)),
+        patch(f"{_MOD}.classify_throw_timing_from_frames",
+              AsyncMock(return_value=timing)),
+    ):
+        result = await generate_landing_clip_for_lineup(
+            db, lineup,
+            chapter_start=0.0, chapter_end=30.0,
+            video_path=Path("/tmp/x.mp4"),
+        )
+    assert result.status == "failed"
+    assert "overloaded_error" in result.error_codes
+
+
+@pytest.mark.asyncio
+async def test_backfill_path_frame_extract_failure_returns_failed():
+    db = AsyncMock()
+    lineup = _lineup()
+    timestamps = [12.0, 18.0, 24.0]
+    with (
+        patch(f"{_MOD}.settings", _settings()),
+        patch(f"{_MOD}.clip_window_timestamps", return_value=timestamps),
+        patch(
+            f"{_MOD}.extract_frames_downscaled",
+            AsyncMock(side_effect=FrameExtractionError(
+                "boom", timestamp=18.0, returncode=1, stderr="x",
+            )),
+        ),
+    ):
+        result = await generate_landing_clip_for_lineup(
+            db, lineup,
+            chapter_start=0.0, chapter_end=30.0,
+            video_path=Path("/tmp/x.mp4"),
+        )
+    assert result.status == "failed"
+    assert any("frame_extract" in c for c in result.error_codes)
+
+
+@pytest.mark.asyncio
+async def test_backfill_path_download_failure_returns_failed(tmp_path):
+    """When the generator owns the download (video_path=None), a yt-dlp
+    failure surfaces as status=failed with structured codes (not a raise)."""
+    db = AsyncMock()
+    lineup = _lineup()
+    with (
+        patch(f"{_MOD}.settings", _settings()),
+        patch(
+            f"{_MOD}.download_video",
+            AsyncMock(side_effect=VideoDownloadError(
+                "boom", video_id="vid123",
+                error_type="network", original=Exception(),
+            )),
+        ),
+    ):
+        result = await generate_landing_clip_for_lineup(
+            db, lineup,
+            chapter_start=0.0, chapter_end=30.0,
+            video_path=None,
+            download_dir=tmp_path,
+        )
+    assert result.status == "failed"
+    assert any("download:network" in c for c in result.error_codes)
+
+
+@pytest.mark.asyncio
+async def test_backfill_path_no_source_video_skips():
+    db = AsyncMock()
+    lineup = _lineup(video_id=None)
+    result = await generate_landing_clip_for_lineup(
+        db, lineup,
+        chapter_start=0.0, chapter_end=30.0,
+        video_path=Path("/tmp/x.mp4"),
+    )
+    assert result.status == "skipped"
+    assert result.skip_reason == "no_source_video"
+
+
+@pytest.mark.asyncio
+async def test_ffmpeg_cut_failure_returns_failed():
+    """Same failure shape on both ingest and backfill paths — assert via ingest."""
+    db = AsyncMock()
+    lineup = _lineup()
+
+    with patch(
+        f"{_MOD}.cut_clip",
+        AsyncMock(side_effect=ClipCutError(
+            "boom", start=20.0, duration=3.5, returncode=1, stderr="x",
+        )),
+    ):
+        result = await generate_landing_clip_for_lineup(
+            db, lineup,
+            chapter_start=10.0, chapter_end=40.0,
+            video_path=Path("/tmp/x.mp4"),
+            precomputed_result_ts=24.0,
+        )
+    assert result.status == "failed"
+    assert any("clip_cut" in c for c in result.error_codes)
+
+
+@pytest.mark.asyncio
+async def test_upload_failure_returns_failed():
+    db = AsyncMock()
+    lineup = _lineup()
+    storage = _storage_mock()
+    storage.upload_file = MagicMock(side_effect=RuntimeError("minio down"))
+
+    with (
+        patch(f"{_MOD}.cut_clip", _ffmpeg_cut_mock()),
+        patch(f"{_MOD}.get_storage", return_value=storage),
+    ):
+        result = await generate_landing_clip_for_lineup(
+            db, lineup,
+            chapter_start=10.0, chapter_end=40.0,
+            video_path=Path("/tmp/x.mp4"),
+            precomputed_result_ts=24.0,
+        )
+    assert result.status == "failed"
+    assert "clip_upload_failed" in result.error_codes
+
+
+@pytest.mark.asyncio
+async def test_persist_failure_returns_failed():
+    db = AsyncMock()
+    lineup = _lineup()
+    storage = _storage_mock()
+
+    with (
+        patch(f"{_MOD}.cut_clip", _ffmpeg_cut_mock()),
+        patch(f"{_MOD}.get_storage", return_value=storage),
+        patch(
+            f"{_MOD}.lineup_repo.set_landing_clip_url",
+            AsyncMock(side_effect=RuntimeError("db down")),
+        ),
+    ):
+        result = await generate_landing_clip_for_lineup(
+            db, lineup,
+            chapter_start=10.0, chapter_end=40.0,
+            video_path=Path("/tmp/x.mp4"),
+            precomputed_result_ts=24.0,
+        )
+    assert result.status == "failed"
+    assert "landing_clip_url_persist_failed" in result.error_codes
