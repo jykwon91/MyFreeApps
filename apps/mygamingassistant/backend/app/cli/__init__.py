@@ -5,6 +5,7 @@ Usage:
     python -m app.cli backfill-clips
     python -m app.cli backfill-technique
     python -m app.cli backfill-landing-clips
+    python -m app.cli backfill-micro-clips
 """
 import asyncio
 import sys
@@ -81,6 +82,33 @@ async def _run_backfill_landing_clips() -> int:
     return 1 if stats.failed else 0
 
 
+async def _run_backfill_micro_clips() -> int:
+    """Generate stand + aim micro-clips for accepted lineups missing one.
+    Returns an exit code.
+
+    Idempotent — safe to re-run; only lineups with at least one of
+    ``stand_clip_url`` / ``aim_clip_url`` NULL are touched. Independent of
+    ``backfill-clips`` / ``backfill-landing-clips`` (separate NULL columns).
+    A non-zero exit signals at least one hard failure on either side so the
+    operator notices (re-running retries them — they are not fatal).
+    """
+    from app.db.session import AsyncSessionLocal
+    from app.services.ingestion.micro_clip_backfill import (
+        backfill_micro_clips,
+    )
+
+    async with AsyncSessionLocal() as db:
+        stats = await backfill_micro_clips(db)
+
+    print(stats.summary())
+    if stats.errors:
+        print(f"  {len(stats.errors)} issue(s):")
+        for err in stats.errors:
+            print(f"   - {err}")
+    # Re-runnable: failures retry next run, so a non-zero exit is advisory.
+    return 1 if stats.failed else 0
+
+
 def main() -> None:
     command = sys.argv[1] if len(sys.argv) > 1 else ""
 
@@ -94,6 +122,8 @@ def main() -> None:
         sys.exit(asyncio.run(_run_backfill_technique()))
     elif command == "backfill-landing-clips":
         sys.exit(asyncio.run(_run_backfill_landing_clips()))
+    elif command == "backfill-micro-clips":
+        sys.exit(asyncio.run(_run_backfill_micro_clips()))
     else:
         print(f"Unknown command: {command!r}")
         print("Available commands:")
@@ -101,6 +131,7 @@ def main() -> None:
         print("  backfill-clips         — generate clips for accepted lineups missing one")
         print("  backfill-technique     — name throw-technique for accepted lineups missing one")
         print("  backfill-landing-clips — generate landing clips for accepted lineups missing one")
+        print("  backfill-micro-clips   — generate stand + aim micro-clips for accepted lineups missing one")
         sys.exit(1)
 
 
