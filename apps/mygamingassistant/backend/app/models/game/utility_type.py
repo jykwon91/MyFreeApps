@@ -1,6 +1,6 @@
 """UtilityType model — a throwable or ability type within a game.
 
-CS2:      smoke, flash, molly, he, decoy
+CS2:      smoke, flash, molly, he
 Valorant: smoke, flash, molly, wall (generic; agent-specific abilities in later phases)
 """
 import uuid

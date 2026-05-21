@@ -6,7 +6,7 @@
  * visible in full-size. Zone section headers act as scroll anchors.
  *
  * Zone section order: A Site → B Site → Mid → others alphabetically.
- * Within each zone: Smoke → Flash → Molotov → HE → Decoy → side (T/CT/Both).
+ * Within each zone: Smoke → Flash → Molotov → HE → side (T/CT/Both).
  *
  * Usage:
  *   <GlanceBoard lineups={allLineups} isFetching={...} mapName={...} />

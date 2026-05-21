@@ -14,8 +14,7 @@
       { "slug": "smoke",   "name": "Smoke" },
       { "slug": "flash",   "name": "Flashbang" },
       { "slug": "molotov", "name": "Molotov / Incendiary" },
-      { "slug": "grenade", "name": "HE Grenade" },
-      { "slug": "decoy",   "name": "Decoy" }
+      { "slug": "grenade", "name": "HE Grenade" }
     ]
   }
 ]

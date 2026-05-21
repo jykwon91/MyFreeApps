@@ -4,7 +4,7 @@
 //! number (`weapon_0`, `weapon_1`, ...). Each entry has a `name` field
 //! using Valve's internal slug ("weapon_smokegrenade", "weapon_flashbang",
 //! etc.). The MGA backend, in contrast, uses short utility slugs
-//! ("smoke", "flash", "molotov", "grenade", "decoy") drawn from
+//! ("smoke", "flash", "molotov", "grenade") drawn from
 //! `backend/app/fixtures/utility_types.json`.
 //!
 //! This module is the ONLY place CS2 weapon names get translated to MGA
@@ -20,10 +20,9 @@
 //!   - `weapon_hegrenade` is HE. The MGA fixture currently uses the slug
 //!     `grenade` for HE (see `utility_types.json`), NOT `he` — we honour
 //!     the fixture's choice.
-//!   - `weapon_decoy` is the decoy grenade. The MGA fixture has the slug
-//!     `decoy`. No lineups exist for decoys yet, but the mapping is in
-//!     place so PR 10 doesn't need a follow-up if creators start uploading
-//!     decoy lineups.
+//!   - `weapon_decoy` returns `None` — decoys are intentionally excluded
+//!     from the MGA lineup library (decoys are not useful enough to
+//!     warrant browsable lineups).
 //!
 //! Anything that isn't a grenade (knife, rifle, pistol, c4) returns
 //! `None`. The frontend only uses utility for narrowing lineup queries,
@@ -47,7 +46,7 @@ pub fn weapon_to_utility_slug(weapon_name: &str) -> Option<&'static str> {
         "weapon_incgrenade" => Some("molotov"),
         // CS2 fixture uses `grenade` (not `he`) for HE — see utility_types.json
         "weapon_hegrenade" => Some("grenade"),
-        "weapon_decoy" => Some("decoy"),
+        // `weapon_decoy` deliberately returns None — decoys excluded from lineup library.
         _ => None,
     }
 }
@@ -92,8 +91,9 @@ mod tests {
     }
 
     #[test]
-    fn decoy_maps_to_decoy() {
-        assert_eq!(weapon_to_utility_slug("weapon_decoy"), Some("decoy"));
+    fn decoy_returns_none() {
+        // Decoys are deliberately excluded from the lineup library.
+        assert_eq!(weapon_to_utility_slug("weapon_decoy"), None);
     }
 
     #[test]
@@ -124,7 +124,7 @@ mod tests {
         assert!(is_utility_weapon("weapon_molotov"));
         assert!(is_utility_weapon("weapon_incgrenade"));
         assert!(is_utility_weapon("weapon_hegrenade"));
-        assert!(is_utility_weapon("weapon_decoy"));
+        assert!(!is_utility_weapon("weapon_decoy"));
         assert!(!is_utility_weapon("weapon_ak47"));
         assert!(!is_utility_weapon("weapon_knife"));
         assert!(!is_utility_weapon("weapon_c4"));

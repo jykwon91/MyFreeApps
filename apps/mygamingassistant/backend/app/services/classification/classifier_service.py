@@ -98,7 +98,7 @@ CS2 (Counter-Strike 2):
 - Left-side weapon list (primary + secondary + grenades as small icons stacked vertically)
 - Minimap in a corner showing teammates as colored dots, bomb carrier marker
 - Round timer at top center; "Bomb" (C4) as a throwable; no agent ability icons
-- Grenades are the utility: smoke, flashbang, HE grenade, Molotov/incendiary, decoy
+- Grenades are the utility: smoke, flashbang, HE grenade, Molotov/incendiary
 - Scoreboard uses T / CT team labels with a knife/bomb icon
 
 Valorant:
@@ -1292,7 +1292,7 @@ _THROW_TIMING_SCHEMA_DOC = """\
 You are given {n} numbered frames (Frame 1 .. Frame {n}) sampled in time order
 from ONE chapter of a tactical-FPS lineup tutorial. Each frame is labelled with
 its timestamp in seconds. The chapter is meant to demonstrate ONE utility throw
-(smoke / molotov / flash / HE / decoy): the player lines up, RELEASES the
+(smoke / molotov / flash / HE): the player lines up, RELEASES the
 utility, and it produces a RESULT on the map.
 
 Your ONLY job is to locate the throw in time:
@@ -1327,7 +1327,6 @@ Rules:
     FLASH   - white wash / detonation. If it is too fast to land on its own
               frame, set result_index = release_index and confidence <= 0.45.
     HE      - explosion burst / debris.
-    DECOY   - landed canister with a small ground smoke puff.
 - confidence: 0-1 that you localised the throw correctly. Low when the throw is
   off-screen, cut away from, or only inferred from trajectory; high only when
   the release and the result are both directly visible.

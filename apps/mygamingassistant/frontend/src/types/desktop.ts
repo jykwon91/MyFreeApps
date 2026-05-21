@@ -45,8 +45,7 @@ export type Cs2UtilitySlug =
   | "smoke"
   | "flash"
   | "molotov"
-  | "grenade"
-  | "decoy";
+  | "grenade";
 
 /** Display labels for the override panel + HUD. */
 export const CS2_UTILITY_LABELS: Record<Cs2UtilitySlug, string> = {
@@ -54,7 +53,6 @@ export const CS2_UTILITY_LABELS: Record<Cs2UtilitySlug, string> = {
   flash: "Flash",
   molotov: "Molotov",
   grenade: "HE",
-  decoy: "Decoy",
 };
 
 /** Ordered list of slugs for select dropdowns — keeps "ALL" group ordering
@@ -64,7 +62,6 @@ export const CS2_UTILITY_SLUGS: Cs2UtilitySlug[] = [
   "flash",
   "molotov",
   "grenade",
-  "decoy",
 ];
 
 /**
