@@ -140,6 +140,16 @@ export interface Lineup {
   // persisted ``aim_anchor_x/y`` overlay dot stays pixel-accurate when the
   // AimPane swaps from still to clip.
   aim_clip_url: string | null;
+  // Per-pane single-offset companions for the STAND/AIM shift-window editor.
+  // The micro-clip width is fixed at 1.0s, so one offset suffices (vs the
+  // start/end pair throw/landing use). The offset is in seconds from the
+  // start of the SHARED wider source ``clip_url_original`` — micro panes
+  // reuse the chapter's wider source rather than keeping per-pane originals.
+  // Admin-shape only — public reads strip these, same posture as the
+  // throw/landing trim offsets. NULL on legacy rows that predate the
+  // migration; the shift overlay opens its slider at offset=0 in that case.
+  stand_clip_offset_s: number | null;
+  aim_clip_offset_s: number | null;
   aim_anchor_x: number | null;
   aim_anchor_y: number | null;
   // Explicit minimap coords; fall back to zone-polygon centroid via effective_*.
