@@ -98,9 +98,15 @@ interface ClipViewProps {
   // that forgets to pass it gets the historical behaviour, not a blank
   // label.
   label?: string;
+  // PR6 — overlay slot. AimPane mounts ``AimAnchorDot`` here so the dot sits
+  // ON the clip pane (same aspect-video container, so the dot's normalized
+  // coords still resolve to the same pixel position as the still-pane
+  // counterpart). Optional; ClipView callers that don't need an overlay
+  // (THROW, LANDING) pass nothing.
+  children?: React.ReactNode;
 }
 
-export function ClipView({ clipUrl, posterUrl, title, label = "THROW" }: ClipViewProps) {
+export function ClipView({ clipUrl, posterUrl, title, label = "THROW", children }: ClipViewProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   // Sticky once the tile has been seen: keep the src attached (re-fetching on
   // every scroll-by is worse than keeping a paused decoded clip).
@@ -189,7 +195,113 @@ export function ClipView({ clipUrl, posterUrl, title, label = "THROW" }: ClipVie
           expired presigned URL mid-session) — the poster stays as the
           graceful fallback rather than a misleading badge. */}
       {!loadFailed && <CornerLabel>{label}</CornerLabel>}
+      {/* PR6 — overlay slot for absolutely-positioned children (AimPane's
+          anchor dot). Renders last so it sits on top of the video. */}
+      {children}
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// StandPane (PR6) — top-left pane. Shows the player's stand position.
+//
+// Renders the looping 1s micro-clip via ``ClipView`` when ``standClipUrl`` is
+// set, otherwise falls back to the original ``ScreenshotHalf`` still. The
+// micro-clip is anchored on the same classifier-chosen frame as the still, so
+// the swap is a visual upgrade — the framing matches frame-for-frame.
+//
+// Silent-fallback shape mirrors PR2's THROW pane: a missing clip URL must
+// never read as a broken/error state, just as the still rendering.
+// ---------------------------------------------------------------------------
+interface StandPaneProps {
+  // Pre-PR6 stand still — the always-valid graceful degradation.
+  standScreenshotUrl: string | null;
+  // PR6 — presigned MinIO key for the stand 1s loop. Null/undefined falls
+  // back to the still.
+  standClipUrl?: string | null;
+  // Title carried into the ClipView aria-label when the clip is rendered.
+  title: string;
+}
+
+export function StandPane({ standScreenshotUrl, standClipUrl, title }: StandPaneProps) {
+  if (standClipUrl) {
+    return (
+      <ClipView
+        clipUrl={standClipUrl}
+        posterUrl={standScreenshotUrl}
+        title={title}
+        label="STAND"
+      />
+    );
+  }
+  return (
+    <ScreenshotHalf
+      url={standScreenshotUrl}
+      alt={`${title} — stand position`}
+      label="STAND"
+    />
+  );
+}
+
+// ---------------------------------------------------------------------------
+// AimPane (PR6) — top-right pane. Shows the player's crosshair-aim view.
+//
+// Same upgrade-with-still-fallback shape as ``StandPane`` plus the persisted
+// aim anchor overlay dot, which renders ON TOP of whichever surface is active
+// (still or clip). Both surfaces are the same ``aspect-video`` container, so
+// the dot's normalized coords resolve to the same pixel position regardless
+// of which one is showing. The clip's first frame IS the still — anchoring on
+// the same classifier-chosen timestamp keeps this invariant.
+// ---------------------------------------------------------------------------
+interface AimPaneProps {
+  aimScreenshotUrl: string | null;
+  aimClipUrl?: string | null;
+  // Persisted normalized anchor coords. Null when the classifier didn't
+  // produce them (manual upload / pre-classifier ingest) — the dot then
+  // omits cleanly.
+  aimAnchorX: number | null;
+  aimAnchorY: number | null;
+  title: string;
+}
+
+export function AimPane({
+  aimScreenshotUrl,
+  aimClipUrl,
+  aimAnchorX,
+  aimAnchorY,
+  title,
+}: AimPaneProps) {
+  // Only render the anchor when both axes are set AND there's a base surface
+  // to anchor over — a dot floating on the "No screenshot" empty state has no
+  // meaning.
+  const renderAnchor =
+    aimAnchorX != null &&
+    aimAnchorY != null &&
+    (aimClipUrl != null || aimScreenshotUrl != null);
+  const anchor = renderAnchor ? (
+    <AimAnchorDot x={aimAnchorX!} y={aimAnchorY!} />
+  ) : null;
+
+  if (aimClipUrl) {
+    return (
+      <ClipView
+        clipUrl={aimClipUrl}
+        posterUrl={aimScreenshotUrl}
+        title={title}
+        label="AIM"
+      >
+        {anchor}
+      </ClipView>
+    );
+  }
+  return (
+    <ScreenshotHalf
+      url={aimScreenshotUrl}
+      alt={`${title} — aim reference`}
+      label="AIM"
+    >
+      {anchor}
+    </ScreenshotHalf>
   );
 }
 

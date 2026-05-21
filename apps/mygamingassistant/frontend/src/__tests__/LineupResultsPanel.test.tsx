@@ -28,6 +28,8 @@ function makeLineup(id: string): Lineup {
     aim_screenshot_url: null,
     clip_url: null,
     landing_clip_url: null,
+    stand_clip_url: null,
+    aim_clip_url: null,
     technique: null,
     aim_anchor_x: null,
     aim_anchor_y: null,
