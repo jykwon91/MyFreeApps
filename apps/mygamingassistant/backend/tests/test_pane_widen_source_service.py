@@ -62,6 +62,12 @@ def _lineup(
         aim_screenshot_url=None,
         stand_clip_url=None,
         aim_clip_url=None,
+        # STAND/AIM shift offsets — PR1 of the shift-window editor (PR #733).
+        # _build_admin_read reads these to surface the slider's initial
+        # position; default None on the stub mirrors a freshly-ingested row
+        # before the operator has shifted the window.
+        stand_clip_offset_s=None,
+        aim_clip_offset_s=None,
         game_id=None, map_id=None,
         target_zone_id=None, stand_zone_id=None,
         side=None, utility_type_id=None,
