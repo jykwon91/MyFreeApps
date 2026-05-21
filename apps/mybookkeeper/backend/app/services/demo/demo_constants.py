@@ -51,8 +51,10 @@ DEMO_PROPERTIES = [
 
 # Each tuple: (property_index, date, vendor, description, amount, type, category, schedule_e_line, tags, sub_category)
 # sub_category is optional (None for non-utility transactions)
+# property_index=None means an UNATTRIBUTED transaction (shows up in the dashboard's
+# Unassigned bucket per PR #697; review-queue rows in DEMO_ATTRIBUTION_REVIEW below).
 # Property indexes: 0=Sunset Villa (LA), 1=Oak Street Duplex (Austin), 2=Downtown Loft (Nashville)
-DEMO_TRANSACTIONS: list[tuple[int, str, str, str, str, str, str, str | None, list[str], str | None]] = [
+DEMO_TRANSACTIONS: list[tuple[int | None, str, str, str, str, str, str, str | None, list[str], str | None]] = [
     # ==========================================================================
     # REVENUE — Sunset Villa (Airbnb short-term, seasonal LA market)
     # ==========================================================================
@@ -471,6 +473,38 @@ DEMO_TRANSACTIONS: list[tuple[int, str, str, str, str, str, str, str | None, lis
     (0, "2025-04-02", "Home Depot", "Guest amenities and bathroom supplies", "85.00", "expense", "other_expense", "line_19_other", [], None),
     (0, "2025-10-15", "Home Depot", "Smoke detectors and fire extinguisher replacement", "120.00", "expense", "other_expense", "line_19_other", [], None),
     (2, "2025-07-05", "Lowes", "Replacement door locks and hardware", "95.00", "expense", "other_expense", "line_19_other", [], None),
+
+    # ==========================================================================
+    # REVENUE — UNATTRIBUTED Airbnb payouts (property_index=None)
+    # Showcases PR #697 (Unassigned dashboard bucket reconciles with totals) and
+    # the four review-queue row shapes from PR #703 (airbnb-fuzzy / airbnb-unmatched).
+    # Matching review-queue rows are seeded by demo_repo.create_attribution_review
+    # from DEMO_ATTRIBUTION_REVIEW below. Rent-fuzzy / rent-unmatched shapes are
+    # not seeded — demo doesn't include applicants.
+    # ==========================================================================
+    (None, "2025-11-22", "Airbnb", "Airbnb payout — guest stay at Sunset Villa", "1450.00", "income", "rental_revenue", "line_3_rents_received", ["airbnb"], None),
+    (None, "2025-12-18", "Airbnb", "Airbnb payout — Sunset Villa December guests", "1820.00", "income", "rental_revenue", "line_3_rents_received", ["airbnb"], None),
+    (None, "2025-11-28", "Airbnb", "Airbnb payout — Downtown Loft Nashville stay", "1290.00", "income", "rental_revenue", "line_3_rents_received", ["airbnb"], None),
+    (None, "2025-12-05", "Airbnb", "Airbnb payout — multi-night booking", "980.00", "income", "rental_revenue", "line_3_rents_received", ["airbnb"], None),
+    (None, "2025-12-22", "Airbnb", "Airbnb payout — reservation HMABC123456", "1640.00", "income", "rental_revenue", "line_3_rents_received", ["airbnb"], None),
+]
+
+# ==========================================================================
+# DEMO_ATTRIBUTION_REVIEW — rent_attribution_review_queue rows for the
+# unattributed Airbnb payouts above. The first two tiers of the matcher
+# (PR #701) auto-attribute on their own; this seed populates rows that
+# would have landed in review (tier 3 fuzzy / tier 4 unmatched).
+#
+# Each tuple: (description_substring_to_match, proposed_property_index_or_None, confidence)
+# confidence ∈ {"fuzzy", "unmatched"} (CHECK constraint on the table).
+# A "fuzzy" row should set proposed_property_index; "unmatched" leaves it None.
+# ==========================================================================
+DEMO_ATTRIBUTION_REVIEW: list[tuple[str, int | None, str]] = [
+    ("guest stay at Sunset Villa", 0, "fuzzy"),
+    ("Sunset Villa December guests", 0, "fuzzy"),
+    ("Downtown Loft Nashville stay", 2, "fuzzy"),
+    ("multi-night booking", None, "unmatched"),
+    ("reservation HMABC123456", None, "unmatched"),
 ]
 
 # ==========================================================================

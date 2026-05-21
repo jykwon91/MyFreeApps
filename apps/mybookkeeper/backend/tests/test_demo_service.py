@@ -16,12 +16,16 @@ from app.models.organization.organization import Organization
 from app.models.tax.tax_form_field import TaxFormField
 from app.models.tax.tax_form_instance import TaxFormInstance
 from app.models.tax.tax_return import TaxReturn
+from app.models.transactions.rent_attribution_review_queue import (
+    RentAttributionReviewQueue,
+)
 from app.models.transactions.transaction import Transaction
 from app.models.transactions.transaction_document import TransactionDocument
 from app.models.user.user import User
 from app.repositories.demo import demo_repo
 from app.services.demo import demo_service
 from app.services.demo.demo_constants import (
+    DEMO_ATTRIBUTION_REVIEW,
     DEMO_DOCUMENTS,
     DEMO_TAX_DOCUMENTS,
     DEMO_TRANSACTIONS,
@@ -129,6 +133,105 @@ class TestDemoServiceCreateDemoUser:
         await demo_service.create_demo_user("dup-test")
         with pytest.raises(ValueError, match="already exists"):
             await demo_service.create_demo_user("dup-test")
+
+
+class TestDemoServiceAirbnbAttributionShowcase:
+    """Demo data must exercise PR #697/#699/#701/#703 — Unassigned dashboard
+    bucket and the airbnb-fuzzy / airbnb-unmatched review-queue row shapes.
+    Demo users created without these become stale once the feature ships."""
+
+    @pytest.mark.asyncio
+    async def test_seeds_unattributed_airbnb_payouts(self, db: AsyncSession) -> None:
+        await demo_service.create_demo_user("unassigned-test")
+        user = await demo_repo.get_user_by_email(
+            db, "demo+unassigned-test@mybookkeeper.com",
+        )
+        assert user is not None
+        org = await demo_repo.get_org_by_user(db, user.id)
+        assert org is not None
+
+        # At least one NULL-property Airbnb payout — this is what drives the
+        # dashboard's Unassigned bucket (PR #697).
+        unattributed = (await db.execute(
+            select(Transaction).where(
+                Transaction.organization_id == org.id,
+                Transaction.property_id.is_(None),
+                Transaction.transaction_type == "income",
+            )
+        )).scalars().all()
+        assert len(unattributed) >= 1, "demo must seed unattributed Airbnb payouts"
+        for txn in unattributed:
+            assert txn.channel == "airbnb", "Airbnb payouts must carry channel='airbnb'"
+            assert txn.payment_method == "platform_payout"
+
+    @pytest.mark.asyncio
+    async def test_attributed_airbnb_revenue_has_channel_and_payment_method(
+        self, db: AsyncSession,
+    ) -> None:
+        """Existing Airbnb payouts must also look like real platform payouts —
+        otherwise channel-aware dashboards (and the matcher's detection per
+        PR #698) treat them as P2P revenue."""
+        await demo_service.create_demo_user("channel-test")
+        user = await demo_repo.get_user_by_email(
+            db, "demo+channel-test@mybookkeeper.com",
+        )
+        assert user is not None
+        org = await demo_repo.get_org_by_user(db, user.id)
+        assert org is not None
+
+        airbnb_txns = (await db.execute(
+            select(Transaction).where(
+                Transaction.organization_id == org.id,
+                Transaction.tags.contains(["airbnb"]),
+                Transaction.transaction_type == "income",
+            )
+        )).scalars().all()
+        assert len(airbnb_txns) > 0
+        for txn in airbnb_txns:
+            assert txn.channel == "airbnb"
+            assert txn.payment_method == "platform_payout"
+
+    @pytest.mark.asyncio
+    async def test_seeds_review_queue_rows_for_all_four_shapes(
+        self, db: AsyncSession,
+    ) -> None:
+        """Seeds both airbnb-fuzzy (proposed_property_id set, confidence='fuzzy')
+        and airbnb-unmatched (proposed_property_id=NULL, confidence='unmatched')
+        so the review UI from PR #703 renders against real data."""
+        await demo_service.create_demo_user("queue-test")
+        user = await demo_repo.get_user_by_email(
+            db, "demo+queue-test@mybookkeeper.com",
+        )
+        assert user is not None
+        org = await demo_repo.get_org_by_user(db, user.id)
+        assert org is not None
+
+        rows = (await db.execute(
+            select(RentAttributionReviewQueue).where(
+                RentAttributionReviewQueue.organization_id == org.id,
+            )
+        )).scalars().all()
+        assert len(rows) == len(DEMO_ATTRIBUTION_REVIEW)
+
+        fuzzy_with_property = [
+            r for r in rows
+            if r.confidence == "fuzzy" and r.proposed_property_id is not None
+        ]
+        unmatched_without_property = [
+            r for r in rows
+            if r.confidence == "unmatched" and r.proposed_property_id is None
+        ]
+        assert len(fuzzy_with_property) >= 1, "airbnb-fuzzy shape missing"
+        assert len(unmatched_without_property) >= 1, "airbnb-unmatched shape missing"
+
+        # Every review row must link to a transaction that's actually unattributed
+        # — confirming pending; otherwise the host-side confirm flow would no-op.
+        for row in rows:
+            assert row.status == "pending"
+            txn = (await db.execute(
+                select(Transaction).where(Transaction.id == row.transaction_id)
+            )).scalar_one()
+            assert txn.property_id is None
 
 
 class TestDemoServiceListDemoUsers:

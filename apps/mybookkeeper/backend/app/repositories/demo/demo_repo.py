@@ -14,9 +14,14 @@ from app.models.properties.property_classification import PropertyClassification
 from app.models.tax.tax_form_field import TaxFormField
 from app.models.tax.tax_form_instance import TaxFormInstance
 from app.models.tax.tax_return import TaxReturn
+from app.models.transactions.rent_attribution_review_queue import (
+    RentAttributionReviewQueue,
+)
 from app.models.transactions.transaction import Transaction
 from app.models.transactions.transaction_document import TransactionDocument
 from app.models.user.user import Role, User
+
+_AIRBNB_CHANNELS = {"airbnb", "vrbo", "booking.com"}
 
 
 async def get_user_by_email(db: AsyncSession, email: str) -> User | None:
@@ -201,15 +206,31 @@ async def create_transactions(
     property_ids: list[uuid.UUID],
     transactions_data: list[tuple],
 ) -> list[Transaction]:
-    """Create transactions and return them for document linking."""
+    """Create transactions and return them for document linking.
+
+    ``prop_idx=None`` seeds an unattributed transaction (NULL property_id).
+    Airbnb-tagged income rows get ``channel="airbnb"`` + ``payment_method=
+    "platform_payout"`` so they match the real shape the extraction prompt
+    emits for platform payouts (per ``_is_airbnb_payout`` in PR #698) — this
+    is the cue the dashboard and review-queue UX use to render the new
+    Airbnb-payout row shapes.
+    """
     created: list[Transaction] = []
     for row in transactions_data:
         prop_idx, date_str, vendor, desc, amount, txn_type, category, sched_line, tags, sub_cat = row
         txn_date = date.fromisoformat(date_str)
+        channel: str | None = next(
+            (t for t in tags if t in _AIRBNB_CHANNELS), None,
+        )
+        payment_method: str | None = (
+            "platform_payout"
+            if channel == "airbnb" and txn_type == "income" and category == "rental_revenue"
+            else None
+        )
         txn = Transaction(
             organization_id=organization_id,
             user_id=user_id,
-            property_id=property_ids[prop_idx],
+            property_id=property_ids[prop_idx] if prop_idx is not None else None,
             transaction_date=txn_date,
             tax_year=txn_date.year,
             vendor=vendor,
@@ -220,12 +241,55 @@ async def create_transactions(
             sub_category=sub_cat,
             schedule_e_line=sched_line,
             tags=tags,
+            channel=channel,
+            payment_method=payment_method,
             tax_relevant=True,
             status="approved",
             is_manual=True,
         )
         db.add(txn)
         created.append(txn)
+    await db.flush()
+    return created
+
+
+async def create_attribution_review(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    organization_id: uuid.UUID,
+    property_ids: list[uuid.UUID],
+    transactions: list[Transaction],
+    review_data: list[tuple[str, int | None, str]],
+) -> int:
+    """Seed rent_attribution_review_queue rows for unattributed payouts.
+
+    Each ``review_data`` tuple is matched to a transaction by description
+    substring. ``proposed_property_index`` is resolved against ``property_ids``;
+    ``None`` leaves the row in the airbnb-unmatched shape.
+
+    Returns the number of review rows created (for logging / tests).
+    """
+    created = 0
+    for description_match, proposed_prop_idx, confidence in review_data:
+        txn = next(
+            (t for t in transactions if description_match in (t.description or "")),
+            None,
+        )
+        if txn is None:
+            continue
+        proposed_property_id = (
+            property_ids[proposed_prop_idx] if proposed_prop_idx is not None else None
+        )
+        row = RentAttributionReviewQueue(
+            user_id=user_id,
+            organization_id=organization_id,
+            transaction_id=txn.id,
+            proposed_property_id=proposed_property_id,
+            confidence=confidence,
+            status="pending",
+        )
+        db.add(row)
+        created += 1
     await db.flush()
     return created
 
