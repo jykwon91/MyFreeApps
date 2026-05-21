@@ -44,9 +44,12 @@ import {
   StandPane,
   ThrowPlaceholder,
 } from "./LineupPanes";
+import { DEFAULT_KNOBS } from "@/hooks/useDesignKnobs";
+import type { DesignKnobs } from "@/hooks/useDesignKnobs";
 
 interface GlanceBoardTileProps {
   lineup: Lineup;
+  knobs?: DesignKnobs;
 }
 
 // ---------------------------------------------------------------------------
@@ -72,8 +75,18 @@ function SideChip({ side }: { side: string | null }) {
 // ---------------------------------------------------------------------------
 // GlanceBoardTile
 // ---------------------------------------------------------------------------
-export default function GlanceBoardTile({ lineup }: GlanceBoardTileProps) {
+export default function GlanceBoardTile({ lineup, knobs = DEFAULT_KNOBS }: GlanceBoardTileProps) {
   const ud = utilDisplay(lineup.utility_type?.slug);
+
+  // Knob-forced overrides: a "still" mode discards any clip URL even when
+  // present, an "off" anchor-dot blanks the persisted coords. Done here
+  // rather than inside the pane primitives so the panes stay knob-agnostic.
+  const standClipForRender = knobs.standMode === "clip" ? lineup.stand_clip_url : null;
+  const aimClipForRender   = knobs.aimMode   === "clip" ? lineup.aim_clip_url   : null;
+  const aimDotX = knobs.showAimDot ? lineup.aim_anchor_x : null;
+  const aimDotY = knobs.showAimDot ? lineup.aim_anchor_y : null;
+  const landingClipForRender =
+    knobs.landingMode === "clip" ? lineup.landing_clip_url : null;
 
   return (
     <article
@@ -111,14 +124,14 @@ export default function GlanceBoardTile({ lineup }: GlanceBoardTileProps) {
         <div className="flex divide-x divide-border">
           <StandPane
             standScreenshotUrl={lineup.stand_screenshot_url}
-            standClipUrl={lineup.stand_clip_url}
+            standClipUrl={standClipForRender}
             title={lineup.title}
           />
           <AimPane
             aimScreenshotUrl={lineup.aim_screenshot_url}
-            aimClipUrl={lineup.aim_clip_url}
-            aimAnchorX={lineup.aim_anchor_x}
-            aimAnchorY={lineup.aim_anchor_y}
+            aimClipUrl={aimClipForRender}
+            aimAnchorX={aimDotX}
+            aimAnchorY={aimDotY}
             title={lineup.title}
           />
         </div>
@@ -135,7 +148,7 @@ export default function GlanceBoardTile({ lineup }: GlanceBoardTileProps) {
           )}
           <LandingPane
             targetZoneName={lineup.target_zone?.name ?? null}
-            landingClipUrl={lineup.landing_clip_url}
+            landingClipUrl={landingClipForRender}
             posterUrl={lineup.aim_screenshot_url}
             title={lineup.title}
           />

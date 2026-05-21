@@ -39,6 +39,8 @@ import KeyboardShortcutsHelp from "@/components/lineup/KeyboardShortcutsHelp";
 import GlanceBoard from "@/components/lineup/GlanceBoard";
 import GlanceBoardMinimapSidebar from "@/components/lineup/GlanceBoardMinimapSidebar";
 import GlanceBoardOperatorMenu from "@/components/lineup/GlanceBoardOperatorMenu";
+import DesignKnobsPanel from "@/components/lineup/DesignKnobsPanel";
+import { useDesignKnobs } from "@/hooks/useDesignKnobs";
 import MinimapUploadDialog from "@/components/game/MinimapUploadDialog";
 import RoundMode from "@/pages/RoundMode";
 import StorageUnavailableBanner from "@/components/map/StorageUnavailableBanner";
@@ -82,6 +84,9 @@ export default function MapPage() {
 
   const { isSuperuser } = useIsSuperuser();
   const game = games?.find((g) => g.slug === gameSlug);
+
+  // Direct-manipulation knobs for the storyboard tile (URL-backed).
+  const { knobs } = useDesignKnobs();
 
   // ---------------------------------------------------------------------------
   // Filter state derived from URL
@@ -487,6 +492,7 @@ export default function MapPage() {
                 mapName={mapDetail.name}
                 filteredUtils={effectiveUtils}
                 side={side}
+                knobs={knobs}
               />
             )}
 
@@ -504,6 +510,9 @@ export default function MapPage() {
           </main>
         </div>
       </div>
+
+      {/* Floating direct-manipulation knobs panel (collapsed by default). */}
+      <DesignKnobsPanel />
     </>
   );
 }
