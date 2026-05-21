@@ -445,9 +445,13 @@ class TestUpdateEvent:
         company = await _create_company(db, uuid.UUID(user["id"]), "Acme")
 
         async with await as_user(user) as authed:
-            app_a = await authed.post("/applications", json=_app_payload(company.id))
+            payload_a = _app_payload(company.id)
+            payload_b = _app_payload(company.id)
+            payload_b["role_title"] = "Staff Backend Engineer"  # avoid uq_application_user_role
+
+            app_a = await authed.post("/applications", json=payload_a)
             app_a_id = app_a.json()["id"]
-            app_b = await authed.post("/applications", json=_app_payload(company.id))
+            app_b = await authed.post("/applications", json=payload_b)
             app_b_id = app_b.json()["id"]
 
             evt_a = await authed.post(
