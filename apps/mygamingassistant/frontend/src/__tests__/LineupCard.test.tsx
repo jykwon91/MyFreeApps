@@ -12,9 +12,23 @@
  */
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import LineupCard from "@/components/lineup/LineupCard";
 import type { Lineup } from "@/types/game";
+
+// jsdom doesn't implement HTMLMediaElement.play/pause — when the expanded
+// variant mounts ClipView (for the THROW pane on a lineup with clip_url),
+// its useEffect calls el.play().catch(...) which would throw on the
+// undefined return. Stub locally rather than globally to keep blast radius
+// to this file (same posture as GlanceBoardTile.test.tsx).
+beforeEach(() => {
+  vi.spyOn(window.HTMLMediaElement.prototype, "play").mockResolvedValue(undefined);
+  vi.spyOn(window.HTMLMediaElement.prototype, "pause").mockImplementation(() => {});
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 const BASE_LINEUP: Lineup = {
   id: "lineup-1",
@@ -180,5 +194,54 @@ describe("LineupCard", () => {
       />,
     );
     expect(screen.getByRole("button", { name: "Pin lineup" })).toBeDefined();
+  });
+
+  // ---------------------------------------------------------------------------
+  // PR4 — 2×2 storyboard (expanded variant only; thumbnail unchanged)
+  // ---------------------------------------------------------------------------
+
+  it("expanded variant renders all four pane labels (STAND, AIM, THROW, LANDING)", () => {
+    render(<LineupCard lineup={BASE_LINEUP} variant="expanded" />);
+    expect(screen.getByText("STAND")).toBeInTheDocument();
+    expect(screen.getByText("AIM")).toBeInTheDocument();
+    expect(screen.getByText("THROW")).toBeInTheDocument();
+    expect(screen.getByText("LANDING")).toBeInTheDocument();
+  });
+
+  it("expanded variant LANDING pane shows target_zone.name", () => {
+    render(<LineupCard lineup={BASE_LINEUP} variant="expanded" />);
+    expect(screen.getByText("Lands in")).toBeInTheDocument();
+    // BASE_LINEUP.target_zone.name = "A Site". Both the LANDING pane and the
+    // zone-context footer render that string; getAllByText covers either.
+    expect(screen.getAllByText("A Site").length).toBeGreaterThan(0);
+  });
+
+  it("expanded variant LANDING pane falls back to '—' when target_zone is null", () => {
+    const lineup: Lineup = {
+      ...BASE_LINEUP,
+      target_zone: null as unknown as Lineup["target_zone"],
+    };
+    render(<LineupCard lineup={lineup} variant="expanded" />);
+    expect(screen.getByText("—")).toBeInTheDocument();
+  });
+
+  it("expanded variant THROW pane shows ThrowPlaceholder when clip_url is null", () => {
+    render(<LineupCard lineup={BASE_LINEUP} variant="expanded" />);
+    expect(screen.getByText("No clip yet")).toBeInTheDocument();
+    expect(document.querySelector("video")).toBeNull();
+  });
+
+  it("expanded variant THROW pane renders ClipView when clip_url is set", () => {
+    const lineup: Lineup = { ...BASE_LINEUP, clip_url: "https://ex.com/clip.mp4" };
+    render(<LineupCard lineup={lineup} variant="expanded" />);
+    expect(document.querySelector("video")).not.toBeNull();
+    // The ThrowPlaceholder copy must not appear when a clip is mounted.
+    expect(screen.queryByText("No clip yet")).not.toBeInTheDocument();
+  });
+
+  it("expanded variant header surfaces technique when set", () => {
+    const lineup: Lineup = { ...BASE_LINEUP, technique: "Jumpthrow + LMB" };
+    render(<LineupCard lineup={lineup} variant="expanded" />);
+    expect(screen.getByText(/Jumpthrow \+ LMB/)).toBeInTheDocument();
   });
 });

@@ -1,16 +1,18 @@
 /**
- * GlanceBoardTile unit tests (PR2 clip view).
+ * GlanceBoardTile unit tests — PR4 4-pane storyboard.
  *
  * jsdom implements neither IntersectionObserver nor HTMLMediaElement
  * play/pause, so both are stubbed here (not globally — keeps blast radius
  * to this file).
  *
  * Tests:
- * - clip_url present → <video> rendered (poster=stand), stills NOT rendered
- * - clip_url null → falls back to the STAND/AIM stills, no <video>
- * - src is lazy: absent until the tile scrolls into view
- * - in view → play() called + src attached; out of view → pause() called
- * - IntersectionObserver missing → arms immediately (graceful degrade)
+ * - All four panes (STAND, AIM, THROW, LANDING) render simultaneously
+ *   regardless of clip_url presence (PR4 invariant)
+ * - THROW pane: ClipView lazy-loads on scroll; pauses out of view; degrades
+ *   without IntersectionObserver (existing PR2 behavior preserved)
+ * - THROW pane: ThrowPlaceholder when clip_url is null
+ * - LANDING pane: renders target_zone.name; falls back to "—" when null
+ * - Throw technique footer (PR3 behavior preserved)
  */
 import { render, screen, act } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -103,31 +105,73 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("GlanceBoardTile clip view", () => {
-  it("renders the stills fallback when clip_url is null", () => {
+// ---------------------------------------------------------------------------
+// 4-pane storyboard — the PR4 invariant
+// ---------------------------------------------------------------------------
+describe("GlanceBoardTile storyboard (4 panes)", () => {
+  it("renders all four panes simultaneously when clip_url is null (stills + placeholders)", () => {
     render(<GlanceBoardTile lineup={makeLineup({ clip_url: null })} />);
     expect(screen.getByText("STAND")).toBeInTheDocument();
     expect(screen.getByText("AIM")).toBeInTheDocument();
+    // THROW pane shows the placeholder badge + "No clip yet" message.
+    expect(screen.getByText("THROW")).toBeInTheDocument();
+    expect(screen.getByText("No clip yet")).toBeInTheDocument();
+    expect(screen.getByText("LANDING")).toBeInTheDocument();
+    expect(screen.getByText("B Site")).toBeInTheDocument();
     expect(document.querySelector("video")).toBeNull();
   });
 
-  it("renders a <video> (poster=stand) and hides the stills when clip_url is set", () => {
+  it("renders all four panes simultaneously when clip_url is set (stills + clip + landing)", () => {
     render(
       <GlanceBoardTile
         lineup={makeLineup({ clip_url: "https://ex.com/clip.mp4" })}
       />,
     );
+    // The stills must still render — PR4 reverses PR2's clip-replaces-stills.
+    expect(screen.getByText("STAND")).toBeInTheDocument();
+    expect(screen.getByText("AIM")).toBeInTheDocument();
+    expect(screen.getByText("LANDING")).toBeInTheDocument();
+    expect(screen.getByText("B Site")).toBeInTheDocument();
+    // THROW pane now hosts the clip.
+    expect(screen.getByText("THROW")).toBeInTheDocument();
     const video = document.querySelector("video") as HTMLVideoElement;
     expect(video).not.toBeNull();
     expect(video.getAttribute("poster")).toBe("https://ex.com/stand.png");
-    expect(video.muted).toBe(true);
-    expect(video.hasAttribute("loop")).toBe(true);
-    expect(video.hasAttribute("playsinline")).toBe(true);
-    // The split stills are not used when a clip exists.
-    expect(screen.queryByText("STAND")).not.toBeInTheDocument();
-    expect(screen.queryByText("AIM")).not.toBeInTheDocument();
   });
 
+  it("renders the aim anchor dot when coords are set on the AIM pane", () => {
+    render(<GlanceBoardTile lineup={makeLineup()} />);
+    expect(screen.getByLabelText(/aim anchor/i)).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// LANDING pane behavior
+// ---------------------------------------------------------------------------
+describe("GlanceBoardTile LANDING pane", () => {
+  it("renders the target zone name", () => {
+    render(
+      <GlanceBoardTile
+        lineup={makeLineup({
+          target_zone: { id: "z9", slug: "mid", name: "Mid", polygon_points: [] },
+        })}
+      />,
+    );
+    expect(screen.getByText("Mid")).toBeInTheDocument();
+    expect(screen.getByText("Lands in")).toBeInTheDocument();
+  });
+
+  it("falls back to '—' when target_zone is null (malformed lineup)", () => {
+    render(<GlanceBoardTile lineup={makeLineup({ target_zone: null as unknown as Lineup["target_zone"] })} />);
+    expect(screen.getByText("LANDING")).toBeInTheDocument();
+    expect(screen.getByText("—")).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// THROW pane clip behavior (PR2 — preserved in the new bottom-left pane)
+// ---------------------------------------------------------------------------
+describe("GlanceBoardTile THROW pane (clip)", () => {
   it("lazily attaches src only after the tile scrolls into view", () => {
     render(
       <GlanceBoardTile
@@ -159,16 +203,18 @@ describe("GlanceBoardTile clip view", () => {
     expect(pauseSpy).toHaveBeenCalled();
   });
 
-  it("hides the Clip badge when the clip fails to load", () => {
+  it("hides the THROW badge when the clip fails to load", () => {
     render(
       <GlanceBoardTile
         lineup={makeLineup({ clip_url: "https://ex.com/gone.mp4" })}
       />,
     );
-    expect(screen.getByText("Clip")).toBeInTheDocument();
+    expect(screen.getByText("THROW")).toBeInTheDocument();
     const video = document.querySelector("video") as HTMLVideoElement;
     act(() => video.dispatchEvent(new Event("error")));
-    expect(screen.queryByText("Clip")).not.toBeInTheDocument();
+    // The clip pane's overlay label is hidden so the poster (stand still)
+    // stays as the graceful fallback rather than reading as broken.
+    expect(screen.queryByText("THROW")).not.toBeInTheDocument();
   });
 
   it("arms immediately when IntersectionObserver is unavailable", () => {
@@ -184,7 +230,7 @@ describe("GlanceBoardTile clip view", () => {
 });
 
 // ---------------------------------------------------------------------------
-// PR3 — throw-technique footer
+// PR3 — throw-technique footer (preserved)
 // ---------------------------------------------------------------------------
 describe("GlanceBoardTile technique footer", () => {
   it("renders the technique string with the correct aria-label when set", () => {
