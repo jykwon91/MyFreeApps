@@ -2,11 +2,11 @@
  * utilityDisplay — single source of truth for utility type display metadata.
  *
  * Keyed by slug (the backend fixture slug), not by display name.
- * CS2 slugs: smoke, flash, molotov, grenade, decoy
+ * CS2 slugs: smoke, flash, molotov, grenade
  * Valorant slugs: smoke, flash, molotov, recon (subset; unknown slugs use fallback)
  *
  * sortOrder defines the LOCKED within-zone ordering:
- *   Smoke → Flash → Molotov → HE → Decoy
+ *   Smoke → Flash → Molotov → HE
  * Unknown/unrecognized slugs sort last (sortOrder 99).
  */
 
@@ -23,7 +23,6 @@ export const UTIL_DISPLAY: Record<string, UtilDisplay> = {
   flash:   { label: "Flash",   chipLabel: "Flash",   badgeBg: "bg-yellow-400", badgeText: "text-slate-900", sortOrder: 1 },
   molotov: { label: "Molotov", chipLabel: "Molotov", badgeBg: "bg-orange-700", badgeText: "text-white",     sortOrder: 2 },
   grenade: { label: "HE",      chipLabel: "HE",      badgeBg: "bg-red-600",    badgeText: "text-white",     sortOrder: 3 },
-  decoy:   { label: "Decoy",   chipLabel: "Decoy",   badgeBg: "bg-purple-600", badgeText: "text-white",     sortOrder: 4 },
   // Valorant-only slugs that share names with CS2 entries above (smoke/flash/molotov)
   // are handled by the entries already keyed above.
   recon:   { label: "Recon",   chipLabel: "Recon",   badgeBg: "bg-teal-600",   badgeText: "text-white",     sortOrder: 5 },

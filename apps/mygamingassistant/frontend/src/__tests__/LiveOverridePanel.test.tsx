@@ -78,7 +78,6 @@ describe("LiveOverridePanel — utility dropdown (PR 10)", () => {
     expect(optionTexts).toContain("Flash");
     expect(optionTexts).toContain("Molotov");
     expect(optionTexts).toContain("HE");
-    expect(optionTexts).toContain("Decoy");
   });
 
   it("defaults to 'All utility' when override.utility is null", () => {
