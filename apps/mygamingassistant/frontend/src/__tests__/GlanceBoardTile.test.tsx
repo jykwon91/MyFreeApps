@@ -34,6 +34,8 @@ function makeLineup(over: Partial<Lineup> = {}): Lineup {
     aim_screenshot_url: "https://ex.com/aim.png",
     clip_url: null,
     landing_clip_url: null,
+    stand_clip_url: null,
+    aim_clip_url: null,
     technique: null,
     aim_anchor_x: 0.5,
     aim_anchor_y: 0.4,
@@ -255,6 +257,92 @@ describe("GlanceBoardTile THROW pane (clip)", () => {
     );
     const video = document.querySelector("video") as HTMLVideoElement;
     expect(video.getAttribute("src")).toBe("https://ex.com/clip.mp4");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PR6 — STAND + AIM panes swap stills for 1s micro-clips
+// ---------------------------------------------------------------------------
+describe("GlanceBoardTile PR6 micro-clips (STAND + AIM)", () => {
+  it("renders the STAND looping clip when stand_clip_url is set", () => {
+    render(
+      <GlanceBoardTile
+        lineup={makeLineup({ stand_clip_url: "https://ex.com/stand.mp4" })}
+      />,
+    );
+    const standVideo = document.querySelector(
+      'video[aria-label*="looping stand clip"]',
+    );
+    expect(standVideo).not.toBeNull();
+    // The STAND label still shows on the clip pane.
+    expect(screen.getByText("STAND")).toBeInTheDocument();
+  });
+
+  it("keeps the STAND still when stand_clip_url is null", () => {
+    render(<GlanceBoardTile lineup={makeLineup({ stand_clip_url: null })} />);
+    // The stand still is the graceful fallback — no stand-clip <video>.
+    expect(
+      document.querySelector('video[aria-label*="looping stand clip"]'),
+    ).toBeNull();
+    expect(
+      screen.getByAltText(/stand position/i),
+    ).toBeInTheDocument();
+  });
+
+  it("renders the AIM looping clip when aim_clip_url is set", () => {
+    render(
+      <GlanceBoardTile
+        lineup={makeLineup({ aim_clip_url: "https://ex.com/aim.mp4" })}
+      />,
+    );
+    const aimVideo = document.querySelector(
+      'video[aria-label*="looping aim clip"]',
+    );
+    expect(aimVideo).not.toBeNull();
+  });
+
+  it("AIM anchor dot still renders when aim_clip_url is set (overlay invariant)", () => {
+    // The whole point of anchoring the AIM clip on the same classifier-chosen
+    // timestamp as the still is that the persisted aim_anchor_x/y dot stays
+    // pixel-accurate over the clip. If the dot dropped when AimPane swapped
+    // to ClipView, the overlay would silently disappear — exactly the PR6
+    // contract this test protects.
+    render(
+      <GlanceBoardTile
+        lineup={makeLineup({ aim_clip_url: "https://ex.com/aim.mp4" })}
+      />,
+    );
+    expect(screen.getByLabelText(/aim anchor/i)).toBeInTheDocument();
+  });
+
+  it("all four panes show motion when every clip URL is set", () => {
+    render(
+      <GlanceBoardTile
+        lineup={makeLineup({
+          stand_clip_url: "https://ex.com/stand.mp4",
+          aim_clip_url: "https://ex.com/aim.mp4",
+          clip_url: "https://ex.com/throw.mp4",
+          landing_clip_url: "https://ex.com/landing.mp4",
+        })}
+      />,
+    );
+    // Four <video> elements — one per pane — all simultaneously rendered.
+    expect(document.querySelectorAll("video").length).toBe(4);
+    // The four corner labels still render on the clip panes.
+    expect(screen.getByText("STAND")).toBeInTheDocument();
+    expect(screen.getByText("AIM")).toBeInTheDocument();
+    expect(screen.getByText("THROW")).toBeInTheDocument();
+    expect(screen.getByText("LANDING")).toBeInTheDocument();
+  });
+
+  it("gracefully falls back to all stills when every clip URL is null (pre-PR6 lineups)", () => {
+    render(<GlanceBoardTile lineup={makeLineup()} />);
+    // No video elements anywhere — both stills + ThrowPlaceholder + landing text.
+    expect(document.querySelectorAll("video").length).toBe(0);
+    expect(screen.getByAltText(/stand position/i)).toBeInTheDocument();
+    expect(screen.getByAltText(/aim reference/i)).toBeInTheDocument();
+    expect(screen.getByText("No clip yet")).toBeInTheDocument();
+    expect(screen.getByText("Lands in")).toBeInTheDocument();
   });
 });
 

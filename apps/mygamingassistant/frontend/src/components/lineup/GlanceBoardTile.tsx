@@ -38,10 +38,10 @@ import { Clock } from "lucide-react";
 import type { Lineup } from "@/types/game";
 import { utilDisplay } from "@/constants/utilityDisplay";
 import {
-  AimAnchorDot,
+  AimPane,
   ClipView,
   LandingPane,
-  ScreenshotHalf,
+  StandPane,
   ThrowPlaceholder,
 } from "./LineupPanes";
 
@@ -109,22 +109,18 @@ export default function GlanceBoardTile({ lineup }: GlanceBoardTileProps) {
       <div className="flex flex-col divide-y divide-border">
         {/* Top row: STAND | AIM */}
         <div className="flex divide-x divide-border">
-          <ScreenshotHalf
-            url={lineup.stand_screenshot_url}
-            alt={`${lineup.title} — stand position`}
-            label="STAND"
+          <StandPane
+            standScreenshotUrl={lineup.stand_screenshot_url}
+            standClipUrl={lineup.stand_clip_url}
+            title={lineup.title}
           />
-          <ScreenshotHalf
-            url={lineup.aim_screenshot_url}
-            alt={`${lineup.title} — aim reference`}
-            label="AIM"
-          >
-            {lineup.aim_screenshot_url &&
-              lineup.aim_anchor_x != null &&
-              lineup.aim_anchor_y != null && (
-                <AimAnchorDot x={lineup.aim_anchor_x} y={lineup.aim_anchor_y} />
-              )}
-          </ScreenshotHalf>
+          <AimPane
+            aimScreenshotUrl={lineup.aim_screenshot_url}
+            aimClipUrl={lineup.aim_clip_url}
+            aimAnchorX={lineup.aim_anchor_x}
+            aimAnchorY={lineup.aim_anchor_y}
+            title={lineup.title}
+          />
         </div>
         {/* Bottom row: THROW | LANDING */}
         <div className="flex divide-x divide-border">

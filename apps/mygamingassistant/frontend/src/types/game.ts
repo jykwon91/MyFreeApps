@@ -114,6 +114,19 @@ export interface Lineup {
   // the LandingPane then falls back to the "Lands in: <zone>" text rendering
   // (graceful degradation, mirroring PR2's clip silent-fallback to stills).
   landing_clip_url: string | null;
+  // PR6: presigned URL of the 1-second looping STAND micro-clip — animates
+  // the stand pane (player arriving at the throw position). Null when ingest
+  // skipped it (manual upload / chapter too short / classifier disabled) or
+  // the lineup predates PR6 — the StandPane then falls back to the stand
+  // still (silent fallback, same shape as PR2/PR5).
+  stand_clip_url: string | null;
+  // PR6: presigned URL of the 1-second looping AIM micro-clip — animates the
+  // aim pane (player crosshair-aim during the lineup). Null with the same
+  // semantics as ``stand_clip_url``. The clip's first frame is the classifier-
+  // chosen anchor frame (same timestamp as ``aim_screenshot_url``), so the
+  // persisted ``aim_anchor_x/y`` overlay dot stays pixel-accurate when the
+  // AimPane swaps from still to clip.
+  aim_clip_url: string | null;
   aim_anchor_x: number | null;
   aim_anchor_y: number | null;
   // Explicit minimap coords; fall back to zone-polygon centroid via effective_*.

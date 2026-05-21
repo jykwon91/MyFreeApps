@@ -116,6 +116,9 @@ def _grid_env(tmp_path: Path, fake_video_path: Path, *, classify_mock, clip_mock
     from app.services.ingestion.landing_clip_generator import (
         LandingClipGenerationResult,
     )
+    from app.services.ingestion.micro_clip_generator import (
+        MicroClipGenerationResult,
+    )
 
     if clip_mock is None:
         clip_mock = _AsyncMock(
@@ -137,6 +140,17 @@ def _grid_env(tmp_path: Path, fake_video_path: Path, *, classify_mock, clip_mock
         )
     )
 
+    # PR6 micro-clip wire-up is also patched to a neutral no-op by default —
+    # same belt-and-suspenders rationale as ``landing_mock`` above. Both
+    # sides default to skipped so the existing classifier tests don't fire
+    # the real generator (which would try to download videos + call Claude).
+    micro_mock = _AsyncMock(
+        return_value=MicroClipGenerationResult(
+            stand_status="skipped", aim_status="skipped",
+            stand_skip_reason="test_default", aim_skip_reason="test_default",
+        )
+    )
+
     with contextlib.ExitStack() as stack:
         stack.enter_context(patch("app.services.ingestion.ingestion_orchestrator.list_videos", new_callable=AsyncMock, return_value=[FAKE_VIDEO]))
         stack.enter_context(patch("app.services.ingestion.ingestion_orchestrator.fetch_video_detail", new_callable=AsyncMock, return_value=FAKE_VIDEO))
@@ -146,6 +160,7 @@ def _grid_env(tmp_path: Path, fake_video_path: Path, *, classify_mock, clip_mock
         stack.enter_context(patch("app.services.ingestion.ingestion_orchestrator.classify_frames_for_lineup_decision", new=classify_mock))
         stack.enter_context(patch("app.services.ingestion.ingestion_orchestrator.generate_clip_for_lineup", new=clip_mock))
         stack.enter_context(patch("app.services.ingestion.ingestion_orchestrator.generate_landing_clip_for_lineup", new=landing_mock))
+        stack.enter_context(patch("app.services.ingestion.ingestion_orchestrator.generate_micro_clips_for_lineup", new=micro_mock))
         mock_settings = stack.enter_context(patch.object(ingestion_orchestrator_module(), "settings"))
 
         mock_settings.ingestion_download_dir = str(tmp_path)

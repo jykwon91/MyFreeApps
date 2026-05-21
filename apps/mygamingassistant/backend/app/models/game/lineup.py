@@ -116,6 +116,17 @@ class Lineup(Base):
     # renders the existing "Lands in: <zone>" text fallback in the LANDING
     # pane. See app/services/ingestion/landing_clip_generator.py.
     landing_clip_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    # PR6 short looped micro-clips for STAND + AIM panes. Anchored on the
+    # classifier-chosen stand/aim timestamps (same instant the existing
+    # stand/aim stills represent) so the AIM clip's first frame IS the aim
+    # still and the normalized aim_anchor_x/y overlay stays pixel-accurate.
+    # Bare MinIO keys like clip_url / landing_clip_url; presigned at read time
+    # in lineup_service._build_read. Best-effort and orthogonal to lineup
+    # validity — NULL gracefully degrades to the existing stand/aim stills in
+    # LineupPanes.StandPane / AimPane. See
+    # app/services/ingestion/micro_clip_generator.py.
+    stand_clip_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    aim_clip_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
     # Normalized 0-1 crosshair position on the aim screenshot
     aim_anchor_x: Mapped[float | None] = mapped_column(Float, nullable=True)
