@@ -93,7 +93,7 @@ httpx==0.28.1
     #   anthropic
     #   mygamingassistant-backend
     #   platform-shared
-idna==3.14
+idna==3.15
     # via
     #   anyio
     #   email-validator
