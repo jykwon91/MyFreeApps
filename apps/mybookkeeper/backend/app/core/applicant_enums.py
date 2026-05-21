@@ -33,6 +33,8 @@ APPLICANT_EVENT_TYPES: tuple[str, ...] = APPLICANT_STAGES + (
     "contract_dates_changed",
     "tenancy_ended",
     "tenancy_restarted",
+    "tenancy_extended",
+    "extension_undone",
 )
 
 APPLICANT_EVENT_ACTORS: tuple[str, ...] = ("host", "system", "applicant")

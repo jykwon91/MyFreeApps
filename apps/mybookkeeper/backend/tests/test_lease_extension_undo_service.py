@@ -23,6 +23,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.applicants.applicant import Applicant
+from app.models.applicants.applicant_event import ApplicantEvent
 from app.models.leases.lease_term_version import LeaseTermVersion
 from app.models.leases.signed_lease import SignedLease
 from app.services.leases.lease_extension_service import (
@@ -304,3 +305,45 @@ async def test_cross_tenant_lease_returns_not_found(db: AsyncSession) -> None:
             lease_id=lease.id,
             version_id=uuid.uuid4(),
         )
+
+
+@pytest.mark.asyncio
+async def test_undo_writes_extension_undone_event(db: AsyncSession) -> None:
+    """Undoing an extension records a timeline event so the host can see why
+    the lease's ends_on rolled back."""
+    org_id, user_id = uuid.uuid4(), uuid.uuid4()
+    lease = await _seed_lease_with_seed_version(
+        db, user_id=user_id, org_id=org_id,
+    )
+    version = await _seed_extension(
+        db, lease=lease, user_id=user_id, ends_on=_dt.date(2027, 6, 30),
+    )
+
+    with patch(
+        "app.services.leases.lease_extension_service.unit_of_work",
+        _fake_uow_for(db),
+    ), patch(
+        "app.services.leases.lease_extension_service.get_lease",
+        AsyncMock(return_value=object()),
+    ):
+        await undo_extension(
+            user_id=user_id,
+            organization_id=org_id,
+            lease_id=lease.id,
+            version_id=version.id,
+        )
+
+    events = (
+        await db.execute(
+            select(ApplicantEvent).where(
+                ApplicantEvent.applicant_id == lease.applicant_id,
+            )
+        )
+    ).scalars().all()
+    assert len(events) == 1
+    evt = events[0]
+    assert evt.event_type == "extension_undone"
+    assert evt.actor == "host"
+    assert evt.payload["lease_id"] == str(lease.id)
+    assert evt.payload["undone_version_id"] == str(version.id)
+    assert evt.payload["new_ends_on"] == "2026-12-31"
