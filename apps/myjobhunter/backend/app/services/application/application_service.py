@@ -313,6 +313,18 @@ async def log_application_event(
     application = await application_repository.get_by_id(db, application_id, user_id)
     if application is None:
         return None
+
+    # Serialise the nested InterviewDetailsRequest to a plain dict for JSONB
+    # storage.  ``model_dump(mode="json")`` converts datetime fields to ISO
+    # strings (JSONB-safe) and drops None sub-fields so the stored blob stays
+    # compact.  When ``interview_details`` is None the column stores NULL.
+    interview_details_dict: dict | None = None
+    if request.interview_details is not None:
+        interview_details_dict = request.interview_details.model_dump(
+            mode="json",
+            exclude_none=True,
+        )
+
     event = ApplicationEvent(
         user_id=user_id,
         application_id=application_id,
@@ -320,6 +332,7 @@ async def log_application_event(
         occurred_at=request.occurred_at,
         source=request.source,
         note=request.note,
+        interview_details=interview_details_dict,
     )
     event = await application_event_repository.create(db, event)
     await db.commit()
