@@ -169,6 +169,16 @@ def _common_patches(
             f"{_MOD}.set_landing_clip_url_original",
             new=persist or AsyncMock(),
         ),
+        # ``_build_admin_read`` (re-exported via this service) calls
+        # ``_sign_screenshot_url`` which hits MinIO. CI doesn't configure
+        # MinIO env vars, so we short-circuit signing to return the bare
+        # key unchanged. The signing logic has its own dedicated tests in
+        # the lineup_service module — covering it here would couple two
+        # concerns.
+        patch(
+            "app.services.game.lineup_service._sign_screenshot_url",
+            side_effect=lambda key: key,
+        ),
     ]
 
 
@@ -272,6 +282,9 @@ class TestHappyPath:
             patch(f"{_MOD}.set_clip_url_original", new=persist_throw),
             patch(f"{_MOD}.set_landing_clip_url_original",
                   new=persist_landing),
+            # CI has no MinIO env — short-circuit signing.
+            patch("app.services.game.lineup_service._sign_screenshot_url",
+                  side_effect=lambda key: key),
         ]):
             result = await widen_pane_source(MagicMock(), _lineup(), "throw")
 
@@ -313,6 +326,8 @@ class TestHappyPath:
             patch(f"{_MOD}.cut_and_upload_wide_source", new=wide),
             patch(f"{_MOD}.set_clip_url_original", new=persist_throw),
             patch(f"{_MOD}.set_landing_clip_url_original", new=persist_landing),
+            patch("app.services.game.lineup_service._sign_screenshot_url",
+                  side_effect=lambda key: key),
         ]):
             result = await widen_pane_source(MagicMock(), _lineup(), "landing")
 
