@@ -133,7 +133,7 @@ httpx==0.28.1
     #   platform-shared
 icalendar==7.1.0
     # via mybookkeeper-backend
-idna==3.13
+idna==3.15
     # via
     #   anyio
     #   email-validator
