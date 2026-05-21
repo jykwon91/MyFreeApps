@@ -58,6 +58,7 @@ from app.schemas.game.lineup_schemas import (
     PendingLineupsResponse,
     UploadUrlResponse,
 )
+from app.schemas.game.pane_shift_window_schemas import PaneShiftWindowRequest
 from app.schemas.game.pane_trim_schemas import PaneTrimRequest
 from app.schemas.game.pane_upload_schemas import (
     Pane,
@@ -67,6 +68,7 @@ from app.schemas.game.pane_upload_schemas import (
 )
 from app.services.game import (
     lineup_service,
+    pane_shift_window_service,
     pane_trim_service,
     pane_upload_service,
     pane_widen_source_service,
@@ -612,3 +614,47 @@ async def widen_pane_source(
     if lineup is None:
         raise HTTPException(status_code=404, detail="Lineup not found")
     return await pane_widen_source_service.widen_pane_source(db, lineup, pane)
+
+
+# ---------------------------------------------------------------------------
+# Per-pane STAND/AIM shift-window — fixed-width sibling of /trim.
+#
+# Re-cuts the served 1s micro-clip at the operator's chosen offset inside
+# the shared wider source ``clip_url_original``. The slider in the frontend
+# is single-thumb (window width is fixed at 1s) so the operator just chooses
+# where the window starts; the throw / landing trim endpoints handle the
+# two-thumb range case for those panes. See pane_shift_window_service.
+# ---------------------------------------------------------------------------
+
+
+@auth_router.post(
+    "/lineups/{lineup_id}/panes/{pane}/shift-window",
+    response_model=LineupRead,
+)
+async def shift_pane_window(
+    lineup_id: uuid.UUID,
+    pane: Pane,
+    body: PaneShiftWindowRequest,
+    db: AsyncSession = Depends(get_db),
+) -> LineupRead:
+    """Re-cut the STAND or AIM 1-second micro-clip at ``body.offset_s``.
+
+    Pane must be ``stand`` or ``aim`` (THROW + LANDING use the variable-
+    width ``/trim`` endpoint instead — see the comment on that handler).
+
+    Failure shapes:
+      * 400 — pane outside the shiftable allow-list, or offset_s pushes
+              past the wider source's actual duration
+      * 404 — lineup missing
+      * 409 — no wider source for this chapter (``clip_url_original`` is
+              null or equals ``clip_url``; widen-source the throw pane
+              first to unlock shifting for all four panes)
+      * 502 — MinIO download or upload failed
+      * 500 — ffprobe, ffmpeg cut, or DB commit failed
+    """
+    lineup = await get_lineup_orm(db, lineup_id)
+    if lineup is None:
+        raise HTTPException(status_code=404, detail="Lineup not found")
+    return await pane_shift_window_service.shift_pane_window(
+        db, lineup, pane, body,
+    )
