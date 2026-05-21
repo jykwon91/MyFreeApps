@@ -44,6 +44,13 @@ export interface Application {
    */
   latest_status: string | null;
 
+  /**
+   * Display name of the joined company. Returned by the list endpoint
+   * so the Applications table can render a Company column without an
+   * extra round-trip per row. Only present in list responses.
+   */
+  company_name: string | null;
+
   deleted_at: string | null;
   created_at: string;
   updated_at: string;

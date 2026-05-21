@@ -1,9 +1,9 @@
 import { Skeleton } from "@platform/ui";
 
 // Column widths mirror the loaded DataTable column widths exactly.
-// Order: Role | Status | Location | Remote | Applied | Fit
-const COLUMN_WIDTHS = ["w-1/3", "w-20", "w-1/4", "w-20", "w-24", "w-16"] as const;
-const COLUMN_HEADERS = ["Role", "Status", "Location", "Remote", "Applied", "Fit"] as const;
+// Order: Company | Role | Status | Location | Remote | Applied | Fit
+const COLUMN_WIDTHS = ["w-1/5", "w-1/4", "w-20", "w-1/4", "w-20", "w-24", "w-16"] as const;
+const COLUMN_HEADERS = ["Company", "Role", "Status", "Location", "Remote", "Applied", "Fit"] as const;
 
 export default function ApplicationsSkeleton() {
   return (
