@@ -467,3 +467,73 @@ async def cut_clip(
     return await loop.run_in_executor(
         None, _cut_clip_sync, video_path, start_seconds, duration_seconds
     )
+
+
+class ProbeError(Exception):
+    """Raised when ffprobe cannot read a duration from a video file.
+
+    Captures the returncode + stderr the same way :class:`ClipCutError`
+    does so callers can surface a structured 5xx with the actionable
+    ffprobe message rather than a bare 500.
+    """
+
+    def __init__(self, message: str, *, returncode: int, stderr: str) -> None:
+        super().__init__(message)
+        self.returncode = returncode
+        self.stderr = stderr
+
+
+def _probe_duration_sync(video_path: Path) -> float:
+    """Synchronously read the duration in seconds from *video_path* via ffprobe.
+
+    Uses ``-show_entries format=duration`` + ``-of csv=p=0`` to get a single
+    bare-number stdout line — cheaper than the full JSON output and trivial
+    to parse. Raises :class:`ProbeError` on any non-zero exit or unparseable
+    output so callers never confuse "duration is 0.0" with "ffprobe failed".
+    """
+    cmd = [
+        "ffprobe",
+        "-v", "error",
+        "-show_entries", "format=duration",
+        "-of", "csv=p=0",
+        str(video_path),
+    ]
+    result = subprocess.run(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        timeout=10,
+    )
+    if result.returncode != 0:
+        stderr_text = result.stderr.decode("utf-8", errors="replace")
+        logger.error(
+            "ffprobe duration failed: video=%s returncode=%d stderr=%s",
+            video_path, result.returncode, stderr_text,
+        )
+        raise ProbeError(
+            f"ffprobe exited {result.returncode} probing {video_path.name}",
+            returncode=result.returncode,
+            stderr=stderr_text,
+        )
+    raw = result.stdout.decode("utf-8", errors="replace").strip()
+    try:
+        return float(raw)
+    except ValueError as exc:
+        raise ProbeError(
+            f"ffprobe produced unparseable duration for {video_path.name}: "
+            f"{raw!r}",
+            returncode=result.returncode,
+            stderr=result.stderr.decode("utf-8", errors="replace"),
+        ) from exc
+
+
+async def probe_duration(video_path: Path) -> float:
+    """Return the duration (seconds) of *video_path* via ffprobe.
+
+    Runs the blocking ffprobe subprocess in the default thread-pool executor
+    so it doesn't block the event loop (same shape as :func:`cut_clip`).
+    Raises :class:`ProbeError` on any ffprobe failure (non-zero exit or
+    unparseable output) — never a silent 0.0.
+    """
+    loop = asyncio.get_running_loop()
+    return await loop.run_in_executor(None, _probe_duration_sync, video_path)

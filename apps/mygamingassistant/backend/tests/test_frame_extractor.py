@@ -15,11 +15,13 @@ import pytest
 from app.services.ingestion.frame_extractor import (
     ClipCutError,
     FrameExtractionError,
+    ProbeError,
     clip_window_timestamps,
     cut_clip,
     extract_frames,
     extract_frames_downscaled,
     grid_timestamps,
+    probe_duration,
 )
 
 _FAKE_PNG = b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00"  # PNG magic bytes header
@@ -329,3 +331,60 @@ class TestCutClip:
 
         after = set(glob.glob(str(Path(tempfile.gettempdir()) / "*.mp4")))
         assert after == before
+
+
+class TestProbeDuration:
+    @pytest.mark.asyncio
+    async def test_returns_float_from_ffprobe_stdout(self, tmp_path: Path):
+        """ffprobe with -of csv=p=0 emits a bare-number stdout line — we
+        parse it as a float and return."""
+        video = tmp_path / "src.mp4"
+        video.write_bytes(b"fake")
+
+        ok = MagicMock()
+        ok.returncode = 0
+        ok.stdout = b"12.345\n"
+        ok.stderr = b""
+        with patch("subprocess.run", return_value=ok) as mr:
+            duration = await probe_duration(video)
+
+        assert duration == pytest.approx(12.345)
+        cmd = mr.call_args[0][0]
+        assert cmd[0] == "ffprobe"
+        assert "-show_entries" in cmd
+
+    @pytest.mark.asyncio
+    async def test_raises_probe_error_on_nonzero_exit(self, tmp_path: Path):
+        video = tmp_path / "src.mp4"
+        video.write_bytes(b"fake")
+
+        bad = MagicMock()
+        bad.returncode = 1
+        bad.stdout = b""
+        bad.stderr = b"Invalid data"
+        with patch("subprocess.run", return_value=bad):
+            with pytest.raises(ProbeError) as exc_info:
+                await probe_duration(video)
+
+        assert exc_info.value.returncode == 1
+        assert "Invalid data" in exc_info.value.stderr
+
+    @pytest.mark.asyncio
+    async def test_raises_probe_error_on_unparseable_stdout(
+        self, tmp_path: Path,
+    ):
+        """A non-numeric stdout (e.g. ``N/A`` from ffprobe on a corrupt file)
+        must be a structured ProbeError, NOT a silent 0.0 — the caller can
+        then surface a 5xx with the actionable reason."""
+        video = tmp_path / "src.mp4"
+        video.write_bytes(b"fake")
+
+        weird = MagicMock()
+        weird.returncode = 0
+        weird.stdout = b"N/A\n"
+        weird.stderr = b""
+        with patch("subprocess.run", return_value=weird):
+            with pytest.raises(ProbeError) as exc_info:
+                await probe_duration(video)
+
+        assert "unparseable duration" in str(exc_info.value)
