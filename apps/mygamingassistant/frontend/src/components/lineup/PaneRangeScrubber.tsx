@@ -33,6 +33,10 @@ interface PaneRangeScrubberProps {
   onChange: (start: number, end: number) => void;
   /** Disable interaction (e.g., during apply/error state). */
   disabled?: boolean;
+  /** Notified when the operator starts / ends a drag gesture. Used by the
+   *  preview-video hook (PR3) to switch between snap-to-thumb (drag) and
+   *  loop-between-thumbs (idle). ``null`` = idle, no thumb actively held. */
+  onThumbChange?: (thumb: "start" | "end" | null) => void;
 }
 
 type ActiveThumb = "start" | "end" | null;
@@ -45,10 +49,19 @@ export default function PaneRangeScrubber({
   step = 0.1,
   onChange,
   disabled = false,
+  onThumbChange,
 }: PaneRangeScrubberProps) {
   const trackRef = useRef<HTMLDivElement | null>(null);
   const [active, setActive] = useState<ActiveThumb>(null);
   const labelId = useId();
+
+  // Surface drag state to the parent so the preview-video hook (PR3) can
+  // distinguish "operator is scrubbing" from "operator paused, play the
+  // loop". One-line event-driven bridge keeps the existing setActive call
+  // sites unchanged.
+  useEffect(() => {
+    onThumbChange?.(active);
+  }, [active, onThumbChange]);
 
   // Drag handler — pointer events because they cover mouse + touch + stylus
   // uniformly. We listen on window during a drag so the operator can drag
