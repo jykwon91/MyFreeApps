@@ -13,7 +13,7 @@
  *     applying-state assertion can lock the component in that phase, and the
  *     error path can exercise extractError without an HTTP round-trip.
  */
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 vi.mock("@/hooks/useClipDuration", () => ({
@@ -33,6 +33,19 @@ const mockedUseClipDuration = vi.mocked(useClipDuration);
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // jsdom doesn't implement HTMLMediaElement play/pause — stub so the PR3
+  // preview <video> inside TrimSliderPanel doesn't warn or throw. Same
+  // pattern as GlanceBoardTile.test.tsx.
+  vi.spyOn(window.HTMLMediaElement.prototype, "play").mockResolvedValue(
+    undefined,
+  );
+  vi.spyOn(window.HTMLMediaElement.prototype, "pause").mockImplementation(
+    () => {},
+  );
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
 });
 
 describe("PaneTrimOverlay", () => {
@@ -102,6 +115,29 @@ describe("PaneTrimOverlay", () => {
     expect(sliders[1]).toHaveAttribute("aria-valuenow", "5");
     expect(sliders[0]).toHaveAttribute("aria-valuemax", "5");
     expect(sliders[1]).toHaveAttribute("aria-valuemax", "5");
+  });
+
+  it("mounts a muted aria-hidden preview <video> with the clip URL when the panel opens (PR3)", () => {
+    mockedUseClipDuration.mockReturnValue(5);
+    const { container } = render(
+      <PaneTrimOverlay
+        lineupId="l1"
+        pane="throw"
+        clipUrl="https://ex/clip.mp4"
+      />,
+    );
+    // Closed → no preview video.
+    expect(container.querySelector("video")).toBeNull();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /trim throw clip duration/i }),
+    );
+
+    const video = container.querySelector("video") as HTMLVideoElement;
+    expect(video).not.toBeNull();
+    expect(video.getAttribute("src")).toBe("https://ex/clip.mp4");
+    expect(video.muted).toBe(true);
+    expect(video.getAttribute("aria-hidden")).toBe("true");
   });
 
   it("Apply button is disabled when initial range is shorter than MIN_TRIM_DURATION_S", () => {

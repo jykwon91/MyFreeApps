@@ -115,13 +115,19 @@ export function useTrimPreviewVideo({
     if (!video || activeThumb !== null) return;
 
     video.currentTime = startOffsetS;
-    void video.play().catch(() => {
-      // Autoplay can be blocked in some browser contexts (e.g., the
-      // operator hasn't interacted with the page yet). Muted + playsInline
-      // satisfies modern autoplay policies but we still defensively
-      // swallow the rejection — the still-frame at startOffsetS remains
-      // visible, which is acceptable degradation.
-    });
+    // Modern browsers return a Promise from play() that rejects when
+    // autoplay is blocked. jsdom and some older runtimes return undefined.
+    // Defensively handle both — the still at startOffsetS remains visible
+    // either way, which is acceptable degradation when autoplay is
+    // unavailable.
+    try {
+      const playResult = video.play() as Promise<void> | undefined;
+      if (playResult && typeof playResult.catch === "function") {
+        playResult.catch(() => {});
+      }
+    } catch {
+      /* play() not implemented or threw synchronously */
+    }
 
     const onTimeUpdate = () => {
       // ``timeupdate`` fires ~4x/sec, so the loop point can overshoot the
