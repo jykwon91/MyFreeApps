@@ -36,9 +36,26 @@ from app.schemas.application.application_create_request import ApplicationCreate
 from app.schemas.application.application_detail_response import ApplicationDetailResponse
 from app.schemas.application.application_event_create_request import ApplicationEventCreateRequest
 from app.schemas.application.application_event_response import ApplicationEventResponse
+from app.schemas.application.application_event_update_request import ApplicationEventUpdateRequest
 from app.schemas.application.application_kanban_item import ApplicationKanbanItem
 from app.schemas.application.application_list_item import ApplicationListItem
 from app.schemas.application.application_update_request import ApplicationUpdateRequest
+
+
+_EDITABLE_EVENT_TYPES = frozenset({"interview_scheduled", "interview_completed"})
+
+
+class EventTypeNotEditableError(ValueError):
+    """Raised when a PATCH targets an event whose ``event_type`` is not in
+    the editable allowlist.
+
+    Only ``interview_scheduled`` and ``interview_completed`` events can be
+    edited — system-generated events (``applied``, ``email_received``,
+    kanban transitions) remain immutable so the audit trail stays trustworthy.
+
+    The route handler maps this to HTTP 422 with a stable detail literal
+    so the frontend can route on it deterministically.
+    """
 
 
 class CompanyNotOwnedError(LookupError):
@@ -335,6 +352,62 @@ async def log_application_event(
         interview_details=interview_details_dict,
     )
     event = await application_event_repository.create(db, event)
+    await db.commit()
+    return event
+
+
+async def update_application_event(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    application_id: uuid.UUID,
+    event_id: uuid.UUID,
+    request: ApplicationEventUpdateRequest,
+) -> ApplicationEvent | None:
+    """Apply a partial update to an ApplicationEvent.
+
+    Returns ``None`` when the event does not exist under
+    ``(user_id, application_id)`` — the route maps to HTTP 404 with no
+    existence leak (a caller who knows an event UUID but not the parent
+    application gets the same response as a genuine miss).
+
+    Raises ``EventTypeNotEditableError`` when the targeted event's
+    ``event_type`` is not in ``_EDITABLE_EVENT_TYPES`` — the route maps
+    to HTTP 422.  Only the two user-input columns may be patched
+    (``interview_details``, ``note``); every other column is immutable
+    via the schema's ``extra='forbid'`` and the route's body shape.
+
+    ``exclude_unset=True`` semantics: fields the caller omitted stay
+    untouched on the row; fields explicitly set to ``null`` clear the
+    column.  Mirrors the application-level PATCH on update_application.
+    """
+    event = await application_event_repository.get_by_id(
+        db, user_id, application_id, event_id,
+    )
+    if event is None:
+        return None
+
+    if event.event_type not in _EDITABLE_EVENT_TYPES:
+        raise EventTypeNotEditableError(
+            f"event_type {event.event_type!r} is not editable",
+        )
+
+    updates = request.model_dump(exclude_unset=True)
+
+    if "interview_details" in updates:
+        details = request.interview_details
+        if details is None:
+            event.interview_details = None
+        else:
+            event.interview_details = details.model_dump(
+                mode="json",
+                exclude_none=True,
+            )
+
+    if "note" in updates:
+        event.note = request.note
+
+    await db.flush()
+    await db.refresh(event)
     await db.commit()
     return event
 

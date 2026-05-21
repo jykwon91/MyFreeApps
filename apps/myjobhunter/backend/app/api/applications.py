@@ -43,6 +43,7 @@ from app.schemas.application.application_create_request import ApplicationCreate
 from app.schemas.application.application_detail_response import ApplicationDetailResponse
 from app.schemas.application.application_event_create_request import ApplicationEventCreateRequest
 from app.schemas.application.application_event_response import ApplicationEventResponse
+from app.schemas.application.application_event_update_request import ApplicationEventUpdateRequest
 from app.schemas.application.application_list_item import ApplicationListItem
 from app.schemas.application.application_response import ApplicationResponse
 from app.schemas.application.application_transition_request import ApplicationTransitionRequest
@@ -52,7 +53,10 @@ from app.schemas.application.jd_parse_response import JdParseResponse
 from app.schemas.application.jd_url_extract_request import JdUrlExtractRequest
 from app.schemas.application.jd_url_extract_response import JdUrlExtractResponse
 from app.services.application import application_service
-from app.services.application.application_service import CompanyNotOwnedError
+from app.services.application.application_service import (
+    CompanyNotOwnedError,
+    EventTypeNotEditableError,
+)
 from app.services.application.application_transition_service import (
     TransitionNotAllowedError,
     transition_application,
@@ -69,6 +73,8 @@ router = APIRouter()
 
 _NOT_FOUND_DETAIL = "Application not found"
 _CONTACT_NOT_FOUND_DETAIL = "Contact not found"
+_EVENT_NOT_FOUND_DETAIL = "Event not found"
+_EVENT_NOT_EDITABLE_DETAIL = "event_type does not support editing"
 
 # Pagination safety cap — prevents pathological limit values.
 _MAX_LIMIT = 500
@@ -467,6 +473,59 @@ async def create_application_event(
     )
     if event is None:
         raise HTTPException(status_code=404, detail=_NOT_FOUND_DETAIL)
+    return ApplicationEventResponse.model_validate(event)
+
+
+@router.patch(
+    "/applications/{application_id}/events/{event_id}",
+    response_model=ApplicationEventResponse,
+)
+async def update_application_event(
+    application_id: uuid.UUID,
+    event_id: uuid.UUID,
+    payload: ApplicationEventUpdateRequest,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(current_active_user),
+) -> ApplicationEventResponse:
+    """Apply a partial update to an ApplicationEvent.
+
+    Only the two user-input columns (``interview_details`` and ``note``)
+    are editable, and only when the targeted event's ``event_type`` is
+    ``interview_scheduled`` or ``interview_completed`` — system-generated
+    events (``applied``, ``email_received``, kanban transitions) stay
+    immutable so the audit trail remains trustworthy.
+
+    Returns 404 if the event is missing OR belongs to another user
+    OR is filed under a different application than ``application_id``.
+    The composite WHERE on (event_id, application_id, user_id) is the
+    canonical no-leak boundary; callers cannot distinguish the three
+    cases.
+
+    Returns 422 with detail ``event_type does not support editing``
+    when the row exists but its event_type is outside the editable
+    allowlist — the frontend already gates the edit UI to interview
+    events, this is defense in depth.
+
+    Rate limited per user (30/min, 200/hr).  Shares limiters with the
+    application-level PATCH because both surfaces fire from the same
+    drawer UI; users hammering one shouldn't bypass the other.
+    """
+    _check_per_user_limit(
+        user.id,
+        _NOTES_PATCH_LIMITER_PER_MIN,
+        _NOTES_PATCH_LIMITER_PER_HOUR,
+    )
+    try:
+        event = await application_service.update_application_event(
+            db, user.id, application_id, event_id, payload,
+        )
+    except EventTypeNotEditableError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=_EVENT_NOT_EDITABLE_DETAIL,
+        ) from exc
+    if event is None:
+        raise HTTPException(status_code=404, detail=_EVENT_NOT_FOUND_DETAIL)
     return ApplicationEventResponse.model_validate(event)
 
 

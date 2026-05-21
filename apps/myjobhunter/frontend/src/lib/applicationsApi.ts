@@ -4,6 +4,7 @@ import type { ApplicationListResponse } from "@/types/application-list-response"
 import type { ApplicationCreateRequest } from "@/types/application-create-request";
 import type { ApplicationEvent } from "@/types/application-event";
 import type { ApplicationEventCreateRequest } from "@/types/application-event-create-request";
+import type { ApplicationEventUpdateRequest } from "@/types/application-event-update-request";
 import type { ApplicationEventListResponse } from "@/types/application-event-list-response";
 import type { JdParseResponse } from "@/types/application/jd-parse-response";
 import type { JdUrlExtractRequest } from "@/types/application/jd-url-extract-request";
@@ -121,6 +122,37 @@ const applicationsApi = baseApi.enhanceEndpoints({
     }),
 
     /**
+     * PATCH /applications/{id}/events/{event_id}
+     *
+     * Update the user-input fields of an existing event. Only
+     * `interview_details` and `note` are accepted; every other column
+     * is immutable. The targeted event's `event_type` must be
+     * `interview_scheduled` or `interview_completed`.
+     *
+     * Returns:
+     * - 200 with the updated ApplicationEvent
+     * - 404 when the event is missing OR not under this application
+     *   OR belongs to another user (composite WHERE — no existence leak)
+     * - 422 when the event_type is not in the editable allowlist
+     *   (detail: "event_type does not support editing")
+     * - 422 when the body shape is invalid (extra fields, bad enum)
+     * - 429 when the per-user rate limit is exceeded (30/min, 200/hr)
+     */
+    updateApplicationEvent: build.mutation<
+      ApplicationEvent,
+      { applicationId: string; eventId: string; body: ApplicationEventUpdateRequest }
+    >({
+      query: ({ applicationId, eventId, body }) => ({
+        url: `/applications/${applicationId}/events/${eventId}`,
+        method: "PATCH",
+        data: body,
+      }),
+      invalidatesTags: (_result, _err, { applicationId }) => [
+        { type: APPLICATION_EVENTS_TAG, id: applicationId },
+      ],
+    }),
+
+    /**
      * POST /applications/{id}/transitions
      *
      * Persists a kanban-column drag as an event_log row. The drag handler
@@ -210,6 +242,7 @@ export const {
   useDeleteApplicationMutation,
   useListApplicationEventsQuery,
   useLogApplicationEventMutation,
+  useUpdateApplicationEventMutation,
   useTransitionApplicationMutation,
   useParseJobDescriptionMutation,
   useExtractJdFromUrlMutation,

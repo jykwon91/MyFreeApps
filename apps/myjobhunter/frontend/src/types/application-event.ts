@@ -36,4 +36,5 @@ export interface ApplicationEvent {
   interview_details: InterviewDetails | null;
   note: string | null;
   created_at: string;
+  updated_at: string;
 }

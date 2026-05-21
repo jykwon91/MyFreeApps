@@ -13,9 +13,11 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 const logEventMock = vi.fn();
+const updateEventMock = vi.fn();
 
 vi.mock("@/lib/applicationsApi", () => ({
   useLogApplicationEventMutation: () => [logEventMock, { isLoading: false }],
+  useUpdateApplicationEventMutation: () => [updateEventMock, { isLoading: false }],
 }));
 
 vi.mock("@radix-ui/react-dialog", async (importOriginal) => {
@@ -52,6 +54,7 @@ describe("LogEventDialog — interview_details", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     logEventMock.mockReturnValue({ unwrap: () => Promise.resolve(undefined) });
+    updateEventMock.mockReturnValue({ unwrap: () => Promise.resolve(undefined) });
   });
 
   it("does not show interview fields for non-interview event types", () => {
@@ -146,5 +149,95 @@ describe("LogEventDialog — interview_details", () => {
     await userEvent.click(screen.getByRole("button", { name: /Log event/i }));
     expect(logEventMock).not.toHaveBeenCalled();
     expect(screen.getByText(/Between 1 and 1440/i)).toBeInTheDocument();
+  });
+});
+
+describe("LogEventDialog — edit mode", () => {
+  const existingEvent = {
+    id: "event-1",
+    user_id: "user-1",
+    application_id: "app-1",
+    event_type: "interview_scheduled" as const,
+    occurred_at: "2026-05-20T15:00:00.000Z",
+    source: "manual" as const,
+    email_message_id: null,
+    raw_payload: null,
+    interview_details: {
+      type: "video" as const,
+      scheduled_at: "2026-05-22T19:00:00.000Z",
+      duration_minutes: 45,
+      location_or_link: "https://meet.google.com/abc-def",
+      interviewer_names: ["Alex Kim", "Jordan Lee"],
+    },
+    note: "original note",
+    created_at: "2026-05-20T15:00:00.000Z",
+    updated_at: "2026-05-20T15:00:00.000Z",
+  };
+
+  function renderEdit() {
+    return render(
+      <LogEventDialog
+        applicationId="app-1"
+        open={true}
+        onOpenChange={() => {}}
+        mode="edit"
+        eventToEdit={existingEvent}
+      />,
+    );
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    logEventMock.mockReturnValue({ unwrap: () => Promise.resolve(undefined) });
+    updateEventMock.mockReturnValue({ unwrap: () => Promise.resolve(undefined) });
+  });
+
+  it("uses the edit title and submit copy", () => {
+    renderEdit();
+    expect(screen.getByText(/Edit interview details/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Save changes/i })).toBeInTheDocument();
+  });
+
+  it("hides the event_type select and the top-level When field in edit mode", () => {
+    renderEdit();
+    expect(screen.queryByLabelText(/^Event/i)).not.toBeInTheDocument();
+    // The interview's own "Scheduled at" field is still visible; the
+    // top-level "When" (occurred_at) is what should be hidden.
+    expect(screen.queryByLabelText(/^When/i)).not.toBeInTheDocument();
+  });
+
+  it("preloads the form with the existing event's values", () => {
+    renderEdit();
+    expect(screen.getByLabelText(/Type/i)).toHaveValue("video");
+    expect(screen.getByLabelText(/Duration/i)).toHaveValue(45);
+    expect(screen.getByLabelText(/Location or link/i)).toHaveValue(
+      "https://meet.google.com/abc-def",
+    );
+    expect(screen.getByLabelText(/Interviewer names/i)).toHaveValue(
+      "Alex Kim\nJordan Lee",
+    );
+    expect(screen.getByLabelText(/^Note/i)).toHaveValue("original note");
+  });
+
+  it("submits via update mutation and forwards eventId", async () => {
+    renderEdit();
+    const note = screen.getByLabelText(/^Note/i);
+    await userEvent.clear(note);
+    await userEvent.type(note, "updated note");
+
+    await userEvent.click(screen.getByRole("button", { name: /Save changes/i }));
+
+    expect(updateEventMock).toHaveBeenCalledTimes(1);
+    expect(logEventMock).not.toHaveBeenCalled();
+    const arg = updateEventMock.mock.calls[0][0];
+    expect(arg.applicationId).toBe("app-1");
+    expect(arg.eventId).toBe("event-1");
+    expect(arg.body.note).toBe("updated note");
+    expect(arg.body.interview_details).toMatchObject({
+      type: "video",
+      duration_minutes: 45,
+      location_or_link: "https://meet.google.com/abc-def",
+      interviewer_names: ["Alex Kim", "Jordan Lee"],
+    });
   });
 });

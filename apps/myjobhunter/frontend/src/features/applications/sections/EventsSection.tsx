@@ -2,14 +2,17 @@
  * Events section of the ApplicationDrawer.
  *
  * Renders the chronological event log newest-first. The "Log event"
- * affordance opens the existing LogEventDialog for non-transition events
- * (notes, follow-ups via ``follow_up_sent``, ad-hoc).
+ * affordance opens LogEventDialog in create mode. Interview events
+ * (interview_scheduled / interview_completed) show an inline pencil
+ * button that opens the same dialog in edit mode, preloaded with the
+ * existing interview_details + note.
  */
 import { useState } from "react";
 import { Plus } from "lucide-react";
 import LogEventDialog from "@/features/applications/LogEventDialog";
 import EventListItem from "./EventListItem";
 import { useListApplicationEventsQuery } from "@/lib/applicationsApi";
+import type { ApplicationEvent } from "@/types/application-event";
 
 interface EventsSectionProps {
   applicationId: string;
@@ -18,7 +21,8 @@ interface EventsSectionProps {
 export default function EventsSection({ applicationId }: EventsSectionProps) {
   const { data: eventsData } = useListApplicationEventsQuery(applicationId);
   const events = eventsData?.items ?? [];
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<ApplicationEvent | null>(null);
 
   return (
     <section>
@@ -29,7 +33,7 @@ export default function EventsSection({ applicationId }: EventsSectionProps) {
         </h2>
         <button
           type="button"
-          onClick={() => setDialogOpen(true)}
+          onClick={() => setCreateDialogOpen(true)}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs border rounded-md hover:bg-muted"
         >
           <Plus size={12} />
@@ -43,15 +47,29 @@ export default function EventsSection({ applicationId }: EventsSectionProps) {
       ) : (
         <ol className="space-y-2">
           {events.map((event) => (
-            <EventListItem key={event.id} event={event} />
+            <EventListItem
+              key={event.id}
+              event={event}
+              onEditClick={setEditingEvent}
+            />
           ))}
         </ol>
       )}
 
       <LogEventDialog
         applicationId={applicationId}
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+        mode="create"
+      />
+      <LogEventDialog
+        applicationId={applicationId}
+        open={editingEvent !== null}
+        onOpenChange={(open) => {
+          if (!open) setEditingEvent(null);
+        }}
+        mode="edit"
+        eventToEdit={editingEvent}
       />
     </section>
   );

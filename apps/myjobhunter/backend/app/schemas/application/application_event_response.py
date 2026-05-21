@@ -37,5 +37,6 @@ class ApplicationEventResponse(BaseModel):
     interview_details: dict[str, Any] | None = None
 
     created_at: _dt.datetime
+    updated_at: _dt.datetime
 
     model_config = ConfigDict(from_attributes=True)
