@@ -1,8 +1,9 @@
-"""Repository for ``application_events`` — the immutable event log per
-application.
+"""Repository for ``application_events`` — the event log per application.
 
-Per the data model: events are an INSERT-only table with no soft delete.
-Status is computed by lateral join on (application_id, occurred_at DESC) —
+Per the data model: events are append-only EXCEPT for the two
+user-input columns ``interview_details`` and ``note`` on interview-typed
+events (PR for interview-details edit, 2026-05-21). Status is still
+computed by lateral join on (application_id, occurred_at DESC) —
 NEVER stored as a column on applications.
 
 Tenant scoping is mandatory — every public function takes ``user_id`` and
@@ -55,3 +56,26 @@ async def create(db: AsyncSession, event: ApplicationEvent) -> ApplicationEvent:
     await db.flush()
     await db.refresh(event)
     return event
+
+
+async def get_by_id(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    application_id: uuid.UUID,
+    event_id: uuid.UUID,
+) -> ApplicationEvent | None:
+    """Return the event matching all three of (event_id, application_id,
+    user_id) — composite WHERE guards IDOR.
+
+    A caller who knows an event UUID but does not own the parent
+    application is returned None (route maps to 404). The triple match
+    means knowing only the event_id is not enough to reach a row.
+    """
+    result = await db.execute(
+        select(ApplicationEvent).where(
+            ApplicationEvent.id == event_id,
+            ApplicationEvent.application_id == application_id,
+            ApplicationEvent.user_id == user_id,
+        ),
+    )
+    return result.scalar_one_or_none()

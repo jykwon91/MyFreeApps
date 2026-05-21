@@ -1,4 +1,5 @@
 import { Badge } from "@platform/ui";
+import { Pencil } from "lucide-react";
 import InterviewDetailsSummary from "@/features/applications/InterviewDetailsSummary";
 import type {
   ApplicationEvent,
@@ -34,6 +35,11 @@ const EVENT_BADGE_COLOR: Record<
   follow_up_sent: "blue",
 };
 
+const INTERVIEW_EVENT_TYPES = new Set<ApplicationEventType>([
+  "interview_scheduled",
+  "interview_completed",
+]);
+
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleString();
 }
@@ -67,9 +73,12 @@ function SourceBlock({ source }: SourceBlockProps) {
 
 interface Props {
   event: ApplicationEvent;
+  onEditClick?: (event: ApplicationEvent) => void;
 }
 
-export default function EventListItem({ event }: Props) {
+export default function EventListItem({ event, onEditClick }: Props) {
+  const isInterviewEvent = INTERVIEW_EVENT_TYPES.has(event.event_type);
+  const showEditButton = isInterviewEvent && onEditClick !== undefined;
   return (
     <li className="border rounded-lg p-3 bg-muted/20">
       <div className="flex items-center justify-between gap-2">
@@ -77,9 +86,21 @@ export default function EventListItem({ event }: Props) {
           label={EVENT_LABELS[event.event_type]}
           color={EVENT_BADGE_COLOR[event.event_type]}
         />
-        <span className="text-xs text-muted-foreground">
-          {formatDate(event.occurred_at)}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">
+            {formatDate(event.occurred_at)}
+          </span>
+          {showEditButton ? (
+            <button
+              type="button"
+              onClick={() => onEditClick(event)}
+              aria-label="Edit interview details"
+              className="text-muted-foreground hover:text-foreground rounded p-1 hover:bg-muted"
+            >
+              <Pencil size={14} />
+            </button>
+          ) : null}
+        </div>
       </div>
       <InterviewBlock event={event} />
       <NoteBlock note={event.note} />

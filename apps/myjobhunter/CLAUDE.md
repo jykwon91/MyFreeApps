@@ -93,7 +93,7 @@ apps/myjobhunter/
 
 **Timestamps:**
 - `DateTime(timezone=True)` on every datetime column
-- `created_at` + `updated_at` on every table (except `application_events` and `research_sources` which are immutable — created_at only)
+- `created_at` + `updated_at` on every table (except `research_sources` which is immutable — created_at only). `application_events` carries both columns; only the two user-input columns (`interview_details`, `note`) are mutable via PATCH, and only on `interview_scheduled` / `interview_completed` events — see `app/services/application/application_service.py::update_application_event`. System-generated events (`applied`, `email_received`, kanban transitions) remain immutable.
 - Python `default=lambda: datetime.now(timezone.utc)` + `server_default=func.now()`
 
 **UUIDs:**
