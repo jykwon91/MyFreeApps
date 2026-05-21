@@ -53,6 +53,9 @@ from app.services.ingestion.clip_generator import generate_clip_for_lineup
 from app.services.ingestion.landing_clip_generator import (
     generate_landing_clip_for_lineup,
 )
+from app.services.ingestion.micro_clip_generator import (
+    generate_micro_clips_for_lineup,
+)
 from app.services.ingestion.technique_extractor import (
     extract_technique_for_lineup,
 )
@@ -462,6 +465,38 @@ async def _process_chapter(
                     source.id, video_meta.video_id, start, lineup.id,
                     str(exc), exc_info=True,
                 )
+
+        # PR6: best-effort STAND + AIM 1s micro-clips. Anchored on the SAME
+        # grid timestamps the classifier already chose for the stand/aim
+        # stills, so the AIM clip's first frame IS today's aim still and the
+        # persisted aim_anchor_x/y overlay stays pixel-accurate. Zero extra
+        # Claude spend — just two ffmpeg cuts + two MinIO uploads per chapter.
+        # Same non-fatal contract as the surrounding clip / landing / technique
+        # blocks (a micro-clip failure must not roll back the lineup).
+        try:
+            micro_result = await generate_micro_clips_for_lineup(
+                db,
+                lineup,
+                chapter_start=float(chapter.start_seconds),
+                chapter_end=float(chapter.end_seconds),
+                video_path=video_path,
+                precomputed_stand_ts=timestamps[stand_idx],
+                precomputed_aim_ts=timestamps[aim_idx],
+            )
+            logger.info(
+                "Micro-clip generation (ingest): source_id=%s video_id=%s "
+                "chapter_start=%d lineup_id=%s stand=%s aim=%s",
+                source.id, video_meta.video_id, start, lineup.id,
+                micro_result.stand_status, micro_result.aim_status,
+            )
+        except Exception as exc:
+            logger.warning(
+                "Micro-clip generation unexpected error (non-fatal): "
+                "source_id=%s video_id=%s chapter_start=%d lineup_id=%s "
+                "error=%s",
+                source.id, video_meta.video_id, start, lineup.id, str(exc),
+                exc_info=True,
+            )
 
         # PR3: best-effort throw-technique footer text. Symmetric to the clip
         # block above and equally non-fatal — independent Claude call, own
