@@ -70,9 +70,21 @@ class LineupRead(BaseModel):
     stand_screenshot_url: Optional[str] = None
     aim_screenshot_url: Optional[str] = None
     clip_url: Optional[str] = None
+    # Operator-only mirror of the pre-trim source clip + the current trim
+    # window inside it. Set by ``_build_admin_read`` (auth_router paths only).
+    # Public paths leave these None so the original — which may contain frames
+    # the operator deliberately trimmed to keep private — never leaks. Drives
+    # the per-pane trim editor's slider bound + thumb pre-fill on the frontend.
+    # See pane_trim_service for the cut-from-original model (PR4).
+    clip_url_original: Optional[str] = None
+    clip_trim_start_s: Optional[float] = None
+    clip_trim_end_s: Optional[float] = None
     # PR5 landing-clip key; presigned to a 24h GET URL at read time in
     # lineup_service._build_read alongside the other MinIO keys.
     landing_clip_url: Optional[str] = None
+    landing_clip_url_original: Optional[str] = None
+    landing_clip_trim_start_s: Optional[float] = None
+    landing_clip_trim_end_s: Optional[float] = None
     # PR6 stand/aim micro-clip keys; presigned alongside clip_url +
     # landing_clip_url in _build_read. NULL until the generator (ingest path)
     # or backfill CLI populates them — UI gracefully degrades to the existing

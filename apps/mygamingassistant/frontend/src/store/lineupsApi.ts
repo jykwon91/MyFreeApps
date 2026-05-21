@@ -73,6 +73,17 @@ const lineupsApi = lineupsBaseApi.injectEndpoints({
       providesTags: (_result, _err, id) => [{ type: "Lineup", id }],
     }),
 
+    // Operator-only — returns the lineup with ``*_url_original`` + ``*_trim_*``
+    // fields populated so the pane-editor Trim slider can bound on the source
+    // and pre-fill thumbs to the current trim window. Fired lazily by
+    // PaneTrimOverlay on scissors click so the public list payload stays
+    // unchanged. Tag-shared with ``getLineup`` so a Replace / Trim
+    // invalidates both caches in one hop.
+    getLineupAdmin: build.query<Lineup, string>({
+      query: (id) => ({ url: `/lineups/${id}/admin`, method: "GET" }),
+      providesTags: (_result, _err, id) => [{ type: "Lineup", id }],
+    }),
+
     createLineup: build.mutation<
       Lineup,
       { payload: LineupCreate; lineup_id?: string }
@@ -258,6 +269,7 @@ export const {
   useGetUploadUrlMutation,
   useGetLineupsQuery,
   useGetLineupQuery,
+  useLazyGetLineupAdminQuery,
   useCreateLineupMutation,
   useUpdateLineupMutation,
   useDeleteLineupMutation,

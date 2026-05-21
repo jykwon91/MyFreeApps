@@ -25,7 +25,12 @@ from app.repositories.game import lineup_repo
 
 
 @pytest.mark.asyncio
-async def test_set_landing_clip_url_commits(db: AsyncSession):
+async def test_set_landing_clip_url_commits_both_url_and_original(
+    db: AsyncSession,
+):
+    """Replace/ingest writes landing_clip_url AND landing_clip_url_original
+    to the same key, and NULLs the trim offset pair (PR4 — sibling of the
+    throw-clip contract in test_lineup_clip_url_repo)."""
     created = await lineup_repo.create_lineup(
         db, {"title": "landing repo test", "status": "pending_review"}
     )
@@ -34,6 +39,9 @@ async def test_set_landing_clip_url_commits(db: AsyncSession):
         db, created, "pending/vidX/12-landing.mp4"
     )
     assert returned.landing_clip_url == "pending/vidX/12-landing.mp4"
+    assert returned.landing_clip_url_original == "pending/vidX/12-landing.mp4"
+    assert returned.landing_clip_trim_start_s is None
+    assert returned.landing_clip_trim_end_s is None
 
     # Capture the PK *before* expire_all(): referencing an expired attribute
     # (created.id) inside the query expression triggers a synchronous lazy
@@ -47,6 +55,33 @@ async def test_set_landing_clip_url_commits(db: AsyncSession):
         await db.execute(select(Lineup).where(Lineup.id == lineup_id))
     ).scalar_one()
     assert refetched.landing_clip_url == "pending/vidX/12-landing.mp4"
+    assert refetched.landing_clip_url_original == "pending/vidX/12-landing.mp4"
+    assert refetched.landing_clip_trim_start_s is None
+    assert refetched.landing_clip_trim_end_s is None
+
+
+@pytest.mark.asyncio
+async def test_set_landing_clip_url_trim_preserves_original(db: AsyncSession):
+    """Trim writes landing_clip_url + offsets; landing_clip_url_original is
+    preserved so the next trim cuts from the same source (PR4 sibling of
+    test_set_clip_url_trim_preserves_original)."""
+    created = await lineup_repo.create_lineup(
+        db, {"title": "landing trim preserves original", "status": "pending_review"}
+    )
+    await lineup_repo.set_landing_clip_url(db, created, "pending/v/orig.mp4")
+    await lineup_repo.set_landing_clip_url_trim(
+        db, created, "edits/v/landing-trimmed.mp4", 0.5, 2.5
+    )
+
+    lineup_id = created.id
+    db.expire_all()
+    refetched = (
+        await db.execute(select(Lineup).where(Lineup.id == lineup_id))
+    ).scalar_one()
+    assert refetched.landing_clip_url == "edits/v/landing-trimmed.mp4"
+    assert refetched.landing_clip_url_original == "pending/v/orig.mp4"
+    assert refetched.landing_clip_trim_start_s == 0.5
+    assert refetched.landing_clip_trim_end_s == 2.5
 
 
 @pytest.mark.asyncio

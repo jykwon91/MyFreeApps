@@ -1,20 +1,35 @@
-"""Per-pane clip-duration trim service (PR2).
+"""Per-pane clip-duration trim service.
 
-The operator drags a two-handle range slider over the existing pane clip and
-hits Apply. The frontend POSTs ``{start_offset_s, end_offset_s}`` to a single
-endpoint; this service:
+PR2 shipped the destructive shape: the operator dragged a two-handle range
+slider over the *current* clip and Apply cut from ``clip_url`` and wrote
+back to ``clip_url``. Re-trimming could only narrow further — frames cut
+on the previous trim were unrecoverable.
 
-    1. Resolves the source clip key on the matching column (``clip_url`` for
-       THROW, ``landing_clip_url`` for LANDING). 404 if no clip is set.
-    2. Downloads the bytes from MinIO and writes them to a temp file (ffmpeg
+PR4 makes trim reversible. Every Replace + ingest now also writes
+``clip_url_original`` (and clears ``clip_trim_start_s`` / ``clip_trim_end_s``)
+via the matching repo setter, preserving the full source alongside the
+served clip. Apply cuts from ``*_url_original`` — NOT from ``*_url`` — and
+persists the new trimmed key + offsets via the trim-only setter, leaving
+``*_url_original`` intact. So consecutive trims always cut from the same
+source: widen, narrow, shift, re-widen — all are valid.
+
+The pipeline:
+
+    1. Resolve the source clip key. Prefer ``*_url_original``; fall back to
+       ``*_url`` for any row the 0015 backfill somehow missed (defense-in-
+       depth — the backfill should leave no such rows, but a fallback is
+       cheap and keeps the trim path safe if it ever does). 404 only when
+       BOTH columns are NULL (the pane truly has no clip to trim).
+    2. Download the bytes from MinIO and write them to a temp file (ffmpeg
        wants a real file path; it cannot read MP4 from stdin reliably for
        ``-movflags +faststart``).
-    3. Cuts a [start, end] segment via the existing ``cut_clip`` helper —
+    3. Cut a [start, end] segment via the existing ``cut_clip`` helper —
        same encode contract as the auto-ingest clips (libx264 crf 28
        veryfast yuv420p +faststart 720p cap muted).
-    4. Uploads the resulting bytes under ``edits/<lineup_id>/`` (same prefix
-       PR1 reserved for operator-driven edits) and persists the new bare key
-       on the matching column via the existing per-column setter.
+    4. Upload the resulting bytes under ``edits/<lineup_id>/`` (same prefix
+       PR1 reserved for operator-driven edits) and persist the new bare key
+       + the offset pair via the trim-only setter — ``*_url_original``
+       stays untouched.
 
 Errors are surfaced (never silent-fail) — ffmpeg / MinIO failures raise an
 HTTPException with a meaningful detail string. ``ClipCutError`` is caught
@@ -34,14 +49,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.storage import get_storage
 from app.models.game.lineup import Lineup
-from app.repositories.game.lineup_repo import set_clip_url, set_landing_clip_url
+from app.repositories.game.lineup_repo import (
+    set_clip_url_trim,
+    set_landing_clip_url_trim,
+)
 from app.schemas.game.lineup_schemas import LineupRead
 from app.schemas.game.pane_trim_schemas import (
     TRIMMABLE_PANES,
     PaneTrimRequest,
     TrimmablePane,
 )
-from app.services.game.lineup_service import _build_read
+from app.services.game.lineup_service import _build_admin_read
 from app.services.ingestion.frame_extractor import ClipCutError, cut_clip
 
 logger = logging.getLogger(__name__)
@@ -51,7 +69,7 @@ logger = logging.getLogger(__name__)
 # Pane → (source column, persistence setter) dispatch.
 #
 # Resolved inline in trim_pane_clip rather than via a module-level table so
-# tests that patch ``pane_trim_service.set_clip_url`` actually see the
+# tests that patch ``pane_trim_service.set_clip_url_trim`` actually see the
 # patched binding — a frozen dataclass would capture the function object at
 # module-import time and survive any later monkeypatch.
 # ---------------------------------------------------------------------------
@@ -100,26 +118,34 @@ async def trim_pane_clip(
     pane: str,
     request: PaneTrimRequest,
 ) -> LineupRead:
-    """Trim the existing clip on ``pane`` and persist the result.
+    """Trim the pane's source clip and persist the result.
 
     Caller (route handler) is responsible for resolving ``lineup`` from the
     path parameter first so a 404 surfaces cleanly without us duplicating
     the lookup.
 
-    The trim is end-to-end: download source → ffmpeg cut → upload new key
-    → set column. Each step has its own structured failure mode (400/404 for
-    operator-correctable issues, 500 with ffmpeg context for server-side
-    failures) — never a silent-fail bool.
+    The trim is end-to-end: download source (preferring ``*_url_original``
+    over ``*_url``) → ffmpeg cut → upload new key → set ``*_url`` + offsets
+    via the trim-only repo setter. Each step has its own structured failure
+    mode (400/404 for operator-correctable issues, 500 with ffmpeg context
+    for server-side failures) — never a silent-fail bool.
     """
     trimmable_pane = _validate_pane(pane)
 
-    # Resolve source column + persistence setter for this pane.
+    # Resolve source column + persistence setter for this pane. Prefer
+    # ``*_url_original`` so each trim cuts from the full source and the
+    # operator can widen past the previous trim. Fall back to ``*_url``
+    # only as defense-in-depth for any row the 0015 backfill missed —
+    # the backfill should leave no such rows, but a NULL ``*_url_original``
+    # next to a non-NULL ``*_url`` would otherwise 404 a clip that is
+    # clearly trimmable, which would be worse UX than honoring the legacy
+    # destructive shape one last time.
     if trimmable_pane == "throw":
-        source_key = lineup.clip_url
-        persist = set_clip_url
+        source_key = lineup.clip_url_original or lineup.clip_url
+        persist = set_clip_url_trim
     else:  # "landing" — exhaustive per _validate_pane
-        source_key = lineup.landing_clip_url
-        persist = set_landing_clip_url
+        source_key = lineup.landing_clip_url_original or lineup.landing_clip_url
+        persist = set_landing_clip_url_trim
 
     if not source_key:
         raise HTTPException(
@@ -196,8 +222,14 @@ async def trim_pane_clip(
                 detail=f"could not upload trimmed clip to storage: {exc}",
             ) from exc
 
-        updated = await persist(db, lineup, new_key)
-        return _build_read(updated)
+        updated = await persist(
+            db,
+            lineup,
+            new_key,
+            request.start_offset_s,
+            request.end_offset_s,
+        )
+        return _build_admin_read(updated)
     finally:
         # Always clean up the temp source file — even on success the bytes
         # are no longer needed (MinIO owns the canonical copy).

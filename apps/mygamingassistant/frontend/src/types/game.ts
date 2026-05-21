@@ -107,6 +107,16 @@ export interface Lineup {
   // the throw could not be localised or the lineup predates the clip
   // pipeline — the tile then falls back to the stand/aim stills.
   clip_url: string | null;
+  // Pane-editor trim model (PR4): operator-only mirror of the pre-trim source
+  // clip + the current trim window inside it. Populated by admin endpoints
+  // (admin lineup detail, Replace confirm, Trim apply, pending review, etc.);
+  // the public list/detail routes leave them null. Drives the Trim editor's
+  // slider bound + thumb pre-fill so the operator can widen past the
+  // previous trim's bounds. Pair semantics: when start_s / end_s are both
+  // null, the clip is untrimmed and the editor opens at [0, originalDuration].
+  clip_url_original: string | null;
+  clip_trim_start_s: number | null;
+  clip_trim_end_s: number | null;
   // PR5: presigned URL of the short looping landing clip — shows the moment
   // the utility lands/explodes (smoke deploying, molly burning, flash
   // detonating). Null when ingest's landing pass was gated off (skipped via
@@ -114,6 +124,9 @@ export interface Lineup {
   // the LandingPane then falls back to the "Lands in: <zone>" text rendering
   // (graceful degradation, mirroring PR2's clip silent-fallback to stills).
   landing_clip_url: string | null;
+  landing_clip_url_original: string | null;
+  landing_clip_trim_start_s: number | null;
+  landing_clip_trim_end_s: number | null;
   // PR6: presigned URL of the 1-second looping STAND micro-clip — animates
   // the stand pane (player arriving at the throw position). Null when ingest
   // skipped it (manual upload / chapter too short / classifier disabled) or

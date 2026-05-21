@@ -1,9 +1,16 @@
-"""DB-backed test for lineup_repo.set_clip_url (PR2).
+"""DB-backed tests for lineup_repo.set_clip_url + set_clip_url_trim.
 
 The clip key must actually COMMIT (not just flush) — the same silent
 data-loss class as PATCH #687: ``get_db`` doesn't auto-commit, so a
 flush-only write is rolled back on session close and the operator's clip
-silently never appears. This asserts the write survives a fresh read.
+silently never appears. These tests assert the writes survive a fresh read
+and that the PR4 cut-from-original contract holds:
+
+  * ``set_clip_url`` (Replace + ingest) writes BOTH ``clip_url`` AND
+    ``clip_url_original`` to the same key, and NULLs the trim offset pair.
+  * ``set_clip_url_trim`` (Trim) writes ONLY ``clip_url`` + the offsets;
+    ``clip_url_original`` is preserved so the next trim cuts from the same
+    source and the operator can widen past the previous trim's bounds.
 """
 from __future__ import annotations
 
@@ -22,7 +29,10 @@ from app.repositories.game import lineup_repo
 
 
 @pytest.mark.asyncio
-async def test_set_clip_url_commits(db: AsyncSession):
+async def test_set_clip_url_commits_both_url_and_original(db: AsyncSession):
+    """Replace/ingest writes clip_url AND clip_url_original to the same key,
+    and NULLs the trim offset pair so the editor opens with bounds = full
+    duration on every fresh upload (PR4)."""
     created = await lineup_repo.create_lineup(
         db, {"title": "clip repo test", "status": "pending_review"}
     )
@@ -31,6 +41,9 @@ async def test_set_clip_url_commits(db: AsyncSession):
         db, created, "pending/vidX/12-clip.mp4"
     )
     assert returned.clip_url == "pending/vidX/12-clip.mp4"
+    assert returned.clip_url_original == "pending/vidX/12-clip.mp4"
+    assert returned.clip_trim_start_s is None
+    assert returned.clip_trim_end_s is None
 
     # Capture the PK *before* expire_all(): referencing an expired attribute
     # (created.id) inside the query expression triggers a synchronous lazy
@@ -45,6 +58,78 @@ async def test_set_clip_url_commits(db: AsyncSession):
         await db.execute(select(Lineup).where(Lineup.id == lineup_id))
     ).scalar_one()
     assert refetched.clip_url == "pending/vidX/12-clip.mp4"
+    assert refetched.clip_url_original == "pending/vidX/12-clip.mp4"
+    assert refetched.clip_trim_start_s is None
+    assert refetched.clip_trim_end_s is None
+
+
+@pytest.mark.asyncio
+async def test_set_clip_url_clears_prior_trim_offsets(db: AsyncSession):
+    """A fresh Replace after a Trim must reset the offset pair to NULL.
+
+    Otherwise the editor would open with thumbs pre-filled to the OLD trim
+    window over a brand-new source clip — a state that's never correct.
+    """
+    created = await lineup_repo.create_lineup(
+        db, {"title": "replace-after-trim", "status": "pending_review"}
+    )
+    await lineup_repo.set_clip_url(db, created, "pending/v/orig.mp4")
+    await lineup_repo.set_clip_url_trim(
+        db, created, "edits/v/trimmed.mp4", 1.0, 3.0
+    )
+    # Sanity: trim setter persisted the offsets and kept the original.
+    assert created.clip_trim_start_s == 1.0
+    assert created.clip_url_original == "pending/v/orig.mp4"
+
+    # Now Replace — must NULL the offsets and overwrite the original.
+    await lineup_repo.set_clip_url(db, created, "pending/v/replaced.mp4")
+
+    lineup_id = created.id
+    db.expire_all()
+    refetched = (
+        await db.execute(select(Lineup).where(Lineup.id == lineup_id))
+    ).scalar_one()
+    assert refetched.clip_url == "pending/v/replaced.mp4"
+    assert refetched.clip_url_original == "pending/v/replaced.mp4"
+    assert refetched.clip_trim_start_s is None
+    assert refetched.clip_trim_end_s is None
+
+
+@pytest.mark.asyncio
+async def test_set_clip_url_trim_preserves_original(db: AsyncSession):
+    """Trim writes clip_url + offsets; clip_url_original is preserved so the
+    next trim cuts from the same source (PR4 widen-past-previous-trim model)."""
+    created = await lineup_repo.create_lineup(
+        db, {"title": "trim preserves original", "status": "pending_review"}
+    )
+    await lineup_repo.set_clip_url(db, created, "pending/v/orig.mp4")
+    await lineup_repo.set_clip_url_trim(
+        db, created, "edits/v/trimmed-1.mp4", 0.5, 2.5
+    )
+
+    lineup_id = created.id
+    db.expire_all()
+    refetched = (
+        await db.execute(select(Lineup).where(Lineup.id == lineup_id))
+    ).scalar_one()
+    assert refetched.clip_url == "edits/v/trimmed-1.mp4"
+    assert refetched.clip_url_original == "pending/v/orig.mp4"  # preserved!
+    assert refetched.clip_trim_start_s == 0.5
+    assert refetched.clip_trim_end_s == 2.5
+
+    # A second trim still cuts from the SAME original — it must not be
+    # silently rewritten to point at the previously-trimmed clip.
+    await lineup_repo.set_clip_url_trim(
+        db, refetched, "edits/v/trimmed-2.mp4", 0.0, 4.0
+    )
+    db.expire_all()
+    refetched2 = (
+        await db.execute(select(Lineup).where(Lineup.id == lineup_id))
+    ).scalar_one()
+    assert refetched2.clip_url == "edits/v/trimmed-2.mp4"
+    assert refetched2.clip_url_original == "pending/v/orig.mp4"  # still preserved
+    assert refetched2.clip_trim_start_s == 0.0
+    assert refetched2.clip_trim_end_s == 4.0
 
 
 @pytest.mark.asyncio

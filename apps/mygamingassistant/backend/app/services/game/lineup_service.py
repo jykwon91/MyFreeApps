@@ -168,6 +168,12 @@ def _sign_screenshot_url(stored: Optional[str]) -> Optional[str]:
 def _build_read(lineup: Lineup) -> LineupRead:
     """Serialize an ORM ``Lineup`` to ``LineupRead`` with signed screenshot URLs.
 
+    PUBLIC shape — the ``*_url_original`` keys and ``*_trim_*`` offset pair
+    are deliberately stripped (left as the schema's default None) so the
+    pre-trim source — which may contain frames the operator deliberately
+    trimmed to keep private — never leaks to anonymous viewers. Operator-only
+    paths use :func:`_build_admin_read` to opt in to those fields.
+
     CRITICAL: this never mutates the ORM instance. The previous implementation
     assigned the signed URL back onto ``lineup.stand_screenshot_url`` /
     ``.aim_screenshot_url``; because accept/patch/create commit the request
@@ -184,6 +190,41 @@ def _build_read(lineup: Lineup) -> LineupRead:
             "landing_clip_url": _sign_screenshot_url(read.landing_clip_url),
             "stand_clip_url": _sign_screenshot_url(read.stand_clip_url),
             "aim_clip_url": _sign_screenshot_url(read.aim_clip_url),
+            # Originals + offsets stripped on the public shape — never leak
+            # pre-trim frames to anonymous viewers.
+            "clip_url_original": None,
+            "clip_trim_start_s": None,
+            "clip_trim_end_s": None,
+            "landing_clip_url_original": None,
+            "landing_clip_trim_start_s": None,
+            "landing_clip_trim_end_s": None,
+        }
+    )
+
+
+def _build_admin_read(lineup: Lineup) -> LineupRead:
+    """Serialize an ORM ``Lineup`` for OPERATOR consumers (auth_router).
+
+    Same shape as :func:`_build_read` plus the per-pane original-clip
+    presigned URL and the current trim offset pair on each trimmable pane.
+    Drives the per-pane Trim editor's slider bound + thumb pre-fill on the
+    frontend (PR4 pane-editor model — cut from preserved source on every
+    Apply so the operator can widen past the previous trim's bounds).
+
+    Same non-mutation invariant as :func:`_build_read`: signing happens on
+    the Pydantic model only.
+    """
+    read = _build_read(lineup)
+    return read.model_copy(
+        update={
+            "clip_url_original": _sign_screenshot_url(lineup.clip_url_original),
+            "clip_trim_start_s": lineup.clip_trim_start_s,
+            "clip_trim_end_s": lineup.clip_trim_end_s,
+            "landing_clip_url_original": _sign_screenshot_url(
+                lineup.landing_clip_url_original
+            ),
+            "landing_clip_trim_start_s": lineup.landing_clip_trim_start_s,
+            "landing_clip_trim_end_s": lineup.landing_clip_trim_end_s,
         }
     )
 
@@ -228,7 +269,7 @@ async def create(
         data["id"] = lineup_id
 
     lineup = await create_lineup(db, data)
-    return _build_read(lineup)
+    return _build_admin_read(lineup)
 
 
 async def create_from_ingestion(
@@ -266,11 +307,23 @@ async def create_from_ingestion(
 async def get(
     db: AsyncSession,
     lineup_id: uuid.UUID,
+    *,
+    include_originals: bool = False,
 ) -> LineupRead | None:
+    """Return a lineup serialized for the matching consumer.
+
+    ``include_originals=False`` (default) — public shape: ``*_url_original``
+    / ``*_trim_*`` are stripped to None so anonymous viewers never see
+    pre-trim frames. ``include_originals=True`` — admin shape used by the
+    auth-only ``GET /api/lineups/{id}/admin`` route; opts in to the per-pane
+    original-clip URLs + offsets that drive the Trim editor.
+    """
     lineup = await get_lineup(db, lineup_id)
     if lineup is None:
         return None
-    return _build_read(lineup)
+    return (
+        _build_admin_read(lineup) if include_originals else _build_read(lineup)
+    )
 
 
 async def list_by_filters(
@@ -291,7 +344,7 @@ async def patch(
         return None
     patch_data = payload.model_dump(exclude_unset=True)
     updated = await update_lineup(db, lineup, patch_data)
-    return _build_read(updated)
+    return _build_admin_read(updated)
 
 
 async def hide(
@@ -302,7 +355,7 @@ async def hide(
     if lineup is None:
         return None
     hidden = await hide_lineup(db, lineup)
-    return _build_read(hidden)
+    return _build_admin_read(hidden)
 
 
 async def get_pending(
@@ -324,7 +377,7 @@ async def get_pending(
         game_id=game_id,
     )
     return PendingLineupsResponse(
-        items=[_build_read(l) for l in items],
+        items=[_build_admin_read(l) for l in items],
         total=total,
         limit=limit,
         offset=offset,
@@ -400,7 +453,7 @@ async def accept(
         overrides["setup_seconds"] = body.setup_seconds
 
     updated = await accept_lineup(db, lineup, overrides)
-    return _build_read(updated)
+    return _build_admin_read(updated)
 
 
 async def reclassify(

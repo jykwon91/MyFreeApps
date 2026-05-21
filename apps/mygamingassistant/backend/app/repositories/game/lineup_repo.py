@@ -327,7 +327,14 @@ async def set_clip_url(
     lineup: Lineup,
     clip_key: str,
 ) -> Lineup:
-    """Persist the generated clip's bare MinIO key onto a lineup row.
+    """Persist a fresh full clip onto the THROW pane (ingest + Replace path).
+
+    Writes BOTH ``clip_url`` AND ``clip_url_original`` to ``clip_key`` and
+    NULLs out the trim offset pair. A fresh upload IS the source: it starts
+    untrimmed, and the editor's slider opens with bounds = full duration.
+    The next ``set_clip_url_trim`` will overwrite only ``clip_url`` + the
+    offsets and leave ``clip_url_original`` alone so the editor can widen
+    past whatever the trim left behind (PR4 pane-editor model).
 
     Its own commit (not folded into the classifier writeback) on purpose:
     clip generation is best-effort and orthogonal to the row's validity — a
@@ -338,10 +345,45 @@ async def set_clip_url(
 
     Transaction ownership lives here in the repo per PR #687/#695 — the
     ingestion orchestrator and the backfill CLI never call db.commit().
-    ``clip_url`` stores a BARE object key (like stand/aim screenshot URLs);
+    Both columns store a BARE object key (like stand/aim screenshot URLs);
     presigning happens at read time in ``lineup_service._build_read``.
     """
     lineup.clip_url = clip_key
+    lineup.clip_url_original = clip_key
+    lineup.clip_trim_start_s = None
+    lineup.clip_trim_end_s = None
+    try:
+        await db.flush()
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
+    return lineup
+
+
+async def set_clip_url_trim(
+    db: AsyncSession,
+    lineup: Lineup,
+    trimmed_clip_key: str,
+    start_offset_s: float,
+    end_offset_s: float,
+) -> Lineup:
+    """Persist a TRIMMED THROW clip + its offsets into the source (Trim path).
+
+    Writes ONLY ``clip_url`` and the offset pair. ``clip_url_original`` is
+    deliberately left untouched so subsequent trims still cut from the full
+    source — this is what lets the operator widen the trim window past the
+    previous trim's bounds (PR4 pane-editor model). Callers MUST have set
+    ``clip_url_original`` via :func:`set_clip_url` (Replace/ingest) before
+    invoking trim; the trim service is responsible for that precondition.
+
+    Same one-column commit posture as :func:`set_clip_url` — trim is
+    best-effort and orthogonal to lineup validity; failures here must never
+    roll back unrelated state.
+    """
+    lineup.clip_url = trimmed_clip_key
+    lineup.clip_trim_start_s = start_offset_s
+    lineup.clip_trim_end_s = end_offset_s
     try:
         await db.flush()
         await db.commit()
@@ -388,7 +430,14 @@ async def set_landing_clip_url(
     lineup: Lineup,
     landing_clip_key: str,
 ) -> Lineup:
-    """Persist the generated landing-clip's bare MinIO key onto a lineup row.
+    """Persist a fresh full clip onto the LANDING pane (ingest + Replace path).
+
+    Writes BOTH ``landing_clip_url`` AND ``landing_clip_url_original`` to
+    ``landing_clip_key`` and NULLs out the trim offset pair — same model
+    as :func:`set_clip_url` for the throw pane. Lets the editor's trim
+    slider open with bounds = full duration on every fresh upload, while
+    preserving the source for future widen-the-trim ops via
+    :func:`set_landing_clip_url_trim` (PR4 pane-editor model).
 
     Its own one-column commit (not folded into the throw-clip commit, the
     classifier writeback, or the technique commit) on purpose — identical
@@ -402,11 +451,40 @@ async def set_landing_clip_url(
 
     Transaction ownership lives here in the repo per PR #687/#695 — the
     ingestion orchestrator and the backfill CLI never call db.commit().
-    ``landing_clip_url`` stores a BARE object key (like stand/aim screenshot
-    URLs and ``clip_url``); presigning happens at read time in
+    Both columns store a BARE object key (like stand/aim screenshot URLs and
+    ``clip_url``); presigning happens at read time in
     ``lineup_service._build_read``.
     """
     lineup.landing_clip_url = landing_clip_key
+    lineup.landing_clip_url_original = landing_clip_key
+    lineup.landing_clip_trim_start_s = None
+    lineup.landing_clip_trim_end_s = None
+    try:
+        await db.flush()
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
+    return lineup
+
+
+async def set_landing_clip_url_trim(
+    db: AsyncSession,
+    lineup: Lineup,
+    trimmed_landing_clip_key: str,
+    start_offset_s: float,
+    end_offset_s: float,
+) -> Lineup:
+    """Persist a TRIMMED LANDING clip + its offsets (Trim path).
+
+    Sibling to :func:`set_clip_url_trim` — identical contract, independent
+    column. Writes ONLY ``landing_clip_url`` and the offsets; preserves
+    ``landing_clip_url_original`` so the next trim can again cut from the
+    full source (PR4 pane-editor model).
+    """
+    lineup.landing_clip_url = trimmed_landing_clip_key
+    lineup.landing_clip_trim_start_s = start_offset_s
+    lineup.landing_clip_trim_end_s = end_offset_s
     try:
         await db.flush()
         await db.commit()

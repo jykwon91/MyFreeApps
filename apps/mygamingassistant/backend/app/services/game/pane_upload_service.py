@@ -49,7 +49,7 @@ from app.schemas.game.pane_upload_schemas import (
     VALID_PANE_KIND,
     _ext_for_content_type,
 )
-from app.services.game.lineup_service import _build_read, _presigned_put
+from app.services.game.lineup_service import _build_admin_read, _presigned_put
 
 
 # Operator setters indexed by (pane, kind). Each value is a coroutine taking
@@ -205,4 +205,7 @@ async def confirm_upload(
 
     setter = _SETTERS[(pane, request.kind)]
     updated = await setter(db, lineup, request.object_key)
-    return _build_read(updated)
+    # Replace is operator-only and feeds the Trim editor — the response must
+    # carry the new ``*_url_original`` so the editor's slider rebinds without
+    # an extra round-trip.
+    return _build_admin_read(updated)
