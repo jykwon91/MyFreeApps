@@ -29,6 +29,9 @@ vi.mock("@/hooks/useClipDuration", () => ({
 const unwrap = vi.fn();
 const trimPaneMutation = vi.fn(() => ({ unwrap }));
 
+const widenUnwrap = vi.fn();
+const widenPaneSourceMutation = vi.fn(() => ({ unwrap: widenUnwrap }));
+
 const triggerAdmin = vi.fn();
 // Mutable so individual tests can swap in cached / fetching / errored shapes
 // without rebuilding the entire module mock.
@@ -41,6 +44,7 @@ let adminQueryResult: {
 
 vi.mock("@/store/lineupsApi", () => ({
   useTrimPaneMutation: () => [trimPaneMutation, {}],
+  useWidenPaneSourceMutation: () => [widenPaneSourceMutation, {}],
   useLazyGetLineupAdminQuery: () => [triggerAdmin, adminQueryResult],
 }));
 
@@ -50,7 +54,10 @@ import PaneTrimOverlay from "@/components/lineup/PaneTrimOverlay";
 const mockedUseClipDuration = vi.mocked(useClipDuration);
 
 /** Build an admin-shape Lineup payload sufficient for the resolveSourceUrl /
- *  resolveStoredOffsets helpers. Defaults: untrimmed source on both panes. */
+ *  resolveStoredOffsets helpers. Defaults: untrimmed source on both panes
+ *  with a YouTube anchor (chapter at 1:23) so the PR3 absolute-timestamp
+ *  readout + Widen-source affordance are exercised by default. Tests that
+ *  want to assert the manual-upload fallback explicitly null them. */
 function makeAdminLineup(
   overrides: Partial<{
     clip_url_original: string | null;
@@ -59,6 +66,8 @@ function makeAdminLineup(
     clip_trim_end_s: number | null;
     landing_clip_trim_start_s: number | null;
     landing_clip_trim_end_s: number | null;
+    youtube_video_id: string | null;
+    chapter_start_seconds: number | null;
   }> = {},
 ): Record<string, unknown> {
   return {
@@ -69,12 +78,22 @@ function makeAdminLineup(
     clip_trim_end_s: null,
     landing_clip_trim_start_s: null,
     landing_clip_trim_end_s: null,
+    youtube_video_id: "dQw4w9WgXcQ",
+    chapter_start_seconds: 83, // 1:23 in M:SS
     ...overrides,
   };
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // clearAllMocks resets call records but NOT once-only implementations.
+  // Without mockReset, a leftover ``mockResolvedValueOnce`` from a prior
+  // test can be consumed by the next test's first invocation — silently
+  // resolving a widen / trim promise the next test expected to leave
+  // pending. The unwrap fns are the only ones we set once-implementations
+  // on, so the targeted reset is enough; the others stay as plain spies.
+  unwrap.mockReset();
+  widenUnwrap.mockReset();
   // Default admin result: no fetch yet (operator hasn't clicked scissors).
   adminQueryResult = {
     data: undefined,
@@ -473,6 +492,261 @@ describe("PaneTrimOverlay", () => {
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /trim throw clip duration/i }),
+    ).toBeInTheDocument();
+  });
+
+  // -------------------------------------------------------------------------
+  // PR3 — absolute-in-video readout
+  // -------------------------------------------------------------------------
+
+  it("renders the readout as absolute video timestamps when the lineup has a chapter anchor", () => {
+    mockedUseClipDuration.mockReturnValue(30); // wide source
+    adminQueryResult = {
+      data: makeAdminLineup({ chapter_start_seconds: 83 }),
+      isFetching: false,
+      isSuccess: true,
+      originalArgs: "l1",
+    };
+    render(
+      <PaneTrimOverlay
+        lineupId="l1"
+        pane="throw"
+        clipUrl="https://ex/clip.mp4"
+      />,
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: /trim throw clip duration/i }),
+    );
+    // Untrimmed → offsets [0, 30]. Readout = 1:23.0 — 1:53.0 / source 30.0s.
+    expect(
+      screen.getByText(/1:23\.0\s+—\s+1:53\.0\s*\/\s*source 30\.0s/),
+    ).toBeInTheDocument();
+  });
+
+  it("falls back to seconds-into-source readout when the lineup has no chapter anchor (manual upload)", () => {
+    mockedUseClipDuration.mockReturnValue(5);
+    adminQueryResult = {
+      data: makeAdminLineup({
+        chapter_start_seconds: null,
+        youtube_video_id: null,
+      }),
+      isFetching: false,
+      isSuccess: true,
+      originalArgs: "l1",
+    };
+    render(
+      <PaneTrimOverlay
+        lineupId="l1"
+        pane="throw"
+        clipUrl="https://ex/clip.mp4"
+      />,
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: /trim throw clip duration/i }),
+    );
+    expect(
+      screen.getByText(/0\.0s\s+—\s+5\.0s\s*\/\s*5\.0s/),
+    ).toBeInTheDocument();
+  });
+
+  // -------------------------------------------------------------------------
+  // PR3 — Widen-source affordance
+  // -------------------------------------------------------------------------
+
+  it("renders the Widen source button when the lineup has a YouTube source", () => {
+    mockedUseClipDuration.mockReturnValue(10);
+    adminQueryResult = {
+      data: makeAdminLineup(),
+      isFetching: false,
+      isSuccess: true,
+      originalArgs: "l1",
+    };
+    render(
+      <PaneTrimOverlay
+        lineupId="l1"
+        pane="throw"
+        clipUrl="https://ex/clip.mp4"
+      />,
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: /trim throw clip duration/i }),
+    );
+    expect(
+      screen.getByRole("button", { name: /widen throw source clip/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("hides the Widen source button when the lineup has no YouTube source (manual upload)", () => {
+    mockedUseClipDuration.mockReturnValue(5);
+    adminQueryResult = {
+      data: makeAdminLineup({ youtube_video_id: null }),
+      isFetching: false,
+      isSuccess: true,
+      originalArgs: "l1",
+    };
+    render(
+      <PaneTrimOverlay
+        lineupId="l1"
+        pane="throw"
+        clipUrl="https://ex/clip.mp4"
+      />,
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: /trim throw clip duration/i }),
+    );
+    expect(
+      screen.queryByRole("button", { name: /widen .* source/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("fires the widen mutation with the lineup id and pane on click", async () => {
+    mockedUseClipDuration.mockReturnValue(10);
+    // The slider's open-after-source-resolves effect refuses to fire when
+    // the lineupId does not match the admin payload's originalArgs — match
+    // them both to a non-default id so the assertion proves the prop is
+    // threaded through to the mutation call (not just the literal "l1").
+    adminQueryResult = {
+      data: makeAdminLineup(),
+      isFetching: false,
+      isSuccess: true,
+      originalArgs: "lineup-abc",
+    };
+    widenUnwrap.mockResolvedValueOnce(makeAdminLineup());
+
+    render(
+      <PaneTrimOverlay
+        lineupId="lineup-abc"
+        pane="throw"
+        clipUrl="https://ex/clip.mp4"
+      />,
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: /trim throw clip duration/i }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: /widen throw source clip/i }),
+    );
+    await waitFor(() => {
+      expect(widenPaneSourceMutation).toHaveBeenCalledWith({
+        lineup_id: "lineup-abc",
+        pane: "throw",
+      });
+    });
+  });
+
+  it("shows the widening spinner + label and disables Apply while widen is in flight", async () => {
+    mockedUseClipDuration.mockReturnValue(10);
+    adminQueryResult = {
+      data: makeAdminLineup(),
+      isFetching: false,
+      isSuccess: true,
+      originalArgs: "l1",
+    };
+    // Lock the widen in flight so the component stays in widening state.
+    widenUnwrap.mockReturnValue(new Promise(() => {}));
+
+    render(
+      <PaneTrimOverlay
+        lineupId="l1"
+        pane="throw"
+        clipUrl="https://ex/clip.mp4"
+      />,
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: /trim throw clip duration/i }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: /widen throw source clip/i }),
+    );
+    // Label flips to ``Widening...`` and aria-label updates so screen
+    // readers announce the state change.
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: /widening throw source/i }),
+      ).toBeInTheDocument();
+    });
+    expect(screen.getByText(/widening\.\.\./i)).toBeInTheDocument();
+    // Apply must be disabled — widening mid-trim would be a foot-gun. The
+    // aria-label gains a ``(minimum 1s)`` suffix when canApply is false, so
+    // match the prefix rather than the exact ``Trim clip`` form.
+    expect(screen.getByRole("button", { name: /^Trim clip/i })).toBeDisabled();
+  });
+
+  it("renders the server error message + Retry/Dismiss when widen fails", async () => {
+    mockedUseClipDuration.mockReturnValue(5);
+    adminQueryResult = {
+      data: makeAdminLineup(),
+      isFetching: false,
+      isSuccess: true,
+      originalArgs: "l1",
+    };
+    widenUnwrap.mockRejectedValueOnce({
+      data: {
+        detail: "chapter no longer exists in the source video",
+      },
+    });
+
+    render(
+      <PaneTrimOverlay
+        lineupId="l1"
+        pane="throw"
+        clipUrl="https://ex/clip.mp4"
+      />,
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: /trim throw clip duration/i }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: /widen throw source clip/i }),
+    );
+
+    // Error replaces the link in-place; alert role surfaces it to AT.
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toBeInTheDocument();
+    });
+    expect(
+      screen.getByText(/chapter no longer exists in the source video/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /retry widen on throw source/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /dismiss widen error/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("Dismiss on the widen error restores the Widen source link", async () => {
+    mockedUseClipDuration.mockReturnValue(5);
+    adminQueryResult = {
+      data: makeAdminLineup(),
+      isFetching: false,
+      isSuccess: true,
+      originalArgs: "l1",
+    };
+    widenUnwrap.mockRejectedValueOnce({ data: { detail: "boom" } });
+
+    render(
+      <PaneTrimOverlay
+        lineupId="l1"
+        pane="throw"
+        clipUrl="https://ex/clip.mp4"
+      />,
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: /trim throw clip duration/i }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: /widen throw source clip/i }),
+    );
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toBeInTheDocument();
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: /dismiss widen error/i }),
+    );
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /widen throw source clip/i }),
     ).toBeInTheDocument();
   });
 });
