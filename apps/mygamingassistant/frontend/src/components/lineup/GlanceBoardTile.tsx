@@ -48,16 +48,17 @@ import {
 import { DEFAULT_KNOBS } from "@/hooks/useDesignKnobs";
 import type { DesignKnobs } from "@/hooks/useDesignKnobs";
 import PaneReplaceOverlay from "./PaneReplaceOverlay";
+import PaneTrimOverlay from "./PaneTrimOverlay";
 import type { PanePosition } from "@/hooks/usePaneUpload";
 
 interface GlanceBoardTileProps {
   lineup: Lineup;
   knobs?: DesignKnobs;
-  /** Operator-only per-pane Replace affordance. Auth gating lives at MapPage
-   *  level so this component stays a pure presentation tile (no Redux deps,
-   *  no Provider required in unit tests). Default false keeps guest viewers
-   *  + existing test fixtures unchanged. */
-  showReplaceOverlay?: boolean;
+  /** Operator-only per-pane edit affordances (Replace + Trim). Auth gating
+   *  lives at MapPage level so this component stays a pure presentation tile
+   *  (no Redux deps, no Provider required in unit tests). Default false keeps
+   *  guest viewers + existing test fixtures unchanged. */
+  showOperatorOverlays?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -71,22 +72,35 @@ function PaneSlot({
   lineupId,
   pane,
   showOverlay,
+  paneClipUrl,
   children,
 }: {
   lineupId: string;
   pane: PanePosition;
   showOverlay: boolean;
+  /** Effective per-pane clip URL — drives the Trim affordance on throw /
+   *  landing panes. Null hides the scissors icon (nothing to trim). Stand /
+   *  aim micro-clips are 1s by design and intentionally not trimmable, so
+   *  this prop is undefined for those panes. */
+  paneClipUrl?: string | null;
   children: ReactNode;
 }) {
   // ``flex`` so the inner pane primitive's own ``flex-1 min-w-0`` resolves to
   // the full wrapper width. ``relative`` is the positioning context for the
-  // absolutely-positioned overlay. ``group/pane`` scopes hover/focus reveal
-  // to THIS pane only — the sibling pane keeps its overlay hidden until
+  // absolutely-positioned overlays. ``group/pane`` scopes hover/focus reveal
+  // to THIS pane only — sibling panes keep their overlays hidden until
   // hovered independently.
   return (
     <div className="relative group/pane flex flex-1 min-w-0">
       {children}
       {showOverlay && <PaneReplaceOverlay lineupId={lineupId} pane={pane} />}
+      {showOverlay && (pane === "throw" || pane === "landing") && (
+        <PaneTrimOverlay
+          lineupId={lineupId}
+          pane={pane}
+          clipUrl={paneClipUrl ?? null}
+        />
+      )}
     </div>
   );
 }
@@ -117,7 +131,7 @@ function SideChip({ side }: { side: string | null }) {
 export default function GlanceBoardTile({
   lineup,
   knobs = DEFAULT_KNOBS,
-  showReplaceOverlay = false,
+  showOperatorOverlays = false,
 }: GlanceBoardTileProps) {
   const ud = utilDisplay(lineup.utility_type?.slug);
 
@@ -165,14 +179,14 @@ export default function GlanceBoardTile({
       <div className="flex flex-col divide-y divide-border">
         {/* Top row: STAND | AIM */}
         <div className="flex divide-x divide-border">
-          <PaneSlot lineupId={lineup.id} pane="stand" showOverlay={showReplaceOverlay}>
+          <PaneSlot lineupId={lineup.id} pane="stand" showOverlay={showOperatorOverlays}>
             <StandPane
               standScreenshotUrl={lineup.stand_screenshot_url}
               standClipUrl={standClipForRender}
               title={lineup.title}
             />
           </PaneSlot>
-          <PaneSlot lineupId={lineup.id} pane="aim" showOverlay={showReplaceOverlay}>
+          <PaneSlot lineupId={lineup.id} pane="aim" showOverlay={showOperatorOverlays}>
             <AimPane
               aimScreenshotUrl={lineup.aim_screenshot_url}
               aimClipUrl={aimClipForRender}
@@ -184,7 +198,12 @@ export default function GlanceBoardTile({
         </div>
         {/* Bottom row: THROW | LANDING */}
         <div className="flex divide-x divide-border">
-          <PaneSlot lineupId={lineup.id} pane="throw" showOverlay={showReplaceOverlay}>
+          <PaneSlot
+            lineupId={lineup.id}
+            pane="throw"
+            showOverlay={showOperatorOverlays}
+            paneClipUrl={lineup.clip_url}
+          >
             {lineup.clip_url ? (
               <ClipView
                 clipUrl={lineup.clip_url}
@@ -195,7 +214,12 @@ export default function GlanceBoardTile({
               <ThrowPlaceholder />
             )}
           </PaneSlot>
-          <PaneSlot lineupId={lineup.id} pane="landing" showOverlay={showReplaceOverlay}>
+          <PaneSlot
+            lineupId={lineup.id}
+            pane="landing"
+            showOverlay={showOperatorOverlays}
+            paneClipUrl={landingClipForRender}
+          >
             <LandingPane
               targetZoneName={lineup.target_zone?.name ?? null}
               landingClipUrl={landingClipForRender}

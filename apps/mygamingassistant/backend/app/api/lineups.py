@@ -58,13 +58,14 @@ from app.schemas.game.lineup_schemas import (
     PendingLineupsResponse,
     UploadUrlResponse,
 )
+from app.schemas.game.pane_trim_schemas import PaneTrimRequest
 from app.schemas.game.pane_upload_schemas import (
     Pane,
     PaneConfirmRequest,
     PaneUploadUrlRequest,
     PaneUploadUrlResponse,
 )
-from app.services.game import lineup_service, pane_upload_service
+from app.services.game import lineup_service, pane_trim_service, pane_upload_service
 
 logger = logging.getLogger(__name__)
 
@@ -535,3 +536,36 @@ async def confirm_pane_upload(
     if lineup is None:
         raise HTTPException(status_code=404, detail="Lineup not found")
     return await pane_upload_service.confirm_upload(db, lineup, pane, body)
+
+
+# ---------------------------------------------------------------------------
+# Per-pane clip-duration trim (PR2)
+#
+# Server-side ffmpeg re-encode of the existing clip on a THROW or LANDING
+# pane. The operator drags a two-handle range slider in the browser and
+# hits Apply; we cut the segment via the same ``cut_clip`` helper the
+# ingestion pipeline uses and write the new key onto the matching column.
+# See pane_trim_service for the download → cut → upload pipeline.
+# ---------------------------------------------------------------------------
+
+
+@auth_router.post(
+    "/lineups/{lineup_id}/panes/{pane}/trim",
+    response_model=LineupRead,
+)
+async def trim_pane_clip(
+    lineup_id: uuid.UUID,
+    pane: Pane,
+    body: PaneTrimRequest,
+    db: AsyncSession = Depends(get_db),
+) -> LineupRead:
+    """Trim the existing clip on ``pane`` to the requested [start, end] window.
+
+    Pane must be ``throw`` or ``landing`` — STAND/AIM 1s micro-clips don't
+    merit a trim UX. 404 if the lineup is missing OR the pane has no clip
+    to trim. 500 with structured ffmpeg context if the cut itself fails.
+    """
+    lineup = await get_lineup_orm(db, lineup_id)
+    if lineup is None:
+        raise HTTPException(status_code=404, detail="Lineup not found")
+    return await pane_trim_service.trim_pane_clip(db, lineup, pane, body)
