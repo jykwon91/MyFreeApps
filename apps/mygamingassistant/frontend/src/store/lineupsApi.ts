@@ -206,6 +206,36 @@ const lineupsApi = lineupsBaseApi.injectEndpoints({
     }),
 
     // ------------------------------------------------------------------
+    // Per-pane clip-duration trim (PR2)
+    // The server downloads the existing clip from MinIO, cuts the
+    // [start_offset_s, end_offset_s] segment via the same ffmpeg helper
+    // ingestion uses, uploads under edits/<lineup_id>/, and writes the new
+    // key onto the matching column. Only THROW + LANDING are trimmable
+    // (STAND/AIM micro-clips are 1s — no UX value in trimming).
+    // ------------------------------------------------------------------
+
+    trimPane: build.mutation<
+      Lineup,
+      {
+        lineup_id: string;
+        pane: "throw" | "landing";
+        start_offset_s: number;
+        end_offset_s: number;
+      }
+    >({
+      query: ({ lineup_id, pane, start_offset_s, end_offset_s }) => ({
+        url: `/lineups/${lineup_id}/panes/${pane}/trim`,
+        method: "POST",
+        data: { start_offset_s, end_offset_s },
+      }),
+      invalidatesTags: (_result, _err, { lineup_id }) => [
+        { type: "Lineup", id: lineup_id },
+        "LineupList",
+        "PendingLineups",
+      ],
+    }),
+
+    // ------------------------------------------------------------------
     // Zone density (map-level aggregate for density coloring)
     // ------------------------------------------------------------------
     getZoneDensity: build.query<ZoneDensity, ZoneDensityParams>({
@@ -239,4 +269,5 @@ export const {
   useBulkAcceptLineupsMutation,
   useRequestPaneUploadUrlMutation,
   useConfirmPaneUploadMutation,
+  useTrimPaneMutation,
 } = lineupsApi;
