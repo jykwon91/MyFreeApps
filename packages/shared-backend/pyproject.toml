@@ -42,6 +42,10 @@ dev = [
     "pypdf>=5.6",
     "mammoth>=1.12.0",
     "openpyxl>=3.1.5",
+    # Required for tests of platform_shared.auth.jwt_backend that exercise
+    # the real JWTStrategy write/read paths. Runtime apps that authenticate
+    # pull fastapi-users in via their own pyproject.toml.
+    "fastapi-users[sqlalchemy]>=15.0,<16.0",
 ]
 
 [tool.pytest.ini_options]
