@@ -17,6 +17,7 @@ from app.schemas.demo.demo import (
     DemoUserSummary,
 )
 from app.services.demo.demo_constants import (
+    DEMO_ATTRIBUTION_REVIEW,
     DEMO_DOCUMENTS,
     DEMO_PROPERTIES,
     DEMO_TAX_DOCUMENTS,
@@ -61,6 +62,9 @@ async def create_demo_user(
         property_ids = await demo_repo.create_properties(db, user.id, org.id, DEMO_PROPERTIES)
         transactions = await demo_repo.create_transactions(
             db, user.id, org.id, property_ids, DEMO_TRANSACTIONS,
+        )
+        await demo_repo.create_attribution_review(
+            db, user.id, org.id, property_ids, transactions, DEMO_ATTRIBUTION_REVIEW,
         )
         await demo_repo.create_documents_with_links(
             db, user.id, org.id, property_ids, DEMO_PROPERTIES,
