@@ -16,6 +16,8 @@ import type { Lineup } from "@/types/game";
 import { utilDisplay } from "@/constants/utilityDisplay";
 import { zoneAnchorId } from "./glanceBoardUtils";
 import GlanceBoardTile from "./GlanceBoardTile";
+import { DEFAULT_KNOBS } from "@/hooks/useDesignKnobs";
+import type { DesignKnobs } from "@/hooks/useDesignKnobs";
 
 interface GlanceBoardProps {
   lineups: Lineup[];
@@ -25,7 +27,15 @@ interface GlanceBoardProps {
   filteredUtils: string[];
   /** Applied side value ("any" / "side_a" / "side_b"). */
   side: string;
+  /** Direct-manipulation tile knobs (optional — falls back to DEFAULT_KNOBS). */
+  knobs?: DesignKnobs;
 }
+
+const GRID_COLS_CLASS: Record<1 | 2 | 3, string> = {
+  1: "grid-cols-1",
+  2: "grid-cols-2",
+  3: "grid-cols-3",
+};
 
 // ---------------------------------------------------------------------------
 // Zone ordering
@@ -134,7 +144,9 @@ export default function GlanceBoard({
   mapName,
   filteredUtils,
   side,
+  knobs = DEFAULT_KNOBS,
 }: GlanceBoardProps) {
+  const colsClass = GRID_COLS_CLASS[knobs.tilesPerRow];
   const groups = useMemo(() => groupByZone(lineups), [lineups]);
 
   if (isFetching) {
@@ -176,10 +188,10 @@ export default function GlanceBoard({
             <span className="flex-1 border-t border-border" />
           </h2>
 
-          {/* 2-column tile grid */}
-          <div className="grid grid-cols-2 gap-4">
+          {/* Tile grid — column count comes from the design knobs panel */}
+          <div className={`grid ${colsClass} gap-4`}>
             {group.lineups.map((lineup) => (
-              <GlanceBoardTile key={lineup.id} lineup={lineup} />
+              <GlanceBoardTile key={lineup.id} lineup={lineup} knobs={knobs} />
             ))}
           </div>
         </section>
