@@ -88,6 +88,17 @@ export function ScreenshotHalf({ url, alt, label, children }: ScreenshotHalfProp
 // PR5 generalised the corner label to a prop so both THROW and LANDING use
 // the same byte-for-byte primitive. The aria-label and loading behaviour are
 // shared — only the label + URL differ between the two surfaces.
+//
+// **Arm lifecycle (post-perf-fix):** ``armed`` flips ON when the tile enters
+// the viewport and OFF when it leaves — i.e. the src attribute is detached on
+// scroll-out, not just paused. The pre-fix sticky-arm behaviour decoded every
+// clip the operator had ever scrolled past, accumulating GPU-held frames as
+// the operator browsed a large map (each ``map`` page mounts 4 video tags
+// per lineup × N lineups, and a CS2 map can carry 60-80 lineups). The
+// trade-off: scroll-back-in re-fetches the MP4 from MinIO instead of
+// re-using a decoded clip, costing ~100-300ms before the loop starts
+// playing again. That's worth bounding worst-case memory; the alternative
+// is unbounded growth.
 // ---------------------------------------------------------------------------
 interface ClipViewProps {
   clipUrl: string;
@@ -108,8 +119,11 @@ interface ClipViewProps {
 
 export function ClipView({ clipUrl, posterUrl, title, label = "THROW", children }: ClipViewProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  // Sticky once the tile has been seen: keep the src attached (re-fetching on
-  // every scroll-by is worse than keeping a paused decoded clip).
+  // ``armed`` controls whether the <video> has a src attached. The tile arms
+  // on viewport entry and DISARMS on viewport exit (post-perf-fix; was
+  // sticky-armed previously). Disarming detaches the src so the browser can
+  // release decoded frames + the underlying HTTP connection — critical for
+  // grids that mount dozens of looping H.264 streams.
   const [armed, setArmed] = useState(false);
   // True while the tile is on screen — drives play/pause in a separate effect
   // so play() never runs before React has committed the src to the DOM.
@@ -143,7 +157,12 @@ export function ClipView({ clipUrl, posterUrl, title, label = "THROW", children 
           setArmed(true);
           setInView(true);
         } else {
+          // Scroll-out: pause (via inView=false → play/pause effect) AND
+          // detach src (via armed=false → src={undefined}). The previous
+          // sticky-arm kept decoded frames around forever; on a 60-lineup
+          // map that exhausts GPU memory and browser connection slots.
           setInView(false);
+          setArmed(false);
         }
       },
       { threshold: 0.25 },

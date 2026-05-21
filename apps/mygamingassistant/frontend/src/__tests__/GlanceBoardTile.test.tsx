@@ -228,16 +228,47 @@ describe("GlanceBoardTile THROW pane (clip)", () => {
     expect(playSpy).toHaveBeenCalled();
   });
 
-  it("pauses when the tile leaves the viewport", () => {
+  it("stops playback when the tile leaves the viewport (via src detach)", () => {
+    // Post-perf-fix: scroll-out disarms the tile (armed=false), which causes
+    // <video> to re-render without a src attribute. The browser stops
+    // playback as a side effect of src removal — we no longer call pause()
+    // explicitly because the play/pause effect early-returns when !armed.
+    // The detached src is the assertion that matters; explicit pause was an
+    // implementation detail of the previous sticky-arm design.
     render(
       <GlanceBoardTile
         lineup={makeLineup({ clip_url: "https://ex.com/clip.mp4" })}
       />,
     );
+    const video = document.querySelector("video") as HTMLVideoElement;
     expect(lastIO).not.toBeNull();
     act(() => lastIO!.cb([{ isIntersecting: true }]));
+    expect(video.getAttribute("src")).toBe("https://ex.com/clip.mp4");
     act(() => lastIO!.cb([{ isIntersecting: false }]));
-    expect(pauseSpy).toHaveBeenCalled();
+    expect(video.hasAttribute("src")).toBe(false);
+  });
+
+  it("detaches src on scroll-out so the browser can release decoded frames", () => {
+    // Perf fix: sticky-arm was costing us — a glance board with 60+ lineups
+    // (4 video tags each) accumulates decoded frames in GPU memory and
+    // exhausts browser per-origin connection slots. After this fix the src
+    // attribute is removed when the tile leaves the viewport, dropping the
+    // <video> back to its lazy state for the next scroll-in.
+    render(
+      <GlanceBoardTile
+        lineup={makeLineup({ clip_url: "https://ex.com/clip.mp4" })}
+      />,
+    );
+    const video = document.querySelector("video") as HTMLVideoElement;
+    act(() => lastIO!.cb([{ isIntersecting: true }]));
+    expect(video.getAttribute("src")).toBe("https://ex.com/clip.mp4");
+    expect(video.getAttribute("preload")).toBe("auto");
+
+    act(() => lastIO!.cb([{ isIntersecting: false }]));
+    // src attribute removed (not src="") AND preload reverted to "metadata"
+    // — same posture as before the tile was ever armed.
+    expect(video.hasAttribute("src")).toBe(false);
+    expect(video.getAttribute("preload")).toBe("metadata");
   });
 
   it("hides the THROW badge when the clip fails to load", () => {
