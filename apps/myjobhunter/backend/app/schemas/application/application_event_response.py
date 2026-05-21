@@ -9,11 +9,17 @@ CWE-200). The field is always null in Phase 1-2 and exposing it in the public
 API response is a forward-looking data-exposure risk. If Phase 3 Gmail
 sync workers need to surface parsed email artifacts, introduce a separate
 admin-only response schema at that time.
+
+``interview_details`` is a purpose-built JSONB field for structured interview
+metadata (type, scheduled_at, duration_minutes, location_or_link,
+interviewer_names). Distinct from raw_payload — no CWE-200 concern because
+the operator explicitly supplies these values via the manual-log form.
 """
 from __future__ import annotations
 
 import datetime as _dt
 import uuid
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
@@ -28,6 +34,7 @@ class ApplicationEventResponse(BaseModel):
     source: str
     email_message_id: str | None = None
     note: str | None = None
+    interview_details: dict[str, Any] | None = None
 
     created_at: _dt.datetime
 

@@ -123,6 +123,15 @@ class RemoteType:
     ALL = ("remote", "hybrid", "onsite", "unknown")
 
 
+class InterviewType:
+    PHONE = "phone"
+    VIDEO = "video"
+    ONSITE = "onsite"
+    PANEL = "panel"
+
+    ALL = ("phone", "video", "onsite", "panel")
+
+
 class EventType:
     APPLIED = "applied"
     EMAIL_RECEIVED = "email_received"

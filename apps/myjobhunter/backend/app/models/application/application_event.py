@@ -39,6 +39,7 @@ class ApplicationEvent(Base):
     source: Mapped[str] = mapped_column(String(20), nullable=False)
     email_message_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     raw_payload: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    interview_details: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(
