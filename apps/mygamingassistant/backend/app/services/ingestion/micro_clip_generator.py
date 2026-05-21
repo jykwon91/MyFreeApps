@@ -68,6 +68,7 @@ from app.services.ingestion.frame_extractor import (
     cut_clip,
     extract_frames,
     grid_timestamps,
+    wide_source_bounds,
 )
 from app.services.ingestion.youtube_fetcher import (
     VideoDownloadError,
@@ -413,6 +414,33 @@ async def generate_micro_clips_for_lineup(
                     reasoning=reasoning,
                 )
 
+        # Compute the wider-source start the served 1s clip's offset will be
+        # measured against. The micro-clip "shift window" editor (PR2) reads
+        # ``stand_clip_offset_s`` / ``aim_clip_offset_s`` to position its
+        # slider inside the SHARED wider source ``clip_url_original`` — micro
+        # widening reuses the chapter's existing wider source bytes rather
+        # than cutting a per-pane original. The offset is only meaningful
+        # when a real wider source exists for THIS lineup (clip_url_original
+        # set AND distinct from clip_url — if they match, clip_generator fell
+        # back to the legacy "*_url_original = *_url" posture and there's no
+        # wider source to index into). Settings used here MUST match the
+        # settings used to cut clip_url_original — in the ingest path they
+        # always do because both runs happen in the same orchestrator pass;
+        # in the standalone backfill the call site doesn't persist offsets so
+        # this branch is bypassed.
+        wider_source_start_s: float | None = None
+        if (
+            lineup.clip_url_original is not None
+            and lineup.clip_url_original != lineup.clip_url
+        ):
+            source_start, _source_duration = wide_source_bounds(
+                float(chapter_start),
+                float(chapter_end),
+                pre_seconds=settings.clip_source_pre_seconds,
+                post_seconds=settings.clip_source_post_seconds,
+            )
+            wider_source_start_s = source_start
+
         # ---- Cut + upload + persist each side independently ---------------
         stand_outcome = await _cut_upload_persist_one_side(
             db, lineup, video_id, local_video,
@@ -422,6 +450,7 @@ async def generate_micro_clips_for_lineup(
             side="stand",
             key_fn=pending_stand_clip_key,
             persist_fn=lineup_repo.set_stand_clip_url,
+            wider_source_start_s=wider_source_start_s,
         )
         aim_outcome = await _cut_upload_persist_one_side(
             db, lineup, video_id, local_video,
@@ -431,6 +460,7 @@ async def generate_micro_clips_for_lineup(
             side="aim",
             key_fn=pending_aim_clip_key,
             persist_fn=lineup_repo.set_aim_clip_url,
+            wider_source_start_s=wider_source_start_s,
         )
 
         return MicroClipGenerationResult(
@@ -470,6 +500,7 @@ async def _cut_upload_persist_one_side(
     side: str,
     key_fn,
     persist_fn,
+    wider_source_start_s: float | None = None,
 ) -> dict:
     """Cut + upload + persist exactly ONE side (stand or aim).
 
@@ -478,6 +509,14 @@ async def _cut_upload_persist_one_side(
     composite ``MicroClipGenerationResult``. The same shape is used for
     both sides so a future third pane (unlikely but possible) can be added
     without touching this function.
+
+    *wider_source_start_s* is the seconds-into-source-video start of the
+    SHARED wider clip (``clip_url_original``) the operator's shift-window
+    slider will be positioned against. When set, this function computes
+    ``offset_s = clip_start - wider_source_start_s`` and persists it via the
+    setter's ``offset_s=`` kwarg so the shift overlay opens at the right
+    initial thumb position. When None (no wider source for this lineup),
+    the offset is left untouched in the DB and the shift overlay opens at 0.
     """
     bounds = _compute_micro_bounds(anchor_ts, chapter_start, chapter_end)
     if bounds is None:
@@ -519,8 +558,16 @@ async def _cut_upload_persist_one_side(
             "error_codes": ["clip_upload_failed"],
         }
 
+    # Compute the in-source offset (only when a shared wider source exists for
+    # this lineup). The setter writes ``*_clip_offset_s`` so the PR2 shift
+    # overlay opens its slider at the position the ingest pipeline cut from.
+    if wider_source_start_s is not None:
+        offset_s: float | None = clip_start - wider_source_start_s
+    else:
+        offset_s = None
+
     try:
-        await persist_fn(db, lineup, clip_key)
+        await persist_fn(db, lineup, clip_key, offset_s=offset_s)
     except Exception as exc:
         # Object uploaded but column did not commit. The key is deterministic
         # so a later backfill recomputes the same key and overwrites the same

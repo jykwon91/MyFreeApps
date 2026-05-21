@@ -664,10 +664,29 @@ async def set_stand_clip_url(
     db: AsyncSession,
     lineup: Lineup,
     stand_clip_key: str,
+    *,
+    offset_s: float | None = None,
 ) -> Lineup:
     """Persist the generated stand micro-clip's bare MinIO key onto a lineup.
 
-    One-column commit on purpose — same rationale as :func:`set_clip_url` /
+    Two shapes:
+
+    **Ingest / backfill shape** (default — ``offset_s=None``): writes
+    ``stand_clip_url`` only. Used when the offset can't be computed because
+    the wider source ``clip_url_original`` wasn't established yet (legacy
+    rows, wide-source cut failed, etc.). ``stand_clip_offset_s`` is left
+    untouched — NULL stays NULL.
+
+    **Shift / wider-source-aware shape** (``offset_s=`` set): also writes
+    ``stand_clip_offset_s`` so the STAND shift-window editor opens its slider
+    at the right initial position. The offset is in seconds from the start of
+    ``clip_url_original`` (the shared wider source — micro-clip widening
+    reuses the chapter's existing wider source bytes rather than cutting a
+    per-pane original). NULL and 0.0 are distinct: the shift overlay treats
+    NULL as "no offset known, slider opens at 0" and any persisted value
+    (including 0.0) as a real operator choice.
+
+    Two-column commit on purpose — same rationale as :func:`set_clip_url` /
     :func:`set_landing_clip_url`: the stand clip is best-effort and orthogonal
     to lineup validity (the stand still already covers this pane; the clip is
     a motion upgrade). A stand-clip failure must NEVER roll back the lineup
@@ -675,11 +694,13 @@ async def set_stand_clip_url(
     clip or any other parallel writer.
 
     Transaction ownership lives here in the repo per PR #687/#695 — callers
-    (ingestion orchestrator + backfill CLI) never call db.commit().
-    ``stand_clip_url`` stores a BARE object key; presigning happens at read
-    time in ``lineup_service._build_read``.
+    (ingestion orchestrator + backfill CLI + shift endpoint) never call
+    db.commit(). ``stand_clip_url`` stores a BARE object key; presigning
+    happens at read time in ``lineup_service._build_read``.
     """
     lineup.stand_clip_url = stand_clip_key
+    if offset_s is not None:
+        lineup.stand_clip_offset_s = offset_s
     try:
         await db.flush()
         await db.commit()
@@ -693,16 +714,20 @@ async def set_aim_clip_url(
     db: AsyncSession,
     lineup: Lineup,
     aim_clip_key: str,
+    *,
+    offset_s: float | None = None,
 ) -> Lineup:
     """Persist the generated aim micro-clip's bare MinIO key onto a lineup.
 
-    Sibling to :func:`set_stand_clip_url` — identical contract, independent
-    column. Anchoring on the same chapter timestamp the classifier chose for
-    ``aim_screenshot_url`` is what keeps the existing ``aim_anchor_x/y``
-    overlay pixel-accurate on the clip's first frame (the first frame IS the
-    aim still).
+    Sibling to :func:`set_stand_clip_url` — identical two-shape contract,
+    independent ``aim_clip_url`` + ``aim_clip_offset_s`` columns. Anchoring on
+    the same chapter timestamp the classifier chose for ``aim_screenshot_url``
+    is what keeps the existing ``aim_anchor_x/y`` overlay pixel-accurate on
+    the clip's first frame (the first frame IS the aim still).
     """
     lineup.aim_clip_url = aim_clip_key
+    if offset_s is not None:
+        lineup.aim_clip_offset_s = offset_s
     try:
         await db.flush()
         await db.commit()

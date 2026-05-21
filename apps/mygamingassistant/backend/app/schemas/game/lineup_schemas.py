@@ -91,6 +91,16 @@ class LineupRead(BaseModel):
     # stand_screenshot_url / aim_screenshot_url stills.
     stand_clip_url: Optional[str] = None
     aim_clip_url: Optional[str] = None
+    # Operator-only single-offset companions for the STAND/AIM shift-window
+    # editor. Each is the seconds-from-start where the corresponding 1s served
+    # micro-clip begins inside the SHARED wider source clip_url_original. The
+    # micro-clip width is fixed (no *_end_s pair). Set by ``_build_admin_read``
+    # only — public reads strip these for the same reason trim offsets are
+    # stripped (the wider source may carry frames the operator deliberately
+    # narrowed away). NULL on legacy rows that predate the migration; the
+    # shift overlay opens the slider at offset=0 in that case.
+    stand_clip_offset_s: Optional[float] = None
+    aim_clip_offset_s: Optional[float] = None
     aim_anchor_x: Optional[float] = None
     aim_anchor_y: Optional[float] = None
     # Minimap anchor positions — raw values from the DB. May be NULL; use the
