@@ -49,16 +49,34 @@ export function usePaneTrim({ lineupId, pane }: UsePaneTrimArgs) {
   const [phase, setPhase] = useState<PaneTrimPhase>({ phase: "closed" });
   const [trimPane] = useTrimPaneMutation();
 
-  const open = useCallback((clipDurationS: number) => {
-    // Default the range to the full clip — operator drags inward from
-    // whichever edge they want to trim.
-    setPhase({
-      phase: "open",
-      startOffsetS: 0,
-      endOffsetS: clipDurationS,
-      clipDurationS,
-    });
-  }, []);
+  const open = useCallback(
+    (
+      clipDurationS: number,
+      initial?: { startOffsetS: number; endOffsetS: number } | null,
+    ) => {
+      // Pre-fill thumbs to "where the operator currently is" inside the
+      // source clip when prior trim offsets are known (PR4 — passed in from
+      // the admin-shape lineup payload). Falls back to the full source range
+      // when offsets are null/missing (untrimmed clip or legacy row).
+      // Re-clamp defensively: a stored offset pair from an older trim that
+      // exceeds the current source duration shouldn't crash the slider.
+      const initStart =
+        initial && Number.isFinite(initial.startOffsetS)
+          ? Math.max(0, Math.min(initial.startOffsetS, clipDurationS))
+          : 0;
+      const initEnd =
+        initial && Number.isFinite(initial.endOffsetS)
+          ? Math.max(initStart, Math.min(initial.endOffsetS, clipDurationS))
+          : clipDurationS;
+      setPhase({
+        phase: "open",
+        startOffsetS: initStart,
+        endOffsetS: initEnd,
+        clipDurationS,
+      });
+    },
+    [],
+  );
 
   const updateRange = useCallback(
     (startOffsetS: number, endOffsetS: number) => {

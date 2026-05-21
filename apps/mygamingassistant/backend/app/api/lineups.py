@@ -337,12 +337,14 @@ async def get_lineup_admin(
 ) -> LineupRead:
     """Operator-only lineup detail — returns any status (accepted/pending/hidden).
 
-    Used by the review UI to inspect pending lineups before accepting. The
-    public ``GET /api/lineups/{id}`` route only returns accepted lineups, so
+    Used by the review UI to inspect pending lineups before accepting AND by
+    the per-pane Trim editor to read each pane's ``*_url_original`` +
+    ``*_trim_*`` offsets (operator-only fields the public ``GET /api/lineups/
+    {id}`` route strips). The public route only returns accepted lineups, so
     this companion endpoint exists to surface non-accepted ones to the
     operator without leaking them publicly.
     """
-    lineup = await lineup_service.get(db, lineup_id)
+    lineup = await lineup_service.get(db, lineup_id, include_originals=True)
     if lineup is None:
         raise HTTPException(status_code=404, detail="Lineup not found")
     return lineup

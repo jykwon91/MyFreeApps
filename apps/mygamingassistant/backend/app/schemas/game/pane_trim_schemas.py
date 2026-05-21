@@ -46,27 +46,29 @@ MAX_TRIM_DURATION_S = 30.0
 
 
 class PaneTrimRequest(BaseModel):
-    """Operator-supplied trim window over the existing clip.
+    """Operator-supplied trim window over the pane's ORIGINAL source clip.
 
-    Both offsets are seconds from the start of the existing clip (NOT from
-    the source video). The slider in the browser drives these values; the
-    server re-encodes a [start, end] segment and writes the new key onto the
-    matching column.
+    Both offsets are seconds from the start of ``*_url_original`` (NOT from
+    the start of the previously-trimmed ``*_url``). PR4 of the pane editor
+    made trim reversible: every Apply cuts fresh from the preserved source,
+    so the operator can widen past whatever the last trim left behind. The
+    slider in the browser is bounded by the source's full duration; these
+    offsets are the operator's chosen window inside that range.
 
     Validation is split: pydantic enforces non-negative + numeric bounds
     here; the service layer enforces ``start < end`` and duration limits
-    against the actual clip length once it's been downloaded.
+    against the actual source clip length once it's been downloaded.
     """
 
     start_offset_s: float = Field(
         ...,
         ge=0.0,
-        description="Seconds from the start of the existing clip to begin the trim.",
+        description="Seconds from the start of the source clip to begin the trim.",
     )
     end_offset_s: float = Field(
         ...,
         gt=0.0,
-        description="Seconds from the start of the existing clip to end the trim.",
+        description="Seconds from the start of the source clip to end the trim.",
     )
 
     @model_validator(mode="after")

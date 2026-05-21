@@ -1,22 +1,30 @@
 /**
- * PaneTrimOverlay — per-pane clip trim affordance (PR2).
+ * PaneTrimOverlay — per-pane clip trim affordance.
  *
  * Mirrors ``PaneReplaceOverlay`` (PR1) structurally so the two affordances
  * coexist on the same pane with consistent UX:
  *
  *   1. **Idle** — scissors icon at ``bottom-1.5 left-1.5`` (diagonally
  *      opposite PR1's Replace icon). Hover/focus-revealed. Hidden when
- *      ``clipUrl`` is null or unknown — no clip = nothing to trim.
+ *      ``clipUrl`` is null — no clip = nothing to trim.
  *
- *   2. **Open** — full-pane scrim + two-thumb range slider + readout +
- *      Apply / Cancel. Slider drags update the in-memory range only;
- *      Apply POSTs to the trim endpoint.
+ *   2. **Fetching** — scrim + spinner while we lazy-load the admin payload
+ *      for this lineup (PR4 — the source-clip URL + stored trim offsets are
+ *      operator-only fields the public list deliberately omits). The fetch
+ *      is RTK-Query-cached per lineup id, so subsequent opens are instant.
  *
- *   3. **Applying** — scrim + indeterminate shimmer bar (the server doesn't
+ *   3. **Open** — full-pane scrim + two-thumb range slider + readout +
+ *      Apply / Cancel. The slider is bound on the SOURCE duration, not the
+ *      currently-served clip, so the operator can drag past whatever the
+ *      previous trim left behind. Thumbs pre-fill to the stored offsets
+ *      (the "where I currently am" state) when present; otherwise to the
+ *      full source range.
+ *
+ *   4. **Applying** — scrim + indeterminate shimmer bar (the server doesn't
  *      stream progress on an ffmpeg cut; honest about not-knowing rather
  *      than fake-precision).
  *
- *   4. **Error** — scrim + red message + Retry. Same shape as PR1's
+ *   5. **Error** — scrim + red message + Retry. Same shape as PR1's
  *      ``PaneReplaceOverlay`` error state.
  *
  * Mutual exclusion with PR1's Replace overlay is visual, not logical: when
@@ -26,7 +34,7 @@
  * sees both options on hover.
  */
 import { useEffect, useId, useState } from "react";
-import { RotateCcw, Scissors, X } from "lucide-react";
+import { Loader2, RotateCcw, Scissors, X } from "lucide-react";
 
 import { useClipDuration } from "@/hooks/useClipDuration";
 import {
@@ -38,6 +46,7 @@ import {
   useTrimPreviewVideo,
   type TrimPreviewThumb,
 } from "@/hooks/useTrimPreviewVideo";
+import { useLazyGetLineupAdminQuery } from "@/store/lineupsApi";
 
 import PaneRangeScrubber from "./PaneRangeScrubber";
 
@@ -54,11 +63,27 @@ export default function PaneTrimOverlay({
   pane,
   clipUrl,
 }: PaneTrimOverlayProps) {
-  const clipDurationS = useClipDuration(clipUrl);
   const { phase, open, close, updateRange, apply, retry } = usePaneTrim({
     lineupId,
     pane,
   });
+
+  // Admin-payload fetch — lazy so the public list payload stays unchanged
+  // and only logged-in operators pay the cost, and only on first click of
+  // the scissors per lineup (RTK Query caches the result by id).
+  const [fetchAdmin, adminResult] = useLazyGetLineupAdminQuery();
+
+  // Track operator intent across the async fetch — without this, an admin
+  // cache that pre-resolved earlier would cause the slider to spring open
+  // unsolicited the next time the operator hovered the pane. State (not
+  // ref) so toggling it re-runs the auto-open effect when the admin
+  // payload was already cached at click time.
+  const [awaitingOpen, setAwaitingOpen] = useState(false);
+
+  const adminLineup = adminResult.data ?? null;
+  const sourceUrl = resolveSourceUrl(adminLineup, pane, clipUrl);
+  const sourceDurationS = useClipDuration(sourceUrl);
+  const storedOffsets = resolveStoredOffsets(adminLineup, pane);
 
   // Escape closes the slider when open OR clears an error.
   useEffect(() => {
@@ -70,42 +95,82 @@ export default function PaneTrimOverlay({
     return () => window.removeEventListener("keydown", handleKey);
   }, [phase.phase, close]);
 
+  // Once the admin payload resolves AND the operator has explicitly asked to
+  // open (``awaitingOpen``), open the slider with bounds = source duration +
+  // thumbs pre-filled to the stored trim window. ``isFetching`` is false on
+  // cached hits so the transition is instant on the second open of the same
+  // lineup. The awaitingOpen gate ensures a cached admin payload doesn't
+  // re-open the slider on its own after Apply transitions phase back to
+  // "closed".
+  useEffect(() => {
+    if (!awaitingOpen) return;
+    if (phase.phase !== "closed") return;
+    if (!adminResult.isSuccess || sourceDurationS == null) return;
+    if (!adminResult.originalArgs || adminResult.originalArgs !== lineupId) return;
+    setAwaitingOpen(false);
+    open(sourceDurationS, storedOffsets);
+  }, [
+    awaitingOpen,
+    adminResult.isSuccess,
+    adminResult.originalArgs,
+    lineupId,
+    phase.phase,
+    sourceDurationS,
+    storedOffsets,
+    open,
+  ]);
+
+  const handleScissorsClick = () => {
+    setAwaitingOpen(true);
+    void fetchAdmin(lineupId, /* preferCacheValue */ true);
+  };
+
   // No clip → no trim affordance. (PaneTrimOverlay never mounts in that case
   // per the parent guard, but defending here keeps the component honest
   // against future call sites.)
   if (!clipUrl) return null;
 
   if (phase.phase === "closed") {
-    // Idle scissors icon. Disabled until duration is known so we can pass
-    // a sane upper bound to open().
+    const isFetching =
+      awaitingOpen &&
+      (adminResult.isFetching || (adminResult.isSuccess && sourceDurationS == null));
     return (
       <button
         type="button"
-        onClick={() => clipDurationS != null && open(clipDurationS)}
+        onClick={handleScissorsClick}
         aria-label={`Trim ${pane} clip duration`}
         title={`Trim ${pane}`}
-        disabled={clipDurationS == null}
+        disabled={isFetching}
         className={[
           "absolute bottom-1.5 left-1.5 z-10",
           "opacity-0 group-hover/pane:opacity-100 focus-visible:opacity-100",
+          isFetching ? "opacity-100" : "",
           "transition-opacity duration-150",
           "p-1.5 rounded bg-black/60 text-white hover:bg-black/80",
-          "disabled:opacity-0 disabled:pointer-events-none",
+          "disabled:cursor-wait disabled:hover:bg-black/60",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-inset",
         ].join(" ")}
       >
-        <Scissors className="w-3.5 h-3.5" aria-hidden />
+        {isFetching ? (
+          <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden />
+        ) : (
+          <Scissors className="w-3.5 h-3.5" aria-hidden />
+        )}
       </button>
     );
   }
 
   if (phase.phase === "open") {
+    // Slider preview must reach for the SOURCE clip, not the
+    // currently-served trimmed clip — otherwise the operator dragging the
+    // thumbs outward past the previous trim's bounds would see nothing.
+    const previewUrl = sourceUrl ?? clipUrl;
     return (
       <TrimSliderPanel
         startOffsetS={phase.startOffsetS}
         endOffsetS={phase.endOffsetS}
         clipDurationS={phase.clipDurationS}
-        clipUrl={clipUrl}
+        clipUrl={previewUrl}
         onChange={updateRange}
         onApply={apply}
         onClose={close}
@@ -128,6 +193,43 @@ export default function PaneTrimOverlay({
     />
   );
 }
+
+// ---------------------------------------------------------------------------
+// Helpers — pane-aware accessors for the admin payload's per-pane original
+// URL + offset pair. Centralising the switch here keeps the orchestrator's
+// JSX flat (one switch in two places would be a maintenance trap).
+// ---------------------------------------------------------------------------
+
+function resolveSourceUrl(
+  admin: { clip_url_original: string | null; landing_clip_url_original: string | null } | null,
+  pane: TrimmablePane,
+  fallbackClipUrl: string | null,
+): string | null {
+  if (!admin) return null;
+  const original =
+    pane === "throw" ? admin.clip_url_original : admin.landing_clip_url_original;
+  // Fall back to the currently-served clip when the admin payload doesn't
+  // carry an original (legacy/missed-backfill row). The PR4 service has the
+  // same fallback on the server.
+  return original ?? fallbackClipUrl;
+}
+
+function resolveStoredOffsets(
+  admin: {
+    clip_trim_start_s: number | null;
+    clip_trim_end_s: number | null;
+    landing_clip_trim_start_s: number | null;
+    landing_clip_trim_end_s: number | null;
+  } | null,
+  pane: TrimmablePane,
+): { startOffsetS: number; endOffsetS: number } | null {
+  if (!admin) return null;
+  const start = pane === "throw" ? admin.clip_trim_start_s : admin.landing_clip_trim_start_s;
+  const end = pane === "throw" ? admin.clip_trim_end_s : admin.landing_clip_trim_end_s;
+  if (start == null || end == null) return null;
+  return { startOffsetS: start, endOffsetS: end };
+}
+
 
 // ---------------------------------------------------------------------------
 // Sub-components — extracted so the orchestrator's JSX stays flat (no

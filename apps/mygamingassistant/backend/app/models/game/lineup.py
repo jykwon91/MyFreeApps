@@ -110,12 +110,28 @@ class Lineup(Base):
     stand_screenshot_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     aim_screenshot_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     clip_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    # Pane-editor trim model (PR4): every clip column has a companion
+    # ``*_original`` key + ``*_trim_start_s`` / ``*_trim_end_s`` offsets so the
+    # operator can re-trim past the bounds of the previous trim. Trim cuts
+    # from ``clip_url_original`` (NOT ``clip_url``) and overwrites only
+    # ``clip_url`` + the offset pair. Replace/ingest overwrite both ``clip_url``
+    # AND ``clip_url_original`` to the new key (clearing the offsets). Public
+    # callers never see ``*_original`` / ``*_trim_*`` (operator-only — the
+    # original may contain frames the operator deliberately trimmed to keep
+    # private). When the offset pair is NULL the clip is untrimmed; the
+    # editor opens with thumbs at [0, original_duration].
+    clip_url_original: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    clip_trim_start_s: Mapped[float | None] = mapped_column(Float, nullable=True)
+    clip_trim_end_s: Mapped[float | None] = mapped_column(Float, nullable=True)
     # PR5 short looping clip showing where the utility lands (smoke deploying,
     # molly burning, etc.). Bare MinIO key like clip_url; presigned at read
     # time. Best-effort and orthogonal to lineup validity — a NULL value
     # renders the existing "Lands in: <zone>" text fallback in the LANDING
     # pane. See app/services/ingestion/landing_clip_generator.py.
     landing_clip_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    landing_clip_url_original: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    landing_clip_trim_start_s: Mapped[float | None] = mapped_column(Float, nullable=True)
+    landing_clip_trim_end_s: Mapped[float | None] = mapped_column(Float, nullable=True)
     # PR6 short looped micro-clips for STAND + AIM panes. Anchored on the
     # classifier-chosen stand/aim timestamps (same instant the existing
     # stand/aim stills represent) so the AIM clip's first frame IS the aim

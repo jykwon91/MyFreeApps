@@ -152,9 +152,14 @@ def _make_lineup(lineup_id: uuid.UUID) -> MagicMock:
 
 @pytest.fixture
 def patched_confirm_io():
-    """Patch storage + _build_read for the confirm-path tests."""
+    """Patch storage + _build_admin_read for the confirm-path tests.
+
+    Replace returns the admin shape so the client's Trim editor can re-bind
+    its slider to the new ``*_url_original`` without a second round-trip
+    (PR4 pane-editor model).
+    """
     with patch.object(pane_upload_service, "get_storage") as get_storage, \
-         patch.object(pane_upload_service, "_build_read") as build_read:
+         patch.object(pane_upload_service, "_build_admin_read") as build_read:
         storage = MagicMock()
         storage.object_exists.return_value = True
         get_storage.return_value = storage

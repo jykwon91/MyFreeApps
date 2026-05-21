@@ -42,6 +42,39 @@ describe("usePaneTrim", () => {
     expect(phase.clipDurationS).toBe(7.5);
   });
 
+  it("open(d, {start, end}) pre-fills thumbs to the stored trim offsets (PR4)", () => {
+    const { result } = renderHook(() =>
+      usePaneTrim({ lineupId: "l1", pane: "throw" }),
+    );
+    act(() =>
+      result.current.open(10, { startOffsetS: 2.5, endOffsetS: 4.5 }),
+    );
+
+    const { phase } = result.current;
+    if (phase.phase !== "open") throw new Error("expected open");
+    expect(phase.startOffsetS).toBe(2.5);
+    expect(phase.endOffsetS).toBe(4.5);
+    // Bound is still the source duration — operator can drag thumbs OUTWARD
+    // past the prior trim window.
+    expect(phase.clipDurationS).toBe(10);
+  });
+
+  it("open(d, {start, end}) re-clamps stored offsets that exceed the source duration", () => {
+    // Regression guard: a stored offset pair from an older trim against a
+    // since-replaced shorter source shouldn't crash the slider.
+    const { result } = renderHook(() =>
+      usePaneTrim({ lineupId: "l1", pane: "throw" }),
+    );
+    act(() =>
+      result.current.open(3, { startOffsetS: 5, endOffsetS: 99 }),
+    );
+
+    const { phase } = result.current;
+    if (phase.phase !== "open") throw new Error("expected open");
+    expect(phase.startOffsetS).toBe(3); // clamped to source duration
+    expect(phase.endOffsetS).toBe(3);
+  });
+
   it("updateRange clamps inputs to [0, clipDurationS] while open", () => {
     const { result } = renderHook(() =>
       usePaneTrim({ lineupId: "l1", pane: "throw" }),
