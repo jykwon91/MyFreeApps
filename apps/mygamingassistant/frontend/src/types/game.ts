@@ -121,6 +121,12 @@ export interface Lineup {
   effective_target_x: number | null;
   effective_target_y: number | null;
   setup_seconds: number | null;
+  // PR3: compact throw-technique phrase ("Jumpthrow + LMB",
+  // "E + 2-charge + 1-bounce") for the glance-board footer. Null for manual
+  // uploads (no source video), lineups predating PR3, or when the technique
+  // could not be determined at >=0.55 confidence — the footer then renders
+  // nothing (no placeholder), mirroring the PR2 clip silent-fallback.
+  technique: string | null;
   attribution_url: string | null;
   attribution_author: string | null;
   status: "accepted" | "pending_review" | "hidden";

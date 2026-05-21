@@ -38,6 +38,7 @@ function makeLineup(overrides: Partial<Lineup> = {}): Lineup {
     stand_screenshot_url: null,
     aim_screenshot_url: null,
     clip_url: null,
+    technique: null,
     aim_anchor_x: null,
     aim_anchor_y: null,
     stand_anchor_x: null,

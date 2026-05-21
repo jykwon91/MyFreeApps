@@ -40,6 +40,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.storage import get_storage
+from app.models.game.game import Game
 from app.models.game.source import Source
 from app.models.game.utility_type import UtilityType
 from app.repositories.game import lineup_repo, source_repo
@@ -49,6 +50,9 @@ from app.services.classification.classifier_service import (
     classify_frames_for_lineup_decision,
 )
 from app.services.ingestion.clip_generator import generate_clip_for_lineup
+from app.services.ingestion.technique_extractor import (
+    extract_technique_for_lineup,
+)
 from app.services.game import lineup_service
 from app.services.ingestion.chapter_parser import (
     Chapter,
@@ -167,6 +171,29 @@ async def _resolve_utility_hint(db: AsyncSession, result) -> Optional[str]:
             select(UtilityType.slug).where(
                 UtilityType.id == result.suggested_utility_type_id
             )
+        )
+    ).scalar_one_or_none()
+
+
+async def _resolve_game_hint(db: AsyncSession, result) -> Optional[str]:
+    """The grid-classified game slug, only when the grid was confident.
+
+    The throw-technique prompt selects a game-specific vocabulary block (CS2
+    mouse buttons vs Valorant ability keys) — passing the wrong game would
+    yield a nonsense phrase. Below the same >0.6 gate the utility hint uses,
+    the grid wasn't sure of the game, so pass none and let the technique
+    prompt determine the game from the HUD itself (its generic block enforces
+    the same game-first discipline as the grid classifier).
+    """
+    if (
+        result.suggested_game_id is None
+        or result.confidence is None
+        or result.confidence <= 0.6
+    ):
+        return None
+    return (
+        await db.execute(
+            select(Game.slug).where(Game.id == result.suggested_game_id)
         )
     ).scalar_one_or_none()
 
@@ -386,6 +413,41 @@ async def _process_chapter(
             logger.warning(
                 "Clip generation unexpected error (non-fatal): source_id=%s "
                 "video_id=%s chapter_start=%d lineup_id=%s error=%s",
+                source.id, video_meta.video_id, start, lineup.id, str(exc),
+                exc_info=True,
+            )
+
+        # PR3: best-effort throw-technique footer text. Symmetric to the clip
+        # block above and equally non-fatal — independent Claude call, own
+        # one-column commit, decoupled from the clip outcome (technique is
+        # still produced when the clip was gated off). Reuse the on-disk
+        # video (never re-download per chapter). extract_technique_for_lineup
+        # returns structured outcomes and doesn't raise for expected
+        # failures; the broad catch is purely defensive against an unexpected
+        # bug taking down ingestion.
+        try:
+            game_hint_slug = await _resolve_game_hint(db, result)
+            technique_result = await extract_technique_for_lineup(
+                db,
+                lineup,
+                chapter_start=float(chapter.start_seconds),
+                chapter_end=float(chapter.end_seconds),
+                game_slug=game_hint_slug,
+                video_path=video_path,
+            )
+            logger.info(
+                "Technique extraction (ingest): source_id=%s video_id=%s "
+                "chapter_start=%d lineup_id=%s status=%s reason=%s",
+                source.id, video_meta.video_id, start, lineup.id,
+                technique_result.status,
+                technique_result.skip_reason
+                or (",".join(technique_result.error_codes) or "-"),
+            )
+        except Exception as exc:
+            logger.warning(
+                "Technique extraction unexpected error (non-fatal): "
+                "source_id=%s video_id=%s chapter_start=%d lineup_id=%s "
+                "error=%s",
                 source.id, video_meta.video_id, start, lineup.id, str(exc),
                 exc_info=True,
             )

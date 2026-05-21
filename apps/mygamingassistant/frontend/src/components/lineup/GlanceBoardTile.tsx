@@ -277,8 +277,13 @@ export default function GlanceBoardTile({ lineup }: GlanceBoardTileProps) {
         </div>
       )}
 
-      {/* ── Footer — PR2 throw-technique placeholder ───────────────────── */}
-      {/* PR2: throw-technique fields (throw type / mouse button / movement) land here */}
+      {/* ── Footer — setup time + throw technique (PR3) ────────────────── */}
+      {/* Technique is the "how" — subordinate to the clip (the "what"): same
+          muted 11px weight as the clock, right-aligned. Null renders NOTHING
+          (no placeholder) — mirrors PR2's clip silent-fallback so a missing
+          technique never reads as a broken/error state on the glance board.
+          The footer div always renders for structural consistency (the clock
+          may be its only child, or it may be empty). */}
       <div className="flex items-center gap-3 px-3 py-1.5 bg-muted/30 border-t min-h-[28px]">
         {lineup.setup_seconds != null && (
           <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
@@ -286,9 +291,15 @@ export default function GlanceBoardTile({ lineup }: GlanceBoardTileProps) {
             {lineup.setup_seconds}s
           </span>
         )}
-        <span className="text-[11px] text-muted-foreground/50 italic select-none">
-          — technique —
-        </span>
+        {lineup.technique != null && (
+          <span
+            className="ml-auto min-w-0 truncate text-[11px] text-muted-foreground"
+            title={lineup.technique}
+            aria-label={`Throw technique: ${lineup.technique}`}
+          >
+            {lineup.technique}
+          </span>
+        )}
       </div>
     </article>
   );

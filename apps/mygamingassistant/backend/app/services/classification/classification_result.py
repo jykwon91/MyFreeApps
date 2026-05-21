@@ -100,3 +100,32 @@ class ThrowTimingResult:
     confidence: Optional[float] = None
     reasoning: str = ""
     error_codes: list[str] = field(default_factory=list)
+
+
+@dataclass
+class ThrowTechniqueResult:
+    """Result of the PR3 throw-technique Claude call.
+
+    Deliberately a SEPARATE type from :class:`ThrowTimingResult` and
+    :class:`ClassificationResult` — the technique pass is its own code path
+    (own prompt, own schema, no slug resolution, no DB) per the frozen PR3
+    design contract. It is decoupled from the clip pipeline: technique is
+    extracted even when the clip is gated off (low timing confidence / no
+    release frame), so conflating it with the timing call would lose technique
+    for the lineups whose clip was skipped.
+
+    On a successful API call ``success=True`` and ``technique`` may be
+    ``None`` — a valid "cannot determine the technique from these frames"
+    answer (not-a-throw / motion not visible / below the 0.55 confidence
+    gate), NOT an error. ``error_codes`` is populated on an API/parse failure
+    AND carries the structured gate codes (``technique_low_confidence:<c>`` /
+    ``technique_no_confidence`` / ``invalid_confidence:<raw>``) on an
+    otherwise-successful call, per rules/check-third-party-error-codes.md
+    (never a bare bool/None).
+    """
+
+    success: bool
+    technique: Optional[str] = None
+    confidence: Optional[float] = None
+    reasoning: str = ""
+    error_codes: list[str] = field(default_factory=list)

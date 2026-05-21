@@ -31,6 +31,7 @@ function makeLineup(over: Partial<Lineup> = {}): Lineup {
     stand_screenshot_url: "https://ex.com/stand.png",
     aim_screenshot_url: "https://ex.com/aim.png",
     clip_url: null,
+    technique: null,
     aim_anchor_x: 0.5,
     aim_anchor_y: 0.4,
     stand_anchor_x: null,
@@ -179,5 +180,41 @@ describe("GlanceBoardTile clip view", () => {
     );
     const video = document.querySelector("video") as HTMLVideoElement;
     expect(video.getAttribute("src")).toBe("https://ex.com/clip.mp4");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PR3 — throw-technique footer
+// ---------------------------------------------------------------------------
+describe("GlanceBoardTile technique footer", () => {
+  it("renders the technique string with the correct aria-label when set", () => {
+    render(
+      <GlanceBoardTile lineup={makeLineup({ technique: "Jumpthrow + LMB" })} />,
+    );
+    expect(screen.getByText("Jumpthrow + LMB")).toBeInTheDocument();
+    expect(
+      screen.getByLabelText("Throw technique: Jumpthrow + LMB"),
+    ).toBeInTheDocument();
+  });
+
+  it("renders nothing for technique when null and keeps the setup clock", () => {
+    render(<GlanceBoardTile lineup={makeLineup({ technique: null })} />);
+    // The placeholder em-dash from the pre-PR3 mockup must NOT appear — both
+    // design agents agreed null renders nothing (no misleading affordance).
+    expect(screen.queryByText("— technique —")).not.toBeInTheDocument();
+    expect(
+      screen.queryByLabelText(/^Throw technique:/),
+    ).not.toBeInTheDocument();
+    // Clock still renders so the footer isn't visually empty.
+    expect(screen.getByText("7s")).toBeInTheDocument();
+  });
+
+  it("truncates long technique via class + carries the full string in title=", () => {
+    const long =
+      "Valorant Killjoy alarmbot bounce-on-stair-corner three-quarter-charge";
+    render(<GlanceBoardTile lineup={makeLineup({ technique: long })} />);
+    const span = screen.getByLabelText(`Throw technique: ${long}`);
+    expect(span.getAttribute("title")).toBe(long);
+    expect(span.className).toContain("truncate");
   });
 });
