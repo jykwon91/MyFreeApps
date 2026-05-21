@@ -28,6 +28,7 @@ import uuid
 
 from app.core.storage import get_storage
 from app.db.session import unit_of_work
+from app.repositories.applicants import applicant_event_repo, applicant_repo
 from app.repositories.leases import (
     lease_term_version_repo,
     signed_lease_attachment_repo,
@@ -228,6 +229,26 @@ async def extend_lease(
                 organization_id=organization_id,
                 fields={"ends_on": new_ends_on, "updated_at": now},
             )
+
+            if applicant is not None:
+                tenancy_restarted = applicant.tenant_ended_at is not None
+                if tenancy_restarted:
+                    await applicant_repo.clear_tenancy_ended(
+                        db, applicant=applicant, now=now,
+                    )
+                await applicant_event_repo.append(
+                    db,
+                    applicant_id=applicant.id,
+                    event_type="tenancy_extended",
+                    actor="host",
+                    occurred_at=now,
+                    payload={
+                        "lease_id": str(lease_id),
+                        "previous_ends_on": original_ends_on.isoformat(),
+                        "new_ends_on": new_ends_on.isoformat(),
+                        "tenancy_restarted": tenancy_restarted,
+                    },
+                )
         except Exception:
             # DB write failed after we uploaded the PDF — best-effort cleanup
             # of the orphan object so the bucket doesn't accumulate dead files
@@ -343,6 +364,19 @@ async def undo_extension(
             user_id=user_id,
             organization_id=organization_id,
             fields={"ends_on": new_ends_on, "updated_at": now},
+        )
+
+        await applicant_event_repo.append(
+            db,
+            applicant_id=lease.applicant_id,
+            event_type="extension_undone",
+            actor="host",
+            occurred_at=now,
+            payload={
+                "lease_id": str(lease_id),
+                "undone_version_id": str(version_id),
+                "new_ends_on": new_ends_on.isoformat(),
+            },
         )
 
     return await get_lease(

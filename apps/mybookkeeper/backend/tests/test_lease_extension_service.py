@@ -23,6 +23,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.applicants.applicant import Applicant
+from app.models.applicants.applicant_event import ApplicantEvent
 from app.models.leases.lease_term_version import LeaseTermVersion
 from app.models.leases.signed_lease import SignedLease
 from app.models.leases.signed_lease_attachment import SignedLeaseAttachment
@@ -299,3 +300,114 @@ async def test_storage_failure_cleans_up_no_partial_version(
     # The lease's ends_on is unchanged.
     await db.refresh(lease)
     assert lease.ends_on == _dt.date(2026, 12, 31)
+
+
+@pytest.mark.asyncio
+async def test_extend_clears_tenant_ended_and_writes_event(
+    db: AsyncSession,
+) -> None:
+    """Extending a lease for a manually-ended tenant restarts the tenancy.
+
+    Without this, host's mental model ("extension means they're staying")
+    silently diverges from system state (UI keeps showing the tenancy as
+    ended because tenant_ended_at is non-null).
+    """
+    org_id, user_id = uuid.uuid4(), uuid.uuid4()
+    lease = await _seed_signed_lease(db, user_id=user_id, org_id=org_id)
+    applicant = (
+        await db.execute(
+            select(Applicant).where(Applicant.id == lease.applicant_id),
+        )
+    ).scalar_one()
+    applicant.tenant_ended_at = _dt.datetime(2026, 6, 1, tzinfo=_dt.timezone.utc)
+    applicant.tenant_ended_reason = "moved out"
+    await db.flush()
+
+    storage = AsyncMock()
+    storage.upload_file = lambda *a, **kw: None
+    with patch(
+        "app.services.leases.lease_extension_service.unit_of_work",
+        _fake_uow_for(db),
+    ), patch(
+        "app.services.leases.lease_extension_service.get_storage", lambda: storage,
+    ), patch(
+        "app.services.leases.lease_extension_service.get_lease",
+        AsyncMock(return_value=object()),
+    ):
+        await extend_lease(
+            user_id=user_id,
+            organization_id=org_id,
+            lease_id=lease.id,
+            new_ends_on=_dt.date(2027, 6, 30),
+            notes=None,
+        )
+
+    await db.refresh(applicant)
+    assert applicant.tenant_ended_at is None
+    assert applicant.tenant_ended_reason is None
+
+    events = (
+        await db.execute(
+            select(ApplicantEvent).where(
+                ApplicantEvent.applicant_id == applicant.id,
+            )
+        )
+    ).scalars().all()
+    assert len(events) == 1
+    evt = events[0]
+    assert evt.event_type == "tenancy_extended"
+    assert evt.actor == "host"
+    assert evt.payload["tenancy_restarted"] is True
+    assert evt.payload["new_ends_on"] == "2027-06-30"
+    assert evt.payload["previous_ends_on"] == "2026-12-31"
+    assert evt.payload["lease_id"] == str(lease.id)
+
+
+@pytest.mark.asyncio
+async def test_extend_with_active_tenancy_writes_event_without_clearing(
+    db: AsyncSession,
+) -> None:
+    """The normal-path extension still writes a timeline event, no clear needed."""
+    org_id, user_id = uuid.uuid4(), uuid.uuid4()
+    lease = await _seed_signed_lease(db, user_id=user_id, org_id=org_id)
+    applicant = (
+        await db.execute(
+            select(Applicant).where(Applicant.id == lease.applicant_id),
+        )
+    ).scalar_one()
+    assert applicant.tenant_ended_at is None  # baseline
+
+    storage = AsyncMock()
+    storage.upload_file = lambda *a, **kw: None
+    with patch(
+        "app.services.leases.lease_extension_service.unit_of_work",
+        _fake_uow_for(db),
+    ), patch(
+        "app.services.leases.lease_extension_service.get_storage", lambda: storage,
+    ), patch(
+        "app.services.leases.lease_extension_service.get_lease",
+        AsyncMock(return_value=object()),
+    ):
+        await extend_lease(
+            user_id=user_id,
+            organization_id=org_id,
+            lease_id=lease.id,
+            new_ends_on=_dt.date(2027, 6, 30),
+            notes=None,
+        )
+
+    await db.refresh(applicant)
+    assert applicant.tenant_ended_at is None
+
+    events = (
+        await db.execute(
+            select(ApplicantEvent).where(
+                ApplicantEvent.applicant_id == applicant.id,
+            )
+        )
+    ).scalars().all()
+    assert len(events) == 1
+    assert events[0].event_type == "tenancy_extended"
+    assert events[0].payload["tenancy_restarted"] is False
+
+

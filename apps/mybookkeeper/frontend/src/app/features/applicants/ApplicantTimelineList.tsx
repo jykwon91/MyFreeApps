@@ -26,6 +26,12 @@ const NON_STAGE_EVENT_LABELS: Record<string, string> = {
   screening_initiated: "Screening initiated",
   screening_completed: "Screening completed",
   reference_contacted: "Reference contacted",
+  stage_changed: "Stage changed",
+  contract_dates_changed: "Contract dates changed",
+  tenancy_ended: "Tenancy ended",
+  tenancy_restarted: "Tenancy restarted",
+  tenancy_extended: "Lease extended",
+  extension_undone: "Extension undone",
 };
 
 export interface ApplicantTimelineListProps {
