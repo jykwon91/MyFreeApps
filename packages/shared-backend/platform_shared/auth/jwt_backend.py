@@ -16,13 +16,39 @@ from each app's ``app.core.auth`` continue to resolve unchanged.
 """
 from __future__ import annotations
 
-from typing import NamedTuple
+import time
+from typing import Generic, NamedTuple
 
+from fastapi_users import models
 from fastapi_users.authentication import (
     AuthenticationBackend,
     BearerTransport,
     JWTStrategy,
 )
+from fastapi_users.jwt import generate_jwt
+
+
+class IatJWTStrategy(JWTStrategy[models.UP, models.ID], Generic[models.UP, models.ID]):
+    """JWTStrategy that always emits an ``iat`` (issued-at) claim.
+
+    fastapi-users 15.x ``JWTStrategy.write_token`` emits only ``sub``,
+    ``aud``, and ``exp``. The platform's strict-superuser gate
+    (``platform_shared.core.permissions.make_strict_superuser_gate``)
+    enforces a recent-auth window by reading ``iat`` — without it,
+    every gated endpoint fails with 401 "Token missing or unreadable
+    iat claim". This subclass closes that gap so the gate works against
+    real platform-issued tokens, not just hand-crafted test tokens.
+    """
+
+    async def write_token(self, user: models.UP) -> str:
+        data = {
+            "sub": str(user.id),
+            "aud": self.token_audience,
+            "iat": int(time.time()),
+        }
+        return generate_jwt(
+            data, self.encode_key, self.lifetime_seconds, algorithm=self.algorithm,
+        )
 
 
 class JwtAuthBackend(NamedTuple):
@@ -63,7 +89,7 @@ def build_jwt_auth_backend(
     bearer_transport = BearerTransport(tokenUrl=token_url)
 
     def get_jwt_strategy() -> JWTStrategy:
-        return JWTStrategy(secret=secret_key, lifetime_seconds=lifetime_seconds)
+        return IatJWTStrategy(secret=secret_key, lifetime_seconds=lifetime_seconds)
 
     auth_backend = AuthenticationBackend(
         name=backend_name,
@@ -78,4 +104,4 @@ def build_jwt_auth_backend(
     )
 
 
-__all__ = ["JwtAuthBackend", "build_jwt_auth_backend"]
+__all__ = ["IatJWTStrategy", "JwtAuthBackend", "build_jwt_auth_backend"]
