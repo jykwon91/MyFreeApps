@@ -69,6 +69,10 @@ from app.services.ingestion.frame_extractor import (
     cut_clip,
     extract_frames_downscaled,
 )
+from app.services.ingestion.wide_source import (
+    cut_and_upload_wide_source,
+    tight_offsets_within_source,
+)
 from app.services.ingestion.youtube_fetcher import (
     VideoDownloadError,
     download_video,
@@ -133,6 +137,20 @@ def pending_landing_clip_key(video_id: str, chapter_start_seconds: float) -> str
     new one.
     """
     return f"pending/{video_id}/{int(chapter_start_seconds)}-landing.mp4"
+
+
+def pending_landing_clip_source_key(
+    video_id: str, chapter_start_seconds: float,
+) -> str:
+    """Deterministic MinIO key for a lineup's wider landing source clip.
+
+    Companion to :func:`pending_landing_clip_key` — the trim editor reads
+    from this wider clip via ``landing_clip_url_original``. Distinct suffix
+    (``-landing-source``) so the tight served landing clip and the wider
+    trim source coexist in MinIO and a backfill run overwrites only the
+    wide one without touching the tight bytes the glance board autoplays.
+    """
+    return f"pending/{video_id}/{int(chapter_start_seconds)}-landing-source.mp4"
 
 
 def _compute_landing_bounds(
@@ -453,12 +471,45 @@ async def _cut_upload_persist(
             clip_duration=clip_duration,
         )
 
+    # ---- Cut + upload the wider trim-editor source (best-effort) -------
+    # Mirrors clip_generator's posture: failure here keeps the row in the
+    # legacy posture (landing_clip_url_original = landing_clip_url, NULL
+    # offsets); the widen-source backfill retries later.
+    wide = await cut_and_upload_wide_source(
+        local_video=local_video,
+        video_id=video_id,
+        chapter_start=float(chapter_start),
+        chapter_end=float(chapter_end),
+        source_key=pending_landing_clip_source_key(video_id, chapter_start),
+        log_prefix="landing_clip_generator",
+        lineup_id=lineup.id,
+    )
+    if wide.succeeded:
+        assert wide.source_start_s is not None  # narrow for type checker
+        trim_start_s, trim_end_s = tight_offsets_within_source(
+            tight_start=clip_start,
+            tight_duration=clip_duration,
+            source_start=wide.source_start_s,
+        )
+        source_key: str | None = wide.source_key
+    else:
+        trim_start_s = trim_end_s = None
+        source_key = None
+
     try:
-        await lineup_repo.set_landing_clip_url(db, lineup, clip_key)
+        await lineup_repo.set_landing_clip_url(
+            db,
+            lineup,
+            clip_key,
+            source_key=source_key,
+            trim_start_s=trim_start_s,
+            trim_end_s=trim_end_s,
+        )
     except Exception as exc:
-        # The object is uploaded but the column did not commit. The key is
-        # deterministic, so a later backfill recomputes the same key and
-        # overwrites the same object — no orphan, safe to retry.
+        # The objects are uploaded but the column did not commit. Both the
+        # tight key and the wide key (``pending_landing_clip_source_key``)
+        # are deterministic, so a later backfill recomputes the same keys
+        # and overwrites the same objects — no orphan, safe to retry.
         logger.warning(
             "landing_clip_generator: landing_clip_url persist failed "
             "(object uploaded, column not committed; backfill is "

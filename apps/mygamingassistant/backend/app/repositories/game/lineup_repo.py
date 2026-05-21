@@ -326,15 +326,31 @@ async def set_clip_url(
     db: AsyncSession,
     lineup: Lineup,
     clip_key: str,
+    *,
+    source_key: str | None = None,
+    trim_start_s: float | None = None,
+    trim_end_s: float | None = None,
 ) -> Lineup:
     """Persist a fresh full clip onto the THROW pane (ingest + Replace path).
 
-    Writes BOTH ``clip_url`` AND ``clip_url_original`` to ``clip_key`` and
-    NULLs out the trim offset pair. A fresh upload IS the source: it starts
-    untrimmed, and the editor's slider opens with bounds = full duration.
-    The next ``set_clip_url_trim`` will overwrite only ``clip_url`` + the
-    offsets and leave ``clip_url_original`` alone so the editor can widen
-    past whatever the trim left behind (PR4 pane-editor model).
+    Two shapes, selected by the optional widening kwargs:
+
+    **Replace shape** (default — no kwargs): writes BOTH ``clip_url`` AND
+    ``clip_url_original`` to ``clip_key`` and NULLs out the trim offsets. A
+    fresh operator upload IS the source; it starts untrimmed and the editor's
+    slider opens with bounds = full duration. This is the byte-identical
+    posture from before the widen-source change.
+
+    **Widened-source shape** (``source_key`` + offsets provided): writes
+    ``clip_url=clip_key`` (the tight served clip) but ``clip_url_original=
+    source_key`` (the wider clip the trim editor reads from) and persists
+    the offsets the tight clip occupies inside the wider source. The slider
+    opens at the tight bounds already trimmed, and the operator can widen
+    the trim past those bounds without re-fetching the YouTube video.
+
+    Either shape's next ``set_clip_url_trim`` overwrites only ``clip_url`` +
+    the offsets and leaves ``clip_url_original`` alone, so the operator can
+    keep widening past previous trims (PR4 pane-editor model).
 
     Its own commit (not folded into the classifier writeback) on purpose:
     clip generation is best-effort and orthogonal to the row's validity — a
@@ -349,9 +365,39 @@ async def set_clip_url(
     presigning happens at read time in ``lineup_service._build_read``.
     """
     lineup.clip_url = clip_key
-    lineup.clip_url_original = clip_key
-    lineup.clip_trim_start_s = None
-    lineup.clip_trim_end_s = None
+    lineup.clip_url_original = source_key if source_key is not None else clip_key
+    lineup.clip_trim_start_s = trim_start_s
+    lineup.clip_trim_end_s = trim_end_s
+    try:
+        await db.flush()
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
+    return lineup
+
+
+async def set_clip_url_original(
+    db: AsyncSession,
+    lineup: Lineup,
+    source_key: str,
+) -> Lineup:
+    """Persist a freshly-widened source clip onto the THROW pane (backfill).
+
+    The widen-source backfill cuts a wider clip from the chapter + padding
+    and uploads it under a distinct key from the tight ``clip_url``. Only
+    ``clip_url_original`` moves; the served tight ``clip_url`` and the trim
+    offsets stay as they were. Offsets are left NULL deliberately: the
+    backfill doesn't know where the tight clip sits inside the wider source
+    (we don't re-run Claude — see ``widen_source_backfill`` for the
+    rationale), so the slider opens at the full wide bounds and the operator
+    drags to refine. The previously-served tight bytes remain in MinIO and
+    autoplay is unchanged.
+
+    Same one-column commit posture as :func:`set_clip_url_trim` — backfill
+    is best-effort and must never roll back unrelated state.
+    """
+    lineup.clip_url_original = source_key
     try:
         await db.flush()
         await db.commit()
@@ -429,15 +475,25 @@ async def set_landing_clip_url(
     db: AsyncSession,
     lineup: Lineup,
     landing_clip_key: str,
+    *,
+    source_key: str | None = None,
+    trim_start_s: float | None = None,
+    trim_end_s: float | None = None,
 ) -> Lineup:
     """Persist a fresh full clip onto the LANDING pane (ingest + Replace path).
 
-    Writes BOTH ``landing_clip_url`` AND ``landing_clip_url_original`` to
-    ``landing_clip_key`` and NULLs out the trim offset pair — same model
-    as :func:`set_clip_url` for the throw pane. Lets the editor's trim
-    slider open with bounds = full duration on every fresh upload, while
-    preserving the source for future widen-the-trim ops via
-    :func:`set_landing_clip_url_trim` (PR4 pane-editor model).
+    Sibling to :func:`set_clip_url` — same two shapes:
+
+    **Replace shape** (default — no kwargs): writes BOTH ``landing_clip_url``
+    AND ``landing_clip_url_original`` to ``landing_clip_key`` and NULLs out
+    the trim offsets. Slider opens with bounds = full duration.
+
+    **Widened-source shape** (``source_key`` + offsets provided): writes
+    ``landing_clip_url=landing_clip_key`` (the tight served landing clip)
+    but ``landing_clip_url_original=source_key`` (wider) and persists the
+    offsets the tight clip occupies inside the wider source. Slider opens
+    at the tight bounds and the operator can widen the trim past those
+    bounds without re-fetching the YouTube video.
 
     Its own one-column commit (not folded into the throw-clip commit, the
     classifier writeback, or the technique commit) on purpose — identical
@@ -456,9 +512,34 @@ async def set_landing_clip_url(
     ``lineup_service._build_read``.
     """
     lineup.landing_clip_url = landing_clip_key
-    lineup.landing_clip_url_original = landing_clip_key
-    lineup.landing_clip_trim_start_s = None
-    lineup.landing_clip_trim_end_s = None
+    lineup.landing_clip_url_original = (
+        source_key if source_key is not None else landing_clip_key
+    )
+    lineup.landing_clip_trim_start_s = trim_start_s
+    lineup.landing_clip_trim_end_s = trim_end_s
+    try:
+        await db.flush()
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
+    return lineup
+
+
+async def set_landing_clip_url_original(
+    db: AsyncSession,
+    lineup: Lineup,
+    source_key: str,
+) -> Lineup:
+    """Persist a freshly-widened source clip onto the LANDING pane (backfill).
+
+    Sibling to :func:`set_clip_url_original` — identical contract,
+    independent column. Only ``landing_clip_url_original`` moves; the served
+    tight ``landing_clip_url`` and the trim offsets stay as they were.
+    Offsets stay NULL so the slider opens at the full wide bounds and the
+    operator drags to refine the landing trim.
+    """
+    lineup.landing_clip_url_original = source_key
     try:
         await db.flush()
         await db.commit()
@@ -492,6 +573,54 @@ async def set_landing_clip_url_trim(
         await db.rollback()
         raise
     return lineup
+
+
+async def list_accepted_lineups_needing_widen_source(
+    db: AsyncSession,
+) -> list[Lineup]:
+    """Accepted, ingested lineups whose trim-editor source still equals the
+    tight served clip — the widen-source backfill candidate set.
+
+    The 0015 migration backfilled ``*_url_original = *_url`` on pre-existing
+    rows so the trim editor had something to read; widen-source's job is to
+    replace those equal pairs with a wider source clip the operator can
+    drag past the tight bounds. A row qualifies if EITHER pane's tight ==
+    wide (independent panes; one or both may need widening). The operator
+    runs this once post-deploy; safe to re-run.
+
+    Filtering on equality is exactly what makes the backfill idempotent —
+    a widened pane stops matching (``clip_url_original != clip_url``) and
+    drops out of the work for that pane. Ordered oldest-first so a long
+    backfill makes monotonic progress; mirrors the other ``list_*_needing_*``
+    queries.
+
+    The ``youtube_video_id IS NOT NULL`` clause is input-modality gating
+    (per ``list_accepted_lineups_needing_clips``): manual uploads have no
+    source video to re-fetch, so a wider clip is unreachable for them.
+    """
+    stmt = (
+        select(Lineup)
+        .where(
+            Lineup.status == "accepted",
+            Lineup.youtube_video_id.is_not(None),
+            (
+                (
+                    Lineup.clip_url.is_not(None)
+                    & (Lineup.clip_url_original == Lineup.clip_url)
+                )
+                | (
+                    Lineup.landing_clip_url.is_not(None)
+                    & (
+                        Lineup.landing_clip_url_original
+                        == Lineup.landing_clip_url
+                    )
+                )
+            ),
+        )
+        .order_by(Lineup.created_at.asc())
+    )
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
 
 
 async def list_accepted_lineups_needing_micro_clips(

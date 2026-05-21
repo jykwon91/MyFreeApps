@@ -89,6 +89,21 @@ class Settings(BaseAppSettings):
     ingestion_download_dir_max_gb: int = 10
 
     # ------------------------------------------------------------------
+    # Pane-editor wide-source window (for the trim editor)
+    # ------------------------------------------------------------------
+    # Seconds of padding kept BEFORE the chapter when extracting the
+    # ``*_url_original`` source clip the trim editor reads from. The operator
+    # can drag the trim slider into this pre-chapter padding to grab frames
+    # the original ingest cut left behind (typical use: 1-2s of approach /
+    # setup that the chapter title misses).
+    clip_source_pre_seconds: float = 15.0
+    # Seconds of padding kept AFTER the chapter, symmetric to the pre-padding
+    # above. Same purpose: lets the trim editor extend past the original
+    # ingest cut. 15s mirrors the pre-padding so the editor's slider feels
+    # symmetric around the chapter.
+    clip_source_post_seconds: float = 15.0
+
+    # ------------------------------------------------------------------
     # Scheduler (PR 6+)
     # ------------------------------------------------------------------
     # Set SCHEDULER_ENABLED=false to disable the background cron entirely

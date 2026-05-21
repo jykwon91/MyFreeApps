@@ -6,6 +6,7 @@ Usage:
     python -m app.cli backfill-technique
     python -m app.cli backfill-landing-clips
     python -m app.cli backfill-micro-clips
+    python -m app.cli widen-source
 """
 import asyncio
 import sys
@@ -82,6 +83,32 @@ async def _run_backfill_landing_clips() -> int:
     return 1 if stats.failed else 0
 
 
+async def _run_widen_source() -> int:
+    """Widen the trim-editor source for lineups still on the legacy posture
+    (``*_url_original`` equals the tight ``*_url``). Exit code.
+
+    Idempotent — safe to re-run; only panes whose tight still equals their
+    wide are touched. Independent of the other backfills (separate columns,
+    separate work set). A non-zero exit signals at least one hard failure
+    so the operator notices (re-running retries them — they are not fatal).
+    """
+    from app.db.session import AsyncSessionLocal
+    from app.services.ingestion.widen_source_backfill import (
+        backfill_widen_source,
+    )
+
+    async with AsyncSessionLocal() as db:
+        stats = await backfill_widen_source(db)
+
+    print(stats.summary())
+    if stats.errors:
+        print(f"  {len(stats.errors)} issue(s):")
+        for err in stats.errors:
+            print(f"   - {err}")
+    # Re-runnable: failures retry next run, so a non-zero exit is advisory.
+    return 1 if stats.failed else 0
+
+
 async def _run_backfill_micro_clips() -> int:
     """Generate stand + aim micro-clips for accepted lineups missing one.
     Returns an exit code.
@@ -124,6 +151,8 @@ def main() -> None:
         sys.exit(asyncio.run(_run_backfill_landing_clips()))
     elif command == "backfill-micro-clips":
         sys.exit(asyncio.run(_run_backfill_micro_clips()))
+    elif command == "widen-source":
+        sys.exit(asyncio.run(_run_widen_source()))
     else:
         print(f"Unknown command: {command!r}")
         print("Available commands:")
@@ -132,6 +161,7 @@ def main() -> None:
         print("  backfill-technique     — name throw-technique for accepted lineups missing one")
         print("  backfill-landing-clips — generate landing clips for accepted lineups missing one")
         print("  backfill-micro-clips   — generate stand + aim micro-clips for accepted lineups missing one")
+        print("  widen-source           — replace tight=wide pairs with a wider trim-editor source")
         sys.exit(1)
 
 

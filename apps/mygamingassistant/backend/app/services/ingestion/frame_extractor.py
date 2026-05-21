@@ -332,6 +332,37 @@ def clip_window_timestamps(
     )
 
 
+def wide_source_bounds(
+    chapter_start_seconds: float,
+    chapter_end_seconds: float,
+    *,
+    pre_seconds: float,
+    post_seconds: float,
+) -> tuple[float, float]:
+    """Bounds of the wider source clip the trim editor reads from.
+
+    The trim editor (``pane_trim_service``) cuts from ``*_url_original``, so
+    that key MUST point at a clip wide enough for the operator to drag past
+    whatever the tight ingest cut left behind. This helper computes that
+    wider window: extend the chapter symmetrically by *pre_seconds* and
+    *post_seconds*. The start is clamped at 0 (ffmpeg refuses negative
+    ``-ss``); the end is NOT clamped — ffmpeg silently truncates at the
+    real video end, so passing a slightly-long duration is safe and avoids
+    needing the video duration up front.
+
+    Used by both the ingest path (``clip_generator`` /
+    ``landing_clip_generator``) AND the backfill path
+    (``widen_source_backfill``) so the bounds are identical regardless of
+    which path generated the wide source — a backfill widen and a fresh
+    ingest widen for the same chapter produce the same clip.
+
+    Returns ``(source_start, source_duration)`` seconds.
+    """
+    source_start = max(0.0, float(chapter_start_seconds) - pre_seconds)
+    source_end = float(chapter_end_seconds) + post_seconds
+    return source_start, source_end - source_start
+
+
 def _cut_clip_sync(
     video_path: Path,
     start_seconds: float,
