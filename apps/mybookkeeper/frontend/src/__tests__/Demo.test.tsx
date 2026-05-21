@@ -1,10 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { Provider } from "react-redux";
 import { BrowserRouter } from "react-router-dom";
 import { store } from "@/shared/store";
 import Demo from "@/admin/pages/Demo";
 import type { DemoUser } from "@/shared/types/demo/demo-user";
+
+const mockShowError = vi.fn();
+const mockShowSuccess = vi.fn();
 
 const mockUsers: DemoUser[] = [
   {
@@ -70,9 +73,24 @@ vi.mock("@/shared/store/demoApi", () => ({
 
 vi.mock("@/shared/hooks/useToast", () => ({
   useToast: () => ({
-    showSuccess: vi.fn(),
-    showError: vi.fn(),
+    showSuccess: mockShowSuccess,
+    showError: mockShowError,
   }),
+}));
+
+vi.mock("@/admin/features/demo/CreateDemoDialog", () => ({
+  default: ({
+    open,
+    onSubmit,
+  }: {
+    open: boolean;
+    onSubmit: (tag: string, email?: string) => void;
+  }) =>
+    open ? (
+      <button data-testid="mock-create-submit" onClick={() => onSubmit("regression")}>
+        submit
+      </button>
+    ) : null,
 }));
 
 import { useListDemoUsersQuery } from "@/shared/store/demoApi";
@@ -155,5 +173,28 @@ describe("Demo Admin Page", () => {
 
     renderWithProviders(<Demo />);
     expect(screen.getByText("1 demo user")).toBeInTheDocument();
+  });
+
+  it("surfaces the backend error detail when create fails", async () => {
+    mockCreateTagged.mockImplementationOnce(
+      () =>
+        ({
+          unwrap: () =>
+            Promise.reject({
+              status: 500,
+              data: { detail: "channel column is missing in demo fixtures" },
+            }),
+        }) as unknown as ReturnType<typeof mockCreateTagged>,
+    );
+
+    renderWithProviders(<Demo />);
+    fireEvent.click(screen.getByText("Create Demo User"));
+    fireEvent.click(screen.getByTestId("mock-create-submit"));
+
+    await waitFor(() => {
+      expect(mockShowError).toHaveBeenCalledWith(
+        expect.stringContaining("channel column is missing in demo fixtures"),
+      );
+    });
   });
 });
