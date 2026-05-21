@@ -38,7 +38,13 @@ _FAKE_PNG = b"\x89PNG\r\n\x1a\n"
 _FAKE_MP4 = b"\x00\x00\x00\x18ftypmp42"
 
 
-def _lineup(video_id="vid123", chapter_title="B smoke"):
+def _lineup(
+    video_id="vid123",
+    chapter_title="B smoke",
+    *,
+    clip_url=None,
+    clip_url_original=None,
+):
     return types.SimpleNamespace(
         id=uuid.uuid4(),
         youtube_video_id=video_id,
@@ -46,6 +52,11 @@ def _lineup(video_id="vid123", chapter_title="B smoke"):
         attribution_author=None,
         stand_clip_url=None,
         aim_clip_url=None,
+        # Read by generate_micro_clips_for_lineup to decide whether
+        # ``stand_clip_offset_s`` / ``aim_clip_offset_s`` can be computed.
+        # PR1 of the STAND/AIM shift-window initiative.
+        clip_url=clip_url,
+        clip_url_original=clip_url_original,
     )
 
 
@@ -465,6 +476,142 @@ async def test_stand_cut_failure_does_not_affect_aim():
     )
     set_stand_mock.assert_not_awaited()
     set_aim_mock.assert_awaited_once()
+
+
+# ---------------------------------------------------------------------------
+# Stand/Aim shift offset persistence — PR1 (STAND/AIM shift-window)
+# ---------------------------------------------------------------------------
+
+
+def _offset_kwarg(call):
+    """Pull ``offset_s`` out of a mock setter call, accepting either keyword
+    or positional binding. The production caller passes ``offset_s=`` as a
+    kwarg per the setter signature; this helper exists so tests aren't
+    brittle to that convention drifting."""
+    if "offset_s" in call.kwargs:
+        return call.kwargs["offset_s"]
+    return None
+
+
+@pytest.mark.asyncio
+async def test_offset_persisted_when_wider_source_exists():
+    """clip_url_original != clip_url → shared wider source exists.
+
+    The micro generator must compute ``offset_s = clip_start - source_start``
+    using the same wide_source_bounds settings clip_generator used (PRE/POST
+    from settings.clip_source_pre/post_seconds), and pass it to the setters
+    so the PR2 shift-window editor opens at the right initial position.
+    """
+    db = AsyncMock()
+    # Wider source covers [chapter_start - PRE, chapter_end + POST] = [10-PRE, 40+POST].
+    # The test patches settings to make PRE/POST deterministic regardless of
+    # whatever the real config carries.
+    lineup = _lineup(
+        clip_url="pending/vid123/10-clip.mp4",
+        clip_url_original="pending/vid123/10-clip-source.mp4",
+    )
+    storage = _storage_mock()
+    set_stand_mock = AsyncMock(return_value=lineup)
+    set_aim_mock = AsyncMock(return_value=lineup)
+
+    fake_settings = MagicMock()
+    fake_settings.clip_source_pre_seconds = 2.0
+    fake_settings.clip_source_post_seconds = 4.0
+
+    with (
+        patch(f"{_MOD}.settings", fake_settings),
+        patch(f"{_MOD}.cut_clip", _ffmpeg_cut_mock()),
+        patch(f"{_MOD}.get_storage", return_value=storage),
+        patch(f"{_MOD}.lineup_repo.set_stand_clip_url", set_stand_mock),
+        patch(f"{_MOD}.lineup_repo.set_aim_clip_url", set_aim_mock),
+    ):
+        await generate_micro_clips_for_lineup(
+            db, lineup,
+            chapter_start=10.0, chapter_end=40.0,
+            video_path=Path("/tmp/x.mp4"),
+            precomputed_stand_ts=12.0,  # → offset 12 - (10 - 2) = 4.0
+            precomputed_aim_ts=30.0,    # → offset 30 - 8 = 22.0
+        )
+
+    stand_call = set_stand_mock.await_args
+    aim_call = set_aim_mock.await_args
+    assert _offset_kwarg(stand_call) == pytest.approx(4.0), (
+        "STAND offset must equal clip_start - wider_source_start "
+        "(12.0 - (10.0 - 2.0) = 4.0). "
+        f"Got setter call: args={stand_call.args} kwargs={stand_call.kwargs}"
+    )
+    assert _offset_kwarg(aim_call) == pytest.approx(22.0), (
+        "AIM offset must equal clip_start - wider_source_start "
+        "(30.0 - 8.0 = 22.0). "
+        f"Got setter call: args={aim_call.args} kwargs={aim_call.kwargs}"
+    )
+
+
+@pytest.mark.asyncio
+async def test_offset_not_persisted_when_no_wider_source():
+    """clip_url_original is None → no shared wider source.
+
+    The setter must be called with ``offset_s=None`` so the existing
+    ``stand_clip_offset_s`` / ``aim_clip_offset_s`` columns are left
+    untouched (NULL stays NULL for legacy rows).
+    """
+    db = AsyncMock()
+    lineup = _lineup(clip_url=None, clip_url_original=None)
+    storage = _storage_mock()
+    set_stand_mock = AsyncMock(return_value=lineup)
+    set_aim_mock = AsyncMock(return_value=lineup)
+
+    with (
+        patch(f"{_MOD}.cut_clip", _ffmpeg_cut_mock()),
+        patch(f"{_MOD}.get_storage", return_value=storage),
+        patch(f"{_MOD}.lineup_repo.set_stand_clip_url", set_stand_mock),
+        patch(f"{_MOD}.lineup_repo.set_aim_clip_url", set_aim_mock),
+    ):
+        await generate_micro_clips_for_lineup(
+            db, lineup,
+            chapter_start=10.0, chapter_end=40.0,
+            video_path=Path("/tmp/x.mp4"),
+            precomputed_stand_ts=12.0,
+            precomputed_aim_ts=24.0,
+        )
+
+    assert _offset_kwarg(set_stand_mock.await_args) is None
+    assert _offset_kwarg(set_aim_mock.await_args) is None
+
+
+@pytest.mark.asyncio
+async def test_offset_not_persisted_when_original_matches_clip():
+    """clip_url_original == clip_url → wide-source cut failed at ingest.
+
+    clip_generator falls back to ``*_url_original = *_url`` when the wider
+    cut fails — same posture as a row without a wider source. Treat it as
+    NO wider source and leave the offsets NULL.
+    """
+    db = AsyncMock()
+    lineup = _lineup(
+        clip_url="pending/vid123/10-clip.mp4",
+        clip_url_original="pending/vid123/10-clip.mp4",  # same as clip_url
+    )
+    storage = _storage_mock()
+    set_stand_mock = AsyncMock(return_value=lineup)
+    set_aim_mock = AsyncMock(return_value=lineup)
+
+    with (
+        patch(f"{_MOD}.cut_clip", _ffmpeg_cut_mock()),
+        patch(f"{_MOD}.get_storage", return_value=storage),
+        patch(f"{_MOD}.lineup_repo.set_stand_clip_url", set_stand_mock),
+        patch(f"{_MOD}.lineup_repo.set_aim_clip_url", set_aim_mock),
+    ):
+        await generate_micro_clips_for_lineup(
+            db, lineup,
+            chapter_start=10.0, chapter_end=40.0,
+            video_path=Path("/tmp/x.mp4"),
+            precomputed_stand_ts=12.0,
+            precomputed_aim_ts=24.0,
+        )
+
+    assert _offset_kwarg(set_stand_mock.await_args) is None
+    assert _offset_kwarg(set_aim_mock.await_args) is None
 
 
 @pytest.mark.asyncio

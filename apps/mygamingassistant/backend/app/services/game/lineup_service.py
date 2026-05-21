@@ -198,6 +198,12 @@ def _build_read(lineup: Lineup) -> LineupRead:
             "landing_clip_url_original": None,
             "landing_clip_trim_start_s": None,
             "landing_clip_trim_end_s": None,
+            # Stand/aim shift offsets share the same operator-only rationale
+            # as the throw/landing trim offsets — they index into
+            # clip_url_original (stripped above), so they're meaningless on
+            # the public shape.
+            "stand_clip_offset_s": None,
+            "aim_clip_offset_s": None,
         }
     )
 
@@ -225,6 +231,11 @@ def _build_admin_read(lineup: Lineup) -> LineupRead:
             ),
             "landing_clip_trim_start_s": lineup.landing_clip_trim_start_s,
             "landing_clip_trim_end_s": lineup.landing_clip_trim_end_s,
+            # Single-offset shift-window state for STAND/AIM. clip_url_original
+            # above doubles as the wider source these offsets index into — the
+            # frontend resolves them against the same URL.
+            "stand_clip_offset_s": lineup.stand_clip_offset_s,
+            "aim_clip_offset_s": lineup.aim_clip_offset_s,
         }
     )
 

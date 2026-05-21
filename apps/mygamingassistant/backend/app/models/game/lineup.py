@@ -143,6 +143,18 @@ class Lineup(Base):
     # app/services/ingestion/micro_clip_generator.py.
     stand_clip_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     aim_clip_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    # Single-offset companions to stand_clip_url / aim_clip_url for the
+    # STAND/AIM shift-window editor. The micro-clip window is FIXED at 1.0s
+    # (see micro_clip_generator._MICRO_CLIP_SECONDS) so one offset per pane is
+    # sufficient — no start/end pair like throw/landing trim. The offset is in
+    # seconds from the start of the SHARED wider source clip_url_original;
+    # stand and aim reuse the chapter's existing wider source bytes rather than
+    # cutting per-pane wider sources (saves ~4 GB MinIO at the cost of slider
+    # range being chapter-bounded — see migration 0016 + STATE.md 2026-05-21).
+    # NULL = legacy row predating PR1; the shift overlay opens the slider at
+    # offset=0 and the first save persists the operator's chosen offset.
+    stand_clip_offset_s: Mapped[float | None] = mapped_column(Float, nullable=True)
+    aim_clip_offset_s: Mapped[float | None] = mapped_column(Float, nullable=True)
 
     # Normalized 0-1 crosshair position on the aim screenshot
     aim_anchor_x: Mapped[float | None] = mapped_column(Float, nullable=True)

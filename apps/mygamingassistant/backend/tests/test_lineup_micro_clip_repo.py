@@ -209,3 +209,98 @@ async def test_list_accepted_lineups_needing_micro_clips_filters(
         assert r.youtube_video_id
         # Each row must have AT LEAST ONE side still NULL.
         assert r.stand_clip_url is None or r.aim_clip_url is None
+
+
+@pytest.mark.asyncio
+async def test_set_stand_clip_url_without_offset_leaves_offset_unchanged(
+    db: AsyncSession,
+):
+    """Default shape — ``offset_s=None`` — must not touch
+    ``stand_clip_offset_s``. Backfill / ingest paths without a shared wider
+    source rely on this NULL-stays-NULL behaviour to signal "no shift state
+    available" to the PR2 shift overlay."""
+    created = await lineup_repo.create_lineup(
+        db, {"title": "no offset", "status": "pending_review"}
+    )
+
+    await lineup_repo.set_stand_clip_url(
+        db, created, "pending/v/1-stand-micro.mp4"
+    )
+
+    lineup_id = created.id
+    db.expire_all()
+    refetched = (
+        await db.execute(select(Lineup).where(Lineup.id == lineup_id))
+    ).scalar_one()
+    assert refetched.stand_clip_url == "pending/v/1-stand-micro.mp4"
+    assert refetched.stand_clip_offset_s is None
+
+
+@pytest.mark.asyncio
+async def test_set_stand_clip_url_with_offset_persists_both_columns(
+    db: AsyncSession,
+):
+    """``offset_s=`` set → both ``stand_clip_url`` and ``stand_clip_offset_s``
+    commit in the same write."""
+    created = await lineup_repo.create_lineup(
+        db, {"title": "with offset", "status": "pending_review"}
+    )
+
+    await lineup_repo.set_stand_clip_url(
+        db, created, "pending/v/1-stand-micro.mp4", offset_s=2.5,
+    )
+
+    lineup_id = created.id
+    db.expire_all()
+    refetched = (
+        await db.execute(select(Lineup).where(Lineup.id == lineup_id))
+    ).scalar_one()
+    assert refetched.stand_clip_url == "pending/v/1-stand-micro.mp4"
+    assert refetched.stand_clip_offset_s == pytest.approx(2.5)
+
+
+@pytest.mark.asyncio
+async def test_set_aim_clip_url_with_offset_persists_both_columns(
+    db: AsyncSession,
+):
+    """Sibling test for the AIM setter — same two-column commit contract."""
+    created = await lineup_repo.create_lineup(
+        db, {"title": "aim with offset", "status": "pending_review"}
+    )
+
+    await lineup_repo.set_aim_clip_url(
+        db, created, "pending/v/1-aim-micro.mp4", offset_s=4.25,
+    )
+
+    lineup_id = created.id
+    db.expire_all()
+    refetched = (
+        await db.execute(select(Lineup).where(Lineup.id == lineup_id))
+    ).scalar_one()
+    assert refetched.aim_clip_url == "pending/v/1-aim-micro.mp4"
+    assert refetched.aim_clip_offset_s == pytest.approx(4.25)
+
+
+@pytest.mark.asyncio
+async def test_set_stand_clip_url_with_offset_zero_is_distinct_from_null(
+    db: AsyncSession,
+):
+    """Offset 0.0 is a real operator choice (the served 1s clip happens to
+    start at the wider source's start); it must persist as 0.0, not be
+    coalesced to NULL. The shift overlay relies on this distinction to know
+    whether to open the slider at the saved position vs the default 0."""
+    created = await lineup_repo.create_lineup(
+        db, {"title": "zero offset", "status": "pending_review"}
+    )
+
+    await lineup_repo.set_stand_clip_url(
+        db, created, "pending/v/1-stand-micro.mp4", offset_s=0.0,
+    )
+
+    lineup_id = created.id
+    db.expire_all()
+    refetched = (
+        await db.execute(select(Lineup).where(Lineup.id == lineup_id))
+    ).scalar_one()
+    assert refetched.stand_clip_offset_s == pytest.approx(0.0)
+    assert refetched.stand_clip_offset_s is not None
