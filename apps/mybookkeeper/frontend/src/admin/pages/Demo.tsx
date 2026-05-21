@@ -14,6 +14,7 @@ import DemoUserTable from "@/admin/features/demo/DemoUserTable";
 import CreateDemoDialog from "@/admin/features/demo/CreateDemoDialog";
 import CredentialsModal from "@/admin/features/demo/CredentialsModal";
 import DemoPageSkeleton from "@/admin/features/demo/DemoPageSkeleton";
+import { extractErrorMessage } from "@/shared/utils/errorMessage";
 
 interface Credentials {
   email: string;
@@ -57,8 +58,8 @@ export default function Demo() {
       } else {
         showSuccess("Demo user created! Credentials shown below");
       }
-    } catch {
-      showError("Failed to create demo user");
+    } catch (err) {
+      showError(`Failed to create demo user: ${extractErrorMessage(err)}`);
     }
   }
 
@@ -69,8 +70,8 @@ export default function Demo() {
       try {
         const result = await deleteUser(confirmAction.userId).unwrap();
         showSuccess(result.message);
-      } catch {
-        showError("Failed to delete demo user");
+      } catch (err) {
+        showError(`Failed to delete demo user: ${extractErrorMessage(err)}`);
       }
     } else {
       try {
@@ -78,8 +79,8 @@ export default function Demo() {
         setCredentials({ email: result.email, password: result.password });
         resetResetCache();
         showSuccess(result.message);
-      } catch {
-        showError("Failed to reset demo user");
+      } catch (err) {
+        showError(`Failed to reset demo user: ${extractErrorMessage(err)}`);
       }
     }
 
