@@ -105,8 +105,10 @@ async def list_applications(
         offset=offset,
     )
     return [
-        ApplicationListItem.model_validate(app).model_copy(update={"latest_status": status})
-        for app, status in rows
+        ApplicationListItem.model_validate(app).model_copy(
+            update={"latest_status": status, "company_name": company_name},
+        )
+        for app, status, company_name in rows
     ]
 
 

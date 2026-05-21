@@ -11,10 +11,16 @@ import type { Application } from "@/types/application";
 
 const COLUMNS: ColumnDef<Application>[] = [
   {
+    id: "company_name",
+    header: "Company",
+    accessorFn: (row) => row.company_name ?? "—",
+    cell: ({ getValue }) => <span className="font-medium">{getValue<string>()}</span>,
+  },
+  {
     id: "role_title",
     header: "Role",
     accessorKey: "role_title",
-    cell: ({ getValue }) => <span className="font-medium">{getValue<string>()}</span>,
+    cell: ({ getValue }) => <span>{getValue<string>()}</span>,
   },
   {
     id: "latest_status",

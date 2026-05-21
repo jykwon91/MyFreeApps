@@ -10,11 +10,14 @@ import Applications from "@/pages/Applications";
 vi.mock("@/lib/applicationsApi", () => ({
   useListApplicationsQuery: vi.fn(),
   useCreateApplicationMutation: vi.fn(),
+  useParseJobDescriptionMutation: vi.fn(),
+  useExtractJdFromUrlMutation: vi.fn(),
 }));
 
 vi.mock("@/lib/companiesApi", () => ({
   useListCompaniesQuery: vi.fn(),
   useCreateCompanyMutation: vi.fn(),
+  useTriggerCompanyResearchMutation: vi.fn(),
 }));
 
 // Suppress radix-dialog portal errors in jsdom.
@@ -46,16 +49,22 @@ vi.mock("@platform/ui", async (importOriginal) => {
 import {
   useListApplicationsQuery,
   useCreateApplicationMutation,
+  useParseJobDescriptionMutation,
+  useExtractJdFromUrlMutation,
 } from "@/lib/applicationsApi";
 import {
   useListCompaniesQuery,
   useCreateCompanyMutation,
+  useTriggerCompanyResearchMutation,
 } from "@/lib/companiesApi";
 
 const mockUseListApplicationsQuery = vi.mocked(useListApplicationsQuery);
 const mockUseCreateApplicationMutation = vi.mocked(useCreateApplicationMutation);
 const mockUseListCompaniesQuery = vi.mocked(useListCompaniesQuery);
 const mockUseCreateCompanyMutation = vi.mocked(useCreateCompanyMutation);
+const mockUseTriggerCompanyResearchMutation = vi.mocked(useTriggerCompanyResearchMutation);
+const mockUseParseJobDescriptionMutation = vi.mocked(useParseJobDescriptionMutation);
+const mockUseExtractJdFromUrlMutation = vi.mocked(useExtractJdFromUrlMutation);
 
 const stubMutation = [vi.fn(), { isLoading: false }] as unknown as ReturnType<
   typeof useCreateApplicationMutation
@@ -63,6 +72,18 @@ const stubMutation = [vi.fn(), { isLoading: false }] as unknown as ReturnType<
 
 const stubCompanyMutation = [vi.fn(), { isLoading: false }] as unknown as ReturnType<
   typeof useCreateCompanyMutation
+>;
+
+const stubResearchMutation = [vi.fn(), { isLoading: false }] as unknown as ReturnType<
+  typeof useTriggerCompanyResearchMutation
+>;
+
+const stubParseJdMutation = [vi.fn(), { isLoading: false }] as unknown as ReturnType<
+  typeof useParseJobDescriptionMutation
+>;
+
+const stubExtractJdMutation = [vi.fn(), { isLoading: false }] as unknown as ReturnType<
+  typeof useExtractJdFromUrlMutation
 >;
 
 function renderApplications() {
@@ -81,6 +102,7 @@ function makeApp(overrides: Partial<{
   id: string;
   role_title: string;
   latest_status: string | null;
+  company_name: string | null;
 }> = {}) {
   return {
     id: overrides.id ?? "app-1",
@@ -104,6 +126,7 @@ function makeApp(overrides: Partial<{
     external_ref: null,
     external_source: null,
     latest_status: overrides.latest_status ?? null,
+    company_name: overrides.company_name ?? "Acme Corp",
     deleted_at: null,
     created_at: "2026-01-01T00:00:00Z",
     updated_at: "2026-01-01T00:00:00Z",
@@ -115,6 +138,9 @@ describe("Applications page", () => {
     vi.clearAllMocks();
     mockUseCreateApplicationMutation.mockReturnValue(stubMutation);
     mockUseCreateCompanyMutation.mockReturnValue(stubCompanyMutation);
+    mockUseTriggerCompanyResearchMutation.mockReturnValue(stubResearchMutation);
+    mockUseParseJobDescriptionMutation.mockReturnValue(stubParseJdMutation);
+    mockUseExtractJdFromUrlMutation.mockReturnValue(stubExtractJdMutation);
     mockUseListCompaniesQuery.mockReturnValue({
       data: { items: [], total: 0 },
       isLoading: false,
@@ -292,6 +318,40 @@ describe("Applications page", () => {
       renderApplications();
 
       expect(screen.getByRole("columnheader", { name: /status/i })).toBeInTheDocument();
+    });
+
+    it("renders the Company column with the company_name value", () => {
+      mockUseListApplicationsQuery.mockReturnValue({
+        data: {
+          items: [makeApp({ latest_status: "applied", company_name: "Stripe" })],
+          total: 1,
+        },
+        isLoading: false,
+        isError: false,
+        error: undefined,
+      } as unknown as ReturnType<typeof useListApplicationsQuery>);
+
+      renderApplications();
+
+      expect(screen.getByRole("columnheader", { name: /company/i })).toBeInTheDocument();
+      expect(screen.getByRole("cell", { name: "Stripe" })).toBeInTheDocument();
+    });
+
+    it("renders an em-dash in the Company cell when company_name is null", () => {
+      mockUseListApplicationsQuery.mockReturnValue({
+        data: {
+          items: [makeApp({ latest_status: "applied", company_name: null })],
+          total: 1,
+        },
+        isLoading: false,
+        isError: false,
+        error: undefined,
+      } as unknown as ReturnType<typeof useListApplicationsQuery>);
+
+      renderApplications();
+
+      const dashes = screen.getAllByText("—");
+      expect(dashes.length).toBeGreaterThan(0);
     });
 
     it("renders unknown event type with neutral badge text (no crash)", () => {

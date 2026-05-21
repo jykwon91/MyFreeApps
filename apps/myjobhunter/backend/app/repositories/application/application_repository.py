@@ -10,11 +10,13 @@ Soft-delete convention: ``applications`` carries ``deleted_at``. Reads filter
 list / detail endpoints. ``soft_delete`` is idempotent — calling it on a row
 that is already soft-deleted is a no-op (returns the existing row unchanged).
 
-Status query: ``list_with_status`` returns ``(Application, str | None)``
-tuples where the second element is the latest ``event_type`` from
-``application_events`` via a correlated scalar sub-select on the covering
-index ``ix_appevent_app_occurred(application_id, occurred_at) INCLUDE
-(event_type)``.  The INCLUDE column lets PostgreSQL satisfy the sub-select
+Status query: ``list_with_status`` returns
+``(Application, str | None, str)`` tuples where the second element is the
+latest ``event_type`` from ``application_events`` via a correlated scalar
+sub-select on the covering index ``ix_appevent_app_occurred(application_id,
+occurred_at) INCLUDE (event_type)``, and the third element is the
+``companies.name`` of the application's owning company (INNER joined since
+``applications.company_id`` is non-null).  The INCLUDE column lets PostgreSQL satisfy the sub-select
 entirely from the index leaf pages (Index Only Scan) with no heap fetch.
 No denormalized column is written to the ``applications`` table — status
 is always computed at query time per CLAUDE.md architecture rules.
@@ -151,8 +153,8 @@ async def list_with_status(
     since: _dt.datetime | None = None,
     limit: int = 100,
     offset: int = 0,
-) -> list[tuple[Application, str | None]]:
-    """List a user's non-deleted applications with their latest event type.
+) -> list[tuple[Application, str | None, str]]:
+    """List a user's non-deleted applications with their latest event type and company name.
 
     Uses a correlated scalar sub-select (equivalent to a lateral join) so
     PostgreSQL can use the covering index ``ix_appevent_app_occurred`` on
@@ -160,11 +162,13 @@ async def list_with_status(
     Only Scan per row with no heap fetch and no sequential scan of
     ``application_events``.
 
-    Returns a list of ``(Application, latest_event_type_or_None)`` tuples.
-    The ``latest_status`` is ``None`` for applications that have zero events.
-    Tenant isolation is enforced on both sides of the correlated sub-query
-    (``user_id`` on ``application_events`` as well) so user A's events can
-    never bleed into user B's application rows.
+    Returns a list of ``(Application, latest_event_type_or_None, company_name)``
+    tuples. The ``latest_status`` is ``None`` for applications that have
+    zero events. Tenant isolation is enforced on both sides of the
+    correlated sub-query (``user_id`` on ``application_events`` as well)
+    so user A's events can never bleed into user B's application rows.
+    The ``companies`` join is INNER because ``applications.company_id``
+    is non-null at the schema level.
 
     Optional filters:
     - ``company_id``: narrow to a specific company (tenant-safe — returns
@@ -193,7 +197,12 @@ async def list_with_status(
     )
 
     stmt = (
-        select(Application, latest_event_sq.label("latest_status"))
+        select(
+            Application,
+            latest_event_sq.label("latest_status"),
+            Company.name.label("company_name"),
+        )
+        .join(Company, Application.company_id == Company.id)
         .where(
             Application.user_id == user_id,
             Application.deleted_at.is_(None),
@@ -209,12 +218,12 @@ async def list_with_status(
 
     stmt = stmt.offset(offset).limit(limit)
     result = await db.execute(stmt)
-    rows = [(row[0], row[1]) for row in result.all()]
+    rows = [(row[0], row[1], row[2]) for row in result.all()]
 
     # status_filter is applied post-query because it filters on the sub-select
     # label value, which is not a real column and cannot be used in WHERE.
     if status_filter is not None:
-        rows = [(app, status) for app, status in rows if status == status_filter]
+        rows = [(app, status, company_name) for app, status, company_name in rows if status == status_filter]
 
     return rows
 
