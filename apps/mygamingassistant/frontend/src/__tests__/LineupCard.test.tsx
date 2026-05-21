@@ -43,6 +43,7 @@ const BASE_LINEUP: Lineup = {
   stand_screenshot_url: "https://example.com/stand.png",
   aim_screenshot_url: "https://example.com/aim.png",
   clip_url: null,
+  landing_clip_url: null,
   technique: null,
   aim_anchor_x: 0.5,
   aim_anchor_y: 0.4,
@@ -237,6 +238,41 @@ describe("LineupCard", () => {
     expect(document.querySelector("video")).not.toBeNull();
     // The ThrowPlaceholder copy must not appear when a clip is mounted.
     expect(screen.queryByText("No clip yet")).not.toBeInTheDocument();
+  });
+
+  // PR5 — landing clip lights up the LANDING pane via the shared ClipView
+  // primitive when landing_clip_url is set; otherwise the pane falls back to
+  // the original "Lands in: <zone>" text rendering.
+
+  it("expanded variant LANDING pane renders ClipView when landing_clip_url is set", () => {
+    const lineup: Lineup = {
+      ...BASE_LINEUP,
+      landing_clip_url: "https://ex.com/landing.mp4",
+    };
+    render(<LineupCard lineup={lineup} variant="expanded" />);
+    // A second <video> element exists once both clips render. Just assert
+    // the landing-specific aria-label is present (independent of the throw
+    // pane's video, which would only mount with clip_url set).
+    const landingVideo = document.querySelector(
+      'video[aria-label*="looping landing clip"]',
+    );
+    expect(landingVideo).not.toBeNull();
+    // The "Lands in" text must NOT appear when the clip is mounted —
+    // showing both is the misleading "video unavailable" UX we explicitly
+    // avoid.
+    expect(screen.queryByText("Lands in")).not.toBeInTheDocument();
+  });
+
+  it("expanded variant LANDING pane keeps the text fallback when landing_clip_url is null", () => {
+    // Already covered by the existing "shows target_zone.name" test; this
+    // adds an explicit no-video assertion so a regression that mounts the
+    // ClipView with an empty src would still surface.
+    render(<LineupCard lineup={BASE_LINEUP} variant="expanded" />);
+    expect(screen.getByText("Lands in")).toBeInTheDocument();
+    const landingVideo = document.querySelector(
+      'video[aria-label*="looping landing clip"]',
+    );
+    expect(landingVideo).toBeNull();
   });
 
   it("expanded variant header surfaces technique when set", () => {

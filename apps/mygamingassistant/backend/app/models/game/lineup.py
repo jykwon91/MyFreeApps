@@ -110,6 +110,12 @@ class Lineup(Base):
     stand_screenshot_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     aim_screenshot_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     clip_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    # PR5 short looping clip showing where the utility lands (smoke deploying,
+    # molly burning, etc.). Bare MinIO key like clip_url; presigned at read
+    # time. Best-effort and orthogonal to lineup validity — a NULL value
+    # renders the existing "Lands in: <zone>" text fallback in the LANDING
+    # pane. See app/services/ingestion/landing_clip_generator.py.
+    landing_clip_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
     # Normalized 0-1 crosshair position on the aim screenshot
     aim_anchor_x: Mapped[float | None] = mapped_column(Float, nullable=True)

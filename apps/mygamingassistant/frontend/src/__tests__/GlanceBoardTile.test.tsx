@@ -33,6 +33,7 @@ function makeLineup(over: Partial<Lineup> = {}): Lineup {
     stand_screenshot_url: "https://ex.com/stand.png",
     aim_screenshot_url: "https://ex.com/aim.png",
     clip_url: null,
+    landing_clip_url: null,
     technique: null,
     aim_anchor_x: 0.5,
     aim_anchor_y: 0.4,
@@ -165,6 +166,34 @@ describe("GlanceBoardTile LANDING pane", () => {
     render(<GlanceBoardTile lineup={makeLineup({ target_zone: null as unknown as Lineup["target_zone"] })} />);
     expect(screen.getByText("LANDING")).toBeInTheDocument();
     expect(screen.getByText("—")).toBeInTheDocument();
+  });
+
+  // PR5 — landing clip lights up the LANDING pane via the shared ClipView
+  // primitive when landing_clip_url is set.
+
+  it("PR5: renders looping landing-clip video when landing_clip_url is set", () => {
+    render(
+      <GlanceBoardTile
+        lineup={makeLineup({
+          landing_clip_url: "https://ex.com/landing.mp4",
+        })}
+      />,
+    );
+    const landingVideo = document.querySelector(
+      'video[aria-label*="looping landing clip"]',
+    );
+    expect(landingVideo).not.toBeNull();
+    // The text fallback ("Lands in") must NOT render once the clip is
+    // mounted — showing both would be confusing UX.
+    expect(screen.queryByText("Lands in")).not.toBeInTheDocument();
+  });
+
+  it("PR5: keeps text fallback when landing_clip_url is null", () => {
+    render(<GlanceBoardTile lineup={makeLineup({ landing_clip_url: null })} />);
+    expect(screen.getByText("Lands in")).toBeInTheDocument();
+    expect(
+      document.querySelector('video[aria-label*="looping landing clip"]'),
+    ).toBeNull();
   });
 });
 
