@@ -5,6 +5,11 @@ import { LoadingButton, showSuccess, showError, extractErrorMessage } from "@pla
 import { X } from "lucide-react";
 import { useLogApplicationEventMutation } from "@/lib/applicationsApi";
 import type { ApplicationEventType } from "@/types/application-event";
+import type {
+  InterviewType,
+  InterviewDetails,
+} from "@/types/interview-details";
+import InterviewDetailsFields from "./InterviewDetailsFields";
 
 const EVENT_TYPE_OPTIONS: { value: ApplicationEventType; label: string }[] = [
   { value: "applied", label: "Applied" },
@@ -20,10 +25,22 @@ const EVENT_TYPE_OPTIONS: { value: ApplicationEventType; label: string }[] = [
   // the Gmail sync worker's lane.
 ];
 
-interface FormValues {
+const INTERVIEW_EVENT_TYPES = new Set<ApplicationEventType>([
+  "interview_scheduled",
+  "interview_completed",
+]);
+
+export interface LogEventFormValues {
   event_type: ApplicationEventType;
   occurred_at: string;
   note: string;
+  // Interview sub-form. Empty strings = "not set"; only sent to the API
+  // when event_type is an interview type AND interview_type is non-empty.
+  interview_type: InterviewType | "";
+  interview_scheduled_at: string;
+  interview_duration_minutes: string;
+  interview_location_or_link: string;
+  interview_interviewer_names: string;
 }
 
 function defaultOccurredAt(): string {
@@ -32,6 +49,45 @@ function defaultOccurredAt(): string {
   const tzOffsetMs = now.getTimezoneOffset() * 60_000;
   const local = new Date(now.getTime() - tzOffsetMs);
   return local.toISOString().slice(0, 16);
+}
+
+function emptyFormValues(): LogEventFormValues {
+  return {
+    event_type: "applied",
+    occurred_at: defaultOccurredAt(),
+    note: "",
+    interview_type: "",
+    interview_scheduled_at: "",
+    interview_duration_minutes: "",
+    interview_location_or_link: "",
+    interview_interviewer_names: "",
+  };
+}
+
+function buildInterviewDetails(values: LogEventFormValues): InterviewDetails | null {
+  if (!INTERVIEW_EVENT_TYPES.has(values.event_type)) return null;
+  if (!values.interview_type) return null;
+
+  const names = values.interview_interviewer_names
+    .split("\n")
+    .map((n) => n.trim())
+    .filter((n) => n.length > 0);
+
+  const details: InterviewDetails = { type: values.interview_type };
+  if (values.interview_scheduled_at) {
+    details.scheduled_at = new Date(values.interview_scheduled_at).toISOString();
+  }
+  if (values.interview_duration_minutes) {
+    const n = Number(values.interview_duration_minutes);
+    if (Number.isFinite(n) && n > 0) details.duration_minutes = n;
+  }
+  if (values.interview_location_or_link.trim()) {
+    details.location_or_link = values.interview_location_or_link.trim();
+  }
+  if (names.length > 0) {
+    details.interviewer_names = names;
+  }
+  return details;
 }
 
 export interface LogEventDialogProps {
@@ -48,19 +104,19 @@ export default function LogEventDialog({ applicationId, open, onOpenChange }: Lo
     handleSubmit,
     formState: { errors },
     reset,
-  } = useForm<FormValues>({
-    defaultValues: {
-      event_type: "applied",
-      occurred_at: defaultOccurredAt(),
-      note: "",
-    },
+    watch,
+  } = useForm<LogEventFormValues>({
+    defaultValues: emptyFormValues(),
   });
 
+  const eventType = watch("event_type");
+  const showInterviewFields = INTERVIEW_EVENT_TYPES.has(eventType);
+
   useEffect(() => {
-    if (!open) reset({ event_type: "applied", occurred_at: defaultOccurredAt(), note: "" });
+    if (!open) reset(emptyFormValues());
   }, [open, reset]);
 
-  const onSubmit: SubmitHandler<FormValues> = async (values) => {
+  const onSubmit: SubmitHandler<LogEventFormValues> = async (values) => {
     try {
       // datetime-local is naive; promote to UTC ISO so the backend stores
       // a tz-aware datetime.
@@ -72,6 +128,7 @@ export default function LogEventDialog({ applicationId, open, onOpenChange }: Lo
           occurred_at: occurredIso,
           source: "manual",
           note: values.note.trim() || null,
+          interview_details: buildInterviewDetails(values),
         },
       }).unwrap();
       showSuccess("Event logged");
@@ -100,10 +157,11 @@ export default function LogEventDialog({ applicationId, open, onOpenChange }: Lo
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
             <div>
-              <label className="block text-sm font-medium mb-1">
+              <label htmlFor="log-event-type" className="block text-sm font-medium mb-1">
                 Event <span className="text-destructive">*</span>
               </label>
               <select
+                id="log-event-type"
                 {...register("event_type", { required: true })}
                 className="w-full border rounded-md px-3 py-2 text-sm bg-background"
               >
@@ -114,10 +172,11 @@ export default function LogEventDialog({ applicationId, open, onOpenChange }: Lo
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">
+              <label htmlFor="log-event-when" className="block text-sm font-medium mb-1">
                 When <span className="text-destructive">*</span>
               </label>
               <input
+                id="log-event-when"
                 type="datetime-local"
                 {...register("occurred_at", { required: "Date is required" })}
                 className="w-full border rounded-md px-3 py-2 text-sm bg-background"
@@ -127,9 +186,14 @@ export default function LogEventDialog({ applicationId, open, onOpenChange }: Lo
               ) : null}
             </div>
 
+            {showInterviewFields ? (
+              <InterviewDetailsFields register={register} errors={errors} />
+            ) : null}
+
             <div>
-              <label className="block text-sm font-medium mb-1">Note</label>
+              <label htmlFor="log-event-note" className="block text-sm font-medium mb-1">Note</label>
               <textarea
+                id="log-event-note"
                 {...register("note")}
                 rows={3}
                 className="w-full border rounded-md px-3 py-2 text-sm bg-background"

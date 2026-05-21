@@ -3,6 +3,8 @@
  * Mirrors `ApplicationEventResponse` in
  * apps/myjobhunter/backend/app/schemas/application/application_event_response.py.
  */
+import type { InterviewDetails } from "./interview-details";
+
 export type ApplicationEventType =
   | "applied"
   | "email_received"
@@ -31,6 +33,7 @@ export interface ApplicationEvent {
   source: ApplicationEventSource;
   email_message_id: string | null;
   raw_payload: Record<string, unknown> | null;
+  interview_details: InterviewDetails | null;
   note: string | null;
   created_at: string;
 }
