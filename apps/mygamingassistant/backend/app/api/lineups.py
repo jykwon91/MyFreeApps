@@ -45,7 +45,7 @@ from app.models.game.map import Map
 from app.models.game.map_zone import MapZone
 from app.models.game.utility_type import UtilityType
 from app.models.user.user import User
-from app.repositories.game.lineup_repo import LineupFilters
+from app.repositories.game.lineup_repo import LineupFilters, get_lineup as get_lineup_orm
 from app.schemas.game.lineup_schemas import (
     BulkAcceptBody,
     BulkAcceptResult,
@@ -58,7 +58,13 @@ from app.schemas.game.lineup_schemas import (
     PendingLineupsResponse,
     UploadUrlResponse,
 )
-from app.services.game import lineup_service
+from app.schemas.game.pane_upload_schemas import (
+    Pane,
+    PaneConfirmRequest,
+    PaneUploadUrlRequest,
+    PaneUploadUrlResponse,
+)
+from app.services.game import lineup_service, pane_upload_service
 
 logger = logging.getLogger(__name__)
 
@@ -473,3 +479,59 @@ async def bulk_accept_lineups(
                 )
             )
     return BulkAcceptResult(accepted=accepted, skipped=skipped)
+
+
+# ---------------------------------------------------------------------------
+# Per-pane local-upload Replace flow (PR1)
+#
+# Two endpoints per (lineup, pane) — request-url then confirm — mirroring the
+# existing /api/lineups/upload-url + POST /api/lineups manual-upload split.
+# The operator renders the artifact locally (ffmpeg/DaVinci/etc) and uploads
+# the bytes directly to MinIO via the presigned PUT; the confirm endpoint
+# then writes the resulting key onto the matching lineup column.
+#
+# Auth is inherited from auth_router (operator only). See
+# pane_upload_service for the validation + key-naming logic.
+# ---------------------------------------------------------------------------
+
+
+@auth_router.post(
+    "/lineups/{lineup_id}/panes/{pane}/upload-url",
+    response_model=PaneUploadUrlResponse,
+)
+async def request_pane_upload_url(
+    lineup_id: uuid.UUID,
+    pane: Pane,
+    body: PaneUploadUrlRequest,
+) -> PaneUploadUrlResponse:
+    """Return a presigned PUT URL the browser uploads directly to MinIO.
+
+    No DB read or write — we deliberately don't pre-check the lineup exists
+    here. The check is at confirm time, where it matters. A signed URL
+    pointing at a non-existent lineup is harmless — the object just lands
+    under an unused ``edits/<lineup_id>/`` prefix and is never referenced.
+    """
+    return pane_upload_service.request_upload_url(lineup_id, pane, body)
+
+
+@auth_router.post(
+    "/lineups/{lineup_id}/panes/{pane}/confirm",
+    response_model=LineupRead,
+)
+async def confirm_pane_upload(
+    lineup_id: uuid.UUID,
+    pane: Pane,
+    body: PaneConfirmRequest,
+    db: AsyncSession = Depends(get_db),
+) -> LineupRead:
+    """Record a completed upload as the new canonical asset for the pane.
+
+    Fetches the lineup (404 if missing), then delegates to the pane-upload
+    service which validates the object actually exists at the declared key
+    and routes through the matching repo setter (one-column commit owned by
+    the repo per PR #687/#695).
+    """
+    lineup = await get_lineup_orm(db, lineup_id)
+    if lineup is None:
+        raise HTTPException(status_code=404, detail="Lineup not found")
+    return await pane_upload_service.confirm_upload(db, lineup, pane, body)

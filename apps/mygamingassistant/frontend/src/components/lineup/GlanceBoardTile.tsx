@@ -35,6 +35,7 @@
  * notes are NOT displayed inline; they live in a title= tooltip.
  */
 import { Clock } from "lucide-react";
+import type { ReactNode } from "react";
 import type { Lineup } from "@/types/game";
 import { utilDisplay } from "@/constants/utilityDisplay";
 import {
@@ -46,10 +47,48 @@ import {
 } from "./LineupPanes";
 import { DEFAULT_KNOBS } from "@/hooks/useDesignKnobs";
 import type { DesignKnobs } from "@/hooks/useDesignKnobs";
+import PaneReplaceOverlay from "./PaneReplaceOverlay";
+import type { PanePosition } from "@/hooks/usePaneUpload";
 
 interface GlanceBoardTileProps {
   lineup: Lineup;
   knobs?: DesignKnobs;
+  /** Operator-only per-pane Replace affordance. Auth gating lives at MapPage
+   *  level so this component stays a pure presentation tile (no Redux deps,
+   *  no Provider required in unit tests). Default false keeps guest viewers
+   *  + existing test fixtures unchanged. */
+  showReplaceOverlay?: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// PaneSlot — wraps each pane in a group/pane div so hover-scoped affordances
+// (PaneReplaceOverlay) resolve to THIS pane only, not the whole tile. The
+// pane primitives in LineupPanes.tsx own their own ``flex-1 min-w-0`` so the
+// wrapper just adds positioning context — no flex sizing is moved here.
+// ---------------------------------------------------------------------------
+
+function PaneSlot({
+  lineupId,
+  pane,
+  showOverlay,
+  children,
+}: {
+  lineupId: string;
+  pane: PanePosition;
+  showOverlay: boolean;
+  children: ReactNode;
+}) {
+  // ``flex`` so the inner pane primitive's own ``flex-1 min-w-0`` resolves to
+  // the full wrapper width. ``relative`` is the positioning context for the
+  // absolutely-positioned overlay. ``group/pane`` scopes hover/focus reveal
+  // to THIS pane only — the sibling pane keeps its overlay hidden until
+  // hovered independently.
+  return (
+    <div className="relative group/pane flex flex-1 min-w-0">
+      {children}
+      {showOverlay && <PaneReplaceOverlay lineupId={lineupId} pane={pane} />}
+    </div>
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -75,7 +114,11 @@ function SideChip({ side }: { side: string | null }) {
 // ---------------------------------------------------------------------------
 // GlanceBoardTile
 // ---------------------------------------------------------------------------
-export default function GlanceBoardTile({ lineup, knobs = DEFAULT_KNOBS }: GlanceBoardTileProps) {
+export default function GlanceBoardTile({
+  lineup,
+  knobs = DEFAULT_KNOBS,
+  showReplaceOverlay = false,
+}: GlanceBoardTileProps) {
   const ud = utilDisplay(lineup.utility_type?.slug);
 
   // Knob-forced overrides: a "still" mode discards any clip URL even when
@@ -122,36 +165,44 @@ export default function GlanceBoardTile({ lineup, knobs = DEFAULT_KNOBS }: Glanc
       <div className="flex flex-col divide-y divide-border">
         {/* Top row: STAND | AIM */}
         <div className="flex divide-x divide-border">
-          <StandPane
-            standScreenshotUrl={lineup.stand_screenshot_url}
-            standClipUrl={standClipForRender}
-            title={lineup.title}
-          />
-          <AimPane
-            aimScreenshotUrl={lineup.aim_screenshot_url}
-            aimClipUrl={aimClipForRender}
-            aimAnchorX={aimDotX}
-            aimAnchorY={aimDotY}
-            title={lineup.title}
-          />
+          <PaneSlot lineupId={lineup.id} pane="stand" showOverlay={showReplaceOverlay}>
+            <StandPane
+              standScreenshotUrl={lineup.stand_screenshot_url}
+              standClipUrl={standClipForRender}
+              title={lineup.title}
+            />
+          </PaneSlot>
+          <PaneSlot lineupId={lineup.id} pane="aim" showOverlay={showReplaceOverlay}>
+            <AimPane
+              aimScreenshotUrl={lineup.aim_screenshot_url}
+              aimClipUrl={aimClipForRender}
+              aimAnchorX={aimDotX}
+              aimAnchorY={aimDotY}
+              title={lineup.title}
+            />
+          </PaneSlot>
         </div>
         {/* Bottom row: THROW | LANDING */}
         <div className="flex divide-x divide-border">
-          {lineup.clip_url ? (
-            <ClipView
-              clipUrl={lineup.clip_url}
-              posterUrl={lineup.stand_screenshot_url}
+          <PaneSlot lineupId={lineup.id} pane="throw" showOverlay={showReplaceOverlay}>
+            {lineup.clip_url ? (
+              <ClipView
+                clipUrl={lineup.clip_url}
+                posterUrl={lineup.stand_screenshot_url}
+                title={lineup.title}
+              />
+            ) : (
+              <ThrowPlaceholder />
+            )}
+          </PaneSlot>
+          <PaneSlot lineupId={lineup.id} pane="landing" showOverlay={showReplaceOverlay}>
+            <LandingPane
+              targetZoneName={lineup.target_zone?.name ?? null}
+              landingClipUrl={landingClipForRender}
+              posterUrl={lineup.aim_screenshot_url}
               title={lineup.title}
             />
-          ) : (
-            <ThrowPlaceholder />
-          )}
-          <LandingPane
-            targetZoneName={lineup.target_zone?.name ?? null}
-            landingClipUrl={landingClipForRender}
-            posterUrl={lineup.aim_screenshot_url}
-            title={lineup.title}
-          />
+          </PaneSlot>
         </div>
       </div>
 

@@ -505,6 +505,58 @@ async def set_aim_clip_url(
     return lineup
 
 
+async def set_stand_screenshot_url(
+    db: AsyncSession,
+    lineup: Lineup,
+    stand_screenshot_key: str,
+) -> Lineup:
+    """Persist a new stand-still bare MinIO key onto a lineup row.
+
+    Operator-facing setter for the per-pane Replace flow (PR1). One-column
+    commit on purpose — identical contract to :func:`set_stand_clip_url` and
+    siblings: a screenshot replace is best-effort and orthogonal to the
+    classifier suggestions / sibling clip column, and must NEVER roll back
+    them.
+
+    Transaction ownership lives here in the repo per PR #687/#695 — the
+    pane-upload service never calls db.commit(). ``stand_screenshot_url``
+    stores a BARE object key (same convention as every other URL column);
+    presigning happens at read time in ``lineup_service._build_read``.
+    """
+    lineup.stand_screenshot_url = stand_screenshot_key
+    try:
+        await db.flush()
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
+    return lineup
+
+
+async def set_aim_screenshot_url(
+    db: AsyncSession,
+    lineup: Lineup,
+    aim_screenshot_key: str,
+) -> Lineup:
+    """Persist a new aim-still bare MinIO key onto a lineup row.
+
+    Sibling to :func:`set_stand_screenshot_url` — identical contract,
+    independent column. Replacing the aim still does NOT affect the persisted
+    ``aim_anchor_x/y`` overlay coords (those are normalized 0..1) — the dot
+    will continue to render at the same proportional position over whatever
+    image now occupies the slot. The operator can re-classify or hand-edit
+    the anchor coords separately via the existing PATCH route.
+    """
+    lineup.aim_screenshot_url = aim_screenshot_key
+    try:
+        await db.flush()
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
+    return lineup
+
+
 async def list_accepted_lineups_needing_technique(
     db: AsyncSession,
 ) -> list[Lineup]:

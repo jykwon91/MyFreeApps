@@ -493,6 +493,7 @@ export default function MapPage() {
                 filteredUtils={effectiveUtils}
                 side={side}
                 knobs={knobs}
+                showReplaceOverlay={isSuperuser}
               />
             )}
 

@@ -29,6 +29,10 @@ interface GlanceBoardProps {
   side: string;
   /** Direct-manipulation tile knobs (optional — falls back to DEFAULT_KNOBS). */
   knobs?: DesignKnobs;
+  /** Operator-only per-pane Replace affordance. Threaded through to each tile;
+   *  auth gating lives at the page (MapPage) level so this component stays
+   *  pure-presentation and its existing tests don't need a Redux Provider. */
+  showReplaceOverlay?: boolean;
 }
 
 const GRID_COLS_CLASS: Record<1 | 2 | 3, string> = {
@@ -145,6 +149,7 @@ export default function GlanceBoard({
   filteredUtils,
   side,
   knobs = DEFAULT_KNOBS,
+  showReplaceOverlay = false,
 }: GlanceBoardProps) {
   const colsClass = GRID_COLS_CLASS[knobs.tilesPerRow];
   const groups = useMemo(() => groupByZone(lineups), [lineups]);
@@ -191,7 +196,12 @@ export default function GlanceBoard({
           {/* Tile grid — column count comes from the design knobs panel */}
           <div className={`grid ${colsClass} gap-4`}>
             {group.lineups.map((lineup) => (
-              <GlanceBoardTile key={lineup.id} lineup={lineup} knobs={knobs} />
+              <GlanceBoardTile
+                key={lineup.id}
+                lineup={lineup}
+                knobs={knobs}
+                showReplaceOverlay={showReplaceOverlay}
+              />
             ))}
           </div>
         </section>
