@@ -62,28 +62,29 @@ def _lineup(video_id="vid123", chapter_title="B smoke"):
 
 class TestComputeClipBounds:
     def test_normal_window_within_band(self):
-        # release 20, result 24, chapter [10,40]: [18, 24.5] = 6.5s in [2,12].
+        # release 20, result 24, chapter [10,40]: [18, 25.5] = 7.5s in [2,12].
+        # Operator-tuned: 1.5s tail after result (was 0.5s) to capture bloom.
         start, dur = _compute_clip_bounds(20.0, 24.0, 10.0, 40.0)
         assert start == pytest.approx(18.0)
-        assert dur == pytest.approx(6.5)
+        assert dur == pytest.approx(7.5)
 
     def test_clamped_to_chapter_start(self):
         # release 11 → 11-2=9 but chapter starts at 10 → clamp to 10.
         start, dur = _compute_clip_bounds(11.0, 13.0, 10.0, 40.0)
         assert start == pytest.approx(10.0)
 
-    def test_too_long_rebuilds_throw_centric_6s(self):
-        # release 20, result 60, chapter [10,90]: raw 42.5s > 12 → rebuild to
-        # ~6s anchored at release: [18, 24].
+    def test_too_long_rebuilds_throw_centric_7s(self):
+        # release 20, result 60, chapter [10,90]: raw 41.5s > 12 → rebuild to
+        # ~7s anchored at release: [18, 25].
         start, dur = _compute_clip_bounds(20.0, 60.0, 10.0, 90.0)
         assert start == pytest.approx(18.0)
-        assert dur == pytest.approx(6.0)
+        assert dur == pytest.approx(7.0)
 
-    def test_missing_result_collapses_to_25s_clip(self):
-        # result_ts == release_ts (no result frame): [release-2, release+0.5]
-        # = 2.5s, which is within the [2,12] band by frozen-contract design.
+    def test_missing_result_collapses_to_35s_clip(self):
+        # result_ts == release_ts (no result frame): [release-2, release+1.5]
+        # = 3.5s, which is within the [2,12] band by frozen-contract design.
         start, dur = _compute_clip_bounds(20.0, 20.0, 0.0, 60.0)
-        assert dur == pytest.approx(2.5)
+        assert dur == pytest.approx(3.5)
 
     def test_chapter_too_short_returns_none(self):
         # 0.5s chapter — even the rebuilt window is < 1s → skip signal.
@@ -224,7 +225,7 @@ class TestGenerateClipWideSourceWiring:
             patch(f"{_MOD}.settings", _settings()),
             # 6 frames spread across [9..24]; release_index=2 → release_ts=12,
             # result_index=4 → result_ts=18. _compute_clip_bounds gives
-            # [12-2, 18+0.5] = [10, 18.5] = 8.5s within band.
+            # [12-2, 18+1.5] = [10, 19.5] = 9.5s within band.
             patch(f"{_MOD}.clip_window_timestamps",
                   return_value=[9.0, 12.0, 15.0, 18.0, 21.0, 24.0]),
             patch(f"{_MOD}.extract_frames_downscaled",
@@ -254,10 +255,10 @@ class TestGenerateClipWideSourceWiring:
         mock_set.assert_awaited_once()
         set_kwargs = mock_set.await_args.kwargs
         assert set_kwargs["source_key"] == "pending/vid123/0-clip-source.mp4"
-        # tight bounds: clip_start=10, clip_duration=8.5; source_start=0
-        # → trim_start_s = 10 - 0 = 10; trim_end_s = 10 + 8.5 - 0 = 18.5
+        # tight bounds: clip_start=10, clip_duration=9.5; source_start=0
+        # → trim_start_s = 10 - 0 = 10; trim_end_s = 10 + 9.5 - 0 = 19.5
         assert set_kwargs["trim_start_s"] == pytest.approx(10.0)
-        assert set_kwargs["trim_end_s"] == pytest.approx(18.5)
+        assert set_kwargs["trim_end_s"] == pytest.approx(19.5)
 
     @pytest.mark.asyncio
     async def test_wide_failure_falls_back_to_legacy_posture(self, tmp_path: Path):
