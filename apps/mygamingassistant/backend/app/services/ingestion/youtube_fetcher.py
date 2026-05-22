@@ -25,9 +25,51 @@ from typing import Optional
 import yt_dlp
 import yt_dlp.utils
 
+from app.core.config import settings
 from app.models.game.source import Source
 
 logger = logging.getLogger(__name__)
+
+# yt-dlp browsers it knows how to read cookies from. Anything else is
+# rejected by the underlying library with a not-very-friendly KeyError, so
+# we gate at the boundary instead.
+_SUPPORTED_COOKIE_BROWSERS = frozenset(
+    {"chrome", "firefox", "edge", "safari", "chromium",
+     "opera", "brave", "vivaldi", "whale"}
+)
+
+
+def _apply_browser_cookies(opts: dict) -> dict:
+    """Inject ``cookiesfrombrowser`` into a yt-dlp options dict if configured.
+
+    YouTube periodically challenges yt-dlp with "Sign in to confirm you're
+    not a bot." The operator-supplied ``YOUTUBE_COOKIES_FROM_BROWSER`` env
+    var (resolved into ``settings.youtube_cookies_from_browser``) names a
+    browser whose existing session yt-dlp can borrow cookies from to clear
+    the challenge — same shape as the ``--cookies-from-browser`` CLI flag.
+
+    No-op (leaves *opts* unchanged) when the setting is empty, which is the
+    correct shape for CI and fresh deploys where no local browser exists.
+    An unknown browser name is treated as a misconfiguration and logged
+    once at WARNING; cookies are NOT injected (the request will still try,
+    and either succeed or fail with the underlying yt-dlp error).
+    """
+    browser = (settings.youtube_cookies_from_browser or "").strip().lower()
+    if not browser:
+        return opts
+    if browser not in _SUPPORTED_COOKIE_BROWSERS:
+        logger.warning(
+            "youtube_fetcher: YOUTUBE_COOKIES_FROM_BROWSER=%r is not a "
+            "yt-dlp-supported browser (supported: %s) — not injecting "
+            "cookies. Either correct the setting or unset it.",
+            browser, sorted(_SUPPORTED_COOKIE_BROWSERS),
+        )
+        return opts
+    # yt-dlp expects a tuple: (browser, profile?, keyring?, container?).
+    # Profile/keyring/container default to None; the single-element tuple
+    # is the form mapped from ``--cookies-from-browser <name>``.
+    opts["cookiesfrombrowser"] = (browser,)
+    return opts
 
 
 @dataclass
@@ -139,13 +181,13 @@ async def list_videos(source: Source) -> list[VideoMeta]:
     # the /videos tab so the flat extraction returns actual videos.
     url = _normalize_listing_url(raw_url)
 
-    ydl_opts = {
+    ydl_opts = _apply_browser_cookies({
         "quiet": True,
         "no_warnings": True,
         "extract_flat": True,
         "skip_download": True,
         "ignoreerrors": False,
-    }
+    })
 
     def _fetch() -> list[VideoMeta]:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -247,12 +289,12 @@ async def fetch_video_detail(video_id: str) -> VideoMeta:
     YouTubeFetchError.
     """
     url = f"https://www.youtube.com/watch?v={video_id}"
-    ydl_opts = {
+    ydl_opts = _apply_browser_cookies({
         "quiet": True,
         "no_warnings": True,
         "skip_download": True,
         "ignoreerrors": False,
-    }
+    })
 
     def _fetch() -> VideoMeta:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -327,14 +369,14 @@ async def download_video(video_id: str, download_dir: Path) -> Path:
     download_dir.mkdir(parents=True, exist_ok=True)
     output_template = str(download_dir / f"{video_id}.%(ext)s")
 
-    ydl_opts = {
+    ydl_opts = _apply_browser_cookies({
         "quiet": True,
         "no_warnings": True,
         "outtmpl": output_template,
         "format": "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
         "merge_output_format": "mp4",
         "ignoreerrors": False,
-    }
+    })
 
     def _download() -> Path:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
