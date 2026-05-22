@@ -96,12 +96,12 @@ class Settings(BaseAppSettings):
     # can drag the trim slider into this pre-chapter padding to grab frames
     # the original ingest cut left behind (typical use: 1-2s of approach /
     # setup that the chapter title misses).
-    clip_source_pre_seconds: float = 15.0
+    clip_source_pre_seconds: float = 7.5
     # Seconds of padding kept AFTER the chapter, symmetric to the pre-padding
     # above. Same purpose: lets the trim editor extend past the original
-    # ingest cut. 15s mirrors the pre-padding so the editor's slider feels
-    # symmetric around the chapter.
-    clip_source_post_seconds: float = 15.0
+    # ingest cut. 7.5s mirrors the pre-padding so the editor's slider feels
+    # symmetric around the chapter (15s total widen window — chapter ± 7.5s).
+    clip_source_post_seconds: float = 7.5
 
     # ------------------------------------------------------------------
     # Scheduler (PR 6+)

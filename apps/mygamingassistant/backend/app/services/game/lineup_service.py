@@ -195,9 +195,11 @@ def _build_read(lineup: Lineup) -> LineupRead:
             "clip_url_original": None,
             "clip_trim_start_s": None,
             "clip_trim_end_s": None,
+            "clip_source_start_in_video_s": None,
             "landing_clip_url_original": None,
             "landing_clip_trim_start_s": None,
             "landing_clip_trim_end_s": None,
+            "landing_clip_source_start_in_video_s": None,
             # Stand/aim shift offsets share the same operator-only rationale
             # as the throw/landing trim offsets — they index into
             # clip_url_original (stripped above), so they're meaningless on
@@ -206,6 +208,40 @@ def _build_read(lineup: Lineup) -> LineupRead:
             "aim_clip_offset_s": None,
         }
     )
+
+
+def _wider_source_start_in_video(
+    lineup: Lineup, original_key: Optional[str], tight_key: Optional[str],
+) -> Optional[float]:
+    """Where ``original_key`` starts in the source-video timeline.
+
+    Mirrors :func:`app.services.ingestion.frame_extractor.wide_source_bounds`
+    using the SAME ``settings.clip_source_pre_seconds`` so the value matches
+    the bounds the cut helper used. Returns ``None`` when:
+
+    * the chapter anchor is missing (manual upload — no in-video timeline),
+    * the wider source doesn't exist (``original_key`` is None), OR
+    * the original equals the tight clip (legacy ``tight == wide`` posture
+      that the widen-source backfill hasn't visited yet — there's no actual
+      wider window).
+
+    Surfaced via ``LineupRead.clip_source_start_in_video_s`` /
+    ``landing_clip_source_start_in_video_s`` so the trim editor's readout
+    can compute absolute in-video timestamps without re-deriving the math
+    in the frontend.
+
+    Note on config-change drift: if the operator bumps
+    ``CLIP_SOURCE_PRE_SECONDS`` after some rows have already been widened,
+    those rows' uploaded bytes still start at the OLD pre-padding offset but
+    this function reports the NEW one. The fix is to re-widen the affected
+    rows via the per-pane "Widen source" button — the operator-visible drift
+    is the signal to do so.
+    """
+    if lineup.chapter_start_seconds is None:
+        return None
+    if original_key is None or original_key == tight_key:
+        return None
+    return max(0.0, float(lineup.chapter_start_seconds) - settings.clip_source_pre_seconds)
 
 
 def _build_admin_read(lineup: Lineup) -> LineupRead:
@@ -226,11 +262,17 @@ def _build_admin_read(lineup: Lineup) -> LineupRead:
             "clip_url_original": _sign_screenshot_url(lineup.clip_url_original),
             "clip_trim_start_s": lineup.clip_trim_start_s,
             "clip_trim_end_s": lineup.clip_trim_end_s,
+            "clip_source_start_in_video_s": _wider_source_start_in_video(
+                lineup, lineup.clip_url_original, lineup.clip_url,
+            ),
             "landing_clip_url_original": _sign_screenshot_url(
                 lineup.landing_clip_url_original
             ),
             "landing_clip_trim_start_s": lineup.landing_clip_trim_start_s,
             "landing_clip_trim_end_s": lineup.landing_clip_trim_end_s,
+            "landing_clip_source_start_in_video_s": _wider_source_start_in_video(
+                lineup, lineup.landing_clip_url_original, lineup.landing_clip_url,
+            ),
             # Single-offset shift-window state for STAND/AIM. clip_url_original
             # above doubles as the wider source these offsets index into — the
             # frontend resolves them against the same URL.

@@ -79,12 +79,26 @@ class LineupRead(BaseModel):
     clip_url_original: Optional[str] = None
     clip_trim_start_s: Optional[float] = None
     clip_trim_end_s: Optional[float] = None
+    # Where ``clip_url_original`` starts in the SOURCE-VIDEO timeline (seconds).
+    # Set by :func:`_build_admin_read` only — public reads strip this for the
+    # same reason originals + offsets are stripped. Computed as
+    # ``max(0, chapter_start_seconds - settings.clip_source_pre_seconds)`` so
+    # the frontend trim editor can render correct in-video timestamps as the
+    # operator drags the slider (without this, the readout drifts by
+    # ``clip_source_pre_seconds`` because the slider's offset=0 is the start
+    # of the WIDER source, not the chapter start). NULL when the wider source
+    # doesn't exist (legacy tight==wide rows) or the chapter anchor is missing
+    # — the trim editor falls back to seconds-into-source in those cases.
+    clip_source_start_in_video_s: Optional[float] = None
     # PR5 landing-clip key; presigned to a 24h GET URL at read time in
     # lineup_service._build_read alongside the other MinIO keys.
     landing_clip_url: Optional[str] = None
     landing_clip_url_original: Optional[str] = None
     landing_clip_trim_start_s: Optional[float] = None
     landing_clip_trim_end_s: Optional[float] = None
+    # Same shape as ``clip_source_start_in_video_s`` above but for the landing
+    # pane's wider source.
+    landing_clip_source_start_in_video_s: Optional[float] = None
     # PR6 stand/aim micro-clip keys; presigned alongside clip_url +
     # landing_clip_url in _build_read. NULL until the generator (ingest path)
     # or backfill CLI populates them — UI gracefully degrades to the existing

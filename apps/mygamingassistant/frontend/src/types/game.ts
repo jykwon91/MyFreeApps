@@ -117,6 +117,15 @@ export interface Lineup {
   clip_url_original: string | null;
   clip_trim_start_s: number | null;
   clip_trim_end_s: number | null;
+  // Where ``clip_url_original`` starts in the source-video timeline (seconds).
+  // Backend-computed: ``max(0, chapter_start_seconds - CLIP_SOURCE_PRE_SECONDS)``
+  // when the wider source exists, otherwise null. Drives the trim editor's
+  // absolute in-video timestamp readout (slider offset=0 maps to this value
+  // in the source video, NOT to chapter_start_seconds). Null on manual uploads,
+  // legacy ``tight == wide`` rows that the widen-source backfill hasn't visited,
+  // or any row where the chapter anchor is missing — in those cases the
+  // readout falls back to seconds-into-source.
+  clip_source_start_in_video_s: number | null;
   // PR5: presigned URL of the short looping landing clip — shows the moment
   // the utility lands/explodes (smoke deploying, molly burning, flash
   // detonating). Null when ingest's landing pass was gated off (skipped via
@@ -127,6 +136,9 @@ export interface Lineup {
   landing_clip_url_original: string | null;
   landing_clip_trim_start_s: number | null;
   landing_clip_trim_end_s: number | null;
+  // Same shape as ``clip_source_start_in_video_s`` above but for the landing
+  // pane's wider source.
+  landing_clip_source_start_in_video_s: number | null;
   // PR6: presigned URL of the 1-second looping STAND micro-clip — animates
   // the stand pane (player arriving at the throw position). Null when ingest
   // skipped it (manual upload / chapter too short / classifier disabled) or

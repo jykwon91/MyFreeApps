@@ -88,11 +88,19 @@ export default function PaneTrimOverlay({
   const sourceDurationS = useClipDuration(sourceUrl);
   const storedOffsets = resolveStoredOffsets(adminLineup, pane);
   // YouTube anchor: the admin payload carries the source-video id + chapter
-  // marker so the Trim slider can render approximate-in-video timestamps and
-  // expose the "Widen source" affordance. Both are null on manual-upload
-  // lineups (no YouTube source → no widen possible, no chapter to anchor on).
+  // marker so the Trim slider can expose the "Widen source" affordance. Both
+  // are null on manual-upload lineups (no YouTube source → no widen possible,
+  // no chapter to anchor on).
   const youtubeVideoId = adminLineup?.youtube_video_id ?? null;
-  const chapterStartSeconds = adminLineup?.chapter_start_seconds ?? null;
+  // Where ``sourceUrl`` (the wider clip) starts in the source-video timeline.
+  // Comes straight from the admin payload — backend computes
+  // ``max(0, chapter_start - settings.clip_source_pre_seconds)`` so the value
+  // matches the bounds the cut helper used. The slider's offset=0 maps to
+  // this in-video timestamp, NOT to ``chapter_start_seconds`` (the
+  // pre-PR-fix bug). Null when the wider source doesn't exist (manual upload,
+  // missing chapter anchor, legacy ``tight == wide`` row) — the readout then
+  // falls back to seconds-into-source.
+  const sourceStartInVideoS = resolveSourceStartInVideoS(adminLineup, pane);
 
   // Per-pane on-demand widen — re-cut a wider source from the YouTube video
   // around the chapter marker. State stays local to the orchestrator (not the
@@ -215,7 +223,7 @@ export default function PaneTrimOverlay({
         onApply={apply}
         onClose={close}
         pane={pane}
-        chapterStartSeconds={chapterStartSeconds}
+        sourceStartInVideoS={sourceStartInVideoS}
         canWiden={!!youtubeVideoId}
         isWidening={isWidening}
         widenError={widenError}
@@ -276,6 +284,25 @@ function resolveStoredOffsets(
   return { startOffsetS: start, endOffsetS: end };
 }
 
+// Where the wider source clip starts in the source-video timeline (seconds).
+// Backend computes this as ``max(0, chapter_start - settings.clip_source_pre_seconds)``
+// so the readout can render absolute in-video timestamps without the drift the
+// pre-fix version had (which used chapter_start_seconds as the anchor — off by
+// the full pre-padding amount, hiding the wider source's leading padding from
+// the operator's view).
+function resolveSourceStartInVideoS(
+  admin: {
+    clip_source_start_in_video_s: number | null;
+    landing_clip_source_start_in_video_s: number | null;
+  } | null,
+  pane: TrimmablePane,
+): number | null {
+  if (!admin) return null;
+  return pane === "throw"
+    ? admin.clip_source_start_in_video_s
+    : admin.landing_clip_source_start_in_video_s;
+}
+
 function extractError(err: unknown): string | null {
   if (typeof err !== "object" || err === null) return null;
   const maybe = err as { data?: { detail?: unknown } };
@@ -296,30 +323,29 @@ function formatVideoTimestamp(totalSeconds: number): string {
   return `${minutes}:${seconds.toFixed(1).padStart(4, "0")}`;
 }
 
-// Build the slider footer readout. When the source clip has a YouTube
-// chapter anchor we surface approximate-in-video timestamps (cleaner
-// mental model than ``Xs into source``); otherwise we fall back to the
-// pre-PR3 seconds-into-clip shape. The approximation note: the formula
-// adds the slider offset to ``chapter_start_seconds`` rather than the
-// true source-clip-start-in-video (which would require backend to expose
-// per-row pre-padding). The drift is ``clip_source_pre_seconds`` (~15s)
-// and the preview <video> is the operator's authoritative visual anchor;
-// the readout exists to help them remember "roughly where in the source
-// video" they are.
+// Build the slider footer readout. When the wider source clip has a
+// known in-video start anchor we surface absolute-in-video timestamps
+// (cleaner mental model than ``Xs into source``); otherwise we fall back
+// to the seconds-into-source shape. The anchor (``sourceStartInVideoS``)
+// comes from the backend and accounts for the pre-padding the wider source
+// carries — slider offset 0 maps to ``sourceStartInVideoS`` in the source
+// video, not to ``chapter_start_seconds`` (the earlier shape drifted by
+// ``settings.clip_source_pre_seconds`` because it conflated chapter start
+// with source-clip start).
 function buildReadout(
   startOffsetS: number,
   endOffsetS: number,
   clipDurationS: number,
-  chapterStartSeconds: number | null,
+  sourceStartInVideoS: number | null,
 ): string {
-  if (chapterStartSeconds == null) {
+  if (sourceStartInVideoS == null) {
     return (
       `${startOffsetS.toFixed(1)}s — ${endOffsetS.toFixed(1)}s / ` +
       `${clipDurationS.toFixed(1)}s`
     );
   }
-  const startVideoTime = formatVideoTimestamp(chapterStartSeconds + startOffsetS);
-  const endVideoTime = formatVideoTimestamp(chapterStartSeconds + endOffsetS);
+  const startVideoTime = formatVideoTimestamp(sourceStartInVideoS + startOffsetS);
+  const endVideoTime = formatVideoTimestamp(sourceStartInVideoS + endOffsetS);
   return `${startVideoTime} — ${endVideoTime} / source ${clipDurationS.toFixed(1)}s`;
 }
 
@@ -338,10 +364,11 @@ interface TrimSliderPanelProps {
   onApply: () => void;
   onClose: () => void;
   pane: TrimmablePane;
-  // PR3 — in-video anchor for the absolute-timestamp readout. Null on
-  // manual-upload lineups (no YouTube source); falls back to the legacy
-  // seconds-into-source format.
-  chapterStartSeconds: number | null;
+  // In-video anchor for the absolute-timestamp readout — where the wider
+  // source clip starts in the source video timeline. Null on manual uploads
+  // (no YouTube source), missing chapter anchors, or legacy ``tight==wide``
+  // rows; the readout falls back to seconds-into-source in those cases.
+  sourceStartInVideoS: number | null;
   // PR3 — gates the "Widen source" link. False when the lineup has no
   // ``youtube_video_id``, which is the only signal the backend's 404
   // contract gives us upfront ("manual uploads cannot be widened").
@@ -361,7 +388,7 @@ function TrimSliderPanel({
   onApply,
   onClose,
   pane,
-  chapterStartSeconds,
+  sourceStartInVideoS,
   canWiden,
   isWidening,
   widenError,
@@ -387,7 +414,7 @@ function TrimSliderPanel({
     startOffsetS,
     endOffsetS,
     clipDurationS,
-    chapterStartSeconds,
+    sourceStartInVideoS,
   );
 
   // Widen-source affordance is hidden — not just disabled — when the
@@ -445,10 +472,10 @@ function TrimSliderPanel({
         onThumbChange={setActiveThumb}
       />
 
-      {/* Readout — selected range / clip total. When the lineup has a
-          YouTube chapter anchor we render approximate-in-video timestamps
-          (chapter_start_seconds + slider offset); otherwise we fall back
-          to the legacy seconds-into-source shape. See ``buildReadout``. */}
+      {/* Readout — selected range / clip total. When the wider source
+          carries a known in-video start anchor we render absolute-in-video
+          timestamps (``sourceStartInVideoS`` + slider offset); otherwise
+          we fall back to the seconds-into-source shape. See ``buildReadout``. */}
       <div className="text-center text-[10px] text-white/80 leading-tight tabular-nums">
         {readout}
       </div>
