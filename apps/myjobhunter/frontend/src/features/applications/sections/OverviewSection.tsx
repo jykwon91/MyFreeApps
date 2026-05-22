@@ -75,14 +75,14 @@ export default function OverviewSection({ application }: OverviewSectionProps) {
       </dl>
 
       {application.jd_text ? (
-        <details className="rounded-md border bg-card" open>
-          <summary className="cursor-pointer select-none px-4 py-2 text-xs uppercase tracking-wide text-muted-foreground hover:bg-muted/50">
+        <div className="rounded-md border bg-card">
+          <p className="px-4 py-2 text-xs uppercase tracking-wide text-muted-foreground border-b">
             Job description
-          </summary>
+          </p>
           <div className="px-4 pb-4 pt-2 text-sm whitespace-pre-wrap break-words">
             {application.jd_text}
           </div>
-        </details>
+        </div>
       ) : null}
     </section>
   );
