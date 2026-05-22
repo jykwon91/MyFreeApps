@@ -68,6 +68,8 @@ function makeAdminLineup(
     landing_clip_trim_end_s: number | null;
     youtube_video_id: string | null;
     chapter_start_seconds: number | null;
+    clip_source_start_in_video_s: number | null;
+    landing_clip_source_start_in_video_s: number | null;
   }> = {},
 ): Record<string, unknown> {
   return {
@@ -80,6 +82,10 @@ function makeAdminLineup(
     landing_clip_trim_end_s: null,
     youtube_video_id: "dQw4w9WgXcQ",
     chapter_start_seconds: 83, // 1:23 in M:SS
+    // Default fixture: chapter at 83s, pre-padding 7.5s → wider source starts
+    // at 75.5s in the source video (1:15.5).
+    clip_source_start_in_video_s: 75.5,
+    landing_clip_source_start_in_video_s: 75.5,
     ...overrides,
   };
 }
@@ -499,10 +505,13 @@ describe("PaneTrimOverlay", () => {
   // PR3 — absolute-in-video readout
   // -------------------------------------------------------------------------
 
-  it("renders the readout as absolute video timestamps when the lineup has a chapter anchor", () => {
-    mockedUseClipDuration.mockReturnValue(30); // wide source
+  it("renders the readout as absolute video timestamps anchored on clip_source_start_in_video_s (NOT chapter_start_seconds)", () => {
+    mockedUseClipDuration.mockReturnValue(30); // wide source spans [75.5, 105.5]
     adminQueryResult = {
-      data: makeAdminLineup({ chapter_start_seconds: 83 }),
+      data: makeAdminLineup({
+        chapter_start_seconds: 83,
+        clip_source_start_in_video_s: 75.5,
+      }),
       isFetching: false,
       isSuccess: true,
       originalArgs: "l1",
@@ -517,18 +526,23 @@ describe("PaneTrimOverlay", () => {
     fireEvent.click(
       screen.getByRole("button", { name: /trim throw clip duration/i }),
     );
-    // Untrimmed → offsets [0, 30]. Readout = 1:23.0 — 1:53.0 / source 30.0s.
+    // Untrimmed → offsets [0, 30] inside the wider source. Wider source starts
+    // at 75.5s, so the readout shows 1:15.5 — 1:45.5. Anchoring on
+    // chapter_start_seconds (83) would have produced 1:23.0 — 1:53.0 — the
+    // pre-fix drift bug that hid the leading 7.5s of padding from the operator.
     expect(
-      screen.getByText(/1:23\.0\s+—\s+1:53\.0\s*\/\s*source 30\.0s/),
+      screen.getByText(/1:15\.5\s+—\s+1:45\.5\s*\/\s*source 30\.0s/),
     ).toBeInTheDocument();
   });
 
-  it("falls back to seconds-into-source readout when the lineup has no chapter anchor (manual upload)", () => {
+  it("falls back to seconds-into-source readout when the wider source has no in-video anchor (manual upload)", () => {
     mockedUseClipDuration.mockReturnValue(5);
     adminQueryResult = {
       data: makeAdminLineup({
         chapter_start_seconds: null,
         youtube_video_id: null,
+        clip_source_start_in_video_s: null,
+        landing_clip_source_start_in_video_s: null,
       }),
       isFetching: false,
       isSuccess: true,
