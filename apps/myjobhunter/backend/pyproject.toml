@@ -14,7 +14,7 @@ dependencies = [
     "pydantic-settings==2.14.1",
     "email-validator==2.3.0",
     "fastapi-users[sqlalchemy]==15.0.5",
-    "pyjwt[crypto]==2.12.1",
+    "pyjwt[crypto]==2.13.0",
     "passlib[bcrypt]==1.7.4",
     "cryptography==48.0.0",
     "httpx==0.28.1",
