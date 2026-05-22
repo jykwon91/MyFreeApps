@@ -87,6 +87,13 @@ class Settings(BaseAppSettings):
     # Operator can raise this if they have more disk; lower values are risky
     # for long-form videos (CS2 full-map videos can exceed 1 GB each).
     ingestion_download_dir_max_gb: int = 10
+    # Optional: pass through to yt-dlp's --cookies-from-browser equivalent so
+    # YouTube's "Sign in to confirm you're not a bot" challenges can be bypassed
+    # using the operator's already-authenticated browser session. Accepts a
+    # browser name yt-dlp supports — chrome, firefox, edge, safari, chromium,
+    # opera, brave, vivaldi, whale. Empty (default) disables cookie injection,
+    # which is the right shape for CI / fresh deploys where no browser exists.
+    youtube_cookies_from_browser: str = ""
 
     # ------------------------------------------------------------------
     # Pane-editor wide-source window (for the trim editor)

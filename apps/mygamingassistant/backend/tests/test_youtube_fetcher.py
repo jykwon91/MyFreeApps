@@ -19,10 +19,12 @@ import pytest
 import yt_dlp.utils
 
 from app.models.game.source import Source
+from app.core.config import settings
 from app.services.ingestion.youtube_fetcher import (
     VideoDownloadError,
     VideoMeta,
     YouTubeFetchError,
+    _apply_browser_cookies,
     download_video,
     fetch_video_detail,
     list_videos,
@@ -346,3 +348,139 @@ class TestDownloadVideo:
         assert err.video_id == "vidPrivate"
         assert "DownloadError" in err.error_type
         assert isinstance(err.original, yt_dlp.utils.DownloadError)
+
+
+# ---------------------------------------------------------------------------
+# Browser-cookies helper + wire-up
+#
+# YOUTUBE_COOKIES_FROM_BROWSER lets the operator bypass YouTube's
+# "Sign in to confirm you're not a bot" challenge by reusing an
+# already-authenticated browser session. The helper is a no-op when unset
+# (the right shape for CI / fresh deploys). The wire-up tests below are
+# regression guards: if a future refactor drops the _apply_browser_cookies
+# call from any of the three yt-dlp option dicts, the feature silently
+# degrades — no symptom until YouTube next throws the bot challenge.
+# ---------------------------------------------------------------------------
+
+class TestApplyBrowserCookies:
+    def test_empty_setting_is_noop(self, monkeypatch: pytest.MonkeyPatch):
+        monkeypatch.setattr(settings, "youtube_cookies_from_browser", "")
+        opts = {"quiet": True}
+        out = _apply_browser_cookies(opts)
+        assert "cookiesfrombrowser" not in out
+        assert out is opts  # same dict, no defensive copy
+
+    def test_valid_browser_injects_tuple(self, monkeypatch: pytest.MonkeyPatch):
+        monkeypatch.setattr(settings, "youtube_cookies_from_browser", "chrome")
+        out = _apply_browser_cookies({"quiet": True})
+        assert out["cookiesfrombrowser"] == ("chrome",)
+
+    @pytest.mark.parametrize(
+        "raw,expected",
+        [
+            ("Chrome", "chrome"),
+            ("  firefox  ", "firefox"),
+            ("EDGE", "edge"),
+            ("Brave", "brave"),
+        ],
+    )
+    def test_case_and_whitespace_normalized(
+        self, monkeypatch: pytest.MonkeyPatch, raw: str, expected: str
+    ):
+        monkeypatch.setattr(settings, "youtube_cookies_from_browser", raw)
+        out = _apply_browser_cookies({})
+        assert out["cookiesfrombrowser"] == (expected,)
+
+    def test_unsupported_browser_is_noop_with_warning(
+        self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+    ):
+        import logging
+        monkeypatch.setattr(settings, "youtube_cookies_from_browser", "internet-explorer")
+        with caplog.at_level(logging.WARNING, logger="app.services.ingestion.youtube_fetcher"):
+            out = _apply_browser_cookies({"quiet": True})
+        assert "cookiesfrombrowser" not in out
+        assert any("internet-explorer" in r.message for r in caplog.records)
+
+    @pytest.mark.parametrize("browser", ["chrome", "firefox", "edge", "safari",
+                                          "chromium", "opera", "brave", "vivaldi", "whale"])
+    def test_all_supported_browsers_accepted(
+        self, monkeypatch: pytest.MonkeyPatch, browser: str
+    ):
+        monkeypatch.setattr(settings, "youtube_cookies_from_browser", browser)
+        out = _apply_browser_cookies({})
+        assert out["cookiesfrombrowser"] == (browser,)
+
+
+class TestCookiesWireUp:
+    """Each yt-dlp call site MUST pass its options dict through
+    _apply_browser_cookies. These tests fail if a future refactor drops
+    the wrapper from any one of them."""
+
+    @pytest.mark.asyncio
+    async def test_list_videos_passes_cookies(self, monkeypatch: pytest.MonkeyPatch):
+        monkeypatch.setattr(settings, "youtube_cookies_from_browser", "firefox")
+        mock_ydl = MagicMock()
+        mock_ydl.__enter__ = MagicMock(return_value=mock_ydl)
+        mock_ydl.__exit__ = MagicMock(return_value=False)
+        mock_ydl.extract_info = MagicMock(return_value={"id": "PLempty", "entries": []})
+
+        constructor = MagicMock(return_value=mock_ydl)
+        with patch("yt_dlp.YoutubeDL", constructor):
+            await list_videos(_make_source())
+
+        passed_opts = constructor.call_args.args[0]
+        assert passed_opts.get("cookiesfrombrowser") == ("firefox",)
+
+    @pytest.mark.asyncio
+    async def test_fetch_video_detail_passes_cookies(self, monkeypatch: pytest.MonkeyPatch):
+        monkeypatch.setattr(settings, "youtube_cookies_from_browser", "edge")
+        mock_ydl = MagicMock()
+        mock_ydl.__enter__ = MagicMock(return_value=mock_ydl)
+        mock_ydl.__exit__ = MagicMock(return_value=False)
+        mock_ydl.extract_info = MagicMock(return_value={
+            "id": "vid000", "title": "x", "duration": 1, "upload_date": "20260101",
+            "channel": "c", "description": "", "chapters": [],
+        })
+
+        constructor = MagicMock(return_value=mock_ydl)
+        with patch("yt_dlp.YoutubeDL", constructor):
+            await fetch_video_detail("vid000")
+
+        passed_opts = constructor.call_args.args[0]
+        assert passed_opts.get("cookiesfrombrowser") == ("edge",)
+
+    @pytest.mark.asyncio
+    async def test_download_video_passes_cookies(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ):
+        monkeypatch.setattr(settings, "youtube_cookies_from_browser", "brave")
+        (tmp_path / "vid001.mp4").write_bytes(b"x")
+        mock_ydl = MagicMock()
+        mock_ydl.__enter__ = MagicMock(return_value=mock_ydl)
+        mock_ydl.__exit__ = MagicMock(return_value=False)
+        mock_ydl.download = MagicMock(return_value=None)
+
+        constructor = MagicMock(return_value=mock_ydl)
+        with patch("yt_dlp.YoutubeDL", constructor):
+            await download_video("vid001", download_dir=tmp_path)
+
+        passed_opts = constructor.call_args.args[0]
+        assert passed_opts.get("cookiesfrombrowser") == ("brave",)
+
+    @pytest.mark.asyncio
+    async def test_no_cookies_key_when_setting_empty(
+        self, monkeypatch: pytest.MonkeyPatch
+    ):
+        """The default shape (empty setting) must NOT add cookiesfrombrowser
+        to the opts — yt-dlp on CI / fresh deploys has no browser to read."""
+        monkeypatch.setattr(settings, "youtube_cookies_from_browser", "")
+        mock_ydl = MagicMock()
+        mock_ydl.__enter__ = MagicMock(return_value=mock_ydl)
+        mock_ydl.__exit__ = MagicMock(return_value=False)
+        mock_ydl.extract_info = MagicMock(return_value={"id": "PLempty", "entries": []})
+
+        constructor = MagicMock(return_value=mock_ydl)
+        with patch("yt_dlp.YoutubeDL", constructor):
+            await list_videos(_make_source())
+
+        assert "cookiesfrombrowser" not in constructor.call_args.args[0]

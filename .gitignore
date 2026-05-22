@@ -67,3 +67,8 @@ test-results/
 .~lock.*
 ROADMAP.md
 MEMORY_AUDIT_*.md
+
+# Dev-server stdout/stderr capture (per-app .uvicorn-*.log / .vite-*.log).
+# Useful for ad-hoc inspection of a backgrounded server; never committed.
+**/.uvicorn-*.log
+**/.vite-*.log
