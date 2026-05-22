@@ -4,10 +4,11 @@
  *                + notes + zone context, used by LineupDetailPanel
  *   thumbnail  — stand image only (small), title underneath, used in lists
  *
- * The expanded variant shares its pane primitives (ScreenshotHalf, AimAnchorDot,
+ * The expanded variant shares its pane primitives (StandPane, AimPane,
  * ClipView, ThrowPlaceholder, LandingPane) with GlanceBoardTile via
  * LineupPanes.tsx — both surfaces converge on the same 4-pane shape so a
- * change in pane behavior lands on both at once.
+ * change in pane behavior lands on both at once. AimPane applies a 2× zoom
+ * centered on the persisted anchor coords (replacing the older red dot).
  *
  * Pin toggle:
  *   Pass isPinned + onPinToggle to show the pin button in either variant.

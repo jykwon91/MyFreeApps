@@ -147,9 +147,24 @@ describe("GlanceBoardTile storyboard (4 panes)", () => {
     expect(video.getAttribute("poster")).toBe("https://ex.com/stand.png");
   });
 
-  it("renders the aim anchor dot when coords are set on the AIM pane", () => {
-    render(<GlanceBoardTile lineup={makeLineup()} />);
-    expect(screen.getByLabelText(/aim anchor/i)).toBeInTheDocument();
+  it("AIM pane zooms 2× centered on the persisted anchor coords (still variant)", () => {
+    render(<GlanceBoardTile lineup={makeLineup({ aim_anchor_x: 0.5, aim_anchor_y: 0.4 })} />);
+    const aimImg = screen.getByAltText(/aim reference/i) as HTMLImageElement;
+    expect(aimImg.style.transform).toBe("scale(2)");
+    expect(aimImg.style.transformOrigin).toBe("50% 40%");
+    // The red dot is gone — the zoomed crop is the affordance now.
+    expect(screen.queryByLabelText(/aim anchor/i)).toBeNull();
+  });
+
+  it("AIM pane falls back to center origin when anchor coords are null", () => {
+    render(
+      <GlanceBoardTile
+        lineup={makeLineup({ aim_anchor_x: null, aim_anchor_y: null })}
+      />,
+    );
+    const aimImg = screen.getByAltText(/aim reference/i) as HTMLImageElement;
+    expect(aimImg.style.transform).toBe("scale(2)");
+    expect(aimImg.style.transformOrigin).toBe("50% 50%");
   });
 });
 
@@ -337,18 +352,27 @@ describe("GlanceBoardTile PR6 micro-clips (STAND + AIM)", () => {
     expect(aimVideo).not.toBeNull();
   });
 
-  it("AIM anchor dot still renders when aim_clip_url is set (overlay invariant)", () => {
-    // The whole point of anchoring the AIM clip on the same classifier-chosen
-    // timestamp as the still is that the persisted aim_anchor_x/y dot stays
-    // pixel-accurate over the clip. If the dot dropped when AimPane swapped
-    // to ClipView, the overlay would silently disappear — exactly the PR6
-    // contract this test protects.
+  it("AIM clip variant carries the same zoom transform as the still variant", () => {
+    // The AIM clip is anchored on the same classifier-chosen timestamp as the
+    // still — so the zoom origin from the persisted aim_anchor stays accurate
+    // when AimPane swaps from still to ClipView. This is the contract that
+    // protects the still→clip visual continuity.
     render(
       <GlanceBoardTile
-        lineup={makeLineup({ aim_clip_url: "https://ex.com/aim.mp4" })}
+        lineup={makeLineup({
+          aim_clip_url: "https://ex.com/aim.mp4",
+          aim_anchor_x: 0.5,
+          aim_anchor_y: 0.4,
+        })}
       />,
     );
-    expect(screen.getByLabelText(/aim anchor/i)).toBeInTheDocument();
+    const aimVideo = document.querySelector(
+      'video[aria-label*="looping aim clip"]',
+    ) as HTMLVideoElement;
+    expect(aimVideo).not.toBeNull();
+    expect(aimVideo.style.transform).toBe("scale(2)");
+    expect(aimVideo.style.transformOrigin).toBe("50% 40%");
+    expect(screen.queryByLabelText(/aim anchor/i)).toBeNull();
   });
 
   it("all four panes show motion when every clip URL is set", () => {

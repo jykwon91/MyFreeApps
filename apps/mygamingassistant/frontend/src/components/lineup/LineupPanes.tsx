@@ -2,13 +2,13 @@
  * LineupPanes — shared pane primitives for the 4-pane lineup storyboard.
  *
  * Both GlanceBoardTile (glance-board surface) and LineupCard (detail-panel
- * surface) render the same 2×2 grid: STAND (still), AIM (still + anchor),
- * THROW (clip loop or empty state), LANDING (text card until PR5).
+ * surface) render the same 2×2 grid: STAND, AIM (2× zoom centered on the
+ * persisted anchor coords), THROW (clip loop or empty state), LANDING.
  *
- * Extracted here so the two surfaces stay byte-equivalent — if the throw-
- * pane behavior or the landing pane content evolves in PR5/PR6 we change
- * it once and both surfaces follow. None of these primitives manage their
- * own grid; the caller arranges them inside a flex row container.
+ * Extracted here so the two surfaces stay byte-equivalent — if pane
+ * behaviour evolves we change it once and both surfaces follow. None of
+ * these primitives manage their own grid; the caller arranges them inside a
+ * flex row container.
  */
 import { useEffect, useRef, useState } from "react";
 
@@ -16,8 +16,10 @@ import { useEffect, useRef, useState } from "react";
 // Aim anchor dot — 12px red filled circle, white outline, drop shadow.
 //
 // Positioned via CSS-absolute at (x*width, y*height) within an aspect-video
-// pane. Receives normalized coords (0..1). Use as a child of ScreenshotHalf
-// inside the AIM pane only.
+// pane. Receives normalized coords (0..1). The 4-pane storyboard's AIM pane
+// no longer renders this — AimPane now zooms into the anchor instead (the
+// zoomed crop is the affordance). Kept as an exported primitive for any
+// future caller that wants a literal dot overlay.
 // ---------------------------------------------------------------------------
 export function AimAnchorDot({ x, y }: { x: number; y: number }) {
   return (
@@ -44,17 +46,18 @@ export function AimAnchorDot({ x, y }: { x: number; y: number }) {
 //
 // Used for STAND and AIM panes (the two stand-in jobs). Renders the image
 // when url is non-null, otherwise a "No screenshot" empty state. Corner
-// label overlays in top-left. Children render on top (used by AIM to host
-// the anchor dot).
+// label overlays in top-left. ``imgStyle`` lets the caller apply CSS to the
+// <img> (used by AimPane to zoom into the persisted anchor — overflow-hidden
+// on the wrapper crops the zoomed content to pane bounds).
 // ---------------------------------------------------------------------------
 interface ScreenshotHalfProps {
   url: string | null;
   alt: string;
   label: string;
-  children?: React.ReactNode;
+  imgStyle?: React.CSSProperties;
 }
 
-export function ScreenshotHalf({ url, alt, label, children }: ScreenshotHalfProps) {
+export function ScreenshotHalf({ url, alt, label, imgStyle }: ScreenshotHalfProps) {
   return (
     <div className="flex-1 min-w-0 relative bg-muted/20 aspect-video overflow-hidden">
       {url ? (
@@ -62,6 +65,7 @@ export function ScreenshotHalf({ url, alt, label, children }: ScreenshotHalfProp
           src={url}
           alt={alt}
           className="absolute inset-0 w-full h-full object-cover"
+          style={imgStyle}
           draggable={false}
         />
       ) : (
@@ -70,7 +74,6 @@ export function ScreenshotHalf({ url, alt, label, children }: ScreenshotHalfProp
         </div>
       )}
       <CornerLabel>{label}</CornerLabel>
-      {children}
     </div>
   );
 }
@@ -109,15 +112,14 @@ interface ClipViewProps {
   // that forgets to pass it gets the historical behaviour, not a blank
   // label.
   label?: string;
-  // PR6 — overlay slot. AimPane mounts ``AimAnchorDot`` here so the dot sits
-  // ON the clip pane (same aspect-video container, so the dot's normalized
-  // coords still resolve to the same pixel position as the still-pane
-  // counterpart). Optional; ClipView callers that don't need an overlay
-  // (THROW, LANDING) pass nothing.
-  children?: React.ReactNode;
+  // Optional CSS on the <video> element. AimPane uses this to apply a
+  // ``transform: scale(2)`` with ``transformOrigin`` set from the persisted
+  // aim-anchor coords — the zoomed crop is the affordance that replaced the
+  // old red dot. Wrapper has ``overflow-hidden`` so the zoom is bounded.
+  videoStyle?: React.CSSProperties;
 }
 
-export function ClipView({ clipUrl, posterUrl, title, label = "THROW", children }: ClipViewProps) {
+export function ClipView({ clipUrl, posterUrl, title, label = "THROW", videoStyle }: ClipViewProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   // ``armed`` controls whether the <video> has a src attached. The tile arms
   // on viewport entry and DISARMS on viewport exit (post-perf-fix; was
@@ -209,14 +211,12 @@ export function ClipView({ clipUrl, posterUrl, title, label = "THROW", children 
         aria-label={`${title} — looping ${label.toLowerCase()} clip (muted)`}
         onError={() => setLoadFailed(true)}
         className="absolute inset-0 w-full h-full object-cover"
+        style={videoStyle}
       />
       {/* Hide the corner affordance when the clip fails to load (e.g. an
           expired presigned URL mid-session) — the poster stays as the
           graceful fallback rather than a misleading badge. */}
       {!loadFailed && <CornerLabel>{label}</CornerLabel>}
-      {/* PR6 — overlay slot for absolutely-positioned children (AimPane's
-          anchor dot). Renders last so it sits on top of the video. */}
-      {children}
     </div>
   );
 }
@@ -263,24 +263,38 @@ export function StandPane({ standScreenshotUrl, standClipUrl, title }: StandPane
 }
 
 // ---------------------------------------------------------------------------
-// AimPane (PR6) — top-right pane. Shows the player's crosshair-aim view.
+// AimPane — top-right pane. Shows the player's crosshair-aim view.
 //
-// Same upgrade-with-still-fallback shape as ``StandPane`` plus the persisted
-// aim anchor overlay dot, which renders ON TOP of whichever surface is active
-// (still or clip). Both surfaces are the same ``aspect-video`` container, so
-// the dot's normalized coords resolve to the same pixel position regardless
-// of which one is showing. The clip's first frame IS the still — anchoring on
-// the same classifier-chosen timestamp keeps this invariant.
+// Same upgrade-with-still-fallback shape as ``StandPane``. Where StandPane
+// renders the source frame as-is, AimPane applies a 2× zoom centered on the
+// persisted aim-anchor coords (fallback 50% 50%) — the operator sees a
+// magnified crop around where the crosshair was, which replaces the old red
+// anchor dot. Both surfaces (still and clip) are the same ``aspect-video``
+// container with ``overflow-hidden``, so the transform crops identically
+// regardless of which one is showing. The clip's first frame IS the still,
+// so the zoom target stays consistent during the still→clip swap.
 // ---------------------------------------------------------------------------
 interface AimPaneProps {
   aimScreenshotUrl: string | null;
   aimClipUrl?: string | null;
-  // Persisted normalized anchor coords. Null when the classifier didn't
-  // produce them (manual upload / pre-classifier ingest) — the dot then
-  // omits cleanly.
+  // Persisted normalized anchor coords (0..1). Null when the classifier
+  // didn't produce them (manual upload / pre-classifier ingest) — the zoom
+  // then falls back to the pane center.
   aimAnchorX: number | null;
   aimAnchorY: number | null;
   title: string;
+}
+
+function aimZoomStyle(
+  aimAnchorX: number | null,
+  aimAnchorY: number | null,
+): React.CSSProperties {
+  const xPct = (aimAnchorX ?? 0.5) * 100;
+  const yPct = (aimAnchorY ?? 0.5) * 100;
+  return {
+    transform: "scale(2)",
+    transformOrigin: `${xPct}% ${yPct}%`,
+  };
 }
 
 export function AimPane({
@@ -290,16 +304,7 @@ export function AimPane({
   aimAnchorY,
   title,
 }: AimPaneProps) {
-  // Only render the anchor when both axes are set AND there's a base surface
-  // to anchor over — a dot floating on the "No screenshot" empty state has no
-  // meaning.
-  const renderAnchor =
-    aimAnchorX != null &&
-    aimAnchorY != null &&
-    (aimClipUrl != null || aimScreenshotUrl != null);
-  const anchor = renderAnchor ? (
-    <AimAnchorDot x={aimAnchorX!} y={aimAnchorY!} />
-  ) : null;
+  const zoom = aimZoomStyle(aimAnchorX, aimAnchorY);
 
   if (aimClipUrl) {
     return (
@@ -308,9 +313,8 @@ export function AimPane({
         posterUrl={aimScreenshotUrl}
         title={title}
         label="AIM"
-      >
-        {anchor}
-      </ClipView>
+        videoStyle={zoom}
+      />
     );
   }
   return (
@@ -318,9 +322,8 @@ export function AimPane({
       url={aimScreenshotUrl}
       alt={`${title} — aim reference`}
       label="AIM"
-    >
-      {anchor}
-    </ScreenshotHalf>
+      imgStyle={zoom}
+    />
   );
 }
 
