@@ -273,3 +273,79 @@ class TestThrowTimingErrorHandling:
             )
         assert result.success is False
         assert result.error_codes == ["json_parse_error"]
+
+
+class TestThrowTimingPerspectivePrompt:
+    """Prompt-presence tests for the LANDING-pane perspective fix.
+
+    The throw-timing classifier picks ``result_index``, which becomes the
+    LANDING clip's anchor. Without these instructions the model picks
+    fully-bloomed-but-rotated frames over partially-deployed same-perspective
+    frames, producing landing clips from the wrong POV. If a refactor
+    accidentally drops any of these blocks, fail loud here.
+    """
+
+    @pytest.mark.asyncio
+    async def test_system_prompt_includes_game_visual_cues(self):
+        """``_GAME_VISUAL_CUES`` must be injected so the model can read HUD
+        cues (weapon-in-hand, ability icons, etc.) to detect that the player
+        has switched utilities or rotated to a different perspective."""
+        _, client = await _call(
+            {"is_lineup_throw": True, "release_index": 1, "result_index": 2,
+             "confidence": 0.6, "reasoning": "x"},
+        )
+        system = client.messages.create.call_args.kwargs["system"]
+        system_text = "\n".join(b["text"] for b in system)
+        assert "HOW TO IDENTIFY THE GAME FROM THE SCREEN" in system_text, (
+            "_GAME_VISUAL_CUES block is required so the timing model can "
+            "spot weapon swaps / HUD changes that signal perspective change."
+        )
+
+    @pytest.mark.asyncio
+    async def test_system_prompt_includes_same_perspective_rule(self):
+        """The SAME-PERSPECTIVE rule must be the top-priority constraint on
+        result_index — it beats the 'first clearly visible' rule. Removing
+        this re-introduces the rotated-POV landing-clip bug."""
+        _, client = await _call(
+            {"is_lineup_throw": True, "release_index": 1, "result_index": 2,
+             "confidence": 0.6, "reasoning": "x"},
+        )
+        system = client.messages.create.call_args.kwargs["system"]
+        system_text = "\n".join(b["text"] for b in system)
+        assert "SAME-PERSPECTIVE RULE" in system_text
+        assert "highest priority" in system_text
+        assert "rotated > ~45°" in system_text
+        assert "utility-in-hand has changed" in system_text
+
+    @pytest.mark.asyncio
+    async def test_system_prompt_includes_max_gap_fallback(self):
+        """The MAX-GAP FALLBACK must instruct the model to set
+        result_index = release_index + confidence <= 0.5 when no valid
+        same-perspective frame exists in the ~2-4s window after release.
+        This is what makes the downstream landing-clip generator skip
+        emitting a misleading clip."""
+        _, client = await _call(
+            {"is_lineup_throw": True, "release_index": 1, "result_index": 2,
+             "confidence": 0.6, "reasoning": "x"},
+        )
+        system = client.messages.create.call_args.kwargs["system"]
+        system_text = "\n".join(b["text"] for b in system)
+        assert "MAX-GAP FALLBACK" in system_text
+        assert "within ~6 frames" in system_text
+        assert "result_index = release_index" in system_text
+        assert "confidence <= 0.5" in system_text
+
+    @pytest.mark.asyncio
+    async def test_system_prompt_tightens_smoke_first_wisp_cue(self):
+        """SMOKE cue must explicitly prefer the FIRST same-perspective wisp
+        over a fully-bloomed frame from a rotated angle."""
+        _, client = await _call(
+            {"is_lineup_throw": True, "release_index": 1, "result_index": 2,
+             "confidence": 0.6, "reasoning": "x"},
+        )
+        system = client.messages.create.call_args.kwargs["system"]
+        system_text = "\n".join(b["text"] for b in system)
+        # The smoke cue must call out the "earlier same-perspective frame"
+        # preference, not just the generic "FIRST wisp" language.
+        assert "the FIRST visible wisp" in system_text
+        assert "earlier same-perspective frame shows even partial deployment" in system_text
