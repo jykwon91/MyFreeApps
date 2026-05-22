@@ -47,6 +47,7 @@ import {
 } from "./LineupPanes";
 import { DEFAULT_KNOBS } from "@/hooks/useDesignKnobs";
 import type { DesignKnobs } from "@/hooks/useDesignKnobs";
+import MicroClipShiftOverlay from "./MicroClipShiftOverlay";
 import PaneReplaceOverlay from "./PaneReplaceOverlay";
 import PaneTrimOverlay from "./PaneTrimOverlay";
 import type { PanePosition } from "@/hooks/usePaneUpload";
@@ -96,6 +97,13 @@ function PaneSlot({
       {showOverlay && <PaneReplaceOverlay lineupId={lineupId} pane={pane} />}
       {showOverlay && (pane === "throw" || pane === "landing") && (
         <PaneTrimOverlay
+          lineupId={lineupId}
+          pane={pane}
+          clipUrl={paneClipUrl ?? null}
+        />
+      )}
+      {showOverlay && (pane === "stand" || pane === "aim") && (
+        <MicroClipShiftOverlay
           lineupId={lineupId}
           pane={pane}
           clipUrl={paneClipUrl ?? null}
@@ -179,14 +187,24 @@ export default function GlanceBoardTile({
       <div className="flex flex-col divide-y divide-border">
         {/* Top row: STAND | AIM */}
         <div className="flex divide-x divide-border">
-          <PaneSlot lineupId={lineup.id} pane="stand" showOverlay={showOperatorOverlays}>
+          <PaneSlot
+            lineupId={lineup.id}
+            pane="stand"
+            showOverlay={showOperatorOverlays}
+            paneClipUrl={lineup.stand_clip_url}
+          >
             <StandPane
               standScreenshotUrl={lineup.stand_screenshot_url}
               standClipUrl={standClipForRender}
               title={lineup.title}
             />
           </PaneSlot>
-          <PaneSlot lineupId={lineup.id} pane="aim" showOverlay={showOperatorOverlays}>
+          <PaneSlot
+            lineupId={lineup.id}
+            pane="aim"
+            showOverlay={showOperatorOverlays}
+            paneClipUrl={lineup.aim_clip_url}
+          >
             <AimPane
               aimScreenshotUrl={lineup.aim_screenshot_url}
               aimClipUrl={aimClipForRender}

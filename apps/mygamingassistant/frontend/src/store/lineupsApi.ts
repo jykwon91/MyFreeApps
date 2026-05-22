@@ -276,6 +276,35 @@ const lineupsApi = lineupsBaseApi.injectEndpoints({
     }),
 
     // ------------------------------------------------------------------
+    // Per-pane STAND/AIM shift-window — fixed-width sibling of trimPane.
+    // The server downloads ``clip_url_original``, cuts a 1-second clip at
+    // ``offset_s``, uploads under the deterministic stand/aim micro-clip
+    // key (overwriting in place — re-shifts don't accumulate orphans),
+    // and writes the new key + offset onto the matching columns. Only
+    // STAND + AIM are valid panes (THROW/LANDING use ``trimPane`` instead).
+    // ------------------------------------------------------------------
+
+    shiftPaneWindow: build.mutation<
+      Lineup,
+      {
+        lineup_id: string;
+        pane: "stand" | "aim";
+        offset_s: number;
+      }
+    >({
+      query: ({ lineup_id, pane, offset_s }) => ({
+        url: `/lineups/${lineup_id}/panes/${pane}/shift-window`,
+        method: "POST",
+        data: { offset_s },
+      }),
+      invalidatesTags: (_result, _err, { lineup_id }) => [
+        { type: "Lineup", id: lineup_id },
+        "LineupList",
+        "PendingLineups",
+      ],
+    }),
+
+    // ------------------------------------------------------------------
     // Zone density (map-level aggregate for density coloring)
     // ------------------------------------------------------------------
     getZoneDensity: build.query<ZoneDensity, ZoneDensityParams>({
@@ -312,4 +341,5 @@ export const {
   useConfirmPaneUploadMutation,
   useTrimPaneMutation,
   useWidenPaneSourceMutation,
+  useShiftPaneWindowMutation,
 } = lineupsApi;
