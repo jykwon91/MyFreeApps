@@ -26,7 +26,10 @@ from app.services.ingestion.frame_extractor import (
     FrameExtractionError,
 )
 from app.services.ingestion.micro_clip_generator import (
+    _AIM_MICRO_CLIP_SECONDS,
+    _STAND_MICRO_CLIP_SECONDS,
     _compute_micro_bounds,
+    _micro_clip_seconds_for_side,
     generate_micro_clips_for_lineup,
     pending_aim_clip_key,
     pending_stand_clip_key,
@@ -65,41 +68,79 @@ def _lineup(
 # ---------------------------------------------------------------------------
 
 class TestComputeMicroBounds:
-    def test_normal_window(self):
-        # anchor 24, chapter [10,40]: [24, 25] = 1.0s.
-        start, dur = _compute_micro_bounds(24.0, 10.0, 40.0)
+    def test_normal_window_aim(self):
+        # AIM uses 1.0s: anchor 24, chapter [10,40]: [24, 25] = 1.0s.
+        start, dur = _compute_micro_bounds(24.0, 10.0, 40.0, clip_seconds=1.0)
         assert start == pytest.approx(24.0)
         assert dur == pytest.approx(1.0)
 
+    def test_normal_window_stand(self):
+        # STAND uses 2.0s: anchor 24, chapter [10,40]: [24, 26] = 2.0s.
+        start, dur = _compute_micro_bounds(24.0, 10.0, 40.0, clip_seconds=2.0)
+        assert start == pytest.approx(24.0)
+        assert dur == pytest.approx(2.0)
+
     def test_clamped_to_chapter_start(self):
         # anchor 9.5 (before start 10): start clamps to 10, duration 1.0.
-        start, dur = _compute_micro_bounds(9.5, 10.0, 40.0)
+        start, dur = _compute_micro_bounds(9.5, 10.0, 40.0, clip_seconds=1.0)
         assert start == pytest.approx(10.0)
         assert dur == pytest.approx(1.0)
 
     def test_clamped_to_chapter_end_tail(self):
         # anchor 39.7, chapter ends 40 → clip [39.7, 40] = 0.3s — too short.
-        assert _compute_micro_bounds(39.7, 10.0, 40.0) is None
+        assert _compute_micro_bounds(39.7, 10.0, 40.0, clip_seconds=1.0) is None
 
     def test_clamped_tail_above_threshold_is_kept(self):
         # anchor 39.4, chapter ends 40 → [39.4, 40] = 0.6s, above 0.5s threshold.
-        start, dur = _compute_micro_bounds(39.4, 10.0, 40.0)
+        start, dur = _compute_micro_bounds(39.4, 10.0, 40.0, clip_seconds=1.0)
         assert start == pytest.approx(39.4)
         assert dur == pytest.approx(0.6)
 
+    def test_stand_clamped_tail_still_2s_when_room(self):
+        # STAND anchor 30, chapter ends 40 → [30, 32] = 2.0s (room for full window).
+        start, dur = _compute_micro_bounds(30.0, 10.0, 40.0, clip_seconds=2.0)
+        assert start == pytest.approx(30.0)
+        assert dur == pytest.approx(2.0)
+
+    def test_stand_clamped_to_chapter_end_when_no_room(self):
+        # STAND anchor 39.0, chapter ends 40 → asks for [39, 41], clamps to 40 = 1.0s.
+        # Above the 0.5s min so it's kept (1.0s STAND > original 1.0s AIM).
+        start, dur = _compute_micro_bounds(39.0, 10.0, 40.0, clip_seconds=2.0)
+        assert start == pytest.approx(39.0)
+        assert dur == pytest.approx(1.0)
+
     def test_chapter_too_short_returns_none(self):
         # 0.4s chapter — clamped window < 0.5s → skip signal.
-        assert _compute_micro_bounds(20.0, 19.9, 20.3) is None
+        assert _compute_micro_bounds(20.0, 19.9, 20.3, clip_seconds=1.0) is None
 
     def test_clip_never_exceeds_chapter_end(self):
-        start, dur = _compute_micro_bounds(21.5, 10.0, 22.0)
+        start, dur = _compute_micro_bounds(21.5, 10.0, 22.0, clip_seconds=1.0)
         assert start + dur <= 22.0 + 1e-9
 
     def test_start_equals_anchor_for_overlay_accuracy(self):
         """The first frame of the AIM clip MUST equal the anchor still —
         otherwise the persisted aim_anchor_x/y pixel coords don't apply."""
-        start, _dur = _compute_micro_bounds(24.0, 10.0, 40.0)
+        start, _dur = _compute_micro_bounds(24.0, 10.0, 40.0, clip_seconds=1.0)
         assert start == pytest.approx(24.0)
+
+
+class TestMicroClipSecondsForSide:
+    """STAND is operator-tuned to 2s (was cutting off mid-stance at 1s);
+    AIM stays at 1s. The asymmetry MUST be load-bearing per-side, not a
+    single shared constant — losing the split here re-introduces the
+    "STAND cuts off too soon" complaint."""
+
+    def test_stand_is_two_seconds(self):
+        assert _micro_clip_seconds_for_side("stand") == pytest.approx(2.0)
+        assert _STAND_MICRO_CLIP_SECONDS == pytest.approx(2.0)
+
+    def test_aim_is_one_second(self):
+        assert _micro_clip_seconds_for_side("aim") == pytest.approx(1.0)
+        assert _AIM_MICRO_CLIP_SECONDS == pytest.approx(1.0)
+
+    def test_unknown_side_raises(self):
+        with pytest.raises(ValueError, match="unknown micro-clip side"):
+            _micro_clip_seconds_for_side("landing")
 
 
 def test_pending_micro_clip_keys_are_deterministic():

@@ -78,9 +78,13 @@ from app.services.ingestion.youtube_fetcher import (
 logger = logging.getLogger(__name__)
 
 # Frozen design-contract constants.
-# 1-second micro-clip per pane — matches the operator's stated ideal of
-# "at most each lineup should be 4 seconds total" with four 1s panes.
-_MICRO_CLIP_SECONDS = 1.0
+# Per-pane micro-clip durations. STAND is 2.0s (operator-tuned: 1.0s was
+# cutting off mid-stance, before the player begins the throw motion). AIM
+# stays at 1.0s — the AIM pane's whole point is the static crosshair
+# placement, and a longer window risks bleeding into the throw animation
+# which is what the THROW pane already shows.
+_STAND_MICRO_CLIP_SECONDS = 2.0
+_AIM_MICRO_CLIP_SECONDS = 1.0
 # Minimum acceptable clamped duration. A near-end timestamp may clip short;
 # under this threshold we skip rather than ship a useless ~200ms sliver.
 _MIN_CLIP_SECONDS = 0.5
@@ -152,14 +156,21 @@ def _compute_micro_bounds(
     anchor_ts: float,
     chapter_start: float,
     chapter_end: float,
+    clip_seconds: float,
 ) -> Optional[tuple[float, float]]:
     """Return ``(clip_start, clip_duration)`` seconds, or None if too short.
 
     Starts AT the anchor timestamp (the classifier-chosen frame), runs
-    forward for ``_MICRO_CLIP_SECONDS``, clamped to the chapter end. The
+    forward for ``clip_seconds``, clamped to the chapter end. The
     important property is that ``clip_start == anchor_ts`` exactly — that
     is what keeps the AIM clip's first frame identical to the existing aim
     still, so the persisted ``aim_anchor_x/y`` overlay stays pixel-accurate.
+
+    ``clip_seconds`` is supplied by the caller per-pane (STAND uses
+    ``_STAND_MICRO_CLIP_SECONDS``, AIM uses ``_AIM_MICRO_CLIP_SECONDS``).
+    Explicit at the call site rather than a default — the two panes have
+    deliberately different durations and silently sharing one default
+    would obscure the asymmetry.
 
     Returns None when the clamped duration is shorter than
     ``_MIN_CLIP_SECONDS`` (the anchor is too close to the chapter end to
@@ -167,11 +178,21 @@ def _compute_micro_bounds(
     ``chapter_too_short_for_microclip``.
     """
     start = max(float(anchor_ts), float(chapter_start))
-    end = min(start + _MICRO_CLIP_SECONDS, float(chapter_end))
+    end = min(start + float(clip_seconds), float(chapter_end))
     duration = end - start
     if duration < _MIN_CLIP_SECONDS:
         return None
     return start, duration
+
+
+def _micro_clip_seconds_for_side(side: str) -> float:
+    """Resolve the per-pane micro-clip duration. Centralized so both ingest
+    and backfill paths get the same answer for the same side string."""
+    if side == "stand":
+        return _STAND_MICRO_CLIP_SECONDS
+    if side == "aim":
+        return _AIM_MICRO_CLIP_SECONDS
+    raise ValueError(f"unknown micro-clip side: {side!r}")
 
 
 async def _resolve_anchor_timestamps_via_classifier(
@@ -518,7 +539,12 @@ async def _cut_upload_persist_one_side(
     initial thumb position. When None (no wider source for this lineup),
     the offset is left untouched in the DB and the shift overlay opens at 0.
     """
-    bounds = _compute_micro_bounds(anchor_ts, chapter_start, chapter_end)
+    bounds = _compute_micro_bounds(
+        anchor_ts,
+        chapter_start,
+        chapter_end,
+        clip_seconds=_micro_clip_seconds_for_side(side),
+    )
     if bounds is None:
         return {
             "status": "skipped",

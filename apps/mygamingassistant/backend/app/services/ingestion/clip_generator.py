@@ -71,12 +71,15 @@ logger = logging.getLogger(__name__)
 # artifact.
 _CLIP_CONFIDENCE_GATE = 0.55
 # Lead-in kept before release / tail kept after the result first shows.
+# The 1.5s tail is the operator-tuned amount of bloom needed to see the smoke
+# clear the obstacle / molly catch / flash fade — earlier 0.5s was cutting off
+# while the utility was still unfolding on screen.
 _PRE_RELEASE_SECONDS = 2.0
-_POST_RESULT_SECONDS = 0.5
-# Accepted clip-length band; outside it we rebuild a throw-centric ~6s window.
+_POST_RESULT_SECONDS = 1.5
+# Accepted clip-length band; outside it we rebuild a throw-centric ~7s window.
 _MIN_CLIP_SECONDS = 2.0
 _MAX_CLIP_SECONDS = 12.0
-_TARGET_CLIP_SECONDS = 6.0
+_TARGET_CLIP_SECONDS = 7.0
 # Below this even the rebuilt window is unusable (chapter too short) → skip.
 _ABSOLUTE_MIN_CLIP_SECONDS = 1.0
 
@@ -149,9 +152,9 @@ def _compute_clip_bounds(
 ) -> Optional[tuple[float, float]]:
     """Return ``(clip_start, clip_duration)`` seconds, or None if too short.
 
-    [release-2.0, result+0.5] clamped to the chapter. If that is outside the
+    [release-2.0, result+1.5] clamped to the chapter. If that is outside the
     [~2s, ~12s] band (e.g. a long gap between release and result, or a missing
-    result frame collapsing it), rebuild a throw-centric ~6s window anchored
+    result frame collapsing it), rebuild a throw-centric ~7s window anchored
     at release. Returns None when even the rebuilt window is shorter than ~1s
     (the chapter is too short to carry a meaningful clip) so the caller skips.
     """
