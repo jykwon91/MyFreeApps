@@ -341,4 +341,5 @@ export const {
   useConfirmPaneUploadMutation,
   useTrimPaneMutation,
   useWidenPaneSourceMutation,
+  useShiftPaneWindowMutation,
 } = lineupsApi;

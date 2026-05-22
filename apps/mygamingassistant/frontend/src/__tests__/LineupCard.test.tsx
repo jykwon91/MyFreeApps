@@ -46,6 +46,8 @@ const BASE_LINEUP: Lineup = {
   landing_clip_url: null,
   stand_clip_url: null,
   aim_clip_url: null,
+  stand_clip_offset_s: null,
+  aim_clip_offset_s: null,
   clip_url_original: null,
   clip_trim_start_s: null,
   clip_trim_end_s: null,
