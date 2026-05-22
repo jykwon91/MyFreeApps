@@ -8,8 +8,8 @@
  *   ┌────────────────────────────────────────────────┐
  *   │ [UTIL]  <title>                 <side>·<from>  │  header
  *   ├──────────────────────┬─────────────────────────┤
- *   │   STAND screenshot   │   AIM screenshot         │  top row
- *   │                      │       ● anchor dot      │
+ *   │   STAND screenshot   │   AIM (2× zoom on       │  top row
+ *   │                      │   persisted anchor)     │
  *   ├──────────────────────┼─────────────────────────┤
  *   │   THROW (clip loop)  │   LANDING (text card)   │  bottom row
  *   │                      │   Lands in: <zone>      │
@@ -20,17 +20,13 @@
  * Each pane does a distinct executional job: arrive (stand), look (aim),
  * throw (clip motion), land (target zone). All four render unconditionally
  * — gracefully degrades per-pane when its data is null. Same height as
- * today's single-clip tile (~346px at 500px wide); same per-pane size as
- * today's stand|aim fallback so the aim anchor dot keeps its accuracy.
+ * today's single-clip tile (~346px at 500px wide). The AIM pane applies a
+ * 2× zoom transform centered on the persisted aim_anchor coords (fallback
+ * 50% 50%) — the magnified crop replaces the older red anchor-dot overlay.
  *
- * Today: STAND/AIM are stills; THROW is the PR2 looping clip; LANDING is a
- * placeholder text card. PR5 will replace LANDING with a real landing clip;
- * PR6 will replace stand/aim stills with 1s micro-clips. The 2×2 framework
- * is the same; panes just upgrade their content.
- *
- * Pane primitives (ScreenshotHalf, AimAnchorDot, ClipView, ThrowPlaceholder,
- * LandingPane) live in LineupPanes.tsx so LineupCard's expanded variant
- * renders the identical shape inside the detail-panel.
+ * Pane primitives (ScreenshotHalf, ClipView, ThrowPlaceholder, LandingPane,
+ * StandPane, AimPane) live in LineupPanes.tsx so LineupCard's expanded
+ * variant renders the identical shape inside the detail-panel.
  *
  * notes are NOT displayed inline; they live in a title= tooltip.
  */

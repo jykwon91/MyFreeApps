@@ -122,17 +122,21 @@ describe("LineupCard", () => {
     expect(screen.getByText("8s")).toBeDefined();
   });
 
-  it("expanded variant renders aim anchor when coords are set", () => {
+  it("expanded variant AIM still zooms 2× centered on the persisted anchor", () => {
     render(<LineupCard lineup={BASE_LINEUP} variant="expanded" />);
-    const anchor = screen.getByLabelText(/aim anchor/i);
-    expect(anchor).toBeDefined();
+    const aimImg = screen.getByAltText(/aim reference/i) as HTMLImageElement;
+    expect(aimImg.style.transform).toBe("scale(2)");
+    expect(aimImg.style.transformOrigin).toBe("50% 40%");
+    // No literal anchor dot in the AIM pane — the zoom replaces it.
+    expect(screen.queryByLabelText(/aim anchor/i)).toBeNull();
   });
 
-  it("expanded variant omits aim anchor when coords are null", () => {
+  it("expanded variant AIM still falls back to center origin when anchor coords are null", () => {
     const lineup: Lineup = { ...BASE_LINEUP, aim_anchor_x: null, aim_anchor_y: null };
     render(<LineupCard lineup={lineup} variant="expanded" />);
-    const anchor = screen.queryByLabelText(/aim anchor/i);
-    expect(anchor).toBeNull();
+    const aimImg = screen.getByAltText(/aim reference/i) as HTMLImageElement;
+    expect(aimImg.style.transform).toBe("scale(2)");
+    expect(aimImg.style.transformOrigin).toBe("50% 50%");
   });
 
   it("expanded variant renders 'No screenshot' when screenshot URL is null", () => {
@@ -329,15 +333,22 @@ describe("LineupCard", () => {
     expect(aimVideo).not.toBeNull();
   });
 
-  it("expanded variant AIM anchor dot still renders when aim_clip_url is set", () => {
-    // Critical PR6 invariant: the anchor dot must overlay the AIM clip just
-    // as it overlays the AIM still. See LineupPanes.AimPane.
+  it("expanded variant AIM clip variant carries the same zoom transform as the still", () => {
+    // Still→clip continuity: AimPane applies the same zoom transform whether
+    // the active surface is the still <img> or the looping <video>, so the
+    // operator's view of the anchor stays consistent during the swap.
     const lineup: Lineup = {
       ...BASE_LINEUP,
       aim_clip_url: "https://ex.com/aim.mp4",
     };
     render(<LineupCard lineup={lineup} variant="expanded" />);
-    expect(screen.getByLabelText(/aim anchor/i)).toBeInTheDocument();
+    const aimVideo = document.querySelector(
+      'video[aria-label*="looping aim clip"]',
+    ) as HTMLVideoElement;
+    expect(aimVideo).not.toBeNull();
+    expect(aimVideo.style.transform).toBe("scale(2)");
+    expect(aimVideo.style.transformOrigin).toBe("50% 40%");
+    expect(screen.queryByLabelText(/aim anchor/i)).toBeNull();
   });
 
   it("expanded variant renders four <video> elements when all four clip URLs are set", () => {
