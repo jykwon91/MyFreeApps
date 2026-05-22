@@ -2,10 +2,11 @@
  * Events section of the ApplicationDrawer.
  *
  * Renders the chronological event log newest-first. The "Log event"
- * affordance opens LogEventDialog in create mode. Interview events
- * (interview_scheduled / interview_completed) show an inline pencil
- * button that opens the same dialog in edit mode, preloaded with the
- * existing interview_details + note.
+ * affordance opens LogEventDialog in create mode. Interview events show
+ * an inline pencil button that swaps the read-only summary in
+ * EventListItem for an edit-in-place form. Only one event can be in
+ * edit mode at a time; clicking pencil on a different event silently
+ * cancels whatever was open.
  */
 import { useState } from "react";
 import { Plus } from "lucide-react";
@@ -22,7 +23,19 @@ export default function EventsSection({ applicationId }: EventsSectionProps) {
   const { data: eventsData } = useListApplicationEventsQuery(applicationId);
   const events = eventsData?.items ?? [];
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [editingEvent, setEditingEvent] = useState<ApplicationEvent | null>(null);
+  const [editingEventId, setEditingEventId] = useState<string | null>(null);
+
+  function handleEditClick(event: ApplicationEvent) {
+    setEditingEventId(event.id);
+  }
+
+  function handleCancelEdit() {
+    setEditingEventId(null);
+  }
+
+  function handleSaved() {
+    setEditingEventId(null);
+  }
 
   return (
     <section>
@@ -49,8 +62,12 @@ export default function EventsSection({ applicationId }: EventsSectionProps) {
           {events.map((event) => (
             <EventListItem
               key={event.id}
+              applicationId={applicationId}
               event={event}
-              onEditClick={setEditingEvent}
+              isEditing={editingEventId === event.id}
+              onEditClick={handleEditClick}
+              onCancelEdit={handleCancelEdit}
+              onSaved={handleSaved}
             />
           ))}
         </ol>
@@ -60,16 +77,6 @@ export default function EventsSection({ applicationId }: EventsSectionProps) {
         applicationId={applicationId}
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
-        mode="create"
-      />
-      <LogEventDialog
-        applicationId={applicationId}
-        open={editingEvent !== null}
-        onOpenChange={(open) => {
-          if (!open) setEditingEvent(null);
-        }}
-        mode="edit"
-        eventToEdit={editingEvent}
       />
     </section>
   );
