@@ -1318,15 +1318,37 @@ Rules:
   the projectile is first airborne; the throw-animation follow-through; the HUD
   grenade/ability slot empties. If no frame catches the exact release, choose
   the frame immediately BEFORE the effect first appears.
-- result_index: the 1-based frame where the RESULT is first clearly visible. It
-  MUST be at or after release_index — a result cannot precede its own release.
-  RESULT cues by utility:
-    SMOKE   - grey/white cloud expanding (count the FIRST wisp; a canister
-              still in flight is NOT yet the result).
-    MOLOTOV - orange floor flame spreading.
+- result_index: the 1-based frame where the RESULT is first clearly visible
+  FROM THE THROWER'S LINEUP POSITION. It MUST be at or after release_index —
+  a result cannot precede its own release.
+  SAME-PERSPECTIVE RULE (highest priority, beats "first clearly visible"):
+    The result frame MUST be from the SAME player position and viewing
+    direction as release_index. Disqualifiers — if any apply, search EARLIER
+    in the window for a valid frame:
+      - background scenery has materially changed (new building, interior,
+        different skyline, a window now framing it from the opposite side)
+      - the player has rotated > ~45° from the release-frame's aim vector
+      - the utility-in-hand has changed in a way that signals abandoning the
+        lineup moment: smoke → molotov, smoke → flash, smoke → HE
+        (smoke → rifle/pistol is fine — they switched back to their primary)
+      - the player has walked into a different room or zone
+    Pick a partial-deploy frame from the lineup position OVER a fully-bloomed
+    frame from a rotated perspective.
+  RESULT cues by utility (use the EARLIEST same-perspective frame that matches):
+    SMOKE   - the FIRST visible wisp (typically 1.5-3.0s after release). Do
+              NOT pick a late frame where the smoke is fully bloomed if an
+              earlier same-perspective frame shows even partial deployment.
+    MOLOTOV - the FIRST flame on the floor (typically 1.0-2.0s after release).
+              Same earliness rule.
     FLASH   - white wash / detonation. If it is too fast to land on its own
               frame, set result_index = release_index and confidence <= 0.45.
     HE      - explosion burst / debris.
+  MAX-GAP FALLBACK: result_index should normally be within ~6 frames (~2-4s)
+    after release_index. If no valid same-perspective result frame exists in
+    that range — because the utility traveled out of view, the player rotated
+    immediately, or the chapter cut away — set result_index = release_index
+    and confidence <= 0.5. Downstream consumers gate on confidence and will
+    skip emitting a landing clip rather than ship a misleading one.
 - confidence: 0-1 that you localised the throw correctly. Low when the throw is
   off-screen, cut away from, or only inferred from trajectory; high only when
   the release and the result are both directly visible.
@@ -1412,6 +1434,8 @@ async def classify_throw_timing_from_frames(
         "shown several timestamped frames from one chapter of a lineup "
         "tutorial and must pinpoint exactly when the utility is released and "
         "when its effect first lands.\n\n"
+        + _GAME_VISUAL_CUES
+        + "\n"
         + _THROW_TIMING_SCHEMA_DOC.format(n=n)
     )
 
