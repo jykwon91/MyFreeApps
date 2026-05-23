@@ -79,18 +79,15 @@ from app.services.ingestion.youtube_fetcher import (
 logger = logging.getLogger(__name__)
 
 # Frozen design-contract constants. The 0.55 gate matches PR2's throw clip —
-# if PR2 cleared its gate, the landing pass shares that judgment (so a clip
-# is generated or both are skipped together, never one without the other).
+# if PR2 cleared its gate, the landing pass shares that judgment.
 _CLIP_CONFIDENCE_GATE = 0.55
-# Lead-in kept before landing / dwell time on the post-landing scene. The
-# 3.0s tail is the visible distinction from PR2's clip — PR2 cuts at result
-# + 0.5s, so landing gets a separate 3.5s pane focused on the after-effect
-# (smoke at full coverage, molly burn pattern, flash radius).
-_PRE_LANDING_SECONDS = 0.5
-_POST_LANDING_SECONDS = 3.0
-# Tight bounds — the landing pane is the smallest of the 2×2 storyboard.
+# result_ts is the throw-timing prompt's "first visible wisp" — typically
+# 1.5-3.0s after release, so the first ~1.5s is still very faint. Pad
+# forward so the clip opens once bloom is actually visible (lineup
+# 7bd971c3 after PR #751).
+_POST_RESULT_PRE_PAD = 1.5
+_LANDING_CLIP_DURATION = 3.5
 _MIN_CLIP_SECONDS = 1.0
-_TARGET_CLIP_SECONDS = _PRE_LANDING_SECONDS + _POST_LANDING_SECONDS  # 3.5s
 
 
 @dataclass
@@ -158,16 +155,18 @@ def _compute_landing_bounds(
 ) -> Optional[tuple[float, float]]:
     """Return ``(clip_start, clip_duration)`` seconds, or None if too short.
 
-    Centered on the landing: ``[result - 0.5, result + 3.0]`` clamped to the
-    chapter. Returns None when the clamped window is shorter than 1s (the
-    chapter has no headroom around the landing to carry a meaningful clip),
-    so the caller skips. We deliberately do NOT rebuild a target-length
-    window — for landing-clip the WHERE is more important than the
-    HOW-LONG, and a clamped sliver is more informative than a fabricated
-    one displaced to a different chapter region.
+    Starts AFTER result_ts (``+ _POST_RESULT_PRE_PAD``) to skip the faint-wisp
+    lead-in that result_ts anchors on. Target duration ``_LANDING_CLIP_DURATION``,
+    clamped to the chapter. Returns None when the chapter ends too close to
+    result_ts to leave ``>= _MIN_CLIP_SECONDS`` of bloom — for landing-clip the
+    WHERE is more important than the HOW-LONG, and a clamped sliver is more
+    informative than a fabricated one displaced to a different chapter region.
     """
-    start = max(result_ts - _PRE_LANDING_SECONDS, chapter_start)
-    end = min(result_ts + _POST_LANDING_SECONDS, chapter_end)
+    start = max(result_ts + _POST_RESULT_PRE_PAD, chapter_start)
+    if start >= chapter_end:
+        # No headroom: the post-pad start is already at/past the chapter end.
+        return None
+    end = min(start + _LANDING_CLIP_DURATION, chapter_end)
     duration = end - start
     if duration < _MIN_CLIP_SECONDS:
         return None

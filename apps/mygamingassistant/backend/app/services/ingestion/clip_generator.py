@@ -18,8 +18,8 @@ End-to-end (the frozen design contract, pr2-clip-localization-design.md):
      game/map grid classifier).
   4. Gate: skip (keep stills) when it is not a throw, confidence < 0.55, or no
      release frame was found.
-  5. Turn the returned indices back into timestamps, compute a throw-centric
-     ~6s clip window, clamp to the chapter.
+  5. Turn the release index back into a timestamp, compute a tight
+     ~3s clip window anchored entirely on release_ts, clamp to the chapter.
   6. Re-use the already-downloaded video (ingest) or re-fetch it by
      ``youtube_video_id`` (backfill), cut + encode a small muted MP4, upload
      to MinIO under a deterministic key, and persist the bare key on the row.
@@ -68,17 +68,17 @@ logger = logging.getLogger(__name__)
 # below 0.55 the dense window missed the throw and the stills are the right
 # artifact.
 _CLIP_CONFIDENCE_GATE = 0.55
-# Lead-in kept before release / tail kept after the result first shows.
-# The 1.5s tail is the operator-tuned amount of bloom needed to see the smoke
-# clear the obstacle / molly catch / flash fade — earlier 0.5s was cutting off
-# while the utility was still unfolding on screen.
+# Throw clip is anchored ENTIRELY on release_ts: the throw pane's job is the
+# throw MOTION, which completes within ~0.5-1.0s of release. The prior
+# implementation used `result_ts + 1.5s` for the tail, but result_ts is the
+# throw-timing prompt's "first visible wisp" (1.5-3.0s after release) — which
+# left 2-3s of useless post-motion tail (operator surfaced this on lineup
+# 7bd971c3 after PR #751 made the release frame accurate). The smoke / molly /
+# flash AFTER-the-throw is what the LANDING pane shows; the THROW pane should
+# end when the throw is done.
 _PRE_RELEASE_SECONDS = 2.0
-_POST_RESULT_SECONDS = 1.5
-# Accepted clip-length band; outside it we rebuild a throw-centric ~7s window.
-_MIN_CLIP_SECONDS = 2.0
-_MAX_CLIP_SECONDS = 12.0
-_TARGET_CLIP_SECONDS = 7.0
-# Below this even the rebuilt window is unusable (chapter too short) → skip.
+_POST_RELEASE_SECONDS = 1.0
+# Below this the chapter-clamped window is unusable → skip.
 _ABSOLUTE_MIN_CLIP_SECONDS = 1.0
 
 
@@ -144,28 +144,20 @@ def pending_clip_source_key(video_id: str, chapter_start_seconds: float) -> str:
 
 def _compute_clip_bounds(
     release_ts: float,
-    result_ts: float,
     chapter_start: float,
     chapter_end: float,
 ) -> Optional[tuple[float, float]]:
     """Return ``(clip_start, clip_duration)`` seconds, or None if too short.
 
-    [release-2.0, result+1.5] clamped to the chapter. If that is outside the
-    [~2s, ~12s] band (e.g. a long gap between release and result, or a missing
-    result frame collapsing it), rebuild a throw-centric ~7s window anchored
-    at release. Returns None when even the rebuilt window is shorter than ~1s
-    (the chapter is too short to carry a meaningful clip) so the caller skips.
+    [release - _PRE_RELEASE_SECONDS, release + _POST_RELEASE_SECONDS] clamped
+    to the chapter. The throw pane's job is the throw MOTION; anchoring the
+    tail on release_ts (not result_ts, the "first visible wisp") keeps the
+    clip tight on the action. Returns None when the chapter-clamped window
+    is shorter than ``_ABSOLUTE_MIN_CLIP_SECONDS`` so the caller skips.
     """
     start = max(release_ts - _PRE_RELEASE_SECONDS, chapter_start)
-    end = min(result_ts + _POST_RESULT_SECONDS, chapter_end)
+    end = min(release_ts + _POST_RELEASE_SECONDS, chapter_end)
     duration = end - start
-
-    if duration < _MIN_CLIP_SECONDS or duration > _MAX_CLIP_SECONDS:
-        # Throw-centric ~6s rebuild: keep the 2s pre-release lead-in, take the
-        # rest after release. Re-clamp to the chapter.
-        start = max(release_ts - _PRE_RELEASE_SECONDS, chapter_start)
-        end = min(start + _TARGET_CLIP_SECONDS, chapter_end)
-        duration = end - start
 
     if duration < _ABSOLUTE_MIN_CLIP_SECONDS:
         return None
@@ -339,16 +331,16 @@ async def generate_clip_for_lineup(
 
         # ---- Indices → timestamps → clip bounds ------------------------
         release_ts = timestamps[timing.release_index - 1]
-        # result_index is guaranteed >= release_index by the parser when set;
-        # when the model omitted it we anchor the tail at release (the
-        # standard 2.5s window then still passes the >=2s contract band).
+        # result_ts is no longer load-bearing for the clip window (the throw
+        # pane is anchored entirely on release_ts) but is still surfaced on
+        # the result row for diagnostics and used by the landing-clip path.
         if timing.result_index is not None:
             result_ts = timestamps[timing.result_index - 1]
         else:
             result_ts = release_ts
 
         bounds = _compute_clip_bounds(
-            release_ts, result_ts, float(chapter_start), float(chapter_end)
+            release_ts, float(chapter_start), float(chapter_end)
         )
         if bounds is None:
             return ClipGenerationResult(
