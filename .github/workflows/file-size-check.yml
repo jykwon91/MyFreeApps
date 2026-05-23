@@ -1,0 +1,39 @@
+name: File Size Check
+
+# Prevents source files from silently growing past safe LOC thresholds.
+# See scripts/check-file-size.py for the rules and scripts/file-size-allowlist.yml
+# for the list of explicitly permitted large files.
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: file-size-check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: check-file-size
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0  # required so git show origin/<base>:<path> resolves
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install pyyaml
+
+      - name: Run file-size check
+        run: python scripts/check-file-size.py --base origin/${{ github.base_ref }}
