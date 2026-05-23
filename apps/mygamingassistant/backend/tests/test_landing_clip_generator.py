@@ -27,6 +27,11 @@ from app.services.ingestion.landing_clip_generator import (
     pending_landing_clip_key,
     pending_landing_clip_source_key,
 )
+from app.services.ingestion.throw_localizer import (
+    STAGE_COARSE_FAILED,
+    STAGE_REFINED,
+    RefinedThrowTiming,
+)
 from app.services.ingestion.wide_source import WideSourceResult
 from app.services.ingestion.youtube_fetcher import VideoDownloadError
 
@@ -157,13 +162,13 @@ async def test_ingest_path_generates_clip_without_classifier_call():
     storage = _storage_mock()
     set_url_mock = AsyncMock(return_value=lineup)
 
-    classifier_mock = AsyncMock()  # MUST NOT be called
+    localizer_mock = AsyncMock()  # MUST NOT be called
 
     with (
         patch(f"{_MOD}.cut_clip", _ffmpeg_cut_mock()) as cut,
         patch(f"{_MOD}.get_storage", return_value=storage),
         patch(f"{_MOD}.lineup_repo.set_landing_clip_url", set_url_mock),
-        patch(f"{_MOD}.classify_throw_timing_from_frames", classifier_mock),
+        patch(f"{_MOD}.localize_throw_with_refinement", localizer_mock),
         # Wide source mocked out — it has its own explicit tests below.
         patch(f"{_MOD}.cut_and_upload_wide_source",
               new=AsyncMock(return_value=_wide_fail())),
@@ -183,8 +188,9 @@ async def test_ingest_path_generates_clip_without_classifier_call():
     cut.assert_awaited_once()
     storage.upload_file.assert_called_once()
     set_url_mock.assert_awaited_once()
-    classifier_mock.assert_not_awaited(), (
-        "Ingest path must NOT call the classifier — cost regression"
+    localizer_mock.assert_not_awaited(), (
+        "Ingest path must NOT call the localizer/classifier — both the "
+        "coarse and dense Claude calls would be cost regressions"
     )
 
 
@@ -244,22 +250,45 @@ def _timing(**kw):
     return ThrowTimingResult(**base)
 
 
+def _refined(
+    *,
+    timestamps: list[float] | None = None,
+    stage: str = STAGE_REFINED,
+    timing: ThrowTimingResult | None = None,
+    **timing_kwargs,
+) -> RefinedThrowTiming:
+    """Mirrors test_clip_generator._refined — build a RefinedThrowTiming
+    wrapper for landing_clip_generator's localize_throw_with_refinement
+    mock. After the two-stage refactor, landing_clip_generator no longer
+    calls clip_window_timestamps / extract_frames_downscaled /
+    classify_throw_timing_from_frames directly; the orchestrator owns
+    that chain. Tests therefore mock the orchestrator and shape its
+    return as RefinedThrowTiming.
+    """
+    timing_obj = timing if timing is not None else _timing(**timing_kwargs)
+    if timestamps is None:
+        timestamps = [12.0, 18.0, 24.0, 30.0, 36.0]
+    return RefinedThrowTiming(
+        timing=timing_obj,
+        frame_timestamps=timestamps,
+        stage=stage,
+        coarse_timing=timing_obj,
+    )
+
+
 @pytest.mark.asyncio
 async def test_backfill_path_runs_classifier_and_generates():
     db = AsyncMock()
     lineup = _lineup()
     storage = _storage_mock()
     set_url_mock = AsyncMock(return_value=lineup)
-    timing = _timing(result_index=5)
     timestamps = [12.0, 18.0, 24.0, 30.0, 36.0]
 
     with (
         patch(f"{_MOD}.settings", _settings()),
-        patch(f"{_MOD}.clip_window_timestamps", return_value=timestamps),
-        patch(f"{_MOD}.extract_frames_downscaled",
-              AsyncMock(return_value=[_FAKE_PNG] * 5)),
-        patch(f"{_MOD}.classify_throw_timing_from_frames",
-              AsyncMock(return_value=timing)),
+        patch(f"{_MOD}.localize_throw_with_refinement",
+              AsyncMock(return_value=_refined(
+                  timestamps=timestamps, result_index=5))),
         patch(f"{_MOD}.cut_clip", _ffmpeg_cut_mock()),
         patch(f"{_MOD}.get_storage", return_value=storage),
         patch(f"{_MOD}.lineup_repo.set_landing_clip_url", set_url_mock),
@@ -282,16 +311,11 @@ async def test_backfill_path_runs_classifier_and_generates():
 async def test_backfill_path_skips_not_a_throw():
     db = AsyncMock()
     lineup = _lineup()
-    timing = _timing(is_lineup_throw=False)
-    timestamps = [12.0, 18.0, 24.0]
-
     with (
         patch(f"{_MOD}.settings", _settings()),
-        patch(f"{_MOD}.clip_window_timestamps", return_value=timestamps),
-        patch(f"{_MOD}.extract_frames_downscaled",
-              AsyncMock(return_value=[_FAKE_PNG] * 3)),
-        patch(f"{_MOD}.classify_throw_timing_from_frames",
-              AsyncMock(return_value=timing)),
+        patch(f"{_MOD}.localize_throw_with_refinement",
+              AsyncMock(return_value=_refined(
+                  timestamps=[12.0, 18.0, 24.0], is_lineup_throw=False))),
     ):
         result = await generate_landing_clip_for_lineup(
             db, lineup,
@@ -306,16 +330,11 @@ async def test_backfill_path_skips_not_a_throw():
 async def test_backfill_path_skips_low_confidence():
     db = AsyncMock()
     lineup = _lineup()
-    timing = _timing(confidence=0.4)
-    timestamps = [12.0, 18.0, 24.0]
-
     with (
         patch(f"{_MOD}.settings", _settings()),
-        patch(f"{_MOD}.clip_window_timestamps", return_value=timestamps),
-        patch(f"{_MOD}.extract_frames_downscaled",
-              AsyncMock(return_value=[_FAKE_PNG] * 3)),
-        patch(f"{_MOD}.classify_throw_timing_from_frames",
-              AsyncMock(return_value=timing)),
+        patch(f"{_MOD}.localize_throw_with_refinement",
+              AsyncMock(return_value=_refined(
+                  timestamps=[12.0, 18.0, 24.0], confidence=0.4))),
     ):
         result = await generate_landing_clip_for_lineup(
             db, lineup,
@@ -330,16 +349,11 @@ async def test_backfill_path_skips_low_confidence():
 async def test_backfill_path_skips_no_result_frame():
     db = AsyncMock()
     lineup = _lineup()
-    timing = _timing(result_index=None)
-    timestamps = [12.0, 18.0, 24.0]
-
     with (
         patch(f"{_MOD}.settings", _settings()),
-        patch(f"{_MOD}.clip_window_timestamps", return_value=timestamps),
-        patch(f"{_MOD}.extract_frames_downscaled",
-              AsyncMock(return_value=[_FAKE_PNG] * 3)),
-        patch(f"{_MOD}.classify_throw_timing_from_frames",
-              AsyncMock(return_value=timing)),
+        patch(f"{_MOD}.localize_throw_with_refinement",
+              AsyncMock(return_value=_refined(
+                  timestamps=[12.0, 18.0, 24.0], result_index=None))),
     ):
         result = await generate_landing_clip_for_lineup(
             db, lineup,
@@ -382,18 +396,16 @@ async def test_backfill_path_classifier_missing_key_skips():
 async def test_backfill_path_classifier_api_failure_returns_failed():
     db = AsyncMock()
     lineup = _lineup()
-    timing = ThrowTimingResult(
+    failed_timing = ThrowTimingResult(
         success=False, error_codes=["overloaded_error"],
         reasoning="rate limited",
     )
-    timestamps = [12.0, 18.0, 24.0]
     with (
         patch(f"{_MOD}.settings", _settings()),
-        patch(f"{_MOD}.clip_window_timestamps", return_value=timestamps),
-        patch(f"{_MOD}.extract_frames_downscaled",
-              AsyncMock(return_value=[_FAKE_PNG] * 3)),
-        patch(f"{_MOD}.classify_throw_timing_from_frames",
-              AsyncMock(return_value=timing)),
+        patch(f"{_MOD}.localize_throw_with_refinement",
+              AsyncMock(return_value=_refined(
+                  timing=failed_timing, stage=STAGE_COARSE_FAILED,
+                  timestamps=[]))),
     ):
         result = await generate_landing_clip_for_lineup(
             db, lineup,
@@ -406,18 +418,17 @@ async def test_backfill_path_classifier_api_failure_returns_failed():
 
 @pytest.mark.asyncio
 async def test_backfill_path_frame_extract_failure_returns_failed():
+    """A coarse-pass FrameExtractionError is re-raised by the orchestrator
+    so landing_clip_generator's existing structured-failure surface is
+    unchanged."""
     db = AsyncMock()
     lineup = _lineup()
-    timestamps = [12.0, 18.0, 24.0]
     with (
         patch(f"{_MOD}.settings", _settings()),
-        patch(f"{_MOD}.clip_window_timestamps", return_value=timestamps),
-        patch(
-            f"{_MOD}.extract_frames_downscaled",
-            AsyncMock(side_effect=FrameExtractionError(
-                "boom", timestamp=18.0, returncode=1, stderr="x",
-            )),
-        ),
+        patch(f"{_MOD}.localize_throw_with_refinement",
+              AsyncMock(side_effect=FrameExtractionError(
+                  "boom", timestamp=18.0, returncode=1, stderr="x",
+              ))),
     ):
         result = await generate_landing_clip_for_lineup(
             db, lineup,

@@ -59,15 +59,13 @@ from app.core.config import settings
 from app.core.storage import get_storage
 from app.models.game.lineup import Lineup
 from app.repositories.game import lineup_repo
-from app.services.classification.classifier_service import (
-    classify_throw_timing_from_frames,
-)
 from app.services.ingestion.frame_extractor import (
     ClipCutError,
     FrameExtractionError,
-    clip_window_timestamps,
     cut_clip,
-    extract_frames_downscaled,
+)
+from app.services.ingestion.throw_localizer import (
+    localize_throw_with_refinement,
 )
 from app.services.ingestion.wide_source import (
     cut_and_upload_wide_source,
@@ -250,12 +248,6 @@ async def generate_landing_clip_for_lineup(
                 skip_reason="classifier_unavailable:missing_api_key",
             )
 
-        timestamps = clip_window_timestamps(chapter_start, chapter_end)
-        if not timestamps:
-            return LandingClipGenerationResult(
-                status="skipped", skip_reason="empty_clip_window"
-            )
-
         owns_video = video_path is None
         local_video: Optional[Path] = video_path
         try:
@@ -285,8 +277,18 @@ async def generate_landing_clip_for_lineup(
                         reasoning=f"Video re-fetch failed: {exc}",
                     )
 
+            # Two-stage throw localisation (see clip_generator + the
+            # throw_localizer docstring). Backfill path needs frame-accurate
+            # release just as much as the ingest path — a coarse-only landing
+            # anchor inherits the same 3s cadence cost.
             try:
-                frames = await extract_frames_downscaled(local_video, timestamps)
+                refined = await localize_throw_with_refinement(
+                    local_video,
+                    chapter_start=chapter_start,
+                    chapter_end=chapter_end,
+                    chapter_title=lineup.chapter_title,
+                    utility_hint=utility_hint,
+                )
             except FrameExtractionError as exc:
                 logger.warning(
                     "landing_clip_generator: downscaled frame extraction "
@@ -299,19 +301,14 @@ async def generate_landing_clip_for_lineup(
                     reasoning=f"Downscaled frame extraction failed: {exc}",
                 )
 
-            chapter_duration = float(chapter_end) - float(chapter_start)
-            timing = await classify_throw_timing_from_frames(
-                frames=frames,
-                frame_timestamps=timestamps,
-                chapter_title=lineup.chapter_title,
-                chapter_duration=chapter_duration,
-                utility_hint=utility_hint,
-            )
+            timing = refined.timing
+            timestamps = refined.frame_timestamps
             if not timing.success:
                 logger.warning(
                     "landing_clip_generator: throw-timing call failed: "
-                    "lineup=%s video_id=%s error_codes=%s reasoning=%s",
-                    lineup.id, video_id, timing.error_codes, timing.reasoning,
+                    "lineup=%s video_id=%s stage=%s error_codes=%s reasoning=%s",
+                    lineup.id, video_id, refined.stage,
+                    timing.error_codes, timing.reasoning,
                 )
                 return LandingClipGenerationResult(
                     status="failed",
