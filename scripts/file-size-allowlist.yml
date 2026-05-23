@@ -25,4 +25,12 @@ over_1000_loc:
       pipeline stabilises.
 
 # Files allowed to grow even when already over 500 LOC (rare — use sparingly).
-allow_growth_over_500: []
+allow_growth_over_500:
+  - path: apps/mygamingassistant/backend/app/services/classification/classifier_service.py
+    reason: >
+      Same file as the over_1000_loc entry above — active extraction in
+      progress. The remaining single-image vs grid classifier split is
+      planned; until that lands, prompt-text corrections (operator-visible
+      defects like the STAND/AIM disambiguation in PR R3) can add LOC.
+      Remove this entry once the file falls below 500 LOC OR once the
+      pending extraction ships.

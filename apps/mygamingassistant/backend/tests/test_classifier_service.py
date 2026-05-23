@@ -877,6 +877,30 @@ class TestGameFirstPromptWiring:
         # Grid schema body still present.
         assert "is_lineup" in prompt
 
+    def test_grid_prompt_distinguishes_stand_from_aim(self):
+        """STAND and AIM must be defined as distinct moments (PR R3 fix).
+
+        Operator surfaced (lineup 7bd971c3) that the grid classifier picked
+        near-duplicate STAND/AIM frames because the old schema doc described
+        both as "crosshair on the alignment marker" and explicitly allowed
+        them to collapse via "May equal best_stand_index if one frame shows
+        both". The fix splits them: STAND = player position with local
+        environment; AIM = crosshair on the alignment marker, distinct frame.
+        """
+        prompt = self._grid_system_prompt()
+        # STAND is anchored on the player-position moment, NOT the aim moment.
+        assert "PLAYER POSITION at the throw spot" in prompt
+        assert '"I am at the spot"' in prompt
+        # AIM is anchored on the crosshair-on-marker moment.
+        assert "CROSSHAIR ON THE ALIGNMENT MARKER" in prompt
+        assert '"crosshair is on the marker"' in prompt
+        # The two indices MUST differ and AIM comes after STAND in time.
+        assert "DIFFERENT frame from best_stand_index" in prompt
+        assert "come AFTER it in time" in prompt
+        # The collapse-allowing clause from the old prompt MUST be gone —
+        # this is the specific phrase that caused the operator-visible bug.
+        assert "May equal best_stand_index" not in prompt
+
     def test_grid_schema_format_does_not_break(self):
         """_GRID_OUTPUT_SCHEMA_DOC.format(n=...) must still substitute n cleanly.
 
