@@ -206,24 +206,37 @@ class TestExtractFramesDownscaled:
 
 
 class TestClipWindowTimestamps:
-    def test_skip_fraction_30pct_for_long_chapter(self):
-        # duration 100s >= 20 → skip 30% → window [30, 100], N=12.
+    def test_long_chapter_uses_30pct_skip(self):
+        # duration 100s >= 90 → skip 30% → window [30, 100], N=12.
         ts = clip_window_timestamps(0.0, 100.0)
         assert len(ts) == 12
         assert all(30.0 <= t <= 100.0 for t in ts)
         assert ts == sorted(ts)
 
-    def test_skip_fraction_15pct_for_short_chapter(self):
-        # duration 16s < 20 → skip 15% → window [2.4, 16]; remaining 13.6 >= 12
-        # so N stays 12.
-        ts = clip_window_timestamps(0.0, 16.0)
+    def test_medium_chapter_uses_15pct_skip(self):
+        # duration 60s (40 <= d < 90) → skip 15% → window [9, 60], N=12.
+        ts = clip_window_timestamps(0.0, 60.0)
         assert len(ts) == 12
-        assert all(2.4 <= t <= 16.0 for t in ts)
+        assert all(9.0 <= t <= 60.0 for t in ts)
+
+    def test_short_chapter_skips_nothing_regression(self):
+        # Regression for the "Market Window - B Site" incident (lineup
+        # 7bd971c3, 34s chapter): the old `0.30 if duration >= 20` rule
+        # started sampling at 10.2s, missing the actual throw earlier in
+        # the chapter, so Claude only saw the post-throw knife-walk and
+        # hallucinated a release on a frame with no utility in hand.
+        # Under the new tier, <40s gets 0% skip.
+        ts = clip_window_timestamps(0.0, 34.0)
+        assert len(ts) == 12
+        # First sample is within edge_padding of the chapter start — no
+        # lead-in trimmed away.
+        assert ts[0] < 5.0
+        assert all(0.0 < t < 34.0 for t in ts)
 
     def test_short_remaining_window_uses_8_frames(self):
-        # duration 14s < 20 → skip 15% → window_start 2.1, remaining 11.9 < 12
+        # duration 10s < 40 → skip 0% → window [0, 10]; remaining 10 < 12
         # → N = 8.
-        ts = clip_window_timestamps(0.0, 14.0)
+        ts = clip_window_timestamps(0.0, 10.0)
         assert len(ts) == 8
 
     def test_long_chapter_caps_to_final_120s(self):
@@ -242,8 +255,34 @@ class TestClipWindowTimestamps:
         assert all(80.0 <= t <= 200.0 for t in ts)
         assert min(ts) >= 80.0  # the 60-80s lead-in is excluded by the cap
 
+    def test_skip_boundary_at_40s_inclusive(self):
+        # At exactly 40s, skip is 15% (medium tier is inclusive of 40).
+        ts = clip_window_timestamps(0.0, 40.0)
+        # 40 * 0.15 = 6.0 → window [6, 40]; remaining 34 >= 12 → N=12.
+        assert len(ts) == 12
+        assert ts[0] >= 6.0  # nothing in the [0, 6) lead-in
+
+    def test_just_below_40s_uses_no_skip(self):
+        # 39.9s falls in the short tier (skip 0%, NOT 15%).
+        ts = clip_window_timestamps(0.0, 39.9)
+        assert ts[0] < 5.0  # first frame near 0, not at ~6s
+
+    def test_skip_boundary_at_90s_inclusive(self):
+        # At exactly 90s, skip is 30% (long tier is inclusive of 90).
+        ts = clip_window_timestamps(0.0, 90.0)
+        # 90 * 0.30 = 27 → window [27, 90].
+        assert len(ts) == 12
+        assert ts[0] >= 27.0
+
+    def test_just_below_90s_uses_15pct_skip(self):
+        # 89s falls in the medium tier (skip 15%, NOT 30%).
+        ts = clip_window_timestamps(0.0, 89.0)
+        # 89 * 0.15 = 13.35 → window [13.35, 89]. Must NOT be ~26.7.
+        assert ts[0] >= 13.0
+        assert ts[0] < 26.0  # confirm we're not in the 30% tier
+
     def test_very_short_chapter_degrades_safely(self):
-        # 5s chapter: skip 15% → window [0.75, 5]; <12 → N=8; grid_timestamps
+        # 5s chapter: skip 0% → window [10, 15]; <12 → N=8; grid_timestamps
         # keeps every sample strictly inside the chapter.
         ts = clip_window_timestamps(10.0, 15.0)
         assert len(ts) == 8
