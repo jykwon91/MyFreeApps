@@ -30,7 +30,7 @@
  */
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, HelpCircle, LayoutGrid, List, X } from "lucide-react";
+import { ArrowLeft, X } from "lucide-react";
 import { useGetGamesQuery, useGetMapDetailQuery } from "@/store/gamesApi";
 import { useGetLineupsQuery, useGetZoneDensityQuery } from "@/store/lineupsApi";
 import { countUnplaceableLineups } from "@/components/lineup/MapLineupPins";
@@ -39,7 +39,7 @@ import KeyboardShortcutsHelp from "@/components/lineup/KeyboardShortcutsHelp";
 import GlanceBoard from "@/components/lineup/GlanceBoard";
 import LineupListBoard from "@/components/lineup/LineupListBoard";
 import GlanceBoardMinimapSidebar from "@/components/lineup/GlanceBoardMinimapSidebar";
-import GlanceBoardOperatorMenu from "@/components/lineup/GlanceBoardOperatorMenu";
+import MapPageTopBar from "@/components/map/MapPageTopBar";
 import DesignKnobsPanel from "@/components/lineup/DesignKnobsPanel";
 import { useDesignKnobs } from "@/hooks/useDesignKnobs";
 import MinimapUploadDialog from "@/components/game/MinimapUploadDialog";
@@ -361,169 +361,27 @@ export default function MapPage() {
       {/* ── Full-height flex container ──────────────────────────────────── */}
       <div className="flex flex-col min-h-screen">
 
-        {/* ── Slim sticky top bar (~40px) ─────────────────────────────── */}
-        <header className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm border-b h-10 flex items-center gap-2 px-3 shrink-0 overflow-x-auto">
-
-          {/* Back + map name */}
-          <button
-            type="button"
-            onClick={() => navigate(`/${gameSlug}`)}
-            className="flex items-center gap-1.5 text-sm font-medium hover:text-foreground text-muted-foreground transition-colors shrink-0"
-            aria-label="Back to maps"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" aria-hidden />
-            <span className="hidden sm:inline text-xs text-muted-foreground">{game?.name ?? gameSlug} ·</span>
-            <span className="text-sm font-semibold text-foreground capitalize">{mapDetail.name}</span>
-          </button>
-
-          <span className="text-border shrink-0">|</span>
-
-          {/* Side chips */}
-          <div className="flex items-center gap-0.5 shrink-0" role="group" aria-label="Side filter">
-            {sideChips.map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => handleSideChange(opt.value)}
-                className={[
-                  "px-2.5 py-0.5 rounded-full text-[11px] font-medium transition-colors",
-                  side === opt.value
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/60",
-                ].join(" ")}
-                aria-pressed={side === opt.value}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-
-          <span className="text-border shrink-0">|</span>
-
-          {/* Utility type chips */}
-          {utilOptions.length > 0 && (
-            <div className="flex items-center gap-0.5 shrink-0" role="group" aria-label="Utility type filter">
-              {utilOptions.map((opt) => {
-                const active = selectedUtils.includes(opt.value);
-                return (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => handleUtilChipToggle(opt.value)}
-                    className={[
-                      "px-2.5 py-0.5 rounded-full text-[11px] font-medium transition-colors",
-                      active
-                        ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground hover:text-foreground hover:bg-muted/60",
-                    ].join(" ")}
-                    aria-pressed={active}
-                  >
-                    {opt.label}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-
-          {/* Loadout chips — persistent inline toggle strip.
-              Composable with utility chips; default empty = no filter.
-              Keyboard shortcut 'l' from old popover removed; inline chips
-              are always accessible without shortcut. */}
-          {utilOptions.length > 0 && (
-            <>
-              <span className="text-border shrink-0">|</span>
-              <div
-                className="flex items-center gap-0.5 shrink-0"
-                role="group"
-                aria-label="Loadout filter — utilities you are carrying this round"
-              >
-                {utilOptions.map((opt) => {
-                  const inLoadout = loadout.includes(opt.value);
-                  return (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      onClick={() => toggleLoadout(opt.value)}
-                      className={[
-                        "px-2.5 py-0.5 rounded-full text-[11px] font-medium transition-colors border",
-                        inLoadout
-                          ? "bg-amber-500/20 border-amber-500/50 text-amber-700 dark:text-amber-400"
-                          : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/60",
-                      ].join(" ")}
-                      aria-pressed={inLoadout}
-                      title={`${inLoadout ? "Remove" : "Add"} ${opt.label} from loadout`}
-                    >
-                      {opt.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </>
-          )}
-
-          {/* Spacer */}
-          <div className="flex-1" />
-
-          {/* View toggle — List (default) vs Grid. List defers all video
-              decoding until the operator expands a row; Grid auto-loops
-              every visible tile's 4 panes. Persisted via ?view URL param. */}
-          <div
-            className="flex items-center rounded-md border bg-card/40 shrink-0"
-            role="group"
-            aria-label="Lineup view mode"
-          >
-            <button
-              type="button"
-              onClick={() => handleViewToggle("list")}
-              aria-pressed={viewMode === "list"}
-              aria-label="List view — compact text rows, click a row to expand"
-              title="List view (default — lower browser CPU)"
-              className={[
-                "p-1 transition-colors rounded-l-md",
-                viewMode === "list"
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted/60",
-              ].join(" ")}
-            >
-              <List className="w-3.5 h-3.5" aria-hidden />
-            </button>
-            <button
-              type="button"
-              onClick={() => handleViewToggle("grid")}
-              aria-pressed={viewMode === "grid"}
-              aria-label="Grid view — full storyboard tiles always visible"
-              title="Grid view (auto-loops every visible tile)"
-              className={[
-                "p-1 transition-colors rounded-r-md",
-                viewMode === "grid"
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted/60",
-              ].join(" ")}
-            >
-              <LayoutGrid className="w-3.5 h-3.5" aria-hidden />
-            </button>
-          </div>
-
-          {/* Help shortcut */}
-          <button
-            type="button"
-            onClick={() => setShowShortcutsHelp(true)}
-            className="p-1 rounded hover:bg-muted/40 text-muted-foreground transition-colors shrink-0"
-            aria-label="Keyboard shortcuts (?)"
-            title="Keyboard shortcuts"
-          >
-            <HelpCircle className="w-3.5 h-3.5" aria-hidden />
-          </button>
-
-          {/* Operator ⚙ menu */}
-          <GlanceBoardOperatorMenu
-            gameSlug={gameSlug!}
-            mapSlug={mapSlug!}
-            isSuperuser={isSuperuser}
-            unplaceableCount={unplaceableCount}
-            onReplaceMinimapClick={() => setShowMinimapUpload(true)}
-          />
-        </header>
+        <MapPageTopBar
+          gameSlug={gameSlug!}
+          mapSlug={mapSlug!}
+          gameName={game?.name ?? gameSlug ?? ""}
+          mapName={mapDetail.name}
+          side={side}
+          sideChips={sideChips}
+          onSideChange={handleSideChange}
+          utilOptions={utilOptions}
+          selectedUtils={selectedUtils}
+          onUtilChipToggle={handleUtilChipToggle}
+          loadout={loadout}
+          onLoadoutToggle={toggleLoadout}
+          viewMode={viewMode}
+          onViewToggle={handleViewToggle}
+          isSuperuser={isSuperuser}
+          unplaceableCount={unplaceableCount}
+          onReplaceMinimapClick={() => setShowMinimapUpload(true)}
+          onBackClick={() => navigate(`/${gameSlug}`)}
+          onShortcutsClick={() => setShowShortcutsHelp(true)}
+        />
 
         {/* ── Body: sidebar + main ─────────────────────────────────────── */}
         <div className="flex flex-1 min-h-0">
