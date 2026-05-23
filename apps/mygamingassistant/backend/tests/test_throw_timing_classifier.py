@@ -349,3 +349,109 @@ class TestThrowTimingPerspectivePrompt:
         # preference, not just the generic "FIRST wisp" language.
         assert "the FIRST visible wisp" in system_text
         assert "earlier same-perspective frame shows even partial deployment" in system_text
+
+
+class TestThrowTimingCandidateExclusions:
+    """Prompt-presence tests for CANDIDATE-FRAME EXCLUSIONS.
+
+    The operator's source channels heavily use title cards / "SMOKE #N"
+    headers / knife-only-walking transition shots. Before this rule was
+    added, those frames were either picked as RELEASE / RESULT (wrong) OR
+    forced the chapter to is_lineup_throw=false (also wrong — the actual
+    throw was hiding elsewhere in the window). The rule decouples
+    "this individual frame can't be the release/result" from "no frame in
+    this chapter shows a throw." If a refactor accidentally drops any of
+    these blocks, fail loud here.
+    """
+
+    @pytest.mark.asyncio
+    async def test_system_prompt_includes_candidate_exclusions_header(self):
+        _, client = await _call(
+            {"is_lineup_throw": True, "release_index": 1, "result_index": 2,
+             "confidence": 0.6, "reasoning": "x"},
+        )
+        system = client.messages.create.call_args.kwargs["system"]
+        system_text = "\n".join(b["text"] for b in system)
+        assert "CANDIDATE-FRAME EXCLUSIONS" in system_text
+
+    @pytest.mark.asyncio
+    async def test_system_prompt_excludes_title_card_frames(self):
+        """Title cards / large text overlays must be called out by name —
+        the operator's source channels use "SMOKE #N" headers heavily."""
+        _, client = await _call(
+            {"is_lineup_throw": True, "release_index": 1, "result_index": 2,
+             "confidence": 0.6, "reasoning": "x"},
+        )
+        system = client.messages.create.call_args.kwargs["system"]
+        system_text = "\n".join(b["text"] for b in system)
+        assert "TITLE-CARD" in system_text
+        # The literal "SMOKE #N" example anchors the model to the operator's
+        # source channel's actual overlay style.
+        assert "SMOKE #N" in system_text
+
+    @pytest.mark.asyncio
+    async def test_system_prompt_excludes_knife_only_walking_frames(self):
+        """Knife-only-walking frames between throws must be explicit
+        non-candidates — but knife-in-hand AFTER a release while the
+        utility is mid-flight is still a valid result candidate."""
+        _, client = await _call(
+            {"is_lineup_throw": True, "release_index": 1, "result_index": 2,
+             "confidence": 0.6, "reasoning": "x"},
+        )
+        system = client.messages.create.call_args.kwargs["system"]
+        system_text = "\n".join(b["text"] for b in system)
+        assert "KNIFE-ONLY-WALKING" in system_text
+        # The post-release knife-in-hand carve-out must be present, or the
+        # rule would over-exclude legitimate result frames where the
+        # thrower has already switched back to a knife while the smoke
+        # blooms in front of them.
+        assert "mid-flight or" in system_text
+        assert "blooming IS a valid result candidate" in system_text
+
+    @pytest.mark.asyncio
+    async def test_system_prompt_decouples_chapter_verdict_from_frame_exclusion(
+        self,
+    ):
+        """is_lineup_throw=false ONLY when NO frame shows a release; a
+        chapter that mixes title cards with a real throw is still
+        is_lineup_throw=true. If this drops, the model will start flipping
+        the verdict on any chapter that contains even one title card."""
+        _, client = await _call(
+            {"is_lineup_throw": True, "release_index": 1, "result_index": 2,
+             "confidence": 0.6, "reasoning": "x"},
+        )
+        system = client.messages.create.call_args.kwargs["system"]
+        system_text = "\n".join(b["text"] for b in system)
+        assert "AT LEAST ONE frame" in system_text
+        assert "ineligible candidates" in system_text
+        # The "NOT a verdict flip" phrase is the explicit decoupling — it's
+        # the one short string that says "mixed-content chapter stays true".
+        assert "NOT a verdict flip" in system_text
+
+    @pytest.mark.asyncio
+    async def test_system_prompt_directs_model_to_search_elsewhere(self):
+        """When a frame is excluded, the model must look elsewhere — not
+        force a pick on the excluded frame. Without this the model often
+        returns its second-favorite which happens to be the title card."""
+        _, client = await _call(
+            {"is_lineup_throw": True, "release_index": 1, "result_index": 2,
+             "confidence": 0.6, "reasoning": "x"},
+        )
+        system = client.messages.create.call_args.kwargs["system"]
+        system_text = "\n".join(b["text"] for b in system)
+        assert "Search for a clean" in system_text
+        assert "set the affected index to null" in system_text
+
+    @pytest.mark.asyncio
+    async def test_system_prompt_asks_for_exclusion_notes_in_reasoning(self):
+        """When the model skips frames due to exclusions, the reasoning
+        field must say which frames + which rule — this is the diagnostic
+        breadcrumb that lets the operator audit the classifier's behavior
+        on a known-bad lineup without re-running it."""
+        _, client = await _call(
+            {"is_lineup_throw": True, "release_index": 1, "result_index": 2,
+             "confidence": 0.6, "reasoning": "x"},
+        )
+        system = client.messages.create.call_args.kwargs["system"]
+        system_text = "\n".join(b["text"] for b in system)
+        assert "skipped F3 title-card" in system_text

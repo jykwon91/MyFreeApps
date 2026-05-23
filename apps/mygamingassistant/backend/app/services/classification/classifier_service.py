@@ -1310,17 +1310,49 @@ keys:
 }}
 
 Rules:
-- is_lineup_throw: true ONLY if these frames show a real first-person utility
-  throw in the main game view. false for intro/outro/title cards, webcam or
-  talking-head, knife-only walking, menus, montages, or anything that is not an
-  actual throw — when false, release_index AND result_index MUST be null.
-- release_index: the 1-based frame where the utility is released. RELEASE cues:
-  the projectile is first airborne; the throw-animation follow-through; the HUD
-  grenade/ability slot empties. If no frame catches the exact release, choose
-  the frame immediately BEFORE the effect first appears.
+- is_lineup_throw: true if AT LEAST ONE frame in this set shows the player
+  releasing a real first-person utility throw in the main game view. false
+  ONLY when NO frame in the set shows a release — e.g., the whole chapter is
+  an intro/outro splash, webcam-only / talking-head, a menu, a montage, or
+  knife-only walking with no utility ever leaving the player's hand. When
+  false, release_index AND result_index MUST be null.
+  IMPORTANT: a chapter where SOME frames are title cards / knife-walking /
+  talking-head but OTHERS show a real throw is still is_lineup_throw=true.
+  The non-throw frames just become ineligible candidates — see
+  CANDIDATE-FRAME EXCLUSIONS below.
+- CANDIDATE-FRAME EXCLUSIONS: a frame matching ANY of the following MUST NOT
+  be returned as release_index OR result_index, EVEN IF a release or result
+  is partially visible behind the overlay. Search for a clean
+  same-perspective frame elsewhere in the window instead. If every frame in
+  the set is excluded, set the affected index to null and reduce confidence
+  rather than forcing a pick on an excluded frame:
+    - TITLE-CARD / LARGE-TEXT-OVERLAY frame: the frame is dominated by an
+      intro splash, chapter banner, "SMOKE #N" / "LINEUP 3" / "PART 2"
+      header, or a semi-transparent block of explanatory text covering
+      >~25% of the frame. The standard HUD (minimap, ammo, money, small
+      crosshair label) is NOT a title card; the disqualifying overlay is
+      the BIG one that obscures the main game view.
+    - KNIFE-ONLY-WALKING frame: the player has ONLY a knife (or no
+      utility) in hand AND no utility is currently airborne / no smoke,
+      flame, flash, or HE effect is unfolding in the world. This is the
+      "walking between throws" state and contains zero release / result
+      information. (Knife-in-hand AFTER a real release while the utility
+      is mid-flight or blooming IS a valid result candidate — knife-alone
+      is not the disqualifier; knife + nothing-happening is.)
+    - WEBCAM / FACECAM dominant frame: a picture-in-picture / face tile
+      covers most of the main game view.
+    - REPLAY / KILL-CAM / SCOREBOARD / MENU / MAP-OVERVIEW frame: not the
+      live first-person main game view.
+- release_index: the 1-based frame where the utility is released, chosen from
+  frames that pass CANDIDATE-FRAME EXCLUSIONS. RELEASE cues: the projectile
+  is first airborne; the throw-animation follow-through; the HUD
+  grenade/ability slot empties. If no eligible frame catches the exact
+  release, choose the eligible frame immediately BEFORE the effect first
+  appears.
 - result_index: the 1-based frame where the RESULT is first clearly visible
-  FROM THE THROWER'S LINEUP POSITION. It MUST be at or after release_index —
-  a result cannot precede its own release.
+  FROM THE THROWER'S LINEUP POSITION, chosen from frames that pass
+  CANDIDATE-FRAME EXCLUSIONS. It MUST be at or after release_index — a
+  result cannot precede its own release.
   SAME-PERSPECTIVE RULE (highest priority, beats "first clearly visible"):
     The result frame MUST be from the SAME player position and viewing
     direction as release_index. Disqualifiers — if any apply, search EARLIER
@@ -1351,16 +1383,22 @@ Rules:
     skip emitting a landing clip rather than ship a misleading one.
 - confidence: 0-1 that you localised the throw correctly. Low when the throw is
   off-screen, cut away from, or only inferred from trajectory; high only when
-  the release and the result are both directly visible.
+  the release and the result are both directly visible AND both indices are
+  on candidate-eligible frames.
 - Discipline:
   - If the throw is shown repeatedly or from multiple angles, use the FIRST
     clean throw only.
   - Ignore picture-in-picture, facecam, killfeed, scoreboard, title cards and
     replays — judge from the main game view only.
-  - Talking-head or knife-only-walking frames are NOT a throw:
-    is_lineup_throw=false, both indices null.
-- reasoning: <= 80 words. State the release cue, the result cue, and which
-  utility you keyed on.
+  - A chapter that is ENTIRELY talking-head / knife-only-walking / menus /
+    title cards with NO release in any frame → is_lineup_throw=false. A
+    chapter that mixes a real throw with non-throw frames →
+    is_lineup_throw=true and the non-throw frames are excluded from
+    candidacy per CANDIDATE-FRAME EXCLUSIONS above (NOT a verdict flip).
+- reasoning: <= 80 words. State the release cue, the result cue, which
+  utility you keyed on, AND — if you skipped over any frames due to
+  CANDIDATE-FRAME EXCLUSIONS — note which frame numbers and which exclusion
+  rule (e.g. "skipped F3 title-card, F7 knife-walking").
 """
 
 
