@@ -4,17 +4,22 @@ Lineups created before PR6 (and any whose micro-clip generation failed at
 ingest time) have ``stand_clip_url IS NULL`` and/or ``aim_clip_url IS NULL``.
 This walks that set, re-fetches each source video ONCE per video (not once
 per lineup — a tutorial video usually backs many lineups), and asks the
-generator to localise anchors + cut clips. Mirrors :mod:`landing_clip_backfill`
-(PR5) shape exactly.
+generator to localise the anchor + cut clips. Mirrors
+:mod:`landing_clip_backfill` (PR5) shape exactly.
 
-Anchor sources (operator-tuned 2026-05-23):
-  - STAND comes from the grid classifier (the 9-frame grid reliably catches
-    the "I am at the spot" window — many seconds long).
-  - AIM comes from ``release_ts - _AIM_PRE_RELEASE_SECONDS``, where release_ts
-    is from the throw-timing classifier's dense pass. The grid is too sparse
-    to localise the sub-second aim moment, so prior AIM clips were random.
-The generator orchestrates both classifier calls itself in the backfill
-path; this module just hands it the source video.
+Anchor source (operator-tuned 2026-05-24):
+  Both STAND and AIM derive from a single ``release_ts`` from the
+  throw-timing classifier's dense pass:
+    - STAND_TS = release_ts − _STAND_PRE_RELEASE_SECONDS (3.0s before)
+    - AIM_TS   = release_ts − _AIM_PRE_RELEASE_SECONDS (0.8s before)
+  The earlier grid-based STAND anchor was abandoned (PR following #761) —
+  the 9-frame grid frequently picked the walk-up or windup frame rather
+  than the settled stance. The throw-localizer's dense pass produces a
+  reliable release frame (THROW + LANDING already depend on it), so
+  STAND/AIM riding the same anchor is the no-bandaid fix.
+
+The generator runs the throw-localizer itself on the backfill path; this
+module just hands it the source video.
 
 Independent of :mod:`clip_backfill` (PR2) and :mod:`landing_clip_backfill`
 (PR5) by design: a lineup can have any combination of NULL micro-clip
@@ -26,12 +31,12 @@ Idempotent by construction: the work set is
 NULL OR aim_clip_url IS NULL)`` (``lineup_repo.list_accepted_lineups_needing_micro_clips``).
 A generated clip sets the matching column and may drop the lineup out of
 the set. The generator handles partial state internally — uploading both
-sides per call is cheap (the heavy cost is the grid classifier + download,
-done once per video). A ``failed`` side leaves its column NULL and is
-retried on the next run (transient yt-dlp / ffmpeg / Claude failures
-self-heal). A ``skipped`` side (no source video / chapter too short /
-classifier disabled) also stays NULL and will be re-evaluated on a future
-run.
+sides per call is cheap (the heavy cost is the throw-localizer call +
+download, done once per video). A ``failed`` side leaves its column NULL
+and is retried on the next run (transient yt-dlp / ffmpeg / Claude
+failures self-heal). A ``skipped`` side (no source video / chapter too
+short / classifier disabled / no throw release in chapter) also stays
+NULL and will be re-evaluated on a future run.
 
 Per rules/no-bandaid-solutions.md + rules/check-third-party-error-codes.md:
 every yt-dlp / ffmpeg / Claude failure is captured with its structured
@@ -212,11 +217,9 @@ async def backfill_micro_clips(db: AsyncSession) -> MicroClipBackfillStats:
                         # Reuse the once-downloaded file — do NOT let the
                         # generator re-download per lineup.
                         video_path=video_path,
-                        # Backfill: no precomputed timestamps; the generator
-                        # re-runs the grid classifier (stand) AND the
-                        # throw-localizer (release → aim) itself.
-                        precomputed_stand_ts=None,
-                        precomputed_release_ts=None,
+                        # Omit precomputed_release_ts — its _UNRESOLVED
+                        # sentinel default tells the generator "I am the
+                        # backfill path; run the throw-localizer yourself".
                     )
                 except Exception as exc:  # defensive: never abort the batch
                     logger.warning(

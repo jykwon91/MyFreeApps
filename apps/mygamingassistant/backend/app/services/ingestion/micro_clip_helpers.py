@@ -4,8 +4,9 @@ generator was already over the 500-LOC threshold; growth requires a
 matching split per TECH_DEBT.md "no-growth on flagged files").
 
 What lives here:
-  - ``_resolve_stand_ts_via_grid_classifier`` — backfill stand anchor.
-  - ``_resolve_release_ts_via_throw_localizer`` — backfill aim anchor.
+  - ``_resolve_release_ts_via_throw_localizer`` — backfill anchor source
+    (both STAND and AIM derive from this single release_ts; see
+    :mod:`micro_clip_generator` docstring).
   - ``_cut_upload_persist_one_side`` — per-side ffmpeg cut + MinIO upload
     + repo commit (shared by both stand and aim).
 
@@ -25,99 +26,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.storage import get_storage
 from app.models.game.lineup import Lineup
-from app.services.classification.classifier_service import (
-    classify_frames_for_lineup_decision,
-)
 from app.services.ingestion.frame_extractor import (
     ClipCutError,
     FrameExtractionError,
     cut_clip,
-    extract_frames,
-    grid_timestamps,
 )
 from app.services.ingestion.throw_localizer import (
     localize_throw_with_refinement,
 )
 
 logger = logging.getLogger(__name__)
-
-# Grid sample count + edge padding — must match the ingest orchestrator's
-# ingestion_orchestrator._GRID_FRAME_COUNT / _GRID_EDGE_PADDING_SECONDS so
-# the backfill recovers the SAME timestamps the ingest pass extracted.
-_GRID_FRAME_COUNT = 9
-_GRID_EDGE_PADDING_SECONDS = 1.0
-
-
-async def _resolve_stand_ts_via_grid_classifier(
-    db: AsyncSession,
-    lineup: Lineup,
-    video_path: Path,
-    chapter_start: float,
-    chapter_end: float,
-) -> tuple[Optional[float], list[str], str]:
-    """Backfill helper: re-run the grid classifier to recover stand_ts.
-
-    Returns ``(stand_ts, error_codes, reasoning)``. The grid classifier also
-    returns an ``aim_idx`` but it is intentionally discarded — AIM_TS is now
-    derived from release_ts (see micro_clip_generator module docstring); the
-    grid pass is too sparse to localise the sub-second aim moment. STAND is
-    unaffected because the standing-at-spot window is many seconds long.
-    """
-    timestamps = grid_timestamps(
-        float(chapter_start),
-        float(chapter_end),
-        _GRID_FRAME_COUNT,
-        edge_padding_seconds=_GRID_EDGE_PADDING_SECONDS,
-    )
-    if not timestamps:
-        return None, ["empty_grid_window"], "chapter window produced no grid frames"
-
-    try:
-        frames = await extract_frames(video_path, timestamps)
-    except FrameExtractionError as exc:
-        logger.warning(
-            "micro_clip_helpers: grid frame extraction failed: "
-            "lineup=%s returncode=%s stderr=%s",
-            lineup.id, exc.returncode, exc.stderr[:300],
-        )
-        return None, [f"frame_extract:rc={exc.returncode}"], str(exc)
-
-    if not frames:
-        return None, ["grid_frames_empty"], "ffmpeg returned no frames"
-
-    try:
-        result = await classify_frames_for_lineup_decision(
-            db,
-            frames=frames,
-            chapter_title=lineup.chapter_title or "",
-            attribution_author=lineup.attribution_author,
-            game_hint=None,
-        )
-    except Exception as exc:
-        logger.warning(
-            "micro_clip_helpers: grid classifier raised: lineup=%s error=%s",
-            lineup.id, str(exc),
-        )
-        return None, [f"classifier_raised:{type(exc).__name__}"], str(exc)
-
-    if not result.success:
-        logger.warning(
-            "micro_clip_helpers: grid classifier call failed: lineup=%s "
-            "error_codes=%s",
-            lineup.id, result.error_codes,
-        )
-        return None, list(result.error_codes), "grid classifier reported failure"
-
-    if not result.is_lineup:
-        # Accepted lineup but classifier says "not a lineup" → keep the
-        # signal but skip cleanly rather than fabricate a timestamp.
-        return None, [], "backfill grid says not_a_lineup (skip)"
-
-    # 1-based → 0-based, clamped to the grid range. Falls back to first
-    # index when the model omitted it (mirrors orchestrator's fallback).
-    stand_idx = (result.best_stand_index or 1) - 1
-    stand_idx = max(0, min(stand_idx, len(timestamps) - 1))
-    return timestamps[stand_idx], [], result.reasoning or ""
 
 
 async def _resolve_release_ts_via_throw_localizer(
