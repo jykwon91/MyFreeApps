@@ -1,7 +1,7 @@
 # MyGamingAssistant - Tech Debt Log
 
 > Last scanned: 2026-05-21 (file-size + split-shape audit; previous best-practice findings preserved)
-> Issues: 1 critical, 6 high, 7 medium, 4 low
+> Issues: 0 critical, 5 high, 7 medium, 4 low
 
 mode: log-only - fix only Critical items that block the current feature; log everything else here.
 
@@ -13,7 +13,9 @@ This scan focuses on the user concern: long production files (700+ LOC). Splits 
 
 ## Critical
 
-### [Size] Classifier - classifier_service.py is a 1967-line god-module: 4 independent Claude pipelines, prompts, parsers, validators in one file
+(none — see Resolved section)
+
+### [RESOLVED — PR #752/#754/#756/#758] [Size] Classifier - classifier_service.py is a 1967-line god-module: 4 independent Claude pipelines, prompts, parsers, validators in one file
 
 - **Severity:** Critical
 - **Category:** size / architecture
@@ -74,9 +76,9 @@ backend/app/services/classification/
 - **Note:** The previous scan recorded this as resolved for the commit/mutation half (Layering audit finding #3 RESOLVED below). The read-side inline select(...) queries are still present and the slug-resolver duplication is unaddressed.
 - **Recommendation:** Extract a shared resolver game_repo.resolve_slugs_to_ids(db, *, game_slug, map_slug, zone_slugs, utility_type_slugs) that returns the FK tuple. Replace the inline select() blocks in the lineup route module and in api/games.py with calls into game_repo (helpers already exist - get_game_by_slug, get_map_detail). Drop the SQLAlchemy select import from both route modules. The classifier _resolve_slugs is allowed to keep its own copy for now since it returns extra diagnostic structure (failures + structured codes) - but make it call the shared FK lookups for the actual queries, deduplicating the 3-way fan-out.
 
-### [Size] Lineup Repository - lineup_repo.py is 873 lines: clip writers stamp out the same 4-line set-column-commit-rollback pattern 8 times
+### [RESOLVED — this PR] [Size] Lineup Repository - lineup_repo.py is 873 lines: clip writers stamp out the same 4-line set-column-commit-rollback pattern 8 times
 
-- **Severity:** High
+- **Severity:** ~~High~~ → RESOLVED. Split into the proposed `lineup/` subpackage; `lineup_repo.py` is now a 74-line re-export shim. Leaf modules: `filters.py` (43), `lifecycle.py` (262), `throw_pane.py` (208), `landing_pane.py` (155), `micro_panes.py` (185), `technique.py` (76), `density.py` (58). All 25 caller sites preserved (no churn). 676/676 backend tests green.
 - **Effort:** M (3-4 hours)
 - **Category:** size / architecture
 - **Blocks:** PR5 trim feature work, PR6 micro-clip iteration; raises noise floor of the file the layering-finding-#3 PR uses as canonical commit-ownership pattern.
@@ -383,6 +385,8 @@ backend/app/schemas/game/
 - ~~Source schemas misfiled in lineup_schemas.py~~ - backend/app/schemas/game/source_schemas.py now exists with SourceCreate/SourceRead/SyncJobResponse; lineup_schemas.py no longer holds them. Verified via ls schemas/game/.
 - ~~Classifier - invalid confidence from Claude silently dropped (except: pass)~~ - verified resolved: classifier_service.py:1917-1924 (technique path) now does logger.warning(... invalid confidence value dropped ...) and emits a structured invalid_confidence:raw code. The grid + single-image paths also log + emit structured codes for non-numeric confidence rather than swallowing.
 - ~~Diagnostics - failed zone slug resolution only surfaces as appended reasoning prose~~ - verified resolved: _slug_failure_code emits unresolved_slug:field:slug:game= per slug and _check_game_map_consistency emits cross_game_rejected:... (lines 334-344, 546-550). Both flow into ClassifyResponse.error_codes. Operator can now filter on structured codes, not prose.
+- ~~[Critical] Classifier - classifier_service.py 1967-line god-module~~ — RESOLVED by PRs #752/#754/#756/#758. The four Claude pipelines split into sibling modules: `grid_classifier.py`, `single_image_classifier.py`, `throw_timing_classifier.py`, `throw_technique_classifier.py`. `classifier_service.py` shrank to 319 LOC as a thin re-export shim. Both MGA allowlist entries in `scripts/file-size-allowlist.yml` cleared (only Tauri `pipeline.rs` remains, due to Rust cross-module state constraints).
+- ~~[High] lineup_repo.py 873-line repo with 11 copy-pasted set-column-commit blocks~~ — RESOLVED by this PR. Split into the `lineup/` subpackage along 4-pane fault lines: `filters.py` / `lifecycle.py` / `throw_pane.py` / `landing_pane.py` / `micro_panes.py` / `technique.py` / `density.py`. `lineup_repo.py` is now a 74-line re-export shim; 25 call sites preserved. 676/676 backend tests green.
 
 ---
 
