@@ -1,14 +1,23 @@
 /**
- * GlanceBoardMinimapSidebar — passive spatial index for the glance board.
+ * GlanceBoardMinimapSidebar — spatial index for the glance board.
  *
  * Renders the minimap image with zone SVG polygons (density coloring,
- * same as MapZoneOverlay). Clicking or hovering a zone smooth-scrolls
- * the main board area to that zone's section header.
+ * same as MapZoneOverlay). Behaviour depends on which click handler the
+ * parent provides:
  *
- * No filter-gate behavior — this is read-only spatial navigation only.
+ *  - **Default (no onZoneClick)** — polygon clicks smooth-scroll the
+ *    main board area to that zone's section header. Read-only spatial
+ *    navigation, the original glance-board behaviour.
+ *
+ *  - **With onZoneClick** — polygon clicks invoke the callback (parent
+ *    typically uses it to set a zone filter URL param). Clicking the
+ *    currently-active zone is the toggle: parent should clear the filter.
+ *    The active zone gets distinct fill + stroke so the operator can see
+ *    which zone is currently selected.
  *
  * Fallback: if the minimap image fails to load, renders a scrollable text
- * list of zone names that still trigger scroll-to-section on click.
+ * list of zone names that runs the same handler on click (filter when
+ * onZoneClick is provided, scroll otherwise).
  */
 import { useState } from "react";
 import type { MapZone, ZoneDensity } from "@/types/game";
@@ -19,6 +28,14 @@ interface Props {
   zones: MapZone[];
   density: ZoneDensity;
   viewBoxSize?: number;
+  /** When provided, polygon + zone-list clicks invoke this instead of the
+   *  default scroll-to-section behaviour. Used by MapPage to set a zone
+   *  filter URL param. */
+  onZoneClick?: (zoneSlug: string) => void;
+  /** When set, the matching polygon is rendered with active fill/stroke
+   *  so the operator can see the current filter. Pass null when no zone
+   *  filter is active. */
+  activeZoneSlug?: string | null;
 }
 
 // Density fill/stroke — same tokens as MapZoneOverlay
@@ -28,6 +45,10 @@ const STROKE_HAS_LINEUPS = "rgba(34,197,94,0.7)";
 const STROKE_EMPTY       = "rgba(255,255,255,0.25)";
 const STROKE_HOVER       = "rgba(251,191,36,0.9)";
 const FILL_HOVER         = "rgba(251,191,36,0.18)";
+// Active (currently-filtered) zone — primary accent so it stands out
+// from hover (amber) and from has-lineups (green).
+const FILL_ACTIVE        = "rgba(59,130,246,0.32)";
+const STROKE_ACTIVE      = "rgba(59,130,246,0.95)";
 
 function pointsToSvg(
   polygon_points: Array<{ x: number; y: number }>,
@@ -50,9 +71,18 @@ export default function GlanceBoardMinimapSidebar({
   zones,
   density,
   viewBoxSize = 1000,
+  onZoneClick,
+  activeZoneSlug = null,
 }: Props) {
   const [minimapFailed, setMinimapFailed] = useState(false);
   const [hoveredZoneSlug, setHoveredZoneSlug] = useState<string | null>(null);
+
+  // Pick the handler once: a filter action (parent-provided) takes
+  // precedence over the default scroll-to-section behaviour. The fallback
+  // text list and the polygon ``onClick`` both use the same handler so the
+  // two surfaces stay consistent.
+  const handleZoneClick = onZoneClick ?? scrollToZone;
+  const usingFilterMode = onZoneClick !== undefined;
 
   // Fallback: text zone list when minimap unavailable
   if (!minimapUrl || minimapFailed) {
@@ -66,12 +96,17 @@ export default function GlanceBoardMinimapSidebar({
         </p>
         {zones.map((zone) => {
           const count = density[zone.id]?.count ?? 0;
+          const isActive = usingFilterMode && zone.slug === activeZoneSlug;
           return (
             <button
               key={zone.id}
               type="button"
-              onClick={() => scrollToZone(zone.slug)}
-              className="text-left px-2 py-1 rounded text-[12px] hover:bg-muted/40 transition-colors flex items-center justify-between gap-2"
+              onClick={() => handleZoneClick(zone.slug)}
+              aria-pressed={usingFilterMode ? isActive : undefined}
+              className={[
+                "text-left px-2 py-1 rounded text-[12px] hover:bg-muted/40 transition-colors flex items-center justify-between gap-2",
+                isActive && "bg-primary/15 text-primary font-medium",
+              ].filter(Boolean).join(" ")}
             >
               <span className="truncate">{zone.name}</span>
               {count > 0 && (
@@ -90,7 +125,11 @@ export default function GlanceBoardMinimapSidebar({
     <nav
       className="relative rounded-lg border overflow-hidden bg-card"
       style={{ aspectRatio: "1 / 1" }}
-      aria-label="Zone minimap — click a zone to scroll to it"
+      aria-label={
+        usingFilterMode
+          ? "Zone minimap — click a zone to filter, click again to clear"
+          : "Zone minimap — click a zone to scroll to it"
+      }
     >
       <img
         src={minimapUrl}
@@ -107,12 +146,36 @@ export default function GlanceBoardMinimapSidebar({
         {zones.map((zone) => {
           const count = density[zone.id]?.count ?? 0;
           const isHovered = zone.slug === hoveredZoneSlug;
+          const isActive = usingFilterMode && zone.slug === activeZoneSlug;
           const hasPolygon = zone.polygon_points.length > 0;
           if (!hasPolygon) return null;
 
           const points = pointsToSvg(zone.polygon_points, viewBoxSize);
-          const fill   = isHovered ? FILL_HOVER   : count > 0 ? FILL_HAS_LINEUPS   : FILL_EMPTY;
-          const stroke = isHovered ? STROKE_HOVER : count > 0 ? STROKE_HAS_LINEUPS : STROKE_EMPTY;
+          // Priority: active (filter selection) > hover > density. Active
+          // wins so the filtered zone stays visually anchored even while
+          // the operator hovers other zones to see counts.
+          const fill = isActive
+            ? FILL_ACTIVE
+            : isHovered
+              ? FILL_HOVER
+              : count > 0
+                ? FILL_HAS_LINEUPS
+                : FILL_EMPTY;
+          const stroke = isActive
+            ? STROKE_ACTIVE
+            : isHovered
+              ? STROKE_HOVER
+              : count > 0
+                ? STROKE_HAS_LINEUPS
+                : STROKE_EMPTY;
+          const strokeWidth = isActive ? 2.5 : isHovered ? 2 : 1;
+
+          const ariaLabelBase = `${zone.name} — ${count} lineup${count !== 1 ? "s" : ""}`;
+          const ariaLabelAction = usingFilterMode
+            ? isActive
+              ? " — currently filtered (click to clear)"
+              : " — click to filter"
+            : " — click to scroll";
 
           return (
             <polygon
@@ -120,12 +183,13 @@ export default function GlanceBoardMinimapSidebar({
               points={points}
               fill={fill}
               stroke={stroke}
-              strokeWidth={isHovered ? 2 : 1}
+              strokeWidth={strokeWidth}
               className="cursor-pointer transition-all duration-150"
-              onClick={() => scrollToZone(zone.slug)}
+              onClick={() => handleZoneClick(zone.slug)}
               onMouseEnter={() => setHoveredZoneSlug(zone.slug)}
               onMouseLeave={() => setHoveredZoneSlug(null)}
-              aria-label={`${zone.name} — ${count} lineup${count !== 1 ? "s" : ""} — click to scroll`}
+              aria-label={`${ariaLabelBase}${ariaLabelAction}`}
+              aria-pressed={usingFilterMode ? isActive : undefined}
             />
           );
         })}
