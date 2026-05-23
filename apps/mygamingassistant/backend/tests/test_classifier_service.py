@@ -201,11 +201,11 @@ class TestClassifyLineup:
 
         with (
             patch(
-                "app.services.classification.classifier_service._fetch_screenshot_bytes",
+                "app.services.classification.single_image_classifier._fetch_screenshot_bytes",
                 return_value=_FAKE_PNG,
             ),
-            patch("app.services.classification.classifier_service.settings") as mock_settings,
-            patch("app.services.classification.classifier_service.anthropic.Anthropic") as mock_anthropic_cls,
+            patch("app.services.classification.single_image_classifier.settings") as mock_settings,
+            patch("app.services.classification.single_image_classifier.anthropic.Anthropic") as mock_anthropic_cls,
         ):
             mock_settings.anthropic_api_key = "sk-test"
             mock_settings.claude_classifier_model = "claude-haiku-4-5-20251001"
@@ -241,7 +241,7 @@ class TestClassifyLineup:
         """Missing ANTHROPIC_API_KEY → success=False, error_codes=['missing_api_key']."""
         from app.services.classification.classifier_service import classify_lineup
 
-        with patch("app.services.classification.classifier_service.settings") as mock_settings:
+        with patch("app.services.classification.single_image_classifier.settings") as mock_settings:
             mock_settings.anthropic_api_key = ""
             mock_settings.enable_classifier = True
             result = await classify_lineup(db, pending_lineup.id)
@@ -265,11 +265,11 @@ class TestClassifyLineup:
 
         with (
             patch(
-                "app.services.classification.classifier_service._fetch_screenshot_bytes",
+                "app.services.classification.single_image_classifier._fetch_screenshot_bytes",
                 return_value=_FAKE_PNG,
             ),
-            patch("app.services.classification.classifier_service.settings") as mock_settings,
-            patch("app.services.classification.classifier_service.anthropic.Anthropic") as mock_cls,
+            patch("app.services.classification.single_image_classifier.settings") as mock_settings,
+            patch("app.services.classification.single_image_classifier.anthropic.Anthropic") as mock_cls,
         ):
             mock_settings.anthropic_api_key = "sk-test"
             mock_settings.claude_classifier_model = "claude-haiku-4-5-20251001"
@@ -294,11 +294,11 @@ class TestClassifyLineup:
 
         with (
             patch(
-                "app.services.classification.classifier_service._fetch_screenshot_bytes",
+                "app.services.classification.single_image_classifier._fetch_screenshot_bytes",
                 return_value=_FAKE_PNG,
             ),
-            patch("app.services.classification.classifier_service.settings") as mock_settings,
-            patch("app.services.classification.classifier_service.anthropic.Anthropic") as mock_cls,
+            patch("app.services.classification.single_image_classifier.settings") as mock_settings,
+            patch("app.services.classification.single_image_classifier.anthropic.Anthropic") as mock_cls,
         ):
             mock_settings.anthropic_api_key = "sk-test"
             mock_settings.claude_classifier_model = "claude-haiku-4-5-20251001"
@@ -327,11 +327,11 @@ class TestClassifyLineup:
 
         with (
             patch(
-                "app.services.classification.classifier_service._fetch_screenshot_bytes",
+                "app.services.classification.single_image_classifier._fetch_screenshot_bytes",
                 return_value=_FAKE_PNG,
             ),
-            patch("app.services.classification.classifier_service.settings") as mock_settings,
-            patch("app.services.classification.classifier_service.anthropic.Anthropic") as mock_cls,
+            patch("app.services.classification.single_image_classifier.settings") as mock_settings,
+            patch("app.services.classification.single_image_classifier.anthropic.Anthropic") as mock_cls,
         ):
             mock_settings.anthropic_api_key = "sk-test"
             mock_settings.claude_classifier_model = "claude-haiku-4-5-20251001"
@@ -582,8 +582,8 @@ class TestClassifyFramesForLineupDecision:
         }
 
         with (
-            patch("app.services.classification.classifier_service.settings") as mock_settings,
-            patch("app.services.classification.classifier_service.anthropic.Anthropic") as mock_cls,
+            patch("app.services.classification.grid_classifier.settings") as mock_settings,
+            patch("app.services.classification.grid_classifier.anthropic.Anthropic") as mock_cls,
         ):
             mock_settings.anthropic_api_key = "sk-test"
             mock_settings.claude_classifier_model = "claude-haiku-4-5-20251001"
@@ -630,8 +630,8 @@ class TestClassifyFramesForLineupDecision:
         }
 
         with (
-            patch("app.services.classification.classifier_service.settings") as mock_settings,
-            patch("app.services.classification.classifier_service.anthropic.Anthropic") as mock_cls,
+            patch("app.services.classification.grid_classifier.settings") as mock_settings,
+            patch("app.services.classification.grid_classifier.anthropic.Anthropic") as mock_cls,
         ):
             mock_settings.anthropic_api_key = "sk-test"
             mock_settings.claude_classifier_model = "claude-haiku-4-5-20251001"
@@ -678,8 +678,8 @@ class TestClassifyFramesForLineupDecision:
         }
 
         with (
-            patch("app.services.classification.classifier_service.settings") as mock_settings,
-            patch("app.services.classification.classifier_service.anthropic.Anthropic") as mock_cls,
+            patch("app.services.classification.grid_classifier.settings") as mock_settings,
+            patch("app.services.classification.grid_classifier.anthropic.Anthropic") as mock_cls,
         ):
             mock_settings.anthropic_api_key = "sk-test"
             mock_settings.claude_classifier_model = "claude-haiku-4-5-20251001"
@@ -707,7 +707,7 @@ class TestClassifyFramesForLineupDecision:
             classify_frames_for_lineup_decision,
         )
 
-        with patch("app.services.classification.classifier_service.settings") as mock_settings:
+        with patch("app.services.classification.grid_classifier.settings") as mock_settings:
             mock_settings.anthropic_api_key = "sk-test"
             result = await classify_frames_for_lineup_decision(
                 db, frames=[], chapter_title="x", attribution_author="y"
@@ -722,7 +722,7 @@ class TestClassifyFramesForLineupDecision:
             classify_frames_for_lineup_decision,
         )
 
-        with patch("app.services.classification.classifier_service.settings") as mock_settings:
+        with patch("app.services.classification.grid_classifier.settings") as mock_settings:
             mock_settings.anthropic_api_key = ""
             result = await classify_frames_for_lineup_decision(
                 db, frames=_THREE_FRAMES, chapter_title="x", attribution_author="y"
@@ -743,8 +743,8 @@ class TestClassifyFramesForLineupDecision:
         bad_response.content = [bad_text]
 
         with (
-            patch("app.services.classification.classifier_service.settings") as mock_settings,
-            patch("app.services.classification.classifier_service.anthropic.Anthropic") as mock_cls,
+            patch("app.services.classification.grid_classifier.settings") as mock_settings,
+            patch("app.services.classification.grid_classifier.anthropic.Anthropic") as mock_cls,
         ):
             mock_settings.anthropic_api_key = "sk-test"
             mock_settings.claude_classifier_model = "claude-haiku-4-5-20251001"
@@ -774,8 +774,8 @@ class TestClassifyFramesForLineupDecision:
         payload = {"is_lineup": False, "confidence": 0.0, "reasoning": "x"}
 
         with (
-            patch("app.services.classification.classifier_service.settings") as mock_settings,
-            patch("app.services.classification.classifier_service.anthropic.Anthropic") as mock_cls,
+            patch("app.services.classification.grid_classifier.settings") as mock_settings,
+            patch("app.services.classification.grid_classifier.anthropic.Anthropic") as mock_cls,
         ):
             mock_settings.anthropic_api_key = "sk-test"
             mock_settings.claude_classifier_model = "claude-haiku-4-5-20251001"
@@ -827,6 +827,7 @@ class TestGameFirstPromptWiring:
     def _single_image_system_prompt(self) -> str:
         """Reconstruct the single-image (classify_lineup) system prompt."""
         from app.services.classification import classifier_service as cs
+        from app.services.classification import single_image_classifier as si
 
         return (
             "You are classifying tactical-FPS utility lineup screenshots.\n"
@@ -836,12 +837,13 @@ class TestGameFirstPromptWiring:
             + "\n"
             + cs._GAME_FIRST_RULE
             + "\n"
-            + cs._OUTPUT_SCHEMA_DOC
+            + si._OUTPUT_SCHEMA_DOC
         )
 
     def _grid_system_prompt(self, n: int = 5) -> str:
         """Reconstruct the grid (classify_frames_for_lineup_decision) system prompt."""
         from app.services.classification import classifier_service as cs
+        from app.services.classification import grid_classifier as gc
 
         return (
             "You are classifying tactical-FPS utility lineup screenshots.\n"
@@ -852,7 +854,7 @@ class TestGameFirstPromptWiring:
             + "\n"
             + cs._GAME_FIRST_RULE
             + "\n"
-            + cs._GRID_OUTPUT_SCHEMA_DOC.format(n=n)
+            + gc._GRID_OUTPUT_SCHEMA_DOC.format(n=n)
         )
 
     def test_single_image_prompt_has_game_first_and_cues(self):
@@ -911,7 +913,8 @@ class TestGameFirstPromptWiring:
         """
         from app.services.classification import classifier_service as cs
 
-        rendered = cs._GRID_OUTPUT_SCHEMA_DOC.format(n=7)  # must not raise
+        from app.services.classification import grid_classifier as gc
+        rendered = gc._GRID_OUTPUT_SCHEMA_DOC.format(n=7)  # must not raise
         assert "Frame 1 .. Frame 7" in rendered
         assert "(1-7)" in rendered  # {n} substituted inside the JSON example
         # The new game_slug rule bullet survived the format round-trip intact.
@@ -1072,8 +1075,8 @@ class TestGridMaxTokens:
         payload = {"is_lineup": False, "confidence": 0.0, "reasoning": "x"}
 
         with (
-            patch("app.services.classification.classifier_service.settings") as mock_settings,
-            patch("app.services.classification.classifier_service.anthropic.Anthropic") as mock_cls,
+            patch("app.services.classification.grid_classifier.settings") as mock_settings,
+            patch("app.services.classification.grid_classifier.anthropic.Anthropic") as mock_cls,
         ):
             mock_settings.anthropic_api_key = "sk-test"
             mock_settings.claude_classifier_model = "claude-haiku-4-5-20251001"
@@ -1254,11 +1257,11 @@ class TestStructuredFailureSurfacing:
 
         with (
             patch(
-                "app.services.classification.classifier_service._fetch_screenshot_bytes",
+                "app.services.classification.single_image_classifier._fetch_screenshot_bytes",
                 return_value=_FAKE_PNG,
             ),
-            patch("app.services.classification.classifier_service.settings") as mock_settings,
-            patch("app.services.classification.classifier_service.anthropic.Anthropic") as mock_cls,
+            patch("app.services.classification.single_image_classifier.settings") as mock_settings,
+            patch("app.services.classification.single_image_classifier.anthropic.Anthropic") as mock_cls,
         ):
             mock_settings.anthropic_api_key = "sk-test"
             mock_settings.claude_classifier_model = "claude-haiku-4-5-20251001"
@@ -1312,11 +1315,11 @@ class TestStructuredFailureSurfacing:
 
         with (
             patch(
-                "app.services.classification.classifier_service._fetch_screenshot_bytes",
+                "app.services.classification.single_image_classifier._fetch_screenshot_bytes",
                 return_value=_FAKE_PNG,
             ),
-            patch("app.services.classification.classifier_service.settings") as mock_settings,
-            patch("app.services.classification.classifier_service.anthropic.Anthropic") as mock_cls,
+            patch("app.services.classification.single_image_classifier.settings") as mock_settings,
+            patch("app.services.classification.single_image_classifier.anthropic.Anthropic") as mock_cls,
         ):
             mock_settings.anthropic_api_key = "sk-test"
             mock_settings.claude_classifier_model = "claude-haiku-4-5-20251001"

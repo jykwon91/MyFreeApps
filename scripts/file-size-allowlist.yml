@@ -9,14 +9,6 @@
 
 # Files explicitly allowed to exceed 1000 LOC.
 over_1000_loc:
-  - path: apps/mygamingassistant/backend/app/services/classification/classifier_service.py
-    reason: >
-      Active extraction in progress. PR #754 extracted throw_timing_classifier
-      (2029 → 1649); PR R1 extracted reference_repo + throw_technique_classifier
-      (1649 → 1017). 1017 LOC is just over the 1000 threshold; remaining
-      single-image vs grid classifier split is the next planned extraction.
-      Remove this entry once classifier_service.py falls below 1000 LOC.
-
   - path: apps/mygamingassistant/desktop/src-tauri/src/cv/pipeline.rs
     reason: >
       Tauri CV pipeline orchestrator — coordinates capture, dot_detector, calibration,
@@ -25,12 +17,4 @@ over_1000_loc:
       pipeline stabilises.
 
 # Files allowed to grow even when already over 500 LOC (rare — use sparingly).
-allow_growth_over_500:
-  - path: apps/mygamingassistant/backend/app/services/classification/classifier_service.py
-    reason: >
-      Same file as the over_1000_loc entry above — active extraction in
-      progress. The remaining single-image vs grid classifier split is
-      planned; until that lands, prompt-text corrections (operator-visible
-      defects like the STAND/AIM disambiguation in PR R3) can add LOC.
-      Remove this entry once the file falls below 500 LOC OR once the
-      pending extraction ships.
+allow_growth_over_500: []
