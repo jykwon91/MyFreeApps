@@ -379,14 +379,18 @@ sudo mybookkeeper-update
 
 ## Tech Debt Policy
 
-`mode: fix`
+mode: no-growth on flagged files
 
-When `mode: fix`, the pipeline (`g-pipeline`, `g-build-feature`) will actively fix existing issues from `TECH_DEBT.md` during each run — highest severity first, up to `max_fixes_per_run`. When `mode: log-only`, the pipeline only logs new issues and never touches existing ones.
+A PR MAY NOT increase the LOC count of any file currently listed under
+`scripts/file-size-allowlist.yml` `over_1000_loc` OR any source file already
+over 500 LOC. If a PR genuinely needs to add to a flagged file, the same PR
+MUST split that file (extract a sibling module + re-export from the original)
+in the same commit. The CI check at `.github/workflows/file-size-check.yml`
+enforces this.
 
-- `max_fixes_per_run: 3` — cap to prevent scope creep into a full rewrite
-- Priority order: Critical > High > Medium > Low
-- After fixing a tech debt issue, remove it from `TECH_DEBT.md` and update the counts
-- Re-run all test suites after each audit fix to confirm no regressions
+Critical severity items that directly block the current feature can still be
+fixed inline. Everything else logged in `TECH_DEBT.md` and addressed in
+dedicated refactor PRs.
 
 ## Legal
 
