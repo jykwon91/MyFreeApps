@@ -145,7 +145,15 @@ curl http://127.0.0.1:8098/health
 
 ## Tech Debt Policy
 
-mode: log-only
+mode: no-growth on flagged files
 
-New project. Fix only Critical severity items that directly block the current
-feature. Log everything else in TECH_DEBT.md.
+A PR MAY NOT increase the LOC count of any file currently listed under
+`scripts/file-size-allowlist.yml` `over_1000_loc` OR any source file already
+over 500 LOC. If a PR genuinely needs to add to a flagged file, the same PR
+MUST split that file (extract a sibling module + re-export from the original)
+in the same commit. The CI check at `.github/workflows/file-size-check.yml`
+enforces this.
+
+Critical severity items that directly block the current feature can still be
+fixed inline. Everything else logged in `TECH_DEBT.md` and addressed in
+dedicated refactor PRs.
