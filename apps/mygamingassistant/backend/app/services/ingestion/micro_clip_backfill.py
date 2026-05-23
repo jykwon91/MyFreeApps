@@ -3,9 +3,18 @@
 Lineups created before PR6 (and any whose micro-clip generation failed at
 ingest time) have ``stand_clip_url IS NULL`` and/or ``aim_clip_url IS NULL``.
 This walks that set, re-fetches each source video ONCE per video (not once
-per lineup — a tutorial video usually backs many lineups), runs the grid
-classifier to recover the stand/aim anchor timestamps, and generates the
-micro-clips. Mirrors :mod:`landing_clip_backfill` (PR5) shape exactly.
+per lineup — a tutorial video usually backs many lineups), and asks the
+generator to localise anchors + cut clips. Mirrors :mod:`landing_clip_backfill`
+(PR5) shape exactly.
+
+Anchor sources (operator-tuned 2026-05-23):
+  - STAND comes from the grid classifier (the 9-frame grid reliably catches
+    the "I am at the spot" window — many seconds long).
+  - AIM comes from ``release_ts - _AIM_PRE_RELEASE_SECONDS``, where release_ts
+    is from the throw-timing classifier's dense pass. The grid is too sparse
+    to localise the sub-second aim moment, so prior AIM clips were random.
+The generator orchestrates both classifier calls itself in the backfill
+path; this module just hands it the source video.
 
 Independent of :mod:`clip_backfill` (PR2) and :mod:`landing_clip_backfill`
 (PR5) by design: a lineup can have any combination of NULL micro-clip
@@ -204,9 +213,10 @@ async def backfill_micro_clips(db: AsyncSession) -> MicroClipBackfillStats:
                         # generator re-download per lineup.
                         video_path=video_path,
                         # Backfill: no precomputed timestamps; the generator
-                        # re-runs the grid classifier itself.
+                        # re-runs the grid classifier (stand) AND the
+                        # throw-localizer (release → aim) itself.
                         precomputed_stand_ts=None,
-                        precomputed_aim_ts=None,
+                        precomputed_release_ts=None,
                     )
                 except Exception as exc:  # defensive: never abort the batch
                     logger.warning(

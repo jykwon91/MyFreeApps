@@ -466,13 +466,23 @@ async def _process_chapter(
                     str(exc), exc_info=True,
                 )
 
-        # PR6: best-effort STAND + AIM 1s micro-clips. Anchored on the SAME
-        # grid timestamps the classifier already chose for the stand/aim
-        # stills, so the AIM clip's first frame IS today's aim still and the
-        # persisted aim_anchor_x/y overlay stays pixel-accurate. Zero extra
-        # Claude spend — just two ffmpeg cuts + two MinIO uploads per chapter.
-        # Same non-fatal contract as the surrounding clip / landing / technique
+        # PR6 (revised 2026-05-23): best-effort STAND + AIM micro-clips.
+        # STAND still anchors on the grid classifier's chosen stand timestamp
+        # (the 9-frame grid reliably catches the "I am at the spot" moment,
+        # which is many seconds long). AIM anchors on release_ts (from the
+        # PR2 throw-localizer above) minus a small pre-release offset — the
+        # sub-second aim moment is invisible to the sparse grid but lives
+        # inside the throw-localizer's dense pass. When the THROW clip step
+        # above skipped/failed, release_ts is None and the AIM side skips
+        # cleanly; STAND still generates. Zero extra Claude spend in the
+        # ingest path — both classifier outputs already exist. Same
+        # non-fatal contract as the surrounding clip / landing / technique
         # blocks (a micro-clip failure must not roll back the lineup).
+        precomputed_release_ts: float | None = (
+            clip_result.release_ts
+            if clip_result is not None and clip_result.status == "generated"
+            else None
+        )
         try:
             micro_result = await generate_micro_clips_for_lineup(
                 db,
@@ -481,7 +491,7 @@ async def _process_chapter(
                 chapter_end=float(chapter.end_seconds),
                 video_path=video_path,
                 precomputed_stand_ts=timestamps[stand_idx],
-                precomputed_aim_ts=timestamps[aim_idx],
+                precomputed_release_ts=precomputed_release_ts,
             )
             logger.info(
                 "Micro-clip generation (ingest): source_id=%s video_id=%s "

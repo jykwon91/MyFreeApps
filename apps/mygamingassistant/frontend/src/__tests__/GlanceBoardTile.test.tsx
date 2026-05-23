@@ -149,16 +149,21 @@ describe("GlanceBoardTile storyboard (4 panes)", () => {
     expect(video.getAttribute("poster")).toBe("https://ex.com/stand.png");
   });
 
-  it("AIM pane zooms 2× centered on the persisted anchor coords (still variant)", () => {
+  it("AIM pane zooms 2× pinned to center regardless of persisted anchor coords", () => {
+    // Post-2026-05-23: anchor coords are ignored at render time — AIM_TS now
+    // derives from the throw-localizer's release_ts (not the grid frame the
+    // anchor was computed against), so trusting the coords would re-introduce
+    // drift. Crosshair in FPS is always at screen center, so origin is
+    // hardcoded to (50%, 50%).
     render(<GlanceBoardTile lineup={makeLineup({ aim_anchor_x: 0.5, aim_anchor_y: 0.4 })} />);
     const aimImg = screen.getByAltText(/aim reference/i) as HTMLImageElement;
     expect(aimImg.style.transform).toBe("scale(2)");
-    expect(aimImg.style.transformOrigin).toBe("50% 40%");
+    expect(aimImg.style.transformOrigin).toBe("50% 50%");
     // The red dot is gone — the zoomed crop is the affordance now.
     expect(screen.queryByLabelText(/aim anchor/i)).toBeNull();
   });
 
-  it("AIM pane falls back to center origin when anchor coords are null", () => {
+  it("AIM pane keeps the center origin even with null anchor coords", () => {
     render(
       <GlanceBoardTile
         lineup={makeLineup({ aim_anchor_x: null, aim_anchor_y: null })}
@@ -354,11 +359,11 @@ describe("GlanceBoardTile PR6 micro-clips (STAND + AIM)", () => {
     expect(aimVideo).not.toBeNull();
   });
 
-  it("AIM clip variant carries the same zoom transform as the still variant", () => {
-    // The AIM clip is anchored on the same classifier-chosen timestamp as the
-    // still — so the zoom origin from the persisted aim_anchor stays accurate
-    // when AimPane swaps from still to ClipView. This is the contract that
-    // protects the still→clip visual continuity.
+  it("AIM clip variant carries the same center-pinned 2× zoom as the still", () => {
+    // Both still and clip apply scale(2) at (50%, 50%). The AIM clip is now
+    // anchored on release_ts - 0.8s (throw-localizer), not the grid's aim
+    // frame, so trusting the persisted aim_anchor for zoom origin would
+    // introduce drift. Center-pin is the correct invariant.
     render(
       <GlanceBoardTile
         lineup={makeLineup({
@@ -373,7 +378,7 @@ describe("GlanceBoardTile PR6 micro-clips (STAND + AIM)", () => {
     ) as HTMLVideoElement;
     expect(aimVideo).not.toBeNull();
     expect(aimVideo.style.transform).toBe("scale(2)");
-    expect(aimVideo.style.transformOrigin).toBe("50% 40%");
+    expect(aimVideo.style.transformOrigin).toBe("50% 50%");
     expect(screen.queryByLabelText(/aim anchor/i)).toBeNull();
   });
 
