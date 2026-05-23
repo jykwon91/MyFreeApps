@@ -69,31 +69,43 @@ def _lineup(video_id="vid123", chapter_title="B smoke"):
 # ---------------------------------------------------------------------------
 
 class TestComputeLandingBounds:
-    def test_normal_window(self):
-        # result 24, chapter [10,40]: [23.5, 27] = 3.5s.
+    def test_normal_window_starts_after_result(self):
+        # result 24, chapter [10,40]: [24+1.5, 24+1.5+3.5] = [25.5, 29.0] = 3.5s.
+        # Anchored AFTER result_ts to skip the faint-wisp lead-in.
         start, dur = _compute_landing_bounds(24.0, 10.0, 40.0)
-        assert start == pytest.approx(23.5)
+        assert start == pytest.approx(25.5)
         assert dur == pytest.approx(3.5)
 
-    def test_clamped_to_chapter_start(self):
-        # result 10.2 → 10.2-0.5=9.7 but chapter starts at 10 → clamp to 10.
-        start, _dur = _compute_landing_bounds(10.2, 10.0, 40.0)
-        assert start == pytest.approx(10.0)
+    def test_clamped_to_chapter_start_when_result_precedes_chapter(self):
+        # Pathological: result_ts before chapter_start. start = max(result+1.5,
+        # chapter_start). E.g., result -10, chapter [0, 10] → start = max(-8.5, 0)
+        # = 0, end = min(3.5, 10) = 3.5, dur 3.5.
+        start, dur = _compute_landing_bounds(-10.0, 0.0, 10.0)
+        assert start == pytest.approx(0.0)
+        assert dur == pytest.approx(3.5)
 
     def test_clamped_to_chapter_end(self):
-        # result 39, chapter [10,40]: 39+3=42 → clamp to 40.
-        start, dur = _compute_landing_bounds(39.0, 10.0, 40.0)
-        assert start == pytest.approx(38.5)
-        # 40 - 38.5 = 1.5s — clamped tail but still >= 1s.
-        assert dur == pytest.approx(1.5)
+        # result 39, chapter [10,40]: start = max(40.5, 10) = 40.5, which is
+        # past chapter_end (40) → no headroom → None. Chapters that end <1.5s
+        # after result_ts cannot carry a landing clip with the new anchor.
+        assert _compute_landing_bounds(39.0, 10.0, 40.0) is None
+
+    def test_partial_window_when_chapter_just_barely_fits(self):
+        # result 17, chapter [10, 22]: start = 18.5, end = min(22, 22) = 22,
+        # dur = 3.5. Exactly fits.
+        start, dur = _compute_landing_bounds(17.0, 10.0, 22.0)
+        assert start == pytest.approx(18.5)
+        assert dur == pytest.approx(3.5)
 
     def test_chapter_too_short_returns_none(self):
-        # 0.4s chapter — clamped window < 1s → skip signal.
+        # 0.4s chapter — start 21.5 > chapter_end 20.3 → skip signal.
         assert _compute_landing_bounds(20.0, 19.9, 20.3) is None
 
     def test_clip_never_exceeds_chapter_end(self):
-        start, dur = _compute_landing_bounds(20.0, 10.0, 22.0)
+        # result 19, chapter [10, 22]: start 20.5, end min(24, 22) = 22, dur 1.5.
+        start, dur = _compute_landing_bounds(19.0, 10.0, 22.0)
         assert start + dur <= 22.0 + 1e-9
+        assert dur == pytest.approx(1.5)
 
 
 def test_pending_landing_clip_key_is_deterministic():
@@ -596,10 +608,11 @@ async def test_widen_source_persists_offsets_for_landing():
     set_url_mock.assert_awaited_once()
     set_kwargs = set_url_mock.await_args.kwargs
     assert set_kwargs["source_key"] == "pending/vid123/10-landing-source.mp4"
-    # Landing tight: clip_start=23.5, clip_duration=3.5; source_start=10
-    # → trim_start_s = 23.5 - 10 = 13.5; trim_end_s = 23.5 + 3.5 - 10 = 17.0
-    assert set_kwargs["trim_start_s"] == pytest.approx(13.5)
-    assert set_kwargs["trim_end_s"] == pytest.approx(17.0)
+    # Landing tight: result_ts=24 → clip_start=24+1.5=25.5, clip_duration=3.5;
+    # source_start=10 → trim_start_s = 25.5 - 10 = 15.5;
+    # trim_end_s = 25.5 + 3.5 - 10 = 19.0
+    assert set_kwargs["trim_start_s"] == pytest.approx(15.5)
+    assert set_kwargs["trim_end_s"] == pytest.approx(19.0)
 
 
 @pytest.mark.asyncio
