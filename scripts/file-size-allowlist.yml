@@ -1,0 +1,25 @@
+# File-size allowlist for check-file-size.py
+#
+# Files in over_1000_loc are exempt from the 1000-LOC hard limit.
+# Files in allow_growth_over_500 are exempt from the growth guard (allowed to
+# add lines even when already over 500 LOC).
+#
+# Allowlisting is a last resort. Prefer splitting files into focused modules.
+# Every entry requires a reason explaining why splitting is not viable.
+
+# Files explicitly allowed to exceed 1000 LOC.
+over_1000_loc:
+  - path: apps/mygamingassistant/backend/app/services/classification/classifier_service.py
+    reason: >
+      Active extraction in progress (PR #752 — refactor/mga-extract-throw-timing-classifier).
+      Remove this entry once classifier_service.py is split and falls below 1000 LOC.
+
+  - path: apps/mygamingassistant/desktop/src-tauri/src/cv/pipeline.rs
+    reason: >
+      Tauri CV pipeline orchestrator — coordinates capture, dot_detector, calibration,
+      and polygon subsystems in a single state machine. Splitting across files would
+      require unsafe cross-module shared state. Flagged for future refactor once the
+      pipeline stabilises.
+
+# Files allowed to grow even when already over 500 LOC (rare — use sparingly).
+allow_growth_over_500: []
