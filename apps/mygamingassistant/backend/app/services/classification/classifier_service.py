@@ -30,16 +30,14 @@ from io import BytesIO
 from typing import Any, Optional
 
 import anthropic
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.models.game.game import Game
-from app.models.game.lineup import Lineup
-from app.models.game.map import Map
-from app.models.game.map_zone import MapZone
-from app.models.game.utility_type import UtilityType
-from app.repositories.game.lineup_repo import write_classifier_suggestions
+from app.repositories.game import lineup_repo
+from app.repositories.game.reference_repo import (
+    load_reference_data,
+    resolve_slugs,
+)
 from app.services.classification.classification_result import (
     ClassificationResult,
     ThrowTechniqueResult,
@@ -186,107 +184,6 @@ Rules:
 - side_a = attacking/T side; side_b = defending/CT side; any = side-agnostic.
 """
 
-# ---------------------------------------------------------------------------
-# Reference data loader
-# ---------------------------------------------------------------------------
-
-
-async def _load_reference_data(
-    db: AsyncSession,
-    game_id: Optional[uuid.UUID],
-) -> dict[str, Any]:
-    """Load all valid slugs for a game (or all games if game_id is None).
-
-    Returns a dict with keys:
-      games: list[{slug, name, side_a_label, side_b_label}]
-      maps: list[{slug, name, game_slug, zones: [{slug, name}]}]
-      utility_types: list[{slug, name, game_slug}]
-    """
-    # Load all games
-    game_rows = (await db.execute(select(Game).order_by(Game.slug))).scalars().all()
-
-    # Load all maps (with zones eagerly if needed)
-    if game_id is not None:
-        map_rows = (
-            await db.execute(
-                select(Map)
-                .where(Map.game_id == game_id)
-                .order_by(Map.slug)
-            )
-        ).scalars().all()
-        ut_rows = (
-            await db.execute(
-                select(UtilityType)
-                .where(UtilityType.game_id == game_id)
-                .order_by(UtilityType.slug)
-            )
-        ).scalars().all()
-        target_game_ids = {game_id}
-    else:
-        map_rows = (await db.execute(select(Map).order_by(Map.game_id, Map.slug))).scalars().all()
-        ut_rows = (
-            await db.execute(select(UtilityType).order_by(UtilityType.game_id, UtilityType.slug))
-        ).scalars().all()
-        target_game_ids = {g.id for g in game_rows}
-
-    # Load zones for all target maps
-    map_ids = [m.id for m in map_rows]
-    if map_ids:
-        zone_rows = (
-            await db.execute(
-                select(MapZone)
-                .where(MapZone.map_id.in_(map_ids))
-                .order_by(MapZone.map_id, MapZone.slug)
-            )
-        ).scalars().all()
-    else:
-        zone_rows = []
-
-    # Build lookup: game.id → game.slug
-    game_id_to_slug = {g.id: g.slug for g in game_rows}
-
-    # Build map list with zones
-    map_id_to_zones: dict[uuid.UUID, list[dict]] = {}
-    for zone in zone_rows:
-        map_id_to_zones.setdefault(zone.map_id, []).append(
-            {"slug": zone.slug, "name": zone.name}
-        )
-
-    games_ref = [
-        {
-            "slug": g.slug,
-            "name": g.name,
-            "side_a_label": g.side_a_label,
-            "side_b_label": g.side_b_label,
-        }
-        for g in game_rows
-    ]
-
-    maps_ref = [
-        {
-            "slug": m.slug,
-            "name": m.name,
-            "game_slug": game_id_to_slug.get(m.game_id, ""),
-            "zones": map_id_to_zones.get(m.id, []),
-        }
-        for m in map_rows
-    ]
-
-    utility_types_ref = [
-        {
-            "slug": ut.slug,
-            "name": ut.name,
-            "game_slug": game_id_to_slug.get(ut.game_id, ""),
-        }
-        for ut in ut_rows
-    ]
-
-    return {
-        "games": games_ref,
-        "maps": maps_ref,
-        "utility_types": utility_types_ref,
-    }
-
 
 # ---------------------------------------------------------------------------
 # Reference text block builder (cache breakpoint candidate)
@@ -296,8 +193,10 @@ async def _load_reference_data(
 def _build_reference_text(ref: dict[str, Any], game_hint: Optional[str] = None) -> str:
     """Build the reference text block passed to Claude.
 
-    This text is constant across calls for the same game → prime candidate for
-    prompt caching. We mark it with a cache_control breakpoint in the message.
+    Constant across calls for the same game → prime candidate for prompt
+    caching. The reference data comes from
+    :func:`app.repositories.game.reference_repo.load_reference_data`; this
+    function shapes it into the system-prompt text Claude reads.
     """
     lines: list[str] = []
 
@@ -324,177 +223,6 @@ def _build_reference_text(ref: dict[str, Any], game_hint: Optional[str] = None) 
         lines.append(f"  {ut['slug']} [{ut['game_slug']}] → {ut['name']}")
 
     return "\n".join(lines)
-
-
-# ---------------------------------------------------------------------------
-# Slug → FK resolver
-# ---------------------------------------------------------------------------
-
-
-def _slug_failure_code(field_name: str, slug: str, *, game_slug: Optional[str]) -> str:
-    """Build a stable, machine-readable failure code for an unresolved slug.
-
-    Shape: ``unresolved_slug:<field>:<slug>:game=<game_slug or '?'>``.
-    The classifier ADVERTISED this slug in the reference list it was given,
-    yet it did not resolve against the (game-scoped) DB — so this is a
-    diagnosable signal, not prose. Surfaced via error_codes so the operator
-    sees "zone slug 'X' advertised but unresolved for game cs2" instead of
-    guessing from a reasoning blob.
-    """
-    return f"unresolved_slug:{field_name}:{slug}:game={game_slug or '?'}"
-
-
-async def _resolve_slugs(
-    db: AsyncSession,
-    game_slug: Optional[str],
-    map_slug: Optional[str],
-    target_zone_slug: Optional[str],
-    stand_zone_slug: Optional[str],
-    utility_type_slug: Optional[str],
-) -> tuple[
-    Optional[uuid.UUID],  # game_id
-    Optional[uuid.UUID],  # map_id
-    Optional[uuid.UUID],  # target_zone_id
-    Optional[uuid.UUID],  # stand_zone_id
-    Optional[uuid.UUID],  # utility_type_id
-    list[str],            # resolution_failures (human prose)
-    list[str],            # structured failure codes
-]:
-    """Resolve classifier-returned slugs to database FK UUIDs.
-
-    Returns a 7-tuple of (game_id, map_id, target_zone_id, stand_zone_id,
-    utility_type_id, resolution_failures, structured_codes).
-
-    resolution_failures is a list of human-readable strings for any slug that
-    could not be resolved — appended to the reasoning field.
-
-    structured_codes mirrors each failure as a stable, parseable token (see
-    :func:`_slug_failure_code`) so the operator/UI gets a machine-readable
-    "this advertised slug did not resolve" signal via
-    ClassifyResponse.error_codes — not prose-only (per
-    rules/check-third-party-error-codes.md: a wrapper that knows WHY it
-    failed must not collapse to a bare null/prose blob).
-
-    Game scoping is HARD here by construction: map/zone/utility lookups are
-    gated on a successfully-resolved ``game_id`` AND every query filters by
-    that ``game_id``. A Valorant-only zone slug therefore cannot resolve in a
-    CS2 classification (different ``game_id`` → zero rows), independent of
-    what the prompt advertised.
-    """
-    failures: list[str] = []
-    codes: list[str] = []
-
-    # Resolve game
-    game_id: Optional[uuid.UUID] = None
-    if game_slug:
-        row = (await db.execute(select(Game).where(Game.slug == game_slug))).scalar_one_or_none()
-        if row:
-            game_id = row.id
-        else:
-            failures.append(f"game slug '{game_slug}' not found in DB")
-            codes.append(_slug_failure_code("game", game_slug, game_slug=game_slug))
-
-    # Resolve map (requires game_id — hard game scope: map MUST belong to the
-    # resolved game; a cross-game map slug yields zero rows here).
-    map_id: Optional[uuid.UUID] = None
-    if map_slug and game_id:
-        row = (
-            await db.execute(
-                select(Map).where(Map.game_id == game_id, Map.slug == map_slug)
-            )
-        ).scalar_one_or_none()
-        if row:
-            map_id = row.id
-        else:
-            failures.append(f"map slug '{map_slug}' not found for game '{game_slug}'")
-            codes.append(_slug_failure_code("map", map_slug, game_slug=game_slug))
-    elif map_slug and not game_id:
-        failures.append(f"cannot resolve map slug '{map_slug}' — game slug failed")
-        codes.append(_slug_failure_code("map", map_slug, game_slug=game_slug))
-
-    # Resolve zones (require map_id, which already requires game_id → zones are
-    # transitively game-scoped: a Valorant zone cannot resolve on a CS2 map).
-    target_zone_id: Optional[uuid.UUID] = None
-    if target_zone_slug and map_id:
-        row = (
-            await db.execute(
-                select(MapZone).where(
-                    MapZone.map_id == map_id, MapZone.slug == target_zone_slug
-                )
-            )
-        ).scalar_one_or_none()
-        if row:
-            target_zone_id = row.id
-        else:
-            failures.append(f"target_zone slug '{target_zone_slug}' not found on map '{map_slug}'")
-            codes.append(
-                _slug_failure_code("target_zone", target_zone_slug, game_slug=game_slug)
-            )
-    elif target_zone_slug and not map_id:
-        failures.append(f"cannot resolve target_zone slug '{target_zone_slug}' — map slug failed")
-        codes.append(
-            _slug_failure_code("target_zone", target_zone_slug, game_slug=game_slug)
-        )
-
-    stand_zone_id: Optional[uuid.UUID] = None
-    if stand_zone_slug and map_id:
-        row = (
-            await db.execute(
-                select(MapZone).where(
-                    MapZone.map_id == map_id, MapZone.slug == stand_zone_slug
-                )
-            )
-        ).scalar_one_or_none()
-        if row:
-            stand_zone_id = row.id
-        else:
-            failures.append(f"stand_zone slug '{stand_zone_slug}' not found on map '{map_slug}'")
-            codes.append(
-                _slug_failure_code("stand_zone", stand_zone_slug, game_slug=game_slug)
-            )
-    elif stand_zone_slug and not map_id:
-        failures.append(f"cannot resolve stand_zone slug '{stand_zone_slug}' — map slug failed")
-        codes.append(
-            _slug_failure_code("stand_zone", stand_zone_slug, game_slug=game_slug)
-        )
-
-    # Resolve utility type (requires game_id — hard game scope identical to map).
-    utility_type_id: Optional[uuid.UUID] = None
-    if utility_type_slug and game_id:
-        row = (
-            await db.execute(
-                select(UtilityType).where(
-                    UtilityType.game_id == game_id,
-                    UtilityType.slug == utility_type_slug,
-                )
-            )
-        ).scalar_one_or_none()
-        if row:
-            utility_type_id = row.id
-        else:
-            failures.append(
-                f"utility_type slug '{utility_type_slug}' not found for game '{game_slug}'"
-            )
-            codes.append(
-                _slug_failure_code("utility_type", utility_type_slug, game_slug=game_slug)
-            )
-    elif utility_type_slug and not game_id:
-        failures.append(
-            f"cannot resolve utility_type slug '{utility_type_slug}' — game slug failed"
-        )
-        codes.append(
-            _slug_failure_code("utility_type", utility_type_slug, game_slug=game_slug)
-        )
-
-    return (
-        game_id,
-        map_id,
-        target_zone_id,
-        stand_zone_id,
-        utility_type_id,
-        failures,
-        codes,
-    )
 
 
 # ---------------------------------------------------------------------------
@@ -629,9 +357,7 @@ async def classify_lineup(
         )
 
     # Load lineup
-    lineup = (
-        await db.execute(select(Lineup).where(Lineup.id == lineup_id))
-    ).scalar_one_or_none()
+    lineup = await lineup_repo.get_lineup(db, lineup_id)
     if lineup is None:
         logger.error("classify_lineup: lineup not found: lineup_id=%s", lineup_id)
         return ClassificationResult(
@@ -641,7 +367,7 @@ async def classify_lineup(
         )
 
     # Load reference data (all games/maps/zones/utility types)
-    ref = await _load_reference_data(db, game_id=lineup.game_id)
+    ref = await load_reference_data(db, game_id=lineup.game_id)
 
     # Fetch stand screenshot bytes
     screenshot_bytes = _fetch_screenshot_bytes(lineup.stand_screenshot_url)
@@ -798,7 +524,7 @@ async def classify_lineup(
         utility_type_id,
         slug_failures,
         slug_codes,
-    ) = await _resolve_slugs(
+    ) = await resolve_slugs(
         db,
         game_slug=parsed.get("game_slug"),
         map_slug=parsed.get("map_slug"),
@@ -879,7 +605,7 @@ async def classify_lineup(
     )
 
     # Write suggestions back to the lineup row via the repo (status stays pending_review)
-    await write_classifier_suggestions(
+    await lineup_repo.write_classifier_suggestions(
         db,
         lineup,
         {
@@ -1046,7 +772,7 @@ async def classify_frames_for_lineup_decision(
 
     # Reference data spans all games when there's no row yet (ingest time has
     # no lineup.game_id). The game_hint narrows the prompt textually.
-    ref = await _load_reference_data(db, game_id=None)
+    ref = await load_reference_data(db, game_id=None)
     reference_text = _build_reference_text(ref, game_hint=game_hint)
 
     chapter_context_parts: list[str] = []
@@ -1223,7 +949,7 @@ async def classify_frames_for_lineup_decision(
         utility_type_id,
         slug_failures,
         slug_codes,
-    ) = await _resolve_slugs(
+    ) = await resolve_slugs(
         db,
         game_slug=parsed.get("game_slug"),
         map_slug=parsed.get("map_slug"),
@@ -1276,375 +1002,16 @@ async def classify_frames_for_lineup_decision(
 
 
 # ---------------------------------------------------------------------------
-# PR3 — throw-technique localizer (glance-board footer text)
-# ---------------------------------------------------------------------------
-#
-# A SEPARATE Claude code path from BOTH the grid classifier and the PR2
-# throw-timing call. It does not classify game/map/zone/side/utility, does not
-# resolve slugs, does not touch the DB, and is independent of the clip outcome
-# (technique is extracted even when the clip was gated off for low timing
-# confidence / no release frame). Its only job: given the same dense throw
-# window, name HOW the throw is executed as a compact <=60-char phrase for the
-# glance-board footer (frozen design contract pr3-throw-technique-design.md).
-
-# Game technique vocabularies are structurally incompatible (CS2 mouse buttons
-# vs Valorant ability keys), so the right phrase is game-specific. The game is
-# known at the call site (ingest grid suggestion >0.6, or the accepted
-# lineup.game_id at backfill); the vocab block is per-call user text (NOT
-# cached — it varies by game), while the schema/system prompt IS cached.
-
-_CS2_TECHNIQUE_VOCAB = """\
-GAME: CS2. Use the CS2 technique vocabulary ONLY.
-Throw type (movement at release): standing, jumpthrow, run-throw, walk-throw,
-crouch-throw, jumpthrow-bind.
-Mouse buttons: LMB (left = full/far throw), RMB (right = short underhand lob),
-LMB+RMB (both = soft/bounce).
-Compact form: "<throw type> + <mouse>" — e.g. "Standing + LMB",
-"Jumpthrow + LMB", "Run + RMB", "Walk + LMB+RMB", "Crouch + LMB".
-Cues: movement = does the player jump / run / walk / crouch / stay still just
-before the throw-animation follow-through? Mouse = the HUD grenade-slot throw
-animation and the projectile arc (long arc = LMB; short lob = RMB; soft bounce
-= LMB+RMB).
-"""
-
-_VALORANT_TECHNIQUE_VOCAB = """\
-GAME: Valorant. Use the Valorant technique vocabulary ONLY.
-Ability key: C, Q, E, or X (ultimate). NO mouse-button component.
-Charge tiers (Sova bow etc.): 1-charge, 2-charge, 3-charge, full-charge.
-Bounce count (Sova bow etc.): 0-bounce, 1-bounce, 2-bounce.
-Aim qualifier (other agents): aimed, instant-cast, held-cast.
-Compact form: "<key>[ + <charge>][ + <bounce/aim>]" — e.g.
-"E + 2-charge + 1-bounce", "C + aimed", "Q + full-charge", "X + held-cast".
-Cues: which ability slot icon (C/Q/E/X) is consumed; bow charge dots / count;
-number of wall/world bounces before the result lands.
-"""
-
-_GENERIC_TECHNIQUE_VOCAB = """\
-GAME UNKNOWN — determine it from the HUD before naming technique:
-- CS2: dollar buy-money like $3800, grenade icons in the weapon list, T/CT.
-- Valorant: C/Q/E/X ability icons bottom-centre, "creds" economy, agent
-  portraits on the minimap.
-Then apply that game's technique vocabulary:
-- CS2: "<standing|jumpthrow|run-throw|walk-throw|crouch-throw> + <LMB|RMB|
-  LMB+RMB>".
-- Valorant: "<C|Q|E|X>[ + <charge>][ + <bounce|aimed|held-cast>]" (no mouse).
-"""
-
-
-def _technique_vocab_block(game_slug: Optional[str]) -> str:
-    """Pick the per-call technique-vocabulary text block for the game.
-
-    Unknown / unrecognized game → the generic block, which asks the model to
-    determine the game from the HUD first (the same game-first discipline the
-    grid classifier enforces via _GAME_FIRST_RULE).
-    """
-    normalized = (game_slug or "").strip().lower()
-    if normalized == "cs2":
-        return _CS2_TECHNIQUE_VOCAB
-    if normalized == "valorant":
-        return _VALORANT_TECHNIQUE_VOCAB
-    return _GENERIC_TECHNIQUE_VOCAB
-
-
-_THROW_TECHNIQUE_SCHEMA_DOC = """\
-You are given {n} numbered frames (Frame 1 .. Frame {n}) sampled in time order
-from ONE chapter of a tactical-FPS lineup tutorial. Each frame is labelled with
-its timestamp in seconds. The chapter is meant to demonstrate ONE utility
-throw.
-
-Your ONLY job is to name the THROW TECHNIQUE — HOW the player executes the
-throw (the body movement + the input), as a single compact phrase. You are
-NOT identifying the game/map/zone/utility and NOT locating the throw in time.
-
-Return ONLY bare JSON — no markdown fences, no preamble — with exactly these
-keys:
-{{
-  "technique": string (<= 60 chars) or null,
-  "confidence": number (0.0-1.0),
-  "reasoning": string (<= 60 words)
-}}
-
-Rules:
-- technique: a compact phrase per the GAME TECHNIQUE VOCABULARY block supplied
-  below. <= 60 characters. Separators only "+", "-", "/". A partial answer is
-  fine — if the movement is visible but the mouse button / charge is not, give
-  just the movement ("Jumpthrow"); if only the input is visible, give just
-  that. Set technique to null when the throw motion is not visible in these
-  frames (static setup only, no release), or you are not confident enough to
-  name it. NEVER guess.
-- confidence: 0-1 that the technique you named is correct. High ONLY when the
-  throw movement and the input are directly observable; low when inferred.
-- reasoning: <= 60 words. State the visual cue(s) that led to the technique
-  (which frame shows the jump/run/crouch, which input cue you keyed on).
-- Discipline:
-  - If the throw is shown repeatedly or from multiple angles, use the FIRST
-    clean throw only.
-  - Ignore picture-in-picture, facecam, killfeed, scoreboard, title cards and
-    replays — judge from the main game view only.
-  - Talking-head, menu, or knife-only-walking frames are NOT a throw:
-    technique = null, confidence low.
-"""
-
-# Module-level so tests can patch it and so it sits visibly alongside its PR2
-# counterpart (clip_generator._CLIP_CONFIDENCE_GATE). Identical 0.55 value by
-# design — the footer renders technique as unqualified fact on a
-# trust-at-a-glance mid-game surface, so a confidently-wrong technique costs a
-# round. One mental model with the clip gate.
-_TECHNIQUE_CONFIDENCE_GATE = 0.55
-
-
-async def classify_throw_technique_from_frames(
-    *,
-    frames: list[bytes],
-    frame_timestamps: list[float],
-    chapter_title: Optional[str],
-    chapter_duration: Optional[float],
-    game_slug: Optional[str] = None,
-) -> ThrowTechniqueResult:
-    """Name the throw technique within ONE chapter as a compact phrase.
-
-    Separate Claude code path from :func:`classify_frames_for_lineup_decision`
-    and :func:`classify_throw_timing_from_frames` (own prompt, own schema, no
-    reference data, no slug resolution, no DB). Decoupled from the clip
-    pipeline so technique is still produced when the clip was gated off.
-
-    Args:
-        frames: Downscaled candidate PNG bytes, in time order (the SAME dense
-            throw window the clip pipeline uses —
-            ``frame_extractor.clip_window_timestamps``; extracted
-            independently per the PR3 contract's documented deviation).
-        frame_timestamps: The timestamp (seconds) of each frame, same order
-            and length as *frames*. Surfaced to the model as load-bearing
-            context (``Frame i (t=..s):``).
-        chapter_title: YouTube chapter title (per-call context).
-        chapter_duration: Chapter length in seconds (per-call context).
-        game_slug: The game ("cs2" / "valorant") — selects the per-call
-            technique-vocabulary block. None → the generic block asks the
-            model to determine the game from the HUD first.
-
-    Returns:
-        ThrowTechniqueResult. ``success=True`` with ``technique=None`` is a
-        valid "cannot determine" answer (not-a-throw / motion not visible /
-        below the 0.55 confidence gate), NOT an error. ``error_codes`` is
-        populated only on an API/parse failure, plus the structured gate code
-        on an otherwise-successful sub-threshold call.
-    """
-    if not settings.anthropic_api_key:
-        logger.warning(
-            "throw_technique: ANTHROPIC_API_KEY not configured — skipping "
-            "(chapter=%r)", chapter_title,
-        )
-        return ThrowTechniqueResult(
-            success=False,
-            error_codes=["missing_api_key"],
-            reasoning="ANTHROPIC_API_KEY not configured",
-        )
-
-    if not frames:
-        return ThrowTechniqueResult(
-            success=False,
-            error_codes=["no_frames"],
-            reasoning="No candidate frames supplied to throw-technique classifier",
-        )
-
-    if len(frames) != len(frame_timestamps):
-        # A frame/timestamp length mismatch would misalign the load-bearing
-        # per-frame timestamp labels. Fail loud (no silent-fail), mirroring
-        # the throw-timing classifier's identical guard.
-        return ThrowTechniqueResult(
-            success=False,
-            error_codes=["frame_timestamp_mismatch"],
-            reasoning=(
-                f"frames ({len(frames)}) and frame_timestamps "
-                f"({len(frame_timestamps)}) length mismatch"
-            ),
-        )
-
-    n = len(frames)
-
-    system_prompt = (
-        "You are a tactical-FPS utility-lineup video analyst specializing in "
-        "throw mechanics. You will be shown several timestamped frames from "
-        "one chapter of a lineup tutorial and must name HOW the throw is "
-        "executed — the technique.\n\n"
-        + _THROW_TECHNIQUE_SCHEMA_DOC.format(n=n)
-    )
-
-    # Per-call content: each frame labelled with its 1-based index AND its
-    # timestamp, then the per-chapter context block (incl. the game-specific
-    # technique vocabulary). Frames are the variable part (NOT cached); the
-    # system prompt is cache_control'd.
-    user_content: list[dict] = []
-    for i, (frame_bytes, ts) in enumerate(
-        zip(frames, frame_timestamps), start=1
-    ):
-        user_content.append(
-            {"type": "text", "text": f"Frame {i} (t={ts:.1f}s):"}
-        )
-        user_content.append(
-            {
-                "type": "image",
-                "source": {
-                    "type": "base64",
-                    "media_type": "image/png",
-                    "data": base64.standard_b64encode(frame_bytes).decode(),
-                },
-            }
-        )
-
-    context_parts: list[str] = []
-    if chapter_title:
-        context_parts.append(f"Chapter title: {chapter_title}")
-    if chapter_duration is not None:
-        context_parts.append(f"Chapter duration: {chapter_duration:.0f}s")
-    context_parts.append(_technique_vocab_block(game_slug))
-    user_content.append({"type": "text", "text": "\n".join(context_parts)})
-
-    try:
-        client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
-        response = client.messages.create(
-            model=settings.claude_classifier_model,
-            max_tokens=300,  # technique string + confidence + 60-word reason
-            system=[
-                {
-                    "type": "text",
-                    "text": system_prompt,
-                    "cache_control": {"type": "ephemeral"},
-                }
-            ],
-            messages=[{"role": "user", "content": user_content}],
-        )
-    except anthropic.RateLimitError as exc:
-        error_type = getattr(exc, "type", "rate_limit_error") or "rate_limit_error"
-        logger.warning(
-            "throw_technique: rate limit hit: chapter=%r error_type=%s message=%s",
-            chapter_title, error_type, str(exc),
-        )
-        return ThrowTechniqueResult(
-            success=False,
-            error_codes=[error_type],
-            reasoning=f"Claude API rate limit: {exc}",
-        )
-    except anthropic.APIStatusError as exc:
-        error_type = getattr(exc, "type", None) or f"api_status_{exc.status_code}"
-        logger.error(
-            "throw_technique: API status error: chapter=%r error_type=%s "
-            "status_code=%s message=%s",
-            chapter_title, error_type, exc.status_code, str(exc),
-        )
-        return ThrowTechniqueResult(
-            success=False,
-            error_codes=[error_type],
-            reasoning=f"Claude API error ({exc.status_code}): {exc}",
-        )
-    except anthropic.APIError as exc:
-        error_type = getattr(exc, "type", "api_error") or "api_error"
-        logger.error(
-            "throw_technique: API error: chapter=%r error_type=%s message=%s",
-            chapter_title, error_type, str(exc),
-        )
-        return ThrowTechniqueResult(
-            success=False,
-            error_codes=[error_type],
-            reasoning=f"Claude API error: {exc}",
-        )
-
-    raw_text = response.content[0].text if response.content else ""
-    try:
-        parsed: dict[str, Any] = json.loads(_strip_json_fences(raw_text))
-    except (json.JSONDecodeError, IndexError) as exc:
-        logger.error(
-            "throw_technique: JSON parse failed: chapter=%r raw=%r error=%s",
-            chapter_title, raw_text[:200], str(exc),
-        )
-        return ThrowTechniqueResult(
-            success=False,
-            error_codes=["json_parse_error"],
-            reasoning=f"Could not parse throw-technique JSON: {exc}",
-        )
-
-    structured_codes: list[str] = []
-
-    # Technique text: must be a string; strip + hard-cap at the DB column width
-    # (80) above the 60-char prompt target; empty becomes None.
-    technique: Optional[str] = None
-    technique_raw = parsed.get("technique")
-    if technique_raw is not None:
-        if not isinstance(technique_raw, str):
-            structured_codes.append(
-                f"invalid_technique_type:{type(technique_raw).__name__}"
-            )
-        else:
-            technique = technique_raw.strip()[:80] or None
-
-    # Confidence: clamp [0,1]; a non-numeric score is a diagnosable signal —
-    # structured code + WARNING (mirrors the timing/grid classifiers), never a
-    # silent drop (rules/check-third-party-error-codes.md).
-    confidence: Optional[float] = None
-    raw_conf = parsed.get("confidence")
-    if raw_conf is not None:
-        try:
-            confidence = max(0.0, min(1.0, float(raw_conf)))
-        except (TypeError, ValueError):
-            logger.warning(
-                "throw_technique: invalid confidence value dropped: "
-                "chapter=%r raw_confidence=%r",
-                chapter_title, raw_conf,
-            )
-            structured_codes.append(f"invalid_confidence:{raw_conf}")
-
-    model_reasoning = str(parsed.get("reasoning") or "")
-
-    # 0.55 confidence gate via module-level _TECHNIQUE_CONFIDENCE_GATE; matches
-    # clip_generator._CLIP_CONFIDENCE_GATE. The footer renders technique as
-    # unqualified fact on a trust-at-a-glance mid-game surface, so a
-    # sub-threshold (or confidence-unknown) technique is dropped to null rather
-    # than shown. NOT a silent drop: emit a structured code + WARNING so the
-    # operator can see how often technique falls below the bar.
-    if technique is not None:
-        if confidence is None:
-            logger.warning(
-                "throw_technique: technique %r dropped — no usable confidence: "
-                "chapter=%r",
-                technique, chapter_title,
-            )
-            structured_codes.append("technique_no_confidence")
-            technique = None
-        elif confidence < _TECHNIQUE_CONFIDENCE_GATE:
-            logger.warning(
-                "throw_technique: technique %r dropped — confidence %.2f < "
-                "%.2f: chapter=%r",
-                technique, confidence, _TECHNIQUE_CONFIDENCE_GATE,
-                chapter_title,
-            )
-            structured_codes.append(f"technique_low_confidence:{confidence:.2f}")
-            technique = None
-
-    logger.info(
-        "throw_technique: chapter=%r n=%d technique=%r confidence=%.2f",
-        chapter_title, n, technique, confidence or 0.0,
-    )
-
-    # success=True even when technique is None — "cannot determine" is a valid
-    # answer, not a call failure (the only failures are API/parse, handled
-    # above). The structured gate/parse codes ride error_codes regardless.
-    return ThrowTechniqueResult(
-        success=True,
-        technique=technique,
-        confidence=confidence,
-        reasoning=model_reasoning,
-        error_codes=list(structured_codes),
-    )
-
-
-# ---------------------------------------------------------------------------
-# PR2 throw-timing classifier — extracted to throw_timing_classifier.py in
-# PR #752 to keep this module under the 1000-LOC god-module threshold
-# (TECH_DEBT.md). Re-exported here so callers can keep importing
-# classify_throw_timing_from_frames from classifier_service unchanged.
-# Late import — must come AFTER _GAME_VISUAL_CUES, _strip_json_fences, and
-# _validate_grid_index are defined, since the extracted module imports them.
+# Extracted Claude code paths — re-exported here so callers can keep importing
+# from classifier_service unchanged. Late imports — must come AFTER
+# _GAME_VISUAL_CUES + _strip_json_fences + _validate_grid_index are defined,
+# since the extracted modules import them.
+#   - throw_timing_classifier (PR #754)
+#   - throw_technique_classifier (PR R1)
 # ---------------------------------------------------------------------------
 from app.services.classification.throw_timing_classifier import (  # noqa: E402
     classify_throw_timing_from_frames,
+)
+from app.services.classification.throw_technique_classifier import (  # noqa: E402
+    classify_throw_technique_from_frames,
 )

@@ -369,9 +369,9 @@ class TestSlugResolver:
         utility_smoke: UtilityType,
     ):
         """All valid slugs → all FK IDs resolved, no failures."""
-        from app.services.classification.classifier_service import _resolve_slugs
+        from app.repositories.game.reference_repo import resolve_slugs
 
-        game_id, map_id, tz_id, sz_id, ut_id, failures, codes = await _resolve_slugs(
+        game_id, map_id, tz_id, sz_id, ut_id, failures, codes = await resolve_slugs(
             db,
             game_slug="valorant",
             map_slug="bind",
@@ -396,9 +396,9 @@ class TestSlugResolver:
         map_bind: Map,
     ):
         """A hallucinated zone slug → map/game resolve, zone fails with message."""
-        from app.services.classification.classifier_service import _resolve_slugs
+        from app.repositories.game.reference_repo import resolve_slugs
 
-        _, _, tz_id, _, _, failures, codes = await _resolve_slugs(
+        _, _, tz_id, _, _, failures, codes = await resolve_slugs(
             db,
             game_slug="valorant",
             map_slug="bind",
@@ -421,9 +421,9 @@ class TestSlugResolver:
         db: AsyncSession,
     ):
         """Unknown game slug → game fails; map/zone/utility all fail with cascade note."""
-        from app.services.classification.classifier_service import _resolve_slugs
+        from app.repositories.game.reference_repo import resolve_slugs
 
-        game_id, map_id, tz_id, sz_id, ut_id, failures, codes = await _resolve_slugs(
+        game_id, map_id, tz_id, sz_id, ut_id, failures, codes = await resolve_slugs(
             db,
             game_slug="fortnite",
             map_slug="some-map",
@@ -1137,7 +1137,7 @@ class TestHardGameScoping:
         cs2_game: Game,
         valorant_only_zone: MapZone,
     ):
-        from app.services.classification.classifier_service import _resolve_slugs
+        from app.repositories.game.reference_repo import resolve_slugs
 
         cs2_map_slug = f"mirage-{_SCOPE_SUFFIX}"
         valorant_zone_slug = valorant_only_zone.slug  # f"val-market-{suffix}"
@@ -1150,7 +1150,7 @@ class TestHardGameScoping:
             utility_type_id,
             failures,
             codes,
-        ) = await _resolve_slugs(
+        ) = await resolve_slugs(
             db,
             game_slug=f"cs2-{_SCOPE_SUFFIX}",
             map_slug=cs2_map_slug,
