@@ -289,11 +289,21 @@ def clip_window_timestamps(
     chapter where the throw actually happens, so the throw-timing classifier
     can localise release/result frames.
 
-    Per the frozen design contract (pr2-clip-localization-design.md):
+    Per the frozen design contract (pr2-clip-localization-design.md),
+    refined 2026-05-22 after the 30%-skip discarded the actual throw on
+    a 34s chapter (lineup 7bd971c3 "Market Window - B Site"; Claude saw
+    only the post-throw knife-walk and hallucinated a release on a frame
+    with no utility in hand):
 
       - ``duration = end - start``
-      - ``skip_fraction = 0.30 if duration >= 20 else 0.15`` — drop the
-        walk-in / "here's the spot" explanation lead-in.
+      - ``skip_fraction``:
+          * ``0.30`` for long chapters (>=90s) — creator usually walks
+            to the spot + talks for the first chunk
+          * ``0.15`` for medium chapters (40s <= duration < 90s) — some
+            lead-in but the throw is usually within the first half
+          * ``0.00`` for short chapters (<40s) — throw can be anywhere;
+            a wasted lead-in frame costs ~1 image token, missing the
+            actual throw frame costs the whole clip
       - ``window = [start + duration*skip_fraction, end]``
       - ``N = 12`` evenly across the window, edge_padding 0.5s, EXCEPT:
         - remaining window < 12s after the skip → ``N = 8`` over that window
@@ -309,7 +319,12 @@ def clip_window_timestamps(
     end = float(chapter_end_seconds)
     duration = end - start
 
-    skip_fraction = 0.30 if duration >= 20 else 0.15
+    if duration >= 90:
+        skip_fraction = 0.30
+    elif duration >= 40:
+        skip_fraction = 0.15
+    else:
+        skip_fraction = 0.0
     window_start = start + duration * skip_fraction
     window_end = end
 
