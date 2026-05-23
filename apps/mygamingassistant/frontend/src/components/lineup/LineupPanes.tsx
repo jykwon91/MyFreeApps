@@ -267,45 +267,44 @@ export function StandPane({ standScreenshotUrl, standClipUrl, title }: StandPane
 //
 // Same upgrade-with-still-fallback shape as ``StandPane``. Where StandPane
 // renders the source frame as-is, AimPane applies a 2× zoom centered on the
-// persisted aim-anchor coords (fallback 50% 50%) — the operator sees a
-// magnified crop around where the crosshair was, which replaces the old red
-// anchor dot. Both surfaces (still and clip) are the same ``aspect-video``
-// container with ``overflow-hidden``, so the transform crops identically
-// regardless of which one is showing. The clip's first frame IS the still,
-// so the zoom target stays consistent during the still→clip swap.
+// frame middle — the operator sees a magnified crop on the crosshair area,
+// which replaces the old red anchor dot.
+//
+// Zoom origin is pinned to (50%, 50%) (operator-confirmed 2026-05-23: the
+// crosshair in tactical FPS is always at screen center, so the alignment
+// marker at the aim moment is also at screen center). The persisted
+// ``aim_anchor_x/y`` coords (still passed through ``aimAnchorX/Y`` props
+// for legacy / backward-compat reasons) are intentionally ignored — they
+// were grid-classifier-derived from a different aim frame than the AIM
+// clip is now anchored on (PR shifting AIM_TS to release_ts − 0.8s), so
+// trusting them would re-introduce drift. The DB column itself is
+// vestigial and can be cleaned up in a follow-up PR.
 // ---------------------------------------------------------------------------
 interface AimPaneProps {
   aimScreenshotUrl: string | null;
   aimClipUrl?: string | null;
-  // Persisted normalized anchor coords (0..1). Null when the classifier
-  // didn't produce them (manual upload / pre-classifier ingest) — the zoom
-  // then falls back to the pane center.
+  // Persisted anchor coords. Vestigial since 2026-05-23 — ignored at render
+  // time (zoom is always centered). Kept on the prop for now so callers
+  // don't break; remove when the DB column is dropped.
   aimAnchorX: number | null;
   aimAnchorY: number | null;
   title: string;
 }
 
-function aimZoomStyle(
-  aimAnchorX: number | null,
-  aimAnchorY: number | null,
-): React.CSSProperties {
-  const xPct = (aimAnchorX ?? 0.5) * 100;
-  const yPct = (aimAnchorY ?? 0.5) * 100;
-  return {
-    transform: "scale(2)",
-    transformOrigin: `${xPct}% ${yPct}%`,
-  };
-}
+const AIM_ZOOM_STYLE: React.CSSProperties = {
+  transform: "scale(2)",
+  transformOrigin: "50% 50%",
+};
 
 export function AimPane({
   aimScreenshotUrl,
   aimClipUrl,
-  aimAnchorX,
-  aimAnchorY,
+  // aim_anchor_x/y are vestigial (see component header). Destructure them so
+  // the prop interface stays unchanged for callers, then ignore.
+  aimAnchorX: _aimAnchorX,
+  aimAnchorY: _aimAnchorY,
   title,
 }: AimPaneProps) {
-  const zoom = aimZoomStyle(aimAnchorX, aimAnchorY);
-
   if (aimClipUrl) {
     return (
       <ClipView
@@ -313,7 +312,7 @@ export function AimPane({
         posterUrl={aimScreenshotUrl}
         title={title}
         label="AIM"
-        videoStyle={zoom}
+        videoStyle={AIM_ZOOM_STYLE}
       />
     );
   }
@@ -322,7 +321,7 @@ export function AimPane({
       url={aimScreenshotUrl}
       alt={`${title} — aim reference`}
       label="AIM"
-      imgStyle={zoom}
+      imgStyle={AIM_ZOOM_STYLE}
     />
   );
 }

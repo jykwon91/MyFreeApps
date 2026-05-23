@@ -1,53 +1,45 @@
-"""Stand + Aim micro-clip generator — 1s looped clips for the STAND and AIM
-panes of the 2×2 storyboard tile (PR6).
+"""Stand + Aim micro-clip generator — 1s looped clips for the storyboard.
 
-PR4 introduced the four-pane storyboard (STAND still | AIM still+anchor | THROW
-clip | LANDING text). PR5 replaced the LANDING text with a real landing clip.
-PR6 replaces the STAND and AIM stills with **1-second looping micro-clips**
-anchored on the **same chapter timestamps** the Strategy-A classifier already
-chose for ``stand_screenshot_url`` and ``aim_screenshot_url``. The still
-remains the always-valid graceful degradation when no micro-clip exists.
+PR6 introduced the 1-second STAND + AIM micro-clips replacing static stills.
+Anchor sources differ per side (operator-tuned 2026-05-23):
 
-Two entry paths share a single contract:
+  - **STAND** anchors on the grid classifier's chosen ``stand`` frame
+    (``timestamps[stand_idx]``). The 9-frame grid reliably catches the
+    "I am at the spot" window (many seconds long).
+  - **AIM** anchors on ``release_ts − _AIM_PRE_RELEASE_SECONDS`` (0.8s
+    before the throw-localizer's release frame). The aim moment is
+    sub-second; the grid is far too sparse to catch it reliably — Claude
+    was picking random distant frames. The throw-timing dense pass
+    (0.5s spacing around release) already sees the locked-aim moment.
 
-  1. **Ingest path** — orchestrator already ran the grid classifier and knows
-     ``timestamps[stand_idx]`` / ``timestamps[aim_idx]``. It passes them via
-     ``precomputed_stand_ts`` / ``precomputed_aim_ts``. The generator skips
-     the classifier call entirely (cost saving: zero extra Claude spend) and
-     just ffmpeg-cuts + uploads + commits.
+Two entry paths share one contract:
 
-  2. **Backfill path** — standalone CLI. ``precomputed_*_ts`` are None, so we
-     re-run ``classify_frames_for_lineup_decision`` over the same grid the
-     ingest path uses, recover the indices, and turn them back into
-     timestamps via the deterministic ``grid_timestamps``. Cost: one grid-
-     classifier call per lineup.
+  1. **Ingest path** — orchestrator passes ``precomputed_stand_ts`` (from
+     its grid run) AND ``precomputed_release_ts`` (from the throw-localizer
+     it already ran for the THROW clip). Generator skips both Claude calls.
+  2. **Backfill path** — both precomputed values are None; generator runs
+     the grid classifier (stand) AND ``localize_throw_with_refinement``
+     (release → aim) itself. Cost: 1 grid + 1-2 throw-timing calls.
 
-Why anchor on the **classifier-chosen** timestamps rather than fixed offsets
-(chapter_start + 0 / chapter_start + 4): the first frame of the AIM clip IS
-the existing aim still (same timestamp), so the persisted ``aim_anchor_x/y``
-normalized overlay stays pixel-accurate when StandPane / AimPane swap from
-``ScreenshotHalf`` to ``ClipView``. Fixed offsets would invalidate the anchor.
-
-Cut + encode the muted MP4 via :func:`cut_clip` (re-uses the PR2 ffmpeg
-wrapper — same encode contract, same ``+faststart``), upload to MinIO under
-a deterministic key, persist the bare key via the matching repo setter.
-
-Idempotent: keys are ``pending/{video_id}/{int(chapter_start)}-stand-micro.mp4``
-and ``pending/{video_id}/{int(chapter_start)}-aim-micro.mp4``. Re-running
-overwrites the same objects instead of orphaning new ones. The DB writes are
-**two separate one-column commits** (``set_stand_clip_url`` +
-``set_aim_clip_url``) so a stand-side failure NEVER rolls back the already-
-committed aim clip, and vice versa. Mirrors PR2 / PR5 exactly.
+Per-side independence: a stand-side failure NEVER rolls back the already-
+committed aim side, and vice versa. The AIM still + persisted aim_anchor
+coords are NOT recut — phase-1 scope is the clip only; the brief poster
+flash + rarely-used still-mode fallback are accepted-imperfections. See
+``project_mga_aim_anchor_center_screen_invariant.md`` in auto-memory.
 
 Failure handling (rules/no-bandaid-solutions.md +
-rules/check-third-party-error-codes.md): yt-dlp / ffmpeg / Claude failures
-are captured with structured codes, logged at WARNING, and returned in
-``stand_error_codes`` / ``aim_error_codes``. ``*_clip_url`` is left NULL and
-the matching pane renders its still fallback. Nothing silent-fails.
+rules/check-third-party-error-codes.md): every yt-dlp / ffmpeg / Claude
+failure is captured with structured codes, logged at WARNING, and returned
+in the per-side error_codes; the matching ``*_clip_url`` is left NULL and
+the pane renders its still fallback. Nothing silent-fails.
+
+Sibling helpers (``_resolve_stand_ts_via_grid_classifier``,
+``_resolve_release_ts_via_throw_localizer``, ``_cut_upload_persist_one_side``)
+live in :mod:`micro_clip_helpers` to keep this file under the file-size
+growth guard (per per-app Tech Debt Policy).
 """
 from __future__ import annotations
 
-import asyncio
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -56,19 +48,15 @@ from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.core.storage import get_storage
 from app.models.game.lineup import Lineup
 from app.repositories.game import lineup_repo
-from app.services.classification.classifier_service import (
-    classify_frames_for_lineup_decision,
-)
 from app.services.ingestion.frame_extractor import (
-    ClipCutError,
-    FrameExtractionError,
-    cut_clip,
-    extract_frames,
-    grid_timestamps,
     wide_source_bounds,
+)
+from app.services.ingestion.micro_clip_helpers import (
+    _cut_upload_persist_one_side,
+    _resolve_release_ts_via_throw_localizer,
+    _resolve_stand_ts_via_grid_classifier,
 )
 from app.services.ingestion.youtube_fetcher import (
     VideoDownloadError,
@@ -77,22 +65,17 @@ from app.services.ingestion.youtube_fetcher import (
 
 logger = logging.getLogger(__name__)
 
-# Frozen design-contract constants.
-# Per-pane micro-clip durations. STAND is 2.0s (operator-tuned: 1.0s was
-# cutting off mid-stance, before the player begins the throw motion). AIM
-# stays at 1.0s — the AIM pane's whole point is the static crosshair
-# placement, and a longer window risks bleeding into the throw animation
-# which is what the THROW pane already shows.
+# Per-pane micro-clip durations. STAND is 2.0s (operator-tuned: 1.0s cut
+# off mid-stance). AIM stays at 1.0s — longer bleeds into the THROW pane's
+# window.
 _STAND_MICRO_CLIP_SECONDS = 2.0
 _AIM_MICRO_CLIP_SECONDS = 1.0
-# Minimum acceptable clamped duration. A near-end timestamp may clip short;
-# under this threshold we skip rather than ship a useless ~200ms sliver.
+# Seconds BEFORE release_ts the AIM clip starts at. The 1.0s AIM clip
+# spans [release − 0.8s, release + 0.2s] — locked-aim with a tiny throw-
+# initiation peek as a natural end-cue.
+_AIM_PRE_RELEASE_SECONDS = 0.8
+# Minimum acceptable clamped duration. Below: skip rather than ship a sliver.
 _MIN_CLIP_SECONDS = 0.5
-# Grid sample count + edge padding — must match the ingest orchestrator's
-# ingestion_orchestrator._GRID_FRAME_COUNT / _GRID_EDGE_PADDING_SECONDS so
-# the backfill recovers the SAME timestamps the ingest pass extracted.
-_GRID_FRAME_COUNT = 9
-_GRID_EDGE_PADDING_SECONDS = 1.0
 
 
 @dataclass
@@ -195,81 +178,6 @@ def _micro_clip_seconds_for_side(side: str) -> float:
     raise ValueError(f"unknown micro-clip side: {side!r}")
 
 
-async def _resolve_anchor_timestamps_via_classifier(
-    db: AsyncSession,
-    lineup: Lineup,
-    video_path: Path,
-    chapter_start: float,
-    chapter_end: float,
-) -> tuple[Optional[float], Optional[float], list[str], str]:
-    """Backfill helper: re-run the grid classifier to recover stand/aim ts.
-
-    Returns ``(stand_ts, aim_ts, error_codes, reasoning)``. On any failure
-    the timestamps are None and ``error_codes`` carries the structured
-    reason. The caller then converts both sides to ``status="failed"`` /
-    ``status="skipped"`` per the failure shape.
-    """
-    timestamps = grid_timestamps(
-        float(chapter_start),
-        float(chapter_end),
-        _GRID_FRAME_COUNT,
-        edge_padding_seconds=_GRID_EDGE_PADDING_SECONDS,
-    )
-    if not timestamps:
-        return None, None, ["empty_grid_window"], "chapter window produced no grid frames"
-
-    try:
-        frames = await extract_frames(video_path, timestamps)
-    except FrameExtractionError as exc:
-        logger.warning(
-            "micro_clip_generator: grid frame extraction failed: "
-            "lineup=%s returncode=%s stderr=%s",
-            lineup.id, exc.returncode, exc.stderr[:300],
-        )
-        return None, None, [f"frame_extract:rc={exc.returncode}"], str(exc)
-
-    if not frames:
-        return None, None, ["grid_frames_empty"], "ffmpeg returned no frames"
-
-    try:
-        result = await classify_frames_for_lineup_decision(
-            db,
-            frames=frames,
-            chapter_title=lineup.chapter_title or "",
-            attribution_author=lineup.attribution_author,
-            game_hint=None,
-        )
-    except Exception as exc:
-        logger.warning(
-            "micro_clip_generator: grid classifier raised: lineup=%s error=%s",
-            lineup.id, str(exc),
-        )
-        return None, None, [f"classifier_raised:{type(exc).__name__}"], str(exc)
-
-    if not result.success:
-        logger.warning(
-            "micro_clip_generator: grid classifier call failed: lineup=%s "
-            "error_codes=%s",
-            lineup.id, result.error_codes,
-        )
-        return None, None, list(result.error_codes), "grid classifier reported failure"
-
-    if not result.is_lineup:
-        # The backfill candidate is an accepted lineup, so the classifier
-        # judging it "not a lineup" here would be a regression — keep the
-        # signal but skip cleanly rather than fabricate timestamps.
-        return None, None, [], "backfill grid says not_a_lineup (skip)"
-
-    # 1-based → 0-based, clamped to the grid range. Falls back to
-    # first/last index when the model omitted one — same shape as
-    # ingestion_orchestrator's classifier-disabled fallback.
-    stand_idx = (result.best_stand_index or 1) - 1
-    aim_idx = (result.best_aim_index or len(frames)) - 1
-    stand_idx = max(0, min(stand_idx, len(timestamps) - 1))
-    aim_idx = max(0, min(aim_idx, len(timestamps) - 1))
-    return timestamps[stand_idx], timestamps[aim_idx], [], result.reasoning or ""
-
-
 async def generate_micro_clips_for_lineup(
     db: AsyncSession,
     lineup: Lineup,
@@ -279,22 +187,33 @@ async def generate_micro_clips_for_lineup(
     video_path: Optional[Path] = None,
     download_dir: Optional[Path] = None,
     precomputed_stand_ts: Optional[float] = None,
-    precomputed_aim_ts: Optional[float] = None,
+    precomputed_release_ts: Optional[float] = None,
 ) -> MicroClipGenerationResult:
-    """Cut + persist STAND and AIM 1s micro-clips for *lineup*.
+    """Cut + persist STAND and AIM micro-clips for *lineup*.
+
+    AIM anchors on ``release_ts - _AIM_PRE_RELEASE_SECONDS`` (NOT on the
+    grid classifier's aim_idx — that pass is too sparse for the sub-second
+    aim moment; see module docstring). STAND still anchors on the grid's
+    stand_idx.
 
     Two entry paths:
 
     **Ingest path** — caller (orchestrator) passes ``precomputed_stand_ts``
-    AND ``precomputed_aim_ts`` from the grid classifier output it already
-    has. The generator skips its own classifier call entirely. Cost: zero
-    extra Claude spend; two extra ffmpeg cuts + two MinIO uploads per
-    chapter.
+    (from the grid run it already did) AND ``precomputed_release_ts`` (from
+    the throw-localizer run it already did for the THROW clip). The
+    generator skips both Claude calls entirely. Cost: zero extra Claude
+    spend; two extra ffmpeg cuts + two MinIO uploads per chapter.
 
-    **Backfill path** — caller is the CLI; ``precomputed_*_ts`` are None.
-    We re-run ``classify_frames_for_lineup_decision`` ourselves over the
-    same grid the ingest path uses (cost: one Claude call per lineup),
-    then cut both clips.
+    Partial-ingest case: if the orchestrator's THROW clip step skipped or
+    failed, ``precomputed_release_ts`` is None and the AIM side is skipped
+    with reason ``no_release_ts_for_aim`` — STAND still generates from the
+    precomputed grid stand_ts.
+
+    **Backfill path** — caller is the CLI; both precomputed values are
+    None. We re-run the grid classifier (for stand_ts) AND the
+    throw-localizer (for release_ts → AIM_TS). Cost: 1 grid call + 1-2
+    throw-timing calls per lineup. Stand- and aim-side failures are tallied
+    independently.
 
     Per-side independence: a stand-side failure NEVER rolls back the
     already-committed aim side, and vice versa. Each side has its own
@@ -311,10 +230,14 @@ async def generate_micro_clips_for_lineup(
             backfill that batches per video). When None the video is
             re-fetched into *download_dir* and deleted afterwards.
         download_dir: Required when *video_path* is None.
-        precomputed_stand_ts / precomputed_aim_ts: Ingest path — pass the
-            ``timestamps[stand_idx]`` / ``timestamps[aim_idx]`` the
-            orchestrator already computed. Either both set or both None;
-            mixed is a wiring bug.
+        precomputed_stand_ts: Ingest path — ``timestamps[stand_idx]`` from
+            the grid classifier output the orchestrator already has.
+            Backfill path — None; generator re-runs the grid classifier.
+        precomputed_release_ts: Ingest path — the throw-localizer's release
+            frame timestamp (from clip_generator's returned ClipGenerationResult).
+            None when the orchestrator's THROW clip step skipped/failed
+            (AIM is then skipped too). Backfill path — None; generator
+            runs the throw-localizer itself.
 
     Returns:
         MicroClipGenerationResult — never raises for expected failures.
@@ -333,20 +256,27 @@ async def generate_micro_clips_for_lineup(
             aim_skip_reason="no_source_video",
         )
 
-    # Validate the precomputed pair — either both supplied or both None.
-    if (precomputed_stand_ts is None) != (precomputed_aim_ts is None):
+    # Two valid input shapes:
+    #   - Backfill: both precomputed values None → generator runs both
+    #     classifier pipelines internally.
+    #   - Ingest:  precomputed_stand_ts set; precomputed_release_ts MAY be
+    #     None (when the orchestrator's THROW clip step skipped/failed —
+    #     STAND still generates, AIM is skipped).
+    # The only invalid shape is "stand None but release set", which would
+    # mean the caller has release_ts without stand_ts — a wiring bug. There
+    # is no concept of "AIM-only" without STAND on the ingest path.
+    if precomputed_stand_ts is None and precomputed_release_ts is not None:
         logger.warning(
-            "micro_clip_generator: lineup %s — precomputed_stand_ts / "
-            "precomputed_aim_ts must both be set or both None; got "
-            "stand=%s aim=%s",
-            lineup.id, precomputed_stand_ts, precomputed_aim_ts,
+            "micro_clip_generator: lineup %s — precomputed_release_ts set "
+            "without precomputed_stand_ts; got stand=None release=%s",
+            lineup.id, precomputed_release_ts,
         )
         return MicroClipGenerationResult(
             stand_status="failed",
             aim_status="failed",
             stand_error_codes=["precomputed_pair_mismatch"],
             aim_error_codes=["precomputed_pair_mismatch"],
-            reasoning="precomputed stand/aim timestamps must be paired",
+            reasoning="precomputed_release_ts requires precomputed_stand_ts",
         )
 
     owns_video = video_path is None
@@ -385,12 +315,37 @@ async def generate_micro_clips_for_lineup(
                 )
 
         # ---- Resolve anchor timestamps ------------------------------------
+        # STAND and AIM resolve independently:
+        #   - STAND comes from the grid classifier (precomputed on ingest;
+        #     re-run on backfill).
+        #   - AIM comes from release_ts − _AIM_PRE_RELEASE_SECONDS, where
+        #     release_ts is from the throw-localizer (precomputed on ingest;
+        #     re-run on backfill).
+        # Either side can independently end up "skipped" with structured
+        # reasoning so the operator can see why per-side without inspecting
+        # logs. The other side still runs normally.
+        stand_ts: Optional[float] = None
+        aim_ts: Optional[float] = None
+        stand_skip_reason: Optional[str] = None
+        aim_skip_reason: Optional[str] = None
+        stand_err_codes: list[str] = []
+        aim_err_codes: list[str] = []
+        reasoning_parts: list[str] = []
+
         if precomputed_stand_ts is not None:
+            # Ingest path — caller already has both sides' Claude output.
             stand_ts = float(precomputed_stand_ts)
-            aim_ts = float(precomputed_aim_ts)  # type: ignore[arg-type]
-            reasoning = ""
+            if precomputed_release_ts is not None:
+                aim_ts = float(precomputed_release_ts) - _AIM_PRE_RELEASE_SECONDS
+            else:
+                # Orchestrator's THROW clip step skipped/failed — STAND
+                # generates, AIM is skipped (the previous grid-based AIM
+                # was unreliable; refusing is preferable to faking).
+                aim_skip_reason = "no_release_ts_for_aim"
         else:
-            # Backfill path — re-run the grid classifier.
+            # Backfill path — generator orchestrates both classifier passes
+            # itself. Stand and aim resolve independently so a failure on
+            # one side doesn't poison the other.
             if not settings.enable_classifier:
                 return MicroClipGenerationResult(
                     stand_status="skipped",
@@ -408,32 +363,48 @@ async def generate_micro_clips_for_lineup(
                     reasoning="anthropic_api_key not configured",
                 )
 
-            (
-                stand_ts,
-                aim_ts,
-                err_codes,
-                reasoning,
-            ) = await _resolve_anchor_timestamps_via_classifier(
-                db, lineup, local_video, chapter_start, chapter_end,
-            )
-            if stand_ts is None or aim_ts is None:
-                # Either real failure (err_codes set) or "not a lineup"
-                # backfill regression (err_codes empty, skip cleanly).
-                if err_codes:
-                    return MicroClipGenerationResult(
-                        stand_status="failed",
-                        aim_status="failed",
-                        stand_error_codes=list(err_codes),
-                        aim_error_codes=list(err_codes),
-                        reasoning=reasoning,
-                    )
-                return MicroClipGenerationResult(
-                    stand_status="skipped",
-                    aim_status="skipped",
-                    stand_skip_reason="backfill_not_a_lineup",
-                    aim_skip_reason="backfill_not_a_lineup",
-                    reasoning=reasoning,
+            # STAND from grid classifier.
+            stand_ts, stand_err_codes, stand_reasoning = (
+                await _resolve_stand_ts_via_grid_classifier(
+                    db, lineup, local_video, chapter_start, chapter_end,
                 )
+            )
+            if stand_reasoning:
+                reasoning_parts.append(f"stand: {stand_reasoning}")
+            if stand_ts is None and not stand_err_codes:
+                stand_skip_reason = "backfill_not_a_lineup"
+
+            # AIM from throw-localizer (independent — runs even if stand failed).
+            release_ts, aim_err_codes, aim_reasoning = (
+                await _resolve_release_ts_via_throw_localizer(
+                    lineup, local_video, chapter_start, chapter_end,
+                )
+            )
+            if aim_reasoning:
+                reasoning_parts.append(f"aim: {aim_reasoning}")
+            if release_ts is not None:
+                aim_ts = release_ts - _AIM_PRE_RELEASE_SECONDS
+            elif not aim_err_codes:
+                aim_skip_reason = "backfill_no_throw_release"
+
+        reasoning = " | ".join(reasoning_parts) if reasoning_parts else ""
+
+        # Hard fail-out only when BOTH sides resolved to nothing AND both
+        # have hard errors — the symmetric ingest-skipped case (no release
+        # → AIM skipped, STAND generates) must not be turned into a failure.
+        if (
+            stand_ts is None
+            and aim_ts is None
+            and stand_err_codes
+            and aim_err_codes
+        ):
+            return MicroClipGenerationResult(
+                stand_status="failed",
+                aim_status="failed",
+                stand_error_codes=list(stand_err_codes),
+                aim_error_codes=list(aim_err_codes),
+                reasoning=reasoning,
+            )
 
         # Compute the wider-source start the served 1s clip's offset will be
         # measured against. The micro-clip "shift window" editor (PR2) reads
@@ -463,26 +434,49 @@ async def generate_micro_clips_for_lineup(
             wider_source_start_s = source_start
 
         # ---- Cut + upload + persist each side independently ---------------
-        stand_outcome = await _cut_upload_persist_one_side(
-            db, lineup, video_id, local_video,
-            anchor_ts=stand_ts,
-            chapter_start=chapter_start,
-            chapter_end=chapter_end,
-            side="stand",
-            key_fn=pending_stand_clip_key,
-            persist_fn=lineup_repo.set_stand_clip_url,
-            wider_source_start_s=wider_source_start_s,
-        )
-        aim_outcome = await _cut_upload_persist_one_side(
-            db, lineup, video_id, local_video,
-            anchor_ts=aim_ts,
-            chapter_start=chapter_start,
-            chapter_end=chapter_end,
-            side="aim",
-            key_fn=pending_aim_clip_key,
-            persist_fn=lineup_repo.set_aim_clip_url,
-            wider_source_start_s=wider_source_start_s,
-        )
+        # A None anchor_ts means the side's resolution step already decided
+        # to skip / fail this side. Short-circuit before the cut so we don't
+        # ffmpeg-attempt against missing data; the outcome dict matches the
+        # _cut_upload_persist_one_side shape so the result composition below
+        # is unchanged.
+        if stand_ts is None:
+            stand_outcome = {
+                "status": "failed" if stand_err_codes else "skipped",
+                "error_codes": list(stand_err_codes),
+                "skip_reason": stand_skip_reason,
+            }
+        else:
+            stand_outcome = await _cut_upload_persist_one_side(
+                db, lineup, video_id, local_video,
+                anchor_ts=stand_ts,
+                clip_seconds=_STAND_MICRO_CLIP_SECONDS,
+                chapter_start=chapter_start,
+                chapter_end=chapter_end,
+                side="stand",
+                key_fn=pending_stand_clip_key,
+                persist_fn=lineup_repo.set_stand_clip_url,
+                wider_source_start_s=wider_source_start_s,
+                min_clip_seconds=_MIN_CLIP_SECONDS,
+            )
+        if aim_ts is None:
+            aim_outcome = {
+                "status": "failed" if aim_err_codes else "skipped",
+                "error_codes": list(aim_err_codes),
+                "skip_reason": aim_skip_reason,
+            }
+        else:
+            aim_outcome = await _cut_upload_persist_one_side(
+                db, lineup, video_id, local_video,
+                anchor_ts=aim_ts,
+                clip_seconds=_AIM_MICRO_CLIP_SECONDS,
+                chapter_start=chapter_start,
+                chapter_end=chapter_end,
+                side="aim",
+                key_fn=pending_aim_clip_key,
+                persist_fn=lineup_repo.set_aim_clip_url,
+                wider_source_start_s=wider_source_start_s,
+                min_clip_seconds=_MIN_CLIP_SECONDS,
+            )
 
         return MicroClipGenerationResult(
             stand_status=stand_outcome["status"],
@@ -509,110 +503,3 @@ async def generate_micro_clips_for_lineup(
                 )
 
 
-async def _cut_upload_persist_one_side(
-    db: AsyncSession,
-    lineup: Lineup,
-    video_id: str,
-    local_video: Path,
-    *,
-    anchor_ts: float,
-    chapter_start: float,
-    chapter_end: float,
-    side: str,
-    key_fn,
-    persist_fn,
-    wider_source_start_s: float | None = None,
-) -> dict:
-    """Cut + upload + persist exactly ONE side (stand or aim).
-
-    Returns a flat dict consumed by ``generate_micro_clips_for_lineup`` —
-    not a dataclass because the caller flattens the two sides into the
-    composite ``MicroClipGenerationResult``. The same shape is used for
-    both sides so a future third pane (unlikely but possible) can be added
-    without touching this function.
-
-    *wider_source_start_s* is the seconds-into-source-video start of the
-    SHARED wider clip (``clip_url_original``) the operator's shift-window
-    slider will be positioned against. When set, this function computes
-    ``offset_s = clip_start - wider_source_start_s`` and persists it via the
-    setter's ``offset_s=`` kwarg so the shift overlay opens at the right
-    initial thumb position. When None (no wider source for this lineup),
-    the offset is left untouched in the DB and the shift overlay opens at 0.
-    """
-    bounds = _compute_micro_bounds(
-        anchor_ts,
-        chapter_start,
-        chapter_end,
-        clip_seconds=_micro_clip_seconds_for_side(side),
-    )
-    if bounds is None:
-        return {
-            "status": "skipped",
-            "skip_reason": "chapter_too_short_for_microclip",
-        }
-    clip_start, clip_duration = bounds
-
-    try:
-        clip_bytes = await cut_clip(local_video, clip_start, clip_duration)
-    except ClipCutError as exc:
-        logger.warning(
-            "micro_clip_generator: %s clip cut failed: lineup=%s video_id=%s "
-            "start=%.2f dur=%.2f returncode=%s stderr=%s",
-            side, lineup.id, video_id, clip_start, clip_duration,
-            exc.returncode, exc.stderr[:300],
-        )
-        return {
-            "status": "failed",
-            "error_codes": [f"clip_cut:rc={exc.returncode}"],
-        }
-
-    clip_key = key_fn(video_id, chapter_start)
-    try:
-        storage = get_storage()
-        loop = asyncio.get_running_loop()
-        await loop.run_in_executor(
-            None, storage.upload_file, clip_key, clip_bytes, "video/mp4"
-        )
-    except Exception as exc:
-        logger.warning(
-            "micro_clip_generator: %s clip upload failed: lineup=%s key=%s "
-            "error=%s",
-            side, lineup.id, clip_key, str(exc),
-        )
-        return {
-            "status": "failed",
-            "error_codes": ["clip_upload_failed"],
-        }
-
-    # Compute the in-source offset (only when a shared wider source exists for
-    # this lineup). The setter writes ``*_clip_offset_s`` so the PR2 shift
-    # overlay opens its slider at the position the ingest pipeline cut from.
-    if wider_source_start_s is not None:
-        offset_s: float | None = clip_start - wider_source_start_s
-    else:
-        offset_s = None
-
-    try:
-        await persist_fn(db, lineup, clip_key, offset_s=offset_s)
-    except Exception as exc:
-        # Object uploaded but column did not commit. The key is deterministic
-        # so a later backfill recomputes the same key and overwrites the same
-        # object — no orphan, safe to retry.
-        logger.warning(
-            "micro_clip_generator: %s_clip_url persist failed (object "
-            "uploaded, column not committed; backfill is idempotent): "
-            "lineup=%s key=%s error=%s",
-            side, lineup.id, clip_key, str(exc),
-        )
-        return {
-            "status": "failed",
-            "error_codes": [f"{side}_clip_url_persist_failed"],
-        }
-
-    logger.info(
-        "micro_clip_generator: %s clip generated: lineup=%s video_id=%s "
-        "key=%s anchor_ts=%.2f clip=[%.2f,+%.2fs]",
-        side, lineup.id, video_id, clip_key, anchor_ts,
-        clip_start, clip_duration,
-    )
-    return {"status": "generated", "clip_key": clip_key}

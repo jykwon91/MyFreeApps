@@ -466,13 +466,11 @@ async def _process_chapter(
                     str(exc), exc_info=True,
                 )
 
-        # PR6: best-effort STAND + AIM 1s micro-clips. Anchored on the SAME
-        # grid timestamps the classifier already chose for the stand/aim
-        # stills, so the AIM clip's first frame IS today's aim still and the
-        # persisted aim_anchor_x/y overlay stays pixel-accurate. Zero extra
-        # Claude spend — just two ffmpeg cuts + two MinIO uploads per chapter.
-        # Same non-fatal contract as the surrounding clip / landing / technique
-        # blocks (a micro-clip failure must not roll back the lineup).
+        # PR6 (revised 2026-05-23): STAND anchors on grid stand_idx; AIM
+        # anchors on release_ts − 0.8s (see micro_clip_generator docstring).
+        # release_ts is None when THROW skipped/failed → AIM skips, STAND
+        # still generates. Non-fatal — failure must not roll back the row.
+        _release_ts = clip_result.release_ts if (clip_result and clip_result.status == "generated") else None
         try:
             micro_result = await generate_micro_clips_for_lineup(
                 db,
@@ -481,7 +479,7 @@ async def _process_chapter(
                 chapter_end=float(chapter.end_seconds),
                 video_path=video_path,
                 precomputed_stand_ts=timestamps[stand_idx],
-                precomputed_aim_ts=timestamps[aim_idx],
+                precomputed_release_ts=_release_ts,
             )
             logger.info(
                 "Micro-clip generation (ingest): source_id=%s video_id=%s "

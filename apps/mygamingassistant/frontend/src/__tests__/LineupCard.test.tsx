@@ -124,16 +124,22 @@ describe("LineupCard", () => {
     expect(screen.getByText("8s")).toBeDefined();
   });
 
-  it("expanded variant AIM still zooms 2× centered on the persisted anchor", () => {
+  it("expanded variant AIM still zooms 2× pinned to center (anchor coords ignored)", () => {
+    // Post-2026-05-23: AIM_TS now derives from release_ts (throw-localizer),
+    // not the grid classifier's aim_idx. The persisted aim_anchor_x/y was
+    // computed against the old grid frame — trusting it for zoom origin
+    // would re-introduce drift on the new release-anchored frame. Crosshair
+    // is always at screen center in tactical FPS, so origin is hardcoded
+    // to (50%, 50%) regardless of the persisted coords.
     render(<LineupCard lineup={BASE_LINEUP} variant="expanded" />);
     const aimImg = screen.getByAltText(/aim reference/i) as HTMLImageElement;
     expect(aimImg.style.transform).toBe("scale(2)");
-    expect(aimImg.style.transformOrigin).toBe("50% 40%");
+    expect(aimImg.style.transformOrigin).toBe("50% 50%");
     // No literal anchor dot in the AIM pane — the zoom replaces it.
     expect(screen.queryByLabelText(/aim anchor/i)).toBeNull();
   });
 
-  it("expanded variant AIM still falls back to center origin when anchor coords are null", () => {
+  it("expanded variant AIM still keeps the center origin even with null anchor coords", () => {
     const lineup: Lineup = { ...BASE_LINEUP, aim_anchor_x: null, aim_anchor_y: null };
     render(<LineupCard lineup={lineup} variant="expanded" />);
     const aimImg = screen.getByAltText(/aim reference/i) as HTMLImageElement;
@@ -335,10 +341,11 @@ describe("LineupCard", () => {
     expect(aimVideo).not.toBeNull();
   });
 
-  it("expanded variant AIM clip variant carries the same zoom transform as the still", () => {
+  it("expanded variant AIM clip carries the same center-pinned 2× zoom as the still", () => {
     // Still→clip continuity: AimPane applies the same zoom transform whether
-    // the active surface is the still <img> or the looping <video>, so the
-    // operator's view of the anchor stays consistent during the swap.
+    // the active surface is the still <img> or the looping <video>. Origin
+    // is always pinned to (50%, 50%) — see the "AIM still" test above for
+    // the rationale.
     const lineup: Lineup = {
       ...BASE_LINEUP,
       aim_clip_url: "https://ex.com/aim.mp4",
@@ -349,7 +356,7 @@ describe("LineupCard", () => {
     ) as HTMLVideoElement;
     expect(aimVideo).not.toBeNull();
     expect(aimVideo.style.transform).toBe("scale(2)");
-    expect(aimVideo.style.transformOrigin).toBe("50% 40%");
+    expect(aimVideo.style.transformOrigin).toBe("50% 50%");
     expect(screen.queryByLabelText(/aim anchor/i)).toBeNull();
   });
 
