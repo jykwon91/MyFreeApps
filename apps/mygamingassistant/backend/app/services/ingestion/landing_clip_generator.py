@@ -79,22 +79,14 @@ from app.services.ingestion.youtube_fetcher import (
 logger = logging.getLogger(__name__)
 
 # Frozen design-contract constants. The 0.55 gate matches PR2's throw clip —
-# if PR2 cleared its gate, the landing pass shares that judgment (so a clip
-# is generated or both are skipped together, never one without the other).
+# if PR2 cleared its gate, the landing pass shares that judgment.
 _CLIP_CONFIDENCE_GATE = 0.55
-# Where the landing clip starts relative to result_ts. result_ts is the
-# throw-timing prompt's "first visible wisp" — typically 1.5-3.0s after the
-# actual release — so the first 1.5-2s after result_ts is still very faint.
-# Starting AT result_ts (or before) gives the operator a clip with a blank /
-# barely-visible lead-in (surfaced on lineup 7bd971c3 after PR #751 made the
-# release frame accurate). Pad forward so the clip starts when the bloom is
-# actually visible.
+# result_ts is the throw-timing prompt's "first visible wisp" — typically
+# 1.5-3.0s after release, so the first ~1.5s is still very faint. Pad
+# forward so the clip opens once bloom is actually visible (lineup
+# 7bd971c3 after PR #751).
 _POST_RESULT_PRE_PAD = 1.5
-# Target clip duration. Kept around the previous ~3.5s total — long enough
-# to show full deployment / molly burn pattern / flash radius without
-# dwelling pointlessly after the effect has settled.
 _LANDING_CLIP_DURATION = 3.5
-# Below this the chapter-clamped window is unusable → skip.
 _MIN_CLIP_SECONDS = 1.0
 
 
