@@ -24,6 +24,11 @@ from app.services.ingestion.clip_generator import (
     pending_clip_source_key,
 )
 from app.services.ingestion.frame_extractor import ClipCutError, FrameExtractionError
+from app.services.ingestion.throw_localizer import (
+    STAGE_COARSE_FAILED,
+    STAGE_REFINED,
+    RefinedThrowTiming,
+)
 from app.services.ingestion.wide_source import WideSourceResult
 from app.services.ingestion.youtube_fetcher import VideoDownloadError
 
@@ -131,6 +136,37 @@ def _timing(**kw):
     return ThrowTimingResult(**base)
 
 
+def _refined(
+    *,
+    timestamps: list[float] | None = None,
+    stage: str = STAGE_REFINED,
+    timing: ThrowTimingResult | None = None,
+    **timing_kwargs,
+) -> RefinedThrowTiming:
+    """Build a RefinedThrowTiming wrapper for the orchestrator's return.
+
+    After the two-stage refactor, clip_generator calls
+    ``localize_throw_with_refinement`` instead of running the timestamp /
+    extract / classify chain itself. Tests therefore mock the orchestrator
+    and shape its return as a RefinedThrowTiming. ``timing`` kwargs are
+    forwarded to :func:`_timing`; ``timestamps`` is the list whose
+    1-based indices the caller maps the release/result indices back to.
+
+    Pass ``stage=STAGE_COARSE_*`` when the test wants to assert the
+    coarse-fallback branch was taken; the wrapped ``timing`` should be a
+    ThrowTimingResult shaped accordingly.
+    """
+    timing_obj = timing if timing is not None else _timing(**timing_kwargs)
+    if timestamps is None:
+        timestamps = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]
+    return RefinedThrowTiming(
+        timing=timing_obj,
+        frame_timestamps=timestamps,
+        stage=stage,
+        coarse_timing=timing_obj,
+    )
+
+
 class TestGenerateClipGeneratedPath:
     @pytest.mark.asyncio
     async def test_generated_reuses_provided_video_and_persists_key(
@@ -144,9 +180,9 @@ class TestGenerateClipGeneratedPath:
 
         with (
             patch(f"{_MOD}.settings", _settings()),
-            patch(f"{_MOD}.clip_window_timestamps", return_value=[1.0, 2.0, 3.0, 4.0, 5.0, 6.0]),
-            patch(f"{_MOD}.extract_frames_downscaled", new=AsyncMock(return_value=[_FAKE_PNG] * 6)),
-            patch(f"{_MOD}.classify_throw_timing_from_frames", new=AsyncMock(return_value=_timing())),
+            patch(f"{_MOD}.localize_throw_with_refinement",
+                  new=AsyncMock(return_value=_refined(
+                      timestamps=[1.0, 2.0, 3.0, 4.0, 5.0, 6.0]))),
             patch(f"{_MOD}.cut_clip", new=AsyncMock(return_value=_FAKE_MP4)) as mock_cut,
             patch(f"{_MOD}.get_storage", return_value=storage),
             patch(f"{_MOD}.download_video", new=AsyncMock()) as mock_dl,
@@ -178,10 +214,10 @@ class TestGenerateClipGeneratedPath:
 
         with (
             patch(f"{_MOD}.settings", _settings()),
-            patch(f"{_MOD}.clip_window_timestamps", return_value=[1.0, 2.0, 3.0, 4.0]),
-            patch(f"{_MOD}.extract_frames_downscaled", new=AsyncMock(return_value=[_FAKE_PNG] * 4)),
-            patch(f"{_MOD}.classify_throw_timing_from_frames",
-                  new=AsyncMock(return_value=_timing(release_index=1, result_index=2))),
+            patch(f"{_MOD}.localize_throw_with_refinement",
+                  new=AsyncMock(return_value=_refined(
+                      timestamps=[1.0, 2.0, 3.0, 4.0],
+                      release_index=1, result_index=2))),
             patch(f"{_MOD}.cut_clip", new=AsyncMock(return_value=_FAKE_MP4)),
             patch(f"{_MOD}.get_storage", return_value=MagicMock()),
             patch(f"{_MOD}.download_video", new=AsyncMock(return_value=fetched)) as mock_dl,
@@ -226,12 +262,9 @@ class TestGenerateClipWideSourceWiring:
             # 6 frames spread across [9..24]; release_index=2 → release_ts=12,
             # result_index=4 → result_ts=18. _compute_clip_bounds gives
             # [12-2, 18+1.5] = [10, 19.5] = 9.5s within band.
-            patch(f"{_MOD}.clip_window_timestamps",
-                  return_value=[9.0, 12.0, 15.0, 18.0, 21.0, 24.0]),
-            patch(f"{_MOD}.extract_frames_downscaled",
-                  new=AsyncMock(return_value=[_FAKE_PNG] * 6)),
-            patch(f"{_MOD}.classify_throw_timing_from_frames",
-                  new=AsyncMock(return_value=_timing(
+            patch(f"{_MOD}.localize_throw_with_refinement",
+                  new=AsyncMock(return_value=_refined(
+                      timestamps=[9.0, 12.0, 15.0, 18.0, 21.0, 24.0],
                       release_index=2, result_index=4))),
             patch(f"{_MOD}.cut_clip", new=AsyncMock(return_value=_FAKE_MP4)),
             patch(f"{_MOD}.get_storage", return_value=MagicMock()),
@@ -271,12 +304,10 @@ class TestGenerateClipWideSourceWiring:
 
         with (
             patch(f"{_MOD}.settings", _settings()),
-            patch(f"{_MOD}.clip_window_timestamps",
-                  return_value=[1.0, 2.0, 3.0, 4.0]),
-            patch(f"{_MOD}.extract_frames_downscaled",
-                  new=AsyncMock(return_value=[_FAKE_PNG] * 4)),
-            patch(f"{_MOD}.classify_throw_timing_from_frames",
-                  new=AsyncMock(return_value=_timing(release_index=1, result_index=2))),
+            patch(f"{_MOD}.localize_throw_with_refinement",
+                  new=AsyncMock(return_value=_refined(
+                      timestamps=[1.0, 2.0, 3.0, 4.0],
+                      release_index=1, result_index=2))),
             patch(f"{_MOD}.cut_clip", new=AsyncMock(return_value=_FAKE_MP4)),
             patch(f"{_MOD}.get_storage", return_value=MagicMock()),
             patch(f"{_MOD}.cut_and_upload_wide_source",
@@ -299,12 +330,14 @@ class TestGenerateClipWideSourceWiring:
 
 class TestGenerateClipSkips:
     async def _skip(self, *, timing=None, settings=None, lineup=None, video=None):
+        refined_return = _refined(
+            timestamps=[1.0, 2.0, 3.0],
+            timing=timing or _timing(),
+        )
         with (
             patch(f"{_MOD}.settings", settings or _settings()),
-            patch(f"{_MOD}.clip_window_timestamps", return_value=[1.0, 2.0, 3.0]),
-            patch(f"{_MOD}.extract_frames_downscaled", new=AsyncMock(return_value=[_FAKE_PNG] * 3)),
-            patch(f"{_MOD}.classify_throw_timing_from_frames",
-                  new=AsyncMock(return_value=timing or _timing())),
+            patch(f"{_MOD}.localize_throw_with_refinement",
+                  new=AsyncMock(return_value=refined_return)),
             patch(f"{_MOD}.cut_clip", new=AsyncMock()) as mock_cut,
             patch(f"{_MOD}.get_storage", return_value=MagicMock()),
             patch(f"{_MOD}.download_video", new=AsyncMock()),
@@ -385,10 +418,10 @@ class TestGenerateClipSkips:
         # release==result and a sub-second chapter → bounds None → skip.
         with (
             patch(f"{_MOD}.settings", _settings()),
-            patch(f"{_MOD}.clip_window_timestamps", return_value=[20.0, 20.1, 20.2]),
-            patch(f"{_MOD}.extract_frames_downscaled", new=AsyncMock(return_value=[_FAKE_PNG] * 3)),
-            patch(f"{_MOD}.classify_throw_timing_from_frames",
-                  new=AsyncMock(return_value=_timing(release_index=1, result_index=1))),
+            patch(f"{_MOD}.localize_throw_with_refinement",
+                  new=AsyncMock(return_value=_refined(
+                      timestamps=[20.0, 20.1, 20.2],
+                      release_index=1, result_index=1))),
             patch(f"{_MOD}.cut_clip", new=AsyncMock()) as mock_cut,
             patch(f"{_MOD}.get_storage", return_value=MagicMock()),
             patch(f"{_MOD}.download_video", new=AsyncMock()),
@@ -406,10 +439,9 @@ class TestGenerateClipSkips:
 class TestGenerateClipFailures:
     @pytest.mark.asyncio
     async def test_refetch_without_download_dir_fails_loud(self):
-        with (
-            patch(f"{_MOD}.settings", _settings()),
-            patch(f"{_MOD}.clip_window_timestamps", return_value=[1.0, 2.0]),
-        ):
+        # No-download-dir check happens BEFORE the orchestrator runs, so
+        # nothing needs to be patched on the timing-localiser surface.
+        with patch(f"{_MOD}.settings", _settings()):
             result = await generate_clip_for_lineup(
                 MagicMock(), _lineup(), chapter_start=0.0, chapter_end=30.0,
                 video_path=None, download_dir=None,
@@ -425,7 +457,6 @@ class TestGenerateClipFailures:
         )
         with (
             patch(f"{_MOD}.settings", _settings()),
-            patch(f"{_MOD}.clip_window_timestamps", return_value=[1.0, 2.0]),
             patch(f"{_MOD}.download_video", new=AsyncMock(side_effect=exc)),
         ):
             result = await generate_clip_for_lineup(
@@ -437,12 +468,14 @@ class TestGenerateClipFailures:
 
     @pytest.mark.asyncio
     async def test_frame_extract_failure(self, tmp_path: Path):
+        """The orchestrator re-raises a coarse-pass FrameExtractionError so
+        the existing structured-failure surface is unchanged."""
         v = tmp_path / "v.mp4"; v.write_bytes(b"x")
         exc = FrameExtractionError("boom", timestamp=5.0, returncode=1, stderr="e")
         with (
             patch(f"{_MOD}.settings", _settings()),
-            patch(f"{_MOD}.clip_window_timestamps", return_value=[1.0, 2.0]),
-            patch(f"{_MOD}.extract_frames_downscaled", new=AsyncMock(side_effect=exc)),
+            patch(f"{_MOD}.localize_throw_with_refinement",
+                  new=AsyncMock(side_effect=exc)),
         ):
             result = await generate_clip_for_lineup(
                 MagicMock(), _lineup(), chapter_start=0.0, chapter_end=30.0,
@@ -453,6 +486,9 @@ class TestGenerateClipFailures:
 
     @pytest.mark.asyncio
     async def test_throw_timing_call_failure(self, tmp_path: Path):
+        """A coarse-pass classifier failure surfaces as
+        RefinedThrowTiming(timing.success=False, stage=COARSE_FAILED) —
+        the caller routes on timing.error_codes exactly as before."""
         v = tmp_path / "v.mp4"; v.write_bytes(b"x")
         failed_timing = ThrowTimingResult(
             success=False, error_codes=["rate_limit_error"],
@@ -460,10 +496,10 @@ class TestGenerateClipFailures:
         )
         with (
             patch(f"{_MOD}.settings", _settings()),
-            patch(f"{_MOD}.clip_window_timestamps", return_value=[1.0, 2.0]),
-            patch(f"{_MOD}.extract_frames_downscaled", new=AsyncMock(return_value=[_FAKE_PNG] * 2)),
-            patch(f"{_MOD}.classify_throw_timing_from_frames",
-                  new=AsyncMock(return_value=failed_timing)),
+            patch(f"{_MOD}.localize_throw_with_refinement",
+                  new=AsyncMock(return_value=_refined(
+                      timing=failed_timing, stage=STAGE_COARSE_FAILED,
+                      timestamps=[]))),
         ):
             result = await generate_clip_for_lineup(
                 MagicMock(), _lineup(), chapter_start=0.0, chapter_end=30.0,
@@ -478,10 +514,10 @@ class TestGenerateClipFailures:
         exc = ClipCutError("nope", start=1.0, duration=6.0, returncode=1, stderr="e")
         with (
             patch(f"{_MOD}.settings", _settings()),
-            patch(f"{_MOD}.clip_window_timestamps", return_value=[1.0, 2.0, 3.0, 4.0]),
-            patch(f"{_MOD}.extract_frames_downscaled", new=AsyncMock(return_value=[_FAKE_PNG] * 4)),
-            patch(f"{_MOD}.classify_throw_timing_from_frames",
-                  new=AsyncMock(return_value=_timing(release_index=1, result_index=2))),
+            patch(f"{_MOD}.localize_throw_with_refinement",
+                  new=AsyncMock(return_value=_refined(
+                      timestamps=[1.0, 2.0, 3.0, 4.0],
+                      release_index=1, result_index=2))),
             patch(f"{_MOD}.cut_clip", new=AsyncMock(side_effect=exc)),
         ):
             result = await generate_clip_for_lineup(
@@ -498,10 +534,10 @@ class TestGenerateClipFailures:
         storage.upload_file.side_effect = RuntimeError("minio down")
         with (
             patch(f"{_MOD}.settings", _settings()),
-            patch(f"{_MOD}.clip_window_timestamps", return_value=[1.0, 2.0, 3.0, 4.0]),
-            patch(f"{_MOD}.extract_frames_downscaled", new=AsyncMock(return_value=[_FAKE_PNG] * 4)),
-            patch(f"{_MOD}.classify_throw_timing_from_frames",
-                  new=AsyncMock(return_value=_timing(release_index=1, result_index=2))),
+            patch(f"{_MOD}.localize_throw_with_refinement",
+                  new=AsyncMock(return_value=_refined(
+                      timestamps=[1.0, 2.0, 3.0, 4.0],
+                      release_index=1, result_index=2))),
             patch(f"{_MOD}.cut_clip", new=AsyncMock(return_value=_FAKE_MP4)),
             patch(f"{_MOD}.get_storage", return_value=storage),
             patch(f"{_MOD}.lineup_repo.set_clip_url", new=AsyncMock()) as mock_set,

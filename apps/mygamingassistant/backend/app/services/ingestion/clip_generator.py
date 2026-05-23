@@ -44,15 +44,13 @@ from app.core.config import settings
 from app.core.storage import get_storage
 from app.models.game.lineup import Lineup
 from app.repositories.game import lineup_repo
-from app.services.classification.classifier_service import (
-    classify_throw_timing_from_frames,
-)
 from app.services.ingestion.frame_extractor import (
     ClipCutError,
     FrameExtractionError,
-    clip_window_timestamps,
     cut_clip,
-    extract_frames_downscaled,
+)
+from app.services.ingestion.throw_localizer import (
+    localize_throw_with_refinement,
 )
 from app.services.ingestion.wide_source import (
     cut_and_upload_wide_source,
@@ -235,13 +233,6 @@ async def generate_clip_for_lineup(
             status="skipped", skip_reason="classifier_unavailable:missing_api_key"
         )
 
-    chapter_duration = float(chapter_end) - float(chapter_start)
-    timestamps = clip_window_timestamps(chapter_start, chapter_end)
-    if not timestamps:
-        return ClipGenerationResult(
-            status="skipped", skip_reason="empty_clip_window"
-        )
-
     owns_video = video_path is None
     local_video: Optional[Path] = video_path
     try:
@@ -272,9 +263,23 @@ async def generate_clip_for_lineup(
                     reasoning=f"Video re-fetch failed: {exc}",
                 )
 
-        # ---- Dense downscaled frames over the throw window --------------
+        # ---- Two-stage throw localisation -------------------------------
+        # Coarse N=12 grid over the throw window, then (when coarse cleared
+        # the 0.55 refine gate) a dense N=8 pass at ~0.5s spacing around
+        # the coarse-pass release for frame-accurate timing. The
+        # orchestrator returns the dense result on success and falls back
+        # to coarse on any dense-pass failure — never regresses the
+        # pipeline (throw_localizer.py docstring covers the full decision
+        # tree). FrameExtractionError on the *coarse* pass re-raises so
+        # we surface the same structured failure we always have.
         try:
-            frames = await extract_frames_downscaled(local_video, timestamps)
+            refined = await localize_throw_with_refinement(
+                local_video,
+                chapter_start=chapter_start,
+                chapter_end=chapter_end,
+                chapter_title=lineup.chapter_title,
+                utility_hint=utility_hint,
+            )
         except FrameExtractionError as exc:
             logger.warning(
                 "clip_generator: downscaled frame extraction failed: "
@@ -287,19 +292,14 @@ async def generate_clip_for_lineup(
                 reasoning=f"Downscaled frame extraction failed: {exc}",
             )
 
-        # ---- Localise the throw ----------------------------------------
-        timing = await classify_throw_timing_from_frames(
-            frames=frames,
-            frame_timestamps=timestamps,
-            chapter_title=lineup.chapter_title,
-            chapter_duration=chapter_duration,
-            utility_hint=utility_hint,
-        )
+        timing = refined.timing
+        timestamps = refined.frame_timestamps
         if not timing.success:
             logger.warning(
                 "clip_generator: throw-timing call failed: lineup=%s "
-                "video_id=%s error_codes=%s reasoning=%s",
-                lineup.id, video_id, timing.error_codes, timing.reasoning,
+                "video_id=%s stage=%s error_codes=%s reasoning=%s",
+                lineup.id, video_id, refined.stage,
+                timing.error_codes, timing.reasoning,
             )
             return ClipGenerationResult(
                 status="failed",
