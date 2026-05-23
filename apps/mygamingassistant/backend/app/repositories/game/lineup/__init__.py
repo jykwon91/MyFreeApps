@@ -37,6 +37,7 @@ from app.repositories.game.lineup.micro_panes import (
     set_aim_clip_url,
     set_aim_screenshot_url,
     set_stand_clip_url,
+    set_stand_localization,
     set_stand_screenshot_url,
 )
 from app.repositories.game.lineup.technique import (
@@ -75,6 +76,7 @@ __all__ = [
     "set_landing_clip_url_original",
     "set_landing_clip_url_trim",
     "set_stand_clip_url",
+    "set_stand_localization",
     "set_stand_screenshot_url",
     "set_technique",
     "update_lineup",

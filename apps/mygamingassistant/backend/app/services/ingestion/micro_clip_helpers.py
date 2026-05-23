@@ -1,12 +1,17 @@
 """Internal helpers for :mod:`micro_clip_generator` — kept in a sibling
 module so the generator stays under the file-size growth guard (the
-generator was already over the 500-LOC threshold; growth requires a
+generator was already at the 500-LOC threshold; growth requires a
 matching split per TECH_DEBT.md "no-growth on flagged files").
 
 What lives here:
   - ``_resolve_release_ts_via_throw_localizer`` — backfill anchor source
-    (both STAND and AIM derive from this single release_ts; see
-    :mod:`micro_clip_generator` docstring).
+    (AIM derives from this release_ts; STAND now uses its own
+    localizer — see ``_resolve_stand_ts``).
+  - ``_resolve_stand_ts`` — content-aware STAND anchor. Uses cached
+    ``lineup.stand_ts`` when set; else runs the STAND-localizer (Claude)
+    and persists the result. The fixed-offset
+    ``release_ts − _STAND_PRE_RELEASE_SECONDS`` heuristic is gone
+    (rules/no-bandaid-solutions.md — see operator pushback 2026-05-23).
   - ``_cut_upload_persist_one_side`` — per-side ffmpeg cut + MinIO upload
     + repo commit (shared by both stand and aim).
 
@@ -19,6 +24,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -26,10 +32,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.storage import get_storage
 from app.models.game.lineup import Lineup
+from app.repositories.game import lineup_repo
 from app.services.ingestion.frame_extractor import (
     ClipCutError,
     FrameExtractionError,
     cut_clip,
+)
+from app.services.ingestion.stand_localizer import (
+    localize_stand_with_refinement,
 )
 from app.services.ingestion.throw_localizer import (
     localize_throw_with_refinement,
@@ -87,6 +97,99 @@ async def _resolve_release_ts_via_throw_localizer(
 
     release_ts = refined.frame_timestamps[timing.release_index - 1]
     return release_ts, [], timing.reasoning or ""
+
+
+async def _resolve_stand_ts(
+    db: AsyncSession,
+    lineup: Lineup,
+    video_path: Path,
+    *,
+    chapter_start: float,
+    release_ts: float,
+) -> tuple[Optional[float], list[str], str]:
+    """Resolve the content-aware STAND anchor for this lineup.
+
+    Two paths:
+
+    **Cached path** — ``lineup.stand_localized_at`` is set: the localizer
+    has already run for this lineup. Returns ``lineup.stand_ts`` (which
+    may be NULL — a previously-confirmed "no stand demo in this chapter"
+    verdict). No Claude call. Operator NULLs ``stand_localized_at`` to
+    force a re-localize.
+
+    **Fresh path** — ``stand_localized_at`` is NULL: run the
+    STAND-localizer two-stage Claude pass, persist
+    ``stand_ts`` + ``stand_localized_at``. Returns the localized
+    timestamp (or NULL on a confident "no demo" verdict).
+
+    Returns ``(stand_ts, error_codes, reasoning)``. ``error_codes`` is
+    populated only on a true failure (frame extract / Claude API);
+    a "no demo" verdict returns ``(None, [], "...")``. The caller surfaces
+    a STAND skip with reason ``stand_localizer_no_demo`` in that case.
+    """
+    if lineup.stand_localized_at is not None:
+        # Cached — trust the prior verdict. NULL stand_ts means
+        # "confirmed no demo" and propagates as a clean skip.
+        return lineup.stand_ts, [], ""
+
+    try:
+        refined = await localize_stand_with_refinement(
+            video_path,
+            chapter_start=float(chapter_start),
+            release_ts=float(release_ts),
+            chapter_title=lineup.chapter_title or "",
+            utility_hint=None,
+        )
+    except FrameExtractionError as exc:
+        logger.warning(
+            "micro_clip_helpers: stand localizer extract failed: "
+            "lineup=%s returncode=%s stderr=%s",
+            lineup.id, exc.returncode, exc.stderr[:300],
+        )
+        return None, [f"stand_localizer_extract:rc={exc.returncode}"], str(exc)
+    except Exception as exc:  # defensive
+        logger.warning(
+            "micro_clip_helpers: stand localizer raised: lineup=%s error=%s",
+            lineup.id, str(exc),
+        )
+        return None, [f"stand_localizer_raised:{type(exc).__name__}"], str(exc)
+
+    timing = refined.timing
+    if not timing.success:
+        # API/parse failure — do NOT persist; next backfill retries.
+        logger.warning(
+            "micro_clip_helpers: stand localizer call failed: lineup=%s "
+            "error_codes=%s",
+            lineup.id, timing.error_codes,
+        )
+        return None, list(timing.error_codes), "stand localizer reported failure"
+
+    # Localizer ran cleanly — persist verdict (demo or no-demo) so the
+    # cache hits on the next call.
+    resolved_ts: Optional[float] = None
+    if timing.has_stand_demonstration and timing.stand_index is not None:
+        resolved_ts = refined.frame_timestamps[timing.stand_index - 1]
+
+    try:
+        await lineup_repo.set_stand_localization(
+            db, lineup,
+            stand_ts=resolved_ts,
+            stand_localized_at=datetime.now(timezone.utc),
+        )
+    except Exception as exc:
+        # Persistence failed — the Claude call succeeded; use the result
+        # this run, log so the operator can investigate. Next run will
+        # re-localize (no cache write happened).
+        logger.warning(
+            "micro_clip_helpers: stand_ts persist failed (Claude call "
+            "succeeded; using value this run, will re-localize next "
+            "backfill): lineup=%s error=%s",
+            lineup.id, str(exc),
+        )
+
+    if resolved_ts is None:
+        return None, [], timing.reasoning or "stand localizer found no demo"
+    return resolved_ts, [], timing.reasoning or ""
 
 
 async def _cut_upload_persist_one_side(

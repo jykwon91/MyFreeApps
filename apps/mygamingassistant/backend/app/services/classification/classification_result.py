@@ -103,6 +103,36 @@ class ThrowTimingResult:
 
 
 @dataclass
+class StandTimingResult:
+    """Result of the STAND-localization Claude call.
+
+    Separate type from :class:`ThrowTimingResult` — STAND is a distinct code
+    path (own prompt, own schema, different semantic target) that finds the
+    frame the narrator DEMONSTRATES the throwing position, not the frame the
+    throw is released. Conflating with ThrowTimingResult would couple two
+    prompts that must evolve independently.
+
+    On a successful API call ``success=True`` and
+    ``has_stand_demonstration`` reflects Claude's judgement. A confident
+    ``has_stand_demonstration=False`` (some chapters skip the stand-demo
+    entirely) is a SUCCESSFUL answer, not an error — caller skips the STAND
+    clip and shows the still. ``error_codes`` is populated only on an
+    API/parse failure (per rules/check-third-party-error-codes.md — never a
+    bare bool/None).
+
+    ``stand_index`` is 1-based into the candidate frame window the call was
+    shown. The caller maps it back to seconds via the same timestamp list.
+    """
+
+    success: bool
+    has_stand_demonstration: Optional[bool] = None
+    stand_index: Optional[int] = None
+    confidence: Optional[float] = None
+    reasoning: str = ""
+    error_codes: list[str] = field(default_factory=list)
+
+
+@dataclass
 class ThrowTechniqueResult:
     """Result of the PR3 throw-technique Claude call.
 
