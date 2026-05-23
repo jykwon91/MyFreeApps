@@ -40,6 +40,9 @@ from app.services.ingestion.micro_clip_generator import (
 from app.services.ingestion.youtube_fetcher import VideoDownloadError
 
 _MOD = "app.services.ingestion.micro_clip_generator"
+# Most ffmpeg / storage / classifier / repo calls now live in the sibling
+# helpers module (PR #761). Patches that target those resolve here.
+_HMOD = "app.services.ingestion.micro_clip_helpers"
 _FAKE_PNG = b"\x89PNG\r\n\x1a\n"
 _FAKE_MP4 = b"\x00\x00\x00\x18ftypmp42"
 
@@ -196,11 +199,11 @@ async def test_ingest_path_generates_both_clips_without_classifier_call():
     classifier_mock = AsyncMock()  # MUST NOT be called
 
     with (
-        patch(f"{_MOD}.cut_clip", _ffmpeg_cut_mock()) as cut,
-        patch(f"{_MOD}.get_storage", return_value=storage),
+        patch(f"{_HMOD}.cut_clip", _ffmpeg_cut_mock()) as cut,
+        patch(f"{_HMOD}.get_storage", return_value=storage),
         patch(f"{_MOD}.lineup_repo.set_stand_clip_url", set_stand_mock),
         patch(f"{_MOD}.lineup_repo.set_aim_clip_url", set_aim_mock),
-        patch(f"{_MOD}.classify_frames_for_lineup_decision", classifier_mock),
+        patch(f"{_HMOD}.classify_frames_for_lineup_decision", classifier_mock),
     ):
         result = await generate_micro_clips_for_lineup(
             db, lineup,
@@ -268,8 +271,8 @@ async def test_ingest_path_stand_only_generates_stand_skips_aim():
     set_aim_mock = AsyncMock(return_value=lineup)
 
     with (
-        patch(f"{_MOD}.cut_clip", _ffmpeg_cut_mock()),
-        patch(f"{_MOD}.get_storage", return_value=storage),
+        patch(f"{_HMOD}.cut_clip", _ffmpeg_cut_mock()),
+        patch(f"{_HMOD}.get_storage", return_value=storage),
         patch(f"{_MOD}.lineup_repo.set_stand_clip_url", set_stand_mock),
         patch(f"{_MOD}.lineup_repo.set_aim_clip_url", set_aim_mock),
     ):
@@ -378,15 +381,15 @@ async def test_backfill_path_runs_classifier_and_generates():
 
     with (
         patch(f"{_MOD}.settings", _settings()),
-        patch(f"{_MOD}.grid_timestamps", return_value=timestamps),
-        patch(f"{_MOD}.extract_frames",
+        patch(f"{_HMOD}.grid_timestamps", return_value=timestamps),
+        patch(f"{_HMOD}.extract_frames",
               AsyncMock(return_value=[_FAKE_PNG] * 5)),
-        patch(f"{_MOD}.classify_frames_for_lineup_decision",
+        patch(f"{_HMOD}.classify_frames_for_lineup_decision",
               AsyncMock(return_value=grid)),
-        patch(f"{_MOD}.localize_throw_with_refinement",
+        patch(f"{_HMOD}.localize_throw_with_refinement",
               _localizer_mock(refined=refined)),
-        patch(f"{_MOD}.cut_clip", _ffmpeg_cut_mock()),
-        patch(f"{_MOD}.get_storage", return_value=storage),
+        patch(f"{_HMOD}.cut_clip", _ffmpeg_cut_mock()),
+        patch(f"{_HMOD}.get_storage", return_value=storage),
         patch(f"{_MOD}.lineup_repo.set_stand_clip_url", set_stand_mock),
         patch(f"{_MOD}.lineup_repo.set_aim_clip_url", set_aim_mock),
     ):
@@ -420,15 +423,15 @@ async def test_backfill_path_grid_not_a_lineup_skips_stand_but_aim_independent()
 
     with (
         patch(f"{_MOD}.settings", _settings()),
-        patch(f"{_MOD}.grid_timestamps", return_value=timestamps),
-        patch(f"{_MOD}.extract_frames",
+        patch(f"{_HMOD}.grid_timestamps", return_value=timestamps),
+        patch(f"{_HMOD}.extract_frames",
               AsyncMock(return_value=[_FAKE_PNG] * 3)),
-        patch(f"{_MOD}.classify_frames_for_lineup_decision",
+        patch(f"{_HMOD}.classify_frames_for_lineup_decision",
               AsyncMock(return_value=grid)),
-        patch(f"{_MOD}.localize_throw_with_refinement",
+        patch(f"{_HMOD}.localize_throw_with_refinement",
               _localizer_mock(refined=refined)),
-        patch(f"{_MOD}.cut_clip", _ffmpeg_cut_mock()),
-        patch(f"{_MOD}.get_storage", return_value=storage),
+        patch(f"{_HMOD}.cut_clip", _ffmpeg_cut_mock()),
+        patch(f"{_HMOD}.get_storage", return_value=storage),
         patch(f"{_MOD}.lineup_repo.set_aim_clip_url", set_aim_mock),
     ):
         result = await generate_micro_clips_for_lineup(
@@ -462,15 +465,15 @@ async def test_backfill_path_throw_localizer_no_release_skips_aim_but_stand_inde
 
     with (
         patch(f"{_MOD}.settings", _settings()),
-        patch(f"{_MOD}.grid_timestamps", return_value=timestamps),
-        patch(f"{_MOD}.extract_frames",
+        patch(f"{_HMOD}.grid_timestamps", return_value=timestamps),
+        patch(f"{_HMOD}.extract_frames",
               AsyncMock(return_value=[_FAKE_PNG] * 3)),
-        patch(f"{_MOD}.classify_frames_for_lineup_decision",
+        patch(f"{_HMOD}.classify_frames_for_lineup_decision",
               AsyncMock(return_value=grid)),
-        patch(f"{_MOD}.localize_throw_with_refinement",
+        patch(f"{_HMOD}.localize_throw_with_refinement",
               _localizer_mock(refined=refined)),
-        patch(f"{_MOD}.cut_clip", _ffmpeg_cut_mock()),
-        patch(f"{_MOD}.get_storage", return_value=storage),
+        patch(f"{_HMOD}.cut_clip", _ffmpeg_cut_mock()),
+        patch(f"{_HMOD}.get_storage", return_value=storage),
         patch(f"{_MOD}.lineup_repo.set_stand_clip_url", set_stand_mock),
     ):
         result = await generate_micro_clips_for_lineup(
@@ -533,15 +536,15 @@ async def test_backfill_path_grid_classifier_api_failure_fails_stand_aim_indepen
 
     with (
         patch(f"{_MOD}.settings", _settings()),
-        patch(f"{_MOD}.grid_timestamps", return_value=timestamps),
-        patch(f"{_MOD}.extract_frames",
+        patch(f"{_HMOD}.grid_timestamps", return_value=timestamps),
+        patch(f"{_HMOD}.extract_frames",
               AsyncMock(return_value=[_FAKE_PNG] * 3)),
-        patch(f"{_MOD}.classify_frames_for_lineup_decision",
+        patch(f"{_HMOD}.classify_frames_for_lineup_decision",
               AsyncMock(return_value=grid)),
-        patch(f"{_MOD}.localize_throw_with_refinement",
+        patch(f"{_HMOD}.localize_throw_with_refinement",
               _localizer_mock(refined=refined)),
-        patch(f"{_MOD}.cut_clip", _ffmpeg_cut_mock()),
-        patch(f"{_MOD}.get_storage", return_value=storage),
+        patch(f"{_HMOD}.cut_clip", _ffmpeg_cut_mock()),
+        patch(f"{_HMOD}.get_storage", return_value=storage),
         patch(f"{_MOD}.lineup_repo.set_aim_clip_url", set_aim_mock),
     ):
         result = await generate_micro_clips_for_lineup(
@@ -578,12 +581,12 @@ async def test_backfill_path_both_classifiers_fail_returns_both_failed():
 
     with (
         patch(f"{_MOD}.settings", _settings()),
-        patch(f"{_MOD}.grid_timestamps", return_value=timestamps),
-        patch(f"{_MOD}.extract_frames",
+        patch(f"{_HMOD}.grid_timestamps", return_value=timestamps),
+        patch(f"{_HMOD}.extract_frames",
               AsyncMock(return_value=[_FAKE_PNG] * 3)),
-        patch(f"{_MOD}.classify_frames_for_lineup_decision",
+        patch(f"{_HMOD}.classify_frames_for_lineup_decision",
               AsyncMock(return_value=grid)),
-        patch(f"{_MOD}.localize_throw_with_refinement",
+        patch(f"{_HMOD}.localize_throw_with_refinement",
               _localizer_mock(refined=refined)),
     ):
         result = await generate_micro_clips_for_lineup(
@@ -610,17 +613,17 @@ async def test_backfill_path_grid_frame_extract_failure_fails_stand_only():
 
     with (
         patch(f"{_MOD}.settings", _settings()),
-        patch(f"{_MOD}.grid_timestamps", return_value=timestamps),
+        patch(f"{_HMOD}.grid_timestamps", return_value=timestamps),
         patch(
-            f"{_MOD}.extract_frames",
+            f"{_HMOD}.extract_frames",
             AsyncMock(side_effect=FrameExtractionError(
                 "boom", timestamp=18.0, returncode=1, stderr="x",
             )),
         ),
-        patch(f"{_MOD}.localize_throw_with_refinement",
+        patch(f"{_HMOD}.localize_throw_with_refinement",
               _localizer_mock(refined=refined)),
-        patch(f"{_MOD}.cut_clip", _ffmpeg_cut_mock()),
-        patch(f"{_MOD}.get_storage", return_value=storage),
+        patch(f"{_HMOD}.cut_clip", _ffmpeg_cut_mock()),
+        patch(f"{_HMOD}.get_storage", return_value=storage),
         patch(f"{_MOD}.lineup_repo.set_aim_clip_url", set_aim_mock),
     ):
         result = await generate_micro_clips_for_lineup(
@@ -703,8 +706,8 @@ async def test_stand_cut_failure_does_not_affect_aim():
         return outcome
 
     with (
-        patch(f"{_MOD}.cut_clip", AsyncMock(side_effect=cut_clip_impl)),
-        patch(f"{_MOD}.get_storage", return_value=storage),
+        patch(f"{_HMOD}.cut_clip", AsyncMock(side_effect=cut_clip_impl)),
+        patch(f"{_HMOD}.get_storage", return_value=storage),
         patch(f"{_MOD}.lineup_repo.set_stand_clip_url", set_stand_mock),
         patch(f"{_MOD}.lineup_repo.set_aim_clip_url", set_aim_mock),
     ):
@@ -768,8 +771,8 @@ async def test_offset_persisted_when_wider_source_exists():
 
     with (
         patch(f"{_MOD}.settings", fake_settings),
-        patch(f"{_MOD}.cut_clip", _ffmpeg_cut_mock()),
-        patch(f"{_MOD}.get_storage", return_value=storage),
+        patch(f"{_HMOD}.cut_clip", _ffmpeg_cut_mock()),
+        patch(f"{_HMOD}.get_storage", return_value=storage),
         patch(f"{_MOD}.lineup_repo.set_stand_clip_url", set_stand_mock),
         patch(f"{_MOD}.lineup_repo.set_aim_clip_url", set_aim_mock),
     ):
@@ -811,8 +814,8 @@ async def test_offset_not_persisted_when_no_wider_source():
     set_aim_mock = AsyncMock(return_value=lineup)
 
     with (
-        patch(f"{_MOD}.cut_clip", _ffmpeg_cut_mock()),
-        patch(f"{_MOD}.get_storage", return_value=storage),
+        patch(f"{_HMOD}.cut_clip", _ffmpeg_cut_mock()),
+        patch(f"{_HMOD}.get_storage", return_value=storage),
         patch(f"{_MOD}.lineup_repo.set_stand_clip_url", set_stand_mock),
         patch(f"{_MOD}.lineup_repo.set_aim_clip_url", set_aim_mock),
     ):
@@ -847,8 +850,8 @@ async def test_offset_not_persisted_when_original_matches_clip():
     set_aim_mock = AsyncMock(return_value=lineup)
 
     with (
-        patch(f"{_MOD}.cut_clip", _ffmpeg_cut_mock()),
-        patch(f"{_MOD}.get_storage", return_value=storage),
+        patch(f"{_HMOD}.cut_clip", _ffmpeg_cut_mock()),
+        patch(f"{_HMOD}.get_storage", return_value=storage),
         patch(f"{_MOD}.lineup_repo.set_stand_clip_url", set_stand_mock),
         patch(f"{_MOD}.lineup_repo.set_aim_clip_url", set_aim_mock),
     ):
@@ -873,8 +876,8 @@ async def test_stand_persist_failure_does_not_affect_aim():
     storage = _storage_mock()
 
     with (
-        patch(f"{_MOD}.cut_clip", _ffmpeg_cut_mock()),
-        patch(f"{_MOD}.get_storage", return_value=storage),
+        patch(f"{_HMOD}.cut_clip", _ffmpeg_cut_mock()),
+        patch(f"{_HMOD}.get_storage", return_value=storage),
         patch(
             f"{_MOD}.lineup_repo.set_stand_clip_url",
             AsyncMock(side_effect=RuntimeError("db down")),
@@ -905,8 +908,8 @@ async def test_upload_failure_per_side_returns_failed():
     storage.upload_file = MagicMock(side_effect=RuntimeError("minio down"))
 
     with (
-        patch(f"{_MOD}.cut_clip", _ffmpeg_cut_mock()),
-        patch(f"{_MOD}.get_storage", return_value=storage),
+        patch(f"{_HMOD}.cut_clip", _ffmpeg_cut_mock()),
+        patch(f"{_HMOD}.get_storage", return_value=storage),
     ):
         result = await generate_micro_clips_for_lineup(
             db, lineup,
