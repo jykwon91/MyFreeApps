@@ -128,11 +128,10 @@ CLASSIFICATION ORDER — YOU MUST FOLLOW THIS SEQUENCE:
    (b) which map you identified, and (c) why you chose the zones you chose.
 """
 
-# Strategy A grid schema. The model is given N numbered candidate frames
-# sampled across the chapter and must (a) decide whether the chapter is a real
-# utility-lineup demo at all, and (b) pick which frame best shows the throwing
-# stance and which best shows the aim/result. The aim_anchor_* coordinates are
-# relative to the chosen best_aim_index frame.
+# Strategy A grid schema. The model decides whether the chapter is a real
+# lineup demo and picks two DISTINCT frames: one for the player's standing
+# position (best_stand_index) and one for the crosshair on the alignment
+# marker (best_aim_index). aim_anchor_* are relative to best_aim_index.
 _GRID_OUTPUT_SCHEMA_DOC = """\
 You are given {n} numbered candidate frames (Frame 1 .. Frame {n}) sampled at
 even intervals across ONE YouTube chapter from a tactical-FPS video. The
@@ -168,12 +167,21 @@ Rules:
 - game_slug: follow CLASSIFICATION ORDER above — determine from visual cues first, then
   constrain all map/zone/utility slugs to entries tagged [<your game_slug>] in the
   reference list.
-- best_stand_index: the 1-based frame number that best shows the player STANDING
-  at the throw position lining up the utility (crosshair on the alignment
-  marker, throwable equipped, before release). null if is_lineup is false.
-- best_aim_index: the 1-based frame number that best shows the AIM/RESULT — the
-  crosshair placement for the throw or the utility landing on target. May equal
-  best_stand_index if one frame shows both. null if is_lineup is false.
+- best_stand_index: the frame showing the PLAYER POSITION at the throw spot.
+  Feet/ground/local environment dominant; crosshair on a LOCAL reference
+  (standing tile, doorframe, nearby corner), NOT the throw's alignment
+  marker. The "I am at the spot" frame — after arrival, before rotating to
+  aim. Utility equipped, projectile not airborne. null if is_lineup is false.
+- best_aim_index: the frame showing the CROSSHAIR ON THE ALIGNMENT MARKER —
+  the specific visual point (skybox feature, building corner, antenna, wire,
+  texture detail) the player is throwing toward. Sky/skybox or distant-map
+  dominant; camera angled UP or across, NOT down at the ground. The
+  "crosshair is on the marker" frame, immediately before release. MUST be a
+  DIFFERENT frame from best_stand_index AND come AFTER it in time (arrive →
+  STAND → rotate up → AIM → release). If no separate aim-on-marker frame
+  exists (player throws on arrival, aim moment off-camera), set
+  best_aim_index to null and reduce confidence — do NOT duplicate
+  best_stand_index. null if is_lineup is false.
 - aim_anchor_x / aim_anchor_y: normalized (0-1) crosshair position IN THE
   best_aim_index FRAME. x=0 left, x=1 right; y=0 top, y=1 bottom. null if
   is_lineup is false or you cannot locate the crosshair.
