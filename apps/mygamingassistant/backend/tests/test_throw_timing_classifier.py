@@ -24,8 +24,8 @@ from app.services.classification.classifier_service import (
 
 _FAKE_PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 64
 
-_PATCH_SETTINGS = "app.services.classification.classifier_service.settings"
-_PATCH_ANTHROPIC = "app.services.classification.classifier_service.anthropic.Anthropic"
+_PATCH_SETTINGS = "app.services.classification.throw_timing_classifier.settings"
+_PATCH_ANTHROPIC = "app.services.classification.throw_timing_classifier.anthropic.Anthropic"
 
 
 def _resp(payload: dict) -> MagicMock:
