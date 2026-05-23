@@ -467,12 +467,10 @@ async def _process_chapter(
                 )
 
         # PR6 (revised 2026-05-24): BOTH STAND and AIM anchor on
-        # release_ts (see micro_clip_generator docstring). The grid
-        # stand_idx is kept here only for the still-image upload above
-        # (stand_screenshot_url); it is NOT used to anchor the STAND
-        # clip. release_ts is None when THROW skipped/failed → both
-        # micro-clips skip cleanly. Non-fatal — a failure must not roll
-        # back the row; the panes gracefully render their stills.
+        # release_ts (see micro_clip_generator docstring; grid stand_idx
+        # is kept only for the still-image upload above, not the clip).
+        # release_ts=None when THROW skipped/failed → both sides skip
+        # cleanly. Non-fatal — failure must not roll back the row.
         _release_ts = clip_result.release_ts if (clip_result and clip_result.status == "generated") else None
         try:
             micro_result = await generate_micro_clips_for_lineup(
