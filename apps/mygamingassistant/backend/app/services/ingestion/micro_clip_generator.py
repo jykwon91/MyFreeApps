@@ -1,30 +1,44 @@
 """Stand + Aim micro-clip generator — 1s looped clips for the storyboard.
 
 PR6 introduced the 1-second STAND + AIM micro-clips replacing static stills.
-Anchor sources differ per side (operator-tuned 2026-05-23):
+Both panes anchor on ``release_ts`` from the throw-localizer's dense pass
+(operator-tuned 2026-05-23/24):
 
-  - **STAND** anchors on the grid classifier's chosen ``stand`` frame
-    (``timestamps[stand_idx]``). The 9-frame grid reliably catches the
-    "I am at the spot" window (many seconds long).
   - **AIM** anchors on ``release_ts − _AIM_PRE_RELEASE_SECONDS`` (0.8s
-    before the throw-localizer's release frame). The aim moment is
-    sub-second; the grid is far too sparse to catch it reliably — Claude
-    was picking random distant frames. The throw-timing dense pass
-    (0.5s spacing around release) already sees the locked-aim moment.
+    before release) → 1.0s clip ``[release − 0.8, release + 0.2]``.
+  - **STAND** anchors on ``release_ts − _STAND_PRE_RELEASE_SECONDS`` (3.0s
+    before release) → 2.0s clip ``[release − 3.0, release − 1.0]``.
+
+The earlier grid-stand_idx anchor was abandoned because the 9-frame grid
+sampling across the whole chapter (~3.5s spacing) frequently picked the
+walk-up or windup frame instead of the settled stance. The throw-localizer's
+dense pass produces a reliable release_ts (THROW + LANDING already depend
+on it), so deriving STAND from it gives a stable "settled at spot ~3s
+before the throw" window that ends before the windup begins.
 
 Two entry paths share one contract:
 
-  1. **Ingest path** — orchestrator passes ``precomputed_stand_ts`` (from
-     its grid run) AND ``precomputed_release_ts`` (from the throw-localizer
-     it already ran for the THROW clip). Generator skips both Claude calls.
-  2. **Backfill path** — both precomputed values are None; generator runs
-     the grid classifier (stand) AND ``localize_throw_with_refinement``
-     (release → aim) itself. Cost: 1 grid + 1-2 throw-timing calls.
+  1. **Ingest path** — orchestrator passes ``precomputed_release_ts``
+     (from the throw-localizer it already ran for the THROW clip).
+     Generator skips its Claude call entirely. Cost: zero extra Claude
+     spend; two extra ffmpeg cuts + two MinIO uploads per chapter.
+  2. **Backfill path** — caller omits the kwarg, leaving it at its
+     ``_UNRESOLVED`` sentinel default; generator runs
+     ``localize_throw_with_refinement`` itself to recover release_ts.
+     Cost: 1-2 throw-timing calls per lineup (the SAME calls
+     ``backfill-clips`` makes — no extra spend on a combined backfill).
 
-Per-side independence: a stand-side failure NEVER rolls back the already-
-committed aim side, and vice versa. The AIM still + persisted aim_anchor
-coords are NOT recut — phase-1 scope is the clip only; the brief poster
-flash + rarely-used still-mode fallback are accepted-imperfections. See
+When ``release_ts`` is unavailable (orchestrator's THROW step skipped or
+the backfill throw-localizer found no release frame), BOTH sides skip
+with structured reasoning. The earlier "STAND from grid when release
+unknown" fallback is gone — fabricating an unreliable STAND is worse
+than the pane gracefully showing its still.
+
+Per-side independence: a stand-side failure (ffmpeg cut / MinIO upload /
+DB commit) NEVER rolls back the already-committed aim side, and vice
+versa. The AIM still + persisted aim_anchor coords are NOT recut —
+phase-1 scope is the clip only; the brief poster flash + rarely-used
+still-mode fallback are accepted-imperfections. See
 ``project_mga_aim_anchor_center_screen_invariant.md`` in auto-memory.
 
 Failure handling (rules/no-bandaid-solutions.md +
@@ -33,17 +47,16 @@ failure is captured with structured codes, logged at WARNING, and returned
 in the per-side error_codes; the matching ``*_clip_url`` is left NULL and
 the pane renders its still fallback. Nothing silent-fails.
 
-Sibling helpers (``_resolve_stand_ts_via_grid_classifier``,
-``_resolve_release_ts_via_throw_localizer``, ``_cut_upload_persist_one_side``)
-live in :mod:`micro_clip_helpers` to keep this file under the file-size
-growth guard (per per-app Tech Debt Policy).
+Sibling helpers (``_resolve_release_ts_via_throw_localizer``,
+``_cut_upload_persist_one_side``) live in :mod:`micro_clip_helpers` to keep
+this file under the file-size growth guard (per per-app Tech Debt Policy).
 """
 from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -56,7 +69,6 @@ from app.services.ingestion.frame_extractor import (
 from app.services.ingestion.micro_clip_helpers import (
     _cut_upload_persist_one_side,
     _resolve_release_ts_via_throw_localizer,
-    _resolve_stand_ts_via_grid_classifier,
 )
 from app.services.ingestion.youtube_fetcher import (
     VideoDownloadError,
@@ -74,8 +86,28 @@ _AIM_MICRO_CLIP_SECONDS = 1.0
 # spans [release − 0.8s, release + 0.2s] — locked-aim with a tiny throw-
 # initiation peek as a natural end-cue.
 _AIM_PRE_RELEASE_SECONDS = 0.8
+# Seconds BEFORE release_ts the STAND clip starts at. The 2.0s STAND clip
+# spans [release − 3.0s, release − 1.0s] — "settled at the spot, ready
+# to throw", ending before the windup so the player is shown stationary
+# at the throwing position. Tuned far enough back that even a fast
+# windup (~0.5-0.8s) does not bleed into the clip.
+_STAND_PRE_RELEASE_SECONDS = 3.0
 # Minimum acceptable clamped duration. Below: skip rather than ship a sliver.
 _MIN_CLIP_SECONDS = 0.5
+
+
+class _Unresolved:
+    """Sentinel — ``precomputed_release_ts=`` was not specified by the caller.
+
+    Distinguishes the backfill path ("generator owns the throw-localizer
+    call") from the ingest path's partial-failure case ("orchestrator ran
+    the throw-localizer and it gave None — both micro clips should skip").
+    Default value of the kwarg; only the backfill leaves it at the
+    default — every ingest call passes an explicit ``float | None``.
+    """
+
+
+_UNRESOLVED: _Unresolved = _Unresolved()
 
 
 @dataclass
@@ -186,38 +218,43 @@ async def generate_micro_clips_for_lineup(
     chapter_end: float,
     video_path: Optional[Path] = None,
     download_dir: Optional[Path] = None,
-    precomputed_stand_ts: Optional[float] = None,
-    precomputed_release_ts: Optional[float] = None,
+    precomputed_release_ts: Union[float, None, _Unresolved] = _UNRESOLVED,
 ) -> MicroClipGenerationResult:
     """Cut + persist STAND and AIM micro-clips for *lineup*.
 
-    AIM anchors on ``release_ts - _AIM_PRE_RELEASE_SECONDS`` (NOT on the
-    grid classifier's aim_idx — that pass is too sparse for the sub-second
-    aim moment; see module docstring). STAND still anchors on the grid's
-    stand_idx.
+    Both panes anchor on ``release_ts``:
+      - STAND_TS = ``release_ts - _STAND_PRE_RELEASE_SECONDS`` (3.0s before)
+      - AIM_TS   = ``release_ts - _AIM_PRE_RELEASE_SECONDS`` (0.8s before)
+
+    The earlier grid-based STAND anchor was abandoned because the 9-frame
+    grid sampling across the whole chapter (~3.5s spacing) frequently
+    picked the walk-up or windup frame rather than the settled stance.
+    Same critique that retired the grid AIM anchor; see module docstring.
 
     Two entry paths:
 
-    **Ingest path** — caller (orchestrator) passes ``precomputed_stand_ts``
-    (from the grid run it already did) AND ``precomputed_release_ts`` (from
-    the throw-localizer run it already did for the THROW clip). The
-    generator skips both Claude calls entirely. Cost: zero extra Claude
-    spend; two extra ffmpeg cuts + two MinIO uploads per chapter.
+    **Ingest path** — caller (orchestrator) passes ``precomputed_release_ts``
+    (the throw-localizer's release frame timestamp from the THROW clip
+    generator's result). Generator skips its Claude call entirely. Cost:
+    zero extra Claude spend; two extra ffmpeg cuts + two MinIO uploads
+    per chapter.
 
-    Partial-ingest case: if the orchestrator's THROW clip step skipped or
-    failed, ``precomputed_release_ts`` is None and the AIM side is skipped
-    with reason ``no_release_ts_for_aim`` — STAND still generates from the
-    precomputed grid stand_ts.
+    Partial-ingest case: when the orchestrator's THROW clip step
+    skipped/failed, ``precomputed_release_ts`` is None and BOTH sides
+    skip with reason ``no_release_ts``. The lineup still has its stand
+    and aim stills; the panes render the still fallback.
 
-    **Backfill path** — caller is the CLI; both precomputed values are
-    None. We re-run the grid classifier (for stand_ts) AND the
-    throw-localizer (for release_ts → AIM_TS). Cost: 1 grid call + 1-2
-    throw-timing calls per lineup. Stand- and aim-side failures are tallied
-    independently.
+    **Backfill path** — caller is the CLI and omits the kwarg (leaving
+    it at the ``_UNRESOLVED`` sentinel default). The generator runs
+    ``localize_throw_with_refinement`` itself. Cost: 1-2 throw-timing
+    calls per lineup (same calls a combined backfill makes for the
+    THROW clip — no extra Claude spend when backfilling both together).
 
     Per-side independence: a stand-side failure NEVER rolls back the
     already-committed aim side, and vice versa. Each side has its own
-    status / error_codes in the returned result.
+    status / error_codes in the returned result. When both sides derive
+    from the SAME release_ts, the only path to per-side divergence is
+    downstream of resolution: ffmpeg cut, MinIO upload, or DB commit.
 
     Args:
         db: Active async session. On success each clip's bare key is
@@ -230,14 +267,15 @@ async def generate_micro_clips_for_lineup(
             backfill that batches per video). When None the video is
             re-fetched into *download_dir* and deleted afterwards.
         download_dir: Required when *video_path* is None.
-        precomputed_stand_ts: Ingest path — ``timestamps[stand_idx]`` from
-            the grid classifier output the orchestrator already has.
-            Backfill path — None; generator re-runs the grid classifier.
-        precomputed_release_ts: Ingest path — the throw-localizer's release
-            frame timestamp (from clip_generator's returned ClipGenerationResult).
-            None when the orchestrator's THROW clip step skipped/failed
-            (AIM is then skipped too). Backfill path — None; generator
-            runs the throw-localizer itself.
+        precomputed_release_ts: Ingest path — pass the throw-localizer's
+            release frame timestamp (from clip_generator's returned
+            ClipGenerationResult). Pass ``None`` when the orchestrator's
+            THROW clip step skipped/failed (both sides then skip).
+            Backfill path — omit the kwarg entirely (leave at
+            ``_UNRESOLVED`` default); generator runs the throw-localizer
+            itself. The sentinel default distinguishes "caller doesn't
+            know" (backfill) from "caller checked and got nothing"
+            (ingest partial).
 
     Returns:
         MicroClipGenerationResult — never raises for expected failures.
@@ -254,29 +292,6 @@ async def generate_micro_clips_for_lineup(
             aim_status="skipped",
             stand_skip_reason="no_source_video",
             aim_skip_reason="no_source_video",
-        )
-
-    # Two valid input shapes:
-    #   - Backfill: both precomputed values None → generator runs both
-    #     classifier pipelines internally.
-    #   - Ingest:  precomputed_stand_ts set; precomputed_release_ts MAY be
-    #     None (when the orchestrator's THROW clip step skipped/failed —
-    #     STAND still generates, AIM is skipped).
-    # The only invalid shape is "stand None but release set", which would
-    # mean the caller has release_ts without stand_ts — a wiring bug. There
-    # is no concept of "AIM-only" without STAND on the ingest path.
-    if precomputed_stand_ts is None and precomputed_release_ts is not None:
-        logger.warning(
-            "micro_clip_generator: lineup %s — precomputed_release_ts set "
-            "without precomputed_stand_ts; got stand=None release=%s",
-            lineup.id, precomputed_release_ts,
-        )
-        return MicroClipGenerationResult(
-            stand_status="failed",
-            aim_status="failed",
-            stand_error_codes=["precomputed_pair_mismatch"],
-            aim_error_codes=["precomputed_pair_mismatch"],
-            reasoning="precomputed_release_ts requires precomputed_stand_ts",
         )
 
     owns_video = video_path is None
@@ -314,38 +329,24 @@ async def generate_micro_clips_for_lineup(
                     reasoning=f"video re-fetch failed: {exc}",
                 )
 
-        # ---- Resolve anchor timestamps ------------------------------------
-        # STAND and AIM resolve independently:
-        #   - STAND comes from the grid classifier (precomputed on ingest;
-        #     re-run on backfill).
-        #   - AIM comes from release_ts − _AIM_PRE_RELEASE_SECONDS, where
-        #     release_ts is from the throw-localizer (precomputed on ingest;
-        #     re-run on backfill).
-        # Either side can independently end up "skipped" with structured
-        # reasoning so the operator can see why per-side without inspecting
-        # logs. The other side still runs normally.
+        # ---- Resolve release_ts (shared anchor source for both sides) -----
+        # STAND and AIM both derive from a single ``release_ts``:
+        #   - STAND_TS = release_ts − _STAND_PRE_RELEASE_SECONDS
+        #   - AIM_TS   = release_ts − _AIM_PRE_RELEASE_SECONDS
+        # When release_ts is unavailable, both sides skip with the same
+        # structured reason — fabricating an unreliable STAND (the abandoned
+        # grid pick) is worse than the panes gracefully showing their stills.
         stand_ts: Optional[float] = None
         aim_ts: Optional[float] = None
-        stand_skip_reason: Optional[str] = None
-        aim_skip_reason: Optional[str] = None
-        stand_err_codes: list[str] = []
-        aim_err_codes: list[str] = []
-        reasoning_parts: list[str] = []
+        shared_skip_reason: Optional[str] = None
+        shared_err_codes: list[str] = []
+        reasoning = ""
+        release_ts: Optional[float] = None
 
-        if precomputed_stand_ts is not None:
-            # Ingest path — caller already has both sides' Claude output.
-            stand_ts = float(precomputed_stand_ts)
-            if precomputed_release_ts is not None:
-                aim_ts = float(precomputed_release_ts) - _AIM_PRE_RELEASE_SECONDS
-            else:
-                # Orchestrator's THROW clip step skipped/failed — STAND
-                # generates, AIM is skipped (the previous grid-based AIM
-                # was unreliable; refusing is preferable to faking).
-                aim_skip_reason = "no_release_ts_for_aim"
-        else:
-            # Backfill path — generator orchestrates both classifier passes
-            # itself. Stand and aim resolve independently so a failure on
-            # one side doesn't poison the other.
+        if isinstance(precomputed_release_ts, _Unresolved):
+            # Backfill path — generator owns the throw-localizer call.
+            # The orchestrator (ingest) always passes float|None explicitly;
+            # only the backfill leaves the kwarg at its sentinel default.
             if not settings.enable_classifier:
                 return MicroClipGenerationResult(
                     stand_status="skipped",
@@ -362,47 +363,39 @@ async def generate_micro_clips_for_lineup(
                     aim_skip_reason="classifier_unavailable:missing_api_key",
                     reasoning="anthropic_api_key not configured",
                 )
-
-            # STAND from grid classifier.
-            stand_ts, stand_err_codes, stand_reasoning = (
-                await _resolve_stand_ts_via_grid_classifier(
-                    db, lineup, local_video, chapter_start, chapter_end,
-                )
-            )
-            if stand_reasoning:
-                reasoning_parts.append(f"stand: {stand_reasoning}")
-            if stand_ts is None and not stand_err_codes:
-                stand_skip_reason = "backfill_not_a_lineup"
-
-            # AIM from throw-localizer (independent — runs even if stand failed).
-            release_ts, aim_err_codes, aim_reasoning = (
+            release_ts, shared_err_codes, throw_reasoning = (
                 await _resolve_release_ts_via_throw_localizer(
                     lineup, local_video, chapter_start, chapter_end,
                 )
             )
-            if aim_reasoning:
-                reasoning_parts.append(f"aim: {aim_reasoning}")
-            if release_ts is not None:
-                aim_ts = release_ts - _AIM_PRE_RELEASE_SECONDS
-            elif not aim_err_codes:
-                aim_skip_reason = "backfill_no_throw_release"
+            if throw_reasoning:
+                reasoning = throw_reasoning
+            if release_ts is None and not shared_err_codes:
+                shared_skip_reason = "backfill_no_throw_release"
+        elif precomputed_release_ts is None:
+            # Ingest path, partial: the orchestrator's THROW clip step
+            # skipped/failed and gave us None. Both sides skip cleanly —
+            # the panes render their stand/aim stills.
+            shared_skip_reason = "no_release_ts"
+        else:
+            # Ingest path, happy case: caller already ran the
+            # throw-localizer (for the THROW clip) and passed us the
+            # release timestamp. Skip the Claude call.
+            release_ts = float(precomputed_release_ts)
 
-        reasoning = " | ".join(reasoning_parts) if reasoning_parts else ""
+        if release_ts is not None:
+            stand_ts = release_ts - _STAND_PRE_RELEASE_SECONDS
+            aim_ts = release_ts - _AIM_PRE_RELEASE_SECONDS
 
-        # Hard fail-out only when BOTH sides resolved to nothing AND both
-        # have hard errors — the symmetric ingest-skipped case (no release
-        # → AIM skipped, STAND generates) must not be turned into a failure.
-        if (
-            stand_ts is None
-            and aim_ts is None
-            and stand_err_codes
-            and aim_err_codes
-        ):
+        # Hard fail-out when release_ts resolution had a structured error
+        # (Claude API failure on the backfill throw-localizer call). Both
+        # sides fail with the same error_codes because they share input.
+        if release_ts is None and shared_err_codes:
             return MicroClipGenerationResult(
                 stand_status="failed",
                 aim_status="failed",
-                stand_error_codes=list(stand_err_codes),
-                aim_error_codes=list(aim_err_codes),
+                stand_error_codes=list(shared_err_codes),
+                aim_error_codes=list(shared_err_codes),
                 reasoning=reasoning,
             )
 
@@ -434,16 +427,16 @@ async def generate_micro_clips_for_lineup(
             wider_source_start_s = source_start
 
         # ---- Cut + upload + persist each side independently ---------------
-        # A None anchor_ts means the side's resolution step already decided
-        # to skip / fail this side. Short-circuit before the cut so we don't
-        # ffmpeg-attempt against missing data; the outcome dict matches the
-        # _cut_upload_persist_one_side shape so the result composition below
-        # is unchanged.
+        # release_ts None at this point means the shared resolution skipped
+        # cleanly (no Claude API error, just no release frame). Both sides
+        # short-circuit with the SAME skip reason — they share input.
+        # Downstream per-side independence (ffmpeg / MinIO / DB commit)
+        # still runs through _cut_upload_persist_one_side when ts is set.
         if stand_ts is None:
             stand_outcome = {
-                "status": "failed" if stand_err_codes else "skipped",
-                "error_codes": list(stand_err_codes),
-                "skip_reason": stand_skip_reason,
+                "status": "skipped",
+                "error_codes": [],
+                "skip_reason": shared_skip_reason,
             }
         else:
             stand_outcome = await _cut_upload_persist_one_side(
@@ -460,9 +453,9 @@ async def generate_micro_clips_for_lineup(
             )
         if aim_ts is None:
             aim_outcome = {
-                "status": "failed" if aim_err_codes else "skipped",
-                "error_codes": list(aim_err_codes),
-                "skip_reason": aim_skip_reason,
+                "status": "skipped",
+                "error_codes": [],
+                "skip_reason": shared_skip_reason,
             }
         else:
             aim_outcome = await _cut_upload_persist_one_side(

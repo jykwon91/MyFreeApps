@@ -1,10 +1,11 @@
 """Unit tests for the PR6 stand + aim micro-clip generator.
 
 Pure micro-bounds math + the full generate_micro_clips_for_lineup
-orchestration with every external (download / frame extract / Claude /
-ffmpeg cut / MinIO / repo commit) mocked. Asserts the frozen-contract
-gate sharing with PR5 (precomputed pair skips the classifier entirely)
-and the structured per-side generated / skipped / failed outcomes.
+orchestration with every external (download / throw-localizer Claude
+call / ffmpeg cut / MinIO / repo commit) mocked. Asserts that both
+STAND and AIM derive from a single release_ts (precomputed on ingest,
+re-resolved by the throw-localizer on backfill) and the structured
+per-side generated / skipped / failed outcomes.
 
 Mirrors :mod:`test_landing_clip_generator` so the two pipelines stay
 synchronised. Re-read PR5's tests when porting any behaviour change.
@@ -19,18 +20,15 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from app.services.classification.classification_result import (
-    ClassificationResult,
     ThrowTimingResult,
 )
 from app.services.ingestion.throw_localizer import RefinedThrowTiming
-from app.services.ingestion.frame_extractor import (
-    ClipCutError,
-    FrameExtractionError,
-)
+from app.services.ingestion.frame_extractor import ClipCutError
 from app.services.ingestion.micro_clip_generator import (
     _AIM_MICRO_CLIP_SECONDS,
     _AIM_PRE_RELEASE_SECONDS,
     _STAND_MICRO_CLIP_SECONDS,
+    _STAND_PRE_RELEASE_SECONDS,
     _compute_micro_bounds,
     _micro_clip_seconds_for_side,
     generate_micro_clips_for_lineup,
@@ -40,10 +38,10 @@ from app.services.ingestion.micro_clip_generator import (
 from app.services.ingestion.youtube_fetcher import VideoDownloadError
 
 _MOD = "app.services.ingestion.micro_clip_generator"
-# Most ffmpeg / storage / classifier / repo calls now live in the sibling
-# helpers module (PR #761). Patches that target those resolve here.
+# Most ffmpeg / storage / throw-localizer / repo calls now live in the
+# sibling helpers module (PR #761 +). Patches that target those resolve
+# here.
 _HMOD = "app.services.ingestion.micro_clip_helpers"
-_FAKE_PNG = b"\x89PNG\r\n\x1a\n"
 _FAKE_MP4 = b"\x00\x00\x00\x18ftypmp42"
 
 
@@ -189,80 +187,59 @@ def _storage_mock():
 
 @pytest.mark.asyncio
 async def test_ingest_path_generates_both_clips_without_classifier_call():
-    """Precomputed stand+aim ts → skip classifier; cut + upload + persist twice."""
+    """Precomputed release_ts → skip classifier; cut + upload + persist twice.
+
+    Both STAND and AIM derive from the same release_ts:
+      - STAND_TS = release_ts − _STAND_PRE_RELEASE_SECONDS (3.0s)
+      - AIM_TS   = release_ts − _AIM_PRE_RELEASE_SECONDS (0.8s)
+    """
     db = AsyncMock()
     lineup = _lineup()
     storage = _storage_mock()
     set_stand_mock = AsyncMock(return_value=lineup)
     set_aim_mock = AsyncMock(return_value=lineup)
 
-    classifier_mock = AsyncMock()  # MUST NOT be called
+    localizer_mock = AsyncMock()  # MUST NOT be called on ingest
 
     with (
         patch(f"{_HMOD}.cut_clip", _ffmpeg_cut_mock()) as cut,
         patch(f"{_HMOD}.get_storage", return_value=storage),
         patch(f"{_MOD}.lineup_repo.set_stand_clip_url", set_stand_mock),
         patch(f"{_MOD}.lineup_repo.set_aim_clip_url", set_aim_mock),
-        patch(f"{_HMOD}.classify_frames_for_lineup_decision", classifier_mock),
+        patch(f"{_HMOD}.localize_throw_with_refinement", localizer_mock),
     ):
+        # release_ts = 25.0 → STAND_TS = 22.0, AIM_TS = 24.2
         result = await generate_micro_clips_for_lineup(
             db, lineup,
             chapter_start=10.0, chapter_end=40.0,
             video_path=Path("/tmp/x.mp4"),
-            precomputed_stand_ts=12.0,
-            # AIM_TS = release_ts - _AIM_PRE_RELEASE_SECONDS (0.8) = 24.0
-            precomputed_release_ts=24.0 + _AIM_PRE_RELEASE_SECONDS,
+            precomputed_release_ts=25.0,
         )
 
     assert result.stand_status == "generated"
     assert result.aim_status == "generated"
     assert result.stand_clip_key == "pending/vid123/10-stand-micro.mp4"
     assert result.aim_clip_key == "pending/vid123/10-aim-micro.mp4"
-    assert result.stand_ts == pytest.approx(12.0)
-    assert result.aim_ts == pytest.approx(24.0)
+    assert result.stand_ts == pytest.approx(25.0 - _STAND_PRE_RELEASE_SECONDS)
+    assert result.aim_ts == pytest.approx(25.0 - _AIM_PRE_RELEASE_SECONDS)
     assert cut.await_count == 2
     assert storage.upload_file.call_count == 2
     set_stand_mock.assert_awaited_once()
     set_aim_mock.assert_awaited_once()
-    classifier_mock.assert_not_awaited(), (
-        "Ingest path must NOT call the classifier — cost regression"
+    localizer_mock.assert_not_awaited(), (
+        "Ingest path must NOT call the throw-localizer — cost regression"
     )
 
 
 @pytest.mark.asyncio
-async def test_ingest_path_release_without_stand_is_wiring_bug():
-    """release_ts set without stand_ts → caller error (both fail).
-
-    Post-2026-05-23: the validation surface changed. AIM-without-STAND is
-    not a meaningful ingest shape (the orchestrator always knows stand_idx
-    when it knows release_ts), so this is the only mixed-precomputed case
-    left that's a true wiring bug. STAND-without-RELEASE is now a normal
-    partial-ingest case (clip generation skipped/failed; AIM skips cleanly).
-    """
-    db = AsyncMock()
-    lineup = _lineup()
-    result = await generate_micro_clips_for_lineup(
-        db, lineup,
-        chapter_start=10.0, chapter_end=40.0,
-        video_path=Path("/tmp/x.mp4"),
-        precomputed_stand_ts=None,  # missing!
-        precomputed_release_ts=24.8,
-    )
-    assert result.stand_status == "failed"
-    assert result.aim_status == "failed"
-    assert "precomputed_pair_mismatch" in result.stand_error_codes
-    assert "precomputed_pair_mismatch" in result.aim_error_codes
-
-
-@pytest.mark.asyncio
-async def test_ingest_path_stand_only_generates_stand_skips_aim():
-    """precomputed_stand_ts set, precomputed_release_ts None → STAND
-    generates from grid; AIM is skipped with no_release_ts_for_aim.
+async def test_ingest_path_no_release_ts_skips_both():
+    """precomputed_release_ts=None → BOTH sides skip with no_release_ts.
 
     This is the partial-ingest case: the orchestrator's THROW clip step
-    skipped or failed, so release_ts is not available. STAND still
-    benefits from the grid pass (which is reliable for STAND) — refusing
-    AIM is preferable to faking it with the previously-random grid aim_idx.
+    skipped or failed, so release_ts is not available. Since STAND and
+    AIM now both anchor on release_ts, neither can be cut — the panes
+    render their stills instead. The earlier "STAND still generates
+    from grid" behaviour is gone (the grid anchor was unreliable).
     """
     db = AsyncMock()
     lineup = _lineup()
@@ -270,25 +247,31 @@ async def test_ingest_path_stand_only_generates_stand_skips_aim():
     set_stand_mock = AsyncMock(return_value=lineup)
     set_aim_mock = AsyncMock(return_value=lineup)
 
+    localizer_mock = AsyncMock()  # MUST NOT be called
+
     with (
         patch(f"{_HMOD}.cut_clip", _ffmpeg_cut_mock()),
         patch(f"{_HMOD}.get_storage", return_value=storage),
         patch(f"{_MOD}.lineup_repo.set_stand_clip_url", set_stand_mock),
         patch(f"{_MOD}.lineup_repo.set_aim_clip_url", set_aim_mock),
+        patch(f"{_HMOD}.localize_throw_with_refinement", localizer_mock),
     ):
         result = await generate_micro_clips_for_lineup(
             db, lineup,
             chapter_start=10.0, chapter_end=40.0,
             video_path=Path("/tmp/x.mp4"),
-            precomputed_stand_ts=12.0,
             precomputed_release_ts=None,
         )
 
-    assert result.stand_status == "generated"
+    assert result.stand_status == "skipped"
     assert result.aim_status == "skipped"
-    assert result.aim_skip_reason == "no_release_ts_for_aim"
-    set_stand_mock.assert_awaited_once()
+    assert result.stand_skip_reason == "no_release_ts"
+    assert result.aim_skip_reason == "no_release_ts"
+    set_stand_mock.assert_not_awaited()
     set_aim_mock.assert_not_awaited()
+    localizer_mock.assert_not_awaited(), (
+        "Ingest must not re-run the throw-localizer when caller passed None"
+    )
 
 
 @pytest.mark.asyncio
@@ -296,13 +279,13 @@ async def test_ingest_path_chapter_too_short_skips_both():
     """A sliver chapter clamps below 0.5s → both sides skip."""
     db = AsyncMock()
     lineup = _lineup()
+    # release_ts in middle of tiny chapter → both anchors clamp to start;
+    # both clips clamp below the 0.5s minimum → both skip.
     result = await generate_micro_clips_for_lineup(
         db, lineup,
         chapter_start=19.9, chapter_end=20.3,
         video_path=Path("/tmp/x.mp4"),
-        precomputed_stand_ts=20.0,
-        # AIM_TS = release_ts - 0.8 = 20.1
-        precomputed_release_ts=20.1 + _AIM_PRE_RELEASE_SECONDS,
+        precomputed_release_ts=20.1,
     )
     assert result.stand_status == "skipped"
     assert result.aim_status == "skipped"
@@ -311,7 +294,7 @@ async def test_ingest_path_chapter_too_short_skips_both():
 
 
 # ---------------------------------------------------------------------------
-# generate_micro_clips_for_lineup — backfill path (own classifier call)
+# generate_micro_clips_for_lineup — backfill path (own throw-localizer call)
 # ---------------------------------------------------------------------------
 
 def _settings(enable=True, key="sk-test"):
@@ -319,16 +302,6 @@ def _settings(enable=True, key="sk-test"):
     s.enable_classifier = enable
     s.anthropic_api_key = key
     return s
-
-
-def _grid(**kw):
-    base = dict(
-        success=True, is_lineup=True,
-        best_stand_index=2, best_aim_index=5,
-        reasoning="ok", error_codes=[],
-    )
-    base.update(kw)
-    return ClassificationResult(**base)
 
 
 def _refined(release_ts=30.8, **kw):
@@ -365,27 +338,18 @@ def _localizer_mock(refined=None, **refined_kw):
 
 
 @pytest.mark.asyncio
-async def test_backfill_path_runs_classifier_and_generates():
-    """Backfill runs grid (stand) + throw_localizer (release → aim) and
-    generates both clips. STAND from grid_timestamps[stand_idx]; AIM from
-    release_ts − _AIM_PRE_RELEASE_SECONDS."""
+async def test_backfill_path_runs_throw_localizer_and_generates():
+    """Backfill runs throw_localizer; both STAND and AIM derive from
+    the same release_ts."""
     db = AsyncMock()
     lineup = _lineup()
     storage = _storage_mock()
     set_stand_mock = AsyncMock(return_value=lineup)
     set_aim_mock = AsyncMock(return_value=lineup)
-    grid = _grid(best_stand_index=2)
-    timestamps = [12.0, 18.0, 24.0, 30.0, 36.0]
-    # release_ts = 36.8 → AIM_TS = 36.0
-    refined = _refined(release_ts=36.0 + _AIM_PRE_RELEASE_SECONDS)
+    refined = _refined(release_ts=30.0)
 
     with (
         patch(f"{_MOD}.settings", _settings()),
-        patch(f"{_HMOD}.grid_timestamps", return_value=timestamps),
-        patch(f"{_HMOD}.extract_frames",
-              AsyncMock(return_value=[_FAKE_PNG] * 5)),
-        patch(f"{_HMOD}.classify_frames_for_lineup_decision",
-              AsyncMock(return_value=grid)),
         patch(f"{_HMOD}.localize_throw_with_refinement",
               _localizer_mock(refined=refined)),
         patch(f"{_HMOD}.cut_clip", _ffmpeg_cut_mock()),
@@ -393,68 +357,29 @@ async def test_backfill_path_runs_classifier_and_generates():
         patch(f"{_MOD}.lineup_repo.set_stand_clip_url", set_stand_mock),
         patch(f"{_MOD}.lineup_repo.set_aim_clip_url", set_aim_mock),
     ):
+        # Omit precomputed_release_ts → sentinel default → backfill branch.
         result = await generate_micro_clips_for_lineup(
             db, lineup,
             chapter_start=10.0, chapter_end=40.0,
             video_path=Path("/tmp/x.mp4"),
-            # No precomputed → backfill branch.
         )
 
     assert result.stand_status == "generated"
     assert result.aim_status == "generated"
-    # best_stand_index 2 (1-based) → timestamps[1] = 18.0.
-    # AIM = release_ts (36.8) − 0.8 = 36.0.
-    assert result.stand_ts == pytest.approx(18.0)
-    assert result.aim_ts == pytest.approx(36.0)
+    # release_ts 30.0 → STAND_TS = 30 − 3 = 27.0; AIM_TS = 30 − 0.8 = 29.2.
+    assert result.stand_ts == pytest.approx(30.0 - _STAND_PRE_RELEASE_SECONDS)
+    assert result.aim_ts == pytest.approx(30.0 - _AIM_PRE_RELEASE_SECONDS)
 
 
 @pytest.mark.asyncio
-async def test_backfill_path_grid_not_a_lineup_skips_stand_but_aim_independent():
-    """Grid says not_a_lineup → STAND skips. Throw localizer still runs
-    independently (it's a separate Claude pass with its own decision).
-    Here we let throw_localizer succeed → AIM still generates."""
+async def test_backfill_path_throw_localizer_no_release_skips_both():
+    """Throw localizer says not-a-throw / no release → both sides skip.
+
+    Since both panes share the same anchor source, a missing release_ts
+    skips them together. The lineup still has its stills.
+    """
     db = AsyncMock()
     lineup = _lineup()
-    storage = _storage_mock()
-    set_aim_mock = AsyncMock(return_value=lineup)
-    grid = _grid(is_lineup=False, best_stand_index=None, best_aim_index=None)
-    timestamps = [12.0, 18.0, 24.0]
-    refined = _refined(release_ts=22.0 + _AIM_PRE_RELEASE_SECONDS)
-
-    with (
-        patch(f"{_MOD}.settings", _settings()),
-        patch(f"{_HMOD}.grid_timestamps", return_value=timestamps),
-        patch(f"{_HMOD}.extract_frames",
-              AsyncMock(return_value=[_FAKE_PNG] * 3)),
-        patch(f"{_HMOD}.classify_frames_for_lineup_decision",
-              AsyncMock(return_value=grid)),
-        patch(f"{_HMOD}.localize_throw_with_refinement",
-              _localizer_mock(refined=refined)),
-        patch(f"{_HMOD}.cut_clip", _ffmpeg_cut_mock()),
-        patch(f"{_HMOD}.get_storage", return_value=storage),
-        patch(f"{_MOD}.lineup_repo.set_aim_clip_url", set_aim_mock),
-    ):
-        result = await generate_micro_clips_for_lineup(
-            db, lineup,
-            chapter_start=10.0, chapter_end=30.0,
-            video_path=Path("/tmp/x.mp4"),
-        )
-    assert result.stand_status == "skipped"
-    assert result.stand_skip_reason == "backfill_not_a_lineup"
-    assert result.aim_status == "generated"
-    assert result.aim_ts == pytest.approx(22.0)
-
-
-@pytest.mark.asyncio
-async def test_backfill_path_throw_localizer_no_release_skips_aim_but_stand_independent():
-    """Throw localizer says not-a-throw / no release → AIM skips cleanly.
-    Grid still runs independently — STAND still generates."""
-    db = AsyncMock()
-    lineup = _lineup()
-    storage = _storage_mock()
-    set_stand_mock = AsyncMock(return_value=lineup)
-    grid = _grid(best_stand_index=2)
-    timestamps = [12.0, 18.0, 24.0]
     not_a_throw = ThrowTimingResult(
         success=True, is_lineup_throw=False,
         release_index=None, result_index=None,
@@ -465,25 +390,17 @@ async def test_backfill_path_throw_localizer_no_release_skips_aim_but_stand_inde
 
     with (
         patch(f"{_MOD}.settings", _settings()),
-        patch(f"{_HMOD}.grid_timestamps", return_value=timestamps),
-        patch(f"{_HMOD}.extract_frames",
-              AsyncMock(return_value=[_FAKE_PNG] * 3)),
-        patch(f"{_HMOD}.classify_frames_for_lineup_decision",
-              AsyncMock(return_value=grid)),
         patch(f"{_HMOD}.localize_throw_with_refinement",
               _localizer_mock(refined=refined)),
-        patch(f"{_HMOD}.cut_clip", _ffmpeg_cut_mock()),
-        patch(f"{_HMOD}.get_storage", return_value=storage),
-        patch(f"{_MOD}.lineup_repo.set_stand_clip_url", set_stand_mock),
     ):
         result = await generate_micro_clips_for_lineup(
             db, lineup,
             chapter_start=10.0, chapter_end=30.0,
             video_path=Path("/tmp/x.mp4"),
         )
-    assert result.stand_status == "generated"
-    assert result.stand_ts == pytest.approx(18.0)
+    assert result.stand_status == "skipped"
     assert result.aim_status == "skipped"
+    assert result.stand_skip_reason == "backfill_no_throw_release"
     assert result.aim_skip_reason == "backfill_no_throw_release"
 
 
@@ -520,53 +437,11 @@ async def test_backfill_path_classifier_missing_key_skips_both():
 
 
 @pytest.mark.asyncio
-async def test_backfill_path_grid_classifier_api_failure_fails_stand_aim_independent():
-    """Grid call fails (overloaded) → STAND fails with the structured code.
-    Throw localizer is separate; here it succeeds and AIM still generates."""
+async def test_backfill_path_throw_localizer_api_failure_fails_both():
+    """Throw localizer call fails (API error) → both sides fail with the
+    SAME structured codes (they share input)."""
     db = AsyncMock()
     lineup = _lineup()
-    storage = _storage_mock()
-    set_aim_mock = AsyncMock(return_value=lineup)
-    grid = ClassificationResult(
-        success=False, error_codes=["overloaded_error"],
-        reasoning="rate limited",
-    )
-    timestamps = [12.0, 18.0, 24.0]
-    refined = _refined(release_ts=22.0 + _AIM_PRE_RELEASE_SECONDS)
-
-    with (
-        patch(f"{_MOD}.settings", _settings()),
-        patch(f"{_HMOD}.grid_timestamps", return_value=timestamps),
-        patch(f"{_HMOD}.extract_frames",
-              AsyncMock(return_value=[_FAKE_PNG] * 3)),
-        patch(f"{_HMOD}.classify_frames_for_lineup_decision",
-              AsyncMock(return_value=grid)),
-        patch(f"{_HMOD}.localize_throw_with_refinement",
-              _localizer_mock(refined=refined)),
-        patch(f"{_HMOD}.cut_clip", _ffmpeg_cut_mock()),
-        patch(f"{_HMOD}.get_storage", return_value=storage),
-        patch(f"{_MOD}.lineup_repo.set_aim_clip_url", set_aim_mock),
-    ):
-        result = await generate_micro_clips_for_lineup(
-            db, lineup,
-            chapter_start=0.0, chapter_end=30.0,
-            video_path=Path("/tmp/x.mp4"),
-        )
-    assert result.stand_status == "failed"
-    assert "overloaded_error" in result.stand_error_codes
-    assert result.aim_status == "generated"
-
-
-@pytest.mark.asyncio
-async def test_backfill_path_both_classifiers_fail_returns_both_failed():
-    """When BOTH the grid call and the throw localizer fail with API errors,
-    both sides fail with structured codes (no fabrication)."""
-    db = AsyncMock()
-    lineup = _lineup()
-    grid = ClassificationResult(
-        success=False, error_codes=["overloaded_error"],
-        reasoning="rate limited",
-    )
     bad_timing = ThrowTimingResult(
         success=False, error_codes=["rate_limit_error"],
         reasoning="rate limited",
@@ -577,15 +452,9 @@ async def test_backfill_path_both_classifiers_fail_returns_both_failed():
         stage="coarse_failed",
         coarse_timing=bad_timing,
     )
-    timestamps = [12.0, 18.0, 24.0]
 
     with (
         patch(f"{_MOD}.settings", _settings()),
-        patch(f"{_HMOD}.grid_timestamps", return_value=timestamps),
-        patch(f"{_HMOD}.extract_frames",
-              AsyncMock(return_value=[_FAKE_PNG] * 3)),
-        patch(f"{_HMOD}.classify_frames_for_lineup_decision",
-              AsyncMock(return_value=grid)),
         patch(f"{_HMOD}.localize_throw_with_refinement",
               _localizer_mock(refined=refined)),
     ):
@@ -596,44 +465,8 @@ async def test_backfill_path_both_classifiers_fail_returns_both_failed():
         )
     assert result.stand_status == "failed"
     assert result.aim_status == "failed"
-    assert "overloaded_error" in result.stand_error_codes
+    assert "rate_limit_error" in result.stand_error_codes
     assert "rate_limit_error" in result.aim_error_codes
-
-
-@pytest.mark.asyncio
-async def test_backfill_path_grid_frame_extract_failure_fails_stand_only():
-    """Grid extract fails → STAND fails; throw_localizer is independent.
-    Here the localizer succeeds → AIM generates."""
-    db = AsyncMock()
-    lineup = _lineup()
-    storage = _storage_mock()
-    set_aim_mock = AsyncMock(return_value=lineup)
-    timestamps = [12.0, 18.0, 24.0]
-    refined = _refined(release_ts=22.0 + _AIM_PRE_RELEASE_SECONDS)
-
-    with (
-        patch(f"{_MOD}.settings", _settings()),
-        patch(f"{_HMOD}.grid_timestamps", return_value=timestamps),
-        patch(
-            f"{_HMOD}.extract_frames",
-            AsyncMock(side_effect=FrameExtractionError(
-                "boom", timestamp=18.0, returncode=1, stderr="x",
-            )),
-        ),
-        patch(f"{_HMOD}.localize_throw_with_refinement",
-              _localizer_mock(refined=refined)),
-        patch(f"{_HMOD}.cut_clip", _ffmpeg_cut_mock()),
-        patch(f"{_HMOD}.get_storage", return_value=storage),
-        patch(f"{_MOD}.lineup_repo.set_aim_clip_url", set_aim_mock),
-    ):
-        result = await generate_micro_clips_for_lineup(
-            db, lineup,
-            chapter_start=0.0, chapter_end=30.0,
-            video_path=Path("/tmp/x.mp4"),
-        )
-    assert result.stand_status == "failed"
-    assert any("frame_extract" in c for c in result.stand_error_codes)
-    assert result.aim_status == "generated"
 
 
 @pytest.mark.asyncio
@@ -686,7 +519,11 @@ async def test_backfill_path_no_source_video_skips_both():
 @pytest.mark.asyncio
 async def test_stand_cut_failure_does_not_affect_aim():
     """The two sides are committed by separate setters; a stand ffmpeg fault
-    must leave aim_status='generated', not 'failed'."""
+    must leave aim_status='generated', not 'failed'.
+
+    Both anchors share release_ts, but the cut/upload/persist runs once
+    per side — a downstream failure on one side must not propagate.
+    """
     db = AsyncMock()
     lineup = _lineup()
     storage = _storage_mock()
@@ -695,7 +532,7 @@ async def test_stand_cut_failure_does_not_affect_aim():
 
     # cut_clip raises on the first call (stand), succeeds on the second (aim).
     cut_side_effects = [
-        ClipCutError("boom", start=12.0, duration=1.0, returncode=1, stderr="x"),
+        ClipCutError("boom", start=22.0, duration=2.0, returncode=1, stderr="x"),
         _FAKE_MP4,
     ]
 
@@ -711,13 +548,12 @@ async def test_stand_cut_failure_does_not_affect_aim():
         patch(f"{_MOD}.lineup_repo.set_stand_clip_url", set_stand_mock),
         patch(f"{_MOD}.lineup_repo.set_aim_clip_url", set_aim_mock),
     ):
+        # release_ts = 25.0 → STAND_TS = 22.0, AIM_TS = 24.2
         result = await generate_micro_clips_for_lineup(
             db, lineup,
             chapter_start=10.0, chapter_end=40.0,
             video_path=Path("/tmp/x.mp4"),
-            precomputed_stand_ts=12.0,
-            # AIM_TS = release_ts - _AIM_PRE_RELEASE_SECONDS (0.8) = 24.0
-            precomputed_release_ts=24.0 + _AIM_PRE_RELEASE_SECONDS,
+            precomputed_release_ts=25.0,
         )
 
     assert result.stand_status == "failed"
@@ -776,25 +612,27 @@ async def test_offset_persisted_when_wider_source_exists():
         patch(f"{_MOD}.lineup_repo.set_stand_clip_url", set_stand_mock),
         patch(f"{_MOD}.lineup_repo.set_aim_clip_url", set_aim_mock),
     ):
+        # release_ts = 15.0 → STAND_TS = 12.0, AIM_TS = 14.2.
+        # wider_source_start = 10 - 2 = 8.0.
+        #   STAND offset = 12.0 - 8.0 = 4.0
+        #   AIM   offset = 14.2 - 8.0 = 6.2
         await generate_micro_clips_for_lineup(
             db, lineup,
             chapter_start=10.0, chapter_end=40.0,
             video_path=Path("/tmp/x.mp4"),
-            precomputed_stand_ts=12.0,  # → offset 12 - (10 - 2) = 4.0
-            # AIM_TS = release_ts - 0.8 = 30.0; → offset 30 - 8 = 22.0
-            precomputed_release_ts=30.0 + _AIM_PRE_RELEASE_SECONDS,
+            precomputed_release_ts=15.0,
         )
 
     stand_call = set_stand_mock.await_args
     aim_call = set_aim_mock.await_args
     assert _offset_kwarg(stand_call) == pytest.approx(4.0), (
         "STAND offset must equal clip_start - wider_source_start "
-        "(12.0 - (10.0 - 2.0) = 4.0). "
+        "((15.0 - 3.0) - (10.0 - 2.0) = 4.0). "
         f"Got setter call: args={stand_call.args} kwargs={stand_call.kwargs}"
     )
-    assert _offset_kwarg(aim_call) == pytest.approx(22.0), (
+    assert _offset_kwarg(aim_call) == pytest.approx(6.2), (
         "AIM offset must equal clip_start - wider_source_start "
-        "(30.0 - 8.0 = 22.0). "
+        "((15.0 - 0.8) - 8.0 = 6.2). "
         f"Got setter call: args={aim_call.args} kwargs={aim_call.kwargs}"
     )
 
@@ -823,9 +661,7 @@ async def test_offset_not_persisted_when_no_wider_source():
             db, lineup,
             chapter_start=10.0, chapter_end=40.0,
             video_path=Path("/tmp/x.mp4"),
-            precomputed_stand_ts=12.0,
-            # AIM_TS = release_ts - _AIM_PRE_RELEASE_SECONDS (0.8) = 24.0
-            precomputed_release_ts=24.0 + _AIM_PRE_RELEASE_SECONDS,
+            precomputed_release_ts=25.0,
         )
 
     assert _offset_kwarg(set_stand_mock.await_args) is None
@@ -859,9 +695,7 @@ async def test_offset_not_persisted_when_original_matches_clip():
             db, lineup,
             chapter_start=10.0, chapter_end=40.0,
             video_path=Path("/tmp/x.mp4"),
-            precomputed_stand_ts=12.0,
-            # AIM_TS = release_ts - _AIM_PRE_RELEASE_SECONDS (0.8) = 24.0
-            precomputed_release_ts=24.0 + _AIM_PRE_RELEASE_SECONDS,
+            precomputed_release_ts=25.0,
         )
 
     assert _offset_kwarg(set_stand_mock.await_args) is None
@@ -891,9 +725,7 @@ async def test_stand_persist_failure_does_not_affect_aim():
             db, lineup,
             chapter_start=10.0, chapter_end=40.0,
             video_path=Path("/tmp/x.mp4"),
-            precomputed_stand_ts=12.0,
-            # AIM_TS = release_ts - _AIM_PRE_RELEASE_SECONDS (0.8) = 24.0
-            precomputed_release_ts=24.0 + _AIM_PRE_RELEASE_SECONDS,
+            precomputed_release_ts=25.0,
         )
     assert result.stand_status == "failed"
     assert "stand_clip_url_persist_failed" in result.stand_error_codes
@@ -915,9 +747,7 @@ async def test_upload_failure_per_side_returns_failed():
             db, lineup,
             chapter_start=10.0, chapter_end=40.0,
             video_path=Path("/tmp/x.mp4"),
-            precomputed_stand_ts=12.0,
-            # AIM_TS = release_ts - _AIM_PRE_RELEASE_SECONDS (0.8) = 24.0
-            precomputed_release_ts=24.0 + _AIM_PRE_RELEASE_SECONDS,
+            precomputed_release_ts=25.0,
         )
     # Storage down → both sides fail (same underlying fault per side).
     assert result.stand_status == "failed"
