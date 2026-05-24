@@ -39,6 +39,41 @@ _SUPPORTED_COOKIE_BROWSERS = frozenset(
 )
 
 
+def _apply_cookies_file(opts: dict) -> dict:
+    """Inject ``cookiefile`` into a yt-dlp options dict if configured.
+
+    ``YOUTUBE_COOKIES_FILE`` points to a Netscape cookies.txt file exported
+    from a logged-in YouTube session (e.g. via the "Get cookies.txt LOCALLY"
+    browser extension). When set, yt-dlp reads cookies directly from the file,
+    bypassing Chrome's DPAPI encryption entirely — the canonical fix for the
+    Chrome 127+ App-Bound Encryption issue that breaks ``cookiesfrombrowser``
+    on Windows.
+
+    **Precedence:** when both ``YOUTUBE_COOKIES_FILE`` and
+    ``YOUTUBE_COOKIES_FROM_BROWSER`` are set, both options land in *opts* and
+    yt-dlp prefers ``cookiefile`` at request time (documented behaviour). The
+    browser option is harmless side-cargo and the file wins.
+
+    No-op when the setting is empty. If the path is set but doesn't resolve to
+    an existing file, logs a single WARNING and leaves *opts* unchanged — the
+    request proceeds without file cookies and will fail loudly with the
+    underlying yt-dlp error if no other auth path is available.
+    """
+    raw = (settings.youtube_cookies_file or "").strip()
+    if not raw:
+        return opts
+    cookie_path = Path(raw)
+    if not cookie_path.exists():
+        logger.warning(
+            "youtube_fetcher: YOUTUBE_COOKIES_FILE=%r does not exist — not "
+            "injecting file cookies. Create the file or unset the variable.",
+            raw,
+        )
+        return opts
+    opts["cookiefile"] = str(cookie_path)
+    return opts
+
+
 def _apply_browser_cookies(opts: dict) -> dict:
     """Inject ``cookiesfrombrowser`` into a yt-dlp options dict if configured.
 
@@ -181,13 +216,13 @@ async def list_videos(source: Source) -> list[VideoMeta]:
     # the /videos tab so the flat extraction returns actual videos.
     url = _normalize_listing_url(raw_url)
 
-    ydl_opts = _apply_browser_cookies({
+    ydl_opts = _apply_cookies_file(_apply_browser_cookies({
         "quiet": True,
         "no_warnings": True,
         "extract_flat": True,
         "skip_download": True,
         "ignoreerrors": False,
-    })
+    }))
 
     def _fetch() -> list[VideoMeta]:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -289,12 +324,12 @@ async def fetch_video_detail(video_id: str) -> VideoMeta:
     YouTubeFetchError.
     """
     url = f"https://www.youtube.com/watch?v={video_id}"
-    ydl_opts = _apply_browser_cookies({
+    ydl_opts = _apply_cookies_file(_apply_browser_cookies({
         "quiet": True,
         "no_warnings": True,
         "skip_download": True,
         "ignoreerrors": False,
-    })
+    }))
 
     def _fetch() -> VideoMeta:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -369,14 +404,18 @@ async def download_video(video_id: str, download_dir: Path) -> Path:
     download_dir.mkdir(parents=True, exist_ok=True)
     output_template = str(download_dir / f"{video_id}.%(ext)s")
 
-    ydl_opts = _apply_browser_cookies({
+    ydl_opts = _apply_cookies_file(_apply_browser_cookies({
         "quiet": True,
         "no_warnings": True,
         "outtmpl": output_template,
-        "format": "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
+        # Permissive format selector: let yt-dlp pick best video+audio from any
+        # codec — merge_output_format=mp4 below coerces the merged file to mp4
+        # regardless of source codecs. The old ext=mp4 filter excluded webm/vp9
+        # streams, which is all YouTube hands to anonymous/non-Premium sessions.
+        "format": "bestvideo*+bestaudio/best",
         "merge_output_format": "mp4",
         "ignoreerrors": False,
-    })
+    }))
 
     def _download() -> Path:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:

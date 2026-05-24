@@ -94,6 +94,14 @@ class Settings(BaseAppSettings):
     # opera, brave, vivaldi, whale. Empty (default) disables cookie injection,
     # which is the right shape for CI / fresh deploys where no browser exists.
     youtube_cookies_from_browser: str = ""
+    # Optional: path to a Netscape cookies.txt file exported from a logged-in
+    # YouTube session. Takes precedence over YOUTUBE_COOKIES_FROM_BROWSER when
+    # set — bypasses Chrome's DPAPI encryption entirely (Chrome 127+ App-Bound
+    # Encryption breaks yt-dlp's browser cookie extraction on Windows). Export
+    # using a browser extension ("Get cookies.txt LOCALLY") and re-export every
+    # few weeks when YouTube rotates the session. Empty (default) disables file
+    # cookie injection and falls back to YOUTUBE_COOKIES_FROM_BROWSER.
+    youtube_cookies_file: str = ""
 
     # ------------------------------------------------------------------
     # Pane-editor wide-source window (for the trim editor)
