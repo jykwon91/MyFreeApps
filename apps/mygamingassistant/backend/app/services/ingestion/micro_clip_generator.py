@@ -1,20 +1,23 @@
 """Stand + Aim micro-clip generator — 1s looped clips for the storyboard.
 
 PR6 introduced the 1-second STAND + AIM micro-clips replacing static stills.
-Both panes anchor on ``release_ts`` from the throw-localizer's dense pass
-(operator-tuned 2026-05-23/24):
+PR #763 (operator-tuned 2026-05-23) split the two anchors:
 
   - **AIM** anchors on ``release_ts − _AIM_PRE_RELEASE_SECONDS`` (0.8s
     before release) → 1.0s clip ``[release − 0.8, release + 0.2]``.
-  - **STAND** anchors on ``release_ts − _STAND_PRE_RELEASE_SECONDS`` (3.0s
-    before release) → 2.0s clip ``[release − 3.0, release − 1.0]``.
+  - **STAND** is content-localized by ``_resolve_stand_ts`` (own Claude
+    pass — see ``stand_timing_classifier`` + ``stand_localizer``). The 2.0s
+    clip is centred on the localized timestamp with an upper clamp at
+    ``release_ts − _STAND_POST_TS_BUFFER`` (0.3s) so a late pick stays
+    clear of the windup.
 
-The earlier grid-stand_idx anchor was abandoned because the 9-frame grid
-sampling across the whole chapter (~3.5s spacing) frequently picked the
-walk-up or windup frame instead of the settled stance. The throw-localizer's
-dense pass produces a reliable release_ts (THROW + LANDING already depend
-on it), so deriving STAND from it gives a stable "settled at spot ~3s
-before the throw" window that ends before the windup begins.
+The earlier ``release_ts − 3.0s`` fixed-offset STAND anchor was abandoned
+because the THROW and STAND moments are visually near-identical at that
+distance and the heuristic shape (constant pre-release offset) could not
+generalise across lineups. Before that, the grid-stand_idx anchor failed
+for the same reason as the grid-aim anchor: ~3.5s spacing across the
+chapter frequently picked the walk-up or windup frame rather than the
+settled stance.
 
 Two entry paths share one contract:
 
@@ -223,14 +226,19 @@ async def generate_micro_clips_for_lineup(
 ) -> MicroClipGenerationResult:
     """Cut + persist STAND and AIM micro-clips for *lineup*.
 
-    Both panes anchor on ``release_ts``:
-      - STAND_TS = ``release_ts - _STAND_PRE_RELEASE_SECONDS`` (3.0s before)
+    Anchor derivation:
       - AIM_TS   = ``release_ts - _AIM_PRE_RELEASE_SECONDS`` (0.8s before)
+      - STAND_TS = ``_resolve_stand_ts(...)`` — content-aware STAND-localizer
+        (own Claude pass), cached on ``lineup.stand_ts`` +
+        ``lineup.stand_localized_at``. STAND clip is CENTERED on
+        ``stand_ts`` with an upper clamp at ``release_ts − 0.3``.
 
-    The earlier grid-based STAND anchor was abandoned because the 9-frame
-    grid sampling across the whole chapter (~3.5s spacing) frequently
-    picked the walk-up or windup frame rather than the settled stance.
-    Same critique that retired the grid AIM anchor; see module docstring.
+    The earlier ``release_ts − _STAND_PRE_RELEASE_SECONDS`` (3.0s) fixed-
+    offset heuristic was abandoned (operator 2026-05-23: "the stand and
+    the throw are nearly identical"); bumping the constant did not
+    generalise — the heuristic shape was wrong. The grid-based STAND anchor
+    before that suffered from ~3.5s spacing frequently picking the walk-up
+    or windup frame rather than the settled stance.
 
     Two entry paths:
 
