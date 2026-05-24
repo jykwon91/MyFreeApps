@@ -8,15 +8,19 @@ generator to localise the anchor + cut clips. Mirrors
 :mod:`landing_clip_backfill` (PR5) shape exactly.
 
 Anchor source (operator-tuned 2026-05-24):
-  Both STAND and AIM derive from a single ``release_ts`` from the
-  throw-timing classifier's dense pass:
-    - STAND_TS = release_ts − _STAND_PRE_RELEASE_SECONDS (3.0s before)
-    - AIM_TS   = release_ts − _AIM_PRE_RELEASE_SECONDS (0.8s before)
-  The earlier grid-based STAND anchor was abandoned (PR following #761) —
-  the 9-frame grid frequently picked the walk-up or windup frame rather
-  than the settled stance. The throw-localizer's dense pass produces a
-  reliable release frame (THROW + LANDING already depend on it), so
-  STAND/AIM riding the same anchor is the no-bandaid fix.
+  Both STAND and AIM are now content-aware. The throw-localizer's dense
+  pass produces a reliable ``release_ts`` (THROW + LANDING already
+  depend on it); STAND and AIM each run their OWN Claude localizers
+  bounded by that release_ts to find the stand-demonstration and
+  locked-aim demonstration frames respectively. Fixed-offset heuristics
+  (release_ts − constant) were abandoned twice — bumping the constant
+  could not generalise across utilities whose windups vary in length
+  (HE ~0.4s, smoke ~0.5s, Molotov ~0.9s); the heuristic SHAPE was
+  wrong. See ``stand_timing_classifier`` / ``aim_timing_classifier`` and
+  ``stand_localizer`` / ``aim_localizer``. The localized timestamps are
+  cached on ``lineup.stand_ts`` + ``lineup.stand_localized_at`` and
+  ``lineup.aim_ts`` + ``lineup.aim_localized_at`` respectively so re-cuts
+  don't re-burn Claude.
 
 The generator runs the throw-localizer itself on the backfill path; this
 module just hands it the source video.

@@ -26,7 +26,6 @@ from app.services.ingestion.throw_localizer import RefinedThrowTiming
 from app.services.ingestion.frame_extractor import ClipCutError
 from app.services.ingestion.micro_clip_generator import (
     _AIM_MICRO_CLIP_SECONDS,
-    _AIM_PRE_RELEASE_SECONDS,
     _STAND_MICRO_CLIP_SECONDS,
     _compute_micro_bounds,
     _micro_clip_seconds_for_side,
@@ -188,9 +187,10 @@ def _storage_mock():
 async def test_ingest_path_generates_both_clips_without_classifier_call():
     """Precomputed release_ts → skip throw-localizer; cut + upload + persist twice.
 
-    AIM derives directly from release_ts (release_ts − _AIM_PRE_RELEASE_SECONDS).
-    STAND is content-localized via ``_resolve_stand_ts`` (mocked here to
-    deterministic ``22.0``); see ``stand_timing_classifier`` for the live shape.
+    Both STAND and AIM are content-localized via their own resolvers
+    (mocked here to deterministic ``22.0`` / ``24.2``). See
+    ``stand_timing_classifier`` and ``aim_timing_classifier`` for the
+    live shapes.
     """
     db = AsyncMock()
     lineup = _lineup()
@@ -200,6 +200,7 @@ async def test_ingest_path_generates_both_clips_without_classifier_call():
 
     localizer_mock = AsyncMock()  # MUST NOT be called on ingest
     resolve_stand_mock = AsyncMock(return_value=(22.0, [], ""))
+    resolve_aim_mock = AsyncMock(return_value=(24.2, [], ""))
 
     with (
         patch(f"{_HMOD}.cut_clip", _ffmpeg_cut_mock()) as cut,
@@ -208,8 +209,9 @@ async def test_ingest_path_generates_both_clips_without_classifier_call():
         patch(f"{_MOD}.lineup_repo.set_aim_clip_url", set_aim_mock),
         patch(f"{_HMOD}.localize_throw_with_refinement", localizer_mock),
         patch(f"{_MOD}._resolve_stand_ts", resolve_stand_mock),
+        patch(f"{_MOD}._resolve_aim_ts", resolve_aim_mock),
     ):
-        # release_ts = 25.0 → AIM_TS = 24.2; STAND_TS = mocked 22.0
+        # release_ts = 25.0 → STAND_TS = mocked 22.0; AIM_TS = mocked 24.2.
         result = await generate_micro_clips_for_lineup(
             db, lineup,
             chapter_start=10.0, chapter_end=40.0,
@@ -222,7 +224,7 @@ async def test_ingest_path_generates_both_clips_without_classifier_call():
     assert result.stand_clip_key == "pending/vid123/10-stand-micro.mp4"
     assert result.aim_clip_key == "pending/vid123/10-aim-micro.mp4"
     assert result.stand_ts == pytest.approx(22.0)
-    assert result.aim_ts == pytest.approx(25.0 - _AIM_PRE_RELEASE_SECONDS)
+    assert result.aim_ts == pytest.approx(24.2)
     assert cut.await_count == 2
     assert storage.upload_file.call_count == 2
     set_stand_mock.assert_awaited_once()
@@ -238,9 +240,10 @@ async def test_ingest_path_no_release_ts_skips_both():
 
     This is the partial-ingest case: the orchestrator's THROW clip step
     skipped or failed, so release_ts is not available. Since STAND and
-    AIM now both anchor on release_ts, neither can be cut — the panes
-    render their stills instead. The earlier "STAND still generates
-    from grid" behaviour is gone (the grid anchor was unreliable).
+    AIM both bound their search windows on release_ts, neither can run —
+    the panes render their stills instead. The earlier "STAND still
+    generates from grid" behaviour is gone (the grid anchor was
+    unreliable).
     """
     db = AsyncMock()
     lineup = _lineup()
@@ -249,6 +252,8 @@ async def test_ingest_path_no_release_ts_skips_both():
     set_aim_mock = AsyncMock(return_value=lineup)
 
     localizer_mock = AsyncMock()  # MUST NOT be called
+    resolve_stand_mock = AsyncMock()  # MUST NOT be called
+    resolve_aim_mock = AsyncMock()  # MUST NOT be called
 
     with (
         patch(f"{_HMOD}.cut_clip", _ffmpeg_cut_mock()),
@@ -256,6 +261,8 @@ async def test_ingest_path_no_release_ts_skips_both():
         patch(f"{_MOD}.lineup_repo.set_stand_clip_url", set_stand_mock),
         patch(f"{_MOD}.lineup_repo.set_aim_clip_url", set_aim_mock),
         patch(f"{_HMOD}.localize_throw_with_refinement", localizer_mock),
+        patch(f"{_MOD}._resolve_stand_ts", resolve_stand_mock),
+        patch(f"{_MOD}._resolve_aim_ts", resolve_aim_mock),
     ):
         result = await generate_micro_clips_for_lineup(
             db, lineup,
@@ -273,6 +280,8 @@ async def test_ingest_path_no_release_ts_skips_both():
     localizer_mock.assert_not_awaited(), (
         "Ingest must not re-run the throw-localizer when caller passed None"
     )
+    resolve_stand_mock.assert_not_awaited()
+    resolve_aim_mock.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -282,10 +291,13 @@ async def test_ingest_path_chapter_too_short_skips_both():
     lineup = _lineup()
     # release_ts in middle of tiny chapter → both anchors clamp to start;
     # both clips clamp below the 0.5s minimum → both skip.
-    # STAND localizer is content-aware (separate Claude call) — mock to a
-    # value inside the sliver chapter so STAND enters the cut path and hits
-    # the chapter_too_short clamp (matching pre-PR #763 test intent).
-    with patch(f"{_MOD}._resolve_stand_ts", AsyncMock(return_value=(20.1, [], ""))):
+    # STAND + AIM localizers are content-aware (separate Claude calls) —
+    # mock both to values inside the sliver chapter so each enters the
+    # cut path and hits the chapter_too_short clamp.
+    with (
+        patch(f"{_MOD}._resolve_stand_ts", AsyncMock(return_value=(20.1, [], ""))),
+        patch(f"{_MOD}._resolve_aim_ts", AsyncMock(return_value=(20.1, [], ""))),
+    ):
         result = await generate_micro_clips_for_lineup(
             db, lineup,
             chapter_start=19.9, chapter_end=20.3,
@@ -344,8 +356,8 @@ def _localizer_mock(refined=None, **refined_kw):
 
 @pytest.mark.asyncio
 async def test_backfill_path_runs_throw_localizer_and_generates():
-    """Backfill runs throw_localizer; AIM derives from release_ts;
-    STAND is content-localized (mocked here)."""
+    """Backfill runs throw_localizer; STAND + AIM both content-localized
+    (mocked here)."""
     db = AsyncMock()
     lineup = _lineup()
     storage = _storage_mock()
@@ -353,6 +365,7 @@ async def test_backfill_path_runs_throw_localizer_and_generates():
     set_aim_mock = AsyncMock(return_value=lineup)
     refined = _refined(release_ts=30.0)
     resolve_stand_mock = AsyncMock(return_value=(27.0, [], ""))
+    resolve_aim_mock = AsyncMock(return_value=(29.4, [], ""))
 
     with (
         patch(f"{_MOD}.settings", _settings()),
@@ -363,6 +376,7 @@ async def test_backfill_path_runs_throw_localizer_and_generates():
         patch(f"{_MOD}.lineup_repo.set_stand_clip_url", set_stand_mock),
         patch(f"{_MOD}.lineup_repo.set_aim_clip_url", set_aim_mock),
         patch(f"{_MOD}._resolve_stand_ts", resolve_stand_mock),
+        patch(f"{_MOD}._resolve_aim_ts", resolve_aim_mock),
     ):
         # Omit precomputed_release_ts → sentinel default → backfill branch.
         result = await generate_micro_clips_for_lineup(
@@ -373,9 +387,9 @@ async def test_backfill_path_runs_throw_localizer_and_generates():
 
     assert result.stand_status == "generated"
     assert result.aim_status == "generated"
-    # release_ts 30.0 → AIM_TS = 30 − 0.8 = 29.2; STAND_TS = mocked 27.0.
+    # release_ts 30.0; both panes content-localized: STAND=27.0, AIM=29.4.
     assert result.stand_ts == pytest.approx(27.0)
-    assert result.aim_ts == pytest.approx(30.0 - _AIM_PRE_RELEASE_SECONDS)
+    assert result.aim_ts == pytest.approx(29.4)
 
 
 @pytest.mark.asyncio
@@ -528,8 +542,9 @@ async def test_stand_cut_failure_does_not_affect_aim():
     """The two sides are committed by separate setters; a stand ffmpeg fault
     must leave aim_status='generated', not 'failed'.
 
-    Both anchors share release_ts, but the cut/upload/persist runs once
-    per side — a downstream failure on one side must not propagate.
+    Both sides bound by the same release_ts, but the cut/upload/persist
+    runs once per side — a downstream failure on one side must not
+    propagate to the other.
     """
     db = AsyncMock()
     lineup = _lineup()
@@ -555,8 +570,9 @@ async def test_stand_cut_failure_does_not_affect_aim():
         patch(f"{_MOD}.lineup_repo.set_stand_clip_url", set_stand_mock),
         patch(f"{_MOD}.lineup_repo.set_aim_clip_url", set_aim_mock),
         patch(f"{_MOD}._resolve_stand_ts", AsyncMock(return_value=(22.0, [], ""))),
+        patch(f"{_MOD}._resolve_aim_ts", AsyncMock(return_value=(24.2, [], ""))),
     ):
-        # release_ts = 25.0 → AIM_TS = 24.2; STAND_TS = mocked 22.0
+        # release_ts = 25.0 → STAND_TS = mocked 22.0; AIM_TS = mocked 24.2
         result = await generate_micro_clips_for_lineup(
             db, lineup,
             chapter_start=10.0, chapter_end=40.0,
@@ -620,12 +636,15 @@ async def test_offset_persisted_when_wider_source_exists():
         patch(f"{_MOD}.lineup_repo.set_stand_clip_url", set_stand_mock),
         patch(f"{_MOD}.lineup_repo.set_aim_clip_url", set_aim_mock),
         patch(f"{_MOD}._resolve_stand_ts", AsyncMock(return_value=(12.0, [], ""))),
+        patch(f"{_MOD}._resolve_aim_ts", AsyncMock(return_value=(14.2, [], ""))),
     ):
-        # release_ts = 15.0 → AIM_TS = 14.2; STAND_TS = mocked 12.0.
-        # STAND clip is CENTERED on stand_ts: clip_start = 12.0 - 1.0 = 11.0.
+        # release_ts = 15.0; STAND_TS = mocked 12.0; AIM_TS = mocked 14.2.
+        # Both clips are CENTERED on their localized timestamps:
+        #   STAND clip_start = 12.0 - 1.0 = 11.0  (half-window 1.0s)
+        #   AIM   clip_start = 14.2 - 0.5 = 13.7  (half-window 0.5s)
         # wider_source_start = 10 - 2 = 8.0.
         #   STAND offset = 11.0 - 8.0 = 3.0
-        #   AIM   offset = 14.2 - 8.0 = 6.2
+        #   AIM   offset = 13.7 - 8.0 = 5.7
         await generate_micro_clips_for_lineup(
             db, lineup,
             chapter_start=10.0, chapter_end=40.0,
@@ -643,9 +662,11 @@ async def test_offset_persisted_when_wider_source_exists():
         "offset = 11.0 - 8.0 = 3.0. "
         f"Got setter call: args={stand_call.args} kwargs={stand_call.kwargs}"
     )
-    assert _offset_kwarg(aim_call) == pytest.approx(6.2), (
-        "AIM offset must equal clip_start - wider_source_start "
-        "((15.0 - 0.8) - 8.0 = 6.2). "
+    assert _offset_kwarg(aim_call) == pytest.approx(5.7), (
+        "AIM offset must equal clip_start - wider_source_start. "
+        "AIM clip is CENTERED on aim_ts: clip_start = "
+        "aim_ts - _AIM_HALF_CLIP_SECONDS (0.5) = 14.2 - 0.5 = 13.7. "
+        "wider_source_start = 8.0. offset = 13.7 - 8.0 = 5.7. "
         f"Got setter call: args={aim_call.args} kwargs={aim_call.kwargs}"
     )
 
@@ -670,6 +691,7 @@ async def test_offset_not_persisted_when_no_wider_source():
         patch(f"{_MOD}.lineup_repo.set_stand_clip_url", set_stand_mock),
         patch(f"{_MOD}.lineup_repo.set_aim_clip_url", set_aim_mock),
         patch(f"{_MOD}._resolve_stand_ts", AsyncMock(return_value=(22.0, [], ""))),
+        patch(f"{_MOD}._resolve_aim_ts", AsyncMock(return_value=(24.2, [], ""))),
     ):
         await generate_micro_clips_for_lineup(
             db, lineup,
@@ -705,6 +727,7 @@ async def test_offset_not_persisted_when_original_matches_clip():
         patch(f"{_MOD}.lineup_repo.set_stand_clip_url", set_stand_mock),
         patch(f"{_MOD}.lineup_repo.set_aim_clip_url", set_aim_mock),
         patch(f"{_MOD}._resolve_stand_ts", AsyncMock(return_value=(22.0, [], ""))),
+        patch(f"{_MOD}._resolve_aim_ts", AsyncMock(return_value=(24.2, [], ""))),
     ):
         await generate_micro_clips_for_lineup(
             db, lineup,
@@ -736,6 +759,7 @@ async def test_stand_persist_failure_does_not_affect_aim():
             AsyncMock(return_value=lineup),
         ),
         patch(f"{_MOD}._resolve_stand_ts", AsyncMock(return_value=(22.0, [], ""))),
+        patch(f"{_MOD}._resolve_aim_ts", AsyncMock(return_value=(24.2, [], ""))),
     ):
         result = await generate_micro_clips_for_lineup(
             db, lineup,
@@ -759,6 +783,7 @@ async def test_upload_failure_per_side_returns_failed():
         patch(f"{_HMOD}.cut_clip", _ffmpeg_cut_mock()),
         patch(f"{_HMOD}.get_storage", return_value=storage),
         patch(f"{_MOD}._resolve_stand_ts", AsyncMock(return_value=(22.0, [], ""))),
+        patch(f"{_MOD}._resolve_aim_ts", AsyncMock(return_value=(24.2, [], ""))),
     ):
         result = await generate_micro_clips_for_lineup(
             db, lineup,
