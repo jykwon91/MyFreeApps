@@ -133,6 +133,42 @@ class StandTimingResult:
 
 
 @dataclass
+class AimTimingResult:
+    """Result of the AIM-localization Claude call.
+
+    Separate type from :class:`StandTimingResult` and :class:`ThrowTimingResult`
+    — AIM is a distinct code path (own prompt, own schema, different semantic
+    target) that finds the frame the narrator DEMONSTRATES the LOCKED AIM
+    (utility ready in hand, crosshair on landmark, before any windup motion),
+    not the frame the throw is released and not the stand-location demo.
+    Conflating with the other timing types would couple prompts that must
+    evolve independently.
+
+    Replaces the abandoned ``release_ts − _AIM_PRE_RELEASE_SECONDS``
+    fixed-offset heuristic (operator pushback 2026-05-24: the AIM clip was
+    showing the END of the throw animation because the constant could not
+    accommodate variable windup lengths across utility types).
+
+    On a successful API call ``success=True`` and ``has_aim_demonstration``
+    reflects Claude's judgement. A confident ``has_aim_demonstration=False``
+    (some chapters skip the aim-demo entirely) is a SUCCESSFUL answer, not
+    an error — caller skips the AIM clip and shows the still. ``error_codes``
+    is populated only on an API/parse failure
+    (per rules/check-third-party-error-codes.md — never a bare bool/None).
+
+    ``aim_index`` is 1-based into the candidate frame window the call was
+    shown. The caller maps it back to seconds via the same timestamp list.
+    """
+
+    success: bool
+    has_aim_demonstration: Optional[bool] = None
+    aim_index: Optional[int] = None
+    confidence: Optional[float] = None
+    reasoning: str = ""
+    error_codes: list[str] = field(default_factory=list)
+
+
+@dataclass
 class ThrowTechniqueResult:
     """Result of the PR3 throw-technique Claude call.
 

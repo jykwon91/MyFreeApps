@@ -1,23 +1,22 @@
 """Stand + Aim micro-clip generator — 1s looped clips for the storyboard.
 
 PR6 introduced the 1-second STAND + AIM micro-clips replacing static stills.
-PR #763 (operator-tuned 2026-05-23) split the two anchors:
+Both panes are now content-aware (STAND: PR #763 / 2026-05-23; AIM
+follow-up: operator pushback 2026-05-24):
 
-  - **AIM** anchors on ``release_ts − _AIM_PRE_RELEASE_SECONDS`` (0.8s
-    before release) → 1.0s clip ``[release − 0.8, release + 0.2]``.
+  - **AIM** is content-localized by ``_resolve_aim_ts`` (own Claude pass
+    — see ``aim_timing_classifier`` + ``aim_localizer``). The 1.0s clip
+    is centred on ``aim_ts`` with an upper clamp at
+    ``release_ts − _AIM_POST_TS_BUFFER`` (0.3s).
   - **STAND** is content-localized by ``_resolve_stand_ts`` (own Claude
-    pass — see ``stand_timing_classifier`` + ``stand_localizer``). The 2.0s
-    clip is centred on the localized timestamp with an upper clamp at
-    ``release_ts − _STAND_POST_TS_BUFFER`` (0.3s) so a late pick stays
-    clear of the windup.
+    pass — see ``stand_timing_classifier`` + ``stand_localizer``). The
+    2.0s clip is centred on ``stand_ts`` with the same upper clamp.
 
-The earlier ``release_ts − 3.0s`` fixed-offset STAND anchor was abandoned
-because the THROW and STAND moments are visually near-identical at that
-distance and the heuristic shape (constant pre-release offset) could not
-generalise across lineups. Before that, the grid-stand_idx anchor failed
-for the same reason as the grid-aim anchor: ~3.5s spacing across the
-chapter frequently picked the walk-up or windup frame rather than the
-settled stance.
+Fixed-offset heuristics (STAND: release_ts − 3.0s; AIM: release_ts −
+0.8s) were abandoned — bumping the constants did not generalise across
+utilities whose windups vary in length (HE ~0.4s, Molotov ~0.9s); the
+heuristic SHAPE was wrong. Grid-based anchors before that picked walk-up
+/ windup frames rather than the settled stance / locked aim.
 
 Two entry paths share one contract:
 
@@ -71,6 +70,7 @@ from app.services.ingestion.frame_extractor import (
 )
 from app.services.ingestion.micro_clip_helpers import (
     _cut_upload_persist_one_side,
+    _resolve_aim_ts,
     _resolve_release_ts_via_throw_localizer,
     _resolve_stand_ts,
 )
@@ -86,16 +86,13 @@ logger = logging.getLogger(__name__)
 # window.
 _STAND_MICRO_CLIP_SECONDS = 2.0
 _AIM_MICRO_CLIP_SECONDS = 1.0
-# Seconds BEFORE release_ts the AIM clip starts at. The 1.0s AIM clip
-# spans [release − 0.8s, release + 0.2s] — locked-aim with a tiny throw-
-# initiation peek as a natural end-cue.
-_AIM_PRE_RELEASE_SECONDS = 0.8
-# STAND clip is centred on the localized ``stand_ts`` (half-window each
-# side → full duration 2*_STAND_HALF_CLIP_SECONDS). Upper end is clamped
-# to ``release_ts − _STAND_POST_TS_BUFFER`` so a late-in-window pick
-# never bleeds into the windup.
+# Both clips are CENTRED on the localized timestamp (half-window each
+# side). Upper end clamped to ``release_ts − _*_POST_TS_BUFFER`` so a
+# late-in-window pick never bleeds into the windup.
 _STAND_HALF_CLIP_SECONDS = 1.0
 _STAND_POST_TS_BUFFER = 0.3
+_AIM_HALF_CLIP_SECONDS = 0.5
+_AIM_POST_TS_BUFFER = 0.3
 # Minimum acceptable clamped duration. Below: skip rather than ship a sliver.
 _MIN_CLIP_SECONDS = 0.5
 
@@ -185,16 +182,9 @@ def _compute_micro_bounds(
     is what keeps the AIM clip's first frame identical to the existing aim
     still, so the persisted ``aim_anchor_x/y`` overlay stays pixel-accurate.
 
-    ``clip_seconds`` is supplied by the caller per-pane (STAND uses
-    ``_STAND_MICRO_CLIP_SECONDS``, AIM uses ``_AIM_MICRO_CLIP_SECONDS``).
-    Explicit at the call site rather than a default — the two panes have
-    deliberately different durations and silently sharing one default
-    would obscure the asymmetry.
-
     Returns None when the clamped duration is shorter than
-    ``_MIN_CLIP_SECONDS`` (the anchor is too close to the chapter end to
-    carry a meaningful clip). Caller skips with reason
-    ``chapter_too_short_for_microclip``.
+    ``_MIN_CLIP_SECONDS`` (anchor too close to chapter end). Caller skips
+    with reason ``chapter_too_short_for_microclip``.
     """
     start = max(float(anchor_ts), float(chapter_start))
     end = min(start + float(clip_seconds), float(chapter_end))
@@ -205,8 +195,7 @@ def _compute_micro_bounds(
 
 
 def _micro_clip_seconds_for_side(side: str) -> float:
-    """Resolve the per-pane micro-clip duration. Centralized so both ingest
-    and backfill paths get the same answer for the same side string."""
+    """Resolve the per-pane micro-clip duration (test-contract helper)."""
     if side == "stand":
         return _STAND_MICRO_CLIP_SECONDS
     if side == "aim":
@@ -226,19 +215,17 @@ async def generate_micro_clips_for_lineup(
 ) -> MicroClipGenerationResult:
     """Cut + persist STAND and AIM micro-clips for *lineup*.
 
-    Anchor derivation:
-      - AIM_TS   = ``release_ts - _AIM_PRE_RELEASE_SECONDS`` (0.8s before)
+    Anchor derivation (both panes content-aware as of 2026-05-24):
+      - AIM_TS   = ``_resolve_aim_ts(...)`` — content-aware AIM-localizer
+        cached on ``lineup.aim_ts`` + ``lineup.aim_localized_at``. AIM
+        clip CENTERED on ``aim_ts`` with upper clamp at ``release_ts − 0.3``.
       - STAND_TS = ``_resolve_stand_ts(...)`` — content-aware STAND-localizer
-        (own Claude pass), cached on ``lineup.stand_ts`` +
-        ``lineup.stand_localized_at``. STAND clip is CENTERED on
-        ``stand_ts`` with an upper clamp at ``release_ts − 0.3``.
+        cached on ``lineup.stand_ts`` + ``lineup.stand_localized_at``.
+        STAND clip CENTERED on ``stand_ts`` with the same upper clamp.
 
-    The earlier ``release_ts − _STAND_PRE_RELEASE_SECONDS`` (3.0s) fixed-
-    offset heuristic was abandoned (operator 2026-05-23: "the stand and
-    the throw are nearly identical"); bumping the constant did not
-    generalise — the heuristic shape was wrong. The grid-based STAND anchor
-    before that suffered from ~3.5s spacing frequently picking the walk-up
-    or windup frame rather than the settled stance.
+    Fixed-offset heuristics (STAND: release_ts − 3.0s; AIM: release_ts
+    − 0.8s) were abandoned — the constants could not generalise across
+    utilities whose windups vary in length; see module docstring.
 
     Two entry paths:
 
@@ -338,9 +325,9 @@ async def generate_micro_clips_for_lineup(
                     reasoning=f"video re-fetch failed: {exc}",
                 )
 
-        # ---- Resolve release_ts (AIM anchor + STAND search upper bound) ----
-        # AIM derives from release_ts (release_ts − _AIM_PRE_RELEASE_SECONDS).
-        # STAND uses its own localizer (``_resolve_stand_ts``) bounded by
+        # ---- Resolve release_ts (STAND + AIM search upper bound) ----------
+        # Both STAND and AIM use their own content-aware localizers
+        # (``_resolve_stand_ts`` / ``_resolve_aim_ts``) bounded by
         # release_ts. When release_ts is unavailable, both sides skip.
         stand_ts: Optional[float] = None
         aim_ts: Optional[float] = None
@@ -390,14 +377,20 @@ async def generate_micro_clips_for_lineup(
             release_ts = float(precomputed_release_ts)
 
         stand_err_codes: list[str] = []
+        aim_err_codes: list[str] = []
         if release_ts is not None:
-            aim_ts = release_ts - _AIM_PRE_RELEASE_SECONDS
             stand_ts, stand_err_codes, stand_r = await _resolve_stand_ts(
                 db, lineup, local_video,
                 chapter_start=chapter_start, release_ts=release_ts,
             )
             if stand_r:
                 reasoning = f"{reasoning}\n{stand_r}".strip() if reasoning else stand_r
+            aim_ts, aim_err_codes, aim_r = await _resolve_aim_ts(
+                db, lineup, local_video,
+                chapter_start=chapter_start, release_ts=release_ts,
+            )
+            if aim_r:
+                reasoning = f"{reasoning}\n{aim_r}".strip() if reasoning else aim_r
 
         # Hard fail-out when release_ts resolution had a structured error
         # (Claude API failure on the backfill throw-localizer call). Both
@@ -462,17 +455,23 @@ async def generate_micro_clips_for_lineup(
             )
         if aim_ts is None:
             aim_outcome = {
-                "status": "skipped",
-                "error_codes": [],
-                "skip_reason": shared_skip_reason,
+                "status": "failed" if aim_err_codes else "skipped",
+                "error_codes": aim_err_codes,
+                "skip_reason": (
+                    None if aim_err_codes
+                    else (shared_skip_reason or "aim_localizer_no_demo")
+                ),
             }
         else:
             aim_outcome = await _cut_upload_persist_one_side(
                 db, lineup, video_id, local_video,
-                anchor_ts=aim_ts,
+                anchor_ts=aim_ts - _AIM_HALF_CLIP_SECONDS,
                 clip_seconds=_AIM_MICRO_CLIP_SECONDS,
                 chapter_start=chapter_start,
-                chapter_end=chapter_end,
+                chapter_end=min(
+                    chapter_end,
+                    (release_ts or chapter_end) - _AIM_POST_TS_BUFFER,
+                ),
                 side="aim",
                 key_fn=pending_aim_clip_key,
                 persist_fn=lineup_repo.set_aim_clip_url,

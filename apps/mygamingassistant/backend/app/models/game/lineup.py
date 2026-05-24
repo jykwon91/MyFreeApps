@@ -176,6 +176,22 @@ class Lineup(Base):
         DateTime(timezone=True), nullable=True
     )
 
+    # Content-aware AIM anchor (PR following #763). Seconds-into-source-video
+    # timestamp of the frame the narrator DEMONSTRATES the locked aim —
+    # looking at target, utility ready in hand, before any windup motion.
+    # Resolved by the AIM-localizer's two-stage Claude pass. Cached so
+    # re-cutting the AIM clip after an offset tweak doesn't re-burn Claude —
+    # operator NULLs both ``aim_ts`` AND ``aim_localized_at`` to force a
+    # re-localize.
+    #
+    # ``aim_localized_at`` distinguishes "never tried" (NULL) from "tried,
+    # no demo found" (set, ``aim_ts`` NULL). Mirrors stand_ts/stand_localized_at
+    # exactly — same rationale, same backfill semantics.
+    aim_ts: Mapped[float | None] = mapped_column(Float, nullable=True)
+    aim_localized_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
     # Normalized 0-1 crosshair position on the aim screenshot
     aim_anchor_x: Mapped[float | None] = mapped_column(Float, nullable=True)
     aim_anchor_y: Mapped[float | None] = mapped_column(Float, nullable=True)

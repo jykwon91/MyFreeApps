@@ -35,6 +35,7 @@ from app.repositories.game.lineup.lifecycle import (
 from app.repositories.game.lineup.micro_panes import (
     list_accepted_lineups_needing_micro_clips,
     set_aim_clip_url,
+    set_aim_localization,
     set_aim_screenshot_url,
     set_stand_clip_url,
     set_stand_localization,
@@ -68,6 +69,7 @@ __all__ = [
     "list_lineups",
     "list_pending_lineups",
     "set_aim_clip_url",
+    "set_aim_localization",
     "set_aim_screenshot_url",
     "set_clip_url",
     "set_clip_url_original",

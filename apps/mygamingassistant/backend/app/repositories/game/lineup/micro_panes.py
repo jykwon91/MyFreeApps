@@ -1,9 +1,12 @@
 """Micro-pane writers — the STAND + AIM micro-clip columns and their stills.
 
-Also owns the STAND-localizer's persistence (``set_stand_localization``):
-the localized ``stand_ts`` + ``stand_localized_at`` "we tried" marker
-share the micro-pane lifecycle (both are cleared together when the
-operator wants a fresh localize).
+Also owns the STAND-localizer's persistence (``set_stand_localization``)
+and the AIM-localizer's persistence (``set_aim_localization``): the
+localized ``stand_ts`` / ``aim_ts`` + their ``*_localized_at`` "we tried"
+markers share the micro-pane lifecycle (both members of a pair are
+cleared together when the operator wants a fresh localize). STAND and
+AIM use SEPARATE setters by design — a stand-side persistence failure
+must never clobber an already-localized ``aim_ts`` and vice versa.
 
 Sibling to ``throw_pane`` / ``landing_pane``. STAND and AIM are the two
 upper panes of the 4-pane storyboard; each has both a screenshot still
@@ -195,6 +198,48 @@ async def set_stand_localization(
     """
     lineup.stand_ts = stand_ts
     lineup.stand_localized_at = stand_localized_at
+    try:
+        await db.flush()
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
+    return lineup
+
+
+async def set_aim_localization(
+    db: AsyncSession,
+    lineup: Lineup,
+    *,
+    aim_ts: Optional[float],
+    aim_localized_at: datetime,
+) -> Lineup:
+    """Persist the AIM-localizer's verdict onto a lineup row.
+
+    Sibling to :func:`set_stand_localization` — identical contract on
+    the AIM ``aim_ts`` + ``aim_localized_at`` column pair. Writes both
+    columns in one commit. The pair is conceptually atomic:
+    ``aim_localized_at`` is the "we tried" marker; ``aim_ts`` is the
+    verdict (a float for a found demo, NULL for a confident "no demo").
+    Writing only one would leave the cache half-set and the next
+    backfill re-running Claude or misreading the result.
+
+    SEPARATE setter from :func:`set_stand_localization` by design —
+    per-side independence: a stand-side persistence failure must never
+    clobber an already-localized ``aim_ts`` and vice versa. Two
+    columns, two setters, two transactions.
+
+    Operator NULLs BOTH columns to force a re-localize. NULLing only one
+    is undefined-behaviour from the lineup's perspective — the backfill
+    treats it as "never tried" via the ``aim_localized_at`` check.
+
+    Transaction ownership lives here in the repo per PR #687/#695 —
+    callers (micro_clip_helpers._resolve_aim_ts) never call db.commit().
+    A failure rolls back both columns and propagates so the caller can
+    surface a structured error.
+    """
+    lineup.aim_ts = aim_ts
+    lineup.aim_localized_at = aim_localized_at
     try:
         await db.flush()
         await db.commit()
