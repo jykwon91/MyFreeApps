@@ -67,18 +67,20 @@ def _lineup(video_id="vid123", chapter_title="B smoke"):
 
 class TestComputeClipBounds:
     def test_normal_window_anchored_on_release(self):
-        # release 20, chapter [10,40]: [20-2, 20+1] = [18, 21] = 3.0s.
-        # Anchored entirely on release_ts — the throw pane shows the MOTION,
-        # not the bloom that follows (the landing pane covers that).
+        # release 20, chapter [10,40]: [20-1, 20+1] = [19, 21] = 2.0s.
+        # Anchored entirely on release_ts — the throw pane shows the MOTION
+        # (windup + release + follow-through), not the bloom that follows
+        # (the landing pane) and not the locked aim (the aim pane).
         start, dur = _compute_clip_bounds(20.0, 10.0, 40.0)
-        assert start == pytest.approx(18.0)
-        assert dur == pytest.approx(3.0)
+        assert start == pytest.approx(19.0)
+        assert dur == pytest.approx(2.0)
 
     def test_clamped_to_chapter_start(self):
-        # release 11 → 11-2=9 but chapter starts at 10 → clamp to 10.
-        start, dur = _compute_clip_bounds(11.0, 10.0, 40.0)
+        # release 10.5 → 10.5-1=9.5 but chapter starts at 10 → clamp to 10.
+        # Expected: [10, 11.5] = 1.5s.
+        start, dur = _compute_clip_bounds(10.5, 10.0, 40.0)
         assert start == pytest.approx(10.0)
-        assert dur == pytest.approx(2.0)  # [10, 12]
+        assert dur == pytest.approx(1.5)
 
     def test_chapter_too_short_returns_none(self):
         # 0.5s chapter — clamped window is < _ABSOLUTE_MIN_CLIP_SECONDS → skip.
@@ -251,7 +253,7 @@ class TestGenerateClipWideSourceWiring:
             patch(f"{_MOD}.settings", _settings()),
             # 6 frames spread across [9..24]; release_index=2 → release_ts=12.
             # _compute_clip_bounds anchors entirely on release_ts:
-            # [12-2, 12+1] = [10, 13] = 3.0s. result_ts (18) is surfaced on
+            # [12-1, 12+1] = [11, 13] = 2.0s. result_ts (18) is surfaced on
             # the result row but no longer influences the clip window.
             patch(f"{_MOD}.localize_throw_with_refinement",
                   new=AsyncMock(return_value=_refined(
@@ -279,9 +281,9 @@ class TestGenerateClipWideSourceWiring:
         mock_set.assert_awaited_once()
         set_kwargs = mock_set.await_args.kwargs
         assert set_kwargs["source_key"] == "pending/vid123/0-clip-source.mp4"
-        # tight bounds: clip_start=10, clip_duration=3.0; source_start=0
-        # → trim_start_s = 10 - 0 = 10; trim_end_s = 10 + 3.0 - 0 = 13.0
-        assert set_kwargs["trim_start_s"] == pytest.approx(10.0)
+        # tight bounds: clip_start=11, clip_duration=2.0; source_start=0
+        # → trim_start_s = 11 - 0 = 11; trim_end_s = 11 + 2.0 - 0 = 13.0
+        assert set_kwargs["trim_start_s"] == pytest.approx(11.0)
         assert set_kwargs["trim_end_s"] == pytest.approx(13.0)
 
     @pytest.mark.asyncio

@@ -19,7 +19,7 @@ End-to-end (the frozen design contract, pr2-clip-localization-design.md):
   4. Gate: skip (keep stills) when it is not a throw, confidence < 0.55, or no
      release frame was found.
   5. Turn the release index back into a timestamp, compute a tight
-     ~3s clip window anchored entirely on release_ts, clamp to the chapter.
+     ~2s clip window anchored entirely on release_ts, clamp to the chapter.
   6. Re-use the already-downloaded video (ingest) or re-fetch it by
      ``youtube_video_id`` (backfill), cut + encode a small muted MP4, upload
      to MinIO under a deterministic key, and persist the bare key on the row.
@@ -69,14 +69,14 @@ logger = logging.getLogger(__name__)
 # artifact.
 _CLIP_CONFIDENCE_GATE = 0.55
 # Throw clip is anchored ENTIRELY on release_ts: the throw pane's job is the
-# throw MOTION, which completes within ~0.5-1.0s of release. The prior
-# implementation used `result_ts + 1.5s` for the tail, but result_ts is the
-# throw-timing prompt's "first visible wisp" (1.5-3.0s after release) — which
-# left 2-3s of useless post-motion tail (operator surfaced this on lineup
-# 7bd971c3 after PR #751 made the release frame accurate). The smoke / molly /
-# flash AFTER-the-throw is what the LANDING pane shows; the THROW pane should
-# end when the throw is done.
-_PRE_RELEASE_SECONDS = 2.0
+# throw MOTION (windup → release → follow-through), which spans ~0.4-0.9s
+# pre-release windup + ~0.5-1.0s post-release follow-through. Earlier 2.0s
+# lead-in showed ~1s of LOCKED AIM before windup — duplicating the AIM pane
+# and surfaced as "THROW clip ~1s too long" on lineup 7bd971c3 (2026-05-24).
+# Tail unchanged: prior `result_ts + 1.5s` was already replaced (PR #755) with
+# release-anchored 1.0s because result_ts is the "first visible wisp"
+# (1.5-3.0s after release) → bloom belongs in LANDING, not THROW.
+_PRE_RELEASE_SECONDS = 1.0
 _POST_RELEASE_SECONDS = 1.0
 # Below this the chapter-clamped window is unusable → skip.
 _ABSOLUTE_MIN_CLIP_SECONDS = 1.0

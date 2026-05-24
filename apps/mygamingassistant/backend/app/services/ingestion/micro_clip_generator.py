@@ -1,16 +1,18 @@
-"""Stand + Aim micro-clip generator — 1s looped clips for the storyboard.
+"""Stand + Aim micro-clip generator — short looped clips for the storyboard.
 
-PR6 introduced the 1-second STAND + AIM micro-clips replacing static stills.
+PR6 introduced the looped STAND + AIM micro-clips replacing static stills.
 Both panes are now content-aware (STAND: PR #763 / 2026-05-23; AIM
 follow-up: operator pushback 2026-05-24):
 
   - **AIM** is content-localized by ``_resolve_aim_ts`` (own Claude pass
     — see ``aim_timing_classifier`` + ``aim_localizer``). The 1.0s clip
-    is centred on ``aim_ts`` with an upper clamp at
-    ``release_ts − _AIM_POST_TS_BUFFER`` (0.3s).
+    is END-ANCHORED on ``aim_ts`` — runs ``[aim_ts − 1.0, aim_ts]``.
+    Centering bled into pre-utility frames on chapters where the narrator
+    drew the utility shortly before locking aim — surfaced as the
+    "knife/holstered start" complaint on lineup 7bd971c3 (2026-05-24).
   - **STAND** is content-localized by ``_resolve_stand_ts`` (own Claude
     pass — see ``stand_timing_classifier`` + ``stand_localizer``). The
-    2.0s clip is centred on ``stand_ts`` with the same upper clamp.
+    2.0s clip is centred on ``stand_ts``.
 
 Fixed-offset heuristics (STAND: release_ts − 3.0s; AIM: release_ts −
 0.8s) were abandoned — bumping the constants did not generalise across
@@ -81,18 +83,14 @@ from app.services.ingestion.youtube_fetcher import (
 
 logger = logging.getLogger(__name__)
 
-# Per-pane micro-clip durations. STAND is 2.0s (operator-tuned: 1.0s cut
-# off mid-stance). AIM stays at 1.0s — longer bleeds into the THROW pane's
-# window.
+# STAND is 2.0s centered on ``stand_ts``; AIM is 1.0s end-anchored on
+# ``aim_ts``. STAND's upper end is clamped to ``release_ts − _STAND_POST_TS_BUFFER``;
+# AIM needs no release buffer because aim_ts is guaranteed pre-windup by the
+# AIM localizer's pre-windup pad. See module docstring.
 _STAND_MICRO_CLIP_SECONDS = 2.0
 _AIM_MICRO_CLIP_SECONDS = 1.0
-# Both clips are CENTRED on the localized timestamp (half-window each
-# side). Upper end clamped to ``release_ts − _*_POST_TS_BUFFER`` so a
-# late-in-window pick never bleeds into the windup.
 _STAND_HALF_CLIP_SECONDS = 1.0
 _STAND_POST_TS_BUFFER = 0.3
-_AIM_HALF_CLIP_SECONDS = 0.5
-_AIM_POST_TS_BUFFER = 0.3
 # Minimum acceptable clamped duration. Below: skip rather than ship a sliver.
 _MIN_CLIP_SECONDS = 0.5
 
@@ -176,11 +174,11 @@ def _compute_micro_bounds(
 ) -> Optional[tuple[float, float]]:
     """Return ``(clip_start, clip_duration)`` seconds, or None if too short.
 
-    Starts AT the anchor timestamp (the classifier-chosen frame), runs
-    forward for ``clip_seconds``, clamped to the chapter end. The
-    important property is that ``clip_start == anchor_ts`` exactly — that
-    is what keeps the AIM clip's first frame identical to the existing aim
-    still, so the persisted ``aim_anchor_x/y`` overlay stays pixel-accurate.
+    Starts AT the anchor timestamp, runs forward for ``clip_seconds``,
+    clamped to the chapter end. Callers compose the semantic anchor (start
+    vs end vs center) by choosing what they pass as ``anchor_ts`` —
+    STAND passes ``stand_ts − half`` (centered); AIM passes
+    ``aim_ts − clip_seconds`` (end-anchored on aim_ts).
 
     Returns None when the clamped duration is shorter than
     ``_MIN_CLIP_SECONDS`` (anchor too close to chapter end). Caller skips
@@ -218,10 +216,12 @@ async def generate_micro_clips_for_lineup(
     Anchor derivation (both panes content-aware as of 2026-05-24):
       - AIM_TS   = ``_resolve_aim_ts(...)`` — content-aware AIM-localizer
         cached on ``lineup.aim_ts`` + ``lineup.aim_localized_at``. AIM
-        clip CENTERED on ``aim_ts`` with upper clamp at ``release_ts − 0.3``.
+        clip END-ANCHORED on ``aim_ts`` (``[aim_ts − 1.0, aim_ts]``) so
+        the loop closes on the classifier-chosen frame.
       - STAND_TS = ``_resolve_stand_ts(...)`` — content-aware STAND-localizer
         cached on ``lineup.stand_ts`` + ``lineup.stand_localized_at``.
-        STAND clip CENTERED on ``stand_ts`` with the same upper clamp.
+        STAND clip CENTERED on ``stand_ts`` with upper clamp at
+        ``release_ts − 0.3``.
 
     Fixed-offset heuristics (STAND: release_ts − 3.0s; AIM: release_ts
     − 0.8s) were abandoned — the constants could not generalise across
@@ -463,15 +463,13 @@ async def generate_micro_clips_for_lineup(
                 ),
             }
         else:
+            # End-anchor: clip = [aim_ts - 1.0, aim_ts]. See module docstring.
             aim_outcome = await _cut_upload_persist_one_side(
                 db, lineup, video_id, local_video,
-                anchor_ts=aim_ts - _AIM_HALF_CLIP_SECONDS,
+                anchor_ts=aim_ts - _AIM_MICRO_CLIP_SECONDS,
                 clip_seconds=_AIM_MICRO_CLIP_SECONDS,
                 chapter_start=chapter_start,
-                chapter_end=min(
-                    chapter_end,
-                    (release_ts or chapter_end) - _AIM_POST_TS_BUFFER,
-                ),
+                chapter_end=min(chapter_end, aim_ts),
                 side="aim",
                 key_fn=pending_aim_clip_key,
                 persist_fn=lineup_repo.set_aim_clip_url,

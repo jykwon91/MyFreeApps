@@ -119,9 +119,10 @@ class TestComputeMicroBounds:
         start, dur = _compute_micro_bounds(21.5, 10.0, 22.0, clip_seconds=1.0)
         assert start + dur <= 22.0 + 1e-9
 
-    def test_start_equals_anchor_for_overlay_accuracy(self):
-        """The first frame of the AIM clip MUST equal the anchor still —
-        otherwise the persisted aim_anchor_x/y pixel coords don't apply."""
+    def test_start_equals_anchor(self):
+        """``_compute_micro_bounds`` preserves the caller-supplied anchor as
+        the clip start (unless clamped by chapter_start). Callers compose the
+        semantic anchor (start / center / end) by choosing what they pass."""
         start, _dur = _compute_micro_bounds(24.0, 10.0, 40.0, clip_seconds=1.0)
         assert start == pytest.approx(24.0)
 
@@ -639,12 +640,11 @@ async def test_offset_persisted_when_wider_source_exists():
         patch(f"{_MOD}._resolve_aim_ts", AsyncMock(return_value=(14.2, [], ""))),
     ):
         # release_ts = 15.0; STAND_TS = mocked 12.0; AIM_TS = mocked 14.2.
-        # Both clips are CENTERED on their localized timestamps:
-        #   STAND clip_start = 12.0 - 1.0 = 11.0  (half-window 1.0s)
-        #   AIM   clip_start = 14.2 - 0.5 = 13.7  (half-window 0.5s)
+        # STAND is CENTERED:  clip_start = 12.0 - 1.0 = 11.0  (half-window 1.0s)
+        # AIM   is END-ANCHORED: clip_start = 14.2 - 1.0 = 13.2  (clip ends at aim_ts)
         # wider_source_start = 10 - 2 = 8.0.
         #   STAND offset = 11.0 - 8.0 = 3.0
-        #   AIM   offset = 13.7 - 8.0 = 5.7
+        #   AIM   offset = 13.2 - 8.0 = 5.2
         await generate_micro_clips_for_lineup(
             db, lineup,
             chapter_start=10.0, chapter_end=40.0,
@@ -662,11 +662,11 @@ async def test_offset_persisted_when_wider_source_exists():
         "offset = 11.0 - 8.0 = 3.0. "
         f"Got setter call: args={stand_call.args} kwargs={stand_call.kwargs}"
     )
-    assert _offset_kwarg(aim_call) == pytest.approx(5.7), (
+    assert _offset_kwarg(aim_call) == pytest.approx(5.2), (
         "AIM offset must equal clip_start - wider_source_start. "
-        "AIM clip is CENTERED on aim_ts: clip_start = "
-        "aim_ts - _AIM_HALF_CLIP_SECONDS (0.5) = 14.2 - 0.5 = 13.7. "
-        "wider_source_start = 8.0. offset = 13.7 - 8.0 = 5.7. "
+        "AIM clip is END-ANCHORED on aim_ts: clip_start = "
+        "aim_ts - _AIM_MICRO_CLIP_SECONDS (1.0) = 14.2 - 1.0 = 13.2. "
+        "wider_source_start = 8.0. offset = 13.2 - 8.0 = 5.2. "
         f"Got setter call: args={aim_call.args} kwargs={aim_call.kwargs}"
     )
 
