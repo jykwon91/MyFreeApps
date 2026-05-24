@@ -1,20 +1,23 @@
 """Stand + Aim micro-clip generator — 1s looped clips for the storyboard.
 
 PR6 introduced the 1-second STAND + AIM micro-clips replacing static stills.
-Both panes anchor on ``release_ts`` from the throw-localizer's dense pass
-(operator-tuned 2026-05-23/24):
+PR #763 (operator-tuned 2026-05-23) split the two anchors:
 
   - **AIM** anchors on ``release_ts − _AIM_PRE_RELEASE_SECONDS`` (0.8s
     before release) → 1.0s clip ``[release − 0.8, release + 0.2]``.
-  - **STAND** anchors on ``release_ts − _STAND_PRE_RELEASE_SECONDS`` (3.0s
-    before release) → 2.0s clip ``[release − 3.0, release − 1.0]``.
+  - **STAND** is content-localized by ``_resolve_stand_ts`` (own Claude
+    pass — see ``stand_timing_classifier`` + ``stand_localizer``). The 2.0s
+    clip is centred on the localized timestamp with an upper clamp at
+    ``release_ts − _STAND_POST_TS_BUFFER`` (0.3s) so a late pick stays
+    clear of the windup.
 
-The earlier grid-stand_idx anchor was abandoned because the 9-frame grid
-sampling across the whole chapter (~3.5s spacing) frequently picked the
-walk-up or windup frame instead of the settled stance. The throw-localizer's
-dense pass produces a reliable release_ts (THROW + LANDING already depend
-on it), so deriving STAND from it gives a stable "settled at spot ~3s
-before the throw" window that ends before the windup begins.
+The earlier ``release_ts − 3.0s`` fixed-offset STAND anchor was abandoned
+because the THROW and STAND moments are visually near-identical at that
+distance and the heuristic shape (constant pre-release offset) could not
+generalise across lineups. Before that, the grid-stand_idx anchor failed
+for the same reason as the grid-aim anchor: ~3.5s spacing across the
+chapter frequently picked the walk-up or windup frame rather than the
+settled stance.
 
 Two entry paths share one contract:
 
@@ -69,6 +72,7 @@ from app.services.ingestion.frame_extractor import (
 from app.services.ingestion.micro_clip_helpers import (
     _cut_upload_persist_one_side,
     _resolve_release_ts_via_throw_localizer,
+    _resolve_stand_ts,
 )
 from app.services.ingestion.youtube_fetcher import (
     VideoDownloadError,
@@ -86,12 +90,12 @@ _AIM_MICRO_CLIP_SECONDS = 1.0
 # spans [release − 0.8s, release + 0.2s] — locked-aim with a tiny throw-
 # initiation peek as a natural end-cue.
 _AIM_PRE_RELEASE_SECONDS = 0.8
-# Seconds BEFORE release_ts the STAND clip starts at. The 2.0s STAND clip
-# spans [release − 3.0s, release − 1.0s] — "settled at the spot, ready
-# to throw", ending before the windup so the player is shown stationary
-# at the throwing position. Tuned far enough back that even a fast
-# windup (~0.5-0.8s) does not bleed into the clip.
-_STAND_PRE_RELEASE_SECONDS = 3.0
+# STAND clip is centred on the localized ``stand_ts`` (half-window each
+# side → full duration 2*_STAND_HALF_CLIP_SECONDS). Upper end is clamped
+# to ``release_ts − _STAND_POST_TS_BUFFER`` so a late-in-window pick
+# never bleeds into the windup.
+_STAND_HALF_CLIP_SECONDS = 1.0
+_STAND_POST_TS_BUFFER = 0.3
 # Minimum acceptable clamped duration. Below: skip rather than ship a sliver.
 _MIN_CLIP_SECONDS = 0.5
 
@@ -222,14 +226,19 @@ async def generate_micro_clips_for_lineup(
 ) -> MicroClipGenerationResult:
     """Cut + persist STAND and AIM micro-clips for *lineup*.
 
-    Both panes anchor on ``release_ts``:
-      - STAND_TS = ``release_ts - _STAND_PRE_RELEASE_SECONDS`` (3.0s before)
+    Anchor derivation:
       - AIM_TS   = ``release_ts - _AIM_PRE_RELEASE_SECONDS`` (0.8s before)
+      - STAND_TS = ``_resolve_stand_ts(...)`` — content-aware STAND-localizer
+        (own Claude pass), cached on ``lineup.stand_ts`` +
+        ``lineup.stand_localized_at``. STAND clip is CENTERED on
+        ``stand_ts`` with an upper clamp at ``release_ts − 0.3``.
 
-    The earlier grid-based STAND anchor was abandoned because the 9-frame
-    grid sampling across the whole chapter (~3.5s spacing) frequently
-    picked the walk-up or windup frame rather than the settled stance.
-    Same critique that retired the grid AIM anchor; see module docstring.
+    The earlier ``release_ts − _STAND_PRE_RELEASE_SECONDS`` (3.0s) fixed-
+    offset heuristic was abandoned (operator 2026-05-23: "the stand and
+    the throw are nearly identical"); bumping the constant did not
+    generalise — the heuristic shape was wrong. The grid-based STAND anchor
+    before that suffered from ~3.5s spacing frequently picking the walk-up
+    or windup frame rather than the settled stance.
 
     Two entry paths:
 
@@ -329,13 +338,10 @@ async def generate_micro_clips_for_lineup(
                     reasoning=f"video re-fetch failed: {exc}",
                 )
 
-        # ---- Resolve release_ts (shared anchor source for both sides) -----
-        # STAND and AIM both derive from a single ``release_ts``:
-        #   - STAND_TS = release_ts − _STAND_PRE_RELEASE_SECONDS
-        #   - AIM_TS   = release_ts − _AIM_PRE_RELEASE_SECONDS
-        # When release_ts is unavailable, both sides skip with the same
-        # structured reason — fabricating an unreliable STAND (the abandoned
-        # grid pick) is worse than the panes gracefully showing their stills.
+        # ---- Resolve release_ts (AIM anchor + STAND search upper bound) ----
+        # AIM derives from release_ts (release_ts − _AIM_PRE_RELEASE_SECONDS).
+        # STAND uses its own localizer (``_resolve_stand_ts``) bounded by
+        # release_ts. When release_ts is unavailable, both sides skip.
         stand_ts: Optional[float] = None
         aim_ts: Optional[float] = None
         shared_skip_reason: Optional[str] = None
@@ -383,9 +389,15 @@ async def generate_micro_clips_for_lineup(
             # release timestamp. Skip the Claude call.
             release_ts = float(precomputed_release_ts)
 
+        stand_err_codes: list[str] = []
         if release_ts is not None:
-            stand_ts = release_ts - _STAND_PRE_RELEASE_SECONDS
             aim_ts = release_ts - _AIM_PRE_RELEASE_SECONDS
+            stand_ts, stand_err_codes, stand_r = await _resolve_stand_ts(
+                db, lineup, local_video,
+                chapter_start=chapter_start, release_ts=release_ts,
+            )
+            if stand_r:
+                reasoning = f"{reasoning}\n{stand_r}".strip() if reasoning else stand_r
 
         # Hard fail-out when release_ts resolution had a structured error
         # (Claude API failure on the backfill throw-localizer call). Both
@@ -399,20 +411,13 @@ async def generate_micro_clips_for_lineup(
                 reasoning=reasoning,
             )
 
-        # Compute the wider-source start the served 1s clip's offset will be
-        # measured against. The micro-clip "shift window" editor (PR2) reads
-        # ``stand_clip_offset_s`` / ``aim_clip_offset_s`` to position its
-        # slider inside the SHARED wider source ``clip_url_original`` — micro
-        # widening reuses the chapter's existing wider source bytes rather
-        # than cutting a per-pane original. The offset is only meaningful
-        # when a real wider source exists for THIS lineup (clip_url_original
-        # set AND distinct from clip_url — if they match, clip_generator fell
-        # back to the legacy "*_url_original = *_url" posture and there's no
-        # wider source to index into). Settings used here MUST match the
-        # settings used to cut clip_url_original — in the ingest path they
-        # always do because both runs happen in the same orchestrator pass;
-        # in the standalone backfill the call site doesn't persist offsets so
-        # this branch is bypassed.
+        # Wider-source start used to compute ``*_clip_offset_s`` for the
+        # PR2 shift-window editor. Only meaningful when ``clip_url_original``
+        # exists and differs from ``clip_url`` (otherwise no wider source to
+        # index into). Settings here MUST match those used when
+        # ``clip_url_original`` was cut — true in the ingest path (same
+        # orchestrator pass); the standalone backfill doesn't persist offsets
+        # so the branch is bypassed.
         wider_source_start_s: float | None = None
         if (
             lineup.clip_url_original is not None
@@ -426,25 +431,29 @@ async def generate_micro_clips_for_lineup(
             )
             wider_source_start_s = source_start
 
-        # ---- Cut + upload + persist each side independently ---------------
-        # release_ts None at this point means the shared resolution skipped
-        # cleanly (no Claude API error, just no release frame). Both sides
-        # short-circuit with the SAME skip reason — they share input.
-        # Downstream per-side independence (ffmpeg / MinIO / DB commit)
-        # still runs through _cut_upload_persist_one_side when ts is set.
+        # ---- Cut + upload + persist each side independently ----------------
+        # When ts is None each side short-circuits to skipped/failed with its
+        # own reason; per-side independence (ffmpeg/MinIO/DB) is enforced
+        # downstream inside ``_cut_upload_persist_one_side``.
         if stand_ts is None:
             stand_outcome = {
-                "status": "skipped",
-                "error_codes": [],
-                "skip_reason": shared_skip_reason,
+                "status": "failed" if stand_err_codes else "skipped",
+                "error_codes": stand_err_codes,
+                "skip_reason": (
+                    None if stand_err_codes
+                    else (shared_skip_reason or "stand_localizer_no_demo")
+                ),
             }
         else:
             stand_outcome = await _cut_upload_persist_one_side(
                 db, lineup, video_id, local_video,
-                anchor_ts=stand_ts,
+                anchor_ts=stand_ts - _STAND_HALF_CLIP_SECONDS,
                 clip_seconds=_STAND_MICRO_CLIP_SECONDS,
                 chapter_start=chapter_start,
-                chapter_end=chapter_end,
+                chapter_end=min(
+                    chapter_end,
+                    (release_ts or chapter_end) - _STAND_POST_TS_BUFFER,
+                ),
                 side="stand",
                 key_fn=pending_stand_clip_key,
                 persist_fn=lineup_repo.set_stand_clip_url,

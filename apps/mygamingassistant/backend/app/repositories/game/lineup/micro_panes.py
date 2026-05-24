@@ -1,5 +1,10 @@
 """Micro-pane writers — the STAND + AIM micro-clip columns and their stills.
 
+Also owns the STAND-localizer's persistence (``set_stand_localization``):
+the localized ``stand_ts`` + ``stand_localized_at`` "we tried" marker
+share the micro-pane lifecycle (both are cleared together when the
+operator wants a fresh localize).
+
 Sibling to ``throw_pane`` / ``landing_pane``. STAND and AIM are the two
 upper panes of the 4-pane storyboard; each has both a screenshot still
 (operator-Replace surface) and a 1-second micro-clip (PR6 motion upgrade).
@@ -11,6 +16,9 @@ The one-column commit posture exists for a reason — see each setter's
 docstring. Do NOT refactor into a multi-column transaction.
 """
 from __future__ import annotations
+
+from datetime import datetime
+from typing import Optional
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -152,6 +160,41 @@ async def set_stand_screenshot_url(
     presigning happens at read time in ``lineup_service._build_read``.
     """
     lineup.stand_screenshot_url = stand_screenshot_key
+    try:
+        await db.flush()
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
+    return lineup
+
+
+async def set_stand_localization(
+    db: AsyncSession,
+    lineup: Lineup,
+    *,
+    stand_ts: Optional[float],
+    stand_localized_at: datetime,
+) -> Lineup:
+    """Persist the STAND-localizer's verdict onto a lineup row.
+
+    Writes both columns in one commit. The pair is conceptually atomic:
+    ``stand_localized_at`` is the "we tried" marker; ``stand_ts`` is the
+    verdict (a float for a found demo, NULL for a confident "no demo").
+    Writing only one would leave the cache half-set and the next backfill
+    re-running Claude or misreading the result.
+
+    Operator NULLs BOTH columns to force a re-localize. NULLing only one
+    is undefined-behaviour from the lineup's perspective — the backfill
+    treats it as "never tried" via the ``stand_localized_at`` check.
+
+    Transaction ownership lives here in the repo per PR #687/#695 —
+    callers (micro_clip_helpers._resolve_stand_ts) never call
+    db.commit(). A failure rolls back both columns and propagates so the
+    caller can surface a structured error.
+    """
+    lineup.stand_ts = stand_ts
+    lineup.stand_localized_at = stand_localized_at
     try:
         await db.flush()
         await db.commit()

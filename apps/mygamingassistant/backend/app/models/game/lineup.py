@@ -156,6 +156,26 @@ class Lineup(Base):
     stand_clip_offset_s: Mapped[float | None] = mapped_column(Float, nullable=True)
     aim_clip_offset_s: Mapped[float | None] = mapped_column(Float, nullable=True)
 
+    # Content-aware STAND anchor (PR following #762). Seconds-into-source-video
+    # timestamp of the frame the narrator DEMONSTRATES the throwing position
+    # (where to stand), resolved by the STAND-localizer's two-stage Claude
+    # pass. Cached so re-cutting the STAND clip after an offset tweak doesn't
+    # re-burn Claude — operator NULLs both ``stand_ts`` AND ``stand_localized_at``
+    # to force a re-localize.
+    #
+    # ``stand_localized_at`` distinguishes "never tried" (NULL) from "tried,
+    # no demo found" (set, ``stand_ts`` NULL). Without it the backfill loop
+    # would re-run Claude on no-demo lineups every run.
+    #
+    # When ``stand_ts`` is set, the STAND clip is cut as a window centred on
+    # it (see :mod:`micro_clip_generator`). When ``stand_localized_at`` is set
+    # but ``stand_ts`` is NULL, the STAND clip is skipped — the stand still
+    # remains the pane's display.
+    stand_ts: Mapped[float | None] = mapped_column(Float, nullable=True)
+    stand_localized_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
     # Normalized 0-1 crosshair position on the aim screenshot
     aim_anchor_x: Mapped[float | None] = mapped_column(Float, nullable=True)
     aim_anchor_y: Mapped[float | None] = mapped_column(Float, nullable=True)
