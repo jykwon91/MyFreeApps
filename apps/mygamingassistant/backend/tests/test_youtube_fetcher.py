@@ -25,6 +25,7 @@ from app.services.ingestion.youtube_fetcher import (
     VideoMeta,
     YouTubeFetchError,
     _apply_browser_cookies,
+    _apply_cookies_file,
     download_video,
     fetch_video_detail,
     list_videos,
@@ -484,3 +485,142 @@ class TestCookiesWireUp:
             await list_videos(_make_source())
 
         assert "cookiesfrombrowser" not in constructor.call_args.args[0]
+
+
+# ---------------------------------------------------------------------------
+# Cookies-file helper + wire-up
+#
+# YOUTUBE_COOKIES_FILE is the Windows-safe alternative to the browser-cookies
+# path. Chrome 127+ App-Bound Encryption broke yt-dlp's DPAPI extraction;
+# a Netscape cookies.txt file exported from a live session sidesteps DPAPI.
+#
+# Precedence rule: when both settings are set, cookiefile wins (yt-dlp
+# prefers it at request time). The browser option stays in the dict as
+# harmless side-cargo — both can coexist without conflict.
+# ---------------------------------------------------------------------------
+
+class TestApplyCookiesFile:
+    def test_empty_setting_is_noop(self, monkeypatch: pytest.MonkeyPatch):
+        monkeypatch.setattr(settings, "youtube_cookies_file", "")
+        opts = {"quiet": True}
+        out = _apply_cookies_file(opts)
+        assert "cookiefile" not in out
+        assert out is opts  # same dict, no defensive copy
+
+    def test_injects_cookiefile_for_existing_path(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ):
+        cookie_file = tmp_path / "cookies.txt"
+        cookie_file.write_text("# Netscape HTTP Cookie File\n")
+        monkeypatch.setattr(settings, "youtube_cookies_file", str(cookie_file))
+        out = _apply_cookies_file({"quiet": True})
+        assert out["cookiefile"] == str(cookie_file)
+
+    def test_missing_path_warns_and_is_noop(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+        caplog: pytest.LogCaptureFixture,
+    ):
+        import logging
+        missing = str(tmp_path / "nonexistent-cookies.txt")
+        monkeypatch.setattr(settings, "youtube_cookies_file", missing)
+        with caplog.at_level(logging.WARNING, logger="app.services.ingestion.youtube_fetcher"):
+            out = _apply_cookies_file({"quiet": True})
+        assert "cookiefile" not in out
+        assert any("nonexistent-cookies.txt" in r.message for r in caplog.records)
+
+    def test_file_and_browser_both_coexist_in_dict(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ):
+        """Both options can be present simultaneously — yt-dlp prefers cookiefile
+        at request time, browser option is harmless side-cargo."""
+        cookie_file = tmp_path / "cookies.txt"
+        cookie_file.write_text("# Netscape HTTP Cookie File\n")
+        monkeypatch.setattr(settings, "youtube_cookies_file", str(cookie_file))
+        monkeypatch.setattr(settings, "youtube_cookies_from_browser", "firefox")
+
+        opts = _apply_cookies_file(_apply_browser_cookies({}))
+        assert opts["cookiefile"] == str(cookie_file)
+        assert opts["cookiesfrombrowser"] == ("firefox",)
+
+
+class TestCookiesFileWireUp:
+    """Each yt-dlp call site MUST pass its options dict through
+    _apply_cookies_file. These tests fail if a future refactor drops
+    the wrapper from any one of them."""
+
+    @pytest.mark.asyncio
+    async def test_list_videos_passes_cookiefile(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ):
+        cookie_file = tmp_path / "cookies.txt"
+        cookie_file.write_text("# Netscape HTTP Cookie File\n")
+        monkeypatch.setattr(settings, "youtube_cookies_file", str(cookie_file))
+        mock_ydl = MagicMock()
+        mock_ydl.__enter__ = MagicMock(return_value=mock_ydl)
+        mock_ydl.__exit__ = MagicMock(return_value=False)
+        mock_ydl.extract_info = MagicMock(return_value={"id": "PLempty", "entries": []})
+
+        constructor = MagicMock(return_value=mock_ydl)
+        with patch("yt_dlp.YoutubeDL", constructor):
+            await list_videos(_make_source())
+
+        assert constructor.call_args.args[0].get("cookiefile") == str(cookie_file)
+
+    @pytest.mark.asyncio
+    async def test_fetch_video_detail_passes_cookiefile(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ):
+        cookie_file = tmp_path / "cookies.txt"
+        cookie_file.write_text("# Netscape HTTP Cookie File\n")
+        monkeypatch.setattr(settings, "youtube_cookies_file", str(cookie_file))
+        mock_ydl = MagicMock()
+        mock_ydl.__enter__ = MagicMock(return_value=mock_ydl)
+        mock_ydl.__exit__ = MagicMock(return_value=False)
+        mock_ydl.extract_info = MagicMock(return_value={
+            "id": "vid000", "title": "x", "duration": 1, "upload_date": "20260101",
+            "channel": "c", "description": "", "chapters": [],
+        })
+
+        constructor = MagicMock(return_value=mock_ydl)
+        with patch("yt_dlp.YoutubeDL", constructor):
+            await fetch_video_detail("vid000")
+
+        assert constructor.call_args.args[0].get("cookiefile") == str(cookie_file)
+
+    @pytest.mark.asyncio
+    async def test_download_video_passes_cookiefile(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ):
+        cookie_file = tmp_path / "cookies.txt"
+        cookie_file.write_text("# Netscape HTTP Cookie File\n")
+        monkeypatch.setattr(settings, "youtube_cookies_file", str(cookie_file))
+        (tmp_path / "vid001.mp4").write_bytes(b"x")
+        mock_ydl = MagicMock()
+        mock_ydl.__enter__ = MagicMock(return_value=mock_ydl)
+        mock_ydl.__exit__ = MagicMock(return_value=False)
+        mock_ydl.download = MagicMock(return_value=None)
+
+        constructor = MagicMock(return_value=mock_ydl)
+        with patch("yt_dlp.YoutubeDL", constructor):
+            await download_video("vid001", download_dir=tmp_path)
+
+        assert constructor.call_args.args[0].get("cookiefile") == str(cookie_file)
+
+    @pytest.mark.asyncio
+    async def test_no_cookiefile_key_when_setting_empty(
+        self, monkeypatch: pytest.MonkeyPatch
+    ):
+        """Empty YOUTUBE_COOKIES_FILE must NOT add cookiefile to the opts."""
+        monkeypatch.setattr(settings, "youtube_cookies_file", "")
+        mock_ydl = MagicMock()
+        mock_ydl.__enter__ = MagicMock(return_value=mock_ydl)
+        mock_ydl.__exit__ = MagicMock(return_value=False)
+        mock_ydl.extract_info = MagicMock(return_value={"id": "PLempty", "entries": []})
+
+        constructor = MagicMock(return_value=mock_ydl)
+        with patch("yt_dlp.YoutubeDL", constructor):
+            await list_videos(_make_source())
+
+        assert "cookiefile" not in constructor.call_args.args[0]
