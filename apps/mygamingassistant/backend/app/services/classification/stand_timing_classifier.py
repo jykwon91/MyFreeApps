@@ -165,42 +165,62 @@ NOT exclusions (allowed for STAND, unlike the throw-timing classifier):
     See NON-UTILITY HELD-WEAPON DISAMBIGUATION above for the motion
     qualifier.
 
-STRUCTURAL ANCHOR — MIDDLE OF SETTLED-STANCE (operator audit 2026-05-25)
-STAND is a frame from the MIDDLE of the settled-stance phase — NOT the
-edges of it. A ~1 second clip is cut centred on the picked frame
-downstream, and an edge-of-phase pick lets that clip extend into the
-preceding walk-up OR the following look-up-to-aim transition. Both
-distort what the viewer is supposed to learn: the FIXED starting
-position before any movement.
+STRUCTURAL ANCHOR — ARRIVAL INSTANT (operator audit 2026-05-25, replaces
+the prior "MIDDLE OF SETTLED-STANCE" rule which anchored too late):
 
-Prefer a frame where:
-  - The narrator is stationary at the throwing spot AND has been
-    stationary for AT LEAST one prior frame in the candidate set.
-  - The next frame in the candidate set is ALSO stationary at the same
-    spot — the camera has not yet started tilting up to aim.
-  - The camera is held still (not panning or sweeping mid-arrival).
-  - The chapter-intro overlay, if any, has faded out, transitioned, or
-    no longer dominates the frame.
+STAND is the ARRIVAL INSTANT — the FIRST frame where the player has
+arrived at the throwing position AND the camera has come to rest. A
+~3 second clip is cut END-ANCHORED on the picked frame downstream
+(``clip = [stand_ts − 3.0s, stand_ts]``), so the picked frame is the
+FINAL frame of the clip and the pre-side captures the LAST seconds of
+approach. The walk-up content on the pre-side is the VALUE — it shows
+the path, the environmental cues, and the final alignment that the
+operator needs for pixel-perfect positioning. An "already-settled"
+pick (well past arrival) defeats the purpose of the STAND pane: the
+clip then shows the player standing still with no information about
+how to navigate to that exact spot.
 
-REJECT these edge-of-phase picks:
-  - FIRST settled frame right after walk-up arrival (the prior frame
-    shows motion). A clip centred here catches the walk-up on the
-    pre-side, blurring "where to stand" with "how to get there".
-  - LAST settled frame before the camera tilts up to aim (the next
-    frame shows camera motion). A clip centred here catches the
-    look-up on the post-side, blurring stand with aim.
+The visual signal is a motion → stationary TRANSITION:
+  - PRIOR frame(s) show APPROACH motion: walking forward, view-bobbing,
+    panning toward the destination, the camera angle still changing
+    as the player navigates to the spot.
+  - The PICKED frame is the FIRST frame where the camera is STATIONARY
+    on the throwing-location framing — the player has fully arrived,
+    motion has stopped, the composition has stabilized.
+  - The NEXT frame(s) (if any) show the player still at the same spot
+    — confirm arrival by checking that motion has genuinely ended, not
+    just paused mid-stride.
 
-If the candidate set only contains edges (no stationary frames on
-BOTH sides of any pick), accept the cleanest available — partial
-information is still better than skipping the demo.
+PICK the FIRST settled frame after the walk-up. DO NOT skip past it
+into "middle of settled stance" — that anchors too late and the
+downstream end-anchored clip misses the approach.
+
+DISQUALIFIED PICKS (search elsewhere if a candidate matches):
+  - SHOWING FROM AFAR: a frame where the player is looking at the
+    throwing spot from a distance (panning a wider area, showing the
+    target on the map, narrating the overview) is NOT arrival. Arrival
+    requires the player to BE at the spot, with the surrounding
+    geometry framed as the throwing position.
+  - MID-WALK PAUSE: a frame where the player is briefly stationary
+    mid-approach (waiting for animation, checking the minimap) but the
+    NEXT frame shows resumed motion is NOT arrival. Genuine arrival
+    has continued stillness.
+  - DEEP-SETTLED: a frame several seconds past the actual arrival,
+    where the player has been stationary for a while AND has started
+    tilting up to line up the throw. Search BACKWARD for the FIRST
+    settled frame.
+
+If the chapter has NO walk-up (the player is already at the spot at
+chapter_start — common for fast-cut tutorial styles), set
+``stand_index = 1`` (the first candidate is the arrival).
 
 WHEN MULTIPLE DEMONSTRATIONS EXIST
-The narrator may show the spot more than once (afar → walking up →
-settled at spot → small re-adjustment). Per the STRUCTURAL ANCHOR
-above, prefer a MIDDLE-of-phase frame from the LONGEST contiguous
-settled-stance segment. Length of stationary stance dominates: a 4-
-frame settled segment with a clean middle frame is preferable to a
-2-frame settled segment, even if the 2-frame segment came first.
+The narrator may visit the throwing position multiple times (afar
+preview → walk-up → arrival → small re-adjustment → continued
+positioning before the throw). Pick the LATEST arrival — the one
+immediately preceding the throw demonstration. Earlier visits /
+previews are not the operator's target; the final arrival before
+windup is.
 
 WHEN NO DEMONSTRATION EXISTS
 Some chapters skip the stand-demo entirely (narrator walks to spot, then

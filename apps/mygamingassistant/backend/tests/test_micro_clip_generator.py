@@ -133,9 +133,12 @@ class TestMicroClipSecondsForSide:
     single shared constant — losing the split here re-introduces the
     "STAND cuts off too soon" complaint."""
 
-    def test_stand_is_two_seconds(self):
-        assert _micro_clip_seconds_for_side("stand") == pytest.approx(2.0)
-        assert _STAND_MICRO_CLIP_SECONDS == pytest.approx(2.0)
+    def test_stand_is_three_seconds(self):
+        # Post 2026-05-25 audit: STAND is 3.0s end-anchored (was 2.0s
+        # centered). Operator wants the LAST 3s of approach ending at
+        # arrival, not 2s centered on settled stance.
+        assert _micro_clip_seconds_for_side("stand") == pytest.approx(3.0)
+        assert _STAND_MICRO_CLIP_SECONDS == pytest.approx(3.0)
 
     def test_aim_is_one_second(self):
         assert _micro_clip_seconds_for_side("aim") == pytest.approx(1.0)
@@ -640,10 +643,12 @@ async def test_offset_persisted_when_wider_source_exists():
         patch(f"{_MOD}._resolve_aim_ts", AsyncMock(return_value=(14.2, [], ""))),
     ):
         # release_ts = 15.0; STAND_TS = mocked 12.0; AIM_TS = mocked 14.2.
-        # STAND is CENTERED:  clip_start = 12.0 - 1.0 = 11.0  (half-window 1.0s)
-        # AIM   is END-ANCHORED: clip_start = 14.2 - 1.0 = 13.2  (clip ends at aim_ts)
+        # STAND is END-ANCHORED (post 2026-05-25 audit — was CENTERED):
+        #   anchor_ts = 12.0 - 3.0 = 9.0; clamped UP to chapter_start (10.0)
+        #   so clip_start = 10.0, duration shrinks to 2.0s.
+        # AIM is END-ANCHORED: clip_start = 14.2 - 1.0 = 13.2 (ends at aim_ts)
         # wider_source_start = 10 - 2 = 8.0.
-        #   STAND offset = 11.0 - 8.0 = 3.0
+        #   STAND offset = 10.0 - 8.0 = 2.0
         #   AIM   offset = 13.2 - 8.0 = 5.2
         await generate_micro_clips_for_lineup(
             db, lineup,
@@ -654,12 +659,13 @@ async def test_offset_persisted_when_wider_source_exists():
 
     stand_call = set_stand_mock.await_args
     aim_call = set_aim_mock.await_args
-    assert _offset_kwarg(stand_call) == pytest.approx(3.0), (
+    assert _offset_kwarg(stand_call) == pytest.approx(2.0), (
         "STAND offset must equal clip_start - wider_source_start. "
-        "STAND clip is CENTERED on stand_ts: clip_start = "
-        "stand_ts - _STAND_HALF_CLIP_SECONDS (1.0) = 12.0 - 1.0 = 11.0. "
-        "wider_source_start = chapter_start - PRE = 10.0 - 2.0 = 8.0. "
-        "offset = 11.0 - 8.0 = 3.0. "
+        "STAND clip is END-ANCHORED on stand_ts (post 2026-05-25 audit, "
+        "was CENTERED): anchor_ts = stand_ts - _STAND_MICRO_CLIP_SECONDS "
+        "(3.0) = 12.0 - 3.0 = 9.0; CLAMPED UP to chapter_start (10.0), "
+        "so clip_start = 10.0. wider_source_start = chapter_start - PRE "
+        "= 10.0 - 2.0 = 8.0. offset = 10.0 - 8.0 = 2.0. "
         f"Got setter call: args={stand_call.args} kwargs={stand_call.kwargs}"
     )
     assert _offset_kwarg(aim_call) == pytest.approx(5.2), (
