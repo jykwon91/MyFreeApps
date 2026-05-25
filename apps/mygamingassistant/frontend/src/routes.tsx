@@ -1,5 +1,6 @@
 import { type RouteObject } from "react-router-dom";
 import GameGrid from "@/pages/GameGrid";
+import LineupDetail from "@/pages/LineupDetail";
 import LineupPackages from "@/pages/LineupPackages";
 import LineupUpload from "@/pages/LineupUpload";
 import LiveCs2 from "@/pages/LiveCs2";
@@ -42,6 +43,10 @@ export const routes: RouteObject[] = [
       { index: true, element: <GameGrid /> },
       { path: "/packages", element: <LineupPackages /> },
       { path: "/live/cs2", element: <LiveCs2 /> },
+      // Direct-link for a single lineup — public for accepted lineups;
+      // operator can also reach pending_review/hidden via the admin fallback.
+      // Must come BEFORE /:gameSlug so "/lineups/..." doesn't match as a game slug.
+      { path: "/lineups/:id", element: <LineupDetail /> },
       { path: "/:gameSlug", element: <MapGrid /> },
       { path: "/:gameSlug/:mapSlug", element: <MapPage /> },
 
