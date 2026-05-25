@@ -94,26 +94,99 @@ Do NOT return stand_index on a frame matching ANY of:
     is the target, not the location.
   - MID-WINDUP / MID-THROW: utility being pulled out, throw animation
     started, or projectile airborne.
+  - CHAPTER-INTRO / WALK-IN with a large opaque chapter-naming overlay
+    on screen — that is the walk-in phase, not yet the settled stand
+    demo. See CHAPTER-INTRO PHASE EXCLUSION below.
   - REPLAY / KILL-CAM / SCOREBOARD / MENU.
   - PURE TALKING-HEAD / FACECAM-DOMINANT frame with the spot not visible.
+
+NON-UTILITY HELD-WEAPON DISAMBIGUATION
+Many lineup videos open with the narrator running TO the spot with a
+knife, melee weapon, sidearm, or primary firearm in hand — these are
+walk-in frames, NOT settled stand demos. A true stand demo typically has
+the narrator stationary at the throwing spot with the chapter's utility
+equipped (or already preparing to equip it).
+
+  - REJECT any frame whose first-person held weapon is a BLADE, KNIFE,
+    MELEE weapon, SIDEARM, or PRIMARY firearm AND the narrator is in
+    motion (running, sliding, jumping). Judge by the SHAPE and HELD
+    POSE — cosmetic skins (gold, ornate, animated "inspector"-grade
+    finishes in either CS2 or Valorant) do NOT convert a non-utility
+    model into a utility model.
+  - EXCEPTION: a stationary frame at the spot with a knife / non-utility
+    still equipped is allowed when the composition unambiguously
+    emphasizes the LOCATION (wide framing of cover, floor markings,
+    chapter banner naming the position). The disqualifier is motion,
+    not the held-weapon class.
+
+  Concrete examples (NON-EXHAUSTIVE — recognize the visual PATTERN, not
+  the exact name):
+    - CS2 non-utility models: knives like karambit, M9 bayonet, butterfly,
+      bowie, huntsman, flip, navaja, ursus — including ornate gold /
+      marble fade / case-hardened / doppler inspector skins. Also: any
+      held primary (AK, M4, AWP) or sidearm (Glock, USP, Deagle).
+    - Valorant non-utility models: knife / melee slot weapons including
+      Reaver, Sovereign, Prime, Champions, Glitchpop, RGX, and similar
+      premium / battle-pass knife skins.
+
+CHAPTER-INTRO PHASE EXCLUSION
+Many lineup videos open each chapter with chapter-naming graphics —
+text overlays, lower-thirds, animated labels, title cards, callout
+boxes. The stand demo is structurally AFTER this intro phase, once the
+narrator has arrived at the spot.
+
+  - When a chapter-naming graphic is rendered in-frame at full opacity,
+    treat the frame as walk-in and prefer a LATER frame in which the
+    overlay has faded, shrunk, transitioned out, or been replaced.
+  - Chapter-naming overlay text is NOT a STAND callout. The overlay
+    RESTATES the chapter title (lineup destination / utility number /
+    site label) as METADATA. Do NOT pick a frame just because the
+    overlay text matches the chapter's subject — overlay text matches
+    by construction. True STAND HUD callouts are anchored to a specific
+    location in the world (an arrow / circle / marker drawn over the
+    spot); chapter-naming graphics float in screen space.
+  - NOT ALL videos use chapter-naming graphics. ABSENCE of an overlay
+    is NEUTRAL — do not penalize a frame for lacking one. Format
+    VARIES BY CREATOR.
+
+  Concrete examples of chapter-intro graphics (NON-EXHAUSTIVE):
+    - Large overlay text naming the lineup, e.g. ``SMOKE #N``,
+      ``B SITE - MARKET WINDOW``, ``MARKET WINDOW - B SITE``,
+      ``LINEUP 12 / A SHORT``.
+    - Numbered cards, animated lower-thirds, title-card transitions.
+    - Persistent lower-third callouts that fade after walk-in.
 
 NOT exclusions (allowed for STAND, unlike the throw-timing classifier):
   - Map-overview / minimap-zoom frames — STRONG candidates when they pin
     the position. Pick them when they are the clearest "this is the
     spot" frame in the set.
-  - Title-card / chapter-banner frames IF the banner names the position
-    ("MARKET WINDOW — B SITE") AND the underlying view shows the spot.
-  - Knife-only / utility-holstered frames — STAND doesn't require
-    utility-in-hand.
+  - Stationary knife-in-hand / utility-holstered frames AT THE SPOT —
+    STAND doesn't require utility-in-hand once the narrator is stopped.
+    See NON-UTILITY HELD-WEAPON DISAMBIGUATION above for the motion
+    qualifier.
+
+STRUCTURAL ANCHOR — EARLIEST SETTLED-STANCE
+STAND is the EARLIEST settled-stance frame after the narrator has
+finished the walk-up to the spot. Prefer the FIRST frame where:
+  - The narrator is stationary at the throwing spot (no running /
+    sliding / jumping motion across adjacent frames).
+  - The camera is held still (not panning or sweeping mid-arrival).
+  - The chapter-intro overlay, if any, has faded out, transitioned, or
+    no longer dominates the frame.
+Do NOT pick frames where the narrator is still adjusting position or
+where the camera is panning — those are part of the walk-in, not the
+settled stand.
 
 WHEN MULTIPLE DEMONSTRATIONS EXIST
-The narrator may show the spot more than once (afar → walking up → at
-spot). Prefer the LATEST stand-demo frame that PRECEDES any aim-windup
-activity — the latest demo is freshest in the viewer's memory and is
-closest to where the viewer will actually be standing. If the latest is
-partial (player already starting to look up to aim) and an earlier
-framing is cleaner, prefer the LATEST CLEAN one — quality outranks
-recency within the pre-aim-windup set.
+The narrator may show the spot more than once (afar → walking up →
+settled at spot → small re-adjustment). Per the STRUCTURAL ANCHOR
+above, prefer the EARLIEST settled-stance frame that follows the
+walk-up — NOT the latest pre-windup frame. The first clean settled
+view is the canonical stand demo; later frames are typically the
+narrator already starting to look up for the aim. Quality still
+outranks earliness: if the earliest settled frame is partial (camera
+still drifting, overlay still opaque), skip to the next clean settled
+frame.
 
 WHEN NO DEMONSTRATION EXISTS
 Some chapters skip the stand-demo entirely (narrator walks to spot, then

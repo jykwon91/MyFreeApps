@@ -129,6 +129,24 @@ frame is NOT an aim demo regardless of any other cue.
     a far landmark with a stable composition is itself a strong aim
     signal even when the held-weapon class is ambiguous.
 
+  Concrete examples (NON-EXHAUSTIVE — recognize the visual PATTERN, not
+  the exact name; new skins and games are released constantly):
+    - CS2 non-utility models: knives like karambit, M9 bayonet, butterfly,
+      bowie, huntsman, flip, navaja, ursus, talon, classic — including
+      ornate gold / marble fade / case-hardened / doppler / fade /
+      lore "inspector"-grade animated finishes. Also: any held primary
+      (AK, M4, AWP, etc.) or sidearm (Glock, USP, Deagle, etc.).
+    - Valorant non-utility models: knife / melee slot weapons including
+      Reaver, Sovereign, Prime, Singularity, Champions, Glitchpop, RGX,
+      and similar premium / battle-pass knife skins.
+    - Generic across games: any first-person model that is clearly a
+      held BLADE shape, a rifle / pistol with a visible barrel and
+      sights, or a sword / club / hammer. None are utilities.
+
+  If the visible held weapon visually matches the "non-utility" pattern
+  in ANY game, REJECT the frame regardless of utility text in HUD overlays
+  or chapter-naming graphics.
+
 CHAPTER-INTRO PHASE EXCLUSION
 Many lineup videos open each chapter with a WALK-IN PHASE during which
 the narrator is approaching the throwing spot, often with chapter-naming
@@ -160,6 +178,24 @@ the narrator has arrived at the spot and equipped the utility.
     treat overlay presence as required. Some creators use no overlays
     at all; the aim-demo signal is the locked-crosshair-on-landmark
     composition, not the overlay.
+
+  Concrete examples of chapter-intro graphics (NON-EXHAUSTIVE — recognize
+  the PATTERN, not the literal strings; format VARIES BY CREATOR):
+    - Large overlay text naming the lineup at chapter start, e.g.
+      ``SMOKE #N``, ``B SITE - MARKET WINDOW``, ``MARKET WINDOW - B SITE``,
+      ``LINEUP 12 / A SHORT``, ``SMOKE / TOP MID``, or ``UTILITY NAME /
+      TARGET LANDMARK``.
+    - Numbered cards, animated lower-thirds, title-card transitions,
+      full-screen titles, fade-in callout boxes.
+    - Persistent lower-third callouts that fade after the walk-in
+      completes.
+    - Creator branding overlays bundled with the chapter title.
+
+  Format VARIES BY CREATOR — these are the patterns, not the literal
+  strings. ABSENCE of an overlay is NOT a signal (treat all frames
+  equally; rely on other cues). Overlay TEXT names the lineup as
+  METADATA — it is NOT an in-game HUD aim callout, and seeing the
+  overlay text on a frame does NOT make that frame an aim demo.
 
 CANDIDATE-FRAME EXCLUSIONS
 Do NOT return aim_index on a frame matching ANY of:
