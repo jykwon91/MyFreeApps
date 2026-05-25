@@ -102,40 +102,64 @@ POSITIVE AIM CUES (ranked — primary cue outranks the others)
      frame. A crosshair-on-landmark frame with no visible hands IS
      a valid aim-demo composition.
 
-CRITICAL — KNIFE DISAMBIGUATION
-A KNIFE (karambit, butterfly, bayonet, M9, huntsman, gut, flip, falchion,
-shadow daggers, ursus, navaja, stiletto, talon, classic, paracord,
-survival, nomad, skeleton) IN ANY SKIN is NEVER a grenade. Knives include
-exotic, gold, marble-fade, case-hardened, doppler, fade, slaughter,
-crimson-web, tiger-tooth, lore, autotronic, and "inspector" finishes
-that can look unusual or ornate — these are STILL knives, not utility.
+CRITICAL — NON-UTILITY HELD-WEAPON DISAMBIGUATION
+The held weapon in the narrator's first-person view EITHER belongs to the
+utility class the chapter teaches (the deployable being demonstrated —
+grenade, projectile, ability orb, deployable gadget, etc.) OR it does not.
+If it does not, the narrator has not yet equipped the utility and the
+frame is NOT an aim demo regardless of any other cue.
 
-  - A CS2 SMOKE GRENADE is a short gray cylinder with a green stripe
-    near the top and a metallic pull-ring; it is NOT a long blade.
-  - A CS2 FLASH is a small black/grey cylinder with red markings.
-  - A CS2 HE is olive-green and round-ended.
-  - A CS2 MOLOTOV/INCENDIARY is a clear bottle with visible liquid.
-  - A KARAMBIT is a curved blade with a finger ring; gold/marble-fade
-    variants are still curved blades, not smoke grenades.
-  - A KNIFE is held with the blade visible — long, sharp, single edge
-    (or curved). If the visible weapon is a BLADE of any kind, REJECT
-    the frame regardless of other cues. The narrator has not yet
-    equipped the utility; this is walk-up territory.
+  - REJECT any frame whose first-person held weapon is a BLADE, KNIFE,
+    MELEE weapon, SIDEARM, or PRIMARY firearm — the visual cue is a
+    long edge, a held hilt, a barrel/sights, or an off-hand swing.
+    Cosmetic skins (ornate, gold, gemmed, animated, "inspector"-grade
+    finishes in either CS2 or Valorant) do NOT convert a melee or
+    firearm model into a utility model — judge by the SHAPE and HELD
+    POSE of the model, not by its color or texture.
+  - The utility itself can be many shapes across games: short cylinders,
+    round-ended canisters, glass bottles with visible liquid, ability
+    orbs, sky-call beacons, deployable gadgets, projectile-launcher
+    barrels held one-handed in ready pose. The unifying cue is that
+    the held object is the chapter's UTILITY class, held in ready pose,
+    not stowed and not airborne. Use the game/HUD cues above to
+    identify which utility class is expected; if the held object is
+    clearly NOT in that class (e.g., a blade), reject.
+  - When uncertain whether the held object is the chapter's utility,
+    fall back to the other positive aim cues — a locked crosshair on
+    a far landmark with a stable composition is itself a strong aim
+    signal even when the held-weapon class is ambiguous.
 
-CHAPTER-INTRO EXCLUSION
-Frames featuring a full-opacity intro overlay — typically lower-left
-text like "SMOKE #N", "SITE - LANDMARK", "B SITE - MARKET WINDOW",
-"FLASH #N - SHORT", or other "chapter title" callouts — are WALK-IN /
-INTRODUCTION cues, NOT aim demos. The aim demo is structurally AFTER
-these overlays have faded and the narrator has equipped the utility.
+CHAPTER-INTRO PHASE EXCLUSION
+Many lineup videos open each chapter with a WALK-IN PHASE during which
+the narrator is approaching the throwing spot, often with chapter-naming
+graphics on screen — text overlays, lower-thirds, animated labels,
+title cards, callout boxes, or full-screen titles that NAME the lineup
+(site, landmark, utility number, etc.). Format and position vary widely
+by creator. The aim demo is structurally AFTER this walk-in phase, once
+the narrator has arrived at the spot and equipped the utility.
 
-  - If the chapter title text is rendered in-frame at full opacity,
-    REJECT the frame. The narrator is still walking up to the spot.
-  - Prefer frames where the intro overlay is absent, faded, or
-    transitioned out.
-  - The aim demo arrives a few seconds AFTER the intro overlay clears;
-    don't let the overlay's "SITE - LANDMARK" text bias you into
-    picking the intro frame just because the chapter title matches.
+  - When a chapter-naming graphic is rendered in-frame at full opacity,
+    treat the frame as walk-in and prefer a LATER frame in which the
+    overlay has faded, shrunk, transitioned out, or been replaced.
+    This holds even if the narrator's view is already settled in that
+    frame — the overlay's full-opacity presence marks the walk-in
+    phase regardless of camera motion.
+  - Chapter-naming overlay text is NOT a HUD aim callout. The overlay
+    RESTATES the chapter title (the lineup's destination / utility
+    number / site label); it is metadata about which lineup is being
+    introduced, not a "AIM HERE" annotation pointing at a target
+    pixel. Do NOT count its presence as a positive aim cue, and do
+    NOT pick a frame just because the overlay text matches the
+    chapter's subject — the overlay text matches by construction.
+    True aim HUD callouts are anchored to a specific landmark in
+    the world (an arrow/circle/marker drawn over a pixel of the
+    scene); chapter-naming graphics float in screen space and name
+    the chapter, not the aim target.
+  - NOT ALL videos use chapter-naming graphics. ABSENCE of an overlay
+    is NEUTRAL — do not penalize a frame for lacking one and do not
+    treat overlay presence as required. Some creators use no overlays
+    at all; the aim-demo signal is the locked-crosshair-on-landmark
+    composition, not the overlay.
 
 CANDIDATE-FRAME EXCLUSIONS
 Do NOT return aim_index on a frame matching ANY of:
@@ -146,10 +170,12 @@ Do NOT return aim_index on a frame matching ANY of:
     surroundings (wall behind, cover, floor markings) — that is the
     STAND demo, not AIM. Subject is the location, not the target.
   - MAP OVERLAY / MINIMAP ZOOM: those are STAND demos, not AIM.
-  - KNIFE-IN-HAND / UTILITY-HOLSTERED: any visible blade → not yet
-    aiming. The narrator may be walking up; wait for utility-out
-    frames. (See CRITICAL — KNIFE DISAMBIGUATION above; do not
-    misread an ornate knife skin as a grenade.)
+  - KNIFE-IN-HAND / NON-UTILITY-IN-HAND / UTILITY-HOLSTERED: any
+    visible blade, melee weapon, sidearm, or primary firearm → not
+    yet aiming. The narrator may be walking up; wait for frames where
+    the chapter's utility class is in hand. (See CRITICAL — NON-UTILITY
+    HELD-WEAPON DISAMBIGUATION above; ornate cosmetic skins do not
+    convert a non-utility model into a utility model.)
   - WALKING / CAMERA SWEEPING: view is in motion AND crosshair is
     not held on a single landmark. A still camera tilted up at a
     sky/tower landmark is NOT "camera sweeping" — it is the aim
