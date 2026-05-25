@@ -203,7 +203,6 @@ async def localize_aim_with_refinement(
     chapter_start: float,
     release_ts: float,
     chapter_title: Optional[str],
-    utility_hint: Optional[str] = None,
 ) -> RefinedAimTiming:
     """Localise the AIM demonstration with optional dense-pass refinement.
 
@@ -215,8 +214,6 @@ async def localize_aim_with_refinement(
             bound of the pre-windup search window — AIM demos must
             precede the windup which itself precedes the release.
         chapter_title: Per-call context surfaced to Claude.
-        utility_hint: Optional utility slug from a prior grid
-            classification at confidence > 0.6.
     """
     chapter_duration = float(release_ts) - float(chapter_start)
 
@@ -267,7 +264,6 @@ async def localize_aim_with_refinement(
         frame_timestamps=coarse_timestamps,
         chapter_title=chapter_title,
         chapter_duration=chapter_duration,
-        utility_hint=utility_hint,
     )
 
     skip_stage = _should_refine(coarse)
@@ -340,7 +336,6 @@ async def localize_aim_with_refinement(
         frame_timestamps=dense_timestamps,
         chapter_title=chapter_title,
         chapter_duration=chapter_duration,
-        utility_hint=utility_hint,
     )
 
     if (

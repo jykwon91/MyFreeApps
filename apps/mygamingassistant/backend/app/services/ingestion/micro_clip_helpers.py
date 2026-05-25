@@ -257,7 +257,6 @@ async def _resolve_aim_ts(
             chapter_start=float(chapter_start),
             release_ts=float(release_ts),
             chapter_title=lineup.chapter_title or "",
-            utility_hint=None,
         )
     except FrameExtractionError as exc:
         logger.warning(
