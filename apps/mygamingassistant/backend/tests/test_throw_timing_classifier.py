@@ -455,3 +455,109 @@ class TestThrowTimingCandidateExclusions:
         system = client.messages.create.call_args.kwargs["system"]
         system_text = "\n".join(b["text"] for b in system)
         assert "skipped F3 title-card" in system_text
+
+
+class TestThrowTimingReleaseAnchor:
+    """Prompt-presence tests for the RELEASE-INSTANT ANCHOR section.
+
+    Per the 2026-05-25 operator audit of the dev DB's 12 lineups, 4 throw
+    clips showed wrong-frame content (#1 / #5 / #6 / #10): two showed the
+    bloom-onset instead of the throw arc ("ANTI-LANDING"), one ended before
+    the throw happened ("ANTI-PRE-WINDUP"). The pre-audit prompt listed
+    "throw-animation follow-through" as a release cue, which licenses the
+    model to pick post-release frames; the audit-driven prompt demotes that
+    cue and elevates HUD-slot decrement + hand-empty as the primary signals.
+    If a refactor accidentally drops any of these blocks the dominant
+    failure mode comes back, so fail loud here.
+    """
+
+    @pytest.mark.asyncio
+    async def test_system_prompt_includes_release_instant_anchor(self):
+        """The RELEASE-INSTANT ANCHOR section must establish hand-empty +
+        HUD-slot-decrement as the primary release cues."""
+        _, client = await _call(
+            {"is_lineup_throw": True, "release_index": 1, "result_index": 2,
+             "confidence": 0.6, "reasoning": "x"},
+        )
+        system = client.messages.create.call_args.kwargs["system"]
+        system_text = "\n".join(b["text"] for b in system)
+        assert "RELEASE-INSTANT ANCHOR" in system_text
+        # Both primary cues must be present by name so the model knows which
+        # signal to anchor on when the HUD is occluded.
+        assert "HUD GRENADE-SLOT DECREMENT" in system_text
+        assert "HAND-EMPTY AFTER ARM EXTENSION" in system_text
+
+    @pytest.mark.asyncio
+    async def test_system_prompt_demotes_follow_through_cue(self):
+        """The pre-audit "throw-animation follow-through" wording was the
+        suspected root cause for #1 / #6 / #10's "shows landing" failures
+        — it licensed the model to pick post-release frames. The new prompt
+        MUST explicitly DO-NOT-USE it as a standalone release cue."""
+        _, client = await _call(
+            {"is_lineup_throw": True, "release_index": 1, "result_index": 2,
+             "confidence": 0.6, "reasoning": "x"},
+        )
+        system = client.messages.create.call_args.kwargs["system"]
+        system_text = "\n".join(b["text"] for b in system)
+        # The literal "DO NOT use" phrasing is the explicit demotion — if a
+        # future refactor collapses the warning back into a plain bullet,
+        # the model loses the anti-follow-through guard.
+        assert "DO NOT use" in system_text
+        assert "throw-animation follow-through" in system_text
+        assert "projectile arc visible" in system_text
+
+    @pytest.mark.asyncio
+    async def test_system_prompt_includes_anti_landing_confusion(self):
+        """The dominant audit failure mode (#1, #6): release picked at bloom
+        onset instead of hand-empty. The ANTI-LANDING CONFUSION block must
+        explicitly tell the model to search BACKWARD when smoke / flame /
+        flash / debris is visible in the world on a candidate frame."""
+        _, client = await _call(
+            {"is_lineup_throw": True, "release_index": 1, "result_index": 2,
+             "confidence": 0.6, "reasoning": "x"},
+        )
+        system = client.messages.create.call_args.kwargs["system"]
+        system_text = "\n".join(b["text"] for b in system)
+        assert "ANTI-LANDING CONFUSION" in system_text
+        # Specific phrasing that tells the model what to DO when it sees the
+        # smoke — search backward, not just "don't pick the bloom".
+        assert "Search BACKWARD" in system_text
+        # The reason is load-bearing — the model needs to understand WHY
+        # picking the bloom is wrong (clip shifts into result territory).
+        assert "bloom belongs on result_index" in system_text
+
+    @pytest.mark.asyncio
+    async def test_system_prompt_includes_anti_pre_windup(self):
+        """The opposite failure mode (#5): release picked at pre-windup
+        when the utility was still in hand. The ANTI-PRE-WINDUP block must
+        tell the model to search FORWARD when the utility is still being
+        held / charged / aimed."""
+        _, client = await _call(
+            {"is_lineup_throw": True, "release_index": 1, "result_index": 2,
+             "confidence": 0.6, "reasoning": "x"},
+        )
+        system = client.messages.create.call_args.kwargs["system"]
+        system_text = "\n".join(b["text"] for b in system)
+        assert "ANTI-PRE-WINDUP" in system_text
+        assert "Search FORWARD" in system_text
+        # The "belongs on the AIM pane" line decouples the two panes
+        # explicitly — pre-windup content is AIM data, not THROW data.
+        assert "AIM pane, not the THROW clip" in system_text
+
+    @pytest.mark.asyncio
+    async def test_system_prompt_includes_straddle_rule(self):
+        """When the candidate set straddles release (frame N in-hand,
+        frame N+1 hand-empty + bloom visible), the model must pick N+1.
+        Without this rule the model can split-the-difference and return
+        frame N, shifting the clip earlier than the true release."""
+        _, client = await _call(
+            {"is_lineup_throw": True, "release_index": 1, "result_index": 2,
+             "confidence": 0.6, "reasoning": "x"},
+        )
+        system = client.messages.create.call_args.kwargs["system"]
+        system_text = "\n".join(b["text"] for b in system)
+        assert "STRADDLE RULE" in system_text
+        # The clip-window justification ("1.0s of pre-release coverage") is
+        # what tells the model it's safe to pick the slightly-late frame —
+        # the wind-up isn't lost.
+        assert "1.0s of pre-release coverage" in system_text

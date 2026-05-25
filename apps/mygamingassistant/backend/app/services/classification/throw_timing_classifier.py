@@ -96,11 +96,48 @@ Rules:
     - REPLAY / KILL-CAM / SCOREBOARD / MENU / MAP-OVERVIEW frame: not the
       live first-person main game view.
 - release_index: the 1-based frame where the utility is released, chosen from
-  frames that pass CANDIDATE-FRAME EXCLUSIONS. RELEASE cues: the projectile
-  is first airborne; the throw-animation follow-through; the HUD
-  grenade/ability slot empties. If no eligible frame catches the exact
-  release, choose the eligible frame immediately BEFORE the effect first
-  appears.
+  frames that pass CANDIDATE-FRAME EXCLUSIONS.
+  RELEASE-INSTANT ANCHOR (operator audit 2026-05-25, highest priority within
+  release-frame selection):
+    The release_index is the FIRST frame where the utility OBJECT has LEFT
+    the player's hand. Two equally reliable signals — use whichever is
+    visible in the candidate set; both together when both are visible:
+      - HUD GRENADE-SLOT DECREMENT: the utility icon in the bottom HUD (CS2:
+        bottom-right grenade slot; Valorant: ability key indicator) flips
+        from "ready / count-N" to "spent / count-(N-1) / icon-greyed". This
+        is a SHARP single-frame transition and is the most reliable cue
+        when the HUD is visible. Use it as the primary signal.
+      - HAND-EMPTY AFTER ARM EXTENSION: the throwing arm has finished its
+        forward swing and the hand is now EMPTY (no utility in or near it).
+        The projectile is already in the air or just out of frame. Pick the
+        FIRST such hand-empty frame — not later frames where the hand is
+        also empty but the result is already visible.
+    DO NOT use "throw-animation follow-through" or "projectile arc visible
+    mid-flight" as standalone release cues — both fire frames AFTER the
+    true release instant and shift the clip into result territory.
+  ANTI-LANDING CONFUSION (the dominant failure mode per operator audit):
+    If smoke / flames / flash-wash / HE-debris is visible IN THE WORLD on a
+    candidate frame, the release ALREADY HAPPENED some frames earlier — do
+    NOT pick the bloom-onset frame as release. Search BACKWARD in the
+    candidate set for the hand-empty / HUD-decrement transition. Picking
+    the bloom instant as release shifts the entire clip 0.3-1.5s into result
+    territory and the viewer sees the smoke unfurling instead of the throw
+    arc. The bloom belongs on result_index, NEVER on release_index.
+  ANTI-PRE-WINDUP (the opposite failure mode):
+    If the utility is STILL in the player's hand on a candidate frame — held
+    statically, charged-up, aimed-with, or mid-wind-up arc — that frame is
+    BEFORE release. Search FORWARD in the candidate set for the hand-empty
+    frame. The wind-up, the lined-up aim, and the charge-up belong on the
+    AIM pane, not the THROW clip.
+  STRADDLE RULE:
+    If the candidate set straddles release (frame N shows utility-in-hand;
+    frame N+1 shows hand-empty AND bloom already visible), pick frame N+1 —
+    it is the closest sample to the true release instant. The clip window
+    pulls 1.0s of pre-release coverage so the viewer still sees the wind-up
+    arc even when the chosen index is slightly past the literal release.
+  Fallback: if no eligible frame shows a hand-empty / HUD-decrement
+  transition, choose the eligible frame immediately BEFORE the smoke / flame
+  / flash / debris first appears in the world.
 - result_index: the 1-based frame where the RESULT is first clearly visible
   FROM THE THROWER'S LINEUP POSITION, chosen from frames that pass
   CANDIDATE-FRAME EXCLUSIONS. It MUST be at or after release_index — a
