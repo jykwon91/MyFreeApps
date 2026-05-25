@@ -389,7 +389,7 @@ export default function MapPage() {
           {/* Minimap sidebar — polygon clicks now set the zone filter via
               handleZoneClick. The active zone (if any) is highlighted. */}
           <aside
-            className="hidden lg:block w-[320px] shrink-0 p-3 border-r overflow-y-auto sticky top-10 h-[calc(100vh-40px)]"
+            className="hidden lg:block w-[440px] shrink-0 p-3 border-r overflow-y-auto sticky top-10 h-[calc(100vh-40px)]"
             aria-label="Map zone navigation"
           >
             <GlanceBoardMinimapSidebar

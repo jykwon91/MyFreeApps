@@ -36,10 +36,11 @@ interface GlanceBoardProps {
   showOperatorOverlays?: boolean;
 }
 
-const GRID_COLS_CLASS: Record<1 | 2 | 3, string> = {
+const GRID_COLS_CLASS: Record<1 | 2 | 3 | 4, string> = {
   1: "grid-cols-1",
   2: "grid-cols-2",
   3: "grid-cols-3",
+  4: "grid-cols-4",
 };
 
 // ---------------------------------------------------------------------------
