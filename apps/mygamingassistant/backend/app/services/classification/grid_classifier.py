@@ -93,6 +93,19 @@ Rules:
 - game_slug: follow CLASSIFICATION ORDER above — determine from visual cues first, then
   constrain all map/zone/utility slugs to entries tagged [<your game_slug>] in the
   reference list.
+- map_slug — CHAPTER-TITLE ZONE-NAME CONSISTENCY CHECK (operator audit 2026-05-25):
+  Before finalizing map_slug, scan the chapter title for words that match a
+  zone name or zone slug listed under EXACTLY ONE map of your chosen
+  game_slug. If a chapter-title word uniquely identifies a map (e.g.
+  "Jungle" is a Mirage zone but not a zone on any other CS2 map in the
+  reference list), the chosen map_slug MUST be that map. If matching
+  zones exist on multiple maps (e.g. "Catwalk" exists on both Mirage and
+  Dust2), use visual cues — minimap radar shape, signature architecture,
+  wall textures — to disambiguate, and explicitly state the visual cue
+  in reasoning. NEVER cite landmark names in reasoning unless they are
+  actually visible in the candidate frames; on-screen overlay text from
+  the YouTuber is metadata about the chapter, NOT evidence of which map
+  is being demonstrated.
 - best_stand_index: the frame showing the PLAYER POSITION at the throw spot.
   Feet/ground/local environment dominant; crosshair on a LOCAL reference
   (standing tile, doorframe, nearby corner), NOT the throw's alignment
