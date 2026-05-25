@@ -83,12 +83,10 @@ from app.services.ingestion.youtube_fetcher import (
 
 logger = logging.getLogger(__name__)
 
-# STAND is 3.0s END-ANCHORED on ``stand_ts`` (operator audit 2026-05-25:
-# stand_ts now means the ARRIVAL INSTANT — last walk-up frame — so the clip
-# should END there and reach BACKWARD to capture the approach + alignment
-# cues that teach pixel-perfect positioning). AIM is 1.0s end-anchored on
-# ``aim_ts``. Both panes are now end-anchored on their classifier-chosen
-# anchor frame; centering is no longer used.
+# STAND + AIM are both END-ANCHORED on their classifier-chosen anchor frame
+# (post 2026-05-25 audit — STAND was previously centered). stand_ts is now
+# the ARRIVAL INSTANT; clip = [stand_ts − 3.0, stand_ts] captures the
+# approach. aim_ts is the lock instant; clip = [aim_ts − 1.0, aim_ts].
 _STAND_MICRO_CLIP_SECONDS = 3.0
 _AIM_MICRO_CLIP_SECONDS = 1.0
 # Minimum acceptable clamped duration. Below: skip rather than ship a sliver.
@@ -438,12 +436,9 @@ async def generate_micro_clips_for_lineup(
                 ),
             }
         else:
-            # END-ANCHORED on stand_ts (the arrival instant — last walk-up
-            # frame). Clip = [stand_ts − 3.0, stand_ts], clamped to
-            # chapter_start. Mirrors AIM's end-anchored shape. No release
-            # buffer needed: stand_ts is the arrival, which is upstream of
-            # any windup; the localizer's _COARSE_PRE_RELEASE_PAD already
-            # keeps stand_ts below release_ts. See module docstring.
+            # END-ANCHORED on stand_ts (the arrival instant); the
+            # localizer's _COARSE_PRE_RELEASE_PAD already keeps stand_ts
+            # below release_ts, so no release-side clamp needed here.
             stand_outcome = await _cut_upload_persist_one_side(
                 db, lineup, video_id, local_video,
                 anchor_ts=stand_ts - _STAND_MICRO_CLIP_SECONDS,
