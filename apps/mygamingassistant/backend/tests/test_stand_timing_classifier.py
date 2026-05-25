@@ -156,10 +156,13 @@ class TestStandTimingPromptShape:
 
     @pytest.mark.asyncio
     async def test_system_prompt_includes_structural_anchor(self):
-        """STRUCTURAL ANCHOR — EARLIEST settled-stance — is the post-#768
-        determinism fix. Without it, STAND has too much latitude over
-        'any settled frame works' and the pick drifts later on re-runs
-        (7bd971c3: 258.99s → 260.4s on bulk re-backfill 2026-05-24)."""
+        """STRUCTURAL ANCHOR — MIDDLE of settled-stance — is the post-
+        2026-05-25 operator-audit fix. The prior EARLIEST rule put the
+        anchor at the edge of the settled phase; the downstream 1s clip
+        then caught walk-up motion on the pre-side. The new rule
+        requires the picked frame to be in the MIDDLE of the settled-
+        stance phase (stationary frames on BOTH sides) so the clip
+        stays stationary."""
         _, client = await _call(
             {"has_stand_demonstration": True, "stand_index": 1,
              "confidence": 0.6, "reasoning": "x"},
@@ -167,11 +170,14 @@ class TestStandTimingPromptShape:
         system = client.messages.create.call_args.kwargs["system"]
         system_text = "\n".join(b["text"] for b in system)
         assert "STRUCTURAL ANCHOR" in system_text
-        assert "EARLIEST" in system_text
-        # The "WHEN MULTIPLE DEMONSTRATIONS EXIST" guidance must also flip
-        # from latest-clean (the old AIM-style rule) to earliest-clean
-        # (per the structural anchor) so the two sections agree.
-        assert "EARLIEST settled-stance" in system_text
+        assert "MIDDLE" in system_text
+        assert "MIDDLE OF SETTLED-STANCE" in system_text
+        # WHEN MULTIPLE DEMONSTRATIONS EXIST must agree with the anchor
+        # — prefer the longest contiguous settled segment, NOT the first
+        # settled frame. Substring-checked piece-wise to survive prompt
+        # line-wrapping.
+        assert "LONGEST contiguous" in system_text
+        assert "Length of stationary stance dominates" in system_text
 
     @pytest.mark.asyncio
     async def test_system_prompt_includes_concrete_anchored_examples(self):

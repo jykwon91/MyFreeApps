@@ -227,14 +227,48 @@ NOT exclusions (allowed for AIM, unlike the stand-timing classifier):
     held up in ready pose.
   - Tight target-centric framings — wide framings are STAND, tight is AIM.
 
+STRUCTURAL ANCHOR — CROSSHAIR LOCK-ON INSTANT (operator audit 2026-05-25)
+AIM is the LOCK-ON INSTANT: the frame in the stable-aim phase where
+the crosshair has just finished sweeping to the target landmark and is
+held still. A ~1 second clip is cut centred on the picked frame
+downstream; the picked frame must be far enough from the windup
+boundary that the clip does NOT extend into windup, release,
+projectile flight, or landing.
+
+Prefer a frame where:
+  - Crosshair sweep is over and the crosshair is stationary on the
+    target landmark (zero crosshair velocity across this frame and
+    its neighbours).
+  - At LEAST one prior frame in the candidate set ALSO shows the
+    crosshair on the same landmark (lock is established, not just
+    transient).
+  - At LEAST one following frame in the candidate set ALSO shows the
+    crosshair on the same landmark with NO windup motion yet (the
+    utility is still in ready pose, body not rotating into throw).
+  - The composition is dominated by the target landmark, not by the
+    sweeping motion or the windup transition.
+
+REJECT these edge-of-phase picks:
+  - LATEST pre-windup frame: typically the crosshair is already
+    drifting OR the utility is just starting to pull back. A clip
+    centred here catches windup → release → landing on the post-side,
+    breaking the AIM pane (operator-observed defect, 2026-05-25:
+    several AIM clips showed the smoke landing).
+  - FIRST stable-aim frame right after the sweep: the prior frame
+    shows crosshair motion. A clip centred here catches the sweep on
+    the pre-side, blurring AIM with the look-up transition from STAND.
+
+If the candidate set only contains edges (no stable-aim frames on
+BOTH sides of any pick), accept the cleanest available — partial
+information is still better than skipping the demo.
+
 WHEN MULTIPLE DEMONSTRATIONS EXIST
-The narrator may show the aim more than once (initial show → small
-adjustment → final lock). Prefer the LATEST aim-demo frame that PRECEDES
-any windup motion — the latest demo is freshest in the viewer's memory
-and is closest to where the viewer will actually be aiming. If the latest
-is partial (crosshair drifting, utility starting to pull back) and an
-earlier framing is cleaner, prefer the LATEST CLEAN one — quality
-outranks recency within the pre-windup set.
+The narrator may show the aim more than once (initial glance → small
+adjustment → final lock). Prefer a MIDDLE-of-phase frame from the
+LONGEST contiguous lock-on segment — NOT the latest frame before
+windup. The longest lock segment is where the narrator was most
+confident in the aim and held it steady; downstream re-anchoring is
+most likely to succeed on that segment.
 
 WHEN NO DEMONSTRATION EXISTS
 Some chapters skip the aim-demo entirely (narrator stands and immediately
