@@ -473,8 +473,12 @@ class TestThrowTimingReleaseAnchor:
 
     @pytest.mark.asyncio
     async def test_system_prompt_includes_release_instant_anchor(self):
-        """The RELEASE-INSTANT ANCHOR section must establish hand-empty +
-        HUD-slot-decrement as the primary release cues."""
+        """The RELEASE-INSTANT ANCHOR section must establish
+        UTILITY-SEPARATION + HUD-slot-decrement as the primary release
+        cues. The UTILITY-SEPARATION wording (mid-swing, T4) replaced the
+        original "HAND-EMPTY AFTER ARM EXTENSION" wording (post-swing,
+        T5) on 2026-05-25 because the original anchored on the wrong
+        biomechanical instant — see #775 follow-up."""
         _, client = await _call(
             {"is_lineup_throw": True, "release_index": 1, "result_index": 2,
              "confidence": 0.6, "reasoning": "x"},
@@ -484,15 +488,49 @@ class TestThrowTimingReleaseAnchor:
         assert "RELEASE-INSTANT ANCHOR" in system_text
         # Both primary cues must be present by name so the model knows which
         # signal to anchor on when the HUD is occluded.
+        assert "UTILITY-SEPARATION FRAME" in system_text
         assert "HUD GRENADE-SLOT DECREMENT" in system_text
-        assert "HAND-EMPTY AFTER ARM EXTENSION" in system_text
+
+    @pytest.mark.asyncio
+    async def test_system_prompt_anchors_on_mid_swing_not_post_swing(self):
+        """The release instant is T4 (utility separates from hand,
+        mid-swing) NOT T5 (arm fully retracted, post-swing). The first
+        cut of this prompt (#775) used "the throwing arm has finished
+        its forward swing and the hand is now EMPTY" wording which
+        anchored on T5 and caused #11 Stairs's clip to catch only the
+        tail of the throw motion (operator audit 2026-05-25). The
+        replacement wording MUST explicitly distinguish mid-swing from
+        post-swing or the bug returns."""
+        _, client = await _call(
+            {"is_lineup_throw": True, "release_index": 1, "result_index": 2,
+             "confidence": 0.6, "reasoning": "x"},
+        )
+        system = client.messages.create.call_args.kwargs["system"]
+        system_text = "\n".join(b["text"] for b in system)
+        # Mid-swing positive cue
+        assert "MID-SWING" in system_text
+        # Explicit anti-post-swing language (substrings chosen to survive
+        # source-file line wrapping — the joined system_text has newlines
+        # mid-phrase where the source wraps)
+        assert "NOT after the swing has completed" in system_text
+        assert "FULLY RETRACTED" in system_text
+        # Forecast the bug if removed: clip catches only the tail of the
+        # throw motion. This phrase ties the rule to the audit so the
+        # warning survives copy-edits.
+        assert "tail of the throw motion" in system_text
+        # The explicit identity statement is the load-bearing instruction
+        # — "release instant IS separation, NOT post-swing rest"
+        assert "the SEPARATION" in system_text
+        assert "post-swing rest" in system_text
 
     @pytest.mark.asyncio
     async def test_system_prompt_demotes_follow_through_cue(self):
         """The pre-audit "throw-animation follow-through" wording was the
         suspected root cause for #1 / #6 / #10's "shows landing" failures
         — it licensed the model to pick post-release frames. The new prompt
-        MUST explicitly DO-NOT-USE it as a standalone release cue."""
+        MUST explicitly DO-NOT-USE it as a standalone release cue. The
+        follow-up (#775+1) also demotes "post-swing hand-at-rest pose"
+        which was the residual T5 anchor that #11 Stairs hit."""
         _, client = await _call(
             {"is_lineup_throw": True, "release_index": 1, "result_index": 2,
              "confidence": 0.6, "reasoning": "x"},
@@ -504,7 +542,11 @@ class TestThrowTimingReleaseAnchor:
         # the model loses the anti-follow-through guard.
         assert "DO NOT use" in system_text
         assert "throw-animation follow-through" in system_text
-        assert "projectile arc visible" in system_text
+        # Substring chosen to survive source-file line wrapping
+        assert "projectile arc" in system_text
+        # The post-swing demotion was added in the #775 follow-up after
+        # the original wording anchored the model on T5 instead of T4.
+        assert "post-swing hand-at-rest pose" in system_text
 
     @pytest.mark.asyncio
     async def test_system_prompt_includes_anti_landing_confusion(self):
@@ -524,7 +566,8 @@ class TestThrowTimingReleaseAnchor:
         assert "Search BACKWARD" in system_text
         # The reason is load-bearing — the model needs to understand WHY
         # picking the bloom is wrong (clip shifts into result territory).
-        assert "bloom belongs on result_index" in system_text
+        # Substring chosen to survive source-file line wrapping.
+        assert "NEVER on release_index" in system_text
 
     @pytest.mark.asyncio
     async def test_system_prompt_includes_anti_pre_windup(self):
@@ -559,5 +602,6 @@ class TestThrowTimingReleaseAnchor:
         assert "STRADDLE RULE" in system_text
         # The clip-window justification ("1.0s of pre-release coverage") is
         # what tells the model it's safe to pick the slightly-late frame —
-        # the wind-up isn't lost.
-        assert "1.0s of pre-release coverage" in system_text
+        # the wind-up isn't lost. Substring chosen to survive source-file
+        # line wrapping.
+        assert "1.0s of pre-release" in system_text
