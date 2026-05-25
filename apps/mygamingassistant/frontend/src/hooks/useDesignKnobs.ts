@@ -32,7 +32,7 @@ export const DEFAULT_KNOBS: DesignKnobs = {
   aimMode: "clip",
   showAimDot: true,
   landingMode: "clip",
-  tilesPerRow: 2,
+  tilesPerRow: 3,
 };
 
 function parsePaneMode(raw: string | null, fallback: PaneMode): PaneMode {

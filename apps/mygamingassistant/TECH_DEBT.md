@@ -331,6 +331,15 @@ backend/app/services/ingestion/clip_pipeline.py
 
 ## Low
 
+### [UX] No direct-link route for a single lineup - audit / share / debug workflow forced to scroll the map glance-board
+
+- **Severity:** Low
+- **Effort:** S (1-2 hours)
+- **Category:** UX / debuggability
+- **Location:** frontend/src/routes.tsx (no `/lineups/:id` path); frontend/src/pages/MapPage.tsx (no `?lineup=<id>` searchParam handling)
+- **Problem:** Lineup cards render only inside MapPage's glance-board (grouped/filtered). To reference a single lineup (during operator review, in a bug report, in chat with the assistant), you have to navigate to the right map page, possibly toggle filters, and scroll to find it by chapter title. Surfaced 2026-05-25 during full-12-lineup audit walk-through — the assistant had to point the operator at `/cs2/<map>?util=smoke&side=side_a` + a chapter-title hint instead of a deterministic URL.
+- **Recommendation:** Two viable shapes — (a) add a route `/lineups/:id` that renders a single GlanceBoardTile (or list-row in expanded state) in a centered shell, OR (b) add `?lineup=<id>` searchParam to MapPage that auto-scrolls + highlights the matching card. (a) is more direct-share-friendly; (b) preserves the surrounding map context. Pick (a) for the audit/share use case.
+
 ### [Architecture] Schemas - lineup_schemas.py is a 13-class catch-all (381 LOC) - Pydantic forms, response shapes, validators all inline
 
 - **Severity:** Low
