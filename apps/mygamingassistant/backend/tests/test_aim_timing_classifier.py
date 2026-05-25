@@ -297,18 +297,28 @@ class TestAimTimingPromptShape:
         assert "STAND-LOCATION-CENTERED" in system_text
 
     @pytest.mark.asyncio
-    async def test_system_prompt_says_latest_clean_pre_windup_demo_preferred(self):
-        """The 'prefer the latest CLEAN pre-windup demo' rule is the
-        anti-regression check — without it the model picks the EARLIEST
-        aim frame, which is often a quick reference glance rather than
-        the final settled aim the viewer should reproduce."""
+    async def test_system_prompt_anchors_on_crosshair_lock_on_instant(self):
+        """STRUCTURAL ANCHOR — CROSSHAIR LOCK-ON INSTANT — is the post-
+        2026-05-25 operator-audit fix. The prior 'LATEST pre-windup'
+        rule pushed the anchor against the windup boundary; the 1s
+        clip then extended into windup → release → flight → landing.
+        Operator observed several AIM clips showing the smoke landing.
+        The new rule anchors on a MIDDLE-of-phase frame in the LONGEST
+        contiguous lock-on segment, with stable-aim frames on BOTH
+        sides so the 1s clip stays in the lock-on phase."""
         _, client = await _call(
             {"has_aim_demonstration": True, "aim_index": 1,
              "confidence": 0.6, "reasoning": "x"},
         )
         system = client.messages.create.call_args.kwargs["system"]
         system_text = "\n".join(b["text"] for b in system)
-        assert "LATEST" in system_text
+        assert "STRUCTURAL ANCHOR" in system_text
+        assert "CROSSHAIR LOCK-ON INSTANT" in system_text
+        # Substring-checked piece-wise to survive prompt line-wrapping.
+        assert "LONGEST contiguous lock-on" in system_text
+        # The reject-edges block must call out the LATEST pre-windup
+        # picking error explicitly — that's the regression we're locking.
+        assert "LATEST pre-windup frame" in system_text
         assert "windup" in system_text.lower()
 
     @pytest.mark.asyncio

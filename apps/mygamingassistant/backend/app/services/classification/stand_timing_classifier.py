@@ -165,28 +165,42 @@ NOT exclusions (allowed for STAND, unlike the throw-timing classifier):
     See NON-UTILITY HELD-WEAPON DISAMBIGUATION above for the motion
     qualifier.
 
-STRUCTURAL ANCHOR — EARLIEST SETTLED-STANCE
-STAND is the EARLIEST settled-stance frame after the narrator has
-finished the walk-up to the spot. Prefer the FIRST frame where:
-  - The narrator is stationary at the throwing spot (no running /
-    sliding / jumping motion across adjacent frames).
+STRUCTURAL ANCHOR — MIDDLE OF SETTLED-STANCE (operator audit 2026-05-25)
+STAND is a frame from the MIDDLE of the settled-stance phase — NOT the
+edges of it. A ~1 second clip is cut centred on the picked frame
+downstream, and an edge-of-phase pick lets that clip extend into the
+preceding walk-up OR the following look-up-to-aim transition. Both
+distort what the viewer is supposed to learn: the FIXED starting
+position before any movement.
+
+Prefer a frame where:
+  - The narrator is stationary at the throwing spot AND has been
+    stationary for AT LEAST one prior frame in the candidate set.
+  - The next frame in the candidate set is ALSO stationary at the same
+    spot — the camera has not yet started tilting up to aim.
   - The camera is held still (not panning or sweeping mid-arrival).
   - The chapter-intro overlay, if any, has faded out, transitioned, or
     no longer dominates the frame.
-Do NOT pick frames where the narrator is still adjusting position or
-where the camera is panning — those are part of the walk-in, not the
-settled stand.
+
+REJECT these edge-of-phase picks:
+  - FIRST settled frame right after walk-up arrival (the prior frame
+    shows motion). A clip centred here catches the walk-up on the
+    pre-side, blurring "where to stand" with "how to get there".
+  - LAST settled frame before the camera tilts up to aim (the next
+    frame shows camera motion). A clip centred here catches the
+    look-up on the post-side, blurring stand with aim.
+
+If the candidate set only contains edges (no stationary frames on
+BOTH sides of any pick), accept the cleanest available — partial
+information is still better than skipping the demo.
 
 WHEN MULTIPLE DEMONSTRATIONS EXIST
 The narrator may show the spot more than once (afar → walking up →
 settled at spot → small re-adjustment). Per the STRUCTURAL ANCHOR
-above, prefer the EARLIEST settled-stance frame that follows the
-walk-up — NOT the latest pre-windup frame. The first clean settled
-view is the canonical stand demo; later frames are typically the
-narrator already starting to look up for the aim. Quality still
-outranks earliness: if the earliest settled frame is partial (camera
-still drifting, overlay still opaque), skip to the next clean settled
-frame.
+above, prefer a MIDDLE-of-phase frame from the LONGEST contiguous
+settled-stance segment. Length of stationary stance dominates: a 4-
+frame settled segment with a clean middle frame is preferable to a
+2-frame settled segment, even if the 2-frame segment came first.
 
 WHEN NO DEMONSTRATION EXISTS
 Some chapters skip the stand-demo entirely (narrator walks to spot, then
