@@ -365,3 +365,29 @@ class TestAimTimingPromptShape:
         # so the model doesn't require hands-in-frame to accept aim demos
         # where the narrator has tilted the camera up at a sky/tower target.
         assert "PRIMARY" in system_text
+
+    @pytest.mark.asyncio
+    async def test_system_prompt_includes_concrete_anchored_examples(self):
+        """Regression lock for the post-#768 quality drop (2026-05-24/25):
+        PR #768 abstracted the prompt to game/creator-agnostic language but
+        STRIPPED OUT all concrete pattern anchors (knife names, overlay-text
+        shapes). Re-backfilling 7bd971c3 the next day slid Claude back into
+        a walk-up frame (~261s vs the previously-good ~266s). The fix re-adds
+        concrete examples marked NON-EXHAUSTIVE so Claude has a token-level
+        pattern to match while the rule stays game-agnostic. If a future
+        refactor drops the anchors again, fail CI here."""
+        _, client = await _call(
+            {"has_aim_demonstration": True, "aim_index": 1,
+             "confidence": 0.6, "reasoning": "x"},
+        )
+        system = client.messages.create.call_args.kwargs["system"]
+        system_text = "\n".join(b["text"] for b in system)
+        # Knife-name anchors — CS2 karambit and Valorant Reaver are the
+        # two highest-coverage examples per game.
+        assert "karambit" in system_text.lower()
+        assert "Reaver" in system_text
+        # Anti-overfitting guard: examples must be explicitly tagged
+        # NON-EXHAUSTIVE so Claude doesn't reject novel knife skins.
+        assert "NON-EXHAUSTIVE" in system_text
+        # Format-variance guard for chapter-intro overlay text.
+        assert "VARIES BY CREATOR" in system_text
