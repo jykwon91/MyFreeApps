@@ -10,14 +10,14 @@
  *   aim=still|clip         — AIM pane content
  *   dot=on|off             — AIM anchor dot
  *   landing=clip|text      — LANDING pane content
- *   cols=1|2|3             — tiles per row in the grid
+ *   cols=1|2|3|4           — tiles per row in the grid
  */
 import { useCallback, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 
 export type PaneMode = "still" | "clip";
 export type LandingMode = "clip" | "text";
-export type TilesPerRow = 1 | 2 | 3;
+export type TilesPerRow = 1 | 2 | 3 | 4;
 
 export interface DesignKnobs {
   standMode: PaneMode;
@@ -32,7 +32,7 @@ export const DEFAULT_KNOBS: DesignKnobs = {
   aimMode: "clip",
   showAimDot: true,
   landingMode: "clip",
-  tilesPerRow: 3,
+  tilesPerRow: 4,
 };
 
 function parsePaneMode(raw: string | null, fallback: PaneMode): PaneMode {
@@ -45,7 +45,7 @@ function parseLandingMode(raw: string | null, fallback: LandingMode): LandingMod
 
 function parseTilesPerRow(raw: string | null, fallback: TilesPerRow): TilesPerRow {
   const n = Number(raw);
-  return n === 1 || n === 2 || n === 3 ? (n as TilesPerRow) : fallback;
+  return n === 1 || n === 2 || n === 3 || n === 4 ? (n as TilesPerRow) : fallback;
 }
 
 export interface UseDesignKnobsReturn {
