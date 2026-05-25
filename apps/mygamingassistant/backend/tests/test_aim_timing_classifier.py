@@ -346,17 +346,21 @@ class TestAimTimingPromptShape:
         """Regression lock for 7bd971c3 ("Market Window - B Site", 2026-05-24):
         Claude misread a karambit knife as a smoke grenade in F3 of the coarse
         window AND was biased into picking an intro-overlay frame because the
-        overlay text matched the chapter title. Two new prompt sections —
-        KNIFE DISAMBIGUATION and CHAPTER-INTRO EXCLUSION — counter both
-        biases. If a future refactor drops either heading, fail CI here."""
+        overlay text matched the chapter title. Two prompt sections counter
+        both biases:
+          - NON-UTILITY HELD-WEAPON DISAMBIGUATION (game/skin-agnostic
+            generalization of the original KNIFE DISAMBIGUATION block)
+          - CHAPTER-INTRO PHASE EXCLUSION (creator-agnostic generalization
+            of the original CHAPTER-INTRO EXCLUSION block)
+        If a future refactor drops either heading, fail CI here."""
         _, client = await _call(
             {"has_aim_demonstration": True, "aim_index": 1,
              "confidence": 0.6, "reasoning": "x"},
         )
         system = client.messages.create.call_args.kwargs["system"]
         system_text = "\n".join(b["text"] for b in system)
-        assert "KNIFE DISAMBIGUATION" in system_text
-        assert "CHAPTER-INTRO EXCLUSION" in system_text
+        assert "NON-UTILITY HELD-WEAPON DISAMBIGUATION" in system_text
+        assert "CHAPTER-INTRO PHASE EXCLUSION" in system_text
         # Crosshair-on-landmark must be ranked as the PRIMARY positive cue
         # so the model doesn't require hands-in-frame to accept aim demos
         # where the narrator has tilted the camera up at a sky/tower target.
