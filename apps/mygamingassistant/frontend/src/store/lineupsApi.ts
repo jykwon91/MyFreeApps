@@ -327,6 +327,7 @@ export const {
   useGetUploadUrlMutation,
   useGetLineupsQuery,
   useGetLineupQuery,
+  useGetLineupAdminQuery,
   useLazyGetLineupAdminQuery,
   useCreateLineupMutation,
   useUpdateLineupMutation,
