@@ -66,7 +66,6 @@ async def _call(payload_or_exc, *, frames=None, timestamps=None, **kwargs):
             frame_timestamps=timestamps,
             chapter_title=kwargs.get("chapter_title", "B-site smoke"),
             chapter_duration=kwargs.get("chapter_duration", 30.0),
-            utility_hint=kwargs.get("utility_hint"),
         )
     return result, mock_client
 
@@ -101,17 +100,6 @@ class TestAimTimingHappyPath:
         texts = [b["text"] for b in content if b["type"] == "text"]
         assert "Frame 1 (t=10.0s):" in texts
         assert "Frame 2 (t=12.5s):" in texts
-
-    @pytest.mark.asyncio
-    async def test_utility_hint_passed_as_context(self):
-        _, client = await _call(
-            {"has_aim_demonstration": True, "aim_index": 1,
-             "confidence": 0.7, "reasoning": "x"},
-            utility_hint="molotov",
-        )
-        content = client.messages.create.call_args.kwargs["messages"][0]["content"]
-        joined = "\n".join(b["text"] for b in content if b["type"] == "text")
-        assert "molotov" in joined
 
     @pytest.mark.asyncio
     async def test_system_prompt_is_cache_controlled(self):
@@ -325,19 +313,21 @@ class TestAimTimingPromptShape:
 
     @pytest.mark.asyncio
     async def test_system_prompt_includes_utility_in_ready_pose(self):
-        """A locked-aim frame should have the utility VISIBLE IN HAND in
-        READY pose — if this drops, the model would happily pick
-        knife-only-walking frames as aim demos."""
+        """The prompt should keep the utility-in-ready-pose cue (now ranked
+        as NEUTRAL when absent — the camera-up case can hide hands) AND
+        the KNIFE-IN-HAND exclusion that distinguishes knife-only walk-up
+        frames from utility-out aim frames."""
         _, client = await _call(
             {"has_aim_demonstration": True, "aim_index": 1,
              "confidence": 0.6, "reasoning": "x"},
         )
         system = client.messages.create.call_args.kwargs["system"]
         system_text = "\n".join(b["text"] for b in system)
-        # Two of the three places the prompt mentions ready-pose / hand
-        # — the prompt would not still make sense if these dropped.
-        assert "VISIBLE IN HAND" in system_text
+        # Ready-pose cue still present (downgraded to cue #6 but kept) and
+        # the KNIFE-IN-HAND exclusion is the regression backstop for the
+        # 7bd971c3 misread.
         assert "READY" in system_text.upper()
+        assert "KNIFE-IN-HAND" in system_text
 
     @pytest.mark.asyncio
     async def test_system_prompt_includes_game_visual_cues(self):
@@ -350,3 +340,24 @@ class TestAimTimingPromptShape:
         system = client.messages.create.call_args.kwargs["system"]
         system_text = "\n".join(b["text"] for b in system)
         assert "HOW TO IDENTIFY THE GAME FROM THE SCREEN" in system_text
+
+    @pytest.mark.asyncio
+    async def test_system_prompt_includes_knife_and_chapter_intro_blocks(self):
+        """Regression lock for 7bd971c3 ("Market Window - B Site", 2026-05-24):
+        Claude misread a karambit knife as a smoke grenade in F3 of the coarse
+        window AND was biased into picking an intro-overlay frame because the
+        overlay text matched the chapter title. Two new prompt sections —
+        KNIFE DISAMBIGUATION and CHAPTER-INTRO EXCLUSION — counter both
+        biases. If a future refactor drops either heading, fail CI here."""
+        _, client = await _call(
+            {"has_aim_demonstration": True, "aim_index": 1,
+             "confidence": 0.6, "reasoning": "x"},
+        )
+        system = client.messages.create.call_args.kwargs["system"]
+        system_text = "\n".join(b["text"] for b in system)
+        assert "KNIFE DISAMBIGUATION" in system_text
+        assert "CHAPTER-INTRO EXCLUSION" in system_text
+        # Crosshair-on-landmark must be ranked as the PRIMARY positive cue
+        # so the model doesn't require hands-in-frame to accept aim demos
+        # where the narrator has tilted the camera up at a sky/tower target.
+        assert "PRIMARY" in system_text

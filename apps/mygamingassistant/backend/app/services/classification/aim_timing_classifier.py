@@ -77,21 +77,65 @@ the world the crosshair is locked onto. The narrator is typically:
   - Standing still at the throwing spot, crosshair held on a specific
     landmark (window pixel, antenna tip, ledge corner, skybox feature,
     pixel-perfect alignment mark).
-  - Utility VISIBLE IN HAND (grenade pulled out, smoke held, molotov
-    primed) — pre-windup, not mid-throw.
+  - View often TILTED UP toward a sky/tower/rooftop landmark; the
+    narrator's hands and utility may sit BELOW the bottom of the frame
+    when the camera is angled up far enough — this is normal, not a
+    disqualifier (see POSITIVE AIM CUES below).
   - HUD may overlay the target ("AIM HERE", crosshair circle, arrow on
     the landmark, ALIGN-PIXEL marker).
 All valid.
 
-POSITIVE AIM CUES
-  - Crosshair locked on a far landmark used as an aim reference
-    (window pixel, antenna, ledge, skybox feature).
-  - Tight composition centred on the aim landmark — minimal camera
-    motion, view stable over several frames.
-  - Utility visible in hand, in READY pose (held up, not in windup arc).
-  - HUD callouts naming/pointing at the aim target.
-  - Pixel-alignment marks / on-screen reticle annotation.
-  - Latest "settled" frame BEFORE any windup motion begins.
+POSITIVE AIM CUES (ranked — primary cue outranks the others)
+  1. PRIMARY: crosshair locked on a far landmark used as an aim
+     reference (window pixel, antenna, ledge, sky/tower, rooftop,
+     skybox feature). A locked crosshair on a clear landmark IS the
+     aim demo — hand visibility is secondary.
+  2. Tight composition centred on the aim landmark — minimal camera
+     motion, view stable over several frames.
+  3. HUD callouts naming/pointing at the aim target ("AIM HERE",
+     arrow on landmark, ALIGN-PIXEL annotation).
+  4. Pixel-alignment marks / on-screen reticle annotation.
+  5. Latest "settled" frame BEFORE any windup motion begins.
+  6. Utility visible in hand in READY pose, when present — NEUTRAL
+     when absent. The narrator may tilt the camera up so the hands
+     leave the bottom of the frame; that does NOT disqualify the
+     frame. A crosshair-on-landmark frame with no visible hands IS
+     a valid aim-demo composition.
+
+CRITICAL — KNIFE DISAMBIGUATION
+A KNIFE (karambit, butterfly, bayonet, M9, huntsman, gut, flip, falchion,
+shadow daggers, ursus, navaja, stiletto, talon, classic, paracord,
+survival, nomad, skeleton) IN ANY SKIN is NEVER a grenade. Knives include
+exotic, gold, marble-fade, case-hardened, doppler, fade, slaughter,
+crimson-web, tiger-tooth, lore, autotronic, and "inspector" finishes
+that can look unusual or ornate — these are STILL knives, not utility.
+
+  - A CS2 SMOKE GRENADE is a short gray cylinder with a green stripe
+    near the top and a metallic pull-ring; it is NOT a long blade.
+  - A CS2 FLASH is a small black/grey cylinder with red markings.
+  - A CS2 HE is olive-green and round-ended.
+  - A CS2 MOLOTOV/INCENDIARY is a clear bottle with visible liquid.
+  - A KARAMBIT is a curved blade with a finger ring; gold/marble-fade
+    variants are still curved blades, not smoke grenades.
+  - A KNIFE is held with the blade visible — long, sharp, single edge
+    (or curved). If the visible weapon is a BLADE of any kind, REJECT
+    the frame regardless of other cues. The narrator has not yet
+    equipped the utility; this is walk-up territory.
+
+CHAPTER-INTRO EXCLUSION
+Frames featuring a full-opacity intro overlay — typically lower-left
+text like "SMOKE #N", "SITE - LANDMARK", "B SITE - MARKET WINDOW",
+"FLASH #N - SHORT", or other "chapter title" callouts — are WALK-IN /
+INTRODUCTION cues, NOT aim demos. The aim demo is structurally AFTER
+these overlays have faded and the narrator has equipped the utility.
+
+  - If the chapter title text is rendered in-frame at full opacity,
+    REJECT the frame. The narrator is still walking up to the spot.
+  - Prefer frames where the intro overlay is absent, faded, or
+    transitioned out.
+  - The aim demo arrives a few seconds AFTER the intro overlay clears;
+    don't let the overlay's "SITE - LANDMARK" text bias you into
+    picking the intro frame just because the chapter title matches.
 
 CANDIDATE-FRAME EXCLUSIONS
 Do NOT return aim_index on a frame matching ANY of:
@@ -102,10 +146,14 @@ Do NOT return aim_index on a frame matching ANY of:
     surroundings (wall behind, cover, floor markings) — that is the
     STAND demo, not AIM. Subject is the location, not the target.
   - MAP OVERLAY / MINIMAP ZOOM: those are STAND demos, not AIM.
-  - KNIFE-ONLY / UTILITY-HOLSTERED: no utility in hand → not yet aiming.
-    The narrator may be walking up; wait for utility-out frames.
-  - WALKING / CAMERA SWEEPING: view is in motion, crosshair not held
-    on a single landmark.
+  - KNIFE-IN-HAND / UTILITY-HOLSTERED: any visible blade → not yet
+    aiming. The narrator may be walking up; wait for utility-out
+    frames. (See CRITICAL — KNIFE DISAMBIGUATION above; do not
+    misread an ornate knife skin as a grenade.)
+  - WALKING / CAMERA SWEEPING: view is in motion AND crosshair is
+    not held on a single landmark. A still camera tilted up at a
+    sky/tower landmark is NOT "camera sweeping" — it is the aim
+    demo. Reject only on actual motion across multiple frames.
   - REPLAY / KILL-CAM / SCOREBOARD / MENU.
   - PURE TALKING-HEAD / FACECAM-DOMINANT frame with the aim view not
     visible or not the primary subject.
@@ -154,7 +202,6 @@ async def classify_aim_timing_from_frames(
     frame_timestamps: list[float],
     chapter_title: Optional[str],
     chapter_duration: Optional[float],
-    utility_hint: Optional[str] = None,
 ) -> AimTimingResult:
     """Locate the AIM demonstration frame within ONE chapter.
 
@@ -173,11 +220,6 @@ async def classify_aim_timing_from_frames(
             returned 1-based index back to seconds.
         chapter_title: YouTube chapter title — per-call context.
         chapter_duration: Chapter length in seconds — per-call context.
-        utility_hint: Optional utility slug from a prior grid
-            classification (passed only when confidence > 0.6) — helps
-            the model reason about what kind of aim posture to look for
-            (e.g., a smoke usually has a long settled aim on a precise
-            landmark whereas a flash may be a quicker target check).
 
     Returns:
         AimTimingResult. ``success=True`` with
@@ -251,10 +293,6 @@ async def classify_aim_timing_from_frames(
         context_parts.append(f"Chapter title: {chapter_title}")
     if chapter_duration is not None:
         context_parts.append(f"Chapter duration: {chapter_duration:.0f}s")
-    if utility_hint:
-        context_parts.append(
-            f"Utility type (from prior classification): {utility_hint}"
-        )
     if context_parts:
         user_content.append({"type": "text", "text": "\n".join(context_parts)})
 
