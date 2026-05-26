@@ -156,13 +156,15 @@ class TestStandTimingPromptShape:
 
     @pytest.mark.asyncio
     async def test_system_prompt_includes_structural_anchor(self):
-        """STRUCTURAL ANCHOR — MIDDLE of settled-stance — is the post-
-        2026-05-25 operator-audit fix. The prior EARLIEST rule put the
-        anchor at the edge of the settled phase; the downstream 1s clip
-        then caught walk-up motion on the pre-side. The new rule
-        requires the picked frame to be in the MIDDLE of the settled-
-        stance phase (stationary frames on BOTH sides) so the clip
-        stays stationary."""
+        """STRUCTURAL ANCHOR — ARRIVAL INSTANT — is the post-2026-05-25
+        operator-audit fix. The prior MIDDLE-OF-SETTLED-STANCE rule put
+        the anchor too late: the operator wanted the walk-up content on
+        the pre-side (it teaches the approach + alignment cues needed
+        for pixel-perfect positioning) but the prompt explicitly
+        REJECTED the first settled frame for centering reasons. The
+        downstream clip shape is now END-ANCHORED ([stand_ts-3.0,
+        stand_ts]) so the FIRST settled frame is correct — the
+        operator sees the LAST 3s of approach ending at arrival."""
         _, client = await _call(
             {"has_stand_demonstration": True, "stand_index": 1,
              "confidence": 0.6, "reasoning": "x"},
@@ -170,14 +172,11 @@ class TestStandTimingPromptShape:
         system = client.messages.create.call_args.kwargs["system"]
         system_text = "\n".join(b["text"] for b in system)
         assert "STRUCTURAL ANCHOR" in system_text
-        assert "MIDDLE" in system_text
-        assert "MIDDLE OF SETTLED-STANCE" in system_text
-        # WHEN MULTIPLE DEMONSTRATIONS EXIST must agree with the anchor
-        # — prefer the longest contiguous settled segment, NOT the first
-        # settled frame. Substring-checked piece-wise to survive prompt
-        # line-wrapping.
-        assert "LONGEST contiguous" in system_text
-        assert "Length of stationary stance dominates" in system_text
+        assert "ARRIVAL INSTANT" in system_text
+        # The "FIRST settled frame" + "DO NOT skip" wording is the load-
+        # bearing reversal of the prior "MIDDLE OF" rule.
+        assert "FIRST settled frame" in system_text
+        assert "DO NOT skip past it" in system_text
 
     @pytest.mark.asyncio
     async def test_system_prompt_includes_concrete_anchored_examples(self):
