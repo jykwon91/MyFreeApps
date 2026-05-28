@@ -293,3 +293,90 @@ class TestFilterLineupChapters:
             "A-site smoke from CT",
             "B-site flash from mid",
         ]
+
+
+# ---------------------------------------------------------------------------
+# filter_lineup_chapters — video-framing suffix + video-title intro card
+# (added 2026-05-28 after "Best Anubis Smokes Guide" became a junk lineup)
+# ---------------------------------------------------------------------------
+
+class TestVideoFramingAndIntroCard:
+    def _ch(self, title: str, start: int = 0, end: int = 120) -> Chapter:
+        return Chapter(start_seconds=start, end_seconds=end, title=title)
+
+    @pytest.mark.parametrize(
+        "title",
+        [
+            "Best Anubis Smokes Guide",
+            "CS2 Smoke Guide",
+            "Mirage Lineups Tutorial",
+            "Full Dust2 Walkthrough",
+            "Top 10 Smokes Compilation",
+            "Insane Clutch Montage",
+            "Complete Utility Breakdown",
+            "Pro Smokes Masterclass",
+        ],
+    )
+    def test_drops_video_framing_suffix(self, title: str):
+        """Titles ending in a video-level framing noun are never a single
+        lineup — dropped regardless of video_title."""
+        assert filter_lineup_chapters([self._ch(title, 0, 300)]) == []
+
+    def test_framing_suffix_anchored_at_end_not_substring(self):
+        """A real lineup whose title merely CONTAINS a framing word mid-string
+        must NOT be dropped — the framing match is suffix-anchored."""
+        chapters = [
+            self._ch("Smoke guide line on B ramp", 0, 60),
+            self._ch("Tutorial-style flash for A main", 60, 120),
+        ]
+        kept = filter_lineup_chapters(chapters)
+        assert len(kept) == 2
+
+    def test_drops_intro_card_matching_video_title(self):
+        """The exact regression: a 0:00 chapter whose title is the video
+        title is the intro card, not a lineup."""
+        chapters = [
+            self._ch("Best Anubis Smokes Guide", 0, 45),
+            self._ch("A site from ramp", 45, 200),
+        ]
+        kept = filter_lineup_chapters(
+            chapters, video_title="Best Anubis Smokes Guide"
+        )
+        assert [c.title for c in kept] == ["A site from ramp"]
+
+    def test_intro_card_tolerates_video_title_suffix(self):
+        """YouTube appends a short ' (CS2)' / ' | Channel' suffix to the video
+        title; the 0:00 chapter still matches as a >=60%-length prefix."""
+        chapters = [self._ch("Best Anubis Smokes", 0, 45)]
+        kept = filter_lineup_chapters(
+            chapters, video_title="Best Anubis Smokes (CS2)"
+        )
+        assert kept == []
+
+    def test_short_real_first_lineup_prefixing_title_is_kept(self):
+        """A short genuine first-lineup title that merely prefixes the video
+        title must survive — the 60% length guard protects it."""
+        chapters = [self._ch("A Site", 0, 60)]
+        kept = filter_lineup_chapters(
+            chapters, video_title="A Site Smokes And Flashes For Mirage"
+        )
+        assert [c.title for c in kept] == ["A Site"]
+
+    def test_intro_card_only_applies_to_zero_start(self):
+        """A chapter that matches the video title but is NOT at 0:00 is a
+        real (oddly-named) lineup, not the intro card — kept."""
+        chapters = [self._ch("Real lineup at start", 0, 60),
+                    self._ch("Anubis Smokes", 120, 200)]
+        kept = filter_lineup_chapters(
+            chapters, video_title="Anubis Smokes"
+        )
+        assert [c.title for c in kept] == [
+            "Real lineup at start", "Anubis Smokes"
+        ]
+
+    def test_no_video_title_skips_intro_heuristic(self):
+        """Without video_title the intro-card heuristic is inert (back-compat);
+        the framing-suffix and denylist heuristics still apply."""
+        chapters = [self._ch("Best Anubis Smokes", 0, 45)]  # no 'guide' suffix
+        kept = filter_lineup_chapters(chapters)  # video_title omitted
+        assert [c.title for c in kept] == ["Best Anubis Smokes"]
