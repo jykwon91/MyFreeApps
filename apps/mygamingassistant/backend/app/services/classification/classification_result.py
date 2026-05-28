@@ -91,12 +91,23 @@ class ThrowTimingResult:
     window the call was shown. The parser guarantees
     ``result_index >= release_index`` when both are set (a result cannot
     precede its own release).
+
+    ``causality_inverted_earlier_index`` is the diagnostic breadcrumb left
+    when the model returned ``result_index < release_index`` (a result
+    cannot precede its own release). The parser still forces
+    ``result_index = release_index`` for the frozen contract, but records
+    the ORIGINAL earlier index here so a caller can recognise the
+    multi-demonstration signature (the model paired a LATE demo's release
+    with an EARLY demo's result) and re-localise around the first event.
+    ``None`` whenever no inversion occurred. See
+    ``throw_localizer.localize_throw_with_refinement`` (causality recovery).
     """
 
     success: bool
     is_lineup_throw: Optional[bool] = None
     release_index: Optional[int] = None
     result_index: Optional[int] = None
+    causality_inverted_earlier_index: Optional[int] = None
     confidence: Optional[float] = None
     reasoning: str = ""
     error_codes: list[str] = field(default_factory=list)
