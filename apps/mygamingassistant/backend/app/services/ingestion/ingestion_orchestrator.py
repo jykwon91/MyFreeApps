@@ -579,7 +579,7 @@ async def _process_video(
     # download + frame extraction + classifier calls — they only produce junk
     # pending lineups and waste a Claude call each. See chapter_parser.
     parsed_count = len(chapters)
-    chapters = filter_lineup_chapters(chapters)
+    chapters = filter_lineup_chapters(chapters, video_title=video_meta.title)
     dropped = parsed_count - len(chapters)
     if dropped:
         logger.info(
