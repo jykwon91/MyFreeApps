@@ -37,6 +37,10 @@ from app.services.ingestion.throw_localizer import (
     STAGE_DENSE_EXTRACT_FAILED,
     STAGE_DENSE_REJECTED,
     STAGE_DENSE_WINDOW_TOO_SMALL,
+    STAGE_RECOVERED_FIRST_EVENT,
+    STAGE_RECOVERY_EXTRACT_FAILED,
+    STAGE_RECOVERY_REJECTED,
+    STAGE_RECOVERY_WINDOW_TOO_SMALL,
     STAGE_REFINED,
     RefinedThrowTiming,
     _should_refine,
@@ -489,3 +493,220 @@ class TestLocalizeThrowOrchestrator:
         assert result.frame_timestamps == _DENSE_TIMESTAMPS
         # And the index→ts resolution: dense.release_index=5 → 16.0
         assert result.frame_timestamps[result.timing.release_index - 1] == 16.0
+
+
+# ---------------------------------------------------------------------------
+# Causality recovery — multi-demonstration chapters
+#
+# When the coarse pass reports result_index < release_index (the classifier
+# preserves the original earlier index on causality_inverted_earlier_index),
+# the model paired a late demo's release with an early demo's result. The
+# orchestrator re-localises densely around the FIRST event BEFORE the normal
+# confidence gate. These tests pin: recovery fires on the inversion signal,
+# uses the recovery window's timestamps on success, and falls back to coarse
+# (never regresses) on every recovery failure mode.
+# ---------------------------------------------------------------------------
+
+
+def _inverted_coarse(**overrides) -> ThrowTimingResult:
+    """Coarse result with the multi-demo inversion signature.
+
+    After the classifier's forcing, release_index == result_index and the
+    ORIGINAL earlier index lives on causality_inverted_earlier_index. The
+    low confidence mirrors the real Market Door case (the inversion is what
+    craters it) — proving recovery fires ahead of the below-gate path.
+    """
+    base = dict(
+        success=True,
+        is_lineup_throw=True,
+        release_index=7,
+        result_index=7,
+        causality_inverted_earlier_index=3,  # → _COARSE_TIMESTAMPS[2] = 14.0
+        confidence=0.28,
+        reasoning="result before release — multi-demo",
+    )
+    base.update(overrides)
+    return ThrowTimingResult(**base)
+
+
+class TestCausalityRecovery:
+    @pytest.mark.asyncio
+    async def test_inversion_recovers_first_event(self):
+        """Inverted coarse + clean recovery → use the recovery result and the
+        recovery window's timestamps (so the caller maps indices correctly)."""
+        coarse = _inverted_coarse()
+        recovered = _coarse(release_index=2, result_index=5, confidence=0.82)
+        patches, extract_mock, classifier_mock = _patch_chain(
+            coarse_classifier=coarse, dense_classifier=recovered
+        )
+        with patches[0], patches[1], patches[2], patches[3]:
+            result = await localize_throw_with_refinement(
+                _FAKE_VIDEO,
+                chapter_start=0.0,
+                chapter_end=60.0,
+                chapter_title="multi-demo smoke",
+            )
+        assert result.stage == STAGE_RECOVERED_FIRST_EVENT
+        assert result.timing is recovered
+        # Recovery window timestamps (the patched dense list), NOT coarse.
+        assert result.frame_timestamps == _DENSE_TIMESTAMPS
+        assert result.coarse_timing is coarse
+        # recovery release_index=2 → _DENSE_TIMESTAMPS[1] = 14.5
+        assert result.frame_timestamps[result.timing.release_index - 1] == 14.5
+        # Two passes ran (coarse + recovery).
+        assert extract_mock.await_count == 2
+        assert classifier_mock.await_count == 2
+
+    @pytest.mark.asyncio
+    async def test_recovery_fires_ahead_of_below_gate(self):
+        """The inverted coarse has confidence 0.28 — below the 0.55 refine
+        gate. Without recovery this returns STAGE_COARSE_BELOW_GATE; recovery
+        must take precedence and never fall to the gate when it succeeds."""
+        coarse = _inverted_coarse(confidence=0.28)
+        recovered = _coarse(release_index=3, result_index=6, confidence=0.9)
+        patches, _, _ = _patch_chain(
+            coarse_classifier=coarse, dense_classifier=recovered
+        )
+        with patches[0], patches[1], patches[2], patches[3]:
+            result = await localize_throw_with_refinement(
+                _FAKE_VIDEO,
+                chapter_start=0.0,
+                chapter_end=60.0,
+                chapter_title="x",
+            )
+        assert result.stage == STAGE_RECOVERED_FIRST_EVENT
+        assert result.stage != STAGE_COARSE_BELOW_GATE
+
+    @pytest.mark.asyncio
+    async def test_recovery_reinverted_falls_back_to_coarse(self):
+        """A recovery pass that itself inverts means the window still spans
+        more than one demo — reject and fall back to coarse."""
+        coarse = _inverted_coarse()
+        recovered = _coarse(
+            release_index=6, result_index=6,
+            causality_inverted_earlier_index=2, confidence=0.4,
+        )
+        patches, extract_mock, classifier_mock = _patch_chain(
+            coarse_classifier=coarse, dense_classifier=recovered
+        )
+        with patches[0], patches[1], patches[2], patches[3]:
+            result = await localize_throw_with_refinement(
+                _FAKE_VIDEO,
+                chapter_start=0.0,
+                chapter_end=60.0,
+                chapter_title="x",
+            )
+        assert result.stage == STAGE_RECOVERY_REJECTED
+        assert result.timing is coarse
+        assert result.frame_timestamps == _COARSE_TIMESTAMPS
+        assert extract_mock.await_count == 2
+        assert classifier_mock.await_count == 2
+
+    @pytest.mark.asyncio
+    async def test_recovery_not_a_throw_falls_back_to_coarse(self):
+        coarse = _inverted_coarse()
+        recovered = _coarse(
+            is_lineup_throw=False, release_index=None, result_index=None,
+            causality_inverted_earlier_index=None, confidence=0.2,
+        )
+        patches, _, _ = _patch_chain(
+            coarse_classifier=coarse, dense_classifier=recovered
+        )
+        with patches[0], patches[1], patches[2], patches[3]:
+            result = await localize_throw_with_refinement(
+                _FAKE_VIDEO,
+                chapter_start=0.0,
+                chapter_end=60.0,
+                chapter_title="x",
+            )
+        assert result.stage == STAGE_RECOVERY_REJECTED
+        assert result.timing is coarse
+
+    @pytest.mark.asyncio
+    async def test_recovery_no_release_falls_back_to_coarse(self):
+        coarse = _inverted_coarse()
+        recovered = _coarse(
+            release_index=None, causality_inverted_earlier_index=None,
+            confidence=0.6,
+        )
+        patches, _, _ = _patch_chain(
+            coarse_classifier=coarse, dense_classifier=recovered
+        )
+        with patches[0], patches[1], patches[2], patches[3]:
+            result = await localize_throw_with_refinement(
+                _FAKE_VIDEO,
+                chapter_start=0.0,
+                chapter_end=60.0,
+                chapter_title="x",
+            )
+        assert result.stage == STAGE_RECOVERY_REJECTED
+        assert result.timing is coarse
+
+    @pytest.mark.asyncio
+    async def test_recovery_window_too_small_falls_back(self):
+        """Chapter boundaries collapse the recovery window → fall back to
+        coarse WITHOUT attempting a recovery extract/classify."""
+        coarse = _inverted_coarse()
+        extract_mock = AsyncMock(
+            return_value=[_FAKE_PNG] * len(_COARSE_TIMESTAMPS)
+        )
+        classifier_mock = AsyncMock(side_effect=[coarse])
+        with (
+            patch(f"{_MOD}.extract_frames_downscaled", extract_mock),
+            patch(f"{_MOD}.classify_throw_timing_from_frames", classifier_mock),
+            patch(
+                f"{_MOD}.clip_window_timestamps",
+                lambda *a, **k: list(_COARSE_TIMESTAMPS),
+            ),
+            patch(
+                f"{_MOD}.dense_window_timestamps",
+                lambda *a, **k: [14.0, 14.5],  # only 2 < 4 minimum
+            ),
+        ):
+            result = await localize_throw_with_refinement(
+                _FAKE_VIDEO,
+                chapter_start=0.0,
+                chapter_end=60.0,
+                chapter_title="x",
+            )
+        assert result.stage == STAGE_RECOVERY_WINDOW_TOO_SMALL
+        assert result.timing is coarse
+        assert result.frame_timestamps == _COARSE_TIMESTAMPS
+        assert extract_mock.await_count == 1  # recovery extract NOT attempted
+        assert classifier_mock.await_count == 1
+
+    @pytest.mark.asyncio
+    async def test_recovery_extract_failure_falls_back(self):
+        """A recovery-pass ffmpeg failure must NEVER regress the pipeline."""
+        coarse = _inverted_coarse()
+        extract_mock = AsyncMock()
+        extract_mock.side_effect = [
+            [_FAKE_PNG] * len(_COARSE_TIMESTAMPS),  # coarse OK
+            FrameExtractionError(
+                "boom", timestamp=14.0, returncode=1, stderr="ffmpeg lost"
+            ),
+        ]
+        classifier_mock = AsyncMock(side_effect=[coarse])
+        with (
+            patch(f"{_MOD}.extract_frames_downscaled", extract_mock),
+            patch(f"{_MOD}.classify_throw_timing_from_frames", classifier_mock),
+            patch(
+                f"{_MOD}.clip_window_timestamps",
+                lambda *a, **k: list(_COARSE_TIMESTAMPS),
+            ),
+            patch(
+                f"{_MOD}.dense_window_timestamps",
+                lambda *a, **k: list(_DENSE_TIMESTAMPS),
+            ),
+        ):
+            result = await localize_throw_with_refinement(
+                _FAKE_VIDEO,
+                chapter_start=0.0,
+                chapter_end=60.0,
+                chapter_title="x",
+            )
+        assert result.stage == STAGE_RECOVERY_EXTRACT_FAILED
+        assert result.timing is coarse
+        assert result.frame_timestamps == _COARSE_TIMESTAMPS
+        assert extract_mock.await_count == 2  # recovery extract attempted
+        assert classifier_mock.await_count == 1  # recovery classify NOT reached

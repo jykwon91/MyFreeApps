@@ -432,6 +432,7 @@ async def classify_throw_timing_from_frames(
     # release. If the model returned both but inverted, force result to the
     # release frame and log (do NOT silently swap — the operator/dash should
     # be able to see this happened).
+    causality_inverted_earlier_index: Optional[int] = None
     if (
         release_index is not None
         and result_index is not None
@@ -445,6 +446,12 @@ async def classify_throw_timing_from_frames(
             "result_index = release_index: chapter=%r",
             result_index, release_index, chapter_title,
         )
+        # Preserve the ORIGINAL earlier index before forcing. An inversion is
+        # the multi-demonstration signature (the model paired a LATE demo's
+        # release with an EARLY demo's result); the localizer uses this to
+        # re-localise densely around the first event. The frozen contract
+        # (result_index >= release_index in the returned value) is unchanged.
+        causality_inverted_earlier_index = result_index
         result_index = release_index
 
     if failures:
@@ -463,6 +470,7 @@ async def classify_throw_timing_from_frames(
         is_lineup_throw=True,
         release_index=release_index,
         result_index=result_index,
+        causality_inverted_earlier_index=causality_inverted_earlier_index,
         confidence=confidence,
         reasoning=reasoning,
         error_codes=list(structured_codes),

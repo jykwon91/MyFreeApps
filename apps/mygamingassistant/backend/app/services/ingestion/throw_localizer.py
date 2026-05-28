@@ -31,6 +31,23 @@ otherwise the coarse result. Either way the caller gets back the
 ``timestamps[release_index - 1]`` exactly as before. The caller is
 otherwise unchanged.
 
+  Causality recovery (NEW, multi-demonstration chapters):
+    When the coarse pass reports ``result_index < release_index`` (the
+    classifier preserves the original earlier index on
+    ``ThrowTimingResult.causality_inverted_earlier_index``), the model
+    paired a LATE demonstration's release with an EARLY demonstration's
+    result — the signature of a chapter that demonstrates the same lineup
+    more than once. Instead of cratering confidence and gating the clip
+    out, the orchestrator re-localises densely around the FIRST event (the
+    earlier index is that demo's result, so the true release precedes it —
+    the recovery window is weighted backward from it). Fires BEFORE the
+    confidence gate, because the inversion is exactly why coarse confidence
+    cratered, and OWNS the outcome — a failed recovery returns the coarse
+    result tagged with a ``recovery_*`` stage (no regression), it does not
+    fall through to the normal dense pass (which would only refine around
+    the wrong late-demo release). (operator audit 2026-05-29, lineup
+    69704f4a "Market Door".)
+
 The refinement gate matches the clip pipeline's existing 0.55 confidence
 threshold:
   * If coarse is below 0.55, the clip would have been skipped anyway —
@@ -94,6 +111,25 @@ _DENSE_FRAME_COUNT = 8
 # under ~4 dense is a regression.
 _MIN_DENSE_FRAMES = 4
 
+# ---- Causality recovery (multi-demonstration chapters) -------------------
+# When the coarse pass reports result_index < release_index (the classifier
+# preserves the original earlier index on
+# ThrowTimingResult.causality_inverted_earlier_index), the model paired a
+# LATE demo's release with an EARLY demo's result — the signature of a
+# chapter that demonstrates the same lineup more than once (operator audit
+# 2026-05-29, lineup 69704f4a "Market Door"). Rather than crater confidence
+# and gate the clip out, re-localise densely around the FIRST event: the
+# earlier index is that demo's RESULT, so the true release precedes it —
+# weight the recovery window heavily BACKWARD from the earlier event.
+#
+# pre=7.0 covers a fully-bloomed smoke result (release→bloom up to ~3s) plus
+# the coarse sampler's own ~3.4s spacing slop; post=1.0 keeps a touch of
+# coverage past the event in case the model keyed on the first wisp. N=14
+# over the ~8s window ≈ 0.6s spacing — tight enough to pin the release.
+_RECOVERY_PRE_RELEASE_SECONDS = 7.0
+_RECOVERY_POST_RELEASE_SECONDS = 1.0
+_RECOVERY_FRAME_COUNT = 14
+
 # Diagnostic stage labels — surfaced on RefinedThrowTiming.stage for
 # logging / metrics. Each maps to a specific reason the dense pass was
 # (or wasn't) used. Keep stable for log-grepping.
@@ -107,6 +143,15 @@ STAGE_DENSE_WINDOW_TOO_SMALL = "dense_window_too_small"
 STAGE_DENSE_EXTRACT_FAILED = "dense_extract_failed"
 STAGE_DENSE_CLASSIFIER_FAILED = "dense_classifier_failed"
 STAGE_DENSE_REJECTED = "dense_rejected"
+# Causality-recovery stages (fired only when the coarse pass was inverted —
+# the multi-demonstration signature). RECOVERED uses the recovery dense
+# result; the REJECTED / *_FAILED / *_TOO_SMALL stages all fall back to the
+# coarse result (same "recovery can only improve, never regress" contract as
+# the dense pass).
+STAGE_RECOVERED_FIRST_EVENT = "recovered_first_event"
+STAGE_RECOVERY_REJECTED = "recovery_rejected"
+STAGE_RECOVERY_WINDOW_TOO_SMALL = "recovery_window_too_small"
+STAGE_RECOVERY_EXTRACT_FAILED = "recovery_extract_failed"
 
 
 @dataclass
@@ -179,6 +224,153 @@ def _should_refine(coarse: ThrowTimingResult) -> Optional[str]:
     return None
 
 
+async def _attempt_first_event_recovery(
+    video_path: Path,
+    coarse: ThrowTimingResult,
+    coarse_timestamps: list[float],
+    *,
+    chapter_start: float,
+    chapter_end: float,
+    chapter_title: Optional[str],
+    utility_hint: Optional[str],
+) -> RefinedThrowTiming:
+    """Re-localise around the FIRST event after a causality-inverted coarse pass.
+
+    Precondition (checked by the caller): ``coarse`` is a successful,
+    throw-positive result whose
+    ``causality_inverted_earlier_index`` is set — i.e. the model paired a
+    late demonstration's release with an earlier demonstration's result.
+    The earlier index points at the FIRST demo's RESULT, so the true release
+    precedes it; we sample a backward-weighted dense window around that event
+    and re-run the throw-timing classifier on the (now single-throw) window.
+
+    Always returns a RefinedThrowTiming so the caller can return it directly:
+      * ``STAGE_RECOVERED_FIRST_EVENT`` — recovery produced a clean,
+        non-re-inverted, throw-positive result with a release; ``timing`` is
+        the recovery result and ``frame_timestamps`` is the recovery window
+        (so the caller maps the recovered indices correctly).
+      * ``STAGE_RECOVERY_*`` — recovery could not improve on coarse; ``timing``
+        is the coarse result and ``frame_timestamps`` is the coarse window.
+        Same "never regress" contract as the dense pass.
+    """
+    earlier_index = coarse.causality_inverted_earlier_index
+    if earlier_index is None or not (1 <= earlier_index <= len(coarse_timestamps)):
+        # Defensive: caller gates on `is not None`, but a stale/out-of-range
+        # index must not index-error — fall back to coarse.
+        return RefinedThrowTiming(
+            timing=coarse,
+            frame_timestamps=coarse_timestamps,
+            stage=STAGE_RECOVERY_REJECTED,
+            coarse_timing=coarse,
+        )
+
+    earlier_event_ts = coarse_timestamps[earlier_index - 1]
+    recovery_timestamps = dense_window_timestamps(
+        earlier_event_ts,
+        chapter_start,
+        chapter_end,
+        pre_release_seconds=_RECOVERY_PRE_RELEASE_SECONDS,
+        post_release_seconds=_RECOVERY_POST_RELEASE_SECONDS,
+        n=_RECOVERY_FRAME_COUNT,
+    )
+
+    if len(recovery_timestamps) < _MIN_DENSE_FRAMES:
+        logger.info(
+            "throw_localizer: stage=%s earlier_event_ts=%.2f recovery_n=%d "
+            "(< %d); returning coarse: chapter=%r",
+            STAGE_RECOVERY_WINDOW_TOO_SMALL,
+            earlier_event_ts,
+            len(recovery_timestamps),
+            _MIN_DENSE_FRAMES,
+            chapter_title,
+        )
+        return RefinedThrowTiming(
+            timing=coarse,
+            frame_timestamps=coarse_timestamps,
+            stage=STAGE_RECOVERY_WINDOW_TOO_SMALL,
+            coarse_timing=coarse,
+        )
+
+    try:
+        recovery_frames = await extract_frames_downscaled(
+            video_path, recovery_timestamps
+        )
+    except FrameExtractionError as exc:
+        # A recovery-pass extraction failure must NEVER regress the pipeline —
+        # fall back to coarse (same contract as the dense pass).
+        logger.warning(
+            "throw_localizer: stage=%s earlier_event_ts=%.2f returncode=%s "
+            "stderr=%s; returning coarse: chapter=%r",
+            STAGE_RECOVERY_EXTRACT_FAILED,
+            earlier_event_ts,
+            exc.returncode,
+            exc.stderr[:200],
+            chapter_title,
+        )
+        return RefinedThrowTiming(
+            timing=coarse,
+            frame_timestamps=coarse_timestamps,
+            stage=STAGE_RECOVERY_EXTRACT_FAILED,
+            coarse_timing=coarse,
+        )
+
+    recovered = await classify_throw_timing_from_frames(
+        frames=recovery_frames,
+        frame_timestamps=recovery_timestamps,
+        chapter_title=chapter_title,
+        chapter_duration=float(chapter_end) - float(chapter_start),
+        utility_hint=utility_hint,
+    )
+
+    # Accept only a clean, throw-positive recovery with a release that did NOT
+    # itself invert — a re-inverted recovery means the window still spans more
+    # than one demonstration, so it is no more trustworthy than coarse.
+    if (
+        not recovered.success
+        or not recovered.is_lineup_throw
+        or recovered.release_index is None
+        or recovered.causality_inverted_earlier_index is not None
+    ):
+        logger.info(
+            "throw_localizer: stage=%s earlier_event_ts=%.2f "
+            "recovered_success=%s recovered_is_lineup_throw=%s "
+            "recovered_release_index=%s recovered_reinverted=%s; "
+            "returning coarse: chapter=%r",
+            STAGE_RECOVERY_REJECTED,
+            earlier_event_ts,
+            recovered.success,
+            recovered.is_lineup_throw,
+            recovered.release_index,
+            recovered.causality_inverted_earlier_index is not None,
+            chapter_title,
+        )
+        return RefinedThrowTiming(
+            timing=coarse,
+            frame_timestamps=coarse_timestamps,
+            stage=STAGE_RECOVERY_REJECTED,
+            coarse_timing=coarse,
+        )
+
+    recovered_release_ts = recovery_timestamps[recovered.release_index - 1]
+    logger.info(
+        "throw_localizer: stage=%s earlier_event_ts=%.2f "
+        "recovered_release_ts=%.2f coarse_conf=%.2f recovered_conf=%.2f "
+        "chapter=%r",
+        STAGE_RECOVERED_FIRST_EVENT,
+        earlier_event_ts,
+        recovered_release_ts,
+        coarse.confidence or 0.0,
+        recovered.confidence or 0.0,
+        chapter_title,
+    )
+    return RefinedThrowTiming(
+        timing=recovered,
+        frame_timestamps=recovery_timestamps,
+        stage=STAGE_RECOVERED_FIRST_EVENT,
+        coarse_timing=coarse,
+    )
+
+
 async def localize_throw_with_refinement(
     video_path: Path,
     *,
@@ -232,6 +424,31 @@ async def localize_throw_with_refinement(
         chapter_duration=chapter_duration,
         utility_hint=utility_hint,
     )
+
+    # ---- Causality recovery (multi-demonstration chapters) --------------
+    # An inverted coarse pass (the classifier preserved the original earlier
+    # index) means the model paired a late demo's release with an early
+    # demo's result. The recovery path OWNS the outcome here: it re-localises
+    # densely around the first event and returns either the recovered result
+    # (STAGE_RECOVERED_FIRST_EVENT) or the coarse result tagged with the
+    # recovery-failure stage (never a regression — same contract as dense).
+    # We don't fall through to the normal refine path because the standard
+    # dense pass would centre on the WRONG (late-demo) release the inversion
+    # produced, and the cratered confidence would gate it out anyway.
+    if (
+        coarse.success
+        and coarse.is_lineup_throw
+        and coarse.causality_inverted_earlier_index is not None
+    ):
+        return await _attempt_first_event_recovery(
+            video_path,
+            coarse,
+            coarse_timestamps,
+            chapter_start=chapter_start,
+            chapter_end=chapter_end,
+            chapter_title=chapter_title,
+            utility_hint=utility_hint,
+        )
 
     skip_stage = _should_refine(coarse)
     if skip_stage is not None:

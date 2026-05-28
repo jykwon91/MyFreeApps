@@ -137,7 +137,8 @@ class TestThrowTimingVerdictAndParser:
 
     @pytest.mark.asyncio
     async def test_result_before_release_is_forced_equal(self):
-        """A result cannot precede its own release — parser forces equality."""
+        """A result cannot precede its own release — parser forces equality
+        AND preserves the original earlier index for causality recovery."""
         result, _ = await _call(
             {
                 "is_lineup_throw": True,
@@ -149,6 +150,25 @@ class TestThrowTimingVerdictAndParser:
         )
         assert result.release_index == 5
         assert result.result_index == 5
+        # The original earlier index (the first demo's result) is the
+        # multi-demonstration breadcrumb the localizer recovers around.
+        assert result.causality_inverted_earlier_index == 3
+
+    @pytest.mark.asyncio
+    async def test_non_inverted_result_leaves_earlier_index_none(self):
+        """No inversion → no recovery breadcrumb (field stays None)."""
+        result, _ = await _call(
+            {
+                "is_lineup_throw": True,
+                "release_index": 3,
+                "result_index": 5,
+                "confidence": 0.7,
+                "reasoning": "x",
+            }
+        )
+        assert result.release_index == 3
+        assert result.result_index == 5
+        assert result.causality_inverted_earlier_index is None
 
     @pytest.mark.asyncio
     async def test_out_of_range_indices_nulled(self):
