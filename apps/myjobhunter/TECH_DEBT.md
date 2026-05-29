@@ -3,7 +3,7 @@
 Issues discovered during development. New entries are appended; resolved entries are
 removed and the counts in this header are updated.
 
-**Open issues: 13 (Critical: 0 / High: 1 blocked-on-react-19 / Medium: 5 deferred-or-blocked / Low: 7 deferred-or-environmental)**
+**Open issues: 24 (Critical: 1 [discovery-quality P0 umbrella, triage-2026-05-28] / High: 6 [1 blocked-on-react-19, 1 public-launch cost guardrail, 4 triage-2026-05-28] / Medium: 7 [5 prior + 2 triage-2026-05-28: pagination, rejection-visibility] / Low: 9 [7 prior + 2 triage-2026-05-28 cosmetic] / Feature requests: 1 [triage-2026-05-28 raw-resume-upload])**
 
 > Status (2026-05-08 PM): All actionable audit items resolved across batches PR #492-#528 (~30 PRs). Remaining open entries are either (a) blocked on the React 18→19 monorepo bump (5 items), (b) deferred-by-design conventions or follow-ups (4), (c) environmental issues unrelated to code (3: asyncpg Windows, test hang on Windows, Quality Gate false-positive), or (d) intentional accepted lint warnings (2).
 
@@ -660,3 +660,136 @@ keep lint green while the underlying patterns are fixed. These are warnings, not
 ### ~~[Discovery] Greenhouse company_name is fetched in a second HTTP call per board fetch~~ RESOLVED
 
 **Resolved:** PR chore(mjh/discover): cache Greenhouse company_name + wire excluded_keywords to GH/Lever (2026-05-11). Added `resolved_company_name: str | None` to `GreenhouseFetchConfig` (fetch-time config supertype). `fetch_board()` now returns `tuple[list[dict], str | None]` — the second element is the resolved name for the caller to cache. `_run_greenhouse` in the fetch service unpacks the tuple and persists the name back to `source.config` JSONB via a direct ORM mutation (same DB transaction). On subsequent fetches `GreenhouseFetchConfig.resolved_company_name` is populated and the metadata HTTP call is skipped. The write-time `GreenhouseSourceConfig` (with `extra="forbid"`) does not expose `resolved_company_name` — callers cannot inject it. Tests: 3 new cache-specific tests in `test_greenhouse_adapter.py`.
+
+---
+
+## Public-launch cost guardrails (2026-05-28)
+
+Surfaced during a "what will MJH cost once public" analysis. Infra cost is fixed (co-tenant VPS with MBK); the only variable cost is Claude/Tavily/JSearch API spend. Two AI endpoints can be driven without bound by a single authenticated account, and there is no aggregate spend kill-switch. These are **pre-public-launch** items — not blocking dev/private use, but should land before open registration is advertised. Cost model verified: everything runs `claude-sonnet-4-6` ($3/1M in, $15/1M out, `extraction/claude_service.py:39,138`); per-call cost already recorded in `extraction_logs.cost_usd`.
+
+### HIGH — No per-user quota on the interactive AI endpoints; no global spend ceiling
+
+**Effort:** M
+**Severity:** High (cost/abuse — only matters once registration is public)
+
+**Problem (three gaps, ranked by exposure):**
+
+1. **Resume refinement has NO rate limit at all.** `/resume-refinement/sessions/{id}/*` (`alternative`, `custom`, `navigate`) each trigger a ~$0.03 Claude call with no per-IP throttle and no per-user quota (`app/api/resume_refinement.py`). One verified account can script unbounded calls — the largest single hole.
+2. **Job analysis is IP-throttled only, no per-user quota.** `/jobs/analyze` is capped at 30 req / 300s per IP (`app/api/job_analysis.py:53`) — bypassable across VPNs/proxies; a single user has no daily ceiling.
+3. **No global/account-wide daily spend ceiling.** The only spend cap anywhere is the per-user *discovery* budget (`discovery_daily_budget_usd=0.30`, hard cap `2.00`, `app/core/config.py:41-42`). The interactive endpoints have no aggregate cap, so total spend across all users is unbounded.
+
+**Recommendation:**
+- Add a per-user daily quota to resume-refinement turns and `/jobs/analyze` (reuse the existing limiter primitives in `app/core/rate_limit.py`; mirror the discovery per-user-budget pattern).
+- Add a global daily spend ceiling that reads `SUM(extraction_logs.cost_usd)` for the day and trips a circuit breaker + Sentry alert (a backstop independent of per-user limits, so no combination of users can run the bill past `$X/day`).
+- Keep discovery opt-in (it already is — one scheduled job per user-created `DiscoverySource`) and leave the default budget at `0.30`, not the `2.00` cap.
+
+**Why not inline now:** MGA/MJH are dev-only / private today (see auto-memory `project_mga_dev_only_no_prod_deploy.md` analog; MJH registration not yet advertised). Real per-user/per-feature spend is already observable via `extraction_logs`, so we can size the quotas off real data once there's traffic rather than guessing. Land before open registration is promoted.
+
+**Parity note:** if implemented as shared limiter/quota middleware, it belongs in `platform_shared` (Tier 1 security/operational primitive per `monorepo-parity-discipline.md`) so MBK and future apps inherit it — not as an MJH-local reimplementation.
+
+---
+
+## Operator triage session (2026-05-28)
+
+Issues surfaced by the operator walking the live app (`myjobhunter.myfreeapps.org`). Logged only — no fixes applied this session. Hypotheses below carry the leads found while logging; confirm before implementing. Order is rough priority (functional → quality → cosmetic).
+
+### ★ PRIORITY 0 (umbrella) — Discovery quality: results aren't meaningful enough to act on
+
+**Reported:** operator — "discovery is the most important part of the app, but the results aren't meaningful enough to take action on." This is the headline priority; the discovery items below are its components.
+**Operator-scoped the failure (2026-05-28) to two dimensions** — and explicitly NOT the other two:
+- ✅ **Trust — the fit scores are wrong / can't be relied on.**
+- ✅ **Noise & dead listings — junk and closed postings bury the signal.**
+- ❌ NOT relevance (right *kinds* of jobs are roughly surfacing) and ❌ NOT explainability (operator does not need a verbose "why" rationale).
+
+This rules a lot of work in and out: **don't** invest in a relevance-overhaul or a big score-rationale UI right now. **Do** invest in score correctness and feed hygiene.
+
+**Dimension A — Trust (scores are wrong).** A job-fit score that's wrong is worse than none — the Strong fit / Worth considering / Everything else bands actively mislead prioritization. Components:
+- (logged) "Fit-scoring rejected a candidate for a role they've already held (Daniel Leba)" — recency-truncated profile snapshot + rubric under-weighting prior direct experience.
+- Broader: calibrate score→verdict bands; send a *relevance-selected* (not recency-truncated) profile to Claude; validate against a small labeled set of jobs the operator hand-rates as strong/weak fit; audit `JOB_ANALYSIS_PROMPT` weighting. `score_reason` already exists — use it for auditing miscalibration even if it's not shown in the UI.
+
+**Dimension B — Noise & dead listings.** Components:
+- (logged) "Discovery feed surfaces closed/expired postings" — active-only filter + `expired_at` writer.
+- (logged) "Cards stuck on Scoring forever" — most fetched jobs never get scored (top-N=20 + daily budget), so the inbox is mostly unscored noise.
+- (logged) "Discovery results need pagination."
+- Broader: dedup across sources + across fetches; sort the inbox by score so good matches float to the top instead of being buried; raise/relevance-tune the prefilter so the *right* jobs get scored, not just the top-20-by-cosine.
+
+**How to approach (fix-time, not now):** diagnostic-first — pull a real sample of scored postings (via Sentry/observability or a synthetic repro per `feedback_no_diagnostic_apis_for_user_data`; do NOT build a user-data debug endpoint), and *measure* the miscalibration rate and dead-listing rate before changing prompts/filters. This is hard-design / scoring-calibration work — do it at `/effort max`. Likely a dedicated discovery-quality design pass (g-design-ux + prompt design) rather than ad-hoc patches; avoid bandaid prompt tweaks that aren't measured.
+
+### HIGH — Job description not visible in application detail (must open the Document and click Edit to read it)
+
+**Reported:** operator, prod — application "Senior Software Engineer, Full-Stack — GeneDx". Believed to be a regression.
+**Symptom:** Opening an application (kanban card → side drawer; likely the full page too) shows a "Job Description" chip under **Documents** but renders no JD text inline. The only way to read the JD is to open that document and click the Edit (pencil) icon.
+**Evidence:**
+- `apps/myjobhunter/frontend/src/features/applications/sections/OverviewSection.tsx:77-86` renders the inline JD block **only** from `application.jd_text` (`{application.jd_text ? … : null}`). Both the drawer and the full page render `OverviewSection`.
+- The affected application has a `job_description`-kind Document but no inline JD block → `application.jd_text` is null/empty for this row even though the JD content lives inside the Document body.
+- Inline-JD rendering was added in #719 and refined in #743 — the render path exists; the gap is the data source.
+**Hypothesis (confirm):** Some application-creation paths (promote-from-discovery and/or apply-from-analysis, and the "Job Description" document upload path) persist the JD as a Document but never set `application.jd_text`, so OverviewSection has nothing to show. Fix is either (a) those paths also populate `jd_text`, or (b) OverviewSection falls back to the latest `job_description` Document body when `jd_text` is empty.
+**Fix considerations:** pick a single source of truth for JD text (application column vs. Document body) — don't render from two divergent places. Read view must show the JD without an edit click.
+
+### HIGH — Discover: cards stuck on "Scoring" spinner forever; JSearch fetch returning 429
+
+**Reported:** operator, prod — "senior software engineer" saved search.
+**Symptom:** Inbox cards show a "Scoring" badge + spinner that never resolves. Saved search shows "Fetch failed — JSearch returned 429 (retry-after=None)", last fetched 49 min ago.
+**Two distinct problems:**
+1. **Spinner never terminates.** Two-stage scoring (#570) embeds all postings locally, then sends only the top-N (`discovery_score_top_n=20`, `app/core/config.py:52`) to Claude, stopping at the daily budget (`discovery_daily_budget_usd=0.30`, `config.py:41-42`). Postings outside the top-N — or beyond budget, or when the fetch failed so the score pass never ran — are never scored, yet the frontend appears to show a perpetual "Scoring" spinner for any unscored job. This violates `visible-loading-feedback` (a spinner must terminate to a real state). Need: frontend must distinguish *scored* / *scoring-in-progress* / *not-scored-this-cycle*, and never spin indefinitely.
+2. **JSearch 429.** RapidAPI returned HTTP 429 (rate-limited), `retry-after=None`. Confirm: is the daily 5-pages-per-fetch (#594) exceeding the RapidAPI plan quota? Is backoff/retry-after handled? Does a failed fetch leave previously-fetched inbox jobs stuck in the unscored state above?
+**Evidence:** `app/services/discovery/discovery_score_service.py` (score loop), `config.py:41-42,52`, fetch pages #594. Frontend "Scoring" badge condition not yet located — find in `apps/myjobhunter/frontend/src/features/discover/`.
+**Fix-time step:** check Sentry (project `myjobhunter-api`) for score-loop / JSearch errors before shell diagnostics (per check-Sentry-first). No Sentry MCP connected this session.
+
+### HIGH — Discovery feed surfaces closed/expired postings; should only show active jobs
+
+**Reported:** operator — opening discovered postings in a new tab lands on already-closed listings.
+**Symptom:** The inbox includes postings that are no longer open when the operator clicks through. Operator wants active-only results.
+**Related existing debt:** the "[Backend / Discovery] `expired_at` column exists but no path sets it" entry below (`app/models/discovery/discovered_job.py:113-115`) — the model has `expired_at` for "posting removed upstream" but **nothing writes it**, and nothing filters on it. That gap is the same root issue.
+**Hypothesis (confirm):** the JSearch/aggregator feed returns stale/closed postings (or postings go stale between fetch and view), and there is no liveness/expiry filter on the inbox query. Options: (a) honor any closed/expired/`job_offer_expiration` signal the feed provides at ingest and skip/flag those rows; (b) implement the `expired_at` writer (mark rows missing from a re-fetch as expired) and exclude expired rows from the inbox; (c) re-validate posting liveness before display. Likely a combination — decide during design.
+
+### HIGH — Fit-scoring rejected a candidate for a role they have already held (Daniel Leba)
+
+**Reported:** operator — Daniel Leba's profile was scored "not a good fit" for a job that matches a role he has previously held. Nonsensical: prior direct experience in the exact role should be among the strongest positive signals.
+**Symptom:** Claude fit-score contradicts the candidate's own work history.
+**Hypothesis (confirm — do NOT pull the user's profile data; per `feedback_no_diagnostic_apis_for_user_data`, reproduce with a synthetic profile + use Sentry/observability):**
+1. **Truncated / recency-only profile snapshot.** Job analysis sends a *bounded* profile snapshot (~8 most-recent work roles, 5 educations, 40 skills) to Claude (prompt builder in `app/services/job_analysis/job_analysis_service.py`; 50K-char content cap in `app/services/extraction/claude_service.py:46`). If the directly-relevant role sits below the 8 most-recent (or is trimmed by the char cap), the scorer never sees it and scores blind. → select roles by *relevance to the JD*, not just recency; or summarize older roles so they still register.
+2. **Rubric under-weights prior direct experience.** `JOB_ANALYSIS_PROMPT` may not treat "has already performed this role" as a dominant positive. → audit the scoring rubric/weighting.
+**Fix-time step:** reproduce with a synthetic profile carrying the matching role at position >8 to isolate truncation vs. rubric; inspect the scored-payload context in Sentry if logged (without surfacing PII). This is the most product-damaging issue in the batch — a job-fit tool that rejects people from jobs they've done erodes all trust in the score.
+
+### MEDIUM — Discovery results need pagination
+
+**Reported:** operator.
+**Symptom:** The discovery inbox renders results without pagination (a single growing list). Fetches pull ~5 pages (~50 postings) per cycle and accumulate.
+**Cross-link — this is the trigger for the existing convention entry:** see "MEDIUM — Pagination response envelopes — adopt early in MJH" above. That entry parked the shared `ListResponse[ItemT]` (`platform_shared/schemas/pagination.py`, landed #492) waiting for MJH's *first* list endpoint that actually needs pagination. The discovery inbox is that endpoint. Implement discovery-inbox pagination by subclassing `ListResponse[DiscoveredJobResponse]` rather than inventing a new envelope; pair with frontend infinite-scroll or page controls on `features/discover/`. Resolving this should also tick the convention entry.
+
+### MEDIUM — No "Rejected" visibility on the pipeline board (rejected/withdrawn/ghosted all collapse into "Closed")
+
+**Reported:** operator, prod dashboard — "why is there no rejection here?"
+**Current behavior (verified 2026-05-28):** the kanban uses 4 coarse columns — `applied / interviewing / offer / closed` (`frontend/src/types/kanban/kanban-column.ts`, mirrors backend `KanbanColumn.ALL`). The `rejected`, `withdrawn`, and `ghosted` event types ALL map to the single `closed` column (`features/kanban/kanban-stage-mapping.ts:20-22`). On the board, "Closed" is a collapsed lane at the bottom — so a rejection is *tracked* but invisible until Closed is expanded, and rejected/withdrawn/ghosted are indistinguishable inside it.
+**So:** rejection IS modeled (there is a `rejected` event type), it's just not surfaced as a distinct stage; the operator expected to see it.
+**Options (decide during design):**
+1. **Distinguish outcomes within Closed** — sub-group or badge rejected vs. withdrawn vs. ghosted, and show a rejected count on the collapsed Closed header. Lowest blast radius (frontend-only). **Recommended** unless a first-class lane is wanted.
+2. **Add a dedicated "Rejected" column** — changes the 4-column model → backend `KanbanColumn` enum + mapping change, and per `feedback_enum_changes_cross_stack` the TS union + labels + order in the same PR. Decide whether withdrawn/ghosted also get their own lanes or stay under Closed.
+3. **Expand Closed by default** / make its contents scannable.
+
+### LOW (cosmetic) — Discover card badge row misaligned ("Scoring" / "JobLeads" / saved-search tag on different baselines)
+
+**Reported:** operator, with screenshot — the three pills in a card's top-right (status "Scoring", publisher "JobLeads", saved-search name "senior software engineer") sit at slightly different vertical positions / heights.
+**Hypothesis:** the badge row mixes pill components with inconsistent padding / line-height / vertical-align, or the flex row lacks `items-center`. Likely in `apps/myjobhunter/frontend/src/features/discover/DiscoveredJobCard.tsx` (header/badge row). Normalize to one badge primitive + `items-center`.
+
+### LOW — Rename user-facing "Discover" → "Discovery"
+
+**Reported:** operator.
+**Scope:** rename the user-facing label only — nav item (`src/constants/nav.ts`), page heading ("Discover" → "Discovery"), and any empty-state copy (`src/constants/empty-states.ts`). 
+**Decision needed:** whether to also rename the route path `/discover` → `/discovery` (would need a redirect for existing bookmarks) and the backend `discover.py` API module / `discovery` service naming. Recommendation: change display copy now; keep the route + internal `discover`/`discovery` module naming as-is unless there's a reason to churn it (larger blast radius, no user-visible benefit). Confirm during the fix.
+
+### FEATURE — Upload & store raw resume documents (resume-specific, mirror MBK Documents)
+
+**Reported:** operator — "I need to upload raw resume documents, similar to MBK's document upload, specifically for resumes."
+**Current state (verified 2026-05-28):**
+- MJH's existing resume upload (`backend/app/services/jobs/resume_upload_service.py` + `workers/resume_parser_worker.py` + `frontend/src/features/profile/ResumeUploadSection.tsx`) is a **parse pipeline**: upload PDF/DOCX → extract text → Claude (`resume_parse`) → populate Profile (work history, skills). It is NOT a managed library of raw resume files.
+- MJH already has generic document upload UI (`features/documents/DocumentList` + `DocumentUploadDialog`, surfaced in the app drawer `DocumentsSection`). But `DocumentKind` (`app/core/enums.py:219-233`) is `cover_letter / tailored_resume / job_description / portfolio / other` — **no raw/master "resume" kind.** `tailored_resume` is a *generated* JD-specific resume, not an uploaded source resume.
+- Net gap: no first-class way to upload, store, browse, download, and version *raw* resume files.
+**Desired:** resume-specific raw-document upload + management, mirroring MBK's Documents upload/viewer pattern.
+**Design questions (resolve before building):**
+1. Add a new `DocumentKind` (e.g. `resume` / `master_resume`) to the existing `documents` table + a resume-focused surface under the "Resume" nav — vs. a separate store. Recommend reusing the `documents` domain (add kind + `chk_document_kind` CheckConstraint + Alembic migration; per `feedback_enum_changes_cross_stack` update the TS union + Record maps in the same PR).
+2. Unify with the parse flow: should uploading a raw resume optionally trigger parse-to-profile, and should the parse flow retain its source file as a `resume` document? Avoid two divergent resume-file stores.
+3. Relationship to `tailored_resume` (generated) and the `/resume` refinement tool — where does a raw "master resume" sit relative to those.
+**Parity note (`monorepo-parity-discipline`):** mirror MBK's Documents upload/viewer. If MBK's upload/viewer primitives are generic and now needed by 2 apps, extract to `@platform/ui` / `platform_shared` rather than copy (Tier 1/2 — auto-promote on 2nd occurrence).
+**Effort:** M — enum + migration + repo/service + a resume document UI. Upload plumbing + MinIO storage (`myjobhunter-files`, 25 MB cap) already exist.
