@@ -17,7 +17,7 @@ slug resolution.
 Shared helpers live in their own sibling modules:
   - ``prompts``: ``GAME_VISUAL_CUES``, ``GAME_FIRST_RULE``, ``build_reference_text``
   - ``response_parsing``: ``strip_json_fences``, ``validate_aim_coord``, ``validate_grid_index``
-  - ``scope_guards``: ``check_game_map_consistency``
+  - ``scope_guards``: ``check_game_map_consistency``, ``apply_map_hint``
 """
 from __future__ import annotations
 
@@ -45,7 +45,10 @@ from app.services.classification.response_parsing import (
     validate_aim_coord,
     validate_grid_index,
 )
-from app.services.classification.scope_guards import check_game_map_consistency
+from app.services.classification.scope_guards import (
+    apply_map_hint,
+    check_game_map_consistency,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -135,8 +138,16 @@ async def classify_frames_for_lineup_decision(
     chapter_title: Optional[str],
     attribution_author: Optional[str],
     game_hint: Optional[str] = None,
+    map_hint: Optional[str] = None,
 ) -> ClassificationResult:
-    """Strategy A: classify a chapter from N candidate frames at ingest time."""
+    """Strategy A: classify a chapter from N candidate frames at ingest time.
+
+    ``map_hint`` is the operator's per-source map scope (Source.config_json
+    ``map_hint``). When set, the chosen map is hard-locked to it (see
+    :func:`app.services.classification.scope_guards.apply_map_hint`) so a
+    single-map source can never spawn lineups on a different map — the
+    recurrence fix for cross-map misclassification.
+    """
     if not settings.anthropic_api_key:
         logger.warning(
             "classify_frames: ANTHROPIC_API_KEY not configured — skipping "
@@ -158,7 +169,15 @@ async def classify_frames_for_lineup_decision(
     n = len(frames)
 
     ref = await load_reference_data(db, game_id=None)
-    reference_text = build_reference_text(ref, game_hint=game_hint)
+    # A map scope implies its game; surface that to the game line too (the map
+    # list itself is restricted to map_hint inside build_reference_text).
+    effective_game_hint = game_hint
+    if map_hint:
+        _map_game = {m["slug"]: m["game_slug"] for m in ref.get("maps", [])}
+        effective_game_hint = _map_game.get(map_hint, game_hint)
+    reference_text = build_reference_text(
+        ref, game_hint=effective_game_hint, map_hint=map_hint
+    )
 
     chapter_context_parts: list[str] = []
     if chapter_title:
@@ -268,7 +287,14 @@ async def classify_frames_for_lineup_decision(
     failures: list[str] = []
     structured_codes: list[str] = []
 
-    parsed = check_game_map_consistency(parsed, ref, failures, structured_codes)
+    # When the source is map-scoped, hard-lock the map (the load-bearing
+    # recurrence fix); otherwise fall back to the cross-game contamination
+    # guard. map_hint forces the map's own game, so the cross-game check is
+    # moot in that branch.
+    if map_hint:
+        parsed = apply_map_hint(parsed, ref, map_hint, failures, structured_codes)
+    else:
+        parsed = check_game_map_consistency(parsed, ref, failures, structured_codes)
 
     is_lineup = bool(parsed.get("is_lineup"))
 

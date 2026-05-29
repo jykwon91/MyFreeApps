@@ -275,3 +275,31 @@ async def resolve_slugs(
         failures,
         codes,
     )
+
+
+async def get_game_slug_for_map(db: AsyncSession, map_slug: str) -> Optional[str]:
+    """Return the game slug a map slug belongs to, or None if no such map.
+
+    Used to validate + normalize an operator source ``map_hint``: a map scope
+    implies its game, so the source service stores both. Keeping the query here
+    keeps ``select``/ORM out of the service layer (MGA CLAUDE.md Architecture
+    Rules: routes → services → repositories).
+    """
+    return (
+        await db.execute(
+            select(Game.slug)
+            .join(Map, Map.game_id == Game.id)
+            .where(Map.slug == map_slug)
+        )
+    ).scalar_one_or_none()
+
+
+async def game_slug_exists(db: AsyncSession, game_slug: str) -> bool:
+    """Return True if a game with this slug exists.
+
+    Used to validate an operator source ``game_hint`` without the service
+    layer issuing its own ORM query.
+    """
+    return (
+        await db.execute(select(Game.slug).where(Game.slug == game_slug))
+    ).scalar_one_or_none() is not None

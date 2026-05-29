@@ -484,6 +484,43 @@ class TestReferenceTextBuilder:
         text = build_reference_text(ref, game_hint=None)
         assert "Expected game" not in text
 
+    def test_map_hint_restricts_map_list_and_emits_scope(self):
+        from app.services.classification.prompts import build_reference_text
+
+        ref = {
+            "games": [
+                {"slug": "cs2", "name": "Counter-Strike 2", "side_a_label": "T", "side_b_label": "CT"},
+            ],
+            "maps": [
+                {"slug": "mirage", "name": "Mirage", "game_slug": "cs2", "zones": [{"slug": "a-site", "name": "A Site"}]},
+                {"slug": "dust2", "name": "Dust II", "game_slug": "cs2", "zones": [{"slug": "long-a", "name": "Long A"}]},
+            ],
+            "utility_types": [{"slug": "smoke", "name": "Smoke", "game_slug": "cs2"}],
+        }
+        text = build_reference_text(ref, map_hint="mirage")
+        # Hard scope instruction emitted, naming the locked map + its game.
+        assert "SOURCE MAP SCOPE" in text
+        assert "You MUST set map_slug='mirage'" in text
+        assert "(game 'cs2')" in text
+        # The hinted map + its zones are present...
+        assert "a-site" in text
+        # ...and the OTHER map is filtered out of the maps list entirely.
+        assert "dust2" not in text
+        assert "long-a" not in text
+
+    def test_map_hint_takes_precedence_over_game_hint(self):
+        from app.services.classification.prompts import build_reference_text
+
+        ref = {
+            "games": [{"slug": "cs2", "name": "CS2", "side_a_label": "T", "side_b_label": "CT"}],
+            "maps": [{"slug": "mirage", "name": "Mirage", "game_slug": "cs2", "zones": []}],
+            "utility_types": [],
+        }
+        # map_hint branch wins — the coarser "Expected game" line is NOT used.
+        text = build_reference_text(ref, game_hint="valorant", map_hint="mirage")
+        assert "SOURCE MAP SCOPE" in text
+        assert "Expected game: valorant" not in text
+
 
 # ---------------------------------------------------------------------------
 # Tests: Strategy A grid classifier (classify_frames_for_lineup_decision)
@@ -700,6 +737,72 @@ class TestClassifyFramesForLineupDecision:
         assert result.best_aim_index is None
         assert "best_stand_index" in result.reasoning
         assert "best_aim_index" in result.reasoning
+
+    @pytest.mark.asyncio
+    async def test_map_hint_forces_map_and_surfaces_override_code(
+        self,
+        db: AsyncSession,
+        grid_game: Game,
+        grid_map: Map,
+        grid_zone: MapZone,
+    ):
+        """map_hint hard-locks the classified map even when Claude picks another,
+        forces the map's game, and surfaces the override as a structured code.
+
+        The recurrence fix for cross-map misclassification: a Mirage-scoped
+        source whose 'Catwalk'/'Jungle' chapter titles led the classifier to
+        guess dust2/ancient now lands on the scoped map regardless.
+        """
+        from app.services.classification.grid_classifier import (
+            classify_frames_for_lineup_decision,
+        )
+
+        # Claude returns a DIFFERENT (bogus) map; the source is scoped to grid_map.
+        payload = {
+            "is_lineup": True,
+            "best_stand_index": 1,
+            "best_aim_index": 2,
+            "game_slug": "some-other-game",
+            "map_slug": "some-other-map",
+            "target_zone_slug": grid_zone.slug,
+            "stand_zone_slug": None,
+            "side": "any",
+            "utility_type_slug": None,
+            "aim_anchor_x": 0.5,
+            "aim_anchor_y": 0.5,
+            "confidence": 0.9,
+            "reasoning": "Catwalk — guessed the wrong map from the title.",
+        }
+
+        with (
+            patch("app.services.classification.grid_classifier.settings") as mock_settings,
+            patch("app.services.classification.grid_classifier.anthropic.Anthropic") as mock_cls,
+        ):
+            mock_settings.anthropic_api_key = "sk-test"
+            mock_settings.claude_classifier_model = "claude-haiku-4-5-20251001"
+            mock_client = MagicMock()
+            mock_cls.return_value = mock_client
+            mock_client.messages.create.return_value = _make_anthropic_response(payload)
+
+            result = await classify_frames_for_lineup_decision(
+                db,
+                frames=_THREE_FRAMES,
+                chapter_title="Catwalk smoke",
+                attribution_author="TestCreator",
+                map_hint=grid_map.slug,
+            )
+
+        assert result.success is True
+        assert result.is_lineup is True
+        # Map forced to the hint → its game + zone resolve to the real FKs.
+        assert result.suggested_map_id == grid_map.id
+        assert result.suggested_game_id == grid_game.id
+        assert result.suggested_target_zone_id == grid_zone.id
+        # Override surfaced as a structured, machine-readable code (not prose-only).
+        assert any(
+            c == f"map_hint_override:claude=some-other-map:forced={grid_map.slug}"
+            for c in result.error_codes
+        ), result.error_codes
 
     @pytest.mark.asyncio
     async def test_empty_frames_returns_error(self, db: AsyncSession):
@@ -1045,6 +1148,79 @@ class TestCheckGameMapConsistency:
         assert result["map_slug"] is None
         assert result["confidence"] == pytest.approx(0.0)
         assert len(failures) == 1
+
+
+class TestApplyMapHint:
+    """Operator map-scope hard-lock — force the classified map to the source's
+    map_hint regardless of Claude's guess (recurrence fix for cross-MAP
+    misclassification within one game)."""
+
+    def test_overrides_different_map_and_emits_code(self):
+        from app.services.classification.scope_guards import apply_map_hint
+
+        # Claude guessed dust2 (Catwalk is more famous there) but the source is
+        # scoped to mirage. apply_map_hint does NOT validate Claude's wrong map
+        # against the ref — it only needs map_hint ('mirage') to be a real map.
+        parsed = {
+            "game_slug": "cs2",
+            "map_slug": "dust2",
+            "target_zone_slug": "catwalk",
+            "stand_zone_slug": "t-spawn",
+            "confidence": 0.8,
+        }
+        failures: list[str] = []
+        codes: list[str] = []
+        result = apply_map_hint(parsed, _CROSS_GAME_REF, "mirage", failures, codes)
+
+        assert result["map_slug"] == "mirage"
+        assert result["game_slug"] == "cs2"  # forced to mirage's own game
+        # Zone slugs are KEPT — resolve_slugs re-scopes them to the forced map.
+        assert result["target_zone_slug"] == "catwalk"
+        assert result["stand_zone_slug"] == "t-spawn"
+        # Structured override code emitted (machine-readable telemetry).
+        assert codes == ["map_hint_override:claude=dust2:forced=mirage"]
+        assert any("MAP-SCOPE OVERRIDE" in f for f in failures)
+        # Original dict not mutated (returns a copy, like check_game_map_consistency).
+        assert parsed["map_slug"] == "dust2"
+
+    def test_matching_map_no_override_code(self):
+        from app.services.classification.scope_guards import apply_map_hint
+
+        parsed = {"game_slug": "cs2", "map_slug": "mirage", "confidence": 0.9}
+        failures: list[str] = []
+        codes: list[str] = []
+        result = apply_map_hint(parsed, _CROSS_GAME_REF, "mirage", failures, codes)
+
+        assert result["map_slug"] == "mirage"
+        assert result["game_slug"] == "cs2"
+        assert codes == []  # Claude already agreed — no override needed
+        assert failures == []
+
+    def test_forces_game_even_when_claude_map_null(self):
+        from app.services.classification.scope_guards import apply_map_hint
+
+        parsed = {"game_slug": None, "map_slug": None, "confidence": 0.5}
+        failures: list[str] = []
+        result = apply_map_hint(parsed, _CROSS_GAME_REF, "mirage", failures)
+
+        assert result["map_slug"] == "mirage"
+        assert result["game_slug"] == "cs2"
+        # No "different map" note when Claude returned no map of its own.
+        assert failures == []
+
+    def test_unknown_map_hint_is_noop_with_note(self):
+        """A map_hint absent from the reference data is a defensive no-op (the
+        source service validates the slug at write time, so this is belt only)."""
+        from app.services.classification.scope_guards import apply_map_hint
+
+        parsed = {"game_slug": "cs2", "map_slug": "mirage", "confidence": 0.7}
+        failures: list[str] = []
+        codes: list[str] = []
+        result = apply_map_hint(parsed, _CROSS_GAME_REF, "no-such-map", failures, codes)
+
+        assert result == parsed  # unchanged
+        assert codes == []
+        assert any("not found in reference data" in f for f in failures)
 
 
 class TestGridMaxTokens:

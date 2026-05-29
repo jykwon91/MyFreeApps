@@ -6,8 +6,9 @@ the parsed dict + reference data — no DB, no SDK. Shared by the grid +
 single-image entrypoints.
 
 Extracted from the former ``classifier_service.py`` (a utility grab-bag) so the
-scope guards have a cohesive home with PUBLIC names. (The operator map-scope
-hard-lock, ``apply_map_hint``, lands here in a follow-up.)
+scope guards have a cohesive home with PUBLIC names. Both the cross-game
+contamination guard (``check_game_map_consistency``) and the operator map-scope
+hard-lock (``apply_map_hint``) live here.
 """
 from __future__ import annotations
 
@@ -72,3 +73,56 @@ def check_game_map_consistency(
                 result["confidence"] = 0.0
         return result
     return parsed
+
+
+def apply_map_hint(
+    parsed: dict[str, Any],
+    ref: dict[str, Any],
+    map_hint: str,
+    failures: list[str],
+    codes: Optional[list[str]] = None,
+) -> dict[str, Any]:
+    """Hard-lock classification to the operator-supplied source map scope.
+
+    The operator scopes a single-map source by setting ``map_hint`` (a map
+    slug) in Source.config_json. This is the load-bearing recurrence fix for
+    cross-MAP-within-one-game misclassification: a pure-Mirage video whose
+    "Catwalk" / "Jungle" / "Ticket" chapter titles led the classifier to guess
+    dust2 / ancient (callout names that are more famous on those maps, even
+    though all three are also Mirage zones). The prompt-only chapter-title
+    consistency nudge proved insufficient on real footage, so this overrides
+    Claude's map selection outright.
+
+    Behaviour when ``map_hint`` is a known map:
+      - force ``game_slug`` to that map's game and ``map_slug`` to ``map_hint``
+      - if Claude returned a DIFFERENT map, emit a structured override code +
+        human note (so the override is visible in telemetry, per
+        check-third-party-error-codes). The returned zone slugs are KEPT:
+        ``resolve_slugs`` scopes zone lookups to the (now-forced) map, so a slug
+        that also exists on the hinted map (catwalk, b-site, …) resolves
+        correctly, while one that does not (e.g. ancient-only ``a-main``)
+        cleanly nulls out for the operator to set during review.
+
+    Returns a COPY (never mutates ``parsed``), matching
+    :func:`check_game_map_consistency`. A ``map_hint`` absent from the
+    reference data is a no-op with a logged note (defensive — the source
+    service validates the slug at write time).
+    """
+    map_game = {m["slug"]: m["game_slug"] for m in ref.get("maps", [])}
+    if map_hint not in map_game:
+        failures.append(
+            f"map_hint '{map_hint}' not found in reference data — scope not applied"
+        )
+        return parsed
+    result = dict(parsed)
+    claude_map = result.get("map_slug")
+    if claude_map and claude_map != map_hint:
+        failures.append(
+            f"MAP-SCOPE OVERRIDE: classifier chose map='{claude_map}' but source is "
+            f"scoped to '{map_hint}' — forcing '{map_hint}' (zones re-resolved on it)"
+        )
+        if codes is not None:
+            codes.append(f"map_hint_override:claude={claude_map}:forced={map_hint}")
+    result["game_slug"] = map_game[map_hint]
+    result["map_slug"] = map_hint
+    return result
