@@ -3,7 +3,7 @@
 Issues discovered during development. New entries are appended; resolved entries are
 removed and the counts in this header are updated.
 
-**Open issues: 24 (Critical: 1 [discovery-quality P0 umbrella, triage-2026-05-28] / High: 6 [1 blocked-on-react-19, 1 public-launch cost guardrail, 4 triage-2026-05-28] / Medium: 7 [5 prior + 2 triage-2026-05-28: pagination, rejection-visibility] / Low: 9 [7 prior + 2 triage-2026-05-28 cosmetic] / Feature requests: 1 [triage-2026-05-28 raw-resume-upload])**
+**Open issues: 22 (Critical: 1 [discovery-quality P0 umbrella, triage-2026-05-28] / High: 5 [1 blocked-on-react-19, 1 public-launch cost guardrail, 3 triage-2026-05-28] / Medium: 7 [5 prior + 2 triage-2026-05-28: pagination, rejection-visibility] / Low: 8 [6 prior + 2 triage-2026-05-28 cosmetic] / Feature requests: 1 [triage-2026-05-28 raw-resume-upload])**
 
 > Status (2026-05-08 PM): All actionable audit items resolved across batches PR #492-#528 (~30 PRs). Remaining open entries are either (a) blocked on the React 18→19 monorepo bump (5 items), (b) deferred-by-design conventions or follow-ups (4), (c) environmental issues unrelated to code (3: asyncpg Windows, test hang on Windows, Quality Gate false-positive), or (d) intentional accepted lint warnings (2).
 
@@ -371,17 +371,9 @@ Column-width alignment (`applications.role_title` 200 vs `discovered_jobs.title`
 
 ---
 
-### [Backend / Discovery] `expired_at` column exists but no path sets it — unused-column tech debt
+### ~~[Backend / Discovery] `expired_at` column exists but no path sets it — unused-column tech debt~~ RESOLVED
 
-**Severity:** Low
-**Effort:** L
-**Location:** `apps/myjobhunter/backend/app/models/discovery/discovered_job.py:113-115`
-
-**Problem:** Model has `expired_at: datetime | None` for "set when source removes posting upstream" per docstring. Nothing writes it. Upsert clears it on re-fetch (line 222 of repo) but no path SETS it on first observed disappearance.
-
-**Recommendation:** When the next refresh of a source returns a posting set that no longer includes a previously-seen `source_external_id`, mark missing rows `expired_at = now()`. Follow-up scope.
-
-**Why Low:** Pure follow-up scope, currently unused. But shipping a column without the writer is debt to clean up.
+**Resolved:** branch `fix/mjh-discovery-active-only` (2026-05-28). `discovery_fetch_service.fetch_source` now calls the new `discovery_repository.mark_missing_as_expired`, which sets `expired_at=now()` on previously-active `(user_id, source)` rows whose `source_external_id` is absent from the set a fetch returned — exactly the "missing from a re-fetch" recommendation. Guarded to fire only after a successful, non-empty fetch so a 429/error/empty cycle never mass-expires the inbox. The inbox/saved queries now also exclude `expired_at`-set rows. Folded into the active-only HIGH fix above; see that entry for full scope.
 
 ---
 
@@ -736,12 +728,9 @@ This rules a lot of work in and out: **don't** invest in a relevance-overhaul or
 **Evidence:** `app/services/discovery/discovery_score_service.py` (score loop), `config.py:41-42,52`, fetch pages #594. Frontend "Scoring" badge condition not yet located — find in `apps/myjobhunter/frontend/src/features/discover/`.
 **Fix-time step:** check Sentry (project `myjobhunter-api`) for score-loop / JSearch errors before shell diagnostics (per check-Sentry-first). No Sentry MCP connected this session.
 
-### HIGH — Discovery feed surfaces closed/expired postings; should only show active jobs
+### ~~HIGH — Discovery feed surfaces closed/expired postings; should only show active jobs~~ RESOLVED
 
-**Reported:** operator — opening discovered postings in a new tab lands on already-closed listings.
-**Symptom:** The inbox includes postings that are no longer open when the operator clicks through. Operator wants active-only results.
-**Related existing debt:** the "[Backend / Discovery] `expired_at` column exists but no path sets it" entry below (`app/models/discovery/discovered_job.py:113-115`) — the model has `expired_at` for "posting removed upstream" but **nothing writes it**, and nothing filters on it. That gap is the same root issue.
-**Hypothesis (confirm):** the JSearch/aggregator feed returns stale/closed postings (or postings go stale between fetch and view), and there is no liveness/expiry filter on the inbox query. Options: (a) honor any closed/expired/`job_offer_expiration` signal the feed provides at ingest and skip/flag those rows; (b) implement the `expired_at` writer (mark rows missing from a re-fetch as expired) and exclude expired rows from the inbox; (c) re-validate posting liveness before display. Likely a combination — decide during design.
+**Resolved:** branch `fix/mjh-discovery-active-only` (2026-05-28). Implemented both liveness signals the hypothesis called for and excluded inactive rows from the inbox. (1) Capture the feed's declared expiry: `sources/jsearch.py` `_normalize` now reads `job_offer_expiration_datetime_utc` into a new normalized `source_expires_at`; Greenhouse/Lever feeds carry no expiry field (active-only feeds) so they map None. (2) New `source_expires_at` timezone-aware column on `discovered_jobs` (migration `discexp260528`), wired through `upsert_postings`. (3) `expired_at` writer: `discovery_fetch_service.fetch_source` now computes the `source_external_id` set returned each cycle and calls the new `discovery_repository.mark_missing_as_expired` to set `expired_at=now()` on previously-active rows absent from the set — guarded to fire ONLY after a successful, non-empty fetch (never on 429/error/empty, which would mass-expire the inbox). (4) `list_discovered` inbox + saved branches now exclude rows where `expired_at IS NOT NULL` OR `source_expires_at < now()`; `state="all"` still returns everything. Regression tests in `tests/test_discovery_active_only.py` (writer, guard, inbox/saved exclusion, end-to-end) + `tests/test_jsearch_adapter.py` (normalize capture). Closes the related Low entry below in the same change.
 
 ### HIGH — Fit-scoring rejected a candidate for a role they have already held (Daniel Leba)
 

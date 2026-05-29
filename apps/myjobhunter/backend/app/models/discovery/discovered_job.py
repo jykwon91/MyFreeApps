@@ -14,7 +14,12 @@ Lifecycle:
 3. Operator triages: ``dismissed_at`` (won't reappear) /
    ``saved_at`` (kept for later) / ``promoted_application_id``
    (promoted into the applications kanban).
-4. ``expired_at`` set when the source removes the posting upstream.
+4. ``expired_at`` set when the posting disappears from a successful,
+   non-empty fetch (we observed it vanish upstream). Separately,
+   ``source_expires_at`` records a feed-declared close date when the
+   source supplies one (JSearch). A row is treated as inactive — and
+   excluded from the inbox / saved views — if ``expired_at`` is set OR
+   ``source_expires_at`` is in the past.
 
 State invariants:
 
@@ -117,6 +122,15 @@ class DiscoveredJob(Base):
         nullable=False,
     )
     expired_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True,
+    )
+    # Feed-declared expiry: the source told us "this listing closes at X"
+    # (e.g. JSearch ``job_offer_expiration_datetime_utc``). Distinct from
+    # ``expired_at`` above, which we set ourselves when a posting vanishes
+    # from a successful fetch. A row is inactive if EITHER ``expired_at`` is
+    # set OR ``source_expires_at`` is in the past. Greenhouse / Lever feeds
+    # carry no declared expiry, so this stays NULL for those sources.
+    source_expires_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True,
     )
 

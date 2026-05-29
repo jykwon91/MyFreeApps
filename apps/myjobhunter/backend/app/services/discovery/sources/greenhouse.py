@@ -309,6 +309,11 @@ def _normalize(raw: dict, *, company_name: str) -> dict:
         "remote_type": remote_type,
         "description": description,
         "posted_at": _parse_updated_at(raw.get("updated_at")),
+        # The Greenhouse boards feed lists only currently-active postings and
+        # carries no declared-expiry field, so there is nothing to map here.
+        # Expiry for Greenhouse is detected by disappearance from the feed
+        # (the fetch service sets ``expired_at`` on rows that stop appearing).
+        "source_expires_at": None,
         "salary_min": None,
         "salary_max": None,
         "salary_currency": "USD",

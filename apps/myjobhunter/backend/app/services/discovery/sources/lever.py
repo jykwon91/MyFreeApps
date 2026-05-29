@@ -249,6 +249,11 @@ def _normalize(raw: dict, *, company_name: str) -> dict:
         "remote_type": remote_type,
         "description": description,
         "posted_at": _parse_epoch_ms(raw.get("createdAt")),
+        # The Lever v0 postings feed lists only currently-active postings and
+        # carries no declared-expiry field, so there is nothing to map here.
+        # Expiry for Lever is detected by disappearance from the feed (the
+        # fetch service sets ``expired_at`` on rows that stop appearing).
+        "source_expires_at": None,
         "salary_min": None,
         "salary_max": None,
         "salary_currency": "USD",

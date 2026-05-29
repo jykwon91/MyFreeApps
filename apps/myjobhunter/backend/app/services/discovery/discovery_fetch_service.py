@@ -369,6 +369,18 @@ async def fetch_source(
 
     fetched_count = len(postings)
 
+    # Capture the set of source_external_ids this fetch returned BEFORE the
+    # operator's post-fetch filters run. Disappearance detection compares
+    # against what the SOURCE returned, not what survived our filters — a
+    # posting the operator excluded by keyword/salary is still live upstream
+    # and must not be marked expired. ``str(...)`` mirrors the normalization
+    # in each adapter (source_external_id is always coerced to str there).
+    seen_external_ids = [
+        str(p["source_external_id"])
+        for p in postings
+        if p.get("source_external_id") is not None
+    ]
+
     # ---- Apply operator's post-fetch filters (min salary, excluded keywords) ----
     postings = _apply_post_fetch_filters(postings, source.config or {})
 
@@ -387,6 +399,28 @@ async def fetch_source(
                 max_posted_at is None or posted_at > max_posted_at
             ):
                 max_posted_at = posted_at
+
+    # ---- Expire postings that vanished from this fetch ----
+    # A posting we previously stored that the source no longer returns has
+    # been taken down upstream — mark it expired so it drops out of the
+    # active-only inbox. CRITICAL GUARD: only when this fetch genuinely
+    # succeeded (status still "success" — the adapter didn't raise) AND the
+    # SOURCE returned a non-empty result (``fetched_count`` is the raw count
+    # before our post-fetch filters). On a 429 / error the adapter raised and
+    # we never reach here; on a legitimately-empty cycle ``fetched_count`` is
+    # 0 and we skip — never mass-expire the whole inbox on a transient blank.
+    if status == "success" and fetched_count > 0 and seen_external_ids:
+        expired_count = await discovery_repository.mark_missing_as_expired(
+            db,
+            user_id=user_id,
+            source=source.source,
+            seen_external_ids=seen_external_ids,
+        )
+        if expired_count:
+            logger.info(
+                "discovery expired %d vanished posting(s): source=%s id=%s",
+                expired_count, source.source, source.id,
+            )
 
     # ---- Persist Greenhouse company name cache ----
     # When the adapter resolved a company display name that differs from
