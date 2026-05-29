@@ -236,6 +236,123 @@ async def test_deleted_source_excluded_from_list_and_detail(
     assert (await auth_client.delete(f"/api/sources/{sid}")).status_code == 204
 
 
+# ---------------------------------------------------------------------------
+# Map-scope hint (map_hint / game_hint): validation at create + read surfacing.
+# The source-create path opens its own unit_of_work, which the `client` fixture
+# binds to the test `db` session — so fixture-seeded game/map rows are visible
+# to _resolve_hints. Slugs are suffixed to be isolation-safe vs a pre-seeded
+# dev DB (same discipline as test_classifier_service.py).
+# ---------------------------------------------------------------------------
+
+_HINT_SUFFIX = uuid.uuid4().hex[:8]
+
+
+@pytest_asyncio.fixture
+async def hint_game_map(db: AsyncSession):
+    from app.models.game.game import Game
+    from app.models.game.map import Map
+
+    g = Game(
+        slug=f"cs2-{_HINT_SUFFIX}",
+        name="Counter-Strike 2",
+        side_a_label="T",
+        side_b_label="CT",
+    )
+    db.add(g)
+    await db.flush()
+    m = Map(game_id=g.id, slug=f"mirage-{_HINT_SUFFIX}", name="Mirage")
+    db.add(m)
+    await db.flush()
+    return g, m
+
+
+@pytest.mark.asyncio
+async def test_create_source_with_map_hint_implies_game(
+    auth_client: AsyncClient, hint_game_map
+):
+    """A valid map_hint is stored AND implies its game; both are surfaced and
+    persisted into config_json (which drives the ingest classifier scope)."""
+    game, mp = hint_game_map
+    resp = await auth_client.post(
+        "/api/sources",
+        json={
+            "kind": "youtube_playlist",
+            "url": "https://www.youtube.com/playlist?list=PLmaphint",
+            "map_hint": mp.slug,
+        },
+    )
+    assert resp.status_code == 201, resp.text
+    body = resp.json()
+    assert body["map_hint"] == mp.slug
+    assert body["game_hint"] == game.slug  # map implies its game
+    assert body["config_json"]["map_hint"] == mp.slug
+    assert body["config_json"]["game_hint"] == game.slug
+
+
+@pytest.mark.asyncio
+async def test_create_source_with_game_hint_only(
+    auth_client: AsyncClient, hint_game_map
+):
+    """A valid game_hint (no map_hint) is stored; map_hint stays null."""
+    game, _ = hint_game_map
+    resp = await auth_client.post(
+        "/api/sources",
+        json={
+            "kind": "youtube_playlist",
+            "url": "https://www.youtube.com/playlist?list=PLgamehint",
+            "game_hint": game.slug,
+        },
+    )
+    assert resp.status_code == 201, resp.text
+    body = resp.json()
+    assert body["game_hint"] == game.slug
+    assert body["map_hint"] is None
+
+
+@pytest.mark.asyncio
+async def test_create_source_unknown_map_hint_returns_422(auth_client: AsyncClient):
+    resp = await auth_client.post(
+        "/api/sources",
+        json={
+            "kind": "youtube_playlist",
+            "url": "https://www.youtube.com/playlist?list=PLbadmap",
+            "map_hint": "no-such-map-xyz",
+        },
+    )
+    assert resp.status_code == 422, resp.text
+    assert "no-such-map-xyz" in resp.text
+
+
+@pytest.mark.asyncio
+async def test_create_source_unknown_game_hint_returns_422(auth_client: AsyncClient):
+    resp = await auth_client.post(
+        "/api/sources",
+        json={
+            "kind": "youtube_playlist",
+            "url": "https://www.youtube.com/playlist?list=PLbadgame",
+            "game_hint": "no-such-game-xyz",
+        },
+    )
+    assert resp.status_code == 422, resp.text
+    assert "no-such-game-xyz" in resp.text
+
+
+@pytest.mark.asyncio
+async def test_create_source_without_hints_surfaces_null(auth_client: AsyncClient):
+    """Omitting hints leaves both null — back-compat with hint-less sources."""
+    resp = await auth_client.post(
+        "/api/sources",
+        json={
+            "kind": "youtube_playlist",
+            "url": "https://www.youtube.com/playlist?list=PLnohint",
+        },
+    )
+    assert resp.status_code == 201, resp.text
+    body = resp.json()
+    assert body["game_hint"] is None
+    assert body["map_hint"] is None
+
+
 def test_lineup_read_serializes_pending_row_with_null_game_map():
     """pending_review lineups have NULL game_id/map_id — LineupRead must
     accept them so the review queue can load (regression: 2 uuid errors).

@@ -38,10 +38,15 @@ router = APIRouter(
 def _source_to_read(source) -> SourceRead:
     last_synced = source.last_synced_at.isoformat() if source.last_synced_at else None
     created = source.created_at.isoformat() if source.created_at else ""
+    config = source.config_json or {}
     return SourceRead(
         id=source.id,
         kind=source.kind,
         config_json=source.config_json,
+        # Lift the classification scope out of config_json so the operator can
+        # see it directly (set at create time, validated in source_service).
+        game_hint=config.get("game_hint"),
+        map_hint=config.get("map_hint"),
         last_synced_at=last_synced,
         created_at=created,
     )

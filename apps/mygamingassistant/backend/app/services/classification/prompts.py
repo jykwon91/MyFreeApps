@@ -69,17 +69,43 @@ CLASSIFICATION ORDER — YOU MUST FOLLOW THIS SEQUENCE:
 """
 
 
-def build_reference_text(ref: dict[str, Any], game_hint: Optional[str] = None) -> str:
+def build_reference_text(
+    ref: dict[str, Any],
+    game_hint: Optional[str] = None,
+    map_hint: Optional[str] = None,
+) -> str:
     """Build the reference text block passed to Claude.
 
-    Constant across calls for the same game → prime candidate for prompt
-    caching. The reference data comes from
+    Constant across calls for the same (game_hint, map_hint) → prime candidate
+    for prompt caching. The reference data comes from
     :func:`app.repositories.game.reference_repo.load_reference_data`; this
     function shapes it into the system-prompt text Claude reads.
+
+    ``map_hint`` is the operator's per-source map scope (Source.config_json
+    ``map_hint``). When set, the map section is restricted to that single map
+    and a HARD scope instruction is emitted, so Claude classifies zones using
+    only that map's zone set. The map itself is additionally hard-locked
+    post-parse by
+    :func:`app.services.classification.scope_guards.apply_map_hint` — the prompt
+    scope improves zone accuracy; the post-parse lock is the load-bearing
+    correctness guarantee.
     """
     lines: list[str] = []
 
-    if game_hint:
+    map_game = {m["slug"]: m["game_slug"] for m in ref.get("maps", [])}
+    if map_hint:
+        mg = map_game.get(map_hint)
+        lines.append(
+            f"SOURCE MAP SCOPE: every chapter in this source is on map "
+            f"'{map_hint}'" + (f" (game '{mg}')" if mg else "") + "."
+        )
+        lines.append(
+            f"You MUST set map_slug='{map_hint}' and pick target_zone_slug / "
+            "stand_zone_slug ONLY from that map's zones listed below. Do NOT "
+            "choose another map, regardless of chapter-title wording."
+        )
+        lines.append("")
+    elif game_hint:
         lines.append(f"Expected game: {game_hint}")
         lines.append("")
 
@@ -93,6 +119,8 @@ def build_reference_text(ref: dict[str, Any], game_hint: Optional[str] = None) -
     lines.append("")
     lines.append("Valid maps with zones (map_slug → game_slug, [zone_slugs]):")
     for m in ref["maps"]:
+        if map_hint and m["slug"] != map_hint:
+            continue
         zone_slugs = ", ".join(z["slug"] for z in m["zones"]) if m["zones"] else "(no zones)"
         lines.append(f"  {m['slug']} [{m['game_slug']}]: {zone_slugs}")
 
