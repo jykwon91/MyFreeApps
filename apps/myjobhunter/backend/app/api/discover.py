@@ -304,10 +304,18 @@ async def list_discovered(
         scored_count, total_count = await discovery_inbox_repository.count_inbox_coverage(
             db, user.id, source_id=source_id,
         )
+        # The inbox pagination total IS the active-inbox row count, which
+        # count_inbox_coverage already computed — reuse it (no second COUNT).
+        total = total_count
+    else:
+        total = await discovery_inbox_repository.count_discovered(
+            db, user.id, state=state, source_id=source_id,
+        )
 
     return DiscoveredJobListResponse(
         items=[DiscoveredJobResponse.model_validate(r) for r in rows],
-        total=len(rows),
+        total=total,
+        has_more=offset + len(rows) < total,
         state=state,
         scored_count=scored_count,
         total_count=total_count,

@@ -292,6 +292,46 @@ async def test_list_discovered_inbox_default(
     # "awaiting the daily pass", not "broken".
     assert body["scored_count"] == 0
     assert body["total_count"] == 1
+    # has_more is inherited from the shared ListResponse; a single row fits one page.
+    assert body["has_more"] is False
+
+
+@pytest.mark.asyncio
+async def test_inbox_pagination_total_is_full_count_and_has_more(
+    client: AsyncClient, user_factory, as_user,
+):
+    """``total`` is the full matching-row count (not the returned page length),
+    and ``has_more`` flips across pages — what the frontend load-more relies on."""
+    user = await user_factory()
+    async with await as_user(user) as a:
+        created = await a.post(
+            "/discover/sources",
+            json={"source": "jsearch", "config": {"query": "x"}},
+        )
+        source_id = created.json()["id"]
+
+        postings = [
+            _posting(
+                source_external_id=f"fake-id-{i}",
+                source_url=f"https://www.linkedin.com/jobs/view/{i}",
+                raw_payload={"job_id": f"fake-id-{i}"},
+            )
+            for i in range(3)
+        ]
+        with patch(_SEARCH_PATH, new_callable=AsyncMock, return_value=postings):
+            await a.post(f"/discover/sources/{source_id}/refresh")
+
+        page1 = (await a.get("/discover?limit=2&offset=0")).json()
+        page2 = (await a.get("/discover?limit=2&offset=2")).json()
+
+    # Page 1: 2 of 3 rows, but total reflects ALL matching rows.
+    assert page1["total"] == 3
+    assert len(page1["items"]) == 2
+    assert page1["has_more"] is True
+    # Page 2: the remaining row, nothing after it.
+    assert page2["total"] == 3
+    assert len(page2["items"]) == 1
+    assert page2["has_more"] is False
 
 
 @pytest.mark.asyncio

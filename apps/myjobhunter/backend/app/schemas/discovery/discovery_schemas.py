@@ -7,6 +7,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
 
+from platform_shared.schemas.pagination import ListResponse
+
 from app.schemas.discovery.greenhouse_source_config import GreenhouseSourceConfig
 from app.schemas.discovery.jsearch_source_config import JSearchSourceConfig
 from app.schemas.discovery.lever_source_config import LeverSourceConfig
@@ -294,11 +296,16 @@ class DiscoveredJobDismissRequest(BaseModel):
     )
 
 
-class DiscoveredJobListResponse(BaseModel):
-    """Returned by ``GET /discover``."""
+class DiscoveredJobListResponse(ListResponse[DiscoveredJobResponse]):
+    """Returned by ``GET /discover``.
 
-    items: list[DiscoveredJobResponse]
-    total: int
+    Inherits ``items`` / ``total`` / ``has_more`` from the shared
+    ``ListResponse`` — the discovery inbox is MJH's first paginated list
+    endpoint (see the TECH_DEBT pagination-convention entry). ``total`` is the
+    full matching-row count for the ``state`` / ``source_id`` filter, NOT the
+    returned page length, so ``has_more`` drives the frontend's load-more.
+    """
+
     state: Literal["inbox", "saved", "all"]
     # Inbox scoring coverage, spanning the WHOLE active inbox (not just the
     # returned page). ``scored_count`` of ``total_count`` rows carry an AI
