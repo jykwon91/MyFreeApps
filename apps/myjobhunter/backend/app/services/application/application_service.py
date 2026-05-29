@@ -30,6 +30,7 @@ from app.repositories.application import (
     application_repository,
 )
 from app.repositories.company import company_repository
+from app.repositories.documents import document_repo
 from app.schemas.application.application_contact_create_request import ApplicationContactCreateRequest
 from app.schemas.application.application_contact_response import ApplicationContactResponse
 from app.schemas.application.application_create_request import ApplicationCreateRequest
@@ -147,12 +148,25 @@ async def get_application_detail(
     sorted_events = sorted(application.events, key=lambda e: e.occurred_at, reverse=True)
     sorted_contacts = sorted(application.contacts, key=lambda c: c.created_at)
 
-    return ApplicationDetailResponse.model_validate(application).model_copy(
-        update={
-            "events": [ApplicationEventResponse.model_validate(e) for e in sorted_events],
-            "contacts": [ApplicationContactResponse.model_validate(c) for c in sorted_contacts],
-        }
-    )
+    update = {
+        "events": [ApplicationEventResponse.model_validate(e) for e in sorted_events],
+        "contacts": [ApplicationContactResponse.model_validate(c) for c in sorted_contacts],
+    }
+
+    response = ApplicationDetailResponse.model_validate(application)
+    # The inline JD view (OverviewSection) reads ``jd_text``. When the JD was
+    # attached as a job_description document instead of typed into the
+    # application, that column is empty — fall back to the document body so the
+    # read view shows the JD without opening + editing the document. ``jd_text``
+    # stays the source of truth when set; this only fills the gap.
+    if not (response.jd_text and response.jd_text.strip()):
+        fallback = await document_repo.latest_job_description_body(
+            db, user_id, application_id,
+        )
+        if fallback and fallback.strip():
+            update["jd_text"] = fallback
+
+    return response.model_copy(update=update)
 
 
 async def get_application(
