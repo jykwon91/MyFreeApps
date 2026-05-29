@@ -6,8 +6,12 @@ RapidAPI calls happen. Verifies:
 - Happy path: 200 OK with realistic JSearch envelope → list of
   normalized RawPosting dicts
 - Auth errors: 401/403 / missing API key → JSearchAuthError
-- Transient errors: 429 / 500 / 502 → JSearchTransientError; tenacity
-  retries up to 3 times before propagating
+- Transient errors: 500 / 502 → JSearchTransientError; tenacity retries
+  up to 3 times before propagating
+- 429 handling: a 429 carrying a (short) Retry-After is honored + retried
+  as transient; a header-less 429 (or one with a Retry-After beyond the
+  per-fetch bound) is monthly-quota exhaustion → JSearchQuotaError (fatal,
+  not retried, distinct actionable message)
 - Invalid envelopes: non-JSON body, status != "OK", non-list jobs →
   JSearchInvalidResponseError
 - Field mapping: each JSearch field lands on the right RawPosting key
@@ -29,6 +33,7 @@ from app.services.discovery.sources.jsearch import (
     JSearchAuthError,
     JSearchError,
     JSearchInvalidResponseError,
+    JSearchQuotaError,
     JSearchTransientError,
     search,
 )
@@ -189,23 +194,6 @@ async def test_search_raises_auth_error_on_403() -> None:
 
 
 @pytest.mark.asyncio
-async def test_search_retries_on_429_then_propagates(monkeypatch) -> None:
-    # Disable tenacity's wait so the test runs in milliseconds.
-    monkeypatch.setattr(jsearch, "search", jsearch.search.retry_with(wait=lambda _: 0))
-    call_count = {"n": 0}
-
-    def handler(request: httpx.Request) -> httpx.Response:
-        call_count["n"] += 1
-        return httpx.Response(429, text="rate-limited")
-
-    with patch.object(httpx, "AsyncClient", lambda *a, **kw: _client_with_handler(handler)):
-        with pytest.raises(JSearchTransientError):
-            await jsearch.search(query="x", api_key="test-key")
-
-    assert call_count["n"] == 3  # tenacity attempts 3 times total
-
-
-@pytest.mark.asyncio
 async def test_search_retries_on_502(monkeypatch) -> None:
     monkeypatch.setattr(jsearch, "search", jsearch.search.retry_with(wait=lambda _: 0))
     call_count = {"n": 0}
@@ -221,15 +209,55 @@ async def test_search_retries_on_502(monkeypatch) -> None:
     assert call_count["n"] == 3
 
 
+# ===========================================================================
+# 429 handling — Retry-After honored as transient; header-less = quota
+# ===========================================================================
+
+
 @pytest.mark.asyncio
-async def test_search_succeeds_after_one_429_then_200(monkeypatch) -> None:
+async def test_search_honors_short_retry_after_and_retries(monkeypatch) -> None:
+    """A 429 carrying a short Retry-After is a transient throttle: we sleep
+    the advised interval (stubbed here) and retry. Three such 429s exhaust
+    tenacity and propagate as JSearchTransientError — NOT quota."""
     monkeypatch.setattr(jsearch, "search", jsearch.search.retry_with(wait=lambda _: 0))
+    # Stub the Retry-After sleep so the test runs instantly.
+    sleeps: list[float] = []
+
+    async def _fake_sleep(secs: float) -> None:
+        sleeps.append(secs)
+
+    monkeypatch.setattr(jsearch.asyncio, "sleep", _fake_sleep)
+    call_count = {"n": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        call_count["n"] += 1
+        return httpx.Response(429, headers={"Retry-After": "2"}, text="slow down")
+
+    with patch.object(httpx, "AsyncClient", lambda *a, **kw: _client_with_handler(handler)):
+        with pytest.raises(JSearchTransientError):
+            await jsearch.search(query="x", api_key="test-key")
+
+    assert call_count["n"] == 3  # retried as transient
+    # Retry-After (2s) honored once per attempt. tenacity's own back-off also
+    # routes through the patched sleep (stubbed to 0), so filter to the
+    # adapter's Retry-After sleeps rather than asserting exact ordering.
+    assert [s for s in sleeps if s == 2.0] == [2.0, 2.0, 2.0]
+
+
+@pytest.mark.asyncio
+async def test_search_succeeds_after_one_throttled_429_then_200(monkeypatch) -> None:
+    monkeypatch.setattr(jsearch, "search", jsearch.search.retry_with(wait=lambda _: 0))
+
+    async def _fake_sleep(_secs: float) -> None:
+        return None
+
+    monkeypatch.setattr(jsearch.asyncio, "sleep", _fake_sleep)
     call_count = {"n": 0}
 
     def handler(request: httpx.Request) -> httpx.Response:
         call_count["n"] += 1
         if call_count["n"] == 1:
-            return httpx.Response(429)
+            return httpx.Response(429, headers={"Retry-After": "1"})
         return httpx.Response(200, json=_ok_envelope())
 
     with patch.object(httpx, "AsyncClient", lambda *a, **kw: _client_with_handler(handler)):
@@ -237,6 +265,57 @@ async def test_search_succeeds_after_one_429_then_200(monkeypatch) -> None:
 
     assert call_count["n"] == 2
     assert len(results) == 1
+
+
+@pytest.mark.asyncio
+async def test_search_headerless_429_is_quota_error_not_retried(monkeypatch) -> None:
+    """A 429 with NO Retry-After means the monthly RapidAPI plan is spent.
+    It must raise JSearchQuotaError on the FIRST call (retrying a spent plan
+    can't succeed) and carry an actionable, distinct message."""
+    monkeypatch.setattr(jsearch, "search", jsearch.search.retry_with(wait=lambda _: 0))
+    call_count = {"n": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        call_count["n"] += 1
+        return httpx.Response(429, text="exceeded the MONTHLY quota")
+
+    with patch.object(httpx, "AsyncClient", lambda *a, **kw: _client_with_handler(handler)):
+        with pytest.raises(JSearchQuotaError) as exc_info:
+            await jsearch.search(query="x", api_key="test-key")
+
+    assert call_count["n"] == 1  # NOT retried
+    assert "quota" in str(exc_info.value).lower()
+
+
+@pytest.mark.asyncio
+async def test_search_long_retry_after_is_quota_error(monkeypatch) -> None:
+    """A Retry-After beyond the per-fetch bound is effectively a quota wall —
+    surface as JSearchQuotaError rather than blocking the worker for minutes."""
+    monkeypatch.setattr(jsearch, "search", jsearch.search.retry_with(wait=lambda _: 0))
+    call_count = {"n": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        call_count["n"] += 1
+        # 3600s is far beyond _MAX_RETRY_AFTER_SECONDS (30s).
+        return httpx.Response(429, headers={"Retry-After": "3600"})
+
+    with patch.object(httpx, "AsyncClient", lambda *a, **kw: _client_with_handler(handler)):
+        with pytest.raises(JSearchQuotaError):
+            await jsearch.search(query="x", api_key="test-key")
+
+    assert call_count["n"] == 1  # NOT retried
+
+
+def test_parse_retry_after_seconds() -> None:
+    """Unit-cover the Retry-After parser: integer seconds, absent, malformed,
+    and negative all resolve correctly (negative/malformed → None = quota)."""
+    assert jsearch._parse_retry_after_seconds("12") == 12.0
+    assert jsearch._parse_retry_after_seconds("  5  ") == 5.0
+    assert jsearch._parse_retry_after_seconds(None) is None
+    assert jsearch._parse_retry_after_seconds("") is None
+    assert jsearch._parse_retry_after_seconds("-3") is None
+    # HTTP-date form is not emitted by RapidAPI → treated as absent.
+    assert jsearch._parse_retry_after_seconds("Wed, 21 Oct 2026 07:28:00 GMT") is None
 
 
 # ===========================================================================

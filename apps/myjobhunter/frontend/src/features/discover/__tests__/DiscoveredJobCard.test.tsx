@@ -111,22 +111,25 @@ describe("DiscoveredJobCard — verdict badge", () => {
 });
 
 describe("DiscoveredJobCard — unscored visual signal (PR 4b)", () => {
-  it("shows 'Awaiting AI score' pill when unscored and polling is idle", () => {
+  it("shows the static 'Not scored' pill when unscored and the scoring window is closed", () => {
     renderInRouter(
       <DiscoveredJobCard
         job={makeJob({ verdict: null, score: null })}
         isScoringInFlight={false}
       />,
     );
-    expect(
-      screen.getByTestId("discovered-job-awaiting-score"),
-    ).toBeInTheDocument();
+    const pill = screen.getByTestId("discovered-job-awaiting-score");
+    expect(pill).toBeInTheDocument();
+    expect(pill).toHaveTextContent("Not scored");
+    // Regression: a score===null card in the steady state must NOT animate.
+    // The perpetual "Scoring" spinner was the bug — the static pill is a
+    // real terminal state, not a spinner that never resolves.
     expect(
       screen.queryByTestId("discovered-job-scoring-spinner"),
     ).toBeNull();
   });
 
-  it("shows a spinner when unscored and polling is in flight", () => {
+  it("shows a spinner when unscored and the scoring window is open", () => {
     renderInRouter(
       <DiscoveredJobCard
         job={makeJob({ verdict: null, score: null })}
@@ -156,12 +159,15 @@ describe("DiscoveredJobCard — unscored visual signal (PR 4b)", () => {
     ).toBeNull();
   });
 
-  it("defaults isScoringInFlight to false when omitted", () => {
+  it("defaults isScoringInFlight to false when omitted (static pill, no spinner)", () => {
     renderInRouter(<DiscoveredJobCard job={makeJob({ verdict: null, score: null })} />);
     // Default falsy → static pill, not the spinner.
     expect(
       screen.getByTestId("discovered-job-awaiting-score"),
     ).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("discovered-job-scoring-spinner"),
+    ).toBeNull();
   });
 });
 

@@ -16,13 +16,16 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import desc, func, nulls_last, or_, outerjoin, select, update
+from sqlalchemy import desc, func, nulls_last, outerjoin, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.discovery.discovered_job import DiscoveredJob
 from app.models.discovery.discovery_fetch import DiscoveryFetch
 from app.models.discovery.discovery_source import DiscoverySource
+from app.repositories.discovery.discovery_inbox_repository import (
+    active_only_predicate,
+)
 
 
 # ===========================================================================
@@ -420,17 +423,10 @@ async def list_discovered(
         )
         .where(DiscoveredJob.user_id == user_id)
     )
-    # Active-only predicate, shared by the inbox and saved views: a row is
-    # active unless we observed it vanish upstream (``expired_at`` set) or its
-    # feed-declared close date is in the past. ``source_expires_at IS NULL``
-    # rows (no declared expiry — e.g. all Greenhouse/Lever rows) stay active.
-    active_only = (
-        DiscoveredJob.expired_at.is_(None),
-        or_(
-            DiscoveredJob.source_expires_at.is_(None),
-            DiscoveredJob.source_expires_at >= func.now(),
-        ),
-    )
+    # Active-only predicate, shared by the inbox and saved views (and the
+    # coverage-count query) via ``active_only_predicate`` — one source of
+    # truth so the populations never drift.
+    active_only = active_only_predicate()
 
     if state == "inbox":
         stmt = stmt.where(
