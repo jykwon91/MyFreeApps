@@ -227,48 +227,53 @@ NOT exclusions (allowed for AIM, unlike the stand-timing classifier):
     held up in ready pose.
   - Tight target-centric framings — wide framings are STAND, tight is AIM.
 
-STRUCTURAL ANCHOR — CROSSHAIR LOCK-ON INSTANT (operator audit 2026-05-25)
-AIM is the LOCK-ON INSTANT: the frame in the stable-aim phase where
-the crosshair has just finished sweeping to the target landmark and is
-held still. A ~1 second clip is cut centred on the picked frame
-downstream; the picked frame must be far enough from the windup
-boundary that the clip does NOT extend into windup, release,
-projectile flight, or landing.
+STRUCTURAL ANCHOR — LAST SETTLED BEAT BEFORE THE THROW MOTION (operator spec 2026-05-31)
+AIM is the LAST SETTLED FRAME before the throw motion begins — the
+instant the thrower is lined up and about to commit. Concretely: the
+utility (smoke/grenade/ability) is IN HAND, the crosshair is PARKED on
+the target landmark, and the view is STILL — and it is the LATEST such
+frame BEFORE the player starts the throw motion (a windup, OR a jump,
+OR a strafe — see below).
 
-Prefer a frame where:
-  - Crosshair sweep is over and the crosshair is stationary on the
-    target landmark (zero crosshair velocity across this frame and
-    its neighbours).
-  - At LEAST one prior frame in the candidate set ALSO shows the
-    crosshair on the same landmark (lock is established, not just
-    transient).
-  - At LEAST one following frame in the candidate set ALSO shows the
-    crosshair on the same landmark with NO windup motion yet (the
-    utility is still in ready pose, body not rotating into throw).
-  - The composition is dominated by the target landmark, not by the
-    sweeping motion or the windup transition.
+The ~1 second clip is cut END-ANCHORED on the picked frame downstream
+(it runs [pick − 1.0s, pick]), so it shows the second of settling onto
+the landmark and ENDS on the lined-up aim. Picking the LATEST settled
+frame is therefore correct and safe: the clip never extends into the
+windup, release, flight, or landing — those are all AFTER the pick.
 
-REJECT these edge-of-phase picks:
-  - LATEST pre-windup frame: typically the crosshair is already
-    drifting OR the utility is just starting to pull back. A clip
-    centred here catches windup → release → landing on the post-side,
-    breaking the AIM pane (operator-observed defect, 2026-05-25:
-    several AIM clips showed the smoke landing).
-  - FIRST stable-aim frame right after the sweep: the prior frame
-    shows crosshair motion. A clip centred here catches the sweep on
-    the pre-side, blurring AIM with the look-up transition from STAND.
+Prefer the frame where:
+  - The crosshair is stationary on the target landmark (zero crosshair
+    velocity) and the utility is in hand.
+  - It is the LATEST such frame before the throw motion starts — i.e.
+    the immediately following frames begin the windup / jump / strafe.
+    Among several settled frames, pick the LAST one before that
+    movement, NOT a middle or early one.
+  - At LEAST one prior frame ALSO shows the crosshair on the same
+    landmark (the lock is established, not a transient sweep).
 
-If the candidate set only contains edges (no stable-aim frames on
-BOTH sides of any pick), accept the cleanest available — partial
-information is still better than skipping the demo.
+JUMP-THROWS AND STRAFE-THROWS (critical — the aim is DECOUPLED from release)
+Many lineups require a jump-throw, or strafing forward / sideways while
+throwing. There the thrower LINES UP THE AIM FIRST (crosshair parked on
+the landmark, still), THEN jumps or strafes WHILE throwing — so the
+utility leaves the hand LATER and from a MOVED position with a
+different look-direction. The AIM frame is the settled lined-up beat
+BEFORE that movement, which may be a fraction of a second or SEVERAL
+seconds before the actual release. Do NOT pick a frame where the player
+has already left the ground, begun strafing, or rotated into the throw
+— those are throw-motion frames, not the aim. Pick the last STILL beat
+before the motion.
+
+If no clearly-settled frame exists before the motion (every frame is
+sweeping or already moving), accept the cleanest near-settled frame —
+partial information beats skipping the demo.
 
 WHEN MULTIPLE DEMONSTRATIONS EXIST
 The narrator may show the aim more than once (initial glance → small
-adjustment → final lock). Prefer a MIDDLE-of-phase frame from the
-LONGEST contiguous lock-on segment — NOT the latest frame before
-windup. The longest lock segment is where the narrator was most
-confident in the aim and held it steady; downstream re-anchoring is
-most likely to succeed on that segment.
+adjustment → final lock-and-throw). Pick the settled beat from the
+demonstration that is ACTUALLY THROWN — the last lined-up frame right
+before the throw motion that leads into the release. When in doubt,
+prefer the LATER lined-up beat (closer to the throw), not an early
+glance the narrator adjusted away from.
 
 WHEN NO DEMONSTRATION EXISTS
 Some chapters skip the aim-demo entirely (narrator stands and immediately
