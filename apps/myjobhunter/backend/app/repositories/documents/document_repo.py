@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from platform_shared.repositories import soft_delete as _soft_delete
 
+from app.core.enums import DocumentKind
 from app.models.application.document import Document
 
 # Allowlist of columns safe to update via the dynamic ``update`` function.
@@ -102,6 +103,37 @@ async def list_by_application(
         .order_by(Document.updated_at.desc(), Document.created_at.desc())
     )
     return list(result.scalars().all())
+
+
+async def latest_job_description_body(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    application_id: uuid.UUID,
+) -> str | None:
+    """Body of the most-recently-updated, non-deleted ``job_description``
+    document linked to ``application_id`` (text-body documents only).
+
+    Backs the application-detail view's inline-JD fallback: when the
+    application's own ``jd_text`` column is empty because the JD was attached
+    as a document rather than typed in, the read view surfaces this body so
+    the JD is visible without opening + editing the document. File-only
+    uploads (``body IS NULL``/empty) are skipped — there is nothing to render
+    inline. Returns ``None`` when no qualifying document exists.
+    """
+    result = await db.execute(
+        select(Document.body)
+        .where(
+            Document.user_id == user_id,
+            Document.application_id == application_id,
+            Document.kind == DocumentKind.JOB_DESCRIPTION,
+            Document.deleted_at.is_(None),
+            Document.body.isnot(None),
+            Document.body != "",
+        )
+        .order_by(Document.updated_at.desc(), Document.created_at.desc())
+        .limit(1)
+    )
+    return result.scalar_one_or_none()
 
 
 async def create(db: AsyncSession, document: Document) -> Document:
