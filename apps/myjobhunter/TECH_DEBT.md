@@ -3,7 +3,7 @@
 Issues discovered during development. New entries are appended; resolved entries are
 removed and the counts in this header are updated.
 
-**Open issues: 22 (Critical: 1 [discovery-quality P0 umbrella, triage-2026-05-28] / High: 5 [1 blocked-on-react-19, 1 public-launch cost guardrail, 3 triage-2026-05-28] / Medium: 7 [5 prior + 2 triage-2026-05-28: pagination, rejection-visibility] / Low: 8 [6 prior + 2 triage-2026-05-28 cosmetic] / Feature requests: 1 [triage-2026-05-28 raw-resume-upload])**
+**Open issues: 22 (Critical: 1 [discovery-quality P0 umbrella, triage-2026-05-28] / High: 4 [1 blocked-on-react-19, 1 public-launch cost guardrail, 2 triage-2026-05-28] / Medium: 8 [5 prior + 2 triage-2026-05-28: pagination, rejection-visibility + 1 discovery content_hash dedup] / Low: 8 [6 prior + 2 triage-2026-05-28 cosmetic] / Feature requests: 1 [triage-2026-05-28 raw-resume-upload])**
 
 > Status (2026-05-08 PM): All actionable audit items resolved across batches PR #492-#528 (~30 PRs). Remaining open entries are either (a) blocked on the React 18→19 monorepo bump (5 items), (b) deferred-by-design conventions or follow-ups (4), (c) environmental issues unrelated to code (3: asyncpg Windows, test hang on Windows, Quality Gate false-positive), or (d) intentional accepted lint warnings (2).
 
@@ -718,15 +718,12 @@ This rules a lot of work in and out: **don't** invest in a relevance-overhaul or
 **Hypothesis (confirm):** Some application-creation paths (promote-from-discovery and/or apply-from-analysis, and the "Job Description" document upload path) persist the JD as a Document but never set `application.jd_text`, so OverviewSection has nothing to show. Fix is either (a) those paths also populate `jd_text`, or (b) OverviewSection falls back to the latest `job_description` Document body when `jd_text` is empty.
 **Fix considerations:** pick a single source of truth for JD text (application column vs. Document body) — don't render from two divergent places. Read view must show the JD without an edit click.
 
-### HIGH — Discover: cards stuck on "Scoring" spinner forever; JSearch fetch returning 429
+### ~~HIGH — Discover: cards stuck on "Scoring" spinner forever; JSearch fetch returning 429~~ RESOLVED
 
-**Reported:** operator, prod — "senior software engineer" saved search.
-**Symptom:** Inbox cards show a "Scoring" badge + spinner that never resolves. Saved search shows "Fetch failed — JSearch returned 429 (retry-after=None)", last fetched 49 min ago.
-**Two distinct problems:**
-1. **Spinner never terminates.** Two-stage scoring (#570) embeds all postings locally, then sends only the top-N (`discovery_score_top_n=20`, `app/core/config.py:52`) to Claude, stopping at the daily budget (`discovery_daily_budget_usd=0.30`, `config.py:41-42`). Postings outside the top-N — or beyond budget, or when the fetch failed so the score pass never ran — are never scored, yet the frontend appears to show a perpetual "Scoring" spinner for any unscored job. This violates `visible-loading-feedback` (a spinner must terminate to a real state). Need: frontend must distinguish *scored* / *scoring-in-progress* / *not-scored-this-cycle*, and never spin indefinitely.
-2. **JSearch 429.** RapidAPI returned HTTP 429 (rate-limited), `retry-after=None`. Confirm: is the daily 5-pages-per-fetch (#594) exceeding the RapidAPI plan quota? Is backoff/retry-after handled? Does a failed fetch leave previously-fetched inbox jobs stuck in the unscored state above?
-**Evidence:** `app/services/discovery/discovery_score_service.py` (score loop), `config.py:41-42,52`, fetch pages #594. Frontend "Scoring" badge condition not yet located — find in `apps/myjobhunter/frontend/src/features/discover/`.
-**Fix-time step:** check Sentry (project `myjobhunter-api`) for score-loop / JSearch errors before shell diagnostics (per check-Sentry-first). No Sentry MCP connected this session.
+**Resolved:** branch `fix/mjh-discovery-scoring-state` (2026-05-29). Both problems fixed (scope-disciplined — scoring *coverage* mechanics, the rubric, and fetch cadence were deliberately left for separate PRs).
+1. **Spinner never terminated.** Root cause: `DiscoveredJobCard` showed an animated spinner whenever `isUnscored && isScoringInFlight`, and `isScoringInFlight` was a *list-wide* boolean (`items.some(score===null)`) passed to every card, while the inbox polled every 4s **forever** with no stop condition. Because the scorer only rates the daily prefilter top-N, most rows stay `score IS NULL` permanently → every unscored card spun forever and the tab polled forever. Fix: a `score===null` card now renders a STATIC "Not scored" pill (no animation); the animated spinner is reserved for a **bounded** client-side window (`SCORING_WINDOW_MS=60s`) opened only when a fresh fetch lands (detected by a jump in the unscored count) and closed on timeout or when every row is scored. Polling runs ONLY while that window is open (`pollingInterval: 0` otherwise), satisfying `visible-loading-feedback`. Coverage is surfaced as "Scored N of M — the rest await the next daily scoring pass" so the unscored tail reads as expected, not broken: new `scored_count`/`total_count` on `DiscoveredJobListResponse` (repo `count_inbox_coverage`, inbox state only) + matching TS type.
+2. **JSearch 429.** `sources/jsearch.py` now honors `Retry-After`: a 429 with a short `Retry-After` sleeps the advised interval (bounded to 30s) and retries as transient; a header-less 429 (or `Retry-After` beyond the bound) is treated as monthly-quota exhaustion → new `JSearchQuotaError` (fatal, not retried) with a distinct actionable message ("JSearch monthly quota reached…"). The fetch service already persists `str(exc)` as the source's `last_error_message`, so the saved-search row now shows the actionable reason; the route maps `JSearchQuotaError` → HTTP 429 with the same string. Captures `x-ratelimit-requests-remaining` + status in structured logs per `check-third-party-error-codes`.
+**Tests:** frontend `DiscoverInboxView.test.tsx` (poll off in steady state, static signal to cards, coverage line) + `DiscoveredJobCard.test.tsx` (static "Not scored" pill, no spinner); backend `test_jsearch_adapter.py` (Retry-After honored + retried; header-less/long-Retry-After → quota, not retried; parser unit) + `test_discover_endpoints.py` (inbox coverage counts scored-vs-total).
 
 ### ~~HIGH — Discovery feed surfaces closed/expired postings; should only show active jobs~~ RESOLVED
 
@@ -740,6 +737,12 @@ This rules a lot of work in and out: **don't** invest in a relevance-overhaul or
 1. **Truncated / recency-only profile snapshot.** Job analysis sends a *bounded* profile snapshot (~8 most-recent work roles, 5 educations, 40 skills) to Claude (prompt builder in `app/services/job_analysis/job_analysis_service.py`; 50K-char content cap in `app/services/extraction/claude_service.py:46`). If the directly-relevant role sits below the 8 most-recent (or is trimmed by the char cap), the scorer never sees it and scores blind. → select roles by *relevance to the JD*, not just recency; or summarize older roles so they still register.
 2. **Rubric under-weights prior direct experience.** `JOB_ANALYSIS_PROMPT` may not treat "has already performed this role" as a dominant positive. → audit the scoring rubric/weighting.
 **Fix-time step:** reproduce with a synthetic profile carrying the matching role at position >8 to isolate truncation vs. rubric; inspect the scored-payload context in Sentry if logged (without surfacing PII). This is the most product-damaging issue in the batch — a job-fit tool that rejects people from jobs they've done erodes all trust in the score.
+
+### MEDIUM — [Discovery] No adapter sets `content_hash` → cross-source dedup index is inert
+
+**Discovered during #791 (active-only-inbox).** No source adapter (jsearch / greenhouse / lever) populates `discovered_jobs.content_hash`, so the `(user_id, content_hash)` cross-source dedup index is inert — the same posting surfaced by two boards (e.g. a role on both Greenhouse and Google Jobs/JSearch) is stored as two rows and shows up twice in the inbox. Today's dedup only catches same-source repeats via `(user_id, source, source_external_id)`. Needs a content-hashing strategy (normalize title + company + a description fingerprint; decide casing/whitespace/locale handling) plus a backfill for existing rows. Follow-up PR.
+
+---
 
 ### MEDIUM — Discovery results need pagination
 

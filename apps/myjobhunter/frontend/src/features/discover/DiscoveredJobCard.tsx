@@ -26,15 +26,18 @@ import UndoDismissToast from "./UndoDismissToast";
 interface DiscoveredJobCardProps {
   job: DiscoveredJob;
   /**
-   * True when the inbox view is currently polling for fresh scores
-   * (i.e. another card in the same list has score=null). Lets the
-   * unscored card show a small spinner in the verdict-badge slot so
-   * the operator knows the rating is in flight, not stuck. When
-   * false, an unscored card shows a static "Awaiting AI score" pill
-   * — same information, lower visual noise once polling stops.
+   * True only during the BOUNDED window right after a refresh the client
+   * itself triggered (and which the inbox times out — see
+   * ``DiscoverInboxView``). While true, an unscored card shows a small
+   * animated spinner so the operator sees their fresh postings are being
+   * rated. While false — the steady state — an unscored card shows a
+   * STATIC "Not scored" pill with no animation, because most fetched rows
+   * never get scored (the scorer only rates the daily prefilter top-N) and
+   * a perpetual spinner would falsely read as "stuck". The pill is a real
+   * terminal state, not a spinner that never resolves.
    *
-   * Optional for backward compatibility — defaults to false so
-   * existing callers (and tests) keep their current behaviour.
+   * Optional for backward compatibility — defaults to false so existing
+   * callers (and tests) get the static, non-animated state.
    */
   isScoringInFlight?: boolean;
   /**
@@ -135,7 +138,7 @@ export default function DiscoveredJobCard({
   // this pill lets the operator know the current score may not reflect their
   // latest skills/experience without waiting for the worker to run.
   // Only applies when the card actually has a score — truly unscored cards
-  // already show "Awaiting AI score" / the scoring spinner.
+  // already show the "Not scored" pill / the bounded scoring spinner.
   const isScoreStale =
     !isUnscored &&
     job.scored_at !== null &&
@@ -197,8 +200,9 @@ export default function DiscoveredJobCard({
             <span
               className="px-2 py-0.5 text-xs text-muted-foreground border border-muted rounded"
               data-testid="discovered-job-awaiting-score"
+              title="Not scored yet. The AI rates the most promising postings each day; the rest stay unscored until the next pass."
             >
-              Awaiting AI score
+              Not scored
             </span>
           )}
           {job.source_publisher && (

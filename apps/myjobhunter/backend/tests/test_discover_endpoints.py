@@ -287,6 +287,52 @@ async def test_list_discovered_inbox_default(
     assert body["items"][0]["title"] == "Senior Backend Engineer"
     assert body["items"][0]["dismissed_at"] is None
     assert body["items"][0]["saved_at"] is None
+    # Coverage: one unscored posting → scored 0 of 1. These drive the
+    # frontend's "Scored N of M" line so the unscored tail reads as
+    # "awaiting the daily pass", not "broken".
+    assert body["scored_count"] == 0
+    assert body["total_count"] == 1
+
+
+@pytest.mark.asyncio
+async def test_inbox_coverage_counts_scored_vs_total(
+    client: AsyncClient, user_factory, as_user, db,
+):
+    """The inbox coverage counts reflect the WHOLE active inbox and track
+    scored-vs-total as rows get scored — independent of the list page."""
+    from app.repositories.discovery import discovery_repository
+
+    user = await user_factory()
+    async with await as_user(user) as a:
+        created = await a.post(
+            "/discover/sources",
+            json={"source": "jsearch", "config": {"query": "x"}},
+        )
+        source_id = created.json()["id"]
+
+        with patch(
+            _SEARCH_PATH,
+            new_callable=AsyncMock,
+            return_value=[
+                _posting(),
+                _posting(source_external_id="ext-2", raw_payload={"job_id": "ext-2"}),
+            ],
+        ):
+            await a.post(f"/discover/sources/{source_id}/refresh")
+
+        # Both unscored initially.
+        before = (await a.get("/discover")).json()
+        assert before["scored_count"] == 0
+        assert before["total_count"] == 2
+
+        # Score one row directly, then re-read coverage.
+        rows = await discovery_repository.list_discovered(db, user.id, state="inbox")
+        rows[0].score = 90
+        await db.commit()
+
+        after = (await a.get("/discover")).json()
+        assert after["scored_count"] == 1
+        assert after["total_count"] == 2
 
 
 @pytest.mark.asyncio

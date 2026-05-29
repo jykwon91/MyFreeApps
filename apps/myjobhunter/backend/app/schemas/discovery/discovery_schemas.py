@@ -300,3 +300,12 @@ class DiscoveredJobListResponse(BaseModel):
     items: list[DiscoveredJobResponse]
     total: int
     state: Literal["inbox", "saved", "all"]
+    # Inbox scoring coverage, spanning the WHOLE active inbox (not just the
+    # returned page). ``scored_count`` of ``total_count`` rows carry an AI
+    # score; the rest are awaiting scoring or fell outside the day's scoring
+    # budget. The frontend renders this as "Scored N of M" so a large
+    # unscored tail reads as "daily limit reached", not "broken". Both are
+    # None for the ``saved`` / ``all`` views, where the coverage framing
+    # doesn't apply.
+    scored_count: int | None = None
+    total_count: int | None = None

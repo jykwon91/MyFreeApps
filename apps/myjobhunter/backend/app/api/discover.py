@@ -32,7 +32,10 @@ from app.core.config import settings
 from app.core.rate_limit import RateLimiter
 from app.db.session import get_db
 from app.models.user.user import User
-from app.repositories.discovery import discovery_repository
+from app.repositories.discovery import (
+    discovery_inbox_repository,
+    discovery_repository,
+)
 from app.schemas.application.application_response import ApplicationResponse
 from app.schemas.discovery.discovery_schemas import (
     DiscoveredJobDismissRequest,
@@ -66,6 +69,7 @@ from app.services.discovery.discovery_fetch_service import (
 from app.services.discovery.sources.jsearch import (
     JSearchAuthError,
     JSearchInvalidResponseError,
+    JSearchQuotaError,
     JSearchTransientError,
 )
 
@@ -202,7 +206,8 @@ async def refresh_source(
     - 200 — fetch completed (status field tells you success/partial/error)
     - 404 — source not found or doesn't belong to caller
     - 409 — source is deactivated
-    - 429 — per-IP rate limit (30 / 5 min)
+    - 429 — per-IP rate limit (30 / 5 min) OR the JSearch RapidAPI plan's
+            monthly quota is exhausted (distinct, actionable detail)
     - 502 — adapter raised transient error after retries exhausted
     - 503 — JSEARCH_API_KEY not configured (or invalid)
     - 501 — no adapter for this source kind (shouldn't happen; defensive)
@@ -229,6 +234,13 @@ async def refresh_source(
                 "set JSEARCH_API_KEY in the backend environment"
             ),
         ) from exc
+    except JSearchQuotaError as exc:
+        # Monthly RapidAPI quota spent (or throttled beyond a single
+        # fetch's wait). 429 with the adapter's actionable detail string —
+        # the same message the fetch service persisted as the source's
+        # last_error_message, so the saved-search row and the HTTP reply
+        # agree.
+        raise HTTPException(status_code=429, detail=str(exc)) from exc
     except JSearchTransientError as exc:
         raise HTTPException(
             status_code=502,
@@ -280,10 +292,25 @@ async def list_discovered(
     rows = await discovery_repository.list_discovered(
         db, user.id, state=state, limit=limit, offset=offset, source_id=source_id,
     )
+
+    # Coverage is only meaningful for the triage inbox: most fetched rows
+    # stay unscored (the scorer only rates the prefilter top-N per day),
+    # and the frontend surfaces "Scored N of M" so that tail reads as
+    # "daily limit reached" rather than "broken". The saved/all views
+    # don't carry the framing, so leave the counts null there.
+    scored_count: int | None = None
+    total_count: int | None = None
+    if state == "inbox":
+        scored_count, total_count = await discovery_inbox_repository.count_inbox_coverage(
+            db, user.id, source_id=source_id,
+        )
+
     return DiscoveredJobListResponse(
         items=[DiscoveredJobResponse.model_validate(r) for r in rows],
         total=len(rows),
         state=state,
+        scored_count=scored_count,
+        total_count=total_count,
     )
 
 
