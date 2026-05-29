@@ -19,6 +19,8 @@ import pytest
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.listings.channel import Channel
+from app.models.listings.channel_listing import ChannelListing
 from app.models.listings.listing import Listing
 from app.models.listings.listing_external_id import ListingExternalId
 from app.models.listings.listing_photo import ListingPhoto
@@ -70,6 +72,30 @@ async def _seed_property(db: AsyncSession, org: Organization, user: User) -> Pro
     db.add(prop)
     await db.flush()
     return prop
+
+
+async def _seed_channel(db: AsyncSession, slug: str = "airbnb") -> Channel:
+    """Seed a Channel row. The PK *is* the slug (no separate slug column)."""
+    channel = Channel(
+        id=slug, name=slug.title(),
+        supports_ical_export=True, supports_ical_import=True,
+    )
+    db.add(channel)
+    await db.flush()
+    return channel
+
+
+async def _link_channel(
+    db: AsyncSession, listing: Listing, channel_id: str,
+) -> ChannelListing:
+    row = ChannelListing(
+        listing_id=listing.id,
+        channel_id=channel_id,
+        external_url=f"https://{channel_id}.com/rooms/12345",
+    )
+    db.add(row)
+    await db.flush()
+    return row
 
 
 class TestListingRepoGetById:
@@ -1059,3 +1085,120 @@ class TestListingTenantIsolation:
         b_results = await listing_repo.list_by_organization(db, org_b.id)
         assert {r.title for r in b_results} == {"Org B Listing"}
         assert await listing_repo.get_by_id(db, listing_a.id, org_b.id) is None
+
+
+class TestListingRepoListByChannel:
+    """Regression coverage for ``list_by_channel`` — the Airbnb-payout
+    attribution path (``attribution_service._attribute_airbnb_payout``).
+
+    These tests exercise the REAL SQLAlchemy query (no mocking). The only
+    pre-existing test of this path mocks ``list_by_channel`` at the repo
+    boundary, so a query-construction bug — ``Channel.slug``, which raised
+    ``AttributeError`` because the Channel model has no ``slug`` column (its
+    primary key IS the slug) — never surfaced and every Airbnb payout email
+    silently failed attribution. Building and running the actual query here is
+    the regression contract: any future ``Channel.<wrong-attr>`` mismatch
+    fails these tests.
+    """
+
+    @pytest.mark.asyncio
+    async def test_returns_listing_linked_to_channel(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        """A listing linked to the ``airbnb`` channel is returned by
+        ``list_by_channel("airbnb")`` — the exact bug scenario."""
+        await _seed_channel(db, "airbnb")
+        prop = await _seed_property(db, test_org, test_user)
+        listing = _make_listing(
+            organization_id=test_org.id, user_id=test_user.id, property_id=prop.id,
+        )
+        db.add(listing)
+        await db.flush()
+        await _link_channel(db, listing, "airbnb")
+        await db.commit()
+
+        result = await listing_repo.list_by_channel(
+            db,
+            organization_id=test_org.id,
+            user_id=test_user.id,
+            channel="airbnb",
+        )
+
+        assert [row.id for row in result] == [listing.id]
+
+    @pytest.mark.asyncio
+    async def test_unrelated_channel_returns_nothing(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        """A listing linked only to ``vrbo`` is not returned when querying for
+        ``airbnb`` — the channel filter must discriminate."""
+        await _seed_channel(db, "airbnb")
+        await _seed_channel(db, "vrbo")
+        prop = await _seed_property(db, test_org, test_user)
+        listing = _make_listing(
+            organization_id=test_org.id, user_id=test_user.id, property_id=prop.id,
+        )
+        db.add(listing)
+        await db.flush()
+        await _link_channel(db, listing, "vrbo")
+        await db.commit()
+
+        result = await listing_repo.list_by_channel(
+            db,
+            organization_id=test_org.id,
+            user_id=test_user.id,
+            channel="airbnb",
+        )
+
+        assert result == []
+
+    @pytest.mark.asyncio
+    async def test_excludes_soft_deleted_listing(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        """A soft-deleted listing linked to the channel is excluded — the
+        ``deleted_at IS NULL`` predicate must still apply."""
+        await _seed_channel(db, "airbnb")
+        prop = await _seed_property(db, test_org, test_user)
+        listing = _make_listing(
+            organization_id=test_org.id, user_id=test_user.id, property_id=prop.id,
+            deleted_at=datetime.now(timezone.utc),
+        )
+        db.add(listing)
+        await db.flush()
+        await _link_channel(db, listing, "airbnb")
+        await db.commit()
+
+        result = await listing_repo.list_by_channel(
+            db,
+            organization_id=test_org.id,
+            user_id=test_user.id,
+            channel="airbnb",
+        )
+
+        assert result == []
+
+    @pytest.mark.asyncio
+    async def test_scoped_to_owning_user(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        """A listing belonging to a different user is not returned even when
+        the channel matches — tenant scoping must hold."""
+        await _seed_channel(db, "airbnb")
+        prop = await _seed_property(db, test_org, test_user)
+        listing = _make_listing(
+            organization_id=test_org.id, user_id=test_user.id, property_id=prop.id,
+        )
+        db.add(listing)
+        await db.flush()
+        await _link_channel(db, listing, "airbnb")
+        await db.commit()
+
+        result = await listing_repo.list_by_channel(
+            db,
+            organization_id=test_org.id,
+            user_id=uuid.uuid4(),  # different user
+            channel="airbnb",
+        )
+
+        assert result == []
