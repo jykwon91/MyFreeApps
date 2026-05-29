@@ -297,15 +297,18 @@ class TestAimTimingPromptShape:
         assert "STAND-LOCATION-CENTERED" in system_text
 
     @pytest.mark.asyncio
-    async def test_system_prompt_anchors_on_crosshair_lock_on_instant(self):
-        """STRUCTURAL ANCHOR — CROSSHAIR LOCK-ON INSTANT — is the post-
-        2026-05-25 operator-audit fix. The prior 'LATEST pre-windup'
-        rule pushed the anchor against the windup boundary; the 1s
-        clip then extended into windup → release → flight → landing.
-        Operator observed several AIM clips showing the smoke landing.
-        The new rule anchors on a MIDDLE-of-phase frame in the LONGEST
-        contiguous lock-on segment, with stable-aim frames on BOTH
-        sides so the 1s clip stays in the lock-on phase."""
+    async def test_system_prompt_anchors_on_last_settled_beat_before_throw(self):
+        """STRUCTURAL ANCHOR — LAST SETTLED BEAT BEFORE THE THROW MOTION —
+        is the 2026-05-31 operator spec that supersedes the 2026-05-25
+        'crosshair lock-on instant / middle-of-longest-segment' rule. The
+        AIM frame is now the LATEST settled beat before the throw motion
+        (windup, jump, OR strafe) begins, and the 1s clip is END-ANCHORED
+        on the pick so it can never bleed into windup → release → flight →
+        landing. Jump- and strafe-throws DECOUPLE the aim from the release
+        (the thrower lines up first, then moves while throwing), so the
+        anchor must NOT be derived from release_ts. When multiple demos
+        exist, the pick is the demonstration ACTUALLY THROWN, not the
+        longest contiguous lock segment."""
         _, client = await _call(
             {"has_aim_demonstration": True, "aim_index": 1,
              "confidence": 0.6, "reasoning": "x"},
@@ -313,12 +316,17 @@ class TestAimTimingPromptShape:
         system = client.messages.create.call_args.kwargs["system"]
         system_text = "\n".join(b["text"] for b in system)
         assert "STRUCTURAL ANCHOR" in system_text
-        assert "CROSSHAIR LOCK-ON INSTANT" in system_text
-        # Substring-checked piece-wise to survive prompt line-wrapping.
-        assert "LONGEST contiguous lock-on" in system_text
-        # The reject-edges block must call out the LATEST pre-windup
-        # picking error explicitly — that's the regression we're locking.
-        assert "LATEST pre-windup frame" in system_text
+        assert "LAST SETTLED BEAT BEFORE THE THROW MOTION" in system_text
+        # End-anchoring is what makes picking the LATEST settled frame safe:
+        # the clip runs [pick − 1.0s, pick] and never extends into the throw.
+        assert "END-ANCHORED" in system_text
+        # Jump/strafe decoupling is the load-bearing new concept — the aim can
+        # be seconds before release and is NOT derivable from it.
+        assert "JUMP-THROWS AND STRAFE-THROWS" in system_text
+        assert "DECOUPLED from release" in system_text
+        # Multiple-demos now resolves to the demo ACTUALLY THROWN (the prior
+        # rule preferred the longest contiguous lock segment — reversed here).
+        assert "ACTUALLY THROWN" in system_text
         assert "windup" in system_text.lower()
 
     @pytest.mark.asyncio
