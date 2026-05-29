@@ -327,7 +327,9 @@
         "frontend/src/shared/lib/listing-labels.ts",
         "frontend/src/shared/lib/channel-labels.ts",
         "frontend/src/shared/lib/external-id-form.ts",
-        "frontend/src/shared/components/ui/SourceBadge.tsx"
+        "frontend/src/shared/components/ui/SourceBadge.tsx",
+        "frontend/src/shared/components/ui/Markdown.tsx",
+        "frontend/src/app/features/public-inquiry/PublicInquiryListingPanel.tsx"
       ],
       "backend_tests": [
         "test_listing_repo.py",
@@ -358,7 +360,8 @@
         "ChannelsSection.test.tsx",
         "ChannelListingFormModal.test.tsx",
         "channel-labels.test.ts",
-        "usePageListModes.test.ts"
+        "usePageListModes.test.ts",
+        "Markdown.test.tsx"
       ],
       "e2e_specs": [
         "listings-api.spec.ts",
@@ -366,7 +369,8 @@
         "listings-layout.spec.ts",
         "listings-crud.spec.ts",
         "listings-external-ids.spec.ts",
-        "listings-channels.spec.ts"
+        "listings-channels.spec.ts",
+        "listing-markdown.spec.ts"
       ]
     },
     "calendar": {

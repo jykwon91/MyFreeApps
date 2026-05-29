@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Trash2 } from "lucide-react";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import AlertBox from "@/shared/components/ui/AlertBox";
+import Markdown from "@/shared/components/ui/Markdown";
 import { Button, LoadingButton } from "@platform/ui";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import {
@@ -83,9 +84,8 @@ export default function ListingDetail() {
         </AlertBox>
       ) : null}
 
-      {isLoading || !listing ? (
-        !isError ? <ListingDetailSkeleton /> : null
-      ) : (
+      {isLoading && !isError ? <ListingDetailSkeleton /> : null}
+      {listing ? (
         <>
           <SectionHeader
             title={listing.title}
@@ -131,7 +131,9 @@ export default function ListingDetail() {
           ) : null}
 
           {listing.description ? (
-            <section className="text-sm text-foreground whitespace-pre-line">{listing.description}</section>
+            <section data-testid="listing-description-section">
+              <Markdown content={listing.description} />
+            </section>
           ) : null}
 
           <section className="border rounded-lg p-4 space-y-3">
