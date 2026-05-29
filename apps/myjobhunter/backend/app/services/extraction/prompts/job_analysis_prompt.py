@@ -52,11 +52,11 @@ an out-of-set value the service nulls it):
 Verdict logic (Claude is told to apply this; the service does not
 recompute, so trust-but-verify with negative tests):
 
-* ``strong_fit``         — every dimension positive (skill=strong,
-                            seniority=aligned, salary in {in_range,
-                            above_target}, location=compatible,
-                            work_auth=compatible) AND ≥2 green flags
-                            AND zero red flags
+* ``strong_fit``         — all dimensions positive (skill=strong,
+                            seniority=aligned, salary anything except
+                            below_target, location=compatible,
+                            work_auth=compatible) AND zero red flags.
+                            Green flags add confidence but don't gate it.
 * ``worth_considering``  — most dimensions positive, ≤2 stretch
                             dimensions, no work_auth=blocker, ≤1 red
                             flag
@@ -64,6 +64,10 @@ recompute, so trust-but-verify with negative tests):
                             OR ≥2 red flags BUT no work_auth blocker
 * ``mismatch``           — work_auth=blocker OR skill_match=gap OR
                             ≥3 red flags
+
+Prior direct experience in the same or a closely-equivalent role forces
+skill_match=strong and so precludes a skill-based mismatch. (work_auth=blocker
+can still yield mismatch — it is an eligibility gate, not a skill question.)
 
 Why structured + rubric + verdict logic in the prompt
 -----------------------------------------------------
@@ -139,9 +143,22 @@ the exact ``key`` strings shown above. Do not add or omit dimensions.
 # Status enum per dimension
 
 skill_match status:
-- "strong"   — candidate clearly covers the must-have skills/experience listed
-- "partial"  — candidate covers some must-haves but is missing 1-2 important ones
-- "gap"      — candidate is missing core must-haves the JD treats as required
+- "strong"   — candidate clearly covers the must-have skills/experience listed,
+               OR has previously held this exact role or a closely-equivalent
+               one. Prior direct experience is the strongest possible signal and
+               always yields "strong", regardless of bullet-level skill coverage.
+               Closely-equivalent = same function at an adjacent seniority (e.g.
+               "Data Analyst" and "Senior Data Analyst"; "Software Engineer" and
+               "Backend Engineer"). NOT equivalent = a different domain
+               specialization (e.g. "Software Engineer" vs "Machine Learning
+               Engineer"; "Data Analyst" vs "Data Engineer"). Use professional
+               judgment, not exact string match.
+- "partial"  — candidate covers some must-haves but is missing 1-2 important
+               ones, AND has not previously held the same or an equivalent role
+- "gap"      — candidate is missing core must-haves the JD treats as required,
+               AND has not previously held the same or an equivalent role. Do
+               NOT assign "gap" to a candidate with direct prior experience in
+               the same or an equivalent role.
 - "unclear"  — JD is too vague about required skills to call
 
 seniority status:
@@ -175,18 +192,25 @@ work_auth status (be strict — this is how an operator avoids wasted apps):
 
 # Verdict logic (apply this rubric)
 
-- strong_fit — every dimension positive (skill_match=strong, seniority=aligned,
-  salary in {in_range, above_target}, location_remote=compatible,
-  work_auth=compatible) AND green_flags has at least 2 items AND red_flags is empty
+- strong_fit — all five dimensions positive: skill_match=strong,
+  seniority=aligned, location_remote=compatible, work_auth=compatible, AND
+  salary is NOT below_target (in_range, above_target, not_disclosed, and
+  no_target ALL qualify — an undisclosed salary does NOT block strong_fit).
+  red_flags is empty. Green flags add confidence but do NOT gate this bucket:
+  an honest match with a terse JD must not be downgraded just because the JD
+  advertised no perks.
 - worth_considering — most dimensions positive, at most 2 dimensions are
   stretch/partial/below/above, work_auth is not "blocker", red_flags has ≤1 item
-- stretch — multiple gap/below dimensions OR salary=below_target OR
+- stretch — multiple gap/partial/below dimensions OR salary=below_target OR
   red_flags has ≥2 items, BUT work_auth is not "blocker"
 - mismatch — work_auth=blocker OR skill_match=gap OR red_flags has ≥3 items
 
-If the rubric leaves the verdict ambiguous between two adjacent buckets,
-prefer the LESS optimistic one (worth_considering over strong_fit; stretch
-over worth_considering). Operators want honest signal, not flattery.
+Tie-break: if the verdict is ambiguous between two adjacent buckets, prefer the
+less optimistic one ONLY when there is a concrete negative signal — a red flag,
+a confirmed skill gap, or a confirmed stretch/incompatible dimension. Missing
+data (an undisclosed salary, no surfaced green flags, a terse JD) is NEUTRAL,
+not negative. Operators want honest signal, not flattery; but a good match on
+thin information must not be penalized for the JD's silence.
 
 # Red / green flags
 
