@@ -4,6 +4,7 @@ import { X } from "lucide-react";
 import Panel from "@/shared/components/ui/Panel";
 import { LoadingButton } from "@platform/ui";
 import FormField from "@/shared/components/ui/FormField";
+import Markdown from "@/shared/components/ui/Markdown";
 import {
   LISTING_ROOM_TYPES,
   LISTING_ROOM_TYPE_LABELS,
@@ -156,6 +157,7 @@ export default function ListingForm({
   const isEdit = listing != null;
   const isSubmitting = isCreating || isUpdating;
   const watchPets = watch("pets_on_premises");
+  const watchDescription = watch("description");
 
   async function onSubmit(values: ListingFormValues) {
     if (isEdit && listing) {
@@ -246,10 +248,22 @@ export default function ListingForm({
           <FormField label="Description">
             <textarea
               {...register("description")}
-              rows={3}
+              rows={4}
               className="w-full border rounded-md px-3 py-2 text-sm"
+              data-testid="listing-form-description"
             />
+            <p className="text-xs text-muted-foreground mt-1">
+              Supports markdown — **bold**, *italic*, lists, headings, links.
+            </p>
           </FormField>
+          {watchDescription ? (
+            <div data-testid="listing-form-description-preview">
+              <p className="text-xs text-muted-foreground mb-1">Preview</p>
+              <div className="border rounded-md px-3 py-2 bg-muted/30 min-h-[60px]">
+                <Markdown content={watchDescription} />
+              </div>
+            </div>
+          ) : null}
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <FormField label="Monthly rate (USD)" required>

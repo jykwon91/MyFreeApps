@@ -134,6 +134,25 @@ describe("ListingForm", () => {
       await user.click(screen.getByTestId("listing-form-pets"));
       expect(screen.getByText(/pet\/dog disclosure/i)).toBeInTheDocument();
     });
+
+    it("shows a live markdown preview when description is typed", async () => {
+      const user = userEvent.setup();
+      renderForm();
+      // No preview when description is empty
+      expect(screen.queryByTestId("listing-form-description-preview")).not.toBeInTheDocument();
+      // Type markdown into the description textarea
+      await user.type(
+        screen.getByTestId("listing-form-description"),
+        "**Bold pricing**",
+      );
+      // Preview section appears
+      expect(screen.getByTestId("listing-form-description-preview")).toBeInTheDocument();
+      // The preview renders the <strong> element, not the literal asterisks
+      const preview = screen.getByTestId("listing-form-description-preview");
+      expect(preview.querySelector("strong")).toBeInTheDocument();
+      expect(preview.textContent).toContain("Bold pricing");
+      expect(preview.textContent).not.toContain("**");
+    });
   });
 
   describe("edit mode", () => {
@@ -143,6 +162,18 @@ describe("ListingForm", () => {
       expect(screen.getByTestId("listing-form-title")).toHaveValue("Existing Listing");
       expect(screen.getByTestId("listing-form-monthly-rate")).toHaveValue(1500);
       expect(screen.getByTestId("listing-form-amenities")).toHaveValue("wifi, parking");
+    });
+
+    it("shows a pre-filled description preview when listing has a description", () => {
+      const listingWithMarkdown: ListingResponse = {
+        ...sampleListing,
+        description: "**Great location** near downtown",
+      };
+      renderForm(listingWithMarkdown);
+      // Preview is visible immediately since description is pre-filled
+      const preview = screen.getByTestId("listing-form-description-preview");
+      expect(preview).toBeInTheDocument();
+      expect(preview.querySelector("strong")).toBeInTheDocument();
     });
 
     it("submits only changed fields", async () => {

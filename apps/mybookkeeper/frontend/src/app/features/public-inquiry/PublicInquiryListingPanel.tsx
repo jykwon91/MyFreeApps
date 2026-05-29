@@ -1,3 +1,4 @@
+import Markdown from "@/shared/components/ui/Markdown";
 import type { PublicListing } from "@/shared/types/inquiry/public-listing";
 
 interface PublicInquiryListingPanelProps {
@@ -16,9 +17,7 @@ export default function PublicInquiryListingPanel({
         {listing.parking_assigned ? " · 1 parking spot" : ""}
       </p>
       {listing.description ? (
-        <p className="mt-3 text-sm text-muted-foreground whitespace-pre-wrap">
-          {listing.description}
-        </p>
+        <Markdown content={listing.description} className="mt-3" />
       ) : null}
       {listing.pets_on_premises ? (
         <p className="mt-3 text-xs text-muted-foreground italic">
