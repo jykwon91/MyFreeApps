@@ -41,10 +41,10 @@ import anthropic
 
 from app.core.config import settings
 from app.services.classification.classification_result import StandTimingResult
-from app.services.classification.classifier_service import (
-    _GAME_VISUAL_CUES,
-    _strip_json_fences,
-    _validate_grid_index,
+from app.services.classification.prompts import GAME_VISUAL_CUES
+from app.services.classification.response_parsing import (
+    strip_json_fences,
+    validate_grid_index,
 )
 
 logger = logging.getLogger(__name__)
@@ -318,7 +318,7 @@ async def classify_stand_timing_from_frames(
         "shown several timestamped frames from the PRE-RELEASE portion of "
         "one chapter of a lineup tutorial and must pick the frame that "
         "best demonstrates WHERE the thrower should stand.\n\n"
-        + _GAME_VISUAL_CUES
+        + GAME_VISUAL_CUES
         + "\n"
         + _STAND_TIMING_SCHEMA_DOC.format(n=n)
     )
@@ -404,7 +404,7 @@ async def classify_stand_timing_from_frames(
 
     raw_text = response.content[0].text if response.content else ""
     try:
-        parsed: dict[str, Any] = json.loads(_strip_json_fences(raw_text))
+        parsed: dict[str, Any] = json.loads(strip_json_fences(raw_text))
     except (json.JSONDecodeError, IndexError) as exc:
         logger.error(
             "stand_timing: JSON parse failed: chapter=%r raw=%r error=%s",
@@ -455,7 +455,7 @@ async def classify_stand_timing_from_frames(
             error_codes=list(structured_codes),
         )
 
-    stand_index = _validate_grid_index(
+    stand_index = validate_grid_index(
         parsed.get("stand_index"), "stand_index", n, failures
     )
 

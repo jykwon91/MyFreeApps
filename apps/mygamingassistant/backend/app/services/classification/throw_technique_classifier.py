@@ -8,14 +8,7 @@ confidence / no release frame). Its only job: given the same dense throw
 window, name HOW the throw is executed as a compact <=60-char phrase for the
 glance-board footer (frozen design contract pr3-throw-technique-design.md).
 
-Extracted from classifier_service.py in PR R1 to keep that file under the
-1000-LOC god-module threshold (TECH_DEBT.md). The shared helper
-``_strip_json_fences`` stays in ``classifier_service`` and is imported here.
-
-Re-export contract: ``classifier_service`` re-exports
-``classify_throw_technique_from_frames`` from this module, so existing
-``from app.services.classification.classifier_service import
-classify_throw_technique_from_frames`` imports keep working unchanged.
+Shared helper ``strip_json_fences`` lives in ``response_parsing``.
 
 Game technique vocabularies are structurally incompatible (CS2 mouse buttons
 vs Valorant ability keys), so the right phrase is game-specific. The game is
@@ -34,7 +27,7 @@ import anthropic
 
 from app.core.config import settings
 from app.services.classification.classification_result import ThrowTechniqueResult
-from app.services.classification.classifier_service import _strip_json_fences
+from app.services.classification.response_parsing import strip_json_fences
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +75,7 @@ def _technique_vocab_block(game_slug: Optional[str]) -> str:
 
     Unknown / unrecognized game → the generic block, which asks the model to
     determine the game from the HUD first (the same game-first discipline the
-    grid classifier enforces via _GAME_FIRST_RULE).
+    grid classifier enforces via GAME_FIRST_RULE in prompts.py).
     """
     normalized = (game_slug or "").strip().lower()
     if normalized == "cs2":
@@ -297,7 +290,7 @@ async def classify_throw_technique_from_frames(
 
     raw_text = response.content[0].text if response.content else ""
     try:
-        parsed: dict[str, Any] = json.loads(_strip_json_fences(raw_text))
+        parsed: dict[str, Any] = json.loads(strip_json_fences(raw_text))
     except (json.JSONDecodeError, IndexError) as exc:
         logger.error(
             "throw_technique: JSON parse failed: chapter=%r raw=%r error=%s",

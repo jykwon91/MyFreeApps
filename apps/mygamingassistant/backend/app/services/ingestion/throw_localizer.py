@@ -79,7 +79,7 @@ from pathlib import Path
 from typing import Optional
 
 from app.services.classification.classification_result import ThrowTimingResult
-from app.services.classification.classifier_service import (
+from app.services.classification.throw_timing_classifier import (
     classify_throw_timing_from_frames,
 )
 from app.services.ingestion.frame_extractor import (

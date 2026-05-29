@@ -42,7 +42,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.models.game.lineup import Lineup
 from app.repositories.game import lineup_repo
-from app.services.classification.classifier_service import (
+from app.services.classification.throw_technique_classifier import (
     classify_throw_technique_from_frames,
 )
 from app.services.ingestion.frame_extractor import (
