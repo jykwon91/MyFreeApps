@@ -5,15 +5,10 @@ decide ``is_lineup`` (one arbitrary frame is exactly the input that made
 ingestion unable to reject junk chapters) — for that, see the grid classifier
 which runs at ingest time with N frames.
 
-Extracted from classifier_service.py in PR R2 to keep that file under the
-500-LOC growth-guard threshold. Shared helpers (``_GAME_VISUAL_CUES``,
-``_GAME_FIRST_RULE``, ``_build_reference_text``, ``_check_game_map_consistency``,
-``_fetch_screenshot_bytes``) stay in ``classifier_service`` and are imported
-here.
-
-Re-export contract: ``classifier_service`` re-exports ``classify_lineup`` from
-this module, so existing ``from app.services.classification.classifier_service
-import classify_lineup`` imports keep working unchanged.
+Shared helpers live in their own sibling modules:
+  - ``prompts``: ``GAME_VISUAL_CUES``, ``GAME_FIRST_RULE``, ``build_reference_text``
+  - ``scope_guards``: ``check_game_map_consistency``
+  - ``screenshots``: ``fetch_screenshot_bytes``
 """
 from __future__ import annotations
 
@@ -33,13 +28,13 @@ from app.repositories.game.reference_repo import (
     resolve_slugs,
 )
 from app.services.classification.classification_result import ClassificationResult
-from app.services.classification.classifier_service import (
-    _GAME_FIRST_RULE,
-    _GAME_VISUAL_CUES,
-    _build_reference_text,
-    _check_game_map_consistency,
-    _fetch_screenshot_bytes,
+from app.services.classification.prompts import (
+    GAME_FIRST_RULE,
+    GAME_VISUAL_CUES,
+    build_reference_text,
 )
+from app.services.classification.scope_guards import check_game_map_consistency
+from app.services.classification.screenshots import fetch_screenshot_bytes
 
 logger = logging.getLogger(__name__)
 
@@ -110,7 +105,7 @@ async def classify_lineup(
 
     ref = await load_reference_data(db, game_id=lineup.game_id)
 
-    screenshot_bytes = _fetch_screenshot_bytes(lineup.stand_screenshot_url)
+    screenshot_bytes = fetch_screenshot_bytes(lineup.stand_screenshot_url)
     if screenshot_bytes is None:
         logger.warning(
             "classify_lineup: no screenshot bytes available: lineup_id=%s key=%s",
@@ -122,7 +117,7 @@ async def classify_lineup(
             reasoning="Stand screenshot not available for classification",
         )
 
-    reference_text = _build_reference_text(ref, game_hint=game_hint)
+    reference_text = build_reference_text(ref, game_hint=game_hint)
 
     chapter_context_parts: list[str] = []
     if lineup.chapter_title:
@@ -137,9 +132,9 @@ async def classify_lineup(
         "You are classifying tactical-FPS utility lineup screenshots.\n"
         "Your task: identify the game, map, zones, side, and utility type from the screenshot "
         "and chapter metadata. Return the crosshair/aim anchor position on the aim screenshot.\n\n"
-        + _GAME_VISUAL_CUES
+        + GAME_VISUAL_CUES
         + "\n"
-        + _GAME_FIRST_RULE
+        + GAME_FIRST_RULE
         + "\n"
         + _OUTPUT_SCHEMA_DOC
     )
@@ -236,7 +231,7 @@ async def classify_lineup(
 
     failures: list[str] = []
     structured_codes: list[str] = []
-    parsed = _check_game_map_consistency(parsed, ref, failures, structured_codes)
+    parsed = check_game_map_consistency(parsed, ref, failures, structured_codes)
 
     (
         game_id,

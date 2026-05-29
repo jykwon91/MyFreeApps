@@ -44,10 +44,10 @@ import anthropic
 
 from app.core.config import settings
 from app.services.classification.classification_result import AimTimingResult
-from app.services.classification.classifier_service import (
-    _GAME_VISUAL_CUES,
-    _strip_json_fences,
-    _validate_grid_index,
+from app.services.classification.prompts import GAME_VISUAL_CUES
+from app.services.classification.response_parsing import (
+    strip_json_fences,
+    validate_grid_index,
 )
 
 logger = logging.getLogger(__name__)
@@ -361,7 +361,7 @@ async def classify_aim_timing_from_frames(
         "shown several timestamped frames from the PRE-WINDUP portion of "
         "one chapter of a lineup tutorial and must pick the frame that "
         "best demonstrates the LOCKED AIM the thrower should reproduce.\n\n"
-        + _GAME_VISUAL_CUES
+        + GAME_VISUAL_CUES
         + "\n"
         + _AIM_TIMING_SCHEMA_DOC.format(n=n)
     )
@@ -443,7 +443,7 @@ async def classify_aim_timing_from_frames(
 
     raw_text = response.content[0].text if response.content else ""
     try:
-        parsed: dict[str, Any] = json.loads(_strip_json_fences(raw_text))
+        parsed: dict[str, Any] = json.loads(strip_json_fences(raw_text))
     except (json.JSONDecodeError, IndexError) as exc:
         logger.error(
             "aim_timing: JSON parse failed: chapter=%r raw=%r error=%s",
@@ -494,7 +494,7 @@ async def classify_aim_timing_from_frames(
             error_codes=list(structured_codes),
         )
 
-    aim_index = _validate_grid_index(
+    aim_index = validate_grid_index(
         parsed.get("aim_index"), "aim_index", n, failures
     )
 

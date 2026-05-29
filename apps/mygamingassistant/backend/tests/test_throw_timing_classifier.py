@@ -18,7 +18,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from app.services.classification.classifier_service import (
+from app.services.classification.throw_timing_classifier import (
     classify_throw_timing_from_frames,
 )
 

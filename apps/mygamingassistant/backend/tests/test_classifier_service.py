@@ -184,7 +184,7 @@ class TestClassifyLineup:
         utility_smoke: UtilityType,
     ):
         """Happy path: classifier returns valid slugs → FK IDs written to lineup."""
-        from app.services.classification.classifier_service import classify_lineup
+        from app.services.classification.single_image_classifier import classify_lineup
 
         classifier_output = {
             "game_slug": "valorant",
@@ -201,7 +201,7 @@ class TestClassifyLineup:
 
         with (
             patch(
-                "app.services.classification.single_image_classifier._fetch_screenshot_bytes",
+                "app.services.classification.single_image_classifier.fetch_screenshot_bytes",
                 return_value=_FAKE_PNG,
             ),
             patch("app.services.classification.single_image_classifier.settings") as mock_settings,
@@ -239,7 +239,7 @@ class TestClassifyLineup:
         pending_lineup: Lineup,
     ):
         """Missing ANTHROPIC_API_KEY → success=False, error_codes=['missing_api_key']."""
-        from app.services.classification.classifier_service import classify_lineup
+        from app.services.classification.single_image_classifier import classify_lineup
 
         with patch("app.services.classification.single_image_classifier.settings") as mock_settings:
             mock_settings.anthropic_api_key = ""
@@ -256,7 +256,7 @@ class TestClassifyLineup:
         pending_lineup: Lineup,
     ):
         """Non-JSON response from Claude → success=False, error_codes=['json_parse_error']."""
-        from app.services.classification.classifier_service import classify_lineup
+        from app.services.classification.single_image_classifier import classify_lineup
 
         bad_response = MagicMock()
         bad_text = MagicMock()
@@ -265,7 +265,7 @@ class TestClassifyLineup:
 
         with (
             patch(
-                "app.services.classification.single_image_classifier._fetch_screenshot_bytes",
+                "app.services.classification.single_image_classifier.fetch_screenshot_bytes",
                 return_value=_FAKE_PNG,
             ),
             patch("app.services.classification.single_image_classifier.settings") as mock_settings,
@@ -290,11 +290,11 @@ class TestClassifyLineup:
     ):
         """RateLimitError → success=False, error_codes contains rate limit type."""
         import anthropic as anthropic_lib
-        from app.services.classification.classifier_service import classify_lineup
+        from app.services.classification.single_image_classifier import classify_lineup
 
         with (
             patch(
-                "app.services.classification.single_image_classifier._fetch_screenshot_bytes",
+                "app.services.classification.single_image_classifier.fetch_screenshot_bytes",
                 return_value=_FAKE_PNG,
             ),
             patch("app.services.classification.single_image_classifier.settings") as mock_settings,
@@ -323,11 +323,11 @@ class TestClassifyLineup:
     ):
         """APIStatusError → success=False, error_codes contains the status error type."""
         import anthropic as anthropic_lib
-        from app.services.classification.classifier_service import classify_lineup
+        from app.services.classification.single_image_classifier import classify_lineup
 
         with (
             patch(
-                "app.services.classification.single_image_classifier._fetch_screenshot_bytes",
+                "app.services.classification.single_image_classifier.fetch_screenshot_bytes",
                 return_value=_FAKE_PNG,
             ),
             patch("app.services.classification.single_image_classifier.settings") as mock_settings,
@@ -450,7 +450,7 @@ class TestSlugResolver:
 
 class TestReferenceTextBuilder:
     def test_includes_game_slugs(self):
-        from app.services.classification.classifier_service import _build_reference_text
+        from app.services.classification.prompts import build_reference_text
 
         ref = {
             "games": [
@@ -463,7 +463,7 @@ class TestReferenceTextBuilder:
                 {"slug": "smoke", "name": "Smoke", "game_slug": "valorant"},
             ],
         }
-        text = _build_reference_text(ref, game_hint="valorant")
+        text = build_reference_text(ref, game_hint="valorant")
         assert "valorant" in text
         assert "bind" in text
         assert "a-short" in text
@@ -471,17 +471,17 @@ class TestReferenceTextBuilder:
         assert "Attacker" in text
 
     def test_game_hint_included(self):
-        from app.services.classification.classifier_service import _build_reference_text
+        from app.services.classification.prompts import build_reference_text
 
         ref = {"games": [], "maps": [], "utility_types": []}
-        text = _build_reference_text(ref, game_hint="cs2")
+        text = build_reference_text(ref, game_hint="cs2")
         assert "cs2" in text
 
     def test_no_game_hint_omitted(self):
-        from app.services.classification.classifier_service import _build_reference_text
+        from app.services.classification.prompts import build_reference_text
 
         ref = {"games": [], "maps": [], "utility_types": []}
-        text = _build_reference_text(ref, game_hint=None)
+        text = build_reference_text(ref, game_hint=None)
         assert "Expected game" not in text
 
 
@@ -561,7 +561,7 @@ class TestClassifyFramesForLineupDecision:
         grid_utility: UtilityType,
     ):
         """is_lineup=True → slugs resolved to FK IDs, chosen indices returned."""
-        from app.services.classification.classifier_service import (
+        from app.services.classification.grid_classifier import (
             classify_frames_for_lineup_decision,
         )
 
@@ -616,7 +616,7 @@ class TestClassifyFramesForLineupDecision:
         grid_game: Game,
     ):
         """is_lineup=False → success=True, is_lineup=False, no suggested FKs."""
-        from app.services.classification.classifier_service import (
+        from app.services.classification.grid_classifier import (
             classify_frames_for_lineup_decision,
         )
 
@@ -662,7 +662,7 @@ class TestClassifyFramesForLineupDecision:
         grid_map: Map,
     ):
         """best_*_index outside [1,n] is rejected → None, note in reasoning."""
-        from app.services.classification.classifier_service import (
+        from app.services.classification.grid_classifier import (
             classify_frames_for_lineup_decision,
         )
 
@@ -703,7 +703,7 @@ class TestClassifyFramesForLineupDecision:
 
     @pytest.mark.asyncio
     async def test_empty_frames_returns_error(self, db: AsyncSession):
-        from app.services.classification.classifier_service import (
+        from app.services.classification.grid_classifier import (
             classify_frames_for_lineup_decision,
         )
 
@@ -718,7 +718,7 @@ class TestClassifyFramesForLineupDecision:
 
     @pytest.mark.asyncio
     async def test_missing_api_key_returns_error(self, db: AsyncSession):
-        from app.services.classification.classifier_service import (
+        from app.services.classification.grid_classifier import (
             classify_frames_for_lineup_decision,
         )
 
@@ -733,7 +733,7 @@ class TestClassifyFramesForLineupDecision:
 
     @pytest.mark.asyncio
     async def test_json_parse_failure(self, db: AsyncSession, grid_game: Game):
-        from app.services.classification.classifier_service import (
+        from app.services.classification.grid_classifier import (
             classify_frames_for_lineup_decision,
         )
 
@@ -767,7 +767,7 @@ class TestClassifyFramesForLineupDecision:
         self, db: AsyncSession, grid_game: Game
     ):
         """All N frames must be in the user content as image blocks."""
-        from app.services.classification.classifier_service import (
+        from app.services.classification.grid_classifier import (
             classify_frames_for_lineup_decision,
         )
 
@@ -826,23 +826,23 @@ class TestGameFirstPromptWiring:
 
     def _single_image_system_prompt(self) -> str:
         """Reconstruct the single-image (classify_lineup) system prompt."""
-        from app.services.classification import classifier_service as cs
+        from app.services.classification import prompts
         from app.services.classification import single_image_classifier as si
 
         return (
             "You are classifying tactical-FPS utility lineup screenshots.\n"
             "Your task: identify the game, map, zones, side, and utility type from the screenshot "
             "and chapter metadata. Return the crosshair/aim anchor position on the aim screenshot.\n\n"
-            + cs._GAME_VISUAL_CUES
+            + prompts.GAME_VISUAL_CUES
             + "\n"
-            + cs._GAME_FIRST_RULE
+            + prompts.GAME_FIRST_RULE
             + "\n"
             + si._OUTPUT_SCHEMA_DOC
         )
 
     def _grid_system_prompt(self, n: int = 5) -> str:
         """Reconstruct the grid (classify_frames_for_lineup_decision) system prompt."""
-        from app.services.classification import classifier_service as cs
+        from app.services.classification import prompts
         from app.services.classification import grid_classifier as gc
 
         return (
@@ -850,9 +850,9 @@ class TestGameFirstPromptWiring:
             "You will receive several numbered candidate frames from ONE video "
             "chapter and must judge whether the chapter is a real utility-lineup "
             "demo, pick the best frames, and classify it.\n\n"
-            + cs._GAME_VISUAL_CUES
+            + prompts.GAME_VISUAL_CUES
             + "\n"
-            + cs._GAME_FIRST_RULE
+            + prompts.GAME_FIRST_RULE
             + "\n"
             + gc._GRID_OUTPUT_SCHEMA_DOC.format(n=n)
         )
@@ -911,8 +911,6 @@ class TestGameFirstPromptWiring:
         ValueError here — proving the new game_slug bullet did not break the
         .format template.
         """
-        from app.services.classification import classifier_service as cs
-
         from app.services.classification import grid_classifier as gc
         rendered = gc._GRID_OUTPUT_SCHEMA_DOC.format(n=7)  # must not raise
         assert "Frame 1 .. Frame 7" in rendered
@@ -925,9 +923,7 @@ class TestCheckGameMapConsistency:
     """Defense-in-depth: map_slug belonging to a different game than game_slug."""
 
     def test_cross_game_mismatch_nulls_map_and_zones(self):
-        from app.services.classification.classifier_service import (
-            _check_game_map_consistency,
-        )
+        from app.services.classification.scope_guards import check_game_map_consistency
 
         # game_slug says valorant, but 'mirage' is a cs2 map → contamination.
         parsed = {
@@ -942,7 +938,7 @@ class TestCheckGameMapConsistency:
             "confidence": 0.9,
         }
         failures: list[str] = []
-        result = _check_game_map_consistency(parsed, _CROSS_GAME_REF, failures)
+        result = check_game_map_consistency(parsed, _CROSS_GAME_REF, failures)
 
         assert result["map_slug"] is None
         assert result["target_zone_slug"] is None
@@ -963,9 +959,7 @@ class TestCheckGameMapConsistency:
         assert parsed["map_slug"] == "mirage"
 
     def test_consistent_game_map_unchanged(self):
-        from app.services.classification.classifier_service import (
-            _check_game_map_consistency,
-        )
+        from app.services.classification.scope_guards import check_game_map_consistency
 
         parsed = {
             "game_slug": "cs2",
@@ -975,7 +969,7 @@ class TestCheckGameMapConsistency:
             "confidence": 0.85,
         }
         failures: list[str] = []
-        result = _check_game_map_consistency(parsed, _CROSS_GAME_REF, failures)
+        result = check_game_map_consistency(parsed, _CROSS_GAME_REF, failures)
 
         assert result["map_slug"] == "mirage"
         assert result["target_zone_slug"] == "a-site"
@@ -984,9 +978,7 @@ class TestCheckGameMapConsistency:
 
     def test_map_slug_absent_from_ref_unchanged(self):
         """A truly-absent map slug is left for the slug resolver to catch."""
-        from app.services.classification.classifier_service import (
-            _check_game_map_consistency,
-        )
+        from app.services.classification.scope_guards import check_game_map_consistency
 
         parsed = {
             "game_slug": "cs2",
@@ -994,41 +986,35 @@ class TestCheckGameMapConsistency:
             "confidence": 0.7,
         }
         failures: list[str] = []
-        result = _check_game_map_consistency(parsed, _CROSS_GAME_REF, failures)
+        result = check_game_map_consistency(parsed, _CROSS_GAME_REF, failures)
 
         assert result["map_slug"] == "nonexistent-map"
         assert result["confidence"] == pytest.approx(0.7)
         assert failures == []
 
     def test_null_game_slug_unchanged(self):
-        from app.services.classification.classifier_service import (
-            _check_game_map_consistency,
-        )
+        from app.services.classification.scope_guards import check_game_map_consistency
 
         parsed = {"game_slug": None, "map_slug": "mirage", "confidence": 0.5}
         failures: list[str] = []
-        result = _check_game_map_consistency(parsed, _CROSS_GAME_REF, failures)
+        result = check_game_map_consistency(parsed, _CROSS_GAME_REF, failures)
 
         assert result == parsed
         assert failures == []
 
     def test_null_map_slug_unchanged(self):
-        from app.services.classification.classifier_service import (
-            _check_game_map_consistency,
-        )
+        from app.services.classification.scope_guards import check_game_map_consistency
 
         parsed = {"game_slug": "cs2", "map_slug": None, "confidence": 0.5}
         failures: list[str] = []
-        result = _check_game_map_consistency(parsed, _CROSS_GAME_REF, failures)
+        result = check_game_map_consistency(parsed, _CROSS_GAME_REF, failures)
 
         assert result == parsed
         assert failures == []
 
     def test_confidence_none_on_mismatch_no_crash(self):
         """A mismatch with confidence=None must not crash; map/zones still nulled."""
-        from app.services.classification.classifier_service import (
-            _check_game_map_consistency,
-        )
+        from app.services.classification.scope_guards import check_game_map_consistency
 
         parsed = {
             "game_slug": "valorant",
@@ -1037,7 +1023,7 @@ class TestCheckGameMapConsistency:
             "confidence": None,
         }
         failures: list[str] = []
-        result = _check_game_map_consistency(parsed, _CROSS_GAME_REF, failures)
+        result = check_game_map_consistency(parsed, _CROSS_GAME_REF, failures)
 
         assert result["map_slug"] is None
         assert result["target_zone_slug"] is None
@@ -1046,9 +1032,7 @@ class TestCheckGameMapConsistency:
 
     def test_confidence_non_numeric_on_mismatch_floored(self):
         """A mismatch with a non-numeric confidence must floor to 0.0, not crash."""
-        from app.services.classification.classifier_service import (
-            _check_game_map_consistency,
-        )
+        from app.services.classification.scope_guards import check_game_map_consistency
 
         parsed = {
             "game_slug": "valorant",
@@ -1056,7 +1040,7 @@ class TestCheckGameMapConsistency:
             "confidence": "high",
         }
         failures: list[str] = []
-        result = _check_game_map_consistency(parsed, _CROSS_GAME_REF, failures)
+        result = check_game_map_consistency(parsed, _CROSS_GAME_REF, failures)
 
         assert result["map_slug"] is None
         assert result["confidence"] == pytest.approx(0.0)
@@ -1068,7 +1052,7 @@ class TestGridMaxTokens:
 
     @pytest.mark.asyncio
     async def test_grid_max_tokens_is_700(self, db: AsyncSession, grid_game: Game):
-        from app.services.classification.classifier_service import (
+        from app.services.classification.grid_classifier import (
             classify_frames_for_lineup_decision,
         )
 
@@ -1203,9 +1187,7 @@ class TestHardGameScoping:
     async def test_check_game_map_consistency_emits_structured_reject_code(self):
         """All-games path: a cross-game map is rejected with a structured code,
         not just a prose note + confidence penalty."""
-        from app.services.classification.classifier_service import (
-            _check_game_map_consistency,
-        )
+        from app.services.classification.scope_guards import check_game_map_consistency
 
         parsed = {
             "game_slug": "valorant",
@@ -1215,7 +1197,7 @@ class TestHardGameScoping:
         }
         failures: list[str] = []
         codes: list[str] = []
-        result = _check_game_map_consistency(parsed, _CROSS_GAME_REF, failures, codes)
+        result = check_game_map_consistency(parsed, _CROSS_GAME_REF, failures, codes)
 
         assert result["map_slug"] is None
         assert result["target_zone_slug"] is None
@@ -1238,7 +1220,7 @@ class TestStructuredFailureSurfacing:
         pending_lineup: Lineup,
         zone_a_short: MapZone,
     ):
-        from app.services.classification.classifier_service import classify_lineup
+        from app.services.classification.single_image_classifier import classify_lineup
 
         # game/map/target zone resolve; stand_zone is a hallucinated slug the
         # prompt "advertised" but cannot resolve → structured code expected.
@@ -1257,7 +1239,7 @@ class TestStructuredFailureSurfacing:
 
         with (
             patch(
-                "app.services.classification.single_image_classifier._fetch_screenshot_bytes",
+                "app.services.classification.single_image_classifier.fetch_screenshot_bytes",
                 return_value=_FAKE_PNG,
             ),
             patch("app.services.classification.single_image_classifier.settings") as mock_settings,
@@ -1298,7 +1280,7 @@ class TestStructuredFailureSurfacing:
         """The former `except (TypeError, ValueError): pass` silent swallow is
         now a structured log + structured code (matches this file's exemplary
         Anthropic error handling). The call still succeeds, confidence is None."""
-        from app.services.classification.classifier_service import classify_lineup
+        from app.services.classification.single_image_classifier import classify_lineup
 
         classifier_output = {
             "game_slug": "valorant",
@@ -1315,7 +1297,7 @@ class TestStructuredFailureSurfacing:
 
         with (
             patch(
-                "app.services.classification.single_image_classifier._fetch_screenshot_bytes",
+                "app.services.classification.single_image_classifier.fetch_screenshot_bytes",
                 return_value=_FAKE_PNG,
             ),
             patch("app.services.classification.single_image_classifier.settings") as mock_settings,

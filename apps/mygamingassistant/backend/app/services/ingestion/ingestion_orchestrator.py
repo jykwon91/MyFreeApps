@@ -46,7 +46,7 @@ from app.models.game.utility_type import UtilityType
 from app.repositories.game import lineup_repo, source_repo
 from app.repositories.game.lineup_repo import write_classifier_suggestions
 from app.schemas.game.lineup_schemas import LineupIngestCreate
-from app.services.classification.classifier_service import (
+from app.services.classification.grid_classifier import (
     classify_frames_for_lineup_decision,
 )
 from app.services.ingestion.clip_generator import generate_clip_for_lineup

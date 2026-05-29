@@ -10,15 +10,9 @@ gif-style clip around the throw.
 Conflating it with the grid classifier would couple two prompts that must
 evolve independently (frozen design contract pr2-clip-localization-design.md).
 
-Extracted from classifier_service.py in PR #752 to keep that file under the
-1000-LOC god-module threshold (TECH_DEBT.md). Shared helpers
-(``_strip_json_fences``, ``_validate_grid_index``, ``_GAME_VISUAL_CUES``)
-stay in ``classifier_service`` and are imported here.
-
-Re-export contract: ``classifier_service`` re-exports
-``classify_throw_timing_from_frames`` from this module, so existing
-``from app.services.classification.classifier_service import
-classify_throw_timing_from_frames`` imports keep working unchanged.
+Shared helpers live in their own sibling modules:
+  - ``prompts``: ``GAME_VISUAL_CUES``
+  - ``response_parsing``: ``strip_json_fences``, ``validate_grid_index``
 """
 from __future__ import annotations
 
@@ -31,10 +25,10 @@ import anthropic
 
 from app.core.config import settings
 from app.services.classification.classification_result import ThrowTimingResult
-from app.services.classification.classifier_service import (
-    _GAME_VISUAL_CUES,
-    _strip_json_fences,
-    _validate_grid_index,
+from app.services.classification.prompts import GAME_VISUAL_CUES
+from app.services.classification.response_parsing import (
+    strip_json_fences,
+    validate_grid_index,
 )
 
 logger = logging.getLogger(__name__)
@@ -274,7 +268,7 @@ async def classify_throw_timing_from_frames(
         "shown several timestamped frames from one chapter of a lineup "
         "tutorial and must pinpoint exactly when the utility is released and "
         "when its effect first lands.\n\n"
-        + _GAME_VISUAL_CUES
+        + GAME_VISUAL_CUES
         + "\n"
         + _THROW_TIMING_SCHEMA_DOC.format(n=n)
     )
@@ -364,7 +358,7 @@ async def classify_throw_timing_from_frames(
 
     raw_text = response.content[0].text if response.content else ""
     try:
-        parsed: dict[str, Any] = json.loads(_strip_json_fences(raw_text))
+        parsed: dict[str, Any] = json.loads(strip_json_fences(raw_text))
     except (json.JSONDecodeError, IndexError) as exc:
         logger.error(
             "throw_timing: JSON parse failed: chapter=%r raw=%r error=%s",
@@ -421,10 +415,10 @@ async def classify_throw_timing_from_frames(
             error_codes=list(structured_codes),
         )
 
-    release_index = _validate_grid_index(
+    release_index = validate_grid_index(
         parsed.get("release_index"), "release_index", n, failures
     )
-    result_index = _validate_grid_index(
+    result_index = validate_grid_index(
         parsed.get("result_index"), "result_index", n, failures
     )
 

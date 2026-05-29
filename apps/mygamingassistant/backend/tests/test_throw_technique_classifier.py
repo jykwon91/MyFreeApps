@@ -19,7 +19,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from app.services.classification.classifier_service import (
+from app.services.classification.throw_technique_classifier import (
     classify_throw_technique_from_frames,
 )
 

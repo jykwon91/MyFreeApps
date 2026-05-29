@@ -39,7 +39,7 @@ from app.repositories.game.lineup_repo import (
     zone_density,
 )
 from app.services.classification.classification_result import ClassificationResult
-from app.services.classification.classifier_service import classify_lineup
+from app.services.classification.single_image_classifier import classify_lineup
 from app.schemas.game.lineup_schemas import (
     LineupAcceptBody,
     LineupCreate,

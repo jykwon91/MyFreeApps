@@ -14,16 +14,10 @@ Does NOT touch the database (no lineup row exists yet — the orchestrator
 creates the row only if ``is_lineup`` is True). Reference data is loaded for
 slug resolution.
 
-Extracted from classifier_service.py in PR R2 to keep that file under the
-500-LOC growth-guard threshold. Shared blocks (``_GAME_VISUAL_CUES``,
-``_GAME_FIRST_RULE``, ``_build_reference_text``, ``_check_game_map_consistency``,
-``_strip_json_fences``, ``_validate_aim_coord``, ``_validate_grid_index``) stay
-in ``classifier_service`` and are imported here.
-
-Re-export contract: ``classifier_service`` re-exports
-``classify_frames_for_lineup_decision`` from this module, so existing
-``from app.services.classification.classifier_service import
-classify_frames_for_lineup_decision`` imports keep working unchanged.
+Shared helpers live in their own sibling modules:
+  - ``prompts``: ``GAME_VISUAL_CUES``, ``GAME_FIRST_RULE``, ``build_reference_text``
+  - ``response_parsing``: ``strip_json_fences``, ``validate_aim_coord``, ``validate_grid_index``
+  - ``scope_guards``: ``check_game_map_consistency``
 """
 from __future__ import annotations
 
@@ -41,15 +35,17 @@ from app.repositories.game.reference_repo import (
     resolve_slugs,
 )
 from app.services.classification.classification_result import ClassificationResult
-from app.services.classification.classifier_service import (
-    _GAME_FIRST_RULE,
-    _GAME_VISUAL_CUES,
-    _build_reference_text,
-    _check_game_map_consistency,
-    _strip_json_fences,
-    _validate_aim_coord,
-    _validate_grid_index,
+from app.services.classification.prompts import (
+    GAME_FIRST_RULE,
+    GAME_VISUAL_CUES,
+    build_reference_text,
 )
+from app.services.classification.response_parsing import (
+    strip_json_fences,
+    validate_aim_coord,
+    validate_grid_index,
+)
+from app.services.classification.scope_guards import check_game_map_consistency
 
 logger = logging.getLogger(__name__)
 
@@ -162,7 +158,7 @@ async def classify_frames_for_lineup_decision(
     n = len(frames)
 
     ref = await load_reference_data(db, game_id=None)
-    reference_text = _build_reference_text(ref, game_hint=game_hint)
+    reference_text = build_reference_text(ref, game_hint=game_hint)
 
     chapter_context_parts: list[str] = []
     if chapter_title:
@@ -176,9 +172,9 @@ async def classify_frames_for_lineup_decision(
         "You will receive several numbered candidate frames from ONE video "
         "chapter and must judge whether the chapter is a real utility-lineup "
         "demo, pick the best frames, and classify it.\n\n"
-        + _GAME_VISUAL_CUES
+        + GAME_VISUAL_CUES
         + "\n"
-        + _GAME_FIRST_RULE
+        + GAME_FIRST_RULE
         + "\n"
         + _GRID_OUTPUT_SCHEMA_DOC.format(n=n)
     )
@@ -257,7 +253,7 @@ async def classify_frames_for_lineup_decision(
 
     raw_text = response.content[0].text if response.content else ""
     try:
-        parsed: dict[str, Any] = json.loads(_strip_json_fences(raw_text))
+        parsed: dict[str, Any] = json.loads(strip_json_fences(raw_text))
     except (json.JSONDecodeError, IndexError) as exc:
         logger.error(
             "classify_frames: JSON parse failed: chapter=%r raw=%r error=%s",
@@ -272,14 +268,14 @@ async def classify_frames_for_lineup_decision(
     failures: list[str] = []
     structured_codes: list[str] = []
 
-    parsed = _check_game_map_consistency(parsed, ref, failures, structured_codes)
+    parsed = check_game_map_consistency(parsed, ref, failures, structured_codes)
 
     is_lineup = bool(parsed.get("is_lineup"))
 
-    best_stand_index = _validate_grid_index(
+    best_stand_index = validate_grid_index(
         parsed.get("best_stand_index"), "best_stand_index", n, failures
     )
-    best_aim_index = _validate_grid_index(
+    best_aim_index = validate_grid_index(
         parsed.get("best_aim_index"), "best_aim_index", n, failures
     )
 
@@ -343,8 +339,8 @@ async def classify_frames_for_lineup_decision(
         structured_codes.append(f"invalid_side:{side}")
         side = None
 
-    aim_x = _validate_aim_coord(parsed.get("aim_anchor_x"), "x", failures)
-    aim_y = _validate_aim_coord(parsed.get("aim_anchor_y"), "y", failures)
+    aim_x = validate_aim_coord(parsed.get("aim_anchor_x"), "x", failures)
+    aim_y = validate_aim_coord(parsed.get("aim_anchor_y"), "y", failures)
 
     if failures:
         reasoning = f"{model_reasoning}\nNotes: {'; '.join(failures)}".strip()
