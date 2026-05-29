@@ -25,8 +25,8 @@ End-to-end:
   2. Anchor the clip on the LANDING moment (``result_ts``). PR2's throw clip
      covers ``[release - 2.0, result + 0.5]`` — the throw motion — and crops
      the post-landing tail tight. PR5's landing clip inverts the framing:
-     start just before the landing and dwell on the AFTER (``[result - 0.5,
-     result + 3.0]`` ≈ 3.5s). The two clips are deliberately offset so a
+     start AT the landing (``result_ts``) and dwell on the deploy
+     (``[result, result + 3.5]``). The two clips are deliberately offset so a
      viewer sees motion in BOTH panes for the same lineup.
 
   3. Cut + encode the muted MP4 via :func:`cut_clip` (re-uses PR2's ffmpeg
@@ -81,11 +81,11 @@ logger = logging.getLogger(__name__)
 # Frozen design-contract constants. The 0.55 gate matches PR2's throw clip —
 # if PR2 cleared its gate, the landing pass shares that judgment.
 _CLIP_CONFIDENCE_GATE = 0.55
-# result_ts is the throw-timing prompt's "first visible wisp" — typically
-# 1.5-3.0s after release, so the first ~1.5s is still very faint. Pad
-# forward so the clip opens once bloom is actually visible (lineup
-# 7bd971c3 after PR #751).
-_POST_RESULT_PRE_PAD = 1.5
+# result_ts is the throw-timing prompt's "first VISIBLE wisp" of the result.
+# Open the landing clip AT result_ts: the pane shows the deploy from its
+# visible onset. A forward pad opened ~1.5s late, past the informative moment
+# (operator audit 2026-05-29, lineup 69704f4a "Market Door"; was 1.5 pre-fix).
+_POST_RESULT_PRE_PAD = 0.0
 _LANDING_CLIP_DURATION = 3.5
 _MIN_CLIP_SECONDS = 1.0
 
@@ -155,12 +155,12 @@ def _compute_landing_bounds(
 ) -> Optional[tuple[float, float]]:
     """Return ``(clip_start, clip_duration)`` seconds, or None if too short.
 
-    Starts AFTER result_ts (``+ _POST_RESULT_PRE_PAD``) to skip the faint-wisp
-    lead-in that result_ts anchors on. Target duration ``_LANDING_CLIP_DURATION``,
-    clamped to the chapter. Returns None when the chapter ends too close to
-    result_ts to leave ``>= _MIN_CLIP_SECONDS`` of bloom — for landing-clip the
-    WHERE is more important than the HOW-LONG, and a clamped sliver is more
-    informative than a fabricated one displaced to a different chapter region.
+    Starts at result_ts (``+ _POST_RESULT_PRE_PAD``, currently 0) — the
+    result's first visible wisp — so the pane opens on the deploy onset.
+    Target duration ``_LANDING_CLIP_DURATION``, clamped to the chapter.
+    Returns None when the chapter ends too close to result_ts to leave
+    ``>= _MIN_CLIP_SECONDS`` of bloom — a clamped sliver is more informative
+    than a fabricated one displaced to a different chapter region.
     """
     start = max(result_ts + _POST_RESULT_PRE_PAD, chapter_start)
     if start >= chapter_end:
