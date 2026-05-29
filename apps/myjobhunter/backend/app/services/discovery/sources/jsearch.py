@@ -299,6 +299,13 @@ def _normalize(raw: dict[str, Any]) -> dict:
         "remote_type": _remote_type(raw),
         "description": description,
         "posted_at": _parse_datetime(raw.get("job_posted_at_datetime_utc")),
+        # Feed-declared expiry ("this listing closes at X"). Distinct from
+        # ``expired_at``, which we set ourselves when a posting vanishes
+        # upstream. JSearch surfaces it as an ISO-8601 UTC string; absent /
+        # unparseable → None (the listing simply carries no declared expiry).
+        "source_expires_at": _parse_datetime(
+            raw.get("job_offer_expiration_datetime_utc"),
+        ),
         "salary_min": _safe_float(raw.get("job_min_salary")),
         "salary_max": _safe_float(raw.get("job_max_salary")),
         "salary_currency": "USD",

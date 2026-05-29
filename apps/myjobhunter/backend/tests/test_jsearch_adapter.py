@@ -342,3 +342,39 @@ async def test_normalize_falls_back_to_city_state_country_for_location() -> None
         results = await search(query="x", api_key="test-key")
 
     assert results[0]["location"] == "Chicago, Illinois, US"
+
+
+@pytest.mark.asyncio
+async def test_normalize_captures_source_expires_at() -> None:
+    """job_offer_expiration_datetime_utc → source_expires_at (parsed UTC)."""
+    job = _realistic_job(
+        job_offer_expiration_datetime_utc="2026-06-15T23:59:00.000Z",
+    )
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=_ok_envelope([job]))
+
+    with patch.object(httpx, "AsyncClient", lambda *a, **kw: _client_with_handler(handler)):
+        results = await search(query="x", api_key="test-key")
+
+    expires = results[0]["source_expires_at"]
+    assert expires is not None
+    assert expires.year == 2026
+    assert expires.month == 6
+    assert expires.day == 15
+    assert expires.tzinfo is not None  # timezone-aware
+
+
+@pytest.mark.asyncio
+async def test_normalize_source_expires_at_none_when_absent() -> None:
+    """No expiration field in the feed → source_expires_at is None, not a crash."""
+    job = _realistic_job()  # _realistic_job omits the expiration field
+    assert "job_offer_expiration_datetime_utc" not in job
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=_ok_envelope([job]))
+
+    with patch.object(httpx, "AsyncClient", lambda *a, **kw: _client_with_handler(handler)):
+        results = await search(query="x", api_key="test-key")
+
+    assert results[0]["source_expires_at"] is None

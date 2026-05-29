@@ -16,7 +16,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import desc, nulls_last, outerjoin, select, update
+from sqlalchemy import desc, func, nulls_last, or_, outerjoin, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -304,11 +304,14 @@ async def upsert_postings(
                 "salary_max": stmt.excluded.salary_max,
                 "salary_currency": stmt.excluded.salary_currency,
                 "salary_period": stmt.excluded.salary_period,
+                # Feed-declared expiry — refresh it from the latest fetch so
+                # a re-listed posting that pushed its close date out is honored.
+                "source_expires_at": stmt.excluded.source_expires_at,
                 "raw_payload": stmt.excluded.raw_payload,
                 "fetch_id": stmt.excluded.fetch_id,
                 "updated_at": datetime.now(timezone.utc),
                 # Clear expired_at — if we see a posting again, it's
-                # not expired anymore.
+                # not expired anymore (it reappeared in a fetch).
                 "expired_at": None,
             },
         ).returning(
@@ -327,6 +330,52 @@ async def upsert_postings(
     return (new_count, updated_count)
 
 
+async def mark_missing_as_expired(
+    db: AsyncSession,
+    *,
+    user_id: uuid.UUID,
+    source: str,
+    seen_external_ids: list[str],
+) -> int:
+    """Mark previously-active postings that vanished from this fetch as expired.
+
+    Given the full set of ``source_external_id`` values a fetch returned for
+    ``(user_id, source)``, set ``expired_at = now()`` on every still-active row
+    for that pair whose id is NOT in the returned set. "Active" means
+    ``expired_at IS NULL`` — already-expired rows are left untouched so we
+    don't churn their timestamp.
+
+    Returns the number of rows newly marked expired (for audit logging).
+
+    CRITICAL: the caller MUST only invoke this after a fetch that genuinely
+    succeeded AND returned a non-empty result set. Calling it on an empty or
+    failed cycle would mark the entire ``(user_id, source)`` inbox expired,
+    because every active id would be "missing" from an empty returned set.
+    This function does not re-check that guard — it trusts the caller — so the
+    guard lives in ``discovery_fetch_service.fetch_source`` where success and
+    non-emptiness are known.
+    """
+    if not seen_external_ids:
+        # Defensive backstop for the caller's guard: never mass-expire on an
+        # empty set. The service is responsible for not calling us here, but
+        # a no-op is the only safe behavior if it slips through.
+        return 0
+
+    now = datetime.now(timezone.utc)
+    stmt = (
+        update(DiscoveredJob)
+        .where(
+            DiscoveredJob.user_id == user_id,
+            DiscoveredJob.source == source,
+            DiscoveredJob.expired_at.is_(None),
+            DiscoveredJob.source_external_id.notin_(seen_external_ids),
+        )
+        .values(expired_at=now)
+    )
+    result = await db.execute(stmt)
+    return result.rowcount or 0
+
+
 async def list_discovered(
     db: AsyncSession,
     user_id: uuid.UUID,
@@ -339,9 +388,17 @@ async def list_discovered(
     """List discovered jobs scoped to user.
 
     state:
-      - "inbox": not dismissed, not saved, not promoted (the triage view)
-      - "saved": saved_at IS NOT NULL AND dismissed_at IS NULL
-      - "all": every non-expired row
+      - "inbox": not dismissed, not saved, not promoted, AND active
+        (the triage view) — active means not expired upstream and not
+        past its feed-declared close date.
+      - "saved": saved_at IS NOT NULL AND dismissed_at IS NULL AND active
+      - "all": every row (no active filter — the operator explicitly
+        asked for everything, including expired/closed listings).
+
+    "Active" excludes a row when ``expired_at IS NOT NULL`` (we observed it
+    vanish upstream) OR ``source_expires_at < now()`` (the feed told us it
+    closed). The operator wants active-ONLY in the inbox, so these are
+    excluded rather than greyed out.
 
     source_id:
       When provided, restricts results to rows whose fetch_id points to a
@@ -363,18 +420,32 @@ async def list_discovered(
         )
         .where(DiscoveredJob.user_id == user_id)
     )
+    # Active-only predicate, shared by the inbox and saved views: a row is
+    # active unless we observed it vanish upstream (``expired_at`` set) or its
+    # feed-declared close date is in the past. ``source_expires_at IS NULL``
+    # rows (no declared expiry — e.g. all Greenhouse/Lever rows) stay active.
+    active_only = (
+        DiscoveredJob.expired_at.is_(None),
+        or_(
+            DiscoveredJob.source_expires_at.is_(None),
+            DiscoveredJob.source_expires_at >= func.now(),
+        ),
+    )
+
     if state == "inbox":
         stmt = stmt.where(
             DiscoveredJob.dismissed_at.is_(None),
             DiscoveredJob.saved_at.is_(None),
             DiscoveredJob.promoted_application_id.is_(None),
+            *active_only,
         )
     elif state == "saved":
         stmt = stmt.where(
             DiscoveredJob.saved_at.isnot(None),
             DiscoveredJob.dismissed_at.is_(None),
+            *active_only,
         )
-    # else "all": no extra filter
+    # else "all": no extra filter — include expired/closed rows on request
 
     if source_id is not None:
         stmt = stmt.where(DiscoveryFetch.discovery_source_id == source_id)
