@@ -264,7 +264,9 @@ async def list_by_channel(
             Listing.organization_id == organization_id,
             Listing.user_id == user_id,
             Listing.deleted_at.is_(None),
-            Channel.slug == channel,
+            # Channel's primary key IS the slug (e.g. "airbnb") — there is no
+            # separate ``slug`` column. See app/models/listings/channel.py.
+            Channel.id == channel,
         )
     )
     return list(result.scalars().all())
