@@ -107,6 +107,21 @@ describe("Markdown", () => {
       expect(screen.getByText("malicious")).toBeInTheDocument();
     });
 
+    it.each([
+      ["vbscript:", "[x](vbscript:msgbox(1))"],
+      ["data:", "[x](data:text/html;base64,PHNjcmlwdD4=)"],
+      ["file:", "[x](file:///etc/passwd)"],
+    ])("neutralizes %s protocol links — allowlist rejects non-http/https/mailto", (scheme, src) => {
+      render(<Markdown content={src} />);
+      // The allowlist permits only http/https/mailto, so no <a> is emitted for
+      // any other scheme — the dangerous href never reaches the DOM.
+      const links = document.querySelectorAll("a");
+      for (const link of links) {
+        expect((link.getAttribute("href") ?? "").startsWith(scheme)).toBe(false);
+      }
+      expect(screen.getByText("x")).toBeInTheDocument();
+    });
+
     it("does not inject a <script> tag from markdown source", () => {
       render(<Markdown content={"<script>alert('xss')</script>"} />);
       // react-markdown without rehype-raw escapes raw HTML — no script element

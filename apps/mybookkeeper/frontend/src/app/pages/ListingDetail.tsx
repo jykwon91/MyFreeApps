@@ -212,7 +212,7 @@ export default function ListingDetail() {
             onCancel={() => setShowDeleteModal(false)}
           />
         </>
-      )}
+      ) : null}
     </main>
   );
 }

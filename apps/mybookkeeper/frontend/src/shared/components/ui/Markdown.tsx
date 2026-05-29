@@ -34,10 +34,13 @@ function isSafeUrl(href: string | undefined): boolean {
   if (!href) return false;
   try {
     const url = new URL(href, window.location.href);
+    // Allowlist only — anything not http/https/mailto (javascript:, data:,
+    // vbscript:, file:, ...) is rejected. A blocklist here would always be
+    // incomplete (CodeQL js/incomplete-url-sanitization).
     return ALLOWED_PROTOCOLS.has(url.protocol);
   } catch {
-    // Relative URLs (no protocol) are safe to pass through.
-    return !href.startsWith("javascript:") && !href.startsWith("data:");
+    // Unparseable URL — fail closed.
+    return false;
   }
 }
 
