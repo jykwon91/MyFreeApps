@@ -44,7 +44,6 @@ re-exported here for backward compatibility so existing callers
 from __future__ import annotations
 
 import hashlib
-import json
 import logging
 import uuid
 from datetime import datetime, timezone
@@ -55,14 +54,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.discovery.discovered_job import DiscoveredJob
 from app.models.job_analysis.job_analysis import JobAnalysis
-from app.models.profile.profile import Profile
 from app.repositories.job_analysis import job_analysis_repository
-from app.repositories.profile import (
-    education_repository,
-    profile_repository,
-    skill_repository,
-    work_history_repository,
-)
 from app.services.extraction import claude_service
 from app.services.extraction.jd_url_extractor import (
     JDFetchAuthRequiredError,
@@ -78,6 +70,12 @@ from app.services.job_analysis._job_analysis_utils import (
     _safe_float,
     _safe_remote_type,
     _str_or_none,
+)
+# Profile-snapshot construction lives in a sibling module (no-growth split).
+# Aliased to the prior underscore names so the call sites below are unchanged.
+from app.services.job_analysis.profile_snapshot import (
+    build_user_content as _build_user_content,
+    load_profile_snapshot as _load_profile_snapshot,
 )
 
 logger = logging.getLogger(__name__)
@@ -231,13 +229,6 @@ _DIMENSION_STATUS: dict[str, frozenset[str]] = {
     ),
     "work_auth": frozenset(("compatible", "blocker", "unclear")),
 }
-
-# Bound the profile snapshot we send to Claude. Operators with very long
-# work histories don't pay for an unbounded prompt — the most-recent
-# entries carry the most signal.
-_MAX_WORK_HISTORY = 8
-_MAX_EDUCATION = 5
-_MAX_SKILLS = 40
 
 # Cap red/green flag list lengths server-side too — defensive against
 # prompt-injection that inflates the array beyond what the UI handles.
@@ -508,103 +499,6 @@ def _strip_html(html: str) -> str:
     )
     text = re.sub(r"\n{3,}", "\n\n", text)
     return text.strip()
-
-
-async def _load_profile_snapshot(
-    db: AsyncSession, user_id: uuid.UUID,
-) -> dict:
-    """Load + bound the operator's profile snapshot for the prompt."""
-    profile = await profile_repository.get_by_user_id(db, user_id)
-    work_history = await work_history_repository.list_by_user(db, user_id)
-    education = await education_repository.list_by_user(db, user_id)
-    skills = await skill_repository.list_by_user(db, user_id)
-
-    return {
-        "profile": _profile_to_dict(profile),
-        "work_history": [_work_to_dict(w) for w in work_history[:_MAX_WORK_HISTORY]],
-        "education": [_edu_to_dict(e) for e in education[:_MAX_EDUCATION]],
-        "skills": [_skill_to_dict(s) for s in skills[:_MAX_SKILLS]],
-    }
-
-
-def _profile_to_dict(profile: Profile | None) -> dict:
-    if profile is None:
-        # Empty snapshot — the analysis still runs, but every dimension
-        # that depends on profile facts will land on "unclear" or
-        # "no_target". The operator sees a "complete your profile" CTA.
-        return {
-            "summary": None,
-            "seniority": None,
-            "work_auth_status": "unknown",
-            "desired_salary_min": None,
-            "desired_salary_max": None,
-            "salary_currency": "USD",
-            "locations": [],
-            "remote_preference": "any",
-        }
-    return {
-        "summary": profile.summary,
-        "seniority": profile.seniority,
-        "work_auth_status": profile.work_auth_status,
-        "desired_salary_min": (
-            float(profile.desired_salary_min)
-            if profile.desired_salary_min is not None
-            else None
-        ),
-        "desired_salary_max": (
-            float(profile.desired_salary_max)
-            if profile.desired_salary_max is not None
-            else None
-        ),
-        "salary_currency": profile.salary_currency,
-        "locations": list(profile.locations or []),
-        "remote_preference": profile.remote_preference,
-    }
-
-
-def _work_to_dict(w: Any) -> dict:
-    return {
-        "company_name": w.company_name,
-        "title": w.title,
-        "start_date": w.start_date.isoformat() if w.start_date else None,
-        "end_date": w.end_date.isoformat() if w.end_date else None,
-        # Cap bullets per role to keep the prompt size predictable.
-        "bullets": list(w.bullets or [])[:8],
-    }
-
-
-def _edu_to_dict(e: Any) -> dict:
-    return {
-        "school": e.school,
-        "degree": getattr(e, "degree", None),
-        "field": getattr(e, "field", None),
-        "end_year": getattr(e, "end_year", None),
-    }
-
-
-def _skill_to_dict(s: Any) -> dict:
-    return {
-        "name": s.name,
-        "years_experience": s.years_experience,
-        "category": s.category,
-    }
-
-
-def _build_user_content(*, snapshot: dict, jd_text: str) -> str:
-    """Compose the user-message body for the analysis prompt.
-
-    The format is "Profile:\n<json>\n\nJob description:\n<text>" so the
-    model has a clean break between the two inputs and can parse the
-    profile reliably without being confused by JSON-looking content
-    inside the JD.
-    """
-    profile_json = json.dumps(snapshot, ensure_ascii=False, indent=2)
-    return (
-        "# Candidate profile (JSON)\n\n"
-        f"{profile_json}\n\n"
-        "# Job description (plain text)\n\n"
-        f"{jd_text}"
-    )
 
 
 # ---------------------------------------------------------------------------
