@@ -80,3 +80,49 @@ async def count_inbox_coverage(
         await db.execute(base.where(DiscoveredJob.score.isnot(None)))
     ).scalar_one()
     return scored_count, total_count
+
+
+async def count_discovered(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    *,
+    state: str = "inbox",
+    source_id: uuid.UUID | None = None,
+) -> int:
+    """Total rows matching the ``state`` / ``source_id`` filter — the pagination
+    ``total`` for ``GET /discover``.
+
+    Mirrors the WHERE logic of ``discovery_repository.list_discovered`` (same
+    state branches + the shared ``active_only_predicate``) so ``total``
+    describes exactly the population the list endpoint paginates over,
+    independent of ``limit`` / ``offset``. The route reuses
+    ``count_inbox_coverage``'s ``total_count`` for the inbox (same population),
+    so this is called for the ``saved`` / ``all`` views.
+    """
+    stmt = select(func.count(DiscoveredJob.id)).where(
+        DiscoveredJob.user_id == user_id,
+    )
+    active_only = active_only_predicate()
+    if state == "inbox":
+        stmt = stmt.where(
+            DiscoveredJob.dismissed_at.is_(None),
+            DiscoveredJob.saved_at.is_(None),
+            DiscoveredJob.promoted_application_id.is_(None),
+            *active_only,
+        )
+    elif state == "saved":
+        stmt = stmt.where(
+            DiscoveredJob.saved_at.isnot(None),
+            DiscoveredJob.dismissed_at.is_(None),
+            *active_only,
+        )
+    # else "all": no extra filter — counts expired/closed rows too.
+    if source_id is not None:
+        stmt = stmt.select_from(
+            outerjoin(
+                DiscoveredJob,
+                DiscoveryFetch,
+                DiscoveredJob.fetch_id == DiscoveryFetch.id,
+            )
+        ).where(DiscoveryFetch.discovery_source_id == source_id)
+    return (await db.execute(stmt)).scalar_one()

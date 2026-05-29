@@ -750,6 +750,8 @@ This rules a lot of work in and out: **don't** invest in a relevance-overhaul or
 
 ### MEDIUM — Discovery results need pagination
 
+**Status (2026-05-29):** Backend SHIPPED — `GET /discover` now returns a real `total` (full matching-row count via `discovery_inbox_repository.count_discovered`, reusing the inbox coverage count for the inbox state) + `has_more`, and `DiscoveredJobListResponse` subclasses the shared `ListResponse[DiscoveredJobResponse]` — MJH's first paginated list endpoint, which satisfies the "Pagination response envelopes — adopt early in MJH" convention entry above. **Frontend FOLLOW-UP still open:** `features/discover/DiscoverInboxView.tsx` must send `limit`/`offset` and add a `has_more`-driven load-more control (today it ignores them → one growing list). Backend tests: `test_discover_endpoints.py::test_inbox_pagination_total_is_full_count_and_has_more`.
+
 **Reported:** operator.
 **Symptom:** The discovery inbox renders results without pagination (a single growing list). Fetches pull ~5 pages (~50 postings) per cycle and accumulate.
 **Cross-link — this is the trigger for the existing convention entry:** see "MEDIUM — Pagination response envelopes — adopt early in MJH" above. That entry parked the shared `ListResponse[ItemT]` (`platform_shared/schemas/pagination.py`, landed #492) waiting for MJH's *first* list endpoint that actually needs pagination. The discovery inbox is that endpoint. Implement discovery-inbox pagination by subclassing `ListResponse[DiscoveredJobResponse]` rather than inventing a new envelope; pair with frontend infinite-scroll or page controls on `features/discover/`. Resolving this should also tick the convention entry.
