@@ -1,7 +1,7 @@
 # Tech Debt
 
-> Last scanned: 2026-05-11
-> Issues: 0 critical, 2 high, 3 medium (0 deferred + 3 active), 0 low
+> Last scanned: 2026-05-29
+> Issues: 0 critical, 2 high, 3 medium (0 deferred + 3 active), 1 low
 > 2026-05-11 (PR 6 of React 19 migration): 1 HIGH resolved (Button/LoadingButton local copies → `@platform/ui`).
 > 2026-05-11 (StatusBadge PR): 1 HIGH resolved (Status-colored Badge → `@platform/ui` StatusBadge).
 > 2026-05-11 (shared-confirm-dialog PR): 1 HIGH resolved (Confirm-delete dialog wrapper extracted to `@platform/ui`).
@@ -247,6 +247,16 @@ Circular-import avoided by moving `TemplateNotFoundError` and `extract_text_from
 **Location:** ~64 files across `apps/mybookkeeper/frontend/src/` (per `grep -rln "=== null\|!== null\|=== undefined"`)
 **Problem:** Per the new global config rule (jkwon-claude-config #92), `if (!x)` is preferred over `if (x === null)` when the type is `T | null` and `T` is always truthy. Reserve explicit comparisons for cases where falsy would over-match (distinguishing `null` from `""`, `0`, or `undefined` when those are valid values). Many of the 64 sites are legitimate; many are not.
 **Recommendation:** Per-file audit — read each line, determine if the type would over-match with truthy. If yes, keep explicit. If no, switch to truthy. Group fixes by domain into ≤3 PRs.
+
+---
+
+## Low
+
+### [Frontend] `Markdown.tsx` — promote to `@platform/ui` when a second app needs markdown
+**Effort:** XS
+**Location:** `apps/mybookkeeper/frontend/src/shared/components/ui/Markdown.tsx` (added PR #792, 2026-05-29)
+**Problem:** The component is correctly app-local for now (first consumer; monorepo extract-on-second-use rule). When MJH or a future app needs markdown rendering, promote by moving the file to `packages/shared-frontend/src/components/ui/Markdown.tsx` and re-exporting from `@platform/ui`.
+**Recommendation:** No action until second consumer. When promoting, remove the "app-local" comment and the promotion note, add to `@platform/ui` index, update both apps' imports.
 
 ---
 
