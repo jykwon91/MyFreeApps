@@ -22,7 +22,8 @@ Usage::
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+from statistics import median
 from typing import Optional
 
 
@@ -216,6 +217,47 @@ def filter_lineup_chapters(
     return kept
 
 
+# Floor for the capped last-chapter window — enough to hold a full demo
+# (walk-in + stand + aim + throw + result) even when this creator's typical
+# chapter is shorter. Kept below clip_window_timestamps's 90s long-chapter
+# threshold so the cap also drops the 0.30 lead-in skip that overshot the throw.
+_LAST_CHAPTER_MAX_WINDOW_FLOOR_SECONDS = 45
+
+
+def _cap_last_chapter_to_typical_duration(
+    chapters: list[Chapter], video_duration: int
+) -> list[Chapter]:
+    """Shrink an artificially-long LAST chapter to this video's typical length.
+
+    The last chapter has no next-chapter boundary, so its ``end_seconds`` is the
+    video tail. On a video that continues past the final lineup demo (outro,
+    extra footage), that tail inflates the chapter duration far past a real demo
+    — and ``clip_window_timestamps`` then applies its long-chapter 0.30 lead-in
+    skip, sampling PAST the (early) throw. Operator audit 2026-05-30, lineup
+    9b2ad4c9 "Stairs - A Site": last chapter 403->508 = 105s, the throw window
+    opened at +27s, and the real throw (~+17s, right after the aim) was never
+    sampled — the localizer locked onto outro content +39s after the aim.
+
+    Cap the last chapter's end at ``start + max(median sibling duration,
+    _LAST_CHAPTER_MAX_WINDOW_FLOOR_SECONDS)`` so its throw-search window matches
+    a normal chapter for this creator. SHRINK-ONLY (never extend a naturally
+    short last chapter) and only with >=2 chapters (so a sibling median exists).
+    The median adapts to each creator's pacing without a hardcoded length.
+
+    Returns a new list (the last chapter ``replace``'d when capped), else the
+    input unchanged.
+    """
+    if len(chapters) < 2:
+        return chapters
+    typical = median(c.end_seconds - c.start_seconds for c in chapters[:-1])
+    last = chapters[-1]
+    cap = last.start_seconds + max(typical, _LAST_CHAPTER_MAX_WINDOW_FLOOR_SECONDS)
+    new_end = min(last.end_seconds, int(cap))
+    if new_end >= last.end_seconds:
+        return chapters  # already tighter than the cap — leave it
+    return chapters[:-1] + [replace(last, end_seconds=new_end)]
+
+
 def parse_chapters(
     description: str,
     video_duration: int,
@@ -250,7 +292,10 @@ def parse_chapters(
             except (ValueError, TypeError, KeyError):
                 continue
         if result:
-            return result
+            return _cap_last_chapter_to_typical_duration(result, video_duration)
 
     # Fallback to description regex.
-    return _parse_chapters_from_description(description, video_duration)
+    return _cap_last_chapter_to_typical_duration(
+        _parse_chapters_from_description(description, video_duration),
+        video_duration,
+    )
