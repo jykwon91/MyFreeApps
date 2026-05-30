@@ -171,6 +171,62 @@ class TestThrowTimingVerdictAndParser:
         assert result.causality_inverted_earlier_index is None
 
     @pytest.mark.asyncio
+    async def test_earlier_demonstration_index_parsed_when_before_release(self):
+        """The GENERAL multi-demo signal (no inversion needed) is kept when it
+        points EARLIER than the chosen release — an earlier demonstration's
+        result precedes the late take the model localised (Market Door case)."""
+        result, _ = await _call(
+            {
+                "is_lineup_throw": True,
+                "release_index": 5,
+                "result_index": 6,
+                "earlier_demonstration_result_index": 2,
+                "confidence": 0.85,
+                "reasoning": "late-demo release F5; 1st-demo smoke at F2",
+            }
+        )
+        assert result.release_index == 5
+        assert result.result_index == 6
+        assert result.earlier_demonstration_result_index == 2
+        # result 6 > release 5 → no inversion; the signal stands on its own.
+        assert result.causality_inverted_earlier_index is None
+
+    @pytest.mark.asyncio
+    async def test_earlier_demonstration_index_dropped_when_not_before_release(
+        self,
+    ):
+        """A value >= release_index is not an 'earlier demo' signal — drop it
+        so the localizer never re-centres around a non-earlier frame."""
+        result, _ = await _call(
+            {
+                "is_lineup_throw": True,
+                "release_index": 3,
+                "result_index": 4,
+                "earlier_demonstration_result_index": 5,
+                "confidence": 0.8,
+                "reasoning": "x",
+            }
+        )
+        assert result.release_index == 3
+        assert result.earlier_demonstration_result_index is None
+
+    @pytest.mark.asyncio
+    async def test_earlier_demonstration_index_dropped_when_release_null(self):
+        """No release → the earlier-demo signal has no anchor to precede → drop."""
+        result, _ = await _call(
+            {
+                "is_lineup_throw": True,
+                "release_index": None,
+                "result_index": None,
+                "earlier_demonstration_result_index": 2,
+                "confidence": 0.4,
+                "reasoning": "x",
+            }
+        )
+        assert result.release_index is None
+        assert result.earlier_demonstration_result_index is None
+
+    @pytest.mark.asyncio
     async def test_out_of_range_indices_nulled(self):
         result, _ = await _call(
             {
@@ -338,6 +394,22 @@ class TestThrowTimingPerspectivePrompt:
         assert "utility-in-hand has changed" in system_text
 
     @pytest.mark.asyncio
+    async def test_system_prompt_includes_first_of_repeated_demonstrations(self):
+        """On a repeated demonstration the EARLIEST aligned throw wins, and the
+        model must report earlier_demonstration_result_index so the localizer
+        can re-center on it. Removing either re-introduces the Market Door
+        split-brain (THROW on the 2nd demo, STAND/AIM/LANDING on the 1st)."""
+        _, client = await _call(
+            {"is_lineup_throw": True, "release_index": 1, "result_index": 2,
+             "confidence": 0.6, "reasoning": "x"},
+        )
+        system = client.messages.create.call_args.kwargs["system"]
+        system_text = "\n".join(b["text"] for b in system)
+        assert "FIRST OF REPEATED DEMONSTRATIONS" in system_text
+        assert "earlier_demonstration_result_index" in system_text
+        assert "EARLIEST such full" in system_text
+
+    @pytest.mark.asyncio
     async def test_system_prompt_includes_max_gap_fallback(self):
         """The MAX-GAP FALLBACK must instruct the model to set
         result_index = release_index + confidence <= 0.5 when no valid
@@ -350,10 +422,12 @@ class TestThrowTimingPerspectivePrompt:
         )
         system = client.messages.create.call_args.kwargs["system"]
         system_text = "\n".join(b["text"] for b in system)
-        assert "MAX-GAP FALLBACK" in system_text
-        assert "within ~6 frames" in system_text
-        assert "result_index = release_index" in system_text
-        assert "confidence <= 0.5" in system_text
+        # The MAX-GAP FALLBACK (result_index = release_index) was replaced by the
+        # SAME-THROW RULE: a far / cross-demonstration result is nulled, not
+        # forced onto the release frame — the landing clip is skipped instead.
+        assert "SAME-THROW RULE" in system_text
+        assert "set result_index = null" in system_text
+        assert "do NOT fall" in system_text
 
     @pytest.mark.asyncio
     async def test_system_prompt_tightens_smoke_first_wisp_cue(self):

@@ -101,6 +101,19 @@ class ThrowTimingResult:
     with an EARLY demo's result) and re-localise around the first event.
     ``None`` whenever no inversion occurred. See
     ``throw_localizer.localize_throw_with_refinement`` (causality recovery).
+
+    ``earlier_demonstration_result_index`` is the GENERAL multi-demonstration
+    signal (the inversion above is only the special case where the model
+    happens to pair across demos). When the chapter demonstrates the SAME
+    lineup more than once and the model localised release on a LATER repeat,
+    it reports here the 1-based frame where an EARLIER demonstration's RESULT
+    is first visible — strictly ``< release_index``. The localizer fires the
+    SAME first-event recovery on it as on an inversion, re-centring on the
+    first demonstration so the throw matches STAND / AIM (operator audit
+    2026-05-30, lineup 69704f4a "Market Door": the throw-clip coarse pass
+    confidently localised the 2nd demo at ~317 while STAND/AIM/LANDING sat on
+    the 1st throw at ~298 — no inversion fired, so nothing pulled it back).
+    ``None`` when there is one demonstration or release is already the earliest.
     """
 
     success: bool
@@ -108,6 +121,7 @@ class ThrowTimingResult:
     release_index: Optional[int] = None
     result_index: Optional[int] = None
     causality_inverted_earlier_index: Optional[int] = None
+    earlier_demonstration_result_index: Optional[int] = None
     confidence: Optional[float] = None
     reasoning: str = ""
     error_codes: list[str] = field(default_factory=list)

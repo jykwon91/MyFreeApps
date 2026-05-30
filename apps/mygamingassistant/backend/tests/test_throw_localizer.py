@@ -22,8 +22,9 @@ result with the matching diagnostic stage.
 """
 from __future__ import annotations
 
+import contextlib
 from pathlib import Path
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
@@ -37,19 +38,38 @@ from app.services.ingestion.throw_localizer import (
     STAGE_DENSE_EXTRACT_FAILED,
     STAGE_DENSE_REJECTED,
     STAGE_DENSE_WINDOW_TOO_SMALL,
+    STAGE_FLOOR_PIN_EXTRACT_FAILED,
+    STAGE_FLOOR_PIN_REJECTED,
+    STAGE_FLOOR_PIN_WINDOW_TOO_SMALL,
     STAGE_RECOVERED_FIRST_EVENT,
+    STAGE_RECOVERED_FLOOR_PIN,
     STAGE_RECOVERY_EXTRACT_FAILED,
     STAGE_RECOVERY_REJECTED,
     STAGE_RECOVERY_WINDOW_TOO_SMALL,
     STAGE_REFINED,
     RefinedThrowTiming,
     _should_refine,
+    apply_gap_invariant,
     dense_window_timestamps,
     localize_throw_with_refinement,
 )
 
 _MOD = "app.services.ingestion.throw_localizer"
+_MOD_RECOVERY = "app.services.ingestion.throw_localizer_recovery"
 _FAKE_VIDEO = Path("/tmp/fake.mp4")
+
+
+@contextlib.contextmanager
+def _with_all(patchers):
+    """Enter several patch() context managers as one (exit together).
+
+    Lets a single tuple slot patch the SAME function on two module namespaces
+    (the orchestrator + the recovery sibling) so tests apply it with one
+    ``with patches[i]`` entry."""
+    with contextlib.ExitStack() as stack:
+        for p in patchers:
+            stack.enter_context(p)
+        yield
 _FAKE_PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 64
 
 
@@ -60,18 +80,22 @@ _FAKE_PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 64
 
 class TestDenseWindowTimestamps:
     def test_returns_n_timestamps_centered_asymmetrically_on_release(self):
-        """4s asymmetric window (release - 1.0, release + 3.0) @ N=8."""
+        """5s asymmetric window (release - 2.0, release + 3.0) @ N=12.
+
+        pre=2.0 (raised from 1.0, 2026-05-30) gives the dense pass windup
+        context so it can pin the separation instant instead of drifting late
+        into follow-through; post=3.0 still catches the result frame."""
         result = dense_window_timestamps(
             coarse_release_ts=100.0,
             chapter_start=0.0,
             chapter_end=200.0,
         )
-        assert len(result) == 8
-        # Window spans [99.0, 103.0] — strictly inside, edge_padding=0.
-        assert result[0] == pytest.approx(99.0)
+        assert len(result) == 12
+        # Window spans [98.0, 103.0] — strictly inside, edge_padding=0.
+        assert result[0] == pytest.approx(98.0)
         assert result[-1] == pytest.approx(103.0)
-        # More post-release than pre-release coverage: release is closer
-        # to the START of the window than the end.
+        # Still more post-release than pre-release coverage: release is closer
+        # to the START of the window than the end (2.0s pre vs 3.0s post).
         release_offset_from_start = 100.0 - result[0]
         release_offset_from_end = result[-1] - 100.0
         assert release_offset_from_end > release_offset_from_start
@@ -112,11 +136,16 @@ class TestDenseWindowTimestamps:
 
 
 def _coarse(**overrides) -> ThrowTimingResult:
+    # result_index=5 keeps the default release→result gap at ~2s over
+    # _COARSE_TIMESTAMPS (2s spacing) — well under the 4.5s gap invariant — so
+    # fallback-identity assertions (`result.timing is coarse`) are not tripped
+    # by apply_gap_invariant nulling a synthetic far-gap result. Gap-invariant
+    # behaviour is covered explicitly in TestGapInvariant.
     base = dict(
         success=True,
         is_lineup_throw=True,
         release_index=4,
-        result_index=6,
+        result_index=5,
         confidence=0.72,
         reasoning="x",
     )
@@ -710,3 +739,430 @@ class TestCausalityRecovery:
         assert result.frame_timestamps == _COARSE_TIMESTAMPS
         assert extract_mock.await_count == 2  # recovery extract attempted
         assert classifier_mock.await_count == 1  # recovery classify NOT reached
+
+
+# ---------------------------------------------------------------------------
+# Multi-demonstration first-event recovery (general signal, no inversion)
+#
+# The causality-inversion signal only fires when the model happens to pair a
+# late demo's release with an early demo's result. On lineup 69704f4a "Market
+# Door" the throw-clip coarse pass instead localised the 2nd demo's release at
+# HIGH confidence with a CONSISTENT later result — no inversion — so nothing
+# pulled it back to the 1st throw while STAND/AIM/LANDING sat there (operator
+# audit 2026-05-30). The classifier now reports earlier_demonstration_result_index
+# on that case and the orchestrator fires the SAME first-event recovery on it.
+# ---------------------------------------------------------------------------
+
+
+def _multidemo_coarse(**overrides) -> ThrowTimingResult:
+    """Coarse result with the GENERAL multi-demonstration signal (no inversion).
+
+    Mirrors the real Market Door throw-clip coarse pass: a CONFIDENT (0.85)
+    release on a LATER demo with a consistent later result (result_index >
+    release_index → NO inversion), plus earlier_demonstration_result_index=3
+    flagging the 1st demo's result (→ _COARSE_TIMESTAMPS[2] = 14.0). The high
+    confidence is the crux — without the signal this REFINES the wrong late
+    release rather than recovering. release→result gap stays 2s (under the gap
+    invariant) so fallback-identity asserts aren't tripped by result nulling.
+    """
+    base = dict(
+        success=True,
+        is_lineup_throw=True,
+        release_index=7,
+        result_index=8,
+        earlier_demonstration_result_index=3,
+        confidence=0.85,
+        reasoning="2nd-demo release; 1st-demo result at F3",
+    )
+    base.update(overrides)
+    return ThrowTimingResult(**base)
+
+
+class TestMultiDemoFirstEventRecovery:
+    @pytest.mark.asyncio
+    async def test_multidemo_signal_recovers_first_event(self):
+        """earlier_demonstration_result_index set (no inversion) → first-event
+        recovery fires and uses the recovery window's timestamps."""
+        coarse = _multidemo_coarse()
+        recovered = _coarse(release_index=2, result_index=5, confidence=0.85)
+        patches, extract_mock, classifier_mock = _patch_chain(
+            coarse_classifier=coarse, dense_classifier=recovered
+        )
+        with patches[0], patches[1], patches[2], patches[3]:
+            result = await localize_throw_with_refinement(
+                _FAKE_VIDEO,
+                chapter_start=0.0,
+                chapter_end=60.0,
+                chapter_title="multi-demo smoke (no inversion)",
+            )
+        assert result.stage == STAGE_RECOVERED_FIRST_EVENT
+        assert result.timing is recovered
+        assert result.frame_timestamps == _DENSE_TIMESTAMPS
+        assert result.coarse_timing is coarse
+        # recovery release_index=2 → _DENSE_TIMESTAMPS[1] = 14.5
+        assert result.frame_timestamps[result.timing.release_index - 1] == 14.5
+        assert extract_mock.await_count == 2
+        assert classifier_mock.await_count == 2
+
+    @pytest.mark.asyncio
+    async def test_recovery_fires_ahead_of_refine_at_high_confidence(self):
+        """THE Market Door bug encoded: coarse confidence 0.85 clears the 0.55
+        refine gate, so WITHOUT the multi-demo signal this refines the wrong
+        (late) release. The signal must make first-event recovery take
+        precedence over the dense-refine pass."""
+        coarse = _multidemo_coarse(confidence=0.85)
+        recovered = _coarse(release_index=3, result_index=6, confidence=0.9)
+        patches, _, _ = _patch_chain(
+            coarse_classifier=coarse, dense_classifier=recovered
+        )
+        with patches[0], patches[1], patches[2], patches[3]:
+            result = await localize_throw_with_refinement(
+                _FAKE_VIDEO,
+                chapter_start=0.0,
+                chapter_end=60.0,
+                chapter_title="x",
+            )
+        assert result.stage == STAGE_RECOVERED_FIRST_EVENT
+        assert result.stage != STAGE_REFINED
+
+    @pytest.mark.asyncio
+    async def test_inversion_index_takes_precedence_when_both_set(self):
+        """Both signals present → the inversion index (3 → ts 14.0) drives the
+        recovery window, NOT the multi-demo index (5 → ts 18.0)."""
+        coarse = _multidemo_coarse(
+            causality_inverted_earlier_index=3,
+            result_index=7,
+            earlier_demonstration_result_index=5,
+        )
+        recovered = _coarse(release_index=2, result_index=4, confidence=0.85)
+        recovery_window_centers: list[float] = []
+
+        def _dense_window(*args, **kwargs):
+            recovery_window_centers.append(args[0] if args else None)
+            return list(_DENSE_TIMESTAMPS)
+
+        extract_mock = AsyncMock(
+            side_effect=[
+                [_FAKE_PNG] * len(_COARSE_TIMESTAMPS),
+                [_FAKE_PNG] * len(_DENSE_TIMESTAMPS),
+            ]
+        )
+        classifier_mock = AsyncMock(side_effect=[coarse, recovered])
+        with (
+            patch(f"{_MOD}.extract_frames_downscaled", extract_mock),
+            patch(f"{_MOD}.classify_throw_timing_from_frames", classifier_mock),
+            patch(
+                f"{_MOD}.clip_window_timestamps",
+                lambda *a, **k: list(_COARSE_TIMESTAMPS),
+            ),
+            patch(f"{_MOD}.dense_window_timestamps", _dense_window),
+        ):
+            result = await localize_throw_with_refinement(
+                _FAKE_VIDEO,
+                chapter_start=0.0,
+                chapter_end=60.0,
+                chapter_title="x",
+            )
+        assert result.stage == STAGE_RECOVERED_FIRST_EVENT
+        # earlier_index resolved to the inversion's 3 → _COARSE_TIMESTAMPS[2].
+        assert recovery_window_centers and recovery_window_centers[0] == 14.0
+
+    @pytest.mark.asyncio
+    async def test_recovery_still_multidemo_falls_back_to_coarse(self):
+        """A recovery pass that STILL reports an earlier demonstration means the
+        window spans more than one demo — reject and fall back to coarse."""
+        coarse = _multidemo_coarse()
+        recovered = _coarse(
+            release_index=6, result_index=7,
+            earlier_demonstration_result_index=2, confidence=0.6,
+        )
+        patches, extract_mock, classifier_mock = _patch_chain(
+            coarse_classifier=coarse, dense_classifier=recovered
+        )
+        with patches[0], patches[1], patches[2], patches[3]:
+            result = await localize_throw_with_refinement(
+                _FAKE_VIDEO,
+                chapter_start=0.0,
+                chapter_end=60.0,
+                chapter_title="x",
+            )
+        assert result.stage == STAGE_RECOVERY_REJECTED
+        assert result.timing is coarse
+        assert result.frame_timestamps == _COARSE_TIMESTAMPS
+        assert extract_mock.await_count == 2
+        assert classifier_mock.await_count == 2
+
+
+# ---------------------------------------------------------------------------
+# Gap invariant — cross-demonstration / hallucinated result nulling
+#
+# A result more than 4.5s after its release cannot be that release's own result
+# (smoke blooms within ~3s). The classifier prompt asks for this but the model
+# violates it on multi-demonstration chapters; apply_gap_invariant is the
+# model-independent backstop applied to every orchestrator return. Nulling
+# result_index gates the landing pane out WITHOUT disturbing release_index
+# (which STAND / AIM / THROW hang off).
+# ---------------------------------------------------------------------------
+
+
+def _refined(release_index, result_index, timestamps, stage=STAGE_REFINED):
+    timing = ThrowTimingResult(
+        success=True,
+        is_lineup_throw=True,
+        release_index=release_index,
+        result_index=result_index,
+        confidence=0.8,
+        reasoning="x",
+    )
+    return RefinedThrowTiming(
+        timing=timing,
+        frame_timestamps=list(timestamps),
+        stage=stage,
+        coarse_timing=timing,
+    )
+
+
+class TestGapInvariant:
+    def test_plausible_gap_returns_same_object(self):
+        """Gap <= 4.5s → unchanged (identity preserved, no needless copy)."""
+        refined = _refined(1, 2, [10.0, 13.0])  # 3.0s
+        assert apply_gap_invariant(refined) is refined
+
+    def test_boundary_gap_kept(self):
+        """Exactly 4.5s is kept (the bound is <=, not <)."""
+        refined = _refined(1, 2, [10.0, 14.5])
+        assert apply_gap_invariant(refined) is refined
+
+    def test_far_result_nulled_release_preserved(self):
+        """Gap > 4.5s → result_index nulled; release_index untouched."""
+        refined = _refined(1, 2, [10.0, 40.0])  # 30s — Catwalk-B cross-pair
+        out = apply_gap_invariant(refined)
+        assert out.timing.result_index is None
+        assert out.timing.release_index == 1
+        # Original is not mutated (dataclasses.replace returns a copy).
+        assert refined.timing.result_index == 2
+
+    def test_ten_second_gap_nulled(self):
+        """The Catwalk-B run-B case: 10s gap at high model confidence."""
+        out = apply_gap_invariant(_refined(1, 2, [242.0, 252.0]))
+        assert out.timing.result_index is None
+
+    def test_none_result_unchanged(self):
+        refined = _refined(1, None, [10.0, 11.0])
+        assert apply_gap_invariant(refined) is refined
+
+    def test_none_release_unchanged(self):
+        refined = _refined(None, 2, [10.0, 50.0])
+        assert apply_gap_invariant(refined) is refined
+
+    @pytest.mark.asyncio
+    async def test_orchestrator_nulls_far_coarse_result(self):
+        """End-to-end: a dense-rejected fall back to a coarse pick with a far
+        result has that result nulled (landing gates out) while release_index
+        survives (STAND / AIM / THROW unaffected)."""
+        # release_index=2 → _COARSE_TIMESTAMPS[1]=12.0;
+        # result_index=11 → _COARSE_TIMESTAMPS[10]=30.0 → 18s gap.
+        coarse = _coarse(release_index=2, result_index=11, confidence=0.7)
+        dense_fail = ThrowTimingResult(
+            success=False, error_codes=["api"], reasoning="x"
+        )
+        patches, _, _ = _patch_chain(
+            coarse_classifier=coarse, dense_classifier=dense_fail
+        )
+        with patches[0], patches[1], patches[2], patches[3]:
+            result = await localize_throw_with_refinement(
+                _FAKE_VIDEO,
+                chapter_start=0.0,
+                chapter_end=60.0,
+                chapter_title="multi-demo",
+            )
+        assert result.stage == STAGE_DENSE_REJECTED
+        assert result.timing.release_index == 2
+        assert result.timing.result_index is None
+
+
+# ---------------------------------------------------------------------------
+# Dense-floor-pin recovery — coarse pick was late, dense pinned its own floor
+#
+# When the dense pass selects release_index == 1 (its earliest frame) the true
+# release is at or before the window floor; the orchestrator re-searches a
+# backward-shifted window. dense_window_timestamps returns the dense window on
+# its first call and the backward window on its second so a recovered result is
+# distinguishable by its frame_timestamps.
+# ---------------------------------------------------------------------------
+
+_BACKWARD_TIMESTAMPS = [9.0, 9.6, 10.2, 10.8, 11.4, 12.0, 12.6, 13.2]
+
+
+def _floor_pin_patches(
+    *,
+    coarse,
+    dense,
+    rescanned=None,
+    extract_side_effect=None,
+    dense_window_side_effect=None,
+):
+    """Patch context for the coarse → dense → backward-rescan chain.
+
+    dense_window_timestamps yields the dense window first (Stage 2) and the
+    backward window second (floor-pin recovery), so a recovered result is
+    identifiable by ``frame_timestamps == _BACKWARD_TIMESTAMPS``.
+    """
+    extract_mock = AsyncMock()
+    extract_mock.side_effect = extract_side_effect or [
+        [_FAKE_PNG] * len(_COARSE_TIMESTAMPS),
+        [_FAKE_PNG] * len(_DENSE_TIMESTAMPS),
+        [_FAKE_PNG] * len(_BACKWARD_TIMESTAMPS),
+    ]
+    classifier_side = [coarse, dense]
+    if rescanned is not None:
+        classifier_side.append(rescanned)
+    classifier_mock = AsyncMock(side_effect=classifier_side)
+    dense_window_mock = Mock(
+        side_effect=dense_window_side_effect
+        or [list(_DENSE_TIMESTAMPS), list(_BACKWARD_TIMESTAMPS)]
+    )
+    # The floor-pin re-scan lives in throw_localizer_recovery, so its
+    # extract / classify / dense_window calls resolve in THAT namespace, while
+    # the coarse + dense passes resolve in throw_localizer. Patch each function
+    # on BOTH namespaces (same mock) so a single tuple slot covers both and the
+    # shared side_effect lists are consumed across all three calls in order.
+    return (
+        _with_all((
+            patch(f"{_MOD}.extract_frames_downscaled", extract_mock),
+            patch(f"{_MOD_RECOVERY}.extract_frames_downscaled", extract_mock),
+        )),
+        _with_all((
+            patch(f"{_MOD}.classify_throw_timing_from_frames", classifier_mock),
+            patch(f"{_MOD_RECOVERY}.classify_throw_timing_from_frames", classifier_mock),
+        )),
+        patch(
+            f"{_MOD}.clip_window_timestamps",
+            lambda *a, **k: list(_COARSE_TIMESTAMPS),
+        ),
+        _with_all((
+            patch(f"{_MOD}.dense_window_timestamps", dense_window_mock),
+            patch(f"{_MOD_RECOVERY}.dense_window_timestamps", dense_window_mock),
+        )),
+    ), extract_mock, classifier_mock
+
+
+class TestFloorPinRecovery:
+    @pytest.mark.asyncio
+    async def test_recovers_earlier_release(self):
+        """Dense floored (release_index=1) → backward re-search brackets the
+        real release (release_index>1) → use it + the backward window."""
+        coarse = _coarse(release_index=4, confidence=0.7)
+        dense = _coarse(release_index=1, result_index=3, confidence=0.8)
+        rescanned = _coarse(release_index=4, result_index=6, confidence=0.85)
+        patches, extract_mock, classifier_mock = _floor_pin_patches(
+            coarse=coarse, dense=dense, rescanned=rescanned
+        )
+        with patches[0], patches[1], patches[2], patches[3]:
+            result = await localize_throw_with_refinement(
+                _FAKE_VIDEO,
+                chapter_start=0.0,
+                chapter_end=60.0,
+                chapter_title="catwalk late coarse",
+            )
+        assert result.stage == STAGE_RECOVERED_FLOOR_PIN
+        assert result.timing is rescanned
+        assert result.frame_timestamps == _BACKWARD_TIMESTAMPS
+        # backward release_index=4 → _BACKWARD_TIMESTAMPS[3] = 10.8
+        assert result.frame_timestamps[result.timing.release_index - 1] == 10.8
+        assert extract_mock.await_count == 3  # coarse + dense + backward
+        assert classifier_mock.await_count == 3
+
+    @pytest.mark.asyncio
+    async def test_repin_falls_back_to_dense(self):
+        """Backward re-search ALSO floors (release_index=1) → no improvement →
+        return the dense result (the floor is the best available anchor)."""
+        coarse = _coarse(release_index=4, confidence=0.7)
+        dense = _coarse(release_index=1, result_index=3, confidence=0.8)
+        rescanned = _coarse(release_index=1, result_index=4, confidence=0.7)
+        patches, _, _ = _floor_pin_patches(
+            coarse=coarse, dense=dense, rescanned=rescanned
+        )
+        with patches[0], patches[1], patches[2], patches[3]:
+            result = await localize_throw_with_refinement(
+                _FAKE_VIDEO,
+                chapter_start=0.0,
+                chapter_end=60.0,
+                chapter_title="x",
+            )
+        assert result.stage == STAGE_FLOOR_PIN_REJECTED
+        assert result.timing is dense
+        assert result.frame_timestamps == _DENSE_TIMESTAMPS
+
+    @pytest.mark.asyncio
+    async def test_rescan_not_a_throw_falls_back_to_dense(self):
+        coarse = _coarse(release_index=4, confidence=0.7)
+        dense = _coarse(release_index=1, result_index=3, confidence=0.8)
+        rescanned = _coarse(
+            is_lineup_throw=False, release_index=None, result_index=None,
+            confidence=0.2,
+        )
+        patches, _, _ = _floor_pin_patches(
+            coarse=coarse, dense=dense, rescanned=rescanned
+        )
+        with patches[0], patches[1], patches[2], patches[3]:
+            result = await localize_throw_with_refinement(
+                _FAKE_VIDEO,
+                chapter_start=0.0,
+                chapter_end=60.0,
+                chapter_title="x",
+            )
+        assert result.stage == STAGE_FLOOR_PIN_REJECTED
+        assert result.timing is dense
+
+    @pytest.mark.asyncio
+    async def test_window_too_small_falls_back_without_extract(self):
+        """Backward window collapses below the minimum → fall back to dense
+        WITHOUT a recovery extract / classify."""
+        coarse = _coarse(release_index=4, confidence=0.7)
+        dense = _coarse(release_index=1, result_index=3, confidence=0.8)
+        patches, extract_mock, classifier_mock = _floor_pin_patches(
+            coarse=coarse,
+            dense=dense,
+            dense_window_side_effect=[list(_DENSE_TIMESTAMPS), [9.0, 9.6]],
+        )
+        with patches[0], patches[1], patches[2], patches[3]:
+            result = await localize_throw_with_refinement(
+                _FAKE_VIDEO,
+                chapter_start=0.0,
+                chapter_end=60.0,
+                chapter_title="x",
+            )
+        assert result.stage == STAGE_FLOOR_PIN_WINDOW_TOO_SMALL
+        assert result.timing is dense
+        assert result.frame_timestamps == _DENSE_TIMESTAMPS
+        assert extract_mock.await_count == 2  # backward extract NOT attempted
+        assert classifier_mock.await_count == 2
+
+    @pytest.mark.asyncio
+    async def test_extract_failure_falls_back_to_dense(self):
+        """A backward-pass ffmpeg failure must NEVER regress — fall back."""
+        coarse = _coarse(release_index=4, confidence=0.7)
+        dense = _coarse(release_index=1, result_index=3, confidence=0.8)
+        patches, extract_mock, classifier_mock = _floor_pin_patches(
+            coarse=coarse,
+            dense=dense,
+            extract_side_effect=[
+                [_FAKE_PNG] * len(_COARSE_TIMESTAMPS),
+                [_FAKE_PNG] * len(_DENSE_TIMESTAMPS),
+                FrameExtractionError(
+                    "boom", timestamp=9.0, returncode=1, stderr="ffmpeg lost"
+                ),
+            ],
+        )
+        with patches[0], patches[1], patches[2], patches[3]:
+            result = await localize_throw_with_refinement(
+                _FAKE_VIDEO,
+                chapter_start=0.0,
+                chapter_end=60.0,
+                chapter_title="x",
+            )
+        assert result.stage == STAGE_FLOOR_PIN_EXTRACT_FAILED
+        assert result.timing is dense
+        assert extract_mock.await_count == 3  # backward extract attempted
+        assert classifier_mock.await_count == 2  # backward classify NOT reached

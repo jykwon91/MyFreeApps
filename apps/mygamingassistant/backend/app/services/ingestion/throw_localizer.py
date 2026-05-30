@@ -1,4 +1,4 @@
-"""Throw localizer — two-stage release-frame refinement.
+"""Throw localizer — two-stage release-frame refinement (orchestrator).
 
 The clip pipeline's coarse pass samples N=12 frames over a 30-180s chapter
 window, putting frames roughly 2-15 seconds apart. Even a perfect classifier
@@ -6,75 +6,52 @@ prompt cannot pick a frame the sampler never extracted — so the final clip
 anchor is at best "release ± 1.5s" on a typical chapter. That cadence is the
 underlying defect; PR #749 / #750 only chip at its symptoms.
 
-This module wraps :func:`classify_throw_timing_from_frames` with a second
-dense pass once the coarse pass has localised the throw to a particular
-region of the chapter:
+This module orchestrates the throw-timing classifier across one coarse pass and
+up to one refinement / recovery pass. The pure leaf helpers (the return
+dataclass, the stage/constant tables, the window-timestamp math, the gate
+decision, and the gap invariant) live in the sibling ``throw_localizer_recovery``
+module (split out so this orchestrator stays under the file-size growth guard —
+see ``apps/mygamingassistant/CLAUDE.md`` "Tech Debt Policy"); they are
+re-exported below so existing import sites are unchanged. The I/O-calling passes
+stay HERE so their ``extract_frames_downscaled`` / ``classify_*`` /
+``dense_window_timestamps`` lookups all resolve in this one namespace.
 
-  Stage 1 — coarse pass (unchanged):
-    * ``clip_window_timestamps`` builds the trimmed throw window
-    * ``extract_frames_downscaled`` pulls those 12 frames
-    * ``classify_throw_timing_from_frames`` returns a coarse
-      ``release_index``
+  Stage 1 — coarse pass:
+    ``clip_window_timestamps`` → ``extract_frames_downscaled`` →
+    ``classify_throw_timing_from_frames`` returns a coarse release/result.
 
-  Stage 2 — dense pass (NEW, only when Stage 1 cleared its gate):
-    * ``dense_window_timestamps`` builds 8 frames at ~0.5s spacing,
-      asymmetric around coarse-release (more post-release coverage for the
-      result frame too)
-    * ``extract_frames_downscaled`` pulls those 8 frames
-    * ``classify_throw_timing_from_frames`` runs a SECOND time with the
-      tighter set — returns a frame-accurate release/result on the same
-      ThrowTimingResult schema
+  Stage 2 — dense pass (only when Stage 1 cleared its 0.55 gate):
+    ``dense_window_timestamps`` builds 8 frames at ~0.5s spacing around the
+    coarse release; a second classify call returns a frame-accurate release.
 
-The orchestrator returns the dense result when the dense pass succeeded,
-otherwise the coarse result. Either way the caller gets back the
-``frame_timestamps`` the returned indices map back to, so it can do
-``timestamps[release_index - 1]`` exactly as before. The caller is
-otherwise unchanged.
+  Recovery passes, each fired on a specific failure signature and each owning
+  the "can only improve, never regress" contract:
+    * Causality recovery — coarse paired a LATE demo's release with an EARLY
+      demo's result (``result_index < release_index``). Re-localise around the
+      first event. (#780 / lineup 69704f4a "Market Door".)
+    * Dense-floor-pin recovery — the dense pass selected its own window floor
+      (``release_index == 1``): the true release is earlier than the window
+      opened. Re-search a backward-shifted window. (Lineup 8f92c010
+      "Catwalk - B Site": coarse late → dense floored at the smoke-in-flight
+      frame; the real aim-up-at-tower release is ~3s earlier.)
 
-  Causality recovery (NEW, multi-demonstration chapters):
-    When the coarse pass reports ``result_index < release_index`` (the
-    classifier preserves the original earlier index on
-    ``ThrowTimingResult.causality_inverted_earlier_index``), the model
-    paired a LATE demonstration's release with an EARLY demonstration's
-    result — the signature of a chapter that demonstrates the same lineup
-    more than once. Instead of cratering confidence and gating the clip
-    out, the orchestrator re-localises densely around the FIRST event (the
-    earlier index is that demo's result, so the true release precedes it —
-    the recovery window is weighted backward from it). Fires BEFORE the
-    confidence gate, because the inversion is exactly why coarse confidence
-    cratered, and OWNS the outcome — a failed recovery returns the coarse
-    result tagged with a ``recovery_*`` stage (no regression), it does not
-    fall through to the normal dense pass (which would only refine around
-    the wrong late-demo release). (operator audit 2026-05-29, lineup
-    69704f4a "Market Door".)
-
-The refinement gate matches the clip pipeline's existing 0.55 confidence
-threshold:
-  * If coarse is below 0.55, the clip would have been skipped anyway —
-    a dense pass over a wrongly-localised coarse region would burn a
-    second Claude call for no expected gain, and the cost is real on a
-    casual / single-user app (see project_mygamingassistant_plan ⇒
-    "App posture"). Skip the refinement.
-  * If coarse is at or above 0.55, the dense window is centred on a
-    release the model is confident about — refining is high-value:
-    "release ± 1.5s" becomes "release ± 0.25s".
-
-Cost: refinement doubles the throw-timing Claude calls per generated
-clip (one coarse + one dense). Non-generated clips (gated out by
-not-a-throw / low confidence / no release) pay only the coarse call as
-before — the gating is the cost control. Net effect at typical accept
-rates is ~1.7-1.9× of pre-refinement cost on clip-generation calls.
+  Gap invariant (``apply_gap_invariant``, applied to every returned result): a
+  result more than ~4.5s after its release cannot be that release's own result
+  (a smoke blooms within ~3s). On a multi-demonstration chapter the classifier
+  confidently pairs one demo's release with another's bloom; the orchestration
+  nulls the offending ``result_index`` so the landing pane gates out, leaving
+  release_index (STAND / AIM / THROW) untouched.
 
 Failure handling (per rules/no-bandaid-solutions.md +
-rules/check-third-party-error-codes.md): the dense pass can ONLY improve
-the result; any dense-pass failure falls through to the coarse pass
-result so the clip pipeline never regresses. The diagnostic ``stage``
-field carries which path was taken.
+rules/check-third-party-error-codes.md): the dense / recovery passes can ONLY
+improve the result; any failure falls through to the prior result so the clip
+pipeline never regresses. The diagnostic ``stage`` field carries which path was
+taken. A coarse-pass extraction failure re-raises so the caller surfaces its
+structured codes.
 """
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
@@ -86,142 +63,45 @@ from app.services.ingestion.frame_extractor import (
     FrameExtractionError,
     clip_window_timestamps,
     extract_frames_downscaled,
-    grid_timestamps,
+)
+
+# Pure helpers from the sibling, re-exported into THIS namespace so:
+#   (1) existing import sites (tests / clip_generator / landing_clip_generator /
+#       micro_clip_helpers / diag scripts) keep importing from ``throw_localizer``;
+#   (2) the recovery passes below call ``dense_window_timestamps`` via this
+#       module's namespace, so a test ``patch("...throw_localizer.dense_window_timestamps")``
+#       affects the dense pass AND the recovery passes uniformly.
+from app.services.ingestion.throw_localizer_recovery import (  # noqa: F401
+    STAGE_COARSE_BELOW_GATE,
+    STAGE_COARSE_FAILED,
+    STAGE_COARSE_NO_RELEASE,
+    STAGE_COARSE_NOT_A_THROW,
+    STAGE_COARSE_ONLY,
+    STAGE_DENSE_CLASSIFIER_FAILED,
+    STAGE_DENSE_EXTRACT_FAILED,
+    STAGE_DENSE_REJECTED,
+    STAGE_DENSE_WINDOW_TOO_SMALL,
+    STAGE_FLOOR_PIN_EXTRACT_FAILED,
+    STAGE_FLOOR_PIN_REJECTED,
+    STAGE_FLOOR_PIN_WINDOW_TOO_SMALL,
+    STAGE_RECOVERED_FIRST_EVENT,
+    STAGE_RECOVERED_FLOOR_PIN,
+    STAGE_RECOVERY_EXTRACT_FAILED,
+    STAGE_RECOVERY_REJECTED,
+    STAGE_RECOVERY_WINDOW_TOO_SMALL,
+    STAGE_REFINED,
+    RefinedThrowTiming,
+    _MIN_DENSE_FRAMES,
+    _RECOVERY_FRAME_COUNT,
+    _RECOVERY_POST_RELEASE_SECONDS,
+    _RECOVERY_PRE_RELEASE_SECONDS,
+    _should_refine,
+    apply_gap_invariant,
+    attempt_floor_pin_recovery,
+    dense_window_timestamps,
 )
 
 logger = logging.getLogger(__name__)
-
-# Refine only when the coarse pass cleared the clip-pipeline confidence
-# gate. Below this we don't trust the coarse release region enough to
-# spend a second Claude call densely sampling around it (and the clip
-# would be skipped anyway — see module docstring).
-_REFINE_CONFIDENCE_GATE = 0.55
-
-# Dense window shape around the coarse-pass release frame. Asymmetric:
-# more post-release coverage so the dense pass also catches the result
-# frame (typical SMOKE result is 1.5-3.0s after release). Total window
-# is 4s with N=8 → 0.5s spacing between dense candidates.
-_DENSE_PRE_RELEASE_SECONDS = 1.0
-_DENSE_POST_RELEASE_SECONDS = 3.0
-_DENSE_FRAME_COUNT = 8
-
-# Don't bother refining if chapter-boundary clamping leaves the dense
-# window with fewer than this many candidates — too few to meaningfully
-# tighten the release frame. Coarse is already 12 frames so anything
-# under ~4 dense is a regression.
-_MIN_DENSE_FRAMES = 4
-
-# ---- Causality recovery (multi-demonstration chapters) -------------------
-# When the coarse pass reports result_index < release_index (the classifier
-# preserves the original earlier index on
-# ThrowTimingResult.causality_inverted_earlier_index), the model paired a
-# LATE demo's release with an EARLY demo's result — the signature of a
-# chapter that demonstrates the same lineup more than once (operator audit
-# 2026-05-29, lineup 69704f4a "Market Door"). Rather than crater confidence
-# and gate the clip out, re-localise densely around the FIRST event: the
-# earlier index is that demo's RESULT, so the true release precedes it —
-# weight the recovery window heavily BACKWARD from the earlier event.
-#
-# pre=7.0 covers a fully-bloomed smoke result (release→bloom up to ~3s) plus
-# the coarse sampler's own ~3.4s spacing slop; post=1.0 keeps a touch of
-# coverage past the event in case the model keyed on the first wisp. N=14
-# over the ~8s window ≈ 0.6s spacing — tight enough to pin the release.
-_RECOVERY_PRE_RELEASE_SECONDS = 7.0
-_RECOVERY_POST_RELEASE_SECONDS = 1.0
-_RECOVERY_FRAME_COUNT = 14
-
-# Diagnostic stage labels — surfaced on RefinedThrowTiming.stage for
-# logging / metrics. Each maps to a specific reason the dense pass was
-# (or wasn't) used. Keep stable for log-grepping.
-STAGE_REFINED = "refined"
-STAGE_COARSE_ONLY = "coarse_only"
-STAGE_COARSE_BELOW_GATE = "coarse_below_refine_gate"
-STAGE_COARSE_NO_RELEASE = "coarse_no_release_index"
-STAGE_COARSE_NOT_A_THROW = "coarse_not_a_throw"
-STAGE_COARSE_FAILED = "coarse_failed"
-STAGE_DENSE_WINDOW_TOO_SMALL = "dense_window_too_small"
-STAGE_DENSE_EXTRACT_FAILED = "dense_extract_failed"
-STAGE_DENSE_CLASSIFIER_FAILED = "dense_classifier_failed"
-STAGE_DENSE_REJECTED = "dense_rejected"
-# Causality-recovery stages (fired only when the coarse pass was inverted —
-# the multi-demonstration signature). RECOVERED uses the recovery dense
-# result; the REJECTED / *_FAILED / *_TOO_SMALL stages all fall back to the
-# coarse result (same "recovery can only improve, never regress" contract as
-# the dense pass).
-STAGE_RECOVERED_FIRST_EVENT = "recovered_first_event"
-STAGE_RECOVERY_REJECTED = "recovery_rejected"
-STAGE_RECOVERY_WINDOW_TOO_SMALL = "recovery_window_too_small"
-STAGE_RECOVERY_EXTRACT_FAILED = "recovery_extract_failed"
-
-
-@dataclass
-class RefinedThrowTiming:
-    """Return shape of :func:`localize_throw_with_refinement`.
-
-    ``timing`` is the ThrowTimingResult the caller should treat as the
-    final answer — dense when the refinement succeeded, otherwise coarse.
-    ``frame_timestamps`` is the timestamp list whose 1-based indices the
-    caller maps ``timing.release_index`` / ``timing.result_index`` back to.
-
-    ``stage`` and ``coarse_timing`` are diagnostics (logs / future
-    metrics). Always populated so a log scan can answer "of N clip
-    generations, how many cleared the refine gate, how many fell back".
-    """
-
-    timing: ThrowTimingResult
-    frame_timestamps: list[float]
-    stage: str
-    coarse_timing: Optional[ThrowTimingResult] = None
-
-
-def dense_window_timestamps(
-    coarse_release_ts: float,
-    chapter_start: float,
-    chapter_end: float,
-    *,
-    pre_release_seconds: float = _DENSE_PRE_RELEASE_SECONDS,
-    post_release_seconds: float = _DENSE_POST_RELEASE_SECONDS,
-    n: int = _DENSE_FRAME_COUNT,
-) -> list[float]:
-    """Dense-pass timestamps for Stage 2 of two-stage refinement.
-
-    Builds an asymmetric window around the coarse-pass release frame
-    (more weight post-release so the dense pass also catches the result),
-    then evenly spaces *n* timestamps across it. Clamped to the chapter
-    bounds so a release near the chapter start/end doesn't sample frames
-    outside the source video.
-
-    Returns the dense timestamp list (length N at most, fewer when the
-    clamped window collapses below N items via grid_timestamps's
-    degenerate-window behaviour — see its docstring).
-    """
-    lo = max(float(chapter_start), float(coarse_release_ts) - pre_release_seconds)
-    hi = min(float(chapter_end), float(coarse_release_ts) + post_release_seconds)
-    if hi <= lo:
-        # Chapter is degenerate or the release is outside the chapter — no
-        # dense window possible. Caller will fall back to coarse.
-        return []
-    # edge_padding_seconds=0.0 — dense window is already pre-trimmed,
-    # don't pull MORE padding off it (would lose candidates near release
-    # for tight chapters).
-    return grid_timestamps(lo, hi, n, edge_padding_seconds=0.0)
-
-
-def _should_refine(coarse: ThrowTimingResult) -> Optional[str]:
-    """Return None if refinement should proceed, else the SKIP stage label.
-
-    Centralises the gate-decision so the orchestrator stays linear and
-    so tests can pin the decision rules independently.
-    """
-    if not coarse.success:
-        return STAGE_COARSE_FAILED
-    if not coarse.is_lineup_throw:
-        return STAGE_COARSE_NOT_A_THROW
-    if coarse.release_index is None:
-        return STAGE_COARSE_NO_RELEASE
-    if coarse.confidence is None or coarse.confidence < _REFINE_CONFIDENCE_GATE:
-        return STAGE_COARSE_BELOW_GATE
-    return None
 
 
 async def _attempt_first_event_recovery(
@@ -229,34 +109,35 @@ async def _attempt_first_event_recovery(
     coarse: ThrowTimingResult,
     coarse_timestamps: list[float],
     *,
+    earlier_index: int,
     chapter_start: float,
     chapter_end: float,
     chapter_title: Optional[str],
     utility_hint: Optional[str],
 ) -> RefinedThrowTiming:
-    """Re-localise around the FIRST event after a causality-inverted coarse pass.
+    """Re-localise around the FIRST event of a multi-demonstration chapter.
 
-    Precondition (checked by the caller): ``coarse`` is a successful,
-    throw-positive result whose
-    ``causality_inverted_earlier_index`` is set — i.e. the model paired a
-    late demonstration's release with an earlier demonstration's result.
-    The earlier index points at the FIRST demo's RESULT, so the true release
-    precedes it; we sample a backward-weighted dense window around that event
-    and re-run the throw-timing classifier on the (now single-throw) window.
+    Precondition (resolved by the caller): ``coarse`` is a successful,
+    throw-positive result for which an EARLIER demonstration's event was
+    flagged — either by a causality inversion (``result_index <
+    release_index`` → ``causality_inverted_earlier_index``) or by the general
+    multi-demonstration signal (``earlier_demonstration_result_index``). Both
+    point at an earlier demonstration's RESULT, so the true first release
+    precedes it; the caller passes that 1-based index as ``earlier_index``. We
+    sample a backward-weighted dense window around that event and re-run the
+    throw-timing classifier on the (now single-throw) window.
 
     Always returns a RefinedThrowTiming so the caller can return it directly:
-      * ``STAGE_RECOVERED_FIRST_EVENT`` — recovery produced a clean,
-        non-re-inverted, throw-positive result with a release; ``timing`` is
-        the recovery result and ``frame_timestamps`` is the recovery window
-        (so the caller maps the recovered indices correctly).
+      * ``STAGE_RECOVERED_FIRST_EVENT`` — clean, non-re-inverted, throw-positive
+        result with a release; ``timing`` is the recovery result and
+        ``frame_timestamps`` is the recovery window.
       * ``STAGE_RECOVERY_*`` — recovery could not improve on coarse; ``timing``
         is the coarse result and ``frame_timestamps`` is the coarse window.
         Same "never regress" contract as the dense pass.
     """
-    earlier_index = coarse.causality_inverted_earlier_index
-    if earlier_index is None or not (1 <= earlier_index <= len(coarse_timestamps)):
-        # Defensive: caller gates on `is not None`, but a stale/out-of-range
-        # index must not index-error — fall back to coarse.
+    if not (1 <= earlier_index <= len(coarse_timestamps)):
+        # Defensive: the caller resolved this from a model-reported index, but
+        # a stale/out-of-range value must not index-error — fall back to coarse.
         return RefinedThrowTiming(
             timing=coarse,
             frame_timestamps=coarse_timestamps,
@@ -330,18 +211,20 @@ async def _attempt_first_event_recovery(
         or not recovered.is_lineup_throw
         or recovered.release_index is None
         or recovered.causality_inverted_earlier_index is not None
+        or recovered.earlier_demonstration_result_index is not None
     ):
         logger.info(
             "throw_localizer: stage=%s earlier_event_ts=%.2f "
             "recovered_success=%s recovered_is_lineup_throw=%s "
-            "recovered_release_index=%s recovered_reinverted=%s; "
-            "returning coarse: chapter=%r",
+            "recovered_release_index=%s recovered_reinverted=%s "
+            "recovered_still_multidemo=%s; returning coarse: chapter=%r",
             STAGE_RECOVERY_REJECTED,
             earlier_event_ts,
             recovered.success,
             recovered.is_lineup_throw,
             recovered.release_index,
             recovered.causality_inverted_earlier_index is not None,
+            recovered.earlier_demonstration_result_index is not None,
             chapter_title,
         )
         return RefinedThrowTiming(
@@ -379,26 +262,25 @@ async def localize_throw_with_refinement(
     chapter_title: Optional[str],
     utility_hint: Optional[str] = None,
 ) -> RefinedThrowTiming:
-    """Localise the throw with optional dense-pass refinement.
+    """Localise the throw with optional dense-pass refinement + recovery.
 
-    See module docstring for the two-stage design. Always returns a
-    RefinedThrowTiming — the dense result when the refine pass succeeded,
-    otherwise the coarse result. The caller can treat the returned
-    ``timing`` exactly as it would treat ``classify_throw_timing_from_frames``'s
-    raw result (same dataclass, same gate semantics), and use
-    ``frame_timestamps`` to map the returned indices back to seconds.
+    See module docstring for the full decision tree. Always returns a
+    RefinedThrowTiming — the dense result when refinement succeeded, a recovery
+    result when a recovery pass improved, otherwise the coarse result. Every
+    return path runs through :func:`apply_gap_invariant`, which nulls a
+    result_index implausibly far from release_index (cross-demonstration /
+    hallucinated bloom) so the landing pane gates out rather than anchoring on
+    a wrong frame.
 
     Args:
-        video_path: Local source video file. Caller owns its lifecycle
-            (download / cleanup); this function only reads from it.
+        video_path: Local source video file. Caller owns its lifecycle.
         chapter_start / chapter_end: Source chapter bounds in seconds.
         chapter_title: Per-call context surfaced to Claude.
-        utility_hint: Optional utility slug from a prior grid
-            classification at confidence > 0.6.
+        utility_hint: Optional utility slug from a prior grid classification.
     """
     chapter_duration = float(chapter_end) - float(chapter_start)
 
-    # ---- Stage 1: coarse pass (existing behaviour) ----------------------
+    # ---- Stage 1: coarse pass -------------------------------------------
     coarse_timestamps = clip_window_timestamps(chapter_start, chapter_end)
 
     try:
@@ -406,10 +288,9 @@ async def localize_throw_with_refinement(
             video_path, coarse_timestamps
         )
     except FrameExtractionError as exc:
-        # Caller's existing FrameExtractionError handling lives in
-        # clip_generator / landing_clip_generator. Re-raise so they can
-        # surface structured codes (this function does not own the failure
-        # surface for downscale-extract; the callers do).
+        # The caller (clip_generator / landing_clip_generator) owns the
+        # downscale-extract failure surface — re-raise so it can surface
+        # structured codes.
         logger.warning(
             "throw_localizer: coarse frame extraction failed: video=%s "
             "returncode=%s stderr=%s",
@@ -425,29 +306,37 @@ async def localize_throw_with_refinement(
         utility_hint=utility_hint,
     )
 
-    # ---- Causality recovery (multi-demonstration chapters) --------------
-    # An inverted coarse pass (the classifier preserved the original earlier
-    # index) means the model paired a late demo's release with an early
-    # demo's result. The recovery path OWNS the outcome here: it re-localises
-    # densely around the first event and returns either the recovered result
-    # (STAGE_RECOVERED_FIRST_EVENT) or the coarse result tagged with the
-    # recovery-failure stage (never a regression — same contract as dense).
-    # We don't fall through to the normal refine path because the standard
-    # dense pass would centre on the WRONG (late-demo) release the inversion
-    # produced, and the cratered confidence would gate it out anyway.
-    if (
-        coarse.success
-        and coarse.is_lineup_throw
-        and coarse.causality_inverted_earlier_index is not None
-    ):
-        return await _attempt_first_event_recovery(
-            video_path,
-            coarse,
-            coarse_timestamps,
-            chapter_start=chapter_start,
-            chapter_end=chapter_end,
-            chapter_title=chapter_title,
-            utility_hint=utility_hint,
+    # ---- First-event recovery (multi-demonstration chapters) ------------
+    # The coarse pass localised a LATER demonstration's release when an EARLIER
+    # one exists. Two signals flag this, and either fires the same recovery:
+    #   * causality inversion — the model paired a late demo's release with an
+    #     early demo's result (result_index < release_index).
+    #   * multi-demonstration report — earlier_demonstration_result_index, set
+    #     even WITHOUT an inversion (lineup 69704f4a "Market Door": the 2nd
+    #     demo's release was confidently localised at ~317 with a consistent
+    #     later result, so no inversion fired, while the real 1st throw sat at
+    #     ~298 — STAND/AIM/LANDING anchored there but the throw clip didn't).
+    # Re-localise around the earlier event. This path OWNS the outcome and never
+    # falls through to the refine pass (which would centre on the WRONG late
+    # release). Prefer the inversion index when both are set — it is the
+    # tighter, already-shipped signal.
+    earlier_index = (
+        coarse.causality_inverted_earlier_index
+        if coarse.causality_inverted_earlier_index is not None
+        else coarse.earlier_demonstration_result_index
+    )
+    if coarse.success and coarse.is_lineup_throw and earlier_index is not None:
+        return apply_gap_invariant(
+            await _attempt_first_event_recovery(
+                video_path,
+                coarse,
+                coarse_timestamps,
+                earlier_index=earlier_index,
+                chapter_start=chapter_start,
+                chapter_end=chapter_end,
+                chapter_title=chapter_title,
+                utility_hint=utility_hint,
+            )
         )
 
     skip_stage = _should_refine(coarse)
@@ -464,14 +353,16 @@ async def localize_throw_with_refinement(
             coarse.confidence,
             chapter_title,
         )
-        return RefinedThrowTiming(
-            timing=coarse,
-            frame_timestamps=coarse_timestamps,
-            stage=skip_stage,
-            coarse_timing=coarse,
+        return apply_gap_invariant(
+            RefinedThrowTiming(
+                timing=coarse,
+                frame_timestamps=coarse_timestamps,
+                stage=skip_stage,
+                coarse_timing=coarse,
+            )
         )
 
-    # ---- Stage 2: dense refinement ---------------------------------------
+    # ---- Stage 2: dense refinement --------------------------------------
     # release_index is non-None (gated above); resolve to a timestamp.
     assert coarse.release_index is not None  # for type checker
     coarse_release_ts = coarse_timestamps[coarse.release_index - 1]
@@ -489,11 +380,13 @@ async def localize_throw_with_refinement(
             _MIN_DENSE_FRAMES,
             chapter_title,
         )
-        return RefinedThrowTiming(
-            timing=coarse,
-            frame_timestamps=coarse_timestamps,
-            stage=STAGE_DENSE_WINDOW_TOO_SMALL,
-            coarse_timing=coarse,
+        return apply_gap_invariant(
+            RefinedThrowTiming(
+                timing=coarse,
+                frame_timestamps=coarse_timestamps,
+                stage=STAGE_DENSE_WINDOW_TOO_SMALL,
+                coarse_timing=coarse,
+            )
         )
 
     try:
@@ -502,8 +395,7 @@ async def localize_throw_with_refinement(
         )
     except FrameExtractionError as exc:
         # A dense-pass extraction failure must NEVER regress the pipeline:
-        # the coarse result already cleared the clip gates and is the
-        # right thing to use. Log so we can see how often this happens.
+        # the coarse result already cleared the clip gates.
         logger.warning(
             "throw_localizer: stage=%s coarse_release_ts=%.2f "
             "returncode=%s stderr=%s; returning coarse: chapter=%r",
@@ -513,11 +405,13 @@ async def localize_throw_with_refinement(
             exc.stderr[:200],
             chapter_title,
         )
-        return RefinedThrowTiming(
-            timing=coarse,
-            frame_timestamps=coarse_timestamps,
-            stage=STAGE_DENSE_EXTRACT_FAILED,
-            coarse_timing=coarse,
+        return apply_gap_invariant(
+            RefinedThrowTiming(
+                timing=coarse,
+                frame_timestamps=coarse_timestamps,
+                stage=STAGE_DENSE_EXTRACT_FAILED,
+                coarse_timing=coarse,
+            )
         )
 
     dense = await classify_throw_timing_from_frames(
@@ -547,11 +441,34 @@ async def localize_throw_with_refinement(
             dense.release_index,
             chapter_title,
         )
-        return RefinedThrowTiming(
-            timing=coarse,
-            frame_timestamps=coarse_timestamps,
-            stage=STAGE_DENSE_REJECTED,
-            coarse_timing=coarse,
+        return apply_gap_invariant(
+            RefinedThrowTiming(
+                timing=coarse,
+                frame_timestamps=coarse_timestamps,
+                stage=STAGE_DENSE_REJECTED,
+                coarse_timing=coarse,
+            )
+        )
+
+    # ---- Dense-floor-pin recovery ---------------------------------------
+    # The dense pass selected its OWN window floor (release_index == 1): the
+    # true release is at or before the earliest frame it was shown — the coarse
+    # pick was late and the dense window opened past the actual release.
+    # Re-search a backward-shifted window. The recovery owns the outcome (a
+    # re-search failure / re-pin returns the dense result tagged with a
+    # floor-pin stage — never a regression).
+    if dense.release_index == 1:
+        return apply_gap_invariant(
+            await attempt_floor_pin_recovery(
+                video_path,
+                dense,
+                dense_timestamps,
+                coarse,
+                chapter_start=chapter_start,
+                chapter_end=chapter_end,
+                chapter_title=chapter_title,
+                utility_hint=utility_hint,
+            )
         )
 
     # Dense pass succeeded — use it. Caller maps the returned indices via
@@ -569,9 +486,11 @@ async def localize_throw_with_refinement(
         dense.confidence or 0.0,
         chapter_title,
     )
-    return RefinedThrowTiming(
-        timing=dense,
-        frame_timestamps=dense_timestamps,
-        stage=STAGE_REFINED,
-        coarse_timing=coarse,
+    return apply_gap_invariant(
+        RefinedThrowTiming(
+            timing=dense,
+            frame_timestamps=dense_timestamps,
+            stage=STAGE_REFINED,
+            coarse_timing=coarse,
+        )
     )

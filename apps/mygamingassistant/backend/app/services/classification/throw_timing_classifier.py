@@ -51,6 +51,7 @@ keys:
   "is_lineup_throw": boolean,
   "release_index": integer (1-{n}) or null,
   "result_index": integer (1-{n}) or null,
+  "earlier_demonstration_result_index": integer (1-{n}) or null,
   "confidence": number (0.0-1.0),
   "reasoning": string (<= 80 words)
 }}
@@ -91,6 +92,36 @@ Rules:
       live first-person main game view.
 - release_index: the 1-based frame where the utility is released, chosen from
   frames that pass CANDIDATE-FRAME EXCLUSIONS.
+  THROWER-POV REQUIREMENT (highest-priority release gate; operator audit
+  2026-05-30, lineup 8f92c010 "Catwalk - B Site" — the localizer kept anchoring
+  release on a later observer / destination view instead of the thrower's own
+  throw):
+    release_index MUST be a frame from the THROWER's OWN first-person view in
+    the act of throwing: their own viewmodel arm/hand is swinging the utility
+    forward AND the crosshair is on the lineup's aiming landmark (a building
+    edge, antenna, rooftop, skybox marker, wall spot). The following are NOT
+    releases — they are observer / result views, eligible at most as a
+    result_index and NEVER as release_index, EVEN WHEN a grenade or its bloom
+    is clearly visible in them:
+      - a "fly to where it lands" / destination / spectator / free-cam shot
+        (camera at or near the LANDING spot, often looking back or down at the
+        impact, frequently with a knife out and NO throwing arm in the frame)
+      - any frame where smoke / flame / flash / debris is already deploying in
+        the world while the player's OWN throw-swing is not happening in-frame
+        (that is the RESULT, not the release)
+      - a teammate's or a spectator's POV
+    If the cleanest "object-leaves-a-hand" frame is a destination / observer
+    angle, it belongs to the WRONG view of the demonstration: search the set
+    for the thrower's own aligned aim-and-release motion and prefer it even
+    when its separation instant is less crisp than the observer frame's.
+  WHICH THROW FIRST (multi-demo — decide before choosing the frame): see
+  "MULTI-DEMONSTRATION CHAPTERS" under Discipline below. The frames where the
+  player is looking at / aligning their crosshair on the target landmark with
+  the utility (about to throw) are the lineup AIM — they are the SETUP for the
+  real throw, the MOST important part of the demonstration, NOT "walking
+  between throws" / repositioning. Do NOT exclude the aligned-at-a-landmark
+  throw as a knife-walk just because a knife is briefly visible before the
+  utility is equipped, and do NOT prefer an earlier casual/setup toss over it.
   RELEASE-INSTANT ANCHOR (operator audit 2026-05-25, highest priority within
   release-frame selection):
     The release_index is the FIRST frame where the utility OBJECT has
@@ -169,21 +200,69 @@ Rules:
     MOLOTOV - the FIRST flame on the floor (typically 1.0-2.0s after release).
               Same earliness rule.
     FLASH   - white wash / detonation. If it is too fast to land on its own
-              frame, set result_index = release_index and confidence <= 0.45.
+              frame, set result_index = null (the landing pane is skipped);
+              keep confidence based on the RELEASE, not the missing flash.
     HE      - explosion burst / debris.
-  MAX-GAP FALLBACK: result_index should normally be within ~6 frames (~2-4s)
-    after release_index. If no valid same-perspective result frame exists in
-    that range — because the utility traveled out of view, the player rotated
-    immediately, or the chapter cut away — set result_index = release_index
-    and confidence <= 0.5. Downstream consumers gate on confidence and will
-    skip emitting a landing clip rather than ship a misleading one.
-- confidence: 0-1 that you localised the throw correctly. Low when the throw is
-  off-screen, cut away from, or only inferred from trajectory; high only when
-  the release and the result are both directly visible AND both indices are
-  on candidate-eligible frames.
+  SAME-THROW RULE (HARD — a result belongs to its OWN release): a utility's
+    effect appears within ~3s of its release (smoke wisp 1.5-3.0s, molotov
+    flame 1.0-2.0s, flash / HE near-instant). release_index and result_index
+    MUST belong to the SAME throw. NEVER select a result_index more than ~4s
+    after release_index: a far-later "result" is a DIFFERENT demonstration's
+    effect, or the same smoke viewed after the player walked over to it — it
+    is NOT this throw's result. If no genuine same-perspective result is
+    visible within ~4s of the release, set result_index = null (do NOT fall
+    back to release_index, and do NOT reach for a far frame). A null result is
+    correct and common: long-range lineups often reveal the landing only from
+    a different position, or the chapter cuts away before it deploys.
+    Downstream skips only the landing pane — far better than a misplaced or
+    cross-demonstration one.
+- earlier_demonstration_result_index: the 1-based frame where an EARLIER
+  demonstration's RESULT (smoke wisp / flame / flash / debris) is first
+  visible, when this chapter demonstrates the SAME lineup MORE THAN ONCE and
+  that earlier demonstration occurs BEFORE your chosen release_index. It MUST
+  be < release_index. Set it as a SAFETY SIGNAL even when you believe your
+  release pick is right — it lets the pipeline re-center on the first
+  demonstration (see FIRST OF REPEATED DEMONSTRATIONS under Discipline). null
+  when there is only ONE demonstration, or when your release_index is already
+  the earliest demonstration, or when no earlier result is visible in the set.
+- confidence: 0-1 in your RELEASE localization specifically — NOT a joint
+  release+result score. A clearly-visible release on a candidate-eligible
+  frame is HIGH confidence (>= 0.8) EVEN WHEN result_index is null: a missing
+  result only gates the landing pane, never the throw itself. Lower confidence
+  only when the RELEASE is uncertain — off-screen, cut away from, inferred from
+  trajectory, or you had to guess among mostly-excluded frames.
 - Discipline:
-  - If the throw is shown repeatedly or from multiple angles, use the FIRST
-    clean throw only.
+  - MULTI-DEMONSTRATION CHAPTERS: the chapter may show the SAME lineup more
+    than once — a quick casual/setup toss THEN the real aligned throw; the
+    throw repeated; or the throw plus a "walk over to where it lands" segment
+    shot from a DIFFERENT position. There is exactly ONE lineup being taught.
+    Select the DELIBERATE LINEUP THROW: the throw where the player has
+    deliberately aligned their crosshair on a specific aiming landmark
+    (a building edge, antenna, rooftop, skybox marker, or wall spot) and then
+    releases. This is frequently NOT the first motion in the chapter — a
+    casual toss, weapon-handling, or walking commonly precedes the real
+    aligned throw. Prefer the aligned-at-a-landmark release over any earlier
+    casual toss, and NEVER pair one demonstration's release with another
+    demonstration's result (see the SAME-THROW RULE under result_index).
+  - FIRST OF REPEATED DEMONSTRATIONS (operator audit 2026-05-30, lineup
+    69704f4a "Market Door"): when the same lineup is shown as TWO OR MORE
+    genuine aligned demonstrations (a repeat for emphasis — often a cleaner or
+    closer second take), release_index MUST be the EARLIEST such full
+    demonstration, NOT the cleaner later repeat. STAND and AIM anchor on the
+    first demonstration; if the throw picks a later repeat the storyboard
+    splits across two takes. This is DISTINCT from the casual-toss rule above:
+    a casual non-aligned warm-up is excluded entirely, but between two GENUINE
+    aligned demonstrations the FIRST wins. Concretely: if — after picking
+    release_index — you can still see an earlier genuine aligned throw of this
+    same lineup in the frames before it, you picked the wrong take; move
+    release_index back to that earlier throw.
+  - TITLE-CARD ANCHOR: tutorial chapters usually place a section banner /
+    title card ("SMOKE #N", "B SITE - CATWALK", "LINEUP 3") immediately
+    BEFORE the demonstration it labels. If a title card appears partway
+    through the frames, the lineup throw is the FIRST clean aligned release
+    AFTER the most recent title card — treat any throw-like motion BEFORE that
+    title card as a leftover / preview from the previous section and do NOT
+    select it, even if it is the cleanest utility-separation in the set.
   - Ignore picture-in-picture, facecam, killfeed, scoreboard, title cards and
     replays — judge from the main game view only.
   - A chapter that is ENTIRELY talking-head / knife-only-walking / menus /
@@ -421,6 +500,20 @@ async def classify_throw_timing_from_frames(
     result_index = validate_grid_index(
         parsed.get("result_index"), "result_index", n, failures
     )
+    earlier_demonstration_result_index = validate_grid_index(
+        parsed.get("earlier_demonstration_result_index"),
+        "earlier_demonstration_result_index", n, failures,
+    )
+    # Only a genuine multi-demonstration signal when it points EARLIER than the
+    # release the model picked: it means "an earlier demonstration's result
+    # precedes your release", i.e. the release likely landed on a later repeat.
+    # A value >= release_index (or with release_index missing) is not an
+    # earlier-demo signal — drop it so the localizer never re-centres spuriously.
+    if earlier_demonstration_result_index is not None and (
+        release_index is None
+        or earlier_demonstration_result_index >= release_index
+    ):
+        earlier_demonstration_result_index = None
 
     # Frozen-contract parser enforcement: a result cannot precede its own
     # release. If the model returned both but inverted, force result to the
@@ -455,8 +548,9 @@ async def classify_throw_timing_from_frames(
 
     logger.info(
         "throw_timing: is_lineup_throw=True chapter=%r n=%d release_idx=%s "
-        "result_idx=%s confidence=%.2f",
-        chapter_title, n, release_index, result_index, confidence or 0.0,
+        "result_idx=%s earlier_demo_idx=%s confidence=%.2f",
+        chapter_title, n, release_index, result_index,
+        earlier_demonstration_result_index, confidence or 0.0,
     )
 
     return ThrowTimingResult(
@@ -465,6 +559,7 @@ async def classify_throw_timing_from_frames(
         release_index=release_index,
         result_index=result_index,
         causality_inverted_earlier_index=causality_inverted_earlier_index,
+        earlier_demonstration_result_index=earlier_demonstration_result_index,
         confidence=confidence,
         reasoning=reasoning,
         error_codes=list(structured_codes),
