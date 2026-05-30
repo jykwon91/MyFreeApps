@@ -614,6 +614,7 @@
       "backend_tests": [
         "test_welcome_manual_image_routes.py",
         "test_welcome_manual_pdf_service.py",
+        "test_welcome_manual_markdown_pdf.py",
         "test_welcome_manual_send_repo.py",
         "test_welcome_manual_email_routes.py",
         "test_welcome_manual_send_audit_masking.py"

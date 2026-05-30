@@ -3,16 +3,23 @@
 Pure function — no DB I/O, no storage, no side effects. Takes the manual's
 already-fetched content (including image BYTES) and returns raw PDF bytes.
 
-Uses ``reportlab`` platypus (``SimpleDocTemplate`` + flowables), mirroring the
-style of ``app.services.leases.renderer.render_pdf_from_text`` (paragraph
-escaping, single-newline → ``<br/>``) and the frozen-dataclass data carrier of
+Uses ``reportlab`` platypus (``SimpleDocTemplate`` + flowables), and the
+frozen-dataclass data carrier of
 ``app.services.leases.receipt_pdf_service.ReceiptData``. The dataclasses live
 inline here because they're tightly coupled to this renderer — the canonical
 PDF pattern in this codebase keeps the data carrier beside its renderer.
 
+Host-authored prose (each section ``body`` and the manual ``intro_text``) is
+**Markdown** and is rendered with ``welcome_manual_markdown_pdf`` so the emailed
+PDF matches what the frontend renders with react-markdown + remark-gfm. Short
+labels — the manual TITLE, section TITLES and image CAPTIONS — stay plain
+escaped text.
+
 Robustness contract:
 - A single undecodable / corrupt image is SKIPPED (logged), never crashes the
   whole PDF.
+- Malformed Markdown degrades to escaped plain text (see
+  ``welcome_manual_markdown_pdf``), never crashes the whole PDF.
 - An empty manual (no sections), sections with no body, and sections with no
   images all render cleanly.
 """
@@ -34,6 +41,10 @@ from reportlab.platypus import (
     Spacer,
 )
 from reportlab.platypus.flowables import Flowable
+
+from app.services.welcome_manuals.welcome_manual_markdown_pdf import (
+    markdown_to_flowables,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -60,22 +71,6 @@ class WelcomeManualPdfData:
     title: str
     intro_text: str | None = None
     sections: list[SectionPdfData] = field(default_factory=list)
-
-
-def _escape_paragraphs(text: str, style: ParagraphStyle) -> list[Flowable]:
-    """Split ``text`` on blank lines into paragraphs, HTML-escaping each and
-    converting single newlines to ``<br/>`` (mirrors render_pdf_from_text)."""
-    flowables: list[Flowable] = []
-    for raw in text.split("\n\n"):
-        chunk = raw.strip()
-        if not chunk:
-            continue
-        safe = (
-            chunk.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-        ).replace("\n", "<br/>")
-        flowables.append(Paragraph(safe, style))
-        flowables.append(Spacer(1, 6))
-    return flowables
 
 
 def _build_image_flowable(
@@ -144,14 +139,14 @@ def generate_welcome_manual_pdf(data: WelcomeManualPdfData) -> bytes:
     ]
 
     if data.intro_text and data.intro_text.strip():
-        story.extend(_escape_paragraphs(data.intro_text, body_style))
+        story.extend(markdown_to_flowables(data.intro_text, body_style))
         story.append(Spacer(1, 8))
 
     for section in data.sections:
         story.append(Paragraph(html_mod.escape(section.title), heading_style))
         story.append(Spacer(1, 4))
         if section.body and section.body.strip():
-            story.extend(_escape_paragraphs(section.body, body_style))
+            story.extend(markdown_to_flowables(section.body, body_style))
         for image in section.images:
             story.extend(_build_image_flowable(image, content_width, caption_style))
         story.append(Spacer(1, 10))

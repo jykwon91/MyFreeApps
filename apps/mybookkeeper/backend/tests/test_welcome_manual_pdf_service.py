@@ -169,3 +169,93 @@ class TestEscaping:
             ),
         )
         assert pdf.startswith(b"%PDF")
+
+
+_MARKDOWN_BODY = (
+    "# Wi-Fi & Access\n\n"
+    "Some **bold**, *italic*, ~~old~~ and `inline code` text.\n\n"
+    "## Steps\n\n"
+    "- Connect to GuestNet\n"
+    "  - Password is `sunny123`\n"
+    "  - It's case-sensitive\n"
+    "- Open a browser\n\n"
+    "1. First do this\n2. Then this\n\n"
+    "> Quiet hours start at 10pm.\n\n"
+    "```\nemergency: 911\n```\n\n"
+    "---\n\n"
+    "See [the guide](https://example.com/guide) for more.\n\n"
+    "| Item | Qty |\n|------|-----|\n| Towels | 4 |\n| Mugs | 6 |"
+)
+
+
+class TestMarkdownBodies:
+    def test_markdown_body_renders_pdf(self) -> None:
+        pdf = generate_welcome_manual_pdf(
+            WelcomeManualPdfData(
+                title="Beach House Guide",
+                intro_text="Welcome! Read the **important** notes below.",
+                sections=[SectionPdfData(title="Everything", body=_MARKDOWN_BODY)],
+            ),
+        )
+        assert pdf.startswith(b"%PDF")
+        assert len(pdf) > 100
+
+    def test_markdown_body_is_richer_than_one_word(self) -> None:
+        # A full markdown body produces meaningfully more structured output
+        # (headings, lists, table, code block) than a single plain word.
+        rich = generate_welcome_manual_pdf(
+            WelcomeManualPdfData(
+                title="Guide",
+                sections=[SectionPdfData(title="S", body=_MARKDOWN_BODY)],
+            ),
+        )
+        minimal = generate_welcome_manual_pdf(
+            WelcomeManualPdfData(
+                title="Guide",
+                sections=[SectionPdfData(title="S", body="Hi.")],
+            ),
+        )
+        assert len(rich) > len(minimal)
+
+    def test_markdown_intro_text_renders(self) -> None:
+        pdf = generate_welcome_manual_pdf(
+            WelcomeManualPdfData(
+                title="Guide",
+                intro_text="## Welcome\n\nEnjoy your **stay**!\n\n- Tip one\n- Tip two",
+                sections=[],
+            ),
+        )
+        assert pdf.startswith(b"%PDF")
+
+    def test_plain_text_body_still_renders(self) -> None:
+        # No-regression: a plain body (no markdown syntax) still renders fine,
+        # in spirit identical to the old escaped-plain-text behaviour.
+        pdf = generate_welcome_manual_pdf(
+            WelcomeManualPdfData(
+                title="Guide",
+                sections=[
+                    SectionPdfData(
+                        title="Wi-Fi",
+                        body="Network: BeachHouse\nPassword: sunny123",
+                    ),
+                ],
+            ),
+        )
+        assert pdf.startswith(b"%PDF")
+
+    def test_malformed_markdown_does_not_crash(self) -> None:
+        for bad in (
+            "**unbalanced bold that never closes",
+            "a stray < bracket and 3 > 2",
+            "| broken | header\n| --- |\n| a | b | c | d |",
+            "```\nunclosed code fence",
+            "[bad link](javascript:alert(1))",
+            "###### ##### #### deeply hashed",
+        ):
+            pdf = generate_welcome_manual_pdf(
+                WelcomeManualPdfData(
+                    title="Guide",
+                    sections=[SectionPdfData(title="S", body=bad)],
+                ),
+            )
+            assert pdf.startswith(b"%PDF"), bad

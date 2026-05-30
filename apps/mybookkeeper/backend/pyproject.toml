@@ -54,6 +54,9 @@ dependencies = [
     # (e.g. CI without the optional dep) — see services/leases/renderer.py.
     "python-docx==1.2.0",
     "platform-shared",
+    "markdown-it-py>=4.2.0",
+    "mdit-py-plugins>=0.6.1",
+    "linkify-it-py>=2.1.0",
 ]
 
 [tool.uv]
