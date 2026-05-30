@@ -52,12 +52,13 @@ def _wide_fail():
     return WideSourceResult(error_codes=["wide_source_cut:rc=1"])
 
 
-def _lineup(video_id="vid123", chapter_title="B smoke"):
+def _lineup(video_id="vid123", chapter_title="B smoke", technique=None):
     return types.SimpleNamespace(
         id=uuid.uuid4(),
         youtube_video_id=video_id,
         chapter_title=chapter_title,
         clip_url=None,
+        technique=technique,
     )
 
 
@@ -90,6 +91,14 @@ class TestComputeClipBounds:
         # release near chapter_end → tail clamped to chapter_end.
         start, dur = _compute_clip_bounds(22.5, 10.0, 23.0)
         assert start + dur <= 23.0 + 1e-9
+
+    def test_movement_aware_pre_release_widens_window(self):
+        # A wider pre pad (jump/run framing) opens the clip EARLIER; the post
+        # pad is unchanged. release 20, pre 1.5 → [18.5, 21] = 2.5s. The
+        # default pre (no arg) stays 1.0 → [19, 21] = 2.0s (asserted above).
+        start, dur = _compute_clip_bounds(20.0, 10.0, 40.0, pre_release_seconds=1.5)
+        assert start == pytest.approx(18.5)
+        assert dur == pytest.approx(2.5)
 
 
 def test_pending_clip_key_is_deterministic():
@@ -542,3 +551,64 @@ class TestGenerateClipFailures:
         assert result.status == "failed"
         assert result.error_codes == ["clip_upload_failed"]
         mock_set.assert_not_awaited()  # nothing persisted on upload failure
+
+
+class TestMovementAwareFraming:
+    """The throw-clip PRE pad widens for moving throws (jump/run/walk) and
+    stays at the standing default otherwise — keyed on ``lineup.technique``.
+    release_ts and the POST pad are unchanged; only clip_start moves. This is
+    the end-to-end proof that throw_framing is wired into the generated window.
+    """
+
+    async def _bounds_for(self, technique, video):
+        # release_index=2 over [10,20,30] → release_ts=20.0; chapter [0,40].
+        with (
+            patch(f"{_MOD}.settings", _settings()),
+            patch(f"{_MOD}.localize_throw_with_refinement",
+                  new=AsyncMock(return_value=_refined(
+                      timestamps=[10.0, 20.0, 30.0],
+                      release_index=2, result_index=3))),
+            patch(f"{_MOD}.cut_clip", new=AsyncMock(return_value=_FAKE_MP4)),
+            patch(f"{_MOD}.get_storage", return_value=MagicMock()),
+            patch(f"{_MOD}.cut_and_upload_wide_source",
+                  new=AsyncMock(return_value=_wide_fail())),
+            patch(f"{_MOD}.lineup_repo.set_clip_url", new=AsyncMock()),
+        ):
+            return await generate_clip_for_lineup(
+                MagicMock(), _lineup(technique=technique),
+                chapter_start=0.0, chapter_end=40.0, video_path=video,
+            )
+
+    @pytest.mark.asyncio
+    async def test_jump_opens_clip_earlier(self, tmp_path: Path):
+        v = tmp_path / "v.mp4"; v.write_bytes(b"x")
+        result = await self._bounds_for("Jumpthrow + LMB", v)
+        assert result.status == "generated"
+        # jump pre=1.5 → [20-1.5, 20+1.0] = [18.5, +2.5]
+        assert result.clip_start == pytest.approx(18.5)
+        assert result.clip_duration == pytest.approx(2.5)
+
+    @pytest.mark.asyncio
+    async def test_run_opens_clip_earliest(self, tmp_path: Path):
+        v = tmp_path / "v.mp4"; v.write_bytes(b"x")
+        result = await self._bounds_for("Run + RMB", v)
+        # run pre=2.0 → [18.0, +3.0]
+        assert result.clip_start == pytest.approx(18.0)
+        assert result.clip_duration == pytest.approx(3.0)
+
+    @pytest.mark.asyncio
+    async def test_standing_uses_default_window(self, tmp_path: Path):
+        v = tmp_path / "v.mp4"; v.write_bytes(b"x")
+        result = await self._bounds_for("Standing + LMB", v)
+        # standing pre=1.0 → [19.0, +2.0]
+        assert result.clip_start == pytest.approx(19.0)
+        assert result.clip_duration == pytest.approx(2.0)
+
+    @pytest.mark.asyncio
+    async def test_null_technique_matches_pre_feature_window(self, tmp_path: Path):
+        v = tmp_path / "v.mp4"; v.write_bytes(b"x")
+        result = await self._bounds_for(None, v)
+        # No technique (e.g. ingest-time, before extraction) → identical to
+        # today's flat 1.0s window: the no-regression guarantee.
+        assert result.clip_start == pytest.approx(19.0)
+        assert result.clip_duration == pytest.approx(2.0)
