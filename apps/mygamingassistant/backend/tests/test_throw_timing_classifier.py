@@ -350,10 +350,12 @@ class TestThrowTimingPerspectivePrompt:
         )
         system = client.messages.create.call_args.kwargs["system"]
         system_text = "\n".join(b["text"] for b in system)
-        assert "MAX-GAP FALLBACK" in system_text
-        assert "within ~6 frames" in system_text
-        assert "result_index = release_index" in system_text
-        assert "confidence <= 0.5" in system_text
+        # The MAX-GAP FALLBACK (result_index = release_index) was replaced by the
+        # SAME-THROW RULE: a far / cross-demonstration result is nulled, not
+        # forced onto the release frame — the landing clip is skipped instead.
+        assert "SAME-THROW RULE" in system_text
+        assert "set result_index = null" in system_text
+        assert "do NOT fall" in system_text
 
     @pytest.mark.asyncio
     async def test_system_prompt_tightens_smoke_first_wisp_cue(self):
