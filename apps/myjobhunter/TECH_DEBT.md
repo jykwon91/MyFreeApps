@@ -3,7 +3,7 @@
 Issues discovered during development. New entries are appended; resolved entries are
 removed and the counts in this header are updated.
 
-**Open issues: 17 (Critical: 1 [discovery-quality P0 umbrella, triage-2026-05-28] / High: 2 [1 blocked-on-react-19, 1 public-launch cost guardrail] / Medium: 6 [4 prior + 1 triage-2026-05-28: rejection-visibility + 1 discovery content_hash dedup] / Low: 7 [6 prior + 1 triage-2026-05-28 cosmetic] / Feature requests: 1 [triage-2026-05-28 raw-resume-upload])**
+**Open issues: 16 (Critical: 1 [discovery-quality P0 umbrella, triage-2026-05-28] / High: 2 [1 blocked-on-react-19, 1 public-launch cost guardrail] / Medium: 6 [4 prior + 1 triage-2026-05-28: rejection-visibility + 1 discovery content_hash dedup] / Low: 6 [6 prior] / Feature requests: 1 [triage-2026-05-28 raw-resume-upload])**
 
 > Status (2026-05-08 PM): All actionable audit items resolved across batches PR #492-#528 (~30 PRs). Remaining open entries are either (a) blocked on the React 18→19 monorepo bump (5 items), (b) deferred-by-design conventions or follow-ups (4), (c) environmental issues unrelated to code (3: asyncpg Windows, test hang on Windows, Quality Gate false-positive), or (d) intentional accepted lint warnings (2).
 
@@ -767,10 +767,10 @@ This rules a lot of work in and out: **don't** invest in a relevance-overhaul or
 2. **Add a dedicated "Rejected" column** — changes the 4-column model → backend `KanbanColumn` enum + mapping change, and per `feedback_enum_changes_cross_stack` the TS union + labels + order in the same PR. Decide whether withdrawn/ghosted also get their own lanes or stay under Closed.
 3. **Expand Closed by default** / make its contents scannable.
 
-### LOW (cosmetic) — Discover card badge row misaligned ("Scoring" / "JobLeads" / saved-search tag on different baselines)
+### ~~LOW (cosmetic) — Discover card badge row misaligned ("Scoring" / "JobLeads" / saved-search tag on different baselines)~~ RESOLVED
 
-**Reported:** operator, with screenshot — the three pills in a card's top-right (status "Scoring", publisher "JobLeads", saved-search name "senior software engineer") sit at slightly different vertical positions / heights.
-**Hypothesis:** the badge row mixes pill components with inconsistent padding / line-height / vertical-align, or the flex row lacks `items-center`. Likely in `apps/myjobhunter/frontend/src/features/discover/DiscoveredJobCard.tsx` (header/badge row). Normalize to one badge primitive + `items-center`.
+**Resolved:** 2026-05-30, branch `fix/mjh-discover-badge-alignment`. Root cause confirmed: the badge row in `DiscoveredJobCard.tsx` used `flex items-start`, which top-aligns its pills — and the bespoke outline status pills ("Scoring" / "Re-scoring soon" / "Not scored") are ~2px taller than the filled `<Badge>` chips (publisher, saved-search name, verdict) because of their border, so under `items-start` their baselines diverged. Switched the row to `items-center` so all pills share one vertical center (the ~1px overhang reads as aligned). Kept the outline status-pill style as-is (the outline-vs-filled distinction is intentional status-vs-category language; a fuller filled-pill normalization is a trivial follow-up if uniform heights are also wanted). 24 `DiscoveredJobCard` tests pass.
+**Reported:** operator, with screenshot — the three pills in a card's top-right (status "Scoring", publisher "JobLeads", saved-search name "senior software engineer") sat at slightly different vertical positions / heights.
 
 ### ~~LOW — Rename user-facing "Discover" → "Discovery"~~ RESOLVED
 

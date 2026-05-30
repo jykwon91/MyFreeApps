@@ -173,7 +173,11 @@ export default function DiscoveredJobCard({
             {job.location ? ` — ${job.location}` : ""}
           </p>
         </div>
-        <div className="flex items-start gap-1.5 shrink-0">
+        {/* items-center so the mixed-height pills (filled Badges vs the
+            outline status pills, which are ~2px taller from their border)
+            share one vertical center instead of top-aligning on different
+            baselines — the misalignment the operator flagged. */}
+        <div className="flex items-center gap-1.5 shrink-0">
           {verdictVisual && <Badge label={verdictVisual.label} color={verdictVisual.color} />}
           {isScoreStale && (
             <span
