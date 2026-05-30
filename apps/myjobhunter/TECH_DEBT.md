@@ -3,7 +3,7 @@
 Issues discovered during development. New entries are appended; resolved entries are
 removed and the counts in this header are updated.
 
-**Open issues: 18 (Critical: 1 [discovery-quality P0 umbrella, triage-2026-05-28] / High: 2 [1 blocked-on-react-19, 1 public-launch cost guardrail] / Medium: 6 [4 prior + 1 triage-2026-05-28: rejection-visibility + 1 discovery content_hash dedup] / Low: 8 [6 prior + 2 triage-2026-05-28 cosmetic] / Feature requests: 1 [triage-2026-05-28 raw-resume-upload])**
+**Open issues: 17 (Critical: 1 [discovery-quality P0 umbrella, triage-2026-05-28] / High: 2 [1 blocked-on-react-19, 1 public-launch cost guardrail] / Medium: 6 [4 prior + 1 triage-2026-05-28: rejection-visibility + 1 discovery content_hash dedup] / Low: 7 [6 prior + 1 triage-2026-05-28 cosmetic] / Feature requests: 1 [triage-2026-05-28 raw-resume-upload])**
 
 > Status (2026-05-08 PM): All actionable audit items resolved across batches PR #492-#528 (~30 PRs). Remaining open entries are either (a) blocked on the React 18→19 monorepo bump (5 items), (b) deferred-by-design conventions or follow-ups (4), (c) environmental issues unrelated to code (3: asyncpg Windows, test hang on Windows, Quality Gate false-positive), or (d) intentional accepted lint warnings (2).
 
@@ -772,11 +772,10 @@ This rules a lot of work in and out: **don't** invest in a relevance-overhaul or
 **Reported:** operator, with screenshot — the three pills in a card's top-right (status "Scoring", publisher "JobLeads", saved-search name "senior software engineer") sit at slightly different vertical positions / heights.
 **Hypothesis:** the badge row mixes pill components with inconsistent padding / line-height / vertical-align, or the flex row lacks `items-center`. Likely in `apps/myjobhunter/frontend/src/features/discover/DiscoveredJobCard.tsx` (header/badge row). Normalize to one badge primitive + `items-center`.
 
-### LOW — Rename user-facing "Discover" → "Discovery"
+### ~~LOW — Rename user-facing "Discover" → "Discovery"~~ RESOLVED
 
+**Resolved:** 2026-05-30, branch `fix/mjh-rename-discover-to-discovery`. Renamed the three user-facing labels only: nav item (`src/constants/nav.ts`), page `<h1>` heading (`src/pages/Discover.tsx`), and the tablist `aria-label` (`src/features/discover/DiscoverViewTabs.tsx`, "Discover views" → "Discovery views"). The empty-state copy (`src/constants/empty-states.ts`) contained no "Discover" literal, so it was untouched. Per the recommendation, the `/discover` route path, the `discover.py` API module, the `discover`/`discovery` internal module/component naming, and code comments were left as-is (larger blast radius, no user-visible benefit). No redirect needed.
 **Reported:** operator.
-**Scope:** rename the user-facing label only — nav item (`src/constants/nav.ts`), page heading ("Discover" → "Discovery"), and any empty-state copy (`src/constants/empty-states.ts`). 
-**Decision needed:** whether to also rename the route path `/discover` → `/discovery` (would need a redirect for existing bookmarks) and the backend `discover.py` API module / `discovery` service naming. Recommendation: change display copy now; keep the route + internal `discover`/`discovery` module naming as-is unless there's a reason to churn it (larger blast radius, no user-visible benefit). Confirm during the fix.
 
 ### FEATURE — Upload & store raw resume documents (resume-specific, mirror MBK Documents)
 

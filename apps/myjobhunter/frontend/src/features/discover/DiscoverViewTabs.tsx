@@ -13,7 +13,7 @@ export default function DiscoverViewTabs({
   return (
     <div
       role="tablist"
-      aria-label="Discover views"
+      aria-label="Discovery views"
       className="flex gap-1 border-b border-border"
     >
       <DiscoverTabButton
