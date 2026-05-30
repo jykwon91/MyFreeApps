@@ -11,6 +11,7 @@ from app.db.session import AsyncSessionLocal, unit_of_work
 from app.repositories import (
     property_repo,
     welcome_manual_repo,
+    welcome_manual_section_image_repo,
     welcome_manual_section_repo,
 )
 from app.schemas.welcome_manuals.welcome_manual_create_request import (
@@ -20,6 +21,9 @@ from app.schemas.welcome_manuals.welcome_manual_list_response import (
     WelcomeManualListResponse,
 )
 from app.schemas.welcome_manuals.welcome_manual_response import WelcomeManualResponse
+from app.schemas.welcome_manuals.welcome_manual_section_image_response import (
+    WelcomeManualSectionImageResponse,
+)
 from app.schemas.welcome_manuals.welcome_manual_section_response import (
     WelcomeManualSectionResponse,
 )
@@ -27,18 +31,41 @@ from app.schemas.welcome_manuals.welcome_manual_summary import WelcomeManualSumm
 from app.schemas.welcome_manuals.welcome_manual_update_request import (
     WelcomeManualUpdateRequest,
 )
+from app.services.welcome_manuals.section_image_response_builder import (
+    attach_presigned_urls,
+)
 
 
-def _to_response(manual, sections=()) -> WelcomeManualResponse:
-    """Convert an ORM manual + its sections to a response model.
+def _build_section_responses(sections, images) -> list[WelcomeManualSectionResponse]:
+    """Build ordered section responses with each section's images attached.
+
+    ``images`` is a flat list of ORM image rows spanning ALL the sections;
+    presigned URLs are minted once over the flat list (one HEAD per image),
+    then grouped by section. No SQLAlchemy ``images`` relationship exists on the
+    section model — ``model_validate`` falls back to the field default, and we
+    overwrite it here — which keeps this safe under async (no lazy load).
+    """
+    image_responses = [WelcomeManualSectionImageResponse.model_validate(img) for img in images]
+    signed = attach_presigned_urls(image_responses)
+    by_section: dict[uuid.UUID, list[WelcomeManualSectionImageResponse]] = {}
+    for image in signed:
+        by_section.setdefault(image.section_id, []).append(image)
+    return [
+        WelcomeManualSectionResponse.model_validate(s).model_copy(
+            update={"images": by_section.get(s.id, [])},
+        )
+        for s in sections
+    ]
+
+
+def _to_response(manual, section_responses=()) -> WelcomeManualResponse:
+    """Convert an ORM manual + pre-built section responses to a response model.
 
     Centralising this construction prevents drift between get / create /
     update response shapes.
     """
     base = WelcomeManualResponse.model_validate(manual)
-    return base.model_copy(update={
-        "sections": [WelcomeManualSectionResponse.model_validate(s) for s in sections],
-    })
+    return base.model_copy(update={"sections": list(section_responses)})
 
 
 async def get_manual(
@@ -56,7 +83,10 @@ async def get_manual(
         if manual is None:
             raise LookupError(f"Welcome manual {manual_id} not found")
         sections = await welcome_manual_section_repo.list_by_manual(db, manual.id)
-    return _to_response(manual, sections)
+        images = await welcome_manual_section_image_repo.list_by_section_ids(
+            db, [s.id for s in sections],
+        )
+    return _to_response(manual, _build_section_responses(sections, images))
 
 
 async def list_manuals(
@@ -129,7 +159,8 @@ async def create_manual(
                 )
                 sections.append(section)
 
-        return _to_response(manual, sections)
+        # Freshly-seeded sections never have images yet.
+        return _to_response(manual, _build_section_responses(sections, []))
 
 
 async def update_manual(
@@ -160,7 +191,10 @@ async def update_manual(
             raise LookupError(f"Welcome manual {manual_id} not found")
 
         sections = await welcome_manual_section_repo.list_by_manual(db, manual.id)
-        return _to_response(manual, sections)
+        images = await welcome_manual_section_image_repo.list_by_section_ids(
+            db, [s.id for s in sections],
+        )
+        return _to_response(manual, _build_section_responses(sections, images))
 
 
 async def soft_delete_manual(

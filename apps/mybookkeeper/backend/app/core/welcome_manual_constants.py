@@ -6,6 +6,12 @@ service-layer seed and the schema validation a single source of truth.
 
 WELCOME_MANUAL_TITLE_MAX_LEN = 200
 WELCOME_MANUAL_SECTION_TITLE_MAX_LEN = 200
+WELCOME_MANUAL_IMAGE_CAPTION_MAX_LEN = 500
+
+# Object-key prefix for welcome-manual section images. Combined with the org id
+# for tenant isolation: ``{org_id}/welcome-manuals`` → keys land under
+# ``{org_id}/welcome-manuals/{uuid}/{filename}`` in the bucket.
+WELCOME_MANUAL_STORAGE_DOMAIN = "welcome-manuals"
 
 # Upper bound on sections per manual — a guard against a client expanding a
 # single manual into an unbounded number of rows. 50 is far above any real

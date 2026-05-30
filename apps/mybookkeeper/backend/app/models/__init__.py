@@ -18,6 +18,7 @@ from app.models.listings.listing_blackout import ListingBlackout
 from app.models.listings.listing_blackout_attachment import ListingBlackoutAttachment
 from app.models.welcome_manuals.welcome_manual import WelcomeManual
 from app.models.welcome_manuals.welcome_manual_section import WelcomeManualSection
+from app.models.welcome_manuals.welcome_manual_section_image import WelcomeManualSectionImage
 from app.models.calendar.calendar_email_review_queue import CalendarEmailReviewQueue
 from app.models.calendar.calendar_listing_blocklist import CalendarListingBlocklist
 from app.models.inquiries.inquiry import Inquiry

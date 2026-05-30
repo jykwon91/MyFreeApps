@@ -3,15 +3,23 @@ a manual. Every operation re-verifies the parent manual belongs to the caller's
 organization before touching a section (the section table carries no org column;
 the manual is the scope gate).
 """
+import logging
 import uuid
 from typing import Any
 
+from app.core.storage import get_storage
 from app.core.welcome_manual_constants import WELCOME_MANUAL_MAX_SECTIONS
 from app.db.session import unit_of_work
-from app.repositories import welcome_manual_repo, welcome_manual_section_repo
+from app.repositories import (
+    welcome_manual_repo,
+    welcome_manual_section_image_repo,
+    welcome_manual_section_repo,
+)
 from app.schemas.welcome_manuals.welcome_manual_section_response import (
     WelcomeManualSectionResponse,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class ManualNotFoundError(LookupError):
@@ -88,9 +96,27 @@ async def delete_section(
         manual = await welcome_manual_repo.get_by_id(db, manual_id, organization_id)
         if manual is None:
             raise ManualNotFoundError(f"Welcome manual {manual_id} not found")
-        deleted = await welcome_manual_section_repo.delete_by_id(db, section_id, manual.id)
-        if deleted is None:
+        section = await welcome_manual_section_repo.get_by_id(db, section_id, manual.id)
+        if section is None:
             raise SectionNotFoundError(f"Section {section_id} not found")
+        # Capture image storage keys before the cascade removes the rows.
+        images = await welcome_manual_section_image_repo.list_by_section(db, section.id)
+        storage_keys = [image.storage_key for image in images]
+        await welcome_manual_section_repo.delete_by_id(db, section_id, manual.id)
+
+    # Best-effort MinIO cleanup outside the transaction — the section (and its
+    # image rows) are already gone; orphaned objects can be swept later.
+    if storage_keys:
+        storage = get_storage()
+        if storage is not None:
+            for key in storage_keys:
+                try:
+                    storage.delete_file(key)
+                except Exception:  # noqa: BLE001
+                    logger.warning(
+                        "Failed to delete welcome-manual image object %s after section delete",
+                        key, exc_info=True,
+                    )
 
 
 async def reorder_sections(
