@@ -71,7 +71,7 @@ export default function Discover() {
     <main className="p-4 sm:p-8 space-y-6">
       <header className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold">Discover</h1>
+          <h1 className="text-2xl font-semibold">Discovery</h1>
           <p className="text-sm text-muted-foreground mt-1">
             New postings from LinkedIn, Indeed, Glassdoor, and ZipRecruiter
             via Google Jobs. Refresh a saved search to pull the latest.
