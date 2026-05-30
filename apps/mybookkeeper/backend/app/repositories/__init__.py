@@ -38,6 +38,8 @@ from app.repositories.listings import channel_repo
 from app.repositories.listings import channel_listing_repo
 from app.repositories.listings import listing_blackout_repo
 from app.repositories.listings import listing_blackout_attachment_repo
+from app.repositories.welcome_manuals import welcome_manual_repo
+from app.repositories.welcome_manuals import welcome_manual_section_repo
 from app.repositories.calendar import calendar_repository
 from app.repositories.calendar import review_queue_repo
 from app.repositories.calendar import blocklist_repo
