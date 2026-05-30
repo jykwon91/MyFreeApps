@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Telescope } from "lucide-react";
-import { EmptyState } from "@platform/ui";
+import { EmptyState, LoadingButton } from "@platform/ui";
 import { DISCOVER_EMPTY_STATES } from "@/constants/empty-states";
 import DiscoveredJobCard from "@/features/discover/DiscoveredJobCard";
 import DiscoveredJobsSkeleton from "@/features/discover/DiscoveredJobsSkeleton";
@@ -24,6 +24,18 @@ const INBOX_POLL_INTERVAL_MS = 4000;
 // pass for the top-N with headroom, then terminates to a real state.
 const SCORING_WINDOW_MS = 60_000;
 
+// The inbox is one growing list. "Load more" grows `limit` by PAGE_SIZE from
+// offset 0 — the API accumulates pages in a single cache entry (see
+// serializeQueryArgs in discoverApi), so each fetch re-reads the WHOLE loaded
+// window and the server-side score-sort stays global across all loaded rows.
+const PAGE_SIZE = 50;
+
+// Backend caps `limit` at 200 (discover.py `le=200`). At the cap the load-more
+// control is replaced by a legible note rather than silently truncating — the
+// operator dismisses/saves to surface the rest, and the "Scored N of M" line
+// already shows the true total.
+const MAX_INBOX_LIMIT = 200;
+
 interface DiscoverInboxViewProps {
   hasSources: boolean;
   /** Active source filter from ?source= URL param. Null = no filter (show all). */
@@ -34,11 +46,28 @@ export default function DiscoverInboxView({
   hasSources,
   activeSourceId,
 }: DiscoverInboxViewProps) {
-  // Include source_id in query args so RTK Query uses it as part of the cache key.
-  // When source_id changes the cache key changes → fresh fetch, no stale data.
+  // How many rows the inbox has loaded. "Load more" grows this; a poll/refetch
+  // always re-reads the whole [0, limit) window so scores fill in across the
+  // full sorted list, not just the latest page.
+  const [limit, setLimit] = useState(PAGE_SIZE);
+
+  // Reset the page size when the source filter changes — synchronously in
+  // render (React's "adjust state when a prop changes" pattern) so the query
+  // fires once at PAGE_SIZE for the new filter, instead of briefly re-fetching
+  // the previous (larger) limit as an effect would.
+  const [limitFilterKey, setLimitFilterKey] = useState(activeSourceId);
+  if (activeSourceId !== limitFilterKey) {
+    setLimitFilterKey(activeSourceId);
+    setLimit(PAGE_SIZE);
+  }
+
+  // Include source_id in query args so RTK Query keys the cache on it. `limit`
+  // is intentionally NOT part of the key (see serializeQueryArgs in discoverApi)
+  // so growing it accumulates in place. When source_id changes the cache key
+  // changes → fresh fetch, no stale data.
   const queryArgs = activeSourceId
-    ? { state: "inbox" as const, source_id: activeSourceId }
-    : { state: "inbox" as const };
+    ? { state: "inbox" as const, limit, source_id: activeSourceId }
+    : { state: "inbox" as const, limit };
 
   // Bounded scoring window. We poll (and show the animated spinner) only
   // while this is true; it auto-closes after SCORING_WINDOW_MS. Opened
@@ -48,7 +77,7 @@ export default function DiscoverInboxView({
   const windowTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevUnscoredRef = useRef<number | null>(null);
 
-  const { data: jobsData, isLoading, isError } = useListDiscoveredJobsQuery(
+  const { data: jobsData, isLoading, isError, isFetching } = useListDiscoveredJobsQuery(
     queryArgs,
     // Poll only while the bounded scoring window is open. `0` disables
     // polling in RTK Query, so the steady state makes no network noise.
@@ -154,6 +183,24 @@ export default function DiscoverInboxView({
 
   const items = jobsData?.items ?? [];
 
+  // has_more is the server's COUNT-backed signal that rows exist beyond the
+  // loaded window. atCap is the frontend ceiling (backend caps limit at 200).
+  const hasMore = jobsData?.has_more ?? false;
+  const atCap = limit >= MAX_INBOX_LIMIT;
+
+  // A "load more" is in flight exactly when we've asked for a bigger window
+  // than the data currently reflects. Once a fetch settles, the loaded window
+  // fills the requested limit, so this is false — and because a poll/refetch
+  // returns the same full window, it never spuriously spins during polling.
+  const isLoadingMore = isFetching && items.length < limit;
+
+  const handleLoadMore = () => {
+    if (atCap) {
+      return;
+    }
+    setLimit((current) => Math.min(current + PAGE_SIZE, MAX_INBOX_LIMIT));
+  };
+
   if (items.length === 0) {
     return (
       <>
@@ -205,6 +252,29 @@ export default function DiscoverInboxView({
           sources={sources ?? []}
         />
       ))}
+      {hasMore && !atCap && (
+        <div className="flex justify-center pt-1">
+          <LoadingButton
+            type="button"
+            variant="secondary"
+            isLoading={isLoadingMore}
+            loadingText="Loading…"
+            onClick={handleLoadMore}
+            data-testid="inbox-load-more"
+          >
+            Load more
+          </LoadingButton>
+        </div>
+      )}
+      {hasMore && atCap && (
+        <p
+          className="pt-1 text-center text-xs text-muted-foreground"
+          data-testid="inbox-load-more-cap"
+        >
+          Showing the first {MAX_INBOX_LIMIT}. Dismiss or save jobs to surface
+          the rest.
+        </p>
+      )}
     </div>
   );
 }

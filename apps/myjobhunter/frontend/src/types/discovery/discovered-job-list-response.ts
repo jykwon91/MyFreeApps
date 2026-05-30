@@ -2,7 +2,12 @@ import type { DiscoveredJob } from "./discovered-job";
 
 export interface DiscoveredJobListResponse {
   items: DiscoveredJob[];
+  /** Full matching-row count for the (state, source_id) filter — NOT the
+   * returned page length. Drives ``has_more`` and the inbox load-more. */
   total: number;
+  /** ``offset + items.length < total`` — true when more rows exist beyond the
+   * current page. The inbox grows ``limit`` in place until this is false. */
+  has_more: boolean;
   state: "inbox" | "saved" | "all";
   /**
    * Inbox scoring coverage across the WHOLE active inbox (not just the

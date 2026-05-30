@@ -3,7 +3,7 @@
 Issues discovered during development. New entries are appended; resolved entries are
 removed and the counts in this header are updated.
 
-**Open issues: 20 (Critical: 1 [discovery-quality P0 umbrella, triage-2026-05-28] / High: 2 [1 blocked-on-react-19, 1 public-launch cost guardrail] / Medium: 8 [5 prior + 2 triage-2026-05-28: pagination, rejection-visibility + 1 discovery content_hash dedup] / Low: 8 [6 prior + 2 triage-2026-05-28 cosmetic] / Feature requests: 1 [triage-2026-05-28 raw-resume-upload])**
+**Open issues: 18 (Critical: 1 [discovery-quality P0 umbrella, triage-2026-05-28] / High: 2 [1 blocked-on-react-19, 1 public-launch cost guardrail] / Medium: 6 [4 prior + 1 triage-2026-05-28: rejection-visibility + 1 discovery content_hash dedup] / Low: 8 [6 prior + 2 triage-2026-05-28 cosmetic] / Feature requests: 1 [triage-2026-05-28 raw-resume-upload])**
 
 > Status (2026-05-08 PM): All actionable audit items resolved across batches PR #492-#528 (~30 PRs). Remaining open entries are either (a) blocked on the React 18→19 monorepo bump (5 items), (b) deferred-by-design conventions or follow-ups (4), (c) environmental issues unrelated to code (3: asyncpg Windows, test hang on Windows, Quality Gate false-positive), or (d) intentional accepted lint warnings (2).
 
@@ -37,10 +37,11 @@ removed and the counts in this header are updated.
 
 ---
 
-#### MEDIUM — Pagination response envelopes — adopt early in MJH
+#### ~~MEDIUM — Pagination response envelopes — adopt early in MJH~~ RESOLVED
 
 **Effort:** S
-**Status:** Shared generic landed in PR #492 (2026-05-08) at `platform_shared/schemas/pagination.py`. MJH adoption is the remaining work — every new list endpoint should subclass `ListResponse[ItemT]` from the start. No backfill needed today (MJH still has zero pagination); this entry stays open as a convention reminder until the first list endpoint ships.
+**Resolved:** 2026-05-30. The first MJH list endpoint that needs pagination — the discovery inbox — shipped end-to-end (`DiscoveredJobListResponse(ListResponse[DiscoveredJobResponse])`, backend PR #797 + frontend `feature/mjh-discovery-load-more`), which is exactly the condition this reminder waited on. The `ListResponse[ItemT]` subclassing convention is now demonstrated in the codebase; future list endpoints follow that pattern.
+**Status (historical):** Shared generic landed in PR #492 (2026-05-08) at `platform_shared/schemas/pagination.py`. MJH adoption was the remaining work — every new list endpoint should subclass `ListResponse[ItemT]` from the start.
 **Problem:** MBK had 8 hardcoded `*ListResponse` envelopes (now refactored to inherit). MJH has zero pagination today.
 **Recommendation:** For every new MJH list endpoint, `from platform_shared.schemas.pagination import ListResponse` and write `class FooListResponse(ListResponse[FooResponse]): pass`. Cheaper than backfilling.
 
@@ -748,9 +749,9 @@ This rules a lot of work in and out: **don't** invest in a relevance-overhaul or
 
 ---
 
-### MEDIUM — Discovery results need pagination
+### ~~MEDIUM — Discovery results need pagination~~ RESOLVED
 
-**Status (2026-05-29):** Backend SHIPPED — `GET /discover` now returns a real `total` (full matching-row count via `discovery_inbox_repository.count_discovered`, reusing the inbox coverage count for the inbox state) + `has_more`, and `DiscoveredJobListResponse` subclasses the shared `ListResponse[DiscoveredJobResponse]` — MJH's first paginated list endpoint, which satisfies the "Pagination response envelopes — adopt early in MJH" convention entry above. **Frontend FOLLOW-UP still open:** `features/discover/DiscoverInboxView.tsx` must send `limit`/`offset` and add a `has_more`-driven load-more control (today it ignores them → one growing list). Backend tests: `test_discover_endpoints.py::test_inbox_pagination_total_is_full_count_and_has_more`.
+**Resolved (2026-05-30):** Frontend SHIPPED — branch `feature/mjh-discovery-load-more`. `DiscoverInboxView` now grows `limit` in place from offset 0 (PAGE_SIZE 50, capped at the backend's 200) and renders a `has_more`-driven "Load more" control; at the 200-row ceiling it shows a legible note instead of truncating silently. The `listDiscoveredJobs` RTK Query endpoint collapses pages into one cache entry (`serializeQueryArgs` drops `limit`/`offset`) with `forceRefetch` on limit change, so growing the window swaps data in place AND a #793 scoring poll / dismiss-save invalidation re-reads the WHOLE loaded window (scores fill in + re-sort across the full list, not just the latest page). Preserves the #793 bounded polling, the "Scored N of M" coverage line, and the server-side score-sort. Tests: `DiscoverInboxView.test.tsx` (load-more visibility, click grows limit by one page, 200-cap note / no silent truncation). **Backend** was SHIPPED earlier in PR #797 — `GET /discover` returns a real `total` (full matching-row count via `discovery_inbox_repository.count_discovered`, reusing the inbox coverage count for the inbox state) + `has_more`, and `DiscoveredJobListResponse` subclasses the shared `ListResponse[DiscoveredJobResponse]`; this also ticked the "Pagination response envelopes — adopt early in MJH" convention entry above. Backend tests: `test_discover_endpoints.py`.
 
 **Reported:** operator.
 **Symptom:** The discovery inbox renders results without pagination (a single growing list). Fetches pull ~5 pages (~50 postings) per cycle and accumulate.

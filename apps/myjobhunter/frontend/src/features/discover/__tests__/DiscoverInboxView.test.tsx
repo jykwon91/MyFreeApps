@@ -8,7 +8,7 @@
  * large unscored tail is expected — the coverage line makes that legible.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import DiscoverInboxView from "@/features/discover/DiscoverInboxView";
 import type { DiscoveredJob } from "@/types/discovery/discovered-job";
@@ -29,6 +29,15 @@ vi.mock("@/lib/skillsApi", () => ({
 
 vi.mock("@platform/ui", () => ({
   EmptyState: ({ heading }: { heading: string }) => <div>{heading}</div>,
+  // Minimal LoadingButton: render children (or loadingText while loading) and
+  // pass through data-testid / onClick. Strip variant/size so React doesn't
+  // warn about unknown DOM attributes.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  LoadingButton: ({ children, loadingText, isLoading, disabled, variant: _variant, size: _size, ...props }: any) => (
+    <button disabled={disabled || isLoading} {...props}>
+      {isLoading ? loadingText ?? children : children}
+    </button>
+  ),
 }));
 
 vi.mock("@/features/discover/DiscoveredJobsSkeleton", () => ({
@@ -93,6 +102,7 @@ function makeResponse(
   return {
     items: [makeJob()],
     total: 1,
+    has_more: false,
     state: "inbox",
     scored_count: 0,
     total_count: 1,
@@ -110,7 +120,7 @@ function renderInbox() {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function jobsResult(data: DiscoveredJobListResponse): any {
-  return { data, isLoading: false, isError: false };
+  return { data, isLoading: false, isError: false, isFetching: false };
 }
 
 describe("DiscoverInboxView — bounded scoring window", () => {
@@ -173,5 +183,71 @@ describe("DiscoverInboxView — bounded scoring window", () => {
     );
     renderInbox();
     expect(screen.queryByTestId("inbox-scoring-coverage")).toBeNull();
+  });
+});
+
+describe("DiscoverInboxView — load more", () => {
+  beforeEach(() => {
+    cardSpy.mockClear();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    mockListSources.mockReturnValue({ data: [] } as any);
+  });
+
+  it("renders the Load more control when the server reports more rows", () => {
+    mockListJobs.mockReturnValue(
+      jobsResult(
+        makeResponse({ has_more: true, total: 120, total_count: 120, scored_count: 20 }),
+      ),
+    );
+    renderInbox();
+    expect(screen.getByTestId("inbox-load-more")).toHaveTextContent("Load more");
+    expect(screen.queryByTestId("inbox-load-more-cap")).toBeNull();
+  });
+
+  it("hides the Load more control when there are no more rows", () => {
+    mockListJobs.mockReturnValue(jobsResult(makeResponse({ has_more: false })));
+    renderInbox();
+    expect(screen.queryByTestId("inbox-load-more")).toBeNull();
+    expect(screen.queryByTestId("inbox-load-more-cap")).toBeNull();
+  });
+
+  it("requests a larger limit (by one page) when Load more is clicked", () => {
+    mockListJobs.mockReturnValue(
+      jobsResult(makeResponse({ has_more: true, total: 300, total_count: 300 })),
+    );
+    renderInbox();
+    // First render queries the first page (limit 50, the default page size).
+    expect(mockListJobs).toHaveBeenLastCalledWith(
+      expect.objectContaining({ state: "inbox", limit: 50 }),
+      expect.anything(),
+    );
+    fireEvent.click(screen.getByTestId("inbox-load-more"));
+    // Clicking grows the window to the next page (limit 100), in place.
+    expect(mockListJobs).toHaveBeenLastCalledWith(
+      expect.objectContaining({ state: "inbox", limit: 100 }),
+      expect.anything(),
+    );
+  });
+
+  it("replaces the button with a legible note at the 200-row cap instead of truncating silently", () => {
+    // Server always says there's more; the frontend ceiling (200) is what
+    // stops the growth. Three clicks: 50 → 100 → 150 → 200.
+    mockListJobs.mockReturnValue(
+      jobsResult(makeResponse({ has_more: true, total: 999, total_count: 999 })),
+    );
+    renderInbox();
+    fireEvent.click(screen.getByTestId("inbox-load-more"));
+    fireEvent.click(screen.getByTestId("inbox-load-more"));
+    fireEvent.click(screen.getByTestId("inbox-load-more"));
+    // At the cap the button is gone and the note explains the ceiling.
+    expect(screen.queryByTestId("inbox-load-more")).toBeNull();
+    expect(screen.getByTestId("inbox-load-more-cap")).toHaveTextContent(
+      /showing the first 200/i,
+    );
+    // Never requests beyond the backend's max limit.
+    expect(mockListJobs).toHaveBeenLastCalledWith(
+      expect.objectContaining({ limit: 200 }),
+      expect.anything(),
+    );
   });
 });
