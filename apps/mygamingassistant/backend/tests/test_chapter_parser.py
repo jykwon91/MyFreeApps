@@ -48,10 +48,14 @@ class TestDescriptionChapters:
         assert chapters[2].start_seconds == 3945  # 1*3600 + 5*60 + 45
         assert chapters[2].end_seconds == 4000
 
-    def test_last_chapter_end_equals_duration(self):
+    def test_inflated_last_chapter_capped_to_typical_duration(self):
+        # Last chapter [120, 500] (380s) far exceeds the single sibling's 120s.
+        # The last-chapter window cap shrinks it to
+        # start + max(median_sibling=120, floor=45) = 120 + 120 = 240 so the
+        # throw-search window matches a normal chapter (see 9b2ad4c9 "Stairs").
         desc = "0:00 Intro\n2:00 Main content\n"
         chapters = parse_chapters(desc, video_duration=500)
-        assert chapters[-1].end_seconds == 500
+        assert chapters[-1].end_seconds == 240
 
     def test_description_with_non_chapter_lines(self):
         desc = (
@@ -134,7 +138,10 @@ class TestNativeChapters:
         assert chapters[0].start_seconds == 0
         assert chapters[0].end_seconds == 90
         assert chapters[1].start_seconds == 90
-        assert chapters[1].end_seconds == 300
+        # Last chapter [90, 300] (210s) exceeds the sibling's 90s, so the
+        # last-chapter window cap shrinks it to
+        # 90 + max(median_sibling=90, floor=45) = 180.
+        assert chapters[1].end_seconds == 180
 
     def test_empty_native_chapters_falls_back_to_description(self):
         desc = "0:00 Intro\n1:00 Second\n"
@@ -167,6 +174,59 @@ class TestNativeChapters:
         chapters = parse_chapters("", video_duration=120, native_chapters=native)
         # "Bad" has non-numeric start_time — parser skips it gracefully
         assert all(c.title != "Bad" for c in chapters)
+
+
+# ---------------------------------------------------------------------------
+# Last-chapter window cap (_cap_last_chapter_to_typical_duration)
+#
+# The last chapter has no next-chapter boundary, so its end is the video tail.
+# When the video continues past the final lineup demo, that inflates the chapter
+# duration and trips clip_window_timestamps's long-chapter lead-in skip, which
+# samples PAST the (early) throw (operator audit 2026-05-30, lineup 9b2ad4c9
+# "Stairs": last chapter 403->508=105s, throw window opened +27s, real throw
+# ~+17s never sampled). The cap shrinks the last chapter to this creator's
+# typical length: start + max(median sibling duration, 45s floor), shrink-only,
+# only with >=2 chapters.
+# ---------------------------------------------------------------------------
+
+class TestLastChapterCap:
+    def test_inflated_last_chapter_capped_by_median(self):
+        # Siblings 40s + 50s (median 45) > 45 floor → cap window = 45.
+        native = [
+            {"start_time": 0, "end_time": 40, "title": "L1"},
+            {"start_time": 40, "end_time": 90, "title": "L2"},
+            {"start_time": 90, "end_time": 290, "title": "L3 (inflated)"},
+        ]
+        chapters = parse_chapters("", video_duration=290, native_chapters=native)
+        # last [90, 290] (200s) capped to 90 + max(median=45, 45) = 135.
+        assert chapters[-1].end_seconds == 135
+
+    def test_floor_applies_when_typical_below_floor(self):
+        # Siblings 20s each (median 20 < 45) → floor 45 governs.
+        native = [
+            {"start_time": 0, "end_time": 20, "title": "L1"},
+            {"start_time": 20, "end_time": 40, "title": "L2"},
+            {"start_time": 40, "end_time": 200, "title": "L3 (inflated)"},
+        ]
+        chapters = parse_chapters("", video_duration=200, native_chapters=native)
+        # last [40, 200] (160s) capped to 40 + max(20, 45) = 85.
+        assert chapters[-1].end_seconds == 85
+
+    def test_tight_last_chapter_untouched(self):
+        # Last chapter already shorter than the cap window → never extended.
+        native = [
+            {"start_time": 0, "end_time": 100, "title": "L1"},
+            {"start_time": 100, "end_time": 130, "title": "L2 (short)"},
+        ]
+        chapters = parse_chapters("", video_duration=130, native_chapters=native)
+        assert chapters[-1].end_seconds == 130  # min(130, 100+max(100,45)) = 130
+
+    def test_single_chapter_not_capped(self):
+        # <2 chapters → no sibling median → no-op.
+        native = [{"start_time": 0, "end_time": 300, "title": "Only chapter"}]
+        chapters = parse_chapters("", video_duration=300, native_chapters=native)
+        assert len(chapters) == 1
+        assert chapters[0].end_seconds == 300
 
 
 # ---------------------------------------------------------------------------
