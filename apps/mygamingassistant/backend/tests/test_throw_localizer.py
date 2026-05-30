@@ -48,9 +48,11 @@ from app.services.ingestion.throw_localizer import (
     STAGE_RECOVERY_WINDOW_TOO_SMALL,
     STAGE_REFINED,
     RefinedThrowTiming,
+    _CROSS_CHAPTER_BLEED_SECONDS,
     _should_refine,
     apply_gap_invariant,
     dense_window_timestamps,
+    is_cross_chapter_bleed,
     localize_throw_with_refinement,
 )
 
@@ -889,6 +891,129 @@ class TestMultiDemoFirstEventRecovery:
         assert result.stage == STAGE_RECOVERY_REJECTED
         assert result.timing is coarse
         assert result.frame_timestamps == _COARSE_TIMESTAMPS
+        assert extract_mock.await_count == 2
+        assert classifier_mock.await_count == 2
+
+
+# ---------------------------------------------------------------------------
+# Cross-chapter bleed guard — prior lineup's lingering effect at the window open
+#
+# A previous lineup's smoke routinely hangs into the OPENING frames of the next
+# chapter; the coarse pass reports it as an "earlier demonstration result" and
+# the first-event recovery anchors on it, pulling release onto the chapter
+# boundary (operator audit 2026-05-30, lineup 7bd971c3 "Market Window": coarse
+# correctly localised the real throw at Frame 6 yet flagged Frame 1's Catwalk
+# bloom — the PRIOR lineup — at +0.50s into the chapter; recovery then picked
+# release before the chapter's own stand/aim). is_cross_chapter_bleed drops the
+# signal when the earlier event sits within the opening bleed zone so recovery
+# never re-centres on the boundary; normal refinement localises this chapter's
+# own throw. The genuine multi-demo case (Market Door, +14.02s) is untouched.
+# ---------------------------------------------------------------------------
+
+
+class TestIsCrossChapterBleed:
+    def test_inside_zone_is_bleed(self):
+        """+1.0s into the chapter is within the default 3.0s bleed zone."""
+        assert is_cross_chapter_bleed(101.0, 100.0) is True
+
+    def test_market_window_offset_is_bleed(self):
+        """The real false-positive: earlier event +0.50s into the chapter."""
+        assert is_cross_chapter_bleed(256.50, 256.0) is True
+
+    def test_market_door_offset_is_not_bleed(self):
+        """The real true-positive: genuine earlier demo result at +14.02s."""
+        assert is_cross_chapter_bleed(304.02, 290.0) is False
+
+    def test_boundary_is_exclusive(self):
+        """Exactly _CROSS_CHAPTER_BLEED_SECONDS in is NOT bleed (strict <)."""
+        assert (
+            is_cross_chapter_bleed(100.0 + _CROSS_CHAPTER_BLEED_SECONDS, 100.0)
+            is False
+        )
+        assert (
+            is_cross_chapter_bleed(
+                100.0 + _CROSS_CHAPTER_BLEED_SECONDS - 0.01, 100.0
+            )
+            is True
+        )
+
+
+class TestCrossChapterBleedGuard:
+    @pytest.mark.asyncio
+    async def test_bleed_signal_dropped_then_refines(self):
+        """earlier_demonstration_result_index points at a frame INSIDE the
+        opening bleed zone → the signal is dropped, first-event recovery does
+        NOT fire, and the pass falls through to normal dense refinement (so the
+        clip anchors on THIS chapter's throw, not the prior lineup's bleed)."""
+        # earlier_index=1 → _COARSE_TIMESTAMPS[0]=10.0. Place chapter_start so
+        # that 10.0 is HALF the bleed window in → inside the zone.
+        bleed_start = 10.0 - _CROSS_CHAPTER_BLEED_SECONDS / 2
+        coarse = _multidemo_coarse(earlier_demonstration_result_index=1)
+        dense = _coarse(release_index=5, result_index=7, confidence=0.88)
+        patches, extract_mock, classifier_mock = _patch_chain(
+            coarse_classifier=coarse, dense_classifier=dense
+        )
+        with patches[0], patches[1], patches[2], patches[3]:
+            result = await localize_throw_with_refinement(
+                _FAKE_VIDEO,
+                chapter_start=bleed_start,
+                chapter_end=60.0,
+                chapter_title="bleed: prior lineup smoke at frame 1",
+            )
+        assert result.stage == STAGE_REFINED
+        assert result.stage != STAGE_RECOVERED_FIRST_EVENT
+        assert result.timing is dense
+        assert result.frame_timestamps == _DENSE_TIMESTAMPS
+        # coarse + dense ran; recovery was never attempted.
+        assert extract_mock.await_count == 2
+        assert classifier_mock.await_count == 2
+
+    @pytest.mark.asyncio
+    async def test_inversion_bleed_signal_dropped_then_refines(self):
+        """The bleed guard applies to the inversion signal too: an inverted
+        earlier index inside the bleed zone is prior-lineup bleed, not an
+        in-chapter inversion — drop it and refine."""
+        bleed_start = 10.0 - _CROSS_CHAPTER_BLEED_SECONDS / 2
+        coarse = _inverted_coarse(causality_inverted_earlier_index=1)
+        dense = _coarse(release_index=5, result_index=7, confidence=0.88)
+        patches, _, _ = _patch_chain(
+            coarse_classifier=coarse, dense_classifier=dense
+        )
+        with patches[0], patches[1], patches[2], patches[3]:
+            result = await localize_throw_with_refinement(
+                _FAKE_VIDEO,
+                chapter_start=bleed_start,
+                chapter_end=60.0,
+                chapter_title="inversion bleed at frame 1",
+            )
+        # _inverted_coarse has confidence 0.28 (below the 0.55 refine gate), so
+        # once the bleed signal is dropped the pass falls to the below-gate
+        # path — the key assertion is that recovery did NOT fire on the bleed.
+        assert result.stage != STAGE_RECOVERED_FIRST_EVENT
+        assert result.stage == STAGE_COARSE_BELOW_GATE
+
+    @pytest.mark.asyncio
+    async def test_earlier_demo_just_outside_zone_recovers(self):
+        """A genuine earlier demonstration whose result sits JUST OUTSIDE the
+        bleed zone still fires the first-event recovery (the guard is not
+        over-broad)."""
+        # earlier_index=1 → 10.0; chapter_start placed so 10.0 is 2x the bleed
+        # window in → safely outside the zone.
+        clear_start = 10.0 - _CROSS_CHAPTER_BLEED_SECONDS * 2
+        coarse = _multidemo_coarse(earlier_demonstration_result_index=1)
+        recovered = _coarse(release_index=2, result_index=5, confidence=0.85)
+        patches, extract_mock, classifier_mock = _patch_chain(
+            coarse_classifier=coarse, dense_classifier=recovered
+        )
+        with patches[0], patches[1], patches[2], patches[3]:
+            result = await localize_throw_with_refinement(
+                _FAKE_VIDEO,
+                chapter_start=clear_start,
+                chapter_end=60.0,
+                chapter_title="genuine earlier demo, clear of bleed zone",
+            )
+        assert result.stage == STAGE_RECOVERED_FIRST_EVENT
+        assert result.timing is recovered
         assert extract_mock.await_count == 2
         assert classifier_mock.await_count == 2
 

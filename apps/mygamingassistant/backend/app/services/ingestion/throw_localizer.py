@@ -91,6 +91,7 @@ from app.services.ingestion.throw_localizer_recovery import (  # noqa: F401
     STAGE_RECOVERY_WINDOW_TOO_SMALL,
     STAGE_REFINED,
     RefinedThrowTiming,
+    _CROSS_CHAPTER_BLEED_SECONDS,
     _MIN_DENSE_FRAMES,
     _RECOVERY_FRAME_COUNT,
     _RECOVERY_POST_RELEASE_SECONDS,
@@ -99,6 +100,7 @@ from app.services.ingestion.throw_localizer_recovery import (  # noqa: F401
     apply_gap_invariant,
     attempt_floor_pin_recovery,
     dense_window_timestamps,
+    is_cross_chapter_bleed,
 )
 
 logger = logging.getLogger(__name__)
@@ -325,6 +327,32 @@ async def localize_throw_with_refinement(
         if coarse.causality_inverted_earlier_index is not None
         else coarse.earlier_demonstration_result_index
     )
+    # ---- Cross-chapter bleed guard --------------------------------------
+    # An "earlier demonstration" the coarse pass located in the opening seconds
+    # of the chapter window is a PRIOR lineup's lingering effect (its smoke
+    # still in the air as this chapter opened), not an earlier repeat of THIS
+    # lineup. Drop the signal so the first-event recovery does not re-centre on
+    # the chapter boundary; normal refinement then localises this chapter's own
+    # throw. See throw_localizer_recovery.is_cross_chapter_bleed (operator audit
+    # 2026-05-30, lineup 7bd971c3 "Market Window" — recovery had pulled release
+    # to 256.23, before the chapter's own stand 260.71 / aim 263.30).
+    if (
+        earlier_index is not None
+        and 1 <= earlier_index <= len(coarse_timestamps)
+        and is_cross_chapter_bleed(
+            coarse_timestamps[earlier_index - 1], chapter_start
+        )
+    ):
+        logger.info(
+            "throw_localizer: cross-chapter bleed — dropping earlier-demo "
+            "signal at t=%.2f (off=%+.2fs from chapter_start %.2f) so recovery "
+            "does not anchor on a prior lineup's lingering effect; chapter=%r",
+            coarse_timestamps[earlier_index - 1],
+            coarse_timestamps[earlier_index - 1] - float(chapter_start),
+            float(chapter_start),
+            chapter_title,
+        )
+        earlier_index = None
     if coarse.success and coarse.is_lineup_throw and earlier_index is not None:
         return apply_gap_invariant(
             await _attempt_first_event_recovery(
