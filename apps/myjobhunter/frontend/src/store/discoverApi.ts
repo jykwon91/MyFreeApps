@@ -70,6 +70,22 @@ const discoverApi = apiWithTags.injectEndpoints({
         }
         return { url: "/discover", method: "GET", params };
       },
+      // Collapse every page of one (state, source_id) view into a SINGLE cache
+      // entry — `limit`/`offset` are excluded from the key. The inbox paginates
+      // by growing `limit` from offset 0 (see DiscoverInboxView), so each fetch
+      // returns the whole loaded window. Sharing one entry means "load more"
+      // swaps the data in place (no empty-list flash), and a poll/refetch
+      // re-reads the entire window — so the #793 scoring poll fills in scores
+      // and re-sorts across the full list, not just the latest page.
+      serializeQueryArgs: ({ queryArgs }) => {
+        const { state = "inbox", source_id } = queryArgs ?? {};
+        return source_id ? { state, source_id } : { state };
+      },
+      // With the key collapsed, a `limit` change alone wouldn't trigger a
+      // request — force one so "load more" actually fetches the larger window.
+      // No `merge` is defined, so the larger response replaces the cache.
+      forceRefetch: ({ currentArg, previousArg }) =>
+        (currentArg?.limit ?? 0) !== (previousArg?.limit ?? 0),
       providesTags: ["DiscoveredJob"],
     }),
     dismissDiscoveredJob: build.mutation<
