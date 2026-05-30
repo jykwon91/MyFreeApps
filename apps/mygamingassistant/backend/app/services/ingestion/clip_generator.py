@@ -49,6 +49,9 @@ from app.services.ingestion.frame_extractor import (
     FrameExtractionError,
     cut_clip,
 )
+from app.services.ingestion.throw_framing import (
+    pre_release_seconds_for_technique,
+)
 from app.services.ingestion.throw_localizer import (
     localize_throw_with_refinement,
 )
@@ -76,6 +79,9 @@ _CLIP_CONFIDENCE_GATE = 0.55
 # Tail unchanged: prior `result_ts + 1.5s` was already replaced (PR #755) with
 # release-anchored 1.0s because result_ts is the "first visible wisp"
 # (1.5-3.0s after release) → bloom belongs in LANDING, not THROW.
+# This is the STANDING default; moving throws (jump/run/walk) widen the PRE
+# pad per-lineup via throw_framing.pre_release_seconds_for_technique() so the
+# windup is in frame without re-showing the AIM pane on standing throws.
 _PRE_RELEASE_SECONDS = 1.0
 _POST_RELEASE_SECONDS = 1.0
 # Below this the chapter-clamped window is unusable → skip.
@@ -146,16 +152,20 @@ def _compute_clip_bounds(
     release_ts: float,
     chapter_start: float,
     chapter_end: float,
+    pre_release_seconds: float = _PRE_RELEASE_SECONDS,
 ) -> Optional[tuple[float, float]]:
     """Return ``(clip_start, clip_duration)`` seconds, or None if too short.
 
-    [release - _PRE_RELEASE_SECONDS, release + _POST_RELEASE_SECONDS] clamped
+    [release - pre_release_seconds, release + _POST_RELEASE_SECONDS] clamped
     to the chapter. The throw pane's job is the throw MOTION; anchoring the
     tail on release_ts (not result_ts, the "first visible wisp") keeps the
-    clip tight on the action. Returns None when the chapter-clamped window
-    is shorter than ``_ABSOLUTE_MIN_CLIP_SECONDS`` so the caller skips.
+    clip tight on the action. ``pre_release_seconds`` is movement-aware — the
+    caller widens it for jump/run/walk throws so the windup is in frame (see
+    ``throw_framing``) — and defaults to the standing ``_PRE_RELEASE_SECONDS``.
+    Returns None when the chapter-clamped window is shorter than
+    ``_ABSOLUTE_MIN_CLIP_SECONDS`` so the caller skips.
     """
-    start = max(release_ts - _PRE_RELEASE_SECONDS, chapter_start)
+    start = max(release_ts - pre_release_seconds, chapter_start)
     end = min(release_ts + _POST_RELEASE_SECONDS, chapter_end)
     duration = end - start
 
@@ -339,8 +349,14 @@ async def generate_clip_for_lineup(
         else:
             result_ts = release_ts
 
+        # Movement-aware framing: widen the pre-release pad for jump/run/walk
+        # throws so the windup is in frame, keyed on the lineup's already-named
+        # technique (PR3 footer). Null / standing / Valorant cast → the
+        # standing default, identical to the pre-feature window (no regression).
+        pre_release_seconds = pre_release_seconds_for_technique(lineup.technique)
         bounds = _compute_clip_bounds(
-            release_ts, float(chapter_start), float(chapter_end)
+            release_ts, float(chapter_start), float(chapter_end),
+            pre_release_seconds,
         )
         if bounds is None:
             return ClipGenerationResult(
@@ -461,9 +477,11 @@ async def generate_clip_for_lineup(
 
         logger.info(
             "clip_generator: clip generated: lineup=%s video_id=%s key=%s "
-            "release_ts=%.2f result_ts=%.2f clip=[%.2f,+%.2fs] confidence=%.2f",
+            "release_ts=%.2f result_ts=%.2f clip=[%.2f,+%.2fs] "
+            "technique=%r pre_release_s=%.2f confidence=%.2f",
             lineup.id, video_id, clip_key, release_ts, result_ts,
-            clip_start, clip_duration, timing.confidence or 0.0,
+            clip_start, clip_duration, lineup.technique, pre_release_seconds,
+            timing.confidence or 0.0,
         )
         return ClipGenerationResult(
             status="generated",
