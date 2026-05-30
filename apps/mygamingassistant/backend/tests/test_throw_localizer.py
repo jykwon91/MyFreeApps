@@ -742,6 +742,158 @@ class TestCausalityRecovery:
 
 
 # ---------------------------------------------------------------------------
+# Multi-demonstration first-event recovery (general signal, no inversion)
+#
+# The causality-inversion signal only fires when the model happens to pair a
+# late demo's release with an early demo's result. On lineup 69704f4a "Market
+# Door" the throw-clip coarse pass instead localised the 2nd demo's release at
+# HIGH confidence with a CONSISTENT later result — no inversion — so nothing
+# pulled it back to the 1st throw while STAND/AIM/LANDING sat there (operator
+# audit 2026-05-30). The classifier now reports earlier_demonstration_result_index
+# on that case and the orchestrator fires the SAME first-event recovery on it.
+# ---------------------------------------------------------------------------
+
+
+def _multidemo_coarse(**overrides) -> ThrowTimingResult:
+    """Coarse result with the GENERAL multi-demonstration signal (no inversion).
+
+    Mirrors the real Market Door throw-clip coarse pass: a CONFIDENT (0.85)
+    release on a LATER demo with a consistent later result (result_index >
+    release_index → NO inversion), plus earlier_demonstration_result_index=3
+    flagging the 1st demo's result (→ _COARSE_TIMESTAMPS[2] = 14.0). The high
+    confidence is the crux — without the signal this REFINES the wrong late
+    release rather than recovering. release→result gap stays 2s (under the gap
+    invariant) so fallback-identity asserts aren't tripped by result nulling.
+    """
+    base = dict(
+        success=True,
+        is_lineup_throw=True,
+        release_index=7,
+        result_index=8,
+        earlier_demonstration_result_index=3,
+        confidence=0.85,
+        reasoning="2nd-demo release; 1st-demo result at F3",
+    )
+    base.update(overrides)
+    return ThrowTimingResult(**base)
+
+
+class TestMultiDemoFirstEventRecovery:
+    @pytest.mark.asyncio
+    async def test_multidemo_signal_recovers_first_event(self):
+        """earlier_demonstration_result_index set (no inversion) → first-event
+        recovery fires and uses the recovery window's timestamps."""
+        coarse = _multidemo_coarse()
+        recovered = _coarse(release_index=2, result_index=5, confidence=0.85)
+        patches, extract_mock, classifier_mock = _patch_chain(
+            coarse_classifier=coarse, dense_classifier=recovered
+        )
+        with patches[0], patches[1], patches[2], patches[3]:
+            result = await localize_throw_with_refinement(
+                _FAKE_VIDEO,
+                chapter_start=0.0,
+                chapter_end=60.0,
+                chapter_title="multi-demo smoke (no inversion)",
+            )
+        assert result.stage == STAGE_RECOVERED_FIRST_EVENT
+        assert result.timing is recovered
+        assert result.frame_timestamps == _DENSE_TIMESTAMPS
+        assert result.coarse_timing is coarse
+        # recovery release_index=2 → _DENSE_TIMESTAMPS[1] = 14.5
+        assert result.frame_timestamps[result.timing.release_index - 1] == 14.5
+        assert extract_mock.await_count == 2
+        assert classifier_mock.await_count == 2
+
+    @pytest.mark.asyncio
+    async def test_recovery_fires_ahead_of_refine_at_high_confidence(self):
+        """THE Market Door bug encoded: coarse confidence 0.85 clears the 0.55
+        refine gate, so WITHOUT the multi-demo signal this refines the wrong
+        (late) release. The signal must make first-event recovery take
+        precedence over the dense-refine pass."""
+        coarse = _multidemo_coarse(confidence=0.85)
+        recovered = _coarse(release_index=3, result_index=6, confidence=0.9)
+        patches, _, _ = _patch_chain(
+            coarse_classifier=coarse, dense_classifier=recovered
+        )
+        with patches[0], patches[1], patches[2], patches[3]:
+            result = await localize_throw_with_refinement(
+                _FAKE_VIDEO,
+                chapter_start=0.0,
+                chapter_end=60.0,
+                chapter_title="x",
+            )
+        assert result.stage == STAGE_RECOVERED_FIRST_EVENT
+        assert result.stage != STAGE_REFINED
+
+    @pytest.mark.asyncio
+    async def test_inversion_index_takes_precedence_when_both_set(self):
+        """Both signals present → the inversion index (3 → ts 14.0) drives the
+        recovery window, NOT the multi-demo index (5 → ts 18.0)."""
+        coarse = _multidemo_coarse(
+            causality_inverted_earlier_index=3,
+            result_index=7,
+            earlier_demonstration_result_index=5,
+        )
+        recovered = _coarse(release_index=2, result_index=4, confidence=0.85)
+        recovery_window_centers: list[float] = []
+
+        def _dense_window(*args, **kwargs):
+            recovery_window_centers.append(args[0] if args else None)
+            return list(_DENSE_TIMESTAMPS)
+
+        extract_mock = AsyncMock(
+            side_effect=[
+                [_FAKE_PNG] * len(_COARSE_TIMESTAMPS),
+                [_FAKE_PNG] * len(_DENSE_TIMESTAMPS),
+            ]
+        )
+        classifier_mock = AsyncMock(side_effect=[coarse, recovered])
+        with (
+            patch(f"{_MOD}.extract_frames_downscaled", extract_mock),
+            patch(f"{_MOD}.classify_throw_timing_from_frames", classifier_mock),
+            patch(
+                f"{_MOD}.clip_window_timestamps",
+                lambda *a, **k: list(_COARSE_TIMESTAMPS),
+            ),
+            patch(f"{_MOD}.dense_window_timestamps", _dense_window),
+        ):
+            result = await localize_throw_with_refinement(
+                _FAKE_VIDEO,
+                chapter_start=0.0,
+                chapter_end=60.0,
+                chapter_title="x",
+            )
+        assert result.stage == STAGE_RECOVERED_FIRST_EVENT
+        # earlier_index resolved to the inversion's 3 → _COARSE_TIMESTAMPS[2].
+        assert recovery_window_centers and recovery_window_centers[0] == 14.0
+
+    @pytest.mark.asyncio
+    async def test_recovery_still_multidemo_falls_back_to_coarse(self):
+        """A recovery pass that STILL reports an earlier demonstration means the
+        window spans more than one demo — reject and fall back to coarse."""
+        coarse = _multidemo_coarse()
+        recovered = _coarse(
+            release_index=6, result_index=7,
+            earlier_demonstration_result_index=2, confidence=0.6,
+        )
+        patches, extract_mock, classifier_mock = _patch_chain(
+            coarse_classifier=coarse, dense_classifier=recovered
+        )
+        with patches[0], patches[1], patches[2], patches[3]:
+            result = await localize_throw_with_refinement(
+                _FAKE_VIDEO,
+                chapter_start=0.0,
+                chapter_end=60.0,
+                chapter_title="x",
+            )
+        assert result.stage == STAGE_RECOVERY_REJECTED
+        assert result.timing is coarse
+        assert result.frame_timestamps == _COARSE_TIMESTAMPS
+        assert extract_mock.await_count == 2
+        assert classifier_mock.await_count == 2
+
+
+# ---------------------------------------------------------------------------
 # Gap invariant — cross-demonstration / hallucinated result nulling
 #
 # A result more than 4.5s after its release cannot be that release's own result

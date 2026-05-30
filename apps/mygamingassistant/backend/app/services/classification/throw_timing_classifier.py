@@ -51,6 +51,7 @@ keys:
   "is_lineup_throw": boolean,
   "release_index": integer (1-{n}) or null,
   "result_index": integer (1-{n}) or null,
+  "earlier_demonstration_result_index": integer (1-{n}) or null,
   "confidence": number (0.0-1.0),
   "reasoning": string (<= 80 words)
 }}
@@ -215,6 +216,15 @@ Rules:
     a different position, or the chapter cuts away before it deploys.
     Downstream skips only the landing pane — far better than a misplaced or
     cross-demonstration one.
+- earlier_demonstration_result_index: the 1-based frame where an EARLIER
+  demonstration's RESULT (smoke wisp / flame / flash / debris) is first
+  visible, when this chapter demonstrates the SAME lineup MORE THAN ONCE and
+  that earlier demonstration occurs BEFORE your chosen release_index. It MUST
+  be < release_index. Set it as a SAFETY SIGNAL even when you believe your
+  release pick is right — it lets the pipeline re-center on the first
+  demonstration (see FIRST OF REPEATED DEMONSTRATIONS under Discipline). null
+  when there is only ONE demonstration, or when your release_index is already
+  the earliest demonstration, or when no earlier result is visible in the set.
 - confidence: 0-1 in your RELEASE localization specifically — NOT a joint
   release+result score. A clearly-visible release on a candidate-eligible
   frame is HIGH confidence (>= 0.8) EVEN WHEN result_index is null: a missing
@@ -234,6 +244,18 @@ Rules:
     aligned throw. Prefer the aligned-at-a-landmark release over any earlier
     casual toss, and NEVER pair one demonstration's release with another
     demonstration's result (see the SAME-THROW RULE under result_index).
+  - FIRST OF REPEATED DEMONSTRATIONS (operator audit 2026-05-30, lineup
+    69704f4a "Market Door"): when the same lineup is shown as TWO OR MORE
+    genuine aligned demonstrations (a repeat for emphasis — often a cleaner or
+    closer second take), release_index MUST be the EARLIEST such full
+    demonstration, NOT the cleaner later repeat. STAND and AIM anchor on the
+    first demonstration; if the throw picks a later repeat the storyboard
+    splits across two takes. This is DISTINCT from the casual-toss rule above:
+    a casual non-aligned warm-up is excluded entirely, but between two GENUINE
+    aligned demonstrations the FIRST wins. Concretely: if — after picking
+    release_index — you can still see an earlier genuine aligned throw of this
+    same lineup in the frames before it, you picked the wrong take; move
+    release_index back to that earlier throw.
   - TITLE-CARD ANCHOR: tutorial chapters usually place a section banner /
     title card ("SMOKE #N", "B SITE - CATWALK", "LINEUP 3") immediately
     BEFORE the demonstration it labels. If a title card appears partway
@@ -478,6 +500,20 @@ async def classify_throw_timing_from_frames(
     result_index = validate_grid_index(
         parsed.get("result_index"), "result_index", n, failures
     )
+    earlier_demonstration_result_index = validate_grid_index(
+        parsed.get("earlier_demonstration_result_index"),
+        "earlier_demonstration_result_index", n, failures,
+    )
+    # Only a genuine multi-demonstration signal when it points EARLIER than the
+    # release the model picked: it means "an earlier demonstration's result
+    # precedes your release", i.e. the release likely landed on a later repeat.
+    # A value >= release_index (or with release_index missing) is not an
+    # earlier-demo signal — drop it so the localizer never re-centres spuriously.
+    if earlier_demonstration_result_index is not None and (
+        release_index is None
+        or earlier_demonstration_result_index >= release_index
+    ):
+        earlier_demonstration_result_index = None
 
     # Frozen-contract parser enforcement: a result cannot precede its own
     # release. If the model returned both but inverted, force result to the
@@ -512,8 +548,9 @@ async def classify_throw_timing_from_frames(
 
     logger.info(
         "throw_timing: is_lineup_throw=True chapter=%r n=%d release_idx=%s "
-        "result_idx=%s confidence=%.2f",
-        chapter_title, n, release_index, result_index, confidence or 0.0,
+        "result_idx=%s earlier_demo_idx=%s confidence=%.2f",
+        chapter_title, n, release_index, result_index,
+        earlier_demonstration_result_index, confidence or 0.0,
     )
 
     return ThrowTimingResult(
@@ -522,6 +559,7 @@ async def classify_throw_timing_from_frames(
         release_index=release_index,
         result_index=result_index,
         causality_inverted_earlier_index=causality_inverted_earlier_index,
+        earlier_demonstration_result_index=earlier_demonstration_result_index,
         confidence=confidence,
         reasoning=reasoning,
         error_codes=list(structured_codes),

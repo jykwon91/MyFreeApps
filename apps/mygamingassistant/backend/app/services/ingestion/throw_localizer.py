@@ -109,20 +109,23 @@ async def _attempt_first_event_recovery(
     coarse: ThrowTimingResult,
     coarse_timestamps: list[float],
     *,
+    earlier_index: int,
     chapter_start: float,
     chapter_end: float,
     chapter_title: Optional[str],
     utility_hint: Optional[str],
 ) -> RefinedThrowTiming:
-    """Re-localise around the FIRST event after a causality-inverted coarse pass.
+    """Re-localise around the FIRST event of a multi-demonstration chapter.
 
-    Precondition (checked by the caller): ``coarse`` is a successful,
-    throw-positive result whose ``causality_inverted_earlier_index`` is set —
-    the model paired a late demonstration's release with an earlier
-    demonstration's result. The earlier index points at the FIRST demo's
-    RESULT, so the true release precedes it; we sample a backward-weighted dense
-    window around that event and re-run the throw-timing classifier on the (now
-    single-throw) window.
+    Precondition (resolved by the caller): ``coarse`` is a successful,
+    throw-positive result for which an EARLIER demonstration's event was
+    flagged — either by a causality inversion (``result_index <
+    release_index`` → ``causality_inverted_earlier_index``) or by the general
+    multi-demonstration signal (``earlier_demonstration_result_index``). Both
+    point at an earlier demonstration's RESULT, so the true first release
+    precedes it; the caller passes that 1-based index as ``earlier_index``. We
+    sample a backward-weighted dense window around that event and re-run the
+    throw-timing classifier on the (now single-throw) window.
 
     Always returns a RefinedThrowTiming so the caller can return it directly:
       * ``STAGE_RECOVERED_FIRST_EVENT`` — clean, non-re-inverted, throw-positive
@@ -132,10 +135,9 @@ async def _attempt_first_event_recovery(
         is the coarse result and ``frame_timestamps`` is the coarse window.
         Same "never regress" contract as the dense pass.
     """
-    earlier_index = coarse.causality_inverted_earlier_index
-    if earlier_index is None or not (1 <= earlier_index <= len(coarse_timestamps)):
-        # Defensive: caller gates on `is not None`, but a stale/out-of-range
-        # index must not index-error — fall back to coarse.
+    if not (1 <= earlier_index <= len(coarse_timestamps)):
+        # Defensive: the caller resolved this from a model-reported index, but
+        # a stale/out-of-range value must not index-error — fall back to coarse.
         return RefinedThrowTiming(
             timing=coarse,
             frame_timestamps=coarse_timestamps,
@@ -209,18 +211,20 @@ async def _attempt_first_event_recovery(
         or not recovered.is_lineup_throw
         or recovered.release_index is None
         or recovered.causality_inverted_earlier_index is not None
+        or recovered.earlier_demonstration_result_index is not None
     ):
         logger.info(
             "throw_localizer: stage=%s earlier_event_ts=%.2f "
             "recovered_success=%s recovered_is_lineup_throw=%s "
-            "recovered_release_index=%s recovered_reinverted=%s; "
-            "returning coarse: chapter=%r",
+            "recovered_release_index=%s recovered_reinverted=%s "
+            "recovered_still_multidemo=%s; returning coarse: chapter=%r",
             STAGE_RECOVERY_REJECTED,
             earlier_event_ts,
             recovered.success,
             recovered.is_lineup_throw,
             recovered.release_index,
             recovered.causality_inverted_earlier_index is not None,
+            recovered.earlier_demonstration_result_index is not None,
             chapter_title,
         )
         return RefinedThrowTiming(
@@ -302,21 +306,32 @@ async def localize_throw_with_refinement(
         utility_hint=utility_hint,
     )
 
-    # ---- Causality recovery (multi-demonstration chapters) --------------
-    # An inverted coarse pass means the model paired a late demo's release with
-    # an early demo's result. The recovery path OWNS the outcome and never falls
-    # through to the normal refine path (which would centre on the WRONG
-    # late-demo release).
-    if (
-        coarse.success
-        and coarse.is_lineup_throw
-        and coarse.causality_inverted_earlier_index is not None
-    ):
+    # ---- First-event recovery (multi-demonstration chapters) ------------
+    # The coarse pass localised a LATER demonstration's release when an EARLIER
+    # one exists. Two signals flag this, and either fires the same recovery:
+    #   * causality inversion — the model paired a late demo's release with an
+    #     early demo's result (result_index < release_index).
+    #   * multi-demonstration report — earlier_demonstration_result_index, set
+    #     even WITHOUT an inversion (lineup 69704f4a "Market Door": the 2nd
+    #     demo's release was confidently localised at ~317 with a consistent
+    #     later result, so no inversion fired, while the real 1st throw sat at
+    #     ~298 — STAND/AIM/LANDING anchored there but the throw clip didn't).
+    # Re-localise around the earlier event. This path OWNS the outcome and never
+    # falls through to the refine pass (which would centre on the WRONG late
+    # release). Prefer the inversion index when both are set — it is the
+    # tighter, already-shipped signal.
+    earlier_index = (
+        coarse.causality_inverted_earlier_index
+        if coarse.causality_inverted_earlier_index is not None
+        else coarse.earlier_demonstration_result_index
+    )
+    if coarse.success and coarse.is_lineup_throw and earlier_index is not None:
         return apply_gap_invariant(
             await _attempt_first_event_recovery(
                 video_path,
                 coarse,
                 coarse_timestamps,
+                earlier_index=earlier_index,
                 chapter_start=chapter_start,
                 chapter_end=chapter_end,
                 chapter_title=chapter_title,
