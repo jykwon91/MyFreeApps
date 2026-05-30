@@ -104,6 +104,29 @@ _FLOOR_PIN_PRE_SECONDS = 8.0
 _FLOOR_PIN_POST_SECONDS = 1.0
 _FLOOR_PIN_FRAME_COUNT = 14
 
+# ---- Cross-chapter bleed guard (first-event recovery) --------------------
+# A previous lineup's utility effect routinely lingers into the OPENING frames
+# of the NEXT chapter's window — a CS2 smoke hangs ~15s, so a lineup thrown
+# near a prior chapter's end is still blooming as this chapter starts. The
+# coarse pass then reports that lingering effect as an "earlier demonstration
+# result" and the first-event recovery anchors on it, pulling release onto the
+# chapter boundary BEFORE this chapter's own stand / aim. Operator audit
+# 2026-05-30, lineup 7bd971c3 "Market Window": coarse correctly localised the
+# real throw at Frame 6 yet flagged Frame 1's bloom — which it itself placed at
+# CATWALK, the PRIOR lineup's landmark — as earlier_demo_idx=1 at t=256.50,
+# only +0.50s into a chapter starting at 256.0; recovery then re-centred there
+# and picked release 256.23, before stand 260.71 / aim 263.30 — incoherent.
+#
+# Physical invariant: the RESULT of a demonstration that began WITHIN this
+# chapter cannot appear in the first few seconds of the chapter — that
+# demonstration's own stand → aim → release must precede it, plus the ~1.5-3.0s
+# bloom delay. An "earlier result" closer than this to chapter_start is
+# therefore a prior lineup's lingering effect, not an in-chapter earlier
+# demonstration, and the first-event recovery must NOT anchor on it. The
+# genuine multi-demo case clears the zone with huge margin: lineup 69704f4a
+# "Market Door"'s real earlier-demonstration result sits at +14.02s.
+_CROSS_CHAPTER_BLEED_SECONDS = 3.0
+
 # Diagnostic stage labels — surfaced on RefinedThrowTiming.stage for
 # logging / metrics. Keep stable for log-grepping.
 STAGE_REFINED = "refined"
@@ -199,6 +222,22 @@ def _should_refine(coarse: ThrowTimingResult) -> Optional[str]:
     if coarse.confidence is None or coarse.confidence < _REFINE_CONFIDENCE_GATE:
         return STAGE_COARSE_BELOW_GATE
     return None
+
+
+def is_cross_chapter_bleed(earlier_event_ts: float, chapter_start: float) -> bool:
+    """True when an earlier-demonstration event is prior-lineup bleed.
+
+    See the ``_CROSS_CHAPTER_BLEED_SECONDS`` block: an earlier-demonstration
+    RESULT within the first few seconds of ``chapter_start`` cannot belong to a
+    demonstration that began inside this chapter (no room for its own
+    stand → aim → release + the ~1.5-3.0s bloom delay before it), so it is a
+    previous lineup's lingering effect. The orchestrator drops the signal so
+    the first-event recovery does not re-centre on the chapter boundary.
+    """
+    return (
+        float(earlier_event_ts) - float(chapter_start)
+        < _CROSS_CHAPTER_BLEED_SECONDS
+    )
 
 
 def apply_gap_invariant(refined: RefinedThrowTiming) -> RefinedThrowTiming:
