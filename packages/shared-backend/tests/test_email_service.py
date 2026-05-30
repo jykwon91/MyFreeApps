@@ -314,3 +314,56 @@ class TestAttachments:
 
         assert ok is True
         assert "lease" in captured[0] or "x.pdf" in captured[0]
+
+
+class TestReplyTo:
+    """``reply_to`` sets the Reply-To header when passed, absent otherwise.
+
+    Use case: a host emailing a guest welcome guide wants guest replies to land
+    in the host's own inbox rather than the system SMTP account.
+    """
+
+    def _capture_raw(self, reply_to: str | None) -> str:
+        service = _configured_service()
+        mock_server = MagicMock()
+        captured: list[str] = []
+        mock_server.sendmail.side_effect = (
+            lambda from_addr, to, raw: captured.append(raw)
+        )
+
+        with patch("smtplib.SMTP") as mock_smtp_cls:
+            mock_smtp_cls.return_value.__enter__ = lambda s: mock_server
+            mock_smtp_cls.return_value.__exit__ = MagicMock(return_value=False)
+            service.send_or_raise(
+                ["guest@example.com"], "subj", "<p>body</p>", reply_to=reply_to,
+            )
+
+        assert len(captured) == 1
+        return captured[0]
+
+    def test_reply_to_header_present_when_passed(self) -> None:
+        raw = self._capture_raw("host@example.com")
+        assert "Reply-To: host@example.com" in raw
+
+    def test_reply_to_header_absent_when_not_passed(self) -> None:
+        raw = self._capture_raw(None)
+        assert "Reply-To:" not in raw
+
+    def test_send_best_effort_threads_reply_to(self) -> None:
+        service = _configured_service()
+        mock_server = MagicMock()
+        captured: list[str] = []
+        mock_server.sendmail.side_effect = (
+            lambda from_addr, to, raw: captured.append(raw)
+        )
+
+        with patch("smtplib.SMTP") as mock_smtp_cls:
+            mock_smtp_cls.return_value.__enter__ = lambda s: mock_server
+            mock_smtp_cls.return_value.__exit__ = MagicMock(return_value=False)
+            ok = service.send(
+                ["guest@example.com"], "subj", "<p>body</p>",
+                reply_to="host@example.com",
+            )
+
+        assert ok is True
+        assert "Reply-To: host@example.com" in captured[0]

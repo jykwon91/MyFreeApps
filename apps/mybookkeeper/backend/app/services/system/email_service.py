@@ -64,16 +64,23 @@ def send_email(
     body_html: str,
     *,
     attachments: Sequence[EmailAttachment] | None = None,
+    reply_to: str | None = None,
 ) -> bool:
     """Best-effort send. Returns True on success, False on failure.
 
     Use for non-critical emails (cost alerts, demos, inquiry
     notifications). Critical-path callers (verification, password
     reset, organization invites) MUST use ``send_email_or_raise``.
+
+    ``reply_to`` (optional) sets the ``Reply-To`` header — e.g. a host
+    emailing a guest welcome guide wants guest replies to reach the
+    host's own inbox rather than the system SMTP account.
     """
     if not to:
         return False
-    return _get_email_service().send(to, subject, body_html, attachments=attachments)
+    return _get_email_service().send(
+        to, subject, body_html, attachments=attachments, reply_to=reply_to,
+    )
 
 
 def send_email_or_raise(
@@ -82,8 +89,12 @@ def send_email_or_raise(
     body_html: str,
     *,
     attachments: Sequence[EmailAttachment] | None = None,
+    reply_to: str | None = None,
 ) -> None:
     """Fail-loud send. Raises on any failure.
+
+    ``reply_to`` (optional) sets the ``Reply-To`` header — see
+    ``send_email`` for the use case.
 
     Raises:
         ValueError: If ``to`` is empty.
@@ -92,7 +103,7 @@ def send_email_or_raise(
             rejected).
     """
     _get_email_service().send_or_raise(
-        to, subject, body_html, attachments=attachments,
+        to, subject, body_html, attachments=attachments, reply_to=reply_to,
     )
 
 

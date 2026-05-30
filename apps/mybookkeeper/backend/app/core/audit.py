@@ -54,6 +54,11 @@ MBK_SENSITIVE_FIELDS: frozenset[str] = frozenset({
     # intentionally plaintext) or other unrelated columns.
     "contact_email",
     "contact_phone",
+    # Welcome-manual send-log PII (PR 3) — free-typed guest recipient,
+    # encrypted at rest via EncryptedString. Field names are specific
+    # (``recipient_*``) so the audit listener doesn't mask unrelated columns.
+    "recipient_email",
+    "recipient_name",
     # Insurance domain PII — policy numbers are PII-adjacent (can identify
     # individuals with insurers), encrypted at rest via EncryptedString.
     "policy_number",

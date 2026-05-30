@@ -109,6 +109,7 @@ class EmailService:
         body_html: str,
         *,
         attachments: Sequence[EmailAttachment] | None = None,
+        reply_to: str | None = None,
     ) -> None:
         """Send the email, raising on any failure.
 
@@ -116,6 +117,11 @@ class EmailService:
         organization invites. Caller is expected to either propagate
         the exception (so the HTTP request fails 5xx and the user
         retries) or handle it explicitly.
+
+        ``reply_to`` (optional) sets the ``Reply-To`` header so replies
+        route to a different address than the sending mailbox — e.g. a
+        host sending a guest welcome guide wants the guest's reply to
+        land in the host's own inbox, not the system SMTP account.
 
         Raises:
             ValueError: If ``to`` is empty.
@@ -150,6 +156,8 @@ class EmailService:
         msg["From"] = f"{self.from_name} <{self.smtp_user}>"
         msg["To"] = ", ".join(to)
         msg["Subject"] = subject
+        if reply_to:
+            msg["Reply-To"] = reply_to
 
         try:
             with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
@@ -170,6 +178,7 @@ class EmailService:
         body_html: str,
         *,
         attachments: Sequence[EmailAttachment] | None = None,
+        reply_to: str | None = None,
     ) -> bool:
         """Best-effort send. Returns True on success, False on failure.
 
@@ -178,9 +187,15 @@ class EmailService:
         callers MUST use send_or_raise() instead — silently swallowing
         a failed verification email leaves the user in a broken state
         with no recovery path.
+
+        ``reply_to`` (optional) is threaded to ``send_or_raise`` to set
+        the ``Reply-To`` header — see that method's docstring.
         """
         try:
-            self.send_or_raise(to, subject, body_html, attachments=attachments)
+            self.send_or_raise(
+                to, subject, body_html,
+                attachments=attachments, reply_to=reply_to,
+            )
             return True
         except (ValueError, EmailNotConfiguredError, EmailSendError):
             logger.warning(
