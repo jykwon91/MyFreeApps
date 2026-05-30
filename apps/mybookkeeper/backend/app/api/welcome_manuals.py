@@ -13,8 +13,14 @@ from app.schemas.welcome_manuals.welcome_manual_section_image_update_request imp
 from app.schemas.welcome_manuals.welcome_manual_create_request import (
     WelcomeManualCreateRequest,
 )
+from app.schemas.welcome_manuals.welcome_manual_email_request import (
+    WelcomeManualEmailRequest,
+)
 from app.schemas.welcome_manuals.welcome_manual_list_response import (
     WelcomeManualListResponse,
+)
+from app.schemas.welcome_manuals.welcome_manual_send_response import (
+    WelcomeManualSendResponse,
 )
 from app.schemas.welcome_manuals.welcome_manual_response import WelcomeManualResponse
 from app.schemas.welcome_manuals.welcome_manual_section_create_request import (
@@ -33,6 +39,7 @@ from app.schemas.welcome_manuals.welcome_manual_update_request import (
     WelcomeManualUpdateRequest,
 )
 from app.services.welcome_manuals import (
+    welcome_manual_email_service,
     welcome_manual_section_image_service,
     welcome_manual_section_service,
     welcome_manual_service,
@@ -109,6 +116,31 @@ async def delete_welcome_manual(
     except LookupError as exc:
         raise HTTPException(status_code=404, detail="Welcome manual not found") from exc
     return Response(status_code=204)
+
+
+@router.post("/{manual_id}/email", response_model=WelcomeManualSendResponse)
+async def email_welcome_manual(
+    manual_id: uuid.UUID,
+    payload: WelcomeManualEmailRequest,
+    ctx: RequestContext = Depends(require_write_access),
+) -> WelcomeManualSendResponse:
+    """Render the manual to a PDF and email it to a free-typed guest.
+
+    Returns the recorded send (HTTP 200) including when the outcome is
+    ``failed``/``skipped`` — the body's ``status`` field communicates the
+    result so the frontend shows a clear message rather than a network error.
+    An SMTP failure is NOT surfaced as a 5xx.
+    """
+    try:
+        return await welcome_manual_email_service.send_manual_to_guest(
+            organization_id=ctx.organization_id,
+            user_id=ctx.user_id,
+            manual_id=manual_id,
+            recipient_email=str(payload.recipient_email),
+            recipient_name=payload.recipient_name,
+        )
+    except welcome_manual_email_service.ManualNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Welcome manual not found") from exc
 
 
 # ---------------------------------------------------------------------------

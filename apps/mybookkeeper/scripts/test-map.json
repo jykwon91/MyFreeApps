@@ -599,6 +599,28 @@
         "insurance-policies.spec.ts"
       ]
     },
+    "welcome_manuals": {
+      "source_paths": [
+        "backend/app/models/welcome_manuals/",
+        "backend/app/repositories/welcome_manuals/",
+        "backend/app/services/welcome_manuals/",
+        "backend/app/schemas/welcome_manuals/",
+        "backend/app/api/welcome_manuals.py",
+        "backend/app/core/welcome_manual_constants.py",
+        "backend/alembic/versions/wmanual260530_add_welcome_manuals_domain.py",
+        "backend/alembic/versions/wmanualimg260530_add_welcome_manual_section_images.py",
+        "backend/alembic/versions/wmanualsend260530_add_welcome_manual_sends.py"
+      ],
+      "backend_tests": [
+        "test_welcome_manual_image_routes.py",
+        "test_welcome_manual_pdf_service.py",
+        "test_welcome_manual_send_repo.py",
+        "test_welcome_manual_email_routes.py",
+        "test_welcome_manual_send_audit_masking.py"
+      ],
+      "frontend_tests": [],
+      "e2e_specs": []
+    },
     "leases": {
       "source_paths": [
         "backend/app/models/leases/",
