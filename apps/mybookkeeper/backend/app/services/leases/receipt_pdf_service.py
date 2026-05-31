@@ -64,6 +64,10 @@ def _format_payment_method(method: str | None) -> str:
         "check": "Check",
         "credit_card": "Credit card",
         "bank_transfer": "Bank transfer",
+        "zelle": "Zelle",
+        "venmo": "Venmo",
+        "cash_app": "Cash App",
+        "paypal": "PayPal",
         "cash": "Cash",
         "platform_payout": "Platform payout",
         "other": "Other",
@@ -130,9 +134,14 @@ def generate_receipt_pdf(data: ReceiptData) -> bytes:
         c.setFont("Helvetica-Bold", 9)
         c.setFillColor(colors.HexColor("#64748b"))
         c.drawString(col_left, y, label)
+        # Place the value just past the label, not at a fixed 1.0in column —
+        # a long label like "Payment method:" is wider than 1.0in and would
+        # otherwise be overdrawn by the value (rendered "Payment methodValue").
+        label_width = c.stringWidth(label, "Helvetica-Bold", 9)
+        value_x = col_left + max(1.0 * inch, label_width + 0.12 * inch)
         c.setFont("Helvetica", 9)
         c.setFillColor(colors.HexColor("#0f172a"))
-        c.drawString(col_left + 1.0 * inch, y, value)
+        c.drawString(value_x, y, value)
         y -= 0.18 * inch
 
     label_value("Property:", data.property_address)

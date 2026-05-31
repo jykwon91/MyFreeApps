@@ -13,8 +13,15 @@ export function inferPaymentMethod(transaction: Transaction): string {
   const vendor = (transaction.vendor ?? "").toLowerCase();
   if (!vendor) return "";
 
+  // Specific P2P rails first — these are the host-visible value on the receipt
+  // ("Zelle", not the generic "Bank transfer"). "cash app" must be matched
+  // before the generic "cash" fallback below.
+  if (vendor.includes("zelle")) return "zelle";
+  if (vendor.includes("venmo")) return "venmo";
+  if (vendor.includes("cash app") || vendor.includes("cashapp")) return "cash_app";
+  if (vendor.includes("paypal")) return "paypal";
+
   if (
-    vendor.includes("zelle") ||
     vendor.includes("ach") ||
     vendor.includes("bank transfer") ||
     vendor.includes("wire") ||
@@ -23,16 +30,15 @@ export function inferPaymentMethod(transaction: Transaction): string {
     return "bank_transfer";
   }
   if (
-    vendor.includes("venmo") ||
-    vendor.includes("cash app") ||
-    vendor.includes("cashapp") ||
-    vendor.includes("paypal") ||
     vendor.includes("apple pay") ||
-    vendor.includes("google pay")
+    vendor.includes("google pay") ||
+    vendor.includes("airbnb") ||
+    vendor.includes("vrbo") ||
+    // "booking" (not "booking.com") — this is a vendor-name substring match,
+    // not URL sanitization; the dotted host form trips CodeQL's
+    // js/incomplete-url-substring-sanitization false positive.
+    vendor.includes("booking")
   ) {
-    return "platform_payout";
-  }
-  if (vendor.includes("airbnb") || vendor.includes("vrbo") || vendor.includes("booking.com")) {
     return "platform_payout";
   }
   if (vendor.includes("check")) return "check";
