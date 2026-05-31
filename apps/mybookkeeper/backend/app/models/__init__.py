@@ -48,6 +48,7 @@ from app.models.extraction.extraction_types import ExtractionData, ExtractionRes
 from app.models.extraction.extraction import Extraction
 from app.models.transactions.transaction import Transaction
 from app.models.transactions.rent_attribution_review_queue import RentAttributionReviewQueue
+from app.models.transactions.payer_alias import PayerAlias
 from app.models.transactions.booking_statement import BookingStatement
 from app.models.transactions.reconciliation_source import ReconciliationSource
 from app.models.transactions.reconciliation_match import ReconciliationMatch

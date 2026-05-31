@@ -14,7 +14,7 @@ export interface Transaction {
   vendor_id: string | null;
   // Tenant attribution
   applicant_id: string | null;
-  attribution_source: "auto_exact" | "auto_fuzzy_confirmed" | "manual" | null;
+  attribution_source: "auto_exact" | "auto_fuzzy_confirmed" | "auto_alias" | "manual" | null;
   payer_name: string | null;
   transaction_date: string;
   tax_year: number;

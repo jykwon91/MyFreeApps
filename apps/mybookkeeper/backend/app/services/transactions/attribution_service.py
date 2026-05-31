@@ -13,7 +13,6 @@ the operator resolves them via the property-confirm path.
 """
 import logging
 import uuid
-from collections.abc import Sequence
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -21,6 +20,7 @@ from app.db.session import AsyncSessionLocal, unit_of_work
 from app.models.applicants.applicant import Applicant
 from app.models.transactions.transaction import Transaction
 from app.repositories import attribution_repo
+from app.repositories import payer_alias_repo
 from app.repositories import booking_statement_repo
 from app.repositories.applicants import applicant_repo
 from app.repositories.leases import signed_lease_repo
@@ -32,91 +32,9 @@ from app.services.transactions.airbnb_payout_matcher import (
     decide_airbnb_attribution,
     parse_res_code,
 )
+from app.services.transactions.attribution_matcher import find_best_match
 
 logger = logging.getLogger(__name__)
-
-
-# ---------------------------------------------------------------------------
-# Pure helpers (no DB I/O — unit-testable without async fixtures)
-# ---------------------------------------------------------------------------
-
-def _levenshtein(a: str, b: str) -> int:
-    """Compute the Levenshtein edit distance between two strings."""
-    if a == b:
-        return 0
-    if not a:
-        return len(b)
-    if not b:
-        return len(a)
-    prev = list(range(len(b) + 1))
-    for i, ca in enumerate(a, start=1):
-        curr = [i]
-        for j, cb in enumerate(b, start=1):
-            cost = 0 if ca == cb else 1
-            curr.append(min(curr[j - 1] + 1, prev[j] + 1, prev[j - 1] + cost))
-        prev = curr
-    return prev[-1]
-
-
-def find_best_match(
-    payer_name: str,
-    candidates: Sequence[Applicant],
-) -> tuple[Applicant | None, str | None]:
-    """Return (best_applicant, confidence) for ``payer_name``.
-
-    Confidence values:
-      - ``"auto_exact"``  — exactly ONE case-insensitive exact match
-      - ``"fuzzy"``       — exactly ONE best Levenshtein ≤ 2 match, no exact
-      - ``"ambiguous"``   — two or more candidates tie at the best score
-        (multiple exact matches, or multiple fuzzy matches at the same
-        smallest distance ≤ 2). Returns ``(None, "ambiguous")`` so the caller
-        queues the payment for manual review instead of silently
-        auto-attributing to whichever same-named tenant happened to sort
-        first — a wrong-attribution hazard when two ``lease_signed`` tenants
-        share a name.
-      - ``None``          — no acceptable match found (returns (None, None))
-    """
-    if not payer_name:
-        return None, None
-
-    lower = payer_name.lower().strip()
-
-    # Pass 1 — exact (case-insensitive). A single exact match auto-confirms;
-    # two or more tenants sharing the name are ambiguous — do NOT guess.
-    exact = [
-        a
-        for a in candidates
-        if a.legal_name and a.legal_name.lower().strip() == lower
-    ]
-    if len(exact) == 1:
-        return exact[0], "auto_exact"
-    if len(exact) > 1:
-        return None, "ambiguous"
-
-    # Pass 2 — fuzzy (Levenshtein ≤ 2). Track every candidate tied at the
-    # current smallest distance; a single closest candidate is a fuzzy
-    # proposal, a tie at the best distance is ambiguous (same hazard as
-    # duplicate exact names).
-    best_dist = 3  # exclusive upper bound — only distances 0..2 qualify
-    tied: list[Applicant] = []
-    for applicant in candidates:
-        if not applicant.legal_name:
-            continue
-        dist = _levenshtein(lower, applicant.legal_name.lower().strip())
-        if dist > 2:
-            continue  # never a fuzzy candidate
-        if dist < best_dist:
-            best_dist = dist
-            tied = [applicant]
-        elif dist == best_dist:
-            tied.append(applicant)
-
-    if tied:  # best_dist is necessarily ≤ 2 here
-        if len(tied) == 1:
-            return tied[0], "fuzzy"
-        return None, "ambiguous"
-
-    return None, None
 
 
 # ---------------------------------------------------------------------------
@@ -203,6 +121,46 @@ async def maybe_attribute_payment(
 
     # Store payer_name on the transaction for future re-attribution
     txn.payer_name = payer_name
+
+    # Pass 0 — learned alias. A payer the host previously confirmed / linked to
+    # a tenant auto-attributes without review ("remember for next time"). This
+    # runs BEFORE name matching and captures payers whose name differs from the
+    # tenant's (a relative paying rent) — exactly what find_best_match can't do.
+    alias = await payer_alias_repo.get_by_payer_name(
+        db, organization_id=organization_id, payer_name=payer_name
+    )
+    if alias is not None:
+        applicant = await applicant_repo.get(
+            db,
+            applicant_id=alias.applicant_id,
+            organization_id=organization_id,
+            user_id=user_id,
+        )
+        if applicant is not None:
+            property_id = await _get_property_id_for_applicant(db, applicant, organization_id)
+            txn.applicant_id = applicant.id
+            txn.attribution_source = "auto_alias"
+            txn.category = "rental_revenue"
+            if property_id and txn.property_id is None:
+                txn.property_id = property_id
+            logger.info(
+                "Auto-attributed transaction %s to applicant %s via learned "
+                "payer alias", txn.id, applicant.id,
+            )
+            await receipt_service.create_pending_receipt_in_session(
+                db,
+                transaction_id=txn.id,
+                applicant_id=applicant.id,
+                user_id=user_id,
+                organization_id=organization_id,
+            )
+            return
+        # Alias points to a missing/deleted applicant — ignore it and fall
+        # through to name matching rather than attributing to a stale tenant.
+        logger.warning(
+            "Payer alias for txn %s points to missing applicant %s — ignoring",
+            txn.id, alias.applicant_id,
+        )
 
     applicants = await _get_lease_signed_applicants(db, organization_id=organization_id, user_id=user_id)
     best, confidence = find_best_match(payer_name, applicants)
@@ -422,6 +380,17 @@ async def confirm_review(
                 user_id=user_id,
                 organization_id=organization_id,
             )
+            # Remember this payer -> tenant so future payments from the same
+            # payer auto-attribute (Pass 0 in maybe_attribute_payment).
+            if txn.payer_name:
+                await payer_alias_repo.upsert(
+                    db,
+                    user_id=user_id,
+                    organization_id=organization_id,
+                    payer_name=txn.payer_name,
+                    applicant_id=applicant.id,
+                    source="confirm",
+                )
             return {"ok": True, "transaction_id": str(txn.id)}
 
         # Property path — Airbnb payout, no tenant. Fail closed: a bad or
@@ -509,4 +478,15 @@ async def attribute_manually(
             user_id=user_id,
             organization_id=organization_id,
         )
+        # Remember this payer -> tenant ("Link" is an explicit host association)
+        # so future payments from the same payer auto-attribute.
+        if txn.payer_name:
+            await payer_alias_repo.upsert(
+                db,
+                user_id=user_id,
+                organization_id=organization_id,
+                payer_name=txn.payer_name,
+                applicant_id=applicant.id,
+                source="manual_link",
+            )
         return {"ok": True, "transaction_id": str(txn.id)}

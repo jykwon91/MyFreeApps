@@ -7,7 +7,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from app.services.transactions.attribution_service import _levenshtein, find_best_match
+from app.services.transactions.attribution_matcher import _levenshtein, find_best_match
 
 
 def _make_applicant(legal_name: str | None) -> MagicMock:

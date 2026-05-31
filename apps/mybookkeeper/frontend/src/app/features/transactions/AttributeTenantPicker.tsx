@@ -15,7 +15,7 @@ import { showError, showSuccess } from "@/shared/lib/toast-store";
 export interface AttributeTenantPickerProps {
   transactionId: string;
   currentApplicantId: string | null;
-  currentAttributionSource: "auto_exact" | "auto_fuzzy_confirmed" | "manual" | null;
+  currentAttributionSource: "auto_exact" | "auto_fuzzy_confirmed" | "auto_alias" | "manual" | null;
 }
 
 export default function AttributeTenantPicker({
@@ -93,6 +93,7 @@ export default function AttributeTenantPicker({
           Currently linked
           {currentAttributionSource === "auto_exact" && " (auto — exact match)"}
           {currentAttributionSource === "auto_fuzzy_confirmed" && " (auto — fuzzy confirmed)"}
+          {currentAttributionSource === "auto_alias" && " (auto — remembered payer)"}
           {currentAttributionSource === "manual" && " (manual)"}
         </p>
       )}

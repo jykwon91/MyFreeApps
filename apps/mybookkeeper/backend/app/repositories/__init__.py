@@ -11,6 +11,7 @@ from app.repositories.transactions import booking_statement_repo
 from app.repositories.transactions import reconciliation_repo
 from app.repositories.transactions import summary_repo
 from app.repositories.transactions import attribution_repo
+from app.repositories.transactions import payer_alias_repo
 from app.repositories.tax import tax_return_repo
 from app.repositories.tax import tax_form_repo
 from app.repositories.tax import tax_year_profile_repo
