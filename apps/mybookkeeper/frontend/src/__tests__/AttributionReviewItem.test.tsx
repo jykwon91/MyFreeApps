@@ -344,4 +344,23 @@ describe("AttributionReviewItem", () => {
       screen.queryByRole("combobox", { name: /pick a property/i }),
     ).not.toBeInTheDocument();
   });
+
+  it("rent-unmatched: empty tenants → message + disabled Link + no picker", () => {
+    vi.mocked(useGetApplicantsQuery).mockReturnValue({
+      data: { items: [] },
+      isLoading: false,
+      isError: false,
+      isUninitialized: false,
+    } as unknown as ReturnType<typeof useGetApplicantsQuery>);
+    renderItem(rentUnmatched());
+    expect(
+      screen.getByText(
+        "No tenants with a signed lease yet — add one in Applicants.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Link$/ })).toBeDisabled();
+    expect(
+      screen.queryByRole("combobox", { name: /pick a tenant/i }),
+    ).not.toBeInTheDocument();
+  });
 });

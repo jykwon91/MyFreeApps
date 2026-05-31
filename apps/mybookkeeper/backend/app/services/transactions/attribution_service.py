@@ -65,8 +65,15 @@ def find_best_match(
     """Return (best_applicant, confidence) for ``payer_name``.
 
     Confidence values:
-      - ``"auto_exact"``  — case-insensitive exact match
-      - ``"fuzzy"``       — Levenshtein ≤ 2, no exact match
+      - ``"auto_exact"``  — exactly ONE case-insensitive exact match
+      - ``"fuzzy"``       — exactly ONE best Levenshtein ≤ 2 match, no exact
+      - ``"ambiguous"``   — two or more candidates tie at the best score
+        (multiple exact matches, or multiple fuzzy matches at the same
+        smallest distance ≤ 2). Returns ``(None, "ambiguous")`` so the caller
+        queues the payment for manual review instead of silently
+        auto-attributing to whichever same-named tenant happened to sort
+        first — a wrong-attribution hazard when two ``lease_signed`` tenants
+        share a name.
       - ``None``          — no acceptable match found (returns (None, None))
     """
     if not payer_name:
@@ -74,24 +81,40 @@ def find_best_match(
 
     lower = payer_name.lower().strip()
 
-    # Pass 1 — exact (case-insensitive)
-    for applicant in candidates:
-        if applicant.legal_name and applicant.legal_name.lower().strip() == lower:
-            return applicant, "auto_exact"
+    # Pass 1 — exact (case-insensitive). A single exact match auto-confirms;
+    # two or more tenants sharing the name are ambiguous — do NOT guess.
+    exact = [
+        a
+        for a in candidates
+        if a.legal_name and a.legal_name.lower().strip() == lower
+    ]
+    if len(exact) == 1:
+        return exact[0], "auto_exact"
+    if len(exact) > 1:
+        return None, "ambiguous"
 
-    # Pass 2 — fuzzy (Levenshtein ≤ 2)
-    best: Applicant | None = None
-    best_dist = 3  # exclusive upper bound
+    # Pass 2 — fuzzy (Levenshtein ≤ 2). Track every candidate tied at the
+    # current smallest distance; a single closest candidate is a fuzzy
+    # proposal, a tie at the best distance is ambiguous (same hazard as
+    # duplicate exact names).
+    best_dist = 3  # exclusive upper bound — only distances 0..2 qualify
+    tied: list[Applicant] = []
     for applicant in candidates:
         if not applicant.legal_name:
             continue
         dist = _levenshtein(lower, applicant.legal_name.lower().strip())
+        if dist > 2:
+            continue  # never a fuzzy candidate
         if dist < best_dist:
             best_dist = dist
-            best = applicant
+            tied = [applicant]
+        elif dist == best_dist:
+            tied.append(applicant)
 
-    if best is not None and best_dist <= 2:
-        return best, "fuzzy"
+    if tied:  # best_dist is necessarily ≤ 2 here
+        if len(tied) == 1:
+            return tied[0], "fuzzy"
+        return None, "ambiguous"
 
     return None, None
 
@@ -183,6 +206,18 @@ async def maybe_attribute_payment(
 
     applicants = await _get_lease_signed_applicants(db, organization_id=organization_id, user_id=user_id)
     best, confidence = find_best_match(payer_name, applicants)
+
+    if confidence == "ambiguous":
+        # Two or more lease_signed tenants share this name — refuse to guess.
+        # Falls through to the review queue (proposed_applicant_id=None,
+        # queued "unmatched") so the host disambiguates via the picker rather
+        # than the payment silently landing on the wrong same-named tenant.
+        logger.warning(
+            "Ambiguous attribution for txn %s: payer_name=%r matches multiple "
+            "lease_signed tenants by name — queuing for manual review instead "
+            "of auto-attributing.",
+            txn.id, payer_name,
+        )
 
     if confidence == "auto_exact" and best is not None:
         property_id = await _get_property_id_for_applicant(db, best, organization_id)
