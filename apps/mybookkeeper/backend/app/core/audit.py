@@ -62,6 +62,12 @@ MBK_SENSITIVE_FIELDS: frozenset[str] = frozenset({
     # Insurance domain PII — policy numbers are PII-adjacent (can identify
     # individuals with insurers), encrypted at rest via EncryptedString.
     "policy_number",
+    # Payment-attribution payer handle (Zelle email/phone, Venmo @user, Cash
+    # App $tag) — a payer's contact identifier, stored on transactions and
+    # learned aliases. Mask in audit_logs. (``payer_name`` is intentionally left
+    # unmasked — a name is lower-sensitivity and used widely in attribution
+    # logs; the handle is the identifying contact value.)
+    "payer_handle",
     "dob",
     "employer_or_hospital",
     "vehicle_make_model",

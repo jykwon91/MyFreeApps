@@ -35,6 +35,14 @@ def test_normalize_matches_matcher():
     assert payer_alias_repo.normalize_payer_name("") == ""
 
 
+def test_normalize_handle():
+    """normalize_handle lower/strips and maps blank/None to the '' sentinel."""
+    assert payer_alias_repo.normalize_handle("  Jdoe@Gmail.com ") == "jdoe@gmail.com"
+    assert payer_alias_repo.normalize_handle("@John-Doe") == "@john-doe"
+    assert payer_alias_repo.normalize_handle(None) == ""
+    assert payer_alias_repo.normalize_handle("   ") == ""
+
+
 @pytest.mark.asyncio
 async def test_upsert_creates_then_get_normalizes(db: AsyncSession):
     org_id, user_id = uuid.uuid4(), uuid.uuid4()
@@ -62,8 +70,40 @@ async def test_upsert_creates_then_get_normalizes(db: AsyncSession):
 
 
 @pytest.mark.asyncio
-async def test_upsert_idempotent_updates_target(db: AsyncSession):
-    """Re-confirming a payer to a different tenant updates the one row."""
+async def test_upsert_same_key_touches_single_row(db: AsyncSession):
+    """Re-confirming the SAME (name, handle, tenant) touches one row, not adds."""
+    org_id, user_id = uuid.uuid4(), uuid.uuid4()
+    prince = await _make_applicant(db, org_id, user_id, "Prince Kapoor")
+
+    await payer_alias_repo.upsert(
+        db, user_id=user_id, organization_id=org_id,
+        payer_name="Tushar Kapoor", applicant_id=prince.id, source="confirm",
+    )
+    # Same name (case/space-insensitive), same (absent) handle, same tenant.
+    await payer_alias_repo.upsert(
+        db, user_id=user_id, organization_id=org_id,
+        payer_name="  tushar kapoor ", applicant_id=prince.id, source="manual_link",
+    )
+
+    rows = (
+        await db.execute(
+            select(PayerAlias).where(PayerAlias.organization_id == org_id)
+        )
+    ).scalars().all()
+    assert len(rows) == 1
+    assert rows[0].applicant_id == prince.id
+    assert rows[0].source == "manual_link"  # latest source wins on touch
+    assert rows[0].payer_handle == ""  # '' sentinel, never NULL
+
+
+@pytest.mark.asyncio
+async def test_upsert_same_name_different_tenant_creates_two_rows(db: AsyncSession):
+    """A name confirmed to two tenants (no handle) keeps BOTH rows → ambiguous.
+
+    Inverts the old latest-wins behavior: silently overwriting one tenant with
+    another is the wrong-attribution hazard PR3 closes. Two rows let the matcher
+    flag the name ambiguous and route to review.
+    """
     org_id, user_id = uuid.uuid4(), uuid.uuid4()
     first = await _make_applicant(db, org_id, user_id, "Prince Kapoor")
     second = await _make_applicant(db, org_id, user_id, "Rahul Kapoor")
@@ -82,9 +122,53 @@ async def test_upsert_idempotent_updates_target(db: AsyncSession):
             select(PayerAlias).where(PayerAlias.organization_id == org_id)
         )
     ).scalars().all()
-    assert len(rows) == 1
-    assert rows[0].applicant_id == second.id
-    assert rows[0].source == "manual_link"
+    assert {r.applicant_id for r in rows} == {first.id, second.id}
+    assert len(rows) == 2
+
+
+@pytest.mark.asyncio
+async def test_upsert_same_name_different_handle_creates_two_rows(db: AsyncSession):
+    """Two different people sharing a name, distinct handles → two rows."""
+    org_id, user_id = uuid.uuid4(), uuid.uuid4()
+    a = await _make_applicant(db, org_id, user_id, "Tenant A")
+    b = await _make_applicant(db, org_id, user_id, "Tenant B")
+
+    await payer_alias_repo.upsert(
+        db, user_id=user_id, organization_id=org_id,
+        payer_name="John Smith", applicant_id=a.id, source="manual_link",
+        payer_handle="john.a@gmail.com",
+    )
+    await payer_alias_repo.upsert(
+        db, user_id=user_id, organization_id=org_id,
+        payer_name="John Smith", applicant_id=b.id, source="manual_link",
+        payer_handle="john.b@gmail.com",
+    )
+
+    rows = await payer_alias_repo.list_by_payer_name(
+        db, organization_id=org_id, payer_name="John Smith"
+    )
+    assert len(rows) == 2
+    by_handle = {r.payer_handle: r.applicant_id for r in rows}
+    assert by_handle == {"john.a@gmail.com": a.id, "john.b@gmail.com": b.id}
+
+
+@pytest.mark.asyncio
+async def test_get_by_payer_name_none_when_ambiguous(db: AsyncSession):
+    """get_by_payer_name returns None (not the first) when a name has 2+ rows."""
+    org_id, user_id = uuid.uuid4(), uuid.uuid4()
+    first = await _make_applicant(db, org_id, user_id, "Prince Kapoor")
+    second = await _make_applicant(db, org_id, user_id, "Rahul Kapoor")
+    for app_ in (first, second):
+        await payer_alias_repo.upsert(
+            db, user_id=user_id, organization_id=org_id,
+            payer_name="Tushar Kapoor", applicant_id=app_.id, source="confirm",
+        )
+    assert await payer_alias_repo.get_by_payer_name(
+        db, organization_id=org_id, payer_name="Tushar Kapoor"
+    ) is None
+    assert len(await payer_alias_repo.list_by_payer_name(
+        db, organization_id=org_id, payer_name="Tushar Kapoor"
+    )) == 2
 
 
 @pytest.mark.asyncio
