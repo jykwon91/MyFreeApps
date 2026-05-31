@@ -143,3 +143,49 @@ class TestFindBestMatch:
         applicant, confidence = find_best_match("alicexyz", [alice])
         assert applicant is None
         assert confidence is None
+
+    def test_multiple_exact_matches_are_ambiguous(self):
+        """Two tenants sharing a name must NOT auto-attribute to the first."""
+        prince_a = _make_applicant("Prince Kapoor")
+        prince_b = _make_applicant("Prince Kapoor")
+        applicant, confidence = find_best_match(
+            "PRINCE KAPOOR", [prince_a, prince_b]
+        )
+        assert applicant is None
+        assert confidence == "ambiguous"
+
+    def test_single_exact_among_distinct_names_still_auto(self):
+        """A lone exact match is unaffected by the ambiguity guard."""
+        prince = _make_applicant("Prince Kapoor")
+        tushar = _make_applicant("Tushar Mehta")
+        applicant, confidence = find_best_match(
+            "Prince Kapoor", [tushar, prince]
+        )
+        assert applicant is prince
+        assert confidence == "auto_exact"
+
+    def test_multiple_fuzzy_tied_at_best_distance_are_ambiguous(self):
+        """Two fuzzy candidates at the same smallest distance ≤ 2 → ambiguous."""
+        john = _make_applicant("John Doe")  # "jonn doe" vs "john doe" = 1
+        jon = _make_applicant("Jon Doe")    # "jonn doe" vs "jon doe"  = 1
+        applicant, confidence = find_best_match("Jonn Doe", [john, jon])
+        assert applicant is None
+        assert confidence == "ambiguous"
+
+    def test_closest_fuzzy_beats_a_farther_fuzzy_no_ambiguity(self):
+        """A strictly-closer fuzzy candidate is not a tie — it resolves."""
+        bob = _make_applicant("Bob Smith")  # distance 1 from "Bobb Smith"
+        rob = _make_applicant("Rob Smith")  # distance 2 from "Bobb Smith"
+        applicant, confidence = find_best_match("Bobb Smith", [bob, rob])
+        assert applicant is bob
+        assert confidence == "fuzzy"
+
+    def test_one_exact_one_fuzzy_resolves_to_exact_not_ambiguous(self):
+        """Exact match short-circuits Pass 2 — a fuzzy near-name is not a tie."""
+        alice = _make_applicant("Alice Johnson")
+        alyce = _make_applicant("Alyce Johnson")  # fuzzy (distance 1)
+        applicant, confidence = find_best_match(
+            "Alice Johnson", [alyce, alice]
+        )
+        assert applicant is alice
+        assert confidence == "auto_exact"

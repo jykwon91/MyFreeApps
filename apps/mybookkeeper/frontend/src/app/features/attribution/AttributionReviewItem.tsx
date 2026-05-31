@@ -55,7 +55,12 @@ export default function AttributionReviewItem({ item }: AttributionReviewItemPro
 
   // Tenant list only for rent rows that are unmatched — never for property
   // rows, otherwise this mounts on every Airbnb row and burns RTK cache.
-  const { data: applicantsResponse, isLoading: loadingApplicants } = useGetApplicantsQuery(
+  const {
+    data: applicantsResponse,
+    isLoading: loadingApplicants,
+    isError: applicantsError,
+    isUninitialized: applicantsUninitialized,
+  } = useGetApplicantsQuery(
     { stage: "lease_signed", limit: 200 },
     { skip: !isUnmatched || isPropertyRow },
   );
@@ -161,6 +166,19 @@ export default function AttributionReviewItem({ item }: AttributionReviewItemPro
   const propsReady =
     showPropertyPicker && !propsLoading && !propertiesError && activeProperties.length > 0;
 
+  // Tenant-picker sub-states, mirroring the property machine above.
+  // `tenantsLoading` also covers the pre-fetch tick (the query is skipped
+  // until this is a rent row, so it starts uninitialized). `tenantsEmpty`
+  // gives the host an explanation + next step when there are no lease_signed
+  // tenants yet, instead of silently leaving only "Not them".
+  const tenantsLoading =
+    showTenantPicker && (loadingApplicants || applicantsUninitialized);
+  const tenantsErrored = showTenantPicker && !tenantsLoading && applicantsError;
+  const tenantsEmpty =
+    showTenantPicker && !tenantsLoading && !applicantsError && applicants.length === 0;
+  const tenantsReady =
+    showTenantPicker && !tenantsLoading && !applicantsError && applicants.length > 0;
+
   return (
     <div className="flex flex-col sm:flex-row sm:items-start gap-4 p-4 border rounded-lg bg-card">
       <div className="flex-1 space-y-1 min-w-0">
@@ -203,7 +221,49 @@ export default function AttributionReviewItem({ item }: AttributionReviewItemPro
           </div>
         )}
 
-        {showTenantPicker && !loadingApplicants && applicants.length > 0 && (
+        {tenantsLoading && (
+          <div className="flex items-center gap-2 flex-wrap pt-1">
+            <div
+              className="border rounded px-2 py-1.5 text-sm bg-background min-h-[36px] max-w-[220px] flex items-center text-muted-foreground"
+              aria-hidden="true"
+            >
+              Loading tenants…
+            </div>
+            <LoadingButton
+              variant="primary"
+              size="sm"
+              isLoading={false}
+              onClick={() => {}}
+              disabled
+            >
+              <UserCheck className="h-3.5 w-3.5 mr-1" aria-hidden="true" />
+              Link
+            </LoadingButton>
+          </div>
+        )}
+        {tenantsErrored && (
+          <p className="text-sm text-destructive pt-1">
+            Couldn't load tenants — try refreshing.
+          </p>
+        )}
+        {tenantsEmpty && (
+          <div className="flex items-center gap-2 flex-wrap pt-1">
+            <p className="text-sm text-muted-foreground">
+              No tenants with a signed lease yet — add one in Applicants.
+            </p>
+            <LoadingButton
+              variant="primary"
+              size="sm"
+              isLoading={false}
+              onClick={() => {}}
+              disabled
+            >
+              <UserCheck className="h-3.5 w-3.5 mr-1" aria-hidden="true" />
+              Link
+            </LoadingButton>
+          </div>
+        )}
+        {tenantsReady && (
           <div className="flex items-center gap-2 flex-wrap pt-1">
             <select
               value={pickedApplicantId}
