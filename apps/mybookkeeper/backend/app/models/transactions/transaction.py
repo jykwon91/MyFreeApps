@@ -217,7 +217,7 @@ class Transaction(Base):
         ),
         CheckConstraint(
             "attribution_source IS NULL OR attribution_source IN "
-            "('auto_exact', 'auto_fuzzy_confirmed', 'manual')",
+            "('auto_exact', 'auto_fuzzy_confirmed', 'auto_alias', 'manual')",
             name="chk_txn_attribution_source",
         ),
     )

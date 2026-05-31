@@ -21,6 +21,7 @@ from app.db.session import AsyncSessionLocal, unit_of_work
 from app.models.applicants.applicant import Applicant
 from app.models.transactions.transaction import Transaction
 from app.repositories import attribution_repo
+from app.repositories import payer_alias_repo
 from app.repositories import booking_statement_repo
 from app.repositories.applicants import applicant_repo
 from app.repositories.leases import signed_lease_repo
@@ -203,6 +204,46 @@ async def maybe_attribute_payment(
 
     # Store payer_name on the transaction for future re-attribution
     txn.payer_name = payer_name
+
+    # Pass 0 — learned alias. A payer the host previously confirmed / linked to
+    # a tenant auto-attributes without review ("remember for next time"). This
+    # runs BEFORE name matching and captures payers whose name differs from the
+    # tenant's (a relative paying rent) — exactly what find_best_match can't do.
+    alias = await payer_alias_repo.get_by_payer_name(
+        db, organization_id=organization_id, payer_name=payer_name
+    )
+    if alias is not None:
+        applicant = await applicant_repo.get(
+            db,
+            applicant_id=alias.applicant_id,
+            organization_id=organization_id,
+            user_id=user_id,
+        )
+        if applicant is not None:
+            property_id = await _get_property_id_for_applicant(db, applicant, organization_id)
+            txn.applicant_id = applicant.id
+            txn.attribution_source = "auto_alias"
+            txn.category = "rental_revenue"
+            if property_id and txn.property_id is None:
+                txn.property_id = property_id
+            logger.info(
+                "Auto-attributed transaction %s to applicant %s via learned "
+                "payer alias", txn.id, applicant.id,
+            )
+            await receipt_service.create_pending_receipt_in_session(
+                db,
+                transaction_id=txn.id,
+                applicant_id=applicant.id,
+                user_id=user_id,
+                organization_id=organization_id,
+            )
+            return
+        # Alias points to a missing/deleted applicant — ignore it and fall
+        # through to name matching rather than attributing to a stale tenant.
+        logger.warning(
+            "Payer alias for txn %s points to missing applicant %s — ignoring",
+            txn.id, alias.applicant_id,
+        )
 
     applicants = await _get_lease_signed_applicants(db, organization_id=organization_id, user_id=user_id)
     best, confidence = find_best_match(payer_name, applicants)
@@ -422,6 +463,17 @@ async def confirm_review(
                 user_id=user_id,
                 organization_id=organization_id,
             )
+            # Remember this payer -> tenant so future payments from the same
+            # payer auto-attribute (Pass 0 in maybe_attribute_payment).
+            if txn.payer_name:
+                await payer_alias_repo.upsert(
+                    db,
+                    user_id=user_id,
+                    organization_id=organization_id,
+                    payer_name=txn.payer_name,
+                    applicant_id=applicant.id,
+                    source="confirm",
+                )
             return {"ok": True, "transaction_id": str(txn.id)}
 
         # Property path — Airbnb payout, no tenant. Fail closed: a bad or
@@ -509,4 +561,15 @@ async def attribute_manually(
             user_id=user_id,
             organization_id=organization_id,
         )
+        # Remember this payer -> tenant ("Link" is an explicit host association)
+        # so future payments from the same payer auto-attribute.
+        if txn.payer_name:
+            await payer_alias_repo.upsert(
+                db,
+                user_id=user_id,
+                organization_id=organization_id,
+                payer_name=txn.payer_name,
+                applicant_id=applicant.id,
+                source="manual_link",
+            )
         return {"ok": True, "transaction_id": str(txn.id)}
