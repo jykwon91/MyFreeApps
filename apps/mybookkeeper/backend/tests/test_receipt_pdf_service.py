@@ -19,7 +19,11 @@ from decimal import Decimal
 import pytest
 from pypdf import PdfReader
 
-from app.services.leases.receipt_pdf_service import ReceiptData, generate_receipt_pdf
+from app.services.leases.receipt_pdf_service import (
+    ReceiptData,
+    _format_payment_method,
+    generate_receipt_pdf,
+)
 
 
 def _make_data(**overrides) -> ReceiptData:
@@ -125,3 +129,37 @@ class TestGenerateReceiptPdf:
         pdf = generate_receipt_pdf(_make_data(payer_email="tenant@example.com"))
         text = _extract_text(pdf)
         assert "tenant@example.com" in text
+
+    def test_zelle_payment_method_renders(self) -> None:
+        # A Zelle rent payment must print "Zelle", not the generic
+        # "Bank transfer" it used to collapse into.
+        pdf = generate_receipt_pdf(_make_data(payment_method="zelle"))
+        text = _extract_text(pdf)
+        assert "Zelle" in text
+        assert "Payment method" in text
+
+    def test_long_label_value_not_overdrawn(self) -> None:
+        # Regression: "Payment method:" is wider than the old fixed 1.0in
+        # column, so the value used to be drawn on top of the label
+        # ("Payment methodVenmo"). The value must extract as its own token.
+        pdf = generate_receipt_pdf(_make_data(payment_method="venmo"))
+        text = _extract_text(pdf)
+        assert "Venmo" in text
+        assert "methodVenmo" not in text.replace(" ", "")
+
+
+class TestFormatPaymentMethod:
+    @pytest.mark.parametrize(
+        "method,expected",
+        [
+            ("zelle", "Zelle"),
+            ("venmo", "Venmo"),
+            ("cash_app", "Cash App"),
+            ("paypal", "PayPal"),
+            ("bank_transfer", "Bank transfer"),
+            ("check", "Check"),
+            (None, "—"),
+        ],
+    )
+    def test_known_and_none(self, method: str | None, expected: str) -> None:
+        assert _format_payment_method(method) == expected
