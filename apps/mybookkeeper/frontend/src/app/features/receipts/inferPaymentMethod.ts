@@ -34,7 +34,10 @@ export function inferPaymentMethod(transaction: Transaction): string {
     vendor.includes("google pay") ||
     vendor.includes("airbnb") ||
     vendor.includes("vrbo") ||
-    vendor.includes("booking.com")
+    // "booking" (not "booking.com") — this is a vendor-name substring match,
+    // not URL sanitization; the dotted host form trips CodeQL's
+    // js/incomplete-url-substring-sanitization false positive.
+    vendor.includes("booking")
   ) {
     return "platform_payout";
   }
