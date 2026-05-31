@@ -132,7 +132,7 @@ vi.mock("@/shared/store/propertiesApi", () => ({
 }));
 
 vi.mock("@/shared/store/applicantsApi", () => ({
-  useGetApplicantsQuery: vi.fn(() => ({
+  useGetTenantsQuery: vi.fn(() => ({
     data: { items: [], total: 0, has_more: false },
     isLoading: false,
   })),
