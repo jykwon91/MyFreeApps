@@ -300,8 +300,10 @@ async def test_public_health_no_auth(client: AsyncClient):
         ("GET", "/api/sources"),
         ("POST", "/api/sources"),
         ("GET", "/api/sources/00000000-0000-0000-0000-000000000000"),
+        ("PATCH", "/api/sources/00000000-0000-0000-0000-000000000000"),
         ("DELETE", "/api/sources/00000000-0000-0000-0000-000000000000"),
         ("POST", "/api/sources/00000000-0000-0000-0000-000000000000/sync"),
+        ("POST", "/api/sources/00000000-0000-0000-0000-000000000000/reclassify"),
         # Scheduler
         ("GET", "/api/scheduler/status"),
         ("POST", "/api/scheduler/trigger/sync_all_sources"),
