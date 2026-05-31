@@ -7,13 +7,26 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from app.services.transactions.attribution_matcher import _levenshtein, find_best_match
+from app.services.transactions.attribution_matcher import (
+    _levenshtein,
+    find_best_match,
+    normalize_handle,
+    resolve_alias,
+)
 
 
 def _make_applicant(legal_name: str | None) -> MagicMock:
     a = MagicMock()
     a.id = uuid.uuid4()
     a.legal_name = legal_name
+    return a
+
+
+def _make_alias(applicant_id: uuid.UUID, payer_handle: str = "") -> MagicMock:
+    """A duck-typed PayerAlias row for resolve_alias (reads .applicant_id + .payer_handle)."""
+    a = MagicMock()
+    a.applicant_id = applicant_id
+    a.payer_handle = payer_handle
     return a
 
 
@@ -189,3 +202,82 @@ class TestFindBestMatch:
         )
         assert applicant is alice
         assert confidence == "auto_exact"
+
+
+# ---------------------------------------------------------------------------
+# normalize_handle
+# ---------------------------------------------------------------------------
+
+class TestNormalizeHandle:
+    def test_lower_strips(self):
+        assert normalize_handle("  JDoe@Gmail.com ") == "jdoe@gmail.com"
+        assert normalize_handle("@John-Doe") == "@john-doe"
+
+    def test_none_and_blank_become_empty_sentinel(self):
+        assert normalize_handle(None) == ""
+        assert normalize_handle("   ") == ""
+
+
+# ---------------------------------------------------------------------------
+# resolve_alias scenarios
+# ---------------------------------------------------------------------------
+
+class TestResolveAlias:
+    def test_no_candidates_is_none_outcome(self):
+        applicant_id, outcome = resolve_alias([], "anything")
+        assert applicant_id is None
+        assert outcome == "none"
+
+    def test_single_alias_auto_attributes(self):
+        a = uuid.uuid4()
+        applicant_id, outcome = resolve_alias([_make_alias(a)], None)
+        assert applicant_id == a
+        assert outcome == "alias"
+
+    def test_two_aliases_same_tenant_is_unambiguous(self):
+        """Same name learned twice for the SAME tenant (e.g. with + without a
+        handle) still resolves — one distinct target."""
+        a = uuid.uuid4()
+        candidates = [_make_alias(a, ""), _make_alias(a, "a@x.com")]
+        applicant_id, outcome = resolve_alias(candidates, None)
+        assert applicant_id == a
+        assert outcome == "alias"
+
+    def test_name_to_two_tenants_no_handle_is_ambiguous(self):
+        a, b = uuid.uuid4(), uuid.uuid4()
+        candidates = [_make_alias(a), _make_alias(b)]
+        applicant_id, outcome = resolve_alias(candidates, None)
+        assert applicant_id is None
+        assert outcome == "ambiguous"
+
+    def test_handle_disambiguates_same_name_two_people(self):
+        """Two different people share a name; the incoming handle picks one."""
+        a, b = uuid.uuid4(), uuid.uuid4()
+        candidates = [_make_alias(a, "john.a@x.com"), _make_alias(b, "john.b@x.com")]
+        applicant_id, outcome = resolve_alias(candidates, "JOHN.B@X.COM")
+        assert applicant_id == b
+        assert outcome == "alias"
+
+    def test_handle_present_but_unseen_falls_back_to_name_level(self):
+        """An incoming handle that matches no alias falls back to name-level —
+        a lone same-named tenant still resolves."""
+        a = uuid.uuid4()
+        candidates = [_make_alias(a, "")]  # learned without a handle
+        applicant_id, outcome = resolve_alias(candidates, "new-handle@x.com")
+        assert applicant_id == a
+        assert outcome == "alias"
+
+    def test_unseen_handle_two_tenants_is_ambiguous(self):
+        a, b = uuid.uuid4(), uuid.uuid4()
+        candidates = [_make_alias(a, "x@x.com"), _make_alias(b, "y@y.com")]
+        applicant_id, outcome = resolve_alias(candidates, "z@z.com")
+        assert applicant_id is None
+        assert outcome == "ambiguous"
+
+    def test_same_handle_two_tenants_is_ambiguous(self):
+        """Defensive: if the same handle somehow maps to two tenants, refuse."""
+        a, b = uuid.uuid4(), uuid.uuid4()
+        candidates = [_make_alias(a, "shared@x.com"), _make_alias(b, "shared@x.com")]
+        applicant_id, outcome = resolve_alias(candidates, "shared@x.com")
+        assert applicant_id is None
+        assert outcome == "ambiguous"

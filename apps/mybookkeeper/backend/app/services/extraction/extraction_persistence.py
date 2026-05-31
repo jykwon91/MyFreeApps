@@ -214,6 +214,7 @@ async def save_email_extraction(
             if surviving:
                 # Attribution — attempt to link this payment to a tenant
                 payer_name = data.get("payer_name")
+                payer_handle = data.get("payer_handle")
                 is_airbnb_payout = _is_airbnb_payout(data)
                 if payer_name or is_airbnb_payout:
                     await maybe_attribute_payment(
@@ -223,6 +224,7 @@ async def save_email_extraction(
                         organization_id=organization_id,
                         user_id=user_id,
                         is_airbnb_payout=is_airbnb_payout,
+                        payer_handle=payer_handle if isinstance(payer_handle, str) else None,
                     )
 
                 for li in (data.get("line_items") or []):

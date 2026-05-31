@@ -43,6 +43,12 @@ class Transaction(Base):
     attribution_source: Mapped[str | None] = mapped_column(String(20), nullable=True)
     # AI-extracted sender name — used by the attribution matcher.
     payer_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # AI-extracted stable sender handle (Zelle email/phone, Venmo @user, Cash
+    # App $tag) when the payment notification exposed one — NULL otherwise
+    # (most Zelle bank alerts show only a name). Informational on the txn; read
+    # by confirm/manual-link to seed the learned alias's handle so two
+    # different people who share a name resolve to different tenants.
+    payer_handle: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     transaction_date: Mapped[date] = mapped_column(Date)
     tax_year: Mapped[int] = mapped_column(SmallInteger)

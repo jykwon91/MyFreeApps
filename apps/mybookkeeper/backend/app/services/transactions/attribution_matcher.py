@@ -1,14 +1,73 @@
-"""Pure payer-name matcher for rent attribution.
+"""Pure payer-name / payer-alias matchers for rent attribution.
 
-No DB or async I/O — these functions are unit-testable in isolation (see
-tests/test_attribution_matcher.py). They are kept separate from
+No DB or async I/O at call time — these functions are unit-testable in
+isolation (see tests/test_attribution_matcher.py). They are kept separate from
 ``attribution_service`` (the DB-aware orchestrator) so the matching logic stays
 a small, pure, heavily-tested unit and the service file stays focused on
 orchestration.
 """
+import uuid
 from collections.abc import Sequence
 
 from app.models.applicants.applicant import Applicant
+from app.models.transactions.payer_alias import PayerAlias
+
+
+def normalize_handle(payer_handle: str | None) -> str:
+    """Normalize a payer handle (Zelle email/phone, Venmo @user, Cash App $tag).
+
+    Mirrors ``payer_alias_repo.normalize_handle`` (kept in sync by contract,
+    like ``find_best_match`` mirrors ``normalize_payer_name``). The empty string
+    is the canonical "no handle" value so a handle-less incoming payment and a
+    handle-less stored alias compare equal.
+    """
+    return (payer_handle or "").lower().strip()
+
+
+def resolve_alias(
+    candidates: Sequence[PayerAlias],
+    incoming_handle: str | None,
+) -> tuple[uuid.UUID | None, str]:
+    """Resolve learned aliases for one payer name to a tenant.
+
+    ``candidates`` is every :class:`PayerAlias` sharing the incoming payment's
+    normalized payer name (already org-filtered by the repo). Returns
+    ``(applicant_id, outcome)``:
+
+      - ``"alias"``     — auto-attribute to ``applicant_id``.
+      - ``"ambiguous"`` — the name maps to more than one tenant and the handle
+        can't disambiguate; caller routes to review (never silently guesses).
+      - ``"none"``      — no learned alias for this name; caller falls through
+        to name matching.
+
+    Resolution order:
+      1. **Handle-exact** — if the incoming payment carries a handle and exactly
+         one tenant is aliased under it, that tenant wins even when same-named
+         aliases point elsewhere (two different people who share a name).
+      2. **Name-level** — otherwise, a single distinct tenant across all
+         same-named aliases is unambiguous; two or more is ambiguous.
+    """
+    if not candidates:
+        return None, "none"
+
+    handle = normalize_handle(incoming_handle)
+
+    if handle:
+        handle_targets = {
+            c.applicant_id
+            for c in candidates
+            if normalize_handle(c.payer_handle) == handle
+        }
+        if len(handle_targets) == 1:
+            return next(iter(handle_targets)), "alias"
+        if len(handle_targets) > 1:
+            return None, "ambiguous"
+        # Handle present but unseen among aliases — fall through to name-level.
+
+    name_targets = {c.applicant_id for c in candidates}
+    if len(name_targets) == 1:
+        return next(iter(name_targets)), "alias"
+    return None, "ambiguous"
 
 
 def _levenshtein(a: str, b: str) -> int:

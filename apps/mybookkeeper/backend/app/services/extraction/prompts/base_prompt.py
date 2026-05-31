@@ -14,6 +14,7 @@ Always return this structure (documents is always an array, even for a single re
       "date": "YYYY-MM-DD or null",
       "vendor": "string or null",
       "payer_name": "the person or entity who sent the payment (e.g. 'Sonu King' from a Zelle notification), or null if not a payment from a specific person",
+      "payer_handle": "the sender's stable account handle IF the notification shows one — Zelle: sender email or phone; Venmo: @username; Cash App: $cashtag; PayPal: sender email — else null. Most Zelle bank alerts show only a name, so null is common.",
       "amount": "decimal as string e.g. '150.00' or null",
       "description": "brief description or null",
       "transaction_type": "income | expense",
@@ -47,7 +48,7 @@ Always return this structure (documents is always an array, even for a single re
     - Apple Pay Cash, Google Pay, direct ACH/wire deposit alerts
     - Any bank deposit alert showing a person-to-person transfer (e.g. Chase Zelle, Bank of America Zelle, Wells Fargo Zelle)
     - Forwarded ("Fwd:") versions of any of the above
-  For all of these, set document_type "invoice", transaction_type "income", category "rental_revenue", and extract: amount, date, payer_name (the sender), vendor (the platform — "Zelle", "Venmo", "Cash App", "PayPal"), and payment_method "bank_transfer" (or "platform_payout" for Venmo/Cash App/PayPal).
+  For all of these, set document_type "invoice", transaction_type "income", category "rental_revenue", and extract: amount, date, payer_name (the sender), payer_handle (the sender's stable handle — email/phone/@username/$cashtag — if the notification shows one, else null), vendor (the platform — "Zelle", "Venmo", "Cash App", "PayPal"), and payment_method "bank_transfer" (or "platform_payout" for Venmo/Cash App/PayPal).
 - "statement" — billing statements, account statements, property management billing periods
 - "lease" — lease agreements, rental contracts, renewals/amendments
 - "insurance_policy" — insurance policies, declarations pages, certificates of insurance
@@ -276,6 +277,7 @@ For lease, tax_form, contract, other:
 # Field rules
 
 - payer_name: for payment emails (Zelle, Venmo, Cash App, direct deposit), extract the name of the person who sent the money. Examples: from "SONU KING sent you $701.20 via Zelle" extract "Sonu King". From "Venmo: John Doe paid you $500" extract "John Doe". For platform payouts (Airbnb, VRBO) set payer_name to null — the platform is the sender, not a specific tenant. For non-payment documents (invoices, bills) set payer_name to null.
+- payer_handle: the sender's STABLE account identifier when the notification exposes one, used to tell apart two different people who share a name. Extract ONLY a value actually shown — Zelle: the sender's email or phone (e.g. "jdoe@gmail.com" or "+1 555-123-4567"); Venmo: the @username (e.g. "@john-doe"); Cash App: the $cashtag (e.g. "$johndoe"); PayPal: the sender's email. Do NOT invent or infer a handle from the name. Most Zelle bank deposit alerts show only a name — set payer_handle to null in that case. Always null for platform payouts and non-payment documents.
 - vendor: single company name, never combine with "/" or "and". Use the company that issued the bill. For utilities, use the retail provider (e.g. "Constellation" not "Constellation / CenterPoint").
 - address: physical property street address, NOT the vendor's address
 - tax_relevant: true for business expenses and taxable income
@@ -307,12 +309,12 @@ Mortgage statement with interest and principal breakdown:
 Airbnb payout:
 {"documents": [{"document_type": "statement", "date": "2025-09-20", "vendor": "Airbnb", "amount": "850.00", "description": "Payout for reservation HM12345", "transaction_type": "income", "category": "rental_revenue", "payment_method": "platform_payout", "tags": ["rental_revenue"], "tax_relevant": true, "channel": "airbnb", "address": "6738 Peerless St Houston TX", "confidence": "high", "line_items": null}]}
 
-Zelle payment ("You received money with Zelle" — Sonu King sent $701.20):
-{"documents": [{"document_type": "invoice", "date": "2026-05-03", "vendor": "Zelle", "payer_name": "Sonu King", "amount": "701.20", "description": "Zelle from Sonu King", "transaction_type": "income", "category": "rental_revenue", "payment_method": "bank_transfer", "tags": ["rental_revenue"], "tax_relevant": true, "channel": null, "address": null, "confidence": "high", "line_items": null}]}
+Zelle payment ("You received money with Zelle" — Sonu King sent $701.20, no handle shown):
+{"documents": [{"document_type": "invoice", "date": "2026-05-03", "vendor": "Zelle", "payer_name": "Sonu King", "payer_handle": null, "amount": "701.20", "description": "Zelle from Sonu King", "transaction_type": "income", "category": "rental_revenue", "payment_method": "bank_transfer", "tags": ["rental_revenue"], "tax_relevant": true, "channel": null, "address": null, "confidence": "high", "line_items": null}]}
 
-Venmo payment ("John Doe paid you $1500.00"):
-{"documents": [{"document_type": "invoice", "date": "2026-05-01", "vendor": "Venmo", "payer_name": "John Doe", "amount": "1500.00", "description": "Venmo from John Doe", "transaction_type": "income", "category": "rental_revenue", "payment_method": "platform_payout", "tags": ["rental_revenue"], "tax_relevant": true, "channel": null, "address": null, "confidence": "high", "line_items": null}]}
+Venmo payment ("@john-doe paid you $1500.00"):
+{"documents": [{"document_type": "invoice", "date": "2026-05-01", "vendor": "Venmo", "payer_name": "John Doe", "payer_handle": "@john-doe", "amount": "1500.00", "description": "Venmo from John Doe", "transaction_type": "income", "category": "rental_revenue", "payment_method": "platform_payout", "tags": ["rental_revenue"], "tax_relevant": true, "channel": null, "address": null, "confidence": "high", "line_items": null}]}
 
-Cash App payment ("$800.00 from Jane Smith"):
-{"documents": [{"document_type": "invoice", "date": "2026-05-02", "vendor": "Cash App", "payer_name": "Jane Smith", "amount": "800.00", "description": "Cash App from Jane Smith", "transaction_type": "income", "category": "rental_revenue", "payment_method": "platform_payout", "tags": ["rental_revenue"], "tax_relevant": true, "channel": null, "address": null, "confidence": "high", "line_items": null}]}
+Cash App payment ("$800.00 from Jane Smith ($janesmith)"):
+{"documents": [{"document_type": "invoice", "date": "2026-05-02", "vendor": "Cash App", "payer_name": "Jane Smith", "payer_handle": "$janesmith", "amount": "800.00", "description": "Cash App from Jane Smith", "transaction_type": "income", "category": "rental_revenue", "payment_method": "platform_payout", "tags": ["rental_revenue"], "tax_relevant": true, "channel": null, "address": null, "confidence": "high", "line_items": null}]}
 """

@@ -32,7 +32,7 @@ from app.services.transactions.airbnb_payout_matcher import (
     decide_airbnb_attribution,
     parse_res_code,
 )
-from app.services.transactions.attribution_matcher import find_best_match
+from app.services.transactions.attribution_matcher import find_best_match, resolve_alias
 
 logger = logging.getLogger(__name__)
 
@@ -98,6 +98,7 @@ async def maybe_attribute_payment(
     organization_id: uuid.UUID,
     user_id: uuid.UUID,
     is_airbnb_payout: bool = False,
+    payer_handle: str | None = None,
 ) -> None:
     """Attempt to attribute a newly-created transaction to a tenant.
 
@@ -119,20 +120,44 @@ async def maybe_attribute_payment(
     if not payer_name:
         return  # nothing to match
 
-    # Store payer_name on the transaction for future re-attribution
+    # Store payer_name + handle on the transaction for future re-attribution
+    # (confirm / manual-link read them back to seed the learned alias).
     txn.payer_name = payer_name
+    txn.payer_handle = payer_handle
 
     # Pass 0 — learned alias. A payer the host previously confirmed / linked to
     # a tenant auto-attributes without review ("remember for next time"). This
     # runs BEFORE name matching and captures payers whose name differs from the
     # tenant's (a relative paying rent) — exactly what find_best_match can't do.
-    alias = await payer_alias_repo.get_by_payer_name(
+    aliases = await payer_alias_repo.list_by_payer_name(
         db, organization_id=organization_id, payer_name=payer_name
     )
-    if alias is not None:
+    alias_applicant_id, alias_outcome = resolve_alias(aliases, payer_handle)
+
+    if alias_outcome == "ambiguous":
+        # The payer name maps to more than one tenant and the handle (if any)
+        # can't disambiguate. Refuse to guess — queue for manual review, the
+        # same guard find_best_match applies to same-named tenants.
+        logger.warning(
+            "Ambiguous payer alias for txn %s: payer_name=%r (handle=%r) maps "
+            "to multiple tenants — queuing for manual review instead of "
+            "auto-attributing.",
+            txn.id, payer_name, payer_handle,
+        )
+        await attribution_repo.create(
+            db,
+            user_id=user_id,
+            organization_id=organization_id,
+            transaction_id=txn.id,
+            proposed_applicant_id=None,
+            confidence="unmatched",
+        )
+        return
+
+    if alias_outcome == "alias" and alias_applicant_id is not None:
         applicant = await applicant_repo.get(
             db,
-            applicant_id=alias.applicant_id,
+            applicant_id=alias_applicant_id,
             organization_id=organization_id,
             user_id=user_id,
         )
@@ -159,7 +184,7 @@ async def maybe_attribute_payment(
         # through to name matching rather than attributing to a stale tenant.
         logger.warning(
             "Payer alias for txn %s points to missing applicant %s — ignoring",
-            txn.id, alias.applicant_id,
+            txn.id, alias_applicant_id,
         )
 
     applicants = await _get_lease_signed_applicants(db, organization_id=organization_id, user_id=user_id)
@@ -381,7 +406,9 @@ async def confirm_review(
                 organization_id=organization_id,
             )
             # Remember this payer -> tenant so future payments from the same
-            # payer auto-attribute (Pass 0 in maybe_attribute_payment).
+            # payer auto-attribute (Pass 0 in maybe_attribute_payment). The
+            # handle (when the original notification carried one) disambiguates
+            # this tenant from a different person who shares the payer's name.
             if txn.payer_name:
                 await payer_alias_repo.upsert(
                     db,
@@ -390,6 +417,7 @@ async def confirm_review(
                     payer_name=txn.payer_name,
                     applicant_id=applicant.id,
                     source="confirm",
+                    payer_handle=txn.payer_handle,
                 )
             return {"ok": True, "transaction_id": str(txn.id)}
 
@@ -479,7 +507,8 @@ async def attribute_manually(
             organization_id=organization_id,
         )
         # Remember this payer -> tenant ("Link" is an explicit host association)
-        # so future payments from the same payer auto-attribute.
+        # so future payments from the same payer auto-attribute. The handle
+        # (when captured) disambiguates this tenant from a same-named payer.
         if txn.payer_name:
             await payer_alias_repo.upsert(
                 db,
@@ -488,5 +517,6 @@ async def attribute_manually(
                 payer_name=txn.payer_name,
                 applicant_id=applicant.id,
                 source="manual_link",
+                payer_handle=txn.payer_handle,
             )
         return {"ok": True, "transaction_id": str(txn.id)}

@@ -52,12 +52,12 @@ async def _make_applicant(db, org_id, user_id, name="Prince Kapoor"):
     return applicant
 
 
-async def _make_txn(db, org_id, user_id, payer_name="Tushar Kapoor"):
+async def _make_txn(db, org_id, user_id, payer_name="Tushar Kapoor", payer_handle=None):
     txn = Transaction(
         id=uuid.uuid4(), organization_id=org_id, user_id=user_id,
         transaction_date=_dt.date(2026, 5, 1), tax_year=2026, amount="1600.00",
         transaction_type="income", category="uncategorized", status="approved",
-        is_manual=False, payer_name=payer_name,
+        is_manual=False, payer_name=payer_name, payer_handle=payer_handle,
     )
     db.add(txn)
     await db.flush()
@@ -137,6 +137,74 @@ async def test_alias_to_missing_applicant_falls_through(db: AsyncSession):
 
 
 @pytest.mark.asyncio
+async def test_alias_ambiguous_name_to_two_tenants_queues_review(db: AsyncSession):
+    """A payer name learned for TWO tenants (no handle) → review, not a guess."""
+    org_id, user_id = uuid.uuid4(), uuid.uuid4()
+    prince = await _make_applicant(db, org_id, user_id, "Prince Kapoor")
+    rahul = await _make_applicant(db, org_id, user_id, "Rahul Kapoor")
+    for app_ in (prince, rahul):
+        await payer_alias_repo.upsert(
+            db, user_id=user_id, organization_id=org_id,
+            payer_name="Tushar Kapoor", applicant_id=app_.id, source="confirm",
+        )
+    txn = await _make_txn(db, org_id, user_id, payer_name="Tushar Kapoor")
+
+    with patch(
+        "app.services.transactions.attribution_service.receipt_service.create_pending_receipt_in_session",
+        new_callable=AsyncMock,
+    ) as receipt_mock:
+        await maybe_attribute_payment(
+            db, txn=txn, payer_name="Tushar Kapoor",
+            organization_id=org_id, user_id=user_id,
+        )
+
+    # Refused to guess — not attributed, no receipt, queued unmatched.
+    assert txn.applicant_id is None
+    receipt_mock.assert_not_awaited()
+    rows = (
+        await db.execute(
+            select(RentAttributionReviewQueue).where(
+                RentAttributionReviewQueue.transaction_id == txn.id
+            )
+        )
+    ).scalars().all()
+    assert len(rows) == 1
+    assert rows[0].confidence == "unmatched"
+
+
+@pytest.mark.asyncio
+async def test_alias_handle_disambiguates_two_same_name_payers(db: AsyncSession):
+    """Two different "John Smith" payers; the incoming handle picks the right one."""
+    org_id, user_id = uuid.uuid4(), uuid.uuid4()
+    tenant_a = await _make_applicant(db, org_id, user_id, "Tenant A")
+    tenant_b = await _make_applicant(db, org_id, user_id, "Tenant B")
+    await payer_alias_repo.upsert(
+        db, user_id=user_id, organization_id=org_id, payer_name="John Smith",
+        applicant_id=tenant_a.id, source="manual_link", payer_handle="john.a@x.com",
+    )
+    await payer_alias_repo.upsert(
+        db, user_id=user_id, organization_id=org_id, payer_name="John Smith",
+        applicant_id=tenant_b.id, source="manual_link", payer_handle="john.b@x.com",
+    )
+    txn = await _make_txn(
+        db, org_id, user_id, payer_name="John Smith", payer_handle="john.b@x.com"
+    )
+
+    with patch(
+        "app.services.transactions.attribution_service.receipt_service.create_pending_receipt_in_session",
+        new_callable=AsyncMock,
+    ) as receipt_mock:
+        await maybe_attribute_payment(
+            db, txn=txn, payer_name="John Smith", payer_handle="john.b@x.com",
+            organization_id=org_id, user_id=user_id,
+        )
+
+    assert txn.applicant_id == tenant_b.id
+    assert txn.attribution_source == "auto_alias"
+    receipt_mock.assert_awaited_once()
+
+
+@pytest.mark.asyncio
 async def test_confirm_review_writes_alias(db: AsyncSession):
     """Confirming a fuzzy/unmatched review against a tenant remembers the payer."""
     org_id, user_id = uuid.uuid4(), uuid.uuid4()
@@ -197,3 +265,39 @@ async def test_attribute_manually_writes_alias(db: AsyncSession):
     assert alias is not None
     assert alias.applicant_id == prince.id
     assert alias.source == "manual_link"
+
+
+@pytest.mark.asyncio
+async def test_confirm_review_writes_alias_with_handle(db: AsyncSession):
+    """Confirming a txn that carried a payer_handle seeds the alias handle."""
+    org_id, user_id = uuid.uuid4(), uuid.uuid4()
+    prince = await _make_applicant(db, org_id, user_id, "Prince Kapoor")
+    txn = await _make_txn(
+        db, org_id, user_id, payer_name="John Smith", payer_handle="John.Smith@X.com"
+    )
+    review = RentAttributionReviewQueue(
+        id=uuid.uuid4(), user_id=user_id, organization_id=org_id,
+        transaction_id=txn.id, proposed_applicant_id=None,
+        confidence="unmatched", status="pending",
+    )
+    db.add(review)
+    await db.flush()
+
+    with patch(
+        "app.services.transactions.attribution_service.unit_of_work",
+        _make_fake_uow(db),
+    ), patch(
+        "app.services.transactions.attribution_service.receipt_service.create_pending_receipt_in_session",
+        new_callable=AsyncMock,
+    ):
+        await confirm_review(
+            review_id=review.id, organization_id=org_id, user_id=user_id,
+            applicant_id=prince.id,
+        )
+
+    alias = await payer_alias_repo.get_by_payer_name(
+        db, organization_id=org_id, payer_name="John Smith"
+    )
+    assert alias is not None
+    assert alias.applicant_id == prince.id
+    assert alias.payer_handle == "john.smith@x.com"  # normalized
