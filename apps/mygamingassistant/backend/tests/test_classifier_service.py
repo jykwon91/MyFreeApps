@@ -233,6 +233,65 @@ class TestClassifyLineup:
         assert pending_lineup.suggested_side == "side_a"
 
     @pytest.mark.asyncio
+    async def test_map_hint_forces_map_on_reclassify_path(
+        self,
+        db: AsyncSession,
+        pending_lineup: Lineup,
+        game_val: Game,
+        map_bind: Map,
+        zone_a_short: MapZone,
+    ):
+        """The interactive reclassify path honors a source's map scope: when
+        map_hint is set, the classified map is hard-locked to it even if Claude
+        picks another, its game is forced, and the override surfaces as a
+        structured code — mirroring the ingest grid classifier (the recurrence
+        fix for cross-map misclassification, now also on the reclassify path)."""
+        from app.services.classification.single_image_classifier import classify_lineup
+
+        # Claude returns a bogus map; the source is scoped to bind via map_hint.
+        classifier_output = {
+            "game_slug": "some-other-game",
+            "map_slug": "some-other-map",
+            "target_zone_slug": "a-short",
+            "stand_zone_slug": None,
+            "side": "any",
+            "utility_type_slug": None,
+            "aim_anchor_x": 0.5,
+            "aim_anchor_y": 0.5,
+            "confidence": 0.9,
+            "reasoning": "Guessed the wrong map from the title.",
+        }
+
+        with (
+            patch(
+                "app.services.classification.single_image_classifier.fetch_screenshot_bytes",
+                return_value=_FAKE_PNG,
+            ),
+            patch("app.services.classification.single_image_classifier.settings") as mock_settings,
+            patch("app.services.classification.single_image_classifier.anthropic.Anthropic") as mock_cls,
+        ):
+            mock_settings.anthropic_api_key = "sk-test"
+            mock_settings.claude_classifier_model = "claude-haiku-4-5-20251001"
+            mock_client = MagicMock()
+            mock_cls.return_value = mock_client
+            mock_client.messages.create.return_value = _make_anthropic_response(
+                classifier_output
+            )
+
+            result = await classify_lineup(db, pending_lineup.id, map_hint="bind")
+
+        assert result.success is True
+        # Map forced to the hint → its game + zone resolve to the real FKs.
+        assert result.suggested_map_id == map_bind.id
+        assert result.suggested_game_id == game_val.id
+        assert result.suggested_target_zone_id == zone_a_short.id
+        # Override surfaced as a structured, machine-readable code (not prose-only).
+        assert any(
+            c == "map_hint_override:claude=some-other-map:forced=bind"
+            for c in result.error_codes
+        ), result.error_codes
+
+    @pytest.mark.asyncio
     async def test_missing_api_key_returns_error(
         self,
         db: AsyncSession,

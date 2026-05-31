@@ -29,7 +29,6 @@ from app.models.game.lineup import Lineup
 from app.repositories.game.lineup_repo import (
     LineupFilters,
     accept_lineup,
-    commit_classifier_run,
     create_lineup,
     get_lineup,
     hide_lineup,
@@ -38,8 +37,6 @@ from app.repositories.game.lineup_repo import (
     update_lineup,
     zone_density,
 )
-from app.services.classification.classification_result import ClassificationResult
-from app.services.classification.single_image_classifier import classify_lineup
 from app.schemas.game.lineup_schemas import (
     LineupAcceptBody,
     LineupCreate,
@@ -48,6 +45,16 @@ from app.schemas.game.lineup_schemas import (
     LineupRead,
     PendingLineupsResponse,
     UploadUrlResponse,
+)
+
+# reclassify / reclassify_source_pending were extracted to reclassify_service to
+# keep this module under the file-size budget. Re-exported here so the existing
+# call sites that reference them via ``lineup_service`` (app.api.lineups,
+# app.api.sources) keep working unchanged.
+from app.services.game.reclassify_service import (  # noqa: F401
+    ReclassifyBatchResult,
+    reclassify,
+    reclassify_source_pending,
 )
 
 # Presigned PUT URLs are valid for 15 minutes — enough time for the browser
@@ -507,25 +514,6 @@ async def accept(
 
     updated = await accept_lineup(db, lineup, overrides)
     return _build_admin_read(updated)
-
-
-async def reclassify(
-    db: AsyncSession,
-    lineup_id: uuid.UUID,
-) -> ClassificationResult:
-    """Re-run the Claude classifier on a single lineup and persist suggestions.
-
-    ``classify_lineup`` writes suggested_* fields and flushes but, per its
-    documented contract, leaves the commit to the caller (the ingestion
-    orchestrator batches; the interactive route commits one). Commit
-    ownership for the interactive path lives in the repo
-    (``commit_classifier_run``) so the route stays free of any ORM/DB call.
-    On classifier failure nothing was flushed worth keeping, so no commit.
-    """
-    result = await classify_lineup(db, lineup_id)
-    if result.success:
-        await commit_classifier_run(db)
-    return result
 
 
 async def get_zone_density(

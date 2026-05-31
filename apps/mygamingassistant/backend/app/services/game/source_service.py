@@ -20,9 +20,10 @@ from app.repositories.game.source_repo import (
     create_source,
     get_source,
     list_sources,
+    replace_source_hints,
     soft_delete_source,
 )
-from app.schemas.game.source_schemas import SourceCreate
+from app.schemas.game.source_schemas import SourceCreate, SourceUpdate
 
 
 # ---------------------------------------------------------------------------
@@ -118,6 +119,25 @@ async def create(payload: SourceCreate) -> Source:
     async with unit_of_work() as db:
         config.update(await _resolve_hints(db, payload.game_hint, payload.map_hint))
         return await create_source(db, kind=payload.kind, config_json=config)
+
+
+async def update_hints(source_id: uuid.UUID, payload: SourceUpdate) -> Source | None:
+    """Set/replace a source's classification scope (game_hint/map_hint).
+
+    Validates slugs via ``_resolve_hints`` (unknown slug → ValueError → 422 in
+    the route), then replaces the scope keys in config_json (REPLACE semantics:
+    both-null clears). Commits atomically via ``unit_of_work`` (route must NOT
+    commit). Returns None if the source is absent or soft-deleted so the route
+    can 404.
+    """
+    async with unit_of_work() as db:
+        source = await get_source(db, source_id)
+        if source is None:
+            return None
+        resolved = await _resolve_hints(db, payload.game_hint, payload.map_hint)
+        source = await replace_source_hints(db, source, hints=resolved)
+        await db.refresh(source)
+        return source
 
 
 async def get(db: AsyncSession, source_id: uuid.UUID) -> Source | None:

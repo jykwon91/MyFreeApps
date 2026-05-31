@@ -87,6 +87,30 @@ async def soft_delete_source(
     return source
 
 
+async def replace_source_hints(
+    db: AsyncSession,
+    source: Source,
+    *,
+    hints: dict,
+) -> Source:
+    """Replace the classification-scope keys (game_hint/map_hint) in config_json.
+
+    REPLACE semantics: the two scope keys are dropped and re-set from *hints*
+    (``{}`` clears the scope; ``{"game_hint": ...}`` or ``{"map_hint": ...,
+    "game_hint": ...}`` set it). Other config_json keys (url, last_sync_stats,
+    deleted, …) are preserved. Reassigns a NEW dict so SQLAlchemy detects the
+    change on the JSON column, mirroring update_sync_stats / soft_delete_source.
+    The caller (source_service.update_hints) owns the commit via unit_of_work.
+    """
+    config = dict(source.config_json or {})
+    config.pop("game_hint", None)
+    config.pop("map_hint", None)
+    config.update(hints)
+    source.config_json = config
+    await db.flush()
+    return source
+
+
 async def update_sync_stats(
     db: AsyncSession,
     source: Source,

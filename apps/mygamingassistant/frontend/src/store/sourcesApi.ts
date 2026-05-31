@@ -6,10 +6,18 @@
  *   SourceList  — list queries (invalidated by create/delete)
  */
 import { baseApi } from "@platform/ui";
-import type { Source, SourceCreate, SyncJobResponse } from "@/types/game";
+import type {
+  ReclassifySourceResult,
+  Source,
+  SourceCreate,
+  SourceUpdate,
+  SyncJobResponse,
+} from "@/types/game";
 
+// "PendingLineups" is owned by lineupsApi; we declare it here too so the bulk
+// reclassify mutation can invalidate the review queue across slices.
 const sourcesBaseApi = baseApi.enhanceEndpoints({
-  addTagTypes: ["Source", "SourceList"],
+  addTagTypes: ["Source", "SourceList", "PendingLineups"],
 });
 
 const sourcesApi = sourcesBaseApi.injectEndpoints({
@@ -46,6 +54,25 @@ const sourcesApi = sourcesBaseApi.injectEndpoints({
       // Don't invalidate SourceList here — sync is async so the list won't
       // have new data immediately. User refreshes to see updated last_synced_at.
     }),
+
+    updateSource: build.mutation<Source, { id: string; body: SourceUpdate }>({
+      query: ({ id, body }) => ({
+        url: `/sources/${id}`,
+        method: "PATCH",
+        data: body,
+      }),
+      invalidatesTags: (_result, _err, { id }) => [
+        { type: "Source", id },
+        "SourceList",
+      ],
+    }),
+
+    reclassifySource: build.mutation<ReclassifySourceResult, string>({
+      query: (id) => ({ url: `/sources/${id}/reclassify`, method: "POST" }),
+      // Re-running the classifier rewrites suggested_* on the source's pending
+      // lineups, so refresh the review queue. Sources themselves are unchanged.
+      invalidatesTags: ["PendingLineups"],
+    }),
   }),
 });
 
@@ -55,4 +82,6 @@ export const {
   useCreateSourceMutation,
   useDeleteSourceMutation,
   useSyncSourceMutation,
+  useUpdateSourceMutation,
+  useReclassifySourceMutation,
 } = sourcesApi;
