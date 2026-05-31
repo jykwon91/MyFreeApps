@@ -2,13 +2,21 @@
  * Inline "Attribute to tenant" widget shown in the TransactionPanel for
  * income transactions that are not yet linked to an applicant.
  *
- * Fetches lease_signed applicants, shows a native <select>, and fires the
- * POST /transactions/{id}/attribute endpoint on confirm.
+ * Fetches lease_signed tenants from the dedicated /applicants/tenants
+ * endpoint (the same source as the Tenants page), shows a native <select>,
+ * and fires the POST /transactions/{id}/attribute endpoint on confirm.
+ *
+ * NOTE: must use ``useGetTenantsQuery``, not ``useGetApplicantsQuery``. The
+ * generic /applicants endpoint caps ``limit`` at 100 and is designed to
+ * *hide* lease_signed applicants (they live on /tenants). Requesting it with
+ * ``limit: 200`` returned 422, which this component silently rendered as the
+ * "no tenants" empty state for every user — see the limit cap in
+ * ``api/applicants.py``.
  */
 import { useState } from "react";
 import { UserCheck } from "lucide-react";
 import { LoadingButton } from "@platform/ui";
-import { useGetApplicantsQuery } from "@/shared/store/applicantsApi";
+import { useGetTenantsQuery } from "@/shared/store/applicantsApi";
 import { useAttributeTransactionManuallyMutation } from "@/shared/store/attributionApi";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 
@@ -26,12 +34,11 @@ export default function AttributeTenantPicker({
   const [selectedId, setSelectedId] = useState<string>(currentApplicantId ?? "");
   const [attribute, { isLoading }] = useAttributeTransactionManuallyMutation();
 
-  const { data: applicantsResponse, isLoading: loadingApplicants } = useGetApplicantsQuery({
-    stage: "lease_signed",
-    limit: 200,
+  const { data: tenantsResponse, isLoading: loadingApplicants } = useGetTenantsQuery({
+    limit: 100,
   });
 
-  const applicants = applicantsResponse?.items ?? [];
+  const applicants = tenantsResponse?.items ?? [];
 
   const isAlreadyAttributed = Boolean(currentApplicantId);
   const hasChanged = selectedId !== (currentApplicantId ?? "");

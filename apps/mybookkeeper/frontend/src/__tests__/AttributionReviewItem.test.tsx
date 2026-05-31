@@ -12,7 +12,7 @@ vi.mock("@/shared/store/attributionApi", () => ({
   useAttributeTransactionManuallyMutation: vi.fn(),
 }));
 vi.mock("@/shared/store/applicantsApi", () => ({
-  useGetApplicantsQuery: vi.fn(),
+  useGetTenantsQuery: vi.fn(),
 }));
 vi.mock("@/shared/store/propertiesApi", () => ({
   useGetPropertiesQuery: vi.fn(),
@@ -27,7 +27,7 @@ import {
   useRejectAttributionReviewMutation,
   useAttributeTransactionManuallyMutation,
 } from "@/shared/store/attributionApi";
-import { useGetApplicantsQuery } from "@/shared/store/applicantsApi";
+import { useGetTenantsQuery } from "@/shared/store/applicantsApi";
 import { useGetPropertiesQuery } from "@/shared/store/propertiesApi";
 
 function makeItem(overrides: Partial<ReviewItemType> = {}): ReviewItemType {
@@ -130,10 +130,10 @@ beforeEach(() => {
     { isLoading: false },
   ] as unknown as ReturnType<typeof useRejectAttributionReviewMutation>);
   setAttributeLoading(false);
-  vi.mocked(useGetApplicantsQuery).mockReturnValue({
+  vi.mocked(useGetTenantsQuery).mockReturnValue({
     data: { items: [{ id: "a1", legal_name: "Bob Tenant" }] },
     isLoading: false,
-  } as unknown as ReturnType<typeof useGetApplicantsQuery>);
+  } as unknown as ReturnType<typeof useGetTenantsQuery>);
   vi.mocked(useGetPropertiesQuery).mockReturnValue({
     data: [
       { id: "p1", name: "Beach House", is_active: true },
@@ -346,12 +346,12 @@ describe("AttributionReviewItem", () => {
   });
 
   it("rent-unmatched: empty tenants → message + disabled Link + no picker", () => {
-    vi.mocked(useGetApplicantsQuery).mockReturnValue({
+    vi.mocked(useGetTenantsQuery).mockReturnValue({
       data: { items: [] },
       isLoading: false,
       isError: false,
       isUninitialized: false,
-    } as unknown as ReturnType<typeof useGetApplicantsQuery>);
+    } as unknown as ReturnType<typeof useGetTenantsQuery>);
     renderItem(rentUnmatched());
     expect(
       screen.getByText(

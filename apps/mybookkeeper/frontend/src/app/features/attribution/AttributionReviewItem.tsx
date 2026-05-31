@@ -8,7 +8,7 @@ import {
   useRejectAttributionReviewMutation,
   useAttributeTransactionManuallyMutation,
 } from "@/shared/store/attributionApi";
-import { useGetApplicantsQuery } from "@/shared/store/applicantsApi";
+import { useGetTenantsQuery } from "@/shared/store/applicantsApi";
 import { useGetPropertiesQuery } from "@/shared/store/propertiesApi";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import AttributionChannelBadge from "./AttributionChannelBadge";
@@ -55,16 +55,19 @@ export default function AttributionReviewItem({ item }: AttributionReviewItemPro
 
   // Tenant list only for rent rows that are unmatched — never for property
   // rows, otherwise this mounts on every Airbnb row and burns RTK cache.
+  // Uses the dedicated /applicants/tenants endpoint (NOT the generic
+  // /applicants, whose limit caps at 100 — requesting `limit: 200` there
+  // returned 422 and stranded this picker in its error state).
   const {
-    data: applicantsResponse,
+    data: tenantsResponse,
     isLoading: loadingApplicants,
     isError: applicantsError,
     isUninitialized: applicantsUninitialized,
-  } = useGetApplicantsQuery(
-    { stage: "lease_signed", limit: 200 },
+  } = useGetTenantsQuery(
+    { limit: 100 },
     { skip: !isUnmatched || isPropertyRow },
   );
-  const applicants = applicantsResponse?.items ?? [];
+  const applicants = tenantsResponse?.items ?? [];
 
   // Property list only for property rows that are unmatched (no proposal to
   // confirm — the host picks the listing the payout belongs to).
