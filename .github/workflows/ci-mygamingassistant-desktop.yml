@@ -2,9 +2,16 @@ name: MyGamingAssistant Desktop CI
 
 # Builds the Tauri desktop binary on Linux, macOS, and Windows.
 #
-# This workflow runs in parallel with the existing deploy-mygamingassistant.yml
-# (which ships the web app). PR 7 only adds this new workflow; it does not
-# change or replace any existing deploy path.
+# DEFERRED (2026-06-01): MyGamingAssistant desktop (Tauri) development is paused.
+# The web app — the read-only lineup library — is the active, deployed product
+# (shipped via deploy-mygamingassistant.yml). The desktop CS2 live screen-capture
+# build is not under active development, and its slow cross-OS native builds were
+# running on every frontend / shared-frontend PR for no current benefit.
+#
+# This workflow is therefore MANUAL-ONLY (workflow_dispatch) — it no longer runs
+# automatically on pull_request / push. The build recipe (jobs below) and all
+# desktop code are intentionally kept intact. To RESUME desktop development,
+# restore the pull_request + push triggers from this file's git history.
 #
 # Signing / notarization: deferred. Binaries are uploaded as workflow artifacts
 # only. Operator setup will be needed before public distribution:
@@ -13,24 +20,11 @@ name: MyGamingAssistant Desktop CI
 #   - Linux:   no signing (or optional Snap/Flatpak publishing later)
 
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - 'apps/mygamingassistant/desktop/**'
-      - 'apps/mygamingassistant/frontend/**'
-      - 'packages/shared-frontend/**'
-      - 'package.json'
-      - 'package-lock.json'
-      - '.github/workflows/ci-mygamingassistant-desktop.yml'
-  push:
-    branches: [main]
-    paths:
-      - 'apps/mygamingassistant/desktop/**'
-      - 'apps/mygamingassistant/frontend/**'
-      - 'packages/shared-frontend/**'
-      - 'package.json'
-      - 'package-lock.json'
-      - '.github/workflows/ci-mygamingassistant-desktop.yml'
+  # Manual-only while desktop development is deferred. To resume automatic
+  # builds, re-add the pull_request + push triggers (branches: [main]; paths:
+  # apps/mygamingassistant/desktop/**, apps/mygamingassistant/frontend/**,
+  # packages/shared-frontend/**, package.json, package-lock.json, and this file).
+  workflow_dispatch:
 
 permissions:
   contents: read
