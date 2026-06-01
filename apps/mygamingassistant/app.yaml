@@ -5,9 +5,18 @@ caddy_host_port: 8096
 node_version: "20"
 postgres_image: postgres:16
 has_minio_subdomain: false
-joins_minio_network: true
+# MGA prod object storage is Cloudflare R2 (reached over the internet), not the
+# shared myfreeapps-minio stack — so the api/caddy services do NOT join the
+# shared external network. See memory/project_mga_prod_storage_r2.md. Local dev
+# still uses standalone MinIO (S3-compatible — endpoint swap only).
+joins_minio_network: false
 block_api_docs: false
 include_bundle_tripwire: true
 env_seed_command: create from .env.example first
-csp: "default-src 'self'; script-src 'self' 'sha256-6gP5jY9WKtmx3Qr/KXGhyuG+YL86Nf6nSb7wHrV5jmk=' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://challenges.cloudflare.com; frame-src 'self' https://challenges.cloudflare.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests"
+# mga-clips.myfreeapps.org is the R2 public clip/screenshot domain (a first-level
+# subdomain so it's covered by Cloudflare's free *.myfreeapps.org Universal SSL).
+# It must appear in img-src (screenshots), media-src (clips), and connect-src
+# (blob fetches). If the operator binds R2 to a different hostname, this CSP,
+# MINIO_PUBLIC_BASE_URL, and the R2 binding must all match.
+csp: "default-src 'self'; script-src 'self' 'sha256-6gP5jY9WKtmx3Qr/KXGhyuG+YL86Nf6nSb7wHrV5jmk=' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://mga-clips.myfreeapps.org; media-src 'self' https://mga-clips.myfreeapps.org; font-src 'self'; connect-src 'self' https://challenges.cloudflare.com https://mga-clips.myfreeapps.org; frame-src 'self' https://challenges.cloudflare.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests"
 workers: []
