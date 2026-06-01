@@ -1,7 +1,7 @@
 # MyGamingAssistant - Tech Debt Log
 
-> Last scanned: 2026-05-21 (file-size + split-shape audit; previous best-practice findings preserved)
-> Issues: 0 critical, 5 high, 7 medium, 3 low
+> Last scanned: 2026-06-01 (serve-only PR — logged 1 pre-existing test failure + extended the ORM-in-routes entry to include totp.py; prior findings preserved)
+> Issues: 0 critical, 6 high, 7 medium, 3 low
 
 mode: log-only - fix only Critical items that block the current feature; log everything else here.
 
@@ -66,13 +66,22 @@ backend/app/services/classification/
 
 ## High
 
+### [Test] MicroClipShiftOverlay - one unit test fails in jsdom (HTMLMediaElement.pause not implemented); the shift mutation is never observed
+
+- **Severity:** High
+- **Effort:** S (<1 hour)
+- **Category:** test / silent failure
+- **Location:** frontend/src/__tests__/MicroClipShiftOverlay.test.tsx:237-241 ("fires the shift mutation with the operator-chosen offset on Apply")
+- **Problem:** The test sets the slider to 3.5, clicks "Shift window", and asserts the shift mutation was called once — but jsdom logs "Not implemented: HTMLMediaElement's pause()" and the mutation spy records 0 calls, so the assertion fails. Pre-existing (fails in isolation on a clean tree; unrelated to the 2026-06-01 serve-only work). Either the component's Apply handler throws before dispatching the mutation when `video.pause()` raises in jsdom (a real bug that would also break the operator's Apply click), or the test fails to stub `HTMLMediaElement.prototype.pause` the way LineupListRow.test.tsx does. The "0 calls" hides which.
+- **Recommendation:** First determine whether the component swallows a `pause()` exception before dispatch (real bug — wrap the pause in a guarded call and still dispatch) or whether it's purely a missing jsdom stub (test bug — add the `HTMLMediaElement.prototype.pause`/`play` stub in a `beforeEach`, mirroring LineupListRow.test.tsx). Fix the cause, not the assertion. This was NOT fixed during the serve-only PR to keep that change scoped (the failure is in the clip-shift domain, unrelated to auth).
+
 ### [Architecture] Lineup Library - ORM/DB access in route handlers (CLAUDE.md never-import-ORM-in-routes violated in 2 modules)
 
 - **Severity:** High
 - **Effort:** M (2-4 hours)
 - **Category:** architecture
-- **Location:** backend/app/api/games.py:24-26,64,84-90,111-126,210-211,237,248; backend/app/api/lineups.py:38,84-94,130-165,240-246,282-285
-- **Problem:** MGA CLAUDE.md mandates Routes -> Services -> Repositories; never import ORM/DB in route handlers. Both modules import select / AsyncSession / selectinload and run raw db.execute(select(...)) plus db.flush() / db.commit() directly in handlers. games.py list_games / list_maps / get_map build queries inline, confirm_minimap_upload does db.flush()+db.commit() (210-211), update_map_zones does db.commit() (248); the lineup route module _resolve_map / list_lineups / list_pending_lineups / get_zone_density resolve Game / Map / Zone / UtilityType slugs via inline db.execute(select(...)). Same class of layering erosion that produced the silent PATCH-rollback bug recorded in lineup_service.py history. The slug-to-ID resolution logic is duplicated across games.py, the lineup route module, and classifier_service._resolve_slugs - three copies.
+- **Location:** backend/app/api/games.py:24-26,64,84-90,111-126,210-211,237,248; backend/app/api/lineups.py:38,84-94,130-165,240-246,282-285; backend/app/api/totp.py:67,88,130,142,153,170,194 (db.add/flush/commit/execute in the TOTP route handlers — same violation; surfaced 2026-06-01 by the serve-only quality gate)
+- **Problem:** MGA CLAUDE.md mandates Routes -> Services -> Repositories; never import ORM/DB in route handlers. These modules import select / AsyncSession / selectinload and run raw db.execute(select(...)) plus db.flush() / db.commit() / db.add() directly in handlers. games.py list_games / list_maps / get_map build queries inline, confirm_minimap_upload does db.flush()+db.commit() (210-211), update_map_zones does db.commit() (248); the lineup route module _resolve_map / list_lineups / list_pending_lineups / get_zone_density resolve Game / Map / Zone / UtilityType slugs via inline db.execute(select(...)). Same class of layering erosion that produced the silent PATCH-rollback bug recorded in lineup_service.py history. The slug-to-ID resolution logic is duplicated across games.py, the lineup route module, and classifier_service._resolve_slugs - three copies.
 - **Note:** The previous scan recorded this as resolved for the commit/mutation half (Layering audit finding #3 RESOLVED below). The read-side inline select(...) queries are still present and the slug-resolver duplication is unaddressed.
 - **Recommendation:** Extract a shared resolver game_repo.resolve_slugs_to_ids(db, *, game_slug, map_slug, zone_slugs, utility_type_slugs) that returns the FK tuple. Replace the inline select() blocks in the lineup route module and in api/games.py with calls into game_repo (helpers already exist - get_game_by_slug, get_map_detail). Drop the SQLAlchemy select import from both route modules. The classifier _resolve_slugs is allowed to keep its own copy for now since it returns extra diagnostic structure (failures + structured codes) - but make it call the shared FK lookups for the actual queries, deduplicating the 3-way fan-out.
 
