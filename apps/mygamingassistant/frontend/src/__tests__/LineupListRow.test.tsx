@@ -80,11 +80,17 @@ const GAME: Game = {
 beforeEach(() => {
   // jsdom doesn't implement these — required only when the row is expanded
   // (mounts GlanceBoardTile → ClipView).
-  (globalThis as any).IntersectionObserver = class {
+  globalThis.IntersectionObserver = class {
     observe() {}
     disconnect() {}
     unobserve() {}
-  };
+    takeRecords() {
+      return [];
+    }
+    readonly root = null;
+    readonly rootMargin = "";
+    readonly thresholds = [];
+  } as unknown as typeof IntersectionObserver;
   Object.defineProperty(HTMLMediaElement.prototype, "play", {
     configurable: true,
     value: vi.fn().mockResolvedValue(undefined),
@@ -96,7 +102,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  delete (globalThis as any).IntersectionObserver;
+  Reflect.deleteProperty(globalThis, "IntersectionObserver");
 });
 
 describe("LineupListRow", () => {
