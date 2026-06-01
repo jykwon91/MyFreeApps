@@ -16,6 +16,13 @@ interface GuestShellProps {
    * passed to either shell without conditional plumbing in RootLayout.
    */
   headerActions?: ReactNode;
+  /**
+   * When true, the "Sign in" CTAs (sidebar + topbar) are hidden entirely.
+   * Used by the serve-only deployment, where there is NO auth at all — the
+   * backend mounts no login route, so a Sign-in button would dead-end on a
+   * 404. The shell then reads as a plain public site with no account concept.
+   */
+  hideSignIn?: boolean;
   /** Page content. */
   children: ReactNode;
 }
@@ -37,7 +44,13 @@ interface GuestShellProps {
  * its API to handle the guest case would break parity with MBK / MJH.
  * A small local component keeps the shared layer clean.
  */
-export default function GuestShell({ logo, nav, headerActions, children }: GuestShellProps) {
+export default function GuestShell({
+  logo,
+  nav,
+  headerActions,
+  hideSignIn = false,
+  children,
+}: GuestShellProps) {
   const isMobile = useMediaQuery("(max-width: 767px)");
   const navigate = useNavigate();
   const location = useLocation();
@@ -84,17 +97,20 @@ export default function GuestShell({ logo, nav, headerActions, children }: Guest
             ))}
           </nav>
 
-          {/* Sign-in CTA in the slot AppShell uses for the user dropdown */}
-          <div className="border-t p-2">
-            <Button
-              onClick={onSignIn}
-              variant="secondary"
-              className="w-full justify-start gap-2 min-h-[44px]"
-            >
-              <LogIn className="w-4 h-4" />
-              Sign in
-            </Button>
-          </div>
+          {/* Sign-in CTA in the slot AppShell uses for the user dropdown.
+              Hidden in serve-only mode (no auth exists). */}
+          {!hideSignIn && (
+            <div className="border-t p-2">
+              <Button
+                onClick={onSignIn}
+                variant="secondary"
+                className="w-full justify-start gap-2 min-h-[44px]"
+              >
+                <LogIn className="w-4 h-4" />
+                Sign in
+              </Button>
+            </div>
+          )}
         </aside>
       )}
 
@@ -104,16 +120,18 @@ export default function GuestShell({ logo, nav, headerActions, children }: Guest
         <header className="flex items-center gap-4 px-4 py-3 border-b bg-background shrink-0 h-14">
           <div className="ml-auto flex items-center gap-2">
             {headerActions}
-            <Button
-              onClick={onSignIn}
-              size="sm"
-              variant="secondary"
-              className="gap-2"
-              data-testid="topbar-sign-in"
-            >
-              <LogIn className="w-4 h-4" />
-              Sign in
-            </Button>
+            {!hideSignIn && (
+              <Button
+                onClick={onSignIn}
+                size="sm"
+                variant="secondary"
+                className="gap-2"
+                data-testid="topbar-sign-in"
+              >
+                <LogIn className="w-4 h-4" />
+                Sign in
+              </Button>
+            )}
           </div>
         </header>
 

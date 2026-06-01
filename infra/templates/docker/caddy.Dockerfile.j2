@@ -52,6 +52,15 @@ COPY apps/{{ app_slug }}/frontend ./apps/{{ app_slug }}/frontend
 # See rules/verify-frontend-build-args.md.
 ARG VITE_TURNSTILE_SITE_KEY=
 ENV VITE_TURNSTILE_SITE_KEY=${VITE_TURNSTILE_SITE_KEY}
+{%- if serve_only_build_arg %}
+
+# VITE_SERVE_ONLY: "true" in the production serve-only deployment makes the
+# bundle a pure public read-only library with no auth UI (no Sign-in CTA, no
+# login/forgot/reset routes). Empty/unset → full auth UI. Inlined at build
+# time like VITE_TURNSTILE_SITE_KEY; see rules/verify-frontend-build-args.md.
+ARG VITE_SERVE_ONLY=
+ENV VITE_SERVE_ONLY=${VITE_SERVE_ONLY}
+{%- endif %}
 
 RUN npm run build --workspace=apps/{{ app_slug }}/frontend
 

@@ -111,6 +111,8 @@ def create_app_lifespan(
     settings: _SettingsProtocol,
     init_sentry: InitSentryFn | None = None,
     bucket_init: BucketInitFn = lambda: None,
+    turnstile_required: bool = True,
+    email_required: bool = True,
     sms_required: bool = False,
     on_startup: LifecycleHook | None = None,
     on_shutdown: LifecycleHook | None = None,
@@ -135,6 +137,18 @@ def create_app_lifespan(
             existence at startup. Defaults to a no-op for apps that
             don't use object storage. Most apps pass their
             ``services.storage.bucket_initializer.ensure_bucket``.
+        turnstile_required: When True (default), the lifespan runs
+            ``check_turnstile_configured()`` so the app fails loud in
+            production if the CAPTCHA secret is missing. Set False for an
+            app/mode that mounts no CAPTCHA-protected form (e.g. MGA's
+            serve_only public-read deployment has no auth, so no
+            forgot-password Turnstile widget). MBK / MJH leave this True.
+        email_required: When True (default), the lifespan runs
+            ``check_email_configured()`` so the app fails loud in
+            production if SMTP creds are missing / console mode is set. Set
+            False for an app/mode that sends no transactional email (e.g.
+            MGA's serve_only deployment has no auth → no verify / reset /
+            login email). MBK / MJH leave this True.
         sms_required: When True, the lifespan also runs
             ``check_sms_configured()`` so the app fails loud in
             production if Twilio credentials are missing. Apps that
@@ -164,16 +178,18 @@ def create_app_lifespan(
         #    raises a subclass of RuntimeError that crashes the
         #    lifespan, fails the healthcheck, and triggers a deploy
         #    rollback.
-        check_turnstile_configured(
-            turnstile_secret_key=settings.turnstile_secret_key,
-            environment=settings.environment,
-        )
-        check_email_configured(
-            email_backend=settings.email_backend,
-            smtp_user=settings.smtp_user,
-            smtp_password=settings.smtp_password,
-            environment=settings.environment,
-        )
+        if turnstile_required:
+            check_turnstile_configured(
+                turnstile_secret_key=settings.turnstile_secret_key,
+                environment=settings.environment,
+            )
+        if email_required:
+            check_email_configured(
+                email_backend=settings.email_backend,
+                smtp_user=settings.smtp_user,
+                smtp_password=settings.smtp_password,
+                environment=settings.environment,
+            )
         if sms_required:
             check_sms_configured(
                 sms_backend=settings.sms_backend,

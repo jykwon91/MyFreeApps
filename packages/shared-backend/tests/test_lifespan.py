@@ -418,3 +418,123 @@ class TestSmsRequired:
         )
         async with lifespan(app):
             pass
+
+
+class TestTurnstileEmailRequiredFlags:
+    """turnstile_required / email_required default True (MBK / MJH unchanged).
+    Setting either False skips the corresponding boot guard — the MGA
+    serve_only mode, which mounts no auth and therefore has no CAPTCHA form
+    and sends no transactional email, so those creds aren't needed in prod."""
+
+    @pytest.mark.asyncio
+    async def test_default_turnstile_required_raises_in_prod_without_key(
+        self, app: FastAPI, monkeypatch,
+    ) -> None:
+        """Default True keeps the canonical fail-loud behavior."""
+        monkeypatch.setattr(
+            "platform_shared.core.lifespan.register_audit_listeners",
+            MagicMock(),
+        )
+        lifespan = create_app_lifespan(
+            settings=_settings(
+                environment="production",
+                turnstile_secret_key="",  # missing
+                email_backend="smtp",
+                smtp_user="u",
+                smtp_password="p" * 16,
+            ),
+            init_sentry=MagicMock(),
+        )
+        with pytest.raises(TurnstileNotConfiguredError):
+            async with lifespan(app):
+                pass
+
+    @pytest.mark.asyncio
+    async def test_turnstile_not_required_skips_guard_in_prod(
+        self, app: FastAPI, monkeypatch,
+    ) -> None:
+        """turnstile_required=False must NOT raise even in prod with no key."""
+        monkeypatch.setattr(
+            "platform_shared.core.lifespan.register_audit_listeners",
+            MagicMock(),
+        )
+        lifespan = create_app_lifespan(
+            settings=_settings(
+                environment="production",
+                turnstile_secret_key="",  # missing — but not required
+                email_backend="smtp",
+                smtp_user="u",
+                smtp_password="p" * 16,
+            ),
+            init_sentry=MagicMock(),
+            turnstile_required=False,
+        )
+        async with lifespan(app):
+            pass
+
+    @pytest.mark.asyncio
+    async def test_default_email_required_raises_in_prod_with_console(
+        self, app: FastAPI, monkeypatch,
+    ) -> None:
+        """Default True keeps the canonical fail-loud behavior."""
+        monkeypatch.setattr(
+            "platform_shared.core.lifespan.register_audit_listeners",
+            MagicMock(),
+        )
+        lifespan = create_app_lifespan(
+            settings=_settings(
+                environment="production",
+                turnstile_secret_key="present",
+                email_backend="console",  # invalid in prod
+            ),
+            init_sentry=MagicMock(),
+        )
+        with pytest.raises(EmailNotConfiguredError):
+            async with lifespan(app):
+                pass
+
+    @pytest.mark.asyncio
+    async def test_email_not_required_skips_guard_in_prod(
+        self, app: FastAPI, monkeypatch,
+    ) -> None:
+        """email_required=False must NOT raise even in prod with console mode."""
+        monkeypatch.setattr(
+            "platform_shared.core.lifespan.register_audit_listeners",
+            MagicMock(),
+        )
+        lifespan = create_app_lifespan(
+            settings=_settings(
+                environment="production",
+                turnstile_secret_key="present",
+                email_backend="console",  # invalid in prod — but not required
+            ),
+            init_sentry=MagicMock(),
+            email_required=False,
+        )
+        async with lifespan(app):
+            pass
+
+    @pytest.mark.asyncio
+    async def test_both_disabled_serve_only_boots_in_prod_with_empty_auth_env(
+        self, app: FastAPI, monkeypatch,
+    ) -> None:
+        """The full MGA serve_only scenario: production, no turnstile key, no
+        SMTP creds, console email — both guards disabled, boots clean."""
+        monkeypatch.setattr(
+            "platform_shared.core.lifespan.register_audit_listeners",
+            MagicMock(),
+        )
+        lifespan = create_app_lifespan(
+            settings=_settings(
+                environment="production",
+                turnstile_secret_key="",
+                email_backend="console",
+                smtp_user="",
+                smtp_password="",
+            ),
+            init_sentry=MagicMock(),
+            turnstile_required=False,
+            email_required=False,
+        )
+        async with lifespan(app):
+            pass

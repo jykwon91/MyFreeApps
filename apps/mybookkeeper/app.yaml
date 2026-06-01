@@ -8,6 +8,9 @@ has_minio_subdomain: true
 joins_minio_network: true
 block_api_docs: true
 include_bundle_tripwire: true
+# Fully auth-gated app — no serve-only public-library mode. Keeps the
+# VITE_SERVE_ONLY build-arg chain OUT of the rendered docker files (MGA-only).
+serve_only_build_arg: false
 env_seed_command: run setup.sh or create env files manually first
 csp: "default-src 'self'; script-src 'self' 'sha256-6gP5jY9WKtmx3Qr/KXGhyuG+YL86Nf6nSb7wHrV5jmk=' https://us.i.posthog.com https://challenges.cloudflare.com https://*.sentry.io; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://storage.{$DOMAIN} https:; font-src 'self'; connect-src 'self' https://storage.{$DOMAIN} https://us.i.posthog.com https://*.posthog.com https://challenges.cloudflare.com https://*.sentry.io; frame-src 'self' blob: https://storage.{$DOMAIN} https://us.posthog.com https://challenges.cloudflare.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests"
 workers:

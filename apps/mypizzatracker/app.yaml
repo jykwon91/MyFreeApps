@@ -8,6 +8,9 @@ has_minio_subdomain: false
 joins_minio_network: true
 block_api_docs: false
 include_bundle_tripwire: false
+# Fully auth-gated app — no serve-only public-library mode. Keeps the
+# VITE_SERVE_ONLY build-arg chain OUT of the rendered docker files (MGA-only).
+serve_only_build_arg: false
 env_seed_command: create from .env.example first
 csp: 'default-src ''self''; script-src ''self'' https://challenges.cloudflare.com;
   style-src ''self'' ''unsafe-inline''; img-src ''self'' data: blob:; font-src ''self'';

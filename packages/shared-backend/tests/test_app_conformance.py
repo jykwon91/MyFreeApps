@@ -346,6 +346,94 @@ class TestTurnstileBundleWiring:
         )
 
 
+# Apps that render the VITE_SERVE_ONLY frontend build-arg chain. Only MGA has
+# a serve-only public-library deployment mode (SERVE_ONLY=true ⇒ no auth). The
+# other apps are fully auth-gated and intentionally do NOT carry the
+# VITE_SERVE_ONLY ARG/build-arg — gated in the templates by the per-app
+# ``serve_only_build_arg`` flag in app.yaml. This is the inverse of an
+# exemption: the bundle-wiring assertions below run ONLY for these apps, and a
+# separate assertion confirms the chain is ABSENT for every other app so the
+# MGA-only scoping can't silently leak into the canonical apps.
+_SERVE_ONLY_BUNDLE_APPS = {"mygamingassistant"}
+
+
+class TestServeOnlyBundleWiring:
+    """VITE_SERVE_ONLY must be wired through the docker build-arg chain for the
+    serve-only app(s), exactly like VITE_TURNSTILE_SITE_KEY.
+
+    Same failure class as the 2026-05-05 Turnstile bug: a VITE_* value read by
+    the frontend that isn't passed as a build arg gets baked as empty, the
+    build still succeeds, and the breakage only shows in the browser. Here an
+    empty VITE_SERVE_ONLY would silently re-enable the auth UI in the public
+    library (Sign-in CTAs pointing at backend routes that 404). See
+    rules/verify-frontend-build-args.md.
+
+    Mirrors TestTurnstileBundleWiring but scoped to _SERVE_ONLY_BUNDLE_APPS,
+    and adds the inverse check (chain absent elsewhere).
+    """
+
+    @pytest.mark.parametrize("app", sorted(_SERVE_ONLY_BUNDLE_APPS))
+    def test_caddy_dockerfile_declares_serve_only_arg(self, app: str) -> None:
+        dockerfile_src = _read("apps", app, "docker", "caddy.Dockerfile")
+        assert "ARG VITE_SERVE_ONLY" in dockerfile_src, (
+            f"{app}/docker/caddy.Dockerfile must declare `ARG VITE_SERVE_ONLY=` "
+            f"before `RUN npm run build` so docker-compose can pass the public "
+            f"serve-only flag into the Vite bundle. Without it the bundle is "
+            f"built with an empty flag and the auth UI re-appears in the "
+            f"public library. (Rendered from the template's "
+            f"serve_only_build_arg gate — re-run "
+            f"`python -m platform_shared.infra.render --app {app}`.)"
+        )
+        assert "ENV VITE_SERVE_ONLY" in dockerfile_src, (
+            f"{app}/docker/caddy.Dockerfile must set "
+            f"`ENV VITE_SERVE_ONLY=${{VITE_SERVE_ONLY}}` after the ARG so Vite "
+            f"picks up the value at build time."
+        )
+        arg_idx = dockerfile_src.find("ARG VITE_SERVE_ONLY")
+        build_idx = dockerfile_src.find("npm run build")
+        assert 0 < arg_idx < build_idx, (
+            f"{app}/docker/caddy.Dockerfile: ARG VITE_SERVE_ONLY must be "
+            f"declared BEFORE `RUN npm run build`, otherwise Vite runs without "
+            f"the env value."
+        )
+
+    @pytest.mark.parametrize("app", sorted(_SERVE_ONLY_BUNDLE_APPS))
+    def test_docker_compose_passes_serve_only_arg_to_caddy(self, app: str) -> None:
+        compose_src = _read("apps", app, "docker-compose.yml")
+        assert "VITE_SERVE_ONLY:" in compose_src, (
+            f"{app}/docker-compose.yml must include `VITE_SERVE_ONLY: "
+            f"${{SERVE_ONLY:-}}` under the caddy service's `build.args:` block "
+            f"so the caddy.Dockerfile ARG sees a value at build time."
+        )
+        assert "${SERVE_ONLY" in compose_src, (
+            f"{app}/docker-compose.yml: VITE_SERVE_ONLY build arg must "
+            f"reference ${{SERVE_ONLY}} (no VITE_ prefix on the right-hand "
+            f"side) so docker compose reads the value from the same env var "
+            f"name the backend uses — one .env.docker line drives both layers."
+        )
+
+    @pytest.mark.parametrize(
+        "app", sorted(set(_APPS) - _SERVE_ONLY_BUNDLE_APPS)
+    )
+    def test_serve_only_chain_absent_for_non_serve_only_apps(self, app: str) -> None:
+        """Inverse guard: fully auth-gated apps must NOT render the
+        VITE_SERVE_ONLY chain. If this fires, the serve_only_build_arg gate
+        leaked (or an app.yaml set it true by mistake) — a non-serve-only app
+        with the flag would build a bundle that could hide its auth UI."""
+        dockerfile_src = _read("apps", app, "docker", "caddy.Dockerfile")
+        compose_src = _read("apps", app, "docker-compose.yml")
+        assert "VITE_SERVE_ONLY" not in dockerfile_src, (
+            f"{app}/docker/caddy.Dockerfile contains VITE_SERVE_ONLY but {app} "
+            f"is not a serve-only app. Set serve_only_build_arg: false in "
+            f"apps/{app}/app.yaml and re-render."
+        )
+        assert "VITE_SERVE_ONLY" not in compose_src, (
+            f"{app}/docker-compose.yml contains VITE_SERVE_ONLY but {app} is "
+            f"not a serve-only app. Set serve_only_build_arg: false in "
+            f"apps/{app}/app.yaml and re-render."
+        )
+
+
 class TestInfraTemplateDrift:
     """Tier 3 — rendered infra files must match the templates byte-for-byte.
 

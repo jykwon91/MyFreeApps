@@ -1,4 +1,5 @@
-import { type RouteObject } from "react-router-dom";
+import type { ReactElement } from "react";
+import { Navigate, type RouteObject } from "react-router-dom";
 import GameGrid from "@/pages/GameGrid";
 import LineupDetail from "@/pages/LineupDetail";
 import LineupPackages from "@/pages/LineupPackages";
@@ -20,6 +21,17 @@ import VerifyEmail from "@/pages/VerifyEmail";
 import NotFound from "@/pages/NotFound";
 import RootLayout from "@/RootLayout";
 import AuthRequired from "@/components/auth/AuthRequired";
+import { isServeOnly } from "@/lib/serveOnly";
+
+// Serve-only mode (production public library): the backend mounts NO auth
+// routes, so the standalone auth pages would dead-end on 404 API calls. Render
+// a redirect to the public home instead of the page. In full-auth mode these
+// resolve to the real pages unchanged.
+const serveOnly = isServeOnly();
+
+function authPageElement(page: ReactElement): ReactElement {
+  return serveOnly ? <Navigate to="/" replace /> : page;
+}
 
 // MGA is single-user — no /register route.
 //
@@ -121,9 +133,9 @@ export const routes: RouteObject[] = [
       },
     ],
   },
-  { path: "/login", element: <Login /> },
-  { path: "/forgot-password", element: <ForgotPassword /> },
-  { path: "/reset-password", element: <ResetPassword /> },
-  { path: "/verify-email", element: <VerifyEmail /> },
+  { path: "/login", element: authPageElement(<Login />) },
+  { path: "/forgot-password", element: authPageElement(<ForgotPassword />) },
+  { path: "/reset-password", element: authPageElement(<ResetPassword />) },
+  { path: "/verify-email", element: authPageElement(<VerifyEmail />) },
   { path: "*", element: <NotFound /> },
 ];
