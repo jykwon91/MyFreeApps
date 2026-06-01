@@ -70,6 +70,11 @@ services:
         # `--env-file backend/.env.docker`. Empty values produce a bundle
         # where TurnstileWidget returns null and registration silently 400s.
         VITE_TURNSTILE_SITE_KEY: ${TURNSTILE_SITE_KEY:-}
+        # VITE_SERVE_ONLY drives the no-auth public-library frontend. Reads the
+        # same SERVE_ONLY var the backend uses (no VITE_ prefix on the RHS) so a
+        # single backend/.env.docker line drives both the backend mode and the
+        # bundle. Empty/unset keeps the full auth UI.
+        VITE_SERVE_ONLY: ${SERVE_ONLY:-}
     restart: unless-stopped
     ports:
       # Bind only to localhost — host Caddy is the public front door and proxies here.

@@ -79,15 +79,21 @@ function makeLineup(over: Partial<Lineup> = {}): Lineup {
 
 beforeEach(() => {
   // Stub for any incidental tile mount via expanded rows in test trees
-  (globalThis as any).IntersectionObserver = class {
+  globalThis.IntersectionObserver = class {
     observe() {}
     disconnect() {}
     unobserve() {}
-  };
+    takeRecords() {
+      return [];
+    }
+    readonly root = null;
+    readonly rootMargin = "";
+    readonly thresholds = [];
+  } as unknown as typeof IntersectionObserver;
 });
 
 afterEach(() => {
-  delete (globalThis as any).IntersectionObserver;
+  Reflect.deleteProperty(globalThis, "IntersectionObserver");
 });
 
 describe("LineupListBoard", () => {

@@ -12,6 +12,12 @@ has_minio_subdomain: false
 joins_minio_network: false
 block_api_docs: false
 include_bundle_tripwire: true
+# MGA-only: render the VITE_SERVE_ONLY frontend build-arg chain (caddy.Dockerfile
+# ARG/ENV + docker-compose caddy build.args). MGA's production deploy is a pure
+# public read-only library with no auth (SERVE_ONLY=true); the bundle needs the
+# matching VITE_SERVE_ONLY flag to hide all auth UI. MBK / MJH / MPT keep this
+# false — they are fully auth-gated and have no serve-only mode.
+serve_only_build_arg: true
 env_seed_command: create from .env.example first
 # mga-clips.myfreeapps.org is the R2 public clip/screenshot domain (a first-level
 # subdomain so it's covered by Cloudflare's free *.myfreeapps.org Universal SSL).

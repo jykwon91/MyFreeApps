@@ -378,3 +378,182 @@ async def test_authed_scheduler_status(auth_client: AsyncClient):
     body = resp.json()
     assert "running" in body
     assert "jobs" in body
+
+
+# ---------------------------------------------------------------------------
+# Serve-only mode — production public read-only library, ZERO auth.
+#
+# In serve_only the app mounts ONLY the public-read surface. Every auth route
+# and every auth-write route must be ABSENT (404) — fail closed: routes are not
+# registered at all, never present-but-bypassed. Public browse must still work.
+#
+# These tests build a SECOND app via create_app() with a serve_only settings
+# clone, and a dedicated client bound to the same test DB session (so the
+# public reads can see fixture rows). They do NOT touch the module-level app,
+# so the rest of the suite (full-auth) is unaffected.
+# ---------------------------------------------------------------------------
+
+@pytest_asyncio.fixture
+async def serve_only_client(
+    db: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> AsyncClient:
+    """An AsyncClient against a freshly-built serve_only app.
+
+    Mirrors the DB / unit_of_work binding the conftest ``client`` fixture does,
+    so public reads resolve against the test's SAVEPOINT-bound session.
+    """
+    from contextlib import asynccontextmanager
+
+    from httpx import ASGITransport
+
+    import app.db.session as _session_mod
+    from app.db.session import get_db as _get_db
+    from app.main import create_app
+
+    serve_settings = settings.model_copy(update={"serve_only": True})
+    serve_app = create_app(serve_settings)
+
+    async def _override_get_db():
+        yield db
+
+    @asynccontextmanager
+    async def _override_unit_of_work():
+        yield db
+
+    monkeypatch.setattr(_session_mod, "unit_of_work", _override_unit_of_work)
+    serve_app.dependency_overrides[_get_db] = _override_get_db
+
+    async with AsyncClient(
+        transport=ASGITransport(app=serve_app),
+        base_url="http://test",
+    ) as ac:
+        yield ac
+
+    serve_app.dependency_overrides.clear()
+
+
+@pytest.mark.parametrize(
+    "method, path",
+    [
+        # fastapi-users auth surface — must be entirely absent.
+        ("POST", "/api/auth/jwt/login"),
+        ("POST", "/api/auth/jwt/logout"),
+        ("POST", "/api/auth/forgot-password"),
+        ("POST", "/api/auth/reset-password"),
+        ("POST", "/api/auth/request-verify-token"),
+        ("POST", "/api/auth/verify"),
+        ("POST", "/api/auth/totp/login"),
+        # User self-service.
+        ("GET", "/api/users/me"),
+        ("GET", "/api/users/me/export"),
+        ("DELETE", "/api/users/me"),
+        # Auth-write domain surface.
+        ("POST", "/api/lineups/upload-url"),
+        ("POST", "/api/lineups"),
+        ("PATCH", "/api/lineups/00000000-0000-0000-0000-000000000000"),
+        ("DELETE", "/api/lineups/00000000-0000-0000-0000-000000000000"),
+        ("GET", "/api/lineups/00000000-0000-0000-0000-000000000000/admin"),
+        ("POST", "/api/lineups/00000000-0000-0000-0000-000000000000/accept"),
+        ("GET", "/api/lineups/pending"),
+        ("POST", "/api/lineups/bulk-accept"),
+        ("POST", "/api/lineup-packages"),
+        ("PATCH", "/api/lineup-packages/00000000-0000-0000-0000-000000000000"),
+        ("DELETE", "/api/lineup-packages/00000000-0000-0000-0000-000000000000"),
+        ("GET", "/api/sources"),
+        ("POST", "/api/sources"),
+        ("GET", "/api/scheduler/status"),
+        ("POST", "/api/scheduler/trigger/sync_all_sources"),
+        ("GET", "/admin/users"),
+        ("GET", "/admin/auth-events"),
+    ],
+)
+@pytest.mark.asyncio
+async def test_serve_only_auth_routes_not_mounted(
+    serve_only_client: AsyncClient, method: str, path: str
+):
+    """Every auth + auth-write route must be NOT MOUNTED in serve_only.
+
+    Fail-closed contract: the operation must be impossible. Acceptable results:
+      - 404: the path is not registered at all (the auth-only surfaces — /auth/*,
+        /api/users/me, /api/sources, /api/scheduler/*, /admin/*).
+      - 405: the path IS registered by the PUBLIC read router for a different
+        method (e.g. POST /api/lineups, PATCH/DELETE /api/lineups/{id},
+        POST /api/lineup-packages), but the write method has no handler. The
+        mutation cannot execute — 405 is as fail-closed as 404 here.
+      - 422: a literal operator path (/api/lineups/pending,
+        /api/lineups/bulk-accept) is, in full-auth mode, served by the
+        auth_router's literal route mounted BEFORE the public parametric
+        GET /api/lineups/{lineup_id}. In serve_only the literal route is ABSENT,
+        so the segment falls through to the parametric route and fails UUID
+        parsing → 422. No operator data is returned; the operator handler is not
+        mounted. Still fail-closed.
+
+    What must NEVER happen:
+      - 2xx: the write/read succeeded (auth bypassed) — catastrophic.
+      - 401 / 403: the route EXISTS and merely rejected the caller — that is
+        present-but-bypassed, which violates the "auth routes ABSENT" guarantee.
+        In serve_only there is no auth dependency to reject, so an auth-style
+        status would mean the auth-write router leaked into the mount.
+    """
+    resp = await serve_only_client.request(method, path)
+    assert resp.status_code in (404, 405, 422), (
+        f"serve_only {method} {path} expected 404/405/422 (route/handler "
+        f"absent), got {resp.status_code}: {resp.text}. A 401/403 would mean "
+        f"the auth route is mounted-but-rejecting (present-but-bypassed); a 2xx "
+        f"would mean auth was bypassed."
+    )
+    # Belt-and-suspenders: explicitly forbid the two catastrophic outcomes so a
+    # future change that accidentally mounts the auth-write router (returning
+    # 200/401/403) fails loudly here regardless of the acceptable-set above.
+    assert resp.status_code not in (200, 201, 204, 401, 403), (
+        f"serve_only {method} {path} returned {resp.status_code} — the "
+        f"auth-write surface MUST be absent (no success, no auth rejection)."
+    )
+
+
+@pytest.mark.asyncio
+async def test_serve_only_public_games_works(
+    serve_only_client: AsyncClient, seeded_game_map: dict
+):
+    """Public GET /api/games must still work in serve_only mode."""
+    resp = await serve_only_client.get("/api/games")
+    assert resp.status_code == 200, resp.text
+    assert any(g["slug"] == "auth-test-game" for g in resp.json())
+
+
+@pytest.mark.asyncio
+async def test_serve_only_public_accepted_lineup_works(
+    serve_only_client: AsyncClient, accepted_lineup: Lineup
+):
+    """Public GET /api/lineups/{id} must return accepted lineups in serve_only."""
+    resp = await serve_only_client.get(f"/api/lineups/{accepted_lineup.id}")
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["id"] == str(accepted_lineup.id)
+
+
+@pytest.mark.asyncio
+async def test_serve_only_public_list_lineups_works(
+    serve_only_client: AsyncClient, seeded_game_map: dict, accepted_lineup: Lineup
+):
+    """Public GET /api/lineups must work and list accepted lineups in serve_only."""
+    resp = await serve_only_client.get("/api/lineups")
+    assert resp.status_code == 200, resp.text
+    assert any(l["id"] == str(accepted_lineup.id) for l in resp.json())
+
+
+@pytest.mark.asyncio
+async def test_serve_only_public_packages_work(serve_only_client: AsyncClient):
+    """Public GET /api/lineup-packages must work in serve_only."""
+    resp = await serve_only_client.get("/api/lineup-packages")
+    assert resp.status_code == 200, resp.text
+    assert isinstance(resp.json(), list)
+
+
+@pytest.mark.asyncio
+async def test_serve_only_health_and_version_work(serve_only_client: AsyncClient):
+    """Public /health and /version must work in serve_only."""
+    health = await serve_only_client.get("/api/health")
+    assert health.status_code in (200, 503), health.text
+    version = await serve_only_client.get("/api/version")
+    assert version.status_code == 200, version.text
+    assert "commit" in version.json()
