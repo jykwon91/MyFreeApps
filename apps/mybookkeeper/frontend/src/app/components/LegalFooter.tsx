@@ -11,6 +11,10 @@ export default function LegalFooter() {
         Terms of Service
       </Link>
       <span aria-hidden="true">·</span>
+      <Link to="/support" className="hover:underline hover:text-foreground transition-colors">
+        Support
+      </Link>
+      <span aria-hidden="true">·</span>
       <a
         href="mailto:jasonykwon91@gmail.com"
         className="hover:underline hover:text-foreground transition-colors"

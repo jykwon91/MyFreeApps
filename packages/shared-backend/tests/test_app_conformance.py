@@ -608,3 +608,120 @@ class TestScaffolderProducesBootableApp:
                     skip_render=True,
                     skip_uv=True,
                 )
+
+
+# --- Transparency / Support page wiring (Initiative 10, PR3) -----------------
+
+_TRANSPARENCY_PRIMARY_APP = "mybookkeeper"
+
+# Per-app routing file (MBK uses an inline <Routes> in App.tsx; the data-router
+# apps use a routes.tsx) and the file that carries the public link to /support
+# (the legal footer on MBK; the login page on the single-user apps).
+_SUPPORT_ROUTING_FILE = {
+    "mybookkeeper": ("frontend", "src", "App.tsx"),
+    "myjobhunter": ("frontend", "src", "routes.tsx"),
+    "mygamingassistant": ("frontend", "src", "routes.tsx"),
+    "mypizzatracker": ("frontend", "src", "routes.tsx"),
+}
+_SUPPORT_LINK_FILE = {
+    "mybookkeeper": ("frontend", "src", "app", "components", "LegalFooter.tsx"),
+    "myjobhunter": ("frontend", "src", "pages", "Login.tsx"),
+    "mygamingassistant": ("frontend", "src", "pages", "Login.tsx"),
+    "mypizzatracker": ("frontend", "src", "pages", "Login.tsx"),
+}
+
+
+@pytest.mark.parametrize("app", _APPS)
+class TestTransparencyRouterMounted:
+    """Every app must mount the shared public transparency router so the
+    /support page's cost widget (GET /transparency) and the Ko-fi webhook
+    (POST /donations/kofi-webhook) resolve. The router is public by design —
+    the /support page is unauthenticated.
+    """
+
+    def test_imports_build_transparency_router(self, app: str) -> None:
+        main_src = _read("apps", app, "backend", "app", "main.py")
+        assert (
+            "from platform_shared.api.transparency_router import build_transparency_router"
+            in main_src
+        ), (
+            f"{app}/backend/app/main.py must import build_transparency_router from "
+            f"platform_shared.api.transparency_router (Initiative 10 PR3)."
+        )
+
+    def test_mounts_transparency_router(self, app: str) -> None:
+        main_src = _read("apps", app, "backend", "app", "main.py")
+        assert "build_transparency_router(settings)" in main_src, (
+            f"{app}/backend/app/main.py must mount the shared router: "
+            f"app.include_router(build_transparency_router(settings)). Without it "
+            f"the /support cost widget 404s and the Ko-fi webhook has no endpoint."
+        )
+
+
+@pytest.mark.parametrize("app", _APPS)
+class TestTransparencyPrimaryWiring:
+    """Exactly ONE app (mybookkeeper) starts the daily cost-sync loop via its
+    lifespan on_startup / on_shutdown hooks. The shared lifespan deliberately
+    does NOT auto-wire it (that would force a core -> services import), so it is
+    wired per-app on the primary only. Enforced in both directions so the loop
+    can't silently start on a second app (two writers racing on the one shared
+    object) or stop being wired on the primary.
+    """
+
+    def test_primary_starts_and_stops_sync(self, app: str) -> None:
+        main_src = _read("apps", app, "backend", "app", "main.py")
+        if app == _TRANSPARENCY_PRIMARY_APP:
+            assert "maybe_start_transparency_sync(settings)" in main_src, (
+                f"{app} is the transparency primary; its main.py on_startup must "
+                f"call maybe_start_transparency_sync(settings)."
+            )
+            assert "stop_transparency_sync()" in main_src, (
+                f"{app} is the transparency primary; its main.py on_shutdown must "
+                f"await stop_transparency_sync()."
+            )
+        else:
+            assert "maybe_start_transparency_sync" not in main_src, (
+                f"{app} is NOT the transparency primary ({_TRANSPARENCY_PRIMARY_APP} "
+                f"is) but its main.py wires maybe_start_transparency_sync. Only the "
+                f"primary may start the cost-sync loop — two writers would race on "
+                f"the shared object."
+            )
+            assert "stop_transparency_sync" not in main_src, (
+                f"{app} is NOT the transparency primary but its main.py references "
+                f"stop_transparency_sync. Only {_TRANSPARENCY_PRIMARY_APP} wires the "
+                f"cost-sync lifecycle."
+            )
+
+
+@pytest.mark.parametrize("app", _APPS)
+class TestSupportPageWired:
+    """Each app exposes a public /support route and links to it from a public
+    surface. MGA additionally opts out of the cost widget — it serves from
+    Cloudflare R2, not the shared MinIO, so it cannot read the shared
+    transparency object.
+    """
+
+    def test_support_route_present(self, app: str) -> None:
+        src = _read("apps", app, *_SUPPORT_ROUTING_FILE[app])
+        assert "/support" in src and "Support" in src, (
+            f"{app}: {'/'.join(_SUPPORT_ROUTING_FILE[app])} must register a public "
+            f"/support route rendering the shared @platform/ui Support page."
+        )
+
+    def test_support_link_present(self, app: str) -> None:
+        src = _read("apps", app, *_SUPPORT_LINK_FILE[app])
+        assert "/support" in src, (
+            f"{app}: {'/'.join(_SUPPORT_LINK_FILE[app])} must carry a public link to "
+            f"/support (the legal footer on MBK; the login page on single-user apps)."
+        )
+
+    def test_mga_omits_cost_widget(self, app: str) -> None:
+        if app != "mygamingassistant":
+            pytest.skip("Only MGA opts out of the cost widget (R2, not shared MinIO).")
+        src = _read("apps", app, *_SUPPORT_ROUTING_FILE[app])
+        assert "showTransparency={false}" in src, (
+            "mygamingassistant/frontend/src/routes.tsx must pass "
+            "showTransparency={false} to <Support> — MGA serves from Cloudflare R2, "
+            "not the shared MinIO, so it cannot read the shared transparency object; "
+            "rendering the widget would show a persistent 'temporarily unavailable'."
+        )

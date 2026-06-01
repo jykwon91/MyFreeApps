@@ -21,6 +21,7 @@ from jwt.exceptions import PyJWTError as JWTError
 from platform_shared.api.admin_router import build_admin_router
 from platform_shared.core.git import resolve_git_commit
 from platform_shared.core.lifespan import create_app_lifespan
+from platform_shared.api.transparency_router import build_transparency_router
 
 from app.api import account, admin, games, health, lineups, lineup_packages, scheduler, sources, totp
 # Note on lineups + lineup_packages routers:
@@ -374,6 +375,14 @@ def create_app(settings: Settings = settings) -> FastAPI:
     if not settings.serve_only:
         _mount_auth_routes(app)
     _mount_public_routes(app)
+
+    # Public transparency / support endpoints (shared): GET /transparency +
+    # POST /donations/kofi-webhook. Unauthenticated by design and mounted in
+    # BOTH modes (parity with the other apps). Inert on MGA: it is not the
+    # transparency primary, so the kofi webhook 404s, and GET /transparency
+    # reports not-configured because MGA serves media from R2, not the shared
+    # MinIO transparency bucket. Public-read fits the serve_only contract.
+    app.include_router(build_transparency_router(settings))
 
     # Test helpers — only mounted when MGA_ENABLE_TEST_HELPERS=1.
     # Provides rate-limit reset + seed-lineup endpoints for E2E tests.

@@ -12,6 +12,11 @@ from sqlalchemy import text
 
 from platform_shared.core.git import resolve_git_commit
 from platform_shared.core.lifespan import create_app_lifespan
+from platform_shared.api.transparency_router import build_transparency_router
+from platform_shared.services.transparency.scheduler import (
+    maybe_start_transparency_sync,
+    stop_transparency_sync,
+)
 
 from app.core.auth import fastapi_users, auth_backend
 from app.core.config import settings
@@ -41,12 +46,19 @@ _worker_task: asyncio.Task[None] | None = None
 
 
 async def _on_startup() -> None:
-    """MBK-specific startup: spawn the Dramatiq upload-processor worker.
+    """MBK-specific startup: spawn the upload-processor worker + start the
+    platform-wide cost-transparency daily sync loop.
 
     The worker pulls Document rows in status=processing and runs the
     extraction pipeline; if RUN_UPLOAD_WORKER is False (e.g. running
     a one-off migration container), we skip it so the same image can
     boot without grabbing the queue.
+
+    MBK is the designated transparency primary, so it also starts the daily
+    cost-sync loop. ``maybe_start_transparency_sync`` is a no-op whenever
+    ``settings.transparency_primary`` is false (every other app, and MBK in
+    any env where the operator hasn't flipped the flag), so calling it here
+    unconditionally is safe.
     """
     global _worker_task
     if settings.run_upload_worker:
@@ -58,9 +70,11 @@ async def _on_startup() -> None:
 
         _worker_task = asyncio.create_task(_run_worker())
 
+    maybe_start_transparency_sync(settings)
+
 
 async def _on_shutdown() -> None:
-    """MBK-specific shutdown: cancel the upload worker."""
+    """MBK-specific shutdown: cancel the upload worker + stop the cost-sync loop."""
     global _worker_task
     if _worker_task and not _worker_task.done():
         _worker_task.cancel()
@@ -68,6 +82,8 @@ async def _on_shutdown() -> None:
             await _worker_task
         except asyncio.CancelledError:
             pass
+
+    await stop_transparency_sync()
 
 
 lifespan = create_app_lifespan(
@@ -210,6 +226,13 @@ app.include_router(
         current_strict_superuser=current_strict_superuser,
     )
 )
+
+# Public transparency / support endpoints (shared): GET /transparency +
+# POST /donations/kofi-webhook. Unauthenticated by design — the public
+# /support page reads it, and Ko-fi posts donations to the one primary app
+# (the app with kofi_verification_token set; every other app 404s the
+# webhook). Resource-level paths; host Caddy strips the /api prefix.
+app.include_router(build_transparency_router(settings))
 app.include_router(admin.router)
 app.include_router(db_admin.router)
 app.include_router(prompts.router)
