@@ -521,6 +521,71 @@ class TestScaffolderProducesBootableApp:
                     skip_uv=True,
                 )
 
+    def test_scaffold_wires_support_page(self, tmp_path) -> None:
+        """Initiative 10 PR4 -- a scaffolded app is born with the public
+        /support page + shared transparency router wired, mirroring the four
+        apps wired in PR3 (TestTransparencyRouterMounted / TestSupportPageWired).
+        Guards against a future template edit silently dropping the support
+        wiring from every app scaffolded thereafter.
+        """
+        import shutil
+        try:
+            import yaml
+        except ModuleNotFoundError as e:
+            pytest.skip(f"pyyaml unavailable ({e}); skipping scaffolder check")
+        try:
+            from platform_shared.infra import new_app as _new_app
+        except ModuleNotFoundError as e:
+            pytest.skip(f"new_app module unavailable ({e}); skipping scaffolder check")
+
+        scaffold_src = _REPO_ROOT / "infra" / "templates" / "scaffold"
+        if not scaffold_src.exists():
+            pytest.skip(f"scaffold templates not present at {scaffold_src}")
+        shutil.copytree(scaffold_src, tmp_path / "infra" / "templates" / "scaffold")
+
+        _new_app.scaffold_app(
+            slug="supporttest",
+            display_name="SupportTest",
+            api_port=18997,
+            caddy_host_port=18996,
+            frontend_port=15997,
+            repo_root=tmp_path,
+            skip_render=True,
+            skip_uv=True,
+            skip_npm=True,
+        )
+        app_dir = tmp_path / "apps" / "supporttest"
+
+        # Backend: shared transparency router imported + mounted (GET /transparency
+        # + POST /donations/kofi-webhook). Without it the /support cost widget 404s.
+        main_src = (app_dir / "backend" / "app" / "main.py").read_text(encoding="utf-8")
+        assert (
+            "from platform_shared.api.transparency_router import build_transparency_router"
+            in main_src
+        ), "scaffolded main.py must import build_transparency_router"
+        assert "build_transparency_router(settings)" in main_src, (
+            "scaffolded main.py must mount the shared transparency router"
+        )
+
+        # Frontend: public /support route rendering the shared Support page + a
+        # public link to it from the login page (single-user apps link via Login).
+        routes_src = (app_dir / "frontend" / "src" / "routes.tsx").read_text(encoding="utf-8")
+        assert "/support" in routes_src and "Support" in routes_src, (
+            "scaffolded routes.tsx must register a public /support route"
+        )
+        login_src = (app_dir / "frontend" / "src" / "pages" / "Login.tsx").read_text(encoding="utf-8")
+        assert "/support" in login_src, (
+            "scaffolded Login.tsx must carry a public link to /support"
+        )
+
+        # CSP: the default frame-src must allow the YouTube no-cookie embed used
+        # by the Support page's inspiration video.
+        csp = yaml.safe_load((app_dir / "app.yaml").read_text(encoding="utf-8"))["csp"]
+        assert "https://www.youtube-nocookie.com" in csp, (
+            "scaffolded app.yaml CSP frame-src must allow youtube-nocookie for the "
+            "Support page video embed"
+        )
+
 
 # --- Transparency / Support page wiring (Initiative 10, PR3) -----------------
 

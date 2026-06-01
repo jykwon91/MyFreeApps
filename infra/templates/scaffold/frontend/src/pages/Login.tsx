@@ -276,7 +276,13 @@ export default function Login() {
         )}
       </div>
 
-      <p className="mt-8 text-xs text-muted-foreground">&copy; 2026 __APP_DISPLAY_NAME__</p>
+      <p className="mt-8 text-xs text-muted-foreground">
+        <a href="/support" className="hover:underline hover:text-foreground transition-colors">
+          Support this project
+        </a>
+        <span className="mx-2" aria-hidden="true">·</span>
+        &copy; 2026 __APP_DISPLAY_NAME__
+      </p>
     </div>
   );
 }
