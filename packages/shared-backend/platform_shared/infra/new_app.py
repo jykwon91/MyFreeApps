@@ -152,7 +152,7 @@ def _write_app_yaml(repo_root: Path, slug: str, *,
             "img-src 'self' data: blob:; "
             "font-src 'self'; "
             "connect-src 'self' https://challenges.cloudflare.com; "
-            "frame-src 'self' https://challenges.cloudflare.com; "
+            "frame-src 'self' https://challenges.cloudflare.com https://www.youtube-nocookie.com; "
             "frame-ancestors 'none'; "
             "base-uri 'self'; "
             "form-action 'self'; "
