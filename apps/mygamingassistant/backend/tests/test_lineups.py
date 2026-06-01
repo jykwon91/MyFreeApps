@@ -118,7 +118,17 @@ def mock_storage():
     mock._client = MagicMock()
     mock._client.presigned_put_object.return_value = "https://minio.example.com/signed-put-url"
 
-    with patch("app.services.game.lineup_service.get_storage", return_value=mock):
+    # get_storage is imported by-reference into BOTH the upload path
+    # (lineup_service.get_upload_url) and the read-signing path
+    # (lineup_url_signing._sign_screenshot_url, extracted in the R2 PR). Patch
+    # every consumer that imported the name — patching only lineup_service
+    # leaves the read path calling the real MinIO client, which raises
+    # StorageNotConfiguredError in CI (no MinIO env). See conftest's
+    # unit_of_work note for the same by-reference patching discipline.
+    with (
+        patch("app.services.game.lineup_service.get_storage", return_value=mock),
+        patch("app.services.game.lineup_url_signing.get_storage", return_value=mock),
+    ):
         yield mock
 
 
