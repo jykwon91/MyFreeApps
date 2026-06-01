@@ -27,6 +27,20 @@ class Settings(BaseAppSettings):
     email_from_name: str = "MyGamingAssistant"
 
     # ------------------------------------------------------------------
+    # Public object base URL for the lineup library (R2 prod serving).
+    # When set (production: the R2 bucket's public custom domain, e.g.
+    # https://clips.mygamingassistant.myfreeapps.org), public read URLs for
+    # lineup clips/screenshots are emitted as plain CDN URLs ``{base}/{key}``
+    # instead of presigned MinIO URLs. Accepted lineups are public and prod R2
+    # holds ONLY accepted clips, so no signing is needed and Cloudflare's CDN
+    # can edge-cache them (R2's free-egress + cache win — why R2 was chosen).
+    # Leave EMPTY in local dev / CI, where storage is MinIO, reads are
+    # presigned, and pending screenshots are gated by the API 404 on
+    # non-accepted lineups. See lineup_service._sign_screenshot_url.
+    # ------------------------------------------------------------------
+    minio_public_base_url: str = ""
+
+    # ------------------------------------------------------------------
     # Single-user seed (MGA-specific — no equivalent in MBK/MJH).
     # On first boot the lifespan creates this user if it doesn't exist.
     # In production both fields are required (boot guard fires if empty).
