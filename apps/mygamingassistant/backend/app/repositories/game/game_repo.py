@@ -200,26 +200,31 @@ async def upsert_map_zone(
     slug: str,
     name: str,
     polygon_points: list[list[float]] | None = None,
+    force_polygon: bool = False,
 ) -> MapZone:
-    """Insert a zone if missing; backfill an empty polygon if the fixture has one.
+    """Insert a zone if missing; backfill/refresh its polygon per the rules below.
 
-    Backfill rule (idempotent, conservative):
-    - The (map_id, slug) zone already exists, AND
-    - its stored ``polygon_points`` is empty/falsy, AND
-    - the incoming ``polygon_points`` is non-empty
-      → write the incoming polygon onto the existing row and flush.
+    Polygon write rule (idempotent, conservative):
+    - existing + EMPTY stored polygon + non-empty incoming → write incoming
+      (the fixture-backfill case; always applies).
+    - existing + NON-EMPTY stored polygon + non-empty incoming → write incoming
+      ONLY when ``force_polygon=True``.
+    - a non-empty stored polygon is NEVER cleared to empty (a falsy incoming
+      is ignored), regardless of ``force_polygon``.
 
-    A zone that already has a non-empty polygon is NEVER overwritten — this
-    protects operator-drawn polygons (the #656 zone editor) from being
-    clobbered by a re-run of ``load-fixtures``. Re-running with the same
-    fixture is a no-op once the polygon is populated.
+    ``load-fixtures`` leaves ``force_polygon=False`` so operator-drawn polygons
+    (the #656 zone editor) are never clobbered by a re-run. The library
+    IMPORTER (``lineup_importer``) passes ``force_polygon=True`` because the
+    published pack is the authoritative source for prod's serve-only library —
+    a polygon the operator refined locally must reach prod, where there is no
+    editor to redraw it.
     """
     result = await db.execute(
         select(MapZone).where(MapZone.map_id == map_id, MapZone.slug == slug)
     )
     existing = result.scalar_one_or_none()
     if existing is not None:
-        if not existing.polygon_points and polygon_points:
+        if polygon_points and (force_polygon or not existing.polygon_points):
             existing.polygon_points = polygon_points
             await db.flush()
         return existing
@@ -232,6 +237,24 @@ async def upsert_map_zone(
     db.add(zone)
     await db.flush()
     return zone
+
+
+async def get_utility_type_by_slug(
+    db: AsyncSession, game_id: uuid.UUID, slug: str
+) -> UtilityType | None:
+    """Return the (game_id, slug) utility type, or None.
+
+    Used by the library importer to resolve a pack lineup's
+    ``utility_type_slug`` to the prod-side UUID. Utility types are seeded by
+    ``load-fixtures`` (which runs before import), so a None here means the
+    fixtures were not loaded — the importer treats that as a hard error.
+    """
+    result = await db.execute(
+        select(UtilityType).where(
+            UtilityType.game_id == game_id, UtilityType.slug == slug
+        )
+    )
+    return result.scalar_one_or_none()
 
 
 async def update_zone_polygons_bulk(
