@@ -1,4 +1,5 @@
 import { type RouteObject } from "react-router-dom";
+import { Support } from "@platform/ui";
 import GameGrid from "@/pages/GameGrid";
 import LineupDetail from "@/pages/LineupDetail";
 import LineupPackages from "@/pages/LineupPackages";
@@ -121,6 +122,12 @@ export const routes: RouteObject[] = [
       },
     ],
   },
+  // Public support / donation page — standalone (no shell, no auth).
+  // showTransparency=false: MGA serves from Cloudflare R2, not the shared MinIO,
+  // so it can't read the shared cost-transparency object. Donation CTA + story +
+  // video still render; the cost widget is omitted. See platform_shared/services/
+  // transparency + memory/project_mga_prod_storage_r2.md.
+  { path: "/support", element: <Support appName="MyGamingAssistant" showTransparency={false} /> },
   { path: "/login", element: <Login /> },
   { path: "/forgot-password", element: <ForgotPassword /> },
   { path: "/reset-password", element: <ResetPassword /> },

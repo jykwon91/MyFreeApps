@@ -20,6 +20,7 @@ from jwt.exceptions import PyJWTError as JWTError
 
 from platform_shared.core.git import resolve_git_commit
 from platform_shared.core.lifespan import create_app_lifespan
+from platform_shared.api.transparency_router import build_transparency_router
 
 from app.api import account, admin, games, health, lineups, lineup_packages, scheduler, sources, totp
 # Note on lineups + lineup_packages routers:
@@ -309,6 +310,13 @@ app.include_router(
         current_strict_superuser=current_strict_superuser,
     )
 )
+
+# Public transparency / support endpoints (shared): GET /transparency +
+# POST /donations/kofi-webhook. Unauthenticated by design — the public
+# /support page reads it, and Ko-fi posts donations to the one primary app
+# (the app with kofi_verification_token set; every other app 404s the
+# webhook). Resource-level paths; host Caddy strips the /api prefix.
+app.include_router(build_transparency_router(settings))
 
 # TOTP routes — /auth/totp/login gets the per-IP throttle.
 for _route in totp.router.routes:

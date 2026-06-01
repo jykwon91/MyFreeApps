@@ -79,6 +79,19 @@ class TestLoadSaveRoundTrip:
         with pytest.raises(StorageNotConfiguredError):
             transparency_store.load_document(_SETTINGS)
 
+    def test_missing_bucket_returns_none(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """A not-yet-created shared bucket is the "not configured" state, not a
+        transient outage: load_document returns None (→ widget hides). Lets apps
+        ship /support before the operator runs the bucket-creation migration, and
+        lets an app that isn't on the shared MinIO at all (e.g. MGA on Cloudflare
+        R2) degrade cleanly instead of surfacing a persistent 503."""
+        class _NoBucket:
+            def download_file(self, key: str) -> bytes:
+                raise make_s3_error("NoSuchBucket", key)
+
+        monkeypatch.setattr(transparency_store, "get_shared_storage", lambda settings: _NoBucket())
+        assert transparency_store.load_document(_SETTINGS) is None
+
 
 class TestProjectResponse:
     def test_none_document_is_not_configured(self) -> None:

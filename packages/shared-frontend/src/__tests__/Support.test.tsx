@@ -3,13 +3,11 @@ import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import Support from "../pages/Support";
 
-// The transparency widget self-fetches; stub it as "not configured" so it
-// renders nothing and the page layout is exercised cleanly.
-vi.mock("../components/widgets/useTransparency", () => ({
-  useTransparency: () => ({
-    status: "ok",
-    data: { month: "June 2026", costs_cents: 0, donations_cents: 0, updated_at: null, configured: false },
-  }),
+// Stub the transparency widget with a sentinel so we can assert whether the
+// page renders it (default) or omits it (showTransparency={false}). The widget's
+// own fetch/render behaviour is covered by TransparencyWidget's tests.
+vi.mock("../components/widgets/TransparencyWidget", () => ({
+  default: () => <div data-testid="transparency-widget" />,
 }));
 
 function renderSupport(props: Partial<Parameters<typeof Support>[0]> = {}) {
@@ -45,5 +43,15 @@ describe("Support page", () => {
       "href",
       "https://ko-fi.com/test",
     );
+  });
+
+  it("renders the cost-transparency widget by default", () => {
+    renderSupport();
+    expect(screen.getByTestId("transparency-widget")).toBeInTheDocument();
+  });
+
+  it("omits the cost-transparency widget when showTransparency is false", () => {
+    renderSupport({ showTransparency: false });
+    expect(screen.queryByTestId("transparency-widget")).not.toBeInTheDocument();
   });
 });
