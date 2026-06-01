@@ -32,6 +32,8 @@ export { default as Badge } from "./components/ui/Badge";
 export { default as StatusBadge } from "./components/ui/StatusBadge";
 export type { StatusBadgeProps, BadgeTone } from "./components/ui/StatusBadge";
 export { default as Card } from "./components/ui/Card";
+export { default as ProgressBar } from "./components/ui/ProgressBar";
+export type { ProgressTone } from "./components/ui/ProgressBar";
 export { default as FormField } from "./components/ui/FormField";
 export { default as Toaster } from "./components/ui/Toaster";
 export { default as TurnstileWidget } from "./components/ui/TurnstileWidget";
@@ -69,6 +71,12 @@ export type { PaginationProps } from "./components/data/Pagination";
 // Upload components
 export { default as FileUploadDropzone } from "./components/upload/FileUploadDropzone";
 export type { FileUploadDropzoneProps } from "./components/upload/FileUploadDropzone";
+
+// Support / donation page (shared across all apps)
+export { default as Support } from "./pages/Support";
+export { default as TransparencyWidget } from "./components/widgets/TransparencyWidget";
+export { default as KofiButton } from "./components/widgets/KofiButton";
+export { default as YouTubeEmbed } from "./components/embed/YouTubeEmbed";
 
 // Hooks
 export { useMediaQuery } from "./hooks/useMediaQuery";
