@@ -40,6 +40,7 @@ from app.repositories.game.lineup import (
     set_stand_screenshot_url,
     set_technique,
     update_lineup,
+    upsert_imported_lineup,
     write_classifier_suggestions,
     zone_density,
 )
@@ -73,6 +74,7 @@ __all__ = [
     "set_stand_screenshot_url",
     "set_technique",
     "update_lineup",
+    "upsert_imported_lineup",
     "write_classifier_suggestions",
     "zone_density",
 ]

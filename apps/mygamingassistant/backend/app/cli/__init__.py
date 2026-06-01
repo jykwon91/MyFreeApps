@@ -2,6 +2,7 @@
 
 Usage:
     python -m app.cli load-fixtures
+    python -m app.cli import-lineups [pack.json]
     python -m app.cli backfill-clips
     python -m app.cli backfill-technique
     python -m app.cli backfill-landing-clips
@@ -143,6 +144,16 @@ def main() -> None:
         from app.services.game.fixture_loader import load_fixtures_standalone
         asyncio.run(load_fixtures_standalone())
         print("Fixtures loaded successfully.")
+    elif command == "import-lineups":
+        # Seeds the public read-only library from the image-baked pack
+        # (apps/.../backend/data/lineup_library.json → /app/data/...). Run
+        # AFTER load-fixtures (it resolves the pack's game/map/zone/utility
+        # slugs against the seeded taxonomy). Optional path arg overrides the
+        # baked default. See app/services/game/lineup_importer.py.
+        from app.services.game.lineup_importer import import_lineups_standalone
+        pack_path = sys.argv[2] if len(sys.argv) > 2 else None
+        stats = asyncio.run(import_lineups_standalone(pack_path))
+        print(stats.summary())
     elif command == "backfill-clips":
         sys.exit(asyncio.run(_run_backfill_clips()))
     elif command == "backfill-technique":
@@ -157,6 +168,7 @@ def main() -> None:
         print(f"Unknown command: {command!r}")
         print("Available commands:")
         print("  load-fixtures          — load game taxonomy fixtures into the database")
+        print("  import-lineups [pack]  — seed the public library from a published pack (after load-fixtures)")
         print("  backfill-clips         — generate clips for accepted lineups missing one")
         print("  backfill-technique     — name throw-technique for accepted lineups missing one")
         print("  backfill-landing-clips — generate landing clips for accepted lineups missing one")
