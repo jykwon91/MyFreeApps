@@ -468,21 +468,46 @@ async def serve_only_client(
     ],
 )
 @pytest.mark.asyncio
-async def test_serve_only_auth_routes_absent_404(
+async def test_serve_only_auth_routes_not_mounted(
     serve_only_client: AsyncClient, method: str, path: str
 ):
-    """Every auth + auth-write route must 404 in serve_only (NOT mounted).
+    """Every auth + auth-write route must be NOT MOUNTED in serve_only.
 
-    Fail closed: a 401/403 would mean the route exists but rejected the
-    caller — that is present-but-bypassed and is NOT acceptable here. Only 404
-    (route absent) and 405 (path exists for another method but not this one)
-    are acceptable; assert specifically that it is NOT an auth-style 401/403
-    and NOT a success.
+    Fail-closed contract: the operation must be impossible. Acceptable results:
+      - 404: the path is not registered at all (the auth-only surfaces — /auth/*,
+        /api/users/me, /api/sources, /api/scheduler/*, /admin/*).
+      - 405: the path IS registered by the PUBLIC read router for a different
+        method (e.g. POST /api/lineups, PATCH/DELETE /api/lineups/{id},
+        POST /api/lineup-packages), but the write method has no handler. The
+        mutation cannot execute — 405 is as fail-closed as 404 here.
+      - 422: a literal operator path (/api/lineups/pending,
+        /api/lineups/bulk-accept) is, in full-auth mode, served by the
+        auth_router's literal route mounted BEFORE the public parametric
+        GET /api/lineups/{lineup_id}. In serve_only the literal route is ABSENT,
+        so the segment falls through to the parametric route and fails UUID
+        parsing → 422. No operator data is returned; the operator handler is not
+        mounted. Still fail-closed.
+
+    What must NEVER happen:
+      - 2xx: the write/read succeeded (auth bypassed) — catastrophic.
+      - 401 / 403: the route EXISTS and merely rejected the caller — that is
+        present-but-bypassed, which violates the "auth routes ABSENT" guarantee.
+        In serve_only there is no auth dependency to reject, so an auth-style
+        status would mean the auth-write router leaked into the mount.
     """
     resp = await serve_only_client.request(method, path)
-    assert resp.status_code == 404, (
-        f"serve_only {method} {path} expected 404 (route absent), got "
-        f"{resp.status_code}: {resp.text}"
+    assert resp.status_code in (404, 405, 422), (
+        f"serve_only {method} {path} expected 404/405/422 (route/handler "
+        f"absent), got {resp.status_code}: {resp.text}. A 401/403 would mean "
+        f"the auth route is mounted-but-rejecting (present-but-bypassed); a 2xx "
+        f"would mean auth was bypassed."
+    )
+    # Belt-and-suspenders: explicitly forbid the two catastrophic outcomes so a
+    # future change that accidentally mounts the auth-write router (returning
+    # 200/401/403) fails loudly here regardless of the acceptable-set above.
+    assert resp.status_code not in (200, 201, 204, 401, 403), (
+        f"serve_only {method} {path} returned {resp.status_code} — the "
+        f"auth-write surface MUST be absent (no success, no auth rejection)."
     )
 
 
