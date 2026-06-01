@@ -72,6 +72,7 @@ from platform_shared.core.audit import register_audit_listeners
 from platform_shared.core.boot_guards import (
     check_email_configured,
     check_sms_configured,
+    check_transparency_configured,
     check_turnstile_configured,
 )
 
@@ -95,6 +96,8 @@ class _SettingsProtocol(Protocol):
     twilio_account_sid: str
     twilio_auth_token: str
     twilio_from_number: str
+    transparency_primary: bool
+    kofi_verification_token: str
 
 
 # init_sentry needs to be passed in as a callable rather than imported,
@@ -182,6 +185,14 @@ def create_app_lifespan(
                 twilio_from_number=settings.twilio_from_number,
                 environment=settings.environment,
             )
+        # Transparency writer guard — self-gating: a no-op unless this app is
+        # the primary (the single Ko-fi webhook receiver) in a non-dev env.
+        # Every app calls it; only a misconfigured primary fails to boot.
+        check_transparency_configured(
+            transparency_primary=settings.transparency_primary,
+            kofi_verification_token=settings.kofi_verification_token,
+            environment=settings.environment,
+        )
 
         # 3. Side-effect inits — wire SQLAlchemy listeners before any
         #    request handler can run a write, and verify MinIO is

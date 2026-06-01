@@ -160,4 +160,35 @@ class BaseAppSettings(BaseSettings):
     # ------------------------------------------------------------------
     log_level: str = "INFO"
 
+    # ------------------------------------------------------------------
+    # Cost-transparency / Support page (platform-wide, one shared object)
+    #
+    # Every app serves a public /support page with a cost-transparency
+    # widget reading ONE shared object in ``transparency_shared_bucket``.
+    # Exactly ONE app is the WRITER (``transparency_primary=true``): it
+    # receives the Ko-fi donation webhook and runs the daily Anthropic
+    # cost poll. Every other app only READS. The writer-only secrets
+    # (Ko-fi token, admin key, cost constants) live solely in the primary
+    # app's env; non-primary apps leave them empty.
+    #
+    # ``kofi_verification_token``  Ko-fi webhook secret (compared for
+    #     equality — Ko-fi uses a static token, not HMAC). Writer only.
+    # ``anthropic_admin_api_key``  Optional sk-ant-admin... key for the
+    #     daily Cost Report pull. Empty = costs reflect the fixed
+    #     constants alone (operator declined auto-pull). Writer only.
+    # ``vps_monthly_cost_cents`` / ``domain_monthly_cost_cents``  Fixed
+    #     monthly hosting costs in cents. Writer only.
+    # ``transparency_primary``  Marks the single writer app. Default false
+    #     so every other app is read-only. NOT a secret — set in compose.
+    # ``transparency_shared_bucket``  Name of the shared MinIO bucket the
+    #     transparency object lives in. Default works platform-wide; the
+    #     operator creates the bucket once and grants every app access.
+    # ------------------------------------------------------------------
+    kofi_verification_token: str = ""
+    anthropic_admin_api_key: str = ""
+    vps_monthly_cost_cents: int = 0
+    domain_monthly_cost_cents: int = 0
+    transparency_primary: bool = False
+    transparency_shared_bucket: str = "myfreeapps-shared"
+
     model_config = {"env_file": ".env", "extra": "ignore"}

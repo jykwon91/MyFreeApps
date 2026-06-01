@@ -194,3 +194,55 @@ def check_sms_configured(
             "raises on every send and customers never receive ready-texts. "
             "Set the credentials or set ENVIRONMENT=development."
         )
+
+
+class TransparencyNotConfiguredError(RuntimeError):
+    """Raised at boot when the transparency PRIMARY app is missing its Ko-fi token."""
+
+
+def check_transparency_configured(
+    *,
+    transparency_primary: bool,
+    kofi_verification_token: str,
+    environment: str,
+) -> None:
+    """Fail loud at boot if the transparency WRITER app can't verify webhooks.
+
+    Only the single primary app (``transparency_primary=true``) receives Ko-fi
+    donation webhooks. The receiver compares the payload's ``verification_token``
+    to ``KOFI_VERIFICATION_TOKEN``; an empty configured token rejects EVERY
+    donation as unverified — the silent-degradation failure mode these boot
+    guards exist to prevent (a deploy looks healthy while donations vanish).
+
+    Non-primary apps need nothing here: they only READ the shared object, so
+    the guard is a no-op for them. Dev/test also pass with empty config.
+
+    Args:
+        transparency_primary: Whether this app is the designated transparency
+            writer (receives the Ko-fi webhook + runs the cost poll).
+        kofi_verification_token: The Ko-fi webhook verification token. Required
+            (non-empty) when ``transparency_primary`` is true in a non-dev
+            environment.
+        environment: Deployment environment name. ``"development"`` / ``"test"``
+            allow an empty token; everything else requires it for the primary.
+
+    Raises:
+        TransparencyNotConfiguredError: If ``environment`` is not dev/test,
+            ``transparency_primary`` is true, and ``kofi_verification_token``
+            is empty.
+    """
+    if environment in _DEV_ENVIRONMENTS:
+        return
+    if not transparency_primary:
+        return
+    if kofi_verification_token:
+        return
+    raise TransparencyNotConfiguredError(
+        "TRANSPARENCY_PRIMARY=true but KOFI_VERIFICATION_TOKEN is empty. "
+        "The primary transparency app receives Ko-fi donation webhooks; "
+        "without the verification token it would reject every donation as "
+        "unverified and the /support widget would never count them. Set "
+        "KOFI_VERIFICATION_TOKEN (from your Ko-fi webhook settings), or set "
+        "TRANSPARENCY_PRIMARY=false on this app (only one app should be the "
+        "writer), or set ENVIRONMENT=development."
+    )
