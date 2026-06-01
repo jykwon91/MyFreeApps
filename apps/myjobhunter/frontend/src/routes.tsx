@@ -1,4 +1,5 @@
 import { Navigate, type RouteObject } from "react-router-dom";
+import { Support } from "@platform/ui";
 import Dashboard from "@/pages/Dashboard";
 import Analyze from "@/pages/Analyze";
 import Discover from "@/pages/Discover";
@@ -67,6 +68,8 @@ export const routes: RouteObject[] = [
       },
     ],
   },
+  // Public support / donation page — standalone (no shell, no auth).
+  { path: "/support", element: <Support appName="MyJobHunter" /> },
   { path: "/login", element: <Login /> },
   { path: "/register", element: <Register /> },
   { path: "/forgot-password", element: <ForgotPassword /> },

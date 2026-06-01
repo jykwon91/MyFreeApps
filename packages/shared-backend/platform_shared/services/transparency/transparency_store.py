@@ -48,7 +48,15 @@ from platform_shared.schemas.transparency import (
 
 logger = logging.getLogger(__name__)
 
-_NOT_FOUND_CODES = {"NoSuchKey", "NoSuchObject"}
+# Codes that mean "the shared transparency object isn't there to read" — a
+# setup / not-configured condition, NOT a transient outage. We map these to
+# ``None`` (→ ``configured=False`` → the widget hides) instead of a 503. Covers
+# the object not being written yet (fresh deploy, before the primary's first
+# sync) AND the shared bucket not existing yet (before the operator runs the
+# operational migration — and the steady state for any app not on the shared
+# MinIO at all, e.g. MGA serving from Cloudflare R2). Transient / auth failures
+# carry a different code and still raise → 503 ("temporarily unavailable").
+_NOT_FOUND_CODES = {"NoSuchKey", "NoSuchObject", "NoSuchBucket"}
 
 
 class _StorageSettings(Protocol):
@@ -103,8 +111,10 @@ def reset_shared_storage_cache() -> None:
 def load_document(settings: _StorageSettings) -> TransparencyDocument | None:
     """Load the stored transparency document.
 
-    Returns ``None`` ONLY when the object does not exist yet (fresh deploy —
-    the "not configured" state). Re-raises on every other failure:
+    Returns ``None`` when the shared object — or the shared bucket itself — does
+    not exist yet (fresh deploy / before the operator's migration, and the
+    steady state for an app not on the shared MinIO). That is the "not
+    configured" state (the widget hides). Re-raises on every other failure:
 
     - :class:`StorageNotConfiguredError` — MinIO unconfigured (dev / pre-setup).
     - :class:`~minio.error.S3Error` (non-NoSuchKey) — transient outage / auth.
