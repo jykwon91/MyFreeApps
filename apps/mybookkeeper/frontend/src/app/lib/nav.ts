@@ -59,6 +59,12 @@ export const NAV_GROUPS: readonly NavGroup[] = [
       { to: "/security", label: "Security" },
     ],
   },
+  {
+    // Headerless trailing group — sits at the bottom of the sidebar, above the
+    // theme toggle / user menu. Routes to the standalone public /support page.
+    label: null,
+    items: [{ to: "/support", label: "Support Me" }],
+  },
 ] as const;
 
 /**

@@ -27,6 +27,7 @@ export const NAV_DESCRIPTORS: NavDescriptor[] = [
   { path: "/resume", label: "Resume", iconName: "Sparkles" },
   { path: "/profile", label: "Profile", iconName: "UserCircle" },
   { path: "/settings", label: "Settings", iconName: "Settings" },
+  { path: "/support", label: "Support Me", iconName: "Heart" },
 ];
 
 /**

@@ -10,10 +10,6 @@ export default function LegalFooter() {
       <Link to="/terms" className="hover:underline hover:text-foreground transition-colors">
         Terms of Service
       </Link>
-      <span aria-hidden="true">·</span>
-      <Link to="/support" className="hover:underline hover:text-foreground transition-colors">
-        Support
-      </Link>
     </footer>
   );
 }

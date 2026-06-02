@@ -48,6 +48,7 @@ export { default as ThemeToggle } from "./components/ui/ThemeToggle";
 // Layout components
 export { default as AppShell } from "./components/layout/AppShell";
 export type { AppShellProps, NavItem, BottomNavItem } from "./components/layout/AppShell";
+export { default as AuthPageFooter } from "./components/layout/AuthPageFooter";
 
 // Auth components
 export { default as RequireAuth } from "./components/auth/RequireAuth";
