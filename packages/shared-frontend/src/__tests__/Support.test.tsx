@@ -27,7 +27,7 @@ describe("Support page", () => {
 
   it("shows a video placeholder when no video id is given", () => {
     renderSupport();
-    expect(screen.getByText(/coming soon/i)).toBeInTheDocument();
+    expect(screen.getByText(/video coming soon/i)).toBeInTheDocument();
   });
 
   it("embeds the video when an id is provided", () => {
@@ -43,6 +43,14 @@ describe("Support page", () => {
       "href",
       "https://ko-fi.com/test",
     );
+  });
+
+  it("renders a disabled 'coming soon' donate button when no Ko-fi url is set", () => {
+    renderSupport();
+    const cta = screen.getByRole("button", { name: /support on ko-fi/i });
+    expect(cta).toBeDisabled();
+    expect(screen.queryByRole("link", { name: /support on ko-fi/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/donations coming soon/i)).toBeInTheDocument();
   });
 
   it("renders the cost-transparency widget by default", () => {

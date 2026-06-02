@@ -1,17 +1,18 @@
 import { Link } from "react-router-dom";
+import Button from "../components/ui/Button";
 import YouTubeEmbed from "../components/embed/YouTubeEmbed";
 import KofiButton from "../components/widgets/KofiButton";
 import TransparencyWidget from "../components/widgets/TransparencyWidget";
-
-/** Shared Ko-fi page for all MyFreeApps. PLACEHOLDER — operator updates to the real handle. */
-const DEFAULT_KOFI_URL = "https://ko-fi.com/myfreeapps";
 
 interface Props {
   /** Host app name, used in the "← Back to {appName}" link, e.g. "MyBookkeeper". */
   appName: string;
   /** Where the back link points. Defaults to the app root. */
   homePath?: string;
-  /** Override the shared Ko-fi page URL. */
+  /**
+   * The app's Ko-fi donate URL. When omitted, the donate button renders disabled
+   * ("Donations coming soon") — set this once a real Ko-fi account exists.
+   */
   kofiUrl?: string;
   /** Unlisted YouTube video ID for the inspiration video. Omit to show a "coming soon" placeholder. */
   youtubeVideoId?: string;
@@ -34,7 +35,7 @@ interface Props {
 export default function Support({
   appName,
   homePath = "/",
-  kofiUrl = DEFAULT_KOFI_URL,
+  kofiUrl,
   youtubeVideoId,
   showTransparency = true,
 }: Props) {
@@ -80,10 +81,21 @@ export default function Support({
 
           <section className="flex flex-col items-center gap-3 text-center">
             <h2 className="sr-only">Support these apps</h2>
-            <KofiButton url={kofiUrl} />
-            <p className="text-xs text-muted-foreground">
-              Donations are handled securely by Ko-fi — you don't need an account.
-            </p>
+            {kofiUrl ? (
+              <>
+                <KofiButton url={kofiUrl} />
+                <p className="text-xs text-muted-foreground">
+                  Donations are handled securely by Ko-fi — you don't need an account.
+                </p>
+              </>
+            ) : (
+              <>
+                <Button variant="primary" disabled>
+                  Support on Ko-fi
+                </Button>
+                <p className="text-xs text-muted-foreground">Donations coming soon.</p>
+              </>
+            )}
           </section>
         </div>
       </div>
