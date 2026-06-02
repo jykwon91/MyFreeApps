@@ -57,14 +57,9 @@ export default function Support({
           <section className="space-y-3 text-sm leading-relaxed">
             <h2 className="sr-only">About MyFreeApps</h2>
             <p>
-              I build these apps for my own use and decided not to charge for them — they're more
-              useful to me, and to everyone, the more people use them. {appName} and the other
-              MyFreeApps tools are free: no ads, no trackers, and nothing sold.
-            </p>
-            <p>
-              I pay for the servers that run them out of my own pocket. If one of these apps has saved
-              you time or money, a small donation helps cover hosting and keeps them running and
-              maintained — every dollar goes straight to costs.
+              {appName} and the other MyFreeApps tools are free — no ads, no trackers,
+              nothing sold. Donations help cover the server and API costs that keep them
+              running.
             </p>
           </section>
 
