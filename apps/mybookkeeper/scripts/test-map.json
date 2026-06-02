@@ -200,6 +200,7 @@
       "backend_tests": [
         "test_dedup_resolution.py",
         "test_dedup_service.py",
+        "test_dedup_service_payer.py",
         "test_duplicates.py",
         "test_extraction_mapper.py",
         "test_extraction_repo.py",

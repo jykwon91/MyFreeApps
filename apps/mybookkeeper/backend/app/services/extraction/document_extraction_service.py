@@ -262,12 +262,14 @@ async def process_document(document_id: uuid.UUID) -> UploadResult:
             item = map_single_item(data, resolved_property_id)
 
             # Dedup evaluation
+            raw_payer = data.get("payer_name")
             decision = await evaluate_dedup(
                 db, ctx.organization_id, item.vendor, item.date, item.amount,
                 item.line_items, item.property_id,
                 exclude_id=document_id,
                 file_type=file_type,
                 new_document_type=item.document_type,
+                payer_name=raw_payer if isinstance(raw_payer, str) else None,
             )
 
             # Handle document creation/assignment

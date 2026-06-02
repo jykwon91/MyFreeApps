@@ -21,6 +21,12 @@ _TWO_PLACES = Decimal("0.01")
 
 AUTO_RESOLVE_WINDOW_DAYS = 10
 DETECTION_WINDOW_DAYS = 14
+# Same payer + same amount within this many days is treated as the same payment
+# arriving via two notifications (e.g. a bank Zelle alert + the zellepay.com
+# email) and auto-skipped. A wider gap (up to DETECTION_WINDOW_DAYS) is flagged
+# for review rather than silently dropped — a tenant could pay the same amount
+# twice legitimately.
+P2P_DUPLICATE_SKIP_WINDOW_DAYS = 3
 
 
 @dataclass
@@ -42,8 +48,46 @@ async def evaluate_dedup(
     exclude_id: uuid.UUID | None = None,
     file_type: str | None = None,
     new_document_type: str | None = None,
+    payer_name: str | None = None,
 ) -> DedupDecision:
     """Evaluate dedup and return a decision without side effects."""
+
+    # --- 0. Peer-to-peer payer match -----------------------------------------
+    # P2P payments (Zelle/Venmo/Cash App) carry no property at extraction time,
+    # and their vendor is always the platform name ("Zelle"), so the vendor- and
+    # property-scoped checks below cannot distinguish one payer from another:
+    # they would both miss a second notification of the same payment once the
+    # first copy has been attributed to a property AND wrongly merge two
+    # different payers who happen to send the same amount. For a P2P payment the
+    # payer identity is the authoritative dedup key, so decide entirely here and
+    # do not fall through. (Skipped when no payer_name — non-P2P sources keep
+    # the vendor/property behavior unchanged.)
+    if payer_name and amount is not None and doc_date is not None:
+        payer_txn_date = doc_date.date() if hasattr(doc_date, "date") else doc_date
+        payer_match = await transaction_repo.find_possible_match_by_payer_amount(
+            db, organization_id, payer_name,
+            abs(amount).quantize(_TWO_PLACES), payer_txn_date,
+            exclude_id=exclude_id,
+        )
+        if payer_match:
+            date_diff = abs((payer_txn_date - payer_match.transaction_date).days)
+            if date_diff <= P2P_DUPLICATE_SKIP_WINDOW_DAYS:
+                return DedupDecision(
+                    action="skip",
+                    existing_transaction=payer_match,
+                    reason=f"Same payer ({payer_name}) + amount, {date_diff}d apart",
+                    confidence="high",
+                )
+            return DedupDecision(
+                action="review",
+                existing_transaction=payer_match,
+                reason=f"Same payer ({payer_name}) + amount, {date_diff}d apart (wider gap)",
+                confidence="medium",
+            )
+        return DedupDecision(
+            action="create",
+            reason="No same-payer match within window (P2P payment)",
+        )
 
     # --- 1. Vendor + date matching (three-tier) ---
     existing: Transaction | None = None
