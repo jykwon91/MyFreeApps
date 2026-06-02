@@ -119,6 +119,10 @@ async def maybe_attribute_payment(
             txn.applicant_id = applicant.id
             txn.attribution_source = "auto_alias"
             txn.category = "rental_revenue"
+            # Auto-attributing a payment verifies it — promote out of the
+            # unverified state so it counts in the dashboard, exactly as the
+            # manual confirm/link paths do.
+            txn.status = "approved"
             if property_id and txn.property_id is None:
                 txn.property_id = property_id
             logger.info(
@@ -160,6 +164,8 @@ async def maybe_attribute_payment(
         txn.applicant_id = best.id
         txn.attribution_source = "auto_exact"
         txn.category = "rental_revenue"
+        # Auto-attributing a payment verifies it (see auto_alias branch above).
+        txn.status = "approved"
         if property_id and txn.property_id is None:
             txn.property_id = property_id
         logger.info(
@@ -233,6 +239,9 @@ async def _attribute_airbnb_payout(
             txn.property_id = match.property_id
         txn.attribution_source = "auto_exact"
         txn.category = "rental_revenue"
+        # Auto-attributing a payout to a property verifies it (see the tenant
+        # auto-attribution branches in maybe_attribute_payment).
+        txn.status = "approved"
         logger.info(
             "Auto-attributed Airbnb payout %s to property %s (res_code=%s)",
             txn.id, match.property_id, res_code,
