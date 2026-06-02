@@ -900,12 +900,14 @@
         "backend/app/models/transactions/rent_attribution_review_queue.py",
         "backend/app/repositories/transactions/attribution_repo.py",
         "backend/app/services/transactions/attribution_service.py",
+        "backend/app/services/transactions/attribution_helpers.py",
         "backend/app/services/transactions/airbnb_payout_matcher.py",
         "backend/app/services/transactions/property_pnl_service.py",
         "backend/app/schemas/transactions/attribution.py",
         "backend/app/api/attribution.py",
         "backend/alembic/versions/txnattr260504_rent_attribution.py",
         "backend/alembic/versions/rarqprop260517_add_proposed_property.py",
+        "backend/alembic/versions/attrverify260602_promote_attributed_unverified.py",
         "frontend/src/shared/store/attributionApi.ts",
         "frontend/src/shared/types/attribution/",
         "frontend/src/app/features/attribution/",
@@ -920,7 +922,9 @@
         "test_attribution_service_attribute_manually.py",
         "test_attribution_service_confirm_property.py",
         "test_airbnb_payout_matcher.py",
-        "test_attribution_service_airbnb_payout.py"
+        "test_attribution_service_airbnb_payout.py",
+        "test_attribution_service_payer_alias.py",
+        "test_attribution_service_auto_verifies.py"
       ],
       "frontend_tests": [
         "AttributionReviewPanel.test.tsx",
