@@ -39,7 +39,9 @@ def _property(org_id: uuid.UUID, user_id: uuid.UUID, name: str = "Beach House") 
     return Property(id=uuid.uuid4(), organization_id=org_id, user_id=user_id, name=name)
 
 
-def _txn(org_id: uuid.UUID, user_id: uuid.UUID) -> Transaction:
+def _txn(
+    org_id: uuid.UUID, user_id: uuid.UUID, *, status: str = "approved"
+) -> Transaction:
     return Transaction(
         id=uuid.uuid4(),
         organization_id=org_id,
@@ -49,7 +51,7 @@ def _txn(org_id: uuid.UUID, user_id: uuid.UUID) -> Transaction:
         amount="2500.00",
         transaction_type="income",
         category="uncategorized",
-        status="approved",
+        status=status,
         is_manual=False,
     )
 
@@ -247,3 +249,67 @@ async def test_confirm_no_applicant_or_property_raises(db: AsyncSession):
             await confirm_review(
                 review_id=review.id, organization_id=org_id, user_id=user_id,
             )
+
+
+@pytest.mark.asyncio
+async def test_confirm_property_promotes_unverified_to_approved(db: AsyncSession):
+    """Confirming an unverified payout against a property promotes it to
+    approved so it counts in the dashboard (the bug behind unattributable
+    Zelle/payout rows being stuck out of revenue totals)."""
+    org_id, user_id = uuid.uuid4(), uuid.uuid4()
+    prop = _property(org_id, user_id)
+    txn = _txn(org_id, user_id, status="unverified")
+    review = _review(org_id, user_id, txn.id, proposed_property_id=prop.id)
+    db.add_all([prop, txn, review])
+    await db.flush()
+
+    with patch(
+        "app.services.transactions.attribution_service.unit_of_work",
+        _make_fake_uow(db),
+    ), patch(
+        "app.services.transactions.attribution_service.receipt_service.create_pending_receipt_in_session",
+        new_callable=AsyncMock,
+    ):
+        await confirm_review(
+            review_id=review.id, organization_id=org_id, user_id=user_id,
+        )
+
+    refreshed_txn = (
+        await db.execute(select(Transaction).where(Transaction.id == txn.id))
+    ).scalar_one()
+    assert refreshed_txn.status == "approved"
+
+
+@pytest.mark.asyncio
+async def test_confirm_applicant_promotes_unverified_to_approved(db: AsyncSession):
+    """Confirming an unverified rent payment against a tenant promotes it to
+    approved."""
+    org_id, user_id = uuid.uuid4(), uuid.uuid4()
+    applicant = Applicant(
+        id=uuid.uuid4(),
+        organization_id=org_id,
+        user_id=user_id,
+        stage="lease_signed",
+        legal_name="Andrew Le",
+    )
+    txn = _txn(org_id, user_id, status="unverified")
+    review = _review(org_id, user_id, txn.id, proposed_applicant_id=applicant.id)
+    db.add_all([applicant, txn, review])
+    await db.flush()
+
+    with patch(
+        "app.services.transactions.attribution_service.unit_of_work",
+        _make_fake_uow(db),
+    ), patch(
+        "app.services.transactions.attribution_service.receipt_service.create_pending_receipt_in_session",
+        new_callable=AsyncMock,
+    ):
+        await confirm_review(
+            review_id=review.id, organization_id=org_id, user_id=user_id,
+        )
+
+    refreshed_txn = (
+        await db.execute(select(Transaction).where(Transaction.id == txn.id))
+    ).scalar_one()
+    assert refreshed_txn.applicant_id == applicant.id
+    assert refreshed_txn.status == "approved"

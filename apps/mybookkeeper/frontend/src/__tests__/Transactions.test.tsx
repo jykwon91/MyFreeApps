@@ -157,7 +157,11 @@ vi.mock("@/shared/hooks/useOrgRole", () => ({
   useCanWrite: vi.fn(() => true),
 }));
 
-import { useListTransactionsQuery } from "@/shared/store/transactionsApi";
+import {
+  useListTransactionsQuery,
+  useUpdateTransactionMutation,
+  useBulkApproveTransactionsMutation,
+} from "@/shared/store/transactionsApi";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
 
 function renderWithProviders(ui: React.ReactElement) {
@@ -310,5 +314,96 @@ describe("Transactions — viewer role", () => {
     renderWithProviders(<Transactions />);
 
     expect(screen.getByText("Export")).toBeInTheDocument();
+  });
+});
+
+describe("Transactions — approve affordance for unverified rows", () => {
+  // Reproduces the reported bug: an Unverified payment with a property assigned
+  // had no way to be approved (the inline ✓ and bulk Approve both skipped the
+  // "unverified" status), so it never reached the dashboard.
+  const unverifiedWithProperty: Transaction = {
+    ...mockTransactions[1],
+    id: "txn-unverified",
+    vendor: "Zelle",
+    status: "unverified",
+    property_id: "prop-1",
+  };
+  const unverifiedNoProperty: Transaction = {
+    ...unverifiedWithProperty,
+    id: "txn-unverified-np",
+    property_id: null,
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(useCanWrite).mockReturnValue(true);
+  });
+
+  it("shows the inline Approve button for an unverified row that has a property", () => {
+    vi.mocked(useListTransactionsQuery).mockReturnValue({
+      data: [unverifiedWithProperty],
+      isLoading: false,
+    } as unknown as ReturnType<typeof useListTransactionsQuery>);
+
+    renderWithProviders(<Transactions />);
+
+    expect(screen.getAllByTitle("Approve").length).toBeGreaterThan(0);
+  });
+
+  it("does not show the inline Approve button for an unverified row with no property", () => {
+    vi.mocked(useListTransactionsQuery).mockReturnValue({
+      data: [unverifiedNoProperty],
+      isLoading: false,
+    } as unknown as ReturnType<typeof useListTransactionsQuery>);
+
+    renderWithProviders(<Transactions />);
+
+    expect(screen.queryByTitle("Approve")).toBeNull();
+  });
+
+  it("approves an unverified row to status 'approved' when the inline button is clicked", async () => {
+    const user = userEvent.setup();
+    const updateTrigger = vi.fn(() => ({ unwrap: () => Promise.resolve({}) }));
+    vi.mocked(useListTransactionsQuery).mockReturnValue({
+      data: [unverifiedWithProperty],
+      isLoading: false,
+    } as unknown as ReturnType<typeof useListTransactionsQuery>);
+    vi.mocked(useUpdateTransactionMutation).mockReturnValue([
+      updateTrigger,
+      { isLoading: false },
+    ] as unknown as ReturnType<typeof useUpdateTransactionMutation>);
+
+    renderWithProviders(<Transactions />);
+
+    await user.click(screen.getAllByTitle("Approve")[0]);
+
+    expect(updateTrigger).toHaveBeenCalledWith({
+      id: "txn-unverified",
+      data: { status: "approved" },
+    });
+  });
+
+  it("bulk-approves a selected unverified row with a property", async () => {
+    const user = userEvent.setup();
+    const bulkTrigger = vi.fn(() => ({
+      unwrap: () => Promise.resolve({ approved: 1, skipped: 0 }),
+    }));
+    vi.mocked(useListTransactionsQuery).mockReturnValue({
+      data: [unverifiedWithProperty],
+      isLoading: false,
+    } as unknown as ReturnType<typeof useListTransactionsQuery>);
+    vi.mocked(useBulkApproveTransactionsMutation).mockReturnValue([
+      bulkTrigger,
+      { isLoading: false },
+    ] as unknown as ReturnType<typeof useBulkApproveTransactionsMutation>);
+
+    renderWithProviders(<Transactions />);
+
+    // Select the row, then click the bulk-bar Approve (visible text — distinct
+    // from the icon-only inline ✓ which exposes its label via `title`).
+    await user.click(screen.getAllByRole("checkbox")[1]);
+    await user.click(screen.getByText("Approve"));
+
+    expect(bulkTrigger).toHaveBeenCalledWith(["txn-unverified"]);
   });
 });

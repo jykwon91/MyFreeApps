@@ -162,3 +162,62 @@ async def test_attribute_manually_no_review_row_works(db: AsyncSession):
         await db.execute(select(Transaction).where(Transaction.id == txn.id))
     ).scalar_one()
     assert refreshed_txn.applicant_id == applicant.id
+
+
+@pytest.mark.asyncio
+async def test_attribute_manually_promotes_unverified_to_approved(db: AsyncSession):
+    """Manually linking a tenant verifies an unverified payment → status approved.
+
+    Reproduces the reported bug: a Zelle payment extracted from an email body
+    lands as ``unverified`` with no UI affordance to approve it. Attributing it
+    to a tenant must promote it to ``approved`` so it reaches the dashboard.
+    """
+    org_id = uuid.uuid4()
+    user_id = uuid.uuid4()
+
+    applicant = Applicant(
+        id=uuid.uuid4(),
+        organization_id=org_id,
+        user_id=user_id,
+        stage="lease_signed",
+        legal_name="Andrew Le",
+    )
+    db.add(applicant)
+
+    txn = Transaction(
+        id=uuid.uuid4(),
+        organization_id=org_id,
+        user_id=user_id,
+        transaction_date=_dt.date(2026, 6, 1),
+        tax_year=2026,
+        amount="1595.00",
+        transaction_type="income",
+        category="uncategorized",
+        status="unverified",
+        is_manual=False,
+    )
+    db.add(txn)
+    await db.flush()
+
+    fake_uow = _make_fake_uow(db)
+
+    with patch(
+        "app.services.transactions.attribution_service.unit_of_work",
+        fake_uow,
+    ), patch(
+        "app.services.transactions.attribution_service.receipt_service.create_pending_receipt_in_session",
+        new_callable=AsyncMock,
+    ):
+        result = await attribute_manually(
+            transaction_id=txn.id,
+            applicant_id=applicant.id,
+            organization_id=org_id,
+            user_id=user_id,
+        )
+
+    assert result["ok"] is True
+    refreshed_txn = (
+        await db.execute(select(Transaction).where(Transaction.id == txn.id))
+    ).scalar_one()
+    assert refreshed_txn.applicant_id == applicant.id
+    assert refreshed_txn.status == "approved"

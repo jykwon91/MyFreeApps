@@ -388,6 +388,9 @@ async def confirm_review(
             txn.applicant_id = applicant.id
             txn.attribution_source = "auto_fuzzy_confirmed"
             txn.category = "rental_revenue"
+            # Confirming an attribution verifies the payment — promote it out of
+            # the pending / unverified review state so it counts in the dashboard.
+            txn.status = "approved"
 
             # Resolve property from applicant's active lease if not already set
             if txn.property_id is None:
@@ -435,6 +438,8 @@ async def confirm_review(
             txn.applicant_id = None
             txn.attribution_source = "manual"
             txn.category = "rental_revenue"
+            # Confirming the payout against a property verifies it.
+            txn.status = "approved"
             await attribution_repo.resolve(db, row, "confirmed")
             return {"ok": True, "transaction_id": str(txn.id)}
 
@@ -487,6 +492,9 @@ async def attribute_manually(
         txn.applicant_id = applicant.id
         txn.attribution_source = "manual"
         txn.category = "rental_revenue"
+        # Manually linking a tenant verifies the payment — promote it to
+        # approved so it counts in the dashboard.
+        txn.status = "approved"
 
         if txn.property_id is None:
             property_id = await _get_property_id_for_applicant(db, applicant, organization_id)
