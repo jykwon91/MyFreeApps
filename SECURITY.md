@@ -8,7 +8,10 @@ Only the latest commit on `main` receives security updates. There are no tagged 
 
 **Please do not open a public GitHub issue for security vulnerabilities.**
 
-To report a vulnerability, use **GitHub Private Vulnerability Reporting** — visit the repository's Security tab and click "Report a vulnerability". (A dedicated security email will be added here once the project's domain mailbox is set up.)
+To report a vulnerability, use one of the following:
+
+1. **GitHub Private Vulnerability Reporting** — preferred. Visit the repository's Security tab and click "Report a vulnerability".
+2. **Email** — `jasonykwon91@gmail.com` with subject line `[SECURITY] <short description>`.
 
 Please include:
 
