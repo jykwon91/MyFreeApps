@@ -48,21 +48,9 @@ export default function Support({
           </Link>
         </div>
 
-        <h1 className="text-3xl font-bold mb-2">Why MyFreeApps is free</h1>
-        <p className="text-sm text-muted-foreground mb-10">
-          A solo-developer project, supported by the people who use it.
-        </p>
+        <h1 className="text-3xl font-bold mb-8">Why MyFreeApps is free</h1>
 
         <div className="space-y-10">
-          <section className="space-y-3 text-sm leading-relaxed">
-            <h2 className="sr-only">About MyFreeApps</h2>
-            <p>
-              {appName} and the other MyFreeApps tools are free — no ads, no trackers,
-              nothing sold. Donations help cover the server and API costs that keep them
-              running.
-            </p>
-          </section>
-
           <section>
             <h2 className="sr-only">The story behind these apps</h2>
             <YouTubeEmbed videoId={youtubeVideoId} title="Why I built MyFreeApps" />
@@ -76,6 +64,9 @@ export default function Support({
 
           <section className="flex flex-col items-center gap-3 text-center">
             <h2 className="sr-only">Support these apps</h2>
+            <p className="text-sm text-muted-foreground">
+              Donations help cover the server and API costs that keep these apps running.
+            </p>
             {kofiUrl ? (
               <>
                 <KofiButton url={kofiUrl} />
