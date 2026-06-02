@@ -13,6 +13,7 @@ import {
 import { Plus, Upload, Sparkles } from "lucide-react";
 import { cn } from "@/shared/utils/cn";
 import { useTransactionColumns } from "@/shared/hooks/useTransactionColumns";
+import { APPROVABLE_STATUSES } from "@/shared/lib/transaction-config";
 import { useTransactionPageState } from "@/app/features/transactions/hooks/useTransactionPageState";
 import { formatTag } from "@/shared/utils/tag";
 import TransactionTable from "@/app/features/transactions/TransactionTable";
@@ -144,11 +145,9 @@ export default function Transactions() {
   const colCount = table.getAllLeafColumns().length;
   const selectedRows = table.getSelectedRowModel().rows;
   const selectedCount = selectedRows.length;
-  const hasApprovable = selectedRows.some(
-    (r) =>
-      r.original.property_id &&
-      (r.original.status === "pending" || r.original.status === "needs_review"),
-  );
+  const isRowApprovable = (r: (typeof selectedRows)[number]) =>
+    !!r.original.property_id && APPROVABLE_STATUSES.includes(r.original.status);
+  const hasApprovable = selectedRows.some(isRowApprovable);
 
   const deleteTarget = confirmDeleteId ? transactions.find((t) => t.id === confirmDeleteId) : null;
 
@@ -236,13 +235,7 @@ export default function Transactions() {
               isDeleting={bulkAction === "delete"}
               onApprove={() =>
                 handleBulkApprove(
-                  selectedRows
-                    .filter(
-                      (r) =>
-                        r.original.property_id &&
-                        (r.original.status === "pending" || r.original.status === "needs_review"),
-                    )
-                    .map((r) => r.original.id),
+                  selectedRows.filter(isRowApprovable).map((r) => r.original.id),
                 )
               }
               onDelete={() => setConfirmBulkDelete(true)}

@@ -7,6 +7,7 @@ import { formatCurrency } from "@/shared/utils/currency";
 import { formatDate } from "@/shared/utils/date";
 import { formatTag } from "@/shared/utils/tag";
 import { TAG_COLORS } from "@/shared/lib/constants";
+import { APPROVABLE_STATUSES } from "@/shared/lib/transaction-config";
 import type { Transaction } from "@/shared/types/transaction/transaction";
 import { Button } from "@platform/ui";
 import Badge from "@/shared/components/ui/Badge";
@@ -176,11 +177,11 @@ export function useTransactionColumns(propertyMap: ReadonlyMap<string, string>, 
       enableSorting: false,
       header: () => null,
       cell: ({ row }) => {
-        const isPending = row.original.status === "pending" || row.original.status === "needs_review";
+        const isApprovable = APPROVABLE_STATUSES.includes(row.original.status);
         if (!canWrite) return null;
         return (
           <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
-            {isPending && row.original.property_id && (
+            {isApprovable && row.original.property_id && (
               <Button
                 variant="ghost"
                 size="sm"
