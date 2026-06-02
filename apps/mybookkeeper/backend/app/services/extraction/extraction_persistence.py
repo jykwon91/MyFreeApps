@@ -112,6 +112,7 @@ async def save_email_extraction(
         doc_date = safe_date(data.get("date"))
         amount = safe_decimal(data.get("amount"))
         doc_type = data.get("document_type", "invoice")
+        raw_payer = data.get("payer_name")
 
         decision = await evaluate_dedup(
             db,
@@ -123,6 +124,7 @@ async def save_email_extraction(
             property_id=property_id,
             file_type="email",
             new_document_type=doc_type,
+            payer_name=raw_payer if isinstance(raw_payer, str) else None,
         )
 
         if decision.action == "skip":
