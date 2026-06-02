@@ -3,6 +3,7 @@ import { Outlet, ScrollRestoration, useSearchParams } from "react-router-dom";
 import {
   ClipboardList,
   Gamepad2,
+  Heart,
   Package,
   PlaySquare,
   Radio,
@@ -34,6 +35,7 @@ function projectUser(user: CurrentUser | undefined): { name: string; email: stri
 const ICONS: Record<string, React.ReactNode> = {
   ClipboardList: <ClipboardList className="w-5 h-5" />,
   Gamepad2: <Gamepad2 className="w-5 h-5" />,
+  Heart: <Heart className="w-5 h-5" />,
   Package: <Package className="w-5 h-5" />,
   PlaySquare: <PlaySquare className="w-5 h-5" />,
   Radio: <Radio className="w-5 h-5" />,
