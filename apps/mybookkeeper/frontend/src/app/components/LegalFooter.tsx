@@ -14,13 +14,6 @@ export default function LegalFooter() {
       <Link to="/support" className="hover:underline hover:text-foreground transition-colors">
         Support
       </Link>
-      <span aria-hidden="true">·</span>
-      <a
-        href="mailto:jasonykwon91@gmail.com"
-        className="hover:underline hover:text-foreground transition-colors"
-      >
-        Contact
-      </a>
     </footer>
   );
 }
