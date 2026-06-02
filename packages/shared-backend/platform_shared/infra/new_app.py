@@ -160,6 +160,7 @@ def _write_app_yaml(repo_root: Path, slug: str, *,
             "upgrade-insecure-requests"
         ),
         "workers": [],
+        "post_deploy_commands": [],
     }
     path = repo_root / "apps" / slug / "app.yaml"
     path.parent.mkdir(parents=True, exist_ok=True)

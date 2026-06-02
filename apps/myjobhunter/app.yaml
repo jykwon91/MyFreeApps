@@ -16,3 +16,5 @@ csp: "default-src 'self'; script-src 'self' 'sha256-6gP5jY9WKtmx3Qr/KXGhyuG+YL86
 workers:
   - name: resume-parser
     command: ["python", "-m", "app.workers.resume_parser_worker"]
+# No app-specific post-deploy steps — deploy runs migrate only.
+post_deploy_commands: []

@@ -90,6 +90,16 @@ jobs:
             echo "--- Run database migrations ---"
             docker compose -f apps/mygamingassistant/docker-compose.yml exec -T api alembic upgrade head
 
+            echo "--- Run post-deploy commands (app-specific, idempotent) ---"
+            # In-container steps that run on EVERY deploy after the schema is
+            # migrated. Each must be idempotent (re-runs on packages/** fan-out
+            # deploys too). Driven by apps/<slug>/app.yaml post_deploy_commands;
+            # empty for most apps. MGA uses it to auto-seed its public lineup
+            # library (load-fixtures + import-lineups) so a merged pack update
+            # goes live with no manual VPS step.
+            docker compose -f apps/mygamingassistant/docker-compose.yml exec -T api python -m app.cli load-fixtures
+            docker compose -f apps/mygamingassistant/docker-compose.yml exec -T api python -m app.cli import-lineups
+
             echo "--- Wait for API health check ---"
             for i in $(seq 1 30); do
               if docker compose -f apps/mygamingassistant/docker-compose.yml exec -T api python -c "import urllib.request; urllib.request.urlopen('http://localhost:8004/health')" 2>/dev/null; then
