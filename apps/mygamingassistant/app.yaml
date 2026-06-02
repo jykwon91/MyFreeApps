@@ -34,3 +34,12 @@ env_seed_command: create from .env.example first
 # host the bundle actually loads from — both are pre-allowed here so either works.
 csp: "default-src 'self'; script-src 'self' 'sha256-6gP5jY9WKtmx3Qr/KXGhyuG+YL86Nf6nSb7wHrV5jmk=' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://mga-clips.myfreeapps.org https://*.r2.cloudflarestorage.com; media-src 'self' https://mga-clips.myfreeapps.org https://*.r2.cloudflarestorage.com; font-src 'self'; connect-src 'self' https://challenges.cloudflare.com https://mga-clips.myfreeapps.org https://*.r2.cloudflarestorage.com; frame-src 'self' https://challenges.cloudflare.com https://www.youtube-nocookie.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests"
 workers: []
+# Run on EVERY deploy, in-container, AFTER migrate. Both idempotent:
+# load-fixtures upserts the game taxonomy (incl. any new map fixture like
+# de_cache); import-lineups reconciles the public library to the image-baked
+# pack (backend/data/lineup_library.json). This is the prod half of "merge a
+# library update -> it goes live"; the local clip-publish half is
+# backend/scripts/ship-library.ps1. Other apps keep this empty.
+post_deploy_commands:
+  - python -m app.cli load-fixtures
+  - python -m app.cli import-lineups

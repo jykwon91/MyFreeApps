@@ -89,6 +89,19 @@ jobs:
 
             echo "--- Run database migrations ---"
             docker compose -f apps/{{ app_slug }}/docker-compose.yml exec -T api alembic upgrade head
+{%- if post_deploy_commands %}
+
+            echo "--- Run post-deploy commands (app-specific, idempotent) ---"
+            # In-container steps that run on EVERY deploy after the schema is
+            # migrated. Each must be idempotent (re-runs on packages/** fan-out
+            # deploys too). Driven by apps/<slug>/app.yaml post_deploy_commands;
+            # empty for most apps. MGA uses it to auto-seed its public lineup
+            # library (load-fixtures + import-lineups) so a merged pack update
+            # goes live with no manual VPS step.
+{%- for cmd in post_deploy_commands %}
+            docker compose -f apps/{{ app_slug }}/docker-compose.yml exec -T api {{ cmd }}
+{%- endfor %}
+{%- endif %}
 
             echo "--- Wait for API health check ---"
             for i in $(seq 1 30); do

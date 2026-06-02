@@ -18,3 +18,5 @@ workers:
     command: ["python", "-m", "app.workers.upload_processor_worker"]
   - name: scheduler
     command: ["python", "-m", "app.workers.scheduler_worker"]
+# No app-specific post-deploy steps — deploy runs migrate only.
+post_deploy_commands: []

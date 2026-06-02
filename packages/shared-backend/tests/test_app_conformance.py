@@ -465,6 +465,58 @@ class TestInfraTemplateDrift:
         )
 
 
+# Apps whose deploy workflow runs in-container steps after migrate (driven by
+# app.yaml `post_deploy_commands`). MGA auto-seeds its public lineup library on
+# every deploy; the canonical apps keep the list empty. The inverse check guards
+# against the auto-import leaking into an app with no library to import.
+_POST_DEPLOY_APPS = {"mygamingassistant"}
+
+
+class TestPostDeployCommands:
+    """`post_deploy_commands` in app.yaml must render into the deploy workflow
+    as in-container `docker compose exec` steps AFTER `alembic upgrade head`.
+
+    MGA uses this to auto-seed its public lineup library (load-fixtures +
+    import-lineups) so a merged library-pack update goes live with no manual
+    VPS step. Empty for every other app — and the inverse test below asserts
+    their deploy workflow has no post-deploy block, so the auto-import can't
+    silently run where there is no library.
+    """
+
+    @pytest.mark.parametrize("app", sorted(_POST_DEPLOY_APPS))
+    def test_deploy_workflow_runs_post_deploy_commands(self, app: str) -> None:
+        wf = _read(".github", "workflows", f"deploy-{app}.yml")
+        assert "Run post-deploy commands" in wf, (
+            f"deploy-{app}.yml must contain the post-deploy block rendered from "
+            f"apps/{app}/app.yaml `post_deploy_commands`. Re-run "
+            f"`python -m platform_shared.infra.render --app {app}`."
+        )
+        assert "python -m app.cli load-fixtures" in wf, (
+            f"deploy-{app}.yml must run `load-fixtures` in-container so a new map "
+            f"fixture is seeded before import-lineups resolves its slugs."
+        )
+        assert "python -m app.cli import-lineups" in wf, (
+            f"deploy-{app}.yml must run `import-lineups` in-container so the "
+            f"image-baked lineup pack is reconciled into prod on every deploy."
+        )
+        assert wf.index("alembic upgrade head") < wf.index("import-lineups"), (
+            f"deploy-{app}.yml: post-deploy commands must run AFTER "
+            f"`alembic upgrade head` (import resolves against migrated tables)."
+        )
+
+    @pytest.mark.parametrize("app", sorted(set(_APPS) - _POST_DEPLOY_APPS))
+    def test_no_post_deploy_block_for_other_apps(self, app: str) -> None:
+        wf = _read(".github", "workflows", f"deploy-{app}.yml")
+        assert "Run post-deploy commands" not in wf, (
+            f"deploy-{app}.yml has a post-deploy block but {app}'s "
+            f"`post_deploy_commands` is empty in app.yaml. Re-render."
+        )
+        assert "import-lineups" not in wf, (
+            f"deploy-{app}.yml references import-lineups but {app} is not a "
+            f"post-deploy app — the MGA-only auto-import leaked into it."
+        )
+
+
 class TestScaffolderProducesBootableApp:
     """Tier 5 -- the scaffolder must produce a complete, fully-substituted app dir.
 

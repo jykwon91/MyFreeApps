@@ -18,3 +18,5 @@ csp: 'default-src ''self''; script-src ''self'' https://challenges.cloudflare.co
   frame-ancestors ''none''; base-uri ''self''; form-action ''self''; object-src ''none'';
   upgrade-insecure-requests'
 workers: []
+# No app-specific post-deploy steps — deploy runs migrate only.
+post_deploy_commands: []
