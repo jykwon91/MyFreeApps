@@ -23,9 +23,9 @@ test.describe("Support page — public", () => {
     await expect(page.getByText(/something went wrong/i)).toHaveCount(0);
   });
 
-  test("is reachable from the footer Support link", async ({ page }) => {
+  test("is reachable from the footer Support Me link", async ({ page }) => {
     await page.goto("/login");
-    await page.getByRole("link", { name: /^support$/i }).click();
+    await page.getByRole("link", { name: /^support me$/i }).click();
     await expect(page).toHaveURL(/\/support/);
     await expect(
       page.getByRole("heading", { name: /why myfreeapps is free/i }),
