@@ -22,6 +22,7 @@ The HTTP endpoint tests run through FastAPI's TestClient via the
 """
 from __future__ import annotations
 
+import ipaddress
 import json
 import uuid
 from typing import Any
@@ -29,6 +30,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 import pytest
+
+from platform_shared.core.url_safety import UnsafeURLError
 
 from app.services.extraction.jd_url_extractor import (
     ExtractedJD,
@@ -43,6 +46,34 @@ from app.services.extraction.jd_url_parser import (
     strip_visible_text as _strip_visible_text,
 )
 from bs4 import BeautifulSoup
+
+
+# ---------------------------------------------------------------------------
+# DNS stub — the SSRF guard resolves every fetched host before egress.
+# Test hosts like ``acme.example.com`` don't resolve publicly, so we stub
+# resolution: literal IPs are classified for real (internal IPs still get
+# blocked), while any hostname maps to a fixed public address so the
+# happy-path fetch tests proceed. SSRF tests use literal internal IPs.
+# ---------------------------------------------------------------------------
+
+_PUBLIC_STUB_IP = "93.184.216.34"
+
+
+def _resolve_for_tests(
+    host: str, port: int
+) -> list[ipaddress.IPv4Address | ipaddress.IPv6Address]:
+    try:
+        return [ipaddress.ip_address(host)]  # literal IP → real classification
+    except ValueError:
+        return [ipaddress.ip_address(_PUBLIC_STUB_IP)]  # hostname → public
+
+
+@pytest.fixture(autouse=True)
+def _stub_dns(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        "platform_shared.core.url_safety._resolve_host",
+        _resolve_for_tests,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -761,3 +792,107 @@ class TestExtractFromUrlEndpoint:
                 json={},
             )
         assert resp.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# SSRF guard — server must refuse to fetch internal / metadata targets
+# ---------------------------------------------------------------------------
+
+
+def _redirect_response(location: str, status_code: int = 302) -> httpx.Response:
+    return httpx.Response(
+        status_code=status_code,
+        headers={"location": location},
+        request=httpx.Request("GET", "https://jobs.example.com/job"),
+    )
+
+
+class TestSsrfGuard:
+    @pytest.mark.parametrize(
+        "url",
+        [
+            "http://169.254.169.254/latest/meta-data/iam/security-credentials/",
+            "http://[fd00:ec2::254]/latest/meta-data/",  # IPv6 metadata
+            "http://127.0.0.1/",  # loopback
+            "http://[::1]/",  # IPv6 loopback
+            "http://10.0.0.5/internal",  # RFC1918
+            "http://192.168.1.1/admin",
+            "http://172.16.0.1/",
+            "http://[::ffff:127.0.0.1]/",  # IPv4-mapped loopback
+        ],
+    )
+    @pytest.mark.asyncio
+    async def test_internal_target_blocked_without_egress(self, url: str) -> None:
+        # The fetch must be refused BEFORE any GET is issued — assert the
+        # client's ``get`` was never reached (no SSRF egress).
+        fake_client = _FakeAsyncClient(
+            response=_build_httpx_response("<html>secret</html>"),
+        )
+        with _patch_httpx(fake_client):
+            with pytest.raises(UnsafeURLError):
+                await extract_from_url(url, user_id=uuid.uuid4())
+        assert fake_client.last_url is None
+
+    @pytest.mark.asyncio
+    async def test_redirect_into_internal_blocked(self) -> None:
+        # A public URL that 302s to a metadata IP must be caught on the
+        # redirect hop — the first (public) GET happens, the second never
+        # does.
+        fake_client = _FakeAsyncClient(
+            response=_redirect_response("http://169.254.169.254/latest/meta-data/"),
+        )
+        with _patch_httpx(fake_client):
+            with pytest.raises(UnsafeURLError):
+                await extract_from_url(
+                    "https://jobs.example.com/job",
+                    user_id=uuid.uuid4(),
+                )
+        # Exactly one egress occurred, to the public origin — never to the
+        # internal redirect target.
+        assert fake_client.last_url == "https://jobs.example.com/job"
+
+    @pytest.mark.asyncio
+    async def test_non_web_port_blocked(self) -> None:
+        # Reaching an internal service on a non-standard port (Postgres,
+        # MinIO, a sibling API) is refused on the port check alone.
+        fake_client = _FakeAsyncClient(
+            response=_build_httpx_response("<html></html>"),
+        )
+        with _patch_httpx(fake_client):
+            with pytest.raises(UnsafeURLError):
+                await extract_from_url(
+                    "http://internal-api.example.com:8000/secrets",
+                    user_id=uuid.uuid4(),
+                )
+        assert fake_client.last_url is None
+
+    @pytest.mark.asyncio
+    async def test_endpoint_internal_url_returns_400(
+        self, user_factory, as_user,
+    ) -> None:
+        # End-to-end: an SSRF attempt through the public route maps to 400
+        # (UnsafeURLError is a ValueError) — not a 500 and not a fetch.
+        user = await user_factory()
+        async with await as_user(user) as authed:
+            resp = await authed.post(
+                "/applications/extract-from-url",
+                json={"url": "http://169.254.169.254/latest/meta-data/"},
+            )
+        assert resp.status_code == 400, resp.text
+
+    @pytest.mark.asyncio
+    async def test_job_analysis_service_maps_internal_url_to_invalid(self) -> None:
+        # The /jobs/analyze call site wraps the same refusal into its own
+        # invalid-URL error (→ 400), never an opaque 500.
+        from app.services.job_analysis import job_analysis_service
+        from app.services.job_analysis.job_analysis_service import (
+            JobAnalysisInvalidUrlError,
+        )
+
+        with pytest.raises(JobAnalysisInvalidUrlError):
+            await job_analysis_service.analyze(
+                None,  # db is never reached on the SSRF-refusal path
+                uuid.uuid4(),
+                url="http://127.0.0.1/",
+                jd_text=None,
+            )
