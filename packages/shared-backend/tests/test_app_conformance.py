@@ -512,6 +512,43 @@ class TestEdgeHardeningDirectives:
         )
 
 
+class TestContainerResourceLimits:
+    """Every app's compose must cap per-container memory, CPU, and PIDs.
+
+    Blast-radius containment on the shared VPS: with no per-container caps a
+    single runaway or compromised container can exhaust host RAM and trigger
+    the kernel OOM-killer against a sibling app's Postgres. Like the
+    edge-hardening directives, the drift test alone wouldn't catch their
+    removal (every rendered compose would drop the caps together and still
+    match the template), so assert them explicitly. Restore in
+    infra/templates/docker-compose.yml.j2 and re-render on failure.
+    """
+
+    @pytest.mark.parametrize("app", _APPS)
+    def test_compose_sets_all_three_limit_kinds(self, app: str) -> None:
+        compose = _read("apps", app, "docker-compose.yml")
+        for key in ("mem_limit:", "cpus:", "pids_limit:"):
+            assert key in compose, (
+                f"{app}/docker-compose.yml is missing `{key}` — per-container "
+                f"resource caps were removed. A runaway container could then OOM "
+                f"the shared VPS and cascade into a sibling app's Postgres. "
+                f"Restore in infra/templates/docker-compose.yml.j2 and re-render."
+            )
+
+    @pytest.mark.parametrize("app", _APPS)
+    def test_api_and_caddy_keep_expected_mem_caps(self, app: str) -> None:
+        compose = _read("apps", app, "docker-compose.yml")
+        assert "mem_limit: 1024m" in compose, (
+            f"{app}/docker-compose.yml api service must keep its 1024m mem_limit "
+            f"(sized above the busiest app's API working set with spike headroom). "
+            f"Restore in the template and re-render."
+        )
+        assert "mem_limit: 128m" in compose, (
+            f"{app}/docker-compose.yml caddy service must keep its 128m mem_limit. "
+            f"Restore in the template and re-render."
+        )
+
+
 # Apps whose deploy workflow runs in-container steps after migrate (driven by
 # app.yaml `post_deploy_commands`). MGA auto-seeds its public lineup library on
 # every deploy; the canonical apps keep the list empty. The inverse check guards
