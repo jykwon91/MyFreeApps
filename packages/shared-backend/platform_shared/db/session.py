@@ -37,11 +37,24 @@ def create_session_factory(
     database_url: str,
     *,
     echo: bool = False,
-    pool_size: int = 10,
-    max_overflow: int = 20,
-    pool_timeout: int = 30,
+    pool_size: int = 5,
+    max_overflow: int = 10,
+    pool_timeout: int = 10,
     pool_recycle: int = 1800,
+    pool_pre_ping: bool = True,
 ) -> SessionFactory:
+    # Pool sizing is bounded by Postgres `max_connections` (default 100),
+    # shared across every engine that targets the same database. Each uvicorn
+    # worker process AND each background-worker container opens its own engine,
+    # so the per-app total is `engines * (pool_size + max_overflow)`. With the
+    # canonical app's 4 engines (2 api workers + upload-processor + scheduler)
+    # and 5+10, that's 60 < 100 — comfortable headroom. The previous 10+20
+    # could demand 120 and exhaust Postgres under load, hanging every request
+    # for `pool_timeout` seconds. `pool_timeout=10` makes backpressure fail
+    # fast instead of piling up; `pool_pre_ping` transparently replaces a
+    # stale connection (e.g. after a Postgres restart) instead of erroring the
+    # first request that draws it.
+    #
     # SQLite (used in unit tests) doesn't support pool sizing — its async driver
     # pairs with StaticPool, and passing pool_size/max_overflow/pool_timeout
     # raises TypeError at engine creation. Skip pool kwargs for SQLite URLs.
@@ -55,6 +68,7 @@ def create_session_factory(
             max_overflow=max_overflow,
             pool_timeout=pool_timeout,
             pool_recycle=pool_recycle,
+            pool_pre_ping=pool_pre_ping,
         )
     session_maker = async_sessionmaker(engine, expire_on_commit=False)
 
