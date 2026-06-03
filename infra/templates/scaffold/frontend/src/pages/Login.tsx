@@ -277,7 +277,7 @@ export default function Login() {
       </div>
 
       <p className="mt-8 text-xs text-muted-foreground">
-        <a href="/support" className="hover:underline hover:text-foreground transition-colors">
+        <a href="/support-myfreeapps" className="hover:underline hover:text-foreground transition-colors">
           Support this project
         </a>
         <span className="mx-2" aria-hidden="true">·</span>

@@ -48,7 +48,7 @@ export default function Support({
           </Link>
         </div>
 
-        <h1 className="text-3xl font-bold mb-8">Why MyFreeApps is free</h1>
+        <h1 className="text-3xl font-bold mb-8">Please support MyFreeApps!</h1>
 
         <div className="space-y-10">
           <section>

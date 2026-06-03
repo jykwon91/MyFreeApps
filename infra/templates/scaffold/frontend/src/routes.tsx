@@ -23,7 +23,7 @@ export const routes: RouteObject[] = [
     ],
   },
   // Public support / donation page — standalone (no shell, no auth).
-  { path: "/support", element: <Support appName="__APP_DISPLAY_NAME__" /> },
+  { path: "/support-myfreeapps", element: <Support appName="__APP_DISPLAY_NAME__" /> },
   { path: "/login", element: <Login /> },
   { path: "/forgot-password", element: <ForgotPassword /> },
   { path: "/reset-password", element: <ResetPassword /> },

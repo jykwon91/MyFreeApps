@@ -7,9 +7,9 @@ interface Props {
 
 /**
  * Footer shown on the public auth pages (Login / Register) of every
- * MyFreeApps app. Renders a "Support Me" link to the shared ``/support`` page
+ * MyFreeApps app. Renders a "Support MyFreeApps" link to the shared ``/support-myfreeapps`` page
  * plus a copyright line, so logged-out visitors always have a path to the
- * donation / cost-transparency page even though the in-app "Support Me" nav
+ * donation / cost-transparency page even though the in-app "Support MyFreeApps" nav
  * item is only reachable once the shell is mounted.
  *
  * Extracted from the three byte-identical copies that previously lived inline
@@ -22,10 +22,10 @@ export default function AuthPageFooter({ appName }: Props) {
   return (
     <p className="mt-8 text-xs text-muted-foreground text-center">
       <Link
-        to="/support"
+        to="/support-myfreeapps"
         className="hover:underline hover:text-foreground transition-colors"
       >
-        Support Me
+        Support MyFreeApps
       </Link>
       <span className="mx-2" aria-hidden="true">
         ·
