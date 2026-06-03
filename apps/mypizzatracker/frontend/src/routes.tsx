@@ -40,7 +40,7 @@ export const routes: RouteObject[] = [
   { path: "/order/status", element: <PublicOrderStatus /> },
   { path: "/order/status/:orderId", element: <PublicOrderStatus /> },
   // Public support / donation page — standalone (no shell, no auth).
-  { path: "/support", element: <Support appName="MyPizzaTracker" /> },
+  { path: "/support-myfreeapps", element: <Support appName="MyPizzaTracker" /> },
   { path: "/login", element: <Login /> },
   { path: "/forgot-password", element: <ForgotPassword /> },
   { path: "/reset-password", element: <ResetPassword /> },

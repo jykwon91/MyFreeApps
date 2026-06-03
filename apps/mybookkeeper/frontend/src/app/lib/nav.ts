@@ -63,7 +63,7 @@ export const NAV_GROUPS: readonly NavGroup[] = [
     // Headerless trailing group — sits at the bottom of the sidebar, above the
     // theme toggle / user menu. Routes to the standalone public /support page.
     label: null,
-    items: [{ to: "/support", label: "Support Me" }],
+    items: [{ to: "/support-myfreeapps", label: "Support MyFreeApps" }],
   },
 ] as const;
 

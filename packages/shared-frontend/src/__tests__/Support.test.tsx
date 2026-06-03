@@ -21,7 +21,7 @@ function renderSupport(props: Partial<Parameters<typeof Support>[0]> = {}) {
 describe("Support page", () => {
   it("renders the heading and a back link to the host app", () => {
     renderSupport();
-    expect(screen.getByRole("heading", { level: 1, name: /why myfreeapps is free/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: /please support myfreeapps/i })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /back to mybookkeeper/i })).toBeInTheDocument();
   });
 

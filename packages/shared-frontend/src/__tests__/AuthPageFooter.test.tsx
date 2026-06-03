@@ -12,10 +12,10 @@ function renderFooter(appName = "MyTestApp") {
 }
 
 describe("AuthPageFooter", () => {
-  it("renders a 'Support Me' link pointing at /support", () => {
+  it("renders a 'Support MyFreeApps' link pointing at /support-myfreeapps", () => {
     renderFooter();
-    const link = screen.getByRole("link", { name: "Support Me" });
-    expect(link).toHaveAttribute("href", "/support");
+    const link = screen.getByRole("link", { name: "Support MyFreeApps" });
+    expect(link).toHaveAttribute("href", "/support-myfreeapps");
   });
 
   it("renders the app name and current year in the copyright line", () => {

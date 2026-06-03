@@ -140,7 +140,7 @@ export const routes: RouteObject[] = [
   // so it can't read the shared cost-transparency object. Donation CTA + story +
   // video still render; the cost widget is omitted. See platform_shared/services/
   // transparency + memory/project_mga_prod_storage_r2.md.
-  { path: "/support", element: <Support appName="MyGamingAssistant" showTransparency={false} /> },
+  { path: "/support-myfreeapps", element: <Support appName="MyGamingAssistant" showTransparency={false} /> },
   { path: "/login", element: authPageElement(<Login />) },
   { path: "/forgot-password", element: authPageElement(<ForgotPassword />) },
   { path: "/reset-password", element: authPageElement(<ResetPassword />) },
