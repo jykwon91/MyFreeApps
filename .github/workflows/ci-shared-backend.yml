@@ -1,31 +1,27 @@
 name: Shared Backend CI
 
 # Runs the platform_shared package's own unit tests AND the cross-app
-# conformance suite (tests/test_app_conformance.py) on every PR that touches the
-# shared package, ANY app under apps/**, or the scaffold templates under
-# infra/templates/** — plus on pushes to main. The conformance suite reads app +
-# template source as text to enforce structural parity, so it must run when THAT
-# source changes, not only when packages/shared-backend changes. (Before this
-# trigger was widened, an app-only PR could drift a guarded pattern — e.g. moving
-# the Login support link into the shared AuthPageFooter in #835 — without ever
-# running the guard, silently rotting it.) Apps that consume this package have
-# their own CI workflows that re-run the consuming app's own tests.
+# conformance suite (tests/test_app_conformance.py) on EVERY pull request to
+# main and every push to main. The conformance suite reads app + template
+# source as text to enforce structural parity, so almost any change can affect
+# it — which is why there is deliberately NO `paths:` filter here.
+#
+# DO NOT re-add a `paths:` filter. `shared-backend-tests` is a REQUIRED status
+# check on main (branch protection). A `pull_request` workflow skipped by a path
+# filter never reports its check context, so any PR that does not touch the
+# filtered paths would hang forever on "Expected — Waiting for status to be
+# reported." Running the ~5s suite on every PR is the price of making it a real,
+# un-skippable gate. (History: an app-only PR could once drift a guarded pattern
+# — e.g. moving the Login support link into the shared AuthPageFooter in #835 —
+# without ever running the guard, silently rotting it. The fix is to ALWAYS run
+# it, not to filter it.) Apps that consume this package have their own CI
+# workflows that re-run the consuming app's own tests.
 
 on:
   pull_request:
     branches: [main]
-    paths:
-      - 'packages/shared-backend/**'
-      - 'apps/**'
-      - 'infra/templates/**'
-      - '.github/workflows/ci-shared-backend.yml'
   push:
     branches: [main]
-    paths:
-      - 'packages/shared-backend/**'
-      - 'apps/**'
-      - 'infra/templates/**'
-      - '.github/workflows/ci-shared-backend.yml'
 
 permissions:
   contents: read
