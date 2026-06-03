@@ -732,8 +732,13 @@ class TestScaffolderProducesBootableApp:
 _TRANSPARENCY_PRIMARY_APP = "mybookkeeper"
 
 # Per-app routing file (MBK uses an inline <Routes> in App.tsx; the data-router
-# apps use a routes.tsx) and the file that carries the public link to /support
-# (the legal footer on MBK; the login page on the single-user apps).
+# apps use a routes.tsx) and the auth-page file that renders the shared
+# AuthPageFooter. The "Support MyFreeApps" link (to /support-myfreeapps) was
+# extracted into the shared AuthPageFooter component (PR #835) and the route
+# renamed (PR #838), so every app's Login page now renders <AuthPageFooter>
+# rather than carrying the link inline. The footer link's exact target is
+# verified in shared-frontend's AuthPageFooter.test.tsx; here we assert each
+# app wires the footer onto its public auth surface.
 _SUPPORT_ROUTING_FILE = {
     "mybookkeeper": ("frontend", "src", "App.tsx"),
     "myjobhunter": ("frontend", "src", "routes.tsx"),
@@ -741,7 +746,7 @@ _SUPPORT_ROUTING_FILE = {
     "mypizzatracker": ("frontend", "src", "routes.tsx"),
 }
 _SUPPORT_LINK_FILE = {
-    "mybookkeeper": ("frontend", "src", "app", "components", "LegalFooter.tsx"),
+    "mybookkeeper": ("frontend", "src", "app", "pages", "Login.tsx"),
     "myjobhunter": ("frontend", "src", "pages", "Login.tsx"),
     "mygamingassistant": ("frontend", "src", "pages", "Login.tsx"),
     "mypizzatracker": ("frontend", "src", "pages", "Login.tsx"),
@@ -827,9 +832,10 @@ class TestSupportPageWired:
 
     def test_support_link_present(self, app: str) -> None:
         src = _read("apps", app, *_SUPPORT_LINK_FILE[app])
-        assert "/support" in src, (
-            f"{app}: {'/'.join(_SUPPORT_LINK_FILE[app])} must carry a public link to "
-            f"/support (the legal footer on MBK; the login page on single-user apps)."
+        assert "AuthPageFooter" in src, (
+            f"{app}: {'/'.join(_SUPPORT_LINK_FILE[app])} must render <AuthPageFooter>, "
+            f"the shared footer that carries the public 'Support MyFreeApps' link to "
+            f"/support-myfreeapps. The link moved into the shared component in PR #835."
         )
 
     def test_mga_omits_cost_widget(self, app: str) -> None:
