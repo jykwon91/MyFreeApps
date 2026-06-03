@@ -465,6 +465,53 @@ class TestInfraTemplateDrift:
         )
 
 
+class TestEdgeHardeningDirectives:
+    """Traffic-resilience hardening must be present in every app's edge.
+
+    These are the platform's first line against a traffic spike / DoS, living
+    in the shared Caddy template + each app's backend.Dockerfile. The drift
+    test alone wouldn't catch their removal (every rendered file would lose
+    the directive together and still match the template), so assert the
+    directives explicitly.
+    """
+
+    @pytest.mark.parametrize("app", _APPS)
+    def test_caddy_has_body_size_cap(self, app: str) -> None:
+        caddy = _read("apps", app, "docker", "Caddyfile.docker")
+        assert "request_body {" in caddy and "max_size 30MB" in caddy, (
+            f"{app} docker Caddyfile is missing the request-body size cap — a "
+            f"large-body flood would buffer into the worker's memory (OOM). "
+            f"Restore it in infra/templates/Caddyfile.docker.j2 and re-render."
+        )
+
+    @pytest.mark.parametrize("app", _APPS)
+    def test_caddy_has_slowloris_timeouts(self, app: str) -> None:
+        caddy = _read("apps", app, "docker", "Caddyfile.docker")
+        assert all(d in caddy for d in ("read_header", "read_body", "idle")), (
+            f"{app} docker Caddyfile is missing the Slowloris timeouts "
+            f"(read_header/read_body/idle). Restore them in the template and re-render."
+        )
+
+    @pytest.mark.parametrize("app", _APPS)
+    def test_caddy_overwrites_forwarded_for(self, app: str) -> None:
+        caddy = _read("apps", app, "docker", "Caddyfile.docker")
+        assert "header_up X-Forwarded-For {client_ip}" in caddy, (
+            f"{app} docker Caddyfile must overwrite X-Forwarded-For with Caddy's "
+            f"trusted {{client_ip}} on the API reverse_proxy — otherwise the app "
+            f"trusts an attacker-set first hop, defeating per-IP rate limits. "
+            f"Restore it in the template and re-render."
+        )
+
+    @pytest.mark.parametrize("app", _APPS)
+    def test_uvicorn_sheds_load(self, app: str) -> None:
+        dockerfile = _read("apps", app, "docker", "backend.Dockerfile")
+        assert "--limit-concurrency" in dockerfile, (
+            f"{app} backend.Dockerfile uvicorn CMD must set --limit-concurrency "
+            f"so a request flood sheds load with 503 instead of queueing "
+            f"unboundedly into OOM."
+        )
+
+
 # Apps whose deploy workflow runs in-container steps after migrate (driven by
 # app.yaml `post_deploy_commands`). MGA auto-seeds its public lineup library on
 # every deploy; the canonical apps keep the list empty. The inverse check guards

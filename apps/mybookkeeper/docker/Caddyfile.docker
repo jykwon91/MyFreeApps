@@ -9,6 +9,17 @@
     servers {
         trusted_proxies static private_ranges
         client_ip_headers X-Forwarded-For
+        # Slowloris / slow-request protection. `read_header` is tight (headers
+        # are tiny, so near-zero false positives); `read_body` is generous
+        # enough for the largest legitimate upload (see request_body cap below)
+        # on a slow link; `idle` bounds kept-alive connections. `write` is
+        # deliberately left at the Caddy default (no limit) so large/slow file
+        # downloads through the storage handler are never truncated.
+        timeouts {
+            read_header 15s
+            read_body 2m
+            idle 2m
+        }
     }
 }
 
@@ -18,6 +29,15 @@
 # redirect from HTTP→HTTPS, but host Caddy proxies plain HTTP into this
 # container, so the redirect bounces back to the same URL → infinite loop.
 :80 {
+    # Coarse request-body cap — a DoS backstop, NOT the per-endpoint limit.
+    # Caddy rejects an oversized body with 413 at the proxy, before the ASGI
+    # app reads it into memory (the app's `await file.read()` happens before
+    # its own size check, so without this a multi-GB body OOMs the worker).
+    # 30 MB clears the largest legitimate upload (a 25 MB resume); apps still
+    # enforce their own tighter per-route limits below this ceiling.
+    request_body {
+        max_size 30MB
+    }
     # Storage subdomain — fronts MinIO for browser GETs of presigned URLs.
     # The storage matcher comes first so the per-handler security header
     # block below isn't applied to MinIO responses (CSP too tight breaks
@@ -56,7 +76,14 @@
         # designed for.
         handle /api/* {
             uri strip_prefix /api
-            reverse_proxy api:8000
+            reverse_proxy api:8000 {
+                # Overwrite X-Forwarded-For with Caddy's trusted computed
+                # client IP. Otherwise the app reads the FIRST XFF value, which
+                # the client sets directly — spoofing the per-IP rate-limit key
+                # and poisoning audit IPs. `{client_ip}` is derived from the
+                # trusted-proxy chain in the global block, so it is unforgeable.
+                header_up X-Forwarded-For {client_ip}
+            }
         }
 
         # SPA fallback for frontend. XFO + CSP `frame-ancestors` belong on the
