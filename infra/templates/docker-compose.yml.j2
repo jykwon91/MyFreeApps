@@ -6,6 +6,17 @@ services:
   postgres:
     image: {{ postgres_image }}
     restart: unless-stopped
+    # Resource caps — blast-radius containment on a small shared VPS. The apps
+    # share one host with no swap headroom, so a single runaway/compromised
+    # container must not exhaust RAM and trigger the kernel OOM-killer against a
+    # sibling app's Postgres (the open blast-radius gap this closes). These are
+    # CEILINGS, not reservations — sized well above observed steady-state working
+    # sets, so the lighter apps never approach them. They pair with a host swap
+    # file (see the PR's operational notes): with swap present, a container that
+    # reaches its mem_limit soft-lands into swap instead of an instant hard kill.
+    mem_limit: 512m
+    cpus: 1.0
+    pids_limit: 256
     environment:
       POSTGRES_USER: {{ app_slug }}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
@@ -31,6 +42,10 @@ services:
       context: ../..
       dockerfile: apps/{{ app_slug }}/docker/backend.Dockerfile
     command: ["alembic", "upgrade", "head"]
+    # One-shot migration — caps guard a runaway migration, not steady state.
+    mem_limit: 512m
+    cpus: 1.5
+    pids_limit: 128
     env_file: backend/.env.docker
     environment:
       DATABASE_URL: postgresql+asyncpg://{{ app_slug }}:${DB_PASSWORD}@postgres/{{ app_slug }}
@@ -43,6 +58,12 @@ services:
       context: ../..
       dockerfile: apps/{{ app_slug }}/docker/backend.Dockerfile
     restart: unless-stopped
+    # Highest single consumer on the box (the busiest app's API steady-states
+    # well under this); cap leaves headroom for request-handling spikes while
+    # still bounding a runaway. See the postgres service for the full rationale.
+    mem_limit: 1024m
+    cpus: 1.5
+    pids_limit: 256
     env_file: backend/.env.docker
     environment:
       DATABASE_URL: postgresql+asyncpg://{{ app_slug }}:${DB_PASSWORD}@postgres/{{ app_slug }}
@@ -78,6 +99,9 @@ services:
       dockerfile: apps/{{ app_slug }}/docker/backend.Dockerfile
     restart: unless-stopped
     command: {{ w.command | tojson }}
+    mem_limit: 512m
+    cpus: 1.0
+    pids_limit: 128
     env_file: backend/.env.docker
     environment:
       DATABASE_URL: postgresql+asyncpg://{{ app_slug }}:${DB_PASSWORD}@postgres/{{ app_slug }}
@@ -113,6 +137,9 @@ services:
         VITE_SERVE_ONLY: ${SERVE_ONLY:-}
 {%- endif %}
     restart: unless-stopped
+    mem_limit: 128m
+    cpus: 0.5
+    pids_limit: 64
     ports:
       # Bind only to localhost — host Caddy is the public front door and proxies here.
       - "127.0.0.1:{{ caddy_host_port }}:80"
