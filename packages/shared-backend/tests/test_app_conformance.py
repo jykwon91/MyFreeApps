@@ -707,15 +707,17 @@ class TestScaffolderProducesBootableApp:
             "scaffolded main.py must mount the shared transparency router"
         )
 
-        # Frontend: public /support route rendering the shared Support page + a
-        # public link to it from the login page (single-user apps link via Login).
+        # Frontend: public /support route rendering the shared Support page + the
+        # shared <AuthPageFooter> on the login page linking to it (the link target
+        # itself is pinned by the shared package's AuthPageFooter unit test).
         routes_src = (app_dir / "frontend" / "src" / "routes.tsx").read_text(encoding="utf-8")
         assert "/support" in routes_src and "Support" in routes_src, (
             "scaffolded routes.tsx must register a public /support route"
         )
         login_src = (app_dir / "frontend" / "src" / "pages" / "Login.tsx").read_text(encoding="utf-8")
-        assert "/support" in login_src, (
-            "scaffolded Login.tsx must carry a public link to /support"
+        assert "AuthPageFooter" in login_src, (
+            "scaffolded Login.tsx must render the shared @platform/ui "
+            "<AuthPageFooter>, which carries the public link to /support-myfreeapps"
         )
 
         # CSP: the default frame-src must allow the YouTube no-cookie embed used
@@ -732,8 +734,11 @@ class TestScaffolderProducesBootableApp:
 _TRANSPARENCY_PRIMARY_APP = "mybookkeeper"
 
 # Per-app routing file (MBK uses an inline <Routes> in App.tsx; the data-router
-# apps use a routes.tsx) and the file that carries the public link to /support
-# (the legal footer on MBK; the login page on the single-user apps).
+# apps use a routes.tsx) and the public auth surface (the Login page) that
+# renders the shared @platform/ui <AuthPageFooter> — the logged-out link to the
+# /support-myfreeapps page. All four apps link via the Login footer now; MBK's
+# LegalFooter dropped its /support link when the footer was extracted into the
+# shared component (#835).
 _SUPPORT_ROUTING_FILE = {
     "mybookkeeper": ("frontend", "src", "App.tsx"),
     "myjobhunter": ("frontend", "src", "routes.tsx"),
@@ -741,7 +746,7 @@ _SUPPORT_ROUTING_FILE = {
     "mypizzatracker": ("frontend", "src", "routes.tsx"),
 }
 _SUPPORT_LINK_FILE = {
-    "mybookkeeper": ("frontend", "src", "app", "components", "LegalFooter.tsx"),
+    "mybookkeeper": ("frontend", "src", "app", "pages", "Login.tsx"),
     "myjobhunter": ("frontend", "src", "pages", "Login.tsx"),
     "mygamingassistant": ("frontend", "src", "pages", "Login.tsx"),
     "mypizzatracker": ("frontend", "src", "pages", "Login.tsx"),
@@ -827,9 +832,12 @@ class TestSupportPageWired:
 
     def test_support_link_present(self, app: str) -> None:
         src = _read("apps", app, *_SUPPORT_LINK_FILE[app])
-        assert "/support" in src, (
-            f"{app}: {'/'.join(_SUPPORT_LINK_FILE[app])} must carry a public link to "
-            f"/support (the legal footer on MBK; the login page on single-user apps)."
+        assert "AuthPageFooter" in src, (
+            f"{app}: {'/'.join(_SUPPORT_LINK_FILE[app])} must render the shared "
+            f"@platform/ui <AuthPageFooter>, the logged-out surface that links to "
+            f"the /support-myfreeapps page. (The link target itself is pinned by "
+            f"packages/shared-frontend/src/__tests__/AuthPageFooter.test.tsx — this "
+            f"check only asserts each app's public Login renders that footer.)"
         )
 
     def test_mga_omits_cost_widget(self, app: str) -> None:

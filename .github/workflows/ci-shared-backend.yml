@@ -1,20 +1,30 @@
 name: Shared Backend CI
 
-# Runs the platform_shared package's own unit tests on every PR that touches
-# packages/shared-backend, plus on pushes to main. Apps that consume this
-# package (MyBookkeeper, MyJobHunter) have their own CI workflows that pin
-# the package and re-run the consuming app's tests.
+# Runs the platform_shared package's own unit tests AND the cross-app
+# conformance suite (tests/test_app_conformance.py) on every PR that touches the
+# shared package, ANY app under apps/**, or the scaffold templates under
+# infra/templates/** — plus on pushes to main. The conformance suite reads app +
+# template source as text to enforce structural parity, so it must run when THAT
+# source changes, not only when packages/shared-backend changes. (Before this
+# trigger was widened, an app-only PR could drift a guarded pattern — e.g. moving
+# the Login support link into the shared AuthPageFooter in #835 — without ever
+# running the guard, silently rotting it.) Apps that consume this package have
+# their own CI workflows that re-run the consuming app's own tests.
 
 on:
   pull_request:
     branches: [main]
     paths:
       - 'packages/shared-backend/**'
+      - 'apps/**'
+      - 'infra/templates/**'
       - '.github/workflows/ci-shared-backend.yml'
   push:
     branches: [main]
     paths:
       - 'packages/shared-backend/**'
+      - 'apps/**'
+      - 'infra/templates/**'
       - '.github/workflows/ci-shared-backend.yml'
 
 permissions:
