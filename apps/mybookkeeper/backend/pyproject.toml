@@ -6,8 +6,8 @@ requires-python = "==3.12.*"
 dependencies = [
     "fastapi>=0.118,<0.140",
     "starlette>=1.0,<2.0",
-    "uvicorn[standard]==0.46.0",
-    "sqlalchemy==2.0.49",
+    "uvicorn[standard]==0.49.0",
+    "sqlalchemy==2.0.50",
     "alembic==1.18.4",
     "asyncpg==0.31.0",
     "psycopg2-binary==2.9.12",
@@ -16,12 +16,12 @@ dependencies = [
     "email-validator==2.3.0",
     "fastapi-users[sqlalchemy]==15.0.5",
     "fastapi-users-db-sqlalchemy==7.0.0",
-    "anthropic==0.100.0",
-    "google-api-python-client==2.196.0",
+    "anthropic==0.105.2",
+    "google-api-python-client==2.197.0",
     "google-auth-httplib2==0.4.0",
     "google-auth-oauthlib==1.4.0",
     "cryptography>=48",
-    "python-multipart==0.0.28",
+    "python-multipart==0.0.32",
     "passlib[bcrypt]==1.7.4",
     "aiofiles>=25",
     "pypdf>=5.6",
@@ -30,8 +30,8 @@ dependencies = [
     "python-dotenv==1.2.2",
     "httpx==0.28.1",
     "minio==7.2.20",
-    "reportlab==4.5.0",
-    "sentry-sdk[fastapi]==2.59.0",
+    "reportlab==4.5.1",
+    "sentry-sdk[fastapi]==2.61.1",
     "pyotp==2.9.0",
     "qrcode[pil]==8.2",
     "pyjwt[crypto]>=2.10",
@@ -46,7 +46,7 @@ dependencies = [
     # 5545 line folding, escaping, DATE vs DATETIME VALUE parameters, and
     # timezone propagation — all of which are fiddly enough that hand-rolling
     # is a bug factory. Used by both outbound serializer and inbound parser.
-    "icalendar==7.1.0",
+    "icalendar==7.1.2",
     # Lease Templates Phase 1 — DOCX rendering with placeholder substitution.
     # PDF rendering uses the existing ``reportlab`` dep (low-fidelity for v1;
     # weasyprint deferred per Phase 1 stop conditions due to Windows install
