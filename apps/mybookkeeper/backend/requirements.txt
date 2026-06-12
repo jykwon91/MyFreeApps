@@ -11,7 +11,7 @@ annotated-doc==0.0.4
     # via fastapi
 annotated-types==0.7.0
     # via pydantic
-anthropic==0.100.0
+anthropic==0.109.1
     # via mybookkeeper-backend
 anyio==4.13.0
     # via
@@ -34,7 +34,7 @@ bcrypt==5.0.0
     # via
     #   passlib
     #   pwdlib
-certifi==2026.4.22
+certifi==2026.5.20
     # via
     #   httpcore
     #   httpx
@@ -51,7 +51,7 @@ charset-normalizer==3.4.7
     #   requests
 clamd==1.0.2
     # via mybookkeeper-backend
-click==8.3.3
+click==8.4.1
     # via uvicorn
 cobble==0.1.4
     # via mammoth
@@ -61,7 +61,7 @@ colorama==0.4.6 ; sys_platform == 'win32'
     #   pytest
     #   qrcode
     #   uvicorn
-cryptography==48.0.0
+cryptography==48.0.1
     # via
     #   google-auth
     #   mybookkeeper-backend
@@ -80,7 +80,7 @@ email-validator==2.3.0
     #   pydantic
 et-xmlfile==2.0.0
     # via openpyxl
-fastapi==0.136.1
+fastapi==0.136.3
     # via
     #   fastapi-users
     #   mybookkeeper-backend
@@ -94,11 +94,11 @@ fastapi-users-db-sqlalchemy==7.0.0
     # via
     #   fastapi-users
     #   mybookkeeper-backend
-google-api-core==2.30.3
+google-api-core==2.31.0
     # via google-api-python-client
-google-api-python-client==2.196.0
+google-api-python-client==2.197.0
     # via mybookkeeper-backend
-google-auth==2.50.0
+google-auth==2.53.0
     # via
     #   google-api-core
     #   google-api-python-client
@@ -110,9 +110,9 @@ google-auth-httplib2==0.4.0
     #   mybookkeeper-backend
 google-auth-oauthlib==1.4.0
     # via mybookkeeper-backend
-googleapis-common-protos==1.74.0
+googleapis-common-protos==1.75.0
     # via google-api-core
-greenlet==3.5.0
+greenlet==3.5.1
     # via sqlalchemy
 h11==0.16.0
     # via
@@ -124,16 +124,16 @@ httplib2==0.31.2
     # via
     #   google-api-python-client
     #   google-auth-httplib2
-httptools==0.7.1
+httptools==0.8.0
     # via uvicorn
 httpx==0.28.1
     # via
     #   anthropic
     #   mybookkeeper-backend
     #   platform-shared
-icalendar==7.1.0
+icalendar==7.1.2
     # via mybookkeeper-backend
-idna==3.13
+idna==3.18
     # via
     #   anyio
     #   email-validator
@@ -141,11 +141,11 @@ idna==3.13
     #   requests
 iniconfig==2.3.0
     # via pytest
-jiter==0.14.0
+jiter==0.15.0
     # via anthropic
 linkify-it-py==2.1.0
     # via mybookkeeper-backend
-lxml==6.1.0
+lxml==6.1.1
     # via python-docx
 makefun==1.16.0
     # via fastapi-users
@@ -181,9 +181,9 @@ pillow==12.2.0
     #   reportlab
 pluggy==1.6.0
     # via pytest
-proto-plus==1.27.2
+proto-plus==1.28.0
     # via google-api-core
-protobuf==7.34.1
+protobuf==7.35.1
     # via
     #   google-api-core
     #   googleapis-common-protos
@@ -207,7 +207,7 @@ pydantic==2.13.4
     #   mybookkeeper-backend
     #   platform-shared
     #   pydantic-settings
-pydantic-core==2.46.4
+pydantic-core==2.47.0
     # via pydantic
 pydantic-settings==2.14.1
     # via
@@ -215,7 +215,7 @@ pydantic-settings==2.14.1
     #   platform-shared
 pygments==2.20.0
     # via pytest
-pyjwt==2.12.1
+pyjwt==2.13.0
     # via
     #   fastapi-users
     #   mybookkeeper-backend
@@ -226,14 +226,14 @@ pyotp==2.9.0
     #   platform-shared
 pyparsing==3.3.2
     # via httplib2
-pypdf==6.11.0
+pypdf==6.13.2
     # via mybookkeeper-backend
 pytest==9.0.3
     # via
     #   pytest-anyio
     #   pytest-asyncio
 pytest-anyio==0.0.0
-pytest-asyncio==1.3.0
+pytest-asyncio==1.4.0
 python-dateutil==2.9.0.post0
     # via icalendar
 python-docx==1.2.0
@@ -245,7 +245,7 @@ python-dotenv==1.2.2
     #   uvicorn
 python-magic==0.4.27
     # via mybookkeeper-backend
-python-multipart==0.0.28
+python-multipart==0.0.32
     # via
     #   fastapi-users
     #   mybookkeeper-backend
@@ -255,15 +255,15 @@ qrcode==8.2
     # via
     #   mybookkeeper-backend
     #   platform-shared
-reportlab==4.5.0
+reportlab==4.5.1
     # via mybookkeeper-backend
-requests==2.33.1
+requests==2.34.2
     # via
     #   google-api-core
     #   requests-oauthlib
 requests-oauthlib==2.0.0
     # via google-auth-oauthlib
-sentry-sdk==2.59.0
+sentry-sdk==2.62.0
     # via
     #   mybookkeeper-backend
     #   platform-shared
@@ -271,13 +271,13 @@ six==1.17.0
     # via python-dateutil
 sniffio==1.3.1
     # via anthropic
-sqlalchemy==2.0.49
+sqlalchemy==2.0.50
     # via
     #   alembic
     #   fastapi-users-db-sqlalchemy
     #   mybookkeeper-backend
     #   platform-shared
-starlette==1.0.0
+starlette==1.3.1
     # via
     #   fastapi
     #   mybookkeeper-backend
@@ -312,11 +312,11 @@ urllib3==2.7.0
     #   minio
     #   requests
     #   sentry-sdk
-uvicorn==0.46.0
+uvicorn==0.49.0
     # via mybookkeeper-backend
 uvloop==0.22.1 ; platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32'
     # via uvicorn
-watchfiles==1.1.1
+watchfiles==1.2.0
     # via uvicorn
 websockets==16.0
     # via uvicorn
