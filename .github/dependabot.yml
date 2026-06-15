@@ -84,3 +84,31 @@ updates:
       interval: "weekly"
     open-pull-requests-limit: 3
     labels: ["dependencies", "docker", "mybookkeeper"]
+
+  # MyRecipes (multi-user)
+  - package-ecosystem: "pip"
+    directory: "/apps/myrecipes/backend"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "python", "myrecipes"]
+    groups:
+      python-minor-patch:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: "npm"
+    directory: "/apps/myrecipes/frontend"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "npm", "myrecipes"]
+    groups:
+      npm-minor-patch:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: "docker"
+    directory: "/apps/myrecipes"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 3
+    labels: ["dependencies", "docker", "myrecipes"]

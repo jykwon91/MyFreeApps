@@ -33,6 +33,12 @@ _APPS = [
     # mypizzatracker is single-user, same shape as mygamingassistant.
     # Scaffolded via `python -m platform_shared.infra.new_app` (PR #623).
     "mypizzatracker",
+    # myrecipes is a MULTI-USER app (public registration + per-user recipe data),
+    # mirroring the canonical app MyBookkeeper. Scaffolded via
+    # `python -m platform_shared.infra.new_app`, then the auth shell was switched
+    # from the scaffold's single-user seed to the multi-user register router
+    # (see apps/myrecipes/backend/app/main.py).
+    "myrecipes",
 ]
 
 # Apps that have intentionally opted OUT of Sentry error monitoring.
@@ -448,7 +454,7 @@ class TestInfraTemplateDrift:
     the template owns the shape.
     """
 
-    @pytest.mark.parametrize("app", ["mybookkeeper", "myjobhunter", "mygamingassistant", "mypizzatracker"])
+    @pytest.mark.parametrize("app", ["mybookkeeper", "myjobhunter", "mygamingassistant", "mypizzatracker", "myrecipes"])
     def test_no_drift(self, app: str) -> None:
         try:
             from platform_shared.infra.render import diff_app, _repo_root
@@ -828,12 +834,14 @@ _SUPPORT_ROUTING_FILE = {
     "myjobhunter": ("frontend", "src", "routes.tsx"),
     "mygamingassistant": ("frontend", "src", "routes.tsx"),
     "mypizzatracker": ("frontend", "src", "routes.tsx"),
+    "myrecipes": ("frontend", "src", "routes.tsx"),
 }
 _SUPPORT_LINK_FILE = {
     "mybookkeeper": ("frontend", "src", "app", "pages", "Login.tsx"),
     "myjobhunter": ("frontend", "src", "pages", "Login.tsx"),
     "mygamingassistant": ("frontend", "src", "pages", "Login.tsx"),
     "mypizzatracker": ("frontend", "src", "pages", "Login.tsx"),
+    "myrecipes": ("frontend", "src", "pages", "Login.tsx"),
 }
 
 
