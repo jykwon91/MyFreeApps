@@ -5,11 +5,13 @@
 name: Deploy MyRecipes
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'apps/myrecipes/**'
-      - 'packages/**'
+  # Manual "Run workflow" button — always available so any app can be
+  # deployed on demand, even when push-triggered auto-deploy is off.
+  workflow_dispatch:
+  # Push-triggered auto-deploy. Rendered ONLY when `automated_deploy` is
+  # truthy in apps/<slug>/app.yaml. A missing key defaults to enabled, so
+  # existing apps keep auto-deploying. Set `automated_deploy: false` to make
+  # an app manual-dispatch-only (e.g. not yet ready for production).
 
 concurrency:
   group: deploy-myrecipes

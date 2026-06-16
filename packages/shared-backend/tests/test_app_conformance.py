@@ -607,6 +607,70 @@ class TestPostDeployCommands:
         )
 
 
+# Apps that have intentionally opted OUT of push-triggered automated deploys.
+# Their deploy workflow renders ONLY a `workflow_dispatch:` trigger (manual
+# "Run workflow" button) — no `push: branches: [main]` block — driven by
+# `automated_deploy: false` in apps/<slug>/app.yaml. The template defaults a
+# missing key to enabled, so every other app keeps auto-deploying. The tests
+# below enforce the opt-out in BOTH directions: a no-auto-deploy app must have
+# no push trigger AND must carry the flag in app.yaml, and every other app must
+# keep its push trigger.
+#
+# - mypizzatracker: paused until it is converted to a mobile app.
+# - myrecipes: paused until local development is complete.
+_NO_AUTO_DEPLOY = {"mypizzatracker", "myrecipes"}
+
+
+class TestAutomatedDeployExclusion:
+    """`automated_deploy: false` in app.yaml must drop the push trigger from
+    the rendered deploy workflow, leaving only the manual workflow_dispatch.
+
+    Same shape as TestPostDeployCommands: a reviewed opt-out set enforced in
+    both directions so neither (a) an excluded app silently regains a push
+    trigger nor (b) a normal app silently loses one can slip through review.
+    """
+
+    @pytest.mark.parametrize("app", sorted(_NO_AUTO_DEPLOY))
+    def test_excluded_app_is_manual_dispatch_only(self, app: str) -> None:
+        wf = _read(".github", "workflows", f"deploy-{app}.yml")
+        assert "workflow_dispatch:" in wf, (
+            f"deploy-{app}.yml must keep the manual `workflow_dispatch:` "
+            f"trigger so the app can still be deployed on demand. Re-run "
+            f"`python -m platform_shared.infra.render --app {app}`."
+        )
+        assert "branches: [main]" not in wf, (
+            f"deploy-{app}.yml still has a `push: branches: [main]` trigger but "
+            f"{app} is in _NO_AUTO_DEPLOY. To keep it manual-dispatch-only, set "
+            f"`automated_deploy: false` in apps/{app}/app.yaml and re-render. "
+            f"To RE-ENABLE auto-deploy, set `automated_deploy: true` (or remove "
+            f"the key) in apps/{app}/app.yaml, re-render, and drop {app} from "
+            f"_NO_AUTO_DEPLOY."
+        )
+        ay = _read("apps", app, "app.yaml")
+        assert "automated_deploy: false" in ay, (
+            f"apps/{app}/app.yaml must declare `automated_deploy: false` — it is "
+            f"the source of truth the template gates the push trigger on. To "
+            f"re-enable auto-deploy, set it to true (or remove the key), "
+            f"re-render, and drop {app} from _NO_AUTO_DEPLOY."
+        )
+
+    @pytest.mark.parametrize("app", sorted(set(_APPS) - _NO_AUTO_DEPLOY))
+    def test_normal_app_keeps_push_trigger(self, app: str) -> None:
+        wf = _read(".github", "workflows", f"deploy-{app}.yml")
+        assert "branches: [main]" in wf, (
+            f"deploy-{app}.yml lost its `push: branches: [main]` trigger but "
+            f"{app} is not in _NO_AUTO_DEPLOY. If this app should stop "
+            f"auto-deploying, add it to _NO_AUTO_DEPLOY and set "
+            f"`automated_deploy: false` in apps/{app}/app.yaml; otherwise set "
+            f"`automated_deploy: true` (or remove the key) and re-render."
+        )
+        assert "workflow_dispatch:" in wf, (
+            f"deploy-{app}.yml must also expose the manual `workflow_dispatch:` "
+            f"trigger (every app gets a Run-workflow button). Re-run "
+            f"`python -m platform_shared.infra.render --app {app}`."
+        )
+
+
 class TestScaffolderProducesBootableApp:
     """Tier 5 -- the scaffolder must produce a complete, fully-substituted app dir.
 

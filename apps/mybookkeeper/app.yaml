@@ -8,6 +8,8 @@ has_minio_subdomain: true
 joins_minio_network: true
 block_api_docs: true
 include_bundle_tripwire: true
+# Push to main auto-deploys this app. Set false to make it manual-dispatch-only.
+automated_deploy: true
 # Fully auth-gated app — no serve-only public-library mode. Keeps the
 # VITE_SERVE_ONLY build-arg chain OUT of the rendered docker files (MGA-only).
 serve_only_build_arg: false
