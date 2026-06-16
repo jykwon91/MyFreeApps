@@ -5,8 +5,8 @@ description = "MyJobHunter backend — job hunt tracker with AI-powered document
 requires-python = "==3.12.*"
 dependencies = [
     "fastapi==0.136.1",
-    "uvicorn[standard]==0.47.0",
-    "sqlalchemy==2.0.49",
+    "uvicorn[standard]==0.49.0",
+    "sqlalchemy==2.0.51",
     "alembic==1.18.4",
     "asyncpg==0.31.0",
     "psycopg2-binary==2.9.12",
@@ -18,7 +18,7 @@ dependencies = [
     "passlib[bcrypt]==1.7.4",
     "cryptography==48.0.0",
     "httpx==0.28.1",
-    "anyio==4.13.0",
+    "anyio==4.14.0",
     "minio==7.2.20",
     "platform-shared",
     "anthropic>=0.49.0",
@@ -36,7 +36,7 @@ dependencies = [
     "weasyprint>=62.0",
     # Sentry — fail-loud production enforcement. See app/core/observability.py.
     # Mirrors apps/mybookkeeper/backend/pyproject.toml.
-    "sentry-sdk[fastapi]==2.60.0",
+    "sentry-sdk[fastapi]==2.62.0",
     # Discovery source adapters: tenacity wraps every outbound HTTP
     # call with exponential-backoff retry on 429 / 5xx so a transient
     # provider blip doesn't tank a fetch cycle.
@@ -67,8 +67,8 @@ platform-shared = { path = "../../../packages/shared-backend", editable = true }
 
 [dependency-groups]
 dev = [
-    "pytest==9.0.3",
-    "pytest-asyncio==1.3.0",
+    "pytest==9.1.0",
+    "pytest-asyncio==1.4.0",
     "pytest-timeout==2.4.0",
 ]
 
