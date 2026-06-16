@@ -11,6 +11,10 @@ include_bundle_tripwire: false
 # Manual-dispatch-only: no push-triggered auto-deploy. Not deployed until local
 # development is complete. Flip to true + re-render to re-enable auto-deploy.
 automated_deploy: false
+# On-VPS Docker build (legacy path). Flip to true to build in CI + pull from
+# GHCR (needs GHCR_PULL_TOKEN secret + MYRECIPES_VITE_TURNSTILE_SITE_KEY var).
+# See apps/mybookkeeper/app.yaml — mbk is the first app on the registry path.
+registry_images: false
 serve_only_build_arg: false
 env_seed_command: create from .env.example first
 csp: 'default-src ''self''; script-src ''self'' https://challenges.cloudflare.com;

@@ -35,12 +35,16 @@ services:
       start_period: 30s
 
   migrate:
+{%- if registry_images | default(false) %}
+    image: ghcr.io/jykwon91/myfreeapps-{{ app_slug }}-backend:${IMAGE_TAG:-latest}
+{%- else %}
     build:
       # Build context is the monorepo root so the image can pull in
       # packages/shared-backend (the `platform_shared` library) alongside
       # apps/{{ app_slug }}/.
       context: ../..
       dockerfile: apps/{{ app_slug }}/docker/backend.Dockerfile
+{%- endif %}
     command: ["alembic", "upgrade", "head"]
     # One-shot migration — caps guard a runaway migration, not steady state.
     mem_limit: 512m
@@ -54,9 +58,13 @@ services:
         condition: service_healthy
 
   api:
+{%- if registry_images | default(false) %}
+    image: ghcr.io/jykwon91/myfreeapps-{{ app_slug }}-backend:${IMAGE_TAG:-latest}
+{%- else %}
     build:
       context: ../..
       dockerfile: apps/{{ app_slug }}/docker/backend.Dockerfile
+{%- endif %}
     restart: unless-stopped
     # Highest single consumer on the box (the busiest app's API steady-states
     # well under this); cap leaves headroom for request-handling spikes while
@@ -94,9 +102,13 @@ services:
       retries: 3
 {% for w in workers %}
   {{ w.name }}:
+{%- if registry_images | default(false) %}
+    image: ghcr.io/jykwon91/myfreeapps-{{ app_slug }}-backend:${IMAGE_TAG:-latest}
+{%- else %}
     build:
       context: ../..
       dockerfile: apps/{{ app_slug }}/docker/backend.Dockerfile
+{%- endif %}
     restart: unless-stopped
     command: {{ w.command | tojson }}
     mem_limit: 512m
@@ -119,6 +131,12 @@ services:
     # at /srv/frontend + Caddyfile baked at /etc/caddy/Caddyfile. No shared
     # volume, no entrypoint copy, no drift between deploys. See
     # docker/caddy.Dockerfile for the full rationale.
+{%- if registry_images | default(false) %}
+    # Registry path: this image is built + pushed by the deploy workflow's
+    # build-and-push job (VITE_* build args sourced from GitHub Actions vars
+    # there, not the VPS .env.docker). The VPS pulls it; no on-box build.
+    image: ghcr.io/jykwon91/myfreeapps-{{ app_slug }}-caddy:${IMAGE_TAG:-latest}
+{%- else %}
     build:
       context: ../..
       dockerfile: apps/{{ app_slug }}/docker/caddy.Dockerfile
@@ -135,6 +153,7 @@ services:
         # single backend/.env.docker line drives both the backend mode and the
         # bundle. Empty/unset keeps the full auth UI.
         VITE_SERVE_ONLY: ${SERVE_ONLY:-}
+{%- endif %}
 {%- endif %}
     restart: unless-stopped
     mem_limit: 128m
