@@ -101,8 +101,14 @@ missing. If either env var is absent in production, the app refuses to start.
 - One model per file, one schema per file
 
 **Enums:**
-- All enums are `String(N)` + `CheckConstraint("col IN (...)")` -- never SQLAlchemy Enum type
-- Table names are singular (`user`, etc. -- matches MBK convention)
+- App domain enums are `String(N)` + `CheckConstraint("col IN (...)")` -- never SQLAlchemy Enum type
+- Exception: the platform `user.role` column uses the postgres `user_role` ENUM
+  (the shared User model binds `SAEnum(Role, name="user_role")`); migration `0001`
+  creates the type. Don't model `user.role` as `String` -- that mismatches the model
+  and the app fails the first auth INSERT with `type "user_role" does not exist`.
+- Table names are singular (`user`, etc.). Multi-user apps that mount the register
+  router use the plural `users` (matches MyBookkeeper + MyJobHunter + the shared
+  register test factory's raw SQL); rename the table when converting to multi-user.
 
 **Timestamps:**
 - `DateTime(timezone=True)` on every datetime column
