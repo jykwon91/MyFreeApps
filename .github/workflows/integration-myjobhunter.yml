@@ -78,7 +78,19 @@ jobs:
           DB_PASSWORD: integration_pw
           DOMAIN: http://localhost
         run: |
-          docker compose up -d --build
+          # docker-compose.yml references prebuilt GHCR image tags
+          # (registry_images: true); those images are only built + pushed by
+          # the deploy workflow on merge to main, so on a PR they don't exist
+          # and `docker compose up` would fail pulling them. Build them locally
+          # under the same tags first — `docker compose up` then finds the
+          # local images and skips the pull (postgres still pulls normally).
+          # This is the same build work the old `up --build` did; it's just
+          # explicit now that the app services use `image:` not `build:`.
+          docker build -f docker/backend.Dockerfile \
+            -t ghcr.io/jykwon91/myfreeapps-myjobhunter-backend:latest ../..
+          docker build -f docker/caddy.Dockerfile \
+            -t ghcr.io/jykwon91/myfreeapps-myjobhunter-caddy:latest ../..
+          docker compose up -d
           echo "Waiting for stack to become healthy..."
 
       - name: Wait for api health
