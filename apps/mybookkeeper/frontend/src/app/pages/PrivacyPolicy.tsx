@@ -27,12 +27,9 @@ export default function PrivacyPolicy() {
               Gmail inbox to automatically pull in billing emails.
             </p>
             <p className="mt-2">
-              This is a solo-developer project — not a corporation. If you have any questions about
-              your data, email{" "}
-              <a href="mailto:jasonykwon91@gmail.com" className="text-primary hover:underline">
-                jasonykwon91@gmail.com
-              </a>{" "}
-              and you'll hear from the person who wrote the code.
+              This is a solo-developer project — not a corporation. A dedicated support email is
+              being set up and will be listed here soon. In the meantime, you can export or delete
+              your data anytime from Settings → Security.
             </p>
             <p className="mt-2 text-muted-foreground italic text-xs">
               Note: This policy is written in plain English for a personal project. It is not legal
@@ -273,12 +270,8 @@ export default function PrivacyPolicy() {
               <div>
                 <h3 className="font-semibold mb-1">Objection or restriction</h3>
                 <p>
-                  If you want to limit how your data is used beyond what the app settings offer,
-                  email{" "}
-                  <a href="mailto:jasonykwon91@gmail.com" className="text-primary hover:underline">
-                    jasonykwon91@gmail.com
-                  </a>
-                  .
+                  If you want to limit how your data is used beyond what the app settings offer, a
+                  dedicated support email is being set up and will be listed here soon.
                 </p>
               </div>
             </div>
@@ -302,11 +295,9 @@ export default function PrivacyPolicy() {
               <li>Cloudflare Turnstile protects registration and forgot-password from bots</li>
             </ul>
             <p className="mt-3">
-              That said, no system is perfectly secure. If you find a vulnerability, please email{" "}
-              <a href="mailto:jasonykwon91@gmail.com" className="text-primary hover:underline">
-                jasonykwon91@gmail.com
-              </a>{" "}
-              before disclosing publicly.
+              That said, no system is perfectly secure. If you find a vulnerability, a dedicated
+              security contact is being set up and will be listed here soon — please report it
+              responsibly before disclosing publicly.
             </p>
           </section>
 
@@ -323,7 +314,7 @@ export default function PrivacyPolicy() {
             <h2 className="text-xl font-semibold mb-3">Children's data</h2>
             <p>
               MyBookkeeper is a financial tool intended for adults. We do not knowingly collect data
-              from anyone under 13. If you believe a child's data has been submitted in error, email
+              from anyone under 13. If you believe a child's data has been submitted in error, contact
               us and we'll delete it.
             </p>
           </section>
@@ -340,10 +331,9 @@ export default function PrivacyPolicy() {
           <section id="contact">
             <h2 className="text-xl font-semibold mb-3">Contact</h2>
             <p>
-              Questions, requests, or concerns:{" "}
-              <a href="mailto:jasonykwon91@gmail.com" className="text-primary hover:underline">
-                jasonykwon91@gmail.com
-              </a>
+              Questions, requests, or concerns: a dedicated support email is being set up and will be
+              listed here soon. You can manage, export, or delete your data anytime from Settings →
+              Security.
             </p>
           </section>
 

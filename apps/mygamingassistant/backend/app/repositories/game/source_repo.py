@@ -29,6 +29,35 @@ async def create_source(
     return source
 
 
+async def upsert_source(
+    db: AsyncSession,
+    *,
+    source_id: uuid.UUID,
+    kind: str,
+    config_json: dict,
+) -> Source:
+    """Insert a source with an EXPLICIT id, or update an existing one. Flush-only.
+
+    Used by the library importer to re-create the sources a published pack
+    references, carrying their verbatim UUIDs so a lineup's ``source_id`` FK
+    resolves with no slug indirection (sources are not fixtures → their PKs do
+    not collide and are safe to import by id). Idempotent: re-running updates
+    ``kind`` / ``config_json`` in place. Uses ``db.get`` (not ``get_source``)
+    so a soft-deleted row is still located and refreshed rather than
+    duplicated. The caller owns the transaction (no commit here).
+    """
+    existing = await db.get(Source, source_id)
+    if existing is not None:
+        existing.kind = kind
+        existing.config_json = config_json
+        await db.flush()
+        return existing
+    source = Source(id=source_id, kind=kind, config_json=config_json)
+    db.add(source)
+    await db.flush()
+    return source
+
+
 def _is_deleted(source: Source) -> bool:
     return bool((source.config_json or {}).get("deleted"))
 

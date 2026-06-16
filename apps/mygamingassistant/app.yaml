@@ -5,9 +5,43 @@ caddy_host_port: 8096
 node_version: "20"
 postgres_image: postgres:16
 has_minio_subdomain: false
-joins_minio_network: true
+# MGA prod object storage is Cloudflare R2 (reached over the internet), not the
+# shared myfreeapps-minio stack — so the api/caddy services do NOT join the
+# shared external network. See memory/project_mga_prod_storage_r2.md. Local dev
+# still uses standalone MinIO (S3-compatible — endpoint swap only).
+joins_minio_network: false
 block_api_docs: false
 include_bundle_tripwire: true
+# Push to main auto-deploys this app. Set false to make it manual-dispatch-only.
+automated_deploy: true
+# MGA-only: render the VITE_SERVE_ONLY frontend build-arg chain (caddy.Dockerfile
+# ARG/ENV + docker-compose caddy build.args). MGA's production deploy is a pure
+# public read-only library with no auth (SERVE_ONLY=true); the bundle needs the
+# matching VITE_SERVE_ONLY flag to hide all auth UI. MBK / MJH / MPT keep this
+# false — they are fully auth-gated and have no serve-only mode.
+serve_only_build_arg: true
 env_seed_command: create from .env.example first
-csp: "default-src 'self'; script-src 'self' 'sha256-6gP5jY9WKtmx3Qr/KXGhyuG+YL86Nf6nSb7wHrV5jmk=' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://challenges.cloudflare.com; frame-src 'self' https://challenges.cloudflare.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests"
+# R2 clips/screenshots reach the browser by ONE of two serving modes, so the CSP
+# allows both hosts in img-src (screenshots), media-src (clips), and connect-src
+# (blob fetches):
+#   1. CDN custom domain — mga-clips.myfreeapps.org. Used when MINIO_PUBLIC_BASE_URL
+#      is set; requires binding the R2 bucket to this domain, which needs the zone
+#      on Cloudflare (a first-level subdomain → free *.myfreeapps.org Universal SSL).
+#   2. Presigned S3 URLs — https://*.r2.cloudflarestorage.com (the account R2
+#      endpoint). Used when MINIO_PUBLIC_BASE_URL is EMPTY (the lineup service
+#      presigns each URL). This is the mode when the DNS zone is NOT on Cloudflare
+#      (e.g. registrar-managed), so the R2 custom domain can't be bound. Wildcard
+#      avoids committing the account-specific endpoint id.
+# Whichever mode is used, MINIO_PUBLIC_BASE_URL and the R2 setup must match the
+# host the bundle actually loads from — both are pre-allowed here so either works.
+csp: "default-src 'self'; script-src 'self' 'sha256-6gP5jY9WKtmx3Qr/KXGhyuG+YL86Nf6nSb7wHrV5jmk=' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://mga-clips.myfreeapps.org https://*.r2.cloudflarestorage.com; media-src 'self' https://mga-clips.myfreeapps.org https://*.r2.cloudflarestorage.com; font-src 'self'; connect-src 'self' https://challenges.cloudflare.com https://mga-clips.myfreeapps.org https://*.r2.cloudflarestorage.com; frame-src 'self' https://challenges.cloudflare.com https://www.youtube-nocookie.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests"
 workers: []
+# Run on EVERY deploy, in-container, AFTER migrate. Both idempotent:
+# load-fixtures upserts the game taxonomy (incl. any new map fixture like
+# de_cache); import-lineups reconciles the public library to the image-baked
+# pack (backend/data/lineup_library.json). This is the prod half of "merge a
+# library update -> it goes live"; the local clip-publish half is
+# backend/scripts/ship-library.ps1. Other apps keep this empty.
+post_deploy_commands:
+  - python -m app.cli load-fixtures
+  - python -m app.cli import-lineups

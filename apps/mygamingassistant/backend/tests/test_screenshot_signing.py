@@ -31,7 +31,10 @@ from app.models.game.map_zone import MapZone
 from app.models.game.utility_type import UtilityType
 from app.schemas.game.lineup_schemas import LineupAcceptBody
 from app.services.game import lineup_service
-from app.services.game.lineup_service import _object_key_from_value
+from app.services.game.lineup_service import (
+    _object_key_from_value,
+    _sign_screenshot_url,
+)
 
 BUCKET = settings.minio_bucket
 
@@ -89,8 +92,10 @@ def _mock_storage():
     mock.generate_presigned_url.return_value = (
         "https://minio.example.com/bucket/signed-read-url?X-Amz-Signature=z"
     )
+    # Signing (and the presign call) now lives in lineup_url_signing — patch
+    # get_storage where it is looked up, not in lineup_service.
     with patch(
-        "app.services.game.lineup_service.get_storage", return_value=mock
+        "app.services.game.lineup_url_signing.get_storage", return_value=mock
     ):
         yield mock
 
@@ -187,3 +192,60 @@ async def test_accept_does_not_corrupt_orm_key_column(db: AsyncSession, seeded: 
     assert row.stand_screenshot_url == BARE_STAND
     assert row.aim_screenshot_url == BARE_AIM
     assert not row.stand_screenshot_url.startswith("http")
+
+
+# ---------------------------------------------------------------------------
+# _sign_screenshot_url — presigned (local MinIO) vs public CDN (prod R2)
+# ---------------------------------------------------------------------------
+#
+# Prod object storage is Cloudflare R2 served on a public custom domain. When
+# settings.minio_public_base_url is set, public read URLs are emitted as plain
+# {base}/{key} (no presigning, CDN-cacheable). When unset (local dev / CI),
+# reads are presigned against MinIO as before. See
+# memory/project_mga_prod_storage_r2.md.
+
+R2_BASE = "https://mga-clips.myfreeapps.org"
+
+
+def test_sign_returns_none_for_empty(monkeypatch):
+    monkeypatch.setattr(settings, "minio_public_base_url", "")
+    assert _sign_screenshot_url(None) is None
+    assert _sign_screenshot_url("") is None
+
+
+def test_sign_presigns_when_public_base_unset(monkeypatch, _mock_storage):
+    """Local MinIO / CI: empty base → delegate to presigned signing."""
+    monkeypatch.setattr(settings, "minio_public_base_url", "")
+    url = _sign_screenshot_url("pending/vid/3-stand.png")
+    _mock_storage.generate_presigned_url.assert_called_once()
+    assert url == _mock_storage.generate_presigned_url.return_value
+
+
+def test_sign_public_cdn_url_when_base_set(monkeypatch, _mock_storage):
+    """Prod R2: base set → plain {base}/{key}, presigning NOT invoked."""
+    monkeypatch.setattr(settings, "minio_public_base_url", R2_BASE)
+    url = _sign_screenshot_url("pending/vid/3-stand.png")
+    assert url == f"{R2_BASE}/pending/vid/3-stand.png"
+    _mock_storage.generate_presigned_url.assert_not_called()
+
+
+def test_sign_public_cdn_strips_trailing_slash(monkeypatch):
+    monkeypatch.setattr(settings, "minio_public_base_url", R2_BASE + "/")
+    url = _sign_screenshot_url("pending/vid/3-stand.png")
+    assert url == f"{R2_BASE}/pending/vid/3-stand.png"  # no double slash
+
+
+def test_sign_public_cdn_keeps_separators_encodes_unsafe(monkeypatch):
+    """Path separators preserved; stray unsafe chars percent-encoded."""
+    monkeypatch.setattr(settings, "minio_public_base_url", R2_BASE)
+    url = _sign_screenshot_url("pending/v id/3-stand.png")
+    assert url == f"{R2_BASE}/pending/v%20id/3-stand.png"
+
+
+def test_sign_public_cdn_peels_corrupted_key_first(monkeypatch):
+    """A row corrupted with a presigned URL still peels to the bare key before
+    the CDN base is prefixed — never emit a nested URL."""
+    monkeypatch.setattr(settings, "minio_public_base_url", R2_BASE)
+    key = "pending/vid/3-stand.png"
+    corrupted = f"https://minio.example.com/{BUCKET}/{key}?X-Amz-Signature=abc"
+    assert _sign_screenshot_url(corrupted) == f"{R2_BASE}/{key}"

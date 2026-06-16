@@ -29,4 +29,7 @@ RUN chmod +x /entrypoint.sh
 EXPOSE 8006
 
 ENTRYPOINT ["/entrypoint.sh"]
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8006", "--workers", "2"]
+# --limit-concurrency sheds load with 503 once in-flight requests exceed the
+# cap, instead of queueing unboundedly (a flood would otherwise grow memory
+# until OOM). Per-worker, so the effective ceiling is 2x this number.
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8006", "--workers", "2", "--limit-concurrency", "64"]

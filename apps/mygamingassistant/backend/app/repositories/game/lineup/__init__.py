@@ -30,6 +30,7 @@ from app.repositories.game.lineup.lifecycle import (
     list_lineups,
     list_pending_lineups,
     update_lineup,
+    upsert_imported_lineup,
     write_classifier_suggestions,
 )
 from app.repositories.game.lineup.micro_panes import (
@@ -68,6 +69,7 @@ __all__ = [
     "list_accepted_lineups_needing_widen_source",
     "list_lineups",
     "list_pending_lineups",
+    "upsert_imported_lineup",
     "set_aim_clip_url",
     "set_aim_localization",
     "set_aim_screenshot_url",

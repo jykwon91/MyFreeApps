@@ -59,7 +59,9 @@ describe("Login page", () => {
   it("shows app branding", () => {
     renderLogin();
     expect(screen.getByText("MyJobHunter")).toBeInTheDocument();
-    expect(screen.getByText(/© 2026 MyJobHunter/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(new RegExp(`© ${new Date().getFullYear()} MyJobHunter`, "i")),
+    ).toBeInTheDocument();
   });
 
   it("navigates to /dashboard on successful sign-in", async () => {

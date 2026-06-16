@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Lock } from "lucide-react";
 import {
+  AuthPageFooter,
   LoadingButton,
   extractErrorMessage,
   useIsAuthenticated,
@@ -276,7 +277,7 @@ export default function Login() {
         )}
       </div>
 
-      <p className="mt-8 text-xs text-muted-foreground">&copy; 2026 __APP_DISPLAY_NAME__</p>
+      <AuthPageFooter appName="__APP_DISPLAY_NAME__" />
     </div>
   );
 }

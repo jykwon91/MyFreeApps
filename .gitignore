@@ -26,6 +26,8 @@ dist/
 .env.local
 .env.*.local
 *.env.docker
+# Local Cloudflare R2 publish creds for the MGA ship-library tool (never commit).
+.env.r2
 
 # OS
 .DS_Store

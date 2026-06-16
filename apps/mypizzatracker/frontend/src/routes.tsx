@@ -1,4 +1,5 @@
 import { type RouteObject } from "react-router-dom";
+import { Support } from "@platform/ui";
 import Home from "@/pages/Home";
 import Drops from "@/pages/Drops";
 import Menu from "@/pages/Menu";
@@ -38,6 +39,8 @@ export const routes: RouteObject[] = [
   { path: "/order", element: <PublicOrder /> },
   { path: "/order/status", element: <PublicOrderStatus /> },
   { path: "/order/status/:orderId", element: <PublicOrderStatus /> },
+  // Public support / donation page — standalone (no shell, no auth).
+  { path: "/support-myfreeapps", element: <Support appName="MyPizzaTracker" /> },
   { path: "/login", element: <Login /> },
   { path: "/forgot-password", element: <ForgotPassword /> },
   { path: "/reset-password", element: <ResetPassword /> },

@@ -11,7 +11,7 @@
 #
 # Adding a new app:
 #   1. Append a new <hostname> { ... reverse_proxy 127.0.0.1:<port> } block.
-#   2. Pick a unique loopback port (8094 = MBK, 8092 = MJH, 9000 = MinIO).
+#   2. Pick a unique loopback port (8094 = MBK, 8092 = MJH, 8096 = MGA, 9000 = MinIO).
 #   3. Make sure the app's docker compose binds that port on 127.0.0.1.
 
 # MyBookkeeper — primary domain.
@@ -56,4 +56,31 @@ myjobhunter.myfreeapps.org, myjobhunter.165-245-134-251.sslip.io {
     }
 
     reverse_proxy 127.0.0.1:8092
+}
+
+# MyGamingAssistant — separate subdomain. New app (no sslip.io legacy address).
+# Public clip media is served separately by Cloudflare R2 at
+# mga-clips.myfreeapps.org (a CNAME to R2, NOT proxied here) — see
+# apps/mygamingassistant/backend/.env.docker.example MINIO_PUBLIC_BASE_URL.
+mygamingassistant.myfreeapps.org {
+    header {
+        Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        -Server
+    }
+
+    reverse_proxy 127.0.0.1:8096
+}
+
+# MyRecipes — separate subdomain. New app (no sslip.io legacy address).
+myrecipes.myfreeapps.org {
+    header {
+        Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        -Server
+    }
+
+    reverse_proxy 127.0.0.1:8100
 }

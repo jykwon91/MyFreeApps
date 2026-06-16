@@ -27,6 +27,7 @@ const NAV_DESCRIPTORS: NavDescriptor[] = [
   { path: "/live/cs2", label: "Live (CS2)", iconName: "Radio", desktopOnly: true },
   { path: "/settings", label: "Settings", iconName: "Settings" },
   { path: "/security", label: "Security", iconName: "Shield" },
+  { path: "/support-myfreeapps", label: "Support MyFreeApps", iconName: "Heart" },
 ];
 
 /**
@@ -43,6 +44,7 @@ export const PUBLIC_NAV_PATHS: ReadonlySet<string> = new Set([
   "/",            // Games (public lineup library)
   "/packages",    // Packages (public — read-only browsing)
   "/live/cs2",    // Live mode (read-only; setup/calibrate inside are gated)
+  "/support-myfreeapps",     // Support MyFreeApps (public donation / cost-transparency page)
 ]);
 
 /**

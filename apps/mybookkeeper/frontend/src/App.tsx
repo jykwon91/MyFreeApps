@@ -2,7 +2,7 @@ import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Provider } from "react-redux";
 import { store } from "@/shared/store";
-import { StepUpModal, useIsAuthenticated } from "@platform/ui";
+import { StepUpModal, Support, useIsAuthenticated } from "@platform/ui";
 import Layout from "@/app/components/Layout";
 import RequireRole from "@/shared/components/RequireRole";
 import RequireOrg from "@/shared/components/RequireOrg";
@@ -83,6 +83,7 @@ export default function App() {
             <Route path="/register" element={<Register />} />
             <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="/terms" element={<TermsOfService />} />
+            <Route path="/support-myfreeapps" element={<Support appName="MyBookkeeper" />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/invite/:token" element={<InviteAccept />} />

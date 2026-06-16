@@ -1,4 +1,5 @@
 import { type RouteObject } from "react-router-dom";
+import { Support } from "@platform/ui";
 import Home from "@/pages/Home";
 import Security from "@/pages/Security";
 import Settings from "@/pages/Settings";
@@ -21,6 +22,8 @@ export const routes: RouteObject[] = [
       { path: "/security", element: <Security /> },
     ],
   },
+  // Public support / donation page — standalone (no shell, no auth).
+  { path: "/support-myfreeapps", element: <Support appName="__APP_DISPLAY_NAME__" /> },
   { path: "/login", element: <Login /> },
   { path: "/forgot-password", element: <ForgotPassword /> },
   { path: "/reset-password", element: <ResetPassword /> },

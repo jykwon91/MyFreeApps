@@ -11,9 +11,10 @@ test.describe("Legal pages — public access", () => {
     await expect(page.getByText(/2026-04-25/)).toBeVisible();
   });
 
-  test("Privacy Policy shows contact email", async ({ page }) => {
+  test("Privacy Policy does not expose a personal email", async ({ page }) => {
     await page.goto("/privacy");
-    await expect(page.getByRole("link", { name: /jasonykwon91@gmail\.com/i }).first()).toBeVisible();
+    await expect(page.getByText(/jasonykwon91/i)).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: /^contact$/i })).toBeVisible();
   });
 
   test("Privacy Policy shows Who we are section", async ({ page }) => {
@@ -36,9 +37,10 @@ test.describe("Legal pages — public access", () => {
     await expect(page.getByText(/2026-04-25/)).toBeVisible();
   });
 
-  test("Terms of Service shows contact email", async ({ page }) => {
+  test("Terms of Service does not expose a personal email", async ({ page }) => {
     await page.goto("/terms");
-    await expect(page.getByRole("link", { name: /jasonykwon91@gmail\.com/i }).first()).toBeVisible();
+    await expect(page.getByText(/jasonykwon91/i)).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: /^contact$/i })).toBeVisible();
   });
 
   test("Terms of Service shows Disclaimers section", async ({ page }) => {

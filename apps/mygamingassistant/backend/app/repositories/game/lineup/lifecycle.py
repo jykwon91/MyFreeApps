@@ -66,6 +66,40 @@ async def create_lineup(db: AsyncSession, data: dict) -> Lineup:
     return lineup
 
 
+async def upsert_imported_lineup(
+    db: AsyncSession,
+    *,
+    lineup_id: uuid.UUID,
+    fields: dict,
+) -> Lineup:
+    """Insert (with an EXPLICIT id) or update an accepted lineup from a pack.
+
+    The library importer (``app.services.game.lineup_importer``) calls this
+    once per pack lineup. ``fields`` carries the resolved prod-side FK UUIDs
+    plus the public scalar columns and must NOT include ``status`` — it is
+    forced to 'accepted' (only accepted lineups are ever exported, and the
+    importer publishes a serve-ready library).
+
+    Idempotent by verbatim id: re-importing the same pack updates the existing
+    row in place (never duplicates), so a re-run after a clip re-publish or a
+    pack refresh converges. Flush-only — unlike ``create_lineup`` this does
+    NOT commit, because the importer owns a single ``unit_of_work`` so the
+    whole pack imports atomically (a mid-import failure rolls the entire
+    library back rather than leaving prod half-populated).
+    """
+    existing = await db.get(Lineup, lineup_id)
+    if existing is not None:
+        for key, value in fields.items():
+            setattr(existing, key, value)
+        existing.status = "accepted"
+        await db.flush()
+        return existing
+    lineup = Lineup(id=lineup_id, status="accepted", **fields)
+    db.add(lineup)
+    await db.flush()
+    return lineup
+
+
 async def list_lineups(
     db: AsyncSession,
     filters: LineupFilters,

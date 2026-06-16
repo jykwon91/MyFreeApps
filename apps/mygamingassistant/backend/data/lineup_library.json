@@ -1,0 +1,2469 @@
+{
+  "version": 1,
+  "lineup_count": 54,
+  "zones": [
+    {
+      "game_slug": "cs2",
+      "map_slug": "anubis",
+      "zone_slug": "a-main",
+      "name": "A Main",
+      "polygon_points": [
+        {
+          "x": 0.58,
+          "y": 0.46
+        },
+        {
+          "x": 0.73,
+          "y": 0.46
+        },
+        {
+          "x": 0.73,
+          "y": 0.64
+        },
+        {
+          "x": 0.58,
+          "y": 0.64
+        }
+      ]
+    },
+    {
+      "game_slug": "cs2",
+      "map_slug": "anubis",
+      "zone_slug": "a-site",
+      "name": "A Site",
+      "polygon_points": [
+        {
+          "x": 0.65,
+          "y": 0.2
+        },
+        {
+          "x": 0.8,
+          "y": 0.2
+        },
+        {
+          "x": 0.8,
+          "y": 0.35
+        },
+        {
+          "x": 0.65,
+          "y": 0.35
+        }
+      ]
+    },
+    {
+      "game_slug": "cs2",
+      "map_slug": "anubis",
+      "zone_slug": "b-main",
+      "name": "B Main",
+      "polygon_points": [
+        {
+          "x": 0.27,
+          "y": 0.58
+        },
+        {
+          "x": 0.42,
+          "y": 0.58
+        },
+        {
+          "x": 0.42,
+          "y": 0.74
+        },
+        {
+          "x": 0.27,
+          "y": 0.74
+        }
+      ]
+    },
+    {
+      "game_slug": "cs2",
+      "map_slug": "anubis",
+      "zone_slug": "b-site",
+      "name": "B Site",
+      "polygon_points": [
+        {
+          "x": 0.23,
+          "y": 0.43
+        },
+        {
+          "x": 0.38,
+          "y": 0.43
+        },
+        {
+          "x": 0.38,
+          "y": 0.57
+        },
+        {
+          "x": 0.23,
+          "y": 0.57
+        }
+      ]
+    },
+    {
+      "game_slug": "cs2",
+      "map_slug": "anubis",
+      "zone_slug": "ct-spawn",
+      "name": "CT Spawn",
+      "polygon_points": [
+        {
+          "x": 0.37,
+          "y": 0.13
+        },
+        {
+          "x": 0.54,
+          "y": 0.13
+        },
+        {
+          "x": 0.54,
+          "y": 0.27
+        },
+        {
+          "x": 0.37,
+          "y": 0.27
+        }
+      ]
+    },
+    {
+      "game_slug": "cs2",
+      "map_slug": "anubis",
+      "zone_slug": "mid",
+      "name": "Mid",
+      "polygon_points": [
+        {
+          "x": 0.43,
+          "y": 0.42
+        },
+        {
+          "x": 0.57,
+          "y": 0.42
+        },
+        {
+          "x": 0.57,
+          "y": 0.58
+        },
+        {
+          "x": 0.43,
+          "y": 0.58
+        }
+      ]
+    },
+    {
+      "game_slug": "cs2",
+      "map_slug": "anubis",
+      "zone_slug": "t-spawn",
+      "name": "T Spawn",
+      "polygon_points": [
+        {
+          "x": 0.4,
+          "y": 0.76
+        },
+        {
+          "x": 0.57,
+          "y": 0.76
+        },
+        {
+          "x": 0.57,
+          "y": 0.88
+        },
+        {
+          "x": 0.4,
+          "y": 0.88
+        }
+      ]
+    },
+    {
+      "game_slug": "cs2",
+      "map_slug": "cache",
+      "zone_slug": "a-main",
+      "name": "A Main",
+      "polygon_points": [
+        {
+          "x": 0.66,
+          "y": 0.5
+        },
+        {
+          "x": 0.84,
+          "y": 0.5
+        },
+        {
+          "x": 0.84,
+          "y": 0.68
+        },
+        {
+          "x": 0.66,
+          "y": 0.68
+        }
+      ]
+    },
+    {
+      "game_slug": "cs2",
+      "map_slug": "cache",
+      "zone_slug": "a-site",
+      "name": "A Site",
+      "polygon_points": [
+        {
+          "x": 0.66,
+          "y": 0.18
+        },
+        {
+          "x": 0.84,
+          "y": 0.18
+        },
+        {
+          "x": 0.84,
+          "y": 0.34
+        },
+        {
+          "x": 0.66,
+          "y": 0.34
+        }
+      ]
+    },
+    {
+      "game_slug": "cs2",
+      "map_slug": "cache",
+      "zone_slug": "b-main",
+      "name": "B Main",
+      "polygon_points": [
+        {
+          "x": 0.16,
+          "y": 0.5
+        },
+        {
+          "x": 0.34,
+          "y": 0.5
+        },
+        {
+          "x": 0.34,
+          "y": 0.68
+        },
+        {
+          "x": 0.16,
+          "y": 0.68
+        }
+      ]
+    },
+    {
+      "game_slug": "cs2",
+      "map_slug": "cache",
+      "zone_slug": "b-site",
+      "name": "B Site",
+      "polygon_points": [
+        {
+          "x": 0.16,
+          "y": 0.18
+        },
+        {
+          "x": 0.34,
+          "y": 0.18
+        },
+        {
+          "x": 0.34,
+          "y": 0.34
+        },
+        {
+          "x": 0.16,
+          "y": 0.34
+        }
+      ]
+    },
+    {
+      "game_slug": "cs2",
+      "map_slug": "cache",
+      "zone_slug": "highway",
+      "name": "Highway",
+      "polygon_points": [
+        {
+          "x": 0.8,
+          "y": 0.38
+        },
+        {
+          "x": 0.92,
+          "y": 0.38
+        },
+        {
+          "x": 0.92,
+          "y": 0.6
+        },
+        {
+          "x": 0.8,
+          "y": 0.6
+        }
+      ]
+    },
+    {
+      "game_slug": "cs2",
+      "map_slug": "cache",
+      "zone_slug": "mid",
+      "name": "Mid",
+      "polygon_points": [
+        {
+          "x": 0.43,
+          "y": 0.42
+        },
+        {
+          "x": 0.57,
+          "y": 0.42
+        },
+        {
+          "x": 0.57,
+          "y": 0.6
+        },
+        {
+          "x": 0.43,
+          "y": 0.6
+        }
+      ]
+    },
+    {
+      "game_slug": "cs2",
+      "map_slug": "cache",
+      "zone_slug": "sun-room",
+      "name": "Sun Room",
+      "polygon_points": [
+        {
+          "x": 0.57,
+          "y": 0.3
+        },
+        {
+          "x": 0.67,
+          "y": 0.3
+        },
+        {
+          "x": 0.67,
+          "y": 0.42
+        },
+        {
+          "x": 0.57,
+          "y": 0.42
+        }
+      ]
+    },
+    {
+      "game_slug": "cs2",
+      "map_slug": "cache",
+      "zone_slug": "t-spawn",
+      "name": "T Spawn",
+      "polygon_points": [
+        {
+          "x": 0.4,
+          "y": 0.8
+        },
+        {
+          "x": 0.6,
+          "y": 0.8
+        },
+        {
+          "x": 0.6,
+          "y": 0.92
+        },
+        {
+          "x": 0.4,
+          "y": 0.92
+        }
+      ]
+    },
+    {
+      "game_slug": "cs2",
+      "map_slug": "cache",
+      "zone_slug": "vents",
+      "name": "Vents",
+      "polygon_points": [
+        {
+          "x": 0.33,
+          "y": 0.34
+        },
+        {
+          "x": 0.43,
+          "y": 0.34
+        },
+        {
+          "x": 0.43,
+          "y": 0.46
+        },
+        {
+          "x": 0.33,
+          "y": 0.46
+        }
+      ]
+    },
+    {
+      "game_slug": "cs2",
+      "map_slug": "mirage",
+      "zone_slug": "a-main",
+      "name": "A Main",
+      "polygon_points": [
+        {
+          "x": 0.58,
+          "y": 0.46
+        },
+        {
+          "x": 0.73,
+          "y": 0.46
+        },
+        {
+          "x": 0.73,
+          "y": 0.64
+        },
+        {
+          "x": 0.58,
+          "y": 0.64
+        }
+      ]
+    },
+    {
+      "game_slug": "cs2",
+      "map_slug": "mirage",
+      "zone_slug": "a-palace",
+      "name": "Palace",
+      "polygon_points": [
+        {
+          "x": 0.29,
+          "y": 0.34
+        },
+        {
+          "x": 0.41,
+          "y": 0.34
+        },
+        {
+          "x": 0.41,
+          "y": 0.47
+        },
+        {
+          "x": 0.29,
+          "y": 0.47
+        }
+      ]
+    },
+    {
+      "game_slug": "cs2",
+      "map_slug": "mirage",
+      "zone_slug": "a-site",
+      "name": "A Site",
+      "polygon_points": [
+        {
+          "x": 0.17,
+          "y": 0.22
+        },
+        {
+          "x": 0.31,
+          "y": 0.22
+        },
+        {
+          "x": 0.32,
+          "y": 0.34
+        },
+        {
+          "x": 0.16,
+          "y": 0.35
+        }
+      ]
+    },
+    {
+      "game_slug": "cs2",
+      "map_slug": "mirage",
+      "zone_slug": "b-apts",
+      "name": "B Apartments",
+      "polygon_points": [
+        {
+          "x": 0.26,
+          "y": 0.68
+        },
+        {
+          "x": 0.41,
+          "y": 0.68
+        },
+        {
+          "x": 0.41,
+          "y": 0.8
+        },
+        {
+          "x": 0.26,
+          "y": 0.8
+        }
+      ]
+    },
+    {
+      "game_slug": "cs2",
+      "map_slug": "mirage",
+      "zone_slug": "b-site",
+      "name": "B Site",
+      "polygon_points": [
+        {
+          "x": 0.27,
+          "y": 0.55
+        },
+        {
+          "x": 0.42,
+          "y": 0.55
+        },
+        {
+          "x": 0.42,
+          "y": 0.7
+        },
+        {
+          "x": 0.27,
+          "y": 0.7
+        }
+      ]
+    },
+    {
+      "game_slug": "cs2",
+      "map_slug": "mirage",
+      "zone_slug": "catwalk",
+      "name": "Catwalk",
+      "polygon_points": [
+        {
+          "x": 0.4,
+          "y": 0.36
+        },
+        {
+          "x": 0.53,
+          "y": 0.36
+        },
+        {
+          "x": 0.53,
+          "y": 0.49
+        },
+        {
+          "x": 0.4,
+          "y": 0.49
+        }
+      ]
+    },
+    {
+      "game_slug": "cs2",
+      "map_slug": "mirage",
+      "zone_slug": "connector",
+      "name": "Connector",
+      "polygon_points": [
+        {
+          "x": 0.41,
+          "y": 0.47
+        },
+        {
+          "x": 0.52,
+          "y": 0.47
+        },
+        {
+          "x": 0.52,
+          "y": 0.56
+        },
+        {
+          "x": 0.41,
+          "y": 0.56
+        }
+      ]
+    },
+    {
+      "game_slug": "cs2",
+      "map_slug": "mirage",
+      "zone_slug": "ct-spawn",
+      "name": "CT Spawn",
+      "polygon_points": [
+        {
+          "x": 0.78,
+          "y": 0.3
+        },
+        {
+          "x": 0.92,
+          "y": 0.3
+        },
+        {
+          "x": 0.92,
+          "y": 0.45
+        },
+        {
+          "x": 0.78,
+          "y": 0.45
+        }
+      ]
+    },
+    {
+      "game_slug": "cs2",
+      "map_slug": "mirage",
+      "zone_slug": "jungle",
+      "name": "Jungle",
+      "polygon_points": [
+        {
+          "x": 0.32,
+          "y": 0.36
+        },
+        {
+          "x": 0.42,
+          "y": 0.36
+        },
+        {
+          "x": 0.42,
+          "y": 0.45
+        },
+        {
+          "x": 0.32,
+          "y": 0.45
+        }
+      ]
+    },
+    {
+      "game_slug": "cs2",
+      "map_slug": "mirage",
+      "zone_slug": "market",
+      "name": "Market",
+      "polygon_points": [
+        {
+          "x": 0.41,
+          "y": 0.56
+        },
+        {
+          "x": 0.52,
+          "y": 0.56
+        },
+        {
+          "x": 0.52,
+          "y": 0.7
+        },
+        {
+          "x": 0.41,
+          "y": 0.7
+        }
+      ]
+    },
+    {
+      "game_slug": "cs2",
+      "map_slug": "mirage",
+      "zone_slug": "mid",
+      "name": "Mid",
+      "polygon_points": [
+        {
+          "x": 0.46,
+          "y": 0.49
+        },
+        {
+          "x": 0.59,
+          "y": 0.49
+        },
+        {
+          "x": 0.59,
+          "y": 0.69
+        },
+        {
+          "x": 0.46,
+          "y": 0.69
+        }
+      ]
+    },
+    {
+      "game_slug": "cs2",
+      "map_slug": "mirage",
+      "zone_slug": "t-spawn",
+      "name": "T Spawn",
+      "polygon_points": [
+        {
+          "x": 0.42,
+          "y": 0.76
+        },
+        {
+          "x": 0.6,
+          "y": 0.76
+        },
+        {
+          "x": 0.6,
+          "y": 0.87
+        },
+        {
+          "x": 0.42,
+          "y": 0.87
+        }
+      ]
+    },
+    {
+      "game_slug": "cs2",
+      "map_slug": "mirage",
+      "zone_slug": "ticket-booth",
+      "name": "Ticket",
+      "polygon_points": [
+        {
+          "x": 0.42,
+          "y": 0.34
+        },
+        {
+          "x": 0.55,
+          "y": 0.34
+        },
+        {
+          "x": 0.55,
+          "y": 0.42
+        },
+        {
+          "x": 0.42,
+          "y": 0.42
+        }
+      ]
+    },
+    {
+      "game_slug": "cs2",
+      "map_slug": "mirage",
+      "zone_slug": "top-mid",
+      "name": "Top Mid",
+      "polygon_points": [
+        {
+          "x": 0.62,
+          "y": 0.45
+        },
+        {
+          "x": 0.78,
+          "y": 0.45
+        },
+        {
+          "x": 0.78,
+          "y": 0.55
+        },
+        {
+          "x": 0.62,
+          "y": 0.55
+        }
+      ]
+    },
+    {
+      "game_slug": "cs2",
+      "map_slug": "mirage",
+      "zone_slug": "window",
+      "name": "Mid Window",
+      "polygon_points": [
+        {
+          "x": 0.53,
+          "y": 0.4
+        },
+        {
+          "x": 0.63,
+          "y": 0.4
+        },
+        {
+          "x": 0.63,
+          "y": 0.5
+        },
+        {
+          "x": 0.53,
+          "y": 0.5
+        }
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "0222c1fd-b2a9-4a1b-a032-161b04b5ae9b",
+      "kind": "youtube_playlist",
+      "config_json": {
+        "url": "https://www.youtube.com/watch?v=6DduFLHu7zM",
+        "map_hint": "cache",
+        "game_hint": "cs2"
+      }
+    },
+    {
+      "id": "1006e6cd-5d9c-46bc-a822-d1728cc5b2bb",
+      "kind": "youtube_playlist",
+      "config_json": {
+        "url": "https://www.youtube.com/playlist?list=PLCv9jk0KUJbeIkPAGvBA_YziLAFZntOU_",
+        "last_synced_at": null,
+        "last_sync_stats": {
+          "synced_at": "2026-05-21T22:03:47.261400+00:00",
+          "error_count": 0,
+          "video_count": 1,
+          "chapter_count": 1
+        }
+      }
+    },
+    {
+      "id": "19aa1ce8-05ad-4f57-80aa-93cab40cfa95",
+      "kind": "youtube_playlist",
+      "config_json": {
+        "url": "https://www.youtube.com/watch?v=et6AZ5a5k3I",
+        "map_hint": "anubis",
+        "game_hint": "cs2"
+      }
+    },
+    {
+      "id": "640d7c0d-5325-4302-beda-bb04afe3e38c",
+      "kind": "youtube_playlist",
+      "config_json": {
+        "url": "https://www.youtube.com/watch?v=SGeV9W39X68",
+        "map_hint": "mirage",
+        "game_hint": "cs2"
+      }
+    }
+  ],
+  "lineups": [
+    {
+      "id": "8bca9356-0c4b-436a-8cd2-e39b5b2de0ac",
+      "game_slug": "cs2",
+      "map_slug": "cache",
+      "target_zone_slug": "vents",
+      "stand_zone_slug": "mid",
+      "utility_type_slug": "smoke",
+      "source_id": "0222c1fd-b2a9-4a1b-a032-161b04b5ae9b",
+      "title": "Connector",
+      "notes": null,
+      "side": "side_a",
+      "stand_screenshot_url": null,
+      "aim_screenshot_url": null,
+      "clip_url": "pending/6DduFLHu7zM/10-clip.mp4",
+      "landing_clip_url": "pending/6DduFLHu7zM/10-landing.mp4",
+      "stand_clip_url": "pending/6DduFLHu7zM/10-stand-micro.mp4",
+      "aim_clip_url": "pending/6DduFLHu7zM/10-aim-micro.mp4",
+      "aim_anchor_x": null,
+      "aim_anchor_y": null,
+      "stand_anchor_x": null,
+      "stand_anchor_y": null,
+      "target_anchor_x": null,
+      "target_anchor_y": null,
+      "setup_seconds": null,
+      "technique": null,
+      "youtube_video_id": "6DduFLHu7zM",
+      "chapter_start_seconds": 10,
+      "chapter_title": "Connector",
+      "attribution_url": "https://www.youtube.com/watch?v=6DduFLHu7zM",
+      "attribution_author": "NartOutHere"
+    },
+    {
+      "id": "33bbc4d1-e2bd-4e0a-ad64-9485870d04ba",
+      "game_slug": "cs2",
+      "map_slug": "cache",
+      "target_zone_slug": "mid",
+      "stand_zone_slug": "mid",
+      "utility_type_slug": "smoke",
+      "source_id": "0222c1fd-b2a9-4a1b-a032-161b04b5ae9b",
+      "title": "Criss Cross",
+      "notes": null,
+      "side": "side_a",
+      "stand_screenshot_url": null,
+      "aim_screenshot_url": null,
+      "clip_url": "pending/6DduFLHu7zM/17-clip.mp4",
+      "landing_clip_url": "pending/6DduFLHu7zM/17-landing.mp4",
+      "stand_clip_url": "pending/6DduFLHu7zM/17-stand-micro.mp4",
+      "aim_clip_url": "pending/6DduFLHu7zM/17-aim-micro.mp4",
+      "aim_anchor_x": null,
+      "aim_anchor_y": null,
+      "stand_anchor_x": null,
+      "stand_anchor_y": null,
+      "target_anchor_x": null,
+      "target_anchor_y": null,
+      "setup_seconds": null,
+      "technique": null,
+      "youtube_video_id": "6DduFLHu7zM",
+      "chapter_start_seconds": 17,
+      "chapter_title": "Criss Cross",
+      "attribution_url": "https://www.youtube.com/watch?v=6DduFLHu7zM",
+      "attribution_author": "NartOutHere"
+    },
+    {
+      "id": "8405d54f-27cb-41e6-90a4-a13f9f37e6fa",
+      "game_slug": "cs2",
+      "map_slug": "cache",
+      "target_zone_slug": "highway",
+      "stand_zone_slug": "a-main",
+      "utility_type_slug": "smoke",
+      "source_id": "0222c1fd-b2a9-4a1b-a032-161b04b5ae9b",
+      "title": "Highway",
+      "notes": null,
+      "side": "side_a",
+      "stand_screenshot_url": null,
+      "aim_screenshot_url": null,
+      "clip_url": "pending/6DduFLHu7zM/46-clip.mp4",
+      "landing_clip_url": "pending/6DduFLHu7zM/46-landing.mp4",
+      "stand_clip_url": "pending/6DduFLHu7zM/46-stand-micro.mp4",
+      "aim_clip_url": "pending/6DduFLHu7zM/46-aim-micro.mp4",
+      "aim_anchor_x": null,
+      "aim_anchor_y": null,
+      "stand_anchor_x": null,
+      "stand_anchor_y": null,
+      "target_anchor_x": null,
+      "target_anchor_y": null,
+      "setup_seconds": null,
+      "technique": null,
+      "youtube_video_id": "6DduFLHu7zM",
+      "chapter_start_seconds": 46,
+      "chapter_title": "Highway",
+      "attribution_url": "https://www.youtube.com/watch?v=6DduFLHu7zM",
+      "attribution_author": "NartOutHere"
+    },
+    {
+      "id": "6ba60fd2-70e5-4526-8a05-73dbc67847b0",
+      "game_slug": "cs2",
+      "map_slug": "cache",
+      "target_zone_slug": "a-site",
+      "stand_zone_slug": "a-main",
+      "utility_type_slug": "smoke",
+      "source_id": "0222c1fd-b2a9-4a1b-a032-161b04b5ae9b",
+      "title": "A Cross",
+      "notes": null,
+      "side": "side_a",
+      "stand_screenshot_url": null,
+      "aim_screenshot_url": null,
+      "clip_url": "pending/6DduFLHu7zM/63-clip.mp4",
+      "landing_clip_url": "pending/6DduFLHu7zM/63-landing.mp4",
+      "stand_clip_url": "pending/6DduFLHu7zM/63-stand-micro.mp4",
+      "aim_clip_url": "pending/6DduFLHu7zM/63-aim-micro.mp4",
+      "aim_anchor_x": null,
+      "aim_anchor_y": null,
+      "stand_anchor_x": null,
+      "stand_anchor_y": null,
+      "target_anchor_x": null,
+      "target_anchor_y": null,
+      "setup_seconds": null,
+      "technique": null,
+      "youtube_video_id": "6DduFLHu7zM",
+      "chapter_start_seconds": 63,
+      "chapter_title": "A Cross",
+      "attribution_url": "https://www.youtube.com/watch?v=6DduFLHu7zM",
+      "attribution_author": "NartOutHere"
+    },
+    {
+      "id": "96144c18-d57d-474c-acd6-e36d3784e47d",
+      "game_slug": "cs2",
+      "map_slug": "cache",
+      "target_zone_slug": "a-site",
+      "stand_zone_slug": "a-main",
+      "utility_type_slug": "smoke",
+      "source_id": "0222c1fd-b2a9-4a1b-a032-161b04b5ae9b",
+      "title": "A Cross Waterfall",
+      "notes": null,
+      "side": "side_a",
+      "stand_screenshot_url": null,
+      "aim_screenshot_url": null,
+      "clip_url": "pending/6DduFLHu7zM/75-clip.mp4",
+      "landing_clip_url": "pending/6DduFLHu7zM/75-landing.mp4",
+      "stand_clip_url": "pending/6DduFLHu7zM/75-stand-micro.mp4",
+      "aim_clip_url": "pending/6DduFLHu7zM/75-aim-micro.mp4",
+      "aim_anchor_x": null,
+      "aim_anchor_y": null,
+      "stand_anchor_x": null,
+      "stand_anchor_y": null,
+      "target_anchor_x": null,
+      "target_anchor_y": null,
+      "setup_seconds": null,
+      "technique": null,
+      "youtube_video_id": "6DduFLHu7zM",
+      "chapter_start_seconds": 75,
+      "chapter_title": "A Cross Waterfall",
+      "attribution_url": "https://www.youtube.com/watch?v=6DduFLHu7zM",
+      "attribution_author": "NartOutHere"
+    },
+    {
+      "id": "7ba223c8-a20f-4879-a85c-f3d7c019122f",
+      "game_slug": "cs2",
+      "map_slug": "cache",
+      "target_zone_slug": "a-site",
+      "stand_zone_slug": "highway",
+      "utility_type_slug": "smoke",
+      "source_id": "0222c1fd-b2a9-4a1b-a032-161b04b5ae9b",
+      "title": "A Cross Waterfall Smoke",
+      "notes": null,
+      "side": "side_a",
+      "stand_screenshot_url": null,
+      "aim_screenshot_url": null,
+      "clip_url": "pending/6DduFLHu7zM/97-clip.mp4",
+      "landing_clip_url": "pending/6DduFLHu7zM/97-landing.mp4",
+      "stand_clip_url": "pending/6DduFLHu7zM/97-stand-micro.mp4",
+      "aim_clip_url": "pending/6DduFLHu7zM/97-aim-micro.mp4",
+      "aim_anchor_x": null,
+      "aim_anchor_y": null,
+      "stand_anchor_x": null,
+      "stand_anchor_y": null,
+      "target_anchor_x": null,
+      "target_anchor_y": null,
+      "setup_seconds": null,
+      "technique": null,
+      "youtube_video_id": "6DduFLHu7zM",
+      "chapter_start_seconds": 97,
+      "chapter_title": "A Cross Waterfall Smoke",
+      "attribution_url": "https://www.youtube.com/watch?v=6DduFLHu7zM",
+      "attribution_author": "NartOutHere"
+    },
+    {
+      "id": "2536d287-3594-4ab8-b1f2-9abf7aa52efd",
+      "game_slug": "cs2",
+      "map_slug": "cache",
+      "target_zone_slug": "a-site",
+      "stand_zone_slug": "a-main",
+      "utility_type_slug": "smoke",
+      "source_id": "0222c1fd-b2a9-4a1b-a032-161b04b5ae9b",
+      "title": "Fast A Cross",
+      "notes": null,
+      "side": "side_a",
+      "stand_screenshot_url": null,
+      "aim_screenshot_url": null,
+      "clip_url": "pending/6DduFLHu7zM/110-clip.mp4",
+      "landing_clip_url": "pending/6DduFLHu7zM/110-landing.mp4",
+      "stand_clip_url": "pending/6DduFLHu7zM/110-stand-micro.mp4",
+      "aim_clip_url": "pending/6DduFLHu7zM/110-aim-micro.mp4",
+      "aim_anchor_x": null,
+      "aim_anchor_y": null,
+      "stand_anchor_x": null,
+      "stand_anchor_y": null,
+      "target_anchor_x": null,
+      "target_anchor_y": null,
+      "setup_seconds": null,
+      "technique": null,
+      "youtube_video_id": "6DduFLHu7zM",
+      "chapter_start_seconds": 110,
+      "chapter_title": "Fast A Cross",
+      "attribution_url": "https://www.youtube.com/watch?v=6DduFLHu7zM",
+      "attribution_author": "NartOutHere"
+    },
+    {
+      "id": "3c40df31-1b56-404b-910d-2eecee7afce9",
+      "game_slug": "cs2",
+      "map_slug": "cache",
+      "target_zone_slug": "a-site",
+      "stand_zone_slug": "a-main",
+      "utility_type_slug": "smoke",
+      "source_id": "0222c1fd-b2a9-4a1b-a032-161b04b5ae9b",
+      "title": "A Backsite",
+      "notes": null,
+      "side": "side_a",
+      "stand_screenshot_url": null,
+      "aim_screenshot_url": null,
+      "clip_url": "pending/6DduFLHu7zM/121-clip.mp4",
+      "landing_clip_url": "pending/6DduFLHu7zM/121-landing.mp4",
+      "stand_clip_url": "pending/6DduFLHu7zM/121-stand-micro.mp4",
+      "aim_clip_url": "pending/6DduFLHu7zM/121-aim-micro.mp4",
+      "aim_anchor_x": null,
+      "aim_anchor_y": null,
+      "stand_anchor_x": null,
+      "stand_anchor_y": null,
+      "target_anchor_x": null,
+      "target_anchor_y": null,
+      "setup_seconds": null,
+      "technique": null,
+      "youtube_video_id": "6DduFLHu7zM",
+      "chapter_start_seconds": 121,
+      "chapter_title": "A Backsite",
+      "attribution_url": "https://www.youtube.com/watch?v=6DduFLHu7zM",
+      "attribution_author": "NartOutHere"
+    },
+    {
+      "id": "b1e4fddb-a840-4182-ac07-ba96f7785f5f",
+      "game_slug": "cs2",
+      "map_slug": "cache",
+      "target_zone_slug": "a-site",
+      "stand_zone_slug": "a-main",
+      "utility_type_slug": "smoke",
+      "source_id": "0222c1fd-b2a9-4a1b-a032-161b04b5ae9b",
+      "title": "Tree",
+      "notes": null,
+      "side": "side_a",
+      "stand_screenshot_url": null,
+      "aim_screenshot_url": null,
+      "clip_url": "pending/6DduFLHu7zM/134-clip.mp4",
+      "landing_clip_url": "pending/6DduFLHu7zM/134-landing.mp4",
+      "stand_clip_url": "pending/6DduFLHu7zM/134-stand-micro.mp4",
+      "aim_clip_url": "pending/6DduFLHu7zM/134-aim-micro.mp4",
+      "aim_anchor_x": null,
+      "aim_anchor_y": null,
+      "stand_anchor_x": null,
+      "stand_anchor_y": null,
+      "target_anchor_x": null,
+      "target_anchor_y": null,
+      "setup_seconds": null,
+      "technique": null,
+      "youtube_video_id": "6DduFLHu7zM",
+      "chapter_start_seconds": 134,
+      "chapter_title": "Tree",
+      "attribution_url": "https://www.youtube.com/watch?v=6DduFLHu7zM",
+      "attribution_author": "NartOutHere"
+    },
+    {
+      "id": "0a747b59-8c8e-41f3-93dc-30cdba2aa9fe",
+      "game_slug": "cs2",
+      "map_slug": "cache",
+      "target_zone_slug": "a-site",
+      "stand_zone_slug": "sun-room",
+      "utility_type_slug": "smoke",
+      "source_id": "0222c1fd-b2a9-4a1b-a032-161b04b5ae9b",
+      "title": "Tree From Sunroom",
+      "notes": null,
+      "side": "side_a",
+      "stand_screenshot_url": null,
+      "aim_screenshot_url": null,
+      "clip_url": "pending/6DduFLHu7zM/144-clip.mp4",
+      "landing_clip_url": "pending/6DduFLHu7zM/144-landing.mp4",
+      "stand_clip_url": "pending/6DduFLHu7zM/144-stand-micro.mp4",
+      "aim_clip_url": "pending/6DduFLHu7zM/144-aim-micro.mp4",
+      "aim_anchor_x": null,
+      "aim_anchor_y": null,
+      "stand_anchor_x": null,
+      "stand_anchor_y": null,
+      "target_anchor_x": null,
+      "target_anchor_y": null,
+      "setup_seconds": null,
+      "technique": null,
+      "youtube_video_id": "6DduFLHu7zM",
+      "chapter_start_seconds": 144,
+      "chapter_title": "Tree From Sunroom",
+      "attribution_url": "https://www.youtube.com/watch?v=6DduFLHu7zM",
+      "attribution_author": "NartOutHere"
+    },
+    {
+      "id": "85b7fdcb-9329-42b9-8440-4203cdc422f9",
+      "game_slug": "cs2",
+      "map_slug": "cache",
+      "target_zone_slug": "a-site",
+      "stand_zone_slug": "sun-room",
+      "utility_type_slug": "smoke",
+      "source_id": "0222c1fd-b2a9-4a1b-a032-161b04b5ae9b",
+      "title": "B Utility Combo",
+      "notes": null,
+      "side": "side_a",
+      "stand_screenshot_url": null,
+      "aim_screenshot_url": null,
+      "clip_url": "pending/6DduFLHu7zM/156-clip.mp4",
+      "landing_clip_url": "pending/6DduFLHu7zM/156-landing.mp4",
+      "stand_clip_url": "pending/6DduFLHu7zM/156-stand-micro.mp4",
+      "aim_clip_url": "pending/6DduFLHu7zM/156-aim-micro.mp4",
+      "aim_anchor_x": null,
+      "aim_anchor_y": null,
+      "stand_anchor_x": null,
+      "stand_anchor_y": null,
+      "target_anchor_x": null,
+      "target_anchor_y": null,
+      "setup_seconds": null,
+      "technique": null,
+      "youtube_video_id": "6DduFLHu7zM",
+      "chapter_start_seconds": 156,
+      "chapter_title": "B Utility Combo",
+      "attribution_url": "https://www.youtube.com/watch?v=6DduFLHu7zM",
+      "attribution_author": "NartOutHere"
+    },
+    {
+      "id": "dbcc5cc3-3c11-4c63-84ba-922335f34c0f",
+      "game_slug": "cs2",
+      "map_slug": "cache",
+      "target_zone_slug": "b-site",
+      "stand_zone_slug": "b-main",
+      "utility_type_slug": "smoke",
+      "source_id": "0222c1fd-b2a9-4a1b-a032-161b04b5ae9b",
+      "title": "Heaven",
+      "notes": null,
+      "side": "side_a",
+      "stand_screenshot_url": null,
+      "aim_screenshot_url": null,
+      "clip_url": "pending/6DduFLHu7zM/178-clip.mp4",
+      "landing_clip_url": "pending/6DduFLHu7zM/178-landing.mp4",
+      "stand_clip_url": "pending/6DduFLHu7zM/178-stand-micro.mp4",
+      "aim_clip_url": "pending/6DduFLHu7zM/178-aim-micro.mp4",
+      "aim_anchor_x": null,
+      "aim_anchor_y": null,
+      "stand_anchor_x": null,
+      "stand_anchor_y": null,
+      "target_anchor_x": null,
+      "target_anchor_y": null,
+      "setup_seconds": null,
+      "technique": null,
+      "youtube_video_id": "6DduFLHu7zM",
+      "chapter_start_seconds": 178,
+      "chapter_title": "Heaven",
+      "attribution_url": "https://www.youtube.com/watch?v=6DduFLHu7zM",
+      "attribution_author": "NartOutHere"
+    },
+    {
+      "id": "db24c221-a8e8-4eed-8a43-3f27b08edc26",
+      "game_slug": "cs2",
+      "map_slug": "cache",
+      "target_zone_slug": "b-site",
+      "stand_zone_slug": "sun-room",
+      "utility_type_slug": "smoke",
+      "source_id": "0222c1fd-b2a9-4a1b-a032-161b04b5ae9b",
+      "title": "Heaven From Sunroom",
+      "notes": null,
+      "side": "side_a",
+      "stand_screenshot_url": null,
+      "aim_screenshot_url": null,
+      "clip_url": "pending/6DduFLHu7zM/191-clip.mp4",
+      "landing_clip_url": "pending/6DduFLHu7zM/191-landing.mp4",
+      "stand_clip_url": "pending/6DduFLHu7zM/191-stand-micro.mp4",
+      "aim_clip_url": "pending/6DduFLHu7zM/191-aim-micro.mp4",
+      "aim_anchor_x": null,
+      "aim_anchor_y": null,
+      "stand_anchor_x": null,
+      "stand_anchor_y": null,
+      "target_anchor_x": null,
+      "target_anchor_y": null,
+      "setup_seconds": null,
+      "technique": null,
+      "youtube_video_id": "6DduFLHu7zM",
+      "chapter_start_seconds": 191,
+      "chapter_title": "Heaven From Sunroom",
+      "attribution_url": "https://www.youtube.com/watch?v=6DduFLHu7zM",
+      "attribution_author": "NartOutHere"
+    },
+    {
+      "id": "ce045a60-d709-4927-b837-1a38780cd136",
+      "game_slug": "cs2",
+      "map_slug": "cache",
+      "target_zone_slug": "b-site",
+      "stand_zone_slug": "b-main",
+      "utility_type_slug": "smoke",
+      "source_id": "0222c1fd-b2a9-4a1b-a032-161b04b5ae9b",
+      "title": "B Lurk",
+      "notes": null,
+      "side": "side_a",
+      "stand_screenshot_url": null,
+      "aim_screenshot_url": null,
+      "clip_url": "pending/6DduFLHu7zM/212-clip.mp4",
+      "landing_clip_url": "pending/6DduFLHu7zM/212-landing.mp4",
+      "stand_clip_url": "pending/6DduFLHu7zM/212-stand-micro.mp4",
+      "aim_clip_url": "pending/6DduFLHu7zM/212-aim-micro.mp4",
+      "aim_anchor_x": null,
+      "aim_anchor_y": null,
+      "stand_anchor_x": null,
+      "stand_anchor_y": null,
+      "target_anchor_x": null,
+      "target_anchor_y": null,
+      "setup_seconds": null,
+      "technique": null,
+      "youtube_video_id": "6DduFLHu7zM",
+      "chapter_start_seconds": 212,
+      "chapter_title": "B Lurk",
+      "attribution_url": "https://www.youtube.com/watch?v=6DduFLHu7zM",
+      "attribution_author": "NartOutHere"
+    },
+    {
+      "id": "76a20ed1-393b-4416-bc4a-84d1a8a22a68",
+      "game_slug": "cs2",
+      "map_slug": "cache",
+      "target_zone_slug": "b-site",
+      "stand_zone_slug": "b-main",
+      "utility_type_slug": "smoke",
+      "source_id": "0222c1fd-b2a9-4a1b-a032-161b04b5ae9b",
+      "title": "Garage",
+      "notes": null,
+      "side": "side_a",
+      "stand_screenshot_url": null,
+      "aim_screenshot_url": null,
+      "clip_url": "pending/6DduFLHu7zM/256-clip.mp4",
+      "landing_clip_url": "pending/6DduFLHu7zM/256-landing.mp4",
+      "stand_clip_url": "pending/6DduFLHu7zM/256-stand-micro.mp4",
+      "aim_clip_url": "pending/6DduFLHu7zM/256-aim-micro.mp4",
+      "aim_anchor_x": null,
+      "aim_anchor_y": null,
+      "stand_anchor_x": null,
+      "stand_anchor_y": null,
+      "target_anchor_x": null,
+      "target_anchor_y": null,
+      "setup_seconds": null,
+      "technique": null,
+      "youtube_video_id": "6DduFLHu7zM",
+      "chapter_start_seconds": 256,
+      "chapter_title": "Garage",
+      "attribution_url": "https://www.youtube.com/watch?v=6DduFLHu7zM",
+      "attribution_author": "NartOutHere"
+    },
+    {
+      "id": "69029776-defb-48b7-afda-0716fc4f4c4d",
+      "game_slug": "cs2",
+      "map_slug": "cache",
+      "target_zone_slug": "b-main",
+      "stand_zone_slug": "highway",
+      "utility_type_slug": "smoke",
+      "source_id": "0222c1fd-b2a9-4a1b-a032-161b04b5ae9b",
+      "title": "Fast Garage Smoke",
+      "notes": null,
+      "side": "side_a",
+      "stand_screenshot_url": null,
+      "aim_screenshot_url": null,
+      "clip_url": "pending/6DduFLHu7zM/268-clip.mp4",
+      "landing_clip_url": "pending/6DduFLHu7zM/268-landing.mp4",
+      "stand_clip_url": "pending/6DduFLHu7zM/268-stand-micro.mp4",
+      "aim_clip_url": "pending/6DduFLHu7zM/268-aim-micro.mp4",
+      "aim_anchor_x": null,
+      "aim_anchor_y": null,
+      "stand_anchor_x": null,
+      "stand_anchor_y": null,
+      "target_anchor_x": null,
+      "target_anchor_y": null,
+      "setup_seconds": null,
+      "technique": null,
+      "youtube_video_id": "6DduFLHu7zM",
+      "chapter_start_seconds": 268,
+      "chapter_title": "Fast Garage Smoke",
+      "attribution_url": "https://www.youtube.com/watch?v=6DduFLHu7zM",
+      "attribution_author": "NartOutHere"
+    },
+    {
+      "id": "af9a2d18-ff4c-4e4e-9ca1-d9709bafd2ba",
+      "game_slug": "cs2",
+      "map_slug": "cache",
+      "target_zone_slug": "a-main",
+      "stand_zone_slug": "highway",
+      "utility_type_slug": "smoke",
+      "source_id": "0222c1fd-b2a9-4a1b-a032-161b04b5ae9b",
+      "title": "A Main",
+      "notes": null,
+      "side": "side_a",
+      "stand_screenshot_url": null,
+      "aim_screenshot_url": null,
+      "clip_url": "pending/6DduFLHu7zM/292-clip.mp4",
+      "landing_clip_url": "pending/6DduFLHu7zM/292-landing.mp4",
+      "stand_clip_url": "pending/6DduFLHu7zM/292-stand-micro.mp4",
+      "aim_clip_url": "pending/6DduFLHu7zM/292-aim-micro.mp4",
+      "aim_anchor_x": null,
+      "aim_anchor_y": null,
+      "stand_anchor_x": null,
+      "stand_anchor_y": null,
+      "target_anchor_x": null,
+      "target_anchor_y": null,
+      "setup_seconds": null,
+      "technique": null,
+      "youtube_video_id": "6DduFLHu7zM",
+      "chapter_start_seconds": 292,
+      "chapter_title": "A Main",
+      "attribution_url": "https://www.youtube.com/watch?v=6DduFLHu7zM",
+      "attribution_author": "NartOutHere"
+    },
+    {
+      "id": "0504ad48-a3d8-476a-a2af-ea6e6d16a55a",
+      "game_slug": "cs2",
+      "map_slug": "cache",
+      "target_zone_slug": "b-main",
+      "stand_zone_slug": "t-spawn",
+      "utility_type_slug": "smoke",
+      "source_id": "0222c1fd-b2a9-4a1b-a032-161b04b5ae9b",
+      "title": "B Main",
+      "notes": null,
+      "side": "side_a",
+      "stand_screenshot_url": null,
+      "aim_screenshot_url": null,
+      "clip_url": "pending/6DduFLHu7zM/316-clip.mp4",
+      "landing_clip_url": "pending/6DduFLHu7zM/316-landing.mp4",
+      "stand_clip_url": "pending/6DduFLHu7zM/316-stand-micro.mp4",
+      "aim_clip_url": "pending/6DduFLHu7zM/316-aim-micro.mp4",
+      "aim_anchor_x": null,
+      "aim_anchor_y": null,
+      "stand_anchor_x": null,
+      "stand_anchor_y": null,
+      "target_anchor_x": null,
+      "target_anchor_y": null,
+      "setup_seconds": null,
+      "technique": null,
+      "youtube_video_id": "6DduFLHu7zM",
+      "chapter_start_seconds": 316,
+      "chapter_title": "B Main",
+      "attribution_url": "https://www.youtube.com/watch?v=6DduFLHu7zM",
+      "attribution_author": "NartOutHere"
+    },
+    {
+      "id": "a7bf5d6c-f21c-48c6-b7df-d018dc9a24a9",
+      "game_slug": "cs2",
+      "map_slug": "cache",
+      "target_zone_slug": "b-main",
+      "stand_zone_slug": "b-site",
+      "utility_type_slug": "smoke",
+      "source_id": "0222c1fd-b2a9-4a1b-a032-161b04b5ae9b",
+      "title": "B Retake Smoke",
+      "notes": null,
+      "side": "side_b",
+      "stand_screenshot_url": null,
+      "aim_screenshot_url": null,
+      "clip_url": "pending/6DduFLHu7zM/327-clip.mp4",
+      "landing_clip_url": "pending/6DduFLHu7zM/327-landing.mp4",
+      "stand_clip_url": "pending/6DduFLHu7zM/327-stand-micro.mp4",
+      "aim_clip_url": "pending/6DduFLHu7zM/327-aim-micro.mp4",
+      "aim_anchor_x": null,
+      "aim_anchor_y": null,
+      "stand_anchor_x": null,
+      "stand_anchor_y": null,
+      "target_anchor_x": null,
+      "target_anchor_y": null,
+      "setup_seconds": null,
+      "technique": null,
+      "youtube_video_id": "6DduFLHu7zM",
+      "chapter_start_seconds": 327,
+      "chapter_title": "B Retake Smoke",
+      "attribution_url": "https://www.youtube.com/watch?v=6DduFLHu7zM",
+      "attribution_author": "NartOutHere"
+    },
+    {
+      "id": "7c2e4ddd-b3be-45ea-bc0a-21507140b911",
+      "game_slug": "cs2",
+      "map_slug": "anubis",
+      "target_zone_slug": "mid",
+      "stand_zone_slug": "mid",
+      "utility_type_slug": "smoke",
+      "source_id": "19aa1ce8-05ad-4f57-80aa-93cab40cfa95",
+      "title": "DEEP MID SMOKE",
+      "notes": null,
+      "side": "side_a",
+      "stand_screenshot_url": null,
+      "aim_screenshot_url": null,
+      "clip_url": "pending/et6AZ5a5k3I/22-clip.mp4",
+      "landing_clip_url": "pending/et6AZ5a5k3I/22-landing.mp4",
+      "stand_clip_url": "pending/et6AZ5a5k3I/22-stand-micro.mp4",
+      "aim_clip_url": "pending/et6AZ5a5k3I/22-aim-micro.mp4",
+      "aim_anchor_x": null,
+      "aim_anchor_y": null,
+      "stand_anchor_x": null,
+      "stand_anchor_y": null,
+      "target_anchor_x": null,
+      "target_anchor_y": null,
+      "setup_seconds": null,
+      "technique": "Standing",
+      "youtube_video_id": "et6AZ5a5k3I",
+      "chapter_start_seconds": 22,
+      "chapter_title": "DEEP MID SMOKE",
+      "attribution_url": "https://www.youtube.com/watch?v=et6AZ5a5k3I",
+      "attribution_author": "Tigerr"
+    },
+    {
+      "id": "5b2fc963-e870-4911-971a-6fbd1c34b1e6",
+      "game_slug": "cs2",
+      "map_slug": "anubis",
+      "target_zone_slug": "b-main",
+      "stand_zone_slug": "mid",
+      "utility_type_slug": "smoke",
+      "source_id": "19aa1ce8-05ad-4f57-80aa-93cab40cfa95",
+      "title": "MID - E BOX",
+      "notes": null,
+      "side": "side_a",
+      "stand_screenshot_url": null,
+      "aim_screenshot_url": null,
+      "clip_url": "pending/et6AZ5a5k3I/36-clip.mp4",
+      "landing_clip_url": "pending/et6AZ5a5k3I/36-landing.mp4",
+      "stand_clip_url": "pending/et6AZ5a5k3I/36-stand-micro.mp4",
+      "aim_clip_url": "pending/et6AZ5a5k3I/36-aim-micro.mp4",
+      "aim_anchor_x": null,
+      "aim_anchor_y": null,
+      "stand_anchor_x": null,
+      "stand_anchor_y": null,
+      "target_anchor_x": null,
+      "target_anchor_y": null,
+      "setup_seconds": null,
+      "technique": "Standing",
+      "youtube_video_id": "et6AZ5a5k3I",
+      "chapter_start_seconds": 36,
+      "chapter_title": "MID - E BOX",
+      "attribution_url": "https://www.youtube.com/watch?v=et6AZ5a5k3I",
+      "attribution_author": "Tigerr"
+    },
+    {
+      "id": "0728a4eb-9005-4123-b3ee-edc6bc37dfa8",
+      "game_slug": "cs2",
+      "map_slug": "anubis",
+      "target_zone_slug": "mid",
+      "stand_zone_slug": "mid",
+      "utility_type_slug": "smoke",
+      "source_id": "19aa1ce8-05ad-4f57-80aa-93cab40cfa95",
+      "title": "MID - TEMPLE",
+      "notes": null,
+      "side": "side_a",
+      "stand_screenshot_url": null,
+      "aim_screenshot_url": null,
+      "clip_url": "pending/et6AZ5a5k3I/88-clip.mp4",
+      "landing_clip_url": "pending/et6AZ5a5k3I/88-landing.mp4",
+      "stand_clip_url": "pending/et6AZ5a5k3I/88-stand-micro.mp4",
+      "aim_clip_url": "pending/et6AZ5a5k3I/88-aim-micro.mp4",
+      "aim_anchor_x": null,
+      "aim_anchor_y": null,
+      "stand_anchor_x": null,
+      "stand_anchor_y": null,
+      "target_anchor_x": null,
+      "target_anchor_y": null,
+      "setup_seconds": null,
+      "technique": "Standing",
+      "youtube_video_id": "et6AZ5a5k3I",
+      "chapter_start_seconds": 88,
+      "chapter_title": "MID - TEMPLE",
+      "attribution_url": "https://www.youtube.com/watch?v=et6AZ5a5k3I",
+      "attribution_author": "Tigerr"
+    },
+    {
+      "id": "7d8ce27b-d102-4124-99e6-f644db6ab6ce",
+      "game_slug": "cs2",
+      "map_slug": "anubis",
+      "target_zone_slug": "mid",
+      "stand_zone_slug": "mid",
+      "utility_type_slug": "smoke",
+      "source_id": "19aa1ce8-05ad-4f57-80aa-93cab40cfa95",
+      "title": "MID - CAMERA",
+      "notes": null,
+      "side": "side_a",
+      "stand_screenshot_url": null,
+      "aim_screenshot_url": null,
+      "clip_url": "pending/et6AZ5a5k3I/112-clip.mp4",
+      "landing_clip_url": "pending/et6AZ5a5k3I/112-landing.mp4",
+      "stand_clip_url": "pending/et6AZ5a5k3I/112-stand-micro.mp4",
+      "aim_clip_url": "pending/et6AZ5a5k3I/112-aim-micro.mp4",
+      "aim_anchor_x": null,
+      "aim_anchor_y": null,
+      "stand_anchor_x": null,
+      "stand_anchor_y": null,
+      "target_anchor_x": null,
+      "target_anchor_y": null,
+      "setup_seconds": null,
+      "technique": "Standing",
+      "youtube_video_id": "et6AZ5a5k3I",
+      "chapter_start_seconds": 112,
+      "chapter_title": "MID - CAMERA",
+      "attribution_url": "https://www.youtube.com/watch?v=et6AZ5a5k3I",
+      "attribution_author": "Tigerr"
+    },
+    {
+      "id": "c40a153a-fc86-4cb6-95d4-e9c26d5546f8",
+      "game_slug": "cs2",
+      "map_slug": "anubis",
+      "target_zone_slug": "mid",
+      "stand_zone_slug": "ct-spawn",
+      "utility_type_slug": "smoke",
+      "source_id": "19aa1ce8-05ad-4f57-80aa-93cab40cfa95",
+      "title": "CT SIDE - T STAIRS",
+      "notes": null,
+      "side": "side_b",
+      "stand_screenshot_url": null,
+      "aim_screenshot_url": null,
+      "clip_url": "pending/et6AZ5a5k3I/134-clip.mp4",
+      "landing_clip_url": "pending/et6AZ5a5k3I/134-landing.mp4",
+      "stand_clip_url": "pending/et6AZ5a5k3I/134-stand-micro.mp4",
+      "aim_clip_url": "pending/et6AZ5a5k3I/134-aim-micro.mp4",
+      "aim_anchor_x": null,
+      "aim_anchor_y": null,
+      "stand_anchor_x": null,
+      "stand_anchor_y": null,
+      "target_anchor_x": null,
+      "target_anchor_y": null,
+      "setup_seconds": null,
+      "technique": "Standing",
+      "youtube_video_id": "et6AZ5a5k3I",
+      "chapter_start_seconds": 134,
+      "chapter_title": "CT SIDE - T STAIRS",
+      "attribution_url": "https://www.youtube.com/watch?v=et6AZ5a5k3I",
+      "attribution_author": "Tigerr"
+    },
+    {
+      "id": "aed96742-f5ea-4f2a-ba01-63ad51d7cf6e",
+      "game_slug": "cs2",
+      "map_slug": "anubis",
+      "target_zone_slug": "mid",
+      "stand_zone_slug": "ct-spawn",
+      "utility_type_slug": "smoke",
+      "source_id": "19aa1ce8-05ad-4f57-80aa-93cab40cfa95",
+      "title": "CT SIDE - DEEP MID CROSS",
+      "notes": null,
+      "side": "side_b",
+      "stand_screenshot_url": null,
+      "aim_screenshot_url": null,
+      "clip_url": "pending/et6AZ5a5k3I/188-clip.mp4",
+      "landing_clip_url": "pending/et6AZ5a5k3I/188-landing.mp4",
+      "stand_clip_url": "pending/et6AZ5a5k3I/188-stand-micro.mp4",
+      "aim_clip_url": "pending/et6AZ5a5k3I/188-aim-micro.mp4",
+      "aim_anchor_x": null,
+      "aim_anchor_y": null,
+      "stand_anchor_x": null,
+      "stand_anchor_y": null,
+      "target_anchor_x": null,
+      "target_anchor_y": null,
+      "setup_seconds": null,
+      "technique": "Standing",
+      "youtube_video_id": "et6AZ5a5k3I",
+      "chapter_start_seconds": 188,
+      "chapter_title": "CT SIDE - DEEP MID CROSS",
+      "attribution_url": "https://www.youtube.com/watch?v=et6AZ5a5k3I",
+      "attribution_author": "Tigerr"
+    },
+    {
+      "id": "62a21add-c0ad-4295-8ceb-ff69b8be5a26",
+      "game_slug": "cs2",
+      "map_slug": "anubis",
+      "target_zone_slug": "a-site",
+      "stand_zone_slug": "a-main",
+      "utility_type_slug": "smoke",
+      "source_id": "19aa1ce8-05ad-4f57-80aa-93cab40cfa95",
+      "title": "A SITE - HEAVEN",
+      "notes": null,
+      "side": "side_a",
+      "stand_screenshot_url": null,
+      "aim_screenshot_url": null,
+      "clip_url": "pending/et6AZ5a5k3I/212-clip.mp4",
+      "landing_clip_url": "pending/et6AZ5a5k3I/212-landing.mp4",
+      "stand_clip_url": "pending/et6AZ5a5k3I/212-stand-micro.mp4",
+      "aim_clip_url": "pending/et6AZ5a5k3I/212-aim-micro.mp4",
+      "aim_anchor_x": null,
+      "aim_anchor_y": null,
+      "stand_anchor_x": null,
+      "stand_anchor_y": null,
+      "target_anchor_x": null,
+      "target_anchor_y": null,
+      "setup_seconds": null,
+      "technique": "Standing",
+      "youtube_video_id": "et6AZ5a5k3I",
+      "chapter_start_seconds": 212,
+      "chapter_title": "A SITE - HEAVEN",
+      "attribution_url": "https://www.youtube.com/watch?v=et6AZ5a5k3I",
+      "attribution_author": "Tigerr"
+    },
+    {
+      "id": "64e02461-2178-44ee-8693-b6f1a635eb81",
+      "game_slug": "cs2",
+      "map_slug": "anubis",
+      "target_zone_slug": "a-site",
+      "stand_zone_slug": "a-main",
+      "utility_type_slug": "smoke",
+      "source_id": "19aa1ce8-05ad-4f57-80aa-93cab40cfa95",
+      "title": "A SITE - CAMERA",
+      "notes": null,
+      "side": "side_a",
+      "stand_screenshot_url": null,
+      "aim_screenshot_url": null,
+      "clip_url": "pending/et6AZ5a5k3I/232-clip.mp4",
+      "landing_clip_url": "pending/et6AZ5a5k3I/232-landing.mp4",
+      "stand_clip_url": "pending/et6AZ5a5k3I/232-stand-micro.mp4",
+      "aim_clip_url": "pending/et6AZ5a5k3I/232-aim-micro.mp4",
+      "aim_anchor_x": null,
+      "aim_anchor_y": null,
+      "stand_anchor_x": null,
+      "stand_anchor_y": null,
+      "target_anchor_x": null,
+      "target_anchor_y": null,
+      "setup_seconds": null,
+      "technique": "Standing",
+      "youtube_video_id": "et6AZ5a5k3I",
+      "chapter_start_seconds": 232,
+      "chapter_title": "A SITE - CAMERA",
+      "attribution_url": "https://www.youtube.com/watch?v=et6AZ5a5k3I",
+      "attribution_author": "Tigerr"
+    },
+    {
+      "id": "fce5d2ce-5488-4887-b6c4-fd94dd3f743e",
+      "game_slug": "cs2",
+      "map_slug": "anubis",
+      "target_zone_slug": "a-site",
+      "stand_zone_slug": "a-main",
+      "utility_type_slug": "smoke",
+      "source_id": "19aa1ce8-05ad-4f57-80aa-93cab40cfa95",
+      "title": "A SITE - PLAT",
+      "notes": null,
+      "side": "side_a",
+      "stand_screenshot_url": null,
+      "aim_screenshot_url": null,
+      "clip_url": "pending/et6AZ5a5k3I/268-clip.mp4",
+      "landing_clip_url": "pending/et6AZ5a5k3I/268-landing.mp4",
+      "stand_clip_url": "pending/et6AZ5a5k3I/268-stand-micro.mp4",
+      "aim_clip_url": "pending/et6AZ5a5k3I/268-aim-micro.mp4",
+      "aim_anchor_x": null,
+      "aim_anchor_y": null,
+      "stand_anchor_x": null,
+      "stand_anchor_y": null,
+      "target_anchor_x": null,
+      "target_anchor_y": null,
+      "setup_seconds": null,
+      "technique": "Standing",
+      "youtube_video_id": "et6AZ5a5k3I",
+      "chapter_start_seconds": 268,
+      "chapter_title": "A SITE - PLAT",
+      "attribution_url": "https://www.youtube.com/watch?v=et6AZ5a5k3I",
+      "attribution_author": "Tigerr"
+    },
+    {
+      "id": "ff8a117c-2e02-40ac-ba18-89987a6d5bdc",
+      "game_slug": "cs2",
+      "map_slug": "anubis",
+      "target_zone_slug": "a-site",
+      "stand_zone_slug": "a-main",
+      "utility_type_slug": "flash",
+      "source_id": "19aa1ce8-05ad-4f57-80aa-93cab40cfa95",
+      "title": "A SITE FLASH",
+      "notes": null,
+      "side": "side_a",
+      "stand_screenshot_url": null,
+      "aim_screenshot_url": null,
+      "clip_url": "pending/et6AZ5a5k3I/300-clip.mp4",
+      "landing_clip_url": "pending/et6AZ5a5k3I/300-landing.mp4",
+      "stand_clip_url": "pending/et6AZ5a5k3I/300-stand-micro.mp4",
+      "aim_clip_url": "pending/et6AZ5a5k3I/300-aim-micro.mp4",
+      "aim_anchor_x": null,
+      "aim_anchor_y": null,
+      "stand_anchor_x": null,
+      "stand_anchor_y": null,
+      "target_anchor_x": null,
+      "target_anchor_y": null,
+      "setup_seconds": null,
+      "technique": "Standing",
+      "youtube_video_id": "et6AZ5a5k3I",
+      "chapter_start_seconds": 300,
+      "chapter_title": "A SITE FLASH",
+      "attribution_url": "https://www.youtube.com/watch?v=et6AZ5a5k3I",
+      "attribution_author": "Tigerr"
+    },
+    {
+      "id": "dc00a42e-fae4-4793-98b2-311425b18bea",
+      "game_slug": "cs2",
+      "map_slug": "anubis",
+      "target_zone_slug": "b-site",
+      "stand_zone_slug": "b-main",
+      "utility_type_slug": "smoke",
+      "source_id": "19aa1ce8-05ad-4f57-80aa-93cab40cfa95",
+      "title": "B SITE - RIGHT SIDE SITE",
+      "notes": null,
+      "side": "side_a",
+      "stand_screenshot_url": null,
+      "aim_screenshot_url": null,
+      "clip_url": "pending/et6AZ5a5k3I/332-clip.mp4",
+      "landing_clip_url": "pending/et6AZ5a5k3I/332-landing.mp4",
+      "stand_clip_url": "pending/et6AZ5a5k3I/332-stand-micro.mp4",
+      "aim_clip_url": "pending/et6AZ5a5k3I/332-aim-micro.mp4",
+      "aim_anchor_x": null,
+      "aim_anchor_y": null,
+      "stand_anchor_x": null,
+      "stand_anchor_y": null,
+      "target_anchor_x": null,
+      "target_anchor_y": null,
+      "setup_seconds": null,
+      "technique": "Standing",
+      "youtube_video_id": "et6AZ5a5k3I",
+      "chapter_start_seconds": 332,
+      "chapter_title": "B SITE - RIGHT SIDE SITE",
+      "attribution_url": "https://www.youtube.com/watch?v=et6AZ5a5k3I",
+      "attribution_author": "Tigerr"
+    },
+    {
+      "id": "f6769e2a-fb09-4b5f-8e71-248b9bdba66c",
+      "game_slug": "cs2",
+      "map_slug": "anubis",
+      "target_zone_slug": "b-site",
+      "stand_zone_slug": "b-main",
+      "utility_type_slug": "smoke",
+      "source_id": "19aa1ce8-05ad-4f57-80aa-93cab40cfa95",
+      "title": "B SITE - LEFT SIDE SITE",
+      "notes": null,
+      "side": "side_a",
+      "stand_screenshot_url": null,
+      "aim_screenshot_url": null,
+      "clip_url": "pending/et6AZ5a5k3I/362-clip.mp4",
+      "landing_clip_url": "pending/et6AZ5a5k3I/362-landing.mp4",
+      "stand_clip_url": "pending/et6AZ5a5k3I/362-stand-micro.mp4",
+      "aim_clip_url": "pending/et6AZ5a5k3I/362-aim-micro.mp4",
+      "aim_anchor_x": null,
+      "aim_anchor_y": null,
+      "stand_anchor_x": null,
+      "stand_anchor_y": null,
+      "target_anchor_x": null,
+      "target_anchor_y": null,
+      "setup_seconds": null,
+      "technique": "Standing",
+      "youtube_video_id": "et6AZ5a5k3I",
+      "chapter_start_seconds": 362,
+      "chapter_title": "B SITE - LEFT SIDE SITE",
+      "attribution_url": "https://www.youtube.com/watch?v=et6AZ5a5k3I",
+      "attribution_author": "Tigerr"
+    },
+    {
+      "id": "06592f07-fc3e-4bc8-90f0-623128d7825e",
+      "game_slug": "cs2",
+      "map_slug": "anubis",
+      "target_zone_slug": "b-site",
+      "stand_zone_slug": "b-main",
+      "utility_type_slug": "molotov",
+      "source_id": "19aa1ce8-05ad-4f57-80aa-93cab40cfa95",
+      "title": "B SITE - PILLAR",
+      "notes": null,
+      "side": "side_a",
+      "stand_screenshot_url": null,
+      "aim_screenshot_url": null,
+      "clip_url": "pending/et6AZ5a5k3I/378-clip.mp4",
+      "landing_clip_url": "pending/et6AZ5a5k3I/378-landing.mp4",
+      "stand_clip_url": "pending/et6AZ5a5k3I/378-stand-micro.mp4",
+      "aim_clip_url": "pending/et6AZ5a5k3I/378-aim-micro.mp4",
+      "aim_anchor_x": null,
+      "aim_anchor_y": null,
+      "stand_anchor_x": null,
+      "stand_anchor_y": null,
+      "target_anchor_x": null,
+      "target_anchor_y": null,
+      "setup_seconds": null,
+      "technique": "Standing",
+      "youtube_video_id": "et6AZ5a5k3I",
+      "chapter_start_seconds": 378,
+      "chapter_title": "B SITE - PILLAR",
+      "attribution_url": "https://www.youtube.com/watch?v=et6AZ5a5k3I",
+      "attribution_author": "Tigerr"
+    },
+    {
+      "id": "db0425df-6870-4c5c-a11b-7a4ab5507547",
+      "game_slug": "cs2",
+      "map_slug": "anubis",
+      "target_zone_slug": "b-site",
+      "stand_zone_slug": "b-main",
+      "utility_type_slug": "smoke",
+      "source_id": "19aa1ce8-05ad-4f57-80aa-93cab40cfa95",
+      "title": "B SITE - E BOX",
+      "notes": null,
+      "side": "side_a",
+      "stand_screenshot_url": null,
+      "aim_screenshot_url": null,
+      "clip_url": "pending/et6AZ5a5k3I/394-clip.mp4",
+      "landing_clip_url": "pending/et6AZ5a5k3I/394-landing.mp4",
+      "stand_clip_url": "pending/et6AZ5a5k3I/394-stand-micro.mp4",
+      "aim_clip_url": "pending/et6AZ5a5k3I/394-aim-micro.mp4",
+      "aim_anchor_x": null,
+      "aim_anchor_y": null,
+      "stand_anchor_x": null,
+      "stand_anchor_y": null,
+      "target_anchor_x": null,
+      "target_anchor_y": null,
+      "setup_seconds": null,
+      "technique": "Standing",
+      "youtube_video_id": "et6AZ5a5k3I",
+      "chapter_start_seconds": 394,
+      "chapter_title": "B SITE - E BOX",
+      "attribution_url": "https://www.youtube.com/watch?v=et6AZ5a5k3I",
+      "attribution_author": "Tigerr"
+    },
+    {
+      "id": "19f96e0b-9932-48bf-8a71-5b3a8b99c6aa",
+      "game_slug": "cs2",
+      "map_slug": "anubis",
+      "target_zone_slug": "b-site",
+      "stand_zone_slug": "t-spawn",
+      "utility_type_slug": "smoke",
+      "source_id": "19aa1ce8-05ad-4f57-80aa-93cab40cfa95",
+      "title": "LEFT SIDE SITE FROM SPAWN",
+      "notes": null,
+      "side": "side_a",
+      "stand_screenshot_url": null,
+      "aim_screenshot_url": null,
+      "clip_url": "pending/et6AZ5a5k3I/430-clip.mp4",
+      "landing_clip_url": "pending/et6AZ5a5k3I/430-landing.mp4",
+      "stand_clip_url": "pending/et6AZ5a5k3I/430-stand-micro.mp4",
+      "aim_clip_url": "pending/et6AZ5a5k3I/430-aim-micro.mp4",
+      "aim_anchor_x": null,
+      "aim_anchor_y": null,
+      "stand_anchor_x": null,
+      "stand_anchor_y": null,
+      "target_anchor_x": null,
+      "target_anchor_y": null,
+      "setup_seconds": null,
+      "technique": "Standing",
+      "youtube_video_id": "et6AZ5a5k3I",
+      "chapter_start_seconds": 430,
+      "chapter_title": "LEFT SIDE SITE FROM SPAWN",
+      "attribution_url": "https://www.youtube.com/watch?v=et6AZ5a5k3I",
+      "attribution_author": "Tigerr"
+    },
+    {
+      "id": "45d89ec3-77bf-4ce4-bf11-68c4bddc10e8",
+      "game_slug": "cs2",
+      "map_slug": "mirage",
+      "target_zone_slug": "mid",
+      "stand_zone_slug": "t-spawn",
+      "utility_type_slug": "smoke",
+      "source_id": "1006e6cd-5d9c-46bc-a822-d1728cc5b2bb",
+      "title": "Mid Window from T Spawn",
+      "notes": null,
+      "side": "side_a",
+      "stand_screenshot_url": "pending/Q4Dwg9Z0wZ0/15-stand.png",
+      "aim_screenshot_url": "pending/Q4Dwg9Z0wZ0/15-aim.png",
+      "clip_url": "pending/Q4Dwg9Z0wZ0/15-clip.mp4",
+      "landing_clip_url": "pending/Q4Dwg9Z0wZ0/15-landing.mp4",
+      "stand_clip_url": "pending/Q4Dwg9Z0wZ0/15-stand-micro.mp4",
+      "aim_clip_url": "pending/Q4Dwg9Z0wZ0/15-aim-micro.mp4",
+      "aim_anchor_x": 0.5,
+      "aim_anchor_y": 0.4,
+      "stand_anchor_x": null,
+      "stand_anchor_y": null,
+      "target_anchor_x": null,
+      "target_anchor_y": null,
+      "setup_seconds": null,
+      "technique": "Standing + LMB",
+      "youtube_video_id": "Q4Dwg9Z0wZ0",
+      "chapter_start_seconds": 15,
+      "chapter_title": "Mid Window from T Spawn",
+      "attribution_url": "https://www.youtube.com/watch?v=Q4Dwg9Z0wZ0",
+      "attribution_author": "Tigerr"
+    },
+    {
+      "id": "f7e8c6b1-7f3e-4f49-8ba2-8b61f08074aa",
+      "game_slug": "cs2",
+      "map_slug": "mirage",
+      "target_zone_slug": "connector",
+      "stand_zone_slug": "t-spawn",
+      "utility_type_slug": "smoke",
+      "source_id": "1006e6cd-5d9c-46bc-a822-d1728cc5b2bb",
+      "title": "Connector from T Spawn",
+      "notes": null,
+      "side": "side_a",
+      "stand_screenshot_url": "pending/Q4Dwg9Z0wZ0/81-stand.png",
+      "aim_screenshot_url": "pending/Q4Dwg9Z0wZ0/81-aim.png",
+      "clip_url": "pending/Q4Dwg9Z0wZ0/81-clip.mp4",
+      "landing_clip_url": "pending/Q4Dwg9Z0wZ0/81-landing.mp4",
+      "stand_clip_url": "pending/Q4Dwg9Z0wZ0/81-stand-micro.mp4",
+      "aim_clip_url": "pending/Q4Dwg9Z0wZ0/81-aim-micro.mp4",
+      "aim_anchor_x": 0.5,
+      "aim_anchor_y": 0.5,
+      "stand_anchor_x": null,
+      "stand_anchor_y": null,
+      "target_anchor_x": null,
+      "target_anchor_y": null,
+      "setup_seconds": null,
+      "technique": "Standing + LMB",
+      "youtube_video_id": "Q4Dwg9Z0wZ0",
+      "chapter_start_seconds": 81,
+      "chapter_title": "Connector from T Spawn",
+      "attribution_url": "https://www.youtube.com/watch?v=Q4Dwg9Z0wZ0",
+      "attribution_author": "Tigerr"
+    },
+    {
+      "id": "5a1ff0a1-c62f-41f5-8f5b-d5418a89e3a3",
+      "game_slug": "cs2",
+      "map_slug": "mirage",
+      "target_zone_slug": "catwalk",
+      "stand_zone_slug": "t-spawn",
+      "utility_type_slug": "smoke",
+      "source_id": "1006e6cd-5d9c-46bc-a822-d1728cc5b2bb",
+      "title": "Catwalk from T Spawn",
+      "notes": null,
+      "side": "side_a",
+      "stand_screenshot_url": "pending/Q4Dwg9Z0wZ0/115-stand.png",
+      "aim_screenshot_url": "pending/Q4Dwg9Z0wZ0/115-aim.png",
+      "clip_url": "pending/Q4Dwg9Z0wZ0/115-clip.mp4",
+      "landing_clip_url": "pending/Q4Dwg9Z0wZ0/115-landing.mp4",
+      "stand_clip_url": "pending/Q4Dwg9Z0wZ0/115-stand-micro.mp4",
+      "aim_clip_url": "pending/Q4Dwg9Z0wZ0/115-aim-micro.mp4",
+      "aim_anchor_x": 0.5,
+      "aim_anchor_y": 0.5,
+      "stand_anchor_x": null,
+      "stand_anchor_y": null,
+      "target_anchor_x": null,
+      "target_anchor_y": null,
+      "setup_seconds": null,
+      "technique": "Run + LMB",
+      "youtube_video_id": "Q4Dwg9Z0wZ0",
+      "chapter_start_seconds": 115,
+      "chapter_title": "Catwalk from T Spawn",
+      "attribution_url": "https://www.youtube.com/watch?v=Q4Dwg9Z0wZ0",
+      "attribution_author": "Tigerr"
+    },
+    {
+      "id": "11d47f96-b1d6-46ef-a8de-4de0a84dca15",
+      "game_slug": "cs2",
+      "map_slug": "mirage",
+      "target_zone_slug": "mid",
+      "stand_zone_slug": "t-spawn",
+      "utility_type_slug": "smoke",
+      "source_id": "1006e6cd-5d9c-46bc-a822-d1728cc5b2bb",
+      "title": "Mid Cross from T spawn",
+      "notes": null,
+      "side": "side_a",
+      "stand_screenshot_url": "pending/Q4Dwg9Z0wZ0/141-stand.png",
+      "aim_screenshot_url": "pending/Q4Dwg9Z0wZ0/141-aim.png",
+      "clip_url": "pending/Q4Dwg9Z0wZ0/141-clip.mp4",
+      "landing_clip_url": "pending/Q4Dwg9Z0wZ0/141-landing.mp4",
+      "stand_clip_url": "pending/Q4Dwg9Z0wZ0/141-stand-micro.mp4",
+      "aim_clip_url": "pending/Q4Dwg9Z0wZ0/141-aim-micro.mp4",
+      "aim_anchor_x": 0.5,
+      "aim_anchor_y": 0.5,
+      "stand_anchor_x": null,
+      "stand_anchor_y": null,
+      "target_anchor_x": null,
+      "target_anchor_y": null,
+      "setup_seconds": null,
+      "technique": "Standing + LMB",
+      "youtube_video_id": "Q4Dwg9Z0wZ0",
+      "chapter_start_seconds": 141,
+      "chapter_title": "Mid Cross from T spawn",
+      "attribution_url": "https://www.youtube.com/watch?v=Q4Dwg9Z0wZ0",
+      "attribution_author": "Tigerr"
+    },
+    {
+      "id": "8e151f60-e03c-4851-9b09-24c1489830d9",
+      "game_slug": "cs2",
+      "map_slug": "mirage",
+      "target_zone_slug": "mid",
+      "stand_zone_slug": "t-spawn",
+      "utility_type_slug": "molotov",
+      "source_id": "1006e6cd-5d9c-46bc-a822-d1728cc5b2bb",
+      "title": "Mid Window from Top Mid",
+      "notes": null,
+      "side": "side_a",
+      "stand_screenshot_url": "pending/Q4Dwg9Z0wZ0/157-stand.png",
+      "aim_screenshot_url": "pending/Q4Dwg9Z0wZ0/157-aim.png",
+      "clip_url": "pending/Q4Dwg9Z0wZ0/157-clip.mp4",
+      "landing_clip_url": "pending/Q4Dwg9Z0wZ0/157-landing.mp4",
+      "stand_clip_url": "pending/Q4Dwg9Z0wZ0/157-stand-micro.mp4",
+      "aim_clip_url": "pending/Q4Dwg9Z0wZ0/157-aim-micro.mp4",
+      "aim_anchor_x": 0.5,
+      "aim_anchor_y": 0.5,
+      "stand_anchor_x": null,
+      "stand_anchor_y": null,
+      "target_anchor_x": null,
+      "target_anchor_y": null,
+      "setup_seconds": null,
+      "technique": "Standing + LMB",
+      "youtube_video_id": "Q4Dwg9Z0wZ0",
+      "chapter_start_seconds": 157,
+      "chapter_title": "Mid Window from Top Mid",
+      "attribution_url": "https://www.youtube.com/watch?v=Q4Dwg9Z0wZ0",
+      "attribution_author": "Tigerr"
+    },
+    {
+      "id": "8f92c010-89bf-4ea1-92cf-f023cde40931",
+      "game_slug": "cs2",
+      "map_slug": "mirage",
+      "target_zone_slug": "b-site",
+      "stand_zone_slug": "catwalk",
+      "utility_type_slug": "smoke",
+      "source_id": "1006e6cd-5d9c-46bc-a822-d1728cc5b2bb",
+      "title": "Catwalk - B Site",
+      "notes": null,
+      "side": "side_a",
+      "stand_screenshot_url": "pending/Q4Dwg9Z0wZ0/218-stand.png",
+      "aim_screenshot_url": "pending/Q4Dwg9Z0wZ0/218-aim.png",
+      "clip_url": "pending/Q4Dwg9Z0wZ0/218-clip.mp4",
+      "landing_clip_url": "pending/Q4Dwg9Z0wZ0/218-landing.mp4",
+      "stand_clip_url": "pending/Q4Dwg9Z0wZ0/218-stand-micro.mp4",
+      "aim_clip_url": "pending/Q4Dwg9Z0wZ0/218-aim-micro.mp4",
+      "aim_anchor_x": 0.5,
+      "aim_anchor_y": 0.5,
+      "stand_anchor_x": null,
+      "stand_anchor_y": null,
+      "target_anchor_x": null,
+      "target_anchor_y": null,
+      "setup_seconds": null,
+      "technique": "Standing + LMB",
+      "youtube_video_id": "Q4Dwg9Z0wZ0",
+      "chapter_start_seconds": 218,
+      "chapter_title": "Catwalk - B Site",
+      "attribution_url": "https://www.youtube.com/watch?v=Q4Dwg9Z0wZ0",
+      "attribution_author": "Tigerr"
+    },
+    {
+      "id": "7bd971c3-d222-47c2-8ae8-5befa5fb9592",
+      "game_slug": "cs2",
+      "map_slug": "mirage",
+      "target_zone_slug": "b-site",
+      "stand_zone_slug": "window",
+      "utility_type_slug": "smoke",
+      "source_id": "1006e6cd-5d9c-46bc-a822-d1728cc5b2bb",
+      "title": "Market Window - B Site",
+      "notes": null,
+      "side": "side_a",
+      "stand_screenshot_url": "pending/Q4Dwg9Z0wZ0/256-stand.png",
+      "aim_screenshot_url": "pending/Q4Dwg9Z0wZ0/256-aim.png",
+      "clip_url": "pending/Q4Dwg9Z0wZ0/256-clip.mp4",
+      "landing_clip_url": "pending/Q4Dwg9Z0wZ0/256-landing.mp4",
+      "stand_clip_url": "pending/Q4Dwg9Z0wZ0/256-stand-micro.mp4",
+      "aim_clip_url": "pending/Q4Dwg9Z0wZ0/256-aim-micro.mp4",
+      "aim_anchor_x": 0.5,
+      "aim_anchor_y": 0.4,
+      "stand_anchor_x": null,
+      "stand_anchor_y": null,
+      "target_anchor_x": null,
+      "target_anchor_y": null,
+      "setup_seconds": null,
+      "technique": "Standing + LMB",
+      "youtube_video_id": "Q4Dwg9Z0wZ0",
+      "chapter_start_seconds": 256,
+      "chapter_title": "Market Window - B Site",
+      "attribution_url": "https://www.youtube.com/watch?v=Q4Dwg9Z0wZ0",
+      "attribution_author": "Tigerr"
+    },
+    {
+      "id": "69704f4a-5aae-4ebf-bd42-40f763ae6a98",
+      "game_slug": "cs2",
+      "map_slug": "mirage",
+      "target_zone_slug": "b-site",
+      "stand_zone_slug": "market",
+      "utility_type_slug": "smoke",
+      "source_id": "1006e6cd-5d9c-46bc-a822-d1728cc5b2bb",
+      "title": "Market Door - B Site",
+      "notes": null,
+      "side": "side_a",
+      "stand_screenshot_url": "pending/Q4Dwg9Z0wZ0/290-stand.png",
+      "aim_screenshot_url": "pending/Q4Dwg9Z0wZ0/290-aim.png",
+      "clip_url": "pending/Q4Dwg9Z0wZ0/290-clip.mp4",
+      "landing_clip_url": "pending/Q4Dwg9Z0wZ0/290-landing.mp4",
+      "stand_clip_url": "pending/Q4Dwg9Z0wZ0/290-stand-micro.mp4",
+      "aim_clip_url": "pending/Q4Dwg9Z0wZ0/290-aim-micro.mp4",
+      "aim_anchor_x": 0.5,
+      "aim_anchor_y": 0.4,
+      "stand_anchor_x": null,
+      "stand_anchor_y": null,
+      "target_anchor_x": null,
+      "target_anchor_y": null,
+      "setup_seconds": null,
+      "technique": "Standing + LMB",
+      "youtube_video_id": "Q4Dwg9Z0wZ0",
+      "chapter_start_seconds": 290,
+      "chapter_title": "Market Door - B Site",
+      "attribution_url": "https://www.youtube.com/watch?v=Q4Dwg9Z0wZ0",
+      "attribution_author": "Tigerr"
+    },
+    {
+      "id": "89c4bfd9-6ca0-4c7d-a27e-792fea7eaec4",
+      "game_slug": "cs2",
+      "map_slug": "mirage",
+      "target_zone_slug": "a-site",
+      "stand_zone_slug": "ticket-booth",
+      "utility_type_slug": "smoke",
+      "source_id": "1006e6cd-5d9c-46bc-a822-d1728cc5b2bb",
+      "title": "Ticket/CT - A Site",
+      "notes": null,
+      "side": "side_a",
+      "stand_screenshot_url": "pending/Q4Dwg9Z0wZ0/335-stand.png",
+      "aim_screenshot_url": "pending/Q4Dwg9Z0wZ0/335-aim.png",
+      "clip_url": "pending/Q4Dwg9Z0wZ0/335-clip.mp4",
+      "landing_clip_url": "pending/Q4Dwg9Z0wZ0/335-landing.mp4",
+      "stand_clip_url": "pending/Q4Dwg9Z0wZ0/335-stand-micro.mp4",
+      "aim_clip_url": "pending/Q4Dwg9Z0wZ0/335-aim-micro.mp4",
+      "aim_anchor_x": 0.5,
+      "aim_anchor_y": 0.5,
+      "stand_anchor_x": null,
+      "stand_anchor_y": null,
+      "target_anchor_x": null,
+      "target_anchor_y": null,
+      "setup_seconds": null,
+      "technique": "Jumpthrow + LMB",
+      "youtube_video_id": "Q4Dwg9Z0wZ0",
+      "chapter_start_seconds": 335,
+      "chapter_title": "Ticket/CT - A Site",
+      "attribution_url": "https://www.youtube.com/watch?v=Q4Dwg9Z0wZ0",
+      "attribution_author": "Tigerr"
+    },
+    {
+      "id": "f88308e3-bfc0-4855-a27e-4b823a8613eb",
+      "game_slug": "cs2",
+      "map_slug": "mirage",
+      "target_zone_slug": "a-site",
+      "stand_zone_slug": "jungle",
+      "utility_type_slug": "smoke",
+      "source_id": "1006e6cd-5d9c-46bc-a822-d1728cc5b2bb",
+      "title": "Jungle - A Site",
+      "notes": null,
+      "side": "side_a",
+      "stand_screenshot_url": "pending/Q4Dwg9Z0wZ0/371-stand.png",
+      "aim_screenshot_url": "pending/Q4Dwg9Z0wZ0/371-aim.png",
+      "clip_url": "pending/Q4Dwg9Z0wZ0/371-clip.mp4",
+      "landing_clip_url": "pending/Q4Dwg9Z0wZ0/371-landing.mp4",
+      "stand_clip_url": "pending/Q4Dwg9Z0wZ0/371-stand-micro.mp4",
+      "aim_clip_url": "pending/Q4Dwg9Z0wZ0/371-aim-micro.mp4",
+      "aim_anchor_x": null,
+      "aim_anchor_y": null,
+      "stand_anchor_x": null,
+      "stand_anchor_y": null,
+      "target_anchor_x": null,
+      "target_anchor_y": null,
+      "setup_seconds": null,
+      "technique": "Standing + LMB",
+      "youtube_video_id": "Q4Dwg9Z0wZ0",
+      "chapter_start_seconds": 371,
+      "chapter_title": "Jungle - A Site",
+      "attribution_url": "https://www.youtube.com/watch?v=Q4Dwg9Z0wZ0",
+      "attribution_author": "Tigerr"
+    },
+    {
+      "id": "9b2ad4c9-bc94-45d7-88e7-9fb6e9834f4a",
+      "game_slug": "cs2",
+      "map_slug": "mirage",
+      "target_zone_slug": "a-site",
+      "stand_zone_slug": "a-main",
+      "utility_type_slug": "smoke",
+      "source_id": "1006e6cd-5d9c-46bc-a822-d1728cc5b2bb",
+      "title": "Stairs - A Site",
+      "notes": null,
+      "side": "side_a",
+      "stand_screenshot_url": "pending/Q4Dwg9Z0wZ0/403-stand.png",
+      "aim_screenshot_url": "pending/Q4Dwg9Z0wZ0/403-aim.png",
+      "clip_url": "pending/Q4Dwg9Z0wZ0/403-clip.mp4",
+      "landing_clip_url": "pending/Q4Dwg9Z0wZ0/403-landing.mp4",
+      "stand_clip_url": "pending/Q4Dwg9Z0wZ0/403-stand-micro.mp4",
+      "aim_clip_url": "pending/Q4Dwg9Z0wZ0/403-aim-micro.mp4",
+      "aim_anchor_x": 0.5,
+      "aim_anchor_y": 0.5,
+      "stand_anchor_x": null,
+      "stand_anchor_y": null,
+      "target_anchor_x": null,
+      "target_anchor_y": null,
+      "setup_seconds": null,
+      "technique": null,
+      "youtube_video_id": "Q4Dwg9Z0wZ0",
+      "chapter_start_seconds": 403,
+      "chapter_title": "Stairs - A Site",
+      "attribution_url": "https://www.youtube.com/watch?v=Q4Dwg9Z0wZ0",
+      "attribution_author": "Tigerr"
+    },
+    {
+      "id": "f5091b69-4e3e-4eee-9f0c-da1ffc25897b",
+      "game_slug": "cs2",
+      "map_slug": "mirage",
+      "target_zone_slug": "a-site",
+      "stand_zone_slug": "a-palace",
+      "utility_type_slug": "flash",
+      "source_id": "640d7c0d-5325-4302-beda-bb04afe3e38c",
+      "title": "A Site - Site Flash",
+      "notes": null,
+      "side": "side_a",
+      "stand_screenshot_url": null,
+      "aim_screenshot_url": null,
+      "clip_url": "pending/SGeV9W39X68/75-clip.mp4",
+      "landing_clip_url": "pending/SGeV9W39X68/75-landing.mp4",
+      "stand_clip_url": "pending/SGeV9W39X68/75-stand-micro.mp4",
+      "aim_clip_url": "pending/SGeV9W39X68/75-aim-micro.mp4",
+      "aim_anchor_x": null,
+      "aim_anchor_y": null,
+      "stand_anchor_x": null,
+      "stand_anchor_y": null,
+      "target_anchor_x": null,
+      "target_anchor_y": null,
+      "setup_seconds": null,
+      "technique": null,
+      "youtube_video_id": "SGeV9W39X68",
+      "chapter_start_seconds": 75,
+      "chapter_title": "A Site - Site Flash",
+      "attribution_url": "https://www.youtube.com/watch?v=SGeV9W39X68",
+      "attribution_author": "Tigerr"
+    },
+    {
+      "id": "be028514-0a46-4205-ac8b-283a2b0fe7fa",
+      "game_slug": "cs2",
+      "map_slug": "mirage",
+      "target_zone_slug": "a-site",
+      "stand_zone_slug": "a-palace",
+      "utility_type_slug": "molotov",
+      "source_id": "640d7c0d-5325-4302-beda-bb04afe3e38c",
+      "title": "A Site - Firebox Molotov",
+      "notes": null,
+      "side": "side_a",
+      "stand_screenshot_url": null,
+      "aim_screenshot_url": null,
+      "clip_url": "pending/SGeV9W39X68/122-clip.mp4",
+      "landing_clip_url": "pending/SGeV9W39X68/122-landing.mp4",
+      "stand_clip_url": "pending/SGeV9W39X68/122-stand-micro.mp4",
+      "aim_clip_url": "pending/SGeV9W39X68/122-aim-micro.mp4",
+      "aim_anchor_x": null,
+      "aim_anchor_y": null,
+      "stand_anchor_x": null,
+      "stand_anchor_y": null,
+      "target_anchor_x": null,
+      "target_anchor_y": null,
+      "setup_seconds": null,
+      "technique": null,
+      "youtube_video_id": "SGeV9W39X68",
+      "chapter_start_seconds": 122,
+      "chapter_title": "A Site - Firebox Molotov",
+      "attribution_url": "https://www.youtube.com/watch?v=SGeV9W39X68",
+      "attribution_author": "Tigerr"
+    },
+    {
+      "id": "41e5aeb7-31d3-4df3-b207-18b4293be070",
+      "game_slug": "cs2",
+      "map_slug": "mirage",
+      "target_zone_slug": "a-palace",
+      "stand_zone_slug": "ct-spawn",
+      "utility_type_slug": "molotov",
+      "source_id": "640d7c0d-5325-4302-beda-bb04afe3e38c",
+      "title": "CT Side - A Main Molotov",
+      "notes": null,
+      "side": "side_b",
+      "stand_screenshot_url": null,
+      "aim_screenshot_url": null,
+      "clip_url": "pending/SGeV9W39X68/139-clip.mp4",
+      "landing_clip_url": "pending/SGeV9W39X68/139-landing.mp4",
+      "stand_clip_url": "pending/SGeV9W39X68/139-stand-micro.mp4",
+      "aim_clip_url": "pending/SGeV9W39X68/139-aim-micro.mp4",
+      "aim_anchor_x": null,
+      "aim_anchor_y": null,
+      "stand_anchor_x": null,
+      "stand_anchor_y": null,
+      "target_anchor_x": null,
+      "target_anchor_y": null,
+      "setup_seconds": null,
+      "technique": null,
+      "youtube_video_id": "SGeV9W39X68",
+      "chapter_start_seconds": 139,
+      "chapter_title": "CT Side - A Main Molotov",
+      "attribution_url": "https://www.youtube.com/watch?v=SGeV9W39X68",
+      "attribution_author": "Tigerr"
+    },
+    {
+      "id": "af132e36-17a7-4620-bcd6-2788bfcd70aa",
+      "game_slug": "cs2",
+      "map_slug": "mirage",
+      "target_zone_slug": "top-mid",
+      "stand_zone_slug": "mid",
+      "utility_type_slug": "flash",
+      "source_id": "640d7c0d-5325-4302-beda-bb04afe3e38c",
+      "title": "Mid - Cross Flash",
+      "notes": null,
+      "side": "side_a",
+      "stand_screenshot_url": null,
+      "aim_screenshot_url": null,
+      "clip_url": "pending/SGeV9W39X68/284-clip.mp4",
+      "landing_clip_url": "pending/SGeV9W39X68/284-landing.mp4",
+      "stand_clip_url": "pending/SGeV9W39X68/284-stand-micro.mp4",
+      "aim_clip_url": "pending/SGeV9W39X68/284-aim-micro.mp4",
+      "aim_anchor_x": null,
+      "aim_anchor_y": null,
+      "stand_anchor_x": null,
+      "stand_anchor_y": null,
+      "target_anchor_x": null,
+      "target_anchor_y": null,
+      "setup_seconds": null,
+      "technique": null,
+      "youtube_video_id": "SGeV9W39X68",
+      "chapter_start_seconds": 284,
+      "chapter_title": "Mid - Cross Flash",
+      "attribution_url": "https://www.youtube.com/watch?v=SGeV9W39X68",
+      "attribution_author": "Tigerr"
+    },
+    {
+      "id": "b62a5b2d-4047-4d71-9d7a-8655a5290dde",
+      "game_slug": "cs2",
+      "map_slug": "mirage",
+      "target_zone_slug": "window",
+      "stand_zone_slug": "top-mid",
+      "utility_type_slug": "molotov",
+      "source_id": "640d7c0d-5325-4302-beda-bb04afe3e38c",
+      "title": "Top Mid - Window Molotov",
+      "notes": null,
+      "side": "side_a",
+      "stand_screenshot_url": null,
+      "aim_screenshot_url": null,
+      "clip_url": "pending/SGeV9W39X68/343-clip.mp4",
+      "landing_clip_url": "pending/SGeV9W39X68/343-landing.mp4",
+      "stand_clip_url": "pending/SGeV9W39X68/343-stand-micro.mp4",
+      "aim_clip_url": "pending/SGeV9W39X68/343-aim-micro.mp4",
+      "aim_anchor_x": null,
+      "aim_anchor_y": null,
+      "stand_anchor_x": null,
+      "stand_anchor_y": null,
+      "target_anchor_x": null,
+      "target_anchor_y": null,
+      "setup_seconds": null,
+      "technique": null,
+      "youtube_video_id": "SGeV9W39X68",
+      "chapter_start_seconds": 343,
+      "chapter_title": "Top Mid - Window Molotov",
+      "attribution_url": "https://www.youtube.com/watch?v=SGeV9W39X68",
+      "attribution_author": "Tigerr"
+    },
+    {
+      "id": "99764d5a-b741-4bf5-a82e-42f9c015a45b",
+      "game_slug": "cs2",
+      "map_slug": "mirage",
+      "target_zone_slug": "b-site",
+      "stand_zone_slug": "b-apts",
+      "utility_type_slug": "molotov",
+      "source_id": "640d7c0d-5325-4302-beda-bb04afe3e38c",
+      "title": "B Site - Balcony Molotov",
+      "notes": null,
+      "side": "side_a",
+      "stand_screenshot_url": null,
+      "aim_screenshot_url": null,
+      "clip_url": "pending/SGeV9W39X68/452-clip.mp4",
+      "landing_clip_url": "pending/SGeV9W39X68/452-landing.mp4",
+      "stand_clip_url": "pending/SGeV9W39X68/452-stand-micro.mp4",
+      "aim_clip_url": "pending/SGeV9W39X68/452-aim-micro.mp4",
+      "aim_anchor_x": null,
+      "aim_anchor_y": null,
+      "stand_anchor_x": null,
+      "stand_anchor_y": null,
+      "target_anchor_x": null,
+      "target_anchor_y": null,
+      "setup_seconds": null,
+      "technique": null,
+      "youtube_video_id": "SGeV9W39X68",
+      "chapter_start_seconds": 452,
+      "chapter_title": "B Site - Balcony Molotov",
+      "attribution_url": "https://www.youtube.com/watch?v=SGeV9W39X68",
+      "attribution_author": "Tigerr"
+    },
+    {
+      "id": "a9ef72c4-6756-41e9-a540-3828c3499775",
+      "game_slug": "cs2",
+      "map_slug": "mirage",
+      "target_zone_slug": "b-site",
+      "stand_zone_slug": "b-apts",
+      "utility_type_slug": "molotov",
+      "source_id": "640d7c0d-5325-4302-beda-bb04afe3e38c",
+      "title": "B Site - Bench Molotov",
+      "notes": null,
+      "side": "side_a",
+      "stand_screenshot_url": null,
+      "aim_screenshot_url": null,
+      "clip_url": "pending/SGeV9W39X68/479-clip.mp4",
+      "landing_clip_url": "pending/SGeV9W39X68/479-landing.mp4",
+      "stand_clip_url": "pending/SGeV9W39X68/479-stand-micro.mp4",
+      "aim_clip_url": "pending/SGeV9W39X68/479-aim-micro.mp4",
+      "aim_anchor_x": null,
+      "aim_anchor_y": null,
+      "stand_anchor_x": null,
+      "stand_anchor_y": null,
+      "target_anchor_x": null,
+      "target_anchor_y": null,
+      "setup_seconds": null,
+      "technique": null,
+      "youtube_video_id": "SGeV9W39X68",
+      "chapter_start_seconds": 479,
+      "chapter_title": "B Site - Bench Molotov",
+      "attribution_url": "https://www.youtube.com/watch?v=SGeV9W39X68",
+      "attribution_author": "Tigerr"
+    },
+    {
+      "id": "4d792787-6fa4-4090-b199-143298874ef6",
+      "game_slug": "cs2",
+      "map_slug": "mirage",
+      "target_zone_slug": "b-site",
+      "stand_zone_slug": "b-apts",
+      "utility_type_slug": "flash",
+      "source_id": "640d7c0d-5325-4302-beda-bb04afe3e38c",
+      "title": "B Site - Site Flash",
+      "notes": null,
+      "side": "side_a",
+      "stand_screenshot_url": null,
+      "aim_screenshot_url": null,
+      "clip_url": "pending/SGeV9W39X68/514-clip.mp4",
+      "landing_clip_url": "pending/SGeV9W39X68/514-landing.mp4",
+      "stand_clip_url": "pending/SGeV9W39X68/514-stand-micro.mp4",
+      "aim_clip_url": "pending/SGeV9W39X68/514-aim-micro.mp4",
+      "aim_anchor_x": null,
+      "aim_anchor_y": null,
+      "stand_anchor_x": null,
+      "stand_anchor_y": null,
+      "target_anchor_x": null,
+      "target_anchor_y": null,
+      "setup_seconds": null,
+      "technique": null,
+      "youtube_video_id": "SGeV9W39X68",
+      "chapter_start_seconds": 514,
+      "chapter_title": "B Site - Site Flash",
+      "attribution_url": "https://www.youtube.com/watch?v=SGeV9W39X68",
+      "attribution_author": "Tigerr"
+    },
+    {
+      "id": "bbdbfdcd-4542-42f7-bb82-53a0dc451248",
+      "game_slug": "cs2",
+      "map_slug": "mirage",
+      "target_zone_slug": "b-apts",
+      "stand_zone_slug": "ct-spawn",
+      "utility_type_slug": "molotov",
+      "source_id": "640d7c0d-5325-4302-beda-bb04afe3e38c",
+      "title": "CT Side - Aps Door Molotovs",
+      "notes": null,
+      "side": "side_b",
+      "stand_screenshot_url": null,
+      "aim_screenshot_url": null,
+      "clip_url": "pending/SGeV9W39X68/566-clip.mp4",
+      "landing_clip_url": "pending/SGeV9W39X68/566-landing.mp4",
+      "stand_clip_url": "pending/SGeV9W39X68/566-stand-micro.mp4",
+      "aim_clip_url": "pending/SGeV9W39X68/566-aim-micro.mp4",
+      "aim_anchor_x": null,
+      "aim_anchor_y": null,
+      "stand_anchor_x": null,
+      "stand_anchor_y": null,
+      "target_anchor_x": null,
+      "target_anchor_y": null,
+      "setup_seconds": null,
+      "technique": null,
+      "youtube_video_id": "SGeV9W39X68",
+      "chapter_start_seconds": 566,
+      "chapter_title": "CT Side - Aps Door Molotovs",
+      "attribution_url": "https://www.youtube.com/watch?v=SGeV9W39X68",
+      "attribution_author": "Tigerr"
+    }
+  ]
+}

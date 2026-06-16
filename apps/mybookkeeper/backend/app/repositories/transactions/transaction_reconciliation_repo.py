@@ -11,6 +11,7 @@ from sqlalchemy.sql.expression import FunctionElement
 from app.core.vendors import normalize_vendor
 from app.models.extraction.extraction import Extraction
 from app.models.transactions.transaction import Transaction
+from app.repositories.transactions.payer_alias_repo import normalize_payer_name
 
 
 class _date_diff_days(FunctionElement):
@@ -147,6 +148,59 @@ async def find_possible_match_by_date_amount(
         stmt = stmt.where(Transaction.property_id.is_(None))
     result = await db.execute(stmt.limit(1))
     return result.scalar_one_or_none()
+
+
+async def find_possible_match_by_payer_amount(
+    db: AsyncSession,
+    organization_id: uuid.UUID,
+    payer_name: str,
+    amount: Decimal,
+    transaction_date: date,
+    exclude_id: uuid.UUID | None = None,
+    date_window_days: int = 14,
+) -> Transaction | None:
+    """Find a same-payer, same-amount transaction within a date window.
+
+    For peer-to-peer payments (Zelle/Venmo/Cash App) the payer identity is the
+    reliable dedup key. The notification email carries no property at extraction
+    time, so the property-scoped checks (``find_possible_match_by_date_amount``)
+    miss a second notification of the same payment once the first copy has been
+    attributed to a property — and they can wrongly merge two *different* payers
+    who happen to send the same amount. Matching on the payer fixes both.
+
+    Candidates are filtered by amount + date window in SQL, then by normalized
+    payer name in Python (``payer_name`` is free text with no normalized column),
+    mirroring the vendor-match pattern above. Returns the closest by date.
+    """
+    target = normalize_payer_name(payer_name)
+    if not target:
+        return None
+    date_start = transaction_date - timedelta(days=date_window_days)
+    date_end = transaction_date + timedelta(days=date_window_days)
+    stmt = (
+        select(Transaction)
+        .where(
+            Transaction.organization_id == organization_id,
+            Transaction.transaction_date >= date_start,
+            Transaction.transaction_date <= date_end,
+            Transaction.amount == amount,
+            Transaction.payer_name.isnot(None),
+            Transaction.status != "duplicate",
+            Transaction.deleted_at.is_(None),
+        )
+    )
+    if exclude_id:
+        stmt = stmt.where(Transaction.id != exclude_id)
+    result = await db.execute(stmt.limit(25))
+    best: Transaction | None = None
+    best_diff: int | None = None
+    for candidate in result.scalars().all():
+        if normalize_payer_name(candidate.payer_name or "") != target:
+            continue
+        diff = abs((transaction_date - candidate.transaction_date).days)
+        if best_diff is None or diff < best_diff:
+            best, best_diff = candidate, diff
+    return best
 
 
 async def find_duplicate_pairs(

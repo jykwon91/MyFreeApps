@@ -17,13 +17,11 @@ import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import AsyncSessionLocal, unit_of_work
-from app.models.applicants.applicant import Applicant
 from app.models.transactions.transaction import Transaction
 from app.repositories import attribution_repo
 from app.repositories import payer_alias_repo
 from app.repositories import booking_statement_repo
 from app.repositories.applicants import applicant_repo
-from app.repositories.leases import signed_lease_repo
 from app.repositories.listings import listing_repo
 from app.repositories.properties import property_repo
 from app.repositories import transaction_repo as txn_repo
@@ -32,58 +30,13 @@ from app.services.transactions.airbnb_payout_matcher import (
     decide_airbnb_attribution,
     parse_res_code,
 )
+from app.services.transactions.attribution_helpers import (
+    _get_lease_signed_applicants,
+    _get_property_id_for_applicant,
+)
 from app.services.transactions.attribution_matcher import find_best_match, resolve_alias
 
 logger = logging.getLogger(__name__)
-
-
-# ---------------------------------------------------------------------------
-# DB-aware helpers
-# ---------------------------------------------------------------------------
-
-async def _get_lease_signed_applicants(
-    db: AsyncSession,
-    *,
-    organization_id: uuid.UUID,
-    user_id: uuid.UUID,
-) -> list[Applicant]:
-    """Fetch all active lease_signed applicants for the org/user."""
-    return await applicant_repo.list_for_user(
-        db,
-        organization_id=organization_id,
-        user_id=user_id,
-        stage="lease_signed",
-        include_deleted=False,
-        limit=500,
-        offset=0,
-    )
-
-
-async def _get_property_id_for_applicant(
-    db: AsyncSession,
-    applicant: Applicant,
-    organization_id: uuid.UUID,
-) -> uuid.UUID | None:
-    """Resolve the property_id linked to an applicant via their signed lease.
-
-    Walks: applicant → signed_lease → listing → property_id.
-    Returns the first non-null property_id found, or None.
-    """
-    leases = await signed_lease_repo.list_for_tenant(
-        db,
-        user_id=applicant.user_id,
-        organization_id=organization_id,
-        applicant_id=applicant.id,
-        include_deleted=False,
-        limit=5,
-    )
-    for lease in leases:
-        if not lease.listing_id:
-            continue
-        listing = await listing_repo.get_by_id(db, lease.listing_id, organization_id)
-        if listing and listing.property_id:
-            return listing.property_id
-    return None
 
 
 # ---------------------------------------------------------------------------
@@ -166,6 +119,10 @@ async def maybe_attribute_payment(
             txn.applicant_id = applicant.id
             txn.attribution_source = "auto_alias"
             txn.category = "rental_revenue"
+            # Auto-attributing a payment verifies it — promote out of the
+            # unverified state so it counts in the dashboard, exactly as the
+            # manual confirm/link paths do.
+            txn.status = "approved"
             if property_id and txn.property_id is None:
                 txn.property_id = property_id
             logger.info(
@@ -207,6 +164,8 @@ async def maybe_attribute_payment(
         txn.applicant_id = best.id
         txn.attribution_source = "auto_exact"
         txn.category = "rental_revenue"
+        # Auto-attributing a payment verifies it (see auto_alias branch above).
+        txn.status = "approved"
         if property_id and txn.property_id is None:
             txn.property_id = property_id
         logger.info(
@@ -280,6 +239,9 @@ async def _attribute_airbnb_payout(
             txn.property_id = match.property_id
         txn.attribution_source = "auto_exact"
         txn.category = "rental_revenue"
+        # Auto-attributing a payout to a property verifies it (see the tenant
+        # auto-attribution branches in maybe_attribute_payment).
+        txn.status = "approved"
         logger.info(
             "Auto-attributed Airbnb payout %s to property %s (res_code=%s)",
             txn.id, match.property_id, res_code,
@@ -388,6 +350,9 @@ async def confirm_review(
             txn.applicant_id = applicant.id
             txn.attribution_source = "auto_fuzzy_confirmed"
             txn.category = "rental_revenue"
+            # Confirming an attribution verifies the payment — promote it out of
+            # the pending / unverified review state so it counts in the dashboard.
+            txn.status = "approved"
 
             # Resolve property from applicant's active lease if not already set
             if txn.property_id is None:
@@ -435,6 +400,8 @@ async def confirm_review(
             txn.applicant_id = None
             txn.attribution_source = "manual"
             txn.category = "rental_revenue"
+            # Confirming the payout against a property verifies it.
+            txn.status = "approved"
             await attribution_repo.resolve(db, row, "confirmed")
             return {"ok": True, "transaction_id": str(txn.id)}
 
@@ -487,6 +454,9 @@ async def attribute_manually(
         txn.applicant_id = applicant.id
         txn.attribution_source = "manual"
         txn.category = "rental_revenue"
+        # Manually linking a tenant verifies the payment — promote it to
+        # approved so it counts in the dashboard.
+        txn.status = "approved"
 
         if txn.property_id is None:
             property_id = await _get_property_id_for_applicant(db, applicant, organization_id)

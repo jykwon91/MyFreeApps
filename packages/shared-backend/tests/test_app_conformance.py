@@ -33,6 +33,12 @@ _APPS = [
     # mypizzatracker is single-user, same shape as mygamingassistant.
     # Scaffolded via `python -m platform_shared.infra.new_app` (PR #623).
     "mypizzatracker",
+    # myrecipes is a MULTI-USER app (public registration + per-user recipe data),
+    # mirroring the canonical app MyBookkeeper. Scaffolded via
+    # `python -m platform_shared.infra.new_app`, then the auth shell was switched
+    # from the scaffold's single-user seed to the multi-user register router
+    # (see apps/myrecipes/backend/app/main.py).
+    "myrecipes",
 ]
 
 # Apps that have intentionally opted OUT of Sentry error monitoring.
@@ -346,6 +352,94 @@ class TestTurnstileBundleWiring:
         )
 
 
+# Apps that render the VITE_SERVE_ONLY frontend build-arg chain. Only MGA has
+# a serve-only public-library deployment mode (SERVE_ONLY=true ⇒ no auth). The
+# other apps are fully auth-gated and intentionally do NOT carry the
+# VITE_SERVE_ONLY ARG/build-arg — gated in the templates by the per-app
+# ``serve_only_build_arg`` flag in app.yaml. This is the inverse of an
+# exemption: the bundle-wiring assertions below run ONLY for these apps, and a
+# separate assertion confirms the chain is ABSENT for every other app so the
+# MGA-only scoping can't silently leak into the canonical apps.
+_SERVE_ONLY_BUNDLE_APPS = {"mygamingassistant"}
+
+
+class TestServeOnlyBundleWiring:
+    """VITE_SERVE_ONLY must be wired through the docker build-arg chain for the
+    serve-only app(s), exactly like VITE_TURNSTILE_SITE_KEY.
+
+    Same failure class as the 2026-05-05 Turnstile bug: a VITE_* value read by
+    the frontend that isn't passed as a build arg gets baked as empty, the
+    build still succeeds, and the breakage only shows in the browser. Here an
+    empty VITE_SERVE_ONLY would silently re-enable the auth UI in the public
+    library (Sign-in CTAs pointing at backend routes that 404). See
+    rules/verify-frontend-build-args.md.
+
+    Mirrors TestTurnstileBundleWiring but scoped to _SERVE_ONLY_BUNDLE_APPS,
+    and adds the inverse check (chain absent elsewhere).
+    """
+
+    @pytest.mark.parametrize("app", sorted(_SERVE_ONLY_BUNDLE_APPS))
+    def test_caddy_dockerfile_declares_serve_only_arg(self, app: str) -> None:
+        dockerfile_src = _read("apps", app, "docker", "caddy.Dockerfile")
+        assert "ARG VITE_SERVE_ONLY" in dockerfile_src, (
+            f"{app}/docker/caddy.Dockerfile must declare `ARG VITE_SERVE_ONLY=` "
+            f"before `RUN npm run build` so docker-compose can pass the public "
+            f"serve-only flag into the Vite bundle. Without it the bundle is "
+            f"built with an empty flag and the auth UI re-appears in the "
+            f"public library. (Rendered from the template's "
+            f"serve_only_build_arg gate — re-run "
+            f"`python -m platform_shared.infra.render --app {app}`.)"
+        )
+        assert "ENV VITE_SERVE_ONLY" in dockerfile_src, (
+            f"{app}/docker/caddy.Dockerfile must set "
+            f"`ENV VITE_SERVE_ONLY=${{VITE_SERVE_ONLY}}` after the ARG so Vite "
+            f"picks up the value at build time."
+        )
+        arg_idx = dockerfile_src.find("ARG VITE_SERVE_ONLY")
+        build_idx = dockerfile_src.find("npm run build")
+        assert 0 < arg_idx < build_idx, (
+            f"{app}/docker/caddy.Dockerfile: ARG VITE_SERVE_ONLY must be "
+            f"declared BEFORE `RUN npm run build`, otherwise Vite runs without "
+            f"the env value."
+        )
+
+    @pytest.mark.parametrize("app", sorted(_SERVE_ONLY_BUNDLE_APPS))
+    def test_docker_compose_passes_serve_only_arg_to_caddy(self, app: str) -> None:
+        compose_src = _read("apps", app, "docker-compose.yml")
+        assert "VITE_SERVE_ONLY:" in compose_src, (
+            f"{app}/docker-compose.yml must include `VITE_SERVE_ONLY: "
+            f"${{SERVE_ONLY:-}}` under the caddy service's `build.args:` block "
+            f"so the caddy.Dockerfile ARG sees a value at build time."
+        )
+        assert "${SERVE_ONLY" in compose_src, (
+            f"{app}/docker-compose.yml: VITE_SERVE_ONLY build arg must "
+            f"reference ${{SERVE_ONLY}} (no VITE_ prefix on the right-hand "
+            f"side) so docker compose reads the value from the same env var "
+            f"name the backend uses — one .env.docker line drives both layers."
+        )
+
+    @pytest.mark.parametrize(
+        "app", sorted(set(_APPS) - _SERVE_ONLY_BUNDLE_APPS)
+    )
+    def test_serve_only_chain_absent_for_non_serve_only_apps(self, app: str) -> None:
+        """Inverse guard: fully auth-gated apps must NOT render the
+        VITE_SERVE_ONLY chain. If this fires, the serve_only_build_arg gate
+        leaked (or an app.yaml set it true by mistake) — a non-serve-only app
+        with the flag would build a bundle that could hide its auth UI."""
+        dockerfile_src = _read("apps", app, "docker", "caddy.Dockerfile")
+        compose_src = _read("apps", app, "docker-compose.yml")
+        assert "VITE_SERVE_ONLY" not in dockerfile_src, (
+            f"{app}/docker/caddy.Dockerfile contains VITE_SERVE_ONLY but {app} "
+            f"is not a serve-only app. Set serve_only_build_arg: false in "
+            f"apps/{app}/app.yaml and re-render."
+        )
+        assert "VITE_SERVE_ONLY" not in compose_src, (
+            f"{app}/docker-compose.yml contains VITE_SERVE_ONLY but {app} is "
+            f"not a serve-only app. Set serve_only_build_arg: false in "
+            f"apps/{app}/app.yaml and re-render."
+        )
+
+
 class TestInfraTemplateDrift:
     """Tier 3 — rendered infra files must match the templates byte-for-byte.
 
@@ -360,7 +454,7 @@ class TestInfraTemplateDrift:
     the template owns the shape.
     """
 
-    @pytest.mark.parametrize("app", ["mybookkeeper", "myjobhunter", "mygamingassistant", "mypizzatracker"])
+    @pytest.mark.parametrize("app", ["mybookkeeper", "myjobhunter", "mygamingassistant", "mypizzatracker", "myrecipes"])
     def test_no_drift(self, app: str) -> None:
         try:
             from platform_shared.infra.render import diff_app, _repo_root
@@ -374,6 +468,206 @@ class TestInfraTemplateDrift:
             f"Rendered infra files for app '{app}' diverge from checked-in copies. "
             f"Re-run `python -m platform_shared.infra.render --app {app}` and commit. "
             f"Diffs:\n\n" + "\n\n".join(diffs)
+        )
+
+
+class TestEdgeHardeningDirectives:
+    """Traffic-resilience hardening must be present in every app's edge.
+
+    These are the platform's first line against a traffic spike / DoS, living
+    in the shared Caddy template + each app's backend.Dockerfile. The drift
+    test alone wouldn't catch their removal (every rendered file would lose
+    the directive together and still match the template), so assert the
+    directives explicitly.
+    """
+
+    @pytest.mark.parametrize("app", _APPS)
+    def test_caddy_has_body_size_cap(self, app: str) -> None:
+        caddy = _read("apps", app, "docker", "Caddyfile.docker")
+        assert "request_body {" in caddy and "max_size 30MB" in caddy, (
+            f"{app} docker Caddyfile is missing the request-body size cap — a "
+            f"large-body flood would buffer into the worker's memory (OOM). "
+            f"Restore it in infra/templates/Caddyfile.docker.j2 and re-render."
+        )
+
+    @pytest.mark.parametrize("app", _APPS)
+    def test_caddy_has_slowloris_timeouts(self, app: str) -> None:
+        caddy = _read("apps", app, "docker", "Caddyfile.docker")
+        assert all(d in caddy for d in ("read_header", "read_body", "idle")), (
+            f"{app} docker Caddyfile is missing the Slowloris timeouts "
+            f"(read_header/read_body/idle). Restore them in the template and re-render."
+        )
+
+    @pytest.mark.parametrize("app", _APPS)
+    def test_caddy_overwrites_forwarded_for(self, app: str) -> None:
+        caddy = _read("apps", app, "docker", "Caddyfile.docker")
+        assert "header_up X-Forwarded-For {client_ip}" in caddy, (
+            f"{app} docker Caddyfile must overwrite X-Forwarded-For with Caddy's "
+            f"trusted {{client_ip}} on the API reverse_proxy — otherwise the app "
+            f"trusts an attacker-set first hop, defeating per-IP rate limits. "
+            f"Restore it in the template and re-render."
+        )
+
+    @pytest.mark.parametrize("app", _APPS)
+    def test_uvicorn_sheds_load(self, app: str) -> None:
+        dockerfile = _read("apps", app, "docker", "backend.Dockerfile")
+        assert "--limit-concurrency" in dockerfile, (
+            f"{app} backend.Dockerfile uvicorn CMD must set --limit-concurrency "
+            f"so a request flood sheds load with 503 instead of queueing "
+            f"unboundedly into OOM."
+        )
+
+
+class TestContainerResourceLimits:
+    """Every app's compose must cap per-container memory, CPU, and PIDs.
+
+    Blast-radius containment on the shared VPS: with no per-container caps a
+    single runaway or compromised container can exhaust host RAM and trigger
+    the kernel OOM-killer against a sibling app's Postgres. Like the
+    edge-hardening directives, the drift test alone wouldn't catch their
+    removal (every rendered compose would drop the caps together and still
+    match the template), so assert them explicitly. Restore in
+    infra/templates/docker-compose.yml.j2 and re-render on failure.
+    """
+
+    @pytest.mark.parametrize("app", _APPS)
+    def test_compose_sets_all_three_limit_kinds(self, app: str) -> None:
+        compose = _read("apps", app, "docker-compose.yml")
+        for key in ("mem_limit:", "cpus:", "pids_limit:"):
+            assert key in compose, (
+                f"{app}/docker-compose.yml is missing `{key}` — per-container "
+                f"resource caps were removed. A runaway container could then OOM "
+                f"the shared VPS and cascade into a sibling app's Postgres. "
+                f"Restore in infra/templates/docker-compose.yml.j2 and re-render."
+            )
+
+    @pytest.mark.parametrize("app", _APPS)
+    def test_api_and_caddy_keep_expected_mem_caps(self, app: str) -> None:
+        compose = _read("apps", app, "docker-compose.yml")
+        assert "mem_limit: 1024m" in compose, (
+            f"{app}/docker-compose.yml api service must keep its 1024m mem_limit "
+            f"(sized above the busiest app's API working set with spike headroom). "
+            f"Restore in the template and re-render."
+        )
+        assert "mem_limit: 128m" in compose, (
+            f"{app}/docker-compose.yml caddy service must keep its 128m mem_limit. "
+            f"Restore in the template and re-render."
+        )
+
+
+# Apps whose deploy workflow runs in-container steps after migrate (driven by
+# app.yaml `post_deploy_commands`). MGA auto-seeds its public lineup library on
+# every deploy; the canonical apps keep the list empty. The inverse check guards
+# against the auto-import leaking into an app with no library to import.
+_POST_DEPLOY_APPS = {"mygamingassistant"}
+
+
+class TestPostDeployCommands:
+    """`post_deploy_commands` in app.yaml must render into the deploy workflow
+    as in-container `docker compose exec` steps AFTER `alembic upgrade head`.
+
+    MGA uses this to auto-seed its public lineup library (load-fixtures +
+    import-lineups) so a merged library-pack update goes live with no manual
+    VPS step. Empty for every other app — and the inverse test below asserts
+    their deploy workflow has no post-deploy block, so the auto-import can't
+    silently run where there is no library.
+    """
+
+    @pytest.mark.parametrize("app", sorted(_POST_DEPLOY_APPS))
+    def test_deploy_workflow_runs_post_deploy_commands(self, app: str) -> None:
+        wf = _read(".github", "workflows", f"deploy-{app}.yml")
+        assert "Run post-deploy commands" in wf, (
+            f"deploy-{app}.yml must contain the post-deploy block rendered from "
+            f"apps/{app}/app.yaml `post_deploy_commands`. Re-run "
+            f"`python -m platform_shared.infra.render --app {app}`."
+        )
+        assert "python -m app.cli load-fixtures" in wf, (
+            f"deploy-{app}.yml must run `load-fixtures` in-container so a new map "
+            f"fixture is seeded before import-lineups resolves its slugs."
+        )
+        assert "python -m app.cli import-lineups" in wf, (
+            f"deploy-{app}.yml must run `import-lineups` in-container so the "
+            f"image-baked lineup pack is reconciled into prod on every deploy."
+        )
+        assert wf.index("alembic upgrade head") < wf.index("import-lineups"), (
+            f"deploy-{app}.yml: post-deploy commands must run AFTER "
+            f"`alembic upgrade head` (import resolves against migrated tables)."
+        )
+
+    @pytest.mark.parametrize("app", sorted(set(_APPS) - _POST_DEPLOY_APPS))
+    def test_no_post_deploy_block_for_other_apps(self, app: str) -> None:
+        wf = _read(".github", "workflows", f"deploy-{app}.yml")
+        assert "Run post-deploy commands" not in wf, (
+            f"deploy-{app}.yml has a post-deploy block but {app}'s "
+            f"`post_deploy_commands` is empty in app.yaml. Re-render."
+        )
+        assert "import-lineups" not in wf, (
+            f"deploy-{app}.yml references import-lineups but {app} is not a "
+            f"post-deploy app — the MGA-only auto-import leaked into it."
+        )
+
+
+# Apps that have intentionally opted OUT of push-triggered automated deploys.
+# Their deploy workflow renders ONLY a `workflow_dispatch:` trigger (manual
+# "Run workflow" button) — no `push: branches: [main]` block — driven by
+# `automated_deploy: false` in apps/<slug>/app.yaml. The template defaults a
+# missing key to enabled, so every other app keeps auto-deploying. The tests
+# below enforce the opt-out in BOTH directions: a no-auto-deploy app must have
+# no push trigger AND must carry the flag in app.yaml, and every other app must
+# keep its push trigger.
+#
+# - mypizzatracker: paused until it is converted to a mobile app.
+# - myrecipes: paused until local development is complete.
+_NO_AUTO_DEPLOY = {"mypizzatracker", "myrecipes"}
+
+
+class TestAutomatedDeployExclusion:
+    """`automated_deploy: false` in app.yaml must drop the push trigger from
+    the rendered deploy workflow, leaving only the manual workflow_dispatch.
+
+    Same shape as TestPostDeployCommands: a reviewed opt-out set enforced in
+    both directions so neither (a) an excluded app silently regains a push
+    trigger nor (b) a normal app silently loses one can slip through review.
+    """
+
+    @pytest.mark.parametrize("app", sorted(_NO_AUTO_DEPLOY))
+    def test_excluded_app_is_manual_dispatch_only(self, app: str) -> None:
+        wf = _read(".github", "workflows", f"deploy-{app}.yml")
+        assert "workflow_dispatch:" in wf, (
+            f"deploy-{app}.yml must keep the manual `workflow_dispatch:` "
+            f"trigger so the app can still be deployed on demand. Re-run "
+            f"`python -m platform_shared.infra.render --app {app}`."
+        )
+        assert "branches: [main]" not in wf, (
+            f"deploy-{app}.yml still has a `push: branches: [main]` trigger but "
+            f"{app} is in _NO_AUTO_DEPLOY. To keep it manual-dispatch-only, set "
+            f"`automated_deploy: false` in apps/{app}/app.yaml and re-render. "
+            f"To RE-ENABLE auto-deploy, set `automated_deploy: true` (or remove "
+            f"the key) in apps/{app}/app.yaml, re-render, and drop {app} from "
+            f"_NO_AUTO_DEPLOY."
+        )
+        ay = _read("apps", app, "app.yaml")
+        assert "automated_deploy: false" in ay, (
+            f"apps/{app}/app.yaml must declare `automated_deploy: false` — it is "
+            f"the source of truth the template gates the push trigger on. To "
+            f"re-enable auto-deploy, set it to true (or remove the key), "
+            f"re-render, and drop {app} from _NO_AUTO_DEPLOY."
+        )
+
+    @pytest.mark.parametrize("app", sorted(set(_APPS) - _NO_AUTO_DEPLOY))
+    def test_normal_app_keeps_push_trigger(self, app: str) -> None:
+        wf = _read(".github", "workflows", f"deploy-{app}.yml")
+        assert "branches: [main]" in wf, (
+            f"deploy-{app}.yml lost its `push: branches: [main]` trigger but "
+            f"{app} is not in _NO_AUTO_DEPLOY. If this app should stop "
+            f"auto-deploying, add it to _NO_AUTO_DEPLOY and set "
+            f"`automated_deploy: false` in apps/{app}/app.yaml; otherwise set "
+            f"`automated_deploy: true` (or remove the key) and re-render."
+        )
+        assert "workflow_dispatch:" in wf, (
+            f"deploy-{app}.yml must also expose the manual `workflow_dispatch:` "
+            f"trigger (every app gets a Run-workflow button). Re-run "
+            f"`python -m platform_shared.infra.render --app {app}`."
         )
 
 
@@ -520,3 +814,195 @@ class TestScaffolderProducesBootableApp:
                     skip_render=True,
                     skip_uv=True,
                 )
+
+    def test_scaffold_wires_support_page(self, tmp_path) -> None:
+        """Initiative 10 PR4 -- a scaffolded app is born with the public
+        /support page + shared transparency router wired, mirroring the four
+        apps wired in PR3 (TestTransparencyRouterMounted / TestSupportPageWired).
+        Guards against a future template edit silently dropping the support
+        wiring from every app scaffolded thereafter.
+        """
+        import shutil
+        try:
+            import yaml
+        except ModuleNotFoundError as e:
+            pytest.skip(f"pyyaml unavailable ({e}); skipping scaffolder check")
+        try:
+            from platform_shared.infra import new_app as _new_app
+        except ModuleNotFoundError as e:
+            pytest.skip(f"new_app module unavailable ({e}); skipping scaffolder check")
+
+        scaffold_src = _REPO_ROOT / "infra" / "templates" / "scaffold"
+        if not scaffold_src.exists():
+            pytest.skip(f"scaffold templates not present at {scaffold_src}")
+        shutil.copytree(scaffold_src, tmp_path / "infra" / "templates" / "scaffold")
+
+        _new_app.scaffold_app(
+            slug="supporttest",
+            display_name="SupportTest",
+            api_port=18997,
+            caddy_host_port=18996,
+            frontend_port=15997,
+            repo_root=tmp_path,
+            skip_render=True,
+            skip_uv=True,
+            skip_npm=True,
+        )
+        app_dir = tmp_path / "apps" / "supporttest"
+
+        # Backend: shared transparency router imported + mounted (GET /transparency
+        # + POST /donations/kofi-webhook). Without it the /support cost widget 404s.
+        main_src = (app_dir / "backend" / "app" / "main.py").read_text(encoding="utf-8")
+        assert (
+            "from platform_shared.api.transparency_router import build_transparency_router"
+            in main_src
+        ), "scaffolded main.py must import build_transparency_router"
+        assert "build_transparency_router(settings)" in main_src, (
+            "scaffolded main.py must mount the shared transparency router"
+        )
+
+        # Frontend: public /support route rendering the shared Support page + the
+        # shared <AuthPageFooter> on the login page linking to it (the link target
+        # itself is pinned by the shared package's AuthPageFooter unit test).
+        routes_src = (app_dir / "frontend" / "src" / "routes.tsx").read_text(encoding="utf-8")
+        assert "/support" in routes_src and "Support" in routes_src, (
+            "scaffolded routes.tsx must register a public /support route"
+        )
+        login_src = (app_dir / "frontend" / "src" / "pages" / "Login.tsx").read_text(encoding="utf-8")
+        assert "AuthPageFooter" in login_src, (
+            "scaffolded Login.tsx must render the shared @platform/ui "
+            "<AuthPageFooter>, which carries the public link to /support-myfreeapps"
+        )
+
+        # CSP: the default frame-src must allow the YouTube no-cookie embed used
+        # by the Support page's inspiration video.
+        csp = yaml.safe_load((app_dir / "app.yaml").read_text(encoding="utf-8"))["csp"]
+        assert "https://www.youtube-nocookie.com" in csp, (
+            "scaffolded app.yaml CSP frame-src must allow youtube-nocookie for the "
+            "Support page video embed"
+        )
+
+
+# --- Transparency / Support page wiring (Initiative 10, PR3) -----------------
+
+_TRANSPARENCY_PRIMARY_APP = "mybookkeeper"
+
+# Per-app routing file (MBK uses an inline <Routes> in App.tsx; the data-router
+# apps use a routes.tsx) and the public auth surface (the Login page) that
+# renders the shared @platform/ui <AuthPageFooter> — the logged-out link to the
+# /support-myfreeapps page. All four apps link via the Login footer now; MBK's
+# LegalFooter dropped its /support link when the footer was extracted into the
+# shared component (#835).
+_SUPPORT_ROUTING_FILE = {
+    "mybookkeeper": ("frontend", "src", "App.tsx"),
+    "myjobhunter": ("frontend", "src", "routes.tsx"),
+    "mygamingassistant": ("frontend", "src", "routes.tsx"),
+    "mypizzatracker": ("frontend", "src", "routes.tsx"),
+    "myrecipes": ("frontend", "src", "routes.tsx"),
+}
+_SUPPORT_LINK_FILE = {
+    "mybookkeeper": ("frontend", "src", "app", "pages", "Login.tsx"),
+    "myjobhunter": ("frontend", "src", "pages", "Login.tsx"),
+    "mygamingassistant": ("frontend", "src", "pages", "Login.tsx"),
+    "mypizzatracker": ("frontend", "src", "pages", "Login.tsx"),
+    "myrecipes": ("frontend", "src", "pages", "Login.tsx"),
+}
+
+
+@pytest.mark.parametrize("app", _APPS)
+class TestTransparencyRouterMounted:
+    """Every app must mount the shared public transparency router so the
+    /support page's cost widget (GET /transparency) and the Ko-fi webhook
+    (POST /donations/kofi-webhook) resolve. The router is public by design —
+    the /support page is unauthenticated.
+    """
+
+    def test_imports_build_transparency_router(self, app: str) -> None:
+        main_src = _read("apps", app, "backend", "app", "main.py")
+        assert (
+            "from platform_shared.api.transparency_router import build_transparency_router"
+            in main_src
+        ), (
+            f"{app}/backend/app/main.py must import build_transparency_router from "
+            f"platform_shared.api.transparency_router (Initiative 10 PR3)."
+        )
+
+    def test_mounts_transparency_router(self, app: str) -> None:
+        main_src = _read("apps", app, "backend", "app", "main.py")
+        assert "build_transparency_router(settings)" in main_src, (
+            f"{app}/backend/app/main.py must mount the shared router: "
+            f"app.include_router(build_transparency_router(settings)). Without it "
+            f"the /support cost widget 404s and the Ko-fi webhook has no endpoint."
+        )
+
+
+@pytest.mark.parametrize("app", _APPS)
+class TestTransparencyPrimaryWiring:
+    """Exactly ONE app (mybookkeeper) starts the daily cost-sync loop via its
+    lifespan on_startup / on_shutdown hooks. The shared lifespan deliberately
+    does NOT auto-wire it (that would force a core -> services import), so it is
+    wired per-app on the primary only. Enforced in both directions so the loop
+    can't silently start on a second app (two writers racing on the one shared
+    object) or stop being wired on the primary.
+    """
+
+    def test_primary_starts_and_stops_sync(self, app: str) -> None:
+        main_src = _read("apps", app, "backend", "app", "main.py")
+        if app == _TRANSPARENCY_PRIMARY_APP:
+            assert "maybe_start_transparency_sync(settings)" in main_src, (
+                f"{app} is the transparency primary; its main.py on_startup must "
+                f"call maybe_start_transparency_sync(settings)."
+            )
+            assert "stop_transparency_sync()" in main_src, (
+                f"{app} is the transparency primary; its main.py on_shutdown must "
+                f"await stop_transparency_sync()."
+            )
+        else:
+            assert "maybe_start_transparency_sync" not in main_src, (
+                f"{app} is NOT the transparency primary ({_TRANSPARENCY_PRIMARY_APP} "
+                f"is) but its main.py wires maybe_start_transparency_sync. Only the "
+                f"primary may start the cost-sync loop — two writers would race on "
+                f"the shared object."
+            )
+            assert "stop_transparency_sync" not in main_src, (
+                f"{app} is NOT the transparency primary but its main.py references "
+                f"stop_transparency_sync. Only {_TRANSPARENCY_PRIMARY_APP} wires the "
+                f"cost-sync lifecycle."
+            )
+
+
+@pytest.mark.parametrize("app", _APPS)
+class TestSupportPageWired:
+    """Each app exposes a public /support route and links to it from a public
+    surface. MGA additionally opts out of the cost widget — it serves from
+    Cloudflare R2, not the shared MinIO, so it cannot read the shared
+    transparency object.
+    """
+
+    def test_support_route_present(self, app: str) -> None:
+        src = _read("apps", app, *_SUPPORT_ROUTING_FILE[app])
+        assert "/support" in src and "Support" in src, (
+            f"{app}: {'/'.join(_SUPPORT_ROUTING_FILE[app])} must register a public "
+            f"/support route rendering the shared @platform/ui Support page."
+        )
+
+    def test_support_link_present(self, app: str) -> None:
+        src = _read("apps", app, *_SUPPORT_LINK_FILE[app])
+        assert "AuthPageFooter" in src, (
+            f"{app}: {'/'.join(_SUPPORT_LINK_FILE[app])} must render the shared "
+            f"@platform/ui <AuthPageFooter>, the logged-out surface that links to "
+            f"the /support-myfreeapps page. (The link target itself is pinned by "
+            f"packages/shared-frontend/src/__tests__/AuthPageFooter.test.tsx — this "
+            f"check only asserts each app's public Login renders that footer.)"
+        )
+
+    def test_mga_omits_cost_widget(self, app: str) -> None:
+        if app != "mygamingassistant":
+            pytest.skip("Only MGA opts out of the cost widget (R2, not shared MinIO).")
+        src = _read("apps", app, *_SUPPORT_ROUTING_FILE[app])
+        assert "showTransparency={false}" in src, (
+            "mygamingassistant/frontend/src/routes.tsx must pass "
+            "showTransparency={false} to <Support> — MGA serves from Cloudflare R2, "
+            "not the shared MinIO, so it cannot read the shared transparency object; "
+            "rendering the widget would show a persistent 'temporarily unavailable'."
+        )

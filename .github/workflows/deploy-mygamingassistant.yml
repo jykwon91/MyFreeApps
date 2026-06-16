@@ -5,6 +5,13 @@
 name: Deploy MyGamingAssistant
 
 on:
+  # Manual "Run workflow" button — always available so any app can be
+  # deployed on demand, even when push-triggered auto-deploy is off.
+  workflow_dispatch:
+  # Push-triggered auto-deploy. Rendered ONLY when `automated_deploy` is
+  # truthy in apps/<slug>/app.yaml. A missing key defaults to enabled, so
+  # existing apps keep auto-deploying. Set `automated_deploy: false` to make
+  # an app manual-dispatch-only (e.g. not yet ready for production).
   push:
     branches: [main]
     paths:
@@ -89,6 +96,16 @@ jobs:
 
             echo "--- Run database migrations ---"
             docker compose -f apps/mygamingassistant/docker-compose.yml exec -T api alembic upgrade head
+
+            echo "--- Run post-deploy commands (app-specific, idempotent) ---"
+            # In-container steps that run on EVERY deploy after the schema is
+            # migrated. Each must be idempotent (re-runs on packages/** fan-out
+            # deploys too). Driven by apps/<slug>/app.yaml post_deploy_commands;
+            # empty for most apps. MGA uses it to auto-seed its public lineup
+            # library (load-fixtures + import-lineups) so a merged pack update
+            # goes live with no manual VPS step.
+            docker compose -f apps/mygamingassistant/docker-compose.yml exec -T api python -m app.cli load-fixtures
+            docker compose -f apps/mygamingassistant/docker-compose.yml exec -T api python -m app.cli import-lineups
 
             echo "--- Wait for API health check ---"
             for i in $(seq 1 30); do

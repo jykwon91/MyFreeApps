@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useSearchParams, Navigate } from "react-router-dom";
 import {
+  AuthPageFooter,
   LoadingButton,
   PasswordPair,
   TurnstileWidget,
@@ -224,6 +225,7 @@ function RegisterWithInvite({ token }: RegisterWithInviteProps) {
           </p>
         </div>
       </div>
+      <AuthPageFooter appName="MyJobHunter" />
     </div>
   );
 }
@@ -242,6 +244,7 @@ function CenteredCard({ title, children }: CenteredCardProps) {
           {children}
         </div>
       </div>
+      <AuthPageFooter appName="MyJobHunter" />
     </div>
   );
 }

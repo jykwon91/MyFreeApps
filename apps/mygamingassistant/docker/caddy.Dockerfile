@@ -53,6 +53,13 @@ COPY apps/mygamingassistant/frontend ./apps/mygamingassistant/frontend
 ARG VITE_TURNSTILE_SITE_KEY=
 ENV VITE_TURNSTILE_SITE_KEY=${VITE_TURNSTILE_SITE_KEY}
 
+# VITE_SERVE_ONLY: "true" in the production serve-only deployment makes the
+# bundle a pure public read-only library with no auth UI (no Sign-in CTA, no
+# login/forgot/reset routes). Empty/unset → full auth UI. Inlined at build
+# time like VITE_TURNSTILE_SITE_KEY; see rules/verify-frontend-build-args.md.
+ARG VITE_SERVE_ONLY=
+ENV VITE_SERVE_ONLY=${VITE_SERVE_ONLY}
+
 RUN npm run build --workspace=apps/mygamingassistant/frontend
 
 FROM caddy:2-alpine

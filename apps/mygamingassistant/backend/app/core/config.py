@@ -18,6 +18,34 @@ from platform_shared.core.settings import BaseAppSettings
 
 class Settings(BaseAppSettings):
     # ------------------------------------------------------------------
+    # Serve-only deployment mode (env: SERVE_ONLY).
+    # ------------------------------------------------------------------
+    # When True, MGA runs as a PURE PUBLIC READ-ONLY lineup library with
+    # ZERO authentication:
+    #   - No login / JWT-auth / reset-password / verify / TOTP routes are
+    #     mounted (they return 404 — fail closed: auth routes are ABSENT,
+    #     never present-but-bypassed).
+    #   - No auth-write surface (lineup/package/source/scheduler/admin
+    #     mutations, /users/me) is mounted.
+    #   - The seed-operator user is NOT created and SEED_USER_* env vars are
+    #     NOT required at boot.
+    #   - The Turnstile + email boot guards are skipped (no forgot-password
+    #     form exists with no auth), so TURNSTILE_* / EMAIL_*/SMTP_* env are
+    #     NOT required.
+    # Only the public-read surface (games, accepted lineups, packages,
+    # health, version) is served. This is the production shape: the operator
+    # authors lineups LOCALLY (full auth) and seeds prod via the
+    # ``import-lineups`` CLI; prod only ever serves the public library.
+    #
+    # When False (the default — local dev / CI), MGA keeps its full
+    # public-read / auth-write behavior unchanged: every auth + write route
+    # is mounted and the seed user + boot guards behave exactly as today.
+    #
+    # The matching frontend build flag is VITE_SERVE_ONLY (wired through the
+    # docker build-args chain — see docker/caddy.Dockerfile + docker-compose.yml).
+    serve_only: bool = False
+
+    # ------------------------------------------------------------------
     # MGA-specific overrides of base defaults
     # ------------------------------------------------------------------
     jwt_lifetime_seconds: int = 1800  # 30 min — same as MJH
@@ -25,6 +53,20 @@ class Settings(BaseAppSettings):
     cors_origins: list[str] = ["http://localhost:5176"]
     minio_bucket: str = "mygamingassistant-screenshots"
     email_from_name: str = "MyGamingAssistant"
+
+    # ------------------------------------------------------------------
+    # Public object base URL for the lineup library (R2 prod serving).
+    # When set (production: the R2 bucket's public custom domain, e.g.
+    # https://clips.mygamingassistant.myfreeapps.org), public read URLs for
+    # lineup clips/screenshots are emitted as plain CDN URLs ``{base}/{key}``
+    # instead of presigned MinIO URLs. Accepted lineups are public and prod R2
+    # holds ONLY accepted clips, so no signing is needed and Cloudflare's CDN
+    # can edge-cache them (R2's free-egress + cache win — why R2 was chosen).
+    # Leave EMPTY in local dev / CI, where storage is MinIO, reads are
+    # presigned, and pending screenshots are gated by the API 404 on
+    # non-accepted lineups. See lineup_service._sign_screenshot_url.
+    # ------------------------------------------------------------------
+    minio_public_base_url: str = ""
 
     # ------------------------------------------------------------------
     # Single-user seed (MGA-specific — no equivalent in MBK/MJH).

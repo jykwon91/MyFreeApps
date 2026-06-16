@@ -3,12 +3,46 @@ from collections.abc import AsyncGenerator
 
 import pytest
 import pytest_asyncio
+from minio.error import S3Error
 from sqlalchemy import JSON, event
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
 from platform_shared.db.base import Base
+
+
+def make_s3_error(code: str, key: str = "obj") -> S3Error:
+    """Build a minio ``S3Error`` with a given code for transparency tests.
+
+    ``code="NoSuchKey"`` exercises the missing-object path; any other code
+    exercises the transient-outage path that callers re-raise. minio's
+    ``S3Error.__init__`` takes ``response`` FIRST, then code/message/...
+    """
+    return S3Error(None, code, f"{code} for {key}", key, "", "")
+
+
+class FakeStorageClient:
+    """In-memory stand-in for ``platform_shared.core.storage.StorageClient``.
+
+    Backs the transparency store tests without a real MinIO. ``download_file``
+    raises a ``NoSuchKey`` ``S3Error`` for absent keys, matching the real
+    client's behaviour that ``transparency_store.load_document`` depends on.
+    """
+
+    def __init__(self) -> None:
+        self.objects: dict[str, bytes] = {}
+        self.uploads: list[tuple[str, bytes, str]] = []
+
+    def upload_file(self, key: str, content: bytes, content_type: str = "application/octet-stream") -> str:
+        self.objects[key] = bytes(content)
+        self.uploads.append((key, bytes(content), content_type))
+        return key
+
+    def download_file(self, key: str) -> bytes:
+        if key not in self.objects:
+            raise make_s3_error("NoSuchKey", key)
+        return self.objects[key]
 
 
 @pytest.fixture

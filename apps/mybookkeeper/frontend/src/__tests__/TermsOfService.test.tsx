@@ -72,17 +72,12 @@ describe("TermsOfService — rendering", () => {
     expect(screen.getAllByRole("heading", { name: /changes/i }).length).toBeGreaterThan(0);
   });
 
-  it("renders the contact email", () => {
+  it("does not expose a personal email anywhere on the page", () => {
     renderTermsOfService();
-    expect(screen.getAllByText(/jasonykwon91@gmail\.com/i).length).toBeGreaterThan(0);
-  });
-
-  it("renders an anchor link for the contact email", () => {
-    renderTermsOfService();
-    const links = screen.getAllByRole("link");
-    const mailtoLink = links.find(
-      (l) => l.getAttribute("href") === "mailto:jasonykwon91@gmail.com",
-    );
-    expect(mailtoLink).toBeDefined();
+    expect(screen.queryByText(/jasonykwon91/i)).toBeNull();
+    const mailtoLinks = screen
+      .queryAllByRole("link")
+      .filter((l) => l.getAttribute("href")?.startsWith("mailto:"));
+    expect(mailtoLinks).toHaveLength(0);
   });
 });

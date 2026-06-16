@@ -182,10 +182,8 @@ export default function TermsOfService() {
           <section id="contact">
             <h2 className="text-xl font-semibold mb-3">Contact</h2>
             <p>
-              Questions or concerns:{" "}
-              <a href="mailto:jasonykwon91@gmail.com" className="text-primary hover:underline">
-                jasonykwon91@gmail.com
-              </a>
+              Questions or concerns: a dedicated support email is being set up and will be listed
+              here soon.
             </p>
           </section>
 

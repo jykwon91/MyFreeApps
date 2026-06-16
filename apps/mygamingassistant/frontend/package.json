@@ -11,7 +11,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test --config e2e/playwright.config.ts"
+    "test:e2e": "playwright test --config e2e/playwright.config.ts",
+    "test:e2e:serve-only": "playwright test --config e2e/playwright.serve-only.config.ts"
   },
   "dependencies": {
     "@platform/ui": "*",

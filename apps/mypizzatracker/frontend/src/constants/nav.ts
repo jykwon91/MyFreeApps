@@ -21,6 +21,7 @@ const NAV_DESCRIPTORS: NavDescriptor[] = [
   { path: "/customers", label: "Customers", iconName: "Users" },
   { path: "/settings", label: "Settings", iconName: "Settings" },
   { path: "/security", label: "Security", iconName: "Shield" },
+  { path: "/support-myfreeapps", label: "Support MyFreeApps", iconName: "Heart" },
 ];
 
 /**

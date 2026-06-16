@@ -5,9 +5,11 @@ import pytest
 from platform_shared.core.boot_guards import (
     EmailNotConfiguredError,
     SmsNotConfiguredError,
+    TransparencyNotConfiguredError,
     TurnstileNotConfiguredError,
     check_email_configured,
     check_sms_configured,
+    check_transparency_configured,
     check_turnstile_configured,
 )
 
@@ -213,3 +215,55 @@ class TestCheckSmsConfigured:
 
     def test_inherits_from_runtime_error(self) -> None:
         assert issubclass(SmsNotConfiguredError, RuntimeError)
+
+
+class TestCheckTransparencyConfigured:
+    def test_dev_primary_empty_token_passes(self) -> None:
+        check_transparency_configured(
+            transparency_primary=True,
+            kofi_verification_token="",
+            environment="development",
+        )
+
+    def test_test_primary_empty_token_passes(self) -> None:
+        check_transparency_configured(
+            transparency_primary=True,
+            kofi_verification_token="",
+            environment="test",
+        )
+
+    def test_non_primary_empty_token_passes_in_prod(self) -> None:
+        """Read-only apps need no token even in production."""
+        check_transparency_configured(
+            transparency_primary=False,
+            kofi_verification_token="",
+            environment="production",
+        )
+
+    def test_primary_with_token_passes_in_prod(self) -> None:
+        check_transparency_configured(
+            transparency_primary=True,
+            kofi_verification_token="kofi-secret",
+            environment="production",
+        )
+
+    def test_primary_empty_token_raises_in_prod(self) -> None:
+        with pytest.raises(TransparencyNotConfiguredError) as exc:
+            check_transparency_configured(
+                transparency_primary=True,
+                kofi_verification_token="",
+                environment="production",
+            )
+        assert "KOFI_VERIFICATION_TOKEN" in str(exc.value)
+        assert "TRANSPARENCY_PRIMARY" in str(exc.value)
+
+    def test_primary_empty_token_raises_in_staging(self) -> None:
+        with pytest.raises(TransparencyNotConfiguredError):
+            check_transparency_configured(
+                transparency_primary=True,
+                kofi_verification_token="",
+                environment="staging",
+            )
+
+    def test_inherits_from_runtime_error(self) -> None:
+        assert issubclass(TransparencyNotConfiguredError, RuntimeError)

@@ -14,12 +14,17 @@ import { MemoryRouter } from "react-router-dom";
 
 const mockIsAuthenticated = vi.fn(() => false);
 const mockNavigate = vi.fn();
+const mockIsServeOnly = vi.fn(() => false);
 
 vi.mock("@platform/ui", () => ({
   Button: ({ children, ...props }: { children: React.ReactNode } & React.ButtonHTMLAttributes<HTMLButtonElement>) => (
     <button {...props}>{children}</button>
   ),
   useIsAuthenticated: () => mockIsAuthenticated(),
+}));
+
+vi.mock("@/lib/serveOnly", () => ({
+  isServeOnly: () => mockIsServeOnly(),
 }));
 
 vi.mock("react-router-dom", async (importOriginal) => {
@@ -38,6 +43,7 @@ function renderWithRouter(ui: React.ReactNode, initialPath = "/sources") {
 
 describe("AuthRequired", () => {
   it("renders children when authenticated", () => {
+    mockIsServeOnly.mockReturnValue(false);
     mockIsAuthenticated.mockReturnValue(true);
     renderWithRouter(
       <AuthRequired action="manage sources">
@@ -45,6 +51,21 @@ describe("AuthRequired", () => {
       </AuthRequired>,
     );
     expect(screen.getByTestId("protected")).toBeDefined();
+  });
+
+  it("in serve-only mode, redirects home and renders neither children nor sign-in card", () => {
+    mockIsServeOnly.mockReturnValue(true);
+    // Even with a valid auth token, serve-only must NOT render gated content —
+    // it redirects to the public home (fail closed).
+    mockIsAuthenticated.mockReturnValue(true);
+    renderWithRouter(
+      <AuthRequired action="manage sources">
+        <div data-testid="protected">protected content</div>
+      </AuthRequired>,
+    );
+    expect(screen.queryByTestId("protected")).toBeNull();
+    expect(screen.queryByRole("heading", { name: /sign in to/i })).toBeNull();
+    mockIsServeOnly.mockReturnValue(false);
   });
 
   it("renders sign-in fallback when not authenticated", () => {

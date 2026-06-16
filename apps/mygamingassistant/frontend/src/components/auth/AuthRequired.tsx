@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { Lock } from "lucide-react";
 import { Button, useIsAuthenticated } from "@platform/ui";
+import { isServeOnly } from "@/lib/serveOnly";
 
 interface AuthRequiredProps {
   /** What the user is trying to do, e.g., "manage sources". Shown in the fallback. */
@@ -36,6 +37,14 @@ export default function AuthRequired({
   const isAuthenticated = useIsAuthenticated();
   const location = useLocation();
   const navigate = useNavigate();
+
+  // Serve-only mode: there is no auth and no operator surface — these gated
+  // routes can never be satisfied. Redirect to the public home rather than
+  // showing a Sign-in card that points at a /login route the backend does
+  // not mount (it would 404). Fail closed: gated content is never rendered.
+  if (isServeOnly()) {
+    return <Navigate to="/" replace />;
+  }
 
   if (isAuthenticated) {
     return <>{children}</>;

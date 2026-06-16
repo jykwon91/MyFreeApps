@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Briefcase } from "lucide-react";
 import {
+  AuthPageFooter,
   LoginForm,
   LoadingButton,
   TurnstileWidget,
@@ -281,7 +282,7 @@ export default function Login() {
         )}
       </div>
 
-      <p className="mt-8 text-xs text-muted-foreground">&copy; 2026 MyJobHunter</p>
+      <AuthPageFooter appName="MyJobHunter" />
     </div>
   );
 }

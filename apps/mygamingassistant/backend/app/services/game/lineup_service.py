@@ -19,7 +19,6 @@ from __future__ import annotations
 import uuid
 from datetime import timedelta
 from typing import Optional
-from urllib.parse import unquote, urlsplit
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -36,6 +35,10 @@ from app.repositories.game.lineup_repo import (
     list_pending_lineups,
     update_lineup,
     zone_density,
+)
+from app.services.game.lineup_url_signing import (
+    _object_key_from_value,  # noqa: F401 — re-exported for tests / call-site parity
+    _sign_screenshot_url,
 )
 from app.schemas.game.lineup_schemas import (
     LineupAcceptBody,
@@ -60,9 +63,6 @@ from app.services.game.reclassify_service import (  # noqa: F401
 # Presigned PUT URLs are valid for 15 minutes — enough time for the browser
 # to complete the upload, short enough to reduce exposure on leaked URLs.
 _UPLOAD_URL_TTL = timedelta(minutes=15)
-# Presigned GET URLs for screenshots in card view — 24 hours so images stay
-# visible without re-auth on reload.
-_READ_URL_TTL = 24 * 3600  # seconds
 
 
 def _screenshot_key(user_id: uuid.UUID, lineup_id: uuid.UUID, slot: str) -> str:
@@ -125,51 +125,6 @@ def _presigned_put(storage, key: str) -> str:
     return storage._client.presigned_put_object(
         storage.bucket, key, expires=_UPLOAD_URL_TTL
     )
-
-
-def _object_key_from_value(value: str) -> str:
-    """Return the bare MinIO object key from a stored screenshot column value.
-
-    Normally *value* is already a bare key (``pending/<vid>/<n>-stand.png`` or
-    ``<user_id>/<lineup_id>/stand.png``) — the column's intended content.
-
-    A historical bug (fixed alongside migration 0007) persisted a *presigned
-    URL* into the key column: ``_sign_lineup`` assigned the signed URL back
-    onto the ORM instance, and mutating flows (accept/patch/create) committed
-    the request session, flushing that URL into the object-key column. Reads
-    then signed the URL *again*, producing a URL whose "key" was a URL-encoded
-    URL → 404 → broken image.
-
-    This peels every URL layer so signing always receives the real key. It is
-    idempotent for already-clean keys (returns them unchanged), so it doubles
-    as defense-in-depth even after the data-repair migration runs.
-    """
-    seen = 0
-    while value[:4].lower() == "http" and seen < 5:
-        parts = urlsplit(value)
-        if not parts.scheme or not parts.netloc:
-            break
-        # URL path is "/<bucket>/<key...>" — drop the leading bucket segment.
-        path = parts.path.lstrip("/")
-        _, _, key = path.partition("/")
-        value = unquote(key or path)
-        seen += 1
-    return value
-
-
-def _sign_screenshot_url(stored: Optional[str]) -> Optional[str]:
-    """Return a presigned GET URL for the screenshot, or None if unset.
-
-    Defensive: extracts the real object key first so a row whose column was
-    corrupted with a presigned URL still resolves (and never double-signs).
-    """
-    if not stored:
-        return None
-    key = _object_key_from_value(stored)
-    if not key:
-        return None
-    storage = get_storage()
-    return storage.generate_presigned_url(key, expires_in_seconds=_READ_URL_TTL)
 
 
 def _build_read(lineup: Lineup) -> LineupRead:
