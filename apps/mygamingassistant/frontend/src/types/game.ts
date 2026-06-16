@@ -320,6 +320,10 @@ export interface Source {
   kind: SourceKind;
   /** Raw config JSON from the backend — contains url/channel_url, last_sync_stats. */
   config_json: Record<string, unknown>;
+  /** Classification scope (surfaced from config_json). map_hint hard-locks the
+   *  map for every lineup from this source and implies its game in game_hint. */
+  game_hint: string | null;
+  map_hint: string | null;
   last_synced_at: string | null;
   created_at: string;
 }
@@ -327,6 +331,18 @@ export interface Source {
 export interface SourceCreate {
   kind: SourceKind;
   url: string;
+  /** Optional classification scope set at create time. map_hint implies its game. */
+  game_hint?: string | null;
+  map_hint?: string | null;
+}
+
+/**
+ * PATCH body to set/replace a source's classification scope after creation.
+ * Replace-semantics: both null clears the scope; map_hint implies its game.
+ */
+export interface SourceUpdate {
+  game_hint?: string | null;
+  map_hint?: string | null;
 }
 
 export interface SyncJobResponse {
@@ -334,6 +350,17 @@ export interface SyncJobResponse {
   source_id: string;
   status: string;
   message: string;
+}
+
+/**
+ * Result of POST /sources/{id}/reclassify — re-running the classifier over a
+ * source's pending lineups. reclassified + failed = processed this call; total
+ * is how many pending matched (may exceed processed if capped).
+ */
+export interface ReclassifySourceResult {
+  total: number;
+  reclassified: number;
+  failed: number;
 }
 
 // ---------------------------------------------------------------------------

@@ -23,8 +23,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import current_active_user
 from app.db.session import get_db
-from app.schemas.game.source_schemas import SourceCreate, SourceRead, SyncJobResponse
-from app.services.game import source_service
+from app.schemas.game.source_schemas import (
+    ReclassifySourceResult,
+    SourceCreate,
+    SourceRead,
+    SourceUpdate,
+    SyncJobResponse,
+)
+from app.services.game import lineup_service, source_service
 from app.services.ingestion import ingestion_orchestrator
 
 # Sources are entirely operator-gated. The single auth router covers the
@@ -88,6 +94,27 @@ async def get_source(
     return _source_to_read(source)
 
 
+@router.patch("/sources/{source_id}", response_model=SourceRead)
+async def update_source(
+    source_id: uuid.UUID,
+    payload: SourceUpdate,
+) -> SourceRead:
+    """Set/replace a source's classification scope (map_hint / game_hint).
+
+    Lets the operator scope an EXISTING source after creation — the create-time
+    hint is otherwise immutable. ``map_hint`` implies its game; both null clears
+    the scope. Persistence + commit are owned by the service (``unit_of_work``);
+    a bad slug surfaces as 422, an unknown source as 404.
+    """
+    try:
+        source = await source_service.update_hints(source_id, payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    if source is None:
+        raise HTTPException(status_code=404, detail="Source not found")
+    return _source_to_read(source)
+
+
 @router.delete("/sources/{source_id}", status_code=204)
 async def delete_source(
     source_id: uuid.UUID,
@@ -134,4 +161,29 @@ async def sync_source(
         source_id=source_id,
         status="queued",
         message="Sync started — lineups will appear in pending_review when complete",
+    )
+
+
+@router.post("/sources/{source_id}/reclassify", response_model=ReclassifySourceResult)
+async def reclassify_source(
+    source_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+) -> ReclassifySourceResult:
+    """Re-run the classifier over a source's pending_review lineups.
+
+    Use after setting a source's map scope to correct a review backlog that was
+    ingested before the scope existed — each pending lineup is re-classified
+    with the source's ``map_hint`` hard-locked (the bulk counterpart to the
+    per-lineup ``POST /api/lineups/{id}/classify``). The commit is owned by the
+    service/repo layer; the route performs no DB transaction call. Returns the
+    per-run counts (total matched, reclassified, failed).
+    """
+    source = await source_service.get(db, source_id)
+    if source is None:
+        raise HTTPException(status_code=404, detail="Source not found")
+    result = await lineup_service.reclassify_source_pending(db, source_id)
+    return ReclassifySourceResult(
+        total=result.total,
+        reclassified=result.reclassified,
+        failed=result.failed,
     )

@@ -158,7 +158,7 @@ qrcode==8.2
     # via
     #   myrecipes-backend
     #   platform-shared
-sentry-sdk==2.62.0
+sentry-sdk==2.63.0
     # via
     #   myrecipes-backend
     #   platform-shared

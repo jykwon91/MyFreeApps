@@ -4,7 +4,10 @@ version = "0.1.0"
 description = "MyBookkeeper FastAPI backend — AI-powered invoice extraction and bookkeeping for rental properties."
 requires-python = "==3.12.*"
 dependencies = [
-    "fastapi>=0.118,<0.140",
+    # Held below 0.137: fastapi 0.137's _IncludedRouter breaks our route-introspection
+    # tests (test_login_ip_rate_limit / test_email_verification / test_password_reset).
+    # Widen back to <0.140 in a coordinated fastapi-0.137 migration across all apps.
+    "fastapi>=0.118,<0.137",
     "starlette>=1.0,<2.0",
     "uvicorn[standard]==0.49.0",
     "sqlalchemy==2.0.51",
@@ -31,7 +34,7 @@ dependencies = [
     "httpx==0.28.1",
     "minio==7.2.20",
     "reportlab==4.5.1",
-    "sentry-sdk[fastapi]==2.62.0",
+    "sentry-sdk[fastapi]==2.63.0",
     "pyotp==2.10.0",
     "qrcode[pil]==8.2",
     "pyjwt[crypto]>=2.10",

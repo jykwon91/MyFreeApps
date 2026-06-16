@@ -14,8 +14,13 @@ __all__ = ["User", "Role"]
 
 
 class User(SQLAlchemyBaseUserTableUUID, Base):
-    # Singular table name — consistent with MBK convention.
-    __tablename__ = "user"
+    # Plural table name — multi-user convention. The canonical app
+    # (MyBookkeeper) and the other multi-user app (MyJobHunter) both use
+    # "users", and the shared register test factory
+    # (platform_shared.testing.factories.make_api_user_factory) issues raw SQL
+    # against "users". Single-user scaffolded apps use the singular "user";
+    # myrecipes was converted to multi-user and must match the plural form.
+    __tablename__ = "users"
 
     display_name: Mapped[str] = mapped_column(String(100), default="")
 

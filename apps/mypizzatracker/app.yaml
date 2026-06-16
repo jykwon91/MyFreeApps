@@ -11,6 +11,10 @@ include_bundle_tripwire: false
 # Manual-dispatch-only: no push-triggered auto-deploy. Not deployed until
 # converted to a mobile app. Flip to true + re-render to re-enable auto-deploy.
 automated_deploy: false
+# On-VPS Docker build (legacy path). Flip to true to build in CI + pull from
+# GHCR (needs GHCR_PULL_TOKEN secret + MYPIZZATRACKER_VITE_TURNSTILE_SITE_KEY var).
+# See apps/mybookkeeper/app.yaml — mbk is the first app on the registry path.
+registry_images: false
 # Fully auth-gated app — no serve-only public-library mode. Keeps the
 # VITE_SERVE_ONLY build-arg chain OUT of the rendered docker files (MGA-only).
 serve_only_build_arg: false

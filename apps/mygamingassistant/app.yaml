@@ -14,6 +14,10 @@ block_api_docs: false
 include_bundle_tripwire: true
 # Push to main auto-deploys this app. Set false to make it manual-dispatch-only.
 automated_deploy: true
+# On-VPS Docker build (legacy path). Flip to true to build in CI + pull from
+# GHCR (needs GHCR_PULL_TOKEN secret + MYGAMINGASSISTANT_VITE_TURNSTILE_SITE_KEY
+# var; serve-only adds VITE_SERVE_ONLY=true in the build job). See mybookkeeper.
+registry_images: false
 # MGA-only: render the VITE_SERVE_ONLY frontend build-arg chain (caddy.Dockerfile
 # ARG/ENV + docker-compose caddy build.args). MGA's production deploy is a pure
 # public read-only library with no auth (SERVE_ONLY=true); the bundle needs the

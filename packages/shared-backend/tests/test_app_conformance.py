@@ -61,6 +61,18 @@ def _read(*parts: str) -> str:
     return (_REPO_ROOT.joinpath(*parts)).read_text(encoding="utf-8")
 
 
+def _uses_registry_images(app: str) -> bool:
+    """True when the app builds its images in CI + pulls them from GHCR on the
+    VPS (``registry_images: true`` in app.yaml) instead of building on-box.
+
+    Apps on the registry path wire the VITE_* build args through the deploy
+    workflow's build-and-push job rather than docker-compose ``build.args``, so
+    the bundle-wiring conformance assertions below branch on this.
+    """
+    app_yaml = _read("apps", app, "app.yaml")
+    return re.search(r"^registry_images:\s*true\b", app_yaml, re.MULTILINE) is not None
+
+
 @pytest.mark.parametrize("app", _APPS)
 class TestSettingsInheritsBaseAppSettings:
     """Each app's Settings class must inherit from BaseAppSettings.
@@ -310,9 +322,34 @@ class TestTurnstileBundleWiring:
         )
 
     def test_docker_compose_passes_turnstile_arg_to_caddy(self, app: str) -> None:
-        """The caddy service in docker-compose.yml must declare a
-        build.args block that maps VITE_TURNSTILE_SITE_KEY from the shell
-        env (where the operator / deploy workflow sources backend/.env.docker)."""
+        """The VITE_TURNSTILE_SITE_KEY build arg must reach the caddy image at
+        build time. WHERE it's wired depends on the build location:
+
+        - VPS-build apps: through the caddy service's docker-compose
+          ``build.args`` block (sourced from backend/.env.docker via --env-file).
+        - Registry apps (``registry_images: true``): the image is built in the
+          deploy workflow's build-and-push job, so the build arg is wired there
+          (from a GitHub Actions variable) and the compose caddy service just
+          references the prebuilt GHCR image — no build.args block exists.
+        """
+        if _uses_registry_images(app):
+            workflow_src = _read(".github", "workflows", f"deploy-{app}.yml")
+            assert "VITE_TURNSTILE_SITE_KEY=" in workflow_src, (
+                f"deploy-{app}.yml builds the caddy image in CI "
+                f"(registry_images: true) but its build-and-push job does not "
+                f"pass VITE_TURNSTILE_SITE_KEY as a --build-arg. Without it the "
+                f"bundle is baked with an empty key and TurnstileWidget renders "
+                f"null. Add it under the caddy build step's `build-args:` in "
+                f"infra/templates/.github/workflows/deploy.yml.j2 and re-render."
+            )
+            compose_src = _read("apps", app, "docker-compose.yml")
+            assert f"myfreeapps-{app}-caddy:" in compose_src, (
+                f"{app}/docker-compose.yml has registry_images: true but the "
+                f"caddy service does not reference the prebuilt image "
+                f"ghcr.io/jykwon91/myfreeapps-{app}-caddy. Re-render from the "
+                f"template."
+            )
+            return
         compose_src = _read("apps", app, "docker-compose.yml")
         assert "VITE_TURNSTILE_SITE_KEY:" in compose_src, (
             f"{app}/docker-compose.yml must include `VITE_TURNSTILE_SITE_KEY: "
@@ -329,10 +366,40 @@ class TestTurnstileBundleWiring:
         )
 
     def test_deploy_workflow_uses_env_file_for_build(self, app: str) -> None:
-        """The deploy workflow must pass `--env-file backend/.env.docker`
-        to `docker compose build` so the build-args block can resolve
-        TURNSTILE_SITE_KEY from the env file."""
+        """The deploy workflow must build the bundle correctly for its build
+        location:
+
+        - VPS-build apps: `docker compose --env-file backend/.env.docker ...
+          build` so the build-args block can resolve TURNSTILE_SITE_KEY.
+        - Registry apps: build + push the images to GHCR in CI
+          (docker/build-push-action), then the VPS authenticates and pulls
+          them (`docker login ghcr.io` + `docker compose ... pull`) — never
+          building on-box.
+        """
         workflow_src = _read(".github", "workflows", f"deploy-{app}.yml")
+        if _uses_registry_images(app):
+            assert "docker/build-push-action" in workflow_src, (
+                f"deploy-{app}.yml has registry_images: true but no "
+                f"docker/build-push-action step — the backend + caddy images "
+                f"must be built and pushed in CI. Re-render from "
+                f"infra/templates/.github/workflows/deploy.yml.j2."
+            )
+            assert "ghcr.io/jykwon91/myfreeapps-" in workflow_src, (
+                f"deploy-{app}.yml registry path must push to (and pull from) "
+                f"ghcr.io/jykwon91/myfreeapps-{app}-*. Re-render from the "
+                f"template."
+            )
+            assert "docker login ghcr.io" in workflow_src, (
+                f"deploy-{app}.yml registry path must `docker login ghcr.io` "
+                f"on the VPS (using GHCR_PULL_TOKEN) before pulling the "
+                f"private images. Re-render from the template."
+            )
+            assert "docker-compose.yml pull" in workflow_src, (
+                f"deploy-{app}.yml registry path must `docker compose ... "
+                f"pull` the prebuilt images on the VPS instead of building "
+                f"them. Re-render from the template."
+            )
+            return
         # Match a `docker compose ... --env-file ...backend/.env.docker ... build`
         # invocation, allowing shell line-continuations (backslash + newline)
         # between the segments. Re-DOTALL lets `.` cross newlines so the
