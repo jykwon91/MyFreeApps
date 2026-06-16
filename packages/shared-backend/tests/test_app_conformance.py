@@ -472,6 +472,35 @@ class TestServeOnlyBundleWiring:
 
     @pytest.mark.parametrize("app", sorted(_SERVE_ONLY_BUNDLE_APPS))
     def test_docker_compose_passes_serve_only_arg_to_caddy(self, app: str) -> None:
+        """WHERE VITE_SERVE_ONLY is wired depends on the build location (mirrors
+        TestTurnstileBundleWiring):
+
+        - VPS-build apps: through the caddy service's docker-compose
+          ``build.args`` block (sourced from backend/.env.docker via --env-file).
+        - Registry apps (``registry_images: true``): the caddy image is built in
+          the deploy workflow's build-and-push job, so VITE_SERVE_ONLY is wired
+          there (a literal flag) and the compose caddy service just references
+          the prebuilt GHCR image — no build.args block exists.
+        """
+        if _uses_registry_images(app):
+            workflow_src = _read(".github", "workflows", f"deploy-{app}.yml")
+            assert "VITE_SERVE_ONLY=true" in workflow_src, (
+                f"deploy-{app}.yml builds the caddy image in CI "
+                f"(registry_images: true) but its build-and-push job does not "
+                f"pass VITE_SERVE_ONLY=true as a --build-arg. Without it the "
+                f"serve-only bundle re-enables the auth UI in the public "
+                f"library. Add it under the caddy build step's `build-args:` in "
+                f"infra/templates/.github/workflows/deploy.yml.j2 (gated by "
+                f"serve_only_build_arg) and re-render."
+            )
+            compose_src = _read("apps", app, "docker-compose.yml")
+            assert f"myfreeapps-{app}-caddy:" in compose_src, (
+                f"{app}/docker-compose.yml has registry_images: true but the "
+                f"caddy service does not reference the prebuilt image "
+                f"ghcr.io/jykwon91/myfreeapps-{app}-caddy. Re-render from the "
+                f"template."
+            )
+            return
         compose_src = _read("apps", app, "docker-compose.yml")
         assert "VITE_SERVE_ONLY:" in compose_src, (
             f"{app}/docker-compose.yml must include `VITE_SERVE_ONLY: "
