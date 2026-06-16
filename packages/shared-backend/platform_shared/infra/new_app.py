@@ -144,6 +144,11 @@ def _write_app_yaml(repo_root: Path, slug: str, *,
         "joins_minio_network": True,
         "block_api_docs": False,
         "include_bundle_tripwire": False,
+        # New apps auto-deploy on push to main by default. The deploy
+        # workflow template gates the push trigger on this flag (a missing
+        # key also defaults to enabled). Flip to False to scaffold an app
+        # as manual-dispatch-only.
+        "automated_deploy": True,
         "env_seed_command": "create from .env.example first",
         "csp": (
             "default-src 'self'; "

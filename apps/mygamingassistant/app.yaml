@@ -12,6 +12,8 @@ has_minio_subdomain: false
 joins_minio_network: false
 block_api_docs: false
 include_bundle_tripwire: true
+# Push to main auto-deploys this app. Set false to make it manual-dispatch-only.
+automated_deploy: true
 # MGA-only: render the VITE_SERVE_ONLY frontend build-arg chain (caddy.Dockerfile
 # ARG/ENV + docker-compose caddy build.args). MGA's production deploy is a pure
 # public read-only library with no auth (SERVE_ONLY=true); the bundle needs the
