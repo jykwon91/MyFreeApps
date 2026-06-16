@@ -72,3 +72,15 @@ mygamingassistant.myfreeapps.org {
 
     reverse_proxy 127.0.0.1:8096
 }
+
+# MyRecipes — separate subdomain. New app (no sslip.io legacy address).
+myrecipes.myfreeapps.org {
+    header {
+        Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        -Server
+    }
+
+    reverse_proxy 127.0.0.1:8100
+}
