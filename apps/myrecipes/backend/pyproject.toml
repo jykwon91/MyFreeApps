@@ -4,9 +4,9 @@ version = "0.1.0"
 description = "MyRecipes backend"
 requires-python = "==3.12.*"
 dependencies = [
-    "fastapi==0.136.1",
-    "uvicorn[standard]==0.46.0",
-    "sqlalchemy==2.0.49",
+    "fastapi==0.137.1",
+    "uvicorn[standard]==0.49.0",
+    "sqlalchemy==2.0.51",
     "alembic==1.18.4",
     "asyncpg==0.31.0",
     "psycopg2-binary==2.9.12",
@@ -14,16 +14,16 @@ dependencies = [
     "pydantic-settings==2.14.1",
     "email-validator==2.3.0",
     "fastapi-users[sqlalchemy]==15.0.5",
-    "pyjwt[crypto]==2.12.1",
+    "pyjwt[crypto]==2.13.0",
     "passlib[bcrypt]==1.7.4",
     "cryptography==48.0.0",
     "httpx==0.28.1",
-    "anyio==4.13.0",
+    "anyio==4.14.0",
     "minio==7.2.20",
     "platform-shared",
     # Sentry -- fail-loud production enforcement. See app/core/observability.py.
-    "sentry-sdk[fastapi]==2.59.0",
-    "pyotp==2.9.0",
+    "sentry-sdk[fastapi]==2.62.0",
+    "pyotp==2.10.0",
     "qrcode[pil]==8.2",
 ]
 
@@ -35,7 +35,7 @@ platform-shared = { path = "../../../packages/shared-backend", editable = true }
 
 [dependency-groups]
 dev = [
-    "pytest==9.0.3",
-    "pytest-asyncio==1.3.0",
+    "pytest==9.1.0",
+    "pytest-asyncio==1.4.0",
     "pytest-timeout==2.4.0",
 ]
