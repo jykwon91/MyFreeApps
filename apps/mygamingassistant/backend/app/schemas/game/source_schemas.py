@@ -41,8 +41,36 @@ class SourceRead(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class SourceUpdate(BaseModel):
+    """Update a source's classification scope after creation.
+
+    Both fields optional and carry REPLACE semantics — the payload is the
+    desired final scope, not a partial patch: a ``map_hint`` sets the map lock
+    (and implies its game); a lone ``game_hint`` sets the coarser game scope;
+    both null CLEARS the scope. Mirrors SourceCreate's hint validation
+    (``map_hint`` overrides ``game_hint`` to the map's own game; an unknown
+    slug surfaces as a 422 from source_service).
+    """
+    game_hint: Optional[str] = None
+    map_hint: Optional[str] = None
+
+
 class SyncJobResponse(BaseModel):
     job_id: str
     source_id: uuid.UUID
     status: str = "queued"
     message: str = "Sync started — lineups will appear in pending_review when complete"
+
+
+class ReclassifySourceResult(BaseModel):
+    """Outcome of re-running the classifier over a source's pending lineups.
+
+    ``total`` is how many pending_review lineups were matched for the source;
+    ``reclassified`` + ``failed`` are how many were actually processed this
+    call. When ``total`` exceeds the per-call batch cap, ``reclassified +
+    failed < total`` — the remainder needs another run (surfaced to the
+    operator, never a silent cap).
+    """
+    total: int
+    reclassified: int
+    failed: int

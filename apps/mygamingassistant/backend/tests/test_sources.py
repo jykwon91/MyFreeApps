@@ -383,3 +383,121 @@ def test_lineup_read_serializes_pending_row_with_null_game_map():
     assert dumped["effective_stand_y"] is None
     assert dumped["effective_target_x"] is None
     assert dumped["effective_target_y"] is None
+
+
+# ---------------------------------------------------------------------------
+# PATCH /api/sources/{id} — set/replace the classification scope on an
+# EXISTING source (the create-time hint is otherwise immutable).
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_update_source_sets_map_hint_implies_game(
+    auth_client: AsyncClient, existing_source: Source, hint_game_map
+):
+    """PATCH sets a map scope on an existing source; map_hint implies its game,
+    and pre-existing config_json keys (url) are preserved."""
+    game, mp = hint_game_map
+    resp = await auth_client.patch(
+        f"/api/sources/{existing_source.id}",
+        json={"map_hint": mp.slug},
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["map_hint"] == mp.slug
+    assert body["game_hint"] == game.slug  # map implies its game
+    assert body["config_json"]["map_hint"] == mp.slug
+    assert body["config_json"]["game_hint"] == game.slug
+    assert "PLexisting" in body["config_json"]["url"]  # url untouched
+
+
+@pytest.mark.asyncio
+async def test_update_source_game_hint_only(
+    auth_client: AsyncClient, existing_source: Source, hint_game_map
+):
+    """A lone game_hint sets the coarser game scope; map_hint stays null."""
+    game, _ = hint_game_map
+    resp = await auth_client.patch(
+        f"/api/sources/{existing_source.id}",
+        json={"game_hint": game.slug},
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["game_hint"] == game.slug
+    assert body["map_hint"] is None
+
+
+@pytest.mark.asyncio
+async def test_update_source_clears_scope(
+    auth_client: AsyncClient, db: AsyncSession, hint_game_map
+):
+    """PATCH with both hints null clears a previously-set scope (and leaves
+    other config_json keys intact)."""
+    game, mp = hint_game_map
+    src = Source(
+        kind="youtube_playlist",
+        config_json={
+            "url": "https://www.youtube.com/playlist?list=PLscoped",
+            "map_hint": mp.slug,
+            "game_hint": game.slug,
+        },
+    )
+    db.add(src)
+    await db.flush()
+
+    resp = await auth_client.patch(f"/api/sources/{src.id}", json={})
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["map_hint"] is None
+    assert body["game_hint"] is None
+    assert "map_hint" not in body["config_json"]
+    assert "game_hint" not in body["config_json"]
+    assert "PLscoped" in body["config_json"]["url"]
+
+
+@pytest.mark.asyncio
+async def test_update_source_unknown_map_hint_returns_422(
+    auth_client: AsyncClient, existing_source: Source
+):
+    resp = await auth_client.patch(
+        f"/api/sources/{existing_source.id}",
+        json={"map_hint": "no-such-map-zzz"},
+    )
+    assert resp.status_code == 422, resp.text
+    assert "no-such-map-zzz" in resp.text
+
+
+@pytest.mark.asyncio
+async def test_update_source_404(auth_client: AsyncClient):
+    resp = await auth_client.patch(f"/api/sources/{uuid.uuid4()}", json={})
+    assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# POST /api/sources/{id}/reclassify — bulk re-run over the source's pending
+# lineups. The classifier itself is stubbed; this asserts the route wiring +
+# count passthrough (the classify logic is covered in test_classifier_service).
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_reclassify_source_returns_counts(
+    auth_client: AsyncClient, existing_source: Source
+):
+    from app.services.game.lineup_service import ReclassifyBatchResult
+
+    with patch(
+        "app.api.sources.lineup_service.reclassify_source_pending",
+        new_callable=AsyncMock,
+        return_value=ReclassifyBatchResult(total=3, reclassified=2, failed=1),
+    ):
+        resp = await auth_client.post(
+            f"/api/sources/{existing_source.id}/reclassify"
+        )
+
+    assert resp.status_code == 200, resp.text
+    assert resp.json() == {"total": 3, "reclassified": 2, "failed": 1}
+
+
+@pytest.mark.asyncio
+async def test_reclassify_source_404(auth_client: AsyncClient):
+    resp = await auth_client.post(f"/api/sources/{uuid.uuid4()}/reclassify")
+    assert resp.status_code == 404
