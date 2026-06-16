@@ -22,7 +22,7 @@ dependencies = [
     "minio==7.2.20",
     "platform-shared",
     # Sentry -- fail-loud production enforcement. See app/core/observability.py.
-    "sentry-sdk[fastapi]==2.62.0",
+    "sentry-sdk[fastapi]==2.63.0",
     "pyotp==2.10.0",
     "qrcode[pil]==8.2",
 ]
