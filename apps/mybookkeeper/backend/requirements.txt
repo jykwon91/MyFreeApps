@@ -80,7 +80,7 @@ email-validator==2.3.0
     #   pydantic
 et-xmlfile==2.0.0
     # via openpyxl
-fastapi==0.136.1
+fastapi==0.137.1
     # via
     #   fastapi-users
     #   mybookkeeper-backend
@@ -207,7 +207,7 @@ pydantic==2.13.4
     #   mybookkeeper-backend
     #   platform-shared
     #   pydantic-settings
-pydantic-core==2.46.4
+pydantic-core==2.47.0
     # via pydantic
 pydantic-settings==2.14.1
     # via
@@ -263,7 +263,7 @@ requests==2.34.2
     #   requests-oauthlib
 requests-oauthlib==2.0.0
     # via google-auth-oauthlib
-sentry-sdk==2.62.0
+sentry-sdk==2.63.0
     # via
     #   mybookkeeper-backend
     #   platform-shared
