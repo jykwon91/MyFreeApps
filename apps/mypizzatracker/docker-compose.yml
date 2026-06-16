@@ -35,12 +35,7 @@ services:
       start_period: 30s
 
   migrate:
-    build:
-      # Build context is the monorepo root so the image can pull in
-      # packages/shared-backend (the `platform_shared` library) alongside
-      # apps/mypizzatracker/.
-      context: ../..
-      dockerfile: apps/mypizzatracker/docker/backend.Dockerfile
+    image: ghcr.io/jykwon91/myfreeapps-mypizzatracker-backend:${IMAGE_TAG:-latest}
     command: ["alembic", "upgrade", "head"]
     # One-shot migration — caps guard a runaway migration, not steady state.
     mem_limit: 512m
@@ -54,9 +49,7 @@ services:
         condition: service_healthy
 
   api:
-    build:
-      context: ../..
-      dockerfile: apps/mypizzatracker/docker/backend.Dockerfile
+    image: ghcr.io/jykwon91/myfreeapps-mypizzatracker-backend:${IMAGE_TAG:-latest}
     restart: unless-stopped
     # Highest single consumer on the box (the busiest app's API steady-states
     # well under this); cap leaves headroom for request-handling spikes while
@@ -84,16 +77,10 @@ services:
     # at /srv/frontend + Caddyfile baked at /etc/caddy/Caddyfile. No shared
     # volume, no entrypoint copy, no drift between deploys. See
     # docker/caddy.Dockerfile for the full rationale.
-    build:
-      context: ../..
-      dockerfile: apps/mypizzatracker/docker/caddy.Dockerfile
-      args:
-        # Frontend public env baked into the Vite bundle at build time.
-        # Read from the host shell environment when `docker compose build`
-        # runs; the deploy workflow / operator passes these via
-        # `--env-file backend/.env.docker`. Empty values produce a bundle
-        # where TurnstileWidget returns null and registration silently 400s.
-        VITE_TURNSTILE_SITE_KEY: ${TURNSTILE_SITE_KEY:-}
+    # Registry path: this image is built + pushed by the deploy workflow's
+    # build-and-push job (VITE_* build args sourced from GitHub Actions vars
+    # there, not the VPS .env.docker). The VPS pulls it; no on-box build.
+    image: ghcr.io/jykwon91/myfreeapps-mypizzatracker-caddy:${IMAGE_TAG:-latest}
     restart: unless-stopped
     mem_limit: 128m
     cpus: 0.5

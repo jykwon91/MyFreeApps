@@ -13,7 +13,7 @@ automated_deploy: true
 # On-VPS Docker build (legacy path). Flip to true to build in CI + pull from
 # GHCR (needs GHCR_PULL_TOKEN secret + MYJOBHUNTER_VITE_TURNSTILE_SITE_KEY var).
 # See apps/mybookkeeper/app.yaml — mbk is the first app on the registry path.
-registry_images: false
+registry_images: true
 # Fully auth-gated app — no serve-only public-library mode. Keeps the
 # VITE_SERVE_ONLY build-arg chain OUT of the rendered docker files (MGA-only).
 serve_only_build_arg: false
