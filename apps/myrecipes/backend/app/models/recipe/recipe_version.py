@@ -53,7 +53,7 @@ class RecipeVersion(Base):
     # directly and gives the user-delete cascade a direct path to versions.
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("user.id", ondelete="CASCADE"),
+        ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
     )
     version_number: Mapped[int] = mapped_column(Integer, nullable=False)
