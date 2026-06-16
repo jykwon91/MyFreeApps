@@ -25,8 +25,73 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+{%- if registry_images | default(false) %}
+  # Build images on the GitHub runner (fast, layer-cached via type=gha) and push
+  # to GHCR. The deploy job below PULLS these prebuilt images instead of building
+  # on the VPS — cutting deploy time from ~20m to ~2-3m and shrinking the
+  # container-recreate downtime window. Each image is tagged with the commit SHA
+  # (immutable; enables rollback via `IMAGE_TAG=<old-sha> docker compose up -d`)
+  # plus :latest. GHCR namespace = the repo owner (jykwon91).
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
+
+      - name: Log in to GHCR
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
+        with:
+          registry: ghcr.io
+          username: ${{ '{{' }} github.actor {{ '}}' }}
+          password: ${{ '{{' }} secrets.GITHUB_TOKEN {{ '}}' }}
+
+      - name: Build and push backend image
+        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
+        with:
+          context: .
+          file: apps/{{ app_slug }}/docker/backend.Dockerfile
+          push: true
+          tags: |
+            ghcr.io/jykwon91/myfreeapps-{{ app_slug }}-backend:${{ '{{' }} github.sha {{ '}}' }}
+            ghcr.io/jykwon91/myfreeapps-{{ app_slug }}-backend:latest
+          build-args: |
+            GIT_COMMIT=${{ '{{' }} github.sha {{ '}}' }}
+          cache-from: type=gha,scope={{ app_slug }}-backend
+          cache-to: type=gha,mode=max,scope={{ app_slug }}-backend
+
+      - name: Build and push caddy image
+        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
+        with:
+          context: .
+          file: apps/{{ app_slug }}/docker/caddy.Dockerfile
+          push: true
+          tags: |
+            ghcr.io/jykwon91/myfreeapps-{{ app_slug }}-caddy:${{ '{{' }} github.sha {{ '}}' }}
+            ghcr.io/jykwon91/myfreeapps-{{ app_slug }}-caddy:latest
+          # VITE_* values are inlined into the frozen bundle at build time. They
+          # now come from GitHub Actions variables (public values — the Turnstile
+          # site key is rendered into the HTML) instead of the VPS .env.docker,
+          # because the build no longer runs on the VPS. See
+          # rules/verify-frontend-build-args.md.
+          build-args: |
+            VITE_TURNSTILE_SITE_KEY=${{ '{{' }} vars.{{ app_slug | upper }}_VITE_TURNSTILE_SITE_KEY {{ '}}' }}
+{%- if serve_only_build_arg %}
+            VITE_SERVE_ONLY=true
+{%- endif %}
+          cache-from: type=gha,scope={{ app_slug }}-caddy
+          cache-to: type=gha,mode=max,scope={{ app_slug }}-caddy
+{% endif %}
   deploy:
     runs-on: ubuntu-latest
+{%- if registry_images | default(false) %}
+    needs: build-and-push
+{%- endif %}
 
     steps:
       - name: Checkout code
@@ -34,10 +99,22 @@ jobs:
 
       - name: Deploy to VPS
         uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
+{%- if registry_images | default(false) %}
+        env:
+          # Forwarded into the remote script via `envs:` below. IMAGE_TAG pins the
+          # exact images the build-and-push job just pushed; GHCR_* authenticate
+          # the VPS to pull the (private) packages.
+          IMAGE_TAG: ${{ '{{' }} github.sha {{ '}}' }}
+          GHCR_USER: ${{ '{{' }} github.repository_owner {{ '}}' }}
+          GHCR_TOKEN: ${{ '{{' }} secrets.GHCR_PULL_TOKEN {{ '}}' }}
+{%- endif %}
         with:
           host: ${{ '{{' }} secrets.SSH_HOST {{ '}}' }}
           username: ${{ '{{' }} secrets.SSH_USER {{ '}}' }}
           key: ${{ '{{' }} secrets.SSH_PRIVATE_KEY {{ '}}' }}
+{%- if registry_images | default(false) %}
+          envs: IMAGE_TAG,GHCR_USER,GHCR_TOKEN
+{%- endif %}
           # Generous: deploys are serialized via the flock below, so a
           # later app can wait through several earlier app deploys before
           # its own runs. 10m was too tight once deploys serialize.
@@ -80,6 +157,18 @@ jobs:
               exit 1
             }
             echo "Env files present — proceeding"
+{%- if registry_images | default(false) %}
+
+            echo "--- Authenticate to GHCR and pull prebuilt images ---"
+            # Images were built + pushed by the build-and-push job on the runner.
+            # The VPS only pulls — no on-box build. IMAGE_TAG pins this commit's
+            # images; docker-compose resolves ${IMAGE_TAG:-latest} against it for
+            # `pull`, `up`, and any later `create`.
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+            export IMAGE_TAG
+            docker compose -f apps/{{ app_slug }}/docker-compose.yml pull
+            docker compose -f apps/{{ app_slug }}/docker-compose.yml up -d --remove-orphans
+{%- else %}
 
             echo "--- Build and deploy with Docker ---"
             # --env-file exposes backend/.env.docker variables to docker compose's
@@ -90,6 +179,7 @@ jobs:
               --env-file apps/{{ app_slug }}/backend/.env.docker \
               build
             docker compose -f apps/{{ app_slug }}/docker-compose.yml up -d --remove-orphans
+{%- endif %}
 
             echo "--- One-time cleanup: remove obsolete frontend_dist volume ---"
             # The frontend_dist volume was used by the pre-baked-caddy layout.
@@ -155,4 +245,9 @@ jobs:
             else
               echo "Bundle freshness OK: $DEPLOYED_JS present in caddy"
             fi
+{%- endif %}
+{%- if registry_images | default(false) %}
+
+            echo "--- Clean up GHCR credentials ---"
+            docker logout ghcr.io || true
 {%- endif %}
