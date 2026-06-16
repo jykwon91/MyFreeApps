@@ -263,7 +263,7 @@ requests==2.34.2
     #   requests-oauthlib
 requests-oauthlib==2.0.0
     # via google-auth-oauthlib
-sentry-sdk==2.62.0
+sentry-sdk==2.63.0
     # via
     #   mybookkeeper-backend
     #   platform-shared
