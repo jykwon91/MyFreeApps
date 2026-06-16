@@ -46,7 +46,7 @@ colorama==0.4.6 ; sys_platform == 'win32'
     #   pytest
     #   qrcode
     #   uvicorn
-cryptography==48.0.0
+cryptography==49.0.0
     # via
     #   myrecipes-backend
     #   platform-shared
