@@ -11,7 +11,7 @@ annotated-doc==0.0.4
     # via fastapi
 annotated-types==0.7.0
     # via pydantic
-anthropic==0.109.2
+anthropic==0.111.0
     # via mybookkeeper-backend
 anyio==4.14.0
     # via
@@ -34,7 +34,7 @@ bcrypt==5.0.0
     # via
     #   passlib
     #   pwdlib
-certifi==2026.5.20
+certifi==2026.6.17
     # via
     #   httpcore
     #   httpx
@@ -80,7 +80,7 @@ email-validator==2.3.0
     #   pydantic
 et-xmlfile==2.0.0
     # via openpyxl
-fastapi==0.136.1
+fastapi==0.137.2
     # via
     #   fastapi-users
     #   mybookkeeper-backend
@@ -112,7 +112,7 @@ google-auth-oauthlib==1.4.0
     # via mybookkeeper-backend
 googleapis-common-protos==1.75.0
     # via google-api-core
-greenlet==3.5.1
+greenlet==3.5.2
     # via sqlalchemy
 h11==0.16.0
     # via
@@ -207,7 +207,7 @@ pydantic==2.13.4
     #   mybookkeeper-backend
     #   platform-shared
     #   pydantic-settings
-pydantic-core==2.46.4
+pydantic-core==2.47.0
     # via pydantic
 pydantic-settings==2.14.1
     # via
@@ -226,7 +226,7 @@ pyotp==2.10.0
     #   platform-shared
 pyparsing==3.3.2
     # via httplib2
-pypdf==6.13.2
+pypdf==6.13.3
     # via mybookkeeper-backend
 pytest==9.1.0
     # via
