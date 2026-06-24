@@ -175,6 +175,7 @@
       ],
       "backend_tests": [
         "test_email_queue_split.py",
+        "test_email_queue_dedup_filter.py",
         "test_email_sync_worker.py",
         "test_gmail_auth_expired.py",
         "test_email_discovery_last_synced.py",
@@ -209,7 +210,9 @@
         "test_prompt_service.py",
         "test_property_matcher.py",
         "test_self_healing.py",
-        "test_trusted_email_senders.py"
+        "test_trusted_email_senders.py",
+        "test_claude_service_prompt.py",
+        "test_utility_bill_silent_drop.py"
       ],
       "frontend_tests": [],
       "e2e_specs": [

@@ -172,9 +172,10 @@ async def _extract_next_fetched(ctx: RequestContext) -> ExtractResult:
                 extraction = None
 
         records_added = 0
+        skip_reason: str | None = None
         async with unit_of_work() as db:
             if extraction:
-                records_added = await save_email_extraction(
+                outcome = await save_email_extraction(
                     message_id=message_id,
                     subject=email_subject,
                     result=extraction[0],
@@ -184,6 +185,8 @@ async def _extract_next_fetched(ctx: RequestContext) -> ExtractResult:
                     db=db,
                     sender_email=sender_email,
                 )
+                records_added = outcome.records_added
+                skip_reason = outcome.skip_reason
 
             item_ref = await email_queue_repo.get_by_id(db, item_id)
             if item_ref:
@@ -195,7 +198,12 @@ async def _extract_next_fetched(ctx: RequestContext) -> ExtractResult:
                 # ``skipped`` status remains available for explicit use
                 # (e.g. an admin-triggered 're-process this email' flow)
                 # but is NOT applied automatically.
-                await email_queue_repo.mark_done(db, item_ref)
+                #
+                # When the email produced no records, persist the REASON on
+                # the row so the Sync Sessions UI can explain it — closing the
+                # silent-drop observability gap (utility bills used to vanish
+                # here with no trace).
+                await email_queue_repo.mark_done(db, item_ref, reason=skip_reason)
 
             log = await sync_log_repo.get_by_id(db, sync_log_id)
             if log:

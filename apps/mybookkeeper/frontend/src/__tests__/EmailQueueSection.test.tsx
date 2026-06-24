@@ -183,8 +183,18 @@ describe("EmailQueueSection", () => {
     expect(screen.getByText(errorMsg)).toBeInTheDocument();
   });
 
-  it("non-failed items do not show error text", () => {
-    setupMocks([makeItem({ status: "done", error: "stale error" })]);
+  it("done items show their no-records reason note", () => {
+    // Closes the silent-drop observability gap: an email that synced fine but
+    // produced no transaction (utility payment-confirmation, duplicate) now
+    // explains why on the row.
+    const reason = "Payment confirmation / notification — no amount to record";
+    setupMocks([makeItem({ status: "done", error: reason })]);
+    render(<EmailQueueSection />);
+    expect(screen.getByText(reason)).toBeInTheDocument();
+  });
+
+  it("pending/fetched/extracting items do not show error text", () => {
+    setupMocks([makeItem({ status: "fetched", error: "stale error" })]);
     render(<EmailQueueSection />);
     expect(screen.queryByText("stale error")).not.toBeInTheDocument();
   });

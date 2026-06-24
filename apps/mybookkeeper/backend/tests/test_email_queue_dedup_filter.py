@@ -162,3 +162,62 @@ class TestMarkSkipped:
         assert item.status == "skipped"
         assert item.error is not None
         assert len(item.error) == 1000
+
+
+class TestMarkDoneReason:
+    """mark_done carries an optional no-records reason so the Sync Sessions UI
+    can explain why a successfully-synced email produced no transactions."""
+
+    @pytest.mark.asyncio
+    async def test_mark_done_with_reason_persists_note(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        await _insert_queue_row(
+            db, org_id=test_org.id, user_id=test_user.id,
+            message_id="msg-done-reason", status="extracting",
+        )
+        from sqlalchemy import select
+        item = (await db.execute(
+            select(EmailQueue).where(EmailQueue.message_id == "msg-done-reason")
+        )).scalar_one()
+        await email_queue_repo.mark_done(
+            db, item, reason="Duplicate of an already-imported document",
+        )
+        await db.flush()
+        assert item.status == "done"
+        assert item.error == "Duplicate of an already-imported document"
+        assert item.raw_content is None
+
+    @pytest.mark.asyncio
+    async def test_mark_done_without_reason_clears_error(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        await _insert_queue_row(
+            db, org_id=test_org.id, user_id=test_user.id,
+            message_id="msg-done-clean", status="extracting",
+        )
+        from sqlalchemy import select
+        item = (await db.execute(
+            select(EmailQueue).where(EmailQueue.message_id == "msg-done-clean")
+        )).scalar_one()
+        await email_queue_repo.mark_done(db, item)
+        await db.flush()
+        assert item.status == "done"
+        assert item.error is None
+
+    @pytest.mark.asyncio
+    async def test_mark_done_truncates_long_reason(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        await _insert_queue_row(
+            db, org_id=test_org.id, user_id=test_user.id,
+            message_id="msg-done-long", status="extracting",
+        )
+        from sqlalchemy import select
+        item = (await db.execute(
+            select(EmailQueue).where(EmailQueue.message_id == "msg-done-long")
+        )).scalar_one()
+        await email_queue_repo.mark_done(db, item, reason="y" * 2000)
+        await db.flush()
+        assert item.error is not None
+        assert len(item.error) == 1000

@@ -11,6 +11,7 @@ from app.core.tags import transaction_type_for_category
 from app.core.trusted_email_senders import is_trusted_sender
 from app.models.documents.document import Document
 from app.models.email.email_types import Attachment
+from app.models.extraction.email_extraction_outcome import EmailExtractionOutcome
 from app.models.extraction.extraction import Extraction
 from app.models.extraction.extraction_types import ExtractionData, ExtractionResult
 from app.repositories import (
@@ -41,12 +42,23 @@ async def save_email_extraction(
     user_id: uuid.UUID,
     db: AsyncSession,
     sender_email: str | None = None,
-) -> int:
-    """Persist extracted documents from an email. Returns count added.
+) -> EmailExtractionOutcome:
+    """Persist extracted documents from an email.
+
+    Returns an :class:`EmailExtractionOutcome` carrying the number of records
+    created and, when zero were created, a human-readable reason so the Sync
+    Sessions UI can explain why a successfully-synced email produced no
+    transactions.
 
     Shared extraction logic (tag sanitization, property matching, dedup)
     is delegated to helper functions. Email-specific concerns (message dedup,
     low-confidence skip, .eml unwrapping, source="email") are handled here.
+
+    Invariant: a document carrying a valid transaction_date AND a positive
+    amount is a real expense and must never be silently dropped — not by the
+    payment-confirmation skip, not by the low-confidence skip. Utility
+    "bill ready" / "Auto Pay" notifications that state an amount due flow
+    through as a ``utilities`` expense.
     """
     documents_data: list[ExtractionData] = result.get("data", [])
     tokens: int = result.get("tokens", 0)
@@ -72,35 +84,51 @@ async def save_email_extraction(
 
     # Extraction record is created on the first non-skipped, non-duplicate doc
     ext_confidence = documents_data[0].get("confidence") if documents_data else None
-    ext_doc_type = documents_data[0].get("document_type", "invoice") if documents_data else "invoice"
+    ext_doc_type = _normalize_document_type(
+        documents_data[0].get("document_type", "invoice") if documents_data else "invoice",
+        documents_data[0] if documents_data else None,
+    )
 
     records_added = 0
     ext_record: Extraction | None = None
+    skip_reason: str | None = None
 
     # Payment confirmations: skip entirely — they duplicate the original invoice.
-    # Carve-out: peer-to-peer transfers (Zelle/Venmo/Cash App/PayPal etc.) ARE
-    # the source of truth for rent income, not duplicates. If any document in
-    # the batch looks like a P2P payment, we must not short-circuit here.
+    # Two carve-outs prevent silently dropping real money:
+    #   1. Peer-to-peer transfers (Zelle/Venmo/Cash App/PayPal etc.) ARE the
+    #      source of truth for rent income, not duplicates.
+    #   2. Any document carrying a valid date + positive amount is a real
+    #      expense record (a utility "bill ready" / "Auto Pay $232.84"
+    #      notification is the ONLY record of that charge — no paper invoice
+    #      will ever arrive). The "payment confirmation" framing must not drop
+    #      a batch that contains a recordable amount.
     has_p2p = any(_looks_like_p2p_payment(d) for d in documents_data)
-    if not has_p2p and (
+    has_recordable_amount = any(_has_recordable_expense(d) for d in documents_data)
+    if not has_p2p and not has_recordable_amount and (
         ext_doc_type == "payment_confirmation" or _is_payment_confirmation(documents_data)
     ):
-        logger.info(
-            "Skipping payment confirmation email (message_id=%s, subject=%r)",
+        logger.warning(
+            "Skipping payment confirmation email — no recordable amount "
+            "(message_id=%s, subject=%r)",
             message_id, subject,
         )
-        return records_added
+        return EmailExtractionOutcome(
+            records_added=0,
+            skip_reason="Payment confirmation / notification — no amount to record",
+        )
 
     for data in documents_data:
         doc_tags = sanitize_extraction_tags(data.get("tags"))
 
         if data.get("confidence") == "low" and (
             not doc_tags or doc_tags == ["uncategorized"]
-        ):
-            logger.info(
-                "Skipping document: low confidence + uncategorized (vendor=%r)",
+        ) and not _has_recordable_expense(data):
+            logger.warning(
+                "Skipping document: low confidence + uncategorized + no amount "
+                "(vendor=%r)",
                 data.get("vendor"),
             )
+            skip_reason = skip_reason or "Low confidence and no recognizable category"
             continue
 
         property_id = await resolve_property_id(
@@ -111,7 +139,7 @@ async def save_email_extraction(
         vendor = data.get("vendor")
         doc_date = safe_date(data.get("date"))
         amount = safe_decimal(data.get("amount"))
-        doc_type = data.get("document_type", "invoice")
+        doc_type = _normalize_document_type(data.get("document_type", "invoice"), data)
         raw_payer = data.get("payer_name")
 
         decision = await evaluate_dedup(
@@ -128,6 +156,7 @@ async def save_email_extraction(
         )
 
         if decision.action == "skip":
+            skip_reason = skip_reason or "Duplicate of an already-imported document"
             continue
 
         doc = Document(
@@ -161,6 +190,13 @@ async def save_email_extraction(
             await extraction_repo.create(db, ext_record)
 
         # Create Transaction via dedup resolution
+        if not (doc_date and amount is not None and abs(amount) > 0):
+            # A Document was created but no Transaction — Claude returned no
+            # usable date/amount. Record why so the email isn't a silent no-op.
+            skip_reason = skip_reason or (
+                "No amount or date found — saved as a document only, "
+                "no transaction created"
+            )
         if doc_date and amount is not None and abs(amount) > 0:
             category = derive_category(doc_tags)
             if category == "uncategorized" and vendor:
@@ -200,12 +236,23 @@ async def save_email_extraction(
             )
 
             # Email body extractions (no PDF attachment) are less reliable —
-            # mark transactions as "unverified" so users review them. Trusted
-            # payment senders (Airbnb, Zelle, etc.) are exempt: their emails
-            # are unambiguous structured receipts and the review step is
-            # friction without value.
-            if is_email_body and txn and not (
-                sender_email and is_trusted_sender(sender_email)
+            # mark transactions as "unverified" so users review them. Two
+            # exemptions land the transaction directly on the dashboard:
+            #   - Trusted payment senders (Airbnb, Zelle, etc.): unambiguous
+            #     structured receipts; the review step is friction without
+            #     value.
+            #   - Utility / recurring-service bills (Constellation, CenterPoint,
+            #     City of Houston Water, AT&T, etc.): a "bill ready" / "Auto Pay"
+            #     notification with a stated amount IS the record of that
+            #     expense. Leaving it "unverified" hides it from dashboard and
+            #     analytics totals (status=="approved" filter) — the exact
+            #     silent-drop the user reported. These are recurring, low-
+            #     ambiguity charges, so surface them.
+            if (
+                is_email_body
+                and txn
+                and not (sender_email and is_trusted_sender(sender_email))
+                and category != "utilities"
             ):
                 txn.status = "unverified"
 
@@ -245,7 +292,10 @@ async def save_email_extraction(
                         continue
                     await booking_statement_repo.create(db, bs)
 
-    return records_added
+    return EmailExtractionOutcome(
+        records_added=records_added,
+        skip_reason=skip_reason if records_added == 0 else None,
+    )
 
 
 _PAYMENT_CONFIRMATION_PATTERNS = re.compile(
@@ -264,6 +314,70 @@ _PAYMENT_CONFIRMATION_PATTERNS = re.compile(
 _P2P_PLATFORM_VENDORS = frozenset({
     "zelle", "venmo", "cash app", "cashapp", "paypal", "apple pay", "google pay",
 })
+
+
+# Document types that the Extraction.document_type CHECK constraint accepts.
+# A "payment_confirmation" is NOT a valid stored document_type — it is a
+# routing signal only. When such a document actually carries a recordable
+# amount (a utility "bill ready" notification that states an amount due), it
+# is a real invoice and must be stored as one, both to satisfy the DB
+# constraint and because that is what it is.
+_VALID_STORED_DOCUMENT_TYPES = frozenset({
+    "invoice", "statement", "lease", "insurance_policy", "tax_form",
+    "contract", "year_end_statement", "receipt", "1099", "other",
+    "w2", "1099_int", "1099_div", "1099_b", "1099_k",
+    "1099_misc", "1099_nec", "1099_r", "1098", "k1",
+})
+
+
+def _normalize_document_type(doc_type: str, data: dict | None) -> str:
+    """Coerce a Claude document_type to one the DB accepts.
+
+    ``payment_confirmation`` is a routing label, not a storable type. When the
+    document carries a recordable amount (a utility bill notification stating
+    an amount due) it is a real invoice — store it as ``invoice``. An
+    amount-less payment_confirmation is left untouched so the upstream
+    payment-confirmation skip still fires before any persistence happens. Any
+    other unknown type degrades to ``other`` rather than crashing the insert.
+    """
+    if doc_type == "payment_confirmation":
+        if data is not None and _has_recordable_expense(data):
+            return "invoice"
+        return doc_type
+    if doc_type in _VALID_STORED_DOCUMENT_TYPES:
+        return doc_type
+    return "other"
+
+
+def _has_recordable_expense(data: dict) -> bool:
+    """Return True if the extraction carries a real, recordable charge.
+
+    A document with a valid transaction_date AND a positive amount is a real
+    expense/income record that must never be silently dropped — not by the
+    payment-confirmation skip and not by the low-confidence skip. This is the
+    structural guarantee behind the utility-bill fix: a Constellation /
+    CenterPoint / City-of-Houston-Water "bill ready" or "Auto Pay" email that
+    states an amount due is the ONLY record of that charge, so the batch must
+    survive even if Claude mis-tags the document_type as payment_confirmation.
+
+    Claude output is untrusted — a malformed amount/date degrades to "not
+    recordable", never raises.
+    """
+    if not safe_date(data.get("date")):
+        return False
+    amount = safe_decimal(_amount_str(data.get("amount")))
+    return amount is not None and abs(amount) > 0
+
+
+def _amount_str(value: object) -> str | None:
+    """Coerce a Claude amount field to the str safe_decimal expects, or None."""
+    if value is None:
+        return None
+    if isinstance(value, str):
+        return value
+    if isinstance(value, (int, float)):
+        return str(value)
+    return None
 
 
 def _looks_like_p2p_payment(data: dict) -> bool:

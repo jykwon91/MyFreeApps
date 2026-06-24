@@ -161,10 +161,20 @@ async def store_fetched_content(
     item.error = None
 
 
-async def mark_done(db: AsyncSession, item: EmailQueue) -> None:
+async def mark_done(
+    db: AsyncSession, item: EmailQueue, *, reason: str | None = None
+) -> None:
+    """Mark a queue row as done.
+
+    ``reason`` carries an optional human-readable note explaining why the
+    email produced no records (e.g. "Duplicate", "Payment confirmation — no
+    amount"). It is stored on ``error`` (a generic per-row note column) so the
+    Sync Sessions UI can surface it. A done row with no records and no reason
+    simply means the email's documents imported cleanly.
+    """
     item.status = "done"
     item.raw_content = None
-    item.error = None
+    item.error = reason[:1000] if reason else None
 
 
 async def mark_skipped(db: AsyncSession, item: EmailQueue, *, reason: str | None = None) -> None:

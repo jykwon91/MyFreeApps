@@ -132,7 +132,7 @@ class TestEmailBodyApprovalGate:
     ) -> None:
         org_id, user_id = await _seed_org_user(db)
 
-        added = await save_email_extraction(
+        outcome = await save_email_extraction(
             message_id=f"msg-{uuid.uuid4().hex}",
             subject="Reservation confirmed",
             result=_make_extraction_result(amount="425.00", vendor="Airbnb"),
@@ -142,7 +142,8 @@ class TestEmailBodyApprovalGate:
             db=db,
             sender_email="automated@airbnb.com",
         )
-        assert added == 1
+        assert outcome.records_added == 1
+        assert outcome.skip_reason is None
 
         txn = (await db.execute(
             select(Transaction).where(Transaction.organization_id == org_id)
