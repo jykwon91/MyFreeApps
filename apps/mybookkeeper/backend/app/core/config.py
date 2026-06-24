@@ -45,6 +45,12 @@ class Settings(BaseAppSettings):
     #   - Airbnb host payouts (subject:payout)
     #   - Peer-to-peer rent payments (Zelle/Venmo/Cash App/PayPal/Apple Pay)
     #     across multiple banks (Chase, BoA, Wells, Citi, Capital One, etc.)
+    #   - Utility "bill is ready / due" notifications (water/electric/gas)
+    #     whose amount lives in the email BODY, not an attachment or a
+    #     statement-subject (City of Houston Water, AT&T, Constellation,
+    #     CenterPoint). These never matched the document-extractor clauses,
+    #     so the bills were silently never fetched even though extraction
+    #     handles them once discovered.
     gmail_search_query: str = (
         # --- Document-extractor patterns ------------------------------------
         "subject:invoice OR subject:receipt OR subject:payment OR subject:payout OR "
@@ -80,7 +86,26 @@ class Settings(BaseAppSettings):
         # notifications, NOT marketing copy.
         "\"sent you money with zelle\" OR \"with zelle®\" OR "
         "\"received money with zelle\" OR \"venmo payment received\" OR "
-        "\"you received\" OR \"sent you money\""
+        "\"you received\" OR \"sent you money\" OR "
+        # --- Utility bill-ready / due notifications -------------------------
+        # Utility providers email a "your bill is ready / your bill is due"
+        # notification carrying the amount in the BODY (e.g. City of Houston
+        # Water "Total Balance: 61.82", AT&T, Constellation, CenterPoint).
+        # They rarely carry invoice/statement/billing in the subject and never
+        # an attachment, so NONE of the document-extractor clauses above match
+        # and the bills were silently never fetched. The subject phrases are
+        # scoped to bill-ready wording — a bare ``subject:bill`` is avoided
+        # because it also matches "billing address", marketing, etc. The
+        # senders are the known utility notification domains (houstontx.gov +
+        # its tmr3.com billing vendor for City of Houston Water, AT&T's
+        # att-mail.com edges, constellation.com), so a body/subject phrasing
+        # change at the provider still gets the email discovered.
+        "subject:\"bill is ready\" OR subject:\"bill is due\" OR "
+        "subject:\"bill is now\" OR subject:\"bill is available\" OR "
+        "subject:\"water bill\" OR "
+        "from:houstontx.gov OR from:emailff.att-mail.com OR "
+        "from:emaildl.att-mail.com OR from:tmr3.com OR "
+        "from:constellation.com"
     )
     gmail_label: str = ""
 

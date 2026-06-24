@@ -178,6 +178,7 @@
         "test_email_queue_dedup_filter.py",
         "test_email_sync_worker.py",
         "test_gmail_auth_expired.py",
+        "test_gmail_search_query.py",
         "test_email_discovery_last_synced.py",
         "test_gmail_skipped_messages.py",
         "test_silent_fail_audit_fixes.py",
