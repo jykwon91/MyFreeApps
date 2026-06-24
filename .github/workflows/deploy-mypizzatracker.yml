@@ -187,5 +187,19 @@ jobs:
               echo "Host Caddyfile already up to date"
             fi
 
+            echo "--- Reclaim disk: prune images + build cache superseded by this deploy ---"
+            # Registry-pull deploys (registry_images) fetch a fresh SHA-tagged
+            # image from GHCR every time but never remove the prior one, so
+            # orphaned image layers accumulate across ALL apps on this shared
+            # 24GB droplet until the disk fills and the next deploy's "Deploy to
+            # VPS" step fails (observed 2026-06-23 at 99% full). The new
+            # containers are already up and the health check above has passed,
+            # so the in-use image is safe — `image prune -af` only removes
+            # dangling + unreferenced images (never the running one). Run on
+            # every app's deploy; the first one to fire after a fan-out reclaims
+            # the shared layers, the rest are cheap no-ops.
+            docker image prune -af || true
+            docker builder prune -af || true
+
             echo "--- Clean up GHCR credentials ---"
             docker logout ghcr.io || true

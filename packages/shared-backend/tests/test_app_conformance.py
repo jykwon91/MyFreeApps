@@ -399,6 +399,34 @@ class TestTurnstileBundleWiring:
                 f"pull` the prebuilt images on the VPS instead of building "
                 f"them. Re-render from the template."
             )
+            # Registry-pull deploys fetch a fresh SHA-tagged image every time
+            # but never remove the prior one, so orphaned layers accumulate
+            # across all apps on the shared droplet until the disk fills (the
+            # next deploy's SSH step then fails). The per-deploy prune reclaims
+            # them AFTER the health check passes (the in-use image is safe).
+            # This assertion fails if the prune step is ever dropped from the
+            # template — re-render from deploy.yml.j2.
+            assert "docker image prune -af" in workflow_src, (
+                f"deploy-{app}.yml registry path must run `docker image prune "
+                f"-af` after the health check so superseded GHCR image layers "
+                f"are reclaimed instead of accumulating until the shared "
+                f"droplet fills. Re-render from the template."
+            )
+            assert "docker builder prune -af" in workflow_src, (
+                f"deploy-{app}.yml registry path must run `docker builder prune "
+                f"-af` to reclaim build cache alongside the image prune. "
+                f"Re-render from the template."
+            )
+            # The prune must come AFTER the health check, never before — pruning
+            # before the new containers are confirmed healthy could remove the
+            # only good image on a failed roll-forward.
+            assert workflow_src.index("API is healthy") < workflow_src.index(
+                "docker image prune -af"
+            ), (
+                f"deploy-{app}.yml: the image prune must run AFTER the "
+                f"`API is healthy` check, so the in-use image is never removed "
+                f"on a failed deploy. Re-render from the template."
+            )
             return
         # Match a `docker compose ... --env-file ...backend/.env.docker ... build`
         # invocation, allowing shell line-continuations (backslash + newline)
