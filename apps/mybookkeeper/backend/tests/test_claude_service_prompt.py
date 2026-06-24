@@ -120,3 +120,34 @@ class TestBillReadyWithAmountInstruction:
     def test_known_utility_vendors_listed(self) -> None:
         for vendor in ("Constellation", "CenterPoint", "City of Houston Water", "AT&T"):
             assert vendor in DEFAULT_PROMPT
+
+
+class TestAccountNumberInstruction:
+    """The prompt must tell Claude to extract a utility/telecom/insurance
+    account number into ``account_number`` — the key the learned account ->
+    property map is built on — and to NOT use invoice/meter/reference numbers."""
+
+    def test_account_number_in_schema_block(self) -> None:
+        # The response-format JSON schema must declare the field.
+        assert '"account_number": "utility/service/insurance account number as shown, or null"' in DEFAULT_PROMPT
+
+    def test_field_rule_present(self) -> None:
+        # The # Field rules section must carry the account_number rule.
+        assert "- account_number:" in DEFAULT_PROMPT
+        assert "preserve dashes, spaces, and leading zeros" in DEFAULT_PROMPT
+
+    def test_address_section_note_present(self) -> None:
+        # The # Address extraction section must note address-less notifications.
+        assert (
+            "show an account number but NO service address" in DEFAULT_PROMPT
+        )
+
+    def test_negative_rule_excludes_invoice_and_reference_numbers(self) -> None:
+        # Must NOT mine invoice / statement / meter / confirmation / reference
+        # numbers as the account_number; null for non-account documents.
+        assert "Do NOT use an invoice number" in DEFAULT_PROMPT
+        assert "Set account_number to null" in DEFAULT_PROMPT
+
+    def test_att_example_carries_masked_account(self) -> None:
+        # The new AT&T notification example demonstrates a masked account value.
+        assert '"account_number": "Account ending in 1234"' in DEFAULT_PROMPT

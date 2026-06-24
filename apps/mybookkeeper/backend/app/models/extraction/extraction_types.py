@@ -13,6 +13,7 @@ class ExtractionData(TypedDict, total=False):
     tax_relevant: bool
     channel: str
     address: str
+    account_number: str | None
     line_items: list[dict[str, str]]
     document_type: str
     category: str

@@ -26,6 +26,7 @@ from app.mappers.booking_statement_mapper import build_booking_statement_from_li
 from app.mappers.transaction_mapper import build_transaction_from_extraction_data
 from app.services.extraction.property_matcher_service import resolve_property_id
 from app.services.extraction.sender_category_service import match_sender_category
+from app.services.extraction.utility_account_service import sender_domain_from_email
 from app.services.classification.rule_engine import classify
 from app.services.transactions.attribution_service import maybe_attribute_payment
 
@@ -134,6 +135,8 @@ async def save_email_extraction(
         property_id = await resolve_property_id(
             data.get("address"), None, organization_id, db,
             user_id=user_id, tags=doc_tags,
+            account_number=data.get("account_number"),
+            sender_domain=sender_domain_from_email(sender_email),
         )
 
         vendor = data.get("vendor")

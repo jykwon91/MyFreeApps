@@ -83,6 +83,11 @@ MBK_SENSITIVE_FIELDS: frozenset[str] = frozenset({
     # contact info, so mask them in audit_logs to be safe.
     "client_ip",
     "user_agent",
+    # Utility-account-link account number — a provider account identifier,
+    # stored plaintext on utility_account_link for equality lookup. PII-adjacent
+    # (already in core/pii.py PII_FIELD_IDS for frontend masking); mask it in
+    # audit_logs too so the plaintext never lands there.
+    "account_number",
 })
 
 # MBK skip-tables — high-volume / secret-bearing tables we don't audit.
