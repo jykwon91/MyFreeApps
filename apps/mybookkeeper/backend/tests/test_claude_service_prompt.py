@@ -101,3 +101,22 @@ class TestGetExtractionPromptDbError:
 
             with pytest.raises(RuntimeError, match="unexpected bug"):
                 await get_extraction_prompt(user_id=user_id)
+
+
+class TestBillReadyWithAmountInstruction:
+    """Regression: the prompt must tell Claude that a bill-ready / Auto Pay
+    notification carrying an amount due is an INVOICE (utilities expense), not
+    a payment_confirmation. Without this, Constellation/CenterPoint/AT&T bills
+    were tagged payment_confirmation with amount=null and silently dropped."""
+
+    def test_bill_ready_with_amount_is_invoice_not_confirmation(self) -> None:
+        # The CRITICAL EXCEPTION block must instruct invoice + utilities.
+        assert "bill-ready / billing notifications that DO show an amount" in DEFAULT_PROMPT
+        assert "are NOT \"payment_confirmation\"" in DEFAULT_PROMPT
+
+    def test_auto_pay_framing_does_not_force_confirmation(self) -> None:
+        assert "\"Auto Pay\" / \"bill is ready\"" in DEFAULT_PROMPT
+
+    def test_known_utility_vendors_listed(self) -> None:
+        for vendor in ("Constellation", "CenterPoint", "City of Houston Water", "AT&T"):
+            assert vendor in DEFAULT_PROMPT

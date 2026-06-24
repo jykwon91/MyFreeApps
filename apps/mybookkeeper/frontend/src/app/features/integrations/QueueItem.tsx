@@ -40,6 +40,11 @@ export default function QueueItem({ item, onRetry, onDismiss }: QueueItemProps) 
         {item.status === "failed" && item.error ? (
           <p className="text-xs text-red-600 mt-0.5 break-all">{item.error}</p>
         ) : null}
+        {item.status === "done" && item.error ? (
+          <p className="text-xs text-muted-foreground mt-0.5 break-all">
+            {item.error}
+          </p>
+        ) : null}
       </div>
       <div className="flex items-center gap-2 shrink-0 ml-3">
         {item.status === "extracting" ? (

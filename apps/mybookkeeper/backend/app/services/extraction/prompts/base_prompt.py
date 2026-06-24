@@ -33,12 +33,20 @@ Always return this structure (documents is always an array, even for a single re
 
 # Document types
 
-- "invoice" — invoices, bills, payment requests, utility bills, receipts
-- "payment_confirmation" — payment confirmations, payment acknowledgments, AND bill-ready notifications. This includes:
-  - Payment confirmations: "Your payment was accepted", "Payment received", "Thank you for your payment"
-  - Bill-ready notifications: "Your bill is ready to view", "Your statement is available", "View your bill online", "Bill reminder"
-  - Any email that notifies about a bill or payment but does NOT contain the actual bill/invoice document itself
+- "invoice" — invoices, bills, payment requests, utility bills, receipts, AND bill-ready / bill-amount notifications that state a specific amount due
+- "payment_confirmation" — payment confirmations / acknowledgments that do NOT contain a charge to record. This includes:
+  - Payment confirmations: "Your payment was accepted", "Payment received", "Thank you for your payment", "Auto Pay processed your payment"
+  - Bill-ready notifications that show NO amount: "Your bill is ready to view" / "Your statement is available" / "View your bill online" with no dollar figure in the email
+  - Any email that notifies about a bill or payment but does NOT contain the actual bill/invoice document itself AND shows no recordable amount
   When you detect any of these, return a single document entry with document_type "payment_confirmation", the vendor name, a description, amount null, and category "uncategorized" — do NOT extract transaction amounts, as these duplicate the original invoice or bill
+
+  CRITICAL EXCEPTION — bill-ready / billing notifications that DO show an amount due are NOT "payment_confirmation". A utility, telecom, or service-provider email that states a specific amount (e.g. "Your bill of $232.84 is ready", "Amount due: $163.12", "Your Auto Pay of $251.64 is scheduled", "Total balance $187.54") IS the record of that expense — there is no separate paper invoice that will ever arrive. The "Auto Pay" / "bill is ready" / "your statement is available" framing does NOT make it a payment confirmation when a charge amount is present. For ALL of these:
+    - Constellation, Reliant, TXU, Green Mountain, Gexa (electricity retailers)
+    - CenterPoint, Atmos, Texas Gas Service (gas)
+    - City of Houston Water, municipal water/sewer/trash utilities
+    - AT&T, Comcast/Xfinity, Spectrum, Verizon (internet/telecom)
+    - Any other recurring service provider that emails an amount due
+  set document_type "invoice", transaction_type "expense", category "utilities" (for electricity/gas/water/internet/trash/sewer providers — telecom internet is "internet"), the correct sub_category, and EXTRACT the amount and the due/statement date. Use the amount due / current charges / total balance as the amount. confidence "high" when the amount and date are both clearly present.
 
   CRITICAL EXCEPTION — peer-to-peer money transfer emails are NEVER "payment_confirmation". They ARE the source of truth for the income, not a duplicate of any invoice. This includes ALL of:
     - Zelle ("You received money with Zelle", "FN LN sent you $X with Zelle")
@@ -299,6 +307,9 @@ Invoice from a plumber:
 
 Monthly electric bill:
 {"documents": [{"document_type": "invoice", "date": "2025-08-01", "vendor": "Constellation", "amount": "187.54", "description": "Electricity Aug 2025", "transaction_type": "expense", "category": "utilities", "sub_category": "electricity", "payment_method": null, "tags": ["utilities"], "tax_relevant": true, "channel": null, "address": "6732 Peerless St Houston TX", "confidence": "high", "line_items": null}]}
+
+Bill-ready email notification that shows an amount due ("Your Constellation bill is ready. Auto Pay of $232.84 is scheduled for Jun 18."):
+{"documents": [{"document_type": "invoice", "date": "2026-06-18", "vendor": "Constellation", "amount": "232.84", "description": "Electricity bill — Auto Pay scheduled", "transaction_type": "expense", "category": "utilities", "sub_category": "electricity", "payment_method": "bank_transfer", "tags": ["utilities"], "tax_relevant": true, "channel": null, "address": null, "confidence": "high", "line_items": null}]}
 
 Invoice with towels and sheets:
 {"documents": [{"document_type": "invoice", "date": "2025-07-20", "vendor": "Amazon", "amount": "89.99", "description": "Bath towels and fitted sheets for rental", "transaction_type": "expense", "category": "maintenance", "payment_method": "credit_card", "tags": ["maintenance", "linen"], "tax_relevant": true, "channel": null, "address": null, "confidence": "high", "line_items": null}]}
