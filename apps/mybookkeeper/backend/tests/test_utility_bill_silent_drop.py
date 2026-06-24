@@ -84,6 +84,7 @@ def _utility_bill_data(
         "confidence": "high",
         "tags": ["utilities"],
         "description": "Electricity bill — Auto Pay scheduled",
+        "account_number": None,
     }
 
 
@@ -223,6 +224,7 @@ class TestGenuinePaymentConfirmationStillSkipped:
             "confidence": "high",
             "tags": ["uncategorized"],
             "description": "Thank you for your payment",
+            "account_number": None,
         }
 
         outcome = await save_email_extraction(
@@ -264,6 +266,7 @@ class TestP2PStillProtected:
             "transaction_type": "income",
             "confidence": "high",
             "tags": ["rental_revenue"],
+            "account_number": None,
         }
 
         outcome = await save_email_extraction(

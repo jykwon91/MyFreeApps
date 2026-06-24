@@ -197,7 +197,8 @@
         "backend/app/repositories/extraction/",
         "backend/app/schemas/extraction/",
         "backend/app/mappers/extraction_mapper.py",
-        "backend/app/core/trusted_email_senders.py"
+        "backend/app/core/trusted_email_senders.py",
+        "backend/app/core/utility_account_constants.py"
       ],
       "backend_tests": [
         "test_dedup_resolution.py",
@@ -210,10 +211,13 @@
         "test_airbnb_payout_detection.py",
         "test_prompt_service.py",
         "test_property_matcher.py",
+        "test_property_matcher_account_link.py",
         "test_self_healing.py",
         "test_trusted_email_senders.py",
         "test_claude_service_prompt.py",
-        "test_utility_bill_silent_drop.py"
+        "test_utility_bill_silent_drop.py",
+        "test_utility_account_service.py",
+        "test_utility_account_link_repo.py"
       ],
       "frontend_tests": [],
       "e2e_specs": [
@@ -300,11 +304,15 @@
         "backend/app/services/properties/",
         "backend/app/schemas/properties/",
         "backend/app/api/properties.py",
+        "backend/alembic/versions/utillink260624_add_utility_account_links.py",
         "frontend/src/pages/Properties.tsx",
         "frontend/src/features/properties/"
       ],
       "backend_tests": [
-        "test_property_duplicate.py"
+        "test_property_duplicate.py",
+        "test_utility_account_link_repo.py",
+        "test_utility_account_service.py",
+        "test_property_matcher_account_link.py"
       ],
       "frontend_tests": [
         "Properties.test.tsx"

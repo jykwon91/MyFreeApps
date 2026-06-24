@@ -9,6 +9,7 @@ from app.models.properties.property import Property, PropertyType
 from app.models.properties.activity_period import ActivityPeriod
 from app.models.properties.tenant import Tenant
 from app.models.properties.lease import Lease, LeaseStatus
+from app.models.properties.utility_account_link import UtilityAccountLink
 from app.models.listings.listing import Listing
 from app.models.listings.listing_photo import ListingPhoto
 from app.models.listings.listing_external_id import ListingExternalId

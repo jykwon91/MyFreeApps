@@ -25,6 +25,7 @@ Always return this structure (documents is always an array, even for a single re
       "tax_relevant": true or false,
       "channel": "airbnb | vrbo | booking.com | direct | null",
       "address": "property street address or null",
+      "account_number": "utility/service/insurance account number as shown, or null",
       "confidence": "high | medium | low",
       "line_items": null
     }
@@ -231,6 +232,7 @@ When the document is a tax source form (W-2, any 1099, 1098, or K-1), use the sp
       "tax_relevant": true,
       "channel": null,
       "address": null,
+      "account_number": null,
       "confidence": "high",
       "line_items": null,
       "tax_form_data": {
@@ -288,6 +290,7 @@ For lease, tax_form, contract, other:
 - payer_handle: the sender's STABLE account identifier when the notification exposes one, used to tell apart two different people who share a name. Extract ONLY a value actually shown — Zelle: the sender's email or phone (e.g. "jdoe@gmail.com" or "+1 555-123-4567"); Venmo: the @username (e.g. "@john-doe"); Cash App: the $cashtag (e.g. "$johndoe"); PayPal: the sender's email. Do NOT invent or infer a handle from the name. Most Zelle bank deposit alerts show only a name — set payer_handle to null in that case. Always null for platform payouts and non-payment documents.
 - vendor: single company name, never combine with "/" or "and". Use the company that issued the bill. For utilities, use the retail provider (e.g. "Constellation" not "Constellation / CenterPoint").
 - address: physical property street address, NOT the vendor's address
+- account_number: for utility, telecom, insurance, property-tax, and other account-based recurring bills, extract the account number / account ID EXACTLY as shown — preserve dashes, spaces, and leading zeros; do NOT normalize, reformat, or strip them. Capture a masked form verbatim ("Account ending in 1234", "Acct: ****5678") and NEVER invent or fill in hidden digits. If multiple account numbers appear, prefer the primary billed account; if you cannot tell, join them with " | ". Do NOT use an invoice number, statement number, meter number, confirmation number, or reference number as the account_number. Set account_number to null for documents that don't have a provider account (plumbers and other one-off contractors, peer-to-peer payments, PM statements).
 - tax_relevant: true for business expenses and taxable income
 - confidence: "low" if amount or date is missing/unclear, "medium" if partially uncertain, "high" if all fields are clear
 
@@ -299,33 +302,37 @@ For utility bills (electric, gas, water, internet), insurance policies, and prop
 - Many bills show both a mailing address and a service address — always use the service address
 - If only one address appears, use it
 - If multiple addresses appear and you cannot determine which is the service address, return all addresses in the "address" field separated by " | " so the system can match against known properties
+- Many notification emails (AT&T, CenterPoint, City of Houston Water) show an account number but NO service address at all. In that case set "address" to null and put the value in "account_number" — the system ties the bill to a property by the learned account number instead of by address.
 
 # Examples
 
 Invoice from a plumber:
-{"documents": [{"document_type": "invoice", "date": "2025-09-15", "vendor": "ABC Plumbing", "amount": "425.00", "description": "Water heater replacement at 6738 Peerless St", "transaction_type": "expense", "category": "contract_work", "payment_method": null, "tags": ["contract_work"], "tax_relevant": true, "channel": null, "address": "6738 Peerless St Houston TX", "confidence": "high", "line_items": null}]}
+{"documents": [{"document_type": "invoice", "date": "2025-09-15", "vendor": "ABC Plumbing", "amount": "425.00", "description": "Water heater replacement at 6738 Peerless St", "transaction_type": "expense", "category": "contract_work", "payment_method": null, "tags": ["contract_work"], "tax_relevant": true, "channel": null, "address": "6738 Peerless St Houston TX", "account_number": null, "confidence": "high", "line_items": null}]}
 
 Monthly electric bill:
-{"documents": [{"document_type": "invoice", "date": "2025-08-01", "vendor": "Constellation", "amount": "187.54", "description": "Electricity Aug 2025", "transaction_type": "expense", "category": "utilities", "sub_category": "electricity", "payment_method": null, "tags": ["utilities"], "tax_relevant": true, "channel": null, "address": "6732 Peerless St Houston TX", "confidence": "high", "line_items": null}]}
+{"documents": [{"document_type": "invoice", "date": "2025-08-01", "vendor": "Constellation", "amount": "187.54", "description": "Electricity Aug 2025", "transaction_type": "expense", "category": "utilities", "sub_category": "electricity", "payment_method": null, "tags": ["utilities"], "tax_relevant": true, "channel": null, "address": "6732 Peerless St Houston TX", "account_number": "1234567890", "confidence": "high", "line_items": null}]}
 
 Bill-ready email notification that shows an amount due ("Your Constellation bill is ready. Auto Pay of $232.84 is scheduled for Jun 18."):
-{"documents": [{"document_type": "invoice", "date": "2026-06-18", "vendor": "Constellation", "amount": "232.84", "description": "Electricity bill — Auto Pay scheduled", "transaction_type": "expense", "category": "utilities", "sub_category": "electricity", "payment_method": "bank_transfer", "tags": ["utilities"], "tax_relevant": true, "channel": null, "address": null, "confidence": "high", "line_items": null}]}
+{"documents": [{"document_type": "invoice", "date": "2026-06-18", "vendor": "Constellation", "amount": "232.84", "description": "Electricity bill — Auto Pay scheduled", "transaction_type": "expense", "category": "utilities", "sub_category": "electricity", "payment_method": "bank_transfer", "tags": ["utilities"], "tax_relevant": true, "channel": null, "address": null, "account_number": null, "confidence": "high", "line_items": null}]}
+
+AT&T notification email that shows an amount due but no service address ("Your AT&T bill of $89.99 is ready. Account ending in 1234."):
+{"documents": [{"document_type": "invoice", "date": "2026-06-20", "vendor": "AT&T", "amount": "89.99", "description": "AT&T internet bill", "transaction_type": "expense", "category": "utilities", "sub_category": "internet", "payment_method": "bank_transfer", "tags": ["utilities"], "tax_relevant": true, "channel": null, "address": null, "account_number": "Account ending in 1234", "confidence": "high", "line_items": null}]}
 
 Invoice with towels and sheets:
-{"documents": [{"document_type": "invoice", "date": "2025-07-20", "vendor": "Amazon", "amount": "89.99", "description": "Bath towels and fitted sheets for rental", "transaction_type": "expense", "category": "maintenance", "payment_method": "credit_card", "tags": ["maintenance", "linen"], "tax_relevant": true, "channel": null, "address": null, "confidence": "high", "line_items": null}]}
+{"documents": [{"document_type": "invoice", "date": "2025-07-20", "vendor": "Amazon", "amount": "89.99", "description": "Bath towels and fitted sheets for rental", "transaction_type": "expense", "category": "maintenance", "payment_method": "credit_card", "tags": ["maintenance", "linen"], "tax_relevant": true, "channel": null, "address": null, "account_number": null, "confidence": "high", "line_items": null}]}
 
 Mortgage statement with interest and principal breakdown:
-{"documents": [{"document_type": "statement", "date": "2025-10-01", "vendor": "Chase Mortgage", "amount": "1250.00", "description": "Oct 2025 mortgage interest", "transaction_type": "expense", "category": "mortgage_interest", "payment_method": "bank_transfer", "tags": ["mortgage_interest"], "tax_relevant": true, "channel": null, "address": "6738 Peerless St Houston TX", "confidence": "high", "line_items": null}, {"document_type": "statement", "date": "2025-10-01", "vendor": "Chase Mortgage", "amount": "450.00", "description": "Oct 2025 mortgage principal", "transaction_type": "expense", "category": "mortgage_principal", "payment_method": "bank_transfer", "tags": ["mortgage_principal"], "tax_relevant": false, "channel": null, "address": "6738 Peerless St Houston TX", "confidence": "high", "line_items": null}]}
+{"documents": [{"document_type": "statement", "date": "2025-10-01", "vendor": "Chase Mortgage", "amount": "1250.00", "description": "Oct 2025 mortgage interest", "transaction_type": "expense", "category": "mortgage_interest", "payment_method": "bank_transfer", "tags": ["mortgage_interest"], "tax_relevant": true, "channel": null, "address": "6738 Peerless St Houston TX", "account_number": null, "confidence": "high", "line_items": null}, {"document_type": "statement", "date": "2025-10-01", "vendor": "Chase Mortgage", "amount": "450.00", "description": "Oct 2025 mortgage principal", "transaction_type": "expense", "category": "mortgage_principal", "payment_method": "bank_transfer", "tags": ["mortgage_principal"], "tax_relevant": false, "channel": null, "address": "6738 Peerless St Houston TX", "account_number": null, "confidence": "high", "line_items": null}]}
 
 Airbnb payout:
-{"documents": [{"document_type": "statement", "date": "2025-09-20", "vendor": "Airbnb", "amount": "850.00", "description": "Payout for reservation HM12345", "transaction_type": "income", "category": "rental_revenue", "payment_method": "platform_payout", "tags": ["rental_revenue"], "tax_relevant": true, "channel": "airbnb", "address": "6738 Peerless St Houston TX", "confidence": "high", "line_items": null}]}
+{"documents": [{"document_type": "statement", "date": "2025-09-20", "vendor": "Airbnb", "amount": "850.00", "description": "Payout for reservation HM12345", "transaction_type": "income", "category": "rental_revenue", "payment_method": "platform_payout", "tags": ["rental_revenue"], "tax_relevant": true, "channel": "airbnb", "address": "6738 Peerless St Houston TX", "account_number": null, "confidence": "high", "line_items": null}]}
 
 Zelle payment ("You received money with Zelle" — Sonu King sent $701.20, no handle shown):
-{"documents": [{"document_type": "invoice", "date": "2026-05-03", "vendor": "Zelle", "payer_name": "Sonu King", "payer_handle": null, "amount": "701.20", "description": "Zelle from Sonu King", "transaction_type": "income", "category": "rental_revenue", "payment_method": "bank_transfer", "tags": ["rental_revenue"], "tax_relevant": true, "channel": null, "address": null, "confidence": "high", "line_items": null}]}
+{"documents": [{"document_type": "invoice", "date": "2026-05-03", "vendor": "Zelle", "payer_name": "Sonu King", "payer_handle": null, "amount": "701.20", "description": "Zelle from Sonu King", "transaction_type": "income", "category": "rental_revenue", "payment_method": "bank_transfer", "tags": ["rental_revenue"], "tax_relevant": true, "channel": null, "address": null, "account_number": null, "confidence": "high", "line_items": null}]}
 
 Venmo payment ("@john-doe paid you $1500.00"):
-{"documents": [{"document_type": "invoice", "date": "2026-05-01", "vendor": "Venmo", "payer_name": "John Doe", "payer_handle": "@john-doe", "amount": "1500.00", "description": "Venmo from John Doe", "transaction_type": "income", "category": "rental_revenue", "payment_method": "platform_payout", "tags": ["rental_revenue"], "tax_relevant": true, "channel": null, "address": null, "confidence": "high", "line_items": null}]}
+{"documents": [{"document_type": "invoice", "date": "2026-05-01", "vendor": "Venmo", "payer_name": "John Doe", "payer_handle": "@john-doe", "amount": "1500.00", "description": "Venmo from John Doe", "transaction_type": "income", "category": "rental_revenue", "payment_method": "platform_payout", "tags": ["rental_revenue"], "tax_relevant": true, "channel": null, "address": null, "account_number": null, "confidence": "high", "line_items": null}]}
 
 Cash App payment ("$800.00 from Jane Smith ($janesmith)"):
-{"documents": [{"document_type": "invoice", "date": "2026-05-02", "vendor": "Cash App", "payer_name": "Jane Smith", "payer_handle": "$janesmith", "amount": "800.00", "description": "Cash App from Jane Smith", "transaction_type": "income", "category": "rental_revenue", "payment_method": "platform_payout", "tags": ["rental_revenue"], "tax_relevant": true, "channel": null, "address": null, "confidence": "high", "line_items": null}]}
+{"documents": [{"document_type": "invoice", "date": "2026-05-02", "vendor": "Cash App", "payer_name": "Jane Smith", "payer_handle": "$janesmith", "amount": "800.00", "description": "Cash App from Jane Smith", "transaction_type": "income", "category": "rental_revenue", "payment_method": "platform_payout", "tags": ["rental_revenue"], "tax_relevant": true, "channel": null, "address": null, "account_number": null, "confidence": "high", "line_items": null}]}
 """

@@ -5,6 +5,11 @@ import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.properties.property import Property
 from app.repositories import property_repo
+from app.repositories.properties import utility_account_link_repo
+from app.services.extraction.utility_account_service import (
+    learn_account_link,
+    normalize_account_number,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -178,19 +183,70 @@ async def resolve_property_id(
     *,
     user_id: uuid.UUID | None = None,
     tags: list[str] | None = None,
+    account_number: str | None = None,
+    sender_domain: str | None = None,
 ) -> uuid.UUID | None:
+    has_account_key = bool(account_number and sender_domain)
+
+    # 1) Explicit pick wins — and is the strongest signal to learn the account
+    #    link from, so a future thin notification (no address) resolves here.
     if explicit_property_id:
+        if has_account_key and user_id:
+            await learn_account_link(
+                db,
+                organization_id=organization_id,
+                user_id=user_id,
+                sender_domain=sender_domain,
+                account_number=account_number,
+                property_id=explicit_property_id,
+            )
         return explicit_property_id
-    if not extracted_address or not extracted_address.strip():
+
+    # 2) Address match. When the bill exposes an account number too, learn the
+    #    link so future address-less notifications for this account resolve.
+    has_address = bool(extracted_address and extracted_address.strip())
+    prop_list: list[Property] = []
+    if has_address:
+        prop_list = list(await property_repo.list_by_org(db, organization_id))
+        matched = match_property_id(extracted_address, prop_list)
+        if matched:
+            if has_account_key and user_id:
+                await learn_account_link(
+                    db,
+                    organization_id=organization_id,
+                    user_id=user_id,
+                    sender_domain=sender_domain,
+                    account_number=account_number,
+                    property_id=matched,
+                )
+            return matched
+
+    # 3) Account-link lookup — the thin-notification path. A "bill is ready"
+    #    email shows an account number but no service address; resolve it via a
+    #    previously learned (sender_domain, account_number) -> property link.
+    if has_account_key:
+        assert account_number is not None and sender_domain is not None
+        link = await utility_account_link_repo.get_by_account(
+            db,
+            organization_id=organization_id,
+            sender_domain=sender_domain,
+            account_number=normalize_account_number(account_number),
+        )
+        if link is not None:
+            return link.property_id
+
+    if not has_address:
         return None
 
-    properties = await property_repo.list_by_org(db, organization_id)
-    prop_list = list(properties)
-    matched = match_property_id(extracted_address, prop_list)
-    if matched:
-        return matched
-
     if not user_id:
+        return None
+
+    # 4) Auto-create-if-property-tag. GUARD: a utility notification that carries
+    #    only an account number (no resolvable service address) is a thin
+    #    notification — its address field is the mailing address, not a real
+    #    property. Do NOT mint a junk property from it; leave property_id null so
+    #    a future learned link (or a host's manual link) can resolve it cleanly.
+    if tags and "utilities" in tags and account_number:
         return None
 
     # Only auto-create if the tags indicate this is a rental property address,
