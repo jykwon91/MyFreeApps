@@ -2,7 +2,7 @@
 #    uv export --format requirements-txt --no-hashes --no-emit-project --output-file requirements.txt
 -e ../../../packages/shared-backend
     # via myjobhunter-backend
-alembic==1.18.4
+alembic==1.18.5
     # via myjobhunter-backend
 annotated-doc==0.0.4
     # via
@@ -10,9 +10,9 @@ annotated-doc==0.0.4
     #   typer
 annotated-types==0.7.0
     # via pydantic
-anthropic==0.109.2
+anthropic==0.112.0
     # via myjobhunter-backend
-anyio==4.14.0
+anyio==4.14.1
     # via
     #   anthropic
     #   httpx
@@ -41,7 +41,7 @@ brotli==1.2.0 ; platform_python_implementation == 'CPython'
     # via fonttools
 brotlicffi==1.2.0.1 ; platform_python_implementation != 'CPython'
     # via fonttools
-certifi==2026.5.20
+certifi==2026.6.17
     # via
     #   httpcore
     #   httpx
@@ -56,7 +56,7 @@ cffi==2.0.0
     #   weasyprint
 charset-normalizer==3.4.7
     # via requests
-click==8.4.1
+click==8.4.2
     # via
     #   huggingface-hub
     #   typer
@@ -89,7 +89,7 @@ email-validator==2.3.0
     #   fastapi-users
     #   myjobhunter-backend
     #   pydantic
-fastapi==0.136.1
+fastapi==0.138.1
     # via
     #   fastapi-users
     #   myjobhunter-backend
@@ -111,7 +111,7 @@ fonttools==4.63.0
     # via weasyprint
 fsspec==2026.6.0
     # via huggingface-hub
-greenlet==3.5.1
+greenlet==3.5.2
     # via sqlalchemy
 h11==0.16.0
     # via
@@ -129,7 +129,7 @@ httpx==0.28.1
     #   huggingface-hub
     #   myjobhunter-backend
     #   platform-shared
-huggingface-hub==1.19.0
+huggingface-hub==1.21.0
     # via
     #   fastembed
     #   tokenizers
@@ -165,7 +165,7 @@ minio==7.2.20
     #   platform-shared
 mmh3==5.2.1
     # via fastembed
-numpy==2.4.6
+numpy==2.5.0
     # via
     #   fastembed
     #   onnxruntime
@@ -206,9 +206,9 @@ pydantic==2.13.4
     #   myjobhunter-backend
     #   platform-shared
     #   pydantic-settings
-pydantic-core==2.46.4
+pydantic-core==2.47.0
     # via pydantic
-pydantic-settings==2.14.1
+pydantic-settings==2.14.2
     # via
     #   myjobhunter-backend
     #   platform-shared
@@ -225,11 +225,11 @@ pyjwt==2.13.0
     #   platform-shared
 pyotp==2.10.0
     # via platform-shared
-pypdf==6.13.2
+pypdf==6.14.2
     # via myjobhunter-backend
 pyphen==0.17.2
     # via weasyprint
-pytest==9.1.0
+pytest==9.1.1
     # via
     #   pytest-asyncio
     #   pytest-timeout
@@ -280,11 +280,11 @@ tinyhtml5==2.1.0
     # via weasyprint
 tokenizers==0.23.1
     # via fastembed
-tqdm==4.68.2
+tqdm==4.68.3
     # via
     #   fastembed
     #   huggingface-hub
-typer==0.25.1
+typer==0.26.8
     # via huggingface-hub
 typing-extensions==4.15.0
     # via
@@ -308,7 +308,7 @@ typing-inspection==0.4.2
     #   pydantic-settings
 tzdata==2026.2 ; sys_platform == 'win32'
     # via tzlocal
-tzlocal==5.4
+tzlocal==5.4.3
     # via apscheduler
 urllib3==2.7.0
     # via
