@@ -5,15 +5,15 @@
 aiofiles==25.1.0
     # via mybookkeeper-backend
 aiosqlite==0.22.1
-alembic==1.18.4
+alembic==1.18.5
     # via mybookkeeper-backend
 annotated-doc==0.0.4
     # via fastapi
 annotated-types==0.7.0
     # via pydantic
-anthropic==0.109.2
+anthropic==0.112.0
     # via mybookkeeper-backend
-anyio==4.14.0
+anyio==4.14.1
     # via
     #   anthropic
     #   httpx
@@ -34,7 +34,7 @@ bcrypt==5.0.0
     # via
     #   passlib
     #   pwdlib
-certifi==2026.5.20
+certifi==2026.6.17
     # via
     #   httpcore
     #   httpx
@@ -51,7 +51,7 @@ charset-normalizer==3.4.7
     #   requests
 clamd==1.0.2
     # via mybookkeeper-backend
-click==8.4.1
+click==8.4.2
     # via uvicorn
 cobble==0.1.4
     # via mammoth
@@ -80,7 +80,7 @@ email-validator==2.3.0
     #   pydantic
 et-xmlfile==2.0.0
     # via openpyxl
-fastapi==0.136.1
+fastapi==0.136.3
     # via
     #   fastapi-users
     #   mybookkeeper-backend
@@ -96,9 +96,9 @@ fastapi-users-db-sqlalchemy==7.0.0
     #   mybookkeeper-backend
 google-api-core==2.31.0
     # via google-api-python-client
-google-api-python-client==2.197.0
+google-api-python-client==2.198.0
     # via mybookkeeper-backend
-google-auth==2.55.0
+google-auth==2.55.1
     # via
     #   google-api-core
     #   google-api-python-client
@@ -112,7 +112,7 @@ google-auth-oauthlib==1.4.0
     # via mybookkeeper-backend
 googleapis-common-protos==1.75.0
     # via google-api-core
-greenlet==3.5.1
+greenlet==3.5.2
     # via sqlalchemy
 h11==0.16.0
     # via
@@ -120,7 +120,7 @@ h11==0.16.0
     #   uvicorn
 httpcore==1.0.9
     # via httpx
-httplib2==0.31.2
+httplib2==0.32.0
     # via
     #   google-api-python-client
     #   google-auth-httplib2
@@ -131,7 +131,7 @@ httpx==0.28.1
     #   anthropic
     #   mybookkeeper-backend
     #   platform-shared
-icalendar==7.1.3
+icalendar==7.2.0
     # via mybookkeeper-backend
 idna==3.18
     # via
@@ -209,7 +209,7 @@ pydantic==2.13.4
     #   pydantic-settings
 pydantic-core==2.46.4
     # via pydantic
-pydantic-settings==2.14.1
+pydantic-settings==2.14.2
     # via
     #   mybookkeeper-backend
     #   platform-shared
@@ -226,9 +226,9 @@ pyotp==2.10.0
     #   platform-shared
 pyparsing==3.3.2
     # via httplib2
-pypdf==6.13.2
+pypdf==6.14.2
     # via mybookkeeper-backend
-pytest==9.1.0
+pytest==9.1.1
     # via
     #   pytest-anyio
     #   pytest-asyncio
