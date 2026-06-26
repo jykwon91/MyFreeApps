@@ -1,0 +1,118 @@
+name: Dependabot Lock Sync
+
+# Keeps the Python backend dependency chain consistent on Dependabot PRs:
+#
+#     pyproject.toml --(uv lock)--> uv.lock --(uv export)--> requirements.txt
+#
+# Dependabot's resolver updates only part of this chain, leaving uv.lock stale,
+# which fails `backend-deps-resolve` (uv lock --check) in each app's CI. This
+# workflow regenerates uv.lock + requirements.txt for every backend and pushes
+# the result back to the PR branch, so the PR goes green without a manual relock.
+#
+# ── One-time operator setup (REQUIRED for this to do anything) ────────────────
+#   Add a *Dependabot* repository secret named DEPENDABOT_RELOCK_TOKEN:
+#     Settings → Secrets and variables → Dependabot → New repository secret
+#   Value: a fine-grained PAT scoped to THIS repo with
+#     Contents: Read and write   +   Pull requests: Read and write
+#   It MUST be a Dependabot secret (not an Actions secret) — Dependabot-triggered
+#   runs only see Dependabot secrets. A push by the default GITHUB_TOKEN would not
+#   re-trigger the required checks, which is why a PAT is needed.
+#   Until the secret exists, this workflow no-ops (green, with a warning) and PRs
+#   continue to need a manual relock — it never blocks existing CI.
+#
+# Security: gated to the first-party dependabot[bot] actor. `uv lock` resolves the
+# PR's pyproject (which can build sdists). The dependency set is your own
+# Dependabot-managed config, so this is bounded; do not widen the actor gate.
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "apps/*/backend/pyproject.toml"
+      - "apps/*/backend/uv.lock"
+      - "apps/*/backend/requirements.txt"
+      - "packages/shared-backend/pyproject.toml"
+      - "packages/shared-backend/uv.lock"
+
+# Least privilege: writes go through the PAT, not GITHUB_TOKEN.
+permissions:
+  contents: read
+
+concurrency:
+  group: dependabot-relock-${{ github.head_ref }}
+  cancel-in-progress: true
+
+jobs:
+  relock:
+    name: relock backends
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # First-party Dependabot PRs only. A push by this workflow is authenticated
+    # as the PAT owner (not dependabot[bot]), so the re-triggered run fails this
+    # gate and skips — that is what prevents an infinite relock loop.
+    if: ${{ github.actor == 'dependabot[bot]' }}
+    steps:
+      - name: Check relock token is configured
+        id: guard
+        env:
+          RELOCK_TOKEN: ${{ secrets.DEPENDABOT_RELOCK_TOKEN }}
+        run: |
+          if [ -n "$RELOCK_TOKEN" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::DEPENDABOT_RELOCK_TOKEN (Dependabot secret) is not set; skipping auto-relock. See workflow header for setup."
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout PR head
+        if: steps.guard.outputs.enabled == 'true'
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          ref: ${{ github.head_ref }}
+          token: ${{ secrets.DEPENDABOT_RELOCK_TOKEN }}
+          fetch-depth: 0
+
+      - name: Set up uv
+        if: steps.guard.outputs.enabled == 'true'
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+
+      - name: Set up Python
+        if: steps.guard.outputs.enabled == 'true'
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: "3.12"
+
+      - name: Relock every backend (idempotent)
+        if: steps.guard.outputs.enabled == 'true'
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          for d in apps/*/backend packages/shared-backend; do
+            [ -f "$d/pyproject.toml" ] || continue
+            echo "::group::relock $d"
+            ( cd "$d" && uv lock )
+            # Regenerate requirements.txt using the exact command recorded in its
+            # own header (apps differ on --no-emit-project), so the format matches.
+            if [ -f "$d/requirements.txt" ]; then
+              cmd="$(sed -n '2{s/^#[[:space:]]*//p;}' "$d/requirements.txt")"
+              case "$cmd" in
+                "uv export"*) ( cd "$d" && bash -c "$cmd" ) ;;
+                *) ( cd "$d" && uv export --format requirements-txt --no-hashes --no-emit-project --output-file requirements.txt ) ;;
+              esac
+            fi
+            echo "::endgroup::"
+          done
+
+      - name: Commit and push if the lockfiles changed
+        if: steps.guard.outputs.enabled == 'true'
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo "Lockfiles already consistent — nothing to push."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "chore(deps): sync uv.lock + requirements.txt [dependabot-relock]"
+          git push origin "HEAD:${{ github.head_ref }}"
