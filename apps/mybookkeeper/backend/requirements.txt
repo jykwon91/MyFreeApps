@@ -255,7 +255,7 @@ qrcode==8.2
     # via
     #   mybookkeeper-backend
     #   platform-shared
-reportlab==4.5.1
+reportlab==5.0.0
     # via mybookkeeper-backend
 requests==2.34.2
     # via
