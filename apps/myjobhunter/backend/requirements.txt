@@ -2,7 +2,7 @@
 #    uv export --format requirements-txt --no-hashes --no-emit-project --output-file requirements.txt
 -e ../../../packages/shared-backend
     # via myjobhunter-backend
-alembic==1.18.4
+alembic==1.18.5
     # via myjobhunter-backend
 annotated-doc==0.0.4
     # via
@@ -12,7 +12,7 @@ annotated-types==0.7.0
     # via pydantic
 anthropic==0.109.2
     # via myjobhunter-backend
-anyio==4.14.0
+anyio==4.14.1
     # via
     #   anthropic
     #   httpx
@@ -208,7 +208,7 @@ pydantic==2.13.4
     #   pydantic-settings
 pydantic-core==2.46.4
     # via pydantic
-pydantic-settings==2.14.1
+pydantic-settings==2.14.2
     # via
     #   myjobhunter-backend
     #   platform-shared
@@ -229,7 +229,7 @@ pypdf==6.13.2
     # via myjobhunter-backend
 pyphen==0.17.2
     # via weasyprint
-pytest==9.1.0
+pytest==9.1.1
     # via
     #   pytest-asyncio
     #   pytest-timeout
