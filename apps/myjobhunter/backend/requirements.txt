@@ -71,7 +71,7 @@ colorama==0.4.6 ; sys_platform == 'win32'
     #   qrcode
     #   tqdm
     #   uvicorn
-cryptography==48.0.0
+cryptography==49.0.0
     # via
     #   myjobhunter-backend
     #   platform-shared
