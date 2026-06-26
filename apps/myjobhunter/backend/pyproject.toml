@@ -8,7 +8,7 @@ dependencies = [
     # route-introspection auth tests (login rate-limit / email-verify / password-reset),
     # the same failure mybookkeeper hit in #893. Bump in a coordinated fastapi-0.137
     # migration across all apps.
-    "fastapi==0.138.1",
+    "fastapi==0.136.1",
     "uvicorn[standard]==0.49.0",
     "sqlalchemy==2.0.51",
     "alembic==1.18.5",
