@@ -31,6 +31,12 @@ updates:
     groups:
       npm-minor-patch:
         update-types: ["minor", "patch"]
+    ignore:
+      # @types/node must track the Node runtime, not leap ahead. Major bumps
+      # (e.g. 25 -> 26) desync the lock / break tsc against the version we
+      # actually run. Allow minor+patch; hold majors until the runtime moves.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "npm"
     directory: "/packages/shared-frontend"
@@ -41,6 +47,12 @@ updates:
     groups:
       npm-minor-patch:
         update-types: ["minor", "patch"]
+    ignore:
+      # @types/node must track the Node runtime, not leap ahead. Major bumps
+      # (e.g. 25 -> 26) desync the lock / break tsc against the version we
+      # actually run. Allow minor+patch; hold majors until the runtime moves.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
 
   # GitHub Actions versions
   - package-ecosystem: "github-actions"
@@ -69,6 +81,12 @@ updates:
     groups:
       npm-minor-patch:
         update-types: ["minor", "patch"]
+    ignore:
+      # @types/node must track the Node runtime, not leap ahead. Major bumps
+      # (e.g. 25 -> 26) desync the lock / break tsc against the version we
+      # actually run. Allow minor+patch; hold majors until the runtime moves.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
 
   # Docker base images (one per app as docker-compose files are added)
   - package-ecosystem: "docker"
@@ -105,6 +123,12 @@ updates:
     groups:
       npm-minor-patch:
         update-types: ["minor", "patch"]
+    ignore:
+      # @types/node must track the Node runtime, not leap ahead. Major bumps
+      # (e.g. 25 -> 26) desync the lock / break tsc against the version we
+      # actually run. Allow minor+patch; hold majors until the runtime moves.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "docker"
     directory: "/apps/myrecipes"
