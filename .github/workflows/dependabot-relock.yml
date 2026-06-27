@@ -91,14 +91,13 @@ jobs:
             [ -f "$d/pyproject.toml" ] || continue
             echo "::group::relock $d"
             ( cd "$d" && uv lock )
-            # Regenerate requirements.txt using the exact command recorded in its
-            # own header (apps differ on --no-emit-project), so the format matches.
+            # Regenerate requirements.txt with the canonical export command (every
+            # app + the scaffold template use this exact form — see each file's
+            # header). Hardcoded rather than parsed from the header: the previous
+            # sed + `bash -c` approach mis-handled the command on the runner and
+            # streamed the export to stdout instead of the file, failing the job.
             if [ -f "$d/requirements.txt" ]; then
-              cmd="$(sed -n '2{s/^#[[:space:]]*//p;}' "$d/requirements.txt")"
-              case "$cmd" in
-                "uv export"*) ( cd "$d" && bash -c "$cmd" ) ;;
-                *) ( cd "$d" && uv export --format requirements-txt --no-hashes --no-emit-project --output-file requirements.txt ) ;;
-              esac
+              ( cd "$d" && uv export --format requirements-txt --no-hashes --no-emit-project --output-file requirements.txt )
             fi
             echo "::endgroup::"
           done
