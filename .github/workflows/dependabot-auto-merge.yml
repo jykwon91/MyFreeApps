@@ -5,10 +5,13 @@ name: Dependabot auto-merge
 # updates flow through invisibly; only a breaking-change major ever needs your
 # attention.
 #
-# The merge is enabled via `gh pr merge --auto`, which GitHub performs
-# server-side after checks go green. Because GitHub (not this token) does the
-# actual merge, this also lands github-actions PRs that edit workflow files —
-# which an OAuth/PAT token cannot merge without the `workflow` scope.
+# The job approves the PR (github-actions[bot]) and enables `gh pr merge --auto`,
+# which GitHub performs server-side after checks go green. The approval is
+# required: main enforces 1 review + last-push approval, and Dependabot cannot
+# approve its own PR, so without it auto-merge would enable then block forever.
+# Because GitHub (not this token) does the actual merge, this also lands
+# github-actions PRs that edit workflow files — which an OAuth/PAT token cannot
+# merge without the `workflow` scope.
 #
 # Security: pull_request_target runs in base context with a write token, but this
 # job NEVER checks out or executes PR code — it only reads Dependabot metadata and
@@ -41,6 +44,20 @@ jobs:
           gh pr edit "$PR_URL" --add-label "dependabot-major" || true
           gh pr comment "$PR_URL" --body \
             "🚧 Major version bump — held for manual review, not auto-merged. Merge deliberately once you've assessed the breaking changes."
+
+      - name: Approve patch / minor / security
+        if: ${{ steps.meta.outputs.update-type != 'version-update:semver-major' }}
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # main requires 1 approving review and Dependabot can't approve its own
+          # PR, so `--auto` below would enable then block forever without this.
+          # The github-actions[bot] approval satisfies the rule — it is neither the
+          # PR author (dependabot[bot]) nor the last pusher, so require_last_push_approval
+          # is met. Re-runs on each synchronize, re-approving after a relock push
+          # trips dismiss_stale_reviews. Gated to non-major (majors are held above).
+          gh pr review --approve "$PR_URL" || true
 
       - name: Enable auto-merge for patch / minor / security
         if: ${{ steps.meta.outputs.update-type != 'version-update:semver-major' }}
