@@ -61,7 +61,7 @@ colorama==0.4.6 ; sys_platform == 'win32'
     #   pytest
     #   qrcode
     #   uvicorn
-cryptography==48.0.0
+cryptography==48.0.1
     # via
     #   mypizzatracker-backend
     #   platform-shared
