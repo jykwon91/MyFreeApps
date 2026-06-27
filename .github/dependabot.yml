@@ -4,7 +4,7 @@ updates:
   - package-ecosystem: "pip"
     directory: "/apps/myjobhunter/backend"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
     open-pull-requests-limit: 5
     labels: ["dependencies", "python", "myjobhunter"]
     groups:
@@ -14,7 +14,7 @@ updates:
   - package-ecosystem: "pip"
     directory: "/packages/shared-backend"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
     open-pull-requests-limit: 5
     labels: ["dependencies", "python", "shared"]
     groups:
@@ -25,7 +25,7 @@ updates:
   - package-ecosystem: "npm"
     directory: "/apps/myjobhunter/frontend"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
     open-pull-requests-limit: 5
     labels: ["dependencies", "npm", "myjobhunter"]
     groups:
@@ -41,7 +41,7 @@ updates:
   - package-ecosystem: "npm"
     directory: "/packages/shared-frontend"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
     open-pull-requests-limit: 5
     labels: ["dependencies", "npm", "shared"]
     groups:
@@ -58,14 +58,14 @@ updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
     open-pull-requests-limit: 5
     labels: ["dependencies", "github-actions"]
 
   - package-ecosystem: "pip"
     directory: "/apps/mybookkeeper/backend"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
     open-pull-requests-limit: 5
     labels: ["dependencies", "python", "mybookkeeper"]
     groups:
@@ -75,7 +75,7 @@ updates:
   - package-ecosystem: "npm"
     directory: "/apps/mybookkeeper/frontend"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
     open-pull-requests-limit: 5
     labels: ["dependencies", "npm", "mybookkeeper"]
     groups:
@@ -92,14 +92,14 @@ updates:
   - package-ecosystem: "docker"
     directory: "/apps/myjobhunter"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
     open-pull-requests-limit: 3
     labels: ["dependencies", "docker", "myjobhunter"]
 
   - package-ecosystem: "docker"
     directory: "/apps/mybookkeeper"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
     open-pull-requests-limit: 3
     labels: ["dependencies", "docker", "mybookkeeper"]
 
@@ -107,7 +107,7 @@ updates:
   - package-ecosystem: "pip"
     directory: "/apps/myrecipes/backend"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
     open-pull-requests-limit: 5
     labels: ["dependencies", "python", "myrecipes"]
     groups:
@@ -117,7 +117,7 @@ updates:
   - package-ecosystem: "npm"
     directory: "/apps/myrecipes/frontend"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
     open-pull-requests-limit: 5
     labels: ["dependencies", "npm", "myrecipes"]
     groups:
@@ -133,6 +133,6 @@ updates:
   - package-ecosystem: "docker"
     directory: "/apps/myrecipes"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
     open-pull-requests-limit: 3
     labels: ["dependencies", "docker", "myrecipes"]
