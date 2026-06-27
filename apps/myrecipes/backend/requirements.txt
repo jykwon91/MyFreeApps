@@ -28,7 +28,7 @@ bcrypt==5.0.0
     # via
     #   passlib
     #   pwdlib
-certifi==2026.5.20
+certifi==2026.6.17
     # via
     #   httpcore
     #   httpx
@@ -38,7 +38,7 @@ cffi==2.0.0
     # via
     #   argon2-cffi-bindings
     #   cryptography
-click==8.4.1
+click==8.4.2
     # via uvicorn
 colorama==0.4.6 ; sys_platform == 'win32'
     # via
@@ -70,7 +70,7 @@ fastapi-users==15.0.5
     #   myrecipes-backend
 fastapi-users-db-sqlalchemy==7.0.0
     # via fastapi-users
-greenlet==3.5.1
+greenlet==3.5.3
     # via sqlalchemy
 h11==0.16.0
     # via
@@ -123,7 +123,7 @@ pydantic==2.13.4
     #   myrecipes-backend
     #   platform-shared
     #   pydantic-settings
-pydantic-core==2.46.4
+pydantic-core==2.47.0
     # via pydantic
 pydantic-settings==2.14.2
     # via
