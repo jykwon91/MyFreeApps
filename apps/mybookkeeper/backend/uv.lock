@@ -829,7 +829,7 @@ requires-dist = [
     { name = "clamd", specifier = "==1.0.2" },
     { name = "cryptography", specifier = ">=48" },
     { name = "email-validator", specifier = "==2.3.0" },
-    { name = "fastapi", specifier = ">=0.118,<0.137" },
+    { name = "fastapi", specifier = ">=0.118,<0.139" },
     { name = "fastapi-users", extras = ["sqlalchemy"], specifier = "==15.0.5" },
     { name = "fastapi-users-db-sqlalchemy", specifier = "==7.0.0" },
     { name = "google-api-python-client", specifier = "==2.198.0" },
