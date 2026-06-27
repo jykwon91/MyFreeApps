@@ -10,6 +10,14 @@ updates:
     groups:
       python-minor-patch:
         update-types: ["minor", "patch"]
+    ignore:
+      # fastapi held < 0.137: 0.137's _IncludedRouter refactor breaks our
+      # route-introspection tests. Without this, Dependabot keeps proposing the
+      # bump, CI goes red, and it must be hand-relocked every cycle. Ignore
+      # >= 0.137 until those tests are migrated for _IncludedRouter, then drop
+      # this block. See project_dependabot_autorelock_and_fastapi_hold.
+      - dependency-name: "fastapi"
+        versions: [">=0.137"]
 
   - package-ecosystem: "pip"
     directory: "/packages/shared-backend"
@@ -71,6 +79,14 @@ updates:
     groups:
       python-minor-patch:
         update-types: ["minor", "patch"]
+    ignore:
+      # fastapi held < 0.137: 0.137's _IncludedRouter refactor breaks our
+      # route-introspection tests. Without this, Dependabot keeps widening the
+      # pin (and an auto-merge would silently land it green). Ignore >= 0.137
+      # until those tests are migrated for _IncludedRouter, then drop this
+      # block. See project_dependabot_autorelock_and_fastapi_hold.
+      - dependency-name: "fastapi"
+        versions: [">=0.137"]
 
   - package-ecosystem: "npm"
     directory: "/apps/mybookkeeper/frontend"
