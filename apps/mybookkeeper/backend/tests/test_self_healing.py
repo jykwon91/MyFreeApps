@@ -214,6 +214,44 @@ class TestRetryLogic:
         assert 230 < delta_2 < 260
 
 
+class TestErrorClassification:
+    def test_generic_error_keeps_friendly_message_and_real_type(self) -> None:
+        from app.workers.upload_processor_worker import _classify_extraction_error
+
+        user_msg, diagnostic = _classify_extraction_error(RuntimeError("boom from claude"))
+        assert user_msg == "An unexpected error occurred during extraction. Try re-extracting this document."
+        # The diagnostic preserves the real exception type + message for admins.
+        assert diagnostic.startswith("RuntimeError: ")
+        assert "boom from claude" in diagnostic
+
+    def test_timeout_error_message(self) -> None:
+        from app.workers.upload_processor_worker import _classify_extraction_error
+
+        user_msg, diagnostic = _classify_extraction_error(asyncio.TimeoutError())
+        assert "timed out" in user_msg
+        assert diagnostic.startswith("TimeoutError")
+
+    def test_db_save_error_message(self) -> None:
+        import sqlalchemy.exc
+        from app.workers.upload_processor_worker import _classify_extraction_error
+
+        exc = sqlalchemy.exc.IntegrityError("INSERT ...", {}, Exception("unique violation"))
+        user_msg, diagnostic = _classify_extraction_error(exc)
+        assert "saving the extraction results" in user_msg
+        assert diagnostic.startswith("IntegrityError")
+
+    def test_auth_error_message(self) -> None:
+        import anthropic
+        from app.workers.upload_processor_worker import _classify_extraction_error
+
+        mock_response = MagicMock()
+        mock_response.status_code = 401
+        exc = anthropic.AuthenticationError(message="bad key", response=mock_response, body=None)
+        user_msg, diagnostic = _classify_extraction_error(exc)
+        assert "contact support" in user_msg
+        assert diagnostic.startswith("AuthenticationError")
+
+
 class TestThrottleState:
     def test_throttle_initial_state(self) -> None:
         from app.services.extraction.claude_service import _ThrottleState
