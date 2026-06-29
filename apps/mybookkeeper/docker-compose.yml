@@ -92,10 +92,9 @@ services:
     env_file: backend/.env.docker
     environment:
       DATABASE_URL: postgresql+asyncpg://mybookkeeper:${DB_PASSWORD}@postgres/mybookkeeper
-      # Extraction reads each document's file back from MinIO (the api stores
-      # uploads there via file_storage_key), so the worker needs the same MinIO
-      # credentials the api has — sourced from the shared infra/ stack via the
-      # ``myfreeapps`` external network. Without these the worker raises
+      # Workers read/write document files in MinIO (extraction downloads by
+      # file_storage_key; email sync stores attachments), so they need the same
+      # MinIO credentials as the api — without them the worker raises
       # StorageNotConfiguredError on every storage-backed document.
       MINIO_ENDPOINT: ${MINIO_ENDPOINT}
       MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT}
@@ -119,9 +118,10 @@ services:
     env_file: backend/.env.docker
     environment:
       DATABASE_URL: postgresql+asyncpg://mybookkeeper:${DB_PASSWORD}@postgres/mybookkeeper
-      # Email-sourced documents are stored to MinIO during sync, so the
-      # scheduler needs the same MinIO credentials as the api and the
-      # upload-processor (see the upload-processor service for the rationale).
+      # Workers read/write document files in MinIO (extraction downloads by
+      # file_storage_key; email sync stores attachments), so they need the same
+      # MinIO credentials as the api — without them the worker raises
+      # StorageNotConfiguredError on every storage-backed document.
       MINIO_ENDPOINT: ${MINIO_ENDPOINT}
       MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT}
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-${MINIO_ROOT_USER}}
