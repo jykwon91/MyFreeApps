@@ -1,12 +1,12 @@
 import { useMemo } from "react";
 import { createColumnHelper } from "@tanstack/react-table";
 import type { ColumnDef } from "@tanstack/react-table";
-import { FileCheck, RotateCw, Trash2 } from "lucide-react";
+import { FileCheck } from "lucide-react";
 import { formatDate, timeAgo } from "@/shared/utils/date";
 import { DOCUMENT_TYPE_LABELS } from "@/shared/lib/constants";
 import type { Document } from "@/shared/types/document/document";
-import { Button } from "@platform/ui";
 import StatusBadge from "@/app/features/documents/StatusBadge";
+import DocumentRowActions from "@/app/features/documents/DocumentRowActions";
 import IndeterminateCheckbox from "@/shared/components/ui/IndeterminateCheckbox";
 
 interface ColumnActions {
@@ -131,49 +131,16 @@ export function useDocumentColumns(actions: ColumnActions): ColumnDef<Document, 
         id: "actions",
         enableSorting: false,
         header: () => null,
-        cell: ({ row }) => {
-          if (!canWrite) return null;
-          return (
-            <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
-              {onReExtract && row.original.status === "failed" && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onReExtract(row.original.id)}
-                  disabled={reExtractingId === row.original.id}
-                  title="Re-extract this document"
-                  aria-label="Re-extract this document"
-                  className="p-1.5 text-muted-foreground hover:text-primary"
-                >
-                  <RotateCw
-                    size={14}
-                    className={reExtractingId === row.original.id ? "animate-spin" : ""}
-                  />
-                </Button>
-              )}
-              {onToggleEscrow && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onToggleEscrow(row.original.id, row.original.is_escrow_paid)}
-                  title={row.original.is_escrow_paid ? "Unmark as reference-only" : "Mark as reference-only (escrow-paid)"}
-                  className={`p-1.5 ${row.original.is_escrow_paid ? "text-blue-600" : "text-muted-foreground hover:text-blue-600"}`}
-                >
-                  <FileCheck size={14} />
-                </Button>
-              )}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => onDelete(row.original.id)}
-                title="Delete"
-                className="p-1.5 text-destructive hover:text-destructive"
-              >
-                <Trash2 size={14} />
-              </Button>
-            </div>
-          );
-        },
+        cell: ({ row }) => (
+          <DocumentRowActions
+            doc={row.original}
+            onDelete={onDelete}
+            onToggleEscrow={onToggleEscrow}
+            onReExtract={onReExtract}
+            reExtractingId={reExtractingId}
+            canWrite={canWrite}
+          />
+        ),
       }),
     ],
     [onDelete, onToggleEscrow, onReExtract, reExtractingId, canWrite],

@@ -11,6 +11,7 @@ import { PAGE_SIZE_OPTIONS, DOCUMENT_TYPE_LABELS } from "@/shared/lib/constants"
 import EmptyState from "@/shared/components/ui/EmptyState";
 import { SortIndicator, ColumnFilter } from "@/shared/components/table";
 import StatusBadge from "@/app/features/documents/StatusBadge";
+import DocumentRowActions from "@/app/features/documents/DocumentRowActions";
 import { timeAgo } from "@/shared/utils/date";
 import { cn } from "@/shared/utils/cn";
 
@@ -23,9 +24,24 @@ export interface DocumentTableProps {
   colCount: number;
   filterOptions: FilterOptions;
   onRowClick?: (doc: Document) => void;
+  onDelete?: (id: string) => void;
+  onToggleEscrow?: (id: string, currentValue: boolean) => void;
+  onReExtract?: (id: string) => void;
+  reExtractingId?: string | null;
+  canWrite?: boolean;
 }
 
-export default function DocumentTable({ table, colCount, filterOptions, onRowClick }: DocumentTableProps) {
+export default function DocumentTable({
+  table,
+  colCount,
+  filterOptions,
+  onRowClick,
+  onDelete,
+  onToggleEscrow,
+  onReExtract,
+  reExtractingId,
+  canWrite = true,
+}: DocumentTableProps) {
   const { pageIndex, pageSize } = table.getState().pagination;
   const totalRows = table.getFilteredRowModel().rows.length;
   const start = pageIndex * pageSize + 1;
@@ -44,32 +60,46 @@ export default function DocumentTable({ table, colCount, filterOptions, onRowCli
               ? (DOCUMENT_TYPE_LABELS[doc.document_type] ?? doc.document_type)
               : null;
             return (
-              <button
-                key={doc.id}
-                onClick={() => onRowClick?.(doc)}
-                className={cn(
-                  "w-full text-left p-4 hover:bg-muted/50 min-h-[44px]",
-                  onRowClick && "cursor-pointer",
-                )}
-              >
-                <div className="flex justify-between items-start gap-2">
-                  <p className="font-medium text-sm truncate min-w-0">
-                    {doc.file_name ?? "\u2014"}
-                  </p>
-                  <span className="text-xs px-2 py-0.5 rounded bg-muted whitespace-nowrap">
-                    {doc.source === "email" ? "Email" : "Upload"}
-                  </span>
-                </div>
-                <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
-                  <StatusBadge status={doc.status} errorMessage={doc.error_message} />
-                  {typeLabel && (
-                    <span className="text-xs text-muted-foreground">{typeLabel}</span>
+              <div key={doc.id} className="p-4 hover:bg-muted/50">
+                <button
+                  onClick={() => onRowClick?.(doc)}
+                  className={cn(
+                    "w-full text-left min-h-[44px]",
+                    onRowClick && "cursor-pointer",
                   )}
-                  <span className="text-xs text-muted-foreground ml-auto">
-                    {timeAgo(doc.created_at)}
-                  </span>
-                </div>
-              </button>
+                >
+                  <div className="flex justify-between items-start gap-2">
+                    <p className="font-medium text-sm truncate min-w-0">
+                      {doc.file_name ?? "\u2014"}
+                    </p>
+                    <span className="text-xs px-2 py-0.5 rounded bg-muted whitespace-nowrap">
+                      {doc.source === "email" ? "Email" : "Upload"}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                    <StatusBadge status={doc.status} errorMessage={doc.error_message} />
+                    {typeLabel && (
+                      <span className="text-xs text-muted-foreground">{typeLabel}</span>
+                    )}
+                    <span className="text-xs text-muted-foreground ml-auto">
+                      {timeAgo(doc.created_at)}
+                    </span>
+                  </div>
+                </button>
+                {canWrite && onDelete && (
+                  <div className="mt-2 flex justify-end border-t pt-2">
+                    <DocumentRowActions
+                      doc={doc}
+                      onDelete={onDelete}
+                      onToggleEscrow={onToggleEscrow}
+                      onReExtract={onReExtract}
+                      reExtractingId={reExtractingId}
+                      canWrite={canWrite}
+                      comfortable
+                    />
+                  </div>
+                )}
+              </div>
             );
           })
         )}

@@ -264,6 +264,11 @@ export default function Documents() {
           colCount={colCount}
           filterOptions={filterOptions}
           onRowClick={(doc) => setViewingDocId(doc.id)}
+          onDelete={handleDelete}
+          onToggleEscrow={handleToggleEscrow}
+          onReExtract={handleReExtract}
+          reExtractingId={reExtractingId}
+          canWrite={canWrite}
         />
       )}
 
