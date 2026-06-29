@@ -169,4 +169,50 @@ test.describe("Documents — re-extract a failed document", () => {
       page.locator("tbody tr", { hasText: FAILED_FILE }).getByTitle("Completed"),
     ).toBeVisible({ timeout: 15000 });
   });
+
+  test("on a mobile viewport the re-extract action is reachable on the failed document card", async ({ page }) => {
+    // The desktop table is hidden below the md breakpoint; the mobile card view
+    // renders instead. Row actions used to be desktop-only, so a failed document
+    // could not be retried on a phone at all. getByRole excludes the hidden
+    // desktop table (includeHidden defaults to false), so it resolves only the
+    // visible mobile-card action.
+    await page.setViewportSize({ width: 390, height: 844 });
+    await plantValidJwtAndOrgInLocalStorage(page);
+    await stubAuthAndOrg(page);
+
+    let reExtractMethod: string | null = null;
+
+    await page.route("**/api/documents*", async (route, request) => {
+      if (request.method() !== "GET") {
+        await route.fallback();
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify([documentRow("failed", "I couldn't read this document — the file looks corrupted.")]),
+      });
+    });
+    await page.route(`**/api/documents/${DOC_ID}/re-extract`, async (route, request) => {
+      reExtractMethod = request.method();
+      await route.fulfill({ status: 202, contentType: "application/json", body: JSON.stringify({ status: "processing" }) });
+    });
+
+    await page.goto("/documents");
+    await expect(page.getByRole("heading", { name: "Documents" })).toBeVisible({ timeout: 15000 });
+
+    // The failed document's card exposes reachable row actions. getByRole
+    // resolves only the visible mobile-card buttons (the hidden desktop table's
+    // duplicates are excluded), so a single match proves the mobile-card fix.
+    const reExtractBtn = page.getByRole("button", { name: "Re-extract this document" });
+    await expect(reExtractBtn).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole("button", { name: "Delete document" })).toBeVisible();
+
+    // Clicking it fires the real re-extract request and confirms with a toast.
+    await reExtractBtn.click();
+    await expect
+      .poll(() => reExtractMethod, { timeout: 10000, message: "re-extract request was never sent from mobile" })
+      .toBe("POST");
+    await expect(page.getByText("take another look at this one")).toBeVisible({ timeout: 10000 });
+  });
 });

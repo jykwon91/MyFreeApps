@@ -156,8 +156,10 @@ describe('Documents', () => {
 
   it('renders document file names from API data', () => {
     renderWithProviders(<Documents />);
-    expect(screen.getByText('invoice_jan.pdf')).toBeInTheDocument();
-    expect(screen.getByText('water_bill.pdf')).toBeInTheDocument();
+    // Names render in both the responsive mobile-card view and the desktop
+    // table (jsdom renders both), so assert presence with getAllByText.
+    expect(screen.getAllByText('invoice_jan.pdf').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('water_bill.pdf').length).toBeGreaterThan(0);
   });
 
   it('shows skeleton when loading', () => {
@@ -278,7 +280,7 @@ describe('Documents — viewer role', () => {
 
   it('still renders the document table for viewer', () => {
     renderWithProviders(<Documents />);
-    expect(screen.getByText('invoice_jan.pdf')).toBeInTheDocument();
+    expect(screen.getAllByText('invoice_jan.pdf').length).toBeGreaterThan(0);
   });
 
   it('still renders the search bar for viewer', () => {
