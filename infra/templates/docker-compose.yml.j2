@@ -117,6 +117,17 @@ services:
     env_file: backend/.env.docker
     environment:
       DATABASE_URL: postgresql+asyncpg://{{ app_slug }}:${DB_PASSWORD}@postgres/{{ app_slug }}
+{%- if has_minio_subdomain %}
+      # Workers read/write document files in MinIO (extraction downloads by
+      # file_storage_key; email sync stores attachments), so they need the same
+      # MinIO credentials as the api — without them the worker raises
+      # StorageNotConfiguredError on every storage-backed document.
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT}
+      MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-${MINIO_ROOT_USER}}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-${MINIO_ROOT_PASSWORD}}
+      MINIO_BUCKET: ${MINIO_BUCKET}
+{%- endif %}
     depends_on:
       migrate:
         condition: service_completed_successfully
