@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   useReactTable,
   getCoreRowModel,
@@ -14,6 +14,7 @@ import {
   useGetDocumentsQuery,
   useBulkDeleteDocumentsMutation,
   useDeleteDocumentMutation,
+  useReExtractDocumentMutation,
   useToggleEscrowPaidMutation,
 } from "@/shared/store/documentsApi";
 import { useDocumentColumns } from "@/shared/hooks/useDocumentColumns";
@@ -36,15 +37,26 @@ export default function Documents() {
   const canWrite = useCanWrite();
   const uploadStatus = useAppSelector((s) => s.documentUpload.current?.status);
   const isExtracting = uploadStatus === "processing";
+  const [reExtractPolling, setReExtractPolling] = useState(false);
+  const [reExtractingId, setReExtractingId] = useState<string | null>(null);
 
   const { data: documents = [], isLoading } = useGetDocumentsQuery(
     { excludeProcessing: true },
-    { pollingInterval: isExtracting ? 5000 : 0 },
+    { pollingInterval: isExtracting || reExtractPolling ? 5000 : 0 },
   );
 
   const [deleteDocument, { isLoading: isDeleting }] = useDeleteDocumentMutation();
   const [bulkDelete, { isLoading: isBulkDeleting }] = useBulkDeleteDocumentsMutation();
   const [toggleEscrow, { isLoading: isTogglingEscrow }] = useToggleEscrowPaidMutation();
+  const [reExtract] = useReExtractDocumentMutation();
+
+  // Keep polling briefly after a re-extract so the row updates from
+  // "Extracting" to its final state without a manual refresh.
+  useEffect(() => {
+    if (!reExtractPolling) return;
+    const timer = window.setTimeout(() => setReExtractPolling(false), 30000);
+    return () => window.clearTimeout(timer);
+  }, [reExtractPolling]);
 
   const [failedDismissed, setFailedDismissed] = useState(false);
   const { dismissed: infoDismissed, dismiss: dismissInfo } = useDismissable("docs-info-dismissed");
@@ -113,7 +125,26 @@ export default function Documents() {
     }
   }
 
-  const columns = useDocumentColumns({ onDelete: handleDelete, onToggleEscrow: handleToggleEscrow, canWrite });
+  const handleReExtract = useCallback(async (id: string) => {
+    setReExtractingId(id);
+    try {
+      await reExtract(id).unwrap();
+      showSuccess("On it — I'll take another look at this one.");
+      setReExtractPolling(true);
+    } catch {
+      showError("I couldn't start that re-extraction. Want to try again?");
+    } finally {
+      setReExtractingId(null);
+    }
+  }, [reExtract, showSuccess, showError]);
+
+  const columns = useDocumentColumns({
+    onDelete: handleDelete,
+    onToggleEscrow: handleToggleEscrow,
+    onReExtract: handleReExtract,
+    reExtractingId,
+    canWrite,
+  });
 
   const filterOptions = useMemo(
     () => ({

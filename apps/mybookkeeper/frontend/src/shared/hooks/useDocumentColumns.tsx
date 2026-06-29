@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { createColumnHelper } from "@tanstack/react-table";
 import type { ColumnDef } from "@tanstack/react-table";
-import { FileCheck, Trash2 } from "lucide-react";
+import { FileCheck, RotateCw, Trash2 } from "lucide-react";
 import { formatDate, timeAgo } from "@/shared/utils/date";
 import { DOCUMENT_TYPE_LABELS } from "@/shared/lib/constants";
 import type { Document } from "@/shared/types/document/document";
@@ -12,6 +12,8 @@ import IndeterminateCheckbox from "@/shared/components/ui/IndeterminateCheckbox"
 interface ColumnActions {
   onDelete: (id: string) => void;
   onToggleEscrow?: (id: string, currentValue: boolean) => void;
+  onReExtract?: (id: string) => void;
+  reExtractingId?: string | null;
   canWrite?: boolean;
 }
 
@@ -19,7 +21,7 @@ const columnHelper = createColumnHelper<Document>();
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function useDocumentColumns(actions: ColumnActions): ColumnDef<Document, any>[] {
-  const { onDelete, onToggleEscrow, canWrite = true } = actions;
+  const { onDelete, onToggleEscrow, onReExtract, reExtractingId, canWrite = true } = actions;
 
   return useMemo(
     () => [
@@ -133,6 +135,22 @@ export function useDocumentColumns(actions: ColumnActions): ColumnDef<Document, 
           if (!canWrite) return null;
           return (
             <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+              {onReExtract && row.original.status === "failed" && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onReExtract(row.original.id)}
+                  disabled={reExtractingId === row.original.id}
+                  title="Re-extract this document"
+                  aria-label="Re-extract this document"
+                  className="p-1.5 text-muted-foreground hover:text-primary"
+                >
+                  <RotateCw
+                    size={14}
+                    className={reExtractingId === row.original.id ? "animate-spin" : ""}
+                  />
+                </Button>
+              )}
               {onToggleEscrow && (
                 <Button
                   variant="ghost"
@@ -158,6 +176,6 @@ export function useDocumentColumns(actions: ColumnActions): ColumnDef<Document, 
         },
       }),
     ],
-    [onDelete, onToggleEscrow, canWrite],
+    [onDelete, onToggleEscrow, onReExtract, reExtractingId, canWrite],
   );
 }

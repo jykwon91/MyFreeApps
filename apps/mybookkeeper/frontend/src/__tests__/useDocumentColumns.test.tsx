@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, renderHook } from "@testing-library/react";
+import { render, renderHook, screen, fireEvent } from "@testing-library/react";
 import {
   useReactTable,
   getCoreRowModel,
@@ -167,6 +167,62 @@ describe("useDocumentColumns — document_type filterFn", () => {
     const mockRow = { getValue: () => null };
     expect(col.filterFn(mockRow, "document_type", [""])).toBe(true);
     expect(col.filterFn(mockRow, "document_type", ["invoice"])).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// actions column — re-extract button
+// ---------------------------------------------------------------------------
+
+function DocumentRow({ doc, onReExtract }: { doc: Document; onReExtract?: (id: string) => void }) {
+  const columns = useDocumentColumns({ onDelete: vi.fn(), onReExtract, canWrite: true });
+  const table = useReactTable({
+    data: [doc],
+    columns: columns as ColumnDef<Document, unknown>[],
+    getCoreRowModel: getCoreRowModel(),
+    getRowId: (row) => row.id,
+  });
+
+  return (
+    <table>
+      <tbody>
+        {table.getRowModel().rows.map((row) => (
+          <tr key={row.id}>
+            {row.getVisibleCells().map((cell) => (
+              <td key={cell.id} data-column={cell.column.id}>
+                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+              </td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+describe("useDocumentColumns — re-extract action", () => {
+  it("renders a re-extract button for failed documents and calls onReExtract on click", () => {
+    const onReExtract = vi.fn();
+    const doc = makeDocument({ status: "failed", error_message: "boom" });
+    render(<DocumentRow doc={doc} onReExtract={onReExtract} />);
+
+    const btn = screen.getByRole("button", { name: "Re-extract this document" });
+    fireEvent.click(btn);
+    expect(onReExtract).toHaveBeenCalledWith("doc-1");
+  });
+
+  it("does not render a re-extract button for completed documents", () => {
+    const doc = makeDocument({ status: "completed" });
+    render(<DocumentRow doc={doc} onReExtract={vi.fn()} />);
+
+    expect(screen.queryByRole("button", { name: "Re-extract this document" })).toBeNull();
+  });
+
+  it("does not render a re-extract button when onReExtract is not provided", () => {
+    const doc = makeDocument({ status: "failed", error_message: "boom" });
+    render(<DocumentRow doc={doc} />);
+
+    expect(screen.queryByRole("button", { name: "Re-extract this document" })).toBeNull();
   });
 });
 

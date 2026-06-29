@@ -56,12 +56,14 @@ const mockBulkDelete = vi.fn(() => ({ unwrap: () => Promise.resolve({ deleted: 2
 const mockToggleEscrow = vi.fn(() => ({
   unwrap: () => Promise.resolve({ is_escrow_paid: true, transactions_removed: 0 }),
 }));
+const mockReExtract = vi.fn(() => ({ unwrap: () => Promise.resolve({ status: "processing" }) }));
 
 vi.mock('@/shared/store/documentsApi', () => ({
   useGetDocumentsQuery: vi.fn(() => ({ data: mockDocuments, isLoading: false })),
   useDeleteDocumentMutation: vi.fn(() => [mockDeleteDocument, { isLoading: false }]),
   useBulkDeleteDocumentsMutation: vi.fn(() => [mockBulkDelete, { isLoading: false }]),
   useToggleEscrowPaidMutation: vi.fn(() => [mockToggleEscrow, { isLoading: false }]),
+  useReExtractDocumentMutation: vi.fn(() => [mockReExtract, { isLoading: false }]),
 }));
 
 vi.mock('@/shared/hooks/useDocumentColumns', () => ({

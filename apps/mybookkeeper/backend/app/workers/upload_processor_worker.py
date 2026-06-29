@@ -48,6 +48,26 @@ def _compute_next_retry(retry_count: int) -> datetime:
     return datetime.now(timezone.utc) + timedelta(seconds=delay_seconds)
 
 
+def _classify_extraction_error(exc: Exception) -> tuple[str, str]:
+    """Map an extraction failure to (user_message, diagnostic_detail).
+
+    The user message is the friendly, conversational string shown on the
+    document in the UI. The diagnostic detail carries the real exception type
+    and message so a failure is diagnosable from the admin health events
+    (System Health -> Recent Activity) without digging through Sentry.
+    """
+    diagnostic = f"{type(exc).__name__}: {str(exc)[:300]}"
+    if isinstance(exc, asyncio.TimeoutError):
+        user_message = "Extraction timed out. The document may be too large or complex."
+    elif isinstance(exc, (sqlalchemy.exc.IntegrityError, sqlalchemy.exc.DBAPIError)):
+        user_message = "Something went wrong while saving the extraction results. Try re-extracting this document."
+    elif isinstance(exc, anthropic.AuthenticationError):
+        user_message = "There's a problem connecting to the AI service. Please contact support."
+    else:
+        user_message = "An unexpected error occurred during extraction. Try re-extracting this document."
+    return user_message, diagnostic
+
+
 async def process_one_for_user(user_id: uuid.UUID) -> bool:
     """Claim and process one document for a specific user."""
     async with AsyncSessionLocal() as db:
@@ -92,14 +112,7 @@ async def process_one_for_user(user_id: uuid.UUID) -> bool:
     except Exception as exc:
         logger.exception("Failed to process document %s", doc_id)
         transient = _is_transient_error(exc)
-        if isinstance(exc, asyncio.TimeoutError):
-            error_msg = "Extraction timed out. The document may be too large or complex."
-        elif isinstance(exc, (sqlalchemy.exc.IntegrityError, sqlalchemy.exc.DBAPIError)):
-            error_msg = "Something went wrong while saving the extraction results. Try re-extracting this document."
-        elif isinstance(exc, anthropic.AuthenticationError):
-            error_msg = "There's a problem connecting to the AI service. Please contact support."
-        else:
-            error_msg = "An unexpected error occurred during extraction. Try re-extracting this document."
+        error_msg, diagnostic = _classify_extraction_error(exc)
 
         async with AsyncSessionLocal() as db:
             failed_doc = await document_repo.get_by_id_internal(db, doc_id)
@@ -120,13 +133,15 @@ async def process_one_for_user(user_id: uuid.UUID) -> bool:
                 await db.commit()
 
         severity = "warning" if transient else "error"
-        event_msg = f"Document {doc_id} extraction failed: {error_msg[:200]}"
+        event_msg = f"Document {doc_id} extraction failed: {diagnostic}"
         try:
             await record_event(
                 org_id, "extraction_failed", severity, event_msg,
                 {
                     "document_id": str(doc_id),
                     "error": error_msg[:500],
+                    "exception_type": type(exc).__name__,
+                    "exception_detail": str(exc)[:500],
                     "transient": transient,
                     "retry_count": retry_count + 1,
                 },
