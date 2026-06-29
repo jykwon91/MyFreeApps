@@ -23,6 +23,18 @@ async def get_summary(
     )
 
 
+@router.get("/years", response_model=list[int])
+async def get_summary_years(
+    ctx: RequestContext = Depends(current_org_member),
+) -> list[int]:
+    """Years that have transaction data — drives the dashboard year dropdown.
+
+    Returned independently of the summary's date/property scoping so the
+    dropdown always lists every data-bearing year.
+    """
+    return await summary_service.get_transaction_years(ctx)
+
+
 @router.get("/tax", response_model=TaxSummaryResponse)
 async def get_tax_summary(
     year: int = Query(...),

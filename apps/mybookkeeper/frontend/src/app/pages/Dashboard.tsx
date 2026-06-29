@@ -2,7 +2,7 @@ import { useState, useCallback, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { formatCurrency } from "@/shared/utils/currency";
 import { formatTag } from "@/shared/utils/tag";
-import { useGetSummaryQuery } from "@/shared/store/summaryApi";
+import { useGetSummaryQuery, useGetSummaryYearsQuery } from "@/shared/store/summaryApi";
 import { useGetHealthSummaryQuery } from "@/shared/store/healthApi";
 import { useGetPropertiesQuery } from "@/shared/store/propertiesApi";
 import { useCurrentUser } from "@/shared/hooks/useCurrentUser";
@@ -77,7 +77,10 @@ export default function Dashboard() {
     },
   );
 
-  const availableYears = useDashboardYears(summary);
+  // Years come from an unfiltered source so the dropdown lists every
+  // data-bearing year regardless of the selected year/property filter.
+  const { data: dataYears } = useGetSummaryYearsQuery();
+  const availableYears = useDashboardYears(dataYears);
 
   const {
     filterState,

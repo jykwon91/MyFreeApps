@@ -148,6 +148,16 @@ async def get_summary(
     }
 
 
+async def get_transaction_years(ctx: RequestContext) -> list[int]:
+    """Years that have approved transaction data for the org, ascending.
+
+    Powers the dashboard year dropdown. Independent of any active filter so
+    selecting a year never removes the other years from the list.
+    """
+    async with AsyncSessionLocal() as db:
+        return await summary_repo.distinct_transaction_years(db, ctx.organization_id)
+
+
 async def get_tax_summary(
     ctx: RequestContext, year: int,
 ) -> TaxSummaryData:

@@ -326,6 +326,79 @@ test.describe("Dashboard Year Filter", () => {
     });
   });
 
+  test.describe("Year list is independent of the selected year (regression)", () => {
+    test("all data-bearing years stay listed after selecting a past year", async ({
+      authedPage: page,
+      api,
+    }) => {
+      // Seed one approved transaction in each of three distinct years. The bug
+      // derived the dropdown's year list from the year-scoped summary, so
+      // selecting one year hid the others. With the fix the list comes from the
+      // unfiltered /summary/years endpoint and must stay complete.
+      const years = [CURRENT_YEAR, CURRENT_YEAR - 1, CURRENT_YEAR - 2];
+      const createdIds: string[] = [];
+
+      const cleanup = async () => {
+        for (const id of createdIds) {
+          await api.delete(`/transactions/${id}`).catch(() => {});
+        }
+      };
+
+      for (const y of years) {
+        const res = await api.post("/transactions", {
+          data: {
+            transaction_date: `${y}-06-15`,
+            vendor: `E2E Year ${y}`,
+            amount: "123.45",
+            transaction_type: "income",
+            category: "rental_revenue",
+          },
+        });
+        if (!res.ok()) {
+          await cleanup();
+          test.skip(true, `Could not create test transaction for ${y}: ${res.status()}`);
+          return;
+        }
+        createdIds.push((await res.json()).id);
+      }
+
+      try {
+        // Manual transactions are created "pending" — approve them so they
+        // surface in the summary/years aggregations.
+        const approveRes = await api.post("/transactions/bulk-approve", {
+          data: { ids: createdIds },
+        });
+        expect(approveRes.ok()).toBe(true);
+
+        // Reload the dashboard so the year dropdown reflects the seeded data.
+        await page.goto("/");
+        await expect(page.getByText("Total Revenue").first()).toBeVisible({
+          timeout: 15000,
+        });
+
+        const yearFilter = page.getByTestId("year-filter");
+        await expect(yearFilter).toBeVisible({ timeout: 10000 });
+
+        // Every seeded year must be offered in the dropdown.
+        for (const y of years) {
+          await expect(yearFilter.locator(`option[value="${y}"]`)).toHaveCount(1);
+        }
+
+        // Select the oldest year — the bug collapsed the dropdown to
+        // ["All time", selectedYear], hiding the other years.
+        await yearFilter.selectOption(String(CURRENT_YEAR - 2));
+        await expect(yearFilter).toHaveValue(String(CURRENT_YEAR - 2));
+
+        // All seeded years must still be listed.
+        for (const y of years) {
+          await expect(yearFilter.locator(`option[value="${y}"]`)).toHaveCount(1);
+        }
+      } finally {
+        await cleanup();
+      }
+    });
+  });
+
   test.describe("Skeleton layout", () => {
     test("skeleton includes a year filter placeholder slot", async ({
       authedPage: page,

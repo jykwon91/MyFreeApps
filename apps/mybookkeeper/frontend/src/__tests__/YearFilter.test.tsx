@@ -68,6 +68,14 @@ describe("YearFilter", () => {
     expect(onChange).toHaveBeenCalledWith(2025);
   });
 
+  it("renders an option for every available year regardless of the selected value (regression: selecting a year must not drop other options)", () => {
+    renderYearFilter(2024, [2026, 2025, 2024, 2023]);
+
+    const select = screen.getByTestId("year-filter") as HTMLSelectElement;
+    const values = Array.from(select.options).map((o) => o.value);
+    expect(values).toEqual(["all", "2026", "2025", "2024", "2023"]);
+  });
+
   it("has accessible aria-label", () => {
     renderYearFilter(2026, [2026]);
 
