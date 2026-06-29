@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { Provider } from "react-redux";
 import { BrowserRouter } from "react-router-dom";
 import { store } from "@/shared/store";
@@ -47,6 +48,10 @@ vi.mock("@/shared/store/summaryApi", () => ({
     data: mockSummaryWithData,
     isLoading: false,
   })),
+  useGetSummaryYearsQuery: vi.fn(() => ({
+    data: [2025],
+    isLoading: false,
+  })),
 }));
 
 vi.mock("@/shared/store/attributionApi", () => ({
@@ -87,7 +92,7 @@ vi.mock("recharts", () => ({
   ReferenceArea: () => <div data-testid="reference-area" />,
 }));
 
-import { useGetSummaryQuery } from "@/shared/store/summaryApi";
+import { useGetSummaryQuery, useGetSummaryYearsQuery } from "@/shared/store/summaryApi";
 
 function renderWithProviders(ui: React.ReactElement) {
   return render(
@@ -100,10 +105,18 @@ function renderWithProviders(ui: React.ReactElement) {
 describe("Dashboard", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Year selection persists to localStorage + the URL — reset both so each
+    // test starts from a clean year filter.
+    localStorage.clear();
+    window.history.replaceState({}, "", "/");
     vi.mocked(useGetSummaryQuery).mockReturnValue({
       data: mockSummaryWithData,
       isLoading: false,
     } as unknown as ReturnType<typeof useGetSummaryQuery>);
+    vi.mocked(useGetSummaryYearsQuery).mockReturnValue({
+      data: [2025],
+      isLoading: false,
+    } as unknown as ReturnType<typeof useGetSummaryYearsQuery>);
   });
 
   it("renders the Dashboard title", () => {
@@ -231,5 +244,44 @@ describe("Dashboard", () => {
     renderWithProviders(<Dashboard />);
 
     expect(screen.queryByText("By Property")).not.toBeInTheDocument();
+  });
+
+  it("lists all data-bearing years and keeps them after selecting a year (regression: year list must not collapse to the filtered summary)", async () => {
+    const user = userEvent.setup();
+    const cy = new Date().getFullYear();
+
+    // The years endpoint reports every year the user has data in — independent
+    // of any active filter. The summary is year-scoped (only the current year's
+    // months here), mimicking the server response once a year is selected.
+    vi.mocked(useGetSummaryYearsQuery).mockReturnValue({
+      data: [cy, cy - 1, cy - 2],
+      isLoading: false,
+    } as unknown as ReturnType<typeof useGetSummaryYearsQuery>);
+    vi.mocked(useGetSummaryQuery).mockReturnValue({
+      data: {
+        ...mockSummaryWithData,
+        by_month: [{ month: `${cy}-01`, revenue: 100, expenses: 0, profit: 100 }],
+      },
+      isLoading: false,
+    } as unknown as ReturnType<typeof useGetSummaryQuery>);
+
+    renderWithProviders(<Dashboard />);
+
+    const yearFilter = screen.getByTestId("year-filter") as HTMLSelectElement;
+    const optionValues = () =>
+      Array.from(yearFilter.options).map((o) => o.value);
+
+    const expectedOptions = ["all", String(cy), String(cy - 1), String(cy - 2)];
+
+    // Every data-bearing year is offered (plus "All time"), regardless of the
+    // year-scoped summary above.
+    expect(optionValues()).toEqual(expectedOptions);
+
+    // Selecting an older year previously collapsed the dropdown to
+    // ["All time", selectedYear]; the other years must survive.
+    await user.selectOptions(yearFilter, String(cy - 2));
+
+    expect(yearFilter.value).toBe(String(cy - 2));
+    expect(optionValues()).toEqual(expectedOptions);
   });
 });

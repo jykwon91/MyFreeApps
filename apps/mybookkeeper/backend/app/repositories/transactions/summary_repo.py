@@ -59,6 +59,30 @@ def _txn_active_property_filter() -> list:
     ]
 
 
+async def distinct_transaction_years(
+    db: AsyncSession,
+    organization_id: uuid.UUID,
+) -> Sequence[int]:
+    """Return the distinct years that have approved, non-deleted transactions.
+
+    Deliberately unscoped by date range and property: the dashboard year
+    dropdown must always offer every data-bearing year regardless of the
+    currently selected year or property filter. Applies the same base and
+    active-property filters as the month aggregation so every year returned
+    will actually render data when selected.
+    """
+    filters = _build_txn_filters(organization_id)
+    result = await db.execute(
+        select(extract("year", Transaction.transaction_date).label("year"))
+        .select_from(Transaction)
+        .outerjoin(Property, Transaction.property_id == Property.id)
+        .where(and_(*filters, *_txn_active_property_filter()))
+        .group_by("year")
+        .order_by("year")
+    )
+    return [int(row.year) for row in result.all()]
+
+
 async def txn_sum_by_category(
     db: AsyncSession,
     organization_id: uuid.UUID,

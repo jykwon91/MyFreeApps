@@ -1,39 +1,23 @@
 import { describe, it, expect } from "vitest";
 import { renderHook } from "@testing-library/react";
 import { useDashboardYears } from "@/shared/hooks/useDashboardYears";
-import type { SummaryResponse } from "@/shared/types/summary/summary";
 
 const CURRENT_YEAR = new Date().getFullYear();
 
-function makeSummary(months: string[]): SummaryResponse {
-  return {
-    revenue: 0,
-    expenses: 0,
-    profit: 0,
-    by_category: {},
-    by_property: [],
-    by_month: months.map((month) => ({ month, revenue: 0, expenses: 0, profit: 0 })),
-    by_month_expense: [],
-    by_property_month: [],
-  };
-}
-
 describe("useDashboardYears", () => {
-  it("returns [currentYear] when summary is undefined", () => {
+  it("returns [currentYear] when dataYears is undefined", () => {
     const { result } = renderHook(() => useDashboardYears(undefined));
     expect(result.current).toEqual([CURRENT_YEAR]);
   });
 
-  it("returns [currentYear] when by_month is empty", () => {
-    const { result } = renderHook(() => useDashboardYears(makeSummary([])));
+  it("returns [currentYear] when dataYears is empty", () => {
+    const { result } = renderHook(() => useDashboardYears([]));
     expect(result.current).toEqual([CURRENT_YEAR]);
   });
 
-  it("derives years from by_month entries in descending order", () => {
-    const summary = makeSummary(["2024-01", "2024-06", "2023-03", "2023-12"]);
-    const { result } = renderHook(() => useDashboardYears(summary));
+  it("includes every data-bearing year in descending order", () => {
+    const { result } = renderHook(() => useDashboardYears([2023, 2024]));
 
-    // Descending: currentYear (always included) then 2024, 2023
     const years = result.current;
     const idx2024 = years.indexOf(2024);
     const idx2023 = years.indexOf(2023);
@@ -42,24 +26,27 @@ describe("useDashboardYears", () => {
     expect(idx2024).toBeLessThan(idx2023);
   });
 
-  it("deduplicates years from multiple same-year months", () => {
-    const summary = makeSummary(["2025-01", "2025-06", "2025-12"]);
-    const { result } = renderHook(() => useDashboardYears(summary));
+  it("deduplicates the current year when it is also a data year", () => {
+    const { result } = renderHook(() => useDashboardYears([CURRENT_YEAR]));
 
-    const count2025 = result.current.filter((y) => y === 2025).length;
-    expect(count2025).toBe(1);
+    const count = result.current.filter((y) => y === CURRENT_YEAR).length;
+    expect(count).toBe(1);
   });
 
-  it("always includes current year even if not in by_month", () => {
-    const summary = makeSummary(["2023-01", "2022-06"]);
-    const { result } = renderHook(() => useDashboardYears(summary));
+  it("deduplicates repeated data years", () => {
+    const { result } = renderHook(() => useDashboardYears([2025, 2025, 2025]));
 
+    const count = result.current.filter((y) => y === 2025).length;
+    expect(count).toBe(1);
+  });
+
+  it("always includes the current year even if absent from dataYears", () => {
+    const { result } = renderHook(() => useDashboardYears([2023, 2022]));
     expect(result.current).toContain(CURRENT_YEAR);
   });
 
   it("result is sorted descending", () => {
-    const summary = makeSummary(["2022-01", "2024-06", "2023-03"]);
-    const { result } = renderHook(() => useDashboardYears(summary));
+    const { result } = renderHook(() => useDashboardYears([2022, 2024, 2023]));
 
     const years = result.current;
     for (let i = 0; i < years.length - 1; i++) {
@@ -67,11 +54,24 @@ describe("useDashboardYears", () => {
     }
   });
 
-  it("handles a single month entry", () => {
-    const summary = makeSummary(["2024-07"]);
-    const { result } = renderHook(() => useDashboardYears(summary));
+  it("ignores out-of-range and non-integer years", () => {
+    const { result } = renderHook(() => useDashboardYears([1800, NaN, 2024]));
 
     expect(result.current).toContain(2024);
-    expect(result.current).toContain(CURRENT_YEAR);
+    expect(result.current).not.toContain(1800);
+    expect(result.current.some((y) => Number.isNaN(y))).toBe(false);
+  });
+
+  it("lists every supplied year regardless of how few have current data (regression: list is filter-independent)", () => {
+    // The years endpoint is unfiltered, so even though the active summary may
+    // only contain the current year, all reported years must still appear.
+    const input = [CURRENT_YEAR, CURRENT_YEAR - 1, CURRENT_YEAR - 2];
+    const { result } = renderHook(() => useDashboardYears(input));
+
+    expect(result.current).toEqual([
+      CURRENT_YEAR,
+      CURRENT_YEAR - 1,
+      CURRENT_YEAR - 2,
+    ]);
   });
 });

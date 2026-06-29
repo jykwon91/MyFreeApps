@@ -853,3 +853,139 @@ class TestUnassignedRevenue:
         from app.repositories import summary_repo
         rows = await summary_repo.txn_sum_by_category(db, org_id)
         assert list(rows) == []
+
+
+class TestDistinctTransactionYears:
+    """``distinct_transaction_years`` powers the dashboard year dropdown.
+
+    It must return every year that has approved, non-deleted data — unscoped by
+    date range or property — so selecting one year never hides the others
+    (regression for the dashboard year filter collapsing to the selected year).
+    """
+
+    @pytest.mark.asyncio
+    async def test_returns_distinct_years_ascending(self, db: AsyncSession) -> None:
+        user, org_id = await _setup_org_and_user(db)
+        prop = _make_property(org_id, user.id)
+        db.add(prop)
+        for year in (2024, 2025, 2026):
+            db.add(_make_transaction(
+                org_id, user.id, property_id=prop.id,
+                amount=Decimal("100.00"),
+                transaction_date=date(year, 6, 15), tax_year=year,
+            ))
+        await db.commit()
+
+        from app.repositories import summary_repo
+        years = await summary_repo.distinct_transaction_years(db, org_id)
+        assert years == [2024, 2025, 2026]
+
+    @pytest.mark.asyncio
+    async def test_deduplicates_multiple_months_same_year(self, db: AsyncSession) -> None:
+        user, org_id = await _setup_org_and_user(db)
+        prop = _make_property(org_id, user.id)
+        db.add(prop)
+        for month in (1, 6, 12):
+            db.add(_make_transaction(
+                org_id, user.id, property_id=prop.id,
+                amount=Decimal("100.00"),
+                transaction_date=date(2025, month, 10), tax_year=2025,
+            ))
+        await db.commit()
+
+        from app.repositories import summary_repo
+        years = await summary_repo.distinct_transaction_years(db, org_id)
+        assert years == [2025]
+
+    @pytest.mark.asyncio
+    async def test_excludes_non_approved_and_deleted(self, db: AsyncSession) -> None:
+        user, org_id = await _setup_org_and_user(db)
+        prop = _make_property(org_id, user.id)
+        db.add(prop)
+        # 2025 approved → should appear
+        db.add(_make_transaction(
+            org_id, user.id, property_id=prop.id,
+            amount=Decimal("100.00"),
+            transaction_date=date(2025, 6, 15), tax_year=2025,
+        ))
+        # 2024 only has an unverified transaction → should NOT appear
+        db.add(_make_transaction(
+            org_id, user.id, property_id=prop.id,
+            amount=Decimal("100.00"), status="unverified",
+            transaction_date=date(2024, 6, 15), tax_year=2024,
+        ))
+        # 2023 only has a deleted (approved) transaction → should NOT appear
+        db.add(_make_transaction(
+            org_id, user.id, property_id=prop.id,
+            amount=Decimal("100.00"),
+            deleted_at=datetime(2023, 7, 1, tzinfo=timezone.utc),
+            transaction_date=date(2023, 6, 15), tax_year=2023,
+        ))
+        await db.commit()
+
+        from app.repositories import summary_repo
+        years = await summary_repo.distinct_transaction_years(db, org_id)
+        assert years == [2025]
+
+    @pytest.mark.asyncio
+    async def test_includes_year_with_only_unassigned_transaction(self, db: AsyncSession) -> None:
+        """A year whose only data is an unattributed (null-property) payout must
+        still surface — the active-property gate must not drop it."""
+        user, org_id = await _setup_org_and_user(db)
+        db.add(_make_transaction(
+            org_id, user.id, property_id=None,
+            amount=Decimal("291.88"), category="rental_revenue",
+            transaction_type="income", schedule_e_line="line_3_rents_received",
+            transaction_date=date(2026, 5, 10), tax_year=2026,
+            tags=["rental_revenue"],
+        ))
+        await db.commit()
+
+        from app.repositories import summary_repo
+        years = await summary_repo.distinct_transaction_years(db, org_id)
+        assert years == [2026]
+
+    @pytest.mark.asyncio
+    async def test_excludes_year_with_only_inactive_property(self, db: AsyncSession) -> None:
+        """A year whose only data is tied to an inactive property (outside any
+        activity period) is empty in the dashboard — it must not be offered."""
+        user, org_id = await _setup_org_and_user(db)
+        inactive = Property(
+            id=uuid.uuid4(), organization_id=org_id, user_id=user.id,
+            name="Archived", address="999 Old St", is_active=False,
+        )
+        db.add(inactive)
+        db.add(_make_transaction(
+            org_id, user.id, property_id=inactive.id,
+            amount=Decimal("100.00"),
+            transaction_date=date(2022, 6, 15), tax_year=2022,
+        ))
+        await db.commit()
+
+        from app.repositories import summary_repo
+        years = await summary_repo.distinct_transaction_years(db, org_id)
+        assert years == []
+
+    @pytest.mark.asyncio
+    async def test_empty_when_no_transactions(self, db: AsyncSession) -> None:
+        user, org_id = await _setup_org_and_user(db)
+        from app.repositories import summary_repo
+        years = await summary_repo.distinct_transaction_years(db, org_id)
+        assert years == []
+
+    @pytest.mark.asyncio
+    async def test_organization_isolation(self, db: AsyncSession) -> None:
+        user, org_id_a = await _setup_org_and_user(db)
+        _, org_id_b = await _setup_org_and_user(db)
+        prop_a = _make_property(org_id_a, user.id, name="Prop A", address="A")
+        db.add(prop_a)
+        db.add(_make_transaction(
+            org_id_a, user.id, property_id=prop_a.id,
+            amount=Decimal("100.00"),
+            transaction_date=date(2024, 6, 15), tax_year=2024,
+        ))
+        await db.commit()
+
+        from app.repositories import summary_repo
+        years_b = await summary_repo.distinct_transaction_years(db, org_id_b)
+        assert years_b == []

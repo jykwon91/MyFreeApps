@@ -24,6 +24,10 @@ const summaryApi = baseApi.injectEndpoints({
       },
       providesTags: ["Summary"],
     }),
+    getSummaryYears: builder.query<number[], void>({
+      query: () => ({ url: "/summary/years" }),
+      providesTags: ["Summary"],
+    }),
     getTaxSummary: builder.query<TaxSummaryResponse, number>({
       query: (year) => ({ url: "/summary/tax", params: { year } }),
       providesTags: ["Summary"],
@@ -31,4 +35,5 @@ const summaryApi = baseApi.injectEndpoints({
   }),
 });
 
-export const { useGetSummaryQuery, useGetTaxSummaryQuery } = summaryApi;
+export const { useGetSummaryQuery, useGetSummaryYearsQuery, useGetTaxSummaryQuery } =
+  summaryApi;
