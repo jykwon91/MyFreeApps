@@ -65,6 +65,15 @@ async def maybe_attribute_payment(
     if txn.applicant_id is not None:
         return  # already attributed
 
+    # Attribution links a rent *payment* (or payout) to a tenant/property and
+    # stamps category="rental_revenue". It must never run on an expense — e.g.
+    # a management-commission line on a property-management statement — or the
+    # row ends up transaction_type="expense" + category="rental_revenue" and
+    # violates the chk_txn_type_category constraint at insert time, failing the
+    # whole sync item.
+    if txn.transaction_type != "income":
+        return
+
     # --- Airbnb payout path ---------------------------------------------------
     if is_airbnb_payout:
         await _attribute_airbnb_payout(db, txn=txn, organization_id=organization_id, user_id=user_id)
