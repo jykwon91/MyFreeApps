@@ -3,6 +3,7 @@ import { Support } from "@platform/ui";
 import Recipes from "@/pages/Recipes";
 import RecipeDetail from "@/pages/RecipeDetail";
 import RecipeEditor from "@/pages/RecipeEditor";
+import RecipeImport from "@/pages/RecipeImport";
 import VersionDiff from "@/pages/VersionDiff";
 import Security from "@/pages/Security";
 import Settings from "@/pages/Settings";
@@ -22,6 +23,7 @@ export const routes: RouteObject[] = [
     children: [
       { index: true, element: <Recipes /> },
       { path: "/recipes/new", element: <RecipeEditor /> },
+      { path: "/recipes/import", element: <RecipeImport /> },
       { path: "/recipes/:id", element: <RecipeDetail /> },
       { path: "/recipes/:id/tweak", element: <RecipeEditor /> },
       {

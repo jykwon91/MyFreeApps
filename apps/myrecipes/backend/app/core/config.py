@@ -25,6 +25,21 @@ class Settings(BaseAppSettings):
     email_from_name: str = "MyRecipes"
 
     # ------------------------------------------------------------------
+    # AI photo import (optional feature).
+    # When ``anthropic_api_key`` is empty, POST /recipes/extract returns 503
+    # and the rest of the app is unaffected. Unlike the canonical app
+    # (MyBookkeeper), MyRecipes does NOT require a Claude key to boot —
+    # photo import is additive, not core. Set ANTHROPIC_API_KEY to enable it.
+    # The uploaded image is a transient extraction input; it is never stored.
+    # ------------------------------------------------------------------
+    anthropic_api_key: str = ""
+    claude_timeout_seconds: float = 600.0
+    # Reject oversized uploads before processing; accepted photos are downscaled
+    # to Anthropic's vision target (~1568px long edge) before the API call.
+    # Matches the 15 MB limit surfaced in the frontend dropzone copy.
+    max_photo_upload_bytes: int = 15 * 1024 * 1024  # 15 MB
+
+    # ------------------------------------------------------------------
     # Test-only helpers — never set in production.
     # When true, /api/_test/* endpoints are mounted (rate-limit reset).
     # ------------------------------------------------------------------

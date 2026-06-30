@@ -20,6 +20,10 @@ dependencies = [
     "httpx==0.28.1",
     "anyio==4.14.1",
     "minio==7.2.20",
+    # AI photo import: Claude vision extraction (consumed via platform_shared.extraction)
+    "anthropic==0.109.2",
+    # Downscale/normalize uploaded photos to Anthropic's vision target before send
+    "pillow==12.2.0",
     "platform-shared",
     # Sentry -- fail-loud production enforcement. See app/core/observability.py.
     "sentry-sdk[fastapi]==2.63.0",

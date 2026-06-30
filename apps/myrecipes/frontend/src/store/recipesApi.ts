@@ -9,6 +9,7 @@ import type {
   VersionCreateRequest,
 } from "@/types/recipe/recipe-requests";
 import type { CookLogCreateRequest } from "@/types/recipe/cook-log";
+import type { RecipeExtractionDraft } from "@/types/recipe/extraction";
 
 /**
  * Cache tags scoped to one recipe id so a tweak / cook / metadata edit
@@ -53,6 +54,12 @@ const recipesApi = apiWithTags.injectEndpoints({
     createRecipe: build.mutation<RecipeDetailResponse, RecipeCreateRequest>({
       query: (data) => ({ url: "/recipes", method: "POST", data }),
       invalidatesTags: [{ type: "Recipe", id: "LIST" }],
+    }),
+    // Photo import: a synchronous Claude vision call returning an editable
+    // draft. Saving goes through createRecipe, so this persists nothing and
+    // invalidates no cache tags. The body is multipart FormData.
+    extractRecipeFromPhoto: build.mutation<RecipeExtractionDraft, FormData>({
+      query: (data) => ({ url: "/recipes/extract", method: "POST", data }),
     }),
     updateRecipe: build.mutation<
       RecipeDetailResponse,
@@ -186,6 +193,7 @@ export const {
   useListRecipesQuery,
   useGetRecipeQuery,
   useCreateRecipeMutation,
+  useExtractRecipeFromPhotoMutation,
   useUpdateRecipeMutation,
   useDeleteRecipeMutation,
   useListVersionsQuery,

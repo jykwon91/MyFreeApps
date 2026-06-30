@@ -1,7 +1,8 @@
-import { useNavigate, useParams, Link } from "react-router-dom";
-import { ArrowLeft, ChefHat } from "lucide-react";
+import { useNavigate, useParams } from "react-router-dom";
+import { ChefHat } from "lucide-react";
 import { EmptyState, Skeleton } from "@platform/ui";
 import { useGetRecipeQuery } from "@/store/recipesApi";
+import EditorHeader from "@/features/recipes/EditorHeader";
 import RecipeEditorForm from "@/features/recipes/RecipeEditorForm";
 
 /**
@@ -80,28 +81,5 @@ function TweakEditor({ recipeId, onMissing }: TweakEditorProps) {
         baseVersion={data.latest_version}
       />
     </main>
-  );
-}
-
-interface EditorHeaderProps {
-  backTo: string;
-  backLabel: string;
-  title: string;
-  subtitle?: string;
-}
-
-function EditorHeader({ backTo, backLabel, title, subtitle }: EditorHeaderProps) {
-  return (
-    <div className="space-y-2">
-      <Link
-        to={backTo}
-        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        {backLabel}
-      </Link>
-      <h1 className="text-2xl font-semibold">{title}</h1>
-      {subtitle ? <p className="text-sm text-muted-foreground">{subtitle}</p> : null}
-    </div>
   );
 }
