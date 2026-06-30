@@ -5,6 +5,7 @@ import type {
 } from "@/features/recipes/editor-types";
 import type { IngredientInput } from "@/types/recipe/ingredient";
 import type { StepInput } from "@/types/recipe/step";
+import type { RecipeExtractionDraft } from "@/types/recipe/extraction";
 import type { VersionResponse } from "@/types/recipe/version";
 
 function makeKey(): string {
@@ -39,6 +40,39 @@ function stepsFromVersion(version: VersionResponse): EditableStepRow[] {
   return version.steps.map((s) => ({ key: makeKey(), instruction: s.instruction }));
 }
 
+/**
+ * Seed rows from an AI-extracted draft (photo import). Every row is brand new
+ * (no lineage keys), and quantities — numbers from the API — are kept as
+ * strings here so the inputs can be edited or cleared.
+ */
+function ingredientsFromDraft(
+  ingredients: RecipeExtractionDraft["ingredients"],
+): EditableIngredientRow[] {
+  return ingredients.map((ing) => ({
+    key: makeKey(),
+    name: ing.name,
+    quantity: ing.quantity === null ? "" : String(ing.quantity),
+    unit: ing.unit ?? "",
+    note: ing.note ?? "",
+    lineageKey: null,
+  }));
+}
+
+function stepsFromDraft(steps: RecipeExtractionDraft["steps"]): EditableStepRow[] {
+  return steps.map((s) => ({ key: makeKey(), instruction: s.instruction }));
+}
+
+/**
+ * How the editor rows are seeded:
+ *   - baseVersion (tweak): copy an existing version forward, carrying lineage keys.
+ *   - draft (photo import): pre-fill from an AI-extracted draft, no lineage keys.
+ *   - neither (create): one empty ingredient row and one empty step row.
+ */
+export interface EditorSeed {
+  baseVersion?: VersionResponse;
+  draft?: RecipeExtractionDraft;
+}
+
 export interface RecipeEditorFormState {
   ingredients: EditableIngredientRow[];
   steps: EditableStepRow[];
@@ -67,17 +101,23 @@ function move<T extends { key: string }>(rows: T[], key: string, direction: -1 |
 }
 
 /**
- * Owns the editable ingredient/step row state for the recipe editor. When a
- * `baseVersion` is supplied (tweak mode) rows are seeded from it, lineage keys
- * included; otherwise the form starts with one blank row of each.
+ * Owns the editable ingredient/step row state for the recipe editor. The rows
+ * are seeded from the `seed` argument: a base version (tweak, lineage keys
+ * carried), an extracted draft (photo import, no lineage keys), or — when
+ * absent (create) — one blank row of each.
  */
-export function useRecipeEditorForm(baseVersion?: VersionResponse): RecipeEditorFormState {
-  const [ingredients, setIngredients] = useState<EditableIngredientRow[]>(() =>
-    baseVersion ? ingredientsFromVersion(baseVersion) : [emptyIngredient()],
-  );
-  const [steps, setSteps] = useState<EditableStepRow[]>(() =>
-    baseVersion ? stepsFromVersion(baseVersion) : [emptyStep()],
-  );
+export function useRecipeEditorForm(seed?: EditorSeed): RecipeEditorFormState {
+  const { baseVersion, draft } = seed ?? {};
+  const [ingredients, setIngredients] = useState<EditableIngredientRow[]>(() => {
+    if (baseVersion) return ingredientsFromVersion(baseVersion);
+    if (draft && draft.ingredients.length > 0) return ingredientsFromDraft(draft.ingredients);
+    return [emptyIngredient()];
+  });
+  const [steps, setSteps] = useState<EditableStepRow[]>(() => {
+    if (baseVersion) return stepsFromVersion(baseVersion);
+    if (draft && draft.steps.length > 0) return stepsFromDraft(draft.steps);
+    return [emptyStep()];
+  });
 
   function setIngredient(key: string, patch: Partial<EditableIngredientRow>) {
     setIngredients((prev) =>

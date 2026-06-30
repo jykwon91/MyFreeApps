@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
+  AlertBox,
   Button,
   FormField,
   LoadingButton,
@@ -14,10 +15,15 @@ import {
   useCreateRecipeMutation,
   useCreateVersionMutation,
 } from "@/store/recipesApi";
+import type { RecipeExtractionDraft } from "@/types/recipe/extraction";
 import type { VersionResponse } from "@/types/recipe/version";
 
 interface CreateProps {
   mode: "create";
+  /** Pre-fill the form from an AI-extracted photo draft (photo import). */
+  initialDraft?: RecipeExtractionDraft;
+  /** Override Cancel — e.g. return to the import upload step, not history. */
+  onCancel?: () => void;
 }
 
 interface TweakProps {
@@ -25,12 +31,24 @@ interface TweakProps {
   recipeId: string;
   /** The version this tweak starts from (its lineage keys seed the form). */
   baseVersion: VersionResponse;
+  /** Override Cancel (defaults to navigating back). */
+  onCancel?: () => void;
 }
 
 type Props = CreateProps | TweakProps;
 
 const META_INPUT =
   "w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 min-h-[44px]";
+
+function minutesToString(minutes: number | null | undefined): string {
+  return minutes != null ? String(minutes) : "";
+}
+
+function buildSeed(base?: VersionResponse, draft?: RecipeExtractionDraft) {
+  if (base) return { baseVersion: base };
+  if (draft) return { draft };
+  return undefined;
+}
 
 /**
  * The shared recipe editor form, driven by a discriminated `mode`:
@@ -44,15 +62,34 @@ export default function RecipeEditorForm(props: Props) {
   const navigate = useNavigate();
   const isTweak = props.mode === "tweak";
   const base = isTweak ? props.baseVersion : undefined;
-  const form = useRecipeEditorForm(base);
+  const draft = props.mode === "create" ? props.initialDraft : undefined;
+  const form = useRecipeEditorForm(buildSeed(base, draft));
 
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [source, setSource] = useState("");
-  const [servings, setServings] = useState(base?.servings ?? "");
-  const [prep, setPrep] = useState(base?.prep_minutes != null ? String(base.prep_minutes) : "");
-  const [cook, setCook] = useState(base?.cook_minutes != null ? String(base.cook_minutes) : "");
+  const [title, setTitle] = useState(draft?.title ?? "");
+  const [description, setDescription] = useState(draft?.description ?? "");
+  const [source, setSource] = useState(draft?.source ?? "");
+  const [servings, setServings] = useState(draft?.servings ?? base?.servings ?? "");
+  const [prep, setPrep] = useState(minutesToString(draft?.prep_minutes ?? base?.prep_minutes));
+  const [cook, setCook] = useState(minutesToString(draft?.cook_minutes ?? base?.cook_minutes));
   const [changeNote, setChangeNote] = useState("");
+
+  // The editable form doubles as the review step for photo import. Warn when
+  // the extraction came back thin so the user knows to double-check, and if it
+  // couldn't read a title, drop focus straight onto the title field.
+  const needsReview =
+    draft != null &&
+    (draft.title.trim() === "" ||
+      draft.ingredients.length === 0 ||
+      draft.steps.length === 0);
+
+  const titleRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (draft != null && draft.title.trim() === "") {
+      titleRef.current?.focus();
+    }
+  }, [draft]);
+
+  const handleCancel = props.onCancel ?? (() => navigate(-1));
 
   const [createRecipe, { isLoading: isCreating }] = useCreateRecipeMutation();
   const [createVersion, { isLoading: isTweaking }] = useCreateVersionMutation();
@@ -129,6 +166,11 @@ export default function RecipeEditorForm(props: Props) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {needsReview ? (
+        <AlertBox variant="warning">
+          We filled in what we could from your photo — double-check everything before saving.
+        </AlertBox>
+      ) : null}
       {isTweak ? (
         <section className="bg-card border rounded-lg p-6 space-y-4">
           <FormField label="What did you change?" required highlight>
@@ -147,6 +189,7 @@ export default function RecipeEditorForm(props: Props) {
         <section className="bg-card border rounded-lg p-6 space-y-4">
           <FormField label="Title" required>
             <input
+              ref={titleRef}
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -244,7 +287,7 @@ export default function RecipeEditorForm(props: Props) {
         <Button
           type="button"
           variant="secondary"
-          onClick={() => navigate(-1)}
+          onClick={handleCancel}
           disabled={isSubmitting}
         >
           Cancel

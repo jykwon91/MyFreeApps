@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChefHat, Plus, Search } from "lucide-react";
+import { Camera, ChefHat, Plus, Search } from "lucide-react";
 import { EmptyState } from "@platform/ui";
 import { useListRecipesQuery } from "@/store/recipesApi";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
@@ -20,6 +20,10 @@ export default function Recipes() {
     navigate("/recipes/new");
   }
 
+  function goToImport() {
+    navigate("/recipes/import");
+  }
+
   const recipes = data ?? [];
   const hasSearch = debouncedSearch.length > 0;
 
@@ -27,13 +31,22 @@ export default function Recipes() {
     <main className="p-4 sm:p-8 space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">Recipes</h1>
-        <button
-          onClick={goToNew}
-          className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 min-h-[44px]"
-        >
-          <Plus className="w-4 h-4" />
-          New recipe
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={goToImport}
+            className="inline-flex items-center gap-2 rounded-md border bg-background px-4 py-2 text-sm font-medium hover:bg-muted min-h-[44px]"
+          >
+            <Camera className="w-4 h-4" />
+            Import from photo
+          </button>
+          <button
+            onClick={goToNew}
+            className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 min-h-[44px]"
+          >
+            <Plus className="w-4 h-4" />
+            New recipe
+          </button>
+        </div>
       </header>
 
       <div className="relative max-w-md">

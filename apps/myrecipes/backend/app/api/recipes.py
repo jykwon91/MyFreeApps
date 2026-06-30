@@ -27,14 +27,16 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import current_active_user
+from app.core.config import settings
 from app.db.session import get_db
 from app.models.user.user import User
 from app.schemas.recipe.cook_log_schemas import CookLogCreateRequest, CookLogResponse
 from app.schemas.recipe.diff_schemas import DiffResponse
+from app.schemas.recipe.extraction_schemas import RecipeDraftResponse
 from app.schemas.recipe.recipe_schemas import (
     RecipeCreateRequest,
     RecipeDetailResponse,
@@ -46,7 +48,7 @@ from app.schemas.recipe.version_schemas import (
     VersionResponse,
     VersionSummary,
 )
-from app.services.recipe import recipe_service
+from app.services.recipe import photo_extraction_service, recipe_service
 from app.services.recipe.recipe_service import InvalidBaseVersionError
 
 router = APIRouter(prefix="/recipes", tags=["recipes"])
@@ -77,6 +79,40 @@ async def create_recipe(
     user: User = Depends(current_active_user),
 ) -> RecipeDetailResponse:
     return await recipe_service.create_recipe(db, user.id, payload)
+
+
+@router.post("/extract", response_model=RecipeDraftResponse)
+async def extract_recipe_photo(
+    file: UploadFile = File(...),
+    user: User = Depends(current_active_user),
+) -> RecipeDraftResponse:
+    """Extract an editable recipe draft from an uploaded photo (Claude vision).
+
+    The image is a transient input — it is never stored. The returned draft is
+    for the user to review and edit; saving happens through ``POST /recipes``.
+    Status codes: 413 too large, 415 unsupported type, 422 unreadable / no
+    recipe found, 503 photo import not available.
+    """
+    content = await file.read()
+    if not content:
+        raise HTTPException(status_code=422, detail="The uploaded image is empty.")
+    if len(content) > settings.max_photo_upload_bytes:
+        limit_mb = settings.max_photo_upload_bytes // (1024 * 1024)
+        raise HTTPException(status_code=413, detail=f"Image exceeds the {limit_mb} MB limit.")
+    if (file.content_type or "") not in photo_extraction_service.SUPPORTED_MEDIA_TYPES:
+        raise HTTPException(
+            status_code=415, detail="Unsupported image type. Use JPEG, PNG, or WebP."
+        )
+    try:
+        return await photo_extraction_service.extract_recipe_from_photo(
+            content, file.content_type or ""
+        )
+    except photo_extraction_service.PhotoExtractionUnavailableError as exc:
+        raise HTTPException(
+            status_code=503, detail="Photo import is not available right now."
+        ) from exc
+    except photo_extraction_service.PhotoNotReadableError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.get("/{recipe_id}", response_model=RecipeDetailResponse)
