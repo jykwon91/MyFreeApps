@@ -1,7 +1,8 @@
 import { useCallback, useState } from "react";
 import { Link } from "react-router-dom";
 import { LoadingButton, TurnstileWidget } from "@platform/ui";
-import { Gamepad2 } from "lucide-react";
+import { ChefHat } from "lucide-react";
+import { CenteredCard } from "@/components/CenteredCard";
 import { forgotPassword } from "@/lib/auth";
 
 export default function ForgotPassword() {
@@ -50,7 +51,7 @@ export default function ForgotPassword() {
       <div className="flex-1 flex items-center justify-center p-4">
         <div className="bg-card border rounded-lg p-8 w-full max-w-sm shadow-sm">
           <div className="flex items-center gap-2 mb-6">
-            <Gamepad2 className="size-6 text-primary" />
+            <ChefHat className="size-6 text-primary" />
             <h1 className="text-2xl font-semibold">Reset your password</h1>
           </div>
           <p className="text-sm text-muted-foreground mb-6">
@@ -91,24 +92,6 @@ export default function ForgotPassword() {
               Back to sign in
             </Link>
           </p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-interface CenteredCardProps {
-  title: string;
-  children: React.ReactNode;
-}
-
-function CenteredCard({ title, children }: CenteredCardProps) {
-  return (
-    <div className="min-h-screen flex flex-col bg-muted">
-      <div className="flex-1 flex items-center justify-center p-4">
-        <div className="bg-card border rounded-lg p-8 w-full max-w-sm shadow-sm text-center">
-          <h1 className="text-2xl font-semibold mb-4">{title}</h1>
-          {children}
         </div>
       </div>
     </div>
