@@ -5,7 +5,8 @@
       { "slug": "smoke",   "name": "Smoke" },
       { "slug": "flash",   "name": "Flash" },
       { "slug": "molotov", "name": "Molotov" },
-      { "slug": "recon",   "name": "Recon Bolt" }
+      { "slug": "recon",   "name": "Recon Bolt" },
+      { "slug": "shock",   "name": "Shock Bolt" }
     ]
   },
   {
