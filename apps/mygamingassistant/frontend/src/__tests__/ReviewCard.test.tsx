@@ -51,8 +51,8 @@ const MAP_DUST2 = { id: "m-dust2", slug: "dust2", name: "Dust II", minimap_url: 
 const ZONE_A = { id: "z-a", slug: "a-site", name: "A Site", polygon_points: [] };
 const ZONE_B = { id: "z-b", slug: "b-site", name: "B Site", polygon_points: [] };
 
-const UTIL_SMOKE = { id: "u-smoke", slug: "smoke", name: "Smoke" };
-const UTIL_FLASH = { id: "u-flash", slug: "flash", name: "Flash" };
+const UTIL_SMOKE = { id: "u-smoke", slug: "smoke", name: "Smoke", agent_slug: null };
+const UTIL_FLASH = { id: "u-flash", slug: "flash", name: "Flash", agent_slug: null };
 
 const MAP_DETAIL = {
   id: "m-mirage",
@@ -62,6 +62,7 @@ const MAP_DETAIL = {
   zones: [ZONE_A, ZONE_B],
   sites: [],
   utility_types: [UTIL_SMOKE, UTIL_FLASH],
+  agents: [],
 };
 
 /** A fully-unclassified pending lineup — no suggested_* values, all classification null. */

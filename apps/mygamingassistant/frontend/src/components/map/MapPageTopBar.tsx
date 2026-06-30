@@ -12,6 +12,8 @@
  */
 import { ArrowLeft, HelpCircle, LayoutGrid, List } from "lucide-react";
 import GlanceBoardOperatorMenu from "@/components/lineup/GlanceBoardOperatorMenu";
+import AgentSelect from "@/components/map/AgentSelect";
+import type { AgentGroup } from "@/constants/agentDisplay";
 
 interface ChipOption {
   value: string;
@@ -28,6 +30,12 @@ interface MapPageTopBarProps {
   side: string;
   sideChips: ChipOption[];
   onSideChange: (newSide: string) => void;
+
+  // Agent filter (Valorant only) — grouped <select> before the util chips.
+  // CS2 passes empty groups, so AgentSelect renders nothing.
+  agentGroups: AgentGroup[];
+  selectedAgent: string;
+  onAgentChange: (slug: string) => void;
 
   // Utility-type filter
   utilOptions: ChipOption[];
@@ -60,6 +68,9 @@ export default function MapPageTopBar({
   side,
   sideChips,
   onSideChange,
+  agentGroups,
+  selectedAgent,
+  onAgentChange,
   utilOptions,
   selectedUtils,
   onUtilChipToggle,
@@ -110,7 +121,23 @@ export default function MapPageTopBar({
         ))}
       </div>
 
-      <span className="text-border shrink-0">|</span>
+      {/* Agent selector (Valorant only — AgentSelect self-hides for CS2). The
+          leading separator renders only when the selector does, so the CS2 bar
+          keeps its single side|util divider. */}
+      {agentGroups.length > 0 && (
+        <>
+          <span className="text-border shrink-0">|</span>
+          <AgentSelect
+            agentGroups={agentGroups}
+            value={selectedAgent}
+            onChange={onAgentChange}
+          />
+        </>
+      )}
+
+      {/* Divider before the util chips — hidden when there are no chips (e.g.
+          Valorant with no agent picked yet) so no separator dangles. */}
+      {utilOptions.length > 0 && <span className="text-border shrink-0">|</span>}
 
       {/* Utility type chips */}
       {utilOptions.length > 0 && (

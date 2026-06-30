@@ -31,6 +31,9 @@ export interface ListLineupsParams {
   target_zone_slug?: string;
   side?: string;
   utility_type_slugs?: string;
+  // Comma-separated agent slugs (Valorant only) — resolves to the agents'
+  // utility_type_ids server-side. Mirrors utility_type_slugs.
+  agent_slugs?: string;
   status?: string;
 }
 
@@ -61,6 +64,7 @@ const lineupsApi = lineupsBaseApi.injectEndpoints({
         if (params.target_zone_slug) searchParams.set("target_zone_slug", params.target_zone_slug);
         if (params.side) searchParams.set("side", params.side);
         if (params.utility_type_slugs) searchParams.set("utility_type_slugs", params.utility_type_slugs);
+        if (params.agent_slugs) searchParams.set("agent_slugs", params.agent_slugs);
         if (params.status) searchParams.set("status", params.status);
         const qs = searchParams.toString();
         return { url: `/lineups${qs ? `?${qs}` : ""}`, method: "GET" };

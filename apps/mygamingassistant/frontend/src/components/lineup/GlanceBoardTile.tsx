@@ -33,7 +33,7 @@
 import { Clock } from "lucide-react";
 import type { ReactNode } from "react";
 import type { Lineup } from "@/types/game";
-import { utilDisplay } from "@/constants/utilityDisplay";
+import { lineupUtilDisplay } from "@/constants/agentDisplay";
 import {
   AimPane,
   ClipView,
@@ -137,7 +137,7 @@ export default function GlanceBoardTile({
   knobs = DEFAULT_KNOBS,
   showOperatorOverlays = false,
 }: GlanceBoardTileProps) {
-  const ud = utilDisplay(lineup.utility_type?.slug);
+  const ud = lineupUtilDisplay(lineup.utility_type);
 
   // Knob-forced overrides: a "still" mode discards any clip URL even when
   // present, an "off" anchor-dot blanks the persisted coords. Done here

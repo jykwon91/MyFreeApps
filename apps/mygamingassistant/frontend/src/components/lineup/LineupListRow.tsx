@@ -27,7 +27,7 @@ import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import type { Lineup } from "@/types/game";
 import type { Game } from "@/types/game";
-import { utilDisplay } from "@/constants/utilityDisplay";
+import { lineupUtilDisplay } from "@/constants/agentDisplay";
 import GlanceBoardTile from "./GlanceBoardTile";
 import type { DesignKnobs } from "@/hooks/useDesignKnobs";
 import { DEFAULT_KNOBS } from "@/hooks/useDesignKnobs";
@@ -55,7 +55,7 @@ export default function LineupListRow({
 
   const target = lineup.target_zone?.name ?? "Unknown";
   const stand = lineup.stand_zone?.name ?? null;
-  const util = utilDisplay(lineup.utility_type?.slug);
+  const util = lineupUtilDisplay(lineup.utility_type);
   const technique = lineup.technique?.trim() || null;
   const side = sideLabel(lineup.side, game);
 

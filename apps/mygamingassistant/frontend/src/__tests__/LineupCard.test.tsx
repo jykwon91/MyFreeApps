@@ -86,7 +86,7 @@ const BASE_LINEUP: Lineup = {
   classification_reasoning: null,
   target_zone: { id: "zone-1", slug: "a-site", name: "A Site", polygon_points: [] },
   stand_zone: { id: "zone-2", slug: "ct-spawn", name: "CT Spawn", polygon_points: [] },
-  utility_type: { id: "util-1", slug: "smoke", name: "Smoke" },
+  utility_type: { id: "util-1", slug: "smoke", name: "Smoke", agent: null },
 };
 
 describe("LineupCard", () => {
