@@ -11,12 +11,12 @@ import {
 } from "@platform/ui";
 import { isUnverifiedError, useSignIn } from "@/features/auth/useSignIn";
 import { requestVerifyToken } from "@/lib/auth";
+import { ResendStatusMode } from "@/constants/resendStatusModes";
+import { ResendStatusAlert } from "@/components/ResendStatusAlert";
 
 interface LocationState {
   from?: string;
 }
-
-type ResendStatus = "idle" | "sending" | "sent" | "error";
 
 /**
  * Login page with three layered flows:
@@ -39,7 +39,9 @@ export default function Login() {
   const [needsVerification, setNeedsVerification] = useState(false);
   const [pendingEmail, setPendingEmail] = useState("");
   const [registeredEmail, setRegisteredEmail] = useState("");
-  const [resendStatus, setResendStatus] = useState<ResendStatus>("idle");
+  const [resendStatus, setResendStatus] = useState<ResendStatusMode>(
+    ResendStatusMode.IDLE,
+  );
 
   // TOTP challenge state (C5) — populated after first signIn returns totp_required
   const [pendingCredentials, setPendingCredentials] = useState<
@@ -91,7 +93,7 @@ export default function Login() {
       if (isUnverifiedError(err)) {
         setPendingEmail(email);
         setNeedsVerification(true);
-        setResendStatus("idle");
+        setResendStatus(ResendStatusMode.IDLE);
       }
       throw err;
     }
@@ -105,12 +107,12 @@ export default function Login() {
 
   async function onResendVerification() {
     if (!pendingEmail) return;
-    setResendStatus("sending");
+    setResendStatus(ResendStatusMode.SENDING);
     try {
       await requestVerifyToken(pendingEmail);
-      setResendStatus("sent");
+      setResendStatus(ResendStatusMode.SENT);
     } catch {
-      setResendStatus("error");
+      setResendStatus(ResendStatusMode.ERROR);
     }
   }
 
@@ -254,28 +256,10 @@ export default function Login() {
                   Please verify your email before signing in. Check your inbox for the
                   verification link.
                 </p>
-                {resendStatus === "sent" ? (
-                  <p
-                    className="text-emerald-700"
-                    data-testid="resend-verification-sent"
-                  >
-                    Verification email sent. Check your inbox.
-                  </p>
-                ) : resendStatus === "error" ? (
-                  <p className="text-destructive">
-                    Couldn't resend right now. Try again shortly.
-                  </p>
-                ) : (
-                  <LoadingButton
-                    type="button"
-                    isLoading={resendStatus === "sending"}
-                    loadingText="Sending..."
-                    className="w-full"
-                    onClick={onResendVerification}
-                  >
-                    Resend verification email
-                  </LoadingButton>
-                )}
+                <ResendStatusAlert
+                  status={resendStatus}
+                  onResend={onResendVerification}
+                />
               </div>
             ) : null}
           </>
