@@ -5,9 +5,10 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Optional
 
-from sqlalchemy import Select
+from sqlalchemy import Select, select
 
 from app.models.game.lineup import Lineup
+from app.models.game.utility_type import UtilityType
 
 
 @dataclass
@@ -19,6 +20,10 @@ class LineupFilters:
     # "side_a", "side_b", or None (no filter)
     side: Optional[str] = None
     utility_type_ids: list[uuid.UUID] = field(default_factory=list)
+    # Valorant agent filter — matches lineups whose utility_type belongs to one
+    # of these agents (agent is derived from utility_type.agent_id, not stored
+    # on the lineup).
+    agent_ids: list[uuid.UUID] = field(default_factory=list)
     # None → only "accepted"; set explicitly to bypass
     status: Optional[str] = "accepted"
 
@@ -40,4 +45,13 @@ def _apply_filters(stmt: "Select[tuple[Lineup]]", f: LineupFilters) -> "Select[t
         stmt = stmt.where(Lineup.side.in_([f.side, "any"]))
     if f.utility_type_ids:
         stmt = stmt.where(Lineup.utility_type_id.in_(f.utility_type_ids))
+    if f.agent_ids:
+        # Derive via utility_type → agent: match lineups whose utility belongs
+        # to one of the requested agents. Composes with utility_type_ids (e.g.
+        # agent=Sova + utility=shock narrows to Sova's shock lineups).
+        stmt = stmt.where(
+            Lineup.utility_type_id.in_(
+                select(UtilityType.id).where(UtilityType.agent_id.in_(f.agent_ids))
+            )
+        )
     return stmt

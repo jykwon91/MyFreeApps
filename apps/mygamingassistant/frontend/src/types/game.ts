@@ -27,10 +27,19 @@ export interface MapSite {
   name: string;
 }
 
+export interface Agent {
+  id: string;
+  slug: string;
+  name: string;
+  role: string | null;
+}
+
 export interface UtilityType {
   id: string;
   slug: string;
   name: string;
+  /** Agent that owns this utility (null for CS2 grenades). */
+  agent_slug: string | null;
 }
 
 export interface MapDetail {
@@ -41,6 +50,10 @@ export interface MapDetail {
   zones: MapZone[];
   sites: MapSite[];
   utility_types: UtilityType[];
+  /** Game-wide agent catalog (Valorant only; empty for CS2). The frontend
+   *  scopes the agent selector to agents that actually have lineups on the
+   *  current map (intersection with the loaded lineups). */
+  agents: Agent[];
 }
 
 export interface MinimapUploadUrlResponse {
@@ -89,6 +102,11 @@ export interface UtilityTypeRead {
   id: string;
   slug: string;
   name: string;
+  /** Agent that owns this utility (Sova's Recon/Shock Bolt); null for CS2
+   *  grenades. Populated from the backend's eager-loaded utility_type.agent
+   *  relationship — the nested shape (vs MapDetail's flat agent_slug) carries
+   *  the role so lineup tiles can color the badge per agent role. */
+  agent: Agent | null;
 }
 
 export interface Lineup {

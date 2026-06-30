@@ -46,10 +46,12 @@ _SEEDED_MAP_FIXTURES: tuple[str, ...] = ("cs2_maps.json", "valorant_maps.json")
 async def load_fixtures(db: AsyncSession) -> None:
     """Load all fixture data into the database. Idempotent.
 
-    Order: games → utility_types → maps → zones + sites
-    (each step depends on the previous one).
+    Order: games → agents → utility_types → maps → zones + sites
+    (each step depends on the previous one — utility_types resolve their
+    ``agent_slug`` against agents, so agents must load first).
     """
     await _load_games(db)
+    await _load_agents(db)
     await _load_utility_types(db)
     for fixture_file in _SEEDED_MAP_FIXTURES:
         await _load_maps(db, fixture_file)
@@ -69,6 +71,31 @@ async def _load_games(db: AsyncSession) -> None:
         logger.debug("fixture_loader: upserted game %s", g["slug"])
 
 
+async def _load_agents(db: AsyncSession) -> None:
+    fixture = _load_json("agents.json")
+    for entry in fixture:
+        game = await game_repo.get_game_by_slug(db, entry["game_slug"])
+        if game is None:
+            logger.warning(
+                "fixture_loader: game %s not found, skipping agents",
+                entry["game_slug"],
+            )
+            continue
+        for a in entry["agents"]:
+            await game_repo.upsert_agent(
+                db,
+                game_id=game.id,
+                slug=a["slug"],
+                name=a["name"],
+                role=a.get("role"),
+            )
+            logger.debug(
+                "fixture_loader: upserted agent %s/%s",
+                entry["game_slug"],
+                a["slug"],
+            )
+
+
 async def _load_utility_types(db: AsyncSession) -> None:
     fixture = _load_json("utility_types.json")
     for entry in fixture:
@@ -80,8 +107,29 @@ async def _load_utility_types(db: AsyncSession) -> None:
             )
             continue
         for ut in entry["utility_types"]:
+            # Valorant utilities carry an ``agent_slug``; resolve it to the
+            # agent's id (agents were loaded above). CS2 utilities omit it →
+            # agent_id stays NULL.
+            agent_id = None
+            agent_slug = ut.get("agent_slug")
+            if agent_slug:
+                agent = await game_repo.get_agent_by_slug(db, game.id, agent_slug)
+                if agent is None:
+                    logger.warning(
+                        "fixture_loader: agent %s/%s not found for utility_type "
+                        "%s — leaving agent_id NULL",
+                        entry["game_slug"],
+                        agent_slug,
+                        ut["slug"],
+                    )
+                else:
+                    agent_id = agent.id
             await game_repo.upsert_utility_type(
-                db, game_id=game.id, slug=ut["slug"], name=ut["name"]
+                db,
+                game_id=game.id,
+                slug=ut["slug"],
+                name=ut["name"],
+                agent_id=agent_id,
             )
             logger.debug(
                 "fixture_loader: upserted utility_type %s/%s",

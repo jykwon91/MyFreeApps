@@ -13,6 +13,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.models.game.agent import Agent
 from app.models.game.game import Game
 from app.models.game.map import Map
 from app.models.game.map_zone import MapZone
@@ -71,17 +72,80 @@ async def upsert_utility_type(
     game_id: uuid.UUID,
     slug: str,
     name: str,
+    agent_id: uuid.UUID | None = None,
 ) -> UtilityType:
     result = await db.execute(
         select(UtilityType).where(UtilityType.game_id == game_id, UtilityType.slug == slug)
     )
     existing = result.scalar_one_or_none()
     if existing is not None:
+        # Re-running load-fixtures must propagate fixture edits. (game_id, slug)
+        # is the natural key; ``name`` + ``agent_id`` are mutable. Crucially
+        # this backfills ``agent_id`` onto utility types that pre-date the agent
+        # dimension — without it the existing Sova ``recon``/``shock`` rows keep
+        # ``agent_id = NULL`` and the agent filter silently matches nothing.
+        changed = False
+        if existing.name != name:
+            existing.name = name
+            changed = True
+        if existing.agent_id != agent_id:
+            existing.agent_id = agent_id
+            changed = True
+        if changed:
+            await db.flush()
         return existing
-    ut = UtilityType(game_id=game_id, slug=slug, name=name)
+    ut = UtilityType(game_id=game_id, slug=slug, name=name, agent_id=agent_id)
     db.add(ut)
     await db.flush()
     return ut
+
+
+# ---------------------------------------------------------------------------
+# Agent (Valorant only — CS2 seeds no agents)
+# ---------------------------------------------------------------------------
+
+async def list_agents_for_game(
+    db: AsyncSession, game_id: uuid.UUID
+) -> Sequence[Agent]:
+    result = await db.execute(
+        select(Agent).where(Agent.game_id == game_id).order_by(Agent.name)
+    )
+    return result.scalars().all()
+
+
+async def get_agent_by_slug(
+    db: AsyncSession, game_id: uuid.UUID, slug: str
+) -> Agent | None:
+    result = await db.execute(
+        select(Agent).where(Agent.game_id == game_id, Agent.slug == slug)
+    )
+    return result.scalar_one_or_none()
+
+
+async def upsert_agent(
+    db: AsyncSession,
+    *,
+    game_id: uuid.UUID,
+    slug: str,
+    name: str,
+    role: str | None = None,
+) -> Agent:
+    existing = await get_agent_by_slug(db, game_id, slug)
+    if existing is not None:
+        changed = False
+        if existing.name != name:
+            existing.name = name
+            changed = True
+        if existing.role != role:
+            existing.role = role
+            changed = True
+        if changed:
+            await db.flush()
+        return existing
+    agent = Agent(game_id=game_id, slug=slug, name=name, role=role)
+    db.add(agent)
+    await db.flush()
+    return agent
 
 
 # ---------------------------------------------------------------------------

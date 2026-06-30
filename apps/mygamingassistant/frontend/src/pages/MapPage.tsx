@@ -47,6 +47,7 @@ import RoundMode from "@/pages/RoundMode";
 import StorageUnavailableBanner from "@/components/map/StorageUnavailableBanner";
 import { usePins } from "@/hooks/usePins";
 import { useLoadout, computeEffectiveUtilFilter } from "@/hooks/useLoadout";
+import { useAgentFilter } from "@/hooks/useAgentFilter";
 import { useMapKeyboardShortcuts } from "@/hooks/useMapKeyboardShortcuts";
 import { useIsSuperuser } from "@/hooks/useIsSuperuser";
 import { utilDisplay } from "@/constants/utilityDisplay";
@@ -95,6 +96,8 @@ export default function MapPage() {
 
   const { isSuperuser } = useIsSuperuser();
   const game = games?.find((g) => g.slug === gameSlug);
+  // Valorant gains an agent dimension above the utility chips; CS2 does not.
+  const isValorant = game?.slug === "valorant";
 
   // Direct-manipulation knobs for the storyboard tile (URL-backed).
   const { knobs } = useDesignKnobs();
@@ -102,12 +105,6 @@ export default function MapPage() {
   // ---------------------------------------------------------------------------
   // Filter state derived from URL
   // ---------------------------------------------------------------------------
-  const utilOptions =
-    mapDetail?.utility_types.map((u) => ({
-      value: u.slug,
-      label: utilDisplay(u.slug).chipLabel,
-    })) ?? [];
-
   const selectedUtils = util ? util.split(",").filter(Boolean) : [];
 
   // Loadout filter — persistent inline chips in the top bar.
@@ -144,6 +141,40 @@ export default function MapPage() {
     },
     { skip: !gameSlug || !mapSlug },
   );
+
+  // ---------------------------------------------------------------------------
+  // Agent dimension (Valorant only). The dropdown options + the filter derive
+  // from the already-loaded lineups, so the agent filter is applied client-side
+  // below (passing agent_slugs to the query would collapse the dropdown to the
+  // selected agent). CS2 → every output is the inert "no agent layer".
+  // ---------------------------------------------------------------------------
+  const {
+    selectedAgent,
+    agentGroups,
+    agentUtilSlugs,
+    onAgentChange,
+    filterByAgent,
+  } = useAgentFilter({
+    isValorant,
+    agents:       mapDetail?.agents ?? [],
+    utilityTypes: mapDetail?.utility_types ?? [],
+    lineups:      allMapLineups,
+  });
+
+  // Utility-chip options. Valorant: the selected agent's abilities labelled by
+  // their backend name, or none until an agent is picked (avoids ~90 chips).
+  // CS2: every utility, slug-labelled via utilityDisplay (unchanged).
+  const utilOptions = useMemo(() => {
+    const types = mapDetail?.utility_types ?? [];
+    if (isValorant) {
+      if (!selectedAgent) return [];
+      const scoped = new Set(agentUtilSlugs);
+      return types
+        .filter((u) => scoped.has(u.slug))
+        .map((u) => ({ value: u.slug, label: u.name }));
+    }
+    return types.map((u) => ({ value: u.slug, label: utilDisplay(u.slug).chipLabel }));
+  }, [mapDetail, isValorant, selectedAgent, agentUtilSlugs]);
 
   // ---------------------------------------------------------------------------
   // Pin system (used by round mode)
@@ -227,9 +258,10 @@ export default function MapPage() {
   // filtering is cheaper than another round-trip + a slug→ID resolver per
   // click. Lineups whose target_zone is null never match a zone filter.
   const visibleLineups = useMemo(() => {
-    if (!zoneFilter) return allMapLineups;
-    return allMapLineups.filter((l) => l.target_zone?.slug === zoneFilter);
-  }, [allMapLineups, zoneFilter]);
+    let list = filterByAgent(allMapLineups);
+    if (zoneFilter) list = list.filter((l) => l.target_zone?.slug === zoneFilter);
+    return list;
+  }, [allMapLineups, filterByAgent, zoneFilter]);
 
   const activeZone = zoneFilter
     ? mapDetail?.zones?.find((z) => z.slug === zoneFilter) ?? null
@@ -369,6 +401,9 @@ export default function MapPage() {
           side={side}
           sideChips={sideChips}
           onSideChange={handleSideChange}
+          agentGroups={agentGroups}
+          selectedAgent={selectedAgent}
+          onAgentChange={onAgentChange}
           utilOptions={utilOptions}
           selectedUtils={selectedUtils}
           onUtilChipToggle={handleUtilChipToggle}
@@ -426,7 +461,7 @@ export default function MapPage() {
             )}
 
             {visibleLineups.length === 0 && !allMapFetching && (
-              effectiveUtils.length > 0 || side !== "any" || zoneFilter
+              effectiveUtils.length > 0 || side !== "any" || zoneFilter || selectedAgent
             ) ? (
               /* Filtered empty state */
               <div className="flex flex-col items-center justify-center py-20 gap-3">
@@ -442,6 +477,7 @@ export default function MapPage() {
                     handleUtilToggle([]);
                     clearLoadout();
                     updateParam("zone", null);
+                    onAgentChange("");
                   }}
                   className="text-sm text-primary hover:underline"
                 >

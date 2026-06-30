@@ -30,10 +30,22 @@ class ZoneRead(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class AgentRead(BaseModel):
+    id: uuid.UUID
+    slug: str
+    name: str
+    role: Optional[str] = None
+
+    model_config = {"from_attributes": True}
+
+
 class UtilityTypeRead(BaseModel):
     id: uuid.UUID
     slug: str
     name: str
+    # Valorant utilities belong to an agent (Sova's recon/shock); CS2 → None.
+    # Populated from the eager-loaded utility_type.agent relationship.
+    agent: Optional["AgentRead"] = None
 
     model_config = {"from_attributes": True}
 

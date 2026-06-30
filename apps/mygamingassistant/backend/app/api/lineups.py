@@ -38,8 +38,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api._query_helpers import resolve_slugs_to_ids
 from app.core.auth import current_active_user
 from app.db.session import get_db
+from app.models.game.agent import Agent
 from app.models.game.game import Game
 from app.models.game.map import Map
 from app.models.game.map_zone import MapZone
@@ -125,6 +127,9 @@ async def list_lineups(
     utility_type_slugs: Optional[str] = Query(
         None, description="Comma-separated utility type slugs"
     ),
+    agent_slugs: Optional[str] = Query(
+        None, description="Comma-separated Valorant agent slugs"
+    ),
     db: AsyncSession = Depends(get_db),
 ) -> list[LineupRead]:
     """List accepted lineups. Public — no auth required.
@@ -140,7 +145,6 @@ async def list_lineups(
     game_id: Optional[uuid.UUID] = None
     map_id: Optional[uuid.UUID] = None
     target_zone_id: Optional[uuid.UUID] = None
-    utility_type_ids: list[uuid.UUID] = []
 
     if game_slug:
         game_result = await db.execute(select(Game).where(Game.slug == game_slug))
@@ -169,16 +173,10 @@ async def list_lineups(
                     return []
                 target_zone_id = zone.id
 
-    if utility_type_slugs and game_id:
-        slugs = [s.strip() for s in utility_type_slugs.split(",") if s.strip()]
-        if slugs:
-            ut_result = await db.execute(
-                select(UtilityType).where(
-                    UtilityType.game_id == game_id,
-                    UtilityType.slug.in_(slugs),
-                )
-            )
-            utility_type_ids = [ut.id for ut in ut_result.scalars().all()]
+    # Resolve the slug-CSV filters to game-scoped ids (empty when unset / no
+    # match → no filter). utility_type_slugs and agent_slugs share one helper.
+    utility_type_ids = await resolve_slugs_to_ids(db, UtilityType, utility_type_slugs, game_id)
+    agent_ids = await resolve_slugs_to_ids(db, Agent, agent_slugs, game_id)
 
     # Validate side value
     if side and side not in ("side_a", "side_b", "any"):
@@ -193,6 +191,7 @@ async def list_lineups(
         target_zone_id=target_zone_id,
         side=side_filter,
         utility_type_ids=utility_type_ids,
+        agent_ids=agent_ids,
         # Public route forces accepted — pending/hidden are operator-only.
         status="accepted",
     )
