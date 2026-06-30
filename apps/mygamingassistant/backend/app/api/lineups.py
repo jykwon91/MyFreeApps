@@ -40,6 +40,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import current_active_user
 from app.db.session import get_db
+from app.models.game.agent import Agent
 from app.models.game.game import Game
 from app.models.game.map import Map
 from app.models.game.map_zone import MapZone
@@ -125,6 +126,9 @@ async def list_lineups(
     utility_type_slugs: Optional[str] = Query(
         None, description="Comma-separated utility type slugs"
     ),
+    agent_slugs: Optional[str] = Query(
+        None, description="Comma-separated Valorant agent slugs"
+    ),
     db: AsyncSession = Depends(get_db),
 ) -> list[LineupRead]:
     """List accepted lineups. Public — no auth required.
@@ -141,6 +145,7 @@ async def list_lineups(
     map_id: Optional[uuid.UUID] = None
     target_zone_id: Optional[uuid.UUID] = None
     utility_type_ids: list[uuid.UUID] = []
+    agent_ids: list[uuid.UUID] = []
 
     if game_slug:
         game_result = await db.execute(select(Game).where(Game.slug == game_slug))
@@ -180,6 +185,17 @@ async def list_lineups(
             )
             utility_type_ids = [ut.id for ut in ut_result.scalars().all()]
 
+    if agent_slugs and game_id:
+        a_slugs = [s.strip() for s in agent_slugs.split(",") if s.strip()]
+        if a_slugs:
+            agent_result = await db.execute(
+                select(Agent).where(
+                    Agent.game_id == game_id,
+                    Agent.slug.in_(a_slugs),
+                )
+            )
+            agent_ids = [a.id for a in agent_result.scalars().all()]
+
     # Validate side value
     if side and side not in ("side_a", "side_b", "any"):
         raise HTTPException(status_code=422, detail="side must be side_a, side_b, or any")
@@ -193,6 +209,7 @@ async def list_lineups(
         target_zone_id=target_zone_id,
         side=side_filter,
         utility_type_ids=utility_type_ids,
+        agent_ids=agent_ids,
         # Public route forces accepted — pending/hidden are operator-only.
         status="accepted",
     )

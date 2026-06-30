@@ -38,6 +38,9 @@ class Game(Base):
     utility_types: Mapped[list["UtilityType"]] = relationship(
         "UtilityType", back_populates="game", lazy="select"
     )
+    agents: Mapped[list["Agent"]] = relationship(
+        "Agent", back_populates="game", lazy="select"
+    )
     lineups: Mapped[list["Lineup"]] = relationship(
         "Lineup",
         foreign_keys="[Lineup.game_id]",
@@ -49,4 +52,5 @@ class Game(Base):
 # Avoid circular import at module level by importing here
 from app.models.game.map import Map  # noqa: E402, F401
 from app.models.game.utility_type import UtilityType  # noqa: E402, F401
+from app.models.game.agent import Agent  # noqa: E402, F401
 from app.models.game.lineup import Lineup  # noqa: E402, F401

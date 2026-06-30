@@ -5,6 +5,7 @@ from app.models.user.user import User  # noqa: F401
 
 # Game domain — taxonomy first, then dependent tables
 from app.models.game.game import Game  # noqa: F401
+from app.models.game.agent import Agent  # noqa: F401
 from app.models.game.utility_type import UtilityType  # noqa: F401
 from app.models.game.map import Map  # noqa: F401
 from app.models.game.map_zone import MapZone  # noqa: F401

@@ -1,0 +1,39 @@
+[
+  {
+    "game_slug": "valorant",
+    "agents": [
+      { "slug": "jett",      "name": "Jett",      "role": "Duelist" },
+      { "slug": "phoenix",   "name": "Phoenix",   "role": "Duelist" },
+      { "slug": "reyna",     "name": "Reyna",     "role": "Duelist" },
+      { "slug": "raze",      "name": "Raze",      "role": "Duelist" },
+      { "slug": "yoru",      "name": "Yoru",      "role": "Duelist" },
+      { "slug": "neon",      "name": "Neon",      "role": "Duelist" },
+      { "slug": "iso",       "name": "Iso",       "role": "Duelist" },
+      { "slug": "waylay",    "name": "Waylay",    "role": "Duelist" },
+
+      { "slug": "sova",      "name": "Sova",      "role": "Initiator" },
+      { "slug": "breach",    "name": "Breach",    "role": "Initiator" },
+      { "slug": "skye",      "name": "Skye",      "role": "Initiator" },
+      { "slug": "kay-o",     "name": "KAY/O",     "role": "Initiator" },
+      { "slug": "fade",      "name": "Fade",      "role": "Initiator" },
+      { "slug": "gekko",     "name": "Gekko",     "role": "Initiator" },
+      { "slug": "tejo",      "name": "Tejo",      "role": "Initiator" },
+
+      { "slug": "brimstone", "name": "Brimstone", "role": "Controller" },
+      { "slug": "omen",      "name": "Omen",      "role": "Controller" },
+      { "slug": "viper",     "name": "Viper",     "role": "Controller" },
+      { "slug": "astra",     "name": "Astra",     "role": "Controller" },
+      { "slug": "harbor",    "name": "Harbor",    "role": "Controller" },
+      { "slug": "clove",     "name": "Clove",     "role": "Controller" },
+      { "slug": "miks",      "name": "Miks",      "role": "Controller" },
+
+      { "slug": "killjoy",   "name": "Killjoy",   "role": "Sentinel" },
+      { "slug": "cypher",    "name": "Cypher",    "role": "Sentinel" },
+      { "slug": "sage",      "name": "Sage",      "role": "Sentinel" },
+      { "slug": "chamber",   "name": "Chamber",   "role": "Sentinel" },
+      { "slug": "deadlock",  "name": "Deadlock",  "role": "Sentinel" },
+      { "slug": "vyse",      "name": "Vyse",      "role": "Sentinel" },
+      { "slug": "veto",      "name": "Veto",      "role": "Sentinel" }
+    ]
+  }
+]

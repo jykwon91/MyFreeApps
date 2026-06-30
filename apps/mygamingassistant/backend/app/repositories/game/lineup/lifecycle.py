@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.game.lineup import Lineup
+from app.models.game.utility_type import UtilityType
 from app.repositories.game.lineup.filters import LineupFilters, _apply_filters
 
 
@@ -110,7 +111,7 @@ async def list_lineups(
         .options(
             selectinload(Lineup.target_zone),
             selectinload(Lineup.stand_zone),
-            selectinload(Lineup.utility_type),
+            selectinload(Lineup.utility_type).selectinload(UtilityType.agent),
         )
         .order_by(Lineup.created_at.desc())
     )
@@ -130,7 +131,7 @@ async def get_lineup(
         .options(
             selectinload(Lineup.target_zone),
             selectinload(Lineup.stand_zone),
-            selectinload(Lineup.utility_type),
+            selectinload(Lineup.utility_type).selectinload(UtilityType.agent),
         )
     )
     result = await db.execute(stmt)
@@ -211,7 +212,7 @@ async def list_pending_lineups(
         .options(
             selectinload(Lineup.target_zone),
             selectinload(Lineup.stand_zone),
-            selectinload(Lineup.utility_type),
+            selectinload(Lineup.utility_type).selectinload(UtilityType.agent),
         )
     )
     if source_id is not None:

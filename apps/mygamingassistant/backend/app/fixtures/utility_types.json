@@ -2,11 +2,89 @@
   {
     "game_slug": "valorant",
     "utility_types": [
-      { "slug": "smoke",   "name": "Smoke" },
-      { "slug": "flash",   "name": "Flash" },
-      { "slug": "molotov", "name": "Molotov" },
-      { "slug": "recon",   "name": "Recon Bolt" },
-      { "slug": "shock",   "name": "Shock Bolt" }
+      { "slug": "cloudburst",       "name": "Cloudburst",       "agent_slug": "jett" },
+
+      { "slug": "curveball",        "name": "Curveball",        "agent_slug": "phoenix" },
+      { "slug": "hot-hands",        "name": "Hot Hands",        "agent_slug": "phoenix" },
+
+      { "slug": "leer",             "name": "Leer",             "agent_slug": "reyna" },
+
+      { "slug": "paint-shells",     "name": "Paint Shells",     "agent_slug": "raze" },
+
+      { "slug": "blindside",        "name": "Blindside",        "agent_slug": "yoru" },
+
+      { "slug": "relay-bolt",       "name": "Relay Bolt",       "agent_slug": "neon" },
+
+      { "slug": "undercut",         "name": "Undercut",         "agent_slug": "iso" },
+
+      { "slug": "saturate",         "name": "Saturate",         "agent_slug": "waylay" },
+
+      { "slug": "recon",            "name": "Recon Bolt",       "agent_slug": "sova" },
+      { "slug": "shock",            "name": "Shock Bolt",       "agent_slug": "sova" },
+
+      { "slug": "flashpoint",       "name": "Flashpoint",       "agent_slug": "breach" },
+      { "slug": "aftershock",       "name": "Aftershock",       "agent_slug": "breach" },
+      { "slug": "fault-line",       "name": "Fault Line",       "agent_slug": "breach" },
+
+      { "slug": "fragment",         "name": "FRAG/ment",        "agent_slug": "kay-o" },
+      { "slug": "flashdrive",       "name": "FLASH/drive",      "agent_slug": "kay-o" },
+      { "slug": "zero-point",       "name": "ZERO/point",       "agent_slug": "kay-o" },
+
+      { "slug": "seize",            "name": "Seize",            "agent_slug": "fade" },
+      { "slug": "haunt",            "name": "Haunt",            "agent_slug": "fade" },
+
+      { "slug": "mosh-pit",         "name": "Mosh Pit",         "agent_slug": "gekko" },
+
+      { "slug": "special-delivery", "name": "Special Delivery", "agent_slug": "tejo" },
+      { "slug": "guided-salvo",     "name": "Guided Salvo",     "agent_slug": "tejo" },
+
+      { "slug": "sky-smoke",        "name": "Sky Smoke",        "agent_slug": "brimstone" },
+      { "slug": "brim-incendiary",  "name": "Incendiary",       "agent_slug": "brimstone" },
+
+      { "slug": "dark-cover",       "name": "Dark Cover",       "agent_slug": "omen" },
+      { "slug": "paranoia",         "name": "Paranoia",         "agent_slug": "omen" },
+
+      { "slug": "poison-cloud",     "name": "Poison Cloud",     "agent_slug": "viper" },
+      { "slug": "snake-bite",       "name": "Snake Bite",       "agent_slug": "viper" },
+      { "slug": "toxic-screen",     "name": "Toxic Screen",     "agent_slug": "viper" },
+
+      { "slug": "nebula",           "name": "Nebula",           "agent_slug": "astra" },
+      { "slug": "nova-pulse",       "name": "Nova Pulse",       "agent_slug": "astra" },
+      { "slug": "gravity-well",     "name": "Gravity Well",     "agent_slug": "astra" },
+
+      { "slug": "cascade",          "name": "Cascade",          "agent_slug": "harbor" },
+      { "slug": "cove",             "name": "Cove",             "agent_slug": "harbor" },
+      { "slug": "high-tide",        "name": "High Tide",        "agent_slug": "harbor" },
+
+      { "slug": "ruse",             "name": "Ruse",             "agent_slug": "clove" },
+      { "slug": "meddle",           "name": "Meddle",           "agent_slug": "clove" },
+
+      { "slug": "waveform",         "name": "Waveform",         "agent_slug": "miks" },
+      { "slug": "m-pulse",          "name": "M-Pulse",          "agent_slug": "miks" },
+
+      { "slug": "nanoswarm",        "name": "Nanoswarm",        "agent_slug": "killjoy" },
+      { "slug": "alarmbot",         "name": "Alarmbot",         "agent_slug": "killjoy" },
+      { "slug": "turret",           "name": "Turret",           "agent_slug": "killjoy" },
+
+      { "slug": "cyber-cage",       "name": "Cyber Cage",       "agent_slug": "cypher" },
+      { "slug": "trapwire",         "name": "Trapwire",         "agent_slug": "cypher" },
+      { "slug": "spycam",           "name": "Spycam",           "agent_slug": "cypher" },
+
+      { "slug": "barrier-orb",      "name": "Barrier Orb",      "agent_slug": "sage" },
+      { "slug": "slow-orb",         "name": "Slow Orb",         "agent_slug": "sage" },
+
+      { "slug": "trademark",        "name": "Trademark",        "agent_slug": "chamber" },
+
+      { "slug": "gravnet",          "name": "GravNet",          "agent_slug": "deadlock" },
+      { "slug": "barrier-mesh",     "name": "Barrier Mesh",     "agent_slug": "deadlock" },
+      { "slug": "sonic-sensor",     "name": "Sonic Sensor",     "agent_slug": "deadlock" },
+
+      { "slug": "arc-rose",         "name": "Arc Rose",         "agent_slug": "vyse" },
+      { "slug": "shear",            "name": "Shear",            "agent_slug": "vyse" },
+      { "slug": "razorvine",        "name": "Razorvine",        "agent_slug": "vyse" },
+
+      { "slug": "chokehold",        "name": "Chokehold",        "agent_slug": "veto" },
+      { "slug": "interceptor",      "name": "Interceptor",      "agent_slug": "veto" }
     ]
   },
   {

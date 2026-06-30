@@ -110,6 +110,8 @@ async def get_map(
         raise HTTPException(status_code=404, detail="Map not found")
 
     utility_types = await game_repo.list_utility_types_for_game(db, game.id)
+    agents = await game_repo.list_agents_for_game(db, game.id)
+    agent_slug_by_id = {a.id: a.slug for a in agents}
 
     return {
         "id": str(map_obj.id),
@@ -130,8 +132,23 @@ async def get_map(
             for s in map_obj.sites
         ],
         "utility_types": [
-            {"id": str(u.id), "slug": u.slug, "name": u.name}
+            {
+                "id": str(u.id),
+                "slug": u.slug,
+                "name": u.name,
+                # Valorant utilities carry their agent's slug so the frontend can
+                # group the second-stage utility chips under the selected agent.
+                # CS2 utilities have no agent → None.
+                "agent_slug": agent_slug_by_id.get(u.agent_id),
+            }
             for u in utility_types
+        ],
+        # Game-wide agent catalog (Valorant only; empty for CS2). The frontend
+        # scopes the agent selector to agents that actually have lineups on this
+        # map (intersection with the loaded lineups).
+        "agents": [
+            {"id": str(a.id), "slug": a.slug, "name": a.name, "role": a.role}
+            for a in agents
         ],
     }
 
