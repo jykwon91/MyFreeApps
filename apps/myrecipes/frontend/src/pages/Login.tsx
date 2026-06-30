@@ -10,6 +10,7 @@ import {
 import { isUnverifiedError, useSignIn } from "@/features/auth/useSignIn";
 import { requestVerifyToken } from "@/lib/auth";
 import { ResendStatusMode } from "@/constants/resendStatusModes";
+import { ResendStatusAlert } from "@/components/ResendStatusAlert";
 
 interface LocationState {
   from?: string;
@@ -258,25 +259,10 @@ export default function Login() {
                   Please verify your email before signing in. Check your inbox for the
                   verification link.
                 </p>
-                {resendStatus === ResendStatusMode.SENT ? (
-                  <p className="text-emerald-700">
-                    Verification email sent. Check your inbox.
-                  </p>
-                ) : resendStatus === ResendStatusMode.ERROR ? (
-                  <p className="text-destructive">
-                    Couldn't resend right now. Try again shortly.
-                  </p>
-                ) : (
-                  <LoadingButton
-                    type="button"
-                    isLoading={resendStatus === ResendStatusMode.SENDING}
-                    loadingText="Sending..."
-                    className="w-full"
-                    onClick={onResendVerification}
-                  >
-                    Resend verification email
-                  </LoadingButton>
-                )}
+                <ResendStatusAlert
+                  status={resendStatus}
+                  onResend={onResendVerification}
+                />
               </div>
             ) : null}
           </>

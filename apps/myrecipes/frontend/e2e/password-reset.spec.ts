@@ -29,10 +29,16 @@ test.describe("Forgot Password — page layout", () => {
   test("submitting email shows confirmation message", async ({ page }) => {
     await page.getByLabel("Email").fill("test@example.com");
     await page.getByRole("button", { name: "Send reset link" }).click();
-    await expect(page.getByText("Check your inbox")).toBeVisible({
-      timeout: 5000,
-    });
-    await expect(page.getByText("test@example.com")).toBeVisible();
+    // "Check your inbox" appears in both the card heading and the body copy
+    // ("...and spam folder"), so scope the assertion to the heading role.
+    await expect(
+      page.getByRole("heading", { name: "Check your inbox" })
+    ).toBeVisible({ timeout: 5000 });
+    // The submitted email is echoed in a <strong>; exact match avoids also
+    // matching the surrounding paragraph text.
+    await expect(
+      page.getByText("test@example.com", { exact: true })
+    ).toBeVisible();
   });
 });
 
