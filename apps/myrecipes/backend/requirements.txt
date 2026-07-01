@@ -8,7 +8,7 @@ annotated-doc==0.0.4
     # via fastapi
 annotated-types==0.7.0
     # via pydantic
-anthropic==0.109.2
+anthropic==0.115.0
     # via myrecipes-backend
 anyio==4.14.1
     # via
@@ -31,7 +31,7 @@ bcrypt==5.0.0
     # via
     #   passlib
     #   pwdlib
-certifi==2026.5.20
+certifi==2026.6.17
     # via
     #   httpcore
     #   httpx
@@ -41,7 +41,7 @@ cffi==2.0.0
     # via
     #   argon2-cffi-bindings
     #   cryptography
-click==8.4.1
+click==8.4.2
     # via uvicorn
 colorama==0.4.6 ; sys_platform == 'win32'
     # via
@@ -65,7 +65,7 @@ email-validator==2.3.0
     #   fastapi-users
     #   myrecipes-backend
     #   pydantic
-fastapi==0.138.1
+fastapi==0.138.2
     # via
     #   fastapi-users
     #   myrecipes-backend
@@ -77,7 +77,7 @@ fastapi-users==15.0.5
     #   myrecipes-backend
 fastapi-users-db-sqlalchemy==7.0.0
     # via fastapi-users
-greenlet==3.5.1
+greenlet==3.5.3
     # via sqlalchemy
 h11==0.16.0
     # via
@@ -136,7 +136,7 @@ pydantic==2.13.4
     #   myrecipes-backend
     #   platform-shared
     #   pydantic-settings
-pydantic-core==2.46.4
+pydantic-core==2.47.0
     # via pydantic
 pydantic-settings==2.14.2
     # via
@@ -171,7 +171,7 @@ qrcode==8.2
     # via
     #   myrecipes-backend
     #   platform-shared
-sentry-sdk==2.63.0
+sentry-sdk==2.64.0
     # via
     #   myrecipes-backend
     #   platform-shared
