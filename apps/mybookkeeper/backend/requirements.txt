@@ -112,7 +112,7 @@ google-auth-oauthlib==1.4.0
     # via mybookkeeper-backend
 googleapis-common-protos==1.75.0
     # via google-api-core
-greenlet==3.5.3
+greenlet==3.5.2
     # via sqlalchemy
 h11==0.16.0
     # via
@@ -141,7 +141,7 @@ idna==3.18
     #   requests
 iniconfig==2.3.0
     # via pytest
-jiter==0.16.0
+jiter==0.15.0
     # via anthropic
 linkify-it-py==2.1.0
     # via mybookkeeper-backend
@@ -207,7 +207,7 @@ pydantic==2.13.4
     #   mybookkeeper-backend
     #   platform-shared
     #   pydantic-settings
-pydantic-core==2.47.0
+pydantic-core==2.46.4
     # via pydantic
 pydantic-settings==2.14.2
     # via
