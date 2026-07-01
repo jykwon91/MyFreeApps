@@ -40,7 +40,7 @@ dependencies = [
     "weasyprint>=62.0",
     # Sentry — fail-loud production enforcement. See app/core/observability.py.
     # Mirrors apps/mybookkeeper/backend/pyproject.toml.
-    "sentry-sdk[fastapi]==2.63.0",
+    "sentry-sdk[fastapi]==2.64.0",
     # Discovery source adapters: tenacity wraps every outbound HTTP
     # call with exponential-backoff retry on 429 / 5xx so a transient
     # provider blip doesn't tank a fetch cycle.
