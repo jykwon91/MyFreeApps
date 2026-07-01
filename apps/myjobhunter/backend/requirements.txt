@@ -251,7 +251,7 @@ requests==2.34.2
     # via fastembed
 rich==15.0.0
     # via typer
-sentry-sdk==2.63.0
+sentry-sdk==2.64.0
     # via
     #   myjobhunter-backend
     #   platform-shared
