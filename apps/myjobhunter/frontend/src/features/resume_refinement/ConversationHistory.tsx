@@ -4,6 +4,12 @@ import type { RefinementTurn } from "@/types/resume-refinement/refinement-turn";
 
 interface ConversationHistoryProps {
   turns: RefinementTurn[];
+  /** Optimistic echo of a just-sent composer message — rendered as a
+   *  user bubble + assistant thinking bubble until the real turn rows
+   *  arrive from the poll/mutation (the owner clears it on
+   *  turn_count advance, NOT on promise resolution, to avoid a
+   *  disappear/reappear flicker). */
+  pendingUserEcho?: { text: string } | null;
 }
 
 type Item =
@@ -18,17 +24,23 @@ type Item =
  * thin labeled divider marks transitions between target sections so the
  * history reads as grouped chapters rather than one undifferentiated stream.
  *
- * Auto-scrolls to the latest turn on every length change.
+ * Auto-scrolls to the latest turn on every length change AND when the
+ * optimistic echo appears — otherwise a sent message can render
+ * off-screen until the real turn lands.
  */
-export default function ConversationHistory({ turns }: ConversationHistoryProps) {
+export default function ConversationHistory({
+  turns,
+  pendingUserEcho = null,
+}: ConversationHistoryProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
+  const echoText = pendingUserEcho?.text ?? null;
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [turns.length]);
+  }, [turns.length, echoText]);
 
   const items = buildItems(turns);
-  if (items.length === 0) return null;
+  if (items.length === 0 && !pendingUserEcho) return null;
 
   return (
     <section
@@ -43,9 +55,47 @@ export default function ConversationHistory({ turns }: ConversationHistoryProps)
             <ConversationBubble key={item.turn.id} turn={item.turn} />
           ),
         )}
+        {pendingUserEcho && <PendingEchoBubbles text={pendingUserEcho.text} />}
       </ol>
       <div ref={bottomRef} aria-hidden />
     </section>
+  );
+}
+
+interface PendingEchoBubblesProps {
+  text: string;
+}
+
+// Optimistic pair: the user's just-sent message (same markup as a real
+// user turn) plus an assistant thinking indicator until the proposal
+// lands. role="status" aria-live="polite" matches the app's existing
+// convention (VerdictBanner, DiscoveredJobCard).
+function PendingEchoBubbles({ text }: PendingEchoBubblesProps) {
+  return (
+    <>
+      <li className="flex justify-end">
+        <div className="max-w-[85%] sm:max-w-[80%] flex flex-col">
+          <div className="rounded-2xl rounded-tr-sm bg-primary/10 border border-primary/20 px-3 py-2 text-sm text-foreground whitespace-pre-wrap break-words">
+            <span className="sr-only">You said: </span>
+            {text}
+          </div>
+          <p className="text-[10px] text-muted-foreground mt-0.5 text-right pr-1">
+            sending…
+          </p>
+        </div>
+      </li>
+      <li className="flex justify-start">
+        <div className="max-w-[85%] sm:max-w-[80%]">
+          <div
+            role="status"
+            aria-live="polite"
+            className="rounded-2xl rounded-tl-sm bg-muted/50 border border-border px-3 py-2 text-sm text-muted-foreground"
+          >
+            Hmm, let me think. Working on a suggestion…
+          </div>
+        </div>
+      </li>
+    </>
   );
 }
 
@@ -99,6 +149,7 @@ function SectionDivider({ section }: SectionDividerProps) {
 function isUserRole(role: RefinementTurn["role"]): boolean {
   return (
     role === "user_accept" ||
+    role === "user_accept_flagged" ||
     role === "user_custom" ||
     role === "user_request_alternative" ||
     role === "user_skip"
@@ -132,12 +183,17 @@ function renderTurnBody(turn: RefinementTurn): string | null {
       return turn.proposed_text
         ? `Accepted: ${turn.proposed_text}`
         : "Accepted this suggestion.";
+    case "user_accept_flagged":
+      return turn.proposed_text
+        ? `Accepted (confirmed accurate): ${turn.proposed_text}`
+        : "Accepted this suggestion after confirming the details.";
     case "user_custom":
       return turn.user_text ?? "Submitted a custom rewrite.";
     case "user_request_alternative":
-      return turn.user_text
-        ? `Try something with: ${turn.user_text}`
-        : "Try a different approach.";
+      // The user's own words, rendered as plain chat text — the old
+      // "Try something with: …" prefix mislabeled clarify answers as
+      // reroll hints (operator complaint, 2026-07-02).
+      return turn.user_text ?? "Asked for another take.";
     case "user_skip":
       return "Skipped.";
     case "session_complete":

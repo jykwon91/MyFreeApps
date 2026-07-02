@@ -1,5 +1,5 @@
 import { type KeyboardEvent } from "react";
-import { LoadingButton } from "@platform/ui";
+import { Button, LoadingButton } from "@platform/ui";
 
 interface CustomRewritePanelProps {
   customText: string;
@@ -30,18 +30,23 @@ export default function CustomRewritePanel({
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={handleKeyDown}
         rows={3}
+        // autoFocus: this panel opens on an explicit "Write my own"
+        // click, and the always-visible composer below is a second
+        // textarea — focusing here makes it obvious which input is live.
+        autoFocus
+        aria-label="Your rewrite of this section"
         placeholder="Type the version you want… Enter to send, Shift+Enter for newline."
         className="w-full rounded-md border border-border bg-background p-2 text-sm"
       />
       <div className="flex gap-2 justify-end">
-        <button
-          type="button"
+        <Button
+          variant="secondary"
+          size="sm"
           onClick={onCancel}
           disabled={isPending}
-          className="rounded-md border px-3 py-1.5 text-sm hover:bg-muted disabled:opacity-50"
         >
           Cancel
-        </button>
+        </Button>
         <LoadingButton
           isLoading={isPending}
           onClick={onSubmit}
