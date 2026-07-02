@@ -7,6 +7,11 @@ interface ClarifyingPanelProps {
   onCustomTextChange: (s: string) => void;
   onSubmit: () => void;
   isPending: boolean;
+  /** Loop breaker: the guard flagged this target twice — offer applying
+   *  the held proposal with explicit user confirmation. */
+  canForce?: boolean;
+  onForce?: () => void;
+  forceIsLoading?: boolean;
 }
 
 export default function ClarifyingPanel({
@@ -15,6 +20,9 @@ export default function ClarifyingPanel({
   onCustomTextChange,
   onSubmit,
   isPending,
+  canForce = false,
+  onForce,
+  forceIsLoading = false,
 }: ClarifyingPanelProps) {
   function handleKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key !== "Enter" || e.shiftKey) return;
@@ -38,13 +46,29 @@ export default function ClarifyingPanel({
       />
       <div className="flex justify-end">
         <LoadingButton
-          isLoading={isPending}
+          isLoading={isPending && !forceIsLoading}
           onClick={onSubmit}
-          disabled={!customText.trim()}
+          disabled={!customText.trim() || isPending}
         >
           Submit answer
         </LoadingButton>
       </div>
+      {canForce && onForce && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-muted/40 p-2">
+          <p className="text-xs text-muted-foreground">
+            Sure those details are right? Apply the held rewrite as-is.
+          </p>
+          <LoadingButton
+            variant="secondary"
+            size="sm"
+            isLoading={forceIsLoading}
+            onClick={onForce}
+            disabled={isPending && !forceIsLoading}
+          >
+            Use it anyway — I confirm this is accurate
+          </LoadingButton>
+        </div>
+      )}
     </div>
   );
 }

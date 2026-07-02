@@ -62,6 +62,11 @@ class SessionRead(BaseModel):
     pending_proposal: str | None = None
     pending_rationale: str | None = None
     pending_clarifying_question: str | None = None
+    # Hallucination-guard state: phrases flagged on the pending clarify,
+    # and whether the loop breaker should offer "Use it anyway" (the
+    # same target has been guard-flagged twice or more).
+    pending_guard_flagged: list[str] | None = None
+    guard_can_force: bool = False
     turn_count: int
     total_tokens_in: int
     total_tokens_out: int

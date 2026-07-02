@@ -28,6 +28,8 @@ async def run_rewrite(
     user_id: uuid.UUID,
     session_id: uuid.UUID,
     prior_context: list[dict] | None = None,
+    confirmed_facts: list[str] | None = None,
+    prior_flag_count: int = 0,
 ) -> dict:
     """Run one rewrite pass.
 
@@ -48,6 +50,14 @@ async def run_rewrite(
             conversation" block so Claude can honour user-stated
             constraints across targets (e.g. "keep it to one page",
             "I left X out for length").
+        confirmed_facts: Session-level allowlist of facts the user has
+            explicitly confirmed. Passed into the hallucination guard so
+            a confirmed fact is never re-flagged — without it, answering
+            the guard's clarify question could never unblock the loop.
+        prior_flag_count: How many times the guard has already flagged a
+            proposal for THIS target. On a repeat flag the clarify copy
+            stops re-asking the same question and points the user at the
+            explicit "Use it anyway" confirmation instead.
 
     Returns:
         Dict with shape:
@@ -94,18 +104,26 @@ async def run_rewrite(
         rewritten = (parsed.get("rewritten_text") or "").strip()
         rationale = (parsed.get("rationale") or "").strip() or None
 
-        flagged = check_proposal(proposed=rewritten, source=resume_markdown)
+        flagged = check_proposal(
+            proposed=rewritten,
+            source=resume_markdown,
+            confirmed_facts=confirmed_facts,
+        )
         if flagged:
             logger.warning(
-                "Hallucination guard flagged proposal for session %s: %s",
+                "Hallucination guard flagged proposal for session %s "
+                "(prior flags for target: %d): %s",
                 session_id,
+                prior_flag_count,
                 flagged[:5],
             )
             response.update(
                 kind="clarify",
                 rewritten_text=rewritten,
                 rationale=rationale,
-                question=_clarify_for_hallucination(flagged),
+                question=_clarify_for_hallucination(
+                    flagged, repeat=prior_flag_count >= 1,
+                ),
                 hallucination_flagged=flagged,
             )
             return response
@@ -195,9 +213,20 @@ def _render_prior_context(entries: list[dict]) -> str:
     return "\n".join(lines)
 
 
-def _clarify_for_hallucination(missing: list[str]) -> str:
-    """Build a user-facing clarification question from the flagged facts."""
+def _clarify_for_hallucination(missing: list[str], *, repeat: bool = False) -> str:
+    """Build a user-facing clarification question from the flagged facts.
+
+    ``repeat=True`` means the guard already flagged this target before —
+    re-asking the identical question would loop, so the copy points at
+    the explicit "Use it anyway" confirmation instead.
+    """
     preview = ", ".join(missing[:3])
+    if repeat:
+        return (
+            "I still can't verify these details against your resume "
+            f"({preview}). If they're accurate, choose \"Use it anyway\" "
+            "below to apply the rewrite as-is — or tell me what to change."
+        )
     return (
         "I almost added some details that aren't in your resume "
         f"({preview}). Could you confirm those, or tell me what's accurate "

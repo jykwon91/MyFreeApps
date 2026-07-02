@@ -7,6 +7,7 @@ import {
 } from "@platform/ui";
 import {
   useAcceptPendingMutation,
+  useAcceptFlaggedMutation,
   useSupplyCustomRewriteMutation,
   useRequestAlternativeMutation,
   useSkipTargetMutation,
@@ -38,6 +39,7 @@ export default function PendingProposalCard({ session }: PendingProposalCardProp
   const [hint, setHint] = useState("");
 
   const [acceptPending, accept] = useAcceptPendingMutation();
+  const [acceptFlagged, flaggedAccept] = useAcceptFlaggedMutation();
   const [supplyCustom, custom] = useSupplyCustomRewriteMutation();
   const [requestAlternative, alternative] = useRequestAlternativeMutation();
   const [skipTarget, skip] = useSkipTargetMutation();
@@ -51,7 +53,11 @@ export default function PendingProposalCard({ session }: PendingProposalCardProp
   const rationale = session.pending_rationale;
   const clarifyingQuestion = session.pending_clarifying_question;
   const isPending =
-    accept.isLoading || custom.isLoading || alternative.isLoading || skip.isLoading;
+    accept.isLoading ||
+    flaggedAccept.isLoading ||
+    custom.isLoading ||
+    alternative.isLoading ||
+    skip.isLoading;
 
   if (totalTargets > 0 && session.target_index >= totalTargets) {
     return null;
@@ -97,6 +103,21 @@ export default function PendingProposalCard({ session }: PendingProposalCardProp
         hint: customText.trim(),
       }).unwrap();
       showSuccess("Got it — composing a suggestion with your context.");
+      resetMode();
+      setCustomText("");
+    } catch (err) {
+      showError(extractErrorMessage(err));
+    }
+  }
+
+  // Guard loop breaker: the user explicitly confirms the flagged facts
+  // are accurate and applies the held proposal as-is. The backend
+  // records the phrases as session-level confirmed facts so the guard
+  // never re-flags them.
+  async function handleForceAccept() {
+    try {
+      await acceptFlagged(session.id).unwrap();
+      showSuccess("Applied. Onto the next one.");
       resetMode();
       setCustomText("");
     } catch (err) {
@@ -176,6 +197,9 @@ export default function PendingProposalCard({ session }: PendingProposalCardProp
         rationale={rationale}
         isPending={isPending}
         isRegenerating={alternative.isLoading}
+        canForce={session.guard_can_force}
+        onForce={handleForceAccept}
+        forceIsLoading={flaggedAccept.isLoading}
       />
 
       {/* Exactly one of the three action panels — mutually exclusive via mode state */}

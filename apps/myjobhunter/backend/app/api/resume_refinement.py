@@ -6,6 +6,7 @@ POST   /resume-refinement/sessions                          start a new session
 GET    /resume-refinement/sessions                          list user's sessions
 GET    /resume-refinement/sessions/{id}                     read session state
 POST   /resume-refinement/sessions/{id}/accept              accept pending proposal
+POST   /resume-refinement/sessions/{id}/accept-flagged      apply guard-held proposal ("Use it anyway")
 POST   /resume-refinement/sessions/{id}/custom              supply custom rewrite
 POST   /resume-refinement/sessions/{id}/alternative         regenerate same target
 POST   /resume-refinement/sessions/{id}/skip                skip current target
@@ -96,6 +97,31 @@ async def accept_pending(
 ) -> SessionWithTurnsRead:
     try:
         session = await session_service.accept_pending(
+            db=db, user_id=user.id, session_id=session_id,
+        )
+    except SessionNotFound as exc:
+        raise HTTPException(status_code=404, detail="Session not found") from exc
+    except SessionNotActive as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except NoPendingProposal as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return SessionWithTurnsRead.model_validate(session)
+
+
+@router.post("/sessions/{session_id}/accept-flagged", response_model=SessionWithTurnsRead)
+async def accept_flagged(
+    session_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(current_active_user),
+) -> SessionWithTurnsRead:
+    """Apply a guard-held proposal after explicit user confirmation.
+
+    The flagged phrases become session-level confirmed facts so the
+    guard never re-flags them; the held proposal is applied to the
+    draft exactly like a normal accept.
+    """
+    try:
+        session = await session_service.accept_flagged(
             db=db, user_id=user.id, session_id=session_id,
         )
     except SessionNotFound as exc:

@@ -160,6 +160,10 @@ async def _generate_next_proposal(
             user_id=user_id,
             session_id=session.id,
             prior_context=prior_context,
+            confirmed_facts=list(session.confirmed_facts or []),
+            prior_flag_count=int(
+                (session.guard_flag_counts or {}).get(str(session.target_index), 0)
+            ),
         )
     except Exception as exc:  # noqa: BLE001 — graceful-degrade for the iteration loop
         # Don't fail the user's action if Claude is flaky. Leave pending
@@ -173,6 +177,7 @@ async def _generate_next_proposal(
         )
         return session
 
+    flagged = list(rewrite.get("hallucination_flagged") or [])
     session = await session_repo.update_pending_proposal(
         db,
         session,
@@ -183,7 +188,15 @@ async def _generate_next_proposal(
         tokens_in=rewrite["input_tokens"],
         tokens_out=rewrite["output_tokens"],
         cost_usd=rewrite["cost_usd"],
+        guard_flagged=flagged or None,
+        flagged_proposal=rewrite["rewritten_text"] if flagged else None,
     )
+    if flagged:
+        # Loop breaker bookkeeping: from the second flag on the same
+        # target, the clarify copy + frontend offer "Use it anyway".
+        session = await session_repo.increment_guard_flag_count(
+            db, session, target_index=session.target_index,
+        )
 
     # Cache the proposal so navigating back to this target_index later
     # is instant. ``request_alternative`` invalidates this entry before
@@ -196,6 +209,8 @@ async def _generate_next_proposal(
         proposal=session.pending_proposal,
         rationale=session.pending_rationale,
         clarifying_question=session.pending_clarifying_question,
+        guard_flagged=session.pending_guard_flagged,
+        flagged_proposal=session.pending_flagged_proposal,
     )
 
     await turn_repo.append(
@@ -242,6 +257,7 @@ async def _prefetch_all_proposals(
 
     semaphore = asyncio.Semaphore(_PREFETCH_CONCURRENCY)
     current_draft = session.current_draft
+    confirmed_facts = list(session.confirmed_facts or [])
 
     # Prefetch fires right after the critique pass appends the
     # ai_critique turn, so prior_context here will contain at most the
@@ -260,6 +276,7 @@ async def _prefetch_all_proposals(
                     user_id=user_id,
                     session_id=session.id,
                     prior_context=prior_context,
+                    confirmed_facts=confirmed_facts,
                 )
             except Exception as exc:  # noqa: BLE001 — graceful per-target degrade
                 logger.warning(
@@ -281,6 +298,7 @@ async def _prefetch_all_proposals(
     # mutation is not safe across concurrent transactions on the same
     # row. Each write is fast (single round-trip) so the sequential
     # cost is negligible.
+    flag_counts = dict(session.guard_flag_counts or {})
     for entry in results:
         if entry is None:
             continue
@@ -288,6 +306,7 @@ async def _prefetch_all_proposals(
         rewrite = entry["rewrite"]
         is_proposal = rewrite.get("kind") == "proposal"
         is_clarify = rewrite.get("kind") == "clarify"
+        flagged = list(rewrite.get("hallucination_flagged") or [])
 
         # Bump session counters via update_pending_proposal — but for
         # prefetch we don't actually want the pending_* fields stamped
@@ -299,6 +318,10 @@ async def _prefetch_all_proposals(
             session.total_cost_usd or Decimal("0")
         ) + rewrite["cost_usd"]
 
+        if flagged:
+            key = str(entry["target_index"])
+            flag_counts[key] = int(flag_counts.get(key, 0)) + 1
+
         session = await session_repo.cache_proposal(
             db,
             session,
@@ -307,7 +330,10 @@ async def _prefetch_all_proposals(
             proposal=rewrite["rewritten_text"] if is_proposal else None,
             rationale=rewrite["rationale"] if is_proposal else None,
             clarifying_question=rewrite["question"] if is_clarify else None,
+            guard_flagged=flagged or None,
+            flagged_proposal=rewrite["rewritten_text"] if flagged else None,
         )
+    session.guard_flag_counts = flag_counts
     await db.flush()
     await db.commit()
     await db.refresh(session)

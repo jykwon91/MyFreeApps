@@ -3,7 +3,7 @@
 Issues discovered during development. New entries are appended; resolved entries are
 removed and the counts in this header are updated.
 
-**Open issues: 16 (Critical: 1 [discovery-quality P0 umbrella, triage-2026-05-28] / High: 2 [1 blocked-on-react-19, 1 public-launch cost guardrail] / Medium: 6 [4 prior + 1 triage-2026-05-28: rejection-visibility + 1 discovery content_hash dedup] / Low: 6 [6 prior] / Feature requests: 1 [triage-2026-05-28 raw-resume-upload])**
+**Open issues: 17 (Critical: 1 [discovery-quality P0 umbrella, triage-2026-05-28] / High: 3 [1 blocked-on-react-19, 1 public-launch cost guardrail, 1 CI shard allowlist gap 2026-07-02] / Medium: 6 [4 prior + 1 triage-2026-05-28: rejection-visibility + 1 discovery content_hash dedup] / Low: 6 [6 prior] / Feature requests: 1 [triage-2026-05-28 raw-resume-upload])**
 
 > Status (2026-05-08 PM): All actionable audit items resolved across batches PR #492-#528 (~30 PRs). Remaining open entries are either (a) blocked on the React 18→19 monorepo bump (5 items), (b) deferred-by-design conventions or follow-ups (4), (c) environmental issues unrelated to code (3: asyncpg Windows, test hang on Windows, Quality Gate false-positive), or (d) intentional accepted lint warnings (2).
 
@@ -791,3 +791,11 @@ This rules a lot of work in and out: **don't** invest in a relevance-overhaul or
 3. Relationship to `tailored_resume` (generated) and the `/resume` refinement tool — where does a raw "master resume" sit relative to those.
 **Parity note (`monorepo-parity-discipline`):** mirror MBK's Documents upload/viewer. If MBK's upload/viewer primitives are generic and now needed by 2 apps, extract to `@platform/ui` / `platform_shared` rather than copy (Tier 1/2 — auto-promote on 2nd occurrence).
 **Effort:** M — enum + migration + repo/service + a resume document UI. Upload plumbing + MinIO storage (`myjobhunter-files`, 25 MB cap) already exist.
+
+### HIGH — CI backend-test shards are an explicit-path allowlist; entire test suites silently excluded
+
+**Reported:** 2026-07-02, discovered while fixing the hallucination-guard confirmation loop (guard PR, branch `fix/mjh-guard-confirm-loop`).
+**Problem:** `.github/workflows/ci-myjobhunter.yml` runs backend tests as 4 shards (`fast` / `crud` / `login-heavy` / `totp`), each an explicit `paths:` file list. Any test file not hand-added to a shard NEVER runs in CI. Found the hard way: all 7 `tests/test_resume_refinement_*.py` files were in no shard, so (a) `hallucination_guard` shipped failing 4 of its own tests — the proper-noun regex never matched un-connectored multi-word phrases ("Acme Corp"), never flagged single-token companies ("Hooli"), and missed bare magnitude metrics ("500K"); and (b) the `test_resume_refinement_proposal_cache.py` patches went silently stale when session_service was split into sub-modules (#478) — 5 tests failing on main, invisible.
+**Fixed so far:** the guard + its tests (this PR), the stale proposal-cache patches (this PR), and a new `refinement` shard covering all 8 refinement test files (this PR).
+**Remaining:** audit every `tests/test_*.py` against the shard lists — as of 2026-07-02 the unsharded set includes (at minimum) discovery, company research, application_writes (intentionally excluded, documented above), jobs/resume-upload, documents, screening, invites, and job-analysis suites. Decide per file: add to a shard (or a new one), or document the intentional exclusion. Structural fix worth considering: replace explicit allowlists with a catch-all shard (`pytest --ignore=<sharded files>`) so a new test file runs by default and sharding is an optimization, not a gate.
+**Also:** `test_application_writes.py` remains excluded per its own entry (Argon2 fixture slowness) — unchanged by this.

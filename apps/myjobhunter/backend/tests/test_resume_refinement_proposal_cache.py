@@ -30,7 +30,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from app.services.resume_refinement import session_service
-from app.services.resume_refinement import session_helpers
+from app.services.resume_refinement import session_turn_service
 
 
 def _fake_session(
@@ -57,6 +57,10 @@ def _fake_session(
     s.pending_proposal = None
     s.pending_rationale = None
     s.pending_clarifying_question = None
+    s.pending_guard_flagged = None
+    s.pending_flagged_proposal = None
+    s.confirmed_facts = []
+    s.guard_flag_counts = {}
     s.total_tokens_in = 0
     s.total_tokens_out = 0
     s.total_cost_usd = Decimal("0")
@@ -132,7 +136,11 @@ async def test_navigate_cache_hit_skips_claude_call() -> None:
         return session
 
     with (
-        patch.object(session_helpers, "_load_active", new=fake_load_active),
+        # NOTE: ``navigate`` lives in session_turn_service and imports
+        # the private helpers BY NAME — patches must target the consumer
+        # module's namespace, not session_helpers. (These patches
+        # silently went stale when session_service was split in #478.)
+        patch.object(session_turn_service, "_load_active", new=fake_load_active),
         patch.object(
             session_service.session_repo,
             "set_target_index",
@@ -183,7 +191,7 @@ async def test_navigate_cache_miss_falls_through_to_generation() -> None:
     generate_mock = AsyncMock(return_value=session)
 
     with (
-        patch.object(session_helpers, "_load_active", new=fake_load_active),
+        patch.object(session_turn_service, "_load_active", new=fake_load_active),
         patch.object(
             session_service.session_repo,
             "set_target_index",
@@ -194,7 +202,7 @@ async def test_navigate_cache_miss_falls_through_to_generation() -> None:
             "hydrate_pending_from_cache",
             new=AsyncMock(return_value=None),  # cache miss
         ),
-        patch.object(session_helpers, "_generate_next_proposal", new=generate_mock),
+        patch.object(session_turn_service, "_generate_next_proposal", new=generate_mock),
         patch.object(
             session_service.session_repo,
             "get_with_turns_for_user",

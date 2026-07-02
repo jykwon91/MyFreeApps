@@ -137,12 +137,22 @@ async def update_pending_proposal(
     tokens_in: int,
     tokens_out: int,
     cost_usd: Decimal,
+    guard_flagged: list[str] | None = None,
+    flagged_proposal: str | None = None,
 ) -> ResumeRefinementSession:
-    """Set the pending AI proposal on the session and bump counters."""
+    """Set the pending AI proposal on the session and bump counters.
+
+    ``guard_flagged`` / ``flagged_proposal`` carry the hallucination-guard
+    state when the proposal was downgraded to a clarify — kept so a
+    clarify answer can confirm the phrases and "Use it anyway" can apply
+    the held text.
+    """
     session.pending_target_section = target_section
     session.pending_proposal = proposal
     session.pending_rationale = rationale
     session.pending_clarifying_question = clarifying_question
+    session.pending_guard_flagged = guard_flagged
+    session.pending_flagged_proposal = flagged_proposal
     session.turn_count += 1
     session.total_tokens_in += tokens_in
     session.total_tokens_out += tokens_out
@@ -166,6 +176,8 @@ async def apply_user_resolution(
     session.pending_proposal = None
     session.pending_rationale = None
     session.pending_clarifying_question = None
+    session.pending_guard_flagged = None
+    session.pending_flagged_proposal = None
     if advance_target:
         session.target_index += 1
     session.turn_count += 1
@@ -194,6 +206,8 @@ async def set_target_index(
     session.pending_proposal = None
     session.pending_rationale = None
     session.pending_clarifying_question = None
+    session.pending_guard_flagged = None
+    session.pending_flagged_proposal = None
     await db.flush()
     await db.commit()
     await db.refresh(session)
@@ -219,6 +233,8 @@ async def hydrate_pending_from_cache(
     session.pending_proposal = entry.get("proposal")
     session.pending_rationale = entry.get("rationale")
     session.pending_clarifying_question = entry.get("clarifying_question")
+    session.pending_guard_flagged = entry.get("guard_flagged")
+    session.pending_flagged_proposal = entry.get("flagged_proposal")
     await db.flush()
     await db.commit()
     await db.refresh(session)
@@ -234,6 +250,8 @@ async def cache_proposal(
     proposal: str | None,
     rationale: str | None,
     clarifying_question: str | None,
+    guard_flagged: list[str] | None = None,
+    flagged_proposal: str | None = None,
 ) -> ResumeRefinementSession:
     """Write the just-generated proposal into ``proposal_cache`` for
     the given ``target_index`` so future navigations skip the AI call.
@@ -247,6 +265,8 @@ async def cache_proposal(
         "proposal": proposal,
         "rationale": rationale,
         "clarifying_question": clarifying_question,
+        "guard_flagged": guard_flagged,
+        "flagged_proposal": flagged_proposal,
     }
     session.proposal_cache = existing
     await db.flush()
@@ -286,6 +306,51 @@ async def mark_completed(
     session.pending_proposal = None
     session.pending_rationale = None
     session.pending_clarifying_question = None
+    session.pending_guard_flagged = None
+    session.pending_flagged_proposal = None
+    await db.flush()
+    await db.commit()
+    await db.refresh(session)
+    return session
+
+
+async def add_confirmed_facts(
+    db: AsyncSession,
+    session: ResumeRefinementSession,
+    *,
+    facts: list[str],
+) -> ResumeRefinementSession:
+    """Append user-confirmed facts to the session-level allowlist.
+
+    Deduplicates case-insensitively while preserving insertion order.
+    JSONB requires a fresh list assignment for SQLAlchemy to detect the
+    change — mutating in place doesn't flush.
+    """
+    existing = list(session.confirmed_facts or [])
+    seen = {f.strip().lower() for f in existing}
+    for fact in facts:
+        cleaned = (fact or "").strip()
+        if cleaned and cleaned.lower() not in seen:
+            existing.append(cleaned)
+            seen.add(cleaned.lower())
+    session.confirmed_facts = existing
+    await db.flush()
+    await db.commit()
+    await db.refresh(session)
+    return session
+
+
+async def increment_guard_flag_count(
+    db: AsyncSession,
+    session: ResumeRefinementSession,
+    *,
+    target_index: int,
+) -> ResumeRefinementSession:
+    """Bump the per-target hallucination-guard flag counter."""
+    counts = dict(session.guard_flag_counts or {})
+    key = str(target_index)
+    counts[key] = int(counts.get(key, 0)) + 1
+    session.guard_flag_counts = counts
     await db.flush()
     await db.commit()
     await db.refresh(session)

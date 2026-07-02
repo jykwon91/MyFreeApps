@@ -70,6 +70,27 @@ class ResumeRefinementSession(Base):
     pending_rationale: Mapped[str | None] = mapped_column(Text, nullable=True)
     pending_clarifying_question: Mapped[str | None] = mapped_column(Text, nullable=True)
 
+    # Hallucination-guard state for the pending clarify. When the guard
+    # downgrades a proposal, the flagged phrases and the held proposal
+    # text are kept so (a) answering the clarify records the phrases as
+    # confirmed facts, and (b) "Use it anyway" can apply the held text.
+    pending_guard_flagged: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+    pending_flagged_proposal: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # Session-level allowlist of facts the user explicitly confirmed
+    # (clarify answers / "Use it anyway"). Passed into every guard check
+    # so a confirmed fact is never re-flagged.
+    confirmed_facts: Mapped[list] = mapped_column(
+        JSONB, nullable=False, default=list, server_default="[]",
+    )
+
+    # Per-target count of guard flags, keyed by stringified target_index.
+    # Drives the loop breaker: from the second flag on the same target,
+    # the frontend offers the explicit "Use it anyway" confirmation.
+    guard_flag_counts: Mapped[dict] = mapped_column(
+        JSONB, nullable=False, default=dict, server_default="{}",
+    )
+
     turn_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     total_tokens_in: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     total_tokens_out: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
@@ -113,6 +134,19 @@ class ResumeRefinementSession(Base):
         cascade="all, delete-orphan",
         order_by="ResumeRefinementTurn.turn_index",
     )
+
+    @property
+    def guard_can_force(self) -> bool:
+        """True when the frontend should offer "Use it anyway".
+
+        The loop breaker: once the guard has flagged the same target
+        twice, re-asking the clarify question would loop forever, so the
+        user gets an explicit accept-with-confirmation escape instead.
+        """
+        if not self.pending_flagged_proposal:
+            return False
+        counts = self.guard_flag_counts or {}
+        return int(counts.get(str(self.target_index), 0)) >= 2
 
     __table_args__ = (
         CheckConstraint(

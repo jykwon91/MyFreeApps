@@ -117,6 +117,68 @@ async def test_hallucination_downgrades_proposal_to_clarify():
 
 
 @pytest.mark.asyncio
+async def test_confirmed_facts_suppress_guard_flag():
+    """A fact the user has confirmed must not re-flag — this is what
+    makes answering the guard's clarify question actually unblock."""
+    parsed = {
+        "kind": "proposal",
+        "rewritten_text": "Architected payment processing handling 500K transactions/day at Acme",
+        "rationale": "Added scope.",
+    }
+    with patch.object(
+        rewrite_service,
+        "call_claude_with_meta",
+        new=AsyncMock(return_value=_claude_response(parsed)),
+    ):
+        result = await rewrite_service.run_rewrite(
+            resume_markdown=_RESUME,
+            target=_TARGET,
+            hint="yes, 500K is correct",
+            user_id=_FAKE_USER_ID,
+            session_id=_FAKE_SESSION_ID,
+            confirmed_facts=["500K"],
+        )
+    assert result["kind"] == "proposal"
+    assert result["hallucination_flagged"] == []
+
+
+@pytest.mark.asyncio
+async def test_repeat_flag_offers_use_it_anyway():
+    """From the second guard flag on the same target, the clarify copy
+    stops re-asking and points at the explicit confirmation action."""
+    parsed = {
+        "kind": "proposal",
+        "rewritten_text": "Architected payment processing handling 500K transactions/day at Acme",
+        "rationale": "Added scope.",
+    }
+    with patch.object(
+        rewrite_service,
+        "call_claude_with_meta",
+        new=AsyncMock(return_value=_claude_response(parsed)),
+    ):
+        first = await rewrite_service.run_rewrite(
+            resume_markdown=_RESUME,
+            target=_TARGET,
+            hint=None,
+            user_id=_FAKE_USER_ID,
+            session_id=_FAKE_SESSION_ID,
+            prior_flag_count=0,
+        )
+        repeat = await rewrite_service.run_rewrite(
+            resume_markdown=_RESUME,
+            target=_TARGET,
+            hint=None,
+            user_id=_FAKE_USER_ID,
+            session_id=_FAKE_SESSION_ID,
+            prior_flag_count=1,
+        )
+    assert first["kind"] == "clarify"
+    assert "Use it anyway" not in (first["question"] or "")
+    assert repeat["kind"] == "clarify"
+    assert "Use it anyway" in (repeat["question"] or "")
+
+
+@pytest.mark.asyncio
 async def test_unknown_kind_falls_back_to_clarify():
     parsed = {"kind": "weird_unknown_kind"}
     with patch.object(
