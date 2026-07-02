@@ -291,3 +291,143 @@ test.describe("Resume Refinement — chat composer (mocked active session)", () 
     }
   });
 });
+
+test.describe("Resume Refinement — click-to-target (mocked active session)", () => {
+  const SESSION_ID = "22222222-3333-4444-8555-666666666666";
+
+  const AI_TARGET = {
+    section: "Experience — bullet 1",
+    current_text: "Built the payments system",
+    improvement_type: "stronger_verb",
+    severity: "medium",
+    notes: null,
+    origin: "ai",
+  };
+
+  function clickableSession(overrides: Record<string, unknown> = {}) {
+    return {
+      id: SESSION_ID,
+      source_resume_job_id: null,
+      status: "active",
+      current_draft:
+        "# Jane Doe\n\n## Experience\n\n- Built the payments system\n- Shipped the mobile app",
+      improvement_targets: [AI_TARGET],
+      target_index: 0,
+      pending_target_section: "Experience — bullet 1",
+      pending_proposal: "Architected the payments system",
+      pending_rationale: null,
+      pending_clarifying_question: null,
+      pending_guard_flagged: null,
+      guard_can_force: false,
+      turn_count: 2,
+      total_tokens_in: 0,
+      total_tokens_out: 0,
+      total_cost_usd: "0",
+      error_message: null,
+      proposals_ready_count: 1,
+      completed_at: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      turns: [],
+      ...overrides,
+    };
+  }
+
+  function afterClickSession() {
+    return clickableSession({
+      improvement_targets: [
+        AI_TARGET,
+        {
+          section: "Experience",
+          current_text: "Shipped the mobile app",
+          improvement_type: "other",
+          severity: "low",
+          notes: null,
+          origin: "user",
+        },
+      ],
+      target_index: 1,
+      pending_target_section: "Experience",
+      pending_proposal: "Delivered the mobile app to 1M users",
+      turn_count: 4,
+    });
+  }
+
+  test("clicking a draft line creates a user target and shows its suggestion", async ({
+    page,
+    request,
+  }) => {
+    const user = await createTestUser(request);
+
+    try {
+      await loginViaUI(page, user, request);
+
+      // Mutable payload: the target-from-line POST swaps it so the
+      // poll/invalidation refetch returns the post-click state.
+      let sessionPayload = clickableSession();
+      await page.route(
+        `**/api/resume-refinement/sessions/${SESSION_ID}`,
+        (route) =>
+          route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: JSON.stringify(sessionPayload),
+          }),
+      );
+      let capturedBody: { current_text?: string; section?: string } | null = null;
+      await page.route(
+        `**/api/resume-refinement/sessions/${SESSION_ID}/target-from-line`,
+        async (route) => {
+          capturedBody = route.request().postDataJSON();
+          sessionPayload = afterClickSession();
+          await route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: JSON.stringify(sessionPayload),
+          });
+        },
+      );
+
+      await page.addInitScript((id) => {
+        localStorage.removeItem("mjh:resumeRefinementClickTipDismissed");
+        localStorage.setItem("mjh:resumeRefinementSessionId", id);
+      }, SESSION_ID);
+
+      await page.goto("/resume");
+      await page.waitForURL("**/resume");
+
+      // Discovery tip is visible on a fresh browser.
+      await expect(
+        page.getByText(/click any line to get a fresh suggestion/i),
+      ).toBeVisible();
+
+      // The non-active bullet is a real button with an action-stating label…
+      const line = page.getByRole("button", {
+        name: /get a suggestion for this line: Shipped the mobile app/i,
+      });
+      await expect(line).toBeVisible();
+
+      // …while the ACTIVE (highlighted) line is never clickable.
+      await expect(
+        page.getByRole("button", {
+          name: /get a suggestion for this line: Built the payments system/i,
+        }),
+      ).toHaveCount(0);
+
+      await line.click();
+
+      // The backend receives the raw line + its nearest ## section.
+      await expect.poll(() => capturedBody).not.toBeNull();
+      expect(capturedBody?.current_text).toBe("Shipped the mobile app");
+      expect(capturedBody?.section).toBe("Experience");
+
+      // The user-origin target is active: "Your pick" badge + its proposal.
+      await expect(page.getByText("Your pick")).toBeVisible();
+      await expect(
+        page.getByText("Delivered the mobile app to 1M users"),
+      ).toBeVisible();
+    } finally {
+      await deleteTestUser(request, user);
+    }
+  });
+});
