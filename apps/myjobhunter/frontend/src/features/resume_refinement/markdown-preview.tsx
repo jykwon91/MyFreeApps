@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import InlineText from "@/features/resume_refinement/InlineText";
+import DraftLine from "@/features/resume_refinement/DraftLine";
 
 // Tiny in-page markdown preview. Handles only the constrained subset
 // emitted by the backend's render/rewrite pipeline (headings, bullet
@@ -11,10 +12,18 @@ import InlineText from "@/features/resume_refinement/InlineText";
 // highlight band. The first matching block becomes the auto-scroll
 // target so users immediately see where the active refinement target
 // lives in the full draft.
+//
+// `onLineClick`: when provided, bullet and paragraph blocks AFTER the
+// first ## heading become clickable (user-directed targeting). Blocks
+// before the first section heading are name/contact preamble — pure
+// facts that should never look actionable. The currently-highlighted
+// block is never clickable (it's already the active target).
 
 interface MarkdownPreviewProps {
   source: string;
   highlightText?: string | null;
+  onLineClick?: (payload: { text: string; section: string }) => void;
+  clickDisabled?: boolean;
 }
 
 // Strip markdown decoration so a heading like "**Staff Engineer** — Acme"
@@ -33,11 +42,28 @@ function shouldHighlight(line: string, highlightText: string | null | undefined)
 const HIGHLIGHT_CLASS =
   "rounded-md border-l-4 border-amber-400 bg-amber-50/60 dark:bg-amber-500/10 -ml-2 pl-3 py-1";
 
-export default function MarkdownPreview({ source, highlightText }: MarkdownPreviewProps) {
+// Screen-reader marker for the amber band — the highlight is otherwise
+// color-only.
+function activeMarker(highlight: boolean): React.ReactNode {
+  if (!highlight) return null;
+  return <span className="sr-only">(this is the suggestion you're working on)</span>;
+}
+
+export default function MarkdownPreview({
+  source,
+  highlightText,
+  onLineClick,
+  clickDisabled = false,
+}: MarkdownPreviewProps) {
   const lines = source.split("\n");
   const blocks: React.ReactNode[] = [];
-  let listBuffer: { text: string; highlight: boolean }[] = [];
+  let listBuffer: { text: string; highlight: boolean; clickable: boolean; section: string }[] = [];
   let key = 0;
+  // Section tracking for click-to-target: the nearest preceding ##
+  // heading labels the new target; blocks before the first ## are
+  // never clickable.
+  let currentSection = "";
+  let seenFirstSection = false;
   const firstHighlightRef = useRef<HTMLElement | null>(null);
   let firstHighlightAssigned = false;
 
@@ -61,7 +87,17 @@ export default function MarkdownPreview({ source, highlightText }: MarkdownPrevi
               ref={(node) => attachIfFirst(node, item.highlight)}
               className={item.highlight ? HIGHLIGHT_CLASS : undefined}
             >
-              <InlineText source={item.text} />
+              {item.clickable && onLineClick ? (
+                <DraftLine
+                  text={item.text}
+                  section={item.section}
+                  disabled={clickDisabled}
+                  onSelect={onLineClick}
+                />
+              ) : (
+                <InlineText source={item.text} />
+              )}
+              {activeMarker(item.highlight)}
             </li>
           ))}
         </ul>
@@ -75,7 +111,13 @@ export default function MarkdownPreview({ source, highlightText }: MarkdownPrevi
 
     if (line.startsWith("- ")) {
       const text = line.slice(2);
-      listBuffer.push({ text, highlight: shouldHighlight(text, highlightText) });
+      const hl = shouldHighlight(text, highlightText);
+      listBuffer.push({
+        text,
+        highlight: hl,
+        clickable: seenFirstSection && !!onLineClick && !hl,
+        section: currentSection,
+      });
       continue;
     }
 
@@ -93,12 +135,15 @@ export default function MarkdownPreview({ source, highlightText }: MarkdownPrevi
           className={`text-xl font-bold border-b border-border pb-1 ${hl ? HIGHLIGHT_CLASS : ""}`}
         >
           <InlineText source={text} />
+          {activeMarker(hl)}
         </h1>
       );
       continue;
     }
     if (line.startsWith("## ")) {
       const text = line.slice(3);
+      currentSection = plainText(text);
+      seenFirstSection = true;
       const hl = shouldHighlight(text, highlightText);
       blocks.push(
         <h2
@@ -107,6 +152,7 @@ export default function MarkdownPreview({ source, highlightText }: MarkdownPrevi
           className={`text-base font-bold uppercase tracking-wide mt-4 ${hl ? HIGHLIGHT_CLASS : ""}`}
         >
           <InlineText source={text} />
+          {activeMarker(hl)}
         </h2>
       );
       continue;
@@ -121,19 +167,31 @@ export default function MarkdownPreview({ source, highlightText }: MarkdownPrevi
           className={`text-sm font-bold mt-2 ${hl ? HIGHLIGHT_CLASS : ""}`}
         >
           <InlineText source={text} />
+          {activeMarker(hl)}
         </h3>
       );
       continue;
     }
 
     const hl = shouldHighlight(line, highlightText);
+    const clickable = seenFirstSection && !!onLineClick && !hl;
     blocks.push(
       <p
         key={`p-${key++}`}
         ref={(node) => attachIfFirst(node, hl)}
         className={`text-sm ${hl ? HIGHLIGHT_CLASS : ""}`}
       >
-        <InlineText source={line} />
+        {clickable && onLineClick ? (
+          <DraftLine
+            text={line}
+            section={currentSection}
+            disabled={clickDisabled}
+            onSelect={onLineClick}
+          />
+        ) : (
+          <InlineText source={line} />
+        )}
+        {activeMarker(hl)}
       </p>
     );
   }

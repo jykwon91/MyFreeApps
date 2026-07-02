@@ -53,6 +53,21 @@ export default function SuggestionBody({
             </LoadingButton>
           </div>
         )}
+        {/* The recovery path when the flagged detail is a genuinely
+            wrong FACT: facts are edited in Profile, not here. Opens a
+            new tab so the in-progress session isn't lost. */}
+        <p className="text-xs text-muted-foreground">
+          Is a fact wrong here (title, dates, employer)? I can't edit facts —{" "}
+          <a
+            href="/profile"
+            target="_blank"
+            rel="noopener"
+            className="underline hover:text-foreground"
+          >
+            head to Profile
+          </a>{" "}
+          to fix it, then come back.
+        </p>
       </div>
     );
   }

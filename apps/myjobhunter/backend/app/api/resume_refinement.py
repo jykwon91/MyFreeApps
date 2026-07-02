@@ -11,6 +11,8 @@ POST   /resume-refinement/sessions/{id}/accept-flagged      apply guard-held pro
 POST   /resume-refinement/sessions/{id}/custom              supply custom rewrite
 POST   /resume-refinement/sessions/{id}/alternative         regenerate same target
 POST   /resume-refinement/sessions/{id}/skip                skip current target
+POST   /resume-refinement/sessions/{id}/navigate            move the cursor next/prev
+POST   /resume-refinement/sessions/{id}/target-from-line    create/jump to a target from a clicked draft line
 POST   /resume-refinement/sessions/{id}/complete            mark session done
 GET    /resume-refinement/sessions/{id}/export?format=pdf|docx   download document
 
@@ -32,6 +34,7 @@ from app.schemas.resume_refinement.session import (
     NavigateRequest,
     SessionStartRequest,
     SessionWithTurnsRead,
+    TargetFromLineRequest,
     TurnAlternativeRequest,
     TurnCustomRequest,
 )
@@ -246,6 +249,39 @@ async def navigate(
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except NoMoreTargets as exc:
         raise HTTPException(status_code=409, detail="No improvement targets to navigate") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return SessionWithTurnsRead.model_validate(session)
+
+
+@router.post(
+    "/sessions/{session_id}/target-from-line",
+    response_model=SessionWithTurnsRead,
+)
+async def create_target_from_line(
+    session_id: uuid.UUID,
+    body: TargetFromLineRequest,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(current_active_user),
+) -> SessionWithTurnsRead:
+    """User clicked a draft line to get a suggestion for it.
+
+    Jumps to the matching target when the line already has one
+    (deduplicated server-side); otherwise inserts a user-origin target
+    after the cursor and generates a proposal on-demand.
+    """
+    try:
+        session = await session_service.create_target_from_line(
+            db=db,
+            user_id=user.id,
+            session_id=session_id,
+            current_text=body.current_text,
+            section=body.section,
+        )
+    except SessionNotFound as exc:
+        raise HTTPException(status_code=404, detail="Session not found") from exc
+    except SessionNotActive as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return SessionWithTurnsRead.model_validate(session)
