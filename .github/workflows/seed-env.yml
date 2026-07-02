@@ -12,6 +12,7 @@
 #   <APP>_TURNSTILE_SECRET_KEY  Cloudflare Turnstile secret
 #   <APP>_MINIO_ACCESS_KEY      shared MinIO stack credentials
 #   <APP>_MINIO_SECRET_KEY
+#   <APP>_ANTHROPIC_API_KEY     optional — apps with AI features (sk-ant-...)
 #   <APP>_SEED_USER_EMAIL           (single-user apps only)
 #   <APP>_SEED_USER_PASSWORD_HASH   (single-user apps only)
 #
@@ -95,6 +96,7 @@ jobs:
             TURNSTILE_SITE_KEY=${{ vars[format('{0}_vite_turnstile_site_key', inputs.app)] }}
             MINIO_ACCESS_KEY=${{ secrets[format('{0}_minio_access_key', inputs.app)] }}
             MINIO_SECRET_KEY=${{ secrets[format('{0}_minio_secret_key', inputs.app)] }}
+            ANTHROPIC_API_KEY=${{ secrets[format('{0}_anthropic_api_key', inputs.app)] }}
             SEED_USER_EMAIL=${{ secrets[format('{0}_seed_user_email', inputs.app)] }}
             SEED_USER_PASSWORD_HASH=${{ secrets[format('{0}_seed_user_password_hash', inputs.app)] }}
             SEED_ENV_OVERRIDES_EOF
