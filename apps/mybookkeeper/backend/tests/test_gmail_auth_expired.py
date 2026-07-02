@@ -86,6 +86,10 @@ async def test_discover_raises_gmail_auth_expired_on_refresh_error() -> None:
             new=AsyncMock(return_value=set()),
         ),
         patch(
+            "app.services.email.email_discovery_service.email_filter_log_repo.get_message_ids",
+            new=AsyncMock(return_value=set()),
+        ),
+        patch(
             "app.services.email.email_discovery_service.list_new_email_ids",
             side_effect=RefreshError("invalid_grant: Token has been expired or revoked."),
         ),
@@ -232,6 +236,10 @@ async def test_discovery_sets_needs_reauth_on_refresh_error() -> None:
         ),
         patch(
             "app.services.email.email_discovery_service.document_repo.get_email_message_ids",
+            new=AsyncMock(return_value=set()),
+        ),
+        patch(
+            "app.services.email.email_discovery_service.email_filter_log_repo.get_message_ids",
             new=AsyncMock(return_value=set()),
         ),
         patch(

@@ -27,15 +27,9 @@ from app.services.email.gmail_service import (
     list_new_email_ids,
     persist_refreshed_token,
 )
+from app.services.email.header_truncation import truncate_header
 
 logger = logging.getLogger(__name__)
-
-
-def _truncate(value: str | None, max_len: int) -> str | None:
-    """Match a Gmail header value to a DB column width without raising."""
-    if value is None:
-        return None
-    return value if len(value) <= max_len else value[:max_len]
 
 
 async def discover_gmail_emails(ctx: RequestContext) -> DiscoverResult:
@@ -67,7 +61,13 @@ async def discover_gmail_emails(ctx: RequestContext) -> DiscoverResult:
 
         queued_ids = await email_queue_repo.get_message_ids(db, org_id)
         doc_ids = await document_repo.get_email_message_ids(db, org_id)
-        processed_ids: set[str] = queued_ids | doc_ids
+        # Filter-logged messages are permanently excluded: bounces (re-listing
+        # them would just re-run the same deterministic detection every sync)
+        # and app-sent mail (rent receipts / inquiry replies recorded at send
+        # time by app_sent_email_service — re-ingesting those would re-extract
+        # the app's own output as duplicate transactions).
+        filtered_ids = await email_filter_log_repo.get_message_ids(db, org_id)
+        processed_ids: set[str] = queued_ids | doc_ids | filtered_ids
 
         label = settings.gmail_label or None
         try:
@@ -189,8 +189,8 @@ async def discover_gmail_emails(ctx: RequestContext) -> DiscoverResult:
                     organization_id=org_id,
                     user_id=ctx.user_id,
                     message_id=message_id,
-                    from_address=_truncate(from_address, EMAIL_FILTER_LOG_FROM_ADDRESS_MAX_LEN),
-                    subject=_truncate(subject, EMAIL_FILTER_LOG_SUBJECT_MAX_LEN),
+                    from_address=truncate_header(from_address, EMAIL_FILTER_LOG_FROM_ADDRESS_MAX_LEN),
+                    subject=truncate_header(subject, EMAIL_FILTER_LOG_SUBJECT_MAX_LEN),
                     reason=bounce_result.reason,
                 )
                 filtered_count += 1

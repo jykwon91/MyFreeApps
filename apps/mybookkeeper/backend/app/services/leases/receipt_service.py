@@ -23,7 +23,6 @@ from __future__ import annotations
 import datetime as _dt
 import logging
 import uuid
-from calendar import monthrange
 from dataclasses import dataclass
 from decimal import Decimal
 
@@ -44,12 +43,20 @@ from app.repositories.transactions import transaction_repo
 from app.repositories.user import user_repo
 from app.repositories.inquiries import inquiry_repo
 from app.services.email import gmail_service
+from app.services.email.app_sent_email_service import record_app_sent_email
+from app.services.email.constants import APP_SENT_RECEIPT_FILTER_REASON
 from app.services.email.exceptions import (
     GmailReauthRequiredError,
     GmailSendError,
     GmailSendScopeError,
 )
 from app.services.integrations import integration_service
+from app.services.leases.receipt_formatting import (
+    default_period as _default_period,
+    format_period_long as _format_period_long,
+    format_period_short as _format_period_short,
+    resolve_landlord_name as _resolve_landlord_name,
+)
 from app.services.leases.receipt_pdf_service import ReceiptData, generate_receipt_pdf
 from app.core import storage as _storage_module
 
@@ -97,32 +104,6 @@ class ReceiptSendResult:
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
-def _default_period(txn_date: _dt.date) -> tuple[_dt.date, _dt.date]:
-    """Return (start, end) for the full calendar month of ``txn_date``."""
-    first = txn_date.replace(day=1)
-    last_day = monthrange(txn_date.year, txn_date.month)[1]
-    last = txn_date.replace(day=last_day)
-    return first, last
-
-
-def _resolve_landlord_name(host_user) -> str:  # type: ignore[no-untyped-def]
-    """Pick the landlord display name for the receipt.
-
-    Prefers the host's configured ``user.name`` (legal name they entered
-    at registration or in profile settings). Falls back to the email
-    local-part only when the user hasn't set a name yet — that fallback
-    surfaces strings like 'jasonykwon91' on the receipt, which is wrong
-    for tenant-facing artifacts. The UI nudges the user to set their
-    name on the Security page so the fallback is short-lived.
-    """
-    name = (host_user.name or "").strip() if hasattr(host_user, "name") else ""
-    if name:
-        return name
-    if host_user.email:
-        return host_user.email.split("@")[0]
-    return "Landlord"
-
 
 async def _resolve_property_address(
     db: AsyncSession,
@@ -395,7 +376,7 @@ async def send_receipt(
             f"Amount: ${txn_amount:,.2f}\n\n"
             f"Thank you,\n{landlord_name}"
         )
-        await gmail_service.send_message_with_attachment(
+        sent_gmail_message_id = await gmail_service.send_message_with_attachment(
             integration,
             from_address=from_address,
             to_address=tenant_email,
@@ -422,7 +403,20 @@ async def send_receipt(
             raise ReceiptMissingSendScopeError(str(exc)) from exc
         raise ReceiptGmailSendError(str(exc)) from exc
 
-    # Gmail succeeded — persist the attachment row and update pending receipt
+    # Gmail succeeded — record the sent message ID FIRST, in its own
+    # transaction, so the Gmail sync never re-ingests this receipt email as a
+    # duplicate income transaction even if the attachment persistence below
+    # fails and rolls back.
+    await record_app_sent_email(
+        organization_id=organization_id,
+        user_id=user_id,
+        message_id=sent_gmail_message_id,
+        from_address=from_address,
+        subject=subject,
+        reason=APP_SENT_RECEIPT_FILTER_REASON,
+    )
+
+    # Persist the attachment row and update pending receipt
     async with unit_of_work() as db:
         # We need a lease_id for the attachment — use the resolved one or
         # fall back to the first active lease. If none exists, we can't
@@ -558,20 +552,3 @@ async def preview_receipt_pdf(
     )
     pdf_bytes = generate_receipt_pdf(receipt_data)
     return pdf_bytes, "receipt-preview.pdf"
-
-
-# ---------------------------------------------------------------------------
-# Private helpers
-# ---------------------------------------------------------------------------
-
-def _format_period_short(start: _dt.date, end: _dt.date) -> str:
-    if start.year == end.year and start.month == end.month:
-        return start.strftime("%b %Y")
-    return f"{start.strftime('%b %Y')} – {end.strftime('%b %Y')}"
-
-
-def _format_period_long(start: _dt.date, end: _dt.date) -> str:
-    if start.year == end.year and start.month == end.month:
-        last = monthrange(start.year, start.month)[1]
-        return f"{start.strftime('%B')} {start.day}–{last}, {start.year}"
-    return f"{start.strftime('%B %-d, %Y')} – {end.strftime('%B %-d, %Y')}"

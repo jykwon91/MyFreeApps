@@ -59,3 +59,12 @@ BOUNCE_BODY_FINGERPRINTS: tuple[str, ...] = (
 # Max widths for EmailFilterLog string columns — must match the model.
 EMAIL_FILTER_LOG_FROM_ADDRESS_MAX_LEN = 500
 EMAIL_FILTER_LOG_SUBJECT_MAX_LEN = 500
+
+# -- EmailFilterLog.reason values for app-sent messages --
+#
+# Written at send time by app.services.email.app_sent_email_service so the
+# Gmail sync never re-ingests mail the app itself sent (a rent receipt matches
+# the ingestion query via subject:receipt + has:attachment and would be
+# re-extracted as a duplicate income transaction).
+APP_SENT_RECEIPT_FILTER_REASON = "app_sent_receipt"
+APP_SENT_INQUIRY_REPLY_FILTER_REASON = "app_sent_inquiry_reply"

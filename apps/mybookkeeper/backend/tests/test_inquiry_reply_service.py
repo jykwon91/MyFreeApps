@@ -22,6 +22,7 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.email.email_filter_log import EmailFilterLog
 from app.models.inquiries.inquiry import Inquiry
 from app.models.inquiries.inquiry_event import InquiryEvent
 from app.models.inquiries.inquiry_message import InquiryMessage
@@ -30,6 +31,8 @@ from app.models.organization.organization import Organization
 from app.models.user.user import User
 from app.repositories.inquiries import inquiry_repo
 from app.schemas.inquiries.inquiry_reply_request import InquiryReplyRequest
+from app.services.email import app_sent_email_service
+from app.services.email.constants import APP_SENT_INQUIRY_REPLY_FILTER_REASON
 from app.services.email.exceptions import GmailReauthRequiredError, GmailSendError, GmailSendScopeError
 from app.services.inquiries import inquiry_reply_service
 
@@ -51,6 +54,9 @@ def patch_session(monkeypatch: pytest.MonkeyPatch, db: AsyncSession):
 
     monkeypatch.setattr(inquiry_reply_service, "AsyncSessionLocal", _factory)
     monkeypatch.setattr(inquiry_reply_service, "unit_of_work", _uow)
+    # The app-sent recorder opens its own transaction — route it to the same
+    # test session so its EmailFilterLog write is visible to assertions.
+    monkeypatch.setattr(app_sent_email_service, "unit_of_work", _uow)
     return None
 
 
@@ -142,6 +148,15 @@ async def test_send_reply_happy_path_inserts_message_event_and_advances_stage(
     rows = events.scalars().all()
     assert len(rows) == 1
     assert rows[0].actor == "host"
+
+    # Sent message recorded so the Gmail sync never re-ingests the host's
+    # own reply as a financial document.
+    filter_rows = (await db.execute(select(EmailFilterLog))).scalars().all()
+    assert len(filter_rows) == 1
+    assert filter_rows[0].message_id == "<gmail-id-123>"
+    assert filter_rows[0].reason == APP_SENT_INQUIRY_REPLY_FILTER_REASON
+    assert filter_rows[0].from_address == test_user.email
+    assert filter_rows[0].subject == "Re: Cozy Room"
 
 
 @pytest.mark.asyncio
@@ -278,6 +293,10 @@ async def test_send_reply_gmail_send_failure_no_message_no_stage_change(
     refreshed = await inquiry_repo.get_by_id(db, inquiry.id, test_org.id)
     assert refreshed is not None
     assert refreshed.stage == "new"
+
+    # Nothing was sent, so nothing was recorded as app-sent.
+    filter_rows = (await db.execute(select(EmailFilterLog))).scalars().all()
+    assert filter_rows == []
 
 
 @pytest.mark.asyncio
