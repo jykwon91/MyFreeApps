@@ -83,6 +83,10 @@ def _base_patches(
             new=AsyncMock(return_value=set()),
         ),
         patch(
+            "app.services.email.email_discovery_service.email_filter_log_repo.get_message_ids",
+            new=AsyncMock(return_value=set()),
+        ),
+        patch(
             "app.services.email.email_discovery_service.list_new_email_ids",
             return_value=(new_ids, len(new_ids)),
         ),

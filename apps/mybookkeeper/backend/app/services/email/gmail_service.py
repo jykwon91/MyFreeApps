@@ -116,9 +116,11 @@ def list_new_email_ids(
     """Return (new_ids, total_matched).
 
     ``new_ids`` excludes any message already in ``processed_ids`` (the dedup
-    set built from email_queue + documents). ``total_matched`` is the
-    pre-dedup count Gmail returned for the configured query — surfaced to
-    the UI so '0 documents added' isn't ambiguous.
+    set built from email_queue + documents + email_filter_logs — the latter
+    covers filtered bounces and app-sent mail recorded at send time).
+    ``total_matched`` is the pre-dedup count Gmail returned for the
+    configured query — surfaced to the UI so '0 documents added' isn't
+    ambiguous.
     """
     query = settings.gmail_search_query
     label_ids: list[str] | None = None

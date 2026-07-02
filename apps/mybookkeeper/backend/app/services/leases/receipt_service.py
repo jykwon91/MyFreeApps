@@ -44,6 +44,8 @@ from app.repositories.transactions import transaction_repo
 from app.repositories.user import user_repo
 from app.repositories.inquiries import inquiry_repo
 from app.services.email import gmail_service
+from app.services.email.app_sent_email_service import record_app_sent_email
+from app.services.email.constants import APP_SENT_RECEIPT_FILTER_REASON
 from app.services.email.exceptions import (
     GmailReauthRequiredError,
     GmailSendError,
@@ -395,7 +397,7 @@ async def send_receipt(
             f"Amount: ${txn_amount:,.2f}\n\n"
             f"Thank you,\n{landlord_name}"
         )
-        await gmail_service.send_message_with_attachment(
+        sent_gmail_message_id = await gmail_service.send_message_with_attachment(
             integration,
             from_address=from_address,
             to_address=tenant_email,
@@ -422,7 +424,20 @@ async def send_receipt(
             raise ReceiptMissingSendScopeError(str(exc)) from exc
         raise ReceiptGmailSendError(str(exc)) from exc
 
-    # Gmail succeeded — persist the attachment row and update pending receipt
+    # Gmail succeeded — record the sent message ID FIRST, in its own
+    # transaction, so the Gmail sync never re-ingests this receipt email as a
+    # duplicate income transaction even if the attachment persistence below
+    # fails and rolls back.
+    await record_app_sent_email(
+        organization_id=organization_id,
+        user_id=user_id,
+        message_id=sent_gmail_message_id,
+        from_address=from_address,
+        subject=subject,
+        reason=APP_SENT_RECEIPT_FILTER_REASON,
+    )
+
+    # Persist the attachment row and update pending receipt
     async with unit_of_work() as db:
         # We need a lease_id for the attachment — use the resolved one or
         # fall back to the first active lease. If none exists, we can't

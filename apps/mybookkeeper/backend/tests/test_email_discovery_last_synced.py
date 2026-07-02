@@ -96,6 +96,10 @@ def _patch_discovery_dependencies(
             "app.services.email.email_discovery_service.document_repo.get_email_message_ids",
             new=AsyncMock(return_value=set()),
         ),
+        patch(
+            "app.services.email.email_discovery_service.email_filter_log_repo.get_message_ids",
+            new=AsyncMock(return_value=set()),
+        ),
     ]
 
     if list_new_ids_side_effect is not None:

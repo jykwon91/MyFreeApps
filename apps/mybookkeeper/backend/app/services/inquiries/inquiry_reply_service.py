@@ -37,6 +37,8 @@ from app.repositories.user import user_repo
 from app.schemas.inquiries.inquiry_message_response import InquiryMessageResponse
 from app.schemas.inquiries.inquiry_reply_request import InquiryReplyRequest
 from app.services.email import gmail_service
+from app.services.email.app_sent_email_service import record_app_sent_email
+from app.services.email.constants import APP_SENT_INQUIRY_REPLY_FILTER_REASON
 from app.services.email.exceptions import GmailReauthRequiredError, GmailSendError, GmailSendScopeError
 from app.services.integrations import integration_service
 
@@ -131,6 +133,17 @@ async def send_reply(
         raise InquiryReplyMissingSendScopeError(str(exc)) from exc
     except GmailSendError as exc:
         raise InquiryReplySendFailedError(str(exc)) from exc
+
+    # Record the sent message ID in its own transaction so the Gmail sync
+    # never re-ingests the host's own reply, even if Phase 3 below fails.
+    await record_app_sent_email(
+        organization_id=organization_id,
+        user_id=user_id,
+        message_id=sent_message_id,
+        from_address=from_address,
+        subject=request.subject,
+        reason=APP_SENT_INQUIRY_REPLY_FILTER_REASON,
+    )
 
     # ----- Phase 3: persist message + event + stage transition (atomic) -----
     now = _dt.datetime.now(_dt.timezone.utc)

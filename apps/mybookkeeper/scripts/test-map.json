@@ -183,7 +183,8 @@
         "test_gmail_skipped_messages.py",
         "test_silent_fail_audit_fixes.py",
         "services/email/test_bounce_detector.py",
-        "services/email/test_discovery_bounce_filter.py"
+        "services/email/test_discovery_bounce_filter.py",
+        "services/email/test_app_sent_email_filter.py"
       ],
       "frontend_tests": [
         "EmailQueueSection.test.tsx"
@@ -712,7 +713,8 @@
       "backend_tests": [
         "test_receipt_pdf_service.py",
         "test_receipt_sequence_repo.py",
-        "test_receipt_routes.py"
+        "test_receipt_routes.py",
+        "test_receipt_service_app_sent.py"
       ],
       "frontend_tests": [
         "SendReceiptDialog.test.tsx",
