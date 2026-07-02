@@ -34,6 +34,7 @@ from app.services.classification.prompts import (
     build_reference_text,
 )
 from app.services.classification.scope_guards import (
+    apply_agent_hint,
     apply_map_hint,
     check_game_map_consistency,
 )
@@ -72,6 +73,7 @@ async def classify_lineup(
     *,
     game_hint: Optional[str] = None,
     map_hint: Optional[str] = None,
+    agent_hint: Optional[str] = None,
 ) -> ClassificationResult:
     """Classify a single lineup and write suggestions back to the DB row.
 
@@ -84,6 +86,12 @@ async def classify_lineup(
             post-parse via ``apply_map_hint`` — mirroring the ingest grid
             classifier — so the interactive reclassify path honors a source's
             operator-set map scope exactly as ingestion does. Implies its game.
+        agent_hint: Optional Valorant agent-slug scope (the lineup's
+            Source.config_json ``agent_hint``). When set, the utility candidate
+            list is narrowed to that agent's abilities and the classified
+            utility is HARD-LOCKED to it post-parse via ``apply_agent_hint`` —
+            mirroring the ingest grid classifier — so the reclassify path honors
+            a source's operator-set agent scope.
 
     Returns:
         ClassificationResult with success=True and suggested FK values on
@@ -118,10 +126,15 @@ async def classify_lineup(
     # apply_map_hint can find the hinted map and re-resolve its zones —
     # mirroring the ingest grid classifier, which always loads all games.
     # Without a map_hint, keep the cheaper game-scoped load.
-    if map_hint:
+    if map_hint or agent_hint:
+        # Full ref: apply_map_hint may need a map from another game, and agent
+        # scoping needs every agent's abilities regardless of this row's current
+        # (possibly mis-set) game_id.
         ref = await load_reference_data(db, game_id=None)
         _map_game = {m["slug"]: m["game_slug"] for m in ref.get("maps", [])}
-        effective_game_hint = _map_game.get(map_hint, game_hint)
+        effective_game_hint = (
+            _map_game.get(map_hint, game_hint) if map_hint else game_hint
+        )
     else:
         ref = await load_reference_data(db, game_id=lineup.game_id)
         effective_game_hint = game_hint
@@ -139,7 +152,7 @@ async def classify_lineup(
         )
 
     reference_text = build_reference_text(
-        ref, game_hint=effective_game_hint, map_hint=map_hint
+        ref, game_hint=effective_game_hint, map_hint=map_hint, agent_hint=agent_hint
     )
 
     chapter_context_parts: list[str] = []
@@ -262,6 +275,11 @@ async def classify_lineup(
         parsed = apply_map_hint(parsed, ref, map_hint, failures, structured_codes)
     else:
         parsed = check_game_map_consistency(parsed, ref, failures, structured_codes)
+
+    # Agent scope is orthogonal to map scope — apply it regardless of the map
+    # branch above. No-op unless agent_hint owns an ability in the ref data.
+    if agent_hint:
+        parsed = apply_agent_hint(parsed, ref, agent_hint, failures, structured_codes)
 
     (
         game_id,

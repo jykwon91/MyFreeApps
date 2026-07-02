@@ -6,9 +6,10 @@ the parsed dict + reference data — no DB, no SDK. Shared by the grid +
 single-image entrypoints.
 
 Extracted from the former ``classifier_service.py`` (a utility grab-bag) so the
-scope guards have a cohesive home with PUBLIC names. Both the cross-game
-contamination guard (``check_game_map_consistency``) and the operator map-scope
-hard-lock (``apply_map_hint``) live here.
+scope guards have a cohesive home with PUBLIC names. The cross-game
+contamination guard (``check_game_map_consistency``), the operator map-scope
+hard-lock (``apply_map_hint``), and the operator agent-scope hard-lock
+(``apply_agent_hint``) all live here.
 """
 from __future__ import annotations
 
@@ -125,4 +126,68 @@ def apply_map_hint(
             codes.append(f"map_hint_override:claude={claude_map}:forced={map_hint}")
     result["game_slug"] = map_game[map_hint]
     result["map_slug"] = map_hint
+    return result
+
+
+def apply_agent_hint(
+    parsed: dict[str, Any],
+    ref: dict[str, Any],
+    agent_hint: str,
+    failures: list[str],
+    codes: Optional[list[str]] = None,
+) -> dict[str, Any]:
+    """Hard-lock the classified utility to the operator-supplied agent scope.
+
+    The operator scopes a single-agent Valorant source by setting ``agent_hint``
+    (an agent slug) in Source.config_json. This is the load-bearing recurrence
+    fix for cross-AGENT-within-Valorant utility misclassification: PR #950 grew
+    the Valorant ability menu from 4 to ~56 with no agent scoping, and a Sova
+    recon dart's scan reads enough like a smoke deploy that the classifier
+    tagged ~1/3 of a Sova source's lineups as Brimstone ``sky-smoke``. The
+    prompt-only scope (``build_reference_text`` agent filter) narrows the menu,
+    but ``resolve_slugs`` is game- but NOT agent-scoped — a hallucinated
+    off-agent slug (still a valid Valorant utility) would otherwise resolve to
+    the wrong agent's FK. This guard makes that impossible post-parse.
+
+    Behaviour when ``agent_hint`` owns at least one ability in the reference
+    data and Claude returned a utility that belongs to a DIFFERENT agent:
+      - null out ``utility_type_slug`` (we cannot know WHICH of the hinted
+        agent's abilities it should be — several per agent — so we leave it for
+        operator review rather than guess, mirroring how ``apply_map_hint``
+        nulls an unresolvable zone)
+      - emit a structured override code + human note (visible in telemetry, per
+        rules/check-third-party-error-codes)
+      - leave every other field intact
+
+    Returns a COPY (never mutates ``parsed``), matching the sibling guards. An
+    ``agent_hint`` that owns no abilities in the reference data (bad slug, or
+    agents not yet loaded) is a no-op with a logged note — defensive, and it
+    keeps the prompt filter and this guard consistent (both fall back to
+    unscoped rather than blanking the utility).
+    """
+    ability_agent = {
+        ut["slug"]: ut.get("agent_slug") for ut in ref.get("utility_types", [])
+    }
+    if agent_hint not in ability_agent.values():
+        failures.append(
+            f"agent_hint '{agent_hint}' has no abilities in reference data — "
+            "scope not applied"
+        )
+        return parsed
+    ut_slug = parsed.get("utility_type_slug")
+    if not ut_slug or ability_agent.get(ut_slug) == agent_hint:
+        return parsed
+    result = dict(parsed)
+    actual_agent = ability_agent.get(ut_slug)
+    failures.append(
+        f"AGENT-SCOPE OVERRIDE: classifier chose utility='{ut_slug}' "
+        f"(agent '{actual_agent}') but source is scoped to agent '{agent_hint}' "
+        "— nulling utility_type_slug for operator review"
+    )
+    if codes is not None:
+        codes.append(
+            f"agent_hint_override:claude={ut_slug}:"
+            f"agent={actual_agent}:scoped={agent_hint}"
+        )
+    result["utility_type_slug"] = None
     return result

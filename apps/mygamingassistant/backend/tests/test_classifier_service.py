@@ -580,6 +580,76 @@ class TestReferenceTextBuilder:
         assert "SOURCE MAP SCOPE" in text
         assert "Expected game: valorant" not in text
 
+    def test_agent_hint_filters_utility_list_and_emits_scope(self):
+        from app.services.classification.prompts import build_reference_text
+
+        ref = {
+            "games": [
+                {"slug": "valorant", "name": "VALORANT", "side_a_label": "Attacker", "side_b_label": "Defender"},
+            ],
+            "maps": [
+                {"slug": "breeze", "name": "Breeze", "game_slug": "valorant", "zones": [{"slug": "a-site", "name": "A Site"}]},
+            ],
+            "utility_types": [
+                {"slug": "recon", "name": "Recon Bolt", "game_slug": "valorant", "agent_slug": "sova"},
+                {"slug": "shock", "name": "Shock Bolt", "game_slug": "valorant", "agent_slug": "sova"},
+                {"slug": "sky-smoke", "name": "Sky Smoke", "game_slug": "valorant", "agent_slug": "brimstone"},
+                {"slug": "smoke", "name": "Smoke", "game_slug": "cs2", "agent_slug": None},
+            ],
+        }
+        text = build_reference_text(ref, agent_hint="sova")
+        # Hard agent-scope instruction naming the agent.
+        assert "SOURCE AGENT SCOPE" in text
+        assert "'sova'" in text
+        assert "You MUST pick utility_type_slug ONLY from sova" in text
+        # Only sova's abilities appear in the utility list...
+        assert "recon" in text
+        assert "shock" in text
+        # ...off-agent abilities (other agents + CS2 grenades) are dropped.
+        assert "sky-smoke" not in text
+        assert "→ Smoke" not in text
+
+    def test_agent_hint_with_no_matching_abilities_is_noop(self):
+        from app.services.classification.prompts import build_reference_text
+
+        ref = {
+            "games": [
+                {"slug": "valorant", "name": "VALORANT", "side_a_label": "Attacker", "side_b_label": "Defender"},
+            ],
+            "maps": [],
+            "utility_types": [
+                {"slug": "recon", "name": "Recon Bolt", "game_slug": "valorant", "agent_slug": "sova"},
+            ],
+        }
+        # Unknown agent (or agents not loaded) → no filter, no scope line; the
+        # utility menu is never emptied.
+        text = build_reference_text(ref, agent_hint="no-such-agent")
+        assert "SOURCE AGENT SCOPE" not in text
+        assert "recon" in text  # full list retained
+
+    def test_agent_hint_composes_with_map_hint(self):
+        from app.services.classification.prompts import build_reference_text
+
+        ref = {
+            "games": [
+                {"slug": "valorant", "name": "VALORANT", "side_a_label": "Attacker", "side_b_label": "Defender"},
+            ],
+            "maps": [
+                {"slug": "breeze", "name": "Breeze", "game_slug": "valorant", "zones": [{"slug": "a-site", "name": "A Site"}]},
+                {"slug": "ascent", "name": "Ascent", "game_slug": "valorant", "zones": [{"slug": "market", "name": "Market"}]},
+            ],
+            "utility_types": [
+                {"slug": "recon", "name": "Recon Bolt", "game_slug": "valorant", "agent_slug": "sova"},
+                {"slug": "sky-smoke", "name": "Sky Smoke", "game_slug": "valorant", "agent_slug": "brimstone"},
+            ],
+        }
+        # Both scopes are orthogonal and both emitted; map + utility filtered.
+        text = build_reference_text(ref, map_hint="breeze", agent_hint="sova")
+        assert "SOURCE MAP SCOPE" in text
+        assert "SOURCE AGENT SCOPE" in text
+        assert "ascent" not in text  # non-hinted map filtered out
+        assert "sky-smoke" not in text  # off-agent utility filtered out
+
 
 # ---------------------------------------------------------------------------
 # Tests: Strategy A grid classifier (classify_frames_for_lineup_decision)
@@ -983,6 +1053,22 @@ _CROSS_GAME_REF: dict = {
 }
 
 
+_AGENT_REF: dict = {
+    "games": [
+        {"slug": "valorant", "name": "VALORANT", "side_a_label": "Attacker", "side_b_label": "Defender"},
+    ],
+    "maps": [
+        {"slug": "breeze", "name": "Breeze", "game_slug": "valorant", "zones": [{"slug": "a-site", "name": "A Site"}]},
+    ],
+    "utility_types": [
+        {"slug": "recon", "name": "Recon Bolt", "game_slug": "valorant", "agent_slug": "sova"},
+        {"slug": "shock", "name": "Shock Bolt", "game_slug": "valorant", "agent_slug": "sova"},
+        {"slug": "sky-smoke", "name": "Sky Smoke", "game_slug": "valorant", "agent_slug": "brimstone"},
+        {"slug": "smoke", "name": "Smoke", "game_slug": "cs2", "agent_slug": None},
+    ],
+}
+
+
 class TestGameFirstPromptWiring:
     """Both system-prompt paths must carry the visual-cue block + game-first rule."""
 
@@ -1280,6 +1366,87 @@ class TestApplyMapHint:
         assert result == parsed  # unchanged
         assert codes == []
         assert any("not found in reference data" in f for f in failures)
+
+
+class TestApplyAgentHint:
+    """Operator agent-scope hard-lock — null a utility that belongs to a
+    different agent than the source's agent_hint (recurrence fix for cross-AGENT
+    utility misclassification within Valorant, e.g. a Sova recon dart tagged as
+    Brimstone sky-smoke). resolve_slugs is game- but NOT agent-scoped, so this
+    post-parse guard is the load-bearing guarantee behind the prompt filter."""
+
+    def test_off_agent_utility_nulled_and_code_emitted(self):
+        from app.services.classification.scope_guards import apply_agent_hint
+
+        # Claude tagged a Sova source's lineup as Brimstone's sky-smoke.
+        parsed = {
+            "game_slug": "valorant",
+            "map_slug": "breeze",
+            "utility_type_slug": "sky-smoke",
+            "side": "side_a",
+            "confidence": 0.8,
+        }
+        failures: list[str] = []
+        codes: list[str] = []
+        result = apply_agent_hint(parsed, _AGENT_REF, "sova", failures, codes)
+
+        assert result["utility_type_slug"] is None
+        # Everything else untouched (only the utility is scoped).
+        assert result["map_slug"] == "breeze"
+        assert result["game_slug"] == "valorant"
+        assert result["side"] == "side_a"
+        assert result["confidence"] == pytest.approx(0.8)
+        assert codes == ["agent_hint_override:claude=sky-smoke:agent=brimstone:scoped=sova"]
+        assert any("AGENT-SCOPE OVERRIDE" in f for f in failures)
+        # Original dict not mutated (returns a copy on override).
+        assert parsed["utility_type_slug"] == "sky-smoke"
+
+    def test_on_agent_utility_kept(self):
+        from app.services.classification.scope_guards import apply_agent_hint
+
+        parsed = {"utility_type_slug": "recon", "confidence": 0.9}
+        failures: list[str] = []
+        codes: list[str] = []
+        result = apply_agent_hint(parsed, _AGENT_REF, "sova", failures, codes)
+
+        assert result["utility_type_slug"] == "recon"
+        assert codes == []
+        assert failures == []
+
+    def test_second_agent_ability_kept(self):
+        """An agent with several abilities keeps ANY of them (sova → recon+shock)."""
+        from app.services.classification.scope_guards import apply_agent_hint
+
+        parsed = {"utility_type_slug": "shock", "confidence": 0.9}
+        failures: list[str] = []
+        result = apply_agent_hint(parsed, _AGENT_REF, "sova", failures)
+
+        assert result["utility_type_slug"] == "shock"
+        assert failures == []
+
+    def test_null_utility_unchanged(self):
+        from app.services.classification.scope_guards import apply_agent_hint
+
+        parsed = {"utility_type_slug": None, "confidence": 0.5}
+        failures: list[str] = []
+        result = apply_agent_hint(parsed, _AGENT_REF, "sova", failures)
+
+        assert result == parsed
+        assert failures == []
+
+    def test_unknown_agent_hint_is_noop_with_note(self):
+        """An agent_hint owning no abilities in the ref is a defensive no-op —
+        keeps the utility rather than blanking it (mirrors the prompt filter)."""
+        from app.services.classification.scope_guards import apply_agent_hint
+
+        parsed = {"utility_type_slug": "sky-smoke", "confidence": 0.7}
+        failures: list[str] = []
+        codes: list[str] = []
+        result = apply_agent_hint(parsed, _AGENT_REF, "no-such-agent", failures, codes)
+
+        assert result == parsed  # unchanged — utility NOT blanked
+        assert codes == []
+        assert any("no abilities in reference data" in f for f in failures)
 
 
 class TestGridMaxTokens:

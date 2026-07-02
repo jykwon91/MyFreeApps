@@ -259,6 +259,7 @@ async def _process_chapter(
 
     cfg = source.config_json or {}
     game_hint, map_hint = cfg.get("game_hint"), cfg.get("map_hint")
+    agent_hint = cfg.get("agent_hint")
 
     # Strategy A core: the classifier IS the lineup detector + frame picker.
     # When the classifier is disabled we cannot make the is_lineup judgement,
@@ -275,8 +276,7 @@ async def _process_chapter(
                 frames=frames,
                 chapter_title=chapter.title,
                 attribution_author=video_meta.channel_name,
-                game_hint=game_hint,
-                map_hint=map_hint,
+                game_hint=game_hint, map_hint=map_hint, agent_hint=agent_hint,
             )
             classifier_ran = True
         except Exception as exc:

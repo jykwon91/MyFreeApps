@@ -46,6 +46,7 @@ from app.services.classification.response_parsing import (
     validate_grid_index,
 )
 from app.services.classification.scope_guards import (
+    apply_agent_hint,
     apply_map_hint,
     check_game_map_consistency,
 )
@@ -139,6 +140,7 @@ async def classify_frames_for_lineup_decision(
     attribution_author: Optional[str],
     game_hint: Optional[str] = None,
     map_hint: Optional[str] = None,
+    agent_hint: Optional[str] = None,
 ) -> ClassificationResult:
     """Strategy A: classify a chapter from N candidate frames at ingest time.
 
@@ -147,6 +149,14 @@ async def classify_frames_for_lineup_decision(
     :func:`app.services.classification.scope_guards.apply_map_hint`) so a
     single-map source can never spawn lineups on a different map — the
     recurrence fix for cross-map misclassification.
+
+    ``agent_hint`` is the operator's per-source Valorant agent scope
+    (Source.config_json ``agent_hint``). When set, the utility candidate list is
+    narrowed to that agent's abilities in the prompt and the classified utility
+    is hard-locked to it post-parse (see
+    :func:`app.services.classification.scope_guards.apply_agent_hint`) — the
+    recurrence fix for cross-agent utility misclassification (a Sova recon dart
+    tagged as Brimstone ``sky-smoke``).
     """
     if not settings.anthropic_api_key:
         logger.warning(
@@ -176,7 +186,7 @@ async def classify_frames_for_lineup_decision(
         _map_game = {m["slug"]: m["game_slug"] for m in ref.get("maps", [])}
         effective_game_hint = _map_game.get(map_hint, game_hint)
     reference_text = build_reference_text(
-        ref, game_hint=effective_game_hint, map_hint=map_hint
+        ref, game_hint=effective_game_hint, map_hint=map_hint, agent_hint=agent_hint
     )
 
     chapter_context_parts: list[str] = []
@@ -295,6 +305,11 @@ async def classify_frames_for_lineup_decision(
         parsed = apply_map_hint(parsed, ref, map_hint, failures, structured_codes)
     else:
         parsed = check_game_map_consistency(parsed, ref, failures, structured_codes)
+
+    # Agent scope is orthogonal to map scope — apply it regardless of which map
+    # branch ran above. No-op unless agent_hint owns an ability in the ref data.
+    if agent_hint:
+        parsed = apply_agent_hint(parsed, ref, agent_hint, failures, structured_codes)
 
     is_lineup = bool(parsed.get("is_lineup"))
 
