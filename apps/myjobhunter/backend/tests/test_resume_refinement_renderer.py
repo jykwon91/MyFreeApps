@@ -322,7 +322,9 @@ async def test_start_session_draft_contains_company_and_skill_names():
     # Capture the initial_draft that session_repo.create receives.
     captured_initial_draft: list[str] = []
 
-    async def fake_session_create(db, *, user_id, source_resume_job_id, initial_draft):
+    async def fake_session_create(
+        db, *, user_id, source_resume_job_id, initial_draft, status="active",
+    ):
         captured_initial_draft.append(initial_draft)
         return fake_session
 

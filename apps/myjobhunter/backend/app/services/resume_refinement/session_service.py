@@ -24,6 +24,8 @@ from __future__ import annotations
 from app.services.resume_refinement.session_lifecycle_service import (
     complete_session,
     get_session_state,
+    prepare_session,
+    retry_preparation,
     start_session,
 )
 
@@ -71,6 +73,8 @@ from app.services.resume_refinement import critique_service, rewrite_service
 __all__ = [
     # Lifecycle
     "start_session",
+    "prepare_session",
+    "retry_preparation",
     "get_session_state",
     "complete_session",
     # Turn mutations

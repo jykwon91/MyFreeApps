@@ -71,6 +71,10 @@ class SessionRead(BaseModel):
     total_tokens_in: int
     total_tokens_out: int
     total_cost_usd: Decimal
+    # Background-preparation surface: error for the "Try again" card,
+    # ready-count for the honest "Drafting suggestions k/N" copy.
+    error_message: str | None = None
+    proposals_ready_count: int = 0
     completed_at: datetime | None = None
     created_at: datetime
     updated_at: datetime

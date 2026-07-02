@@ -3,6 +3,9 @@ interface SuggestionProgressBarProps {
   completed: number;
   /** Total number of suggestions in the session. */
   total: number;
+  /** Override for non-"resolved" contexts — e.g. the preparing panel's
+   *  drafted-count bar, where nothing has been resolved yet. */
+  ariaLabel?: string;
 }
 
 /**
@@ -14,6 +17,7 @@ interface SuggestionProgressBarProps {
 export default function SuggestionProgressBar({
   completed,
   total,
+  ariaLabel,
 }: SuggestionProgressBarProps) {
   if (total <= 0) return null;
   const ratio = Math.min(Math.max(completed / total, 0), 1);
@@ -24,7 +28,7 @@ export default function SuggestionProgressBar({
       aria-valuemin={0}
       aria-valuemax={total}
       aria-valuenow={completed}
-      aria-label={`${completed} of ${total} suggestions resolved`}
+      aria-label={ariaLabel ?? `${completed} of ${total} suggestions resolved`}
     >
       <div
         className="h-full bg-primary transition-[width] duration-300 ease-out"

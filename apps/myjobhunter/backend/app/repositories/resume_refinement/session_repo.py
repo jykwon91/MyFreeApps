@@ -11,7 +11,7 @@ import uuid
 from datetime import datetime, timezone
 from decimal import Decimal
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -26,13 +26,14 @@ async def create(
     user_id: uuid.UUID,
     source_resume_job_id: uuid.UUID | None,
     initial_draft: str,
+    status: str = "active",
 ) -> ResumeRefinementSession:
-    """Insert a new active session and return the persisted row."""
+    """Insert a new session and return the persisted row."""
     session = ResumeRefinementSession(
         user_id=user_id,
         source_resume_job_id=source_resume_job_id,
         current_draft=initial_draft,
-        status="active",
+        status=status,
     )
     db.add(session)
     await db.flush()
@@ -334,6 +335,148 @@ async def add_confirmed_facts(
             existing.append(cleaned)
             seen.add(cleaned.lower())
     session.confirmed_facts = existing
+    await db.flush()
+    await db.commit()
+    await db.refresh(session)
+    return session
+
+
+async def clear_pending_state(
+    db: AsyncSession,
+    session: ResumeRefinementSession,
+) -> ResumeRefinementSession:
+    """Clear the pending_* fields without touching draft or cursor.
+
+    Used when the iteration loop runs out of targets — the user clicks
+    Complete to lock; until then the session just has nothing pending.
+    """
+    session.pending_target_section = None
+    session.pending_proposal = None
+    session.pending_rationale = None
+    session.pending_clarifying_question = None
+    session.pending_guard_flagged = None
+    session.pending_flagged_proposal = None
+    await db.flush()
+    await db.commit()
+    await db.refresh(session)
+    return session
+
+
+async def bump_turn_count(
+    db: AsyncSession,
+    session: ResumeRefinementSession,
+) -> ResumeRefinementSession:
+    """Persist a turn_count increment for a user action that appends a
+    turn row without going through ``apply_user_resolution``."""
+    session.turn_count += 1
+    await db.flush()
+    await db.commit()
+    await db.refresh(session)
+    return session
+
+
+async def persist_prefetch_results(
+    db: AsyncSession,
+    session: ResumeRefinementSession,
+    *,
+    guard_flag_counts: dict,
+) -> ResumeRefinementSession:
+    """Final write of the prefetch pass: guard-flag counters plus the
+    token/cost accumulators the caller mutated on the instance."""
+    session.guard_flag_counts = guard_flag_counts
+    await db.flush()
+    await db.commit()
+    await db.refresh(session)
+    return session
+
+
+async def claim_next_preparing(db: AsyncSession) -> ResumeRefinementSession | None:
+    """Atomically claim one unclaimed ``preparing`` session and return it.
+
+    Mirrors ``resume_upload_job_repo.claim_next_queued``: an
+    ``UPDATE ... WHERE id = (subquery) RETURNING`` with
+    ``FOR UPDATE SKIP LOCKED`` so only one worker replica can claim a
+    given session. The claim marker is ``preparation_started_at``
+    (status stays ``preparing`` — the frontend keeps showing the
+    progress card either way).
+
+    Returns ``None`` when nothing is waiting.
+    """
+    now = datetime.now(timezone.utc)
+    subq = (
+        select(ResumeRefinementSession.id)
+        .where(
+            ResumeRefinementSession.status == "preparing",
+            ResumeRefinementSession.preparation_started_at.is_(None),
+        )
+        .order_by(ResumeRefinementSession.created_at.asc())
+        .limit(1)
+        .with_for_update(skip_locked=True)
+        .scalar_subquery()
+    )
+    stmt = (
+        update(ResumeRefinementSession)
+        .where(ResumeRefinementSession.id == subq)
+        .values(preparation_started_at=now, updated_at=now)
+        .returning(ResumeRefinementSession)
+    )
+    result = await db.execute(stmt)
+    row = result.scalar_one_or_none()
+    if row is not None:
+        await db.commit()
+    return row
+
+
+async def mark_active(
+    db: AsyncSession,
+    session: ResumeRefinementSession,
+) -> ResumeRefinementSession:
+    """Unlock a prepared session for user mutations."""
+    session.status = "active"
+    session.error_message = None
+    await db.flush()
+    await db.commit()
+    await db.refresh(session)
+    return session
+
+
+async def mark_preparation_failed(
+    db: AsyncSession,
+    session: ResumeRefinementSession,
+    error_message: str,
+) -> ResumeRefinementSession:
+    """Permanent preparation failure — surfaced as the "Try again" card."""
+    session.status = "failed"
+    session.error_message = error_message
+    await db.flush()
+    await db.commit()
+    await db.refresh(session)
+    return session
+
+
+async def release_preparation_claim(
+    db: AsyncSession,
+    session: ResumeRefinementSession,
+    note: str,
+) -> ResumeRefinementSession:
+    """Transient preparation failure — release the claim so the next
+    worker poll retries. Status stays ``preparing``."""
+    session.preparation_started_at = None
+    session.error_message = note
+    await db.flush()
+    await db.commit()
+    await db.refresh(session)
+    return session
+
+
+async def reset_for_retry(
+    db: AsyncSession,
+    session: ResumeRefinementSession,
+) -> ResumeRefinementSession:
+    """User-initiated retry of a ``failed`` preparation: re-queue it."""
+    session.status = "preparing"
+    session.error_message = None
+    session.preparation_started_at = None
     await db.flush()
     await db.commit()
     await db.refresh(session)

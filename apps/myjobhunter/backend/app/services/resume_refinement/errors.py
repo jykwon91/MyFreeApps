@@ -45,3 +45,9 @@ class HallucinationGuardFailed(ResumeRefinementError):
 
 class CritiqueRetryExceeded(ResumeRefinementError):
     """Claude failed to return a usable critique after retries."""
+
+
+class PreparationFailed(ResumeRefinementError):
+    """Background session preparation could not produce a usable first
+    proposal. The worker marks the session ``failed`` for the frontend's
+    "Try again" affordance."""

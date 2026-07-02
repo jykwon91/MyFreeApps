@@ -120,6 +120,7 @@ jobs:
               tests/test_resume_refinement_proposal_cache.py
               tests/test_resume_refinement_session_helpers.py
               tests/test_resume_refinement_guard_confirmation.py
+              tests/test_resume_refinement_preparing_flow.py
 
     services:
       postgres:

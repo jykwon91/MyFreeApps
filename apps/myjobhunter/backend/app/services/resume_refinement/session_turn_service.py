@@ -198,10 +198,7 @@ async def request_alternative(
         target_section=target.get("section"),
         user_text=hint,
     )
-    session.turn_count += 1
-    await db.flush()
-    await db.commit()
-    await db.refresh(session)
+    session = await session_repo.bump_turn_count(db, session)
 
     # Drop the cached proposal so this regeneration's output replaces
     # the stale one. Without invalidation, a future navigate-back to

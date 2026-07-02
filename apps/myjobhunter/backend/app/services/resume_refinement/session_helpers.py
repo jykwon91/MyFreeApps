@@ -140,14 +140,7 @@ async def _generate_next_proposal(
     target = _current_target(session)
     if target is None:
         # No more targets — clear pending state. The user clicks Complete to lock.
-        session.pending_target_section = None
-        session.pending_proposal = None
-        session.pending_rationale = None
-        session.pending_clarifying_question = None
-        await db.flush()
-        await db.commit()
-        await db.refresh(session)
-        return session
+        return await session_repo.clear_pending_state(db, session)
 
     prior_turns = await turn_repo.list_for_session(db, session.id)
     prior_context = _build_prior_context(prior_turns)
@@ -333,11 +326,9 @@ async def _prefetch_all_proposals(
             guard_flagged=flagged or None,
             flagged_proposal=rewrite["rewritten_text"] if flagged else None,
         )
-    session.guard_flag_counts = flag_counts
-    await db.flush()
-    await db.commit()
-    await db.refresh(session)
-    return session
+    return await session_repo.persist_prefetch_results(
+        db, session, guard_flag_counts=flag_counts,
+    )
 
 
 def _apply_rewrite(
