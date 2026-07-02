@@ -336,6 +336,23 @@ class TestWorkHistory:
         assert resp.status_code == 422, resp.text
 
     @pytest.mark.asyncio
+    async def test_patch_explicit_null_on_non_nullable_field_returns_422(
+        self, user_factory, as_user,
+    ) -> None:
+        """Explicit JSON null on a NOT NULL column must be a clean 422,
+        not an IntegrityError 500 at the repository layer."""
+        user = await user_factory()
+        async with await as_user(user) as authed:
+            create = await authed.post("/work-history", json=_work_history_payload())
+            assert create.status_code == 201
+            entry_id = create.json()["id"]
+            resp = await authed.patch(
+                f"/work-history/{entry_id}",
+                json={"is_current": None},
+            )
+        assert resp.status_code == 422, resp.text
+
+    @pytest.mark.asyncio
     async def test_patch_end_date_and_not_current_together_succeeds(
         self, user_factory, as_user,
     ) -> None:

@@ -12,7 +12,7 @@ Output shape:
       "title": "string",
       "location": "string|null",
       "starts_on": "YYYY-MM-DD or YYYY-MM or null",
-      "ends_on": "YYYY-MM-DD or YYYY-MM or null (null = current)",
+      "ends_on": "YYYY-MM-DD or YYYY-MM or null",
       "is_current": true|false,
       "bullets": ["string", ...]
     }
@@ -55,7 +55,7 @@ Return exactly this JSON structure:
       "title": "string — job title",
       "location": "string or null — city/state/country if shown",
       "starts_on": "YYYY-MM-DD or YYYY-MM or null",
-      "ends_on": "YYYY-MM-DD or YYYY-MM or null — null means the role is current",
+      "ends_on": "YYYY-MM-DD or YYYY-MM or null",
       "is_current": true or false,
       "bullets": ["string — achievement or responsibility", ...]
     }
@@ -88,8 +88,10 @@ Return exactly this JSON structure:
 - Extract ALL skills mentioned anywhere in the resume (skills section, work bullets, etc.).
 - For ``starts_on`` / ``ends_on``: prefer ``YYYY-MM`` format. Use ``YYYY-MM-DD`` only \
 if the day is explicitly stated. Use ``null`` when no date is present.
-- ``is_current`` is ``true`` when the role has no end date OR uses words like \
-"Present", "Current", "Now", "–".
+- ``is_current`` is ``true`` ONLY when the resume explicitly marks the role as \
+ongoing — words like "Present", "Current", "Now", "Today", or an open-ended \
+range ("2022 –"). A role that merely OMITS its end date is NOT current: use \
+``is_current: false`` with ``ends_on: null`` (the end date is unknown, not ongoing).
 - ``ends_on`` is ``null`` for current roles (``is_current: true``).
 - For bullets: extract them verbatim from the resume. Do not paraphrase or truncate. \
 Cap at 30 bullets per role.
