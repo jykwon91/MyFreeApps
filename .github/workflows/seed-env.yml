@@ -15,6 +15,10 @@
 #   <APP>_ANTHROPIC_API_KEY     optional — apps with AI features (sk-ant-...)
 #   <APP>_SEED_USER_EMAIL           (single-user apps only)
 #   <APP>_SEED_USER_PASSWORD_HASH   (single-user apps only)
+#   <APP>_SEED_ADMIN_EMAIL          (multi-user apps: boot-seeded platform admin)
+#   <APP>_SEED_ADMIN_PASSWORD_HASH  (bcrypt hash — generate locally, never the
+#                                    plaintext password; see the app's
+#                                    backend/.env.docker.example for the command)
 #
 # TURNSTILE_SITE_KEY (public) comes from the existing repo variable
 # <APPUPPER>_VITE_TURNSTILE_SITE_KEY. Missing secrets arrive as empty strings
@@ -99,6 +103,8 @@ jobs:
             ANTHROPIC_API_KEY=${{ secrets[format('{0}_anthropic_api_key', inputs.app)] }}
             SEED_USER_EMAIL=${{ secrets[format('{0}_seed_user_email', inputs.app)] }}
             SEED_USER_PASSWORD_HASH=${{ secrets[format('{0}_seed_user_password_hash', inputs.app)] }}
+            SEED_ADMIN_EMAIL=${{ secrets[format('{0}_seed_admin_email', inputs.app)] }}
+            SEED_ADMIN_PASSWORD_HASH=${{ secrets[format('{0}_seed_admin_password_hash', inputs.app)] }}
             SEED_ENV_OVERRIDES_EOF
 
             echo "--- Seed ---"

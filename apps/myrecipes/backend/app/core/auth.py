@@ -1,8 +1,9 @@
 """MyRecipes authentication wiring.
 
-Single-user app — registration route is NOT mounted in main.py.
-The full fastapi-users machinery (TOTP, lockout, HIBP, audit) is
-preserved so the operator can log in securely and enable 2FA.
+Multi-user app — public registration is mounted in main.py. The full
+fastapi-users machinery (TOTP, lockout, HIBP, audit) comes from
+platform_shared; the boot-seeded platform-admin address is reserved
+from registration via ``seed_admin_email`` below.
 
 Mirrors apps/myjobhunter/backend/app/core/auth.py.
 """
@@ -40,6 +41,9 @@ async def get_user_db(session: AsyncSession = Depends(get_db)):
 class UserManager(PlatformBaseUserManager[User]):
     reset_password_token_secret = settings.secret_key
     verification_token_secret = settings.secret_key
+    # Reserve the boot-seeded platform-admin address from public
+    # registration (rejected exactly like an already-taken email).
+    seed_admin_email = settings.seed_admin_email
 
     @property
     def lockout_threshold(self) -> int:

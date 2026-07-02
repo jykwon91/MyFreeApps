@@ -26,10 +26,15 @@ Boot order (rationale documented inline below):
                                     request handler can write
   5. bucket_init()                — verify MinIO reachable; refuse to
                                     boot if storage missing
-  6. extra_startup()              — app-specific (e.g. MBK spawns the
+  6. seed_admin()                 — optional platform-admin seed for
+                                    multi-user apps (see
+                                    platform_shared.services.seed_admin_service);
+                                    runs after register_audit_listeners
+                                    so the seed's DB writes are audited
+  7. extra_startup()              — app-specific (e.g. MBK spawns the
                                     upload worker; MJH has nothing yet)
-  7. yield                        — app handles requests
-  8. extra_shutdown()             — app-specific cleanup (e.g. cancel
+  8. yield                        — app handles requests
+  9. extra_shutdown()             — app-specific cleanup (e.g. cancel
                                     the upload worker task)
 
 Usage:
@@ -117,6 +122,7 @@ def create_app_lifespan(
     turnstile_required: bool = True,
     email_required: bool = True,
     sms_required: bool = False,
+    seed_admin: LifecycleHook | None = None,
     on_startup: LifecycleHook | None = None,
     on_shutdown: LifecycleHook | None = None,
 ) -> Callable[[FastAPI], Any]:
@@ -156,6 +162,13 @@ def create_app_lifespan(
             ``check_sms_configured()`` so the app fails loud in
             production if Twilio credentials are missing. Apps that
             never text users (MBK, MJH) leave this False.
+        seed_admin: Optional async or sync callable that seeds the
+            platform-admin account for multi-user apps — build it with
+            ``platform_shared.services.seed_admin_service.build_seed_admin_hook``.
+            Runs AFTER ``register_audit_listeners`` (so the seed's DB
+            writes are audited) and BEFORE ``on_startup``. Default None
+            (single-user apps keep their own SEED_USER_* path; apps
+            that never adopted the standard are unaffected).
         on_startup: Optional async or sync callable invoked AFTER all
             shared boot steps but BEFORE the lifespan yields. Use for
             app-specific work like spawning background tasks.
@@ -216,7 +229,15 @@ def create_app_lifespan(
         register_audit_listeners()
         bucket_init()
 
-        # 4. App-specific startup hook (workers, cron registration, etc.)
+        # 4. Platform-admin seed (multi-user apps) — after the audit
+        #    listeners so the seed's own DB writes are audited, before
+        #    the app-specific startup hook.
+        if seed_admin is not None:
+            result = seed_admin()
+            if hasattr(result, "__await__"):
+                await result  # type: ignore[misc]
+
+        # 5. App-specific startup hook (workers, cron registration, etc.)
         if on_startup is not None:
             result = on_startup()
             if hasattr(result, "__await__"):
@@ -225,7 +246,7 @@ def create_app_lifespan(
         try:
             yield
         finally:
-            # 5. App-specific shutdown hook
+            # 6. App-specific shutdown hook
             if on_shutdown is not None:
                 result = on_shutdown()
                 if hasattr(result, "__await__"):

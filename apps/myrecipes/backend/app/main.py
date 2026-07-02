@@ -1,8 +1,10 @@
 """MyRecipes FastAPI application.
 
-Single-user app -- the /register route is intentionally NOT mounted.
-The operator account is seeded once at boot from SEED_USER_EMAIL +
-SEED_USER_PASSWORD_HASH env vars (lifespan -> _on_startup below).
+Multi-user app -- public registration is mounted (rate-limited +
+Turnstile). The platform-admin account is seeded at boot from
+SEED_ADMIN_EMAIL + SEED_ADMIN_PASSWORD_HASH env vars via the shared
+seed_admin lifespan hook (platform_shared.services.seed_admin_service);
+the address is reserved from public registration.
 
 Mirrors apps/myjobhunter/backend/app/main.py for all Tier-1 and Tier-2
 patterns (lifespan factory, CORS, audit middleware, JWT login gating,
@@ -20,6 +22,7 @@ from jwt.exceptions import PyJWTError as JWTError
 from platform_shared.core.git import resolve_git_commit
 from platform_shared.core.lifespan import create_app_lifespan
 from platform_shared.api.transparency_router import build_transparency_router
+from platform_shared.services.seed_admin_service import build_seed_admin_hook
 
 from app.api import account, admin, health, recipes, totp
 from app.core.audit import current_user_id
@@ -32,6 +35,8 @@ from app.core.rate_limit import (
     check_register_rate_limit,
     require_turnstile,
 )
+from app.db.session import unit_of_work
+from app.models.user.user import User
 from app.schemas.user.user_base import UserCreate, UserRead, UserUpdate  # noqa: F401
 from app.services.storage.bucket_initializer import ensure_bucket
 
@@ -50,6 +55,17 @@ lifespan = create_app_lifespan(
     settings=settings,
     init_sentry=init_sentry,
     bucket_init=ensure_bucket,
+    # Boot-seeded platform admin (SEED_ADMIN_EMAIL + SEED_ADMIN_PASSWORD_HASH).
+    # required=True: production refuses to boot while the vars are blank —
+    # same fail-loud posture as the email/turnstile guards. The deploy
+    # contract expects the admin to exist (seed-env --check enforces the
+    # vars before first deploy).
+    seed_admin=build_seed_admin_hook(
+        settings=settings,
+        unit_of_work=unit_of_work,
+        user_model=User,
+        required=True,
+    ),
 )
 
 

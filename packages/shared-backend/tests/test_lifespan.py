@@ -78,6 +78,76 @@ class TestBootSequenceOrder:
 
         assert order == ["sentry", "audit", "bucket", "startup", "yielded", "shutdown"]
 
+    @pytest.mark.asyncio
+    async def test_seed_admin_runs_after_audit_before_startup(
+        self, app: FastAPI, monkeypatch,
+    ) -> None:
+        """seed_admin writes user rows — it must run after the audit
+        listeners are registered and before the app-specific startup hook."""
+        order: list[str] = []
+        monkeypatch.setattr(
+            "platform_shared.core.lifespan.register_audit_listeners",
+            lambda: order.append("audit"),
+        )
+
+        async def _seed() -> None:
+            order.append("seed_admin")
+
+        lifespan = create_app_lifespan(
+            settings=_settings(),
+            init_sentry=lambda: order.append("sentry"),
+            bucket_init=lambda: order.append("bucket"),
+            seed_admin=_seed,
+            on_startup=lambda: order.append("startup"),
+        )
+
+        async with lifespan(app):
+            pass
+
+        assert order == ["sentry", "audit", "bucket", "seed_admin", "startup"]
+
+    @pytest.mark.asyncio
+    async def test_seed_admin_defaults_to_none_and_is_skipped(
+        self, app: FastAPI, monkeypatch,
+    ) -> None:
+        """Apps that never adopted the standard are unaffected."""
+        monkeypatch.setattr(
+            "platform_shared.core.lifespan.register_audit_listeners",
+            MagicMock(),
+        )
+        lifespan = create_app_lifespan(
+            settings=_settings(),
+            init_sentry=MagicMock(),
+        )
+        async with lifespan(app):
+            pass
+
+    @pytest.mark.asyncio
+    async def test_seed_admin_failure_aborts_boot(
+        self, app: FastAPI, monkeypatch,
+    ) -> None:
+        """A raising seed hook (e.g. SeedAdminNotConfiguredError in prod)
+        must crash the lifespan so the deploy healthcheck fails."""
+        monkeypatch.setattr(
+            "platform_shared.core.lifespan.register_audit_listeners",
+            MagicMock(),
+        )
+
+        async def _seed() -> None:
+            raise RuntimeError("SEED_ADMIN_* not configured")
+
+        started = []
+        lifespan = create_app_lifespan(
+            settings=_settings(),
+            init_sentry=MagicMock(),
+            seed_admin=_seed,
+            on_startup=lambda: started.append("startup"),
+        )
+        with pytest.raises(RuntimeError, match="SEED_ADMIN"):
+            async with lifespan(app):
+                pass
+        assert started == []
+
 
 class TestBootGuardsRunWithSettings:
     """The factory must thread settings into the boot guards correctly."""
