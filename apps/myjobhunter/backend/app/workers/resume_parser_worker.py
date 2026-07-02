@@ -36,7 +36,8 @@ import sqlalchemy.exc
 from app.db.session import AsyncSessionLocal
 from app.mappers.resume_mapper import map_education, map_skills, map_work_history
 from app.repositories.jobs import resume_upload_job_repo
-from app.services.extraction.claude_service import extract_resume
+from app.services.extraction.claude_service import MAX_TEXT_CHARS, extract_resume
+from app.services.jobs.parse_provenance import build_parse_provenance
 from app.services.jobs.resume_text_extractor import (
     ResumeTextExtractionFailed,
     extract_text,
@@ -140,6 +141,24 @@ async def _run_extraction(
                  len(claude_response.get("skills", [])),
                  job_id)
 
+    # 3.5 Parse-time provenance guard: check every extracted bullet +
+    # the summary against the SAME truncated text the model saw. The
+    # rewrite path has had this guard since it shipped; the parse path
+    # that seeds all profile data did not — which is how a fabricated
+    # metric can land in work_history unnoticed. Verdicts are surfaced
+    # (stored on the job row + shown in the UI), never enforced: a
+    # bullet with one unsourced number still carries real content.
+    provenance = build_parse_provenance(
+        claude_response, source_text=text[:MAX_TEXT_CHARS],
+    )
+    if provenance["flagged"]:
+        logger.warning(
+            "Resume parse provenance flagged %d item(s) for job %s: %s",
+            len(provenance["flagged"]),
+            job_id,
+            [entry["unsourced_terms"] for entry in provenance["flagged"]][:5],
+        )
+
     # 4. Map to ORM instances.
     work_entries = map_work_history(
         claude_response.get("work_history") or [], user_id, profile_id,
@@ -175,7 +194,7 @@ async def _run_extraction(
         await resume_upload_job_repo.mark_complete(
             db,
             job,
-            result_parsed_fields=_build_parsed_fields(claude_response),
+            result_parsed_fields=_build_parsed_fields(claude_response, provenance=provenance),
             parser_version=PARSER_VERSION,
         )
 
@@ -204,9 +223,10 @@ async def _upsert_skill_ignore_conflict(db: "AsyncSession", skill: "_Skill") -> 
     await db.execute(stmt)
 
 
-def _build_parsed_fields(claude_response: dict) -> dict:
+def _build_parsed_fields(claude_response: dict, *, provenance: dict | None = None) -> dict:
     """Build the JSONB summary stored on the job row for quick UI display."""
     return {
+        "provenance": provenance,
         "summary": claude_response.get("summary"),
         "headline": claude_response.get("headline"),
         "work_history_count": len(claude_response.get("work_history") or []),

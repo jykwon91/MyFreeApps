@@ -27,6 +27,7 @@ from anthropic import Timeout
 from app.core.config import settings
 from app.db.session import AsyncSessionLocal
 from app.models.system.extraction_log import ExtractionLog
+from app.repositories.system import extraction_log_repository
 from app.services.extraction.prompts.resume_prompt import RESUME_EXTRACTION_PROMPT
 
 logger = logging.getLogger(__name__)
@@ -43,7 +44,11 @@ _MAX_TOKENS = 8192
 
 # Maximum text characters sent to Claude. Generous for resumes / JDs (most
 # are <20 k chars) but bounded to prevent runaway token costs.
-_MAX_TEXT_CHARS = 50_000
+# Public so the parse-time provenance guard can check extracted bullets
+# against the SAME truncated text the model actually saw — checking the
+# full document would misread a truncation artifact as a hallucination.
+MAX_TEXT_CHARS = 50_000
+_MAX_TEXT_CHARS = MAX_TEXT_CHARS
 
 
 def _get_client() -> anthropic.AsyncAnthropic:
@@ -262,7 +267,8 @@ async def _record_log(
         cost_usd = (input_tokens * 3 + output_tokens * 15) / 1_000_000
 
     async with AsyncSessionLocal() as db:
-        log = ExtractionLog(
+        await extraction_log_repository.create(
+            db,
             user_id=user_id,
             context_type=context_type,
             context_id=context_id,
@@ -275,5 +281,3 @@ async def _record_log(
             error_message=error_message,
             created_at=datetime.now(timezone.utc),
         )
-        db.add(log)
-        await db.commit()
