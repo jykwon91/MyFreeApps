@@ -41,15 +41,15 @@ from __future__ import annotations
 
 import logging
 import re
-from collections.abc import AsyncIterator, Awaitable, Callable
+from collections.abc import Awaitable, Callable
 from contextlib import AbstractAsyncContextManager
 from typing import Any, Protocol
 
-from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from platform_shared.core.auth_events import AuthEventType
 from platform_shared.core.permissions import Role
+from platform_shared.repositories import user_repo
 from platform_shared.services.auth_event_service import log_auth_event
 
 logger = logging.getLogger(__name__)
@@ -140,24 +140,12 @@ async def seed_admin_user(
     address would slip past the ownership check and the seed would insert a
     duplicate.
     """
-    result = await db.execute(
-        select(user_model).where(
-            func.lower(user_model.email) == email.strip().lower()
-        )
-    )
-    existing = result.scalars().first()
+    existing = await user_repo.get_by_email_ci(db, email, user_model=user_model)
 
     if existing is None:
-        user = user_model(
-            email=email,
-            hashed_password=password_hash,
-            is_active=True,
-            is_superuser=True,
-            is_verified=True,  # operator's own address — no verification email needed
-            role=Role.ADMIN,
+        user = await user_repo.create_seed_admin(
+            db, user_model=user_model, email=email, hashed_password=password_hash,
         )
-        db.add(user)
-        await db.flush()
         await log_auth_event(
             db,
             event_type=AuthEventType.SEED_ADMIN_CREATED,
@@ -202,9 +190,7 @@ async def seed_admin_user(
     if not updates:
         return "unchanged"
 
-    for field, value in updates.items():
-        setattr(existing, field, value)
-    await db.flush()
+    await user_repo.apply_seed_admin_promotion(db, existing, updates)
     await log_auth_event(
         db,
         event_type=AuthEventType.SEED_ADMIN_PROMOTED,

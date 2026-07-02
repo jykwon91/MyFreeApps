@@ -24,8 +24,10 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from platform_shared.core.permissions import Role
 
 
 async def get_by_id(
@@ -48,6 +50,60 @@ async def get_by_email(
     """Return the user row with ``email``, or ``None`` if not found."""
     result = await db.execute(select(user_model).where(user_model.email == email))
     return result.scalar_one_or_none()
+
+
+async def get_by_email_ci(
+    db: AsyncSession,
+    email: str,
+    *,
+    user_model: Any,
+) -> Any | None:
+    """Case-insensitive email lookup.
+
+    Matches fastapi-users' own ``get_by_email`` semantics — used by the
+    boot-time admin seed so a case-variant of the configured address can't
+    slip past the ownership check (``seed_admin_service``).
+    """
+    result = await db.execute(
+        select(user_model).where(
+            func.lower(user_model.email) == (email or "").strip().lower()
+        )
+    )
+    return result.scalars().first()
+
+
+async def create_seed_admin(
+    db: AsyncSession,
+    *,
+    user_model: Any,
+    email: str,
+    hashed_password: str,
+) -> Any:
+    """Insert the boot-seeded platform admin (verified, role=admin,
+    is_superuser). Called only when no row matches the seed email —
+    ownership/promotion policy lives in ``seed_admin_service``."""
+    user = user_model(
+        email=email,
+        hashed_password=hashed_password,
+        is_active=True,
+        is_superuser=True,
+        is_verified=True,  # operator's own address — no verification email needed
+        role=Role.ADMIN,
+    )
+    db.add(user)
+    await db.flush()
+    return user
+
+
+async def apply_seed_admin_promotion(
+    db: AsyncSession,
+    user: Any,
+    updates: dict[str, Any],
+) -> None:
+    """Apply the seed-owned promotion field updates and flush."""
+    for field, value in updates.items():
+        setattr(user, field, value)
+    await db.flush()
 
 
 async def get_totp_enabled(
