@@ -13,6 +13,12 @@
 #   1. Append a new <hostname> { ... reverse_proxy 127.0.0.1:<port> } block.
 #   2. Pick a unique loopback port (8094 = MBK, 8092 = MJH, 8096 = MGA, 9000 = MinIO).
 #   3. Make sure the app's docker compose binds that port on 127.0.0.1.
+#
+# Note: deploys only sync + `caddy reload` this file when it DIFFERS from
+# /etc/caddy/Caddyfile. If a block's DNS record is created AFTER the block
+# was already synced (ACME has been failing + backing off), touch this file
+# (any comment change) and dispatch a deploy to force the reload that
+# re-attempts certificate issuance. Done 2026-07-02 for myrecipes go-live.
 
 # MyBookkeeper — primary domain.
 # Both addresses listed during the myfreeapps.org cutover so existing
