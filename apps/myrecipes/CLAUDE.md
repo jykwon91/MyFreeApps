@@ -130,6 +130,11 @@ cd /srv/myfreeapps
 PYTHONPATH=packages/shared-backend python3 -m platform_shared.infra.seed_env --app myrecipes
 ```
 
+No-SSH alternative: set the `MYRECIPES_*` repo secrets (`_SENTRY_DSN`,
+`_SMTP_USER`, `_SMTP_PASSWORD`, `_EMAIL_FROM_ADDRESS`, `_TURNSTILE_SECRET_KEY`,
+`_MINIO_ACCESS_KEY`, `_MINIO_SECRET_KEY`) via `gh secret set`, then dispatch
+the "Seed VPS env files" workflow: `gh workflow run seed-env.yml -f app=myrecipes`.
+
 **Critical env vars:**
 
 | Var | Required | Notes |
