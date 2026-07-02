@@ -122,6 +122,7 @@ jobs:
               tests/test_resume_refinement_guard_confirmation.py
               tests/test_resume_refinement_preparing_flow.py
               tests/test_resume_parse_provenance.py
+              tests/test_resume_mapper.py
 
     services:
       postgres:

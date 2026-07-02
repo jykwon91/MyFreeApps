@@ -125,7 +125,12 @@ async def _build_user_context(db: AsyncSession, user_id: uuid.UUID) -> str | Non
         parts.append("Recent roles:")
         bullets_used = 0
         for w in sorted_history:
-            end_label = w.end_date.isoformat() if w.end_date else "Present"
+            if w.is_current:
+                end_label = "Present"
+            elif w.end_date:
+                end_label = w.end_date.isoformat()
+            else:
+                end_label = "end date unknown"
             parts.append(
                 f"- {w.title} at {w.company_name} "
                 f"({w.start_date.isoformat()} → {end_label})"

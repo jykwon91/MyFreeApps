@@ -218,6 +218,7 @@ async def create_work_history(
             title=seed["title"],
             start_date=seed["start_date"],
             end_date=seed["end_date"],
+            is_current=seed["is_current"],
             bullets=list(seed["bullets"]),
         )
         db.add(row)

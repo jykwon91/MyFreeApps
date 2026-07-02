@@ -20,6 +20,7 @@ import ScreeningAnswerDialog from "@/features/profile/ScreeningAnswerDialog";
 import ResumeUploadSection from "@/features/profile/ResumeUploadSection";
 import SkillAddForm from "@/features/profile/SkillAddForm";
 import ScreeningAnswerRow from "@/features/profile/ScreeningAnswerRow";
+import { REMOTE_PREF_LABELS, formatDateRange } from "@/features/profile/profile-format";
 import { useGetProfileQuery, useUpdateProfileMutation } from "@/lib/profileApi";
 import { useListWorkHistoryQuery, useDeleteWorkHistoryMutation } from "@/lib/workHistoryApi";
 import { useListEducationQuery, useDeleteEducationMutation } from "@/lib/educationApi";
@@ -31,28 +32,6 @@ import {
 import type { WorkHistory } from "@/types/work-history/work-history";
 import type { Education } from "@/types/education/education";
 import type { ScreeningAnswer } from "@/types/screening-answer/screening-answer";
-
-// ---------------------------------------------------------------------------
-// Display helpers
-// ---------------------------------------------------------------------------
-
-const REMOTE_PREF_LABELS: Record<string, string> = {
-  remote_only: "Remote only",
-  hybrid: "Hybrid",
-  onsite: "On-site",
-  any: "Open to all",
-};
-
-function formatDateRange(start: string, end: string | null): string {
-  const fmt = (d: string) => {
-    const [year, month] = d.split("-");
-    return new Date(parseInt(year), parseInt(month) - 1).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-    });
-  };
-  return end ? `${fmt(start)} – ${fmt(end)}` : `${fmt(start)} – Present`;
-}
 
 // ---------------------------------------------------------------------------
 // Main Profile page
@@ -293,7 +272,7 @@ export default function Profile() {
                   <p className="font-medium text-sm">{entry.title}</p>
                   <p className="text-sm text-muted-foreground">{entry.company_name}</p>
                   <p className="text-xs text-muted-foreground">
-                    {formatDateRange(entry.start_date, entry.end_date)}
+                    {formatDateRange(entry.start_date, entry.end_date, entry.is_current)}
                   </p>
                   {entry.bullets.length > 0 ? (
                     <ul className="mt-2 space-y-1 list-disc list-inside">

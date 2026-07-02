@@ -15,6 +15,8 @@ Covers:
   - PATCH /work-history/{id} returns 404 for cross-tenant access
   - DELETE /work-history/{id} hard-deletes and returns 204
   - DELETE /work-history/{id} returns 404 for cross-tenant access
+  - is_current: create defaults false / persists true / 422 when paired
+    with an end date (create AND merged-row patch, both directions)
 
   Education:
   - POST /education happy path returns 201
@@ -245,6 +247,131 @@ class TestWorkHistory:
                 f"/work-history/{entry_id}", json={"title": "Stolen"}
             )
         assert resp.status_code == 404, resp.text
+
+    @pytest.mark.asyncio
+    async def test_create_defaults_is_current_false(self, user_factory, as_user) -> None:
+        user = await user_factory()
+        async with await as_user(user) as authed:
+            resp = await authed.post("/work-history", json=_work_history_payload())
+        assert resp.status_code == 201, resp.text
+        assert resp.json()["is_current"] is False
+
+    @pytest.mark.asyncio
+    async def test_create_current_role_persists_flag(self, user_factory, as_user) -> None:
+        user = await user_factory()
+        async with await as_user(user) as authed:
+            resp = await authed.post(
+                "/work-history",
+                json=_work_history_payload(is_current=True, end_date=None),
+            )
+        assert resp.status_code == 201, resp.text
+        body = resp.json()
+        assert body["is_current"] is True
+        assert body["end_date"] is None
+
+    @pytest.mark.asyncio
+    async def test_create_current_role_with_end_date_returns_422(
+        self, user_factory, as_user,
+    ) -> None:
+        user = await user_factory()
+        async with await as_user(user) as authed:
+            resp = await authed.post(
+                "/work-history",
+                json=_work_history_payload(is_current=True, end_date="2022-12-31"),
+            )
+        assert resp.status_code == 422, resp.text
+
+    @pytest.mark.asyncio
+    async def test_patch_is_current_true_with_null_end_date(
+        self, user_factory, as_user,
+    ) -> None:
+        user = await user_factory()
+        async with await as_user(user) as authed:
+            create = await authed.post("/work-history", json=_work_history_payload())
+            assert create.status_code == 201
+            entry_id = create.json()["id"]
+            resp = await authed.patch(
+                f"/work-history/{entry_id}",
+                json={"is_current": True, "end_date": None},
+            )
+        assert resp.status_code == 200, resp.text
+        body = resp.json()
+        assert body["is_current"] is True
+        assert body["end_date"] is None
+
+    @pytest.mark.asyncio
+    async def test_patch_is_current_true_keeping_end_date_returns_422(
+        self, user_factory, as_user,
+    ) -> None:
+        """The merged row is validated, not just the patch: flipping
+        is_current on while the stored row still has an end date is
+        contradictory and must be rejected."""
+        user = await user_factory()
+        async with await as_user(user) as authed:
+            create = await authed.post("/work-history", json=_work_history_payload())
+            assert create.status_code == 201
+            entry_id = create.json()["id"]
+            resp = await authed.patch(
+                f"/work-history/{entry_id}",
+                json={"is_current": True},
+            )
+        assert resp.status_code == 422, resp.text
+
+    @pytest.mark.asyncio
+    async def test_patch_end_date_onto_current_role_returns_422(
+        self, user_factory, as_user,
+    ) -> None:
+        user = await user_factory()
+        async with await as_user(user) as authed:
+            create = await authed.post(
+                "/work-history",
+                json=_work_history_payload(is_current=True, end_date=None),
+            )
+            assert create.status_code == 201
+            entry_id = create.json()["id"]
+            resp = await authed.patch(
+                f"/work-history/{entry_id}",
+                json={"end_date": "2025-06-30"},
+            )
+        assert resp.status_code == 422, resp.text
+
+    @pytest.mark.asyncio
+    async def test_patch_explicit_null_on_non_nullable_field_returns_422(
+        self, user_factory, as_user,
+    ) -> None:
+        """Explicit JSON null on a NOT NULL column must be a clean 422,
+        not an IntegrityError 500 at the repository layer."""
+        user = await user_factory()
+        async with await as_user(user) as authed:
+            create = await authed.post("/work-history", json=_work_history_payload())
+            assert create.status_code == 201
+            entry_id = create.json()["id"]
+            resp = await authed.patch(
+                f"/work-history/{entry_id}",
+                json={"is_current": None},
+            )
+        assert resp.status_code == 422, resp.text
+
+    @pytest.mark.asyncio
+    async def test_patch_end_date_and_not_current_together_succeeds(
+        self, user_factory, as_user,
+    ) -> None:
+        user = await user_factory()
+        async with await as_user(user) as authed:
+            create = await authed.post(
+                "/work-history",
+                json=_work_history_payload(is_current=True, end_date=None),
+            )
+            assert create.status_code == 201
+            entry_id = create.json()["id"]
+            resp = await authed.patch(
+                f"/work-history/{entry_id}",
+                json={"is_current": False, "end_date": "2025-06-30"},
+            )
+        assert resp.status_code == 200, resp.text
+        body = resp.json()
+        assert body["is_current"] is False
+        assert body["end_date"] == "2025-06-30"
 
     @pytest.mark.asyncio
     async def test_delete_happy_path_returns_204(self, user_factory, as_user) -> None:

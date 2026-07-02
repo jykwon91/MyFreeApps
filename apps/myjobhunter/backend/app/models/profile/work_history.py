@@ -2,6 +2,7 @@ import uuid
 from datetime import date, datetime, timezone
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     Date,
     DateTime,
@@ -38,6 +39,15 @@ class WorkHistory(Base):
     start_date: Mapped[date] = mapped_column(Date, nullable=False)
     end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
 
+    # Authoritative "Present" flag. ``end_date IS NULL`` alone is NOT enough:
+    # a role can legitimately have an unknown end date without being current.
+    is_current: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default="false",
+    )
+
     bullets: Mapped[list[str]] = mapped_column(
         ARRAY(Text),
         default=list,
@@ -62,5 +72,9 @@ class WorkHistory(Base):
         CheckConstraint(
             "cardinality(bullets) <= 30",
             name="chk_work_history_bullets_max",
+        ),
+        CheckConstraint(
+            "NOT (is_current AND end_date IS NOT NULL)",
+            name="chk_work_history_current_no_end_date",
         ),
     )

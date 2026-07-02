@@ -70,6 +70,7 @@ def map_work_history(
             title=title[:200],
             start_date=start_date,
             end_date=end_date,
+            is_current=is_current,
             bullets=bullets,
         ))
     return entries

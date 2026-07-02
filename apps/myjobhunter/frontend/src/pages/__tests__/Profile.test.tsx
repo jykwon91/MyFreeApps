@@ -357,6 +357,7 @@ describe("Profile page", () => {
               title: "Senior Engineer",
               start_date: "2020-01-01",
               end_date: "2022-12-31",
+              is_current: false,
               bullets: ["Led rewrite"],
               created_at: "2026-01-01T00:00:00Z",
               updated_at: "2026-01-01T00:00:00Z",
@@ -371,6 +372,33 @@ describe("Profile page", () => {
       expect(screen.getByText("Acme Corp")).toBeInTheDocument();
       expect(screen.getByText("Senior Engineer")).toBeInTheDocument();
       expect(screen.getByText("Led rewrite")).toBeInTheDocument();
+    });
+
+    it("shows Present only when is_current is set — not for a missing end date", () => {
+      setupAllMocks();
+      const base = {
+        user_id: "u1",
+        profile_id: "p1",
+        title: "Engineer",
+        start_date: "2020-01-01",
+        bullets: [],
+        created_at: "2026-01-01T00:00:00Z",
+        updated_at: "2026-01-01T00:00:00Z",
+      };
+      mockListWorkHistory.mockReturnValue({
+        data: {
+          items: [
+            { ...base, id: "wh-current", company_name: "CurrentCo", end_date: null, is_current: true },
+            { ...base, id: "wh-unknown", company_name: "UnknownCo", end_date: null, is_current: false },
+          ],
+          total: 2,
+        },
+        isLoading: false,
+      } as unknown as ReturnType<typeof useListWorkHistoryQuery>);
+
+      renderProfile();
+      expect(screen.getByText(/– Present/)).toBeInTheDocument();
+      expect(screen.getByText(/– No end date/)).toBeInTheDocument();
     });
   });
 

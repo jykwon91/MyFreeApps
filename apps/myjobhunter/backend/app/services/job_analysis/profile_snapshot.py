@@ -151,6 +151,7 @@ def _work_to_dict(w: Any, *, compact: bool = False) -> dict:
         "title": w.title,
         "start_date": w.start_date.isoformat() if w.start_date else None,
         "end_date": w.end_date.isoformat() if w.end_date else None,
+        "is_current": bool(w.is_current),
     }
     if not compact:
         entry["bullets"] = list(w.bullets or [])[:_MAX_BULLETS_PER_ROLE]

@@ -116,6 +116,7 @@ class WorkHistorySeed(TypedDict):
     title: str
     start_date: date
     end_date: date | None
+    is_current: bool
     bullets: list[str]
 
 
@@ -125,6 +126,7 @@ DEMO_WORK_HISTORY: list[WorkHistorySeed] = [
         "title": "Senior Software Engineer",
         "start_date": date(2023, 3, 1),
         "end_date": None,
+        "is_current": True,
         "bullets": [
             "Led migration of monolithic billing service to event-driven microservices, cutting p99 latency by 40%.",
             "Mentored 3 junior engineers; designed onboarding curriculum now used team-wide.",
@@ -136,6 +138,7 @@ DEMO_WORK_HISTORY: list[WorkHistorySeed] = [
         "title": "Software Engineer II",
         "start_date": date(2020, 6, 1),
         "end_date": date(2023, 2, 28),
+        "is_current": False,
         "bullets": [
             "Built real-time data ingestion pipeline handling 50M events/day with Kafka + Flink.",
             "Owned the GraphQL gateway, reducing average payload size by 35% via persisted queries.",
@@ -147,6 +150,7 @@ DEMO_WORK_HISTORY: list[WorkHistorySeed] = [
         "title": "Software Engineer",
         "start_date": date(2018, 8, 1),
         "end_date": date(2020, 5, 31),
+        "is_current": False,
         "bullets": [
             "Wrote and maintained the core Rails monolith that powered the product's first $5M ARR.",
             "Improved test suite runtime from 25 minutes to 6 minutes via parallelization and DB seeding.",

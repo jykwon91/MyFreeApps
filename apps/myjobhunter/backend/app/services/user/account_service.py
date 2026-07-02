@@ -98,6 +98,7 @@ def _work_history_to_export_dict(item: WorkHistory) -> dict:
         "title": item.title,
         "start_date": item.start_date.isoformat() if item.start_date else None,
         "end_date": item.end_date.isoformat() if item.end_date else None,
+        "is_current": bool(item.is_current),
         "bullets": list(item.bullets or []),
         "created_at": item.created_at.isoformat() if item.created_at else None,
     }

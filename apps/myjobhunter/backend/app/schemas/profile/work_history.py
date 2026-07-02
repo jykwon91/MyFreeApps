@@ -12,6 +12,7 @@ class WorkHistoryRead(BaseModel):
     title: str
     start_date: date
     end_date: date | None
+    is_current: bool
     created_at: datetime
 
     model_config = {"from_attributes": True}

@@ -19,6 +19,7 @@ _UPDATABLE_COLUMNS: frozenset[str] = frozenset({
     "title",
     "start_date",
     "end_date",
+    "is_current",
     "bullets",
 })
 
