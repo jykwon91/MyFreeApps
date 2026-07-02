@@ -45,6 +45,7 @@ def _work_row(title: str, start: date, *, bullets: list[str] | None = None):
         title=title,
         start_date=start,
         end_date=None,
+        is_current=False,
         bullets=bullets if bullets is not None else ["did a thing"],
     )
 

@@ -271,25 +271,31 @@ def _build_renderer_input(
     - WorkHistory.company_name   → renderer["company"]
     - WorkHistory.start_date     → renderer["starts_on"] (ISO date string or "")
     - WorkHistory.end_date       → renderer["ends_on"]   (ISO date string or None)
+    - WorkHistory.is_current     → renderer["is_current"] (drives "Present")
     - Education.start_year       → renderer["starts_on"] (year as string or "")
     - Education.end_year         → renderer["ends_on"]   (year as string or "")
     - Education.gpa (float)      → renderer["gpa"]       (string representation)
 
-    ``headline`` is best-effort: we JSON-parse result_parsed_fields["raw"]
-    and pull .headline if present; otherwise it's omitted (None falls through
-    the ``if headline:`` guard in the renderer with no visible effect).
+    ``headline`` is best-effort: result_parsed_fields["raw"] holds the Claude
+    response as a dict (the worker stores it unserialized); legacy rows may
+    hold a JSON string instead, so both shapes are accepted. On any other
+    shape the headline is omitted (None falls through the ``if headline:``
+    guard in the renderer with no visible effect).
     """
-    # Best-effort headline from the raw Claude JSON blob.
+    # Best-effort headline from the raw Claude blob (dict, or legacy JSON string).
     headline: str | None = None
-    raw_str = (raw_parsed or {}).get("raw")
-    if raw_str:
+    raw_val = (raw_parsed or {}).get("raw")
+    raw_obj: Any = raw_val
+    if isinstance(raw_val, str) and raw_val:
         try:
-            raw_obj = json.loads(raw_str)
-            headline = raw_obj.get("headline") or None
-        except (json.JSONDecodeError, AttributeError, TypeError):
+            raw_obj = json.loads(raw_val)
+        except json.JSONDecodeError:
             logger.debug(
                 "result_parsed_fields['raw'] is not valid JSON — skipping headline."
             )
+            raw_obj = None
+    if isinstance(raw_obj, dict):
+        headline = raw_obj.get("headline") or None
 
     work_history_dicts = [
         {
@@ -298,7 +304,7 @@ def _build_renderer_input(
             "location": "",
             "starts_on": row.start_date.isoformat() if row.start_date else "",
             "ends_on": row.end_date.isoformat() if row.end_date else None,
-            "is_current": row.end_date is None,
+            "is_current": bool(row.is_current),
             "bullets": list(row.bullets or []),
         }
         for row in work_history_rows

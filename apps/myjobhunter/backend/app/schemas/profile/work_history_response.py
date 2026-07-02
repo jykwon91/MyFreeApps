@@ -15,6 +15,7 @@ class WorkHistoryResponse(BaseModel):
     title: str
     start_date: date
     end_date: date | None = None
+    is_current: bool
     bullets: list[str]
     created_at: datetime
     updated_at: datetime

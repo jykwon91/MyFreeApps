@@ -3,5 +3,6 @@ export interface WorkHistoryCreateRequest {
   title: string;
   start_date: string;
   end_date: string | null;
+  is_current: boolean;
   bullets: string[];
 }

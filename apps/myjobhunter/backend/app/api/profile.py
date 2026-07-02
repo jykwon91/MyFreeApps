@@ -60,6 +60,7 @@ from app.schemas.profile.work_history_response import WorkHistoryResponse
 from app.schemas.profile.work_history_update_request import WorkHistoryUpdateRequest
 from app.services.profile import profile_service
 from app.services.profile.profile_service import (
+    CurrentRoleEndDateError,
     DuplicateScreeningAnswerError,
     DuplicateSkillError,
     InvalidScreeningKeyError,
@@ -145,7 +146,10 @@ async def update_work_history(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> WorkHistoryResponse:
-    entry = await profile_service.update_work_history(db, user.id, work_history_id, payload)
+    try:
+        entry = await profile_service.update_work_history(db, user.id, work_history_id, payload)
+    except CurrentRoleEndDateError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     if entry is None:
         raise HTTPException(status_code=404, detail=_NOT_FOUND_WORK_HISTORY)
     return WorkHistoryResponse.model_validate(entry)

@@ -34,6 +34,7 @@ def _work_history(
     title: str = "Engineer",
     start_date: date = date(2020, 1, 1),
     end_date: date | None = None,
+    is_current: bool = False,
     bullets: list[str] | None = None,
 ) -> MagicMock:
     row = MagicMock()
@@ -41,6 +42,7 @@ def _work_history(
     row.title = title
     row.start_date = start_date
     row.end_date = end_date
+    row.is_current = is_current
     row.bullets = bullets or []
     return row
 
@@ -88,6 +90,7 @@ def test_adapter_produces_correct_shape_all_sources_populated():
         title="Staff Engineer",
         start_date=date(2020, 3, 1),
         end_date=None,
+        is_current=True,
         bullets=["Led platform migration", "Reduced latency by 40%"],
     )
     edu = _education(
@@ -264,6 +267,40 @@ def test_adapter_work_history_with_end_date_marks_not_current():
     assert wh_dict["is_current"] is False
 
 
+def test_adapter_null_end_date_without_is_current_is_not_present():
+    """A missing end date must NOT imply "Present" — is_current is the
+    authoritative flag (the OneOncology wrong-tenure bug)."""
+    wh = _work_history(start_date=date(2022, 11, 1), end_date=None, is_current=False)
+    result = _build_renderer_input(
+        profile=None,
+        work_history_rows=[wh],
+        education_rows=[],
+        skill_rows=[],
+        raw_parsed=None,
+    )
+    wh_dict = result["work_history"][0]
+    assert wh_dict["ends_on"] is None
+    assert wh_dict["is_current"] is False
+
+    md = render_resume_to_markdown(result)
+    assert "Present" not in md
+
+
+def test_adapter_headline_read_from_dict_raw():
+    """The worker stores result_parsed_fields["raw"] as a dict, not a JSON
+    string. json.loads(dict) raised TypeError and the headline silently
+    never rendered — the adapter must accept the dict shape directly."""
+    raw_parsed = {"raw": {"headline": "Staff Engineer at Acme"}}
+    result = _build_renderer_input(
+        profile=None,
+        work_history_rows=[],
+        education_rows=[],
+        skill_rows=[],
+        raw_parsed=raw_parsed,
+    )
+    assert result["headline"] == "Staff Engineer at Acme"
+
+
 # ---------------------------------------------------------------------------
 # Integration-ish: start_session with all external calls mocked
 # ---------------------------------------------------------------------------
@@ -295,6 +332,7 @@ async def test_start_session_draft_contains_company_and_skill_names():
         title="Senior SWE",
         start_date=date(2021, 4, 1),
         end_date=None,
+        is_current=True,
         bullets=["Shipped the main product", "Mentored junior devs"],
     )
 

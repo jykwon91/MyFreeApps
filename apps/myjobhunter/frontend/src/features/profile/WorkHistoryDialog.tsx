@@ -14,6 +14,7 @@ interface FormValues {
   title: string;
   start_date: string;
   end_date: string;
+  is_current: boolean;
   bullets: string;
 }
 
@@ -46,15 +47,20 @@ export default function WorkHistoryDialog({ open, onOpenChange, existing }: Work
     handleSubmit,
     formState: { errors },
     reset,
+    setValue,
+    watch,
   } = useForm<FormValues>({
     defaultValues: {
       company_name: "",
       title: "",
       start_date: "",
       end_date: "",
+      is_current: false,
       bullets: "",
     },
   });
+
+  const isCurrent = watch("is_current");
 
   useEffect(() => {
     if (open) {
@@ -63,6 +69,7 @@ export default function WorkHistoryDialog({ open, onOpenChange, existing }: Work
         title: existing?.title ?? "",
         start_date: existing?.start_date ?? "",
         end_date: existing?.end_date ?? "",
+        is_current: existing?.is_current ?? false,
         bullets: existing ? bulletsToText(existing.bullets) : "",
       });
     }
@@ -70,6 +77,9 @@ export default function WorkHistoryDialog({ open, onOpenChange, existing }: Work
 
   const onSubmit: SubmitHandler<FormValues> = async (values) => {
     const bullets = textToBullets(values.bullets);
+    // The backend rejects a current role that carries an end date; the
+    // checkbox clears + disables the field, so this only guards races.
+    const endDate = values.is_current ? null : values.end_date.trim() || null;
     try {
       if (isEdit && existing) {
         await updateWorkHistory({
@@ -78,7 +88,8 @@ export default function WorkHistoryDialog({ open, onOpenChange, existing }: Work
             company_name: values.company_name.trim(),
             title: values.title.trim(),
             start_date: values.start_date || null,
-            end_date: values.end_date.trim() || null,
+            end_date: endDate,
+            is_current: values.is_current,
             bullets,
           },
         }).unwrap();
@@ -88,7 +99,8 @@ export default function WorkHistoryDialog({ open, onOpenChange, existing }: Work
           company_name: values.company_name.trim(),
           title: values.title.trim(),
           start_date: values.start_date,
-          end_date: values.end_date.trim() || null,
+          end_date: endDate,
+          is_current: values.is_current,
           bullets,
         }).unwrap();
         showSuccess("Work history added");
@@ -174,11 +186,29 @@ export default function WorkHistoryDialog({ open, onOpenChange, existing }: Work
                 <input
                   id="wh-end-date"
                   type="date"
+                  disabled={isCurrent}
                   {...register("end_date")}
-                  className="w-full border rounded-md px-3 py-2 text-sm bg-background"
+                  className="w-full border rounded-md px-3 py-2 text-sm bg-background disabled:opacity-50 disabled:cursor-not-allowed"
                 />
-                <p className="text-xs text-muted-foreground mt-1">Leave blank if current role</p>
               </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                id="wh-is-current"
+                type="checkbox"
+                {...register("is_current", {
+                  onChange: (e) => {
+                    if (e.target.checked) {
+                      setValue("end_date", "");
+                    }
+                  },
+                })}
+                className="h-4 w-4 rounded border"
+              />
+              <label htmlFor="wh-is-current" className="text-sm">
+                I currently work in this role
+              </label>
             </div>
 
             <div>

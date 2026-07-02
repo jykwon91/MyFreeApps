@@ -43,7 +43,7 @@ const REMOTE_PREF_LABELS: Record<string, string> = {
   any: "Open to all",
 };
 
-function formatDateRange(start: string, end: string | null): string {
+function formatDateRange(start: string, end: string | null, isCurrent: boolean): string {
   const fmt = (d: string) => {
     const [year, month] = d.split("-");
     return new Date(parseInt(year), parseInt(month) - 1).toLocaleDateString("en-US", {
@@ -51,7 +51,10 @@ function formatDateRange(start: string, end: string | null): string {
       month: "short",
     });
   };
-  return end ? `${fmt(start)} – ${fmt(end)}` : `${fmt(start)} – Present`;
+  if (isCurrent) {
+    return `${fmt(start)} – Present`;
+  }
+  return end ? `${fmt(start)} – ${fmt(end)}` : `${fmt(start)} – No end date`;
 }
 
 // ---------------------------------------------------------------------------
@@ -293,7 +296,7 @@ export default function Profile() {
                   <p className="font-medium text-sm">{entry.title}</p>
                   <p className="text-sm text-muted-foreground">{entry.company_name}</p>
                   <p className="text-xs text-muted-foreground">
-                    {formatDateRange(entry.start_date, entry.end_date)}
+                    {formatDateRange(entry.start_date, entry.end_date, entry.is_current)}
                   </p>
                   {entry.bullets.length > 0 ? (
                     <ul className="mt-2 space-y-1 list-disc list-inside">

@@ -18,6 +18,10 @@ class WorkHistoryUpdateRequest(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=200)
     start_date: date | None = None
     end_date: date | None = None
+    # ``is_current`` + ``end_date`` must not both be set on the merged row;
+    # the service validates against the existing entry (partial updates make
+    # a schema-level check impossible here).
+    is_current: bool | None = None
     bullets: list[BulletItem] | None = Field(default=None, max_length=_BULLETS_MAX_COUNT)
 
     model_config = ConfigDict(extra="forbid")

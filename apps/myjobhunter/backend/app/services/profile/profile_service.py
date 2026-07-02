@@ -125,6 +125,14 @@ class InvalidScreeningKeyError(ValueError):
     """
 
 
+class CurrentRoleEndDateError(ValueError):
+    """Raised when a work-history update would leave a row both marked
+    current and carrying an end date (violates the DB check constraint).
+
+    Subclasses ``ValueError`` so the route maps it to HTTP 422.
+    """
+
+
 # ---------------------------------------------------------------------------
 # Profile CRUD
 # ---------------------------------------------------------------------------
@@ -192,6 +200,7 @@ async def create_work_history(
         title=request.title,
         start_date=request.start_date,
         end_date=request.end_date,
+        is_current=request.is_current,
         bullets=request.bullets,
     )
     entry = await work_history_repository.create(db, entry)
@@ -211,6 +220,17 @@ async def update_work_history(
         return None
     updates = request.to_update_dict()
     if updates:
+        # Partial update — validate the MERGED row, not just the patch:
+        # a patch that flips is_current on while the row still has an end
+        # date (or vice versa) must be rejected before it hits the DB
+        # check constraint.
+        merged_is_current = updates.get("is_current", entry.is_current)
+        merged_end_date = updates.get("end_date", entry.end_date)
+        if merged_is_current and merged_end_date is not None:
+            raise CurrentRoleEndDateError(
+                "A current role cannot have an end date. Clear the end date "
+                "or unset is_current in the same request."
+            )
         entry = await work_history_repository.update(db, entry, updates)
         await db.commit()
         await _refresh_profile_embedding_best_effort(db, user_id)
