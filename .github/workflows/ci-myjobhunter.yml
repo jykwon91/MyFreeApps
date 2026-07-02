@@ -105,7 +105,7 @@ jobs:
               tests/test_totp_login.py
               tests/test_totp_setup.py
           - name: refinement
-            # Resume-refinement suite: pure-function + mocked tests (no
+            # Resume refinement + parse suites: pure-function + mocked tests (no
             # DB fixtures, no Argon2 login storm) — runs in seconds.
             # These files were previously in NO shard, so none of them
             # gated merges; a hallucination-guard regression shipped
@@ -121,6 +121,7 @@ jobs:
               tests/test_resume_refinement_session_helpers.py
               tests/test_resume_refinement_guard_confirmation.py
               tests/test_resume_refinement_preparing_flow.py
+              tests/test_resume_parse_provenance.py
 
     services:
       postgres:

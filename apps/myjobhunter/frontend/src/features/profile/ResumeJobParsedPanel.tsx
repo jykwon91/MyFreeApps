@@ -1,3 +1,4 @@
+import ParseProvenanceWarning from "@/features/profile/ParseProvenanceWarning";
 import type { ResumeJobParsedFields } from "@/types/resume-upload-job/resume-upload-job";
 
 export interface ResumeJobParsedPanelProps {
@@ -8,6 +9,9 @@ export default function ResumeJobParsedPanel({ parsed }: ResumeJobParsedPanelPro
   return (
     <div className="mt-2 pl-11 pr-10 pb-2">
       <div className="rounded-md border bg-muted/40 p-3 space-y-2 text-xs">
+        {parsed.provenance ? (
+          <ParseProvenanceWarning provenance={parsed.provenance} />
+        ) : null}
         {parsed.headline ? (
           <p className="font-medium text-foreground">{parsed.headline}</p>
         ) : null}

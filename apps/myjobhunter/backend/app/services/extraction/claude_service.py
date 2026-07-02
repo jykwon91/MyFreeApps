@@ -27,6 +27,7 @@ from anthropic import Timeout
 from app.core.config import settings
 from app.db.session import AsyncSessionLocal
 from app.models.system.extraction_log import ExtractionLog
+from app.repositories.system import extraction_log_repository
 from app.services.extraction.prompts.resume_prompt import RESUME_EXTRACTION_PROMPT
 
 logger = logging.getLogger(__name__)
@@ -266,7 +267,8 @@ async def _record_log(
         cost_usd = (input_tokens * 3 + output_tokens * 15) / 1_000_000
 
     async with AsyncSessionLocal() as db:
-        log = ExtractionLog(
+        await extraction_log_repository.create(
+            db,
             user_id=user_id,
             context_type=context_type,
             context_id=context_id,
@@ -279,5 +281,3 @@ async def _record_log(
             error_message=error_message,
             created_at=datetime.now(timezone.utc),
         )
-        db.add(log)
-        await db.commit()
