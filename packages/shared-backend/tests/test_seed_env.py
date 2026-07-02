@@ -186,6 +186,66 @@ class TestIdempotence:
         assert docker["CUSTOM_OPERATOR_KEY"] == "keep-me"
 
 
+class TestOverrides:
+    def _overrides(self, tmp_path: Path, content: str) -> Path:
+        path = tmp_path / "overrides.env"
+        path.write_text(content, encoding="utf-8")
+        return path
+
+    def test_fills_required_blanks_to_green(self, repo: Path, tmp_path: Path):
+        ov = self._overrides(tmp_path, """\
+SENTRY_DSN=https://ov@sentry.example/2
+SMTP_USER=ops@example.org
+SMTP_PASSWORD=app-password
+EMAIL_FROM_ADDRESS=noreply@example.org
+TURNSTILE_SITE_KEY=0x4AAAsite
+TURNSTILE_SECRET_KEY=0x4AAAsecret
+""")
+        rc = run(repo, "--overrides", str(ov))
+        assert rc == 0  # all required values provided in one shot
+        docker = read_env(repo / "apps" / "testapp" / "backend" / ".env.docker")
+        assert docker["SENTRY_DSN"] == "https://ov@sentry.example/2"
+        assert run(repo, "--check") == 0
+
+    def test_override_wins_over_existing_value(self, repo: Path, tmp_path: Path):
+        run(repo)
+        ov = self._overrides(tmp_path, "SMTP_HOST=smtp.rotated.example\n")
+        run(repo, "--overrides", str(ov))
+        docker = read_env(repo / "apps" / "testapp" / "backend" / ".env.docker")
+        assert docker["SMTP_HOST"] == "smtp.rotated.example"  # was smtp.gmail.com
+
+    def test_blank_override_never_erases(self, repo: Path, tmp_path: Path):
+        run(repo)
+        docker_path = repo / "apps" / "testapp" / "backend" / ".env.docker"
+        docker_path.write_text(
+            docker_path.read_text(encoding="utf-8").replace(
+                "SENTRY_DSN=", "SENTRY_DSN=https://keep@sentry.example/1", 1),
+            encoding="utf-8")
+        ov = self._overrides(tmp_path, "SENTRY_DSN=\n")
+        run(repo, "--overrides", str(ov))
+        assert read_env(docker_path)["SENTRY_DSN"] == "https://keep@sentry.example/1"
+
+    def test_undeclared_override_warns_and_is_ignored(self, repo: Path, tmp_path: Path, capsys):
+        ov = self._overrides(tmp_path, "NO_SUCH_KEY=value\n")
+        run(repo, "--overrides", str(ov))
+        out = capsys.readouterr().out
+        assert "not declared" in out and "NO_SUCH_KEY" in out
+        docker_text = (repo / "apps" / "testapp" / "backend" / ".env.docker").read_text(encoding="utf-8")
+        assert "NO_SUCH_KEY" not in docker_text
+
+    def test_special_characters_survive(self, repo: Path, tmp_path: Path):
+        # Gmail app passwords contain spaces; bcrypt hashes contain `$`.
+        ov = self._overrides(tmp_path, "SMTP_PASSWORD=abcd efgh $2b$12 'quo\"te\n")
+        run(repo, "--overrides", str(ov))
+        docker = read_env(repo / "apps" / "testapp" / "backend" / ".env.docker")
+        assert docker["SMTP_PASSWORD"] == "abcd efgh $2b$12 'quo\"te"
+
+    def test_missing_overrides_file_exits_2(self, repo: Path, capsys):
+        rc = run(repo, "--overrides", str(repo / "nope.env"))
+        assert rc == 2
+        assert "Overrides file not found" in capsys.readouterr().err
+
+
 class TestCheckMode:
     def test_check_fails_on_missing_files(self, repo: Path, capsys):
         rc = run(repo, "--check")

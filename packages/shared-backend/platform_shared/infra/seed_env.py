@@ -28,6 +28,11 @@ venv). From the VPS checkout:
 Deploy-preflight / verification mode (writes nothing, exit 0 = ready):
 
     PYTHONPATH=packages/shared-backend python3 -m platform_shared.infra.seed_env --app myrecipes --check
+
+No-SSH path: the "Seed VPS env files" workflow (.github/workflows/seed-env.yml)
+runs this module on the VPS over SSH, injecting per-app GitHub repo secrets
+(``<APPUPPER>_SENTRY_DSN`` etc.) via ``--overrides``. Overrides win over
+existing values — re-dispatch after rotating a secret to update the VPS file.
 """
 
 from __future__ import annotations
@@ -134,15 +139,19 @@ def _stamps(domain: str) -> dict[str, str]:
 
 
 def _resolve_value(key: str, example_value: str, existing: dict[str, str],
-                   stamps: dict[str, str]) -> str:
+                   stamps: dict[str, str], overrides: dict[str, str]) -> str:
     """Pick the final value for one key. Precedence:
 
-    1. existing real value (idempotence — never overwrite operator input)
-    2. example real value (checked-in defaults like LOCKOUT_THRESHOLD=5)
-    3. generated secret
-    4. deploy stamp
-    5. blank
+    1. explicit override (``--overrides`` file — deliberate set/rotate,
+       so it wins even over an existing value)
+    2. existing real value (idempotence — never clobber operator input)
+    3. example real value (checked-in defaults like LOCKOUT_THRESHOLD=5)
+    4. generated secret
+    5. deploy stamp
+    6. blank
     """
+    if key in overrides:
+        return overrides[key]
     existing_value = existing.get(key, "")
     if not _is_unset(existing_value):
         return existing_value
@@ -155,8 +164,19 @@ def _resolve_value(key: str, example_value: str, existing: dict[str, str],
     return ""
 
 
+def _load_overrides(path: Path) -> dict[str, str]:
+    """Parse a KEY=VALUE overrides file; blank values are dropped (a missing
+    GitHub secret arrives as an empty string — that must mean "leave alone",
+    never "erase")."""
+    if not path.exists():
+        raise SeedEnvError(f"Overrides file not found: {path}")
+    return {k: v for k, v in _parse_env(path.read_text(encoding="utf-8")).items()
+            if v.strip()}
+
+
 def _render_from_example(example_text: str, existing: dict[str, str],
-                         stamps: dict[str, str]) -> tuple[str, dict[str, str]]:
+                         stamps: dict[str, str],
+                         overrides: dict[str, str]) -> tuple[str, dict[str, str]]:
     """Rewrite the example line-by-line (comments preserved) with resolved values.
 
     Returns (rendered_text, final_values). Keys in ``existing`` that the
@@ -171,7 +191,7 @@ def _render_from_example(example_text: str, existing: dict[str, str],
             continue
         key, _, example_value = stripped.partition("=")
         key = key.strip()
-        value = _resolve_value(key, example_value.strip(), existing, stamps)
+        value = _resolve_value(key, example_value.strip(), existing, stamps, overrides)
         final[key] = value
         out_lines.append(f"{key}={value}")
 
@@ -180,6 +200,7 @@ def _render_from_example(example_text: str, existing: dict[str, str],
         out_lines.append("")
         out_lines.append("# --- Preserved keys not present in the example template ---")
         for key, value in extra.items():
+            value = overrides.get(key, value)
             out_lines.append(f"{key}={value}")
             final[key] = value
 
@@ -206,7 +227,8 @@ def _blank_report(final: dict[str, str], enforced_keys: tuple[str, ...]) -> tupl
 
 
 def seed_app(repo_root: Path, slug: str, *, domain: str | None = None,
-             check_only: bool = False) -> int:
+             check_only: bool = False,
+             overrides: dict[str, str] | None = None) -> int:
     """Seed (or verify, with ``check_only``) both env files for one app.
 
     Returns the process exit code: 0 = ready to deploy, 1 = operator values
@@ -227,6 +249,7 @@ def seed_app(repo_root: Path, slug: str, *, domain: str | None = None,
     docker_env = app_dir / "backend" / ".env.docker"
     resolved_domain = domain or f"{slug}.myfreeapps.org"
     stamps = _stamps(resolved_domain)
+    overrides = overrides or {}
 
     problems: list[str] = []
 
@@ -260,20 +283,28 @@ def seed_app(repo_root: Path, slug: str, *, domain: str | None = None,
     # --- seed compose-level .env ---
     existing_compose = _read_env_file(compose_env)
     compose_text, compose_final = _render_from_example(
-        compose_example.read_text(encoding="utf-8"), existing_compose, stamps,
+        compose_example.read_text(encoding="utf-8"), existing_compose, stamps, overrides,
     )
     compose_written = _write_secure(compose_env, compose_text)
 
     # --- seed backend/.env.docker ---
     existing_docker = _read_env_file(docker_env)
     docker_text, docker_final = _render_from_example(
-        docker_example.read_text(encoding="utf-8"), existing_docker, stamps,
+        docker_example.read_text(encoding="utf-8"), existing_docker, stamps, overrides,
     )
     docker_written = _write_secure(docker_env, docker_text)
 
     print(f"{'Seeded' if compose_written else 'Unchanged'}: {compose_env}")
     print(f"{'Seeded' if docker_written else 'Unchanged'}: {docker_env}")
     print("Both files chmod 600.")
+
+    applied = sorted(k for k in overrides if k in compose_final or k in docker_final)
+    if applied:
+        print(f"Overrides applied: {', '.join(applied)}")
+    unapplied = sorted(set(overrides) - set(applied))
+    if unapplied:
+        print("WARNING: override keys not declared by this app's templates "
+              f"(ignored): {', '.join(unapplied)}")
 
     required_blanks, other_blanks = _blank_report(
         {**compose_final, **docker_final},
@@ -313,11 +344,18 @@ def _cli(argv: list[str] | None = None) -> int:
                              "stamp FRONTEND_URL/CORS_ORIGINS when the template left them blank.")
     parser.add_argument("--repo-root", default=None,
                         help="Monorepo root (default: resolved from this file's location).")
+    parser.add_argument("--overrides", default=None,
+                        help="Path to a KEY=VALUE file of explicit values to set. "
+                             "Overrides win over existing values (deliberate set/rotate); "
+                             "blank values in the file are ignored. Used by the "
+                             "seed-env GitHub Actions workflow to inject repo secrets.")
     args = parser.parse_args(argv)
 
     repo_root = Path(args.repo_root).resolve() if args.repo_root else _repo_root()
     try:
-        return seed_app(repo_root, args.app, domain=args.domain, check_only=args.check)
+        overrides = _load_overrides(Path(args.overrides)) if args.overrides else None
+        return seed_app(repo_root, args.app, domain=args.domain,
+                        check_only=args.check, overrides=overrides)
     except SeedEnvError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2

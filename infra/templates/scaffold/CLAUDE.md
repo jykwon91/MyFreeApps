@@ -137,6 +137,13 @@ cd /srv/myfreeapps
 PYTHONPATH=packages/shared-backend python3 -m platform_shared.infra.seed_env --app __APP_SLUG__
 ```
 
+No-SSH alternative: set the per-app repo secrets (slug uppercased +
+`_SENTRY_DSN`, `_SMTP_USER`, `_SMTP_PASSWORD`, `_EMAIL_FROM_ADDRESS`,
+`_TURNSTILE_SECRET_KEY`, `_MINIO_ACCESS_KEY`, `_MINIO_SECRET_KEY`, single-user
+apps also `_SEED_USER_EMAIL` + `_SEED_USER_PASSWORD_HASH`) via `gh secret set`,
+then dispatch the "Seed VPS env files" workflow:
+`gh workflow run seed-env.yml -f app=__APP_SLUG__`.
+
 **Critical env vars:**
 
 | Var | Required | Notes |
