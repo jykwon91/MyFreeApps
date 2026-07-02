@@ -55,6 +55,8 @@ REQUIRED_OPERATOR_KEYS: tuple[str, ...] = (
     "TURNSTILE_SECRET_KEY",
     "SEED_USER_EMAIL",
     "SEED_USER_PASSWORD_HASH",
+    "SEED_ADMIN_EMAIL",
+    "SEED_ADMIN_PASSWORD_HASH",
 )
 
 # Short operator-facing hints for the checklist output.
@@ -67,6 +69,8 @@ _KEY_HINTS: dict[str, str] = {
     "TURNSTILE_SECRET_KEY": "Cloudflare Turnstile secret key",
     "SEED_USER_EMAIL": "single-user operator account email",
     "SEED_USER_PASSWORD_HASH": "bcrypt hash of the operator password",
+    "SEED_ADMIN_EMAIL": "multi-user apps: platform-admin account email (seeded at boot)",
+    "SEED_ADMIN_PASSWORD_HASH": "bcrypt hash of the platform-admin password",
 }
 
 # Placeholder prefixes in the example templates that count as "not set".

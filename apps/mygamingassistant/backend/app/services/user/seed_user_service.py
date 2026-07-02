@@ -29,6 +29,11 @@ Then set SEED_USER_PASSWORD_HASH in backend/.env.docker.
 """
 import logging
 
+# Extracted to platform_shared when the multi-user SEED_ADMIN_* standard became
+# the second consumer (auto-promote rule). Re-exported so existing imports of
+# app.services.user.seed_user_service.is_valid_seed_email keep working.
+from platform_shared.services.seed_admin_service import is_valid_seed_email  # noqa: F401
+
 from app.db.session import unit_of_work
 from app.repositories.user import user_repo
 
@@ -41,34 +46,6 @@ class SeedUserNotConfiguredError(RuntimeError):
 
 class SeedUserInvalidEmailError(RuntimeError):
     """Raised in production when SEED_USER_EMAIL is set but not a valid email."""
-
-
-def is_valid_seed_email(email: str) -> bool:
-    """Return True if *email* passes the same validation fastapi-users'
-    ``UserRead.email`` (Pydantic ``EmailStr``) applies at response time.
-
-    Pydantic v2 ``EmailStr`` delegates to ``email-validator`` with
-    ``check_deliverability=False`` (no DNS/network). We mirror that exactly so
-    this boot check accepts/rejects precisely what the response schema will —
-    catching ``dev@localhost``-style addresses (no dot in the domain) before
-    they seed an operator whose ``GET /users/me`` then 500s on every call.
-
-    The DNS check is deliberately disabled: it matches Pydantic, avoids a
-    network call on the startup path, and keeps the check deterministic in CI.
-    """
-    if not email:
-        return False
-    try:
-        from email_validator import EmailNotValidError, validate_email
-    except ImportError:  # pragma: no cover - ships with pydantic[email]/fastapi-users
-        # Minimal structural fallback: local-part@domain with a dotted domain.
-        parts = email.split("@")
-        return len(parts) == 2 and bool(parts[0]) and "." in parts[1]
-    try:
-        validate_email(email, check_deliverability=False)
-        return True
-    except EmailNotValidError:
-        return False
 
 
 async def seed_operator_user(email: str, hashed_password: str) -> None:

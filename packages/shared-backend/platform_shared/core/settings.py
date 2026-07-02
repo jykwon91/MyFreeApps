@@ -69,6 +69,19 @@ class BaseAppSettings(BaseSettings):
     jwt_lifetime_seconds: int = 1800  # 30 min
 
     # ------------------------------------------------------------------
+    # Platform-admin seed (multi-user apps) — the multi-user counterpart
+    # of the single-user SEED_USER_* operator seed. When both are set,
+    # the lifespan's seed_admin hook (see
+    # platform_shared.services.seed_admin_service) ensures a verified
+    # platform admin exists for this email at every boot. Blank = the
+    # seed is skipped (apps opt in by wiring the hook AND setting these).
+    # SEED_ADMIN_PASSWORD_HASH is a bcrypt HASH — never the plaintext
+    # password, and its value must never be logged.
+    # ------------------------------------------------------------------
+    seed_admin_email: str = ""
+    seed_admin_password_hash: str = ""
+
+    # ------------------------------------------------------------------
     # HTTP / CORS — apps override frontend_url and cors_origins with the
     # right port. Defaults below keep validation clean in dev/CI.
     # ------------------------------------------------------------------

@@ -132,13 +132,16 @@ PYTHONPATH=packages/shared-backend python3 -m platform_shared.infra.seed_env --a
 
 No-SSH alternative: set the `MYRECIPES_*` repo secrets (`_SENTRY_DSN`,
 `_SMTP_USER`, `_SMTP_PASSWORD`, `_EMAIL_FROM_ADDRESS`, `_TURNSTILE_SECRET_KEY`,
-`_MINIO_ACCESS_KEY`, `_MINIO_SECRET_KEY`) via `gh secret set`, then dispatch
+`_MINIO_ACCESS_KEY`, `_MINIO_SECRET_KEY`, `_SEED_ADMIN_EMAIL`,
+`_SEED_ADMIN_PASSWORD_HASH`) via `gh secret set`, then dispatch
 the "Seed VPS env files" workflow: `gh workflow run seed-env.yml -f app=myrecipes`.
 
 **Critical env vars:**
 
 | Var | Required | Notes |
 |---|---|---|
+| `SEED_ADMIN_EMAIL` | Yes (prod) | Boot-seeded platform admin; reserved from public registration |
+| `SEED_ADMIN_PASSWORD_HASH` | Yes (prod) | bcrypt hash -- generate locally with `python -c "from passlib.context import CryptContext; import getpass; print(CryptContext(schemes=['bcrypt']).hash(getpass.getpass()))"` |
 | `SECRET_KEY` | Yes | JWT signing -- `openssl rand -hex 32` |
 | `ENCRYPTION_KEY` | Yes | Fernet PII key -- `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"` |
 | `DATABASE_URL` | Yes | Full async postgres URL (set by docker-compose) |

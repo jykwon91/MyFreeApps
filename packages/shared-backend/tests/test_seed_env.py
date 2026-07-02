@@ -84,10 +84,30 @@ class TestFreshSeed:
         for key in ("SENTRY_DSN", "SMTP_USER", "SMTP_PASSWORD",
                     "EMAIL_FROM_ADDRESS", "TURNSTILE_SITE_KEY", "TURNSTILE_SECRET_KEY"):
             assert key in out
-        # SEED_USER_* not declared by this app — must not be demanded
+        # SEED_USER_* / SEED_ADMIN_* not declared by this app — must not be demanded
         assert "SEED_USER_EMAIL" not in out
+        assert "SEED_ADMIN_EMAIL" not in out
         # optional key listed informationally, not as required
         assert "ANTHROPIC_API_KEY" in out
+
+    def test_seed_admin_keys_enforced_when_declared(self, repo: Path, capsys):
+        """A multi-user app declaring SEED_ADMIN_* must have them flagged as
+        required blanks (and --check must fail) until the operator fills them."""
+        docker_example = repo / "apps" / "testapp" / "backend" / ".env.docker.example"
+        docker_example.write_text(
+            docker_example.read_text(encoding="utf-8")
+            + "\nSEED_ADMIN_EMAIL=\nSEED_ADMIN_PASSWORD_HASH=\n",
+            encoding="utf-8",
+        )
+
+        rc = run(repo)
+        assert rc == 1
+        out = capsys.readouterr().out
+        assert "SEED_ADMIN_EMAIL" in out
+        assert "SEED_ADMIN_PASSWORD_HASH" in out
+
+        rc = run(repo, "--check")
+        assert rc == 1
 
     def test_generated_secret_shapes(self, repo: Path):
         run(repo)

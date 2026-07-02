@@ -15,6 +15,11 @@ from the app's ``settings``):
   * ``lockout_autoreset_hours`` — defaults to 24
   * ``hibp_enabled`` — defaults to True
   * ``min_password_length`` — defaults to 12
+  * ``seed_admin_email`` — defaults to "" (no reservation). Multi-user
+    apps that seed a platform admin at boot set this to
+    ``settings.seed_admin_email`` so the address can never be claimed
+    through public registration (see
+    ``platform_shared.services.seed_admin_service``).
 
 Subclasses MUST override:
 
@@ -63,6 +68,7 @@ from platform_shared.services.account_lockout import (
 )
 from platform_shared.services.auth_event_service import log_auth_event
 from platform_shared.services.hibp_service import HIBPCheckError, is_password_pwned
+from platform_shared.services.seed_admin_service import is_reserved_seed_email
 
 logger = logging.getLogger(__name__)
 
@@ -80,6 +86,29 @@ class PlatformBaseUserManager(
     lockout_autoreset_hours: int = 24
     hibp_enabled: bool = True
     min_password_length: int = 12
+    seed_admin_email: str = ""
+
+    async def create(
+        self,
+        user_create: schemas.UC,
+        safe: bool = False,
+        request: Optional[Request] = None,
+    ) -> models.UP:
+        """Reserve the seeded platform-admin address from registration.
+
+        With open registration, whoever registers ``SEED_ADMIN_EMAIL``
+        first would otherwise own the row the boot-time seed matches by
+        email. The seed itself refuses to promote a non-seed-owned row
+        (hash check), but reserving the address here closes the squat
+        window entirely. Raises the same ``UserAlreadyExists`` the parent
+        raises for a taken email — indistinguishable, no enumeration
+        signal.
+        """
+        if is_reserved_seed_email(
+            getattr(user_create, "email", ""), self.seed_admin_email,
+        ):
+            raise exceptions.UserAlreadyExists()
+        return await super().create(user_create, safe=safe, request=request)
 
     async def authenticate(
         self, credentials: OAuth2PasswordRequestForm,

@@ -32,3 +32,10 @@ class AuthEventType:
     SUPERUSER_GATE_DENIED_TOKEN_STALE = "superuser.gate.denied.token_stale"
     SUPERUSER_GATE_DENIED_MISSING_TOTP = "superuser.gate.denied.missing_totp"
     SUPERUSER_GATE_DENIED_BAD_TOTP = "superuser.gate.denied.bad_totp"
+    # Boot-time platform-admin seeding (multi-user apps). A privilege change
+    # that bypasses the admin API must leave the same forensic trail — see
+    # platform_shared.services.seed_admin_service. "refused" fires when a row
+    # with SEED_ADMIN_EMAIL exists but isn't seed-owned (hash mismatch).
+    SEED_ADMIN_CREATED = "seed_admin.created"
+    SEED_ADMIN_PROMOTED = "seed_admin.promoted"
+    SEED_ADMIN_REFUSED = "seed_admin.refused"
