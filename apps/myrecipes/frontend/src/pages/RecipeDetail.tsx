@@ -29,8 +29,16 @@ export default function RecipeDetail() {
   const navigate = useNavigate();
 
   const recipeQuery = useGetRecipeQuery(recipeId, { skip: !recipeId });
+  // Public-read / auth-write: reads are public, but cook logs, write buttons,
+  // and the cook-log section are owner-only. is_owner comes from the recipe
+  // response and gates all of those below.
+  const isOwner = recipeQuery.data?.is_owner ?? false;
   const versionsQuery = useListVersionsQuery(recipeId, { skip: !recipeId });
-  const cooksQuery = useListRecipeCooksQuery(recipeId, { skip: !recipeId });
+  // The cook-logs endpoint 404s for non-owners, so skip it entirely unless the
+  // viewer owns this recipe.
+  const cooksQuery = useListRecipeCooksQuery(recipeId, {
+    skip: !recipeId || !isOwner,
+  });
 
   const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
   const [compareIds, setCompareIds] = useState<string[]>([]);
@@ -99,7 +107,7 @@ export default function RecipeDetail() {
         <EmptyState
           icon={<ChefHat className="w-12 h-12 text-destructive" />}
           heading="Recipe not found"
-          body="This recipe doesn't exist or you don't have access to it."
+          body="This recipe doesn't exist. It may have been deleted."
           action={{ label: "Back to recipes", onClick: () => navigate("/") }}
         />
       </main>
@@ -133,45 +141,47 @@ export default function RecipeDetail() {
             </p>
           ) : null}
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <LoadingButton
-            variant="primary"
-            size="sm"
-            onClick={() => navigate(`/recipes/${recipeId}/tweak`)}
-          >
-            <span className="inline-flex items-center gap-1.5">
-              <GitBranch className="w-4 h-4" />
-              Tweak this recipe
-            </span>
-          </LoadingButton>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => setCookOpen(true)}
-            disabled={!effectiveVersionId}
-          >
-            <span className="inline-flex items-center gap-1.5">
-              <UtensilsCrossed className="w-4 h-4" />
-              I made it
-            </span>
-          </Button>
-          <Button variant="secondary" size="sm" onClick={() => setEditOpen(true)}>
-            <span className="inline-flex items-center gap-1.5">
-              <Pencil className="w-4 h-4" />
-              Edit
-            </span>
-          </Button>
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={() => setDeleteOpen(true)}
-          >
-            <span className="inline-flex items-center gap-1.5">
-              <Trash2 className="w-4 h-4" />
-              Delete
-            </span>
-          </Button>
-        </div>
+        {isOwner && (
+          <div className="flex flex-wrap items-center gap-2">
+            <LoadingButton
+              variant="primary"
+              size="sm"
+              onClick={() => navigate(`/recipes/${recipeId}/tweak`)}
+            >
+              <span className="inline-flex items-center gap-1.5">
+                <GitBranch className="w-4 h-4" />
+                Tweak this recipe
+              </span>
+            </LoadingButton>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setCookOpen(true)}
+              disabled={!effectiveVersionId}
+            >
+              <span className="inline-flex items-center gap-1.5">
+                <UtensilsCrossed className="w-4 h-4" />
+                I made it
+              </span>
+            </Button>
+            <Button variant="secondary" size="sm" onClick={() => setEditOpen(true)}>
+              <span className="inline-flex items-center gap-1.5">
+                <Pencil className="w-4 h-4" />
+                Edit
+              </span>
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => setDeleteOpen(true)}
+            >
+              <span className="inline-flex items-center gap-1.5">
+                <Trash2 className="w-4 h-4" />
+                Delete
+              </span>
+            </Button>
+          </div>
+        )}
       </header>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -195,14 +205,16 @@ export default function RecipeDetail() {
             </>
           )}
 
-          <section className="bg-card border rounded-lg p-6">
-            <h2 className="text-base font-medium mb-4">Cook log</h2>
-            <CookLogHistory
-              recipeId={recipeId}
-              cooks={cooksQuery.data ?? []}
-              versionNumberById={versionNumberById}
-            />
-          </section>
+          {isOwner && (
+            <section className="bg-card border rounded-lg p-6">
+              <h2 className="text-base font-medium mb-4">Cook log</h2>
+              <CookLogHistory
+                recipeId={recipeId}
+                cooks={cooksQuery.data ?? []}
+                versionNumberById={versionNumberById}
+              />
+            </section>
+          )}
         </div>
 
         <div className="lg:col-span-1">
@@ -217,7 +229,7 @@ export default function RecipeDetail() {
         </div>
       </div>
 
-      {effectiveVersionId && versionQuery.data ? (
+      {isOwner && effectiveVersionId && versionQuery.data ? (
         <CookLogModal
           open={cookOpen}
           onClose={() => setCookOpen(false)}
@@ -227,22 +239,26 @@ export default function RecipeDetail() {
         />
       ) : null}
 
-      <EditRecipeMetaModal
-        open={editOpen}
-        onClose={() => setEditOpen(false)}
-        recipe={recipe}
-      />
+      {isOwner && (
+        <EditRecipeMetaModal
+          open={editOpen}
+          onClose={() => setEditOpen(false)}
+          recipe={recipe}
+        />
+      )}
 
-      <ConfirmDialog
-        open={deleteOpen}
-        title="Delete this recipe?"
-        description="This removes the recipe and its whole version history from your list. This can't be undone here."
-        confirmLabel="Delete recipe"
-        variant="destructive"
-        isLoading={isDeleting}
-        onConfirm={handleDelete}
-        onCancel={() => setDeleteOpen(false)}
-      />
+      {isOwner && (
+        <ConfirmDialog
+          open={deleteOpen}
+          title="Delete this recipe?"
+          description="This removes the recipe and its whole version history from your list. This can't be undone here."
+          confirmLabel="Delete recipe"
+          variant="destructive"
+          isLoading={isDeleting}
+          onConfirm={handleDelete}
+          onCancel={() => setDeleteOpen(false)}
+        />
+      )}
     </main>
   );
 }

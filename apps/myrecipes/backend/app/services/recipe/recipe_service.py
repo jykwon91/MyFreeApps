@@ -27,6 +27,7 @@ from app.repositories.recipe import (
     recipe_repository,
     recipe_version_repository,
 )
+from app.repositories.user import user_repo as user_repository
 from app.schemas.recipe.cook_log_schemas import CookLogCreateRequest, CookLogResponse
 from app.schemas.recipe.diff_schemas import DiffResponse
 from app.schemas.recipe.recipe_schemas import (
@@ -80,19 +81,36 @@ def _make_steps(version_id: uuid.UUID, inputs: list[StepInput]) -> list[RecipeSt
 
 
 async def _build_detail(
-    db: AsyncSession, recipe: Recipe, user_id: uuid.UUID,
+    db: AsyncSession,
+    recipe: Recipe,
+    versions: list[RecipeVersion],
+    viewer_id: uuid.UUID | None,
 ) -> RecipeDetailResponse:
     """Assemble a recipe's detail DTO (summary rollups + full latest version).
 
-    Reads see flushed-but-uncommitted rows, so callers may invoke this before
-    committing a write.
+    ``viewer_id`` is the OPTIONAL current user. ``is_owner`` is computed against
+    it; the owner's ``user_id`` is never placed on the wire. Cook-log rollups
+    (``best_rating`` / ``last_cooked_at``) are owner-private — they stay ``None``
+    for any non-owner viewer, and the rollup query is only issued when the
+    viewer owns the recipe (so another user's cook data is never even read).
+
+    ``versions`` is passed in by the caller so the right access path is used —
+    tenant-scoped for write flows, the public (recipe-scoped) listing for public
+    reads. Reads see flushed-but-uncommitted rows, so callers may invoke this
+    before committing a write.
     """
-    versions = await recipe_version_repository.list_by_recipe(db, recipe.id, user_id)
+    is_owner = viewer_id is not None and viewer_id == recipe.user_id
     latest = versions[-1] if versions else None
-    best_map = await cook_log_repository.best_rating_and_last_cooked_by_recipe(
-        db, [recipe.id]
-    )
-    best_rating, last_cooked = best_map.get(recipe.id, (None, None))
+
+    best_rating: int | None = None
+    last_cooked: datetime | None = None
+    if is_owner:
+        best_map = await cook_log_repository.best_rating_and_last_cooked_by_recipe(
+            db, [recipe.id]
+        )
+        best_rating, last_cooked = best_map.get(recipe.id, (None, None))
+
+    names = await user_repository.display_names_by_ids(db, {recipe.user_id})
 
     latest_dto: VersionResponse | None = None
     if latest is not None:
@@ -102,7 +120,6 @@ async def _build_detail(
 
     return RecipeDetailResponse(
         id=recipe.id,
-        user_id=recipe.user_id,
         title=recipe.title,
         description=recipe.description,
         source=recipe.source,
@@ -110,6 +127,8 @@ async def _build_detail(
         updated_at=recipe.updated_at,
         version_count=len(versions),
         latest_version_number=latest.version_number if latest else None,
+        is_owner=is_owner,
+        owner_display_name=names.get(recipe.user_id, ""),
         best_rating=best_rating,
         last_cooked_at=last_cooked,
         latest_version=latest_dto,
@@ -149,27 +168,59 @@ async def create_recipe(
     )
     await recipe_version_repository.add_steps(db, _make_steps(version.id, req.steps))
 
-    detail = await _build_detail(db, recipe, user_id)
+    versions = await recipe_version_repository.list_by_recipe(db, recipe.id, user_id)
+    detail = await _build_detail(db, recipe, versions, user_id)
     await db.commit()
     return detail
 
 
-async def list_recipes(
-    db: AsyncSession, user_id: uuid.UUID, *, search: str | None = None,
+async def list_public_recipes(
+    db: AsyncSession,
+    viewer_id: uuid.UUID | None,
+    *,
+    search: str | None = None,
+    limit: int,
+    offset: int = 0,
+    owner_me: bool = False,
 ) -> list[RecipeSummary]:
-    recipes = await recipe_repository.list_by_user(db, user_id, search=search)
+    """List recipes for the public library (or the viewer's own with owner_me).
+
+    ``viewer_id`` is the OPTIONAL current user. When ``owner_me`` is set the
+    result is scoped to the viewer's recipes (the route rejects anonymous
+    ``owner=me`` with 401 before we get here). Otherwise every non-deleted
+    recipe is returned, paginated.
+
+    ``is_owner`` is computed per row; ``user_id`` is never returned. Cook-log
+    rollups are populated only for recipes the viewer owns — the rollup query
+    is issued for owned ids only, so another user's cook data is never read.
+    """
+    if owner_me:
+        assert viewer_id is not None  # route guarantees this
+        recipes = await recipe_repository.list_by_user(
+            db, viewer_id, search=search, limit=limit, offset=offset,
+        )
+    else:
+        recipes = await recipe_repository.list_public(
+            db, search=search, limit=limit, offset=offset,
+        )
+
     recipe_ids = [r.id for r in recipes]
     counts = await recipe_version_repository.counts_and_latest_by_recipe(db, recipe_ids)
-    cooks = await cook_log_repository.best_rating_and_last_cooked_by_recipe(db, recipe_ids)
+    names = await user_repository.display_names_by_ids(db, {r.user_id for r in recipes})
+
+    owned_ids = [
+        r.id for r in recipes if viewer_id is not None and r.user_id == viewer_id
+    ]
+    cooks = await cook_log_repository.best_rating_and_last_cooked_by_recipe(db, owned_ids)
 
     summaries: list[RecipeSummary] = []
     for r in recipes:
+        is_owner = viewer_id is not None and r.user_id == viewer_id
         version_count, latest_number = counts.get(r.id, (0, None))
-        best_rating, last_cooked = cooks.get(r.id, (None, None))
+        best_rating, last_cooked = cooks.get(r.id, (None, None)) if is_owner else (None, None)
         summaries.append(
             RecipeSummary(
                 id=r.id,
-                user_id=r.user_id,
                 title=r.title,
                 description=r.description,
                 source=r.source,
@@ -177,6 +228,8 @@ async def list_recipes(
                 updated_at=r.updated_at,
                 version_count=version_count,
                 latest_version_number=latest_number,
+                is_owner=is_owner,
+                owner_display_name=names.get(r.user_id, ""),
                 best_rating=best_rating,
                 last_cooked_at=last_cooked,
             )
@@ -184,13 +237,17 @@ async def list_recipes(
     return summaries
 
 
-async def get_recipe_detail(
-    db: AsyncSession, user_id: uuid.UUID, recipe_id: uuid.UUID,
+async def get_public_recipe_detail(
+    db: AsyncSession, viewer_id: uuid.UUID | None, recipe_id: uuid.UUID,
 ) -> RecipeDetailResponse | None:
-    recipe = await recipe_repository.get_by_id(db, recipe_id, user_id)
+    """Public recipe detail. Returns None for a missing OR soft-deleted recipe
+    (the route maps both to an identical 404 — no soft-delete existence leak).
+    """
+    recipe = await recipe_repository.get_public_by_id(db, recipe_id)
     if recipe is None:
         return None
-    return await _build_detail(db, recipe, user_id)
+    versions = await recipe_version_repository.list_by_recipe_public(db, recipe.id)
+    return await _build_detail(db, recipe, versions, viewer_id)
 
 
 async def update_recipe(
@@ -202,7 +259,8 @@ async def update_recipe(
     updates = req.model_dump(exclude_unset=True)
     if updates:
         await recipe_repository.update(db, recipe, updates)
-    detail = await _build_detail(db, recipe, user_id)
+    versions = await recipe_version_repository.list_by_recipe(db, recipe.id, user_id)
+    detail = await _build_detail(db, recipe, versions, user_id)
     await db.commit()
     return detail
 
@@ -223,36 +281,61 @@ async def delete_recipe(
 # ---------------------------------------------------------------------------
 
 
-async def list_versions(
-    db: AsyncSession, user_id: uuid.UUID, recipe_id: uuid.UUID,
+async def list_public_versions(
+    db: AsyncSession, viewer_id: uuid.UUID | None, recipe_id: uuid.UUID,
 ) -> list[VersionSummary] | None:
-    recipe = await recipe_repository.get_by_id(db, recipe_id, user_id)
+    """Public version timeline. Returns None for a missing/soft-deleted recipe.
+
+    Per-version cook rollups (``cook_count`` / ``best_rating``) are owner-
+    private: they are populated only when the viewer owns the recipe, and stay
+    ``None`` for everyone else. The rollup query runs for owners only.
+    """
+    recipe = await recipe_repository.get_public_by_id(db, recipe_id)
     if recipe is None:
         return None
-    versions = await recipe_version_repository.list_by_recipe(db, recipe_id, user_id)
-    agg = await cook_log_repository.counts_and_best_by_version(
-        db, [v.id for v in versions]
-    )
+    versions = await recipe_version_repository.list_by_recipe_public(db, recipe_id)
+    is_owner = viewer_id is not None and viewer_id == recipe.user_id
+
+    if is_owner:
+        agg = await cook_log_repository.counts_and_best_by_version(
+            db, [v.id for v in versions]
+        )
+        return [
+            VersionSummary(
+                id=v.id,
+                version_number=v.version_number,
+                change_note=v.change_note,
+                created_at=v.created_at,
+                cook_count=agg.get(v.id, (0, None))[0],
+                best_rating=agg.get(v.id, (0, None))[1],
+            )
+            for v in versions
+        ]
+
     return [
         VersionSummary(
             id=v.id,
             version_number=v.version_number,
             change_note=v.change_note,
             created_at=v.created_at,
-            cook_count=agg.get(v.id, (0, None))[0],
-            best_rating=agg.get(v.id, (0, None))[1],
+            cook_count=None,
+            best_rating=None,
         )
         for v in versions
     ]
 
 
-async def get_version(
-    db: AsyncSession, user_id: uuid.UUID, recipe_id: uuid.UUID, version_id: uuid.UUID,
+async def get_public_version(
+    db: AsyncSession, recipe_id: uuid.UUID, version_id: uuid.UUID,
 ) -> VersionResponse | None:
-    recipe = await recipe_repository.get_by_id(db, recipe_id, user_id)
+    """Public single version. None for a missing/soft-deleted recipe or a
+    version that isn't part of it. ``VersionResponse`` carries no cook data, so
+    no viewer gating is needed here.
+    """
+    recipe = await recipe_repository.get_public_by_id(db, recipe_id)
     if recipe is None:
         return None
-    version = await recipe_version_repository.get_by_id(db, version_id, user_id)
+    version = await recipe_version_repository.get_by_id_public(db, version_id)
     if version is None or version.recipe_id != recipe_id:
         return None
     ingredients = await recipe_version_repository.get_ingredients(db, version.id)
@@ -357,28 +440,33 @@ async def restore_version(
     return dto
 
 
-async def diff_versions(
+async def diff_public_versions(
     db: AsyncSession,
-    user_id: uuid.UUID,
     recipe_id: uuid.UUID,
     version_id: uuid.UUID,
     against_id: uuid.UUID | None = None,
 ) -> DiffResponse | None:
-    """Diff ``version_id`` against ``against_id`` (default: its parent version)."""
-    recipe = await recipe_repository.get_by_id(db, recipe_id, user_id)
+    """Public diff of ``version_id`` against ``against_id`` (default: its parent).
+
+    None for a missing/soft-deleted recipe or a ``version_id`` that isn't part
+    of it. Raises InvalidBaseVersionError (route -> 400) when an explicit
+    ``against`` isn't a version of this recipe. Diffs expose only ingredient/
+    step content — no cook data — so no viewer gating is required.
+    """
+    recipe = await recipe_repository.get_public_by_id(db, recipe_id)
     if recipe is None:
         return None
-    to_version = await recipe_version_repository.get_by_id(db, version_id, user_id)
+    to_version = await recipe_version_repository.get_by_id_public(db, version_id)
     if to_version is None or to_version.recipe_id != recipe_id:
         return None
 
     if against_id is not None:
-        from_version = await recipe_version_repository.get_by_id(db, against_id, user_id)
+        from_version = await recipe_version_repository.get_by_id_public(db, against_id)
         if from_version is None or from_version.recipe_id != recipe_id:
             raise InvalidBaseVersionError("against version is not a version of this recipe")
     elif to_version.parent_version_id is not None:
-        from_version = await recipe_version_repository.get_by_id(
-            db, to_version.parent_version_id, user_id
+        from_version = await recipe_version_repository.get_by_id_public(
+            db, to_version.parent_version_id
         )
     else:
         from_version = None  # v1 — nothing precedes it; everything is "added".

@@ -108,10 +108,14 @@ export default function VersionTimeline({
                     </p>
                     <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
                       <span>{formatDate(version.created_at)}</span>
-                      <span>
-                        {version.cook_count} cook
-                        {version.cook_count === 1 ? "" : "s"}
-                      </span>
+                      {/* cook_count is owner-only — null for non-owners, so the
+                          count is omitted rather than rendered as a bare "cooks". */}
+                      {version.cook_count !== null ? (
+                        <span>
+                          {version.cook_count} cook
+                          {version.cook_count === 1 ? "" : "s"}
+                        </span>
+                      ) : null}
                     </div>
                   </button>
                 </div>

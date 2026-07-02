@@ -1,14 +1,23 @@
 import type { ReactNode } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { Lock } from "lucide-react";
-import { Button, useIsAuthenticated } from "@platform/ui";
-import { isServeOnly } from "@/lib/serveOnly";
+import Button from "../ui/Button";
+import { useIsAuthenticated } from "../../lib/auth-store";
 
-interface AuthRequiredProps {
+export interface AuthRequiredProps {
   /** What the user is trying to do, e.g., "manage sources". Shown in the fallback. */
   action?: string;
   /** Optional longer description rendered below the primary CTA copy. */
   description?: string;
+  /**
+   * When true, the gated route can never be satisfied in this deployment (e.g.
+   * a serve-only / no-auth build where the backend mounts no login route).
+   * Rather than showing a Sign-in card that points at a /login route that
+   * would 404, redirect to the public home. Fail closed: gated content is
+   * never rendered when ``unavailable`` is set, even if a stale token is
+   * present.
+   */
+  unavailable?: boolean;
   /** The gated content. */
   children: ReactNode;
 }
@@ -16,33 +25,32 @@ interface AuthRequiredProps {
 /**
  * AuthRequired — gate a write-surface route or sub-tree behind authentication.
  *
- * MGA uses a public-read / auth-write model: anyone can browse lineups, but
- * mutations and operational pages are operator-only. This component is the
- * one and only frontend gate — every gated route should wrap its top-level
- * component with `<AuthRequired action="...">`.
+ * For a public-read / auth-write app: anyone can browse, but mutations and
+ * operational pages are auth-only. This component is the one and only frontend
+ * gate — every gated route should wrap its top-level component with
+ * `<AuthRequired action="...">`.
  *
  * When unauthenticated, renders a centered card explaining what auth would
  * unlock and a "Sign in" button that routes to /login, passing the current
- * pathname so Login.tsx can return the user here on success.
+ * pathname so Login can return the user here on success.
  *
  * When authenticated, renders ``children`` unchanged.
- *
- * See apps/mygamingassistant/CLAUDE.md → Authentication Model.
  */
 export default function AuthRequired({
   action,
   description,
+  unavailable = false,
   children,
 }: AuthRequiredProps) {
   const isAuthenticated = useIsAuthenticated();
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Serve-only mode: there is no auth and no operator surface — these gated
+  // Unavailable mode: there is no auth surface in this deployment — these gated
   // routes can never be satisfied. Redirect to the public home rather than
-  // showing a Sign-in card that points at a /login route the backend does
-  // not mount (it would 404). Fail closed: gated content is never rendered.
-  if (isServeOnly()) {
+  // showing a Sign-in card that points at a /login route the backend does not
+  // mount (it would 404). Fail closed: gated content is never rendered.
+  if (unavailable) {
     return <Navigate to="/" replace />;
   }
 
@@ -55,7 +63,7 @@ export default function AuthRequired({
     : "Sign in to continue";
   const body =
     description ??
-    "This page is for the site operator. Browsing lineups doesn't require an account — only managing content does.";
+    "This page is for signed-in users. Browsing doesn't require an account — only managing content does.";
 
   function onSignIn() {
     navigate("/login", {

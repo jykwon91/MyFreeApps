@@ -9,9 +9,15 @@ interface Props {
 }
 
 /**
- * A single recipe in the list grid. Surfaces the four data points that answer
+ * A single recipe in the list grid. Surfaces the data points that answer
  * "which recipe, how evolved, how good, how recently cooked": title, latest
- * version number, best rating (as stars), version count, and last-cooked date.
+ * version number, and version count for everyone; plus best rating and
+ * last-cooked date for the owner only.
+ *
+ * Public-read / auth-write: the recipe library is public, so cards render for
+ * every visitor. The star-rating and last-cooked block is owner-private — it's
+ * omitted entirely (not dashed) for other people's recipes, and cards show a
+ * "by {owner}" attribution when the owner's display name is known.
  */
 export default function RecipeCard({ recipe }: Props) {
   const versionLabel =
@@ -42,14 +48,22 @@ export default function RecipeCard({ recipe }: Props) {
           <GitBranch className="w-4 h-4" aria-hidden />
           {recipe.version_count} version{recipe.version_count === 1 ? "" : "s"}
         </span>
-        <StarRating value={recipe.best_rating} showEmptyDash />
+        {recipe.is_owner && <StarRating value={recipe.best_rating} showEmptyDash />}
       </div>
 
-      <div className="text-xs text-muted-foreground">
-        {recipe.last_cooked_at
-          ? `Last cooked ${formatDate(recipe.last_cooked_at)}`
-          : "Not cooked yet"}
-      </div>
+      {recipe.is_owner && (
+        <div className="text-xs text-muted-foreground">
+          {recipe.last_cooked_at
+            ? `Last cooked ${formatDate(recipe.last_cooked_at)}`
+            : "Not cooked yet"}
+        </div>
+      )}
+
+      {recipe.owner_display_name ? (
+        <div className="text-xs text-muted-foreground/80">
+          by {recipe.owner_display_name}
+        </div>
+      ) : null}
     </Link>
   );
 }

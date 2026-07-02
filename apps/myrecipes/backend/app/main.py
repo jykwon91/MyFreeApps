@@ -181,7 +181,10 @@ app.include_router(health.router, tags=["health"])
 app.include_router(admin.router)
 
 # App-specific domain routes (MyRecipes): recipes + version history + cook logs.
-app.include_router(recipes.router)
+# Public-read / auth-write split — public_router is unauthenticated (browse the
+# library), auth_router gates writes + owner-only cook logs at the router level.
+app.include_router(recipes.public_router)
+app.include_router(recipes.auth_router)
 
 # Shared platform admin router -- generic user-management endpoints
 # (list/role/activate/deactivate/superuser/stats-users).

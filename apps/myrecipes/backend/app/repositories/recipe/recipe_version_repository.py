@@ -37,6 +37,38 @@ async def list_by_recipe(
     return list(result.scalars().all())
 
 
+async def list_by_recipe_public(
+    db: AsyncSession, recipe_id: uuid.UUID,
+) -> list[RecipeVersion]:
+    """All versions of a recipe, oldest first — NO tenant filter.
+
+    Public read companion to :func:`list_by_recipe`. Every version of a recipe
+    is owned by that recipe's owner, so scoping by ``recipe_id`` alone is
+    sufficient and lets non-owners browse the timeline. Caller is responsible
+    for confirming the recipe itself is public (non-deleted) first.
+    """
+    result = await db.execute(
+        select(RecipeVersion)
+        .where(RecipeVersion.recipe_id == recipe_id)
+        .order_by(RecipeVersion.version_number.asc())
+    )
+    return list(result.scalars().all())
+
+
+async def get_by_id_public(
+    db: AsyncSession, version_id: uuid.UUID,
+) -> RecipeVersion | None:
+    """Return a version by id with NO tenant filter.
+
+    Public read companion to :func:`get_by_id`. Caller confirms the parent
+    recipe is public and that ``recipe_id`` matches before returning it.
+    """
+    result = await db.execute(
+        select(RecipeVersion).where(RecipeVersion.id == version_id)
+    )
+    return result.scalar_one_or_none()
+
+
 async def get_latest(
     db: AsyncSession, recipe_id: uuid.UUID, user_id: uuid.UUID,
 ) -> RecipeVersion | None:

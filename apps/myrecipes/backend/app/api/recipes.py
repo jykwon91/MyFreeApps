@@ -1,27 +1,37 @@
 """HTTP routes for the MyRecipes domain — recipes, version history, cook logs.
 
-Every endpoint requires an authenticated user (``current_active_user``) and is
-tenant-scoped: a recipe/version/cook owned by another user yields 404 (no
-existence leak), like the canonical apps. Handlers are thin — they delegate to
-``recipe_service`` and translate ``None`` -> 404 and ``InvalidBaseVersionError``
--> 400.
+MyRecipes uses **public-read / auth-write** routing (mirrors MyGamingAssistant;
+see apps/myrecipes/CLAUDE.md and apps/mygamingassistant/CLAUDE.md → Authentication
+Model). This module exports two routers:
 
-Path map::
+    ``public_router`` — no auth dependency; anyone may browse the library:
+        GET /recipes                                  list (summaries)
+        GET /recipes/{id}                             detail (summary + latest version)
+        GET /recipes/{id}/versions                    timeline (version summaries)
+        GET /recipes/{id}/versions/{vid}              full version
+        GET /recipes/{id}/versions/{vid}/diff         diff vs parent (or ?against=)
 
-    GET    /recipes                                   list (summaries)
-    POST   /recipes                                   create recipe + v1
-    GET    /recipes/{id}                              detail (summary + latest version)
-    PATCH  /recipes/{id}                              edit metadata (title/desc/source)
-    DELETE /recipes/{id}                              soft-delete
-    GET    /recipes/{id}/versions                     timeline (version summaries)
-    POST   /recipes/{id}/versions                     tweak -> new version
-    GET    /recipes/{id}/versions/{vid}               full version
-    GET    /recipes/{id}/versions/{vid}/diff          diff vs parent (or ?against=)
-    POST   /recipes/{id}/versions/{vid}/restore       copy old version forward
-    POST   /recipes/{id}/versions/{vid}/cooks         log a cook (rating/notes)
-    GET    /recipes/{id}/versions/{vid}/cooks         cooks for a version
-    GET    /recipes/{id}/cooks                        cooks across the recipe
-    DELETE /recipes/{id}/cooks/{cook_id}              delete a cook log
+    ``auth_router`` — ``Depends(current_active_user)`` at the ROUTER level (never
+    per-handler, so a newly added write handler cannot regress to "no auth"):
+        POST   /recipes                               create recipe + v1
+        POST   /recipes/extract                       photo -> draft (Claude vision)
+        PATCH  /recipes/{id}                          edit metadata
+        DELETE /recipes/{id}                          soft-delete
+        POST   /recipes/{id}/versions                 tweak -> new version
+        POST   /recipes/{id}/versions/{vid}/restore   copy old version forward
+        POST   /recipes/{id}/versions/{vid}/cooks     log a cook (rating/notes)
+        GET    /recipes/{id}/versions/{vid}/cooks     cooks for a version (owner-only)
+        GET    /recipes/{id}/cooks                    cooks across the recipe (owner-only)
+        DELETE /recipes/{id}/cooks/{cook_id}          delete a cook log
+
+Security shape:
+- Public responses never carry ``user_id``. The service computes ``is_owner``
+  against the OPTIONAL viewer (``current_user_optional``) plus the owner's public
+  ``owner_display_name``. Cook-log rollups are owner-private (null for non-owners).
+- Cook logs are PRIVATE (owner-only) — all ``/cooks`` endpoints are auth-gated
+  and tenant-scoped; another user's cooks yield 404 (no existence leak).
+- Public reads use the service's dedicated public functions, which are NOT
+  tenant-scoped; every WRITE keeps threading ``user.id`` (cross-tenant -> 404).
 """
 from __future__ import annotations
 
@@ -30,7 +40,7 @@ import uuid
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.auth import current_active_user
+from app.core.auth import current_active_user, current_user_optional
 from app.core.config import settings
 from app.db.session import get_db
 from app.models.user.user import User
@@ -51,28 +61,122 @@ from app.schemas.recipe.version_schemas import (
 from app.services.recipe import photo_extraction_service, recipe_service
 from app.services.recipe.recipe_service import InvalidBaseVersionError
 
-router = APIRouter(prefix="/recipes", tags=["recipes"])
+# Public read-only routes — no auth required.
+public_router = APIRouter(prefix="/recipes", tags=["recipes"])
+
+# Auth-required mutations + owner-only cook logs. Auth is enforced at the router
+# level rather than per-handler so gating cannot accidentally regress when new
+# handlers are added.
+auth_router = APIRouter(
+    prefix="/recipes",
+    tags=["recipes"],
+    dependencies=[Depends(current_active_user)],
+)
 
 _RECIPE_NOT_FOUND = "Recipe not found"
 _VERSION_NOT_FOUND = "Version not found"
 _COOK_NOT_FOUND = "Cook log not found"
 
 
-# ---------------------------------------------------------------------------
-# Recipes
-# ---------------------------------------------------------------------------
+# ===========================================================================
+# Public routes — read-only, not tenant-scoped
+# ===========================================================================
 
 
-@router.get("", response_model=list[RecipeSummary])
+@public_router.get("", response_model=list[RecipeSummary])
 async def list_recipes(
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(current_active_user),
+    viewer: User | None = Depends(current_user_optional),
     search: str | None = Query(default=None, description="Case-insensitive title filter"),
+    owner: str | None = Query(
+        default=None,
+        description="Set to 'me' to list only your own recipes (requires auth).",
+    ),
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
 ) -> list[RecipeSummary]:
-    return await recipe_service.list_recipes(db, user.id, search=search)
+    """List recipes. Public — no auth required.
+
+    ``owner=me`` scopes the list to the authenticated viewer's own recipes and
+    responds 401 if used anonymously. Rollups (best_rating/last_cooked_at) are
+    populated only on recipes the viewer owns.
+    """
+    if owner is not None and owner != "me":
+        raise HTTPException(status_code=422, detail="owner must be 'me' when provided")
+    owner_me = owner == "me"
+    if owner_me and viewer is None:
+        raise HTTPException(
+            status_code=401, detail="Authentication required for owner=me"
+        )
+    viewer_id = viewer.id if viewer is not None else None
+    return await recipe_service.list_public_recipes(
+        db, viewer_id, search=search, limit=limit, offset=offset, owner_me=owner_me,
+    )
 
 
-@router.post("", response_model=RecipeDetailResponse, status_code=201)
+@public_router.get("/{recipe_id}", response_model=RecipeDetailResponse)
+async def get_recipe(
+    recipe_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    viewer: User | None = Depends(current_user_optional),
+) -> RecipeDetailResponse:
+    viewer_id = viewer.id if viewer is not None else None
+    detail = await recipe_service.get_public_recipe_detail(db, viewer_id, recipe_id)
+    if detail is None:
+        raise HTTPException(status_code=404, detail=_RECIPE_NOT_FOUND)
+    return detail
+
+
+@public_router.get("/{recipe_id}/versions", response_model=list[VersionSummary])
+async def list_versions(
+    recipe_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    viewer: User | None = Depends(current_user_optional),
+) -> list[VersionSummary]:
+    viewer_id = viewer.id if viewer is not None else None
+    versions = await recipe_service.list_public_versions(db, viewer_id, recipe_id)
+    if versions is None:
+        raise HTTPException(status_code=404, detail=_RECIPE_NOT_FOUND)
+    return versions
+
+
+@public_router.get("/{recipe_id}/versions/{version_id}", response_model=VersionResponse)
+async def get_version(
+    recipe_id: uuid.UUID,
+    version_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+) -> VersionResponse:
+    version = await recipe_service.get_public_version(db, recipe_id, version_id)
+    if version is None:
+        raise HTTPException(status_code=404, detail=_VERSION_NOT_FOUND)
+    return version
+
+
+@public_router.get("/{recipe_id}/versions/{version_id}/diff", response_model=DiffResponse)
+async def diff_version(
+    recipe_id: uuid.UUID,
+    version_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    against: uuid.UUID | None = Query(
+        default=None,
+        description="Version to compare against. Defaults to this version's parent.",
+    ),
+) -> DiffResponse:
+    try:
+        diff = await recipe_service.diff_public_versions(db, recipe_id, version_id, against)
+    except InvalidBaseVersionError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    if diff is None:
+        raise HTTPException(status_code=404, detail=_VERSION_NOT_FOUND)
+    return diff
+
+
+# ===========================================================================
+# Auth-required routes — writes + owner-only cook logs
+# ===========================================================================
+
+
+@auth_router.post("", response_model=RecipeDetailResponse, status_code=201)
 async def create_recipe(
     payload: RecipeCreateRequest,
     db: AsyncSession = Depends(get_db),
@@ -81,7 +185,7 @@ async def create_recipe(
     return await recipe_service.create_recipe(db, user.id, payload)
 
 
-@router.post("/extract", response_model=RecipeDraftResponse)
+@auth_router.post("/extract", response_model=RecipeDraftResponse)
 async def extract_recipe_photo(
     file: UploadFile = File(...),
     user: User = Depends(current_active_user),
@@ -115,19 +219,7 @@ async def extract_recipe_photo(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
-@router.get("/{recipe_id}", response_model=RecipeDetailResponse)
-async def get_recipe(
-    recipe_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
-    user: User = Depends(current_active_user),
-) -> RecipeDetailResponse:
-    detail = await recipe_service.get_recipe_detail(db, user.id, recipe_id)
-    if detail is None:
-        raise HTTPException(status_code=404, detail=_RECIPE_NOT_FOUND)
-    return detail
-
-
-@router.patch("/{recipe_id}", response_model=RecipeDetailResponse)
+@auth_router.patch("/{recipe_id}", response_model=RecipeDetailResponse)
 async def update_recipe(
     recipe_id: uuid.UUID,
     payload: RecipeUpdateRequest,
@@ -140,7 +232,7 @@ async def update_recipe(
     return detail
 
 
-@router.delete("/{recipe_id}", status_code=204)
+@auth_router.delete("/{recipe_id}", status_code=204)
 async def delete_recipe(
     recipe_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
@@ -152,24 +244,7 @@ async def delete_recipe(
     return Response(status_code=204)
 
 
-# ---------------------------------------------------------------------------
-# Versions
-# ---------------------------------------------------------------------------
-
-
-@router.get("/{recipe_id}/versions", response_model=list[VersionSummary])
-async def list_versions(
-    recipe_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
-    user: User = Depends(current_active_user),
-) -> list[VersionSummary]:
-    versions = await recipe_service.list_versions(db, user.id, recipe_id)
-    if versions is None:
-        raise HTTPException(status_code=404, detail=_RECIPE_NOT_FOUND)
-    return versions
-
-
-@router.post("/{recipe_id}/versions", response_model=VersionResponse, status_code=201)
+@auth_router.post("/{recipe_id}/versions", response_model=VersionResponse, status_code=201)
 async def create_version(
     recipe_id: uuid.UUID,
     payload: VersionCreateRequest,
@@ -185,40 +260,7 @@ async def create_version(
     return version
 
 
-@router.get("/{recipe_id}/versions/{version_id}", response_model=VersionResponse)
-async def get_version(
-    recipe_id: uuid.UUID,
-    version_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
-    user: User = Depends(current_active_user),
-) -> VersionResponse:
-    version = await recipe_service.get_version(db, user.id, recipe_id, version_id)
-    if version is None:
-        raise HTTPException(status_code=404, detail=_VERSION_NOT_FOUND)
-    return version
-
-
-@router.get("/{recipe_id}/versions/{version_id}/diff", response_model=DiffResponse)
-async def diff_version(
-    recipe_id: uuid.UUID,
-    version_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
-    user: User = Depends(current_active_user),
-    against: uuid.UUID | None = Query(
-        default=None,
-        description="Version to compare against. Defaults to this version's parent.",
-    ),
-) -> DiffResponse:
-    try:
-        diff = await recipe_service.diff_versions(db, user.id, recipe_id, version_id, against)
-    except InvalidBaseVersionError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-    if diff is None:
-        raise HTTPException(status_code=404, detail=_VERSION_NOT_FOUND)
-    return diff
-
-
-@router.post(
+@auth_router.post(
     "/{recipe_id}/versions/{version_id}/restore",
     response_model=VersionResponse,
     status_code=201,
@@ -236,11 +278,11 @@ async def restore_version(
 
 
 # ---------------------------------------------------------------------------
-# Cook logs
+# Cook logs — PRIVATE (owner-only). Never public.
 # ---------------------------------------------------------------------------
 
 
-@router.post(
+@auth_router.post(
     "/{recipe_id}/versions/{version_id}/cooks",
     response_model=CookLogResponse,
     status_code=201,
@@ -258,7 +300,7 @@ async def log_cook(
     return cook
 
 
-@router.get(
+@auth_router.get(
     "/{recipe_id}/versions/{version_id}/cooks",
     response_model=list[CookLogResponse],
 )
@@ -274,7 +316,7 @@ async def list_version_cooks(
     return cooks
 
 
-@router.get("/{recipe_id}/cooks", response_model=list[CookLogResponse])
+@auth_router.get("/{recipe_id}/cooks", response_model=list[CookLogResponse])
 async def list_recipe_cooks(
     recipe_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
@@ -286,7 +328,7 @@ async def list_recipe_cooks(
     return cooks
 
 
-@router.delete("/{recipe_id}/cooks/{cook_id}", status_code=204)
+@auth_router.delete("/{recipe_id}/cooks/{cook_id}", status_code=204)
 async def delete_cook(
     recipe_id: uuid.UUID,
     cook_id: uuid.UUID,

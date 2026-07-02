@@ -28,15 +28,33 @@ const apiWithTags = baseApi.enhanceEndpoints({
   addTagTypes: ["Recipe", "Version", "CookLog"],
 });
 
+/**
+ * Arguments for the recipes list query.
+ *
+ * Public-read / auth-write: ``search`` free-text filters the public library;
+ * ``owner: "me"`` narrows to the signed-in user's own recipes (the "My recipes"
+ * filter chip, rendered only when authenticated).
+ */
+export interface ListRecipesArgs {
+  search?: string;
+  owner?: "me";
+}
+
 const recipesApi = apiWithTags.injectEndpoints({
   endpoints: (build) => ({
     // ---- Recipes -------------------------------------------------------
-    listRecipes: build.query<RecipeSummary[], string | undefined>({
-      query: (search) => ({
-        url: "/recipes",
-        method: "GET",
-        params: search ? { search } : undefined,
-      }),
+    listRecipes: build.query<RecipeSummary[], ListRecipesArgs | void>({
+      query: (args) => {
+        const { search, owner } = args ?? {};
+        const params: Record<string, string> = {};
+        if (search) params.search = search;
+        if (owner) params.owner = owner;
+        return {
+          url: "/recipes",
+          method: "GET",
+          params: Object.keys(params).length > 0 ? params : undefined,
+        };
+      },
       providesTags: (result) =>
         result
           ? [
