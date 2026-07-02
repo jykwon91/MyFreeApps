@@ -1,12 +1,8 @@
 import { useState } from "react";
-import { Skeleton } from "@platform/ui";
-import ClarifyingPanel from "@/features/resume_refinement/ClarifyingPanel";
+import { LoadingButton, Skeleton } from "@platform/ui";
 
 interface SuggestionBodyProps {
   clarifyingQuestion: string | null;
-  customText: string;
-  onCustomTextChange: (s: string) => void;
-  onClarifySubmit: () => void;
   proposal: string | null;
   rationale: string | null;
   isPending: boolean;
@@ -18,15 +14,13 @@ interface SuggestionBodyProps {
   forceIsLoading?: boolean;
 }
 
-// Three-way render of the suggestion area: clarification request,
-// AI proposal (with optional regenerating skeleton), or "thinking"
+// Three-way render of the suggestion area: clarification banner (the
+// answer goes through the always-visible composer below the card), AI
+// proposal (with optional regenerating skeleton), or "thinking"
 // placeholder. Uses early returns instead of a nested ternary chain
 // per the JSX-conditional convention.
 export default function SuggestionBody({
   clarifyingQuestion,
-  customText,
-  onCustomTextChange,
-  onClarifySubmit,
   proposal,
   rationale,
   isPending,
@@ -39,16 +33,27 @@ export default function SuggestionBody({
 
   if (clarifyingQuestion) {
     return (
-      <ClarifyingPanel
-        question={clarifyingQuestion}
-        customText={customText}
-        onCustomTextChange={onCustomTextChange}
-        onSubmit={onClarifySubmit}
-        isPending={isPending}
-        canForce={canForce}
-        onForce={onForce}
-        forceIsLoading={forceIsLoading}
-      />
+      <div className="space-y-2">
+        <div className="rounded-md border border-amber-300/50 bg-amber-50 dark:bg-amber-950/20 p-3 text-sm">
+          {clarifyingQuestion}
+        </div>
+        {canForce && onForce && (
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-muted/40 p-2">
+            <p className="text-xs text-muted-foreground">
+              Sure those details are right? Apply the held rewrite as-is.
+            </p>
+            <LoadingButton
+              variant="secondary"
+              size="sm"
+              isLoading={forceIsLoading}
+              onClick={onForce}
+              disabled={isPending && !forceIsLoading}
+            >
+              Use it anyway — I confirm this is accurate
+            </LoadingButton>
+          </div>
+        )}
+      </div>
     );
   }
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Sparkles } from "lucide-react";
 import {
   showError,
@@ -15,8 +15,8 @@ import {
 import { SuggestionMode } from "@/features/resume_refinement/suggestion-mode";
 import SuggestionBody from "@/features/resume_refinement/SuggestionBody";
 import SuggestionActions from "@/features/resume_refinement/SuggestionActions";
+import SuggestionComposer from "@/features/resume_refinement/SuggestionComposer";
 import CustomRewritePanel from "@/features/resume_refinement/CustomRewritePanel";
-import AlternativePanel from "@/features/resume_refinement/AlternativePanel";
 import SuggestionProgressBar from "@/features/resume_refinement/SuggestionProgressBar";
 import NavigationButtons from "@/features/resume_refinement/NavigationButtons";
 import {
@@ -28,21 +28,55 @@ import type { RefinementSession } from "@/types/resume-refinement/refinement-ses
 
 interface PendingProposalCardProps {
   session: RefinementSession;
+  /** Surface for the composer's optimistic echo — the parent renders
+   *  it inside ConversationHistory (which lives outside this card). */
+  onPendingEchoChange?: (echo: { text: string } | null) => void;
 }
 
 // Top-level orchestrator for the suggestion area. Owns the
-// SuggestionMode state machine and the four mutation hooks; all
-// rendering is delegated to the sub-components in this directory.
-export default function PendingProposalCard({ session }: PendingProposalCardProps) {
+// SuggestionMode state machine, the mutation hooks, and the
+// always-visible chat composer; all rendering is delegated to the
+// sub-components in this directory.
+export default function PendingProposalCard({
+  session,
+  onPendingEchoChange,
+}: PendingProposalCardProps) {
   const [mode, setMode] = useState<SuggestionMode>(SuggestionMode.VIEW);
+  // Dedicated states: customText belongs to "Write my own" (replaces
+  // the target outright); composerText is chat (hints + clarify
+  // answers). They can be visible simultaneously — sharing one string
+  // would cross-contaminate the two inputs.
   const [customText, setCustomText] = useState("");
-  const [hint, setHint] = useState("");
+  const [composerText, setComposerText] = useState("");
+  // Optimistic echo: set at send time with the pre-send turn_count;
+  // cleared when the REAL turn rows arrive (turn_count advances) — not
+  // on promise resolution, which would flicker the bubble out before
+  // the refetched history contains it.
+  const [pendingEcho, setPendingEcho] = useState<
+    { text: string; baselineTurnCount: number } | null
+  >(null);
 
   const [acceptPending, accept] = useAcceptPendingMutation();
   const [acceptFlagged, flaggedAccept] = useAcceptFlaggedMutation();
   const [supplyCustom, custom] = useSupplyCustomRewriteMutation();
   const [requestAlternative, alternative] = useRequestAlternativeMutation();
   const [skipTarget, skip] = useSkipTargetMutation();
+
+  useEffect(() => {
+    if (pendingEcho && session.turn_count > pendingEcho.baselineTurnCount) {
+      setPendingEcho(null);
+    }
+  }, [session.turn_count, pendingEcho]);
+
+  const echoCallbackRef = useRef(onPendingEchoChange);
+  echoCallbackRef.current = onPendingEchoChange;
+  useEffect(() => {
+    echoCallbackRef.current?.(pendingEcho ? { text: pendingEcho.text } : null);
+  }, [pendingEcho]);
+  useEffect(() => {
+    // Clear the parent's echo if this card unmounts mid-flight.
+    return () => echoCallbackRef.current?.(null);
+  }, []);
 
   const totalTargets = session.improvement_targets?.length ?? 0;
   const activeTarget =
@@ -61,9 +95,7 @@ export default function PendingProposalCard({ session }: PendingProposalCardProp
 
   // Bail when every target is consumed — AND for the zero-target
   // session, where there is nothing to suggest (CompletePanel's
-  // "nothing to flag" state owns that render). The old
-  // `totalTargets > 0 &&` clause inverted the zero case and showed a
-  // permanently-thinking "Suggestion 1 / 0" card.
+  // "nothing to flag" state owns that render).
   if (session.target_index >= totalTargets) {
     return null;
   }
@@ -82,6 +114,21 @@ export default function PendingProposalCard({ session }: PendingProposalCardProp
     }
   }
 
+  // Guard loop breaker: the user explicitly confirms the flagged facts
+  // are accurate and applies the held proposal as-is. The backend
+  // records the phrases as session-level confirmed facts so the guard
+  // never re-flags them.
+  async function handleForceAccept() {
+    try {
+      await acceptFlagged(session.id).unwrap();
+      showSuccess("Applied. Onto the next one.");
+      resetMode();
+      setComposerText("");
+    } catch (err) {
+      showError(extractErrorMessage(err));
+    }
+  }
+
   async function handleCustom() {
     if (!customText.trim()) return;
     try {
@@ -94,50 +141,28 @@ export default function PendingProposalCard({ session }: PendingProposalCardProp
     }
   }
 
-  // Distinct from handleCustom: when Claude asked a clarifying question,
-  // the operator's typed answer is CONTEXT for Claude to compose a
-  // better proposal — not the rewrite itself. Pipe it through
-  // request_alternative as the ``hint`` so the regenerated proposal
-  // reflects the answer. The cache for the current target is
-  // invalidated server-side, so the new proposal lands fresh.
-  async function handleClarifySubmit() {
-    if (!customText.trim()) return;
+  // One send path for everything typed into the composer: style hints,
+  // clarify answers, redirections. Clears the input IMMEDIATELY and
+  // shows an optimistic bubble; on error the text is restored so
+  // nothing the user typed is lost.
+  async function handleComposerSend() {
+    const text = composerText.trim();
+    if (!text) return;
+    setComposerText("");
+    setPendingEcho({ text, baselineTurnCount: session.turn_count });
     try {
-      await requestAlternative({
-        id: session.id,
-        hint: customText.trim(),
-      }).unwrap();
-      showSuccess("Got it — composing a suggestion with your context.");
-      resetMode();
-      setCustomText("");
+      await requestAlternative({ id: session.id, hint: text }).unwrap();
     } catch (err) {
+      setPendingEcho(null);
+      setComposerText(text);
       showError(extractErrorMessage(err));
     }
   }
 
-  // Guard loop breaker: the user explicitly confirms the flagged facts
-  // are accurate and applies the held proposal as-is. The backend
-  // records the phrases as session-level confirmed facts so the guard
-  // never re-flags them.
-  async function handleForceAccept() {
+  // Blank reroll (old "Another option") — regenerate without a note.
+  async function handleRegenerate() {
     try {
-      await acceptFlagged(session.id).unwrap();
-      showSuccess("Applied. Onto the next one.");
-      resetMode();
-      setCustomText("");
-    } catch (err) {
-      showError(extractErrorMessage(err));
-    }
-  }
-
-  async function handleAlternative() {
-    try {
-      await requestAlternative({
-        id: session.id,
-        hint: hint.trim() || undefined,
-      }).unwrap();
-      resetMode();
-      setHint("");
+      await requestAlternative({ id: session.id, hint: undefined }).unwrap();
     } catch (err) {
       showError(extractErrorMessage(err));
     }
@@ -195,9 +220,6 @@ export default function PendingProposalCard({ session }: PendingProposalCardProp
 
       <SuggestionBody
         clarifyingQuestion={clarifyingQuestion}
-        customText={customText}
-        onCustomTextChange={setCustomText}
-        onClarifySubmit={handleClarifySubmit}
         proposal={proposal}
         rationale={rationale}
         isPending={isPending}
@@ -207,12 +229,10 @@ export default function PendingProposalCard({ session }: PendingProposalCardProp
         forceIsLoading={flaggedAccept.isLoading}
       />
 
-      {/* Exactly one of the three action panels — mutually exclusive via mode state */}
       {mode === SuggestionMode.VIEW && (
         <SuggestionActions
           onAccept={handleAccept}
           onSwitchToCustom={() => setMode(SuggestionMode.CUSTOM)}
-          onSwitchToAlternative={() => setMode(SuggestionMode.ALTERNATIVE)}
           onSkip={handleSkip}
           isPending={isPending}
           acceptIsLoading={accept.isLoading}
@@ -228,15 +248,18 @@ export default function PendingProposalCard({ session }: PendingProposalCardProp
           isPending={isPending}
         />
       )}
-      {mode === SuggestionMode.ALTERNATIVE && (
-        <AlternativePanel
-          hint={hint}
-          onChange={setHint}
-          onCancel={resetMode}
-          onSubmit={handleAlternative}
-          isPending={isPending}
-        />
-      )}
+
+      {/* Always-visible chat input — hints, clarify answers, and
+          rerolls all live here. Stably mounted (never keyed to the
+          target) so focus survives sends. */}
+      <SuggestionComposer
+        value={composerText}
+        onChange={setComposerText}
+        onSend={handleComposerSend}
+        onRegenerate={handleRegenerate}
+        isBusy={isPending}
+        isClarify={!!clarifyingQuestion}
+      />
     </section>
   );
 }

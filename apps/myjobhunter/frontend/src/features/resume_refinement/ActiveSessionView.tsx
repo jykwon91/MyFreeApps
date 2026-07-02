@@ -30,6 +30,11 @@ export default function ActiveSessionView({ session, onStartNew }: ActiveSession
   const isPreparing = session.status === "preparing" || session.status === "failed";
   const showWorkSurface = session.status === "active" || session.status === "completed";
 
+  // Optimistic echo of a just-sent composer message. Owned here
+  // because the composer lives in PendingProposalCard (composer zone)
+  // while the bubbles render in ConversationHistory (history zone).
+  const [pendingEcho, setPendingEcho] = useState<{ text: string } | null>(null);
+
   const activeTarget =
     session.improvement_targets &&
     session.target_index < session.improvement_targets.length
@@ -57,7 +62,10 @@ export default function ActiveSessionView({ session, onStartNew }: ActiveSession
     <div className="flex flex-col gap-2 min-h-0 h-full">
       {/* History zone */}
       <div className="order-2 lg:order-1 lg:flex-1 lg:overflow-y-auto lg:min-h-0 pr-1">
-        <ConversationHistory turns={session.turns ?? []} />
+        <ConversationHistory
+          turns={session.turns ?? []}
+          pendingUserEcho={pendingEcho}
+        />
       </div>
 
       {/* Composer zone */}
@@ -66,7 +74,10 @@ export default function ActiveSessionView({ session, onStartNew }: ActiveSession
       >
         {isPreparing && <SessionPreparingPanel session={session} />}
         {session.status === "active" && (
-          <PendingProposalCard session={session} />
+          <PendingProposalCard
+            session={session}
+            onPendingEchoChange={setPendingEcho}
+          />
         )}
         {/* Gated: CompletePanel's reached-end math treats a null
             targets list as "done", so rendering it while preparing

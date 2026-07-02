@@ -168,3 +168,126 @@ test.describe("Resume Refinement API — session list", () => {
     }
   });
 });
+
+test.describe("Resume Refinement — chat composer (mocked active session)", () => {
+  // The composer only renders inside an active session, which normally
+  // requires a live Claude critique. Mock the session GET (and the
+  // alternative POST) at the network layer so the composer's real
+  // interaction contract — always visible, clears on Enter, optimistic
+  // echo, plain-text history labels — is exercised end-to-end without
+  // an Anthropic dependency.
+  const SESSION_ID = "11111111-2222-4333-8444-555555555555";
+
+  function fakeSession(overrides: Record<string, unknown> = {}) {
+    return {
+      id: SESSION_ID,
+      source_resume_job_id: null,
+      status: "active",
+      current_draft: "# Jane Doe\n\n- Built the payments system",
+      improvement_targets: [
+        {
+          section: "Experience — bullet 1",
+          current_text: "Built the payments system",
+          improvement_type: "stronger_verb",
+          severity: "medium",
+          notes: null,
+        },
+      ],
+      target_index: 0,
+      pending_target_section: "Experience — bullet 1",
+      pending_proposal: "Architected the payments system",
+      pending_rationale: null,
+      pending_clarifying_question: null,
+      pending_guard_flagged: null,
+      guard_can_force: false,
+      turn_count: 2,
+      total_tokens_in: 0,
+      total_tokens_out: 0,
+      total_cost_usd: "0",
+      error_message: null,
+      proposals_ready_count: 1,
+      completed_at: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      turns: [
+        {
+          id: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+          turn_index: 0,
+          role: "user_request_alternative",
+          target_section: "Experience — bullet 1",
+          proposed_text: null,
+          user_text: "no em dashes",
+          rationale: null,
+          clarifying_question: null,
+          created_at: new Date().toISOString(),
+        },
+      ],
+      ...overrides,
+    };
+  }
+
+  test("composer is always visible, clears on Enter with an optimistic echo, and history shows the user's own words", async ({
+    page,
+    request,
+  }) => {
+    const user = await createTestUser(request);
+
+    try {
+      await loginViaUI(page, user, request);
+
+      await page.route(
+        `**/api/resume-refinement/sessions/${SESSION_ID}`,
+        (route) =>
+          route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: JSON.stringify(fakeSession()),
+          }),
+      );
+      // Hold the alternative call open long enough to observe the
+      // cleared input + optimistic echo, then respond.
+      await page.route(
+        `**/api/resume-refinement/sessions/${SESSION_ID}/alternative`,
+        async (route) => {
+          await new Promise((r) => setTimeout(r, 800));
+          await route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: JSON.stringify(fakeSession({ turn_count: 4 })),
+          });
+        },
+      );
+
+      await page.addInitScript((id) => {
+        localStorage.setItem("mjh:resumeRefinementSessionId", id);
+      }, SESSION_ID);
+
+      await page.goto("/resume");
+      await page.waitForURL("**/resume");
+
+      // History renders the user's own words — not "Try something with: …"
+      await expect(page.getByText("no em dashes", { exact: true })).toBeVisible();
+      await expect(page.getByText(/try something with/i)).toHaveCount(0);
+
+      // Composer is visible without opening any panel.
+      const composer = page.getByRole("textbox", { name: /message the assistant/i });
+      await expect(composer).toBeVisible();
+      await expect(composer).toHaveAttribute(
+        "placeholder",
+        /tell me what to change/i,
+      );
+
+      // Type + Enter: input clears immediately; optimistic echo + thinking
+      // indicator appear while the request is in flight.
+      await composer.fill("more concise please");
+      await composer.press("Enter");
+      await expect(composer).toHaveValue("");
+      await expect(
+        page.getByText("more concise please", { exact: true }),
+      ).toBeVisible();
+      await expect(page.getByText(/working on a suggestion/i)).toBeVisible();
+    } finally {
+      await deleteTestUser(request, user);
+    }
+  });
+});

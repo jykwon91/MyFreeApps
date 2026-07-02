@@ -1,10 +1,9 @@
-import { Pencil, RefreshCw, SkipForward } from "lucide-react";
-import { LoadingButton } from "@platform/ui";
+import { Pencil, SkipForward } from "lucide-react";
+import { Button, LoadingButton } from "@platform/ui";
 
 interface SuggestionActionsProps {
   onAccept: () => void;
   onSwitchToCustom: () => void;
-  onSwitchToAlternative: () => void;
   onSkip: () => void;
   isPending: boolean;
   acceptIsLoading: boolean;
@@ -12,12 +11,12 @@ interface SuggestionActionsProps {
 }
 
 // Action row shown when the user is in VIEW mode: accept the AI's
-// proposal, write their own, ask for another option, or skip.
+// proposal, write their own, or skip. Asking for a different take
+// lives in the always-visible SuggestionComposer below the card.
 // Extracted to keep PendingProposalCard focused on orchestration.
 export default function SuggestionActions({
   onAccept,
   onSwitchToCustom,
-  onSwitchToAlternative,
   onSkip,
   isPending,
   acceptIsLoading,
@@ -32,30 +31,27 @@ export default function SuggestionActions({
       >
         Accept
       </LoadingButton>
-      <button
-        type="button"
+      <Button
+        variant="secondary"
+        size="sm"
         onClick={onSwitchToCustom}
         disabled={isPending}
-        className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm hover:bg-muted disabled:opacity-50"
       >
-        <Pencil size={14} /> Write my own
-      </button>
-      <button
-        type="button"
-        onClick={onSwitchToAlternative}
-        disabled={isPending}
-        className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm hover:bg-muted disabled:opacity-50"
-      >
-        <RefreshCw size={14} /> Another option
-      </button>
-      <button
-        type="button"
+        <span className="inline-flex items-center gap-1.5">
+          <Pencil size={14} /> Write my own
+        </span>
+      </Button>
+      <Button
+        variant="secondary"
+        size="sm"
         onClick={onSkip}
         disabled={isPending}
-        className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm hover:bg-muted disabled:opacity-50 ml-auto"
+        className="ml-auto"
       >
-        <SkipForward size={14} /> Skip
-      </button>
+        <span className="inline-flex items-center gap-1.5">
+          <SkipForward size={14} /> Skip
+        </span>
+      </Button>
     </div>
   );
 }

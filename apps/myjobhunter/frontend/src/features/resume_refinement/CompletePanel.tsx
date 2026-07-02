@@ -8,6 +8,7 @@ import {
 } from "@platform/ui";
 import api from "@/lib/api";
 import { useCompleteRefinementSessionMutation } from "@/lib/resumeRefinementApi";
+import { ExportFormat } from "@/features/resume_refinement/export-format";
 import type { RefinementSession } from "@/types/resume-refinement/refinement-session";
 
 interface CompletePanelProps {
@@ -23,7 +24,7 @@ export default function CompletePanel({ session }: CompletePanelProps) {
   const isEmpty = !isCompleted && targets.length === 0;
 
   const [completeSession, { isLoading: isCompleting }] = useCompleteRefinementSessionMutation();
-  const [downloading, setDownloading] = useState<"pdf" | "docx" | null>(null);
+  const [downloading, setDownloading] = useState<ExportFormat | null>(null);
 
   if (!reachedEnd && !isCompleted) {
     return null;
@@ -38,7 +39,7 @@ export default function CompletePanel({ session }: CompletePanelProps) {
     }
   }
 
-  async function handleDownload(fmt: "pdf" | "docx") {
+  async function handleDownload(fmt: ExportFormat) {
     setDownloading(fmt);
     try {
       const response = await api.get(
@@ -50,7 +51,7 @@ export default function CompletePanel({ session }: CompletePanelProps) {
       );
       const blob = new Blob([response.data], {
         type:
-          fmt === "pdf"
+          fmt === ExportFormat.PDF
             ? "application/pdf"
             : "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       });
@@ -97,16 +98,16 @@ export default function CompletePanel({ session }: CompletePanelProps) {
         {isCompleted && (
           <>
             <LoadingButton
-              isLoading={downloading === "pdf"}
-              onClick={() => handleDownload("pdf")}
+              isLoading={downloading === ExportFormat.PDF}
+              onClick={() => handleDownload(ExportFormat.PDF)}
             >
               <span className="inline-flex items-center gap-1.5">
                 <FileDown size={14} /> Download PDF
               </span>
             </LoadingButton>
             <LoadingButton
-              isLoading={downloading === "docx"}
-              onClick={() => handleDownload("docx")}
+              isLoading={downloading === ExportFormat.DOCX}
+              onClick={() => handleDownload(ExportFormat.DOCX)}
             >
               <span className="inline-flex items-center gap-1.5">
                 <FileDown size={14} /> Download DOCX
