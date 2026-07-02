@@ -97,7 +97,12 @@ class VersionResponse(BaseModel):
 
 
 class VersionSummary(BaseModel):
-    """Timeline entry — lightweight, no ingredient/step bodies."""
+    """Timeline entry — lightweight, no ingredient/step bodies.
+
+    ``cook_count`` and ``best_rating`` are owner-private cook-log rollups: the
+    service populates them only when the viewer owns the recipe and leaves both
+    ``None`` for any other viewer (so cook activity never leaks publicly).
+    """
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -105,5 +110,5 @@ class VersionSummary(BaseModel):
     version_number: int
     change_note: str | None = None
     created_at: datetime
-    cook_count: int = 0
+    cook_count: int | None = None
     best_rating: int | None = None

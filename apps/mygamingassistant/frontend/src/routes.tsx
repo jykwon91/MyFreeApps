@@ -1,6 +1,6 @@
 import type { ReactElement } from "react";
 import { Navigate, type RouteObject } from "react-router-dom";
-import { Support } from "@platform/ui";
+import { AuthRequired, Support } from "@platform/ui";
 import GameGrid from "@/pages/GameGrid";
 import LineupDetail from "@/pages/LineupDetail";
 import LineupPackages from "@/pages/LineupPackages";
@@ -21,7 +21,6 @@ import ResetPassword from "@/pages/ResetPassword";
 import VerifyEmail from "@/pages/VerifyEmail";
 import NotFound from "@/pages/NotFound";
 import RootLayout from "@/RootLayout";
-import AuthRequired from "@/components/auth/AuthRequired";
 import { isServeOnly } from "@/lib/serveOnly";
 
 // Serve-only mode (production public library): the backend mounts NO auth
@@ -69,7 +68,7 @@ export const routes: RouteObject[] = [
       {
         path: "/lineups/new",
         element: (
-          <AuthRequired action="upload a new lineup">
+          <AuthRequired action="upload a new lineup" unavailable={serveOnly}>
             <LineupUpload />
           </AuthRequired>
         ),
@@ -77,7 +76,7 @@ export const routes: RouteObject[] = [
       {
         path: "/sources",
         element: (
-          <AuthRequired action="manage video sources">
+          <AuthRequired action="manage video sources" unavailable={serveOnly}>
             <Sources />
           </AuthRequired>
         ),
@@ -85,7 +84,7 @@ export const routes: RouteObject[] = [
       {
         path: "/review",
         element: (
-          <AuthRequired action="review pending lineups">
+          <AuthRequired action="review pending lineups" unavailable={serveOnly}>
             <Review />
           </AuthRequired>
         ),
@@ -93,7 +92,7 @@ export const routes: RouteObject[] = [
       {
         path: "/live/cs2/setup",
         element: (
-          <AuthRequired action="install the GSI config">
+          <AuthRequired action="install the GSI config" unavailable={serveOnly}>
             <LiveCs2Setup />
           </AuthRequired>
         ),
@@ -101,7 +100,7 @@ export const routes: RouteObject[] = [
       {
         path: "/live/cs2/calibrate",
         element: (
-          <AuthRequired action="calibrate the minimap CV pipeline">
+          <AuthRequired action="calibrate the minimap CV pipeline" unavailable={serveOnly}>
             <LiveCs2Calibrate />
           </AuthRequired>
         ),
@@ -111,7 +110,7 @@ export const routes: RouteObject[] = [
         // specific path doesn't shadow the plan-mode map view.
         path: "/:gameSlug/:mapSlug/zones/edit",
         element: (
-          <AuthRequired action="edit map zones">
+          <AuthRequired action="edit map zones" unavailable={serveOnly}>
             <ZoneEditPage />
           </AuthRequired>
         ),
@@ -119,7 +118,7 @@ export const routes: RouteObject[] = [
       {
         path: "/settings",
         element: (
-          <AuthRequired action="manage your account">
+          <AuthRequired action="manage your account" unavailable={serveOnly}>
             <Settings />
           </AuthRequired>
         ),
@@ -127,7 +126,7 @@ export const routes: RouteObject[] = [
       {
         path: "/security",
         element: (
-          <AuthRequired action="manage account security">
+          <AuthRequired action="manage account security" unavailable={serveOnly}>
             <Security />
           </AuthRequired>
         ),

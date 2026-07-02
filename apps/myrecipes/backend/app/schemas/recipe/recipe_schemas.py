@@ -44,12 +44,18 @@ class RecipeUpdateRequest(BaseModel):
 
 
 class RecipeSummary(BaseModel):
-    """List-view recipe: identity + rollups, no version bodies."""
+    """List-view recipe: identity + rollups, no version bodies.
+
+    Public-read safe: the owner's ``user_id`` is never exposed. Instead the
+    server computes ``is_owner`` (against the OPTIONAL current viewer) and
+    surfaces the owner's public ``owner_display_name``. Cook-log rollups
+    (``best_rating`` / ``last_cooked_at``) are private — the service leaves
+    them ``None`` for any viewer who does not own the recipe.
+    """
 
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
-    user_id: uuid.UUID
     title: str
     description: str | None = None
     source: str | None = None
@@ -57,6 +63,8 @@ class RecipeSummary(BaseModel):
     updated_at: datetime
     version_count: int = 0
     latest_version_number: int | None = None
+    is_owner: bool = False
+    owner_display_name: str = ""
     best_rating: int | None = None
     last_cooked_at: datetime | None = None
 

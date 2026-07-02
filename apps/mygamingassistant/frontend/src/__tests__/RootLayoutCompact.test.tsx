@@ -29,23 +29,21 @@ vi.mock("react-router-dom", async (importOriginal) => {
 
 const mockIsAuthenticated = vi.fn(() => false);
 
-// Minimal stubs for platform/ui components used in RootLayout.
+// Minimal stubs for platform/ui components used in RootLayout. GuestShell now
+// lives in @platform/ui (extracted from the local copy), so it's stubbed here
+// alongside AppShell — we just want to assert which shell renders, not exercise
+// its internals (those have their own tests in shared-frontend).
 vi.mock("@platform/ui", () => ({
   AppShell: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="app-shell">{children}</div>
+  ),
+  GuestShell: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="guest-shell">{children}</div>
   ),
   StepUpModal: () => <div data-testid="step-up-modal" />,
   ThemeToggle: () => <div data-testid="theme-toggle" />,
   Toaster: () => <div data-testid="toaster" />,
   useIsAuthenticated: () => mockIsAuthenticated(),
-}));
-
-// Mock GuestShell — we just want to assert that it renders, not exercise its
-// internals (those have their own tests).
-vi.mock("@/components/auth/GuestShell", () => ({
-  default: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="guest-shell">{children}</div>
-  ),
 }));
 
 vi.mock("@/constants/nav", () => ({

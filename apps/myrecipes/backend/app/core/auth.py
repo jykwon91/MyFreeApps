@@ -94,3 +94,11 @@ auth_backend = _jwt.auth_backend
 
 fastapi_users = FastAPIUsers[User, uuid.UUID](get_user_manager, [auth_backend])
 current_active_user = fastapi_users.current_user(active=True, verified=True)
+
+# Optional viewer identity for public-read routes: resolves to the User when a
+# valid bearer token is present, or None for anonymous callers. Used to compute
+# ``is_owner`` and gate owner-only fields (cook-log rollups) without forcing
+# auth on public reads. See apps/myrecipes/CLAUDE.md and the recipes router.
+current_user_optional = fastapi_users.current_user(
+    active=True, verified=True, optional=True,
+)

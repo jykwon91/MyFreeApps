@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useNavigate, useParams, useSearchParams, Link } from "react-router-dom";
 import { ArrowLeft, GitCompare } from "lucide-react";
 import { EmptyState, LoadingButton, Skeleton } from "@platform/ui";
-import { useGetDiffQuery } from "@/store/recipesApi";
+import { useGetDiffQuery, useGetRecipeQuery } from "@/store/recipesApi";
 import DiffRow from "@/features/recipes/DiffRow";
 import { formatIngredientLine } from "@/features/recipes/IngredientLine";
 import type { IngredientChange } from "@/types/recipe/diff";
@@ -30,6 +30,11 @@ export default function VersionDiff() {
     { recipeId, versionId, against },
     { skip: !recipeId || !versionId },
   );
+
+  // The diff is public, but "Tweak this recipe" is a write action gated to the
+  // owner. Fetch the recipe to read is_owner (cached from the detail page).
+  const recipeQuery = useGetRecipeQuery(recipeId, { skip: !recipeId });
+  const isOwner = recipeQuery.data?.is_owner ?? false;
 
   const totalChanges = useMemo(
     () => (data ? data.ingredient_changes.length + data.step_changes.length : 0),
@@ -142,14 +147,16 @@ export default function VersionDiff() {
         </div>
       )}
 
-      <div className="flex justify-end">
-        <LoadingButton
-          variant="secondary"
-          onClick={() => navigate(`/recipes/${recipeId}/tweak`)}
-        >
-          Tweak this recipe
-        </LoadingButton>
-      </div>
+      {isOwner ? (
+        <div className="flex justify-end">
+          <LoadingButton
+            variant="secondary"
+            onClick={() => navigate(`/recipes/${recipeId}/tweak`)}
+          >
+            Tweak this recipe
+          </LoadingButton>
+        </div>
+      ) : null}
     </main>
   );
 }

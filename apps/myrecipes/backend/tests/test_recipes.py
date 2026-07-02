@@ -7,6 +7,8 @@ real Postgres in CI; the user-delete cascade cleans up all recipe rows.
 """
 from __future__ import annotations
 
+import uuid
+
 import pytest
 from httpx import AsyncClient
 
@@ -46,7 +48,11 @@ class TestCreateRecipe:
 
         assert resp.status_code == 201, resp.text
         body = resp.json()
-        assert body["user_id"] == user["id"]
+        # Public-read safe: the owner's user_id is never on the wire; the
+        # creator sees is_owner=true and their own display name instead.
+        assert "user_id" not in body
+        assert body["is_owner"] is True
+        assert isinstance(body["owner_display_name"], str)
         assert body["title"] == "Chocolate Chip Cookies"
         assert body["version_count"] == 1
         assert body["latest_version_number"] == 1
@@ -79,35 +85,46 @@ class TestCreateRecipe:
 
 class TestReadRecipes:
     @pytest.mark.asyncio
-    async def test_list_returns_caller_recipes(self, user_factory, as_user) -> None:
+    async def test_owner_me_returns_caller_recipes(self, user_factory, as_user) -> None:
+        # owner=me is the tenant-scoped "My recipes" view (deterministic count).
         user = await user_factory()
+        title = f"Caller Recipe {uuid.uuid4().hex[:8]}"
         async with await as_user(user) as authed:
-            await authed.post("/recipes", json=_recipe_payload())
-            resp = await authed.get("/recipes")
+            await authed.post("/recipes", json=_recipe_payload(title=title))
+            resp = await authed.get("/recipes", params={"owner": "me"})
         assert resp.status_code == 200
         body = resp.json()
         assert len(body) == 1
-        assert body[0]["title"] == "Chocolate Chip Cookies"
+        assert body[0]["title"] == title
+        assert body[0]["is_owner"] is True
 
     @pytest.mark.asyncio
-    async def test_list_does_not_leak_other_users(self, user_factory, as_user) -> None:
+    async def test_owner_me_does_not_leak_other_users(self, user_factory, as_user) -> None:
         owner = await user_factory()
         attacker = await user_factory()
         async with await as_user(owner) as authed:
             await authed.post("/recipes", json=_recipe_payload())
         async with await as_user(attacker) as authed:
-            resp = await authed.get("/recipes")
+            resp = await authed.get("/recipes", params={"owner": "me"})
+        # owner=me is scoped to the caller — the attacker owns nothing.
         assert resp.json() == []
 
     @pytest.mark.asyncio
-    async def test_get_other_users_recipe_returns_404(self, user_factory, as_user) -> None:
+    async def test_other_user_can_read_but_not_own(self, user_factory, as_user) -> None:
+        # Public-read: a logged-in non-owner can fetch someone else's recipe,
+        # but is_owner is false and rollups are private (null).
         owner = await user_factory()
         attacker = await user_factory()
         async with await as_user(owner) as authed:
             recipe_id = (await authed.post("/recipes", json=_recipe_payload())).json()["id"]
         async with await as_user(attacker) as authed:
             resp = await authed.get(f"/recipes/{recipe_id}")
-        assert resp.status_code == 404
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["is_owner"] is False
+        assert "user_id" not in body
+        assert body["best_rating"] is None
+        assert body["last_cooked_at"] is None
 
 
 # ---------------------------------------------------------------------------

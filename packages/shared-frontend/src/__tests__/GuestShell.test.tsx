@@ -1,13 +1,12 @@
 /**
- * Unit tests for GuestShell — the layout shown to unauthenticated visitors.
+ * Unit tests for GuestShell — the layout shown to unauthenticated visitors of
+ * a public-read / auth-write app.
  *
  * Verifies:
  *   - the top-bar Sign in button is present
  *   - navigation items render
  *   - clicking Sign in routes to /login with the current location captured
- *
- * Public-read / auth-write model: see apps/mygamingassistant/CLAUDE.md →
- * Authentication Model.
+ *   - hideSignIn suppresses the Sign in CTAs
  */
 import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
@@ -15,12 +14,10 @@ import { MemoryRouter } from "react-router-dom";
 
 const mockNavigate = vi.fn();
 
-vi.mock("@platform/ui", () => ({
-  Button: ({ children, ...props }: { children: React.ReactNode } & React.ButtonHTMLAttributes<HTMLButtonElement>) => (
-    <button {...props}>{children}</button>
-  ),
-  cn: (...args: unknown[]) => args.filter(Boolean).join(" "),
-  useMediaQuery: () => false, // desktop view
+// GuestShell reads useMediaQuery to switch between desktop sidebar and mobile
+// bottom nav. jsdom has no matchMedia, so mock the hook to desktop (false).
+vi.mock("../hooks/useMediaQuery", () => ({
+  useMediaQuery: () => false,
 }));
 
 vi.mock("react-router-dom", async (importOriginal) => {
@@ -31,10 +28,10 @@ vi.mock("react-router-dom", async (importOriginal) => {
   };
 });
 
-import GuestShell from "@/components/auth/GuestShell";
+import GuestShell from "../components/layout/GuestShell";
 
 const SAMPLE_NAV = [
-  { path: "/", label: "Games", icon: <span data-testid="icon-games" />, exact: true },
+  { path: "/", label: "Recipes", icon: <span data-testid="icon-recipes" />, exact: true },
   { path: "/packages", label: "Packages", icon: <span data-testid="icon-packages" /> },
 ];
 
@@ -49,7 +46,7 @@ describe("GuestShell", () => {
         <div>content</div>
       </GuestShell>,
     );
-    expect(screen.getByTestId("topbar-sign-in")).toBeDefined();
+    expect(screen.getByTestId("topbar-sign-in")).toBeInTheDocument();
   });
 
   it("renders the supplied nav items", () => {
@@ -58,8 +55,8 @@ describe("GuestShell", () => {
         <div>content</div>
       </GuestShell>,
     );
-    expect(screen.getByText("Games")).toBeDefined();
-    expect(screen.getByText("Packages")).toBeDefined();
+    expect(screen.getByText("Recipes")).toBeInTheDocument();
+    expect(screen.getByText("Packages")).toBeInTheDocument();
   });
 
   it("renders content", () => {
@@ -68,7 +65,7 @@ describe("GuestShell", () => {
         <div data-testid="content">inner</div>
       </GuestShell>,
     );
-    expect(screen.getByTestId("content")).toBeDefined();
+    expect(screen.getByTestId("content")).toBeInTheDocument();
   });
 
   it("routes to /login with the current location captured on Sign in click", () => {
@@ -98,6 +95,15 @@ describe("GuestShell", () => {
         <div>content</div>
       </GuestShell>,
     );
-    expect(screen.getByTestId("theme-toggle")).toBeDefined();
+    expect(screen.getByTestId("theme-toggle")).toBeInTheDocument();
+  });
+
+  it("hides the Sign in CTAs when hideSignIn is set", () => {
+    renderWithRouter(
+      <GuestShell logo={<div>logo</div>} nav={SAMPLE_NAV} hideSignIn>
+        <div>content</div>
+      </GuestShell>,
+    );
+    expect(screen.queryByTestId("topbar-sign-in")).toBeNull();
   });
 });

@@ -48,10 +48,14 @@ export { default as ThemeToggle } from "./components/ui/ThemeToggle";
 // Layout components
 export { default as AppShell } from "./components/layout/AppShell";
 export type { AppShellProps, NavItem, BottomNavItem } from "./components/layout/AppShell";
+export { default as GuestShell } from "./components/layout/GuestShell";
+export type { GuestShellProps } from "./components/layout/GuestShell";
 export { default as AuthPageFooter } from "./components/layout/AuthPageFooter";
 
 // Auth components
 export { default as RequireAuth } from "./components/auth/RequireAuth";
+export { default as AuthRequired } from "./components/auth/AuthRequired";
+export type { AuthRequiredProps } from "./components/auth/AuthRequired";
 export { default as LoginForm } from "./components/auth/LoginForm";
 export type { LoginFormProps } from "./components/auth/LoginForm";
 export { default as PasswordPair } from "./components/auth/PasswordPair";

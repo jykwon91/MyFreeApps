@@ -1,30 +1,21 @@
 /**
- * Unit tests for AuthRequired.
+ * Unit tests for AuthRequired — the frontend gate for public-read / auth-write
+ * apps.
  *
  * Verifies the gate behaviour:
- *   - authenticated   → renders children
- *   - unauthenticated → renders the sign-in fallback (heading + Sign in button)
- *
- * Public-read / auth-write model: see apps/mygamingassistant/CLAUDE.md →
- * Authentication Model.
+ *   - authenticated       → renders children
+ *   - unauthenticated     → renders the sign-in fallback (heading + Sign in button)
+ *   - unavailable={true}  → redirects home, renders neither children nor card
  */
 import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 
-const mockIsAuthenticated = vi.fn(() => false);
 const mockNavigate = vi.fn();
-const mockIsServeOnly = vi.fn(() => false);
 
-vi.mock("@platform/ui", () => ({
-  Button: ({ children, ...props }: { children: React.ReactNode } & React.ButtonHTMLAttributes<HTMLButtonElement>) => (
-    <button {...props}>{children}</button>
-  ),
-  useIsAuthenticated: () => mockIsAuthenticated(),
-}));
-
-vi.mock("@/lib/serveOnly", () => ({
-  isServeOnly: () => mockIsServeOnly(),
+vi.mock("../lib/auth-store", () => ({
+  useIsAuthenticated: vi.fn(),
+  notifyAuthChange: vi.fn(),
 }));
 
 vi.mock("react-router-dom", async (importOriginal) => {
@@ -35,7 +26,10 @@ vi.mock("react-router-dom", async (importOriginal) => {
   };
 });
 
-import AuthRequired from "@/components/auth/AuthRequired";
+import { useIsAuthenticated } from "../lib/auth-store";
+import AuthRequired from "../components/auth/AuthRequired";
+
+const mockUseIsAuthenticated = vi.mocked(useIsAuthenticated);
 
 function renderWithRouter(ui: React.ReactNode, initialPath = "/sources") {
   return render(<MemoryRouter initialEntries={[initialPath]}>{ui}</MemoryRouter>);
@@ -43,33 +37,30 @@ function renderWithRouter(ui: React.ReactNode, initialPath = "/sources") {
 
 describe("AuthRequired", () => {
   it("renders children when authenticated", () => {
-    mockIsServeOnly.mockReturnValue(false);
-    mockIsAuthenticated.mockReturnValue(true);
+    mockUseIsAuthenticated.mockReturnValue(true);
     renderWithRouter(
       <AuthRequired action="manage sources">
         <div data-testid="protected">protected content</div>
       </AuthRequired>,
     );
-    expect(screen.getByTestId("protected")).toBeDefined();
+    expect(screen.getByTestId("protected")).toBeInTheDocument();
   });
 
-  it("in serve-only mode, redirects home and renders neither children nor sign-in card", () => {
-    mockIsServeOnly.mockReturnValue(true);
-    // Even with a valid auth token, serve-only must NOT render gated content —
+  it("when unavailable, redirects home and renders neither children nor sign-in card", () => {
+    // Even with a valid auth token, unavailable must NOT render gated content —
     // it redirects to the public home (fail closed).
-    mockIsAuthenticated.mockReturnValue(true);
+    mockUseIsAuthenticated.mockReturnValue(true);
     renderWithRouter(
-      <AuthRequired action="manage sources">
+      <AuthRequired action="manage sources" unavailable>
         <div data-testid="protected">protected content</div>
       </AuthRequired>,
     );
     expect(screen.queryByTestId("protected")).toBeNull();
     expect(screen.queryByRole("heading", { name: /sign in to/i })).toBeNull();
-    mockIsServeOnly.mockReturnValue(false);
   });
 
   it("renders sign-in fallback when not authenticated", () => {
-    mockIsAuthenticated.mockReturnValue(false);
+    mockUseIsAuthenticated.mockReturnValue(false);
     renderWithRouter(
       <AuthRequired action="manage sources">
         <div data-testid="protected">protected content</div>
@@ -77,22 +68,22 @@ describe("AuthRequired", () => {
     );
     expect(screen.queryByTestId("protected")).toBeNull();
     // Heading uses the action string
-    expect(screen.getByRole("heading", { name: /sign in to manage sources/i })).toBeDefined();
-    expect(screen.getByRole("button", { name: /sign in/i })).toBeDefined();
+    expect(screen.getByRole("heading", { name: /sign in to manage sources/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /sign in/i })).toBeInTheDocument();
   });
 
   it("falls back to generic heading when no action is provided", () => {
-    mockIsAuthenticated.mockReturnValue(false);
+    mockUseIsAuthenticated.mockReturnValue(false);
     renderWithRouter(
       <AuthRequired>
         <div>protected</div>
       </AuthRequired>,
     );
-    expect(screen.getByRole("heading", { name: /sign in to continue/i })).toBeDefined();
+    expect(screen.getByRole("heading", { name: /sign in to continue/i })).toBeInTheDocument();
   });
 
   it("navigates to /login with the current path as state.from on click", () => {
-    mockIsAuthenticated.mockReturnValue(false);
+    mockUseIsAuthenticated.mockReturnValue(false);
     mockNavigate.mockClear();
     renderWithRouter(
       <AuthRequired action="manage sources">
@@ -110,12 +101,12 @@ describe("AuthRequired", () => {
   });
 
   it("renders the custom description when supplied", () => {
-    mockIsAuthenticated.mockReturnValue(false);
+    mockUseIsAuthenticated.mockReturnValue(false);
     renderWithRouter(
       <AuthRequired action="upload a lineup" description="Only the operator can add lineups.">
         <div>protected</div>
       </AuthRequired>,
     );
-    expect(screen.getByText(/only the operator can add lineups/i)).toBeDefined();
+    expect(screen.getByText(/only the operator can add lineups/i)).toBeInTheDocument();
   });
 });

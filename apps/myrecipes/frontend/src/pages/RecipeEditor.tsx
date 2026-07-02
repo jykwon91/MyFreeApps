@@ -35,6 +35,7 @@ interface TweakEditorProps {
 }
 
 function TweakEditor({ recipeId, onMissing }: TweakEditorProps) {
+  const navigate = useNavigate();
   const { data, isLoading, isError } = useGetRecipeQuery(recipeId);
 
   if (isLoading) {
@@ -62,6 +63,31 @@ function TweakEditor({ recipeId, onMissing }: TweakEditorProps) {
           heading="Recipe not found"
           body="This recipe doesn't exist or has no version to tweak."
           action={{ label: "Back to recipes", onClick: onMissing }}
+        />
+      </main>
+    );
+  }
+
+  // Public-read / auth-write: anyone can view a recipe, but tweaking creates a
+  // new version on the owner's recipe — only they can do that. A non-owner who
+  // deep-links to /tweak must NOT get a fillable form that would 404 on submit;
+  // show a clear message with a way back to the recipe instead.
+  if (!data.is_owner) {
+    return (
+      <main className="p-4 sm:p-8 space-y-6">
+        <EditorHeader
+          backTo={`/recipes/${recipeId}`}
+          backLabel="Back to recipe"
+          title="Tweak recipe"
+        />
+        <EmptyState
+          icon={<ChefHat className="w-12 h-12" />}
+          heading="You can only tweak your own recipes"
+          body="This recipe belongs to someone else. You can view it, but tweaking creates a new version that only the owner can make."
+          action={{
+            label: "Back to recipe",
+            onClick: () => navigate(`/recipes/${recipeId}`),
+          }}
         />
       </main>
     );

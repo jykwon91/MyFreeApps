@@ -10,14 +10,13 @@ import {
   Settings,
   Shield,
 } from "lucide-react";
-import { AppShell, StepUpModal, ThemeToggle, Toaster, useIsAuthenticated } from "@platform/ui";
+import { AppShell, GuestShell, StepUpModal, ThemeToggle, Toaster, useIsAuthenticated } from "@platform/ui";
 import { buildNav, PUBLIC_NAV_PATHS } from "@/constants/nav";
 import { signOut } from "@/lib/auth";
 import { useIsSuperuser } from "@/hooks/useIsSuperuser";
 import { useGetCurrentUserQuery } from "@/lib/userApi";
 import { isTauri } from "@/lib/tauri";
 import { isServeOnly } from "@/lib/serveOnly";
-import GuestShell from "@/components/auth/GuestShell";
 import type { CurrentUser } from "@/lib/userApi";
 
 const ANONYMOUS_USER = { name: "You", email: "" };

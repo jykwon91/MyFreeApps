@@ -19,6 +19,18 @@ const NAV_DESCRIPTORS: NavDescriptor[] = [
 ];
 
 /**
+ * Paths that appear in the unauthenticated GuestShell sidebar.
+ *
+ * MyRecipes uses a public-read / auth-write model: anyone can browse the recipe
+ * library, but only the owner can create / tweak / cook. Guests see just the
+ * recipes list; /settings and /security are account pages, kept out of the
+ * guest nav so unauthenticated visitors don't see dead links to gated pages.
+ */
+export const PUBLIC_NAV_PATHS: ReadonlySet<string> = new Set([
+  "/", // Recipes (public library)
+]);
+
+/**
  * Build the full NavItem array -- called once in RootLayout.tsx with injected
  * icon nodes.
  */

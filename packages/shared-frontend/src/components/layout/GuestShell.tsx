@@ -1,26 +1,26 @@
 import type { ReactNode } from "react";
 import { NavLink, useLocation, useNavigate, type NavLinkRenderProps } from "react-router-dom";
 import { LogIn } from "lucide-react";
-import { Button } from "@platform/ui";
-import { cn } from "@platform/ui";
-import { useMediaQuery } from "@platform/ui";
-import type { NavItem } from "@platform/ui";
+import Button from "../ui/Button";
+import { cn } from "../../utils/cn";
+import { useMediaQuery } from "../../hooks/useMediaQuery";
+import type { NavItem } from "./AppShell";
 
-interface GuestShellProps {
+export interface GuestShellProps {
   logo: ReactNode;
   /** Nav items visible to unauthenticated visitors (public surfaces only). */
   nav: NavItem[];
   /**
-   * Optional right-aligned topbar slot — mirrors @platform/ui AppShell's
-   * ``headerActions`` so the same node (e.g. ``<ThemeToggle />``) can be
-   * passed to either shell without conditional plumbing in RootLayout.
+   * Optional right-aligned topbar slot — mirrors AppShell's ``headerActions``
+   * so the same node (e.g. ``<ThemeToggle />``) can be passed to either shell
+   * without conditional plumbing in RootLayout.
    */
   headerActions?: ReactNode;
   /**
    * When true, the "Sign in" CTAs (sidebar + topbar) are hidden entirely.
-   * Used by the serve-only deployment, where there is NO auth at all — the
-   * backend mounts no login route, so a Sign-in button would dead-end on a
-   * 404. The shell then reads as a plain public site with no account concept.
+   * Used by a serve-only / no-auth deployment, where the backend mounts no
+   * login route so a Sign-in button would dead-end on a 404. The shell then
+   * reads as a plain public site with no account concept.
    */
   hideSignIn?: boolean;
   /** Page content. */
@@ -28,21 +28,19 @@ interface GuestShellProps {
 }
 
 /**
- * GuestShell — app layout for unauthenticated visitors.
+ * GuestShell — app layout for unauthenticated visitors of a public-read /
+ * auth-write app.
  *
- * Mirrors the @platform/ui AppShell visually (same sidebar + topbar
- * structure) but:
- *   - Sidebar shows only public nav items (no Sources / Review / Settings).
+ * Mirrors the AppShell visually (same sidebar + topbar structure) but:
+ *   - Sidebar shows only the public nav items passed in ``nav``.
  *   - User dropdown is replaced with a "Sign in" CTA button.
  *   - Bottom mobile nav reflects the same public-only nav.
  *
- * This is an MGA-specific Tier 3 component — MBK / MJH stay fully auth-gated
- * and don't have an unauthenticated layout state to render.
- *
- * Why not extend @platform/ui AppShell directly: AppShell requires a
- * ``user: { name, email? }`` prop and renders a "Sign out" item. Bending
- * its API to handle the guest case would break parity with MBK / MJH.
- * A small local component keeps the shared layer clean.
+ * Why not extend AppShell directly: AppShell requires a
+ * ``user: { name, email? }`` prop and renders a "Sign out" item. Bending its
+ * API to handle the guest case would break parity for fully auth-gated apps.
+ * A small dedicated component keeps the shared layer clean and lets each app
+ * pick the shell in its RootLayout based on auth state.
  */
 export default function GuestShell({
   logo,
