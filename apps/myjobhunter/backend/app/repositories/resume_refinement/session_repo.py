@@ -341,6 +341,55 @@ async def add_confirmed_facts(
     return session
 
 
+async def clear_pending_state(
+    db: AsyncSession,
+    session: ResumeRefinementSession,
+) -> ResumeRefinementSession:
+    """Clear the pending_* fields without touching draft or cursor.
+
+    Used when the iteration loop runs out of targets — the user clicks
+    Complete to lock; until then the session just has nothing pending.
+    """
+    session.pending_target_section = None
+    session.pending_proposal = None
+    session.pending_rationale = None
+    session.pending_clarifying_question = None
+    session.pending_guard_flagged = None
+    session.pending_flagged_proposal = None
+    await db.flush()
+    await db.commit()
+    await db.refresh(session)
+    return session
+
+
+async def bump_turn_count(
+    db: AsyncSession,
+    session: ResumeRefinementSession,
+) -> ResumeRefinementSession:
+    """Persist a turn_count increment for a user action that appends a
+    turn row without going through ``apply_user_resolution``."""
+    session.turn_count += 1
+    await db.flush()
+    await db.commit()
+    await db.refresh(session)
+    return session
+
+
+async def persist_prefetch_results(
+    db: AsyncSession,
+    session: ResumeRefinementSession,
+    *,
+    guard_flag_counts: dict,
+) -> ResumeRefinementSession:
+    """Final write of the prefetch pass: guard-flag counters plus the
+    token/cost accumulators the caller mutated on the instance."""
+    session.guard_flag_counts = guard_flag_counts
+    await db.flush()
+    await db.commit()
+    await db.refresh(session)
+    return session
+
+
 async def claim_next_preparing(db: AsyncSession) -> ResumeRefinementSession | None:
     """Atomically claim one unclaimed ``preparing`` session and return it.
 

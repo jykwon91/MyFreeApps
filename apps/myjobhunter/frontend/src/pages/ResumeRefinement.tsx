@@ -1,15 +1,9 @@
-import { useEffect, useRef, useState } from "react";
-import { Sparkles } from "lucide-react";
-import { Skeleton } from "@platform/ui";
-import SessionStartPanel from "@/features/resume_refinement/SessionStartPanel";
-import CurrentDraftPanel from "@/features/resume_refinement/CurrentDraftPanel";
-import PendingProposalCard from "@/features/resume_refinement/PendingProposalCard";
-import CompletePanel from "@/features/resume_refinement/CompletePanel";
-import SessionPreparingPanel from "@/features/resume_refinement/SessionPreparingPanel";
-import ConversationHistory from "@/features/resume_refinement/ConversationHistory";
-import ActiveSessionLayout from "@/features/resume_refinement/ActiveSessionLayout";
+import { useState } from "react";
+import NoSessionView from "@/features/resume_refinement/NoSessionView";
+import SessionLoadErrorView from "@/features/resume_refinement/SessionLoadErrorView";
+import SessionLoadingView from "@/features/resume_refinement/SessionLoadingView";
+import ActiveSessionView from "@/features/resume_refinement/ActiveSessionView";
 import { useGetRefinementSessionQuery } from "@/lib/resumeRefinementApi";
-import type { RefinementSession } from "@/types/resume-refinement/refinement-session";
 
 const ACTIVE_SESSION_KEY = "mjh:resumeRefinementSessionId";
 const POLL_INTERVAL_MS = 3000;
@@ -19,6 +13,12 @@ export default function ResumeRefinement() {
     typeof window !== "undefined" ? window.localStorage.getItem(ACTIVE_SESSION_KEY) : null,
   );
 
+  // Polling is intentionally not stopped once the session is no
+  // longer active — the data is stable post-completion so the cost
+  // is one tiny GET every 3s, and stopping introduces a stale-cache
+  // edge case if the user returns to a completed session and
+  // downloads. During status=preparing the same poll drives the
+  // staged progress card and the unlock.
   const {
     data: session,
     isLoading,
@@ -27,15 +27,6 @@ export default function ResumeRefinement() {
     skip: !sessionId,
     pollingInterval: sessionId ? POLL_INTERVAL_MS : 0,
   });
-
-  // Polling is intentionally not stopped once the session is no
-  // longer active — the data is stable post-completion so the cost
-  // is one tiny GET every 3s, and stopping introduces a stale-cache
-  // edge case if the user returns to a completed session and
-  // downloads.
-  useEffect(() => {
-    if (!session) return;
-  }, [session]);
 
   function handleSessionStarted(id: string) {
     if (typeof window !== "undefined") {
@@ -63,180 +54,5 @@ export default function ResumeRefinement() {
     return <SessionLoadingView />;
   }
 
-  return (
-    <ActiveSessionView session={session} onStartNew={handleStartNew} />
-  );
-}
-
-interface NoSessionViewProps {
-  onSessionStarted: (id: string) => void;
-}
-
-function NoSessionView({ onSessionStarted }: NoSessionViewProps) {
-  return (
-    <main className="p-4 sm:p-8 space-y-6 max-w-3xl">
-      <ResumeRefinementHeader />
-      <SessionStartPanel onSessionStarted={onSessionStarted} />
-    </main>
-  );
-}
-
-interface SessionLoadErrorViewProps {
-  onStartNew: () => void;
-}
-
-function SessionLoadErrorView({ onStartNew }: SessionLoadErrorViewProps) {
-  return (
-    <main className="p-4 sm:p-8 space-y-6 max-w-3xl">
-      <ResumeRefinementHeader />
-      <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm">
-        We couldn't load that session.{" "}
-        <button type="button" onClick={onStartNew} className="underline">
-          Start a new one
-        </button>
-        .
-      </div>
-    </main>
-  );
-}
-
-function SessionLoadingView() {
-  return (
-    <main className="p-4 sm:p-8 space-y-6 max-w-3xl">
-      <ResumeRefinementHeader />
-      <Skeleton className="h-32 w-full" />
-      <Skeleton className="h-64 w-full" />
-    </main>
-  );
-}
-
-interface ActiveSessionViewProps {
-  session: RefinementSession;
-  onStartNew: () => void;
-}
-
-function ActiveSessionView({ session, onStartNew }: ActiveSessionViewProps) {
-  // One-time fade on the composer zone when the background preparation
-  // unlocks the session (preparing → active). Passive transition — no
-  // focus is moved; the aria-live heading in SessionPreparingPanel and
-  // the fade are the only signals.
-  const prevStatusRef = useRef(session.status);
-  const [justUnlocked, setJustUnlocked] = useState(false);
-  useEffect(() => {
-    if (prevStatusRef.current === "preparing" && session.status === "active") {
-      setJustUnlocked(true);
-    }
-    prevStatusRef.current = session.status;
-  }, [session.status]);
-
-  const isPreparing = session.status === "preparing" || session.status === "failed";
-  const showWorkSurface = session.status === "active" || session.status === "completed";
-
-  const activeTarget =
-    session.improvement_targets &&
-    session.target_index < session.improvement_targets.length
-      ? session.improvement_targets[session.target_index]
-      : null;
-  const highlightText = activeTarget?.current_text ?? null;
-
-  const draft = (
-    <CurrentDraftPanel
-      markdown={session.current_draft}
-      highlightText={highlightText}
-    />
-  );
-
-  // RIGHT COLUMN: split into two zones.
-  //
-  // HISTORY ZONE — grows to fill available space, independently
-  // scrollable on desktop. On mobile (<lg) rendered SECOND in DOM
-  // order (order-2) so the composer stays visible above it.
-  //
-  // COMPOSER ZONE — shrinks to its natural height; never scrolls.
-  // On desktop (lg+) rendered second in visual flow (order-2).
-  // On mobile rendered first (order-1).
-  const controls = (
-    <div className="flex flex-col gap-2 min-h-0 h-full">
-      {/* History zone */}
-      <div className="order-2 lg:order-1 lg:flex-1 lg:overflow-y-auto lg:min-h-0 pr-1">
-        <ConversationHistory turns={session.turns ?? []} />
-      </div>
-
-      {/* Composer zone */}
-      <div
-        className={`order-1 lg:order-2 shrink-0 ${justUnlocked ? "unlock-fade-in" : ""}`}
-      >
-        {isPreparing && <SessionPreparingPanel session={session} />}
-        {session.status === "active" && (
-          <PendingProposalCard session={session} />
-        )}
-        {/* Gated: CompletePanel's reached-end math treats a null
-            targets list as "done", so rendering it while preparing
-            would show "Mark resume done" before the critique ran. */}
-        {showWorkSurface && <CompletePanel session={session} />}
-      </div>
-    </div>
-  );
-
-  return (
-    <ActiveSessionLayout
-      header={
-        <ResumeRefinementHeader
-          compact
-          onStartNew={onStartNew}
-          startNewLabel={
-            session.status === "preparing" ? "Cancel" : undefined
-          }
-        />
-      }
-      draft={draft}
-      controls={controls}
-    />
-  );
-}
-
-interface ResumeRefinementHeaderProps {
-  compact?: boolean;
-  onStartNew?: () => void;
-  /** Override the escape-hatch label — "Cancel" while preparing (it's
-   *  an exit from a wait, not a choice among sessions). */
-  startNewLabel?: string;
-}
-
-function ResumeRefinementHeader({
-  compact = false,
-  onStartNew,
-  startNewLabel,
-}: ResumeRefinementHeaderProps) {
-  if (compact) {
-    return (
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <Sparkles className="size-5 text-primary" />
-          <h1 className="text-lg font-semibold">Resume refinement</h1>
-        </div>
-        {onStartNew && (
-          <button
-            type="button"
-            onClick={onStartNew}
-            className="text-xs underline text-muted-foreground hover:text-foreground"
-          >
-            {startNewLabel ?? "Start a different session"}
-          </button>
-        )}
-      </div>
-    );
-  }
-  return (
-    <header>
-      <div className="flex items-center gap-2">
-        <Sparkles className="size-6 text-primary" />
-        <h1 className="text-2xl font-semibold">Resume refinement</h1>
-      </div>
-      <p className="text-sm text-muted-foreground mt-0.5">
-        Iterate on your resume one bullet at a time. AI suggests, you accept
-        or override, and at the end you download a polished PDF or DOCX.
-      </p>
-    </header>
-  );
+  return <ActiveSessionView session={session} onStartNew={handleStartNew} />;
 }
