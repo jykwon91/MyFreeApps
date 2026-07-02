@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import InlineText from "@/features/resume_refinement/InlineText";
 
 // Tiny in-page markdown preview. Handles only the constrained subset
 // emitted by the backend's render/rewrite pipeline (headings, bullet
@@ -11,68 +12,9 @@ import { useEffect, useRef } from "react";
 // target so users immediately see where the active refinement target
 // lives in the full draft.
 
-interface InlineSpan {
-  text: string;
-  bold?: boolean;
-  italic?: boolean;
-}
-
 interface MarkdownPreviewProps {
   source: string;
   highlightText?: string | null;
-}
-
-function renderInline(line: string): InlineSpan[] {
-  const spans: InlineSpan[] = [];
-  let i = 0;
-  let buffer = "";
-
-  while (i < line.length) {
-    if (line[i] === "*" && line[i + 1] === "*") {
-      const end = line.indexOf("**", i + 2);
-      if (end >= 0) {
-        if (buffer) {
-          spans.push({ text: buffer });
-          buffer = "";
-        }
-        spans.push({ text: line.slice(i + 2, end), bold: true });
-        i = end + 2;
-        continue;
-      }
-    } else if (line[i] === "*") {
-      const end = line.indexOf("*", i + 1);
-      if (end >= 0 && line[end + 1] !== "*") {
-        if (buffer) {
-          spans.push({ text: buffer });
-          buffer = "";
-        }
-        spans.push({ text: line.slice(i + 1, end), italic: true });
-        i = end + 1;
-        continue;
-      }
-    }
-    buffer += line[i];
-    i += 1;
-  }
-
-  if (buffer) {
-    spans.push({ text: buffer });
-  }
-  return spans;
-}
-
-function InlineText({ source }: { source: string }) {
-  const spans = renderInline(source);
-  return (
-    <>
-      {spans.map((span, idx) => {
-        if (span.bold && span.italic) return <strong key={idx}><em>{span.text}</em></strong>;
-        if (span.bold) return <strong key={idx}>{span.text}</strong>;
-        if (span.italic) return <em key={idx}>{span.text}</em>;
-        return <span key={idx}>{span.text}</span>;
-      })}
-    </>
-  );
 }
 
 // Strip markdown decoration so a heading like "**Staff Engineer** — Acme"
