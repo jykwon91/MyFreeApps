@@ -22,6 +22,7 @@ from typing import Any, Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.game.agent import Agent
 from app.models.game.game import Game
 from app.models.game.map import Map
 from app.models.game.map_zone import MapZone
@@ -37,9 +38,18 @@ async def load_reference_data(
     Returns a dict with keys:
       games: list[{slug, name, side_a_label, side_b_label}]
       maps: list[{slug, name, game_slug, zones: [{slug, name}]}]
-      utility_types: list[{slug, name, game_slug}]
+      utility_types: list[{slug, name, game_slug, agent_slug}]
+
+    ``agent_slug`` is the Valorant agent a utility ability belongs to (Sova's
+    ``recon`` / ``shock``), or ``None`` for game-wide utilities (all CS2
+    grenades). It lets the prompt builder scope the candidate ability list to a
+    single agent (Source.config_json ``agent_hint``) — the recurrence fix for a
+    Sova recon dart being mis-tagged as another agent's smoke.
     """
     game_rows = (await db.execute(select(Game).order_by(Game.slug))).scalars().all()
+    # All agents (few — 29 across the fixtures); a plain id→slug map avoids an
+    # async lazy-load of ``UtilityType.agent`` per row below.
+    agent_rows = (await db.execute(select(Agent))).scalars().all()
 
     if game_id is not None:
         map_rows = (
@@ -75,6 +85,7 @@ async def load_reference_data(
         zone_rows = []
 
     game_id_to_slug = {g.id: g.slug for g in game_rows}
+    agent_id_to_slug = {a.id: a.slug for a in agent_rows}
 
     map_id_to_zones: dict[uuid.UUID, list[dict]] = {}
     for zone in zone_rows:
@@ -107,6 +118,7 @@ async def load_reference_data(
             "slug": ut.slug,
             "name": ut.name,
             "game_slug": game_id_to_slug.get(ut.game_id, ""),
+            "agent_slug": agent_id_to_slug.get(ut.agent_id),
         }
         for ut in ut_rows
     ]

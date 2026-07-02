@@ -41,30 +41,30 @@ _RECLASSIFY_BATCH_LIMIT = 500
 async def _source_scope(
     db: AsyncSession,
     source_id: Optional[uuid.UUID],
-) -> tuple[Optional[str], Optional[str]]:
-    """Return the (game_hint, map_hint) scope for a source id, null-safe.
+) -> tuple[Optional[str], Optional[str], Optional[str]]:
+    """Return the (game_hint, map_hint, agent_hint) scope for a source id.
 
     The hints live in Source.config_json (set by the operator at create time or
     via ``PATCH /api/sources/{id}``). A missing source_id, or a soft-deleted
-    source, yields (None, None) — classification then runs unscoped, exactly as
-    it did before this wiring existed.
+    source, yields (None, None, None) — classification then runs unscoped,
+    exactly as it did before this wiring existed.
     """
     if source_id is None:
-        return None, None
+        return None, None, None
     source = await source_repo.get_source(db, source_id)
     if source is None:
-        return None, None
+        return None, None, None
     cfg = source.config_json or {}
-    return cfg.get("game_hint"), cfg.get("map_hint")
+    return cfg.get("game_hint"), cfg.get("map_hint"), cfg.get("agent_hint")
 
 
 async def _source_scope_for_lineup(
     db: AsyncSession,
     lineup: Optional[Lineup],
-) -> tuple[Optional[str], Optional[str]]:
+) -> tuple[Optional[str], Optional[str], Optional[str]]:
     """The source scope for a lineup (SET NULL FK / manual upload → unscoped)."""
     if lineup is None:
-        return None, None
+        return None, None, None
     return await _source_scope(db, lineup.source_id)
 
 
@@ -87,9 +87,9 @@ async def reclassify(
     On classifier failure nothing was flushed worth keeping, so no commit.
     """
     lineup = await get_lineup(db, lineup_id)
-    game_hint, map_hint = await _source_scope_for_lineup(db, lineup)
+    game_hint, map_hint, agent_hint = await _source_scope_for_lineup(db, lineup)
     result = await classify_lineup(
-        db, lineup_id, game_hint=game_hint, map_hint=map_hint
+        db, lineup_id, game_hint=game_hint, map_hint=map_hint, agent_hint=agent_hint
     )
     if result.success:
         await commit_classifier_run(db)
@@ -126,7 +126,7 @@ async def reclassify_source_pending(
     the per-call cap is surfaced via ``total > reclassified + failed`` rather
     than silently dropping the tail.
     """
-    game_hint, map_hint = await _source_scope(db, source_id)
+    game_hint, map_hint, agent_hint = await _source_scope(db, source_id)
     lineups, total = await list_pending_lineups(
         db, source_id=source_id, limit=_RECLASSIFY_BATCH_LIMIT, offset=0
     )
@@ -135,7 +135,8 @@ async def reclassify_source_pending(
     for lineup in lineups:
         try:
             result = await classify_lineup(
-                db, lineup.id, game_hint=game_hint, map_hint=map_hint
+                db, lineup.id, game_hint=game_hint, map_hint=map_hint,
+                agent_hint=agent_hint,
             )
         except Exception:
             logger.exception(

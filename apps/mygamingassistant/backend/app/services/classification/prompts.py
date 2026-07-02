@@ -73,11 +73,12 @@ def build_reference_text(
     ref: dict[str, Any],
     game_hint: Optional[str] = None,
     map_hint: Optional[str] = None,
+    agent_hint: Optional[str] = None,
 ) -> str:
     """Build the reference text block passed to Claude.
 
-    Constant across calls for the same (game_hint, map_hint) → prime candidate
-    for prompt caching. The reference data comes from
+    Constant across calls for the same (game_hint, map_hint, agent_hint) → prime
+    candidate for prompt caching. The reference data comes from
     :func:`app.repositories.game.reference_repo.load_reference_data`; this
     function shapes it into the system-prompt text Claude reads.
 
@@ -89,8 +90,35 @@ def build_reference_text(
     :func:`app.services.classification.scope_guards.apply_map_hint` — the prompt
     scope improves zone accuracy; the post-parse lock is the load-bearing
     correctness guarantee.
+
+    ``agent_hint`` is the operator's per-source Valorant agent scope
+    (Source.config_json ``agent_hint``). When set — and the agent owns at least
+    one ability in the reference data — the utility-type candidate list is
+    restricted to that agent's abilities and a HARD scope instruction is
+    emitted. This is the recurrence fix for a Sova recon dart being tagged as
+    another agent's smoke (e.g. Brimstone ``sky-smoke``): PR #950 grew the
+    Valorant ability list from 4 to ~56 with no agent scoping, so the full menu
+    invited cross-agent contamination. As with ``map_hint``, the utility is
+    additionally hard-locked post-parse by
+    :func:`app.services.classification.scope_guards.apply_agent_hint` — the
+    prompt scope narrows the menu; the post-parse lock is the load-bearing
+    guarantee (``resolve_slugs`` is game- but not agent-scoped, so a hallucinated
+    off-agent slug would otherwise still resolve). An ``agent_hint`` with no
+    matching abilities is ignored (no filter, no scope line) so the candidate
+    list is never emptied.
     """
     lines: list[str] = []
+
+    # Abilities owned by the hinted agent. Empty when agent_hint is unset OR the
+    # hint matches no ability in the reference data (bad hint / agents not yet
+    # loaded) — in which case the filter + scope line are skipped so the utility
+    # menu is never emptied (defensive, mirroring apply_map_hint's no-op).
+    agent_ability_slugs = {
+        ut["slug"]
+        for ut in ref.get("utility_types", [])
+        if agent_hint and ut.get("agent_slug") == agent_hint
+    }
+    apply_agent_scope = bool(agent_ability_slugs)
 
     map_game = {m["slug"]: m["game_slug"] for m in ref.get("maps", [])}
     if map_hint:
@@ -107,6 +135,19 @@ def build_reference_text(
         lines.append("")
     elif game_hint:
         lines.append(f"Expected game: {game_hint}")
+        lines.append("")
+
+    if apply_agent_scope:
+        lines.append(
+            f"SOURCE AGENT SCOPE: every chapter in this source is Valorant agent "
+            f"'{agent_hint}'."
+        )
+        lines.append(
+            f"You MUST pick utility_type_slug ONLY from {agent_hint}'s abilities "
+            "listed below. Do NOT choose another agent's ability, no matter how "
+            "similar the on-screen effect looks (e.g. a recon dart's scan is NOT "
+            "a smoke)."
+        )
         lines.append("")
 
     lines.append("Valid games (slug → name):")
@@ -127,6 +168,12 @@ def build_reference_text(
     lines.append("")
     lines.append("Valid utility types (slug → name, game):")
     for ut in ref["utility_types"]:
+        # When agent-scoped, list ONLY the hinted agent's abilities. Off-agent
+        # utilities (other agents, and CS2's agent-less grenades) are dropped —
+        # an agent_hint is always a Valorant/agent source, so they're never
+        # valid candidates here.
+        if apply_agent_scope and ut.get("agent_slug") != agent_hint:
+            continue
         lines.append(f"  {ut['slug']} [{ut['game_slug']}] → {ut['name']}")
 
     return "\n".join(lines)
