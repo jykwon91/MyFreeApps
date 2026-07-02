@@ -3,6 +3,8 @@
 Public entry points (called from ``app.api.resume_refinement``):
 
 - ``accept_pending`` — user accepts the AI proposal as-is.
+- ``accept_flagged`` — user applies a guard-held proposal after explicitly
+  confirming the flagged facts are accurate ("Use it anyway").
 - ``accept_custom`` — user supplies their own text instead.
 - ``request_alternative`` — regenerate the proposal for the same target.
 - ``skip_target`` — move to the next target without modifying.
@@ -75,6 +77,57 @@ async def accept_pending(
     return await _with_turns(db, session)
 
 
+async def accept_flagged(
+    *,
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    session_id: uuid.UUID,
+) -> ResumeRefinementSession:
+    """Apply a guard-held proposal after explicit user confirmation.
+
+    The "Use it anyway — I confirm this is accurate" escape from the
+    clarify loop: the flagged phrases become session-level confirmed
+    facts (so they never re-flag), and the held proposal is applied to
+    the draft exactly like a normal accept.
+    """
+    session = await _load_active(db, session_id, user_id)
+    if not session.pending_flagged_proposal:
+        raise NoPendingProposal(
+            "No guard-held proposal to apply. Request a new suggestion instead."
+        )
+
+    flagged_facts = list(session.pending_guard_flagged or [])
+    if flagged_facts:
+        session = await session_repo.add_confirmed_facts(
+            db, session, facts=flagged_facts,
+        )
+
+    target = _current_target(session)
+    new_draft = _apply_rewrite(
+        session.current_draft,
+        target_current_text=target["current_text"] if target else "",
+        new_text=session.pending_flagged_proposal,
+    )
+    accepted_text = session.pending_flagged_proposal
+    target_section = session.pending_target_section
+
+    session = await session_repo.apply_user_resolution(
+        db, session, new_draft=new_draft, advance_target=True,
+    )
+    await turn_repo.append(
+        db,
+        session_id=session.id,
+        turn_index=session.turn_count,
+        role="user_accept_flagged",
+        target_section=target_section,
+        proposed_text=accepted_text,
+        draft_after=new_draft,
+    )
+
+    session = await _generate_next_proposal(db, session, user_id=user_id, hint=None)
+    return await _with_turns(db, session)
+
+
 async def accept_custom(
     *,
     db: AsyncSession,
@@ -124,6 +177,18 @@ async def request_alternative(
     target = _current_target(session)
     if target is None:
         raise NoMoreTargets()
+
+    # When the pending clarify was guard-generated and the user typed an
+    # answer, record the flagged phrases as session-level confirmed
+    # facts BEFORE regenerating. The regenerated proposal is checked
+    # against the allowlist, so "yes, that's correct" actually unblocks
+    # — previously the same phrase re-flagged against the unchanged
+    # source and the identical question returned forever.
+    flagged_facts = list(session.pending_guard_flagged or [])
+    if hint and hint.strip() and flagged_facts:
+        session = await session_repo.add_confirmed_facts(
+            db, session, facts=flagged_facts,
+        )
 
     await turn_repo.append(
         db,

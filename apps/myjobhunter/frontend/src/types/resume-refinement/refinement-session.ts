@@ -14,6 +14,8 @@ export interface RefinementSession {
   pending_proposal: string | null;
   pending_rationale: string | null;
   pending_clarifying_question: string | null;
+  pending_guard_flagged: string[] | null;
+  guard_can_force: boolean;
   turn_count: number;
   total_tokens_in: number;
   total_tokens_out: number;

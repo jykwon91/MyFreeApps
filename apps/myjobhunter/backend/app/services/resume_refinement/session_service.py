@@ -30,6 +30,7 @@ from app.services.resume_refinement.session_lifecycle_service import (
 # Public entry points — turn mutations
 from app.services.resume_refinement.session_turn_service import (
     accept_custom,
+    accept_flagged,
     accept_pending,
     navigate,
     request_alternative,
@@ -74,6 +75,7 @@ __all__ = [
     "complete_session",
     # Turn mutations
     "accept_pending",
+    "accept_flagged",
     "accept_custom",
     "request_alternative",
     "skip_target",

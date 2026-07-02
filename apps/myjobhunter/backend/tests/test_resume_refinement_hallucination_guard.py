@@ -73,3 +73,117 @@ def test_flags_invented_proper_noun_phrase():
     flagged = check_proposal(proposed=proposal, source=SOURCE)
     # "Forrester Innovation Award" is not in source.
     assert any("Forrester" in item for item in flagged)
+
+
+def test_flags_multiword_proper_noun_without_connector():
+    """Consecutive capitalized words form one checkable phrase even with
+    no joining word — 'Initech Solutions' is an invented employer."""
+    proposal = "Scaled the platform during my time at Initech Solutions"
+    flagged = check_proposal(proposed=proposal, source=SOURCE)
+    assert any("Initech" in item for item in flagged)
+
+
+def test_flags_invented_magnitude_metric():
+    """Bare magnitude counts (500K, 1.2M) are quantitative claims."""
+    proposal = "Processed 500K transactions per day"
+    flagged = check_proposal(proposed=proposal, source=SOURCE)
+    assert any("500K" in item for item in flagged)
+
+
+# ---------------------------------------------------------------------------
+# Connector decomposition — regression for the production clarify dead-end.
+# The old pattern merged "API" + "React" (both individually in the source)
+# into one contiguous phrase "API and React" that wasn't, so it flagged.
+# ---------------------------------------------------------------------------
+
+
+def test_and_joined_words_individually_present_pass():
+    source = SOURCE + "\n- Built REST API integrations\n- React frontend work\n"
+    proposal = "Delivered API and React integrations for the payment system"
+    assert check_proposal(proposed=proposal, source=source) == []
+
+
+def test_and_joined_decomposition_flags_only_the_missing_part():
+    proposal = "Led projects at Acme Corp and Hooli Inc simultaneously"
+    flagged = check_proposal(proposed=proposal, source=SOURCE)
+    # "Acme Corp" is in source — only the invented "Hooli Inc" flags.
+    assert any("Hooli" in item for item in flagged)
+    assert not any("Acme" in item for item in flagged)
+
+
+def test_of_connector_phrase_stays_whole():
+    """'of' joins a single name — decomposing 'Bank of America' into
+    single tokens would erase the guard for invented employers."""
+    proposal = "Managed integrations with Bank of America"
+    flagged = check_proposal(proposed=proposal, source=SOURCE)
+    assert any("Bank of America" in item for item in flagged)
+
+
+# ---------------------------------------------------------------------------
+# Confirmed-facts allowlist — user confirmation must actually unblock.
+# ---------------------------------------------------------------------------
+
+
+def test_confirmed_metric_is_not_reflagged():
+    proposal = "Improved throughput by 87% across the fleet"
+    assert any(
+        "87%" in item
+        for item in check_proposal(proposed=proposal, source=SOURCE)
+    )
+    assert (
+        check_proposal(
+            proposed=proposal, source=SOURCE, confirmed_facts=["87%"],
+        )
+        == []
+    )
+
+
+def test_confirmed_proper_noun_is_not_reflagged_case_insensitive():
+    proposal = "Built the system at Hooli after the merger"
+    assert any(
+        "Hooli" in item
+        for item in check_proposal(proposed=proposal, source=SOURCE)
+    )
+    assert (
+        check_proposal(
+            proposed=proposal, source=SOURCE, confirmed_facts=["hooli"],
+        )
+        == []
+    )
+
+
+def test_confirmed_date_is_not_reflagged():
+    proposal = "Joined the team in 1999 as a founding engineer"
+    assert (
+        check_proposal(
+            proposed=proposal, source=SOURCE, confirmed_facts=["1999"],
+        )
+        == []
+    )
+
+
+def test_unconfirmed_facts_still_flag_alongside_confirmed():
+    proposal = "Improved throughput by 87% and saved $250K at Hooli"
+    flagged = check_proposal(
+        proposed=proposal, source=SOURCE, confirmed_facts=["87%"],
+    )
+    assert not any("87%" in item for item in flagged)
+    assert any("$250K" in item for item in flagged)
+    assert any("Hooli" in item for item in flagged)
+
+
+# ---------------------------------------------------------------------------
+# Sentence-position heuristics.
+# ---------------------------------------------------------------------------
+
+
+def test_sentence_initial_single_cap_is_not_flagged():
+    """A bullet opening with an unlisted verb is ordinary capitalization."""
+    proposal = "Spearheaded the search relevance pipeline"
+    assert check_proposal(proposed=proposal, source=SOURCE) == []
+
+
+def test_mid_sentence_single_cap_invented_company_flags():
+    proposal = "Shipped the payments integration for Vandelay last quarter"
+    flagged = check_proposal(proposed=proposal, source=SOURCE)
+    assert any("Vandelay" in item for item in flagged)

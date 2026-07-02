@@ -31,6 +31,15 @@ const resumeRefinementApi = baseApi
         invalidatesTags: (_result, _err, id) => [{ type: REFINEMENT_TAG, id }],
       }),
 
+      acceptFlagged: build.mutation<RefinementSession, string>({
+        query: (id) => ({
+          url: `/resume-refinement/sessions/${id}/accept-flagged`,
+          method: "POST",
+          data: {},
+        }),
+        invalidatesTags: (_result, _err, id) => [{ type: REFINEMENT_TAG, id }],
+      }),
+
       supplyCustomRewrite: build.mutation<RefinementSession, { id: string; user_text: string }>({
         query: ({ id, user_text }) => ({
           url: `/resume-refinement/sessions/${id}/custom`,
@@ -85,6 +94,7 @@ export const {
   useStartRefinementSessionMutation,
   useGetRefinementSessionQuery,
   useAcceptPendingMutation,
+  useAcceptFlaggedMutation,
   useSupplyCustomRewriteMutation,
   useRequestAlternativeMutation,
   useSkipTargetMutation,

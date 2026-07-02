@@ -104,6 +104,22 @@ jobs:
             paths: >-
               tests/test_totp_login.py
               tests/test_totp_setup.py
+          - name: refinement
+            # Resume-refinement suite: pure-function + mocked tests (no
+            # DB fixtures, no Argon2 login storm) — runs in seconds.
+            # These files were previously in NO shard, so none of them
+            # gated merges; a hallucination-guard regression shipped
+            # because of it. The broader explicit-path-allowlist gap is
+            # logged in apps/myjobhunter/TECH_DEBT.md.
+            paths: >-
+              tests/test_resume_refinement_hallucination_guard.py
+              tests/test_resume_refinement_rewrite_service.py
+              tests/test_resume_refinement_critique_service.py
+              tests/test_resume_refinement_markdown_renderer.py
+              tests/test_resume_refinement_renderer.py
+              tests/test_resume_refinement_proposal_cache.py
+              tests/test_resume_refinement_session_helpers.py
+              tests/test_resume_refinement_guard_confirmation.py
 
     services:
       postgres:

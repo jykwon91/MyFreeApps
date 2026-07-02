@@ -8,6 +8,8 @@ Roles:
   for the session. One per session.
 - ``ai_proposal`` — Claude proposes a rewrite for the current target.
 - ``user_accept`` — user accepts the AI proposal as-is.
+- ``user_accept_flagged`` — user applies a guard-held proposal after
+  explicitly confirming the flagged facts are accurate ("Use it anyway").
 - ``user_custom`` — user supplies their own rewrite for the current target.
 - ``user_request_alternative`` — user asks Claude for a different proposal
   for the same target.
@@ -89,6 +91,7 @@ class ResumeRefinementTurn(Base):
             "'ai_critique',"
             "'ai_proposal',"
             "'user_accept',"
+            "'user_accept_flagged',"
             "'user_custom',"
             "'user_request_alternative',"
             "'user_skip',"

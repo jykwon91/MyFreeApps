@@ -12,6 +12,10 @@ interface SuggestionBodyProps {
   isPending: boolean;
   /** True while an alternative is being regenerated — shows skeleton instead of stale text. */
   isRegenerating?: boolean;
+  /** Guard loop breaker: offer applying the held proposal with explicit confirmation. */
+  canForce?: boolean;
+  onForce?: () => void;
+  forceIsLoading?: boolean;
 }
 
 // Three-way render of the suggestion area: clarification request,
@@ -27,6 +31,9 @@ export default function SuggestionBody({
   rationale,
   isPending,
   isRegenerating = false,
+  canForce = false,
+  onForce,
+  forceIsLoading = false,
 }: SuggestionBodyProps) {
   const [showRationale, setShowRationale] = useState(false);
 
@@ -38,6 +45,9 @@ export default function SuggestionBody({
         onCustomTextChange={onCustomTextChange}
         onSubmit={onClarifySubmit}
         isPending={isPending}
+        canForce={canForce}
+        onForce={onForce}
+        forceIsLoading={forceIsLoading}
       />
     );
   }
