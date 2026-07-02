@@ -8,6 +8,8 @@ import { createTestUser, deleteTestUser, loginViaUI } from "./fixtures/auth";
  *   1. Profile page loads with all 7 sections visible
  *   2. Add work history entry via dialog → appears in the list
  *   3. Edit work history entry via dialog → changes are reflected
+ *   3b. Current-role checkbox clears + disables end date, entry renders
+ *       "Present", and edit mode re-opens with the box pre-checked
  *   4. Add skill via inline form → chip appears
  *   5. Add screening answer → appears in correct group
  *   6. Tenant isolation — user B cannot see user A's data
@@ -113,6 +115,53 @@ test.describe("Work history CRUD", () => {
 
       // Updated title appears
       await expect(page.getByText("Senior Engineer")).toBeVisible({ timeout: 5_000 });
+    } finally {
+      await deleteTestUser(request, user);
+    }
+  });
+
+  test("current-role checkbox disables end date and renders Present", async ({
+    page,
+    request,
+  }) => {
+    const user = await createTestUser(request);
+
+    try {
+      await loginViaUI(page, user, request);
+      await navigateToProfile(page);
+
+      await page.getByLabel("Add work history").click();
+      await expect(
+        page.getByRole("dialog", { name: /add work history/i }),
+      ).toBeVisible();
+
+      await page.getByLabel(/^company/i).fill("CurrentCo");
+      await page.getByLabel(/^title/i).fill("Staff Engineer");
+      await page.getByLabel(/^start date/i).fill("2023-03-01");
+
+      // Type an end date, then check the current-role box — the field
+      // must be cleared and disabled so a contradictory state can't be sent.
+      const endDate = page.getByLabel(/^end date/i);
+      await endDate.fill("2024-06-30");
+      await page.getByLabel(/i currently work in this role/i).check();
+      await expect(endDate).toBeDisabled();
+      await expect(endDate).toHaveValue("");
+
+      await page.getByRole("button", { name: /add work history/i }).click();
+
+      // Entry appears with a Present tenure (is_current drives the label)
+      await expect(page.getByText("CurrentCo")).toBeVisible({ timeout: 5_000 });
+      await expect(page.getByText(/– Present/)).toBeVisible();
+
+      // Edit mode re-opens with the box pre-checked and end date disabled
+      await page.getByRole("button", { name: /edit currentco/i }).click();
+      await expect(
+        page.getByRole("dialog", { name: /edit work history/i }),
+      ).toBeVisible();
+      await expect(
+        page.getByLabel(/i currently work in this role/i),
+      ).toBeChecked();
+      await expect(page.getByLabel(/^end date/i)).toBeDisabled();
     } finally {
       await deleteTestUser(request, user);
     }
