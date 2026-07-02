@@ -43,7 +43,11 @@ _MAX_TOKENS = 8192
 
 # Maximum text characters sent to Claude. Generous for resumes / JDs (most
 # are <20 k chars) but bounded to prevent runaway token costs.
-_MAX_TEXT_CHARS = 50_000
+# Public so the parse-time provenance guard can check extracted bullets
+# against the SAME truncated text the model actually saw — checking the
+# full document would misread a truncation artifact as a hallucination.
+MAX_TEXT_CHARS = 50_000
+_MAX_TEXT_CHARS = MAX_TEXT_CHARS
 
 
 def _get_client() -> anthropic.AsyncAnthropic:
