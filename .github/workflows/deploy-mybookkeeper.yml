@@ -137,11 +137,11 @@ jobs:
 
             echo "--- Preflight: verify required env files exist ---"
             test -f /srv/myfreeapps/apps/mybookkeeper/.env || {
-              echo "::error::Missing /srv/myfreeapps/apps/mybookkeeper/.env — run setup.sh or create env files manually first"
+              echo "::error::Missing /srv/myfreeapps/apps/mybookkeeper/.env — seed with 'cd /srv/myfreeapps && PYTHONPATH=packages/shared-backend python3 -m platform_shared.infra.seed_env --app mybookkeeper'"
               exit 1
             }
             test -f /srv/myfreeapps/apps/mybookkeeper/backend/.env.docker || {
-              echo "::error::Missing /srv/myfreeapps/apps/mybookkeeper/backend/.env.docker — run setup.sh or create env files manually first"
+              echo "::error::Missing /srv/myfreeapps/apps/mybookkeeper/backend/.env.docker — seed with 'cd /srv/myfreeapps && PYTHONPATH=packages/shared-backend python3 -m platform_shared.infra.seed_env --app mybookkeeper'"
               exit 1
             }
             echo "Env files present — proceeding"

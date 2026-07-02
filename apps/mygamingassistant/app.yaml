@@ -24,7 +24,8 @@ registry_images: true
 # matching VITE_SERVE_ONLY flag to hide all auth UI. MBK / MJH / MPT keep this
 # false — they are fully auth-gated and have no serve-only mode.
 serve_only_build_arg: true
-env_seed_command: create from .env.example first
+env_seed_command: seed with 'cd /srv/myfreeapps && PYTHONPATH=packages/shared-backend
+  python3 -m platform_shared.infra.seed_env --app mygamingassistant'
 # R2 clips/screenshots reach the browser by ONE of two serving modes, so the CSP
 # allows both hosts in img-src (screenshots), media-src (clips), and connect-src
 # (blob fetches):
