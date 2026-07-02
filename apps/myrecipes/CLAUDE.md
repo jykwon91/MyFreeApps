@@ -121,6 +121,15 @@ names singular.
 | `apps/myrecipes/.env` | Compose-level -- only `DB_PASSWORD` |
 | `apps/myrecipes/backend/.env.docker` | App-level -- all other secrets; see `backend/.env.docker.example` |
 
+Seed both in one shot on the VPS -- secrets are auto-generated, deploy values
+stamped, and the command prints a checklist of operator-external values
+(Sentry DSN, SMTP, Turnstile) to fill in. Re-run with `--check` to verify:
+
+```bash
+cd /srv/myfreeapps
+PYTHONPATH=packages/shared-backend python3 -m platform_shared.infra.seed_env --app myrecipes
+```
+
 **Critical env vars:**
 
 | Var | Required | Notes |

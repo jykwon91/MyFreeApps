@@ -13,6 +13,10 @@ outputs (Caddyfile, docker-compose.yml, caddy.Dockerfile, deploy.yml)
 from `infra/templates/*.j2`. This module calls it once at the end so a
 single `new_app` invocation produces a fully-bootable app directory.
 
+Before the app's first deploy, :mod:`platform_shared.infra.seed_env`
+creates both required env files on the VPS (secrets auto-generated,
+operator-external values left blank with a checklist).
+
 CLI::
 
     python -m platform_shared.infra.new_app mypizzatracker \\
@@ -149,7 +153,10 @@ def _write_app_yaml(repo_root: Path, slug: str, *,
         # key also defaults to enabled). Flip to False to scaffold an app
         # as manual-dispatch-only.
         "automated_deploy": True,
-        "env_seed_command": "create from .env.example first",
+        "env_seed_command": (
+            "seed with 'cd /srv/myfreeapps && PYTHONPATH=packages/shared-backend "
+            f"python3 -m platform_shared.infra.seed_env --app {slug}'"
+        ),
         "csp": (
             "default-src 'self'; "
             "script-src 'self' https://challenges.cloudflare.com; "
@@ -357,6 +364,11 @@ def _cli() -> int:
     print(f"Scaffolded app: {summary['app_dir']}")
     print(f"Files written:  {summary['files_written']}")
     print(f"Tier 3 rendered: {len(summary['rendered'])} files")
+    print(
+        "Before the first deploy, seed the env files on the VPS:\n"
+        "  cd /srv/myfreeapps && PYTHONPATH=packages/shared-backend "
+        f"python3 -m platform_shared.infra.seed_env --app {args.slug}"
+    )
     if not summary["uv_export_succeeded"]:
         print(
             "WARNING: uv was unavailable or failed. After installing uv, run:\n"

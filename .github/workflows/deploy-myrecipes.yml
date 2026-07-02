@@ -132,11 +132,11 @@ jobs:
 
             echo "--- Preflight: verify required env files exist ---"
             test -f /srv/myfreeapps/apps/myrecipes/.env || {
-              echo "::error::Missing /srv/myfreeapps/apps/myrecipes/.env — create from .env.example first"
+              echo "::error::Missing /srv/myfreeapps/apps/myrecipes/.env — seed with 'cd /srv/myfreeapps && PYTHONPATH=packages/shared-backend python3 -m platform_shared.infra.seed_env --app myrecipes'"
               exit 1
             }
             test -f /srv/myfreeapps/apps/myrecipes/backend/.env.docker || {
-              echo "::error::Missing /srv/myfreeapps/apps/myrecipes/backend/.env.docker — create from .env.example first"
+              echo "::error::Missing /srv/myfreeapps/apps/myrecipes/backend/.env.docker — seed with 'cd /srv/myfreeapps && PYTHONPATH=packages/shared-backend python3 -m platform_shared.infra.seed_env --app myrecipes'"
               exit 1
             }
             echo "Env files present — proceeding"
