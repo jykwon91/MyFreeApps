@@ -18,7 +18,8 @@
 # /etc/caddy/Caddyfile. If a block's DNS record is created AFTER the block
 # was already synced (ACME has been failing + backing off), touch this file
 # (any comment change) and dispatch a deploy to force the reload that
-# re-attempts certificate issuance. Done 2026-07-02 for myrecipes go-live.
+# re-attempts certificate issuance. Done 2026-07-02 for myrecipes go-live (x2 —
+# first post-DNS attempt likely hit stale negative DNS cache at the CA).
 
 # MyBookkeeper — primary domain.
 # Both addresses listed during the myfreeapps.org cutover so existing
