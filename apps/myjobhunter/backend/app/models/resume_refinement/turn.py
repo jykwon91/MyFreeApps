@@ -13,6 +13,8 @@ Roles:
 - ``user_custom`` — user supplies their own rewrite for the current target.
 - ``user_request_alternative`` — user asks Claude for a different proposal
   for the same target.
+- ``user_created_target`` — user clicked a draft line to create their own
+  improvement target (user-directed targeting).
 - ``user_skip`` — user skips the current target without modifying it.
 - ``session_complete`` — terminal turn; user marked the session done.
 """
@@ -94,6 +96,7 @@ class ResumeRefinementTurn(Base):
             "'user_accept_flagged',"
             "'user_custom',"
             "'user_request_alternative',"
+            "'user_created_target',"
             "'user_skip',"
             "'session_complete'"
             ")",

@@ -34,6 +34,7 @@ from app.services.resume_refinement.session_turn_service import (
     accept_custom,
     accept_flagged,
     accept_pending,
+    create_target_from_line,
     navigate,
     request_alternative,
     skip_target,
@@ -67,7 +68,11 @@ from app.repositories.profile import (
     skill_repository,
     work_history_repository,
 )
-from app.repositories.resume_refinement import session_repo, turn_repo
+from app.repositories.resume_refinement import (
+    session_repo,
+    session_target_repo,
+    turn_repo,
+)
 from app.services.resume_refinement import critique_service, rewrite_service
 
 __all__ = [
@@ -84,6 +89,7 @@ __all__ = [
     "request_alternative",
     "skip_target",
     "navigate",
+    "create_target_from_line",
     # Private helpers (tests import these directly)
     "_PREFETCH_CONCURRENCY",
     "_apply_rewrite",
@@ -96,6 +102,7 @@ __all__ = [
     "_with_turns",
     # Module refs (tests use patch / patch.object against these)
     "session_repo",
+    "session_target_repo",
     "turn_repo",
     "rewrite_service",
     "critique_service",

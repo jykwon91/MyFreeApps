@@ -9,6 +9,9 @@ Public entry points (called from ``app.api.resume_refinement``):
 - ``request_alternative`` — regenerate the proposal for the same target.
 - ``skip_target`` — move to the next target without modifying.
 - ``navigate`` — move the iteration cursor without consuming the active proposal.
+- ``create_target_from_line`` — user clicked a draft line: jump to the
+  matching target if one exists, otherwise insert a user-origin target
+  after the cursor and generate a proposal for it.
 
 Each "advance" entry point has the same shape:
 1. Apply the user's resolution to the draft (or skip).
@@ -19,12 +22,17 @@ Each "advance" entry point has the same shape:
 """
 from __future__ import annotations
 
+import re
 import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.resume_refinement.session import ResumeRefinementSession
-from app.repositories.resume_refinement import session_repo, turn_repo
+from app.repositories.resume_refinement import (
+    session_repo,
+    session_target_repo,
+    turn_repo,
+)
 from app.services.resume_refinement.errors import (
     NoMoreTargets,
     NoPendingProposal,
@@ -293,5 +301,83 @@ async def navigate(
 
     # Cache miss: fall through to generation. ``_generate_next_proposal``
     # writes the result back to the cache for future navigations.
+    session = await _generate_next_proposal(db, session, user_id=user_id, hint=None)
+    return await _with_turns(db, session)
+
+
+# Markdown decoration stripped before comparing a clicked line against
+# stored target text — mirrors the frontend's plainText() normalization.
+_MD_DECORATION = re.compile(r"\*\*|\*")
+
+
+def _normalize_line(text: str) -> str:
+    return _MD_DECORATION.sub("", text).strip()
+
+
+async def create_target_from_line(
+    *,
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    session_id: uuid.UUID,
+    current_text: str,
+    section: str,
+) -> ResumeRefinementSession:
+    """Create (or jump to) an improvement target from a clicked draft line.
+
+    Dedup first: if the line matches an existing target's ``current_text``
+    (markdown decoration stripped), jump to that target instead of
+    duplicating — re-clicking a previously-skipped line is a legitimate
+    "let me reconsider" gesture and should surface its cached proposal.
+
+    Otherwise a user-origin target is inserted immediately AFTER the
+    cursor (not appended) so the progress bar's "resolved" count stays
+    accurate, the cursor moves to it, and a proposal is generated
+    on-demand (user targets are never prefetched).
+    """
+    session = await _load_active(db, session_id, user_id)
+    normalized = _normalize_line(current_text)
+    if not normalized:
+        raise ValueError("The selected line is empty.")
+
+    targets = session.improvement_targets or []
+    for idx, existing in enumerate(targets):
+        if _normalize_line(str(existing.get("current_text") or "")) != normalized:
+            continue
+        if idx == session.target_index:
+            # Already the active target — nothing to do.
+            return await _with_turns(db, session)
+        session = await session_repo.set_target_index(db, session, new_index=idx)
+        cached = await session_repo.hydrate_pending_from_cache(
+            db, session, target_index=idx,
+        )
+        if cached is not None:
+            return await _with_turns(db, cached)
+        session = await _generate_next_proposal(db, session, user_id=user_id, hint=None)
+        return await _with_turns(db, session)
+
+    new_target = {
+        "section": section.strip() or "Your selection",
+        # Raw line text — must remain a verbatim substring of the draft
+        # so _apply_rewrite's replace still matches on accept.
+        "current_text": current_text.strip(),
+        "improvement_type": "other",
+        "severity": "low",
+        "notes": None,
+        "origin": "user",
+    }
+    insert_at = min(session.target_index + 1, len(targets))
+
+    await turn_repo.append(
+        db,
+        session_id=session.id,
+        turn_index=session.turn_count,
+        role="user_created_target",
+        target_section=new_target["section"],
+        user_text=normalized,
+    )
+    session = await session_target_repo.insert_target_at(
+        db, session, target=new_target, insert_at=insert_at,
+    )
+
     session = await _generate_next_proposal(db, session, user_id=user_id, hint=None)
     return await _with_turns(db, session)

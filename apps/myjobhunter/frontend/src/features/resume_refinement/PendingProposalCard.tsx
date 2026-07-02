@@ -31,6 +31,9 @@ interface PendingProposalCardProps {
   /** Surface for the composer's optimistic echo — the parent renders
    *  it inside ConversationHistory (which lives outside this card). */
   onPendingEchoChange?: (echo: { text: string } | null) => void;
+  /** A sibling mutation is in flight (click-to-target generation owned
+   *  by ActiveSessionView) — folds into the unified pending gate. */
+  externalPending?: boolean;
 }
 
 // Top-level orchestrator for the suggestion area. Owns the
@@ -40,6 +43,7 @@ interface PendingProposalCardProps {
 export default function PendingProposalCard({
   session,
   onPendingEchoChange,
+  externalPending = false,
 }: PendingProposalCardProps) {
   const [mode, setMode] = useState<SuggestionMode>(SuggestionMode.VIEW);
   // Dedicated states: customText belongs to "Write my own" (replaces
@@ -91,7 +95,9 @@ export default function PendingProposalCard({
     flaggedAccept.isLoading ||
     custom.isLoading ||
     alternative.isLoading ||
-    skip.isLoading;
+    skip.isLoading ||
+    externalPending;
+  const isUserTarget = activeTarget?.origin === "user";
 
   // Bail when every target is consumed — AND for the zero-target
   // session, where there is nothing to suggest (CompletePanel's
@@ -186,7 +192,12 @@ export default function PendingProposalCard({
           <span className="truncate">
             Suggestion {session.target_index + 1} / {totalTargets}
           </span>
-          {activeTarget && (
+          {activeTarget && isUserTarget && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium shrink-0 bg-primary/10 text-primary">
+              Your pick
+            </span>
+          )}
+          {activeTarget && !isUserTarget && (
             <span
               className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium shrink-0 ${SEVERITY_BADGE_CLASS[activeTarget.severity]}`}
             >
@@ -209,8 +220,10 @@ export default function PendingProposalCard({
         total={totalTargets}
       />
 
-      {/* Improvement type pill as subtitle */}
-      {activeTarget && (
+      {/* Improvement type pill as subtitle — suppressed for user-created
+          targets, whose placeholder "other" type explains nothing next
+          to the "Your pick" badge. */}
+      {activeTarget && !isUserTarget && (
         <p className="text-xs">
           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-primary/10 text-primary">
             {IMPROVEMENT_TYPE_LABEL[activeTarget.improvement_type]}
@@ -218,16 +231,20 @@ export default function PendingProposalCard({
         </p>
       )}
 
-      <SuggestionBody
-        clarifyingQuestion={clarifyingQuestion}
-        proposal={proposal}
-        rationale={rationale}
-        isPending={isPending}
-        isRegenerating={alternative.isLoading}
-        canForce={session.guard_can_force}
-        onForce={handleForceAccept}
-        forceIsLoading={flaggedAccept.isLoading}
-      />
+      {/* aria-live: focus never moves when a proposal lands (passive
+          transitions by convention here) — this is the SR signal. */}
+      <div aria-live="polite">
+        <SuggestionBody
+          clarifyingQuestion={clarifyingQuestion}
+          proposal={proposal}
+          rationale={rationale}
+          isPending={isPending}
+          isRegenerating={alternative.isLoading || externalPending}
+          canForce={session.guard_can_force}
+          onForce={handleForceAccept}
+          forceIsLoading={flaggedAccept.isLoading}
+        />
+      </div>
 
       {mode === SuggestionMode.VIEW && (
         <SuggestionActions

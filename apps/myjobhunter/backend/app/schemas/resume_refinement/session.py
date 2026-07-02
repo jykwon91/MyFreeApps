@@ -35,6 +35,11 @@ class ImprovementTarget(BaseModel):
         default=None,
         description="Critique pass's free-form notes about why this target matters.",
     )
+    origin: Literal["ai", "user"] = Field(
+        default="ai",
+        description="'ai' for critique-chosen targets; 'user' when the user "
+        "clicked a draft line to create the target themselves.",
+    )
 
 
 class TurnRead(BaseModel):
@@ -140,3 +145,16 @@ class NavigateRequest(BaseModel):
         ...,
         description="Move to the next or previous improvement target.",
     )
+
+
+class TargetFromLineRequest(BaseModel):
+    """User clicked a draft line to get a suggestion for it.
+
+    ``current_text`` must be the raw markdown line content (minus any
+    ``- `` bullet marker) so the rewrite's verbatim substring replace
+    still matches the draft. ``section`` is the nearest preceding
+    ``##`` heading — used for the target label and transcript grouping.
+    """
+
+    current_text: str = Field(..., min_length=1, max_length=2000)
+    section: str = Field(default="", max_length=200)

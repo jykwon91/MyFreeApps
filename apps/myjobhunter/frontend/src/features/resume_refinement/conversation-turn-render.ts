@@ -16,6 +16,7 @@ export function isUserRole(role: RefinementTurn["role"]): boolean {
     role === "user_accept_flagged" ||
     role === "user_custom" ||
     role === "user_request_alternative" ||
+    role === "user_created_target" ||
     role === "user_skip"
   );
 }
@@ -58,6 +59,10 @@ export function renderTurnBody(turn: RefinementTurn): string | null {
       // "Try something with: …" prefix mislabeled clarify answers as
       // reroll hints (operator complaint, 2026-07-02).
       return turn.user_text ?? "Asked for another take.";
+    case "user_created_target":
+      return turn.user_text
+        ? `Picked from the draft: ${turn.user_text}`
+        : "Picked a line from the draft.";
     case "user_skip":
       return "Skipped.";
     case "session_complete":

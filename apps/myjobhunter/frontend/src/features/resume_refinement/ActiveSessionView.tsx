@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { showError, extractErrorMessage } from "@platform/ui";
 import CurrentDraftPanel from "@/features/resume_refinement/CurrentDraftPanel";
 import PendingProposalCard from "@/features/resume_refinement/PendingProposalCard";
 import CompletePanel from "@/features/resume_refinement/CompletePanel";
@@ -6,11 +7,16 @@ import SessionPreparingPanel from "@/features/resume_refinement/SessionPreparing
 import ConversationHistory from "@/features/resume_refinement/ConversationHistory";
 import ActiveSessionLayout from "@/features/resume_refinement/ActiveSessionLayout";
 import ResumeRefinementHeader from "@/features/resume_refinement/ResumeRefinementHeader";
+import { useCreateTargetFromLineMutation } from "@/lib/resumeRefinementApi";
 import type { RefinementSession } from "@/types/resume-refinement/refinement-session";
 
 interface ActiveSessionViewProps {
   session: RefinementSession;
   onStartNew: () => void;
+}
+
+function normalizeLine(text: string): string {
+  return text.replace(/\*\*?/g, "").trim();
 }
 
 export default function ActiveSessionView({ session, onStartNew }: ActiveSessionViewProps) {
@@ -40,12 +46,52 @@ export default function ActiveSessionView({ session, onStartNew }: ActiveSession
     session.target_index < session.improvement_targets.length
       ? session.improvement_targets[session.target_index]
       : null;
-  const highlightText = activeTarget?.current_text ?? null;
+
+  // Click-to-target: the clicked line becomes the highlight IMMEDIATELY
+  // (before the 2-10s generation resolves); the override clears once
+  // the refetched session's active target matches the clicked line.
+  const [createTargetFromLine, createTarget] = useCreateTargetFromLineMutation();
+  const [pendingLine, setPendingLine] = useState<string | null>(null);
+  const controlsRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (
+      pendingLine &&
+      activeTarget &&
+      normalizeLine(activeTarget.current_text) === normalizeLine(pendingLine)
+    ) {
+      setPendingLine(null);
+    }
+  }, [activeTarget, pendingLine]);
+
+  async function handleLineSelected({ text, section }: { text: string; section: string }) {
+    if (createTarget.isLoading) return;
+    setPendingLine(text);
+    try {
+      await createTargetFromLine({
+        id: session.id,
+        current_text: text,
+        section,
+      }).unwrap();
+      // On narrow viewports the suggestion card sits below the draft —
+      // bring it into view so the generated proposal isn't off-screen.
+      if (window.innerWidth < 1024) {
+        controlsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    } catch (err) {
+      setPendingLine(null);
+      showError(extractErrorMessage(err));
+    }
+  }
+
+  const highlightText = pendingLine ?? activeTarget?.current_text ?? null;
 
   const draft = (
     <CurrentDraftPanel
       markdown={session.current_draft}
       highlightText={highlightText}
+      onLineClick={session.status === "active" ? handleLineSelected : undefined}
+      clickDisabled={createTarget.isLoading}
     />
   );
 
@@ -59,7 +105,7 @@ export default function ActiveSessionView({ session, onStartNew }: ActiveSession
   // On desktop (lg+) rendered second in visual flow (order-2).
   // On mobile rendered first (order-1).
   const controls = (
-    <div className="flex flex-col gap-2 min-h-0 h-full">
+    <div className="flex flex-col gap-2 min-h-0 h-full" ref={controlsRef}>
       {/* History zone */}
       <div className="order-2 lg:order-1 lg:flex-1 lg:overflow-y-auto lg:min-h-0 pr-1">
         <ConversationHistory
@@ -77,6 +123,7 @@ export default function ActiveSessionView({ session, onStartNew }: ActiveSession
           <PendingProposalCard
             session={session}
             onPendingEchoChange={setPendingEcho}
+            externalPending={createTarget.isLoading}
           />
         )}
         {/* Gated: CompletePanel's reached-end math treats a null
