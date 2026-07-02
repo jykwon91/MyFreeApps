@@ -79,6 +79,15 @@ const resumeRefinementApi = baseApi
         invalidatesTags: (_result, _err, { id }) => [{ type: REFINEMENT_TAG, id }],
       }),
 
+      retryPreparation: build.mutation<RefinementSession, string>({
+        query: (id) => ({
+          url: `/resume-refinement/sessions/${id}/retry-preparation`,
+          method: "POST",
+          data: {},
+        }),
+        invalidatesTags: (_result, _err, id) => [{ type: REFINEMENT_TAG, id }],
+      }),
+
       completeRefinementSession: build.mutation<RefinementSession, string>({
         query: (id) => ({
           url: `/resume-refinement/sessions/${id}/complete`,
@@ -99,5 +108,6 @@ export const {
   useRequestAlternativeMutation,
   useSkipTargetMutation,
   useNavigateRefinementMutation,
+  useRetryPreparationMutation,
   useCompleteRefinementSessionMutation,
 } = resumeRefinementApi;

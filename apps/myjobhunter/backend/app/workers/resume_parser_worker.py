@@ -217,17 +217,30 @@ def _build_parsed_fields(claude_response: dict) -> dict:
 
 
 async def main() -> None:
+    # Deferred import: refinement_prepare_worker imports _is_transient
+    # from THIS module, so a top-level import here would be circular.
+    from app.workers.refinement_prepare_worker import (  # noqa: PLC0415
+        process_one_session,
+    )
+
     logger.info(
-        "Resume parser worker started — polling every %ds", POLL_INTERVAL_SECONDS,
+        "Resume worker started (parse + refinement prepare) — polling every %ds",
+        POLL_INTERVAL_SECONDS,
     )
     while True:
         try:
-            found = await process_one()
+            found_parse = await process_one()
         except Exception:
-            logger.exception("Unexpected error in worker loop")
-            found = False
+            logger.exception("Unexpected error in resume-parse loop")
+            found_parse = False
 
-        if not found:
+        try:
+            found_prepare = await process_one_session()
+        except Exception:
+            logger.exception("Unexpected error in refinement-prepare loop")
+            found_prepare = False
+
+        if not (found_parse or found_prepare):
             await asyncio.sleep(POLL_INTERVAL_SECONDS)
 
 

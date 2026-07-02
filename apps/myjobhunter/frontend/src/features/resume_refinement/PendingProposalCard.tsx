@@ -59,7 +59,12 @@ export default function PendingProposalCard({ session }: PendingProposalCardProp
     alternative.isLoading ||
     skip.isLoading;
 
-  if (totalTargets > 0 && session.target_index >= totalTargets) {
+  // Bail when every target is consumed — AND for the zero-target
+  // session, where there is nothing to suggest (CompletePanel's
+  // "nothing to flag" state owns that render). The old
+  // `totalTargets > 0 &&` clause inverted the zero case and showed a
+  // permanently-thinking "Suggestion 1 / 0" card.
+  if (session.target_index >= totalTargets) {
     return null;
   }
 

@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Sparkles } from "lucide-react";
 import { Skeleton } from "@platform/ui";
 import SessionStartPanel from "@/features/resume_refinement/SessionStartPanel";
 import CurrentDraftPanel from "@/features/resume_refinement/CurrentDraftPanel";
 import PendingProposalCard from "@/features/resume_refinement/PendingProposalCard";
 import CompletePanel from "@/features/resume_refinement/CompletePanel";
+import SessionPreparingPanel from "@/features/resume_refinement/SessionPreparingPanel";
 import ConversationHistory from "@/features/resume_refinement/ConversationHistory";
 import ActiveSessionLayout from "@/features/resume_refinement/ActiveSessionLayout";
 import { useGetRefinementSessionQuery } from "@/lib/resumeRefinementApi";
@@ -115,6 +116,22 @@ interface ActiveSessionViewProps {
 }
 
 function ActiveSessionView({ session, onStartNew }: ActiveSessionViewProps) {
+  // One-time fade on the composer zone when the background preparation
+  // unlocks the session (preparing → active). Passive transition — no
+  // focus is moved; the aria-live heading in SessionPreparingPanel and
+  // the fade are the only signals.
+  const prevStatusRef = useRef(session.status);
+  const [justUnlocked, setJustUnlocked] = useState(false);
+  useEffect(() => {
+    if (prevStatusRef.current === "preparing" && session.status === "active") {
+      setJustUnlocked(true);
+    }
+    prevStatusRef.current = session.status;
+  }, [session.status]);
+
+  const isPreparing = session.status === "preparing" || session.status === "failed";
+  const showWorkSurface = session.status === "active" || session.status === "completed";
+
   const activeTarget =
     session.improvement_targets &&
     session.target_index < session.improvement_targets.length
@@ -146,18 +163,32 @@ function ActiveSessionView({ session, onStartNew }: ActiveSessionViewProps) {
       </div>
 
       {/* Composer zone */}
-      <div className="order-1 lg:order-2 shrink-0">
+      <div
+        className={`order-1 lg:order-2 shrink-0 ${justUnlocked ? "unlock-fade-in" : ""}`}
+      >
+        {isPreparing && <SessionPreparingPanel session={session} />}
         {session.status === "active" && (
           <PendingProposalCard session={session} />
         )}
-        <CompletePanel session={session} />
+        {/* Gated: CompletePanel's reached-end math treats a null
+            targets list as "done", so rendering it while preparing
+            would show "Mark resume done" before the critique ran. */}
+        {showWorkSurface && <CompletePanel session={session} />}
       </div>
     </div>
   );
 
   return (
     <ActiveSessionLayout
-      header={<ResumeRefinementHeader compact onStartNew={onStartNew} />}
+      header={
+        <ResumeRefinementHeader
+          compact
+          onStartNew={onStartNew}
+          startNewLabel={
+            session.status === "preparing" ? "Cancel" : undefined
+          }
+        />
+      }
       draft={draft}
       controls={controls}
     />
@@ -167,9 +198,16 @@ function ActiveSessionView({ session, onStartNew }: ActiveSessionViewProps) {
 interface ResumeRefinementHeaderProps {
   compact?: boolean;
   onStartNew?: () => void;
+  /** Override the escape-hatch label — "Cancel" while preparing (it's
+   *  an exit from a wait, not a choice among sessions). */
+  startNewLabel?: string;
 }
 
-function ResumeRefinementHeader({ compact = false, onStartNew }: ResumeRefinementHeaderProps) {
+function ResumeRefinementHeader({
+  compact = false,
+  onStartNew,
+  startNewLabel,
+}: ResumeRefinementHeaderProps) {
   if (compact) {
     return (
       <div className="flex items-center justify-between gap-2">
@@ -183,7 +221,7 @@ function ResumeRefinementHeader({ compact = false, onStartNew }: ResumeRefinemen
             onClick={onStartNew}
             className="text-xs underline text-muted-foreground hover:text-foreground"
           >
-            Start a different session
+            {startNewLabel ?? "Start a different session"}
           </button>
         )}
       </div>

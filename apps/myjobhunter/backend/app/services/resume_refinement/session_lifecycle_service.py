@@ -2,12 +2,20 @@
 
 Public entry points (called from ``app.api.resume_refinement``):
 
-- ``start_session`` — kick off a new session from a completed
-  ``resume_upload_jobs`` row. Renders the parsed fields to markdown,
-  runs the initial critique pass, and generates the first proposal.
+- ``start_session`` — create a ``preparing`` session from a completed
+  ``resume_upload_jobs`` row and return in well under a second. The
+  initial draft renders inline (profile-table read, no Claude call);
+  the expensive critique + prefetch run in the background worker.
+- ``retry_preparation`` — re-queue a ``failed`` preparation.
 - ``get_session_state`` — return the current session including pending
   proposal. Pure read.
 - ``complete_session`` — terminal: mark the session done.
+
+Worker-side entry point (called from
+``app.workers.refinement_prepare_worker`` after an atomic claim):
+
+- ``prepare_session`` — critique → prefetch → hydrate first target →
+  unlock (status ``active``). Idempotent on retry.
 """
 from __future__ import annotations
 
@@ -33,6 +41,8 @@ from app.repositories.profile import (
 from app.repositories.resume_refinement import session_repo, turn_repo
 from app.services.resume_refinement import critique_service
 from app.services.resume_refinement.errors import (
+    PreparationFailed,
+    SessionNotActive,
     SessionNotFound,
     SourceJobNotFound,
     SourceJobNotReady,
@@ -53,7 +63,17 @@ async def start_session(
     user_id: uuid.UUID,
     source_resume_job_id: uuid.UUID,
 ) -> ResumeRefinementSession:
-    """Create a new session, run critique, and queue the first proposal."""
+    """Create a ``preparing`` session and return immediately.
+
+    Rendering the initial draft from profile tables is a cheap DB read,
+    so it happens inline — the frontend shows the draft right away. The
+    critique pass and the all-targets prefetch (1-2 minutes of Claude
+    calls) run in the background worker; the session unlocks
+    (status ``active``) when the first proposal is ready. This used to
+    be one synchronous request, which meant a dead button spinner for
+    the whole wait and a fragile 90s+ request vs the 2-minute Caddy
+    timeouts.
+    """
     job = await resume_upload_job_repo.get_by_id_for_user(
         db, source_resume_job_id, user_id,
     )
@@ -67,7 +87,7 @@ async def start_session(
         )
 
     # Build the initial draft from profile tables — NOT from result_parsed_fields,
-    # which only stores {"raw": "<Claude JSON string>"} and not the structured data.
+    # which only stores the raw Claude blob and not the structured data.
     profile = await profile_repository.get_by_user_id(db, user_id)
     work_history_rows = await work_history_repository.list_by_user(db, user_id)
     education_rows = await education_repository.list_by_user(db, user_id)
@@ -87,62 +107,113 @@ async def start_session(
         user_id=user_id,
         source_resume_job_id=source_resume_job_id,
         initial_draft=initial_draft,
+        status="preparing",
     )
+    return await _with_turns(db, session)
 
-    # Run the critique pass. If it fails, the session still exists with
-    # an empty improvement_targets — the caller can retry.
-    try:
+
+async def prepare_session(
+    *,
+    db: AsyncSession,
+    session: ResumeRefinementSession,
+    user_id: uuid.UUID,
+) -> ResumeRefinementSession:
+    """Run the expensive preparation for a claimed ``preparing`` session.
+
+    Called from the background worker. Idempotent on retry: the critique
+    pass is skipped when ``improvement_targets`` is already populated (a
+    previous attempt got that far), so a retry after a prefetch-stage
+    failure doesn't re-spend the critique call.
+
+    Raises on failure — the worker decides transient (release the claim,
+    poll retries) vs permanent (status ``failed`` + error_message).
+    """
+    if session.improvement_targets is None:
         critique = await critique_service.run_critique(
-            resume_markdown=initial_draft,
+            resume_markdown=session.current_draft,
             user_id=user_id,
             session_id=session.id,
         )
-    except Exception as exc:
-        logger.error(
-            "Critique pass failed for session %s: %s", session.id, exc,
+        session = await session_repo.update_critique(
+            db,
+            session,
+            improvement_targets=critique["targets"],
+            tokens_in=critique["input_tokens"],
+            tokens_out=critique["output_tokens"],
+            cost_usd=critique["cost_usd"],
         )
-        raise
+        await turn_repo.append(
+            db,
+            session_id=session.id,
+            turn_index=0,
+            role="ai_critique",
+            target_section=None,
+            rationale=f"Identified {len(critique['targets'])} improvement targets.",
+            draft_after=session.current_draft,
+            tokens_in=critique["input_tokens"],
+            tokens_out=critique["output_tokens"],
+        )
 
-    session = await session_repo.update_critique(
-        db,
-        session,
-        improvement_targets=critique["targets"],
-        tokens_in=critique["input_tokens"],
-        tokens_out=critique["output_tokens"],
-        cost_usd=critique["cost_usd"],
-    )
-    await turn_repo.append(
-        db,
-        session_id=session.id,
-        turn_index=0,
-        role="ai_critique",
-        target_section=None,
-        rationale=f"Identified {len(critique['targets'])} improvement targets.",
-        draft_after=initial_draft,
-        tokens_in=critique["input_tokens"],
-        tokens_out=critique["output_tokens"],
-    )
+    targets = session.improvement_targets or []
+    if not targets:
+        # Nothing to draft — unlock straight into the "nothing to flag"
+        # completion state. Waiting for a "first proposal" here would
+        # spin forever (there is no target 0).
+        return await session_repo.mark_active(db, session)
 
     # Prefetch proposals for ALL critique targets in parallel. The
     # operator's stated workflow is to browse every suggestion before
     # acting, so we pay the Claude cost up front to make navigation
-    # instant. Wall-clock latency is one Claude round-trip (capped at
-    # _PREFETCH_CONCURRENCY in flight); per-target failures are
-    # graceful — those targets generate on first visit.
-    session = await _prefetch_all_proposals(
-        db, session, user_id=user_id,
-    )
+    # instant. Per-target failures are graceful — those targets
+    # generate on first visit.
+    session = await _prefetch_all_proposals(db, session, user_id=user_id)
 
-    # Hydrate pending_* from the cache for the starting target so the
-    # session-start response includes a proposal. If the prefetch for
-    # target 0 failed, fall back to a synchronous generation (matches
-    # the pre-prefetch behavior).
+    # Hydrate pending_* from the cache for the starting target. If the
+    # prefetch for target 0 failed, fall back to a synchronous
+    # generation.
     hydrated = await session_repo.hydrate_pending_from_cache(
         db, session, target_index=session.target_index,
     )
     if hydrated is not None:
-        return await _with_turns(db, hydrated)
-    session = await _generate_next_proposal(db, session, user_id=user_id, hint=None)
+        session = hydrated
+    else:
+        session = await _generate_next_proposal(
+            db, session, user_id=user_id, hint=None,
+        )
+
+    # Unlock gate: never flip to active without real content for the
+    # current target. GET /sessions/{id} is a pure read (no
+    # generate-on-poll), so unlocking early would strand the user on a
+    # permanently-stuck "working on a suggestion" placeholder.
+    if not (session.pending_proposal or session.pending_clarifying_question):
+        raise PreparationFailed(
+            "Suggestion generation failed for the first target."
+        )
+
+    return await session_repo.mark_active(db, session)
+
+
+async def retry_preparation(
+    *,
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    session_id: uuid.UUID,
+) -> ResumeRefinementSession:
+    """Re-queue a ``failed`` background preparation (frontend "Try again").
+
+    The critique output survives the failure, so a retry after a
+    prefetch-stage failure resumes from the prefetch (see
+    ``prepare_session`` idempotency note).
+    """
+    session = await session_repo.get_by_id_for_user(db, session_id, user_id)
+    if session is None:
+        raise SessionNotFound()
+    if session.status != "failed":
+        raise SessionNotActive(
+            f"Session is in status={session.status!r}; only failed "
+            "preparations can be retried."
+        )
+    session = await session_repo.reset_for_retry(db, session)
     return await _with_turns(db, session)
 
 

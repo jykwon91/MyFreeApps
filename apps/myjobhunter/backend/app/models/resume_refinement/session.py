@@ -4,8 +4,10 @@ A session ties a user to a source resume upload and tracks the
 markdown draft, the prioritized improvement targets, the pending AI
 proposal, and per-session token / cost counters.
 
-Status values: ``active`` (default), ``completed`` (user marked done),
-``abandoned`` (user explicitly walked away or auto-aged out).
+Status values: ``preparing`` (background critique + prefetch running),
+``active`` (unlocked for user mutations), ``completed`` (user marked
+done), ``abandoned`` (user explicitly walked away or auto-aged out),
+``failed`` (background preparation failed; retryable).
 """
 import uuid
 from datetime import datetime, timezone
@@ -50,6 +52,18 @@ class ResumeRefinementSession(Base):
     )
 
     status: Mapped[str] = mapped_column(String(20), default="active", nullable=False)
+
+    # Populated when background preparation fails — surfaced by the
+    # frontend's "Try again" card. Cleared on retry / unlock.
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # Worker claim marker for the ``preparing`` state: set atomically by
+    # ``claim_next_preparing`` so concurrent worker replicas never
+    # prepare the same session twice. Cleared on transient failure so
+    # the next poll retries.
+    preparation_started_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True,
+    )
 
     # The live working markdown document. Updated whenever a user accepts
     # an AI proposal or supplies a custom rewrite for the current target.
@@ -148,9 +162,18 @@ class ResumeRefinementSession(Base):
         counts = self.guard_flag_counts or {}
         return int(counts.get(str(self.target_index), 0)) >= 2
 
+    @property
+    def proposals_ready_count(self) -> int:
+        """How many targets have a drafted proposal (or clarify) cached.
+
+        Drives the honest "Drafting suggestions — k of N ready" copy in
+        the preparing panel without exposing the raw cache payload.
+        """
+        return len(self.proposal_cache or {})
+
     __table_args__ = (
         CheckConstraint(
-            "status IN ('active','completed','abandoned')",
+            "status IN ('preparing','active','completed','abandoned','failed')",
             name="chk_refinement_session_status",
         ),
         Index("ix_refinement_session_user_status", "user_id", "status"),

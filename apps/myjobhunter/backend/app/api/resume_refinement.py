@@ -2,7 +2,8 @@
 
 Endpoints:
 
-POST   /resume-refinement/sessions                          start a new session
+POST   /resume-refinement/sessions                          start a new session (returns status=preparing)
+POST   /resume-refinement/sessions/{id}/retry-preparation   re-queue a failed preparation
 GET    /resume-refinement/sessions                          list user's sessions
 GET    /resume-refinement/sessions/{id}                     read session state
 POST   /resume-refinement/sessions/{id}/accept              accept pending proposal
@@ -42,7 +43,6 @@ from app.services.resume_refinement.errors import (
     SessionNotFound,
     SourceJobNotFound,
     SourceJobNotReady,
-    CritiqueRetryExceeded,
 )
 from app.services.resume_refinement.export_service import (
     ExportFidelityError,
@@ -58,7 +58,12 @@ async def start_session(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_user),
 ) -> SessionWithTurnsRead:
-    """Start a new refinement session from a completed resume upload."""
+    """Start a new refinement session from a completed resume upload.
+
+    Returns in well under a second with ``status="preparing"`` — the
+    critique + prefetch run in the background worker; poll
+    GET /sessions/{id} for the unlock (``status="active"``).
+    """
     try:
         session = await session_service.start_session(
             db=db,
@@ -69,8 +74,27 @@ async def start_session(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except SourceJobNotReady as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
-    except CritiqueRetryExceeded as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    return SessionWithTurnsRead.model_validate(session)
+
+
+@router.post(
+    "/sessions/{session_id}/retry-preparation",
+    response_model=SessionWithTurnsRead,
+)
+async def retry_preparation(
+    session_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(current_active_user),
+) -> SessionWithTurnsRead:
+    """Re-queue a failed background preparation ("Try again")."""
+    try:
+        session = await session_service.retry_preparation(
+            db=db, user_id=user.id, session_id=session_id,
+        )
+    except SessionNotFound as exc:
+        raise HTTPException(status_code=404, detail="Session not found") from exc
+    except SessionNotActive as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     return SessionWithTurnsRead.model_validate(session)
 
 

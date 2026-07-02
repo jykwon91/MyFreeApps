@@ -74,6 +74,7 @@ export default function SessionStartPanel({ onSessionStarted }: SessionStartPane
       <div className="flex justify-end">
         <LoadingButton
           isLoading={isStarting}
+          loadingText="Starting…"
           disabled={!picked}
           onClick={handleStart}
         >

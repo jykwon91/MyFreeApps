@@ -18,6 +18,9 @@ export default function CompletePanel({ session }: CompletePanelProps) {
   const targets = session.improvement_targets ?? [];
   const reachedEnd = session.target_index >= targets.length;
   const isCompleted = session.status === "completed";
+  // Critique found nothing to change — still a legitimately "done"
+  // resume, but the copy shouldn't claim the user reviewed anything.
+  const isEmpty = !isCompleted && targets.length === 0;
 
   const [completeSession, { isLoading: isCompleting }] = useCompleteRefinementSessionMutation();
   const [downloading, setDownloading] = useState<"pdf" | "docx" | null>(null);
@@ -66,19 +69,25 @@ export default function CompletePanel({ session }: CompletePanelProps) {
     }
   }
 
+  let heading = "All targets reviewed";
+  let body =
+    "You've gone through every suggestion. Mark the session done to lock the draft, then download.";
+  if (isCompleted) {
+    heading = "All done";
+    body = "Your refined resume is ready to download in either format.";
+  } else if (isEmpty) {
+    heading = "Nothing to flag";
+    body =
+      "We reviewed your draft and didn't find anything worth changing this pass. Mark it done as-is, or make some edits elsewhere and start a fresh session.";
+  }
+
   return (
     <section className="rounded-lg border border-emerald-300/50 bg-emerald-50 dark:bg-emerald-950/20 p-4 space-y-3">
       <header className="flex items-center gap-2">
         <Check className="size-5 text-emerald-600" />
-        <h2 className="text-sm font-semibold">
-          {isCompleted ? "All done" : "All targets reviewed"}
-        </h2>
+        <h2 className="text-sm font-semibold">{heading}</h2>
       </header>
-      <p className="text-sm text-muted-foreground">
-        {isCompleted
-          ? "Your refined resume is ready to download in either format."
-          : "You've gone through every suggestion. Mark the session done to lock the draft, then download."}
-      </p>
+      <p className="text-sm text-muted-foreground">{body}</p>
       <div className="flex flex-wrap gap-2">
         {!isCompleted && (
           <LoadingButton isLoading={isCompleting} onClick={handleComplete}>

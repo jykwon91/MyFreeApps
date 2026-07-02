@@ -1,7 +1,12 @@
 import type { ImprovementTarget } from "./improvement-target";
 import type { RefinementTurn } from "./refinement-turn";
 
-export type RefinementSessionStatus = "active" | "completed" | "abandoned";
+export type RefinementSessionStatus =
+  | "preparing"
+  | "active"
+  | "completed"
+  | "abandoned"
+  | "failed";
 
 export interface RefinementSession {
   id: string;
@@ -20,6 +25,8 @@ export interface RefinementSession {
   total_tokens_in: number;
   total_tokens_out: number;
   total_cost_usd: string;
+  error_message: string | null;
+  proposals_ready_count: number;
   completed_at: string | null;
   created_at: string;
   updated_at: string;
