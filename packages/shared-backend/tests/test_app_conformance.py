@@ -1130,3 +1130,39 @@ class TestSupportPageWired:
             "not the shared MinIO, so it cannot read the shared transparency object; "
             "rendering the widget would show a persistent 'temporarily unavailable'."
         )
+
+
+@pytest.mark.parametrize("app", _APPS)
+class TestComposeEnvFileFormatRaw:
+    """Every compose env_file reference to backend/.env.docker must use the
+    long syntax with ``format: raw`` (Compose >= 2.30).
+
+    Drift trigger: compose interpolates $-sequences inside env-file values by
+    default, silently corrupting literal secrets. Real incident 2026-07-03:
+    myrecipes' SEED_ADMIN_PASSWORD_HASH ($2b$12$<salt+digest>) had its
+    $<alnum-run> substituted to blank (compose logged "variable is not set —
+    defaulting to a blank string"), the api booted with a non-bcrypt hash,
+    SeedAdminInvalidHashError crash-looped the container, and the deploy had
+    to be rolled back. ``format: raw`` declares the whole file literal,
+    protecting seeder-written AND hand-edited values.
+    """
+
+    def test_env_file_entries_use_format_raw(self, app: str) -> None:
+        compose_src = _read("apps", app, "docker-compose.yml")
+        assert "env_file: backend/.env.docker" not in compose_src, (
+            f"{app}/docker-compose.yml uses short-syntax env_file, which lets "
+            f"compose interpolate $-sequences in values (corrupts bcrypt hashes "
+            f"like SEED_ADMIN_PASSWORD_HASH). Use the long syntax with "
+            f"`format: raw` — edit infra/templates/docker-compose.yml.j2 and "
+            f"re-render via `python -m platform_shared.infra.render --all`."
+        )
+        refs = compose_src.count("backend/.env.docker")
+        raw_refs = len(
+            re.findall(r"- path: backend/\.env\.docker\n\s+format: raw", compose_src)
+        )
+        assert refs > 0 and raw_refs == refs, (
+            f"{app}/docker-compose.yml: {refs} env_file reference(s) to "
+            f"backend/.env.docker but only {raw_refs} carry `format: raw`. "
+            f"Every entry must disable interpolation — edit "
+            f"infra/templates/docker-compose.yml.j2 and re-render."
+        )
