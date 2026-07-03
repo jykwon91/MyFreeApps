@@ -41,7 +41,13 @@ services:
     mem_limit: 512m
     cpus: 1.5
     pids_limit: 128
-    env_file: backend/.env.docker
+    # format: raw (compose >= 2.30) — values are literal, never interpolated.
+    # Default env_file parsing expands $-sequences, which silently corrupts
+    # bcrypt hashes (SEED_*_PASSWORD_HASH: "$2b$12$<salt>..." loses everything
+    # after the first $<alnum-run> to a blank-variable substitution).
+    env_file:
+      - path: backend/.env.docker
+        format: raw
     environment:
       DATABASE_URL: postgresql+asyncpg://mybookkeeper:${DB_PASSWORD}@postgres/mybookkeeper
     depends_on:
@@ -57,7 +63,13 @@ services:
     mem_limit: 1024m
     cpus: 1.5
     pids_limit: 256
-    env_file: backend/.env.docker
+    # format: raw (compose >= 2.30) — values are literal, never interpolated.
+    # Default env_file parsing expands $-sequences, which silently corrupts
+    # bcrypt hashes (SEED_*_PASSWORD_HASH: "$2b$12$<salt>..." loses everything
+    # after the first $<alnum-run> to a blank-variable substitution).
+    env_file:
+      - path: backend/.env.docker
+        format: raw
     environment:
       DATABASE_URL: postgresql+asyncpg://mybookkeeper:${DB_PASSWORD}@postgres/mybookkeeper
       RUN_UPLOAD_WORKER: "false"
@@ -89,7 +101,13 @@ services:
     mem_limit: 512m
     cpus: 1.0
     pids_limit: 128
-    env_file: backend/.env.docker
+    # format: raw (compose >= 2.30) — values are literal, never interpolated.
+    # Default env_file parsing expands $-sequences, which silently corrupts
+    # bcrypt hashes (SEED_*_PASSWORD_HASH: "$2b$12$<salt>..." loses everything
+    # after the first $<alnum-run> to a blank-variable substitution).
+    env_file:
+      - path: backend/.env.docker
+        format: raw
     environment:
       DATABASE_URL: postgresql+asyncpg://mybookkeeper:${DB_PASSWORD}@postgres/mybookkeeper
       # Workers read/write document files in MinIO (extraction downloads by
@@ -115,7 +133,13 @@ services:
     mem_limit: 512m
     cpus: 1.0
     pids_limit: 128
-    env_file: backend/.env.docker
+    # format: raw (compose >= 2.30) — values are literal, never interpolated.
+    # Default env_file parsing expands $-sequences, which silently corrupts
+    # bcrypt hashes (SEED_*_PASSWORD_HASH: "$2b$12$<salt>..." loses everything
+    # after the first $<alnum-run> to a blank-variable substitution).
+    env_file:
+      - path: backend/.env.docker
+        format: raw
     environment:
       DATABASE_URL: postgresql+asyncpg://mybookkeeper:${DB_PASSWORD}@postgres/mybookkeeper
       # Workers read/write document files in MinIO (extraction downloads by
