@@ -50,7 +50,7 @@ import { useLoadout, computeEffectiveUtilFilter } from "@/hooks/useLoadout";
 import { useAgentFilter } from "@/hooks/useAgentFilter";
 import { useMapKeyboardShortcuts } from "@/hooks/useMapKeyboardShortcuts";
 import { useIsSuperuser } from "@/hooks/useIsSuperuser";
-import { utilDisplay } from "@/constants/utilityDisplay";
+import { buildUtilOptions } from "@/constants/utilityDisplay";
 import type { ZoneDensity } from "@/types/game";
 
 export default function MapPage() {
@@ -161,26 +161,19 @@ export default function MapPage() {
     lineups:      allMapLineups,
   });
 
-  // Utility-chip options. Valorant: the selected agent's abilities labelled by
-  // their backend name, or none until an agent is picked (avoids ~90 chips).
-  // CS2: only the utilities that actually have accepted lineups on this map
-  // (backend-computed present_utility_type_slugs — not the whole game catalog),
-  // ordered by the locked within-zone display order (Smoke→Flash→Molotov→HE).
-  const utilOptions = useMemo(() => {
-    const types = mapDetail?.utility_types ?? [];
-    if (isValorant) {
-      if (!selectedAgent) return [];
-      const scoped = new Set(agentUtilSlugs);
-      return types
-        .filter((u) => scoped.has(u.slug))
-        .map((u) => ({ value: u.slug, label: u.name }));
-    }
-    const present = new Set(mapDetail?.present_utility_type_slugs ?? []);
-    return types
-      .filter((u) => present.has(u.slug))
-      .sort((a, b) => utilDisplay(a.slug).sortOrder - utilDisplay(b.slug).sortOrder)
-      .map((u) => ({ value: u.slug, label: utilDisplay(u.slug).chipLabel }));
-  }, [mapDetail, isValorant, selectedAgent, agentUtilSlugs]);
+  // Utility-chip options — see buildUtilOptions (Valorant agent-scoped chips /
+  // CS2 present-utilities-only, both display-ordered).
+  const utilOptions = useMemo(
+    () =>
+      buildUtilOptions({
+        isValorant,
+        hasSelectedAgent: Boolean(selectedAgent),
+        agentUtilSlugs,
+        utilityTypes: mapDetail?.utility_types ?? [],
+        presentSlugs: mapDetail?.present_utility_type_slugs ?? [],
+      }),
+    [mapDetail, isValorant, selectedAgent, agentUtilSlugs],
+  );
 
   // ---------------------------------------------------------------------------
   // Pin system (used by round mode)

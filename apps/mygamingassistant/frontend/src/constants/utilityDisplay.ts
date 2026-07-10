@@ -39,3 +39,41 @@ export function utilDisplay(slug: string | undefined | null): UtilDisplay {
     sortOrder: 99,
   };
 }
+
+export interface UtilChipOption {
+  value: string;
+  label: string;
+}
+
+/**
+ * Build the map-page utility-filter chip options.
+ *
+ * - Valorant: the selected agent's abilities, labelled by their backend name;
+ *   none until an agent is picked (avoids showing ~90 catalog chips).
+ * - CS2: only utilities that actually have accepted lineups on the map
+ *   (`presentSlugs`), ordered by the locked within-zone display order
+ *   (Smoke → Flash → Molotov → HE → …).
+ *
+ * Pure + display-only so it can be unit-tested without a component.
+ */
+export function buildUtilOptions(args: {
+  isValorant: boolean;
+  hasSelectedAgent: boolean;
+  agentUtilSlugs: string[];
+  utilityTypes: { slug: string; name: string }[];
+  presentSlugs: string[];
+}): UtilChipOption[] {
+  const { isValorant, hasSelectedAgent, agentUtilSlugs, utilityTypes, presentSlugs } = args;
+  if (isValorant) {
+    if (!hasSelectedAgent) return [];
+    const scoped = new Set(agentUtilSlugs);
+    return utilityTypes
+      .filter((u) => scoped.has(u.slug))
+      .map((u) => ({ value: u.slug, label: u.name }));
+  }
+  const present = new Set(presentSlugs);
+  return utilityTypes
+    .filter((u) => present.has(u.slug))
+    .sort((a, b) => utilDisplay(a.slug).sortOrder - utilDisplay(b.slug).sortOrder)
+    .map((u) => ({ value: u.slug, label: utilDisplay(u.slug).chipLabel }));
+}
