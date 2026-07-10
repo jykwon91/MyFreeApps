@@ -246,6 +246,13 @@ jobs:
               echo "Bundle freshness OK: $DEPLOYED_JS present in caddy"
             fi
 {%- endif %}
+{%- if post_deploy_verifications is defined and post_deploy_verifications %}
+{%- for check in post_deploy_verifications %}
+
+            echo "--- Post-deploy verification: {{ check.name }} ---"
+{{ check.script | indent(width=12, first=True) }}
+{%- endfor %}
+{%- endif %}
 {%- if registry_images | default(false) %}
 
             echo "--- Reclaim disk: prune images + build cache superseded by this deploy ---"

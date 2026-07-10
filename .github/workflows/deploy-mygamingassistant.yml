@@ -218,14 +218,11 @@ jobs:
               echo "Bundle freshness OK: $DEPLOYED_JS present in caddy"
             fi
 
-            echo "--- Media serving tripwire ---"
-            # Regression guard for the 2026-07-10 incident: MINIO_PUBLIC_BASE_URL
-            # was set to an unbound custom domain (NXDOMAIN), so EVERY lineup clip
-            # 404'd in the browser while the API + /health check stayed green and
-            # the deploy reported success. Fetch one accepted lineup's clip_url
-            # from the live API and confirm the media actually serves. A range GET
-            # (not HEAD — presigned R2 URLs are signed for GET only) keeps it to
-            # ~1MB. See apps/mygamingassistant/backend/.env.docker.example.
+            echo "--- Post-deploy verification: Media serving tripwire ---"
+            # Fetch one accepted lineup's clip_url from the live API and confirm the
+            # media actually serves. Range GET (not HEAD — presigned R2 URLs are signed
+            # for GET only) caps the transfer at ~1MB. See
+            # apps/mygamingassistant/backend/.env.docker.example (MINIO_PUBLIC_BASE_URL).
             CLIP_URL=$(curl -sS http://127.0.0.1:8096/api/lineups \
               | grep -oE '"clip_url":"[^"]+"' | head -1 \
               | sed -E 's/"clip_url":"//; s/"$//')
@@ -243,6 +240,7 @@ jobs:
                   ;;
               esac
             fi
+
 
             echo "--- Reclaim disk: prune images + build cache superseded by this deploy ---"
             # Registry-pull deploys (registry_images) fetch a fresh SHA-tagged
