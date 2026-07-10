@@ -50,7 +50,7 @@ import { useLoadout, computeEffectiveUtilFilter } from "@/hooks/useLoadout";
 import { useAgentFilter } from "@/hooks/useAgentFilter";
 import { useMapKeyboardShortcuts } from "@/hooks/useMapKeyboardShortcuts";
 import { useIsSuperuser } from "@/hooks/useIsSuperuser";
-import { utilDisplay } from "@/constants/utilityDisplay";
+import { buildUtilOptions } from "@/constants/utilityDisplay";
 import type { ZoneDensity } from "@/types/game";
 
 export default function MapPage() {
@@ -161,20 +161,19 @@ export default function MapPage() {
     lineups:      allMapLineups,
   });
 
-  // Utility-chip options. Valorant: the selected agent's abilities labelled by
-  // their backend name, or none until an agent is picked (avoids ~90 chips).
-  // CS2: every utility, slug-labelled via utilityDisplay (unchanged).
-  const utilOptions = useMemo(() => {
-    const types = mapDetail?.utility_types ?? [];
-    if (isValorant) {
-      if (!selectedAgent) return [];
-      const scoped = new Set(agentUtilSlugs);
-      return types
-        .filter((u) => scoped.has(u.slug))
-        .map((u) => ({ value: u.slug, label: u.name }));
-    }
-    return types.map((u) => ({ value: u.slug, label: utilDisplay(u.slug).chipLabel }));
-  }, [mapDetail, isValorant, selectedAgent, agentUtilSlugs]);
+  // Utility-chip options — see buildUtilOptions (Valorant agent-scoped chips /
+  // CS2 present-utilities-only, both display-ordered).
+  const utilOptions = useMemo(
+    () =>
+      buildUtilOptions({
+        isValorant,
+        hasSelectedAgent: Boolean(selectedAgent),
+        agentUtilSlugs,
+        utilityTypes: mapDetail?.utility_types ?? [],
+        presentSlugs: mapDetail?.present_utility_type_slugs ?? [],
+      }),
+    [mapDetail, isValorant, selectedAgent, agentUtilSlugs],
+  );
 
   // ---------------------------------------------------------------------------
   // Pin system (used by round mode)
