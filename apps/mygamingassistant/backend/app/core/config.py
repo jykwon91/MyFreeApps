@@ -55,16 +55,20 @@ class Settings(BaseAppSettings):
     email_from_name: str = "MyGamingAssistant"
 
     # ------------------------------------------------------------------
-    # Public object base URL for the lineup library (R2 prod serving).
-    # When set (production: the R2 bucket's public custom domain, e.g.
-    # https://clips.mygamingassistant.myfreeapps.org), public read URLs for
-    # lineup clips/screenshots are emitted as plain CDN URLs ``{base}/{key}``
-    # instead of presigned MinIO URLs. Accepted lineups are public and prod R2
-    # holds ONLY accepted clips, so no signing is needed and Cloudflare's CDN
-    # can edge-cache them (R2's free-egress + cache win — why R2 was chosen).
-    # Leave EMPTY in local dev / CI, where storage is MinIO, reads are
-    # presigned, and pending screenshots are gated by the API 404 on
-    # non-accepted lineups. See lineup_service._sign_screenshot_url.
+    # Public object base URL for the lineup library (R2 read serving).
+    # EMPTY is the current production mode: clip/screenshot read URLs are
+    # PRESIGNED against the R2 S3 endpoint (always reachable; CSP already allows
+    # *.r2.cloudflarestorage.com). Only accepted/public clips reach prod and the
+    # API presigns each URL per request — no edge cache, but R2 egress is free.
+    #
+    # Set this ONLY to a BOUND R2 custom domain (e.g. https://mga-clips.myfreeapps.org):
+    # read URLs then become plain CDN URLs ``{base}/{key}`` (unsigned, edge-cached).
+    # Binding requires the myfreeapps.org DNS zone on Cloudflare, which it is not
+    # (Porkbun) — so this stays empty until the zone migration tracked in
+    # apps/mygamingassistant/TECH_DEBT.md. An unbound value dead-links every clip;
+    # the lifespan now fails loud at boot if the host does not resolve (see
+    # app/main.py _check_media_public_base_url_resolvable). Also empty in local
+    # dev / CI, where storage is MinIO. See lineup_url_signing._sign_screenshot_url.
     # ------------------------------------------------------------------
     minio_public_base_url: str = ""
 

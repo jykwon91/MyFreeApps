@@ -192,6 +192,16 @@ backend/app/services/ingestion/chapter_post_processors.py
 
 ## Medium
 
+### [Infra] Unify media routing — migrate myfreeapps.org zone to Cloudflare + bind mga-clips as an R2 custom domain
+
+- **Severity:** Medium
+- **Effort:** L (operator-driven: Cloudflare + Porkbun dashboards; risk touches all apps)
+- **Category:** infra / serving
+- **Location:** apps/mygamingassistant/backend/.env.docker (MINIO_PUBLIC_BASE_URL); apps/mygamingassistant/app.yaml (CSP already allows both hosts)
+- **Deferred:** 2026-07-10, by operator ("defer the work to unify routing to the backlog").
+- **Problem:** Prod currently serves lineup clips via PRESIGNED R2 URLs (`*.r2.cloudflarestorage.com`) because `MINIO_PUBLIC_BASE_URL` is empty. This is correct and works, but bypasses Cloudflare's edge cache — the original reason R2 was chosen for a public read-heavy library. The intended CDN mode (plain `{base}/{key}` via `mga-clips.myfreeapps.org`) needs that domain bound as an R2 custom domain, which needs the `myfreeapps.org` DNS zone on Cloudflare. It is on **Porkbun** (`*.ns.porkbun.com`), so binding is impossible without migrating the whole zone. Setting `MINIO_PUBLIC_BASE_URL` to the unbound domain is what caused the 2026-07-10 incident (every clip NXDOMAIN while /health stayed green).
+- **Recommendation:** When/if edge caching is wanted: repoint `myfreeapps.org` nameservers Porkbun → Cloudflare, re-create every existing DNS record (all app subdomains + MX/email — one miss = downtime), bind `mga-clips.myfreeapps.org` as an R2 custom domain, then set `MINIO_PUBLIC_BASE_URL=https://mga-clips.myfreeapps.org` on the VPS. The boot guard (`app/main.py _check_media_public_base_url_resolvable`) and deploy media tripwire will then verify the CDN host serves before the deploy is declared green. Low urgency: presigned mode is fully functional and R2 egress is free regardless; this only buys edge caching, marginal for a low-traffic app.
+
 ### [Size] LiveCs2Calibrate - 658-line page mixes URL state, dirty-leave guard, keyboard shortcuts, screen capture, three sub-panels
 
 - **Severity:** Medium
