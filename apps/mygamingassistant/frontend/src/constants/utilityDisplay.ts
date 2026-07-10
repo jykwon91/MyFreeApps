@@ -3,7 +3,7 @@
  *
  * Keyed by slug (the backend fixture slug), not by display name.
  * CS2 slugs: smoke, flash, molotov, grenade
- * Valorant slugs: smoke, flash, molotov, recon (subset; unknown slugs use fallback)
+ * Valorant slugs: smoke, flash, molotov, recon, shock (subset; unknown slugs use fallback)
  *
  * sortOrder defines the LOCKED within-zone ordering:
  *   Smoke → Flash → Molotov → HE
@@ -26,6 +26,7 @@ export const UTIL_DISPLAY: Record<string, UtilDisplay> = {
   // Valorant-only slugs that share names with CS2 entries above (smoke/flash/molotov)
   // are handled by the entries already keyed above.
   recon:   { label: "Recon",   chipLabel: "Recon",   badgeBg: "bg-teal-600",   badgeText: "text-white",     sortOrder: 5 },
+  shock:   { label: "Shock",   chipLabel: "Shock",   badgeBg: "bg-purple-600", badgeText: "text-white",     sortOrder: 6 },
 };
 
 /** Safe accessor — returns a sensible fallback for any unknown slug. Never throws. */

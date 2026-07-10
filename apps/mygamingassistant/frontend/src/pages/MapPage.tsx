@@ -163,7 +163,9 @@ export default function MapPage() {
 
   // Utility-chip options. Valorant: the selected agent's abilities labelled by
   // their backend name, or none until an agent is picked (avoids ~90 chips).
-  // CS2: every utility, slug-labelled via utilityDisplay (unchanged).
+  // CS2: only the utilities that actually have accepted lineups on this map
+  // (backend-computed present_utility_type_slugs — not the whole game catalog),
+  // ordered by the locked within-zone display order (Smoke→Flash→Molotov→HE).
   const utilOptions = useMemo(() => {
     const types = mapDetail?.utility_types ?? [];
     if (isValorant) {
@@ -173,7 +175,11 @@ export default function MapPage() {
         .filter((u) => scoped.has(u.slug))
         .map((u) => ({ value: u.slug, label: u.name }));
     }
-    return types.map((u) => ({ value: u.slug, label: utilDisplay(u.slug).chipLabel }));
+    const present = new Set(mapDetail?.present_utility_type_slugs ?? []);
+    return types
+      .filter((u) => present.has(u.slug))
+      .sort((a, b) => utilDisplay(a.slug).sortOrder - utilDisplay(b.slug).sortOrder)
+      .map((u) => ({ value: u.slug, label: utilDisplay(u.slug).chipLabel }));
   }, [mapDetail, isValorant, selectedAgent, agentUtilSlugs]);
 
   // ---------------------------------------------------------------------------

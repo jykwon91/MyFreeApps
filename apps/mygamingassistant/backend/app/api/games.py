@@ -112,6 +112,9 @@ async def get_map(
     utility_types = await game_repo.list_utility_types_for_game(db, game.id)
     agents = await game_repo.list_agents_for_game(db, game.id)
     agent_slug_by_id = {a.id: a.slug for a in agents}
+    present_utility_type_slugs = await game_repo.list_present_utility_type_slugs_for_map(
+        db, map_obj.id
+    )
 
     return {
         "id": str(map_obj.id),
@@ -150,6 +153,7 @@ async def get_map(
             {"id": str(a.id), "slug": a.slug, "name": a.name, "role": a.role}
             for a in agents
         ],
+        "present_utility_type_slugs": present_utility_type_slugs,
     }
 
 

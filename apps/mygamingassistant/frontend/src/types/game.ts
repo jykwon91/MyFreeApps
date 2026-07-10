@@ -54,6 +54,13 @@ export interface MapDetail {
    *  scopes the agent selector to agents that actually have lineups on the
    *  current map (intersection with the loaded lineups). */
   agents: Agent[];
+  /**
+   * Utility-type slugs that actually have accepted lineups on this map.
+   * Drives the CS2 map page's filter chips (a small subset), while
+   * `utility_types` carries the full game catalog for the upload/review forms.
+   * (Valorant scopes its chips to the selected agent's abilities instead.)
+   */
+  present_utility_type_slugs: string[];
 }
 
 export interface MinimapUploadUrlResponse {

@@ -15,6 +15,7 @@ from sqlalchemy.orm import selectinload
 
 from app.models.game.agent import Agent
 from app.models.game.game import Game
+from app.models.game.lineup import Lineup
 from app.models.game.map import Map
 from app.models.game.map_zone import MapZone
 from app.models.game.site import Site
@@ -64,6 +65,25 @@ async def list_utility_types_for_game(
         select(UtilityType).where(UtilityType.game_id == game_id).order_by(UtilityType.name)
     )
     return result.scalars().all()
+
+
+async def list_present_utility_type_slugs_for_map(
+    db: AsyncSession, map_id: uuid.UUID
+) -> list[str]:
+    """Distinct utility-type slugs among *accepted* lineups on a map.
+
+    Drives the map page's utility filter chips — so the filter only offers
+    the utilities that actually have browsable lineups on this map, not the
+    whole game's ability catalog (56 for Valorant). The full catalog stays on
+    the map-detail ``utility_types`` field for the upload/review forms.
+    """
+    result = await db.execute(
+        select(UtilityType.slug)
+        .join(Lineup, Lineup.utility_type_id == UtilityType.id)
+        .where(Lineup.map_id == map_id, Lineup.status == "accepted")
+        .distinct()
+    )
+    return sorted(result.scalars().all())
 
 
 async def upsert_utility_type(
