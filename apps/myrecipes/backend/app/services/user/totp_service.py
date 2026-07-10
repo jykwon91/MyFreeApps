@@ -11,7 +11,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from platform_shared.services.totp_service import (
     DEFAULT_TOTP_ALGORITHM,
     TotpAlgorithm,
-    enroll_totp as _shared_enroll_totp,
     generate_recovery_codes,
     generate_secret,
     get_provisioning_uri as _shared_get_provisioning_uri,
@@ -51,12 +50,29 @@ def get_provisioning_uri(
 
 
 async def setup_totp(user_id: uuid.UUID) -> tuple[str, str]:
-    """Generate a fresh SHA-256 TOTP enrollment and stash the secret + URI."""
+    """Generate a fresh SHA-256 TOTP enrollment and stash the secret + URI.
+
+    Returns ``(secret, provisioning_uri)``. Recovery codes are NOT generated
+    here — they're issued by :func:`confirm_totp` once the user has proven
+    their authenticator can produce a valid code, so the user never walks
+    away with codes for an enrollment that doesn't actually work.
+
+    Writes ``users.totp_algorithm = "sha256"`` alongside the new secret so
+    subsequent verifications use the correct HMAC digest. ``totp_enabled``
+    stays False — the user still has to call :func:`confirm_totp`.
+    """
     async with unit_of_work() as db:
         user = await user_repo.get_by_id(db, user_id)
         if user is None:
-            raise ValueError(f"User {user_id} not found")
-        return _shared_enroll_totp(user, get_provisioning_uri)
+            raise ValueError("User not found")
+        secret = generate_secret()
+        user.totp_secret = secret
+        user.totp_recovery_codes = None
+        user.totp_algorithm = DEFAULT_TOTP_ALGORITHM
+        uri = get_provisioning_uri(
+            secret, user.email, algorithm=DEFAULT_TOTP_ALGORITHM,
+        )
+        return secret, uri
 
 
 async def confirm_totp(
