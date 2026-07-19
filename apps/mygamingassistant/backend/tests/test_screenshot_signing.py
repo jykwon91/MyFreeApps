@@ -156,6 +156,40 @@ async def test_get_does_not_mutate_orm_key_column(db: AsyncSession, seeded: dict
 
 
 @pytest.mark.asyncio
+async def test_get_signs_landing_screenshot_url(db: AsyncSession, seeded: dict):
+    """landing_screenshot_url (preview-stills PR) is signed alongside
+    stand/aim_screenshot_url — same bare-key-in / signed-URL-out contract,
+    same non-mutation guarantee."""
+    bare_landing = "u-1/l-1/landing-poster.webp"
+    lineup = Lineup(
+        game_id=seeded["game"].id,
+        map_id=seeded["map"].id,
+        target_zone_id=seeded["zt"].id,
+        stand_zone_id=seeded["zs"].id,
+        side="side_a",
+        utility_type_id=seeded["util"].id,
+        title="landing signing test",
+        status="accepted",
+        stand_screenshot_url=BARE_STAND,
+        aim_screenshot_url=BARE_AIM,
+        landing_screenshot_url=bare_landing,
+    )
+    db.add(lineup)
+    await db.flush()
+    lineup_id = lineup.id
+
+    read = await lineup_service.get(db, lineup_id)
+    assert read is not None
+    assert read.landing_screenshot_url.startswith("http")
+
+    db.expire_all()
+    row = (
+        await db.execute(select(Lineup).where(Lineup.id == lineup_id))
+    ).scalar_one()
+    assert row.landing_screenshot_url == bare_landing
+
+
+@pytest.mark.asyncio
 async def test_accept_does_not_corrupt_orm_key_column(db: AsyncSession, seeded: dict):
     """accept() commits the session — the column must remain a bare key.
 

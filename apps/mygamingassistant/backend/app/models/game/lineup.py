@@ -109,6 +109,13 @@ class Lineup(Base):
     # Screenshot URLs in MinIO (presigned at read time)
     stand_screenshot_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     aim_screenshot_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    # LANDING pane poster still (WebP, last frame of the LANDING micro-clip).
+    # Counterpart to stand/aim_screenshot_url above — same bare-MinIO-key +
+    # presigned-at-read-time contract. NULL gracefully degrades to the
+    # existing "Lands in: <zone>" text fallback / live-video pane (best-effort,
+    # orthogonal to lineup validity, same posture as landing_clip_url). See
+    # migration 0020 + app/services/ingestion/poster_extractor.py.
+    landing_screenshot_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     clip_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     # Pane-editor trim model (PR4): every clip column has a companion
     # ``*_original`` key + ``*_trim_start_s`` / ``*_trim_end_s`` offsets so the

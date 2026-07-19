@@ -81,6 +81,11 @@ class LineupRead(BaseModel):
     notes: Optional[str] = None
     stand_screenshot_url: Optional[str] = None
     aim_screenshot_url: Optional[str] = None
+    # LANDING pane poster still — counterpart to stand/aim_screenshot_url
+    # above. Presigned alongside them in lineup_service._build_read. NULL
+    # until the poster extractor / recut backfill populates it; UI falls back
+    # to the existing "Lands in: <zone>" text / live-video pane.
+    landing_screenshot_url: Optional[str] = None
     clip_url: Optional[str] = None
     # Operator-only mirror of the pre-trim source clip + the current trim
     # window inside it. Set by ``_build_admin_read`` (auth_router paths only).

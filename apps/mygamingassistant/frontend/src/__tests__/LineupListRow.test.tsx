@@ -2,7 +2,8 @@
  * LineupListRow unit tests — compact-list-row primitive.
  *
  * Stub IntersectionObserver + HTMLMediaElement methods because the expanded
- * state mounts GlanceBoardTile (which contains ClipView <video> elements).
+ * state mounts GlanceBoardTile, and further expanding THAT mounts
+ * GlanceBoardStoryboard's <video>-bearing panes.
  */
 import { render, screen, fireEvent } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -22,6 +23,7 @@ function makeLineup(over: Partial<Lineup> = {}): Lineup {
     notes: null,
     stand_screenshot_url: null,
     aim_screenshot_url: null,
+    landing_screenshot_url: null,
     clip_url: null,
     landing_clip_url: null,
     stand_clip_url: null,
@@ -78,8 +80,6 @@ const GAME: Game = {
 };
 
 beforeEach(() => {
-  // jsdom doesn't implement these — required only when the row is expanded
-  // (mounts GlanceBoardTile → ClipView).
   globalThis.IntersectionObserver = class {
     observe() {}
     disconnect() {}
@@ -131,15 +131,48 @@ describe("LineupListRow", () => {
     expect(screen.getByText("Unknown")).toBeInTheDocument();
   });
 
-  it("collapses by default — does not mount the storyboard tile", () => {
+  it("collapses by default — does not mount the summary tile", () => {
     render(<LineupListRow lineup={makeLineup()} game={GAME} />);
-    // The corner labels (STAND / AIM / THROW / LANDING) only appear inside
-    // the expanded GlanceBoardTile. Absence here proves the tile is unmounted.
-    expect(screen.queryByText("THROW")).not.toBeInTheDocument();
+    // The corner labels (STAND / LANDING) only appear inside the expanded
+    // GlanceBoardTile. Absence here proves the tile is unmounted.
+    expect(screen.queryByText("STAND")).not.toBeInTheDocument();
     expect(screen.queryByText("LANDING")).not.toBeInTheDocument();
   });
 
-  it("expands on click and mounts the storyboard tile", () => {
+  it("row is at least min-h-[44px] tall to fit the mini thumbnails", () => {
+    render(<LineupListRow lineup={makeLineup()} game={GAME} />);
+    const button = screen.getByRole("button", { name: /click to expand/i });
+    expect(button.className).toContain("min-h-[44px]");
+  });
+
+  it("renders null-poster mini thumbnails as a muted ImageOff icon", () => {
+    render(
+      <LineupListRow
+        lineup={makeLineup({ stand_screenshot_url: null, landing_screenshot_url: null })}
+        game={GAME}
+      />,
+    );
+    // Neither thumbnail has a URL — no <img> should be present in the row
+    // (before expansion), only the muted placeholder spans.
+    expect(document.querySelectorAll("img").length).toBe(0);
+  });
+
+  it("renders mini thumbnails as <img> when poster URLs are present", () => {
+    render(
+      <LineupListRow
+        lineup={makeLineup({
+          stand_screenshot_url: "https://ex.com/stand-thumb.png",
+          landing_screenshot_url: "https://ex.com/landing-thumb.png",
+        })}
+        game={GAME}
+      />,
+    );
+    const thumbs = Array.from(document.querySelectorAll("img")).map((i) => i.src);
+    expect(thumbs).toContain("https://ex.com/stand-thumb.png");
+    expect(thumbs).toContain("https://ex.com/landing-thumb.png");
+  });
+
+  it("expands on click and mounts the GlanceBoardTile summary (STAND + LANDING, no AIM/THROW yet)", () => {
     render(<LineupListRow lineup={makeLineup()} game={GAME} />);
     const button = screen.getByRole("button", { name: /click to expand/i });
     expect(button).toHaveAttribute("aria-expanded", "false");
@@ -147,12 +180,23 @@ describe("LineupListRow", () => {
     fireEvent.click(button);
     expect(button).toHaveAttribute("aria-expanded", "true");
 
-    // Storyboard's corner labels are now in the DOM
+    // The mounted tile is the 2-still summary, not the full storyboard.
     expect(screen.getByText("STAND")).toBeInTheDocument();
-    expect(screen.getByText("AIM")).toBeInTheDocument();
+    expect(screen.getByText("LANDING")).toBeInTheDocument();
+    expect(screen.queryByText("AIM")).not.toBeInTheDocument();
+    expect(screen.queryByText("THROW")).not.toBeInTheDocument();
   });
 
-  it("collapses on second click — unmounts the storyboard tile", () => {
+  it("expanding the row then expanding the mounted tile reveals the full storyboard", () => {
+    render(<LineupListRow lineup={makeLineup()} game={GAME} />);
+    fireEvent.click(screen.getByRole("button", { name: /click to expand/i }));
+    // Second, independent expand toggle owned by GlanceBoardTile itself.
+    fireEvent.click(screen.getByRole("button", { name: /^expand/i }));
+    expect(screen.getByText("AIM")).toBeInTheDocument();
+    expect(screen.getByText("THROW")).toBeInTheDocument();
+  });
+
+  it("collapses on second click — unmounts the summary tile", () => {
     render(<LineupListRow lineup={makeLineup()} game={GAME} />);
     const button = screen.getByRole("button", { name: /click to expand/i });
     fireEvent.click(button);
@@ -178,5 +222,11 @@ describe("LineupListRow", () => {
       />,
     );
     expect(screen.getByText("Def")).toBeInTheDocument();
+  });
+
+  it("uses the shared sideDisplay gold/blue tokens for the side chip", () => {
+    render(<LineupListRow lineup={makeLineup({ side: "side_a" })} game={GAME} />);
+    const chip = screen.getByText("T");
+    expect(chip.className).toContain("bg-yellow-500/20");
   });
 });
