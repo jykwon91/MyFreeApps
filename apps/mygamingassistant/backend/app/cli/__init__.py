@@ -7,6 +7,7 @@ Usage:
     python -m app.cli backfill-technique
     python -m app.cli backfill-landing-clips
     python -m app.cli backfill-micro-clips
+    python -m app.cli backfill-posters
     python -m app.cli widen-source
 """
 import asyncio
@@ -137,6 +138,32 @@ async def _run_backfill_micro_clips() -> int:
     return 1 if stats.failed else 0
 
 
+async def _run_backfill_posters() -> int:
+    """Generate STAND + LANDING poster stills for accepted lineups missing one.
+    Returns an exit code.
+
+    Idempotent — safe to re-run; only lineups that have a clip but whose
+    screenshot column isn't yet a ``*-poster.webp`` key are touched.
+    Independent of the clip backfills (posters derive from already-uploaded
+    clips — no video is re-fetched). A non-zero exit signals at least one hard
+    failure on either side so the operator notices (re-running retries them —
+    they are not fatal).
+    """
+    from app.db.session import AsyncSessionLocal
+    from app.services.ingestion.poster_backfill import backfill_posters
+
+    async with AsyncSessionLocal() as db:
+        stats = await backfill_posters(db)
+
+    print(stats.summary())
+    if stats.errors:
+        print(f"  {len(stats.errors)} issue(s):")
+        for err in stats.errors:
+            print(f"   - {err}")
+    # Re-runnable: failures retry next run, so a non-zero exit is advisory.
+    return 1 if stats.failed else 0
+
+
 def main() -> None:
     command = sys.argv[1] if len(sys.argv) > 1 else ""
 
@@ -162,6 +189,8 @@ def main() -> None:
         sys.exit(asyncio.run(_run_backfill_landing_clips()))
     elif command == "backfill-micro-clips":
         sys.exit(asyncio.run(_run_backfill_micro_clips()))
+    elif command == "backfill-posters":
+        sys.exit(asyncio.run(_run_backfill_posters()))
     elif command == "widen-source":
         sys.exit(asyncio.run(_run_widen_source()))
     else:
@@ -173,6 +202,7 @@ def main() -> None:
         print("  backfill-technique     — name throw-technique for accepted lineups missing one")
         print("  backfill-landing-clips — generate landing clips for accepted lineups missing one")
         print("  backfill-micro-clips   — generate stand + aim micro-clips for accepted lineups missing one")
+        print("  backfill-posters       — generate stand + landing poster stills for accepted lineups missing one")
         print("  widen-source           — replace tight=wide pairs with a wider trim-editor source")
         sys.exit(1)
 
