@@ -1,7 +1,9 @@
 /**
  * LineupListRow — compact one-line row for the list-view rendering of the
- * glance board. Click anywhere on the row to expand the full 4-pane
- * GlanceBoardTile inline below the row.
+ * glance board. Click anywhere on the row to expand the GlanceBoardTile
+ * summary tile (2-still STAND/LANDING, no motion) inline below the row —
+ * the tile's own expand toggle reveals the full 4-pane storyboard from
+ * there, same as it does on the grid glance board.
  *
  * Why the list view exists: the default card-grid renders every lineup
  * card as a full 4-pane storyboard, which mounts up to 4 simultaneous
@@ -12,12 +14,13 @@
  * affordance, and only the rows the operator clicks-to-expand mount the
  * storyboard tile (and therefore the videos).
  *
- * Layout (compact ~36-44px tall):
+ * Layout (compact, min-h-[44px] to fit the two mini thumbnails):
  *
  *   ┌─────────────────────────────────────────────────────────────────┐
- *   │ [icon] Target ← Stand  · Side · Util · Technique          [▾]   │
+ *   │ [icon] [stand→landing thumbs] Target ← Stand  · Side · Util  [▾]│
  *   └─────────────────────────────────────────────────────────────────┘
- *   (expanded below: GlanceBoardTile with all 4 panes + footer)
+ *   (expanded below: GlanceBoardTile — the 2-still summary tile, which
+ *   itself has its own expand toggle for the full 4-pane storyboard)
  *
  * Expansion state lives in this component (useState) — the board does
  * NOT track which rows are expanded; multiple rows can be expanded
@@ -28,7 +31,9 @@ import { ChevronDown } from "lucide-react";
 import type { Lineup } from "@/types/game";
 import type { Game } from "@/types/game";
 import { lineupUtilDisplay } from "@/constants/agentDisplay";
+import { sideDisplay } from "@/constants/sideDisplay";
 import GlanceBoardTile from "./GlanceBoardTile";
+import { MiniPosterThumb } from "./LineupStillPreview";
 import type { DesignKnobs } from "@/hooks/useDesignKnobs";
 import { DEFAULT_KNOBS } from "@/hooks/useDesignKnobs";
 
@@ -37,12 +42,6 @@ interface LineupListRowProps {
   game?: Game | null;
   knobs?: DesignKnobs;
   showOperatorOverlays?: boolean;
-}
-
-function sideLabel(side: Lineup["side"], game: Game | null | undefined): string {
-  if (side === "side_a") return game?.side_a_label ?? "T";
-  if (side === "side_b") return game?.side_b_label ?? "CT";
-  return "Both";
 }
 
 export default function LineupListRow({
@@ -57,7 +56,7 @@ export default function LineupListRow({
   const stand = lineup.stand_zone?.name ?? null;
   const util = lineupUtilDisplay(lineup.utility_type);
   const technique = lineup.technique?.trim() || null;
-  const side = sideLabel(lineup.side, game);
+  const sideCfg = sideDisplay(lineup.side, game ?? undefined);
 
   // Title is treated as supplementary — many ingested lineups inherit the
   // chapter title which restates target/stand. Only render it if it adds
@@ -76,8 +75,8 @@ export default function LineupListRow({
         type="button"
         onClick={() => setExpanded((v) => !v)}
         aria-expanded={expanded}
-        aria-label={`${target}${stand ? ` from ${stand}` : ""} — ${util.chipLabel} — ${side} side. Click to ${expanded ? "collapse" : "expand"} storyboard.`}
-        className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-muted/30 transition-colors min-h-[36px]"
+        aria-label={`${target}${stand ? ` from ${stand}` : ""} — ${util.chipLabel} — ${sideCfg.label} side. Click to ${expanded ? "collapse" : "expand"} storyboard.`}
+        className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-muted/30 transition-colors min-h-[44px]"
       >
         {/* Utility color dot — reuses the badge tokens from utilDisplay so
             row color-coding matches the storyboard tile's header chip. */}
@@ -92,6 +91,16 @@ export default function LineupListRow({
         {/* Visually-hidden text for screen readers / typeahead */}
         <span className="sr-only">{util.chipLabel}: </span>
 
+        {/* STAND → LANDING mini thumbnails — the same "instant glance"
+            information the glance-board tile shows, compressed for the list
+            row. Always aria-hidden (see MiniPosterThumb) — this button's own
+            aria-label already carries the zone names. */}
+        <span aria-hidden className="shrink-0 flex items-center gap-1">
+          <MiniPosterThumb url={lineup.stand_screenshot_url} />
+          <span className="text-muted-foreground text-[10px]">→</span>
+          <MiniPosterThumb url={lineup.landing_screenshot_url} />
+        </span>
+
         {/* Target ← Stand */}
         <span className="text-sm font-medium text-foreground truncate">
           {target}
@@ -103,18 +112,15 @@ export default function LineupListRow({
           )}
         </span>
 
-        {/* Side chip */}
+        {/* Side chip — unified gold/blue tokens (constants/sideDisplay.ts) */}
         <span
           className={[
             "shrink-0 px-1.5 py-0.5 rounded text-[10px] font-medium tracking-wide uppercase",
-            lineup.side === "side_a"
-              ? "bg-orange-500/15 text-orange-700 dark:text-orange-300"
-              : lineup.side === "side_b"
-                ? "bg-sky-500/15 text-sky-700 dark:text-sky-300"
-                : "bg-muted/60 text-muted-foreground",
+            sideCfg.bg,
+            sideCfg.text,
           ].join(" ")}
         >
-          {side}
+          {sideCfg.label}
         </span>
 
         {/* Util label (text — duplicates the icon for accessibility / when

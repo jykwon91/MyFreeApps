@@ -46,6 +46,7 @@ LINEUP_SCALAR_FIELDS: tuple[str, ...] = (
     "side",
     "stand_screenshot_url",
     "aim_screenshot_url",
+    "landing_screenshot_url",
     "clip_url",
     "landing_clip_url",
     "stand_clip_url",
@@ -65,12 +66,13 @@ LINEUP_SCALAR_FIELDS: tuple[str, ...] = (
     "attribution_author",
 )
 
-# The 6 public object keys ``publish_clips_to_r2`` ships from local MinIO → R2.
+# The 7 public object keys ``publish_clips_to_r2`` ships from local MinIO → R2.
 # One source of truth shared by the publish script (and any verifier) so the
 # set can't drift from what the read path signs in ``lineup_service``.
 PUBLIC_OBJECT_KEY_FIELDS: tuple[str, ...] = (
     "stand_screenshot_url",
     "aim_screenshot_url",
+    "landing_screenshot_url",
     "clip_url",
     "landing_clip_url",
     "stand_clip_url",

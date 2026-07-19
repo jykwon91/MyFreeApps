@@ -128,6 +128,14 @@ export interface Lineup {
   notes: string | null;
   stand_screenshot_url: string | null;
   aim_screenshot_url: string | null;
+  // Preview-stills pipeline: presigned URL of the still WebP poster showing
+  // where the utility lands/explodes. Null on legacy lineups that predate
+  // the still pipeline or when generation was skipped — LineupStillPreview
+  // (the glance-board summary tile's LANDING half) falls back to the
+  // "Lands in: <zone>" text card, same silent-fallback shape as the other
+  // pane primitives. Deliberately NOT the same URL as `landing_clip_url`'s
+  // poster — this is a purpose-generated still, not a clip frame.
+  landing_screenshot_url: string | null;
   // PR2: presigned URL of the short looping throw clip (gif-style). Null when
   // the throw could not be localised or the lineup predates the clip
   // pipeline — the tile then falls back to the stand/aim stills.

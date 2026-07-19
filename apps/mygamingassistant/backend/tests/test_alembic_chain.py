@@ -24,8 +24,8 @@ def script_directory() -> ScriptDirectory:
     return ScriptDirectory.from_config(cfg)
 
 
-def test_single_head_is_0019(script_directory: ScriptDirectory) -> None:
-    """The DAG must resolve to exactly one head and it must be 0019.
+def test_single_head_is_0020(script_directory: ScriptDirectory) -> None:
+    """The DAG must resolve to exactly one head and it must be 0020.
 
     Bump this pin (and add a down_revision assertion below) in the same PR
     that adds a new migration — same per-PR contract as the fixture
@@ -37,8 +37,8 @@ def test_single_head_is_0019(script_directory: ScriptDirectory) -> None:
         "Orphan heads usually mean a migration's down_revision is stale "
         "after a merge — rebase and re-point the down_revision."
     )
-    assert heads[0] == "0019", (
-        f"Expected head 0019 (agent table + utility_type.agent_id), "
+    assert heads[0] == "0020", (
+        f"Expected head 0020 (lineup.landing_screenshot_url poster still), "
         f"got {heads[0]}."
     )
 
@@ -145,3 +145,19 @@ def test_0018_down_revision_points_at_0017(
     """0018 must chain directly off 0017 (lineup.aim_ts + aim_localized_at)."""
     rev = script_directory.get_revision("0018")
     assert rev.down_revision == "0017"
+
+
+def test_0019_down_revision_points_at_0018(
+    script_directory: ScriptDirectory,
+) -> None:
+    """0019 must chain directly off 0018 (agent table + utility_type.agent_id)."""
+    rev = script_directory.get_revision("0019")
+    assert rev.down_revision == "0018"
+
+
+def test_0020_down_revision_points_at_0019(
+    script_directory: ScriptDirectory,
+) -> None:
+    """0020 must chain directly off 0019 (lineup.landing_screenshot_url poster still)."""
+    rev = script_directory.get_revision("0020")
+    assert rev.down_revision == "0019"

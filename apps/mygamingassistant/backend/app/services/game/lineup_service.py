@@ -148,6 +148,7 @@ def _build_read(lineup: Lineup) -> LineupRead:
         update={
             "stand_screenshot_url": _sign_screenshot_url(read.stand_screenshot_url),
             "aim_screenshot_url": _sign_screenshot_url(read.aim_screenshot_url),
+            "landing_screenshot_url": _sign_screenshot_url(read.landing_screenshot_url),
             "clip_url": _sign_screenshot_url(read.clip_url),
             "landing_clip_url": _sign_screenshot_url(read.landing_clip_url),
             "stand_clip_url": _sign_screenshot_url(read.stand_clip_url),

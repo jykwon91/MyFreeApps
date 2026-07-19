@@ -110,6 +110,13 @@ function groupByZone(lineups: Lineup[]): ZoneGroup[] {
 
 // ---------------------------------------------------------------------------
 // Skeleton loader (2 tiles per row)
+//
+// aspectRatio mirrors the CURRENT tile shape so the loading state doesn't
+// pop/reflow once real data lands. The preview-stills tile (header +
+// 2-still row + footer) is much shorter than the old 4-pane storyboard
+// (~180-200px vs ~346px at typical tile width) — "4.5 / 1" approximates
+// that width:height ratio. Update this alongside any future change to
+// GlanceBoardTile's header/body/footer proportions.
 // ---------------------------------------------------------------------------
 function GlanceBoardSkeleton() {
   return (
@@ -119,7 +126,7 @@ function GlanceBoardSkeleton() {
           <div className="h-5 w-48 bg-muted/40 rounded animate-pulse" />
           <div className="grid grid-cols-2 gap-4">
             {[1, 2].map((t) => (
-              <div key={t} className="rounded-lg bg-muted/40 animate-pulse" style={{ aspectRatio: "2 / 1" }} />
+              <div key={t} className="rounded-lg bg-muted/40 animate-pulse" style={{ aspectRatio: "4.5 / 1" }} />
             ))}
           </div>
         </div>

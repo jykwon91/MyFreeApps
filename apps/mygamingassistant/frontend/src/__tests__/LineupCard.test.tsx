@@ -42,6 +42,7 @@ const BASE_LINEUP: Lineup = {
   notes: "Stand on the crate",
   stand_screenshot_url: "https://example.com/stand.png",
   aim_screenshot_url: "https://example.com/aim.png",
+  landing_screenshot_url: null,
   clip_url: null,
   landing_clip_url: null,
   stand_clip_url: null,

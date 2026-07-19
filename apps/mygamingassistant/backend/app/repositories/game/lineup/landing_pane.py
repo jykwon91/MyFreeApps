@@ -1,11 +1,11 @@
-"""Landing-pane writers — the LANDING clip column.
+"""Landing-pane writers — the LANDING clip column + poster still.
 
-Sibling to ``throw_pane``: three one-column commit setters
+Sibling to ``throw_pane``: four one-column commit setters
 (``set_landing_clip_url``, ``set_landing_clip_url_original``,
-``set_landing_clip_url_trim``) and the backfill list query
-``list_accepted_lineups_needing_landing_clips``. The widen-source list
-lives in ``throw_pane`` because a single query covers both panes
-(operator runs widen-source once for both).
+``set_landing_clip_url_trim``, ``set_landing_screenshot_url``) and the
+backfill list query ``list_accepted_lineups_needing_landing_clips``. The
+widen-source list lives in ``throw_pane`` because a single query covers both
+panes (operator runs widen-source once for both).
 
 The one-column commit posture exists for a reason — see each setter's
 docstring. A landing-clip failure must NEVER roll back the lineup or the
@@ -146,6 +146,37 @@ async def set_landing_clip_url_trim(
     lineup.landing_clip_url = trimmed_landing_clip_key
     lineup.landing_clip_trim_start_s = start_offset_s
     lineup.landing_clip_trim_end_s = end_offset_s
+    try:
+        await db.flush()
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
+    return lineup
+
+
+async def set_landing_screenshot_url(
+    db: AsyncSession,
+    lineup: Lineup,
+    landing_screenshot_key: str,
+) -> Lineup:
+    """Persist a new landing-poster bare MinIO key onto a lineup row.
+
+    Sibling to :func:`micro_panes.set_stand_screenshot_url` /
+    :func:`micro_panes.set_aim_screenshot_url` — identical one-column-commit
+    contract, independent column. The poster is a WebP still extracted from
+    the last frame of the LANDING micro-clip (see
+    ``app.services.ingestion.poster_extractor``), giving the LANDING pane an
+    instant-render fallback in place of the live-video clip. Best-effort and
+    orthogonal to lineup validity — a landing-poster failure must NEVER roll
+    back the lineup or any sibling clip/screenshot column.
+
+    Transaction ownership lives here in the repo per PR #687/#695 — callers
+    never call db.commit(). ``landing_screenshot_url`` stores a BARE object
+    key (same convention as every other URL column); presigning happens at
+    read time in ``lineup_service._build_read``.
+    """
+    lineup.landing_screenshot_url = landing_screenshot_key
     try:
         await db.flush()
         await db.commit()

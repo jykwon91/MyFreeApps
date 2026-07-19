@@ -67,6 +67,8 @@ export function ScreenshotHalf({ url, alt, label, imgStyle }: ScreenshotHalfProp
           className="absolute inset-0 w-full h-full object-cover"
           style={imgStyle}
           draggable={false}
+          loading="lazy"
+          decoding="async"
         />
       ) : (
         <div className="absolute inset-0 flex items-center justify-center text-xs text-muted-foreground">
@@ -407,8 +409,13 @@ export function LandingPane({
 
 // ---------------------------------------------------------------------------
 // CornerLabel — small TL-corner uppercase label. Shared across all panes.
+//
+// Exported so LineupStillPreview.tsx (the glance-board summary tile's
+// no-motion 2-still body) can reuse the identical label treatment instead
+// of forking a second copy — same visual language on the always-visible
+// summary and the expanded storyboard.
 // ---------------------------------------------------------------------------
-function CornerLabel({ children }: { children: React.ReactNode }) {
+export function CornerLabel({ children }: { children: React.ReactNode }) {
   return (
     <span className="absolute top-1.5 left-2 text-[10px] font-semibold tracking-wider text-white/80 bg-black/40 px-1.5 py-0.5 rounded uppercase select-none pointer-events-none">
       {children}

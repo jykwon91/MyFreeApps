@@ -19,6 +19,7 @@ from app.repositories.game.lineup.landing_pane import (
     set_landing_clip_url,
     set_landing_clip_url_original,
     set_landing_clip_url_trim,
+    set_landing_screenshot_url,
 )
 from app.repositories.game.lineup.lifecycle import (
     accept_lineup,
@@ -79,6 +80,7 @@ __all__ = [
     "set_landing_clip_url",
     "set_landing_clip_url_original",
     "set_landing_clip_url_trim",
+    "set_landing_screenshot_url",
     "set_stand_clip_url",
     "set_stand_localization",
     "set_stand_screenshot_url",

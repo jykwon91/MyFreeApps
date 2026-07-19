@@ -34,6 +34,7 @@ function makeLineup(over: Partial<Lineup> = {}): Lineup {
     notes: null,
     stand_screenshot_url: null,
     aim_screenshot_url: null,
+    landing_screenshot_url: null,
     clip_url: null,
     landing_clip_url: null,
     stand_clip_url: null,
