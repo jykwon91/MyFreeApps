@@ -20,8 +20,9 @@
  * onZoneClick is provided, scroll otherwise).
  */
 import { useState } from "react";
-import type { MapZone, ZoneDensity } from "@/types/game";
+import type { Lineup, MapZone, ZoneDensity } from "@/types/game";
 import { zoneAnchorId } from "./glanceBoardUtils";
+import MapLineupPins, { type PinMode } from "./MapLineupPins";
 
 interface Props {
   minimapUrl: string | null;
@@ -36,6 +37,13 @@ interface Props {
    *  so the operator can see the current filter. Pass null when no zone
    *  filter is active. */
   activeZoneSlug?: string | null;
+  /** Lineups to overlay as pins on the minimap. Requires pinMode to be set
+   *  and the minimap image to be present (pins only render in the image
+   *  branch, never the text-list fallback). */
+  lineups?: Lineup[];
+  pinMode?: PinMode | null;
+  selectedLineupId?: string | null;
+  onPinSelect?: (lineupId: string) => void;
 }
 
 // Density fill/stroke — same tokens as MapZoneOverlay
@@ -73,6 +81,10 @@ export default function GlanceBoardMinimapSidebar({
   viewBoxSize = 1000,
   onZoneClick,
   activeZoneSlug = null,
+  lineups,
+  pinMode = null,
+  selectedLineupId = null,
+  onPinSelect,
 }: Props) {
   const [minimapFailed, setMinimapFailed] = useState(false);
   const [hoveredZoneSlug, setHoveredZoneSlug] = useState<string | null>(null);
@@ -209,6 +221,19 @@ export default function GlanceBoardMinimapSidebar({
           </div>
         );
       })()}
+
+      {/* Lineup-pin overlay — only in the image branch (this render path is
+          inherently !minimapFailed). Aligns with zones via the shared 1000×
+          viewBox. */}
+      {pinMode && lineups && onPinSelect && (
+        <MapLineupPins
+          lineups={lineups}
+          mode={pinMode}
+          selectedLineupId={selectedLineupId}
+          onPinSelect={onPinSelect}
+          viewBoxSize={viewBoxSize}
+        />
+      )}
     </nav>
   );
 }

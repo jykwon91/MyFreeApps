@@ -46,6 +46,9 @@ interface Pin {
   x: number; // viewBox units
   y: number;
   title: string;
+  /** True when this pin sits on the zone centroid (no explicit anchor set) —
+   *  rendered with a dashed ring so the operator can spot unplaced lineups. */
+  isGuess: boolean;
 }
 
 interface Cluster {
@@ -91,6 +94,7 @@ function buildPins(
           x: l.effective_stand_x * viewBoxSize,
           y: l.effective_stand_y * viewBoxSize,
           title: l.title,
+          isGuess: l.stand_anchor_x == null,
         });
       }
     }
@@ -103,6 +107,7 @@ function buildPins(
           x: l.effective_target_x * viewBoxSize,
           y: l.effective_target_y * viewBoxSize,
           title: l.title,
+          isGuess: l.target_anchor_x == null,
         });
       }
     }
@@ -181,6 +186,18 @@ export default function MapLineupPins({
                 }}
               >
                 <circle cx={p.x} cy={p.y} r={22} fill="transparent" />
+                {p.isGuess && (
+                  <circle
+                    cx={p.x}
+                    cy={p.y}
+                    r={16}
+                    fill="none"
+                    stroke={fill}
+                    strokeWidth={2}
+                    strokeDasharray="4 3"
+                    opacity={0.5}
+                  />
+                )}
                 {isSelected && (
                   <circle
                     cx={p.x}

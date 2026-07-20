@@ -38,8 +38,9 @@ import type { PinMode } from "@/components/lineup/MapLineupPins";
 import KeyboardShortcutsHelp from "@/components/lineup/KeyboardShortcutsHelp";
 import GlanceBoard from "@/components/lineup/GlanceBoard";
 import LineupListBoard from "@/components/lineup/LineupListBoard";
-import GlanceBoardMinimapSidebar from "@/components/lineup/GlanceBoardMinimapSidebar";
+import MapSpatialSidebar from "@/components/lineup/MapSpatialSidebar";
 import MapPageTopBar from "@/components/map/MapPageTopBar";
+import MapPageSkeleton from "@/components/map/MapPageSkeleton";
 import DesignKnobsPanel from "@/components/lineup/DesignKnobsPanel";
 import { useDesignKnobs } from "@/hooks/useDesignKnobs";
 import MinimapUploadDialog from "@/components/game/MinimapUploadDialog";
@@ -301,16 +302,7 @@ export default function MapPage() {
   // Loading / error states
   // ---------------------------------------------------------------------------
   if (mapLoading) {
-    return (
-      <main className="p-4 sm:p-8 space-y-4">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-md bg-muted/40 animate-pulse" />
-          <div className="h-7 w-40 bg-muted/40 rounded animate-pulse" />
-        </div>
-        <div className="h-10 bg-muted/40 rounded-lg animate-pulse" />
-        <div className="h-96 bg-muted/40 rounded-xl animate-pulse" />
-      </main>
-    );
+    return <MapPageSkeleton />;
   }
 
   if (mapError || !mapDetail) {
@@ -426,12 +418,16 @@ export default function MapPage() {
             className="hidden lg:block w-[440px] shrink-0 p-3 border-r overflow-y-auto sticky top-10 h-[calc(100vh-40px)]"
             aria-label="Map zone navigation"
           >
-            <GlanceBoardMinimapSidebar
+            <MapSpatialSidebar
               minimapUrl={mapDetail.minimap_url}
               zones={mapDetail.zones}
               density={density}
               onZoneClick={handleZoneClick}
               activeZoneSlug={zoneFilter}
+              lineups={allMapLineups}
+              pinMode={pinMode}
+              onPinModeChange={(m) => updateParam("pins", m)}
+              isSuperuser={isSuperuser}
             />
           </aside>
 

@@ -212,4 +212,48 @@ describe("MapLineupPins", () => {
     await user.click(within(menu).getByRole("menuitem", { name: /two/i }));
     expect(onPinSelect).toHaveBeenCalledWith("b");
   });
+
+  it("draws a dashed guess ring for lineups with no explicit stand anchor", () => {
+    const { container } = render(
+      <MapLineupPins
+        lineups={[
+          makeLineup({
+            id: "guess",
+            title: "unplaced",
+            // effective coords resolve (from a zone centroid) but no explicit anchor
+            effective_stand_x: 0.4,
+            effective_stand_y: 0.4,
+            stand_anchor_x: null,
+            stand_anchor_y: null,
+          }),
+        ]}
+        mode="stand"
+        selectedLineupId={null}
+        onPinSelect={vi.fn()}
+      />,
+    );
+    const dashed = container.querySelector("circle[stroke-dasharray]");
+    expect(dashed).not.toBeNull();
+  });
+
+  it("omits the dashed ring once the stand anchor is explicitly set", () => {
+    const { container } = render(
+      <MapLineupPins
+        lineups={[
+          makeLineup({
+            id: "placed",
+            title: "placed",
+            effective_stand_x: 0.4,
+            effective_stand_y: 0.4,
+            stand_anchor_x: 0.4,
+            stand_anchor_y: 0.4,
+          }),
+        ]}
+        mode="stand"
+        selectedLineupId={null}
+        onPinSelect={vi.fn()}
+      />,
+    );
+    expect(container.querySelector("circle[stroke-dasharray]")).toBeNull();
+  });
 });
