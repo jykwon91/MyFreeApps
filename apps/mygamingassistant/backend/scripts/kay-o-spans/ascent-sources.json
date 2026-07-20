@@ -1,0 +1,15 @@
+{
+  "agent": "kay-o",
+  "map_slug": "ascent",
+  "purpose": "Multi-source backfill candidate set (project_mga_multisource_backfill). The shipped KAY/O Ascent bucket used ONE source (mPE6_-Cip_M, 23 lineups). These are additional verified tutorial videos to localize + ingest, then geometrically dedup against the shipped pack so only UNIQUE lineups ship. Discovered 2026-07-20 via web search + verified with list_channel_videos/yt-dlp single-video extract (chapter counts are yt-dlp chapter markers, an upper bound on lineups per video).",
+  "dedup_key": "(game, map, utility_type, side) + stand_anchor within eps AND target_anchor within eps — see dedup_lineups.py. Requires fine minimap pins, which the current span schema does NOT capture (zones only); pin population is the gating prerequisite.",
+  "sources": [
+    {"video_id": "mPE6_-Cip_M", "author": "AG Zapdos", "duration": "10:01", "chapters": 34, "status": "shipped", "span_file": "kay-o-spans/ascent.json", "note": "Current single source. 23 accepted (6 rejected at gate). Baseline to dedup new sources against."},
+    {"video_id": "upRqW_UxEP4", "author": null, "duration": "15:32", "chapters": 47, "status": "candidate", "priority": 1, "note": "KAYO Ascent (OLD 2023). 47 chapters — largest coverage by far. OLD: verify each lineup against current map geometry before accepting (post-2023 patches may have moved geometry). Highest unique-yield candidate."},
+    {"video_id": "afiJb2bd3Go", "author": null, "duration": "9:36", "chapters": 19, "status": "candidate", "priority": 2, "note": "Pop-flash SPECIFIC guide (flashdrive). Complements the base guide's coverage; pop-flash lineups are a known thin area across the library."},
+    {"video_id": "GligM5VERcQ", "author": null, "duration": "5:38", "chapters": 8, "status": "candidate", "priority": 3, "note": "The Best Kayo Lineups on Ascent."},
+    {"video_id": "9WQuk5DwhI4", "author": null, "duration": "6:48", "chapters": 6, "status": "candidate", "priority": 3, "note": "The Kay/O Lineups You NEED To Know On Ascent."},
+    {"video_id": "eOB7HUyVrLw", "author": null, "duration": "10:57", "chapters": 5, "status": "candidate", "priority": 4, "note": "BEST KayO Lineups Ascent map 2024. Few chapters — likely low unique yield after dedup."},
+    {"video_id": "hmfLLIxK610", "author": null, "duration": "8:17", "chapters": 4, "status": "candidate", "priority": 4, "note": "ULTIMATE KAYO LINEUP GUIDE ON ASCENT. Few chapters."}
+  ]
+}
