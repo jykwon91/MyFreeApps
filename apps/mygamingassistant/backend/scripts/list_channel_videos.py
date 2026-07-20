@@ -41,7 +41,10 @@ def main() -> None:
         n = int(args[2]) if len(args) > 2 else 40
     elif args[0] == "--search":
         n = int(args[2]) if len(args) > 2 else 40
-        target = f"ytsearchdate{n}:{args[1]}"
+        # Pass the bare query + default_search so yt-dlp routes it to the search
+        # extractor. Building the "ytsearchdate<N>:" scheme by hand trips the
+        # generic URL handler ("Unsupported url scheme") in current yt-dlp.
+        target = args[1]
     else:
         target = args[0]
         host = (urlparse(target).hostname or "").lower()
@@ -51,6 +54,8 @@ def main() -> None:
         n = int(args[1]) if len(args) > 1 else 40
 
     opts = dict(_FLAT, playlistend=n)
+    if args[0] == "--search":
+        opts["default_search"] = f"ytsearchdate{n}"
     with yt_dlp.YoutubeDL(opts) as y:
         info = y.extract_info(target, download=False)
     entries = info.get("entries") or []
