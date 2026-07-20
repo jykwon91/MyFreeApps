@@ -12,6 +12,7 @@ Prints id, duration, and title (newest first). Use dump_chapters.py on a
 candidate to confirm upload_date + per-lineup chapter structure.
 """
 import sys
+from urllib.parse import urlparse
 
 import yt_dlp  # noqa: E402
 
@@ -43,7 +44,9 @@ def main() -> None:
         target = f"ytsearchdate{n}:{args[1]}"
     else:
         target = args[0]
-        if "youtube.com" in target and "/videos" not in target and "list=" not in target:
+        host = (urlparse(target).hostname or "").lower()
+        is_youtube = host == "youtube.com" or host.endswith(".youtube.com")
+        if is_youtube and "/videos" not in target and "list=" not in target:
             target = target.rstrip("/") + "/videos"
         n = int(args[1]) if len(args) > 1 else 40
 
