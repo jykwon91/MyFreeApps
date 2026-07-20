@@ -202,7 +202,12 @@ test.describe("Welcome Manuals layout (mocked, no backend)", () => {
     await expect(page.getByTestId("welcome-manual-detail-skeleton")).toBeVisible({ timeout: 5000 });
 
     await expect(page.getByTestId("welcome-manual-header-card")).toBeVisible({ timeout: 10000 });
-    await expect(page.getByRole("heading", { name: "Lakeview Welcome Guide" })).toBeVisible();
+    // Scope to the header card — the guest-preview panel repeats the title as its own h1.
+    await expect(
+      page.getByTestId("welcome-manual-header-card").getByRole("heading", {
+        name: "Lakeview Welcome Guide",
+      }),
+    ).toBeVisible();
     await expect(page.getByTestId("welcome-manual-sections")).toBeVisible();
     const cards = await page.getByTestId("welcome-manual-section-card").count();
     expect(cards).toBe(3);
@@ -210,5 +215,54 @@ test.describe("Welcome Manuals layout (mocked, no backend)", () => {
     const bodyWidth = await page.evaluate(() => document.body.scrollWidth);
     const vw = page.viewportSize()?.width ?? 0;
     expect(bodyWidth).toBeLessThanOrEqual(vw + 1);
+  });
+
+  test("desktop shows editor + guest preview side by side; toggle hidden", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await plantAuth(page);
+    await stubShell(page);
+    await stubDetail(page);
+
+    await page.goto(`/welcome-manuals/${MANUAL_ID}`);
+    await expect(page.getByTestId("welcome-manual-header-card")).toBeVisible({ timeout: 10000 });
+
+    // Both columns visible on desktop; the mobile Edit/Preview toggle is hidden.
+    await expect(page.getByTestId("welcome-manual-editor-column")).toBeVisible();
+    await expect(page.getByTestId("welcome-manual-preview-column")).toBeVisible();
+    await expect(page.getByTestId("welcome-manual-view-toggle")).toBeHidden();
+
+    // The preview mirrors the sections (title + one preview section per section).
+    const previewSections = await page.getByTestId("welcome-manual-preview-section").count();
+    expect(previewSections).toBe(3);
+
+    const bodyWidth = await page.evaluate(() => document.body.scrollWidth);
+    expect(bodyWidth).toBeLessThanOrEqual(1280 + 1);
+  });
+
+  test("mobile toggle switches between editor and guest preview", async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 800 });
+    await plantAuth(page);
+    await stubShell(page);
+    await stubDetail(page);
+
+    await page.goto(`/welcome-manuals/${MANUAL_ID}`);
+    await expect(page.getByTestId("welcome-manual-view-toggle")).toBeVisible({ timeout: 10000 });
+
+    // Editor shows by default; preview is hidden.
+    await expect(page.getByTestId("welcome-manual-editor-column")).toBeVisible();
+    await expect(page.getByTestId("welcome-manual-preview-column")).toBeHidden();
+
+    // Switch to preview.
+    await page.getByTestId("welcome-manual-view-toggle-preview").click();
+    await expect(page.getByTestId("welcome-manual-preview-column")).toBeVisible();
+    await expect(page.getByTestId("welcome-manual-editor-column")).toBeHidden();
+
+    // Switch back to editor.
+    await page.getByTestId("welcome-manual-view-toggle-edit").click();
+    await expect(page.getByTestId("welcome-manual-editor-column")).toBeVisible();
+    await expect(page.getByTestId("welcome-manual-preview-column")).toBeHidden();
+
+    const bodyWidth = await page.evaluate(() => document.body.scrollWidth);
+    expect(bodyWidth).toBeLessThanOrEqual(375 + 1);
   });
 });

@@ -58,8 +58,11 @@ test.describe("Welcome Manuals CRUD (PR 4b)", () => {
       await page.getByTestId("welcome-manual-create-title").fill(title);
       await page.getByTestId("welcome-manual-create-submit").click();
 
-      // Navigates to the new detail page (header heading appears).
-      await expect(page.getByRole("heading", { name: title })).toBeVisible({ timeout: 10000 });
+      // Navigates to the new detail page (header heading appears). Scope to the
+      // header card — the guest-preview panel repeats the title as its own h1.
+      await expect(
+        page.getByTestId("welcome-manual-header-card").getByRole("heading", { name: title }),
+      ).toBeVisible({ timeout: 10000 });
       const detailUrl = page.url();
       const match = detailUrl.match(/\/welcome-manuals\/([0-9a-f-]+)/);
       manualId = match?.[1] ?? null;
@@ -78,7 +81,9 @@ test.describe("Welcome Manuals CRUD (PR 4b)", () => {
 
       // Open it again.
       await page.getByText(title).first().click();
-      await expect(page.getByRole("heading", { name: title })).toBeVisible();
+      await expect(
+        page.getByTestId("welcome-manual-header-card").getByRole("heading", { name: title }),
+      ).toBeVisible();
       await page.waitForLoadState("networkidle");
 
       // 3) EDIT the first section's title + markdown body, then Save.

@@ -26,6 +26,7 @@ import { useGetPropertiesQuery } from "@/shared/store/propertiesApi";
 import type { WelcomeManualSectionResponse } from "@/shared/types/welcome-manual/welcome-manual-section-response";
 import WelcomeManualDetailSkeleton from "@/app/features/welcome-manuals/WelcomeManualDetailSkeleton";
 import WelcomeManualSectionCard from "@/app/features/welcome-manuals/WelcomeManualSectionCard";
+import WelcomeManualPreview from "@/app/features/welcome-manuals/WelcomeManualPreview";
 import WelcomeManualForm from "@/app/features/welcome-manuals/WelcomeManualForm";
 import WelcomeManualEmailDialog from "@/app/features/welcome-manuals/WelcomeManualEmailDialog";
 import DeleteWelcomeManualModal from "@/app/features/welcome-manuals/DeleteWelcomeManualModal";
@@ -38,6 +39,9 @@ export default function WelcomeManualDetail() {
   const [showEmailDialog, setShowEmailDialog] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [pendingFocusId, setPendingFocusId] = useState<string | null>(null);
+  // Mobile-only view toggle. Desktop (lg+) shows editor + preview side by side,
+  // so this state is ignored there.
+  const [mobileView, setMobileView] = useState<"edit" | "preview">("edit");
 
   const sectionRefs = useRef<Map<string, HTMLElement>>(new Map());
 
@@ -124,7 +128,7 @@ export default function WelcomeManualDetail() {
   const hasSections = sortedSections.length > 0;
 
   return (
-    <main className="p-4 sm:p-8 space-y-6 max-w-3xl">
+    <main className="p-4 sm:p-8 space-y-6 max-w-6xl">
       <Link
         to="/welcome-manuals"
         className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground min-h-[44px]"
@@ -152,104 +156,163 @@ export default function WelcomeManualDetail() {
 
       {manual ? (
         <>
-          <section
-            className="border rounded-lg p-4 space-y-3"
-            data-testid="welcome-manual-header-card"
+          <div
+            className="flex rounded-lg border p-1 lg:hidden"
+            role="tablist"
+            aria-label="Editor and guest preview"
+            data-testid="welcome-manual-view-toggle"
           >
-            <SectionHeader
-              title={manual.title}
-              subtitle={
-                property ? (
-                  <Link to="/properties" className="text-sm text-primary hover:underline">
-                    {property.name}
-                  </Link>
-                ) : undefined
-              }
-              actions={
-                <>
-                  <Button
-                    variant="secondary"
-                    size="md"
-                    onClick={() => setShowEditForm(true)}
-                    data-testid="edit-welcome-manual-button"
-                  >
-                    Edit
-                  </Button>
-                  <span title={hasSections ? undefined : "Add at least one section before sending."}>
-                    <Button
-                      variant="secondary"
-                      size="md"
-                      onClick={() => setShowEmailDialog(true)}
-                      disabled={!hasSections}
-                      data-testid="email-welcome-manual-button"
-                    >
-                      <Mail className="h-4 w-4 mr-1" />
-                      Email to guest
-                    </Button>
-                  </span>
-                  <Button
-                    variant="secondary"
-                    size="md"
-                    onClick={() => setShowDeleteModal(true)}
-                    className="text-red-600 border-red-200 hover:bg-red-50"
-                    data-testid="delete-welcome-manual-button"
-                  >
-                    <Trash2 className="h-4 w-4 mr-1" />
-                    Delete
-                  </Button>
-                </>
-              }
-            />
-            {manual.intro_text ? (
-              <div data-testid="welcome-manual-intro">
-                <Markdown content={manual.intro_text} />
+            <button
+              type="button"
+              role="tab"
+              aria-selected={mobileView === "edit"}
+              onClick={() => setMobileView("edit")}
+              className={`flex-1 min-h-[44px] rounded-md text-sm font-medium transition-colors ${
+                mobileView === "edit"
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+              data-testid="welcome-manual-view-toggle-edit"
+            >
+              Edit
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={mobileView === "preview"}
+              onClick={() => setMobileView("preview")}
+              className={`flex-1 min-h-[44px] rounded-md text-sm font-medium transition-colors ${
+                mobileView === "preview"
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+              data-testid="welcome-manual-view-toggle-preview"
+            >
+              Preview
+            </button>
+          </div>
+
+          <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
+            <div
+              className={`space-y-6 lg:block ${mobileView === "edit" ? "block" : "hidden"}`}
+              data-testid="welcome-manual-editor-column"
+            >
+              <section
+                className="border rounded-lg p-4 space-y-3"
+                data-testid="welcome-manual-header-card"
+              >
+                <SectionHeader
+                  title={manual.title}
+                  subtitle={
+                    property ? (
+                      <Link to="/properties" className="text-sm text-primary hover:underline">
+                        {property.name}
+                      </Link>
+                    ) : undefined
+                  }
+                  actions={
+                    <>
+                      <Button
+                        variant="secondary"
+                        size="md"
+                        onClick={() => setShowEditForm(true)}
+                        data-testid="edit-welcome-manual-button"
+                      >
+                        Edit
+                      </Button>
+                      <span title={hasSections ? undefined : "Add at least one section before sending."}>
+                        <Button
+                          variant="secondary"
+                          size="md"
+                          onClick={() => setShowEmailDialog(true)}
+                          disabled={!hasSections}
+                          data-testid="email-welcome-manual-button"
+                        >
+                          <Mail className="h-4 w-4 mr-1" />
+                          Email to guest
+                        </Button>
+                      </span>
+                      <Button
+                        variant="secondary"
+                        size="md"
+                        onClick={() => setShowDeleteModal(true)}
+                        className="text-red-600 border-red-200 hover:bg-red-50"
+                        data-testid="delete-welcome-manual-button"
+                      >
+                        <Trash2 className="h-4 w-4 mr-1" />
+                        Delete
+                      </Button>
+                    </>
+                  }
+                />
+                {manual.intro_text ? (
+                  <div data-testid="welcome-manual-intro">
+                    <Markdown content={manual.intro_text} />
+                  </div>
+                ) : null}
+              </section>
+
+              {hasSections ? (
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={(event) => void handleDragEnd(event)}
+                >
+                  <SortableContext items={orderedIds} strategy={verticalListSortingStrategy}>
+                    <div className="space-y-4" data-testid="welcome-manual-sections">
+                      {orderedIds.map((id) => {
+                        const section = sectionsById.get(id);
+                        if (!section) return null;
+                        return (
+                          <WelcomeManualSectionCard
+                            key={id}
+                            ref={(node) => registerSectionRef(id, node)}
+                            manualId={manual.id}
+                            section={section}
+                          />
+                        );
+                      })}
+                    </div>
+                  </SortableContext>
+                </DndContext>
+              ) : (
+                <p
+                  className="text-sm text-muted-foreground border rounded-lg p-6 text-center"
+                  data-testid="welcome-manual-sections-empty"
+                >
+                  No sections yet. Add one to start building this guide.
+                </p>
+              )}
+
+              <div className="flex justify-center">
+                <LoadingButton
+                  variant="secondary"
+                  onClick={() => void handleAddSection()}
+                  isLoading={isAddingSection}
+                  loadingText="Adding..."
+                  data-testid="add-welcome-manual-section-button"
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add section
+                </LoadingButton>
               </div>
-            ) : null}
-          </section>
+            </div>
 
-          {hasSections ? (
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={(event) => void handleDragEnd(event)}
+            <div
+              className={`lg:block ${mobileView === "preview" ? "block" : "hidden"}`}
+              data-testid="welcome-manual-preview-column"
             >
-              <SortableContext items={orderedIds} strategy={verticalListSortingStrategy}>
-                <div className="space-y-4" data-testid="welcome-manual-sections">
-                  {orderedIds.map((id) => {
-                    const section = sectionsById.get(id);
-                    if (!section) return null;
-                    return (
-                      <WelcomeManualSectionCard
-                        key={id}
-                        ref={(node) => registerSectionRef(id, node)}
-                        manualId={manual.id}
-                        section={section}
-                      />
-                    );
-                  })}
-                </div>
-              </SortableContext>
-            </DndContext>
-          ) : (
-            <p
-              className="text-sm text-muted-foreground border rounded-lg p-6 text-center"
-              data-testid="welcome-manual-sections-empty"
-            >
-              No sections yet. Add one to start building this guide.
-            </p>
-          )}
-
-          <div className="flex justify-center">
-            <LoadingButton
-              variant="secondary"
-              onClick={() => void handleAddSection()}
-              isLoading={isAddingSection}
-              loadingText="Adding..."
-              data-testid="add-welcome-manual-section-button"
-            >
-              <Plus className="h-4 w-4 mr-1" />
-              Add section
-            </LoadingButton>
+              <div className="lg:sticky lg:top-8 space-y-2">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Guest preview
+                </p>
+                <WelcomeManualPreview
+                  title={manual.title}
+                  introText={manual.intro_text}
+                  sections={sortedSections}
+                />
+              </div>
+            </div>
           </div>
 
           {showEditForm ? (

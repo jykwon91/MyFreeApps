@@ -8,7 +8,7 @@
  *   - The error state offers a retry.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { Provider } from "react-redux";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { store } from "@/shared/store";
@@ -120,5 +120,27 @@ describe("WelcomeManualDetail", () => {
     renderDetail();
     expect(screen.getByTestId("email-welcome-manual-button")).not.toBeDisabled();
     expect(screen.getByTestId("welcome-manual-sections")).toBeInTheDocument();
+  });
+
+  it("renders a guest preview panel beside the editor", () => {
+    mockManual = makeManual([makeSection("sec-1")]);
+    renderDetail();
+    expect(screen.getByTestId("welcome-manual-editor-column")).toBeInTheDocument();
+    expect(screen.getByTestId("welcome-manual-preview-column")).toBeInTheDocument();
+    expect(screen.getByTestId("welcome-manual-preview")).toBeInTheDocument();
+  });
+
+  it("toggles the mobile view between edit and preview", () => {
+    mockManual = makeManual([makeSection("sec-1")]);
+    renderDetail();
+    const editTab = screen.getByTestId("welcome-manual-view-toggle-edit");
+    const previewTab = screen.getByTestId("welcome-manual-view-toggle-preview");
+    // Editor is the default selected tab.
+    expect(editTab).toHaveAttribute("aria-selected", "true");
+    expect(previewTab).toHaveAttribute("aria-selected", "false");
+
+    fireEvent.click(previewTab);
+    expect(previewTab).toHaveAttribute("aria-selected", "true");
+    expect(editTab).toHaveAttribute("aria-selected", "false");
   });
 });
