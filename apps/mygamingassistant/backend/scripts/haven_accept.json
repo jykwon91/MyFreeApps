@@ -1,0 +1,102 @@
+{
+"30": [
+"garage",
+"b-site",
+"side_a"
+],
+"55": [
+"c-lobby",
+"c-site",
+"side_a"
+],
+"79": [
+"a-lobby",
+"a-site",
+"side_a"
+],
+"102": [
+"a-lobby",
+"a-site",
+"side_a"
+],
+"122": [
+"a-lobby",
+"a-site",
+"side_a"
+],
+"145": [
+"a-lobby",
+"a-site",
+"side_a"
+],
+"167": [
+"a-lobby",
+"a-site",
+"side_a"
+],
+"189": [
+"c-lobby",
+"c-site",
+"side_a"
+],
+"212": [
+"garage",
+"b-site",
+"side_a"
+],
+"232": [
+"garage",
+"b-site",
+"side_a"
+],
+"254": [
+"a-lobby",
+"a-site",
+"side_a"
+],
+"277": [
+"a-lobby",
+"a-site",
+"side_a"
+],
+"300": [
+"a-lobby",
+"a-site",
+"side_a"
+],
+"359": [
+"ct-spawn",
+"b-site",
+"side_b"
+],
+"378": [
+"c-lobby",
+"c-site",
+"side_a"
+],
+"402": [
+"c-lobby",
+"c-site",
+"side_a"
+],
+"427": [
+"ct-spawn",
+"c-site",
+"side_b"
+],
+"450": [
+"a-site",
+"a-site",
+"side_a"
+],
+"479": [
+"b-site",
+"b-site",
+"side_a"
+],
+"497": [
+"c-site",
+"c-site",
+"side_a"
+]
+}

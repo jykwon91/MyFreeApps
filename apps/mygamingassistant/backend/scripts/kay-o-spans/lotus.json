@@ -1,0 +1,148 @@
+{
+  "video_id": "UOjxEWdYg7U",
+  "map_slug": "lotus",
+  "author": "Tseeky",
+  "note": "KAY/O Lotus lineups, sourced from Tseeky 'KAYO Lineups Lotus - Valorant Guide *NEW*' (UOjxEWdYg7U, uploaded 2023-03-17, post-release current geometry). 39 source chapters localized STAND/AIM/THROW/LANDING and gated on the ability payload actually shown on-screen; 14 accepted (5 flashdrive, 7 zero-point, 2 fragment). Every accept has a live on-camera correct-color payload (white flash bloom / suppression pulse / repeating fragment blasts). Rejects were the source's dominant ghost-cam/preview-reveal pattern (frozen 1:40 timer + 'Tseeky set Ghost to On', no live cast), blind pop-flashes lobbed over geometry, non-chronological cold-opens, or landings never resolving on camera. See lotus-ledger.md.",
+  "lineups": [
+    {
+      "cs": 126,
+      "title": "B Site Flash (from B Main, Attack)",
+      "ability": "flashdrive",
+      "technique": "standing",
+      "target": "b-site",
+      "stand": "b-main",
+      "side": "side_a",
+      "spans": {"stand": [126.00, 127.50], "aim": [128.85, 129.45], "throw": [129.45, 129.95], "landing": [123.50, 124.10]}
+    },
+    {
+      "cs": 139,
+      "title": "A Main One Way Flash (from A Main, Defense)",
+      "ability": "flashdrive",
+      "technique": "standing",
+      "target": "a-main",
+      "stand": "a-main",
+      "side": "side_b",
+      "spans": {"stand": [139.50, 141.50], "aim": [145.60, 146.75], "throw": [146.70, 147.20], "landing": [148.20, 148.70]}
+    },
+    {
+      "cs": 171,
+      "title": "A Tree Pop Flash (from A Tree, Defense)",
+      "ability": "flashdrive",
+      "technique": "standing",
+      "target": "a-main",
+      "stand": "a-site",
+      "side": "side_b",
+      "spans": {"stand": [171.70, 173.50], "aim": [176.30, 176.80], "throw": [176.75, 177.35], "landing": [177.95, 178.35]}
+    },
+    {
+      "cs": 215,
+      "title": "C Main Flash (from C Main, Defense)",
+      "ability": "flashdrive",
+      "technique": "standing",
+      "target": "c-main",
+      "stand": "c-main",
+      "side": "side_b",
+      "spans": {"stand": [215.00, 216.80], "aim": [219.85, 220.20], "throw": [220.20, 220.70], "landing": [221.70, 222.20]}
+    },
+    {
+      "cs": 295,
+      "title": "B Retake Flash (from C Link, Defense)",
+      "ability": "flashdrive",
+      "technique": "standing",
+      "target": "b-site",
+      "stand": "c-main",
+      "side": "side_b",
+      "spans": {"stand": [295.60, 297.30], "aim": [297.30, 297.50], "throw": [297.47, 297.65], "landing": [299.10, 299.45]}
+    },
+    {
+      "cs": 326,
+      "title": "A Main Knife (from A Lobby, Attack)",
+      "ability": "zero-point",
+      "technique": "standing",
+      "target": "a-main",
+      "stand": "a-main",
+      "side": "side_a",
+      "spans": {"stand": [326.80, 328.00], "aim": [329.40, 330.45], "throw": [330.45, 330.95], "landing": [331.75, 332.60]}
+    },
+    {
+      "cs": 359,
+      "title": "A Site Knife (from A Main, Attack)",
+      "ability": "zero-point",
+      "technique": "standing",
+      "target": "a-site",
+      "stand": "a-main",
+      "side": "side_a",
+      "spans": {"stand": [359.50, 361.00], "aim": [363.87, 364.37], "throw": [364.85, 365.40], "landing": [366.30, 366.90]}
+    },
+    {
+      "cs": 378,
+      "title": "B Main Knife (from B Main, Attack)",
+      "ability": "zero-point",
+      "technique": "standing",
+      "target": "b-main",
+      "stand": "b-main",
+      "side": "side_a",
+      "spans": {"stand": [378.70, 379.30], "aim": [379.55, 379.78], "throw": [379.68, 380.10], "landing": [379.90, 380.40]}
+    },
+    {
+      "cs": 435,
+      "title": "C Main Knife (from C Main, Attack)",
+      "ability": "zero-point",
+      "technique": "standing",
+      "target": "c-main",
+      "stand": "c-main",
+      "side": "side_a",
+      "spans": {"stand": [435.75, 436.60], "aim": [437.30, 437.78], "throw": [437.65, 438.10], "landing": [438.75, 439.25]}
+    },
+    {
+      "cs": 500,
+      "title": "A Lobby Knife (from C Gravel, Defense)",
+      "ability": "zero-point",
+      "technique": "standing",
+      "target": "a-main",
+      "stand": "c-main",
+      "side": "side_b",
+      "spans": {"stand": [500.50, 502.50], "aim": [503.50, 504.15], "throw": [504.00, 504.60], "landing": [509.70, 511.30]}
+    },
+    {
+      "cs": 538,
+      "title": "B Retake Knife (from Heaven, Defense)",
+      "ability": "zero-point",
+      "technique": "standing",
+      "target": "b-site",
+      "stand": "b-site",
+      "side": "side_b",
+      "spans": {"stand": [538.40, 540.00], "aim": [542.90, 543.90], "throw": [543.90, 544.50], "landing": [546.90, 547.90]}
+    },
+    {
+      "cs": 587,
+      "title": "C Retake Knife (from C Waterfall, Defense)",
+      "ability": "zero-point",
+      "technique": "standing",
+      "target": "c-site",
+      "stand": "c-site",
+      "side": "side_b",
+      "spans": {"stand": [587.00, 588.20], "aim": [591.65, 592.15], "throw": [592.40, 592.90], "landing": [595.40, 596.30]}
+    },
+    {
+      "cs": 605,
+      "title": "A Drop Molly (from A Tree, Attack)",
+      "ability": "fragment",
+      "technique": "standing",
+      "target": "a-site",
+      "stand": "a-site",
+      "side": "side_a",
+      "spans": {"stand": [605.00, 606.00], "aim": [609.45, 609.95], "throw": [609.95, 610.45], "landing": [613.75, 614.35]}
+    },
+    {
+      "cs": 625,
+      "title": "A Default Molly (from A Root, Attack)",
+      "ability": "fragment",
+      "technique": "standing",
+      "target": "a-site",
+      "stand": "a-main",
+      "side": "side_a",
+      "spans": {"stand": [625.00, 627.00], "aim": [631.70, 633.05], "throw": [633.05, 633.65], "landing": [638.30, 641.00]}
+    }
+  ]
+}

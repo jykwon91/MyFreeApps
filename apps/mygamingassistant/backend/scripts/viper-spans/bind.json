@@ -1,0 +1,19 @@
+{
+  "video_id": "xx9xZ3JGVu0",
+  "map_slug": "bind",
+  "author": "B3ast plays YT",
+  "note": "Bind Viper post-plant snake-bites, 11 lineups from 13 windows (W8 dropped = dup of W9; W11 dropped = landing edited out / <0.3s flight impossible). 7 A-site + 4 B-site, all attacker post-plant, all snake-bite. W6 and W12 are JUMP-throws; rest standing (many near-vertical, technique unverified). Bind has NO mid. Coarse zones: A Link/A Lobby/A Short/A Bath->a-short; A Site->a-site; B Short/B Teleporter->b-short; B Fountain->b-site; targets a-site/b-site. Several A-side share A Lobby->A Site with different alignment refs (kept distinct).",
+  "lineups": [
+    {"cs": 17,  "title": "A Site (from A Link)",             "ability": "snake-bite", "technique": "standing", "target": "a-site", "stand": "a-short", "side": "side_a", "spans": {"stand": [17.00, 18.00], "aim": [18.05, 18.30], "throw": [18.30, 18.85], "landing": [21.95, 22.75]}},
+    {"cs": 40,  "title": "A Site (from A Short)",            "ability": "snake-bite", "technique": "standing", "target": "a-site", "stand": "a-short", "side": "side_a", "spans": {"stand": [40.20, 40.50], "aim": [40.55, 40.78], "throw": [40.75, 40.95], "landing": [44.20, 45.40]}},
+    {"cs": 52,  "title": "A Site (from A Lobby, bounce)",    "ability": "snake-bite", "technique": "standing", "target": "a-site", "stand": "a-short", "side": "side_a", "spans": {"stand": [52.00, 53.50], "aim": [54.40, 55.70], "throw": [55.72, 56.20], "landing": [60.80, 62.50]}},
+    {"cs": 70,  "title": "A Site (from A Bath, skylight)",   "ability": "snake-bite", "technique": "standing", "target": "a-site", "stand": "a-short", "side": "side_a", "spans": {"stand": [70.00, 70.40], "aim": [73.25, 73.58], "throw": [73.55, 73.85], "landing": [76.40, 77.50]}},
+    {"cs": 87,  "title": "A Site (from A Lobby)",            "ability": "snake-bite", "technique": "standing", "target": "a-site", "stand": "a-short", "side": "side_a", "spans": {"stand": [87.00, 88.80], "aim": [90.30, 90.48], "throw": [90.46, 90.96], "landing": [95.50, 97.50]}},
+    {"cs": 102, "title": "A Site (from A Lobby, jump-throw)","ability": "snake-bite", "technique": "jump",     "target": "a-site", "stand": "a-short", "side": "side_a", "spans": {"stand": [102.00, 102.25], "aim": [102.10, 102.35], "throw": [102.40, 103.00], "landing": [109.50, 110.60]}},
+    {"cs": 118, "title": "A Site (from A Short, rooftop)",   "ability": "snake-bite", "technique": "standing", "target": "a-site", "stand": "a-short", "side": "side_a", "spans": {"stand": [118.00, 120.00], "aim": [121.25, 121.45], "throw": [121.40, 121.75], "landing": [123.80, 126.00]}},
+    {"cs": 150, "title": "B Site (from B Teleporter)",       "ability": "snake-bite", "technique": "standing", "target": "b-site", "stand": "b-short", "side": "side_a", "spans": {"stand": [150.26, 150.42], "aim": [150.42, 150.51], "throw": [150.47, 150.63], "landing": [155.50, 156.60]}},
+    {"cs": 164, "title": "B Site (from B Fountain)",         "ability": "snake-bite", "technique": "standing", "target": "b-site", "stand": "b-site",  "side": "side_a", "spans": {"stand": [164.00, 165.40], "aim": [167.90, 168.25], "throw": [168.30, 168.85], "landing": [172.20, 174.20]}},
+    {"cs": 210, "title": "B Site (from B Short, jump-throw)","ability": "snake-bite", "technique": "jump",     "target": "b-site", "stand": "b-short", "side": "side_a", "spans": {"stand": [210.00, 210.60], "aim": [211.00, 211.70], "throw": [211.80, 212.10], "landing": [219.70, 220.70]}},
+    {"cs": 226, "title": "B Site (from B Teleporter, tent)", "ability": "snake-bite", "technique": "standing", "target": "b-site", "stand": "b-short", "side": "side_a", "spans": {"stand": [226.00, 227.00], "aim": [228.93, 229.02], "throw": [229.02, 229.55], "landing": [234.30, 235.40]}}
+  ]
+}

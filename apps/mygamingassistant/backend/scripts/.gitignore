@@ -1,0 +1,77 @@
+# MGA operator pipeline tooling — track the PORTABLE, reusable pipeline + its
+# structured inputs; keep machine-local scratch, run output, and secrets local.
+#
+# This is a PUBLIC repo. The hard gate (see rules/non-code-public-repo-guardrails):
+# NOTHING with a literal operator-absolute path (a `C:\Users\<name>\...` /
+# `/Users/<name>/...` home dir) or a claude session-UUID scratch path may be
+# committed.
+# The durable pipeline scripts are path-clean (they derive dirs from
+# `Path.home()` / `os.environ["TEMP"]`), so they ARE tracked. Ad-hoc diagnostics
+# that hardcode this machine's paths stay local (protected from a stray
+# `git clean` by hooks/block-git-clean.js) until scrubbed to portable idioms.
+#
+# Tracked (necessary to RE-RUN the pipeline — the scripts read these):
+#   - portable .py / .ps1 pipeline tooling (no hardcoded operator path)
+#   - *-lineup-expert.md            — path-clean domain knowledge
+#   - <agent>-spans/<map>.json      — structured ingest source-of-truth
+#   - *_items.json                  — per-chapter work lists (localization input)
+#   - *_accept.json                 — externalized accept mappings (gating input)
+#   - .env.r2.example
+#
+# Ignored (run output / human notes / machine-local / secret):
+#   - LOCALIZE_INSTRUCTIONS*.md, dump_*, and the diagnostics listed below
+#     (hardcode operator-absolute paths — machine-local operator briefs/scratch)
+#   - *.block, *_results.json       raw localizer output (embed local card paths)
+#   - *_spans.md, *-ledger.md, *-spans notes  human notes (paths + reasoning)
+#   - strips / frames / logs / __pycache__ / the .env.r2 credential file
+
+# --- Secrets (NEVER track) ---
+.env
+.env.*
+!.env.example
+!.env.r2.example
+
+# --- Machine-local operator briefs + ad-hoc diagnostics (hardcode this
+#     machine's absolute paths — keep local until scrubbed to Path.home() idioms) ---
+LOCALIZE_INSTRUCTIONS*.md
+dump_*.py
+dump_*.ps1
+backfill_market_door.py
+diagnose_aim_localizer.py
+finecut_strip.py
+landing_pad_compare_sheet.py
+market_door_strip.py
+parse_and_recut.py
+recut_from_output.py
+recut_landing_pad_check.py
+relocalize_aim.py
+rerun_market_door_micro.py
+scan_multidemo.py
+
+# --- Raw localizer run OUTPUT (embed machine-local card paths) ---
+*.block
+*_results.json
+
+# --- Human working-notes / ledgers (local paths + internal gating reasoning) ---
+# Top-level notes + everything non-.json inside a *-spans/ dir (per-lineup
+# notes, addenda, txt). Only the structured <map>.json in a spans dir is input.
+*_spans.md
+*-ledger.md
+*-spans/*.md
+*-spans/**/*.md
+*-spans/*.txt
+*-spans/**/*.txt
+
+# --- Extracted media / frame strips (regenerable from the source video) ---
+_strips/
+*_strips/
+frames/
+_scratch/
+
+# --- Logs ---
+*.log
+_*.log
+
+# --- Python bytecode cache ---
+__pycache__/
+*.pyc

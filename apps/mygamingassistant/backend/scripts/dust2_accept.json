@@ -1,0 +1,177 @@
+{
+  "44": [
+    "mid",
+    "mid",
+    "side_a"
+  ],
+  "50": [
+    "mid",
+    "mid",
+    "side_a"
+  ],
+  "59": [
+    "mid",
+    "mid",
+    "side_a"
+  ],
+  "74": [
+    "mid",
+    "mid",
+    "side_a"
+  ],
+  "96": [
+    "a-long",
+    "a-site",
+    "side_a"
+  ],
+  "110": [
+    "a-long",
+    "a-site",
+    "side_a"
+  ],
+  "146": [
+    "a-long",
+    "a-site",
+    "side_a"
+  ],
+  "164": [
+    "a-long",
+    "a-site",
+    "side_a"
+  ],
+  "201": [
+    "a-long",
+    "a-site",
+    "side_a"
+  ],
+  "213": [
+    "a-long",
+    "a-site",
+    "side_a"
+  ],
+  "303": [
+    "catwalk",
+    "a-site",
+    "side_a"
+  ],
+  "311": [
+    "a-site",
+    "a-long",
+    "side_b"
+  ],
+  "320": [
+    "a-long",
+    "a-site",
+    "side_a"
+  ],
+  "342": [
+    "catwalk",
+    "a-site",
+    "side_a"
+  ],
+  "356": [
+    "a-long",
+    "a-site",
+    "side_a"
+  ],
+  "368": [
+    "a-long",
+    "a-site",
+    "side_a"
+  ],
+  "400": [
+    "a-long",
+    "a-site",
+    "side_a"
+  ],
+  "448": [
+    "mid",
+    "ct-spawn",
+    "side_a"
+  ],
+  "467": [
+    "a-long",
+    "ct-spawn",
+    "side_a"
+  ],
+  "477": [
+    "a-long",
+    "a-site",
+    "side_a"
+  ],
+  "491": [
+    "a-site",
+    "a-site",
+    "side_a"
+  ],
+  "503": [
+    "b-tunnels",
+    "b-site",
+    "side_a"
+  ],
+  "527": [
+    "b-tunnels",
+    "b-site",
+    "side_a"
+  ],
+  "544": [
+    "b-tunnels",
+    "b-site",
+    "side_a"
+  ],
+  "577": [
+    "mid",
+    "mid",
+    "side_a"
+  ],
+  "582": [
+    "mid",
+    "b-site",
+    "side_a"
+  ],
+  "589": [
+    "mid",
+    "b-site",
+    "side_a"
+  ],
+  "613": [
+    "mid",
+    "b-site",
+    "side_a"
+  ],
+  "633": [
+    "mid",
+    "b-site",
+    "side_a"
+  ],
+  "649": [
+    "b-tunnels",
+    "mid",
+    "side_a"
+  ],
+  "661": [
+    "ct-spawn",
+    "mid",
+    "side_b"
+  ],
+  "742": [
+    "ct-spawn",
+    "a-long",
+    "side_b"
+  ],
+  "843": [
+    "ct-spawn",
+    "a-site",
+    "side_b"
+  ],
+  "888": [
+    "ct-spawn",
+    "b-site",
+    "side_b"
+  ],
+  "896": [
+    "ct-spawn",
+    "b-site",
+    "side_b"
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "video_id": "U7AwrJhexw8",
+  "map_slug": "haven",
+  "author": "B3ast plays YT",
+  "note": "Viper Top-15 post-plant snake-bite lineups, Haven. Localized by frame-study from an unchaptered montage; coarse zones per map zone set, fine detail in titles. Not operator-verified.",
+  "lineups": [
+    {"cs": 18, "title": "C Long -> C Site (11m spike)", "ability": "snake-bite", "technique": "standing", "target": "c-site", "stand": "c-lobby", "side": "side_a", "spans": {"stand": [18.50, 20.00], "aim": [22.70, 22.88], "throw": [22.86, 23.36], "landing": [28.05, 28.85]}},
+    {"cs": 36, "title": "C Long -> A Site (cross-map lob)", "ability": "snake-bite", "technique": "standing", "target": "a-site", "stand": "c-lobby", "side": "side_a", "spans": {"stand": [36.00, 37.40], "aim": [41.00, 41.55], "throw": [41.55, 42.05], "landing": [46.75, 47.55]}},
+    {"cs": 54, "title": "Mid Courtyard -> C Site", "ability": "snake-bite", "technique": "standing", "target": "c-site", "stand": "b-site", "side": "side_a", "spans": {"stand": [54.00, 54.60], "aim": [58.30, 58.55], "throw": [58.55, 59.10], "landing": [63.50, 65.50]}},
+    {"cs": 71, "title": "C Long -> C Site (11m spike, high loft)", "ability": "snake-bite", "technique": "standing", "target": "c-site", "stand": "c-lobby", "side": "side_a", "spans": {"stand": [71.80, 73.00], "aim": [77.20, 77.70], "throw": [77.70, 78.15], "landing": [82.80, 83.80]}},
+    {"cs": 89, "title": "C Long -> C Site (skybox lob)", "ability": "snake-bite", "technique": "standing", "target": "c-site", "stand": "c-lobby", "side": "side_a", "spans": {"stand": [89.00, 89.70], "aim": [96.40, 96.90], "throw": [96.85, 97.35], "landing": [100.50, 101.40]}},
+    {"cs": 109, "title": "C Long -> C Site (near-vertical loft)", "ability": "snake-bite", "technique": "standing", "target": "c-site", "stand": "c-lobby", "side": "side_a", "spans": {"stand": [109.60, 111.00], "aim": [111.40, 112.35], "throw": [112.50, 113.05], "landing": [116.80, 118.60]}},
+    {"cs": 125, "title": "Mid Window -> B Site (run throw)", "ability": "snake-bite", "technique": "run", "target": "b-site", "stand": "b-site", "side": "side_a", "spans": {"stand": [125.00, 126.50], "aim": [128.20, 129.15], "throw": [129.25, 129.85], "landing": [131.70, 133.00]}},
+    {"cs": 154, "title": "Mid Courtyard -> B Site (7m run throw)", "ability": "snake-bite", "technique": "run", "target": "b-site", "stand": "b-site", "side": "side_a", "spans": {"stand": [154.00, 154.90], "aim": [156.60, 157.50], "throw": [158.25, 158.75], "landing": [160.30, 161.00]}},
+    {"cs": 164, "title": "A Long -> A Site (12m spike)", "ability": "snake-bite", "technique": "standing", "target": "a-site", "stand": "a-lobby", "side": "side_a", "spans": {"stand": [164.00, 166.50], "aim": [171.60, 171.76], "throw": [171.76, 172.20], "landing": [176.00, 179.00]}},
+    {"cs": 183, "title": "A Long -> A Site (8m default plant)", "ability": "snake-bite", "technique": "standing", "target": "a-site", "stand": "a-lobby", "side": "side_a", "spans": {"stand": [183.80, 184.40], "aim": [184.50, 184.95], "throw": [184.95, 185.35], "landing": [185.70, 187.20]}},
+    {"cs": 198, "title": "A Long -> A Site (11m jump throw)", "ability": "snake-bite", "technique": "jump", "target": "a-site", "stand": "a-lobby", "side": "side_a", "spans": {"stand": [198.40, 199.20], "aim": [199.30, 199.90], "throw": [200.50, 200.78], "landing": [203.20, 205.00]}},
+    {"cs": 227, "title": "A Long -> A Site (10m spike)", "ability": "snake-bite", "technique": "standing", "target": "a-site", "stand": "a-lobby", "side": "side_a", "spans": {"stand": [227.00, 228.50], "aim": [229.00, 229.62], "throw": [229.60, 229.85], "landing": [235.00, 236.40]}}
+  ]
+}

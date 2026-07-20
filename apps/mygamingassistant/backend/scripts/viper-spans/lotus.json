@@ -1,0 +1,20 @@
+{
+  "video_id": "yRfCBtiYDMg",
+  "map_slug": "lotus",
+  "author": "B3ast plays YT",
+  "note": "Viper Top-15 post-plant snake-bite lineups, Lotus. Localized by frame-study from an unchaptered montage; coarse zones per map zone set, fine detail in titles. Not operator-verified. W9/W11 are both A Rubble->A Hut standing (13m/12m) kept distinct pending operator eyeball.",
+  "lineups": [
+    {"cs": 18, "title": "B Pillars -> B Site (9m high-arc)", "ability": "snake-bite", "technique": "standing", "target": "b-site", "stand": "b-site", "side": "side_a", "spans": {"stand": [18.30, 19.80], "aim": [21.40, 22.15], "throw": [22.70, 23.20], "landing": [31.35, 32.10]}},
+    {"cs": 35, "title": "B Main -> B Site (13m)", "ability": "snake-bite", "technique": "standing", "target": "b-site", "stand": "b-main", "side": "side_a", "spans": {"stand": [35.00, 35.60], "aim": [36.00, 36.60], "throw": [37.72, 38.10], "landing": [39.90, 40.60]}},
+    {"cs": 69, "title": "A Link -> B Site (long cross)", "ability": "snake-bite", "technique": "standing", "target": "b-site", "stand": "a-site", "side": "side_a", "spans": {"stand": [69.50, 70.50], "aim": [70.88, 71.08], "throw": [71.12, 71.66], "landing": [75.80, 77.00]}},
+    {"cs": 81, "title": "B Pillars -> B Site (run throw)", "ability": "snake-bite", "technique": "run", "target": "b-site", "stand": "b-site", "side": "side_a", "spans": {"stand": [81.80, 82.60], "aim": [82.80, 83.40], "throw": [84.12, 84.66], "landing": [85.40, 86.40]}},
+    {"cs": 98, "title": "C Mound -> C Site", "ability": "snake-bite", "technique": "standing", "target": "c-site", "stand": "c-main", "side": "side_a", "spans": {"stand": [98.00, 99.20], "aim": [100.60, 101.25], "throw": [101.22, 101.60], "landing": [106.68, 107.35]}},
+    {"cs": 124, "title": "C Lobby -> C Site / C Bend", "ability": "snake-bite", "technique": "standing", "target": "c-site", "stand": "c-main", "side": "side_a", "spans": {"stand": [124.50, 127.00], "aim": [134.13, 134.24], "throw": [134.24, 134.72], "landing": [139.40, 140.00]}},
+    {"cs": 153, "title": "C Waterfall -> C Site (27m)", "ability": "snake-bite", "technique": "standing", "target": "c-site", "stand": "c-main", "side": "side_a", "spans": {"stand": [153.00, 154.50], "aim": [155.30, 156.20], "throw": [157.10, 157.70], "landing": [158.40, 159.10]}},
+    {"cs": 164, "title": "A Root -> A Hut (13m)", "ability": "snake-bite", "technique": "standing", "target": "a-main", "stand": "a-main", "side": "side_a", "spans": {"stand": [164.50, 166.30], "aim": [169.68, 170.12], "throw": [172.18, 172.66], "landing": [177.90, 179.00]}},
+    {"cs": 187, "title": "A Rubble -> A Hut (13m)", "ability": "snake-bite", "technique": "standing", "target": "a-main", "stand": "a-main", "side": "side_a", "spans": {"stand": [187.00, 188.80], "aim": [194.44, 194.54], "throw": [194.54, 195.06], "landing": [199.90, 200.70]}},
+    {"cs": 206, "title": "A Root -> A Site (post-plant lob)", "ability": "snake-bite", "technique": "standing", "target": "a-site", "stand": "mid", "side": "side_a", "spans": {"stand": [206.00, 207.60], "aim": [211.07, 211.19], "throw": [211.19, 211.42], "landing": [216.60, 217.60]}},
+    {"cs": 221, "title": "A Rubble -> A Hut (12m)", "ability": "snake-bite", "technique": "standing", "target": "a-main", "stand": "a-main", "side": "side_a", "spans": {"stand": [221.50, 223.50], "aim": [230.93, 231.06], "throw": [231.06, 231.46], "landing": [235.95, 236.95]}},
+    {"cs": 239, "title": "A Tree -> A Hut (10m run throw)", "ability": "snake-bite", "technique": "run", "target": "a-main", "stand": "a-site", "side": "side_a", "spans": {"stand": [239.00, 239.80], "aim": [240.00, 240.45], "throw": [240.55, 240.95], "landing": [242.78, 243.30]}}
+  ]
+}

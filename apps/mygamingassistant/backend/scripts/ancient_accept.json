@@ -1,0 +1,157 @@
+{
+  "50": [
+    "mid",
+    "mid",
+    "side_a"
+  ],
+  "67": [
+    "mid",
+    "mid",
+    "side_a"
+  ],
+  "83": [
+    "mid",
+    "mid",
+    "side_a"
+  ],
+  "169": [
+    "mid",
+    "mid",
+    "side_a"
+  ],
+  "216": [
+    "mid",
+    "a-main",
+    "side_a"
+  ],
+  "231": [
+    "mid",
+    "mid",
+    "side_a"
+  ],
+  "260": [
+    "mid",
+    "ct-spawn",
+    "side_a"
+  ],
+  "282": [
+    "a-main",
+    "a-site",
+    "side_a"
+  ],
+  "295": [
+    "mid",
+    "a-site",
+    "side_a"
+  ],
+  "306": [
+    "a-main",
+    "a-site",
+    "side_a"
+  ],
+  "337": [
+    "a-main",
+    "a-site",
+    "side_a"
+  ],
+  "355": [
+    "a-main",
+    "a-site",
+    "side_a"
+  ],
+  "422": [
+    "b-main",
+    "b-site",
+    "side_a"
+  ],
+  "427": [
+    "b-main",
+    "b-site",
+    "side_a"
+  ],
+  "436": [
+    "b-main",
+    "b-site",
+    "side_a"
+  ],
+  "446": [
+    "mid",
+    "b-main",
+    "side_a"
+  ],
+  "457": [
+    "b-main",
+    "b-site",
+    "side_a"
+  ],
+  "476": [
+    "b-main",
+    "b-site",
+    "side_a"
+  ],
+  "494": [
+    "mid",
+    "b-main",
+    "side_a"
+  ],
+  "533": [
+    "b-main",
+    "b-site",
+    "side_a"
+  ],
+  "557": [
+    "b-main",
+    "b-site",
+    "side_a"
+  ],
+  "570": [
+    "b-main",
+    "b-site",
+    "side_a"
+  ],
+  "599": [
+    "b-main",
+    "b-site",
+    "side_a"
+  ],
+  "667": [
+    "b-main",
+    "b-site",
+    "side_a"
+  ],
+  "687": [
+    "b-main",
+    "b-site",
+    "side_a"
+  ],
+  "699": [
+    "b-site",
+    "b-site",
+    "side_a"
+  ],
+  "708": [
+    "b-main",
+    "b-site",
+    "side_a"
+  ],
+  "720": [
+    "ct-spawn",
+    "b-site",
+    "side_b"
+  ],
+  "724": [
+    "ct-spawn",
+    "mid",
+    "side_b"
+  ],
+  "778": [
+    "ct-spawn",
+    "b-site",
+    "side_b"
+  ],
+  "931": [
+    "ct-spawn",
+    "a-site",
+    "side_b"
+  ]
+}

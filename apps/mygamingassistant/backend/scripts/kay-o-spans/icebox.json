@@ -1,0 +1,238 @@
+{
+  "video_id": "VlnnVK1TfVQ",
+  "map_slug": "icebox",
+  "author": "Tseeky",
+  "note": "KAY/O Icebox lineups, sourced from Tseeky 'KAYO Lineups Icebox 2024 *NEW*' (VlnnVK1TfVQ, post-rework geometry). 38 source chapters localized STAND/AIM/THROW/LANDING and gated on the ability payload actually shown on-screen; 23 accepted (11 flashdrive, 7 zero-point, 5 fragment). Every accept has a visible correct-color payload on its verify CARD. Rejects were off-camera / editorial-overlay / non-chronological detonations (RE-CUT candidates). See icebox-ledger.md.",
+  "lineups": [
+    {
+      "cs": 66,
+      "title": "A Site Flash (Generator One Way, from A Nest, Attack)",
+      "ability": "flashdrive",
+      "technique": "standing",
+      "target": "a-site",
+      "stand": "a-site",
+      "side": "side_a",
+      "spans": {"stand": [66.50, 68.00], "aim": [70.40, 71.15], "throw": [71.15, 71.65], "landing": [72.85, 73.35]}
+    },
+    {
+      "cs": 85,
+      "title": "A Site One Way Flash (from A Nest, Attack)",
+      "ability": "flashdrive",
+      "technique": "standing",
+      "target": "a-site",
+      "stand": "a-site",
+      "side": "side_a",
+      "spans": {"stand": [85.50, 87.50], "aim": [91.55, 92.10], "throw": [91.95, 92.55], "landing": [93.65, 94.35]}
+    },
+    {
+      "cs": 104,
+      "title": "A Site One Way Flash (from A Pipes, Attack)",
+      "ability": "flashdrive",
+      "technique": "standing",
+      "target": "a-site",
+      "stand": "a-main",
+      "side": "side_a",
+      "spans": {"stand": [104.00, 106.50], "aim": [114.90, 115.31], "throw": [115.15, 115.75], "landing": [116.75, 117.60]}
+    },
+    {
+      "cs": 123,
+      "title": "A Site Post Plant Flash (from A Nest, Attack)",
+      "ability": "flashdrive",
+      "technique": "standing",
+      "target": "a-site",
+      "stand": "a-site",
+      "side": "side_a",
+      "spans": {"stand": [123.30, 124.50], "aim": [132.30, 132.87], "throw": [132.80, 133.30], "landing": [134.20, 135.50]}
+    },
+    {
+      "cs": 178,
+      "title": "B Site Flash (from B Green, Attack)",
+      "ability": "flashdrive",
+      "technique": "standing",
+      "target": "b-site",
+      "stand": "b-site",
+      "side": "side_a",
+      "spans": {"stand": [178.00, 179.00], "aim": [183.40, 184.40], "throw": [184.40, 184.90], "landing": [185.60, 186.30]}
+    },
+    {
+      "cs": 200,
+      "title": "B Main Flash (from B Green, Attack)",
+      "ability": "flashdrive",
+      "technique": "standing",
+      "target": "b-main",
+      "stand": "b-site",
+      "side": "side_a",
+      "spans": {"stand": [200.40, 200.98], "aim": [201.00, 201.65], "throw": [201.65, 202.15], "landing": [203.35, 203.70]}
+    },
+    {
+      "cs": 270,
+      "title": "A Site Flash (from A Main, Defense)",
+      "ability": "flashdrive",
+      "technique": "standing",
+      "target": "a-site",
+      "stand": "a-main",
+      "side": "side_b",
+      "spans": {"stand": [270.30, 271.70], "aim": [272.00, 272.65], "throw": [272.65, 273.05], "landing": [274.30, 274.90]}
+    },
+    {
+      "cs": 287,
+      "title": "A Main Pipes Peek Flash (from A Site, Defense)",
+      "ability": "flashdrive",
+      "technique": "standing",
+      "target": "a-main",
+      "stand": "a-site",
+      "side": "side_b",
+      "spans": {"stand": [287.00, 289.80], "aim": [290.00, 291.45], "throw": [291.50, 291.95], "landing": [293.00, 293.40]}
+    },
+    {
+      "cs": 329,
+      "title": "A Site Nest One Way Flash (from A Nest, Defense)",
+      "ability": "flashdrive",
+      "technique": "standing",
+      "target": "a-site",
+      "stand": "a-site",
+      "side": "side_b",
+      "spans": {"stand": [329.00, 330.70], "aim": [337.60, 338.75], "throw": [338.75, 339.35], "landing": [342.60, 343.40]}
+    },
+    {
+      "cs": 367,
+      "title": "A Site Retake Flash (from A Rafters, Defense)",
+      "ability": "flashdrive",
+      "technique": "standing",
+      "target": "a-site",
+      "stand": "a-site",
+      "side": "side_b",
+      "spans": {"stand": [367.50, 369.90], "aim": [370.00, 371.20], "throw": [371.13, 371.63], "landing": [372.80, 373.30]}
+    },
+    {
+      "cs": 397,
+      "title": "B Site Retake Flash (Defense)",
+      "ability": "flashdrive",
+      "technique": "standing",
+      "target": "b-site",
+      "stand": "b-site",
+      "side": "side_b",
+      "spans": {"stand": [397.50, 399.00], "aim": [403.20, 403.80], "throw": [403.65, 404.15], "landing": [405.40, 406.00]}
+    },
+    {
+      "cs": 439,
+      "title": "A Pipes Suppress (from A Belt, Attack)",
+      "ability": "zero-point",
+      "technique": "standing",
+      "target": "a-main",
+      "stand": "a-site",
+      "side": "side_a",
+      "spans": {"stand": [439.00, 440.00], "aim": [440.70, 441.30], "throw": [441.30, 441.70], "landing": [441.75, 442.30]}
+    },
+    {
+      "cs": 467,
+      "title": "B Main Suppress (from Spawn, Attack)",
+      "ability": "zero-point",
+      "technique": "standing",
+      "target": "b-main",
+      "stand": "t-spawn",
+      "side": "side_a",
+      "spans": {"stand": [467.00, 468.80], "aim": [470.20, 470.47], "throw": [470.47, 470.62], "landing": [472.80, 473.60]}
+    },
+    {
+      "cs": 507,
+      "title": "B Yellow Suppress (from B Green, Attack)",
+      "ability": "zero-point",
+      "technique": "standing",
+      "target": "b-main",
+      "stand": "b-site",
+      "side": "side_a",
+      "spans": {"stand": [507.50, 509.30], "aim": [509.30, 511.35], "throw": [511.35, 511.85], "landing": [511.55, 512.10]}
+    },
+    {
+      "cs": 521,
+      "title": "B Site Suppress (from B Green, Attack)",
+      "ability": "zero-point",
+      "technique": "standing",
+      "target": "b-site",
+      "stand": "b-site",
+      "side": "side_a",
+      "spans": {"stand": [521.00, 523.50], "aim": [527.60, 528.60], "throw": [528.50, 528.85], "landing": [534.00, 534.80]}
+    },
+    {
+      "cs": 565,
+      "title": "A Main Round-Start Suppress (from A Screens, Defense)",
+      "ability": "zero-point",
+      "technique": "standing",
+      "target": "a-main",
+      "stand": "a-site",
+      "side": "side_b",
+      "spans": {"stand": [565.00, 566.80], "aim": [573.15, 573.85], "throw": [573.75, 574.30], "landing": [574.70, 575.60]}
+    },
+    {
+      "cs": 584,
+      "title": "B Main God Knife (from Mid, Defense)",
+      "ability": "zero-point",
+      "technique": "standing",
+      "target": "b-main",
+      "stand": "mid",
+      "side": "side_b",
+      "spans": {"stand": [584.00, 585.60], "aim": [589.70, 590.55], "throw": [590.55, 591.05], "landing": [596.00, 597.30]}
+    },
+    {
+      "cs": 605,
+      "title": "B Main Fast Suppress (from Mid, Defense)",
+      "ability": "zero-point",
+      "technique": "standing",
+      "target": "b-main",
+      "stand": "mid",
+      "side": "side_b",
+      "spans": {"stand": [605.30, 606.80], "aim": [608.60, 609.25], "throw": [609.25, 609.75], "landing": [609.65, 611.10]}
+    },
+    {
+      "cs": 622,
+      "title": "A Site Anti-Killjoy Ult Molly (Attack)",
+      "ability": "fragment",
+      "technique": "standing",
+      "target": "a-site",
+      "stand": "a-site",
+      "side": "side_a",
+      "spans": {"stand": [622.00, 623.80], "aim": [625.70, 626.60], "throw": [626.72, 627.32], "landing": [630.30, 631.50]}
+    },
+    {
+      "cs": 642,
+      "title": "A Site Post Plant Molly (from A Belt, Attack)",
+      "ability": "fragment",
+      "technique": "standing",
+      "target": "a-site",
+      "stand": "a-site",
+      "side": "side_a",
+      "spans": {"stand": [642.70, 644.70], "aim": [644.70, 645.58], "throw": [645.55, 646.05], "landing": [648.55, 649.55]}
+    },
+    {
+      "cs": 659,
+      "title": "B Site Post Plant Molly (from B Green, Attack)",
+      "ability": "fragment",
+      "technique": "standing",
+      "target": "b-site",
+      "stand": "b-site",
+      "side": "side_a",
+      "spans": {"stand": [659.50, 661.00], "aim": [662.60, 663.15], "throw": [663.15, 663.65], "landing": [665.00, 665.90]}
+    },
+    {
+      "cs": 677,
+      "title": "A Site Anti-Killjoy Ult Molly (Defense)",
+      "ability": "fragment",
+      "technique": "standing",
+      "target": "a-site",
+      "stand": "a-site",
+      "side": "side_b",
+      "spans": {"stand": [677.10, 678.30], "aim": [678.30, 680.75], "throw": [680.75, 681.10], "landing": [684.10, 685.60]}
+    },
+    {
+      "cs": 695,
+      "title": "B Yellow Retake Molly (from B Snowman, Defense)",
+      "ability": "fragment",
+      "technique": "standing",
+      "target": "b-main",
+      "stand": "b-site",
+      "side": "side_b",
+      "spans": {"stand": [695.50, 697.30], "aim": [699.40, 700.05], "throw": [700.05, 700.60], "landing": [704.85, 708.95]}
+    }
+  ]
+}

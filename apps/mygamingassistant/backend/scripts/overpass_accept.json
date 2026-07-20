@@ -1,0 +1,332 @@
+{
+  "42": [
+    "mid",
+    "a-site",
+    "side_a"
+  ],
+  "49": [
+    "mid",
+    "a-site",
+    "side_a"
+  ],
+  "57": [
+    "mid",
+    "a-long",
+    "side_a"
+  ],
+  "67": [
+    "mid",
+    "a-site",
+    "side_a"
+  ],
+  "98": [
+    "mid",
+    "a-site",
+    "side_a"
+  ],
+  "109": [
+    "mid",
+    "a-site",
+    "side_a"
+  ],
+  "115": [
+    "a-long",
+    "a-site",
+    "side_a"
+  ],
+  "125": [
+    "mid",
+    "mid",
+    "side_a"
+  ],
+  "145": [
+    "mid",
+    "a-site",
+    "side_a"
+  ],
+  "165": [
+    "mid",
+    "a-site",
+    "side_a"
+  ],
+  "172": [
+    "mid",
+    "a-site",
+    "side_a"
+  ],
+  "184": [
+    "mid",
+    "a-site",
+    "side_a"
+  ],
+  "210": [
+    "ct-spawn",
+    "a-long",
+    "side_b"
+  ],
+  "223": [
+    "a-long",
+    "a-site",
+    "side_a"
+  ],
+  "234": [
+    "canal",
+    "b-site",
+    "side_a"
+  ],
+  "243": [
+    "a-long",
+    "a-site",
+    "side_a"
+  ],
+  "251": [
+    "a-long",
+    "a-site",
+    "side_a"
+  ],
+  "283": [
+    "a-long",
+    "a-site",
+    "side_a"
+  ],
+  "295": [
+    "a-long",
+    "a-site",
+    "side_a"
+  ],
+  "313": [
+    "mid",
+    "a-site",
+    "side_a"
+  ],
+  "326": [
+    "a-long",
+    "a-site",
+    "side_a"
+  ],
+  "335": [
+    "a-long",
+    "a-site",
+    "side_a"
+  ],
+  "340": [
+    "a-long",
+    "a-site",
+    "side_a"
+  ],
+  "369": [
+    "b-monster",
+    "b-site",
+    "side_a"
+  ],
+  "381": [
+    "b-monster",
+    "b-site",
+    "side_a"
+  ],
+  "389": [
+    "b-monster",
+    "b-site",
+    "side_a"
+  ],
+  "397": [
+    "canal",
+    "b-site",
+    "side_a"
+  ],
+  "407": [
+    "canal",
+    "b-site",
+    "side_a"
+  ],
+  "421": [
+    "b-monster",
+    "b-site",
+    "side_a"
+  ],
+  "432": [
+    "b-monster",
+    "b-site",
+    "side_a"
+  ],
+  "442": [
+    "canal",
+    "b-site",
+    "side_a"
+  ],
+  "448": [
+    "b-monster",
+    "b-site",
+    "side_a"
+  ],
+  "463": [
+    "b-monster",
+    "b-site",
+    "side_a"
+  ],
+  "495": [
+    "b-monster",
+    "b-site",
+    "side_a"
+  ],
+  "520": [
+    "b-monster",
+    "b-site",
+    "side_a"
+  ],
+  "536": [
+    "b-monster",
+    "b-site",
+    "side_a"
+  ],
+  "550": [
+    "mid",
+    "b-site",
+    "side_a"
+  ],
+  "568": [
+    "mid",
+    "b-site",
+    "side_a"
+  ],
+  "576": [
+    "b-monster",
+    "b-site",
+    "side_a"
+  ],
+  "588": [
+    "b-monster",
+    "b-site",
+    "side_a"
+  ],
+  "598": [
+    "b-monster",
+    "b-site",
+    "side_a"
+  ],
+  "619": [
+    "b-monster",
+    "b-site",
+    "side_a"
+  ],
+  "628": [
+    "b-monster",
+    "b-site",
+    "side_a"
+  ],
+  "636": [
+    "b-monster",
+    "b-site",
+    "side_a"
+  ],
+  "647": [
+    "b-monster",
+    "ct-spawn",
+    "side_a"
+  ],
+  "653": [
+    "b-monster",
+    "b-site",
+    "side_a"
+  ],
+  "658": [
+    "b-monster",
+    "b-site",
+    "side_a"
+  ],
+  "670": [
+    "b-monster",
+    "b-site",
+    "side_a"
+  ],
+  "678": [
+    "b-monster",
+    "b-site",
+    "side_a"
+  ],
+  "687": [
+    "b-monster",
+    "b-site",
+    "side_a"
+  ],
+  "703": [
+    "b-monster",
+    "b-site",
+    "side_a"
+  ],
+  "728": [
+    "b-monster",
+    "b-site",
+    "side_a"
+  ],
+  "733": [
+    "b-site",
+    "canal",
+    "side_b"
+  ],
+  "743": [
+    "b-monster",
+    "b-site",
+    "side_a"
+  ],
+  "753": [
+    "b-monster",
+    "b-site",
+    "side_a"
+  ],
+  "763": [
+    "canal",
+    "b-site",
+    "side_a"
+  ],
+  "788": [
+    "mid",
+    "a-site",
+    "side_a"
+  ],
+  "810": [
+    "canal",
+    "b-monster",
+    "side_a"
+  ],
+  "820": [
+    "a-long",
+    "a-site",
+    "side_a"
+  ],
+  "839": [
+    "a-long",
+    "a-site",
+    "side_a"
+  ],
+  "846": [
+    "a-long",
+    "a-site",
+    "side_a"
+  ],
+  "855": [
+    "a-long",
+    "a-site",
+    "side_a"
+  ],
+  "871": [
+    "a-long",
+    "a-site",
+    "side_a"
+  ],
+  "890": [
+    "a-long",
+    "a-site",
+    "side_a"
+  ],
+  "905": [
+    "b-monster",
+    "b-site",
+    "side_a"
+  ],
+  "911": [
+    "canal",
+    "b-monster",
+    "side_b"
+  ]
+}
