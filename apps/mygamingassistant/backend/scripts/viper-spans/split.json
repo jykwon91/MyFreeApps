@@ -1,0 +1,19 @@
+{
+  "video_id": "5wBWvIeMnlk",
+  "map_slug": "split",
+  "author": "B3ast plays YT",
+  "note": "Viper Top-15 post-plant snake-bite lineups, Split. Localized by frame-study from an unchaptered montage; coarse zones per map zone set (a-main/a-site/b-main/b-site/ct-spawn/mail/mid/t-spawn), fine detail in titles. Not operator-verified. All snake-bite/side_a/standing. Near-dups kept distinct by throw time pending operator eyeball: W1/W2/W3 (A Lobby->A Site), W4/W5 (A Ramps->A Site), W10/W11 (B Alley->B Site). W9 stands at Mail.",
+  "lineups": [
+    {"cs": 19, "title": "A Lobby -> A Site (over skyscraper edge, high lob)", "ability": "snake-bite", "technique": "standing", "target": "a-site", "stand": "a-main", "side": "side_a", "spans": {"stand": [19.50, 21.00], "aim": [21.80, 22.05], "throw": [22.05, 22.55], "landing": [32.10, 33.10]}},
+    {"cs": 38, "title": "A Lobby -> A Site (by A-site screens)", "ability": "snake-bite", "technique": "standing", "target": "a-site", "stand": "a-main", "side": "side_a", "spans": {"stand": [38.00, 39.50], "aim": [43.40, 43.52], "throw": [43.52, 43.82], "landing": [47.25, 47.85]}},
+    {"cs": 68, "title": "A Lobby -> A Site (through tower gap, high lob)", "ability": "snake-bite", "technique": "standing", "target": "a-site", "stand": "a-main", "side": "side_a", "spans": {"stand": [68.70, 69.30], "aim": [72.99, 73.10], "throw": [73.10, 73.30], "landing": [78.40, 79.20]}},
+    {"cs": 81, "title": "A Ramps -> A Site (over ramps wall onto spike)", "ability": "snake-bite", "technique": "standing", "target": "a-site", "stand": "a-main", "side": "side_a", "spans": {"stand": [81.20, 83.00], "aim": [84.66, 84.90], "throw": [85.02, 85.46], "landing": [95.20, 96.00]}},
+    {"cs": 102, "title": "A Ramps -> A Site (between roof peaks, near-vertical lob)", "ability": "snake-bite", "technique": "standing", "target": "a-site", "stand": "a-main", "side": "side_a", "spans": {"stand": [102.90, 103.70], "aim": [106.43, 106.56], "throw": [106.54, 107.05], "landing": [112.15, 112.90]}},
+    {"cs": 127, "title": "A Screens -> A Site (bank to map-table plant, 1 bounce)", "ability": "snake-bite", "technique": "standing", "target": "a-site", "stand": "a-site", "side": "side_a", "spans": {"stand": [127.50, 128.40], "aim": [132.36, 132.53], "throw": [132.54, 132.74], "landing": [134.40, 135.30]}},
+    {"cs": 141, "title": "A Tower -> A Site (down the stairs doorway)", "ability": "snake-bite", "technique": "standing", "target": "a-site", "stand": "a-site", "side": "side_a", "spans": {"stand": [141.80, 142.35], "aim": [142.50, 142.85], "throw": [142.95, 143.45], "landing": [145.40, 146.00]}},
+    {"cs": 160, "title": "B Garage -> B Site (short lob onto default plant, ~10m)", "ability": "snake-bite", "technique": "standing", "target": "b-site", "stand": "b-main", "side": "side_a", "spans": {"stand": [160.80, 161.15], "aim": [161.20, 161.42], "throw": [161.44, 161.70], "landing": [162.00, 163.00]}},
+    {"cs": 183, "title": "Mail -> B Site (over the wall onto boxes plant)", "ability": "snake-bite", "technique": "standing", "target": "b-site", "stand": "mail", "side": "side_a", "spans": {"stand": [183.40, 184.30], "aim": [186.10, 186.23], "throw": [186.18, 186.72], "landing": [188.55, 189.60]}},
+    {"cs": 205, "title": "B Alley -> B Site (over roof onto plant)", "ability": "snake-bite", "technique": "standing", "target": "b-site", "stand": "b-main", "side": "side_a", "spans": {"stand": [205.20, 207.00], "aim": [212.30, 212.40], "throw": [212.40, 212.62], "landing": [217.75, 218.85]}},
+    {"cs": 222, "title": "B Alley -> B Site (over doorway onto spike, ~9m)", "ability": "snake-bite", "technique": "standing", "target": "b-site", "stand": "b-main", "side": "side_a", "spans": {"stand": [222.50, 223.50], "aim": [225.90, 225.98], "throw": [225.98, 226.30], "landing": [227.85, 229.30]}}
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "video_id": "v8v1QGPSSg4",
+  "map_slug": "icebox",
+  "author": "B3ast plays YT",
+  "note": "Icebox Viper post-plant snake-bites. 9 new (proofs cs50/92/107/194 already accepted). w6 dropped as mislocalized dup of w5 (0.6s flight). All snake-bite/standing/attacker. Coarse zones: A Belt->a-main, A Rafters->a-site, B Green->b-site, B Snow Pile->b-site, Mid Blue->mid; targets A->a-site B->b-site.",
+  "lineups": [
+    {"cs": 22,  "title": "A Bounce (from A Belt)",          "ability": "snake-bite", "technique": "standing", "target": "a-site", "stand": "a-main", "side": "side_a", "spans": {"stand": [22.00, 22.55], "aim": [22.55, 22.92], "throw": [22.92, 23.42], "landing": [43.00, 44.60]}},
+    {"cs": 66,  "title": "A Site (from A Belt)",            "ability": "snake-bite", "technique": "standing", "target": "a-site", "stand": "a-main", "side": "side_a", "spans": {"stand": [66.65, 66.95], "aim": [66.98, 67.18], "throw": [67.15, 67.70], "landing": [70.60, 71.25]}},
+    {"cs": 70,  "title": "A Default (from A Rafters)",      "ability": "snake-bite", "technique": "standing", "target": "a-site", "stand": "a-site", "side": "side_a", "spans": {"stand": [70.66, 70.80], "aim": [70.78, 70.92], "throw": [70.92, 71.18], "landing": [74.30, 75.30]}},
+    {"cs": 120, "title": "B Default (from B Green)",        "ability": "snake-bite", "technique": "standing", "target": "b-site", "stand": "b-site", "side": "side_a", "spans": {"stand": [120.40, 121.40], "aim": [121.40, 121.98], "throw": [122.00, 122.58], "landing": [124.33, 125.30]}},
+    {"cs": 146, "title": "B Default (from B Green, loft)",  "ability": "snake-bite", "technique": "standing", "target": "b-site", "stand": "b-site", "side": "side_a", "spans": {"stand": [146.50, 148.50], "aim": [150.60, 151.80], "throw": [154.85, 155.45], "landing": [160.20, 161.10]}},
+    {"cs": 171, "title": "B Default (from B Green, tower)", "ability": "snake-bite", "technique": "standing", "target": "b-site", "stand": "b-site", "side": "side_a", "spans": {"stand": [171.55, 171.65], "aim": [171.63, 171.72], "throw": [171.72, 172.05], "landing": [175.60, 177.60]}},
+    {"cs": 210, "title": "B Spike (from B Green)",          "ability": "snake-bite", "technique": "standing", "target": "b-site", "stand": "b-site", "side": "side_a", "spans": {"stand": [210.46, 210.55], "aim": [210.50, 210.62], "throw": [210.60, 211.15], "landing": [215.70, 217.30]}},
+    {"cs": 225, "title": "B Site (from B Snow Pile)",       "ability": "snake-bite", "technique": "standing", "target": "b-site", "stand": "b-site", "side": "side_a", "spans": {"stand": [225.00, 226.40], "aim": [229.33, 229.50], "throw": [229.50, 230.05], "landing": [234.80, 236.30]}},
+    {"cs": 241, "title": "B Site (from Mid Blue)",          "ability": "snake-bite", "technique": "standing", "target": "b-site", "stand": "mid",    "side": "side_a", "spans": {"stand": [241.00, 242.50], "aim": [255.05, 255.20], "throw": [255.22, 255.80], "landing": [260.35, 261.30]}}
+  ]
+}

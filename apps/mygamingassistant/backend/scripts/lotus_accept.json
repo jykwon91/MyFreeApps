@@ -1,0 +1,112 @@
+{
+  "7": [
+    "a-main",
+    "a-site",
+    "side_a"
+  ],
+  "24": [
+    "a-main",
+    "a-site",
+    "side_a"
+  ],
+  "49": [
+    "a-main",
+    "a-site",
+    "side_a"
+  ],
+  "62": [
+    "a-main",
+    "a-site",
+    "side_a"
+  ],
+  "82": [
+    "a-main",
+    "a-site",
+    "side_a"
+  ],
+  "100": [
+    "b-main",
+    "b-site",
+    "side_a"
+  ],
+  "122": [
+    "b-main",
+    "b-site",
+    "side_a"
+  ],
+  "143": [
+    "c-main",
+    "c-site",
+    "side_a"
+  ],
+  "163": [
+    "c-main",
+    "c-site",
+    "side_a"
+  ],
+  "185": [
+    "c-main",
+    "c-site",
+    "side_a"
+  ],
+  "204": [
+    "a-main",
+    "a-site",
+    "side_a"
+  ],
+  "234": [
+    "a-main",
+    "a-site",
+    "side_a"
+  ],
+  "264": [
+    "a-main",
+    "a-site",
+    "side_b"
+  ],
+  "279": [
+    "mid",
+    "a-site",
+    "side_a"
+  ],
+  "308": [
+    "c-main",
+    "c-site",
+    "side_a"
+  ],
+  "329": [
+    "c-main",
+    "c-site",
+    "side_a"
+  ],
+  "344": [
+    "ct-spawn",
+    "a-site",
+    "side_b"
+  ],
+  "384": [
+    "ct-spawn",
+    "c-site",
+    "side_b"
+  ],
+  "403": [
+    "ct-spawn",
+    "c-site",
+    "side_b"
+  ],
+  "422": [
+    "b-main",
+    "b-site",
+    "side_b"
+  ],
+  "440": [
+    "ct-spawn",
+    "b-site",
+    "side_b"
+  ],
+  "457": [
+    "ct-spawn",
+    "b-site",
+    "side_b"
+  ]
+}

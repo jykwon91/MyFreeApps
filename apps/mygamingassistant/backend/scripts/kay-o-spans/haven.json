@@ -1,0 +1,198 @@
+{
+  "video_id": "OdRSiGHly4A",
+  "map_slug": "haven",
+  "author": "Tseeky",
+  "note": "KAY/O Haven lineups, sourced from Tseeky 'KAYO Lineups Haven 2024 *NEW*' (OdRSiGHly4A). 37 source chapters localized STAND/AIM/THROW/LANDING and gated on the ability payload actually shown on-screen; 19 accepted (10 zero-point, 7 flashdrive, 2 fragment). Rejects were off-camera detonations in the no-enemy practice lobby (RE-CUT candidates). See haven-ledger.md.",
+  "lineups": [
+    {
+      "cs": 48,
+      "title": "A Site Flash (from A Sewer, Attack)",
+      "ability": "flashdrive",
+      "technique": "standing",
+      "target": "a-site",
+      "stand": "a-site",
+      "side": "side_a",
+      "spans": {"stand": [48.50, 49.50], "aim": [53.50, 53.67], "throw": [53.60, 54.05], "landing": [55.45, 56.05]}
+    },
+    {
+      "cs": 132,
+      "title": "B Site Flash (from Mid, Attack)",
+      "ability": "flashdrive",
+      "technique": "standing",
+      "target": "b-site",
+      "stand": "garage",
+      "side": "side_a",
+      "spans": {"stand": [132.50, 134.80], "aim": [137.30, 137.80], "throw": [137.80, 138.30], "landing": [139.45, 140.20]}
+    },
+    {
+      "cs": 151,
+      "title": "Garage Flash (from Attacker Spawn, Attack)",
+      "ability": "flashdrive",
+      "technique": "standing",
+      "target": "garage",
+      "stand": "t-spawn",
+      "side": "side_a",
+      "spans": {"stand": [151.50, 153.50], "aim": [158.00, 158.65], "throw": [158.60, 159.10], "landing": [159.95, 160.30]}
+    },
+    {
+      "cs": 222,
+      "title": "C Site Flash (from C Cubby, Attack)",
+      "ability": "flashdrive",
+      "technique": "standing",
+      "target": "c-site",
+      "stand": "c-site",
+      "side": "side_a",
+      "spans": {"stand": [222.00, 223.70], "aim": [224.25, 224.90], "throw": [224.90, 225.40], "landing": [226.28, 226.90]}
+    },
+    {
+      "cs": 289,
+      "title": "A Long Flash (from A Site, Defense)",
+      "ability": "flashdrive",
+      "technique": "standing",
+      "target": "a-lobby",
+      "stand": "a-site",
+      "side": "side_b",
+      "spans": {"stand": [289.60, 291.00], "aim": [296.05, 296.30], "throw": [296.30, 296.85], "landing": [298.55, 298.95]}
+    },
+    {
+      "cs": 308,
+      "title": "A Site Flash (from A Tower, Defense)",
+      "ability": "flashdrive",
+      "technique": "standing",
+      "target": "a-site",
+      "stand": "a-site",
+      "side": "side_b",
+      "spans": {"stand": [308.30, 309.80], "aim": [314.90, 315.28], "throw": [315.15, 315.65], "landing": [316.85, 317.50]}
+    },
+    {
+      "cs": 361,
+      "title": "C Long Flash (from C Site, Defense)",
+      "ability": "flashdrive",
+      "technique": "standing",
+      "target": "c-site",
+      "stand": "c-site",
+      "side": "side_b",
+      "spans": {"stand": [361.60, 364.65], "aim": [364.90, 365.60], "throw": [365.58, 366.10], "landing": [366.85, 367.35]}
+    },
+    {
+      "cs": 443,
+      "title": "A Short Suppress (from A Garden, Attack)",
+      "ability": "zero-point",
+      "technique": "standing",
+      "target": "a-site",
+      "stand": "a-site",
+      "side": "side_a",
+      "spans": {"stand": [443.00, 445.50], "aim": [452.50, 453.00], "throw": [453.00, 453.60], "landing": [458.50, 459.30]}
+    },
+    {
+      "cs": 468,
+      "title": "A Site Suppress (from A Garden, Attack)",
+      "ability": "zero-point",
+      "technique": "standing",
+      "target": "a-site",
+      "stand": "a-site",
+      "side": "side_a",
+      "spans": {"stand": [468.00, 469.60], "aim": [474.40, 475.60], "throw": [475.60, 476.05], "landing": [479.60, 481.80]}
+    },
+    {
+      "cs": 489,
+      "title": "A Site Suppress (from A Long, Attack)",
+      "ability": "zero-point",
+      "technique": "standing",
+      "target": "a-site",
+      "stand": "a-lobby",
+      "side": "side_a",
+      "spans": {"stand": [489.50, 491.00], "aim": [498.30, 498.48], "throw": [498.45, 498.95], "landing": [504.30, 505.00]}
+    },
+    {
+      "cs": 511,
+      "title": "C Site Suppress (from C Lobby, Attack)",
+      "ability": "zero-point",
+      "technique": "standing",
+      "target": "c-site",
+      "stand": "c-lobby",
+      "side": "side_a",
+      "spans": {"stand": [511.00, 512.60], "aim": [516.40, 517.00], "throw": [516.95, 517.55], "landing": [523.00, 523.40]}
+    },
+    {
+      "cs": 532,
+      "title": "A Lobby Suppress (from A Site, Defense)",
+      "ability": "zero-point",
+      "technique": "standing",
+      "target": "a-lobby",
+      "stand": "a-site",
+      "side": "side_b",
+      "spans": {"stand": [532.00, 534.40], "aim": [538.50, 538.90], "throw": [538.90, 539.40], "landing": [544.00, 546.00]}
+    },
+    {
+      "cs": 556,
+      "title": "A Lobby Suppress (from B Site, Defense)",
+      "ability": "zero-point",
+      "technique": "standing",
+      "target": "a-lobby",
+      "stand": "b-site",
+      "side": "side_b",
+      "spans": {"stand": [556.50, 558.50], "aim": [558.50, 559.10], "throw": [559.10, 559.70], "landing": [560.83, 562.20]}
+    },
+    {
+      "cs": 573,
+      "title": "C Main Suppress (from C Site, Attack)",
+      "ability": "zero-point",
+      "technique": "standing",
+      "target": "c-lobby",
+      "stand": "c-site",
+      "side": "side_a",
+      "spans": {"stand": [573.00, 575.30], "aim": [575.80, 576.40], "throw": [576.35, 576.85], "landing": [578.15, 578.85]}
+    },
+    {
+      "cs": 588,
+      "title": "C Lobby Suppress (from C Site, Defense)",
+      "ability": "zero-point",
+      "technique": "standing",
+      "target": "c-lobby",
+      "stand": "c-site",
+      "side": "side_b",
+      "spans": {"stand": [588.90, 590.00], "aim": [594.00, 594.60], "throw": [594.48, 595.08], "landing": [599.90, 601.30]}
+    },
+    {
+      "cs": 608,
+      "title": "A Backsite Molly (from A Long, Attack)",
+      "ability": "fragment",
+      "technique": "standing",
+      "target": "a-site",
+      "stand": "a-lobby",
+      "side": "side_a",
+      "spans": {"stand": [608.00, 609.50], "aim": [614.90, 615.55], "throw": [615.55, 616.05], "landing": [619.70, 620.60]}
+    },
+    {
+      "cs": 642,
+      "title": "A Site Molly (from Defender Spawn, Defense)",
+      "ability": "fragment",
+      "technique": "standing",
+      "target": "a-site",
+      "stand": "ct-spawn",
+      "side": "side_b",
+      "spans": {"stand": [642.60, 644.60], "aim": [650.90, 651.75], "throw": [651.75, 652.30], "landing": [656.30, 657.00]}
+    },
+    {
+      "cs": 664,
+      "title": "C Cubby Suppress (from C Site, Defense)",
+      "ability": "zero-point",
+      "technique": "standing",
+      "target": "c-site",
+      "stand": "c-site",
+      "side": "side_b",
+      "spans": {"stand": [664.40, 665.30], "aim": [668.90, 669.65], "throw": [669.65, 670.15], "landing": [672.50, 674.00]}
+    },
+    {
+      "cs": 681,
+      "title": "C Cubby Suppress (from C Link, Defense)",
+      "ability": "zero-point",
+      "technique": "standing",
+      "target": "c-site",
+      "stand": "c-site",
+      "side": "side_b",
+      "spans": {"stand": [681.00, 685.30], "aim": [689.85, 690.15], "throw": [690.15, 690.65], "landing": [696.30, 696.90]}
+    }
+  ]
+}

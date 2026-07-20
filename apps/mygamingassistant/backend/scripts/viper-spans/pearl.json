@@ -1,0 +1,19 @@
+{
+  "video_id": "Q30HSrbnrFo",
+  "map_slug": "pearl",
+  "author": "B3ast plays YT",
+  "note": "Viper Top-15 post-plant snake-bite lineups, Pearl. Localized by frame-study from an unchaptered montage; coarse zones per map zone set, fine detail in titles. Not operator-verified. Several near-dups (W3/W4 A Link->A Site, W7/W8 B Ramp->B Site) kept distinct by throw time pending operator eyeball. W12 window was outro (no lineup).",
+  "lineups": [
+    {"cs": 22, "title": "A Main construction -> A Site (over glass dome, 15m)", "ability": "snake-bite", "technique": "standing", "target": "a-site", "stand": "a-main", "side": "side_a", "spans": {"stand": [22.90, 23.70], "aim": [24.30, 24.85], "throw": [24.85, 25.45], "landing": [35.40, 37.00]}},
+    {"cs": 40, "title": "A Restaurant -> A Site (Perola Cafe high lob)", "ability": "snake-bite", "technique": "standing", "target": "a-site", "stand": "a-main", "side": "side_a", "spans": {"stand": [40.50, 42.00], "aim": [48.00, 48.09], "throw": [48.09, 48.69], "landing": [53.40, 54.80]}},
+    {"cs": 61, "title": "A Link -> A Site (greenhouse skylight, 14m)", "ability": "snake-bite", "technique": "standing", "target": "a-site", "stand": "a-main", "side": "side_a", "spans": {"stand": [61.50, 62.40], "aim": [62.60, 63.40], "throw": [67.97, 68.47], "landing": [73.40, 75.00]}},
+    {"cs": 80, "title": "A Link -> A Site (window gap, 13m)", "ability": "snake-bite", "technique": "standing", "target": "a-site", "stand": "a-main", "side": "side_a", "spans": {"stand": [80.40, 81.80], "aim": [84.82, 85.08], "throw": [85.12, 85.60], "landing": [92.40, 93.50]}},
+    {"cs": 98, "title": "A Main -> A Site (over glass dome, 11m)", "ability": "snake-bite", "technique": "standing", "target": "a-site", "stand": "a-main", "side": "side_a", "spans": {"stand": [98.00, 98.80], "aim": [101.42, 101.51], "throw": [101.52, 101.78], "landing": [104.00, 104.60]}},
+    {"cs": 123, "title": "A Secret -> A Site (Perola Cafe corner)", "ability": "snake-bite", "technique": "standing", "target": "a-site", "stand": "a-site", "side": "side_a", "spans": {"stand": [123.60, 124.10], "aim": [124.44, 124.64], "throw": [124.66, 124.90], "landing": [127.55, 128.30]}},
+    {"cs": 140, "title": "B Ramp -> B Site (over glass dome, 14m)", "ability": "snake-bite", "technique": "standing", "target": "b-site", "stand": "b-main", "side": "side_a", "spans": {"stand": [140.52, 140.61], "aim": [140.61, 140.70], "throw": [140.70, 140.88], "landing": [145.80, 147.40]}},
+    {"cs": 158, "title": "B Ramp -> B Site (terracotta tower high lob)", "ability": "snake-bite", "technique": "standing", "target": "b-site", "stand": "b-main", "side": "side_a", "spans": {"stand": [158.00, 158.55], "aim": [158.80, 159.10], "throw": [159.08, 159.30], "landing": [161.50, 163.20]}},
+    {"cs": 189, "title": "B Link -> B Site (through skylight, 15m)", "ability": "snake-bite", "technique": "standing", "target": "b-site", "stand": "b-main", "side": "side_a", "spans": {"stand": [189.60, 190.40], "aim": [190.60, 191.40], "throw": [193.70, 194.02], "landing": [199.30, 200.30]}},
+    {"cs": 202, "title": "B Tower -> B Site (run throw, default plant)", "ability": "snake-bite", "technique": "run", "target": "b-site", "stand": "b-site", "side": "side_a", "spans": {"stand": [202.80, 204.40], "aim": [204.85, 205.15], "throw": [205.20, 205.80], "landing": [209.70, 210.35]}},
+    {"cs": 218, "title": "B Tunnel -> B Site (over mid dome, 13m)", "ability": "snake-bite", "technique": "standing", "target": "b-site", "stand": "b-main", "side": "side_a", "spans": {"stand": [218.00, 219.30], "aim": [223.70, 224.10], "throw": [224.38, 224.60], "landing": [227.70, 228.30]}}
+  ]
+}

@@ -1,0 +1,1422 @@
+[
+  {
+    "file": "0018.md",
+    "cs_native": 18,
+    "ce_native": 38,
+    "utility": "smoke",
+    "name": "Connector Smoke from Boost",
+    "throw_idx": 1,
+    "throw_total": 3,
+    "stand": [
+      18.5,
+      21.75
+    ],
+    "aim": [
+      22.0,
+      24.75
+    ],
+    "throw": [
+      24.75,
+      24.95
+    ],
+    "landing": [
+      17.0,
+      18.1
+    ],
+    "technique": "standing",
+    "target": "vents",
+    "stand_zone": "mid",
+    "side": "side_a",
+    "conf": "med",
+    "cs": 18,
+    "id": "43152548-96e6-4cca-9545-792c6c2b7b6a",
+    "id8": "43152548"
+  },
+  {
+    "file": "0018.md",
+    "cs_native": 18,
+    "ce_native": 38,
+    "utility": "molotov",
+    "name": "White Box Molotov from Boost",
+    "throw_idx": 2,
+    "throw_total": 3,
+    "stand": [
+      18.5,
+      21.75
+    ],
+    "aim": [
+      24.95,
+      29.7
+    ],
+    "throw": [
+      29.7,
+      29.9
+    ],
+    "landing": [
+      34.2,
+      34.6
+    ],
+    "technique": "standing",
+    "target": "mid",
+    "stand_zone": "mid",
+    "side": "side_a",
+    "conf": "med",
+    "cs": 19,
+    "id": "cd8c54d3-7eb6-4e7e-80f6-dd4638376547",
+    "id8": "cd8c54d3"
+  },
+  {
+    "file": "0018.md",
+    "cs_native": 18,
+    "ce_native": 38,
+    "utility": "flash",
+    "name": "Flashbang from Boost",
+    "throw_idx": 3,
+    "throw_total": 3,
+    "stand": [
+      18.5,
+      21.75
+    ],
+    "aim": [
+      29.95,
+      31.55
+    ],
+    "throw": [
+      31.55,
+      31.7
+    ],
+    "landing": [
+      31.6,
+      31.8
+    ],
+    "technique": "standing",
+    "target": "vents",
+    "stand_zone": "mid",
+    "side": "side_a",
+    "conf": "low",
+    "cs": 20,
+    "id": "1496d490-5d80-4565-ab88-82b1d560737a",
+    "id8": "1496d490"
+  },
+  {
+    "file": "0038.md",
+    "cs_native": 38,
+    "ce_native": 52,
+    "utility": "smoke",
+    "name": "Mid Lurk Smoke - T Yard to Mid",
+    "throw_idx": 1,
+    "throw_total": 2,
+    "stand": [
+      40.5,
+      40.8
+    ],
+    "aim": [
+      40.8,
+      41.35
+    ],
+    "throw": [
+      41.35,
+      41.48
+    ],
+    "landing": [
+      45.3,
+      46.3
+    ],
+    "technique": "standing",
+    "target": "mid",
+    "stand_zone": "t-spawn",
+    "side": "side_a",
+    "conf": "low",
+    "cs": 40,
+    "id": "5c844385-7b7d-4c9f-98fc-d92540a25d6a",
+    "id8": "5c844385"
+  },
+  {
+    "file": "0038.md",
+    "cs_native": 38,
+    "ce_native": 52,
+    "utility": "flash",
+    "name": "Mid Lurk Flash - Garage into Mid",
+    "throw_idx": 2,
+    "throw_total": 2,
+    "stand": [
+      42.6,
+      43.0
+    ],
+    "aim": [
+      43.0,
+      43.3
+    ],
+    "throw": [
+      43.3,
+      43.65
+    ],
+    "landing": [
+      43.7,
+      44.3
+    ],
+    "technique": "standing",
+    "target": "mid",
+    "stand_zone": "a-main",
+    "side": "side_a",
+    "conf": "low",
+    "cs": 42,
+    "id": "43fa0a51-8eed-4b39-8939-8e9c81d7c49a",
+    "id8": "43fa0a51"
+  },
+  {
+    "file": "0052.md",
+    "cs_native": 52,
+    "ce_native": 61,
+    "utility": "smoke",
+    "name": "Instant Boost Smoke",
+    "throw_idx": 1,
+    "throw_total": 1,
+    "stand": [
+      53.0,
+      54.0
+    ],
+    "aim": [
+      54.0,
+      55.15
+    ],
+    "throw": [
+      55.15,
+      55.65
+    ],
+    "landing": [
+      58.4,
+      59.5
+    ],
+    "technique": "standing",
+    "target": "highway",
+    "stand_zone": "t-spawn",
+    "side": "side_a",
+    "conf": "med",
+    "cs": 53,
+    "id": "0f581948-fb86-4171-8098-c4669c0175a5",
+    "id8": "0f581948"
+  },
+  {
+    "file": "0061.md",
+    "cs_native": 61,
+    "ce_native": 75,
+    "utility": "smoke",
+    "name": "Boost - Highway",
+    "throw_idx": 1,
+    "throw_total": 1,
+    "stand": [
+      64.5,
+      64.85
+    ],
+    "aim": [
+      64.85,
+      65.3
+    ],
+    "throw": [
+      65.3,
+      65.6
+    ],
+    "landing": [
+      67.95,
+      68.15
+    ],
+    "technique": "standing",
+    "target": "highway",
+    "stand_zone": "a-main",
+    "side": "side_a",
+    "conf": "med",
+    "cs": 64,
+    "id": "b04a1fb8-47a1-4549-b8de-d062a4d03220",
+    "id8": "b04a1fb8"
+  },
+  {
+    "file": "0075.md",
+    "cs_native": 75,
+    "ce_native": 88,
+    "utility": "smoke",
+    "name": "Mid combo smoke onto A-Main corner",
+    "throw_idx": 1,
+    "throw_total": 3,
+    "stand": [
+      77.0,
+      78.6
+    ],
+    "aim": [
+      79.0,
+      80.05
+    ],
+    "throw": [
+      80.05,
+      80.2
+    ],
+    "landing": [
+      86.6,
+      87.9
+    ],
+    "technique": "standing",
+    "target": "a-main",
+    "stand_zone": "mid",
+    "side": "side_a",
+    "conf": "med",
+    "cs": 77,
+    "id": "b262a88c-0308-45b6-a58d-96a85ed24717",
+    "id8": "b262a88c"
+  },
+  {
+    "file": "0075.md",
+    "cs_native": 75,
+    "ce_native": 88,
+    "utility": "molotov",
+    "name": "Mid combo molotov onto A-Main corner",
+    "throw_idx": 2,
+    "throw_total": 3,
+    "stand": [
+      80.2,
+      81.0
+    ],
+    "aim": [
+      81.0,
+      83.45
+    ],
+    "throw": [
+      83.45,
+      83.6
+    ],
+    "landing": [
+      85.6,
+      86.8
+    ],
+    "technique": "standing",
+    "target": "a-main",
+    "stand_zone": "mid",
+    "side": "side_a",
+    "conf": "med",
+    "cs": 80,
+    "id": "bc0513f6-9379-4c3b-ac0f-ca2e30d317f3",
+    "id8": "bc0513f6"
+  },
+  {
+    "file": "0075.md",
+    "cs_native": 75,
+    "ce_native": 88,
+    "utility": "flash",
+    "name": "Mid combo flashbang onto A-Main corner",
+    "throw_idx": 3,
+    "throw_total": 3,
+    "stand": [
+      83.6,
+      84.4
+    ],
+    "aim": [
+      83.7,
+      84.48
+    ],
+    "throw": [
+      84.48,
+      84.6
+    ],
+    "landing": [
+      84.9,
+      85.6
+    ],
+    "technique": "standing",
+    "target": "a-main",
+    "stand_zone": "mid",
+    "side": "side_a",
+    "conf": "low",
+    "cs": 83,
+    "id": "c25f52e5-a0b5-47cd-8d0f-50be9135ebff",
+    "id8": "c25f52e5"
+  },
+  {
+    "file": "0088.md",
+    "cs_native": 88,
+    "ce_native": 94,
+    "utility": "molotov",
+    "name": "Under Boost molotov",
+    "throw_idx": 1,
+    "throw_total": 1,
+    "stand": [
+      88.4,
+      89.9
+    ],
+    "aim": [
+      89.9,
+      90.7
+    ],
+    "throw": [
+      90.7,
+      91.2
+    ],
+    "landing": [
+      92.9,
+      94.7
+    ],
+    "technique": "standing",
+    "target": "a-main",
+    "stand_zone": "a-main",
+    "side": "side_a",
+    "conf": "med",
+    "cs": 88,
+    "id": "2408cd01-3eda-4b68-b0b4-65edc1f03461",
+    "id8": "2408cd01"
+  },
+  {
+    "file": "0094.md",
+    "cs_native": 94,
+    "ce_native": 101,
+    "utility": "molotov",
+    "name": "White Box Molotov",
+    "throw_idx": 1,
+    "throw_total": 1,
+    "stand": [
+      94.72,
+      95.3
+    ],
+    "aim": [
+      95.3,
+      96.9
+    ],
+    "throw": [
+      96.9,
+      97.2
+    ],
+    "landing": [
+      99.6,
+      100.0
+    ],
+    "technique": "standing",
+    "target": "a-main",
+    "stand_zone": "mid",
+    "side": "side_a",
+    "conf": "med",
+    "cs": 94,
+    "id": "d0d30258-eff9-43d4-abd6-279d54b14f78",
+    "id8": "d0d30258"
+  },
+  {
+    "file": "0101.md",
+    "cs_native": 101,
+    "ce_native": 108,
+    "utility": "molotov",
+    "name": "Whitebox corner molotov (Outside A)",
+    "throw_idx": 1,
+    "throw_total": 1,
+    "stand": [
+      101.6,
+      102.0
+    ],
+    "aim": [
+      103.5,
+      104.6
+    ],
+    "throw": [
+      104.6,
+      104.8
+    ],
+    "landing": [
+      105.9,
+      107.3
+    ],
+    "technique": "standing",
+    "target": "a-main",
+    "stand_zone": "a-main",
+    "side": "side_a",
+    "conf": "med",
+    "cs": 101,
+    "id": "8e9b6ffe-867f-4116-905f-c828b52e9027",
+    "id8": "8e9b6ffe"
+  },
+  {
+    "file": "0108.md",
+    "cs_native": 108,
+    "ce_native": 119,
+    "utility": "molotov",
+    "name": "Sandbag Molotov - T Yard sprint-flick",
+    "throw_idx": 1,
+    "throw_total": 2,
+    "stand": [
+      108.5,
+      109.6
+    ],
+    "aim": [
+      110.0,
+      110.8
+    ],
+    "throw": [
+      110.8,
+      111.1
+    ],
+    "landing": [
+      111.4,
+      112.5
+    ],
+    "technique": "run",
+    "target": "a-main",
+    "stand_zone": "mid",
+    "side": "side_a",
+    "conf": "low",
+    "cs": 108,
+    "id": "93aee6fc-0229-48b5-ae62-8ea7cd254141",
+    "id8": "93aee6fc"
+  },
+  {
+    "file": "0108.md",
+    "cs_native": 108,
+    "ce_native": 119,
+    "utility": "molotov",
+    "name": "Sandbag Molotov - Boost standing toss",
+    "throw_idx": 2,
+    "throw_total": 2,
+    "stand": [
+      115.3,
+      115.9
+    ],
+    "aim": [
+      115.9,
+      117.05
+    ],
+    "throw": [
+      117.05,
+      117.25
+    ],
+    "landing": [
+      118.35,
+      119.0
+    ],
+    "technique": "standing",
+    "target": "a-main",
+    "stand_zone": "mid",
+    "side": "side_a",
+    "conf": "med",
+    "cs": 115,
+    "id": "9b5a22a9-8dcd-47ac-9162-cbfd4c192d1a",
+    "id8": "9b5a22a9"
+  },
+  {
+    "file": "0119.md",
+    "cs_native": 119,
+    "ce_native": 131,
+    "utility": "molotov",
+    "name": "Vent Molotov",
+    "throw_idx": 1,
+    "throw_total": 1,
+    "stand": [
+      123.5,
+      125.5
+    ],
+    "aim": [
+      125.6,
+      126.85
+    ],
+    "throw": [
+      126.85,
+      127.05
+    ],
+    "landing": [
+      127.7,
+      129.5
+    ],
+    "technique": "standing",
+    "target": "vents",
+    "stand_zone": "a-main",
+    "side": "side_a",
+    "conf": "med",
+    "cs": 123,
+    "id": "b62ce8e7-2406-4d37-8ecb-e1b295b64c33",
+    "id8": "b62ce8e7"
+  },
+  {
+    "file": "0131.md",
+    "cs_native": 131,
+    "ce_native": 175,
+    "utility": "flash",
+    "name": "Outside-A/Mid sky flash into firefight",
+    "throw_idx": 1,
+    "throw_total": 3,
+    "stand": [
+      132.0,
+      133.3
+    ],
+    "aim": [
+      133.3,
+      134.2
+    ],
+    "throw": [
+      134.2,
+      135.3
+    ],
+    "landing": [
+      135.3,
+      136.3
+    ],
+    "technique": "standing",
+    "target": "a-main",
+    "stand_zone": "mid",
+    "side": "side_a",
+    "conf": "low",
+    "cs": 132,
+    "id": "2f97efab-4601-47d6-aad5-b9b8160289f1",
+    "id8": "2f97efab"
+  },
+  {
+    "file": "0131.md",
+    "cs_native": 131,
+    "ce_native": 175,
+    "utility": "flash",
+    "name": "T-Yard/Outside-A flash blinding Highway AWP",
+    "throw_idx": 2,
+    "throw_total": 3,
+    "stand": [
+      142.0,
+      144.5
+    ],
+    "aim": [
+      144.5,
+      145.15
+    ],
+    "throw": [
+      145.15,
+      145.9
+    ],
+    "landing": [
+      146.6,
+      148.9
+    ],
+    "technique": "standing",
+    "target": "highway",
+    "stand_zone": "a-main",
+    "side": "side_a",
+    "conf": "med",
+    "cs": 142,
+    "id": "90e75067-a447-437c-8220-af47233a2628",
+    "id8": "90e75067"
+  },
+  {
+    "file": "0131.md",
+    "cs_native": 131,
+    "ce_native": 175,
+    "utility": "flash",
+    "name": "Pipe-gap sky flash toward B/Highway",
+    "throw_idx": 3,
+    "throw_total": 3,
+    "stand": [
+      149.3,
+      150.0
+    ],
+    "aim": [
+      150.0,
+      150.8
+    ],
+    "throw": [
+      150.8,
+      151.3
+    ],
+    "landing": [
+      151.3,
+      153.4
+    ],
+    "technique": "standing",
+    "target": "b-main",
+    "stand_zone": "mid",
+    "side": "side_a",
+    "conf": "low",
+    "cs": 149,
+    "id": "7eb221b6-7fae-4cfc-bdb0-587d6c87a22c",
+    "id8": "7eb221b6"
+  },
+  {
+    "file": "0199.md",
+    "cs_native": 199,
+    "ce_native": 211,
+    "utility": "smoke",
+    "name": "Fast A Site smoke (T Yard -> A site)",
+    "throw_idx": 1,
+    "throw_total": 1,
+    "stand": [
+      200.5,
+      201.3
+    ],
+    "aim": [
+      202.0,
+      202.7
+    ],
+    "throw": [
+      202.7,
+      202.9
+    ],
+    "landing": [
+      206.8,
+      208.5
+    ],
+    "technique": "standing",
+    "target": "a-site",
+    "stand_zone": "a-main",
+    "side": "side_a",
+    "conf": "med",
+    "cs": 200,
+    "id": "832c77b3-6346-41d3-8ed7-b8eb71d24cdc",
+    "id8": "832c77b3"
+  },
+  {
+    "file": "0211.md",
+    "cs_native": 212,
+    "ce_native": 223,
+    "utility": "flash",
+    "name": "Chill's Long-A Corner Flashbang",
+    "throw_idx": 2,
+    "throw_total": 3,
+    "stand": [
+      212.5,
+      213.25
+    ],
+    "aim": [
+      213.25,
+      219.0
+    ],
+    "throw": [
+      219.0,
+      219.5
+    ],
+    "landing": [
+      221.0,
+      223.2
+    ],
+    "technique": "standing",
+    "target": "a-site",
+    "stand_zone": "a-main",
+    "side": "side_a",
+    "conf": "med",
+    "cs": 212,
+    "id": "35a8bef2-d4b9-47d4-9b90-f953a5dc1979",
+    "id8": "35a8bef2"
+  },
+  {
+    "file": "0238.md",
+    "cs_native": 238,
+    "ce_native": 245,
+    "utility": "molotov",
+    "name": "Squeaky Forklift Molotov",
+    "throw_idx": 1,
+    "throw_total": 1,
+    "stand": [
+      239.0,
+      239.6
+    ],
+    "aim": [
+      239.7,
+      241.13
+    ],
+    "throw": [
+      241.1,
+      241.3
+    ],
+    "landing": [
+      242.05,
+      243.8
+    ],
+    "technique": "standing",
+    "target": "mid",
+    "stand_zone": "squeaky",
+    "side": "side_a",
+    "conf": "med",
+    "cs": 239,
+    "id": "5b3639bf-860f-4abd-bc49-e2a7889da7ee",
+    "id8": "5b3639bf"
+  },
+  {
+    "file": "0245.md",
+    "cs_native": 245,
+    "ce_native": 254,
+    "utility": "molotov",
+    "name": "NBK Molotov - A Main to Yard",
+    "throw_idx": 1,
+    "throw_total": 2,
+    "stand": [
+      245.8,
+      246.6
+    ],
+    "aim": [
+      246.6,
+      250.0
+    ],
+    "throw": [
+      250.0,
+      250.6
+    ],
+    "landing": [
+      250.6,
+      251.4
+    ],
+    "technique": "standing",
+    "target": "a-main",
+    "stand_zone": "a-main",
+    "side": "side_a",
+    "conf": "med",
+    "cs": 245,
+    "id": "e5faefd7-adf9-452d-9a1e-16ff26657904",
+    "id8": "e5faefd7"
+  },
+  {
+    "file": "0245.md",
+    "cs_native": 245,
+    "ce_native": 254,
+    "utility": "molotov",
+    "name": "Quad Molotov - Site Boxes",
+    "throw_idx": 2,
+    "throw_total": 2,
+    "stand": [
+      251.0,
+      251.1
+    ],
+    "aim": [
+      251.1,
+      251.35
+    ],
+    "throw": [
+      251.35,
+      251.45
+    ],
+    "landing": [
+      251.45,
+      253.9
+    ],
+    "technique": "standing",
+    "target": "a-site",
+    "stand_zone": "a-site",
+    "side": "side_a",
+    "conf": "low",
+    "cs": 251,
+    "id": "a1c1af80-915a-4b59-8369-75ad495206fa",
+    "id8": "a1c1af80"
+  },
+  {
+    "file": "0254.md",
+    "cs_native": 254,
+    "ce_native": 288,
+    "utility": "smoke",
+    "name": "B Main Lurk Smoke",
+    "throw_idx": 1,
+    "throw_total": 2,
+    "stand": [
+      255.6,
+      256.15
+    ],
+    "aim": [
+      256.15,
+      256.7
+    ],
+    "throw": [
+      256.68,
+      256.8
+    ],
+    "landing": [
+      258.7,
+      260.3
+    ],
+    "technique": "standing",
+    "target": "b-main",
+    "stand_zone": "b-main",
+    "side": "side_a",
+    "conf": "med",
+    "cs": 255,
+    "id": "0ba87fd2-d7a8-41ff-8fad-f8dfa42567eb",
+    "id8": "0ba87fd2"
+  },
+  {
+    "file": "0254.md",
+    "cs_native": 254,
+    "ce_native": 288,
+    "utility": "molotov",
+    "name": "B Main Lurk Molotov Follow-up",
+    "throw_idx": 2,
+    "throw_total": 2,
+    "stand": [
+      264.0,
+      264.7
+    ],
+    "aim": [
+      265.6,
+      267.45
+    ],
+    "throw": [
+      267.45,
+      267.55
+    ],
+    "landing": [
+      268.6,
+      269.4
+    ],
+    "technique": "standing",
+    "target": "b-main",
+    "stand_zone": "b-main",
+    "side": "side_a",
+    "conf": "low",
+    "cs": 264,
+    "id": "f0ea4e46-82ca-4fd8-bf69-eeb0832a6cb1",
+    "id8": "f0ea4e46"
+  },
+  {
+    "file": "0312.md",
+    "cs_native": 312,
+    "ce_native": 325,
+    "utility": "smoke",
+    "name": "Tree Smoke",
+    "throw_idx": 1,
+    "throw_total": 2,
+    "stand": [
+      316.0,
+      317.3
+    ],
+    "aim": [
+      317.3,
+      318.83
+    ],
+    "throw": [
+      318.83,
+      319.05
+    ],
+    "landing": [
+      320.0,
+      321.0
+    ],
+    "technique": "standing",
+    "target": "b-site",
+    "stand_zone": "sun-room",
+    "side": "side_a",
+    "conf": "low",
+    "cs": 316,
+    "id": "2ddbba2c-75c4-4a1e-a15d-f2245ff7eb5a",
+    "id8": "2ddbba2c"
+  },
+  {
+    "file": "0312.md",
+    "cs_native": 312,
+    "ce_native": 325,
+    "utility": "molotov",
+    "name": "HS Molotov",
+    "throw_idx": 2,
+    "throw_total": 2,
+    "stand": [
+      319.25,
+      320.0
+    ],
+    "aim": [
+      320.0,
+      321.25
+    ],
+    "throw": [
+      321.25,
+      321.75
+    ],
+    "landing": [
+      322.75,
+      324.5
+    ],
+    "technique": "standing",
+    "target": "b-site",
+    "stand_zone": "sun-room",
+    "side": "side_a",
+    "conf": "high",
+    "cs": 319,
+    "id": "1b6a3836-c743-4469-93b9-2c158e354a08",
+    "id8": "1b6a3836"
+  },
+  {
+    "file": "0325.md",
+    "cs_native": 325,
+    "ce_native": 332,
+    "utility": "molotov",
+    "name": "Sun Room - B Site",
+    "throw_idx": 1,
+    "throw_total": 1,
+    "stand": [
+      326.0,
+      326.5
+    ],
+    "aim": [
+      326.6,
+      327.6
+    ],
+    "throw": [
+      327.6,
+      328.95
+    ],
+    "landing": [
+      330.35,
+      331.9
+    ],
+    "technique": "standing",
+    "target": "b-site",
+    "stand_zone": "sun-room",
+    "side": "side_a",
+    "conf": "med",
+    "cs": 326,
+    "id": "16cf7b06-5ca2-442e-be1b-31c4b24bc480",
+    "id8": "16cf7b06"
+  },
+  {
+    "file": "0345.md",
+    "cs_native": 345,
+    "ce_native": 374,
+    "utility": "molotov",
+    "name": "Sun Room Roof Molotov - Squeaky",
+    "throw_idx": 1,
+    "throw_total": 2,
+    "stand": [
+      350.0,
+      351.5
+    ],
+    "aim": [
+      352.0,
+      357.6
+    ],
+    "throw": [
+      357.6,
+      358.5
+    ],
+    "landing": [
+      365.7,
+      366.7
+    ],
+    "technique": "standing",
+    "target": "squeaky",
+    "stand_zone": "sun-room",
+    "side": "side_a",
+    "conf": "low",
+    "cs": 350,
+    "id": "8d0a756c-85d8-49e6-811e-f168a1deb6f7",
+    "id8": "8d0a756c"
+  },
+  {
+    "file": "0345.md",
+    "cs_native": 345,
+    "ce_native": 374,
+    "utility": "flash",
+    "name": "Sun Room Courtyard Flash - Vents",
+    "throw_idx": 2,
+    "throw_total": 2,
+    "stand": [
+      358.5,
+      359.3
+    ],
+    "aim": [
+      359.3,
+      360.3
+    ],
+    "throw": [
+      360.3,
+      361.3
+    ],
+    "landing": [
+      361.5,
+      362.5
+    ],
+    "technique": "standing",
+    "target": "vents",
+    "stand_zone": "sun-room",
+    "side": "side_a",
+    "conf": "low",
+    "cs": 358,
+    "id": "504cadaa-7529-4328-bef3-afe371d11983",
+    "id8": "504cadaa"
+  },
+  {
+    "file": "0381.md",
+    "cs_native": 381,
+    "ce_native": 396,
+    "utility": "grenade",
+    "name": "Mid HE Antirush (LAKSHERi round)",
+    "throw_idx": 1,
+    "throw_total": 2,
+    "stand": [
+      382.0,
+      383.5
+    ],
+    "aim": [
+      384.0,
+      386.9
+    ],
+    "throw": [
+      386.9,
+      387.0
+    ],
+    "landing": [
+      387.6,
+      389.5
+    ],
+    "technique": "standing",
+    "target": "mid",
+    "stand_zone": "vents",
+    "side": "side_b",
+    "conf": "med",
+    "cs": 382,
+    "id": "3b590299-bfa6-4f77-8e04-4e6a404a5784",
+    "id8": "3b590299"
+  },
+  {
+    "file": "0381.md",
+    "cs_native": 381,
+    "ce_native": 396,
+    "utility": "molotov",
+    "name": "Mid Incendiary Antirush (Chill round)",
+    "throw_idx": 2,
+    "throw_total": 2,
+    "stand": [
+      391.0,
+      391.5
+    ],
+    "aim": [
+      392.0,
+      392.7
+    ],
+    "throw": [
+      392.65,
+      392.78
+    ],
+    "landing": [
+      395.0,
+      396.0
+    ],
+    "technique": "standing",
+    "target": "mid",
+    "stand_zone": "vents",
+    "side": "side_b",
+    "conf": "low",
+    "side_inherited": true,
+    "cs": 391,
+    "id": "e7787dd3-a7b4-4df3-be9b-1b542bdc4853",
+    "id8": "e7787dd3"
+  },
+  {
+    "file": "0396.md",
+    "cs_native": 396,
+    "ce_native": 402,
+    "utility": "grenade",
+    "name": "Boost HE to A Rooftop",
+    "throw_idx": 1,
+    "throw_total": 1,
+    "stand": [
+      396.25,
+      397.55
+    ],
+    "aim": [
+      397.65,
+      399.85
+    ],
+    "throw": [
+      399.85,
+      400.1
+    ],
+    "landing": [
+      400.9,
+      401.3
+    ],
+    "technique": "standing",
+    "target": "a-site",
+    "stand_zone": "mid",
+    "side": "side_a",
+    "conf": "med",
+    "cs": 396,
+    "id": "026f7b41-6049-41c7-9e3d-4f497c7658ff",
+    "id8": "026f7b41"
+  },
+  {
+    "file": "0408.md",
+    "cs_native": 408,
+    "ce_native": 418,
+    "utility": "smoke",
+    "name": "Deep A Main",
+    "throw_idx": 1,
+    "throw_total": 1,
+    "stand": [
+      412.8,
+      413.6
+    ],
+    "aim": [
+      413.6,
+      414.45
+    ],
+    "throw": [
+      414.45,
+      414.7
+    ],
+    "landing": [
+      415.4,
+      416.4
+    ],
+    "technique": "standing",
+    "target": "a-main",
+    "stand_zone": "a-main",
+    "side": "side_a",
+    "conf": "med",
+    "cs": 412,
+    "id": "bf6d4450-305a-4fc1-87d3-8d45b5a2e2db",
+    "id8": "bf6d4450"
+  },
+  {
+    "file": "0418.md",
+    "cs_native": 418,
+    "ce_native": 427,
+    "utility": "flash",
+    "name": "A Main Flash",
+    "throw_idx": 1,
+    "throw_total": 1,
+    "stand": [
+      418.5,
+      421.0
+    ],
+    "aim": [
+      422.5,
+      422.9
+    ],
+    "throw": [
+      422.9,
+      423.3
+    ],
+    "landing": [
+      425.9,
+      426.9
+    ],
+    "technique": "standing",
+    "target": "vents",
+    "stand_zone": "a-main",
+    "side": "side_a",
+    "conf": "low",
+    "cs": 418,
+    "id": "4050192f-da29-4f87-9264-34785ebc2800",
+    "id8": "4050192f"
+  },
+  {
+    "file": "0427.md",
+    "cs_native": 427,
+    "ce_native": 432,
+    "utility": "molotov",
+    "name": "A Main box molotov",
+    "throw_idx": 1,
+    "throw_total": 1,
+    "stand": [
+      427.3,
+      428.7
+    ],
+    "aim": [
+      429.3,
+      429.65
+    ],
+    "throw": [
+      429.65,
+      429.8
+    ],
+    "landing": [
+      430.45,
+      431.8
+    ],
+    "technique": "standing",
+    "target": "a-main",
+    "stand_zone": "a-main",
+    "side": "side_a",
+    "conf": "med",
+    "cs": 427,
+    "id": "26cad80c-643d-40c4-8bc4-b850a02b9fcb",
+    "id8": "26cad80c"
+  },
+  {
+    "file": "0432.md",
+    "cs_native": 432,
+    "ce_native": 441,
+    "utility": "smoke",
+    "name": "A Main control smoke (from A site)",
+    "throw_idx": 1,
+    "throw_total": 2,
+    "stand": [
+      433.0,
+      433.5
+    ],
+    "aim": [
+      433.5,
+      433.65
+    ],
+    "throw": [
+      433.65,
+      433.85
+    ],
+    "landing": [
+      435.3,
+      436.0
+    ],
+    "technique": "standing",
+    "target": "a-main",
+    "stand_zone": "a-site",
+    "side": "side_b",
+    "conf": "low",
+    "cs": 433,
+    "id": "598404e6-7ec2-489b-8da2-d118dbf72fc9",
+    "id8": "598404e6"
+  },
+  {
+    "file": "0432.md",
+    "cs_native": 432,
+    "ce_native": 441,
+    "utility": "molotov",
+    "name": "A Main control incendiary (from A site)",
+    "throw_idx": 2,
+    "throw_total": 2,
+    "stand": [
+      435.6,
+      436.0
+    ],
+    "aim": [
+      436.0,
+      437.2
+    ],
+    "throw": [
+      437.2,
+      437.4
+    ],
+    "landing": [
+      438.15,
+      438.4
+    ],
+    "technique": "standing",
+    "target": "a-main",
+    "stand_zone": "a-site",
+    "side": "side_b",
+    "conf": "med",
+    "cs": 435,
+    "id": "7e81e2ce-20e9-4dab-ad9f-69475f961fa2",
+    "id8": "7e81e2ce"
+  },
+  {
+    "file": "0441.md",
+    "cs_native": 441,
+    "ce_native": 452,
+    "utility": "smoke",
+    "name": "Quad hold smoke (A site)",
+    "throw_idx": 1,
+    "throw_total": 1,
+    "stand": [
+      441.5,
+      442.6
+    ],
+    "aim": [
+      444.1,
+      445.2
+    ],
+    "throw": [
+      445.2,
+      445.45
+    ],
+    "landing": [
+      445.45,
+      447.2
+    ],
+    "technique": "standing",
+    "target": "highway",
+    "stand_zone": "a-site",
+    "side": "side_b",
+    "conf": "low",
+    "cs": 441,
+    "id": "7eb51149-b796-4017-95e6-d22f161b5dfd",
+    "id8": "7eb51149"
+  },
+  {
+    "file": "0459.md",
+    "cs_native": 459,
+    "ce_native": 471,
+    "utility": "flash",
+    "name": "B Main flash",
+    "throw_idx": 1,
+    "throw_total": 1,
+    "stand": [
+      459.5,
+      459.53
+    ],
+    "aim": [
+      459.53,
+      459.56
+    ],
+    "throw": [
+      459.5,
+      459.9
+    ],
+    "landing": [
+      464.6,
+      465.3
+    ],
+    "technique": "standing",
+    "target": "checkers",
+    "stand_zone": "b-site",
+    "side": "side_a",
+    "conf": "low",
+    "cs": 459,
+    "id": "c3e412b4-5d1a-49a4-ab6c-55f814f02406",
+    "id8": "c3e412b4"
+  },
+  {
+    "file": "0471.md",
+    "cs_native": 471,
+    "ce_native": 484,
+    "utility": "smoke",
+    "name": "Tree Room B-Main Smoke",
+    "throw_idx": 1,
+    "throw_total": 2,
+    "stand": [
+      472.5,
+      473.18
+    ],
+    "aim": [
+      473.1,
+      473.18
+    ],
+    "throw": [
+      473.18,
+      473.3
+    ],
+    "landing": [
+      474.85,
+      475.6
+    ],
+    "technique": "standing",
+    "target": "b-main",
+    "stand_zone": "b-site",
+    "side": "side_b",
+    "conf": "low",
+    "cs": 472,
+    "id": "3c7a6d72-a49d-4823-9967-81a4c2c0624c",
+    "id8": "3c7a6d72"
+  },
+  {
+    "file": "0471.md",
+    "cs_native": 471,
+    "ce_native": 484,
+    "utility": "molotov",
+    "name": "Tree Room B-Site Incendiary",
+    "throw_idx": 2,
+    "throw_total": 2,
+    "stand": [
+      474.85,
+      475.0
+    ],
+    "aim": [
+      475.0,
+      475.4
+    ],
+    "throw": [
+      475.4,
+      475.7
+    ],
+    "landing": [
+      476.55,
+      477.0
+    ],
+    "technique": "standing",
+    "target": "b-site",
+    "stand_zone": "b-site",
+    "side": "side_b",
+    "conf": "low",
+    "cs": 474,
+    "id": "66950ca4-bb40-4cc4-982f-5ed4de96b37a",
+    "id8": "66950ca4"
+  }
+]
