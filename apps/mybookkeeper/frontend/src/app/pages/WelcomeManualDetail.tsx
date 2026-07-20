@@ -16,7 +16,11 @@ import AlertBox from "@/shared/components/ui/AlertBox";
 import Markdown from "@/shared/components/ui/Markdown";
 import { Button, LoadingButton } from "@platform/ui";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
-import { NEW_SECTION_DEFAULT_TITLE } from "@/shared/lib/welcome-manual-constants";
+import {
+  NEW_SECTION_DEFAULT_TITLE,
+  WELCOME_MANUAL_VIEW_MODE,
+  type WelcomeManualViewMode,
+} from "@/shared/lib/welcome-manual-constants";
 import {
   useCreateSectionMutation,
   useDeleteWelcomeManualMutation,
@@ -41,7 +45,9 @@ export default function WelcomeManualDetail() {
   const [pendingFocusId, setPendingFocusId] = useState<string | null>(null);
   // Mobile-only view toggle. Desktop (lg+) shows editor + preview side by side,
   // so this state is ignored there.
-  const [mobileView, setMobileView] = useState<"edit" | "preview">("edit");
+  const [mobileView, setMobileView] = useState<WelcomeManualViewMode>(
+    WELCOME_MANUAL_VIEW_MODE.EDIT,
+  );
 
   const sectionRefs = useRef<Map<string, HTMLElement>>(new Map());
 
@@ -165,10 +171,10 @@ export default function WelcomeManualDetail() {
             <button
               type="button"
               role="tab"
-              aria-selected={mobileView === "edit"}
-              onClick={() => setMobileView("edit")}
+              aria-selected={mobileView === WELCOME_MANUAL_VIEW_MODE.EDIT}
+              onClick={() => setMobileView(WELCOME_MANUAL_VIEW_MODE.EDIT)}
               className={`flex-1 min-h-[44px] rounded-md text-sm font-medium transition-colors ${
-                mobileView === "edit"
+                mobileView === WELCOME_MANUAL_VIEW_MODE.EDIT
                   ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:text-foreground"
               }`}
@@ -179,10 +185,10 @@ export default function WelcomeManualDetail() {
             <button
               type="button"
               role="tab"
-              aria-selected={mobileView === "preview"}
-              onClick={() => setMobileView("preview")}
+              aria-selected={mobileView === WELCOME_MANUAL_VIEW_MODE.PREVIEW}
+              onClick={() => setMobileView(WELCOME_MANUAL_VIEW_MODE.PREVIEW)}
               className={`flex-1 min-h-[44px] rounded-md text-sm font-medium transition-colors ${
-                mobileView === "preview"
+                mobileView === WELCOME_MANUAL_VIEW_MODE.PREVIEW
                   ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:text-foreground"
               }`}
@@ -194,7 +200,9 @@ export default function WelcomeManualDetail() {
 
           <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
             <div
-              className={`space-y-6 lg:block ${mobileView === "edit" ? "block" : "hidden"}`}
+              className={`space-y-6 lg:block ${
+                mobileView === WELCOME_MANUAL_VIEW_MODE.EDIT ? "block" : "hidden"
+              }`}
               data-testid="welcome-manual-editor-column"
             >
               <section
@@ -299,7 +307,9 @@ export default function WelcomeManualDetail() {
             </div>
 
             <div
-              className={`lg:block ${mobileView === "preview" ? "block" : "hidden"}`}
+              className={`lg:block ${
+                mobileView === WELCOME_MANUAL_VIEW_MODE.PREVIEW ? "block" : "hidden"
+              }`}
               data-testid="welcome-manual-preview-column"
             >
               <div className="lg:sticky lg:top-8 space-y-2">

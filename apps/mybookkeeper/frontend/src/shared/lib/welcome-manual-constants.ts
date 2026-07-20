@@ -19,3 +19,15 @@ export const SECTION_IMAGE_STORAGE_DOMAIN = "welcome_manual_section_image";
 
 /** RFC-lite email format check for the email-to-guest dialog's submit gate. */
 export const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/**
+ * Detail-page view modes. On desktop the editor and guest preview show side by
+ * side; on mobile this toggles which one is visible.
+ */
+export const WELCOME_MANUAL_VIEW_MODE = {
+  EDIT: "edit",
+  PREVIEW: "preview",
+} as const;
+
+export type WelcomeManualViewMode =
+  (typeof WELCOME_MANUAL_VIEW_MODE)[keyof typeof WELCOME_MANUAL_VIEW_MODE];
