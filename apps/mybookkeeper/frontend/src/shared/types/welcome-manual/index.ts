@@ -6,6 +6,7 @@ export type { WelcomeManualListArgs } from "./welcome-manual-list-args";
 export type { WelcomeManualListResponse } from "./welcome-manual-list-response";
 export type { WelcomeManualResponse } from "./welcome-manual-response";
 export type { WelcomeManualSectionCreateRequest } from "./welcome-manual-section-create-request";
+export type { WelcomeManualSectionFieldResponse } from "./welcome-manual-section-field-response";
 export type { WelcomeManualSectionImageResponse } from "./welcome-manual-section-image-response";
 export type { WelcomeManualSectionResponse } from "./welcome-manual-section-response";
 export type { WelcomeManualSectionUpdateRequest } from "./welcome-manual-section-update-request";

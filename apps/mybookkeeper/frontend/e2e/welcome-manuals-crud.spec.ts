@@ -22,7 +22,13 @@ const FIXTURE_PHOTO = path.join(__dirname, "fixtures", "listings", "test-photo-w
 interface ManualDetail {
   id: string;
   title: string;
-  sections: Array<{ id: string; title: string; display_order: number; images: unknown[] }>;
+  sections: Array<{
+    id: string;
+    title: string;
+    display_order: number;
+    fields: Array<{ id: string; label: string; value: string | null; display_order: number }>;
+    images: unknown[];
+  }>;
 }
 
 async function fetchManual(api: APIRequestContext, id: string): Promise<ManualDetail> {
@@ -101,6 +107,28 @@ test.describe("Welcome Manuals CRUD (PR 4b)", () => {
         const updated = await fetchManual(api, manualId!);
         const edited = updated.sections.find((s) => s.title === `Wi-Fi Details ${runId}`);
         expect(edited).toBeTruthy();
+      }).toPass({ timeout: 10000 });
+
+      // 3b) ADD a field to the first section — fill label + value, blur, and
+      // assert the persisted row via the API (mirrors the image assertion:
+      // verify backend state, not just visibility).
+      const fieldCard = page.getByTestId("welcome-manual-section-card").first();
+      await fieldCard.getByTestId("welcome-manual-field-add-button").click();
+      const fieldRow = fieldCard.getByTestId("welcome-manual-field-card").first();
+      await expect(fieldRow).toBeVisible({ timeout: 10000 });
+      const fieldLabel = `Wi-Fi network ${runId}`;
+      const fieldValue = `Lakeview-${runId}`;
+      await fieldRow.getByTestId("welcome-manual-field-label").fill(fieldLabel);
+      await fieldRow.getByTestId("welcome-manual-field-value").fill(fieldValue);
+      // Blur the value input to trigger the save.
+      await fieldRow.getByTestId("welcome-manual-field-value").blur();
+
+      await expect(async () => {
+        const withField = await fetchManual(api, manualId!);
+        const match = withField.sections
+          .flatMap((s) => s.fields)
+          .find((f) => f.label === fieldLabel && f.value === fieldValue);
+        expect(match).toBeTruthy();
       }).toPass({ timeout: 10000 });
 
       // 4) ADD a section — it appears as a new card.

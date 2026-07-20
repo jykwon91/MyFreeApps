@@ -12,7 +12,10 @@ from unittest.mock import patch
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.welcome_manual_constants import DEFAULT_WELCOME_MANUAL_SECTIONS
+from app.core.welcome_manual_constants import (
+    DEFAULT_WELCOME_MANUAL_SECTION_FIELDS,
+    DEFAULT_WELCOME_MANUAL_SECTIONS,
+)
 from app.models.organization.organization import Organization
 from app.models.properties.property import Property
 from app.models.user.user import User
@@ -57,6 +60,32 @@ class TestCreate:
         assert resp.title == "Guide"
         assert [s.title for s in resp.sections] == list(DEFAULT_WELCOME_MANUAL_SECTIONS)
         assert [s.display_order for s in resp.sections] == list(range(len(DEFAULT_WELCOME_MANUAL_SECTIONS)))
+
+    @pytest.mark.asyncio
+    async def test_seeds_wifi_section_fields(self, db: AsyncSession, test_user: User, test_org: Organization) -> None:
+        with _patch(db):
+            resp = await welcome_manual_service.create_manual(
+                test_org.id, test_user.id, WelcomeManualCreateRequest(title="Guide"),
+            )
+        wifi = next(s for s in resp.sections if s.title == "Wi-Fi")
+        expected = list(DEFAULT_WELCOME_MANUAL_SECTION_FIELDS["Wi-Fi"])
+        assert [f.label for f in wifi.fields] == expected
+        assert [f.value for f in wifi.fields] == [None] * len(expected)
+        assert [f.display_order for f in wifi.fields] == list(range(len(expected)))
+        # Sections without a default-field mapping seed no fields.
+        parking = next(s for s in resp.sections if s.title == "Parking")
+        assert parking.fields == []
+
+    @pytest.mark.asyncio
+    async def test_get_manual_includes_seeded_fields(self, db: AsyncSession, test_user: User, test_org: Organization) -> None:
+        with _patch(db):
+            created = await welcome_manual_service.create_manual(
+                test_org.id, test_user.id, WelcomeManualCreateRequest(title="Guide"),
+            )
+            await db.commit()
+            fetched = await welcome_manual_service.get_manual(test_org.id, test_user.id, created.id)
+        wifi = next(s for s in fetched.sections if s.title == "Wi-Fi")
+        assert [f.label for f in wifi.fields] == list(DEFAULT_WELCOME_MANUAL_SECTION_FIELDS["Wi-Fi"])
 
     @pytest.mark.asyncio
     async def test_no_seed_when_disabled(self, db: AsyncSession, test_user: User, test_org: Organization) -> None:

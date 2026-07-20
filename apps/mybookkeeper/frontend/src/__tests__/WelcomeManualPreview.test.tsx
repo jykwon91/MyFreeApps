@@ -9,7 +9,22 @@ import { describe, it, expect } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import WelcomeManualPreview from "@/app/features/welcome-manuals/WelcomeManualPreview";
 import type { WelcomeManualSectionResponse } from "@/shared/types/welcome-manual/welcome-manual-section-response";
+import type { WelcomeManualSectionFieldResponse } from "@/shared/types/welcome-manual/welcome-manual-section-field-response";
 import type { WelcomeManualSectionImageResponse } from "@/shared/types/welcome-manual/welcome-manual-section-image-response";
+
+function makeField(
+  overrides: Partial<WelcomeManualSectionFieldResponse> = {},
+): WelcomeManualSectionFieldResponse {
+  return {
+    id: "fld-1",
+    section_id: "sec-1",
+    label: "Wi-Fi network",
+    value: "Lakeview",
+    display_order: 0,
+    created_at: "2026-01-01T00:00:00Z",
+    ...overrides,
+  };
+}
 
 function makeImage(
   overrides: Partial<WelcomeManualSectionImageResponse> = {},
@@ -36,6 +51,7 @@ function makeSection(
     title: "Parking",
     body: "Park in **spot 4**.",
     display_order: 0,
+    fields: [],
     images: [],
     created_at: "2026-01-01T00:00:00Z",
     updated_at: "2026-01-01T00:00:00Z",
@@ -77,6 +93,49 @@ describe("WelcomeManualPreview", () => {
     const section = screen.getByTestId("welcome-manual-preview-section");
     expect(within(section).getByRole("heading", { name: "Parking" })).toBeInTheDocument();
     expect(within(section).getByText("spot 4")).toBeInTheDocument();
+  });
+
+  it("renders section fields as label/value pairs", () => {
+    render(
+      <WelcomeManualPreview
+        title="Guide"
+        introText={null}
+        sections={[
+          makeSection({
+            fields: [
+              makeField({ id: "fld-1", label: "Wi-Fi network", value: "Lakeview" }),
+              makeField({ id: "fld-2", label: "Check-out", value: "11am" }),
+            ],
+          }),
+        ]}
+      />,
+    );
+    const rows = screen.getAllByTestId("welcome-manual-preview-field");
+    expect(rows).toHaveLength(2);
+    expect(screen.getByText("Wi-Fi network")).toBeInTheDocument();
+    expect(screen.getByText("Lakeview")).toBeInTheDocument();
+    expect(screen.getByText("Check-out")).toBeInTheDocument();
+    expect(screen.getByText("11am")).toBeInTheDocument();
+  });
+
+  it("skips a field row where both label and value are empty", () => {
+    render(
+      <WelcomeManualPreview
+        title="Guide"
+        introText={null}
+        sections={[
+          makeSection({
+            fields: [
+              makeField({ id: "fld-1", label: "Wi-Fi network", value: "Lakeview" }),
+              makeField({ id: "fld-2", label: "", value: null }),
+            ],
+          }),
+        ]}
+      />,
+    );
+    // Only the populated row renders; the all-empty row is dropped.
+    expect(screen.getAllByTestId("welcome-manual-preview-field")).toHaveLength(1);
+    expect(screen.getByText("Wi-Fi network")).toBeInTheDocument();
   });
 
   it("renders section images with their captions", () => {

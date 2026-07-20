@@ -41,6 +41,9 @@ vi.mock("@/shared/store/welcomeManualsApi", () => ({
   useUploadSectionImagesMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useUpdateSectionImageMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useDeleteSectionImageMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useCreateSectionFieldMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useUpdateSectionFieldMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useDeleteSectionFieldMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
 }));
 
 vi.mock("@/shared/store/propertiesApi", () => ({
@@ -54,6 +57,7 @@ function makeSection(id: string): WelcomeManualSectionResponse {
     title: "Wi-Fi",
     body: "instructions",
     display_order: 0,
+    fields: [],
     images: [],
     created_at: "2026-01-01T00:00:00Z",
     updated_at: "2026-01-01T00:00:00Z",

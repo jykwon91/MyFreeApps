@@ -125,6 +125,7 @@ async function stubDetail(page: Page, delayMs = 0): Promise<void> {
           title: `Section ${i + 1}`,
           body: "Some instructions",
           display_order: i,
+          fields: [],
           images: [],
           created_at: "2026-01-01T00:00:00Z",
           updated_at: "2026-01-01T00:00:00Z",

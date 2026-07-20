@@ -60,9 +60,16 @@ class SectionImagePdfData:
 
 
 @dataclass(frozen=True)
+class SectionFieldPdfData:
+    label: str
+    value: str | None = None
+
+
+@dataclass(frozen=True)
 class SectionPdfData:
     title: str
     body: str | None = None
+    fields: list[SectionFieldPdfData] = field(default_factory=list)
     images: list[SectionImagePdfData] = field(default_factory=list)
 
 
@@ -147,6 +154,12 @@ def generate_welcome_manual_pdf(data: WelcomeManualPdfData) -> bytes:
         story.append(Spacer(1, 4))
         if section.body and section.body.strip():
             story.extend(markdown_to_flowables(section.body, body_style))
+        # Fields (label: value) render as plain escaped text — not Markdown —
+        # after the body and before the images.
+        for section_field in section.fields:
+            label = html_mod.escape(section_field.label)
+            value = html_mod.escape(section_field.value or "")
+            story.append(Paragraph(f"{label}: {value}", body_style))
         for image in section.images:
             story.extend(_build_image_flowable(image, content_width, caption_style))
         story.append(Spacer(1, 10))

@@ -32,6 +32,7 @@ from app.db.session import unit_of_work
 from app.repositories import (
     user_repo,
     welcome_manual_repo,
+    welcome_manual_section_field_repo,
     welcome_manual_section_image_repo,
     welcome_manual_section_repo,
     welcome_manual_send_repo,
@@ -42,6 +43,7 @@ from app.schemas.welcome_manuals.welcome_manual_send_response import (
 from app.services.system import email_service
 from app.services.system.email_service import EmailAttachment
 from app.services.welcome_manuals.welcome_manual_pdf_service import (
+    SectionFieldPdfData,
     SectionImagePdfData,
     SectionPdfData,
     WelcomeManualPdfData,
@@ -130,7 +132,7 @@ def _fetch_image_bytes(images, *, manual_id: uuid.UUID) -> dict[uuid.UUID, bytes
     return by_image
 
 
-def _build_pdf_data(manual, sections, images, image_bytes) -> WelcomeManualPdfData:
+def _build_pdf_data(manual, sections, images, fields, image_bytes) -> WelcomeManualPdfData:
     """Assemble the pure PDF data carrier from the loaded ORM rows + bytes."""
     images_by_section: dict[uuid.UUID, list[SectionImagePdfData]] = {}
     for image in images:
@@ -140,10 +142,16 @@ def _build_pdf_data(manual, sections, images, image_bytes) -> WelcomeManualPdfDa
         images_by_section.setdefault(image.section_id, []).append(
             SectionImagePdfData(image_bytes=content, caption=image.caption),
         )
+    fields_by_section: dict[uuid.UUID, list[SectionFieldPdfData]] = {}
+    for field in fields:
+        fields_by_section.setdefault(field.section_id, []).append(
+            SectionFieldPdfData(label=field.label, value=field.value),
+        )
     section_data = [
         SectionPdfData(
             title=section.title,
             body=section.body,
+            fields=fields_by_section.get(section.id, []),
             images=images_by_section.get(section.id, []),
         )
         for section in sections
@@ -174,9 +182,9 @@ async def send_manual_to_guest(
         if manual is None:
             raise ManualNotFoundError(f"Welcome manual {manual_id} not found")
         sections = await welcome_manual_section_repo.list_by_manual(db, manual.id)
-        images = await welcome_manual_section_image_repo.list_by_section_ids(
-            db, [s.id for s in sections],
-        )
+        section_ids = [s.id for s in sections]
+        images = await welcome_manual_section_image_repo.list_by_section_ids(db, section_ids)
+        fields = await welcome_manual_section_field_repo.list_by_section_ids(db, section_ids)
         host = await user_repo.get_by_id(db, manual.user_id)
         host_email = host.email if host is not None else None
         manual_title = manual.title
@@ -196,7 +204,7 @@ async def send_manual_to_guest(
 
     image_bytes = _fetch_image_bytes(images, manual_id=manual_id)
     pdf_bytes = generate_welcome_manual_pdf(
-        _build_pdf_data(manual, sections, images, image_bytes),
+        _build_pdf_data(manual, sections, images, fields, image_bytes),
     )
 
     attachment = EmailAttachment(

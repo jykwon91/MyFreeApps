@@ -5,6 +5,7 @@ import type { WelcomeManualListArgs } from "@/shared/types/welcome-manual/welcom
 import type { WelcomeManualListResponse } from "@/shared/types/welcome-manual/welcome-manual-list-response";
 import type { WelcomeManualResponse } from "@/shared/types/welcome-manual/welcome-manual-response";
 import type { WelcomeManualSectionCreateRequest } from "@/shared/types/welcome-manual/welcome-manual-section-create-request";
+import type { WelcomeManualSectionFieldResponse } from "@/shared/types/welcome-manual/welcome-manual-section-field-response";
 import type { WelcomeManualSectionImageResponse } from "@/shared/types/welcome-manual/welcome-manual-section-image-response";
 import type { WelcomeManualSectionResponse } from "@/shared/types/welcome-manual/welcome-manual-section-response";
 import type { WelcomeManualSectionUpdateRequest } from "@/shared/types/welcome-manual/welcome-manual-section-update-request";
@@ -175,6 +176,56 @@ const welcomeManualsApi = baseApi.injectEndpoints({
         { type: "WelcomeManual", id: arg.manualId },
       ],
     }),
+    // ---- Section fields ----
+    createSectionField: builder.mutation<
+      WelcomeManualSectionFieldResponse,
+      { manualId: string; sectionId: string; data: { label: string; value?: string | null } }
+    >({
+      query: ({ manualId, sectionId, data }) => ({
+        url: `/welcome-manuals/${manualId}/sections/${sectionId}/fields`,
+        method: "POST",
+        data,
+      }),
+      invalidatesTags: (_result, _err, arg) => [
+        { type: "WelcomeManual", id: arg.manualId },
+      ],
+    }),
+    updateSectionField: builder.mutation<
+      WelcomeManualSectionFieldResponse,
+      {
+        manualId: string;
+        sectionId: string;
+        fieldId: string;
+        label?: string | null;
+        value?: string | null;
+        display_order?: number;
+      }
+    >({
+      query: ({ manualId, sectionId, fieldId, label, value, display_order }) => ({
+        url: `/welcome-manuals/${manualId}/sections/${sectionId}/fields/${fieldId}`,
+        method: "PATCH",
+        data: {
+          ...(label !== undefined ? { label } : {}),
+          ...(value !== undefined ? { value } : {}),
+          ...(display_order !== undefined ? { display_order } : {}),
+        },
+      }),
+      invalidatesTags: (_result, _err, arg) => [
+        { type: "WelcomeManual", id: arg.manualId },
+      ],
+    }),
+    deleteSectionField: builder.mutation<
+      void,
+      { manualId: string; sectionId: string; fieldId: string }
+    >({
+      query: ({ manualId, sectionId, fieldId }) => ({
+        url: `/welcome-manuals/${manualId}/sections/${sectionId}/fields/${fieldId}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: (_result, _err, arg) => [
+        { type: "WelcomeManual", id: arg.manualId },
+      ],
+    }),
   }),
 });
 
@@ -192,4 +243,7 @@ export const {
   useUploadSectionImagesMutation,
   useUpdateSectionImageMutation,
   useDeleteSectionImageMutation,
+  useCreateSectionFieldMutation,
+  useUpdateSectionFieldMutation,
+  useDeleteSectionFieldMutation,
 } = welcomeManualsApi;
