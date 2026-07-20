@@ -16,6 +16,7 @@ from app.repositories.game.lineup.density import zone_density
 from app.repositories.game.lineup.filters import LineupFilters
 from app.repositories.game.lineup.landing_pane import (
     list_accepted_lineups_needing_landing_clips,
+    list_accepted_lineups_needing_posters,
     set_landing_clip_url,
     set_landing_clip_url_original,
     set_landing_clip_url_trim,
@@ -66,6 +67,7 @@ __all__ = [
     "list_accepted_lineups_needing_clips",
     "list_accepted_lineups_needing_landing_clips",
     "list_accepted_lineups_needing_micro_clips",
+    "list_accepted_lineups_needing_posters",
     "list_accepted_lineups_needing_technique",
     "list_accepted_lineups_needing_widen_source",
     "list_lineups",

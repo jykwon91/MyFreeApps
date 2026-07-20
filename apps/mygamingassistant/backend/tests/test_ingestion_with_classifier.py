@@ -119,6 +119,7 @@ def _grid_env(tmp_path: Path, fake_video_path: Path, *, classify_mock, clip_mock
     from app.services.ingestion.micro_clip_generator import (
         MicroClipGenerationResult,
     )
+    from app.services.ingestion.poster_generator import PosterGenerationResult
 
     if clip_mock is None:
         clip_mock = _AsyncMock(
@@ -151,6 +152,15 @@ def _grid_env(tmp_path: Path, fake_video_path: Path, *, classify_mock, clip_mock
         )
     )
 
+    # #984 poster wire-up defaults to a neutral no-op too — same rationale as
+    # landing_mock / micro_mock. Both sides default to skipped so the existing
+    # classifier tests don't hit real storage / ffmpeg.
+    poster_mock = _AsyncMock(
+        return_value=PosterGenerationResult(
+            stand_status="skipped", landing_status="skipped",
+        )
+    )
+
     with contextlib.ExitStack() as stack:
         stack.enter_context(patch("app.services.ingestion.ingestion_orchestrator.list_videos", new_callable=AsyncMock, return_value=[FAKE_VIDEO]))
         stack.enter_context(patch("app.services.ingestion.ingestion_orchestrator.fetch_video_detail", new_callable=AsyncMock, return_value=FAKE_VIDEO))
@@ -158,9 +168,13 @@ def _grid_env(tmp_path: Path, fake_video_path: Path, *, classify_mock, clip_mock
         stack.enter_context(patch("app.services.ingestion.ingestion_orchestrator.extract_frames", new_callable=AsyncMock, return_value=[_FAKE_PNG] * 5))
         mock_storage_factory = stack.enter_context(patch("app.services.ingestion.ingestion_orchestrator.get_storage"))
         stack.enter_context(patch("app.services.ingestion.ingestion_orchestrator.classify_frames_for_lineup_decision", new=classify_mock))
-        stack.enter_context(patch("app.services.ingestion.ingestion_orchestrator.generate_clip_for_lineup", new=clip_mock))
-        stack.enter_context(patch("app.services.ingestion.ingestion_orchestrator.generate_landing_clip_for_lineup", new=landing_mock))
-        stack.enter_context(patch("app.services.ingestion.ingestion_orchestrator.generate_micro_clips_for_lineup", new=micro_mock))
+        # The media generators moved into ``chapter_media`` (extracted from the
+        # orchestrator to satisfy the file-size guard) — patch them where they
+        # are now looked up, not on the orchestrator module.
+        stack.enter_context(patch("app.services.ingestion.chapter_media.generate_clip_for_lineup", new=clip_mock))
+        stack.enter_context(patch("app.services.ingestion.chapter_media.generate_landing_clip_for_lineup", new=landing_mock))
+        stack.enter_context(patch("app.services.ingestion.chapter_media.generate_micro_clips_for_lineup", new=micro_mock))
+        stack.enter_context(patch("app.services.ingestion.chapter_media.generate_posters_for_lineup", new=poster_mock))
         mock_settings = stack.enter_context(patch.object(ingestion_orchestrator_module(), "settings"))
 
         mock_settings.ingestion_download_dir = str(tmp_path)
@@ -396,6 +410,74 @@ class TestIngestClipWiring:
         assert kwargs["chapter_end"] == 60.0
         # _FAKE_UT_ID is seeded as slug "cls-smoke"; confidence 0.85 > 0.6.
         assert kwargs["utility_hint"] == "cls-smoke"
+
+    @pytest.mark.asyncio
+    async def test_posters_generated_for_lineup_on_ingest(
+        self, db: AsyncSession, source: Source, tmp_path: Path
+    ):
+        """#984 wiring: an accepted chapter runs generate_posters_for_lineup
+        against the freshly-created lineup, so future ingests auto-generate the
+        STAND/LANDING poster stills without a manual backfill."""
+        ingestion_orchestrator = ingestion_orchestrator_module()
+        fake_video_path = tmp_path / "vid_cls_001.mp4"
+        fake_video_path.write_bytes(b"fake")
+
+        classify_mock = AsyncMock(return_value=self._grid_result())
+        # Poster generation runs regardless of the clip outcome (it reads the
+        # already-uploaded clip columns, not the in-flight clip result), so the
+        # default skipped clip_mock is fine here.
+        from app.services.ingestion.poster_generator import (
+            PosterGenerationResult,
+        )
+        poster_mock = AsyncMock(
+            return_value=PosterGenerationResult(
+                stand_status="generated", landing_status="skipped",
+            )
+        )
+
+        with _grid_env(
+            tmp_path, fake_video_path, classify_mock=classify_mock,
+        ) as (mock_settings, _):
+            mock_settings.enable_classifier = True
+            # Override the fixture's neutral poster no-op with an asserting mock.
+            with patch(
+                "app.services.ingestion.chapter_media.generate_posters_for_lineup",
+                new=poster_mock,
+            ):
+                await ingestion_orchestrator.sync_source(source.id, db)
+
+        poster_mock.assert_awaited_once()
+        # Called positionally as generate_posters_for_lineup(db, lineup).
+        assert poster_mock.call_args.args[0] is db
+        assert poster_mock.call_args.args[1].youtube_video_id == FAKE_VIDEO.video_id
+
+    @pytest.mark.asyncio
+    async def test_poster_failure_is_non_fatal_to_the_chapter(
+        self, db: AsyncSession, source: Source, tmp_path: Path
+    ):
+        """An unexpected poster-gen exception must NOT fail the chapter — the
+        lineup is fully usable from its stills and is already committed."""
+        ingestion_orchestrator = ingestion_orchestrator_module()
+        fake_video_path = tmp_path / "vid_cls_001.mp4"
+        fake_video_path.write_bytes(b"fake")
+
+        classify_mock = AsyncMock(return_value=self._grid_result())
+        poster_mock = AsyncMock(side_effect=RuntimeError("ffmpeg blew up"))
+
+        with _grid_env(
+            tmp_path, fake_video_path, classify_mock=classify_mock,
+        ) as (mock_settings, _):
+            mock_settings.enable_classifier = True
+            with patch(
+                "app.services.ingestion.chapter_media.generate_posters_for_lineup",
+                new=poster_mock,
+            ):
+                stats = await ingestion_orchestrator.sync_source(source.id, db)
+
+        poster_mock.assert_awaited_once()
+        # Chapter still counted as handled; no error recorded from the poster fault.
+        assert stats.chapter_count == 1
+        assert stats.error_count == 0
 
     @pytest.mark.asyncio
     async def test_clip_gen_not_called_when_not_a_lineup(

@@ -51,6 +51,68 @@ async def list_accepted_lineups_needing_landing_clips(
     return list(result.scalars().all())
 
 
+async def list_accepted_lineups_needing_posters(
+    db: AsyncSession,
+) -> list[Lineup]:
+    """Accepted, ingested lineups with a clip but no poster still yet.
+
+    The #984 poster backfill set. A poster still is the last-frame WebP of an
+    already-cut clip (see ``poster_generator`` / ``poster_extractor``): the
+    STAND poster upgrades ``stand_screenshot_url`` (replacing the classifier's
+    grid PNG for video-ingested lineups) and the LANDING poster fills the new
+    ``landing_screenshot_url``. A lineup needs poster work when it has the
+    source clip but its screenshot column isn't yet a ``*-poster.webp`` key:
+
+      * STAND   — ``stand_clip_url`` set AND ``stand_screenshot_url`` is null or
+        still the classifier ``.png`` (not ``*-stand-poster.webp``).
+      * LANDING — ``landing_clip_url`` set AND ``landing_screenshot_url`` is null
+        or not yet ``*-landing-poster.webp``.
+
+    ``youtube_video_id`` not null excludes the image-ingested lineups (which
+    have no clip to derive a poster from and keep their manual stand still —
+    the LANDING half renders the "Lands in: <zone>" text fallback). Matching on
+    the poster-key suffix is what makes the backfill idempotent — once both
+    sides carry a ``*-poster.webp`` key the lineup drops out of the set, so a
+    re-run only touches the remainder. Ordered oldest-first for monotonic
+    progress.
+
+    Mirrors the sibling backfill lists (:func:`list_accepted_lineups_needing_landing_clips`,
+    :func:`micro_panes.list_accepted_lineups_needing_micro_clips`) — one
+    composite list so a video's lineups are visited together, and the generator
+    handles partial (one-side-done) state internally.
+    """
+    stmt = (
+        select(Lineup)
+        .where(
+            Lineup.status == "accepted",
+            Lineup.youtube_video_id.is_not(None),
+            (
+                (
+                    Lineup.stand_clip_url.is_not(None)
+                    & (
+                        Lineup.stand_screenshot_url.is_(None)
+                        | Lineup.stand_screenshot_url.notlike(
+                            "%-stand-poster.webp"
+                        )
+                    )
+                )
+                | (
+                    Lineup.landing_clip_url.is_not(None)
+                    & (
+                        Lineup.landing_screenshot_url.is_(None)
+                        | Lineup.landing_screenshot_url.notlike(
+                            "%-landing-poster.webp"
+                        )
+                    )
+                )
+            ),
+        )
+        .order_by(Lineup.created_at.asc())
+    )
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
+
+
 async def set_landing_clip_url(
     db: AsyncSession,
     lineup: Lineup,
