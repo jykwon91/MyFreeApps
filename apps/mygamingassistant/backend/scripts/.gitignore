@@ -75,3 +75,7 @@ _*.log
 # --- Python bytecode cache ---
 __pycache__/
 *.pyc
+
+# --- Pin-proposer run artifacts (embed machine-local frame paths) ---
+*-pin-requests.json
+*-pin-proposals.json
