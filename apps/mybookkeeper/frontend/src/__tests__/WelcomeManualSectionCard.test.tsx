@@ -23,13 +23,16 @@ vi.mock("@/shared/lib/toast-store", () => ({
   showSuccess: vi.fn(),
 }));
 
-// Image manager hits these but we only assert section editing here.
+// Image + field managers hit these but we only assert section editing here.
 vi.mock("@/shared/store/welcomeManualsApi", () => ({
   useUpdateSectionMutation: vi.fn(() => [updateSectionMock, { isLoading: false }]),
   useDeleteSectionMutation: vi.fn(() => [deleteSectionMock, { isLoading: false }]),
   useUploadSectionImagesMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useUpdateSectionImageMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useDeleteSectionImageMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useCreateSectionFieldMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useUpdateSectionFieldMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useDeleteSectionFieldMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
 }));
 
 function makeSection(overrides: Partial<WelcomeManualSectionResponse>): WelcomeManualSectionResponse {
@@ -39,6 +42,7 @@ function makeSection(overrides: Partial<WelcomeManualSectionResponse>): WelcomeM
     title: "Wi-Fi",
     body: "Network: Lakeview, password hunter2",
     display_order: 0,
+    fields: [],
     images: [],
     created_at: "2026-01-01T00:00:00Z",
     updated_at: "2026-01-01T00:00:00Z",
@@ -92,5 +96,13 @@ describe("WelcomeManualSectionCard", () => {
     expect(body.placeholder).toBe("Add instructions for guests…");
     // No preview rendered when the body is empty.
     expect(screen.queryByTestId("welcome-manual-section-body-preview")).not.toBeInTheDocument();
+  });
+
+  it("renders the field manager with an Add-field button", () => {
+    renderCard(makeSection({}));
+    expect(screen.getByTestId("welcome-manual-field-manager")).toBeInTheDocument();
+    expect(screen.getByTestId("welcome-manual-field-add-button")).toBeInTheDocument();
+    // No fields seeded → empty state shows.
+    expect(screen.getByTestId("welcome-manual-field-empty-state")).toBeInTheDocument();
   });
 });

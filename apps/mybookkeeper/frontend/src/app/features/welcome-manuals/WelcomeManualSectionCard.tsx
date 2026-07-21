@@ -8,6 +8,7 @@ import Markdown from "@/shared/components/ui/Markdown";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import { useDeleteSectionMutation } from "@/shared/store/welcomeManualsApi";
 import type { WelcomeManualSectionResponse } from "@/shared/types/welcome-manual/welcome-manual-section-response";
+import WelcomeManualSectionFieldManager from "./WelcomeManualSectionFieldManager";
 import WelcomeManualSectionImageManager from "./WelcomeManualSectionImageManager";
 import { useSectionEditor } from "./useSectionEditor";
 
@@ -136,6 +137,15 @@ const WelcomeManualSectionCard = forwardRef<HTMLElement, WelcomeManualSectionCar
           >
             Save
           </LoadingButton>
+        </div>
+
+        <div className="border-t pt-3">
+          <p className="text-xs font-medium text-muted-foreground mb-2">Details</p>
+          <WelcomeManualSectionFieldManager
+            manualId={manualId}
+            sectionId={section.id}
+            fields={section.fields}
+          />
         </div>
 
         <div className="border-t pt-3">

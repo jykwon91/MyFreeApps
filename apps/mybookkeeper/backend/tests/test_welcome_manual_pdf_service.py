@@ -12,6 +12,7 @@ import io
 from PIL import Image
 
 from app.services.welcome_manuals.welcome_manual_pdf_service import (
+    SectionFieldPdfData,
     SectionImagePdfData,
     SectionPdfData,
     WelcomeManualPdfData,
@@ -146,6 +147,54 @@ class TestImages:
                             SectionImagePdfData(image_bytes=b"\x00\x01garbage", caption="bad"),
                             SectionImagePdfData(image_bytes=_png_bytes(), caption="good"),
                         ],
+                    ),
+                ],
+            ),
+        )
+        assert pdf.startswith(b"%PDF")
+
+
+class TestFields:
+    def test_section_with_fields_renders(self) -> None:
+        pdf = generate_welcome_manual_pdf(
+            WelcomeManualPdfData(
+                title="Guide",
+                sections=[
+                    SectionPdfData(
+                        title="Wi-Fi",
+                        body="Connect to the guest network.",
+                        fields=[
+                            SectionFieldPdfData(label="Network name", value="GuestNet"),
+                            SectionFieldPdfData(label="Password", value="sunny123"),
+                        ],
+                    ),
+                ],
+            ),
+        )
+        assert pdf.startswith(b"%PDF")
+
+    def test_field_with_null_value_renders(self) -> None:
+        pdf = generate_welcome_manual_pdf(
+            WelcomeManualPdfData(
+                title="Guide",
+                sections=[
+                    SectionPdfData(
+                        title="Wi-Fi",
+                        fields=[SectionFieldPdfData(label="Password", value=None)],
+                    ),
+                ],
+            ),
+        )
+        assert pdf.startswith(b"%PDF")
+
+    def test_field_special_chars_do_not_break_render(self) -> None:
+        pdf = generate_welcome_manual_pdf(
+            WelcomeManualPdfData(
+                title="Guide",
+                sections=[
+                    SectionPdfData(
+                        title="Wi-Fi",
+                        fields=[SectionFieldPdfData(label="A & B <c>", value="x > y & z < w")],
                     ),
                 ],
             ),

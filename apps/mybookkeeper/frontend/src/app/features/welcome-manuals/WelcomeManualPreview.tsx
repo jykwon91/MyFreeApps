@@ -50,6 +50,21 @@ export default function WelcomeManualPreview({
 
             {section.body ? <Markdown content={section.body} /> : null}
 
+            {section.fields.length > 0 ? (
+              <dl className="grid gap-2 sm:grid-cols-2" data-testid="welcome-manual-preview-fields">
+                {section.fields
+                  .filter((field) => field.label.trim() !== "" || (field.value ?? "").trim() !== "")
+                  .map((field) => (
+                    <div key={field.id} data-testid="welcome-manual-preview-field">
+                      <dt className="text-xs font-semibold text-muted-foreground">
+                        {field.label}
+                      </dt>
+                      <dd className="text-sm text-foreground">{field.value}</dd>
+                    </div>
+                  ))}
+              </dl>
+            ) : null}
+
             {section.images.length > 0 ? (
               <ul className="grid gap-3 sm:grid-cols-2 list-none">
                 {section.images.map((image) => (

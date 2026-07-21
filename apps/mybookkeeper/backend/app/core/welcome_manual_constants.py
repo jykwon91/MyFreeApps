@@ -21,6 +21,14 @@ WELCOME_MANUAL_STORAGE_DOMAIN = "welcome-manuals"
 # welcome guide (Wi-Fi, trash, laundry, parking, check-out, house rules…).
 WELCOME_MANUAL_MAX_SECTIONS = 50
 
+# Section fields (label + value pairs, e.g. "Network name" / "Password").
+# Bounds mirrored by the Pydantic schemas. ``WELCOME_MANUAL_MAX_FIELDS`` guards
+# a single section against unbounded field rows.
+WELCOME_MANUAL_MAX_FIELDS = 20
+WELCOME_MANUAL_FIELD_LABEL_MAX_LEN = 100
+WELCOME_MANUAL_FIELD_VALUE_MAX_LEN = 500
+NEW_FIELD_DEFAULT_LABEL = "New field"
+
 # Outcome statuses for a welcome-manual email send (welcome_manual_sends.status).
 # Stored as String(20) + CheckConstraint (never SQLAlchemy Enum, per the schema
 # convention). ``sent`` = SMTP accepted; ``failed`` = SMTP rejected/errored;
@@ -41,3 +49,10 @@ DEFAULT_WELCOME_MANUAL_SECTIONS: tuple[str, ...] = (
     "Laundry",
     "Check-out",
 )
+
+# Stub fields seeded into a default section when the manual is created with
+# ``seed_default_sections=True``. Keyed by the section title; each value is an
+# ordered tuple of field labels (values start empty for the host to fill in).
+DEFAULT_WELCOME_MANUAL_SECTION_FIELDS: dict[str, tuple[str, ...]] = {
+    "Wi-Fi": ("Network name", "Password"),
+}

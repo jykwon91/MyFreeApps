@@ -623,13 +623,18 @@
         "backend/app/core/welcome_manual_constants.py",
         "backend/alembic/versions/wmanual260530_add_welcome_manuals_domain.py",
         "backend/alembic/versions/wmanualimg260530_add_welcome_manual_section_images.py",
+        "backend/alembic/versions/wmanualfld260720_add_welcome_manual_section_fields.py",
         "backend/alembic/versions/wmanualsend260530_add_welcome_manual_sends.py"
       ],
       "backend_tests": [
         "test_welcome_manual_image_routes.py",
+        "test_welcome_manual_field_routes.py",
+        "test_welcome_manual_section_field_repo.py",
+        "test_welcome_manual_section_field_service.py",
         "test_welcome_manual_pdf_service.py",
         "test_welcome_manual_markdown_pdf.py",
         "test_welcome_manual_send_repo.py",
+        "test_welcome_manual_service.py",
         "test_welcome_manual_email_routes.py",
         "test_welcome_manual_send_audit_masking.py"
       ],

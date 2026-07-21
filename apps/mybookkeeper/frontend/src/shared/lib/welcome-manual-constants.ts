@@ -4,6 +4,12 @@ export const WELCOME_MANUAL_PAGE_SIZE = 25;
 /** Default title applied to a freshly-added section before the host renames it. */
 export const NEW_SECTION_DEFAULT_TITLE = "New section";
 
+/** Max label/value fields allowed per section. */
+export const MAX_FIELDS_PER_SECTION = 20;
+
+/** Default label applied to a freshly-added field before the host renames it. */
+export const NEW_FIELD_DEFAULT_LABEL = "New field";
+
 /** Max upload size per section image, in bytes (10MB). Mirrors listing photos. */
 export const SECTION_IMAGE_MAX_BYTES = 10 * 1024 * 1024;
 

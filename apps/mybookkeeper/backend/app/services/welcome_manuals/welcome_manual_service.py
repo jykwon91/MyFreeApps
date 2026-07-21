@@ -6,11 +6,15 @@ lives in ``welcome_manual_section_service``.
 """
 import uuid
 
-from app.core.welcome_manual_constants import DEFAULT_WELCOME_MANUAL_SECTIONS
+from app.core.welcome_manual_constants import (
+    DEFAULT_WELCOME_MANUAL_SECTION_FIELDS,
+    DEFAULT_WELCOME_MANUAL_SECTIONS,
+)
 from app.db.session import AsyncSessionLocal, unit_of_work
 from app.repositories import (
     property_repo,
     welcome_manual_repo,
+    welcome_manual_section_field_repo,
     welcome_manual_section_image_repo,
     welcome_manual_section_repo,
 )
@@ -21,6 +25,9 @@ from app.schemas.welcome_manuals.welcome_manual_list_response import (
     WelcomeManualListResponse,
 )
 from app.schemas.welcome_manuals.welcome_manual_response import WelcomeManualResponse
+from app.schemas.welcome_manuals.welcome_manual_section_field_response import (
+    WelcomeManualSectionFieldResponse,
+)
 from app.schemas.welcome_manuals.welcome_manual_section_image_response import (
     WelcomeManualSectionImageResponse,
 )
@@ -36,23 +43,33 @@ from app.services.welcome_manuals.section_image_response_builder import (
 )
 
 
-def _build_section_responses(sections, images) -> list[WelcomeManualSectionResponse]:
-    """Build ordered section responses with each section's images attached.
+def _build_section_responses(sections, images, fields) -> list[WelcomeManualSectionResponse]:
+    """Build ordered section responses with each section's fields + images attached.
 
-    ``images`` is a flat list of ORM image rows spanning ALL the sections;
-    presigned URLs are minted once over the flat list (one HEAD per image),
-    then grouped by section. No SQLAlchemy ``images`` relationship exists on the
-    section model — ``model_validate`` falls back to the field default, and we
-    overwrite it here — which keeps this safe under async (no lazy load).
+    ``images`` and ``fields`` are flat lists of ORM rows spanning ALL the
+    sections; presigned URLs are minted once over the flat image list (one HEAD
+    per image), then both are grouped by section. No SQLAlchemy relationships
+    exist on the section model — ``model_validate`` falls back to the field
+    defaults, and we overwrite them here — which keeps this safe under async
+    (no lazy load).
     """
     image_responses = [WelcomeManualSectionImageResponse.model_validate(img) for img in images]
     signed = attach_presigned_urls(image_responses)
-    by_section: dict[uuid.UUID, list[WelcomeManualSectionImageResponse]] = {}
+    images_by_section: dict[uuid.UUID, list[WelcomeManualSectionImageResponse]] = {}
     for image in signed:
-        by_section.setdefault(image.section_id, []).append(image)
+        images_by_section.setdefault(image.section_id, []).append(image)
+
+    field_responses = [WelcomeManualSectionFieldResponse.model_validate(f) for f in fields]
+    fields_by_section: dict[uuid.UUID, list[WelcomeManualSectionFieldResponse]] = {}
+    for field in field_responses:
+        fields_by_section.setdefault(field.section_id, []).append(field)
+
     return [
         WelcomeManualSectionResponse.model_validate(s).model_copy(
-            update={"images": by_section.get(s.id, [])},
+            update={
+                "fields": fields_by_section.get(s.id, []),
+                "images": images_by_section.get(s.id, []),
+            },
         )
         for s in sections
     ]
@@ -83,10 +100,10 @@ async def get_manual(
         if manual is None:
             raise LookupError(f"Welcome manual {manual_id} not found")
         sections = await welcome_manual_section_repo.list_by_manual(db, manual.id)
-        images = await welcome_manual_section_image_repo.list_by_section_ids(
-            db, [s.id for s in sections],
-        )
-    return _to_response(manual, _build_section_responses(sections, images))
+        section_ids = [s.id for s in sections]
+        images = await welcome_manual_section_image_repo.list_by_section_ids(db, section_ids)
+        fields = await welcome_manual_section_field_repo.list_by_section_ids(db, section_ids)
+    return _to_response(manual, _build_section_responses(sections, images, fields))
 
 
 async def list_manuals(
@@ -148,6 +165,7 @@ async def create_manual(
         )
 
         sections = []
+        fields = []
         if payload.seed_default_sections:
             for index, title in enumerate(DEFAULT_WELCOME_MANUAL_SECTIONS):
                 section = await welcome_manual_section_repo.create(
@@ -158,9 +176,20 @@ async def create_manual(
                     display_order=index,
                 )
                 sections.append(section)
+                for field_index, label in enumerate(
+                    DEFAULT_WELCOME_MANUAL_SECTION_FIELDS.get(title, ()),
+                ):
+                    field = await welcome_manual_section_field_repo.create(
+                        db,
+                        section_id=section.id,
+                        label=label,
+                        value=None,
+                        display_order=field_index,
+                    )
+                    fields.append(field)
 
         # Freshly-seeded sections never have images yet.
-        return _to_response(manual, _build_section_responses(sections, []))
+        return _to_response(manual, _build_section_responses(sections, [], fields))
 
 
 async def update_manual(
@@ -191,10 +220,10 @@ async def update_manual(
             raise LookupError(f"Welcome manual {manual_id} not found")
 
         sections = await welcome_manual_section_repo.list_by_manual(db, manual.id)
-        images = await welcome_manual_section_image_repo.list_by_section_ids(
-            db, [s.id for s in sections],
-        )
-        return _to_response(manual, _build_section_responses(sections, images))
+        section_ids = [s.id for s in sections]
+        images = await welcome_manual_section_image_repo.list_by_section_ids(db, section_ids)
+        fields = await welcome_manual_section_field_repo.list_by_section_ids(db, section_ids)
+        return _to_response(manual, _build_section_responses(sections, images, fields))
 
 
 async def soft_delete_manual(
