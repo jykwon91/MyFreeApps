@@ -44,6 +44,7 @@ const CREATED: WelcomeManualResponse = {
   title: "My Guide",
   intro_text: null,
   sections: [],
+  places: [],
   created_at: "2026-01-01T00:00:00Z",
   updated_at: "2026-01-01T00:00:00Z",
 };

@@ -37,3 +37,12 @@ export const WELCOME_MANUAL_VIEW_MODE = {
 
 export type WelcomeManualViewMode =
   (typeof WELCOME_MANUAL_VIEW_MODE)[keyof typeof WELCOME_MANUAL_VIEW_MODE];
+
+/** Max "Where to Eat" places allowed per manual. */
+export const WELCOME_MANUAL_MAX_PLACES = 200;
+
+/** Price tiers a place can be tagged with, in ascending order. */
+export const WELCOME_MANUAL_PRICE_TIERS = ["$", "$$", "$$$"] as const;
+
+/** Default name applied to a freshly-added place before the host renames it. */
+export const NEW_PLACE_DEFAULT_NAME = "New place";

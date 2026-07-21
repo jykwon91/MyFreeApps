@@ -13,6 +13,7 @@ from app.core.welcome_manual_constants import (
 from app.db.session import AsyncSessionLocal, unit_of_work
 from app.repositories import (
     property_repo,
+    welcome_manual_place_repo,
     welcome_manual_repo,
     welcome_manual_section_field_repo,
     welcome_manual_section_image_repo,
@@ -23,6 +24,9 @@ from app.schemas.welcome_manuals.welcome_manual_create_request import (
 )
 from app.schemas.welcome_manuals.welcome_manual_list_response import (
     WelcomeManualListResponse,
+)
+from app.schemas.welcome_manuals.welcome_manual_place_response import (
+    WelcomeManualPlaceResponse,
 )
 from app.schemas.welcome_manuals.welcome_manual_response import WelcomeManualResponse
 from app.schemas.welcome_manuals.welcome_manual_section_field_response import (
@@ -75,14 +79,20 @@ def _build_section_responses(sections, images, fields) -> list[WelcomeManualSect
     ]
 
 
-def _to_response(manual, section_responses=()) -> WelcomeManualResponse:
-    """Convert an ORM manual + pre-built section responses to a response model.
+def _to_response(manual, section_responses=(), place_responses=()) -> WelcomeManualResponse:
+    """Convert an ORM manual + pre-built section/place responses to a response
+    model.
 
     Centralising this construction prevents drift between get / create /
     update response shapes.
     """
     base = WelcomeManualResponse.model_validate(manual)
-    return base.model_copy(update={"sections": list(section_responses)})
+    return base.model_copy(
+        update={
+            "sections": list(section_responses),
+            "places": list(place_responses),
+        },
+    )
 
 
 async def get_manual(
@@ -103,7 +113,9 @@ async def get_manual(
         section_ids = [s.id for s in sections]
         images = await welcome_manual_section_image_repo.list_by_section_ids(db, section_ids)
         fields = await welcome_manual_section_field_repo.list_by_section_ids(db, section_ids)
-    return _to_response(manual, _build_section_responses(sections, images, fields))
+        places = await welcome_manual_place_repo.list_by_manual(db, manual.id)
+    place_responses = [WelcomeManualPlaceResponse.model_validate(p) for p in places]
+    return _to_response(manual, _build_section_responses(sections, images, fields), place_responses)
 
 
 async def list_manuals(
@@ -188,8 +200,9 @@ async def create_manual(
                     )
                     fields.append(field)
 
-        # Freshly-seeded sections never have images yet.
-        return _to_response(manual, _build_section_responses(sections, [], fields))
+        # Freshly-seeded sections never have images yet. New manuals start
+        # with zero places — places are never seeded on create.
+        return _to_response(manual, _build_section_responses(sections, [], fields), [])
 
 
 async def update_manual(
@@ -223,7 +236,9 @@ async def update_manual(
         section_ids = [s.id for s in sections]
         images = await welcome_manual_section_image_repo.list_by_section_ids(db, section_ids)
         fields = await welcome_manual_section_field_repo.list_by_section_ids(db, section_ids)
-        return _to_response(manual, _build_section_responses(sections, images, fields))
+        places = await welcome_manual_place_repo.list_by_manual(db, manual.id)
+        place_responses = [WelcomeManualPlaceResponse.model_validate(p) for p in places]
+        return _to_response(manual, _build_section_responses(sections, images, fields), place_responses)
 
 
 async def soft_delete_manual(

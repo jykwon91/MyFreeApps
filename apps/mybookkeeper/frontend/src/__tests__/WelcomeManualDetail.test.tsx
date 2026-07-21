@@ -44,6 +44,9 @@ vi.mock("@/shared/store/welcomeManualsApi", () => ({
   useCreateSectionFieldMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useUpdateSectionFieldMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useDeleteSectionFieldMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useCreatePlaceMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useUpdatePlaceMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useDeletePlaceMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
 }));
 
 vi.mock("@/shared/store/propertiesApi", () => ({
@@ -73,6 +76,7 @@ function makeManual(sections: WelcomeManualSectionResponse[]): WelcomeManualResp
     title: "Lakeview Welcome Guide",
     intro_text: null,
     sections,
+    places: [],
     created_at: "2026-01-01T00:00:00Z",
     updated_at: "2026-01-01T00:00:00Z",
   };

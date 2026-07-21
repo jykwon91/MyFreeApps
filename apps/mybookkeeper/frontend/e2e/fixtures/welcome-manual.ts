@@ -11,6 +11,7 @@ interface CreatedManual {
   id: string;
   title: string;
   sections: Array<{ id: string; title: string; display_order: number }>;
+  places: Array<{ id: string; name: string; display_order: number }>;
 }
 
 /**

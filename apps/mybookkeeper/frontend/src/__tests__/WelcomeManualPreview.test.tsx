@@ -66,6 +66,7 @@ describe("WelcomeManualPreview", () => {
         title="Lakeview Welcome Guide"
         introText="Welcome to **our home**!"
         sections={[]}
+        places={[]}
       />,
     );
     expect(
@@ -77,7 +78,7 @@ describe("WelcomeManualPreview", () => {
 
   it("shows the empty placeholder when there are no sections", () => {
     render(
-      <WelcomeManualPreview title="Guide" introText={null} sections={[]} />,
+      <WelcomeManualPreview title="Guide" introText={null} sections={[]} places={[]} />,
     );
     expect(screen.getByTestId("welcome-manual-preview-empty")).toBeInTheDocument();
   });
@@ -88,6 +89,7 @@ describe("WelcomeManualPreview", () => {
         title="Guide"
         introText={null}
         sections={[makeSection()]}
+        places={[]}
       />,
     );
     const section = screen.getByTestId("welcome-manual-preview-section");
@@ -108,6 +110,7 @@ describe("WelcomeManualPreview", () => {
             ],
           }),
         ]}
+        places={[]}
       />,
     );
     const rows = screen.getAllByTestId("welcome-manual-preview-field");
@@ -131,6 +134,7 @@ describe("WelcomeManualPreview", () => {
             ],
           }),
         ]}
+        places={[]}
       />,
     );
     // Only the populated row renders; the all-empty row is dropped.
@@ -144,6 +148,7 @@ describe("WelcomeManualPreview", () => {
         title="Guide"
         introText={null}
         sections={[makeSection({ images: [makeImage()] })]}
+        places={[]}
       />,
     );
     const img = screen.getByTestId("welcome-manual-preview-image");
@@ -161,6 +166,7 @@ describe("WelcomeManualPreview", () => {
             images: [makeImage({ is_available: false, presigned_url: null })],
           }),
         ]}
+        places={[]}
       />,
     );
     expect(
