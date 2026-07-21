@@ -6,8 +6,16 @@
  */
 import { render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { MemoryRouter } from "react-router-dom";
+import type { ReactElement } from "react";
 import LineupListBoard from "@/components/lineup/LineupListBoard";
 import type { Lineup, Game } from "@/types/game";
+
+// LineupListBoard reads ?lineup / writes ?edit via useSearchParams, so every
+// render needs a router context.
+function renderInRouter(ui: ReactElement) {
+  return render(<MemoryRouter>{ui}</MemoryRouter>);
+}
 
 const GAME: Game = {
   id: "g1",
@@ -99,7 +107,7 @@ afterEach(() => {
 
 describe("LineupListBoard", () => {
   it("renders the skeleton when isFetching is true", () => {
-    const { container } = render(
+    const { container } = renderInRouter(
       <LineupListBoard
         lineups={[]}
         isFetching={true}
@@ -114,7 +122,7 @@ describe("LineupListBoard", () => {
   });
 
   it("renders the unfiltered empty state when no lineups", () => {
-    render(
+    renderInRouter(
       <LineupListBoard
         lineups={[]}
         isFetching={false}
@@ -128,7 +136,7 @@ describe("LineupListBoard", () => {
   });
 
   it("renders the filtered empty state hint when side/util filters are active", () => {
-    render(
+    renderInRouter(
       <LineupListBoard
         lineups={[]}
         isFetching={false}
@@ -156,7 +164,7 @@ describe("LineupListBoard", () => {
         target_zone: { id: "z2", slug: "a-site", name: "A Site", polygon_points: [] },
       }),
     ];
-    render(
+    renderInRouter(
       <LineupListBoard
         lineups={lineups}
         isFetching={false}
@@ -184,7 +192,7 @@ describe("LineupListBoard", () => {
   });
 
   it("does not mount any GlanceBoardTile when all rows are collapsed", () => {
-    render(
+    renderInRouter(
       <LineupListBoard
         lineups={[makeLineup(), makeLineup({ id: "l2" })]}
         isFetching={false}

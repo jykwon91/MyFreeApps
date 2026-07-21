@@ -25,7 +25,7 @@
  * simultaneously and the operator chooses freely.
  */
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Crosshair } from "lucide-react";
 import type { Lineup } from "@/types/game";
 import type { Game } from "@/types/game";
 import { lineupUtilDisplay } from "@/constants/agentDisplay";
@@ -47,6 +47,14 @@ interface LineupListRowProps {
    *  Highlights the row, badges it "EDITING", and scrolls it into view so the
    *  operator can see which list row the editor panel is bound to. */
   isEditing?: boolean;
+  /** True when a minimap pin click focused this lineup (?lineup=<id>). The row
+   *  auto-expands its storyboard and scrolls into view — the "navigate to the
+   *  lineup and expanded" pin-click behaviour. */
+  isFocused?: boolean;
+  /** Superuser only — when provided, the expanded row shows an "Adjust pin"
+   *  button that opens the pin editor for this lineup. Undefined for public
+   *  viewers (no button). */
+  onEditPin?: (lineupId: string) => void;
 }
 
 export default function LineupListRow({
@@ -56,6 +64,8 @@ export default function LineupListRow({
   showOperatorOverlays = false,
   onHover,
   isEditing = false,
+  isFocused = false,
+  onEditPin,
 }: LineupListRowProps) {
   const [expanded, setExpanded] = useState(false);
   const rowRef = useRef<HTMLDivElement>(null);
@@ -68,6 +78,15 @@ export default function LineupListRow({
       rowRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
     }
   }, [isEditing]);
+
+  // When a pin click focuses this lineup (?lineup=<id>), open it and bring it
+  // into view — the "navigate to the lineup and expanded" pin-click behaviour.
+  useEffect(() => {
+    if (isFocused) {
+      setExpanded(true);
+      rowRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [isFocused]);
 
   const target = lineup.target_zone?.name ?? "Unknown";
   const stand = lineup.stand_zone?.name ?? null;
@@ -207,6 +226,21 @@ export default function LineupListRow({
               showOperatorOverlays={showOperatorOverlays}
             />
           </div>
+          {/* Deliberate pin-edit entry — replaces editor-on-every-pin-click.
+              Rendered only when onEditPin is supplied (superusers); opens
+              PinEditPanel via ?edit=<id>. */}
+          {onEditPin && (
+            <div className="mt-2 flex justify-end">
+              <button
+                type="button"
+                onClick={() => onEditPin(lineup.id)}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors min-h-[44px]"
+              >
+                <Crosshair className="w-3.5 h-3.5" aria-hidden />
+                Adjust pin
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

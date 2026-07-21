@@ -387,8 +387,8 @@ export default function MapPage() {
         />
       )}
 
-      {/* ── Full-height flex container ──────────────────────────────────── */}
-      <div className="flex flex-col min-h-screen">
+      {/* ── Board container — scrolls inside AppShell's <main>; NOT min-h-screen (no blank 100vh under short lists) and no nested scroller ── */}
+      <div className="flex flex-col">
 
         <MapPageTopBar
           gameSlug={gameSlug!}
@@ -416,12 +416,12 @@ export default function MapPage() {
         />
 
         {/* ── Body: sidebar + main ─────────────────────────────────────── */}
-        <div className="flex flex-1 min-h-0">
+        <div className="flex">
 
           {/* Minimap sidebar — polygon clicks now set the zone filter via
               handleZoneClick. The active zone (if any) is highlighted. */}
           <aside
-            className="hidden lg:block w-[440px] shrink-0 p-3 border-r overflow-y-auto sticky top-10 h-[calc(100vh-40px)]"
+            className="hidden lg:block w-[440px] shrink-0 p-3 border-r sticky top-10 self-start max-h-[calc(100vh-40px)] overflow-y-auto"
             aria-label="Map zone navigation"
           >
             <MapSpatialSidebar
@@ -438,8 +438,8 @@ export default function MapPage() {
             />
           </aside>
 
-          {/* Main scrollable area */}
-          <main className="flex-1 min-w-0 p-4 lg:p-6 overflow-y-auto">
+          {/* Main board column — scrolls as part of AppShell's <main> */}
+          <main className="flex-1 min-w-0 p-4 lg:p-6">
 
             {/* Active zone-filter chip — only when a zone is selected.
                 Click the × to clear; clicking the active zone polygon on
