@@ -32,7 +32,7 @@ from app.db.session import AsyncSessionLocal
 from app.schemas.user.user import UserRead, UserCreate, UserUpdate
 from app.services.storage.bucket_initializer import ensure_bucket
 from app.workers.upload_processor_worker import main as worker_main
-from app.api import account, activities, analytics, applicants, attribution, blackouts, booking_statements, calendar, classification_rules, costs, db_admin, demo, documents, frontend_errors, inquiries, insurance_policies, lease_templates, listings, properties, public_inquiries, rent_receipts, reply_templates, signed_leases, tenants, summary, integrations, audit, prompts, admin, organizations, transactions, reconciliation, screening, tax_completeness, tax_documents, tax_profile, tax_returns, tax_year_profiles, vendors, exports, imports, health_dashboard, totp, taxpayer_profiles, welcome_manuals
+from app.api import account, activities, analytics, applicants, attribution, blackouts, booking_statements, calendar, classification_rules, costs, db_admin, demo, documents, frontend_errors, inquiries, insurance_policies, lease_templates, listings, properties, public_inquiries, public_welcome_manuals, rent_receipts, reply_templates, signed_leases, tenants, summary, integrations, audit, prompts, admin, organizations, transactions, reconciliation, screening, tax_completeness, tax_documents, tax_profile, tax_returns, tax_year_profiles, vendors, exports, imports, health_dashboard, totp, taxpayer_profiles, welcome_manuals
 
 logging.basicConfig(
     level=logging.INFO,
@@ -198,6 +198,9 @@ app.include_router(inquiries.router)
 # already drop the ``/api`` segment before requests reach FastAPI. See the
 # detailed comment in ``api/public_inquiries.py``.
 app.include_router(public_inquiries.router)
+# Public welcome-manual share link — unauthenticated, PIN-protected. Same
+# no-/api-prefix reasoning as public_inquiries above.
+app.include_router(public_welcome_manuals.router)
 app.include_router(applicants.router)
 app.include_router(lease_templates.router)
 app.include_router(signed_leases.router)

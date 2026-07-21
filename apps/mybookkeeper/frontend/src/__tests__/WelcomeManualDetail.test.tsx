@@ -35,6 +35,9 @@ vi.mock("@/shared/store/welcomeManualsApi", () => ({
   })),
   useCreateSectionMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useDeleteWelcomeManualMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useEnableWelcomeManualShareMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useUpdateWelcomeManualShareMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useRevokeWelcomeManualShareMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useUpdateSectionMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useDeleteSectionMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useReorderSectionsMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
@@ -77,6 +80,8 @@ function makeManual(sections: WelcomeManualSectionResponse[]): WelcomeManualResp
     intro_text: null,
     sections,
     places: [],
+    share_token: null,
+    share_pin: null,
     created_at: "2026-01-01T00:00:00Z",
     updated_at: "2026-01-01T00:00:00Z",
   };

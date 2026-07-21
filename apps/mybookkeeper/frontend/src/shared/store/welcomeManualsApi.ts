@@ -11,6 +11,8 @@ import type { WelcomeManualSectionImageResponse } from "@/shared/types/welcome-m
 import type { WelcomeManualSectionResponse } from "@/shared/types/welcome-manual/welcome-manual-section-response";
 import type { WelcomeManualSectionUpdateRequest } from "@/shared/types/welcome-manual/welcome-manual-section-update-request";
 import type { WelcomeManualSendResponse } from "@/shared/types/welcome-manual/welcome-manual-send-response";
+import type { WelcomeManualShareResponse } from "@/shared/types/welcome-manual/welcome-manual-share-response";
+import type { WelcomeManualShareUpdateRequest } from "@/shared/types/welcome-manual/welcome-manual-share-update-request";
 import type { WelcomeManualUpdateRequest } from "@/shared/types/welcome-manual/welcome-manual-update-request";
 
 const welcomeManualsApi = baseApi.injectEndpoints({
@@ -66,6 +68,26 @@ const welcomeManualsApi = baseApi.injectEndpoints({
         data,
       }),
       invalidatesTags: [{ type: "WelcomeManualSend", id: "LIST" }],
+    }),
+    // ---- Share link ----
+    enableWelcomeManualShare: builder.mutation<WelcomeManualShareResponse, string>({
+      query: (manualId) => ({ url: `/welcome-manuals/${manualId}/share`, method: "POST" }),
+      invalidatesTags: (_result, _err, manualId) => [{ type: "WelcomeManual", id: manualId }],
+    }),
+    updateWelcomeManualShare: builder.mutation<
+      WelcomeManualShareResponse,
+      { manualId: string; data: WelcomeManualShareUpdateRequest }
+    >({
+      query: ({ manualId, data }) => ({
+        url: `/welcome-manuals/${manualId}/share`,
+        method: "PATCH",
+        data,
+      }),
+      invalidatesTags: (_result, _err, arg) => [{ type: "WelcomeManual", id: arg.manualId }],
+    }),
+    revokeWelcomeManualShare: builder.mutation<void, string>({
+      query: (manualId) => ({ url: `/welcome-manuals/${manualId}/share`, method: "DELETE" }),
+      invalidatesTags: (_result, _err, manualId) => [{ type: "WelcomeManual", id: manualId }],
     }),
     // ---- Sections ----
     createSection: builder.mutation<
@@ -298,6 +320,9 @@ export const {
   useUpdateWelcomeManualMutation,
   useDeleteWelcomeManualMutation,
   useEmailWelcomeManualMutation,
+  useEnableWelcomeManualShareMutation,
+  useUpdateWelcomeManualShareMutation,
+  useRevokeWelcomeManualShareMutation,
   useCreateSectionMutation,
   useUpdateSectionMutation,
   useDeleteSectionMutation,

@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from sqlalchemy import delete, func, select, update
@@ -149,3 +149,121 @@ async def hard_delete_by_id(
             WelcomeManual.organization_id == organization_id,
         )
     )
+
+
+async def set_share(
+    db: AsyncSession,
+    manual_id: uuid.UUID,
+    organization_id: uuid.UUID,
+    *,
+    share_token: str,
+    share_pin: str,
+) -> WelcomeManual | None:
+    """First-time share enable. Returns None if the manual doesn't exist /
+    is soft-deleted / belongs to a different org."""
+    manual = await get_by_id(db, manual_id, organization_id)
+    if manual is None:
+        return None
+    manual.share_token = share_token
+    manual.share_pin = share_pin
+    await db.flush()
+    return manual
+
+
+async def rotate_pin(
+    db: AsyncSession,
+    manual_id: uuid.UUID,
+    organization_id: uuid.UUID,
+    *,
+    share_pin: str,
+) -> WelcomeManual | None:
+    """Rotate the PIN of an already-shared manual. Returns None if the
+    manual doesn't exist / is soft-deleted / belongs to a different org.
+
+    Does NOT check ``share_token is not None`` — the caller (service layer)
+    is responsible for raising ``ShareNotEnabledError`` before calling this,
+    since that's a distinct 404 case from "manual not found".
+    """
+    manual = await get_by_id(db, manual_id, organization_id)
+    if manual is None:
+        return None
+    manual.share_pin = share_pin
+    await db.flush()
+    return manual
+
+
+async def clear_share(
+    db: AsyncSession,
+    manual_id: uuid.UUID,
+    organization_id: uuid.UUID,
+) -> bool:
+    """Revoke the share link — clears BOTH ``share_token`` and ``share_pin``.
+
+    Returns True if a row was updated (manual existed, was not soft-deleted,
+    and belonged to the org), False otherwise.
+    """
+    result = await db.execute(
+        update(WelcomeManual)
+        .where(
+            WelcomeManual.id == manual_id,
+            WelcomeManual.organization_id == organization_id,
+            WelcomeManual.deleted_at.is_(None),
+        )
+        .values(share_token=None, share_pin=None)
+    )
+    return (result.rowcount or 0) > 0
+
+
+async def record_failed_unlock(
+    db: AsyncSession,
+    manual: WelcomeManual,
+    *,
+    max_attempts: int,
+    lockout_window_seconds: int,
+    now: datetime,
+) -> None:
+    """Register one wrong-PIN unlock attempt on ``manual``.
+
+    Increments ``failed_unlock_count``; once it reaches ``max_attempts`` the
+    manual is locked for ``lockout_window_seconds`` and the counter resets to
+    0 so the next window starts clean. Mutates the already-loaded object (the
+    public unlock path holds it) rather than re-querying — matches the
+    ``set_share`` / ``rotate_pin`` style and keeps the value fresh in-session.
+    """
+    manual.failed_unlock_count += 1
+    if manual.failed_unlock_count >= max_attempts:
+        manual.unlock_locked_until = now + timedelta(seconds=lockout_window_seconds)
+        manual.failed_unlock_count = 0
+    await db.flush()
+
+
+async def reset_unlock_state(
+    db: AsyncSession,
+    manual: WelcomeManual,
+) -> None:
+    """Clear the brute-force lockout counters after a successful unlock, so a
+    guest reopening the guide with the correct PIN never accumulates toward a
+    lockout. No-op (no flush) when already clean to avoid a needless write on
+    the common repeat-visit path."""
+    if manual.failed_unlock_count == 0 and manual.unlock_locked_until is None:
+        return
+    manual.failed_unlock_count = 0
+    manual.unlock_locked_until = None
+    await db.flush()
+
+
+async def get_by_share_token(
+    db: AsyncSession,
+    share_token: str,
+) -> WelcomeManual | None:
+    """Public lookup by share token — deliberately NOT org-scoped (the
+    caller has no organization context yet). Respects soft-delete so a
+    deleted manual's stale token can never resolve.
+    """
+    result = await db.execute(
+        select(WelcomeManual).where(
+            WelcomeManual.share_token == share_token,
+            WelcomeManual.deleted_at.is_(None),
+        )
+    )
+    return result.scalar_one_or_none()

@@ -32,6 +32,7 @@ import WelcomeManualDetailSkeleton from "@/app/features/welcome-manuals/WelcomeM
 import WelcomeManualSectionCard from "@/app/features/welcome-manuals/WelcomeManualSectionCard";
 import WelcomeManualPreview from "@/app/features/welcome-manuals/WelcomeManualPreview";
 import WelcomeManualPlaceManager from "@/app/features/welcome-manuals/WelcomeManualPlaceManager";
+import WelcomeManualShareCard from "@/app/features/welcome-manuals/WelcomeManualShareCard";
 import WelcomeManualForm from "@/app/features/welcome-manuals/WelcomeManualForm";
 import WelcomeManualEmailDialog from "@/app/features/welcome-manuals/WelcomeManualEmailDialog";
 import DeleteWelcomeManualModal from "@/app/features/welcome-manuals/DeleteWelcomeManualModal";
@@ -260,6 +261,12 @@ export default function WelcomeManualDetail() {
                   </div>
                 ) : null}
               </section>
+
+              <WelcomeManualShareCard
+                manualId={manual.id}
+                shareToken={manual.share_token}
+                sharePin={manual.share_pin}
+              />
 
               {hasSections ? (
                 <DndContext

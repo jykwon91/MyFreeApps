@@ -23,7 +23,16 @@ api.interceptors.request.use((config) => {
 // third-party integration refresh token that has been revoked). A 401 from
 // these routes must NOT force a logout — it should surface as a normal error
 // so the user can self-serve (e.g. disconnect and reconnect Gmail).
-const BUSINESS_401_URL_PREFIXES: readonly string[] = ["/integrations/gmail/sync"];
+//
+// `/public/welcome-manuals` is the guest PIN gate: a wrong PIN returns 401.
+// Those requests carry no JWT (public page), but a host previewing their own
+// share link in the same browser IS authed — without this exclusion a
+// mistyped PIN would wipe their token and navigate them away before the
+// inline "Incorrect code" error could render, breaking the retry UX.
+const BUSINESS_401_URL_PREFIXES: readonly string[] = [
+  "/integrations/gmail/sync",
+  "/public/welcome-manuals",
+];
 
 function isBusinessLevel401(url: string | undefined): boolean {
   if (!url) return false;

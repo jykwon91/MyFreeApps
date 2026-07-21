@@ -66,3 +66,18 @@ PLACE_CUISINE_MAX_LEN = 50
 PLACE_NOTE_MAX_LEN = 500
 PLACE_MAP_URL_MAX_LEN = 2048
 WELCOME_MANUAL_PRICE_TIERS: tuple[str, ...] = ("$", "$$", "$$$")
+
+# Public PIN-protected share link. ``SHARE_TOKEN_BYTES`` is the
+# ``secrets.token_urlsafe`` input size (not the resulting string length —
+# base64 expands it by ~4/3). ``SHARE_PIN_LENGTH`` is a 4-digit numeric PIN
+# (10,000-value space) gating ALL guest-visible manual content (Wi-Fi,
+# check-in, etc.). ``SHARE_UNLOCK_MAX_ATTEMPTS`` /
+# ``SHARE_UNLOCK_LOCKOUT_WINDOW_SECONDS`` bound the brute-force surface a
+# 10k-space PIN would otherwise present: after this many WRONG PINs the
+# manual (keyed on its share token, persisted on the row — NOT the spoofable
+# client IP) locks for the window; a correct PIN resets the counter. See
+# ``welcome_manual_share_service`` for why the key is the manual, not the IP.
+SHARE_TOKEN_BYTES = 24
+SHARE_PIN_LENGTH = 4
+SHARE_UNLOCK_MAX_ATTEMPTS = 5
+SHARE_UNLOCK_LOCKOUT_WINDOW_SECONDS = 900
