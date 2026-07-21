@@ -1,9 +1,8 @@
 /**
  * LineupListRow unit tests — compact-list-row primitive.
  *
- * Stub IntersectionObserver + HTMLMediaElement methods because the expanded
- * state mounts GlanceBoardTile, and further expanding THAT mounts
- * GlanceBoardStoryboard's <video>-bearing panes.
+ * Stub IntersectionObserver + HTMLMediaElement methods because a single row
+ * click mounts GlanceBoardStoryboard's <video>-bearing panes directly.
  */
 import { render, screen, fireEvent } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -172,7 +171,7 @@ describe("LineupListRow", () => {
     expect(thumbs).toContain("https://ex.com/landing-thumb.png");
   });
 
-  it("expands on click and mounts the GlanceBoardTile summary (STAND + LANDING, no AIM/THROW yet)", () => {
+  it("expands on click and mounts the full 4-pane storyboard directly (STAND / AIM / THROW / LANDING)", () => {
     render(<LineupListRow lineup={makeLineup()} game={GAME} />);
     const button = screen.getByRole("button", { name: /click to expand/i });
     expect(button).toHaveAttribute("aria-expanded", "false");
@@ -180,23 +179,30 @@ describe("LineupListRow", () => {
     fireEvent.click(button);
     expect(button).toHaveAttribute("aria-expanded", "true");
 
-    // The mounted tile is the 2-still summary, not the full storyboard.
+    // A single row click now mounts the full storyboard directly — all four
+    // panes, no intermediate summary-tile step.
     expect(screen.getByText("STAND")).toBeInTheDocument();
-    expect(screen.getByText("LANDING")).toBeInTheDocument();
-    expect(screen.queryByText("AIM")).not.toBeInTheDocument();
-    expect(screen.queryByText("THROW")).not.toBeInTheDocument();
-  });
-
-  it("expanding the row then expanding the mounted tile reveals the full storyboard", () => {
-    render(<LineupListRow lineup={makeLineup()} game={GAME} />);
-    fireEvent.click(screen.getByRole("button", { name: /click to expand/i }));
-    // Second, independent expand toggle owned by GlanceBoardTile itself.
-    fireEvent.click(screen.getByRole("button", { name: /^expand/i }));
     expect(screen.getByText("AIM")).toBeInTheDocument();
     expect(screen.getByText("THROW")).toBeInTheDocument();
+    expect(screen.getByText("LANDING")).toBeInTheDocument();
   });
 
-  it("collapses on second click — unmounts the summary tile", () => {
+  it("fires onHover with the lineup id on pointer-enter and null on leave", () => {
+    const onHover = vi.fn();
+    const lineup = makeLineup();
+    const { container } = render(
+      <LineupListRow lineup={lineup} game={GAME} onHover={onHover} />,
+    );
+    const row = container.firstChild as HTMLElement;
+
+    fireEvent.mouseEnter(row);
+    expect(onHover).toHaveBeenLastCalledWith(lineup.id);
+
+    fireEvent.mouseLeave(row);
+    expect(onHover).toHaveBeenLastCalledWith(null);
+  });
+
+  it("collapses on second click — unmounts the storyboard", () => {
     render(<LineupListRow lineup={makeLineup()} game={GAME} />);
     const button = screen.getByRole("button", { name: /click to expand/i });
     fireEvent.click(button);

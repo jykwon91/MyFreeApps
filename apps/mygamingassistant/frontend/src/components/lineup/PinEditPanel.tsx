@@ -76,6 +76,98 @@ export default function PinEditPanel({ editor, minimapUrl }: Props) {
         </button>
       </div>
 
+      {/* Save actions — placed directly under the header so they're visible the
+          instant the panel opens, no scrolling past the (tall) in-game frame +
+          map. The operator drags the pin below, then scrolls back here to Save.
+          Sticky-at-bottom was unreliable in the scrollable sidebar. */}
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={() => save(false)}
+          disabled={isSaving}
+          className="flex-1 inline-flex items-center justify-center gap-1.5 h-9 rounded-md bg-primary px-2 text-xs font-semibold text-primary-foreground hover:enabled:bg-primary/90 disabled:opacity-50 transition-colors"
+        >
+          {isSaving ? (
+            "Saving…"
+          ) : (
+            <>
+              <Check className="w-4 h-4" aria-hidden />
+              Save
+            </>
+          )}
+        </button>
+        <button
+          type="button"
+          onClick={() => save(true)}
+          disabled={isSaving || !hasNext}
+          title={hasNext ? "Save and jump to the next unplaced pin" : "No more unplaced pins"}
+          className="flex-1 inline-flex items-center justify-center h-9 rounded-md border border-input bg-background px-2 text-xs font-medium hover:enabled:bg-muted/40 disabled:opacity-50 transition-colors"
+        >
+          {isSaving ? "Saving…" : "Save & Next"}
+        </button>
+      </div>
+
+      {/* In-game stand frame — the operator places the reference pin by
+          reading the white player marker off the in-game minimap (top-left of
+          this frame). Zoomed to that corner so the marker is legible in the
+          narrow sidebar. Without this the operator was placing blind against
+          the clean reference map. */}
+      {selectedLineup.stand_screenshot_url && (
+        <div className="space-y-1">
+          <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+            In-game minimap — white marker = player's stand
+          </p>
+          <div
+            className="w-full overflow-hidden rounded-lg border bg-black"
+            style={{ maxWidth: 280, aspectRatio: "1 / 1" }}
+          >
+            <img
+              src={selectedLineup.stand_screenshot_url}
+              alt="In-game stand frame (minimap in the top-left corner)"
+              draggable={false}
+              className="block select-none"
+              style={{ width: "380%", maxWidth: "none" }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Landing frame — reference for the orange Target pin. This is a
+          first-person shot of where the utility lands (NOT a minimap), so it's
+          shown full-frame, unlike the corner-zoomed stand frame above. Without
+          it the operator had no cue for where on the map the lineup lands. */}
+      {selectedLineup.landing_screenshot_url && (
+        <div className="space-y-1">
+          <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+            Where it lands — set the orange Target pin at this spot on the map
+          </p>
+          <div
+            className="w-full overflow-hidden rounded-lg border bg-black"
+            style={{ maxWidth: 280 }}
+          >
+            <img
+              src={selectedLineup.landing_screenshot_url}
+              alt="Landing frame — where the utility ends up"
+              draggable={false}
+              className="block w-full select-none"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* How-to line — the editor has no explicit "set" button (dragging IS
+          the set), and "Reset stand/target" reads like a commit when it's
+          actually an undo. Spell out the flow so the operator isn't guessing. */}
+      <p className="text-[11px] leading-snug text-muted-foreground">
+        Drag the <span className="font-medium text-foreground">blue Stand pin</span> onto
+        the white marker (from the in-game frame), and the{" "}
+        <span className="font-medium text-foreground">orange Target pin</span> to where it
+        lands, then <span className="font-medium text-foreground">Save</span>.
+        <span className="block text-muted-foreground/70">
+          “Reset” just snaps a pin back to the auto/default spot — you don’t need it to save.
+        </span>
+      </p>
+
       <MinimapPinEditor
         lineup={selectedLineup}
         minimapUrl={minimapUrl}
@@ -89,33 +181,6 @@ export default function PinEditPanel({ editor, minimapUrl }: Props) {
         onResetTarget={onResetTarget}
         disabled={isSaving}
       />
-
-      <div className="flex gap-2">
-        <button
-          type="button"
-          onClick={() => save(false)}
-          disabled={isSaving}
-          className="flex-1 inline-flex items-center justify-center gap-1.5 h-8 rounded-md border border-input bg-background px-2 text-xs font-medium hover:enabled:bg-muted/40 disabled:opacity-50 transition-colors"
-        >
-          {isSaving ? (
-            "Saving…"
-          ) : (
-            <>
-              <Check className="w-3.5 h-3.5" aria-hidden />
-              Save
-            </>
-          )}
-        </button>
-        <button
-          type="button"
-          onClick={() => save(true)}
-          disabled={isSaving || !hasNext}
-          title={hasNext ? "Save and jump to the next unplaced pin" : "No more unplaced pins"}
-          className="flex-1 inline-flex items-center justify-center h-8 rounded-md bg-primary px-2 text-xs font-medium text-primary-foreground hover:enabled:bg-primary/90 disabled:opacity-50 transition-colors"
-        >
-          {isSaving ? "Saving…" : "Save & Next"}
-        </button>
-      </div>
     </div>
   );
 }

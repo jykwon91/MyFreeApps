@@ -99,19 +99,20 @@ export default function LineupStillPreview({ lineup }: LineupStillPreviewProps) 
 }
 
 // ---------------------------------------------------------------------------
-// MiniPosterThumb — ~32x18px (16:9) thumbnail for LineupListRow's compact
-// text row. Always aria-hidden: the row's own aria-label already states the
-// target/stand zone names, so a redundant accessible name here would just
-// be noise for screen-reader users.
+// MiniPosterThumb — 128x72px (16:9) thumbnail for LineupListRow's compact
+// text row. Large enough to actually read the stand/landing framing at a
+// glance without expanding the row. Always aria-hidden: the row's own
+// aria-label already states the target/stand zone names, so a redundant
+// accessible name here would just be noise for screen-reader users.
 // ---------------------------------------------------------------------------
 export function MiniPosterThumb({ url }: { url: string | null }) {
   if (!url) {
     return (
       <span
         aria-hidden
-        className="inline-flex items-center justify-center w-8 h-[18px] shrink-0 rounded-sm bg-muted/40"
+        className="inline-flex items-center justify-center w-32 h-[72px] shrink-0 rounded bg-muted/40"
       >
-        <ImageOff className="w-3 h-3 text-muted-foreground/50" />
+        <ImageOff className="w-5 h-5 text-muted-foreground/50" />
       </span>
     );
   }
@@ -120,7 +121,7 @@ export function MiniPosterThumb({ url }: { url: string | null }) {
       src={url}
       alt=""
       aria-hidden
-      className="w-8 h-[18px] shrink-0 rounded-sm object-cover"
+      className="w-32 h-[72px] shrink-0 rounded object-cover"
       draggable={false}
       loading="lazy"
       decoding="async"

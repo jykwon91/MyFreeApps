@@ -36,8 +36,7 @@ import { useGetLineupsQuery, useGetZoneDensityQuery } from "@/store/lineupsApi";
 import { countUnplaceableLineups } from "@/components/lineup/MapLineupPins";
 import type { PinMode } from "@/components/lineup/MapLineupPins";
 import KeyboardShortcutsHelp from "@/components/lineup/KeyboardShortcutsHelp";
-import GlanceBoard from "@/components/lineup/GlanceBoard";
-import LineupListBoard from "@/components/lineup/LineupListBoard";
+import MapBoardBody from "@/components/lineup/MapBoardBody";
 import MapSpatialSidebar from "@/components/lineup/MapSpatialSidebar";
 import MapPageTopBar from "@/components/map/MapPageTopBar";
 import MapPageSkeleton from "@/components/map/MapPageSkeleton";
@@ -77,10 +76,17 @@ export default function MapPage() {
     pinModeParam === "stand" || pinModeParam === "target" || pinModeParam === "both"
       ? pinModeParam
       : null;
+  // Lineup currently open in the pin editor (?edit=<id>). Superuser-only —
+  // same param usePinEditor reads. Passed to the list board so the matching
+  // row highlights + scrolls into view, giving an unmistakable link between
+  // the editor panel ("Editing pin — <title>") and the actual lineup row.
+  const editingLineupId    = searchParams.get("edit");
 
   const [showShortcutsHelp,   setShowShortcutsHelp]   = useState(false);
   const [storageUnavailableToast, setStorageUnavailableToast] = useState(false);
   const [showMinimapUpload,   setShowMinimapUpload]    = useState(false);
+  // Lineup hovered in the list → highlight its pin(s) on the minimap.
+  const [hoveredLineupId,     setHoveredLineupId]      = useState<string | null>(null);
   // Card cycling — used by round mode + keyboard shortcuts
   const [activeCardIndex,     setActiveCardIndex]      = useState(0);
 
@@ -428,6 +434,7 @@ export default function MapPage() {
               pinMode={pinMode}
               onPinModeChange={(m) => updateParam("pins", m)}
               isSuperuser={isSuperuser}
+              highlightedLineupId={hoveredLineupId}
             />
           </aside>
 
@@ -455,52 +462,32 @@ export default function MapPage() {
               </div>
             )}
 
-            {visibleLineups.length === 0 && !allMapFetching && (
-              effectiveUtils.length > 0 || side !== "any" || zoneFilter || selectedAgent
-            ) ? (
-              /* Filtered empty state */
-              <div className="flex flex-col items-center justify-center py-20 gap-3">
-                <p className="text-sm text-muted-foreground text-center">
-                  No{effectiveUtils.length > 0 ? ` ${effectiveUtils.join("/")}` : ""} lineups
-                  {side !== "any" ? ` for ${side === "side_a" ? sideA : sideB}` : ""}
-                  {activeZone ? ` in ${activeZone.name}` : ""}.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    handleSideChange("any");
-                    handleUtilToggle([]);
-                    clearLoadout();
-                    updateParam("zone", null);
-                    onAgentChange("");
-                  }}
-                  className="text-sm text-primary hover:underline"
-                >
-                  Clear filters
-                </button>
-              </div>
-            ) : viewMode === "list" ? (
-              <LineupListBoard
-                lineups={visibleLineups}
-                isFetching={allMapFetching}
-                mapName={mapDetail.name}
-                filteredUtils={effectiveUtils}
-                side={side}
-                game={game}
-                knobs={knobs}
-                showOperatorOverlays={isSuperuser}
-              />
-            ) : (
-              <GlanceBoard
-                lineups={visibleLineups}
-                isFetching={allMapFetching}
-                mapName={mapDetail.name}
-                filteredUtils={effectiveUtils}
-                side={side}
-                knobs={knobs}
-                showOperatorOverlays={isSuperuser}
-              />
-            )}
+            <MapBoardBody
+              lineups={visibleLineups}
+              isFetching={allMapFetching}
+              mapName={mapDetail.name}
+              filteredUtils={effectiveUtils}
+              side={side}
+              sideA={sideA}
+              sideB={sideB}
+              activeZoneName={activeZone?.name ?? null}
+              hasActiveFilter={
+                effectiveUtils.length > 0 || side !== "any" || !!zoneFilter || !!selectedAgent
+              }
+              viewMode={viewMode}
+              game={game}
+              knobs={knobs}
+              showOperatorOverlays={isSuperuser}
+              onLineupHover={setHoveredLineupId}
+              editingLineupId={isSuperuser ? editingLineupId : null}
+              onClearFilters={() => {
+                handleSideChange("any");
+                handleUtilToggle([]);
+                clearLoadout();
+                updateParam("zone", null);
+                onAgentChange("");
+              }}
+            />
 
             {/* Add lineup CTA at bottom if completely empty (no lineups AND
                 no filters applied) — the truly-empty-map state. */}

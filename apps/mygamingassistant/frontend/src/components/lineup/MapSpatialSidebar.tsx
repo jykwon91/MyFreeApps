@@ -30,6 +30,9 @@ interface Props {
   pinMode: PinMode | null;
   onPinModeChange: (next: PinMode | null) => void;
   isSuperuser: boolean;
+  /** Lineup hovered in the list board — forwarded to the minimap so its
+   *  pin(s) highlight. Null when nothing is hovered. */
+  highlightedLineupId?: string | null;
 }
 
 export default function MapSpatialSidebar({
@@ -42,6 +45,7 @@ export default function MapSpatialSidebar({
   pinMode,
   onPinModeChange,
   isSuperuser,
+  highlightedLineupId = null,
 }: Props) {
   const editor = usePinEditor({ lineups, isSuperuser });
 
@@ -73,10 +77,16 @@ export default function MapSpatialSidebar({
         lineups={lineups}
         pinMode={pinMode}
         selectedLineupId={editor.selectedLineupId}
+        highlightedLineupId={highlightedLineupId}
         onPinSelect={handlePinSelect}
       />
 
-      {isSuperuser && pinMode && (
+      {/* Show the editor whenever a lineup is selected for editing (via an
+          ?edit= deep link or a pin click) — NOT only when the Pins toggle is
+          on. Arriving at ?edit=<id> should open the editor directly; requiring
+          the operator to first flip the Pins toggle off "Off" was a hidden
+          gate that made deep links appear to do nothing. */}
+      {isSuperuser && (pinMode || editor.selectedLineup) && (
         <PinEditPanel editor={editor} minimapUrl={minimapUrl} />
       )}
     </div>
