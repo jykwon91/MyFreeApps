@@ -175,7 +175,7 @@ packaging==26.2
     # via pytest
 passlib==1.7.4
     # via mybookkeeper-backend
-pillow==12.3.0
+pillow==12.2.0
     # via
     #   qrcode
     #   reportlab
