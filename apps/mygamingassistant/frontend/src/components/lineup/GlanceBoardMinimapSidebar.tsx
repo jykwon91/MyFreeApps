@@ -43,6 +43,9 @@ interface Props {
   lineups?: Lineup[];
   pinMode?: PinMode | null;
   selectedLineupId?: string | null;
+  /** Lineup hovered in the list — forwarded to MapLineupPins so its pin(s)
+   *  get a hover halo. Null when nothing is hovered. */
+  highlightedLineupId?: string | null;
   onPinSelect?: (lineupId: string) => void;
 }
 
@@ -84,6 +87,7 @@ export default function GlanceBoardMinimapSidebar({
   lineups,
   pinMode = null,
   selectedLineupId = null,
+  highlightedLineupId = null,
   onPinSelect,
 }: Props) {
   const [minimapFailed, setMinimapFailed] = useState(false);
@@ -230,6 +234,7 @@ export default function GlanceBoardMinimapSidebar({
           lineups={lineups}
           mode={pinMode}
           selectedLineupId={selectedLineupId}
+          highlightedLineupId={highlightedLineupId}
           onPinSelect={onPinSelect}
           viewBoxSize={viewBoxSize}
         />

@@ -1,9 +1,8 @@
 /**
  * LineupListRow — compact one-line row for the list-view rendering of the
- * glance board. Click anywhere on the row to expand the GlanceBoardTile
- * summary tile (2-still STAND/LANDING, no motion) inline below the row —
- * the tile's own expand toggle reveals the full 4-pane storyboard from
- * there, same as it does on the grid glance board.
+ * glance board. Click anywhere on the row to expand the full 4-pane
+ * GlanceBoardStoryboard (STAND / AIM / THROW / LANDING) inline below the
+ * row directly — a single click, no intermediate summary-tile step.
  *
  * Why the list view exists: the default card-grid renders every lineup
  * card as a full 4-pane storyboard, which mounts up to 4 simultaneous
@@ -19,20 +18,19 @@
  *   ┌─────────────────────────────────────────────────────────────────┐
  *   │ [icon] [stand→landing thumbs] Target ← Stand  · Side · Util  [▾]│
  *   └─────────────────────────────────────────────────────────────────┘
- *   (expanded below: GlanceBoardTile — the 2-still summary tile, which
- *   itself has its own expand toggle for the full 4-pane storyboard)
+ *   (expanded below: GlanceBoardStoryboard — the full 4-pane storyboard)
  *
  * Expansion state lives in this component (useState) — the board does
  * NOT track which rows are expanded; multiple rows can be expanded
  * simultaneously and the operator chooses freely.
  */
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import type { Lineup } from "@/types/game";
 import type { Game } from "@/types/game";
 import { lineupUtilDisplay } from "@/constants/agentDisplay";
 import { sideDisplay } from "@/constants/sideDisplay";
-import GlanceBoardTile from "./GlanceBoardTile";
+import GlanceBoardStoryboard from "./GlanceBoardStoryboard";
 import { MiniPosterThumb } from "./LineupStillPreview";
 import type { DesignKnobs } from "@/hooks/useDesignKnobs";
 import { DEFAULT_KNOBS } from "@/hooks/useDesignKnobs";
@@ -42,6 +40,13 @@ interface LineupListRowProps {
   game?: Game | null;
   knobs?: DesignKnobs;
   showOperatorOverlays?: boolean;
+  /** Fired with this lineup's id on pointer-enter and null on pointer-leave,
+   *  so the parent can highlight the matching minimap pin(s). */
+  onHover?: (lineupId: string | null) => void;
+  /** True when this lineup is the one open in the pin editor (?edit=<id>).
+   *  Highlights the row, badges it "EDITING", and scrolls it into view so the
+   *  operator can see which list row the editor panel is bound to. */
+  isEditing?: boolean;
 }
 
 export default function LineupListRow({
@@ -49,8 +54,20 @@ export default function LineupListRow({
   game,
   knobs = DEFAULT_KNOBS,
   showOperatorOverlays = false,
+  onHover,
+  isEditing = false,
 }: LineupListRowProps) {
   const [expanded, setExpanded] = useState(false);
+  const rowRef = useRef<HTMLDivElement>(null);
+
+  // When this row becomes the edited lineup, scroll it into the middle of the
+  // viewport so the operator's eye lands on it right after the editor panel
+  // opens on the left. Only fires on the isEditing→true transition.
+  useEffect(() => {
+    if (isEditing) {
+      rowRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [isEditing]);
 
   const target = lineup.target_zone?.name ?? "Unknown";
   const stand = lineup.stand_zone?.name ?? null;
@@ -70,14 +87,35 @@ export default function LineupListRow({
   })();
 
   return (
-    <div className="border-b last:border-b-0">
+    <div
+      ref={rowRef}
+      className={[
+        "border-b last:border-b-0 scroll-mt-16",
+        // Strong, unmistakable highlight when this row is the one bound to the
+        // open pin editor — left accent bar + tinted background.
+        isEditing && "border-l-4 border-l-primary bg-primary/10",
+      ].filter(Boolean).join(" ")}
+      onMouseEnter={() => onHover?.(lineup.id)}
+      onMouseLeave={() => onHover?.(null)}
+    >
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
         aria-expanded={expanded}
-        aria-label={`${target}${stand ? ` from ${stand}` : ""} — ${util.chipLabel} — ${sideCfg.label} side. Click to ${expanded ? "collapse" : "expand"} storyboard.`}
-        className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-muted/30 transition-colors min-h-[44px]"
+        aria-label={`${target}${stand ? ` from ${stand}` : ""} — ${util.chipLabel} — ${sideCfg.label} side.${isEditing ? " Currently open in the pin editor." : ""} Click to ${expanded ? "collapse" : "expand"} storyboard.`}
+        className={[
+          "w-full flex items-center gap-2 px-3 py-2 text-left transition-colors min-h-[44px]",
+          isEditing ? "hover:bg-primary/15" : "hover:bg-muted/30",
+        ].join(" ")}
       >
+        {/* "EDITING" pill — only on the row bound to the open pin editor, so
+            the editor panel ("Editing pin — <title>") and this list row are
+            unmistakably the same lineup. */}
+        {isEditing && (
+          <span className="shrink-0 px-1.5 py-0.5 rounded text-[10px] font-semibold tracking-wide uppercase bg-primary text-primary-foreground">
+            Editing
+          </span>
+        )}
         {/* Utility color dot — reuses the badge tokens from utilDisplay so
             row color-coding matches the storyboard tile's header chip. */}
         <span
@@ -154,17 +192,21 @@ export default function LineupListRow({
         />
       </button>
 
-      {/* Inline expanded storyboard — only mounts (and therefore only
-          attaches video decoders) when the row is expanded. Collapse
-          unmounts the tile so the decoders are released. This is the
-          whole point of the list view. */}
+      {/* Inline expanded storyboard — a single row click opens the full
+          4-pane storyboard (STAND / AIM / THROW / LANDING) directly, no
+          intermediate summary-tile step. Only mounts (and therefore only
+          attaches video decoders) when the row is expanded; collapse
+          unmounts it so the decoders are released. This is the whole point
+          of the list view — decoding is still deferred to clicked rows. */}
       {expanded && (
         <div className="px-3 pb-3 pt-1">
-          <GlanceBoardTile
-            lineup={lineup}
-            knobs={knobs}
-            showOperatorOverlays={showOperatorOverlays}
-          />
+          <div className="rounded-lg border bg-card overflow-hidden">
+            <GlanceBoardStoryboard
+              lineup={lineup}
+              knobs={knobs}
+              showOperatorOverlays={showOperatorOverlays}
+            />
+          </div>
         </div>
       )}
     </div>

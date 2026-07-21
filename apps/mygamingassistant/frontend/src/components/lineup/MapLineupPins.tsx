@@ -25,6 +25,12 @@ interface Props {
   mode: PinMode;
   selectedLineupId: string | null;
   onPinSelect: (lineupId: string) => void;
+  /** Lineup currently hovered in the list — its pin(s) get a steady halo +
+   *  enlargement so the operator can see where a row lands on the map without
+   *  clicking. Distinct from ``selectedLineupId`` (the click-select ping):
+   *  hover is a transient pointer cue, selection is a committed choice, and
+   *  both can be active at once. Null when nothing is hovered. */
+  highlightedLineupId?: string | null;
   /** viewBox dimensions — defaults to 1000 (matches MapZoneOverlay). */
   viewBoxSize?: number;
 }
@@ -35,6 +41,14 @@ const CLUSTER_THRESHOLD = 30;
 const STAND_FILL = "#3b82f6"; // blue-500
 const TARGET_FILL = "#f97316"; // orange-500
 const MIXED_FILL = "#71717a"; // zinc-500 when a cluster spans both modes
+
+// Hover-highlight accent. Deliberately NOT the pin's own fill (a same-color
+// halo blends into the dot and is invisible) — a bright high-contrast yellow
+// reads against blue pins, orange pins, and the map underneath alike.
+const HIGHLIGHT_ACCENT = "#fde047"; // yellow-300
+// Opacity every non-hovered pin drops to while a row is hovered, so the
+// matching pin pops out of the crowd instead of being one dot among many.
+const DIMMED_OPACITY = 0.2;
 
 type PinKind = "stand" | "target";
 
@@ -149,11 +163,17 @@ export default function MapLineupPins({
   mode,
   selectedLineupId,
   onPinSelect,
+  highlightedLineupId = null,
   viewBoxSize = 1000,
 }: Props) {
   const pins = useMemo(() => buildPins(lineups, mode, viewBoxSize), [lineups, mode, viewBoxSize]);
   const clusters = useMemo(() => buildClusters(pins), [pins]);
   const [openClusterIndex, setOpenClusterIndex] = useState<number | null>(null);
+
+  // When any row is hovered, every non-matching pin dims so the highlighted
+  // one stands out. Cheap "spotlight" effect that reads far better than a
+  // per-pin halo alone.
+  const anyHighlighted = highlightedLineupId != null;
 
   if (pins.length === 0) return null;
 
@@ -169,6 +189,7 @@ export default function MapLineupPins({
           if (cluster.pins.length === 1) {
             const p = cluster.pins[0];
             const isSelected = p.lineupId === selectedLineupId;
+            const isHighlighted = p.lineupId === highlightedLineupId;
             const fill = pinFill(p.kind);
             return (
               <g
@@ -176,7 +197,8 @@ export default function MapLineupPins({
                 tabIndex={0}
                 role="button"
                 aria-label={`Open lineup: ${p.title}`}
-                className="pointer-events-auto cursor-pointer focus:outline-none"
+                className="pointer-events-auto cursor-pointer focus:outline-none transition-opacity duration-150"
+                style={{ opacity: anyHighlighted && !isHighlighted ? DIMMED_OPACITY : 1 }}
                 onClick={() => onPinSelect(p.lineupId)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
@@ -186,7 +208,7 @@ export default function MapLineupPins({
                 }}
               >
                 <circle cx={p.x} cy={p.y} r={22} fill="transparent" />
-                {p.isGuess && (
+                {p.isGuess && !isHighlighted && (
                   <circle
                     cx={p.x}
                     cy={p.y}
@@ -197,6 +219,29 @@ export default function MapLineupPins({
                     strokeDasharray="4 3"
                     opacity={0.5}
                   />
+                )}
+                {/* Hover highlight — a bright yellow glow + ring in a color
+                    the pin ISN'T, so it can't blend in. Pulses (opacity only,
+                    no expansion) to catch the eye and stay distinct from the
+                    click-select ping below (which expands + fades). */}
+                {isHighlighted && (
+                  <>
+                    <circle
+                      cx={p.x}
+                      cy={p.y}
+                      r={26}
+                      fill={HIGHLIGHT_ACCENT}
+                      className="opacity-30 animate-pulse"
+                    />
+                    <circle
+                      cx={p.x}
+                      cy={p.y}
+                      r={20}
+                      fill="none"
+                      stroke={HIGHLIGHT_ACCENT}
+                      strokeWidth={5}
+                    />
+                  </>
                 )}
                 {isSelected && (
                   <circle
@@ -212,11 +257,11 @@ export default function MapLineupPins({
                 <circle
                   cx={p.x}
                   cy={p.y}
-                  r={isSelected ? 12 : 10}
+                  r={isHighlighted ? 16 : isSelected ? 12 : 10}
                   fill={fill}
-                  stroke="white"
-                  strokeWidth={2}
-                  className="transition-transform duration-150"
+                  stroke={isHighlighted ? HIGHLIGHT_ACCENT : "white"}
+                  strokeWidth={isHighlighted ? 4 : 2}
+                  className="transition-all duration-150"
                 />
               </g>
             );
@@ -228,10 +273,17 @@ export default function MapLineupPins({
           const containsSelected =
             selectedLineupId != null &&
             cluster.pins.some((p) => p.lineupId === selectedLineupId);
+          const containsHighlighted =
+            highlightedLineupId != null &&
+            cluster.pins.some((p) => p.lineupId === highlightedLineupId);
           const isOpen = openClusterIndex === i;
 
           return (
-            <g key={`cluster-${i}`} className="pointer-events-auto">
+            <g
+              key={`cluster-${i}`}
+              className="pointer-events-auto transition-opacity duration-150"
+              style={{ opacity: anyHighlighted && !containsHighlighted ? DIMMED_OPACITY : 1 }}
+            >
               <g
                 tabIndex={0}
                 role="button"
@@ -248,6 +300,28 @@ export default function MapLineupPins({
                 }}
               >
                 <circle cx={cluster.cx} cy={cluster.cy} r={22} fill="transparent" />
+                {/* Hover highlight when a hovered row's pin lives inside this
+                    cluster — bright yellow glow + ring, same language as the
+                    single pin so a stacked target is just as easy to spot. */}
+                {containsHighlighted && (
+                  <>
+                    <circle
+                      cx={cluster.cx}
+                      cy={cluster.cy}
+                      r={28}
+                      fill={HIGHLIGHT_ACCENT}
+                      className="opacity-30 animate-pulse"
+                    />
+                    <circle
+                      cx={cluster.cx}
+                      cy={cluster.cy}
+                      r={22}
+                      fill="none"
+                      stroke={HIGHLIGHT_ACCENT}
+                      strokeWidth={5}
+                    />
+                  </>
+                )}
                 {containsSelected && (
                   <circle
                     cx={cluster.cx}
@@ -262,10 +336,10 @@ export default function MapLineupPins({
                 <circle
                   cx={cluster.cx}
                   cy={cluster.cy}
-                  r={14}
+                  r={containsHighlighted ? 17 : 14}
                   fill={fill}
-                  stroke="white"
-                  strokeWidth={2}
+                  stroke={containsHighlighted ? HIGHLIGHT_ACCENT : "white"}
+                  strokeWidth={containsHighlighted ? 4 : 2}
                 />
                 <text
                   x={cluster.cx}

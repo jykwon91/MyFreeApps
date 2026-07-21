@@ -30,6 +30,13 @@ interface LineupListBoardProps {
   game?: Game | null;
   knobs?: DesignKnobs;
   showOperatorOverlays?: boolean;
+  /** Fired with a lineup id when a row is hovered, null on leave — lets
+   *  MapPage highlight the matching minimap pin(s). */
+  onLineupHover?: (lineupId: string | null) => void;
+  /** Lineup currently open in the pin editor (?edit=<id>). The matching row
+   *  highlights + scrolls into view so the operator can see which lineup the
+   *  editor panel is bound to. Null when no lineup is being edited. */
+  editingLineupId?: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -128,6 +135,8 @@ export default function LineupListBoard({
   game,
   knobs = DEFAULT_KNOBS,
   showOperatorOverlays = false,
+  onLineupHover,
+  editingLineupId = null,
 }: LineupListBoardProps) {
   const groups = useMemo(() => groupByZone(lineups), [lineups]);
 
@@ -174,6 +183,8 @@ export default function LineupListBoard({
                 game={game}
                 knobs={knobs}
                 showOperatorOverlays={showOperatorOverlays}
+                onHover={onLineupHover}
+                isEditing={lineup.id === editingLineupId}
               />
             ))}
           </div>

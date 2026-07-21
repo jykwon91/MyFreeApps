@@ -77,10 +77,17 @@ export default function MapPage() {
     pinModeParam === "stand" || pinModeParam === "target" || pinModeParam === "both"
       ? pinModeParam
       : null;
+  // Lineup currently open in the pin editor (?edit=<id>). Superuser-only —
+  // same param usePinEditor reads. Passed to the list board so the matching
+  // row highlights + scrolls into view, giving an unmistakable link between
+  // the editor panel ("Editing pin — <title>") and the actual lineup row.
+  const editingLineupId    = searchParams.get("edit");
 
   const [showShortcutsHelp,   setShowShortcutsHelp]   = useState(false);
   const [storageUnavailableToast, setStorageUnavailableToast] = useState(false);
   const [showMinimapUpload,   setShowMinimapUpload]    = useState(false);
+  // Lineup hovered in the list → highlight its pin(s) on the minimap.
+  const [hoveredLineupId,     setHoveredLineupId]      = useState<string | null>(null);
   // Card cycling — used by round mode + keyboard shortcuts
   const [activeCardIndex,     setActiveCardIndex]      = useState(0);
 
@@ -428,6 +435,7 @@ export default function MapPage() {
               pinMode={pinMode}
               onPinModeChange={(m) => updateParam("pins", m)}
               isSuperuser={isSuperuser}
+              highlightedLineupId={hoveredLineupId}
             />
           </aside>
 
@@ -489,6 +497,8 @@ export default function MapPage() {
                 game={game}
                 knobs={knobs}
                 showOperatorOverlays={isSuperuser}
+                onLineupHover={setHoveredLineupId}
+                editingLineupId={isSuperuser ? editingLineupId : null}
               />
             ) : (
               <GlanceBoard

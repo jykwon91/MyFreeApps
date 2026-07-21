@@ -297,7 +297,7 @@ export default function MinimapPinEditor({
           onClick={onResetStand}
           disabled={!standResetEnabled}
           className="flex-1 h-7 rounded border border-input bg-background px-2 text-xs text-muted-foreground disabled:opacity-40 hover:enabled:bg-muted/40 transition-colors"
-          title="Reset stand pin to zone centroid"
+          title="Undo — snap the stand pin back to the auto/default spot (you don't need this to save)"
         >
           Reset stand
         </button>
@@ -306,7 +306,7 @@ export default function MinimapPinEditor({
           onClick={onResetTarget}
           disabled={!targetResetEnabled}
           className="flex-1 h-7 rounded border border-input bg-background px-2 text-xs text-muted-foreground disabled:opacity-40 hover:enabled:bg-muted/40 transition-colors"
-          title="Reset target pin to zone centroid"
+          title="Undo — snap the target pin back to the auto/default spot (you don't need this to save)"
         >
           Reset target
         </button>
