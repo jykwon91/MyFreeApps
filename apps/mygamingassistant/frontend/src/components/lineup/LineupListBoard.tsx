@@ -13,6 +13,7 @@
  * this drops idle browser CPU from ~10% to near zero.
  */
 import { useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
 import type { Lineup, Game } from "@/types/game";
 import { zoneAnchorId } from "./glanceBoardUtils";
 import LineupListRow from "./LineupListRow";
@@ -139,6 +140,25 @@ export default function LineupListBoard({
   editingLineupId = null,
 }: LineupListBoardProps) {
   const groups = useMemo(() => groupByZone(lineups), [lineups]);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // ?lineup=<id> — set by a minimap pin click (MapSpatialSidebar). The matching
+  // row auto-expands + scrolls into view: "navigate to the lineup and expanded".
+  const focusedLineupId = searchParams.get("lineup");
+
+  // Superuser pin editing is now a deliberate action from the expanded row's
+  // "Adjust pin" button, not a side effect of every pin click. Only wired when
+  // operator overlays are on (i.e. the viewer is the superuser).
+  function handleEditPin(lineupId: string) {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.set("edit", lineupId);
+        return next;
+      },
+      { replace: true },
+    );
+  }
 
   if (isFetching) {
     return <LineupListSkeleton />;
@@ -185,6 +205,8 @@ export default function LineupListBoard({
                 showOperatorOverlays={showOperatorOverlays}
                 onHover={onLineupHover}
                 isEditing={lineup.id === editingLineupId}
+                isFocused={lineup.id === focusedLineupId}
+                onEditPin={showOperatorOverlays ? handleEditPin : undefined}
               />
             ))}
           </div>

@@ -7,16 +7,18 @@
  *      overlay (MapLineupPins) when a pin mode is active
  *   3. PinEditPanel        — operator-only nudge surface (?edit=<id>)
  *
- * Pin selection routing:
- *   - Superuser  → select the lineup for editing (opens PinEditPanel)
- *   - Public     → smooth-scroll the board to that lineup's target-zone
- *     section, reusing the existing zoneAnchorId scroll anchors.
+ * Pin selection routing (both superuser and public):
+ *   Clicking a pin focuses that lineup — sets ?lineup=<id>, which the list
+ *   board's LineupListRow reads to scroll the matching row into view and
+ *   expand its storyboard. A pin click is always a "show me this lineup"
+ *   action; superusers open the pin editor deliberately from the expanded
+ *   row's "Adjust pin" button (?edit=<id>), not on every pin click.
  */
+import { useSearchParams } from "react-router-dom";
 import GlanceBoardMinimapSidebar from "./GlanceBoardMinimapSidebar";
 import PinModeToggle from "./PinModeToggle";
 import PinEditPanel from "./PinEditPanel";
 import { usePinEditor } from "@/hooks/usePinEditor";
-import { zoneAnchorId } from "./glanceBoardUtils";
 import type { PinMode } from "./MapLineupPins";
 import type { Lineup, MapZone, ZoneDensity } from "@/types/game";
 
@@ -48,20 +50,21 @@ export default function MapSpatialSidebar({
   highlightedLineupId = null,
 }: Props) {
   const editor = usePinEditor({ lineups, isSuperuser });
+  const [, setSearchParams] = useSearchParams();
 
   function handlePinSelect(lineupId: string) {
-    if (isSuperuser) {
-      editor.setSelected(lineupId);
-      return;
-    }
-    // Public viewer — jump the board to the lineup's target-zone section.
-    const l = lineups.find((x) => x.id === lineupId);
-    const slug = l?.target_zone?.slug;
-    if (slug) {
-      document
-        .getElementById(zoneAnchorId(slug))
-        ?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
+    // Focus the clicked lineup: ?lineup=<id> tells LineupListRow to scroll its
+    // row into view and expand the storyboard. Clear ?edit so a pin click also
+    // exits any open pin editor — clicking a pin is a "view", not an "edit".
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.set("lineup", lineupId);
+        next.delete("edit");
+        return next;
+      },
+      { replace: true },
+    );
   }
 
   return (
