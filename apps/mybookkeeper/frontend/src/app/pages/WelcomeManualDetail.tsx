@@ -31,6 +31,7 @@ import type { WelcomeManualSectionResponse } from "@/shared/types/welcome-manual
 import WelcomeManualDetailSkeleton from "@/app/features/welcome-manuals/WelcomeManualDetailSkeleton";
 import WelcomeManualSectionCard from "@/app/features/welcome-manuals/WelcomeManualSectionCard";
 import WelcomeManualPreview from "@/app/features/welcome-manuals/WelcomeManualPreview";
+import WelcomeManualPlaceManager from "@/app/features/welcome-manuals/WelcomeManualPlaceManager";
 import WelcomeManualForm from "@/app/features/welcome-manuals/WelcomeManualForm";
 import WelcomeManualEmailDialog from "@/app/features/welcome-manuals/WelcomeManualEmailDialog";
 import DeleteWelcomeManualModal from "@/app/features/welcome-manuals/DeleteWelcomeManualModal";
@@ -304,6 +305,13 @@ export default function WelcomeManualDetail() {
                   Add section
                 </LoadingButton>
               </div>
+
+              <section
+                className="border rounded-lg p-4 space-y-3 bg-card"
+                data-testid="welcome-manual-places-card"
+              >
+                <WelcomeManualPlaceManager manualId={manual.id} places={manual.places ?? []} />
+              </section>
             </div>
 
             <div
@@ -320,6 +328,7 @@ export default function WelcomeManualDetail() {
                   title={manual.title}
                   introText={manual.intro_text}
                   sections={sortedSections}
+                  places={manual.places ?? []}
                 />
               </div>
             </div>

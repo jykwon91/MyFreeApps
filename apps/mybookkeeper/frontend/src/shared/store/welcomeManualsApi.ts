@@ -3,6 +3,7 @@ import type { WelcomeManualCreateRequest } from "@/shared/types/welcome-manual/w
 import type { WelcomeManualEmailRequest } from "@/shared/types/welcome-manual/welcome-manual-email-request";
 import type { WelcomeManualListArgs } from "@/shared/types/welcome-manual/welcome-manual-list-args";
 import type { WelcomeManualListResponse } from "@/shared/types/welcome-manual/welcome-manual-list-response";
+import type { WelcomeManualPlaceResponse } from "@/shared/types/welcome-manual/welcome-manual-place-response";
 import type { WelcomeManualResponse } from "@/shared/types/welcome-manual/welcome-manual-response";
 import type { WelcomeManualSectionCreateRequest } from "@/shared/types/welcome-manual/welcome-manual-section-create-request";
 import type { WelcomeManualSectionFieldResponse } from "@/shared/types/welcome-manual/welcome-manual-section-field-response";
@@ -226,6 +227,67 @@ const welcomeManualsApi = baseApi.injectEndpoints({
         { type: "WelcomeManual", id: arg.manualId },
       ],
     }),
+    // ---- Places (Where to Eat) ----
+    createPlace: builder.mutation<
+      WelcomeManualPlaceResponse,
+      {
+        manualId: string;
+        data: {
+          name: string;
+          cuisine: string;
+          price_tier?: "$" | "$$" | "$$$" | null;
+          note?: string | null;
+          map_url?: string | null;
+        };
+      }
+    >({
+      query: ({ manualId, data }) => ({
+        url: `/welcome-manuals/${manualId}/places`,
+        method: "POST",
+        data,
+      }),
+      invalidatesTags: (_result, _err, arg) => [
+        { type: "WelcomeManual", id: arg.manualId },
+      ],
+    }),
+    updatePlace: builder.mutation<
+      WelcomeManualPlaceResponse,
+      {
+        manualId: string;
+        placeId: string;
+        name?: string;
+        cuisine?: string;
+        price_tier?: "$" | "$$" | "$$$" | null;
+        note?: string | null;
+        map_url?: string | null;
+        display_order?: number;
+      }
+    >({
+      query: ({ manualId, placeId, name, cuisine, price_tier, note, map_url, display_order }) => ({
+        url: `/welcome-manuals/${manualId}/places/${placeId}`,
+        method: "PATCH",
+        data: {
+          ...(name !== undefined ? { name } : {}),
+          ...(cuisine !== undefined ? { cuisine } : {}),
+          ...(price_tier !== undefined ? { price_tier } : {}),
+          ...(note !== undefined ? { note } : {}),
+          ...(map_url !== undefined ? { map_url } : {}),
+          ...(display_order !== undefined ? { display_order } : {}),
+        },
+      }),
+      invalidatesTags: (_result, _err, arg) => [
+        { type: "WelcomeManual", id: arg.manualId },
+      ],
+    }),
+    deletePlace: builder.mutation<void, { manualId: string; placeId: string }>({
+      query: ({ manualId, placeId }) => ({
+        url: `/welcome-manuals/${manualId}/places/${placeId}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: (_result, _err, arg) => [
+        { type: "WelcomeManual", id: arg.manualId },
+      ],
+    }),
   }),
 });
 
@@ -246,4 +308,7 @@ export const {
   useCreateSectionFieldMutation,
   useUpdateSectionFieldMutation,
   useDeleteSectionFieldMutation,
+  useCreatePlaceMutation,
+  useUpdatePlaceMutation,
+  useDeletePlaceMutation,
 } = welcomeManualsApi;

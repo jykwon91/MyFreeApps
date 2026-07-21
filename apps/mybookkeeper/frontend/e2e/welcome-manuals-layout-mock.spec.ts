@@ -102,7 +102,47 @@ async function stubList(page: Page, delayMs = 0): Promise<void> {
   });
 }
 
-async function stubDetail(page: Page, delayMs = 0): Promise<void> {
+const SAMPLE_PLACES = [
+  {
+    id: "00000000-0000-0000-0000-0000000000p1",
+    manual_id: MANUAL_ID,
+    name: "Taco Spot",
+    cuisine: "Mexican",
+    price_tier: "$",
+    note: "Great al pastor",
+    map_url: null,
+    display_order: 0,
+    created_at: "2026-01-01T00:00:00Z",
+  },
+  {
+    id: "00000000-0000-0000-0000-0000000000p2",
+    manual_id: MANUAL_ID,
+    name: "Nice Cantina",
+    cuisine: "Mexican",
+    price_tier: "$$",
+    note: null,
+    map_url: null,
+    display_order: 1,
+    created_at: "2026-01-01T00:00:00Z",
+  },
+  {
+    id: "00000000-0000-0000-0000-0000000000p3",
+    manual_id: MANUAL_ID,
+    name: "Sushi Bar",
+    cuisine: "Japanese",
+    price_tier: "$$$",
+    note: null,
+    map_url: "https://maps.example.com/sushi",
+    display_order: 2,
+    created_at: "2026-01-01T00:00:00Z",
+  },
+];
+
+async function stubDetail(
+  page: Page,
+  delayMs = 0,
+  places: unknown[] = [],
+): Promise<void> {
   await page.route(`**/api/welcome-manuals/${MANUAL_ID}`, async (route, request) => {
     if (request.method() !== "GET") {
       await route.continue();
@@ -130,6 +170,7 @@ async function stubDetail(page: Page, delayMs = 0): Promise<void> {
           created_at: "2026-01-01T00:00:00Z",
           updated_at: "2026-01-01T00:00:00Z",
         })),
+        places,
         created_at: "2026-01-01T00:00:00Z",
         updated_at: "2026-01-01T00:00:00Z",
       }),
@@ -238,6 +279,37 @@ test.describe("Welcome Manuals layout (mocked, no backend)", () => {
 
     const bodyWidth = await page.evaluate(() => document.body.scrollWidth);
     expect(bodyWidth).toBeLessThanOrEqual(1280 + 1);
+  });
+
+  test("guest preview renders the Where to Eat directory with genre + price filters", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await plantAuth(page);
+    await stubShell(page);
+    await stubDetail(page, 0, SAMPLE_PLACES);
+
+    await page.goto(`/welcome-manuals/${MANUAL_ID}`);
+    const directory = page.getByTestId("welcome-manual-place-directory");
+    await expect(directory).toBeVisible({ timeout: 10000 });
+
+    // Genre chips: "All" + the two distinct cuisines present.
+    await expect(directory.getByTestId("welcome-manual-place-directory-genre-chip")).toHaveCount(3);
+    // Price chips: one per distinct tier present ($, $$, $$$).
+    await expect(directory.getByTestId("welcome-manual-place-directory-price-chip")).toHaveCount(3);
+    // All three places show initially.
+    await expect(directory.getByTestId("welcome-manual-place-directory-item")).toHaveCount(3);
+
+    // Filter by a genre → only that cuisine's place remains.
+    await directory.getByRole("button", { name: "Japanese" }).click();
+    await expect(directory.getByTestId("welcome-manual-place-directory-item")).toHaveCount(1);
+    await expect(directory.getByText("Sushi Bar")).toBeVisible();
+
+    // Reset to All, then filter by price → only the $ place remains.
+    await directory.getByRole("button", { name: "All" }).click();
+    await directory.getByTestId("welcome-manual-place-directory-price-chip").first().click();
+    await expect(directory.getByTestId("welcome-manual-place-directory-item")).toHaveCount(1);
+    await expect(directory.getByText("Taco Spot")).toBeVisible();
   });
 
   test("mobile toggle switches between editor and guest preview", async ({ page }) => {

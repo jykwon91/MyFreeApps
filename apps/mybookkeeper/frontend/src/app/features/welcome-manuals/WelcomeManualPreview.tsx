@@ -1,11 +1,14 @@
 import Markdown from "@/shared/components/ui/Markdown";
+import type { WelcomeManualPlaceResponse } from "@/shared/types/welcome-manual/welcome-manual-place-response";
 import type { WelcomeManualSectionResponse } from "@/shared/types/welcome-manual/welcome-manual-section-response";
+import WelcomeManualPlaceDirectory from "./WelcomeManualPlaceDirectory";
 
 export interface WelcomeManualPreviewProps {
   title: string;
   introText: string | null;
   /** Sections already sorted by display_order. */
   sections: WelcomeManualSectionResponse[];
+  places: WelcomeManualPlaceResponse[];
 }
 
 /**
@@ -22,6 +25,7 @@ export default function WelcomeManualPreview({
   title,
   introText,
   sections,
+  places,
 }: WelcomeManualPreviewProps) {
   return (
     <article
@@ -104,6 +108,8 @@ export default function WelcomeManualPreview({
           Add sections to see them here.
         </p>
       )}
+
+      <WelcomeManualPlaceDirectory places={places} />
     </article>
   );
 }

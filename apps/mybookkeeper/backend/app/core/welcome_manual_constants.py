@@ -56,3 +56,13 @@ DEFAULT_WELCOME_MANUAL_SECTIONS: tuple[str, ...] = (
 DEFAULT_WELCOME_MANUAL_SECTION_FIELDS: dict[str, tuple[str, ...]] = {
     "Wi-Fi": ("Network name", "Password"),
 }
+
+# Restaurant "places" (a guest dining directory) attached directly to a
+# manual — no section parent. Bounds mirrored by the Pydantic schemas.
+# ``WELCOME_MANUAL_MAX_PLACES`` guards a single manual against unbounded rows.
+WELCOME_MANUAL_MAX_PLACES = 200
+PLACE_NAME_MAX_LEN = 150
+PLACE_CUISINE_MAX_LEN = 50
+PLACE_NOTE_MAX_LEN = 500
+PLACE_MAP_URL_MAX_LEN = 2048
+WELCOME_MANUAL_PRICE_TIERS: tuple[str, ...] = ("$", "$$", "$$$")
