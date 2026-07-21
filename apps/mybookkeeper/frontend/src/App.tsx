@@ -53,6 +53,7 @@ import Security from "@/app/pages/Security";
 import Forbidden from "@/app/pages/Forbidden";
 import OAuthCallback from "@/app/pages/OAuthCallback";
 import PublicInquiryForm from "@/app/pages/PublicInquiryForm";
+import PublicWelcomeManual from "@/app/pages/PublicWelcomeManual";
 
 import PrivacyPolicy from "@/app/pages/PrivacyPolicy";
 import TermsOfService from "@/app/pages/TermsOfService";
@@ -91,6 +92,8 @@ export default function App() {
             <Route path="/verify-email" element={<VerifyEmail />} />
             {/* Public inquiry form (T0) — unauthenticated, no Layout. */}
             <Route path="/apply/:slug" element={<PublicInquiryForm />} />
+            {/* Public PIN-protected welcome manual guide — unauthenticated, no Layout. */}
+            <Route path="/guide/:token" element={<PublicWelcomeManual />} />
             <Route
               path="/onboarding"
               element={

@@ -171,6 +171,8 @@ async function stubDetail(
           updated_at: "2026-01-01T00:00:00Z",
         })),
         places,
+        share_token: null,
+        share_pin: null,
         created_at: "2026-01-01T00:00:00Z",
         updated_at: "2026-01-01T00:00:00Z",
       }),

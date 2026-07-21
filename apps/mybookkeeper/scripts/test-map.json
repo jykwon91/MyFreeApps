@@ -624,7 +624,13 @@
         "backend/alembic/versions/wmanual260530_add_welcome_manuals_domain.py",
         "backend/alembic/versions/wmanualimg260530_add_welcome_manual_section_images.py",
         "backend/alembic/versions/wmanualfld260720_add_welcome_manual_section_fields.py",
-        "backend/alembic/versions/wmanualsend260530_add_welcome_manual_sends.py"
+        "backend/alembic/versions/wmanualsend260530_add_welcome_manual_sends.py",
+        "frontend/src/app/pages/WelcomeManualDetail.tsx",
+        "frontend/src/app/pages/PublicWelcomeManual.tsx",
+        "frontend/src/app/features/welcome-manuals/",
+        "frontend/src/shared/store/welcomeManualsApi.ts",
+        "frontend/src/shared/types/welcome-manual/",
+        "frontend/src/shared/lib/welcome-manual-constants.ts"
       ],
       "backend_tests": [
         "test_welcome_manual_image_routes.py",
@@ -638,8 +644,14 @@
         "test_welcome_manual_email_routes.py",
         "test_welcome_manual_send_audit_masking.py"
       ],
-      "frontend_tests": [],
-      "e2e_specs": []
+      "frontend_tests": [
+        "WelcomeManualDetail.test.tsx",
+        "WelcomeManualShareCard.test.tsx",
+        "PublicWelcomeManual.test.tsx"
+      ],
+      "e2e_specs": [
+        "welcome-manuals-layout-mock.spec.ts"
+      ]
     },
     "leases": {
       "source_paths": [

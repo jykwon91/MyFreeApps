@@ -23,6 +23,13 @@ class WelcomeManualResponse(BaseModel):
     title: str
     intro_text: str | None = None
 
+    # Public share link — populated only when the host has enabled sharing.
+    # ``share_pin`` is the DECRYPTED plaintext PIN (read via the
+    # ``EncryptedString`` column) so the admin editor can display/copy it.
+    # This is the AUTHENTICATED response — never exposed on the public routes.
+    share_token: str | None = None
+    share_pin: str | None = None
+
     sections: list[WelcomeManualSectionResponse] = []
     places: list[WelcomeManualPlaceResponse] = []
 

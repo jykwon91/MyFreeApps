@@ -73,6 +73,10 @@ MBK_SENSITIVE_FIELDS: frozenset[str] = frozenset({
     "vehicle_make_model",
     "reference_name",
     "reference_contact",
+    # Guest welcome-manual share PIN — encrypted at rest via EncryptedString.
+    # The audit log must never capture the decrypted PIN (or its ciphertext,
+    # which would leak that a share link is enabled).
+    "share_pin",
     # Hosts may put sensitive context into freeform notes (medical info,
     # personal references, candid character assessments) — mask the column
     # to be safe. Applies to inquiries.notes, applicants.pets context,

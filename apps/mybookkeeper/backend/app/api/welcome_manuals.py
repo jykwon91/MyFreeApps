@@ -53,6 +53,12 @@ from app.schemas.welcome_manuals.welcome_manual_section_response import (
 from app.schemas.welcome_manuals.welcome_manual_section_update_request import (
     WelcomeManualSectionUpdateRequest,
 )
+from app.schemas.welcome_manuals.welcome_manual_share_pin_update_request import (
+    WelcomeManualSharePinUpdateRequest,
+)
+from app.schemas.welcome_manuals.welcome_manual_share_response import (
+    WelcomeManualShareResponse,
+)
 from app.schemas.welcome_manuals.welcome_manual_update_request import (
     WelcomeManualUpdateRequest,
 )
@@ -63,6 +69,7 @@ from app.services.welcome_manuals import (
     welcome_manual_section_image_service,
     welcome_manual_section_service,
     welcome_manual_service,
+    welcome_manual_share_service,
 )
 
 router = APIRouter(prefix="/welcome-manuals", tags=["welcome-manuals"])
@@ -474,4 +481,58 @@ async def delete_place(
         raise HTTPException(status_code=404, detail="Welcome manual not found") from exc
     except welcome_manual_place_service.PlaceNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Place not found") from exc
+    return Response(status_code=204)
+
+
+# ---------------------------------------------------------------------------
+# Public share link (PIN-protected)
+# ---------------------------------------------------------------------------
+
+
+@router.post("/{manual_id}/share", response_model=WelcomeManualShareResponse)
+async def enable_share(
+    manual_id: uuid.UUID,
+    ctx: RequestContext = Depends(require_write_access),
+) -> WelcomeManualShareResponse:
+    """Enable the public share link. Idempotent — a manual that's already
+    shared returns its existing token + PIN unchanged."""
+    try:
+        return await welcome_manual_share_service.enable_share(
+            ctx.organization_id, ctx.user_id, manual_id,
+        )
+    except welcome_manual_share_service.ManualNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Welcome manual not found") from exc
+
+
+@router.patch("/{manual_id}/share", response_model=WelcomeManualShareResponse)
+async def rotate_share_pin(
+    manual_id: uuid.UUID,
+    payload: WelcomeManualSharePinUpdateRequest,
+    ctx: RequestContext = Depends(require_write_access),
+) -> WelcomeManualShareResponse:
+    """Rotate the PIN for an already-shared manual. Body ``pin`` set ->
+    use it (validated digit/length by the schema); omitted/null ->
+    generate a fresh random PIN."""
+    try:
+        return await welcome_manual_share_service.rotate_pin(
+            ctx.organization_id, ctx.user_id, manual_id, payload.pin,
+        )
+    except welcome_manual_share_service.ManualNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Welcome manual not found") from exc
+    except welcome_manual_share_service.ShareNotEnabledError as exc:
+        raise HTTPException(status_code=404, detail="Share link is not enabled") from exc
+
+
+@router.delete("/{manual_id}/share", status_code=204)
+async def revoke_share(
+    manual_id: uuid.UUID,
+    ctx: RequestContext = Depends(require_write_access),
+) -> Response:
+    """Revoke the share link — clears both the token and the PIN."""
+    try:
+        await welcome_manual_share_service.revoke_share(
+            ctx.organization_id, ctx.user_id, manual_id,
+        )
+    except welcome_manual_share_service.ManualNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Welcome manual not found") from exc
     return Response(status_code=204)

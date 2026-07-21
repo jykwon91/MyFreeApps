@@ -15,6 +15,10 @@ export interface WelcomeManualResponse {
   intro_text: string | null;
   sections: WelcomeManualSectionResponse[];
   places: WelcomeManualPlaceResponse[];
+  /** Non-null once a PIN-protected public share link has been created. */
+  share_token: string | null;
+  /** Current access PIN for the share link. Null when not shared. */
+  share_pin: string | null;
   created_at: string;
   updated_at: string;
 }

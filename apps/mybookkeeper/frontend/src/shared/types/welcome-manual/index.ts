@@ -12,5 +12,7 @@ export type { WelcomeManualSectionResponse } from "./welcome-manual-section-resp
 export type { WelcomeManualSectionUpdateRequest } from "./welcome-manual-section-update-request";
 export type { WelcomeManualSendResponse } from "./welcome-manual-send-response";
 export type { WelcomeManualSendStatus } from "./welcome-manual-send-status";
+export type { WelcomeManualShareResponse } from "./welcome-manual-share-response";
+export type { WelcomeManualShareUpdateRequest } from "./welcome-manual-share-update-request";
 export type { WelcomeManualSummary } from "./welcome-manual-summary";
 export type { WelcomeManualUpdateRequest } from "./welcome-manual-update-request";
