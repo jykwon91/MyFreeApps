@@ -27,13 +27,27 @@ export default function AgentSelect({ agentGroups, value, onChange }: AgentSelec
       onChange={(e) => onChange(e.target.value)}
       aria-label="Filter lineups by agent"
       title="Filter lineups by agent"
-      className="shrink-0 h-6 rounded-md border bg-card/40 px-1.5 text-[11px] font-medium text-foreground hover:bg-muted/60 focus:outline-none focus:ring-1 focus:ring-primary/50 transition-colors"
+      className="shrink-0 h-6 rounded-md border bg-card/40 px-1.5 text-[11px] font-medium text-foreground hover:bg-muted/60 focus:outline-none focus:ring-1 focus:ring-primary/50 transition-colors [color-scheme:light_dark]"
     >
-      <option value="">All agents</option>
+      {/* Native <option>/<optgroup> render in an OS popup whose default
+          background is white; without an explicit theme-token background the
+          light `text-foreground` is invisible in dark mode. Set both so the
+          list is readable in either theme. */}
+      <option value="" className="bg-background text-foreground">
+        All agents
+      </option>
       {agentGroups.map((group) => (
-        <optgroup key={group.role} label={group.role}>
+        <optgroup
+          key={group.role}
+          label={group.role}
+          className="bg-background text-muted-foreground"
+        >
           {group.agents.map((agent) => (
-            <option key={agent.slug} value={agent.slug}>
+            <option
+              key={agent.slug}
+              value={agent.slug}
+              className="bg-background text-foreground"
+            >
               {agent.name}
             </option>
           ))}
