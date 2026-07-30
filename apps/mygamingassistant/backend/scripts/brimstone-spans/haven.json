@@ -1,0 +1,170 @@
+{
+ "video_id": "U0IlINyWPdE",
+ "map_slug": "haven",
+ "author": "Quible",
+ "lineups": [
+  {
+   "cs": 56,
+   "title": "C Cubby - C Site (2 of 2 in source)",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "c-site",
+   "stand": "c-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     58.5,
+     60.4
+    ],
+    "aim": [
+     61.7,
+     62.22
+    ],
+    "throw": [
+     62.2,
+     62.8
+    ],
+    "landing": [
+     65.85,
+     67.05
+    ]
+   }
+  },
+  {
+   "cs": 85,
+   "title": "Mid Courtyard - B Site",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "a-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     99.4,
+     101.4
+    ],
+    "aim": [
+     101.42,
+     102.12
+    ],
+    "throw": [
+     102.05,
+     102.65
+    ],
+    "landing": [
+     103.65,
+     104.85
+    ]
+   }
+  },
+  {
+   "cs": 109,
+   "title": "Mid Window - B Site",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "a-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     117.1,
+     119.3
+    ],
+    "aim": [
+     121.32,
+     121.86
+    ],
+    "throw": [
+     121.76,
+     122.41
+    ],
+    "landing": [
+     124.65,
+     125.98
+    ]
+   }
+  },
+  {
+   "cs": 135,
+   "title": "A Garden - B Site",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "a-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     139.4,
+     141.4
+    ],
+    "aim": [
+     144.95,
+     145.96
+    ],
+    "throw": [
+     145.85,
+     146.45
+    ],
+    "landing": [
+     153.5,
+     155.3
+    ]
+   }
+  },
+  {
+   "cs": 190,
+   "title": "A Long - A Site (1 of 2 in source)",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     190.3,
+     192.3
+    ],
+    "aim": [
+     196.5,
+     197.5
+    ],
+    "throw": [
+     197.45,
+     198.05
+    ],
+    "landing": [
+     204.85,
+     206.05
+    ]
+   }
+  },
+  {
+   "cs": 221,
+   "title": "A Long - A Site (2 of 2 in source)",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     219.4,
+     220.47
+    ],
+    "aim": [
+     220.55,
+     221.28
+    ],
+    "throw": [
+     221.3,
+     221.85
+    ],
+    "landing": [
+     225.98,
+     227.48
+    ]
+   }
+  }
+ ],
+ "note": "brimstone HAVEN lineups from U0IlINyWPdE; 6 gate-passed, 3 dropped as un-gated. brimstone HAVEN lineups from U0IlINyWPdE (Quible). The author's chapter TITLES are wrong for this video - they name A/B callouts (incl. 'A Wine', an Ascent callout that does not exist on Haven) while the footage is C-side then mid then A-side. Titles, stand and target here were rebuilt from the in-game zone label, confirmed twice: by the localize agents' stand_loc and by an independent frame audit. Targets are the localizer's read only - no author label survives to cross-check them. SIDE is measured, not labelled: this source carries no side cue, so each row's side comes from the shipped corpus - a-lobby/c-lobby stands are unanimous side_a (14/14 and 10/10, 3 sources each; derive_side_by_stand.py), and the two A Long rows from the unanimous side_a of 15 shipped 'thrown from a Long' lineups across 4 sources."
+}

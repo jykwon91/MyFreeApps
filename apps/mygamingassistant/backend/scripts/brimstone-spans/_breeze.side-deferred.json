@@ -1,0 +1,197 @@
+{
+ "video_id": "NMGBevdEqDI",
+ "map_slug": "breeze",
+ "author": "HEHE XD",
+ "lineups": [
+  {
+   "cs": 82,
+   "title": "A default from Mid Bottom",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "mid",
+   "side": null,
+   "spans": {
+    "stand": [
+     85.2,
+     85.95
+    ],
+    "aim": [
+     90.8,
+     91.8
+    ],
+    "throw": [
+     91.82,
+     92.42
+    ],
+    "landing": [
+     98.32,
+     99.55
+    ]
+   }
+  },
+  {
+   "cs": 102,
+   "title": "A default from Mid Pillar",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "mid",
+   "side": null,
+   "spans": {
+    "stand": [
+     106.0,
+     108.1
+    ],
+    "aim": [
+     113.5,
+     114.5
+    ],
+    "throw": [
+     114.52,
+     115.12
+    ],
+    "landing": [
+     121.5,
+     122.6
+    ]
+   }
+  },
+  {
+   "cs": 222,
+   "title": "A center from Mid Pillar",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "mid",
+   "side": null,
+   "spans": {
+    "stand": [
+     223.0,
+     225.0
+    ],
+    "aim": [
+     232.55,
+     233.58
+    ],
+    "throw": [
+     233.5,
+     234.1
+    ],
+    "landing": [
+     239.78,
+     241.0
+    ]
+   }
+  },
+  {
+   "cs": 268,
+   "title": "B default from B Main",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": null,
+   "spans": {
+    "stand": [
+     279.4,
+     281.6
+    ],
+    "aim": [
+     287.6,
+     288.65
+    ],
+    "throw": [
+     288.55,
+     289.15
+    ],
+    "landing": [
+     295.7,
+     296.9
+    ]
+   }
+  },
+  {
+   "cs": 300,
+   "title": "B default from B Window",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": null,
+   "spans": {
+    "stand": [
+     301.1,
+     303.6
+    ],
+    "aim": [
+     311.22,
+     312.25
+    ],
+    "throw": [
+     312.12,
+     312.72
+    ],
+    "landing": [
+     317.45,
+     318.65
+    ]
+   }
+  },
+  {
+   "cs": 322,
+   "title": "B default from Mid Cannon",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "mid",
+   "side": null,
+   "spans": {
+    "stand": [
+     322.85,
+     325.05
+    ],
+    "aim": [
+     333.2,
+     334.2
+    ],
+    "throw": [
+     334.15,
+     334.8
+    ],
+    "landing": [
+     339.65,
+     341.15
+    ]
+   }
+  },
+  {
+   "cs": 344,
+   "title": "B default from Mid Pillar",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "mid",
+   "side": null,
+   "spans": {
+    "stand": [
+     347.8,
+     350.0
+    ],
+    "aim": [
+     354.54,
+     355.64
+    ],
+    "throw": [
+     355.64,
+     356.29
+    ],
+    "landing": [
+     362.5,
+     363.75
+    ]
+   }
+  }
+ ],
+ "note": "brimstone BREEZE rows whose SIDE is not measurable from the shipped corpus. Spans are LOCALIZED AND GATE-PASSED - only `side` is missing. Merge back into breeze.json once the operator calls it; do NOT re-localize."
+}

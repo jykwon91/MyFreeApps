@@ -1,0 +1,790 @@
+{
+ "video_id": "_VwWwoRSEcY",
+ "map_slug": "haven",
+ "author": "Tseeky - Pro Valorant Lineups",
+ "lineups": [
+  {
+   "cs": 7,
+   "title": "A Long 1",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     8.0,
+     10.0
+    ],
+    "aim": [
+     10.0,
+     10.4
+    ],
+    "throw": [
+     10.4,
+     10.9
+    ],
+    "landing": [
+     12.5,
+     13.5
+    ]
+   }
+  },
+  {
+   "cs": 25,
+   "title": "A Site 1",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     26.0,
+     28.0
+    ],
+    "aim": [
+     28.0,
+     28.4
+    ],
+    "throw": [
+     28.4,
+     28.9
+    ],
+    "landing": [
+     30.5,
+     31.5
+    ]
+   }
+  },
+  {
+   "cs": 45,
+   "title": "A Site 2",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     46.0,
+     48.0
+    ],
+    "aim": [
+     48.0,
+     48.4
+    ],
+    "throw": [
+     48.4,
+     48.9
+    ],
+    "landing": [
+     50.5,
+     51.5
+    ]
+   }
+  },
+  {
+   "cs": 63,
+   "title": "B Site 1",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "a-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     64.0,
+     66.0
+    ],
+    "aim": [
+     66.0,
+     66.4
+    ],
+    "throw": [
+     66.4,
+     66.9
+    ],
+    "landing": [
+     68.5,
+     69.5
+    ]
+   }
+  },
+  {
+   "cs": 83,
+   "title": "C Site God Reveal",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "c-site",
+   "stand": "c-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     84.0,
+     86.0
+    ],
+    "aim": [
+     86.0,
+     86.4
+    ],
+    "throw": [
+     86.4,
+     86.9
+    ],
+    "landing": [
+     88.5,
+     89.5
+    ]
+   }
+  },
+  {
+   "cs": 101,
+   "title": "C Site 2",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "c-site",
+   "stand": "c-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     102.0,
+     104.0
+    ],
+    "aim": [
+     104.0,
+     104.4
+    ],
+    "throw": [
+     104.4,
+     104.9
+    ],
+    "landing": [
+     106.5,
+     107.5
+    ]
+   }
+  },
+  {
+   "cs": 122,
+   "title": "A Garden",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-lobby",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     123.0,
+     125.0
+    ],
+    "aim": [
+     125.0,
+     125.4
+    ],
+    "throw": [
+     125.4,
+     125.9
+    ],
+    "landing": [
+     127.5,
+     128.5
+    ]
+   }
+  },
+  {
+   "cs": 140,
+   "title": "A Early Info",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     141.0,
+     143.0
+    ],
+    "aim": [
+     143.0,
+     143.4
+    ],
+    "throw": [
+     143.4,
+     143.9
+    ],
+    "landing": [
+     145.5,
+     146.5
+    ]
+   }
+  },
+  {
+   "cs": 158,
+   "title": "A Retake 1",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     159.0,
+     161.0
+    ],
+    "aim": [
+     161.0,
+     161.4
+    ],
+    "throw": [
+     161.4,
+     161.9
+    ],
+    "landing": [
+     163.5,
+     164.5
+    ]
+   }
+  },
+  {
+   "cs": 178,
+   "title": "A Retake 2",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     179.0,
+     181.0
+    ],
+    "aim": [
+     181.0,
+     181.4
+    ],
+    "throw": [
+     181.4,
+     181.9
+    ],
+    "landing": [
+     183.5,
+     184.5
+    ]
+   }
+  },
+  {
+   "cs": 202,
+   "title": "C Early Info",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "c-site",
+   "stand": "c-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     203.0,
+     205.0
+    ],
+    "aim": [
+     205.0,
+     205.4
+    ],
+    "throw": [
+     205.4,
+     205.9
+    ],
+    "landing": [
+     207.5,
+     208.5
+    ]
+   }
+  },
+  {
+   "cs": 223,
+   "title": "C Retake/Support 1",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "c-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     224.0,
+     226.0
+    ],
+    "aim": [
+     226.0,
+     226.4
+    ],
+    "throw": [
+     226.4,
+     226.9
+    ],
+    "landing": [
+     228.5,
+     229.5
+    ]
+   }
+  },
+  {
+   "cs": 244,
+   "title": "A Long 2",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     245.0,
+     247.0
+    ],
+    "aim": [
+     247.0,
+     247.4
+    ],
+    "throw": [
+     247.4,
+     247.9
+    ],
+    "landing": [
+     249.5,
+     250.5
+    ]
+   }
+  },
+  {
+   "cs": 263,
+   "title": "A Long 3",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     264.0,
+     266.0
+    ],
+    "aim": [
+     266.0,
+     266.4
+    ],
+    "throw": [
+     266.4,
+     266.9
+    ],
+    "landing": [
+     268.5,
+     269.5
+    ]
+   }
+  },
+  {
+   "cs": 282,
+   "title": "A Short 1 Simple",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     283.0,
+     285.0
+    ],
+    "aim": [
+     285.0,
+     285.4
+    ],
+    "throw": [
+     285.4,
+     285.9
+    ],
+    "landing": [
+     287.5,
+     288.5
+    ]
+   }
+  },
+  {
+   "cs": 301,
+   "title": "A Short 2",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     302.0,
+     304.0
+    ],
+    "aim": [
+     304.0,
+     304.4
+    ],
+    "throw": [
+     304.4,
+     304.9
+    ],
+    "landing": [
+     306.5,
+     307.5
+    ]
+   }
+  },
+  {
+   "cs": 321,
+   "title": "A Site 3 Post Plant",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "b-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     322.0,
+     324.0
+    ],
+    "aim": [
+     324.0,
+     324.4
+    ],
+    "throw": [
+     324.4,
+     324.9
+    ],
+    "landing": [
+     326.5,
+     327.5
+    ]
+   }
+  },
+  {
+   "cs": 340,
+   "title": "A Site 4",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     341.0,
+     343.0
+    ],
+    "aim": [
+     343.0,
+     343.4
+    ],
+    "throw": [
+     343.4,
+     343.9
+    ],
+    "landing": [
+     345.5,
+     346.5
+    ]
+   }
+  },
+  {
+   "cs": 362,
+   "title": "A Site 5",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "b-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     363.0,
+     365.0
+    ],
+    "aim": [
+     365.0,
+     365.4
+    ],
+    "throw": [
+     365.4,
+     365.9
+    ],
+    "landing": [
+     367.5,
+     368.5
+    ]
+   }
+  },
+  {
+   "cs": 384,
+   "title": "B Site 2 Post Plant",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     385.0,
+     387.0
+    ],
+    "aim": [
+     387.0,
+     387.4
+    ],
+    "throw": [
+     387.4,
+     387.9
+    ],
+    "landing": [
+     389.5,
+     390.5
+    ]
+   }
+  },
+  {
+   "cs": 405,
+   "title": "C Site 3",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "c-site",
+   "stand": "c-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     406.0,
+     408.0
+    ],
+    "aim": [
+     408.0,
+     408.4
+    ],
+    "throw": [
+     408.4,
+     408.9
+    ],
+    "landing": [
+     410.5,
+     411.5
+    ]
+   }
+  },
+  {
+   "cs": 426,
+   "title": "C Site 4 Post Plant",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "c-site",
+   "stand": "c-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     427.0,
+     429.0
+    ],
+    "aim": [
+     429.0,
+     429.4
+    ],
+    "throw": [
+     429.4,
+     429.9
+    ],
+    "landing": [
+     431.5,
+     432.5
+    ]
+   }
+  },
+  {
+   "cs": 446,
+   "title": "C Site 5",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "c-site",
+   "stand": "c-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     447.0,
+     449.0
+    ],
+    "aim": [
+     449.0,
+     449.4
+    ],
+    "throw": [
+     449.4,
+     449.9
+    ],
+    "landing": [
+     451.5,
+     452.5
+    ]
+   }
+  },
+  {
+   "cs": 466,
+   "title": "Middle (Attacker)",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-lobby",
+   "stand": "a-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     467.0,
+     469.0
+    ],
+    "aim": [
+     469.0,
+     469.4
+    ],
+    "throw": [
+     469.4,
+     469.9
+    ],
+    "landing": [
+     471.5,
+     472.5
+    ]
+   }
+  },
+  {
+   "cs": 486,
+   "title": "A Support/Retake",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     487.0,
+     489.0
+    ],
+    "aim": [
+     489.0,
+     489.4
+    ],
+    "throw": [
+     489.4,
+     489.9
+    ],
+    "landing": [
+     491.5,
+     492.5
+    ]
+   }
+  },
+  {
+   "cs": 508,
+   "title": "C Push",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "c-site",
+   "stand": "c-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     509.0,
+     511.0
+    ],
+    "aim": [
+     511.0,
+     511.4
+    ],
+    "throw": [
+     511.4,
+     511.9
+    ],
+    "landing": [
+     513.5,
+     514.5
+    ]
+   }
+  },
+  {
+   "cs": 529,
+   "title": "C Retake/Support 2",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "c-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     530.0,
+     532.0
+    ],
+    "aim": [
+     532.0,
+     532.4
+    ],
+    "throw": [
+     532.4,
+     532.9
+    ],
+    "landing": [
+     534.5,
+     535.5
+    ]
+   }
+  },
+  {
+   "cs": 548,
+   "title": "C Support Simple",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "c-site",
+   "stand": "ct-spawn",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     549.0,
+     551.0
+    ],
+    "aim": [
+     551.0,
+     551.4
+    ],
+    "throw": [
+     551.4,
+     551.9
+    ],
+    "landing": [
+     553.5,
+     554.5
+    ]
+   }
+  },
+  {
+   "cs": 569,
+   "title": "Middle (Defender)",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-lobby",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     570.0,
+     572.0
+    ],
+    "aim": [
+     572.0,
+     572.4
+    ],
+    "throw": [
+     572.4,
+     572.9
+    ],
+    "landing": [
+     574.5,
+     575.5
+    ]
+   }
+  }
+ ]
+}
