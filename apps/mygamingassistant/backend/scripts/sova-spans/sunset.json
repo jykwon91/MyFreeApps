@@ -1,0 +1,683 @@
+{
+ "video_id": "vgfDU-_cXTc",
+ "map_slug": "sunset",
+ "author": "Tseeky - Pro Valorant Lineups",
+ "lineups": [
+  {
+   "cs": 7,
+   "title": "A Main/Site",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     12.7,
+     13.4
+    ],
+    "aim": [
+     17.9,
+     18.4
+    ],
+    "throw": [
+     18.4,
+     18.9
+    ],
+    "landing": [
+     22.05,
+     23.5
+    ]
+   }
+  },
+  {
+   "cs": 27,
+   "title": "A Elbow 1 Fast",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     33.0,
+     35.5
+    ],
+    "aim": [
+     37.8,
+     39.3
+    ],
+    "throw": [
+     39.2,
+     39.8
+    ],
+    "landing": [
+     41.55,
+     42.15
+    ]
+   }
+  },
+  {
+   "cs": 48,
+   "title": "A Elbow 2 Deep",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     54.6,
+     56.6
+    ],
+    "aim": [
+     60.4,
+     61.3
+    ],
+    "throw": [
+     61.3,
+     61.85
+    ],
+    "landing": [
+     64.05,
+     65.6
+    ]
+   }
+  },
+  {
+   "cs": 70,
+   "title": "A Site God Arrow",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     75.0,
+     77.0
+    ],
+    "aim": [
+     81.6,
+     82.55
+    ],
+    "throw": [
+     82.4,
+     83.0
+    ],
+    "landing": [
+     85.0,
+     86.3
+    ]
+   }
+  },
+  {
+   "cs": 93,
+   "title": "A Site Simple",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     98.0,
+     100.0
+    ],
+    "aim": [
+     102.2,
+     102.8
+    ],
+    "throw": [
+     102.7,
+     103.3
+    ],
+    "landing": [
+     105.1,
+     105.9
+    ]
+   }
+  },
+  {
+   "cs": 110,
+   "title": "A Site Post Plant",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     114.6,
+     116.6
+    ],
+    "aim": [
+     122.7,
+     123.15
+    ],
+    "throw": [
+     123.0,
+     123.5
+    ],
+    "landing": [
+     125.7,
+     126.7
+    ]
+   }
+  },
+  {
+   "cs": 132,
+   "title": "B Main",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     139.6,
+     140.0
+    ],
+    "aim": [
+     141.6,
+     142.15
+    ],
+    "throw": [
+     142.0,
+     142.6
+    ],
+    "landing": [
+     143.3,
+     144.6
+    ]
+   }
+  },
+  {
+   "cs": 150,
+   "title": "B Market (Scans through plants)",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "market",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     154.6,
+     157.1
+    ],
+    "aim": [
+     163.2,
+     164.0
+    ],
+    "throw": [
+     164.0,
+     164.6
+    ],
+    "landing": [
+     168.1,
+     169.6
+    ]
+   }
+  },
+  {
+   "cs": 180,
+   "title": "B Market/B Site God Arrow",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "market",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     184.5,
+     186.3
+    ],
+    "aim": [
+     194.7,
+     195.35
+    ],
+    "throw": [
+     195.3,
+     195.9
+    ],
+    "landing": [
+     203.3,
+     204.8
+    ]
+   }
+  },
+  {
+   "cs": 231,
+   "title": "B Site 3",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     236.3,
+     238.3
+    ],
+    "aim": [
+     240.85,
+     241.45
+    ],
+    "throw": [
+     241.4,
+     241.95
+    ],
+    "landing": [
+     243.55,
+     244.75
+    ]
+   }
+  },
+  {
+   "cs": 250,
+   "title": "Middle 1 Tiles Barrier",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     256.5,
+     258.15
+    ],
+    "aim": [
+     259.4,
+     260.2
+    ],
+    "throw": [
+     260.1,
+     260.6
+    ],
+    "landing": [
+     262.3,
+     263.6
+    ]
+   }
+  },
+  {
+   "cs": 290,
+   "title": "Top Middle",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     297.0,
+     299.0
+    ],
+    "aim": [
+     302.5,
+     303.15
+    ],
+    "throw": [
+     302.95,
+     303.55
+    ],
+    "landing": [
+     309.8,
+     312.0
+    ]
+   }
+  },
+  {
+   "cs": 318,
+   "title": "A Lobby 1 Early Info",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     324.4,
+     325.9
+    ],
+    "aim": [
+     328.75,
+     329.35
+    ],
+    "throw": [
+     329.35,
+     329.85
+    ],
+    "landing": [
+     331.65,
+     333.15
+    ]
+   }
+  },
+  {
+   "cs": 355,
+   "title": "A Lobby 3 Deep Info 2",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     359.0,
+     361.0
+    ],
+    "aim": [
+     363.9,
+     364.65
+    ],
+    "throw": [
+     364.6,
+     365.25
+    ],
+    "landing": [
+     367.0,
+     368.5
+    ]
+   }
+  },
+  {
+   "cs": 373,
+   "title": "A Info 4",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     377.0,
+     378.6
+    ],
+    "aim": [
+     380.3,
+     381.3
+    ],
+    "throw": [
+     381.3,
+     381.9
+    ],
+    "landing": [
+     384.85,
+     386.3
+    ]
+   }
+  },
+  {
+   "cs": 434,
+   "title": "A Retake 1",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "ct-spawn",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     438.4,
+     440.9
+    ],
+    "aim": [
+     444.4,
+     445.55
+    ],
+    "throw": [
+     445.4,
+     445.9
+    ],
+    "landing": [
+     448.55,
+     449.85
+    ]
+   }
+  },
+  {
+   "cs": 455,
+   "title": "A Retake 2 Simple",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     466.0,
+     468.9
+    ],
+    "aim": [
+     468.9,
+     469.5
+    ],
+    "throw": [
+     469.4,
+     469.9
+    ],
+    "landing": [
+     472.0,
+     473.4
+    ]
+   }
+  },
+  {
+   "cs": 478,
+   "title": "A Retake 3 Elbow Info",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "ct-spawn",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     484.0,
+     485.3
+    ],
+    "aim": [
+     487.6,
+     488.28
+    ],
+    "throw": [
+     488.15,
+     488.75
+    ],
+    "landing": [
+     490.7,
+     491.9
+    ]
+   }
+  },
+  {
+   "cs": 498,
+   "title": "A Support",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     501.7,
+     503.3
+    ],
+    "aim": [
+     505.5,
+     506.4
+    ],
+    "throw": [
+     506.3,
+     506.9
+    ],
+    "landing": [
+     518.9,
+     520.0
+    ]
+   }
+  },
+  {
+   "cs": 543,
+   "title": "Mid Fast Info",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     547.2,
+     549.2
+    ],
+    "aim": [
+     555.0,
+     555.3
+    ],
+    "throw": [
+     555.3,
+     555.85
+    ],
+    "landing": [
+     557.3,
+     558.6
+    ]
+   }
+  },
+  {
+   "cs": 569,
+   "title": "B Traps 1 (Attacker)",
+   "ability": "shock",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     573.5,
+     574.9
+    ],
+    "aim": [
+     578.9,
+     579.72
+    ],
+    "throw": [
+     579.65,
+     580.25
+    ],
+    "landing": [
+     582.3,
+     582.85
+    ]
+   }
+  },
+  {
+   "cs": 585,
+   "title": "B Traps 2 (Attacker)",
+   "ability": "shock",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     592.7,
+     594.6
+    ],
+    "aim": [
+     596.3,
+     597.0
+    ],
+    "throw": [
+     597.0,
+     597.4
+    ],
+    "landing": [
+     599.4,
+     600.15
+    ]
+   }
+  },
+  {
+   "cs": 602,
+   "title": "Attacker Double Shock Dart For A Default",
+   "ability": "shock",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     606.7,
+     608.2
+    ],
+    "aim": [
+     614.3,
+     615.05
+    ],
+    "throw": [
+     614.9,
+     615.5
+    ],
+    "landing": [
+     630.4,
+     631.6
+    ]
+   }
+  },
+  {
+   "cs": 649,
+   "title": "A Traps 2",
+   "ability": "shock",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     653.3,
+     654.7
+    ],
+    "aim": [
+     660.9,
+     661.5
+    ],
+    "throw": [
+     661.9,
+     662.4
+    ],
+    "landing": [
+     665.85,
+     666.9
+    ]
+   }
+  },
+  {
+   "cs": 668,
+   "title": "B Traps 1 (Defender)",
+   "ability": "shock",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     673.0,
+     674.7
+    ],
+    "aim": [
+     683.2,
+     683.9
+    ],
+    "throw": [
+     683.9,
+     684.5
+    ],
+    "landing": [
+     689.85,
+     690.45
+    ]
+   }
+  }
+ ],
+ "note": "sova Summit lineups from vgfDU-_cXTc; 25 gate-passed, 8 dropped as un-gated. ability from localizer (author unlabelled)."
+}

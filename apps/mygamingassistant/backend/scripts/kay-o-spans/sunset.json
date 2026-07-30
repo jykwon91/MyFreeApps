@@ -1,0 +1,494 @@
+{
+ "video_id": "_WfQDEgq5Dg",
+ "map_slug": "sunset",
+ "author": "Tseeky - Pro Valorant Lineups",
+ "lineups": [
+  {
+   "cs": 59,
+   "title": "A Site 2 From Elbow",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     64.3,
+     65.7
+    ],
+    "aim": [
+     66.9,
+     67.5
+    ],
+    "throw": [
+     67.5,
+     68.0
+    ],
+    "landing": [
+     69.3,
+     69.7
+    ]
+   }
+  },
+  {
+   "cs": 72,
+   "title": "A Site 3 Post Plant",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     77.6,
+     79.9
+    ],
+    "aim": [
+     80.55,
+     80.9
+    ],
+    "throw": [
+     80.85,
+     81.4
+    ],
+    "landing": [
+     82.6,
+     82.95
+    ]
+   }
+  },
+  {
+   "cs": 118,
+   "title": "B Site (2 variations)",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     124.0,
+     124.8
+    ],
+    "aim": [
+     127.7,
+     128.5
+    ],
+    "throw": [
+     128.45,
+     128.95
+    ],
+    "landing": [
+     129.8,
+     130.3
+    ]
+   }
+  },
+  {
+   "cs": 186,
+   "title": "Top Mid",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     194.6,
+     196.0
+    ],
+    "aim": [
+     196.85,
+     197.17
+    ],
+    "throw": [
+     197.05,
+     197.6
+    ],
+    "landing": [
+     198.83,
+     199.18
+    ]
+   }
+  },
+  {
+   "cs": 204,
+   "title": "Mid Support 1",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     208.3,
+     209.7
+    ],
+    "aim": [
+     213.6,
+     214.48
+    ],
+    "throw": [
+     214.45,
+     215.0
+    ],
+    "landing": [
+     215.85,
+     216.3
+    ]
+   }
+  },
+  {
+   "cs": 221,
+   "title": "Mid Support 2",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     225.3,
+     226.4
+    ],
+    "aim": [
+     230.9,
+     231.5
+    ],
+    "throw": [
+     231.45,
+     231.95
+    ],
+    "landing": [
+     233.2,
+     233.6
+    ]
+   }
+  },
+  {
+   "cs": 251,
+   "title": "Mid Tiles Push",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     258.0,
+     260.9
+    ],
+    "aim": [
+     261.85,
+     262.43
+    ],
+    "throw": [
+     262.35,
+     262.95
+    ],
+    "landing": [
+     263.85,
+     264.35
+    ]
+   }
+  },
+  {
+   "cs": 296,
+   "title": "Market Self Peek 2 (From B Site)",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "market",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     302.0,
+     303.7
+    ],
+    "aim": [
+     304.9,
+     305.15
+    ],
+    "throw": [
+     305.05,
+     305.55
+    ],
+    "landing": [
+     306.55,
+     307.05
+    ]
+   }
+  },
+  {
+   "cs": 326,
+   "title": "B Main 2 Self Peek",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     329.9,
+     331.9
+    ],
+    "aim": [
+     332.6,
+     333.4
+    ],
+    "throw": [
+     333.35,
+     333.95
+    ],
+    "landing": [
+     335.9,
+     336.4
+    ]
+   }
+  },
+  {
+   "cs": 338,
+   "title": "B Main 3 Perfect One Way Pop Flash For Nerds",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     346.5,
+     348.5
+    ],
+    "aim": [
+     354.55,
+     355.1
+    ],
+    "throw": [
+     355.05,
+     355.6
+    ],
+    "landing": [
+     356.85,
+     357.3
+    ]
+   }
+  },
+  {
+   "cs": 471,
+   "title": "A Elbow (Knife)",
+   "ability": "zero-point",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     486.05,
+     486.4
+    ],
+    "aim": [
+     486.4,
+     486.6
+    ],
+    "throw": [
+     486.63,
+     487.13
+    ],
+    "landing": [
+     486.87,
+     487.35
+    ]
+   }
+  },
+  {
+   "cs": 490,
+   "title": "A Site 1",
+   "ability": "zero-point",
+   "technique": "jump",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     497.3,
+     499.3
+    ],
+    "aim": [
+     503.5,
+     504.5
+    ],
+    "throw": [
+     504.65,
+     505.2
+    ],
+    "landing": [
+     510.2,
+     511.0
+    ]
+   }
+  },
+  {
+   "cs": 513,
+   "title": "A Site 2",
+   "ability": "zero-point",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     520.0,
+     522.5
+    ],
+    "aim": [
+     528.45,
+     528.7
+    ],
+    "throw": [
+     528.75,
+     529.35
+    ],
+    "landing": [
+     534.3,
+     534.9
+    ]
+   }
+  },
+  {
+   "cs": 537,
+   "title": "B Market",
+   "ability": "zero-point",
+   "technique": "standing",
+   "target": "market",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     547.0,
+     549.0
+    ],
+    "aim": [
+     553.4,
+     553.8
+    ],
+    "throw": [
+     553.75,
+     554.35
+    ],
+    "landing": [
+     559.9,
+     560.6
+    ]
+   }
+  },
+  {
+   "cs": 584,
+   "title": "B Site Simple",
+   "ability": "zero-point",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     588.2,
+     590.1
+    ],
+    "aim": [
+     590.45,
+     591.28
+    ],
+    "throw": [
+     591.2,
+     591.75
+    ],
+    "landing": [
+     591.95,
+     594.0
+    ]
+   }
+  },
+  {
+   "cs": 615,
+   "title": "A Main/Lobby From Top Mid",
+   "ability": "zero-point",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     619.2,
+     620.6
+    ],
+    "aim": [
+     627.2,
+     627.5
+    ],
+    "throw": [
+     627.45,
+     627.75
+    ],
+    "landing": [
+     633.3,
+     633.65
+    ]
+   }
+  },
+  {
+   "cs": 636,
+   "title": "B Main 1 Fast (Also scans some of bottom mid)",
+   "ability": "zero-point",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "b-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     642.0,
+     644.5
+    ],
+    "aim": [
+     646.0,
+     646.25
+    ],
+    "throw": [
+     646.2,
+     646.6
+    ],
+    "landing": [
+     646.35,
+     646.85
+    ]
+   }
+  },
+  {
+   "cs": 700,
+   "title": "B Main Box",
+   "ability": "fragment",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     707.0,
+     708.8
+    ],
+    "aim": [
+     709.4,
+     710.6
+    ],
+    "throw": [
+     710.65,
+     711.25
+    ],
+    "landing": [
+     713.4,
+     714.5
+    ]
+   }
+  }
+ ],
+ "note": "kay-o Summit lineups from _WfQDEgq5Dg; 18 gate-passed, 23 dropped as un-gated. ability from localizer (author unlabelled)."
+}

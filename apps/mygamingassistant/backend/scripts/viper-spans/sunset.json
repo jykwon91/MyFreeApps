@@ -1,0 +1,251 @@
+{
+ "video_id": "V5212_RxPYQ",
+ "map_slug": "sunset",
+ "author": "Snapiex",
+ "lineups": [
+  {
+   "cs": 10,
+   "title": "B Default [Snake Bite]",
+   "ability": "snake-bite",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": null,
+   "spans": {
+    "stand": [
+     23.4,
+     25.4
+    ],
+    "aim": [
+     27.15,
+     28.15
+    ],
+    "throw": [
+     28.15,
+     28.65
+    ],
+    "landing": [
+     33.0,
+     34.0
+    ]
+   }
+  },
+  {
+   "cs": 66,
+   "title": "A Corner [Snake Bite]",
+   "ability": "snake-bite",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": null,
+   "spans": {
+    "stand": [
+     77.5,
+     79.5
+    ],
+    "aim": [
+     85.55,
+     86.55
+    ],
+    "throw": [
+     86.55,
+     87.05
+    ],
+    "landing": [
+     91.6,
+     92.6
+    ]
+   }
+  },
+  {
+   "cs": 98,
+   "title": "A Boxes [Snake Bite]",
+   "ability": "snake-bite",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": null,
+   "spans": {
+    "stand": [
+     102.0,
+     103.5
+    ],
+    "aim": [
+     116.05,
+     116.85
+    ],
+    "throw": [
+     116.9,
+     117.5
+    ],
+    "landing": [
+     121.9,
+     123.0
+    ]
+   }
+  },
+  {
+   "cs": 181,
+   "title": "B Site [Toxic Screen - Poison Cloud]",
+   "ability": "poison-cloud",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": null,
+   "spans": {
+    "stand": [
+     201.05,
+     201.15
+    ],
+    "aim": [
+     201.15,
+     201.35
+    ],
+    "throw": [
+     201.3,
+     201.5
+    ],
+    "landing": [
+     202.75,
+     203.65
+    ]
+   }
+  },
+  {
+   "cs": 212,
+   "title": "Middle [Toxic Screen - Poison Cloud]",
+   "ability": "poison-cloud",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": null,
+   "spans": {
+    "stand": [
+     236.8,
+     238.8
+    ],
+    "aim": [
+     238.83,
+     238.95
+    ],
+    "throw": [
+     238.9,
+     239.1
+    ],
+    "landing": [
+     240.4,
+     243.0
+    ]
+   }
+  },
+  {
+   "cs": 265,
+   "title": "A Main [Poison Cloud]",
+   "ability": "poison-cloud",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-main",
+   "side": null,
+   "spans": {
+    "stand": [
+     272.0,
+     273.5
+    ],
+    "aim": [
+     280.0,
+     281.1
+    ],
+    "throw": [
+     281.3,
+     282.0
+    ],
+    "landing": [
+     283.35,
+     286.5
+    ]
+   }
+  },
+  {
+   "cs": 298,
+   "title": "A Main One Way [Poison Cloud]",
+   "ability": "poison-cloud",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-main",
+   "side": null,
+   "spans": {
+    "stand": [
+     311.97,
+     312.3
+    ],
+    "aim": [
+     312.35,
+     312.85
+    ],
+    "throw": [
+     312.8,
+     313.05
+    ],
+    "landing": [
+     314.6,
+     316.1
+    ]
+   }
+  },
+  {
+   "cs": 330,
+   "title": "Middle [Poison Cloud]",
+   "ability": "poison-cloud",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": null,
+   "spans": {
+    "stand": [
+     332.5,
+     334.0
+    ],
+    "aim": [
+     342.5,
+     343.35
+    ],
+    "throw": [
+     343.35,
+     343.6
+    ],
+    "landing": [
+     345.95,
+     347.3
+    ]
+   }
+  },
+  {
+   "cs": 356,
+   "title": "B Main [Poison Cloud]",
+   "ability": "poison-cloud",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "b-site",
+   "side": null,
+   "spans": {
+    "stand": [
+     367.8,
+     369.8
+    ],
+    "aim": [
+     370.0,
+     370.65
+    ],
+    "throw": [
+     370.6,
+     371.2
+    ],
+    "landing": [
+     372.0,
+     373.5
+    ]
+   }
+  }
+ ],
+ "note": "viper Summit lineups from V5212_RxPYQ; 9 gate-passed, 5 dropped as un-gated. ability from localizer (author unlabelled)."
+}

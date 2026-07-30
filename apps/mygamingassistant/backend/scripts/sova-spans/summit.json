@@ -1,0 +1,1034 @@
+{
+  "video_id": "ej8mSinpIs4",
+  "map_slug": "summit",
+  "author": "Tseeky",
+  "note": "Full Summit Sova batch (38 Tseeky chapters). 3 pilot (cs 22/471/604) frame-study localized+gate-passed 2026-07-27. Other 35 have PLACEHOLDER spans \u2014 the mga-lineup-localize workflow refines them; side/zones confirmed from localize output before accept. Ability recon(ch0-30)/shock(ch31-37).",
+  "lineups": [
+    {
+      "cs": 0,
+      "title": "A Site Close",
+      "ability": "recon",
+      "technique": "standing",
+      "target": "a-site",
+      "stand": "a-main",
+      "side": "side_a",
+      "spans": {
+        "stand": [
+          2.0,
+          3.5
+        ],
+        "aim": [
+          4.0,
+          5.0
+        ],
+        "throw": [
+          5.0,
+          6.5
+        ],
+        "landing": [
+          8.0,
+          10.0
+        ]
+      }
+    },
+    {
+      "cs": 22,
+      "title": "A Site 1",
+      "ability": "recon",
+      "technique": "standing",
+      "target": "a-site",
+      "stand": "a-main",
+      "side": "side_a",
+      "spans": {
+        "stand": [
+          18,
+          19.5
+        ],
+        "aim": [
+          27,
+          27.6
+        ],
+        "throw": [
+          27.7,
+          28.3
+        ],
+        "landing": [
+          29.6,
+          30.8
+        ]
+      }
+    },
+    {
+      "cs": 38,
+      "title": "A Back Site",
+      "ability": "recon",
+      "technique": "standing",
+      "target": "a-site",
+      "stand": "a-main",
+      "side": "side_a",
+      "spans": {
+        "stand": [
+          40.0,
+          41.5
+        ],
+        "aim": [
+          42.0,
+          43.0
+        ],
+        "throw": [
+          43.0,
+          44.5
+        ],
+        "landing": [
+          46.0,
+          48.0
+        ]
+      }
+    },
+    {
+      "cs": 57,
+      "title": "A Site From A Link",
+      "ability": "recon",
+      "technique": "standing",
+      "target": "a-site",
+      "stand": "a-main",
+      "side": "side_a",
+      "spans": {
+        "stand": [
+          59.0,
+          60.5
+        ],
+        "aim": [
+          61.0,
+          62.0
+        ],
+        "throw": [
+          62.0,
+          63.5
+        ],
+        "landing": [
+          65.0,
+          67.0
+        ]
+      }
+    },
+    {
+      "cs": 74,
+      "title": "A Garden",
+      "ability": "recon",
+      "technique": "standing",
+      "target": "a-site",
+      "stand": "a-main",
+      "side": "side_a",
+      "spans": {
+        "stand": [
+          76.0,
+          77.5
+        ],
+        "aim": [
+          78.0,
+          79.0
+        ],
+        "throw": [
+          79.0,
+          80.5
+        ],
+        "landing": [
+          82.0,
+          84.0
+        ]
+      }
+    },
+    {
+      "cs": 99,
+      "title": "B Site Close",
+      "ability": "recon",
+      "technique": "standing",
+      "target": "b-site",
+      "stand": "b-main",
+      "side": "side_a",
+      "spans": {
+        "stand": [
+          101.0,
+          102.5
+        ],
+        "aim": [
+          103.0,
+          104.0
+        ],
+        "throw": [
+          104.0,
+          105.5
+        ],
+        "landing": [
+          107.0,
+          109.0
+        ]
+      }
+    },
+    {
+      "cs": 119,
+      "title": "B Site Simple",
+      "ability": "recon",
+      "technique": "standing",
+      "target": "b-site",
+      "stand": "b-main",
+      "side": "side_a",
+      "spans": {
+        "stand": [
+          121.0,
+          122.5
+        ],
+        "aim": [
+          123.0,
+          124.0
+        ],
+        "throw": [
+          124.0,
+          125.5
+        ],
+        "landing": [
+          127.0,
+          129.0
+        ]
+      }
+    },
+    {
+      "cs": 138,
+      "title": "B Site Best",
+      "ability": "recon",
+      "technique": "standing",
+      "target": "b-site",
+      "stand": "b-main",
+      "side": "side_a",
+      "spans": {
+        "stand": [
+          140.0,
+          141.5
+        ],
+        "aim": [
+          142.0,
+          143.0
+        ],
+        "throw": [
+          143.0,
+          144.5
+        ],
+        "landing": [
+          146.0,
+          148.0
+        ]
+      }
+    },
+    {
+      "cs": 159,
+      "title": "B Site From Mid",
+      "ability": "recon",
+      "technique": "standing",
+      "target": "b-site",
+      "stand": "mid",
+      "side": "side_a",
+      "spans": {
+        "stand": [
+          161.0,
+          162.5
+        ],
+        "aim": [
+          163.0,
+          164.0
+        ],
+        "throw": [
+          164.0,
+          165.5
+        ],
+        "landing": [
+          167.0,
+          169.0
+        ]
+      }
+    },
+    {
+      "cs": 178,
+      "title": "B Post Plant",
+      "ability": "recon",
+      "technique": "standing",
+      "target": "b-site",
+      "stand": "b-main",
+      "side": "side_a",
+      "spans": {
+        "stand": [
+          180.0,
+          181.5
+        ],
+        "aim": [
+          182.0,
+          183.0
+        ],
+        "throw": [
+          183.0,
+          184.5
+        ],
+        "landing": [
+          186.0,
+          188.0
+        ]
+      }
+    },
+    {
+      "cs": 194,
+      "title": "Middle Close (B Lobby)",
+      "ability": "recon",
+      "technique": "standing",
+      "target": "mid",
+      "stand": "b-main",
+      "side": "side_a",
+      "spans": {
+        "stand": [
+          196.0,
+          197.5
+        ],
+        "aim": [
+          198.0,
+          199.0
+        ],
+        "throw": [
+          199.0,
+          200.5
+        ],
+        "landing": [
+          202.0,
+          204.0
+        ]
+      }
+    },
+    {
+      "cs": 211,
+      "title": "Middle Bend (B Lobby)",
+      "ability": "recon",
+      "technique": "standing",
+      "target": "mid",
+      "stand": "b-main",
+      "side": "side_a",
+      "spans": {
+        "stand": [
+          213.0,
+          214.5
+        ],
+        "aim": [
+          215.0,
+          216.0
+        ],
+        "throw": [
+          216.0,
+          217.5
+        ],
+        "landing": [
+          219.0,
+          221.0
+        ]
+      }
+    },
+    {
+      "cs": 229,
+      "title": "Middle Best Mid Round (A Lobby)",
+      "ability": "recon",
+      "technique": "standing",
+      "target": "mid",
+      "stand": "a-main",
+      "side": "side_a",
+      "spans": {
+        "stand": [
+          231.0,
+          232.5
+        ],
+        "aim": [
+          233.0,
+          234.0
+        ],
+        "throw": [
+          234.0,
+          235.5
+        ],
+        "landing": [
+          237.0,
+          239.0
+        ]
+      }
+    },
+    {
+      "cs": 249,
+      "title": "Middle Bottom (A Lobby)",
+      "ability": "recon",
+      "technique": "standing",
+      "target": "mid",
+      "stand": "a-main",
+      "side": "side_a",
+      "spans": {
+        "stand": [
+          251.0,
+          252.5
+        ],
+        "aim": [
+          253.0,
+          254.0
+        ],
+        "throw": [
+          254.0,
+          255.5
+        ],
+        "landing": [
+          257.0,
+          259.0
+        ]
+      }
+    },
+    {
+      "cs": 269,
+      "title": "Middle Best (A Link)",
+      "ability": "recon",
+      "technique": "standing",
+      "target": "mid",
+      "stand": "a-main",
+      "side": "side_b",
+      "spans": {
+        "stand": [
+          271.0,
+          272.5
+        ],
+        "aim": [
+          273.0,
+          274.0
+        ],
+        "throw": [
+          274.0,
+          275.5
+        ],
+        "landing": [
+          277.0,
+          279.0
+        ]
+      }
+    },
+    {
+      "cs": 288,
+      "title": "Middle Top (Window)",
+      "ability": "recon",
+      "technique": "standing",
+      "target": "mid",
+      "stand": "mid",
+      "side": "side_b",
+      "spans": {
+        "stand": [
+          290.0,
+          291.5
+        ],
+        "aim": [
+          292.0,
+          293.0
+        ],
+        "throw": [
+          293.0,
+          294.5
+        ],
+        "landing": [
+          296.0,
+          298.0
+        ]
+      }
+    },
+    {
+      "cs": 308,
+      "title": "A Lobby 1",
+      "ability": "recon",
+      "technique": "standing",
+      "target": "a-main",
+      "stand": "a-site",
+      "side": "side_b",
+      "spans": {
+        "stand": [
+          310.0,
+          311.5
+        ],
+        "aim": [
+          312.0,
+          313.0
+        ],
+        "throw": [
+          313.0,
+          314.5
+        ],
+        "landing": [
+          316.0,
+          318.0
+        ]
+      }
+    },
+    {
+      "cs": 330,
+      "title": "A Lobby 2",
+      "ability": "recon",
+      "technique": "standing",
+      "target": "a-main",
+      "stand": "a-site",
+      "side": "side_b",
+      "spans": {
+        "stand": [
+          332.0,
+          333.5
+        ],
+        "aim": [
+          334.0,
+          335.0
+        ],
+        "throw": [
+          335.0,
+          336.5
+        ],
+        "landing": [
+          338.0,
+          340.0
+        ]
+      }
+    },
+    {
+      "cs": 351,
+      "title": "A Lobby 3",
+      "ability": "recon",
+      "technique": "standing",
+      "target": "a-main",
+      "stand": "a-site",
+      "side": "side_b",
+      "spans": {
+        "stand": [
+          353.0,
+          354.5
+        ],
+        "aim": [
+          355.0,
+          356.0
+        ],
+        "throw": [
+          356.0,
+          357.5
+        ],
+        "landing": [
+          359.0,
+          361.0
+        ]
+      }
+    },
+    {
+      "cs": 376,
+      "title": "A Main",
+      "ability": "recon",
+      "technique": "standing",
+      "target": "a-main",
+      "stand": "a-site",
+      "side": "side_b",
+      "spans": {
+        "stand": [
+          378.0,
+          379.5
+        ],
+        "aim": [
+          380.0,
+          381.0
+        ],
+        "throw": [
+          381.0,
+          382.5
+        ],
+        "landing": [
+          384.0,
+          386.0
+        ]
+      }
+    },
+    {
+      "cs": 394,
+      "title": "A Support",
+      "ability": "recon",
+      "technique": "standing",
+      "target": "a-main",
+      "stand": "a-site",
+      "side": "side_b",
+      "spans": {
+        "stand": [
+          396.0,
+          397.5
+        ],
+        "aim": [
+          398.0,
+          399.0
+        ],
+        "throw": [
+          399.0,
+          400.5
+        ],
+        "landing": [
+          402.0,
+          404.0
+        ]
+      }
+    },
+    {
+      "cs": 413,
+      "title": "A Retake 1",
+      "ability": "recon",
+      "technique": "standing",
+      "target": "a-site",
+      "stand": "a-main",
+      "side": "side_b",
+      "spans": {
+        "stand": [
+          415.0,
+          416.5
+        ],
+        "aim": [
+          417.0,
+          418.0
+        ],
+        "throw": [
+          418.0,
+          419.5
+        ],
+        "landing": [
+          421.0,
+          423.0
+        ]
+      }
+    },
+    {
+      "cs": 429,
+      "title": "A Retake 2",
+      "ability": "recon",
+      "technique": "standing",
+      "target": "a-site",
+      "stand": "a-main",
+      "side": "side_b",
+      "spans": {
+        "stand": [
+          431.0,
+          432.5
+        ],
+        "aim": [
+          433.0,
+          434.0
+        ],
+        "throw": [
+          434.0,
+          435.5
+        ],
+        "landing": [
+          437.0,
+          439.0
+        ]
+      }
+    },
+    {
+      "cs": 447,
+      "title": "A Retake 3",
+      "ability": "recon",
+      "technique": "standing",
+      "target": "a-site",
+      "stand": "a-main",
+      "side": "side_b",
+      "spans": {
+        "stand": [
+          449.0,
+          450.5
+        ],
+        "aim": [
+          451.0,
+          452.0
+        ],
+        "throw": [
+          452.0,
+          453.5
+        ],
+        "landing": [
+          455.0,
+          457.0
+        ]
+      }
+    },
+    {
+      "cs": 471,
+      "title": "B Main",
+      "ability": "recon",
+      "technique": "standing",
+      "target": "b-main",
+      "stand": "b-site",
+      "side": "side_b",
+      "spans": {
+        "stand": [
+          468.4,
+          468.95
+        ],
+        "aim": [
+          475.85,
+          476.45
+        ],
+        "throw": [
+          476.4,
+          477
+        ],
+        "landing": [
+          478.5,
+          479.8
+        ]
+      }
+    },
+    {
+      "cs": 483,
+      "title": "B Lobby 1 Simple",
+      "ability": "recon",
+      "technique": "standing",
+      "target": "b-main",
+      "stand": "b-site",
+      "side": "side_b",
+      "spans": {
+        "stand": [
+          485.0,
+          486.5
+        ],
+        "aim": [
+          487.0,
+          488.0
+        ],
+        "throw": [
+          488.0,
+          489.5
+        ],
+        "landing": [
+          491.0,
+          493.0
+        ]
+      }
+    },
+    {
+      "cs": 504,
+      "title": "B Lobby 2",
+      "ability": "recon",
+      "technique": "standing",
+      "target": "b-main",
+      "stand": "b-site",
+      "side": "side_b",
+      "spans": {
+        "stand": [
+          506.0,
+          507.5
+        ],
+        "aim": [
+          508.0,
+          509.0
+        ],
+        "throw": [
+          509.0,
+          510.5
+        ],
+        "landing": [
+          512.0,
+          514.0
+        ]
+      }
+    },
+    {
+      "cs": 522,
+      "title": "B Lobby 3 From A Link",
+      "ability": "recon",
+      "technique": "standing",
+      "target": "b-main",
+      "stand": "a-main",
+      "side": "side_b",
+      "spans": {
+        "stand": [
+          524.0,
+          525.5
+        ],
+        "aim": [
+          526.0,
+          527.0
+        ],
+        "throw": [
+          527.0,
+          528.5
+        ],
+        "landing": [
+          530.0,
+          532.0
+        ]
+      }
+    },
+    {
+      "cs": 547,
+      "title": "B Retake 1",
+      "ability": "recon",
+      "technique": "standing",
+      "target": "b-site",
+      "stand": "b-main",
+      "side": "side_b",
+      "spans": {
+        "stand": [
+          549.0,
+          550.5
+        ],
+        "aim": [
+          551.0,
+          552.0
+        ],
+        "throw": [
+          552.0,
+          553.5
+        ],
+        "landing": [
+          555.0,
+          557.0
+        ]
+      }
+    },
+    {
+      "cs": 565,
+      "title": "B Retake 2",
+      "ability": "recon",
+      "technique": "standing",
+      "target": "b-site",
+      "stand": "b-main",
+      "side": "side_b",
+      "spans": {
+        "stand": [
+          567.0,
+          568.5
+        ],
+        "aim": [
+          569.0,
+          570.0
+        ],
+        "throw": [
+          570.0,
+          571.5
+        ],
+        "landing": [
+          573.0,
+          575.0
+        ]
+      }
+    },
+    {
+      "cs": 581,
+      "title": "B Support",
+      "ability": "recon",
+      "technique": "standing",
+      "target": "b-main",
+      "stand": "b-site",
+      "side": "side_b",
+      "spans": {
+        "stand": [
+          583.0,
+          584.5
+        ],
+        "aim": [
+          585.0,
+          586.0
+        ],
+        "throw": [
+          586.0,
+          587.5
+        ],
+        "landing": [
+          589.0,
+          591.0
+        ]
+      }
+    },
+    {
+      "cs": 604,
+      "title": "A Post Plant 1",
+      "ability": "shock",
+      "technique": "standing",
+      "target": "a-site",
+      "stand": "a-main",
+      "side": "side_a",
+      "spans": {
+        "stand": [
+          601.5,
+          603.5
+        ],
+        "aim": [
+          606.4,
+          607.15
+        ],
+        "throw": [
+          607.3,
+          607.8
+        ],
+        "landing": [
+          615.6,
+          616.4
+        ]
+      }
+    },
+    {
+      "cs": 618,
+      "title": "A Post Plant 2 Simple",
+      "ability": "shock",
+      "technique": "standing",
+      "target": "a-site",
+      "stand": "a-main",
+      "side": "side_a",
+      "spans": {
+        "stand": [
+          620.0,
+          621.5
+        ],
+        "aim": [
+          622.0,
+          623.0
+        ],
+        "throw": [
+          623.0,
+          624.5
+        ],
+        "landing": [
+          626.0,
+          628.0
+        ]
+      }
+    },
+    {
+      "cs": 631,
+      "title": "B Post Plant 1",
+      "ability": "shock",
+      "technique": "standing",
+      "target": "b-site",
+      "stand": "b-main",
+      "side": "side_a",
+      "spans": {
+        "stand": [
+          633.0,
+          634.5
+        ],
+        "aim": [
+          635.0,
+          636.0
+        ],
+        "throw": [
+          636.0,
+          637.5
+        ],
+        "landing": [
+          639.0,
+          641.0
+        ]
+      }
+    },
+    {
+      "cs": 645,
+      "title": "B Post Plant 2 Simple",
+      "ability": "shock",
+      "technique": "standing",
+      "target": "b-site",
+      "stand": "b-main",
+      "side": "side_a",
+      "spans": {
+        "stand": [
+          647.0,
+          648.5
+        ],
+        "aim": [
+          649.0,
+          650.0
+        ],
+        "throw": [
+          650.0,
+          651.5
+        ],
+        "landing": [
+          653.0,
+          655.0
+        ]
+      }
+    },
+    {
+      "cs": 658,
+      "title": "A Site Door",
+      "ability": "shock",
+      "technique": "standing",
+      "target": "a-site",
+      "stand": "a-main",
+      "side": "side_a",
+      "spans": {
+        "stand": [
+          660.0,
+          661.5
+        ],
+        "aim": [
+          662.0,
+          663.0
+        ],
+        "throw": [
+          663.0,
+          664.5
+        ],
+        "landing": [
+          666.0,
+          668.0
+        ]
+      }
+    },
+    {
+      "cs": 682,
+      "title": "B Site Door",
+      "ability": "shock",
+      "technique": "standing",
+      "target": "b-site",
+      "stand": "b-main",
+      "side": "side_a",
+      "spans": {
+        "stand": [
+          684.0,
+          685.5
+        ],
+        "aim": [
+          686.0,
+          687.0
+        ],
+        "throw": [
+          687.0,
+          688.5
+        ],
+        "landing": [
+          690.0,
+          692.0
+        ]
+      }
+    },
+    {
+      "cs": 699,
+      "title": "Middle Door",
+      "ability": "shock",
+      "technique": "standing",
+      "target": "mid",
+      "stand": "mid",
+      "side": "side_a",
+      "spans": {
+        "stand": [
+          701.0,
+          702.5
+        ],
+        "aim": [
+          703.0,
+          704.0
+        ],
+        "throw": [
+          704.0,
+          705.5
+        ],
+        "landing": [
+          707.0,
+          709.0
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,656 @@
+{
+ "video_id": "P3FbvaUcB-A",
+ "map_slug": "summit",
+ "author": "maxWELL Lineup-Larry",
+ "note": "kay-o Summit lineups from P3FbvaUcB-A; 24 gate-passed, 1 dropped as un-gated.",
+ "lineups": [
+  {
+   "cs": 5,
+   "title": "A Lobby to A",
+   "ability": "zero-point",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     9.0,
+     11.0
+    ],
+    "aim": [
+     16.3,
+     17.2
+    ],
+    "throw": [
+     17.2,
+     17.7
+    ],
+    "landing": [
+     25.85,
+     26.85
+    ]
+   }
+  },
+  {
+   "cs": 31,
+   "title": "Tiles to Bottom Mid",
+   "ability": "zero-point",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     31.0,
+     33.0
+    ],
+    "aim": [
+     39.0,
+     39.9
+    ],
+    "throw": [
+     39.9,
+     40.5
+    ],
+    "landing": [
+     42.9,
+     43.6
+    ]
+   }
+  },
+  {
+   "cs": 54,
+   "title": "B Lobby to B",
+   "ability": "zero-point",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     69.0,
+     70.4
+    ],
+    "aim": [
+     71.0,
+     72.3
+    ],
+    "throw": [
+     72.3,
+     73.0
+    ],
+    "landing": [
+     73.0,
+     73.6
+    ]
+   }
+  },
+  {
+   "cs": 79,
+   "title": "B Lobby to Drop",
+   "ability": "zero-point",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     83.4,
+     84.6
+    ],
+    "aim": [
+     89.2,
+     89.83
+    ],
+    "throw": [
+     89.83,
+     90.33
+    ],
+    "landing": [
+     97.3,
+     97.8
+    ]
+   }
+  },
+  {
+   "cs": 101,
+   "title": "A Main to A",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     104.0,
+     104.9
+    ],
+    "aim": [
+     106.0,
+     108.9
+    ],
+    "throw": [
+     108.85,
+     109.35
+    ],
+    "landing": [
+     110.82,
+     111.0
+    ]
+   }
+  },
+  {
+   "cs": 117,
+   "title": "A Main to A Garden",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     117.0,
+     119.3
+    ],
+    "aim": [
+     122.3,
+     123.9
+    ],
+    "throw": [
+     124.0,
+     124.6
+    ],
+    "landing": [
+     127.4,
+     128.4
+    ]
+   }
+  },
+  {
+   "cs": 154,
+   "title": "Mid to Bottom Mid",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     156.7,
+     158.5
+    ],
+    "aim": [
+     162.4,
+     163.7
+    ],
+    "throw": [
+     163.7,
+     164.2
+    ],
+    "landing": [
+     166.9,
+     167.6
+    ]
+   }
+  },
+  {
+   "cs": 190,
+   "title": "B Lobby to B",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     190.1,
+     191.6
+    ],
+    "aim": [
+     199.3,
+     199.55
+    ],
+    "throw": [
+     199.55,
+     200.1
+    ],
+    "landing": [
+     200.4,
+     201.0
+    ]
+   }
+  },
+  {
+   "cs": 207,
+   "title": "A Main to A",
+   "ability": "fragment",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     208.0,
+     209.7
+    ],
+    "aim": [
+     213.08,
+     213.16
+    ],
+    "throw": [
+     213.16,
+     213.35
+    ],
+    "landing": [
+     215.1,
+     215.6
+    ]
+   }
+  },
+  {
+   "cs": 218,
+   "title": "A Main to A Garden",
+   "ability": "fragment",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     220.2,
+     222.0
+    ],
+    "aim": [
+     230.1,
+     230.75
+    ],
+    "throw": [
+     230.7,
+     231.2
+    ],
+    "landing": [
+     235.6,
+     236.4
+    ]
+   }
+  },
+  {
+   "cs": 238,
+   "title": "A Lobby to A Default",
+   "ability": "fragment",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     240.6,
+     242.0
+    ],
+    "aim": [
+     244.8,
+     245.83
+    ],
+    "throw": [
+     245.83,
+     246.42
+    ],
+    "landing": [
+     256.5,
+     257.2
+    ]
+   }
+  },
+  {
+   "cs": 280,
+   "title": "B Main to B Hut",
+   "ability": "fragment",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     282.0,
+     283.9
+    ],
+    "aim": [
+     289.12,
+     289.21
+    ],
+    "throw": [
+     289.17,
+     289.46
+    ],
+    "landing": [
+     291.55,
+     293.5
+    ]
+   }
+  },
+  {
+   "cs": 297,
+   "title": "A to A Main",
+   "ability": "zero-point",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     303.6,
+     305.42
+    ],
+    "aim": [
+     305.46,
+     305.54
+    ],
+    "throw": [
+     305.5,
+     305.65
+    ],
+    "landing": [
+     305.6,
+     307.0
+    ]
+   }
+  },
+  {
+   "cs": 313,
+   "title": "A Link to A",
+   "ability": "zero-point",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     318.0,
+     319.9
+    ],
+    "aim": [
+     322.65,
+     322.79
+    ],
+    "throw": [
+     322.75,
+     323.25
+    ],
+    "landing": [
+     323.9,
+     324.3
+    ]
+   }
+  },
+  {
+   "cs": 330,
+   "title": "A Backsite to B Main",
+   "ability": "zero-point",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     330.3,
+     331.8
+    ],
+    "aim": [
+     336.2,
+     336.65
+    ],
+    "throw": [
+     336.65,
+     337.25
+    ],
+    "landing": [
+     347.2,
+     348.3
+    ]
+   }
+  },
+  {
+   "cs": 354,
+   "title": "B to B Main",
+   "ability": "zero-point",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     355.0,
+     356.5
+    ],
+    "aim": [
+     361.7,
+     362.1
+    ],
+    "throw": [
+     362.1,
+     362.6
+    ],
+    "landing": [
+     362.65,
+     363.05
+    ]
+   }
+  },
+  {
+   "cs": 411,
+   "title": "A Link to A Garden",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     412.9,
+     414.15
+    ],
+    "aim": [
+     419.7,
+     420.42
+    ],
+    "throw": [
+     420.45,
+     420.97
+    ],
+    "landing": [
+     421.81,
+     422.45
+    ]
+   }
+  },
+  {
+   "cs": 428,
+   "title": "A Cave to A",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     428.3,
+     429.5
+    ],
+    "aim": [
+     432.3,
+     433.6
+    ],
+    "throw": [
+     434.15,
+     434.65
+    ],
+    "landing": [
+     434.65,
+     435.5
+    ]
+   }
+  },
+  {
+   "cs": 446,
+   "title": "B Main to B Lobby",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "b-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     447.7,
+     448.5
+    ],
+    "aim": [
+     448.5,
+     449.02
+    ],
+    "throw": [
+     449.02,
+     449.3
+    ],
+    "landing": [
+     449.35,
+     449.65
+    ]
+   }
+  },
+  {
+   "cs": 467,
+   "title": "B Link to B",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     469.75,
+     470.05
+    ],
+    "aim": [
+     474.3,
+     474.75
+    ],
+    "throw": [
+     474.75,
+     475.25
+    ],
+    "landing": [
+     476.25,
+     476.75
+    ]
+   }
+  },
+  {
+   "cs": 484,
+   "title": "B Gym to B",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     484.3,
+     485.9
+    ],
+    "aim": [
+     489.4,
+     490.05
+    ],
+    "throw": [
+     490.05,
+     490.55
+    ],
+    "landing": [
+     491.55,
+     492.05
+    ]
+   }
+  },
+  {
+   "cs": 503,
+   "title": "A Art to A Main",
+   "ability": "fragment",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     505.2,
+     506.4
+    ],
+    "aim": [
+     509.5,
+     510.4
+    ],
+    "throw": [
+     510.42,
+     510.92
+    ],
+    "landing": [
+     513.0,
+     513.6
+    ]
+   }
+  },
+  {
+   "cs": 517,
+   "title": "A Garden to A Main",
+   "ability": "fragment",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     521.5,
+     523.3
+    ],
+    "aim": [
+     523.4,
+     523.92
+    ],
+    "throw": [
+     523.83,
+     524.4
+    ],
+    "landing": [
+     526.9,
+     528.4
+    ]
+   }
+  },
+  {
+   "cs": 530,
+   "title": "B Link to B Main",
+   "ability": "fragment",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     531.0,
+     533.0
+    ],
+    "aim": [
+     534.15,
+     534.8
+    ],
+    "throw": [
+     534.7,
+     535.3
+    ],
+    "landing": [
+     542.4,
+     542.9
+    ]
+   }
+  }
+ ]
+}
