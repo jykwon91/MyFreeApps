@@ -1,0 +1,304 @@
+{
+ "video_id": "aWxjHR5GXRQ",
+ "map_slug": "split",
+ "author": "Quible",
+ "lineups": [
+  {
+   "cs": 5,
+   "title": "A Site - Attacker Molly (1 of 6 in source)",
+   "ability": "hot-hands",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     6.0,
+     8.0
+    ],
+    "aim": [
+     8.0,
+     8.4
+    ],
+    "throw": [
+     8.4,
+     8.9
+    ],
+    "landing": [
+     10.5,
+     11.5
+    ]
+   }
+  },
+  {
+   "cs": 23,
+   "title": "A Site - Attacker Molly (2 of 6 in source)",
+   "ability": "hot-hands",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     24.0,
+     26.0
+    ],
+    "aim": [
+     26.0,
+     26.4
+    ],
+    "throw": [
+     26.4,
+     26.9
+    ],
+    "landing": [
+     28.5,
+     29.5
+    ]
+   }
+  },
+  {
+   "cs": 40,
+   "title": "A Site - Attacker Molly (3 of 6 in source)",
+   "ability": "hot-hands",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     41.0,
+     43.0
+    ],
+    "aim": [
+     43.0,
+     43.4
+    ],
+    "throw": [
+     43.4,
+     43.9
+    ],
+    "landing": [
+     45.5,
+     46.5
+    ]
+   }
+  },
+  {
+   "cs": 55,
+   "title": "A Site - Attacker Molly (4 of 6 in source)",
+   "ability": "hot-hands",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     56.0,
+     58.0
+    ],
+    "aim": [
+     58.0,
+     58.4
+    ],
+    "throw": [
+     58.4,
+     58.9
+    ],
+    "landing": [
+     60.5,
+     61.5
+    ]
+   }
+  },
+  {
+   "cs": 77,
+   "title": "A Site - Attacker Molly (5 of 6 in source)",
+   "ability": "hot-hands",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     78.0,
+     80.0
+    ],
+    "aim": [
+     80.0,
+     80.4
+    ],
+    "throw": [
+     80.4,
+     80.9
+    ],
+    "landing": [
+     82.5,
+     83.5
+    ]
+   }
+  },
+  {
+   "cs": 95,
+   "title": "A Site - Attacker Molly (6 of 6 in source)",
+   "ability": "hot-hands",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     96.0,
+     98.0
+    ],
+    "aim": [
+     98.0,
+     98.4
+    ],
+    "throw": [
+     98.4,
+     98.9
+    ],
+    "landing": [
+     100.5,
+     101.5
+    ]
+   }
+  },
+  {
+   "cs": 110,
+   "title": "A Site - Defender Molly (1 of 4 in source)",
+   "ability": "hot-hands",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     111.0,
+     113.0
+    ],
+    "aim": [
+     113.0,
+     113.4
+    ],
+    "throw": [
+     113.4,
+     113.9
+    ],
+    "landing": [
+     115.5,
+     116.5
+    ]
+   }
+  },
+  {
+   "cs": 129,
+   "title": "A Site - Defender Molly (2 of 4 in source)",
+   "ability": "hot-hands",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     130.0,
+     132.0
+    ],
+    "aim": [
+     132.0,
+     132.4
+    ],
+    "throw": [
+     132.4,
+     132.9
+    ],
+    "landing": [
+     134.5,
+     135.5
+    ]
+   }
+  },
+  {
+   "cs": 146,
+   "title": "A Site - Defender Molly (3 of 4 in source)",
+   "ability": "hot-hands",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     147.0,
+     149.0
+    ],
+    "aim": [
+     149.0,
+     149.4
+    ],
+    "throw": [
+     149.4,
+     149.9
+    ],
+    "landing": [
+     151.5,
+     152.5
+    ]
+   }
+  },
+  {
+   "cs": 165,
+   "title": "A Site - Defender Molly (4 of 4 in source)",
+   "ability": "hot-hands",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     166.0,
+     168.0
+    ],
+    "aim": [
+     168.0,
+     168.4
+    ],
+    "throw": [
+     168.4,
+     168.9
+    ],
+    "landing": [
+     170.5,
+     171.5
+    ]
+   }
+  },
+  {
+   "cs": 181,
+   "title": "A Main - Defender Molly",
+   "ability": "hot-hands",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     182.0,
+     184.0
+    ],
+    "aim": [
+     184.0,
+     184.4
+    ],
+    "throw": [
+     184.4,
+     184.9
+    ],
+    "landing": [
+     186.5,
+     187.5
+    ]
+   }
+  }
+ ]
+}

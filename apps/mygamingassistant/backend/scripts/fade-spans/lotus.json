@@ -1,0 +1,817 @@
+{
+ "video_id": "Gb0RESvGUZw",
+ "map_slug": "lotus",
+ "author": "Tseeky - Pro Valorant Lineups",
+ "lineups": [
+  {
+   "cs": 7,
+   "title": "A Main God Reveal (Defender)",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     8.0,
+     10.0
+    ],
+    "aim": [
+     10.0,
+     10.4
+    ],
+    "throw": [
+     10.4,
+     10.9
+    ],
+    "landing": [
+     12.5,
+     13.5
+    ]
+   }
+  },
+  {
+   "cs": 27,
+   "title": "A Main God Reveal 2 From B Site",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     28.0,
+     30.0
+    ],
+    "aim": [
+     30.0,
+     30.4
+    ],
+    "throw": [
+     30.4,
+     30.9
+    ],
+    "landing": [
+     32.5,
+     33.5
+    ]
+   }
+  },
+  {
+   "cs": 45,
+   "title": "A Main 3 From Tree (Wallbang, 2 variations)",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     46.0,
+     48.0
+    ],
+    "aim": [
+     48.0,
+     48.4
+    ],
+    "throw": [
+     48.4,
+     48.9
+    ],
+    "landing": [
+     50.5,
+     51.5
+    ]
+   }
+  },
+  {
+   "cs": 82,
+   "title": "A Retake 1 From A Heaven",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     83.0,
+     85.0
+    ],
+    "aim": [
+     85.0,
+     85.4
+    ],
+    "throw": [
+     85.4,
+     85.9
+    ],
+    "landing": [
+     87.5,
+     88.5
+    ]
+   }
+  },
+  {
+   "cs": 102,
+   "title": "A Retake 2 From A Main (Tree Wallbang)",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     103.0,
+     105.0
+    ],
+    "aim": [
+     105.0,
+     105.4
+    ],
+    "throw": [
+     105.4,
+     105.9
+    ],
+    "landing": [
+     107.5,
+     108.5
+    ]
+   }
+  },
+  {
+   "cs": 120,
+   "title": "B Support/Retake",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "ct-spawn",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     121.0,
+     123.0
+    ],
+    "aim": [
+     123.0,
+     123.4
+    ],
+    "throw": [
+     123.4,
+     123.9
+    ],
+    "landing": [
+     125.5,
+     126.5
+    ]
+   }
+  },
+  {
+   "cs": 137,
+   "title": "C Early Info",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "c-site",
+   "stand": "c-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     138.0,
+     140.0
+    ],
+    "aim": [
+     140.0,
+     140.4
+    ],
+    "throw": [
+     140.4,
+     140.9
+    ],
+    "landing": [
+     142.5,
+     143.5
+    ]
+   }
+  },
+  {
+   "cs": 159,
+   "title": "C Main From B Site",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "c-main",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     160.0,
+     162.0
+    ],
+    "aim": [
+     162.0,
+     162.4
+    ],
+    "throw": [
+     162.4,
+     162.9
+    ],
+    "landing": [
+     164.5,
+     165.5
+    ]
+   }
+  },
+  {
+   "cs": 179,
+   "title": "C God Retake",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "c-site",
+   "stand": "c-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     180.0,
+     182.0
+    ],
+    "aim": [
+     182.0,
+     182.4
+    ],
+    "throw": [
+     182.4,
+     182.9
+    ],
+    "landing": [
+     184.5,
+     185.5
+    ]
+   }
+  },
+  {
+   "cs": 203,
+   "title": "A Main God Reveal (Attacker)",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     204.0,
+     206.0
+    ],
+    "aim": [
+     206.0,
+     206.4
+    ],
+    "throw": [
+     206.4,
+     206.9
+    ],
+    "landing": [
+     208.5,
+     209.5
+    ]
+   }
+  },
+  {
+   "cs": 224,
+   "title": "A Tree",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     225.0,
+     227.0
+    ],
+    "aim": [
+     227.0,
+     227.4
+    ],
+    "throw": [
+     227.4,
+     227.9
+    ],
+    "landing": [
+     229.5,
+     230.5
+    ]
+   }
+  },
+  {
+   "cs": 244,
+   "title": "A Site God Reveal From A Main",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     245.0,
+     247.0
+    ],
+    "aim": [
+     247.0,
+     247.4
+    ],
+    "throw": [
+     247.4,
+     247.9
+    ],
+    "landing": [
+     249.5,
+     250.5
+    ]
+   }
+  },
+  {
+   "cs": 266,
+   "title": "A Site 2 From A Tree",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     267.0,
+     269.0
+    ],
+    "aim": [
+     269.0,
+     269.4
+    ],
+    "throw": [
+     269.4,
+     269.9
+    ],
+    "landing": [
+     271.5,
+     272.5
+    ]
+   }
+  },
+  {
+   "cs": 283,
+   "title": "C Main God Reveal",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "c-main",
+   "stand": "c-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     284.0,
+     286.0
+    ],
+    "aim": [
+     286.0,
+     286.4
+    ],
+    "throw": [
+     286.4,
+     286.9
+    ],
+    "landing": [
+     288.5,
+     289.5
+    ]
+   }
+  },
+  {
+   "cs": 312,
+   "title": "C Main 2",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "c-main",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     313.0,
+     315.0
+    ],
+    "aim": [
+     315.0,
+     315.4
+    ],
+    "throw": [
+     315.4,
+     315.9
+    ],
+    "landing": [
+     317.5,
+     318.5
+    ]
+   }
+  },
+  {
+   "cs": 333,
+   "title": "C Site God Reveal (Risky, use prowler on the left side first)",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "c-site",
+   "stand": "c-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     334.0,
+     336.0
+    ],
+    "aim": [
+     336.0,
+     336.4
+    ],
+    "throw": [
+     336.4,
+     336.9
+    ],
+    "landing": [
+     338.5,
+     339.5
+    ]
+   }
+  },
+  {
+   "cs": 356,
+   "title": "C Site 2",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "c-site",
+   "stand": "c-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     357.0,
+     359.0
+    ],
+    "aim": [
+     359.0,
+     359.4
+    ],
+    "throw": [
+     359.4,
+     359.9
+    ],
+    "landing": [
+     361.5,
+     362.5
+    ]
+   }
+  },
+  {
+   "cs": 373,
+   "title": "A Main 4 From A Barrier",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     374.0,
+     376.0
+    ],
+    "aim": [
+     376.0,
+     376.4
+    ],
+    "throw": [
+     376.4,
+     376.9
+    ],
+    "landing": [
+     378.5,
+     379.5
+    ]
+   }
+  },
+  {
+   "cs": 394,
+   "title": "A Support 1 (B Rotate)",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "ct-spawn",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     395.0,
+     397.0
+    ],
+    "aim": [
+     397.0,
+     397.4
+    ],
+    "throw": [
+     397.4,
+     397.9
+    ],
+    "landing": [
+     399.5,
+     400.5
+    ]
+   }
+  },
+  {
+   "cs": 414,
+   "title": "A Support 2 (C Rotate)",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "ct-spawn",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     415.0,
+     417.0
+    ],
+    "aim": [
+     417.0,
+     417.4
+    ],
+    "throw": [
+     417.4,
+     417.9
+    ],
+    "landing": [
+     419.5,
+     420.5
+    ]
+   }
+  },
+  {
+   "cs": 433,
+   "title": "A Retake 3 From A Drop",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     434.0,
+     436.0
+    ],
+    "aim": [
+     436.0,
+     436.4
+    ],
+    "throw": [
+     436.4,
+     436.9
+    ],
+    "landing": [
+     438.5,
+     439.5
+    ]
+   }
+  },
+  {
+   "cs": 452,
+   "title": "B Retake From A Link",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     453.0,
+     455.0
+    ],
+    "aim": [
+     455.0,
+     455.4
+    ],
+    "throw": [
+     455.4,
+     455.9
+    ],
+    "landing": [
+     457.5,
+     458.5
+    ]
+   }
+  },
+  {
+   "cs": 471,
+   "title": "C Main 2 From Waterfall",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "c-main",
+   "stand": "c-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     472.0,
+     474.0
+    ],
+    "aim": [
+     474.0,
+     474.4
+    ],
+    "throw": [
+     474.4,
+     474.9
+    ],
+    "landing": [
+     476.5,
+     477.5
+    ]
+   }
+  },
+  {
+   "cs": 491,
+   "title": "C Retake 2",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "c-site",
+   "stand": "c-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     492.0,
+     494.0
+    ],
+    "aim": [
+     494.0,
+     494.4
+    ],
+    "throw": [
+     494.4,
+     494.9
+    ],
+    "landing": [
+     496.5,
+     497.5
+    ]
+   }
+  },
+  {
+   "cs": 512,
+   "title": "C Retake 3",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "c-site",
+   "stand": "c-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     513.0,
+     515.0
+    ],
+    "aim": [
+     515.0,
+     515.4
+    ],
+    "throw": [
+     515.4,
+     515.9
+    ],
+    "landing": [
+     517.5,
+     518.5
+    ]
+   }
+  },
+  {
+   "cs": 531,
+   "title": "A Main 2",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     532.0,
+     534.0
+    ],
+    "aim": [
+     534.0,
+     534.4
+    ],
+    "throw": [
+     534.4,
+     534.9
+    ],
+    "landing": [
+     536.5,
+     537.5
+    ]
+   }
+  },
+  {
+   "cs": 552,
+   "title": "A Main 3 (Also shows some of A site)",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     553.0,
+     555.0
+    ],
+    "aim": [
+     555.0,
+     555.4
+    ],
+    "throw": [
+     555.4,
+     555.9
+    ],
+    "landing": [
+     557.5,
+     558.5
+    ]
+   }
+  },
+  {
+   "cs": 571,
+   "title": "A Site 3 From A Tree (More risky, but shows more heaven and drop)",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     572.0,
+     574.0
+    ],
+    "aim": [
+     574.0,
+     574.4
+    ],
+    "throw": [
+     574.4,
+     574.9
+    ],
+    "landing": [
+     576.5,
+     577.5
+    ]
+   }
+  },
+  {
+   "cs": 592,
+   "title": "B Site Simple",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     593.0,
+     595.0
+    ],
+    "aim": [
+     595.0,
+     595.4
+    ],
+    "throw": [
+     595.4,
+     595.9
+    ],
+    "landing": [
+     597.5,
+     598.5
+    ]
+   }
+  },
+  {
+   "cs": 611,
+   "title": "C Site 3 Simple",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "c-site",
+   "stand": "c-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     612.0,
+     614.0
+    ],
+    "aim": [
+     614.0,
+     614.4
+    ],
+    "throw": [
+     614.4,
+     614.9
+    ],
+    "landing": [
+     616.5,
+     617.5
+    ]
+   }
+  }
+ ]
+}

@@ -1,0 +1,385 @@
+{
+ "video_id": "olWxwnYlKiI",
+ "map_slug": "breeze",
+ "author": "AiltonVG",
+ "lineups": [
+  {
+   "cs": 0,
+   "title": "Site A Attack - Lineup 1",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     1.0,
+     3.0
+    ],
+    "aim": [
+     3.0,
+     3.4
+    ],
+    "throw": [
+     3.4,
+     3.9
+    ],
+    "landing": [
+     5.5,
+     6.5
+    ]
+   }
+  },
+  {
+   "cs": 30,
+   "title": "Site A Attack - Lineup 2",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     31.0,
+     33.0
+    ],
+    "aim": [
+     33.0,
+     33.4
+    ],
+    "throw": [
+     33.4,
+     33.9
+    ],
+    "landing": [
+     35.5,
+     36.5
+    ]
+   }
+  },
+  {
+   "cs": 57,
+   "title": "Defense Site A - Lineup Main",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     58.0,
+     60.0
+    ],
+    "aim": [
+     60.0,
+     60.4
+    ],
+    "throw": [
+     60.4,
+     60.9
+    ],
+    "landing": [
+     62.5,
+     63.5
+    ]
+   }
+  },
+  {
+   "cs": 85,
+   "title": "Site A Defense – Capture Retake",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     86.0,
+     88.0
+    ],
+    "aim": [
+     88.0,
+     88.4
+    ],
+    "throw": [
+     88.4,
+     88.9
+    ],
+    "landing": [
+     90.5,
+     91.5
+    ]
+   }
+  },
+  {
+   "cs": 108,
+   "title": "Defense Site A - Lineup Retake",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     109.0,
+     111.0
+    ],
+    "aim": [
+     111.0,
+     111.4
+    ],
+    "throw": [
+     111.4,
+     111.9
+    ],
+    "landing": [
+     113.5,
+     114.5
+    ]
+   }
+  },
+  {
+   "cs": 133,
+   "title": "Defense Mid - Info mid",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     134.0,
+     136.0
+    ],
+    "aim": [
+     136.0,
+     136.4
+    ],
+    "throw": [
+     136.4,
+     136.9
+    ],
+    "landing": [
+     138.5,
+     139.5
+    ]
+   }
+  },
+  {
+   "cs": 160,
+   "title": "Mid Attack - Mid Info 1",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     161.0,
+     163.0
+    ],
+    "aim": [
+     163.0,
+     163.4
+    ],
+    "throw": [
+     163.4,
+     163.9
+    ],
+    "landing": [
+     165.5,
+     166.5
+    ]
+   }
+  },
+  {
+   "cs": 175,
+   "title": "Mid Attack - Mid Info 2",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     176.0,
+     178.0
+    ],
+    "aim": [
+     178.0,
+     178.4
+    ],
+    "throw": [
+     178.4,
+     178.9
+    ],
+    "landing": [
+     180.5,
+     181.5
+    ]
+   }
+  },
+  {
+   "cs": 205,
+   "title": "Site B Attack - Lineup 1",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     206.0,
+     208.0
+    ],
+    "aim": [
+     208.0,
+     208.4
+    ],
+    "throw": [
+     208.4,
+     208.9
+    ],
+    "landing": [
+     210.5,
+     211.5
+    ]
+   }
+  },
+  {
+   "cs": 222,
+   "title": "Site B Attack - Lineup 2",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     223.0,
+     225.0
+    ],
+    "aim": [
+     225.0,
+     225.4
+    ],
+    "throw": [
+     225.4,
+     225.9
+    ],
+    "landing": [
+     227.5,
+     228.5
+    ]
+   }
+  },
+  {
+   "cs": 242,
+   "title": "Site B Attack - Capture backsite",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     243.0,
+     245.0
+    ],
+    "aim": [
+     245.0,
+     245.4
+    ],
+    "throw": [
+     245.4,
+     245.9
+    ],
+    "landing": [
+     247.5,
+     248.5
+    ]
+   }
+  },
+  {
+   "cs": 255,
+   "title": "Defense Site B - Lineup main",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     256.0,
+     258.0
+    ],
+    "aim": [
+     258.0,
+     258.4
+    ],
+    "throw": [
+     258.4,
+     258.9
+    ],
+    "landing": [
+     260.5,
+     261.5
+    ]
+   }
+  },
+  {
+   "cs": 277,
+   "title": "Site B Defense – Capture Retake",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     278.0,
+     280.0
+    ],
+    "aim": [
+     280.0,
+     280.4
+    ],
+    "throw": [
+     280.4,
+     280.9
+    ],
+    "landing": [
+     282.5,
+     283.5
+    ]
+   }
+  },
+  {
+   "cs": 305,
+   "title": "Defense Site B - Lineup Retake site",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     306.0,
+     308.0
+    ],
+    "aim": [
+     308.0,
+     308.4
+    ],
+    "throw": [
+     308.4,
+     308.9
+    ],
+    "landing": [
+     310.5,
+     311.5
+    ]
+   }
+  }
+ ]
+}

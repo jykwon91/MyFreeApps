@@ -1,0 +1,278 @@
+{
+ "video_id": "NMGBevdEqDI",
+ "map_slug": "breeze",
+ "author": "HEHE XD",
+ "lineups": [
+  {
+   "cs": 9,
+   "title": "A default from A Lobby",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     19.6,
+     21.4
+    ],
+    "aim": [
+     24.9,
+     25.72
+    ],
+    "throw": [
+     25.68,
+     26.24
+    ],
+    "landing": [
+     31.34,
+     32.54
+    ]
+   }
+  },
+  {
+   "cs": 36,
+   "title": "A default from A Lobby",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     37.0,
+     38.8
+    ],
+    "aim": [
+     45.85,
+     46.95
+    ],
+    "throw": [
+     47.0,
+     47.28
+    ],
+    "landing": [
+     52.96,
+     54.16
+    ]
+   }
+  },
+  {
+   "cs": 58,
+   "title": "A default from A Lobby",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     60.9,
+     63.0
+    ],
+    "aim": [
+     69.2,
+     70.4
+    ],
+    "throw": [
+     70.3,
+     70.9
+    ],
+    "landing": [
+     77.58,
+     78.9
+    ]
+   }
+  },
+  {
+   "cs": 126,
+   "title": "A default from CT",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "ct-spawn",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     129.4,
+     131.4
+    ],
+    "aim": [
+     137.9,
+     138.92
+    ],
+    "throw": [
+     138.79,
+     139.44
+    ],
+    "landing": [
+     144.25,
+     145.55
+    ]
+   }
+  },
+  {
+   "cs": 149,
+   "title": "A center from A Lobby",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     161.9,
+     163.9
+    ],
+    "aim": [
+     168.2,
+     168.95
+    ],
+    "throw": [
+     168.95,
+     169.55
+    ],
+    "landing": [
+     174.76,
+     176.06
+    ]
+   }
+  },
+  {
+   "cs": 180,
+   "title": "A center from A Lobby",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     183.05,
+     184.05
+    ],
+    "aim": [
+     188.55,
+     189.45
+    ],
+    "throw": [
+     189.47,
+     190.07
+    ],
+    "landing": [
+     196.62,
+     197.82
+    ]
+   }
+  },
+  {
+   "cs": 201,
+   "title": "A center from A Lobby",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     201.85,
+     203.85
+    ],
+    "aim": [
+     210.2,
+     211.15
+    ],
+    "throw": [
+     211.05,
+     211.7
+    ],
+    "landing": [
+     216.85,
+     218.05
+    ]
+   }
+  },
+  {
+   "cs": 244,
+   "title": "A center from CT",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "ct-spawn",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     248.1,
+     249.55
+    ],
+    "aim": [
+     255.3,
+     256.35
+    ],
+    "throw": [
+     256.4,
+     257.0
+    ],
+    "landing": [
+     263.3,
+     264.5
+    ]
+   }
+  },
+  {
+   "cs": 367,
+   "title": "B default from Mid Top",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     369.85,
+     370.32
+    ],
+    "aim": [
+     377.25,
+     378.1
+    ],
+    "throw": [
+     378.1,
+     378.7
+    ],
+    "landing": [
+     383.75,
+     384.95
+    ]
+   }
+  },
+  {
+   "cs": 388,
+   "title": "B default from CT",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "ct-spawn",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     392.3,
+     394.6
+    ],
+    "aim": [
+     400.25,
+     401.35
+    ],
+    "throw": [
+     401.28,
+     401.88
+    ],
+    "landing": [
+     408.2,
+     409.5
+    ]
+   }
+  }
+ ],
+ "note": "brimstone BREEZE lineups from NMGBevdEqDI; 17 gate-passed, 0 dropped as un-gated. ability from localizer (author unlabelled). SIDE is measured, not labelled: this source carries no side cue, so each row's side comes from the shipped corpus - stand callout 'A Lobby': unanimous side_a 24/24 across 11 sources; stand callout 'Mid Top': unanimous side_a 5/5 across 4 sources; stand zone ct-spawn: unanimous side_b 48/48 across 17 sources (pooled, all maps). 7 further gate-passed rows (Mid Bottom/Mid Pillar x3/Mid Cannon/B Window/B Main) had NO measurable side evidence and are parked in _breeze.side-deferred.json rather than guessed."
+}
