@@ -1,0 +1,305 @@
+{
+ "video_id": "qXlyMGB0noM",
+ "map_slug": "summit",
+ "author": "nic.vallabh",
+ "note": "Phoenix Summit lineups (n); ability provisional, set by localizer at reconcile.",
+ "lineups": [
+  {
+   "cs": 5,
+   "title": "A Main to A Site (Plant 1)",
+   "ability": "hot-hands",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     6.0,
+     8.0
+    ],
+    "aim": [
+     8.0,
+     8.4
+    ],
+    "throw": [
+     8.4,
+     8.9
+    ],
+    "landing": [
+     10.5,
+     11.5
+    ]
+   }
+  },
+  {
+   "cs": 35,
+   "title": "A Main to A Site Green Box (Plant 2)",
+   "ability": "hot-hands",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     36.0,
+     38.0
+    ],
+    "aim": [
+     38.0,
+     38.4
+    ],
+    "throw": [
+     38.4,
+     38.9
+    ],
+    "landing": [
+     40.5,
+     41.5
+    ]
+   }
+  },
+  {
+   "cs": 65,
+   "title": "A Main to A Site (Plant 3)",
+   "ability": "hot-hands",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     66.0,
+     68.0
+    ],
+    "aim": [
+     68.0,
+     68.4
+    ],
+    "throw": [
+     68.4,
+     68.9
+    ],
+    "landing": [
+     70.5,
+     71.5
+    ]
+   }
+  },
+  {
+   "cs": 93,
+   "title": "A Main to A Garden Green Box",
+   "ability": "hot-hands",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     94.0,
+     96.0
+    ],
+    "aim": [
+     96.0,
+     96.4
+    ],
+    "throw": [
+     96.4,
+     96.9
+    ],
+    "landing": [
+     98.5,
+     99.5
+    ]
+   }
+  },
+  {
+   "cs": 121,
+   "title": "A Garden to A Main",
+   "ability": "hot-hands",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     122.0,
+     124.0
+    ],
+    "aim": [
+     124.0,
+     124.4
+    ],
+    "throw": [
+     124.4,
+     124.9
+    ],
+    "landing": [
+     126.5,
+     127.5
+    ]
+   }
+  },
+  {
+   "cs": 145,
+   "title": "A Site to A Main",
+   "ability": "hot-hands",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     146.0,
+     148.0
+    ],
+    "aim": [
+     148.0,
+     148.4
+    ],
+    "throw": [
+     148.4,
+     148.9
+    ],
+    "landing": [
+     150.5,
+     151.5
+    ]
+   }
+  },
+  {
+   "cs": 168,
+   "title": "A Cave to A Garden Green Box",
+   "ability": "hot-hands",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     169.0,
+     171.0
+    ],
+    "aim": [
+     171.0,
+     171.4
+    ],
+    "throw": [
+     171.4,
+     171.9
+    ],
+    "landing": [
+     173.5,
+     174.5
+    ]
+   }
+  },
+  {
+   "cs": 195,
+   "title": "A Art to A Garden Green Box",
+   "ability": "hot-hands",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     196.0,
+     198.0
+    ],
+    "aim": [
+     198.0,
+     198.4
+    ],
+    "throw": [
+     198.4,
+     198.9
+    ],
+    "landing": [
+     200.5,
+     201.5
+    ]
+   }
+  },
+  {
+   "cs": 220,
+   "title": "B Site to B Main Rush",
+   "ability": "hot-hands",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     221.0,
+     223.0
+    ],
+    "aim": [
+     223.0,
+     223.4
+    ],
+    "throw": [
+     223.4,
+     223.9
+    ],
+    "landing": [
+     225.5,
+     226.5
+    ]
+   }
+  },
+  {
+   "cs": 245,
+   "title": "B Main to B site Boxes (Plant 1)",
+   "ability": "hot-hands",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     246.0,
+     248.0
+    ],
+    "aim": [
+     248.0,
+     248.4
+    ],
+    "throw": [
+     248.4,
+     248.9
+    ],
+    "landing": [
+     250.5,
+     251.5
+    ]
+   }
+  },
+  {
+   "cs": 273,
+   "title": "B Main to B site (Plant 2)",
+   "ability": "hot-hands",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     274.0,
+     276.0
+    ],
+    "aim": [
+     276.0,
+     276.4
+    ],
+    "throw": [
+     276.4,
+     276.9
+    ],
+    "landing": [
+     278.5,
+     279.5
+    ]
+   }
+  }
+ ]
+}

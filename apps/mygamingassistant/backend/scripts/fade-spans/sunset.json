@@ -1,0 +1,548 @@
+{
+ "video_id": "RFVkhxHJZOw",
+ "map_slug": "sunset",
+ "author": "Tseeky - Pro Valorant Lineups",
+ "lineups": [
+  {
+   "cs": 65,
+   "title": "A Main/Elbow",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     69.5,
+     71.0
+    ],
+    "aim": [
+     76.0,
+     76.9
+    ],
+    "throw": [
+     77.05,
+     77.65
+    ],
+    "landing": [
+     79.5,
+     80.4
+    ]
+   }
+  },
+  {
+   "cs": 86,
+   "title": "A Site 1",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     90.1,
+     91.9
+    ],
+    "aim": [
+     96.3,
+     96.9
+    ],
+    "throw": [
+     96.9,
+     97.4
+    ],
+    "landing": [
+     99.8,
+     100.6
+    ]
+   }
+  },
+  {
+   "cs": 106,
+   "title": "A Site 2",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     114.6,
+     116.6
+    ],
+    "aim": [
+     117.5,
+     117.85
+    ],
+    "throw": [
+     117.85,
+     118.45
+    ],
+    "landing": [
+     120.55,
+     121.35
+    ]
+   }
+  },
+  {
+   "cs": 128,
+   "title": "A Site 3",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     133.0,
+     135.3
+    ],
+    "aim": [
+     140.65,
+     141.35
+    ],
+    "throw": [
+     141.2,
+     141.75
+    ],
+    "landing": [
+     143.35,
+     144.6
+    ]
+   }
+  },
+  {
+   "cs": 151,
+   "title": "A Site 4",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     155.3,
+     157.0
+    ],
+    "aim": [
+     161.3,
+     161.9
+    ],
+    "throw": [
+     163.05,
+     163.65
+    ],
+    "landing": [
+     165.9,
+     167.4
+    ]
+   }
+  },
+  {
+   "cs": 171,
+   "title": "Top Mid/A Link",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     176.0,
+     178.0
+    ],
+    "aim": [
+     182.0,
+     182.98
+    ],
+    "throw": [
+     182.9,
+     183.5
+    ],
+    "landing": [
+     184.9,
+     186.0
+    ]
+   }
+  },
+  {
+   "cs": 192,
+   "title": "B Main",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     197.9,
+     199.3
+    ],
+    "aim": [
+     203.6,
+     204.4
+    ],
+    "throw": [
+     204.4,
+     204.95
+    ],
+    "landing": [
+     206.6,
+     207.5
+    ]
+   }
+  },
+  {
+   "cs": 212,
+   "title": "B Site 1",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "market",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     216.7,
+     218.7
+    ],
+    "aim": [
+     224.3,
+     225.42
+    ],
+    "throw": [
+     225.42,
+     225.9
+    ],
+    "landing": [
+     227.15,
+     228.35
+    ]
+   }
+  },
+  {
+   "cs": 235,
+   "title": "B Site 2",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "market",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     239.5,
+     240.8
+    ],
+    "aim": [
+     246.0,
+     246.9
+    ],
+    "throw": [
+     246.7,
+     247.3
+    ],
+    "landing": [
+     249.2,
+     250.4
+    ]
+   }
+  },
+  {
+   "cs": 256,
+   "title": "B Site 3",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     261.0,
+     263.0
+    ],
+    "aim": [
+     264.5,
+     265.35
+    ],
+    "throw": [
+     265.3,
+     265.9
+    ],
+    "landing": [
+     267.5,
+     268.9
+    ]
+   }
+  },
+  {
+   "cs": 274,
+   "title": "Middle 1",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     278.5,
+     280.5
+    ],
+    "aim": [
+     282.8,
+     283.6
+    ],
+    "throw": [
+     285.2,
+     285.7
+    ],
+    "landing": [
+     285.8,
+     287.3
+    ]
+   }
+  },
+  {
+   "cs": 293,
+   "title": "Middle 2",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     297.7,
+     299.9
+    ],
+    "aim": [
+     302.4,
+     303.4
+    ],
+    "throw": [
+     304.6,
+     305.2
+    ],
+    "landing": [
+     306.6,
+     307.8
+    ]
+   }
+  },
+  {
+   "cs": 313,
+   "title": "Middle 3",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "market",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     319.0,
+     320.9
+    ],
+    "aim": [
+     322.05,
+     322.83
+    ],
+    "throw": [
+     322.83,
+     323.45
+    ],
+    "landing": [
+     324.4,
+     326.3
+    ]
+   }
+  },
+  {
+   "cs": 352,
+   "title": "A Info 2",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     357.0,
+     358.6
+    ],
+    "aim": [
+     362.5,
+     363.05
+    ],
+    "throw": [
+     363.1,
+     363.65
+    ],
+    "landing": [
+     364.3,
+     365.3
+    ]
+   }
+  },
+  {
+   "cs": 372,
+   "title": "A Info 3",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     377.0,
+     379.5
+    ],
+    "aim": [
+     383.6,
+     384.55
+    ],
+    "throw": [
+     384.55,
+     385.05
+    ],
+    "landing": [
+     386.15,
+     387.6
+    ]
+   }
+  },
+  {
+   "cs": 393,
+   "title": "A/Mid Info",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     397.8,
+     399.6
+    ],
+    "aim": [
+     403.3,
+     404.4
+    ],
+    "throw": [
+     405.8,
+     406.4
+    ],
+    "landing": [
+     408.2,
+     408.95
+    ]
+   }
+  },
+  {
+   "cs": 478,
+   "title": "A Support 2",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     483.2,
+     485.2
+    ],
+    "aim": [
+     487.9,
+     488.55
+    ],
+    "throw": [
+     488.35,
+     488.95
+    ],
+    "landing": [
+     490.3,
+     491.7
+    ]
+   }
+  },
+  {
+   "cs": 498,
+   "title": "B Retake 1",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     502.5,
+     504.5
+    ],
+    "aim": [
+     506.9,
+     507.55
+    ],
+    "throw": [
+     507.4,
+     508.0
+    ],
+    "landing": [
+     509.3,
+     510.7
+    ]
+   }
+  },
+  {
+   "cs": 516,
+   "title": "B Retake 2",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     521.6,
+     522.6
+    ],
+    "aim": [
+     524.3,
+     524.65
+    ],
+    "throw": [
+     524.65,
+     525.15
+    ],
+    "landing": [
+     527.0,
+     527.55
+    ]
+   }
+  },
+  {
+   "cs": 533,
+   "title": "B Support",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     539.1,
+     539.7
+    ],
+    "aim": [
+     540.8,
+     541.8
+    ],
+    "throw": [
+     543.1,
+     543.7
+    ],
+    "landing": [
+     545.8,
+     547.0
+    ]
+   }
+  }
+ ],
+ "note": "fade Summit lineups from RFVkhxHJZOw; 20 gate-passed, 7 dropped as un-gated."
+}

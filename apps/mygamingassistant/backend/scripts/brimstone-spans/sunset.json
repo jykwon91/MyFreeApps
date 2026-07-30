@@ -1,0 +1,683 @@
+{
+ "video_id": "Q8gvPdspKQE",
+ "map_slug": "sunset",
+ "author": "Tseeky - Pro Valorant Lineups",
+ "lineups": [
+  {
+   "cs": 7,
+   "title": "A Default 1 From Lobby Fast",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     12.0,
+     13.8
+    ],
+    "aim": [
+     15.0,
+     16.35
+    ],
+    "throw": [
+     16.32,
+     16.87
+    ],
+    "landing": [
+     20.05,
+     21.05
+    ]
+   }
+  },
+  {
+   "cs": 24,
+   "title": "A Default 2 From Lobby",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     24.3,
+     25.8
+    ],
+    "aim": [
+     32.5,
+     33.4
+    ],
+    "throw": [
+     33.35,
+     33.85
+    ],
+    "landing": [
+     40.25,
+     41.45
+    ]
+   }
+  },
+  {
+   "cs": 44,
+   "title": "A Default 3 From Lobby (Safe and pretty fast)",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     44.5,
+     47.0
+    ],
+    "aim": [
+     53.2,
+     53.87
+    ],
+    "throw": [
+     53.75,
+     54.35
+    ],
+    "landing": [
+     58.15,
+     59.7
+    ]
+   }
+  },
+  {
+   "cs": 62,
+   "title": "A Default 4 From Elbow",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     62.5,
+     63.6
+    ],
+    "aim": [
+     69.9,
+     70.83
+    ],
+    "throw": [
+     70.83,
+     71.33
+    ],
+    "landing": [
+     78.5,
+     79.6
+    ]
+   }
+  },
+  {
+   "cs": 82,
+   "title": "A Default 5 From Mid",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     88.0,
+     90.0
+    ],
+    "aim": [
+     91.05,
+     91.45
+    ],
+    "throw": [
+     91.4,
+     91.95
+    ],
+    "landing": [
+     94.9,
+     97.0
+    ]
+   }
+  },
+  {
+   "cs": 102,
+   "title": "A Default 6 From Top Mid",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     106.0,
+     108.8
+    ],
+    "aim": [
+     114.5,
+     114.8
+    ],
+    "throw": [
+     114.8,
+     115.3
+    ],
+    "landing": [
+     118.4,
+     119.9
+    ]
+   }
+  },
+  {
+   "cs": 124,
+   "title": "A Default 7 From A Link",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     127.0,
+     128.5
+    ],
+    "aim": [
+     132.9,
+     133.8
+    ],
+    "throw": [
+     133.7,
+     134.3
+    ],
+    "landing": [
+     135.5,
+     136.3
+    ]
+   }
+  },
+  {
+   "cs": 141,
+   "title": "A Box Corner 1 From Lobby",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     144.4,
+     146.3
+    ],
+    "aim": [
+     147.6,
+     148.45
+    ],
+    "throw": [
+     148.43,
+     148.9
+    ],
+    "landing": [
+     151.83,
+     152.05
+    ]
+   }
+  },
+  {
+   "cs": 156,
+   "title": "A Box Corner 2 From Elbow",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     159.5,
+     162.0
+    ],
+    "aim": [
+     164.3,
+     165.35
+    ],
+    "throw": [
+     165.35,
+     165.85
+    ],
+    "landing": [
+     168.35,
+     169.5
+    ]
+   }
+  },
+  {
+   "cs": 172,
+   "title": "A Box Corner 3 From Main",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     172.6,
+     175.3
+    ],
+    "aim": [
+     177.9,
+     179.35
+    ],
+    "throw": [
+     179.35,
+     179.85
+    ],
+    "landing": [
+     183.6,
+     184.6
+    ]
+   }
+  },
+  {
+   "cs": 187,
+   "title": "A Close 1 From Lobby",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     191.4,
+     193.4
+    ],
+    "aim": [
+     199.0,
+     199.4
+    ],
+    "throw": [
+     199.35,
+     199.85
+    ],
+    "landing": [
+     203.93,
+     205.3
+    ]
+   }
+  },
+  {
+   "cs": 208,
+   "title": "A Close 2 From Elbow",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     208.0,
+     210.5
+    ],
+    "aim": [
+     215.0,
+     215.9
+    ],
+    "throw": [
+     215.85,
+     216.45
+    ],
+    "landing": [
+     220.0,
+     221.4
+    ]
+   }
+  },
+  {
+   "cs": 243,
+   "title": "B Default 2 From Middle",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     243.5,
+     246.5
+    ],
+    "aim": [
+     255.15,
+     255.55
+    ],
+    "throw": [
+     255.5,
+     256.0
+    ],
+    "landing": [
+     264.0,
+     265.5
+    ]
+   }
+  },
+  {
+   "cs": 290,
+   "title": "B Default 4 Simple From Main",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     294.0,
+     295.0
+    ],
+    "aim": [
+     297.0,
+     297.7
+    ],
+    "throw": [
+     297.65,
+     298.15
+    ],
+    "landing": [
+     300.0,
+     301.3
+    ]
+   }
+  },
+  {
+   "cs": 304,
+   "title": "B Stairs From Lobby",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     306.2,
+     306.6
+    ],
+    "aim": [
+     314.65,
+     314.97
+    ],
+    "throw": [
+     314.9,
+     315.5
+    ],
+    "landing": [
+     320.8,
+     321.6
+    ]
+   }
+  },
+  {
+   "cs": 345,
+   "title": "B Best Plant 2 From Bottom Mid",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     345.5,
+     347.5
+    ],
+    "aim": [
+     354.95,
+     355.48
+    ],
+    "throw": [
+     355.45,
+     355.95
+    ],
+    "landing": [
+     361.18,
+     362.35
+    ]
+   }
+  },
+  {
+   "cs": 365,
+   "title": "B Boxes 1 From Market Fast",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "market",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     369.0,
+     371.8
+    ],
+    "aim": [
+     372.75,
+     373.05
+    ],
+    "throw": [
+     373.05,
+     373.55
+    ],
+    "landing": [
+     375.35,
+     376.85
+    ]
+   }
+  },
+  {
+   "cs": 398,
+   "title": "B Boxes 3 From Middle",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     399.7,
+     401.5
+    ],
+    "aim": [
+     409.7,
+     410.45
+    ],
+    "throw": [
+     410.45,
+     410.95
+    ],
+    "landing": [
+     417.3,
+     418.3
+    ]
+   }
+  },
+  {
+   "cs": 421,
+   "title": "B Boxes 4 From Boba (Do 1 step backwards)",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     421.5,
+     424.3
+    ],
+    "aim": [
+     432.95,
+     433.55
+    ],
+    "throw": [
+     433.5,
+     434.0
+    ],
+    "landing": [
+     441.28,
+     442.78
+    ]
+   }
+  },
+  {
+   "cs": 445,
+   "title": "A Execute Molly (Can be used as a post plant lineup too)",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     450.3,
+     451.6
+    ],
+    "aim": [
+     459.9,
+     460.5
+    ],
+    "throw": [
+     460.5,
+     461.0
+    ],
+    "landing": [
+     468.9,
+     471.6
+    ]
+   }
+  },
+  {
+   "cs": 473,
+   "title": "B Execute Molly",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     473.0,
+     475.0
+    ],
+    "aim": [
+     479.0,
+     480.05
+    ],
+    "throw": [
+     480.0,
+     480.5
+    ],
+    "landing": [
+     482.6,
+     483.8
+    ]
+   }
+  },
+  {
+   "cs": 486,
+   "title": "A Retake Molly",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     487.0,
+     489.5
+    ],
+    "aim": [
+     494.7,
+     495.35
+    ],
+    "throw": [
+     495.3,
+     495.9
+    ],
+    "landing": [
+     498.6,
+     499.6
+    ]
+   }
+  },
+  {
+   "cs": 502,
+   "title": "A Anti Plant 1 From A Link",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     502.85,
+     503.6
+    ],
+    "aim": [
+     510.15,
+     510.9
+    ],
+    "throw": [
+     510.9,
+     511.5
+    ],
+    "landing": [
+     513.9,
+     515.4
+    ]
+   }
+  },
+  {
+   "cs": 531,
+   "title": "B Anti Plant 1 From Boba",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     531.5,
+     533.5
+    ],
+    "aim": [
+     536.85,
+     537.35
+    ],
+    "throw": [
+     537.3,
+     537.8
+    ],
+    "landing": [
+     540.15,
+     540.9
+    ]
+   }
+  },
+  {
+   "cs": 556,
+   "title": "B Anti Plant 3 From Market Stairs",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "market",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     556.0,
+     558.5
+    ],
+    "aim": [
+     560.35,
+     561.03
+    ],
+    "throw": [
+     562.4,
+     562.9
+    ],
+    "landing": [
+     564.0,
+     565.4
+    ]
+   }
+  }
+ ],
+ "note": "brimstone Summit lineups from Q8gvPdspKQE; 25 gate-passed, 6 dropped as un-gated. ability from localizer (author unlabelled)."
+}

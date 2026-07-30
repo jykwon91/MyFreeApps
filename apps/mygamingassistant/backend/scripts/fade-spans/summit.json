@@ -1,0 +1,1007 @@
+{
+ "video_id": "zwwwAiHOpu4",
+ "map_slug": "summit",
+ "author": "Tseeky",
+ "note": "fade Summit lineups from zwwwAiHOpu4; 37 gate-passed, 1 dropped as un-gated. ability from localizer (author unlabelled).",
+ "lineups": [
+  {
+   "cs": 0,
+   "title": "ATT A Main 1",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     0.6,
+     3.2
+    ],
+    "aim": [
+     7.2,
+     7.82
+    ],
+    "throw": [
+     7.82,
+     8.32
+    ],
+    "landing": [
+     10.7,
+     11.9
+    ]
+   }
+  },
+  {
+   "cs": 16,
+   "title": "ATT A Main 2",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     16.6,
+     19.6
+    ],
+    "aim": [
+     24.5,
+     25.55
+    ],
+    "throw": [
+     25.55,
+     26.0
+    ],
+    "landing": [
+     27.9,
+     29.3
+    ]
+   }
+  },
+  {
+   "cs": 35,
+   "title": "ATT A Site Best",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     36.5,
+     38.5
+    ],
+    "aim": [
+     43.0,
+     43.53
+    ],
+    "throw": [
+     43.4,
+     43.9
+    ],
+    "landing": [
+     45.58,
+     46.6
+    ]
+   }
+  },
+  {
+   "cs": 54,
+   "title": "ATT A Site 2 (Use if A Main is smoked off)",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     54.7,
+     56.3
+    ],
+    "aim": [
+     60.5,
+     61.1
+    ],
+    "throw": [
+     61.1,
+     61.7
+    ],
+    "landing": [
+     63.7,
+     65.0
+    ]
+   }
+  },
+  {
+   "cs": 70,
+   "title": "ATT A Site 3 Simple",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     70.5,
+     72.5
+    ],
+    "aim": [
+     76.1,
+     76.75
+    ],
+    "throw": [
+     76.95,
+     77.55
+    ],
+    "landing": [
+     79.65,
+     80.9
+    ]
+   }
+  },
+  {
+   "cs": 86,
+   "title": "ATT A Garden 1 High",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     86.7,
+     89.4
+    ],
+    "aim": [
+     90.9,
+     91.4
+    ],
+    "throw": [
+     91.4,
+     91.95
+    ],
+    "landing": [
+     93.05,
+     94.2
+    ]
+   }
+  },
+  {
+   "cs": 102,
+   "title": "ATT A Garden 2 From Mid",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     106.6,
+     106.9
+    ],
+    "aim": [
+     112.0,
+     112.8
+    ],
+    "throw": [
+     112.65,
+     113.25
+    ],
+    "landing": [
+     115.0,
+     115.9
+    ]
+   }
+  },
+  {
+   "cs": 122,
+   "title": "ATT A Garden 3 Simple",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     122.0,
+     124.6
+    ],
+    "aim": [
+     128.9,
+     129.65
+    ],
+    "throw": [
+     129.65,
+     130.15
+    ],
+    "landing": [
+     131.6,
+     132.9
+    ]
+   }
+  },
+  {
+   "cs": 139,
+   "title": "ATT B Site Best",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     140.0,
+     141.9
+    ],
+    "aim": [
+     144.8,
+     145.4
+    ],
+    "throw": [
+     145.4,
+     146.0
+    ],
+    "landing": [
+     147.9,
+     149.1
+    ]
+   }
+  },
+  {
+   "cs": 156,
+   "title": "ATT B Site Best 2 (Use if B Main is smoked off)",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     156.5,
+     158.8
+    ],
+    "aim": [
+     163.6,
+     164.2
+    ],
+    "throw": [
+     164.05,
+     164.65
+    ],
+    "landing": [
+     166.25,
+     167.4
+    ]
+   }
+  },
+  {
+   "cs": 175,
+   "title": "ATT B Site Best 3 From Bottom Mid",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     176.0,
+     178.5
+    ],
+    "aim": [
+     182.35,
+     182.95
+    ],
+    "throw": [
+     182.9,
+     183.4
+    ],
+    "landing": [
+     185.4,
+     186.4
+    ]
+   }
+  },
+  {
+   "cs": 192,
+   "title": "ATT B Site High",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     192.7,
+     194.3
+    ],
+    "aim": [
+     200.15,
+     201.15
+    ],
+    "throw": [
+     201.15,
+     201.75
+    ],
+    "landing": [
+     203.7,
+     204.4
+    ]
+   }
+  },
+  {
+   "cs": 210,
+   "title": "ATT B Site Split",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     210.2,
+     211.9
+    ],
+    "aim": [
+     217.6,
+     218.35
+    ],
+    "throw": [
+     218.35,
+     218.95
+    ],
+    "landing": [
+     220.85,
+     222.35
+    ]
+   }
+  },
+  {
+   "cs": 227,
+   "title": "ATT B Site Simple",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     227.5,
+     229.4
+    ],
+    "aim": [
+     231.5,
+     232.1
+    ],
+    "throw": [
+     232.1,
+     232.7
+    ],
+    "landing": [
+     236.0,
+     236.9
+    ]
+   }
+  },
+  {
+   "cs": 242,
+   "title": "ATT B Site Post Plant",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     242.0,
+     244.0
+    ],
+    "aim": [
+     247.8,
+     248.4
+    ],
+    "throw": [
+     248.3,
+     248.9
+    ],
+    "landing": [
+     250.1,
+     250.9
+    ]
+   }
+  },
+  {
+   "cs": 256,
+   "title": "ATT Middle Best From Tiles (Barrier)",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     256.5,
+     258.6
+    ],
+    "aim": [
+     263.9,
+     264.85
+    ],
+    "throw": [
+     264.85,
+     265.35
+    ],
+    "landing": [
+     267.3,
+     268.5
+    ]
+   }
+  },
+  {
+   "cs": 275,
+   "title": "ATT Middle Best 2 From A Lobby",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     279.5,
+     281.5
+    ],
+    "aim": [
+     283.6,
+     284.15
+    ],
+    "throw": [
+     284.15,
+     284.75
+    ],
+    "landing": [
+     286.05,
+     287.05
+    ]
+   }
+  },
+  {
+   "cs": 293,
+   "title": "ATT Middle Bottom From Tiles",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     293.5,
+     295.8
+    ],
+    "aim": [
+     299.85,
+     300.45
+    ],
+    "throw": [
+     300.35,
+     300.9
+    ],
+    "landing": [
+     303.0,
+     304.3
+    ]
+   }
+  },
+  {
+   "cs": 309,
+   "title": "DEF A Lobby 1 (Barrier)",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     313.6,
+     315.0
+    ],
+    "aim": [
+     315.95,
+     316.95
+    ],
+    "throw": [
+     316.9,
+     317.45
+    ],
+    "landing": [
+     319.2,
+     319.7
+    ]
+   }
+  },
+  {
+   "cs": 324,
+   "title": "DEF A Lobby 2 (Barrier)",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     325.0,
+     327.5
+    ],
+    "aim": [
+     334.2,
+     335.2
+    ],
+    "throw": [
+     335.15,
+     335.65
+    ],
+    "landing": [
+     337.85,
+     338.6
+    ]
+   }
+  },
+  {
+   "cs": 344,
+   "title": "DEF A Main Fast",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     344.5,
+     347.5
+    ],
+    "aim": [
+     350.0,
+     350.9
+    ],
+    "throw": [
+     352.1,
+     352.6
+    ],
+    "landing": [
+     353.4,
+     354.6
+    ]
+   }
+  },
+  {
+   "cs": 359,
+   "title": "DEF A Main/Site (Use when enemies are pushing out of A Main)",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     361.0,
+     362.2
+    ],
+    "aim": [
+     364.5,
+     364.8
+    ],
+    "throw": [
+     364.72,
+     365.22
+    ],
+    "landing": [
+     367.35,
+     368.6
+    ]
+   }
+  },
+  {
+   "cs": 373,
+   "title": "DEF A Main/Site 2",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     373.3,
+     375.7
+    ],
+    "aim": [
+     379.5,
+     380.15
+    ],
+    "throw": [
+     380.05,
+     380.65
+    ],
+    "landing": [
+     382.5,
+     383.4
+    ]
+   }
+  },
+  {
+   "cs": 388,
+   "title": "DEF A Retake 1",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     389.5,
+     391.8
+    ],
+    "aim": [
+     393.2,
+     393.97
+    ],
+    "throw": [
+     393.95,
+     394.55
+    ],
+    "landing": [
+     396.25,
+     397.55
+    ]
+   }
+  },
+  {
+   "cs": 404,
+   "title": "DEF A Retake 2",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     407.55,
+     408.05
+    ],
+    "aim": [
+     409.0,
+     409.4
+    ],
+    "throw": [
+     409.83,
+     410.33
+    ],
+    "landing": [
+     412.3,
+     413.55
+    ]
+   }
+  },
+  {
+   "cs": 419,
+   "title": "DEF A Retake 3",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     420.5,
+     422.8
+    ],
+    "aim": [
+     423.9,
+     424.5
+    ],
+    "throw": [
+     424.5,
+     425.0
+    ],
+    "landing": [
+     426.9,
+     427.9
+    ]
+   }
+  },
+  {
+   "cs": 433,
+   "title": "DEF B Main 1",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "b-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     433.7,
+     434.7
+    ],
+    "aim": [
+     438.6,
+     439.9
+    ],
+    "throw": [
+     439.78,
+     440.28
+    ],
+    "landing": [
+     442.3,
+     443.3
+    ]
+   }
+  },
+  {
+   "cs": 448,
+   "title": "DEF B Main 2",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "b-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     448.3,
+     448.95
+    ],
+    "aim": [
+     452.9,
+     453.65
+    ],
+    "throw": [
+     454.85,
+     455.45
+    ],
+    "landing": [
+     456.5,
+     457.3
+    ]
+   }
+  },
+  {
+   "cs": 463,
+   "title": "DEF B Site/Main (Use when enemies are pushing out of B Main)",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     465.5,
+     468.3
+    ],
+    "aim": [
+     469.15,
+     469.85
+    ],
+    "throw": [
+     469.85,
+     470.45
+    ],
+    "landing": [
+     472.5,
+     473.7
+    ]
+   }
+  },
+  {
+   "cs": 479,
+   "title": "DEF B Retake Simple & Best",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     479.6,
+     482.4
+    ],
+    "aim": [
+     484.85,
+     485.19
+    ],
+    "throw": [
+     485.05,
+     485.65
+    ],
+    "landing": [
+     487.6,
+     488.6
+    ]
+   }
+  },
+  {
+   "cs": 512,
+   "title": "DEF B Retake 3 High",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     512.5,
+     515.0
+    ],
+    "aim": [
+     520.0,
+     520.65
+    ],
+    "throw": [
+     520.55,
+     521.05
+    ],
+    "landing": [
+     522.95,
+     523.5
+    ]
+   }
+  },
+  {
+   "cs": 528,
+   "title": "DEF B Retake 4 Drop",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     533.0,
+     534.7
+    ],
+    "aim": [
+     536.0,
+     536.65
+    ],
+    "throw": [
+     536.65,
+     537.15
+    ],
+    "landing": [
+     538.1,
+     539.1
+    ]
+   }
+  },
+  {
+   "cs": 546,
+   "title": "DEF Middle Best 1 From Bottom Mid",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     546.0,
+     548.0
+    ],
+    "aim": [
+     552.5,
+     553.15
+    ],
+    "throw": [
+     553.15,
+     553.65
+    ],
+    "landing": [
+     555.6,
+     556.6
+    ]
+   }
+  },
+  {
+   "cs": 562,
+   "title": "DEF Middle Best 2 From A Link",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     565.0,
+     567.5
+    ],
+    "aim": [
+     569.7,
+     570.6
+    ],
+    "throw": [
+     570.7,
+     571.3
+    ],
+    "landing": [
+     573.1,
+     574.1
+    ]
+   }
+  },
+  {
+   "cs": 581,
+   "title": "DEF Middle 3 From A Link",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     582.2,
+     583.0
+    ],
+    "aim": [
+     588.35,
+     588.9
+    ],
+    "throw": [
+     588.9,
+     589.4
+    ],
+    "landing": [
+     591.4,
+     592.3
+    ]
+   }
+  },
+  {
+   "cs": 599,
+   "title": "DEF Middle 4 From Bottom Mid",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     603.35,
+     605.1
+    ],
+    "aim": [
+     606.05,
+     606.5
+    ],
+    "throw": [
+     606.45,
+     607.05
+    ],
+    "landing": [
+     608.08,
+     609.45
+    ]
+   }
+  },
+  {
+   "cs": 615,
+   "title": "DEF Middle 5 From Bottom Mid (Peek with this!)",
+   "ability": "haunt",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     616.0,
+     618.2
+    ],
+    "aim": [
+     621.6,
+     622.19
+    ],
+    "throw": [
+     622.0,
+     622.6
+    ],
+    "landing": [
+     625.0,
+     625.6
+    ]
+   }
+  }
+ ]
+}

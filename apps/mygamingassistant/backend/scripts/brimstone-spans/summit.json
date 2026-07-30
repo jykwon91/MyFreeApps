@@ -1,0 +1,521 @@
+{
+ "video_id": "3GUKAYiurQk",
+ "map_slug": "summit",
+ "author": "HEHE XD",
+ "note": "brimstone Summit lineups from 3GUKAYiurQk; 19 gate-passed, 0 dropped as un-gated.",
+ "lineups": [
+  {
+   "cs": 39,
+   "title": "B Default from B Main",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     51.1,
+     53.3
+    ],
+    "aim": [
+     56.4,
+     57.5
+    ],
+    "throw": [
+     57.37,
+     57.97
+    ],
+    "landing": [
+     65.42,
+     66.6
+    ]
+   }
+  },
+  {
+   "cs": 70,
+   "title": "B Default from Mid Tiles",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     76.7,
+     79.3
+    ],
+    "aim": [
+     86.9,
+     87.85
+    ],
+    "throw": [
+     87.98,
+     88.16
+    ],
+    "landing": [
+     95.52,
+     96.82
+    ]
+   }
+  },
+  {
+   "cs": 101,
+   "title": "B Default from Mid Bottom",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     107.2,
+     109.7
+    ],
+    "aim": [
+     113.5,
+     114.55
+    ],
+    "throw": [
+     114.5,
+     115.1
+    ],
+    "landing": [
+     120.66,
+     121.95
+    ]
+   }
+  },
+  {
+   "cs": 125,
+   "title": "B Default from CT",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "ct-spawn",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     128.5,
+     130.3
+    ],
+    "aim": [
+     143.3,
+     144.15
+    ],
+    "throw": [
+     144.2,
+     144.7
+    ],
+    "landing": [
+     150.4,
+     151.7
+    ]
+   }
+  },
+  {
+   "cs": 155,
+   "title": "B Default from CT",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "ct-spawn",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     158.0,
+     160.5
+    ],
+    "aim": [
+     174.5,
+     175.45
+    ],
+    "throw": [
+     175.45,
+     175.95
+    ],
+    "landing": [
+     183.2,
+     184.6
+    ]
+   }
+  },
+  {
+   "cs": 188,
+   "title": "B Default from B Drop",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     197.0,
+     199.5
+    ],
+    "aim": [
+     207.4,
+     208.0
+    ],
+    "throw": [
+     207.9,
+     208.4
+    ],
+    "landing": [
+     210.4,
+     211.6
+    ]
+   }
+  },
+  {
+   "cs": 216,
+   "title": "B Hut from B Main",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     220.55,
+     222.1
+    ],
+    "aim": [
+     233.7,
+     234.65
+    ],
+    "throw": [
+     234.6,
+     235.0
+    ],
+    "landing": [
+     242.55,
+     243.55
+    ]
+   }
+  },
+  {
+   "cs": 247,
+   "title": "B Hut from B Lobby",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     253.3,
+     255.5
+    ],
+    "aim": [
+     265.5,
+     266.45
+    ],
+    "throw": [
+     266.45,
+     267.05
+    ],
+    "landing": [
+     273.85,
+     275.35
+    ]
+   }
+  },
+  {
+   "cs": 278,
+   "title": "B Hut from Mid Tiles",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     285.5,
+     288.4
+    ],
+    "aim": [
+     296.2,
+     297.05
+    ],
+    "throw": [
+     297.05,
+     297.23
+    ],
+    "landing": [
+     304.4,
+     305.4
+    ]
+   }
+  },
+  {
+   "cs": 309,
+   "title": "B Hut from CT",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "ct-spawn",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     311.7,
+     313.2
+    ],
+    "aim": [
+     327.7,
+     328.7
+    ],
+    "throw": [
+     328.6,
+     329.1
+    ],
+    "landing": [
+     336.5,
+     337.7
+    ]
+   }
+  },
+  {
+   "cs": 364,
+   "title": "A Default from A Main",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     369.5,
+     372.5
+    ],
+    "aim": [
+     377.6,
+     378.55
+    ],
+    "throw": [
+     378.45,
+     378.65
+    ],
+    "landing": [
+     385.25,
+     386.6
+    ]
+   }
+  },
+  {
+   "cs": 390,
+   "title": "A Default from A Lobby",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     396.0,
+     398.0
+    ],
+    "aim": [
+     403.9,
+     405.1
+    ],
+    "throw": [
+     405.0,
+     405.6
+    ],
+    "landing": [
+     412.1,
+     413.4
+    ]
+   }
+  },
+  {
+   "cs": 416,
+   "title": "A Default from Mid Top",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     423.0,
+     425.6
+    ],
+    "aim": [
+     431.4,
+     432.4
+    ],
+    "throw": [
+     432.4,
+     432.9
+    ],
+    "landing": [
+     437.45,
+     438.65
+    ]
+   }
+  },
+  {
+   "cs": 442,
+   "title": "A Default from Mid Fountain",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     447.0,
+     449.0
+    ],
+    "aim": [
+     457.6,
+     458.23
+    ],
+    "throw": [
+     458.05,
+     458.3
+    ],
+    "landing": [
+     465.3,
+     466.6
+    ]
+   }
+  },
+  {
+   "cs": 470,
+   "title": "A Default from A Art",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     478.0,
+     480.0
+    ],
+    "aim": [
+     482.15,
+     483.15
+    ],
+    "throw": [
+     483.05,
+     483.65
+    ],
+    "landing": [
+     485.6,
+     486.6
+    ]
+   }
+  },
+  {
+   "cs": 491,
+   "title": "A Default from CT",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "ct-spawn",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     497.0,
+     499.0
+    ],
+    "aim": [
+     504.4,
+     505.44
+    ],
+    "throw": [
+     505.44,
+     505.95
+    ],
+    "landing": [
+     512.8,
+     514.0
+    ]
+   }
+  },
+  {
+   "cs": 517,
+   "title": "A Open from A Lobby",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     523.5,
+     525.5
+    ],
+    "aim": [
+     531.0,
+     531.78
+    ],
+    "throw": [
+     531.8,
+     532.05
+    ],
+    "landing": [
+     536.9,
+     538.2
+    ]
+   }
+  },
+  {
+   "cs": 541,
+   "title": "A Open from Mid Top",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     549.0,
+     552.0
+    ],
+    "aim": [
+     558.7,
+     559.6
+    ],
+    "throw": [
+     559.6,
+     560.1
+    ],
+    "landing": [
+     565.1,
+     566.1
+    ]
+   }
+  },
+  {
+   "cs": 570,
+   "title": "A Open from A Cave",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     578.5,
+     580.9
+    ],
+    "aim": [
+     584.1,
+     584.9
+    ],
+    "throw": [
+     584.9,
+     585.1
+    ],
+    "landing": [
+     587.4,
+     588.9
+    ]
+   }
+  }
+ ]
+}

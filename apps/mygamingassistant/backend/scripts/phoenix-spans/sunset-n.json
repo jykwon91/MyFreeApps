@@ -1,0 +1,251 @@
+{
+ "video_id": "vBZsTtVYfEY",
+ "map_slug": "sunset",
+ "author": "nic.vallabh",
+ "lineups": [
+  {
+   "cs": 5,
+   "title": "A Attack Elbow Corner",
+   "ability": "hot-hands",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     10.6,
+     12.6
+    ],
+    "aim": [
+     16.3,
+     17.1
+    ],
+    "throw": [
+     18.3,
+     19.0
+    ],
+    "landing": [
+     20.6,
+     21.1
+    ]
+   }
+  },
+  {
+   "cs": 27,
+   "title": "A Attack plant 1",
+   "ability": "hot-hands",
+   "technique": "jump",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     32.0,
+     35.0
+    ],
+    "aim": [
+     42.3,
+     43.25
+    ],
+    "throw": [
+     43.2,
+     43.7
+    ],
+    "landing": [
+     45.6,
+     46.6
+    ]
+   }
+  },
+  {
+   "cs": 52,
+   "title": "A Attack Plant 2",
+   "ability": "hot-hands",
+   "technique": "jump",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     60.5,
+     62.5
+    ],
+    "aim": [
+     66.8,
+     67.55
+    ],
+    "throw": [
+     67.55,
+     67.75
+    ],
+    "landing": [
+     70.0,
+     70.7
+    ]
+   }
+  },
+  {
+   "cs": 89,
+   "title": "A Lobby Defense Push",
+   "ability": "hot-hands",
+   "technique": "jump",
+   "target": "a-main",
+   "stand": "a-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     93.9,
+     95.4
+    ],
+    "aim": [
+     102.2,
+     102.85
+    ],
+    "throw": [
+     102.85,
+     103.45
+    ],
+    "landing": [
+     105.3,
+     106.8
+    ]
+   }
+  },
+  {
+   "cs": 109,
+   "title": "A Defense plant 1",
+   "ability": "hot-hands",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     113.7,
+     115.55
+    ],
+    "aim": [
+     119.0,
+     120.08
+    ],
+    "throw": [
+     120.1,
+     120.65
+    ],
+    "landing": [
+     122.4,
+     123.8
+    ]
+   }
+  },
+  {
+   "cs": 128,
+   "title": "A Defense plant 2",
+   "ability": "hot-hands",
+   "technique": "jump",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     136.0,
+     138.5
+    ],
+    "aim": [
+     139.3,
+     140.2
+    ],
+    "throw": [
+     140.2,
+     140.8
+    ],
+    "landing": [
+     142.7,
+     144.0
+    ]
+   }
+  },
+  {
+   "cs": 168,
+   "title": "B Site Cubby Defense",
+   "ability": "hot-hands",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "market",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     171.5,
+     173.5
+    ],
+    "aim": [
+     177.5,
+     178.5
+    ],
+    "throw": [
+     178.4,
+     178.9
+    ],
+    "landing": [
+     180.45,
+     181.3
+    ]
+   }
+  },
+  {
+   "cs": 186,
+   "title": "B Site Box 1",
+   "ability": "hot-hands",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "market",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     191.3,
+     191.9
+    ],
+    "aim": [
+     194.2,
+     194.95
+    ],
+    "throw": [
+     194.75,
+     195.35
+    ],
+    "landing": [
+     196.42,
+     197.2
+    ]
+   }
+  },
+  {
+   "cs": 202,
+   "title": "B site Box 2",
+   "ability": "hot-hands",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "market",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     204.4,
+     206.9
+    ],
+    "aim": [
+     209.0,
+     210.0
+    ],
+    "throw": [
+     209.95,
+     210.45
+    ],
+    "landing": [
+     211.35,
+     212.35
+    ]
+   }
+  }
+ ],
+ "note": "phoenix Summit lineups from vBZsTtVYfEY; 9 gate-passed, 2 dropped as un-gated. ability from localizer (author unlabelled)."
+}

@@ -1,0 +1,278 @@
+{
+ "video_id": "DoFq0TyLJrU",
+ "map_slug": "summit",
+ "author": "Tseeky",
+ "note": "viper Summit lineups from DoFq0TyLJrU; 10 gate-passed, 3 dropped as un-gated.",
+ "lineups": [
+  {
+   "cs": 450,
+   "title": "A Site Default + Corner Molly Fast",
+   "ability": "snake-bite",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     454.0,
+     455.5
+    ],
+    "aim": [
+     456.03,
+     456.28
+    ],
+    "throw": [
+     456.25,
+     456.85
+    ],
+    "landing": [
+     457.35,
+     457.75
+    ]
+   }
+  },
+  {
+   "cs": 463,
+   "title": "A Site Best Post Plant Molly (This molly covers 3 plant spots!)",
+   "ability": "snake-bite",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     464.0,
+     465.8
+    ],
+    "aim": [
+     471.8,
+     472.5
+    ],
+    "throw": [
+     472.45,
+     472.95
+    ],
+    "landing": [
+     477.9,
+     479.5
+    ]
+   }
+  },
+  {
+   "cs": 484,
+   "title": "A Site Best Post Plant Molly 2 Mid Top",
+   "ability": "snake-bite",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     483.85,
+     485.85
+    ],
+    "aim": [
+     491.25,
+     492.15
+    ],
+    "throw": [
+     492.05,
+     492.65
+    ],
+    "landing": [
+     497.05,
+     498.35
+    ]
+   }
+  },
+  {
+   "cs": 521,
+   "title": "A Site Corner Box Molly",
+   "ability": "snake-bite",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     521.35,
+     523.15
+    ],
+    "aim": [
+     526.52,
+     527.2
+    ],
+    "throw": [
+     527.35,
+     527.95
+    ],
+    "landing": [
+     532.45,
+     533.45
+    ]
+   }
+  },
+  {
+   "cs": 536,
+   "title": "A Site Box Molly",
+   "ability": "snake-bite",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     536.4,
+     538.3
+    ],
+    "aim": [
+     542.0,
+     543.0
+    ],
+    "throw": [
+     542.95,
+     543.35
+    ],
+    "landing": [
+     548.0,
+     549.2
+    ]
+   }
+  },
+  {
+   "cs": 551,
+   "title": "A Garden Box Molly",
+   "ability": "snake-bite",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     551.15,
+     552.85
+    ],
+    "aim": [
+     558.2,
+     558.8
+    ],
+    "throw": [
+     558.78,
+     559.38
+    ],
+    "landing": [
+     564.0,
+     565.1
+    ]
+   }
+  },
+  {
+   "cs": 567,
+   "title": "B Site Main Plant Molly",
+   "ability": "snake-bite",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     568.0,
+     569.6
+    ],
+    "aim": [
+     572.6,
+     573.7
+    ],
+    "throw": [
+     573.7,
+     574.2
+    ],
+    "landing": [
+     577.5,
+     578.1
+    ]
+   }
+  },
+  {
+   "cs": 580,
+   "title": "B Site Main Plant Molly 2 Mid Link",
+   "ability": "snake-bite",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     580.0,
+     581.7
+    ],
+    "aim": [
+     586.2,
+     587.05
+    ],
+    "throw": [
+     587.85,
+     588.35
+    ],
+    "landing": [
+     592.8,
+     593.6
+    ]
+   }
+  },
+  {
+   "cs": 608,
+   "title": "B Site Main Plant Molly 4 Mid Bottom",
+   "ability": "snake-bite",
+   "technique": "jump",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     609.4,
+     610.7
+    ],
+    "aim": [
+     614.95,
+     615.25
+    ],
+    "throw": [
+     616.0,
+     616.6
+    ],
+    "landing": [
+     621.05,
+     621.65
+    ]
+   }
+  },
+  {
+   "cs": 624,
+   "title": "B Site Default Molly 1",
+   "ability": "snake-bite",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     624.0,
+     626.8
+    ],
+    "aim": [
+     630.8,
+     631.05
+    ],
+    "throw": [
+     631.8,
+     632.3
+    ],
+    "landing": [
+     638.1,
+     639.1
+    ]
+   }
+  }
+ ]
+}

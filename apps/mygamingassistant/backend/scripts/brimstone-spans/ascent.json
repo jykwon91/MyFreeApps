@@ -1,0 +1,845 @@
+{
+ "video_id": "rrPhSQYLEMg",
+ "map_slug": "ascent",
+ "author": "Tseeky - Pro Valorant Lineups",
+ "lineups": [
+  {
+   "cs": 7,
+   "title": "A Default Plant 1",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     7.0,
+     8.75
+    ],
+    "aim": [
+     12.95,
+     13.65
+    ],
+    "throw": [
+     13.65,
+     14.3
+    ],
+    "landing": [
+     18.4,
+     19.2
+    ]
+   }
+  },
+  {
+   "cs": 38,
+   "title": "A Default Plant 3",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     38.8,
+     40.3
+    ],
+    "aim": [
+     44.3,
+     44.95
+    ],
+    "throw": [
+     44.95,
+     45.45
+    ],
+    "landing": [
+     50.1,
+     51.6
+    ]
+   }
+  },
+  {
+   "cs": 53,
+   "title": "A Dice Plant 1",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     56.0,
+     58.6
+    ],
+    "aim": [
+     59.3,
+     60.0
+    ],
+    "throw": [
+     59.9,
+     60.4
+    ],
+    "landing": [
+     63.8,
+     65.2
+    ]
+   }
+  },
+  {
+   "cs": 81,
+   "title": "B Default Plant 1",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     82.0,
+     83.9
+    ],
+    "aim": [
+     87.0,
+     87.5
+    ],
+    "throw": [
+     87.5,
+     88.05
+    ],
+    "landing": [
+     90.05,
+     91.4
+    ]
+   }
+  },
+  {
+   "cs": 94,
+   "title": "B Default Plant 2",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     97.8,
+     99.6
+    ],
+    "aim": [
+     100.55,
+     101.55
+    ],
+    "throw": [
+     101.5,
+     101.95
+    ],
+    "landing": [
+     105.25,
+     106.75
+    ]
+   }
+  },
+  {
+   "cs": 109,
+   "title": "B Corner Plant 1",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     109.0,
+     110.4
+    ],
+    "aim": [
+     112.3,
+     113.15
+    ],
+    "throw": [
+     113.2,
+     113.7
+    ],
+    "landing": [
+     117.65,
+     118.75
+    ]
+   }
+  },
+  {
+   "cs": 121,
+   "title": "B Corner Plant 2",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     126.6,
+     127.8
+    ],
+    "aim": [
+     127.8,
+     128.57
+    ],
+    "throw": [
+     128.55,
+     129.1
+    ],
+    "landing": [
+     133.0,
+     134.3
+    ]
+   }
+  },
+  {
+   "cs": 136,
+   "title": "A Default Plant 4",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     137.0,
+     140.0
+    ],
+    "aim": [
+     145.3,
+     146.3
+    ],
+    "throw": [
+     146.3,
+     146.6
+    ],
+    "landing": [
+     152.0,
+     152.8
+    ]
+   }
+  },
+  {
+   "cs": 155,
+   "title": "A Default Plant 5",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     155.5,
+     156.15
+    ],
+    "aim": [
+     164.4,
+     165.05
+    ],
+    "throw": [
+     165.05,
+     165.55
+    ],
+    "landing": [
+     171.15,
+     172.15
+    ]
+   }
+  },
+  {
+   "cs": 174,
+   "title": "A Default Plant 6",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     176.0,
+     177.7
+    ],
+    "aim": [
+     182.0,
+     182.75
+    ],
+    "throw": [
+     182.7,
+     183.15
+    ],
+    "landing": [
+     186.9,
+     188.1
+    ]
+   }
+  },
+  {
+   "cs": 190,
+   "title": "A Default Plant 7",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     191.0,
+     193.0
+    ],
+    "aim": [
+     196.9,
+     197.5
+    ],
+    "throw": [
+     198.55,
+     199.05
+    ],
+    "landing": [
+     202.95,
+     203.65
+    ]
+   }
+  },
+  {
+   "cs": 227,
+   "title": "A Dice Plant 3",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     227.5,
+     228.3
+    ],
+    "aim": [
+     236.8,
+     237.75
+    ],
+    "throw": [
+     237.6,
+     238.1
+    ],
+    "landing": [
+     243.1,
+     244.1
+    ]
+   }
+  },
+  {
+   "cs": 246,
+   "title": "A Dice Plant 4",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     247.0,
+     248.8
+    ],
+    "aim": [
+     253.8,
+     254.75
+    ],
+    "throw": [
+     254.65,
+     255.15
+    ],
+    "landing": [
+     261.0,
+     262.5
+    ]
+   }
+  },
+  {
+   "cs": 264,
+   "title": "A Dice Plant 5",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     264.3,
+     266.3
+    ],
+    "aim": [
+     274.5,
+     276.2
+    ],
+    "throw": [
+     276.05,
+     276.65
+    ],
+    "landing": [
+     279.6,
+     281.0
+    ]
+   }
+  },
+  {
+   "cs": 287,
+   "title": "A Safe Plant 2",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     287.5,
+     289.5
+    ],
+    "aim": [
+     296.2,
+     297.37
+    ],
+    "throw": [
+     297.37,
+     297.9
+    ],
+    "landing": [
+     302.0,
+     303.9
+    ]
+   }
+  },
+  {
+   "cs": 307,
+   "title": "B Default Plant 3",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     307.4,
+     309.5
+    ],
+    "aim": [
+     317.0,
+     318.05
+    ],
+    "throw": [
+     318.03,
+     318.63
+    ],
+    "landing": [
+     325.35,
+     326.3
+    ]
+   }
+  },
+  {
+   "cs": 328,
+   "title": "B Default Plant 4",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     329.0,
+     330.5
+    ],
+    "aim": [
+     335.5,
+     336.4
+    ],
+    "throw": [
+     336.35,
+     336.95
+    ],
+    "landing": [
+     343.55,
+     344.6
+    ]
+   }
+  },
+  {
+   "cs": 347,
+   "title": "B Default Plant 5",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     347.0,
+     349.7
+    ],
+    "aim": [
+     356.4,
+     357.08
+    ],
+    "throw": [
+     357.02,
+     357.6
+    ],
+    "landing": [
+     363.2,
+     364.6
+    ]
+   }
+  },
+  {
+   "cs": 366,
+   "title": "B Default Plant 6",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "market",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     367.0,
+     369.0
+    ],
+    "aim": [
+     375.2,
+     376.5
+    ],
+    "throw": [
+     376.55,
+     377.05
+    ],
+    "landing": [
+     384.3,
+     386.3
+    ]
+   }
+  },
+  {
+   "cs": 387,
+   "title": "B Corner Plant 3",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     389.0,
+     391.0
+    ],
+    "aim": [
+     395.2,
+     395.85
+    ],
+    "throw": [
+     395.85,
+     396.45
+    ],
+    "landing": [
+     401.3,
+     402.3
+    ]
+   }
+  },
+  {
+   "cs": 404,
+   "title": "B Corner Plant 4",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     404.7,
+     405.55
+    ],
+    "aim": [
+     410.6,
+     411.6
+    ],
+    "throw": [
+     411.45,
+     412.05
+    ],
+    "landing": [
+     418.5,
+     419.7
+    ]
+   }
+  },
+  {
+   "cs": 422,
+   "title": "B Corner Plant 5",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "market",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     422.0,
+     424.2
+    ],
+    "aim": [
+     428.3,
+     428.9
+    ],
+    "throw": [
+     428.85,
+     429.45
+    ],
+    "landing": [
+     435.2,
+     436.7
+    ]
+   }
+  },
+  {
+   "cs": 457,
+   "title": "A Heaven",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     458.0,
+     460.4
+    ],
+    "aim": [
+     466.6,
+     467.65
+    ],
+    "throw": [
+     467.55,
+     468.05
+    ],
+    "landing": [
+     472.9,
+     473.7
+    ]
+   }
+  },
+  {
+   "cs": 476,
+   "title": "A Gen",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     477.5,
+     479.5
+    ],
+    "aim": [
+     485.6,
+     486.35
+    ],
+    "throw": [
+     486.35,
+     486.75
+    ],
+    "landing": [
+     492.4,
+     493.6
+    ]
+   }
+  },
+  {
+   "cs": 495,
+   "title": "A Back Dice",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     497.3,
+     498.7
+    ],
+    "aim": [
+     504.7,
+     505.9
+    ],
+    "throw": [
+     505.85,
+     506.35
+    ],
+    "landing": [
+     513.35,
+     514.6
+    ]
+   }
+  },
+  {
+   "cs": 516,
+   "title": "B Market",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "market",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     517.2,
+     519.6
+    ],
+    "aim": [
+     522.3,
+     522.85
+    ],
+    "throw": [
+     522.87,
+     523.4
+    ],
+    "landing": [
+     525.45,
+     526.6
+    ]
+   }
+  },
+  {
+   "cs": 528,
+   "title": "B Stairs",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     529.0,
+     531.0
+    ],
+    "aim": [
+     534.2,
+     534.9
+    ],
+    "throw": [
+     534.9,
+     535.4
+    ],
+    "landing": [
+     538.0,
+     538.6
+    ]
+   }
+  },
+  {
+   "cs": 541,
+   "title": "B Spawn",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     542.0,
+     544.0
+    ],
+    "aim": [
+     547.3,
+     547.85
+    ],
+    "throw": [
+     548.05,
+     548.65
+    ],
+    "landing": [
+     550.8,
+     551.6
+    ]
+   }
+  },
+  {
+   "cs": 554,
+   "title": "A Antiplant 1",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     554.5,
+     558.0
+    ],
+    "aim": [
+     559.9,
+     560.8
+    ],
+    "throw": [
+     560.75,
+     561.35
+    ],
+    "landing": [
+     564.0,
+     565.2
+    ]
+   }
+  },
+  {
+   "cs": 567,
+   "title": "A Antiplant 2",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     569.5,
+     571.0
+    ],
+    "aim": [
+     573.65,
+     574.0
+    ],
+    "throw": [
+     573.9,
+     574.5
+    ],
+    "landing": [
+     576.1,
+     577.0
+    ]
+   }
+  },
+  {
+   "cs": 580,
+   "title": "B Antiplant",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "ct-spawn",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     582.5,
+     584.5
+    ],
+    "aim": [
+     586.05,
+     586.58
+    ],
+    "throw": [
+     586.55,
+     587.05
+    ],
+    "landing": [
+     589.8,
+     591.3
+    ]
+   }
+  }
+ ],
+ "note": "brimstone Summit lineups from rrPhSQYLEMg; 31 gate-passed, 4 dropped as un-gated. ability from localizer (author unlabelled)."
+}

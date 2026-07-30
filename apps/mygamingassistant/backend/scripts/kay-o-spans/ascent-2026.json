@@ -1,0 +1,1441 @@
+{
+ "video_id": "69sMI1UqbYk",
+ "map_slug": "ascent",
+ "author": "Tseeky",
+ "note": "KAY/O Ascent lineups from Tseeky 'Best KAYO Lineups Ascent 2026', client v12.10 (current), 50 chapters. SECOND source for the multi-source backfill alongside the 2024 AG Zapdos pack (kay-o-spans/ascent.json) \u00e2\u20ac\u201d union to be deduped by (utility, side, stand_anchor~, target_anchor~). Beats seeded by scripts/_kayo_localizer.py-adjacent seed.py (title-parse classification + 4fps annotated contact sheets), then each chapter frame-study VERIFIED here. Ascent minimap is FIXED/north-up on this source (verified across 3 positions) \u00e2\u2020\u2019 CV localizes stand via self-marker; zero-point targets via knife dome glyph; flash/fragment targets = zone-centroid seed (no minimap marker). STILL PENDING operator eyeball at localhost:5176 before ship. WORK IN PROGRESS \u00e2\u20ac\u201d flash block first.",
+ "lineups": [
+  {
+   "cs": 6,
+   "title": "A Main Flash (2026, Best)",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     9.0,
+     9.8
+    ],
+    "aim": [
+     12.5,
+     12.75
+    ],
+    "throw": [
+     13.0,
+     13.5
+    ],
+    "landing": [
+     16.25,
+     16.85
+    ]
+   },
+   "src_title": "DEF A Main Best Flash"
+  },
+  {
+   "cs": 21,
+   "title": "A Main Flash (2026, Simple)",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     22.0,
+     23.0
+    ],
+    "aim": [
+     24.5,
+     24.75
+    ],
+    "throw": [
+     25.0,
+     25.5
+    ],
+    "landing": [
+     27.0,
+     27.6
+    ]
+   },
+   "src_title": "DEF A Main Simple Flash"
+  },
+  {
+   "cs": 32,
+   "title": "A Main Flash (2026, Solo)",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     33.5,
+     34.3
+    ],
+    "aim": [
+     35.5,
+     35.75
+    ],
+    "throw": [
+     37.0,
+     37.5
+    ],
+    "landing": [
+     38.0,
+     38.6
+    ]
+   },
+   "src_title": "DEF A Main Solo Flash"
+  },
+  {
+   "cs": 45,
+   "title": "A Lobby Flash (2026, Push)",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     47.0,
+     47.8
+    ],
+    "aim": [
+     50.5,
+     50.75
+    ],
+    "throw": [
+     51.0,
+     51.5
+    ],
+    "landing": [
+     52.0,
+     52.6
+    ]
+   },
+   "src_title": "DEF A Lobby Push Flash",
+   "gate_flag": "bloom not shown (flies off-screen into A main); target=a-main by trajectory, flash anchor=centroid seed anyway. Operator scrutinize."
+  },
+  {
+   "cs": 57,
+   "title": "A Wine Flash (2026, Solo)",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     59.0,
+     60.0
+    ],
+    "aim": [
+     60.5,
+     60.75
+    ],
+    "throw": [
+     61.5,
+     62.0
+    ],
+    "landing": [
+     63.5,
+     64.1
+    ]
+   },
+   "src_title": "DEF A Wine Solo Flash"
+  },
+  {
+   "cs": 71,
+   "title": "A Retake Flash (2026, lob)",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     73.0,
+     74.0
+    ],
+    "aim": [
+     74.0,
+     74.25
+    ],
+    "throw": [
+     74.25,
+     74.75
+    ],
+    "landing": [
+     80.5,
+     81.1
+    ]
+   },
+   "src_title": "DEF A Retake Flash",
+   "note": "high lob, ~6s flight"
+  },
+  {
+   "cs": 85,
+   "title": "A Retake Flash (2026, One-Way)",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     86.5,
+     87.5
+    ],
+    "aim": [
+     90.5,
+     90.75
+    ],
+    "throw": [
+     91.0,
+     91.5
+    ],
+    "landing": [
+     94.0,
+     94.6
+    ]
+   },
+   "src_title": "DEF A Retake One Way Best Flash",
+   "gate_flag": "one-way: bloom sits behind cover, weak landing signal. Operator scrutinize."
+  },
+  {
+   "cs": 101,
+   "title": "B Main Flash (2026, Solo)",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     102.5,
+     103.5
+    ],
+    "aim": [
+     105.5,
+     105.75
+    ],
+    "throw": [
+     106.0,
+     106.5
+    ],
+    "landing": [
+     108.5,
+     109.1
+    ]
+   },
+   "src_title": "DEF B Main Solo Flash"
+  },
+  {
+   "cs": 115,
+   "title": "B Main Flash (2026, One-Way)",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     116.5,
+     117.5
+    ],
+    "aim": [
+     120.0,
+     120.25
+    ],
+    "throw": [
+     120.5,
+     121.0
+    ],
+    "landing": [
+     123.0,
+     123.6
+    ]
+   },
+   "src_title": "DEF B Main Best One Way Flash",
+   "gate_flag": "one-way: bloom behind cover. Operator scrutinize."
+  },
+  {
+   "cs": 130,
+   "title": "B Lane Flash (2026, Solo)",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     131.5,
+     132.5
+    ],
+    "aim": [
+     134.0,
+     134.25
+    ],
+    "throw": [
+     134.5,
+     135.0
+    ],
+    "landing": [
+     138.0,
+     138.6
+    ]
+   },
+   "src_title": "DEF B Lane Solo Flash"
+  },
+  {
+   "cs": 142,
+   "title": "B Retake Flash (2026, jump)",
+   "ability": "flashdrive",
+   "technique": "jump",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     143.5,
+     144.5
+    ],
+    "aim": [
+     145.75,
+     146.0
+    ],
+    "throw": [
+     146.0,
+     146.5
+    ],
+    "landing": [
+     150.0,
+     150.6
+    ]
+   },
+   "src_title": "DEF B Retake Flash",
+   "note": "possible jump-throw (tilted frames at release); confirm technique on eyeball"
+  },
+  {
+   "cs": 154,
+   "title": "B Lobby Flash (2026)",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     155.5,
+     156.5
+    ],
+    "aim": [
+     159.5,
+     159.75
+    ],
+    "throw": [
+     160.0,
+     160.5
+    ],
+    "landing": [
+     162.0,
+     162.6
+    ]
+   },
+   "src_title": "DEF B Lobby Flash"
+  },
+  {
+   "cs": 168,
+   "title": "Mid Link Flash (2026, One-Way)",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     169.5,
+     170.5
+    ],
+    "aim": [
+     173.5,
+     173.75
+    ],
+    "throw": [
+     174.0,
+     174.5
+    ],
+    "landing": [
+     177.0,
+     177.6
+    ]
+   },
+   "src_title": "DEF Mid Link Push One Way Flash",
+   "gate_flag": "one-way: bloom subtle behind cover. Operator scrutinize."
+  },
+  {
+   "cs": 182,
+   "title": "Mid Flash (2026, from Spawn)",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "ct-spawn",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     183.5,
+     184.5
+    ],
+    "aim": [
+     186.0,
+     186.25
+    ],
+    "throw": [
+     186.5,
+     187.0
+    ],
+    "landing": [
+     188.5,
+     189.1
+    ]
+   },
+   "src_title": "DEF Mid From Spawn Flash"
+  },
+  {
+   "cs": 195,
+   "title": "Mid Flash (2026, from Market)",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "market",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     196.5,
+     197.5
+    ],
+    "aim": [
+     201.0,
+     201.25
+    ],
+    "throw": [
+     201.5,
+     202.0
+    ],
+    "landing": [
+     204.0,
+     204.6
+    ]
+   },
+   "src_title": "DEF Mid From Market Flash"
+  },
+  {
+   "cs": 209,
+   "title": "Mid Flash (2026, from A Tree)",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "a-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     210.5,
+     211.5
+    ],
+    "aim": [
+     214.5,
+     214.75
+    ],
+    "throw": [
+     215.0,
+     215.5
+    ],
+    "landing": [
+     217.0,
+     217.6
+    ]
+   },
+   "src_title": "DEF Mid From Tree Flash"
+  },
+  {
+   "cs": 223,
+   "title": "A Main Flash (2026, Attack One-Way)",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     224.5,
+     225.5
+    ],
+    "aim": [
+     228.5,
+     228.75
+    ],
+    "throw": [
+     229.0,
+     229.5
+    ],
+    "landing": [
+     231.5,
+     232.1
+    ]
+   },
+   "src_title": "ATT A Main One Way Flash",
+   "gate_flag": "one-way: bloom behind cover. Operator scrutinize."
+  },
+  {
+   "cs": 237,
+   "title": "A Site Flash (2026, Attack Best)",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     238.5,
+     239.5
+    ],
+    "aim": [
+     241.5,
+     241.75
+    ],
+    "throw": [
+     242.0,
+     242.5
+    ],
+    "landing": [
+     245.0,
+     245.6
+    ]
+   },
+   "src_title": "ATT A Site Best Flash (2 variations)",
+   "note": "clip demos 2 variations over ~29s (standing + shift-step jump-throw, same landing). Primary entry = variation 1 (standing); jump variant exists."
+  },
+  {
+   "cs": 266,
+   "title": "A Site Flash (2026, Attack Simple)",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     268.5,
+     269.5
+    ],
+    "aim": [
+     271.0,
+     271.25
+    ],
+    "throw": [
+     271.5,
+     272.0
+    ],
+    "landing": [
+     274.0,
+     274.6
+    ]
+   },
+   "src_title": "ATT A Site Simple Flash"
+  },
+  {
+   "cs": 280,
+   "title": "A Heaven Flash (2026, One-Way)",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     281.5,
+     282.5
+    ],
+    "aim": [
+     284.5,
+     284.75
+    ],
+    "throw": [
+     285.0,
+     285.5
+    ],
+    "landing": [
+     288.0,
+     288.6
+    ]
+   },
+   "src_title": "ATT A Heaven One Way Flash",
+   "gate_flag": "one-way lofted to A Heaven. Operator scrutinize."
+  },
+  {
+   "cs": 290,
+   "title": "A Split Flash (2026, from A Tree)",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     291.5,
+     292.5
+    ],
+    "aim": [
+     295.0,
+     295.25
+    ],
+    "throw": [
+     295.5,
+     296.0
+    ],
+    "landing": [
+     299.0,
+     299.6
+    ]
+   },
+   "src_title": "ATT A Split From Tree Flash"
+  },
+  {
+   "cs": 305,
+   "title": "A Post-Plant Flash (2026)",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     306.5,
+     307.5
+    ],
+    "aim": [
+     310.0,
+     310.25
+    ],
+    "throw": [
+     310.5,
+     311.0
+    ],
+    "landing": [
+     314.0,
+     314.6
+    ]
+   },
+   "src_title": "ATT A Post Plant Flash"
+  },
+  {
+   "cs": 319,
+   "title": "B Site Flash (2026, Close)",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     320.5,
+     321.5
+    ],
+    "aim": [
+     324.0,
+     324.25
+    ],
+    "throw": [
+     324.5,
+     325.0
+    ],
+    "landing": [
+     327.0,
+     327.6
+    ]
+   },
+   "src_title": "ATT B Site Close Flash"
+  },
+  {
+   "cs": 335,
+   "title": "B Site Flash (2026, Close Simple)",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     336.5,
+     337.5
+    ],
+    "aim": [
+     340.5,
+     340.75
+    ],
+    "throw": [
+     341.0,
+     341.5
+    ],
+    "landing": [
+     343.0,
+     343.6
+    ]
+   },
+   "src_title": "ATT B Site Close Simple Flash"
+  },
+  {
+   "cs": 350,
+   "title": "B Site Flash (2026, One-Way)",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     351.5,
+     352.5
+    ],
+    "aim": [
+     355.5,
+     355.75
+    ],
+    "throw": [
+     356.0,
+     356.5
+    ],
+    "landing": [
+     359.0,
+     359.6
+    ]
+   },
+   "src_title": "ATT B Site One Way Flash",
+   "gate_flag": "one-way: bloom behind cover. Operator scrutinize."
+  },
+  {
+   "cs": 364,
+   "title": "B Post-Plant Flash (2026)",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     365.5,
+     366.5
+    ],
+    "aim": [
+     369.0,
+     369.25
+    ],
+    "throw": [
+     369.5,
+     370.0
+    ],
+    "landing": [
+     373.0,
+     373.6
+    ]
+   },
+   "src_title": "ATT B Post Plant Flash"
+  },
+  {
+   "cs": 379,
+   "title": "B Market Flash (2026, One-Way)",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "market",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     380.5,
+     381.5
+    ],
+    "aim": [
+     382.5,
+     382.75
+    ],
+    "throw": [
+     383.0,
+     383.5
+    ],
+    "landing": [
+     384.5,
+     385.1
+    ]
+   },
+   "src_title": "ATT B Market One Way Flash",
+   "gate_flag": "one-way into market: weak/brief bloom. Operator scrutinize."
+  },
+  {
+   "cs": 389,
+   "title": "Bottom Mid Flash (2026, One-Way)",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     390.5,
+     391.5
+    ],
+    "aim": [
+     394.5,
+     394.75
+    ],
+    "throw": [
+     395.0,
+     395.5
+    ],
+    "landing": [
+     398.0,
+     398.6
+    ]
+   },
+   "src_title": "ATT Bottom Mid One Way Flash",
+   "gate_flag": "one-way: bloom behind cover. Operator scrutinize."
+  },
+  {
+   "cs": 403,
+   "title": "Bottom Mid Flash (2026, One-Way Solo)",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     403.5,
+     404.3
+    ],
+    "aim": [
+     404.5,
+     404.75
+    ],
+    "throw": [
+     405.0,
+     405.5
+    ],
+    "landing": [
+     407.5,
+     408.1
+    ]
+   },
+   "src_title": "ATT Bottom Mid One Way Solo Flash",
+   "gate_flag": "one-way, short clip, early throw. Operator scrutinize."
+  },
+  {
+   "cs": 413,
+   "title": "A Main Suppress (2026, Fast)",
+   "ability": "zero-point",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     413.5,
+     414.5
+    ],
+    "aim": [
+     415.0,
+     415.25
+    ],
+    "throw": [
+     415.5,
+     416.0
+    ],
+    "landing": [
+     417.5,
+     418.5
+    ]
+   },
+   "src_title": "DEF A Simple & Fast Knife (2 variations)",
+   "note": "knife suppression dome = CV-localizable target marker; landing window holds the stuck-knife dome"
+  },
+  {
+   "cs": 425,
+   "title": "A Main Suppress (2026, Slow lob)",
+   "ability": "zero-point",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     427.0,
+     428.0
+    ],
+    "aim": [
+     433.0,
+     433.5
+    ],
+    "throw": [
+     434.5,
+     435.0
+    ],
+    "landing": [
+     439.0,
+     440.0
+    ]
+   },
+   "src_title": "DEF A Main Slow Knife",
+   "note": "long charged lob (~4s flight); dome sticks ~t439"
+  },
+  {
+   "cs": 443,
+   "title": "A Main Suppress (2026, from B Site)",
+   "ability": "zero-point",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     444.5,
+     445.5
+    ],
+    "aim": [
+     449.5,
+     450.0
+    ],
+    "throw": [
+     451.0,
+     451.5
+    ],
+    "landing": [
+     456.5,
+     457.5
+    ]
+   },
+   "src_title": "DEF A Main From B Site Knife",
+   "note": "cross-map lob B site -> A main (~6s flight); dome sticks ~t457"
+  },
+  {
+   "cs": 459,
+   "title": "B Main Suppress (2026, Fast)",
+   "ability": "zero-point",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     459.5,
+     460.5
+    ],
+    "aim": [
+     461.0,
+     461.25
+    ],
+    "throw": [
+     461.5,
+     462.0
+    ],
+    "landing": [
+     464.5,
+     465.5
+    ]
+   },
+   "src_title": "DEF B Simple & Fast Knife"
+  },
+  {
+   "cs": 468,
+   "title": "B Main Suppress (2026, from A Tree)",
+   "ability": "zero-point",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "a-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     469.5,
+     470.5
+    ],
+    "aim": [
+     473.5,
+     474.0
+    ],
+    "throw": [
+     474.5,
+     475.0
+    ],
+    "landing": [
+     481.5,
+     482.5
+    ]
+   },
+   "src_title": "DEF B Main From A Tree Knife",
+   "note": "cross-map lob A Tree -> B main (~7s flight); dome sticks ~t482"
+  },
+  {
+   "cs": 485,
+   "title": "A Main Suppress (2026, Attack Fast)",
+   "ability": "zero-point",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     486.5,
+     487.5
+    ],
+    "aim": [
+     491.0,
+     491.25
+    ],
+    "throw": [
+     491.5,
+     492.0
+    ],
+    "landing": [
+     493.0,
+     494.0
+    ]
+   },
+   "src_title": "ATT A Main Fast Knife"
+  },
+  {
+   "cs": 496,
+   "title": "A Main + Wine Suppress (2026)",
+   "ability": "zero-point",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     497.5,
+     498.5
+    ],
+    "aim": [
+     501.0,
+     501.5
+    ],
+    "throw": [
+     502.0,
+     502.5
+    ],
+    "landing": [
+     508.0,
+     509.0
+    ]
+   },
+   "src_title": "ATT A Main + Wine Knife",
+   "note": "lob over rooftops (~6s); dome sticks ~t508. Covers A Main + Wine."
+  },
+  {
+   "cs": 511,
+   "title": "A Site Suppress (2026, Attack lob)",
+   "ability": "zero-point",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     513.0,
+     514.0
+    ],
+    "aim": [
+     516.0,
+     516.5
+    ],
+    "throw": [
+     517.0,
+     517.5
+    ],
+    "landing": [
+     526.0,
+     527.0
+    ]
+   },
+   "src_title": "ATT A Site Knife (2 variations)",
+   "note": "long ~36s clip, 2 variations, high lob. Primary entry = variation 1 (dome ~t527). Operator eyeball to confirm which variation to keep."
+  },
+  {
+   "cs": 547,
+   "title": "A Site Suppress (2026, Simple lob)",
+   "ability": "zero-point",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     548.5,
+     549.5
+    ],
+    "aim": [
+     553.0,
+     553.5
+    ],
+    "throw": [
+     554.0,
+     554.5
+    ],
+    "landing": [
+     561.0,
+     562.0
+    ]
+   },
+   "src_title": "ATT A Site Simple Knife",
+   "note": "lob A main -> A site (~7s); dome sticks ~t561"
+  },
+  {
+   "cs": 564,
+   "title": "B Site Suppress (2026, Fast lob from B Main)",
+   "ability": "zero-point",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     565.5,
+     566.5
+    ],
+    "aim": [
+     570.0,
+     570.5
+    ],
+    "throw": [
+     571.0,
+     571.5
+    ],
+    "landing": [
+     572.5,
+     573.5
+    ]
+   },
+   "src_title": "ATT B Site Fast Knife",
+   "note": "fast low lob B main -> B site (~1.5s flight); dome ~t573"
+  },
+  {
+   "cs": 578,
+   "title": "B Site Suppress (2026, Fast lob variation 2)",
+   "ability": "zero-point",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     579.5,
+     580.5
+    ],
+    "aim": [
+     583.0,
+     583.5
+    ],
+    "throw": [
+     584.0,
+     584.5
+    ],
+    "landing": [
+     585.5,
+     586.5
+    ]
+   },
+   "src_title": "ATT B Site Fast Knife 2",
+   "note": "second B-site fast knife; slightly different stand/angle. Dedup vs cs=564 by stand anchor at operator eyeball."
+  },
+  {
+   "cs": 591,
+   "title": "B Site Suppress (2026, from B Market)",
+   "ability": "zero-point",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "market",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     592.0,
+     593.0
+    ],
+    "aim": [
+     596.5,
+     597.0
+    ],
+    "throw": [
+     597.5,
+     598.0
+    ],
+    "landing": [
+     604.5,
+     605.5
+    ]
+   },
+   "src_title": "ATT B Market Knife",
+   "note": "high lob B market -> B site (~7s flight over spire); dome sticks ~t605"
+  },
+  {
+   "cs": 608,
+   "title": "A Main Cubby Molly (2026, +extra flash)",
+   "ability": "fragment",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     609.5,
+     610.5
+    ],
+    "aim": [
+     615.0,
+     615.5
+    ],
+    "throw": [
+     616.0,
+     616.5
+    ],
+    "landing": [
+     621.0,
+     622.0
+    ]
+   },
+   "src_title": "DEF A Main Cubby Molly + Extra Flash",
+   "note": "defender molly onto A main from cubby; combo with an extra flash. Purple KAY/O molly puddle lands ~t621."
+  },
+  {
+   "cs": 624,
+   "title": "A Retake Molly (2026)",
+   "ability": "fragment",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     625.5,
+     626.5
+    ],
+    "aim": [
+     629.5,
+     630.0
+    ],
+    "throw": [
+     630.5,
+     631.0
+    ],
+    "landing": [
+     632.5,
+     633.5
+    ]
+   },
+   "src_title": "DEF A Retake Molly",
+   "note": "short retake molly onto A site; purple puddle ~t633 (seeder orange-detect misses the purple KAY/O molly \u2014 visual override)."
+  },
+  {
+   "cs": 637,
+   "title": "A Gen Molly (2026)",
+   "ability": "fragment",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     638.5,
+     639.5
+    ],
+    "aim": [
+     642.5,
+     643.0
+    ],
+    "throw": [
+     643.5,
+     644.0
+    ],
+    "landing": [
+     648.0,
+     649.0
+    ]
+   },
+   "src_title": "ATT A Gen Molly",
+   "note": "lob from A main onto A generator; purple puddle ~t648."
+  },
+  {
+   "cs": 652,
+   "title": "A Heaven Molly (2026)",
+   "ability": "fragment",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     653.5,
+     654.5
+    ],
+    "aim": [
+     658.5,
+     659.0
+    ],
+    "throw": [
+     659.5,
+     660.0
+    ],
+    "landing": [
+     664.5,
+     665.5
+    ]
+   },
+   "src_title": "ATT A Heaven Molly",
+   "note": "lob from A main onto A heaven; purple puddle ~t665."
+  },
+  {
+   "cs": 668,
+   "title": "A Heaven Molly (2026, variation 2)",
+   "ability": "fragment",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     669.5,
+     670.5
+    ],
+    "aim": [
+     673.5,
+     674.0
+    ],
+    "throw": [
+     674.0,
+     674.5
+    ],
+    "landing": [
+     679.0,
+     680.0
+    ]
+   },
+   "src_title": "ATT A Heaven 2 Molly",
+   "note": "second A-heaven molly, slightly different stand. Dedup vs cs=652 by stand anchor at operator eyeball."
+  },
+  {
+   "cs": 682,
+   "title": "A Door Molly (2026, high lob)",
+   "ability": "fragment",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     684.0,
+     685.0
+    ],
+    "aim": [
+     691.0,
+     691.5
+    ],
+    "throw": [
+     691.5,
+     692.0
+    ],
+    "landing": [
+     696.5,
+     697.5
+    ]
+   },
+   "src_title": "ATT A Door Molly",
+   "note": "long high lob from A door onto A site; purple puddle ~t697."
+  },
+  {
+   "cs": 701,
+   "title": "A Wine Molly (2026)",
+   "ability": "fragment",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     702.5,
+     703.5
+    ],
+    "aim": [
+     708.0,
+     708.5
+    ],
+    "throw": [
+     708.5,
+     709.0
+    ],
+    "landing": [
+     713.0,
+     714.0
+    ]
+   },
+   "src_title": "ATT A Wine Molly",
+   "note": "molly onto A wine cubby; purple puddle ~t713."
+  },
+  {
+   "cs": 717,
+   "title": "B Stairs Molly (2026, high lob)",
+   "ability": "fragment",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     718.5,
+     719.5
+    ],
+    "aim": [
+     724.5,
+     725.0
+    ],
+    "throw": [
+     725.0,
+     725.5
+    ],
+    "landing": [
+     730.0,
+     731.0
+    ]
+   },
+   "src_title": "ATT B Stairs Molly",
+   "gate_flag": "landing-offscreen",
+   "note": "high lob from B main onto B stairs; molly puddle lands out of the coarse sweep view \u2014 confirm landing + target at operator eyeball. Target anchor = B-stairs zone centroid regardless (molly has no minimap marker)."
+  }
+ ],
+ "dedup_2026_internal": {
+  "method": "CV stand+target anchors (ascent-2026-pins.json) + source callout discrimination",
+  "genuine_dups": [
+   {
+    "keep_clearest": [
+     652,
+     668
+    ],
+    "reason": "both A Heaven molly from same A-main stand"
+   }
+  ],
+  "kept_both_distinct": [
+   {
+    "cs": [
+     335,
+     350
+    ],
+    "reason": "B-site flash: simple vs one-way = different utility outcome"
+   },
+   {
+    "cs": [
+     564,
+     578
+    ],
+    "reason": "B-site fast knife x2, slightly different stand/angle \u2014 operator to confirm"
+   }
+  ],
+  "note": "The 5 coarse a-site->a-main flashes (6,21,32,45,57) are geometrically DISTINCT stands (not dups). Cross-source dedup vs 23 existing 2024 lineups is DEFERRED until local DB is up to read 2024 anchors."
+ }
+}

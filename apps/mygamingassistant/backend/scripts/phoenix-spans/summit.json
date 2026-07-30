@@ -1,0 +1,251 @@
+{
+ "video_id": "Zu7QLACQXv8",
+ "map_slug": "summit",
+ "author": "Quible",
+ "note": "phoenix Summit lineups from Zu7QLACQXv8; 9 gate-passed, 0 dropped as un-gated. ability from localizer (author unlabelled).",
+ "lineups": [
+  {
+   "cs": 2,
+   "title": "B Site - B Main",
+   "ability": "hot-hands",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     2.0,
+     4.0
+    ],
+    "aim": [
+     12.5,
+     12.9
+    ],
+    "throw": [
+     13.05,
+     13.65
+    ],
+    "landing": [
+     15.55,
+     16.55
+    ]
+   }
+  },
+  {
+   "cs": 20,
+   "title": "B Main - B Site",
+   "ability": "hot-hands",
+   "technique": "jump",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     25.7,
+     27.0
+    ],
+    "aim": [
+     33.85,
+     34.55
+    ],
+    "throw": [
+     34.55,
+     35.05
+    ],
+    "landing": [
+     37.4,
+     38.2
+    ]
+   }
+  },
+  {
+   "cs": 42,
+   "title": "B Main - B Site",
+   "ability": "hot-hands",
+   "technique": "jump",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     48.75,
+     49.95
+    ],
+    "aim": [
+     53.5,
+     54.15
+    ],
+    "throw": [
+     54.2,
+     54.8
+    ],
+    "landing": [
+     56.3,
+     57.6
+    ]
+   }
+  },
+  {
+   "cs": 61,
+   "title": "B Tower - B Site",
+   "ability": "hot-hands",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     69.3,
+     70.3
+    ],
+    "aim": [
+     76.05,
+     76.6
+    ],
+    "throw": [
+     76.6,
+     77.2
+    ],
+    "landing": [
+     78.9,
+     79.6
+    ]
+   }
+  },
+  {
+   "cs": 85,
+   "title": "B Main - B Site",
+   "ability": "hot-hands",
+   "technique": "jump",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     90.85,
+     92.1
+    ],
+    "aim": [
+     98.15,
+     98.9
+    ],
+    "throw": [
+     99.1,
+     99.7
+    ],
+    "landing": [
+     101.55,
+     102.75
+    ]
+   }
+  },
+  {
+   "cs": 100,
+   "title": "A Site - A Main",
+   "ability": "hot-hands",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     112.6,
+     114.2
+    ],
+    "aim": [
+     115.3,
+     116.5
+    ],
+    "throw": [
+     116.6,
+     117.3
+    ],
+    "landing": [
+     118.7,
+     119.9
+    ]
+   }
+  },
+  {
+   "cs": 122,
+   "title": "A Main - A Site",
+   "ability": "hot-hands",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     130.9,
+     131.9
+    ],
+    "aim": [
+     138.7,
+     139.7
+    ],
+    "throw": [
+     139.7,
+     140.2
+    ],
+    "landing": [
+     142.25,
+     143.35
+    ]
+   }
+  },
+  {
+   "cs": 148,
+   "title": "A Main - A Site",
+   "ability": "hot-hands",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     155.4,
+     157.0
+    ],
+    "aim": [
+     162.15,
+     163.27
+    ],
+    "throw": [
+     163.15,
+     163.65
+    ],
+    "landing": [
+     165.2,
+     165.8
+    ]
+   }
+  },
+  {
+   "cs": 174,
+   "title": "A Cave - A Site",
+   "ability": "hot-hands",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     177.6,
+     178.3
+    ],
+    "aim": [
+     183.1,
+     183.7
+    ],
+    "throw": [
+     183.7,
+     184.3
+    ],
+    "landing": [
+     185.85,
+     186.55
+    ]
+   }
+  }
+ ]
+}
