@@ -9,24 +9,24 @@
    "ability": "haunt",
    "technique": "standing",
    "target": "a-site",
-   "stand": "a-main",
+   "stand": "a-site",
    "side": "side_a",
    "spans": {
     "stand": [
-     8.1,
-     9.1
+     1.0,
+     3.0
     ],
     "aim": [
-     17.6,
-     18.75
+     3.0,
+     3.4
     ],
     "throw": [
-     18.7,
-     19.3
+     3.4,
+     3.9
     ],
     "landing": [
-     21.3,
-     22.05
+     5.5,
+     6.5
     ]
    }
   },
@@ -36,24 +36,24 @@
    "ability": "haunt",
    "technique": "standing",
    "target": "a-site",
-   "stand": "a-main",
+   "stand": "a-site",
    "side": "side_a",
    "spans": {
     "stand": [
-     43.3,
-     44.7
+     31.0,
+     33.0
     ],
     "aim": [
-     48.36,
-     48.92
+     33.0,
+     33.4
     ],
     "throw": [
-     48.92,
-     49.52
+     33.4,
+     33.9
     ],
     "landing": [
-     51.7,
-     53.0
+     35.5,
+     36.5
     ]
    }
   },
@@ -67,47 +67,47 @@
    "side": "side_b",
    "spans": {
     "stand": [
-     70.9,
-     72.9
+     58.0,
+     60.0
     ],
     "aim": [
-     75.5,
-     76.62
+     60.0,
+     60.4
     ],
     "throw": [
-     76.62,
-     77.24
+     60.4,
+     60.9
     ],
     "landing": [
-     78.55,
-     79.85
+     62.5,
+     63.5
     ]
    }
   },
   {
    "cs": 85,
    "title": "Site A Defense – Capture Retake",
-   "ability": "seize",
+   "ability": "haunt",
    "technique": "standing",
    "target": "a-site",
    "stand": "a-site",
    "side": "side_b",
    "spans": {
     "stand": [
-     96.45,
-     97.6
+     86.0,
+     88.0
     ],
     "aim": [
-     102.24,
-     102.78
+     88.0,
+     88.4
     ],
     "throw": [
-     102.76,
-     103.34
+     88.4,
+     88.9
     ],
     "landing": [
-     104.95,
-     106.05
+     90.5,
+     91.5
     ]
    }
   },
@@ -121,20 +121,20 @@
    "side": "side_b",
    "spans": {
     "stand": [
-     123.9,
-     124.95
+     109.0,
+     111.0
     ],
     "aim": [
-     124.95,
-     125.6
+     111.0,
+     111.4
     ],
     "throw": [
-     125.6,
-     126.2
+     111.4,
+     111.9
     ],
     "landing": [
-     127.62,
-     128.5
+     113.5,
+     114.5
     ]
    }
   },
@@ -144,24 +144,24 @@
    "ability": "haunt",
    "technique": "standing",
    "target": "mid",
-   "stand": "b-main",
+   "stand": "mid",
    "side": "side_b",
    "spans": {
     "stand": [
-     137.4,
-     139.4
+     134.0,
+     136.0
     ],
     "aim": [
-     148.5,
-     149.45
+     136.0,
+     136.4
     ],
     "throw": [
-     149.38,
-     150.0
+     136.4,
+     136.9
     ],
     "landing": [
-     151.6,
-     152.85
+     138.5,
+     139.5
     ]
    }
   },
@@ -175,20 +175,20 @@
    "side": "side_a",
    "spans": {
     "stand": [
-     163.58,
-     164.45
+     161.0,
+     163.0
     ],
     "aim": [
-     164.55,
-     165.2
+     163.0,
+     163.4
     ],
     "throw": [
-     167.47,
-     168.05
+     163.4,
+     163.9
     ],
     "landing": [
-     169.7,
-     170.75
+     165.5,
+     166.5
     ]
    }
   },
@@ -196,26 +196,26 @@
    "cs": 175,
    "title": "Mid Attack - Mid Info 2",
    "ability": "haunt",
-   "technique": "jump",
+   "technique": "standing",
    "target": "mid",
    "stand": "mid",
    "side": "side_a",
    "spans": {
     "stand": [
-     184.1,
-     185.4
+     176.0,
+     178.0
     ],
     "aim": [
-     195.2,
-     196.3
+     178.0,
+     178.4
     ],
     "throw": [
-     196.25,
-     196.85
+     178.4,
+     178.9
     ],
     "landing": [
-     198.05,
-     199.35
+     180.5,
+     181.5
     ]
    }
   },
@@ -225,24 +225,24 @@
    "ability": "haunt",
    "technique": "standing",
    "target": "b-site",
-   "stand": "b-main",
+   "stand": "b-site",
    "side": "side_a",
    "spans": {
     "stand": [
-     212.6,
-     213.8
+     206.0,
+     208.0
     ],
     "aim": [
-     217.75,
-     218.36
+     208.0,
+     208.4
     ],
     "throw": [
-     218.38,
-     218.98
+     208.4,
+     208.9
     ],
     "landing": [
-     220.12,
-     221.42
+     210.5,
+     211.5
     ]
    }
   },
@@ -252,51 +252,51 @@
    "ability": "haunt",
    "technique": "standing",
    "target": "b-site",
-   "stand": "b-main",
+   "stand": "b-site",
    "side": "side_a",
    "spans": {
     "stand": [
-     225.0,
-     226.5
+     223.0,
+     225.0
     ],
     "aim": [
-     231.4,
-     232.1
+     225.0,
+     225.4
     ],
     "throw": [
-     232.15,
-     232.8
+     225.4,
+     225.9
     ],
     "landing": [
-     234.0,
-     235.2
+     227.5,
+     228.5
     ]
    }
   },
   {
    "cs": 242,
    "title": "Site B Attack - Capture backsite",
-   "ability": "seize",
+   "ability": "haunt",
    "technique": "standing",
    "target": "b-site",
-   "stand": "b-main",
+   "stand": "b-site",
    "side": "side_a",
    "spans": {
     "stand": [
-     246.65,
-     248.0
+     243.0,
+     245.0
     ],
     "aim": [
-     250.26,
-     250.58
+     245.0,
+     245.4
     ],
     "throw": [
-     250.52,
-     251.12
+     245.4,
+     245.9
     ],
     "landing": [
-     252.2,
-     253.6
+     247.5,
+     248.5
     ]
    }
   },
@@ -310,47 +310,47 @@
    "side": "side_b",
    "spans": {
     "stand": [
-     261.0,
-     262.9
+     256.0,
+     258.0
     ],
     "aim": [
-     268.78,
-     269.08
+     258.0,
+     258.4
     ],
     "throw": [
-     268.98,
-     269.6
+     258.4,
+     258.9
     ],
     "landing": [
-     271.05,
-     272.45
+     260.5,
+     261.5
     ]
    }
   },
   {
    "cs": 277,
    "title": "Site B Defense – Capture Retake",
-   "ability": "seize",
+   "ability": "haunt",
    "technique": "standing",
    "target": "b-site",
    "stand": "b-site",
    "side": "side_b",
    "spans": {
     "stand": [
-     290.2,
-     290.39
+     278.0,
+     280.0
     ],
     "aim": [
-     297.05,
-     297.95
+     280.0,
+     280.4
     ],
     "throw": [
-     298.16,
-     298.76
+     280.4,
+     280.9
     ],
     "landing": [
-     300.37,
-     301.02
+     282.5,
+     283.5
     ]
    }
   },
@@ -364,23 +364,22 @@
    "side": "side_b",
    "spans": {
     "stand": [
-     312.8,
-     314.12
+     306.0,
+     308.0
     ],
     "aim": [
-     317.9,
-     318.45
+     308.0,
+     308.4
     ],
     "throw": [
-     318.35,
-     318.97
+     308.4,
+     308.9
     ],
     "landing": [
-     320.2,
-     321.15
+     310.5,
+     311.5
     ]
    }
   }
- ],
- "note": "fade BREEZE lineups from olWxwnYlKiI; 14 gate-passed, 0 dropped as un-gated. ability from localizer (author unlabelled)."
+ ]
 }
