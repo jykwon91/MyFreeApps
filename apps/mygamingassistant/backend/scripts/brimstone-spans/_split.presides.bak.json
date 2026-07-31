@@ -1,0 +1,520 @@
+{
+ "video_id": "ffopLLNJfkQ",
+ "map_slug": "split",
+ "author": "Tseeky - Pro Valorant Lineups",
+ "lineups": [
+  {
+   "cs": 0,
+   "title": "B Open Plant 1 (Main / Heaven Plant)",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     1.0,
+     3.0
+    ],
+    "aim": [
+     3.0,
+     3.4
+    ],
+    "throw": [
+     3.4,
+     3.9
+    ],
+    "landing": [
+     5.5,
+     6.5
+    ]
+   }
+  },
+  {
+   "cs": 19,
+   "title": "B Default Plant 1 Fast",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     20.0,
+     22.0
+    ],
+    "aim": [
+     22.0,
+     22.4
+    ],
+    "throw": [
+     22.4,
+     22.9
+    ],
+    "landing": [
+     24.5,
+     25.5
+    ]
+   }
+  },
+  {
+   "cs": 37,
+   "title": "B Corner Plant",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     38.0,
+     40.0
+    ],
+    "aim": [
+     40.0,
+     40.4
+    ],
+    "throw": [
+     40.4,
+     40.9
+    ],
+    "landing": [
+     42.5,
+     43.5
+    ]
+   }
+  },
+  {
+   "cs": 51,
+   "title": "B Rafter Box Plant",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     52.0,
+     54.0
+    ],
+    "aim": [
+     54.0,
+     54.4
+    ],
+    "throw": [
+     54.4,
+     54.9
+    ],
+    "landing": [
+     56.5,
+     57.5
+    ]
+   }
+  },
+  {
+   "cs": 67,
+   "title": "B Open Plant 2 From Heaven",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "mail",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     68.0,
+     70.0
+    ],
+    "aim": [
+     70.0,
+     70.4
+    ],
+    "throw": [
+     70.4,
+     70.9
+    ],
+    "landing": [
+     72.5,
+     73.5
+    ]
+   }
+  },
+  {
+   "cs": 80,
+   "title": "B Default Plant 2 From Heaven",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "mail",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     81.0,
+     83.0
+    ],
+    "aim": [
+     83.0,
+     83.4
+    ],
+    "throw": [
+     83.4,
+     83.9
+    ],
+    "landing": [
+     85.5,
+     86.5
+    ]
+   }
+  },
+  {
+   "cs": 93,
+   "title": "B Open Plant 3 Simple",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     94.0,
+     96.0
+    ],
+    "aim": [
+     96.0,
+     96.4
+    ],
+    "throw": [
+     96.4,
+     96.9
+    ],
+    "landing": [
+     98.5,
+     99.5
+    ]
+   }
+  },
+  {
+   "cs": 110,
+   "title": "B Default Plant 3 Simple",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     111.0,
+     113.0
+    ],
+    "aim": [
+     113.0,
+     113.4
+    ],
+    "throw": [
+     113.4,
+     113.9
+    ],
+    "landing": [
+     115.5,
+     116.5
+    ]
+   }
+  },
+  {
+   "cs": 127,
+   "title": "A Open Plant 1 Fast",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     128.0,
+     130.0
+    ],
+    "aim": [
+     130.0,
+     130.4
+    ],
+    "throw": [
+     130.4,
+     130.9
+    ],
+    "landing": [
+     132.5,
+     133.5
+    ]
+   }
+  },
+  {
+   "cs": 140,
+   "title": "A Default Plant 1 Fast",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     141.0,
+     143.0
+    ],
+    "aim": [
+     143.0,
+     143.4
+    ],
+    "throw": [
+     143.4,
+     143.9
+    ],
+    "landing": [
+     145.5,
+     146.5
+    ]
+   }
+  },
+  {
+   "cs": 154,
+   "title": "A Open Plant 2",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     155.0,
+     157.0
+    ],
+    "aim": [
+     157.0,
+     157.4
+    ],
+    "throw": [
+     157.4,
+     157.9
+    ],
+    "landing": [
+     159.5,
+     160.5
+    ]
+   }
+  },
+  {
+   "cs": 172,
+   "title": "A Default Plant 2",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     173.0,
+     175.0
+    ],
+    "aim": [
+     175.0,
+     175.4
+    ],
+    "throw": [
+     175.4,
+     175.9
+    ],
+    "landing": [
+     177.5,
+     178.5
+    ]
+   }
+  },
+  {
+   "cs": 190,
+   "title": "A Front Screen Plant",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     191.0,
+     193.0
+    ],
+    "aim": [
+     193.0,
+     193.4
+    ],
+    "throw": [
+     193.4,
+     193.9
+    ],
+    "landing": [
+     195.5,
+     196.5
+    ]
+   }
+  },
+  {
+   "cs": 206,
+   "title": "A Back Screen Plant",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     207.0,
+     209.0
+    ],
+    "aim": [
+     209.0,
+     209.4
+    ],
+    "throw": [
+     209.4,
+     209.9
+    ],
+    "landing": [
+     211.5,
+     212.5
+    ]
+   }
+  },
+  {
+   "cs": 220,
+   "title": "A Corner Plant",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     221.0,
+     223.0
+    ],
+    "aim": [
+     223.0,
+     223.4
+    ],
+    "throw": [
+     223.4,
+     223.9
+    ],
+    "landing": [
+     225.5,
+     226.5
+    ]
+   }
+  },
+  {
+   "cs": 236,
+   "title": "A Open Plant 3 Fast & Simple",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     237.0,
+     239.0
+    ],
+    "aim": [
+     239.0,
+     239.4
+    ],
+    "throw": [
+     239.4,
+     239.9
+    ],
+    "landing": [
+     241.5,
+     242.5
+    ]
+   }
+  },
+  {
+   "cs": 253,
+   "title": "A Antiplant From CT",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     254.0,
+     256.0
+    ],
+    "aim": [
+     256.0,
+     256.4
+    ],
+    "throw": [
+     256.4,
+     256.9
+    ],
+    "landing": [
+     258.5,
+     259.5
+    ]
+   }
+  },
+  {
+   "cs": 269,
+   "title": "A Antiplant From Heaven",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     270.0,
+     272.0
+    ],
+    "aim": [
+     272.0,
+     272.4
+    ],
+    "throw": [
+     272.4,
+     272.9
+    ],
+    "landing": [
+     274.5,
+     275.5
+    ]
+   }
+  },
+  {
+   "cs": 282,
+   "title": "B Antiplants From CT",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": null,
+   "spans": {
+    "stand": [
+     283.0,
+     285.0
+    ],
+    "aim": [
+     285.0,
+     285.4
+    ],
+    "throw": [
+     285.4,
+     285.9
+    ],
+    "landing": [
+     287.5,
+     288.5
+    ]
+   }
+  }
+ ]
+}

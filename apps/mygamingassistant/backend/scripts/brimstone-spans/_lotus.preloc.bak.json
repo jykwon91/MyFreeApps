@@ -1,0 +1,736 @@
+{
+ "video_id": "979CIGlymyM",
+ "map_slug": "lotus",
+ "author": "HEHE XD",
+ "lineups": [
+  {
+   "cs": 0,
+   "title": "A DEFAULT FROM A LINK",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "mid",
+   "side": null,
+   "spans": {
+    "stand": [
+     1.0,
+     3.0
+    ],
+    "aim": [
+     3.0,
+     3.4
+    ],
+    "throw": [
+     3.4,
+     3.9
+    ],
+    "landing": [
+     5.5,
+     6.5
+    ]
+   }
+  },
+  {
+   "cs": 23,
+   "title": "A DEFAULT FROM A RUBBLE",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": null,
+   "spans": {
+    "stand": [
+     24.0,
+     26.0
+    ],
+    "aim": [
+     26.0,
+     26.4
+    ],
+    "throw": [
+     26.4,
+     26.9
+    ],
+    "landing": [
+     28.5,
+     29.5
+    ]
+   }
+  },
+  {
+   "cs": 44,
+   "title": "A DEFAULT FROM B SITE",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "b-site",
+   "side": null,
+   "spans": {
+    "stand": [
+     45.0,
+     47.0
+    ],
+    "aim": [
+     47.0,
+     47.4
+    ],
+    "throw": [
+     47.4,
+     47.9
+    ],
+    "landing": [
+     49.5,
+     50.5
+    ]
+   }
+  },
+  {
+   "cs": 72,
+   "title": "A DEFAULT FROM DEFENDER SPAWN",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "ct-spawn",
+   "side": null,
+   "spans": {
+    "stand": [
+     73.0,
+     75.0
+    ],
+    "aim": [
+     75.0,
+     75.4
+    ],
+    "throw": [
+     75.4,
+     75.9
+    ],
+    "landing": [
+     77.5,
+     78.5
+    ]
+   }
+  },
+  {
+   "cs": 100,
+   "title": "A OPEN FROM A ROOT",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": null,
+   "spans": {
+    "stand": [
+     101.0,
+     103.0
+    ],
+    "aim": [
+     103.0,
+     103.4
+    ],
+    "throw": [
+     103.4,
+     103.9
+    ],
+    "landing": [
+     105.5,
+     106.5
+    ]
+   }
+  },
+  {
+   "cs": 130,
+   "title": "A OPEN FROM A RUBBLE",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": null,
+   "spans": {
+    "stand": [
+     131.0,
+     133.0
+    ],
+    "aim": [
+     133.0,
+     133.4
+    ],
+    "throw": [
+     133.4,
+     133.9
+    ],
+    "landing": [
+     135.5,
+     136.5
+    ]
+   }
+  },
+  {
+   "cs": 160,
+   "title": "A OPEN FROM B SITE",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "b-site",
+   "side": null,
+   "spans": {
+    "stand": [
+     161.0,
+     163.0
+    ],
+    "aim": [
+     163.0,
+     163.4
+    ],
+    "throw": [
+     163.4,
+     163.9
+    ],
+    "landing": [
+     165.5,
+     166.5
+    ]
+   }
+  },
+  {
+   "cs": 182,
+   "title": "A OPEN FROM DEFENDER SPAWN",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "ct-spawn",
+   "side": null,
+   "spans": {
+    "stand": [
+     183.0,
+     185.0
+    ],
+    "aim": [
+     185.0,
+     185.4
+    ],
+    "throw": [
+     185.4,
+     185.9
+    ],
+    "landing": [
+     187.5,
+     188.5
+    ]
+   }
+  },
+  {
+   "cs": 206,
+   "title": "A BACKSITE FROM DEFENDER SPAWN",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "ct-spawn",
+   "side": null,
+   "spans": {
+    "stand": [
+     207.0,
+     209.0
+    ],
+    "aim": [
+     209.0,
+     209.4
+    ],
+    "throw": [
+     209.4,
+     209.9
+    ],
+    "landing": [
+     211.5,
+     212.5
+    ]
+   }
+  },
+  {
+   "cs": 234,
+   "title": "B OPEN FROM A RUBBLE",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "a-main",
+   "side": null,
+   "spans": {
+    "stand": [
+     235.0,
+     237.0
+    ],
+    "aim": [
+     237.0,
+     237.4
+    ],
+    "throw": [
+     237.4,
+     237.9
+    ],
+    "landing": [
+     239.5,
+     240.5
+    ]
+   }
+  },
+  {
+   "cs": 265,
+   "title": "B OPEN FROM A DOOR",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "a-main",
+   "side": null,
+   "spans": {
+    "stand": [
+     266.0,
+     268.0
+    ],
+    "aim": [
+     268.0,
+     268.4
+    ],
+    "throw": [
+     268.4,
+     268.9
+    ],
+    "landing": [
+     270.5,
+     271.5
+    ]
+   }
+  },
+  {
+   "cs": 290,
+   "title": "B PIT FROM B PILLARS",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": null,
+   "spans": {
+    "stand": [
+     291.0,
+     293.0
+    ],
+    "aim": [
+     293.0,
+     293.4
+    ],
+    "throw": [
+     293.4,
+     293.9
+    ],
+    "landing": [
+     295.5,
+     296.5
+    ]
+   }
+  },
+  {
+   "cs": 319,
+   "title": "B PIT FROM C GRAVEL",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "c-site",
+   "side": null,
+   "spans": {
+    "stand": [
+     320.0,
+     322.0
+    ],
+    "aim": [
+     322.0,
+     322.4
+    ],
+    "throw": [
+     322.4,
+     322.9
+    ],
+    "landing": [
+     324.5,
+     325.5
+    ]
+   }
+  },
+  {
+   "cs": 345,
+   "title": "B PIT FROM DEFENDER SPAWN",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "ct-spawn",
+   "side": null,
+   "spans": {
+    "stand": [
+     346.0,
+     348.0
+    ],
+    "aim": [
+     348.0,
+     348.4
+    ],
+    "throw": [
+     348.4,
+     348.9
+    ],
+    "landing": [
+     350.5,
+     351.5
+    ]
+   }
+  },
+  {
+   "cs": 368,
+   "title": "C DEFAULT FROM C LOBBY",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "c-site",
+   "stand": "c-main",
+   "side": null,
+   "spans": {
+    "stand": [
+     369.0,
+     371.0
+    ],
+    "aim": [
+     371.0,
+     371.4
+    ],
+    "throw": [
+     371.4,
+     371.9
+    ],
+    "landing": [
+     373.5,
+     374.5
+    ]
+   }
+  },
+  {
+   "cs": 399,
+   "title": "C DEFAULT FROM C MOUND",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "c-site",
+   "stand": "c-main",
+   "side": null,
+   "spans": {
+    "stand": [
+     400.0,
+     402.0
+    ],
+    "aim": [
+     402.0,
+     402.4
+    ],
+    "throw": [
+     402.4,
+     402.9
+    ],
+    "landing": [
+     404.5,
+     405.5
+    ]
+   }
+  },
+  {
+   "cs": 426,
+   "title": "C OPEN FROM C MOUND",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "c-site",
+   "stand": "c-main",
+   "side": null,
+   "spans": {
+    "stand": [
+     427.0,
+     429.0
+    ],
+    "aim": [
+     429.0,
+     429.4
+    ],
+    "throw": [
+     429.4,
+     429.9
+    ],
+    "landing": [
+     431.5,
+     432.5
+    ]
+   }
+  },
+  {
+   "cs": 458,
+   "title": "C OPEN FROM B PILLARS",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "c-site",
+   "stand": "b-main",
+   "side": null,
+   "spans": {
+    "stand": [
+     459.0,
+     461.0
+    ],
+    "aim": [
+     461.0,
+     461.4
+    ],
+    "throw": [
+     461.4,
+     461.9
+    ],
+    "landing": [
+     463.5,
+     464.5
+    ]
+   }
+  },
+  {
+   "cs": 482,
+   "title": "C OPEN FROM B SITE",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "c-site",
+   "stand": "b-site",
+   "side": null,
+   "spans": {
+    "stand": [
+     483.0,
+     485.0
+    ],
+    "aim": [
+     485.0,
+     485.4
+    ],
+    "throw": [
+     485.4,
+     485.9
+    ],
+    "landing": [
+     487.5,
+     488.5
+    ]
+   }
+  },
+  {
+   "cs": 505,
+   "title": "C OPEN FROM C GRAVEL",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "c-site",
+   "stand": "c-site",
+   "side": null,
+   "spans": {
+    "stand": [
+     506.0,
+     508.0
+    ],
+    "aim": [
+     508.0,
+     508.4
+    ],
+    "throw": [
+     508.4,
+     508.9
+    ],
+    "landing": [
+     510.5,
+     511.5
+    ]
+   }
+  },
+  {
+   "cs": 528,
+   "title": "C SAFE FROM C MOUND",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "c-site",
+   "stand": "c-main",
+   "side": null,
+   "spans": {
+    "stand": [
+     529.0,
+     531.0
+    ],
+    "aim": [
+     531.0,
+     531.4
+    ],
+    "throw": [
+     531.4,
+     531.9
+    ],
+    "landing": [
+     533.5,
+     534.5
+    ]
+   }
+  },
+  {
+   "cs": 560,
+   "title": "C SAFE FROM B SITE",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "c-site",
+   "stand": "b-site",
+   "side": null,
+   "spans": {
+    "stand": [
+     561.0,
+     563.0
+    ],
+    "aim": [
+     563.0,
+     563.4
+    ],
+    "throw": [
+     563.4,
+     563.9
+    ],
+    "landing": [
+     565.5,
+     566.5
+    ]
+   }
+  },
+  {
+   "cs": 582,
+   "title": "C ALTERNATIVE FROM C LOBBY",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "c-site",
+   "stand": "c-main",
+   "side": null,
+   "spans": {
+    "stand": [
+     583.0,
+     585.0
+    ],
+    "aim": [
+     585.0,
+     585.4
+    ],
+    "throw": [
+     585.4,
+     585.9
+    ],
+    "landing": [
+     587.5,
+     588.5
+    ]
+   }
+  },
+  {
+   "cs": 613,
+   "title": "(DEFENCIVE) C MAIN FROM B SITE",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "c-main",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     614.0,
+     616.0
+    ],
+    "aim": [
+     616.0,
+     616.4
+    ],
+    "throw": [
+     616.4,
+     616.9
+    ],
+    "landing": [
+     618.5,
+     619.5
+    ]
+   }
+  },
+  {
+   "cs": 640,
+   "title": "(DEFENCIVE) A MAIN FROM C WATERFALL",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "c-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     641.0,
+     643.0
+    ],
+    "aim": [
+     643.0,
+     643.4
+    ],
+    "throw": [
+     643.4,
+     643.9
+    ],
+    "landing": [
+     645.5,
+     646.5
+    ]
+   }
+  },
+  {
+   "cs": 660,
+   "title": "(DEFENCIVE) A TREE FROM DEFENDER SPAWN",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "ct-spawn",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     661.0,
+     663.0
+    ],
+    "aim": [
+     663.0,
+     663.4
+    ],
+    "throw": [
+     663.4,
+     663.9
+    ],
+    "landing": [
+     665.5,
+     666.5
+    ]
+   }
+  },
+  {
+   "cs": 683,
+   "title": "(DEFENCIVE) C MAIN FROM A SITE",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "c-main",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     684.0,
+     686.0
+    ],
+    "aim": [
+     686.0,
+     686.4
+    ],
+    "throw": [
+     686.4,
+     686.9
+    ],
+    "landing": [
+     688.5,
+     689.5
+    ]
+   }
+  }
+ ]
+}

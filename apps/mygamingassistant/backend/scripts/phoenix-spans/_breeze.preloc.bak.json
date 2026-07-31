@@ -1,0 +1,493 @@
+{
+ "video_id": "ajDIywaiqxg",
+ "map_slug": "breeze",
+ "author": "nic.vallabh",
+ "lineups": [
+  {
+   "cs": 5,
+   "title": "A Lobby to A Shop",
+   "ability": "hot-hands",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-main",
+   "side": null,
+   "spans": {
+    "stand": [
+     6.0,
+     8.0
+    ],
+    "aim": [
+     8.0,
+     8.4
+    ],
+    "throw": [
+     8.4,
+     8.9
+    ],
+    "landing": [
+     10.5,
+     11.5
+    ]
+   }
+  },
+  {
+   "cs": 38,
+   "title": "A Cubby to A 2nd Pyramid back",
+   "ability": "hot-hands",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": null,
+   "spans": {
+    "stand": [
+     39.0,
+     41.0
+    ],
+    "aim": [
+     41.0,
+     41.4
+    ],
+    "throw": [
+     41.4,
+     41.9
+    ],
+    "landing": [
+     43.5,
+     44.5
+    ]
+   }
+  },
+  {
+   "cs": 67,
+   "title": "A Cubby to A Orange box",
+   "ability": "hot-hands",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": null,
+   "spans": {
+    "stand": [
+     68.0,
+     70.0
+    ],
+    "aim": [
+     70.0,
+     70.4
+    ],
+    "throw": [
+     70.4,
+     70.9
+    ],
+    "landing": [
+     72.5,
+     73.5
+    ]
+   }
+  },
+  {
+   "cs": 97,
+   "title": "A Cubby to A 1st Pyramid back",
+   "ability": "hot-hands",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": null,
+   "spans": {
+    "stand": [
+     98.0,
+     100.0
+    ],
+    "aim": [
+     100.0,
+     100.4
+    ],
+    "throw": [
+     100.4,
+     100.9
+    ],
+    "landing": [
+     102.5,
+     103.5
+    ]
+   }
+  },
+  {
+   "cs": 127,
+   "title": "A Cubby to A Default Plant",
+   "ability": "hot-hands",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     128.0,
+     130.0
+    ],
+    "aim": [
+     130.0,
+     130.4
+    ],
+    "throw": [
+     130.4,
+     130.9
+    ],
+    "landing": [
+     132.5,
+     133.5
+    ]
+   }
+  },
+  {
+   "cs": 155,
+   "title": "A 1st Pyramid to A Site Brown Box",
+   "ability": "hot-hands",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": null,
+   "spans": {
+    "stand": [
+     156.0,
+     158.0
+    ],
+    "aim": [
+     158.0,
+     158.4
+    ],
+    "throw": [
+     158.4,
+     158.9
+    ],
+    "landing": [
+     160.5,
+     161.5
+    ]
+   }
+  },
+  {
+   "cs": 186,
+   "title": "The Pillar Play",
+   "ability": "hot-hands",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": null,
+   "spans": {
+    "stand": [
+     187.0,
+     189.0
+    ],
+    "aim": [
+     189.0,
+     189.4
+    ],
+    "throw": [
+     189.4,
+     189.9
+    ],
+    "landing": [
+     191.5,
+     192.5
+    ]
+   }
+  },
+  {
+   "cs": 217,
+   "title": "A Orange to A Back site",
+   "ability": "hot-hands",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": null,
+   "spans": {
+    "stand": [
+     218.0,
+     220.0
+    ],
+    "aim": [
+     220.0,
+     220.4
+    ],
+    "throw": [
+     220.4,
+     220.9
+    ],
+    "landing": [
+     222.5,
+     223.5
+    ]
+   }
+  },
+  {
+   "cs": 248,
+   "title": "A Orange to A Default Plant",
+   "ability": "hot-hands",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     249.0,
+     251.0
+    ],
+    "aim": [
+     251.0,
+     251.4
+    ],
+    "throw": [
+     251.4,
+     251.9
+    ],
+    "landing": [
+     253.5,
+     254.5
+    ]
+   }
+  },
+  {
+   "cs": 291,
+   "title": "A Orange to Mid Entrance",
+   "ability": "hot-hands",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "a-site",
+   "side": null,
+   "spans": {
+    "stand": [
+     292.0,
+     294.0
+    ],
+    "aim": [
+     294.0,
+     294.4
+    ],
+    "throw": [
+     294.4,
+     294.9
+    ],
+    "landing": [
+     296.5,
+     297.5
+    ]
+   }
+  },
+  {
+   "cs": 320,
+   "title": "Mid Rush (Defense)",
+   "ability": "hot-hands",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     321.0,
+     323.0
+    ],
+    "aim": [
+     323.0,
+     323.4
+    ],
+    "throw": [
+     323.4,
+     323.9
+    ],
+    "landing": [
+     325.5,
+     326.5
+    ]
+   }
+  },
+  {
+   "cs": 348,
+   "title": "Mid Rush (Attack)",
+   "ability": "hot-hands",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     349.0,
+     351.0
+    ],
+    "aim": [
+     351.0,
+     351.4
+    ],
+    "throw": [
+     351.4,
+     351.9
+    ],
+    "landing": [
+     353.5,
+     354.5
+    ]
+   }
+  },
+  {
+   "cs": 373,
+   "title": "B Half Wall to B Default Plant",
+   "ability": "hot-hands",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     374.0,
+     376.0
+    ],
+    "aim": [
+     376.0,
+     376.4
+    ],
+    "throw": [
+     376.4,
+     376.9
+    ],
+    "landing": [
+     378.5,
+     379.5
+    ]
+   }
+  },
+  {
+   "cs": 396,
+   "title": "B Half Wall to B Back Pillar",
+   "ability": "hot-hands",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": null,
+   "spans": {
+    "stand": [
+     397.0,
+     399.0
+    ],
+    "aim": [
+     399.0,
+     399.4
+    ],
+    "throw": [
+     399.4,
+     399.9
+    ],
+    "landing": [
+     401.5,
+     402.5
+    ]
+   }
+  },
+  {
+   "cs": 425,
+   "title": "B Half Wall to B Entrance Cubby",
+   "ability": "hot-hands",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "b-site",
+   "side": null,
+   "spans": {
+    "stand": [
+     426.0,
+     428.0
+    ],
+    "aim": [
+     428.0,
+     428.4
+    ],
+    "throw": [
+     428.4,
+     428.9
+    ],
+    "landing": [
+     430.5,
+     431.5
+    ]
+   }
+  },
+  {
+   "cs": 450,
+   "title": "B Back Black Pillar 1 to B Back Black Pillar 2",
+   "ability": "hot-hands",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": null,
+   "spans": {
+    "stand": [
+     451.0,
+     453.0
+    ],
+    "aim": [
+     453.0,
+     453.4
+    ],
+    "throw": [
+     453.4,
+     453.9
+    ],
+    "landing": [
+     455.5,
+     456.5
+    ]
+   }
+  },
+  {
+   "cs": 470,
+   "title": "B Back brown box to B Default Plant",
+   "ability": "hot-hands",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     471.0,
+     473.0
+    ],
+    "aim": [
+     473.0,
+     473.4
+    ],
+    "throw": [
+     473.4,
+     473.9
+    ],
+    "landing": [
+     475.5,
+     476.5
+    ]
+   }
+  },
+  {
+   "cs": 485,
+   "title": "B Back Black Pillar 1 to B Site Plant",
+   "ability": "hot-hands",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     486.0,
+     488.0
+    ],
+    "aim": [
+     488.0,
+     488.4
+    ],
+    "throw": [
+     488.4,
+     488.9
+    ],
+    "landing": [
+     490.5,
+     491.5
+    ]
+   }
+  }
+ ]
+}

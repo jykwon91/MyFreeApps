@@ -1,0 +1,465 @@
+{
+  "video_id": "979CIGlymyM",
+  "why": "side undecidable by callout / stand-zone / zone-pair / target-zone measurement; the author's '(DEFENCIVE)' prefix marks a section, not a partition, so its absence does not imply attack. Operator resolves by watching the video's framing.",
+  "lineups": [
+    {
+      "cs": 0,
+      "title": "A DEFAULT FROM A LINK",
+      "ability": "brim-incendiary",
+      "technique": "standing",
+      "target": "a-site",
+      "stand": "mid",
+      "side": null,
+      "spans": {
+        "stand": [
+          8.9,
+          11.2
+        ],
+        "aim": [
+          15.0,
+          15.9
+        ],
+        "throw": [
+          15.9,
+          16.5
+        ],
+        "landing": [
+          17.15,
+          18.65
+        ]
+      }
+    },
+    {
+      "cs": 23,
+      "title": "A DEFAULT FROM A RUBBLE",
+      "ability": "brim-incendiary",
+      "technique": "standing",
+      "target": "a-site",
+      "stand": "a-main",
+      "side": null,
+      "spans": {
+        "stand": [
+          26.95,
+          28.9
+        ],
+        "aim": [
+          32.88,
+          33.83
+        ],
+        "throw": [
+          33.75,
+          34.35
+        ],
+        "landing": [
+          39.35,
+          40.6
+        ]
+      }
+    },
+    {
+      "cs": 44,
+      "title": "A DEFAULT FROM B SITE",
+      "ability": "brim-incendiary",
+      "technique": "standing",
+      "target": "a-site",
+      "stand": "b-site",
+      "side": null,
+      "spans": {
+        "stand": [
+          50.6,
+          52.6
+        ],
+        "aim": [
+          59.8,
+          60.85
+        ],
+        "throw": [
+          60.7,
+          61.3
+        ],
+        "landing": [
+          67.85,
+          69.15
+        ]
+      }
+    },
+    {
+      "cs": 100,
+      "title": "A OPEN FROM A ROOT",
+      "ability": "brim-incendiary",
+      "technique": "standing",
+      "target": "a-site",
+      "stand": "a-main",
+      "side": null,
+      "spans": {
+        "stand": [
+          111.9,
+          114.6
+        ],
+        "aim": [
+          118.5,
+          119.6
+        ],
+        "throw": [
+          119.45,
+          120.05
+        ],
+        "landing": [
+          125.7,
+          126.9
+        ]
+      }
+    },
+    {
+      "cs": 130,
+      "title": "A OPEN FROM A RUBBLE",
+      "ability": "brim-incendiary",
+      "technique": "standing",
+      "target": "a-site",
+      "stand": "a-main",
+      "side": null,
+      "spans": {
+        "stand": [
+          132.35,
+          133.85
+        ],
+        "aim": [
+          146.45,
+          147.6
+        ],
+        "throw": [
+          147.47,
+          148.07
+        ],
+        "landing": [
+          154.9,
+          156.2
+        ]
+      }
+    },
+    {
+      "cs": 160,
+      "title": "A OPEN FROM B SITE",
+      "ability": "brim-incendiary",
+      "technique": "standing",
+      "target": "a-site",
+      "stand": "b-site",
+      "side": null,
+      "spans": {
+        "stand": [
+          162.45,
+          164.05
+        ],
+        "aim": [
+          169.4,
+          170.4
+        ],
+        "throw": [
+          170.28,
+          170.93
+        ],
+        "landing": [
+          176.68,
+          178.0
+        ]
+      }
+    },
+    {
+      "cs": 234,
+      "title": "B OPEN FROM A RUBBLE",
+      "ability": "brim-incendiary",
+      "technique": "standing",
+      "target": "b-site",
+      "stand": "a-main",
+      "side": null,
+      "spans": {
+        "stand": [
+          243.15,
+          244.65
+        ],
+        "aim": [
+          252.95,
+          253.9
+        ],
+        "throw": [
+          253.78,
+          254.34
+        ],
+        "landing": [
+          261.2,
+          262.5
+        ]
+      }
+    },
+    {
+      "cs": 265,
+      "title": "B OPEN FROM A DOOR",
+      "ability": "brim-incendiary",
+      "technique": "standing",
+      "target": "b-site",
+      "stand": "a-main",
+      "side": null,
+      "spans": {
+        "stand": [
+          269.4,
+          271.5
+        ],
+        "aim": [
+          276.5,
+          277.6
+        ],
+        "throw": [
+          277.6,
+          278.2
+        ],
+        "landing": [
+          285.28,
+          286.6
+        ]
+      }
+    },
+    {
+      "cs": 290,
+      "title": "B PIT FROM B PILLARS",
+      "ability": "brim-incendiary",
+      "technique": "standing",
+      "target": "b-site",
+      "stand": "b-main",
+      "side": null,
+      "spans": {
+        "stand": [
+          299.3,
+          301.6
+        ],
+        "aim": [
+          307.35,
+          308.3
+        ],
+        "throw": [
+          308.2,
+          308.85
+        ],
+        "landing": [
+          314.28,
+          315.6
+        ]
+      }
+    },
+    {
+      "cs": 368,
+      "title": "C DEFAULT FROM C LOBBY",
+      "ability": "brim-incendiary",
+      "technique": "standing",
+      "target": "c-site",
+      "stand": "c-main",
+      "side": null,
+      "spans": {
+        "stand": [
+          374.0,
+          375.5
+        ],
+        "aim": [
+          386.3,
+          387.41
+        ],
+        "throw": [
+          387.28,
+          387.93
+        ],
+        "landing": [
+          394.53,
+          395.73
+        ]
+      }
+    },
+    {
+      "cs": 399,
+      "title": "C DEFAULT FROM C MOUND",
+      "ability": "brim-incendiary",
+      "technique": "standing",
+      "target": "c-site",
+      "stand": "c-main",
+      "side": null,
+      "spans": {
+        "stand": [
+          403.2,
+          405.0
+        ],
+        "aim": [
+          413.15,
+          414.15
+        ],
+        "throw": [
+          414.1,
+          414.75
+        ],
+        "landing": [
+          421.6,
+          422.9
+        ]
+      }
+    },
+    {
+      "cs": 458,
+      "title": "C OPEN FROM B PILLARS",
+      "ability": "brim-incendiary",
+      "technique": "standing",
+      "target": "c-site",
+      "stand": "b-main",
+      "side": null,
+      "spans": {
+        "stand": [
+          461.4,
+          463.9
+        ],
+        "aim": [
+          469.85,
+          471.05
+        ],
+        "throw": [
+          471.0,
+          471.65
+        ],
+        "landing": [
+          476.95,
+          478.25
+        ]
+      }
+    },
+    {
+      "cs": 482,
+      "title": "C OPEN FROM B SITE",
+      "ability": "brim-incendiary",
+      "technique": "standing",
+      "target": "c-site",
+      "stand": "b-site",
+      "side": null,
+      "spans": {
+        "stand": [
+          485.0,
+          487.0
+        ],
+        "aim": [
+          493.2,
+          494.15
+        ],
+        "throw": [
+          494.15,
+          494.75
+        ],
+        "landing": [
+          500.2,
+          501.6
+        ]
+      }
+    },
+    {
+      "cs": 505,
+      "title": "C OPEN FROM C GRAVEL",
+      "ability": "brim-incendiary",
+      "technique": "standing",
+      "target": "c-site",
+      "stand": "c-site",
+      "side": null,
+      "spans": {
+        "stand": [
+          508.6,
+          511.0
+        ],
+        "aim": [
+          518.65,
+          519.8
+        ],
+        "throw": [
+          519.7,
+          520.3
+        ],
+        "landing": [
+          523.7,
+          525.0
+        ]
+      }
+    },
+    {
+      "cs": 528,
+      "title": "C SAFE FROM C MOUND",
+      "ability": "brim-incendiary",
+      "technique": "standing",
+      "target": "c-site",
+      "stand": "c-main",
+      "side": null,
+      "spans": {
+        "stand": [
+          541.4,
+          543.4
+        ],
+        "aim": [
+          548.05,
+          548.95
+        ],
+        "throw": [
+          548.9,
+          549.55
+        ],
+        "landing": [
+          554.6,
+          555.8
+        ]
+      }
+    },
+    {
+      "cs": 560,
+      "title": "C SAFE FROM B SITE",
+      "ability": "brim-incendiary",
+      "technique": "standing",
+      "target": "c-site",
+      "stand": "b-site",
+      "side": null,
+      "spans": {
+        "stand": [
+          562.8,
+          565.6
+        ],
+        "aim": [
+          570.6,
+          571.75
+        ],
+        "throw": [
+          571.68,
+          572.28
+        ],
+        "landing": [
+          577.88,
+          579.1
+        ]
+      }
+    },
+    {
+      "cs": 582,
+      "title": "C ALTERNATIVE FROM C LOBBY",
+      "ability": "brim-incendiary",
+      "technique": "standing",
+      "target": "c-site",
+      "stand": "c-main",
+      "side": null,
+      "spans": {
+        "stand": [
+          592.85,
+          594.95
+        ],
+        "aim": [
+          600.72,
+          601.74
+        ],
+        "throw": [
+          601.65,
+          602.25
+        ],
+        "landing": [
+          608.95,
+          610.3
+        ]
+      }
+    }
+  ]
+}
