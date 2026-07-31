@@ -43,6 +43,11 @@ class UtilityTypeRead(BaseModel):
     id: uuid.UUID
     slug: str
     name: str
+    # 'thrown' (STAND/AIM/THROW/LANDING) or 'placed' (STAND/AIM/LANDING — a
+    # mounted device never leaves the player's hands, so there is no throw beat).
+    # Defaulted rather than required so a client reading an older payload, or a
+    # test constructing this by hand, still gets the overwhelmingly common case.
+    placement: str = "thrown"
     # Valorant utilities belong to an agent (Sova's recon/shock); CS2 → None.
     # Populated from the eager-loaded utility_type.agent relationship.
     agent: Optional["AgentRead"] = None

@@ -130,6 +130,9 @@ async def _load_utility_types(db: AsyncSession) -> None:
                 slug=ut["slug"],
                 name=ut["name"],
                 agent_id=agent_id,
+                # Absent for every thrown utility, which is nearly all of them —
+                # the fixture only spells out the 'placed' exceptions.
+                placement=ut.get("placement", "thrown"),
             )
             logger.debug(
                 "fixture_loader: upserted utility_type %s/%s",

@@ -143,6 +143,9 @@ async def get_map(
                 # group the second-stage utility chips under the selected agent.
                 # CS2 utilities have no agent → None.
                 "agent_slug": agent_slug_by_id.get(u.agent_id),
+                # Lets the upload/review forms know a lineup for this utility has
+                # three beats rather than four, before any clip exists.
+                "placement": u.placement,
             }
             for u in utility_types
         ],

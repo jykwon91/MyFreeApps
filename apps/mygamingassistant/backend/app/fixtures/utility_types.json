@@ -63,21 +63,21 @@
       { "slug": "m-pulse",          "name": "M-Pulse",          "agent_slug": "miks" },
 
       { "slug": "nanoswarm",        "name": "Nanoswarm",        "agent_slug": "killjoy" },
-      { "slug": "alarmbot",         "name": "Alarmbot",         "agent_slug": "killjoy" },
-      { "slug": "turret",           "name": "Turret",           "agent_slug": "killjoy" },
+      { "slug": "alarmbot",         "name": "Alarmbot",         "agent_slug": "killjoy", "placement": "placed" },
+      { "slug": "turret",           "name": "Turret",           "agent_slug": "killjoy", "placement": "placed" },
 
       { "slug": "cyber-cage",       "name": "Cyber Cage",       "agent_slug": "cypher" },
-      { "slug": "trapwire",         "name": "Trapwire",         "agent_slug": "cypher" },
-      { "slug": "spycam",           "name": "Spycam",           "agent_slug": "cypher" },
+      { "slug": "trapwire",         "name": "Trapwire",         "agent_slug": "cypher", "placement": "placed" },
+      { "slug": "spycam",           "name": "Spycam",           "agent_slug": "cypher", "placement": "placed" },
 
       { "slug": "barrier-orb",      "name": "Barrier Orb",      "agent_slug": "sage" },
       { "slug": "slow-orb",         "name": "Slow Orb",         "agent_slug": "sage" },
 
-      { "slug": "trademark",        "name": "Trademark",        "agent_slug": "chamber" },
+      { "slug": "trademark",        "name": "Trademark",        "agent_slug": "chamber", "placement": "placed" },
 
       { "slug": "gravnet",          "name": "GravNet",          "agent_slug": "deadlock" },
       { "slug": "barrier-mesh",     "name": "Barrier Mesh",     "agent_slug": "deadlock" },
-      { "slug": "sonic-sensor",     "name": "Sonic Sensor",     "agent_slug": "deadlock" },
+      { "slug": "sonic-sensor",     "name": "Sonic Sensor",     "agent_slug": "deadlock", "placement": "placed" },
 
       { "slug": "arc-rose",         "name": "Arc Rose",         "agent_slug": "vyse" },
       { "slug": "shear",            "name": "Shear",            "agent_slug": "vyse" },
