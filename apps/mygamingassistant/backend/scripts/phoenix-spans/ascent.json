@@ -1,251 +1,89 @@
 {
- "video_id": "oe5FvG5-59k",
- "map_slug": "ascent",
- "author": "Bonsai",
- "lineups": [
-  {
-   "cs": 67,
-   "title": "A Default 1",
-   "ability": "hot-hands",
-   "technique": "standing",
-   "target": "a-site",
-   "stand": "a-main",
-   "side": null,
-   "spans": {
-    "stand": [
-     70.55,
-     71.05
-    ],
-    "aim": [
-     72.4,
-     72.75
-    ],
-    "throw": [
-     72.9,
-     73.4
-    ],
-    "landing": [
-     75.3,
-     76.1
-    ]
-   }
-  },
-  {
-   "cs": 96,
-   "title": "A Anti-Plant",
-   "ability": "hot-hands",
-   "technique": "standing",
-   "target": "a-site",
-   "stand": "a-site",
-   "side": "side_b",
-   "spans": {
-    "stand": [
-     99.7,
-     101.0
-    ],
-    "aim": [
-     102.3,
-     102.6
-    ],
-    "throw": [
-     102.78,
-     103.28
-    ],
-    "landing": [
-     105.15,
-     106.45
-    ]
-   }
-  },
-  {
-   "cs": 120,
-   "title": "B Anti-Rush (Combo)",
-   "ability": "hot-hands",
-   "technique": "standing",
-   "target": "b-site",
-   "stand": "b-site",
-   "side": null,
-   "spans": {
-    "stand": [
-     122.5,
-     124.0
-    ],
-    "aim": [
-     128.4,
-     129.0
-    ],
-    "throw": [
-     128.9,
-     129.4
-    ],
-    "landing": [
-     133.0,
-     135.5
-    ]
-   }
-  },
-  {
-   "cs": 167,
-   "title": "B Stairs (Combo)",
-   "ability": "hot-hands",
-   "technique": "standing",
-   "target": "b-site",
-   "stand": "b-main",
-   "side": "side_a",
-   "spans": {
-    "stand": [
-     171.6,
-     173.2
-    ],
-    "aim": [
-     173.9,
-     174.35
-    ],
-    "throw": [
-     174.35,
-     174.85
-    ],
-    "landing": [
-     177.3,
-     178.1
-    ]
-   }
-  },
-  {
-   "cs": 182,
-   "title": "A Orb 1 (Combo)",
-   "ability": "hot-hands",
-   "technique": "standing",
-   "target": "a-main",
-   "stand": "a-site",
-   "side": null,
-   "spans": {
-    "stand": [
-     183.5,
-     185.0
-    ],
-    "aim": [
-     188.3,
-     189.2
-    ],
-    "throw": [
-     189.25,
-     189.9
-    ],
-    "landing": [
-     191.7,
-     192.3
-    ]
-   }
-  },
-  {
-   "cs": 198,
-   "title": "A Orb 2 (Combo)",
-   "ability": "hot-hands",
-   "technique": "standing",
-   "target": "a-main",
-   "stand": "a-site",
-   "side": null,
-   "spans": {
-    "stand": [
-     206.75,
-     207.55
-    ],
-    "aim": [
-     207.75,
-     208.05
-    ],
-    "throw": [
-     208.05,
-     208.6
-    ],
-    "landing": [
-     209.1,
-     209.9
-    ]
-   }
-  },
-  {
-   "cs": 250,
-   "title": "A Site Right Box 1 (Combo)",
-   "ability": "hot-hands",
-   "technique": "jump",
-   "target": "a-site",
-   "stand": "a-main",
-   "side": null,
-   "spans": {
-    "stand": [
-     252.0,
-     253.3
-    ],
-    "aim": [
-     254.5,
-     255.5
-    ],
-    "throw": [
-     255.5,
-     256.0
-    ],
-    "landing": [
-     258.0,
-     258.6
-    ]
-   }
-  },
-  {
-   "cs": 277,
-   "title": "A Backsite 1 (Combo)",
-   "ability": "hot-hands",
-   "technique": "standing",
-   "target": "a-site",
-   "stand": "a-site",
-   "side": null,
-   "spans": {
-    "stand": [
-     277.0,
-     279.6
-    ],
-    "aim": [
-     283.0,
-     283.6
-    ],
-    "throw": [
-     283.55,
-     284.15
-    ],
-    "landing": [
-     286.5,
-     288.0
-    ]
-   }
-  },
-  {
-   "cs": 291,
-   "title": "A Backsite 2 (Combo)",
-   "ability": "hot-hands",
-   "technique": "standing",
-   "target": "a-site",
-   "stand": "a-site",
-   "side": "side_b",
-   "spans": {
-    "stand": [
-     292.0,
-     293.6
-    ],
-    "aim": [
-     295.4,
-     296.05
-    ],
-    "throw": [
-     296.05,
-     296.55
-    ],
-    "landing": [
-     298.6,
-     299.6
-    ]
-   }
-  }
- ],
- "note": "phoenix Summit lineups from oe5FvG5-59k; 9 gate-passed, 11 dropped as un-gated. ability from localizer (author unlabelled)."
+  "video_id": "oe5FvG5-59k",
+  "map_slug": "ascent",
+  "author": "Bonsai",
+  "lineups": [
+    {
+      "cs": 96,
+      "title": "A Anti-Plant",
+      "ability": "hot-hands",
+      "technique": "standing",
+      "target": "a-site",
+      "stand": "a-site",
+      "side": "side_b",
+      "spans": {
+        "stand": [
+          99.7,
+          101.0
+        ],
+        "aim": [
+          102.3,
+          102.6
+        ],
+        "throw": [
+          102.78,
+          103.28
+        ],
+        "landing": [
+          105.15,
+          106.45
+        ]
+      }
+    },
+    {
+      "cs": 167,
+      "title": "B Stairs (Combo)",
+      "ability": "hot-hands",
+      "technique": "standing",
+      "target": "b-site",
+      "stand": "b-main",
+      "side": "side_a",
+      "spans": {
+        "stand": [
+          171.6,
+          173.2
+        ],
+        "aim": [
+          173.9,
+          174.35
+        ],
+        "throw": [
+          174.35,
+          174.85
+        ],
+        "landing": [
+          177.3,
+          178.1
+        ]
+      }
+    },
+    {
+      "cs": 291,
+      "title": "A Backsite 2 (Combo)",
+      "ability": "hot-hands",
+      "technique": "standing",
+      "target": "a-site",
+      "stand": "a-site",
+      "side": "side_b",
+      "spans": {
+        "stand": [
+          292.0,
+          293.6
+        ],
+        "aim": [
+          295.4,
+          296.05
+        ],
+        "throw": [
+          296.05,
+          296.55
+        ],
+        "landing": [
+          298.6,
+          299.6
+        ]
+      }
+    }
+  ],
+  "note": "phoenix Summit lineups from oe5FvG5-59k; 9 gate-passed, 11 dropped as un-gated. ability from localizer (author unlabelled)."
 }

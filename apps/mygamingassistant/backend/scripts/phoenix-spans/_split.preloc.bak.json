@@ -7,26 +7,26 @@
    "cs": 5,
    "title": "A Site - Attacker Molly (1 of 6 in source)",
    "ability": "hot-hands",
-   "technique": "jump",
+   "technique": "standing",
    "target": "a-site",
-   "stand": "a-main",
+   "stand": "a-site",
    "side": "side_a",
    "spans": {
     "stand": [
-     6.9,
-     8.5
+     6.0,
+     8.0
     ],
     "aim": [
-     11.05,
-     11.75
+     8.0,
+     8.4
     ],
     "throw": [
-     11.9,
-     12.55
+     8.4,
+     8.9
     ],
     "landing": [
-     14.1,
-     15.1
+     10.5,
+     11.5
     ]
    }
   },
@@ -34,26 +34,26 @@
    "cs": 23,
    "title": "A Site - Attacker Molly (2 of 6 in source)",
    "ability": "hot-hands",
-   "technique": "jump",
+   "technique": "standing",
    "target": "a-site",
-   "stand": "a-main",
+   "stand": "a-site",
    "side": "side_a",
    "spans": {
     "stand": [
-     26.15,
-     27.15
+     24.0,
+     26.0
     ],
     "aim": [
-     29.35,
-     29.94
+     26.0,
+     26.4
     ],
     "throw": [
-     29.75,
-     30.35
+     26.4,
+     26.9
     ],
     "landing": [
-     32.2,
-     33.4
+     28.5,
+     29.5
     ]
    }
   },
@@ -61,26 +61,26 @@
    "cs": 40,
    "title": "A Site - Attacker Molly (3 of 6 in source)",
    "ability": "hot-hands",
-   "technique": "jump",
+   "technique": "standing",
    "target": "a-site",
-   "stand": "a-main",
+   "stand": "a-site",
    "side": "side_a",
    "spans": {
     "stand": [
-     42.6,
-     44.1
+     41.0,
+     43.0
     ],
     "aim": [
-     46.2,
-     46.8
+     43.0,
+     43.4
     ],
     "throw": [
-     46.85,
-     47.45
+     43.4,
+     43.9
     ],
     "landing": [
-     49.05,
-     50.35
+     45.5,
+     46.5
     ]
    }
   },
@@ -88,26 +88,26 @@
    "cs": 55,
    "title": "A Site - Attacker Molly (4 of 6 in source)",
    "ability": "hot-hands",
-   "technique": "jump",
+   "technique": "standing",
    "target": "a-site",
-   "stand": "a-main",
+   "stand": "a-site",
    "side": "side_a",
    "spans": {
     "stand": [
-     66.1,
-     67.3
+     56.0,
+     58.0
     ],
     "aim": [
-     67.45,
-     68.2
+     58.0,
+     58.4
     ],
     "throw": [
-     68.22,
-     68.82
+     58.4,
+     58.9
     ],
     "landing": [
-     70.28,
-     71.55
+     60.5,
+     61.5
     ]
    }
   },
@@ -115,26 +115,26 @@
    "cs": 77,
    "title": "A Site - Attacker Molly (5 of 6 in source)",
    "ability": "hot-hands",
-   "technique": "jump",
+   "technique": "standing",
    "target": "a-site",
-   "stand": "a-main",
+   "stand": "a-site",
    "side": "side_a",
    "spans": {
     "stand": [
-     84.95,
-     86.35
+     78.0,
+     80.0
     ],
     "aim": [
-     86.35,
-     87.05
+     80.0,
+     80.4
     ],
     "throw": [
-     86.95,
-     87.55
+     80.4,
+     80.9
     ],
     "landing": [
-     89.2,
-     90.4
+     82.5,
+     83.5
     ]
    }
   },
@@ -144,24 +144,24 @@
    "ability": "hot-hands",
    "technique": "standing",
    "target": "a-site",
-   "stand": "a-main",
+   "stand": "a-site",
    "side": "side_a",
    "spans": {
     "stand": [
-     98.8,
-     100.3
+     96.0,
+     98.0
     ],
     "aim": [
-     101.05,
-     101.95
+     98.0,
+     98.4
     ],
     "throw": [
-     101.95,
-     102.55
+     98.4,
+     98.9
     ],
     "landing": [
-     104.4,
-     105.6
+     100.5,
+     101.5
     ]
    }
   },
@@ -169,26 +169,26 @@
    "cs": 110,
    "title": "A Site - Defender Molly (1 of 4 in source)",
    "ability": "hot-hands",
-   "technique": "jump",
+   "technique": "standing",
    "target": "a-site",
-   "stand": "a-main",
+   "stand": "a-site",
    "side": "side_b",
    "spans": {
     "stand": [
-     113.3,
-     115.3
+     111.0,
+     113.0
     ],
     "aim": [
-     117.72,
-     118.42
+     113.0,
+     113.4
     ],
     "throw": [
-     118.42,
-     119.02
+     113.4,
+     113.9
     ],
     "landing": [
-     120.7,
-     121.9
+     115.5,
+     116.5
     ]
    }
   },
@@ -196,26 +196,26 @@
    "cs": 129,
    "title": "A Site - Defender Molly (2 of 4 in source)",
    "ability": "hot-hands",
-   "technique": "jump",
+   "technique": "standing",
    "target": "a-site",
    "stand": "a-site",
    "side": "side_b",
    "spans": {
     "stand": [
-     135.8,
-     137.3
+     130.0,
+     132.0
     ],
     "aim": [
-     137.7,
-     138.42
+     132.0,
+     132.4
     ],
     "throw": [
-     138.38,
-     138.98
+     132.4,
+     132.9
     ],
     "landing": [
-     140.45,
-     141.65
+     134.5,
+     135.5
     ]
    }
   },
@@ -229,20 +229,20 @@
    "side": "side_b",
    "spans": {
     "stand": [
-     149.78,
-     151.1
+     147.0,
+     149.0
     ],
     "aim": [
-     151.75,
-     152.35
+     149.0,
+     149.4
     ],
     "throw": [
-     152.45,
-     153.1
+     149.4,
+     149.9
     ],
     "landing": [
-     154.72,
-     155.92
+     151.5,
+     152.5
     ]
    }
   },
@@ -250,26 +250,26 @@
    "cs": 165,
    "title": "A Site - Defender Molly (4 of 4 in source)",
    "ability": "hot-hands",
-   "technique": "jump",
+   "technique": "standing",
    "target": "a-site",
-   "stand": "ct-spawn",
+   "stand": "a-site",
    "side": "side_b",
    "spans": {
     "stand": [
-     164.1,
-     165.4
+     166.0,
+     168.0
     ],
     "aim": [
-     169.04,
-     169.6
+     168.0,
+     168.4
     ],
     "throw": [
-     169.58,
-     170.14
+     168.4,
+     168.9
     ],
     "landing": [
-     172.1,
-     173.3
+     170.5,
+     171.5
     ]
    }
   },
@@ -277,29 +277,28 @@
    "cs": 181,
    "title": "A Main - Defender Molly",
    "ability": "hot-hands",
-   "technique": "jump",
+   "technique": "standing",
    "target": "a-main",
-   "stand": "a-site",
+   "stand": "a-main",
    "side": "side_b",
    "spans": {
     "stand": [
-     181.72,
-     183.12
+     182.0,
+     184.0
     ],
     "aim": [
-     183.22,
-     183.86
+     184.0,
+     184.4
     ],
     "throw": [
-     184.02,
-     184.62
+     184.4,
+     184.9
     ],
     "landing": [
-     186.49,
-     187.79
+     186.5,
+     187.5
     ]
    }
   }
- ],
- "note": "phoenix SPLIT lineups from aWxjHR5GXRQ; 11 gate-passed, 0 dropped as un-gated."
+ ]
 }
