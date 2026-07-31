@@ -4,6 +4,33 @@
  "author": "Quible",
  "lineups": [
   {
+   "cs": 6,
+   "title": "C Site - Defender Molly (1 of 4 in source)",
+   "ability": "hot-hands",
+   "technique": "standing",
+   "target": "c-site",
+   "stand": "c-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     7.0,
+     9.0
+    ],
+    "aim": [
+     9.0,
+     9.4
+    ],
+    "throw": [
+     9.4,
+     9.9
+    ],
+    "landing": [
+     11.5,
+     12.5
+    ]
+   }
+  },
+  {
    "cs": 14,
    "title": "C Site - Attacker Molly (1 of 2 in source)",
    "ability": "hot-hands",
@@ -13,20 +40,20 @@
    "side": "side_a",
    "spans": {
     "stand": [
-     15.45,
-     16.95
+     15.0,
+     17.0
     ],
     "aim": [
-     19.88,
-     20.5
+     17.0,
+     17.4
     ],
     "throw": [
-     20.52,
-     21.08
+     17.4,
+     17.9
     ],
     "landing": [
-     23.95,
-     25.25
+     19.5,
+     20.5
     ]
    }
   },
@@ -34,26 +61,26 @@
    "cs": 28,
    "title": "A Site - Attacker Molly (1 of 5 in source)",
    "ability": "hot-hands",
-   "technique": "jump",
+   "technique": "standing",
    "target": "a-site",
    "stand": "a-site",
    "side": "side_a",
    "spans": {
     "stand": [
-     30.78,
-     31.33
+     29.0,
+     31.0
     ],
     "aim": [
-     32.8,
-     33.26
+     31.0,
+     31.4
     ],
     "throw": [
-     33.5,
-     34.1
+     31.4,
+     31.9
     ],
     "landing": [
-     35.0,
-     36.3
+     33.5,
+     34.5
     ]
    }
   },
@@ -67,20 +94,47 @@
    "side": "side_a",
    "spans": {
     "stand": [
-     43.8,
-     45.4
+     43.0,
+     45.0
     ],
     "aim": [
-     46.45,
-     47.1
+     45.0,
+     45.4
     ],
     "throw": [
-     47.05,
-     47.62
+     45.4,
+     45.9
     ],
     "landing": [
-     49.38,
-     50.58
+     47.5,
+     48.5
+    ]
+   }
+  },
+  {
+   "cs": 54,
+   "title": "A Site - Defender Molly (1 of 5 in source)",
+   "ability": "hot-hands",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     55.0,
+     57.0
+    ],
+    "aim": [
+     57.0,
+     57.4
+    ],
+    "throw": [
+     57.4,
+     57.9
+    ],
+    "landing": [
+     59.5,
+     60.5
     ]
    }
   },
@@ -94,20 +148,20 @@
    "side": "side_b",
    "spans": {
     "stand": [
-     68.95,
-     69.85
+     67.0,
+     69.0
     ],
     "aim": [
-     69.65,
-     70.62
+     69.0,
+     69.4
     ],
     "throw": [
-     70.55,
-     71.15
+     69.4,
+     69.9
     ],
     "landing": [
-     73.0,
-     74.2
+     71.5,
+     72.5
     ]
    }
   },
@@ -121,20 +175,20 @@
    "side": "side_b",
    "spans": {
     "stand": [
-     82.3,
-     83.6
+     79.0,
+     81.0
     ],
     "aim": [
-     83.75,
-     84.33
+     81.0,
+     81.4
     ],
     "throw": [
-     84.33,
-     84.95
+     81.4,
+     81.9
     ],
     "landing": [
-     86.7,
-     87.9
+     83.5,
+     84.5
     ]
    }
   },
@@ -148,20 +202,20 @@
    "side": "side_a",
    "spans": {
     "stand": [
-     95.85,
-     97.25
+     93.0,
+     95.0
     ],
     "aim": [
-     100.2,
-     101.05
+     95.0,
+     95.4
     ],
     "throw": [
-     101.05,
-     101.65
+     95.4,
+     95.9
     ],
     "landing": [
-     103.3,
-     104.5
+     97.5,
+     98.5
     ]
    }
   },
@@ -169,26 +223,26 @@
    "cs": 109,
    "title": "A Site - Attacker Molly (4 of 5 in source)",
    "ability": "hot-hands",
-   "technique": "jump",
+   "technique": "standing",
    "target": "a-site",
    "stand": "a-site",
    "side": "side_a",
    "spans": {
     "stand": [
-     109.75,
-     111.35
+     110.0,
+     112.0
     ],
     "aim": [
-     111.95,
-     112.65
+     112.0,
+     112.4
     ],
     "throw": [
-     113.05,
-     113.65
+     112.4,
+     112.9
     ],
     "landing": [
-     115.25,
-     116.55
+     114.5,
+     115.5
     ]
    }
   },
@@ -198,24 +252,24 @@
    "ability": "hot-hands",
    "technique": "standing",
    "target": "c-site",
-   "stand": "b-site",
+   "stand": "c-site",
    "side": "side_b",
    "spans": {
     "stand": [
-     124.9,
-     126.6
+     121.0,
+     123.0
     ],
     "aim": [
-     127.82,
-     128.34
+     123.0,
+     123.4
     ],
     "throw": [
-     128.32,
-     128.9
+     123.4,
+     123.9
     ],
     "landing": [
-     130.68,
-     131.95
+     125.5,
+     126.5
     ]
    }
   },
@@ -229,20 +283,20 @@
    "side": "side_b",
    "spans": {
     "stand": [
-     135.45,
-     136.45
+     136.0,
+     138.0
     ],
     "aim": [
-     136.75,
-     137.55
+     138.0,
+     138.4
     ],
     "throw": [
-     137.6,
-     138.2
+     138.4,
+     138.9
     ],
     "landing": [
-     139.85,
-     140.95
+     140.5,
+     141.5
     ]
    }
   },
@@ -252,24 +306,24 @@
    "ability": "hot-hands",
    "technique": "standing",
    "target": "c-site",
-   "stand": "garage",
+   "stand": "c-site",
    "side": "side_b",
    "spans": {
     "stand": [
-     155.5,
-     157.2
+     147.0,
+     149.0
     ],
     "aim": [
-     157.35,
-     158.0
+     149.0,
+     149.4
     ],
     "throw": [
-     158.1,
-     158.7
+     149.4,
+     149.9
     ],
     "landing": [
-     159.98,
-     161.1
+     151.5,
+     152.5
     ]
    }
   },
@@ -279,24 +333,24 @@
    "ability": "hot-hands",
    "technique": "standing",
    "target": "c-site",
-   "stand": "c-lobby",
+   "stand": "c-site",
    "side": "side_a",
    "spans": {
     "stand": [
-     169.0,
-     170.6
+     170.0,
+     172.0
     ],
     "aim": [
-     171.6,
-     172.16
+     172.0,
+     172.4
     ],
     "throw": [
-     172.1,
-     172.72
+     172.4,
+     172.9
     ],
     "landing": [
-     174.38,
-     175.6
+     174.5,
+     175.5
     ]
    }
   },
@@ -306,24 +360,24 @@
    "ability": "hot-hands",
    "technique": "standing",
    "target": "c-site",
-   "stand": "garage",
+   "stand": "c-site",
    "side": "side_b",
    "spans": {
     "stand": [
-     182.15,
-     183.15
+     181.0,
+     183.0
     ],
     "aim": [
-     183.25,
-     183.95
+     183.0,
+     183.4
     ],
     "throw": [
-     183.95,
-     184.55
+     183.4,
+     183.9
     ],
     "landing": [
-     186.55,
-     187.75
+     185.5,
+     186.5
     ]
    }
   },
@@ -337,20 +391,20 @@
    "side": "side_b",
    "spans": {
     "stand": [
-     192.0,
-     193.5
+     193.0,
+     195.0
     ],
     "aim": [
-     194.2,
-     194.78
+     195.0,
+     195.4
     ],
     "throw": [
-     194.98,
-     195.62
+     195.4,
+     195.9
     ],
     "landing": [
-     197.2,
-     198.4
+     197.5,
+     198.5
     ]
    }
   },
@@ -364,20 +418,20 @@
    "side": "side_a",
    "spans": {
     "stand": [
-     217.58,
-     217.8
+     217.0,
+     219.0
     ],
     "aim": [
-     219.78,
-     220.38
+     219.0,
+     219.4
     ],
     "throw": [
-     220.36,
-     220.96
+     219.4,
+     219.9
     ],
     "landing": [
-     222.73,
-     223.93
+     221.5,
+     222.5
     ]
    }
   },
@@ -391,23 +445,22 @@
    "side": "side_b",
    "spans": {
     "stand": [
-     229.9,
-     231.1
+     229.0,
+     231.0
     ],
     "aim": [
-     231.8,
-     232.28
+     231.0,
+     231.4
     ],
     "throw": [
-     232.26,
-     232.86
+     231.4,
+     231.9
     ],
     "landing": [
-     234.62,
-     235.9
+     233.5,
+     234.5
     ]
    }
   }
- ],
- "note": "phoenix HAVEN lineups from 99XDk2UyO5I; 15 gate-passed, 2 dropped as un-gated."
+ ]
 }

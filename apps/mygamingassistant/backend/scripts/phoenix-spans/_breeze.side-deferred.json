@@ -1,0 +1,249 @@
+{
+  "video_id": "ajDIywaiqxg",
+  "why": "side undecidable by callout / stand-zone / zone-pair / target-zone measurement. Localized and gate-passed — ONLY `side` is missing. Merge back when the operator calls it; do NOT re-localize.",
+  "lineups": [
+    {
+      "cs": 38,
+      "title": "A Cubby to A 2nd Pyramid back",
+      "ability": "hot-hands",
+      "technique": "standing",
+      "target": "a-site",
+      "stand": "a-site",
+      "side": null,
+      "spans": {
+        "stand": [
+          44.4,
+          46.1
+        ],
+        "aim": [
+          57.4,
+          58.28
+        ],
+        "throw": [
+          58.35,
+          58.95
+        ],
+        "landing": [
+          60.9,
+          62.3
+        ]
+      }
+    },
+    {
+      "cs": 67,
+      "title": "A Cubby to A Orange box",
+      "ability": "hot-hands",
+      "technique": "jump",
+      "target": "a-site",
+      "stand": "a-site",
+      "side": null,
+      "spans": {
+        "stand": [
+          76.0,
+          78.0
+        ],
+        "aim": [
+          88.4,
+          89.4
+        ],
+        "throw": [
+          89.5,
+          90.1
+        ],
+        "landing": [
+          91.6,
+          92.8
+        ]
+      }
+    },
+    {
+      "cs": 155,
+      "title": "A 1st Pyramid to A Site Brown Box",
+      "ability": "hot-hands",
+      "technique": "standing",
+      "target": "a-site",
+      "stand": "a-site",
+      "side": null,
+      "spans": {
+        "stand": [
+          162.4,
+          164.75
+        ],
+        "aim": [
+          175.85,
+          176.8
+        ],
+        "throw": [
+          176.75,
+          177.35
+        ],
+        "landing": [
+          179.45,
+          180.95
+        ]
+      }
+    },
+    {
+      "cs": 186,
+      "title": "The Pillar Play",
+      "ability": "hot-hands",
+      "technique": "standing",
+      "target": "mid",
+      "stand": "mid",
+      "side": null,
+      "spans": {
+        "stand": [
+          194.8,
+          195.6
+        ],
+        "aim": [
+          196.08,
+          196.68
+        ],
+        "throw": [
+          196.7,
+          197.3
+        ],
+        "landing": [
+          209.02,
+          209.75
+        ]
+      }
+    },
+    {
+      "cs": 217,
+      "title": "A Orange to A Back site",
+      "ability": "hot-hands",
+      "technique": "jump",
+      "target": "a-site",
+      "stand": "a-site",
+      "side": null,
+      "spans": {
+        "stand": [
+          232.3,
+          234.05
+        ],
+        "aim": [
+          237.95,
+          238.95
+        ],
+        "throw": [
+          239.55,
+          240.15
+        ],
+        "landing": [
+          241.65,
+          242.75
+        ]
+      }
+    },
+    {
+      "cs": 291,
+      "title": "A Orange to Mid Entrance",
+      "ability": "hot-hands",
+      "technique": "standing",
+      "target": "mid",
+      "stand": "a-site",
+      "side": null,
+      "spans": {
+        "stand": [
+          303.6,
+          305.25
+        ],
+        "aim": [
+          309.1,
+          310.2
+        ],
+        "throw": [
+          310.2,
+          310.85
+        ],
+        "landing": [
+          312.5,
+          313.8
+        ]
+      }
+    },
+    {
+      "cs": 396,
+      "title": "B Half Wall to B Back Pillar",
+      "ability": "hot-hands",
+      "technique": "jump",
+      "target": "b-site",
+      "stand": "b-site",
+      "side": null,
+      "spans": {
+        "stand": [
+          405.0,
+          406.8
+        ],
+        "aim": [
+          415.4,
+          416.6
+        ],
+        "throw": [
+          416.65,
+          417.25
+        ],
+        "landing": [
+          418.9,
+          420.1
+        ]
+      }
+    },
+    {
+      "cs": 425,
+      "title": "B Half Wall to B Entrance Cubby",
+      "ability": "hot-hands",
+      "technique": "jump",
+      "target": "b-main",
+      "stand": "b-site",
+      "side": null,
+      "spans": {
+        "stand": [
+          433.4,
+          435.2
+        ],
+        "aim": [
+          440.2,
+          441.35
+        ],
+        "throw": [
+          441.55,
+          442.15
+        ],
+        "landing": [
+          443.85,
+          445.15
+        ]
+      }
+    },
+    {
+      "cs": 450,
+      "title": "B Back Black Pillar 1 to B Back Black Pillar 2",
+      "ability": "hot-hands",
+      "technique": "jump",
+      "target": "b-site",
+      "stand": "b-site",
+      "side": null,
+      "spans": {
+        "stand": [
+          457.4,
+          458.85
+        ],
+        "aim": [
+          461.6,
+          462.7
+        ],
+        "throw": [
+          463.18,
+          463.72
+        ],
+        "landing": [
+          465.55,
+          466.85
+        ]
+      }
+    }
+  ]
+}
