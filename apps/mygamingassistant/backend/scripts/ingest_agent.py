@@ -16,6 +16,13 @@ Each spans JSON has:
   origin/main + prod, so every agent's abilities resolve with no fixture work.
 - target/stand are COARSE map-zone slugs (the fine callout lives in `title`).
 - side = side_a (attacker) | side_b (defender).
+- spans.throw is OMITTED for PLACED utility (utility_type.placement == 'placed':
+  Cypher's trapwire/spycam, Killjoy's alarmbot/turret, Chamber's trademark,
+  Deadlock's sonic sensor). A mounted device never leaves the player's hands, so
+  those lineups are a complete THREE-beat STAND/AIM/LANDING story rather than a
+  four-beat one missing a beat. Validation enforces this in BOTH directions: a
+  placed row carrying a throw span fails just as loudly as a thrown row missing
+  one, because each means the ability was read wrong or a beat was invented.
 
 Subcommands (MAIN checkout venv, cwd = backend, PG:5433 up):
   plan   — resolve + validate every lineup (zones/utility exist), print, write nothing
@@ -102,7 +109,9 @@ async def _resolve(db, data: dict):
         Map.slug == data["map_slug"], Map.game_id == game_id))).scalar_one()
     zones = {z.slug: z.id for z in (await db.execute(
         select(MapZone).where(MapZone.map_id == vmap.id))).scalars().all()}
-    utils = {u.slug: u.id for u in (await db.execute(
+    # Whole objects, not just ids — the pipeline needs `placement` to decide
+    # whether a THROW beat is expected at all (placed utility has none).
+    utils = {u.slug: u for u in (await db.execute(
         select(UtilityType).where(UtilityType.game_id == game_id))).scalars().all()}
     return game_id, vmap, zones, utils
 
@@ -122,7 +131,25 @@ def _validate(data: dict, zones: dict, utils: dict) -> None:
                 errs.append(f"cs={ln['cs']} {zk} zone {ln[zk]!r} not in map zones {sorted(zones)}")
         if ln["side"] not in ("side_a", "side_b"):
             errs.append(f"cs={ln['cs']} bad side {ln['side']!r}")
-        for ev in ("stand", "aim", "throw", "landing"):
+
+        # Placed utility (trapwire, spycam, alarmbot, turret, trademark, sonic
+        # sensor) is mounted, not lobbed, so its story is a complete 3-beat
+        # STAND/AIM/LANDING. Demanding a throw span there would fail every one
+        # of those rows; accepting one silently would mean the localizer
+        # invented a beat that does not exist on screen, or read the ability
+        # wrong. Both are worth failing loudly on, in opposite directions.
+        placed = ln["ability"] in utils and utils[ln["ability"]].placement == "placed"
+        events = ("stand", "aim", "landing") if placed else ("stand", "aim", "throw", "landing")
+        if placed and "throw" in ln["spans"]:
+            errs.append(
+                f"cs={ln['cs']} ability {ln['ability']!r} is placed utility but a "
+                f"'throw' span was supplied — placed utility never leaves the hands. "
+                f"Either the ability is misread or the throw beat is invented."
+            )
+        for ev in events:
+            if ev not in ln["spans"]:
+                errs.append(f"cs={ln['cs']} missing {ev!r} span")
+                continue
             s, e = ln["spans"][ev]
             if not (e > s):
                 errs.append(f"cs={ln['cs']} {ev}: end {e} must be > start {s}")
@@ -138,8 +165,9 @@ async def cmd_plan(agent: str, pack: str) -> None:
         print(f"{agent} / {data['map_slug']} — {len(data['lineups'])} lineups, video {data['video_id']}")
         for ln in data["lineups"]:
             sp = ln["spans"]
+            beat = f"thr={sp['throw'][0]:.2f}" if "throw" in sp else "PLACED    "
             print(f"  cs={ln['cs']:4} {ln['ability']:14} {ln['stand']:7}->{ln['target']:7} "
-                  f"{ln['side']} thr={sp['throw'][0]:.2f} :: {ln['title']}")
+                  f"{ln['side']} {beat} :: {ln['title']}")
         print("validation OK (all utilities + zones resolve).")
 
 
@@ -163,7 +191,7 @@ async def cmd_create(agent: str, pack: str) -> None:
             if ln["cs"] in existing:
                 print(f"  SKIP cs={ln['cs']} (exists)"); continue
             row = Lineup(
-                game_id=game_id, map_id=vmap.id, utility_type_id=utils[ln["ability"]],
+                game_id=game_id, map_id=vmap.id, utility_type_id=utils[ln["ability"]].id,
                 title=ln["title"], chapter_title=ln["title"], chapter_start_seconds=ln["cs"],
                 youtube_video_id=vid, attribution_url=url, attribution_author=data["author"],
                 source_id=src_id, technique=ln["technique"],
@@ -184,6 +212,13 @@ def cmd_recut(agent: str, pack: str) -> None:
 
     async def _ids():
         async with AsyncSessionLocal() as db:
+            # Validate here too, not just in plan/create/accept. recut is the one
+            # subcommand that writes MEDIA, and a missing 'throw' span is
+            # ambiguous on its face: legitimate for placed utility, a truncated
+            # pack for anything else. Only the utility's `placement` separates
+            # them, and that needs the DB — so resolve before cutting anything.
+            _, _, zones, utils = await _resolve(db, data)
+            _validate(data, zones, utils)
             rows = (await db.execute(select(Lineup).where(Lineup.youtube_video_id == vid))).scalars().all()
             return {r.chapter_start_seconds: str(r.id)[:8] for r in rows}
     id_by_cs = asyncio.run(_ids())
@@ -197,8 +232,12 @@ def cmd_recut(agent: str, pack: str) -> None:
         cmd = [py, recut, id8,
                "--stand", str(sp["stand"][0]), str(sp["stand"][1]),
                "--aim", str(sp["aim"][0]), str(sp["aim"][1]),
-               "--throw", str(sp["throw"][0]), str(sp["throw"][1]),
                "--landing", str(sp["landing"][0]), str(sp["landing"][1])]
+        # Absent for placed utility — recut then skips the tight throw cut and
+        # leaves clip_url NULL. _validate ran above, so a missing throw span
+        # here is established as placed, not as a truncated pack.
+        if "throw" in sp:
+            cmd += ["--throw", str(sp["throw"][0]), str(sp["throw"][1])]
         r = subprocess.run(cmd, capture_output=True, text=True)
         if r.returncode == 0:
             print(f"  RECUT cs={ln['cs']:4} id8={id8} OK"); ok += 1
@@ -223,7 +262,7 @@ async def cmd_accept(agent: str, pack: str) -> None:
                 print(f"  NO ROW cs={ln['cs']}"); continue
             await accept_lineup(db, row, {
                 "game_id": game_id, "map_id": vmap.id,
-                "utility_type_id": utils[ln["ability"]],
+                "utility_type_id": utils[ln["ability"]].id,
                 "target_zone_id": zones[ln["target"]], "stand_zone_id": zones[ln["stand"]],
                 "side": ln["side"],
             })

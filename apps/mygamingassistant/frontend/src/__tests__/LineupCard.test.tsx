@@ -255,6 +255,22 @@ describe("LineupCard", () => {
     expect(document.querySelector("video")).toBeNull();
   });
 
+  it("expanded variant THROW pane distinguishes placed utility from a missing clip", () => {
+    // Both cases have clip_url === null, but they mean opposite things: a
+    // thrown lineup is INCOMPLETE (clip still owed), a placed one is COMPLETE
+    // (there is no throw beat to film). If the copy doesn't separate them, the
+    // operator has no way to tell a finished Cypher trapwire from a Sova dart
+    // whose clip never generated.
+    const placed: Lineup = {
+      ...BASE_LINEUP,
+      utility_type: { ...BASE_LINEUP.utility_type!, slug: "trapwire", placement: "placed" },
+    };
+    render(<LineupCard lineup={placed} variant="expanded" />);
+    expect(screen.getByText("Placed — no throw")).toBeInTheDocument();
+    expect(screen.queryByText("No clip yet")).not.toBeInTheDocument();
+    expect(document.querySelector("video")).toBeNull();
+  });
+
   it("expanded variant THROW pane renders ClipView when clip_url is set", () => {
     const lineup: Lineup = { ...BASE_LINEUP, clip_url: "https://ex.com/clip.mp4" };
     render(<LineupCard lineup={lineup} variant="expanded" />);

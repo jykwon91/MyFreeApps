@@ -149,7 +149,7 @@ export default function LineupCard({
               title={lineup.title}
             />
           ) : (
-            <ThrowPlaceholder />
+            <ThrowPlaceholder placement={lineup.utility_type?.placement} />
           )}
           <LandingPane
             targetZoneName={lineup.target_zone?.name ?? null}

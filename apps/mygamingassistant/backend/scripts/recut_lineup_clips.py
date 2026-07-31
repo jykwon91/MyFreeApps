@@ -1,6 +1,15 @@
-"""Re-cut all 4 storyboard clips (STAND / AIM / THROW / LANDING) for ONE lineup
+"""Re-cut the storyboard clips (STAND / AIM / THROW / LANDING) for ONE lineup
 from OPERATOR-CONFIRMED frame-study spans — a DB/MinIO data-fix, NO pipeline,
 NO Claude, NO localizer.
+
+THROW is OPTIONAL. Placed utility (Cypher's trapwire/spycam, Killjoy's
+alarmbot/turret, Chamber's trademark, Deadlock's sonic sensor) is mounted, not
+lobbed: it never leaves the player's hands, so there is no throw beat to cut.
+Those lineups are a complete THREE-beat STAND/AIM/LANDING story, not a degraded
+four-beat one. Omit ``--throw`` and the tight throw clip is skipped and
+``clip_url`` stays NULL — but the throw WIDE source is still cut and persisted
+via ``set_clip_url_original``, because it is the shared source that the STAND
+and AIM offsets index into and the shift editors open against.
 
 Initiative 7 (MGA lineup-localization accuracy sweep). The spans are the
 operator's frame-study determinations (see auto-memory
@@ -12,6 +21,7 @@ indistinguishable from a fresh pipeline cut at those instants:
   - THROW   : cut tight [s,e] -> overwrite ``{cs}-clip.mp4``; cut+upload the
               wide source ``{cs}-clip-source.mp4`` ([cs-7.5, ce+7.5]); persist
               clip_url + clip_url_original + trim offsets via set_clip_url.
+              Without ``--throw``: wide source only, via set_clip_url_original.
   - LANDING : same shape against the ``-landing`` / ``-landing-source`` keys.
   - STAND   : cut tight [s,e] -> overwrite ``{cs}-stand-micro.mp4``; persist
               stand_clip_url + stand_clip_offset_s (offset INTO the shared THROW
@@ -31,6 +41,10 @@ out of the clip-recut scope).
 Run via the MAIN checkout venv, cwd = backend:
   python scripts/recut_lineup_clips.py 45d89ec3 \
     --stand 28.4 30.0 --aim 38.0 39.4 --throw 38.7 40.2 --landing 72.3 74.3
+
+  # placed utility (trapwire / spycam / turret / trademark / sonic sensor):
+  python scripts/recut_lineup_clips.py 45d89ec3 \
+    --stand 28.4 30.0 --aim 38.0 39.4 --landing 72.3 74.3
 """
 import argparse
 import asyncio
@@ -70,11 +84,19 @@ VIDEO_DIR = Path(os.environ["TEMP"]) / "mga-debug-source"
 def _parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("id8", help="lineup id8 prefix (e.g. 45d89ec3)")
-    for pane in ("stand", "aim", "throw", "landing"):
+    for pane in ("stand", "aim", "landing"):
         p.add_argument(
             f"--{pane}", nargs=2, type=float, metavar=("START", "END"),
             required=True, help=f"{pane.upper()} span [start end] in source seconds",
         )
+    # Optional on purpose — placed utility has no throw beat. See module docstring.
+    p.add_argument(
+        "--throw", nargs=2, type=float, metavar=("START", "END"), default=None,
+        help="THROW span [start end] in source seconds. OMIT for placed utility "
+             "(trapwire/spycam/alarmbot/turret/trademark/sonic-sensor): the tight "
+             "throw clip is skipped and clip_url stays NULL, but the shared wide "
+             "source is still cut so the STAND/AIM offsets remain valid.",
+    )
     p.add_argument(
         "--dry-run", action="store_true",
         help="print the plan + computed offsets, write nothing",
@@ -85,6 +107,11 @@ def _parse_args() -> argparse.Namespace:
              "shared wide source; does NOT affect the tight served clips)",
     )
     return p.parse_args()
+
+
+def _fmt(v: float | None) -> str:
+    """2dp, or 'None'. Trim columns are legitimately NULL on the placed path."""
+    return "None" if v is None else f"{v:.2f}"
 
 
 async def _cut_and_upload_tight(storage, video: Path, key: str,
@@ -102,8 +129,10 @@ async def main() -> None:
     args = _parse_args()
     spans = {
         "stand": tuple(args.stand), "aim": tuple(args.aim),
-        "throw": tuple(args.throw), "landing": tuple(args.landing),
+        "landing": tuple(args.landing),
     }
+    if args.throw is not None:
+        spans["throw"] = tuple(args.throw)
     for pane, (s, e) in spans.items():
         if e <= s:
             raise SystemExit(f"{pane}: end {e} must be > start {s}")
@@ -137,7 +166,7 @@ async def main() -> None:
         print(f"  vid={vid} chapter=[{cs:.2f}, {ce:.2f}] (next_cs={next_cs}) "
               f"technique={lineup.technique!r}")
         print(f"  spans: stand={spans['stand']} aim={spans['aim']} "
-              f"throw={spans['throw']} landing={spans['landing']}")
+              f"throw={spans.get('throw', 'PLACED — none')} landing={spans['landing']}")
         print("  BEFORE:")
         print(f"    stand_clip={lineup.stand_clip_url} off={lineup.stand_clip_offset_s}")
         print(f"    aim_clip  ={lineup.aim_clip_url} off={lineup.aim_clip_offset_s}")
@@ -177,14 +206,24 @@ async def main() -> None:
             raise SystemExit(f"LANDING wide source failed: {land_wide.error_codes}")
 
         # ---- THROW tight + persist (clip_url + original + trim) -------------
-        ts0, ts1 = spans["throw"]
-        n = await _cut_and_upload_tight(storage, video, pending_clip_key(vid, cs), ts0, ts1)
-        tr_s, tr_e = tight_offsets_within_source(
-            tight_start=ts0, tight_duration=ts1 - ts0, source_start=wide_start)
-        await lineup_repo.set_clip_url(
-            db, lineup, pending_clip_key(vid, cs),
-            source_key=throw_wide.source_key, trim_start_s=tr_s, trim_end_s=tr_e)
-        print(f"  THROW   tight=[{ts0:.2f},{ts1:.2f}] ({n}B) trim=[{tr_s:.2f},{tr_e:.2f}]")
+        # Placed utility has no throw beat, so there is nothing to cut tight.
+        # The WIDE source is still persisted (set_clip_url_original writes only
+        # clip_url_original, leaving clip_url NULL) because the STAND and AIM
+        # offsets below are measured from its start — drop it and both shift
+        # editors lose their frame of reference.
+        if "throw" in spans:
+            ts0, ts1 = spans["throw"]
+            n = await _cut_and_upload_tight(storage, video, pending_clip_key(vid, cs), ts0, ts1)
+            tr_s, tr_e = tight_offsets_within_source(
+                tight_start=ts0, tight_duration=ts1 - ts0, source_start=wide_start)
+            await lineup_repo.set_clip_url(
+                db, lineup, pending_clip_key(vid, cs),
+                source_key=throw_wide.source_key, trim_start_s=tr_s, trim_end_s=tr_e)
+            print(f"  THROW   tight=[{ts0:.2f},{ts1:.2f}] ({n}B) trim=[{tr_s:.2f},{tr_e:.2f}]")
+        else:
+            await lineup_repo.set_clip_url_original(db, lineup, throw_wide.source_key)
+            print("  THROW   PLACED — no throw beat; clip_url left NULL, "
+                  f"wide source persisted as {throw_wide.source_key}")
 
         # ---- LANDING tight + persist ----------------------------------------
         ls0, ls1 = spans["landing"]
@@ -216,11 +255,13 @@ async def main() -> None:
         print("  AFTER:")
         print(f"    stand_clip={lineup.stand_clip_url} off={lineup.stand_clip_offset_s}")
         print(f"    aim_clip  ={lineup.aim_clip_url} off={lineup.aim_clip_offset_s}")
+        # Trims are NULL on the placed path (no tight throw clip), so format
+        # defensively rather than blowing up on None.__format__('.2f').
         print(f"    throw_clip={lineup.clip_url} orig={lineup.clip_url_original} "
-              f"trim=[{lineup.clip_trim_start_s:.2f},{lineup.clip_trim_end_s:.2f}]")
+              f"trim=[{_fmt(lineup.clip_trim_start_s)},{_fmt(lineup.clip_trim_end_s)}]")
         print(f"    landing   ={lineup.landing_clip_url} orig={lineup.landing_clip_url_original} "
-              f"trim=[{lineup.landing_clip_trim_start_s:.2f},{lineup.landing_clip_trim_end_s:.2f}]")
-        print("DONE — 4 clips re-cut from operator-confirmed spans.")
+              f"trim=[{_fmt(lineup.landing_clip_trim_start_s)},{_fmt(lineup.landing_clip_trim_end_s)}]")
+        print(f"DONE — {len(spans)} clips re-cut from operator-confirmed spans.")
 
 
 asyncio.run(main())
