@@ -93,6 +93,7 @@ async def upsert_utility_type(
     slug: str,
     name: str,
     agent_id: uuid.UUID | None = None,
+    placement: str = "thrown",
 ) -> UtilityType:
     result = await db.execute(
         select(UtilityType).where(UtilityType.game_id == game_id, UtilityType.slug == slug)
@@ -111,10 +112,24 @@ async def upsert_utility_type(
         if existing.agent_id != agent_id:
             existing.agent_id = agent_id
             changed = True
+        # ``placement`` is mutable for the same reason ``agent_id`` is: migration
+        # 0021 backfills every pre-existing row to 'thrown', so the fixture edit
+        # marking trapwire/spycam 'placed' only takes effect if re-running
+        # load-fixtures propagates it. Without this the column would be correct
+        # in the fixture and permanently wrong in the database.
+        if existing.placement != placement:
+            existing.placement = placement
+            changed = True
         if changed:
             await db.flush()
         return existing
-    ut = UtilityType(game_id=game_id, slug=slug, name=name, agent_id=agent_id)
+    ut = UtilityType(
+        game_id=game_id,
+        slug=slug,
+        name=name,
+        agent_id=agent_id,
+        placement=placement,
+    )
     db.add(ut)
     await db.flush()
     return ut

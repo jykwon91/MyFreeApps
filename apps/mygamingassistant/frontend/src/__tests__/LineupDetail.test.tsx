@@ -77,7 +77,7 @@ function makeLineup(over: Partial<Lineup> = {}): Lineup {
     classification_reasoning: null,
     target_zone: { id: "z1", slug: "mid", name: "Mid", polygon_points: [] },
     stand_zone: null,
-    utility_type: { id: "u1", slug: "smoke", name: "Smoke", agent: null },
+    utility_type: { id: "u1", slug: "smoke", name: "Smoke", placement: "thrown", agent: null },
     ...over,
   };
 }

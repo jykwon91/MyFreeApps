@@ -34,12 +34,27 @@ export interface Agent {
   role: string | null;
 }
 
+/**
+ * How a utility reaches its destination, which decides how many beats a lineup has.
+ *
+ * - `thrown` — travels through the air: STAND -> AIM -> THROW -> LANDING (4 beats).
+ * - `placed` — mounted on a surface at the player's own position, so nothing is ever
+ *   in flight: STAND -> AIM -> LANDING (3 beats). Cypher's trapwire/spycam,
+ *   Killjoy's turret/alarmbot. These lineups have a null `clip_url` by design, not
+ *   because a clip is missing.
+ *
+ * Mirrors the `ck_utilitytype_placement` CHECK constraint on `utility_type.placement`;
+ * adding a value here means adding it there in the same change.
+ */
+export type UtilityPlacement = 'thrown' | 'placed';
+
 export interface UtilityType {
   id: string;
   slug: string;
   name: string;
   /** Agent that owns this utility (null for CS2 grenades). */
   agent_slug: string | null;
+  placement: UtilityPlacement;
 }
 
 export interface MapDetail {
@@ -109,6 +124,8 @@ export interface UtilityTypeRead {
   id: string;
   slug: string;
   name: string;
+  /** See {@link UtilityPlacement}. `placed` utilities have no THROW beat. */
+  placement: UtilityPlacement;
   /** Agent that owns this utility (Sova's Recon/Shock Bolt); null for CS2
    *  grenades. Populated from the backend's eager-loaded utility_type.agent
    *  relationship — the nested shape (vs MapDetail's flat agent_slug) carries

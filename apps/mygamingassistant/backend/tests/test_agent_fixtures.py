@@ -74,3 +74,47 @@ def test_generic_valorant_utilities_pruned():
     assert slugs.isdisjoint({"smoke", "flash", "molotov"}), (
         "generic Valorant smoke/flash/molotov must be removed (replaced by agent abilities)"
     )
+
+
+# --- placement ('thrown' | 'placed') -------------------------------------------------
+
+_VALID_PLACEMENTS = {"thrown", "placed"}
+
+
+def test_placement_values_are_valid_where_present():
+    """Any ``placement`` in the fixture must match the DB CHECK constraint.
+
+    The fixture spells out only the 'placed' exceptions; everything else omits the
+    key and picks up the column default. A typo like "place" would pass fixture
+    load in-process and then blow up on the INSERT, so it is cheaper to catch here.
+    """
+    for entry in _load("utility_types.json"):
+        for ut in entry["utility_types"]:
+            if "placement" in ut:
+                assert ut["placement"] in _VALID_PLACEMENTS, (
+                    f"{entry['game_slug']}/{ut['slug']} has invalid placement "
+                    f"{ut['placement']!r}"
+                )
+
+
+def test_mounted_abilities_are_placed_and_thrown_ones_are_not():
+    """The 3-beat pipeline keys off this, so the classification is load-bearing.
+
+    A wrong 'placed' silently drops a real THROW beat from that utility's lineups;
+    a wrong 'thrown' demands a throw that does not exist and fails every gate. Both
+    are invisible until footage is localized, which is expensive — hence the pin.
+    """
+    by_slug = {u["slug"]: u for u in _valorant_utils()}
+
+    # Mounted on a surface at the player's own position — nothing is ever airborne.
+    for slug in ("trapwire", "spycam", "alarmbot", "turret", "trademark", "sonic-sensor"):
+        assert by_slug[slug].get("placement") == "placed", (
+            f"{slug} is a mounted device and must be placement='placed'"
+        )
+
+    # Cypher's third ability IS thrown — it arcs and lands. Its presence here is the
+    # point: 'placed' is a property of the ability, not of the agent that owns it.
+    for slug in ("cyber-cage", "nanoswarm", "hot-hands", "recon", "shock"):
+        assert by_slug[slug].get("placement", "thrown") == "thrown", (
+            f"{slug} travels through the air and must be placement='thrown'"
+        )
