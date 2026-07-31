@@ -21,6 +21,15 @@ id), then upserts each lineup by verbatim id. The whole pack imports inside ONE
 ``unit_of_work`` transaction — atomic: a malformed pack rolls the entire
 library back rather than leaving prod half-populated. Idempotent + re-runnable
 (re-import after a clip re-publish or pack refresh converges).
+
+**The pack is a complete snapshot, not a delta.** Import used to be upsert-only,
+so it could publish and revise but never retract: a lineup hidden or deleted
+locally just stopped appearing in the pack, and its prod row — already imported
+by an earlier deploy — stayed live forever. After every pack lineup is upserted,
+any lineup still ``accepted`` in the DB but absent from the pack is set to
+``hidden``. Reversible (re-accept locally → the next import forces 'accepted'
+back) and skipped entirely for an empty pack, which is a broken export rather
+than an instruction to unpublish the library.
 """
 from __future__ import annotations
 
@@ -35,7 +44,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import unit_of_work
 from app.repositories.game import game_repo, source_repo
-from app.repositories.game.lineup import upsert_imported_lineup
+from app.repositories.game.lineup import (
+    retract_lineups_absent_from_pack,
+    upsert_imported_lineup,
+)
 from app.services.game.lineup_exporter import LINEUP_SCALAR_FIELDS, PACK_VERSION
 
 logger = logging.getLogger(__name__)
@@ -63,11 +75,18 @@ class ImportStats:
     zones_upserted: int = 0
     sources_upserted: int = 0
     lineups_upserted: int = 0
+    lineups_retracted: int = 0
 
     def summary(self) -> str:
+        retracted = (
+            f" Retracted {self.lineups_retracted} lineup(s) absent from the pack."
+            if self.lineups_retracted
+            else ""
+        )
         return (
             f"Imported {self.lineups_upserted} lineup(s), "
             f"{self.zones_upserted} zone(s), {self.sources_upserted} source(s)."
+            f"{retracted}"
         )
 
 
@@ -104,6 +123,20 @@ async def import_pack(db: AsyncSession, pack: dict) -> ImportStats:
         raise PackError(
             f"pack version {version!r} != supported {PACK_VERSION!r}; "
             "rebuild the pack (export_lineup_pack.py) or upgrade the app."
+        )
+
+    # Retraction below treats "absent from the pack" as "no longer public", so a
+    # SHORT pack would silently hide most of the library. The exporter always
+    # writes lineup_count alongside the rows, so a mismatch is the cheapest
+    # possible detector for a truncated or hand-edited file — check it before
+    # anything is written rather than discovering it by the row count in prod.
+    declared = pack.get("lineup_count")
+    actual = len(pack.get("lineups", []))
+    if declared is not None and declared != actual:
+        raise PackError(
+            f"pack declares lineup_count={declared} but carries {actual} lineup(s) — "
+            "truncated or hand-edited. Refusing to import, because rows missing from "
+            "a short pack would be retracted as if they had been unpublished."
         )
 
     stats = ImportStats()
@@ -162,6 +195,7 @@ async def import_pack(db: AsyncSession, pack: dict) -> ImportStats:
         stats.zones_upserted += 1
 
     # 3) Lineups — resolve FK slugs → prod UUIDs, upsert by verbatim id.
+    pack_lineup_ids: set[uuid.UUID] = set()
     for lineup in pack.get("lineups", []):
         game = await _resolve_game(lineup["game_slug"])
         map_obj = await _resolve_map(lineup["game_slug"], lineup["map_slug"])
@@ -193,6 +227,21 @@ async def import_pack(db: AsyncSession, pack: dict) -> ImportStats:
             db, lineup_id=uuid.UUID(lineup["id"]), fields=fields
         )
         stats.lineups_upserted += 1
+        pack_lineup_ids.add(uuid.UUID(lineup["id"]))
+
+    # 4) Retract — the pack is a complete snapshot, so anything still accepted
+    #    here but no longer in it has been unpublished (hidden or deleted)
+    #    upstream and must come down. Skipped for an empty pack: "no lineups at
+    #    all" is a broken export, never an instruction to hide the library.
+    if pack_lineup_ids:
+        stats.lineups_retracted = await retract_lineups_absent_from_pack(
+            db, keep_ids=pack_lineup_ids
+        )
+        if stats.lineups_retracted:
+            logger.info(
+                "import: retracted %d lineup(s) absent from the pack",
+                stats.lineups_retracted,
+            )
 
     return stats
 

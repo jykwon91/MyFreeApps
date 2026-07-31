@@ -284,6 +284,100 @@ async def test_import_force_publishes_refined_polygon(db: AsyncSession, seeded: 
     assert refreshed.polygon_points == refined
 
 
+# --------------------------------------------------------------------------
+# Retraction — the pack is a complete snapshot, so absence means "unpublished".
+#
+# Scope note: retraction is deliberately GLOBAL (build_pack exports the whole
+# accepted library, so a real pack is never partial). These tests use the
+# scoped ``rt-`` pack, which means the real dev-DB lineups are also retracted
+# inside the test transaction — harmless, since the conftest ``db`` fixture
+# rolls everything back and the assertions only concern ``rt-`` rows.
+# --------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_import_retracts_a_lineup_absent_from_the_pack(
+    db: AsyncSession, seeded: dict
+):
+    """Import was upsert-only, so a lineup hidden locally simply stopped being
+    updated in prod instead of coming down — leaving it live forever. This is
+    the exact 1-row prod/pack drift that motivated the change."""
+    kept = await _make_accepted(db, seeded, title="RT Kept")
+    dropped = await _make_accepted(db, seeded, title="RT Dropped")
+
+    pack = _scope_pack(await build_pack(db))
+    # Simulate the exporter omitting it because it went `hidden` locally.
+    pack["lineups"] = [ln for ln in pack["lineups"] if ln["id"] != str(dropped.id)]
+    pack["lineup_count"] = len(pack["lineups"])
+
+    stats = await import_pack(db, pack)
+
+    await db.refresh(kept)
+    await db.refresh(dropped)
+    assert kept.status == "accepted"
+    assert dropped.status == "hidden", "a lineup absent from the pack must come down"
+    assert stats.lineups_retracted >= 1
+
+
+@pytest.mark.asyncio
+async def test_retraction_is_reversible_on_the_next_import(
+    db: AsyncSession, seeded: dict
+):
+    """Hidden, not deleted — so re-accepting locally republishes on the next
+    import. This is why the row survives: a delete would strand the R2 media
+    and make the retraction one-way."""
+    lineup = await _make_accepted(db, seeded, title="RT Round Trip")
+    # A second row so removing the first still leaves a NON-empty pack —
+    # otherwise this exercises the empty-pack guard instead of retraction.
+    await _make_accepted(db, seeded, title="RT Round Trip Companion")
+    full = _scope_pack(await build_pack(db))
+
+    empty_of_it = dict(full)
+    empty_of_it["lineups"] = [
+        ln for ln in full["lineups"] if ln["id"] != str(lineup.id)
+    ]
+    empty_of_it["lineup_count"] = len(empty_of_it["lineups"])
+    await import_pack(db, empty_of_it)
+    await db.refresh(lineup)
+    assert lineup.status == "hidden"
+
+    await import_pack(db, full)
+    await db.refresh(lineup)
+    assert lineup.status == "accepted", "re-listing in the pack must republish"
+
+
+@pytest.mark.asyncio
+async def test_import_rejects_a_pack_whose_count_disagrees_with_its_rows(
+    db: AsyncSession, seeded: dict
+):
+    """Retraction makes a TRUNCATED pack dangerous — every row it lost would be
+    unpublished as though the operator had hidden it. lineup_count is written
+    by the exporter alongside the rows, so a mismatch catches that before any
+    write happens."""
+    await _make_accepted(db, seeded, title="RT Truncation Guard")
+    pack = _scope_pack(await build_pack(db))
+    pack["lineup_count"] = len(pack["lineups"]) + 5
+
+    with pytest.raises(PackError, match="truncated or hand-edited"):
+        await import_pack(db, pack)
+
+
+@pytest.mark.asyncio
+async def test_empty_pack_retracts_nothing(db: AsyncSession, seeded: dict):
+    """A pack with no lineups at all is a broken export, never an instruction
+    to unpublish the entire library — so retraction is skipped outright."""
+    lineup = await _make_accepted(db, seeded, title="RT Survives Empty Pack")
+
+    stats = await import_pack(
+        db,
+        {"version": PACK_VERSION, "lineup_count": 0, "zones": [], "sources": [], "lineups": []},
+    )
+
+    await db.refresh(lineup)
+    assert lineup.status == "accepted"
+    assert stats.lineups_retracted == 0
+
+
 @pytest.mark.asyncio
 async def test_import_rejects_wrong_pack_version(db: AsyncSession):
     bad = {"version": PACK_VERSION + 999, "zones": [], "sources": [], "lineups": []}

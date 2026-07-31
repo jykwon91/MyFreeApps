@@ -101,6 +101,47 @@ async def upsert_imported_lineup(
     return lineup
 
 
+async def retract_lineups_absent_from_pack(
+    db: AsyncSession,
+    *,
+    keep_ids: set[uuid.UUID],
+) -> int:
+    """Hide every currently-accepted lineup whose id is NOT in *keep_ids*.
+
+    The counterpart to :func:`upsert_imported_lineup`. Import was upsert-only,
+    so it could publish and revise but never RETRACT: once a lineup shipped, it
+    stayed live in prod forever. Hiding a lineup locally removes it from the
+    next pack (the exporter only emits ``status == 'accepted'``), which meant
+    the row simply stopped being updated rather than coming down — prod drifted
+    permanently one row ahead of the library the pack describes.
+
+    The pack is a COMPLETE snapshot of the public library, not a delta, so
+    "absent from the pack" is the authoritative signal for "no longer public".
+    That covers a lineup hidden locally AND one deleted outright, which an
+    explicit retraction list exported from surviving rows could never do.
+
+    Hidden, not deleted: the public API already 404s hidden rows and the list
+    endpoint excludes them, so the visible effect is identical — but the row,
+    its anchors and its media links survive, and re-accepting locally restores
+    it on the next import (``upsert_imported_lineup`` forces 'accepted' back).
+    Deleting would make a retraction irreversible and orphan the R2 objects.
+
+    Only ``accepted`` rows are touched, so re-running is a no-op and rows the
+    operator parked in other states are left alone. Flush-only — the importer
+    owns the single ``unit_of_work`` covering the whole pack.
+
+    Returns the number of rows retracted.
+    """
+    stmt = select(Lineup).where(Lineup.status == "accepted")
+    if keep_ids:
+        stmt = stmt.where(Lineup.id.notin_(keep_ids))
+    stale = (await db.execute(stmt)).scalars().all()
+    for lineup in stale:
+        lineup.status = "hidden"
+    await db.flush()
+    return len(stale)
+
+
 async def list_lineups(
     db: AsyncSession,
     filters: LineupFilters,
