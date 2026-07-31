@@ -160,7 +160,7 @@ export default function GlanceBoardStoryboard({
               title={lineup.title}
             />
           ) : (
-            <ThrowPlaceholder />
+            <ThrowPlaceholder placement={lineup.utility_type?.placement} />
           )}
         </PaneSlot>
         <PaneSlot
