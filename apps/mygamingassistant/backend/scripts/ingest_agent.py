@@ -28,6 +28,33 @@ Subcommands (MAIN checkout venv, cwd = backend, PG:5433 up):
   .venv/Scripts/python.exe scripts/ingest_agent.py <agent> <map> recut
   .venv/Scripts/python.exe scripts/ingest_agent.py <agent> <map> accept
 
+MULTI-SOURCE (`--pack <stem>`)
+  Multi-source ingest is the standing doctrine — one video per agent+map is a coverage
+  defect. But `video_id` is a PER-PACK field and is the join key every subcommand uses
+  (`Lineup.youtube_video_id == vid`), so two videos CANNOT share one pack file: recut
+  would pull every clip from the wrong mp4 and `cs` values can collide across videos.
+
+  Instead give each source its own pack under the same <agent>-spans/ dir and run the
+  driver once per source:
+
+    scripts/phoenix-spans/summit.json     <- source 1 (default stem = map slug)
+    scripts/phoenix-spans/summit-n.json   <- source 2
+
+    ingest_agent.py phoenix summit create
+    ingest_agent.py phoenix summit create --pack summit-n
+
+  `--pack` overrides ONLY the filename stem; the map is always resolved from the pack's
+  own `map_slug`, so the two packs still land on the same map. Cross-source duplicate
+  lineups are NOT auto-merged here — dedup is a separate judgement (see below).
+
+DEDUP CAVEAT
+  Do NOT dedup across sources on (ability, side, stand, target) alone. Those zones are
+  coarse: one real source legitimately holds several distinct b-main -> b-site lineups
+  that differ only by plant spot ("Plant 1/2/3", "Green Box", "Boxes"). Collapsing on
+  the zone key destroys real content. Fine-grained dedup needs the pin ANCHORS, which
+  only exist after pin placement — so treat same-zone pairs as CANDIDATES for the
+  operator's eyeball, not as automatic merges.
+
 Backward-compat: ingest_viper.py still exists for the shipped Viper spans; new agents
 use this driver. To ingest Viper via this driver, symlink/copy viper-spans -> the
 scripts/viper-spans dir already used (agent slug "viper" resolves scripts/viper-spans/).
@@ -59,8 +86,10 @@ def _spans_dir(agent: str) -> Path:
     return ROOT / "scripts" / f"{agent}-spans"
 
 
-def _load(agent: str, map_slug: str) -> dict:
-    path = _spans_dir(agent) / f"{map_slug}.json"
+def _load(agent: str, pack: str) -> dict:
+    """Load one spans pack. `pack` is only a FILE STEM — the real map is always read from
+    the pack's own `map_slug` field, so a non-default pack name never changes resolution."""
+    path = _spans_dir(agent) / f"{pack}.json"
     if not path.exists():
         raise SystemExit(f"ABORT — {path} not found")
     return json.loads(path.read_text())
@@ -101,8 +130,8 @@ def _validate(data: dict, zones: dict, utils: dict) -> None:
         raise SystemExit("VALIDATION FAILED:\n  " + "\n  ".join(errs))
 
 
-async def cmd_plan(agent: str, map_slug: str) -> None:
-    data = _load(agent, map_slug)
+async def cmd_plan(agent: str, pack: str) -> None:
+    data = _load(agent, pack)
     async with AsyncSessionLocal() as db:
         _, vmap, zones, utils = await _resolve(db, data)
         _validate(data, zones, utils)
@@ -114,8 +143,8 @@ async def cmd_plan(agent: str, map_slug: str) -> None:
         print("validation OK (all utilities + zones resolve).")
 
 
-async def cmd_create(agent: str, map_slug: str) -> None:
-    data = _load(agent, map_slug)
+async def cmd_create(agent: str, pack: str) -> None:
+    data = _load(agent, pack)
     vid = data["video_id"]
     url = f"https://www.youtube.com/watch?v={vid}"
     async with AsyncSessionLocal() as db:
@@ -147,8 +176,8 @@ async def cmd_create(agent: str, map_slug: str) -> None:
         print(f"DONE — created {made}, {len(data['lineups'])-made} pre-existing.")
 
 
-def cmd_recut(agent: str, map_slug: str) -> None:
-    data = _load(agent, map_slug)
+def cmd_recut(agent: str, pack: str) -> None:
+    data = _load(agent, pack)
     vid = data["video_id"]
     py = str(ROOT / ".venv" / "Scripts" / "python.exe")
     recut = str(ROOT / "scripts" / "recut_lineup_clips.py")
@@ -179,8 +208,8 @@ def cmd_recut(agent: str, map_slug: str) -> None:
     print(f"RECUT done; {ok} ok, {fail} failed.")
 
 
-async def cmd_accept(agent: str, map_slug: str) -> None:
-    data = _load(agent, map_slug)
+async def cmd_accept(agent: str, pack: str) -> None:
+    data = _load(agent, pack)
     vid = data["video_id"]
     async with AsyncSessionLocal() as db:
         game_id, vmap, zones, utils = await _resolve(db, data)
@@ -205,13 +234,36 @@ async def cmd_accept(agent: str, map_slug: str) -> None:
 
 
 def main() -> None:
-    if len(sys.argv) < 4:
-        raise SystemExit("usage: ingest_agent.py <agent> <map> {plan|create|recut|accept}")
-    agent, map_slug, sub = sys.argv[1], sys.argv[2], sys.argv[3]
+    # A second (third, ...) SOURCE for the same agent+map lives in its own pack file, because
+    # video_id is per-pack and is the join key for create/recut/accept. Merging two videos into
+    # one pack would recut every clip from the wrong mp4. Default stem is the map slug, so all
+    # existing single-source invocations are unchanged.
+    pack_override, positional, rest = None, [], list(sys.argv[1:])
+    while rest:
+        a = rest.pop(0)
+        if a.startswith("--pack="):
+            pack_override = a.split("=", 1)[1]
+        elif a == "--pack":
+            if not rest:
+                raise SystemExit("ABORT — --pack needs a value")
+            pack_override = rest.pop(0)
+        elif a.startswith("--"):
+            raise SystemExit(f"unknown flag {a!r}")
+        else:
+            positional.append(a)
+
+    if len(positional) < 3:
+        raise SystemExit(
+            "usage: ingest_agent.py <agent> <map> {plan|create|recut|accept} [--pack <stem>]")
+    agent, map_slug, sub = positional[0], positional[1], positional[2]
+    pack = pack_override or map_slug
+    if pack != map_slug:
+        print(f"[pack] using scripts/{agent}-spans/{pack}.json")
+
     if sub == "recut":
-        cmd_recut(agent, map_slug)
+        cmd_recut(agent, pack)
     elif sub in ("plan", "create", "accept"):
-        asyncio.run({"plan": cmd_plan, "create": cmd_create, "accept": cmd_accept}[sub](agent, map_slug))
+        asyncio.run({"plan": cmd_plan, "create": cmd_create, "accept": cmd_accept}[sub](agent, pack))
     else:
         raise SystemExit(f"unknown subcommand {sub!r}")
 
