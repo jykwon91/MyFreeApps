@@ -12,7 +12,7 @@ annotated-types==0.7.0
     # via pydantic
 anthropic==0.109.2
     # via myjobhunter-backend
-anyio==4.14.1
+anyio==4.14.2
     # via
     #   anthropic
     #   httpx
@@ -70,7 +70,6 @@ colorama==0.4.6 ; sys_platform == 'win32'
     #   pytest
     #   qrcode
     #   tqdm
-    #   uvicorn
 cryptography==49.0.0
     # via
     #   myjobhunter-backend
@@ -251,7 +250,7 @@ requests==2.34.2
     # via fastembed
 rich==15.0.0
     # via typer
-sentry-sdk==2.64.0
+sentry-sdk==2.66.1
     # via
     #   myjobhunter-backend
     #   platform-shared
@@ -315,7 +314,7 @@ urllib3==2.7.0
     #   minio
     #   requests
     #   sentry-sdk
-uvicorn==0.49.0
+uvicorn==0.52.0
     # via myjobhunter-backend
 uvloop==0.22.1 ; platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32'
     # via uvicorn
