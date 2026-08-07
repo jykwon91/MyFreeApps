@@ -3,7 +3,26 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
+
+
+def _reject_half_a_usage_pair(model: "TransactionCreate | TransactionUpdate"):
+    """Mirror the chk_txn_usage_paired DB constraint as a 422, not a 500.
+
+    A quantity with no unit cannot be compared to anything, and a unit with no
+    quantity carries no information.
+    """
+    if (model.usage_quantity is None) != (model.usage_unit is None):
+        raise ValueError("usage_quantity and usage_unit must be provided together")
+    if model.usage_quantity is not None and model.usage_quantity < 0:
+        raise ValueError("usage_quantity must not be negative")
+    if (
+        model.service_period_start is not None
+        and model.service_period_end is not None
+        and model.service_period_start > model.service_period_end
+    ):
+        raise ValueError("service_period_start must not be after service_period_end")
+    return model
 
 
 TransactionType = Literal["income", "expense"]
@@ -16,6 +35,7 @@ TransactionCategory = Literal[
     "furnishings", "other_expense", "uncategorized",
 ]
 SubCategory = Literal["electricity", "water", "gas", "internet", "trash", "sewer"]
+UsageUnit = Literal["kwh", "therm", "ccf", "mcf", "gallon", "kgal"]
 TransactionChannel = Literal["airbnb", "vrbo", "booking.com", "direct"]
 PaymentMethod = Literal["check", "credit_card", "bank_transfer", "cash", "platform_payout", "other"]
 ScheduleELine = Literal[
@@ -51,6 +71,14 @@ class TransactionRead(BaseModel):
 
     category: TransactionCategory
     sub_category: SubCategory | None = None
+
+    # Metered consumption. NULL on non-utility rows and on utility
+    # notifications that state only an amount due.
+    usage_quantity: Decimal | None = None
+    usage_unit: UsageUnit | None = None
+    service_period_start: date | None = None
+    service_period_end: date | None = None
+
     tags: list[str] = []
     tax_relevant: bool = False
     schedule_e_line: ScheduleELine | None = None
@@ -97,6 +125,10 @@ class TransactionCreate(BaseModel):
     transaction_type: TransactionType
     category: TransactionCategory
     sub_category: SubCategory | None = None
+    usage_quantity: Decimal | None = None
+    usage_unit: UsageUnit | None = None
+    service_period_start: date | None = None
+    service_period_end: date | None = None
     tags: list[str] = []
     tax_relevant: bool = False
     schedule_e_line: ScheduleELine | None = None
@@ -105,6 +137,8 @@ class TransactionCreate(BaseModel):
     channel: TransactionChannel | None = None
     address: str | None = None
     payment_method: PaymentMethod | None = None
+
+    _check_usage = model_validator(mode="after")(_reject_half_a_usage_pair)
 
 
 class ScheduleELineItem(BaseModel):
@@ -127,6 +161,13 @@ class TransactionUpdate(BaseModel):
     transaction_type: TransactionType | None = None
     category: TransactionCategory | None = None
     sub_category: SubCategory | None = None
+    # Both halves must be sent together, even when only the quantity changes —
+    # a partial patch cannot tell "unit omitted" from "unit cleared", and the
+    # DB rejects half a pair.
+    usage_quantity: Decimal | None = None
+    usage_unit: UsageUnit | None = None
+    service_period_start: date | None = None
+    service_period_end: date | None = None
     tags: list[str] | None = None
     tax_relevant: bool | None = None
     schedule_e_line: ScheduleELine | None = None
@@ -136,6 +177,8 @@ class TransactionUpdate(BaseModel):
     address: str | None = None
     payment_method: PaymentMethod | None = None
     status: TransactionStatus | None = None
+
+    _check_usage = model_validator(mode="after")(_reject_half_a_usage_pair)
 
     def to_update_dict(self) -> dict[str, object]:
         """Return the patch payload for the service layer.

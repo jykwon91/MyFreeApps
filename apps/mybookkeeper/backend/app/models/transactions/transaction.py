@@ -10,7 +10,10 @@ from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 
+from app.core.utility_usage_constants import USAGE_UNITS
 from app.db.base import Base
+
+_USAGE_UNIT_IN = ", ".join(f"'{unit}'" for unit in sorted(USAGE_UNITS))
 
 
 class Transaction(Base):
@@ -61,6 +64,18 @@ class Transaction(Base):
 
     category: Mapped[str] = mapped_column(String(50))
     sub_category: Mapped[str | None] = mapped_column(String(50), nullable=True)
+
+    # Metered consumption for utility bills. NULL on every non-utility row, and
+    # also on utility notifications that state only an amount due — a bill's
+    # dollar amount cannot be compared across months, or against a contracted
+    # c/kWh rate, without the quantity it was charged on.
+    usage_quantity: Mapped[Decimal | None] = mapped_column(Numeric(12, 3), nullable=True)
+    usage_unit: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    # The period the usage covers. Distinct from transaction_date: utility
+    # periods routinely straddle two calendar months, so billing-month
+    # aggregation on transaction_date alone misattributes consumption.
+    service_period_start: Mapped[date | None] = mapped_column(Date, nullable=True)
+    service_period_end: Mapped[date | None] = mapped_column(Date, nullable=True)
     tags: Mapped[list[str]] = mapped_column(JSONB, default=list, server_default="[]")
     tax_relevant: Mapped[bool] = mapped_column(Boolean, default=False)
     schedule_e_line: Mapped[str | None] = mapped_column(String(50), nullable=True)
@@ -131,6 +146,32 @@ class Transaction(Base):
             "'line_16_taxes', 'line_17_utilities', 'line_18_depreciation', 'line_19_other'"
             ")",
             name="chk_txn_schedule_e",
+        ),
+        CheckConstraint(
+            f"usage_unit IS NULL OR usage_unit IN ({_USAGE_UNIT_IN})",
+            name="chk_txn_usage_unit",
+        ),
+        # A quantity with no unit cannot be compared to anything, and a unit
+        # with no quantity carries no information — reject either half alone.
+        CheckConstraint(
+            "(usage_quantity IS NULL) = (usage_unit IS NULL)",
+            name="chk_txn_usage_paired",
+        ),
+        # >= 0, not > 0: a vacant month legitimately bills 0 kWh against the
+        # base charge, and rejecting it would drop valid data.
+        CheckConstraint(
+            "usage_quantity IS NULL OR usage_quantity >= 0",
+            name="chk_txn_usage_non_negative",
+        ),
+        # Half a period cannot bucket anything, so the boundaries pair the same
+        # way the quantity and its unit do.
+        CheckConstraint(
+            "(service_period_start IS NULL) = (service_period_end IS NULL)",
+            name="chk_txn_service_period_paired",
+        ),
+        CheckConstraint(
+            "service_period_start IS NULL OR service_period_end >= service_period_start",
+            name="chk_txn_service_period_order",
         ),
         CheckConstraint(
             "tax_year >= 2020 AND tax_year <= 2099",

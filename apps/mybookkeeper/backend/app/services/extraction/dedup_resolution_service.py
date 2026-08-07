@@ -120,15 +120,33 @@ async def _link_document(
 
 
 def _copy_user_edits(old: Transaction, new: Transaction) -> None:
-    """Copy user edits from old transaction to new one."""
+    """Copy user edits from old transaction to new one.
+
+    A ``replace`` decision soft-deletes ``old`` and keeps ``new``. Every field
+    not carried across is lost silently — the analytics queries filter on
+    ``deleted_at IS NULL``, so the value simply stops existing with no error and
+    no log line. Any column added to Transaction that a user can set, or that a
+    better source can supply, has to be carried here.
+    """
     if old.property_id and not new.property_id:
         new.property_id = old.property_id
     if old.category != "uncategorized" and new.category == "uncategorized":
         new.category = old.category
+    if old.sub_category and not new.sub_category:
+        new.sub_category = old.sub_category
     if old.tags and not new.tags:
         new.tags = old.tags
     if old.schedule_e_line and not new.schedule_e_line:
         new.schedule_e_line = old.schedule_e_line
+    # Quantity and unit move together or not at all — chk_txn_usage_paired
+    # rejects half a pair, so copying one without the other would turn a silent
+    # data loss into a failed insert.
+    if old.usage_quantity is not None and new.usage_quantity is None:
+        new.usage_quantity = old.usage_quantity
+        new.usage_unit = old.usage_unit
+    if old.service_period_start and not new.service_period_start:
+        new.service_period_start = old.service_period_start
+        new.service_period_end = old.service_period_end
 
 
 async def _get_document_id_from_extraction(

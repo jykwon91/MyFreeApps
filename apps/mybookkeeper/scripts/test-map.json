@@ -199,7 +199,8 @@
         "backend/app/schemas/extraction/",
         "backend/app/mappers/extraction_mapper.py",
         "backend/app/core/trusted_email_senders.py",
-        "backend/app/core/utility_account_constants.py"
+        "backend/app/core/utility_account_constants.py",
+        "backend/app/core/utility_usage_constants.py"
       ],
       "backend_tests": [
         "test_dedup_resolution.py",
@@ -218,7 +219,9 @@
         "test_claude_service_prompt.py",
         "test_utility_bill_silent_drop.py",
         "test_utility_account_service.py",
-        "test_utility_account_link_repo.py"
+        "test_utility_account_link_repo.py",
+        "test_metered_usage_extraction.py",
+        "test_dedup_copy_user_edits.py"
       ],
       "frontend_tests": [],
       "e2e_specs": [
@@ -259,7 +262,8 @@
         "backend/app/mappers/reservation_mapper.py"
       ],
       "backend_tests": [
-        "test_reservation_mapper.py"
+        "test_reservation_mapper.py",
+        "test_metered_usage_extraction.py"
       ],
       "frontend_tests": [],
       "e2e_specs": []
@@ -926,7 +930,9 @@
         "frontend/src/shared/components/ui/YearFilter.tsx",
         "frontend/src/shared/store/summaryApi.ts",
         "frontend/src/shared/hooks/useSelectedYear.ts",
-        "frontend/src/shared/hooks/useDashboardYears.ts"
+        "frontend/src/shared/hooks/useDashboardYears.ts",
+        "frontend/src/shared/types/transaction/",
+        "backend/app/core/utility_usage_constants.py"
       ],
       "backend_tests": [
         "test_bank_csv_parser.py",
@@ -943,7 +949,8 @@
         "test_transaction_routes.py",
         "test_transaction_schema.py",
         "test_transaction_service.py",
-        "test_vendor_normalization.py"
+        "test_vendor_normalization.py",
+        "test_metered_usage_extraction.py"
       ],
       "frontend_tests": [
         "Transactions.test.tsx",

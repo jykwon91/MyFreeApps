@@ -122,3 +122,85 @@ class TestTransactionUpdateVendorId:
         assert payload["vendor_id"] is None
         assert "property_id" not in payload
         assert "status" not in payload
+
+
+class TestMeteredUsageValidation:
+    """The DB pairs usage_quantity with usage_unit; the schema must reject a
+    half-pair as a 422 rather than letting it reach the CHECK as a 500."""
+
+    def _valid_payload(self, **overrides) -> dict:
+        base = {
+            "transaction_date": date(2025, 8, 1),
+            "amount": Decimal("187.54"),
+            "transaction_type": "expense",
+            "category": "utilities",
+            "sub_category": "electricity",
+        }
+        base.update(overrides)
+        return base
+
+    def test_accepts_full_usage(self) -> None:
+        txn = TransactionCreate(**self._valid_payload(
+            usage_quantity=Decimal("1042.000"), usage_unit="kwh",
+            service_period_start=date(2025, 7, 12), service_period_end=date(2025, 8, 11),
+        ))
+        assert txn.usage_quantity == Decimal("1042.000")
+        assert txn.usage_unit == "kwh"
+
+    def test_accepts_no_usage(self) -> None:
+        assert TransactionCreate(**self._valid_payload()).usage_quantity is None
+
+    def test_accepts_zero_usage(self) -> None:
+        # A vacant month legitimately bills 0 against the base charge.
+        txn = TransactionCreate(**self._valid_payload(
+            usage_quantity=Decimal("0"), usage_unit="kwh",
+        ))
+        assert txn.usage_quantity == Decimal("0")
+
+    def test_accepts_kgal(self) -> None:
+        txn = TransactionCreate(**self._valid_payload(
+            usage_quantity=Decimal("12"), usage_unit="kgal",
+        ))
+        assert txn.usage_unit == "kgal"
+
+    def test_rejects_quantity_without_unit(self) -> None:
+        with pytest.raises(ValidationError):
+            TransactionCreate(**self._valid_payload(usage_quantity=Decimal("1042")))
+
+    def test_rejects_unit_without_quantity(self) -> None:
+        with pytest.raises(ValidationError):
+            TransactionCreate(**self._valid_payload(usage_unit="kwh"))
+
+    def test_rejects_unknown_unit(self) -> None:
+        with pytest.raises(ValidationError):
+            TransactionCreate(**self._valid_payload(
+                usage_quantity=Decimal("1"), usage_unit="widgets",
+            ))
+
+    def test_rejects_negative_quantity(self) -> None:
+        with pytest.raises(ValidationError):
+            TransactionCreate(**self._valid_payload(
+                usage_quantity=Decimal("-5"), usage_unit="kwh",
+            ))
+
+    def test_rejects_inverted_service_period(self) -> None:
+        with pytest.raises(ValidationError):
+            TransactionCreate(**self._valid_payload(
+                service_period_start=date(2025, 8, 11),
+                service_period_end=date(2025, 7, 12),
+            ))
+
+    def test_update_rejects_half_a_pair(self) -> None:
+        with pytest.raises(ValidationError):
+            TransactionUpdate(usage_quantity=Decimal("1042"))
+
+    def test_update_accepts_both_halves(self) -> None:
+        txn = TransactionUpdate(usage_quantity=Decimal("1042"), usage_unit="kwh")
+        payload = txn.to_update_dict()
+        assert payload["usage_quantity"] == Decimal("1042")
+        assert payload["usage_unit"] == "kwh"
+
+    def test_update_untouched_usage_is_omitted(self) -> None:
+        payload = TransactionUpdate(status="approved").to_update_dict()
+        assert "usage_quantity" not in payload
+        assert "usage_unit" not in payload
