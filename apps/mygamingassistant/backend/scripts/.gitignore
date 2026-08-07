@@ -6,9 +6,14 @@
 # `/Users/<name>/...` home dir) or a claude session-UUID scratch path may be
 # committed.
 # The durable pipeline scripts are path-clean (they derive dirs from
-# `Path.home()` / `os.environ["TEMP"]`), so they ARE tracked. Ad-hoc diagnostics
-# that hardcode this machine's paths stay local (protected from a stray
-# `git clean` by hooks/block-git-clean.js) until scrubbed to portable idioms.
+# `Path(__file__)` / `tempfile.gettempdir()`), so they ARE tracked. Ad-hoc
+# diagnostics that hardcode this machine's paths stay local (protected from a
+# stray `git clean` by hooks/block-git-clean.js) until scrubbed to portable idioms.
+#
+# "Until scrubbed" is a debt, not a resting state: a pipeline script that only
+# exists on one machine is one `git clean` from gone, and this repo has already
+# lost ~180 untracked scripts that way. If a script is needed to RE-RUN the
+# pipeline, scrub it and track it — the scrub is a one-line root constant.
 #
 # Tracked (necessary to RE-RUN the pipeline — the scripts read these):
 #   - portable .py / .ps1 pipeline tooling (no hardcoded operator path)
@@ -42,7 +47,6 @@ finecut_strip.py
 landing_pad_compare_sheet.py
 market_door_strip.py
 parse_and_recut.py
-recut_from_output.py
 recut_landing_pad_check.py
 relocalize_aim.py
 rerun_market_door_micro.py
