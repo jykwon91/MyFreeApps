@@ -340,61 +340,78 @@ SPLIT_CASES = [
     ("Outro", None), ("Fail Blooper", None),
 ]
 
-bad = 0
-for map_slug, cases in (("summit", SUMMIT_CASES), ("ascent", ASCENT_CASES),
-                        ("sunset", SUNSET_CASES), ("ascent", REVERSED_CASES),
-                        ("breeze", BREEZE_REVERSED_CASES), ("haven", HAVEN_CASES),
-                        ("lotus", LOTUS_CASES), ("split", SPLIT_CASES)):
-    table = BY_MAP[map_slug]
-    print(f"--- {map_slug} ({len(cases)} cases) ---")
-    for raw, want in cases:
-        # Call the SAME normalizer build_items.py uses for the target lookup, rather than
-        # re-implementing part of it here. The old line mirrored only the parenthetical strip, so it
-        # could not have caught the "From <stand>" hijack at all — the test agreed with the bug.
-        # Pass the table exactly as build_items.py does. Without it target_text cannot evaluate the
-        # reversed `<STAND> to <TARGET>` grammar, and the test would silently exercise a weaker
-        # code path than production — the same way the pre-fix test agreed with the "From" bug.
-        got = c2z(target_text(raw, table), table)
-        ok = got == want
-        bad += not ok
-        print(f"  {'ok ' if ok else 'FAIL'} {raw!r:34} -> {got!r}" + ("" if ok else f"   want {want!r}"))
+def run():
+    """Run every case table + invariant. Returns the failure count (0 == all passed)."""
+    bad = 0
+    for map_slug, cases in (("summit", SUMMIT_CASES), ("ascent", ASCENT_CASES),
+                            ("sunset", SUNSET_CASES), ("ascent", REVERSED_CASES),
+                            ("breeze", BREEZE_REVERSED_CASES), ("haven", HAVEN_CASES),
+                            ("lotus", LOTUS_CASES), ("split", SPLIT_CASES)):
+        table = BY_MAP[map_slug]
+        print(f"--- {map_slug} ({len(cases)} cases) ---")
+        for raw, want in cases:
+            # Call the SAME normalizer build_items.py uses for the target lookup, rather than
+            # re-implementing part of it here. The old line mirrored only the parenthetical strip, so it
+            # could not have caught the "From <stand>" hijack at all — the test agreed with the bug.
+            # Pass the table exactly as build_items.py does. Without it target_text cannot evaluate the
+            # reversed `<STAND> to <TARGET>` grammar, and the test would silently exercise a weaker
+            # code path than production — the same way the pre-fix test agreed with the "From" bug.
+            got = c2z(target_text(raw, table), table)
+            ok = got == want
+            bad += not ok
+            print(f"  {'ok ' if ok else 'FAIL'} {raw!r:34} -> {got!r}" + ("" if ok else f"   want {want!r}"))
 
-# --- reachability invariant -------------------------------------------------------------------
-# callout_to_zone lowercases the SUBJECT and replaces every non-alphanumeric run with a space before
-# it searches, but it searches for the table entry VERBATIM. So an entry that is not already in
-# normalized form can never match anything — and it fails SILENTLY: the table still lists it, so a
-# reader (and I did) concludes the mapping is present while the lookup falls through to whatever
-# broader entry sits below it. That is how "A/Mid Info" resolved to mid despite an "a/mid info" row.
-# Asserting entry == normalize(entry) is exactly the reachability condition, and it catches
-# uppercase and doubled spaces too, not just punctuation.
-print("\n--- table entries are reachable (normalized form) ---")
-unreachable = 0
-for map_slug, table in sorted(BY_MAP.items()):
-    for i, (word, slug) in enumerate(table):
-        norm = re.sub(r"\s+", " ", re.sub(r"[^a-z0-9 ]+", " ", word.lower())).strip()
-        if norm != word:
-            unreachable += 1
-            print(f"  FAIL {map_slug}[{i}] {word!r} -> {slug}: normalizes to {norm!r}, so the "
-                  f"verbatim search can never hit it. Spell the entry {norm!r}.")
-bad += unreachable
-entries = sum(len(t) for t in BY_MAP.values())
-print(f"  {'ok ' if not unreachable else '   '} {entries - unreachable}/{entries} entries across "
-      f"{len(BY_MAP)} tables are reachable")
+    # --- reachability invariant -------------------------------------------------------------------
+    # callout_to_zone lowercases the SUBJECT and replaces every non-alphanumeric run with a space before
+    # it searches, but it searches for the table entry VERBATIM. So an entry that is not already in
+    # normalized form can never match anything — and it fails SILENTLY: the table still lists it, so a
+    # reader (and I did) concludes the mapping is present while the lookup falls through to whatever
+    # broader entry sits below it. That is how "A/Mid Info" resolved to mid despite an "a/mid info" row.
+    # Asserting entry == normalize(entry) is exactly the reachability condition, and it catches
+    # uppercase and doubled spaces too, not just punctuation.
+    print("\n--- table entries are reachable (normalized form) ---")
+    unreachable = 0
+    for map_slug, table in sorted(BY_MAP.items()):
+        for i, (word, slug) in enumerate(table):
+            norm = re.sub(r"\s+", " ", re.sub(r"[^a-z0-9 ]+", " ", word.lower())).strip()
+            if norm != word:
+                unreachable += 1
+                print(f"  FAIL {map_slug}[{i}] {word!r} -> {slug}: normalizes to {norm!r}, so the "
+                      f"verbatim search can never hit it. Spell the entry {norm!r}.")
+    bad += unreachable
+    entries = sum(len(t) for t in BY_MAP.values())
+    print(f"  {'ok ' if not unreachable else '   '} {entries - unreachable}/{entries} entries across "
+          f"{len(BY_MAP)} tables are reachable")
 
-# A map with no table must be absent, not silently defaulted — reconcile aborts on the None.
-# This walked sunset -> breeze -> haven -> lotus -> split as each table landed. All SEVEN pool maps
-# now have one, so it is repointed at Icebox: a real Valorant map that is deliberately OUT of the
-# operator's pool, so it stays un-tabled and the contract keeps being tested. If Icebox is ever
-# added, move this to another out-of-pool map (Fracture, Pearl, Bind, Abyss) rather than deleting
-# it — an untested fail-loud path is how an unknown map starts silently resolving to nothing.
-print("\n--- fail-loud contract ---")
-unknown = BY_MAP.get("icebox")
-ok = unknown is None
-bad += not ok
-print(f"  {'ok ' if ok else 'FAIL'} unknown map 'icebox' has no table (reconcile aborts) -> {unknown!r}")
+    # A map with no table must be absent, not silently defaulted — reconcile aborts on the None.
+    # This walked sunset -> breeze -> haven -> lotus -> split as each table landed. All SEVEN pool maps
+    # now have one, so it is repointed at Icebox: a real Valorant map that is deliberately OUT of the
+    # operator's pool, so it stays un-tabled and the contract keeps being tested. If Icebox is ever
+    # added, move this to another out-of-pool map (Fracture, Pearl, Bind, Abyss) rather than deleting
+    # it — an untested fail-loud path is how an unknown map starts silently resolving to nothing.
+    print("\n--- fail-loud contract ---")
+    unknown = BY_MAP.get("icebox")
+    ok = unknown is None
+    bad += not ok
+    print(f"  {'ok ' if ok else 'FAIL'} unknown map 'icebox' has no table (reconcile aborts) -> {unknown!r}")
 
-total = (len(SUMMIT_CASES) + len(ASCENT_CASES) + len(SUNSET_CASES) + len(REVERSED_CASES)
-         + len(BREEZE_REVERSED_CASES) + len(HAVEN_CASES) + len(LOTUS_CASES)
-         + len(SPLIT_CASES) + 1 + entries)
-print(f"\n{total - bad}/{total} passed")
-raise SystemExit(1 if bad else 0)
+    total = (len(SUMMIT_CASES) + len(ASCENT_CASES) + len(SUNSET_CASES) + len(REVERSED_CASES)
+             + len(BREEZE_REVERSED_CASES) + len(HAVEN_CASES) + len(LOTUS_CASES)
+             + len(SPLIT_CASES) + 1 + entries)
+    print(f"\n{total - bad}/{total} passed")
+    return bad
+
+
+def test_callouts():
+    """pytest entry point.
+
+    scripts/ is collected by the backend suite (see test_dedup_lineups.py), so this file
+    must be importable with no side effects. It previously ran at import and ended in a
+    bare `raise SystemExit`, which aborts pytest collection with an INTERNALERROR even
+    when every check passes.
+    """
+    assert run() == 0, "callout table checks failed — run `python test_callouts.py` for detail"
+
+
+if __name__ == "__main__":
+    raise SystemExit(1 if run() else 0)
