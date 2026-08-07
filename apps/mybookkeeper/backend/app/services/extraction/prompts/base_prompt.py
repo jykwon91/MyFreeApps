@@ -26,6 +26,10 @@ Always return this structure (documents is always an array, even for a single re
       "channel": "airbnb | vrbo | booking.com | direct | null",
       "address": "property street address or null",
       "account_number": "utility/service/insurance account number as shown, or null",
+      "usage_quantity": "metered consumption for the billing period as a decimal string e.g. '1042.000', or null",
+      "usage_unit": "kwh | therm | ccf | mcf | gallon | kgal | null",
+      "service_period_start": "YYYY-MM-DD first day of the billing/service period, or null",
+      "service_period_end": "YYYY-MM-DD last day of the billing/service period, or null",
       "confidence": "high | medium | low",
       "line_items": null
     }
@@ -293,6 +297,20 @@ For lease, tax_form, contract, other:
 - account_number: for utility, telecom, insurance, property-tax, and other account-based recurring bills, extract the account number / account ID EXACTLY as shown — preserve dashes, spaces, and leading zeros; do NOT normalize, reformat, or strip them. Capture a masked form verbatim ("Account ending in 1234", "Acct: ****5678") and NEVER invent or fill in hidden digits. If multiple account numbers appear, prefer the primary billed account; if you cannot tell, join them with " | ". Do NOT use an invoice number, statement number, meter number, confirmation number, or reference number as the account_number. Set account_number to null for documents that don't have a provider account (plumbers and other one-off contractors, peer-to-peer payments, PM statements).
 - tax_relevant: true for business expenses and taxable income
 - confidence: "low" if amount or date is missing/unclear, "medium" if partially uncertain, "high" if all fields are clear
+- usage_quantity / usage_unit / service_period_start / service_period_end: metered consumption — see "Metered usage extraction" below. Always null for non-metered documents.
+
+# Metered usage extraction
+
+Utility bills price a metered quantity, and the dollar amount alone cannot be compared across months or against a contracted rate. When the document is a utility bill or a utility billing notification, also extract how much was consumed.
+
+- usage_quantity: the total consumption billed for the period, as a decimal string. Take the number the provider bills on — labelled "Usage", "Total kWh Used", "kWh Used This Period", "Consumption", "CCF Used", "Therms", "Gallons Used". Strip thousands separators ("1,042 kWh" -> "1042.000").
+- usage_unit: the unit that quantity is measured in — "kwh" (electricity), "therm" or "ccf" (natural gas — use whichever the bill actually bills on), "mcf" (bulk gas), "gallon" or "kgal" (water/sewer). Lowercase. If you extract a usage_quantity you MUST also set usage_unit, and vice versa — never set one without the other.
+- CRITICAL — water bills are usually metered in THOUSANDS of gallons, not gallons. If the usage column is headed "1,000 GAL", "kgal", "x1000 gallons", or "TGAL", the unit is "kgal" and the quantity is the number as printed — do NOT multiply it out to gallons. Reading "12" off a 1,000-gallon column and calling it "gallon" is wrong by a factor of 1000. Only use "gallon" when the bill genuinely states individual gallons.
+- Report the quantity in the unit the bill bills on. Do not convert between units — CCF to therms, kgal to gallons, or anything else. The stored row must match the source document.
+- service_period_start / service_period_end: the billing period the usage covers ("Service Period 07/12/2025 - 08/11/2025", "Billing period: Jul 12 to Aug 11"). This is NOT the statement date or the due date — utility periods routinely straddle two calendar months, so the period is what makes the usage comparable, not the bill date.
+- Set all four to null when the document is not a metered utility bill (internet, trash, and flat-rate services have no meter; so do invoices, receipts, payouts, and tax forms).
+- Set usage_quantity and usage_unit to null when the bill is a metered service but the notification does not state the consumption — many "your bill is ready" emails show only an amount due. Do NOT infer or estimate consumption from the dollar amount.
+- A meter READING (the odometer-style number on the meter face, often shown as "Previous reading" / "Current reading") is NOT the usage. Usage is the difference between them, which the bill states separately. If only readings are shown and no usage total, set usage_quantity to null.
 
 # Address extraction
 
@@ -309,11 +327,14 @@ For utility bills (electric, gas, water, internet), insurance policies, and prop
 Invoice from a plumber:
 {"documents": [{"document_type": "invoice", "date": "2025-09-15", "vendor": "ABC Plumbing", "amount": "425.00", "description": "Water heater replacement at 6738 Peerless St", "transaction_type": "expense", "category": "contract_work", "payment_method": null, "tags": ["contract_work"], "tax_relevant": true, "channel": null, "address": "6738 Peerless St Houston TX", "account_number": null, "confidence": "high", "line_items": null}]}
 
-Monthly electric bill:
-{"documents": [{"document_type": "invoice", "date": "2025-08-01", "vendor": "Constellation", "amount": "187.54", "description": "Electricity Aug 2025", "transaction_type": "expense", "category": "utilities", "sub_category": "electricity", "payment_method": null, "tags": ["utilities"], "tax_relevant": true, "channel": null, "address": "6732 Peerless St Houston TX", "account_number": "1234567890", "confidence": "high", "line_items": null}]}
+Monthly electric bill showing "Total kWh Used: 1,042" for service period 07/12/2025 - 08/11/2025:
+{"documents": [{"document_type": "invoice", "date": "2025-08-01", "vendor": "Constellation", "amount": "187.54", "description": "Electricity Aug 2025", "transaction_type": "expense", "category": "utilities", "sub_category": "electricity", "payment_method": null, "tags": ["utilities"], "tax_relevant": true, "channel": null, "address": "6732 Peerless St Houston TX", "account_number": "1234567890", "usage_quantity": "1042.000", "usage_unit": "kwh", "service_period_start": "2025-07-12", "service_period_end": "2025-08-11", "confidence": "high", "line_items": null}]}
 
-Bill-ready email notification that shows an amount due ("Your Constellation bill is ready. Auto Pay of $232.84 is scheduled for Jun 18."):
-{"documents": [{"document_type": "invoice", "date": "2026-06-18", "vendor": "Constellation", "amount": "232.84", "description": "Electricity bill — Auto Pay scheduled", "transaction_type": "expense", "category": "utilities", "sub_category": "electricity", "payment_method": "bank_transfer", "tags": ["utilities"], "tax_relevant": true, "channel": null, "address": null, "account_number": null, "confidence": "high", "line_items": null}]}
+Gas bill billed in CCF ("Usage: 38 CCF, Billing period Jan 15 - Feb 14 2026"):
+{"documents": [{"document_type": "invoice", "date": "2026-02-18", "vendor": "CenterPoint Energy", "amount": "64.21", "description": "Natural gas Feb 2026", "transaction_type": "expense", "category": "utilities", "sub_category": "gas", "payment_method": null, "tags": ["utilities"], "tax_relevant": true, "channel": null, "address": "6732 Peerless St Houston TX", "account_number": "9876543210", "usage_quantity": "38.000", "usage_unit": "ccf", "service_period_start": "2026-01-15", "service_period_end": "2026-02-14", "confidence": "high", "line_items": null}]}
+
+Bill-ready email notification that shows an amount due but no consumption ("Your Constellation bill is ready. Auto Pay of $232.84 is scheduled for Jun 18."):
+{"documents": [{"document_type": "invoice", "date": "2026-06-18", "vendor": "Constellation", "amount": "232.84", "description": "Electricity bill — Auto Pay scheduled", "transaction_type": "expense", "category": "utilities", "sub_category": "electricity", "payment_method": "bank_transfer", "tags": ["utilities"], "tax_relevant": true, "channel": null, "address": null, "account_number": null, "usage_quantity": null, "usage_unit": null, "service_period_start": null, "service_period_end": null, "confidence": "high", "line_items": null}]}
 
 AT&T notification email that shows an amount due but no service address ("Your AT&T bill of $89.99 is ready. Account ending in 1234."):
 {"documents": [{"document_type": "invoice", "date": "2026-06-20", "vendor": "AT&T", "amount": "89.99", "description": "AT&T internet bill", "transaction_type": "expense", "category": "utilities", "sub_category": "internet", "payment_method": "bank_transfer", "tags": ["utilities"], "tax_relevant": true, "channel": null, "address": null, "account_number": "Account ending in 1234", "confidence": "high", "line_items": null}]}

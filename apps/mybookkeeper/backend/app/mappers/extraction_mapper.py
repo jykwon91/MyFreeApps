@@ -5,12 +5,16 @@ Pure data transformation — no I/O, no DB access. The orchestration layer
 """
 import logging
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from decimal import Decimal
 
 from app.core.parsers import safe_date, safe_decimal
-from app.core.tags import REVENUE_TAGS, EXPENSE_TAGS, CATEGORY_TO_SCHEDULE_E, UTILITY_SUB_CATEGORIES, sanitize_tags
+from app.core.tags import (
+    REVENUE_TAGS, EXPENSE_TAGS, CATEGORY_TO_SCHEDULE_E, UTILITY_SUB_CATEGORIES, sanitize_tags,
+)
+from app.core.utility_usage_constants import USAGE_UNITS
+from app.models.extraction.metered_usage import MeteredUsage
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +49,7 @@ class MappedItem:
     review_reason: str | None
     raw_data: dict
     sub_category: str | None = None
+    usage: MeteredUsage = field(default_factory=MeteredUsage.empty)
 
 
 def sanitize_extraction_tags(raw_tags: list | None) -> list[str]:
@@ -109,6 +114,45 @@ def _extract_sub_category(data: dict, tags: list[str]) -> str | None:
     return None
 
 
+def extract_usage(data: dict, category: str) -> MeteredUsage:
+    """Extract metered consumption; only valid for the utilities category.
+
+    Takes the resolved category rather than tags so both ingestion paths (the
+    upload path, which derives category from tags, and the email path, which is
+    handed one) share this validation instead of re-implementing it.
+
+    Quantity and unit are all-or-nothing — a quantity with no unit is not
+    comparable to anything, and a unit with no quantity carries no information.
+    The service period is kept even when the consumption is missing, because it
+    still tells us which months a bill's dollar amount covers.
+    """
+    if category != "utilities":
+        return MeteredUsage.empty()
+
+    quantity = safe_decimal(data.get("usage_quantity"))
+    raw_unit = data.get("usage_unit")
+    unit = raw_unit.lower() if isinstance(raw_unit, str) else None
+    if unit not in USAGE_UNITS:
+        unit = None
+    if quantity is None or unit is None or quantity < 0:
+        quantity = unit = None
+
+    period_start = safe_date(data.get("service_period_start"))
+    period_end = safe_date(data.get("service_period_end"))
+    # Half a period cannot bucket anything, and an inverted one means the model
+    # mixed up two dates on the bill — either would silently corrupt per-period
+    # aggregation, and chk_txn_service_period_paired rejects them outright.
+    if not period_start or not period_end or period_start > period_end:
+        period_start = period_end = None
+
+    return MeteredUsage(
+        quantity=quantity,
+        unit=unit,
+        period_start=period_start.date() if period_start else None,
+        period_end=period_end.date() if period_end else None,
+    )
+
+
 def map_single_item(
     data: dict,
     property_id: uuid.UUID | None,
@@ -120,6 +164,7 @@ def map_single_item(
     amount = safe_decimal(data.get("amount"))
     doc_type = data.get("document_type", "invoice")
     sub_category = _extract_sub_category(data, doc_tags)
+    usage = extract_usage(data, derive_category(doc_tags))
 
     status, review_reason, review_fields = determine_review_status(
         vendor, amount, doc_type, property_id, doc_tags,
@@ -143,6 +188,7 @@ def map_single_item(
         review_reason=review_reason,
         raw_data=data,
         sub_category=sub_category,
+        usage=usage,
     )
 
 

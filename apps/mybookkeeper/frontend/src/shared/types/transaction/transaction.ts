@@ -1,6 +1,10 @@
+import type { UsageUnit } from "../utility/utility-usage-unit";
+
 export type TransactionType = "income" | "expense";
 
 export type TransactionStatus = "pending" | "approved" | "needs_review" | "duplicate" | "unverified";
+
+export type SubCategory = "electricity" | "water" | "gas" | "internet" | "trash" | "sewer";
 
 export interface Transaction {
   id: string;
@@ -23,6 +27,14 @@ export interface Transaction {
   amount: string;
   transaction_type: TransactionType;
   category: string;
+  sub_category: SubCategory | null;
+  // Metered consumption. Null on non-utility transactions and on utility
+  // notifications that state only an amount due. `usage_quantity` is a string
+  // because Numeric serializes as JSON string — parse before arithmetic.
+  usage_quantity: string | null;
+  usage_unit: UsageUnit | null;
+  service_period_start: string | null;
+  service_period_end: string | null;
   tags: string[];
   tax_relevant: boolean;
   schedule_e_line: string | null;

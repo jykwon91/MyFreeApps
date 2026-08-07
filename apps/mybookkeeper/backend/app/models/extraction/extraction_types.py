@@ -14,6 +14,10 @@ class ExtractionData(TypedDict, total=False):
     channel: str
     address: str
     account_number: str | None
+    usage_quantity: str | None
+    usage_unit: str | None
+    service_period_start: str | None
+    service_period_end: str | None
     line_items: list[dict[str, str]]
     document_type: str
     category: str

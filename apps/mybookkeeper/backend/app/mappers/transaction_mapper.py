@@ -5,8 +5,11 @@ from decimal import Decimal
 
 from app.core.tags import REVENUE_TAGS, EXPENSE_TAGS, UTILITY_SUB_CATEGORIES, transaction_type_for_category
 from app.core.tax_line_mapping import resolve_tax_line
+from app.models.extraction.metered_usage import MeteredUsage
 from app.models.transactions.transaction import Transaction
-from app.mappers.extraction_mapper import derive_category, derive_transaction_type, derive_schedule_e_line, MappedItem
+from app.mappers.extraction_mapper import (
+    derive_category, derive_transaction_type, derive_schedule_e_line, extract_usage, MappedItem,
+)
 
 
 def reconcile_type_category(txn_type: str, category: str) -> str:
@@ -49,7 +52,11 @@ def build_transaction_from_mapped_item(
     if amount is None or amount == 0:
         return None
 
+    # Re-gate on the resolved category: map_single_item derives category from
+    # tags, but this builder prefers the raw category when present, so the two
+    # can disagree. Usage only means something on a utilities row.
     sub_category = item.sub_category if category == "utilities" else None
+    usage = item.usage if category == "utilities" else MeteredUsage.empty()
 
     return Transaction(
         organization_id=organization_id,
@@ -64,6 +71,10 @@ def build_transaction_from_mapped_item(
         transaction_type=txn_type,
         category=category,
         sub_category=sub_category,
+        usage_quantity=usage.quantity,
+        usage_unit=usage.unit,
+        service_period_start=usage.period_start,
+        service_period_end=usage.period_end,
         tags=item.tags,
         tax_relevant=item.tax_relevant,
         schedule_e_line=resolve_tax_line(category, tax_form) if tax_form else derive_schedule_e_line(category),
@@ -100,6 +111,8 @@ def build_transaction_from_extraction_data(
     if category == "utilities" and isinstance(raw_sub, str) and raw_sub in UTILITY_SUB_CATEGORIES:
         sub_category = raw_sub
 
+    usage = extract_usage(data, category)
+
     return Transaction(
         organization_id=organization_id,
         user_id=user_id,
@@ -114,6 +127,10 @@ def build_transaction_from_extraction_data(
         transaction_type=txn_type,
         category=category,
         sub_category=sub_category,
+        usage_quantity=usage.quantity,
+        usage_unit=usage.unit,
+        service_period_start=usage.period_start,
+        service_period_end=usage.period_end,
         tags=tags,
         tax_relevant=data.get("tax_relevant", False),
         schedule_e_line=resolve_tax_line(category, tax_form) if tax_form else derive_schedule_e_line(category),
