@@ -613,6 +613,50 @@
         "insurance-policies.spec.ts"
       ]
     },
+    "utility_plans": {
+      "source_paths": [
+        "backend/app/models/properties/utility_plan.py",
+        "backend/app/repositories/properties/utility_plan_repo.py",
+        "backend/app/schemas/properties/utility_plan_create_request.py",
+        "backend/app/schemas/properties/utility_plan_update_request.py",
+        "backend/app/schemas/properties/utility_plan_summary.py",
+        "backend/app/schemas/properties/utility_plan_response.py",
+        "backend/app/schemas/properties/utility_plan_list_response.py",
+        "backend/app/schemas/properties/utility_plan_renewal_alert_response.py",
+        "backend/app/schemas/properties/utility_plan_validation.py",
+        "backend/app/services/properties/utility_plan_service.py",
+        "backend/app/api/utility_plans.py",
+        "backend/app/core/utility_plan_constants.py",
+        "backend/app/cli/utility_plan_seed_row.py",
+        "backend/app/cli/peerless_utility_plan_seed.py",
+        "backend/app/cli/migrate_data.py",
+        "backend/app/workers/scheduler_worker.py",
+        "backend/alembic/versions/utilplan260807_add_utility_plans.py",
+        "frontend/src/app/pages/UtilityPlans.tsx",
+        "frontend/src/app/features/utility/",
+        "frontend/src/shared/types/utility/",
+        "frontend/src/shared/store/utilityPlansApi.ts",
+        "frontend/src/shared/lib/utility-plan-format.ts"
+      ],
+      "backend_tests": [
+        "test_utility_plan_service.py",
+        "test_utility_plan_repo.py",
+        "test_utility_plans_api.py",
+        "test_utility_plan_scheduler.py",
+        "test_utility_plan_seed.py"
+      ],
+      "frontend_tests": [
+        "UtilityPlans.test.tsx",
+        "UtilityPlanRenewalAlertCard.test.tsx",
+        "utility-plan-format.test.ts",
+        "Dashboard.test.tsx"
+      ],
+      "e2e_specs": [
+        "utility-plans.spec.ts",
+        "utility-plans-layout.spec.ts",
+        "dashboard.spec.ts"
+      ]
+    },
     "welcome_manuals": {
       "source_paths": [
         "backend/app/models/welcome_manuals/",
@@ -875,7 +919,7 @@
         "backend/app/api/reconciliation.py",
         "backend/app/api/summary.py",
         "frontend/src/pages/Transactions.tsx",
-        "frontend/src/pages/Dashboard.tsx",
+        "frontend/src/app/pages/Dashboard.tsx",
         "frontend/src/features/transactions/",
         "frontend/src/features/dashboard/",
         "frontend/src/shared/types/dashboard/",

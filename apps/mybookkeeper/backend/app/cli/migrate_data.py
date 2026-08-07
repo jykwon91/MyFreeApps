@@ -5,13 +5,18 @@ Usage:
     python -m app.cli.migrate_data cleanup-duplicates
     python -m app.cli.migrate_data recompute-tax --year 2025
     python -m app.cli.migrate_data dry-run cleanup-duplicates
+    python -m app.cli.migrate_data --dry-run seed-utility-plans
 """
 import argparse
 import sys
+import uuid
 
 from sqlalchemy import text
 
 from app.cli.db import SyncSession
+from app.cli.peerless_utility_plan_seed import PEERLESS_UTILITY_PLANS
+from app.cli.utility_plan_seed_row import UtilityPlanSeedRow
+from app.services.extraction.utility_account_service import normalize_account_number
 
 
 def cmd_cleanup_duplicates(args):
@@ -143,6 +148,139 @@ def cmd_reprocess_completed_without_transactions(args):
         print("The upload processor worker will re-extract and create transactions.")
 
 
+_FIND_PROPERTY = text("""
+    SELECT id, user_id, organization_id, name
+    FROM properties
+    WHERE name ILIKE :frag OR address ILIKE :frag
+    ORDER BY name
+""")
+
+# service_start_date is NULL for regulated plans, so a plain `=` would never
+# match and every re-run would insert a duplicate.
+_FIND_EXISTING_PLAN = text("""
+    SELECT id FROM utility_plans
+    WHERE property_id = :property_id
+      AND service_type = :service_type
+      AND provider_name = :provider_name
+      AND service_start_date IS NOT DISTINCT FROM :service_start_date
+      AND deleted_at IS NULL
+""")
+
+_INSERT_PLAN = text("""
+    INSERT INTO utility_plans (
+        id, user_id, organization_id, property_id,
+        service_type, provider_name, account_number, plan_name, rate_type,
+        energy_charge_cents_per_kwh, tdu_charge_cents_per_kwh,
+        avg_price_cents_per_kwh_at_1000, monthly_base_charge_cents,
+        term_months, service_start_date, term_end_date,
+        early_termination_fee_cents, has_bill_credit,
+        min_usage_fee_cents, min_usage_threshold_kwh, notes,
+        created_at, updated_at
+    ) VALUES (
+        :id, :user_id, :organization_id, :property_id,
+        :service_type, :provider_name, :account_number, :plan_name, :rate_type,
+        :energy_charge_cents_per_kwh, :tdu_charge_cents_per_kwh,
+        :avg_price_cents_per_kwh_at_1000, :monthly_base_charge_cents,
+        :term_months, :service_start_date, :term_end_date,
+        :early_termination_fee_cents, false,
+        :min_usage_fee_cents, :min_usage_threshold_kwh, :notes,
+        NOW(), NOW()
+    )
+""")
+
+
+def _plan_params(row: UtilityPlanSeedRow, prop) -> dict:
+    """Bind parameters for one seed row against its resolved property."""
+    account = row.account_number
+    return {
+        "id": str(uuid.uuid4()),
+        "user_id": str(prop.user_id),
+        "organization_id": str(prop.organization_id),
+        "property_id": str(prop.id),
+        "service_type": row.service_type,
+        "provider_name": row.provider_name,
+        # Normalized identically to utility_account_link so the two can be
+        # joined on the account number later.
+        "account_number": normalize_account_number(account) if account else None,
+        "plan_name": row.plan_name,
+        "rate_type": row.rate_type,
+        "energy_charge_cents_per_kwh": row.energy_charge_cents_per_kwh,
+        "tdu_charge_cents_per_kwh": row.tdu_charge_cents_per_kwh,
+        "avg_price_cents_per_kwh_at_1000": row.avg_price_cents_per_kwh_at_1000,
+        "monthly_base_charge_cents": row.monthly_base_charge_cents,
+        "term_months": row.term_months,
+        "service_start_date": row.service_start_date,
+        "term_end_date": row.term_end_date,
+        "early_termination_fee_cents": row.early_termination_fee_cents,
+        "min_usage_fee_cents": row.min_usage_fee_cents,
+        "min_usage_threshold_kwh": row.min_usage_threshold_kwh,
+        "notes": row.notes,
+    }
+
+
+def cmd_seed_utility_plans(args):
+    """Insert the Peerless St utility plans transcribed from provider email.
+
+    Idempotent: a row is skipped when a non-deleted plan already exists for the
+    same (property, service_type, provider, start date). Re-running after
+    adding a property picks up only what is missing.
+
+    A seed row whose property fragment matches zero or more than one property
+    is reported and skipped, never guessed — the wrong property would produce a
+    renewal alert for a contract that does not exist there.
+    """
+    inserted = skipped = unresolved = 0
+
+    with SyncSession() as session:
+        for row in PEERLESS_UTILITY_PLANS:
+            label = f"{row.property_match} / {row.service_type}"
+            matches = session.execute(
+                _FIND_PROPERTY, {"frag": f"%{row.property_match}%"},
+            ).fetchall()
+
+            if len(matches) != 1:
+                found = ", ".join(m.name for m in matches) or "nothing"
+                print(f"  SKIP {label} — matched {found}; expected exactly one property")
+                unresolved += 1
+                continue
+
+            prop = matches[0]
+            params = _plan_params(row, prop)
+
+            existing = session.execute(_FIND_EXISTING_PLAN, {
+                "property_id": params["property_id"],
+                "service_type": row.service_type,
+                "provider_name": row.provider_name,
+                "service_start_date": row.service_start_date,
+            }).first()
+            if existing:
+                print(f"  SKIP {label} — already present on {prop.name}")
+                skipped += 1
+                continue
+
+            # ASCII arrow on purpose: the Windows console this CLI is run from
+            # is cp1252, which has no U+2192 and raises UnicodeEncodeError.
+            if args.dry_run:
+                print(f"  WOULD INSERT {label} -> {prop.name} ({row.provider_name})")
+            else:
+                session.execute(_INSERT_PLAN, params)
+                print(f"  INSERT {label} -> {prop.name} ({row.provider_name})")
+            inserted += 1
+
+        if args.dry_run:
+            print(
+                f"\n[DRY RUN] Would insert {inserted}; "
+                f"{skipped} already present, {unresolved} unresolved."
+            )
+            return
+
+        session.commit()
+        print(
+            f"\nInserted {inserted} utility plans; "
+            f"{skipped} already present, {unresolved} unresolved."
+        )
+
+
 def main():
     parser = argparse.ArgumentParser(description="MyBookkeeper data migration CLI")
     parser.add_argument("--dry-run", action="store_true", help="Preview changes without applying")
@@ -159,11 +297,17 @@ def main():
         help="Reset completed docs with extractions but no transactions for re-processing",
     )
 
+    subparsers.add_parser(
+        "seed-utility-plans",
+        help="Insert the Peerless St utility plans transcribed from provider email",
+    )
+
     args = parser.parse_args()
     commands = {
         "cleanup-duplicates": cmd_cleanup_duplicates,
         "recompute-tax": cmd_recompute_tax,
         "reprocess-completed-without-transactions": cmd_reprocess_completed_without_transactions,
+        "seed-utility-plans": cmd_seed_utility_plans,
     }
     commands[args.command](args)
 
