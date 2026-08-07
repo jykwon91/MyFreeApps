@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button } from "@platform/ui";
+import { Button, ConfirmDialog } from "@platform/ui";
 import AlertBox from "@/shared/components/ui/AlertBox";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
@@ -22,6 +22,7 @@ export default function UtilityPlans() {
   const [showExpiringOnly, setShowExpiringOnly] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [deletingPlanId, setDeletingPlanId] = useState<string | null>(null);
+  const [planPendingDelete, setPlanPendingDelete] = useState<UtilityPlanSummary | null>(null);
 
   const { data, isLoading, isError, isFetching, refetch } = useGetUtilityPlansQuery({});
   const [deletePlan] = useDeleteUtilityPlanMutation();
@@ -41,11 +42,14 @@ export default function UtilityPlans() {
 
   const mode = useUtilityPlansListMode({ isLoading, planCount: plans.length });
 
-  async function handleDelete(plan: UtilityPlanSummary) {
+  async function handleConfirmDelete() {
+    const plan = planPendingDelete;
+    if (!plan) return;
     setDeletingPlanId(plan.id);
     try {
       await deletePlan(plan.id).unwrap();
       showSuccess("Utility plan removed.");
+      setPlanPendingDelete(null);
     } catch {
       showError("Couldn't remove the plan. Please try again.");
     } finally {
@@ -102,12 +106,27 @@ export default function UtilityPlans() {
         plans={plans}
         showExpiringOnly={showExpiringOnly}
         deletingPlanId={deletingPlanId}
-        onDelete={(plan) => void handleDelete(plan)}
+        onDelete={(plan) => setPlanPendingDelete(plan)}
       />
 
       {showAddDialog ? (
         <AddUtilityPlanDialog onClose={() => setShowAddDialog(false)} />
       ) : null}
+
+      <ConfirmDialog
+        open={planPendingDelete !== null}
+        title="Remove this utility plan?"
+        description={
+          planPendingDelete
+            ? `${planPendingDelete.provider_name} for ${planPendingDelete.property_name ?? "this property"}. The rate history it holds is what a new offer gets compared against, so removing it leaves nothing to measure the next plan against.`
+            : ""
+        }
+        confirmLabel="Remove plan"
+        variant="danger"
+        isLoading={deletingPlanId !== null}
+        onConfirm={() => void handleConfirmDelete()}
+        onCancel={() => setPlanPendingDelete(null)}
+      />
     </main>
   );
 }
