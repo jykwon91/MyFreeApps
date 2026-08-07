@@ -57,11 +57,17 @@ export default function UtilityPlanRow({ plan, isDeleting, onDelete }: UtilityPl
 
         <div className="flex items-center gap-2 shrink-0">
           <UtilityPlanRenewalBadge status={plan.renewal_status} />
+          {/* Provider alone is ambiguous: the same regulated utility serves
+              every property, so several rows would all read "Delete
+              CenterPoint Energy plan" to a screen reader. Property and
+              service disambiguate them. */}
           <button
             type="button"
             onClick={() => onDelete(plan)}
             disabled={isDeleting}
-            aria-label={`Delete ${plan.provider_name} plan`}
+            aria-label={`Delete ${plan.provider_name} ${UTILITY_SERVICE_TYPE_LABELS[
+              plan.service_type
+            ].toLowerCase()} plan for ${plan.property_name ?? "unknown property"}`}
             className="text-muted-foreground hover:text-red-600 disabled:opacity-50 min-h-[44px] min-w-[44px] flex items-center justify-center"
             data-testid={`utility-plan-delete-${plan.id}`}
           >

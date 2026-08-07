@@ -142,10 +142,17 @@ test.describe("Utility Plans", () => {
         page.getByTestId(`utility-plan-alert-${planId}`),
       ).toContainText(propertyName);
 
-      // 6) DELETE through the UI; the row goes and the API agrees.
+      // 6) DELETE through the UI; the row goes and the API agrees. The trash
+      //    icon only opens the confirmation — the plan survives until the
+      //    operator confirms, so the row must still be there in between.
       await page.goto("/utility-plans");
       await waitForListPage(page);
       await page.getByTestId(`utility-plan-delete-${planId}`).click();
+      await expect(page.getByText("Remove this utility plan?")).toBeVisible({
+        timeout: 10000,
+      });
+      await expect(page.getByTestId(`utility-plan-item-${planId}`)).toBeVisible();
+      await page.getByRole("button", { name: "Remove plan" }).click();
       await expect(page.getByTestId(`utility-plan-item-${planId}`)).toBeHidden({
         timeout: 10000,
       });

@@ -219,12 +219,38 @@ describe("UtilityPlans — needs-renewing filter", () => {
 });
 
 describe("UtilityPlans — delete", () => {
+  it("asks before removing rather than deleting on the first click", async () => {
+    const user = userEvent.setup();
+    mockPlans = [makePlan()];
+
+    renderPage();
+    await user.click(screen.getByTestId("utility-plan-delete-plan-a"));
+
+    expect(screen.getByText("Remove this utility plan?")).toBeInTheDocument();
+    expect(mockDeleteUnwrap).not.toHaveBeenCalled();
+  });
+
+  it("leaves the plan alone when the confirmation is dismissed", async () => {
+    const user = userEvent.setup();
+    mockPlans = [makePlan()];
+
+    renderPage();
+    await user.click(screen.getByTestId("utility-plan-delete-plan-a"));
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(mockDeleteUnwrap).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(screen.queryByText("Remove this utility plan?")).not.toBeInTheDocument(),
+    );
+  });
+
   it("confirms removal on success", async () => {
     const user = userEvent.setup();
     mockPlans = [makePlan()];
 
     renderPage();
     await user.click(screen.getByTestId("utility-plan-delete-plan-a"));
+    await user.click(screen.getByRole("button", { name: "Remove plan" }));
 
     await waitFor(() => expect(showSuccess).toHaveBeenCalledWith("Utility plan removed."));
   });
@@ -236,10 +262,26 @@ describe("UtilityPlans — delete", () => {
 
     renderPage();
     await user.click(screen.getByTestId("utility-plan-delete-plan-a"));
+    await user.click(screen.getByRole("button", { name: "Remove plan" }));
 
     await waitFor(() =>
       expect(showError).toHaveBeenCalledWith("Couldn't remove the plan. Please try again."),
     );
+  });
+
+  // A failed delete must keep the dialog open — closing it would strand the
+  // operator with a row they asked to remove and no way to see the retry.
+  it("keeps the confirmation open when the delete fails", async () => {
+    const user = userEvent.setup();
+    mockPlans = [makePlan()];
+    mockDeleteUnwrap.mockRejectedValue(new Error("boom"));
+
+    renderPage();
+    await user.click(screen.getByTestId("utility-plan-delete-plan-a"));
+    await user.click(screen.getByRole("button", { name: "Remove plan" }));
+
+    await waitFor(() => expect(showError).toHaveBeenCalled());
+    expect(screen.getByText("Remove this utility plan?")).toBeInTheDocument();
   });
 });
 
