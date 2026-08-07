@@ -8,6 +8,7 @@ import {
   useGetUtilityPlansQuery,
 } from "@/shared/store/utilityPlansApi";
 import AddUtilityPlanDialog from "@/app/features/utility/AddUtilityPlanDialog";
+import EditUtilityPlanDialog from "@/app/features/utility/EditUtilityPlanDialog";
 import UtilityPlansListBody from "@/app/features/utility/UtilityPlansListBody";
 import { useUtilityPlansListMode } from "@/app/features/utility/useUtilityPlansListMode";
 import type { UtilityPlanSummary } from "@/shared/types/utility/utility-plan-summary";
@@ -21,6 +22,7 @@ import type { UtilityPlanSummary } from "@/shared/types/utility/utility-plan-sum
 export default function UtilityPlans() {
   const [showExpiringOnly, setShowExpiringOnly] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
   const [deletingPlanId, setDeletingPlanId] = useState<string | null>(null);
   const [planPendingDelete, setPlanPendingDelete] = useState<UtilityPlanSummary | null>(null);
 
@@ -106,11 +108,19 @@ export default function UtilityPlans() {
         plans={plans}
         showExpiringOnly={showExpiringOnly}
         deletingPlanId={deletingPlanId}
+        onEdit={(plan) => setEditingPlanId(plan.id)}
         onDelete={(plan) => setPlanPendingDelete(plan)}
       />
 
       {showAddDialog ? (
         <AddUtilityPlanDialog onClose={() => setShowAddDialog(false)} />
+      ) : null}
+
+      {editingPlanId ? (
+        <EditUtilityPlanDialog
+          planId={editingPlanId}
+          onClose={() => setEditingPlanId(null)}
+        />
       ) : null}
 
       <ConfirmDialog

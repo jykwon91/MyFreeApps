@@ -7,6 +7,7 @@ export interface UtilityPlansListBodyProps {
   plans: UtilityPlanSummary[];
   showExpiringOnly: boolean;
   deletingPlanId: string | null;
+  onEdit: (plan: UtilityPlanSummary) => void;
   onDelete: (plan: UtilityPlanSummary) => void;
 }
 
@@ -15,13 +16,16 @@ export default function UtilityPlansListBody({
   plans,
   showExpiringOnly,
   deletingPlanId,
+  onEdit,
   onDelete,
 }: UtilityPlansListBodyProps) {
   switch (mode) {
     case "loading":
       return (
-        // Mirrors the loaded row: two-line left block plus a badge on the
-        // right, so nothing shifts when the data lands.
+        // Mirrors the loaded row: two-line left block, then a badge and the
+        // edit/delete actions on the right, so nothing shifts when the data
+        // lands. Only the badge placeholder is a pill — the action slots are
+        // square, matching the icon buttons they stand in for.
         <div
           className="space-y-2 animate-pulse"
           aria-busy="true"
@@ -35,7 +39,11 @@ export default function UtilityPlansListBody({
                   <div className="h-3 bg-muted rounded w-1/3" />
                   <div className="h-3 bg-muted rounded w-2/5" />
                 </div>
-                <div className="h-5 w-20 bg-muted rounded-full shrink-0" />
+                <div className="flex items-center gap-2 shrink-0">
+                  <div className="h-5 w-20 bg-muted rounded-full" />
+                  <div className="h-6 w-6 bg-muted rounded" />
+                  <div className="h-6 w-6 bg-muted rounded" />
+                </div>
               </div>
             </div>
           ))}
@@ -57,6 +65,7 @@ export default function UtilityPlansListBody({
               key={plan.id}
               plan={plan}
               isDeleting={deletingPlanId === plan.id}
+              onEdit={onEdit}
               onDelete={onDelete}
             />
           ))}

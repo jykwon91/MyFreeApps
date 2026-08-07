@@ -19,10 +19,16 @@ import { createProperty, deleteProperty } from "./fixtures/seed-data";
 interface UtilityPlanRow {
   id: string;
   provider_name: string;
+  account_number: string | null;
+  plan_name: string | null;
   renewal_status: string;
   is_current: boolean;
   days_until_term_end: number | null;
+  term_end_date: string | null;
   tdu_charge_cents_per_kwh: string | null;
+  min_usage_fee_cents: number | null;
+  min_usage_threshold_kwh: number | null;
+  notes: string | null;
 }
 
 interface RenewalAlerts {
@@ -218,6 +224,103 @@ test.describe("Utility Plans", () => {
       // And the "needs renewing" filter excludes it.
       await page.getByTestId("utility-plans-expiring-toggle").check();
       await expect(page.getByTestId(`utility-plan-item-${planId}`)).toBeHidden();
+    } finally {
+      if (planId) await api.delete(`/utility-plans/${planId}`).catch(() => {});
+      if (propertyId) await deleteProperty(api, propertyId);
+    }
+  });
+
+  test("editing a plan corrects it without erasing the terms the form cannot edit", async ({
+    authedPage: page,
+    api,
+  }) => {
+    // The seeded Peerless plans carry a minimum-usage clause and a provenance
+    // note that this dialog has no fields for. Because PATCH applies exactly
+    // the keys it is sent, a save that emitted them as null would silently
+    // erase both — so the plan is created with them set and asserted intact
+    // afterwards.
+    const runId = Date.now();
+    const propertyName = `E2E Edit Property ${runId}`;
+    const providerName = `E2E Edit Power ${runId}`;
+    const NOTE = "Account number unresolved — set it from a bill.";
+    let propertyId: string | null = null;
+    let planId: string | null = null;
+
+    try {
+      const property = await createProperty(api, { name: propertyName });
+      propertyId = property.id;
+
+      const created = await api.post("/utility-plans", {
+        data: {
+          property_id: propertyId,
+          service_type: "electricity",
+          rate_type: "fixed",
+          provider_name: providerName,
+          plan_name: "12 Month Fixed",
+          energy_charge_cents_per_kwh: "11.6",
+          tdu_charge_cents_per_kwh: "5.3509",
+          term_months: 12,
+          service_start_date: isoDateOffset(-400),
+          term_end_date: isoDateOffset(-35),
+          min_usage_fee_cents: 995,
+          min_usage_threshold_kwh: 999,
+          notes: NOTE,
+        },
+      });
+      expect(created.ok()).toBe(true);
+      planId = ((await created.json()) as UtilityPlanRow).id;
+
+      await page.goto("/utility-plans");
+      await waitForListPage(page);
+
+      const row = page.getByTestId(`utility-plan-item-${planId}`);
+      await expect(row).toBeVisible({ timeout: 10000 });
+      await expect(row.getByTestId("utility-plan-status-expired")).toBeVisible();
+
+      // 1) Open the editor and confirm it arrived prefilled, not blank.
+      await page.getByTestId(`utility-plan-edit-${planId}`).click();
+      await expect(page.getByTestId("edit-utility-plan-dialog")).toBeVisible();
+      await expect(page.getByTestId("utility-plan-provider-input")).toHaveValue(
+        providerName,
+        { timeout: 10000 },
+      );
+      await expect(page.getByTestId("utility-plan-tdu-input")).toHaveValue("5.3509");
+      await expect(page.getByTestId("edit-utility-plan-property")).toContainText(
+        propertyName,
+      );
+      // The property is fixed for the life of the plan.
+      await expect(page.getByTestId("utility-plan-property-select")).toBeHidden();
+
+      // 2) Fill in the account number the row was missing and renew the term.
+      const renewedEnd = isoDateOffset(300);
+      await page.getByTestId("utility-plan-account-input").fill("6403771807-5");
+      await page.getByTestId("utility-plan-end-date-input").fill(renewedEnd);
+      await page.getByTestId("utility-plan-save-button").click();
+
+      await expect(page.getByTestId("edit-utility-plan-dialog")).toBeHidden({
+        timeout: 10000,
+      });
+      await page.waitForLoadState("networkidle");
+
+      // 3) The list re-derives the status from the new term end.
+      await expect(row.getByTestId("utility-plan-status-active")).toBeVisible({
+        timeout: 10000,
+      });
+      await expect(row).not.toContainText("Lapsed");
+
+      // 4) The backend agrees — the edits landed and everything the form does
+      //    not own is byte-identical to what was created.
+      const saved = await fetchPlan(api, planId);
+      // Stored in lookup-key form: the service strips dashes so a number typed
+      // as it appears on the bill still matches the learned bill→property link.
+      expect(saved.account_number).toBe("64037718075");
+      expect(saved.term_end_date).toBe(renewedEnd);
+      expect(saved.renewal_status).toBe("active");
+      expect(saved.plan_name).toBe("12 Month Fixed");
+      expect(Number(saved.tdu_charge_cents_per_kwh)).toBeCloseTo(5.3509, 4);
+      expect(saved.min_usage_fee_cents).toBe(995);
+      expect(saved.min_usage_threshold_kwh).toBe(999);
+      expect(saved.notes).toBe(NOTE);
     } finally {
       if (planId) await api.delete(`/utility-plans/${planId}`).catch(() => {});
       if (propertyId) await deleteProperty(api, propertyId);
