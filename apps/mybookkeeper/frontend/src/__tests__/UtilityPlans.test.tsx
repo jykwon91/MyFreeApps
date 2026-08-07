@@ -42,6 +42,14 @@ vi.mock("@/shared/store/utilityPlansApi", () => ({
     { isLoading: false },
   ]),
   useCreateUtilityPlanMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useUpdateUtilityPlanMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useGetUtilityPlanByIdQuery: vi.fn(() => ({
+    data: undefined,
+    isLoading: true,
+    isError: false,
+    isFetching: false,
+    refetch: vi.fn(),
+  })),
   useGetUtilityPlanRenewalAlertsQuery: vi.fn(() => ({ data: undefined })),
 }));
 
@@ -293,5 +301,44 @@ describe("UtilityPlans — add dialog", () => {
     await user.click(screen.getByTestId("add-utility-plan-button"));
 
     expect(screen.getByTestId("add-utility-plan-dialog")).toBeInTheDocument();
+  });
+});
+
+describe("UtilityPlans — edit dialog", () => {
+  it("opens for the row whose edit action was used", async () => {
+    const user = userEvent.setup();
+    mockPlans = [makePlan(), makePlan({ id: "plan-b", property_name: "6732 Peerless St" })];
+
+    renderPage();
+    await user.click(screen.getByTestId("utility-plan-edit-plan-b"));
+
+    expect(screen.getByTestId("edit-utility-plan-dialog")).toBeInTheDocument();
+  });
+
+  it("names the plan in the edit action so rows stay distinguishable", () => {
+    // Every row of a portfolio shares one regulated gas provider, so provider
+    // alone would read identically to a screen reader.
+    mockPlans = [GAS_PLAN];
+
+    renderPage();
+
+    expect(
+      screen.getByRole("button", {
+        name: "Edit CenterPoint Energy natural gas plan for 6734 Peerless St",
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("closes without leaving the dialog mounted", async () => {
+    const user = userEvent.setup();
+    mockPlans = [makePlan()];
+
+    renderPage();
+    await user.click(screen.getByTestId("utility-plan-edit-plan-a"));
+    await user.click(screen.getByRole("button", { name: "Close" }));
+
+    await waitFor(() =>
+      expect(screen.queryByTestId("edit-utility-plan-dialog")).not.toBeInTheDocument(),
+    );
   });
 });

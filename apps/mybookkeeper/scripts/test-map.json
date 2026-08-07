@@ -640,7 +640,8 @@
         "frontend/src/app/features/utility/",
         "frontend/src/shared/types/utility/",
         "frontend/src/shared/store/utilityPlansApi.ts",
-        "frontend/src/shared/lib/utility-plan-format.ts"
+        "frontend/src/shared/lib/utility-plan-format.ts",
+        "frontend/src/shared/lib/utility-plan-form.ts"
       ],
       "backend_tests": [
         "test_utility_plan_service.py",
@@ -651,8 +652,10 @@
       ],
       "frontend_tests": [
         "UtilityPlans.test.tsx",
+        "EditUtilityPlanDialog.test.tsx",
         "UtilityPlanRenewalAlertCard.test.tsx",
         "utility-plan-format.test.ts",
+        "utility-plan-form.test.ts",
         "Dashboard.test.tsx"
       ],
       "e2e_specs": [

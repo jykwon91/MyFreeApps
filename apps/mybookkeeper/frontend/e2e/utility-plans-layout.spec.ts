@@ -147,12 +147,69 @@ test.describe("Utility Plans layout", () => {
 
       await page.setViewportSize({ width: 375, height: 800 });
       await page.goto("/utility-plans");
-      const deleteButton = page.getByTestId(`utility-plan-delete-${planId}`);
-      await expect(deleteButton).toBeVisible({ timeout: 15000 });
-      const box = await deleteButton.boundingBox();
-      expect(box).not.toBeNull();
-      expect(box!.width).toBeGreaterThanOrEqual(44);
-      expect(box!.height).toBeGreaterThanOrEqual(44);
+      await expect(page.getByTestId(`utility-plan-item-${planId}`)).toBeVisible({
+        timeout: 15000,
+      });
+      for (const testId of [
+        `utility-plan-edit-${planId}`,
+        `utility-plan-delete-${planId}`,
+      ]) {
+        const control = page.getByTestId(testId);
+        await expect(control).toBeVisible();
+        const box = await control.boundingBox();
+        expect(box, `${testId} has no box`).not.toBeNull();
+        expect(box!.width, `${testId} width`).toBeGreaterThanOrEqual(44);
+        expect(box!.height, `${testId} height`).toBeGreaterThanOrEqual(44);
+      }
+    } finally {
+      if (planId) await api.delete(`/utility-plans/${planId}`).catch(() => {});
+      if (propertyId) await deleteProperty(api, propertyId);
+    }
+  });
+
+  test("the edit dialog holds its shape while the plan loads", async ({
+    authedPage: page,
+    api,
+  }) => {
+    const runId = Date.now();
+    let propertyId: string | null = null;
+    let planId: string | null = null;
+
+    try {
+      const property = await createProperty(api, { name: `E2E Edit Layout ${runId}` });
+      propertyId = property.id;
+      planId = await seedPlan(api, propertyId, `E2E Edit Layout Power ${runId}`);
+
+      await page.setViewportSize({ width: 375, height: 800 });
+      await page.goto("/utility-plans");
+      await expect(page.getByTestId(`utility-plan-item-${planId}`)).toBeVisible({
+        timeout: 15000,
+      });
+
+      // Hold the single-plan fetch so the dialog's skeleton is observable. The
+      // list glob above it has already resolved.
+      await page.route(`**/api/utility-plans/${planId}`, async (route) => {
+        await new Promise((r) => setTimeout(r, 1500));
+        await route.continue();
+      });
+
+      await page.getByTestId(`utility-plan-edit-${planId}`).click();
+
+      const skeleton = page.getByTestId("utility-plan-form-loading");
+      await expect(skeleton).toBeVisible({ timeout: 5000 });
+      const skeletonHeight = (await skeleton.boundingBox())!.height;
+      expect(await hasHorizontalOverflow(page), "overflow while loading").toBe(false);
+
+      // The real form replaces it without the dialog jumping. The threshold is
+      // generous — the promise is "no visible jolt", not pixel equality.
+      const form = page.getByTestId("utility-plan-provider-input");
+      await expect(form).toBeVisible({ timeout: 15000 });
+      const loadedHeight = (await page
+        .getByTestId("edit-utility-plan-dialog")
+        .locator("form")
+        .boundingBox())!.height;
+      expect(Math.abs(loadedHeight - skeletonHeight)).toBeLessThan(160);
+      expect(await hasHorizontalOverflow(page), "overflow when loaded").toBe(false);
     } finally {
       if (planId) await api.delete(`/utility-plans/${planId}`).catch(() => {});
       if (propertyId) await deleteProperty(api, propertyId);
