@@ -66,19 +66,15 @@ from pathlib import Path
 BE = Path(__file__).resolve().parents[1]  # scripts/ -> backend/
 HERE = Path(__file__).resolve().parent
 
-# --- import the live callout tables rather than copying them ---
-SRC = (HERE / "reconcile_agent.py").read_text(encoding="utf-8")
-HEAD = SRC.split("def extract_json")[0]
-BEGIN, END = "# --- BEGIN CLI", "# --- END CLI ---"
-HEAD = HEAD.split(BEGIN)[0] + HEAD.split(END, 1)[1]
-# exec() gets no module globals of its own, so the exec'd header cannot see a __file__
-# and its `Path(__file__).resolve().parents[1]` would raise NameError. Hand it the real
-# path of the file being exec'd.
-_ns = {"AGENT": "", "APPLY_ABILITY": False, "APPLY_STAND": False, "APPLY": False,
-       "__file__": str(HERE / "reconcile_agent.py")}
-exec(compile(HEAD, "reconcile_agent.py", "exec"), _ns)
-CALLOUTS_BY_MAP, _c2z, _lead = _ns["CALLOUTS_BY_MAP"], _ns["callout_to_zone"], _ns["leading_callout"]
-_target_text = _ns["target_text"]
+# --- the live callout tables, imported rather than copied ---
+# Previously exec()'d out of reconcile_agent.py with its CLI block excised by sentinel. That
+# coupled this builder to reconcile's module-level code with nothing in the import graph to
+# show it, and broke the moment reconcile derived its root from __file__ (exec() supplies no
+# module globals, so __file__ was undefined). Same tables, ordinary import.
+from lineup_callouts import CALLOUTS_BY_MAP  # noqa: F401  (re-exported for callers)
+from lineup_callouts import callout_to_zone as _c2z
+from lineup_callouts import leading_callout as _lead
+from lineup_callouts import target_text as _target_text
 
 
 def callout_to_zone(text, table):
