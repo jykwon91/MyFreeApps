@@ -20,6 +20,26 @@ export default function DashboardSkeleton() {
         ))}
       </section>
 
+      {/* Utility plan renewal card — matches UtilityPlanRenewalAlertCard:
+          header row with a title + "View all" link, then two alert rows */}
+      <Card className="overflow-hidden p-0">
+        <div className="flex items-center justify-between px-6 py-4 border-b">
+          <Skeleton className="h-5 w-56" />
+          <Skeleton className="h-4 w-16" />
+        </div>
+        <div className="px-6 py-2 divide-y">
+          {[0, 1].map((i) => (
+            <div key={i} className="flex items-start justify-between gap-3 py-2">
+              <div className="flex-1">
+                <Skeleton className="h-4 w-1/2" />
+                <Skeleton className="h-3 w-2/3 mt-1" />
+              </div>
+              <Skeleton className="h-5 w-20 rounded-full" />
+            </div>
+          ))}
+        </div>
+      </Card>
+
       {/* Monthly Average card — matches MonthlyAverageCard */}
       <Card>
         <div className="flex items-baseline justify-between mb-4">

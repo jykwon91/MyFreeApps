@@ -20,6 +20,7 @@ from app.db.session import AsyncSessionLocal, unit_of_work
 from app.repositories import integration_repo
 from app.repositories.leases import signed_lease_repo
 from app.services.listings.channel_sync_service import poll_all as poll_all_channels
+from app.services.properties import utility_plan_service
 from app.workers.email_sync_worker import sync_gmail_for_user
 
 logger = logging.getLogger(__name__)
@@ -91,6 +92,37 @@ async def auto_end_replaced_leases() -> int:
     return transitioned
 
 
+async def flag_expiring_utility_plans() -> int:
+    """Log every current utility plan whose fixed term has lapsed or is about to.
+
+    Read-only — it changes no rows. The dashboard card is the operator-facing
+    surface; this exists so the same condition is visible server-side (journald
+    / Sentry) without anyone having to open the app, which is precisely the
+    failure mode a silently-lapsed rate plan exploits.
+
+    Returns the number of plans flagged. Never raises: a failure here must not
+    stop the Gmail or lease steps in the same cycle.
+    """
+    try:
+        flagged = await utility_plan_service.sweep_plans_needing_renewal()
+    except Exception:
+        logger.exception("flag_expiring_utility_plans cycle failed")
+        return 0
+
+    for plan in flagged:
+        logger.warning(
+            "Utility plan needs renewal: property=%s provider=%s service=%s "
+            "term_end=%s days_remaining=%s status=%s",
+            plan.property_name,
+            plan.provider_name,
+            plan.service_type,
+            plan.term_end_date,
+            plan.days_until_term_end,
+            plan.renewal_status,
+        )
+    return len(flagged)
+
+
 async def run_sync_cycle() -> None:
     """Run one full sync cycle for all integration types."""
     gmail_user_ids = await get_gmail_user_ids()
@@ -100,6 +132,7 @@ async def run_sync_cycle() -> None:
 
     await sync_all_channel_calendars()
     await auto_end_replaced_leases()
+    await flag_expiring_utility_plans()
 
 
 def run() -> None:

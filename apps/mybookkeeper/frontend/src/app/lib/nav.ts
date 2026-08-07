@@ -18,6 +18,7 @@ export const NAV_GROUPS: readonly NavGroup[] = [
       { to: "/listings", label: "Listings" },
       { to: "/welcome-manuals", label: "Welcome Manuals" },
       { to: "/insurance-policies", label: "Insurance" },
+      { to: "/utility-plans", label: "Utility Plans" },
       { to: "/calendar", label: "Calendar" },
     ],
   },

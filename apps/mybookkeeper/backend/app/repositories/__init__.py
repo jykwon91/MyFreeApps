@@ -33,6 +33,7 @@ from app.repositories.properties import property_repo
 from app.repositories.properties import tenant_repo
 from app.repositories.properties import lease_repo
 from app.repositories.properties import utility_account_link_repo
+from app.repositories.properties import utility_plan_repo
 from app.repositories.listings import listing_repo
 from app.repositories.listings import listing_photo_repo
 from app.repositories.listings import listing_external_id_repo
