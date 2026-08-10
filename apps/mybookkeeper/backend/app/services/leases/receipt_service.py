@@ -52,12 +52,12 @@ from app.services.email.exceptions import (
 )
 from app.services.integrations import integration_service
 from app.services.leases.receipt_formatting import (
-    default_period as _default_period,
     format_period_long as _format_period_long,
     format_period_short as _format_period_short,
     resolve_landlord_name as _resolve_landlord_name,
 )
 from app.services.leases.receipt_pdf_service import ReceiptData, generate_receipt_pdf
+from app.services.leases.receipt_period_resolver import resolve_lease_and_period
 from app.core import storage as _storage_module
 
 logger = logging.getLogger(__name__)
@@ -165,20 +165,15 @@ async def create_pending_receipt_in_session(
     if not txn:
         return  # transaction disappeared; nothing to do
 
-    leases = await signed_lease_repo.list_for_tenant(
+    signed_lease_id, start, end = await resolve_lease_and_period(
         db,
         user_id=user_id,
         organization_id=organization_id,
         applicant_id=applicant_id,
-        include_deleted=False,
-        limit=1,
+        txn_date=txn.transaction_date,
+        period_start_date=period_start_date,
+        period_end_date=period_end_date,
     )
-    signed_lease_id = leases[0].id if leases else None
-
-    if not period_start_date or not period_end_date:
-        start, end = _default_period(txn.transaction_date)
-    else:
-        start, end = period_start_date, period_end_date
 
     await pending_rent_receipt_repo.create_idempotent(
         db,

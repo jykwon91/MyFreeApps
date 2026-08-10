@@ -17,6 +17,36 @@ def default_period(txn_date: _dt.date) -> tuple[_dt.date, _dt.date]:
     return first, last
 
 
+def clamp_period_to_term(
+    start: _dt.date,
+    end: _dt.date,
+    *,
+    term_start: _dt.date | None,
+    term_end: _dt.date | None,
+) -> tuple[_dt.date, _dt.date]:
+    """Clip a candidate receipt period to the tenant's occupancy window.
+
+    A receipt must never claim coverage for days the tenant was not under
+    lease. Without this, a payment recorded in a move-out month defaults to
+    the whole calendar month and the PDF overstates the period — e.g. a
+    tenant whose term ended Aug 9 gets a receipt reading "Aug 1–31".
+
+    Lease terms are inclusive on both ends, so a term running 05-03 → 11-10
+    covers both of those days. Either bound may be ``None`` (open-ended
+    leases exist in the data); an absent bound simply does not clip.
+
+    Returns the period unchanged when the term and the period do not overlap
+    at all. A payment dated outside the lease window is a data question for
+    the host to resolve in the dialog, not something to silently rewrite
+    into an inverted or zero-day range.
+    """
+    clamped_start = max(start, term_start) if term_start is not None else start
+    clamped_end = min(end, term_end) if term_end is not None else end
+    if clamped_start > clamped_end:
+        return start, end
+    return clamped_start, clamped_end
+
+
 def resolve_landlord_name(host_user) -> str:  # type: ignore[no-untyped-def]
     """Pick the landlord display name for the receipt.
 
