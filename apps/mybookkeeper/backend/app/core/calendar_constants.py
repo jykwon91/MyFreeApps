@@ -16,3 +16,23 @@ DEFAULT_WINDOW_DAYS: int = 90
 # in one go. 365 days is a year — anything beyond that is almost
 # certainly a mistake.
 MAX_WINDOW_DAYS: int = 365
+
+# Source slug for occupancy derived from a signed lease. Unlike every other
+# slug this is NOT a channel — leases arrive through the lease flow, not an
+# iCal poll, and have no ``listing_blackouts`` row. The viewer unions them in
+# from ``signed_leases`` so a host sees tenant occupancy next to channel
+# bookings. Events carrying this source are read-only: their ``id`` is a lease
+# id, so the blackout notes/attachment endpoints do not apply to them.
+LEASE_SOURCE: str = "lease"
+
+# Lease statuses that represent real occupancy on the calendar.
+#
+# ``draft`` / ``generated`` / ``sent`` are still being negotiated — nobody has
+# moved in, so blocking the dates would be wrong. ``terminated`` ended early,
+# meaning the stored ``ends_on`` no longer describes the stay.
+#
+# Same three statuses as ``services.leases._lease_helpers``'s
+# PARENT_ALLOWED_STATUSES, but deliberately a separate constant: that one
+# answers "can this lease have a successor", this one answers "did someone
+# actually live here". They agree today for unrelated reasons.
+LEASE_OCCUPANCY_STATUSES: frozenset[str] = frozenset({"signed", "active", "ended"})

@@ -7,10 +7,12 @@ import {
 import {
   getSourceColor,
   getSourceLabel,
+  isReadOnlySource,
 } from "@/shared/lib/calendar-constants";
 import type { CalendarEvent } from "@/shared/types/calendar/calendar-event";
 import AttachmentsSection from "@/app/features/calendar/CalendarEventAttachmentsSection";
 import NotesSection from "@/app/features/calendar/CalendarEventNotesSection";
+import LeaseEventFooter from "@/app/features/calendar/CalendarLeaseEventFooter";
 
 export interface CalendarEventDetailBodyProps {
   event: CalendarEvent;
@@ -22,6 +24,19 @@ export default function CalendarEventDetailBody({ event }: CalendarEventDetailBo
   const nights = Math.max(1, daysBetween(event.starts_on, event.ends_on));
   const range = formatWindowLabel(event.starts_on, event.ends_on);
   const synced = relativeTime(event.updated_at);
+  // A read-only event's id belongs to another table (a lease, not a
+  // blackout), so the notes and attachment endpoints don't address it.
+  const readOnly = isReadOnlySource(event.source);
+  // A months-long tenancy isn't measured in nights, and nothing polls a
+  // lease — the channel wording would be wrong on both counts.
+  const nightsLabel = readOnly ? "Days" : "Nights";
+  const updatedLabel = readOnly ? "Last updated" : "Last synced";
+  // A lease's summary IS the tenant name, already the title. Repeating it as
+  // a row adds nothing; for a channel the raw iCal text is worth showing.
+  const showSummaryRow = !!event.summary && !readOnly;
+  // Channels that send no guest name get a nudge to record it in the notes.
+  // Leases always carry a tenant name and have no notes field here.
+  const showChannelHint = !event.summary && !readOnly;
 
   return (
     <div className="space-y-5">
@@ -50,10 +65,10 @@ export default function CalendarEventDetailBody({ event }: CalendarEventDetailBo
         <dt className="text-muted-foreground">Dates</dt>
         <dd className="font-medium">{range}</dd>
 
-        <dt className="text-muted-foreground">Nights</dt>
+        <dt className="text-muted-foreground">{nightsLabel}</dt>
         <dd className="font-medium">{nights}</dd>
 
-        {event.summary ? (
+        {showSummaryRow ? (
           <>
             <dt className="text-muted-foreground">From channel</dt>
             <dd className="font-medium break-words">{event.summary}</dd>
@@ -67,22 +82,28 @@ export default function CalendarEventDetailBody({ event }: CalendarEventDetailBo
           </>
         ) : null}
 
-        <dt className="text-muted-foreground">Last synced</dt>
+        <dt className="text-muted-foreground">{updatedLabel}</dt>
         <dd className="font-medium">{synced}</dd>
       </dl>
 
-      {!event.summary ? (
+      {showChannelHint ? (
         <p className="text-xs text-muted-foreground italic border-t pt-3">
           {sourceLabel} doesn't expose guest details over iCal — only the dates
           and source channel. Paste guest info in the notes below.
         </p>
       ) : null}
 
-      {/* Editable notes — key resets local state when a different blackout is opened */}
-      <NotesSection key={event.id} blackoutId={event.id} initialNotes={event.host_notes} />
+      {readOnly ? (
+        <LeaseEventFooter leaseId={event.id} />
+      ) : (
+        <>
+          {/* Editable notes — key resets local state when a different blackout is opened */}
+          <NotesSection key={event.id} blackoutId={event.id} initialNotes={event.host_notes} />
 
-      {/* Attachments */}
-      <AttachmentsSection blackoutId={event.id} />
+          {/* Attachments */}
+          <AttachmentsSection blackoutId={event.id} />
+        </>
+      )}
     </div>
   );
 }
