@@ -399,6 +399,7 @@
         "backend/app/services/listings/blackout_service.py",
         "backend/app/services/listings/attachment_response_builder.py",
         "backend/app/repositories/calendar/",
+        "backend/app/mappers/calendar_event_mapper.py",
         "backend/app/repositories/listings/listing_blackout_repo.py",
         "backend/app/repositories/listings/listing_blackout_attachment_repo.py",
         "backend/app/schemas/calendar/",
@@ -419,6 +420,7 @@
       "backend_tests": [
         "test_calendar_repository.py",
         "test_calendar_service.py",
+        "test_calendar_event_mapper.py",
         "test_calendar_events_route.py",
         "test_calendar_route.py",
         "test_blackout_notes_attachments.py",
@@ -430,6 +432,7 @@
         "Calendar.test.tsx",
         "calendar-utils.test.ts",
         "CalendarEventDetail.test.tsx",
+        "CalendarLeaseEvent.test.tsx",
         "ReviewQueueItem.test.tsx",
         "ReviewQueueDrawer.test.tsx"
       ],
