@@ -408,6 +408,7 @@
         "backend/app/schemas/listings/listing_blackout_attachment_response.py",
         "backend/app/models/listings/listing_blackout.py",
         "backend/app/models/listings/listing_blackout_attachment.py",
+        "backend/app/models/leases/signed_lease.py",
         "backend/app/core/calendar_constants.py",
         "frontend/src/app/pages/Calendar.tsx",
         "frontend/src/app/features/calendar/",
@@ -438,6 +439,7 @@
       ],
       "e2e_specs": [
         "calendar.spec.ts",
+        "calendar-lease-events.spec.ts",
         "calendar-booking-notes.spec.ts",
         "calendar-review-queue-resolve.spec.ts"
       ]

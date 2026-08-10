@@ -592,6 +592,9 @@ class _SeedSignedLeaseRequest(BaseModel):
     applicant_id: uuid.UUID | None = None
     kind: str = "imported"
     status: str = "signed"
+    # The only property linkage a lease has — a lease without it cannot
+    # appear on the (listing-keyed) calendar.
+    listing_id: uuid.UUID | None = None
     starts_on: _dt.date | None = None
     ends_on: _dt.date | None = None
     attachments: list[_SeedAttachmentSpec] = []
@@ -624,7 +627,7 @@ async def seed_signed_lease(
             user_id=ctx.user_id,
             organization_id=ctx.organization_id,
             applicant_id=payload.applicant_id,
-            listing_id=None,
+            listing_id=payload.listing_id,
             kind=payload.kind,
             values={},
             status=payload.status,

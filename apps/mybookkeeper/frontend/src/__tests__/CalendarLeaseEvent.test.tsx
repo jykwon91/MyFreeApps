@@ -14,6 +14,7 @@ import { configureStore } from "@reduxjs/toolkit";
 import { baseApi } from "@/shared/store/baseApi";
 import * as calendarApi from "@/shared/store/calendarApi";
 import CalendarEventDetail from "@/app/features/calendar/CalendarEventDetail";
+import CalendarEventBar from "@/app/features/calendar/CalendarEventBar";
 import {
   CALENDAR_FILTER_SOURCES,
   getSourceColor,
@@ -143,6 +144,46 @@ describe("channel events keep their editing affordances", () => {
   it("still shows the iCal guest-details hint when no summary is present", () => {
     renderDetail(makeEvent());
     expect(screen.getByText(/doesn't expose guest details/i)).toBeInTheDocument();
+  });
+});
+
+describe("the bar on the grid", () => {
+  function renderBar(event: CalendarEvent) {
+    return render(
+      <CalendarEventBar event={event} startCol={0} span={5} onClick={vi.fn()} />,
+    );
+  }
+
+  it("names the tenant rather than repeating the source label", () => {
+    renderBar(makeLeaseEvent());
+    // "Tenant" on every band would tell the host nothing they didn't
+    // already know from the colour — the name is the reason they looked.
+    expect(screen.getByRole("button")).toHaveTextContent("Sonu King");
+  });
+
+  it("falls back to the source label when the tenancy has no name", () => {
+    renderBar(makeLeaseEvent({ summary: null }));
+    expect(screen.getByRole("button")).toHaveTextContent("Tenant");
+  });
+
+  it("still shows the channel name on a channel bar", () => {
+    // iCal sends no guest name, so the channel is all there is to show.
+    renderBar(makeEvent());
+    expect(screen.getByRole("button")).toHaveTextContent("Airbnb");
+  });
+
+  it("calls a tenancy a tenancy, not a blackout, for screen readers", () => {
+    renderBar(makeLeaseEvent());
+    expect(
+      screen.getByRole("button", { name: /Sonu King tenancy from 2026-05-03/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("still calls a channel booking a blackout", () => {
+    renderBar(makeEvent());
+    expect(
+      screen.getByRole("button", { name: /Airbnb blackout from 2026-06-05/i }),
+    ).toBeInTheDocument();
   });
 });
 
