@@ -771,6 +771,8 @@
         "backend/app/schemas/leases/receipt_response.py",
         "backend/app/services/leases/receipt_service.py",
         "backend/app/services/leases/receipt_pdf_service.py",
+        "backend/app/services/leases/receipt_formatting.py",
+        "backend/app/services/leases/receipt_period_resolver.py",
         "backend/app/api/rent_receipts.py",
         "backend/alembic/versions/rcpt260504_rent_receipts.py",
         "frontend/src/app/pages/PendingReceipts.tsx",
@@ -782,7 +784,8 @@
         "test_receipt_pdf_service.py",
         "test_receipt_sequence_repo.py",
         "test_receipt_routes.py",
-        "test_receipt_service_app_sent.py"
+        "test_receipt_service_app_sent.py",
+        "test_receipt_period_resolver.py"
       ],
       "frontend_tests": [
         "SendReceiptDialog.test.tsx",
