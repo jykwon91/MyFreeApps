@@ -74,3 +74,8 @@ MEMORY_AUDIT_*.md
 # Useful for ad-hoc inspection of a backgrounded server; never committed.
 **/.uvicorn-*.log
 **/.vite-*.log
+
+# Lineup-pipeline run ledgers: localize-workflow task output, recut/poster/R2
+# logs. Provenance for one batch, superseded by the spans pack that batch
+# produces (which IS committed). Disposable — regenerate by re-running.
+apps/*/backend/scripts/_runs/
