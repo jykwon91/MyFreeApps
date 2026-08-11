@@ -42,6 +42,7 @@ vi.mock("@/shared/store/utilityPlansApi", () => ({
     { isLoading: false },
   ]),
   useCreateUtilityPlanMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useExtractUtilityPlanMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useUpdateUtilityPlanMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useGetUtilityPlanByIdQuery: vi.fn(() => ({
     data: undefined,

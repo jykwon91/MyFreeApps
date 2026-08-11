@@ -34,6 +34,7 @@ from app.db.session import AsyncSessionLocal
 from app.repositories import extraction_prompt_repo
 from app.services.extraction.prompts.base_prompt import DEFAULT_PROMPT
 from app.services.extraction.prompts.document_type_addendums import get_addendum_for_filename
+from app.services.extraction.prompts.utility_plan_prompt import UTILITY_PLAN_PROMPT
 from app.services.system.event_service import record_event
 from platform_shared.extraction import (
     ExtractionParseError,
@@ -54,6 +55,7 @@ __all__ = [
     "extract_from_text",
     "extract_from_image",
     "extract_from_email",
+    "run_utility_plan_extraction",
     "_create_with_backoff",
     "_ThrottleState",
     "_throttle",
@@ -246,6 +248,48 @@ async def extract_from_image(image_bytes: bytes, media_type: str, user_id: uuid.
     except ExtractionParseError:
         return _legacy_fallback()
     return _to_legacy(resp)
+
+
+async def run_utility_plan_extraction(
+    *,
+    text: str | None = None,
+    image_bytes: bytes | None = None,
+    media_type: str | None = None,
+    user_id: uuid.UUID | None = None,
+) -> dict:
+    """Read utility plan terms with UTILITY_PLAN_PROMPT instead of DEFAULT_PROMPT.
+
+    Shares the client, throttle and 429 backoff with transaction extraction —
+    they are the same account's rate limit — but nothing else. In particular it
+    does NOT append the user's stored extraction rules: those are written about
+    categorizing transactions, and a rule like "always categorize Constellation
+    as utilities" applied to a plan reading is noise at best.
+
+    Returns the model's parsed JSON object, or ``{}`` when the response was not
+    parseable. The caller builds a draft from whatever fields survive, so an
+    empty dict degrades to an empty form rather than an error.
+    """
+    if not _extraction.is_configured():
+        logger.warning("utility plan extraction requested without an API key")
+        return {}
+    try:
+        if image_bytes is not None:
+            resp = await _extraction.extract_document(
+                UTILITY_PLAN_PROMPT,
+                image_bytes,
+                media_type or "application/pdf",
+                on_rate_limit=_record_rate_limited,
+            )
+        else:
+            resp = await _extraction.extract_text(
+                UTILITY_PLAN_PROMPT,
+                (text or "")[:settings.max_text_chars],
+                on_rate_limit=_record_rate_limited,
+            )
+    except ExtractionParseError:
+        logger.warning("utility plan extraction: model response was not JSON")
+        return {}
+    return resp.data if isinstance(resp.data, dict) else {}
 
 
 async def extract_from_email(subject: str, body: str, user_id: uuid.UUID | None = None) -> dict:

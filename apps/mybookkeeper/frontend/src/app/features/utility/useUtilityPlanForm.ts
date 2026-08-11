@@ -8,6 +8,16 @@ export interface UtilityPlanFormState {
     key: K,
     value: UtilityPlanFormValues[K],
   ) => void;
+  /**
+   * Replace several fields at once, derived from the current values.
+   *
+   * Used by the read-a-document flow, which overlays a whole draft. It takes a
+   * function rather than an object so the overlay can decide per field whether
+   * to fill or leave alone, without racing the operator's own typing.
+   */
+  replaceValues: (
+    update: (previous: UtilityPlanFormValues) => UtilityPlanFormValues,
+  ) => void;
 }
 
 /**
@@ -30,5 +40,12 @@ export function useUtilityPlanForm(
     [],
   );
 
-  return { values, setField };
+  const replaceValues = useCallback(
+    (update: (previous: UtilityPlanFormValues) => UtilityPlanFormValues) => {
+      setValues(update);
+    },
+    [],
+  );
+
+  return { values, setField, replaceValues };
 }

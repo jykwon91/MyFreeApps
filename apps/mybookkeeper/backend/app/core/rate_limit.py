@@ -48,6 +48,7 @@ __all__ = [
     "register_limiter",
     "password_reset_limiter",
     "export_limiter",
+    "utility_plan_extract_limiter",
     "frontend_error_limiter",
     "require_turnstile",
     "check_login_rate_limit",
@@ -68,6 +69,10 @@ totp_limiter = RateLimiter(max_attempts=20, window_seconds=300)
 register_limiter = RateLimiter(max_attempts=5, window_seconds=3600)
 password_reset_limiter = RateLimiter(max_attempts=5, window_seconds=3600)
 export_limiter = RateLimiter(max_attempts=20, window_seconds=3600)
+# Each call is a paid model request against a document the caller already has.
+# The daily upload cap bounds how many distinct documents exist but not how
+# many times one is re-read, so this bounds the re-reads.
+utility_plan_extract_limiter = RateLimiter(max_attempts=30, window_seconds=3600)
 frontend_error_limiter = RateLimiter(max_attempts=50, window_seconds=3600)
 
 

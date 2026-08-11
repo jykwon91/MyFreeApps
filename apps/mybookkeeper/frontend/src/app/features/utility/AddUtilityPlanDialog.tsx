@@ -1,5 +1,6 @@
 import { useState } from "react";
 import FormField from "@/shared/components/ui/FormField";
+import { applyDraftToForm } from "@/shared/lib/utility-plan-draft";
 import {
   toUtilityPlanFields,
   validateUtilityPlanForm,
@@ -7,7 +8,10 @@ import {
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import { useGetPropertiesQuery } from "@/shared/store/propertiesApi";
 import { useCreateUtilityPlanMutation } from "@/shared/store/utilityPlansApi";
+import type { UtilityPlanDraft } from "@/shared/types/utility/utility-plan-draft";
 import UtilityPlanDialogShell from "./UtilityPlanDialogShell";
+import UtilityPlanDocumentReader from "./UtilityPlanDocumentReader";
+import UtilityPlanDraftNotices from "./UtilityPlanDraftNotices";
 import UtilityPlanFormActions from "./UtilityPlanFormActions";
 import UtilityPlanFormFields, { UTILITY_PLAN_INPUT_CLASS } from "./UtilityPlanFormFields";
 import { useUtilityPlanForm } from "./useUtilityPlanForm";
@@ -20,8 +24,14 @@ export interface AddUtilityPlanDialogProps {
 export default function AddUtilityPlanDialog({ onClose }: AddUtilityPlanDialogProps) {
   const { data: properties = [] } = useGetPropertiesQuery();
   const [createPlan, { isLoading }] = useCreateUtilityPlanMutation();
-  const { values, setField } = useUtilityPlanForm();
+  const { values, setField, replaceValues } = useUtilityPlanForm();
   const [propertyId, setPropertyId] = useState("");
+  const [draft, setDraft] = useState<UtilityPlanDraft | null>(null);
+
+  function handleRead(read: UtilityPlanDraft) {
+    setDraft(read);
+    replaceValues((previous) => applyDraftToForm(previous, read));
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -39,6 +49,9 @@ export default function AddUtilityPlanDialog({ onClose }: AddUtilityPlanDialogPr
       await createPlan({
         property_id: propertyId,
         ...toUtilityPlanFields(values),
+        // Recorded only when the form was actually seeded from a document, so
+        // the saved plan points back at what it was read from.
+        ...(draft ? { source_document_id: draft.source_document_id } : {}),
       }).unwrap();
       showSuccess("Utility plan added.");
       onClose();
@@ -54,6 +67,9 @@ export default function AddUtilityPlanDialog({ onClose }: AddUtilityPlanDialogPr
       onClose={onClose}
     >
       <form onSubmit={(e) => void handleSubmit(e)} className="p-5 space-y-4">
+        <UtilityPlanDocumentReader onRead={handleRead} />
+        {draft && <UtilityPlanDraftNotices draft={draft} />}
+
         <FormField label="Property" required>
           <select
             value={propertyId}
