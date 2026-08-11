@@ -8,6 +8,8 @@ import {
   useGetUtilityPlansQuery,
 } from "@/shared/store/utilityPlansApi";
 import AddUtilityPlanDialog from "@/app/features/utility/AddUtilityPlanDialog";
+import MarketRateBenchmarkDialog from "@/app/features/utility/MarketRateBenchmarkDialog";
+import MarketRateBenchmarkSummary from "@/app/features/utility/MarketRateBenchmarkSummary";
 import EditUtilityPlanDialog from "@/app/features/utility/EditUtilityPlanDialog";
 import UtilityPlansListBody from "@/app/features/utility/UtilityPlansListBody";
 import { useUtilityPlansListMode } from "@/app/features/utility/useUtilityPlansListMode";
@@ -22,6 +24,7 @@ import type { UtilityPlanSummary } from "@/shared/types/utility/utility-plan-sum
 export default function UtilityPlans() {
   const [showExpiringOnly, setShowExpiringOnly] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showBenchmarkDialog, setShowBenchmarkDialog] = useState(false);
   const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
   const [deletingPlanId, setDeletingPlanId] = useState<string | null>(null);
   const [planPendingDelete, setPlanPendingDelete] = useState<UtilityPlanSummary | null>(null);
@@ -63,17 +66,28 @@ export default function UtilityPlans() {
     <main className="p-4 sm:p-8 space-y-6 max-w-3xl">
       <SectionHeader
         title="Utility Plans"
-        subtitle="Track what each property pays for power and gas, and get warned before a fixed rate lapses."
+        subtitle="Track what each property pays for power and gas, get warned before a fixed rate lapses, and see which plans are priced above the market."
         actions={
-          <Button
-            type="button"
-            variant="primary"
-            size="md"
-            onClick={() => setShowAddDialog(true)}
-            data-testid="add-utility-plan-button"
-          >
-            Add plan
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              size="md"
+              onClick={() => setShowBenchmarkDialog(true)}
+              data-testid="record-market-rate-button"
+            >
+              Market rate
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              size="md"
+              onClick={() => setShowAddDialog(true)}
+              data-testid="add-utility-plan-button"
+            >
+              Add plan
+            </Button>
+          </div>
         }
       />
 
@@ -89,6 +103,8 @@ export default function UtilityPlans() {
           </button>
         </AlertBox>
       ) : null}
+
+      <MarketRateBenchmarkSummary onEdit={() => setShowBenchmarkDialog(true)} />
 
       <div className="flex items-center gap-3">
         <label className="flex items-center gap-2 text-sm cursor-pointer">
@@ -114,6 +130,10 @@ export default function UtilityPlans() {
 
       {showAddDialog ? (
         <AddUtilityPlanDialog onClose={() => setShowAddDialog(false)} />
+      ) : null}
+
+      {showBenchmarkDialog ? (
+        <MarketRateBenchmarkDialog onClose={() => setShowBenchmarkDialog(false)} />
       ) : null}
 
       {editingPlanId ? (

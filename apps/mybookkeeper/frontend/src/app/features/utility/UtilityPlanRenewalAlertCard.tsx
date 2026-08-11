@@ -1,12 +1,10 @@
 import { Link } from "react-router-dom";
 import AlertBox from "@/shared/components/ui/AlertBox";
 import Card from "@/shared/components/ui/Card";
-import {
-  useGetUtilityPlanRenewalAlertsQuery,
-  useGetUtilityPlansQuery,
-} from "@/shared/store/utilityPlansApi";
+import { useGetUtilityPlanRenewalAlertsQuery } from "@/shared/store/utilityPlansApi";
 import UtilityPlanAlertRow from "./UtilityPlanAlertRow";
 import UtilityPlanAlertCardSkeleton from "./UtilityPlanAlertCardSkeleton";
+import { useHasAnyUtilityPlans } from "./useHasAnyUtilityPlans";
 import { useUtilityPlanAlertCardMode } from "./useUtilityPlanAlertCardMode";
 
 /**
@@ -20,15 +18,18 @@ import { useUtilityPlanAlertCardMode } from "./useUtilityPlanAlertCardMode";
 export default function UtilityPlanRenewalAlertCard() {
   const { data, isLoading, isError, refetch, isFetching } =
     useGetUtilityPlanRenewalAlertsQuery();
-  // One page is enough to answer "do they track any plans at all?", which is
-  // all this drives — the card hides itself for operators who track none.
-  const { data: plansPage, isLoading: isPlansLoading } = useGetUtilityPlansQuery({ limit: 1 });
+  // The card hides itself for operators who track no plans at all.
+  const {
+    hasAnyPlans,
+    isLoading: isPlansLoading,
+    isError: isPlansError,
+  } = useHasAnyUtilityPlans();
 
   const mode = useUtilityPlanAlertCardMode({
     isLoading: isLoading || isPlansLoading,
-    isError,
+    isError: isError || isPlansError,
     totalNeedingAttention: data?.total_needing_attention,
-    hasAnyPlans: (plansPage?.total ?? 0) > 0,
+    hasAnyPlans,
   });
 
   if (mode === "loading") return <UtilityPlanAlertCardSkeleton />;

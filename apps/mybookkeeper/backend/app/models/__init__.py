@@ -11,6 +11,7 @@ from app.models.properties.tenant import Tenant
 from app.models.properties.lease import Lease, LeaseStatus
 from app.models.properties.utility_account_link import UtilityAccountLink
 from app.models.properties.utility_plan import UtilityPlan
+from app.models.properties.market_rate_benchmark import MarketRateBenchmark
 from app.models.listings.listing import Listing
 from app.models.listings.listing_photo import ListingPhoto
 from app.models.listings.listing_external_id import ListingExternalId

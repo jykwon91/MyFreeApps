@@ -20,9 +20,11 @@ export interface UtilityPlanListArgs {
  *
  * Tag strategy mirrors insurancePoliciesApi: per-id ``UtilityPlan:{id}`` plus
  * a shared ``UtilityPlan:LIST``. Every mutation also invalidates
- * ``UtilityPlan:ALERTS`` — the dashboard card is derived from the same rows,
- * so editing a term end date must refresh it or the operator keeps seeing an
- * alert they already dealt with.
+ * ``UtilityPlan:ALERTS`` and ``UtilityPlan:COMPARISON`` — both dashboard cards
+ * are derived from the same rows, so editing a term end date or a rate must
+ * refresh them or the operator keeps seeing a warning they already dealt with.
+ * ``COMPARISON`` is served by ``marketRateBenchmarksApi`` but tagged here
+ * because it is invalidated from both sides.
  */
 const utilityPlansApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
@@ -80,6 +82,7 @@ const utilityPlansApi = baseApi.injectEndpoints({
       invalidatesTags: [
         { type: "UtilityPlan", id: "LIST" },
         { type: "UtilityPlan", id: "ALERTS" },
+        { type: "UtilityPlan", id: "COMPARISON" },
       ],
     }),
 
@@ -96,6 +99,7 @@ const utilityPlansApi = baseApi.injectEndpoints({
         { type: "UtilityPlan", id: planId },
         { type: "UtilityPlan", id: "LIST" },
         { type: "UtilityPlan", id: "ALERTS" },
+        { type: "UtilityPlan", id: "COMPARISON" },
       ],
     }),
 
@@ -116,6 +120,7 @@ const utilityPlansApi = baseApi.injectEndpoints({
       invalidatesTags: [
         { type: "UtilityPlan", id: "LIST" },
         { type: "UtilityPlan", id: "ALERTS" },
+        { type: "UtilityPlan", id: "COMPARISON" },
       ],
     }),
   }),

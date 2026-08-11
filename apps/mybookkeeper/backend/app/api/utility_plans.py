@@ -18,12 +18,19 @@ from app.schemas.properties.utility_plan_create_request import UtilityPlanCreate
 from app.schemas.properties.utility_plan_draft import UtilityPlanDraft
 from app.schemas.properties.utility_plan_extract_request import UtilityPlanExtractRequest
 from app.schemas.properties.utility_plan_list_response import UtilityPlanListResponse
+from app.schemas.properties.utility_plan_rate_comparison_response import (
+    UtilityPlanRateComparisonResponse,
+)
 from app.schemas.properties.utility_plan_renewal_alert_response import (
     UtilityPlanRenewalAlertResponse,
 )
 from app.schemas.properties.utility_plan_response import UtilityPlanResponse
 from app.schemas.properties.utility_plan_update_request import UtilityPlanUpdateRequest
-from app.services.properties import utility_plan_extraction_service, utility_plan_service
+from app.services.properties import (
+    market_rate_benchmark_service,
+    utility_plan_extraction_service,
+    utility_plan_service,
+)
 
 router = APIRouter(prefix="/utility-plans", tags=["utility-plans"])
 
@@ -106,6 +113,22 @@ async def get_renewal_alerts(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
         window_days=window_days,
+    )
+
+
+@router.get("/rate-comparison", response_model=UtilityPlanRateComparisonResponse)
+async def get_rate_comparison(
+    ctx: RequestContext = Depends(current_org_member),
+) -> UtilityPlanRateComparisonResponse:
+    """Current plans priced materially above the recorded market benchmark.
+
+    Lives on the plan resource rather than the benchmark one because it returns
+    plans. Declared before ``/{plan_id}`` so the literal path is not swallowed
+    by the UUID route.
+    """
+    return await market_rate_benchmark_service.get_rate_comparison(
+        user_id=ctx.user_id,
+        organization_id=ctx.organization_id,
     )
 
 
