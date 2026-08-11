@@ -12,19 +12,23 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response
 
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member, require_write_access
+from app.core.rate_limit import utility_plan_extract_limiter
 from app.core.utility_plan_constants import EXPIRING_SOON_DAYS
 from app.schemas.properties.utility_plan_create_request import UtilityPlanCreateRequest
+from app.schemas.properties.utility_plan_draft import UtilityPlanDraft
+from app.schemas.properties.utility_plan_extract_request import UtilityPlanExtractRequest
 from app.schemas.properties.utility_plan_list_response import UtilityPlanListResponse
 from app.schemas.properties.utility_plan_renewal_alert_response import (
     UtilityPlanRenewalAlertResponse,
 )
 from app.schemas.properties.utility_plan_response import UtilityPlanResponse
 from app.schemas.properties.utility_plan_update_request import UtilityPlanUpdateRequest
-from app.services.properties import utility_plan_service
+from app.services.properties import utility_plan_extraction_service, utility_plan_service
 
 router = APIRouter(prefix="/utility-plans", tags=["utility-plans"])
 
 _NOT_FOUND_DETAIL = "Utility plan not found"
+_DOCUMENT_NOT_FOUND_DETAIL = "Document not found"
 
 
 @router.post("", response_model=UtilityPlanResponse, status_code=201)
@@ -39,6 +43,32 @@ async def create_plan(
             fields=payload.model_dump(),
         )
     except utility_plan_service.InvalidUtilityPlanError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post("/extract", response_model=UtilityPlanDraft)
+async def extract_plan_from_document(
+    payload: UtilityPlanExtractRequest,
+    ctx: RequestContext = Depends(require_write_access),
+) -> UtilityPlanDraft:
+    """Read plan terms out of a document the caller already uploaded.
+
+    Nothing is saved — the response prefills the create form, and the operator
+    still reviews it. Declared before ``/{plan_id}`` so the literal path is not
+    swallowed by the UUID route.
+    """
+    utility_plan_extract_limiter.check(f"utility-plan-extract:{ctx.user_id}")
+    try:
+        return await utility_plan_extraction_service.extract_plan_from_document(
+            user_id=ctx.user_id,
+            organization_id=ctx.organization_id,
+            document_id=payload.document_id,
+        )
+    except utility_plan_extraction_service.DocumentNotFoundError as exc:
+        raise HTTPException(
+            status_code=404, detail=_DOCUMENT_NOT_FOUND_DETAIL,
+        ) from exc
+    except utility_plan_extraction_service.UnreadableDocumentError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 

@@ -12,7 +12,15 @@ import type { UtilityPlanRateType } from "@/shared/types/utility/utility-plan-ra
 import type { UtilityServiceType } from "@/shared/types/utility/utility-service-type";
 import type { UtilityPlanFormState } from "./useUtilityPlanForm";
 
-export type UtilityPlanFormFieldsProps = UtilityPlanFormState;
+/**
+ * The inputs edit one field at a time, so they take only that much of the form
+ * state. Aliasing the whole hook state here would make every caller forward
+ * setters these fields never touch.
+ */
+export type UtilityPlanFormFieldsProps = Pick<
+  UtilityPlanFormState,
+  "values" | "setField"
+>;
 
 export const UTILITY_PLAN_INPUT_CLASS = "w-full px-3 py-2 text-sm border rounded-md";
 

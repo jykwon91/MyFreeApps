@@ -638,8 +638,12 @@
         "backend/app/schemas/properties/utility_plan_list_response.py",
         "backend/app/schemas/properties/utility_plan_renewal_alert_response.py",
         "backend/app/schemas/properties/utility_plan_validation.py",
+        "backend/app/schemas/properties/utility_plan_draft.py",
+        "backend/app/schemas/properties/utility_plan_extract_request.py",
         "backend/app/services/properties/utility_plan_service.py",
         "backend/app/services/properties/_utility_plan_helpers.py",
+        "backend/app/services/properties/utility_plan_extraction_service.py",
+        "backend/app/services/extraction/prompts/utility_plan_prompt.py",
         "backend/app/api/utility_plans.py",
         "backend/app/core/utility_plan_constants.py",
         "backend/app/cli/utility_plan_seed_row.py",
@@ -653,21 +657,25 @@
         "frontend/src/shared/types/utility/",
         "frontend/src/shared/store/utilityPlansApi.ts",
         "frontend/src/shared/lib/utility-plan-format.ts",
-        "frontend/src/shared/lib/utility-plan-form.ts"
+        "frontend/src/shared/lib/utility-plan-form.ts",
+        "frontend/src/shared/lib/utility-plan-draft.ts"
       ],
       "backend_tests": [
         "test_utility_plan_service.py",
         "test_utility_plan_repo.py",
         "test_utility_plans_api.py",
+        "test_utility_plan_extraction.py",
         "test_utility_plan_scheduler.py",
         "test_utility_plan_seed.py"
       ],
       "frontend_tests": [
         "UtilityPlans.test.tsx",
+        "AddUtilityPlanDialog.test.tsx",
         "EditUtilityPlanDialog.test.tsx",
         "UtilityPlanRenewalAlertCard.test.tsx",
         "utility-plan-format.test.ts",
         "utility-plan-form.test.ts",
+        "utility-plan-draft.test.ts",
         "Dashboard.test.tsx"
       ],
       "e2e_specs": [

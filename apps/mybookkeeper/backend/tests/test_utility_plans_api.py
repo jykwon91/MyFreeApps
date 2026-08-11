@@ -14,10 +14,12 @@ from decimal import Decimal
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member, require_write_access
+from app.core.rate_limit import utility_plan_extract_limiter
 from app.core.utility_plan_constants import (
     EXPIRING_SOON_DAYS,
     RATE_TYPE_FIXED,
@@ -26,12 +28,17 @@ from app.core.utility_plan_constants import (
 )
 from app.main import app
 from app.models.organization.organization_member import OrgRole
+from app.schemas.properties.utility_plan_draft import UtilityPlanDraft
 from app.schemas.properties.utility_plan_list_response import UtilityPlanListResponse
 from app.schemas.properties.utility_plan_renewal_alert_response import (
     UtilityPlanRenewalAlertResponse,
 )
 from app.schemas.properties.utility_plan_response import UtilityPlanResponse
 from app.schemas.properties.utility_plan_summary import UtilityPlanSummary
+from app.services.properties.utility_plan_extraction_service import (
+    DocumentNotFoundError,
+    UnreadableDocumentError,
+)
 from app.services.properties.utility_plan_service import (
     InvalidUtilityPlanError,
     UtilityPlanNotFoundError,
@@ -43,6 +50,7 @@ PROPERTY_ID = uuid.uuid4()
 PLAN_ID = uuid.uuid4()
 
 _SERVICE = "app.api.utility_plans.utility_plan_service"
+_EXTRACTION = "app.api.utility_plans.utility_plan_extraction_service"
 
 
 def _ctx(role: OrgRole = OrgRole.OWNER) -> RequestContext:
@@ -295,6 +303,134 @@ class TestCreate:
             },
         )
         assert response.status_code == 422
+
+
+class TestExtract:
+    """``POST /utility-plans/extract`` — reads a document, saves nothing."""
+
+    def test_a_draft_comes_back_without_anything_being_saved(
+        self, client: TestClient,
+    ) -> None:
+        document_id = uuid.uuid4()
+        draft = UtilityPlanDraft(
+            source_document_id=document_id,
+            provider_name="Constellation",
+            rate_type="fixed",
+            confidence="high",
+        )
+        with patch(
+            f"{_EXTRACTION}.extract_plan_from_document",
+            new_callable=AsyncMock,
+            return_value=draft,
+        ) as mock_extract:
+            with patch(f"{_SERVICE}.create_plan", new_callable=AsyncMock) as mock_create:
+                response = client.post(
+                    "/utility-plans/extract",
+                    json={"document_id": str(document_id)},
+                )
+
+        assert response.status_code == 200
+        assert response.json()["provider_name"] == "Constellation"
+        assert mock_extract.await_args.kwargs["document_id"] == document_id
+        mock_create.assert_not_called()
+
+    def test_the_literal_path_is_not_swallowed_by_the_uuid_route(
+        self, client: TestClient,
+    ) -> None:
+        """``/extract`` is declared before ``/{plan_id}``; this pins that order.
+
+        Reversing them would send this request to ``get_plan``, which would
+        reject "extract" as a malformed UUID — a 422 that looks like a payload
+        problem and reads nothing like a routing bug.
+        """
+        with patch(f"{_SERVICE}.get_plan", new_callable=AsyncMock) as mock_get:
+            with patch(
+                f"{_EXTRACTION}.extract_plan_from_document",
+                new_callable=AsyncMock,
+                return_value=UtilityPlanDraft(source_document_id=uuid.uuid4()),
+            ):
+                response = client.post(
+                    "/utility-plans/extract",
+                    json={"document_id": str(uuid.uuid4())},
+                )
+
+        assert response.status_code == 200
+        mock_get.assert_not_called()
+
+    def test_a_document_we_do_not_own_returns_404(self, client: TestClient) -> None:
+        """Same answer as a document that does not exist — no existence oracle."""
+        with patch(
+            f"{_EXTRACTION}.extract_plan_from_document",
+            new_callable=AsyncMock,
+            side_effect=DocumentNotFoundError("nope"),
+        ):
+            response = client.post(
+                "/utility-plans/extract",
+                json={"document_id": str(uuid.uuid4())},
+            )
+
+        assert response.status_code == 404
+        assert response.json()["detail"] == "Document not found"
+
+    def test_an_unreadable_document_returns_422_with_the_reason(
+        self, client: TestClient,
+    ) -> None:
+        with patch(
+            f"{_EXTRACTION}.extract_plan_from_document",
+            new_callable=AsyncMock,
+            side_effect=UnreadableDocumentError("Plan terms can be read from a PDF."),
+        ):
+            response = client.post(
+                "/utility-plans/extract",
+                json={"document_id": str(uuid.uuid4())},
+            )
+
+        assert response.status_code == 422
+        assert "PDF" in response.json()["detail"]
+
+    def test_a_missing_document_id_returns_422(self, client: TestClient) -> None:
+        assert client.post("/utility-plans/extract", json={}).status_code == 422
+
+    def test_an_unknown_field_returns_422(self, client: TestClient) -> None:
+        response = client.post(
+            "/utility-plans/extract",
+            json={"document_id": str(uuid.uuid4()), "property_id": str(PROPERTY_ID)},
+        )
+        assert response.status_code == 422
+
+    def test_the_caller_is_throttled_before_the_model_is_called_again(
+        self, client: TestClient,
+    ) -> None:
+        """Each call is a paid model request; the upload cap does not bound re-reads."""
+        limiter = utility_plan_extract_limiter
+        with patch.object(limiter, "check", side_effect=HTTPException(429, "slow down")):
+            with patch(
+                f"{_EXTRACTION}.extract_plan_from_document", new_callable=AsyncMock,
+            ) as mock_extract:
+                response = client.post(
+                    "/utility-plans/extract",
+                    json={"document_id": str(uuid.uuid4())},
+                )
+
+        assert response.status_code == 429
+        mock_extract.assert_not_called()
+
+    def test_the_limit_is_keyed_per_user_not_globally(
+        self, client: TestClient,
+    ) -> None:
+        """A shared key would let one operator's reading lock everyone else out."""
+        with patch.object(utility_plan_extract_limiter, "check") as mock_check:
+            with patch(
+                f"{_EXTRACTION}.extract_plan_from_document",
+                new_callable=AsyncMock,
+                return_value=UtilityPlanDraft(source_document_id=uuid.uuid4()),
+            ):
+                client.post(
+                    "/utility-plans/extract",
+                    json={"document_id": str(uuid.uuid4())},
+                )
+
+        assert str(USER_ID) in mock_check.call_args.args[0]
 
 
 class TestList:

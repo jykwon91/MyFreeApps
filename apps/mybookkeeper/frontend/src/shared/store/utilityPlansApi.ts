@@ -1,6 +1,7 @@
 import { baseApi } from "./baseApi";
 import type { UtilityPlanCreateRequest } from "@/shared/types/utility/utility-plan-create-request";
 import type { UtilityPlanDetail } from "@/shared/types/utility/utility-plan-detail";
+import type { UtilityPlanDraft } from "@/shared/types/utility/utility-plan-draft";
 import type { UtilityPlanListResponse } from "@/shared/types/utility/utility-plan-list-response";
 import type { UtilityPlanRenewalAlert } from "@/shared/types/utility/utility-plan-renewal-alert";
 import type { UtilityPlanUpdateRequest } from "@/shared/types/utility/utility-plan-update-request";
@@ -98,6 +99,18 @@ const utilityPlansApi = baseApi.injectEndpoints({
       ],
     }),
 
+    /**
+     * Read plan terms out of an already-uploaded document.
+     *
+     * A mutation rather than a query despite saving nothing: it is a paid model
+     * call the operator triggers deliberately, and caching it under the
+     * document id would silently return a stale reading after the file is
+     * replaced. It invalidates nothing — no row changed.
+     */
+    extractUtilityPlan: builder.mutation<UtilityPlanDraft, { document_id: string }>({
+      query: (data) => ({ url: "/utility-plans/extract", method: "POST", data }),
+    }),
+
     deleteUtilityPlan: builder.mutation<void, string>({
       query: (id) => ({ url: `/utility-plans/${id}`, method: "DELETE" }),
       invalidatesTags: [
@@ -113,6 +126,7 @@ export const {
   useGetUtilityPlanRenewalAlertsQuery,
   useGetUtilityPlanByIdQuery,
   useCreateUtilityPlanMutation,
+  useExtractUtilityPlanMutation,
   useUpdateUtilityPlanMutation,
   useDeleteUtilityPlanMutation,
 } = utilityPlansApi;
