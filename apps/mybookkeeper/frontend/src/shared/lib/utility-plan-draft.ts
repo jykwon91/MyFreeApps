@@ -67,6 +67,13 @@ function draftedFields(draft: UtilityPlanDraft): Partial<UtilityPlanFormValues> 
     etf: centsToDollarString(draft.early_termination_fee_cents),
     billCreditAmount: centsToDollarString(draft.bill_credit_amount_cents),
     billCreditThreshold: intToInputString(draft.bill_credit_threshold_kwh),
+    minUsageFee: centsToDollarString(draft.min_usage_fee_cents),
+    minUsageThreshold: intToInputString(draft.min_usage_threshold_kwh),
+    postPromoMonthly: centsToDollarString(draft.post_promo_monthly_cents),
+    equipmentFeeMonthly: centsToDollarString(draft.equipment_fee_monthly_cents),
+    downloadMbps: intToInputString(draft.download_mbps),
+    uploadMbps: intToInputString(draft.upload_mbps),
+    dataCapGb: intToInputString(draft.data_cap_gb),
   };
 
   const set: Partial<UtilityPlanFormValues> = {};
@@ -96,35 +103,22 @@ export function applyDraftToForm(
   };
 }
 
-/** Draft fields the form has no input for yet, keyed by what to call them. */
-const UNHELD_FIELD_LABELS: ReadonlyArray<
-  [keyof UtilityPlanDraft, (value: number) => string]
-> = [
-  ["min_usage_fee_cents", (v) => `Minimum usage fee: $${(v / 100).toFixed(2)}`],
-  ["min_usage_threshold_kwh", (v) => `Minimum usage threshold: ${v} kWh`],
-  ["post_promo_monthly_cents", (v) => `Price after the promo: $${(v / 100).toFixed(2)}/mo`],
-  ["equipment_fee_monthly_cents", (v) => `Equipment fee: $${(v / 100).toFixed(2)}/mo`],
-  ["download_mbps", (v) => `Download speed: ${v} Mbps`],
-  ["upload_mbps", (v) => `Upload speed: ${v} Mbps`],
-  ["data_cap_gb", (v) => `Data cap: ${v} GB`],
-];
-
 /**
  * Terms the document stated that this form cannot currently hold.
  *
- * Without this they would be read, returned, and silently dropped on the floor
- * — the operator would have no way to know the document said anything about a
- * minimum usage fee. Rendered alongside the backend's own ``unrepresented``
- * list, which covers terms the *database* has no column for; this one covers
- * terms the database holds but this form does not yet edit.
+ * Without this they would be read, returned, and silently dropped on the floor.
+ * Rendered alongside the backend's own ``unrepresented`` list, which covers
+ * terms the *database* has no column for; this one covers terms the database
+ * holds but this form does not yet edit.
+ *
+ * Down to ``notes`` alone. Every other field the reader can return now has an
+ * input, so the list is empty for most documents — which is the point, and the
+ * reason it stays: it is the seam that will catch the next column added to the
+ * draft ahead of its input. Notes is deliberately last to be held. ``PATCH``
+ * applies exactly the keys it is sent, and editing notes here would erase the
+ * provenance line the seeded plans carry.
  */
 export function draftFieldsTheFormCannotHold(draft: UtilityPlanDraft): string[] {
-  const dropped = UNHELD_FIELD_LABELS.flatMap(([key, label]) => {
-    const value = draft[key];
-    return typeof value === "number" ? [label(value)] : [];
-  });
-  if (draft.notes !== null && draft.notes.trim() !== "") {
-    dropped.push(`Notes: ${draft.notes.trim()}`);
-  }
-  return dropped;
+  if (draft.notes === null || draft.notes.trim() === "") return [];
+  return [`Notes: ${draft.notes.trim()}`];
 }

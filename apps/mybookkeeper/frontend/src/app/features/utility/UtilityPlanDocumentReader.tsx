@@ -5,7 +5,7 @@ import { showError } from "@/shared/lib/toast-store";
 import { useGetDocumentsQuery } from "@/shared/store/documentsApi";
 import { useExtractUtilityPlanMutation } from "@/shared/store/utilityPlansApi";
 import type { UtilityPlanDraft } from "@/shared/types/utility/utility-plan-draft";
-import { UTILITY_PLAN_INPUT_CLASS } from "./UtilityPlanFormFields";
+import { UTILITY_PLAN_INPUT_CLASS } from "./utility-plan-input-class";
 
 export interface UtilityPlanDocumentReaderProps {
   onRead: (draft: UtilityPlanDraft) => void;

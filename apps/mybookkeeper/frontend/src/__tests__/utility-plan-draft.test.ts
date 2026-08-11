@@ -131,35 +131,70 @@ describe("applyDraftToForm", () => {
 
     expect(values.monthlyBase).toBe("0.00");
   });
+
+  it("fills the minimum-usage terms the form now holds", () => {
+    const values = applyDraftToForm(
+      EMPTY_UTILITY_PLAN_FORM,
+      draft({ min_usage_fee_cents: 995, min_usage_threshold_kwh: 1000 }),
+    );
+
+    expect(values.minUsageFee).toBe("9.95");
+    expect(values.minUsageThreshold).toBe("1000");
+  });
+
+  it("fills the internet terms the form now holds", () => {
+    const values = applyDraftToForm(
+      EMPTY_UTILITY_PLAN_FORM,
+      draft({
+        service_type: "internet",
+        post_promo_monthly_cents: 8999,
+        equipment_fee_monthly_cents: 1500,
+        download_mbps: 1000,
+        upload_mbps: 35,
+        data_cap_gb: 1200,
+      }),
+    );
+
+    expect(values.serviceType).toBe("internet");
+    expect(values.postPromoMonthly).toBe("89.99");
+    expect(values.equipmentFeeMonthly).toBe("15.00");
+    expect(values.downloadMbps).toBe("1000");
+    expect(values.uploadMbps).toBe("35");
+    expect(values.dataCapGb).toBe("1200");
+  });
 });
 
 describe("draftFieldsTheFormCannotHold", () => {
   it("lists what was read but has no input yet", () => {
-    const dropped = draftFieldsTheFormCannotHold(
-      draft({
-        min_usage_fee_cents: 995,
-        download_mbps: 1000,
-        data_cap_gb: 1200,
-        notes: "Rate assumes autopay enrollment.",
-      }),
-    );
-
-    expect(dropped).toContain("Minimum usage fee: $9.95");
-    expect(dropped).toContain("Download speed: 1000 Mbps");
-    expect(dropped).toContain("Data cap: 1200 GB");
-    expect(dropped).toContain("Notes: Rate assumes autopay enrollment.");
+    expect(
+      draftFieldsTheFormCannotHold(draft({ notes: "Rate assumes autopay enrollment." })),
+    ).toEqual(["Notes: Rate assumes autopay enrollment."]);
   });
 
   it("says nothing when everything read fits the form", () => {
     expect(draftFieldsTheFormCannotHold(draft({ provider_name: "Reliant" }))).toEqual([]);
   });
 
-  it("still reports a stated zero fee", () => {
-    // "$0.00 minimum usage fee" is a recorded promise, not an absence — losing
-    // it silently is exactly the failure this list exists to prevent.
-    expect(draftFieldsTheFormCannotHold(draft({ min_usage_fee_cents: 0 }))).toEqual([
-      "Minimum usage fee: $0.00",
-    ]);
+  /**
+   * These seven used to land here. Every one now has an input, so a document
+   * stating them fills the form instead of listing them as dropped — which is
+   * the whole point of the change, and the assertion that would catch a
+   * regression where an input is removed but the notice is not restored.
+   */
+  it("no longer reports the terms the form gained inputs for", () => {
+    expect(
+      draftFieldsTheFormCannotHold(
+        draft({
+          min_usage_fee_cents: 0,
+          min_usage_threshold_kwh: 1000,
+          post_promo_monthly_cents: 8999,
+          equipment_fee_monthly_cents: 1500,
+          download_mbps: 1000,
+          upload_mbps: 35,
+          data_cap_gb: 1200,
+        }),
+      ),
+    ).toEqual([]);
   });
 
   it("ignores whitespace-only notes", () => {

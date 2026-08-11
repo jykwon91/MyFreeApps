@@ -11,6 +11,8 @@ import {
 import type { UtilityPlanRateType } from "@/shared/types/utility/utility-plan-rate-type";
 import type { UtilityServiceType } from "@/shared/types/utility/utility-service-type";
 import type { UtilityPlanFormState } from "./useUtilityPlanForm";
+import UtilityPlanInternetFields from "./UtilityPlanInternetFields";
+import { UTILITY_PLAN_INPUT_CLASS } from "./utility-plan-input-class";
 
 /**
  * The inputs edit one field at a time, so they take only that much of the form
@@ -22,7 +24,6 @@ export type UtilityPlanFormFieldsProps = Pick<
   "values" | "setField"
 >;
 
-export const UTILITY_PLAN_INPUT_CLASS = "w-full px-3 py-2 text-sm border rounded-md";
 
 /**
  * Every field of a utility plan except the property it belongs to.
@@ -257,6 +258,41 @@ export default function UtilityPlanFormFields({
           </FormField>
         </div>
       ) : null}
+
+      {values.serviceType === "internet" ? (
+        <UtilityPlanInternetFields values={values} setField={setField} />
+      ) : (
+        // The bill credit's mirror image: a penalty below a usage floor rather
+        // than a reward above one. Both are in kWh, so neither describes an
+        // internet plan.
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <FormField label="Minimum usage fee (USD)">
+            <input
+              type="number"
+              value={values.minUsageFee}
+              onChange={(e) => setField("minUsageFee", e.target.value)}
+              placeholder="9.95"
+              min="0"
+              step="0.01"
+              className={UTILITY_PLAN_INPUT_CLASS}
+              data-testid="utility-plan-min-usage-fee-input"
+            />
+          </FormField>
+
+          <FormField label="Charged below (kWh)">
+            <input
+              type="number"
+              value={values.minUsageThreshold}
+              onChange={(e) => setField("minUsageThreshold", e.target.value)}
+              placeholder="1000"
+              min="0"
+              step="1"
+              className={UTILITY_PLAN_INPUT_CLASS}
+              data-testid="utility-plan-min-usage-threshold-input"
+            />
+          </FormField>
+        </div>
+      )}
     </>
   );
 }

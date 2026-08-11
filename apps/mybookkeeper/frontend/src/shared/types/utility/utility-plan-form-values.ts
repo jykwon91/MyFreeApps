@@ -32,4 +32,12 @@ export interface UtilityPlanFormValues {
   hasBillCredit: boolean;
   billCreditAmount: string;
   billCreditThreshold: string;
+  minUsageFee: string;
+  minUsageThreshold: string;
+
+  postPromoMonthly: string;
+  equipmentFeeMonthly: string;
+  downloadMbps: string;
+  uploadMbps: string;
+  dataCapGb: string;
 }

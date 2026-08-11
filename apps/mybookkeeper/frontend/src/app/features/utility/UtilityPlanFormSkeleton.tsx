@@ -37,6 +37,13 @@ export default function UtilityPlanFormSkeleton() {
       </div>
       <div className="h-14 bg-muted rounded" />
       <div className="h-5 bg-muted rounded w-2/5" />
+      {/* The minimum-usage pair. A plan opens on its saved service type, and
+          every service but internet lands here; the internet block it gives way
+          to is a row taller, which stays inside the dialog's jump budget. */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="h-14 bg-muted rounded" />
+        <div className="h-14 bg-muted rounded" />
+      </div>
       <div className="flex gap-3 pt-2 justify-end">
         <div className="h-10 w-24 bg-muted rounded" />
         <div className="h-10 w-32 bg-muted rounded" />
