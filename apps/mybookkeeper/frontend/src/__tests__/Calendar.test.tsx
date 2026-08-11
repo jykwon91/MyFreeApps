@@ -224,6 +224,20 @@ describe("Calendar page", () => {
     expect(screen.getByRole("link", { name: /add a listing/i })).toHaveAttribute("href", "/listings");
   });
 
+  it("shows the events, not the no-listings prompt, when a lease has no listing behind it", () => {
+    // A signed lease can exist before it's linked to a listing, so an org with
+    // zero listings can still have real tenancies. Showing "add a listing"
+    // here would hide them.
+    vi.mocked(useGetListingsQuery).mockReturnValue(
+      { data: { items: [], total: 0, has_more: false }, isLoading: false } as unknown as ReturnType<
+        typeof useGetListingsQuery
+      >,
+    );
+    renderCalendar();
+    expect(screen.queryByTestId("calendar-no-listings")).not.toBeInTheDocument();
+    expect(screen.getAllByTestId("calendar-event-bar").length).toBeGreaterThan(0);
+  });
+
   it("displays last-synced relative time when events exist", () => {
     renderCalendar();
     const lastSynced = screen.getByTestId("calendar-last-synced");

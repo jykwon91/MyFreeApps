@@ -128,6 +128,18 @@ def _lease_row(listing_title: str, starts_on: date, ends_on: date, name: str):
     return lease, listing, prop, SimpleNamespace(legal_name=name)
 
 
+def _unlinked_lease_row(starts_on: date, ends_on: date, name: str):
+    """A lease the host never attached to a listing.
+
+    ``signed_leases.listing_id`` is nullable, so the repository's outer join
+    hands the service ``None`` in both the listing and property slots.
+    """
+    lease = SimpleNamespace(
+        id=uuid.uuid4(), starts_on=starts_on, ends_on=ends_on, updated_at=_NOW,
+    )
+    return lease, None, None, SimpleNamespace(legal_name=name)
+
+
 @asynccontextmanager
 async def _fake_session():
     yield AsyncMock()
@@ -208,3 +220,58 @@ class TestListEventsUnion:
             sources=["airbnb", LEASE_SOURCE],
         )
         assert query_events.await_args.kwargs["sources"] == ["airbnb"]
+
+
+class TestListEventsWithUnlinkedLeases:
+    """A tenancy with no listing must reach the response, not vanish."""
+
+    @pytest.mark.asyncio
+    async def test_a_lease_with_no_listing_is_returned(self) -> None:
+        events, _, _ = await _list_events(
+            blackouts=[],
+            leases=[
+                _unlinked_lease_row(
+                    date(2026, 8, 26), date(2026, 10, 3), "Mohammed Awamleh",
+                ),
+            ],
+        )
+        assert len(events) == 1
+        assert events[0].summary == "Mohammed Awamleh"
+        assert events[0].listing_id is None
+        assert events[0].listing_name is None
+        assert events[0].property_id is None
+        assert events[0].property_name is None
+        # The end-date convention still applies to an unlinked lease.
+        assert events[0].ends_on == date(2026, 10, 4)
+
+    @pytest.mark.asyncio
+    async def test_unlinked_leases_sort_after_everything_with_a_listing(self) -> None:
+        events, _, _ = await _list_events(
+            blackouts=[_blackout_row("Z room", date(2026, 8, 20), date(2026, 8, 25))],
+            leases=[
+                _unlinked_lease_row(date(2026, 8, 1), date(2026, 8, 9), "Andrew Le"),
+                _lease_row("A room", date(2026, 8, 3), date(2026, 8, 9), "Sonu King"),
+            ],
+        )
+        assert [e.summary for e in events] == ["Sonu King", None, "Andrew Le"]
+        assert events[-1].listing_name is None
+
+    @pytest.mark.asyncio
+    async def test_mixed_linked_and_unlinked_leases_all_survive(self) -> None:
+        """The regression this class exists for: 4 leases in, 4 leases out."""
+        events, _, _ = await _list_events(
+            blackouts=[],
+            leases=[
+                _lease_row("A room", date(2026, 5, 3), date(2026, 11, 10), "Sonu King"),
+                _lease_row("A room", date(2026, 5, 30), date(2026, 8, 9), "Prince Kapoor"),
+                _unlinked_lease_row(date(2026, 8, 26), date(2026, 10, 3), "Mohammed Awamleh"),
+                _unlinked_lease_row(date(2026, 5, 30), date(2026, 8, 9), "Andrew Le"),
+            ],
+        )
+        assert len(events) == 4
+        assert sorted(e.summary for e in events) == [
+            "Andrew Le",
+            "Mohammed Awamleh",
+            "Prince Kapoor",
+            "Sonu King",
+        ]

@@ -35,6 +35,21 @@ function makeEvent(overrides: Partial<CalendarEvent> = {}): CalendarEvent {
   };
 }
 
+/** A signed lease the host never linked to a listing — the calendar's only
+ * source of null listing/property fields. */
+function unlinkedLease(overrides: Partial<CalendarEvent> = {}): CalendarEvent {
+  return makeEvent({
+    source: "lease",
+    listing_id: null,
+    listing_name: null,
+    property_id: null,
+    property_name: null,
+    source_event_id: null,
+    summary: "Mohammed Awamleh",
+    ...overrides,
+  });
+}
+
 describe("parseIsoDate / formatIsoDate", () => {
   it("parses ISO date as UTC midnight", () => {
     const d = parseIsoDate("2026-06-05");
@@ -127,6 +142,31 @@ describe("groupByListing", () => {
   it("handles empty input", () => {
     expect(groupByListing([])).toEqual([]);
   });
+
+  it("collects every listing-less lease into one row", () => {
+    const events: CalendarEvent[] = [
+      unlinkedLease({ id: "1", summary: "Mohammed Awamleh" }),
+      unlinkedLease({ id: "2", summary: "Andrew Le" }),
+    ];
+    const rows = groupByListing(events);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].listing_id).toBeNull();
+    expect(rows[0].events.map((e) => e.summary)).toEqual([
+      "Mohammed Awamleh",
+      "Andrew Le",
+    ]);
+  });
+
+  it("keeps a listing-less row separate from a listed one and sorts it last", () => {
+    const events: CalendarEvent[] = [
+      unlinkedLease({ id: "1" }),
+      makeEvent({ id: "2", listing_id: "L1", listing_name: "A Room", property_name: "House A" }),
+    ];
+    const rows = groupByListing(events);
+    expect(rows).toHaveLength(2);
+    expect(rows[0].listing_name).toBe("A Room");
+    expect(rows[1].listing_id).toBeNull();
+  });
 });
 
 describe("groupByProperty", () => {
@@ -140,6 +180,18 @@ describe("groupByProperty", () => {
     const groups = groupByProperty(rows);
     expect(groups).toHaveLength(2);
     expect(groups[0].rows).toHaveLength(2);
+    expect(groups[1].rows).toHaveLength(1);
+  });
+
+  it("puts listing-less rows in their own trailing group", () => {
+    const events: CalendarEvent[] = [
+      makeEvent({ id: "1", listing_id: "L1", property_id: "P1", property_name: "A" }),
+      unlinkedLease({ id: "2" }),
+    ];
+    const groups = groupByProperty(groupByListing(events));
+    expect(groups).toHaveLength(2);
+    expect(groups[0].property_name).toBe("A");
+    expect(groups[1].property_id).toBeNull();
     expect(groups[1].rows).toHaveLength(1);
   });
 });

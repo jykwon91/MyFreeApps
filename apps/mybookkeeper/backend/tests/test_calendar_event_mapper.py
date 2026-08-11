@@ -115,6 +115,24 @@ class TestLeaseToEvent:
         assert event.property_id == prop.id
         assert event.property_name == "Elsewhere"
 
+    def test_maps_a_lease_with_no_listing_instead_of_refusing(self) -> None:
+        """``signed_leases.listing_id`` is nullable — the tenancy is still real."""
+        event = lease_to_event(
+            _lease(date(2026, 8, 26), date(2026, 10, 3)),
+            None,
+            None,
+            SimpleNamespace(legal_name="Mohammed Awamleh"),
+        )
+        assert event.listing_id is None
+        assert event.listing_name is None
+        assert event.property_id is None
+        assert event.property_name is None
+        # Everything that makes the event useful still survives.
+        assert event.summary == "Mohammed Awamleh"
+        assert event.starts_on == date(2026, 8, 26)
+        assert event.ends_on == date(2026, 10, 4)
+        assert event.source == LEASE_SOURCE
+
 
 class TestBlackoutToEvent:
     def test_passes_the_exclusive_end_through_untouched(self) -> None:
@@ -166,3 +184,18 @@ class TestEventSortKey:
         ]
         ordered = sorted(events, key=event_sort_key)
         assert [e.source for e in ordered] == [LEASE_SOURCE, "airbnb", "airbnb"]
+
+    def test_sorts_listing_less_leases_last_without_raising(self) -> None:
+        """``None`` and ``str`` are not orderable — the key must rank null-ness."""
+        applicant = SimpleNamespace(legal_name="T")
+        events = [
+            lease_to_event(_lease(date(2026, 8, 1), date(2026, 8, 9)), None, None, applicant),
+            lease_to_event(
+                _lease(date(2026, 8, 1), date(2026, 8, 9)),
+                _listing("Z room"),
+                _property("Z prop"),
+                applicant,
+            ),
+        ]
+        ordered = sorted(events, key=event_sort_key)
+        assert [e.property_name for e in ordered] == ["Z prop", None]

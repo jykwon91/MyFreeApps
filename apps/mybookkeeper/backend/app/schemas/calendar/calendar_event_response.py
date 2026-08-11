@@ -1,5 +1,4 @@
-"""Calendar event payload — one row per listing_blackout joined to its
-listing + property.
+"""Calendar event payload — one channel/manual blackout or one tenancy.
 
 Returned as a flat list by ``GET /api/calendar/events`` (the unified
 calendar viewer). The viewer is read-only — no mutations exist on this
@@ -8,6 +7,12 @@ schema.
 Date semantics match ``ListingBlackout``: ``starts_on`` inclusive,
 ``ends_on`` exclusive (iCal RFC 5545 convention). The frontend grid is
 responsible for translating exclusive end → display end.
+
+The listing and property fields are nullable, and only a ``lease`` event can
+actually carry nulls: a blackout hangs off a listing by construction, whereas
+``signed_leases.listing_id`` is nullable and a host can record a tenancy
+before linking it to a listing. Consumers must render those events under an
+"unassigned" heading rather than assume a name is present.
 """
 from __future__ import annotations
 
@@ -19,10 +24,10 @@ from pydantic import BaseModel, ConfigDict
 
 class CalendarEventResponse(BaseModel):
     id: uuid.UUID
-    listing_id: uuid.UUID
-    listing_name: str
-    property_id: uuid.UUID
-    property_name: str
+    listing_id: uuid.UUID | None = None
+    listing_name: str | None = None
+    property_id: uuid.UUID | None = None
+    property_name: str | None = None
     starts_on: date
     ends_on: date
     source: str

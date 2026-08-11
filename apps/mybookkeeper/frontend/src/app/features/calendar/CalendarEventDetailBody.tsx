@@ -5,6 +5,7 @@ import {
   relativeTime,
 } from "@/app/features/calendar/calendar-utils";
 import {
+  CALENDAR_UNASSIGNED_LISTING_LABEL,
   getSourceColor,
   getSourceLabel,
   isReadOnlySource,
@@ -37,6 +38,12 @@ export default function CalendarEventDetailBody({ event }: CalendarEventDetailBo
   // Channels that send no guest name get a nudge to record it in the notes.
   // Leases always carry a tenant name and have no notes field here.
   const showChannelHint = !event.summary && !readOnly;
+  // An unlinked lease has neither name to show. Say so plainly rather than
+  // rendering a bare separator between two blanks.
+  const locationLabel =
+    event.listing_name === null
+      ? CALENDAR_UNASSIGNED_LISTING_LABEL
+      : `${event.listing_name} · ${event.property_name}`;
 
   return (
     <div className="space-y-5">
@@ -52,7 +59,7 @@ export default function CalendarEventDetailBody({ event }: CalendarEventDetailBo
             {event.summary ?? `${sourceLabel} booking`}
           </Dialog.Title>
           <Dialog.Description className="text-sm text-muted-foreground">
-            {event.listing_name} · {event.property_name}
+            {locationLabel}
           </Dialog.Description>
         </div>
       </div>

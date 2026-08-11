@@ -87,6 +87,23 @@ export function isReadOnlySource(source: string): boolean {
 }
 
 /**
+ * Labels for a lease the host hasn't linked to a listing yet.
+ *
+ * `signed_leases.listing_id` is nullable, so a tenancy can exist before it is
+ * attached to a listing. The calendar shows it regardless — a real tenant in
+ * a real room is not less real for a missing foreign key — under this
+ * heading, which doubles as a nudge to go set the link.
+ */
+export const CALENDAR_UNASSIGNED_LISTING_LABEL = "No listing linked";
+export const CALENDAR_UNASSIGNED_PROPERTY_LABEL = "Not linked to a property";
+
+/**
+ * Map key standing in for a null listing/property id when grouping. Real ids
+ * are UUIDs, so this can never collide with one.
+ */
+export const CALENDAR_UNASSIGNED_KEY = "unassigned";
+
+/**
  * Fallback color for unknown source slugs (e.g., a channel added on
  * the backend before the frontend is updated). Slightly lighter than
  * `direct` so it stands out as "I don't know what this is."
