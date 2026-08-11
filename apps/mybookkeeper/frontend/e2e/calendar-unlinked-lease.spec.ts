@@ -109,7 +109,9 @@ test.describe("Tenancies with no listing linked", () => {
       expect(unlinkedEvent, "the unlinked tenancy must survive the query").toBeDefined();
       expect(unlinkedEvent?.listing_id).toBeNull();
 
-      await page.goto(`/calendar?from=${FROM_ISO}&to=${TO_ISO}`);
+      // The unassigned row is a timeline concept — the month grid stacks
+      // every listing into one cell, so it has no row to belong to.
+      await page.goto(`/calendar?from=${FROM_ISO}&to=${TO_ISO}&view=timeline`);
       await page.waitForLoadState("networkidle");
       await expect(page.getByRole("heading", { name: "Calendar" })).toBeVisible();
 
@@ -163,7 +165,7 @@ test.describe("Tenancies with no listing linked", () => {
       // Narrowing to the property answers "this property's occupancy", which
       // an unlinked lease is not part of. The linked tenancy survives.
       await page.goto(
-        `/calendar?from=${FROM_ISO}&to=${TO_ISO}&properties=${property.id}`,
+        `/calendar?from=${FROM_ISO}&to=${TO_ISO}&view=timeline&properties=${property.id}`,
       );
       await page.waitForLoadState("networkidle");
       await expect(

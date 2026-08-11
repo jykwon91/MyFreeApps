@@ -122,7 +122,8 @@ test.describe("Calendar review queue — Phase 2b resolve creates blackout", () 
     const blackoutIdsToClean: string[] = [];
 
     try {
-      await page.goto(`/calendar?from=${fromIso}&to=${toIso}`);
+      // Timeline view — the resolved booking is asserted as an event bar.
+      await page.goto(`/calendar?from=${fromIso}&to=${toIso}&view=timeline`);
       await page.waitForLoadState("networkidle");
 
       // Open the review queue drawer.

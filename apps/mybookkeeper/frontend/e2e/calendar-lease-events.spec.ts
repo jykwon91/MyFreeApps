@@ -108,7 +108,8 @@ test.describe("Tenant leases on the calendar", () => {
     );
 
     try {
-      await page.goto(`/calendar?from=${FROM_ISO}&to=${TO_ISO}`);
+      // The listing-per-row timeline — the month grid is the default view.
+      await page.goto(`/calendar?from=${FROM_ISO}&to=${TO_ISO}&view=timeline`);
       await page.waitForLoadState("networkidle");
       await expect(page.getByRole("heading", { name: "Calendar" })).toBeVisible();
 

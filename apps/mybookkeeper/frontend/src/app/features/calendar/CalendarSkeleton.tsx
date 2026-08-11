@@ -1,4 +1,5 @@
 import Skeleton from "@/shared/components/ui/Skeleton";
+import CalendarAgendaSkeleton from "@/app/features/calendar/CalendarAgendaSkeleton";
 import {
   CALENDAR_DAY_CELL_PX,
   CALENDAR_LABEL_COLUMN_PX,
@@ -21,15 +22,9 @@ export default function CalendarSkeleton({ rows = 4, days = 30 }: CalendarSkelet
   return (
     <div data-testid="calendar-skeleton">
       {/* Mobile: agenda list skeleton */}
-      <ul className="md:hidden space-y-3" aria-label="Loading agenda">
-        {Array.from({ length: rows }, (_, i) => (
-          <li key={`m-${i}`} className="border rounded-lg p-3 space-y-2">
-            <Skeleton className="h-4 w-32" />
-            <Skeleton className="h-3 w-48" />
-            <Skeleton className="h-3 w-24" />
-          </li>
-        ))}
-      </ul>
+      <div className="md:hidden">
+        <CalendarAgendaSkeleton rows={rows} />
+      </div>
 
       {/* Desktop: grid skeleton */}
       <div className="hidden md:block border rounded-lg overflow-hidden">

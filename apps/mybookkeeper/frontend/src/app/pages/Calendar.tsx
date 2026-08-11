@@ -11,19 +11,27 @@ import { useGetPropertiesQuery } from "@/shared/store/propertiesApi";
 import { useGetListingsQuery } from "@/shared/store/listingsApi";
 import {
   CALENDAR_DEFAULT_WINDOW_DAYS,
+  parseCalendarView,
 } from "@/shared/lib/calendar-constants";
 import {
   addDays,
   formatIsoDate,
 } from "@/app/features/calendar/calendar-utils";
-import CalendarSkeleton from "@/app/features/calendar/CalendarSkeleton";
-import CalendarGrid from "@/app/features/calendar/CalendarGrid";
+import {
+  monthGridWindow,
+  startOfMonth,
+} from "@/app/features/calendar/month-grid-utils";
+import CalendarLoadingState from "@/app/features/calendar/CalendarLoadingState";
+import CalendarViewport from "@/app/features/calendar/CalendarViewport";
 import CalendarAgendaList from "@/app/features/calendar/CalendarAgendaList";
 import CalendarLegend from "@/app/features/calendar/CalendarLegend";
 import CalendarSourceFilter from "@/app/features/calendar/CalendarSourceFilter";
+import CalendarMonthNav from "@/app/features/calendar/CalendarMonthNav";
 import CalendarWindowNav from "@/app/features/calendar/CalendarWindowNav";
+import CalendarViewToggle from "@/app/features/calendar/CalendarViewToggle";
 import CalendarLastSynced from "@/app/features/calendar/CalendarLastSynced";
 import ReviewQueueDrawer from "@/app/features/calendar/ReviewQueueDrawer";
+import type { CalendarView } from "@/shared/types/calendar/calendar-view";
 
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -49,10 +57,17 @@ export default function Calendar() {
   const [isQueueOpen, setIsQueueOpen] = useState(false);
   const { data: pendingCount = 0 } = useGetReviewQueueCountQuery();
 
-  // Resolve the current window from URL, defaulting to today → today + 30.
-  const fromIso = parseIsoOrNull(searchParams.get("from")) ?? todayIso();
-  const toIso =
-    parseIsoOrNull(searchParams.get("to")) ?? addDays(fromIso, CALENDAR_DEFAULT_WINDOW_DAYS);
+  // `from` is the anchor in both views: the window start for the timeline,
+  // the month to display for the month grid. The month view derives its own
+  // fetch window (whole weeks around that month) and ignores `to`.
+  const view = parseCalendarView(searchParams.get("view"));
+  const anchorIso = parseIsoOrNull(searchParams.get("from")) ?? todayIso();
+  const timelineToIso =
+    parseIsoOrNull(searchParams.get("to")) ?? addDays(anchorIso, CALENDAR_DEFAULT_WINDOW_DAYS);
+
+  const monthWindow = monthGridWindow(anchorIso);
+  const fromIso = view === "month" ? monthWindow.fromIso : anchorIso;
+  const toIso = view === "month" ? monthWindow.toIso : timelineToIso;
 
   // Memoize the filter arrays so the query cache key stays referentially
   // stable across renders that don't change the URL — without this, the
@@ -98,9 +113,36 @@ export default function Calendar() {
     setSearchParams(params, { replace: true });
   }
 
+  /** Month view: `from` is the anchor month and `to` doesn't apply. */
+  function updateAnchorMonth(nextAnchorIso: string) {
+    const params = new URLSearchParams(searchParams);
+    params.set("from", startOfMonth(nextAnchorIso));
+    params.delete("to");
+    setSearchParams(params, { replace: true });
+  }
+
   function handleToday() {
     const today = todayIso();
+    if (view === "month") {
+      updateAnchorMonth(today);
+      return;
+    }
     updateWindow(today, addDays(today, CALENDAR_DEFAULT_WINDOW_DAYS));
+  }
+
+  function handleViewChange(nextView: CalendarView) {
+    const params = new URLSearchParams(searchParams);
+    params.set("view", nextView);
+    if (nextView === "month") {
+      // Land on the month the operator was already looking at.
+      params.set("from", startOfMonth(anchorIso));
+      params.delete("to");
+    } else {
+      // Open the timeline on the same date, at its own default width.
+      params.set("from", anchorIso);
+      params.set("to", addDays(anchorIso, CALENDAR_DEFAULT_WINDOW_DAYS));
+    }
+    setSearchParams(params, { replace: true });
   }
 
   function handlePropertiesChange(ids: string[]) {
@@ -164,12 +206,21 @@ export default function Calendar() {
       <ReviewQueueDrawer isOpen={isQueueOpen} onClose={() => setIsQueueOpen(false)} />
 
       <div className="flex flex-wrap items-center gap-3">
-        <CalendarWindowNav
-          fromIso={fromIso}
-          toIso={toIso}
-          onChange={updateWindow}
-          onToday={handleToday}
-        />
+        {view === "month" ? (
+          <CalendarMonthNav
+            anchorIso={anchorIso}
+            onChange={updateAnchorMonth}
+            onToday={handleToday}
+          />
+        ) : (
+          <CalendarWindowNav
+            fromIso={fromIso}
+            toIso={toIso}
+            onChange={updateWindow}
+            onToday={handleToday}
+          />
+        )}
+        <CalendarViewToggle view={view} onChange={handleViewChange} />
         <PropertyMultiSelect
           properties={properties}
           selectedIds={selectedPropertyIds}
@@ -200,7 +251,7 @@ export default function Calendar() {
       ) : null}
 
       {isLoading ? (
-        <CalendarSkeleton />
+        <CalendarLoadingState view={view} />
       ) : hasNoListings && isEmpty ? (
         // A tenancy can exist with no listing behind it, so "no listings" is
         // only the right story when there's also nothing to show. Otherwise
@@ -222,7 +273,14 @@ export default function Calendar() {
       ) : (
         <>
           <div className="hidden md:block" data-testid="calendar-desktop">
-            <CalendarGrid events={eventsList} fromIso={fromIso} toIso={toIso} />
+            <CalendarViewport
+              view={view}
+              events={eventsList}
+              fromIso={fromIso}
+              toIso={toIso}
+              anchorIso={anchorIso}
+              todayIso={todayIso()}
+            />
           </div>
           <div className="md:hidden" data-testid="calendar-mobile">
             <CalendarAgendaList events={eventsList} />

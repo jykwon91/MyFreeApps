@@ -1,4 +1,5 @@
 import type { CalendarSource } from "@/shared/types/calendar/calendar-source";
+import type { CalendarView } from "@/shared/types/calendar/calendar-view";
 
 /**
  * Fixed grid sizing for the unified calendar grid.
@@ -40,6 +41,55 @@ export const CALENDAR_WINDOW_PRESETS: ReadonlyArray<{ label: string; days: numbe
   { label: "3 mo", days: 90 },
   { label: "6 mo", days: 180 },
   { label: "Year", days: 365 },
+];
+
+/**
+ * Month-view geometry.
+ *
+ * The month grid is fluid — columns are sevenths of the available width, not
+ * fixed pixels — so only the vertical rhythm is pinned here. The row count is
+ * fixed at 6 so the page doesn't jump by a whole row between a 4-week-ish
+ * February and a 6-row March, and so the skeleton can mirror the loaded
+ * layout exactly.
+ */
+export const CALENDAR_WEEK_LENGTH = 7;
+export const CALENDAR_MONTH_WEEKS = 6;
+/** Event rows drawn per week before a day falls back to "+N more". */
+export const CALENDAR_MONTH_MAX_LANES = 4;
+export const CALENDAR_MONTH_LANE_HEIGHT_PX = 20;
+export const CALENDAR_MONTH_LANE_GAP_PX = 2;
+/** Space reserved at the top of a cell for the day number. */
+export const CALENDAR_MONTH_DAY_HEADER_PX = 24;
+/** Floor on week-row height so a quiet week still reads as a week. */
+export const CALENDAR_MONTH_MIN_ROW_PX = 104;
+
+/**
+ * The two calendar shapes, in toggle order. `month` is the default — it is
+ * the shape people already read fluently — and `timeline` stays available
+ * for the per-listing question the month grid can't answer.
+ */
+export const CALENDAR_VIEW_OPTIONS: ReadonlyArray<{ value: CalendarView; label: string }> = [
+  { value: "month", label: "Month" },
+  { value: "timeline", label: "Timeline" },
+];
+
+export const CALENDAR_DEFAULT_VIEW: CalendarView = "month";
+
+export function parseCalendarView(raw: string | null): CalendarView {
+  return CALENDAR_VIEW_OPTIONS.some((o) => o.value === raw)
+    ? (raw as CalendarView)
+    : CALENDAR_DEFAULT_VIEW;
+}
+
+/** Column headings, Sunday-first to match `Date#getUTCDay`. */
+export const CALENDAR_WEEKDAY_LABELS: readonly string[] = [
+  "Sun",
+  "Mon",
+  "Tue",
+  "Wed",
+  "Thu",
+  "Fri",
+  "Sat",
 ];
 
 /**
