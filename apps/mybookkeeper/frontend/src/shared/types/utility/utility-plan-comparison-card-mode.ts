@@ -1,15 +1,19 @@
 /**
  * What the dashboard rate-comparison card should render.
  *
- * ``no-benchmark`` is distinct from ``clear``: with nothing to compare against
+ * ``NO_BENCHMARK`` is distinct from ``CLEAR``: with nothing to compare against
  * the card cannot claim the plans are priced well, so it prompts the operator
  * to record a market rate instead of implying an all-clear it has not earned.
- * ``hidden`` covers the operator who tracks no plans at all.
+ * ``HIDDEN`` covers the operator who tracks no plans at all.
  */
+export const UTILITY_PLAN_COMPARISON_CARD_MODES = {
+  LOADING: "loading",
+  ERROR: "error",
+  HIDDEN: "hidden",
+  NO_BENCHMARK: "no-benchmark",
+  CLEAR: "clear",
+  ABOVE_MARKET: "above-market",
+} as const;
+
 export type UtilityPlanComparisonCardMode =
-  | "loading"
-  | "error"
-  | "hidden"
-  | "no-benchmark"
-  | "clear"
-  | "above-market";
+  (typeof UTILITY_PLAN_COMPARISON_CARD_MODES)[keyof typeof UTILITY_PLAN_COMPARISON_CARD_MODES];

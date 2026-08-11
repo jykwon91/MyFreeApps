@@ -10,6 +10,7 @@ import UtilityPlanComparisonCardSkeleton from "./UtilityPlanComparisonCardSkelet
 import UtilityPlanNotComparedRow from "./UtilityPlanNotComparedRow";
 import { useHasAnyUtilityPlans } from "./useHasAnyUtilityPlans";
 import { useUtilityPlanComparisonCardMode } from "./useUtilityPlanComparisonCardMode";
+import { UTILITY_PLAN_COMPARISON_CARD_MODES } from "@/shared/types/utility/utility-plan-comparison-card-mode";
 
 /**
  * Dashboard card for plans priced materially above the recorded market rate.
@@ -48,10 +49,12 @@ export default function UtilityPlanComparisonCard() {
     hasAnyBenchmark: (benchmarks?.length ?? 0) > 0,
   });
 
-  if (mode === "loading") return <UtilityPlanComparisonCardSkeleton />;
-  if (mode === "hidden") return null;
+  if (mode === UTILITY_PLAN_COMPARISON_CARD_MODES.LOADING) {
+    return <UtilityPlanComparisonCardSkeleton />;
+  }
+  if (mode === UTILITY_PLAN_COMPARISON_CARD_MODES.HIDDEN) return null;
 
-  if (mode === "error") {
+  if (mode === UTILITY_PLAN_COMPARISON_CARD_MODES.ERROR) {
     return (
       <AlertBox variant="error" className="flex items-center justify-between gap-3">
         <span>Couldn't compare your utility rates to the market.</span>
@@ -66,7 +69,7 @@ export default function UtilityPlanComparisonCard() {
     );
   }
 
-  if (mode === "no-benchmark") {
+  if (mode === UTILITY_PLAN_COMPARISON_CARD_MODES.NO_BENCHMARK) {
     return (
       <Card title="Rate check" className="text-sm text-muted-foreground">
         <p data-testid="utility-plan-comparison-card-no-benchmark">
@@ -86,7 +89,7 @@ export default function UtilityPlanComparisonCard() {
   // re-declared here with a fallback the UI would have no business choosing.
   if (!data) return null;
 
-  const isClear = mode === "clear";
+  const isClear = mode === UTILITY_PLAN_COMPARISON_CARD_MODES.CLEAR;
 
   return (
     <Card className="p-0 overflow-hidden">

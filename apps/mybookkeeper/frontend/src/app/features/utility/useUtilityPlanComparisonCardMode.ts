@@ -1,4 +1,7 @@
-import type { UtilityPlanComparisonCardMode } from "@/shared/types/utility/utility-plan-comparison-card-mode";
+import {
+  UTILITY_PLAN_COMPARISON_CARD_MODES,
+  type UtilityPlanComparisonCardMode,
+} from "@/shared/types/utility/utility-plan-comparison-card-mode";
 
 interface UseUtilityPlanComparisonCardModeArgs {
   isLoading: boolean;
@@ -14,7 +17,7 @@ interface UseUtilityPlanComparisonCardModeArgs {
 /**
  * Resolves what the dashboard rate-comparison card should render.
  *
- * The ``no-benchmark`` case is the one that carries the design: without a
+ * The ``NO_BENCHMARK`` case is the one that carries the design: without a
  * recorded market rate the card must not fall through to "nothing to worry
  * about". Silence there would read as an all-clear when the truth is that
  * nothing was checked — which is exactly the failure this feature exists to
@@ -28,10 +31,10 @@ export function useUtilityPlanComparisonCardMode({
   hasAnyPlans,
   hasAnyBenchmark,
 }: UseUtilityPlanComparisonCardModeArgs): UtilityPlanComparisonCardMode {
-  if (isLoading) return "loading";
-  if (isError) return "error";
-  if (!hasAnyPlans) return "hidden";
-  if (!hasAnyBenchmark) return "no-benchmark";
-  if ((totalAboveMarket ?? 0) === 0) return "clear";
-  return "above-market";
+  if (isLoading) return UTILITY_PLAN_COMPARISON_CARD_MODES.LOADING;
+  if (isError) return UTILITY_PLAN_COMPARISON_CARD_MODES.ERROR;
+  if (!hasAnyPlans) return UTILITY_PLAN_COMPARISON_CARD_MODES.HIDDEN;
+  if (!hasAnyBenchmark) return UTILITY_PLAN_COMPARISON_CARD_MODES.NO_BENCHMARK;
+  if ((totalAboveMarket ?? 0) === 0) return UTILITY_PLAN_COMPARISON_CARD_MODES.CLEAR;
+  return UTILITY_PLAN_COMPARISON_CARD_MODES.ABOVE_MARKET;
 }
