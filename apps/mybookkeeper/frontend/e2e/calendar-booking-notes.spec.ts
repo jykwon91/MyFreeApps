@@ -74,7 +74,7 @@ test.describe("Calendar booking notes + attachments", () => {
 
     try {
       // Navigate to the calendar with the test window.
-      await page.goto("/calendar?from=2026-06-01&to=2026-07-01");
+      await page.goto("/calendar?from=2026-06-01&to=2026-07-01&view=timeline");
       await page.waitForLoadState("networkidle");
 
       // Open the detail dialog by clicking the event bar.
@@ -140,7 +140,7 @@ test.describe("Calendar booking notes + attachments", () => {
     test.skip(blackoutId === null, "Blackout seed endpoint not available");
 
     try {
-      await page.goto("/calendar?from=2026-06-01&to=2026-07-01");
+      await page.goto("/calendar?from=2026-06-01&to=2026-07-01&view=timeline");
       await page.waitForLoadState("networkidle");
 
       // Open detail dialog.

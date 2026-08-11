@@ -102,7 +102,9 @@ test.describe("Unified calendar viewer", () => {
     if (vr !== null) blackoutIds.push(vr);
 
     try {
-      await page.goto(`/calendar?from=${fromIso}&to=${toIso}`);
+      // `view=timeline` throughout this spec: the month grid is the default
+      // now, and these assertions are about the listing-per-row shape.
+      await page.goto(`/calendar?from=${fromIso}&to=${toIso}&view=timeline`);
       await page.waitForLoadState("networkidle");
 
       // Heading visible.
@@ -164,7 +166,7 @@ test.describe("Unified calendar viewer", () => {
     try {
       // Desktop: grid view visible, mobile agenda hidden.
       await page.setViewportSize({ width: 1280, height: 900 });
-      await page.goto("/calendar?from=2026-06-01&to=2026-07-01");
+      await page.goto("/calendar?from=2026-06-01&to=2026-07-01&view=timeline");
       await page.waitForLoadState("networkidle");
       await expect(page.getByRole("heading", { name: "Calendar" })).toBeVisible();
       await expect(page.getByTestId("calendar-desktop")).toBeVisible();
@@ -178,7 +180,7 @@ test.describe("Unified calendar viewer", () => {
 
       // Mobile: agenda list visible, desktop grid hidden.
       await page.setViewportSize({ width: 375, height: 800 });
-      await page.goto("/calendar?from=2026-06-01&to=2026-07-01");
+      await page.goto("/calendar?from=2026-06-01&to=2026-07-01&view=timeline");
       await page.waitForLoadState("networkidle");
       await expect(page.getByTestId("calendar-mobile")).toBeVisible();
       await expect(page.getByTestId("calendar-desktop")).toBeHidden();

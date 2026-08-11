@@ -121,6 +121,40 @@ async def get(
     return result.scalar_one_or_none()
 
 
+async def get_covering_date(
+    db: AsyncSession,
+    *,
+    user_id: uuid.UUID,
+    organization_id: uuid.UUID,
+    applicant_id: uuid.UUID,
+    on_date: _dt.date,
+) -> SignedLease | None:
+    """Return the tenant's lease whose term contains ``on_date``.
+
+    Terms are inclusive on both ends. Leases with an open ``starts_on`` or
+    ``ends_on`` are skipped — an unbounded term cannot be said to cover a
+    specific day, and callers fall back to the most recent lease anyway.
+
+    When terms overlap (a successor signed before its parent ended) the most
+    recently created lease wins, matching ``list_for_tenant``'s ordering.
+    """
+    stmt = (
+        select(SignedLease)
+        .where(
+            SignedLease.user_id == user_id,
+            SignedLease.organization_id == organization_id,
+            SignedLease.applicant_id == applicant_id,
+            SignedLease.deleted_at.is_(None),
+            SignedLease.starts_on <= on_date,
+            SignedLease.ends_on >= on_date,
+        )
+        .order_by(desc(SignedLease.created_at))
+        .limit(1)
+    )
+    result = await db.execute(stmt)
+    return result.scalars().first()
+
+
 async def list_for_tenant(
     db: AsyncSession,
     *,

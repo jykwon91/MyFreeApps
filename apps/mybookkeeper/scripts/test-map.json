@@ -399,6 +399,7 @@
         "backend/app/services/listings/blackout_service.py",
         "backend/app/services/listings/attachment_response_builder.py",
         "backend/app/repositories/calendar/",
+        "backend/app/mappers/calendar_event_mapper.py",
         "backend/app/repositories/listings/listing_blackout_repo.py",
         "backend/app/repositories/listings/listing_blackout_attachment_repo.py",
         "backend/app/schemas/calendar/",
@@ -407,6 +408,7 @@
         "backend/app/schemas/listings/listing_blackout_attachment_response.py",
         "backend/app/models/listings/listing_blackout.py",
         "backend/app/models/listings/listing_blackout_attachment.py",
+        "backend/app/models/leases/signed_lease.py",
         "backend/app/core/calendar_constants.py",
         "frontend/src/app/pages/Calendar.tsx",
         "frontend/src/app/features/calendar/",
@@ -419,6 +421,7 @@
       "backend_tests": [
         "test_calendar_repository.py",
         "test_calendar_service.py",
+        "test_calendar_event_mapper.py",
         "test_calendar_events_route.py",
         "test_calendar_route.py",
         "test_blackout_notes_attachments.py",
@@ -429,12 +432,19 @@
       "frontend_tests": [
         "Calendar.test.tsx",
         "calendar-utils.test.ts",
+        "month-grid-utils.test.ts",
         "CalendarEventDetail.test.tsx",
+        "CalendarLeaseEvent.test.tsx",
+        "CalendarMonthGrid.test.tsx",
+        "CalendarUnlinkedLease.test.tsx",
         "ReviewQueueItem.test.tsx",
         "ReviewQueueDrawer.test.tsx"
       ],
       "e2e_specs": [
         "calendar.spec.ts",
+        "calendar-lease-events.spec.ts",
+        "calendar-month-view.spec.ts",
+        "calendar-unlinked-lease.spec.ts",
         "calendar-booking-notes.spec.ts",
         "calendar-review-queue-resolve.spec.ts"
       ]
@@ -771,6 +781,8 @@
         "backend/app/schemas/leases/receipt_response.py",
         "backend/app/services/leases/receipt_service.py",
         "backend/app/services/leases/receipt_pdf_service.py",
+        "backend/app/services/leases/receipt_formatting.py",
+        "backend/app/services/leases/receipt_period_resolver.py",
         "backend/app/api/rent_receipts.py",
         "backend/alembic/versions/rcpt260504_rent_receipts.py",
         "frontend/src/app/pages/PendingReceipts.tsx",
@@ -782,7 +794,8 @@
         "test_receipt_pdf_service.py",
         "test_receipt_sequence_repo.py",
         "test_receipt_routes.py",
-        "test_receipt_service_app_sent.py"
+        "test_receipt_service_app_sent.py",
+        "test_receipt_period_resolver.py"
       ],
       "frontend_tests": [
         "SendReceiptDialog.test.tsx",

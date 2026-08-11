@@ -119,6 +119,12 @@ vi.mock("@/shared/store/listingsApi", () => ({
 import { useGetCalendarEventsQuery } from "@/shared/store/calendarApi";
 import { useGetListingsQuery } from "@/shared/store/listingsApi";
 
+/**
+ * The month grid is the default view, so any assertion about the
+ * listing-per-row timeline has to ask for it explicitly.
+ */
+const TIMELINE_URL = ["/calendar?from=2026-06-01&to=2026-07-01&view=timeline"];
+
 function renderCalendar(initialEntries: string[] = ["/calendar?from=2026-06-01&to=2026-07-01"]) {
   return render(
     <Provider store={store}>
@@ -144,16 +150,23 @@ describe("Calendar page", () => {
     expect(screen.getByRole("heading", { name: "Calendar" })).toBeInTheDocument();
   });
 
-  it("renders the legend, filters, and window nav", () => {
+  it("renders the legend, filters, and month nav", () => {
     renderCalendar();
     expect(screen.getByTestId("calendar-legend")).toBeInTheDocument();
     expect(screen.getByTestId("property-filter-trigger")).toBeInTheDocument();
     expect(screen.getByTestId("source-filter-trigger")).toBeInTheDocument();
-    expect(screen.getByTestId("calendar-window-nav")).toBeInTheDocument();
+    expect(screen.getByTestId("calendar-month-nav")).toBeInTheDocument();
+    expect(screen.getByTestId("calendar-view-toggle")).toBeInTheDocument();
   });
 
-  it("renders event bars colored by source on desktop view", () => {
-    renderCalendar();
+  it("swaps in the window nav when the timeline is selected", () => {
+    renderCalendar(TIMELINE_URL);
+    expect(screen.getByTestId("calendar-window-nav")).toBeInTheDocument();
+    expect(screen.queryByTestId("calendar-month-nav")).not.toBeInTheDocument();
+  });
+
+  it("renders event bars colored by source on the timeline", () => {
+    renderCalendar(TIMELINE_URL);
     const bars = screen.getAllByTestId("calendar-event-bar");
     expect(bars).toHaveLength(mockEvents.length);
     const sources = bars.map((b) => b.getAttribute("data-source"));
@@ -162,8 +175,8 @@ describe("Calendar page", () => {
     expect(sources).toContain("manual");
   });
 
-  it("groups listings by property in the desktop grid", () => {
-    renderCalendar();
+  it("groups listings by property in the timeline grid", () => {
+    renderCalendar(TIMELINE_URL);
     const desktop = screen.getByTestId("calendar-desktop");
     const propertyHeaders = within(desktop).getAllByTestId("calendar-property-header");
     expect(propertyHeaders).toHaveLength(1);
@@ -224,6 +237,20 @@ describe("Calendar page", () => {
     expect(screen.getByRole("link", { name: /add a listing/i })).toHaveAttribute("href", "/listings");
   });
 
+  it("shows the events, not the no-listings prompt, when a lease has no listing behind it", () => {
+    // A signed lease can exist before it's linked to a listing, so an org with
+    // zero listings can still have real tenancies. Showing "add a listing"
+    // here would hide them.
+    vi.mocked(useGetListingsQuery).mockReturnValue(
+      { data: { items: [], total: 0, has_more: false }, isLoading: false } as unknown as ReturnType<
+        typeof useGetListingsQuery
+      >,
+    );
+    renderCalendar();
+    expect(screen.queryByTestId("calendar-no-listings")).not.toBeInTheDocument();
+    expect(screen.getAllByTestId("calendar-month-event-pill").length).toBeGreaterThan(0);
+  });
+
   it("displays last-synced relative time when events exist", () => {
     renderCalendar();
     const lastSynced = screen.getByTestId("calendar-last-synced");
@@ -248,7 +275,7 @@ describe("Calendar skeleton", () => {
     vi.mocked(useGetCalendarEventsQuery).mockReturnValue(
       defaultEventsState as unknown as ReturnType<typeof useGetCalendarEventsQuery>,
     );
-    const { unmount } = renderCalendar();
+    const { unmount } = renderCalendar(TIMELINE_URL);
     const loaded = screen.getByTestId("calendar-grid");
     const loadedRows = within(loaded).getAllByTestId("calendar-listing-row");
     const loadedRowCount = loadedRows.length;
@@ -260,7 +287,7 @@ describe("Calendar skeleton", () => {
         typeof useGetCalendarEventsQuery
       >,
     );
-    renderCalendar();
+    renderCalendar(TIMELINE_URL);
     const skeleton = screen.getByTestId("calendar-skeleton");
     // Skeleton's desktop-only block is hidden via CSS in tests (jsdom doesn't
     // evaluate media queries), but the structural sanity check is that the

@@ -1,4 +1,5 @@
 import type { CalendarSource } from "@/shared/types/calendar/calendar-source";
+import type { CalendarView } from "@/shared/types/calendar/calendar-view";
 
 /**
  * Fixed grid sizing for the unified calendar grid.
@@ -43,6 +44,55 @@ export const CALENDAR_WINDOW_PRESETS: ReadonlyArray<{ label: string; days: numbe
 ];
 
 /**
+ * Month-view geometry.
+ *
+ * The month grid is fluid — columns are sevenths of the available width, not
+ * fixed pixels — so only the vertical rhythm is pinned here. The row count is
+ * fixed at 6 so the page doesn't jump by a whole row between a 4-week-ish
+ * February and a 6-row March, and so the skeleton can mirror the loaded
+ * layout exactly.
+ */
+export const CALENDAR_WEEK_LENGTH = 7;
+export const CALENDAR_MONTH_WEEKS = 6;
+/** Event rows drawn per week before a day falls back to "+N more". */
+export const CALENDAR_MONTH_MAX_LANES = 4;
+export const CALENDAR_MONTH_LANE_HEIGHT_PX = 20;
+export const CALENDAR_MONTH_LANE_GAP_PX = 2;
+/** Space reserved at the top of a cell for the day number. */
+export const CALENDAR_MONTH_DAY_HEADER_PX = 24;
+/** Floor on week-row height so a quiet week still reads as a week. */
+export const CALENDAR_MONTH_MIN_ROW_PX = 104;
+
+/**
+ * The two calendar shapes, in toggle order. `month` is the default — it is
+ * the shape people already read fluently — and `timeline` stays available
+ * for the per-listing question the month grid can't answer.
+ */
+export const CALENDAR_VIEW_OPTIONS: ReadonlyArray<{ value: CalendarView; label: string }> = [
+  { value: "month", label: "Month" },
+  { value: "timeline", label: "Timeline" },
+];
+
+export const CALENDAR_DEFAULT_VIEW: CalendarView = "month";
+
+export function parseCalendarView(raw: string | null): CalendarView {
+  return CALENDAR_VIEW_OPTIONS.some((o) => o.value === raw)
+    ? (raw as CalendarView)
+    : CALENDAR_DEFAULT_VIEW;
+}
+
+/** Column headings, Sunday-first to match `Date#getUTCDay`. */
+export const CALENDAR_WEEKDAY_LABELS: readonly string[] = [
+  "Sun",
+  "Mon",
+  "Tue",
+  "Wed",
+  "Thu",
+  "Fri",
+  "Sat",
+];
+
+/**
  * Color per source. `manual` is rendered with a hatched overlay (see
  * the grid component) — this map gives its base background.
  *
@@ -57,6 +107,7 @@ export const CALENDAR_SOURCE_COLORS: Record<string, string> = {
   rotating_room: "#7c3aed",   // purple
   direct: "#6b7280",          // slate gray
   manual: "#475569",          // darker slate; hatched overlay added in CSS
+  lease: "#b45309",           // amber-700; warm, and unlike every channel hue
 };
 
 /**
@@ -69,7 +120,38 @@ export const CALENDAR_SOURCE_LABELS: Record<string, string> = {
   rotating_room: "Rotating Room",
   direct: "Direct",
   manual: "Manual",
+  lease: "Tenant",
 };
+
+/**
+ * Sources whose events cannot be edited in the detail dialog.
+ *
+ * A `lease` event's `id` is a lease id, not a blackout id — the notes and
+ * attachment endpoints are keyed by blackout and would 404. The dialog hides
+ * both sections for these sources and points the host at the lease instead.
+ */
+export const CALENDAR_READ_ONLY_SOURCES: readonly string[] = ["lease"];
+
+export function isReadOnlySource(source: string): boolean {
+  return CALENDAR_READ_ONLY_SOURCES.includes(source);
+}
+
+/**
+ * Labels for a lease the host hasn't linked to a listing yet.
+ *
+ * `signed_leases.listing_id` is nullable, so a tenancy can exist before it is
+ * attached to a listing. The calendar shows it regardless — a real tenant in
+ * a real room is not less real for a missing foreign key — under this
+ * heading, which doubles as a nudge to go set the link.
+ */
+export const CALENDAR_UNASSIGNED_LISTING_LABEL = "No listing linked";
+export const CALENDAR_UNASSIGNED_PROPERTY_LABEL = "Not linked to a property";
+
+/**
+ * Map key standing in for a null listing/property id when grouping. Real ids
+ * are UUIDs, so this can never collide with one.
+ */
+export const CALENDAR_UNASSIGNED_KEY = "unassigned";
 
 /**
  * Fallback color for unknown source slugs (e.g., a channel added on
@@ -98,4 +180,5 @@ export const CALENDAR_FILTER_SOURCES: readonly CalendarSource[] = [
   "rotating_room",
   "direct",
   "manual",
+  "lease",
 ];

@@ -71,8 +71,10 @@ class PendingRentReceipt(Base):
         nullable=True,
     )
 
-    # Default period is the calendar month of the transaction date; host can
-    # override in the SendReceiptDialog before sending.
+    # Default period is the calendar month of the transaction date, clipped to
+    # the covering lease's term so a move-in/move-out month reports only the
+    # days under lease (see ``receipt_period_resolver``). Host can override in
+    # the SendReceiptDialog before sending.
     period_start_date: Mapped[_dt.date] = mapped_column(Date, nullable=False)
     period_end_date: Mapped[_dt.date] = mapped_column(Date, nullable=False)
 

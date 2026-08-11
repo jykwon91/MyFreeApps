@@ -1,4 +1,4 @@
-import { getSourceColor, getSourceLabel } from "@/shared/lib/calendar-constants";
+import { getSourceColor, getSourceLabel, isReadOnlySource } from "@/shared/lib/calendar-constants";
 import { CALENDAR_DAY_CELL_PX } from "@/shared/lib/calendar-constants";
 import type { CalendarEvent } from "@/shared/types/calendar/calendar-event";
 
@@ -25,6 +25,12 @@ export default function CalendarEventBar({ event, startCol, span, onClick }: Cal
   const isManual = event.source === "manual";
   const color = getSourceColor(event.source);
   const label = getSourceLabel(event.source);
+  // A channel bar can only say which channel it came from — iCal sends no
+  // guest name. A tenancy knows exactly who lives there, and that name is
+  // the reason the host is looking at the row at all.
+  const isTenancy = isReadOnlySource(event.source);
+  const barLabel = isTenancy ? (event.summary ?? label) : label;
+  const kindWord = isTenancy ? "tenancy" : "blackout";
 
   const hasNotes = event.host_notes != null;
   const hasAttachments = event.attachment_count > 0;
@@ -53,11 +59,11 @@ export default function CalendarEventBar({ event, startCol, span, onClick }: Cal
           : undefined,
       }}
       title={tooltip}
-      aria-label={`${label} blackout from ${event.starts_on} to ${event.ends_on}. Click for details.`}
+      aria-label={`${barLabel} ${kindWord} from ${event.starts_on} to ${event.ends_on}. Click for details.`}
       data-testid="calendar-event-bar"
       data-source={event.source}
     >
-      <span className="truncate flex-1">{label}</span>
+      <span className="truncate flex-1">{barLabel}</span>
 
       {/* Notes / attachment indicators — top-right of the bar */}
       {(hasNotes || hasAttachments) ? (
