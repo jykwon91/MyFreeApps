@@ -658,7 +658,21 @@
         "frontend/src/shared/store/utilityPlansApi.ts",
         "frontend/src/shared/lib/utility-plan-format.ts",
         "frontend/src/shared/lib/utility-plan-form.ts",
-        "frontend/src/shared/lib/utility-plan-draft.ts"
+        "frontend/src/shared/lib/utility-plan-draft.ts",
+        "backend/app/models/properties/market_rate_benchmark.py",
+        "backend/app/repositories/properties/market_rate_benchmark_repo.py",
+        "backend/app/schemas/properties/market_rate_benchmark_response.py",
+        "backend/app/schemas/properties/market_rate_benchmark_upsert_request.py",
+        "backend/app/schemas/properties/utility_plan_rate_comparison_row.py",
+        "backend/app/schemas/properties/utility_plan_rate_comparison_response.py",
+        "backend/app/services/properties/market_rate_benchmark_service.py",
+        "backend/app/services/properties/_market_benchmark_compare.py",
+        "backend/app/api/market_rate_benchmarks.py",
+        "backend/app/core/market_benchmark_constants.py",
+        "backend/alembic/versions/mktbench260811_market_rate_benchmarks.py",
+        "frontend/src/shared/store/marketRateBenchmarksApi.ts",
+        "frontend/src/shared/lib/api-error-detail.ts",
+        "frontend/src/shared/types/api/"
       ],
       "backend_tests": [
         "test_utility_plan_service.py",
@@ -666,7 +680,11 @@
         "test_utility_plans_api.py",
         "test_utility_plan_extraction.py",
         "test_utility_plan_scheduler.py",
-        "test_utility_plan_seed.py"
+        "test_utility_plan_seed.py",
+        "test_market_benchmark_compare.py",
+        "test_market_rate_benchmark_repo.py",
+        "test_market_rate_benchmark_service.py",
+        "test_market_rate_benchmarks_api.py"
       ],
       "frontend_tests": [
         "UtilityPlans.test.tsx",
@@ -676,12 +694,16 @@
         "utility-plan-format.test.ts",
         "utility-plan-form.test.ts",
         "utility-plan-draft.test.ts",
-        "Dashboard.test.tsx"
+        "Dashboard.test.tsx",
+        "UtilityPlanComparisonCard.test.tsx",
+        "MarketRateBenchmarkDialog.test.tsx"
       ],
       "e2e_specs": [
         "utility-plans.spec.ts",
         "utility-plans-layout.spec.ts",
-        "dashboard.spec.ts"
+        "dashboard.spec.ts",
+        "utility-plan-rate-benchmark.spec.ts",
+        "utility-plan-comparison-layout.spec.ts"
       ]
     },
     "welcome_manuals": {

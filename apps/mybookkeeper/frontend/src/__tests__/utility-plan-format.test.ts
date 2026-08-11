@@ -7,8 +7,10 @@
  */
 import { describe, it, expect } from "vitest";
 import {
+  formatBenchmarkGap,
   formatCents,
   formatCentsPerKwh,
+  formatComparisonFigure,
   formatPlanDate,
   formatRenewalCountdown,
 } from "@/shared/lib/utility-plan-format";
@@ -81,5 +83,39 @@ describe("formatPlanDate", () => {
   it("falls back to a dash for missing or invalid input", () => {
     expect(formatPlanDate(null)).toBe("—");
     expect(formatPlanDate("garbage")).toBe("—");
+  });
+});
+
+describe("formatBenchmarkGap", () => {
+  it("spells out the direction so a negative does not read as bad news", () => {
+    expect(formatBenchmarkGap("35.7")).toBe("35.7% above market");
+    expect(formatBenchmarkGap("-12.0")).toBe("12% below market");
+  });
+
+  it("names an exact tie rather than showing 0%", () => {
+    expect(formatBenchmarkGap("0")).toBe("level with market");
+  });
+
+  it("falls back to a dash for missing or invalid input", () => {
+    expect(formatBenchmarkGap(null)).toBe("—");
+    expect(formatBenchmarkGap("garbage")).toBe("—");
+  });
+});
+
+describe("formatComparisonFigure", () => {
+  it("quotes metered service per kWh", () => {
+    expect(formatComparisonFigure("15.0600", "electricity")).toBe("15.06¢/kWh");
+    expect(formatComparisonFigure("0.9500", "natural_gas")).toBe("0.95¢/kWh");
+  });
+
+  it("quotes internet as a monthly amount, parsing the Decimal string", () => {
+    // Sending 9000 as "9000" must not become $9,000.00 or 9000¢/kWh.
+    expect(formatComparisonFigure("9000", "internet")).toBe("$90.00/mo");
+  });
+
+  it("falls back to a dash for missing or invalid input", () => {
+    expect(formatComparisonFigure(null, "internet")).toBe("—");
+    expect(formatComparisonFigure("garbage", "internet")).toBe("—");
+    expect(formatComparisonFigure(null, "electricity")).toBe("—");
   });
 });

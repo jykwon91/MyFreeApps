@@ -28,6 +28,7 @@ import SectionHeader from "@/shared/components/ui/SectionHeader";
 import PropertyPnLGrid from "@/app/features/attribution/PropertyPnLGrid";
 import PnLDateRangeSelector from "@/app/features/attribution/PnLDateRangeSelector";
 import UtilityPlanRenewalAlertCard from "@/app/features/utility/UtilityPlanRenewalAlertCard";
+import UtilityPlanComparisonCard from "@/app/features/utility/UtilityPlanComparisonCard";
 
 function getThisMonthRange(): { since: string; until: string } {
   const now = new Date();
@@ -191,6 +192,11 @@ export default function Dashboard() {
           plan costs money whether or not any transactions have been imported
           yet, so it must not be hidden behind the no-data empty state. */}
       <UtilityPlanRenewalAlertCard />
+
+      {/* Directly below the renewal card, for the same reason: a plan can be
+          comfortably inside its term and still be the most expensive line in
+          the portfolio, which the renewal card cannot say. */}
+      <UtilityPlanComparisonCard />
 
       {!isEmpty && (filteredSummary?.by_month?.length ?? 0) > 0 && (
         <MonthlyAverageCard byMonth={filteredSummary?.by_month ?? []} />
