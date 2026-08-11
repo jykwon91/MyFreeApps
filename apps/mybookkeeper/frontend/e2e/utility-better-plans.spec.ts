@@ -15,6 +15,7 @@
  * Verifies:
  *   - Loading the page does not call the external feed; only a click does.
  *   - Skeleton group/row counts mirror the loaded section (no layout shift).
+ *   - The current plan is on screen, and each offer reads as a movement from it.
  *   - The withheld-for-poor-rating count is stated, not silently applied.
  *   - A bill-credit teaser carries its caveat.
  *   - No horizontal scroll across mobile / tablet / desktop; 44px touch target.
@@ -25,7 +26,7 @@ import { test, expect, type Page } from "@playwright/test";
 const ORG_ID = "00000000-0000-0000-0000-000000000010";
 const PROPERTY_ID = "00000000-0000-0000-0000-0000000000c1";
 
-/** Matches ``BetterPlansSkeleton``: two cards, three rows each. */
+/** Matches ``BetterPlansSkeleton``: two property cards, three candidates each. */
 const SKELETON_GROUP_COUNT = 2;
 const SKELETON_ROWS_PER_GROUP = 3;
 
@@ -196,12 +197,20 @@ test.describe("Find a better plan", () => {
     await expect(results).toBeVisible({ timeout: 15000 });
     expect(offerRequests).toBe(1);
 
-    // The recommendation itself: rate, rating, and the saving against today.
+    // What the property holds today — the thing every figure is measured from.
+    const equipped = page.getByTestId(`equipped-plan-${PROPERTY_ID}`);
+    await expect(equipped).toContainText("Constellation");
+    await expect(equipped).toContainText("15.66¢/kWh");
+    await expect(equipped).toContainText("$1,879");
+
+    // The recommendation, stated as a movement rather than a listing: the
+    // headline saving, then the two stats that moved to produce it.
     const topOffer = page.getByTestId("better-plan-501");
     await expect(topOffer).toContainText("Veteran Energy");
-    await expect(topOffer).toContainText("10.50¢/kWh");
+    await expect(topOffer).toContainText("$619");
+    await expect(topOffer).toContainText("less per year than now");
+    await expect(topOffer).toContainText("5.16¢ less");
     await expect(topOffer).toContainText("3/5");
-    await expect(page.getByTestId("better-plan-saving-501")).toContainText("$619/yr");
 
     // A cheaper headline that only holds in one usage band says so.
     await expect(page.getByTestId("better-plan-teaser-502")).toContainText(
@@ -243,6 +252,15 @@ test.describe("Find a better plan", () => {
         await hasHorizontalOverflow(page),
         `horizontal overflow at ${size.width}px`,
       ).toBe(false);
+
+      // The enrol link is the action the whole comparison exists to enable, so
+      // it has to stay tappable at every width, not just the button above it.
+      const enroll = page.getByTestId("better-plan-enroll-501");
+      const enrollBox = await enroll.boundingBox();
+      expect(enrollBox, `enrol link has no box at ${size.width}px`).not.toBeNull();
+      expect(enrollBox!.height, `enrol link height at ${size.width}px`).toBeGreaterThanOrEqual(
+        44,
+      );
     }
 
     await page.setViewportSize({ width: 375, height: 800 });

@@ -682,7 +682,9 @@
         "backend/app/services/properties/power_to_choose_client.py",
         "backend/app/services/properties/utility_offer_service.py",
         "frontend/src/shared/store/utilityOffersApi.ts",
-        "frontend/src/shared/lib/utility-offer-format.ts"
+        "frontend/src/shared/lib/utility-offer-format.ts",
+        "frontend/src/shared/lib/offer-stats.ts",
+        "frontend/src/shared/lib/offer-tiers.ts"
       ],
       "backend_tests": [
         "test_utility_plan_service.py",
@@ -709,7 +711,9 @@
         "Dashboard.test.tsx",
         "UtilityPlanComparisonCard.test.tsx",
         "MarketRateBenchmarkDialog.test.tsx",
-        "BetterPlansSection.test.tsx"
+        "BetterPlansSection.test.tsx",
+        "offer-stats.test.ts",
+        "offer-tiers.test.ts"
       ],
       "e2e_specs": [
         "utility-plans.spec.ts",
