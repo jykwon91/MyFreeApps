@@ -83,6 +83,9 @@ const utilityPlansApi = baseApi.injectEndpoints({
         { type: "UtilityPlan", id: "LIST" },
         { type: "UtilityPlan", id: "ALERTS" },
         { type: "UtilityPlan", id: "COMPARISON" },
+        // The market ranking is measured against the plan's own rate, so
+        // changing that rate changes which offers beat it.
+        { type: "UtilityPlan", id: "OFFERS" },
       ],
     }),
 
@@ -100,6 +103,9 @@ const utilityPlansApi = baseApi.injectEndpoints({
         { type: "UtilityPlan", id: "LIST" },
         { type: "UtilityPlan", id: "ALERTS" },
         { type: "UtilityPlan", id: "COMPARISON" },
+        // The market ranking is measured against the plan's own rate, so
+        // changing that rate changes which offers beat it.
+        { type: "UtilityPlan", id: "OFFERS" },
       ],
     }),
 
@@ -121,6 +127,9 @@ const utilityPlansApi = baseApi.injectEndpoints({
         { type: "UtilityPlan", id: "LIST" },
         { type: "UtilityPlan", id: "ALERTS" },
         { type: "UtilityPlan", id: "COMPARISON" },
+        // The market ranking is measured against the plan's own rate, so
+        // changing that rate changes which offers beat it.
+        { type: "UtilityPlan", id: "OFFERS" },
       ],
     }),
   }),

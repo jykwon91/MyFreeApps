@@ -672,7 +672,17 @@
         "backend/alembic/versions/mktbench260811_market_rate_benchmarks.py",
         "frontend/src/shared/store/marketRateBenchmarksApi.ts",
         "frontend/src/shared/lib/api-error-detail.ts",
-        "frontend/src/shared/types/api/"
+        "frontend/src/shared/types/api/",
+        "backend/app/core/power_to_choose_constants.py",
+        "backend/app/schemas/properties/utility_offer.py",
+        "backend/app/schemas/properties/utility_offer_group.py",
+        "backend/app/schemas/properties/utility_offer_search_response.py",
+        "backend/app/services/properties/_address_zip.py",
+        "backend/app/services/properties/_offer_ranking.py",
+        "backend/app/services/properties/power_to_choose_client.py",
+        "backend/app/services/properties/utility_offer_service.py",
+        "frontend/src/shared/store/utilityOffersApi.ts",
+        "frontend/src/shared/lib/utility-offer-format.ts"
       ],
       "backend_tests": [
         "test_utility_plan_service.py",
@@ -684,7 +694,9 @@
         "test_market_benchmark_compare.py",
         "test_market_rate_benchmark_repo.py",
         "test_market_rate_benchmark_service.py",
-        "test_market_rate_benchmarks_api.py"
+        "test_market_rate_benchmarks_api.py",
+        "test_offer_ranking.py",
+        "test_utility_offer_ranking.py"
       ],
       "frontend_tests": [
         "UtilityPlans.test.tsx",
@@ -696,14 +708,16 @@
         "utility-plan-draft.test.ts",
         "Dashboard.test.tsx",
         "UtilityPlanComparisonCard.test.tsx",
-        "MarketRateBenchmarkDialog.test.tsx"
+        "MarketRateBenchmarkDialog.test.tsx",
+        "BetterPlansSection.test.tsx"
       ],
       "e2e_specs": [
         "utility-plans.spec.ts",
         "utility-plans-layout.spec.ts",
         "dashboard.spec.ts",
         "utility-plan-rate-benchmark.spec.ts",
-        "utility-plan-comparison-layout.spec.ts"
+        "utility-plan-comparison-layout.spec.ts",
+        "utility-better-plans.spec.ts"
       ]
     },
     "welcome_manuals": {
