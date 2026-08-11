@@ -11,6 +11,7 @@ from decimal import Decimal
 import pytest
 
 from app.services.properties._address_zip import derive_zip_code
+from app.services.properties.power_to_choose_client import _log_zip
 from app.services.properties._offer_ranking import (
     annual_saving_cents,
     is_teaser_priced,
@@ -151,3 +152,20 @@ class TestDeriveZipCode:
     def test_missing_address_is_none(self) -> None:
         assert derive_zip_code(None) is None
         assert derive_zip_code("") is None
+
+
+class TestLogZip:
+    """Application logs ship to Sentry — a full ZIP must never reach them."""
+
+    def test_keeps_only_the_market_prefix(self) -> None:
+        assert _log_zip("77021") == "770xx"
+
+    @pytest.mark.parametrize("zip_code", ["77021", "75201", "78701", "77021-1234"])
+    def test_the_house_level_digits_are_dropped(self, zip_code: str) -> None:
+        masked = _log_zip(zip_code)
+        assert masked == f"{zip_code[:3]}xx"
+        assert zip_code not in masked
+
+    def test_a_too_short_value_is_fully_masked(self) -> None:
+        assert _log_zip("77") == "xxxxx"
+        assert _log_zip("") == "xxxxx"
