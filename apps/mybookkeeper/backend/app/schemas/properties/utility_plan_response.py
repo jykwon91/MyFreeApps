@@ -37,6 +37,14 @@ class UtilityPlanResponse(BaseModel):
     min_usage_fee_cents: int | None = None
     min_usage_threshold_kwh: int | None = None
 
+    post_promo_monthly_cents: int | None = None
+    equipment_fee_monthly_cents: int | None = None
+    download_mbps: int | None = None
+    upload_mbps: int | None = None
+    data_cap_gb: int | None = None
+
+    source_document_id: uuid.UUID | None = None
+
     notes: str | None = None
 
     # Derived — see utility_plan_service.

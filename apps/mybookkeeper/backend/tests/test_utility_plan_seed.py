@@ -162,28 +162,80 @@ class TestElectricPlans:
             assert _row_2025(match).account_number == account
             assert _row_2026(match).account_number == account
 
-    def test_current_terms_record_the_portal_rate_and_nothing_it_did_not_state(self) -> None:
-        """Plan detail shows a blended average only — no components, no ETF."""
+    def test_current_terms_keep_the_portal_average_not_the_efl_one(self) -> None:
+        """The portal figure is the current one; the EFL's is priced on a stale TDU.
+
+        The EFLs quote 16.5 and 17.1 c/kWh at 1,000 kWh against a 6.0009 c/kWh
+        TDU rate; CenterPoint now charges 5.1461. Replacing these with the EFL
+        numbers would overstate every current comparison by ~0.85 c/kWh.
+        """
         rates = {
             "6732 Peerless": Decimal("15.0600"),
             "6734 Peerless": Decimal("15.6600"),
             "6738 Peerless": Decimal("16.2700"),
         }
         for match, rate in rates.items():
-            row = _row_2026(match)
-            assert row.avg_price_cents_per_kwh_at_1000 == rate
-            # Carrying 2025's components or ETF forward onto a differently
-            # named plan would be invention, not a transcription.
-            assert row.energy_charge_cents_per_kwh is None
-            assert row.tdu_charge_cents_per_kwh is None
-            assert row.monthly_base_charge_cents is None
-            assert row.early_termination_fee_cents is None
+            assert _row_2026(match).avg_price_cents_per_kwh_at_1000 == rate
 
-    def test_only_the_plans_that_say_so_claim_no_minimum_usage_fee(self) -> None:
-        """The claim comes from the plan name; 6738's name makes no such claim."""
-        assert _row_2026("6732 Peerless").min_usage_fee_cents == 0
-        assert _row_2026("6734 Peerless").min_usage_fee_cents == 0
-        assert _row_2026("6738 Peerless").min_usage_fee_cents is None
+    def test_no_current_term_records_a_tdu_charge(self) -> None:
+        """TDU is a pass-through the utility re-tariffs mid-term.
+
+        Neither the EFL's issue-date value nor a spot reading is a property of
+        the contract, so none is stored.
+        """
+        for match in ("6732 Peerless", "6734 Peerless", "6738 Peerless"):
+            assert _row_2026(match).tdu_charge_cents_per_kwh is None
+
+    def test_efl_backed_terms_carry_their_supplier_fixed_components(self) -> None:
+        """Read from each plan's EFL on 2026-08-11 — both stated a $150 ETF."""
+        row = _row_2026("6734 Peerless")
+        assert row.energy_charge_cents_per_kwh == Decimal("10.0000")
+        assert row.monthly_base_charge_cents == 0
+        assert row.early_termination_fee_cents == 15_000
+
+        row = _row_2026("6738 Peerless")
+        # Higher because the bundled A/C, heating and water-heater coverage is
+        # priced into the energy charge rather than billed as a separate line.
+        assert row.energy_charge_cents_per_kwh == Decimal("14.1100")
+        assert row.early_termination_fee_cents == 15_000
+
+    def test_6732_leaves_its_unread_efl_fields_blank(self) -> None:
+        """Its EFL could not be retrieved; the sibling's values are NOT assumed.
+
+        6732 is on the identically-named plan as 6734, which makes $150 and
+        10.00 c/kWh a good guess — and a guess in a money column reads as a
+        measurement to every comparison downstream.
+        """
+        row = _row_2026("6732 Peerless")
+        assert row.energy_charge_cents_per_kwh is None
+        assert row.monthly_base_charge_cents is None
+        assert row.early_termination_fee_cents is None
+
+    def test_every_current_term_records_its_zero_minimum_usage_fee(self) -> None:
+        """6738's came from its EFL; the other two from the plan name itself."""
+        for match in ("6732 Peerless", "6734 Peerless", "6738 Peerless"):
+            assert _row_2026(match).min_usage_fee_cents == 0
+
+    def test_6738_records_the_bill_credit_that_distorts_its_rate(self) -> None:
+        """A credit that only lands above a usage floor changes the real price."""
+        row = _row_2026("6738 Peerless")
+        assert row.has_bill_credit is True
+        assert row.bill_credit_amount_cents == 3_500
+        assert row.bill_credit_threshold_kwh == 1_000
+        # The EFL's second tier ($15 above 2,000 kWh) has no column to live in;
+        # the note must say so rather than let the omission look like absence.
+        assert "2,000 kWh" in (row.notes or "")
+
+    def test_no_other_plan_claims_a_bill_credit(self) -> None:
+        credited = [r for r in PEERLESS_UTILITY_PLANS if r.has_bill_credit]
+        assert [r.property_match for r in credited] == ["6738 Peerless"]
+
+    def test_a_claimed_bill_credit_always_carries_both_its_terms(self) -> None:
+        """Mirrors chk_utility_plan_bill_credit_complete — a half pair is a 500."""
+        for row in PEERLESS_UTILITY_PLANS:
+            if row.has_bill_credit:
+                assert row.bill_credit_amount_cents is not None
+                assert row.bill_credit_threshold_kwh is not None
 
 
 class TestGasPlans:
@@ -260,3 +312,23 @@ class TestPlanParams:
         params = _plan_params(_row_2025("6732 Peerless"), self._prop())
 
         assert params["tdu_charge_cents_per_kwh"] == Decimal("5.3509")
+
+    def test_a_bill_credit_reaches_the_insert(self) -> None:
+        """The INSERT bound ``false`` literally until 2026-08-11.
+
+        A row could declare a credit and land in the database without one, so
+        the flag has to be asserted on the params, not just on the seed row.
+        """
+        params = _plan_params(_row_2026("6738 Peerless"), self._prop())
+
+        assert params["has_bill_credit"] is True
+        assert params["bill_credit_amount_cents"] == 3_500
+        assert params["bill_credit_threshold_kwh"] == 1_000
+
+    def test_a_plan_without_a_credit_sends_the_flag_false_not_null(self) -> None:
+        """``has_bill_credit`` is NOT NULL — a None here is an INSERT failure."""
+        params = _plan_params(_row_2026("6734 Peerless"), self._prop())
+
+        assert params["has_bill_credit"] is False
+        assert params["bill_credit_amount_cents"] is None
+        assert params["bill_credit_threshold_kwh"] is None

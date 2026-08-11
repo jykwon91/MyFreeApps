@@ -34,6 +34,12 @@ class UtilityPlanSeedRow:
     service_start_date: _dt.date | None = None
     term_end_date: _dt.date | None = None
     early_termination_fee_cents: int | None = None
+    # A bill-credit plan advertises a rate that only materializes at or above a
+    # usage threshold. Omitting the pair does not make a plan cheaper to model —
+    # it makes every comparison against it silently wrong in the plan's favour.
+    has_bill_credit: bool = False
+    bill_credit_amount_cents: int | None = None
+    bill_credit_threshold_kwh: int | None = None
     min_usage_fee_cents: int | None = None
     min_usage_threshold_kwh: int | None = None
     notes: str | None = None

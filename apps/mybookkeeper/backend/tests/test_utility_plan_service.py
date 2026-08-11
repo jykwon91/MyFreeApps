@@ -21,6 +21,7 @@ from decimal import Decimal
 from unittest.mock import patch
 
 import pytest
+from sqlalchemy import inspect as sa_inspect
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.utility_plan_constants import (
@@ -34,10 +35,15 @@ from app.core.utility_plan_constants import (
     RENEWAL_STATUS_EXPIRING_SOON,
     RENEWAL_STATUS_NOT_APPLICABLE,
     SERVICE_TYPE_ELECTRICITY,
+    SERVICE_TYPE_INTERNET,
     SERVICE_TYPE_NATURAL_GAS,
 )
+from app.models.documents.document import Document
 from app.models.properties.property import Property
+from app.models.properties.utility_plan import UtilityPlan
 from app.repositories.properties import utility_plan_repo
+from app.schemas.properties.utility_plan_response import UtilityPlanResponse
+from app.services.properties import _utility_plan_helpers as utility_plan_helpers
 from app.services.properties import utility_plan_service
 
 TODAY = _dt.date(2026, 8, 7)
@@ -588,6 +594,61 @@ class TestUpdatePlan:
                     fields={"term_end_date": _dt.date(2024, 6, 1)},
                 )
 
+    async def test_patch_accepts_post_promo_against_a_stored_term_end(
+        self, db: AsyncSession,
+    ) -> None:
+        """The date the price step lands on can come from the stored row."""
+        org_id, user_id = uuid.uuid4(), uuid.uuid4()
+        prop = await _make_property(db, org_id, user_id, "6736 Peerless St")
+        plan = await utility_plan_repo.create(
+            db,
+            user_id=user_id,
+            organization_id=org_id,
+            property_id=prop.id,
+            service_type=SERVICE_TYPE_INTERNET,
+            provider_name="AT&T Fiber",
+            rate_type=RATE_TYPE_FIXED,
+            service_start_date=_dt.date(2026, 2, 17),
+            term_end_date=_dt.date(2027, 2, 17),
+        )
+
+        with patch(_UOW_TARGET, _make_fake_uow(db)):
+            detail = await utility_plan_service.update_plan(
+                user_id=user_id,
+                organization_id=org_id,
+                plan_id=plan.id,
+                fields={"post_promo_monthly_cents": 9500},
+            )
+
+        assert detail.post_promo_monthly_cents == 9500
+
+    async def test_patch_rejects_clearing_the_term_end_under_a_post_promo_price(
+        self, db: AsyncSession,
+    ) -> None:
+        """Nulling the date would strand a price step with nowhere to land."""
+        org_id, user_id = uuid.uuid4(), uuid.uuid4()
+        prop = await _make_property(db, org_id, user_id, "6740 Peerless St")
+        plan = await utility_plan_repo.create(
+            db,
+            user_id=user_id,
+            organization_id=org_id,
+            property_id=prop.id,
+            service_type=SERVICE_TYPE_INTERNET,
+            provider_name="Comcast",
+            rate_type=RATE_TYPE_FIXED,
+            term_end_date=_dt.date(2027, 2, 17),
+            post_promo_monthly_cents=9500,
+        )
+
+        with patch(_UOW_TARGET, _make_fake_uow(db)):
+            with pytest.raises(utility_plan_service.InvalidUtilityPlanError):
+                await utility_plan_service.update_plan(
+                    user_id=user_id,
+                    organization_id=org_id,
+                    plan_id=plan.id,
+                    fields={"term_end_date": None},
+                )
+
     async def test_account_number_is_normalized_on_update(
         self, db: AsyncSession,
     ) -> None:
@@ -625,3 +686,213 @@ class TestUpdatePlan:
                     plan_id=uuid.uuid4(),
                     fields={"provider_name": "Anything"},
                 )
+
+
+class TestDetailMappingIsExhaustive:
+    """``to_detail`` names every column by hand, so a new one is easy to omit.
+
+    That omission is silent: the response field keeps its ``None`` default and
+    every layer above — API, TypeScript, UI — reads it as "not set" rather than
+    "not mapped". ``post_promo_monthly_cents`` shipped that way and was only
+    caught because a PATCH test happened to assert the round-trip. This walks
+    the two schemas instead of trusting the next author to remember.
+    """
+
+    def _populated_plan(self) -> UtilityPlan:
+        """Every response-visible column set to a distinguishable non-default."""
+        now = _dt.datetime(2026, 8, 11, 12, 0, tzinfo=_dt.UTC)
+        return UtilityPlan(
+            id=uuid.uuid4(),
+            user_id=uuid.uuid4(),
+            organization_id=uuid.uuid4(),
+            property_id=uuid.uuid4(),
+            source_document_id=uuid.uuid4(),
+            service_type=SERVICE_TYPE_ELECTRICITY,
+            provider_name="Constellation",
+            account_number="204865622",
+            plan_name="12 Month Usage Bill Credit",
+            rate_type=RATE_TYPE_FIXED,
+            energy_charge_cents_per_kwh=Decimal("10.0000"),
+            tdu_charge_cents_per_kwh=Decimal("5.1461"),
+            avg_price_cents_per_kwh_at_1000=Decimal("15.6600"),
+            monthly_base_charge_cents=439,
+            term_months=12,
+            service_start_date=_dt.date(2026, 2, 17),
+            term_end_date=_dt.date(2027, 2, 17),
+            early_termination_fee_cents=15_000,
+            has_bill_credit=True,
+            bill_credit_amount_cents=3_500,
+            bill_credit_threshold_kwh=1_000,
+            min_usage_fee_cents=0,
+            min_usage_threshold_kwh=999,
+            post_promo_monthly_cents=9_500,
+            equipment_fee_monthly_cents=1_000,
+            download_mbps=1_000,
+            upload_mbps=1_000,
+            data_cap_gb=1_200,
+            notes="seeded",
+            created_at=now,
+            updated_at=now,
+        )
+
+    def _shared_field_names(self) -> set[str]:
+        columns = {c.key for c in sa_inspect(UtilityPlan).columns}
+        return columns & set(UtilityPlanResponse.model_fields)
+
+    def test_the_fixture_leaves_no_shared_column_unset(self) -> None:
+        """Otherwise a column could be 'mapped' to a None the test can't see."""
+        plan = self._populated_plan()
+
+        unset = [n for n in self._shared_field_names() if getattr(plan, n) is None]
+
+        assert unset == []
+
+    def test_every_shared_column_reaches_the_response(self) -> None:
+        plan = self._populated_plan()
+
+        detail = utility_plan_helpers.to_detail(
+            plan, property_name="6734 Peerless St", is_current=True,
+        )
+
+        dropped = [
+            name for name in self._shared_field_names()
+            if getattr(detail, name) != getattr(plan, name)
+        ]
+        assert dropped == []
+
+
+@pytest.mark.asyncio
+class TestSourceDocumentIsolation:
+    """The FK proves a document exists; it does not prove whose it is.
+
+    ``documents`` is a global table, so nothing at the database layer stops one
+    organization from citing another's document as the source of a rate. The
+    id arrives straight from the request body, so the check has to be explicit.
+    """
+
+    async def _document(
+        self, db: AsyncSession, org_id: uuid.UUID, user_id: uuid.UUID,
+    ) -> Document:
+        doc = Document(
+            id=uuid.uuid4(),
+            organization_id=org_id,
+            user_id=user_id,
+            file_name="efl.pdf",
+        )
+        db.add(doc)
+        await db.flush()
+        return doc
+
+    async def test_a_document_from_our_own_org_is_accepted(
+        self, db: AsyncSession,
+    ) -> None:
+        org_id, user_id = uuid.uuid4(), uuid.uuid4()
+        prop = await _make_property(db, org_id, user_id, "6734 Peerless St")
+        doc = await self._document(db, org_id, user_id)
+
+        with patch(_UOW_TARGET, _make_fake_uow(db)):
+            detail = await utility_plan_service.create_plan(
+                user_id=user_id,
+                organization_id=org_id,
+                fields={
+                    "property_id": prop.id,
+                    "service_type": SERVICE_TYPE_ELECTRICITY,
+                    "provider_name": "Constellation",
+                    "rate_type": RATE_TYPE_FIXED,
+                    "source_document_id": doc.id,
+                },
+            )
+
+        assert detail.source_document_id == doc.id
+
+    async def test_creating_against_another_orgs_document_is_rejected(
+        self, db: AsyncSession,
+    ) -> None:
+        org_id, user_id = uuid.uuid4(), uuid.uuid4()
+        prop = await _make_property(db, org_id, user_id, "6734 Peerless St")
+        theirs = await self._document(db, uuid.uuid4(), uuid.uuid4())
+
+        with patch(_UOW_TARGET, _make_fake_uow(db)):
+            with pytest.raises(utility_plan_service.InvalidUtilityPlanError):
+                await utility_plan_service.create_plan(
+                    user_id=user_id,
+                    organization_id=org_id,
+                    fields={
+                        "property_id": prop.id,
+                        "service_type": SERVICE_TYPE_ELECTRICITY,
+                        "provider_name": "Constellation",
+                        "rate_type": RATE_TYPE_FIXED,
+                        "source_document_id": theirs.id,
+                    },
+                )
+
+    async def test_patching_in_another_orgs_document_is_rejected(
+        self, db: AsyncSession,
+    ) -> None:
+        org_id, user_id = uuid.uuid4(), uuid.uuid4()
+        prop = await _make_property(db, org_id, user_id, "6734 Peerless St")
+        plan = await utility_plan_repo.create(
+            db,
+            user_id=user_id,
+            organization_id=org_id,
+            property_id=prop.id,
+            service_type=SERVICE_TYPE_ELECTRICITY,
+            provider_name="Constellation",
+            rate_type=RATE_TYPE_FIXED,
+        )
+        theirs = await self._document(db, uuid.uuid4(), uuid.uuid4())
+
+        with patch(_UOW_TARGET, _make_fake_uow(db)):
+            with pytest.raises(utility_plan_service.InvalidUtilityPlanError):
+                await utility_plan_service.update_plan(
+                    user_id=user_id,
+                    organization_id=org_id,
+                    plan_id=plan.id,
+                    fields={"source_document_id": theirs.id},
+                )
+
+    async def test_a_document_id_naming_nothing_is_rejected(
+        self, db: AsyncSession,
+    ) -> None:
+        """Otherwise it surfaces as an IntegrityError 500 instead of a 422."""
+        org_id, user_id = uuid.uuid4(), uuid.uuid4()
+        prop = await _make_property(db, org_id, user_id, "6734 Peerless St")
+
+        with patch(_UOW_TARGET, _make_fake_uow(db)):
+            with pytest.raises(utility_plan_service.InvalidUtilityPlanError):
+                await utility_plan_service.create_plan(
+                    user_id=user_id,
+                    organization_id=org_id,
+                    fields={
+                        "property_id": prop.id,
+                        "service_type": SERVICE_TYPE_ELECTRICITY,
+                        "provider_name": "Constellation",
+                        "rate_type": RATE_TYPE_FIXED,
+                        "source_document_id": uuid.uuid4(),
+                    },
+                )
+
+    async def test_a_plan_with_no_source_document_skips_the_lookup(
+        self, db: AsyncSession,
+    ) -> None:
+        """The overwhelmingly common case must not pay for a second query."""
+        org_id, user_id = uuid.uuid4(), uuid.uuid4()
+        prop = await _make_property(db, org_id, user_id, "6734 Peerless St")
+
+        with patch(_UOW_TARGET, _make_fake_uow(db)):
+            with patch(
+                "app.services.properties.utility_plan_service.document_repo.get_by_id",
+            ) as mock_get:
+                detail = await utility_plan_service.create_plan(
+                    user_id=user_id,
+                    organization_id=org_id,
+                    fields={
+                        "property_id": prop.id,
+                        "service_type": SERVICE_TYPE_ELECTRICITY,
+                        "provider_name": "Constellation",
+                        "rate_type": RATE_TYPE_FIXED,
+                    },
+                )
+
+        assert detail.source_document_id is None
+        mock_get.assert_not_called()

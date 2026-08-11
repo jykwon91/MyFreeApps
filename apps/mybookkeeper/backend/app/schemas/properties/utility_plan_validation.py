@@ -20,11 +20,22 @@ from app.core.utility_plan_constants import RATE_TYPES, SERVICE_TYPES
 # entered where cents belong), not to police the market.
 MAX_RATE_CENTS = Decimal("999.9999")
 
+# Loose for the same reason: residential fibre tops out around 10 Gbps today,
+# so this catches a bits-for-bytes or Kbps-for-Mbps mix-up without capping the
+# market to whatever is fast this year.
+MAX_MBPS = 100_000
+
 ModelT = TypeVar("ModelT")
 
 
-def validate_plan_fields(model: ModelT) -> ModelT:
-    """Raise ``ValueError`` if ``model``'s utility-plan fields are inconsistent."""
+def validate_plan_fields(model: ModelT, *, partial: bool = False) -> ModelT:
+    """Raise ``ValueError`` if ``model``'s utility-plan fields are inconsistent.
+
+    ``partial`` marks a PATCH body, where an absent field means "unchanged"
+    rather than "null". Rules that would misread an absent field as a missing
+    one are skipped in that mode; the service re-runs this against the merged
+    row (``partial=False``) before flushing, which is where they actually bite.
+    """
     service_type = getattr(model, "service_type", None)
     if service_type is not None and service_type not in SERVICE_TYPES:
         raise ValueError(
@@ -51,6 +62,18 @@ def validate_plan_fields(model: ModelT) -> ModelT:
         raise ValueError(
             "bill_credit_amount_cents and bill_credit_threshold_kwh are "
             "required when has_bill_credit is true",
+        )
+
+    # An internet promo's post-promo price is meaningless without the date it
+    # takes effect on — it would be a price step the UI cannot place on a
+    # calendar, and the renewal alert exists to name that date.
+    if (
+        not partial
+        and getattr(model, "post_promo_monthly_cents", None) is not None
+        and end is None
+    ):
+        raise ValueError(
+            "term_end_date is required when post_promo_monthly_cents is set",
         )
 
     return model

@@ -78,6 +78,12 @@ async def create(
     bill_credit_threshold_kwh: int | None = None,
     min_usage_fee_cents: int | None = None,
     min_usage_threshold_kwh: int | None = None,
+    post_promo_monthly_cents: int | None = None,
+    equipment_fee_monthly_cents: int | None = None,
+    download_mbps: int | None = None,
+    upload_mbps: int | None = None,
+    data_cap_gb: int | None = None,
+    source_document_id: uuid.UUID | None = None,
     notes: str | None = None,
 ) -> UtilityPlan:
     plan = UtilityPlan(
@@ -102,6 +108,12 @@ async def create(
         bill_credit_threshold_kwh=bill_credit_threshold_kwh,
         min_usage_fee_cents=min_usage_fee_cents,
         min_usage_threshold_kwh=min_usage_threshold_kwh,
+        post_promo_monthly_cents=post_promo_monthly_cents,
+        equipment_fee_monthly_cents=equipment_fee_monthly_cents,
+        download_mbps=download_mbps,
+        upload_mbps=upload_mbps,
+        data_cap_gb=data_cap_gb,
+        source_document_id=source_document_id,
         notes=notes,
     )
     db.add(plan)

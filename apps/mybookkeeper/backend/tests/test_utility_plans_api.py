@@ -166,6 +166,123 @@ class TestCreate:
         )
         assert response.status_code == 422
 
+    def test_internet_plan_round_trips_its_own_fields(
+        self, client: TestClient,
+    ) -> None:
+        """An internet plan prices none of the kWh columns and must still land."""
+        with patch(
+            f"{_SERVICE}.create_plan", new_callable=AsyncMock, return_value=_detail(),
+        ) as mock_create:
+            response = client.post(
+                "/utility-plans",
+                json={
+                    "property_id": str(PROPERTY_ID),
+                    "service_type": "internet",
+                    "provider_name": "AT&T Fiber",
+                    "rate_type": "fixed",
+                    "monthly_base_charge_cents": 5500,
+                    "post_promo_monthly_cents": 9500,
+                    "equipment_fee_monthly_cents": 1000,
+                    "download_mbps": 1000,
+                    "upload_mbps": 1000,
+                    "data_cap_gb": 1200,
+                    "service_start_date": "2026-02-17",
+                    "term_end_date": "2027-02-17",
+                },
+            )
+
+        assert response.status_code == 201
+        fields = mock_create.await_args.kwargs["fields"]
+        assert fields["post_promo_monthly_cents"] == 9500
+        assert fields["equipment_fee_monthly_cents"] == 1000
+        assert fields["download_mbps"] == 1000
+        assert fields["data_cap_gb"] == 1200
+
+    def test_post_promo_price_without_a_term_end_returns_422(
+        self, client: TestClient,
+    ) -> None:
+        """A price step with no date it lands on cannot be rendered or alerted on."""
+        response = client.post(
+            "/utility-plans",
+            json={
+                "property_id": str(PROPERTY_ID),
+                "service_type": "internet",
+                "provider_name": "AT&T Fiber",
+                "rate_type": "fixed",
+                "post_promo_monthly_cents": 9500,
+            },
+        )
+        assert response.status_code == 422
+        assert "term_end_date" in response.text
+
+    @pytest.mark.parametrize("field", ["download_mbps", "upload_mbps", "data_cap_gb"])
+    def test_zero_speed_or_cap_returns_422(
+        self, client: TestClient, field: str,
+    ) -> None:
+        """Zero would be indistinguishable from "not recorded", which is NULL."""
+        response = client.post(
+            "/utility-plans",
+            json={
+                "property_id": str(PROPERTY_ID),
+                "service_type": "internet",
+                "provider_name": "AT&T Fiber",
+                "rate_type": "fixed",
+                field: 0,
+            },
+        )
+        assert response.status_code == 422
+
+    def test_source_document_id_is_accepted(self, client: TestClient) -> None:
+        document_id = uuid.uuid4()
+        with patch(
+            f"{_SERVICE}.create_plan", new_callable=AsyncMock, return_value=_detail(),
+        ) as mock_create:
+            response = client.post(
+                "/utility-plans",
+                json={
+                    "property_id": str(PROPERTY_ID),
+                    "service_type": "electricity",
+                    "provider_name": "Constellation",
+                    "rate_type": "fixed",
+                    "source_document_id": str(document_id),
+                },
+            )
+
+        assert response.status_code == 201
+        assert mock_create.await_args.kwargs["fields"]["source_document_id"] == (
+            document_id
+        )
+
+    def test_a_rejected_source_document_returns_422_not_500(
+        self, client: TestClient,
+    ) -> None:
+        """Citing another organization's document is a bad request, not a crash.
+
+        Only the service can tell — the id is well-formed and the row exists,
+        it just is not ours. Before this route caught the error it escaped as a
+        500 and told the caller nothing.
+        """
+        with patch(
+            f"{_SERVICE}.create_plan",
+            new_callable=AsyncMock,
+            side_effect=InvalidUtilityPlanError(
+                "source_document_id does not name a document",
+            ),
+        ):
+            response = client.post(
+                "/utility-plans",
+                json={
+                    "property_id": str(PROPERTY_ID),
+                    "service_type": "electricity",
+                    "provider_name": "Constellation",
+                    "rate_type": "fixed",
+                    "source_document_id": str(uuid.uuid4()),
+                },
+            )
+
+        assert response.status_code == 422
+        assert "source_document_id" in response.json()["detail"]
+
     def test_unknown_field_returns_422(self, client: TestClient) -> None:
         response = client.post(
             "/utility-plans",
@@ -305,6 +422,26 @@ class TestUpdate:
         assert response.status_code == 200
         assert mock_get.await_count == 1
         assert mock_update.await_count == 0
+
+    def test_post_promo_alone_is_not_rejected_by_the_schema(
+        self, client: TestClient,
+    ) -> None:
+        """The stored row may already carry the term end this price attaches to.
+
+        Rejecting here would 422 a legitimate edit. Whether the merged row is
+        consistent is the service's call, exercised below.
+        """
+        with patch(
+            f"{_SERVICE}.update_plan", new_callable=AsyncMock, return_value=_detail(),
+        ) as mock_update:
+            response = client.patch(
+                f"/utility-plans/{PLAN_ID}", json={"post_promo_monthly_cents": 9500},
+            )
+
+        assert response.status_code == 200
+        assert mock_update.await_args.kwargs["fields"] == {
+            "post_promo_monthly_cents": 9500,
+        }
 
     def test_inconsistent_merge_returns_422_not_500(
         self, client: TestClient,

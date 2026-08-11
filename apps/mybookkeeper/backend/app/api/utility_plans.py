@@ -32,11 +32,14 @@ async def create_plan(
     payload: UtilityPlanCreateRequest,
     ctx: RequestContext = Depends(require_write_access),
 ) -> UtilityPlanResponse:
-    return await utility_plan_service.create_plan(
-        user_id=ctx.user_id,
-        organization_id=ctx.organization_id,
-        fields=payload.model_dump(),
-    )
+    try:
+        return await utility_plan_service.create_plan(
+            user_id=ctx.user_id,
+            organization_id=ctx.organization_id,
+            fields=payload.model_dump(),
+        )
+    except utility_plan_service.InvalidUtilityPlanError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.get("", response_model=UtilityPlanListResponse)
