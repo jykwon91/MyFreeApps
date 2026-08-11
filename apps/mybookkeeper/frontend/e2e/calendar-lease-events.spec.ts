@@ -173,36 +173,8 @@ test.describe("Tenant leases on the calendar", () => {
       await deleteProperty(api, property.id);
     }
   });
-
-  test("a lease with no listing assigned stays off the grid", async ({ authedPage: page, api }) => {
-    // `signed_leases.listing_id` is nullable and is the only property linkage
-    // a lease carries, so an unassigned lease has no row to sit on. Pinning
-    // this stops a future "just LEFT JOIN it" change from inventing a
-    // placement the data cannot support.
-    const runId = Date.now();
-    const tenantName = `E2E Unassigned Tenant ${runId}`;
-    const applicantId = await seedApplicant(api, tenantName);
-    const res = await api.post("/test/seed-signed-lease", {
-      data: {
-        applicant_id: applicantId,
-        kind: "imported",
-        status: "signed",
-        starts_on: LEASE_STARTS_ON,
-        ends_on: LEASE_ENDS_ON,
-      },
-    });
-    const { id: leaseId } = (await res.json()) as { id: string };
-
-    try {
-      await page.goto(`/calendar?from=${FROM_ISO}&to=${TO_ISO}`);
-      await page.waitForLoadState("networkidle");
-      await expect(page.getByRole("heading", { name: "Calendar" })).toBeVisible();
-      await expect(
-        page.getByTestId("calendar-event-bar").filter({ hasText: tenantName }),
-      ).toHaveCount(0);
-    } finally {
-      await api.delete(`/test/signed-leases/${leaseId}`).catch(() => {});
-      await api.delete(`/test/applicants/${applicantId}`).catch(() => {});
-    }
-  });
 });
+
+// A lease with no `listing_id` used to be dropped from the calendar entirely.
+// That behaviour is now a bug, not a contract — see
+// `calendar-unlinked-lease.spec.ts` for the replacement coverage.

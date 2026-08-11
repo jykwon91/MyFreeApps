@@ -55,14 +55,19 @@ def blackout_to_event(
 
 def lease_to_event(
     lease: SignedLease,
-    listing: Listing,
-    prop: Property,
+    listing: Listing | None,
+    prop: Property | None,
     applicant: Applicant,
 ) -> CalendarEventResponse:
     """Map tenant occupancy from a signed lease.
 
     ``summary`` carries the tenant's name — the whole point of surfacing
     leases here is seeing *who* is in a room, not just that it is taken.
+
+    ``listing`` and ``prop`` are optional because ``signed_leases.listing_id``
+    is nullable: a host can record a tenancy without linking it to a listing.
+    Those leases map to an event with null listing/property rather than being
+    dropped, and the viewer groups them under an "unassigned" heading.
 
     Notes and attachments stay empty: those endpoints are keyed by blackout
     id, and this event's id is a lease id. The frontend hides both sections
@@ -74,10 +79,10 @@ def lease_to_event(
     assert lease.starts_on is not None and lease.ends_on is not None
     return CalendarEventResponse(
         id=lease.id,
-        listing_id=listing.id,
-        listing_name=listing.title,
-        property_id=prop.id,
-        property_name=prop.name,
+        listing_id=listing.id if listing else None,
+        listing_name=listing.title if listing else None,
+        property_id=prop.id if prop else None,
+        property_name=prop.name if prop else None,
         starts_on=lease.starts_on,
         ends_on=lease.ends_on + timedelta(days=1),
         source=LEASE_SOURCE,
@@ -91,11 +96,22 @@ def lease_to_event(
 
 def event_sort_key(
     event: CalendarEventResponse,
-) -> tuple[str, str, object, uuid.UUID]:
+) -> tuple[bool, str, str, object, uuid.UUID]:
     """Ordering for the merged list.
 
     Mirrors what each repository query orders by, applied after the union so
     blackouts and leases interleave correctly instead of arriving in two
     separate blocks.
+
+    The leading flag is the Python equivalent of the queries' ``NULLS LAST``:
+    ``False`` sorts before ``True``, so events with a listing come first and
+    unassigned leases collect at the end. It also keeps the comparison
+    total — ``None`` and ``str`` are not orderable against each other.
     """
-    return (event.property_name, event.listing_name, event.starts_on, event.id)
+    return (
+        event.property_name is None,
+        event.property_name or "",
+        event.listing_name or "",
+        event.starts_on,
+        event.id,
+    )

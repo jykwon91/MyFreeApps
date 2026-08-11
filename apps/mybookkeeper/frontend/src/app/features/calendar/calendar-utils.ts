@@ -1,3 +1,4 @@
+import { CALENDAR_UNASSIGNED_KEY } from "@/shared/lib/calendar-constants";
 import type { CalendarEvent } from "@/shared/types/calendar/calendar-event";
 
 /**
@@ -51,12 +52,18 @@ export function eventSpan(event: CalendarEvent, windowFromIso: string, windowToI
   return Math.max(1, daysBetween(startsClipped, endsClipped));
 }
 
-/** Listing → events map, indexed for grid rendering. */
+/**
+ * Listing → events map, indexed for grid rendering.
+ *
+ * `listing_id` / `property_id` are null for leases the host hasn't linked to
+ * a listing. Those collapse into a single trailing row so the tenancy is
+ * still visible; see `CALENDAR_UNASSIGNED_*` in `shared/lib/calendar-constants`.
+ */
 export interface ListingRow {
-  listing_id: string;
-  listing_name: string;
-  property_id: string;
-  property_name: string;
+  listing_id: string | null;
+  listing_name: string | null;
+  property_id: string | null;
+  property_name: string | null;
   events: CalendarEvent[];
 }
 
@@ -64,19 +71,20 @@ export interface ListingRow {
  * Group events into one row per listing, then group rows by property.
  *
  * Order matches the backend repository: by property name, then listing
- * name. The backend already orders this way; we re-derive in case the
- * frontend ever fans out to additional sources.
+ * name, with unassigned events last. The backend already orders this way;
+ * we re-derive in case the frontend ever fans out to additional sources.
  */
 export function groupByListing(events: readonly CalendarEvent[]): ListingRow[] {
   const byListingId = new Map<string, ListingRow>();
 
   for (const event of events) {
-    const existing = byListingId.get(event.listing_id);
+    const key = event.listing_id ?? CALENDAR_UNASSIGNED_KEY;
+    const existing = byListingId.get(key);
     if (existing) {
       existing.events.push(event);
       continue;
     }
-    byListingId.set(event.listing_id, {
+    byListingId.set(key, {
       listing_id: event.listing_id,
       listing_name: event.listing_name,
       property_id: event.property_id,
@@ -85,30 +93,44 @@ export function groupByListing(events: readonly CalendarEvent[]): ListingRow[] {
     });
   }
 
-  return Array.from(byListingId.values()).sort((a, b) => {
-    if (a.property_name !== b.property_name) {
-      return a.property_name.localeCompare(b.property_name);
-    }
-    return a.listing_name.localeCompare(b.listing_name);
-  });
+  return Array.from(byListingId.values()).sort(compareByPropertyThenListing);
+}
+
+/**
+ * Sort rows by property name, then listing name, with unassigned last.
+ *
+ * Null names can't go through `localeCompare`, and "sorts wherever the empty
+ * string lands" would put unassigned first — the opposite of what the
+ * backend's `NULLS LAST` promises. Rank the null-ness explicitly instead.
+ */
+function compareByPropertyThenListing(a: ListingRow, b: ListingRow): number {
+  const aUnassigned = a.property_name === null;
+  const bUnassigned = b.property_name === null;
+  if (aUnassigned !== bUnassigned) return aUnassigned ? 1 : -1;
+
+  const propertyOrder = (a.property_name ?? "").localeCompare(b.property_name ?? "");
+  if (propertyOrder !== 0) return propertyOrder;
+
+  return (a.listing_name ?? "").localeCompare(b.listing_name ?? "");
 }
 
 /** Group listing-rows by property for the collapsible header rendering. */
 export interface PropertyGroup {
-  property_id: string;
-  property_name: string;
+  property_id: string | null;
+  property_name: string | null;
   rows: ListingRow[];
 }
 
 export function groupByProperty(rows: readonly ListingRow[]): PropertyGroup[] {
   const groups = new Map<string, PropertyGroup>();
   for (const row of rows) {
-    const g = groups.get(row.property_id);
+    const key = row.property_id ?? CALENDAR_UNASSIGNED_KEY;
+    const g = groups.get(key);
     if (g) {
       g.rows.push(row);
       continue;
     }
-    groups.set(row.property_id, {
+    groups.set(key, {
       property_id: row.property_id,
       property_name: row.property_name,
       rows: [row],

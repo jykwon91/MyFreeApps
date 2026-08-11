@@ -434,12 +434,14 @@
         "calendar-utils.test.ts",
         "CalendarEventDetail.test.tsx",
         "CalendarLeaseEvent.test.tsx",
+        "CalendarUnlinkedLease.test.tsx",
         "ReviewQueueItem.test.tsx",
         "ReviewQueueDrawer.test.tsx"
       ],
       "e2e_specs": [
         "calendar.spec.ts",
         "calendar-lease-events.spec.ts",
+        "calendar-unlinked-lease.spec.ts",
         "calendar-booking-notes.spec.ts",
         "calendar-review-queue-resolve.spec.ts"
       ]

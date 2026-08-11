@@ -2,6 +2,8 @@ import { useState } from "react";
 import {
   CALENDAR_DAY_CELL_PX,
   CALENDAR_LABEL_COLUMN_PX,
+  CALENDAR_UNASSIGNED_KEY,
+  CALENDAR_UNASSIGNED_PROPERTY_LABEL,
 } from "@/shared/lib/calendar-constants";
 import {
   daysBetween,
@@ -48,18 +50,18 @@ export default function CalendarGrid({ events, fromIso, toIso }: CalendarGridPro
         <div style={{ minWidth: totalGridWidth }}>
           <CalendarGridHeader fromIso={fromIso} totalDays={totalDays} />
           {groups.map((group) => (
-            <div key={group.property_id}>
+            <div key={group.property_id ?? CALENDAR_UNASSIGNED_KEY}>
               {/* Property header row — visually distinct so multiple properties
                   are obvious without a tree-collapse interaction (kept simple). */}
               <div
                 className="flex bg-muted/30 border-t text-xs font-semibold text-muted-foreground uppercase tracking-wide px-3 py-1.5"
                 data-testid="calendar-property-header"
               >
-                {group.property_name}
+                {group.property_name ?? CALENDAR_UNASSIGNED_PROPERTY_LABEL}
               </div>
               {group.rows.map((row) => (
                 <CalendarListingRow
-                  key={row.listing_id}
+                  key={row.listing_id ?? CALENDAR_UNASSIGNED_KEY}
                   row={row}
                   fromIso={fromIso}
                   toIso={toIso}

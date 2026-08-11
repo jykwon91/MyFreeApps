@@ -1,10 +1,18 @@
 """Repository tests for the unified calendar viewer.
 
-Covers:
+Covers, for ``query_events`` (blackouts):
 - date-range overlap (events fully inside / overlapping start / overlapping end / outside)
 - soft-deleted listings excluded
 - tenant isolation: another organization's events never appear
 - filter composition: listing_ids, property_ids, sources
+
+and, for ``query_lease_events`` (tenancies):
+- leases with no ``listing_id`` are RETURNED, with null listing/property
+- tenant isolation on ``signed_leases.organization_id``, including for
+  leases that have no listing to scope on
+- status / soft-delete / date-bound exclusions
+- filter composition, including that narrowing by listing or property
+  intentionally drops unlinked leases
 
 Per CLAUDE.md: 'enumerate and test all composite key combinations
 before implementation' — applied here to the half-open interval
@@ -19,6 +27,8 @@ from decimal import Decimal
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.applicants.applicant import Applicant
+from app.models.leases.signed_lease import SignedLease
 from app.models.listings.listing import Listing
 from app.models.listings.listing_blackout import ListingBlackout
 from app.models.organization.organization import Organization
@@ -72,6 +82,48 @@ async def _seed_property(
     db.add(prop)
     await db.flush()
     return prop
+
+
+async def _seed_applicant(
+    db: AsyncSession, org: Organization, user: User, *, legal_name: str,
+) -> Applicant:
+    applicant = Applicant(
+        id=uuid.uuid4(),
+        organization_id=org.id,
+        user_id=user.id,
+        legal_name=legal_name,
+    )
+    db.add(applicant)
+    await db.flush()
+    return applicant
+
+
+def _make_lease(
+    *,
+    organization_id: uuid.UUID,
+    user_id: uuid.UUID,
+    applicant_id: uuid.UUID,
+    starts_on: date | None,
+    ends_on: date | None,
+    listing_id: uuid.UUID | None = None,
+    status: str = "signed",
+    deleted_at: datetime | None = None,
+) -> SignedLease:
+    """A signed lease. ``listing_id`` defaults to None — the case the
+    calendar used to drop on the floor."""
+    return SignedLease(
+        id=uuid.uuid4(),
+        organization_id=organization_id,
+        user_id=user_id,
+        applicant_id=applicant_id,
+        listing_id=listing_id,
+        kind="generated",
+        values={},
+        status=status,
+        starts_on=starts_on,
+        ends_on=ends_on,
+        deleted_at=deleted_at,
+    )
 
 
 def _make_blackout(
@@ -766,3 +818,267 @@ class TestListingBlackoutRepoCreateAndDelete:
             db, blackout_id=uuid.uuid4(), organization_id=test_org.id,
         )
         assert deleted is False
+
+
+# ---------------------------------------------------------------------------
+# query_lease_events — tenant occupancy
+#
+# The regression these exist for: ``signed_leases.listing_id`` is nullable, and
+# an inner join to ``listings`` silently discarded every lease the host hadn't
+# linked yet. A tenancy that exists must reach the calendar; the missing link
+# is a gap to surface, not a reason to hide the tenant.
+# ---------------------------------------------------------------------------
+
+_WINDOW = {"from_": date(2026, 8, 1), "to": date(2026, 9, 1)}
+
+
+class TestCalendarRepoLeaseEvents:
+    @pytest.mark.asyncio
+    async def test_lease_with_no_listing_is_returned_with_null_listing(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        applicant = await _seed_applicant(
+            db, test_org, test_user, legal_name="Mohammed Awamleh",
+        )
+        db.add(_make_lease(
+            organization_id=test_org.id,
+            user_id=test_user.id,
+            applicant_id=applicant.id,
+            starts_on=date(2026, 8, 26),
+            ends_on=date(2026, 10, 3),
+        ))
+        await db.commit()
+
+        rows = await calendar_repository.query_lease_events(
+            db, organization_id=test_org.id, **_WINDOW,
+        )
+        assert len(rows) == 1
+        lease, listing, prop, tenant = rows[0]
+        assert listing is None
+        assert prop is None
+        assert lease.starts_on == date(2026, 8, 26)
+        assert tenant.legal_name == "Mohammed Awamleh"
+
+    @pytest.mark.asyncio
+    async def test_linked_and_unlinked_leases_both_come_back(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        prop = await _seed_property(db, test_org, test_user, name="6734 Peerless")
+        listing = _make_listing(
+            organization_id=test_org.id, user_id=test_user.id, property_id=prop.id,
+            title="Private suite",
+        )
+        db.add(listing)
+        await db.flush()
+        linked = await _seed_applicant(db, test_org, test_user, legal_name="Sonu King")
+        unlinked = await _seed_applicant(db, test_org, test_user, legal_name="Andrew Le")
+        db.add_all([
+            _make_lease(
+                organization_id=test_org.id, user_id=test_user.id,
+                applicant_id=linked.id, listing_id=listing.id,
+                starts_on=date(2026, 5, 3), ends_on=date(2026, 11, 10),
+            ),
+            _make_lease(
+                organization_id=test_org.id, user_id=test_user.id,
+                applicant_id=unlinked.id,
+                starts_on=date(2026, 5, 30), ends_on=date(2026, 8, 9),
+            ),
+        ])
+        await db.commit()
+
+        rows = await calendar_repository.query_lease_events(
+            db, organization_id=test_org.id, **_WINDOW,
+        )
+        assert len(rows) == 2
+        assert {r[3].legal_name for r in rows} == {"Sonu King", "Andrew Le"}
+        # Linked first, unlinked last — NULLS LAST on the property name.
+        assert rows[0][1] is not None
+        assert rows[1][1] is None
+
+    @pytest.mark.asyncio
+    async def test_soft_deleted_listing_degrades_the_lease_to_unlinked(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        """The tenancy survives; only the (now-deleted) listing name drops."""
+        prop = await _seed_property(db, test_org, test_user)
+        gone = _make_listing(
+            organization_id=test_org.id, user_id=test_user.id, property_id=prop.id,
+            title="Gone", deleted_at=datetime.now(timezone.utc),
+        )
+        db.add(gone)
+        await db.flush()
+        applicant = await _seed_applicant(db, test_org, test_user, legal_name="Sonu King")
+        db.add(_make_lease(
+            organization_id=test_org.id, user_id=test_user.id,
+            applicant_id=applicant.id, listing_id=gone.id,
+            starts_on=date(2026, 8, 1), ends_on=date(2026, 8, 20),
+        ))
+        await db.commit()
+
+        rows = await calendar_repository.query_lease_events(
+            db, organization_id=test_org.id, **_WINDOW,
+        )
+        assert len(rows) == 1
+        assert rows[0][1] is None
+        assert rows[0][3].legal_name == "Sonu King"
+
+    @pytest.mark.asyncio
+    async def test_another_orgs_unlinked_lease_never_appears(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        """Scoping moved from the listing to the lease — prove it still holds
+        for exactly the rows that have no listing to scope on."""
+        mine = await _seed_applicant(db, test_org, test_user, legal_name="Mine")
+        db.add(_make_lease(
+            organization_id=test_org.id, user_id=test_user.id,
+            applicant_id=mine.id,
+            starts_on=date(2026, 8, 1), ends_on=date(2026, 8, 20),
+        ))
+
+        user_b = User(
+            id=uuid.uuid4(), email="leaseb@example.com", hashed_password="hash",
+            is_active=True, is_superuser=False, is_verified=True,
+        )
+        org_b = Organization(id=uuid.uuid4(), name="Org B", created_by=user_b.id)
+        db.add_all([user_b, org_b])
+        await db.flush()
+        db.add(OrganizationMember(
+            organization_id=org_b.id, user_id=user_b.id, org_role="owner",
+        ))
+        theirs = await _seed_applicant(db, org_b, user_b, legal_name="Theirs")
+        db.add(_make_lease(
+            organization_id=org_b.id, user_id=user_b.id,
+            applicant_id=theirs.id,
+            starts_on=date(2026, 8, 1), ends_on=date(2026, 8, 20),
+        ))
+        await db.commit()
+
+        mine_rows = await calendar_repository.query_lease_events(
+            db, organization_id=test_org.id, **_WINDOW,
+        )
+        assert [r[3].legal_name for r in mine_rows] == ["Mine"]
+
+        their_rows = await calendar_repository.query_lease_events(
+            db, organization_id=org_b.id, **_WINDOW,
+        )
+        assert [r[3].legal_name for r in their_rows] == ["Theirs"]
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("status", ["draft", "generated", "sent", "terminated"])
+    async def test_non_occupying_statuses_are_excluded(
+        self, db: AsyncSession, test_user: User, test_org: Organization, status: str,
+    ) -> None:
+        applicant = await _seed_applicant(db, test_org, test_user, legal_name="T")
+        db.add(_make_lease(
+            organization_id=test_org.id, user_id=test_user.id,
+            applicant_id=applicant.id, status=status,
+            starts_on=date(2026, 8, 1), ends_on=date(2026, 8, 20),
+        ))
+        await db.commit()
+
+        rows = await calendar_repository.query_lease_events(
+            db, organization_id=test_org.id, **_WINDOW,
+        )
+        assert rows == []
+
+    @pytest.mark.asyncio
+    async def test_soft_deleted_lease_is_excluded(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        applicant = await _seed_applicant(db, test_org, test_user, legal_name="T")
+        db.add(_make_lease(
+            organization_id=test_org.id, user_id=test_user.id,
+            applicant_id=applicant.id,
+            starts_on=date(2026, 8, 1), ends_on=date(2026, 8, 20),
+            deleted_at=datetime.now(timezone.utc),
+        ))
+        await db.commit()
+
+        rows = await calendar_repository.query_lease_events(
+            db, organization_id=test_org.id, **_WINDOW,
+        )
+        assert rows == []
+
+    @pytest.mark.asyncio
+    async def test_lease_missing_a_date_bound_is_excluded(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        """No extent, nothing to draw — even though the lease is otherwise valid."""
+        applicant = await _seed_applicant(db, test_org, test_user, legal_name="T")
+        db.add(_make_lease(
+            organization_id=test_org.id, user_id=test_user.id,
+            applicant_id=applicant.id,
+            starts_on=date(2026, 8, 1), ends_on=None,
+        ))
+        await db.commit()
+
+        rows = await calendar_repository.query_lease_events(
+            db, organization_id=test_org.id, **_WINDOW,
+        )
+        assert rows == []
+
+    @pytest.mark.asyncio
+    async def test_lease_ending_the_day_before_the_window_is_excluded(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        """``ends_on`` is INCLUSIVE for a lease: Aug 9 is in an Aug-9 window
+        but not in an Aug-10 one."""
+        applicant = await _seed_applicant(
+            db, test_org, test_user, legal_name="Prince Kapoor",
+        )
+        db.add(_make_lease(
+            organization_id=test_org.id, user_id=test_user.id,
+            applicant_id=applicant.id,
+            starts_on=date(2026, 5, 30), ends_on=date(2026, 8, 9),
+        ))
+        await db.commit()
+
+        covered = await calendar_repository.query_lease_events(
+            db, organization_id=test_org.id,
+            from_=date(2026, 8, 9), to=date(2026, 9, 1),
+        )
+        assert len(covered) == 1
+
+        after = await calendar_repository.query_lease_events(
+            db, organization_id=test_org.id,
+            from_=date(2026, 8, 10), to=date(2026, 9, 1),
+        )
+        assert after == []
+
+    @pytest.mark.asyncio
+    async def test_narrowing_by_property_drops_unlinked_leases(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        """Asking for one property's occupancy must not answer with a lease
+        that belongs to no property."""
+        prop = await _seed_property(db, test_org, test_user, name="6734 Peerless")
+        listing = _make_listing(
+            organization_id=test_org.id, user_id=test_user.id, property_id=prop.id,
+        )
+        db.add(listing)
+        await db.flush()
+        linked = await _seed_applicant(db, test_org, test_user, legal_name="Sonu King")
+        unlinked = await _seed_applicant(db, test_org, test_user, legal_name="Andrew Le")
+        db.add_all([
+            _make_lease(
+                organization_id=test_org.id, user_id=test_user.id,
+                applicant_id=linked.id, listing_id=listing.id,
+                starts_on=date(2026, 8, 1), ends_on=date(2026, 8, 20),
+            ),
+            _make_lease(
+                organization_id=test_org.id, user_id=test_user.id,
+                applicant_id=unlinked.id,
+                starts_on=date(2026, 8, 1), ends_on=date(2026, 8, 20),
+            ),
+        ])
+        await db.commit()
+
+        by_property = await calendar_repository.query_lease_events(
+            db, organization_id=test_org.id, property_ids=[prop.id], **_WINDOW,
+        )
+        assert [r[3].legal_name for r in by_property] == ["Sonu King"]
+
+        by_listing = await calendar_repository.query_lease_events(
+            db, organization_id=test_org.id, listing_ids=[listing.id], **_WINDOW,
+        )
+        assert [r[3].legal_name for r in by_listing] == ["Sonu King"]

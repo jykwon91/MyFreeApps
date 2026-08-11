@@ -592,8 +592,9 @@ class _SeedSignedLeaseRequest(BaseModel):
     applicant_id: uuid.UUID | None = None
     kind: str = "imported"
     status: str = "signed"
-    # The only property linkage a lease has — a lease without it cannot
-    # appear on the (listing-keyed) calendar.
+    # The only property linkage a lease has. Leaving it unset is a real
+    # state, not an invalid one — the calendar collects such tenancies
+    # under an "unassigned" row rather than dropping them.
     listing_id: uuid.UUID | None = None
     starts_on: _dt.date | None = None
     ends_on: _dt.date | None = None
