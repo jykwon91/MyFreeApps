@@ -2,3 +2,32 @@
 # https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
 
 * @jykwon91
+
+# --- Dependency manifests: deliberately un-owned ---------------------------
+#
+# `main` enforces require_code_owner_reviews. CODEOWNERS accepts users and
+# teams but never GitHub App identities, so the `github-actions[bot]` approval
+# that .github/workflows/dependabot-auto-merge.yml casts can satisfy the
+# 1-approving-review rule yet never satisfy the code-owner rule. The result was
+# every Dependabot PR sitting with auto-merge enabled and permanently blocked on
+# REVIEW_REQUIRED — 30 of them had queued up by 2026-08-11.
+#
+# The entries below match a pattern with NO owner, which removes ownership for
+# those paths (last matching pattern wins). A PR touching only dependency
+# manifests therefore has no code owner, the bot approval is sufficient, and
+# auto-merge lands it. A PR touching any source file still matches `* @jykwon91`
+# above and still requires your review.
+#
+# `.github/workflows/**` is deliberately ABSENT from this list. Dependabot also
+# bumps GitHub Action SHAs, and workflow files are the supply-chain vector worth
+# keeping a human on — those PRs stay gated on your review by design.
+#
+# Keep in sync with .github/dependabot.yml's ecosystem directories.
+
+package.json
+package-lock.json
+**/package.json
+**/package-lock.json
+**/pyproject.toml
+**/requirements*.txt
+**/uv.lock
