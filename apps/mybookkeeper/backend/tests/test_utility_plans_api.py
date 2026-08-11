@@ -28,6 +28,9 @@ from app.core.utility_plan_constants import (
 )
 from app.main import app
 from app.models.organization.organization_member import OrgRole
+from app.schemas.properties.utility_offer_search_response import (
+    UtilityOfferSearchResponse,
+)
 from app.schemas.properties.utility_plan_draft import UtilityPlanDraft
 from app.schemas.properties.utility_plan_list_response import UtilityPlanListResponse
 from app.schemas.properties.utility_plan_renewal_alert_response import (
@@ -51,6 +54,7 @@ PLAN_ID = uuid.uuid4()
 
 _SERVICE = "app.api.utility_plans.utility_plan_service"
 _EXTRACTION = "app.api.utility_plans.utility_plan_extraction_service"
+_OFFERS = "app.api.utility_plans.utility_offer_service"
 
 
 def _ctx(role: OrgRole = OrgRole.OWNER) -> RequestContext:
@@ -667,3 +671,60 @@ class TestPermissions:
         client = TestClient(app)
         assert client.get("/utility-plans").status_code == 401
         assert client.get("/utility-plans/renewal-alerts").status_code == 401
+        assert client.get("/utility-plans/offers").status_code == 401
+
+
+class TestFindBetterPlans:
+    def test_offers_is_not_swallowed_by_the_uuid_route(
+        self, client: TestClient,
+    ) -> None:
+        """``/offers`` is declared before ``/{plan_id}``; this pins that order.
+
+        Reversing them would send this to ``get_plan``, which rejects "offers"
+        as a malformed UUID — a 422 that reads like a payload problem and
+        nothing like the routing bug it would actually be.
+        """
+        with patch(f"{_SERVICE}.get_plan", new_callable=AsyncMock) as mock_get:
+            with patch(
+                f"{_OFFERS}.find_better_plans",
+                new_callable=AsyncMock,
+                return_value=UtilityOfferSearchResponse(
+                    groups=[], reference_annual_kwh=12_000,
+                ),
+            ):
+                response = client.get("/utility-plans/offers")
+
+        assert response.status_code == 200
+        mock_get.assert_not_called()
+
+    def test_the_minimum_term_is_passed_through(self, client: TestClient) -> None:
+        with patch(
+            f"{_OFFERS}.find_better_plans",
+            new_callable=AsyncMock,
+            return_value=UtilityOfferSearchResponse(
+                groups=[], reference_annual_kwh=12_000,
+            ),
+        ) as mock_find:
+            response = client.get("/utility-plans/offers?min_term_months=24")
+
+        assert response.status_code == 200
+        assert mock_find.await_args.kwargs["min_term_months"] == 24
+
+    def test_an_absurd_term_is_rejected(self, client: TestClient) -> None:
+        assert client.get("/utility-plans/offers?min_term_months=0").status_code == 422
+        assert client.get("/utility-plans/offers?min_term_months=99").status_code == 422
+
+    def test_a_read_only_member_may_search(self) -> None:
+        """Searching the market changes nothing, so a viewer may do it."""
+        app.dependency_overrides[current_org_member] = lambda: _ctx(OrgRole.VIEWER)
+        try:
+            with patch(
+                f"{_OFFERS}.find_better_plans",
+                new_callable=AsyncMock,
+                return_value=UtilityOfferSearchResponse(
+                    groups=[], reference_annual_kwh=12_000,
+                ),
+            ):
+                assert TestClient(app).get("/utility-plans/offers").status_code == 200
+        finally:
+            app.dependency_overrides.clear()

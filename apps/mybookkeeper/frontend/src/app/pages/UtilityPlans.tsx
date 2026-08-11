@@ -8,6 +8,7 @@ import {
   useGetUtilityPlansQuery,
 } from "@/shared/store/utilityPlansApi";
 import AddUtilityPlanDialog from "@/app/features/utility/AddUtilityPlanDialog";
+import BetterPlansSection from "@/app/features/utility/BetterPlansSection";
 import MarketRateBenchmarkDialog from "@/app/features/utility/MarketRateBenchmarkDialog";
 import MarketRateBenchmarkSummary from "@/app/features/utility/MarketRateBenchmarkSummary";
 import EditUtilityPlanDialog from "@/app/features/utility/EditUtilityPlanDialog";
@@ -66,7 +67,7 @@ export default function UtilityPlans() {
     <main className="p-4 sm:p-8 space-y-6 max-w-3xl">
       <SectionHeader
         title="Utility Plans"
-        subtitle="Track what each property pays for power and gas, get warned before a fixed rate lapses, and see which plans are priced above the market."
+        subtitle="Track what each property pays for power and gas, get warned before a fixed rate lapses, and check the live market for a better rate."
         actions={
           <div className="flex gap-2">
             <Button
@@ -105,6 +106,8 @@ export default function UtilityPlans() {
       ) : null}
 
       <MarketRateBenchmarkSummary onEdit={() => setShowBenchmarkDialog(true)} />
+
+      <BetterPlansSection />
 
       <div className="flex items-center gap-3">
         <label className="flex items-center gap-2 text-sm cursor-pointer">

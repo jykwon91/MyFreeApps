@@ -12,9 +12,16 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response
 
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member, require_write_access
-from app.core.rate_limit import utility_plan_extract_limiter
+from app.core.power_to_choose_constants import DEFAULT_MIN_TERM_MONTHS
+from app.core.rate_limit import (
+    utility_offer_search_limiter,
+    utility_plan_extract_limiter,
+)
 from app.core.utility_plan_constants import EXPIRING_SOON_DAYS
 from app.schemas.properties.utility_plan_create_request import UtilityPlanCreateRequest
+from app.schemas.properties.utility_offer_search_response import (
+    UtilityOfferSearchResponse,
+)
 from app.schemas.properties.utility_plan_draft import UtilityPlanDraft
 from app.schemas.properties.utility_plan_extract_request import UtilityPlanExtractRequest
 from app.schemas.properties.utility_plan_list_response import UtilityPlanListResponse
@@ -28,6 +35,7 @@ from app.schemas.properties.utility_plan_response import UtilityPlanResponse
 from app.schemas.properties.utility_plan_update_request import UtilityPlanUpdateRequest
 from app.services.properties import (
     market_rate_benchmark_service,
+    utility_offer_service,
     utility_plan_extraction_service,
     utility_plan_service,
 )
@@ -129,6 +137,24 @@ async def get_rate_comparison(
     return await market_rate_benchmark_service.get_rate_comparison(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
+    )
+
+
+@router.get("/offers", response_model=UtilityOfferSearchResponse)
+async def find_better_plans(
+    min_term_months: int = Query(DEFAULT_MIN_TERM_MONTHS, ge=1, le=60),
+    ctx: RequestContext = Depends(current_org_member),
+) -> UtilityOfferSearchResponse:
+    """Live market offers ranked against each property's current electricity plan.
+
+    Reads the Power to Choose feed; persists nothing. Declared before
+    ``/{plan_id}`` so the literal path is not swallowed by the UUID route.
+    """
+    utility_offer_search_limiter.check(f"utility-offer-search:{ctx.user_id}")
+    return await utility_offer_service.find_better_plans(
+        user_id=ctx.user_id,
+        organization_id=ctx.organization_id,
+        min_term_months=min_term_months,
     )
 
 
