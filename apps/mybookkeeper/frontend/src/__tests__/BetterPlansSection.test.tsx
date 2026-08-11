@@ -153,7 +153,7 @@ describe("BetterPlansSection", () => {
     );
   });
 
-  it("shows the saving and the rate against the current plan", () => {
+  it("states an offer as a movement against the plan the property holds", () => {
     mockUninitialized = false;
     mockData = {
       groups: [group()],
@@ -162,9 +162,82 @@ describe("BetterPlansSection", () => {
     };
     renderSection();
 
-    expect(screen.getByTestId("better-plan-saving-1")).toHaveTextContent("$619/yr");
-    expect(screen.getByTestId("better-plan-1")).toHaveTextContent("10.50¢/kWh");
-    expect(screen.getByTestId("better-plan-1")).toHaveTextContent("3/5");
+    const card = screen.getByTestId("better-plan-1");
+    // The headline answer, then the two stats that move: 15.66¢ → 10.50¢, and
+    // $1,879 → $1,260 a year at the disclosure usage.
+    expect(card).toHaveTextContent("$619");
+    expect(card).toHaveTextContent("less per year than now");
+    expect(card).toHaveTextContent("5.16¢ less");
+    expect(card).toHaveTextContent("$619 less");
+    expect(card).toHaveTextContent("3/5");
+  });
+
+  it("shows what the property is on today, as the thing being compared to", () => {
+    mockUninitialized = false;
+    mockData = {
+      groups: [group()],
+      reference_annual_kwh: 12000,
+      has_any_offers: true,
+    };
+    renderSection();
+
+    const equipped = screen.getByTestId(
+      "equipped-plan-11111111-1111-1111-1111-111111111111",
+    );
+    expect(equipped).toHaveTextContent("Constellation");
+    expect(equipped).toHaveTextContent("15.66¢/kWh");
+    expect(equipped).toHaveTextContent("$1,879");
+    expect(equipped).toHaveTextContent("$150");
+  });
+
+  it("names the exit-fee gap instead of implying leaving is free", () => {
+    mockUninitialized = false;
+    mockData = {
+      groups: [group({ switch_cost_cents: null })],
+      reference_annual_kwh: 12000,
+      has_any_offers: true,
+    };
+    renderSection();
+
+    const equipped = screen.getByTestId(
+      "equipped-plan-11111111-1111-1111-1111-111111111111",
+    );
+    expect(equipped).toHaveTextContent("Not recorded");
+    expect(
+      screen.getByTestId(
+        "equipped-plan-no-exit-fee-11111111-1111-1111-1111-111111111111",
+      ),
+    ).toHaveTextContent("early termination fee");
+  });
+
+  it("collapses identical offers into one choice led by the cheapest to leave", () => {
+    mockUninitialized = false;
+    mockData = {
+      groups: [
+        group({
+          offers: [
+            offer({ external_plan_id: 1, provider_name: "Energy Texas" }),
+            offer({
+              external_plan_id: 2,
+              provider_name: "Octopus Energy",
+              cancellation_fee_cents: 2000,
+              cancellation_fee_is_per_remaining_month: true,
+            }),
+          ],
+        }),
+      ],
+      reference_annual_kwh: 12000,
+      has_any_offers: true,
+    };
+    renderSection();
+
+    // Same rate, term and rating — one decision. Energy Texas leads on a flat
+    // $150 exit fee; Octopus's $20-per-remaining-month is $240 over 12 months.
+    expect(screen.getByTestId("better-plan-1")).toBeInTheDocument();
+    expect(screen.queryByTestId("better-plan-2")).not.toBeInTheDocument();
+    expect(screen.getByTestId("tier-alternate-2")).toHaveTextContent(
+      "Octopus Energy",
+    );
   });
 
   it("says why a property has nothing to show instead of showing nothing", () => {

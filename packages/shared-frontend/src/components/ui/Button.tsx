@@ -14,7 +14,10 @@ export default function Button({ variant = "primary", size = "md", className, ..
   return (
     <button
       className={cn(
-        "inline-flex items-center justify-center font-medium disabled:opacity-50",
+        // `whitespace-nowrap`: a button's label is a single action, so wrapping
+        // it mid-phrase turns one control into what reads as two lines of prose.
+        // Buttons in a flex row shrink before they wrap without this.
+        "inline-flex items-center justify-center font-medium whitespace-nowrap disabled:opacity-50",
         variant === "primary" && "bg-primary text-primary-foreground hover:opacity-90",
         variant === "secondary" && "border hover:bg-muted",
         variant === "ghost" && "text-muted-foreground hover:underline px-2",

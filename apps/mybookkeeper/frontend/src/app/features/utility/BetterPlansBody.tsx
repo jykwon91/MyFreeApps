@@ -1,7 +1,13 @@
 import BetterPlansGroup from "@/app/features/utility/BetterPlansGroup";
 import BetterPlansSkeleton from "@/app/features/utility/BetterPlansSkeleton";
+import { bestSavingCents } from "@/shared/lib/offer-stats";
 import type { BetterPlansMode } from "@/shared/types/utility/better-plans-mode";
 import type { UtilityOfferGroup } from "@/shared/types/utility/utility-offer-group";
+
+/** Most money on the table first — that is the property worth acting on. */
+function byBiggestSaving(groups: UtilityOfferGroup[]): UtilityOfferGroup[] {
+  return [...groups].sort((a, b) => bestSavingCents(b) - bestSavingCents(a));
+}
 
 export interface BetterPlansBodyProps {
   mode: BetterPlansMode;
@@ -45,8 +51,12 @@ export default function BetterPlansBody({
     case "results":
       return (
         <div className="space-y-4" data-testid="better-plans-results">
-          {groups.map((group) => (
-            <BetterPlansGroup key={group.property_id} group={group} />
+          {byBiggestSaving(groups).map((group) => (
+            <BetterPlansGroup
+              key={group.property_id}
+              group={group}
+              referenceAnnualKwh={referenceAnnualKwh}
+            />
           ))}
           {/* Stated once, at the bottom: every saving above is arithmetic at
               this usage, not a forecast of a specific bill. */}
