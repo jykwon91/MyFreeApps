@@ -83,6 +83,16 @@ class UtilityPlan(Base):
         index=True,
         nullable=False,
     )
+    # The document these numbers were read off — an EFL, a bill, a contract.
+    # SET NULL rather than CASCADE: the rate stays true after its evidence is
+    # deleted, it just becomes unsourced. Null is the honest state for a plan
+    # typed in by hand, which is every row that predates document upload.
+    source_document_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("documents.id", ondelete="SET NULL"),
+        index=True,
+        nullable=True,
+    )
 
     service_type: Mapped[str] = mapped_column(String(20), nullable=False)
     provider_name: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -140,6 +150,27 @@ class UtilityPlan(Base):
     min_usage_fee_cents: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     min_usage_threshold_kwh: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
+    # ---- Internet-shaped pricing ------------------------------------------
+    # An internet plan's renewal cliff is a price step, not a lapse: service
+    # continues at the standard rate when the promo ends. ``term_end_date``
+    # already carries the date; this carries what the bill becomes after it,
+    # which is the half that makes the alert worth acting on.
+    post_promo_monthly_cents: Mapped[int | None] = mapped_column(
+        BigInteger, nullable=True,
+    )
+    # Modem / router rental, routinely quoted outside the advertised price.
+    # Separated for the same reason as ``tdu_charge_cents_per_kwh``: it is a
+    # real cost that switching providers does not necessarily remove.
+    equipment_fee_monthly_cents: Mapped[int | None] = mapped_column(
+        BigInteger, nullable=True,
+    )
+    # What the money buys. Comparing two internet plans on price alone is the
+    # same error as comparing two electricity bills without their kWh.
+    download_mbps: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    upload_mbps: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # Null means uncapped (the usual case on fiber), not unknown-and-zero.
+    data_cap_gb: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     deleted_at: Mapped[_dt.datetime | None] = mapped_column(
@@ -188,6 +219,26 @@ class UtilityPlan(Base):
             " OR (bill_credit_amount_cents IS NOT NULL"
             " AND bill_credit_threshold_kwh IS NOT NULL)",
             name="chk_utility_plan_bill_credit_complete",
+        ),
+        # A post-promo price with no date it takes effect on is unusable —
+        # it would render as a price step the UI cannot place on a calendar.
+        CheckConstraint(
+            "post_promo_monthly_cents IS NULL OR term_end_date IS NOT NULL",
+            name="chk_utility_plan_post_promo_needs_term_end",
+        ),
+        CheckConstraint(
+            "(post_promo_monthly_cents IS NULL OR post_promo_monthly_cents >= 0)"
+            " AND (equipment_fee_monthly_cents IS NULL"
+            " OR equipment_fee_monthly_cents >= 0)",
+            name="chk_utility_plan_internet_amounts_nonneg",
+        ),
+        # Zero is not a meaningful speed or cap — it means "not recorded",
+        # which is what NULL already says. Rejecting 0 keeps them distinct.
+        CheckConstraint(
+            "(download_mbps IS NULL OR download_mbps > 0)"
+            " AND (upload_mbps IS NULL OR upload_mbps > 0)"
+            " AND (data_cap_gb IS NULL OR data_cap_gb > 0)",
+            name="chk_utility_plan_speeds_positive",
         ),
         # Current-plan resolution: newest start per property + service.
         Index(

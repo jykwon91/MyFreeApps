@@ -7,11 +7,13 @@ instead.
 from __future__ import annotations
 
 import datetime as _dt
+import uuid
 from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.schemas.properties.utility_plan_validation import (
+    MAX_MBPS,
     MAX_RATE_CENTS,
     validate_plan_fields,
 )
@@ -46,6 +48,14 @@ class UtilityPlanUpdateRequest(BaseModel):
     min_usage_fee_cents: int | None = Field(None, ge=0)
     min_usage_threshold_kwh: int | None = Field(None, ge=0)
 
+    post_promo_monthly_cents: int | None = Field(None, ge=0)
+    equipment_fee_monthly_cents: int | None = Field(None, ge=0)
+    download_mbps: int | None = Field(None, gt=0, le=MAX_MBPS)
+    upload_mbps: int | None = Field(None, gt=0, le=MAX_MBPS)
+    data_cap_gb: int | None = Field(None, gt=0)
+
+    source_document_id: uuid.UUID | None = None
+
     notes: str | None = Field(None, max_length=5000)
 
     model_config = ConfigDict(extra="forbid")
@@ -56,4 +66,4 @@ class UtilityPlanUpdateRequest(BaseModel):
         # update that leaves the row inconsistent with a field it did NOT send
         # is caught by the table's CHECK constraints; the service re-validates
         # the merged row before flushing so that surfaces as a 422 too.
-        return validate_plan_fields(self)
+        return validate_plan_fields(self, partial=True)

@@ -37,6 +37,14 @@ export interface UtilityPlanDetail {
   min_usage_fee_cents: number | null;
   min_usage_threshold_kwh: number | null;
 
+  post_promo_monthly_cents: number | null;
+  equipment_fee_monthly_cents: number | null;
+  download_mbps: number | null;
+  upload_mbps: number | null;
+  data_cap_gb: number | null;
+
+  source_document_id: string | null;
+
   notes: string | null;
 
   days_until_term_end: number | null;

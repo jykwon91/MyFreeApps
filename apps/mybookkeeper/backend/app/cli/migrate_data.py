@@ -174,6 +174,7 @@ _INSERT_PLAN = text("""
         avg_price_cents_per_kwh_at_1000, monthly_base_charge_cents,
         term_months, service_start_date, term_end_date,
         early_termination_fee_cents, has_bill_credit,
+        bill_credit_amount_cents, bill_credit_threshold_kwh,
         min_usage_fee_cents, min_usage_threshold_kwh, notes,
         created_at, updated_at
     ) VALUES (
@@ -182,7 +183,8 @@ _INSERT_PLAN = text("""
         :energy_charge_cents_per_kwh, :tdu_charge_cents_per_kwh,
         :avg_price_cents_per_kwh_at_1000, :monthly_base_charge_cents,
         :term_months, :service_start_date, :term_end_date,
-        :early_termination_fee_cents, false,
+        :early_termination_fee_cents, :has_bill_credit,
+        :bill_credit_amount_cents, :bill_credit_threshold_kwh,
         :min_usage_fee_cents, :min_usage_threshold_kwh, :notes,
         NOW(), NOW()
     )
@@ -212,6 +214,9 @@ def _plan_params(row: UtilityPlanSeedRow, prop) -> dict:
         "service_start_date": row.service_start_date,
         "term_end_date": row.term_end_date,
         "early_termination_fee_cents": row.early_termination_fee_cents,
+        "has_bill_credit": row.has_bill_credit,
+        "bill_credit_amount_cents": row.bill_credit_amount_cents,
+        "bill_credit_threshold_kwh": row.bill_credit_threshold_kwh,
         "min_usage_fee_cents": row.min_usage_fee_cents,
         "min_usage_threshold_kwh": row.min_usage_threshold_kwh,
         "notes": row.notes,
