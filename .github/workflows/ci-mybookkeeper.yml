@@ -182,7 +182,8 @@ jobs:
             e2e/document-viewer-failure-modes.spec.ts \
             e2e/document-re-extract.spec.ts \
             e2e/caddy-headers-blob-iframe.spec.ts \
-            e2e/welcome-manuals-layout-mock.spec.ts
+            e2e/welcome-manuals-layout-mock.spec.ts \
+            e2e/utility-better-plans.spec.ts
 
       - name: Upload Playwright report on failure
         if: failure()

@@ -1,22 +1,102 @@
-import type { Page } from "@playwright/test";
-import { test, expect } from "./fixtures/auth";
-
 /**
- * E2E for the "Find a better plan" section.
+ * No-backend E2E for the "Find a better plan" section.
  *
- * The offer feed is Power to Choose — a live public service outside this
- * repo's control. The endpoint response is stubbed so the assertions are about
- * *our* behaviour (search is explicit, the gate is visible, a teaser is
- * labelled) rather than about whatever the market happens to be offering the
- * morning the suite runs. The stub is applied at the backend route, so
- * everything from RTK Query down through the rendered rows is real.
+ * Fully mocks the API surface via page.route() so it runs under
+ * playwright.layout.config.ts in the `frontend-layout-e2e` CI job (no backend,
+ * no globalSetup) — the same shape welcome-manuals-layout-mock.spec.ts uses.
+ *
+ * Mocking is not a compromise here: the upstream source is Power to Choose, a
+ * live public marketplace outside this repo's control. Asserting against
+ * whatever it happens to be offering the morning the suite runs would test the
+ * Texas electricity market, not this code. What is exercised is ours —
+ * the search is explicit, the skeleton matches the loaded shape, the rating
+ * gate is visible, a teaser is labelled, and a feed outage reads as an outage.
+ *
+ * Verifies:
+ *   - Loading the page does not call the external feed; only a click does.
+ *   - Skeleton group/row counts mirror the loaded section (no layout shift).
+ *   - The withheld-for-poor-rating count is stated, not silently applied.
+ *   - A bill-credit teaser carries its caveat.
+ *   - No horizontal scroll across mobile / tablet / desktop; 44px touch target.
+ *   - A 503 from the feed renders "nothing is wrong with your plans".
  */
+import { test, expect, type Page } from "@playwright/test";
 
-const PROPERTY_ID = "c0ffee00-0000-4000-8000-000000000001";
+const ORG_ID = "00000000-0000-0000-0000-000000000010";
+const PROPERTY_ID = "00000000-0000-0000-0000-0000000000c1";
 
 /** Matches ``BetterPlansSkeleton``: two cards, three rows each. */
 const SKELETON_GROUP_COUNT = 2;
 const SKELETON_ROWS_PER_GROUP = 3;
+
+function plantAuth(page: Page): Promise<void> {
+  return page.addInitScript(
+    ([orgId]) => {
+      const futureExp = Math.floor(Date.now() / 1000) + 3600;
+      const header = btoa(JSON.stringify({ alg: "HS256", typ: "JWT" }));
+      const payload = btoa(JSON.stringify({ sub: "test-user", exp: futureExp }));
+      window.localStorage.setItem("token", `${header}.${payload}.fake-signature`);
+      window.localStorage.setItem("v1_activeOrgId", orgId);
+    },
+    [ORG_ID],
+  );
+}
+
+function json(body: unknown) {
+  return { status: 200, contentType: "application/json", body: JSON.stringify(body) };
+}
+
+async function stubShell(page: Page): Promise<void> {
+  await page.route("**/api/users/me", (route) =>
+    route.fulfill(
+      json({
+        id: "00000000-0000-0000-0000-000000000001",
+        email: "test@example.com",
+        name: "Test User",
+        is_active: true,
+        is_superuser: false,
+        is_verified: true,
+        role: "owner",
+      }),
+    ),
+  );
+  await page.route("**/api/organizations", (route) =>
+    route.fulfill(json([{ id: ORG_ID, name: "Test Workspace", role: "owner" }])),
+  );
+  await page.route("**/api/version", (route) => route.fulfill(json({ version: "test" })));
+  await page.route("**/api/tax-profile", (route) =>
+    route.fulfill(
+      json({
+        onboarding_completed: true,
+        tax_situations: [],
+        filing_status: null,
+        dependents_count: 0,
+      }),
+    ),
+  );
+  await page.route("**/api/properties", (route) => route.fulfill(json([])));
+}
+
+/**
+ * The rest of the Utility Plans page. Routed before the offers stub would be
+ * wrong — `**\/api/utility-plans*` stops at the next `/`, so it never swallows
+ * `/utility-plans/offers`, but the two sibling literal routes below would.
+ */
+async function stubUtilityPage(page: Page): Promise<void> {
+  await page.route("**/api/utility-plans/renewal-alerts*", (route) =>
+    route.fulfill(json({ expiring_count: 0, expired_count: 0, plans: [] })),
+  );
+  await page.route("**/api/utility-plans/rate-comparison*", (route) =>
+    route.fulfill(json({ rows: [], benchmarks: [] })),
+  );
+  await page.route("**/api/market-rate-benchmarks*", (route) => route.fulfill(json([])));
+  await page.route("**/api/utility-plans?*", (route) =>
+    route.fulfill(json({ items: [], total: 0, has_more: false })),
+  );
+  await page.route("**/api/utility-plans", (route) =>
+    route.fulfill(json({ items: [], total: 0, has_more: false })),
+  );
+}
 
 const OFFERS_RESPONSE = {
   groups: [
@@ -73,37 +153,28 @@ const OFFERS_RESPONSE = {
   has_any_offers: true,
 };
 
-async function stubOffers(page: Page, delayMs = 0): Promise<void> {
-  await page.route("**/api/utility-plans/offers*", async (route) => {
-    if (delayMs > 0) await new Promise((r) => setTimeout(r, delayMs));
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify(OFFERS_RESPONSE),
-    });
-  });
-}
-
 async function hasHorizontalOverflow(page: Page): Promise<boolean> {
   return page.evaluate(
     () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
   );
 }
 
+test.beforeEach(async ({ page }) => {
+  await plantAuth(page);
+  await stubShell(page);
+  await stubUtilityPage(page);
+});
+
 test.describe("Find a better plan", () => {
   test("searches only when asked, then shows the market with its caveats", async ({
-    authedPage: page,
+    page,
   }) => {
     let offerRequests = 0;
     await page.route("**/api/utility-plans/offers*", async (route) => {
       offerRequests += 1;
       // Held long enough for the skeleton to be observable on the one click.
       await new Promise((r) => setTimeout(r, 1200));
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify(OFFERS_RESPONSE),
-      });
+      await route.fulfill(json(OFFERS_RESPONSE));
     });
 
     await page.goto("/utility-plans");
@@ -147,9 +218,11 @@ test.describe("Find a better plan", () => {
   });
 
   test("the section fits every viewport and keeps a 44px touch target", async ({
-    authedPage: page,
+    page,
   }) => {
-    await stubOffers(page);
+    await page.route("**/api/utility-plans/offers*", (route) =>
+      route.fulfill(json(OFFERS_RESPONSE)),
+    );
 
     for (const size of [
       { width: 375, height: 800 },
@@ -181,9 +254,7 @@ test.describe("Find a better plan", () => {
     expect(box!.height, "search button height").toBeGreaterThanOrEqual(44);
   });
 
-  test("a feed outage reads as a feed outage, not as a bad rate", async ({
-    authedPage: page,
-  }) => {
+  test("a feed outage reads as a feed outage, not as a bad rate", async ({ page }) => {
     await page.route("**/api/utility-plans/offers*", (route) =>
       route.fulfill({
         status: 503,
