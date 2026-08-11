@@ -35,16 +35,13 @@ class OfferFeedUnavailableError(RuntimeError):
     """The feed could not be reached or returned something unusable."""
 
 
-def _log_zip(zip_code: str) -> str:
-    """A ZIP coarse enough to log.
-
-    Application logs ship to Sentry, and a full ZIP tied to an organization is
-    household-level location data about the operator's properties. The first
-    three digits name the market — which is the whole diagnostic value here,
-    since a feed failure is regional, never per-address — and are the geographic
-    precision HIPAA Safe Harbor treats as de-identified.
-    """
-    return f"{zip_code[:3]}xx" if len(zip_code) >= 3 else "xxxxx"
+# The ZIP is deliberately absent from every log line below. Application logs
+# ship to Sentry, and a ZIP tied to an organization is location data about the
+# operator's properties — while adding nothing to a diagnosis, because a feed
+# failure is regional and the operator already sees which property couldn't be
+# priced: ``utility_offer_service`` turns the raised error into a per-group
+# reason on the page. What the logs carry instead is what the third-party
+# response actually said.
 
 
 # ZIP -> (fetched_at_monotonic, offers). The feed republishes in daily batches,
@@ -140,19 +137,18 @@ async def fetch_offers(zip_code: str) -> list[UtilityOffer]:
             payload = response.json()
     except httpx.HTTPStatusError as exc:
         logger.warning(
-            "Power to Choose returned HTTP %s for zip=%s",
+            "Power to Choose returned HTTP %s: %s",
             exc.response.status_code,
-            _log_zip(zip_code),
+            exc.response.text[:200],
         )
         raise OfferFeedUnavailableError("offer feed returned an error") from exc
     except (httpx.HTTPError, ValueError) as exc:
-        logger.warning("Power to Choose unreachable for zip=%s: %s", _log_zip(zip_code), exc)
+        logger.warning("Power to Choose unreachable: %s", exc)
         raise OfferFeedUnavailableError("offer feed is unreachable") from exc
 
     if not isinstance(payload, dict) or not payload.get("success"):
         logger.warning(
-            "Power to Choose reported failure for zip=%s: %s",
-            _log_zip(zip_code),
+            "Power to Choose reported failure: %s",
             (payload or {}).get("message") if isinstance(payload, dict) else None,
         )
         raise OfferFeedUnavailableError("offer feed reported a failure")

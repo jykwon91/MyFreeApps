@@ -6,12 +6,14 @@ real data rather than invented data.
 """
 from __future__ import annotations
 
+import ast
+import inspect
 from decimal import Decimal
 
 import pytest
 
+from app.services.properties import power_to_choose_client
 from app.services.properties._address_zip import derive_zip_code
-from app.services.properties.power_to_choose_client import _log_zip
 from app.services.properties._offer_ranking import (
     annual_saving_cents,
     is_teaser_priced,
@@ -154,18 +156,29 @@ class TestDeriveZipCode:
         assert derive_zip_code("") is None
 
 
-class TestLogZip:
-    """Application logs ship to Sentry — a full ZIP must never reach them."""
+class TestFeedLoggingCarriesNoZip:
+    """Application logs ship to Sentry — a property ZIP must never reach them.
 
-    def test_keeps_only_the_market_prefix(self) -> None:
-        assert _log_zip("77021") == "770xx"
+    Checked against the module's AST rather than a captured record: the three
+    warnings sit on separate failure branches that each need a differently
+    broken feed to reach, and the property worth protecting is simply that no
+    branch passes the ZIP to a logger.
+    """
 
-    @pytest.mark.parametrize("zip_code", ["77021", "75201", "78701", "77021-1234"])
-    def test_the_house_level_digits_are_dropped(self, zip_code: str) -> None:
-        masked = _log_zip(zip_code)
-        assert masked == f"{zip_code[:3]}xx"
-        assert zip_code not in masked
+    def test_no_logger_call_takes_the_zip_as_an_argument(self) -> None:
+        tree = ast.parse(inspect.getsource(power_to_choose_client))
+        logger_calls = [
+            node
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and isinstance(node.func.value, ast.Name)
+            and node.func.value.id == "logger"
+        ]
+        assert logger_calls, "no logger calls found — this test would pass vacuously"
 
-    def test_a_too_short_value_is_fully_masked(self) -> None:
-        assert _log_zip("77") == "xxxxx"
-        assert _log_zip("") == "xxxxx"
+        for call in logger_calls:
+            names = {
+                sub.id for sub in ast.walk(call) if isinstance(sub, ast.Name)
+            }
+            assert "zip_code" not in names, ast.unparse(call)
