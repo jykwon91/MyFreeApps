@@ -149,7 +149,7 @@ describe("AddUtilityPlanDialog — reading from a document", () => {
     mockExtract.mockReturnValue({
       unwrap: vi.fn().mockResolvedValue({
         ...DRAFT,
-        min_usage_fee_cents: 995,
+        notes: "Rate assumes autopay enrollment.",
         unrepresented: ["Rate steps to 21.4 c/kWh in months 11-12"],
       }),
     });
@@ -158,11 +158,105 @@ describe("AddUtilityPlanDialog — reading from a document", () => {
     await readTheDocument(user);
 
     await waitFor(() => {
-      expect(screen.getByText("Minimum usage fee: $9.95")).toBeInTheDocument();
+      expect(
+        screen.getByText("Notes: Rate assumes autopay enrollment."),
+      ).toBeInTheDocument();
     });
     expect(
       screen.getByText("Rate steps to 21.4 c/kWh in months 11-12"),
     ).toBeInTheDocument();
+  });
+
+  it("puts a minimum usage fee into its input rather than a notice", async () => {
+    // It used to land in the can't-hold notice for want of an input. Reading a
+    // term the operator then has to re-type by hand is the failure this closes.
+    const user = userEvent.setup();
+    mockExtract.mockReturnValue({
+      unwrap: vi.fn().mockResolvedValue({
+        ...DRAFT,
+        min_usage_fee_cents: 995,
+        min_usage_threshold_kwh: 1000,
+      }),
+    });
+    renderDialog();
+
+    await readTheDocument(user);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("utility-plan-min-usage-fee-input")).toHaveValue(9.95);
+    });
+    expect(screen.getByTestId("utility-plan-min-usage-threshold-input")).toHaveValue(
+      1000,
+    );
+    expect(screen.queryByText("Minimum usage fee: $9.95")).not.toBeInTheDocument();
+  });
+
+  it("swaps the metered fields for the internet ones when the service changes", async () => {
+    const user = userEvent.setup();
+    renderDialog();
+
+    expect(screen.getByTestId("utility-plan-min-usage-fee-input")).toBeInTheDocument();
+    expect(screen.queryByTestId("utility-plan-internet-fields")).not.toBeInTheDocument();
+
+    await user.selectOptions(
+      screen.getByTestId("utility-plan-service-select"),
+      "internet",
+    );
+
+    expect(screen.getByTestId("utility-plan-internet-fields")).toBeInTheDocument();
+    expect(screen.getByTestId("utility-plan-download-input")).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("utility-plan-min-usage-fee-input"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("saves an internet plan's speeds and promo terms", async () => {
+    const user = userEvent.setup();
+    renderDialog();
+
+    await user.selectOptions(
+      screen.getByTestId("utility-plan-property-select"),
+      "prop-1",
+    );
+    await user.type(screen.getByTestId("utility-plan-provider-input"), "Spectrum");
+    await user.selectOptions(
+      screen.getByTestId("utility-plan-service-select"),
+      "internet",
+    );
+    await user.type(screen.getByTestId("utility-plan-download-input"), "1000");
+    await user.type(screen.getByTestId("utility-plan-equipment-fee-input"), "15");
+    await user.click(screen.getByTestId("utility-plan-save-button"));
+
+    await waitFor(() => expect(mockCreate).toHaveBeenCalled());
+    expect(mockCreate.mock.calls[0][0]).toMatchObject({
+      service_type: "internet",
+      download_mbps: 1000,
+      equipment_fee_monthly_cents: 1500,
+    });
+  });
+
+  it("refuses a promo price with no date it takes effect on", async () => {
+    const user = userEvent.setup();
+    renderDialog();
+
+    await user.selectOptions(
+      screen.getByTestId("utility-plan-property-select"),
+      "prop-1",
+    );
+    await user.type(screen.getByTestId("utility-plan-provider-input"), "Spectrum");
+    await user.selectOptions(
+      screen.getByTestId("utility-plan-service-select"),
+      "internet",
+    );
+    await user.type(screen.getByTestId("utility-plan-post-promo-input"), "89.99");
+    await user.click(screen.getByTestId("utility-plan-save-button"));
+
+    await waitFor(() =>
+      expect(showError).toHaveBeenCalledWith(
+        "A post-promo price needs the date the promo ends.",
+      ),
+    );
+    expect(mockCreate).not.toHaveBeenCalled();
   });
 
   it("shows a warning about a field that may be wrong", async () => {

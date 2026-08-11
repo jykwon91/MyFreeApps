@@ -13,7 +13,8 @@ import UtilityPlanDialogShell from "./UtilityPlanDialogShell";
 import UtilityPlanDocumentReader from "./UtilityPlanDocumentReader";
 import UtilityPlanDraftNotices from "./UtilityPlanDraftNotices";
 import UtilityPlanFormActions from "./UtilityPlanFormActions";
-import UtilityPlanFormFields, { UTILITY_PLAN_INPUT_CLASS } from "./UtilityPlanFormFields";
+import UtilityPlanFormFields from "./UtilityPlanFormFields";
+import { UTILITY_PLAN_INPUT_CLASS } from "./utility-plan-input-class";
 import { useUtilityPlanForm } from "./useUtilityPlanForm";
 
 export interface AddUtilityPlanDialogProps {

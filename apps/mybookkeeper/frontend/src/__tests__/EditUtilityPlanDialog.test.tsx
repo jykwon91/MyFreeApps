@@ -173,8 +173,8 @@ describe("EditUtilityPlanDialog — save", () => {
 
   /**
    * PATCH applies exactly the keys it receives, so a key the form does not own
-   * must never appear — sending null would erase the minimum-usage terms and
-   * the provenance note this plan carries.
+   * must never appear — sending null would erase the provenance note this plan
+   * carries.
    */
   it("never sends the fields it cannot edit", async () => {
     const user = userEvent.setup();
@@ -184,10 +184,25 @@ describe("EditUtilityPlanDialog — save", () => {
 
     await waitFor(() => expect(mockUpdate).toHaveBeenCalledTimes(1));
     const [{ data }] = mockUpdate.mock.calls[0] as [{ data: Record<string, unknown> }];
-    expect(data).not.toHaveProperty("min_usage_fee_cents");
-    expect(data).not.toHaveProperty("min_usage_threshold_kwh");
     expect(data).not.toHaveProperty("notes");
     expect(data).not.toHaveProperty("property_id");
+  });
+
+  /**
+   * The other half of the same rule: a field the form DOES own must survive a
+   * save that never touched it. These two were previously omitted to protect
+   * them; now they are sent, so the protection has to come from the round trip.
+   */
+  it("returns the minimum-usage terms unchanged when they were not edited", async () => {
+    const user = userEvent.setup();
+
+    renderDialog();
+    await user.click(screen.getByTestId("utility-plan-save-button"));
+
+    await waitFor(() => expect(mockUpdate).toHaveBeenCalledTimes(1));
+    const [{ data }] = mockUpdate.mock.calls[0] as [{ data: Record<string, unknown> }];
+    expect(data.min_usage_fee_cents).toBe(0);
+    expect(data.min_usage_threshold_kwh).toBe(999);
   });
 
   it("confirms and closes on success", async () => {

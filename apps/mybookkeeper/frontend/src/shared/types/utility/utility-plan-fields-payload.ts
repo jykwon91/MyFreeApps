@@ -8,10 +8,9 @@ import type { UtilityServiceType } from "@/shared/types/utility/utility-service-
  * ``UtilityPlanUpdateRequest``: adding ``property_id`` makes it a create body,
  * and it is assignable to an update body as is.
  *
- * ``min_usage_fee_cents``, ``min_usage_threshold_kwh`` and ``notes`` are
- * deliberately absent. The form does not edit them and ``PATCH`` applies
- * exactly the keys it is sent, so including them would erase what a seeded
- * plan records.
+ * ``notes`` is deliberately absent. The form does not edit it and ``PATCH``
+ * applies exactly the keys it is sent, so including it would erase the
+ * provenance note a seeded plan records.
  */
 export interface UtilityPlanFieldsPayload {
   service_type: UtilityServiceType;
@@ -33,4 +32,12 @@ export interface UtilityPlanFieldsPayload {
   has_bill_credit: boolean;
   bill_credit_amount_cents: number | null;
   bill_credit_threshold_kwh: number | null;
+  min_usage_fee_cents: number | null;
+  min_usage_threshold_kwh: number | null;
+
+  post_promo_monthly_cents: number | null;
+  equipment_fee_monthly_cents: number | null;
+  download_mbps: number | null;
+  upload_mbps: number | null;
+  data_cap_gb: number | null;
 }
