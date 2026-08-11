@@ -201,7 +201,10 @@ export default function Calendar() {
 
       {isLoading ? (
         <CalendarSkeleton />
-      ) : hasNoListings ? (
+      ) : hasNoListings && isEmpty ? (
+        // A tenancy can exist with no listing behind it, so "no listings" is
+        // only the right story when there's also nothing to show. Otherwise
+        // this prompt would hide the very events it claims don't exist.
         <div
           className="text-center text-muted-foreground text-sm py-8"
           data-testid="calendar-no-listings"
