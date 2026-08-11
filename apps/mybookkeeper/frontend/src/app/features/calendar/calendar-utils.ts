@@ -155,6 +155,17 @@ export function formatMonthYear(iso: string): string {
   return d.toLocaleString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
 }
 
+/** Format an ISO date as a full day label (e.g. "Thursday, September 3, 2026"). */
+export function formatDayLabel(iso: string): string {
+  return parseIsoDate(iso).toLocaleString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
 /** Format a window as a compact range label (e.g. "May 2 – Aug 1, 2026"). */
 export function formatWindowLabel(fromIso: string, toExclusiveIso: string): string {
   const from = parseIsoDate(fromIso);
