@@ -12,6 +12,7 @@
  *
  * Verifies:
  *   - A file picked on the device is read without leaving the dialog
+ *   - Picking is the whole interaction — the fields fill with nothing else pressed
  *   - An empty library shows no picker rather than an empty one
  *   - The read prefills the form the operator then saves
  *   - The upload posts to the reference-only route, not /documents/upload
@@ -177,9 +178,6 @@ test.describe("Adding a utility plan from a document on the phone", () => {
 
     await openDialog(page);
 
-    const read = page.getByTestId("utility-plan-read-document-button");
-    await expect(read).toBeDisabled();
-
     await page
       .getByTestId("utility-plan-file-input")
       .setInputFiles(EFL_FILE);
@@ -187,8 +185,10 @@ test.describe("Adding a utility plan from a document on the phone", () => {
     await expect(page.getByTestId("utility-plan-chosen-document")).toContainText(
       "rhythm-efl.pdf",
     );
-    await expect(read).toBeEnabled();
-    await read.click();
+    // Picking is the whole interaction — nothing else to press.
+    await expect(
+      page.getByTestId("utility-plan-read-document-button"),
+    ).toHaveCount(0);
 
     // The read is only worth anything if it lands in the form the operator saves.
     await expect(page.getByTestId("utility-plan-provider-input")).toHaveValue("Rhythm");
@@ -220,7 +220,6 @@ test.describe("Adding a utility plan from a document on the phone", () => {
     await page
       .getByTestId("utility-plan-document-select")
       .selectOption(DOCUMENT_ID);
-    await page.getByTestId("utility-plan-read-document-button").click();
 
     await expect(page.getByTestId("utility-plan-provider-input")).toHaveValue("Rhythm");
   });
@@ -237,7 +236,6 @@ test.describe("Adding a utility plan from a document on the phone", () => {
 
     for (const testId of [
       "utility-plan-choose-file-button",
-      "utility-plan-read-document-button",
       "utility-plan-property-select",
     ]) {
       const box = await page.getByTestId(testId).boundingBox();

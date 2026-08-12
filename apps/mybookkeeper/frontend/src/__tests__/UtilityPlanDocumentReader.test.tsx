@@ -9,9 +9,10 @@
  *
  * Verifies:
  * - A file picked on the device is read without visiting the Documents page
- * - Nothing is uploaded until the read is actually asked for
+ * - Picking reads immediately — no second button to press
  * - An empty library hides the picker rather than showing an empty one
- * - Each way a read can fail says something the operator can act on
+ * - Each way a read can fail says something the operator can act on, and the
+ *   failed document can be retried without being picked again
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
@@ -26,12 +27,12 @@ const mockExtract = vi.fn();
 const mockExtractUpload = vi.fn();
 const mockUseGetDocuments = vi.fn();
 
+/** Mutable so a test can hold the read open and inspect the in-flight state. */
+const uploadState = vi.hoisted(() => ({ isLoading: false }));
+
 vi.mock("@/shared/store/utilityPlansApi", () => ({
   useExtractUtilityPlanMutation: vi.fn(() => [mockExtract, { isLoading: false }]),
-  useExtractUtilityPlanFromUploadMutation: vi.fn(() => [
-    mockExtractUpload,
-    { isLoading: false },
-  ]),
+  useExtractUtilityPlanFromUploadMutation: vi.fn(() => [mockExtractUpload, uploadState]),
 }));
 
 vi.mock("@/shared/store/documentsApi", () => ({
@@ -64,6 +65,7 @@ async function pickFile(user: ReturnType<typeof userEvent.setup>, file = EFL) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  uploadState.isLoading = false;
   withLibrary([{ id: "doc-1", file_name: "constellation-efl.pdf" }]);
   mockExtract.mockReturnValue({ unwrap: vi.fn().mockResolvedValue(DRAFT) });
   mockExtractUpload.mockReturnValue({ unwrap: vi.fn().mockResolvedValue(DRAFT) });
@@ -75,14 +77,27 @@ describe("UtilityPlanDocumentReader — reading a file off the device", () => {
     const onRead = renderReader();
 
     await pickFile(user);
-    await user.click(screen.getByTestId("utility-plan-read-document-button"));
 
     await waitFor(() => expect(onRead).toHaveBeenCalledWith(DRAFT));
     expect(mockExtractUpload).toHaveBeenCalledWith(EFL);
     expect(mockExtract).not.toHaveBeenCalled();
   });
 
-  it("shows which file it is about to read", async () => {
+  it("reads on pick rather than waiting to be asked a second time", async () => {
+    // Picking a document had exactly one sensible next step, so pressing a
+    // button to confirm it was a step that never carried a decision.
+    const user = userEvent.setup();
+    renderReader();
+
+    await pickFile(user);
+
+    await waitFor(() => expect(mockExtractUpload).toHaveBeenCalled());
+    expect(
+      screen.queryByTestId("utility-plan-read-document-button"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows which file it is reading", async () => {
     const user = userEvent.setup();
     renderReader();
 
@@ -93,18 +108,23 @@ describe("UtilityPlanDocumentReader — reading a file off the device", () => {
     );
   });
 
-  it("uploads nothing until the read is asked for", async () => {
-    // Picking a file and then abandoning the dialog must not leave a document
-    // behind — the upload happens inside the read, not on selection.
+  it("says it is reading while the read is in flight", async () => {
     const user = userEvent.setup();
+    uploadState.isLoading = true;
+    mockExtractUpload.mockReturnValue({ unwrap: vi.fn(() => new Promise(() => {})) });
     renderReader();
 
     await pickFile(user);
 
-    expect(mockExtractUpload).not.toHaveBeenCalled();
+    expect(screen.getByTestId("utility-plan-reading-indicator")).toBeInTheDocument();
+    // Swapping the document out mid-read would race the response about to
+    // fill the form, so the way to do that is gone until it settles.
+    expect(
+      screen.queryByTestId("utility-plan-clear-document-button"),
+    ).not.toBeInTheDocument();
   });
 
-  it("lets the operator swap the file back out", async () => {
+  it("lets the operator swap the file back out once the read has settled", async () => {
     const user = userEvent.setup();
     renderReader();
 
@@ -113,17 +133,16 @@ describe("UtilityPlanDocumentReader — reading a file off the device", () => {
 
     expect(screen.queryByTestId("utility-plan-chosen-document")).not.toBeInTheDocument();
     expect(screen.getByTestId("utility-plan-file-dropzone")).toBeInTheDocument();
-    expect(screen.getByTestId("utility-plan-read-document-button")).toBeDisabled();
   });
 
-  it("does not read anything until something is chosen", async () => {
-    const user = userEvent.setup();
+  it("reads nothing on its own before anything is picked", async () => {
     renderReader();
-
-    await user.click(screen.getByTestId("utility-plan-read-document-button"));
 
     expect(mockExtractUpload).not.toHaveBeenCalled();
     expect(mockExtract).not.toHaveBeenCalled();
+    expect(
+      screen.queryByTestId("utility-plan-read-document-button"),
+    ).not.toBeInTheDocument();
   });
 });
 
@@ -146,7 +165,6 @@ describe("UtilityPlanDocumentReader — the document library", () => {
       screen.getByTestId("utility-plan-document-select"),
       "doc-1",
     );
-    await user.click(screen.getByTestId("utility-plan-read-document-button"));
 
     await waitFor(() => expect(onRead).toHaveBeenCalledWith(DRAFT));
     expect(mockExtract).toHaveBeenCalledWith({ document_id: "doc-1" });
@@ -182,13 +200,33 @@ describe("UtilityPlanDocumentReader — when a read fails", () => {
     renderReader();
 
     await pickFile(user);
-    await user.click(screen.getByTestId("utility-plan-read-document-button"));
 
     await waitFor(() => expect(showError).toHaveBeenCalled());
     expect(vi.mocked(showError).mock.calls[0][0]).toContain(expected);
   });
 
-  it("keeps the chosen file so a retry does not start from scratch", async () => {
+  it("offers to retry the same document rather than making it be picked again", async () => {
+    const user = userEvent.setup();
+    mockExtractUpload.mockReturnValue({
+      unwrap: vi.fn().mockRejectedValue({ status: 500 }),
+    });
+    const onRead = renderReader();
+
+    await pickFile(user);
+    await waitFor(() => expect(showError).toHaveBeenCalled());
+
+    expect(screen.getByTestId("utility-plan-chosen-document")).toHaveTextContent(
+      "rhythm-efl.pdf",
+    );
+
+    mockExtractUpload.mockReturnValue({ unwrap: vi.fn().mockResolvedValue(DRAFT) });
+    await user.click(screen.getByTestId("utility-plan-read-document-button"));
+
+    await waitFor(() => expect(onRead).toHaveBeenCalledWith(DRAFT));
+    expect(mockExtractUpload).toHaveBeenCalledTimes(2);
+  });
+
+  it("takes the retry button away again once the read succeeds", async () => {
     const user = userEvent.setup();
     mockExtractUpload.mockReturnValue({
       unwrap: vi.fn().mockRejectedValue({ status: 500 }),
@@ -196,11 +234,17 @@ describe("UtilityPlanDocumentReader — when a read fails", () => {
     renderReader();
 
     await pickFile(user);
+    await waitFor(() =>
+      expect(screen.getByTestId("utility-plan-read-document-button")).toBeInTheDocument(),
+    );
+
+    mockExtractUpload.mockReturnValue({ unwrap: vi.fn().mockResolvedValue(DRAFT) });
     await user.click(screen.getByTestId("utility-plan-read-document-button"));
 
-    await waitFor(() => expect(showError).toHaveBeenCalled());
-    expect(screen.getByTestId("utility-plan-chosen-document")).toHaveTextContent(
-      "rhythm-efl.pdf",
+    await waitFor(() =>
+      expect(
+        screen.queryByTestId("utility-plan-read-document-button"),
+      ).not.toBeInTheDocument(),
     );
   });
 });

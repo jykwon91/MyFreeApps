@@ -84,13 +84,13 @@ function renderDialog() {
 }
 
 async function readTheDocument(user: ReturnType<typeof userEvent.setup>) {
-  // The library picker is collapsed now that uploading is the primary path.
+  // The library picker is collapsed now that uploading is the primary path,
+  // and picking is what starts the read — there is no confirm step.
   await user.click(screen.getByText(/already uploaded/));
   await user.selectOptions(
     screen.getByTestId("utility-plan-document-select"),
     "doc-1",
   );
-  await user.click(screen.getByTestId("utility-plan-read-document-button"));
 }
 
 beforeEach(() => {
@@ -301,11 +301,9 @@ describe("AddUtilityPlanDialog — reading from a document", () => {
   });
 
   it("does not call the model until a document is chosen", async () => {
-    const user = userEvent.setup();
     renderDialog();
 
-    await user.click(screen.getByTestId("utility-plan-read-document-button"));
-
     expect(mockExtract).not.toHaveBeenCalled();
+    expect(mockExtractUpload).not.toHaveBeenCalled();
   });
 });
