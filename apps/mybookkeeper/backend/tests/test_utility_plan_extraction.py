@@ -15,6 +15,8 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
+from app.core.context import RequestContext
+from app.models.organization.organization_member import OrgRole
 from app.services.properties import utility_plan_extraction_service as svc
 
 DOC_ID = uuid.uuid4()
@@ -22,6 +24,12 @@ DOC_ID = uuid.uuid4()
 
 def _draft(**raw):
     return svc.build_draft(raw, document_id=DOC_ID)
+
+
+def _upload_ctx() -> RequestContext:
+    return RequestContext(
+        organization_id=uuid.uuid4(), user_id=uuid.uuid4(), org_role=OrgRole.OWNER,
+    )
 
 
 class TestBuildDraftReadsWhatIsThere:
@@ -273,3 +281,62 @@ class TestExtractPlanFromDocument:
                 await svc._extract_raw(b"pdf", "pdf", "", user_id=uuid.uuid4())
 
         assert mock_model.await_args.kwargs.get("image_bytes") == b"pdf"
+
+
+@pytest.mark.asyncio
+class TestExtractPlanFromUpload:
+    """Bytes in, draft out — the path a phone takes with no library to point at."""
+
+    async def test_the_file_is_stored_as_reference_material(self) -> None:
+        """Stored any other way, the transaction extractor invents an expense.
+
+        This assertion is the whole reason the dialog can offer an upload at
+        all; drop it and the feature silently starts dirtying the books.
+        """
+        document_id = uuid.uuid4()
+        with patch.object(
+            svc.document_upload_service,
+            "accept_upload",
+            new=AsyncMock(return_value={"document_id": str(document_id)}),
+        ) as mock_upload:
+            with patch.object(
+                svc, "_load_document", new=AsyncMock(return_value=(b"x", "pdf", "")),
+            ):
+                with patch.object(
+                    svc,
+                    "_extract_raw",
+                    new=AsyncMock(return_value={"provider_name": "Rhythm"}),
+                ):
+                    draft = await svc.extract_plan_from_upload(
+                        ctx=_upload_ctx(),
+                        content=b"%PDF-1.4",
+                        filename="efl.pdf",
+                        content_type="application/pdf",
+                    )
+
+        assert mock_upload.await_args.kwargs["reference_only"] is True
+        assert draft.provider_name == "Rhythm"
+        # The draft has to cite the row the upload just made, or the saved plan
+        # points at nothing and the operator cannot reopen what it was read from.
+        assert draft.source_document_id == document_id
+
+    async def test_a_refused_upload_does_not_masquerade_as_an_unreadable_file(
+        self,
+    ) -> None:
+        """``UnreadableDocumentError`` is a ``ValueError``, and the route reads
+        the difference: one is 413, the other 422. Conflating them tells someone
+        whose file is too big to go and find a different file."""
+        with patch.object(
+            svc.document_upload_service,
+            "accept_upload",
+            new=AsyncMock(side_effect=ValueError("File exceeds 10MB limit")),
+        ):
+            with pytest.raises(ValueError) as excinfo:
+                await svc.extract_plan_from_upload(
+                    ctx=_upload_ctx(),
+                    content=b"%PDF-1.4",
+                    filename="efl.pdf",
+                    content_type="application/pdf",
+                )
+
+        assert not isinstance(excinfo.value, svc.UnreadableDocumentError)

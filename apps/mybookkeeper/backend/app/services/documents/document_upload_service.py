@@ -34,12 +34,23 @@ async def accept_upload(
     filename: str,
     content_type: str,
     property_id: uuid.UUID | None = None,
+    *,
+    reference_only: bool = False,
 ) -> dict[str, str | int | None]:
     """Validate and save placeholder document(s) for async processing.
 
     For zip files, extracts all supported files and creates one document per file.
     Returns dict with document_id (primary), batch_id (if zip), and batch_total.
     Raises ValueError for limit exceeded or unsupported file type.
+
+    ``reference_only`` stores the file as source material rather than as
+    something to bill against. It sets the same flag the Documents page exposes
+    as "mark as reference-only", which the extractor short-circuits on before it
+    ever calls the model — so an Electricity Facts Label read into a utility
+    plan lands in the library without minting a transaction against the
+    property. Dedup deliberately does not apply the flag retroactively: a file
+    already uploaded for extraction keeps the transactions it produced, and the
+    operator can still toggle the flag by hand afterwards.
     """
     if len(content) == 0:
         raise ValueError("File is empty")
@@ -82,6 +93,7 @@ async def accept_upload(
                     file_mime_type=mime,
                     source="upload",
                     status="processing",
+                    is_escrow_paid=reference_only,
                     batch_id=batch_id,
                 )
                 created = await document_repo.create(db, doc)
@@ -119,6 +131,7 @@ async def accept_upload(
             content_hash=content_hash,
             source="upload",
             status="processing",
+            is_escrow_paid=reference_only,
         )
         created = await document_repo.create(db, doc)
         return {"document_id": str(created.id), "batch_id": None, "batch_total": 1}

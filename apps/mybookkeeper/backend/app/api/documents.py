@@ -10,6 +10,7 @@ from fastapi.responses import Response
 
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member, require_write_access
+from app.core.upload_errors import upload_error_status
 from app.schemas.common import BulkIdsRequest
 from app.schemas.documents.document import DocumentRead
 from app.schemas.documents.operation_responses import (
@@ -59,13 +60,7 @@ async def upload_document(
         )
     except ValueError as e:
         msg = str(e)
-        if "limit" in msg.lower() and "MB" in msg:
-            raise HTTPException(status_code=413, detail=msg)
-        if "daily upload limit" in msg.lower():
-            raise HTTPException(status_code=429, detail=msg)
-        if "unsupported" in msg.lower():
-            raise HTTPException(status_code=415, detail=msg)
-        raise HTTPException(status_code=422, detail=msg)
+        raise HTTPException(status_code=upload_error_status(msg), detail=msg)
     return AcceptUploadResponse(**result)
 
 
