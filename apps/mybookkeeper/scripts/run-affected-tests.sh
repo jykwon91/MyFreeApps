@@ -68,18 +68,57 @@ else
   echo ""
 fi
 
-# Detect Python command — try python3 first, fall back to python, then check venv
-if python3 --version &>/dev/null; then
-  PYTHON_CMD="python3"
-elif python --version &>/dev/null; then
-  PYTHON_CMD="python"
-elif [[ -f "$REPO_ROOT/backend/.venv/Scripts/python.exe" ]]; then
-  PYTHON_CMD="$REPO_ROOT/backend/.venv/Scripts/python.exe"
-elif [[ -f "$REPO_ROOT/backend/.venv/bin/python" ]]; then
-  PYTHON_CMD="$REPO_ROOT/backend/.venv/bin/python"
-else
-  echo -e "${RED}Error: Python not found${NC}"
+# Detect the Python to run tests with.
+#
+# The venv comes first on purpose. A bare `python` on PATH is almost never the
+# one holding pytest-asyncio, and preferring it meant this script died with
+# `ModuleNotFoundError: No module named 'pytest_asyncio'` in any git worktree —
+# worktrees have no .venv of their own. Falling back to the main checkout's
+# venv is what makes the script usable from a worktree at all.
+# Resolve both paths through `cd`+`pwd` so they share one format. Comparing a
+# shell `pwd` (/c/Users/...) against a raw `git rev-parse` (C:/Users/...) on
+# Windows silently fails to match, which is how this lookup broke the first time.
+GIT_COMMON_DIR="$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null || echo "")"
+MAIN_CHECKOUT=""
+if [[ -n "$GIT_COMMON_DIR" ]]; then
+  MAIN_CHECKOUT="$(cd "${GIT_COMMON_DIR%/.git}" 2>/dev/null && pwd || echo "")"
+fi
+WORKTREE_ROOT="$(cd "$(git rev-parse --show-toplevel)" 2>/dev/null && pwd || echo "")"
+APP_REL="${REPO_ROOT#"$WORKTREE_ROOT"/}"
+
+for candidate in \
+  "$REPO_ROOT/backend/.venv/Scripts/python.exe" \
+  "$REPO_ROOT/backend/.venv/bin/python" \
+  "$MAIN_CHECKOUT/$APP_REL/backend/.venv/Scripts/python.exe" \
+  "$MAIN_CHECKOUT/$APP_REL/backend/.venv/bin/python"; do
+  if [[ -f "$candidate" ]]; then
+    PYTHON_CMD="$candidate"
+    break
+  fi
+done
+
+if [[ -z "${PYTHON_CMD:-}" ]]; then
+  if python3 --version &>/dev/null; then
+    PYTHON_CMD="python3"
+  elif python --version &>/dev/null; then
+    PYTHON_CMD="python"
+  else
+    echo -e "${RED}Error: Python not found${NC}"
+    exit 2
+  fi
+fi
+
+if ! "$PYTHON_CMD" -c "import pytest_asyncio" &>/dev/null; then
+  echo -e "${RED}Error: $PYTHON_CMD cannot import pytest_asyncio.${NC}"
+  echo -e "${RED}Run 'uv sync' in backend/, or point at a checkout that has a .venv.${NC}"
   exit 2
+fi
+
+# Spread the suite across cores when xdist is available. It is optional so the
+# script still runs on a venv that predates it; CI installs it explicitly.
+PYTEST_PARALLEL=()
+if "$PYTHON_CMD" -c "import xdist" &>/dev/null; then
+  PYTEST_PARALLEL=(-n auto)
 fi
 
 # Check if any shared path was modified (triggers full suite)
@@ -167,16 +206,13 @@ run_backend_tests() {
 
   cd "$REPO_ROOT/backend"
 
-  # Activate venv if it exists
-  if [[ -f ".venv/Scripts/activate" ]]; then
-    source .venv/Scripts/activate
-  elif [[ -f ".venv/bin/activate" ]]; then
-    source .venv/bin/activate
-  fi
+  # No venv activation here: $PYTHON_CMD was already resolved (and verified to
+  # import pytest_asyncio) at the top of the script, and it is the only
+  # interpreter that is correct in a worktree, where there is no local .venv.
 
   if [[ "$test_files" == "ALL" ]]; then
     echo -e "  Running: ${YELLOW}all backend tests${NC}"
-    if python -m pytest tests/ -v; then
+    if "$PYTHON_CMD" -m pytest tests/ -q "${PYTEST_PARALLEL[@]}"; then
       echo -e "  ${GREEN}Backend tests passed${NC}"
     else
       echo -e "  ${RED}Backend tests FAILED${NC}"
@@ -191,7 +227,7 @@ run_backend_tests() {
     echo -e "  Running: ${YELLOW}${#FILES[@]} test file(s)${NC}"
     echo "$test_files" | tr ',' '\n' | sed 's/^/    /'
 
-    if python -m pytest $pytest_args -v; then
+    if "$PYTHON_CMD" -m pytest $pytest_args -q "${PYTEST_PARALLEL[@]}"; then
       echo -e "  ${GREEN}Backend tests passed${NC}"
     else
       echo -e "  ${RED}Backend tests FAILED${NC}"

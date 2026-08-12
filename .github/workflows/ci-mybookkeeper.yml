@@ -80,7 +80,8 @@ jobs:
         working-directory: apps/mybookkeeper/backend
         # Test deps are not pinned in pyproject.toml; install into the uv venv.
         # Mirrors the standalone repo's CI pattern (pytest + pytest-asyncio + aiosqlite).
-        run: uv pip install pytest pytest-asyncio aiosqlite
+        # pytest-xdist runs the suite across cores — see the -n flag below.
+        run: uv pip install pytest pytest-asyncio aiosqlite pytest-xdist
 
       - name: Install shared-backend package
         # platform_shared lives at packages/shared-backend and is imported by
@@ -100,7 +101,10 @@ jobs:
           ANTHROPIC_API_KEY: sk-ant-placeholder-not-real
           GOOGLE_CLIENT_ID: placeholder-not-real-google-client
           GOOGLE_CLIENT_SECRET: placeholder-not-real-google-secret
-        run: uv run pytest -q -m "not integration"
+        # -n auto spreads the ~3.6k tests across the runner's cores. Each
+        # xdist worker is its own process, so the session-scoped in-memory
+        # database in tests/conftest.py is per-worker and stays isolated.
+        run: uv run pytest -q -m "not integration" -n auto
 
   frontend-build:
     name: frontend-build / mybookkeeper
