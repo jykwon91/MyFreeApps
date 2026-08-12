@@ -26,10 +26,15 @@ export interface UtilityPlanDocumentReaderProps {
  * stores the file as reference material instead, so it lands in the library
  * — the saved plan cites it — without ever being mistaken for a payment.
  *
- * A picked file is held until "Read the terms" is pressed rather than uploaded
- * on sight, so abandoning the dialog leaves nothing behind and the read is a
- * single request either way. That matters on a phone, which is where this is
- * mostly used.
+ * Picking a document reads it. There is no confirm step: the card exists to
+ * fill the form, so a picked document the operator then has to press a second
+ * button to act on is a step that only ever had one sensible answer. The file
+ * is uploaded as part of that read rather than on sight, so abandoning the
+ * dialog before picking leaves nothing behind and the read is a single request
+ * either way. That matters on a phone, which is where this is mostly used.
+ *
+ * The button only comes back when a read fails, as a way to retry the same
+ * document without re-picking it.
  */
 export default function UtilityPlanDocumentReader({
   onRead,
@@ -39,20 +44,28 @@ export default function UtilityPlanDocumentReader({
   const [extractUpload, { isLoading: isReadingUpload }] =
     useExtractUtilityPlanFromUploadMutation();
   const [source, setSource] = useState<UtilityPlanDocumentSource | null>(null);
+  const [hasFailed, setHasFailed] = useState(false);
 
   const isReading = isReadingLibrary || isReadingUpload;
 
-  async function handleRead() {
-    if (!source) return;
+  async function read(target: UtilityPlanDocumentSource) {
+    setHasFailed(false);
     try {
       onRead(
-        source.kind === "file"
-          ? await extractUpload(source.file).unwrap()
-          : await extractPlan({ document_id: source.documentId }).unwrap(),
+        target.kind === "file"
+          ? await extractUpload(target.file).unwrap()
+          : await extractPlan({ document_id: target.documentId }).unwrap(),
       );
     } catch (e: unknown) {
+      setHasFailed(true);
       showError(readDocumentErrorMessage((e as { status?: number }).status));
     }
+  }
+
+  /** Picking is the whole interaction — take the document and read it. */
+  function pick(target: UtilityPlanDocumentSource) {
+    setSource(target);
+    void read(target);
   }
 
   return (
@@ -68,39 +81,42 @@ export default function UtilityPlanDocumentReader({
       {source ? (
         <UtilityPlanChosenDocument
           source={source}
-          onClear={() => setSource(null)}
-          disabled={isReading}
+          onClear={() => {
+            setSource(null);
+            setHasFailed(false);
+          }}
+          isReading={isReading}
         />
       ) : (
         <>
           <UtilityPlanFileDropzone
-            onFile={(file) => setSource({ kind: "file", file })}
+            onFile={(file) => pick({ kind: "file", file })}
             disabled={isReading}
           />
           {documents.length > 0 && (
             <UtilityPlanLibraryPicker
               documents={documents}
-              onPick={(documentId, name) =>
-                setSource({ kind: "library", documentId, name })
-              }
+              onPick={(documentId, name) => pick({ kind: "library", documentId, name })}
               disabled={isReading}
             />
           )}
         </>
       )}
 
-      <LoadingButton
-        type="button"
-        variant="secondary"
-        size="md"
-        isLoading={isReading}
-        loadingText="Reading..."
-        disabled={isReading || !source}
-        onClick={() => void handleRead()}
-        data-testid="utility-plan-read-document-button"
-      >
-        Read the terms
-      </LoadingButton>
+      {hasFailed && source && (
+        <LoadingButton
+          type="button"
+          variant="secondary"
+          size="md"
+          isLoading={isReading}
+          loadingText="Reading..."
+          disabled={isReading}
+          onClick={() => void read(source)}
+          data-testid="utility-plan-read-document-button"
+        >
+          Try reading it again
+        </LoadingButton>
+      )}
     </div>
   );
 }
