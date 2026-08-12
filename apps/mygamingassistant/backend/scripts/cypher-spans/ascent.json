@@ -1,0 +1,680 @@
+{
+ "video_id": "UsfCu5uL3Qs",
+ "map_slug": "ascent",
+ "author": "spawns",
+ "lineups": [
+  {
+   "cs": 9,
+   "title": "B Site Cam 1 \u2014 overall solid cam, what I use most rounds",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     9.17,
+     9.47
+    ],
+    "aim": [
+     9.83,
+     10.39
+    ],
+    "landing": [
+     10.4,
+     10.95
+    ]
+   }
+  },
+  {
+   "cs": 15,
+   "title": "B Site Cam 2 \u2014 Very similar info, good for timing Sova shocks/odin spam from",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     15.9,
+     16.6
+    ],
+    "aim": [
+     16.88,
+     17.43
+    ],
+    "landing": [
+     17.45,
+     18.28
+    ]
+   }
+  },
+  {
+   "cs": 21,
+   "title": "B Site Cam 3 \u2014 Great for fast rotating, also for Sova shocks",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     21.46,
+     22.02
+    ],
+    "aim": [
+     22.02,
+     22.66
+    ],
+    "landing": [
+     22.7,
+     23.42
+    ]
+   }
+  },
+  {
+   "cs": 26,
+   "title": "B Site Cam 4 \u2014 Solid info on site, can see through the windows into B main a",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     26.08,
+     26.56
+    ],
+    "aim": [
+     26.54,
+     27.02
+    ],
+    "landing": [
+     27.04,
+     27.5
+    ]
+   }
+  },
+  {
+   "cs": 31,
+   "title": "B Site Cam 5 \u2014 Market/B main info cams",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     31.17,
+     31.5
+    ],
+    "aim": [
+     31.3,
+     31.9
+    ],
+    "landing": [
+     31.9,
+     32.62
+    ]
+   }
+  },
+  {
+   "cs": 43,
+   "title": "B Main Cam 1 \u2014 Different early B main info cam",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     43.46,
+     44.25
+    ],
+    "aim": [
+     44.25,
+     44.93
+    ],
+    "landing": [
+     44.97,
+     45.68
+    ]
+   }
+  },
+  {
+   "cs": 48,
+   "title": "B Site Cage 1 \u2014 Crouch + lineup with crosshair",
+   "ability": "cyber-cage",
+   "technique": "crouch",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     48.62,
+     50.1
+    ],
+    "aim": [
+     52.25,
+     53.35
+    ],
+    "throw": [
+     53.72,
+     54.32
+    ],
+    "landing": [
+     55.83,
+     56.73
+    ]
+   }
+  },
+  {
+   "cs": 57,
+   "title": "B Site Cage 2 \u2014 solid cages for playing backsite, no lineup",
+   "ability": "cyber-cage",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     57.4,
+     57.85
+    ],
+    "aim": [
+     57.85,
+     58.38
+    ],
+    "throw": [
+     58.3,
+     58.85
+    ],
+    "landing": [
+     58.92,
+     59.8
+    ]
+   }
+  },
+  {
+   "cs": 76,
+   "title": "B Site Cage 3 \u2014 Easy lineup for lane cage if you need it midround (use",
+   "ability": "cyber-cage",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     76.7,
+     78.05
+    ],
+    "aim": [
+     78.65,
+     79.4
+    ],
+    "throw": [
+     79.3,
+     79.9
+    ],
+    "landing": [
+     82.1,
+     82.85
+    ]
+   }
+  },
+  {
+   "cs": 85,
+   "title": "B Site Trip 1 \u2014 standing at the site mouth near the B main arch, trip strung",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     85.5,
+     86.0
+    ],
+    "aim": [
+     86.05,
+     86.53
+    ],
+    "landing": [
+     86.58,
+     87.32
+    ]
+   }
+  },
+  {
+   "cs": 92,
+   "title": "B Site Trip 2 \u2014 low trip strung along the left brick wall near the small wall",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     92.25,
+     92.58
+    ],
+    "aim": [
+     92.58,
+     92.87
+    ],
+    "landing": [
+     93.5,
+     93.96
+    ]
+   }
+  },
+  {
+   "cs": 98,
+   "title": "B Site Trip 3 \u2014 trip strung diagonally from the ground up to an anchor high",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     98.3,
+     98.66
+    ],
+    "aim": [
+     98.66,
+     99.04
+    ],
+    "landing": [
+     99.65,
+     99.86
+    ]
+   }
+  },
+  {
+   "cs": 105,
+   "title": "Market Trip 1 \u2014 trip strung across the market stairs / Pizzeria doorway",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "market",
+   "stand": "market",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     105.95,
+     106.6
+    ],
+    "aim": [
+     106.7,
+     107.2
+    ],
+    "landing": [
+     107.24,
+     107.7
+    ]
+   }
+  },
+  {
+   "cs": 114,
+   "title": "A Main Cam 1 \u2014 Best cam towards A imo, info tree and won't get shot out early",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     114.19,
+     114.84
+    ],
+    "aim": [
+     114.38,
+     114.84
+    ],
+    "landing": [
+     114.85,
+     115.48
+    ]
+   }
+  },
+  {
+   "cs": 117,
+   "title": "A Main Cam 2 \u2014 Same cam but more left to time one ways, will get shot out",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     117.9,
+     118.7
+    ],
+    "aim": [
+     118.7,
+     119.2
+    ],
+    "landing": [
+     119.38,
+     120.02
+    ]
+   }
+  },
+  {
+   "cs": 122,
+   "title": "A Site Cam 1 \u2014 Goat cam for tree info",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     122.55,
+     123.45
+    ],
+    "aim": [
+     123.5,
+     124.25
+    ],
+    "landing": [
+     124.25,
+     125.0
+    ]
+   }
+  },
+  {
+   "cs": 127,
+   "title": "Mid Cam 1 \u2014 Alternative tree cam, look at radar when using",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     127.15,
+     127.55
+    ],
+    "aim": [
+     127.55,
+     128.2
+    ],
+    "landing": [
+     128.23,
+     128.88
+    ]
+   }
+  },
+  {
+   "cs": 132,
+   "title": "A Site Cam 2 \u2014 Best mid cam when playing A imo",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     132.75,
+     133.65
+    ],
+    "aim": [
+     134.12,
+     135.0
+    ],
+    "landing": [
+     135.03,
+     135.8
+    ]
+   }
+  },
+  {
+   "cs": 137,
+   "title": "A Site Cage 1 \u2014 Use middle hud line for lineup",
+   "ability": "cyber-cage",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     137.7,
+     139.3
+    ],
+    "aim": [
+     142.2,
+     143.15
+    ],
+    "throw": [
+     143.1,
+     143.7
+    ],
+    "landing": [
+     144.75,
+     146.25
+    ]
+   }
+  },
+  {
+   "cs": 148,
+   "title": "A Site Cage 2 \u2014 Use middle hud line for lineup",
+   "ability": "cyber-cage",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     148.6,
+     149.65
+    ],
+    "aim": [
+     153.9,
+     154.82
+    ],
+    "throw": [
+     154.82,
+     155.45
+    ],
+    "landing": [
+     157.65,
+     158.94
+    ]
+   }
+  },
+  {
+   "cs": 175,
+   "title": "A Site Cage 3 \u2014 Really good cages for playing off trips site",
+   "ability": "cyber-cage",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     175.14,
+     175.31
+    ],
+    "aim": [
+     175.31,
+     175.42
+    ],
+    "throw": [
+     175.33,
+     175.83
+    ],
+    "landing": [
+     177.85,
+     178.75
+    ]
+   }
+  },
+  {
+   "cs": 180,
+   "title": "A Site Cage 4 \u2014 Another pair of good cages, can be played from site/heaven",
+   "ability": "cyber-cage",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     180.4,
+     181.42
+    ],
+    "aim": [
+     181.45,
+     182.32
+    ],
+    "throw": [
+     182.35,
+     182.75
+    ],
+    "landing": [
+     182.55,
+     183.1
+    ]
+   }
+  },
+  {
+   "cs": 191,
+   "title": "A Main Trip 1 \u2014 A Site: trapwire strung across the site-side mouth of A Main",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     191.82,
+     192.06
+    ],
+    "aim": [
+     192.06,
+     192.36
+    ],
+    "landing": [
+     192.37,
+     192.62
+    ]
+   }
+  },
+  {
+   "cs": 200,
+   "title": "A Site Trip 1 \u2014 A Site: low trapwire across the A Link / tree doorway",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     200.8,
+     201.65
+    ],
+    "aim": [
+     201.2,
+     201.72
+    ],
+    "landing": [
+     201.75,
+     202.3
+    ]
+   }
+  },
+  {
+   "cs": 205,
+   "title": "A Site Trip 2 \u2014 A Site: trapwire across the ramp/steps leading up toward A",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     205.22,
+     205.74
+    ],
+    "aim": [
+     205.38,
+     205.71
+    ],
+    "landing": [
+     205.78,
+     206.42
+    ]
+   }
+  },
+  {
+   "cs": 211,
+   "title": "A Site Trip 3 \u2014 A Site backsite: low trapwire across the CT-side walkway",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     211.15,
+     212.0
+    ],
+    "aim": [
+     212.02,
+     212.72
+    ],
+    "landing": [
+     212.86,
+     213.19
+    ]
+   }
+  },
+  {
+   "cs": 213,
+   "title": "A Site Trip 4 \u2014 A Site: diagonal trapwire up the CT-side rafters/tarp wall",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     213.0,
+     213.55
+    ],
+    "aim": [
+     213.74,
+     214.28
+    ],
+    "landing": [
+     214.3,
+     214.57
+    ]
+   }
+  },
+  {
+   "cs": 216,
+   "title": "A Site Trip 5 \u2014 A Tree: horizontal trapwire strung across the A Tree corridor",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     216.04,
+     216.13
+    ],
+    "aim": [
+     216.11,
+     216.2
+    ],
+    "landing": [
+     216.36,
+     217.06
+    ]
+   }
+  }
+ ],
+ "note": "Localized 2026-08-11 via mga-lineup-localize-multi wf_453e794d-6b8 (opus/high survey + opus/high localize + opus/high adversarial gate). 6 grouped chapters -> 34 placements, 28 gate-passed; 6 failed the gate and go to the retry backlog. Titles carry the creator's own on-screen captions."
+}
