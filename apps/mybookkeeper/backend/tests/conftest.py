@@ -147,6 +147,43 @@ async def db(_db_engine: AsyncEngine) -> AsyncGenerator[AsyncSession, None]:
                 await conn.execute(table.delete())
 
 
+@pytest.fixture()
+def audit_listeners():
+    """Attach the audit listener for one test, then put the registry back.
+
+    The listener lives on the global SQLAlchemy ``Session`` class, so leaving
+    it attached makes every later test in the session write an audit row per
+    changed field — the demo-seeding tests went from 664 to 15,230 statements
+    purely from listener leakage. Any test that needs the listener must take
+    this fixture rather than calling ``register_audit_listeners()`` directly.
+
+    ``reset_registry()`` also clears the sensitive / skip sets, so the
+    import-time registrations from ``app.core.audit`` are re-applied here to
+    leave global state exactly as it was found.
+    """
+    from app.core.audit import (
+        MBK_SENSITIVE_FIELDS,
+        MBK_SKIP_FIELDS,
+        MBK_SKIP_TABLES,
+        register_audit_listeners,
+    )
+    from platform_shared.core.audit import (
+        register_sensitive_fields,
+        register_skip_fields,
+        register_skip_tables,
+        reset_registry,
+    )
+
+    register_audit_listeners()
+    try:
+        yield
+    finally:
+        reset_registry()
+        register_sensitive_fields(MBK_SENSITIVE_FIELDS)
+        register_skip_tables(MBK_SKIP_TABLES)
+        register_skip_fields(MBK_SKIP_FIELDS)
+
+
 test_user, test_org = make_user_fixture(
     user_model=User,
     org_model=Organization,

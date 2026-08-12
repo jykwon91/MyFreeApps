@@ -13,7 +13,6 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.audit import register_audit_listeners
 from app.models.organization.organization import Organization
 from app.models.system.audit_log import AuditLog
 from app.models.user.user import User
@@ -22,8 +21,9 @@ from app.models.welcome_manuals.welcome_manual_send import WelcomeManualSend
 
 
 @pytest.fixture(autouse=True)
-def _audit():
-    register_audit_listeners()
+def _audit(audit_listeners):
+    """Attach the audit listener for this module's tests only — see the
+    shared ``audit_listeners`` fixture for why it must be detached after."""
 
 
 class TestWelcomeManualSendAuditMasking:
