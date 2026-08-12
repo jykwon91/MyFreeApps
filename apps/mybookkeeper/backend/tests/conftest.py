@@ -28,9 +28,9 @@ os.environ.setdefault("MINIO_BUCKET", "test-bucket")
 os.environ.setdefault("MINIO_PUBLIC_ENDPOINT", "test-minio:9000")
 import pytest_asyncio
 from sqlalchemy import event, JSON, String
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
 from sqlalchemy.dialects.postgresql import ARRAY, INET, JSONB
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 
 from app.db.base import Base
 from app.models.organization.organization import Organization
@@ -96,10 +96,21 @@ def _patch_metadata_for_sqlite() -> None:
             table.columns[name].nullable = True
 
 
-@pytest_asyncio.fixture()
-async def db() -> AsyncGenerator[AsyncSession, None]:
-    """In-memory SQLite async session for tests."""
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+@pytest_asyncio.fixture(scope="session")
+async def _db_engine() -> AsyncGenerator[AsyncEngine, None]:
+    """One in-memory database, built once for the whole run.
+
+    The schema is 81 tables and 178 indexes. Creating it per test meant 259
+    DDL statements before every one of ~3.5k tests, which was the bulk of a
+    ten-minute suite. ``StaticPool`` keeps every connection pointed at the
+    same in-memory database so the schema survives between tests; isolation
+    comes from the per-test transaction in ``db`` below.
+    """
+    engine = create_async_engine(
+        "sqlite+aiosqlite:///:memory:",
+        poolclass=StaticPool,
+        connect_args={"check_same_thread": False},
+    )
 
     @event.listens_for(engine.sync_engine, "connect")
     def _set_fk(dbapi_conn, _rec):  # type: ignore[no-untyped-def]
@@ -110,11 +121,30 @@ async def db() -> AsyncGenerator[AsyncSession, None]:
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
-    async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
-    async with async_session() as session:
-        yield session
+    yield engine
 
     await engine.dispose()
+
+
+@pytest_asyncio.fixture()
+async def db(_db_engine: AsyncEngine) -> AsyncGenerator[AsyncSession, None]:
+    """A session on the shared database, emptied when the test ends.
+
+    Rows are deleted rather than rolled back: services under test commit
+    through their own sessions, and wrapping those in a savepoint made a
+    commit stop meaning what it means in production. Deleting afterwards
+    keeps commit semantics identical to a real database while still
+    skipping the schema rebuild — 81 DELETEs against mostly-empty tables
+    against 259 DDL statements.
+    """
+    session = AsyncSession(bind=_db_engine, expire_on_commit=False)
+    try:
+        yield session
+    finally:
+        await session.close()
+        async with _db_engine.begin() as conn:
+            for table in reversed(Base.metadata.sorted_tables):
+                await conn.execute(table.delete())
 
 
 test_user, test_org = make_user_fixture(
