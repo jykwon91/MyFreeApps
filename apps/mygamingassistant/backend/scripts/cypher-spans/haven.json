@@ -1,0 +1,511 @@
+{
+ "video_id": "UsfCu5uL3Qs",
+ "map_slug": "haven",
+ "author": "spawns",
+ "lineups": [
+  {
+   "cs": 1008,
+   "title": "A Site Cam 1 \u2014 Good earlyish info cam (will get shot out fast though)",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1008.99,
+     1009.42
+    ],
+    "aim": [
+     1009.42,
+     1010.06
+    ],
+    "landing": [
+     1010.1,
+     1010.75
+    ]
+   }
+  },
+  {
+   "cs": 1014,
+   "title": "A Lobby Cam 1 \u2014 Early short info cam",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "a-lobby",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1014.24,
+     1014.94
+    ],
+    "aim": [
+     1014.66,
+     1015.27
+    ],
+    "landing": [
+     1015.42,
+     1016.1
+    ]
+   }
+  },
+  {
+   "cs": 1021,
+   "title": "A Site Cam 2 \u2014 Best retake cam imo",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1021.22,
+     1021.72
+    ],
+    "aim": [
+     1021.72,
+     1022.28
+    ],
+    "landing": [
+     1022.33,
+     1023.1
+    ]
+   }
+  },
+  {
+   "cs": 1025,
+   "title": "A Site Cam 3 \u2014 Alternative retake cams",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1025.72,
+     1026.42
+    ],
+    "aim": [
+     1026.42,
+     1026.96
+    ],
+    "landing": [
+     1026.96,
+     1027.76
+    ]
+   }
+  },
+  {
+   "cs": 1029,
+   "title": "A Site Cam 4 \u2014 Alternative retake cams",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1029.67,
+     1030.25
+    ],
+    "aim": [
+     1029.75,
+     1030.25
+    ],
+    "landing": [
+     1030.25,
+     1031.05
+    ]
+   }
+  },
+  {
+   "cs": 1034,
+   "title": "A Site Cage 1 \u2014 Pretty simple cages just to play off different trips",
+   "ability": "cyber-cage",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1034.45,
+     1035.1
+    ],
+    "aim": [
+     1035.03,
+     1035.26
+    ],
+    "throw": [
+     1035.19,
+     1035.72
+    ],
+    "landing": [
+     1035.42,
+     1035.8
+    ]
+   }
+  },
+  {
+   "cs": 1039,
+   "title": "A Site Cage 2 \u2014 Pretty simple cages just to play off different trips",
+   "ability": "cyber-cage",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1039.45,
+     1040.1
+    ],
+    "aim": [
+     1040.05,
+     1040.45
+    ],
+    "throw": [
+     1040.3,
+     1040.85
+    ],
+    "landing": [
+     1040.62,
+     1041.08
+    ]
+   }
+  },
+  {
+   "cs": 1049,
+   "title": "A Site Trip 1 \u2014 A Site interior: trip anchored on the tall wooden gate and",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1049.45,
+     1049.74
+    ],
+    "aim": [
+     1049.74,
+     1050.02
+    ],
+    "landing": [
+     1050.06,
+     1050.34
+    ]
+   }
+  },
+  {
+   "cs": 1053,
+   "title": "A Site Trip 2 \u2014 A Site: trip strung across the mouth of the 'A'-marked garage",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1053.78,
+     1054.12
+    ],
+    "aim": [
+     1054.12,
+     1054.49
+    ],
+    "landing": [
+     1054.55,
+     1055.5
+    ]
+   }
+  },
+  {
+   "cs": 1056,
+   "title": "A Lobby Cam 2 \u2014 cam stuck high on the A-site mural wall right of the hanging",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "a-lobby",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1056.3,
+     1056.95
+    ],
+    "aim": [
+     1056.93,
+     1057.43
+    ],
+    "landing": [
+     1057.45,
+     1057.88
+    ]
+   }
+  },
+  {
+   "cs": 1058,
+   "title": "C Site Cam 1 \u2014 Cam gets info site and garage which is just super strong",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "c-site",
+   "stand": "c-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1058.05,
+     1058.95
+    ],
+    "aim": [
+     1059.75,
+     1060.49
+    ],
+    "landing": [
+     1060.5,
+     1061.26
+    ]
+   }
+  },
+  {
+   "cs": 1073,
+   "title": "Garage Cage 1 \u2014 Solid garage one way, personally never use though",
+   "ability": "cyber-cage",
+   "technique": "standing",
+   "target": "garage",
+   "stand": "garage",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1073.78,
+     1074.98
+    ],
+    "aim": [
+     1075.0,
+     1075.9
+    ],
+    "throw": [
+     1075.9,
+     1076.5
+    ],
+    "landing": [
+     1076.7,
+     1077.38
+    ]
+   }
+  },
+  {
+   "cs": 1094,
+   "title": "B Site Trip 1 \u2014 Second trip from the same spawn-barrier stand, anchored on",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "c-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1094.3,
+     1094.72
+    ],
+    "aim": [
+     1094.72,
+     1095.08
+    ],
+    "landing": [
+     1095.68,
+     1096.29
+    ]
+   }
+  },
+  {
+   "cs": 1096,
+   "title": "C Site Trip 1 \u2014 Fourth trip placed after turning right toward the white",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "c-site",
+   "stand": "c-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1096.8,
+     1097.95
+    ],
+    "aim": [
+     1098.2,
+     1098.86
+    ],
+    "landing": [
+     1098.9,
+     1099.2
+    ]
+   }
+  },
+  {
+   "cs": 1101,
+   "title": "B Site Trip 2 \u2014 Wire placed facing the mural back wall with the tarp on the",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1101.7,
+     1101.92
+    ],
+    "aim": [
+     1102.15,
+     1102.58
+    ],
+    "landing": [
+     1102.62,
+     1103.4
+    ]
+   }
+  },
+  {
+   "cs": 1113,
+   "title": "Garage Cam 1 \u2014 Goat cam for garage, I've been asked before, no you won't get",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "garage",
+   "stand": "garage",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1113.95,
+     1115.65
+    ],
+    "aim": [
+     1116.92,
+     1117.6
+    ],
+    "landing": [
+     1117.62,
+     1118.43
+    ]
+   }
+  },
+  {
+   "cs": 1125,
+   "title": "B Site Cam 1 \u2014 Alt mid info cam",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1125.9,
+     1126.9
+    ],
+    "aim": [
+     1126.98,
+     1127.44
+    ],
+    "landing": [
+     1127.46,
+     1128.26
+    ]
+   }
+  },
+  {
+   "cs": 1140,
+   "title": "C Site Cage 1 \u2014 Great one way but will often get smoked out",
+   "ability": "cyber-cage",
+   "technique": "standing",
+   "target": "c-site",
+   "stand": "c-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1140.15,
+     1141.0
+    ],
+    "aim": [
+     1140.98,
+     1141.5
+    ],
+    "throw": [
+     1141.4,
+     1142.0
+    ],
+    "landing": [
+     1143.15,
+     1144.35
+    ]
+   }
+  },
+  {
+   "cs": 1148,
+   "title": "B Site Cam 2 \u2014 Basically the goat cam for B imo",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1148.79,
+     1149.16
+    ],
+    "aim": [
+     1149.45,
+     1150.05
+    ],
+    "landing": [
+     1150.07,
+     1150.78
+    ]
+   }
+  },
+  {
+   "cs": 1152,
+   "title": "B Site Cam 3 \u2014 Another good mid info cam",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1152.5,
+     1153.05
+    ],
+    "aim": [
+     1153.05,
+     1153.68
+    ],
+    "landing": [
+     1153.8,
+     1154.05
+    ]
+   }
+  },
+  {
+   "cs": 1156,
+   "title": "B Site Cage 1 \u2014 Place the cage slightly more inward so you can activate with",
+   "ability": "cyber-cage",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1156.45,
+     1158.35
+    ],
+    "aim": [
+     1158.72,
+     1159.35
+    ],
+    "throw": [
+     1159.3,
+     1159.86
+    ],
+    "landing": [
+     1162.09,
+     1162.66
+    ]
+   }
+  }
+ ],
+ "note": "Cypher setups by spawns; grouped chapters split into individual placements by survey pass."
+}
