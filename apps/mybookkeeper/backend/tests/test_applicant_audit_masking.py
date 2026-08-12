@@ -19,7 +19,6 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.audit import register_audit_listeners
 from app.models.applicants.applicant import Applicant
 from app.models.applicants.reference import Reference
 from app.models.applicants.video_call_note import VideoCallNote
@@ -28,14 +27,15 @@ from app.models.system.audit_log import AuditLog
 from app.models.user.user import User
 
 
-@pytest.fixture(scope="session", autouse=True)
-def _audit() -> None:
-    """Register audit listeners ONCE for the session.
+@pytest.fixture(autouse=True)
+def _audit(audit_listeners) -> None:
+    """Attach the audit listener for this module's tests only.
 
-    The audit listener attaches to the global ``Session`` class — registering
-    per-test would stack listeners and produce duplicate audit_log rows.
+    Delegates to the shared ``audit_listeners`` fixture so the listener is
+    detached afterwards — it lives on the global ``Session`` class, and
+    leaving it attached makes every later test in the run pay for audit
+    writes it never asked for.
     """
-    register_audit_listeners()
 
 
 class TestApplicantAuditMasking:
