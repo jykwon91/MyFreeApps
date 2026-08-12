@@ -74,14 +74,10 @@ jobs:
 
       - name: Sync backend dependencies
         working-directory: apps/mybookkeeper/backend
+        # Installs the `dev` dependency-group too (pytest, pytest-asyncio,
+        # aiosqlite, pytest-xdist), so CI and a local `uv sync` resolve the
+        # same test toolchain from the lockfile instead of drifting.
         run: uv sync --frozen
-
-      - name: Install test-only dependencies
-        working-directory: apps/mybookkeeper/backend
-        # Test deps are not pinned in pyproject.toml; install into the uv venv.
-        # Mirrors the standalone repo's CI pattern (pytest + pytest-asyncio + aiosqlite).
-        # pytest-xdist runs the suite across cores — see the -n flag below.
-        run: uv pip install pytest pytest-asyncio aiosqlite pytest-xdist
 
       - name: Install shared-backend package
         # platform_shared lives at packages/shared-backend and is imported by

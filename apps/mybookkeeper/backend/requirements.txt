@@ -80,6 +80,8 @@ email-validator==2.3.0
     #   pydantic
 et-xmlfile==2.0.0
     # via openpyxl
+execnet==2.1.2
+    # via pytest-xdist
 fastapi==0.136.3
     # via
     #   fastapi-users
@@ -232,8 +234,10 @@ pytest==9.1.1
     # via
     #   pytest-anyio
     #   pytest-asyncio
+    #   pytest-xdist
 pytest-anyio==0.0.0
 pytest-asyncio==1.4.0
+pytest-xdist==3.8.0
 python-dateutil==2.9.0.post0
     # via icalendar
 python-docx==1.2.0
