@@ -1,0 +1,634 @@
+{
+ "video_id": "UsfCu5uL3Qs",
+ "map_slug": "bind",
+ "author": "spawns",
+ "lineups": [
+  {
+   "cs": 380,
+   "title": "B Site Cam 1 \u2014 Best cam for hookah, you will need to practice though",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     380.56,
+     381.22
+    ],
+    "aim": [
+     382.4,
+     382.82
+    ],
+    "landing": [
+     382.85,
+     383.32
+    ]
+   }
+  },
+  {
+   "cs": 384,
+   "title": "B Site Cam 2 \u2014 Good early info",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     384.42,
+     384.75
+    ],
+    "aim": [
+     384.74,
+     385.2
+    ],
+    "landing": [
+     385.23,
+     385.98
+    ]
+   }
+  },
+  {
+   "cs": 391,
+   "title": "B Site Cam 3 \u2014 Alternative solid hookah cams",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "hookah",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     391.55,
+     392.35
+    ],
+    "aim": [
+     392.45,
+     393.06
+    ],
+    "landing": [
+     393.08,
+     393.68
+    ]
+   }
+  },
+  {
+   "cs": 402,
+   "title": "B Site Cam 4 \u2014 Early long info but will get shot",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     402.12,
+     402.6
+    ],
+    "aim": [
+     402.6,
+     403.25
+    ],
+    "landing": [
+     403.27,
+     404.05
+    ]
+   }
+  },
+  {
+   "cs": 406,
+   "title": "B Site Cam 5 \u2014 This cam is better imo and doesn't get shot out as much",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     406.0,
+     406.4
+    ],
+    "aim": [
+     406.42,
+     406.98
+    ],
+    "landing": [
+     407.05,
+     407.85
+    ]
+   }
+  },
+  {
+   "cs": 428,
+   "title": "B Site Cage 1 \u2014 Love this one way for pistol rounds but be careful on rifle",
+   "ability": "cyber-cage",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     428.0,
+     429.15
+    ],
+    "aim": [
+     430.28,
+     431.0
+    ],
+    "throw": [
+     431.0,
+     431.6
+    ],
+    "landing": [
+     432.05,
+     433.45
+    ]
+   }
+  },
+  {
+   "cs": 445,
+   "title": "B Site Cage 2 \u2014 Good cages for a rat play",
+   "ability": "cyber-cage",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     445.97,
+     446.3
+    ],
+    "aim": [
+     446.06,
+     446.3
+    ],
+    "throw": [
+     446.27,
+     446.79
+    ],
+    "landing": [
+     446.38,
+     446.82
+    ]
+   }
+  },
+  {
+   "cs": 457,
+   "title": "B Site Trip 1 \u2014 trip strung across the room / interior archway at waist",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     457.38,
+     457.6
+    ],
+    "aim": [
+     457.6,
+     457.88
+    ],
+    "landing": [
+     458.3,
+     458.5
+    ]
+   }
+  },
+  {
+   "cs": 459,
+   "title": "B Site Trip 2 \u2014 trip anchored on the wooden ledge/awning above the arched",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     459.62,
+     460.1
+    ],
+    "aim": [
+     459.68,
+     460.24
+    ],
+    "landing": [
+     460.23,
+     460.63
+    ]
+   }
+  },
+  {
+   "cs": 462,
+   "title": "B Site Trip 3 \u2014 trip strung high across the top of the B Link doorway",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     462.95,
+     463.85
+    ],
+    "aim": [
+     463.95,
+     464.78
+    ],
+    "landing": [
+     464.95,
+     465.55
+    ]
+   }
+  },
+  {
+   "cs": 469,
+   "title": "B Site Trip 4 \u2014 trip anchored on the corner of the wooden shop counter / crate",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     469.07,
+     469.3
+    ],
+    "aim": [
+     469.3,
+     469.63
+    ],
+    "landing": [
+     469.66,
+     470.45
+    ]
+   }
+  },
+  {
+   "cs": 473,
+   "title": "A Site Cam 1 \u2014 Best info cam for A",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     473.56,
+     474.14
+    ],
+    "aim": [
+     473.72,
+     474.14
+    ],
+    "landing": [
+     474.18,
+     475.0
+    ]
+   }
+  },
+  {
+   "cs": 475,
+   "title": "A Site Cam 2 \u2014 Worse info, doesn't get shot as easily",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     475.94,
+     476.13
+    ],
+    "aim": [
+     476.13,
+     476.36
+    ],
+    "landing": [
+     476.63,
+     477.23
+    ]
+   }
+  },
+  {
+   "cs": 479,
+   "title": "A Short Cam 1 \u2014 Sees over Viper lurk wall short",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "a-short",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     479.44,
+     479.96
+    ],
+    "aim": [
+     479.96,
+     480.48
+    ],
+    "landing": [
+     480.5,
+     481.3
+    ]
+   }
+  },
+  {
+   "cs": 482,
+   "title": "A Site Cam 3 \u2014 Solid info, can make tp plays with it",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     482.72,
+     483.55
+    ],
+    "aim": [
+     483.55,
+     484.22
+    ],
+    "landing": [
+     484.33,
+     485.05
+    ]
+   }
+  },
+  {
+   "cs": 491,
+   "title": "A Short Cam 2 \u2014 Super safe cam",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "a-short",
+   "stand": "a-short",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     491.28,
+     491.6
+    ],
+    "aim": [
+     491.74,
+     492.31
+    ],
+    "landing": [
+     492.34,
+     493.1
+    ]
+   }
+  },
+  {
+   "cs": 499,
+   "title": "A Short Cage 1 \u2014 Good one way, but I don't use often because of how people",
+   "ability": "cyber-cage",
+   "technique": "standing",
+   "target": "a-short",
+   "stand": "a-short",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     499.65,
+     500.55
+    ],
+    "aim": [
+     500.62,
+     501.32
+    ],
+    "throw": [
+     501.3,
+     501.9
+    ],
+    "landing": [
+     503.3,
+     504.5
+    ]
+   }
+  },
+  {
+   "cs": 507,
+   "title": "A Short Cage 2 \u2014 Lineup with right of sign, aim in between lamp and wall",
+   "ability": "cyber-cage",
+   "technique": "standing",
+   "target": "a-short",
+   "stand": "a-short",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     507.2,
+     509.1
+    ],
+    "aim": [
+     512.9,
+     513.8
+    ],
+    "throw": [
+     513.72,
+     514.32
+    ],
+    "landing": [
+     515.7,
+     516.95
+    ]
+   }
+  },
+  {
+   "cs": 517,
+   "title": "A Short Cage 3 \u2014 different cages for playing off kill trips from site",
+   "ability": "cyber-cage",
+   "technique": "standing",
+   "target": "a-short",
+   "stand": "a-short",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     517.72,
+     518.55
+    ],
+    "aim": [
+     518.1,
+     518.72
+    ],
+    "throw": [
+     518.72,
+     519.28
+    ],
+    "landing": [
+     519.3,
+     519.85
+    ]
+   }
+  },
+  {
+   "cs": 520,
+   "title": "A Site Cage 1 \u2014 different cages for playing off kill trips from site",
+   "ability": "cyber-cage",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     520.08,
+     520.6
+    ],
+    "aim": [
+     520.28,
+     520.76
+    ],
+    "throw": [
+     520.68,
+     521.28
+    ],
+    "landing": [
+     521.18,
+     521.88
+    ]
+   }
+  },
+  {
+   "cs": 524,
+   "title": "A Short Cage 4 \u2014 different cages for playing off kill trips from site",
+   "ability": "cyber-cage",
+   "technique": "standing",
+   "target": "a-short",
+   "stand": "a-short",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     524.0,
+     524.22
+    ],
+    "aim": [
+     524.2,
+     524.3
+    ],
+    "throw": [
+     524.12,
+     524.72
+    ],
+    "landing": [
+     524.86,
+     525.9
+    ]
+   }
+  },
+  {
+   "cs": 527,
+   "title": "A Site Trip 1 \u2014 trapwire strung at head height across the top of the A-site",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     527.15,
+     527.58
+    ],
+    "aim": [
+     527.25,
+     527.6
+    ],
+    "landing": [
+     527.63,
+     528.13
+    ]
+   }
+  },
+  {
+   "cs": 534,
+   "title": "A Short Trip 1 \u2014 trapwire anchored on the left-hand wall corner beside the",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "a-short",
+   "stand": "a-short",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     534.17,
+     534.45
+    ],
+    "aim": [
+     534.45,
+     534.69
+    ],
+    "landing": [
+     534.7,
+     535.45
+    ]
+   }
+  },
+  {
+   "cs": 539,
+   "title": "A Site Trip 2 \u2014 low trapwire strung from the green box stack across the site",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     539.55,
+     540.45
+    ],
+    "aim": [
+     540.45,
+     540.92
+    ],
+    "landing": [
+     541.55,
+     542.6
+    ]
+   }
+  },
+  {
+   "cs": 542,
+   "title": "A Short Trip 2 \u2014 long chest-height trapwire strung across the front of the",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "a-short",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     542.94,
+     543.24
+    ],
+    "aim": [
+     543.26,
+     543.62
+    ],
+    "landing": [
+     543.68,
+     544.02
+    ]
+   }
+  },
+  {
+   "cs": 547,
+   "title": "Showers Trip 1 \u2014 trapwire strung across the tiled bathhouse interior, anchored",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "showers",
+   "stand": "showers",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     547.75,
+     548.14
+    ],
+    "aim": [
+     548.17,
+     548.47
+    ],
+    "landing": [
+     548.5,
+     548.73
+    ]
+   }
+  }
+ ],
+ "note": "Cypher setups by spawns; grouped chapters split into individual placements by survey pass."
+}

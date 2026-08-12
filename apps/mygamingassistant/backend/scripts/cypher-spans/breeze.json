@@ -1,0 +1,438 @@
+{
+ "video_id": "UsfCu5uL3Qs",
+ "map_slug": "breeze",
+ "author": "spawns",
+ "lineups": [
+  {
+   "cs": 730,
+   "title": "B Site Cam 1 \u2014 Standard site cam, sees tunnel/nest push",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     730.95,
+     731.6
+    ],
+    "aim": [
+     731.78,
+     732.3
+    ],
+    "landing": [
+     732.32,
+     733.1
+    ]
+   }
+  },
+  {
+   "cs": 735,
+   "title": "B Site Cam 2 \u2014 Earlier info, earlier to get shot",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     735.09,
+     735.42
+    ],
+    "aim": [
+     735.55,
+     736.02
+    ],
+    "landing": [
+     736.05,
+     736.8
+    ]
+   }
+  },
+  {
+   "cs": 739,
+   "title": "B Main Cam 1 \u2014 Good mid cams from B",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "b-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     739.32,
+     739.6
+    ],
+    "aim": [
+     739.46,
+     739.66
+    ],
+    "landing": [
+     739.67,
+     740.38
+    ]
+   }
+  },
+  {
+   "cs": 742,
+   "title": "Mid Cam 1 \u2014 Good mid cams from B",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "b-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     742.19,
+     742.44
+    ],
+    "aim": [
+     742.32,
+     742.56
+    ],
+    "landing": [
+     742.52,
+     742.74
+    ]
+   }
+  },
+  {
+   "cs": 751,
+   "title": "B Main Cage 1 \u2014 Place crosshair on the square",
+   "ability": "cyber-cage",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "b-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     751.72,
+     752.68
+    ],
+    "aim": [
+     752.72,
+     753.56
+    ],
+    "throw": [
+     753.55,
+     754.15
+    ],
+    "landing": [
+     755.24,
+     756.4
+    ]
+   }
+  },
+  {
+   "cs": 757,
+   "title": "B Site Cage 1 \u2014 the cages I would use to play off kill trips not complicated",
+   "ability": "cyber-cage",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     757.92,
+     758.52
+    ],
+    "aim": [
+     758.48,
+     759.04
+    ],
+    "throw": [
+     758.94,
+     759.44
+    ],
+    "landing": [
+     759.88,
+     760.78
+    ]
+   }
+  },
+  {
+   "cs": 763,
+   "title": "B Site Cage 2 \u2014 the cages I would use to play off kill trips not complicated",
+   "ability": "cyber-cage",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     763.5,
+     764.3
+    ],
+    "aim": [
+     763.5,
+     763.68
+    ],
+    "throw": [
+     763.55,
+     764.15
+    ],
+    "landing": [
+     764.22,
+     765.45
+    ]
+   }
+  },
+  {
+   "cs": 777,
+   "title": "B Site Trip 1 \u2014 wire strung from the big round tan pillar across the gap to",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     777.2,
+     777.96
+    ],
+    "aim": [
+     777.58,
+     777.97
+    ],
+    "landing": [
+     777.99,
+     778.29
+    ]
+   }
+  },
+  {
+   "cs": 789,
+   "title": "B Main Trip 1 \u2014 vertical wire strung on the wooden barn-door frame at the",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "b-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     789.35,
+     789.7
+    ],
+    "aim": [
+     789.7,
+     790.04
+    ],
+    "landing": [
+     790.08,
+     790.4
+    ]
+   }
+  },
+  {
+   "cs": 796,
+   "title": "A Main Cam 1 \u2014 Later info, never gets shot out",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     796.62,
+     797.02
+    ],
+    "aim": [
+     797.02,
+     797.56
+    ],
+    "landing": [
+     797.66,
+     798.36
+    ]
+   }
+  },
+  {
+   "cs": 800,
+   "title": "A Site Cam 1 \u2014 Alternative cam",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     800.45,
+     800.78
+    ],
+    "aim": [
+     800.56,
+     800.79
+    ],
+    "landing": [
+     800.85,
+     801.55
+    ]
+   }
+  },
+  {
+   "cs": 803,
+   "title": "A Site Cam 2 \u2014 Similar to others, but with early double door info",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     803.48,
+     803.62
+    ],
+    "aim": [
+     803.49,
+     803.57
+    ],
+    "landing": [
+     803.65,
+     804.35
+    ]
+   }
+  },
+  {
+   "cs": 818,
+   "title": "A Site Cage 1 \u2014 Cage tossed a short distance from A Site onto the ground at",
+   "ability": "cyber-cage",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     818.89,
+     819.35
+    ],
+    "aim": [
+     819.6,
+     819.77
+    ],
+    "throw": [
+     819.65,
+     820.2
+    ],
+    "landing": [
+     821.0,
+     821.95
+    ]
+   }
+  },
+  {
+   "cs": 833,
+   "title": "A Main Trip 1 \u2014 Stood beside the A-site pyramid (\"A Pyramids\") facing the low",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     833.22,
+     833.55
+    ],
+    "aim": [
+     834.05,
+     834.57
+    ],
+    "landing": [
+     834.63,
+     834.9
+    ]
+   }
+  },
+  {
+   "cs": 835,
+   "title": "A Site Trip 1 \u2014 Same stand area, turned right to face the walkway lane",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     835.3,
+     836.02
+    ],
+    "aim": [
+     836.02,
+     836.7
+    ],
+    "landing": [
+     836.76,
+     837.32
+    ]
+   }
+  },
+  {
+   "cs": 837,
+   "title": "A Site Trip 2 \u2014 Trip anchored on the pyramid's angled side wall (anchor disc",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     837.62,
+     837.98
+    ],
+    "aim": [
+     838.0,
+     838.24
+    ],
+    "landing": [
+     838.66,
+     839.4
+    ]
+   }
+  },
+  {
+   "cs": 841,
+   "title": "A Site Trip 3 \u2014 Walked to the metal rail on A site overlooking the \"A\"",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     841.0,
+     841.45
+    ],
+    "aim": [
+     841.45,
+     842.17
+    ],
+    "landing": [
+     842.25,
+     843.15
+    ]
+   }
+  },
+  {
+   "cs": 847,
+   "title": "A Site Trip 4 \u2014 Trips behind spawn barrier can not be heard from A main if",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     847.5,
+     848.48
+    ],
+    "aim": [
+     848.48,
+     848.96
+    ],
+    "landing": [
+     849.1,
+     850.05
+    ]
+   }
+  }
+ ],
+ "note": "Cypher setups by spawns; grouped chapters split into individual placements by survey pass."
+}
