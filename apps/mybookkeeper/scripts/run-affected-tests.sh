@@ -114,8 +114,10 @@ if ! "$PYTHON_CMD" -c "import pytest_asyncio" &>/dev/null; then
   exit 2
 fi
 
-# Spread the suite across cores when xdist is available. It is optional so the
-# script still runs on a venv that predates it; CI installs it explicitly.
+# Spread the suite across cores when xdist is available. Only the full-suite
+# path uses it: spinning up one worker per core costs more than it saves on a
+# targeted run of a few files, which is the common case for this script.
+# The guard keeps the script working on a venv predating the dev-group dep.
 PYTEST_PARALLEL=()
 if "$PYTHON_CMD" -c "import xdist" &>/dev/null; then
   PYTEST_PARALLEL=(-n auto)
@@ -227,7 +229,7 @@ run_backend_tests() {
     echo -e "  Running: ${YELLOW}${#FILES[@]} test file(s)${NC}"
     echo "$test_files" | tr ',' '\n' | sed 's/^/    /'
 
-    if "$PYTHON_CMD" -m pytest $pytest_args -q "${PYTEST_PARALLEL[@]}"; then
+    if "$PYTHON_CMD" -m pytest $pytest_args -q; then
       echo -e "  ${GREEN}Backend tests passed${NC}"
     else
       echo -e "  ${RED}Backend tests FAILED${NC}"

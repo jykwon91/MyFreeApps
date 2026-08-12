@@ -74,4 +74,8 @@ dev = [
     "pytest>=9.0.3",
     "pytest-anyio>=0.0.0",
     "pytest-asyncio>=1.3.0",
+    # Full-suite runs spread across cores via `-n auto`. Declared here rather
+    # than installed ad-hoc in CI so a local `uv sync` gets the same parallel
+    # path CI uses — otherwise local runs silently fall back to serial.
+    "pytest-xdist>=3.6",
 ]
