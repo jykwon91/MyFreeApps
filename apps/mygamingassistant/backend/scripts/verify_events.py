@@ -95,9 +95,21 @@ def main() -> None:
     ap.add_argument("--k", type=int, default=5, help="frames sampled per event window")
     ap.add_argument("--throw-k", type=int, default=9, help="denser sample for the THROW window")
     for pane in _PANES:
+        # THROW is optional: PLACED utility (trapwire, spycam, alarmbot, turret,
+        # trademark, sonic sensor) is mounted at the player's own position and
+        # never leaves the hands, so its story is a complete 3-beat
+        # STAND/AIM/LANDING. Requiring a throw span here would make it
+        # impossible to build a card for those — and an agent forced to invent
+        # one would be gated on a beat that does not exist on screen.
+        # ingest_agent.py rejects a throw span on placed utility for the same
+        # reason; the two must agree.
         ap.add_argument(f"--{pane}", nargs=2, type=float, metavar=("START", "END"),
-                        required=True, help=f"{pane.upper()} span [start end] abs source seconds")
+                        required=pane != "throw",
+                        help=f"{pane.upper()} span [start end] abs source seconds"
+                             + (" (omit for PLACED utility)" if pane == "throw" else ""))
     args = ap.parse_args()
+
+    panes = [p for p in _PANES if getattr(args, p) is not None]
 
     video = SOURCE_DIR / f"{args.video}.mp4"
     if not video.exists():
@@ -109,7 +121,7 @@ def main() -> None:
 
     print(f"== verify '{args.label}' :: {video.name} ==")
     strips: list[Path] = []
-    for pane in _PANES:
+    for pane in panes:
         s, e = getattr(args, pane)
         k = args.throw_k if pane == "throw" else args.k
         times = sample_times(s, e, k)
@@ -122,7 +134,10 @@ def main() -> None:
 
     card = out / f"{args.label}-CARD.png"
     vstack_strips(strips, card)
-    print(f"\nOVERVIEW CARD (rows STAND / AIM / THROW / LANDING, time left->right):\n  {card}")
+    rows = " / ".join(p.upper() for p in panes)
+    if "throw" not in panes:
+        rows += "   [PLACED utility — no THROW beat]"
+    print(f"\nOVERVIEW CARD (rows {rows}, time left->right):\n  {card}")
     print("\nJUDGE each strip against its signature. A window that does NOT contain its")
     print("event is a MISMATCH -> re-localize before accept. Operator eyeball is final;")
     print("never accept on file-validity alone (that was the verify_clips.py bug).")
