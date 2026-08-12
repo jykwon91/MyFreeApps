@@ -121,6 +121,24 @@ const utilityPlansApi = baseApi.injectEndpoints({
       query: (data) => ({ url: "/utility-plans/extract", method: "POST", data }),
     }),
 
+    /**
+     * Read plan terms out of a file the operator has on the device.
+     *
+     * The upload half of this does save a row — the file lands in the document
+     * library as reference material so the plan can cite it — hence the
+     * ``Document`` invalidation its sibling above does not need. It is stored
+     * reference-only, so no transaction is minted from it and no summary or
+     * transaction cache goes stale.
+     */
+    extractUtilityPlanFromUpload: builder.mutation<UtilityPlanDraft, File>({
+      query: (file) => {
+        const form = new FormData();
+        form.append("file", file);
+        return { url: "/utility-plans/extract-upload", method: "POST", data: form };
+      },
+      invalidatesTags: ["Document"],
+    }),
+
     deleteUtilityPlan: builder.mutation<void, string>({
       query: (id) => ({ url: `/utility-plans/${id}`, method: "DELETE" }),
       invalidatesTags: [
@@ -141,6 +159,7 @@ export const {
   useGetUtilityPlanByIdQuery,
   useCreateUtilityPlanMutation,
   useExtractUtilityPlanMutation,
+  useExtractUtilityPlanFromUploadMutation,
   useUpdateUtilityPlanMutation,
   useDeleteUtilityPlanMutation,
 } = utilityPlansApi;

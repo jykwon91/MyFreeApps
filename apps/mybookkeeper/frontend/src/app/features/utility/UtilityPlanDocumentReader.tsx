@@ -1,41 +1,57 @@
 import { useState } from "react";
 import { LoadingButton } from "@platform/ui";
-import FormField from "@/shared/components/ui/FormField";
 import { showError } from "@/shared/lib/toast-store";
+import { readDocumentErrorMessage } from "@/shared/lib/utility-plan-read-errors";
 import { useGetDocumentsQuery } from "@/shared/store/documentsApi";
-import { useExtractUtilityPlanMutation } from "@/shared/store/utilityPlansApi";
+import {
+  useExtractUtilityPlanFromUploadMutation,
+  useExtractUtilityPlanMutation,
+} from "@/shared/store/utilityPlansApi";
+import type { UtilityPlanDocumentSource } from "@/shared/types/utility/utility-plan-document-source";
 import type { UtilityPlanDraft } from "@/shared/types/utility/utility-plan-draft";
-import { UTILITY_PLAN_INPUT_CLASS } from "./utility-plan-input-class";
+import UtilityPlanChosenDocument from "./UtilityPlanChosenDocument";
+import UtilityPlanFileDropzone from "./UtilityPlanFileDropzone";
+import UtilityPlanLibraryPicker from "./UtilityPlanLibraryPicker";
 
 export interface UtilityPlanDocumentReaderProps {
   onRead: (draft: UtilityPlanDraft) => void;
 }
 
 /**
- * Fill the form from a document already in the library.
+ * Fill the form from a document.
  *
- * It reads an existing document rather than uploading a new one on the spot,
- * and that is deliberate: ``POST /documents/upload`` enqueues the transaction
- * extractor, so uploading an Electricity Facts Label here would mint a junk
- * transaction against the property. The operator uploads on the Documents page
- * as usual, then points this at the file.
+ * Uploading here does not go through ``POST /documents/upload``: that endpoint
+ * queues the transaction extractor, and an Electricity Facts Label run through
+ * it would mint a junk transaction against the property. The read endpoint
+ * stores the file as reference material instead, so it lands in the library
+ * — the saved plan cites it — without ever being mistaken for a payment.
+ *
+ * A picked file is held until "Read the terms" is pressed rather than uploaded
+ * on sight, so abandoning the dialog leaves nothing behind and the read is a
+ * single request either way. That matters on a phone, which is where this is
+ * mostly used.
  */
 export default function UtilityPlanDocumentReader({
   onRead,
 }: UtilityPlanDocumentReaderProps) {
   const { data: documents = [] } = useGetDocumentsQuery({ excludeProcessing: true });
-  const [extractPlan, { isLoading }] = useExtractUtilityPlanMutation();
-  const [documentId, setDocumentId] = useState("");
+  const [extractPlan, { isLoading: isReadingLibrary }] = useExtractUtilityPlanMutation();
+  const [extractUpload, { isLoading: isReadingUpload }] =
+    useExtractUtilityPlanFromUploadMutation();
+  const [source, setSource] = useState<UtilityPlanDocumentSource | null>(null);
+
+  const isReading = isReadingLibrary || isReadingUpload;
 
   async function handleRead() {
-    if (!documentId) {
-      showError("Pick a document first.");
-      return;
-    }
+    if (!source) return;
     try {
-      onRead(await extractPlan({ document_id: documentId }).unwrap());
-    } catch {
-      showError("I couldn't read that one. Try another file, or fill it in by hand.");
+      onRead(
+        source.kind === "file"
+          ? await extractUpload(source.file).unwrap()
+          : await extractPlan({ document_id: source.documentId }).unwrap(),
+      );
+    } catch (e: unknown) {
+      showError(readDocumentErrorMessage((e as { status?: number }).status));
     }
   }
 
@@ -44,34 +60,42 @@ export default function UtilityPlanDocumentReader({
       <div>
         <p className="text-sm font-medium">Start from a document</p>
         <p className="text-xs text-gray-500 dark:text-gray-400">
-          Point me at an Electricity Facts Label, a contract, or a bill and I'll fill
-          in what I can. Upload it on the Documents page first if it isn't here yet.
+          Add an Electricity Facts Label, a contract, or a bill and I'll fill in
+          what I can.
         </p>
       </div>
 
-      <FormField label="Document">
-        <select
-          value={documentId}
-          onChange={(e) => setDocumentId(e.target.value)}
-          className={UTILITY_PLAN_INPUT_CLASS}
-          data-testid="utility-plan-document-select"
-        >
-          <option value="">Select a document…</option>
-          {documents.map((document) => (
-            <option key={document.id} value={document.id}>
-              {document.file_name ?? "Untitled document"}
-            </option>
-          ))}
-        </select>
-      </FormField>
+      {source ? (
+        <UtilityPlanChosenDocument
+          source={source}
+          onClear={() => setSource(null)}
+          disabled={isReading}
+        />
+      ) : (
+        <>
+          <UtilityPlanFileDropzone
+            onFile={(file) => setSource({ kind: "file", file })}
+            disabled={isReading}
+          />
+          {documents.length > 0 && (
+            <UtilityPlanLibraryPicker
+              documents={documents}
+              onPick={(documentId, name) =>
+                setSource({ kind: "library", documentId, name })
+              }
+              disabled={isReading}
+            />
+          )}
+        </>
+      )}
 
       <LoadingButton
         type="button"
         variant="secondary"
         size="md"
-        isLoading={isLoading}
+        isLoading={isReading}
         loadingText="Reading..."
-        disabled={isLoading || !documentId}
+        disabled={isReading || !source}
         onClick={() => void handleRead()}
         data-testid="utility-plan-read-document-button"
       >

@@ -18,10 +18,15 @@ import type { UtilityPlanDraft } from "@/shared/types/utility/utility-plan-draft
 
 const mockCreate = vi.fn();
 const mockExtract = vi.fn();
+const mockExtractUpload = vi.fn();
 
 vi.mock("@/shared/store/utilityPlansApi", () => ({
   useCreateUtilityPlanMutation: vi.fn(() => [mockCreate, { isLoading: false }]),
   useExtractUtilityPlanMutation: vi.fn(() => [mockExtract, { isLoading: false }]),
+  useExtractUtilityPlanFromUploadMutation: vi.fn(() => [
+    mockExtractUpload,
+    { isLoading: false },
+  ]),
 }));
 
 vi.mock("@/shared/store/propertiesApi", () => ({
@@ -79,6 +84,8 @@ function renderDialog() {
 }
 
 async function readTheDocument(user: ReturnType<typeof userEvent.setup>) {
+  // The library picker is collapsed now that uploading is the primary path.
+  await user.click(screen.getByText(/already uploaded/));
   await user.selectOptions(
     screen.getByTestId("utility-plan-document-select"),
     "doc-1",
@@ -90,6 +97,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mockCreate.mockReturnValue({ unwrap: vi.fn().mockResolvedValue({ id: "plan-1" }) });
   mockExtract.mockReturnValue({ unwrap: vi.fn().mockResolvedValue(DRAFT) });
+  mockExtractUpload.mockReturnValue({ unwrap: vi.fn().mockResolvedValue(DRAFT) });
 });
 
 describe("AddUtilityPlanDialog — reading from a document", () => {

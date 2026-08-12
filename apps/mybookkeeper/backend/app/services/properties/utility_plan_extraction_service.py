@@ -6,9 +6,11 @@ matters more than usual for this domain, because every field ends up in a
 plan-vs-plan comparison where a wrong number is indistinguishable from a right
 one.
 
-The document arrives by id, not by upload: ``POST /documents/upload`` already
-owns the size cap, the daily rate limit and the content sniff, and reusing it
-means the draft can cite a ``source_document_id`` that genuinely exists.
+A document can be named by id or handed over as bytes. Either way the storing is
+``document_upload_service.accept_upload``'s job — it owns the size cap, the
+daily rate limit and the content sniff, and going through it means the draft can
+cite a ``source_document_id`` that genuinely exists and the operator can find
+the file again on the Documents page.
 """
 from __future__ import annotations
 
@@ -18,11 +20,13 @@ import uuid
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
+from app.core.context import RequestContext
 from app.core.storage import get_storage
 from app.core.utility_plan_constants import RATE_TYPES, SERVICE_TYPES
 from app.db.session import unit_of_work
 from app.repositories.documents import document_repo
 from app.schemas.properties.utility_plan_draft import UtilityPlanDraft
+from app.services.documents import document_upload_service
 from app.services.extraction.claude_service import run_utility_plan_extraction
 from app.services.extraction.extractor_service import (
     extract_text_from_docx,
@@ -293,3 +297,37 @@ async def extract_plan_from_document(
         )
         raw = {}
     return build_draft(raw, document_id=document_id)
+
+
+async def extract_plan_from_upload(
+    *,
+    ctx: RequestContext,
+    content: bytes,
+    filename: str,
+    content_type: str,
+) -> UtilityPlanDraft:
+    """Store a file the operator just picked, then read the plan out of it.
+
+    One round trip rather than upload-then-extract, because the caller is
+    usually a phone: two sequential requests over a mobile connection is two
+    chances to strand the operator halfway.
+
+    The file is stored reference-only, so the transaction extractor skips it
+    entirely — an Electricity Facts Label is a description of a plan, not a
+    payment, and letting the usual pipeline see it would invent an expense. It
+    still lands in the Documents library, which is the point: the saved plan
+    cites it, and the operator can open the file it was read from.
+
+    Raises ``ValueError`` for an upload the store refuses (too large, wrong
+    type, daily limit) and ``UnreadableDocumentError`` when the file stores fine
+    but holds nothing readable.
+    """
+    result = await document_upload_service.accept_upload(
+        ctx, content, filename, content_type, reference_only=True,
+    )
+    document_id = uuid.UUID(str(result["document_id"]))
+    return await extract_plan_from_document(
+        user_id=ctx.user_id,
+        organization_id=ctx.organization_id,
+        document_id=document_id,
+    )

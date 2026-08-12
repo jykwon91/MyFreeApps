@@ -1,0 +1,49 @@
+import type { Document } from "@/shared/types/document/document";
+import { UTILITY_PLAN_INPUT_CLASS } from "./utility-plan-input-class";
+
+export interface UtilityPlanLibraryPickerProps {
+  documents: Document[];
+  onPick: (documentId: string, name: string) => void;
+  disabled?: boolean;
+}
+
+/**
+ * The secondary way in: a file already in the document library.
+ *
+ * Collapsed, and rendered only when the library has something in it. It used to
+ * be the only control here, which left anyone whose Electricity Facts Label was
+ * still on their phone staring at a dropdown with nothing in it. ``details``
+ * rather than a hand-rolled toggle so the expanded state is announced and
+ * keyboard-operable without extra ARIA.
+ */
+export default function UtilityPlanLibraryPicker({
+  documents,
+  onPick,
+  disabled = false,
+}: UtilityPlanLibraryPickerProps) {
+  return (
+    <details data-testid="utility-plan-library-picker">
+      <summary className="min-h-[44px] flex items-center cursor-pointer text-xs font-medium text-primary">
+        Or pick one you've already uploaded ({documents.length})
+      </summary>
+      <select
+        value=""
+        onChange={(e) => {
+          const picked = documents.find((d) => d.id === e.target.value);
+          if (picked) onPick(picked.id, picked.file_name ?? "Untitled document");
+        }}
+        disabled={disabled}
+        aria-label="Document"
+        className={`${UTILITY_PLAN_INPUT_CLASS} mt-2`}
+        data-testid="utility-plan-document-select"
+      >
+        <option value="">Select a document…</option>
+        {documents.map((document) => (
+          <option key={document.id} value={document.id}>
+            {document.file_name ?? "Untitled document"}
+          </option>
+        ))}
+      </select>
+    </details>
+  );
+}

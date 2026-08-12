@@ -8,7 +8,15 @@ import datetime as _dt
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    HTTPException,
+    Query,
+    Response,
+    UploadFile,
+)
 
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member, require_write_access
@@ -17,6 +25,7 @@ from app.core.rate_limit import (
     utility_offer_search_limiter,
     utility_plan_extract_limiter,
 )
+from app.core.upload_errors import upload_error_status
 from app.core.utility_plan_constants import EXPIRING_SOON_DAYS
 from app.schemas.properties.utility_plan_create_request import UtilityPlanCreateRequest
 from app.schemas.properties.utility_offer_search_response import (
@@ -85,6 +94,40 @@ async def extract_plan_from_document(
         ) from exc
     except utility_plan_extraction_service.UnreadableDocumentError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post("/extract-upload", response_model=UtilityPlanDraft)
+async def extract_plan_from_upload(
+    file: UploadFile = File(...),
+    ctx: RequestContext = Depends(require_write_access),
+) -> UtilityPlanDraft:
+    """Store a file the caller just picked and read plan terms out of it.
+
+    The one-request form of ``/extract``, for callers holding bytes rather than
+    a document id — a phone photographing an Electricity Facts Label has nothing
+    in the library to point at. The file is kept as reference material, so no
+    transaction is invented from it. No plan is saved; the response prefills the
+    create form. Declared before ``/{plan_id}`` so the literal path is not
+    swallowed by the UUID route.
+    """
+    utility_plan_extract_limiter.check(f"utility-plan-extract:{ctx.user_id}")
+    content = await file.read()
+    try:
+        return await utility_plan_extraction_service.extract_plan_from_upload(
+            ctx=ctx,
+            content=content,
+            filename=file.filename or "",
+            content_type=file.content_type or "",
+        )
+    # UnreadableDocumentError is a ValueError, so it has to be caught first or
+    # the upload-rejection mapping below would swallow it.
+    except utility_plan_extraction_service.UnreadableDocumentError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except ValueError as exc:
+        msg = str(exc)
+        raise HTTPException(
+            status_code=upload_error_status(msg), detail=msg,
+        ) from exc
 
 
 @router.get("", response_model=UtilityPlanListResponse)

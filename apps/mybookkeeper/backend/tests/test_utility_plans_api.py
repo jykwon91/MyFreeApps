@@ -437,6 +437,123 @@ class TestExtract:
         assert str(USER_ID) in mock_check.call_args.args[0]
 
 
+class TestExtractUpload:
+    """``POST /utility-plans/extract-upload`` — bytes in, draft out, nothing saved.
+
+    The one-request form of ``/extract``, for a caller holding a file rather
+    than a document id. A phone photographing an Electricity Facts Label has
+    nothing in the library to point at, and sending it through upload-then-read
+    would give a mobile connection two chances to strand the operator halfway.
+    """
+
+    @staticmethod
+    def _post(client: TestClient) -> object:
+        return client.post(
+            "/utility-plans/extract-upload",
+            files={"file": ("efl.pdf", b"%PDF-1.4 efl", "application/pdf")},
+        )
+
+    def test_a_draft_comes_back_without_a_plan_being_saved(
+        self, client: TestClient,
+    ) -> None:
+        draft = UtilityPlanDraft(
+            source_document_id=uuid.uuid4(),
+            provider_name="Rhythm",
+            rate_type="fixed",
+            confidence="high",
+        )
+        with patch(
+            f"{_EXTRACTION}.extract_plan_from_upload",
+            new_callable=AsyncMock,
+            return_value=draft,
+        ) as mock_extract:
+            with patch(f"{_SERVICE}.create_plan", new_callable=AsyncMock) as mock_create:
+                response = self._post(client)
+
+        assert response.status_code == 200
+        assert response.json()["provider_name"] == "Rhythm"
+        kwargs = mock_extract.await_args.kwargs
+        assert kwargs["content"] == b"%PDF-1.4 efl"
+        assert kwargs["filename"] == "efl.pdf"
+        assert kwargs["content_type"] == "application/pdf"
+        mock_create.assert_not_called()
+
+    def test_the_literal_path_is_not_swallowed_by_the_uuid_route(
+        self, client: TestClient,
+    ) -> None:
+        """Declared before ``/{plan_id}``; reversing them would 422 on the UUID."""
+        with patch(f"{_SERVICE}.get_plan", new_callable=AsyncMock) as mock_get:
+            with patch(
+                f"{_EXTRACTION}.extract_plan_from_upload",
+                new_callable=AsyncMock,
+                return_value=UtilityPlanDraft(source_document_id=uuid.uuid4()),
+            ):
+                response = self._post(client)
+
+        assert response.status_code == 200
+        mock_get.assert_not_called()
+
+    @pytest.mark.parametrize(
+        ("message", "expected"),
+        [
+            ("File exceeds 10MB limit", 413),
+            ("Daily upload limit reached", 429),
+            ("Unsupported file type", 415),
+            ("File is empty", 422),
+        ],
+    )
+    def test_a_refused_upload_keeps_its_own_status(
+        self, client: TestClient, message: str, expected: int,
+    ) -> None:
+        """The store reports every rejection as a ``ValueError``; the caller
+        still has to learn which one, because the fix differs — shrink the file,
+        wait a day, or pick a different format."""
+        with patch(
+            f"{_EXTRACTION}.extract_plan_from_upload",
+            new_callable=AsyncMock,
+            side_effect=ValueError(message),
+        ):
+            response = self._post(client)
+
+        assert response.status_code == expected
+        assert response.json()["detail"] == message
+
+    def test_a_file_that_stores_but_cannot_be_read_returns_422(
+        self, client: TestClient,
+    ) -> None:
+        """``UnreadableDocumentError`` subclasses ``ValueError``, so it has to be
+        caught ahead of the upload-rejection mapping. Catch it after and a file
+        the model simply could not read would be reported as too large."""
+        with patch(
+            f"{_EXTRACTION}.extract_plan_from_upload",
+            new_callable=AsyncMock,
+            side_effect=UnreadableDocumentError("This document has no file content."),
+        ):
+            response = self._post(client)
+
+        assert response.status_code == 422
+        assert "no file content" in response.json()["detail"]
+
+    def test_the_model_is_not_called_when_the_reader_is_rate_limited(
+        self, client: TestClient,
+    ) -> None:
+        with patch.object(
+            utility_plan_extract_limiter,
+            "check",
+            side_effect=HTTPException(429, "slow down"),
+        ):
+            with patch(
+                f"{_EXTRACTION}.extract_plan_from_upload", new_callable=AsyncMock,
+            ) as mock_extract:
+                response = self._post(client)
+
+        assert response.status_code == 429
+        mock_extract.assert_not_called()
+
+    def test_a_request_with_no_file_returns_422(self, client: TestClient) -> None:
+        assert client.post("/utility-plans/extract-upload").status_code == 422
+
+
 class TestList:
     def test_forwards_filters_to_the_service(self, client: TestClient) -> None:
         empty = UtilityPlanListResponse(items=[], total=0, has_more=False)
