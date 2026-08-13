@@ -79,3 +79,13 @@ MEMORY_AUDIT_*.md
 # logs. Provenance for one batch, superseded by the spans pack that batch
 # produces (which IS committed). Disposable — regenerate by re-running.
 apps/*/backend/scripts/_runs/
+
+# Same idea for a batch's <agent>-spans/_raw/ working dir: the raw workflow
+# .output (~1MB each), the placements extracted from it, and the pack snapshot
+# exported for the additive diff. All are superseded by the spans pack. The
+# BUILDERS in that dir stay tracked — they carry the per-map zone tables, which
+# are expensive to rebuild and were nearly lost to `git clean -fd` once already.
+apps/*/backend/scripts/*-spans/_raw/*.output
+apps/*/backend/scripts/*-spans/_raw/*_passed.json
+apps/*/backend/scripts/*-spans/_raw/exported.json
+apps/*/backend/scripts/*-spans/_raw/*_args*.json

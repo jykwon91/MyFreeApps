@@ -1,0 +1,407 @@
+{
+ "video_id": "UsfCu5uL3Qs",
+ "map_slug": "lotus",
+ "author": "spawns",
+ "lineups": [
+  {
+   "cs": 1415,
+   "title": "C Main Trip 1 \u2014 C Main: trapwire anchored on the flat back/left wall panel of",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "c-main",
+   "stand": "c-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1415.35,
+     1415.6
+    ],
+    "aim": [
+     1415.75,
+     1415.9
+    ],
+    "landing": [
+     1415.96,
+     1416.01
+    ]
+   }
+  },
+  {
+   "cs": 1416,
+   "title": "C Main Trip 2 \u2014 C Main: trapwire anchored on the side face of the lotus crate",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "c-main",
+   "stand": "c-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1416.1,
+     1416.54
+    ],
+    "aim": [
+     1416.56,
+     1417.09
+    ],
+    "landing": [
+     1417.14,
+     1417.61
+    ]
+   }
+  },
+  {
+   "cs": 1420,
+   "title": "C Main Trip 3 \u2014 C Main: trapwire anchored beside the small lotus crate, wire",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "c-main",
+   "stand": "c-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1420.5,
+     1421.18
+    ],
+    "aim": [
+     1421.18,
+     1421.8
+    ],
+    "landing": [
+     1421.92,
+     1422.8
+    ]
+   }
+  },
+  {
+   "cs": 1424,
+   "title": "C Main Trip 4 \u2014 C Bend: trapwire strung across C Bend between the big lotus",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "c-main",
+   "stand": "c-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1424.25,
+     1424.75
+    ],
+    "aim": [
+     1424.8,
+     1425.47
+    ],
+    "landing": [
+     1425.48,
+     1426.0
+    ]
+   }
+  },
+  {
+   "cs": 1435,
+   "title": "A Site Cam 1 \u2014 Goat A site cam",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1435.22,
+     1435.47
+    ],
+    "aim": [
+     1435.4,
+     1435.68
+    ],
+    "landing": [
+     1435.67,
+     1436.43
+    ]
+   }
+  },
+  {
+   "cs": 1438,
+   "title": "A Site Cam 2 \u2014 Earlyish info cam",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1438.16,
+     1438.92
+    ],
+    "aim": [
+     1438.92,
+     1439.68
+    ],
+    "landing": [
+     1439.69,
+     1440.44
+    ]
+   }
+  },
+  {
+   "cs": 1442,
+   "title": "A Site Cam 3 \u2014 Cam anywhere in this area, tap for info + tag midround",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1442.45,
+     1443.5
+    ],
+    "aim": [
+     1444.92,
+     1445.4
+    ],
+    "landing": [
+     1445.43,
+     1445.98
+    ]
+   }
+  },
+  {
+   "cs": 1462,
+   "title": "A Site Cage 1 \u2014 Aim at black dot in bushes, move crosshair down till its on",
+   "ability": "cyber-cage",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1462.1,
+     1463.4
+    ],
+    "aim": [
+     1468.0,
+     1468.92
+    ],
+    "throw": [
+     1468.93,
+     1469.53
+    ],
+    "landing": [
+     1469.95,
+     1471.1
+    ]
+   }
+  },
+  {
+   "cs": 1478,
+   "title": "A Site Trip 1 \u2014 trip strung down the alley from the shrine ledge across to",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1478.7,
+     1479.06
+    ],
+    "aim": [
+     1479.42,
+     1480.0
+    ],
+    "landing": [
+     1480.82,
+     1481.52
+    ]
+   }
+  },
+  {
+   "cs": 1483,
+   "title": "A Site Trip 2 \u2014 trip strung across the passage between the tomb wall and the",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1483.84,
+     1484.32
+    ],
+    "aim": [
+     1484.34,
+     1484.8
+    ],
+    "landing": [
+     1484.9,
+     1485.42
+    ]
+   }
+  },
+  {
+   "cs": 1485,
+   "title": "A Site Trip 3 \u2014 trip strung from the lotus crate on the left across to the",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1485.72,
+     1486.72
+    ],
+    "aim": [
+     1486.93,
+     1487.34
+    ],
+    "landing": [
+     1487.48,
+     1488.2
+    ]
+   }
+  },
+  {
+   "cs": 1488,
+   "title": "B Site Cam 1 \u2014 Overall good cam for site",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1488.24,
+     1489.14
+    ],
+    "aim": [
+     1489.2,
+     1489.73
+    ],
+    "landing": [
+     1489.75,
+     1490.5
+    ]
+   }
+  },
+  {
+   "cs": 1497,
+   "title": "B Site Cam 2 \u2014 Early info cams",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1497.5,
+     1498.38
+    ],
+    "aim": [
+     1498.42,
+     1498.9
+    ],
+    "landing": [
+     1498.93,
+     1499.45
+    ]
+   }
+  },
+  {
+   "cs": 1500,
+   "title": "B Site Cam 3 \u2014 Early info cams",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1500.66,
+     1501.56
+    ],
+    "aim": [
+     1502.4,
+     1503.27
+    ],
+    "landing": [
+     1503.3,
+     1503.98
+    ]
+   }
+  },
+  {
+   "cs": 1525,
+   "title": "A Site Cage 2 \u2014 I don't have a lineup for this I just throw it in and hop it",
+   "ability": "cyber-cage",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1525.44,
+     1525.86
+    ],
+    "aim": [
+     1526.06,
+     1526.24
+    ],
+    "throw": [
+     1526.14,
+     1526.74
+    ],
+    "landing": [
+     1526.72,
+     1527.08
+    ]
+   }
+  },
+  {
+   "cs": 1531,
+   "title": "B Main Trip 1 \u2014 Turns right from the same mid-site spot and strings a wire",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1531.5,
+     1532.14
+    ],
+    "aim": [
+     1532.16,
+     1532.71
+    ],
+    "landing": [
+     1532.74,
+     1533.26
+    ]
+   }
+  },
+  {
+   "cs": 1533,
+   "title": "B Site Trip 1 \u2014 Wire anchored on the round wall medallion of the back-site",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1533.95,
+     1534.95
+    ],
+    "aim": [
+     1535.0,
+     1535.76
+    ],
+    "landing": [
+     1535.8,
+     1536.1
+    ]
+   }
+  }
+ ],
+ "note": ""
+}
