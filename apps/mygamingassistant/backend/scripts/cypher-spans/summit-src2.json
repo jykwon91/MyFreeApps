@@ -1,0 +1,311 @@
+{
+ "video_id": "6PbBfx6EuzM",
+ "map_slug": "summit",
+ "author": "spawns",
+ "lineups": [
+  {
+   "cs": 0,
+   "title": "B Site Trip 1 \u2014 For the default B setting Place your trap here on a eye level",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     0.15,
+     1.1
+    ],
+    "aim": [
+     2.28,
+     2.85
+    ],
+    "landing": [
+     2.87,
+     3.28
+    ]
+   }
+  },
+  {
+   "cs": 5,
+   "title": "B Site Trip 2 \u2014 Then place another trap on the corner of this box This",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     5.32,
+     5.9
+    ],
+    "aim": [
+     5.33,
+     5.49
+    ],
+    "landing": [
+     6.95,
+     7.6
+    ]
+   }
+  },
+  {
+   "cs": 13,
+   "title": "B Site Cam 1 \u2014 turn around and go to these two boxes Place yourself on the",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     13.7,
+     14.45
+    ],
+    "aim": [
+     17.05,
+     17.8
+    ],
+    "landing": [
+     18.3,
+     19.05
+    ]
+   }
+  },
+  {
+   "cs": 56,
+   "title": "B Site Trip 3 \u2014 anchor placed on the inner corner of the grey pillar on the",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     56.1,
+     56.3
+    ],
+    "aim": [
+     56.15,
+     56.3
+    ],
+    "landing": [
+     56.38,
+     57.05
+    ]
+   }
+  },
+  {
+   "cs": 59,
+   "title": "B Site Trip 4 \u2014 but place your trap on this bottom-right corner",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     59.84,
+     60.16
+    ],
+    "aim": [
+     60.16,
+     60.54
+    ],
+    "landing": [
+     61.4,
+     62.8
+    ]
+   }
+  },
+  {
+   "cs": 72,
+   "title": "B Site Cam 2 \u2014 and forward-jump-throw camera",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     72.2,
+     73.3
+    ],
+    "aim": [
+     73.78,
+     74.42
+    ],
+    "landing": [
+     74.78,
+     74.96
+    ]
+   }
+  },
+  {
+   "cs": 146,
+   "title": "A Site Trip 1 \u2014 When it comes to A site this giant two-square-two box",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     146.7,
+     147.05
+    ],
+    "aim": [
+     147.0,
+     147.43
+    ],
+    "landing": [
+     147.46,
+     148.16
+    ]
+   }
+  },
+  {
+   "cs": 149,
+   "title": "A Main Trip 1 \u2014 is really helpful as you can see Place each traps at each",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     149.45,
+     150.55
+    ],
+    "aim": [
+     150.6,
+     151.42
+    ],
+    "landing": [
+     151.52,
+     152.45
+    ]
+   }
+  },
+  {
+   "cs": 169,
+   "title": "A Site Cam 1 \u2014 find this isolated stone And try to place your cam on the",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     169.45,
+     170.35
+    ],
+    "aim": [
+     172.3,
+     172.98
+    ],
+    "landing": [
+     173.07,
+     174.02
+    ]
+   }
+  },
+  {
+   "cs": 248,
+   "title": "A Main Trip 2 \u2014 Place your trap wherever you want",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     248.5,
+     249.45
+    ],
+    "aim": [
+     250.45,
+     251.46
+    ],
+    "landing": [
+     251.52,
+     252.6
+    ]
+   }
+  },
+  {
+   "cs": 254,
+   "title": "A Main Cage 1 \u2014 Then place yourself at this corner and look top right Then",
+   "ability": "cyber-cage",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     254.75,
+     256.25
+    ],
+    "aim": [
+     260.65,
+     261.35
+    ],
+    "throw": [
+     267.19,
+     267.79
+    ],
+    "landing": [
+     268.03,
+     268.63
+    ]
+   }
+  },
+  {
+   "cs": 299,
+   "title": "Mid Cam 1 \u2014 Place yourself on the edge of the left corner then look right",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     299.92,
+     300.85
+    ],
+    "aim": [
+     302.68,
+     303.38
+    ],
+    "landing": [
+     303.44,
+     304.24
+    ]
+   }
+  },
+  {
+   "cs": 304,
+   "title": "Mid Trip 1 \u2014 and place your trap wire If you want to have strong control",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     304.72,
+     305.6
+    ],
+    "aim": [
+     306.42,
+     307.16
+    ],
+    "landing": [
+     307.2,
+     308.3
+    ]
+   }
+  }
+ ],
+ "note": ""
+}
