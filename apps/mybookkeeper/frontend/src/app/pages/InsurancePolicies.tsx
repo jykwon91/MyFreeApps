@@ -4,6 +4,8 @@ import { useGetInsurancePoliciesQuery } from "@/shared/store/insurancePoliciesAp
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import AlertBox from "@/shared/components/ui/AlertBox";
 import { useInsurancePoliciesListMode } from "@/app/features/insurance/useInsurancePoliciesListMode";
+import InsuranceBenchmarkDialog from "@/app/features/insurance/InsuranceBenchmarkDialog";
+import InsuranceBenchmarkSummary from "@/app/features/insurance/InsuranceBenchmarkSummary";
 import InsurancePoliciesListBody from "@/app/features/insurance/InsurancePoliciesListBody";
 
 /**
@@ -12,6 +14,7 @@ import InsurancePoliciesListBody from "@/app/features/insurance/InsurancePolicie
  */
 export default function InsurancePolicies() {
   const [showExpiringSoon, setShowExpiringSoon] = useState(false);
+  const [showBenchmarkDialog, setShowBenchmarkDialog] = useState(false);
 
   const expiringBefore = showExpiringSoon
     ? format(addDays(new Date(), 30), "yyyy-MM-dd")
@@ -44,6 +47,8 @@ export default function InsurancePolicies() {
         </AlertBox>
       ) : null}
 
+      <InsuranceBenchmarkSummary onEdit={() => setShowBenchmarkDialog(true)} />
+
       {/* Expiring soon filter */}
       <div className="flex items-center gap-3">
         <label className="flex items-center gap-2 text-sm cursor-pointer">
@@ -63,6 +68,10 @@ export default function InsurancePolicies() {
         policies={policies}
         showExpiringSoon={showExpiringSoon}
       />
+
+      {showBenchmarkDialog ? (
+        <InsuranceBenchmarkDialog onClose={() => setShowBenchmarkDialog(false)} />
+      ) : null}
     </main>
   );
 }

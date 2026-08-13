@@ -58,6 +58,21 @@ export function formatAnnualPremium(cents: number | null): string {
 }
 
 /**
+ * The comparison unit → ``"$2.69 per $1,000"``.
+ *
+ * Arrives as a Decimal string in *cents* of annual premium per $1,000 of
+ * dwelling coverage. Premiums are never compared raw: $1,400 on a $250,000
+ * house and $1,400 on a $500,000 house are the same number and not remotely
+ * the same deal, so every figure the comparison shows is normalised first.
+ */
+export function formatCoverageRate(value: string | null): string {
+  if (value === null || value.trim() === "") return "—";
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return "—";
+  return `${formatCurrency(parsed / 100)} per $1,000`;
+}
+
+/**
  * Wind/hail deductible → ``"2% of coverage"``, with the dollar figure when the
  * coverage amount is known.
  *

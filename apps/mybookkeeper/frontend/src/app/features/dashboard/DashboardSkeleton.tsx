@@ -1,6 +1,7 @@
 import Skeleton from "@/shared/components/ui/Skeleton";
 import Card from "@/shared/components/ui/Card";
 import UtilityPlanComparisonCardSkeleton from "@/app/features/utility/UtilityPlanComparisonCardSkeleton";
+import InsurancePremiumComparisonCardSkeleton from "@/app/features/insurance/InsurancePremiumComparisonCardSkeleton";
 
 export default function DashboardSkeleton() {
   return (
@@ -44,6 +45,10 @@ export default function DashboardSkeleton() {
       {/* Rate comparison card. Rendered from the card's own skeleton rather
           than re-described here, so the two cannot drift apart. */}
       <UtilityPlanComparisonCardSkeleton />
+
+      {/* Premium comparison card, same arrangement — its own skeleton, not a
+          copy of it. */}
+      <InsurancePremiumComparisonCardSkeleton />
 
       {/* Monthly Average card — matches MonthlyAverageCard */}
       <Card>

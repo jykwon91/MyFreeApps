@@ -1,7 +1,5 @@
-import {
-  formatBenchmarkGap,
-  formatComparisonFigure,
-} from "@/shared/lib/utility-plan-format";
+import { formatBenchmarkGap } from "@/shared/lib/benchmark-format";
+import { formatComparisonFigure } from "@/shared/lib/utility-plan-format";
 import { UTILITY_SERVICE_TYPE_LABELS } from "@/shared/types/utility/utility-service-type";
 import type { UtilityPlanRateComparisonRow } from "@/shared/types/utility/utility-plan-rate-comparison-row";
 
