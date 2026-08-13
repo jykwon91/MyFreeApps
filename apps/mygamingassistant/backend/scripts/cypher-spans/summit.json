@@ -1,0 +1,668 @@
+{
+ "video_id": "y8XT-7jCBLA",
+ "map_slug": "summit",
+ "author": "spawns",
+ "lineups": [
+  {
+   "cs": 17,
+   "title": "A Site Cam 1 \u2014 A Site Cameras",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     17.4,
+     18.4
+    ],
+    "aim": [
+     19.15,
+     19.89
+    ],
+    "landing": [
+     19.92,
+     20.6
+    ]
+   }
+  },
+  {
+   "cs": 39,
+   "title": "A Main Cam 1 \u2014 Back in A Garden, places a spycam on the near wall/pagoda",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     39.02,
+     39.42
+    ],
+    "aim": [
+     39.98,
+     40.2
+    ],
+    "landing": [
+     40.25,
+     41.02
+    ]
+   }
+  },
+  {
+   "cs": 43,
+   "title": "A Site Cam 2 \u2014 Standing on A Site facing the open cliff edge, projects a",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     43.21,
+     43.72
+    ],
+    "aim": [
+     43.8,
+     44.66
+    ],
+    "landing": [
+     44.72,
+     45.4
+    ]
+   }
+  },
+  {
+   "cs": 56,
+   "title": "A Main Cam 2 \u2014 In A Garden under the arched entry, places a spycam high",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     56.26,
+     56.92
+    ],
+    "aim": [
+     57.05,
+     57.76
+    ],
+    "landing": [
+     57.79,
+     58.42
+    ]
+   }
+  },
+  {
+   "cs": 76,
+   "title": "A Main Trip 1 \u2014 Standing on the low grass/stone strip below A Site's circular",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     76.45,
+     77.25
+    ],
+    "aim": [
+     77.36,
+     77.86
+    ],
+    "landing": [
+     77.94,
+     78.22
+    ]
+   }
+  },
+  {
+   "cs": 102,
+   "title": "A Main Trip 2 \u2014 A Garden, standing near the teal crates facing the tall",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     102.55,
+     103.45
+    ],
+    "aim": [
+     103.65,
+     104.24
+    ],
+    "landing": [
+     104.28,
+     105.15
+    ]
+   }
+  },
+  {
+   "cs": 109,
+   "title": "A Site Trip 1 \u2014 \"A Site\" region, tucked into the grey rock channel at the",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     109.65,
+     110.55
+    ],
+    "aim": [
+     110.55,
+     111.15
+    ],
+    "landing": [
+     111.18,
+     112.85
+    ]
+   }
+  },
+  {
+   "cs": 118,
+   "title": "A Main Trip 3 \u2014 A Garden, standing off to the side of the wooden tunnel",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     118.47,
+     119.55
+    ],
+    "aim": [
+     119.72,
+     120.55
+    ],
+    "landing": [
+     120.5,
+     121.05
+    ]
+   }
+  },
+  {
+   "cs": 127,
+   "title": "A Main Trip 4 \u2014 A Garden, close in on the teal double-door crate stack",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     127.0,
+     127.55
+    ],
+    "aim": [
+     127.5,
+     128.02
+    ],
+    "landing": [
+     128.03,
+     128.85
+    ]
+   }
+  },
+  {
+   "cs": 162,
+   "title": "A Main Trip 5 \u2014 A Garden, standing square to the wooden tunnel doorway with",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     162.3,
+     163.3
+    ],
+    "aim": [
+     164.15,
+     164.85
+    ],
+    "landing": [
+     164.92,
+     165.42
+    ]
+   }
+  },
+  {
+   "cs": 334,
+   "title": "Mid Cage 1 \u2014 A Link/Mid",
+   "ability": "cyber-cage",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "a-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     334.65,
+     335.95
+    ],
+    "aim": [
+     335.95,
+     336.58
+    ],
+    "throw": [
+     336.51,
+     337.11
+    ],
+    "landing": [
+     343.15,
+     344.45
+    ]
+   }
+  },
+  {
+   "cs": 358,
+   "title": "Mid Cam 1 \u2014 Spycam stuck on the A Link wall by the poster board 'garden",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "a-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     358.34,
+     359.54
+    ],
+    "aim": [
+     361.45,
+     362.37
+    ],
+    "landing": [
+     362.37,
+     363.15
+    ]
+   }
+  },
+  {
+   "cs": 370,
+   "title": "A Main Trip 6 \u2014 Second trapwire strung across the A Link doorway, anchored on",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     370.45,
+     371.4
+    ],
+    "aim": [
+     371.4,
+     372.31
+    ],
+    "landing": [
+     372.32,
+     373.25
+    ]
+   }
+  },
+  {
+   "cs": 385,
+   "title": "A Main Cage 1 \u2014 Aligned cyber-cage lineup from the A Link corner: crosshair",
+   "ability": "cyber-cage",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     385.15,
+     386.85
+    ],
+    "aim": [
+     392.45,
+     393.27
+    ],
+    "throw": [
+     393.28,
+     393.9
+    ],
+    "landing": [
+     393.83,
+     394.85
+    ]
+   }
+  },
+  {
+   "cs": 445,
+   "title": "Mid Cam 2 \u2014 Mid",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     445.24,
+     445.94
+    ],
+    "aim": [
+     446.85,
+     447.82
+    ],
+    "landing": [
+     447.84,
+     448.26
+    ]
+   }
+  },
+  {
+   "cs": 452,
+   "title": "Mid Trip 1 \u2014 At Mid Bottom, trapwire strung across the doorway gap between",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     452.0,
+     453.3
+    ],
+    "aim": [
+     453.62,
+     454.08
+    ],
+    "landing": [
+     454.45,
+     455.3
+    ]
+   }
+  },
+  {
+   "cs": 464,
+   "title": "Mid Cage 2 \u2014 At Mid Bottom, cyber cage(s) stuck high in the ornamental",
+   "ability": "cyber-cage",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     464.05,
+     465.05
+    ],
+    "aim": [
+     465.05,
+     465.7
+    ],
+    "throw": [
+     465.7,
+     466.3
+    ],
+    "landing": [
+     487.0,
+     488.3
+    ]
+   }
+  },
+  {
+   "cs": 503,
+   "title": "B Site Cam 1 \u2014 spycam stuck high on the tall pale stone facade across the",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     503.6,
+     504.85
+    ],
+    "aim": [
+     512.1,
+     512.87
+    ],
+    "landing": [
+     512.96,
+     513.69
+    ]
+   }
+  },
+  {
+   "cs": 551,
+   "title": "B Site Cam 2 \u2014 long-range spycam thrown across the site onto a distant",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     551.4,
+     551.9
+    ],
+    "aim": [
+     552.28,
+     552.78
+    ],
+    "landing": [
+     552.82,
+     554.1
+    ]
+   }
+  },
+  {
+   "cs": 571,
+   "title": "B Site Cam 3 \u2014 after checking the mural wall he commits the spycam onto the",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     571.9,
+     574.1
+    ],
+    "aim": [
+     575.05,
+     575.76
+    ],
+    "landing": [
+     575.78,
+     576.6
+    ]
+   }
+  },
+  {
+   "cs": 583,
+   "title": "B Site Trip 1 \u2014 B Site Trips",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     583.32,
+     584.2
+    ],
+    "aim": [
+     584.22,
+     584.78
+    ],
+    "landing": [
+     584.83,
+     585.55
+    ]
+   }
+  },
+  {
+   "cs": 604,
+   "title": "B Site Trip 2 \u2014 B Site, standing beside the large teal crate - trip anchored",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     604.55,
+     605.75
+    ],
+    "aim": [
+     605.98,
+     606.49
+    ],
+    "landing": [
+     612.2,
+     613.1
+    ]
+   }
+  },
+  {
+   "cs": 632,
+   "title": "B Site Trip 3 \u2014 B Site - trip anchored on the near edge of the tall",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     632.94,
+     633.28
+    ],
+    "aim": [
+     633.3,
+     633.63
+    ],
+    "landing": [
+     633.68,
+     634.28
+    ]
+   }
+  },
+  {
+   "cs": 642,
+   "title": "B Site Trip 4 \u2014 Back of B Site by the pale sliding-door wall (B Link tunnel",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     642.2,
+     642.95
+    ],
+    "aim": [
+     643.0,
+     643.5
+    ],
+    "landing": [
+     643.56,
+     643.95
+    ]
+   }
+  },
+  {
+   "cs": 655,
+   "title": "B Site Trip 5 \u2014 B Site back-right under the poster - trip anchored on the",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     655.95,
+     656.42
+    ],
+    "aim": [
+     656.42,
+     656.95
+    ],
+    "landing": [
+     657.35,
+     658.65
+    ]
+   }
+  },
+  {
+   "cs": 701,
+   "title": "B Site Trip 6 \u2014 White-walled corridor off B Site (B Tunnel Link) - trip",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     701.28,
+     702.0
+    ],
+    "aim": [
+     702.0,
+     702.53
+    ],
+    "landing": [
+     702.55,
+     703.44
+    ]
+   }
+  },
+  {
+   "cs": 777,
+   "title": "B Main Trip 1 \u2014 In the B Link interior corridor (looking toward the doorway",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "b-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     777.1,
+     778.0
+    ],
+    "aim": [
+     778.15,
+     778.5
+    ],
+    "landing": [
+     780.25,
+     780.8
+    ]
+   }
+  },
+  {
+   "cs": 813,
+   "title": "B Site Cage 1 \u2014 Standing in B Site looking up at the brazier/roof-line",
+   "ability": "cyber-cage",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     813.9,
+     814.98
+    ],
+    "aim": [
+     815.42,
+     816.42
+    ],
+    "throw": [
+     816.43,
+     817.03
+    ],
+    "landing": [
+     816.75,
+     817.55
+    ]
+   }
+  }
+ ],
+ "note": ""
+}
