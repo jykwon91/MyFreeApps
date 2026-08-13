@@ -1,19 +1,11 @@
 import { annualCostCents } from "@/shared/lib/offer-stats";
 import { formatOfferRate, formatWholeDollars } from "@/shared/lib/utility-offer-format";
 import type { UtilityOfferGroup } from "@/shared/types/utility/utility-offer-group";
+import EquippedPlanFigure from "./EquippedPlanFigure";
 
 export interface EquippedPlanCardProps {
   group: UtilityOfferGroup;
   referenceAnnualKwh: number;
-}
-
-function Figure({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <dt className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</dt>
-      <dd className="text-sm font-medium mt-0.5">{value}</dd>
-    </div>
-  );
 }
 
 /**
@@ -46,12 +38,15 @@ export default function EquippedPlanCard({
         {group.current_provider_name ?? "Unknown provider"}
       </p>
       <dl className="mt-3 grid grid-cols-3 lg:grid-cols-1 gap-x-4 gap-y-3">
-        <Figure label="Rate" value={rate === null ? "—" : `${formatOfferRate(rate)}/kWh`} />
-        <Figure
+        <EquippedPlanFigure
+          label="Rate"
+          value={rate === null ? "—" : `${formatOfferRate(rate)}/kWh`}
+        />
+        <EquippedPlanFigure
           label="Yearly cost"
           value={yearly === null ? "—" : formatWholeDollars(yearly)}
         />
-        <Figure
+        <EquippedPlanFigure
           label="Cost to leave"
           value={
             group.switch_cost_cents === null
