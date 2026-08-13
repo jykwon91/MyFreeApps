@@ -1,0 +1,430 @@
+{
+ "video_id": "UsfCu5uL3Qs",
+ "map_slug": "sunset",
+ "author": "spawns",
+ "lineups": [
+  {
+   "cs": 2039,
+   "title": "B Site Cam 1 \u2014 You need to crouch midair for this jump",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     2039.78,
+     2040.7
+    ],
+    "aim": [
+     2041.92,
+     2042.85
+    ],
+    "landing": [
+     2042.95,
+     2043.65
+    ]
+   }
+  },
+  {
+   "cs": 2045,
+   "title": "B Site Cam 2 \u2014 Spycam tucked into the open window frame of the brick",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     2045.02,
+     2045.3
+    ],
+    "aim": [
+     2045.3,
+     2045.7
+    ],
+    "landing": [
+     2045.72,
+     2046.28
+    ]
+   }
+  },
+  {
+   "cs": 2047,
+   "title": "B Site Cam 3 \u2014 Spycam placed high on the trunk of the palm tree next to the",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     2047.99,
+     2048.17
+    ],
+    "aim": [
+     2048.17,
+     2048.35
+    ],
+    "landing": [
+     2048.38,
+     2049.13
+    ]
+   }
+  },
+  {
+   "cs": 2051,
+   "title": "B Site Cam 4 \u2014 Spycam placed high on the trunk of a second, different palm",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     2051.07,
+     2051.62
+    ],
+    "aim": [
+     2051.4,
+     2051.93
+    ],
+    "landing": [
+     2051.93,
+     2052.69
+    ]
+   }
+  },
+  {
+   "cs": 2054,
+   "title": "B Site Cam 5 \u2014 Spycam thrown from the doorway of the B Main / boba interior",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     2054.75,
+     2055.28
+    ],
+    "aim": [
+     2055.3,
+     2055.93
+    ],
+    "landing": [
+     2055.95,
+     2056.75
+    ]
+   }
+  },
+  {
+   "cs": 2057,
+   "title": "B Main Cam 1 \u2014 Second spycam in the same B Main interior room, stuck high on",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "b-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     2057.97,
+     2058.3
+    ],
+    "aim": [
+     2058.08,
+     2058.55
+    ],
+    "landing": [
+     2058.56,
+     2059.28
+    ]
+   }
+  },
+  {
+   "cs": 2068,
+   "title": "B Site Cam 6 \u2014 watches the B Main / market-entry approach",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     2068.45,
+     2069.95
+    ],
+    "aim": [
+     2071.14,
+     2071.74
+    ],
+    "landing": [
+     2071.98,
+     2072.54
+    ]
+   }
+  },
+  {
+   "cs": 2076,
+   "title": "Market Cage 1 \u2014 This is only a one way when they are close to it, don't peek",
+   "ability": "cyber-cage",
+   "technique": "standing",
+   "target": "market",
+   "stand": "market",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     2076.95,
+     2078.15
+    ],
+    "aim": [
+     2078.4,
+     2079.4
+    ],
+    "throw": [
+     2079.36,
+     2079.91
+    ],
+    "landing": [
+     2081.32,
+     2082.7
+    ]
+   }
+  },
+  {
+   "cs": 2083,
+   "title": "B Site Trip 1 \u2014 wire strung high across the gap between the two buildings",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     2083.26,
+     2083.74
+    ],
+    "aim": [
+     2083.74,
+     2084.24
+    ],
+    "landing": [
+     2084.24,
+     2085.06
+    ]
+   }
+  },
+  {
+   "cs": 2084,
+   "title": "B Site Trip 2 \u2014 second, lower wire across the same walkway/gap, run along the",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     2083.4,
+     2084.02
+    ],
+    "aim": [
+     2083.7,
+     2084.2
+    ],
+    "landing": [
+     2084.85,
+     2085.6
+    ]
+   }
+  },
+  {
+   "cs": 2093,
+   "title": "A Site Cam 1 \u2014 Goat cam for A, I guarantee this cam will become common",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     2093.15,
+     2093.62
+    ],
+    "aim": [
+     2094.0,
+     2094.53
+    ],
+    "landing": [
+     2094.58,
+     2095.5
+    ]
+   }
+  },
+  {
+   "cs": 2098,
+   "title": "A Site Cam 2 \u2014 Good retake cam",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     2098.15,
+     2098.28
+    ],
+    "aim": [
+     2098.17,
+     2098.29
+    ],
+    "landing": [
+     2098.28,
+     2099.05
+    ]
+   }
+  },
+  {
+   "cs": 2101,
+   "title": "A Site Cam 3 \u2014 Inside A Elbow, places a spycam high on the interior wall",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     2101.48,
+     2101.65
+    ],
+    "aim": [
+     2101.67,
+     2101.85
+    ],
+    "landing": [
+     2101.87,
+     2102.58
+    ]
+   }
+  },
+  {
+   "cs": 2105,
+   "title": "A Site Cam 4 \u2014 Alternative early info cam",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     2105.17,
+     2105.55
+    ],
+    "aim": [
+     2105.17,
+     2105.28
+    ],
+    "landing": [
+     2105.3,
+     2105.52
+    ]
+   }
+  },
+  {
+   "cs": 2108,
+   "title": "A Main Cage 1 \u2014 Place left hud line in the middle of the box + graffiti",
+   "ability": "cyber-cage",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     2108.3,
+     2109.9
+    ],
+    "aim": [
+     2114.75,
+     2115.8
+    ],
+    "throw": [
+     2115.89,
+     2116.49
+    ],
+    "landing": [
+     2117.32,
+     2118.6
+    ]
+   }
+  },
+  {
+   "cs": 2120,
+   "title": "A Site Trip 1 \u2014 Deep A Main: trip strung low across the A Main choke",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     2120.85,
+     2121.26
+    ],
+    "aim": [
+     2121.26,
+     2121.83
+    ],
+    "landing": [
+     2121.85,
+     2122.53
+    ]
+   }
+  },
+  {
+   "cs": 2127,
+   "title": "A Site Trip 2 \u2014 A Site: trip anchored on the tarp/scaffold cover next to the",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     2127.0,
+     2127.7
+    ],
+    "aim": [
+     2127.95,
+     2128.82
+    ],
+    "landing": [
+     2128.85,
+     2129.14
+    ]
+   }
+  },
+  {
+   "cs": 2129,
+   "title": "A Main Trip 1 \u2014 A Site backsite, standing off the boxes: trip anchored on the",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     2129.38,
+     2129.7
+    ],
+    "aim": [
+     2129.7,
+     2130.1
+    ],
+    "landing": [
+     2130.8,
+     2131.55
+    ]
+   }
+  }
+ ],
+ "note": ""
+}
