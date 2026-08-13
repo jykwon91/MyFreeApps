@@ -1,0 +1,480 @@
+{
+ "video_id": "UsfCu5uL3Qs",
+ "map_slug": "split",
+ "author": "spawns",
+ "lineups": [
+  {
+   "cs": 1700,
+   "title": "A Site Cam 1 \u2014 Really good early info cams",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1700.7,
+     1701.9
+    ],
+    "aim": [
+     1702.32,
+     1703.5
+    ],
+    "landing": [
+     1703.7,
+     1704.38
+    ]
+   }
+  },
+  {
+   "cs": 1708,
+   "title": "A Main Cam 1 \u2014 Really good early info cams",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1708.85,
+     1710.0
+    ],
+    "aim": [
+     1711.55,
+     1712.06
+    ],
+    "landing": [
+     1712.08,
+     1712.8
+    ]
+   }
+  },
+  {
+   "cs": 1713,
+   "title": "A Site Cam 2 \u2014 Great info cams for site + heaven",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1713.63,
+     1714.2
+    ],
+    "aim": [
+     1714.23,
+     1714.65
+    ],
+    "landing": [
+     1714.67,
+     1715.02
+    ]
+   }
+  },
+  {
+   "cs": 1718,
+   "title": "A Site Cam 3 \u2014 Great info cams for site + heaven",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1718.09,
+     1718.44
+    ],
+    "aim": [
+     1718.44,
+     1718.77
+    ],
+    "landing": [
+     1718.8,
+     1719.56
+    ]
+   }
+  },
+  {
+   "cs": 1731,
+   "title": "A Main Cam 2 \u2014 At A Ramps, tucked in the corner by the white wall, cam",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1731.95,
+     1732.85
+    ],
+    "aim": [
+     1733.2,
+     1733.93
+    ],
+    "landing": [
+     1733.93,
+     1734.8
+    ]
+   }
+  },
+  {
+   "cs": 1740,
+   "title": "A Site Cam 4 \u2014 Inside A Tower, cam stuck on the white pillar /",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1740.36,
+     1740.86
+    ],
+    "aim": [
+     1740.92,
+     1741.2
+    ],
+    "landing": [
+     1741.23,
+     1741.9
+    ]
+   }
+  },
+  {
+   "cs": 1758,
+   "title": "A Site Cage 1 \u2014 A Site: cage placed up on the sloped wall/ledge of the A-site",
+   "ability": "cyber-cage",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1758.0,
+     1759.1
+    ],
+    "aim": [
+     1759.55,
+     1760.6
+    ],
+    "throw": [
+     1760.55,
+     1761.15
+    ],
+    "landing": [
+     1763.74,
+     1765.3
+    ]
+   }
+  },
+  {
+   "cs": 1766,
+   "title": "A Site Cage 2 \u2014 Put the cage slightly to the left so they can't walk out hell",
+   "ability": "cyber-cage",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1766.69,
+     1767.69
+    ],
+    "aim": [
+     1766.69,
+     1766.89
+    ],
+    "throw": [
+     1766.72,
+     1767.32
+    ],
+    "landing": [
+     1769.75,
+     1770.65
+    ]
+   }
+  },
+  {
+   "cs": 1786,
+   "title": "A Main Trip 1 \u2014 trapwire anchored low near the planter base on the site",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1786.55,
+     1787.55
+    ],
+    "aim": [
+     1787.6,
+     1788.19
+    ],
+    "landing": [
+     1788.19,
+     1788.62
+    ]
+   }
+  },
+  {
+   "cs": 1789,
+   "title": "A Site Trip 1 \u2014 trapwire anchored on the corner of the vine-topped crate",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1789.6,
+     1789.93
+    ],
+    "aim": [
+     1789.94,
+     1790.18
+    ],
+    "landing": [
+     1790.22,
+     1790.58
+    ]
+   }
+  },
+  {
+   "cs": 1807,
+   "title": "Mid Cam 1 \u2014 One way mid cam for trap plays",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1807.67,
+     1808.6
+    ],
+    "aim": [
+     1808.94,
+     1809.89
+    ],
+    "landing": [
+     1809.93,
+     1810.62
+    ]
+   }
+  },
+  {
+   "cs": 1814,
+   "title": "Mail Trip 1 \u2014 Goat mid trip close to unbreakable",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "mail",
+   "stand": "mail",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1814.6,
+     1815.84
+    ],
+    "aim": [
+     1815.84,
+     1816.7
+    ],
+    "landing": [
+     1816.79,
+     1817.55
+    ]
+   }
+  },
+  {
+   "cs": 1822,
+   "title": "B Site Cam 1 \u2014 Alternative B site cams",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1822.77,
+     1823.15
+    ],
+    "aim": [
+     1823.15,
+     1823.56
+    ],
+    "landing": [
+     1823.95,
+     1824.58
+    ]
+   }
+  },
+  {
+   "cs": 1827,
+   "title": "B Site Cam 2 \u2014 Alternative B site cams",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1827.13,
+     1827.9
+    ],
+    "aim": [
+     1828.24,
+     1828.77
+    ],
+    "landing": [
+     1828.77,
+     1829.58
+    ]
+   }
+  },
+  {
+   "cs": 1830,
+   "title": "B Main Cam 1 \u2014 Inside B Tower / Apartment B (pink interior), cam stuck high",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "b-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1830.88,
+     1831.32
+    ],
+    "aim": [
+     1831.44,
+     1832.04
+    ],
+    "landing": [
+     1832.04,
+     1832.76
+    ]
+   }
+  },
+  {
+   "cs": 1836,
+   "title": "B Main Cam 2 \u2014 Inside B Garage (roller-shutter room off B Site), cam placed",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1836.58,
+     1837.0
+    ],
+    "aim": [
+     1836.95,
+     1837.48
+    ],
+    "landing": [
+     1837.51,
+     1838.0
+    ]
+   }
+  },
+  {
+   "cs": 1840,
+   "title": "B Site Cage 1 \u2014 B site backsite: cage thrown up over the awning/overhang at",
+   "ability": "cyber-cage",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1840.0,
+     1841.2
+    ],
+    "aim": [
+     1841.42,
+     1842.06
+    ],
+    "throw": [
+     1841.96,
+     1842.56
+    ],
+    "landing": [
+     1844.0,
+     1845.1
+    ]
+   }
+  },
+  {
+   "cs": 1864,
+   "title": "B Site Trip 1 \u2014 Trapwire in B Rafters, anchored on the pink wall bearing the",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1864.78,
+     1865.18
+    ],
+    "aim": [
+     1865.32,
+     1865.8
+    ],
+    "landing": [
+     1865.82,
+     1866.15
+    ]
+   }
+  },
+  {
+   "cs": 1873,
+   "title": "B Site Trip 2 \u2014 Trapwire strung across the B site alley beside the wooden",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1873.9,
+     1874.2
+    ],
+    "aim": [
+     1874.2,
+     1874.44
+    ],
+    "landing": [
+     1874.48,
+     1874.84
+    ]
+   }
+  },
+  {
+   "cs": 1885,
+   "title": "B Site Trip 3 \u2014 Trapwire strung between the graffiti crates and the papered",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1885.9,
+     1886.9
+    ],
+    "aim": [
+     1887.15,
+     1887.75
+    ],
+    "landing": [
+     1887.85,
+     1888.9
+    ]
+   }
+  }
+ ],
+ "note": ""
+}
