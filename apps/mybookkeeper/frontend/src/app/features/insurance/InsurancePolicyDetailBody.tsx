@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Trash2 } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import { useDeleteInsurancePolicyMutation } from "@/shared/store/insurancePoliciesApi";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
@@ -8,6 +8,13 @@ import type { InsurancePolicyDetail } from "@/shared/types/insurance/insurance-p
 import type { InsurancePolicyDetailMode } from "@/shared/types/insurance/insurance-policy-detail-mode";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import { Button, ConfirmDialog } from "@platform/ui";
+import {
+  formatAnnualPremium,
+  formatBilledPremium,
+  formatPolicyMoney,
+  formatWindHailDeductible,
+} from "@/shared/lib/insurance-policy-format";
+import EditInsurancePolicyDialog from "./EditInsurancePolicyDialog";
 import InsuranceExpirationBadge from "./InsuranceExpirationBadge";
 import InsurancePolicyAttachmentsSection from "./InsurancePolicyAttachmentsSection";
 import InsurancePolicyDetailSkeleton from "./InsurancePolicyDetailSkeleton";
@@ -15,15 +22,6 @@ import InsurancePolicyDetailSkeleton from "./InsurancePolicyDetailSkeleton";
 export interface InsurancePolicyDetailBodyProps {
   mode: InsurancePolicyDetailMode | null;
   policy: InsurancePolicyDetail | undefined;
-}
-
-function formatCoverage(cents: number | null): string {
-  if (cents === null) return "—";
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 0,
-  }).format(cents / 100);
 }
 
 function formatDate(iso: string | null): string {
@@ -39,6 +37,7 @@ export default function InsurancePolicyDetailBody({
   const navigate = useNavigate();
   const canWrite = useCanWrite();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
   const [deletePolicy, { isLoading: isDeleting }] = useDeleteInsurancePolicyMutation();
 
   async function handleDelete() {
@@ -73,16 +72,27 @@ export default function InsurancePolicyDetailBody({
             }
             actions={
               canWrite ? (
-                <Button
-                  variant="secondary"
-                  size="md"
-                  onClick={() => setShowDeleteConfirm(true)}
-                  className="text-red-600 border-red-200 hover:bg-red-50"
-                  data-testid="delete-insurance-policy-button"
-                >
-                  <Trash2 className="h-4 w-4 mr-1" />
-                  Delete
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="secondary"
+                    size="md"
+                    onClick={() => setShowEditDialog(true)}
+                    data-testid="edit-insurance-policy-button"
+                  >
+                    <Pencil className="h-4 w-4 mr-1" />
+                    Edit
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="md"
+                    onClick={() => setShowDeleteConfirm(true)}
+                    className="text-red-600 border-red-200 hover:bg-red-50"
+                    data-testid="delete-insurance-policy-button"
+                  >
+                    <Trash2 className="h-4 w-4 mr-1" />
+                    Delete
+                  </Button>
+                </div>
               ) : null
             }
           />
@@ -99,7 +109,7 @@ export default function InsurancePolicyDetailBody({
               <div>
                 <dt className="text-xs text-muted-foreground">Coverage amount</dt>
                 <dd className="font-medium" data-testid="insurance-coverage-amount">
-                  {formatCoverage(policy.coverage_amount_cents)}
+                  {formatPolicyMoney(policy.coverage_amount_cents)}
                 </dd>
               </div>
               <div>
@@ -121,6 +131,42 @@ export default function InsurancePolicyDetailBody({
             ) : null}
           </section>
 
+          <section className="border rounded-lg p-4 space-y-3" data-testid="insurance-policy-cost">
+            <h2 className="text-sm font-medium">Cost</h2>
+            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+              <div>
+                <dt className="text-xs text-muted-foreground">Premium</dt>
+                <dd className="font-medium" data-testid="insurance-premium">
+                  {formatBilledPremium(policy.premium_cents, policy.premium_frequency)}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted-foreground">Annualised</dt>
+                {/* The figure a comparison uses. Shown beside the billed amount
+                    rather than instead of it so it stays reconcilable against
+                    the declarations page. */}
+                <dd className="font-medium" data-testid="insurance-annual-premium">
+                  {formatAnnualPremium(policy.annual_premium_cents)}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted-foreground">Deductible</dt>
+                <dd data-testid="insurance-deductible">
+                  {formatPolicyMoney(policy.deductible_cents)}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted-foreground">Wind / hail deductible</dt>
+                <dd data-testid="insurance-wind-hail-deductible">
+                  {formatWindHailDeductible(
+                    policy.wind_hail_deductible_pct,
+                    policy.coverage_amount_cents,
+                  )}
+                </dd>
+              </div>
+            </dl>
+          </section>
+
           <section className="border rounded-lg p-4 space-y-3">
             <h2 className="text-sm font-medium">Documents</h2>
             <InsurancePolicyAttachmentsSection
@@ -129,6 +175,13 @@ export default function InsurancePolicyDetailBody({
               canWrite={canWrite}
             />
           </section>
+
+          {showEditDialog ? (
+            <EditInsurancePolicyDialog
+              policy={policy}
+              onClose={() => setShowEditDialog(false)}
+            />
+          ) : null}
 
           <ConfirmDialog
             open={showDeleteConfirm}

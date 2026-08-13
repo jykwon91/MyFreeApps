@@ -606,25 +606,33 @@
         "backend/app/api/insurance_policies.py",
         "backend/app/core/insurance_enums.py",
         "backend/alembic/versions/insur260504_add_insurance_policy_tables.py",
+        "backend/alembic/versions/inspremium260812_add_insurance_premium.py",
         "frontend/src/app/pages/InsurancePolicies.tsx",
         "frontend/src/app/pages/InsurancePolicyDetail.tsx",
         "frontend/src/app/features/insurance/",
         "frontend/src/shared/types/insurance/",
+        "frontend/src/shared/lib/insurance-policy-format.ts",
+        "frontend/src/shared/lib/insurance-policy-form.ts",
         "frontend/src/shared/store/insurancePoliciesApi.ts"
       ],
       "backend_tests": [
         "test_insurance_policies_api.py",
-        "test_insurance_policy_repo.py"
+        "test_insurance_policy_repo.py",
+        "test_insurance_policy_validation.py",
+        "test_premium_math.py"
       ],
       "frontend_tests": [
         "InsuranceExpirationBadge.test.tsx",
         "ListingInsuranceSection.test.tsx",
         "InsurancePolicies.test.tsx",
         "InsurancePolicyDetail.test.tsx",
+        "insurance-policy-format.test.ts",
+        "insurance-policy-form.test.ts",
         "usePageListModes.test.ts"
       ],
       "e2e_specs": [
-        "insurance-policies.spec.ts"
+        "insurance-premium.spec.ts",
+        "insurance-policy-detail-layout.spec.ts"
       ]
     },
     "utility_plans": {

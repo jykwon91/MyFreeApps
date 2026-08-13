@@ -3,8 +3,11 @@ from __future__ import annotations
 
 import datetime as _dt
 import uuid
+from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+from app.schemas.insurance.insurance_policy_validation import validate_policy_fields
 
 
 class InsurancePolicyCreateRequest(BaseModel):
@@ -15,6 +18,16 @@ class InsurancePolicyCreateRequest(BaseModel):
     effective_date: _dt.date | None = None
     expiration_date: _dt.date | None = None
     coverage_amount_cents: int | None = Field(None, ge=0)
+    premium_cents: int | None = Field(None, gt=0)
+    premium_frequency: str | None = None
+    deductible_cents: int | None = Field(None, ge=0)
+    wind_hail_deductible_pct: Decimal | None = Field(
+        None, gt=0, le=100, decimal_places=2,
+    )
     notes: str | None = Field(None, max_length=5000)
 
     model_config = ConfigDict(extra="forbid")
+
+    @model_validator(mode="after")
+    def _check_fields(self) -> InsurancePolicyCreateRequest:
+        return validate_policy_fields(self)

@@ -1,26 +1,33 @@
 import { useState } from "react";
 import { Button, LoadingButton } from "@platform/ui";
-import { EMPTY_POLICY_FORM, toPolicyPayload } from "@/shared/lib/insurance-policy-form";
+import { policyToFormValues, toPolicyPayload } from "@/shared/lib/insurance-policy-form";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
-import { useCreateInsurancePolicyMutation } from "@/shared/store/insurancePoliciesApi";
+import { useUpdateInsurancePolicyMutation } from "@/shared/store/insurancePoliciesApi";
+import type { InsurancePolicyDetail } from "@/shared/types/insurance/insurance-policy-detail";
 import type { InsurancePolicyFormValues } from "@/shared/types/insurance/insurance-policy-form-values";
 import InsurancePolicyDialogShell from "./InsurancePolicyDialogShell";
 import InsurancePolicyFormFields from "./InsurancePolicyFormFields";
 
-export interface AddInsurancePolicyDialogProps {
-  listingId: string;
+export interface EditInsurancePolicyDialogProps {
+  policy: InsurancePolicyDetail;
   onClose: () => void;
 }
 
 /**
- * Modal dialog for creating a new insurance policy on a listing.
+ * Modal dialog for correcting a stored policy.
+ *
+ * Premiums move at every renewal, so a policy recorded once and never editable
+ * would go stale the first time the carrier repriced it — and the operator's
+ * only recourse would be to delete the row, taking its attachments with it.
  */
-export default function AddInsurancePolicyDialog({
-  listingId,
+export default function EditInsurancePolicyDialog({
+  policy,
   onClose,
-}: AddInsurancePolicyDialogProps) {
-  const [createPolicy, { isLoading }] = useCreateInsurancePolicyMutation();
-  const [values, setValues] = useState<InsurancePolicyFormValues>(EMPTY_POLICY_FORM);
+}: EditInsurancePolicyDialogProps) {
+  const [updatePolicy, { isLoading }] = useUpdateInsurancePolicyMutation();
+  const [values, setValues] = useState<InsurancePolicyFormValues>(() =>
+    policyToFormValues(policy),
+  );
 
   function handleChange<K extends keyof InsurancePolicyFormValues>(
     field: K,
@@ -37,11 +44,11 @@ export default function AddInsurancePolicyDialog({
     }
 
     try {
-      await createPolicy({
-        listing_id: listingId,
-        ...toPolicyPayload(values),
+      await updatePolicy({
+        policyId: policy.id,
+        data: toPolicyPayload(values),
       }).unwrap();
-      showSuccess("Insurance policy added.");
+      showSuccess("Insurance policy updated.");
       onClose();
     } catch {
       showError("Couldn't save the policy. Please try again.");
@@ -50,8 +57,8 @@ export default function AddInsurancePolicyDialog({
 
   return (
     <InsurancePolicyDialogShell
-      title="Add insurance policy"
-      testId="add-insurance-policy-dialog"
+      title="Edit insurance policy"
+      testId="edit-insurance-policy-dialog"
       onClose={onClose}
     >
       <form onSubmit={(e) => void handleSubmit(e)} className="p-5 space-y-4">
@@ -67,9 +74,9 @@ export default function AddInsurancePolicyDialog({
             size="md"
             isLoading={isLoading}
             loadingText="Saving..."
-            data-testid="insurance-policy-save-button"
+            data-testid="insurance-policy-update-button"
           >
-            Save policy
+            Save changes
           </LoadingButton>
         </div>
       </form>

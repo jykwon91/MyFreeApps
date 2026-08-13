@@ -130,6 +130,73 @@ class TestCreateInsurancePolicy:
 
 
 # ---------------------------------------------------------------------------
+# POST /insurance-policies — premium validation
+# ---------------------------------------------------------------------------
+
+class TestCreateInsurancePolicyPremiumValidation:
+    """A premium is only interpretable with the period it is billed over."""
+
+    def _post(self, extra: dict) -> int:
+        org_id, user_id = uuid.uuid4(), uuid.uuid4()
+        policy_id = uuid.uuid4()
+        app.dependency_overrides[require_write_access] = lambda: _ctx(org_id, user_id)
+        try:
+            with patch(
+                "app.api.insurance_policies.insurance_policy_service.create_policy",
+                return_value=_ok_policy_response(policy_id, org_id, user_id),
+            ):
+                client = TestClient(app)
+                resp = client.post(
+                    "/insurance-policies",
+                    json={
+                        "listing_id": str(uuid.uuid4()),
+                        "policy_name": "Landlord Insurance",
+                        **extra,
+                    },
+                )
+            return resp.status_code
+        finally:
+            app.dependency_overrides.clear()
+
+    def test_complete_premium_pair_accepted(self) -> None:
+        assert self._post({"premium_cents": 11200, "premium_frequency": "monthly"}) == 201
+
+    def test_amount_without_frequency_rejected(self) -> None:
+        assert self._post({"premium_cents": 11200}) == 422
+
+    def test_frequency_without_amount_rejected(self) -> None:
+        assert self._post({"premium_frequency": "monthly"}) == 422
+
+    def test_unknown_frequency_rejected(self) -> None:
+        assert self._post(
+            {"premium_cents": 11200, "premium_frequency": "fortnightly"},
+        ) == 422
+
+    def test_zero_premium_rejected(self) -> None:
+        # A free policy is not a thing; a zero here means the field was posted
+        # from a blank input.
+        assert self._post({"premium_cents": 0, "premium_frequency": "annual"}) == 422
+
+    def test_negative_deductible_rejected(self) -> None:
+        assert self._post({"deductible_cents": -1}) == 422
+
+    def test_zero_deductible_accepted(self) -> None:
+        # First-dollar coverage is a real policy term.
+        assert self._post({"deductible_cents": 0}) == 201
+
+    def test_wind_hail_pct_above_100_rejected(self) -> None:
+        assert self._post({"wind_hail_deductible_pct": "101"}) == 422
+
+    def test_wind_hail_pct_of_zero_rejected(self) -> None:
+        # 0% is not "no wind/hail deductible" — that is recorded by leaving the
+        # field unset — so it is a typo either way.
+        assert self._post({"wind_hail_deductible_pct": "0"}) == 422
+
+    def test_wind_hail_pct_within_range_accepted(self) -> None:
+        assert self._post({"wind_hail_deductible_pct": "2.00"}) == 201
+
+
+# ---------------------------------------------------------------------------
 # GET /insurance-policies
 # ---------------------------------------------------------------------------
 
@@ -264,6 +331,66 @@ class TestUpdateInsurancePolicy:
                     json={"carrier": "Allstate"},
                 )
             assert resp.status_code == 404, resp.text
+        finally:
+            app.dependency_overrides.clear()
+
+    def test_partial_premium_update_allowed_by_the_schema(self) -> None:
+        # A PATCH may legitimately send only the amount when the stored row
+        # already has a frequency, so the pair rule is not enforced here —
+        # the service re-checks it against the merged row instead.
+        org_id, user_id = uuid.uuid4(), uuid.uuid4()
+        policy_id = uuid.uuid4()
+        app.dependency_overrides[require_write_access] = lambda: _ctx(org_id, user_id)
+        try:
+            with patch(
+                "app.api.insurance_policies.insurance_policy_service.update_policy",
+                return_value=_ok_policy_response(policy_id, org_id, user_id),
+            ):
+                client = TestClient(app)
+                resp = client.patch(
+                    f"/insurance-policies/{policy_id}",
+                    json={"premium_cents": 11200},
+                )
+            assert resp.status_code == 200, resp.text
+        finally:
+            app.dependency_overrides.clear()
+
+    def test_unknown_frequency_rejected(self) -> None:
+        org_id, user_id = uuid.uuid4(), uuid.uuid4()
+        policy_id = uuid.uuid4()
+        app.dependency_overrides[require_write_access] = lambda: _ctx(org_id, user_id)
+        try:
+            client = TestClient(app)
+            resp = client.patch(
+                f"/insurance-policies/{policy_id}",
+                json={"premium_frequency": "fortnightly"},
+            )
+            assert resp.status_code == 422, resp.text
+        finally:
+            app.dependency_overrides.clear()
+
+    def test_inconsistent_merged_state_returns_422(self) -> None:
+        # e.g. clearing the frequency on a row that still has an amount.
+        org_id, user_id = uuid.uuid4(), uuid.uuid4()
+        policy_id = uuid.uuid4()
+        app.dependency_overrides[require_write_access] = lambda: _ctx(org_id, user_id)
+        try:
+            from app.services.insurance.insurance_policy_service import (
+                InvalidInsurancePolicyError,
+            )
+            with patch(
+                "app.api.insurance_policies.insurance_policy_service.update_policy",
+                side_effect=InvalidInsurancePolicyError(
+                    "premium_cents and premium_frequency must be set together",
+                ),
+            ):
+                client = TestClient(app)
+                resp = client.patch(
+                    f"/insurance-policies/{policy_id}",
+                    json={"premium_frequency": None},
+                )
+            assert resp.status_code == 422, resp.text
+            assert "must be set together" in resp.json()["detail"]
         finally:
             app.dependency_overrides.clear()
 

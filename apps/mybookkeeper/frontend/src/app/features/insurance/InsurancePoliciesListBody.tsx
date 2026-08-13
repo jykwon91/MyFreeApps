@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
+import { formatAnnualPremium } from "@/shared/lib/insurance-policy-format";
 import type { InsurancePoliciesListMode } from "@/shared/types/insurance/insurance-policies-list-mode";
 import type { InsurancePolicySummary } from "@/shared/types/insurance/insurance-policy-summary";
 import InsuranceExpirationBadge from "./InsuranceExpirationBadge";
@@ -65,7 +66,20 @@ export default function InsurancePoliciesListBody({
                     </p>
                   ) : null}
                 </div>
-                <InsuranceExpirationBadge expirationDate={policy.expiration_date} />
+                <div className="flex flex-col items-end gap-1 shrink-0">
+                  <InsuranceExpirationBadge expirationDate={policy.expiration_date} />
+                  {/* Annualised, not as billed: the rows sit in one column, and
+                      a monthly amount beside an annual one makes the pricier
+                      policy look like the cheaper one. */}
+                  {policy.annual_premium_cents !== null ? (
+                    <span
+                      className="text-xs text-muted-foreground"
+                      data-testid={`insurance-policy-premium-${policy.id}`}
+                    >
+                      {formatAnnualPremium(policy.annual_premium_cents)}
+                    </span>
+                  ) : null}
+                </div>
               </div>
             </li>
           ))}

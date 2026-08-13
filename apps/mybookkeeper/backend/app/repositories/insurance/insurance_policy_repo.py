@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import datetime as _dt
 import uuid
+from decimal import Decimal
 from typing import Any
 
 from sqlalchemy import desc, func, select, update
@@ -23,6 +24,10 @@ async def create(
     effective_date: _dt.date | None = None,
     expiration_date: _dt.date | None = None,
     coverage_amount_cents: int | None = None,
+    premium_cents: int | None = None,
+    premium_frequency: str | None = None,
+    deductible_cents: int | None = None,
+    wind_hail_deductible_pct: Decimal | None = None,
     notes: str | None = None,
 ) -> InsurancePolicy:
     policy = InsurancePolicy(
@@ -35,6 +40,10 @@ async def create(
         effective_date=effective_date,
         expiration_date=expiration_date,
         coverage_amount_cents=coverage_amount_cents,
+        premium_cents=premium_cents,
+        premium_frequency=premium_frequency,
+        deductible_cents=deductible_cents,
+        wind_hail_deductible_pct=wind_hail_deductible_pct,
         notes=notes,
     )
     db.add(policy)
