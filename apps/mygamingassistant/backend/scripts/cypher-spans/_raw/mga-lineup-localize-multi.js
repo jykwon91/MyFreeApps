@@ -2,13 +2,13 @@
 //
 // The original mga-lineup-localize assumes 1 chapter == 1 lineup, which held for the
 // Sova/Fade/Brimstone sources. Sentinel sources (cypher, killjoy, ...) are usually
-// filmed as "Ascent B Trips" — one 30s chapter containing 2-4 separate placements.
+// filmed as "Ascent B Trips" -- one 30s chapter containing 2-4 separate placements.
 // Forcing those through the 1:1 workflow silently drops every placement but the first.
 //
 // This adds a SURVEY stage in front: one agent enumerates the distinct placements in a
 // chapter and returns a tight sub-window for each; every placement then goes through the
 // SAME localize -> gate -> reloc -> regate path as before, unchanged. `cs` is not the
-// chapter start — ingest_agent.py defines it as floor(STAND.start), unique per lineup —
+// chapter start -- ingest_agent.py defines it as floor(STAND.start), unique per lineup --
 // so several lineups from one chapter is already a legal pack shape.
 //
 // Launch with:
@@ -97,23 +97,23 @@ const f = (s) => s[0] + ' ' + s[1]
 
 function surveyPrompt(it) {
   const vn = it.varNote ? `\nNOTE: ${it.varNote}` : ''
-  return `You are a VALORANT lineup SURVEY subagent for MGA. You are NOT localizing anything precisely — you are producing an INVENTORY so that later agents each get one placement.
+  return `You are a VALORANT lineup SURVEY subagent for MGA. You are NOT localizing anything precisely -- you are producing an INVENTORY so that later agents each get one placement.
 
 Video ${VIDEO}, map ${it.map}. Chapter NN=${it.nn} titled "${it.name || ''}", window [${it.cs}, ${it.next}].${vn}
 
 This source groups several separate utility placements into ONE chapter (e.g. a "Trips" chapter demonstrates 2-4 different tripwire spots back to back). Your job: watch the chapter and enumerate EVERY DISTINCT placement it contains.
 
-Method: a single COARSE pass is enough — frame_study.py --video ${VIDEO} --t0 ${it.cs} --t1 ${it.next} --step 0.5 --label ${it.map}-${it.nn}-survey, then montage_study.py to read it as a grid. Use the PowerShell tool. Read the montage and identify the shot boundaries: each placement typically runs walk-to-spot -> aim at surface -> deploy -> brief look at the result, then cuts to the next spot.
+Method: a single COARSE pass is enough -- frame_study.py --video ${VIDEO} --t0 ${it.cs} --t1 ${it.next} --step 0.5 --label ${it.map}-${it.nn}-survey, then montage_study.py to read it as a grid. Use the PowerShell tool. Read the montage and identify the shot boundaries: each placement typically runs walk-to-spot -> aim at surface -> deploy -> brief look at the result, then cuts to the next spot.
 
 READ THE ON-SCREEN CAPTIONS. This creator burns a caption into the footage for each placement ("Different early B main info cam", "Crouch + lineup with crosshair", "Just solid cages for playing backsite, no lineup"). They name the spot and state the intent, and they are the best evidence available. Transcribe them verbatim.
 
-For EACH distinct placement return: t0/t1 = a GENEROUS sub-window (absolute seconds) that fully contains that placement's stand+aim+deploy, padded ~1s on each side and allowed to overlap its neighbours slightly; ability = one of trapwire, spycam, cyber-cage, called from WHAT IS ACTUALLY DEPLOYED, not from the chapter title (a thin beam strung across a gap with a small dark anchor disc = trapwire; a small camera stuck to a surface = spycam; a thrown device that blooms into a translucent cage box = cyber-cage); what = a one-line description of the spot; caption = the on-screen caption verbatim, or "" if none; aligned = whether this is an ALIGNED lineup (a deliberate stand spot + a crosshair/alignment reference, as in "lineup with crosshair") rather than a freehand close-range drop — the creator often says which; complete = whether the chapter actually SHOWS the full stand->aim->deploy for it (false if it only shows the result, or cuts away mid-placement).
+For EACH distinct placement return: t0/t1 = a GENEROUS sub-window (absolute seconds) that fully contains that placement's stand+aim+deploy, padded ~1s on each side and allowed to overlap its neighbours slightly; ability = one of trapwire, spycam, cyber-cage, called from WHAT IS ACTUALLY DEPLOYED, not from the chapter title (a thin beam strung across a gap with a small dark anchor disc = trapwire; a small camera stuck to a surface = spycam; a thrown device that blooms into a translucent cage box = cyber-cage); what = a one-line description of the spot; caption = the on-screen caption verbatim, or "" if none; aligned = whether this is an ALIGNED lineup (a deliberate stand spot + a crosshair/alignment reference, as in "lineup with crosshair") rather than a freehand close-range drop -- the creator often says which; complete = whether the chapter actually SHOWS the full stand->aim->deploy for it (false if it only shows the result, or cuts away mid-placement).
 
 Rules:
-- CHAPTER BOUNDARIES ARE OFFSET on this source — a "Cages" chapter can open on the tail of the previous chapter's cam. Trust the footage, never the title, when calling the ability.
+- CHAPTER BOUNDARIES ARE OFFSET on this source -- a "Cages" chapter can open on the tail of the previous chapter's cam. Trust the footage, never the title, when calling the ability.
 - To avoid double-counting across that offset, report a placement ONLY if its DEPLOY moment falls inside your window. A placement whose deploy happens before ${it.cs} belongs to the previous chapter's agent.
 - Report placements that are genuinely DIFFERENT spots. The same placement re-shown from another angle, or reviewed afterwards from the camera's own remote view, is ONE placement, not two.
-- Set complete=false rather than inventing a window — incomplete ones get dropped, and that is the correct outcome.
+- Set complete=false rather than inventing a window -- incomplete ones get dropped, and that is the correct outcome.
 - Do NOT localize precisely, do NOT build verify cards, do NOT run recut, do NOT edit repo files.
 - Cap: at most ${MAX_PER_CHAPTER}. If the chapter genuinely has more, return the ${MAX_PER_CHAPTER} clearest and say so in notes.
 - Disk hygiene: Remove-Item -Recurse -Force your frame-dump + montage dirs under mga-frame-study before returning.
@@ -123,30 +123,30 @@ Return via StructuredOutput: placements[] and notes.`
 
 function locPrompt(it, fb) {
   const label = it.map + '-' + it.nn + (fb ? '-r2' : '')
-  const fbb = fb ? `\n\nA PRIOR ATTEMPT FAILED the gate (events: ${(fb.failed_events || []).join(',') || '?'}; reason: ${fb.reason || '?'}). Re-localize honestly — don't resubmit the same spans.` : ''
+  const fbb = fb ? `\n\nA PRIOR ATTEMPT FAILED the gate (events: ${(fb.failed_events || []).join(',') || '?'}; reason: ${fb.reason || '?'}). Re-localize honestly -- don't resubmit the same spans.` : ''
   const vn = it.varNote ? `\nNOTE: ${it.varNote}` : ''
   const placed = isPlaced(it)
   const mode = placed
-    ? `\n\n*** PLACED UTILITY — 3 EVENTS ONLY ***\n${it.ability} is MOUNTED at the player's own position: it never leaves the hands and nothing is ever in flight. There is NO THROW event. The instructions file describes 4 events — for THIS lineup, ignore its THROW section entirely.\nLocalize exactly THREE: STAND, AIM, LANDING, where LANDING = the moment the device is DEPLOYED and visible in place (trapwire beam strung across the gap, camera stuck to the surface and active). Do NOT return a 'throw' span. Do NOT invent one, do NOT copy AIM into it, do NOT return a zero-length placeholder. Omitting it is the correct and expected answer; a fabricated throw span is a hard failure.`
+    ? `\n\n*** PLACED UTILITY -- 3 EVENTS ONLY ***\n${it.ability} is MOUNTED at the player's own position: it never leaves the hands and nothing is ever in flight. There is NO THROW event. The instructions file describes 4 events -- for THIS lineup, ignore its THROW section entirely.\nLocalize exactly THREE: STAND, AIM, LANDING, where LANDING = the moment the device is DEPLOYED and visible in place (trapwire beam strung across the gap, camera stuck to the surface and active). Do NOT return a 'throw' span. Do NOT invent one, do NOT copy AIM into it, do NOT return a zero-length placeholder. Omitting it is the correct and expected answer; a fabricated throw span is a hard failure.`
     : ''
   const beats = placed ? 'all 3 events' : 'all 4 events'
   const pin = placed ? 'the DEPLOY instant pinned at 60fps' : 'THROW release pinned at 60fps'
   const ret = placed ? 'stand/aim/landing=[start,end] abs seconds (NO throw)' : 'stand/aim/throw/landing=[start,end] abs seconds'
-  const cap = it.caption ? `\nThe creator's own on-screen caption for it reads: "${it.caption}" — treat that as the best available statement of what this spot is for, and carry it into NOTES.` : ''
-  const scoped = `\n\n*** SCOPED SUB-WINDOW ***\nThis chapter contains several separate placements. YOURS is only: "${it.what}" inside [${it.cs}, ${it.next}]. Other placements appear before/after that window — localize ONLY yours and ignore the neighbours entirely. If your window turns out to contain no complete placement, say so in WEAKEST with low confidence rather than localizing a neighbour's.${cap}\nThe ability below came from a survey pass reading the footage, not from the chapter title (titles on this source are offset and unreliable). CONFIRM it against what you see deployed and correct it in your return if it disagrees.`
-  return `You are a VALORANT lineup-localization subagent for MGA. FIRST read this instructions file COMPLETELY and follow it (tooling, the events, mode-invariance, honesty contract): ${INSTR}\nIt points to a domain reference (valorant-lineup-expert.md) — read that too.\n\nYOUR LINEUP: NN=${it.nn} name="${it.name || ''}" window [${it.cs}, ${it.next}] ability=${it.ability} on video ${VIDEO} (map ${it.map}). Use label prefix ${label} for ALL frame_study/montage/verify_events labels.${vn}${scoped}${mode}\n\nLocalize ${beats} by DENSE frame study (${pin}, --step 0). Build the verify_events CARD (--video ${VIDEO} --label ${label}) and READ it yourself; if a strip mismatches its event, re-localize before returning. Do NOT run recut_lineup_clips.py, do NOT edit repo files. Disk hygiene: Remove-Item -Recurse -Force your frame-dump + montage dirs under mga-frame-study before returning, KEEP verify-cards.${fbb}\n\nReturn via StructuredOutput: ${ret}; ability; charge; bounces; technique; target+stand_loc (callouts); side; confidence; weakest; notes; card_path (absolute path to the CARD png).`
+  const cap = it.caption ? `\nThe creator's own on-screen caption for it reads: "${it.caption}" -- treat that as the best available statement of what this spot is for, and carry it into NOTES.` : ''
+  const scoped = `\n\n*** SCOPED SUB-WINDOW ***\nThis chapter contains several separate placements. YOURS is only: "${it.what}" inside [${it.cs}, ${it.next}]. Other placements appear before/after that window -- localize ONLY yours and ignore the neighbours entirely. If your window turns out to contain no complete placement, say so in WEAKEST with low confidence rather than localizing a neighbour's.${cap}\nThe ability below came from a survey pass reading the footage, not from the chapter title (titles on this source are offset and unreliable). CONFIRM it against what you see deployed and correct it in your return if it disagrees.`
+  return `You are a VALORANT lineup-localization subagent for MGA. FIRST read this instructions file COMPLETELY and follow it (tooling, the events, mode-invariance, honesty contract): ${INSTR}\nIt points to a domain reference (valorant-lineup-expert.md) -- read that too.\n\nYOUR LINEUP: NN=${it.nn} name="${it.name || ''}" window [${it.cs}, ${it.next}] ability=${it.ability} on video ${VIDEO} (map ${it.map}). Use label prefix ${label} for ALL frame_study/montage/verify_events labels.${vn}${scoped}${mode}\n\nLocalize ${beats} by DENSE frame study (${pin}, --step 0). Build the verify_events CARD (--video ${VIDEO} --label ${label}) and READ it yourself; if a strip mismatches its event, re-localize before returning. Do NOT run recut_lineup_clips.py, do NOT edit repo files. Disk hygiene: Remove-Item -Recurse -Force your frame-dump + montage dirs under mga-frame-study before returning, KEEP verify-cards.${fbb}\n\nReturn via StructuredOutput: ${ret}; ability; charge; bounces; technique; target+stand_loc (callouts); side; confidence; weakest; notes; card_path (absolute path to the CARD png).`
 }
 
 function gatePrompt(it, loc) {
   if (isPlaced(it)) {
     const dep = it.ability === 'trapwire'
-      ? 'the tripwire STRUNG — the beam/wire spans the gap and its anchor is stuck to the surface (a wire still in hand or a bare aiming reticle = FAIL).'
+      ? 'the tripwire STRUNG -- the beam/wire spans the gap and its anchor is stuck to the surface (a wire still in hand or a bare aiming reticle = FAIL).'
       : (it.ability === 'spycam'
-        ? 'the camera MOUNTED — stuck to the wall/surface and active (lens glow / placement confirmation), not merely aimed at the spot.'
-        : 'the device DEPLOYED and visible in place at the destination — not merely aimed at the spot.')
-    return `INDEPENDENT ADVERSARIAL gate for a lineup localization (MGA). Judge ONLY what you SEE in the card; default FAIL when uncertain (a wrong PASS ships a bad clip).\nLineup ${it.map}-${it.nn} ability ${it.ability}, window [${it.cs},${it.next}] video ${VIDEO}. This window is ONE placement out of several in its chapter: "${it.what}".\nThis is PLACED utility — mounted at the player's own position, never in flight, so there are THREE events and NO THROW. Claimed: STAND ${f(loc.stand)} | AIM ${f(loc.aim)} | LANDING ${f(loc.landing)}.\nRead this card: ${loc.card_path}\nIf missing/unreadable → pass=false, reason="card missing". Strips top→bottom: STAND, AIM, LANDING.\nPASS needs ALL: STAND stable at the spot (title-card overlay OK); AIM settled on the placement surface / alignment reference; LANDING ${dep}; no editor-overlay-only evidence; spans within/near the window with positive length.\nALSO FAIL if the localizer returned a 'throw' span at all — placed utility has no throw beat, so any value there is fabricated. It returned: ${loc['throw'] ? f(loc['throw']) : 'none (correct)'}.\nReturn pass (bool), failed_events (subset stand/aim/landing), reason (cite what you saw).`
+        ? 'the camera MOUNTED -- stuck to the wall/surface and active (lens glow / placement confirmation), not merely aimed at the spot.'
+        : 'the device DEPLOYED and visible in place at the destination -- not merely aimed at the spot.')
+    return `INDEPENDENT ADVERSARIAL gate for a lineup localization (MGA). Judge ONLY what you SEE in the card; default FAIL when uncertain (a wrong PASS ships a bad clip).\nLineup ${it.map}-${it.nn} ability ${it.ability}, window [${it.cs},${it.next}] video ${VIDEO}. This window is ONE placement out of several in its chapter: "${it.what}".\nThis is PLACED utility -- mounted at the player's own position, never in flight, so there are THREE events and NO THROW. Claimed: STAND ${f(loc.stand)} | AIM ${f(loc.aim)} | LANDING ${f(loc.landing)}.\nRead this card: ${loc.card_path}\nIf missing/unreadable -> pass=false, reason="card missing". Strips top->bottom: STAND, AIM, LANDING.\nPASS needs ALL: STAND stable at the spot (title-card overlay OK); AIM settled on the placement surface / alignment reference; LANDING ${dep}; no editor-overlay-only evidence; spans within/near the window with positive length.\nALSO FAIL if the localizer returned a 'throw' span at all -- placed utility has no throw beat, so any value there is fabricated. It returned: ${loc['throw'] ? f(loc['throw']) : 'none (correct)'}.\nReturn pass (bool), failed_events (subset stand/aim/landing), reason (cite what you saw).`
   }
-  return `INDEPENDENT ADVERSARIAL gate for a lineup localization (MGA). Judge ONLY what you SEE in the card; default FAIL when uncertain (a wrong PASS ships a bad clip).\nLineup ${it.map}-${it.nn} ability ${it.ability}, window [${it.cs},${it.next}] video ${VIDEO}. This window is ONE placement out of several in its chapter: "${it.what}".\nClaimed: STAND ${f(loc.stand)} | AIM ${f(loc.aim)} | THROW ${f(loc['throw'])} | LANDING ${f(loc.landing)}.\nRead this card: ${loc.card_path}\nIf missing/unreadable → pass=false, reason="card missing". Strips top→bottom: STAND, AIM, THROW, LANDING.\nPASS needs ALL: STAND stable at the spot; AIM settled on an alignment reference; THROW the actual RELEASE visible (the cage leaves the hand with its trail — a held cage with NO release = FAIL); LANDING the cyber-cage DEPLOYED at the destination (it lands, then blooms into its cage/smoke box — the bloom, not the mid-air object); no editor-overlay-only evidence; spans within/near the window with positive length.\nReturn pass (bool), failed_events (subset stand/aim/throw/landing), reason (cite what you saw).`
+  return `INDEPENDENT ADVERSARIAL gate for a lineup localization (MGA). Judge ONLY what you SEE in the card; default FAIL when uncertain (a wrong PASS ships a bad clip).\nLineup ${it.map}-${it.nn} ability ${it.ability}, window [${it.cs},${it.next}] video ${VIDEO}. This window is ONE placement out of several in its chapter: "${it.what}".\nClaimed: STAND ${f(loc.stand)} | AIM ${f(loc.aim)} | THROW ${f(loc['throw'])} | LANDING ${f(loc.landing)}.\nRead this card: ${loc.card_path}\nIf missing/unreadable -> pass=false, reason="card missing". Strips top->bottom: STAND, AIM, THROW, LANDING.\nPASS needs ALL: STAND stable at the spot; AIM settled on an alignment reference; THROW the actual RELEASE visible (the cage leaves the hand with its trail -- a held cage with NO release = FAIL); LANDING the cyber-cage DEPLOYED at the destination (it lands, then blooms into its cage/smoke box -- the bloom, not the mid-air object); no editor-overlay-only evidence; spans within/near the window with positive length.\nReturn pass (bool), failed_events (subset stand/aim/throw/landing), reason (cite what you saw).`
 }
 
 log(`${MAP}: surveying ${ITEMS.length} grouped chapters (video ${VIDEO}; survey=${SURVEY_MODEL}/${SURVEY_EFFORT}, loc=${LOC_MODEL}/${LOC_EFFORT}, gate=${GATE_MODEL}/${GATE_EFFORT})`)
@@ -168,7 +168,7 @@ const perChapter = await pipeline(
       what: p.what,
       caption: p.caption || '',
       aligned: p.aligned !== false,
-      name: (it.name || '') + ' — ' + p.what,
+      name: (it.name || '') + ' -- ' + p.what,
     }))
 
     const out = await parallel(subs.map((sit) => async () => {
