@@ -34,6 +34,7 @@ from app.db.session import AsyncSessionLocal
 from app.repositories import extraction_prompt_repo
 from app.services.extraction.prompts.base_prompt import DEFAULT_PROMPT
 from app.services.extraction.prompts.document_type_addendums import get_addendum_for_filename
+from app.services.extraction.prompts.insurance_policy_prompt import INSURANCE_POLICY_PROMPT
 from app.services.extraction.prompts.utility_plan_prompt import UTILITY_PLAN_PROMPT
 from app.services.system.event_service import record_event
 from platform_shared.extraction import (
@@ -56,6 +57,7 @@ __all__ = [
     "extract_from_image",
     "extract_from_email",
     "run_utility_plan_extraction",
+    "run_insurance_policy_extraction",
     "_create_with_backoff",
     "_ThrottleState",
     "_throttle",
@@ -250,14 +252,15 @@ async def extract_from_image(image_bytes: bytes, media_type: str, user_id: uuid.
     return _to_legacy(resp)
 
 
-async def run_utility_plan_extraction(
+async def _run_record_extraction(
+    prompt: str,
+    label: str,
     *,
-    text: str | None = None,
-    image_bytes: bytes | None = None,
-    media_type: str | None = None,
-    user_id: uuid.UUID | None = None,
+    text: str | None,
+    image_bytes: bytes | None,
+    media_type: str | None,
 ) -> dict:
-    """Read utility plan terms with UTILITY_PLAN_PROMPT instead of DEFAULT_PROMPT.
+    """Read a structured record with ``prompt`` instead of DEFAULT_PROMPT.
 
     Shares the client, throttle and 429 backoff with transaction extraction —
     they are the same account's rate limit — but nothing else. In particular it
@@ -270,26 +273,60 @@ async def run_utility_plan_extraction(
     empty dict degrades to an empty form rather than an error.
     """
     if not _extraction.is_configured():
-        logger.warning("utility plan extraction requested without an API key")
+        logger.warning("%s extraction requested without an API key", label)
         return {}
     try:
         if image_bytes is not None:
             resp = await _extraction.extract_document(
-                UTILITY_PLAN_PROMPT,
+                prompt,
                 image_bytes,
                 media_type or "application/pdf",
                 on_rate_limit=_record_rate_limited,
             )
         else:
             resp = await _extraction.extract_text(
-                UTILITY_PLAN_PROMPT,
+                prompt,
                 (text or "")[:settings.max_text_chars],
                 on_rate_limit=_record_rate_limited,
             )
     except ExtractionParseError:
-        logger.warning("utility plan extraction: model response was not JSON")
+        logger.warning("%s extraction: model response was not JSON", label)
         return {}
     return resp.data if isinstance(resp.data, dict) else {}
+
+
+async def run_utility_plan_extraction(
+    *,
+    text: str | None = None,
+    image_bytes: bytes | None = None,
+    media_type: str | None = None,
+    user_id: uuid.UUID | None = None,
+) -> dict:
+    """Read utility plan terms under UTILITY_PLAN_PROMPT."""
+    return await _run_record_extraction(
+        UTILITY_PLAN_PROMPT,
+        "utility plan",
+        text=text,
+        image_bytes=image_bytes,
+        media_type=media_type,
+    )
+
+
+async def run_insurance_policy_extraction(
+    *,
+    text: str | None = None,
+    image_bytes: bytes | None = None,
+    media_type: str | None = None,
+    user_id: uuid.UUID | None = None,
+) -> dict:
+    """Read insurance policy terms under INSURANCE_POLICY_PROMPT."""
+    return await _run_record_extraction(
+        INSURANCE_POLICY_PROMPT,
+        "insurance policy",
+        text=text,
+        image_bytes=image_bytes,
+        media_type=media_type,
+    )
 
 
 async def extract_from_email(subject: str, body: str, user_id: uuid.UUID | None = None) -> dict:

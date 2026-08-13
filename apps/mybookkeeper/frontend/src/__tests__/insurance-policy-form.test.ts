@@ -19,6 +19,7 @@ const POLICY: InsurancePolicyDetail = {
   user_id: "user-1",
   organization_id: "org-1",
   listing_id: "listing-1",
+  source_document_id: null,
   policy_name: "Landlord Insurance",
   carrier: "State Farm",
   policy_number: "POL-12345",

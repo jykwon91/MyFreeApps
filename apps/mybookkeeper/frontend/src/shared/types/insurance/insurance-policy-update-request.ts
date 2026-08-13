@@ -6,6 +6,7 @@ import type { InsurancePremiumFrequency } from "@/shared/types/insurance/insuran
  * Mirrors ``schemas/insurance/insurance_policy_update_request.py``.
  */
 export interface InsurancePolicyUpdateRequest {
+  source_document_id?: string | null;
   policy_name?: string;
   carrier?: string | null;
   policy_number?: string | null;

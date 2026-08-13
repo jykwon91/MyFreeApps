@@ -12,11 +12,17 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Respon
 
 from app.core.context import RequestContext
 from app.core.permissions import current_org_member, require_write_access
+from app.core.rate_limit import insurance_policy_extract_limiter
+from app.core.upload_errors import upload_error_status
 from app.schemas.insurance.insurance_policy_attachment_response import (
     InsurancePolicyAttachmentResponse,
 )
 from app.schemas.insurance.insurance_policy_create_request import (
     InsurancePolicyCreateRequest,
+)
+from app.schemas.insurance.insurance_policy_draft import InsurancePolicyDraft
+from app.schemas.insurance.insurance_policy_extract_request import (
+    InsurancePolicyExtractRequest,
 )
 from app.schemas.insurance.insurance_policy_list_response import (
     InsurancePolicyListResponse,
@@ -28,9 +34,15 @@ from app.schemas.insurance.insurance_policy_response import InsurancePolicyRespo
 from app.schemas.insurance.insurance_policy_update_request import (
     InsurancePolicyUpdateRequest,
 )
-from app.services.insurance import insurance_benchmark_service, insurance_policy_service
+from app.services.insurance import (
+    insurance_benchmark_service,
+    insurance_policy_extraction_service,
+    insurance_policy_service,
+)
 
 router = APIRouter(prefix="/insurance-policies", tags=["insurance-policies"])
+
+_DOCUMENT_NOT_FOUND_DETAIL = "Document not found"
 
 
 @router.post("", response_model=InsurancePolicyResponse, status_code=201)
@@ -42,6 +54,7 @@ async def create_policy(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
         listing_id=payload.listing_id,
+        source_document_id=payload.source_document_id,
         policy_name=payload.policy_name,
         carrier=payload.carrier,
         policy_number=payload.policy_number,
@@ -54,6 +67,66 @@ async def create_policy(
         wind_hail_deductible_pct=payload.wind_hail_deductible_pct,
         notes=payload.notes,
     )
+
+
+@router.post("/extract", response_model=InsurancePolicyDraft)
+async def extract_policy_from_document(
+    payload: InsurancePolicyExtractRequest,
+    ctx: RequestContext = Depends(require_write_access),
+) -> InsurancePolicyDraft:
+    """Read policy terms out of a document the caller already uploaded.
+
+    Nothing is saved — the response prefills the create form, and the operator
+    still reviews it. Declared before ``/{policy_id}`` so the literal path is
+    not swallowed by the UUID route.
+    """
+    insurance_policy_extract_limiter.check(f"insurance-policy-extract:{ctx.user_id}")
+    try:
+        return await insurance_policy_extraction_service.extract_policy_from_document(
+            user_id=ctx.user_id,
+            organization_id=ctx.organization_id,
+            document_id=payload.document_id,
+        )
+    except insurance_policy_extraction_service.DocumentNotFoundError as exc:
+        raise HTTPException(
+            status_code=404, detail=_DOCUMENT_NOT_FOUND_DETAIL,
+        ) from exc
+    except insurance_policy_extraction_service.UnreadableDocumentError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post("/extract-upload", response_model=InsurancePolicyDraft)
+async def extract_policy_from_upload(
+    file: UploadFile = File(...),
+    ctx: RequestContext = Depends(require_write_access),
+) -> InsurancePolicyDraft:
+    """Store a file the caller just picked and read policy terms out of it.
+
+    The one-request form of ``/extract``, for callers holding bytes rather than
+    a document id — a phone photographing a declarations page has nothing in
+    the library to point at. The file is kept as reference material, so no
+    transaction is invented from the premium printed on it. No policy is saved;
+    the response prefills the create form. Declared before ``/{policy_id}`` so
+    the literal path is not swallowed by the UUID route.
+    """
+    insurance_policy_extract_limiter.check(f"insurance-policy-extract:{ctx.user_id}")
+    content = await file.read()
+    try:
+        return await insurance_policy_extraction_service.extract_policy_from_upload(
+            ctx=ctx,
+            content=content,
+            filename=file.filename or "",
+            content_type=file.content_type or "",
+        )
+    # UnreadableDocumentError is a ValueError, so it has to be caught first or
+    # the upload-rejection mapping below would swallow it.
+    except insurance_policy_extraction_service.UnreadableDocumentError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except ValueError as exc:
+        msg = str(exc)
+        raise HTTPException(
+            status_code=upload_error_status(msg), detail=msg,
+        ) from exc
 
 
 @router.get("", response_model=InsurancePolicyListResponse)

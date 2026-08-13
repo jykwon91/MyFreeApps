@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { Upload } from "lucide-react";
-import { MAX_UPLOAD_MB } from "@/shared/lib/utility-plan-read-errors";
+import { MAX_UPLOAD_MB } from "@/shared/lib/document-read-errors";
 
 /** Formats the reader will accept. Matches the backend's content sniff. */
 const ACCEPTED_MIME = [
@@ -10,22 +10,25 @@ const ACCEPTED_MIME = [
   "image/webp",
 ];
 
-export interface UtilityPlanFileDropzoneProps {
+export interface DocumentFileDropzoneProps {
   onFile: (file: File) => void;
+  /** Namespaces the test ids so each domain's specs address their own card. */
+  testIdPrefix: string;
   disabled?: boolean;
 }
 
 /**
- * Pick the plan document off the device.
+ * Pick the document to read off the device.
  *
  * No ``capture`` attribute on purpose — leaving it off is what makes iOS offer
  * Photo Library / Take Photo / Browse from one control, which covers every way
- * an operator actually has an Electricity Facts Label to hand.
+ * an operator actually has the paperwork to hand.
  */
-export default function UtilityPlanFileDropzone({
+export default function DocumentFileDropzone({
   onFile,
+  testIdPrefix,
   disabled = false,
-}: UtilityPlanFileDropzoneProps) {
+}: DocumentFileDropzoneProps) {
   const [isDragging, setIsDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -47,14 +50,14 @@ export default function UtilityPlanFileDropzone({
         if (file) onFile(file);
       }}
       className={`border-2 border-dashed rounded-lg p-4 text-center transition-colors ${borderTone} ${enabledTone}`}
-      data-testid="utility-plan-file-dropzone"
+      data-testid={`${testIdPrefix}-file-dropzone`}
     >
       <Upload size={16} className="mx-auto text-muted-foreground mb-1" />
       <button
         type="button"
         onClick={() => inputRef.current?.click()}
         className="min-h-[44px] px-2 text-sm font-medium text-primary hover:underline"
-        data-testid="utility-plan-choose-file-button"
+        data-testid={`${testIdPrefix}-choose-file-button`}
       >
         Add a photo or PDF
       </button>
@@ -74,7 +77,7 @@ export default function UtilityPlanFileDropzone({
           // read.
           e.target.value = "";
         }}
-        data-testid="utility-plan-file-input"
+        data-testid={`${testIdPrefix}-file-input`}
       />
     </div>
   );

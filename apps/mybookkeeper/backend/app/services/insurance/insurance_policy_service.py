@@ -30,6 +30,7 @@ from app.schemas.insurance.insurance_policy_list_response import (
 )
 from app.schemas.insurance.insurance_policy_response import InsurancePolicyResponse
 from app.schemas.insurance.insurance_policy_summary import InsurancePolicySummary
+from app.services.documents.document_ownership import owns_document
 from app.services.insurance._merged_policy import MergedPolicy
 from app.services.insurance.attachment_response_builder import attach_presigned_urls
 
@@ -87,12 +88,31 @@ def _attachment_responses(
     )
 
 
+async def _assert_source_document_is_ours(
+    db, *, organization_id: uuid.UUID, document_id: uuid.UUID | None,
+) -> None:
+    """Reject a ``source_document_id`` belonging to another organization.
+
+    The foreign key only proves the document exists — it is global. The client
+    supplies this id directly, so it is checked here rather than trusted.
+    """
+    if document_id is None:
+        return
+    if not await owns_document(
+        db, organization_id=organization_id, document_id=document_id,
+    ):
+        raise InvalidInsurancePolicyError(
+            "source_document_id does not name a document",
+        )
+
+
 def _to_detail(policy, attachments: list) -> InsurancePolicyResponse:
     return InsurancePolicyResponse(
         id=policy.id,
         user_id=policy.user_id,
         organization_id=policy.organization_id,
         listing_id=policy.listing_id,
+        source_document_id=policy.source_document_id,
         policy_name=policy.policy_name,
         carrier=policy.carrier,
         policy_number=policy.policy_number,
@@ -120,6 +140,7 @@ async def create_policy(
     organization_id: uuid.UUID,
     listing_id: uuid.UUID,
     policy_name: str,
+    source_document_id: uuid.UUID | None,
     carrier: str | None,
     policy_number: str | None,
     effective_date: _dt.date | None,
@@ -132,11 +153,15 @@ async def create_policy(
     notes: str | None,
 ) -> InsurancePolicyResponse:
     async with unit_of_work() as db:
+        await _assert_source_document_is_ours(
+            db, organization_id=organization_id, document_id=source_document_id,
+        )
         policy = await insurance_policy_repo.create(
             db,
             user_id=user_id,
             organization_id=organization_id,
             listing_id=listing_id,
+            source_document_id=source_document_id,
             policy_name=policy_name,
             carrier=carrier,
             policy_number=policy_number,
@@ -237,6 +262,12 @@ async def update_policy(
             validate_policy_fields(MergedPolicy(existing, fields))
         except ValueError as exc:
             raise InvalidInsurancePolicyError(str(exc)) from exc
+
+        await _assert_source_document_is_ours(
+            db,
+            organization_id=organization_id,
+            document_id=fields.get("source_document_id"),
+        )
 
         policy = await insurance_policy_repo.update_policy(
             db,

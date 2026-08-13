@@ -18,6 +18,7 @@ class InsurancePolicyResponse(BaseModel):
     user_id: uuid.UUID
     organization_id: uuid.UUID
     listing_id: uuid.UUID
+    source_document_id: uuid.UUID | None = None
     policy_name: str
     carrier: str | None = None
     policy_number: str | None = None

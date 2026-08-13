@@ -881,7 +881,7 @@ class TestSourceDocumentIsolation:
 
         with patch(_UOW_TARGET, _make_fake_uow(db)):
             with patch(
-                "app.services.properties.utility_plan_service.document_repo.get_by_id",
+                "app.services.properties.utility_plan_service.owns_document",
             ) as mock_get:
                 detail = await utility_plan_service.create_plan(
                     user_id=user_id,

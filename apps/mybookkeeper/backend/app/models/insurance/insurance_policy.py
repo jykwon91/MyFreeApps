@@ -58,6 +58,22 @@ class InsurancePolicy(Base):
         nullable=False,
     )
 
+    # The document these terms were read off — a declarations page, a binder, a
+    # renewal notice. SET NULL rather than CASCADE: the coverage stays true
+    # after its evidence is deleted, it just becomes unsourced. Null is the
+    # honest state for a policy typed in by hand, which is every row that
+    # predates document reading.
+    #
+    # Distinct from ``insurance_policy_attachments``: those are paperwork the
+    # operator chose to keep against the policy, this is provenance for the
+    # numbers in the row.
+    source_document_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("documents.id", ondelete="SET NULL"),
+        index=True,
+        nullable=True,
+    )
+
     policy_name: Mapped[str] = mapped_column(String(255), nullable=False)
     carrier: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
