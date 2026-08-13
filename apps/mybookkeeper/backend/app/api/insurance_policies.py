@@ -45,6 +45,10 @@ async def create_policy(
         effective_date=payload.effective_date,
         expiration_date=payload.expiration_date,
         coverage_amount_cents=payload.coverage_amount_cents,
+        premium_cents=payload.premium_cents,
+        premium_frequency=payload.premium_frequency,
+        deductible_cents=payload.deductible_cents,
+        wind_hail_deductible_pct=payload.wind_hail_deductible_pct,
         notes=payload.notes,
     )
 
@@ -112,6 +116,8 @@ async def update_policy(
         )
     except insurance_policy_service.InsurancePolicyNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Insurance policy not found") from exc
+    except insurance_policy_service.InvalidInsurancePolicyError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.delete("/{policy_id}", status_code=204)

@@ -1,4 +1,5 @@
 import type { InsurancePolicyAttachment } from "@/shared/types/insurance/insurance-policy-attachment";
+import type { InsurancePremiumFrequency } from "@/shared/types/insurance/insurance-premium-frequency";
 
 /**
  * Full insurance policy with attachments.
@@ -16,6 +17,12 @@ export interface InsurancePolicyDetail {
   effective_date: string | null;
   expiration_date: string | null;
   coverage_amount_cents: number | null;
+  premium_cents: number | null;
+  premium_frequency: InsurancePremiumFrequency | null;
+  deductible_cents: number | null;
+  wind_hail_deductible_pct: string | null;
+  /** Derived server-side from premium + frequency; never sent on write. */
+  annual_premium_cents: number | null;
   notes: string | null;
   created_at: string;
   updated_at: string;

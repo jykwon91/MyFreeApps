@@ -27,6 +27,7 @@ let mockIsFetching = false;
 let mockPolicy: PolicyDetailType | undefined;
 
 const deleteMock = vi.fn(() => ({ unwrap: () => Promise.resolve(undefined) }));
+const updateMock = vi.fn(() => ({ unwrap: () => Promise.resolve(undefined) }));
 let mockIsDeleting = false;
 
 vi.mock("@/shared/store/insurancePoliciesApi", () => ({
@@ -38,6 +39,7 @@ vi.mock("@/shared/store/insurancePoliciesApi", () => ({
     refetch: mockRefetch,
   })),
   useDeleteInsurancePolicyMutation: vi.fn(() => [deleteMock, { isLoading: mockIsDeleting }]),
+  useUpdateInsurancePolicyMutation: vi.fn(() => [updateMock, { isLoading: false }]),
   useUploadInsurancePolicyAttachmentMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useDeleteInsurancePolicyAttachmentMutation: vi.fn(() => [
     vi.fn(() => ({ unwrap: () => Promise.resolve(undefined) })),
@@ -70,6 +72,11 @@ const POLICY: PolicyDetailType = {
   effective_date: "2025-01-01",
   expiration_date: "2026-01-01",
   coverage_amount_cents: 50000000,
+  premium_cents: 11200,
+  premium_frequency: "monthly",
+  deductible_cents: 250000,
+  wind_hail_deductible_pct: "2.00",
+  annual_premium_cents: 134400,
   notes: "Annual renewal reminder set.",
   attachments: [],
   created_at: "2025-01-01T00:00:00Z",
@@ -277,5 +284,139 @@ describe("InsurancePolicyDetail — coverage edge cases", () => {
     mockPolicy = { ...POLICY, notes: null };
     renderPage();
     expect(screen.queryByTestId("insurance-notes")).not.toBeInTheDocument();
+  });
+});
+
+describe("InsurancePolicyDetail — cost section", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockIsLoading = false;
+    mockIsError = false;
+    mockIsFetching = false;
+    mockPolicy = POLICY;
+    mockCanWrite = true;
+  });
+
+  it("shows the premium as billed, carrying its period", () => {
+    renderPage();
+    expect(screen.getByTestId("insurance-premium")).toHaveTextContent("$112/mo");
+  });
+
+  it("shows the annualised premium alongside the billed amount", () => {
+    renderPage();
+    expect(screen.getByTestId("insurance-annual-premium")).toHaveTextContent("$1,344/yr");
+  });
+
+  it("formats the deductible from cents", () => {
+    renderPage();
+    expect(screen.getByTestId("insurance-deductible")).toHaveTextContent("$2,500");
+  });
+
+  it("prices the wind/hail percentage against the coverage amount", () => {
+    renderPage();
+    // 2% of $500,000 — the percentage alone reads far smaller than the exposure.
+    expect(screen.getByTestId("insurance-wind-hail-deductible")).toHaveTextContent(
+      "2% of coverage ($10,000.00)",
+    );
+  });
+
+  it("shows '—' for each cost field when nothing is recorded", () => {
+    mockPolicy = {
+      ...POLICY,
+      premium_cents: null,
+      premium_frequency: null,
+      deductible_cents: null,
+      wind_hail_deductible_pct: null,
+      annual_premium_cents: null,
+    };
+    renderPage();
+    expect(screen.getByTestId("insurance-premium")).toHaveTextContent("—");
+    expect(screen.getByTestId("insurance-annual-premium")).toHaveTextContent("—");
+    expect(screen.getByTestId("insurance-deductible")).toHaveTextContent("—");
+    expect(screen.getByTestId("insurance-wind-hail-deductible")).toHaveTextContent("—");
+  });
+});
+
+describe("InsurancePolicyDetail — edit flow", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockIsLoading = false;
+    mockIsError = false;
+    mockIsFetching = false;
+    mockPolicy = POLICY;
+    mockCanWrite = true;
+  });
+
+  it("shows the Edit button when canWrite=true", () => {
+    renderPage();
+    expect(screen.getByTestId("edit-insurance-policy-button")).toBeInTheDocument();
+  });
+
+  it("does not show the Edit button when canWrite=false", () => {
+    mockCanWrite = false;
+    renderPage();
+    expect(screen.queryByTestId("edit-insurance-policy-button")).not.toBeInTheDocument();
+  });
+
+  it("seeds the form from the stored policy", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(screen.getByTestId("edit-insurance-policy-button"));
+    expect(screen.getByTestId("insurance-policy-name-input")).toHaveValue(
+      "Landlord Insurance",
+    );
+    expect(screen.getByTestId("insurance-premium-input")).toHaveValue(112);
+    expect(screen.getByTestId("insurance-premium-frequency-select")).toHaveValue("monthly");
+    expect(screen.getByTestId("insurance-wind-hail-input")).toHaveValue(2);
+  });
+
+  it("saves an edited premium as cents with its frequency", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(screen.getByTestId("edit-insurance-policy-button"));
+
+    const premium = screen.getByTestId("insurance-premium-input");
+    await user.clear(premium);
+    await user.type(premium, "125.50");
+    await user.click(screen.getByTestId("insurance-policy-update-button"));
+
+    await waitFor(() => {
+      expect(updateMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          policyId: "policy-abc",
+          data: expect.objectContaining({
+            premium_cents: 12550,
+            premium_frequency: "monthly",
+          }),
+        }),
+      );
+    });
+    await waitFor(() => {
+      expect(showSuccessMock).toHaveBeenCalledWith("Insurance policy updated.");
+    });
+  });
+
+  it("closes the dialog after a successful save", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(screen.getByTestId("edit-insurance-policy-button"));
+    await user.click(screen.getByTestId("insurance-policy-update-button"));
+    await waitFor(() => {
+      expect(screen.queryByTestId("edit-insurance-policy-dialog")).not.toBeInTheDocument();
+    });
+  });
+
+  it("does not submit a whitespace-only policy name", async () => {
+    // `required` on the input stops an empty field; whitespace satisfies it, so
+    // the handler's own guard is what catches this one.
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(screen.getByTestId("edit-insurance-policy-button"));
+    const name = screen.getByTestId("insurance-policy-name-input");
+    await user.clear(name);
+    await user.type(name, "   ");
+    await user.click(screen.getByTestId("insurance-policy-update-button"));
+    expect(updateMock).not.toHaveBeenCalled();
+    expect(showErrorMock).toHaveBeenCalledWith("Policy name is required.");
   });
 });

@@ -42,6 +42,11 @@ const POLICY_ACTIVE: InsurancePolicySummary = {
   effective_date: "2025-01-01",
   expiration_date: "2026-12-31",
   coverage_amount_cents: 50000000,
+  premium_cents: 124000,
+  premium_frequency: "annual",
+  deductible_cents: 250000,
+  wind_hail_deductible_pct: "2.00",
+  annual_premium_cents: 124000,
   created_at: "2025-01-01T00:00:00Z",
   updated_at: "2025-01-01T00:00:00Z",
 };
@@ -54,6 +59,11 @@ const POLICY_EXPIRING_SOON: InsurancePolicySummary = {
   effective_date: "2025-06-01",
   expiration_date: new Date(Date.now() + 10 * 86400000).toISOString().split("T")[0],
   coverage_amount_cents: null,
+  premium_cents: null,
+  premium_frequency: null,
+  deductible_cents: null,
+  wind_hail_deductible_pct: null,
+  annual_premium_cents: null,
   created_at: "2025-06-01T00:00:00Z",
   updated_at: "2025-06-01T00:00:00Z",
 };

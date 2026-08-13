@@ -55,6 +55,11 @@ const POLICY_A: InsurancePolicySummary = {
   effective_date: "2025-01-01",
   expiration_date: "2027-01-01",
   coverage_amount_cents: 50000000,
+  premium_cents: 11200,
+  premium_frequency: "monthly",
+  deductible_cents: 250000,
+  wind_hail_deductible_pct: "2.00",
+  annual_premium_cents: 134400,
   created_at: "2025-01-01T00:00:00Z",
   updated_at: "2025-01-01T00:00:00Z",
 };
@@ -67,6 +72,11 @@ const POLICY_B: InsurancePolicySummary = {
   effective_date: "2024-06-01",
   expiration_date: new Date(Date.now() + 10 * 86400000).toISOString().split("T")[0], // expiring in 10 days
   coverage_amount_cents: null,
+  premium_cents: null,
+  premium_frequency: null,
+  deductible_cents: null,
+  wind_hail_deductible_pct: null,
+  annual_premium_cents: null,
   created_at: "2024-06-01T00:00:00Z",
   updated_at: "2024-06-01T00:00:00Z",
 };
@@ -180,6 +190,20 @@ describe("InsurancePolicies page — policy list", () => {
     renderPage();
     // POLICY_B expires in 10 days → badge-soon
     expect(screen.getByTestId("expiration-badge-soon")).toBeInTheDocument();
+  });
+
+  it("shows the annualised premium, not the billed monthly amount", () => {
+    renderPage();
+    // POLICY_A is billed $112/mo; the row must read the yearly total so it is
+    // comparable against a policy billed annually in the same column.
+    expect(screen.getByTestId("insurance-policy-premium-pol-a")).toHaveTextContent(
+      "$1,344/yr",
+    );
+  });
+
+  it("omits the premium line for a policy with no premium recorded", () => {
+    renderPage();
+    expect(screen.queryByTestId("insurance-policy-premium-pol-b")).not.toBeInTheDocument();
   });
 });
 

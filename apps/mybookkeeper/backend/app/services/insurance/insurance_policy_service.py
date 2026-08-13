@@ -10,6 +10,7 @@ from __future__ import annotations
 import datetime as _dt
 import logging
 import uuid
+from decimal import Decimal
 from typing import Any
 
 from app.core.config import settings as _settings
@@ -20,6 +21,7 @@ from app.repositories.insurance import (
     insurance_policy_attachment_repo,
     insurance_policy_repo,
 )
+from app.schemas.insurance.insurance_policy_validation import validate_policy_fields
 from app.schemas.insurance.insurance_policy_attachment_response import (
     InsurancePolicyAttachmentResponse,
 )
@@ -28,6 +30,7 @@ from app.schemas.insurance.insurance_policy_list_response import (
 )
 from app.schemas.insurance.insurance_policy_response import InsurancePolicyResponse
 from app.schemas.insurance.insurance_policy_summary import InsurancePolicySummary
+from app.services.insurance._merged_policy import MergedPolicy
 from app.services.insurance.attachment_response_builder import attach_presigned_urls
 
 logger = logging.getLogger(__name__)
@@ -38,6 +41,10 @@ logger = logging.getLogger(__name__)
 
 class InsurancePolicyNotFoundError(LookupError):
     pass
+
+
+class InvalidInsurancePolicyError(ValueError):
+    """A payload that would leave the stored row internally inconsistent."""
 
 
 class AttachmentNotFoundError(LookupError):
@@ -92,6 +99,10 @@ def _to_detail(policy, attachments: list) -> InsurancePolicyResponse:
         effective_date=policy.effective_date,
         expiration_date=policy.expiration_date,
         coverage_amount_cents=policy.coverage_amount_cents,
+        premium_cents=policy.premium_cents,
+        premium_frequency=policy.premium_frequency,
+        deductible_cents=policy.deductible_cents,
+        wind_hail_deductible_pct=policy.wind_hail_deductible_pct,
         notes=policy.notes,
         created_at=policy.created_at,
         updated_at=policy.updated_at,
@@ -114,6 +125,10 @@ async def create_policy(
     effective_date: _dt.date | None,
     expiration_date: _dt.date | None,
     coverage_amount_cents: int | None,
+    premium_cents: int | None,
+    premium_frequency: str | None,
+    deductible_cents: int | None,
+    wind_hail_deductible_pct: Decimal | None,
     notes: str | None,
 ) -> InsurancePolicyResponse:
     async with unit_of_work() as db:
@@ -128,6 +143,10 @@ async def create_policy(
             effective_date=effective_date,
             expiration_date=expiration_date,
             coverage_amount_cents=coverage_amount_cents,
+            premium_cents=premium_cents,
+            premium_frequency=premium_frequency,
+            deductible_cents=deductible_cents,
+            wind_hail_deductible_pct=wind_hail_deductible_pct,
             notes=notes,
         )
     return _to_detail(policy, [])
@@ -202,6 +221,23 @@ async def update_policy(
     fields: dict[str, Any],
 ) -> InsurancePolicyResponse:
     async with unit_of_work() as db:
+        existing = await insurance_policy_repo.get(
+            db,
+            policy_id=policy_id,
+            user_id=user_id,
+            organization_id=organization_id,
+        )
+        if existing is None:
+            raise InsurancePolicyNotFoundError(f"Policy {policy_id} not found")
+
+        # Re-checked against the merged row, not the payload: clearing one half
+        # of the premium pair while the other stays stored is a violation the
+        # partial payload alone cannot see.
+        try:
+            validate_policy_fields(MergedPolicy(existing, fields))
+        except ValueError as exc:
+            raise InvalidInsurancePolicyError(str(exc)) from exc
+
         policy = await insurance_policy_repo.update_policy(
             db,
             policy_id=policy_id,

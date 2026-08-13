@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import datetime as _dt
 import uuid
+from decimal import Decimal
 
 import pytest
 import pytest_asyncio
@@ -177,6 +178,80 @@ class TestInsurancePolicyRepo:
         assert updated is not None
         assert updated.carrier == "Allstate"
         assert updated.policy_name == "Updated Name"
+
+    @pytest.mark.asyncio
+    async def test_persists_cost_fields(self, db: AsyncSession, test_user: User, test_org: Organization) -> None:
+        listing = await _make_listing(db, test_org.id, test_user.id)
+        policy = await insurance_policy_repo.create(
+            db,
+            user_id=test_user.id,
+            organization_id=test_org.id,
+            listing_id=listing.id,
+            policy_name="Landlord Insurance",
+            premium_cents=11200,
+            premium_frequency="monthly",
+            deductible_cents=250000,
+            wind_hail_deductible_pct=Decimal("2.00"),
+        )
+        await db.commit()
+        db.expunge_all()
+
+        fetched = await insurance_policy_repo.get(
+            db,
+            policy_id=policy.id,
+            user_id=test_user.id,
+            organization_id=test_org.id,
+        )
+        assert fetched is not None
+        assert fetched.premium_cents == 11200
+        assert fetched.premium_frequency == "monthly"
+        assert fetched.deductible_cents == 250000
+        assert Decimal(str(fetched.wind_hail_deductible_pct)) == Decimal("2.00")
+
+    @pytest.mark.asyncio
+    async def test_cost_fields_default_to_none(self, db: AsyncSession, test_user: User, test_org: Organization) -> None:
+        # A policy recorded before the cost fields existed reads as unpriced,
+        # not as free.
+        listing = await _make_listing(db, test_org.id, test_user.id)
+        policy = await insurance_policy_repo.create(
+            db,
+            user_id=test_user.id,
+            organization_id=test_org.id,
+            listing_id=listing.id,
+            policy_name="Coverage Only",
+        )
+        await db.commit()
+
+        assert policy.premium_cents is None
+        assert policy.premium_frequency is None
+        assert policy.deductible_cents is None
+        assert policy.wind_hail_deductible_pct is None
+
+    @pytest.mark.asyncio
+    async def test_update_cost_fields(self, db: AsyncSession, test_user: User, test_org: Organization) -> None:
+        listing = await _make_listing(db, test_org.id, test_user.id)
+        policy = await insurance_policy_repo.create(
+            db,
+            user_id=test_user.id,
+            organization_id=test_org.id,
+            listing_id=listing.id,
+            policy_name="Landlord Insurance",
+            premium_cents=11200,
+            premium_frequency="monthly",
+        )
+        await db.commit()
+
+        # A renewal reprice: same policy, new amount on a new payment plan.
+        updated = await insurance_policy_repo.update_policy(
+            db,
+            policy_id=policy.id,
+            user_id=test_user.id,
+            organization_id=test_org.id,
+            fields={"premium_cents": 138000, "premium_frequency": "annual"},
+        )
+        assert updated is not None
+        assert updated.premium_cents == 138000
+        assert updated.premium_frequency == "annual"
 
     @pytest.mark.asyncio
     async def test_soft_delete(self, db: AsyncSession, test_user: User, test_org: Organization) -> None:

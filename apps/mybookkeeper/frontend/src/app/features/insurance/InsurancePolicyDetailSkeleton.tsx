@@ -22,6 +22,17 @@ export default function InsurancePolicyDetailSkeleton() {
         </div>
       </div>
 
+      {/* Cost section — four fields, same two-column grid as the loaded page */}
+      <div className="border rounded-lg p-4 space-y-3">
+        <div className="h-4 bg-muted rounded w-1/4" />
+        <div className="grid grid-cols-2 gap-3">
+          <div className="h-4 bg-muted rounded" />
+          <div className="h-4 bg-muted rounded" />
+          <div className="h-4 bg-muted rounded" />
+          <div className="h-4 bg-muted rounded" />
+        </div>
+      </div>
+
       {/* Attachments section */}
       <div className="border rounded-lg p-4 space-y-3">
         <div className="h-4 bg-muted rounded w-1/4" />
