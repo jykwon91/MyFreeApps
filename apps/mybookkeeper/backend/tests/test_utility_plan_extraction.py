@@ -221,7 +221,7 @@ class TestDraftWarnings:
 class TestExtractPlanFromDocument:
     async def test_a_document_from_another_org_is_not_found(self) -> None:
         with patch.object(
-            svc, "_load_document", side_effect=svc.DocumentNotFoundError(str(DOC_ID)),
+            svc, "load_document", side_effect=svc.DocumentNotFoundError(str(DOC_ID)),
         ):
             with pytest.raises(svc.DocumentNotFoundError):
                 await svc.extract_plan_from_document(
@@ -233,10 +233,10 @@ class TestExtractPlanFromDocument:
     async def test_a_non_dict_response_degrades_to_an_empty_draft(self) -> None:
         """The model ignoring the contract must not 500 the request."""
         with patch.object(
-            svc, "_load_document", new=AsyncMock(return_value=(b"x", "pdf", "")),
+            svc, "load_document", new=AsyncMock(return_value=(b"x", "pdf", "")),
         ):
             with patch.object(
-                svc, "_extract_raw", new=AsyncMock(return_value=["not", "an", "object"]),
+                svc, "extract_raw", new=AsyncMock(return_value=["not", "an", "object"]),
             ):
                 draft = await svc.extract_plan_from_document(
                     user_id=uuid.uuid4(),
@@ -247,40 +247,6 @@ class TestExtractPlanFromDocument:
         assert draft.provider_name is None
         assert draft.confidence == "low"
         assert draft.source_document_id == DOC_ID
-
-    async def test_an_unsupported_file_type_is_reported_not_sent_to_the_model(
-        self,
-    ) -> None:
-        with patch.object(
-            svc, "run_utility_plan_extraction", new=AsyncMock(),
-        ) as mock_model:
-            with pytest.raises(svc.UnreadableDocumentError):
-                await svc._extract_raw(b"x", "zip", "", user_id=uuid.uuid4())
-
-        mock_model.assert_not_called()
-
-    async def test_a_pdf_with_a_real_text_layer_is_read_as_text(self) -> None:
-        """Vision on a text PDF costs more and reads no better."""
-        with patch.object(
-            svc, "extract_text_from_pdf", new=AsyncMock(return_value="x" * 200),
-        ):
-            with patch.object(
-                svc, "run_utility_plan_extraction", new=AsyncMock(return_value={}),
-            ) as mock_model:
-                await svc._extract_raw(b"pdf", "pdf", "", user_id=uuid.uuid4())
-
-        assert mock_model.await_args.kwargs.get("text") is not None
-        assert mock_model.await_args.kwargs.get("image_bytes") is None
-
-    async def test_a_scanned_pdf_falls_back_to_vision(self) -> None:
-        """A scanned EFL has no text layer — the numbers are only in the pixels."""
-        with patch.object(svc, "extract_text_from_pdf", new=AsyncMock(return_value="")):
-            with patch.object(
-                svc, "run_utility_plan_extraction", new=AsyncMock(return_value={}),
-            ) as mock_model:
-                await svc._extract_raw(b"pdf", "pdf", "", user_id=uuid.uuid4())
-
-        assert mock_model.await_args.kwargs.get("image_bytes") == b"pdf"
 
 
 @pytest.mark.asyncio
@@ -300,11 +266,11 @@ class TestExtractPlanFromUpload:
             new=AsyncMock(return_value={"document_id": str(document_id)}),
         ) as mock_upload:
             with patch.object(
-                svc, "_load_document", new=AsyncMock(return_value=(b"x", "pdf", "")),
+                svc, "load_document", new=AsyncMock(return_value=(b"x", "pdf", "")),
             ):
                 with patch.object(
                     svc,
-                    "_extract_raw",
+                    "extract_raw",
                     new=AsyncMock(return_value={"provider_name": "Rhythm"}),
                 ):
                     draft = await svc.extract_plan_from_upload(

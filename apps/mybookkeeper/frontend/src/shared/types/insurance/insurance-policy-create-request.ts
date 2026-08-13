@@ -7,6 +7,7 @@ import type { InsurancePremiumFrequency } from "@/shared/types/insurance/insuran
  */
 export interface InsurancePolicyCreateRequest {
   listing_id: string;
+  source_document_id?: string | null;
   policy_name: string;
   carrier?: string | null;
   policy_number?: string | null;

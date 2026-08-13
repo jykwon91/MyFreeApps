@@ -610,25 +610,36 @@
         "backend/alembic/versions/insur260504_add_insurance_policy_tables.py",
         "backend/alembic/versions/inspremium260812_add_insurance_premium.py",
         "backend/alembic/versions/insbench260813_add_insurance_benchmarks.py",
+        "backend/alembic/versions/inssrcdoc260813_add_source_document_to_insurance_policies.py",
         "frontend/src/app/pages/InsurancePolicies.tsx",
         "frontend/src/app/pages/InsurancePolicyDetail.tsx",
         "frontend/src/app/features/insurance/",
         "frontend/src/shared/types/insurance/",
         "frontend/src/shared/lib/insurance-policy-format.ts",
         "frontend/src/shared/lib/insurance-policy-form.ts",
+        "frontend/src/shared/lib/insurance-policy-draft.ts",
         "frontend/src/shared/lib/benchmark-format.ts",
         "frontend/src/shared/store/insurancePoliciesApi.ts",
-        "frontend/src/shared/store/insuranceBenchmarksApi.ts"
+        "frontend/src/shared/store/insuranceBenchmarksApi.ts",
+        "backend/app/services/extraction/document_draft_reader.py",
+        "backend/app/services/documents/document_ownership.py",
+        "frontend/src/app/features/documents/",
+        "frontend/src/shared/lib/document-read-errors.ts",
+        "frontend/src/shared/types/document/document-source.ts"
       ],
       "backend_tests": [
         "test_insurance_policies_api.py",
         "test_insurance_policy_repo.py",
         "test_insurance_policy_validation.py",
+        "test_insurance_policy_extraction.py",
+        "test_insurance_policy_extract_api.py",
+        "test_insurance_policy_source_document.py",
         "test_premium_math.py",
         "test_insurance_benchmark_compare.py",
         "test_insurance_benchmark_repo.py",
         "test_insurance_benchmark_service.py",
-        "test_insurance_benchmarks_api.py"
+        "test_insurance_benchmarks_api.py",
+        "test_document_draft_reader.py"
       ],
       "frontend_tests": [
         "InsuranceExpirationBadge.test.tsx",
@@ -637,6 +648,9 @@
         "InsurancePolicyDetail.test.tsx",
         "insurance-policy-format.test.ts",
         "insurance-policy-form.test.ts",
+        "insurance-policy-draft.test.ts",
+        "AddInsurancePolicyDialog.test.tsx",
+        "InsurancePolicyDocumentReader.test.tsx",
         "usePageListModes.test.ts",
         "InsurancePremiumComparisonCard.test.tsx",
         "InsuranceBenchmarkDialog.test.tsx",
@@ -648,7 +662,8 @@
         "insurance-premium.spec.ts",
         "insurance-policy-detail-layout.spec.ts",
         "insurance-premium-benchmark.spec.ts",
-        "insurance-premium-comparison-layout.spec.ts"
+        "insurance-premium-comparison-layout.spec.ts",
+        "insurance-policy-document-upload.spec.ts"
       ]
     },
     "utility_plans": {
@@ -685,7 +700,6 @@
         "frontend/src/shared/lib/utility-plan-format.ts",
         "frontend/src/shared/lib/utility-plan-form.ts",
         "frontend/src/shared/lib/utility-plan-draft.ts",
-        "frontend/src/shared/lib/utility-plan-read-errors.ts",
         "frontend/src/shared/lib/benchmark-format.ts",
         "backend/app/models/properties/market_rate_benchmark.py",
         "backend/app/repositories/properties/market_rate_benchmark_repo.py",
@@ -712,7 +726,12 @@
         "frontend/src/shared/store/utilityOffersApi.ts",
         "frontend/src/shared/lib/utility-offer-format.ts",
         "frontend/src/shared/lib/offer-stats.ts",
-        "frontend/src/shared/lib/offer-tiers.ts"
+        "frontend/src/shared/lib/offer-tiers.ts",
+        "backend/app/services/extraction/document_draft_reader.py",
+        "backend/app/services/documents/document_ownership.py",
+        "frontend/src/app/features/documents/",
+        "frontend/src/shared/lib/document-read-errors.ts",
+        "frontend/src/shared/types/document/document-source.ts"
       ],
       "backend_tests": [
         "test_utility_plan_service.py",
@@ -728,7 +747,8 @@
         "test_market_rate_benchmark_service.py",
         "test_market_rate_benchmarks_api.py",
         "test_offer_ranking.py",
-        "test_utility_offer_ranking.py"
+        "test_utility_offer_ranking.py",
+        "test_document_draft_reader.py"
       ],
       "frontend_tests": [
         "UtilityPlans.test.tsx",

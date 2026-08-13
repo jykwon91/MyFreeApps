@@ -12,6 +12,7 @@ from app.schemas.insurance.insurance_policy_validation import validate_policy_fi
 
 class InsurancePolicyCreateRequest(BaseModel):
     listing_id: uuid.UUID
+    source_document_id: uuid.UUID | None = None
     policy_name: str = Field(..., min_length=1, max_length=255)
     carrier: str | None = Field(None, max_length=255)
     policy_number: str | None = Field(None, max_length=255)

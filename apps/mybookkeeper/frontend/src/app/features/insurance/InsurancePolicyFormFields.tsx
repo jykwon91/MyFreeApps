@@ -2,14 +2,7 @@ import FormField from "@/shared/components/ui/FormField";
 import { INSURANCE_POLICY_INPUT_CLASS } from "./insurance-policy-input-class";
 import { FREQUENCY_LABEL } from "@/shared/lib/insurance-policy-format";
 import type { InsurancePolicyFormValues } from "@/shared/types/insurance/insurance-policy-form-values";
-import type { InsurancePremiumFrequency } from "@/shared/types/insurance/insurance-premium-frequency";
-
-const FREQUENCIES: InsurancePremiumFrequency[] = [
-  "annual",
-  "semiannual",
-  "quarterly",
-  "monthly",
-];
+import { INSURANCE_PREMIUM_FREQUENCIES } from "@/shared/types/insurance/insurance-premium-frequency";
 
 export interface InsurancePolicyFormFieldsProps {
   values: InsurancePolicyFormValues;
@@ -134,7 +127,7 @@ export default function InsurancePolicyFormFields({
               {/* Blank rather than a default period: guessing "annually" over a
                   monthly premium understates the yearly cost by 12x. */}
               <option value="">Select…</option>
-              {FREQUENCIES.map((frequency) => (
+              {INSURANCE_PREMIUM_FREQUENCIES.map((frequency) => (
                 <option key={frequency} value={frequency}>
                   {FREQUENCY_LABEL[frequency]}
                 </option>

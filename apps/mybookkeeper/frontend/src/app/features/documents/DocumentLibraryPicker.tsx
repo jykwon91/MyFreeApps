@@ -1,9 +1,12 @@
 import type { Document } from "@/shared/types/document/document";
-import { UTILITY_PLAN_INPUT_CLASS } from "./utility-plan-input-class";
 
-export interface UtilityPlanLibraryPickerProps {
+export interface DocumentLibraryPickerProps {
   documents: Document[];
   onPick: (documentId: string, name: string) => void;
+  /** Namespaces the test ids so each domain's specs address their own card. */
+  testIdPrefix: string;
+  /** The owning dialog's input styling — each domain keeps its own constant. */
+  inputClass: string;
   disabled?: boolean;
 }
 
@@ -11,18 +14,20 @@ export interface UtilityPlanLibraryPickerProps {
  * The secondary way in: a file already in the document library.
  *
  * Collapsed, and rendered only when the library has something in it. It used to
- * be the only control here, which left anyone whose Electricity Facts Label was
- * still on their phone staring at a dropdown with nothing in it. ``details``
- * rather than a hand-rolled toggle so the expanded state is announced and
- * keyboard-operable without extra ARIA.
+ * be the only control here, which left anyone whose paperwork was still on
+ * their phone staring at a dropdown with nothing in it. ``details`` rather than
+ * a hand-rolled toggle so the expanded state is announced and keyboard-operable
+ * without extra ARIA.
  */
-export default function UtilityPlanLibraryPicker({
+export default function DocumentLibraryPicker({
   documents,
   onPick,
+  testIdPrefix,
+  inputClass,
   disabled = false,
-}: UtilityPlanLibraryPickerProps) {
+}: DocumentLibraryPickerProps) {
   return (
-    <details data-testid="utility-plan-library-picker">
+    <details data-testid={`${testIdPrefix}-library-picker`}>
       <summary className="min-h-[44px] flex items-center cursor-pointer text-xs font-medium text-primary">
         Or pick one you've already uploaded ({documents.length})
       </summary>
@@ -34,8 +39,8 @@ export default function UtilityPlanLibraryPicker({
         }}
         disabled={disabled}
         aria-label="Document"
-        className={`${UTILITY_PLAN_INPUT_CLASS} mt-2`}
-        data-testid="utility-plan-document-select"
+        className={`${inputClass} mt-2`}
+        data-testid={`${testIdPrefix}-document-select`}
       >
         <option value="">Select a document…</option>
         {documents.map((document) => (

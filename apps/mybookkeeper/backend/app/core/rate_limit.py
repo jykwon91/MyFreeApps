@@ -49,6 +49,7 @@ __all__ = [
     "password_reset_limiter",
     "export_limiter",
     "utility_plan_extract_limiter",
+    "insurance_policy_extract_limiter",
     "utility_offer_search_limiter",
     "frontend_error_limiter",
     "require_turnstile",
@@ -74,6 +75,10 @@ export_limiter = RateLimiter(max_attempts=20, window_seconds=3600)
 # The daily upload cap bounds how many distinct documents exist but not how
 # many times one is re-read, so this bounds the re-reads.
 utility_plan_extract_limiter = RateLimiter(max_attempts=30, window_seconds=3600)
+# Same reasoning for the declarations page a policy is read off. Its own bucket
+# rather than a shared one so a morning spent re-reading Electricity Facts
+# Labels cannot lock the operator out of recording an insurance policy.
+insurance_policy_extract_limiter = RateLimiter(max_attempts=30, window_seconds=3600)
 # Each search fans out to one Power to Choose request per distinct property ZIP.
 # The client's 15-minute cache absorbs ordinary page views, so this only bounds
 # a caller deliberately hammering the PUCT host through us.

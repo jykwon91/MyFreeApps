@@ -11,6 +11,8 @@ export interface InsurancePolicyDetail {
   user_id: string;
   organization_id: string;
   listing_id: string;
+  /** The document this policy's numbers were read from, when it was read. */
+  source_document_id: string | null;
   policy_name: string;
   carrier: string | null;
   policy_number: string | null;

@@ -3,6 +3,7 @@ import type { InsuranceAttachmentKind } from "@/shared/types/insurance/insurance
 import type { InsurancePolicyAttachment } from "@/shared/types/insurance/insurance-policy-attachment";
 import type { InsurancePolicyCreateRequest } from "@/shared/types/insurance/insurance-policy-create-request";
 import type { InsurancePolicyDetail } from "@/shared/types/insurance/insurance-policy-detail";
+import type { InsurancePolicyDraft } from "@/shared/types/insurance/insurance-policy-draft";
 import type { InsurancePolicyListResponse } from "@/shared/types/insurance/insurance-policy-list-response";
 import type { InsurancePolicyUpdateRequest } from "@/shared/types/insurance/insurance-policy-update-request";
 
@@ -75,6 +76,43 @@ const insurancePoliciesApi = baseApi.injectEndpoints({
       ],
     }),
 
+    /**
+     * Read policy terms out of an already-uploaded document.
+     *
+     * A mutation rather than a query despite saving nothing: it is a paid model
+     * call the operator triggers deliberately, and caching it under the
+     * document id would silently return a stale reading after the file is
+     * replaced. It invalidates nothing — no row changed.
+     */
+    extractInsurancePolicy: builder.mutation<
+      InsurancePolicyDraft,
+      { document_id: string }
+    >({
+      query: (data) => ({ url: "/insurance-policies/extract", method: "POST", data }),
+    }),
+
+    /**
+     * Read policy terms out of a file the operator has on the device.
+     *
+     * The upload half of this does save a row — the declarations page lands in
+     * the document library as reference material so the policy can cite it —
+     * hence the ``Document`` invalidation its sibling above does not need. It
+     * is stored reference-only, so the annual premium printed on it is never
+     * booked as a payment that did not happen.
+     */
+    extractInsurancePolicyFromUpload: builder.mutation<InsurancePolicyDraft, File>({
+      query: (file) => {
+        const form = new FormData();
+        form.append("file", file);
+        return {
+          url: "/insurance-policies/extract-upload",
+          method: "POST",
+          data: form,
+        };
+      },
+      invalidatesTags: ["Document"],
+    }),
+
     deleteInsurancePolicy: builder.mutation<void, string>({
       query: (id) => ({ url: `/insurance-policies/${id}`, method: "DELETE" }),
       invalidatesTags: [{ type: "InsurancePolicy", id: "LIST" }],
@@ -120,6 +158,8 @@ export const {
   useCreateInsurancePolicyMutation,
   useUpdateInsurancePolicyMutation,
   useDeleteInsurancePolicyMutation,
+  useExtractInsurancePolicyMutation,
+  useExtractInsurancePolicyFromUploadMutation,
   useUploadInsurancePolicyAttachmentMutation,
   useDeleteInsurancePolicyAttachmentMutation,
 } = insurancePoliciesApi;

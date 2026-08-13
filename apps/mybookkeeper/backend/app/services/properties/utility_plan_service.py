@@ -36,7 +36,6 @@ from app.core.utility_plan_constants import (
     RENEWAL_STATUS_EXPIRED,
 )
 from app.db.session import unit_of_work
-from app.repositories.documents import document_repo
 from app.repositories.properties import property_repo, utility_plan_repo
 from app.schemas.properties.utility_plan_list_response import UtilityPlanListResponse
 from app.schemas.properties.utility_plan_renewal_alert_response import (
@@ -45,6 +44,7 @@ from app.schemas.properties.utility_plan_renewal_alert_response import (
 from app.schemas.properties.utility_plan_response import UtilityPlanResponse
 from app.schemas.properties.utility_plan_summary import UtilityPlanSummary
 from app.schemas.properties.utility_plan_validation import validate_plan_fields
+from app.services.documents.document_ownership import owns_document
 from app.services.extraction.utility_account_service import normalize_account_number
 from app.services.properties._utility_plan_helpers import (
     _MergedPlan,
@@ -92,8 +92,9 @@ async def _assert_source_document_is_ours(
     document_id = payload.get("source_document_id")
     if document_id is None:
         return
-    document = await document_repo.get_by_id(db, document_id, organization_id)
-    if document is None:
+    if not await owns_document(
+        db, organization_id=organization_id, document_id=document_id,
+    ):
         raise InvalidUtilityPlanError("source_document_id does not name a document")
 
 

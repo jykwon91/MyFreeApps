@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import datetime as _dt
+import uuid
 from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -10,6 +11,7 @@ from app.schemas.insurance.insurance_policy_validation import validate_policy_fi
 
 
 class InsurancePolicyUpdateRequest(BaseModel):
+    source_document_id: uuid.UUID | None = None
     policy_name: str | None = Field(None, min_length=1, max_length=255)
     carrier: str | None = Field(None, max_length=255)
     policy_number: str | None = None

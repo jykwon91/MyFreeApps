@@ -32,6 +32,16 @@ vi.mock("@/shared/store/insurancePoliciesApi", () => ({
     vi.fn(() => ({ unwrap: () => Promise.resolve({}) })),
     { isLoading: false },
   ]),
+  // The add dialog now opens with a document reader in it.
+  useExtractInsurancePolicyMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useExtractInsurancePolicyFromUploadMutation: vi.fn(() => [
+    vi.fn(),
+    { isLoading: false },
+  ]),
+}));
+
+vi.mock("@/shared/store/documentsApi", () => ({
+  useGetDocumentsQuery: vi.fn(() => ({ data: [] })),
 }));
 
 const POLICY_ACTIVE: InsurancePolicySummary = {

@@ -11,37 +11,47 @@ A document can be named by id or handed over as bytes. Either way the storing is
 daily rate limit and the content sniff, and going through it means the draft can
 cite a ``source_document_id`` that genuinely exists and the operator can find
 the file again on the Documents page.
+
+The fetch-and-coerce half is shared with the insurance reader — see
+``services/extraction/document_draft_reader``. What stays here is the part that
+is actually about utility plans: which fields exist, and what makes one of them
+worth warning about.
 """
 from __future__ import annotations
 
 import datetime as _dt
 import logging
 import uuid
-from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from app.core.context import RequestContext
-from app.core.storage import get_storage
 from app.core.utility_plan_constants import RATE_TYPES, SERVICE_TYPES
-from app.db.session import unit_of_work
-from app.repositories.documents import document_repo
 from app.schemas.properties.utility_plan_draft import UtilityPlanDraft
 from app.services.documents import document_upload_service
 from app.services.extraction.claude_service import run_utility_plan_extraction
-from app.services.extraction.extractor_service import (
-    extract_text_from_docx,
-    extract_text_from_pdf,
-    extract_text_from_spreadsheet,
+from app.services.extraction.document_draft_reader import (
+    CONFIDENCE_VALUES,
+    DocumentNotFoundError,
+    UnreadableDocumentError,
+    as_date,
+    as_decimal,
+    as_int,
+    as_string_list,
+    as_text,
+    extract_raw,
+    known,
+    load_document,
 )
 
+__all__ = [
+    "DocumentNotFoundError",
+    "UnreadableDocumentError",
+    "build_draft",
+    "extract_plan_from_document",
+    "extract_plan_from_upload",
+]
+
 logger = logging.getLogger(__name__)
-
-_CONFIDENCE_VALUES = frozenset({"high", "medium", "low"})
-
-# Below this, a PDF's embedded text layer is a scan artifact rather than the
-# document, and vision reads the page better. Same threshold the transaction
-# pipeline uses, for the same reason.
-_MIN_PDF_TEXT_CHARS = 50
 
 _RATE_FIELDS = (
     "energy_charge_cents_per_kwh",
@@ -65,97 +75,26 @@ _INT_FIELDS = (
 _DATE_FIELDS = ("service_start_date", "term_end_date")
 _TEXT_FIELDS = ("provider_name", "plan_name", "account_number", "notes")
 
+# The fourth decimal of a per-kWh rate is a real price difference: 5.3509
+# rounded to 5.35 misprices every comparison built on it.
+_RATE_PLACES = "0.0001"
+
 # A TDU rate is a pass-through the utility re-tariffs mid-term, so the one
 # printed on an EFL is only true as of its issue date. Reading the 6734 EFL on
 # 2026-08-11 gave 6.0009 c/kWh against a then-current 5.1461 — a 0.85 c/kWh
 # error in every comparison, silently.
 _TDU_STALENESS_DAYS = 90
 
-
-class DocumentNotFoundError(LookupError):
-    """No such document, or it belongs to another organization."""
-
-
-class UnreadableDocumentError(ValueError):
-    """The document exists but its content cannot be sent to the model."""
-
-
-def _as_text(value: Any, *, max_length: int) -> str | None:
-    if value is None:
-        return None
-    text = str(value).strip()
-    if not text:
-        return None
-    return text[:max_length]
-
-
-def _as_int(value: Any) -> int | None:
-    """Ints only, and non-negative — a negative fee is a misread, not a value."""
-    if value is None or isinstance(value, bool):
-        return None
-    try:
-        parsed = int(Decimal(str(value)))
-    except (InvalidOperation, ValueError, TypeError):
-        return None
-    return parsed if parsed >= 0 else None
-
-
-def _as_rate(value: Any) -> Decimal | None:
-    """Four decimal places, because the fourth is load-bearing (5.3509)."""
-    if value is None or isinstance(value, bool):
-        return None
-    try:
-        parsed = Decimal(str(value))
-    except (InvalidOperation, ValueError, TypeError):
-        return None
-    if parsed < 0:
-        return None
-    return parsed.quantize(Decimal("0.0001"))
-
-
-def _as_date(value: Any) -> _dt.date | None:
-    if not value:
-        return None
-    try:
-        return _dt.date.fromisoformat(str(value)[:10])
-    except ValueError:
-        return None
-
-
-def _as_string_list(value: Any) -> list[str]:
-    """Strings only — this list is shown to the operator as prose.
-
-    Unlike the scalar fields, a non-string here is not worth coercing: a bare
-    ``1`` stringifies happily and then reads as a meaningless bullet under
-    "things this document says that the form cannot hold".
-    """
-    if not isinstance(value, list):
-        return []
-    return [
-        text
-        for item in value
-        if isinstance(item, str) and (text := _as_text(item, max_length=500))
-    ]
-
-
-def _known(value: Any, allowed: frozenset[str] | set[str]) -> str | None:
-    """Drop an enum value the database would reject at INSERT time.
-
-    The model is told the allowed values, but a hallucinated ``"fixed_rate"``
-    reaching the form as a selected option is worse than an empty select — the
-    operator would have to notice it was wrong rather than simply pick one.
-    """
-    if not isinstance(value, str):
-        return None
-    normalized = value.strip().lower()
-    return normalized if normalized in allowed else None
+_UNSUPPORTED_MESSAGE = (
+    "Plan terms can be read from a PDF, an image, a Word file or a spreadsheet."
+)
 
 
 def _warnings_for(raw: dict[str, Any], draft_fields: dict[str, Any]) -> list[str]:
     warnings: list[str] = []
 
     if draft_fields.get("tdu_charge_cents_per_kwh") is not None:
-        issued = _as_date(raw.get("document_issued_date"))
+        issued = as_date(raw.get("document_issued_date"))
         age = (_dt.date.today() - issued).days if issued else None
         if age is None or age > _TDU_STALENESS_DAYS:
             warnings.append(
@@ -193,88 +132,29 @@ def build_draft(raw: dict[str, Any], *, document_id: uuid.UUID) -> UtilityPlanDr
     operator the eleven fields that were read correctly.
     """
     fields: dict[str, Any] = {
-        "service_type": _known(raw.get("service_type"), SERVICE_TYPES),
-        "rate_type": _known(raw.get("rate_type"), RATE_TYPES),
+        "service_type": known(raw.get("service_type"), SERVICE_TYPES),
+        "rate_type": known(raw.get("rate_type"), RATE_TYPES),
         "has_bill_credit": raw.get("has_bill_credit") is True,
     }
     for name in _TEXT_FIELDS:
-        fields[name] = _as_text(
+        fields[name] = as_text(
             raw.get(name), max_length=5000 if name == "notes" else 255,
         )
     for name in _RATE_FIELDS:
-        fields[name] = _as_rate(raw.get(name))
+        fields[name] = as_decimal(raw.get(name), places=_RATE_PLACES)
     for name in _INT_FIELDS:
-        fields[name] = _as_int(raw.get(name))
+        fields[name] = as_int(raw.get(name))
     for name in _DATE_FIELDS:
-        fields[name] = _as_date(raw.get(name))
+        fields[name] = as_date(raw.get(name))
 
-    confidence = _known(raw.get("confidence"), _CONFIDENCE_VALUES) or "low"
+    confidence = known(raw.get("confidence"), CONFIDENCE_VALUES) or "low"
 
     return UtilityPlanDraft(
         source_document_id=document_id,
         confidence=confidence,
         warnings=_warnings_for(raw, fields),
-        unrepresented=_as_string_list(raw.get("unrepresented")),
+        unrepresented=as_string_list(raw.get("unrepresented")),
         **fields,
-    )
-
-
-async def _load_document(
-    *, document_id: uuid.UUID, organization_id: uuid.UUID,
-) -> tuple[bytes, str, str]:
-    """Return (content, file_type, mime_type) for a document we own."""
-    async with unit_of_work() as db:
-        doc = await document_repo.get_by_id_with_content(
-            db, document_id, organization_id,
-        )
-        if doc is None:
-            raise DocumentNotFoundError(str(document_id))
-        storage_key = doc.file_storage_key
-        content = doc.file_content
-        file_type = doc.file_type or ""
-        mime_type = doc.file_mime_type or ""
-
-    if storage_key:
-        storage = get_storage()
-        if storage is None:
-            raise UnreadableDocumentError(
-                "This document is in object storage, which is not configured.",
-            )
-        content = storage.download_file(storage_key)
-
-    if not content:
-        raise UnreadableDocumentError("This document has no file content to read.")
-    return content, file_type, mime_type
-
-
-async def _extract_raw(
-    content: bytes, file_type: str, mime_type: str, *, user_id: uuid.UUID,
-) -> dict[str, Any]:
-    """Send the document to the model as text where possible, vision otherwise."""
-    if file_type == "image":
-        return await run_utility_plan_extraction(
-            image_bytes=content,
-            media_type=mime_type or "image/jpeg",
-            user_id=user_id,
-        )
-    if file_type == "pdf":
-        text = await extract_text_from_pdf(content)
-        if text and len(text) >= _MIN_PDF_TEXT_CHARS:
-            return await run_utility_plan_extraction(text=text, user_id=user_id)
-        # A scanned EFL has no text layer; the numbers are only in the pixels.
-        return await run_utility_plan_extraction(
-            image_bytes=content, media_type="application/pdf", user_id=user_id,
-        )
-    if file_type == "docx":
-        return await run_utility_plan_extraction(
-            text=await extract_text_from_docx(content), user_id=user_id,
-        )
-    if file_type == "spreadsheet":
-        return await run_utility_plan_extraction(
-            text=await extract_text_from_spreadsheet(content, ""), user_id=user_id,
-        )
-    raise UnreadableDocumentError(
-        "Plan terms can be read from a PDF, an image, a Word file or a spreadsheet.",
     )
 
 
@@ -284,10 +164,17 @@ async def extract_plan_from_document(
     organization_id: uuid.UUID,
     document_id: uuid.UUID,
 ) -> UtilityPlanDraft:
-    content, file_type, mime_type = await _load_document(
+    content, file_type, mime_type = await load_document(
         document_id=document_id, organization_id=organization_id,
     )
-    raw = await _extract_raw(content, file_type, mime_type, user_id=user_id)
+    raw = await extract_raw(
+        content,
+        file_type,
+        mime_type,
+        run=run_utility_plan_extraction,
+        user_id=user_id,
+        unsupported_message=_UNSUPPORTED_MESSAGE,
+    )
     if not isinstance(raw, dict):
         # A bare list or string means the model ignored the contract. An empty
         # draft is honest; a partially-parsed one would not be.
