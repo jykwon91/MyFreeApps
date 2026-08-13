@@ -179,13 +179,16 @@ class TestDemoServiceAirbnbAttributionShowcase:
         org = await demo_repo.get_org_by_user(db, user.id)
         assert org is not None
 
-        airbnb_txns = (await db.execute(
+        # Tag membership is filtered in Python rather than in SQL: containment
+        # over a JSON array is spelled differently in every dialect, and the
+        # test fixture is SQLite while production is PostgreSQL.
+        income_txns = (await db.execute(
             select(Transaction).where(
                 Transaction.organization_id == org.id,
-                Transaction.tags.contains(["airbnb"]),
                 Transaction.transaction_type == "income",
             )
         )).scalars().all()
+        airbnb_txns = [t for t in income_txns if "airbnb" in (t.tags or [])]
         assert len(airbnb_txns) > 0
         for txn in airbnb_txns:
             assert txn.channel == "airbnb"
