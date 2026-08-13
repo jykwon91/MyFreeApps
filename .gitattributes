@@ -6,3 +6,8 @@ apps/myjobhunter/backend/uv.lock text eol=lf
 apps/*/backend/requirements.txt text eol=lf
 package-lock.json text eol=lf
 apps/*/frontend/package-lock.json text eol=lf
+
+# Lineup-pipeline workflow scripts are passed to the Workflow tool as text, and
+# it rejects any script containing control characters -- CR counts. Checking one
+# out with CRLF on Windows makes it unlaunchable, so pin LF at the source.
+apps/*/backend/scripts/*-spans/_raw/*.js text eol=lf
