@@ -15,7 +15,7 @@ import datetime as _dt
 import uuid
 from decimal import Decimal
 
-from sqlalchemy import Select, delete, select
+from sqlalchemy import Select, delete, inspect, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -130,7 +130,13 @@ async def upsert(
         # Another writer inserted this org's row between our read and our
         # write. The SAVEPOINT rolled back, so the session is usable: re-read
         # the winner and apply our values on top.
-        db.expunge(benchmark)
+        #
+        # The rollback usually evicts the pending instance itself, in which
+        # case expunging again raises InvalidRequestError — and that exception
+        # would replace the IntegrityError we are handling, turning a recovered
+        # race into a 500. Only expunge if it is still attached.
+        if inspect(benchmark).session_id is not None:
+            db.expunge(benchmark)
         winner = await get_by_service_type(
             db, organization_id=organization_id, service_type=service_type,
         )

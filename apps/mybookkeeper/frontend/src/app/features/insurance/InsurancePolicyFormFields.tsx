@@ -1,9 +1,8 @@
 import FormField from "@/shared/components/ui/FormField";
+import { INSURANCE_POLICY_INPUT_CLASS } from "./insurance-policy-input-class";
 import { FREQUENCY_LABEL } from "@/shared/lib/insurance-policy-format";
 import type { InsurancePolicyFormValues } from "@/shared/types/insurance/insurance-policy-form-values";
 import type { InsurancePremiumFrequency } from "@/shared/types/insurance/insurance-premium-frequency";
-
-const INPUT_CLASS = "w-full px-3 py-2 text-sm border rounded-md";
 
 const FREQUENCIES: InsurancePremiumFrequency[] = [
   "annual",
@@ -39,7 +38,7 @@ export default function InsurancePolicyFormFields({
           value={values.policyName}
           onChange={(e) => onChange("policyName", e.target.value)}
           placeholder="e.g. Landlord Insurance — 123 Main St"
-          className={INPUT_CLASS}
+          className={INSURANCE_POLICY_INPUT_CLASS}
           maxLength={255}
           required
           data-testid="insurance-policy-name-input"
@@ -52,7 +51,7 @@ export default function InsurancePolicyFormFields({
           value={values.carrier}
           onChange={(e) => onChange("carrier", e.target.value)}
           placeholder="e.g. State Farm"
-          className={INPUT_CLASS}
+          className={INSURANCE_POLICY_INPUT_CLASS}
           maxLength={255}
           data-testid="insurance-carrier-input"
         />
@@ -64,7 +63,7 @@ export default function InsurancePolicyFormFields({
           value={values.policyNumber}
           onChange={(e) => onChange("policyNumber", e.target.value)}
           placeholder="e.g. POL-123456"
-          className={INPUT_CLASS}
+          className={INSURANCE_POLICY_INPUT_CLASS}
           maxLength={255}
           data-testid="insurance-policy-number-input"
         />
@@ -76,7 +75,7 @@ export default function InsurancePolicyFormFields({
             type="date"
             value={values.effectiveDate}
             onChange={(e) => onChange("effectiveDate", e.target.value)}
-            className={INPUT_CLASS}
+            className={INSURANCE_POLICY_INPUT_CLASS}
             data-testid="insurance-effective-date-input"
           />
         </FormField>
@@ -86,7 +85,7 @@ export default function InsurancePolicyFormFields({
             type="date"
             value={values.expirationDate}
             onChange={(e) => onChange("expirationDate", e.target.value)}
-            className={INPUT_CLASS}
+            className={INSURANCE_POLICY_INPUT_CLASS}
             data-testid="insurance-expiration-date-input"
           />
         </FormField>
@@ -100,7 +99,7 @@ export default function InsurancePolicyFormFields({
           placeholder="e.g. 500000"
           min="0"
           step="1"
-          className={INPUT_CLASS}
+          className={INSURANCE_POLICY_INPUT_CLASS}
           data-testid="insurance-coverage-input"
         />
       </FormField>
@@ -120,7 +119,7 @@ export default function InsurancePolicyFormFields({
               placeholder="e.g. 1240"
               min="0"
               step="0.01"
-              className={INPUT_CLASS}
+              className={INSURANCE_POLICY_INPUT_CLASS}
               data-testid="insurance-premium-input"
             />
           </FormField>
@@ -129,7 +128,7 @@ export default function InsurancePolicyFormFields({
             <select
               value={values.premiumFrequency}
               onChange={(e) => onChange("premiumFrequency", e.target.value)}
-              className={INPUT_CLASS}
+              className={INSURANCE_POLICY_INPUT_CLASS}
               data-testid="insurance-premium-frequency-select"
             >
               {/* Blank rather than a default period: guessing "annually" over a
@@ -153,7 +152,7 @@ export default function InsurancePolicyFormFields({
               placeholder="e.g. 2500"
               min="0"
               step="1"
-              className={INPUT_CLASS}
+              className={INSURANCE_POLICY_INPUT_CLASS}
               data-testid="insurance-deductible-input"
             />
           </FormField>
@@ -167,7 +166,7 @@ export default function InsurancePolicyFormFields({
               min="0"
               max="100"
               step="0.01"
-              className={INPUT_CLASS}
+              className={INSURANCE_POLICY_INPUT_CLASS}
               data-testid="insurance-wind-hail-input"
             />
           </FormField>
@@ -179,7 +178,7 @@ export default function InsurancePolicyFormFields({
           value={values.notes}
           onChange={(e) => onChange("notes", e.target.value)}
           placeholder="Any additional notes about this policy..."
-          className={`${INPUT_CLASS} resize-none`}
+          className={`${INSURANCE_POLICY_INPUT_CLASS} resize-none`}
           rows={3}
           maxLength={5000}
           data-testid="insurance-notes-input"

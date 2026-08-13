@@ -29,6 +29,7 @@ import PropertyPnLGrid from "@/app/features/attribution/PropertyPnLGrid";
 import PnLDateRangeSelector from "@/app/features/attribution/PnLDateRangeSelector";
 import UtilityPlanRenewalAlertCard from "@/app/features/utility/UtilityPlanRenewalAlertCard";
 import UtilityPlanComparisonCard from "@/app/features/utility/UtilityPlanComparisonCard";
+import InsurancePremiumComparisonCard from "@/app/features/insurance/InsurancePremiumComparisonCard";
 
 function getThisMonthRange(): { since: string; until: string } {
   const now = new Date();
@@ -197,6 +198,11 @@ export default function Dashboard() {
           comfortably inside its term and still be the most expensive line in
           the portfolio, which the renewal card cannot say. */}
       <UtilityPlanComparisonCard />
+
+      {/* Same argument one domain over: a policy can be years from expiry and
+          still cost half again what the same coverage sells for, and the
+          expiration badge on the policy list cannot say so. */}
+      <InsurancePremiumComparisonCard />
 
       {!isEmpty && (filteredSummary?.by_month?.length ?? 0) > 0 && (
         <MonthlyAverageCard byMonth={filteredSummary?.by_month ?? []} />

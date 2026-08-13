@@ -138,6 +138,47 @@ class TestUpsert:
         assert updated.id == first.id
         assert updated.recorded_by_user_id == member_b
 
+    async def test_a_racing_insert_converges_on_an_update(
+        self, db: AsyncSession,
+    ) -> None:
+        """Simulates the loser of a concurrent write: the row appears between
+        the read and the insert. The SAVEPOINT catches the unique violation and
+        the caller ends up updating the winner instead of seeing a 500."""
+        org_id = uuid.uuid4()
+        real_get = market_rate_benchmark_repo.get_by_service_type
+        calls = {"n": 0}
+
+        async def _get_missing_first(db_arg, *, organization_id, service_type):
+            # First read reports "absent" even though the row is about to
+            # exist; later reads (including the post-IntegrityError re-read)
+            # tell the truth.
+            calls["n"] += 1
+            if calls["n"] == 1:
+                return None
+            return await real_get(
+                db_arg, organization_id=organization_id, service_type=service_type,
+            )
+
+        # The winner's row, already written by the other writer.
+        await _upsert(db, org_id=org_id, source="Winner")
+
+        market_rate_benchmark_repo.get_by_service_type = _get_missing_first  # type: ignore[assignment]
+        try:
+            result = await _upsert(
+                db,
+                org_id=org_id,
+                source="Loser",
+                rate_cents_per_kwh=Decimal("9.0000"),
+            )
+        finally:
+            market_rate_benchmark_repo.get_by_service_type = real_get  # type: ignore[assignment]
+
+        assert result.source == "Loser"
+        rows = await market_rate_benchmark_repo.list_for_org(
+            db, organization_id=org_id,
+        )
+        assert len(rows) == 1
+
 
 class TestOrganizationScoping:
     """A benchmark belongs to the org, not to whoever looked the rate up."""

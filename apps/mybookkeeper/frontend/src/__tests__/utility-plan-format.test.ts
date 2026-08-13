@@ -7,7 +7,6 @@
  */
 import { describe, it, expect } from "vitest";
 import {
-  formatBenchmarkGap,
   formatCents,
   formatCentsPerKwh,
   formatComparisonFigure,
@@ -83,22 +82,6 @@ describe("formatPlanDate", () => {
   it("falls back to a dash for missing or invalid input", () => {
     expect(formatPlanDate(null)).toBe("—");
     expect(formatPlanDate("garbage")).toBe("—");
-  });
-});
-
-describe("formatBenchmarkGap", () => {
-  it("spells out the direction so a negative does not read as bad news", () => {
-    expect(formatBenchmarkGap("35.7")).toBe("35.7% above market");
-    expect(formatBenchmarkGap("-12.0")).toBe("12% below market");
-  });
-
-  it("names an exact tie rather than showing 0%", () => {
-    expect(formatBenchmarkGap("0")).toBe("level with market");
-  });
-
-  it("falls back to a dash for missing or invalid input", () => {
-    expect(formatBenchmarkGap(null)).toBe("—");
-    expect(formatBenchmarkGap("garbage")).toBe("—");
   });
 });
 

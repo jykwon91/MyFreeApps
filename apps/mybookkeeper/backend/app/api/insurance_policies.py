@@ -21,11 +21,14 @@ from app.schemas.insurance.insurance_policy_create_request import (
 from app.schemas.insurance.insurance_policy_list_response import (
     InsurancePolicyListResponse,
 )
+from app.schemas.insurance.insurance_policy_premium_comparison_response import (
+    InsurancePolicyPremiumComparisonResponse,
+)
 from app.schemas.insurance.insurance_policy_response import InsurancePolicyResponse
 from app.schemas.insurance.insurance_policy_update_request import (
     InsurancePolicyUpdateRequest,
 )
-from app.services.insurance import insurance_policy_service
+from app.services.insurance import insurance_benchmark_service, insurance_policy_service
 
 router = APIRouter(prefix="/insurance-policies", tags=["insurance-policies"])
 
@@ -68,6 +71,24 @@ async def list_policies(
         expiring_before=expiring_before,
         limit=limit,
         offset=offset,
+    )
+
+
+@router.get(
+    "/premium-comparison", response_model=InsurancePolicyPremiumComparisonResponse,
+)
+async def get_premium_comparison(
+    ctx: RequestContext = Depends(current_org_member),
+) -> InsurancePolicyPremiumComparisonResponse:
+    """Unexpired policies priced materially above the recorded benchmark.
+
+    Lives on the policy resource rather than the benchmark one because it
+    returns policies. Declared before ``/{policy_id}`` so the literal path is
+    not swallowed by the UUID route.
+    """
+    return await insurance_benchmark_service.get_premium_comparison(
+        user_id=ctx.user_id,
+        organization_id=ctx.organization_id,
     )
 
 

@@ -10,6 +10,7 @@ import {
   FREQUENCY_LABEL,
   formatAnnualPremium,
   formatBilledPremium,
+  formatCoverageRate,
   formatPolicyMoney,
   formatWindHailDeductible,
 } from "@/shared/lib/insurance-policy-format";
@@ -95,6 +96,30 @@ describe("formatWindHailDeductible", () => {
 
   it("renders an em dash for an unparseable value", () => {
     expect(formatWindHailDeductible("abc", 50000000)).toBe("—");
+  });
+});
+
+describe("formatCoverageRate", () => {
+  it("renders the comparison unit from a Decimal string of cents", () => {
+    expect(formatCoverageRate("300.00")).toBe("$3.00 per $1,000");
+  });
+
+  it("keeps the cents, since the gap between two rates lives there", () => {
+    // $2.69 and $3.00 per $1,000 is a 12% difference — rounding to whole
+    // dollars would erase most of what the comparison is measuring.
+    expect(formatCoverageRate("268.80")).toBe("$2.69 per $1,000");
+  });
+
+  it("renders an em dash when the rate could not be derived", () => {
+    expect(formatCoverageRate(null)).toBe("—");
+  });
+
+  it("renders an em dash for a blank string", () => {
+    expect(formatCoverageRate("  ")).toBe("—");
+  });
+
+  it("renders an em dash for an unparseable value", () => {
+    expect(formatCoverageRate("abc")).toBe("—");
   });
 });
 

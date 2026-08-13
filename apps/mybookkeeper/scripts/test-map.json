@@ -604,22 +604,31 @@
         "backend/app/schemas/insurance/",
         "backend/app/services/insurance/",
         "backend/app/api/insurance_policies.py",
+        "backend/app/api/insurance_benchmarks.py",
         "backend/app/core/insurance_enums.py",
+        "backend/app/core/insurance_benchmark_constants.py",
         "backend/alembic/versions/insur260504_add_insurance_policy_tables.py",
         "backend/alembic/versions/inspremium260812_add_insurance_premium.py",
+        "backend/alembic/versions/insbench260813_add_insurance_benchmarks.py",
         "frontend/src/app/pages/InsurancePolicies.tsx",
         "frontend/src/app/pages/InsurancePolicyDetail.tsx",
         "frontend/src/app/features/insurance/",
         "frontend/src/shared/types/insurance/",
         "frontend/src/shared/lib/insurance-policy-format.ts",
         "frontend/src/shared/lib/insurance-policy-form.ts",
-        "frontend/src/shared/store/insurancePoliciesApi.ts"
+        "frontend/src/shared/lib/benchmark-format.ts",
+        "frontend/src/shared/store/insurancePoliciesApi.ts",
+        "frontend/src/shared/store/insuranceBenchmarksApi.ts"
       ],
       "backend_tests": [
         "test_insurance_policies_api.py",
         "test_insurance_policy_repo.py",
         "test_insurance_policy_validation.py",
-        "test_premium_math.py"
+        "test_premium_math.py",
+        "test_insurance_benchmark_compare.py",
+        "test_insurance_benchmark_repo.py",
+        "test_insurance_benchmark_service.py",
+        "test_insurance_benchmarks_api.py"
       ],
       "frontend_tests": [
         "InsuranceExpirationBadge.test.tsx",
@@ -628,11 +637,18 @@
         "InsurancePolicyDetail.test.tsx",
         "insurance-policy-format.test.ts",
         "insurance-policy-form.test.ts",
-        "usePageListModes.test.ts"
+        "usePageListModes.test.ts",
+        "InsurancePremiumComparisonCard.test.tsx",
+        "InsuranceBenchmarkDialog.test.tsx",
+        "InsuranceBenchmarkSummary.test.tsx",
+        "benchmark-format.test.ts",
+        "Dashboard.test.tsx"
       ],
       "e2e_specs": [
         "insurance-premium.spec.ts",
-        "insurance-policy-detail-layout.spec.ts"
+        "insurance-policy-detail-layout.spec.ts",
+        "insurance-premium-benchmark.spec.ts",
+        "insurance-premium-comparison-layout.spec.ts"
       ]
     },
     "utility_plans": {
@@ -670,6 +686,7 @@
         "frontend/src/shared/lib/utility-plan-form.ts",
         "frontend/src/shared/lib/utility-plan-draft.ts",
         "frontend/src/shared/lib/utility-plan-read-errors.ts",
+        "frontend/src/shared/lib/benchmark-format.ts",
         "backend/app/models/properties/market_rate_benchmark.py",
         "backend/app/repositories/properties/market_rate_benchmark_repo.py",
         "backend/app/schemas/properties/market_rate_benchmark_response.py",
@@ -722,6 +739,7 @@
         "utility-plan-format.test.ts",
         "utility-plan-form.test.ts",
         "utility-plan-draft.test.ts",
+        "benchmark-format.test.ts",
         "Dashboard.test.tsx",
         "UtilityPlanComparisonCard.test.tsx",
         "MarketRateBenchmarkDialog.test.tsx",
