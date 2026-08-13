@@ -33,6 +33,7 @@ from sqlalchemy.dialects.postgresql import ARRAY, INET, JSONB
 from sqlalchemy.pool import StaticPool
 
 from app.db.base import Base
+import app.models  # noqa: F401 — registers every table before the patch below
 from app.models.organization.organization import Organization
 from app.models.organization.organization_member import OrganizationMember
 from app.models.user.user import User
@@ -75,7 +76,10 @@ def _patch_storage_for_tests(monkeypatch):
 
 
 def _patch_metadata_for_sqlite() -> None:
-    """Make PostgreSQL-specific DDL compatible with SQLite for tests."""
+    """Make PostgreSQL-specific DDL compatible with SQLite for tests.
+
+    Must run before any test module is imported — see the call site below.
+    """
     for table in Base.metadata.tables.values():
         cols_to_drop: list[str] = []
         for column in table.columns:
@@ -94,6 +98,22 @@ def _patch_metadata_for_sqlite() -> None:
         for name in cols_to_drop:
             table.columns[name].computed = None
             table.columns[name].nullable = True
+
+
+# Swap the PostgreSQL-only column types at conftest import time, which pytest
+# does before it imports a single test module.
+#
+# SQLAlchemy memoizes a column's comparator on first use, and the comparator
+# is what decides how an operator renders: a JSONB column turns
+# ``Model.col.contains(...)`` into the PostgreSQL-only ``@>``, while a plain
+# JSON column renders a portable LIKE. Reassigning ``column.type`` afterwards
+# does NOT re-derive the memoized comparator. So if this patch ran later —
+# from the session-scoped engine fixture, say — any expression built before
+# the first database test kept ``@>`` and blew up on SQLite with
+# ``unrecognized token: "@"``. Which test got there first depended on
+# collection order and on how pytest-xdist happened to shard the run, so the
+# breakage moved around whenever tests were added.
+_patch_metadata_for_sqlite()
 
 
 @pytest_asyncio.fixture(scope="session")
@@ -115,8 +135,6 @@ async def _db_engine() -> AsyncGenerator[AsyncEngine, None]:
     @event.listens_for(engine.sync_engine, "connect")
     def _set_fk(dbapi_conn, _rec):  # type: ignore[no-untyped-def]
         dbapi_conn.execute("PRAGMA foreign_keys=OFF")
-
-    _patch_metadata_for_sqlite()
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
