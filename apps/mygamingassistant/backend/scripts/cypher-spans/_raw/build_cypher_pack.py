@@ -2,17 +2,24 @@
 
 Usage:
     python build_cypher_pack.py <workflow-output.json> <map_slug> <out.json> [note]
+                                [--video <youtube_id>]
 
 Callouts that no table maps are a HARD FAILURE, listed by name. Silently
 defaulting an unmapped callout to a site is how a lineup ships under the wrong
 zone, so the fix is to extend the table, never to guess at runtime.
+
+--video is REQUIRED whenever the run is not the default source. video_id is the
+join key ingest_agent.py uses to find the mp4, so a pack carrying the wrong one
+recuts every clip from the wrong video -- silently, since the clips still cut.
+This used to be a module constant you hand-edited per source, which is the same
+bug waiting for whoever forgets.
 """
 import json
 import math
 import sys
 from collections import Counter
 
-VIDEO = "UsfCu5uL3Qs"
+DEFAULT_VIDEO = "UsfCu5uL3Qs"
 AUTHOR = "spawns"
 PLACED = {"trapwire", "spycam"}
 
@@ -116,6 +123,45 @@ ZONES = {
         "attacker spawn": "t-spawn", "attacker side spawn": "t-spawn", "t spawn": "t-spawn",
         "defender spawn": "ct-spawn", "defender side spawn": "ct-spawn", "ct spawn": "ct-spawn",
     },
+    # Summit's fixture has only 7 coarse zones, so the finer callouts fold in.
+    # Two judgement calls worth stating, since both are areas the fixture has no
+    # slot for:
+    #   A Garden sits BETWEEN A Main and A Site -- the localizer's own strings say
+    #     "at the A Garden mouth facing the A Main" and "A Site entrance from A
+    #     Garden". It is pre-site space a defender wires to slow the approach, so
+    #     it folds into a-main rather than a-site.
+    #   A Link is the A-side connector to Mid; it maps to a-main to match how
+    #     "a link" is already mapped on ascent, rather than inventing a new
+    #     convention for one map.
+    # No bare "a"/"b" keys here on purpose: this source's callouts always name the
+    # site ("A Site"), and a one-letter key matches stray English prose such as
+    # "a few metres out".
+    "summit": {
+        "a site": "a-site", "a back": "a-site", "a boxes": "a-site",
+        "boxes": "a-site", "a cave": "a-site", "cave": "a-site",
+        "a heaven": "a-site", "heaven": "a-site", "a temple": "a-site",
+        "a cliff": "a-site", "a rock": "a-site", "a tower": "a-site",
+        "a pillar": "a-site", "a default": "a-site",
+        "a main": "a-main", "a lobby": "a-main", "a garden": "a-main",
+        "garden": "a-main", "a link": "a-main", "a short": "a-main",
+        "a entry": "a-main", "a entrance": "a-main", "a door": "a-main",
+        "a doors": "a-main",
+        "b site": "b-site", "b back": "b-site", "b tower": "b-site",
+        "tower": "b-site", "b trophy": "b-site", "trophy": "b-site",
+        "b gym": "b-site", "gym": "b-site", "b pagoda": "b-site",
+        "pagoda": "b-site", "b boxes": "b-site", "b alley": "b-site",
+        "b default": "b-site",
+        "b main": "b-main", "b lobby": "b-main", "b link": "b-main",
+        "b short": "b-main", "b stairs": "b-main", "b entry": "b-main",
+        "mid": "mid", "middle": "mid", "mid top": "mid", "mid bottom": "mid",
+        "mid bend": "mid", "bend": "mid", "mid fountain": "mid",
+        "fountain": "mid", "mid courtyard": "mid", "courtyard": "mid",
+        "mid window": "mid", "window": "mid", "mid archway": "mid",
+        "mid arch": "mid", "mid restaurant": "mid", "restaurant": "mid",
+        "cable car": "mid", "bridge": "mid",
+        "attacker spawn": "t-spawn", "attacker side spawn": "t-spawn", "t spawn": "t-spawn",
+        "defender spawn": "ct-spawn", "defender side spawn": "ct-spawn", "ct spawn": "ct-spawn",
+    },
     "sunset": {
         "a site": "a-site", "a": "a-site", "a elbow": "a-site", "elbow": "a-site",
         "a alley": "a-site", "a link": "a-site", "a back": "a-site", "a heaven": "a-site",
@@ -160,10 +206,25 @@ def clean_caption(cap):
     return c
 
 
+def drop_non_latin(s):
+    """Strip runs of non-Latin script from a title fragment.
+
+    Localizers transcribe in-game signage verbatim, so a landmark can arrive as
+    "under the <CJK> / <CJK> poster". Accurate, but the title is read by an
+    English-speaking operator, and it crashes a cp1252 console outright. Keep the
+    landmark ("under the poster"), drop the glyphs. Latin-1 accents and the
+    em-dash separator are below the cutoff and survive.
+    """
+    kept = "".join(" " if ord(c) > 0x2500 else c for c in s or "")
+    kept = kept.replace(" / ", " ")
+    return " ".join(kept.split())
+
+
 def short_desc(caption, what, limit=62):
     """A compact human descriptor: the creator's caption if usable, else the
     distinctive tail of the survey's prose (after the em-dash), never a
     mid-word truncation."""
+    caption, what = drop_non_latin(caption), drop_non_latin(what)
     s = clean_caption(caption)
     if not s:
         w = " ".join((what or "").split())
@@ -204,10 +265,22 @@ def zone(raw, table, unmapped):
 
 
 def main():
-    if len(sys.argv) < 4:
+    argv, video = [], DEFAULT_VIDEO
+    rest = list(sys.argv[1:])
+    while rest:
+        a = rest.pop(0)
+        if a == "--video":
+            if not rest:
+                raise SystemExit("ABORT - --video needs a value")
+            video = rest.pop(0)
+        elif a.startswith("--video="):
+            video = a.split("=", 1)[1]
+        else:
+            argv.append(a)
+    if len(argv) < 3:
         raise SystemExit(__doc__)
-    src, map_slug, out_path = sys.argv[1], sys.argv[2], sys.argv[3]
-    note = sys.argv[4] if len(sys.argv) > 4 else ""
+    src, map_slug, out_path = argv[0], argv[1], argv[2]
+    note = argv[3] if len(argv) > 3 else ""
     table = ZONES.get(map_slug)
     if table is None:
         raise SystemExit(f"ABORT - no zone table for map {map_slug!r}; add one to ZONES")
@@ -301,7 +374,7 @@ def main():
     ordered = ["cs", "title", "ability", "technique", "target", "stand", "side", "spans"]
     rows = [{k: r[k] for k in ordered} for r in rows]
 
-    pack = {"video_id": VIDEO, "map_slug": map_slug, "author": AUTHOR,
+    pack = {"video_id": video, "map_slug": map_slug, "author": AUTHOR,
             "lineups": rows, "note": note}
     with open(out_path, "w", encoding="utf-8") as fh:
         json.dump(pack, fh, indent=1)
