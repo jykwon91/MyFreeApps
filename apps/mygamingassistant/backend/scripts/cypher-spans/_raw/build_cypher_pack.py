@@ -58,6 +58,12 @@ ZONES = {
         "a main": "a-main", "a lobby": "a-main", "a short": "a-main",
         "short": "a-main", "a link": "a-main", "a door": "a-main", "a doors": "a-main",
         "catwalk": "a-main", "a stairs": "a-main", "a ramp": "a-main",
+        # "a garden" MUST stay ahead of the bare "garden" below. Ascent has BOTH:
+        # Garden sits by B, but VALORANT's own location readout says "A Garden"
+        # for the vine/trellis strip directly behind A Site. zone() is
+        # longest-key-wins, so the 8-char key beats the 6-char one; delete it and
+        # every A Garden stand silently lands on the far side of the map.
+        "a garden": "a-site",
         "b site": "b-site", "b": "b-site", "b back": "b-site", "garden": "b-site",
         "boathouse": "b-site", "b boathouse": "b-site", "switch": "b-site",
         "b main": "b-main", "b lobby": "b-main", "b stairs": "b-main",
