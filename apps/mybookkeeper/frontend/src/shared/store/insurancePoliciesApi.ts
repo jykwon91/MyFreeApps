@@ -8,7 +8,7 @@ import type { InsurancePolicyListResponse } from "@/shared/types/insurance/insur
 import type { InsurancePolicyUpdateRequest } from "@/shared/types/insurance/insurance-policy-update-request";
 
 export interface InsurancePolicyListArgs {
-  listing_id?: string;
+  property_id?: string;
   expiring_before?: string;
   limit?: number;
   offset?: number;
@@ -30,7 +30,7 @@ const insurancePoliciesApi = baseApi.injectEndpoints({
       query: (args) => ({
         url: "/insurance-policies",
         params: {
-          ...(args?.listing_id ? { listing_id: args.listing_id } : {}),
+          ...(args?.property_id ? { property_id: args.property_id } : {}),
           ...(args?.expiring_before ? { expiring_before: args.expiring_before } : {}),
           ...(args?.limit !== undefined ? { limit: args.limit } : {}),
           ...(args?.offset !== undefined ? { offset: args.offset } : {}),

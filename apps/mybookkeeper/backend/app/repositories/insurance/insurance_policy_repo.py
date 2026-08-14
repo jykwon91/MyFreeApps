@@ -17,7 +17,7 @@ async def create(
     *,
     user_id: uuid.UUID,
     organization_id: uuid.UUID,
-    listing_id: uuid.UUID,
+    property_id: uuid.UUID,
     policy_name: str,
     source_document_id: uuid.UUID | None = None,
     carrier: str | None = None,
@@ -34,7 +34,7 @@ async def create(
     policy = InsurancePolicy(
         user_id=user_id,
         organization_id=organization_id,
-        listing_id=listing_id,
+        property_id=property_id,
         source_document_id=source_document_id,
         policy_name=policy_name,
         carrier=carrier,
@@ -77,7 +77,7 @@ async def list_for_org(
     *,
     user_id: uuid.UUID,
     organization_id: uuid.UUID,
-    listing_id: uuid.UUID | None = None,
+    property_id: uuid.UUID | None = None,
     expiring_before: _dt.date | None = None,
     include_deleted: bool = False,
     limit: int = 50,
@@ -89,8 +89,8 @@ async def list_for_org(
     )
     if not include_deleted:
         stmt = stmt.where(InsurancePolicy.deleted_at.is_(None))
-    if listing_id is not None:
-        stmt = stmt.where(InsurancePolicy.listing_id == listing_id)
+    if property_id is not None:
+        stmt = stmt.where(InsurancePolicy.property_id == property_id)
     if expiring_before is not None:
         stmt = stmt.where(
             InsurancePolicy.expiration_date.isnot(None),
@@ -106,7 +106,7 @@ async def count_for_org(
     *,
     user_id: uuid.UUID,
     organization_id: uuid.UUID,
-    listing_id: uuid.UUID | None = None,
+    property_id: uuid.UUID | None = None,
     expiring_before: _dt.date | None = None,
     include_deleted: bool = False,
 ) -> int:
@@ -116,8 +116,8 @@ async def count_for_org(
     )
     if not include_deleted:
         stmt = stmt.where(InsurancePolicy.deleted_at.is_(None))
-    if listing_id is not None:
-        stmt = stmt.where(InsurancePolicy.listing_id == listing_id)
+    if property_id is not None:
+        stmt = stmt.where(InsurancePolicy.property_id == property_id)
     if expiring_before is not None:
         stmt = stmt.where(
             InsurancePolicy.expiration_date.isnot(None),

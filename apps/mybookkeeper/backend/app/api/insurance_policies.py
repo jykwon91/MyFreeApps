@@ -53,7 +53,7 @@ async def create_policy(
     return await insurance_policy_service.create_policy(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
-        listing_id=payload.listing_id,
+        property_id=payload.property_id,
         source_document_id=payload.source_document_id,
         policy_name=payload.policy_name,
         carrier=payload.carrier,
@@ -131,7 +131,7 @@ async def extract_policy_from_upload(
 
 @router.get("", response_model=InsurancePolicyListResponse)
 async def list_policies(
-    listing_id: uuid.UUID | None = Query(None),
+    property_id: uuid.UUID | None = Query(None),
     expiring_before: _dt.date | None = Query(None),
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
@@ -140,7 +140,7 @@ async def list_policies(
     return await insurance_policy_service.list_policies(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
-        listing_id=listing_id,
+        property_id=property_id,
         expiring_before=expiring_before,
         limit=limit,
         offset=offset,

@@ -10,7 +10,8 @@ export interface InsurancePolicyDetail {
   id: string;
   user_id: string;
   organization_id: string;
-  listing_id: string;
+  property_id: string;
+  property_name: string | null;
   /** The document this policy's numbers were read from, when it was read. */
   source_document_id: string | null;
   policy_name: string;

@@ -1,7 +1,10 @@
-"""Insurance policy record scoped to a listing.
+"""Insurance policy record scoped to a property.
 
-One policy per listing (e.g. "Landlord Insurance — 123 Main St"). Multiple
-attachments per policy (see ``insurance_policy_attachment.py``).
+A dwelling policy insures the building, so it hangs off the property the way
+leases, tenants and utility account links do — not off a listing. A house let
+room by room has one policy and many listings; scoping to a listing would
+force one copy of the same policy per room, each with its own expiration to
+renew. Multiple attachments per policy (see ``insurance_policy_attachment.py``).
 
 Soft-deleted because insurance records are financial/legal documents and
 retention is recommended even after operational deletion.
@@ -51,9 +54,9 @@ class InsurancePolicy(Base):
         index=True,
         nullable=False,
     )
-    listing_id: Mapped[uuid.UUID] = mapped_column(
+    property_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("listings.id", ondelete="CASCADE"),
+        ForeignKey("properties.id", ondelete="CASCADE"),
         index=True,
         nullable=False,
     )

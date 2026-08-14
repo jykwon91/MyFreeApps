@@ -30,39 +30,15 @@ function isoDateOffset(offsetDays: number): string {
   return d.toISOString().slice(0, 10);
 }
 
-async function createListing(
-  api: APIRequestContext,
-  propertyId: string,
-  title: string,
-): Promise<string> {
-  const res = await api.post("/listings", {
-    data: {
-      property_id: propertyId,
-      title,
-      monthly_rate: "1500.00",
-      room_type: "private_room",
-      status: "active",
-      private_bath: false,
-      parking_assigned: false,
-      furnished: false,
-      pets_on_premises: false,
-    },
-  });
-  if (!res.ok()) {
-    throw new Error(`createListing failed: ${res.status()} ${await res.text()}`);
-  }
-  return ((await res.json()) as { id: string }).id;
-}
-
 /** An unambiguously above-market policy: 600¢ per $1,000 against a 300¢ market. */
 async function seedPolicy(
   api: APIRequestContext,
-  listingId: string,
+  propertyId: string,
   policyName: string,
 ): Promise<string> {
   const res = await api.post("/insurance-policies", {
     data: {
-      listing_id: listingId,
+      property_id: propertyId,
       policy_name: policyName,
       carrier: "E2E Mutual",
       premium_cents: 240_000,
@@ -108,7 +84,6 @@ test.describe("Insurance premium comparison layout", () => {
   }) => {
     const runId = Date.now();
     let propertyId: string | null = null;
-    let listingId: string | null = null;
     let policyId: string | null = null;
     let benchmarkRecorded = false;
 
@@ -117,8 +92,7 @@ test.describe("Insurance premium comparison layout", () => {
         name: `E2E Premium Layout ${runId}`,
       });
       propertyId = property.id;
-      listingId = await createListing(api, propertyId, `E2E Premium Layout ${runId}`);
-      policyId = await seedPolicy(api, listingId, `E2E Premium Layout Policy ${runId}`);
+      policyId = await seedPolicy(api, propertyId, `E2E Premium Layout Policy ${runId}`);
       await seedBenchmark(api, `E2E premium layout ${runId}`);
       benchmarkRecorded = true;
 
@@ -163,7 +137,6 @@ test.describe("Insurance premium comparison layout", () => {
     } finally {
       if (benchmarkRecorded) await api.delete(BENCHMARK_URL).catch(() => {});
       if (policyId) await api.delete(`/insurance-policies/${policyId}`).catch(() => {});
-      if (listingId) await api.delete(`/listings/${listingId}`).catch(() => {});
       if (propertyId) await deleteProperty(api, propertyId);
     }
   });
@@ -174,7 +147,6 @@ test.describe("Insurance premium comparison layout", () => {
   }) => {
     const runId = Date.now();
     let propertyId: string | null = null;
-    let listingId: string | null = null;
     let policyId: string | null = null;
     let benchmarkRecorded = false;
 
@@ -183,14 +155,9 @@ test.describe("Insurance premium comparison layout", () => {
         name: `E2E Wide Premium Property Name That Could Overflow ${runId}`,
       });
       propertyId = property.id;
-      listingId = await createListing(
-        api,
-        propertyId,
-        `E2E Wide Premium Listing ${runId}`,
-      );
       policyId = await seedPolicy(
         api,
-        listingId,
+        propertyId,
         `E2E Premium Policy With A Deliberately Long Name ${runId}`,
       );
       await seedBenchmark(
@@ -252,7 +219,6 @@ test.describe("Insurance premium comparison layout", () => {
     } finally {
       if (benchmarkRecorded) await api.delete(BENCHMARK_URL).catch(() => {});
       if (policyId) await api.delete(`/insurance-policies/${policyId}`).catch(() => {});
-      if (listingId) await api.delete(`/listings/${listingId}`).catch(() => {});
       if (propertyId) await deleteProperty(api, propertyId);
     }
   });

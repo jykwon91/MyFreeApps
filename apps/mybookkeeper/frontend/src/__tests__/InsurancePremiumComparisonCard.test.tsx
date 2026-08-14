@@ -49,7 +49,8 @@ function makePolicy(
 ): InsurancePolicySummary {
   return {
     id: "policy-a",
-    listing_id: "listing-1",
+    property_id: "property-1",
+    property_name: "6734 Peerless St",
     policy_name: "Dwelling HO-3",
     carrier: "State Farm",
     effective_date: "2026-03-01",

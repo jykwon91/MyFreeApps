@@ -22,10 +22,6 @@ import { createProperty, deleteProperty } from "./fixtures/seed-data";
  * rows rather than a total, and the benchmark is removed on the way out.
  */
 
-interface CreatedListing {
-  id: string;
-}
-
 interface ComparisonRow {
   policy: { id: string; policy_name: string };
   status: string;
@@ -52,38 +48,14 @@ function isoDateOffset(offsetDays: number): string {
   return d.toISOString().slice(0, 10);
 }
 
-async function createListing(
-  api: APIRequestContext,
-  propertyId: string,
-  title: string,
-): Promise<CreatedListing> {
-  const res = await api.post("/listings", {
-    data: {
-      property_id: propertyId,
-      title,
-      monthly_rate: "1500.00",
-      room_type: "private_room",
-      status: "active",
-      private_bath: false,
-      parking_assigned: false,
-      furnished: false,
-      pets_on_premises: false,
-    },
-  });
-  if (!res.ok()) {
-    throw new Error(`createListing failed: ${res.status()} ${await res.text()}`);
-  }
-  return { id: ((await res.json()) as { id: string }).id };
-}
-
 async function seedPolicy(
   api: APIRequestContext,
-  listingId: string,
+  propertyId: string,
   data: { policy_name: string; premium_cents: number; coverage_amount_cents: number },
 ): Promise<string> {
   const res = await api.post("/insurance-policies", {
     data: {
-      listing_id: listingId,
+      property_id: propertyId,
       carrier: "E2E Mutual",
       premium_frequency: "annual",
       // Years from expiry: the expiration badge has nothing to say here, which
@@ -123,7 +95,6 @@ test.describe("Insurance premium benchmark", () => {
     const pricey = `E2E Overpriced Policy ${runId}`;
     const fair = `E2E Fairly Priced Policy ${runId}`;
     let propertyId: string | null = null;
-    let listingId: string | null = null;
     let priceyId: string | null = null;
     let fairId: string | null = null;
     let benchmarkRecorded = false;
@@ -133,18 +104,14 @@ test.describe("Insurance premium benchmark", () => {
         name: `E2E Benchmark Insurance Property ${runId}`,
       });
       propertyId = property.id;
-      listingId = (
-        await createListing(api, propertyId, `E2E Benchmark Listing ${runId}`)
-      ).id;
-
       // Same premium, different dwelling amounts. Raw they are identical; per
       // $1,000 of coverage one is 600¢ and the other 300¢.
-      priceyId = await seedPolicy(api, listingId, {
+      priceyId = await seedPolicy(api, propertyId, {
         policy_name: pricey,
         premium_cents: 240_000,
         coverage_amount_cents: 40_000_000,
       });
-      fairId = await seedPolicy(api, listingId, {
+      fairId = await seedPolicy(api, propertyId, {
         policy_name: fair,
         premium_cents: 240_000,
         coverage_amount_cents: 80_000_000,
@@ -242,7 +209,6 @@ test.describe("Insurance premium benchmark", () => {
       }
       if (priceyId) await api.delete(`/insurance-policies/${priceyId}`).catch(() => {});
       if (fairId) await api.delete(`/insurance-policies/${fairId}`).catch(() => {});
-      if (listingId) await api.delete(`/listings/${listingId}`).catch(() => {});
       if (propertyId) await deleteProperty(api, propertyId);
     }
   });
@@ -254,7 +220,6 @@ test.describe("Insurance premium benchmark", () => {
     // silently would let the operator read the all-clear as covering it.
     const runId = Date.now();
     let propertyId: string | null = null;
-    let listingId: string | null = null;
     let policyId: string | null = null;
     let benchmarkRecorded = false;
 
@@ -263,13 +228,9 @@ test.describe("Insurance premium benchmark", () => {
         name: `E2E Unmeasurable Property ${runId}`,
       });
       propertyId = property.id;
-      listingId = (
-        await createListing(api, propertyId, `E2E Unmeasurable Listing ${runId}`)
-      ).id;
-
       const created = await api.post("/insurance-policies", {
         data: {
-          listing_id: listingId,
+          property_id: propertyId,
           policy_name: `E2E Coverage-less Policy ${runId}`,
           premium_cents: 240_000,
           premium_frequency: "annual",
@@ -298,7 +259,6 @@ test.describe("Insurance premium benchmark", () => {
         await api.delete("/insurance-benchmarks").catch(() => {});
       }
       if (policyId) await api.delete(`/insurance-policies/${policyId}`).catch(() => {});
-      if (listingId) await api.delete(`/listings/${listingId}`).catch(() => {});
       if (propertyId) await deleteProperty(api, propertyId);
     }
   });

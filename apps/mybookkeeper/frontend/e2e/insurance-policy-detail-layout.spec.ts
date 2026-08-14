@@ -20,38 +20,14 @@ interface SeededPolicy {
   id: string;
 }
 
-async function createListing(
-  api: APIRequestContext,
-  propertyId: string,
-  title: string,
-): Promise<string> {
-  const res = await api.post("/listings", {
-    data: {
-      property_id: propertyId,
-      title,
-      monthly_rate: "1500.00",
-      room_type: "private_room",
-      status: "active",
-      private_bath: false,
-      parking_assigned: false,
-      furnished: false,
-      pets_on_premises: false,
-    },
-  });
-  if (!res.ok()) {
-    throw new Error(`createListing failed: ${res.status()} ${await res.text()}`);
-  }
-  return ((await res.json()) as SeededPolicy).id;
-}
-
 async function seedPolicy(
   api: APIRequestContext,
-  listingId: string,
+  propertyId: string,
   policyName: string,
 ): Promise<string> {
   const res = await api.post("/insurance-policies", {
     data: {
-      listing_id: listingId,
+      property_id: propertyId,
       policy_name: policyName,
       carrier: "E2E Mutual",
       policy_number: "POL-E2E-LAYOUT",
@@ -83,7 +59,6 @@ test.describe("Insurance policy detail layout", () => {
   }) => {
     const runId = Date.now();
     let propertyId: string | null = null;
-    let listingId: string | null = null;
     let policyId: string | null = null;
 
     try {
@@ -91,12 +66,7 @@ test.describe("Insurance policy detail layout", () => {
         name: `E2E Insurance Layout Property ${runId}`,
       });
       propertyId = property.id;
-      listingId = await createListing(
-        api,
-        propertyId,
-        `E2E Insurance Layout Listing ${runId}`,
-      );
-      policyId = await seedPolicy(api, listingId, `E2E Layout Policy ${runId}`);
+      policyId = await seedPolicy(api, propertyId, `E2E Layout Policy ${runId}`);
 
       // Hold the single-policy fetch long enough to observe the skeleton.
       await page.route(`**/api/insurance-policies/${policyId}`, async (route) => {
@@ -133,7 +103,6 @@ test.describe("Insurance policy detail layout", () => {
       expect(await hasHorizontalOverflow(page), "overflow when loaded").toBe(false);
     } finally {
       if (policyId) await api.delete(`/insurance-policies/${policyId}`).catch(() => {});
-      if (listingId) await api.delete(`/listings/${listingId}`).catch(() => {});
       if (propertyId) await deleteProperty(api, propertyId);
     }
   });
@@ -144,7 +113,6 @@ test.describe("Insurance policy detail layout", () => {
   }) => {
     const runId = Date.now();
     let propertyId: string | null = null;
-    let listingId: string | null = null;
     let policyId: string | null = null;
 
     try {
@@ -152,14 +120,9 @@ test.describe("Insurance policy detail layout", () => {
         name: `E2E Insurance Wide Property ${runId}`,
       });
       propertyId = property.id;
-      listingId = await createListing(
-        api,
-        propertyId,
-        `E2E Insurance Wide Listing ${runId}`,
-      );
       policyId = await seedPolicy(
         api,
-        listingId,
+        propertyId,
         `E2E Policy With A Deliberately Long Name That Could Overflow ${runId}`,
       );
 
@@ -201,7 +164,6 @@ test.describe("Insurance policy detail layout", () => {
       }
     } finally {
       if (policyId) await api.delete(`/insurance-policies/${policyId}`).catch(() => {});
-      if (listingId) await api.delete(`/listings/${listingId}`).catch(() => {});
       if (propertyId) await deleteProperty(api, propertyId);
     }
   });

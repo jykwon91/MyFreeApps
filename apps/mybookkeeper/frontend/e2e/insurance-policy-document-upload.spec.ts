@@ -26,7 +26,6 @@ import { test, expect, type Page } from "@playwright/test";
 const ORG_ID = "00000000-0000-0000-0000-000000000010";
 const USER_ID = "00000000-0000-0000-0000-000000000001";
 const PROPERTY_ID = "00000000-0000-0000-0000-0000000000c1";
-const LISTING_ID = "00000000-0000-0000-0000-0000000000e1";
 const DOCUMENT_ID = "00000000-0000-0000-0000-0000000000d1";
 
 const IPHONE = { width: 390, height: 844 };
@@ -107,39 +106,12 @@ async function stubShell(page: Page): Promise<void> {
   );
 }
 
-async function stubListingPage(page: Page): Promise<void> {
-  await page.route(`**/api/listings/${LISTING_ID}`, (route) =>
-    route.fulfill(
-      json({
-        id: LISTING_ID,
-        organization_id: ORG_ID,
-        user_id: USER_ID,
-        property_id: PROPERTY_ID,
-        title: "6734 Peerless St — Room A",
-        description: null,
-        slug: "peerless-room-a",
-        monthly_rate: "1500.00",
-        weekly_rate: null,
-        nightly_rate: null,
-        min_stay_days: null,
-        max_stay_days: null,
-        room_type: "private_room",
-        private_bath: false,
-        parking_assigned: false,
-        furnished: false,
-        status: "active",
-        amenities: [],
-        pets_on_premises: false,
-        large_dog_disclosure: null,
-        photos: [],
-        external_ids: [],
-        created_at: "2026-01-01T00:00:00Z",
-        updated_at: "2026-01-01T00:00:00Z",
-      }),
-    ),
-  );
+async function stubInsurancePage(page: Page): Promise<void> {
   await page.route("**/api/insurance-policies?*", (route) =>
     route.fulfill(json({ items: [], total: 0, has_more: false })),
+  );
+  await page.route("**/api/insurance-benchmarks", (route) =>
+    route.fulfill({ status: 404, contentType: "application/json", body: "{}" }),
   );
 }
 
@@ -150,11 +122,14 @@ async function stubDocuments(page: Page, documents: unknown[]): Promise<void> {
 }
 
 async function openDialog(page: Page): Promise<void> {
-  await page.goto(`/listings/${LISTING_ID}`);
+  await page.goto("/insurance-policies");
   const add = page.getByTestId("add-insurance-policy-button");
   await expect(add).toBeVisible({ timeout: 15000 });
   await add.click();
   await expect(page.getByTestId("add-insurance-policy-dialog")).toBeVisible();
+  // The policy insures a building, so the dialog cannot be saved until one is
+  // named. Choosing it up front keeps each test about the reading.
+  await page.getByTestId("insurance-policy-property-select").selectOption(PROPERTY_ID);
 }
 
 function hasHorizontalOverflow(page: Page): Promise<boolean> {
@@ -168,7 +143,7 @@ test.use({ viewport: IPHONE });
 test.beforeEach(async ({ page }) => {
   await plantAuth(page);
   await stubShell(page);
-  await stubListingPage(page);
+  await stubInsurancePage(page);
 });
 
 test.describe("Adding an insurance policy from a document on the phone", () => {

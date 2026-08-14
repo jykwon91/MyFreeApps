@@ -18,7 +18,7 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.documents.document import Document
-from app.models.listings.listing import Listing
+from app.models.properties.property import Property
 from app.repositories.insurance import insurance_policy_repo
 from app.services.insurance import insurance_policy_service
 
@@ -34,23 +34,18 @@ def _make_fake_uow(session: AsyncSession):
     return _fake_uow
 
 
-async def _make_listing(
+async def _make_property(
     db: AsyncSession, org_id: uuid.UUID, user_id: uuid.UUID,
-) -> Listing:
-    listing = Listing(
+) -> Property:
+    prop = Property(
         id=uuid.uuid4(),
         organization_id=org_id,
         user_id=user_id,
-        property_id=uuid.uuid4(),  # FK not enforced in the SQLite test env
-        title="6734 Peerless St",
-        slug=f"peerless-{uuid.uuid4().hex[:6]}",
-        status="active",
-        room_type="private_room",
-        monthly_rate=1500.00,
+        name="6734 Peerless St",
     )
-    db.add(listing)
+    db.add(prop)
     await db.flush()
-    return listing
+    return prop
 
 
 async def _make_document(
@@ -91,14 +86,14 @@ class TestSourceDocumentIsolation:
         self, db: AsyncSession,
     ) -> None:
         org_id, user_id = uuid.uuid4(), uuid.uuid4()
-        listing = await _make_listing(db, org_id, user_id)
+        prop = await _make_property(db, org_id, user_id)
         doc = await _make_document(db, org_id, user_id)
 
         with patch(_UOW_TARGET, _make_fake_uow(db)):
             detail = await insurance_policy_service.create_policy(
                 user_id=user_id,
                 organization_id=org_id,
-                listing_id=listing.id,
+                property_id=prop.id,
                 **_create_kwargs(source_document_id=doc.id),
             )
 
@@ -108,7 +103,7 @@ class TestSourceDocumentIsolation:
         self, db: AsyncSession,
     ) -> None:
         org_id, user_id = uuid.uuid4(), uuid.uuid4()
-        listing = await _make_listing(db, org_id, user_id)
+        prop = await _make_property(db, org_id, user_id)
         theirs = await _make_document(db, uuid.uuid4(), uuid.uuid4())
 
         with patch(_UOW_TARGET, _make_fake_uow(db)):
@@ -116,7 +111,7 @@ class TestSourceDocumentIsolation:
                 await insurance_policy_service.create_policy(
                     user_id=user_id,
                     organization_id=org_id,
-                    listing_id=listing.id,
+                    property_id=prop.id,
                     **_create_kwargs(source_document_id=theirs.id),
                 )
 
@@ -125,14 +120,14 @@ class TestSourceDocumentIsolation:
     ) -> None:
         """Same answer as another org's document — no existence oracle."""
         org_id, user_id = uuid.uuid4(), uuid.uuid4()
-        listing = await _make_listing(db, org_id, user_id)
+        prop = await _make_property(db, org_id, user_id)
 
         with patch(_UOW_TARGET, _make_fake_uow(db)):
             with pytest.raises(insurance_policy_service.InvalidInsurancePolicyError):
                 await insurance_policy_service.create_policy(
                     user_id=user_id,
                     organization_id=org_id,
-                    listing_id=listing.id,
+                    property_id=prop.id,
                     **_create_kwargs(source_document_id=uuid.uuid4()),
                 )
 
@@ -141,13 +136,13 @@ class TestSourceDocumentIsolation:
     ) -> None:
         """Typing a policy in by hand stays the ordinary path."""
         org_id, user_id = uuid.uuid4(), uuid.uuid4()
-        listing = await _make_listing(db, org_id, user_id)
+        prop = await _make_property(db, org_id, user_id)
 
         with patch(_UOW_TARGET, _make_fake_uow(db)):
             detail = await insurance_policy_service.create_policy(
                 user_id=user_id,
                 organization_id=org_id,
-                listing_id=listing.id,
+                property_id=prop.id,
                 **_create_kwargs(),
             )
 
@@ -157,12 +152,12 @@ class TestSourceDocumentIsolation:
         self, db: AsyncSession,
     ) -> None:
         org_id, user_id = uuid.uuid4(), uuid.uuid4()
-        listing = await _make_listing(db, org_id, user_id)
+        prop = await _make_property(db, org_id, user_id)
         policy = await insurance_policy_repo.create(
             db,
             user_id=user_id,
             organization_id=org_id,
-            listing_id=listing.id,
+            property_id=prop.id,
             policy_name="Landlord Protection",
         )
         theirs = await _make_document(db, uuid.uuid4(), uuid.uuid4())
@@ -181,12 +176,12 @@ class TestSourceDocumentIsolation:
     ) -> None:
         """Re-reading a dec page against a policy entered by hand."""
         org_id, user_id = uuid.uuid4(), uuid.uuid4()
-        listing = await _make_listing(db, org_id, user_id)
+        prop = await _make_property(db, org_id, user_id)
         policy = await insurance_policy_repo.create(
             db,
             user_id=user_id,
             organization_id=org_id,
-            listing_id=listing.id,
+            property_id=prop.id,
             policy_name="Landlord Protection",
         )
         doc = await _make_document(db, org_id, user_id)
@@ -206,13 +201,13 @@ class TestSourceDocumentIsolation:
     ) -> None:
         """``fields`` omits the key entirely — that is not a request to clear it."""
         org_id, user_id = uuid.uuid4(), uuid.uuid4()
-        listing = await _make_listing(db, org_id, user_id)
+        prop = await _make_property(db, org_id, user_id)
         doc = await _make_document(db, org_id, user_id)
         policy = await insurance_policy_repo.create(
             db,
             user_id=user_id,
             organization_id=org_id,
-            listing_id=listing.id,
+            property_id=prop.id,
             policy_name="Landlord Protection",
             source_document_id=doc.id,
         )

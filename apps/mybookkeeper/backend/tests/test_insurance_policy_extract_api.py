@@ -141,7 +141,7 @@ class TestExtract:
     def test_an_unknown_field_returns_422(self, client: TestClient) -> None:
         response = client.post(
             "/insurance-policies/extract",
-            json={"document_id": str(uuid.uuid4()), "listing_id": str(uuid.uuid4())},
+            json={"document_id": str(uuid.uuid4()), "property_id": str(uuid.uuid4())},
         )
         assert response.status_code == 422
 

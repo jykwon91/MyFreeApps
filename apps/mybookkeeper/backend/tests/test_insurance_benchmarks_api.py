@@ -90,7 +90,7 @@ def _summary() -> InsurancePolicySummary:
     now = _dt.datetime.now(_dt.timezone.utc)
     return InsurancePolicySummary(
         id=POLICY_ID,
-        listing_id=LISTING_ID,
+        property_id=LISTING_ID,
         policy_name="Dwelling HO-3",
         carrier="State Farm",
         effective_date=_dt.date(2026, 3, 1),

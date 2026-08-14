@@ -30,9 +30,11 @@ from app.schemas.insurance.insurance_policy_list_response import (
 )
 from app.schemas.insurance.insurance_policy_response import InsurancePolicyResponse
 from app.schemas.insurance.insurance_policy_summary import InsurancePolicySummary
+from app.repositories.properties import property_repo
 from app.services.documents.document_ownership import owns_document
 from app.services.insurance._merged_policy import MergedPolicy
 from app.services.insurance.attachment_response_builder import attach_presigned_urls
+from app.services.properties.property_ownership import owns_property
 
 logger = logging.getLogger(__name__)
 
@@ -106,12 +108,29 @@ async def _assert_source_document_is_ours(
         )
 
 
-def _to_detail(policy, attachments: list) -> InsurancePolicyResponse:
+async def _assert_property_is_ours(
+    db, *, organization_id: uuid.UUID, property_id: uuid.UUID,
+) -> None:
+    """Reject a ``property_id`` belonging to another organization.
+
+    The foreign key only proves the property row exists. The client supplies
+    this id directly, so ownership is checked here rather than trusted.
+    """
+    if not await owns_property(
+        db, organization_id=organization_id, property_id=property_id,
+    ):
+        raise InvalidInsurancePolicyError("property_id does not name a property")
+
+
+def _to_detail(
+    policy, attachments: list, property_name: str | None = None,
+) -> InsurancePolicyResponse:
     return InsurancePolicyResponse(
         id=policy.id,
         user_id=policy.user_id,
         organization_id=policy.organization_id,
-        listing_id=policy.listing_id,
+        property_id=policy.property_id,
+        property_name=property_name,
         source_document_id=policy.source_document_id,
         policy_name=policy.policy_name,
         carrier=policy.carrier,
@@ -138,7 +157,7 @@ async def create_policy(
     *,
     user_id: uuid.UUID,
     organization_id: uuid.UUID,
-    listing_id: uuid.UUID,
+    property_id: uuid.UUID,
     policy_name: str,
     source_document_id: uuid.UUID | None,
     carrier: str | None,
@@ -153,6 +172,9 @@ async def create_policy(
     notes: str | None,
 ) -> InsurancePolicyResponse:
     async with unit_of_work() as db:
+        await _assert_property_is_ours(
+            db, organization_id=organization_id, property_id=property_id,
+        )
         await _assert_source_document_is_ours(
             db, organization_id=organization_id, document_id=source_document_id,
         )
@@ -160,7 +182,7 @@ async def create_policy(
             db,
             user_id=user_id,
             organization_id=organization_id,
-            listing_id=listing_id,
+            property_id=property_id,
             source_document_id=source_document_id,
             policy_name=policy_name,
             carrier=carrier,
@@ -174,7 +196,9 @@ async def create_policy(
             wind_hail_deductible_pct=wind_hail_deductible_pct,
             notes=notes,
         )
-    return _to_detail(policy, [])
+        names = await property_repo.get_name_map(db, organization_id)
+        detail = _to_detail(policy, [], names.get(policy.property_id))
+    return detail
 
 
 # ---------------------------------------------------------------------------
@@ -185,7 +209,7 @@ async def list_policies(
     *,
     user_id: uuid.UUID,
     organization_id: uuid.UUID,
-    listing_id: uuid.UUID | None = None,
+    property_id: uuid.UUID | None = None,
     expiring_before: _dt.date | None = None,
     limit: int = 50,
     offset: int = 0,
@@ -195,7 +219,7 @@ async def list_policies(
             db,
             user_id=user_id,
             organization_id=organization_id,
-            listing_id=listing_id,
+            property_id=property_id,
             expiring_before=expiring_before,
             limit=limit,
             offset=offset,
@@ -204,10 +228,16 @@ async def list_policies(
             db,
             user_id=user_id,
             organization_id=organization_id,
-            listing_id=listing_id,
+            property_id=property_id,
             expiring_before=expiring_before,
         )
-    items = [InsurancePolicySummary.model_validate(r) for r in rows]
+        names = await property_repo.get_name_map(db, organization_id)
+    items = [
+        InsurancePolicySummary.model_validate(r).model_copy(
+            update={"property_name": names.get(r.property_id)},
+        )
+        for r in rows
+    ]
     return InsurancePolicyListResponse(
         items=items, total=total, has_more=(offset + len(items)) < total,
     )
@@ -231,7 +261,8 @@ async def get_policy(
         attachments = await insurance_policy_attachment_repo.list_by_policy(
             db, policy.id,
         )
-    return _to_detail(policy, attachments)
+        names = await property_repo.get_name_map(db, organization_id)
+    return _to_detail(policy, attachments, names.get(policy.property_id))
 
 
 # ---------------------------------------------------------------------------
@@ -288,7 +319,8 @@ async def update_policy(
             user_id=user_id,
             organization_id=organization_id,
         )
-    return _to_detail(policy, attachments)
+        names = await property_repo.get_name_map(db, organization_id)
+    return _to_detail(policy, attachments, names.get(policy.property_id))
 
 
 # ---------------------------------------------------------------------------

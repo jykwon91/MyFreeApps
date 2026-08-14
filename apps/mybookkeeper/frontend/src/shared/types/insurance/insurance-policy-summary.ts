@@ -11,7 +11,8 @@ import type { InsurancePremiumFrequency } from "@/shared/types/insurance/insuran
  */
 export interface InsurancePolicySummary {
   id: string;
-  listing_id: string;
+  property_id: string;
+  property_name: string | null;
   policy_name: string;
   carrier: string | null;
   effective_date: string | null;

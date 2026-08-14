@@ -32,7 +32,7 @@ def _ok_policy_response(policy_id: uuid.UUID, org_id: uuid.UUID, user_id: uuid.U
         id=policy_id,
         user_id=user_id,
         organization_id=org_id,
-        listing_id=uuid.uuid4(),
+        property_id=uuid.uuid4(),
         policy_name="Landlord Insurance",
         carrier="State Farm",
         policy_number=None,
@@ -72,7 +72,7 @@ class TestCreateInsurancePolicy:
                 resp = client.post(
                     "/insurance-policies",
                     json={
-                        "listing_id": str(uuid.uuid4()),
+                        "property_id": str(uuid.uuid4()),
                         "policy_name": "Landlord Insurance",
                         "carrier": "State Farm",
                         "expiration_date": "2026-01-01",
@@ -93,7 +93,7 @@ class TestCreateInsurancePolicy:
             resp = client.post(
                 "/insurance-policies",
                 json={
-                    "listing_id": str(uuid.uuid4()),
+                    "property_id": str(uuid.uuid4()),
                     "policy_name": "Test",
                     "UNKNOWN_FIELD": "hax",
                 },
@@ -109,7 +109,7 @@ class TestCreateInsurancePolicy:
             client = TestClient(app)
             resp = client.post(
                 "/insurance-policies",
-                json={"listing_id": str(uuid.uuid4())},  # missing policy_name
+                json={"property_id": str(uuid.uuid4())},  # missing policy_name
             )
             assert resp.status_code == 422, resp.text
         finally:
@@ -122,7 +122,7 @@ class TestCreateInsurancePolicy:
             client = TestClient(app)
             resp = client.post(
                 "/insurance-policies",
-                json={"listing_id": str(uuid.uuid4()), "policy_name": ""},
+                json={"property_id": str(uuid.uuid4()), "policy_name": ""},
             )
             assert resp.status_code == 422, resp.text
         finally:
@@ -149,7 +149,7 @@ class TestCreateInsurancePolicyPremiumValidation:
                 resp = client.post(
                     "/insurance-policies",
                     json={
-                        "listing_id": str(uuid.uuid4()),
+                        "property_id": str(uuid.uuid4()),
                         "policy_name": "Landlord Insurance",
                         **extra,
                     },
@@ -218,9 +218,9 @@ class TestListInsurancePolicies:
         finally:
             app.dependency_overrides.clear()
 
-    def test_filter_by_listing_id(self) -> None:
+    def test_filter_by_property_id(self) -> None:
         org_id, user_id = uuid.uuid4(), uuid.uuid4()
-        listing_id = uuid.uuid4()
+        property_id = uuid.uuid4()
         app.dependency_overrides[current_org_member] = lambda: _ctx(org_id, user_id)
         try:
             with patch(
@@ -230,12 +230,12 @@ class TestListInsurancePolicies:
                 client = TestClient(app)
                 resp = client.get(
                     "/insurance-policies",
-                    params={"listing_id": str(listing_id)},
+                    params={"property_id": str(property_id)},
                 )
             assert resp.status_code == 200, resp.text
-            # Ensure listing_id was forwarded to the service.
+            # Ensure property_id was forwarded to the service.
             call_kwargs = mock_list.call_args.kwargs
-            assert str(call_kwargs["listing_id"]) == str(listing_id)
+            assert str(call_kwargs["property_id"]) == str(property_id)
         finally:
             app.dependency_overrides.clear()
 

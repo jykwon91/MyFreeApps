@@ -29,6 +29,15 @@ vi.mock("@/shared/store/insurancePoliciesApi", () => ({
   ]),
 }));
 
+vi.mock("@/shared/store/propertiesApi", () => ({
+  useGetPropertiesQuery: vi.fn(() => ({
+    data: [
+      { id: "property-1", name: "6734 Peerless St" },
+      { id: "property-2", name: "6738 Peerless St" },
+    ],
+  })),
+}));
+
 vi.mock("@/shared/store/documentsApi", () => ({
   useGetDocumentsQuery: vi.fn(() => ({
     data: [{ id: "doc-1", file_name: "texas-mutual-dec.pdf" }],
@@ -61,8 +70,15 @@ const DRAFT: InsurancePolicyDraft = {
 };
 
 function renderDialog(onClose = vi.fn()) {
-  render(<AddInsurancePolicyDialog listingId="listing-1" onClose={onClose} />);
+  render(<AddInsurancePolicyDialog onClose={onClose} />);
   return onClose;
+}
+
+async function pickProperty(user: ReturnType<typeof userEvent.setup>) {
+  await user.selectOptions(
+    screen.getByTestId("insurance-policy-property-select"),
+    "property-1",
+  );
 }
 
 async function readFromLibrary(user: ReturnType<typeof userEvent.setup>) {
@@ -100,6 +116,7 @@ describe("AddInsurancePolicyDialog — reading a declarations page", () => {
     const user = userEvent.setup();
     renderDialog();
 
+    await pickProperty(user);
     await readFromLibrary(user);
     await waitFor(() =>
       expect(screen.getByDisplayValue("Texas Mutual")).toBeInTheDocument(),
@@ -108,7 +125,7 @@ describe("AddInsurancePolicyDialog — reading a declarations page", () => {
 
     await waitFor(() => expect(mockCreate).toHaveBeenCalled());
     expect(mockCreate.mock.calls[0][0]).toMatchObject({
-      listing_id: "listing-1",
+      property_id: "property-1",
       source_document_id: "doc-1",
       carrier: "Texas Mutual",
       coverage_amount_cents: 40_000_000,
@@ -163,6 +180,7 @@ describe("AddInsurancePolicyDialog — typing the policy in by hand", () => {
     const user = userEvent.setup();
     renderDialog();
 
+    await pickProperty(user);
     await user.type(
       screen.getByPlaceholderText(/Landlord Insurance/i),
       "Landlord Protection",
@@ -179,8 +197,31 @@ describe("AddInsurancePolicyDialog — typing the policy in by hand", () => {
     const user = userEvent.setup();
     renderDialog();
 
+    await pickProperty(user);
     await user.click(screen.getByTestId("insurance-policy-save-button"));
 
     expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  it("refuses to save a policy that names no property", async () => {
+    // The property is what the policy insures. Saving without one would file
+    // coverage against nothing and leave a building silently uninsured.
+    const user = userEvent.setup();
+    renderDialog();
+
+    await user.type(
+      screen.getByPlaceholderText(/Landlord Insurance/i),
+      "Landlord Protection",
+    );
+    await user.click(screen.getByTestId("insurance-policy-save-button"));
+
+    // The select is `required`, so the browser blocks the submit before the
+    // handler's own guard is reached — hence no toast to assert on here. Both
+    // gates exist: this one keeps the field marked invalid in place, and the
+    // guard in `handleSubmit` covers a programmatic submit that skips it.
+    expect(mockCreate).not.toHaveBeenCalled();
+    expect(
+      screen.getByTestId("insurance-policy-property-select"),
+    ).toBeInvalid();
   });
 });
