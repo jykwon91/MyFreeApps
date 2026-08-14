@@ -78,7 +78,9 @@ const POLICY: PolicyDetailType = {
   premium_frequency: "monthly",
   deductible_cents: 250000,
   wind_hail_deductible_pct: "2.00",
+  fees_and_taxes_cents: 30000,
   annual_premium_cents: 134400,
+  annual_total_cents: 164400,
   notes: "Annual renewal reminder set.",
   attachments: [],
   created_at: "2025-01-01T00:00:00Z",
@@ -309,6 +311,15 @@ describe("InsurancePolicyDetail — cost section", () => {
     expect(screen.getByTestId("insurance-annual-premium")).toHaveTextContent("$1,344/yr");
   });
 
+  it("breaks out fees and the annual total beside the premium", () => {
+    // What the cover is priced at and what the policy costs to hold are two
+    // different questions, and showing only one of them answers half while
+    // looking like it answered both.
+    renderPage();
+    expect(screen.getByTestId("insurance-fees-and-taxes")).toHaveTextContent("$300");
+    expect(screen.getByTestId("insurance-annual-total")).toHaveTextContent("$1,644/yr");
+  });
+
   it("formats the deductible from cents", () => {
     renderPage();
     expect(screen.getByTestId("insurance-deductible")).toHaveTextContent("$2,500");
@@ -329,11 +340,15 @@ describe("InsurancePolicyDetail — cost section", () => {
       premium_frequency: null,
       deductible_cents: null,
       wind_hail_deductible_pct: null,
+      fees_and_taxes_cents: null,
       annual_premium_cents: null,
+      annual_total_cents: null,
     };
     renderPage();
     expect(screen.getByTestId("insurance-premium")).toHaveTextContent("—");
     expect(screen.getByTestId("insurance-annual-premium")).toHaveTextContent("—");
+    expect(screen.getByTestId("insurance-fees-and-taxes")).toHaveTextContent("—");
+    expect(screen.getByTestId("insurance-annual-total")).toHaveTextContent("—");
     expect(screen.getByTestId("insurance-deductible")).toHaveTextContent("—");
     expect(screen.getByTestId("insurance-wind-hail-deductible")).toHaveTextContent("—");
   });

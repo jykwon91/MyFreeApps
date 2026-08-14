@@ -104,9 +104,22 @@ async function stubShell(page: Page): Promise<void> {
   await page.route("**/api/properties", (route) =>
     route.fulfill(json([{ id: PROPERTY_ID, name: "6734 Peerless St" }])),
   );
+  // Shell chrome, not this dialog: the Gmail reconnect banner and the
+  // attribution-review badge both fire on every authenticated page. Left
+  // unstubbed they reach a real backend, which rejects the planted token and
+  // logs the session out mid-test — the dialog never gets a chance to open.
+  await page.route("**/api/integrations", (route) => route.fulfill(json([])));
+  await page.route("**/api/transactions/attribution-review-queue*", (route) =>
+    route.fulfill(json({ items: [], total: 0, has_more: false })),
+  );
 }
 
 async function stubInsurancePage(page: Page): Promise<void> {
+  // Both spellings: the list request carries no query string, so a `?*`
+  // pattern alone silently misses it.
+  await page.route("**/api/insurance-policies", (route) =>
+    route.fulfill(json({ items: [], total: 0, has_more: false })),
+  );
   await page.route("**/api/insurance-policies?*", (route) =>
     route.fulfill(json({ items: [], total: 0, has_more: false })),
   );

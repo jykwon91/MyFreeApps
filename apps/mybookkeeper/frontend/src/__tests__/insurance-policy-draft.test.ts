@@ -29,6 +29,7 @@ const EMPTY_DRAFT: InsurancePolicyDraft = {
   coverage_amount_cents: null,
   premium_cents: null,
   premium_frequency: null,
+  fees_and_taxes_cents: null,
   deductible_cents: null,
   wind_hail_deductible_pct: null,
   notes: null,

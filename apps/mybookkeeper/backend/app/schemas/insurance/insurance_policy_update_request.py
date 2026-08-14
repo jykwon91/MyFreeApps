@@ -20,6 +20,7 @@ class InsurancePolicyUpdateRequest(BaseModel):
     coverage_amount_cents: int | None = Field(None, ge=0)
     premium_cents: int | None = Field(None, gt=0)
     premium_frequency: str | None = None
+    fees_and_taxes_cents: int | None = Field(None, ge=0)
     deductible_cents: int | None = Field(None, ge=0)
     wind_hail_deductible_pct: Decimal | None = Field(
         None, gt=0, le=100, decimal_places=2,

@@ -29,9 +29,11 @@ const POLICY: InsurancePolicyDetail = {
   coverage_amount_cents: 50000000,
   premium_cents: 11200,
   premium_frequency: "monthly",
+  fees_and_taxes_cents: 30000,
   deductible_cents: 250000,
   wind_hail_deductible_pct: "2.00",
   annual_premium_cents: 134400,
+  annual_total_cents: 164400,
   notes: "Annual renewal reminder set.",
   attachments: [],
   created_at: "2025-01-01T00:00:00Z",
@@ -74,6 +76,7 @@ describe("toPolicyPayload", () => {
       coverage_amount_cents: null,
       premium_cents: null,
       premium_frequency: null,
+      fees_and_taxes_cents: null,
       deductible_cents: null,
       wind_hail_deductible_pct: null,
       notes: null,
@@ -124,6 +127,34 @@ describe("toPolicyPayload", () => {
     expect(payload.premium_frequency).toBeNull();
   });
 
+  it("posts fees and taxes apart from the premium", () => {
+    // The real 6732 Peerless renewal. Typed as one $2,985.17 figure these
+    // become a premium 15% over what the coverage is actually priced at, and
+    // the overpaying comparison has no way to tell.
+    const payload = toPolicyPayload({
+      ...EMPTY_POLICY_FORM,
+      policyName: "Lloyd's Certificate TDP 3",
+      premiumDollars: "2591",
+      premiumFrequency: "annual",
+      feesAndTaxesDollars: "394.17",
+    });
+
+    expect(payload.premium_cents).toBe(259100);
+    expect(payload.fees_and_taxes_cents).toBe(39417);
+    expect(payload.premium_cents! + payload.fees_and_taxes_cents!).toBe(298517);
+  });
+
+  it("keeps zero fees, which is what an admitted carrier charges", () => {
+    // Distinct from a blank field: one says "none", the other "not recorded".
+    const payload = toPolicyPayload({
+      ...EMPTY_POLICY_FORM,
+      policyName: "Policy",
+      feesAndTaxesDollars: "0",
+    });
+
+    expect(payload.fees_and_taxes_cents).toBe(0);
+  });
+
   it("keeps a zero deductible, which is a real policy term", () => {
     const payload = toPolicyPayload({
       ...EMPTY_POLICY_FORM,
@@ -164,6 +195,7 @@ describe("policyToFormValues", () => {
       coverageDollars: "500000",
       premiumDollars: "112",
       premiumFrequency: "monthly",
+      feesAndTaxesDollars: "300",
       deductibleDollars: "2500",
       windHailPct: "2.00",
       notes: "Annual renewal reminder set.",
@@ -180,6 +212,7 @@ describe("policyToFormValues", () => {
       coverage_amount_cents: null,
       premium_cents: null,
       premium_frequency: null,
+      fees_and_taxes_cents: null,
       deductible_cents: null,
       wind_hail_deductible_pct: null,
       notes: null,

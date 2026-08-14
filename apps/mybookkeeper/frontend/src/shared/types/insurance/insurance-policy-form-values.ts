@@ -15,6 +15,8 @@ export interface InsurancePolicyFormValues {
   premiumDollars: string;
   /** "" until a premium is entered — the pair is required together. */
   premiumFrequency: string;
+  /** Fees, surcharges and taxes for the policy term — not per billing period. */
+  feesAndTaxesDollars: string;
   deductibleDollars: string;
   windHailPct: string;
   notes: string;

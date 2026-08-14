@@ -141,12 +141,30 @@ export default function InsurancePolicyDetailBody({
                 </dd>
               </div>
               <div>
-                <dt className="text-xs text-muted-foreground">Annualised</dt>
+                <dt className="text-xs text-muted-foreground">
+                  Annualised premium
+                </dt>
                 {/* The figure a comparison uses. Shown beside the billed amount
                     rather than instead of it so it stays reconcilable against
                     the declarations page. */}
                 <dd className="font-medium" data-testid="insurance-annual-premium">
                   {formatAnnualPremium(policy.annual_premium_cents)}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted-foreground">Fees &amp; taxes</dt>
+                <dd data-testid="insurance-fees-and-taxes">
+                  {formatPolicyMoney(policy.fees_and_taxes_cents)}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted-foreground">Annual total</dt>
+                {/* What actually leaves the account, as against what the cover
+                    is priced at. The two differ by every fee and state tax on
+                    the bill, so showing only one of them answers half the
+                    question and looks like it answered all of it. */}
+                <dd className="font-medium" data-testid="insurance-annual-total">
+                  {formatAnnualPremium(policy.annual_total_cents)}
                 </dd>
               </div>
               <div>

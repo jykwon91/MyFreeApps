@@ -54,7 +54,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 _TEXT_FIELDS = ("policy_name", "carrier", "policy_number", "notes")
-_INT_FIELDS = ("coverage_amount_cents", "deductible_cents")
+_INT_FIELDS = ("coverage_amount_cents", "deductible_cents", "fees_and_taxes_cents")
 _DATE_FIELDS = ("effective_date", "expiration_date")
 
 # Wind/hail is quoted to two places — "2%", "1.5%" — and the column is
@@ -68,6 +68,12 @@ _UNSUPPORTED_MESSAGE = (
 
 def _premium(raw: dict[str, Any]) -> tuple[int | None, str | None]:
     """The premium and its billing period, or nothing.
+
+    The premium alone — fees and taxes come back in their own field and are
+    coerced with the other integers. Nothing here reconciles the two against a
+    stated total: the model is asked to check that arithmetic and to say so in
+    its notes when it does not hold, because it is the only party that can see
+    which of the three figures the document actually printed.
 
     A zero premium is not a free policy, it is a failed read, so it is dropped
     rather than recorded — unlike a zero deductible, which is a real
@@ -111,6 +117,17 @@ def _warnings_for(fields: dict[str, Any]) -> list[str]:
             f"I found part of the premium but not {missing}. A policy can't be "
             "saved with only one of the two — the amount means nothing without "
             "the period it covers.",
+        )
+
+    # Fees are only meaningful next to the premium they sit on top of. On their
+    # own they would show on the form as the cost of the policy, which is the
+    # one reading of them that is never true.
+    fees = fields.get("fees_and_taxes_cents")
+    if fees is not None and premium is None:
+        warnings.append(
+            "I found fees and taxes on this document but couldn't read the "
+            "premium itself. Fees on their own aren't the cost of the policy — "
+            "add the premium before saving.",
         )
 
     if premium is not None and fields.get("coverage_amount_cents") is None:

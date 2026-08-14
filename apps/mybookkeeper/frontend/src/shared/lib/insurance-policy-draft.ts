@@ -50,6 +50,7 @@ function draftedFields(
     coverageDollars: centsToDollarString(draft.coverage_amount_cents),
     premiumDollars: centsToDollarString(draft.premium_cents),
     premiumFrequency: asFrequency(draft.premium_frequency),
+    feesAndTaxesDollars: centsToDollarString(draft.fees_and_taxes_cents),
     deductibleDollars: centsToDollarString(draft.deductible_cents),
     windHailPct: pctToInputString(draft.wind_hail_deductible_pct),
   };

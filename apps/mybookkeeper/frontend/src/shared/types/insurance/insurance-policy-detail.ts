@@ -22,10 +22,17 @@ export interface InsurancePolicyDetail {
   coverage_amount_cents: number | null;
   premium_cents: number | null;
   premium_frequency: InsurancePremiumFrequency | null;
+  /** Fees, surcharges and taxes for the policy term, not per billing period. */
+  fees_and_taxes_cents: number | null;
   deductible_cents: number | null;
   wind_hail_deductible_pct: string | null;
-  /** Derived server-side from premium + frequency; never sent on write. */
+  /**
+   * Derived server-side from premium + frequency; never sent on write.
+   * The premium ALONE — this is the half comparable to a benchmark.
+   */
   annual_premium_cents: number | null;
+  /** A year of premium plus the term's fees and taxes — what is paid. */
+  annual_total_cents: number | null;
   notes: string | null;
   created_at: string;
   updated_at: string;

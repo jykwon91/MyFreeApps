@@ -184,6 +184,60 @@ class TestBuildDraftWarnings:
 
         assert any("percentage of dwelling coverage" in w for w in draft.warnings)
 
+    def test_fees_with_no_premium_are_flagged(self) -> None:
+        """On their own they read as the cost of the policy, which is never true."""
+        draft = _draft(fees_and_taxes_cents=39_417)
+
+        assert any("Fees on their own" in w for w in draft.warnings)
+
+
+class TestBuildDraftKeepsFeesApartFromThePremium:
+    """The real 6732 Peerless renewal: $2,591.00 premium, $394.17 of paperwork.
+
+    Read as one number these become $2,985.17 of "premium", which is then
+    measured against a county average premium and reports a fairly priced
+    policy as 15% over market.
+    """
+
+    def test_both_halves_survive_the_read(self) -> None:
+        draft = _draft(
+            premium_cents=259_100,
+            premium_frequency="annual",
+            fees_and_taxes_cents=39_417,
+            coverage_amount_cents=33_120_000,
+        )
+
+        assert draft.premium_cents == 259_100
+        assert draft.fees_and_taxes_cents == 39_417
+        assert draft.warnings == []
+
+    def test_a_document_stating_no_fees_reports_none_rather_than_zero(self) -> None:
+        """Nothing invents a split the document did not state."""
+        draft = _draft(
+            premium_cents=259_100,
+            premium_frequency="annual",
+            coverage_amount_cents=33_120_000,
+        )
+
+        assert draft.fees_and_taxes_cents is None
+
+    def test_zero_fees_is_kept_because_admitted_carriers_charge_none(self) -> None:
+        """Unlike a zero premium, which is a failed read rather than a product."""
+        draft = _draft(
+            premium_cents=259_100,
+            premium_frequency="annual",
+            fees_and_taxes_cents=0,
+            coverage_amount_cents=33_120_000,
+        )
+
+        assert draft.fees_and_taxes_cents == 0
+
+    def test_negative_fees_are_dropped(self) -> None:
+        """A negative fee is a misread; the column would refuse it anyway."""
+        draft = _draft(fees_and_taxes_cents=-100)
+
+        assert draft.fees_and_taxes_cents is None
+
 
 @pytest.mark.asyncio
 class TestExtractPolicyFromDocument:

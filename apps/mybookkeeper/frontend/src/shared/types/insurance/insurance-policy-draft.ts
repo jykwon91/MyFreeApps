@@ -26,6 +26,7 @@ export interface InsurancePolicyDraft {
   coverage_amount_cents: number | null;
   premium_cents: number | null;
   premium_frequency: string | null;
+  fees_and_taxes_cents: number | null;
   deductible_cents: number | null;
   wind_hail_deductible_pct: string | null;
 

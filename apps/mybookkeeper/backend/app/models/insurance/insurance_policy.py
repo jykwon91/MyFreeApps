@@ -96,11 +96,39 @@ class InsurancePolicy(Base):
         BigInteger, nullable=True,
     )
 
-    # What the policy costs, as billed. Meaningless without ``premium_frequency``
-    # — the CHECK below keeps the pair together — because carriers quote the same
-    # policy annually or monthly depending on the payment plan.
+    # The PREMIUM ONLY — the risk price the carrier charges, as billed, and not
+    # the total that leaves the operator's account. Meaningless without
+    # ``premium_frequency`` — the CHECK below keeps the pair together — because
+    # carriers quote the same policy annually or monthly depending on the
+    # payment plan.
+    #
+    # This is the half that is comparable: a benchmark, a competing quote and a
+    # TDI county average are all premiums. Folding fees and taxes in here would
+    # make every policy read ~15% over the market it is being measured against,
+    # which is the specific wrong answer ``fees_and_taxes_cents`` exists to
+    # prevent.
     premium_cents: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     premium_frequency: Mapped[str | None] = mapped_column(String(12), nullable=True)
+
+    # Everything else on the bill: policy fee, inspection fee, agent fee,
+    # surplus lines tax, stamping fee. Charged once for the POLICY TERM rather
+    # than per billing period — a monthly pay plan does not levy the state's
+    # surplus lines tax twelve times — so this is deliberately not paired with
+    # ``premium_frequency``.
+    #
+    # Separate from the premium because the two answer different questions and
+    # move independently: the premium is what the coverage costs and is what a
+    # comparison needs, while these are what the transaction actually is and are
+    # what reconciles against the bank. A Texas dwelling policy written through
+    # the surplus lines market carries both, and on the 2026 Peerless renewal
+    # they are $2,591.00 and $394.17 — a 15% gap that silently ruins either
+    # number if the two are stored as one.
+    #
+    # Zero is a real value: an admitted carrier commonly charges no fees at all,
+    # which is a different fact from "not recorded".
+    fees_and_taxes_cents: Mapped[int | None] = mapped_column(
+        BigInteger, nullable=True,
+    )
 
     # The all-other-perils deductible, in dollars. Zero is a real value here
     # (first-dollar coverage exists), so it is allowed where a zero premium is
@@ -154,10 +182,12 @@ class InsurancePolicy(Base):
             name="chk_insurance_policy_premium_pair",
         ),
         # A zero premium means "not recorded", which is what NULL is for; a zero
-        # deductible is a real product, so only the premium is barred from zero.
+        # deductible is a real product, and so is a zero fee bill — an admitted
+        # carrier charges none — so only the premium is barred from zero.
         CheckConstraint(
             "(premium_cents IS NULL OR premium_cents > 0)"
-            " AND (deductible_cents IS NULL OR deductible_cents >= 0)",
+            " AND (deductible_cents IS NULL OR deductible_cents >= 0)"
+            " AND (fees_and_taxes_cents IS NULL OR fees_and_taxes_cents >= 0)",
             name="chk_insurance_policy_amounts_valid",
         ),
         CheckConstraint(
