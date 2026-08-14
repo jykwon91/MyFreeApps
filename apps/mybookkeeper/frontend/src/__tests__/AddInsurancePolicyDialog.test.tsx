@@ -61,6 +61,7 @@ const DRAFT: InsurancePolicyDraft = {
   coverage_amount_cents: 40_000_000,
   premium_cents: 240_000,
   premium_frequency: "annual",
+  fees_and_taxes_cents: 39417,
   deductible_cents: 100_000,
   wind_hail_deductible_pct: "2.00",
   notes: null,
@@ -131,6 +132,7 @@ describe("AddInsurancePolicyDialog — reading a declarations page", () => {
       coverage_amount_cents: 40_000_000,
       premium_cents: 240_000,
       premium_frequency: "annual",
+  fees_and_taxes_cents: 39417,
     });
   });
 

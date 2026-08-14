@@ -21,6 +21,9 @@ class InsurancePolicyCreateRequest(BaseModel):
     coverage_amount_cents: int | None = Field(None, ge=0)
     premium_cents: int | None = Field(None, gt=0)
     premium_frequency: str | None = None
+    # ``ge=0`` rather than ``gt=0``: a policy with genuinely no fees is a real
+    # product, unlike a policy with no premium.
+    fees_and_taxes_cents: int | None = Field(None, ge=0)
     deductible_cents: int | None = Field(None, ge=0)
     wind_hail_deductible_pct: Decimal | None = Field(
         None, gt=0, le=100, decimal_places=2,

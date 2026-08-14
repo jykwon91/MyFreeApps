@@ -73,6 +73,7 @@ def _create_kwargs(**overrides):
         "coverage_amount_cents": None,
         "premium_cents": None,
         "premium_frequency": None,
+        "fees_and_taxes_cents": None,
         "deductible_cents": None,
         "wind_hail_deductible_pct": None,
         "notes": None,

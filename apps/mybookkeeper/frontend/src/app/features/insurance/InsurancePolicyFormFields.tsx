@@ -136,6 +136,27 @@ export default function InsurancePolicyFormFields({
           </FormField>
         </div>
 
+        {/* Kept out of the premium because only the premium is comparable to a
+            benchmark or a competing quote, while only the total reconciles
+            against the bank. A surplus-lines policy separates them by ~15%. */}
+        <FormField label="Fees & taxes (USD)">
+          <input
+            type="number"
+            value={values.feesAndTaxesDollars}
+            onChange={(e) => onChange("feesAndTaxesDollars", e.target.value)}
+            placeholder="e.g. 394.17"
+            min="0"
+            step="0.01"
+            className={INSURANCE_POLICY_INPUT_CLASS}
+            data-testid="insurance-fees-and-taxes-input"
+          />
+          <p className="mt-1 text-xs text-muted-foreground">
+            Policy, inspection and agent fees, surplus lines tax and stamping
+            fee — everything on the bill that isn&apos;t premium, for the whole
+            policy term. Leave blank if the carrier charges none.
+          </p>
+        </FormField>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <FormField label="Deductible (USD)">
             <input

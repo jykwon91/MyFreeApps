@@ -63,6 +63,7 @@ async def create_policy(
         coverage_amount_cents=payload.coverage_amount_cents,
         premium_cents=payload.premium_cents,
         premium_frequency=payload.premium_frequency,
+        fees_and_taxes_cents=payload.fees_and_taxes_cents,
         deductible_cents=payload.deductible_cents,
         wind_hail_deductible_pct=payload.wind_hail_deductible_pct,
         notes=payload.notes,

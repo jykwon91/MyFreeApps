@@ -6,7 +6,7 @@ run through it produces an expense, which is a real and useful thing, but it is
 not this: this answers "what am I insured for, for how much, until when".
 
 The instructions are written against Texas landlord / dwelling-fire policies
-because that is what the data is. Two things about that market shape the whole
+because that is what the data is. Three things about that market shape the whole
 contract:
 
 1. **The premium is only meaningful with its billing period.** Carriers quote
@@ -18,6 +18,14 @@ contract:
    dwelling it is the largest deductible on the page, and it is written as "2%
    of Coverage A". Recording it as a flat dollar figure invents a number that
    only holds at today's coverage amount.
+3. **The premium is not the total.** Much of this market is written through
+   non-admitted (surplus lines) carriers, whose bills add a policy fee, an
+   inspection fee, an agent fee, 4.85% Texas surplus lines tax and a 0.04%
+   stamping fee on top of the premium. On the 2026 Peerless renewal that is
+   $2,591.00 of premium against a $2,985.17 total. The two are reported
+   separately because they answer different questions — an earlier version of
+   this prompt said to report the total, and the resulting figure went straight
+   into a comparison against a county average premium.
 
 And the rule that outranks both: **a missing value is null, never an inference.**
 A plausible invented limit is worse than a blank, because a blank is visibly
@@ -43,6 +51,7 @@ Return ONLY a JSON object, no prose and no markdown fence, in this shape:
   "coverage_amount_cents": integer | null,
   "premium_cents": integer | null,
   "premium_frequency": "annual" | "semiannual" | "quarterly" | "monthly" | null,
+  "fees_and_taxes_cents": integer | null,
 
   "deductible_cents": integer | null,
   "wind_hail_deductible_pct": string | null,
@@ -75,16 +84,48 @@ Return ONLY a JSON object, no prose and no markdown fence, in this shape:
 
 # The premium and its period
 
-- `premium_cents` is what the policy costs for ONE billing period, and
-  `premium_frequency` is that period. Report both or neither.
-- A dec page usually states a "Total Policy Premium" for the policy term. If the
-  term runs 12 months, that is "annual"; a 6-month term is "semiannual".
-- If the document shows an installment / pay-plan schedule as well as a total,
-  report the TOTAL and its term — not the installment. Mention the pay plan in
-  `notes`.
+- `premium_cents` is the PREMIUM ONLY — the line the document labels "Premium",
+  the price of the coverage itself. It is NOT the "Total Policy Premium", and
+  NOT the sum of the bill.
+- `premium_frequency` is the period that premium covers. Report both or neither.
+- If the term runs 12 months, the frequency is "annual"; a 6-month term is
+  "semiannual".
+- If the document shows an installment / pay-plan schedule as well as a term
+  figure, report the TERM figure and its period — not the installment. Mention
+  the pay plan in `notes`.
 - If a premium appears with no period stated anywhere and no term to infer it
   from, return both fields null and describe what you saw in `notes`. Half a
   pair cannot be saved.
+
+# Fees and taxes are a separate number from the premium
+
+A policy bill is usually `premium + fees + taxes = total`. These are two
+different facts and each has its own field, because they answer different
+questions: the premium is what the coverage is priced at and is the only half
+comparable to another quote or a market average, while the total is what
+actually gets paid. Reporting the total as the premium overstates the price of
+the coverage — on a Texas surplus lines policy by around 15%.
+
+- `fees_and_taxes_cents` is EVERYTHING on the bill that is not premium, added
+  together into one integer: policy fee, inspection fee, agent or broker fee,
+  service fee, surplus lines tax, stamping fee, state or municipal surcharges,
+  MGA fee, installment fees.
+- Itemise the individual charges in `notes` so the operator can see the makeup;
+  the field itself is their sum.
+- Check your arithmetic against the document: `premium + fees_and_taxes` must
+  equal the stated total. If it does not, you have misread one of them — say so
+  in `notes` and set `confidence` no higher than "medium".
+- If the document states only ONE premium figure and no fees or taxes at all,
+  put it in `premium_cents` and set `fees_and_taxes_cents` to null. Do not
+  invent a split. Admitted carriers commonly charge no fees, so a single figure
+  is a normal document and not a failed read.
+- If the document states only a TOTAL and itemises no premium — a renewal
+  notice often does — put the total in `premium_cents`, leave
+  `fees_and_taxes_cents` null, and say in `notes` that the figure is a total
+  which may include fees. A wrong split invented here is worse than an honest
+  one, because nothing downstream can tell it was a guess.
+- `fees_and_taxes_cents` is for the POLICY TERM, not per installment. A monthly
+  pay plan does not levy the state's surplus lines tax twelve times.
 
 # Coverage and deductibles
 
@@ -141,4 +182,8 @@ One plain sentence per real term you found that has no field above. Examples:
 "named storm deductible is a flat $5,000", "roof settlement is actual cash value
 rather than replacement cost", "policy is written on a 6-month term with 4
 installments". Return an empty list if everything the document stated fit.
+
+Do NOT list the individual fees and taxes here — they have a field now, and
+listing them as unrepresented would tell the operator they were dropped when
+they were recorded. Their itemisation belongs in `notes`.
 """

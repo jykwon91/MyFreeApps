@@ -58,9 +58,11 @@ const POLICY_A: InsurancePolicySummary = {
   coverage_amount_cents: 50000000,
   premium_cents: 11200,
   premium_frequency: "monthly",
+  fees_and_taxes_cents: 30000,
   deductible_cents: 250000,
   wind_hail_deductible_pct: "2.00",
   annual_premium_cents: 134400,
+  annual_total_cents: 164400,
   created_at: "2025-01-01T00:00:00Z",
   updated_at: "2025-01-01T00:00:00Z",
 };
@@ -76,9 +78,11 @@ const POLICY_B: InsurancePolicySummary = {
   coverage_amount_cents: null,
   premium_cents: null,
   premium_frequency: null,
+  fees_and_taxes_cents: null,
   deductible_cents: null,
   wind_hail_deductible_pct: null,
   annual_premium_cents: null,
+  annual_total_cents: null,
   created_at: "2024-06-01T00:00:00Z",
   updated_at: "2024-06-01T00:00:00Z",
 };

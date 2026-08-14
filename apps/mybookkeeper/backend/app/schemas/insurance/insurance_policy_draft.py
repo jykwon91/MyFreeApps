@@ -38,6 +38,7 @@ class InsurancePolicyDraft(BaseModel):
     coverage_amount_cents: int | None = None
     premium_cents: int | None = None
     premium_frequency: str | None = None
+    fees_and_taxes_cents: int | None = None
 
     deductible_cents: int | None = None
     wind_hail_deductible_pct: Decimal | None = None
