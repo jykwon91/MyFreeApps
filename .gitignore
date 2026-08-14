@@ -89,3 +89,8 @@ apps/*/backend/scripts/*-spans/_raw/*.output
 apps/*/backend/scripts/*-spans/_raw/*_passed.json
 apps/*/backend/scripts/*-spans/_raw/exported.json
 apps/*/backend/scripts/*-spans/_raw/*_args*.json
+# Raw localize/gate output. Large (100k+ lines of localizer prose) and derived —
+# the tracked <map>.json pack is the artifact. Keep a copy OUTSIDE the repo if you
+# may need to rebuild a pack after a zone-table fix; regenerating it means re-running
+# the whole localize workflow.
+apps/*/backend/scripts/*-spans/_raw/*_localize_raw.json
