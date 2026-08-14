@@ -616,3 +616,75 @@ class TestTotpLoginAccountLockout:
         assert len(rows) >= 1, (
             "LOGIN_BLOCKED_LOCKED event must be emitted when TOTP login is blocked by lockout"
         )
+
+
+# ---------------------------------------------------------------------------
+# Malformed bodies on /auth/totp/login (prod 500 found 2026-08-14)
+# ---------------------------------------------------------------------------
+
+class TestTotpLoginMalformedBody:
+    """A malformed login body must be a 422, never a 500.
+
+    The lockout dependency runs before FastAPI validates ``TotpLoginRequest``,
+    so it is the first code to touch the raw body. It used to call
+    ``request.json()`` and index the result unguarded, which meant anything
+    that is not a JSON object — an empty body, a truncated upload, a bare
+    array — raised out of the dependency and became a 500 with an unhandled
+    exception attached. Production returned 500 for an empty POST to the main
+    login route, which is both the wrong status and pure Sentry noise.
+
+    None of these inputs names an account, so there is nothing for lockout to
+    check; validation is the route's job and it answers 422.
+    """
+
+    @pytest_asyncio.fixture(autouse=True)
+    async def _bypass_ip_limits(self):
+        """Only the lockout dependency is under test here."""
+        from app.core.rate_limit import check_login_rate_limit, check_totp_rate_limit
+
+        app.dependency_overrides[check_login_rate_limit] = lambda: None
+        app.dependency_overrides[check_totp_rate_limit] = lambda: None
+        yield
+        app.dependency_overrides.clear()
+
+    async def _post(self, **kwargs) -> int:
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post("/auth/totp/login", **kwargs)
+        return resp.status_code
+
+    @pytest.mark.asyncio
+    async def test_empty_body_is_422(self) -> None:
+        assert await self._post() == 422
+
+    @pytest.mark.asyncio
+    async def test_empty_json_object_is_422(self) -> None:
+        assert await self._post(json={}) == 422
+
+    @pytest.mark.asyncio
+    async def test_unparseable_body_is_422(self) -> None:
+        assert await self._post(
+            content=b"{not json at all",
+            headers={"Content-Type": "application/json"},
+        ) == 422
+
+    @pytest.mark.asyncio
+    async def test_json_array_body_is_422(self) -> None:
+        """Valid JSON, but ``.get`` does not exist on a list."""
+        assert await self._post(json=["email", "password"]) == 422
+
+    @pytest.mark.asyncio
+    async def test_json_scalar_body_is_422(self) -> None:
+        assert await self._post(json="just-a-string") == 422
+
+    @pytest.mark.asyncio
+    async def test_non_string_email_is_422(self) -> None:
+        """Well-formed JSON object, wrong type — must not reach the user lookup."""
+        assert await self._post(json={"email": 7, "password": "x"}) == 422
+
+    @pytest.mark.asyncio
+    async def test_well_formed_body_still_reaches_the_route(self) -> None:
+        """The guard must not swallow real logins — unknown account still 400s."""
+        assert await self._post(
+            json={"email": "nobody@example.com", "password": "wrongpassword"},
+        ) == 400

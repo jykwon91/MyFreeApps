@@ -20,6 +20,7 @@ Existing call sites inside MBK (``app.main``, ``app.api.totp``, route
 gates, tests) keep their imports — every public name from before M6
 still resolves here.
 """
+import json
 from datetime import datetime, timezone
 
 from fastapi import Depends, HTTPException, Request
@@ -218,6 +219,30 @@ async def check_account_not_locked(
         )
 
 
+async def _login_email_from_body(request: Request) -> str | None:
+    """Read ``email`` out of a JSON login body, or ``None`` if there isn't one.
+
+    A dependency runs *before* FastAPI validates the route's body model, so it
+    sees whatever the client actually sent: a well-formed body, no body at all,
+    a truncated upload, a JSON scalar, or ``{"email": 7}``. Only the first of
+    those names an account, and none of the others is lockout-relevant — there
+    is nothing to look up, and the route's own validation is what owes the
+    caller a 422. Letting the parse raise here turns that 422 into a 500 and
+    files an unhandled exception for what is really a malformed request.
+
+    Reading the body is safe: Starlette caches it on the request, so the route
+    handler still binds its ``TotpLoginRequest`` from the same bytes.
+    """
+    try:
+        body = await request.json()
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return None
+    if not isinstance(body, dict):
+        return None
+    email = body.get("email")
+    return email if isinstance(email, str) and email else None
+
+
 async def check_totp_account_not_locked(
     request: Request,
     db: AsyncSession = Depends(get_db),
@@ -233,8 +258,7 @@ async def check_totp_account_not_locked(
     login endpoint.  The 429 body is intentionally identical to all other
     rate-limit / lockout responses — callers cannot infer which gate fired.
     """
-    body = await request.json()
-    email: str = body.get("email", "")
+    email = await _login_email_from_body(request)
     if not email:
         return
 
