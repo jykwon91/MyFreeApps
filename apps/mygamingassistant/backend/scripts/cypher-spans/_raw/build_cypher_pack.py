@@ -1,8 +1,8 @@
-"""Turn an mga-lineup-localize-multi run into a cypher spans pack.
+"""Turn an mga-lineup-localize-multi run into a spans pack.
 
 Usage:
     python build_cypher_pack.py <workflow-output.json> <map_slug> <out.json> [note]
-                                [--video <youtube_id>]
+                                [--video <youtube_id>] [--agent <slug>]
 
 Callouts that no table maps are a HARD FAILURE, listed by name. Silently
 defaulting an unmapped callout to a site is how a lineup ships under the wrong
@@ -20,8 +20,32 @@ import sys
 from collections import Counter
 
 DEFAULT_VIDEO = "UsfCu5uL3Qs"
-AUTHOR = "spawns"
-PLACED = {"trapwire", "spycam"}
+
+# Per-agent facts. The expensive, reusable asset in this file is the per-MAP
+# callout tables below -- they are map-keyed, not agent-keyed, so a second agent
+# on a map already covered reuses them for free. Only these three things
+# actually differ per agent, so they live here rather than in a forked copy of
+# the whole builder.
+#
+# `placed` decides the BEAT COUNT (3 vs 4). Getting it wrong either fabricates a
+# THROW that never happened or drops a real one, so it is checked against the
+# app fixture's `placement` column, not guessed from the ability's name.
+AGENTS = {
+    "cypher": {
+        "author": "spawns",
+        "placed": {"trapwire", "spycam"},
+        "short": {"spycam": "Cam", "trapwire": "Trip", "cyber-cage": "Cage"},
+    },
+    "killjoy": {
+        "author": "SC Valorant Guides",
+        # Both are PLACED. Riot's own text is "FIRE to deploy a bot" for the
+        # alarmbot -- it is deployed at a spot, not lobbed on an arc -- and the
+        # app fixture's `placement` column agrees. Only nanoswarm is thrown.
+        "placed": {"turret", "alarmbot"},
+        "short": {"turret": "Turret", "alarmbot": "Bot", "nanoswarm": "Nano"},
+    },
+}
+DEFAULT_AGENT = "cypher"
 
 # Fine in-game callout -> the map's coarse fixture zone slug.
 ZONES = {
@@ -179,7 +203,11 @@ ZONES = {
 }
 
 
-AB_SHORT = {"spycam": "Cam", "trapwire": "Trip", "cyber-cage": "Cage"}
+# Set from AGENTS[...] by main(); the cypher values are the historical default so
+# an existing cypher invocation with no --agent behaves exactly as before.
+AUTHOR = AGENTS[DEFAULT_AGENT]["author"]
+PLACED = AGENTS[DEFAULT_AGENT]["placed"]
+AB_SHORT = AGENTS[DEFAULT_AGENT]["short"]
 ZONE_LABEL = {
     "a-site": "A Site", "b-site": "B Site", "c-site": "C Site",
     "a-main": "A Main", "b-main": "B Main", "c-main": "C Main",
@@ -265,7 +293,8 @@ def zone(raw, table, unmapped):
 
 
 def main():
-    argv, video = [], DEFAULT_VIDEO
+    global AUTHOR, PLACED, AB_SHORT
+    argv, video, agent = [], DEFAULT_VIDEO, DEFAULT_AGENT
     rest = list(sys.argv[1:])
     while rest:
         a = rest.pop(0)
@@ -275,8 +304,20 @@ def main():
             video = rest.pop(0)
         elif a.startswith("--video="):
             video = a.split("=", 1)[1]
+        elif a == "--agent":
+            if not rest:
+                raise SystemExit("ABORT - --agent needs a value")
+            agent = rest.pop(0)
+        elif a.startswith("--agent="):
+            agent = a.split("=", 1)[1]
         else:
             argv.append(a)
+    if agent not in AGENTS:
+        raise SystemExit("ABORT - unknown --agent %r; known: %s"
+                         % (agent, ", ".join(sorted(AGENTS))))
+    AUTHOR = AGENTS[agent]["author"]
+    PLACED = AGENTS[agent]["placed"]
+    AB_SHORT = AGENTS[agent]["short"]
     if len(argv) < 3:
         raise SystemExit(__doc__)
     src, map_slug, out_path = argv[0], argv[1], argv[2]
