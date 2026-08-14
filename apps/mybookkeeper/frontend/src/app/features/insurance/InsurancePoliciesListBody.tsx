@@ -40,7 +40,7 @@ export default function InsurancePoliciesListBody({
         >
           {showExpiringSoon
             ? "No policies expiring within 30 days."
-            : "No policies on this listing yet — add one to track coverage and expiration."}
+            : "No policies yet — add one to track coverage and expiration."}
         </p>
       );
     case "list":
@@ -57,6 +57,14 @@ export default function InsurancePoliciesListBody({
                   >
                     {policy.policy_name}
                   </Link>
+                  {policy.property_name ? (
+                    <p
+                      className="text-xs text-muted-foreground mt-0.5"
+                      data-testid={`insurance-policy-property-${policy.id}`}
+                    >
+                      {policy.property_name}
+                    </p>
+                  ) : null}
                   {policy.carrier ? (
                     <p className="text-xs text-muted-foreground mt-0.5">{policy.carrier}</p>
                   ) : null}

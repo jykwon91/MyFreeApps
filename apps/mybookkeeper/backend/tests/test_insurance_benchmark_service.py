@@ -25,7 +25,7 @@ from app.core.insurance_benchmark_constants import (
     BENCHMARK_STATUS_NOT_COMPARABLE,
     BENCHMARK_STATUS_NO_BENCHMARK,
 )
-from app.models.listings.listing import Listing
+from app.models.properties.property import Property
 from app.models.organization.organization import Organization
 from app.models.user.user import User
 from app.repositories.insurance import insurance_benchmark_repo, insurance_policy_repo
@@ -49,23 +49,18 @@ def _make_fake_uow(session: AsyncSession):
     return _fake_uow
 
 
-async def _make_listing(
+async def _make_property(
     db: AsyncSession, org_id: uuid.UUID, user_id: uuid.UUID,
-) -> Listing:
-    listing = Listing(
+) -> Property:
+    prop = Property(
         id=uuid.uuid4(),
         organization_id=org_id,
         user_id=user_id,
-        property_id=uuid.uuid4(),
-        title="6732 Peerless St",
-        slug=f"peerless-{uuid.uuid4().hex[:6]}",
-        status="active",
-        room_type="private_room",
-        monthly_rate=1500.00,
+        name="6732 Peerless St",
     )
-    db.add(listing)
+    db.add(prop)
     await db.flush()
-    return listing
+    return prop
 
 
 async def _make_policy(
@@ -73,7 +68,7 @@ async def _make_policy(
     *,
     org_id: uuid.UUID,
     user_id: uuid.UUID,
-    listing_id: uuid.UUID,
+    property_id: uuid.UUID,
     policy_name: str = "Dwelling HO-3",
     premium_cents: int | None = 200_000,
     premium_frequency: str | None = "annual",
@@ -84,7 +79,7 @@ async def _make_policy(
         db,
         user_id=user_id,
         organization_id=org_id,
-        listing_id=listing_id,
+        property_id=property_id,
         policy_name=policy_name,
         premium_cents=premium_cents,
         premium_frequency=premium_frequency,
@@ -208,10 +203,10 @@ class TestGetPremiumComparison:
     async def test_flags_a_policy_priced_above_the_market(
         self, db: AsyncSession, test_user: User, test_org: Organization,
     ) -> None:
-        listing = await _make_listing(db, test_org.id, test_user.id)
+        prop = await _make_property(db, test_org.id, test_user.id)
         # $2,000/yr on $400,000 → 500¢ per $1,000 against a 300¢ market.
         await _make_policy(
-            db, org_id=test_org.id, user_id=test_user.id, listing_id=listing.id,
+            db, org_id=test_org.id, user_id=test_user.id, property_id=prop.id,
         )
         await _make_benchmark(db, org_id=test_org.id, user_id=test_user.id)
 
@@ -234,12 +229,12 @@ class TestGetPremiumComparison:
         self, db: AsyncSession, test_user: User, test_org: Organization,
     ) -> None:
         """At-or-below is the quiet case — nothing for the operator to do."""
-        listing = await _make_listing(db, test_org.id, test_user.id)
+        prop = await _make_property(db, test_org.id, test_user.id)
         await _make_policy(
             db,
             org_id=test_org.id,
             user_id=test_user.id,
-            listing_id=listing.id,
+            property_id=prop.id,
             premium_cents=110_000,
         )
         await _make_benchmark(db, org_id=test_org.id, user_id=test_user.id)
@@ -260,12 +255,12 @@ class TestGetPremiumComparison:
     ) -> None:
         """$167/mo is $2,004/yr — comparing the monthly figure raw would call
         the most expensive policy in the portfolio a bargain."""
-        listing = await _make_listing(db, test_org.id, test_user.id)
+        prop = await _make_property(db, test_org.id, test_user.id)
         await _make_policy(
             db,
             org_id=test_org.id,
             user_id=test_user.id,
-            listing_id=listing.id,
+            property_id=prop.id,
             premium_cents=16_700,
             premium_frequency="monthly",
         )
@@ -282,12 +277,12 @@ class TestGetPremiumComparison:
         self, db: AsyncSession, test_user: User, test_org: Organization,
     ) -> None:
         """A lapsed policy's price is history; flagging it would be noise."""
-        listing = await _make_listing(db, test_org.id, test_user.id)
+        prop = await _make_property(db, test_org.id, test_user.id)
         await _make_policy(
             db,
             org_id=test_org.id,
             user_id=test_user.id,
-            listing_id=listing.id,
+            property_id=prop.id,
             policy_name="Lapsed and expensive",
             premium_cents=400_000,
             expiration_date=TODAY - _dt.timedelta(days=1),
@@ -306,12 +301,12 @@ class TestGetPremiumComparison:
         self, db: AsyncSession, test_user: User, test_org: Organization,
     ) -> None:
         """An unknown end date is not evidence the policy lapsed."""
-        listing = await _make_listing(db, test_org.id, test_user.id)
+        prop = await _make_property(db, test_org.id, test_user.id)
         await _make_policy(
             db,
             org_id=test_org.id,
             user_id=test_user.id,
-            listing_id=listing.id,
+            property_id=prop.id,
             expiration_date=None,
         )
         await _make_benchmark(db, org_id=test_org.id, user_id=test_user.id)
@@ -327,9 +322,9 @@ class TestGetPremiumComparison:
         self, db: AsyncSession, test_user: User, test_org: Organization,
     ) -> None:
         """Silence would read as an all-clear the app has not earned."""
-        listing = await _make_listing(db, test_org.id, test_user.id)
+        prop = await _make_property(db, test_org.id, test_user.id)
         await _make_policy(
-            db, org_id=test_org.id, user_id=test_user.id, listing_id=listing.id,
+            db, org_id=test_org.id, user_id=test_user.id, property_id=prop.id,
         )
 
         with patch(_UOW_TARGET, _make_fake_uow(db)):
@@ -345,12 +340,12 @@ class TestGetPremiumComparison:
     async def test_policy_without_coverage_is_surfaced_as_not_comparable(
         self, db: AsyncSession, test_user: User, test_org: Organization,
     ) -> None:
-        listing = await _make_listing(db, test_org.id, test_user.id)
+        prop = await _make_property(db, test_org.id, test_user.id)
         await _make_policy(
             db,
             org_id=test_org.id,
             user_id=test_user.id,
-            listing_id=listing.id,
+            property_id=prop.id,
             coverage_amount_cents=None,
         )
         await _make_benchmark(db, org_id=test_org.id, user_id=test_user.id)
@@ -366,12 +361,12 @@ class TestGetPremiumComparison:
     async def test_widest_gap_reads_first(
         self, db: AsyncSession, test_user: User, test_org: Organization,
     ) -> None:
-        listing = await _make_listing(db, test_org.id, test_user.id)
+        prop = await _make_property(db, test_org.id, test_user.id)
         await _make_policy(
             db,
             org_id=test_org.id,
             user_id=test_user.id,
-            listing_id=listing.id,
+            property_id=prop.id,
             policy_name="Merely dear",
             premium_cents=180_000,
         )
@@ -379,7 +374,7 @@ class TestGetPremiumComparison:
             db,
             org_id=test_org.id,
             user_id=test_user.id,
-            listing_id=listing.id,
+            property_id=prop.id,
             policy_name="Worst offender",
             premium_cents=300_000,
         )
@@ -398,9 +393,9 @@ class TestGetPremiumComparison:
     async def test_stale_benchmark_is_flagged_on_the_payload(
         self, db: AsyncSession, test_user: User, test_org: Organization,
     ) -> None:
-        listing = await _make_listing(db, test_org.id, test_user.id)
+        prop = await _make_property(db, test_org.id, test_user.id)
         await _make_policy(
-            db, org_id=test_org.id, user_id=test_user.id, listing_id=listing.id,
+            db, org_id=test_org.id, user_id=test_user.id, property_id=prop.id,
         )
         await _make_benchmark(
             db,
@@ -420,9 +415,9 @@ class TestGetPremiumComparison:
     async def test_another_orgs_policies_are_not_measured(
         self, db: AsyncSession, test_user: User, test_org: Organization,
     ) -> None:
-        listing = await _make_listing(db, test_org.id, test_user.id)
+        prop = await _make_property(db, test_org.id, test_user.id)
         await _make_policy(
-            db, org_id=test_org.id, user_id=test_user.id, listing_id=listing.id,
+            db, org_id=test_org.id, user_id=test_user.id, property_id=prop.id,
         )
         await _make_benchmark(db, org_id=test_org.id, user_id=test_user.id)
 

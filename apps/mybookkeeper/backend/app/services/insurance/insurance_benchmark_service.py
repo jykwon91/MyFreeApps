@@ -28,6 +28,7 @@ from app.repositories.insurance import (
     insurance_benchmark_repo,
     insurance_policy_repo,
 )
+from app.repositories.properties import property_repo
 from app.schemas.insurance.insurance_benchmark_response import (
     InsuranceBenchmarkResponse,
 )
@@ -126,6 +127,7 @@ async def get_premium_comparison(
             limit=_COMPARISON_PAGE_SIZE,
             offset=0,
         )
+        names = await property_repo.get_name_map(db, organization_id)
 
     above: list[InsurancePolicyPremiumComparisonRow] = []
     not_compared: list[InsurancePolicyPremiumComparisonRow] = []
@@ -135,7 +137,9 @@ async def get_premium_comparison(
         if _is_expired(row.expiration_date, reference):
             continue
         considered += 1
-        summary = InsurancePolicySummary.model_validate(row)
+        summary = InsurancePolicySummary.model_validate(row).model_copy(
+            update={"property_name": names.get(row.property_id)},
+        )
         result = compare(
             annual_premium_cents(row.premium_cents, row.premium_frequency),
             row.coverage_amount_cents,

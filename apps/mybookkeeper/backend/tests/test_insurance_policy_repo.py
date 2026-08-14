@@ -16,7 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.organization.organization import Organization
 from app.models.organization.organization_member import OrganizationMember
 from app.models.user.user import User
-from app.models.listings.listing import Listing
+from app.models.properties.property import Property
 from app.repositories.insurance import (
     insurance_policy_attachment_repo,
     insurance_policy_repo,
@@ -27,22 +27,17 @@ from app.repositories.insurance import (
 # Helpers
 # ---------------------------------------------------------------------------
 
-async def _make_listing(db: AsyncSession, org_id: uuid.UUID, user_id: uuid.UUID | None = None) -> Listing:
-    """Create a minimal Listing row in the test database."""
-    listing = Listing(
+async def _make_property(db: AsyncSession, org_id: uuid.UUID, user_id: uuid.UUID | None = None) -> Property:
+    """Create a minimal Property row in the test database."""
+    prop = Property(
         id=uuid.uuid4(),
         organization_id=org_id,
-        user_id=user_id or uuid.uuid4(),  # FK not enforced in SQLite test env
-        property_id=uuid.uuid4(),  # FK not enforced in SQLite test env
-        title="Test Listing",
-        slug=f"test-listing-{uuid.uuid4().hex[:6]}",
-        status="active",
-        room_type="private_room",
-        monthly_rate=1500.00,
+        user_id=user_id or uuid.uuid4(),
+        name="Test Property",
     )
-    db.add(listing)
+    db.add(prop)
     await db.flush()
-    return listing
+    return prop
 
 
 # ---------------------------------------------------------------------------
@@ -52,12 +47,12 @@ async def _make_listing(db: AsyncSession, org_id: uuid.UUID, user_id: uuid.UUID 
 class TestInsurancePolicyRepo:
     @pytest.mark.asyncio
     async def test_create_and_get(self, db: AsyncSession, test_user: User, test_org: Organization) -> None:
-        listing = await _make_listing(db, test_org.id, test_user.id)
+        prop = await _make_property(db, test_org.id, test_user.id)
         policy = await insurance_policy_repo.create(
             db,
             user_id=test_user.id,
             organization_id=test_org.id,
-            listing_id=listing.id,
+            property_id=prop.id,
             policy_name="Landlord Insurance",
             carrier="State Farm",
             policy_number="POL-123456",
@@ -81,19 +76,19 @@ class TestInsurancePolicyRepo:
 
     @pytest.mark.asyncio
     async def test_list_for_org(self, db: AsyncSession, test_user: User, test_org: Organization) -> None:
-        listing = await _make_listing(db, test_org.id, test_user.id)
+        prop = await _make_property(db, test_org.id, test_user.id)
         await insurance_policy_repo.create(
             db,
             user_id=test_user.id,
             organization_id=test_org.id,
-            listing_id=listing.id,
+            property_id=prop.id,
             policy_name="Policy A",
         )
         await insurance_policy_repo.create(
             db,
             user_id=test_user.id,
             organization_id=test_org.id,
-            listing_id=listing.id,
+            property_id=prop.id,
             policy_name="Policy B",
         )
         await db.commit()
@@ -106,21 +101,21 @@ class TestInsurancePolicyRepo:
         assert len(policies) == 2
 
     @pytest.mark.asyncio
-    async def test_filter_by_listing_id(self, db: AsyncSession, test_user: User, test_org: Organization) -> None:
-        listing_a = await _make_listing(db, test_org.id, test_user.id)
-        listing_b = await _make_listing(db, test_org.id, test_user.id)
+    async def test_filter_by_property_id(self, db: AsyncSession, test_user: User, test_org: Organization) -> None:
+        property_a = await _make_property(db, test_org.id, test_user.id)
+        property_b = await _make_property(db, test_org.id, test_user.id)
         await insurance_policy_repo.create(
             db,
             user_id=test_user.id,
             organization_id=test_org.id,
-            listing_id=listing_a.id,
+            property_id=property_a.id,
             policy_name="Policy for A",
         )
         await insurance_policy_repo.create(
             db,
             user_id=test_user.id,
             organization_id=test_org.id,
-            listing_id=listing_b.id,
+            property_id=property_b.id,
             policy_name="Policy for B",
         )
         await db.commit()
@@ -129,19 +124,19 @@ class TestInsurancePolicyRepo:
             db,
             user_id=test_user.id,
             organization_id=test_org.id,
-            listing_id=listing_a.id,
+            property_id=property_a.id,
         )
         assert len(policies) == 1
         assert policies[0].policy_name == "Policy for A"
 
     @pytest.mark.asyncio
     async def test_cross_tenant_returns_none(self, db: AsyncSession, test_user: User, test_org: Organization) -> None:
-        listing = await _make_listing(db, test_org.id, test_user.id)
+        prop = await _make_property(db, test_org.id, test_user.id)
         policy = await insurance_policy_repo.create(
             db,
             user_id=test_user.id,
             organization_id=test_org.id,
-            listing_id=listing.id,
+            property_id=prop.id,
             policy_name="Test Policy",
         )
         await db.commit()
@@ -158,12 +153,12 @@ class TestInsurancePolicyRepo:
 
     @pytest.mark.asyncio
     async def test_update_policy_fields(self, db: AsyncSession, test_user: User, test_org: Organization) -> None:
-        listing = await _make_listing(db, test_org.id, test_user.id)
+        prop = await _make_property(db, test_org.id, test_user.id)
         policy = await insurance_policy_repo.create(
             db,
             user_id=test_user.id,
             organization_id=test_org.id,
-            listing_id=listing.id,
+            property_id=prop.id,
             policy_name="Original Name",
         )
         await db.commit()
@@ -181,12 +176,12 @@ class TestInsurancePolicyRepo:
 
     @pytest.mark.asyncio
     async def test_persists_cost_fields(self, db: AsyncSession, test_user: User, test_org: Organization) -> None:
-        listing = await _make_listing(db, test_org.id, test_user.id)
+        prop = await _make_property(db, test_org.id, test_user.id)
         policy = await insurance_policy_repo.create(
             db,
             user_id=test_user.id,
             organization_id=test_org.id,
-            listing_id=listing.id,
+            property_id=prop.id,
             policy_name="Landlord Insurance",
             premium_cents=11200,
             premium_frequency="monthly",
@@ -212,12 +207,12 @@ class TestInsurancePolicyRepo:
     async def test_cost_fields_default_to_none(self, db: AsyncSession, test_user: User, test_org: Organization) -> None:
         # A policy recorded before the cost fields existed reads as unpriced,
         # not as free.
-        listing = await _make_listing(db, test_org.id, test_user.id)
+        prop = await _make_property(db, test_org.id, test_user.id)
         policy = await insurance_policy_repo.create(
             db,
             user_id=test_user.id,
             organization_id=test_org.id,
-            listing_id=listing.id,
+            property_id=prop.id,
             policy_name="Coverage Only",
         )
         await db.commit()
@@ -229,12 +224,12 @@ class TestInsurancePolicyRepo:
 
     @pytest.mark.asyncio
     async def test_update_cost_fields(self, db: AsyncSession, test_user: User, test_org: Organization) -> None:
-        listing = await _make_listing(db, test_org.id, test_user.id)
+        prop = await _make_property(db, test_org.id, test_user.id)
         policy = await insurance_policy_repo.create(
             db,
             user_id=test_user.id,
             organization_id=test_org.id,
-            listing_id=listing.id,
+            property_id=prop.id,
             policy_name="Landlord Insurance",
             premium_cents=11200,
             premium_frequency="monthly",
@@ -255,12 +250,12 @@ class TestInsurancePolicyRepo:
 
     @pytest.mark.asyncio
     async def test_soft_delete(self, db: AsyncSession, test_user: User, test_org: Organization) -> None:
-        listing = await _make_listing(db, test_org.id, test_user.id)
+        prop = await _make_property(db, test_org.id, test_user.id)
         policy = await insurance_policy_repo.create(
             db,
             user_id=test_user.id,
             organization_id=test_org.id,
-            listing_id=listing.id,
+            property_id=prop.id,
             policy_name="Policy to Delete",
         )
         await db.commit()
@@ -295,12 +290,12 @@ class TestInsurancePolicyRepo:
 
     @pytest.mark.asyncio
     async def test_soft_delete_cross_tenant_no_effect(self, db: AsyncSession, test_user: User, test_org: Organization) -> None:
-        listing = await _make_listing(db, test_org.id, test_user.id)
+        prop = await _make_property(db, test_org.id, test_user.id)
         policy = await insurance_policy_repo.create(
             db,
             user_id=test_user.id,
             organization_id=test_org.id,
-            listing_id=listing.id,
+            property_id=prop.id,
             policy_name="Protected Policy",
         )
         await db.commit()
@@ -331,12 +326,12 @@ class TestInsurancePolicyRepo:
 class TestInsurancePolicyAttachmentRepo:
     @pytest.mark.asyncio
     async def test_create_and_list(self, db: AsyncSession, test_user: User, test_org: Organization) -> None:
-        listing = await _make_listing(db, test_org.id, test_user.id)
+        prop = await _make_property(db, test_org.id, test_user.id)
         policy = await insurance_policy_repo.create(
             db,
             user_id=test_user.id,
             organization_id=test_org.id,
-            listing_id=listing.id,
+            property_id=prop.id,
             policy_name="Test",
         )
         await db.flush()
@@ -363,12 +358,12 @@ class TestInsurancePolicyAttachmentRepo:
 
     @pytest.mark.asyncio
     async def test_idor_safe_delete_correct_policy(self, db: AsyncSession, test_user: User, test_org: Organization) -> None:
-        listing = await _make_listing(db, test_org.id, test_user.id)
+        prop = await _make_property(db, test_org.id, test_user.id)
         policy = await insurance_policy_repo.create(
             db,
             user_id=test_user.id,
             organization_id=test_org.id,
-            listing_id=listing.id,
+            property_id=prop.id,
             policy_name="Test",
         )
         await db.flush()
@@ -397,19 +392,19 @@ class TestInsurancePolicyAttachmentRepo:
 
     @pytest.mark.asyncio
     async def test_idor_safe_delete_wrong_policy_returns_none(self, db: AsyncSession, test_user: User, test_org: Organization) -> None:
-        listing = await _make_listing(db, test_org.id, test_user.id)
+        prop = await _make_property(db, test_org.id, test_user.id)
         policy_a = await insurance_policy_repo.create(
             db,
             user_id=test_user.id,
             organization_id=test_org.id,
-            listing_id=listing.id,
+            property_id=prop.id,
             policy_name="Policy A",
         )
         policy_b = await insurance_policy_repo.create(
             db,
             user_id=test_user.id,
             organization_id=test_org.id,
-            listing_id=listing.id,
+            property_id=prop.id,
             policy_name="Policy B",
         )
         await db.flush()

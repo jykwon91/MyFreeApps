@@ -49,7 +49,8 @@ vi.mock("@/shared/lib/toast-store", () => ({
 
 const POLICY_A: InsurancePolicySummary = {
   id: "pol-a",
-  listing_id: "listing-1",
+  property_id: "property-1",
+  property_name: "6734 Peerless St",
   policy_name: "Landlord Insurance",
   carrier: "State Farm",
   effective_date: "2025-01-01",
@@ -66,7 +67,8 @@ const POLICY_A: InsurancePolicySummary = {
 
 const POLICY_B: InsurancePolicySummary = {
   id: "pol-b",
-  listing_id: "listing-2",
+  property_id: "property-2",
+  property_name: "6738 Peerless St",
   policy_name: "Short-Term Rental Coverage",
   carrier: "Allstate",
   effective_date: "2024-06-01",
@@ -155,7 +157,7 @@ describe("InsurancePolicies page — empty state", () => {
   it("renders the generic empty message when no filter is active", () => {
     renderPage();
     expect(screen.getByTestId("insurance-policies-empty")).toBeInTheDocument();
-    expect(screen.getByText(/no policies on this listing yet/i)).toBeInTheDocument();
+    expect(screen.getByText(/no policies yet/i)).toBeInTheDocument();
   });
 });
 

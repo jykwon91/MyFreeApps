@@ -1,19 +1,22 @@
 import { useState } from "react";
 import { addDays, format } from "date-fns";
+import { Button } from "@platform/ui";
 import { useGetInsurancePoliciesQuery } from "@/shared/store/insurancePoliciesApi";
 import SectionHeader from "@/shared/components/ui/SectionHeader";
 import AlertBox from "@/shared/components/ui/AlertBox";
 import { useInsurancePoliciesListMode } from "@/app/features/insurance/useInsurancePoliciesListMode";
+import AddInsurancePolicyDialog from "@/app/features/insurance/AddInsurancePolicyDialog";
 import InsuranceBenchmarkDialog from "@/app/features/insurance/InsuranceBenchmarkDialog";
 import InsuranceBenchmarkSummary from "@/app/features/insurance/InsuranceBenchmarkSummary";
 import InsurancePoliciesListBody from "@/app/features/insurance/InsurancePoliciesListBody";
 
 /**
- * All-policies view: lists insurance policies across all listings.
+ * All-policies view: lists insurance policies across all properties.
  * Includes an "expiring soon" toggle (within 30 days).
  */
 export default function InsurancePolicies() {
   const [showExpiringSoon, setShowExpiringSoon] = useState(false);
+  const [showAddDialog, setShowAddDialog] = useState(false);
   const [showBenchmarkDialog, setShowBenchmarkDialog] = useState(false);
 
   const expiringBefore = showExpiringSoon
@@ -31,7 +34,18 @@ export default function InsurancePolicies() {
     <main className="p-4 sm:p-8 space-y-6 max-w-3xl">
       <SectionHeader
         title="Insurance"
-        subtitle="Track coverage and expiration across all listings."
+        subtitle="Track coverage and expiration across all properties."
+        actions={
+          <Button
+            type="button"
+            variant="primary"
+            size="md"
+            onClick={() => setShowAddDialog(true)}
+            data-testid="add-insurance-policy-button"
+          >
+            Add policy
+          </Button>
+        }
       />
 
       {isError ? (
@@ -68,6 +82,10 @@ export default function InsurancePolicies() {
         policies={policies}
         showExpiringSoon={showExpiringSoon}
       />
+
+      {showAddDialog ? (
+        <AddInsurancePolicyDialog onClose={() => setShowAddDialog(false)} />
+      ) : null}
 
       {showBenchmarkDialog ? (
         <InsuranceBenchmarkDialog onClose={() => setShowBenchmarkDialog(false)} />

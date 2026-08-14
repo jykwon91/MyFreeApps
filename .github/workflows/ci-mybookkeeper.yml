@@ -184,7 +184,8 @@ jobs:
             e2e/caddy-headers-blob-iframe.spec.ts \
             e2e/welcome-manuals-layout-mock.spec.ts \
             e2e/utility-better-plans.spec.ts \
-            e2e/utility-plan-document-upload.spec.ts
+            e2e/utility-plan-document-upload.spec.ts \
+            e2e/insurance-policy-document-upload.spec.ts
 
       - name: Upload Playwright report on failure
         if: failure()

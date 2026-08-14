@@ -1,30 +1,33 @@
 import { useState } from "react";
 import { Button, LoadingButton } from "@platform/ui";
+import FormField from "@/shared/components/ui/FormField";
 import { applyDraftToForm } from "@/shared/lib/insurance-policy-draft";
 import { EMPTY_POLICY_FORM, toPolicyPayload } from "@/shared/lib/insurance-policy-form";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import { useCreateInsurancePolicyMutation } from "@/shared/store/insurancePoliciesApi";
+import { useGetPropertiesQuery } from "@/shared/store/propertiesApi";
 import type { InsurancePolicyDraft } from "@/shared/types/insurance/insurance-policy-draft";
 import type { InsurancePolicyFormValues } from "@/shared/types/insurance/insurance-policy-form-values";
 import InsurancePolicyDialogShell from "./InsurancePolicyDialogShell";
 import InsurancePolicyDocumentReader from "./InsurancePolicyDocumentReader";
 import InsurancePolicyDraftNotices from "./InsurancePolicyDraftNotices";
 import InsurancePolicyFormFields from "./InsurancePolicyFormFields";
+import { INSURANCE_POLICY_INPUT_CLASS } from "./insurance-policy-input-class";
 
 export interface AddInsurancePolicyDialogProps {
-  listingId: string;
   onClose: () => void;
 }
 
 /**
- * Modal dialog for creating a new insurance policy on a listing.
+ * Modal dialog for recording an insurance policy against a property.
  */
 export default function AddInsurancePolicyDialog({
-  listingId,
   onClose,
 }: AddInsurancePolicyDialogProps) {
+  const { data: properties = [] } = useGetPropertiesQuery();
   const [createPolicy, { isLoading }] = useCreateInsurancePolicyMutation();
   const [values, setValues] = useState<InsurancePolicyFormValues>(EMPTY_POLICY_FORM);
+  const [propertyId, setPropertyId] = useState("");
   const [draft, setDraft] = useState<InsurancePolicyDraft | null>(null);
 
   function handleChange<K extends keyof InsurancePolicyFormValues>(
@@ -41,6 +44,10 @@ export default function AddInsurancePolicyDialog({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!propertyId) {
+      showError("Pick a property.");
+      return;
+    }
     if (!values.policyName.trim()) {
       showError("Policy name is required.");
       return;
@@ -48,7 +55,7 @@ export default function AddInsurancePolicyDialog({
 
     try {
       await createPolicy({
-        listing_id: listingId,
+        property_id: propertyId,
         ...toPolicyPayload(values),
         // Recorded only when the form was actually seeded from a document, so
         // the saved policy points back at what it was read from.
@@ -70,6 +77,23 @@ export default function AddInsurancePolicyDialog({
       <form onSubmit={(e) => void handleSubmit(e)} className="p-5 space-y-4">
         <InsurancePolicyDocumentReader onRead={handleRead} />
         {draft && <InsurancePolicyDraftNotices draft={draft} />}
+
+        <FormField label="Property" required>
+          <select
+            value={propertyId}
+            onChange={(e) => setPropertyId(e.target.value)}
+            className={INSURANCE_POLICY_INPUT_CLASS}
+            required
+            data-testid="insurance-policy-property-select"
+          >
+            <option value="">Select a property…</option>
+            {properties.map((property) => (
+              <option key={property.id} value={property.id}>
+                {property.name}
+              </option>
+            ))}
+          </select>
+        </FormField>
 
         <InsurancePolicyFormFields values={values} onChange={handleChange} />
 

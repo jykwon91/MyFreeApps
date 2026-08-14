@@ -12,7 +12,10 @@ from app.services.insurance.premium_math import annual_premium_cents
 
 class InsurancePolicySummary(BaseModel):
     id: uuid.UUID
-    listing_id: uuid.UUID
+    property_id: uuid.UUID
+    # Resolved by the service so the list can name the building without the
+    # client holding its own copy of the property table.
+    property_name: str | None = None
     policy_name: str
     carrier: str | None = None
     effective_date: _dt.date | None = None
