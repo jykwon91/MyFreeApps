@@ -5,9 +5,10 @@ import { createProperty, deleteProperty } from "./fixtures/seed-data";
  * Insurance premium capture — full-flow behavioural E2E.
  *
  * Drives the real journey: record a policy with its premium through the dialog
- * on the listing → the annualised figure appears in the all-policies list →
- * the detail page breaks out billed vs annualised vs deductibles → edit the
- * premium at renewal and watch every derived figure move with it.
+ * on the Insurance page, against the property it insures → the annualised
+ * figure appears in the all-policies list → the detail page breaks out billed
+ * vs annualised vs deductibles → edit the premium at renewal and watch every
+ * derived figure move with it.
  *
  * The premium is deliberately seeded as a MONTHLY amount. A monthly premium
  * shown or compared as if it were annual understates the yearly cost by 12x,
@@ -17,11 +18,6 @@ import { createProperty, deleteProperty } from "./fixtures/seed-data";
  * Verifies UI state AND backend state via the public API, and cleans up every
  * seeded row in `finally` per the project's "never leave test data" rule.
  */
-
-interface CreatedListing {
-  id: string;
-  slug: string;
-}
 
 interface InsurancePolicyRow {
   id: string;
@@ -35,28 +31,6 @@ interface InsurancePolicyRow {
   notes: string | null;
 }
 
-async function createListing(
-  api: APIRequestContext,
-  payload: { property_id: string; title: string; monthly_rate: string },
-): Promise<CreatedListing> {
-  const res = await api.post("/listings", {
-    data: {
-      room_type: "private_room",
-      status: "active",
-      private_bath: false,
-      parking_assigned: false,
-      furnished: false,
-      pets_on_premises: false,
-      ...payload,
-    },
-  });
-  if (!res.ok()) {
-    throw new Error(`createListing failed: ${res.status()} ${await res.text()}`);
-  }
-  const body = (await res.json()) as { id: string; slug: string };
-  return { id: body.id, slug: body.slug };
-}
-
 async function fetchPolicy(
   api: APIRequestContext,
   id: string,
@@ -68,8 +42,8 @@ async function fetchPolicy(
   return res.json();
 }
 
-async function waitForListingPage(page: Page, listingId: string): Promise<void> {
-  await page.goto(`/listings/${listingId}`);
+async function waitForInsurancePage(page: Page): Promise<void> {
+  await page.goto("/insurance-policies");
   await expect(page.getByTestId("add-insurance-policy-button")).toBeVisible({
     timeout: 15000,
   });
@@ -85,7 +59,6 @@ test.describe("Insurance premium capture", () => {
     const propertyName = `E2E Insurance Property ${runId}`;
     const policyName = `E2E Landlord Policy ${runId}`;
     let propertyId: string | null = null;
-    let listingId: string | null = null;
     let policyId: string | null = null;
 
     try {
@@ -94,18 +67,15 @@ test.describe("Insurance premium capture", () => {
         address: `${runId} Peerless St, Houston, TX 77021`,
       });
       propertyId = property.id;
-      const listing = await createListing(api, {
-        property_id: propertyId,
-        title: `E2E Insurance Listing ${runId}`,
-        monthly_rate: "1500.00",
-      });
-      listingId = listing.id;
 
       // 1) CREATE through the dialog, premium billed monthly.
-      await waitForListingPage(page, listingId);
+      await waitForInsurancePage(page);
       await page.getByTestId("add-insurance-policy-button").click();
       await expect(page.getByTestId("add-insurance-policy-dialog")).toBeVisible();
 
+      await page
+        .getByTestId("insurance-policy-property-select")
+        .selectOption(propertyId);
       await page.getByTestId("insurance-policy-name-input").fill(policyName);
       await page.getByTestId("insurance-carrier-input").fill("E2E Mutual");
       await page.getByTestId("insurance-policy-number-input").fill("POL-E2E-1");
@@ -123,14 +93,20 @@ test.describe("Insurance premium capture", () => {
       });
       await page.waitForLoadState("networkidle");
 
-      const listingRow = page.locator('[data-testid^="insurance-policy-link-"]', {
+      const row = page.locator('[data-testid^="insurance-policy-item-"]', {
         hasText: policyName,
       });
-      await expect(listingRow).toBeVisible({ timeout: 10000 });
-      const testId = await listingRow.getAttribute("data-testid");
-      policyId = testId?.replace("insurance-policy-link-", "") ?? null;
+      await expect(row).toBeVisible({ timeout: 10000 });
+      const testId = await row.getAttribute("data-testid");
+      policyId = testId?.replace("insurance-policy-item-", "") ?? null;
       expect(policyId).toBeTruthy();
       if (!policyId) throw new Error("Could not parse policy id from the row");
+
+      // The row names the building. Policy names alone cannot tell three
+      // near-identical houses apart, which is the whole point of the column.
+      await expect(
+        page.getByTestId(`insurance-policy-property-${policyId}`),
+      ).toHaveText(propertyName);
 
       // 2) The backend stored the amount as billed — unannualised — with the
       //    period beside it, and derived the yearly total itself.
@@ -208,7 +184,6 @@ test.describe("Insurance premium capture", () => {
       expect(repriced.deductible_cents).toBe(250000);
     } finally {
       if (policyId) await api.delete(`/insurance-policies/${policyId}`).catch(() => {});
-      if (listingId) await api.delete(`/listings/${listingId}`).catch(() => {});
       if (propertyId) await deleteProperty(api, propertyId);
     }
   });
@@ -223,22 +198,15 @@ test.describe("Insurance premium capture", () => {
     const propertyName = `E2E Unpriced Property ${runId}`;
     const policyName = `E2E Unpriced Policy ${runId}`;
     let propertyId: string | null = null;
-    let listingId: string | null = null;
     let policyId: string | null = null;
 
     try {
       const property = await createProperty(api, { name: propertyName });
       propertyId = property.id;
-      const listing = await createListing(api, {
-        property_id: propertyId,
-        title: `E2E Unpriced Listing ${runId}`,
-        monthly_rate: "1500.00",
-      });
-      listingId = listing.id;
 
       const created = await api.post("/insurance-policies", {
         data: {
-          listing_id: listingId,
+          property_id: propertyId,
           policy_name: policyName,
           carrier: "E2E Mutual",
           coverage_amount_cents: 50000000,
@@ -271,7 +239,6 @@ test.describe("Insurance premium capture", () => {
       );
     } finally {
       if (policyId) await api.delete(`/insurance-policies/${policyId}`).catch(() => {});
-      if (listingId) await api.delete(`/listings/${listingId}`).catch(() => {});
       if (propertyId) await deleteProperty(api, propertyId);
     }
   });
@@ -281,21 +248,14 @@ test.describe("Insurance premium capture", () => {
     // half-set pair rather than assuming one.
     const runId = Date.now();
     let propertyId: string | null = null;
-    let listingId: string | null = null;
 
     try {
       const property = await createProperty(api, { name: `E2E Pair Property ${runId}` });
       propertyId = property.id;
-      const listing = await createListing(api, {
-        property_id: propertyId,
-        title: `E2E Pair Listing ${runId}`,
-        monthly_rate: "1500.00",
-      });
-      listingId = listing.id;
 
       const amountOnly = await api.post("/insurance-policies", {
         data: {
-          listing_id: listingId,
+          property_id: propertyId,
           policy_name: `E2E Pair Policy ${runId}`,
           premium_cents: 11200,
         },
@@ -304,14 +264,13 @@ test.describe("Insurance premium capture", () => {
 
       const frequencyOnly = await api.post("/insurance-policies", {
         data: {
-          listing_id: listingId,
+          property_id: propertyId,
           policy_name: `E2E Pair Policy ${runId}`,
           premium_frequency: "monthly",
         },
       });
       expect(frequencyOnly.status()).toBe(422);
     } finally {
-      if (listingId) await api.delete(`/listings/${listingId}`).catch(() => {});
       if (propertyId) await deleteProperty(api, propertyId);
     }
   });
