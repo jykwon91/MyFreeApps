@@ -605,6 +605,10 @@
         "backend/app/services/insurance/",
         "backend/app/api/insurance_policies.py",
         "backend/app/api/insurance_benchmarks.py",
+        "backend/app/api/insurance_market.py",
+        "backend/app/core/tdi_rate_filings_constants.py",
+        "frontend/src/shared/lib/rate-filing-format.ts",
+        "frontend/src/shared/store/insuranceMarketApi.ts",
         "backend/app/core/insurance_enums.py",
         "backend/app/core/insurance_benchmark_constants.py",
         "backend/alembic/versions/insur260504_add_insurance_policy_tables.py",
@@ -639,6 +643,10 @@
         "test_insurance_benchmark_repo.py",
         "test_insurance_benchmark_service.py",
         "test_insurance_benchmarks_api.py",
+        "test_insurance_market_watch_service.py",
+        "test_insurance_market_api.py",
+        "test_insurance_carrier_filing_match.py",
+        "test_tdi_rate_filings_client.py",
         "test_document_draft_reader.py"
       ],
       "frontend_tests": [
@@ -655,6 +663,8 @@
         "InsurancePremiumComparisonCard.test.tsx",
         "InsuranceBenchmarkDialog.test.tsx",
         "InsuranceBenchmarkSummary.test.tsx",
+        "RateWatchSection.test.tsx",
+        "rate-filing-format.test.ts",
         "benchmark-format.test.ts",
         "Dashboard.test.tsx"
       ],
@@ -663,7 +673,8 @@
         "insurance-policy-detail-layout.spec.ts",
         "insurance-premium-benchmark.spec.ts",
         "insurance-premium-comparison-layout.spec.ts",
-        "insurance-policy-document-upload.spec.ts"
+        "insurance-policy-document-upload.spec.ts",
+        "insurance-rate-watch.spec.ts"
       ]
     },
     "utility_plans": {
