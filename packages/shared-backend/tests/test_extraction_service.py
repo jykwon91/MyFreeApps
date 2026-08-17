@@ -121,6 +121,97 @@ class TestExtractText:
         assert client.messages.create.await_args.kwargs["max_tokens"] == 2048
 
 
+class TestLocatingTheJson:
+    """Where in the response the payload is allowed to sit.
+
+    A production extraction was lost on 2026-08-17 because the model
+    reconciled a declarations page out loud — "I need to work through the
+    premium split carefully" and eight lines of arithmetic — before
+    answering. The call succeeded, the object was there, and it was thrown
+    away for starting at a character other than zero.
+    """
+
+    async def test_reads_json_that_follows_the_models_reasoning(self) -> None:
+        msg = _message(
+            "I need to work through the premium split carefully.\n\n"
+            "- Coverage A premium: $2,212\n"
+            "- Subtotal: $2,379\n"
+            "There is a $31 discrepancy, which I attribute to fees.\n\n"
+            '{"annual_premium": 2535, "confidence": "medium"}'
+        )
+        ctx, _ = _patched_client(msg)
+        with ctx:
+            resp = await _service().extract_text("s", "t")
+        assert resp.data == {"annual_premium": 2535, "confidence": "medium"}
+
+    async def test_reads_json_that_precedes_trailing_commentary(self) -> None:
+        msg = _message('{"vendor": "Acme"}\n\nLet me know if the fees look wrong.')
+        ctx, _ = _patched_client(msg)
+        with ctx:
+            resp = await _service().extract_text("s", "t")
+        assert resp.data == {"vendor": "Acme"}
+
+    async def test_returns_the_whole_object_not_a_nested_fragment(self) -> None:
+        # Every nested object is also a candidate start. Scanning left to
+        # right is what keeps the outer one winning.
+        msg = _message(
+            'Here is what I found:\n{"policy": {"carrier": "SafePoint"}, "premium": 2410}'
+        )
+        ctx, _ = _patched_client(msg)
+        with ctx:
+            resp = await _service().extract_text("s", "t")
+        assert resp.data == {"policy": {"carrier": "SafePoint"}, "premium": 2410}
+
+    async def test_a_brace_in_the_prose_does_not_derail_the_scan(self) -> None:
+        msg = _message('The template {name} was not filled in.\n{"ok": true}')
+        ctx, _ = _patched_client(msg)
+        with ctx:
+            resp = await _service().extract_text("s", "t")
+        assert resp.data == {"ok": True}
+
+    async def test_reads_a_top_level_array(self) -> None:
+        # Some prompts ask for a list of rows. The fence branch only ever
+        # accepted objects, so an array behind prose was unreachable.
+        msg = _message('Found two:\n[{"line": 1}, {"line": 2}]')
+        ctx, _ = _patched_client(msg)
+        with ctx:
+            resp = await _service().extract_text("s", "t")
+        assert resp.data == [{"line": 1}, {"line": 2}]
+
+    async def test_a_fenced_block_still_wins_over_stray_prose_braces(self) -> None:
+        msg = _message(
+            'Consider {a} and {b}.\n```json\n{"chosen": "fenced"}\n```\n{"later": true}'
+        )
+        ctx, _ = _patched_client(msg)
+        with ctx:
+            resp = await _service().extract_text("s", "t")
+        assert resp.data == {"chosen": "fenced"}
+
+    async def test_reads_a_fenced_array(self) -> None:
+        msg = _message('```json\n[1, 2, 3]\n```')
+        ctx, _ = _patched_client(msg)
+        with ctx:
+            resp = await _service().extract_text("s", "t")
+        assert resp.data == [1, 2, 3]
+
+    async def test_prose_with_no_json_at_all_still_raises(self) -> None:
+        # The fallback the caller depends on. A refusal or a clarifying
+        # question must not be dressed up as an extraction.
+        msg = _message("I could not read this document — the scan is blank.")
+        ctx, _ = _patched_client(msg)
+        with ctx:
+            with pytest.raises(ExtractionParseError):
+                await _service().extract_text("s", "t")
+
+    async def test_the_raised_error_quotes_the_whole_response(self) -> None:
+        msg = _message("No JSON here, only regrets.")
+        ctx, _ = _patched_client(msg)
+        with ctx:
+            with pytest.raises(ExtractionParseError) as exc:
+                await _service().extract_text("s", "t")
+        assert "line 1 column 1" in str(exc.value)
+
+
 class TestExtractDocument:
     async def test_pdf_uses_document_block(self) -> None:
         msg = _message("{}")
