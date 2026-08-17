@@ -72,22 +72,12 @@ export function applyDraftToForm(
   return { ...values, ...draftedFields(draft) };
 }
 
-/**
- * Terms the document stated that this form cannot currently hold.
+/*
+ * ``notes`` is deliberately absent from the fields above.
  *
- * Without this they would be read, returned, and silently dropped on the floor.
- * Rendered alongside the backend's own ``unrepresented`` list, which covers
- * coverages the *database* has no column for; this one covers terms the
- * database holds but this form does not yet fill.
- *
- * Down to ``notes`` alone. Every other field the reader can return has an
- * input, so the list is empty for most declarations pages — which is the point,
- * and the reason it stays: it is the seam that will catch the next column added
- * to the draft ahead of its input. Notes is deliberately last to be held: the
- * field is where the operator keeps their own record of the policy, and
- * overwriting it with a model's summary would cost them something they wrote.
+ * It is the one field the reader returns that the form must not fill: it is
+ * where the operator keeps their own record of the policy, and overwriting that
+ * with a model's summary would cost them something they wrote. It is not
+ * dropped either — ``DocumentDraftNotices`` renders it, unedited, as the
+ * reader's own account of the document.
  */
-export function draftFieldsTheFormCannotHold(draft: InsurancePolicyDraft): string[] {
-  if (draft.notes === null || draft.notes.trim() === "") return [];
-  return [`Notes: ${draft.notes.trim()}`];
-}

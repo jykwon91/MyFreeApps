@@ -1,5 +1,4 @@
 import DocumentDraftNotices from "@/app/features/documents/DocumentDraftNotices";
-import { draftFieldsTheFormCannotHold } from "@/shared/lib/utility-plan-draft";
 import type { UtilityPlanDraft } from "@/shared/types/utility/utility-plan-draft";
 
 export interface UtilityPlanDraftNoticesProps {
@@ -11,8 +10,7 @@ export default function UtilityPlanDraftNotices({ draft }: UtilityPlanDraftNotic
   return (
     <DocumentDraftNotices
       draft={draft}
-      unheld={draftFieldsTheFormCannotHold(draft)}
-      unrepresentedLabel="a plan record"
+      notes={draft.notes}
       testIdPrefix="utility-plan"
     />
   );

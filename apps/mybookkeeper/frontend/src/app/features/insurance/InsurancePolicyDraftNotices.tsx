@@ -1,5 +1,4 @@
 import DocumentDraftNotices from "@/app/features/documents/DocumentDraftNotices";
-import { draftFieldsTheFormCannotHold } from "@/shared/lib/insurance-policy-draft";
 import type { InsurancePolicyDraft } from "@/shared/types/insurance/insurance-policy-draft";
 
 export interface InsurancePolicyDraftNoticesProps {
@@ -13,8 +12,7 @@ export default function InsurancePolicyDraftNotices({
   return (
     <DocumentDraftNotices
       draft={draft}
-      unheld={draftFieldsTheFormCannotHold(draft)}
-      unrepresentedLabel="a policy record"
+      notes={draft.notes}
       testIdPrefix="insurance-policy"
     />
   );

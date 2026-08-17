@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  applyDraftToForm,
-  draftFieldsTheFormCannotHold,
-} from "@/shared/lib/utility-plan-draft";
+import { applyDraftToForm } from "@/shared/lib/utility-plan-draft";
 import { EMPTY_UTILITY_PLAN_FORM } from "@/shared/lib/utility-plan-form";
 import type { UtilityPlanDraft } from "@/shared/types/utility/utility-plan-draft";
 import type { UtilityPlanFormValues } from "@/shared/types/utility/utility-plan-form-values";
@@ -161,43 +158,5 @@ describe("applyDraftToForm", () => {
     expect(values.downloadMbps).toBe("1000");
     expect(values.uploadMbps).toBe("35");
     expect(values.dataCapGb).toBe("1200");
-  });
-});
-
-describe("draftFieldsTheFormCannotHold", () => {
-  it("lists what was read but has no input yet", () => {
-    expect(
-      draftFieldsTheFormCannotHold(draft({ notes: "Rate assumes autopay enrollment." })),
-    ).toEqual(["Notes: Rate assumes autopay enrollment."]);
-  });
-
-  it("says nothing when everything read fits the form", () => {
-    expect(draftFieldsTheFormCannotHold(draft({ provider_name: "Reliant" }))).toEqual([]);
-  });
-
-  /**
-   * These seven used to land here. Every one now has an input, so a document
-   * stating them fills the form instead of listing them as dropped — which is
-   * the whole point of the change, and the assertion that would catch a
-   * regression where an input is removed but the notice is not restored.
-   */
-  it("no longer reports the terms the form gained inputs for", () => {
-    expect(
-      draftFieldsTheFormCannotHold(
-        draft({
-          min_usage_fee_cents: 0,
-          min_usage_threshold_kwh: 1000,
-          post_promo_monthly_cents: 8999,
-          equipment_fee_monthly_cents: 1500,
-          download_mbps: 1000,
-          upload_mbps: 35,
-          data_cap_gb: 1200,
-        }),
-      ),
-    ).toEqual([]);
-  });
-
-  it("ignores whitespace-only notes", () => {
-    expect(draftFieldsTheFormCannotHold(draft({ notes: "   " }))).toEqual([]);
   });
 });
