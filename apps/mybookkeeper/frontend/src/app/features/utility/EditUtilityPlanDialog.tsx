@@ -1,7 +1,7 @@
 import AlertBox from "@/shared/components/ui/AlertBox";
 import { useGetUtilityPlanByIdQuery } from "@/shared/store/utilityPlansApi";
 import EditUtilityPlanForm from "./EditUtilityPlanForm";
-import UtilityPlanDialogShell from "./UtilityPlanDialogShell";
+import FormDialogShell from "@/shared/components/ui/FormDialogShell";
 import UtilityPlanFormSkeleton from "./UtilityPlanFormSkeleton";
 
 export interface EditUtilityPlanDialogProps {
@@ -24,10 +24,11 @@ export default function EditUtilityPlanDialog({
     useGetUtilityPlanByIdQuery(planId);
 
   return (
-    <UtilityPlanDialogShell
+    <FormDialogShell
       title="Edit utility plan"
       testId="edit-utility-plan-dialog"
       onClose={onClose}
+      width="wide"
     >
       {isLoading ? <UtilityPlanFormSkeleton /> : null}
 
@@ -49,6 +50,6 @@ export default function EditUtilityPlanDialog({
       {plan ? (
         <EditUtilityPlanForm plan={plan} onSaved={onClose} onCancel={onClose} />
       ) : null}
-    </UtilityPlanDialogShell>
+    </FormDialogShell>
   );
 }

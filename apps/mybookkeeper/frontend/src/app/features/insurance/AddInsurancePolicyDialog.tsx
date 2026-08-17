@@ -8,7 +8,7 @@ import { useCreateInsurancePolicyMutation } from "@/shared/store/insurancePolici
 import { useGetPropertiesQuery } from "@/shared/store/propertiesApi";
 import type { InsurancePolicyDraft } from "@/shared/types/insurance/insurance-policy-draft";
 import type { InsurancePolicyFormValues } from "@/shared/types/insurance/insurance-policy-form-values";
-import InsurancePolicyDialogShell from "./InsurancePolicyDialogShell";
+import FormDialogShell from "@/shared/components/ui/FormDialogShell";
 import InsurancePolicyDocumentReader from "./InsurancePolicyDocumentReader";
 import InsurancePolicyDraftNotices from "./InsurancePolicyDraftNotices";
 import InsurancePolicyFormFields from "./InsurancePolicyFormFields";
@@ -69,10 +69,11 @@ export default function AddInsurancePolicyDialog({
   }
 
   return (
-    <InsurancePolicyDialogShell
+    <FormDialogShell
       title="Add insurance policy"
       testId="add-insurance-policy-dialog"
       onClose={onClose}
+      width="wide"
     >
       <form onSubmit={(e) => void handleSubmit(e)} className="p-5 space-y-4">
         <InsurancePolicyDocumentReader onRead={handleRead} />
@@ -113,6 +114,6 @@ export default function AddInsurancePolicyDialog({
           </LoadingButton>
         </div>
       </form>
-    </InsurancePolicyDialogShell>
+    </FormDialogShell>
   );
 }

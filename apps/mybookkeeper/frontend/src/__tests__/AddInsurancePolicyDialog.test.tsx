@@ -11,6 +11,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import AddInsurancePolicyDialog from "@/app/features/insurance/AddInsurancePolicyDialog";
+import { FORM_DIALOG_WIDTH_CLASS } from "@/shared/components/ui/form-dialog-width-class";
 import { showError } from "@/shared/lib/toast-store";
 import type { InsurancePolicyDraft } from "@/shared/types/insurance/insurance-policy-draft";
 
@@ -225,5 +226,17 @@ describe("AddInsurancePolicyDialog — typing the policy in by hand", () => {
     expect(
       screen.getByTestId("insurance-policy-property-select"),
     ).toBeInvalid();
+  });
+
+  it("gives the form room for its paired fields", () => {
+    // The form pairs effective/expiration, premium/billed and the two
+    // deductibles two to a row. At the shell's default width those rows have
+    // nowhere to sit, and the dialog renders as a narrow ribbon in an
+    // otherwise empty viewport.
+    renderDialog();
+
+    const panel = screen.getByTestId("add-insurance-policy-dialog")
+      .firstElementChild;
+    expect(panel).toHaveClass(FORM_DIALOG_WIDTH_CLASS.wide);
   });
 });

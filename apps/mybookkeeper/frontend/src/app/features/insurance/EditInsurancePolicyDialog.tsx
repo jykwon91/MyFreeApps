@@ -5,7 +5,7 @@ import { showError, showSuccess } from "@/shared/lib/toast-store";
 import { useUpdateInsurancePolicyMutation } from "@/shared/store/insurancePoliciesApi";
 import type { InsurancePolicyDetail } from "@/shared/types/insurance/insurance-policy-detail";
 import type { InsurancePolicyFormValues } from "@/shared/types/insurance/insurance-policy-form-values";
-import InsurancePolicyDialogShell from "./InsurancePolicyDialogShell";
+import FormDialogShell from "@/shared/components/ui/FormDialogShell";
 import InsurancePolicyFormFields from "./InsurancePolicyFormFields";
 
 export interface EditInsurancePolicyDialogProps {
@@ -56,10 +56,11 @@ export default function EditInsurancePolicyDialog({
   }
 
   return (
-    <InsurancePolicyDialogShell
+    <FormDialogShell
       title="Edit insurance policy"
       testId="edit-insurance-policy-dialog"
       onClose={onClose}
+      width="wide"
     >
       <form onSubmit={(e) => void handleSubmit(e)} className="p-5 space-y-4">
         <InsurancePolicyFormFields values={values} onChange={handleChange} />
@@ -80,6 +81,6 @@ export default function EditInsurancePolicyDialog({
           </LoadingButton>
         </div>
       </form>
-    </InsurancePolicyDialogShell>
+    </FormDialogShell>
   );
 }
