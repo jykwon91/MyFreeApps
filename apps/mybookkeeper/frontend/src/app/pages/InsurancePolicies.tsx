@@ -9,6 +9,7 @@ import AddInsurancePolicyDialog from "@/app/features/insurance/AddInsurancePolic
 import InsuranceBenchmarkDialog from "@/app/features/insurance/InsuranceBenchmarkDialog";
 import InsuranceBenchmarkSummary from "@/app/features/insurance/InsuranceBenchmarkSummary";
 import InsurancePoliciesListBody from "@/app/features/insurance/InsurancePoliciesListBody";
+import RateWatchSection from "@/app/features/insurance/RateWatchSection";
 
 /**
  * All-policies view: lists insurance policies across all properties.
@@ -82,6 +83,10 @@ export default function InsurancePolicies() {
         policies={policies}
         showExpiringSoon={showExpiringSoon}
       />
+
+      {/* Below the policy list, mirroring the utility page: what you hold
+          first, then what the market is doing to it. */}
+      <RateWatchSection />
 
       {showAddDialog ? (
         <AddInsurancePolicyDialog onClose={() => setShowAddDialog(false)} />
