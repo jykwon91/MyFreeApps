@@ -9,7 +9,7 @@ import { showError, showSuccess } from "@/shared/lib/toast-store";
 import { useGetPropertiesQuery } from "@/shared/store/propertiesApi";
 import { useCreateUtilityPlanMutation } from "@/shared/store/utilityPlansApi";
 import type { UtilityPlanDraft } from "@/shared/types/utility/utility-plan-draft";
-import UtilityPlanDialogShell from "./UtilityPlanDialogShell";
+import FormDialogShell from "@/shared/components/ui/FormDialogShell";
 import UtilityPlanDocumentReader from "./UtilityPlanDocumentReader";
 import UtilityPlanDraftNotices from "./UtilityPlanDraftNotices";
 import UtilityPlanFormActions from "./UtilityPlanFormActions";
@@ -62,10 +62,11 @@ export default function AddUtilityPlanDialog({ onClose }: AddUtilityPlanDialogPr
   }
 
   return (
-    <UtilityPlanDialogShell
+    <FormDialogShell
       title="Add utility plan"
       testId="add-utility-plan-dialog"
       onClose={onClose}
+      width="wide"
     >
       <form onSubmit={(e) => void handleSubmit(e)} className="p-5 space-y-4">
         <UtilityPlanDocumentReader onRead={handleRead} />
@@ -96,6 +97,6 @@ export default function AddUtilityPlanDialog({ onClose }: AddUtilityPlanDialogPr
           onCancel={onClose}
         />
       </form>
-    </UtilityPlanDialogShell>
+    </FormDialogShell>
   );
 }

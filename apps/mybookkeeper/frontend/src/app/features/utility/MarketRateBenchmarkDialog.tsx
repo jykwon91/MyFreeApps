@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { UTILITY_PLAN_INPUT_CLASS } from "./utility-plan-input-class";
 import MarketRateBenchmarkForm from "./MarketRateBenchmarkForm";
-import UtilityPlanDialogShell from "./UtilityPlanDialogShell";
+import FormDialogShell from "@/shared/components/ui/FormDialogShell";
 import { useGetMarketRateBenchmarksQuery } from "@/shared/store/marketRateBenchmarksApi";
 import {
   UTILITY_SERVICE_TYPES,
@@ -30,7 +30,7 @@ export default function MarketRateBenchmarkDialog({
   const existing = benchmarks?.find((b) => b.service_type === serviceType);
 
   return (
-    <UtilityPlanDialogShell
+    <FormDialogShell
       title="Record the market rate"
       testId="market-rate-benchmark-dialog"
       onClose={onClose}
@@ -72,6 +72,6 @@ export default function MarketRateBenchmarkDialog({
           onCancel={onClose}
         />
       </div>
-    </UtilityPlanDialogShell>
+    </FormDialogShell>
   );
 }

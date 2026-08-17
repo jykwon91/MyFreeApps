@@ -1,5 +1,5 @@
 import InsuranceBenchmarkForm from "./InsuranceBenchmarkForm";
-import InsurancePolicyDialogShell from "./InsurancePolicyDialogShell";
+import FormDialogShell from "@/shared/components/ui/FormDialogShell";
 import { useGetInsuranceBenchmarkQuery } from "@/shared/store/insuranceBenchmarksApi";
 
 export interface InsuranceBenchmarkDialogProps {
@@ -21,7 +21,7 @@ export default function InsuranceBenchmarkDialog({
   const { data: benchmark, isLoading } = useGetInsuranceBenchmarkQuery();
 
   return (
-    <InsurancePolicyDialogShell
+    <FormDialogShell
       title="Record the market premium"
       testId="insurance-benchmark-dialog"
       onClose={onClose}
@@ -55,6 +55,6 @@ export default function InsuranceBenchmarkDialog({
           />
         )}
       </div>
-    </InsurancePolicyDialogShell>
+    </FormDialogShell>
   );
 }
