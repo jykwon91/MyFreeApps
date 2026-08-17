@@ -14,6 +14,11 @@ function changeColor(pct: number | null): BadgeColor {
 
 export interface RateWatchFilingRowProps {
   filing: InsuranceRateFiling;
+  /**
+   * Off inside a policy card, which has already named the carrier in its
+   * heading and again in its headline — a third printing is just repetition.
+   */
+  showCarrier?: boolean;
 }
 
 /**
@@ -23,15 +28,20 @@ export interface RateWatchFilingRowProps {
  * refused reads identically to one that got it unless the disposition is on
  * the row, and only one of those changes what the operator will pay.
  */
-export default function RateWatchFilingRow({ filing }: RateWatchFilingRowProps) {
+export default function RateWatchFilingRow({
+  filing,
+  showCarrier = true,
+}: RateWatchFilingRowProps) {
   return (
     <li
       className="flex flex-wrap items-baseline gap-x-3 gap-y-1 py-2 border-b border-border last:border-0"
       data-testid="rate-watch-filing-row"
     >
-      <span className="text-sm font-medium min-w-0 flex-1 truncate">
-        {filing.company_name}
-      </span>
+      {showCarrier ? (
+        // Never truncated. This list exists to be read to an agent, and half a
+        // carrier's name is not a name.
+        <span className="text-sm font-medium">{filing.company_name}</span>
+      ) : null}
 
       <Badge
         label={formatChangePct(filing.percent_change)}
@@ -43,7 +53,10 @@ export default function RateWatchFilingRow({ filing }: RateWatchFilingRowProps) 
         color={filing.is_in_force ? "gray" : "yellow"}
       />
 
-      <span className="text-xs text-muted-foreground w-full sm:w-auto">
+      {/* Always its own line. Left to wrap only when it does not fit, the
+          badges landed in a different place on every row and the list read as
+          ragged rather than as a column. */}
+      <span className="text-xs text-muted-foreground basis-full">
         {filing.product_name ?? "Unnamed program"} · renewals from{" "}
         {formatFilingDate(filing.effective_date_renewal)}
       </span>

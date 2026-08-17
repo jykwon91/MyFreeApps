@@ -62,7 +62,8 @@ def _response(**overrides) -> InsuranceMarketWatchResponse:
         "outlooks": [
             InsurancePolicyRateOutlook(
                 policy_id=POLICY_ID,
-                policy_name="Dwelling DP-3",
+                policy_name="Dwelling DP-3, 6738 Peerless St",
+                policy_label="Dwelling DP-3",
                 property_name="6738 Peerless St",
                 carrier="SafePoint",
                 expiration_date=_dt.date(2026, 9, 24),
@@ -72,8 +73,10 @@ def _response(**overrides) -> InsuranceMarketWatchResponse:
                 projected_premium_cents=267_751,
             ),
         ],
-        "market_filings": [filing],
+        "market_rising": [filing],
+        "market_flat": [],
         "has_any_increase": True,
+        "checked_policy_count": 1,
     }
     base.update(overrides)
     return InsuranceMarketWatchResponse(**base)
@@ -87,7 +90,10 @@ def test_returns_the_rate_watch(client):
     body = response.json()
     assert body["has_any_increase"] is True
     assert body["outlooks"][0]["projected_premium_cents"] == 267_751
-    assert body["market_filings"][0]["company_name"] == "SAFEPOINT INSURANCE COMPANY"
+    assert body["outlooks"][0]["policy_label"] == "Dwelling DP-3"
+    assert body["market_rising"][0]["company_name"] == "SAFEPOINT INSURANCE COMPANY"
+    assert body["market_flat"] == []
+    assert body["checked_policy_count"] == 1
     assert body["feed_unavailable_reason"] is None
 
 
@@ -103,8 +109,10 @@ def test_scopes_the_read_to_the_caller_organization(client):
 def test_a_feed_outage_still_returns_the_policies_with_a_reason(client):
     degraded = _response(
         outlooks=[],
-        market_filings=[],
+        market_rising=[],
+        market_flat=[],
         has_any_increase=False,
+        checked_policy_count=0,
         feed_unavailable_reason=REASON_FEED_DOWN,
     )
     with patch(f"{_SERVICE}.get_market_watch", AsyncMock(return_value=degraded)):

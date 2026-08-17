@@ -12,6 +12,7 @@ import {
   formatFilingDate,
   formatFilingStatus,
   formatOutlookHeadline,
+  formatPremiumDelta,
 } from "@/shared/lib/rate-filing-format";
 import type { InsuranceRateFiling } from "@/shared/types/insurance/insurance-rate-filing";
 
@@ -106,5 +107,26 @@ describe("formatOutlookHeadline", () => {
     expect(formatOutlookHeadline(11.1, null)).toBe(
       "This carrier filed an increase",
     );
+  });
+});
+
+describe("formatPremiumDelta", () => {
+  it("gives the yearly dollar movement, which is the operator's unit", () => {
+    expect(formatPremiumDelta(241_000, 267_751)).toBe("+$268/yr");
+  });
+
+  it("marks a decrease with a minus", () => {
+    expect(formatPremiumDelta(241_000, 220_000)).toBe("−$210/yr");
+  });
+
+  it("returns null when there is no movement to report", () => {
+    // Not "+$0/yr" — a carrier holding flat is said in words elsewhere, and a
+    // zero dollar figure reads as a rounding artefact.
+    expect(formatPremiumDelta(241_000, 241_000)).toBeNull();
+  });
+
+  it("returns null when either premium is unknown", () => {
+    expect(formatPremiumDelta(null, 267_751)).toBeNull();
+    expect(formatPremiumDelta(241_000, null)).toBeNull();
   });
 });

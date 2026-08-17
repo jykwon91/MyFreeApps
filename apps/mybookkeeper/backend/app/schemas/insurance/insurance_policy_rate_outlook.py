@@ -12,8 +12,17 @@ from app.schemas.insurance.insurance_rate_filing import InsuranceRateFiling
 class InsurancePolicyRateOutlook(BaseModel):
     policy_id: uuid.UUID
     policy_name: str
+    # ``policy_name`` with the property address removed, for a card heading that
+    # already names the property. A declarations-page reader fills the name with
+    # the whole descriptor off the page, address included.
+    policy_label: str
     property_name: str | None = None
     carrier: str | None = None
+    # False when this policy is written on a form the dwelling feed does not
+    # cover (a homeowners policy). The distinction matters: "we searched and
+    # found nothing" and "this was never in scope" are different statements, and
+    # the first cut made only the former.
+    is_checkable: bool = True
     expiration_date: _dt.date | None = None
     current_premium_cents: int | None = None
     # Filings matched to this policy's carrier that take effect on or before

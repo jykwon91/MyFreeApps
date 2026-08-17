@@ -608,6 +608,8 @@
         "backend/app/api/insurance_market.py",
         "backend/app/core/tdi_rate_filings_constants.py",
         "frontend/src/shared/lib/rate-filing-format.ts",
+        "frontend/src/shared/lib/rate-watch-verdict.ts",
+        "frontend/src/shared/lib/rate-watch-constants.ts",
         "frontend/src/shared/store/insuranceMarketApi.ts",
         "backend/app/core/insurance_enums.py",
         "backend/app/core/insurance_benchmark_constants.py",
@@ -646,6 +648,7 @@
         "test_insurance_market_watch_service.py",
         "test_insurance_market_api.py",
         "test_insurance_carrier_filing_match.py",
+        "test_insurance_policy_form.py",
         "test_tdi_rate_filings_client.py",
         "test_document_draft_reader.py"
       ],
@@ -665,6 +668,7 @@
         "InsuranceBenchmarkSummary.test.tsx",
         "RateWatchSection.test.tsx",
         "rate-filing-format.test.ts",
+        "rate-watch-verdict.test.ts",
         "benchmark-format.test.ts",
         "Dashboard.test.tsx"
       ],

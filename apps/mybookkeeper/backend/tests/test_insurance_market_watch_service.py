@@ -24,6 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.tdi_rate_filings_constants import (
     MAX_MARKET_FILINGS,
     REASON_FEED_DOWN,
+    REASON_NOT_DWELLING,
     REASON_NO_CARRIER,
     REASON_NO_FILINGS,
 )
@@ -289,7 +290,7 @@ class TestPolicyOutlook:
 
 
 class TestMarketView:
-    async def test_shows_one_row_per_carrier_newest_first(
+    async def test_shows_one_row_per_carrier(
         self, db: AsyncSession, test_user: User, test_org: Organization,
     ) -> None:
         """A carrier files several programs a year; repeats crowd out the rest."""
@@ -306,9 +307,68 @@ class TestMarketView:
 
         result = await _watch(db, test_org, test_user, filings)
 
-        assert [(f.company_name, f.filed_date) for f in result.market_filings] == [
-            ("FOREMOST LLOYDS OF TEXAS", _dt.date(2026, 7, 24)),
-            ("SAFEPOINT INSURANCE COMPANY", _dt.date(2026, 5, 28)),
+        assert [f.company_name for f in result.market_rising] == [
+            "SAFEPOINT INSURANCE COMPANY",
+        ]
+        assert [f.company_name for f in result.market_flat] == [
+            "FOREMOST LLOYDS OF TEXAS",
+        ]
+        # The newest of SafePoint's two, not the first one seen.
+        assert result.market_rising[0].filed_date == _dt.date(2026, 5, 28)
+
+    async def test_rising_reads_soonest_first(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        """Sorting on filed_date while displaying the effective date read as
+        shuffled — the list looked unordered to the operator reading it."""
+        filings = [
+            _filing(
+                company="LATE CARRIER",
+                filed=_dt.date(2026, 7, 1),
+                renewal=_dt.date(2026, 12, 1),
+            ),
+            _filing(
+                company="EARLY CARRIER",
+                filed=_dt.date(2026, 1, 5),
+                renewal=_dt.date(2026, 9, 1),
+            ),
+            _filing(company="UNDATED CARRIER", filed=_dt.date(2026, 6, 1), renewal=None),
+        ]
+
+        result = await _watch(db, test_org, test_user, filings)
+
+        assert [f.company_name for f in result.market_rising] == [
+            "EARLY CARRIER",
+            "LATE CARRIER",
+            # No date to plan around, so it sorts last rather than first.
+            "UNDATED CARRIER",
+        ]
+
+    async def test_flat_reads_most_recently_confirmed_first(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        """A different question, so a different order: the shortlist to call
+        leads with the carrier that confirmed no change most recently."""
+        filings = [
+            _filing(
+                company="OLD FLAT CARRIER",
+                pct=0.0,
+                filed=_dt.date(2026, 1, 5),
+                renewal=_dt.date(2026, 2, 1),
+            ),
+            _filing(
+                company="RECENT FLAT CARRIER",
+                pct=0.0,
+                filed=_dt.date(2026, 7, 1),
+                renewal=_dt.date(2026, 8, 1),
+            ),
+        ]
+
+        result = await _watch(db, test_org, test_user, filings)
+
+        assert [f.company_name for f in result.market_flat] == [
+            "RECENT FLAT CARRIER",
+            "OLD FLAT CARRIER",
         ]
 
     async def test_keeps_a_carrier_holding_rates_flat(
@@ -319,7 +379,19 @@ class TestMarketView:
             db, test_org, test_user, [_filing(company="FLAT CARRIER", pct=0.0)],
         )
 
-        assert [f.percent_change for f in result.market_filings] == [0.0]
+        assert [f.percent_change for f in result.market_flat] == [0.0]
+        assert result.market_rising == []
+
+    async def test_drops_a_filing_that_states_no_percentage(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        """No stated change is not a flat rate — it belongs in neither list."""
+        result = await _watch(
+            db, test_org, test_user, [_filing(company="SILENT CARRIER", pct=None)],
+        )
+
+        assert result.market_rising == []
+        assert result.market_flat == []
 
     async def test_keeps_pending_filings_flagged_as_proposed(
         self, db: AsyncSession, test_user: User, test_org: Organization,
@@ -328,9 +400,9 @@ class TestMarketView:
             db, test_org, test_user, [_filing(in_force=False, pending=True)],
         )
 
-        assert len(result.market_filings) == 1
-        assert result.market_filings[0].is_pending is True
-        assert result.market_filings[0].is_in_force is False
+        assert len(result.market_rising) == 1
+        assert result.market_rising[0].is_pending is True
+        assert result.market_rising[0].is_in_force is False
 
     async def test_drops_a_withdrawn_filing(
         self, db: AsyncSession, test_user: User, test_org: Organization,
@@ -340,7 +412,8 @@ class TestMarketView:
             db, test_org, test_user, [_filing(in_force=False, pending=False)],
         )
 
-        assert result.market_filings == []
+        assert result.market_rising == []
+        assert result.market_flat == []
 
     async def test_drops_a_stale_filing(
         self, db: AsyncSession, test_user: User, test_org: Organization,
@@ -349,19 +422,140 @@ class TestMarketView:
             db, test_org, test_user, [_filing(filed=_dt.date(2017, 5, 1))],
         )
 
-        assert result.market_filings == []
+        assert result.market_rising == []
 
-    async def test_caps_the_market_list(
+    async def test_drops_an_increase_that_already_took_effect(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        """Filed recently but effective a year ago: it is already inside what
+        the carrier quotes today, so it is not a warning to shop early."""
+        result = await _watch(
+            db,
+            test_org,
+            test_user,
+            [_filing(filed=_dt.date(2025, 9, 1), renewal=_dt.date(2025, 10, 1))],
+        )
+
+        assert result.market_rising == []
+
+    async def test_keeps_a_flat_filing_that_already_took_effect(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        """The bug the live feed exposed: applying the still-ahead rule to the
+        flat list dropped six of its seven names. A carrier that filed *no
+        change* said nothing that expires — it is still the shortlist to call.
+        """
+        result = await _watch(
+            db,
+            test_org,
+            test_user,
+            [
+                _filing(
+                    company="AMICA MUTUAL INSURANCE COMPANY",
+                    pct=0.0,
+                    filed=_dt.date(2025, 11, 3),
+                    renewal=_dt.date(2026, 1, 1),
+                ),
+            ],
+        )
+
+        assert [f.company_name for f in result.market_flat] == [
+            "AMICA MUTUAL INSURANCE COMPANY",
+        ]
+
+    async def test_drops_carriers_an_operator_cannot_buy_from(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        """The residual pool and the advisory bureau both file dwelling rates.
+        Listing them sends the operator to ask for something nobody sells."""
+        filings = [
+            _filing(company="TEXAS WINDSTORM INSURANCE ASSOCIATION"),
+            _filing(company="INSURANCE SERVICES OFFICE INC"),
+            _filing(company="ARMED FORCES INSURANCE EXCHANGE"),
+            _filing(company="SAFEPOINT INSURANCE COMPANY"),
+        ]
+
+        result = await _watch(db, test_org, test_user, filings)
+
+        assert [f.company_name for f in result.market_rising] == [
+            "SAFEPOINT INSURANCE COMPANY",
+        ]
+
+    async def test_caps_each_market_list(
         self, db: AsyncSession, test_user: User, test_org: Organization,
     ) -> None:
         filings = [
-            _filing(company=f"CARRIER {index} GROUP", filed=_dt.date(2026, 6, 1))
+            _filing(company=f"RISING {index} GROUP", filed=_dt.date(2026, 6, 1))
+            for index in range(MAX_MARKET_FILINGS + 10)
+        ] + [
+            _filing(company=f"FLAT {index} GROUP", pct=0.0, filed=_dt.date(2026, 6, 1))
             for index in range(MAX_MARKET_FILINGS + 10)
         ]
 
         result = await _watch(db, test_org, test_user, filings)
 
-        assert len(result.market_filings) == MAX_MARKET_FILINGS
+        assert len(result.market_rising) == MAX_MARKET_FILINGS
+        assert len(result.market_flat) == MAX_MARKET_FILINGS
+
+
+class TestOutOfScopePolicies:
+    async def test_a_homeowners_policy_is_not_a_matching_failure(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        """The dwelling feed could never have matched an HO-3. Saying "no
+        filings found under this carrier" asserts a search that never ran."""
+        prop = await _make_property(db, test_org.id, test_user.id, "6734 Peerless St")
+        await _make_policy(
+            db,
+            org_id=test_org.id,
+            user_id=test_user.id,
+            property_id=prop.id,
+            policy_name="Homeowners Policy (HO-3), 6734 Peerless St",
+        )
+
+        result = await _watch(db, test_org, test_user, [_filing()])
+
+        assert result.outlooks[0].is_checkable is False
+        assert result.outlooks[0].unavailable_reason == REASON_NOT_DWELLING
+        assert result.outlooks[0].filings == []
+        assert result.checked_policy_count == 0
+
+    async def test_the_card_heading_does_not_repeat_the_address(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        """A dec-page reader fills policy_name with the whole descriptor; the
+        heading already names the property."""
+        prop = await _make_property(db, test_org.id, test_user.id, "6738 Peerless St")
+        await _make_policy(
+            db,
+            org_id=test_org.id,
+            user_id=test_user.id,
+            property_id=prop.id,
+            policy_name="Dwelling Fire DP-3, 6738 Peerless St",
+        )
+
+        result = await _watch(db, test_org, test_user, [_filing()])
+
+        assert result.outlooks[0].policy_label == "Dwelling Fire DP-3"
+
+    async def test_counts_only_the_policies_actually_checked(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        """"No increases across 3 policies" must not include one never looked at."""
+        prop = await _make_property(db, test_org.id, test_user.id, "6738 Peerless St")
+        for name in ["Dwelling Fire DP-3", "Homeowners Policy HO-3"]:
+            await _make_policy(
+                db,
+                org_id=test_org.id,
+                user_id=test_user.id,
+                property_id=prop.id,
+                policy_name=name,
+            )
+
+        result = await _watch(db, test_org, test_user, [_filing()])
+
+        assert len(result.outlooks) == 2
+        assert result.checked_policy_count == 1
 
 
 class TestFeedOutage:
@@ -379,5 +573,26 @@ class TestFeedOutage:
         assert result.feed_unavailable_reason == REASON_FEED_DOWN
         assert result.outlooks[0].unavailable_reason == REASON_FEED_DOWN
         assert result.outlooks[0].projected_change_pct is None
-        assert result.market_filings == []
+        assert result.market_rising == []
+        assert result.market_flat == []
         assert result.has_any_increase is False
+        # Nothing was checked, so the frontend has nothing to give a verdict on.
+        assert result.checked_policy_count == 0
+
+    async def test_an_out_of_scope_policy_keeps_its_own_reason(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        """The feed being down changes nothing for a policy the dwelling line
+        would not have covered either way."""
+        prop = await _make_property(db, test_org.id, test_user.id, "6734 Peerless St")
+        await _make_policy(
+            db,
+            org_id=test_org.id,
+            user_id=test_user.id,
+            property_id=prop.id,
+            policy_name="Homeowners Policy (HO-3)",
+        )
+
+        result = await _watch(db, test_org, test_user, _failing_fetch())
+
+        assert result.outlooks[0].unavailable_reason == REASON_NOT_DWELLING

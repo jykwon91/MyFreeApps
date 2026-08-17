@@ -1,37 +1,43 @@
-import RateWatchFilingRow from "@/app/features/insurance/RateWatchFilingRow";
+import RateWatchMarketGroup from "@/app/features/insurance/RateWatchMarketGroup";
 import type { InsuranceRateFiling } from "@/shared/types/insurance/insurance-rate-filing";
 
 export interface RateWatchMarketListProps {
-  filings: InsuranceRateFiling[];
+  rising: InsuranceRateFiling[];
+  flat: InsuranceRateFiling[];
 }
 
 /**
- * The dwelling market: who last moved their landlord rates, and by how much.
+ * The dwelling market, as two answers rather than one table.
  *
- * This is the half the operator can act on. A dwelling policy is written
- * through an agent rather than bought online, so the useful thing to walk into
- * that conversation with is the list of carriers currently holding flat — and
- * the ones to avoid asking about.
+ * A dwelling policy is written through an agent rather than bought online, so
+ * what the operator needs from this is a short list of names to raise on a
+ * call — and a shorter list to skip. Pooling both into one percentage-ordered
+ * table made them do that sorting by eye.
  */
-export default function RateWatchMarketList({ filings }: RateWatchMarketListProps) {
-  if (filings.length === 0) return null;
+export default function RateWatchMarketList({
+  rising,
+  flat,
+}: RateWatchMarketListProps) {
+  if (rising.length === 0 && flat.length === 0) return null;
 
   return (
     <section
-      className="rounded-lg border border-border p-4"
+      className="rounded-lg border border-border p-4 space-y-4"
       data-testid="rate-watch-market-list"
     >
-      <h3 className="text-sm font-semibold">Recent landlord-policy filings</h3>
-      <p className="text-xs text-muted-foreground mt-0.5">
-        One row per carrier, most recent first. A carrier holding flat is worth
-        asking your agent about.
-      </p>
+      <RateWatchMarketGroup
+        title="Holding rates flat"
+        blurb="Worth asking your agent about — the last dwelling rate each of these filed was unchanged or lower."
+        filings={flat}
+        testId="rate-watch-market-flat"
+      />
 
-      <ul className="mt-3">
-        {filings.map((filing) => (
-          <RateWatchFilingRow key={filing.serff_id} filing={filing} />
-        ))}
-      </ul>
+      <RateWatchMarketGroup
+        title="Raising rates"
+        blurb="Filed an increase that has not reached renewals yet."
+        filings={rising}
+        testId="rate-watch-market-rising"
+      />
     </section>
   );
 }

@@ -4,8 +4,15 @@ import type { InsuranceRateFiling } from "@/shared/types/insurance/insurance-rat
 export interface InsurancePolicyRateOutlook {
   policy_id: string;
   policy_name: string;
+  /** `policy_name` without the property address, for a heading that has it. */
+  policy_label: string;
   property_name: string | null;
   carrier: string | null;
+  /**
+   * False for a policy on a form the dwelling feed does not cover. "Searched
+   * and found nothing" and "never in scope" are different statements.
+   */
+  is_checkable: boolean;
   expiration_date: string | null;
   /** Annualised, so a monthly policy is comparable to the projection. */
   current_premium_cents: number | null;
