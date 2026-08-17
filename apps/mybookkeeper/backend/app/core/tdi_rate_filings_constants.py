@@ -39,6 +39,27 @@ MAX_FILINGS_FETCHED = 1_000
 
 FETCH_TIMEOUT_SECONDS: float = 15.0
 
+# --- Surviving a hiccup -------------------------------------------------------
+#
+# On 2026-08-17 a single call resolved nothing — ``[Errno -2] Name or service
+# not known`` — and the whole section reported the feed unreachable. It was one
+# getaddrinfo miss: the same container had read the feed successfully earlier
+# the same day, and no other app on the host logged a resolution failure in the
+# fourteen days around it. One retry would have hidden it entirely.
+#
+# Bounded two ways, because the two failures that land here have opposite
+# costs. A DNS miss or refused connection comes back in milliseconds, so
+# retrying is nearly free; a genuine timeout has already spent
+# FETCH_TIMEOUT_SECONDS of the operator's wait, and a second one would double
+# it. The attempt count caps the cheap case, the wall-clock budget caps the
+# expensive one — whichever runs out first ends the fetch.
+
+MAX_FETCH_ATTEMPTS: int = 3
+
+RETRY_INITIAL_DELAY_SECONDS: float = 0.5
+
+FETCH_BUDGET_SECONDS: float = 20.0
+
 # Filings are republished as TDI processes them — daily at most. A short
 # in-process cache spares the host a request per page view.
 FILINGS_CACHE_TTL_SECONDS: int = 3_600

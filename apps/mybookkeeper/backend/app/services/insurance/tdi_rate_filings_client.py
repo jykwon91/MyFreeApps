@@ -11,6 +11,7 @@ the same sentence.
 """
 from __future__ import annotations
 
+import asyncio
 import datetime as _dt
 import logging
 import time
@@ -23,9 +24,12 @@ from app.core.tdi_rate_filings_constants import (
     CLOSED_TYPE_IN_FORCE,
     CLOSED_TYPES_ABANDONED,
     DWELLING_SUBTYPE,
+    FETCH_BUDGET_SECONDS,
     FETCH_TIMEOUT_SECONDS,
     FILINGS_CACHE_TTL_SECONDS,
+    MAX_FETCH_ATTEMPTS,
     MAX_FILINGS_FETCHED,
+    RETRY_INITIAL_DELAY_SECONDS,
     STATUS_CLOSED,
     STATUS_PENDING,
     TDI_RATE_FILINGS_URL,
@@ -113,6 +117,74 @@ def _to_filing(row: dict[str, Any]) -> InsuranceRateFiling | None:
     )
 
 
+async def _request_payload(params: dict[str, str]) -> Any:
+    """One GET against the dataset, retried while a hiccup is still plausible.
+
+    Only transport failures are retried — no name resolved, no connection, no
+    reply. Those are the ones a second attempt a moment later can turn into a
+    success, and the one that took the section down in production was of
+    exactly this kind. A status code is not retried: the server answered, and
+    asking it the same question again gets the same answer while making an
+    operator wait for it. Neither is unparseable JSON, which is a bug in the
+    query or the dataset, not a hiccup.
+    """
+    deadline = time.monotonic() + FETCH_BUDGET_SECONDS
+    delay = RETRY_INITIAL_DELAY_SECONDS
+
+    async with httpx.AsyncClient(timeout=FETCH_TIMEOUT_SECONDS) as client:
+        for attempt in range(1, MAX_FETCH_ATTEMPTS + 1):
+            try:
+                response = await client.get(
+                    TDI_RATE_FILINGS_URL,
+                    params=params,
+                    headers={"User-Agent": _user_agent(), "Accept": "application/json"},
+                    follow_redirects=True,
+                )
+                response.raise_for_status()
+                return response.json()
+            except httpx.HTTPStatusError as exc:
+                # Per rules/check-third-party-error-codes.md: Socrata puts the
+                # reason a query was refused in the body, so log it rather than
+                # only the status.
+                logger.warning(
+                    "TDI rate filings returned HTTP %s: %s",
+                    exc.response.status_code,
+                    exc.response.text[:200],
+                )
+                raise RateFilingFeedUnavailableError(
+                    "rate filing feed returned an error"
+                ) from exc
+            except httpx.TransportError as exc:
+                spent = attempt >= MAX_FETCH_ATTEMPTS or (
+                    time.monotonic() + delay >= deadline
+                )
+                if spent:
+                    logger.warning(
+                        "TDI rate filings unreachable after %s attempt(s): %s",
+                        attempt,
+                        exc,
+                    )
+                    raise RateFilingFeedUnavailableError(
+                        "rate filing feed is unreachable"
+                    ) from exc
+                logger.info(
+                    "TDI rate filings attempt %s failed (%s) — retrying in %ss",
+                    attempt,
+                    exc,
+                    delay,
+                )
+                await asyncio.sleep(delay)
+                delay *= 2
+            except (httpx.HTTPError, ValueError) as exc:
+                logger.warning("TDI rate filings unreachable: %s", exc)
+                raise RateFilingFeedUnavailableError(
+                    "rate filing feed is unreachable"
+                ) from exc
+
+    # Unreachable: every path through the loop returns or raises.
+    raise RateFilingFeedUnavailableError("rate filing feed is unreachable")
+
+
 async def fetch_dwelling_filings() -> list[InsuranceRateFiling]:
     """Every dwelling-line filing TDI publishes, newest first.
 
@@ -132,28 +204,7 @@ async def fetch_dwelling_filings() -> list[InsuranceRateFiling]:
         "$limit": str(MAX_FILINGS_FETCHED),
     }
 
-    try:
-        async with httpx.AsyncClient(timeout=FETCH_TIMEOUT_SECONDS) as client:
-            response = await client.get(
-                TDI_RATE_FILINGS_URL,
-                params=params,
-                headers={"User-Agent": _user_agent(), "Accept": "application/json"},
-                follow_redirects=True,
-            )
-            response.raise_for_status()
-            payload = response.json()
-    except httpx.HTTPStatusError as exc:
-        # Per rules/check-third-party-error-codes.md: Socrata puts the reason a
-        # query was refused in the body, so log it rather than only the status.
-        logger.warning(
-            "TDI rate filings returned HTTP %s: %s",
-            exc.response.status_code,
-            exc.response.text[:200],
-        )
-        raise RateFilingFeedUnavailableError("rate filing feed returned an error") from exc
-    except (httpx.HTTPError, ValueError) as exc:
-        logger.warning("TDI rate filings unreachable: %s", exc)
-        raise RateFilingFeedUnavailableError("rate filing feed is unreachable") from exc
+    payload = await _request_payload(params)
 
     if not isinstance(payload, list):
         raise RateFilingFeedUnavailableError("rate filing feed returned an unexpected shape")
