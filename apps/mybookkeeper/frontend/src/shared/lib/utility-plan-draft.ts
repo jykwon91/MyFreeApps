@@ -103,22 +103,11 @@ export function applyDraftToForm(
   };
 }
 
-/**
- * Terms the document stated that this form cannot currently hold.
+/*
+ * ``notes`` is deliberately absent from the fields above.
  *
- * Without this they would be read, returned, and silently dropped on the floor.
- * Rendered alongside the backend's own ``unrepresented`` list, which covers
- * terms the *database* has no column for; this one covers terms the database
- * holds but this form does not yet edit.
- *
- * Down to ``notes`` alone. Every other field the reader can return now has an
- * input, so the list is empty for most documents — which is the point, and the
- * reason it stays: it is the seam that will catch the next column added to the
- * draft ahead of its input. Notes is deliberately last to be held. ``PATCH``
- * applies exactly the keys it is sent, and editing notes here would erase the
- * provenance line the seeded plans carry.
+ * ``PATCH`` applies exactly the keys it is sent, and filling notes here would
+ * erase the provenance line the seeded plans carry. It is not dropped either —
+ * ``DocumentDraftNotices`` renders it, unedited, as the reader's own account of
+ * the document.
  */
-export function draftFieldsTheFormCannotHold(draft: UtilityPlanDraft): string[] {
-  if (draft.notes === null || draft.notes.trim() === "") return [];
-  return [`Notes: ${draft.notes.trim()}`];
-}

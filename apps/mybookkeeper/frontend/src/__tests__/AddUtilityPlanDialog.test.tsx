@@ -165,9 +165,12 @@ describe("AddUtilityPlanDialog — reading from a document", () => {
 
     await readTheDocument(user);
 
+    // Both live in the folded reference section now. Folded still renders —
+    // what the operator does to see it is open a disclosure, not re-read the
+    // document.
     await waitFor(() => {
       expect(
-        screen.getByText("Notes: Rate assumes autopay enrollment."),
+        screen.getByText("Rate assumes autopay enrollment."),
       ).toBeInTheDocument();
     });
     expect(

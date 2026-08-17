@@ -663,6 +663,7 @@
         "insurance-policy-form.test.ts",
         "insurance-policy-draft.test.ts",
         "AddInsurancePolicyDialog.test.tsx",
+        "DocumentDraftNotices.test.tsx",
         "InsurancePolicyDocumentReader.test.tsx",
         "usePageListModes.test.ts",
         "InsurancePremiumComparisonCard.test.tsx",
@@ -770,6 +771,7 @@
       "frontend_tests": [
         "UtilityPlans.test.tsx",
         "AddUtilityPlanDialog.test.tsx",
+        "DocumentDraftNotices.test.tsx",
         "UtilityPlanDocumentReader.test.tsx",
         "EditUtilityPlanDialog.test.tsx",
         "UtilityPlanRenewalAlertCard.test.tsx",

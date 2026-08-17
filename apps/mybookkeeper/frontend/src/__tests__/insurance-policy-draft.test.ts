@@ -11,10 +11,7 @@
  * field the operator knows to fill.
  */
 import { describe, it, expect } from "vitest";
-import {
-  applyDraftToForm,
-  draftFieldsTheFormCannotHold,
-} from "@/shared/lib/insurance-policy-draft";
+import { applyDraftToForm } from "@/shared/lib/insurance-policy-draft";
 import { EMPTY_POLICY_FORM } from "@/shared/lib/insurance-policy-form";
 import type { InsurancePolicyDraft } from "@/shared/types/insurance/insurance-policy-draft";
 import type { InsurancePolicyFormValues } from "@/shared/types/insurance/insurance-policy-form-values";
@@ -149,21 +146,5 @@ describe("applyDraftToForm — filling the form from a dec page", () => {
     const values = applyDraftToForm(form(), draft({ notes: "Wind/hail excluded" }));
 
     expect(values.notes).toBe("");
-  });
-});
-
-describe("draftFieldsTheFormCannotHold — what the read found but the form won't take", () => {
-  it("surfaces notes rather than dropping them on the floor", () => {
-    expect(draftFieldsTheFormCannotHold(draft({ notes: "Wind/hail excluded" }))).toEqual(
-      ["Notes: Wind/hail excluded"],
-    );
-  });
-
-  it("says nothing when the document had nothing left over", () => {
-    expect(draftFieldsTheFormCannotHold(draft({ carrier: "Texas Mutual" }))).toEqual([]);
-  });
-
-  it("treats whitespace-only notes as nothing left over", () => {
-    expect(draftFieldsTheFormCannotHold(draft({ notes: "   " }))).toEqual([]);
   });
 });
