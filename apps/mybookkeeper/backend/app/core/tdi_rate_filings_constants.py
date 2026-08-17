@@ -77,17 +77,63 @@ MIN_NOTABLE_CHANGE_PCT = 1.0
 # out keeps those policies in the outlook instead of silently dropping them.
 RENEWAL_HORIZON_DAYS = 120
 
-# Cap on carriers shown in the market view. One row per carrier, most recently
-# filed first, so this is "the N carriers who last moved their dwelling rates".
+# Cap on carriers shown in the market view. One row per carrier, soonest
+# effective first, so this is "the N carriers whose next dwelling rate lands
+# earliest". Each of the two groups below is capped separately.
 MAX_MARKET_FILINGS = 25
+
+# How many rows of each market group are shown before the operator has to
+# expand. Twenty undifferentiated rows is what the first cut shipped, and it
+# read as a wall rather than a shortlist.
+MARKET_GROUP_PREVIEW = 5
+
+# --- Who the operator can actually buy from -----------------------------------
+#
+# These file dwelling rates with TDI and so appear in the raw feed, but none of
+# them is a carrier an ordinary landlord can place a policy with. Listing them
+# under "worth asking your agent about" is not merely noise — it is wrong, and
+# it sends the operator to ask for something that cannot be sold to them.
+#
+# Matched on a token-subset basis (same helper as carrier matching) so that
+# legal-name drift — "TEXAS WINDSTORM INSURANCE ASSN" vs "...ASSOCIATION" —
+# does not quietly let one back in.
+
+NON_PURCHASABLE_CARRIERS: tuple[str, ...] = (
+    # State-run residual market, sold only where no admitted carrier will write.
+    "TEXAS WINDSTORM INSURANCE ASSOCIATION",
+    # The FAIR Plan: last-resort pool, eligibility requires prior declinations.
+    "TEXAS FAIR PLAN ASSOCIATION",
+    # An advisory rating bureau. Licenses loss-cost data to insurers; sells no
+    # policies to anyone.
+    "INSURANCE SERVICES OFFICE",
+    # Membership limited to military personnel and their families.
+    "ARMED FORCES INSURANCE EXCHANGE",
+    # Files on behalf of member insurers; not itself a market.
+    "AMERICAN ASSOCIATION OF INSURANCE SERVICES",
+)
 
 # --- Why an outlook could not be produced -------------------------------------
 #
 # Shown to the operator instead of an empty filing list, so "we could not check"
-# never reads as "nothing is coming".
+# never reads as "nothing is coming". These are three genuinely different
+# situations and collapsing them into one string is what made the first cut
+# claim it had searched for a homeowners policy it never looked at.
 
-REASON_NO_CARRIER = "No carrier recorded on this policy."
-REASON_NO_FILINGS = "No dwelling-line filings found under this carrier's name."
+REASON_NO_CARRIER = "No carrier recorded on this policy — add one to check it."
+
+REASON_NO_FILINGS = (
+    "No landlord-policy rate filing found under this carrier's name in the "
+    "last two years. Either they have not filed one, or the name on this "
+    "policy does not match how they file with the state."
+)
+
+# Not a failure to find anything — this dataset was never going to apply.
+# Saying "no filings found" here implies a search happened, and none did.
+REASON_NOT_DWELLING = (
+    "Texas publishes rate filings for landlord (dwelling-fire) policies only, "
+    "so there is nothing to check against a homeowners policy."
+)
+
 REASON_FEED_DOWN = (
     "The Texas Department of Insurance filing data could not be reached, so "
     "nothing was checked."

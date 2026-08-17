@@ -1,6 +1,4 @@
-import AlertBox from "@/shared/components/ui/AlertBox";
-import RateWatchMarketList from "@/app/features/insurance/RateWatchMarketList";
-import RateWatchOutlookCard from "@/app/features/insurance/RateWatchOutlookCard";
+import RateWatchResults from "@/app/features/insurance/RateWatchResults";
 import RateWatchSkeleton from "@/app/features/insurance/RateWatchSkeleton";
 import type { InsuranceMarketWatch } from "@/shared/types/insurance/insurance-market-watch";
 import type { RateWatchMode } from "@/shared/types/insurance/rate-watch-mode";
@@ -41,28 +39,6 @@ export default function RateWatchBody({ mode, data }: RateWatchBodyProps) {
       );
 
     case "results":
-      return (
-        <div className="space-y-4" data-testid="rate-watch-results">
-          {data?.feed_unavailable_reason ? (
-            <AlertBox variant="warning">{data.feed_unavailable_reason}</AlertBox>
-          ) : null}
-
-          <ul className="space-y-3">
-            {(data?.outlooks ?? []).map((outlook) => (
-              <RateWatchOutlookCard key={outlook.policy_id} outlook={outlook} />
-            ))}
-          </ul>
-
-          <RateWatchMarketList filings={data?.market_filings ?? []} />
-
-          {/* Stated once, at the bottom. Every figure above is a carrier's
-              statewide average, not a quote on a specific house. */}
-          <p className="text-xs text-muted-foreground">
-            Filings come from the Texas Department of Insurance. A filed change
-            is a statewide average across the carrier's whole book — your own
-            renewal also moves with your coverage amount and claims history.
-          </p>
-        </div>
-      );
+      return data ? <RateWatchResults data={data} /> : null;
   }
 }

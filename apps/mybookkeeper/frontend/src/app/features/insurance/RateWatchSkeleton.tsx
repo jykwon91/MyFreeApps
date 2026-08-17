@@ -1,10 +1,10 @@
 /**
  * Loading placeholder for the rate-watch check.
  *
- * Mirrors the loaded section: two bordered policy cards, each with a heading
- * row, a headline line, a projection line and two filing rows, then the market
- * list with its heading and five rows. Same shape means no layout shift when
- * the department answers.
+ * Mirrors the loaded section: the verdict banner, two bordered policy cards
+ * each with a heading row, a headline line, a projection line and two filing
+ * rows, then the market list with its heading and five rows. Same shape means
+ * no layout shift when the department answers.
  */
 export default function RateWatchSkeleton() {
   return (
@@ -13,6 +13,13 @@ export default function RateWatchSkeleton() {
       aria-busy="true"
       data-testid="rate-watch-loading"
     >
+      {/* The verdict lands first and is the tallest single element; without a
+          placeholder everything below it jumps on arrival. */}
+      <div className="rounded-lg border border-border p-4">
+        <div className="h-6 bg-muted rounded w-72" />
+        <div className="h-3 bg-muted rounded w-56 mt-2" />
+      </div>
+
       <ul className="space-y-3">
         {[1, 2].map((card) => (
           <li key={card} className="rounded-lg border border-border p-4">

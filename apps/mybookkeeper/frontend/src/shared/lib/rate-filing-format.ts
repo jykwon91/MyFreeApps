@@ -60,3 +60,21 @@ export function formatOutlookHeadline(
   if (pct < 0) return `${who} filed a decrease`;
   return `${who} filed an increase`;
 }
+
+/**
+ * The dollar movement, e.g. `"+$268/yr"`.
+ *
+ * The percentage is the insurer's unit; dollars per year is the operator's.
+ * Showing the two endpoints and leaving them to subtract is asking them to do
+ * arithmetic to reach the only number that changes their budget.
+ */
+export function formatPremiumDelta(
+  currentCents: number | null,
+  projectedCents: number | null,
+): string | null {
+  if (currentCents === null || projectedCents === null) return null;
+  const delta = projectedCents - currentCents;
+  if (delta === 0) return null;
+  const dollars = Math.round(Math.abs(delta) / 100);
+  return `${delta > 0 ? "+" : "−"}$${dollars.toLocaleString("en-US")}/yr`;
+}

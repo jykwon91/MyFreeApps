@@ -15,19 +15,23 @@
  *
  * Verifies:
  *   - Loading the page does not call the department; only a click does.
+ *   - The verdict leads, in dollars per year, above any evidence.
  *   - Skeleton card/row counts mirror the loaded section (no layout shift).
  *   - The projected renewal reads as a movement from today's premium, marked
  *     as an estimate.
  *   - A carrier with no filings says so instead of rendering as "all clear".
+ *   - A policy the feed never covered is a footnote, not a card.
+ *   - Carriers holding rates flat are separated from carriers raising them.
  *   - A withdrawn filing is labelled "Not approved".
  *   - No horizontal scroll across mobile / tablet / desktop; 44px touch target.
- *   - A feed outage renders the reason rather than an empty section.
+ *   - A feed outage renders the reason and offers no verdict at all.
  */
 import { test, expect, type Page } from "@playwright/test";
 
 const ORG_ID = "00000000-0000-0000-0000-000000000010";
 const POLICY_ID = "00000000-0000-0000-0000-0000000000d1";
 const UNMATCHED_POLICY_ID = "00000000-0000-0000-0000-0000000000d2";
+const OUT_OF_SCOPE_POLICY_ID = "00000000-0000-0000-0000-0000000000d3";
 
 /** Matches ``RateWatchSkeleton``: two policy cards, two filing rows each. */
 const SKELETON_CARD_COUNT = 2;
@@ -154,9 +158,11 @@ const RATE_WATCH_RESPONSE = {
   outlooks: [
     {
       policy_id: POLICY_ID,
-      policy_name: "Dwelling DP-3",
+      policy_name: "Dwelling DP-3, E2E Peerless",
+      policy_label: "Dwelling DP-3",
       property_name: "E2E Peerless",
       carrier: "SafePoint",
+      is_checkable: true,
       expiration_date: "2026-09-24",
       current_premium_cents: 241_000,
       filings: [APPROVED_FILING, WITHDRAWN_FILING],
@@ -167,8 +173,10 @@ const RATE_WATCH_RESPONSE = {
     {
       policy_id: UNMATCHED_POLICY_ID,
       policy_name: "Dwelling DP-3",
+      policy_label: "Dwelling DP-3",
       property_name: "E2E Second Peerless",
       carrier: "Benchmark/Swyfft",
+      is_checkable: true,
       expiration_date: "2027-02-01",
       current_premium_cents: 180_000,
       filings: [],
@@ -176,9 +184,26 @@ const RATE_WATCH_RESPONSE = {
       projected_premium_cents: null,
       unavailable_reason: "No dwelling-line filings found under this carrier's name.",
     },
+    {
+      policy_id: OUT_OF_SCOPE_POLICY_ID,
+      policy_name: "Homeowners Policy (HO-3), E2E Home",
+      policy_label: "Homeowners Policy (HO-3)",
+      property_name: "E2E Home",
+      carrier: "State Farm",
+      is_checkable: false,
+      expiration_date: "2027-04-01",
+      current_premium_cents: 310_000,
+      filings: [],
+      projected_change_pct: null,
+      projected_premium_cents: null,
+      unavailable_reason:
+        "Texas publishes rate filings for landlord (dwelling-fire) policies only.",
+    },
   ],
-  market_filings: [FLAT_FILING, APPROVED_FILING],
+  market_rising: [APPROVED_FILING],
+  market_flat: [FLAT_FILING],
   has_any_increase: true,
+  checked_policy_count: 2,
   feed_unavailable_reason: null,
 };
 
@@ -222,6 +247,15 @@ test.describe("Check for rate increases", () => {
     await expect(results).toBeVisible({ timeout: 15000 });
     expect(watchRequests).toBe(1);
 
+    // The answer comes first, in the operator's own unit. Without it the
+    // section is a filing table the reader has to interpret themselves.
+    const verdict = page.getByTestId("rate-watch-verdict");
+    await expect(verdict).toContainText("E2E Peerless");
+    await expect(verdict).toContainText("+$268/yr");
+    await expect(page.getByTestId("rate-watch-verdict-detail")).toContainText(
+      "SafePoint filed +11.1%",
+    );
+
     // The projection reads as a movement from today's premium, and never as a
     // quote: a filing is a statewide average, not this house's renewal.
     const projection = page.getByTestId("rate-watch-outlook-projection");
@@ -242,10 +276,19 @@ test.describe("Check for rate increases", () => {
       "No dwelling-line filings found under this carrier's name.",
     );
 
-    // The market half: who to ask an agent about.
-    const market = page.getByTestId("rate-watch-market-list");
-    await expect(market).toContainText("FOREMOST LLOYDS OF TEXAS");
-    await expect(market).toContainText("no change");
+    // A policy on a form this feed never covered is a footnote, not a card
+    // claiming a search that never ran.
+    await expect(page.getByTestId("rate-watch-outlook-card")).toHaveCount(2);
+    await expect(page.getByTestId("rate-watch-out-of-scope")).toContainText("E2E Home");
+
+    // The market half: who to ask an agent about. Carriers holding rates flat
+    // are the shortlist to call, so they are separated from the ones raising.
+    await expect(page.getByTestId("rate-watch-market-flat")).toContainText(
+      "FOREMOST LLOYDS OF TEXAS",
+    );
+    await expect(page.getByTestId("rate-watch-market-rising")).toContainText(
+      "SAFEPOINT INSURANCE COMPANY",
+    );
 
     // A projection is arithmetic on a statewide average, not a bill promise.
     await expect(results).toContainText("statewide average");
@@ -302,8 +345,10 @@ test.describe("Check for rate increases", () => {
               unavailable_reason: FEED_DOWN_REASON,
             },
           ],
-          market_filings: [],
+          market_rising: [],
+          market_flat: [],
           has_any_increase: false,
+          checked_policy_count: 0,
           feed_unavailable_reason: FEED_DOWN_REASON,
         }),
       ),
@@ -318,6 +363,9 @@ test.describe("Check for rate increases", () => {
     await expect(page.getByTestId("rate-watch-outlook-unavailable")).toContainText(
       "nothing was checked",
     );
+    // And no verdict at all — an all-clear here would be a claim about a
+    // search that never ran.
+    await expect(page.getByTestId("rate-watch-verdict")).toHaveCount(0);
   });
 
   test("a request failure keeps the blame off the policies", async ({ page }) => {
