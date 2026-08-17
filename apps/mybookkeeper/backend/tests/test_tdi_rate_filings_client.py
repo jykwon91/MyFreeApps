@@ -17,6 +17,10 @@ import datetime as _dt
 import httpx
 import pytest
 
+from app.core.tdi_rate_filings_constants import (
+    MAX_FETCH_ATTEMPTS,
+    RETRY_INITIAL_DELAY_SECONDS,
+)
 from app.services.insurance import tdi_rate_filings_client as client
 from app.services.insurance.tdi_rate_filings_client import (
     RateFilingFeedUnavailableError,
@@ -46,6 +50,18 @@ def _clear_cache():
     client._cache = None
     yield
     client._cache = None
+
+
+@pytest.fixture
+def _no_backoff(monkeypatch):
+    """Run the retry loop without waiting out its real backoff."""
+    slept: list[float] = []
+
+    async def _sleep(seconds):
+        slept.append(seconds)
+
+    monkeypatch.setattr(client.asyncio, "sleep", _sleep)
+    return slept
 
 
 class TestParsing:
@@ -149,7 +165,7 @@ class TestFetch:
             await fetch_dwelling_filings()
 
     @pytest.mark.asyncio
-    async def test_a_network_failure_raises(self, monkeypatch):
+    async def test_a_network_failure_raises(self, monkeypatch, _no_backoff):
         async def _get(self, url, **kwargs):
             raise httpx.ConnectError("no route to host")
 
@@ -166,6 +182,139 @@ class TestFetch:
         )
         with pytest.raises(RateFilingFeedUnavailableError):
             await fetch_dwelling_filings()
+
+
+class TestRetry:
+    """What a single hiccup is allowed to cost.
+
+    Production lost the whole section on 2026-08-17 to one unresolved name —
+    ``[Errno -2] Name or service not known`` — on a host that had read the feed
+    successfully hours earlier and logged no other resolution failure in two
+    weeks. These pin the retry to the class of failure a second attempt can
+    actually fix, and off the class it cannot.
+    """
+
+    @pytest.mark.asyncio
+    async def test_a_dns_miss_is_retried_and_succeeds(self, monkeypatch, _no_backoff):
+        attempts: list[int] = []
+
+        async def _get(self, url, **kwargs):
+            attempts.append(1)
+            if len(attempts) == 1:
+                raise httpx.ConnectError("[Errno -2] Name or service not known")
+            return httpx.Response(200, json=[_ROW], request=httpx.Request("GET", url))
+
+        monkeypatch.setattr(client.httpx.AsyncClient, "get", _get)
+        filings = await fetch_dwelling_filings()
+        assert len(attempts) == 2
+        assert [f.company_name for f in filings] == ["SAFEPOINT INSURANCE COMPANY"]
+
+    @pytest.mark.asyncio
+    async def test_a_read_timeout_is_retried(self, monkeypatch, _no_backoff):
+        attempts: list[int] = []
+
+        async def _get(self, url, **kwargs):
+            attempts.append(1)
+            if len(attempts) == 1:
+                raise httpx.ReadTimeout("timed out")
+            return httpx.Response(200, json=[_ROW], request=httpx.Request("GET", url))
+
+        monkeypatch.setattr(client.httpx.AsyncClient, "get", _get)
+        await fetch_dwelling_filings()
+        assert len(attempts) == 2
+
+    @pytest.mark.asyncio
+    async def test_gives_up_after_the_attempt_ceiling(self, monkeypatch, _no_backoff):
+        attempts: list[int] = []
+
+        async def _get(self, url, **kwargs):
+            attempts.append(1)
+            raise httpx.ConnectError("no route to host")
+
+        monkeypatch.setattr(client.httpx.AsyncClient, "get", _get)
+        with pytest.raises(RateFilingFeedUnavailableError):
+            await fetch_dwelling_filings()
+        assert len(attempts) == MAX_FETCH_ATTEMPTS
+
+    @pytest.mark.asyncio
+    async def test_backs_off_further_between_each_attempt(self, monkeypatch, _no_backoff):
+        async def _get(self, url, **kwargs):
+            raise httpx.ConnectError("no route to host")
+
+        monkeypatch.setattr(client.httpx.AsyncClient, "get", _get)
+        with pytest.raises(RateFilingFeedUnavailableError):
+            await fetch_dwelling_filings()
+        assert _no_backoff == [
+            RETRY_INITIAL_DELAY_SECONDS,
+            RETRY_INITIAL_DELAY_SECONDS * 2,
+        ]
+
+    @pytest.mark.asyncio
+    async def test_stops_once_the_wall_clock_budget_is_spent(
+        self, monkeypatch, _no_backoff,
+    ):
+        # A slow feed has already spent the operator's patience on the first
+        # attempt; a second full timeout would double the wait for the same
+        # answer. The budget, not the attempt count, is what ends this one —
+        # exhausted here by shrinking it rather than by faking the clock, which
+        # is the same clock the event loop runs on.
+        attempts: list[int] = []
+
+        async def _get(self, url, **kwargs):
+            attempts.append(1)
+            raise httpx.ConnectTimeout("slow")
+
+        monkeypatch.setattr(client.httpx.AsyncClient, "get", _get)
+        monkeypatch.setattr(client, "FETCH_BUDGET_SECONDS", 0.0)
+        with pytest.raises(RateFilingFeedUnavailableError):
+            await fetch_dwelling_filings()
+        assert len(attempts) == 1
+        assert _no_backoff == []
+
+    @pytest.mark.asyncio
+    async def test_a_status_code_is_not_retried(self, monkeypatch, _no_backoff):
+        # The server answered. Asking again gets the same answer and charges
+        # the operator another round trip for it.
+        attempts: list[int] = []
+
+        async def _get(self, url, **kwargs):
+            attempts.append(1)
+            return httpx.Response(403, text="forbidden", request=httpx.Request("GET", url))
+
+        monkeypatch.setattr(client.httpx.AsyncClient, "get", _get)
+        with pytest.raises(RateFilingFeedUnavailableError):
+            await fetch_dwelling_filings()
+        assert len(attempts) == 1
+
+    @pytest.mark.asyncio
+    async def test_unparseable_json_is_not_retried(self, monkeypatch, _no_backoff):
+        attempts: list[int] = []
+
+        async def _get(self, url, **kwargs):
+            attempts.append(1)
+            return httpx.Response(200, text="<html>nope", request=httpx.Request("GET", url))
+
+        monkeypatch.setattr(client.httpx.AsyncClient, "get", _get)
+        with pytest.raises(RateFilingFeedUnavailableError):
+            await fetch_dwelling_filings()
+        assert len(attempts) == 1
+
+    @pytest.mark.asyncio
+    async def test_a_retried_success_is_cached_like_any_other(
+        self, monkeypatch, _no_backoff,
+    ):
+        attempts: list[int] = []
+
+        async def _get(self, url, **kwargs):
+            attempts.append(1)
+            if len(attempts) == 1:
+                raise httpx.ConnectError("[Errno -2] Name or service not known")
+            return httpx.Response(200, json=[_ROW], request=httpx.Request("GET", url))
+
+        monkeypatch.setattr(client.httpx.AsyncClient, "get", _get)
+        await fetch_dwelling_filings()
+        await fetch_dwelling_filings()
+        assert len(attempts) == 2
 
 
 def _stub_get(response: httpx.Response):
