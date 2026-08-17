@@ -30,6 +30,16 @@ contract:
 And the rule that outranks both: **a missing value is null, never an inference.**
 A plausible invented limit is worse than a blank, because a blank is visibly
 unknown and a number is not.
+
+The same rule is why the address gets a section of its own. The 2026 Peerless
+renewal names the insured location as 6732 and the insured's mailing address as
+6734 — the house next door, because that is where the landlord lives. Read off
+the text layer, where the labels sit in one block and the values in another and
+the agent's ZIP runs straight into the next street number
+("Houston, TX 770366734 Peerless St"), the policy came back named for 6734 at
+confidence "high". Every other field on it was right. A policy filed against the
+neighbouring building does not look like a failed read, which is exactly what
+makes it worth spelling out.
 """
 
 INSURANCE_POLICY_PROMPT = """You read property insurance documents and report the policy terms they state.
@@ -146,11 +156,44 @@ the coverage — on a Texas surplus lines policy by around 15%.
   rental value, personal property, ordinance or law, water backup — has no field
   here. Put each in `unrepresented`.
 
+# Which address
+
+A declarations page carries several addresses and only one of them is the
+property. Getting this wrong does not look like an error — it produces a
+confident, well-formed policy filed against the wrong building.
+
+- Use the INSURED LOCATION: the address labelled "Insured Location", "Location
+  of Risk", "Described Location", "Covered Property", "Property Address", or
+  appearing under a combined "Insured(s) & Insured Location" heading.
+- Never use the INSURED MAILING ADDRESS. A landlord's mail goes to where they
+  live, which is a different building from the one insured — and on a portfolio
+  of nearby rentals it is often the house next door, so the wrong answer looks
+  entirely plausible.
+- Never use the agent's, agency's, producer's, coverholder's, carrier's,
+  mortgagee's, or loss payee's address.
+
+Two things about how these pages extract make the wrong one easy to grab:
+
+- Labels and values are frequently in separate blocks, so every label appears
+  first and every value after, in the same order. Match them by position: the
+  third address in the value block belongs to the third address label.
+- Adjacent values can run together with no separator. A line reading
+  "Houston, TX 770366734 Peerless St" is the END of one address ("Houston, TX
+  77036") immediately followed by the START of the next ("6734 Peerless St").
+  Do not read the digits as a single ZIP or a single street number.
+
+If more than one address appears and you cannot tell with certainty which is
+the insured location, use none of them, say what you saw in `notes`, and set
+`confidence` no higher than "medium". An address that might be the property is
+worth less than no address, because the operator cannot see that it was a
+guess.
+
 # Naming the policy
 
 - `policy_name` is how the operator would recognise this policy in a list. Use
   the product name the document gives it ("Landlord Protection", "Dwelling Fire
-  DP-3") and, if the document names the insured property, the street address.
+  DP-3") and, if the document names the insured property, the street address of
+  the INSURED LOCATION — see "Which address" above.
 - `carrier` is the insurance company, not the agency or the broker. "Written
   through Smith Insurance Agency" is the agency; the carrier is whose paper the
   policy is on. If both appear, report the carrier and mention the agency in
