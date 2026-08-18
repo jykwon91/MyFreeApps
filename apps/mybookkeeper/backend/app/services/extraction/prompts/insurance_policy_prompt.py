@@ -40,6 +40,17 @@ the agent's ZIP runs straight into the next street number
 confidence "high". Every other field on it was right. A policy filed against the
 neighbouring building does not look like a failed read, which is exactly what
 makes it worth spelling out.
+
+``notes`` gets a section of its own for a different reason: it is rendered to the
+operator verbatim. Left undescribed, it came back as one unbroken block — 2,172
+characters on the Peerless renewal, carrying the fee itemisation, the arithmetic
+check and the address ambiguity in a single paragraph nobody reads to the end of.
+Asking for one subject per paragraph turned that into six on the same document,
+and 5-9 across every declarations page tested. Everything else about the split
+between ``notes`` and ``unrepresented`` was left alone deliberately — instructions
+forbidding duplication between the two, and forbidding failed reads from being
+filed as terms, were written, measured against four real documents, and reverted
+because neither changed the output.
 """
 
 INSURANCE_POLICY_PROMPT = """You read property insurance documents and report the policy terms they state.
@@ -217,6 +228,20 @@ policy terms.
   terms.
 - "low": a notice or certificate that mostly implies the terms, or anything you
   had to work to interpret.
+
+# notes
+
+Your own account of the document, read beside the fields rather than instead of
+them. Everything that did not fit a field and is not a term for `unrepresented`:
+who the carrier and the agency actually are, the itemisation behind
+`fees_and_taxes_cents`, the arithmetic you checked, which of several addresses
+you took and why, whatever you could not read, and anything about the document
+that changes how far the fields should be trusted.
+
+Write it as short paragraphs separated by a blank line, one subject each — the
+parties, the money, the address, what you could not read. It is displayed to the
+operator exactly as you write it, beside the fields. A single unbroken block of
+several hundred words is where the one line that mattered goes to be missed.
 
 # unrepresented
 
