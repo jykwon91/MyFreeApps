@@ -116,7 +116,7 @@ packaging==26.2
     # via pytest
 passlib==1.7.4
     # via mygamingassistant-backend
-pillow==12.2.0
+pillow==12.3.0
     # via qrcode
 pluggy==1.6.0
     # via pytest
@@ -143,7 +143,7 @@ pydantic-settings==2.14.2
     #   platform-shared
 pygments==2.20.0
     # via pytest
-pyjwt==2.12.1
+pyjwt==2.13.0
     # via
     #   fastapi-users
     #   mygamingassistant-backend
