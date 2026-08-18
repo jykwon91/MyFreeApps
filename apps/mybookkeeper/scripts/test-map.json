@@ -651,6 +651,7 @@
         "test_insurance_carrier_filing_match.py",
         "test_insurance_policy_form.py",
         "test_insurance_policy_prompt_address.py",
+        "test_prompt_notes_section.py",
         "test_tdi_rate_filings_client.py",
         "test_document_draft_reader.py"
       ],
@@ -756,6 +757,7 @@
         "test_utility_plan_repo.py",
         "test_utility_plans_api.py",
         "test_utility_plan_extraction.py",
+        "test_prompt_notes_section.py",
         "test_upload_errors.py",
         "test_document_upload_service.py",
         "test_utility_plan_scheduler.py",

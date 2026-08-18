@@ -19,6 +19,13 @@ Two rules matter more than the rest, and both are about refusing to guess:
    bill-credit tier, a tiered TDU schedule, a bundled service — the schema
    cannot hold it, so it has to be said out loud rather than dropped. Silence
    would read as "the document did not mention it".
+
+``notes`` has a section describing its shape because it is rendered to the
+operator verbatim. Left undescribed, the sibling insurance prompt returned it as
+one unbroken block of over two thousand characters, with the fee itemisation and
+the arithmetic check buried mid-paragraph. Asking for one subject per paragraph
+fixed it there; the same instruction is carried here so the two documents read
+alike.
 """
 
 UTILITY_PLAN_PROMPT = """You read utility service documents and report the plan terms they state.
@@ -137,6 +144,19 @@ unless the bill genuinely restates the plan terms.
   the terms.
 - "low": a bill or notice that mostly implies the terms, or anything you had to
   work to interpret.
+
+# notes
+
+Your own account of the document, read beside the fields rather than instead of
+them. Everything that did not fit a field and is not a term for `unrepresented`:
+who the provider and the REP actually are, how a rate was arrived at, the
+arithmetic you checked, whatever you could not read, and anything about the
+document that changes how far the fields should be trusted.
+
+Write it as short paragraphs separated by a blank line, one subject each — the
+parties, the money, what you could not read. It is displayed to the operator
+exactly as you write it, beside the fields. A single unbroken block of several
+hundred words is where the one line that mattered goes to be missed.
 
 # unrepresented
 
