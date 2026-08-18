@@ -23,6 +23,7 @@ from app.core.power_to_choose_constants import (
 )
 from app.schemas.properties.utility_offer import UtilityOffer
 from app.services.properties._offer_ranking import (
+    clean_special_terms,
     is_teaser_priced,
     normalize_rating,
     parse_cancellation_fee_cents,
@@ -69,13 +70,23 @@ def _to_offer(row: dict[str, Any]) -> UtilityOffer | None:
 
     Only ``Fixed`` offers survive: a variable-rate offer is the holdover product
     a lapsed plan already fell into, so presenting it as an upgrade would be
-    incoherent. Prepaid and time-of-use products are dropped for the same
-    reason — their headline ¢/kWh is not comparable to a standard fixed rate.
+    incoherent. Prepaid is dropped too — it is a different product, bought under
+    a deposit-and-credit constraint rather than on price.
+
+    Time-of-use offers (free nights, free weekends, off-peak discounts) are
+    kept, flagged, and left for the caller to present separately. Their
+    disclosure prices are a blended average over an assumed usage shape, so they
+    cannot be ranked against a flat rate — but dropping them here made a whole
+    category of plan invisible, including well-rated ones, and an optimiser that
+    silently never considers a product is worse than one that shows it plainly
+    with no saving claimed.
     """
     if row.get("rate_type") != FEED_RATE_TYPE_FIXED:
         return None
-    if row.get("prepaid") or row.get("timeofuse"):
+    if row.get("prepaid"):
         return None
+
+    is_time_of_use = bool(row.get("timeofuse"))
 
     price_500 = _decimal(row.get("price_kwh500"))
     price_1000 = _decimal(row.get("price_kwh1000"))
@@ -108,6 +119,13 @@ def _to_offer(row: dict[str, Any]) -> UtilityOffer | None:
         cancellation_fee_cents=fee_cents,
         cancellation_fee_is_per_remaining_month=fee_per_month,
         is_teaser_priced=is_teaser_priced(price_500, price_1000, price_2000),
+        is_time_of_use=is_time_of_use,
+        # Only carried for time-of-use plans: on a flat plan the field is
+        # marketing copy that adds nothing to a price comparison, whereas here
+        # it is the only place the free window is written down.
+        special_terms=(
+            clean_special_terms(row.get("special_terms")) if is_time_of_use else None
+        ),
         fact_sheet_url=str(row.get("fact_sheet") or "") or None,
         enroll_url=str(row.get("go_to_plan") or "") or None,
     )

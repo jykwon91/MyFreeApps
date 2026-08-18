@@ -35,6 +35,8 @@ function offer(overrides: Partial<UtilityOffer> = {}): UtilityOffer {
     cancellation_fee_is_per_remaining_month: false,
     is_teaser_priced: false,
     annual_saving_cents: 61920,
+    is_time_of_use: false,
+    special_terms: null,
     fact_sheet_url: null,
     enroll_url: null,
     ...overrides,
@@ -51,6 +53,8 @@ function group(overrides: Partial<UtilityOfferGroup> = {}): UtilityOfferGroup {
     switch_cost_cents: 15000,
     offers: [],
     withheld_low_rated_count: 0,
+    time_of_use_offers: [],
+    withheld_low_rated_time_of_use_count: 0,
     unavailable_reason: null,
     ...overrides,
   };

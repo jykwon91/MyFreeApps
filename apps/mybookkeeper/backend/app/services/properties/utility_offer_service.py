@@ -13,6 +13,13 @@ Ranking order is deliberate and quality-first:
    reputation is a false saving. Withheld offers are counted, never hidden.
 3. Sink teaser-priced offers below honest ones.
 4. Only then sort by price, breaking ties toward the better-rated provider.
+
+Time-of-use plans are handled apart from all of that. A free-weekends plan is
+worth what the household's weekend usage is worth, and the only consumption
+figure available here is an annual reference total — it carries no information
+about *when* power is drawn. So these are listed with their terms and no saving
+figure at all, rather than either silently dropped (which hid well-rated plans
+from the operator entirely) or ranked on a blended rate that nobody pays.
 """
 from __future__ import annotations
 
@@ -23,6 +30,7 @@ from decimal import Decimal
 from app.core.power_to_choose_constants import (
     DEFAULT_MIN_TERM_MONTHS,
     MAX_OFFERS_PER_PROPERTY,
+    MAX_TIME_OF_USE_OFFERS_PER_PROPERTY,
     MIN_MEANINGFUL_SAVING_CENTS,
     REFERENCE_ANNUAL_KWH,
 )
@@ -92,6 +100,8 @@ def _rank(
     kept: list[UtilityOffer] = []
 
     for offer in offers:
+        if offer.is_time_of_use:
+            continue
         if offer.term_months < min_term_months:
             continue
 
@@ -124,6 +134,44 @@ def _rank(
         ),
     )
     return kept[:MAX_OFFERS_PER_PROPERTY], withheld
+
+
+def _rank_time_of_use(
+    offers: list[UtilityOffer], *, min_term_months: int,
+) -> tuple[list[UtilityOffer], int]:
+    """Time-of-use offers worth reading, plus how many were withheld on rating.
+
+    No saving gate, because there is no honest saving to compute: the blended
+    disclosure price a time-of-use plan publishes assumes a usage shape, and
+    measuring it against a flat rate would reward or punish the plan for an
+    assumption the operator never made. Champion's 5-star free-weekends plan
+    prices at 12.8¢ blended against a 10.5¢ flat rate and would fail a saving
+    gate outright, while being the single best plan on the market for a
+    household that runs its load on Saturdays.
+
+    The rating bar still applies. A plan the operator cannot get a billing
+    dispute resolved on is not worth reading about, whatever it charges at 2am.
+    """
+    withheld = 0
+    kept: list[UtilityOffer] = []
+
+    for offer in offers:
+        if not offer.is_time_of_use:
+            continue
+        if offer.term_months < min_term_months:
+            continue
+        if not meets_rating_bar(offer.provider_rating):
+            withheld += 1
+            continue
+        kept.append(offer)
+
+    # Cheapest blended rate first is the least-bad available ordering: it is the
+    # rate paid outside the free window, which is the part of the bill that does
+    # not depend on the household's habits.
+    kept.sort(
+        key=lambda o: (o.price_cents_per_kwh_at_1000, -(o.provider_rating or 0)),
+    )
+    return kept[:MAX_TIME_OF_USE_OFFERS_PER_PROPERTY], withheld
 
 
 async def find_better_plans(
@@ -193,6 +241,15 @@ async def find_better_plans(
         )
         group.offers = ranked
         group.withheld_low_rated_count = withheld
+
+        time_of_use, withheld_tou = _rank_time_of_use(
+            available, min_term_months=min_term_months,
+        )
+        group.time_of_use_offers = time_of_use
+        group.withheld_low_rated_time_of_use_count = withheld_tou
+
+        # Still set when only time-of-use plans came back: the sentence is about
+        # what beats this plan on price, and none of these claim to.
         if not ranked:
             group.unavailable_reason = _NO_BETTER_REASON
         groups.append(group)

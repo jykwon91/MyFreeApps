@@ -33,8 +33,22 @@ class UtilityOffer(BaseModel):
     # and 2000 kWh. Ranked below honest plans and badged in the UI.
     is_teaser_priced: bool = False
     # Signed cents per year at the reference usage, against the plan currently
-    # held for this property. Negative means the offer is worse.
+    # held for this property. Negative means the offer is worse. Always None on
+    # a time-of-use offer: the reference usage says nothing about *when* power
+    # is drawn, so any figure computed from it would be a guess wearing a
+    # number's clothes.
     annual_saving_cents: int | None = None
+    # True when the plan prices power differently by hour or day — free nights,
+    # free weekends, off-peak discounts. The three disclosure prices below are
+    # then a blended average over an assumed usage shape, not a rate the
+    # operator will actually pay, so these offers are listed apart and never
+    # ranked against a flat plan.
+    is_time_of_use: bool = False
+    # The REP's own description of what the plan includes, verbatim from the
+    # feed and truncated. Carried only for time-of-use offers, where it is the
+    # one place the free window is stated in words; None when the REP published
+    # nothing, which is a real gap and not an empty string.
+    special_terms: str | None = None
     # The provider's Electricity Facts Label — the legally binding terms. Always
     # surfaced, because a ranking is a starting point and not a recommendation.
     fact_sheet_url: str | None = None

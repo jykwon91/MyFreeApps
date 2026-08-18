@@ -1,7 +1,8 @@
-"""Pure scoring helpers for Power to Choose offers.
+"""Pure scoring and feed-text helpers for Power to Choose offers.
 
 No network, no DB — every function here is deterministic on its arguments so
-the ranking rules can be tested against the real shapes the feed emits.
+the ranking rules, and the free-text fields they read, can be tested against
+the real shapes the feed emits.
 """
 from __future__ import annotations
 
@@ -9,6 +10,7 @@ import re
 from decimal import Decimal
 
 from app.core.power_to_choose_constants import (
+    MAX_SPECIAL_TERMS_CHARS,
     MIN_PROVIDER_RATING,
     REFERENCE_ANNUAL_KWH,
     TEASER_PRICE_RATIO,
@@ -47,6 +49,34 @@ def parse_cancellation_fee_cents(pricing_details: str | None) -> tuple[int | Non
     dollars = Decimal(match.group(1).replace(",", ""))
     cents = int((dollars * 100).to_integral_value())
     return cents, _PER_MONTH_RE.search(pricing_details) is not None
+
+
+# Runs of whitespace, including the newlines some REPs paste into the field.
+_WHITESPACE_RE = re.compile(r"\s+")
+
+
+def clean_special_terms(raw: object) -> str | None:
+    """Normalise a feed ``special_terms`` blurb, or None when there is none.
+
+    REP-authored free text: whitespace is collapsed so a pasted-in paragraph
+    does not render as a ragged block, and the result is capped at
+    ``MAX_SPECIAL_TERMS_CHARS``. Truncation cuts at a word boundary and marks
+    itself with an ellipsis — a sentence that stops mid-word reads as corrupted
+    data rather than as an excerpt, and the Electricity Facts Label link beside
+    it is the binding version either way.
+    """
+    if not isinstance(raw, str):
+        return None
+    text = _WHITESPACE_RE.sub(" ", raw).strip()
+    if not text:
+        return None
+    if len(text) <= MAX_SPECIAL_TERMS_CHARS:
+        return text
+    head = text[:MAX_SPECIAL_TERMS_CHARS].rstrip()
+    cut = head.rfind(" ")
+    if cut > 0:
+        head = head[:cut]
+    return f"{head.rstrip(' ,.;:-')}…"
 
 
 def is_teaser_priced(

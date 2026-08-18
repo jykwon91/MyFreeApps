@@ -18,7 +18,11 @@
  *   - The current plan is on screen, and each offer reads as a movement from it.
  *   - The withheld-for-poor-rating count is stated, not silently applied.
  *   - A bill-credit teaser carries its caveat.
+ *   - Time-of-use plans are listed apart, with terms and no savings figure.
  *   - No horizontal scroll across mobile / tablet / desktop; 44px touch target.
+ *     The time-of-use fixture carries a full-length REP name on purpose —
+ *     "CHAMPION ENERGY SERVICES LLC" in an enrol label is what pushed 13px of
+ *     horizontal scroll onto the page before the label was allowed to wrap.
  *   - A 503 from the feed renders "nothing is wrong with your plans".
  */
 import { test, expect, type Page } from "@playwright/test";
@@ -124,6 +128,8 @@ const OFFERS_RESPONSE = {
           cancellation_fee_is_per_remaining_month: false,
           is_teaser_priced: false,
           annual_saving_cents: 61920,
+          is_time_of_use: false,
+          special_terms: null,
           fact_sheet_url: "https://example.test/efl.pdf",
           enroll_url: "https://example.test/enroll",
         },
@@ -142,11 +148,40 @@ const OFFERS_RESPONSE = {
           cancellation_fee_is_per_remaining_month: true,
           is_teaser_priced: true,
           annual_saving_cents: 113520,
+          is_time_of_use: false,
+          special_terms: null,
           fact_sheet_url: null,
           enroll_url: null,
         },
       ],
       withheld_low_rated_count: 33,
+      // Champion's Free Weekends-24, the shape this section exists for: a
+      // five-star plan whose blended rate loses to the flat offers above it,
+      // and which is worth reading anyway.
+      time_of_use_offers: [
+        {
+          external_plan_id: 601,
+          provider_name: "CHAMPION ENERGY SERVICES LLC",
+          plan_name: "Free Weekends-24",
+          term_months: 24,
+          price_cents_per_kwh_at_500: "13.5000",
+          price_cents_per_kwh_at_1000: "12.8000",
+          price_cents_per_kwh_at_2000: "12.4000",
+          renewable_pct: 22,
+          provider_rating: 5,
+          jd_power_rating: null,
+          cancellation_fee_cents: 15000,
+          cancellation_fee_is_per_remaining_month: false,
+          is_teaser_priced: false,
+          annual_saving_cents: null,
+          is_time_of_use: true,
+          special_terms:
+            "Free power from 12 midnight Friday night to 11:59 PM Sunday night.",
+          fact_sheet_url: "https://example.test/efl-tou.pdf",
+          enroll_url: "https://example.test/enroll-tou",
+        },
+      ],
+      withheld_low_rated_time_of_use_count: 5,
       unavailable_reason: null,
     },
   ],
@@ -224,6 +259,25 @@ test.describe("Find a better plan", () => {
 
     // A saving is arithmetic at a stated usage, not a bill promise.
     await expect(results).toContainText("12,000 kWh per year");
+
+    // Time-of-use plans sit in their own list, below the ranked ones.
+    const timeOfUse = page.getByTestId(`time-of-use-offers-${PROPERTY_ID}`);
+    await expect(timeOfUse).toContainText("Plans that price by time of day");
+    await expect(timeOfUse).toContainText("nothing here carries a savings figure");
+
+    const freeWeekends = page.getByTestId("time-of-use-plan-601");
+    await expect(freeWeekends).toContainText("CHAMPION ENERGY SERVICES LLC");
+    await expect(freeWeekends).toContainText("12 midnight Friday night");
+    await expect(freeWeekends).toContainText("12.80¢ average");
+    await expect(freeWeekends).toContainText("24 months");
+
+    // The invariant the whole section rests on: no money is promised here.
+    await expect(freeWeekends).not.toContainText("less per year than now");
+    await expect(freeWeekends).not.toContainText("Best value");
+
+    await expect(
+      page.getByTestId(`time-of-use-withheld-${PROPERTY_ID}`),
+    ).toContainText("5 more plans hidden");
   });
 
   test("the section fits every viewport and keeps a 44px touch target", async ({
@@ -255,12 +309,18 @@ test.describe("Find a better plan", () => {
 
       // The enrol link is the action the whole comparison exists to enable, so
       // it has to stay tappable at every width, not just the button above it.
-      const enroll = page.getByTestId("better-plan-enroll-501");
-      const enrollBox = await enroll.boundingBox();
-      expect(enrollBox, `enrol link has no box at ${size.width}px`).not.toBeNull();
-      expect(enrollBox!.height, `enrol link height at ${size.width}px`).toBeGreaterThanOrEqual(
-        44,
-      );
+      for (const testId of [
+        "better-plan-enroll-501",
+        "time-of-use-enroll-601",
+      ]) {
+        const enroll = page.getByTestId(testId);
+        const enrollBox = await enroll.boundingBox();
+        expect(enrollBox, `${testId} has no box at ${size.width}px`).not.toBeNull();
+        expect(
+          enrollBox!.height,
+          `${testId} height at ${size.width}px`,
+        ).toBeGreaterThanOrEqual(44);
+      }
     }
 
     await page.setViewportSize({ width: 375, height: 800 });

@@ -836,6 +836,7 @@
         "test_market_rate_benchmarks_api.py",
         "test_offer_ranking.py",
         "test_utility_offer_ranking.py",
+        "test_time_of_use_offers.py",
         "test_document_draft_reader.py"
       ],
       "frontend_tests": [
@@ -854,7 +855,8 @@
         "MarketRateBenchmarkDialog.test.tsx",
         "BetterPlansSection.test.tsx",
         "offer-stats.test.ts",
-        "offer-tiers.test.ts"
+        "offer-tiers.test.ts",
+        "TimeOfUseOffers.test.tsx"
       ],
       "e2e_specs": [
         "utility-plans.spec.ts",
