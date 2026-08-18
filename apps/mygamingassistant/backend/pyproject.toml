@@ -4,32 +4,32 @@ version = "0.1.0"
 description = "MyGamingAssistant backend — personal utility lineup library for tactical FPS games"
 requires-python = "==3.12.*"
 dependencies = [
-    "fastapi==0.136.1",
-    "uvicorn[standard]==0.46.0",
-    "sqlalchemy==2.0.49",
-    "alembic==1.18.4",
+    "fastapi==0.141.1",
+    "uvicorn[standard]==0.52.3",
+    "sqlalchemy==2.0.52",
+    "alembic==1.19.1",
     "asyncpg==0.31.0",
     "psycopg2-binary==2.9.12",
     "pydantic==2.13.4",
-    "pydantic-settings==2.14.2",
+    "pydantic-settings==2.15.0",
     "email-validator==2.3.0",
     "fastapi-users[sqlalchemy]==15.0.5",
     "pyjwt[crypto]==2.13.0",
     "passlib[bcrypt]==1.7.4",
     "cryptography==50.0.0",
     "httpx==0.28.1",
-    "anyio==4.13.0",
+    "anyio==4.14.2",
     "minio==7.2.20",
     "platform-shared",
     "anthropic>=0.49.0",
-    "pyotp==2.9.0",
+    "pyotp==2.10.0",
     "qrcode[pil]==8.2",
     # YouTube ingestion — yt-dlp for video/playlist metadata + download.
     # Pinned to latest stable as of 2026-05. Bump on yt-dlp breakage (expected ~3-4x/year).
     "yt-dlp==2026.7.4",
     # APScheduler — in-process background cron for source syncs (PR 6+).
     # 3.x series; 4.x is a rewrite with breaking API changes — stay on 3.x.
-    "apscheduler==3.11.0",
+    "apscheduler==3.11.3",
 ]
 
 [tool.uv]
@@ -40,8 +40,8 @@ platform-shared = { path = "../../../packages/shared-backend", editable = true }
 
 [dependency-groups]
 dev = [
-    "pytest==9.0.3",
-    "pytest-asyncio==1.3.0",
+    "pytest==9.1.1",
+    "pytest-asyncio==1.4.0",
     "pytest-timeout==2.4.0",
 ]
 
