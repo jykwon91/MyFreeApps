@@ -152,3 +152,79 @@ updates:
       interval: "monthly"
     open-pull-requests-limit: 3
     labels: ["dependencies", "docker", "myrecipes"]
+
+  # MyGamingAssistant
+  #
+  # No fastapi ignore here (unlike mybookkeeper / myjobhunter): the < 0.137 hold
+  # exists for those two apps' route-introspection tests, which mga does not
+  # have. myrecipes already runs fastapi 0.141.1 green, so the hold is
+  # app-specific, not cross-app. If a >= 0.137 bump ever reds mga's CI, add an
+  # ignore block then rather than pre-emptively freezing it here.
+  - package-ecosystem: "pip"
+    directory: "/apps/mygamingassistant/backend"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "python", "mygamingassistant"]
+    groups:
+      python-minor-patch:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: "npm"
+    directory: "/apps/mygamingassistant/frontend"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "npm", "mygamingassistant"]
+    groups:
+      npm-minor-patch:
+        update-types: ["minor", "patch"]
+    ignore:
+      # @types/node must track the Node runtime, not leap ahead. Major bumps
+      # (e.g. 25 -> 26) desync the lock / break tsc against the version we
+      # actually run. Allow minor+patch; hold majors until the runtime moves.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: "docker"
+    directory: "/apps/mygamingassistant"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 3
+    labels: ["dependencies", "docker", "mygamingassistant"]
+
+  # MyPizzaTracker
+  #
+  # No fastapi ignore — same reasoning as mygamingassistant above.
+  - package-ecosystem: "pip"
+    directory: "/apps/mypizzatracker/backend"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "python", "mypizzatracker"]
+    groups:
+      python-minor-patch:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: "npm"
+    directory: "/apps/mypizzatracker/frontend"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "npm", "mypizzatracker"]
+    groups:
+      npm-minor-patch:
+        update-types: ["minor", "patch"]
+    ignore:
+      # @types/node must track the Node runtime, not leap ahead. Major bumps
+      # (e.g. 25 -> 26) desync the lock / break tsc against the version we
+      # actually run. Allow minor+patch; hold majors until the runtime moves.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: "docker"
+    directory: "/apps/mypizzatracker"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 3
+    labels: ["dependencies", "docker", "mypizzatracker"]
