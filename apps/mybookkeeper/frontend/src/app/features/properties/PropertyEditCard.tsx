@@ -4,6 +4,8 @@ import type { Property } from "@/shared/types/property/property";
 import type { PropertyForm } from "@/shared/types/property/property-form";
 import type { PropertyClassification } from "@/shared/types/property/property-classification";
 import { CLASSIFICATION_OPTIONS } from "@/shared/lib/property-labels";
+import { useToast } from "@/shared/hooks/useToast";
+import { extractErrorMessage } from "@/shared/utils/errorMessage";
 import { Button, LoadingButton } from "@platform/ui";
 import Select from "@/shared/components/ui/Select";
 import TilePicker from "@/shared/components/ui/TilePicker";
@@ -19,6 +21,7 @@ export interface PropertyEditCardProps {
 export default function PropertyEditCard({ property, onDone }: PropertyEditCardProps) {
   const [form, setForm] = useState<PropertyForm>(() => fromProperty(property));
   const [updateProperty, { isLoading }] = useUpdatePropertyMutation();
+  const { showSuccess, showError } = useToast();
 
   function setField(field: keyof PropertyForm, value: string | null) {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -45,7 +48,11 @@ export default function PropertyEditCard({ property, onDone }: PropertyEditCardP
       },
     })
       .unwrap()
-      .then(onDone);
+      .then(() => {
+        showSuccess("Property updated");
+        onDone();
+      })
+      .catch((err) => showError(extractErrorMessage(err)));
   }
 
   return (

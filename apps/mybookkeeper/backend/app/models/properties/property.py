@@ -20,6 +20,29 @@ class PropertyType(str, enum.Enum):
     LONG_TERM = "long_term"
 
 
+def reconcile_type(
+    classification: PropertyClassification, type: PropertyType | None,
+) -> PropertyType | None:
+    """Return the rental ``type`` that ``classification`` allows.
+
+    Mirrors ``chk_prop_classification_type`` below: a rental type only means
+    something on an investment property, so the two columns have to move
+    together. Every write path goes through here, because the database rejects a
+    mismatched pair with an ``IntegrityError`` that surfaces as a 500 rather than
+    anything the caller can act on — and a PATCH that changes only
+    ``classification`` leaves the stored ``type`` behind unless something
+    reconciles it.
+    """
+    if classification is PropertyClassification.INVESTMENT:
+        return type or PropertyType.SHORT_TERM
+    if classification in (
+        PropertyClassification.PRIMARY_RESIDENCE,
+        PropertyClassification.SECOND_HOME,
+    ):
+        return None
+    return type
+
+
 class Property(Base):
     __tablename__ = "properties"
 

@@ -305,22 +305,27 @@
     "properties": {
       "source_paths": [
         "backend/app/models/properties/",
+        "backend/app/models/requests/property_create.py",
+        "backend/app/models/requests/property_update.py",
         "backend/app/repositories/properties/",
         "backend/app/services/properties/",
         "backend/app/schemas/properties/",
         "backend/app/api/properties.py",
         "backend/alembic/versions/utillink260624_add_utility_account_links.py",
-        "frontend/src/pages/Properties.tsx",
-        "frontend/src/features/properties/"
+        "frontend/src/app/pages/Properties.tsx",
+        "frontend/src/app/features/properties/"
       ],
       "backend_tests": [
         "test_property_duplicate.py",
+        "test_property_classification_type.py",
+        "test_property_service_reclassify.py",
         "test_utility_account_link_repo.py",
         "test_utility_account_service.py",
         "test_property_matcher_account_link.py"
       ],
       "frontend_tests": [
-        "Properties.test.tsx"
+        "Properties.test.tsx",
+        "PropertyEditCard.test.tsx"
       ],
       "e2e_specs": [
         "properties.spec.ts"
