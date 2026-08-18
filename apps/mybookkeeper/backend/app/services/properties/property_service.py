@@ -3,7 +3,7 @@ import uuid
 
 from app.core.context import RequestContext
 from app.db.session import AsyncSessionLocal, unit_of_work
-from app.models.properties.property import Property, PropertyType
+from app.models.properties.property import Property, PropertyType, reconcile_type
 from app.models.properties.property_classification import PropertyClassification
 from app.repositories import activity_repo, property_repo, tax_return_repo
 
@@ -77,6 +77,13 @@ async def update_property(
             if field not in UPDATABLE_FIELDS:
                 raise ValueError(f"Cannot update field: {field}")
             setattr(prop, field, value)
+
+        # A PATCH that only moves classification leaves the old rental type in
+        # place, which the chk_prop_classification_type constraint rejects. The
+        # invariant belongs here rather than in the request model: only this
+        # layer sees the merged row, and callers cannot send a null type through
+        # a PATCH that drops nulls.
+        prop.type = reconcile_type(prop.classification, prop.type)
 
         # Cascade: when classification changes, update linked Activity and flag recompute
         new_classification = prop.classification
