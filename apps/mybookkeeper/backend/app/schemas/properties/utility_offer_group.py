@@ -26,6 +26,15 @@ class UtilityOfferGroup(BaseModel):
     # rating on file). Reported rather than silently dropped so the list never
     # reads as "this is everything" when it is not.
     withheld_low_rated_count: int = 0
+    # Plans that price by hour or day — free nights, free weekends, off-peak
+    # discounts. Kept apart from ``offers`` and carrying no saving figure,
+    # because whether one wins depends on *when* power is drawn and nothing in
+    # the data says that. Listed so the operator can judge them, never ranked.
+    time_of_use_offers: list[UtilityOffer] = []
+    # Time-of-use plans held back on the same rating bar. Counted separately
+    # from ``withheld_low_rated_count`` so neither number claims the other's
+    # meaning — one is about cheaper offers, this one is not about price at all.
+    withheld_low_rated_time_of_use_count: int = 0
     # Set when no ranking could be produced: no ZIP in the address, no current
     # electricity plan to compare against, or the feed was unreachable. The UI
     # shows this instead of an empty list, so a gap never reads as "no savings".

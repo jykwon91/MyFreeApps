@@ -12,10 +12,12 @@ from decimal import Decimal
 
 import pytest
 
+from app.core.power_to_choose_constants import MAX_SPECIAL_TERMS_CHARS
 from app.services.properties import power_to_choose_client
 from app.services.properties._address_zip import derive_zip_code
 from app.services.properties._offer_ranking import (
     annual_saving_cents,
+    clean_special_terms,
     is_teaser_priced,
     meets_rating_bar,
     normalize_rating,
@@ -138,6 +140,43 @@ class TestSavingsAndSwitchCost:
         assert switch_cost_cents(
             None, is_per_remaining_month=False, months_remaining=6,
         ) is None
+
+
+class TestCleanSpecialTerms:
+    """The one place a time-of-use plan states its free window in words."""
+
+    def test_champion_free_weekends_survives_intact(self) -> None:
+        """143 characters — under the cap, so nothing is touched."""
+        raw = (
+            "Free power from 12 midnight Friday night to 11:59 PM Sunday "
+            "night. No monthly fee or minimum usage requirement. Indexed "
+            "Solar Buyback Included."
+        )
+        assert clean_special_terms(raw) == raw
+
+    def test_pasted_whitespace_is_collapsed(self) -> None:
+        """Some REPs paste a formatted paragraph; a ragged block is not copy."""
+        assert clean_special_terms(
+            "FREE electricity from 9:00 AM\n  to 4:00 PM\tdaily.",
+        ) == "FREE electricity from 9:00 AM to 4:00 PM daily."
+
+    def test_a_long_blurb_is_cut_at_a_word_boundary(self) -> None:
+        """Chariot's 285-character marketing blurb is the real case."""
+        raw = "word " * 100
+        cleaned = clean_special_terms(raw)
+        assert cleaned is not None
+        assert cleaned.endswith("…")
+        assert len(cleaned) <= MAX_SPECIAL_TERMS_CHARS + 1
+        # No half-word before the ellipsis — a truncated token reads as
+        # corrupted data rather than as an excerpt.
+        assert cleaned[:-1].endswith("word")
+
+    def test_nothing_published_is_none_not_empty(self) -> None:
+        """The UI says so out loud, which it cannot do with an empty string."""
+        assert clean_special_terms("") is None
+        assert clean_special_terms("   ") is None
+        assert clean_special_terms(None) is None
+        assert clean_special_terms(42) is None
 
 
 class TestDeriveZipCode:

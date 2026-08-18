@@ -1,5 +1,6 @@
 import EquippedPlanCard from "@/app/features/utility/EquippedPlanCard";
 import OfferTierCard from "@/app/features/utility/OfferTierCard";
+import TimeOfUseOffers from "@/app/features/utility/TimeOfUseOffers";
 import { bestSavingCents } from "@/shared/lib/offer-stats";
 import { buildOfferTiers } from "@/shared/lib/offer-tiers";
 import type { UtilityOfferGroup } from "@/shared/types/utility/utility-offer-group";
@@ -74,6 +75,14 @@ export default function BetterPlansGroup({
               poorly rated or unrated providers.
             </p>
           ) : null}
+
+          {/* Below the ranked plans, and separated by a rule, because these are
+              not further down the same list — they are a different question. */}
+          <TimeOfUseOffers
+            offers={group.time_of_use_offers}
+            withheldLowRatedCount={group.withheld_low_rated_time_of_use_count}
+            propertyId={group.property_id}
+          />
         </div>
       </div>
     </section>

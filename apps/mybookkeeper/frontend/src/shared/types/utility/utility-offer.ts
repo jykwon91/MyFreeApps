@@ -23,7 +23,24 @@ export interface UtilityOffer {
   cancellation_fee_cents: number | null;
   cancellation_fee_is_per_remaining_month: boolean;
   is_teaser_priced: boolean;
+  /**
+   * Always `null` on a time-of-use offer — the reference usage says nothing
+   * about when power is drawn, so there is no honest figure to put here.
+   */
   annual_saving_cents: number | null;
+  /**
+   * The plan prices power differently by hour or day — free nights, free
+   * weekends, off-peak discounts. The three disclosure prices are then a
+   * blended average, not a rate that will be paid, so these are listed apart
+   * from the ranked offers and never compared against a flat plan.
+   */
+  is_time_of_use: boolean;
+  /**
+   * The provider's own description of what the plan includes, verbatim and
+   * truncated. Only populated for time-of-use offers, where it is the one place
+   * the free window is stated in words.
+   */
+  special_terms: string | null;
   fact_sheet_url: string | null;
   enroll_url: string | null;
 }

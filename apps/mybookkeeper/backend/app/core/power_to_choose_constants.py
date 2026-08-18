@@ -72,3 +72,15 @@ UNRATED_SENTINELS: frozenset[int] = frozenset({-1, 0})
 # Cap on offers returned per property. The ranked list is long and repetitive
 # past the first handful — every REP fields near-identical 12-month products.
 MAX_OFFERS_PER_PROPERTY = 8
+
+# Cap on time-of-use offers returned per property. Shown in their own list with
+# no saving figure attached (see ``utility_offer_service``), so the operator is
+# reading each one's terms rather than scanning a ranking — a shorter list than
+# the priced one is the point.
+MAX_TIME_OF_USE_OFFERS_PER_PROPERTY = 4
+
+# Longest ``special_terms`` blurb to carry through, in characters. The field is
+# REP-authored free text: some state the free window in one sentence, others run
+# a few hundred characters of marketing. Truncating keeps a card readable, and
+# the Electricity Facts Label link beside it is the binding version regardless.
+MAX_SPECIAL_TERMS_CHARS = 260

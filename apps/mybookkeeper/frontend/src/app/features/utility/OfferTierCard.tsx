@@ -1,4 +1,5 @@
 import OfferDisclosure from "@/app/features/utility/OfferDisclosure";
+import OfferEnrollLink from "@/app/features/utility/OfferEnrollLink";
 import OfferStatGrid from "@/app/features/utility/OfferStatGrid";
 import OfferVerdictBadge from "@/app/features/utility/OfferVerdictBadge";
 import SavingHeadline from "@/app/features/utility/SavingHeadline";
@@ -33,11 +34,6 @@ export default function OfferTierCard({
   const offer = tier.lead;
   const stats = buildOfferStats(offer, group, referenceAnnualKwh);
   const verdict = offerVerdict(offer);
-  // One solid button per property. A column of identical primary buttons is a
-  // column of equally-weighted choices, which is the opposite of a ranking.
-  const enrollTone = isBest
-    ? "bg-primary text-primary-foreground hover:opacity-90"
-    : "border border-border hover:bg-muted";
 
   return (
     <li
@@ -83,15 +79,15 @@ export default function OfferTierCard({
 
       {offer.enroll_url ? (
         <p className="mt-3">
-          <a
+          {/* One solid button per property. A column of identical primary
+              buttons is a column of equally-weighted choices, which is the
+              opposite of a ranking. */}
+          <OfferEnrollLink
             href={offer.enroll_url}
-            target="_blank"
-            rel="noreferrer noopener"
-            className={`inline-flex items-center justify-center min-h-[44px] px-4 rounded-md text-sm font-medium whitespace-nowrap ${enrollTone}`}
-            data-testid={`better-plan-enroll-${offer.external_plan_id}`}
-          >
-            Sign up with {offer.provider_name}
-          </a>
+            providerName={offer.provider_name}
+            tone={isBest ? "primary" : "secondary"}
+            testId={`better-plan-enroll-${offer.external_plan_id}`}
+          />
         </p>
       ) : null}
 

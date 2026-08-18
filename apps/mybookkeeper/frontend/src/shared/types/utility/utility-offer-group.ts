@@ -16,6 +16,13 @@ export interface UtilityOfferGroup {
   offers: UtilityOffer[];
   /** Cheaper offers held back for failing the provider-rating bar. */
   withheld_low_rated_count: number;
+  /**
+   * Plans that price by hour or day. Carry no saving figure — whether one wins
+   * depends on when power is used, which nothing in the data records.
+   */
+  time_of_use_offers: UtilityOffer[];
+  /** Time-of-use plans held back on the same rating bar. */
+  withheld_low_rated_time_of_use_count: number;
   /** Why there is nothing to show. Rendered instead of an empty list. */
   unavailable_reason: string | null;
 }

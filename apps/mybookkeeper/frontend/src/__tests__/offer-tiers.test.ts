@@ -26,6 +26,8 @@ function offer(overrides: Partial<UtilityOffer> = {}): UtilityOffer {
     cancellation_fee_is_per_remaining_month: false,
     is_teaser_priced: false,
     annual_saving_cents: 61920,
+    is_time_of_use: false,
+    special_terms: null,
     fact_sheet_url: null,
     enroll_url: null,
     ...overrides,
