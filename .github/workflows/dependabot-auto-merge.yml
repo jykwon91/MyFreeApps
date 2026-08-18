@@ -27,13 +27,48 @@ jobs:
   auto-merge:
     name: auto-merge
     runs-on: ubuntu-latest
-    if: ${{ github.actor == 'dependabot[bot]' }}
+    # Gate on the PR AUTHOR, not github.actor. When the relock workflow pushes
+    # its lockfile-sync commit, the resulting `synchronize` event carries
+    # github.actor = the PAT owner, so an actor gate SKIPS the run entirely —
+    # and the re-approval that `dismiss_stale_reviews` requires never happens,
+    # stranding the PR at REVIEW_REQUIRED forever.
+    #
+    # Verified against real runs of this workflow: on the same Dependabot PR,
+    # `success` when triggering_actor=dependabot[bot] (the `opened` event) and
+    # `skipped` when triggering_actor=jykwon91 (the post-relock `synchronize`).
+    #
+    # Author-gating is laxer than actor-gating in exactly one way: a human with
+    # write access could push to a Dependabot branch and have it auto-approved.
+    # The bot-authorship check below closes that hole.
+    if: ${{ github.event.pull_request.user.login == 'dependabot[bot]' }}
     steps:
       - name: Fetch Dependabot metadata
         id: meta
         uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98 # v3.1.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify every commit is bot-authored
+        id: authors
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          # Only dependabot[bot]'s own commits and the relock workflow's
+          # github-actions[bot] lockfile-sync commit may be auto-approved.
+          # Anything else means a human pushed to this branch — never
+          # rubber-stamp that, which is the risk author-gating would otherwise
+          # introduce over the old actor gate.
+          FOREIGN="$(gh api "repos/$REPO/pulls/$PR_NUMBER/commits" --paginate --jq '.[] | select((.commit.author.name // "") as $n | $n != "dependabot[bot]" and $n != "github-actions[bot]") | .sha[0:8] + " " + (.commit.author.name // "?")')"
+          if [ -n "$FOREIGN" ]; then
+            echo "::warning::Non-bot commits on this PR — skipping auto-approve:"
+            echo "$FOREIGN"
+            echo "safe=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "safe=true" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Hold majors for manual review
         if: ${{ steps.meta.outputs.update-type == 'version-update:semver-major' }}
@@ -46,7 +81,7 @@ jobs:
             "🚧 Major version bump — held for manual review, not auto-merged. Merge deliberately once you've assessed the breaking changes."
 
       - name: Approve patch / minor / security
-        if: ${{ steps.meta.outputs.update-type != 'version-update:semver-major' }}
+        if: ${{ steps.meta.outputs.update-type != 'version-update:semver-major' && steps.authors.outputs.safe == 'true' }}
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -55,12 +90,14 @@ jobs:
           # PR, so `--auto` below would enable then block forever without this.
           # The github-actions[bot] approval satisfies the rule — it is neither the
           # PR author (dependabot[bot]) nor the last pusher, so require_last_push_approval
-          # is met. Re-runs on each synchronize, re-approving after a relock push
-          # trips dismiss_stale_reviews. Gated to non-major (majors are held above).
+          # is met. Re-runs on each synchronize, re-approving after a relock push trips
+          # dismiss_stale_reviews — which only actually works now that the job gates on
+          # the PR author rather than github.actor (see the job-level `if:` above).
+          # Gated to non-major (majors are held above) and to bot-only authorship.
           gh pr review --approve "$PR_URL" || true
 
       - name: Enable auto-merge for patch / minor / security
-        if: ${{ steps.meta.outputs.update-type != 'version-update:semver-major' }}
+        if: ${{ steps.meta.outputs.update-type != 'version-update:semver-major' && steps.authors.outputs.safe == 'true' }}
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
