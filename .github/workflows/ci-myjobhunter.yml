@@ -3,12 +3,6 @@ name: MyJobHunter CI
 on:
   pull_request:
     branches: [main]
-    paths:
-      - 'apps/myjobhunter/**'
-      - 'packages/**'
-      - 'package.json'
-      - 'package-lock.json'
-      - '.github/workflows/ci-myjobhunter.yml'
   push:
     branches: [main]
     paths:
@@ -26,7 +20,82 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  # Path filtering lives HERE, at the job level — NOT in `on.pull_request.paths`.
+  #
+  # Several of this workflow's checks are REQUIRED status checks on main. A
+  # `pull_request` workflow skipped by a top-level `paths:` filter never reports
+  # its check contexts at all, so every PR that did not touch myjobhunter hung forever
+  # on "Expected — Waiting for status to be reported" and could only be landed
+  # with `gh pr merge --admin`. (Same failure mode documented at length in
+  # ci-shared-backend.yml, which solves it by always running its ~5s suite. This
+  # workflow is far too heavy for that, so it skips at the job level instead.)
+  #
+  # A job skipped by an `if:` condition reports SUCCESS to required status
+  # checks, whereas a workflow skipped by a path filter reports nothing at all.
+  # That difference is the entire fix. The `paths:` filter is deliberately KEPT
+  # on `push` — main builds do not need to report contexts.
+  #
+  # DO NOT re-add `paths:` under `on.pull_request`.
+  #
+  # The gate below is `!cancelled() && ... != 'false'`, NOT `== 'true'`.
+  # A plain `needs: changes` would skip every dependent job if the gate job
+  # itself failed — and a skipped job reports SUCCESS, which would let a PR
+  # merge with no tests run at all. This form inverts that: work is skipped
+  # only on an explicit `false`, so any failure of the gate runs everything.
+  changes:
+    name: changes / myjobhunter
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      relevant: ${{ steps.filter.outputs.relevant }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Detect changes relevant to myjobhunter
+        id: filter
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          set -uo pipefail
+          # Non-PR events (push to main) still carry the `paths:` filter below,
+          # so if we are running at all the change is relevant by definition.
+          if [ "$EVENT_NAME" != "pull_request" ]; then
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # Three-dot semantics: only what THIS PR changed, ignoring commits
+          # that landed on main after it branched.
+          MERGE_BASE="$(git merge-base "$BASE_SHA" "$HEAD_SHA")" || MERGE_BASE=""
+          if [ -z "$MERGE_BASE" ]; then
+            echo "::warning::Could not compute merge base; running the full suite."
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if ! FILES="$(git diff --name-only "$MERGE_BASE" "$HEAD_SHA")"; then
+            echo "::warning::Could not diff; running the full suite."
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "::group::changed files"
+          echo "$FILES"
+          echo "::endgroup::"
+          # Mirrors the `paths:` filter still applied to `push` below. Every
+          # failure path above falls back to relevant=true — this gate may only
+          # ever skip work it is certain is unrelated.
+          if echo "$FILES" | grep -qE '^(apps/myjobhunter/|packages/|package\.json$|package-lock\.json$|\.github/workflows/ci-myjobhunter\.yml$)'; then
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "relevant=false" >> "$GITHUB_OUTPUT"
+          fi
+
   backend-deps-resolve:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.relevant != 'false' }}
     name: backend-deps-resolve / myjobhunter
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -48,6 +117,8 @@ jobs:
           pip install -r requirements.txt
 
   backend-tests:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.relevant != 'false' }}
     name: backend-tests / myjobhunter / ${{ matrix.shard.name }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -181,6 +252,8 @@ jobs:
         run: python -m pytest -q --timeout=60 ${{ matrix.shard.paths }}
 
   frontend-build:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.relevant != 'false' }}
     name: frontend-build / myjobhunter
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -203,6 +276,8 @@ jobs:
         run: npm run build --workspace=myjobhunter-frontend
 
   caddy-image:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.relevant != 'false' }}
     name: caddy-image / myjobhunter
     runs-on: ubuntu-latest
     timeout-minutes: 10
