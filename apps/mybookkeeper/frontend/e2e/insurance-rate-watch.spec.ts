@@ -16,13 +16,15 @@
  * Verifies:
  *   - Loading the page does not call the department; only a click does.
  *   - The verdict leads, in dollars per year, above any evidence.
+ *   - The action item names carriers to quote and the renewal to beat, and
+ *     says out loud that the operator has to call an agent.
+ *   - Every policy gets a card, and a scope line accounts for all of them.
  *   - Skeleton card/row counts mirror the loaded section (no layout shift).
  *   - The projected renewal reads as a movement from today's premium, marked
  *     as an estimate.
  *   - A carrier with no filings says so instead of rendering as "all clear".
- *   - A policy the feed never covered is a footnote, not a card.
  *   - Carriers holding rates flat are separated from carriers raising them.
- *   - A withdrawn filing is labelled "Not approved".
+ *   - A filing that never took effect says what that cost: nothing.
  *   - No horizontal scroll across mobile / tablet / desktop; 44px touch target.
  *   - A feed outage renders the reason and offers no verdict at all.
  */
@@ -33,8 +35,14 @@ const POLICY_ID = "00000000-0000-0000-0000-0000000000d1";
 const UNMATCHED_POLICY_ID = "00000000-0000-0000-0000-0000000000d2";
 const OUT_OF_SCOPE_POLICY_ID = "00000000-0000-0000-0000-0000000000d3";
 
-/** Matches ``RateWatchSkeleton``: two policy cards, two filing rows each. */
-const SKELETON_CARD_COUNT = 2;
+/**
+ * Matches ``RateWatchSkeleton``: three policy cards, two filing rows each.
+ *
+ * Three because every policy now gets a card, including ones this feed
+ * structurally cannot cover — the previous cut footnoted those, and the
+ * operator read the result as two of their three properties being skipped.
+ */
+const SKELETON_CARD_COUNT = 3;
 
 const FEED_DOWN_REASON =
   "The Texas Department of Insurance filing data could not be reached, so nothing was checked.";
@@ -253,7 +261,20 @@ test.describe("Check for rate increases", () => {
     await expect(verdict).toContainText("E2E Peerless");
     await expect(verdict).toContainText("+$268/yr");
     await expect(page.getByTestId("rate-watch-verdict-detail")).toContainText(
-      "SafePoint filed +11.1%",
+      "SafePoint filed a +11.1% average rate increase with the state",
+    );
+
+    // Then the only thing the operator can actually do about it. A landlord
+    // policy is agent-placed, so the deliverable is names and a date — not a
+    // switch, and not a table to interpret.
+    const action = page.getByTestId("rate-watch-action");
+    await expect(action).toContainText("FOREMOST LLOYDS OF TEXAS");
+    await expect(action).toContainText("before Sep 24, 2026");
+    await expect(action).toContainText("can't be bought online");
+
+    // Every policy is accounted for before the cards are read.
+    await expect(page.getByTestId("rate-watch-scope")).toContainText(
+      "Checked your 3 policies",
     );
 
     // The projection reads as a movement from today's premium, and never as a
@@ -264,22 +285,36 @@ test.describe("Check for rate increases", () => {
     await expect(projection).toContainText("+11.1%");
     await expect(projection).toContainText("estimated");
 
-    // The bigger number on the card is one the carrier asked for and did not
-    // get. Unlabelled, it would read as the coming increase.
+    // The card leads with the filing that will actually be charged. The bigger
+    // number — 24%, which the carrier asked for and did not get — is folded
+    // away, because listed beside the live one it read as the coming increase.
     const cards = page.getByTestId("rate-watch-outlook-card");
-    await expect(cards.first()).toContainText("Not approved");
-    await expect(cards.first()).toContainText("Approved");
+    await expect(cards.first()).toContainText(
+      "In effect — this is the rate you'll be charged.",
+    );
+    const fold = page.getByTestId("rate-watch-outlook-more");
+    await expect(fold).toContainText("See 1 more filing from this carrier");
+    await fold.locator("summary").click();
+    await expect(
+      cards.first().getByText("Withdrawn before taking effect — never reached a bill."),
+    ).toBeVisible();
 
     // A carrier the department publishes nothing for says so. Silence here
     // would read as "no increase coming".
-    await expect(page.getByTestId("rate-watch-outlook-unavailable")).toContainText(
-      "No dwelling-line filings found under this carrier's name.",
-    );
+    // Scoped to its own card: two policies now explain themselves, and they
+    // explain different things — a carrier that filed nothing is not the same
+    // as a policy form the feed will never carry.
+    await expect(
+      cards.nth(1).getByTestId("rate-watch-outlook-unavailable"),
+    ).toContainText("No dwelling-line filings found under this carrier's name.");
 
-    // A policy on a form this feed never covered is a footnote, not a card
-    // claiming a search that never ran.
-    await expect(page.getByTestId("rate-watch-outlook-card")).toHaveCount(2);
-    await expect(page.getByTestId("rate-watch-out-of-scope")).toContainText("E2E Home");
+    // A policy on a form this feed never covers still gets a card, saying why
+    // there is nothing to check rather than being footnoted out of the count.
+    await expect(cards).toHaveCount(3);
+    await expect(cards.nth(2)).toContainText("E2E Home");
+    await expect(cards.nth(2)).toContainText(
+      "Texas publishes rate filings for landlord (dwelling-fire) policies only.",
+    );
 
     // The market half: who to ask an agent about. Carriers holding rates flat
     // are the shortlist to call, so they are separated from the ones raising.
@@ -329,6 +364,15 @@ test.describe("Check for rate increases", () => {
     const box = await button.boundingBox();
     expect(box, "check button has no box").not.toBeNull();
     expect(box!.height, "check button height").toBeGreaterThanOrEqual(44);
+
+    // The disclosure hiding a card's non-binding filings is tapped, not just
+    // read, so it is held to the same floor as the button above it.
+    await button.click();
+    const fold = page.getByTestId("rate-watch-outlook-more").locator("summary");
+    await expect(fold).toBeVisible({ timeout: 15000 });
+    const foldBox = await fold.boundingBox();
+    expect(foldBox, "fold summary has no box").not.toBeNull();
+    expect(foldBox!.height, "fold summary height").toBeGreaterThanOrEqual(44);
   });
 
   test("a feed outage reads as an outage, not as good news", async ({ page }) => {

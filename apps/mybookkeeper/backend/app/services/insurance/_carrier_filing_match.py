@@ -19,7 +19,10 @@ from __future__ import annotations
 import datetime as _dt
 import re
 
-from app.core.tdi_rate_filings_constants import FILING_LOOKBACK_DAYS
+from app.core.tdi_rate_filings_constants import (
+    FILING_LOOKBACK_DAYS,
+    NON_ADMITTED_CARRIER_MARKERS,
+)
 from app.schemas.insurance.insurance_rate_filing import InsuranceRateFiling
 
 # Words that identify a corporate form rather than a company. Left in, every
@@ -125,6 +128,38 @@ def matches_carrier(policy_carrier: str | None, filing_company: str) -> bool:
     if not filing_tokens:
         return False
     return any(alias <= filing_tokens for alias in carrier_aliases(policy_carrier))
+
+
+def _fold_punctuation(name: str) -> str:
+    """Upper-cased, with apostrophes closed up and other punctuation spaced.
+
+    Apostrophes are removed rather than replaced so "Lloyd's" reads as one
+    word. Splitting it into "LLOYD S" is what would stop "LLOYDS OF LONDON"
+    from ever matching the name as an operator actually writes it.
+    """
+    without_apostrophes = re.sub(r"['’]", "", name.upper())
+    return " ".join(re.split(r"[^A-Z0-9]+", without_apostrophes)).strip()
+
+
+def is_non_admitted_carrier(name: str | None) -> bool:
+    """Whether this carrier is exempt from Texas rate filing.
+
+    A surplus-lines carrier does not file its rates with TDI, so it can never
+    appear in this dataset — which is a permanent fact about the carrier, not a
+    search that came back empty. The two have to be told apart because they
+    lead the operator to do different things: one is "nothing to do here ever",
+    the other is "check how the name is spelled".
+
+    Conservative by construction. A false positive tells the operator to stop
+    looking at a policy this feed could have spoken about, so a carrier is only
+    named here when its status is unambiguous; anything unrecognised falls
+    through to the ordinary no-filings path, which lists surplus lines as one
+    of its possible explanations.
+    """
+    if not name:
+        return False
+    folded = _fold_punctuation(name)
+    return any(marker in folded for marker in NON_ADMITTED_CARRIER_MARKERS)
 
 
 def is_recent(filing: InsuranceRateFiling, *, today: _dt.date) -> bool:

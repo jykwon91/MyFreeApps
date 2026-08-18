@@ -21,6 +21,7 @@ from app.core.tdi_rate_filings_constants import (
     MIN_NOTABLE_CHANGE_PCT,
     NON_PURCHASABLE_CARRIERS,
     REASON_FEED_DOWN,
+    REASON_NON_ADMITTED_CARRIER,
     REASON_NO_CARRIER,
     REASON_NOT_DWELLING,
     REASON_NO_FILINGS,
@@ -40,6 +41,7 @@ from app.services.insurance._carrier_filing_match import (
     applies_by,
     carrier_tokens,
     compound_change_pct,
+    is_non_admitted_carrier,
     is_recent,
     matches_carrier,
     project_premium_cents,
@@ -95,7 +97,12 @@ def _build_outlook(
     filings: list[InsuranceRateFiling],
     today: _dt.date,
 ) -> InsurancePolicyRateOutlook:
-    checkable = not is_out_of_scope(policy_form(row.policy_name))
+    wrong_form = is_out_of_scope(policy_form(row.policy_name))
+    # Not a search that failed: a surplus-lines carrier is exempt from Texas
+    # rate filing, so this policy is as permanently outside the dataset as a
+    # homeowners one. Grouped with the form check for that reason.
+    unfiled_carrier = is_non_admitted_carrier(row.carrier)
+    checkable = not wrong_form and not unfiled_carrier
 
     renewal = _renewal_date(row.expiration_date, today=today)
     matched = (
@@ -108,8 +115,10 @@ def _build_outlook(
     # not a carrier-matching failure, and saying so first stops the card
     # claiming a search it never ran.
     unavailable_reason: str | None = None
-    if not checkable:
+    if wrong_form:
         unavailable_reason = REASON_NOT_DWELLING
+    elif unfiled_carrier:
+        unavailable_reason = REASON_NON_ADMITTED_CARRIER
     elif not row.carrier:
         unavailable_reason = REASON_NO_CARRIER
     elif not matched:

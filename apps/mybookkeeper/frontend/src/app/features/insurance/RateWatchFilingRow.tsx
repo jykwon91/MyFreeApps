@@ -1,56 +1,46 @@
-import Badge, { type BadgeColor } from "@/shared/components/ui/Badge";
+import Badge from "@/shared/components/ui/Badge";
 import {
+  filingChangeColor,
+  filingStatusColor,
   formatChangePct,
   formatFilingDate,
   formatFilingStatus,
 } from "@/shared/lib/rate-filing-format";
 import type { InsuranceRateFiling } from "@/shared/types/insurance/insurance-rate-filing";
 
-/** Green for a decrease, orange for a rise, grey for flat or unstated. */
-function changeColor(pct: number | null): BadgeColor {
-  if (pct === null || pct === 0) return "gray";
-  return pct > 0 ? "orange" : "green";
-}
-
 export interface RateWatchFilingRowProps {
   filing: InsuranceRateFiling;
-  /**
-   * Off inside a policy card, which has already named the carrier in its
-   * heading and again in its headline — a third printing is just repetition.
-   */
-  showCarrier?: boolean;
 }
 
 /**
- * One filing, as a line.
+ * One carrier's filing in the market list.
  *
- * The status badge is not decoration. A carrier that asked for 15% and was
- * refused reads identically to one that got it unless the disposition is on
- * the row, and only one of those changes what the operator will pay.
+ * Compact on purpose — this list is scanned for carrier names to read out to an
+ * agent, and a sentence per row would bury them. Policy cards use
+ * ``RateWatchFilingDetail`` instead, which spells the status out; the two
+ * shapes stopped being one component with a flag when the flag was doing more
+ * than hiding a name.
  */
 export default function RateWatchFilingRow({
   filing,
-  showCarrier = true,
 }: RateWatchFilingRowProps) {
   return (
     <li
       className="flex flex-wrap items-baseline gap-x-3 gap-y-1 py-2 border-b border-border last:border-0"
       data-testid="rate-watch-filing-row"
     >
-      {showCarrier ? (
-        // Never truncated. This list exists to be read to an agent, and half a
-        // carrier's name is not a name.
-        <span className="text-sm font-medium">{filing.company_name}</span>
-      ) : null}
+      {/* Never truncated. This list exists to be read to an agent, and half a
+          carrier's name is not a name. */}
+      <span className="text-sm font-medium">{filing.company_name}</span>
 
       <Badge
         label={formatChangePct(filing.percent_change)}
-        color={changeColor(filing.percent_change)}
+        color={filingChangeColor(filing.percent_change)}
       />
 
       <Badge
         label={formatFilingStatus(filing)}
-        color={filing.is_in_force ? "gray" : "yellow"}
+        color={filingStatusColor(filing)}
       />
 
       {/* Always its own line. Left to wrap only when it does not fit, the

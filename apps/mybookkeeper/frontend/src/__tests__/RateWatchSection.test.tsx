@@ -113,7 +113,7 @@ describe("RateWatchSection", () => {
     expect(verdict).toHaveTextContent("6738 Peerless St");
     expect(verdict).toHaveTextContent("+$268/yr");
     expect(screen.getByTestId("rate-watch-verdict-detail")).toHaveTextContent(
-      "SafePoint filed +11.1%",
+      "SafePoint filed a +11.1% average rate increase with the state",
     );
   });
 
@@ -212,9 +212,11 @@ describe("RateWatchSection", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("footnotes a policy the feed never covered instead of giving it a card", () => {
-    // An HO-3 is not a carrier-matching failure. The first cut gave it a
-    // full-size card claiming a search that never ran.
+  it("gives a policy the feed never covered its own card, saying why", () => {
+    // Reverses the previous cut, which footnoted these. With three policies
+    // and one filed increase the operator saw a single card and asked "why do
+    // i only see options for 1 property instead of all?" — a policy that was
+    // answered has to look answered, not absent.
     mockUninitialized = false;
     mockData = watch({
       outlooks: [
@@ -233,9 +235,16 @@ describe("RateWatchSection", () => {
     });
     render(<RateWatchSection />);
 
-    expect(screen.getAllByTestId("rate-watch-outlook-card")).toHaveLength(1);
-    expect(screen.getByTestId("rate-watch-out-of-scope")).toHaveTextContent(
-      "6734 Peerless St",
+    const cards = screen.getAllByTestId("rate-watch-outlook-card");
+    expect(cards).toHaveLength(2);
+    expect(cards[1]).toHaveTextContent("6734 Peerless St");
+    expect(cards[1]).toHaveTextContent(
+      "Texas publishes rate filings for landlord policies only.",
+    );
+    // And the count above the cards accounts for it, so the reader never has
+    // to work out the total by counting cards that look interesting.
+    expect(screen.getByTestId("rate-watch-scope")).toHaveTextContent(
+      "Checked your 2 policies — 1 filed an increase, 1 this feed doesn't cover.",
     );
   });
 
@@ -255,7 +264,7 @@ describe("RateWatchSection", () => {
     render(<RateWatchSection />);
 
     expect(screen.getByTestId("rate-watch-outlook-headline")).toHaveTextContent(
-      "Foremost is holding rates flat",
+      "Foremost filed with the state to hold dwelling rates flat.",
     );
     expect(
       screen.queryByTestId("rate-watch-outlook-projection"),
@@ -274,9 +283,12 @@ describe("RateWatchSection", () => {
     });
     render(<RateWatchSection />);
 
-    expect(screen.getAllByTestId("rate-watch-filing-row")[0]).toHaveTextContent(
-      "Not approved",
-    );
+    // On a card the status is a clause, not a badge — this is where the
+    // operator is deciding whether to act, so "Not approved" becomes the
+    // sentence that says it never cost them anything.
+    expect(
+      screen.getAllByTestId("rate-watch-filing-detail")[0],
+    ).toHaveTextContent("Withdrawn before taking effect — never reached a bill.");
   });
 
   it("labels a filing the regulator has not ruled on", () => {
@@ -287,7 +299,7 @@ describe("RateWatchSection", () => {
     render(<RateWatchSection />);
 
     expect(screen.getByTestId("rate-watch-market-rising")).toHaveTextContent(
-      "Proposed",
+      "Pending decision",
     );
   });
 
@@ -356,6 +368,109 @@ describe("RateWatchSection", () => {
 
     expect(screen.getByTestId("rate-watch-error")).toHaveTextContent(
       "Nothing is wrong with your policies",
+    );
+  });
+
+  it("names the carriers to quote and the date to beat", () => {
+    // "do i need to manually search these insurance companies and call? it's
+    // not clear what the action item is." Both halves answered on screen.
+    mockUninitialized = false;
+    mockData = watch({
+      market_flat: [
+        filing({ serff_id: "F-1", company_name: "FOREMOST LLOYDS OF TEXAS", percent_change: 0 }),
+        filing({ serff_id: "F-2", company_name: "ALLSTATE VEHICLE AND PROPERTY", percent_change: 0 }),
+      ],
+    });
+    render(<RateWatchSection />);
+
+    const action = screen.getByTestId("rate-watch-action");
+    expect(action).toHaveTextContent(
+      "FOREMOST LLOYDS OF TEXAS and ALLSTATE VEHICLE AND PROPERTY",
+    );
+    expect(action).toHaveTextContent("before Sep 24, 2026");
+    expect(action).toHaveTextContent("can't be bought online");
+  });
+
+  it("still says to call when no carrier is holding rates flat", () => {
+    // The increase is real either way. Inventing names because the callout
+    // looks bare would be worse than a shortlist with none.
+    mockUninitialized = false;
+    mockData = watch({ market_flat: [] });
+    render(<RateWatchSection />);
+
+    expect(screen.getByTestId("rate-watch-action")).toHaveTextContent(
+      "whether another carrier will quote your property",
+    );
+  });
+
+  it("shows no action item when nothing is going up", () => {
+    // An instruction that appears on a clean check trains the reader to skip
+    // it on the one that matters.
+    mockUninitialized = false;
+    mockData = watch({
+      outlooks: [
+        outlook({ projected_change_pct: 0, projected_premium_cents: 241_000 }),
+      ],
+      has_any_increase: false,
+      market_rising: [],
+    });
+    render(<RateWatchSection />);
+
+    expect(screen.queryByTestId("rate-watch-action")).not.toBeInTheDocument();
+  });
+
+  it("leads a card with the filing in force and folds the rest away", () => {
+    // Only a filing in force reaches a bill. The previous cut listed a
+    // withdrawn one beside it at equal weight, which is what made a card read
+    // as three contradictory percentages.
+    mockUninitialized = false;
+    mockData = watch({
+      outlooks: [
+        outlook({
+          filings: [
+            filing({ serff_id: "LIVE-1", percent_change: 11.1 }),
+            filing({
+              serff_id: "DEAD-1",
+              percent_change: 0,
+              is_in_force: false,
+              is_pending: false,
+            }),
+          ],
+        }),
+      ],
+    });
+    render(<RateWatchSection />);
+
+    expect(screen.getAllByTestId("rate-watch-filing-detail")[0]).toHaveTextContent(
+      "this is the rate you'll be charged",
+    );
+    expect(screen.getByTestId("rate-watch-outlook-more")).toHaveTextContent(
+      "See 1 more filing from this carrier",
+    );
+  });
+
+  it("does not fold a card's only filings out of sight", () => {
+    // With nothing in force to lead with, folding would leave the headline
+    // with no visible evidence under it at all.
+    mockUninitialized = false;
+    mockData = watch({
+      outlooks: [
+        outlook({
+          projected_change_pct: null,
+          projected_premium_cents: null,
+          filings: [filing({ is_in_force: false, is_pending: true })],
+        }),
+      ],
+      has_any_increase: false,
+      market_rising: [],
+    });
+    render(<RateWatchSection />);
+
+    expect(screen.queryByTestId("rate-watch-outlook-more")).not.toBeInTheDocument();
+    expect(screen.getByTestId("rate-watch-filing-detail")).toBeInTheDocument();
+    // And a live filing is not reported as "nothing took effect".
+    expect(screen.getByTestId("rate-watch-outlook-headline")).toHaveTextContent(
+      "has a rate change pending with the state",
     );
   });
 });

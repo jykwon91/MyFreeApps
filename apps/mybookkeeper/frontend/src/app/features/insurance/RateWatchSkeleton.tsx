@@ -1,10 +1,14 @@
 /**
  * Loading placeholder for the rate-watch check.
  *
- * Mirrors the loaded section: the verdict banner, two bordered policy cards
- * each with a heading row, a headline line, a projection line and two filing
- * rows, then the market list with its heading and five rows. Same shape means
- * no layout shift when the department answers.
+ * Mirrors the loaded section: the verdict banner, the action-item box, the
+ * scope line, three bordered policy cards each with a heading row, a headline
+ * line, a projection line and two filing rows, then the market list with its
+ * heading and five rows. Same shape means no layout shift when the department
+ * answers.
+ *
+ * Three cards rather than two because every policy now gets one, and the
+ * operator this was rebuilt for holds three.
  */
 export default function RateWatchSkeleton() {
   return (
@@ -20,8 +24,18 @@ export default function RateWatchSkeleton() {
         <div className="h-3 bg-muted rounded w-56 mt-2" />
       </div>
 
+      {/* The action item, then the scope line. Both sit between the verdict and
+          the cards in the loaded section. */}
+      <div className="rounded-lg border border-border p-4">
+        <div className="h-4 bg-muted rounded w-24" />
+        <div className="h-4 bg-muted rounded w-full mt-2" />
+        <div className="h-3 bg-muted rounded w-64 mt-2" />
+      </div>
+
+      <div className="h-4 bg-muted rounded w-80" />
+
       <ul className="space-y-3">
-        {[1, 2].map((card) => (
+        {[1, 2, 3].map((card) => (
           <li key={card} className="rounded-lg border border-border p-4">
             <div className="flex items-baseline justify-between gap-3">
               <div className="h-4 bg-muted rounded w-40" />
