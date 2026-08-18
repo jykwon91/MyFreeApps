@@ -38,6 +38,7 @@ import VendorDetail from "@/app/pages/VendorDetail";
 import ReplyTemplates from "@/app/pages/ReplyTemplates";
 import InsurancePolicies from "@/app/pages/InsurancePolicies";
 import InsurancePolicyDetail from "@/app/pages/InsurancePolicyDetail";
+import Mortgages from "@/app/pages/Mortgages";
 import UtilityPlans from "@/app/pages/UtilityPlans";
 import TaxReport from "@/app/pages/TaxReport";
 import Integrations from "@/app/pages/Integrations";
@@ -139,6 +140,7 @@ export default function App() {
               <Route path="vendors/:vendorId" element={<VendorDetail />} />
               <Route path="insurance-policies" element={<InsurancePolicies />} />
               <Route path="insurance-policies/:policyId" element={<InsurancePolicyDetail />} />
+              <Route path="mortgages" element={<Mortgages />} />
               <Route path="utility-plans" element={<UtilityPlans />} />
               <Route path="reply-templates" element={<ReplyTemplates />} />
               <Route path="reconciliation" element={<Reconciliation />} />

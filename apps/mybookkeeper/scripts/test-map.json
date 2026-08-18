@@ -691,6 +691,63 @@
         "insurance-rate-watch.spec.ts"
       ]
     },
+    "mortgage": {
+      "source_paths": [
+        "backend/app/models/mortgage/",
+        "backend/app/repositories/mortgage/",
+        "backend/app/schemas/mortgage/",
+        "backend/app/services/mortgage/",
+        "backend/app/api/mortgages.py",
+        "backend/app/api/mortgage_market.py",
+        "backend/app/core/mortgage_enums.py",
+        "backend/app/core/pmms_rate_constants.py",
+        "backend/app/services/extraction/prompts/mortgage_statement_prompt.py",
+        "backend/app/services/extraction/document_draft_reader.py",
+        "backend/app/services/documents/document_ownership.py",
+        "backend/alembic/versions/mtg260817_create_mortgages.py",
+        "frontend/src/app/pages/Mortgages.tsx",
+        "frontend/src/app/features/mortgages/",
+        "frontend/src/shared/types/mortgage/",
+        "frontend/src/shared/lib/mortgage-format.ts",
+        "frontend/src/shared/lib/mortgage-form.ts",
+        "frontend/src/shared/lib/mortgage-draft.ts",
+        "frontend/src/shared/lib/mortgage-rate-watch-verdict.ts",
+        "frontend/src/shared/lib/mortgage-verdict-labels.ts",
+        "frontend/src/shared/store/mortgagesApi.ts",
+        "frontend/src/shared/store/mortgageMarketApi.ts",
+        "frontend/src/app/features/documents/",
+        "frontend/src/shared/lib/document-read-errors.ts"
+      ],
+      "backend_tests": [
+        "test_mortgages_api.py",
+        "test_mortgage_response_mapping.py",
+        "test_mortgage_validation.py",
+        "test_mortgage_extraction.py",
+        "test_mortgage_audit_masking.py",
+        "test_mortgage_market_api.py",
+        "test_mortgage_market_service.py",
+        "test_pmms_client.py",
+        "test_refi_math.py",
+        "test_refi_outlook.py",
+        "test_document_draft_reader.py"
+      ],
+      "frontend_tests": [
+        "Mortgages.test.tsx",
+        "EditMortgageDialog.test.tsx",
+        "MortgageRateWatchSection.test.tsx",
+        "PropertyOccupancyFixer.test.tsx",
+        "mortgage-format.test.ts",
+        "mortgage-form.test.ts",
+        "mortgage-draft.test.ts",
+        "mortgage-rate-watch-verdict.test.ts",
+        "DocumentDraftNotices.test.tsx",
+        "usePageListModes.test.ts"
+      ],
+      "e2e_specs": [
+        "mortgages.spec.ts",
+        "mortgage-rate-watch.spec.ts"
+      ]
+    },
     "utility_plans": {
       "source_paths": [
         "backend/app/models/properties/utility_plan.py",

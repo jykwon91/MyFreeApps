@@ -8,6 +8,8 @@ import { useInsurancePoliciesListMode } from "@/app/features/insurance/useInsura
 import { useInsurancePolicyDetailMode } from "@/app/features/insurance/useInsurancePolicyDetailMode";
 import { useInquiriesListMode } from "@/app/features/inquiries/useInquiriesListMode";
 import { useInquiryDetailMode } from "@/app/features/inquiries/useInquiryDetailMode";
+import { useMortgagesListMode } from "@/app/features/mortgages/useMortgagesListMode";
+import { useMortgageRateWatchMode } from "@/app/features/mortgages/useMortgageRateWatchMode";
 import type { InsurancePolicyDetail } from "@/shared/types/insurance/insurance-policy-detail";
 import type { InquiryResponse } from "@/shared/types/inquiry/inquiry-response";
 
@@ -215,5 +217,95 @@ describe("useInquiryDetailMode", () => {
 
   it("returns 'content' when not loading, no error, and inquiry is defined", () => {
     expect(useInquiryDetailMode({ isLoading: false, isError: false, inquiry: stubInquiry })).toBe("content");
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// useMortgagesListMode
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("useMortgagesListMode", () => {
+  it("returns 'loading' while fetching regardless of count", () => {
+    expect(useMortgagesListMode({ isLoading: true, mortgageCount: 0 })).toBe("loading");
+    expect(useMortgagesListMode({ isLoading: true, mortgageCount: 3 })).toBe("loading");
+  });
+
+  it("returns 'empty' when done loading and no loans are on file", () => {
+    expect(useMortgagesListMode({ isLoading: false, mortgageCount: 0 })).toBe("empty");
+  });
+
+  it("returns 'list' when count is non-zero", () => {
+    expect(useMortgagesListMode({ isLoading: false, mortgageCount: 3 })).toBe("list");
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// useMortgageRateWatchMode
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("useMortgageRateWatchMode", () => {
+  it("returns 'idle' before the operator has asked for a check", () => {
+    // The check reaches an external service, so an unchecked section must not
+    // render as loading — nothing is in flight.
+    expect(
+      useMortgageRateWatchMode({
+        hasChecked: false,
+        isFetching: false,
+        isError: false,
+        outlookCount: 0,
+      }),
+    ).toBe("idle");
+  });
+
+  it("returns 'loading' while fetching, even on the first check", () => {
+    expect(
+      useMortgageRateWatchMode({
+        hasChecked: false,
+        isFetching: true,
+        isError: false,
+        outlookCount: 0,
+      }),
+    ).toBe("loading");
+    expect(
+      useMortgageRateWatchMode({
+        hasChecked: true,
+        isFetching: true,
+        isError: false,
+        outlookCount: 2,
+      }),
+    ).toBe("loading");
+  });
+
+  it("returns 'error' when a completed check failed", () => {
+    expect(
+      useMortgageRateWatchMode({
+        hasChecked: true,
+        isFetching: false,
+        isError: true,
+        outlookCount: 0,
+      }),
+    ).toBe("error");
+  });
+
+  it("returns 'empty' when the check ran and there were no loans to compare", () => {
+    expect(
+      useMortgageRateWatchMode({
+        hasChecked: true,
+        isFetching: false,
+        isError: false,
+        outlookCount: 0,
+      }),
+    ).toBe("empty");
+  });
+
+  it("returns 'results' once a successful check produced outlooks", () => {
+    expect(
+      useMortgageRateWatchMode({
+        hasChecked: true,
+        isFetching: false,
+        isError: false,
+        outlookCount: 2,
+      }),
+    ).toBe("results");
   });
 });

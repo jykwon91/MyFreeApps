@@ -35,6 +35,9 @@ from app.repositories import extraction_prompt_repo
 from app.services.extraction.prompts.base_prompt import DEFAULT_PROMPT
 from app.services.extraction.prompts.document_type_addendums import get_addendum_for_filename
 from app.services.extraction.prompts.insurance_policy_prompt import INSURANCE_POLICY_PROMPT
+from app.services.extraction.prompts.mortgage_statement_prompt import (
+    MORTGAGE_STATEMENT_PROMPT,
+)
 from app.services.extraction.prompts.utility_plan_prompt import UTILITY_PLAN_PROMPT
 from app.services.system.event_service import record_event
 from platform_shared.extraction import (
@@ -57,6 +60,7 @@ __all__ = [
     "extract_from_image",
     "extract_from_email",
     "run_utility_plan_extraction",
+    "run_mortgage_statement_extraction",
     "run_insurance_policy_extraction",
     "_create_with_backoff",
     "_ThrottleState",
@@ -306,6 +310,23 @@ async def run_utility_plan_extraction(
     return await _run_record_extraction(
         UTILITY_PLAN_PROMPT,
         "utility plan",
+        text=text,
+        image_bytes=image_bytes,
+        media_type=media_type,
+    )
+
+
+async def run_mortgage_statement_extraction(
+    *,
+    text: str | None = None,
+    image_bytes: bytes | None = None,
+    media_type: str | None = None,
+    user_id: uuid.UUID | None = None,
+) -> dict:
+    """Read mortgage loan terms under MORTGAGE_STATEMENT_PROMPT."""
+    return await _run_record_extraction(
+        MORTGAGE_STATEMENT_PROMPT,
+        "mortgage statement",
         text=text,
         image_bytes=image_bytes,
         media_type=media_type,
