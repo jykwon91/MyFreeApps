@@ -53,8 +53,17 @@ CLAUDE_TIMEOUT_S = 30.0
 # ``[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}`` so the dot belongs to exactly one place in
 # the grammar; the original let ``.`` match either inside the class or as the
 # literal separator, which is the same backtracking amplifier one level down.
+#
+# Every quantifier is bounded. The lookbehind is what makes the scan linear in
+# practice, but static analysis reasons about the pattern in isolation and
+# cannot see it, so the bounds carry the proof: worst-case work per start
+# position is a constant, not a function of input length. The limits sit far
+# above anything RFC 5321/1035 permits (64-char local part, 63-char labels), so
+# no address that the previous pattern redacted stops being redacted -- verified
+# against a parity set before the change.
 _EMAIL_RE = re.compile(
-    r"(?<![a-zA-Z0-9._%+-])[a-zA-Z0-9._%+-]+@(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}"
+    r"(?<![a-zA-Z0-9._%+-])[a-zA-Z0-9._%+-]{1,256}"
+    r"@(?:[a-zA-Z0-9-]{1,63}\.){1,16}[a-zA-Z]{2,63}"
 )
 _PHONE_RE = re.compile(r"(?<![\d+])(?:\+?\d[\s().-]?){8,15}")
 
