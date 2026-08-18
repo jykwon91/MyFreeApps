@@ -53,17 +53,48 @@ export function combineNotes(result: JdUrlExtractResponse): string | null {
   return combined.length > NOTES_MAX_LEN ? combined.slice(0, NOTES_MAX_LEN) : combined;
 }
 
+/**
+ * Convert an HTML fragment to plain text.
+ *
+ * Parsing is delegated to the browser's own HTML parser via `DOMParser`
+ * rather than a chain of regex replacements. A regex chain gets this class of
+ * job wrong in two ways a real parser cannot:
+ *
+ * - **Order-dependent entity decoding.** Stripping tags before decoding
+ *   entities leaves `&lt;script&gt;` intact through the strip, then turns it
+ *   into `<script>` afterwards — the sanitiser hands back the exact markup it
+ *   was meant to remove.
+ * - **Double unescaping.** Running `&amp;` -> `&` as one replacement and
+ *   `&lt;` -> `<` as another means `&amp;lt;` decodes twice and yields `<`,
+ *   again reconstructing markup from an already-escaped input.
+ *
+ * `DOMParser.parseFromString(html, "text/html")` builds an inert document:
+ * scripts do not execute and no subresources are fetched. `textContent` then
+ * yields the text with every tag removed and every entity decoded exactly
+ * once, per the HTML spec.
+ *
+ * The result is used as plain text (the notes scaffold) and must never be fed
+ * to `dangerouslySetInnerHTML` — see NotesSection.
+ */
 export function stripHtml(html: string): string {
-  return html
+  // Preserve the line structure block-level markup implies, before the parser
+  // flattens everything to text.
+  const withBreaks = html
     .replace(/<\s*br\s*\/?\s*>/gi, "\n")
-    .replace(/<\s*\/?\s*(p|li|div|h[1-6])[^>]*>/gi, "\n")
-    .replace(/<[^>]+>/g, "")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
+    .replace(/<\s*\/?\s*(p|li|div|h[1-6])\b[^>]*>/gi, "\n");
+
+  const doc = new DOMParser().parseFromString(withBreaks, "text/html");
+  // Script/style bodies are markup internals, not prose — their text would
+  // otherwise survive into the notes.
+  doc.body
+    ?.querySelectorAll("script, style, noscript, template")
+    .forEach((el) => el.remove());
+
+  return (doc.body?.textContent ?? "")
+    // The parser decodes `&nbsp;` to U+00A0. Notes are plain text edited in a
+    // textarea, where a non-breaking space is an invisible foot-gun; fold it
+    // back to an ordinary space.
+    .replace(/\u00a0/g, " ")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 }

@@ -12,6 +12,7 @@ from sqlalchemy import text
 
 from platform_shared.core.git import resolve_git_commit
 from platform_shared.core.lifespan import create_app_lifespan
+from platform_shared.core.logging_safety import install_crlf_safe_logging
 from platform_shared.api.transparency_router import build_transparency_router
 from platform_shared.services.transparency.scheduler import (
     maybe_start_transparency_sync,
@@ -39,6 +40,10 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s %(name)s %(message)s",
     datefmt="%Y-%m-%dT%H:%M:%S",
 )
+# Escape CR/LF + ANSI in every interpolated log message, so a request-supplied
+# value can never forge a log record (log injection). Applied at the handler
+# boundary, so it covers every call site in the process without per-call work.
+install_crlf_safe_logging()
 logger = logging.getLogger("app")
 
 
