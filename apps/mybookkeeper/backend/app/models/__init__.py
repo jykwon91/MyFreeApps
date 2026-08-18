@@ -47,6 +47,7 @@ from app.models.leases.lease_term_version import LeaseTermVersion
 from app.models.insurance.insurance_benchmark import InsuranceBenchmark
 from app.models.insurance.insurance_policy import InsurancePolicy
 from app.models.insurance.insurance_policy_attachment import InsurancePolicyAttachment
+from app.models.mortgage.mortgage import Mortgage
 from app.models.vendors.vendor import Vendor
 from app.models.documents.document import Document
 from app.models.extraction.extraction_prompt import ExtractionPrompt
