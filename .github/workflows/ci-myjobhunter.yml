@@ -118,7 +118,20 @@ jobs:
 
   backend-tests:
     needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.relevant != 'false' }}
+    # `!cancelled()` (not a `relevant` test) so the job still RUNS — and so still
+    # expands its matrix into the five required contexts — even if the `changes`
+    # gate job itself failed. The per-step conditions below then evaluate an empty
+    # `relevant`, which is != 'false', so the full suite runs. Fail-safe either way.
+    if: ${{ !cancelled() }}
+    # NOTE: unlike every other job here, the gate is applied per-STEP, not at
+    # the job level. A matrix job skipped by a job-level `if:` does not have its
+    # matrix expanded, so GitHub reports ONE check literally named
+    # "backend-tests / myjobhunter / ${{ matrix.shard.name }}" instead of the five
+    # shard contexts. All five are REQUIRED status checks on main, so the PR would
+    # stay blocked forever — the exact bug this gating was introduced to fix.
+    #
+    # Running the job and skipping its steps keeps the five real context names and
+    # costs only a few seconds of runner startup per shard.
     name: backend-tests / myjobhunter / ${{ matrix.shard.name }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -226,9 +239,11 @@ jobs:
 
     steps:
       - name: Checkout
+        if: ${{ needs.changes.outputs.relevant != 'false' }}
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Python
+        if: ${{ needs.changes.outputs.relevant != 'false' }}
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.12'
@@ -236,16 +251,19 @@ jobs:
           cache-dependency-path: apps/myjobhunter/backend/requirements.txt
 
       - name: Install backend dependencies
+        if: ${{ needs.changes.outputs.relevant != 'false' }}
         working-directory: apps/myjobhunter/backend
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
       - name: Run alembic migrations
+        if: ${{ needs.changes.outputs.relevant != 'false' }}
         working-directory: apps/myjobhunter/backend
         run: PYTHONPATH=. alembic upgrade head
 
       - name: Run pytest (${{ matrix.shard.name }})
+        if: ${{ needs.changes.outputs.relevant != 'false' }}
         working-directory: apps/myjobhunter/backend
         # --timeout=60 (pytest-timeout) is a safety net so a future
         # teardown bug can't consume the whole shard timeout silently.
