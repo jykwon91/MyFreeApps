@@ -180,7 +180,7 @@ passlib==1.7.4
     # via myjobhunter-backend
 pgvector==0.4.2
     # via myjobhunter-backend
-pillow==12.2.0
+pillow==12.3.0
     # via
     #   fastembed
     #   weasyprint
@@ -224,7 +224,7 @@ pyjwt==2.13.0
     #   platform-shared
 pyotp==2.10.0
     # via platform-shared
-pypdf==6.13.3
+pypdf==6.16.1
     # via myjobhunter-backend
 pyphen==0.17.2
     # via weasyprint

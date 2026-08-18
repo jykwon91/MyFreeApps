@@ -227,7 +227,7 @@ pyotp==2.10.0
     #   platform-shared
 pyparsing==3.3.2
     # via httplib2
-pypdf==6.14.2
+pypdf==6.16.1
     # via mybookkeeper-backend
 pytest==9.1.1
     # via
