@@ -18,7 +18,10 @@ export default function RateWatchBody({ mode, data }: RateWatchBodyProps) {
         <p className="text-sm text-muted-foreground" data-testid="rate-watch-idle">
           Texas carriers must file a rate change with the state before they can
           charge it, months before the renewal notice reaches you. This checks
-          the landlord-policy filings against every policy you hold.
+          the landlord-policy filings against every policy you hold. A dwelling
+          policy is agent-placed — there's no online marketplace for it — so if
+          it's worth switching, you'll still call your agent; this just tells
+          you who to ask about.
         </p>
       );
 

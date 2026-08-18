@@ -133,6 +133,44 @@ NON_PURCHASABLE_CARRIERS: tuple[str, ...] = (
     "AMERICAN ASSOCIATION OF INSURANCE SERVICES",
 )
 
+# --- Carriers that will never appear in this feed -----------------------------
+#
+# A surplus-lines (non-admitted) carrier is exempt from Texas rate filing:
+# TDI does not regulate what it charges, so no amount of correct spelling will
+# find a filing for one. Much of the Texas landlord market is written this way
+# — the 2026 Peerless renewal is on Lloyd's syndicate paper — and reporting
+# that as "either they have not filed or the name does not match" sends the
+# operator to fix a spelling that was never wrong.
+#
+# Matched as substrings against the carrier name with punctuation folded away,
+# NOT by the token-subset rule used for carrier matching: ``carrier_tokens``
+# discards LLOYD, LLOYDS and UNDERWRITERS as corporate boilerplate, which are
+# exactly the words that identify this paper.
+#
+# The distinction that makes this list delicate: "Certain Underwriters at
+# Lloyd's of London" is the London surplus-lines market, while "SafePoint
+# Lloyds", "Foremost Lloyds of Texas" and "State Farm Lloyds" are Texas Lloyds
+# plan companies — fully admitted Texas carriers that DO file, and three of
+# which are in the live feed. Matching bare "LLOYDS" would wrongly exclude
+# them, so the markers carry the qualifying words.
+#
+# Deliberately a floor rather than an admissions registry. TDI publishes no
+# machine-readable admitted-carrier list, so this names only the writers whose
+# status is unambiguous; everything else falls through to REASON_NO_FILINGS,
+# which names surplus lines as one of its three possibilities for that reason.
+
+NON_ADMITTED_CARRIER_MARKERS: tuple[str, ...] = (
+    # Lloyd's of London syndicate paper, written in Texas as surplus lines.
+    "CERTAIN UNDERWRITERS",
+    "LLOYDS OF LONDON",
+    # US excess & surplus writers. Each is the non-admitted arm of a group
+    # whose admitted companies file separately and under different names.
+    "LEXINGTON INSURANCE",
+    "SCOTTSDALE INSURANCE",
+    "EVANSTON INSURANCE",
+    "KINSALE INSURANCE",
+)
+
 # --- Why an outlook could not be produced -------------------------------------
 #
 # Shown to the operator instead of an empty filing list, so "we could not check"
@@ -142,17 +180,34 @@ NON_PURCHASABLE_CARRIERS: tuple[str, ...] = (
 
 REASON_NO_CARRIER = "No carrier recorded on this policy — add one to check it."
 
+# Three genuinely different things produce an empty result, and the first cut
+# named only two of them. A surplus-lines carrier is not a search that failed:
+# Texas does not regulate its rates, so it will never be in this dataset. Left
+# out, the operator reads "the name might not match" and goes to correct a
+# spelling that was never wrong. ``NON_ADMITTED_CARRIER_MARKERS`` catches the
+# ones that can be named with certainty; this covers the rest.
 REASON_NO_FILINGS = (
     "No landlord-policy rate filing found under this carrier's name in the "
-    "last two years. Either they have not filed one, or the name on this "
-    "policy does not match how they file with the state."
+    "last two years. That means one of three things: they write on a "
+    "surplus-lines (non-admitted) basis, which Texas does not regulate rates "
+    "for and which will never appear here; they have not filed in that time; "
+    "or the name on this policy does not match how they file with the state."
 )
 
 # Not a failure to find anything — this dataset was never going to apply.
-# Saying "no filings found" here implies a search happened, and none did.
+# Saying "no filings found" here implies a search happened, and none did. The
+# closing clause matters: without it the operator has no way to tell this from
+# a gap that might fill in by the next renewal.
 REASON_NOT_DWELLING = (
-    "Texas publishes rate filings for landlord (dwelling-fire) policies only, "
-    "so there is nothing to check against a homeowners policy."
+    "Texas only publishes rate filings for landlord (dwelling-fire) policies, "
+    "not homeowners policies — there is nothing in this feed to check this "
+    "policy against, and there never will be."
+)
+
+REASON_NON_ADMITTED_CARRIER = (
+    "This carrier writes on a surplus-lines (non-admitted) basis. Texas does "
+    "not regulate surplus-lines rates, so it will never appear in this feed — "
+    "there is nothing to check here, now or at any future renewal."
 )
 
 REASON_FEED_DOWN = (

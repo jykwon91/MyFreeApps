@@ -1,4 +1,4 @@
-import RateWatchFilingRow from "@/app/features/insurance/RateWatchFilingRow";
+import RateWatchOutlookFilings from "@/app/features/insurance/RateWatchOutlookFilings";
 import {
   formatChangePct,
   formatFilingDate,
@@ -24,6 +24,12 @@ export interface RateWatchOutlookCardProps {
  * is a statewide average across a carrier's whole book, and the operator's own
  * renewal also moves with their coverage amount and claims history — showing it
  * as a firm number would invite them to treat it as a quote.
+ *
+ * Every policy gets a card, including ones this feed will never cover. The
+ * previous cut footnoted those, and with three policies and one filed increase
+ * the operator read a single card and asked "why do i only see options for 1
+ * property instead of all?" — a policy that was answered looked like a policy
+ * that was skipped.
  */
 export default function RateWatchOutlookCard({ outlook }: RateWatchOutlookCardProps) {
   const { projected_change_pct: pct, unavailable_reason: reason } = outlook;
@@ -32,6 +38,14 @@ export default function RateWatchOutlookCard({ outlook }: RateWatchOutlookCardPr
     outlook.current_premium_cents,
     outlook.projected_premium_cents,
   );
+
+  // Only a filing in force will ever appear on a bill. Listing the rest beside
+  // it at equal weight is what put a withdrawn filing next to a live one and
+  // left the operator asking what "no change" and "Not approved" meant on the
+  // same row — neither of them was going to cost anything.
+  const inForce = outlook.filings.filter((filing) => filing.is_in_force);
+  const rest = outlook.filings.filter((filing) => !filing.is_in_force);
+  const hasPendingOnly = inForce.length === 0 && rest.some((f) => f.is_pending);
 
   return (
     <li
@@ -79,7 +93,7 @@ export default function RateWatchOutlookCard({ outlook }: RateWatchOutlookCardPr
             className="text-sm text-muted-foreground mt-2"
             data-testid="rate-watch-outlook-headline"
           >
-            {formatOutlookHeadline(pct, outlook.carrier)}
+            {formatOutlookHeadline(pct, outlook.carrier, { hasPendingOnly })}
           </p>
 
           {hasMovement ? (
@@ -101,17 +115,7 @@ export default function RateWatchOutlookCard({ outlook }: RateWatchOutlookCardPr
         </>
       )}
 
-      {outlook.filings.length > 0 ? (
-        <ul className="mt-3">
-          {outlook.filings.map((filing) => (
-            <RateWatchFilingRow
-              key={filing.serff_id}
-              filing={filing}
-              showCarrier={false}
-            />
-          ))}
-        </ul>
-      ) : null}
+      <RateWatchOutlookFilings inForce={inForce} rest={rest} />
     </li>
   );
 }

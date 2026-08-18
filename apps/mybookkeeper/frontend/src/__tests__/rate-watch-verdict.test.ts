@@ -47,8 +47,12 @@ describe("buildRateWatchVerdict", () => {
     expect(verdict?.headline).toBe(
       "Your 6738 Peerless St renewal is going up about +$268/yr.",
     );
-    expect(verdict?.detail).toContain("SafePoint filed +11.1%");
-    expect(verdict?.detail).toContain("Sep 24, 2026");
+    // The qualifiers are the point: a filed percentage is a statewide average
+    // lodged with the regulator, not a number anyone quoted for this address.
+    expect(verdict?.detail).toContain(
+      "SafePoint filed a +11.1% average rate increase with the state",
+    );
+    expect(verdict?.detail).toContain("in effect before your Sep 24, 2026 renewal");
   });
 
   it("picks the worst policy when several have increases", () => {

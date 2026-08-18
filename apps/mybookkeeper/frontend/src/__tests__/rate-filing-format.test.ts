@@ -8,9 +8,13 @@
  */
 import { describe, it, expect } from "vitest";
 import {
+  filingChangeColor,
+  filingStatusColor,
   formatChangePct,
+  formatFilingConsequence,
   formatFilingDate,
   formatFilingStatus,
+  formatFoldSummary,
   formatOutlookHeadline,
   formatPremiumDelta,
 } from "@/shared/lib/rate-filing-format";
@@ -63,50 +67,123 @@ describe("formatFilingDate", () => {
 });
 
 describe("formatFilingStatus", () => {
-  it("calls an in-force filing approved", () => {
-    expect(formatFilingStatus(filing())).toBe("Approved");
+  // Named for the bill, not for the regulator's process. "Approved" /
+  // "Proposed" / "Not approved" were three of the four words the operator had
+  // to ask the meaning of.
+  it("says an in-force filing is in effect", () => {
+    expect(formatFilingStatus(filing())).toBe("In effect");
   });
 
-  it("calls a pending filing proposed", () => {
+  it("says a pending filing is still awaiting a decision", () => {
     expect(
       formatFilingStatus(filing({ is_in_force: false, is_pending: true })),
-    ).toBe("Proposed");
+    ).toBe("Pending decision");
   });
 
-  it("calls a withdrawn filing not approved", () => {
+  it("says a filing that lost is withdrawn", () => {
     // Neither in force nor pending — the carrier asked and did not get it.
     expect(
       formatFilingStatus(filing({ is_in_force: false, is_pending: false })),
-    ).toBe("Not approved");
+    ).toBe("Withdrawn");
+  });
+});
+
+describe("formatFilingConsequence", () => {
+  it("tells the operator an in-force filing is what they'll be charged", () => {
+    expect(formatFilingConsequence(filing())).toBe(
+      "In effect — this is the rate you'll be charged.",
+    );
+  });
+
+  it("says a pending filing may still be cut or refused", () => {
+    expect(
+      formatFilingConsequence(filing({ is_in_force: false, is_pending: true })),
+    ).toContain("could be cut or refused");
+  });
+
+  it("says a withdrawn filing never reached a bill", () => {
+    expect(
+      formatFilingConsequence(filing({ is_in_force: false, is_pending: false })),
+    ).toContain("never reached a bill");
   });
 });
 
 describe("formatOutlookHeadline", () => {
-  it("names the carrier raising rates", () => {
+  it("calls an increase a statewide average, not a quote", () => {
+    // "average" and "with the state" are the two qualifiers that stop +11.1%
+    // reading as a number someone quoted for this house.
     expect(formatOutlookHeadline(11.1, "SafePoint")).toBe(
-      "SafePoint filed an increase",
+      "SafePoint filed an average rate increase with the state.",
     );
   });
 
   it("distinguishes holding flat from finding nothing", () => {
     expect(formatOutlookHeadline(0, "Foremost")).toBe(
-      "Foremost is holding rates flat",
+      "Foremost filed with the state to hold dwelling rates flat.",
     );
     expect(formatOutlookHeadline(null, "Foremost")).toBe(
-      "Foremost — no approved change found",
+      "Foremost's recent filings didn't result in a rate change that took effect.",
     );
+  });
+
+  it("distinguishes nothing-in-force from a decision not yet made", () => {
+    // Same null percentage, opposite meanings: one carrier is settled and
+    // quiet, the other has a live filing that could land before renewal.
+    expect(
+      formatOutlookHeadline(null, "Foremost", { hasPendingOnly: true }),
+    ).toBe("Foremost has a rate change pending with the state — not decided yet.");
   });
 
   it("reports a decrease as such", () => {
     expect(formatOutlookHeadline(-4.2, "Foremost")).toBe(
-      "Foremost filed a decrease",
+      "Foremost filed a rate decrease with the state.",
     );
   });
 
   it("falls back when the policy records no carrier", () => {
     expect(formatOutlookHeadline(11.1, null)).toBe(
-      "This carrier filed an increase",
+      "This carrier filed an average rate increase with the state.",
     );
+  });
+});
+
+describe("formatFoldSummary", () => {
+  it("counts what is hidden", () => {
+    expect(
+      formatFoldSummary([filing({ is_in_force: false, is_pending: false })]),
+    ).toBe("See 1 more filing from this carrier");
+  });
+
+  it("surfaces a pending filing rather than burying it in the fold", () => {
+    // A live filing is the reason anyone opens this, so hiding that fact
+    // behind the fold would defeat the fold.
+    expect(
+      formatFoldSummary([
+        filing({ is_in_force: false, is_pending: false }),
+        filing({ serff_id: "X-2", is_in_force: false, is_pending: true }),
+      ]),
+    ).toBe(
+      "See 2 more filings from this carrier, including one still pending a decision",
+    );
+  });
+});
+
+describe("filing badge colours", () => {
+  it("greys a flat or unstated change and warns on a rise", () => {
+    expect(filingChangeColor(null)).toBe("gray");
+    expect(filingChangeColor(0)).toBe("gray");
+    expect(filingChangeColor(11.1)).toBe("orange");
+    expect(filingChangeColor(-4.2)).toBe("green");
+  });
+
+  it("marks only an undecided filing as still live", () => {
+    expect(filingStatusColor(filing())).toBe("gray");
+    expect(
+      filingStatusColor(filing({ is_in_force: false, is_pending: true })),
+    ).toBe("yellow");
+    expect(
+      filingStatusColor(filing({ is_in_force: false, is_pending: false })),
+    ).toBe("gray");
   });
 });
 

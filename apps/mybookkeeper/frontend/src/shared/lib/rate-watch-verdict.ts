@@ -45,23 +45,31 @@ export function buildRateWatchVerdict(
     headline: delta
       ? `Your ${where} renewal is going up about ${delta}.`
       : `A rate increase is filed against your ${where} policy.`,
+    // "average" and "with the state" carry the two facts the bare percentage
+    // hid: this is a statewide figure across the carrier's whole book, and it
+    // is a regulatory filing rather than a quote anyone sent for this house.
     detail: [
-      `${worst.carrier ?? "The carrier"} filed ${formatChangePct(
+      `${worst.carrier ?? "The carrier"} filed a ${formatChangePct(
         worst.projected_change_pct,
-      )}`,
+      )} average rate increase with the state`,
       worst.expiration_date
-        ? `takes effect before your ${formatFilingDate(
+        ? `, in effect before your ${formatFilingDate(
             worst.expiration_date,
           )} renewal`
-        : null,
-    ]
-      .filter(Boolean)
-      .join(", "),
+        : "",
+      ".",
+    ].join(""),
   };
 }
 
-/** The policy facing the largest filed increase — the one worth naming. */
-function worstOutlook(
+/**
+ * The policy facing the largest filed increase — the one worth naming.
+ *
+ * Exported because the action item has to name the same renewal the verdict
+ * names. Deriving the deadline twice from the same array is how the callout
+ * and the headline end up quoting different dates.
+ */
+export function worstOutlook(
   outlooks: InsurancePolicyRateOutlook[],
 ): InsurancePolicyRateOutlook | null {
   let worst: InsurancePolicyRateOutlook | null = null;

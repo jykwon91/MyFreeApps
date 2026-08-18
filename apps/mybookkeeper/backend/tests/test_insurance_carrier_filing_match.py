@@ -20,6 +20,7 @@ from app.services.insurance._carrier_filing_match import (
     carrier_aliases,
     carrier_tokens,
     compound_change_pct,
+    is_non_admitted_carrier,
     is_recent,
     matches_carrier,
     project_premium_cents,
@@ -194,3 +195,62 @@ class TestProjection:
 
     def test_an_unknown_change_projects_nothing(self):
         assert project_premium_cents(241_000, None) is None
+
+
+class TestNonAdmittedCarriers:
+    """Surplus-lines carriers are exempt from Texas rate filing.
+
+    They can never appear in this dataset, which is a permanent fact about the
+    carrier rather than a search that came back empty. Told apart because they
+    lead the operator to do different things — "nothing to do here, ever"
+    against "check how you spelled the name".
+    """
+
+    def test_lloyds_syndicate_paper_is_non_admitted(self):
+        # Verbatim from the 2026 Peerless renewal. This is the policy that
+        # produced a "the name might not match" message the operator could
+        # have spent an afternoon acting on.
+        assert is_non_admitted_carrier("Certain Underwriters at Lloyd's of London")
+
+    def test_the_apostrophe_does_not_break_the_match(self):
+        # "Lloyd's" has to fold to LLOYDS, not to "LLOYD S" — split on the
+        # apostrophe, the London marker never matches a name as anyone writes it.
+        assert is_non_admitted_carrier("Underwriters at Lloyds of London")
+        assert is_non_admitted_carrier("Certain Underwriters at Lloyd’s")
+
+    def test_recognises_the_us_surplus_lines_writers(self):
+        for name in (
+            "Lexington Insurance Company",
+            "Scottsdale Insurance Company",
+            "Evanston Insurance Company",
+            "Kinsale Insurance Company",
+        ):
+            assert is_non_admitted_carrier(name), name
+
+    def test_a_texas_lloyds_plan_company_is_admitted(self):
+        # The distinction that makes this list delicate. All three are in the
+        # live TDI feed as filers — a bare "LLOYDS" marker would exclude
+        # carriers the operator can actually be quoted by, and the flat-rate
+        # shortlist is built from exactly these names.
+        for name in (
+            "SAFECO LLOYDS INSURANCE COMPANY",
+            "FOREMOST LLOYDS OF TEXAS",
+            "State Farm Lloyds",
+        ):
+            assert not is_non_admitted_carrier(name), name
+
+    def test_an_admitted_carrier_with_underwriters_in_its_name_is_not_caught(self):
+        # "TEXAS FARM BUREAU UNDERWRITERS" files dwelling rates and appears in
+        # the live flat list. The marker is "CERTAIN UNDERWRITERS", not
+        # "UNDERWRITERS", precisely so this keeps working.
+        assert not is_non_admitted_carrier("TEXAS FARM BUREAU UNDERWRITERS")
+
+    def test_the_carriers_on_the_operators_other_policies_are_admitted(self):
+        assert not is_non_admitted_carrier("SafePoint Insurance Company")
+        assert not is_non_admitted_carrier("Benchmark Insurance Company")
+
+    def test_a_missing_carrier_is_not_a_surplus_lines_carrier(self):
+        # Absent is its own reason (REASON_NO_CARRIER) and must not be
+        # reported as "this will never be checkable".
+        assert not is_non_admitted_carrier(None)
+        assert not is_non_admitted_carrier("")

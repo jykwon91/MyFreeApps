@@ -41,7 +41,10 @@ export default function RateWatchMarketGroup({
 
       {rest.length > 0 ? (
         <details className="mt-1">
-          <summary className="text-xs text-muted-foreground cursor-pointer py-2">
+          {/* `min-h-11` is the 44px touch target. `py-2` alone left this
+              disclosure at roughly 32px, which is under the floor for a
+              control the operator is expected to tap. */}
+          <summary className="flex items-center min-h-11 text-xs text-muted-foreground cursor-pointer">
             Show {rest.length} more
           </summary>
           <ul>
