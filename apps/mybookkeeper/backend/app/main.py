@@ -289,6 +289,10 @@ async def health():
         )
 
 
-@app.get("/api/version")
+# Declared WITHOUT the ``/api`` prefix on purpose. Both the docker Caddy
+# (``uri strip_prefix /api``) and the Vite dev proxy (``rewrite``) remove the
+# prefix before the request reaches FastAPI, so a route declared as
+# ``/api/version`` is unreachable from a browser in every environment.
+@app.get("/version")
 async def version():
     return {"commit": GIT_COMMIT, "timestamp": STARTUP_TIMESTAMP}
