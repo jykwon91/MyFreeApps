@@ -155,10 +155,20 @@ def cmd_extract(args) -> None:
 
 
 def _poster_path(pdir: Path, key: str | None) -> Path | None:
+    """Resolve a pack object key to a synced poster file under ``pdir``.
+
+    Prefer the key's FULL relative path. Poster basenames are only unique within
+    one source video (``pending/<video_id>/<chapter>-stand-poster.webp``), so a
+    flat basename lookup silently hands the localizer another video's frame for
+    every colliding chapter number — 66 of Ascent's 482 keys collide. The
+    basename fallback keeps older flat poster dirs working.
+    """
     if not key:
         return None
-    p = pdir / Path(key).name
-    return p if p.is_file() else None
+    for cand in (pdir / key, pdir / Path(key).name):
+        if cand.is_file():
+            return cand
+    return None
 
 
 def _request_row(l: dict, stand_frame: Path | None, landing_frame: Path | None) -> dict:
@@ -180,10 +190,35 @@ def _load_proposals(path: str) -> dict[str, dict]:
     return {r["lineup_id"]: r for r in rows}
 
 
+_FIXTURES = _BACKEND / "app" / "fixtures" / "valorant_maps.json"
+
+
+def _zone_centroids(map_slug: str) -> dict[str, tuple[float, float]]:
+    """Centroid of every seeded zone box on a map, keyed by slug."""
+    blocks = json.loads(_FIXTURES.read_text(encoding="utf-8"))
+    for block in blocks:
+        for m in block.get("maps", []):
+            if m["slug"] != map_slug:
+                continue
+            out = {}
+            for z in m["zones"]:
+                pts = z["polygon_points"]
+                out[z["slug"]] = (sum(q["x"] for q in pts) / len(pts),
+                                  sum(q["y"] for q in pts) / len(pts))
+            return out
+    return {}
+
+
 def cmd_apply(args) -> None:
     pack = _load_pack()
     proposals = _load_proposals(args.proposals)
-    changed = 0
+    # The HUD minimap marks the PLAYER, never where a utility lands, so a vision
+    # pass over stand frames yields strong stand pins and no target evidence at
+    # all. Rather than invent a target, fall back to the centre of the lineup's
+    # own target zone — a deliberately coarse, clearly-labelled starting point
+    # the operator nudges, which still beats placing from a blank minimap.
+    centroids = _zone_centroids(args.map) if args.target_fallback else {}
+    changed = filled = 0
     for l in pack["lineups"]:
         p = proposals.get(l["id"])
         if not p:
@@ -194,7 +229,14 @@ def cmd_apply(args) -> None:
         if p.get("target"):
             l["target_anchor_x"] = round(float(p["target"]["x"]), 4)
             l["target_anchor_y"] = round(float(p["target"]["y"]), 4)
+        elif centroids.get(l.get("target_zone_slug")):
+            cx, cy = centroids[l["target_zone_slug"]]
+            l["target_anchor_x"] = round(cx, 4)
+            l["target_anchor_y"] = round(cy, 4)
+            filled += 1
         changed += 1
+    if filled:
+        print(f"  {filled} target pin(s) filled from the target zone's centroid")
     if args.dry_run:
         print(f"[dry-run] would set anchors on {changed} lineups (no write)")
         return
@@ -258,6 +300,8 @@ def main() -> None:
     a.add_argument("--map")
     a.add_argument("--proposals", required=True)
     a.add_argument("--dry-run", action="store_true")
+    a.add_argument("--target-fallback", action="store_true",
+                   help="fill any missing target pin with its target zone's centroid")
     a.set_defaults(func=cmd_apply)
 
     r = sub.add_parser("render", help="overlay proposed pins on the reference minimap")
