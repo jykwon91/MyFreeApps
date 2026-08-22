@@ -7,12 +7,15 @@
  *      overlay (MapLineupPins) when a pin mode is active
  *   3. PinEditPanel        — operator-only nudge surface (?edit=<id>)
  *
- * Pin selection routing (both superuser and public):
- *   Clicking a pin focuses that lineup — sets ?lineup=<id>, which the list
- *   board's LineupListRow reads to scroll the matching row into view and
- *   expand its storyboard. A pin click is always a "show me this lineup"
- *   action; superusers open the pin editor deliberately from the expanded
- *   row's "Adjust pin" button (?edit=<id>), not on every pin click.
+ * Pin selection routing:
+ *   - Public viewer: clicking a pin sets ?lineup=<id>, which the list board's
+ *     LineupListRow reads to scroll the matching row into view and expand its
+ *     storyboard. A pin click is a "show me this lineup" action.
+ *   - Superuser: clicking a pin ALSO sets ?edit=<id>, opening the pin editor
+ *     right here in the sidebar. Bulk pin-placement is the operator's core
+ *     workflow, so a pin click IS "let me place this one" — the editor's
+ *     Save & Next then walks the rest of the queue. (The expanded row's
+ *     "Adjust pin" button remains a second entry point for the same ?edit=.)
  */
 import { useSearchParams } from "react-router-dom";
 import GlanceBoardMinimapSidebar from "./GlanceBoardMinimapSidebar";
@@ -53,14 +56,18 @@ export default function MapSpatialSidebar({
   const [, setSearchParams] = useSearchParams();
 
   function handlePinSelect(lineupId: string) {
-    // Focus the clicked lineup: ?lineup=<id> tells LineupListRow to scroll its
-    // row into view and expand the storyboard. Clear ?edit so a pin click also
-    // exits any open pin editor — clicking a pin is a "view", not an "edit".
+    // ?lineup=<id> tells LineupListRow to scroll its row into view + expand the
+    // storyboard. For a superuser, ALSO set ?edit=<id> so the pin editor opens
+    // immediately in this sidebar (the placement workflow) — otherwise a pin
+    // click appears to "do nothing" from the sidebar because the only visible
+    // effect is a row expanding in the far-right column. Public viewers get the
+    // view-only behavior (no ?edit).
     setSearchParams(
       (prev) => {
         const next = new URLSearchParams(prev);
         next.set("lineup", lineupId);
-        next.delete("edit");
+        if (isSuperuser) next.set("edit", lineupId);
+        else next.delete("edit");
         return next;
       },
       { replace: true },

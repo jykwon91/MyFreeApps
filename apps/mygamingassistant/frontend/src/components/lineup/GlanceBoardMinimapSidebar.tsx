@@ -217,7 +217,7 @@ export default function GlanceBoardMinimapSidebar({
         if (!zone) return null;
         const count = density[zone.id]?.count ?? 0;
         return (
-          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 pointer-events-none z-10 px-2 py-1 rounded-md bg-popover border text-xs shadow-md whitespace-nowrap">
+          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 pointer-events-none z-10 px-2 py-1 rounded-md bg-card text-card-foreground border text-xs shadow-md whitespace-nowrap">
             <span className="font-semibold">{zone.name}</span>
             <span className="ml-1.5 text-muted-foreground">
               {count} lineup{count !== 1 ? "s" : ""}

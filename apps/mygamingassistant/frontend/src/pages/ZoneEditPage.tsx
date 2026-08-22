@@ -351,7 +351,7 @@ export default function ZoneEditPage() {
 
               {showCoachmark && mode === "new" && (
                 <div
-                  className="absolute top-3 left-1/2 -translate-x-1/2 z-20 max-w-sm bg-popover border rounded-lg shadow-lg px-4 py-2.5 text-sm"
+                  className="absolute top-3 left-1/2 -translate-x-1/2 z-20 max-w-sm bg-card text-card-foreground border rounded-lg shadow-lg px-4 py-2.5 text-sm"
                   role="status"
                 >
                   <p className="font-medium mb-1">Drawing a polygon</p>

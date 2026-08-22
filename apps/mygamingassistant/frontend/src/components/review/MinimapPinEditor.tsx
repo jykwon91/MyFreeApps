@@ -22,6 +22,7 @@
  */
 import { useRef, useState } from "react";
 import type { Lineup } from "@/types/game";
+import { useMinimapZoomPan } from "@/hooks/useMinimapZoomPan";
 
 // ---------------------------------------------------------------------------
 // Constants — match MapLineupPins.tsx
@@ -98,6 +99,8 @@ export default function MinimapPinEditor({
   disabled,
 }: MinimapPinEditorProps) {
   const svgRef = useRef<SVGSVGElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const zoom = useMinimapZoomPan(containerRef);
   const [dragging, setDragging] = useState<"stand" | "target" | null>(null);
   const [imgLoadFailed, setImgLoadFailed] = useState(false);
 
@@ -151,32 +154,48 @@ export default function MinimapPinEditor({
   function handlePointerDown(e: React.PointerEvent<SVGElement>, pin: "stand" | "target") {
     if (disabled) return;
     e.preventDefault();
+    // Stop the event reaching the SVG's onPointerDown (which would start a pan).
+    e.stopPropagation();
     // Capture on the SVG element (not the <g>) so pointermove/up fire on the SVG.
     svgRef.current?.setPointerCapture(e.pointerId);
     setDragging(pin);
   }
 
-  function handlePointerMove(e: React.PointerEvent<SVGSVGElement>) {
-    if (!dragging || disabled) return;
-    const coords = svgCoordsFromPointer(e);
-    if (!coords) return;
-    const nx = coords.x / VIEW_BOX;
-    const ny = coords.y / VIEW_BOX;
-    if (dragging === "stand") onStandChange(nx, ny);
-    else onTargetChange(nx, ny);
+  // Empty-map press → start a pan (a no-op unless zoomed in). Pins call
+  // stopPropagation, so this only ever fires on the bare minimap background.
+  function handleSvgPointerDown(e: React.PointerEvent<SVGSVGElement>) {
+    if (disabled) return;
+    zoom.onPanStart(e);
   }
 
-  function handlePointerUp(e: React.PointerEvent<SVGSVGElement>) {
-    if (!dragging || disabled) return;
-    const coords = svgCoordsFromPointer(e);
-    if (coords) {
+  function handlePointerMove(e: React.PointerEvent<SVGSVGElement>) {
+    if (dragging && !disabled) {
+      const coords = svgCoordsFromPointer(e);
+      if (!coords) return;
       const nx = coords.x / VIEW_BOX;
       const ny = coords.y / VIEW_BOX;
       if (dragging === "stand") onStandChange(nx, ny);
       else onTargetChange(nx, ny);
+      return;
     }
-    (e.currentTarget as SVGSVGElement).releasePointerCapture(e.pointerId);
-    setDragging(null);
+    // Not dragging a pin → route to pan (guarded internally; no-op when idle).
+    zoom.onPanMove(e);
+  }
+
+  function handlePointerUp(e: React.PointerEvent<SVGSVGElement>) {
+    if (dragging && !disabled) {
+      const coords = svgCoordsFromPointer(e);
+      if (coords) {
+        const nx = coords.x / VIEW_BOX;
+        const ny = coords.y / VIEW_BOX;
+        if (dragging === "stand") onStandChange(nx, ny);
+        else onTargetChange(nx, ny);
+      }
+      (e.currentTarget as SVGSVGElement).releasePointerCapture(e.pointerId);
+      setDragging(null);
+      return;
+    }
+    zoom.onPanEnd(e);
   }
 
   // ---------------------------------------------------------------------------
@@ -191,7 +210,8 @@ export default function MinimapPinEditor({
   ) {
     if (disabled) return;
 
-    const step = e.shiftKey ? 50 : 10; // viewBox units; Shift = 5%, plain = 1%
+    // viewBox units; Alt = 0.2% (pixel-perfect), plain = 1%, Shift = 5%.
+    const step = e.altKey ? 2 : e.shiftKey ? 50 : 10;
     let dx = 0;
     let dy = 0;
 
@@ -223,72 +243,116 @@ export default function MinimapPinEditor({
 
   return (
     <div className="flex flex-col gap-2">
-      {/* Square inset — max 280px, shrinks on narrow viewports */}
+      {/* Square inset — scroll to zoom, drag empty map to pan (see hint below).
+          overflow-hidden clips the zoomed content; touchAction none so the
+          wheel/drag gestures don't scroll the page. */}
       <div
+        ref={containerRef}
         className="relative rounded-lg overflow-hidden border bg-muted/20"
-        style={{ maxWidth: 280, width: "100%", aspectRatio: "1 / 1" }}
+        style={{
+          maxWidth: 280,
+          width: "100%",
+          aspectRatio: "1 / 1",
+          touchAction: "none",
+          cursor: zoom.panning ? "grabbing" : zoom.isZoomed ? "grab" : "default",
+        }}
       >
-        {/* Minimap image */}
-        {showImage ? (
-          <img
-            src={minimapUrl}
-            alt="Map minimap"
-            className="absolute inset-0 w-full h-full object-cover"
-            draggable={false}
-            onError={() => setImgLoadFailed(true)}
-          />
-        ) : (
-          <div className="absolute inset-0 flex items-center justify-center text-xs text-muted-foreground">
-            No minimap image
-          </div>
+        {/* Zoom/pan transform layer — holds BOTH the image and the SVG so the
+            pins scale/translate together and getScreenCTM keeps mapping pointer
+            → viewBox correctly at any zoom. */}
+        <div className="absolute inset-0" style={zoom.transformStyle}>
+          {/* Minimap image */}
+          {showImage ? (
+            <img
+              src={minimapUrl}
+              alt="Map minimap"
+              className="absolute inset-0 w-full h-full object-cover"
+              draggable={false}
+              onError={() => setImgLoadFailed(true)}
+            />
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center text-xs text-muted-foreground">
+              No minimap image
+            </div>
+          )}
+
+          {/* SVG pin overlay */}
+          <svg
+            ref={svgRef}
+            viewBox={`0 0 ${VIEW_BOX} ${VIEW_BOX}`}
+            className="absolute inset-0 w-full h-full"
+            style={{
+              touchAction: "none",
+              cursor: dragging ? "grabbing" : "default",
+            }}
+            onPointerDown={handleSvgPointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerUp}
+          >
+            {/* Stand pin (blue) */}
+            <PinGroup
+              x={svxStand}
+              y={svyStand}
+              fill={STAND_FILL}
+              label="Stand"
+              showLabel={showLabels}
+              isGuess={standIsGuess}
+              isDragging={dragging === "stand"}
+              disabled={disabled}
+              ariaLabel={`Stand pin — drag to reposition`}
+              ariaValueText={`${standX.toFixed(2)}, ${standY.toFixed(2)}`}
+              onPointerDown={(e) => handlePointerDown(e, "stand")}
+              onKeyDown={(e) => handlePinKeyDown(e, standX, standY, onStandChange)}
+            />
+
+            {/* Target pin (orange) */}
+            <PinGroup
+              x={svxTarget}
+              y={svyTarget}
+              fill={TARGET_FILL}
+              label="Target"
+              showLabel={showLabels}
+              isGuess={targetIsGuess}
+              isDragging={dragging === "target"}
+              disabled={disabled}
+              ariaLabel={`Target pin — drag to reposition`}
+              ariaValueText={`${targetX.toFixed(2)}, ${targetY.toFixed(2)}`}
+              onPointerDown={(e) => handlePointerDown(e, "target")}
+              onKeyDown={(e) => handlePinKeyDown(e, targetX, targetY, onTargetChange)}
+            />
+          </svg>
+        </div>
+
+        {/* Reset-zoom control — outside the transform layer so it stays fixed. */}
+        {zoom.isZoomed && (
+          <button
+            type="button"
+            onClick={zoom.reset}
+            className="absolute top-1 right-1 z-10 rounded bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white hover:bg-black/80 transition-colors"
+            title="Reset zoom to fit"
+          >
+            {zoom.scale.toFixed(1)}× · reset
+          </button>
         )}
-
-        {/* SVG pin overlay */}
-        <svg
-          ref={svgRef}
-          viewBox={`0 0 ${VIEW_BOX} ${VIEW_BOX}`}
-          className="absolute inset-0 w-full h-full"
-          style={{
-            touchAction: "none",
-            cursor: dragging ? "grabbing" : "default",
-          }}
-          onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUp}
-          onPointerCancel={handlePointerUp}
-        >
-          {/* Stand pin (blue) */}
-          <PinGroup
-            x={svxStand}
-            y={svyStand}
-            fill={STAND_FILL}
-            label="Stand"
-            showLabel={showLabels}
-            isGuess={standIsGuess}
-            isDragging={dragging === "stand"}
-            disabled={disabled}
-            ariaLabel={`Stand pin — drag to reposition`}
-            ariaValueText={`${standX.toFixed(2)}, ${standY.toFixed(2)}`}
-            onPointerDown={(e) => handlePointerDown(e, "stand")}
-            onKeyDown={(e) => handlePinKeyDown(e, standX, standY, onStandChange)}
-          />
-
-          {/* Target pin (orange) */}
-          <PinGroup
-            x={svxTarget}
-            y={svyTarget}
-            fill={TARGET_FILL}
-            label="Target"
-            showLabel={showLabels}
-            isGuess={targetIsGuess}
-            isDragging={dragging === "target"}
-            disabled={disabled}
-            ariaLabel={`Target pin — drag to reposition`}
-            ariaValueText={`${targetX.toFixed(2)}, ${targetY.toFixed(2)}`}
-            onPointerDown={(e) => handlePointerDown(e, "target")}
-            onKeyDown={(e) => handlePinKeyDown(e, targetX, targetY, onTargetChange)}
-          />
-        </svg>
       </div>
+
+      {/* Live coordinate readout — normalized [0,1] map position of each pin, so
+          the operator can eyeball / cross-check exact placement while nudging. */}
+      <div className="flex items-center justify-between text-[10px] tabular-nums text-muted-foreground">
+        <span>
+          <span style={{ color: STAND_FILL }}>●</span> Stand {standX.toFixed(3)}, {standY.toFixed(3)}
+        </span>
+        <span>
+          <span style={{ color: TARGET_FILL }}>●</span> Target {targetX.toFixed(3)}, {targetY.toFixed(3)}
+        </span>
+      </div>
+
+      {/* Interaction hint. */}
+      <p className="text-[10px] leading-snug text-muted-foreground/70">
+        Scroll to zoom · drag empty map to pan · click a pin then arrow-nudge
+        (Alt = pixel-fine, Shift = coarse).
+      </p>
 
       {/* Per-pin reset buttons */}
       <div className="flex gap-2">

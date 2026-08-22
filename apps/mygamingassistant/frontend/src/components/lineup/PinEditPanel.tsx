@@ -107,26 +107,24 @@ export default function PinEditPanel({ editor, minimapUrl }: Props) {
         </button>
       </div>
 
-      {/* In-game stand frame — the operator places the reference pin by
-          reading the white player marker off the in-game minimap (top-left of
-          this frame). Zoomed to that corner so the marker is legible in the
-          narrow sidebar. Without this the operator was placing blind against
-          the clean reference map. */}
+      {/* In-game stand frame — full first-person shot of the throwing position.
+          The operator recognizes the spot from the scene (walls, boxes, skybox)
+          and places the pin there. NOT corner-zoomed to the minimap: that inset
+          rotates with the crosshair, so it gives no absolute position. */}
       {selectedLineup.stand_screenshot_url && (
         <div className="space-y-1">
           <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
-            In-game minimap — white marker = player's stand
+            Stand — where the player throws from
           </p>
           <div
             className="w-full overflow-hidden rounded-lg border bg-black"
-            style={{ maxWidth: 280, aspectRatio: "1 / 1" }}
+            style={{ maxWidth: 280 }}
           >
             <img
               src={selectedLineup.stand_screenshot_url}
-              alt="In-game stand frame (minimap in the top-left corner)"
+              alt="Stand frame — the throwing position"
               draggable={false}
-              className="block select-none"
-              style={{ width: "380%", maxWidth: "none" }}
+              className="block w-full select-none"
             />
           </div>
         </div>
@@ -159,12 +157,15 @@ export default function PinEditPanel({ editor, minimapUrl }: Props) {
           the set), and "Reset stand/target" reads like a commit when it's
           actually an undo. Spell out the flow so the operator isn't guessing. */}
       <p className="text-[11px] leading-snug text-muted-foreground">
-        Drag the <span className="font-medium text-foreground">blue Stand pin</span> onto
-        the white marker (from the in-game frame), and the{" "}
-        <span className="font-medium text-foreground">orange Target pin</span> to where it
-        lands, then <span className="font-medium text-foreground">Save</span>.
+        Recognize the spot from the frames, then place the pins on the map: the{" "}
+        <span className="font-medium text-foreground">blue Stand pin</span> where the
+        player throws from, the{" "}
+        <span className="font-medium text-foreground">orange Target pin</span> where it
+        lands. Scroll to zoom for pixel precision, then{" "}
+        <span className="font-medium text-foreground">Save</span>.
         <span className="block text-muted-foreground/70">
-          “Reset” just snaps a pin back to the auto/default spot — you don’t need it to save.
+          Ignore the in-game minimap corner — it rotates with the crosshair and won’t
+          line up with this map. “Reset” just snaps a pin back to the auto spot.
         </span>
       </p>
 

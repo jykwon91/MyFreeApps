@@ -29,12 +29,11 @@
  *  - Compact mode (?compact=1): borderless — app shell hides itself
  */
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, X } from "lucide-react";
 import { useGetGamesQuery, useGetMapDetailQuery } from "@/store/gamesApi";
 import { useGetLineupsQuery, useGetZoneDensityQuery } from "@/store/lineupsApi";
 import { countUnplaceableLineups } from "@/components/lineup/MapLineupPins";
-import type { PinMode } from "@/components/lineup/MapLineupPins";
 import KeyboardShortcutsHelp from "@/components/lineup/KeyboardShortcutsHelp";
 import MapBoardBody from "@/components/lineup/MapBoardBody";
 import MapSpatialSidebar from "@/components/lineup/MapSpatialSidebar";
@@ -42,6 +41,7 @@ import MapPageTopBar from "@/components/map/MapPageTopBar";
 import MapPageSkeleton from "@/components/map/MapPageSkeleton";
 import DesignKnobsPanel from "@/components/lineup/DesignKnobsPanel";
 import { useDesignKnobs } from "@/hooks/useDesignKnobs";
+import { useMapBoardParams } from "@/hooks/useMapBoardParams";
 import MinimapUploadDialog from "@/components/game/MinimapUploadDialog";
 import RoundMode from "@/pages/RoundMode";
 import StorageUnavailableBanner from "@/components/map/StorageUnavailableBanner";
@@ -55,32 +55,21 @@ import type { ZoneDensity } from "@/types/game";
 
 export default function MapPage() {
   const { gameSlug, mapSlug } = useParams<{ gameSlug: string; mapSlug: string }>();
-  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  const side               = searchParams.get("side")   ?? "any";
-  const util               = searchParams.get("util")   ?? "";
-  const isRoundMode        = searchParams.get("round")  === "1";
-  // Zone filter — narrows the rendered lineups to a single target zone.
-  // Set by clicking a zone polygon (or zone-name in the fallback list)
-  // on the minimap sidebar. Click the active zone again to clear.
-  const zoneFilter         = searchParams.get("zone")   ?? null;
-  // Render mode — list (default; compact rows, click-to-expand storyboard)
-  // or grid (the original full-tile glance-board). List view is the default
-  // because the grid mounts up to 4 looping <video> tags per visible card,
-  // pushing browser CPU to ~10% on a dense map. List defers all video
-  // decoding until the operator clicks a specific row.
-  const viewMode           = searchParams.get("view") === "grid" ? "grid" : "list";
-  const pinModeParam       = searchParams.get("pins");
-  const pinMode: PinMode | null =
-    pinModeParam === "stand" || pinModeParam === "target" || pinModeParam === "both"
-      ? pinModeParam
-      : null;
-  // Lineup currently open in the pin editor (?edit=<id>). Superuser-only —
-  // same param usePinEditor reads. Passed to the list board so the matching
-  // row highlights + scrolls into view, giving an unmistakable link between
-  // the editor panel ("Editing pin — <title>") and the actual lineup row.
-  const editingLineupId    = searchParams.get("edit");
+  // Every filter/mode on this board is URL-backed — see useMapBoardParams for
+  // the per-param parsing rules.
+  const {
+    searchParams,
+    updateParam,
+    side,
+    util,
+    isRoundMode,
+    zoneFilter,
+    viewMode,
+    pinMode,
+    editingLineupId,
+  } = useMapBoardParams();
 
   const [showShortcutsHelp,   setShowShortcutsHelp]   = useState(false);
   const [storageUnavailableToast, setStorageUnavailableToast] = useState(false);
@@ -210,24 +199,6 @@ export default function MapPage() {
     window.addEventListener("mga:storage-unavailable", onStorageUnavailable);
     return () => window.removeEventListener("mga:storage-unavailable", onStorageUnavailable);
   }, []);
-
-  // ---------------------------------------------------------------------------
-  // URL helpers
-  // ---------------------------------------------------------------------------
-  function updateParam(key: string, value: string | null) {
-    setSearchParams(
-      (prev) => {
-        const next = new URLSearchParams(prev);
-        if (value) {
-          next.set(key, value);
-        } else {
-          next.delete(key);
-        }
-        return next;
-      },
-      { replace: true },
-    );
-  }
 
   function handleSideChange(newSide: string) {
     updateParam("side", newSide === "any" ? null : newSide);
@@ -432,7 +403,7 @@ export default function MapPage() {
               activeZoneSlug={zoneFilter}
               lineups={allMapLineups}
               pinMode={pinMode}
-              onPinModeChange={(m) => updateParam("pins", m)}
+              onPinModeChange={(m) => updateParam("pins", m ?? "off")}
               isSuperuser={isSuperuser}
               highlightedLineupId={hoveredLineupId}
             />
