@@ -119,7 +119,16 @@ export default function LineupListRow({
     >
       <button
         type="button"
-        onClick={() => setExpanded((v) => !v)}
+        onClick={() => {
+          const next = !expanded;
+          setExpanded(next);
+          // Superuser: opening a row also opens the pin editor for that lineup
+          // (?edit=<id>), so a single click on a lineup is "let me place this
+          // one" — the placement workflow. Only when expanding, so collapsing
+          // doesn't re-open a just-closed editor. Public viewers (no onEditPin)
+          // just expand the storyboard.
+          if (next && onEditPin) onEditPin(lineup.id);
+        }}
         aria-expanded={expanded}
         aria-label={`${target}${stand ? ` from ${stand}` : ""} — ${util.chipLabel} — ${sideCfg.label} side.${isEditing ? " Currently open in the pin editor." : ""} Click to ${expanded ? "collapse" : "expand"} storyboard.`}
         className={[

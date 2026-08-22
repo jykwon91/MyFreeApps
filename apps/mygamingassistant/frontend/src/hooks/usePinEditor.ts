@@ -81,8 +81,20 @@ export function usePinEditor({ lineups, isSuperuser }: Args) {
     setSearchParams(
       (prev) => {
         const next = new URLSearchParams(prev);
-        if (id) next.set("edit", id);
-        else next.delete("edit");
+        if (id) {
+          next.set("edit", id);
+          // Also focus the lineup (?lineup) so its list row expands + scrolls
+          // into view — the same pair of signals a pin click sends. The
+          // "Editing" tag is driven by ?edit but the row's expand/scroll is
+          // driven by ?lineup (isFocused); without this, Save & Next advanced
+          // the editor selection while the board stayed parked on the previous
+          // row (tag moved, storyboard didn't).
+          next.set("lineup", id);
+        } else {
+          // Closing the editor clears ?edit only; ?lineup is left as-is so the
+          // just-saved lineup's row stays expanded for review.
+          next.delete("edit");
+        }
         return next;
       },
       { replace: true },

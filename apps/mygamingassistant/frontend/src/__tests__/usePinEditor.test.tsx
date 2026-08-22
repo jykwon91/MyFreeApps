@@ -7,7 +7,7 @@
  * so we can assert call arguments without a real store or server.
  */
 import { renderHook, act } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, useLocation } from "react-router-dom";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { usePinEditor, isLineupConfirmed } from "@/hooks/usePinEditor";
 import type { Lineup } from "@/types/game";
@@ -100,6 +100,32 @@ describe("usePinEditor", () => {
       patch: { stand_anchor_x: 0.25, stand_anchor_y: 0.75 },
     });
     expect(showSuccess).toHaveBeenCalled();
+  });
+
+  it("Save & Next advances BOTH ?edit and ?lineup so the next row expands + scrolls", async () => {
+    let loc: ReturnType<typeof useLocation> | null = null;
+    const { result } = renderHook(
+      () => {
+        loc = useLocation();
+        return usePinEditor({ lineups: [lineup("a", null), lineup("b", null)], isSuperuser: true });
+      },
+      {
+        wrapper: ({ children }) => (
+          <MemoryRouter initialEntries={["/valorant/ascent?edit=a&lineup=a"]}>
+            {children}
+          </MemoryRouter>
+        ),
+      },
+    );
+
+    await act(async () => {
+      await result.current.save(true);
+    });
+
+    const params = new URLSearchParams(loc!.search);
+    // Editor selection AND row focus both advance to the next unconfirmed (b).
+    expect(params.get("edit")).toBe("b");
+    expect(params.get("lineup")).toBe("b");
   });
 
   it("does not revert the dragged position when the save fails", async () => {

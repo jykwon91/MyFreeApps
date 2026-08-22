@@ -72,10 +72,16 @@ export default function MapPage() {
   // decoding until the operator clicks a specific row.
   const viewMode           = searchParams.get("view") === "grid" ? "grid" : "list";
   const pinModeParam       = searchParams.get("pins");
+  // Pins default to "both" — the operator wants to eyeball placements without
+  // reaching for the toggle. "Off" is an explicit choice, persisted as
+  // ?pins=off (an absent param means "not chosen" → default on, so Off must
+  // write a real value or it couldn't survive a reload / stick in the URL).
   const pinMode: PinMode | null =
     pinModeParam === "stand" || pinModeParam === "target" || pinModeParam === "both"
       ? pinModeParam
-      : null;
+      : pinModeParam === "off"
+        ? null
+        : "both";
   // Lineup currently open in the pin editor (?edit=<id>). Superuser-only —
   // same param usePinEditor reads. Passed to the list board so the matching
   // row highlights + scrolls into view, giving an unmistakable link between
@@ -432,7 +438,7 @@ export default function MapPage() {
               activeZoneSlug={zoneFilter}
               lineups={allMapLineups}
               pinMode={pinMode}
-              onPinModeChange={(m) => updateParam("pins", m)}
+              onPinModeChange={(m) => updateParam("pins", m ?? "off")}
               isSuperuser={isSuperuser}
               highlightedLineupId={hoveredLineupId}
             />

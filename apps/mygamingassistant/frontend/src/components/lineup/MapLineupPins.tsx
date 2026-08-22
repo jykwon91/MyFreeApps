@@ -177,6 +177,21 @@ export default function MapLineupPins({
 
   if (pins.length === 0) return null;
 
+  // The currently-open cluster + its lineups deduped by id (a "both"-mode
+  // cluster can hold this lineup's stand AND target pin; the picker lists the
+  // lineup once). Drives the real-scale HTML popover below the SVG.
+  const openCluster = openClusterIndex != null ? clusters[openClusterIndex] ?? null : null;
+  const openClusterLineups: Pin[] = [];
+  if (openCluster) {
+    const seen = new Set<string>();
+    for (const p of openCluster.pins) {
+      if (!seen.has(p.lineupId)) {
+        seen.add(p.lineupId);
+        openClusterLineups.push(p);
+      }
+    }
+  }
+
   return (
     <div className="absolute inset-0 pointer-events-none">
       <svg
@@ -354,54 +369,62 @@ export default function MapLineupPins({
                   {count}
                 </text>
               </g>
-
-              {isOpen && (
-                <foreignObject
-                  x={cluster.cx + 18}
-                  y={cluster.cy - 18}
-                  width={220}
-                  height={Math.min(40 + count * 36, 320)}
-                  style={{ overflow: "visible" }}
-                >
-                  <div
-                    className="bg-popover border rounded-md shadow-lg p-1 text-xs"
-                    role="menu"
-                  >
-                    <p className="px-2 py-1 text-[10px] uppercase tracking-wide text-muted-foreground">
-                      {count} lineups at this spot
-                    </p>
-                    <ul className="space-y-0.5 max-h-72 overflow-y-auto">
-                      {cluster.pins.map((p) => (
-                        <li key={p.key}>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              onPinSelect(p.lineupId);
-                              setOpenClusterIndex(null);
-                            }}
-                            className={[
-                              "w-full text-left px-2 py-1.5 rounded hover:bg-muted/60 transition-colors flex items-center gap-2",
-                              p.lineupId === selectedLineupId ? "bg-muted/40 font-medium" : "",
-                            ].join(" ")}
-                            role="menuitem"
-                          >
-                            <span
-                              className="w-2 h-2 rounded-full flex-shrink-0"
-                              style={{ background: pinFill(p.kind) }}
-                              aria-hidden
-                            />
-                            <span className="truncate">{p.title}</span>
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </foreignObject>
-              )}
             </g>
           );
         })}
       </svg>
+
+      {/* Cluster popover — rendered as REAL-SCALE HTML, not an SVG
+          <foreignObject>. Inside the SVG it inherited the 1000-unit viewBox
+          scale (~⅓ at the ~340px minimap), making the text unreadable. As an
+          absolutely-positioned HTML panel anchored to the minimap's bottom
+          edge it stays at true pixel size and can't clip against the
+          overflow-hidden minimap container. */}
+      {openCluster && (
+        <div
+          className="absolute left-1 right-1 bottom-1 z-20 pointer-events-auto bg-popover border rounded-md shadow-lg text-xs overflow-hidden"
+          role="menu"
+        >
+          <div className="flex items-center justify-between px-2 py-1 border-b">
+            <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+              {openClusterLineups.length} lineup{openClusterLineups.length !== 1 ? "s" : ""} at this spot
+            </span>
+            <button
+              type="button"
+              onClick={() => setOpenClusterIndex(null)}
+              className="ml-2 shrink-0 rounded px-1 text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors"
+              aria-label="Close list"
+            >
+              ✕
+            </button>
+          </div>
+          <ul className="max-h-44 overflow-y-auto py-1">
+            {openClusterLineups.map((p) => (
+              <li key={p.lineupId}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onPinSelect(p.lineupId);
+                    setOpenClusterIndex(null);
+                  }}
+                  className={[
+                    "w-full text-left px-2 py-1.5 hover:bg-muted/60 transition-colors flex items-center gap-2",
+                    p.lineupId === selectedLineupId ? "bg-muted/40 font-medium" : "",
+                  ].join(" ")}
+                  role="menuitem"
+                >
+                  <span
+                    className="w-2 h-2 rounded-full flex-shrink-0"
+                    style={{ background: pinFill(p.kind) }}
+                    aria-hidden
+                  />
+                  <span className="truncate">{p.title}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }
