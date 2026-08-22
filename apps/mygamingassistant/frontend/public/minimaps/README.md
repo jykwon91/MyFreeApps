@@ -59,11 +59,12 @@ Nuke, Vertigo. Reserve pool adds Overpass.
 Required files:
 
 ```
-bind.png   haven.png   split.png   ascent.png   icebox.png
-breeze.png  fracture.png  pearl.png  lotus.png
+bind.png    haven.png     split.png   ascent.png   icebox.png
+breeze.png  fracture.png  pearl.png   lotus.png    summit.png
+sunset.png  abyss.png
 ```
 
-All 9 are bundled in this repo (1024×1024 RGBA), sourced from
+All 12 are bundled in this repo (1024×1024 RGBA), sourced from
 [valorant-api.com](https://valorant-api.com) — a community-maintained mirror of
 Riot's official VALORANT assets. The `displayIcon` field is the in-game top-down
 map render (the same art VALORANT draws the minimap from). Riot does not ship a
@@ -87,11 +88,31 @@ declare -A UUID=(
   [fracture]=b529448b-4d60-346e-e89e-00a4c527a405
   [pearl]=fd267378-4d1d-484f-ff52-77821ed10dc2
   [lotus]=2fe4ed3a-450a-948b-6d6b-e89a78e680a9
+  [summit]=756da597-416b-c0f2-f47b-afbdf28670bc
+  [sunset]=92584fbe-486a-b1b2-9faa-39b0f486b498
+  [abyss]=224b0a95-48b9-f703-1bd8-67aca101a61f
 )
 for slug in "${!UUID[@]}"; do
   curl -sSL -o "${slug}.png" "${BASE}/${UUID[$slug]}/displayicon.png"
 done
 ```
+
+**Zone polygons.** `valorant-api.com` also serves each map's `callouts` plus the
+`xMultiplier`/`yMultiplier`/`xScalarToAdd`/`yScalarToAdd` fields that map Riot's
+world coordinates onto this exact image:
+
+```
+nx = game.y * xMultiplier + xScalarToAdd
+ny = game.x * yMultiplier + yScalarToAdd      # note the x/y swap
+```
+
+That is where Abyss's `a-main` / `b-main` / lobbies / mid / spawn boxes in
+`backend/app/fixtures/valorant_maps.json` come from — Riot's own coordinates, not
+eyeballed. The two site boxes are traced from the radar's khaki plant-zone
+highlight (RGB `152,152,118`) instead, because Riot places the site callout at a
+corner of the site rather than its centre. Always render the boxes over the PNG
+and look at the result before committing; the transform silently produces
+plausible-looking garbage if a map's multipliers change after a rework.
 
 Dimensions are flexible — `MapZoneOverlay` renders polygons in a normalized 0-1
 coordinate space, so any aspect-ratio image works as long as you calibrate
