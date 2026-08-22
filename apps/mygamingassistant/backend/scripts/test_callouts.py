@@ -340,13 +340,42 @@ SPLIT_CASES = [
     ("Outro", None), ("Fail Blooper", None),
 ]
 
+ABYSS_CASES = [
+    # Abyss seeds a-lobby / b-lobby as REAL zones — unlike Summit/Breeze, where the same
+    # callout folds into a-main / b-main. Regression guard for copying the wrong convention.
+    ("A Lobby", "a-lobby"), ("B Lobby", "b-lobby"),
+    ("A Main", "a-main"), ("B Main", "b-main"), ("A Site", "a-site"), ("B Site", "b-site"),
+    ("A Bridge", "a-site"), ("A Tower", "a-site"), ("A Link", "a-site"),
+    ("A Security", "a-site"), ("A Secret", "a-site"),
+    ("A Default", "a-site"), ("A Backsite", "a-site"),
+    ("B Tower", "b-site"), ("B Heaven", "b-site"), ("B Default", "b-site"),
+    ("B Backsite", "b-site"),
+    ("B Nest", "b-main"), ("B Danger", "b-main"), ("B Window", "b-main"), ("B Rope", "b-main"),
+    # Abyss's A Link is a-site while its B Link is mid — the geometry genuinely differs
+    # (a-site d=0.098 vs a tie at B). This pair is why no BARE "link" entry exists.
+    ("B Link", "mid"),
+    ("A Vent", "mid"), ("Library", "mid"), ("Mid Library", "mid"), ("Mid Catwalk", "mid"),
+    ("Mid Bend", "mid"), ("Mid", "mid"), ("Middle", "mid"),
+    ("Top Mid", "mid"), ("Bottom Mid", "mid"), ("Mid Top", "mid"), ("Mid Bottom", "mid"),
+    ("CT", "ct-spawn"), ("CT Spawn", "ct-spawn"), ("Defender Side Spawn", "ct-spawn"),
+    ("Attacker Side Spawn", "t-spawn"), ("T Spawn", "t-spawn"),
+    # This source names the destination with a bare letter; the single-letter entries are
+    # last in the table, so anything more specific must still win.
+    ("A", "a-site"), ("B", "b-site"),
+    ("A Lobby to A Main", "a-main"), ("B Main to B Backsite", "b-site"),
+    ("B Heaven to B Main & Rope", "b-main"), ("B Lobby to B (Postplant)", "b-site"),
+    ("A Site/Backsite to A Lobby", "a-lobby"),   # slash form must not resolve to a-site
+    ("", None), ("somewhere unlabelled", None),
+]
+
 def run():
     """Run every case table + invariant. Returns the failure count (0 == all passed)."""
     bad = 0
     for map_slug, cases in (("summit", SUMMIT_CASES), ("ascent", ASCENT_CASES),
                             ("sunset", SUNSET_CASES), ("ascent", REVERSED_CASES),
                             ("breeze", BREEZE_REVERSED_CASES), ("haven", HAVEN_CASES),
-                            ("lotus", LOTUS_CASES), ("split", SPLIT_CASES)):
+                            ("lotus", LOTUS_CASES), ("split", SPLIT_CASES),
+                            ("abyss", ABYSS_CASES)):
         table = BY_MAP[map_slug]
         print(f"--- {map_slug} ({len(cases)} cases) ---")
         for raw, want in cases:
@@ -389,6 +418,8 @@ def run():
     # operator's pool, so it stays un-tabled and the contract keeps being tested. If Icebox is ever
     # added, move this to another out-of-pool map (Fracture, Pearl, Bind, Abyss) rather than deleting
     # it — an untested fail-loud path is how an unknown map starts silently resolving to nothing.
+    # Abyss was one of those spares until V26 Act 5 rotated it INTO the pool (Breeze out) and it
+    # got a table of its own; Fracture, Pearl and Bind remain available if Icebox ever lands.
     print("\n--- fail-loud contract ---")
     unknown = BY_MAP.get("icebox")
     ok = unknown is None
@@ -397,7 +428,7 @@ def run():
 
     total = (len(SUMMIT_CASES) + len(ASCENT_CASES) + len(SUNSET_CASES) + len(REVERSED_CASES)
              + len(BREEZE_REVERSED_CASES) + len(HAVEN_CASES) + len(LOTUS_CASES)
-             + len(SPLIT_CASES) + 1 + entries)
+             + len(SPLIT_CASES) + len(ABYSS_CASES) + 1 + entries)
     print(f"\n{total - bad}/{total} passed")
     return bad
 
