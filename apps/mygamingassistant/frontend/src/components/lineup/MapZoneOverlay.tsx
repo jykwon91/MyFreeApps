@@ -130,7 +130,7 @@ export default function MapZoneOverlay({
         const byUtil = data?.by_utility ?? {};
         return (
           <div
-            className="pointer-events-none absolute z-20 px-2.5 py-1.5 rounded-md bg-popover border text-xs shadow-md"
+            className="pointer-events-none absolute z-20 px-2.5 py-1.5 rounded-md bg-card text-card-foreground border text-xs shadow-md"
             style={{
               left: tooltip.x + 12,
               top: tooltip.y - 8,

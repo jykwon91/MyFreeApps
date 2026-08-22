@@ -382,7 +382,7 @@ export default function MapLineupPins({
           overflow-hidden minimap container. */}
       {openCluster && (
         <div
-          className="absolute left-1 right-1 bottom-1 z-20 pointer-events-auto bg-popover border rounded-md shadow-lg text-xs overflow-hidden"
+          className="absolute left-1 right-1 bottom-1 z-20 pointer-events-auto bg-card text-card-foreground border rounded-md shadow-lg text-xs overflow-hidden"
           role="menu"
         >
           <div className="flex items-center justify-between px-2 py-1 border-b">

@@ -1,11 +1,15 @@
 /**
  * /lineups/:id direct-link route E2E tests.
  *
+ * The route is a REDIRECT into the map board, not a standalone page:
+ * /lineups/<id> -> /<game.slug>/<map.slug>?lineup=<id> (plus &edit=<id> for a
+ * superuser, which opens the pin editor in the board sidebar).
+ *
  * Coverage:
  *  - Visiting a well-formed but non-existent UUID shows "Lineup not found"
- *    (public visitor, no lineup at that ID)
- *  - Visiting /lineups/<uuid> for an accepted lineup shows the tile
- *    (requires a real accepted lineup; seed via test-helper API when available)
+ *    (public visitor, no lineup at that ID) — no redirect
+ *  - Visiting /lineups/<uuid> for a real lineup lands on the board focused on
+ *    it (requires a real lineup; seed via test-helper API when available)
  *  - The route is accessible without auth (public-read model)
  *
  * The seed-and-visit test requires:
@@ -38,7 +42,7 @@ test.describe("/lineups/:id direct-link route", () => {
     await expect(page.getByText("Lineup not found.")).toBeVisible();
   });
 
-  test("renders a tile for an accepted lineup when seeded via test helper", async ({
+  test("redirects into the map board for an accepted lineup when seeded via test helper", async ({
     page,
     request,
   }) => {
@@ -86,10 +90,14 @@ test.describe("/lineups/:id direct-link route", () => {
     await loginViaUI(page, credentials, request);
     await page.goto(`/lineups/${lineupId}`);
 
-    // The page renders the lineup tile (GlanceBoardTile renders the title in the header)
-    // and a back link.
+    // Redirected off /lineups/:id onto the board for this lineup's game+map,
+    // focused on it. As a superuser, &edit is set too so the pin editor opens.
+    await page.waitForURL((url) => !url.pathname.startsWith("/lineups/"), {
+      timeout: 15_000,
+    });
+    const url = new URL(page.url());
+    expect(url.searchParams.get("lineup")).toBe(lineupId);
+    expect(url.searchParams.get("edit")).toBe(lineupId);
     await expect(page.locator("main")).toBeVisible();
-    // Back link is present — exact text depends on game/map resolution
-    await expect(page.locator("main a").first()).toBeVisible();
   });
 });
