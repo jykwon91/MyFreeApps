@@ -291,24 +291,35 @@ export default function WelcomeManualDetail() {
                     </div>
                   </SortableContext>
                 </DndContext>
-              ) : (
-                <p
-                  className="text-sm text-muted-foreground border rounded-lg p-6 text-center"
-                  data-testid="welcome-manual-sections-empty"
-                >
-                  No sections yet. Add one to start building this guide.
-                </p>
-              )}
+              ) : null}
 
-              <div className="flex justify-center">
+              {/* Deliberately a dashed tile, not another solid card — the host
+                  needs to tell "add a new section" apart from the sections
+                  themselves at a glance. Doubles as the empty state. */}
+              <div
+                className="border-2 border-dashed rounded-lg p-6 text-center space-y-3"
+                data-testid="welcome-manual-add-section"
+              >
+                {hasSections ? (
+                  <p className="text-sm text-muted-foreground">
+                    Sections are the parts of the guide — Wi-Fi, parking, trash day, check-out.
+                  </p>
+                ) : (
+                  <p
+                    className="text-sm text-muted-foreground"
+                    data-testid="welcome-manual-sections-empty"
+                  >
+                    No sections yet. Add one to start building this guide.
+                  </p>
+                )}
                 <LoadingButton
-                  variant="secondary"
+                  variant="primary"
                   onClick={() => void handleAddSection()}
                   isLoading={isAddingSection}
                   loadingText="Adding..."
                   data-testid="add-welcome-manual-section-button"
                 >
-                  <Plus className="h-4 w-4 mr-1" />
+                  <Plus className="h-4 w-4 mr-1" aria-hidden="true" />
                   Add section
                 </LoadingButton>
               </div>
