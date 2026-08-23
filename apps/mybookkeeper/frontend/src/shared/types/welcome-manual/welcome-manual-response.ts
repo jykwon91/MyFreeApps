@@ -1,4 +1,5 @@
 import type { WelcomeManualPlaceResponse } from "./welcome-manual-place-response";
+import type { WelcomeManualRoomResponse } from "./welcome-manual-room-response";
 import type { WelcomeManualSectionResponse } from "./welcome-manual-section-response";
 
 /**
@@ -13,6 +14,8 @@ export interface WelcomeManualResponse {
   property_id: string | null;
   title: string;
   intro_text: string | null;
+  /** Empty on a whole-property manual; non-empty when it is let by the room. */
+  rooms: WelcomeManualRoomResponse[];
   sections: WelcomeManualSectionResponse[];
   places: WelcomeManualPlaceResponse[];
   /** Non-null once a PIN-protected public share link has been created. */

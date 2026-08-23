@@ -1,6 +1,8 @@
 """Pydantic schema for POST /welcome-manuals/{id}/sections request body."""
 from __future__ import annotations
 
+import uuid
+
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.core.welcome_manual_constants import WELCOME_MANUAL_SECTION_TITLE_MAX_LEN
@@ -9,5 +11,8 @@ from app.core.welcome_manual_constants import WELCOME_MANUAL_SECTION_TITLE_MAX_L
 class WelcomeManualSectionCreateRequest(BaseModel):
     title: str = Field(min_length=1, max_length=WELCOME_MANUAL_SECTION_TITLE_MAX_LEN)
     body: str | None = None
+    # Omit (or send null) for a section every room shares. Send a room id to
+    # scope the section to that room only.
+    room_id: uuid.UUID | None = None
 
     model_config = ConfigDict(extra="forbid")

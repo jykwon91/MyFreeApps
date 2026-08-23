@@ -1,13 +1,20 @@
 import { forwardRef, useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Trash2 } from "lucide-react";
+import { DoorOpen, GripVertical, Trash2 } from "lucide-react";
 import { LoadingButton, ConfirmDialog } from "@platform/ui";
 import FormField from "@/shared/components/ui/FormField";
 import Markdown from "@/shared/components/ui/Markdown";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
-import { NEW_SECTION_DEFAULT_TITLE } from "@/shared/lib/welcome-manual-constants";
-import { useDeleteSectionMutation } from "@/shared/store/welcomeManualsApi";
+import {
+  NEW_SECTION_DEFAULT_TITLE,
+  SHARED_ROOM_OPTION,
+} from "@/shared/lib/welcome-manual-constants";
+import {
+  useDeleteSectionMutation,
+  useUpdateSectionMutation,
+} from "@/shared/store/welcomeManualsApi";
+import type { WelcomeManualRoomResponse } from "@/shared/types/welcome-manual/welcome-manual-room-response";
 import type { WelcomeManualSectionResponse } from "@/shared/types/welcome-manual/welcome-manual-section-response";
 import WelcomeManualSectionFieldManager from "./WelcomeManualSectionFieldManager";
 import WelcomeManualSectionImageManager from "./WelcomeManualSectionImageManager";
@@ -16,18 +23,26 @@ import { useSectionEditor } from "./useSectionEditor";
 export interface WelcomeManualSectionCardProps {
   manualId: string;
   section: WelcomeManualSectionResponse;
+  /**
+   * Rooms on this manual, in display order. Empty for a whole-place guide —
+   * the scope picker only appears once the host has added a room.
+   */
+  rooms: WelcomeManualRoomResponse[];
 }
 
 const BODY_PLACEHOLDER = "Add instructions for guests…";
 
 const WelcomeManualSectionCard = forwardRef<HTMLElement, WelcomeManualSectionCardProps>(
-  function WelcomeManualSectionCard({ manualId, section }, forwardedRef) {
+  function WelcomeManualSectionCard({ manualId, section, rooms }, forwardedRef) {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
       id: section.id,
     });
     const [deleteSection] = useDeleteSectionMutation();
+    const [updateSection, { isLoading: isRescoping }] = useUpdateSectionMutation();
     const [confirmDelete, setConfirmDelete] = useState(false);
     const editor = useSectionEditor({ manualId, section });
+
+    const scopedRoom = rooms.find((room) => room.id === section.room_id);
 
     // A section keeps the placeholder title until the host renames it, so this
     // marks the one they just added without any transient client state — it
@@ -46,6 +61,20 @@ const WelcomeManualSectionCard = forwardRef<HTMLElement, WelcomeManualSectionCar
         forwardedRef(node);
       } else if (forwardedRef) {
         forwardedRef.current = node;
+      }
+    }
+
+    async function handleScopeChange(value: string) {
+      const roomId = value === SHARED_ROOM_OPTION ? null : value;
+      if (roomId === section.room_id) return;
+      try {
+        await updateSection({
+          manualId,
+          sectionId: section.id,
+          data: { room_id: roomId },
+        }).unwrap();
+      } catch {
+        showError("I couldn't change who sees that section. Want to try again?");
       }
     }
 
@@ -77,6 +106,16 @@ const WelcomeManualSectionCard = forwardRef<HTMLElement, WelcomeManualSectionCar
             data-testid="welcome-manual-section-unnamed-badge"
           >
             Just added — give it a name and instructions
+          </p>
+        ) : null}
+
+        {scopedRoom ? (
+          <p
+            className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground"
+            data-testid="welcome-manual-section-room-badge"
+          >
+            <DoorOpen className="h-3 w-3" aria-hidden="true" />
+            {scopedRoom.name} only
           </p>
         ) : null}
 
@@ -114,6 +153,29 @@ const WelcomeManualSectionCard = forwardRef<HTMLElement, WelcomeManualSectionCar
             <Trash2 size={16} />
           </button>
         </div>
+
+        {rooms.length > 0 ? (
+          <FormField label="Who gets this section">
+            <select
+              value={section.room_id ?? SHARED_ROOM_OPTION}
+              onChange={(e) => void handleScopeChange(e.target.value)}
+              disabled={isRescoping}
+              className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px] bg-transparent disabled:opacity-60"
+              data-testid="welcome-manual-section-scope"
+            >
+              <option value={SHARED_ROOM_OPTION}>Everyone — shared by every room</option>
+              {rooms.map((room) => (
+                <option key={room.id} value={room.id}>
+                  {room.name} only
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-muted-foreground mt-1">
+              A room-only section reaches that room&rsquo;s guest in their emailed
+              guide. It never appears on the shared link.
+            </p>
+          </FormField>
+        ) : null}
 
         <FormField label="Instructions">
           <textarea

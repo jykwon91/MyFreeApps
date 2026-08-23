@@ -48,6 +48,7 @@ function makeSection(
   return {
     id: "sec-1",
     manual_id: "m-1",
+    room_id: null,
     title: "Parking",
     body: "Park in **spot 4**.",
     display_order: 0,

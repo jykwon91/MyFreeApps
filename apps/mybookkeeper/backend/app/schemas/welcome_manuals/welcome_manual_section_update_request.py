@@ -1,6 +1,8 @@
 """Pydantic schema for PATCH /welcome-manuals/{id}/sections/{section_id}."""
 from __future__ import annotations
 
+import uuid
+
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.core.welcome_manual_constants import WELCOME_MANUAL_SECTION_TITLE_MAX_LEN
@@ -9,12 +11,14 @@ from app.core.welcome_manual_constants import WELCOME_MANUAL_SECTION_TITLE_MAX_L
 class WelcomeManualSectionUpdateRequest(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=WELCOME_MANUAL_SECTION_TITLE_MAX_LEN)
     body: str | None = None
+    room_id: uuid.UUID | None = None
 
     model_config = ConfigDict(extra="forbid")
 
     def to_update_dict(self) -> dict[str, object]:
         """Return only explicitly-provided fields. An explicit ``null`` title is
-        a no-op (title is required); an explicit ``null`` body clears it."""
+        a no-op (title is required); an explicit ``null`` body clears it, and an
+        explicit ``null`` room_id moves the section back to shared-by-all."""
         data = self.model_dump(exclude_unset=True)
         if "title" in data and data["title"] is None:
             data.pop("title")

@@ -63,6 +63,31 @@ async def _seed_manual(
     return m
 
 
+class TestSubjectLine:
+    """``build_subject`` is a pure helper — the room name is how three tenants
+    of one house tell their guides apart in an inbox."""
+
+    def test_names_the_room_when_given_one(self) -> None:
+        assert welcome_manual_email_service.build_subject(
+            manual_title="6732 Peerless St", room_name="Front bedroom",
+        ) == "Your welcome guide — 6732 Peerless St (Front bedroom)"
+
+    def test_falls_back_to_the_manual_title(self) -> None:
+        assert welcome_manual_email_service.build_subject(
+            manual_title="6732 Peerless St",
+        ) == "Your welcome guide — 6732 Peerless St"
+
+    def test_room_only(self) -> None:
+        assert welcome_manual_email_service.build_subject(
+            manual_title="", room_name="Front bedroom",
+        ) == "Your welcome guide — Front bedroom"
+
+    def test_neither(self) -> None:
+        assert welcome_manual_email_service.build_subject(
+            manual_title="",
+        ) == "Your welcome guide"
+
+
 class TestAuth:
     def test_requires_auth(self) -> None:
         # No dependency override → the real auth dependency rejects.

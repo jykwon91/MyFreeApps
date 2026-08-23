@@ -46,3 +46,16 @@ export const WELCOME_MANUAL_PRICE_TIERS = ["$", "$$", "$$$"] as const;
 
 /** Default name applied to a freshly-added place before the host renames it. */
 export const NEW_PLACE_DEFAULT_NAME = "New place";
+
+/** Max rooms allowed per manual. Mirrors WELCOME_MANUAL_MAX_ROOMS. */
+export const WELCOME_MANUAL_MAX_ROOMS = 20;
+
+/** Default name applied to a freshly-added room before the host renames it. */
+export const NEW_ROOM_DEFAULT_NAME = "New room";
+
+/**
+ * Value used by the section scope <select> to mean "shared by every room".
+ * A native select option value must be a string, so the null room_id needs
+ * a sentinel; it is never sent to the API.
+ */
+export const SHARED_ROOM_OPTION = "shared";

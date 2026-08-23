@@ -42,6 +42,7 @@ from app.repositories.listings import channel_listing_repo
 from app.repositories.listings import listing_blackout_repo
 from app.repositories.listings import listing_blackout_attachment_repo
 from app.repositories.welcome_manuals import welcome_manual_repo
+from app.repositories.welcome_manuals import welcome_manual_room_repo
 from app.repositories.welcome_manuals import welcome_manual_section_repo
 from app.repositories.welcome_manuals import welcome_manual_section_image_repo
 from app.repositories.welcome_manuals import welcome_manual_section_field_repo

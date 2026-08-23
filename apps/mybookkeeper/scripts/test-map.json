@@ -874,11 +874,14 @@
         "backend/app/services/welcome_manuals/",
         "backend/app/schemas/welcome_manuals/",
         "backend/app/api/welcome_manuals.py",
+        "backend/app/api/welcome_manual_places.py",
+        "backend/app/api/welcome_manual_rooms.py",
         "backend/app/core/welcome_manual_constants.py",
         "backend/alembic/versions/wmanual260530_add_welcome_manuals_domain.py",
         "backend/alembic/versions/wmanualimg260530_add_welcome_manual_section_images.py",
         "backend/alembic/versions/wmanualfld260720_add_welcome_manual_section_fields.py",
         "backend/alembic/versions/wmanualsend260530_add_welcome_manual_sends.py",
+        "backend/alembic/versions/wmroom260823_add_welcome_manual_rooms.py",
         "frontend/src/app/pages/WelcomeManualDetail.tsx",
         "frontend/src/app/pages/PublicWelcomeManual.tsx",
         "frontend/src/app/features/welcome-manuals/",
@@ -896,15 +899,27 @@
         "test_welcome_manual_send_repo.py",
         "test_welcome_manual_service.py",
         "test_welcome_manual_email_routes.py",
-        "test_welcome_manual_send_audit_masking.py"
+        "test_welcome_manual_send_audit_masking.py",
+        "test_welcome_manual_room_repo.py",
+        "test_welcome_manual_room_service.py",
+        "test_welcome_manual_section_repo.py",
+        "test_welcome_manual_section_service.py",
+        "test_welcome_manual_share_service.py"
       ],
       "frontend_tests": [
         "WelcomeManualDetail.test.tsx",
         "WelcomeManualShareCard.test.tsx",
-        "PublicWelcomeManual.test.tsx"
+        "PublicWelcomeManual.test.tsx",
+        "WelcomeManualRoomManager.test.tsx",
+        "WelcomeManualSectionCard.test.tsx",
+        "WelcomeManualSectionFieldManager.test.tsx",
+        "WelcomeManualEmailDialog.test.tsx",
+        "WelcomeManualPreview.test.tsx",
+        "WelcomeManualCreateDialog.test.tsx"
       ],
       "e2e_specs": [
-        "welcome-manuals-layout-mock.spec.ts"
+        "welcome-manuals-layout-mock.spec.ts",
+        "welcome-manual-rooms.spec.ts"
       ]
     },
     "leases": {

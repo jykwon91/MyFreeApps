@@ -35,15 +35,6 @@ from app.schemas.welcome_manuals.welcome_manual_section_field_response import (
 from app.schemas.welcome_manuals.welcome_manual_section_field_update_request import (
     WelcomeManualSectionFieldUpdateRequest,
 )
-from app.schemas.welcome_manuals.welcome_manual_place_create_request import (
-    WelcomeManualPlaceCreateRequest,
-)
-from app.schemas.welcome_manuals.welcome_manual_place_response import (
-    WelcomeManualPlaceResponse,
-)
-from app.schemas.welcome_manuals.welcome_manual_place_update_request import (
-    WelcomeManualPlaceUpdateRequest,
-)
 from app.schemas.welcome_manuals.welcome_manual_section_reorder_request import (
     WelcomeManualSectionReorderRequest,
 )
@@ -64,7 +55,6 @@ from app.schemas.welcome_manuals.welcome_manual_update_request import (
 )
 from app.services.welcome_manuals import (
     welcome_manual_email_service,
-    welcome_manual_place_service,
     welcome_manual_section_field_service,
     welcome_manual_section_image_service,
     welcome_manual_section_service,
@@ -165,9 +155,12 @@ async def email_welcome_manual(
             manual_id=manual_id,
             recipient_email=str(payload.recipient_email),
             recipient_name=payload.recipient_name,
+            room_id=payload.room_id,
         )
     except welcome_manual_email_service.ManualNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Welcome manual not found") from exc
+    except welcome_manual_email_service.RoomNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Room not found") from exc
 
 
 # ---------------------------------------------------------------------------
@@ -188,10 +181,12 @@ async def add_section(
     try:
         return await welcome_manual_section_service.add_section(
             ctx.organization_id, ctx.user_id, manual_id,
-            title=payload.title, body=payload.body,
+            title=payload.title, body=payload.body, room_id=payload.room_id,
         )
     except welcome_manual_section_service.ManualNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Welcome manual not found") from exc
+    except welcome_manual_section_service.RoomNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Room not found") from exc
     except welcome_manual_section_service.TooManySectionsError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 
@@ -234,6 +229,8 @@ async def update_section(
         )
     except welcome_manual_section_service.ManualNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Welcome manual not found") from exc
+    except welcome_manual_section_service.RoomNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Room not found") from exc
     except welcome_manual_section_service.SectionNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Section not found") from exc
 
@@ -414,73 +411,6 @@ async def delete_section_field(
         raise HTTPException(status_code=404, detail="Section not found") from exc
     except welcome_manual_section_field_service.FieldNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Field not found") from exc
-    return Response(status_code=204)
-
-
-# ---------------------------------------------------------------------------
-# Places (restaurant recommendations — a flat guest dining directory)
-# ---------------------------------------------------------------------------
-
-
-@router.post(
-    "/{manual_id}/places",
-    response_model=WelcomeManualPlaceResponse,
-    status_code=201,
-)
-async def add_place(
-    manual_id: uuid.UUID,
-    payload: WelcomeManualPlaceCreateRequest,
-    ctx: RequestContext = Depends(require_write_access),
-) -> WelcomeManualPlaceResponse:
-    try:
-        return await welcome_manual_place_service.add_place(
-            ctx.organization_id, ctx.user_id, manual_id,
-            payload.name, payload.cuisine, payload.price_tier, payload.note, payload.map_url,
-        )
-    except welcome_manual_place_service.ManualNotFoundError as exc:
-        raise HTTPException(status_code=404, detail="Welcome manual not found") from exc
-    except welcome_manual_place_service.TooManyPlacesError as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
-
-
-@router.patch(
-    "/{manual_id}/places/{place_id}",
-    response_model=WelcomeManualPlaceResponse,
-)
-async def update_place(
-    manual_id: uuid.UUID,
-    place_id: uuid.UUID,
-    payload: WelcomeManualPlaceUpdateRequest,
-    ctx: RequestContext = Depends(require_write_access),
-) -> WelcomeManualPlaceResponse:
-    try:
-        return await welcome_manual_place_service.update_place(
-            ctx.organization_id, ctx.user_id, manual_id, place_id,
-            payload.to_update_dict(),
-        )
-    except welcome_manual_place_service.ManualNotFoundError as exc:
-        raise HTTPException(status_code=404, detail="Welcome manual not found") from exc
-    except welcome_manual_place_service.PlaceNotFoundError as exc:
-        raise HTTPException(status_code=404, detail="Place not found") from exc
-
-
-@router.delete(
-    "/{manual_id}/places/{place_id}",
-    status_code=204,
-)
-async def delete_place(
-    manual_id: uuid.UUID,
-    place_id: uuid.UUID,
-    ctx: RequestContext = Depends(require_write_access),
-) -> Response:
-    try:
-        await welcome_manual_place_service.delete_place(
-            ctx.organization_id, ctx.user_id, manual_id, place_id,
-        )
-    except welcome_manual_place_service.ManualNotFoundError as exc:
-        raise HTTPException(status_code=404, detail="Welcome manual not found") from exc
-    except welcome_manual_place_service.PlaceNotFoundError as exc:
-        raise HTTPException(status_code=404, detail="Place not found") from exc
     return Response(status_code=204)
 
 

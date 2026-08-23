@@ -7,12 +7,15 @@
  *   - failed  → amber error, "Try again" returns to the form WITH email
  *               pre-filled + "Close"
  *   - skipped → blue info, "Close" only (no "Try again" — retry always skips)
- * Plus: send button disabled until a valid email is entered.
+ * Plus: send button disabled until a valid email is entered, and — for a
+ * by-the-room manual — until the host has picked which room the guest is in.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import WelcomeManualEmailDialog from "@/app/features/welcome-manuals/WelcomeManualEmailDialog";
+import { SHARED_ROOM_OPTION } from "@/shared/lib/welcome-manual-constants";
+import type { WelcomeManualRoomResponse } from "@/shared/types/welcome-manual/welcome-manual-room-response";
 import type { WelcomeManualSendResponse } from "@/shared/types/welcome-manual/welcome-manual-send-response";
 
 const emailMutationMock = vi.fn();
@@ -40,6 +43,17 @@ function makeSend(overrides: Partial<WelcomeManualSendResponse>): WelcomeManualS
   };
 }
 
+const ROOMS: WelcomeManualRoomResponse[] = [
+  {
+    id: "room-1",
+    manual_id: "m-1",
+    name: "Front bedroom",
+    display_order: 0,
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+  },
+];
+
 const onClose = vi.fn();
 
 describe("WelcomeManualEmailDialog", () => {
@@ -48,7 +62,7 @@ describe("WelcomeManualEmailDialog", () => {
   });
 
   it("disables the send button until a valid email is entered", async () => {
-    render(<WelcomeManualEmailDialog manualId="m-1" onClose={onClose} />);
+    render(<WelcomeManualEmailDialog manualId="m-1" rooms={[]} onClose={onClose} />);
     const sendBtn = screen.getByTestId("welcome-manual-email-send");
     expect(sendBtn).toBeDisabled();
 
@@ -65,7 +79,7 @@ describe("WelcomeManualEmailDialog", () => {
     emailMutationMock.mockReturnValue({
       unwrap: () => Promise.resolve(makeSend({ status: "sent" })),
     });
-    render(<WelcomeManualEmailDialog manualId="m-1" onClose={onClose} />);
+    render(<WelcomeManualEmailDialog manualId="m-1" rooms={[]} onClose={onClose} />);
     await userEvent.type(screen.getByTestId("welcome-manual-email-input"), "guest@example.com");
     await userEvent.click(screen.getByTestId("welcome-manual-email-send"));
 
@@ -84,7 +98,7 @@ describe("WelcomeManualEmailDialog", () => {
           makeSend({ status: "failed", error_reason: "Mailbox does not exist" }),
         ),
     });
-    render(<WelcomeManualEmailDialog manualId="m-1" onClose={onClose} />);
+    render(<WelcomeManualEmailDialog manualId="m-1" rooms={[]} onClose={onClose} />);
     await userEvent.type(screen.getByTestId("welcome-manual-email-input"), "guest@example.com");
     await userEvent.click(screen.getByTestId("welcome-manual-email-send"));
 
@@ -104,7 +118,7 @@ describe("WelcomeManualEmailDialog", () => {
     emailMutationMock.mockReturnValue({
       unwrap: () => Promise.resolve(makeSend({ status: "skipped" })),
     });
-    render(<WelcomeManualEmailDialog manualId="m-1" onClose={onClose} />);
+    render(<WelcomeManualEmailDialog manualId="m-1" rooms={[]} onClose={onClose} />);
     await userEvent.type(screen.getByTestId("welcome-manual-email-input"), "guest@example.com");
     await userEvent.click(screen.getByTestId("welcome-manual-email-send"));
 
@@ -121,7 +135,7 @@ describe("WelcomeManualEmailDialog", () => {
     emailMutationMock.mockReturnValue({
       unwrap: () => Promise.reject(new Error("network")),
     });
-    render(<WelcomeManualEmailDialog manualId="m-1" onClose={onClose} />);
+    render(<WelcomeManualEmailDialog manualId="m-1" rooms={[]} onClose={onClose} />);
     await userEvent.type(screen.getByTestId("welcome-manual-email-input"), "guest@example.com");
     await userEvent.click(screen.getByTestId("welcome-manual-email-send"));
 
@@ -130,5 +144,82 @@ describe("WelcomeManualEmailDialog", () => {
     });
     // Still on the form — no result state rendered.
     expect(screen.getByTestId("welcome-manual-email-form")).toBeInTheDocument();
+  });
+
+  describe("room picker", () => {
+    it("is absent for a whole-place manual", () => {
+      render(<WelcomeManualEmailDialog manualId="m-1" rooms={[]} onClose={onClose} />);
+      expect(screen.queryByTestId("welcome-manual-email-room")).not.toBeInTheDocument();
+    });
+
+    it("holds Send until the host says which room the guest is in", async () => {
+      render(<WelcomeManualEmailDialog manualId="m-1" rooms={ROOMS} onClose={onClose} />);
+      await userEvent.type(
+        screen.getByTestId("welcome-manual-email-input"),
+        "guest@example.com",
+      );
+      // Valid email, but no room chosen yet.
+      expect(screen.getByTestId("welcome-manual-email-send")).toBeDisabled();
+
+      await userEvent.selectOptions(
+        screen.getByTestId("welcome-manual-email-room"),
+        "room-1",
+      );
+      expect(screen.getByTestId("welcome-manual-email-send")).not.toBeDisabled();
+    });
+
+    it("sends the chosen room id so the PDF carries that room's sections", async () => {
+      emailMutationMock.mockReturnValue({
+        unwrap: () => Promise.resolve(makeSend({ status: "sent" })),
+      });
+      render(<WelcomeManualEmailDialog manualId="m-1" rooms={ROOMS} onClose={onClose} />);
+      await userEvent.type(
+        screen.getByTestId("welcome-manual-email-input"),
+        "guest@example.com",
+      );
+      await userEvent.selectOptions(
+        screen.getByTestId("welcome-manual-email-room"),
+        "room-1",
+      );
+      await userEvent.click(screen.getByTestId("welcome-manual-email-send"));
+
+      await waitFor(() => {
+        expect(emailMutationMock).toHaveBeenCalledWith({
+          manualId: "m-1",
+          data: {
+            recipient_email: "guest@example.com",
+            recipient_name: null,
+            room_id: "room-1",
+          },
+        });
+      });
+    });
+
+    it("sends a null room id for the shared-sections-only choice", async () => {
+      emailMutationMock.mockReturnValue({
+        unwrap: () => Promise.resolve(makeSend({ status: "sent" })),
+      });
+      render(<WelcomeManualEmailDialog manualId="m-1" rooms={ROOMS} onClose={onClose} />);
+      await userEvent.type(
+        screen.getByTestId("welcome-manual-email-input"),
+        "guest@example.com",
+      );
+      await userEvent.selectOptions(
+        screen.getByTestId("welcome-manual-email-room"),
+        SHARED_ROOM_OPTION,
+      );
+      await userEvent.click(screen.getByTestId("welcome-manual-email-send"));
+
+      await waitFor(() => {
+        expect(emailMutationMock).toHaveBeenCalledWith({
+          manualId: "m-1",
+          data: {
+            recipient_email: "guest@example.com",
+            recipient_name: null,
+            room_id: null,
+          },
+        });
+      });
+    });
   });
 });

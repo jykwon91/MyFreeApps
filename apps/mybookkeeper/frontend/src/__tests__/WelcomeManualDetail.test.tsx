@@ -6,6 +6,9 @@
  *     and ENABLED once it has at least one section (operator decision).
  *   - The loading skeleton renders while the manual query is in-flight.
  *   - The error state offers a retry.
+ *   - The room manager renders, and a by-the-room manual gets a preview-scope
+ *     picker whose selection filters the guest preview the way the backend
+ *     filters the emailed PDF.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
@@ -15,6 +18,7 @@ import { store } from "@/shared/store";
 import WelcomeManualDetail from "@/app/pages/WelcomeManualDetail";
 import type { WelcomeManualResponse } from "@/shared/types/welcome-manual/welcome-manual-response";
 import type { WelcomeManualSectionResponse } from "@/shared/types/welcome-manual/welcome-manual-section-response";
+import type { WelcomeManualRoomResponse } from "@/shared/types/welcome-manual/welcome-manual-room-response";
 
 let mockManual: WelcomeManualResponse | undefined;
 let mockIsLoading = false;
@@ -47,6 +51,9 @@ vi.mock("@/shared/store/welcomeManualsApi", () => ({
   useCreateSectionFieldMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useUpdateSectionFieldMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useDeleteSectionFieldMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useCreateRoomMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useUpdateRoomMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
+  useDeleteRoomMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useCreatePlaceMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useUpdatePlaceMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
   useDeletePlaceMutation: vi.fn(() => [vi.fn(), { isLoading: false }]),
@@ -56,10 +63,14 @@ vi.mock("@/shared/store/propertiesApi", () => ({
   useGetPropertiesQuery: vi.fn(() => ({ data: [] })),
 }));
 
-function makeSection(id: string): WelcomeManualSectionResponse {
+function makeSection(
+  id: string,
+  overrides: Partial<WelcomeManualSectionResponse> = {},
+): WelcomeManualSectionResponse {
   return {
     id,
     manual_id: "m-1",
+    room_id: null,
     title: "Wi-Fi",
     body: "instructions",
     display_order: 0,
@@ -67,10 +78,25 @@ function makeSection(id: string): WelcomeManualSectionResponse {
     images: [],
     created_at: "2026-01-01T00:00:00Z",
     updated_at: "2026-01-01T00:00:00Z",
+    ...overrides,
   };
 }
 
-function makeManual(sections: WelcomeManualSectionResponse[]): WelcomeManualResponse {
+function makeRoom(id: string, name: string, display_order: number): WelcomeManualRoomResponse {
+  return {
+    id,
+    manual_id: "m-1",
+    name,
+    display_order,
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+  };
+}
+
+function makeManual(
+  sections: WelcomeManualSectionResponse[],
+  rooms: WelcomeManualRoomResponse[] = [],
+): WelcomeManualResponse {
   return {
     id: "m-1",
     organization_id: "org-1",
@@ -78,6 +104,7 @@ function makeManual(sections: WelcomeManualSectionResponse[]): WelcomeManualResp
     property_id: null,
     title: "Lakeview Welcome Guide",
     intro_text: null,
+    rooms,
     sections,
     places: [],
     share_token: null,
@@ -155,5 +182,63 @@ describe("WelcomeManualDetail", () => {
     fireEvent.click(previewTab);
     expect(previewTab).toHaveAttribute("aria-selected", "true");
     expect(editTab).toHaveAttribute("aria-selected", "false");
+  });
+
+  it("renders the room manager, empty for a whole-place guide", () => {
+    mockManual = makeManual([makeSection("sec-1")]);
+    renderDetail();
+    expect(screen.getByTestId("welcome-manual-room-manager")).toBeInTheDocument();
+    expect(screen.getByTestId("welcome-manual-room-empty-state")).toBeInTheDocument();
+  });
+
+  describe("preview scope", () => {
+    const ROOMS = [makeRoom("room-1", "Front bedroom", 0), makeRoom("room-2", "Back bedroom", 1)];
+
+    function makeRoomManual() {
+      return makeManual(
+        [
+          makeSection("sec-shared", { title: "House rules" }),
+          makeSection("sec-front", { title: "Your room — front", room_id: "room-1" }),
+          makeSection("sec-back", {
+            title: "Your room — back",
+            room_id: "room-2",
+            display_order: 1,
+          }),
+        ],
+        ROOMS,
+      );
+    }
+
+    it("has no scope picker until the manual has rooms", () => {
+      mockManual = makeManual([makeSection("sec-1")]);
+      renderDetail();
+      expect(
+        screen.queryByTestId("welcome-manual-preview-scope"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("previews the shared link by default — shared sections only", () => {
+      mockManual = makeRoomManual();
+      renderDetail();
+      const scope = screen.getByTestId("welcome-manual-preview-scope") as HTMLSelectElement;
+      expect(scope.value).toBe("shared");
+      const previewed = screen.getAllByTestId("welcome-manual-preview-section");
+      expect(previewed).toHaveLength(1);
+      expect(previewed[0]).toHaveTextContent("House rules");
+    });
+
+    it("adds only the chosen room's own sections when previewing their PDF", () => {
+      mockManual = makeRoomManual();
+      renderDetail();
+      fireEvent.change(screen.getByTestId("welcome-manual-preview-scope"), {
+        target: { value: "room-1" },
+      });
+      const previewed = screen.getAllByTestId("welcome-manual-preview-section");
+      expect(previewed).toHaveLength(2);
+      const text = previewed.map((p) => p.textContent).join(" ");
+      expect(text).toContain("House rules");
+      expect(text).toContain("Your room — front");
+      expect(text).not.toContain("Your room — back");
+    });
   });
 });

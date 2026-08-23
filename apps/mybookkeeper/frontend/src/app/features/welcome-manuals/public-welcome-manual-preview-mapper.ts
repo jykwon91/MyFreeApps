@@ -19,6 +19,9 @@ export function mapPublicSectionsToPreview(
     return {
       id: sectionId,
       manual_id: "public",
+      // The share link only ever carries shared sections, so nothing here is
+      // room-scoped by construction.
+      room_id: null,
       title: section.title,
       body: section.body,
       display_order: sectionIndex,

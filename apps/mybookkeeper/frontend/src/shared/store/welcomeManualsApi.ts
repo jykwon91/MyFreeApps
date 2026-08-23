@@ -4,6 +4,9 @@ import type { WelcomeManualEmailRequest } from "@/shared/types/welcome-manual/we
 import type { WelcomeManualListArgs } from "@/shared/types/welcome-manual/welcome-manual-list-args";
 import type { WelcomeManualListResponse } from "@/shared/types/welcome-manual/welcome-manual-list-response";
 import type { WelcomeManualPlaceResponse } from "@/shared/types/welcome-manual/welcome-manual-place-response";
+import type { WelcomeManualRoomCreateRequest } from "@/shared/types/welcome-manual/welcome-manual-room-create-request";
+import type { WelcomeManualRoomResponse } from "@/shared/types/welcome-manual/welcome-manual-room-response";
+import type { WelcomeManualRoomUpdateRequest } from "@/shared/types/welcome-manual/welcome-manual-room-update-request";
 import type { WelcomeManualResponse } from "@/shared/types/welcome-manual/welcome-manual-response";
 import type { WelcomeManualSectionCreateRequest } from "@/shared/types/welcome-manual/welcome-manual-section-create-request";
 import type { WelcomeManualSectionFieldResponse } from "@/shared/types/welcome-manual/welcome-manual-section-field-response";
@@ -249,6 +252,44 @@ const welcomeManualsApi = baseApi.injectEndpoints({
         { type: "WelcomeManual", id: arg.manualId },
       ],
     }),
+    // ---- Rooms (one manual let by the room) ----
+    // Every room mutation invalidates the whole manual: rooms and sections are
+    // rendered together, and a delete cascades to that room's sections.
+    createRoom: builder.mutation<
+      WelcomeManualRoomResponse,
+      { manualId: string; data: WelcomeManualRoomCreateRequest }
+    >({
+      query: ({ manualId, data }) => ({
+        url: `/welcome-manuals/${manualId}/rooms`,
+        method: "POST",
+        data,
+      }),
+      invalidatesTags: (_result, _err, arg) => [
+        { type: "WelcomeManual", id: arg.manualId },
+      ],
+    }),
+    updateRoom: builder.mutation<
+      WelcomeManualRoomResponse,
+      { manualId: string; roomId: string; data: WelcomeManualRoomUpdateRequest }
+    >({
+      query: ({ manualId, roomId, data }) => ({
+        url: `/welcome-manuals/${manualId}/rooms/${roomId}`,
+        method: "PATCH",
+        data,
+      }),
+      invalidatesTags: (_result, _err, arg) => [
+        { type: "WelcomeManual", id: arg.manualId },
+      ],
+    }),
+    deleteRoom: builder.mutation<void, { manualId: string; roomId: string }>({
+      query: ({ manualId, roomId }) => ({
+        url: `/welcome-manuals/${manualId}/rooms/${roomId}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: (_result, _err, arg) => [
+        { type: "WelcomeManual", id: arg.manualId },
+      ],
+    }),
     // ---- Places (Where to Eat) ----
     createPlace: builder.mutation<
       WelcomeManualPlaceResponse,
@@ -333,6 +374,9 @@ export const {
   useCreateSectionFieldMutation,
   useUpdateSectionFieldMutation,
   useDeleteSectionFieldMutation,
+  useCreateRoomMutation,
+  useUpdateRoomMutation,
+  useDeleteRoomMutation,
   useCreatePlaceMutation,
   useUpdatePlaceMutation,
   useDeletePlaceMutation,

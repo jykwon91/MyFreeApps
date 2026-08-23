@@ -6,4 +6,6 @@
 export interface WelcomeManualSectionUpdateRequest {
   title?: string;
   body?: string | null;
+  /** An explicit ``null`` moves the section back to shared-by-all. */
+  room_id?: string | null;
 }

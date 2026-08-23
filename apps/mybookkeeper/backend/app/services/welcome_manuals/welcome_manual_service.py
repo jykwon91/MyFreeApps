@@ -15,6 +15,7 @@ from app.repositories import (
     property_repo,
     welcome_manual_place_repo,
     welcome_manual_repo,
+    welcome_manual_room_repo,
     welcome_manual_section_field_repo,
     welcome_manual_section_image_repo,
     welcome_manual_section_repo,
@@ -29,6 +30,9 @@ from app.schemas.welcome_manuals.welcome_manual_place_response import (
     WelcomeManualPlaceResponse,
 )
 from app.schemas.welcome_manuals.welcome_manual_response import WelcomeManualResponse
+from app.schemas.welcome_manuals.welcome_manual_room_response import (
+    WelcomeManualRoomResponse,
+)
 from app.schemas.welcome_manuals.welcome_manual_section_field_response import (
     WelcomeManualSectionFieldResponse,
 )
@@ -79,9 +83,11 @@ def _build_section_responses(sections, images, fields) -> list[WelcomeManualSect
     ]
 
 
-def _to_response(manual, section_responses=(), place_responses=()) -> WelcomeManualResponse:
-    """Convert an ORM manual + pre-built section/place responses to a response
-    model.
+def _to_response(
+    manual, section_responses=(), place_responses=(), room_responses=(),
+) -> WelcomeManualResponse:
+    """Convert an ORM manual + pre-built section/place/room responses to a
+    response model.
 
     Centralising this construction prevents drift between get / create /
     update response shapes.
@@ -89,6 +95,7 @@ def _to_response(manual, section_responses=(), place_responses=()) -> WelcomeMan
     base = WelcomeManualResponse.model_validate(manual)
     return base.model_copy(
         update={
+            "rooms": list(room_responses),
             "sections": list(section_responses),
             "places": list(place_responses),
         },
@@ -114,8 +121,15 @@ async def get_manual(
         images = await welcome_manual_section_image_repo.list_by_section_ids(db, section_ids)
         fields = await welcome_manual_section_field_repo.list_by_section_ids(db, section_ids)
         places = await welcome_manual_place_repo.list_by_manual(db, manual.id)
+        rooms = await welcome_manual_room_repo.list_by_manual(db, manual.id)
     place_responses = [WelcomeManualPlaceResponse.model_validate(p) for p in places]
-    return _to_response(manual, _build_section_responses(sections, images, fields), place_responses)
+    room_responses = [WelcomeManualRoomResponse.model_validate(r) for r in rooms]
+    return _to_response(
+        manual,
+        _build_section_responses(sections, images, fields),
+        place_responses,
+        room_responses,
+    )
 
 
 async def list_manuals(
@@ -201,8 +215,9 @@ async def create_manual(
                     fields.append(field)
 
         # Freshly-seeded sections never have images yet. New manuals start
-        # with zero places — places are never seeded on create.
-        return _to_response(manual, _build_section_responses(sections, [], fields), [])
+        # with zero places and zero rooms — a manual is whole-property until
+        # the host splits it by room.
+        return _to_response(manual, _build_section_responses(sections, [], fields), [], [])
 
 
 async def update_manual(
@@ -237,8 +252,15 @@ async def update_manual(
         images = await welcome_manual_section_image_repo.list_by_section_ids(db, section_ids)
         fields = await welcome_manual_section_field_repo.list_by_section_ids(db, section_ids)
         places = await welcome_manual_place_repo.list_by_manual(db, manual.id)
+        rooms = await welcome_manual_room_repo.list_by_manual(db, manual.id)
         place_responses = [WelcomeManualPlaceResponse.model_validate(p) for p in places]
-        return _to_response(manual, _build_section_responses(sections, images, fields), place_responses)
+        room_responses = [WelcomeManualRoomResponse.model_validate(r) for r in rooms]
+        return _to_response(
+            manual,
+            _build_section_responses(sections, images, fields),
+            place_responses,
+            room_responses,
+        )
 
 
 async def soft_delete_manual(

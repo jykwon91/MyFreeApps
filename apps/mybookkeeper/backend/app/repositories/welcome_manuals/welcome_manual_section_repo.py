@@ -1,7 +1,7 @@
 import uuid
 from typing import Any
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.welcome_manuals.welcome_manual_section import WelcomeManualSection
@@ -13,6 +13,10 @@ from app.models.welcome_manuals.welcome_manual_section import WelcomeManualSecti
 _UPDATABLE_COLUMNS: frozenset[str] = frozenset({
     "title",
     "body",
+    # Moving a section between "shared by all rooms" (NULL) and a specific room
+    # is a normal edit — the host decides which parts of the guide are
+    # room-specific while writing them.
+    "room_id",
 })
 
 
@@ -24,6 +28,32 @@ async def list_by_manual(
     result = await db.execute(
         select(WelcomeManualSection)
         .where(WelcomeManualSection.manual_id == manual_id)
+        .order_by(
+            WelcomeManualSection.display_order.asc(),
+            WelcomeManualSection.created_at.asc(),
+        )
+    )
+    return list(result.scalars().all())
+
+
+async def list_for_room(
+    db: AsyncSession,
+    manual_id: uuid.UUID,
+    room_id: uuid.UUID | None,
+) -> list[WelcomeManualSection]:
+    """List the sections one guest should see, in display order.
+
+    Always includes the manual's shared sections (``room_id IS NULL``). When
+    ``room_id`` is given, that room's own sections are included too; when it is
+    None the result is the shared sections alone — which is what the single
+    public share link renders, so one room's guest can't read another's.
+    """
+    scope = WelcomeManualSection.room_id.is_(None)
+    if room_id is not None:
+        scope = or_(scope, WelcomeManualSection.room_id == room_id)
+    result = await db.execute(
+        select(WelcomeManualSection)
+        .where(WelcomeManualSection.manual_id == manual_id, scope)
         .order_by(
             WelcomeManualSection.display_order.asc(),
             WelcomeManualSection.created_at.asc(),
@@ -90,12 +120,14 @@ async def create(
     title: str,
     body: str | None,
     display_order: int,
+    room_id: uuid.UUID | None = None,
 ) -> WelcomeManualSection:
     section = WelcomeManualSection(
         manual_id=manual_id,
         title=title,
         body=body,
         display_order=display_order,
+        room_id=room_id,
     )
     db.add(section)
     await db.flush()
