@@ -6,10 +6,6 @@ import type { SectionEditorValues } from "@/shared/types/welcome-manual/section-
 import type { WelcomeManualSectionResponse } from "@/shared/types/welcome-manual/welcome-manual-section-response";
 import type { WelcomeManualSectionUpdateRequest } from "@/shared/types/welcome-manual/welcome-manual-section-update-request";
 
-function sectionToValues(section: WelcomeManualSectionResponse): SectionEditorValues {
-  return { title: section.title, body: section.body ?? "" };
-}
-
 function valuesToUpdateRequest(
   values: SectionEditorValues,
   dirty: Partial<Record<keyof SectionEditorValues, boolean>>,
@@ -46,7 +42,17 @@ export interface UseSectionEditorResult {
 export function useSectionEditor({ manualId, section }: UseSectionEditorArgs): UseSectionEditorResult {
   const [updateSection, { isLoading: isSaving }] = useUpdateSectionMutation();
 
-  const defaults = useMemo<SectionEditorValues>(() => sectionToValues(section), [section]);
+  // Depend on the persisted VALUES, not the section object. Every mutation on
+  // this manual (uploading a photo, adding a field, saving a caption, adding a
+  // place) invalidates the whole manual tag, so `section` is a brand-new object
+  // after each one even when its title and body are untouched.
+  const serverTitle = section.title;
+  const serverBody = section.body ?? "";
+
+  const defaults = useMemo<SectionEditorValues>(
+    () => ({ title: serverTitle, body: serverBody }),
+    [serverTitle, serverBody],
+  );
 
   const {
     register,
@@ -56,8 +62,10 @@ export function useSectionEditor({ manualId, section }: UseSectionEditorArgs): U
     formState: { errors, dirtyFields, isDirty },
   } = useForm<SectionEditorValues>({ defaultValues: defaults });
 
-  // Re-baseline when the server value changes (after a successful save/refetch
-  // or an external edit) so "dirty" reflects the latest persisted state.
+  // Re-baseline only when the persisted text actually changes — a successful
+  // save, or an edit from elsewhere. Keying this on object identity meant a
+  // photo upload mid-edit reset the form and discarded whatever the host had
+  // typed but not yet saved.
   useEffect(() => {
     reset(defaults);
   }, [defaults, reset]);

@@ -6,6 +6,7 @@ import { LoadingButton, ConfirmDialog } from "@platform/ui";
 import FormField from "@/shared/components/ui/FormField";
 import Markdown from "@/shared/components/ui/Markdown";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
+import { NEW_SECTION_DEFAULT_TITLE } from "@/shared/lib/welcome-manual-constants";
 import { useDeleteSectionMutation } from "@/shared/store/welcomeManualsApi";
 import type { WelcomeManualSectionResponse } from "@/shared/types/welcome-manual/welcome-manual-section-response";
 import WelcomeManualSectionFieldManager from "./WelcomeManualSectionFieldManager";
@@ -27,6 +28,11 @@ const WelcomeManualSectionCard = forwardRef<HTMLElement, WelcomeManualSectionCar
     const [deleteSection] = useDeleteSectionMutation();
     const [confirmDelete, setConfirmDelete] = useState(false);
     const editor = useSectionEditor({ manualId, section });
+
+    // A section keeps the placeholder title until the host renames it, so this
+    // marks the one they just added without any transient client state — it
+    // survives a refetch or a page reload and clears itself on the first save.
+    const isUnnamed = section.title === NEW_SECTION_DEFAULT_TITLE;
 
     const style = {
       transform: CSS.Transform.toString(transform),
@@ -57,10 +63,23 @@ const WelcomeManualSectionCard = forwardRef<HTMLElement, WelcomeManualSectionCar
       <section
         ref={setRefs}
         style={style}
-        className="border rounded-lg p-4 space-y-3 bg-card"
+        className={`rounded-lg p-4 space-y-3 bg-card ${
+          isUnnamed
+            ? "border-2 border-amber-400 dark:border-amber-600"
+            : "border"
+        }`}
         data-testid="welcome-manual-section-card"
         data-section-id={section.id}
       >
+        {isUnnamed ? (
+          <p
+            className="inline-block rounded-full bg-amber-100 dark:bg-amber-900 px-2 py-0.5 text-xs font-medium text-amber-800 dark:text-amber-200"
+            data-testid="welcome-manual-section-unnamed-badge"
+          >
+            Just added — give it a name and instructions
+          </p>
+        ) : null}
+
         <div className="flex items-start gap-2">
           <button
             {...attributes}
