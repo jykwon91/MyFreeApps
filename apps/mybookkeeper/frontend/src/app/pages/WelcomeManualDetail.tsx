@@ -83,7 +83,7 @@ export default function WelcomeManualDetail() {
   // Mirrors the backend's `list_for_room`: shared sections always, plus the
   // selected room's own. The share link only ever carries the shared ones.
   const previewSections = sortedSections.filter(
-    (section) => section.room_id === null || section.room_id === previewScope,
+    (section) => !section.room_id || section.room_id === previewScope,
   );
   const property = manual?.property_id
     ? properties.find((p) => p.id === manual.property_id)
