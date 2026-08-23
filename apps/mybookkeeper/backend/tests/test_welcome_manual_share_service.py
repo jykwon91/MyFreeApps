@@ -21,6 +21,7 @@ from app.models.user.user import User
 from app.repositories.welcome_manuals import (
     welcome_manual_place_repo,
     welcome_manual_repo,
+    welcome_manual_room_repo,
     welcome_manual_section_field_repo,
     welcome_manual_section_repo,
 )
@@ -448,3 +449,47 @@ class TestUnlockPublic:
                     await welcome_manual_share_service.unlock_public(
                         enabled.share_token, wrong,
                     )
+
+
+class TestPublicResponseExcludesRoomSections:
+    """One share link serves the whole manual, so a by-the-room manual must
+    publish only its shared sections — a guest with the link is not a
+    particular room's tenant."""
+
+    @pytest.mark.asyncio
+    async def test_room_scoped_sections_are_not_published(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        manual = await _make_manual(db, test_org, test_user)
+        await db.commit()
+        room = await welcome_manual_room_repo.create(
+            db, manual_id=manual.id, name="Front bedroom", display_order=0,
+        )
+        await welcome_manual_section_repo.create(
+            db, manual_id=manual.id, title="Wi-Fi", body="GuestNet", display_order=0,
+        )
+        private = await welcome_manual_section_repo.create(
+            db, manual_id=manual.id, title="Your door code", body="1234",
+            display_order=1, room_id=room.id,
+        )
+        await welcome_manual_section_field_repo.create(
+            db, section_id=private.id, label="Code", value="1234", display_order=0,
+        )
+        await db.commit()
+
+        with _patch(db):
+            enabled = await welcome_manual_share_service.enable_share(
+                test_org.id, test_user.id, manual.id,
+            )
+            await db.commit()
+            unlocked = await welcome_manual_share_service.unlock_public(
+                enabled.share_token, enabled.share_pin,
+            )
+
+        titles = [section.title for section in unlocked.sections]
+        assert titles == ["Wi-Fi"]
+        # And the room's field values never reach the public payload either.
+        published_values = [
+            f.value for section in unlocked.sections for f in section.fields
+        ]
+        assert "1234" not in published_values

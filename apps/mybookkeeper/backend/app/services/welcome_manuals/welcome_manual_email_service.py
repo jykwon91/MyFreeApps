@@ -32,6 +32,7 @@ from app.db.session import unit_of_work
 from app.repositories import (
     user_repo,
     welcome_manual_repo,
+    welcome_manual_room_repo,
     welcome_manual_section_field_repo,
     welcome_manual_section_image_repo,
     welcome_manual_section_repo,
@@ -59,11 +60,24 @@ class ManualNotFoundError(LookupError):
     """The manual doesn't exist, is soft-deleted, or belongs to another org."""
 
 
-def build_subject(*, manual_title: str) -> str:
-    """Pure helper. Subject line for the guest email."""
+class RoomNotFoundError(LookupError):
+    """The requested room isn't one of this manual's rooms."""
+
+
+def build_subject(*, manual_title: str, room_name: str | None = None) -> str:
+    """Pure helper. Subject line for the guest email.
+
+    Naming the room matters when three tenants of one house each receive their
+    own guide — the subject is how they tell theirs apart in the inbox.
+    """
     title = manual_title.strip() if manual_title else ""
+    room = room_name.strip() if room_name else ""
+    if title and room:
+        return f"Your welcome guide — {title} ({room})"
     if title:
         return f"Your welcome guide — {title}"
+    if room:
+        return f"Your welcome guide — {room}"
     return "Your welcome guide"
 
 
@@ -132,7 +146,9 @@ def _fetch_image_bytes(images, *, manual_id: uuid.UUID) -> dict[uuid.UUID, bytes
     return by_image
 
 
-def _build_pdf_data(manual, sections, images, fields, image_bytes) -> WelcomeManualPdfData:
+def _build_pdf_data(
+    manual, sections, images, fields, image_bytes, room_name=None,
+) -> WelcomeManualPdfData:
     """Assemble the pure PDF data carrier from the loaded ORM rows + bytes."""
     images_by_section: dict[uuid.UUID, list[SectionImagePdfData]] = {}
     for image in images:
@@ -159,6 +175,7 @@ def _build_pdf_data(manual, sections, images, fields, image_bytes) -> WelcomeMan
     return WelcomeManualPdfData(
         title=manual.title,
         intro_text=manual.intro_text,
+        room_name=room_name,
         sections=section_data,
     )
 
@@ -170,18 +187,31 @@ async def send_manual_to_guest(
     manual_id: uuid.UUID,
     recipient_email: str,
     recipient_name: str | None,
+    room_id: uuid.UUID | None = None,
 ) -> WelcomeManualSendResponse:
     """Render ``manual_id`` to a PDF and email it to ``recipient_email``.
 
+    ``room_id`` picks which room's guide to build on a by-the-room manual: the
+    PDF then carries the shared sections plus that room's own, and names the
+    room on its cover. Without it the guide is the shared sections only — which
+    is exactly right for a whole-property manual, where every section is shared.
+
     Returns the recorded send (``status`` in {sent, failed, skipped}). Raises
-    ManualNotFoundError if the manual isn't visible to the caller's org.
+    ManualNotFoundError if the manual isn't visible to the caller's org, or
+    RoomNotFoundError if ``room_id`` isn't one of its rooms.
     """
     # Load manual + sections + images + host email in one short transaction.
     async with unit_of_work() as db:
         manual = await welcome_manual_repo.get_by_id(db, manual_id, organization_id)
         if manual is None:
             raise ManualNotFoundError(f"Welcome manual {manual_id} not found")
-        sections = await welcome_manual_section_repo.list_by_manual(db, manual.id)
+        room_name = None
+        if room_id is not None:
+            room = await welcome_manual_room_repo.get_by_id(db, room_id, manual.id)
+            if room is None:
+                raise RoomNotFoundError(f"Room {room_id} not found")
+            room_name = room.name
+        sections = await welcome_manual_section_repo.list_for_room(db, manual.id, room_id)
         section_ids = [s.id for s in sections]
         images = await welcome_manual_section_image_repo.list_by_section_ids(db, section_ids)
         fields = await welcome_manual_section_field_repo.list_by_section_ids(db, section_ids)
@@ -204,7 +234,7 @@ async def send_manual_to_guest(
 
     image_bytes = _fetch_image_bytes(images, manual_id=manual_id)
     pdf_bytes = generate_welcome_manual_pdf(
-        _build_pdf_data(manual, sections, images, fields, image_bytes),
+        _build_pdf_data(manual, sections, images, fields, image_bytes, room_name),
     )
 
     attachment = EmailAttachment(
@@ -214,7 +244,7 @@ async def send_manual_to_guest(
     )
     sent = email_service.send_email(
         [recipient_email],
-        build_subject(manual_title=manual_title),
+        build_subject(manual_title=manual_title, room_name=room_name),
         build_body_html(manual_title=manual_title, recipient_name=recipient_name),
         attachments=[attachment],
         reply_to=host_email,

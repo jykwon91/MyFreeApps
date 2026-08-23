@@ -189,7 +189,13 @@ async def get_public_gate(token: str) -> bool:
 
 
 async def _assemble_public_response(db, manual: WelcomeManual) -> PublicWelcomeManualResponse:
-    sections = await welcome_manual_section_repo.list_by_manual(db, manual.id)
+    # SHARED SECTIONS ONLY. There is one share link per manual, so a
+    # by-the-room manual would otherwise hand every visitor every room's
+    # content — which room is whose, its door code, its parking space. Passing
+    # ``room_id=None`` selects the sections with no room scope; on a
+    # whole-property manual that is all of them, so nothing changes there.
+    # Room-specific content reaches a guest through their own emailed PDF.
+    sections = await welcome_manual_section_repo.list_for_room(db, manual.id, None)
     section_ids = [s.id for s in sections]
     images = await welcome_manual_section_image_repo.list_by_section_ids(db, section_ids)
     fields = await welcome_manual_section_field_repo.list_by_section_ids(db, section_ids)

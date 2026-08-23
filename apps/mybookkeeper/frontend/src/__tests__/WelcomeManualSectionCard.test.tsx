@@ -11,12 +11,16 @@
  *     untouched (e.g. uploading a photo into the section mid-edit).
  *   - A genuine server-side change to the persisted body still re-baselines.
  *   - A section still carrying the placeholder title is flagged as just-added.
+ *   - The room scope picker only appears once the manual has rooms, changing it
+ *     PATCHes room_id, and a room-scoped section wears a badge naming the room.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { DndContext } from "@dnd-kit/core";
 import WelcomeManualSectionCard from "@/app/features/welcome-manuals/WelcomeManualSectionCard";
+import { SHARED_ROOM_OPTION } from "@/shared/lib/welcome-manual-constants";
+import type { WelcomeManualRoomResponse } from "@/shared/types/welcome-manual/welcome-manual-room-response";
 import type { WelcomeManualSectionResponse } from "@/shared/types/welcome-manual/welcome-manual-section-response";
 
 const updateSectionMock = vi.fn();
@@ -43,6 +47,7 @@ function makeSection(overrides: Partial<WelcomeManualSectionResponse>): WelcomeM
   return {
     id: "sec-1",
     manual_id: "m-1",
+    room_id: null,
     title: "Wi-Fi",
     body: "Network: Lakeview, password hunter2",
     display_order: 0,
@@ -54,10 +59,13 @@ function makeSection(overrides: Partial<WelcomeManualSectionResponse>): WelcomeM
   };
 }
 
-function renderCard(section: WelcomeManualSectionResponse) {
+function renderCard(
+  section: WelcomeManualSectionResponse,
+  rooms: WelcomeManualRoomResponse[] = [],
+) {
   const utils = render(
     <DndContext>
-      <WelcomeManualSectionCard manualId="m-1" section={section} />
+      <WelcomeManualSectionCard manualId="m-1" section={section} rooms={rooms} />
     </DndContext>,
   );
   return {
@@ -66,7 +74,7 @@ function renderCard(section: WelcomeManualSectionResponse) {
     refetchWith: (next: WelcomeManualSectionResponse) =>
       utils.rerender(
         <DndContext>
-          <WelcomeManualSectionCard manualId="m-1" section={next} />
+          <WelcomeManualSectionCard manualId="m-1" section={next} rooms={rooms} />
         </DndContext>,
       ),
   };
@@ -172,5 +180,102 @@ describe("WelcomeManualSectionCard", () => {
     expect(screen.getByTestId("welcome-manual-field-add-button")).toBeInTheDocument();
     // No fields seeded → empty state shows.
     expect(screen.getByTestId("welcome-manual-field-empty-state")).toBeInTheDocument();
+  });
+
+  describe("room scope", () => {
+    const ROOMS: WelcomeManualRoomResponse[] = [
+      {
+        id: "room-1",
+        manual_id: "m-1",
+        name: "Front bedroom",
+        display_order: 0,
+        created_at: "2026-01-01T00:00:00Z",
+        updated_at: "2026-01-01T00:00:00Z",
+      },
+      {
+        id: "room-2",
+        manual_id: "m-1",
+        name: "Back bedroom",
+        display_order: 1,
+        created_at: "2026-01-01T00:00:00Z",
+        updated_at: "2026-01-01T00:00:00Z",
+      },
+    ];
+
+    it("hides the scope picker for a whole-place guide", () => {
+      renderCard(makeSection({}));
+      expect(
+        screen.queryByTestId("welcome-manual-section-scope"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("offers Everyone plus one option per room once rooms exist", () => {
+      renderCard(makeSection({}), ROOMS);
+      const scope = screen.getByTestId(
+        "welcome-manual-section-scope",
+      ) as HTMLSelectElement;
+      expect(scope.value).toBe(SHARED_ROOM_OPTION);
+      expect(
+        Array.from(scope.options).map((o) => o.textContent),
+      ).toEqual([
+        "Everyone — shared by every room",
+        "Front bedroom only",
+        "Back bedroom only",
+      ]);
+    });
+
+    it("PATCHes room_id when the section is scoped to a room", async () => {
+      updateSectionMock.mockReturnValue({
+        unwrap: () => Promise.resolve(makeSection({ room_id: "room-2" })),
+      });
+      renderCard(makeSection({}), ROOMS);
+
+      await userEvent.selectOptions(
+        screen.getByTestId("welcome-manual-section-scope"),
+        "room-2",
+      );
+
+      await waitFor(() => {
+        expect(updateSectionMock).toHaveBeenCalledWith({
+          manualId: "m-1",
+          sectionId: "sec-1",
+          data: { room_id: "room-2" },
+        });
+      });
+    });
+
+    it("PATCHes a null room_id when a room-only section is shared again", async () => {
+      updateSectionMock.mockReturnValue({
+        unwrap: () => Promise.resolve(makeSection({})),
+      });
+      renderCard(makeSection({ room_id: "room-1" }), ROOMS);
+
+      await userEvent.selectOptions(
+        screen.getByTestId("welcome-manual-section-scope"),
+        SHARED_ROOM_OPTION,
+      );
+
+      await waitFor(() => {
+        expect(updateSectionMock).toHaveBeenCalledWith({
+          manualId: "m-1",
+          sectionId: "sec-1",
+          data: { room_id: null },
+        });
+      });
+    });
+
+    it("badges a room-scoped section with the room name", () => {
+      renderCard(makeSection({ room_id: "room-1" }), ROOMS);
+      expect(
+        screen.getByTestId("welcome-manual-section-room-badge"),
+      ).toHaveTextContent("Front bedroom only");
+    });
+
+    it("does not badge a shared section", () => {
+      renderCard(makeSection({}), ROOMS);
+      expect(
+        screen.queryByTestId("welcome-manual-section-room-badge"),
+      ).not.toBeInTheDocument();
+    });
   });
 });

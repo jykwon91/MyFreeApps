@@ -6,6 +6,9 @@ from pydantic import BaseModel, ConfigDict
 from app.schemas.welcome_manuals.welcome_manual_place_response import (
     WelcomeManualPlaceResponse,
 )
+from app.schemas.welcome_manuals.welcome_manual_room_response import (
+    WelcomeManualRoomResponse,
+)
 from app.schemas.welcome_manuals.welcome_manual_section_response import (
     WelcomeManualSectionResponse,
 )
@@ -30,6 +33,9 @@ class WelcomeManualResponse(BaseModel):
     share_token: str | None = None
     share_pin: str | None = None
 
+    # Empty for a whole-property manual. Non-empty when the host rents this
+    # property by the room — see ``WelcomeManualSectionResponse.room_id``.
+    rooms: list[WelcomeManualRoomResponse] = []
     sections: list[WelcomeManualSectionResponse] = []
     places: list[WelcomeManualPlaceResponse] = []
 

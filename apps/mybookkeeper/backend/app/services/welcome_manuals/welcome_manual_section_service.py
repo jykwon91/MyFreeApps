@@ -12,6 +12,7 @@ from app.core.welcome_manual_constants import WELCOME_MANUAL_MAX_SECTIONS
 from app.db.session import unit_of_work
 from app.repositories import (
     welcome_manual_repo,
+    welcome_manual_room_repo,
     welcome_manual_section_image_repo,
     welcome_manual_section_repo,
 )
@@ -39,6 +40,23 @@ class InvalidReorderError(Exception):
     current sections (-> HTTP 400)."""
 
 
+class RoomNotFoundError(LookupError):
+    """The requested room scope doesn't exist on this manual."""
+
+
+async def _verify_room_scope(db, manual_id: uuid.UUID, room_id: uuid.UUID | None) -> None:
+    """Reject a section scoped to a room that isn't this manual's.
+
+    ``room_id`` is in the repo's updatable allowlist, so without this a caller
+    could point one of their sections at another organization's room id.
+    """
+    if room_id is None:
+        return
+    room = await welcome_manual_room_repo.get_by_id(db, room_id, manual_id)
+    if room is None:
+        raise RoomNotFoundError(f"Room {room_id} not found")
+
+
 async def add_section(
     organization_id: uuid.UUID,
     user_id: uuid.UUID,  # noqa: ARG001 — accepted for audit context
@@ -46,11 +64,13 @@ async def add_section(
     *,
     title: str,
     body: str | None,
+    room_id: uuid.UUID | None = None,
 ) -> WelcomeManualSectionResponse:
     async with unit_of_work() as db:
         manual = await welcome_manual_repo.get_by_id(db, manual_id, organization_id)
         if manual is None:
             raise ManualNotFoundError(f"Welcome manual {manual_id} not found")
+        await _verify_room_scope(db, manual.id, room_id)
 
         existing = await welcome_manual_section_repo.list_by_manual(db, manual.id)
         if len(existing) >= WELCOME_MANUAL_MAX_SECTIONS:
@@ -65,6 +85,7 @@ async def add_section(
             title=title,
             body=body,
             display_order=next_order,
+            room_id=room_id,
         )
         return WelcomeManualSectionResponse.model_validate(section)
 
@@ -80,6 +101,8 @@ async def update_section(
         manual = await welcome_manual_repo.get_by_id(db, manual_id, organization_id)
         if manual is None:
             raise ManualNotFoundError(f"Welcome manual {manual_id} not found")
+        if "room_id" in fields:
+            await _verify_room_scope(db, manual.id, fields["room_id"])
         section = await welcome_manual_section_repo.update(db, section_id, manual.id, fields)
         if section is None:
             raise SectionNotFoundError(f"Section {section_id} not found")

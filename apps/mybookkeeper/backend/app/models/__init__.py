@@ -20,6 +20,7 @@ from app.models.listings.channel_listing import ChannelListing
 from app.models.listings.listing_blackout import ListingBlackout
 from app.models.listings.listing_blackout_attachment import ListingBlackoutAttachment
 from app.models.welcome_manuals.welcome_manual import WelcomeManual
+from app.models.welcome_manuals.welcome_manual_room import WelcomeManualRoom
 from app.models.welcome_manuals.welcome_manual_section import WelcomeManualSection
 from app.models.welcome_manuals.welcome_manual_section_image import WelcomeManualSectionImage
 from app.models.welcome_manuals.welcome_manual_section_field import WelcomeManualSectionField

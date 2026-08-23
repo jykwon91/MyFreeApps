@@ -18,6 +18,7 @@ import { Button, LoadingButton } from "@platform/ui";
 import { showError, showSuccess } from "@/shared/lib/toast-store";
 import {
   NEW_SECTION_DEFAULT_TITLE,
+  SHARED_ROOM_OPTION,
   WELCOME_MANUAL_VIEW_MODE,
   type WelcomeManualViewMode,
 } from "@/shared/lib/welcome-manual-constants";
@@ -32,6 +33,7 @@ import WelcomeManualDetailSkeleton from "@/app/features/welcome-manuals/WelcomeM
 import WelcomeManualSectionCard from "@/app/features/welcome-manuals/WelcomeManualSectionCard";
 import WelcomeManualPreview from "@/app/features/welcome-manuals/WelcomeManualPreview";
 import WelcomeManualPlaceManager from "@/app/features/welcome-manuals/WelcomeManualPlaceManager";
+import WelcomeManualRoomManager from "@/app/features/welcome-manuals/WelcomeManualRoomManager";
 import WelcomeManualShareCard from "@/app/features/welcome-manuals/WelcomeManualShareCard";
 import WelcomeManualForm from "@/app/features/welcome-manuals/WelcomeManualForm";
 import WelcomeManualEmailDialog from "@/app/features/welcome-manuals/WelcomeManualEmailDialog";
@@ -45,6 +47,9 @@ export default function WelcomeManualDetail() {
   const [showEmailDialog, setShowEmailDialog] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [pendingFocusId, setPendingFocusId] = useState<string | null>(null);
+  // Which guest's copy the preview column is showing. SHARED_ROOM_OPTION is
+  // the public share link; a room id is that room's emailed PDF.
+  const [previewScope, setPreviewScope] = useState<string>(SHARED_ROOM_OPTION);
   // Mobile-only view toggle. Desktop (lg+) shows editor + preview side by side,
   // so this state is ignored there.
   const [mobileView, setMobileView] = useState<WelcomeManualViewMode>(
@@ -67,6 +72,19 @@ export default function WelcomeManualDetail() {
 
   const sections = manual?.sections ?? [];
   const sortedSections = [...sections].sort((a, b) => a.display_order - b.display_order);
+  const rooms = [...(manual?.rooms ?? [])].sort((a, b) => a.display_order - b.display_order);
+
+  const sectionCountByRoom = new Map<string, number>();
+  for (const section of sections) {
+    if (!section.room_id) continue;
+    sectionCountByRoom.set(section.room_id, (sectionCountByRoom.get(section.room_id) ?? 0) + 1);
+  }
+
+  // Mirrors the backend's `list_for_room`: shared sections always, plus the
+  // selected room's own. The share link only ever carries the shared ones.
+  const previewSections = sortedSections.filter(
+    (section) => !section.room_id || section.room_id === previewScope,
+  );
   const property = manual?.property_id
     ? properties.find((p) => p.id === manual.property_id)
     : undefined;
@@ -268,6 +286,12 @@ export default function WelcomeManualDetail() {
                 sharePin={manual.share_pin}
               />
 
+              <WelcomeManualRoomManager
+                manualId={manual.id}
+                rooms={rooms}
+                sectionCountByRoom={sectionCountByRoom}
+              />
+
               {hasSections ? (
                 <DndContext
                   sensors={sensors}
@@ -285,6 +309,7 @@ export default function WelcomeManualDetail() {
                             ref={(node) => registerSectionRef(id, node)}
                             manualId={manual.id}
                             section={section}
+                            rooms={rooms}
                           />
                         );
                       })}
@@ -342,10 +367,28 @@ export default function WelcomeManualDetail() {
                 <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   Guest preview
                 </p>
+                {rooms.length > 0 ? (
+                  <select
+                    value={previewScope}
+                    onChange={(e) => setPreviewScope(e.target.value)}
+                    className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px] bg-transparent"
+                    aria-label="Whose copy to preview"
+                    data-testid="welcome-manual-preview-scope"
+                  >
+                    <option value={SHARED_ROOM_OPTION}>
+                      Shared link — what the public link shows
+                    </option>
+                    {rooms.map((room) => (
+                      <option key={room.id} value={room.id}>
+                        {room.name} — their emailed PDF
+                      </option>
+                    ))}
+                  </select>
+                ) : null}
                 <WelcomeManualPreview
                   title={manual.title}
                   introText={manual.intro_text}
-                  sections={sortedSections}
+                  sections={previewSections}
                   places={manual.places ?? []}
                 />
               </div>
@@ -364,6 +407,7 @@ export default function WelcomeManualDetail() {
           {showEmailDialog ? (
             <WelcomeManualEmailDialog
               manualId={manual.id}
+              rooms={rooms}
               onClose={() => setShowEmailDialog(false)}
             />
           ) : null}

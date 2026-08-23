@@ -9,6 +9,8 @@ import type { WelcomeManualSectionImageResponse } from "./welcome-manual-section
 export interface WelcomeManualSectionResponse {
   id: string;
   manual_id: string;
+  /** null = shared by every room; otherwise the room this section belongs to. */
+  room_id: string | null;
   title: string;
   body: string | null;
   display_order: number;

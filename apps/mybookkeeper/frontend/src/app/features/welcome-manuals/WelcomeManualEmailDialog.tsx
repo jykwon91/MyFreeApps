@@ -4,30 +4,46 @@ import Panel from "@/shared/components/ui/Panel";
 import FormField from "@/shared/components/ui/FormField";
 import { LoadingButton } from "@platform/ui";
 import { showError } from "@/shared/lib/toast-store";
-import { EMAIL_REGEX } from "@/shared/lib/welcome-manual-constants";
+import { EMAIL_REGEX, SHARED_ROOM_OPTION } from "@/shared/lib/welcome-manual-constants";
 import { useEmailWelcomeManualMutation } from "@/shared/store/welcomeManualsApi";
 import type { WelcomeManualEmailDialogStep } from "@/shared/types/welcome-manual/welcome-manual-email-dialog-step";
+import type { WelcomeManualRoomResponse } from "@/shared/types/welcome-manual/welcome-manual-room-response";
 
 export interface WelcomeManualEmailDialogProps {
   manualId: string;
+  /**
+   * Rooms on this manual, in display order. When there are any, the host must
+   * pick one before sending — that choice decides which room-only sections
+   * land in the PDF.
+   */
+  rooms: WelcomeManualRoomResponse[];
   onClose: () => void;
 }
 
-export default function WelcomeManualEmailDialog({ manualId, onClose }: WelcomeManualEmailDialogProps) {
+export default function WelcomeManualEmailDialog({ manualId, rooms, onClose }: WelcomeManualEmailDialogProps) {
   const [emailManual, { isLoading }] = useEmailWelcomeManualMutation();
   const [step, setStep] = useState<WelcomeManualEmailDialogStep>("form");
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [errorReason, setErrorReason] = useState<string | null>(null);
+  // "" until the host chooses; SHARED_ROOM_OPTION means "shared sections only".
+  const [roomChoice, setRoomChoice] = useState("");
 
   const emailValid = EMAIL_REGEX.test(email.trim());
+  const roomChosen = rooms.length === 0 || roomChoice !== "";
+  const canSend = emailValid && roomChosen;
 
   async function handleSend() {
-    if (!emailValid) return;
+    if (!canSend) return;
+    const roomId = roomChoice === "" || roomChoice === SHARED_ROOM_OPTION ? null : roomChoice;
     try {
       const send = await emailManual({
         manualId,
-        data: { recipient_email: email.trim(), recipient_name: name.trim() || null },
+        data: {
+          recipient_email: email.trim(),
+          recipient_name: name.trim() || null,
+          room_id: roomId,
+        },
       }).unwrap();
       setErrorReason(send.error_reason);
       setStep(send.status);
@@ -82,6 +98,30 @@ export default function WelcomeManualEmailDialog({ manualId, onClose }: WelcomeM
                   data-testid="welcome-manual-email-name"
                 />
               </FormField>
+              {rooms.length > 0 ? (
+                <FormField label="Which room is this guest in" required>
+                  <select
+                    value={roomChoice}
+                    onChange={(e) => setRoomChoice(e.target.value)}
+                    className="w-full border rounded-md px-3 py-2 text-sm min-h-[44px] bg-transparent"
+                    data-testid="welcome-manual-email-room"
+                  >
+                    <option value="">Choose a room…</option>
+                    {rooms.map((room) => (
+                      <option key={room.id} value={room.id}>
+                        {room.name}
+                      </option>
+                    ))}
+                    <option value={SHARED_ROOM_OPTION}>
+                      No room — shared sections only
+                    </option>
+                  </select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    The PDF gets every shared section plus the ones written for
+                    this room.
+                  </p>
+                </FormField>
+              ) : null}
             </div>
           ) : null}
 
@@ -134,7 +174,7 @@ export default function WelcomeManualEmailDialog({ manualId, onClose }: WelcomeM
                 onClick={() => void handleSend()}
                 isLoading={isLoading}
                 loadingText="Sending..."
-                disabled={!emailValid}
+                disabled={!canSend}
                 data-testid="welcome-manual-email-send"
               >
                 Send guide

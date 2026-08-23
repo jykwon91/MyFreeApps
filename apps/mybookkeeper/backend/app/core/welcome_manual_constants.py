@@ -29,6 +29,15 @@ WELCOME_MANUAL_FIELD_LABEL_MAX_LEN = 100
 WELCOME_MANUAL_FIELD_VALUE_MAX_LEN = 500
 NEW_FIELD_DEFAULT_LABEL = "New field"
 
+# Rooms. A manual can be split into rooms when one property is rented by the
+# room — the shared sections (Wi-Fi, trash day, house rules) are written once
+# and every room's guide includes them, while a room-scoped section (which
+# room is yours, its key, its bathroom) reaches only that room's guest.
+# ``room_id IS NULL`` on a section means "shared across all rooms".
+WELCOME_MANUAL_MAX_ROOMS = 20
+WELCOME_MANUAL_ROOM_NAME_MAX_LEN = 120
+NEW_ROOM_DEFAULT_NAME = "New room"
+
 # Outcome statuses for a welcome-manual email send (welcome_manual_sends.status).
 # Stored as String(20) + CheckConstraint (never SQLAlchemy Enum, per the schema
 # convention). ``sent`` = SMTP accepted; ``failed`` = SMTP rejected/errored;

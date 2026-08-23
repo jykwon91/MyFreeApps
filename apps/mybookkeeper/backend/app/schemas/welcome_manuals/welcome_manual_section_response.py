@@ -14,6 +14,9 @@ from app.schemas.welcome_manuals.welcome_manual_section_image_response import (
 class WelcomeManualSectionResponse(BaseModel):
     """One section of a welcome manual, with its ordered fields and images.
 
+    ``room_id`` scopes the section: ``None`` means every room's guide includes
+    it, a room id means only that room's does.
+
     ``fields`` and ``images`` (the latter with presigned URLs) are populated on
     the full-manual read paths. Section-mutation responses (add / update /
     reorder) return empty lists — the frontend refetches the manual after those
@@ -22,6 +25,8 @@ class WelcomeManualSectionResponse(BaseModel):
 
     id: uuid.UUID
     manual_id: uuid.UUID
+    # None = shared by every room. Otherwise the room this section belongs to.
+    room_id: uuid.UUID | None = None
     title: str
     body: str | None = None
     display_order: int

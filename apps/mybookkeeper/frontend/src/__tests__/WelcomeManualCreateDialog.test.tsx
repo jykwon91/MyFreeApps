@@ -43,6 +43,7 @@ const CREATED: WelcomeManualResponse = {
   property_id: null,
   title: "My Guide",
   intro_text: null,
+  rooms: [],
   sections: [],
   places: [],
   share_token: null,

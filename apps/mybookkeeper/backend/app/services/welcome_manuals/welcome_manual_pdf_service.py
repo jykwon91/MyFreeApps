@@ -77,6 +77,10 @@ class SectionPdfData:
 class WelcomeManualPdfData:
     title: str
     intro_text: str | None = None
+    # Set when the guide is for one room of a by-the-room property. Rendered as
+    # a subtitle under the title so the guest can see at a glance which room's
+    # copy they were sent.
+    room_name: str | None = None
     sections: list[SectionPdfData] = field(default_factory=list)
 
 
@@ -129,6 +133,14 @@ def generate_welcome_manual_pdf(data: WelcomeManualPdfData) -> bytes:
     title_style = styles["Title"]
     heading_style = styles["Heading2"]
     body_style = styles["BodyText"]
+    room_style = ParagraphStyle(
+        "WelcomeManualRoom",
+        parent=styles["Title"],
+        fontSize=14,
+        leading=18,
+        spaceBefore=0,
+        textColor="#4b5563",
+    )
     caption_style = ParagraphStyle(
         "WelcomeManualCaption",
         parent=styles["Italic"],
@@ -142,8 +154,10 @@ def generate_welcome_manual_pdf(data: WelcomeManualPdfData) -> bytes:
 
     story: list[Flowable] = [
         Paragraph(html_mod.escape(data.title), title_style),
-        Spacer(1, 12),
     ]
+    if data.room_name and data.room_name.strip():
+        story.append(Paragraph(html_mod.escape(data.room_name.strip()), room_style))
+    story.append(Spacer(1, 12))
 
     if data.intro_text and data.intro_text.strip():
         story.extend(markdown_to_flowables(data.intro_text, body_style))

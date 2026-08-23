@@ -15,7 +15,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.welcome_manual_constants import WELCOME_MANUAL_MAX_SECTIONS
 from app.models.organization.organization import Organization
 from app.models.user.user import User
-from app.repositories.welcome_manuals import welcome_manual_repo, welcome_manual_section_repo
+from app.repositories.welcome_manuals import (
+    welcome_manual_repo,
+    welcome_manual_room_repo,
+    welcome_manual_section_repo,
+)
 from app.services.welcome_manuals import welcome_manual_section_service
 
 
@@ -176,3 +180,87 @@ class TestReorder:
                 await welcome_manual_section_service.reorder_sections(
                     test_org.id, test_user.id, uuid.uuid4(), [uuid.uuid4()],
                 )
+
+
+class TestRoomScope:
+    @pytest.mark.asyncio
+    async def test_add_section_scoped_to_a_room(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        manual = await _make_manual(db, test_org, test_user)
+        room = await welcome_manual_room_repo.create(
+            db, manual_id=manual.id, name="Front", display_order=0,
+        )
+        await db.commit()
+        with _patch_uow(db):
+            section = await welcome_manual_section_service.add_section(
+                test_org.id, test_user.id, manual.id,
+                title="Your room", body=None, room_id=room.id,
+            )
+        assert section.room_id == room.id
+
+    @pytest.mark.asyncio
+    async def test_add_section_defaults_to_shared(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        manual = await _make_manual(db, test_org, test_user)
+        await db.commit()
+        with _patch_uow(db):
+            section = await welcome_manual_section_service.add_section(
+                test_org.id, test_user.id, manual.id, title="Wi-Fi", body=None,
+            )
+        assert section.room_id is None
+
+    @pytest.mark.asyncio
+    async def test_add_rejects_a_room_from_another_manual(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        mine = await _make_manual(db, test_org, test_user)
+        theirs = await _make_manual(db, test_org, test_user)
+        foreign_room = await welcome_manual_room_repo.create(
+            db, manual_id=theirs.id, name="Not mine", display_order=0,
+        )
+        await db.commit()
+        with _patch_uow(db), pytest.raises(welcome_manual_section_service.RoomNotFoundError):
+            await welcome_manual_section_service.add_section(
+                test_org.id, test_user.id, mine.id,
+                title="Sneaky", body=None, room_id=foreign_room.id,
+            )
+
+    @pytest.mark.asyncio
+    async def test_update_rejects_a_room_from_another_manual(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        mine = await _make_manual(db, test_org, test_user)
+        theirs = await _make_manual(db, test_org, test_user)
+        foreign_room = await welcome_manual_room_repo.create(
+            db, manual_id=theirs.id, name="Not mine", display_order=0,
+        )
+        section = await welcome_manual_section_repo.create(
+            db, manual_id=mine.id, title="Wi-Fi", body=None, display_order=0,
+        )
+        await db.commit()
+        with _patch_uow(db), pytest.raises(welcome_manual_section_service.RoomNotFoundError):
+            await welcome_manual_section_service.update_section(
+                test_org.id, test_user.id, mine.id, section.id,
+                {"room_id": foreign_room.id},
+            )
+
+    @pytest.mark.asyncio
+    async def test_update_can_move_a_section_back_to_shared(
+        self, db: AsyncSession, test_user: User, test_org: Organization,
+    ) -> None:
+        manual = await _make_manual(db, test_org, test_user)
+        room = await welcome_manual_room_repo.create(
+            db, manual_id=manual.id, name="Front", display_order=0,
+        )
+        section = await welcome_manual_section_repo.create(
+            db, manual_id=manual.id, title="Door code", body=None,
+            display_order=0, room_id=room.id,
+        )
+        await db.commit()
+        with _patch_uow(db):
+            updated = await welcome_manual_section_service.update_section(
+                test_org.id, test_user.id, manual.id, section.id, {"room_id": None},
+            )
+        assert updated.room_id is None
