@@ -50,12 +50,18 @@ def _reset_rate_limiters():
     buckets accumulate across the session and exhaust the budget, causing
     unrelated tests' login/register calls to receive 429.
     """
-    from app.core.rate_limit import login_limiter, register_limiter, totp_limiter
+    from app.core.rate_limit import (
+        discovery_limiter,
+        login_limiter,
+        register_limiter,
+        totp_limiter,
+    )
 
-    for limiter in (login_limiter, register_limiter, totp_limiter):
+    limiters = (login_limiter, register_limiter, totp_limiter, discovery_limiter)
+    for limiter in limiters:
         limiter._buckets.clear()
     yield
-    for limiter in (login_limiter, register_limiter, totp_limiter):
+    for limiter in limiters:
         limiter._buckets.clear()
 
 

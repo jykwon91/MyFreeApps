@@ -1,5 +1,5 @@
 import { Outlet, ScrollRestoration } from "react-router-dom";
-import { ChefHat, Settings, Shield } from "lucide-react";
+import { ChefHat, Compass, Settings, Shield } from "lucide-react";
 import { AppShell, GuestShell, StepUpModal, Toaster, useIsAuthenticated } from "@platform/ui";
 import { buildNav, PUBLIC_NAV_PATHS } from "@/constants/nav";
 import { signOut } from "@/lib/auth";
@@ -21,6 +21,7 @@ function projectUser(user: CurrentUser | undefined): { name: string; email: stri
 
 const ICONS: Record<string, React.ReactNode> = {
   Recipes: <ChefHat className="w-5 h-5" />,
+  Compass: <Compass className="w-5 h-5" />,
   Settings: <Settings className="w-5 h-5" />,
   Shield: <Shield className="w-5 h-5" />,
 };

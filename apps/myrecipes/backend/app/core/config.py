@@ -25,12 +25,14 @@ class Settings(BaseAppSettings):
     email_from_name: str = "MyRecipes"
 
     # ------------------------------------------------------------------
-    # AI photo import (optional feature).
-    # When ``anthropic_api_key`` is empty, POST /recipes/extract returns 503
-    # and the rest of the app is unaffected. Unlike the canonical app
-    # (MyBookkeeper), MyRecipes does NOT require a Claude key to boot —
-    # photo import is additive, not core. Set ANTHROPIC_API_KEY to enable it.
-    # The uploaded image is a transient extraction input; it is never stored.
+    # AI features (both optional, both keyed off ANTHROPIC_API_KEY):
+    #   - photo import      POST /recipes/extract    (Claude vision)
+    #   - web discovery     POST /discovery/search   (Claude + web search)
+    # When ``anthropic_api_key`` is empty BOTH return 503 and the rest of the
+    # app is unaffected. Unlike the canonical app (MyBookkeeper), MyRecipes
+    # does NOT require a Claude key to boot — these are additive, not core.
+    # Neither feature stores its input: the uploaded photo and the discovery
+    # results are transient, living only in the HTTP response.
     # ------------------------------------------------------------------
     anthropic_api_key: str = ""
     claude_timeout_seconds: float = 600.0
