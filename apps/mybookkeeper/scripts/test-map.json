@@ -602,6 +602,38 @@
         "tenants.spec.ts"
       ]
     },
+    "rent_ledger": {
+      "source_paths": [
+        "backend/app/models/rent/",
+        "backend/app/repositories/rent/",
+        "backend/app/schemas/rent/",
+        "backend/app/services/rent/",
+        "backend/app/api/rent_ledger.py",
+        "backend/app/core/rent_ledger_enums.py",
+        "backend/app/test_helpers/rent_seed.py",
+        "backend/alembic/versions/rentledg260830_add_rent_schedules_and_charges.py",
+        "frontend/src/app/features/rent/",
+        "frontend/src/shared/types/rent/",
+        "frontend/src/shared/store/rentLedgerApi.ts",
+        "frontend/src/app/features/applicants/TenantPayments.tsx",
+        "frontend/src/app/features/applicants/PaymentRow.tsx",
+        "frontend/src/app/features/applicants/ApplicantDetailBody.tsx"
+      ],
+      "backend_tests": [
+        "test_rent_period_math.py",
+        "test_rent_allocation.py",
+        "test_rent_ledger_service.py"
+      ],
+      "frontend_tests": [
+        "RentLedgerPanel.test.tsx",
+        "RentScheduleForm.test.tsx",
+        "RentChargeDialogs.test.tsx",
+        "TenantPayments.test.tsx"
+      ],
+      "e2e_specs": [
+        "rent-ledger.spec.ts"
+      ]
+    },
     "insurance": {
       "source_paths": [
         "backend/app/models/insurance/",

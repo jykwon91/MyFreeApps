@@ -22,6 +22,7 @@ import SensitiveDataUnlock from "./SensitiveDataUnlock";
 import LinkedLeaseDocuments from "./LinkedLeaseDocuments";
 import LinkedLeaseReceipts from "./LinkedLeaseReceipts";
 import TenantPayments from "./TenantPayments";
+import RentLedgerPanel from "@/app/features/rent/RentLedgerPanel";
 import ScreeningSection from "@/app/features/screening/ScreeningSection";
 import EndTenancyDialog from "@/app/features/tenants/EndTenancyDialog";
 
@@ -307,7 +308,20 @@ export default function ApplicantDetailBody({ applicant }: ApplicantDetailBodyPr
         </div>
       </SensitiveDataUnlock>
 
-      {/* Payments — attributed rent payments from this tenant */}
+      {/* Rent — what this tenant owes, and how far this period has been paid.
+          Sits above Payments because the obligation is what gives the payments
+          below it meaning. */}
+      {applicant.stage === "lease_signed" ? (
+        <section
+          className="border rounded-lg p-4 space-y-3"
+          data-testid="rent-ledger-section"
+        >
+          <h2 className="text-sm font-medium">Rent</h2>
+          <RentLedgerPanel applicantId={applicant.id} />
+        </section>
+      ) : null}
+
+      {/* Payments — every payment attributed to this tenant, with receipts */}
       {applicant.stage === "lease_signed" ? (
         <section
           className="border rounded-lg p-4 space-y-3"

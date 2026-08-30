@@ -89,6 +89,8 @@ from app.models.email.email_types import (
     FetchResult,
     ParsedEml,
 )
+from app.models.rent.rent_schedule import RentSchedule
+from app.models.rent.rent_charge import RentCharge
 from app.models.classification.classification_rule import ClassificationRule
 from app.models.system.system_event import SystemEvent
 from app.models.system.audit_log import AuditLog
