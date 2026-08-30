@@ -1,22 +1,10 @@
 import { formatCurrency } from "@/shared/utils/currency";
+import RentTotalsLine from "./RentTotalsLine";
 
 export interface RentBalanceLineProps {
   balance: string;
   totalCharged: string;
   totalPaid: string;
-}
-
-interface TotalsProps {
-  totalCharged: string;
-  totalPaid: string;
-}
-
-function Totals({ totalCharged, totalPaid }: TotalsProps) {
-  return (
-    <span className="text-xs text-muted-foreground tabular-nums">
-      {formatCurrency(totalPaid)} paid of {formatCurrency(totalCharged)} charged
-    </span>
-  );
 }
 
 /**
@@ -32,7 +20,9 @@ export default function RentBalanceLine({
   totalPaid,
 }: RentBalanceLineProps) {
   const owed = parseFloat(balance);
-  const totals = <Totals totalCharged={totalCharged} totalPaid={totalPaid} />;
+  const totals = (
+    <RentTotalsLine totalCharged={totalCharged} totalPaid={totalPaid} />
+  );
 
   if (Math.abs(owed) < 0.005) {
     return (
