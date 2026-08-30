@@ -77,7 +77,8 @@ class RentSchedule(Base):
 
     cadence: Mapped[str] = mapped_column(String(12), nullable=False)
 
-    # Periods tile forward from ``start_date``; see ``rent_period_math``.
+    # Monthly periods are calendar months, with the first one prorated from
+    # ``start_date``; weekly/biweekly tile from it. See ``rent_period_math``.
     start_date: Mapped[_dt.date] = mapped_column(Date, nullable=False)
     # NULL = open-ended. When set, the period containing it is prorated by
     # actual days and no later period is generated.

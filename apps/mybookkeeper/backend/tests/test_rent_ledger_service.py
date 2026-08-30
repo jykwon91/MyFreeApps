@@ -201,6 +201,80 @@ class TestChargeGeneration:
 
 
     @pytest.mark.asyncio
+    async def test_mid_month_move_in_prorates_only_the_first_period(
+        self, db: AsyncSession,
+    ) -> None:
+        """A tenant who moves in Aug 15 owes 17 of August's 31 days, then full months."""
+        applicant_id = await _make_tenant(db)
+        await _create_monthly_schedule(
+            db, applicant_id, start=_dt.date(2026, 8, 15),
+        )
+
+        ledger_patch, _ = _patch_uow(db)
+        with ledger_patch:
+            await rent_ledger_service.ensure_charges_generated(
+                db, organization_id=ORG, applicant_id=applicant_id,
+                through=_dt.date(2026, 10, 5),
+            )
+
+        rows = (
+            await db.execute(
+                select(RentCharge)
+                .where(RentCharge.applicant_id == applicant_id)
+                .order_by(RentCharge.period_start),
+            )
+        ).scalars().all()
+
+        assert [(r.period_start, r.period_end, r.amount) for r in rows] == [
+            (_dt.date(2026, 8, 15), _dt.date(2026, 8, 31), Decimal("822.58")),
+            (_dt.date(2026, 9, 1), _dt.date(2026, 9, 30), Decimal("1500.00")),
+            (_dt.date(2026, 10, 1), _dt.date(2026, 10, 31), Decimal("1500.00")),
+        ]
+
+    @pytest.mark.asyncio
+    async def test_mid_month_period_is_labelled_as_a_range_not_a_month(
+        self, db: AsyncSession,
+    ) -> None:
+        """"August 2026" against $822.58 would read as a shortfall, not a part-month."""
+        applicant_id = await _make_tenant(db)
+        await _create_monthly_schedule(
+            db, applicant_id, start=_dt.date(2026, 8, 15),
+        )
+
+        ledger_patch, _ = _patch_uow(db)
+        with ledger_patch:
+            ledger = await rent_ledger_service.get_ledger(
+                organization_id=ORG, user_id=USER,
+                applicant_id=applicant_id, as_of=_dt.date(2026, 8, 20),
+            )
+
+        assert ledger.current_period is not None
+        assert ledger.current_period.label == "Aug 15 – Aug 31, 2026"
+        assert ledger.current_period.amount == Decimal("822.58")
+        # The undivided amount rides along so the UI can explain the shortfall.
+        august = next(c for c in ledger.charges if c.amount == Decimal("822.58"))
+        assert august.full_amount == Decimal("1500.00")
+
+    @pytest.mark.asyncio
+    async def test_whole_periods_carry_no_full_amount(
+        self, db: AsyncSession,
+    ) -> None:
+        """Only a prorated charge needs explaining; a full month speaks for itself."""
+        applicant_id = await _make_tenant(db)
+        await _create_monthly_schedule(
+            db, applicant_id, start=_dt.date(2026, 8, 1),
+        )
+
+        ledger_patch, _ = _patch_uow(db)
+        with ledger_patch:
+            ledger = await rent_ledger_service.get_ledger(
+                organization_id=ORG, user_id=USER,
+                applicant_id=applicant_id, as_of=_dt.date(2026, 8, 20),
+            )
+
+        assert [c.full_amount for c in ledger.charges] == [None]
+
+    @pytest.mark.asyncio
     async def test_shortening_a_tenancy_retires_future_charges(
         self, db: AsyncSession,
     ) -> None:

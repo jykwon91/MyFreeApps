@@ -12,10 +12,11 @@ Mirrors ``app/core/applicant_enums.py`` for consistency.
 # deliberately independent of how often the tenant actually pays — a tenant on
 # a monthly schedule who pays weekly is the case this whole domain exists for.
 #
-# Periods tile forward from ``rent_schedules.start_date``; there is no separate
-# anchor day. A lease starting on the 15th bills the 15th→14th, which is how
-# leases actually read. Adding a cadence here means adding a branch to
-# ``rent_period_math.period_bounds`` and a case to its tests.
+# ``monthly`` bills calendar months: rent is due on the 1st, and a tenant who
+# moves in mid-month owes a prorated first period. ``weekly`` / ``biweekly``
+# tile from ``rent_schedules.start_date`` instead, since there is no calendar
+# boundary to align a weekly obligation to. Adding a cadence here means adding
+# a branch to ``rent_period_math.natural_bounds`` and a case to its tests.
 RENT_CADENCES: tuple[str, ...] = ("monthly", "weekly", "biweekly")
 
 # Number of days in a cadence's period, for the cadences that tile on a fixed

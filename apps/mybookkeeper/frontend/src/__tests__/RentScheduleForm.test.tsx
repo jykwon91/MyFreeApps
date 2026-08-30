@@ -85,6 +85,23 @@ describe("RentScheduleForm", () => {
     expect(onSaved).toHaveBeenCalledOnce();
   });
 
+  it("warns that a mid-month monthly start will be prorated", () => {
+    renderForm(null);
+    expect(screen.getByTestId("rent-schedule-start-hint")).toHaveTextContent(
+      "Rent falls due on the 1st. Starting mid-month bills a prorated first period",
+    );
+  });
+
+  it("describes weekly periods as tiling from the start day, not the calendar", () => {
+    renderForm(null);
+    fireEvent.change(screen.getByTestId("rent-schedule-cadence"), {
+      target: { value: "weekly" },
+    });
+    expect(screen.getByTestId("rent-schedule-start-hint")).toHaveTextContent(
+      "Weeks are counted from this day",
+    );
+  });
+
   it("blocks submission until an amount and start date are entered", () => {
     renderForm(null);
     expect(screen.getByTestId("rent-schedule-save-button")).toBeDisabled();

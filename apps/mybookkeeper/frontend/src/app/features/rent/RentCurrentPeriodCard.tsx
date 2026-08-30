@@ -1,7 +1,8 @@
 import { ProgressBar } from "@platform/ui";
 import { formatCurrency } from "@/shared/utils/currency";
-import { formatShortDate } from "@/shared/lib/inquiry-date-format";
 import RentChargeStatusBadge from "./RentChargeStatusBadge";
+import { proratedNote } from "./rent-prorated-note";
+import { periodDateRange } from "./rent-period-dates";
 import type { RentPeriodSummary } from "@/shared/types/rent/rent-period-summary";
 import type { ProgressTone } from "@platform/ui";
 
@@ -31,6 +32,8 @@ export default function RentCurrentPeriodCard({
   const allocated = parseFloat(period.allocated);
   const remaining = parseFloat(period.remaining);
   const percent = amount > 0 ? (allocated / amount) * 100 : 100;
+  const prorated = proratedNote(period.full_amount);
+  const dates = periodDateRange(period);
 
   return (
     <div
@@ -40,8 +43,8 @@ export default function RentCurrentPeriodCard({
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
           <p className="text-xs text-muted-foreground">
-            {period.label} · {formatShortDate(period.period_start)} –{" "}
-            {formatShortDate(period.period_end)}
+            {period.label}
+            {dates ? ` · ${dates}` : ""}
           </p>
           <p className="text-xl font-semibold tabular-nums mt-0.5">
             <span data-testid="rent-current-allocated">
@@ -64,6 +67,15 @@ export default function RentCurrentPeriodCard({
         tone={toneFor(period.status)}
         label={`${formatCurrency(allocated)} of ${formatCurrency(amount)} paid for ${period.label}`}
       />
+
+      {prorated ? (
+        <p
+          className="text-xs text-muted-foreground"
+          data-testid="rent-current-prorated"
+        >
+          {prorated}
+        </p>
+      ) : null}
 
       <p className="text-xs text-muted-foreground" data-testid="rent-current-remaining">
         {remaining > 0

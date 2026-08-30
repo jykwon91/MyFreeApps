@@ -6,6 +6,7 @@ import RentChargeStatusBadge from "./RentChargeStatusBadge";
 import RentChargeApplications from "./RentChargeApplications";
 import RentChargeRowActions from "./RentChargeRowActions";
 import { RENT_CHARGE_TYPE_LABEL } from "./rent-labels";
+import { proratedNote } from "./rent-prorated-note";
 import type { RentCharge } from "@/shared/types/rent/rent-charge";
 
 export interface RentChargeRowProps {
@@ -33,6 +34,7 @@ export default function RentChargeRow({
 }: RentChargeRowProps) {
   const [expanded, setExpanded] = useState(false);
   const Chevron = expanded ? ChevronDown : ChevronRight;
+  const prorated = proratedNote(charge.full_amount);
 
   return (
     <li className="py-2" data-testid="rent-charge-row">
@@ -65,6 +67,15 @@ export default function RentChargeRow({
           />
         ) : null}
       </div>
+
+      {prorated ? (
+        <p
+          className="text-xs text-muted-foreground pl-7 pt-1"
+          data-testid="rent-charge-prorated"
+        >
+          {prorated}
+        </p>
+      ) : null}
 
       {charge.waived_at && charge.waived_reason ? (
         <p className="text-xs text-muted-foreground italic pl-7 pt-1">
