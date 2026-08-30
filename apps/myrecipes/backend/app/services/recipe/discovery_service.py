@@ -291,12 +291,22 @@ def _clean_http_url(value: Any) -> str | None:
     return text
 
 
+def _host_is(host: str, domain: str) -> bool:
+    """True for ``domain`` and its subdomains only.
+
+    A bare ``host.endswith(domain)`` also accepts ``evilyoutube.com``, which
+    would let a page anyone can register wear the YouTube badge. The leading
+    dot is what makes it a domain match rather than a string suffix.
+    """
+    return host == domain or host.endswith(f".{domain}")
+
+
 def _source_type(value: Any, url: str) -> str:
     """The model's label, corrected against the URL where the URL is definitive."""
     host = _host_of(url).lower().removeprefix("www.")
-    if host.endswith("youtube.com") or host == "youtu.be":
+    if _host_is(host, "youtube.com") or host == "youtu.be":
         return "youtube"
-    if host.endswith("reddit.com"):
+    if _host_is(host, "reddit.com"):
         return "reddit"
     label = value if isinstance(value, str) else ""
     return label if label in _SOURCE_TYPES else "website"

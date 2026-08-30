@@ -185,6 +185,27 @@ class TestSearch:
             resp = await authed.post("/discovery/search", json={"query": "flan"})
         assert resp.json()["recipes"][2]["source_type"] == "youtube"
 
+    @pytest.mark.parametrize(
+        ("url", "expected"),
+        [
+            ("https://www.youtube.com/watch?v=abc", "youtube"),
+            ("https://m.youtube.com/watch?v=abc", "youtube"),
+            ("https://youtu.be/abc", "youtube"),
+            ("https://old.reddit.com/r/cooking/x", "reddit"),
+            # A domain anyone can register must not inherit the badge: these
+            # end with the string but are not the site.
+            ("https://evilyoutube.com/watch?v=abc", "website"),
+            ("https://notreddit.com/r/cooking/x", "website"),
+            ("https://youtube.com.attacker.test/watch?v=abc", "website"),
+        ],
+    )
+    def test_source_type_matches_the_domain_not_the_suffix(
+        self, url: str, expected: str
+    ) -> None:
+        from app.services.recipe.discovery_service import _source_type
+
+        assert _source_type("website", url) == expected
+
     @pytest.mark.asyncio
     async def test_youtube_thumbnail_is_derived_not_trusted(
         self, user_factory, as_user, monkeypatch
