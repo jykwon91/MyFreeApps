@@ -4,6 +4,7 @@ import Recipes from "@/pages/Recipes";
 import RecipeDetail from "@/pages/RecipeDetail";
 import RecipeEditor from "@/pages/RecipeEditor";
 import RecipeImport from "@/pages/RecipeImport";
+import Discover from "@/pages/Discover";
 import VersionDiff from "@/pages/VersionDiff";
 import Security from "@/pages/Security";
 import Settings from "@/pages/Settings";
@@ -60,6 +61,14 @@ export const routes: RouteObject[] = [
         element: (
           <AuthRequired action="tweak this recipe">
             <RecipeEditor />
+          </AuthRequired>
+        ),
+      },
+      {
+        path: "/discover",
+        element: (
+          <AuthRequired action="discover recipes from the web">
+            <Discover />
           </AuthRequired>
         ),
       },

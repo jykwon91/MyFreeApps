@@ -25,7 +25,7 @@ from platform_shared.core.logging_safety import install_crlf_safe_logging
 from platform_shared.api.transparency_router import build_transparency_router
 from platform_shared.services.seed_admin_service import build_seed_admin_hook
 
-from app.api import account, admin, health, recipes, totp
+from app.api import account, admin, discovery, health, recipes, totp
 from app.core.audit import current_user_id
 from app.core.auth import auth_backend, fastapi_users
 from app.core.config import settings
@@ -190,6 +190,13 @@ app.include_router(admin.router)
 # library), auth_router gates writes + owner-only cook logs at the router level.
 app.include_router(recipes.public_router)
 app.include_router(recipes.auth_router)
+
+# Recipe discovery (web search -> candidates -> full read). Auth-gated and
+# throttled because each call is a paid Claude turn; the thumbnail proxy is
+# separate because an <img> cannot carry a bearer token and is authorised by
+# a per-URL signature instead. See app/api/discovery.py.
+app.include_router(discovery.router)
+app.include_router(discovery.image_router)
 
 # Shared platform admin router -- generic user-management endpoints
 # (list/role/activate/deactivate/superuser/stats-users).

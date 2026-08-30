@@ -34,9 +34,11 @@ __all__ = [
     "login_limiter",
     "totp_limiter",
     "register_limiter",
+    "discovery_limiter",
     "check_login_rate_limit",
     "check_register_rate_limit",
     "check_totp_rate_limit",
+    "check_discovery_rate_limit",
     "check_account_not_locked",
     "check_totp_account_not_locked",
     "verify_turnstile_token",
@@ -60,6 +62,13 @@ totp_limiter = RateLimiter(max_attempts=20, window_seconds=300)
 # than login, so the budget is tight — a burst of signups from one IP is
 # almost certainly abuse.
 register_limiter = RateLimiter(max_attempts=5, window_seconds=3600)
+
+# Per-IP web-discovery throttle. Unlike the auth limiters this one is not
+# about credential stuffing — every discovery call runs a multi-search Claude
+# turn that costs real money, so the budget is a spend ceiling. 20/hour is
+# far above normal browsing (a session is a handful of searches) and well
+# below what a script could burn unattended.
+discovery_limiter = RateLimiter(max_attempts=20, window_seconds=3600)
 
 
 # ---------------------------------------------------------------------------
@@ -127,6 +136,15 @@ async def check_register_rate_limit(request: Request) -> None:
     the login throttle there is no per-account audit dimension to record here.
     """
     register_limiter.check(get_client_ip(request))
+
+
+async def check_discovery_rate_limit(request: Request) -> None:
+    """Per-IP throttle on the paid web-discovery endpoints.
+
+    Raises HTTP 429 when the budget is exhausted. No DB write — there is no
+    per-account audit dimension here, unlike the login throttle.
+    """
+    discovery_limiter.check(get_client_ip(request))
 
 
 async def check_totp_rate_limit(

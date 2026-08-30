@@ -19,3 +19,17 @@ export const RECIPES_SEARCH_EMPTY = {
   heading: "No matches",
   body: "No recipes match your search. Try a different title.",
 } as const;
+
+export const DISCOVER_EMPTY_STATE = {
+  iconName: "Compass",
+  heading: "Find the best version of a dish",
+  body: "Search recipe sites, food blogs, YouTube and Reddit at once, compare what makes each version different, and save the one you want to cook.",
+} as const;
+
+/** Seed queries for the idle Discover page, so it is never a dead end. */
+export const DISCOVER_SUGGESTIONS = [
+  "Mexican flan",
+  "Carbonara",
+  "Chicken tikka masala",
+  "Sourdough focaccia",
+] as const;

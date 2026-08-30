@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Camera, ChefHat, Plus, Search } from "lucide-react";
+import { Camera, ChefHat, Compass, Plus, Search } from "lucide-react";
 import { EmptyState, cn, useIsAuthenticated } from "@platform/ui";
 import { useListRecipesQuery } from "@/store/recipesApi";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
@@ -55,6 +55,10 @@ export default function Recipes() {
 
   function goToImport() {
     navigate("/recipes/import");
+  }
+
+  function goToDiscover() {
+    navigate("/discover");
   }
 
   function toggleOwnerMe() {
@@ -118,6 +122,13 @@ export default function Recipes() {
       <header className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">Recipes</h1>
         <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={goToDiscover}
+            className="inline-flex items-center gap-2 rounded-md border bg-background px-4 py-2 text-sm font-medium hover:bg-muted min-h-[44px]"
+          >
+            <Compass className="w-4 h-4" />
+            Discover
+          </button>
           <button
             onClick={goToImport}
             className="inline-flex items-center gap-2 rounded-md border bg-background px-4 py-2 text-sm font-medium hover:bg-muted min-h-[44px]"
