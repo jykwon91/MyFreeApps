@@ -159,6 +159,7 @@ async def update_schedule(
         if schedule is None:
             raise ScheduleNotFoundError(str(schedule_id))
 
+        fields: dict[str, object] = {}
         if "end_date" in touched:
             if end_date is not None and end_date < schedule.start_date:
                 raise ValueError("end_date must not precede start_date")
@@ -170,18 +171,17 @@ async def update_schedule(
                 end_date=end_date,
                 ignore_schedule_id=schedule.id,
             )
-            schedule.end_date = end_date
+            fields["end_date"] = end_date
         if "grace_days" in touched:
-            schedule.grace_days = grace_days
+            fields["grace_days"] = grace_days
         if "notes" in touched:
-            schedule.notes = notes
+            fields["notes"] = notes
 
-        await db.flush()
+        await rent_schedule_repo.update_terms(db, schedule=schedule, fields=fields)
         applicant_id = schedule.applicant_id
         await rent_ledger_service.ensure_charges_generated(
             db, organization_id=organization_id, applicant_id=applicant_id,
         )
-        await db.refresh(schedule)
         return RentScheduleResponse.model_validate(schedule)
 
 
@@ -257,9 +257,7 @@ async def waive_charge(
         )
         if charge is None:
             raise ChargeNotFoundError(str(charge_id))
-        charge.waived_at = _dt.datetime.now(_dt.timezone.utc)
-        charge.waived_reason = reason
-        await db.flush()
+        await rent_charge_repo.set_waiver(db, charge=charge, reason=reason)
 
 
 async def unwaive_charge(
@@ -271,9 +269,7 @@ async def unwaive_charge(
         )
         if charge is None:
             raise ChargeNotFoundError(str(charge_id))
-        charge.waived_at = None
-        charge.waived_reason = None
-        await db.flush()
+        await rent_charge_repo.set_waiver(db, charge=charge, reason=None)
 
 
 async def delete_charge(

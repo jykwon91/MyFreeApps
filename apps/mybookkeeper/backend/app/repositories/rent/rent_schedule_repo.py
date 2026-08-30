@@ -91,6 +91,31 @@ async def list_for_org(
     return result.scalars().all()
 
 
+async def update_terms(
+    db: AsyncSession,
+    *,
+    schedule: RentSchedule,
+    fields: dict[str, object],
+) -> RentSchedule:
+    """Apply the editable subset of a schedule's terms.
+
+    ``fields`` carries only the keys the caller actually touched, so clearing a
+    value (``end_date=None``) is distinguishable from leaving it alone. Amount
+    and cadence are absent by design: changing them would silently rewrite the
+    charges already generated under the old terms, so the UI ends the schedule
+    and starts a new one instead.
+    """
+    allowed = {"end_date", "grace_days", "notes"}
+    unknown = set(fields) - allowed
+    if unknown:
+        raise ValueError(f"unsupported schedule fields: {sorted(unknown)}")
+    for key, value in fields.items():
+        setattr(schedule, key, value)
+    await db.flush()
+    await db.refresh(schedule)
+    return schedule
+
+
 async def soft_delete(db: AsyncSession, *, schedule: RentSchedule) -> None:
     schedule.deleted_at = _dt.datetime.now(_dt.timezone.utc)
     await db.flush()

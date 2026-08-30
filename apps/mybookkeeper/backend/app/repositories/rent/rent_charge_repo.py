@@ -135,6 +135,41 @@ async def list_payments_for_applicant(
     return result.scalars().all()
 
 
+async def set_waiver(
+    db: AsyncSession, *, charge: RentCharge, reason: str | None,
+) -> RentCharge:
+    """Waive a charge, or restore it.
+
+    A reason waives; ``None`` restores. Waiving is preferred over deleting for
+    a generated charge — the period genuinely existed, and the reason is the
+    record of why it stopped being owed.
+    """
+    if reason is None:
+        charge.waived_at = None
+        charge.waived_reason = None
+    else:
+        charge.waived_at = _dt.datetime.now(_dt.timezone.utc)
+        charge.waived_reason = reason
+    await db.flush()
+    return charge
+
+
+async def retime(
+    db: AsyncSession, *, charge: RentCharge, period_end: _dt.date, amount: Decimal,
+) -> RentCharge:
+    """Re-fit an existing charge to its schedule's current terms.
+
+    Called when a schedule's end date moves and the final period has to shrink
+    or grow. Only the period's tail and its prorated amount change — the row's
+    identity, its start date and anything already allocated to it survive, so
+    the tenant's history is not rewritten underneath them.
+    """
+    charge.period_end = period_end
+    charge.amount = amount
+    await db.flush()
+    return charge
+
+
 async def soft_delete(db: AsyncSession, *, charge: RentCharge) -> None:
     charge.deleted_at = _dt.datetime.now(_dt.timezone.utc)
     await db.flush()

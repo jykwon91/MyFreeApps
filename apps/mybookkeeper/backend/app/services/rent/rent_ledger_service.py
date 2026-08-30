@@ -132,15 +132,15 @@ async def _generate_charges_for_schedule(
         if current.waived_at is not None:
             continue
         if current.period_end != finish or current.amount != amount:
-            current.period_end = finish
-            current.amount = amount
+            await rent_charge_repo.retime(
+                db, charge=current, period_end=finish, amount=amount,
+            )
 
     # Periods that no longer exist under the current end_date.
     for begin, charge in existing.items():
         if begin not in wanted and charge.waived_at is None:
             await rent_charge_repo.soft_delete(db, charge=charge)
 
-    await db.flush()
     return created
 
 
