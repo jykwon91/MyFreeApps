@@ -33,7 +33,7 @@ from app.db.session import AsyncSessionLocal
 from app.schemas.user.user import UserRead, UserCreate, UserUpdate
 from app.services.storage.bucket_initializer import ensure_bucket
 from app.workers.upload_processor_worker import main as worker_main
-from app.api import account, activities, analytics, applicants, attribution, blackouts, booking_statements, calendar, classification_rules, costs, db_admin, demo, documents, frontend_errors, inquiries, insurance_benchmarks, insurance_market, insurance_policies, lease_templates, listings, market_rate_benchmarks, mortgage_market, mortgages, properties, public_inquiries, public_welcome_manuals, rent_receipts, reply_templates, signed_leases, tenants, summary, integrations, audit, prompts, admin, organizations, transactions, reconciliation, screening, tax_completeness, tax_documents, tax_profile, tax_returns, tax_year_profiles, vendors, exports, imports, health_dashboard, totp, taxpayer_profiles, utility_plans, welcome_manual_places, welcome_manual_rooms, welcome_manuals
+from app.api import account, activities, analytics, applicants, attribution, blackouts, booking_statements, calendar, classification_rules, costs, db_admin, demo, documents, frontend_errors, inquiries, insurance_benchmarks, insurance_market, insurance_policies, lease_templates, listings, market_rate_benchmarks, mortgage_market, mortgages, properties, public_inquiries, public_welcome_manuals, rent_ledger, rent_receipts, reply_templates, signed_leases, tenants, summary, integrations, audit, prompts, admin, organizations, transactions, reconciliation, screening, tax_completeness, tax_documents, tax_profile, tax_returns, tax_year_profiles, vendors, exports, imports, health_dashboard, totp, taxpayer_profiles, utility_plans, welcome_manual_places, welcome_manual_rooms, welcome_manuals
 
 logging.basicConfig(
     level=logging.INFO,
@@ -223,6 +223,7 @@ app.include_router(vendors.router)
 app.include_router(reply_templates.router)
 app.include_router(tenants.router)
 app.include_router(rent_receipts.router)
+app.include_router(rent_ledger.router)
 app.include_router(summary.router)
 app.include_router(integrations.router)
 app.include_router(audit.router)
