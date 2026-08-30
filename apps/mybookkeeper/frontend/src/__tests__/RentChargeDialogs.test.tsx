@@ -29,6 +29,7 @@ const CHARGE: RentCharge = {
   period_end: "2026-08-31",
   due_date: "2026-08-01",
   amount: "1500.00",
+  full_amount: null,
   description: null,
   waived_at: null,
   waived_reason: null,

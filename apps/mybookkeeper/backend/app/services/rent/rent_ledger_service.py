@@ -248,6 +248,16 @@ async def get_ledger(
         for c in charges
     }
 
+    # A generated charge worth less than its schedule's amount was prorated —
+    # a part-month tenancy at one end or the other. Surfacing the undivided
+    # amount lets the UI explain the shortfall rather than just show it.
+    full_amount_by_charge = {
+        c.id: schedules_by_id[c.schedule_id].amount
+        for c in charges
+        if c.schedule_id in schedules_by_id
+        and c.amount != schedules_by_id[c.schedule_id].amount
+    }
+
     charge_responses: list[RentChargeResponse] = []
     for settlement in result.settlements:
         charge = charges_by_id[settlement.charge_id]
@@ -260,6 +270,7 @@ async def get_ledger(
                 period_end=charge.period_end,
                 due_date=charge.due_date,
                 amount=charge.amount,
+                full_amount=full_amount_by_charge.get(charge.id),
                 description=charge.description,
                 waived_at=charge.waived_at,
                 waived_reason=charge.waived_reason,
@@ -308,6 +319,7 @@ async def get_ledger(
         charges=charges,
         settlement_by_id=settlement_by_id,
         cadence_by_charge=cadence_by_charge,
+        full_amount_by_charge=full_amount_by_charge,
         as_of=today,
     )
 
@@ -326,7 +338,8 @@ async def get_ledger(
 
 
 def _current_period(
-    *, charges, settlement_by_id, cadence_by_charge, as_of: _dt.date,
+    *, charges, settlement_by_id, cadence_by_charge, full_amount_by_charge,
+    as_of: _dt.date,
 ) -> RentPeriodSummary | None:
     """The rent charge whose period contains ``as_of``.
 
@@ -353,6 +366,7 @@ def _current_period(
         period_start=charge.period_start,
         period_end=charge.period_end,
         amount=charge.amount,
+        full_amount=full_amount_by_charge.get(charge.id),
         allocated=settlement.allocated,
         remaining=settlement.remaining,
         status=settlement.status(as_of),

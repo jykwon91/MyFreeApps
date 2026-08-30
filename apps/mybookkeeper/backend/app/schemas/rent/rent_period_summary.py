@@ -14,6 +14,9 @@ class RentPeriodSummary(BaseModel):
     period_start: _dt.date
     period_end: _dt.date
     amount: Decimal
+    # Set only when ``amount`` is a prorated slice of a part-month tenancy;
+    # see ``RentChargeResponse.full_amount``.
+    full_amount: Decimal | None = None
     allocated: Decimal
     remaining: Decimal
     status: str

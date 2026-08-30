@@ -1,7 +1,7 @@
 import { Button, LoadingButton } from "@platform/ui";
 import Select from "@/shared/components/ui/Select";
 import { RENT_INPUT_CLASS } from "./rent-input-class";
-import { RENT_CADENCE_LABEL } from "./rent-labels";
+import { RENT_CADENCE_LABEL, RENT_START_HINT } from "./rent-labels";
 import RentScheduleFixedTerms from "./RentScheduleFixedTerms";
 import { useRentScheduleForm } from "./useRentScheduleForm";
 import type { RentCadence } from "@/shared/types/rent/rent-cadence";
@@ -108,9 +108,11 @@ export default function RentScheduleForm({
               data-testid="rent-schedule-start"
               required
             />
-            <p className="text-xs text-muted-foreground mt-1">
-              Periods are counted from this day, so a tenancy starting the 15th
-              is billed the 15th to the 14th.
+            <p
+              className="text-xs text-muted-foreground mt-1"
+              data-testid="rent-schedule-start-hint"
+            >
+              {RENT_START_HINT[form.cadence]}
             </p>
           </div>
         )}

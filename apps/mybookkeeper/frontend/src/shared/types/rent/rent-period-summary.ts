@@ -7,6 +7,8 @@ export interface RentPeriodSummary {
   period_start: string;
   period_end: string;
   amount: string;
+  /** Set only when `amount` is a prorated slice of a part-month tenancy. */
+  full_amount: string | null;
   allocated: string;
   remaining: string;
   status: RentChargeStatus;

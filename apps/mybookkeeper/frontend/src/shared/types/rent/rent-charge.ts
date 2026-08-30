@@ -11,6 +11,9 @@ export interface RentCharge {
   period_end: string;
   due_date: string;
   amount: string;
+  /** The schedule's undivided amount when this period was prorated for a
+   *  part-month tenancy; null for a whole period or a one-off charge. */
+  full_amount: string | null;
   description: string | null;
   waived_at: string | null;
   waived_reason: string | null;

@@ -17,11 +17,19 @@ interface Ledger {
   charges: Array<{
     id: string;
     amount: string;
+    full_amount: string | null;
     allocated: string;
+    period_start: string;
+    period_end: string;
     status: string;
     waived_at: string | null;
   }>;
-  current_period: { allocated: string; amount: string; status: string } | null;
+  current_period: {
+    allocated: string;
+    amount: string;
+    full_amount: string | null;
+    status: string;
+  } | null;
   balance: string;
   total_paid: string;
 }
@@ -168,6 +176,53 @@ test.describe("Rent ledger", () => {
       const afterPeriod = await getLedger(api, applicantId, "2026-09-05");
       const august = afterPeriod.charges.find((c) => c.amount === "1500.00");
       expect(august?.status).toBe("overdue");
+    } finally {
+      await cleanUp(api, applicantId, transactionIds);
+    }
+  });
+
+  test("a mid-month move-in is prorated, then billed whole months", async ({
+    authedPage: page,
+    api,
+  }) => {
+    const runId = Date.now();
+    let applicantId = "";
+    let transactionIds: string[] = [];
+
+    try {
+      applicantId = await seedTenant(api, `E2E Rent Prorated ${runId}`);
+      transactionIds = await seedPayments(api, applicantId, ["2026-08-20"]);
+
+      await page.goto(`/applicants/${applicantId}`);
+      await expect(page.getByTestId("rent-ledger-section")).toBeVisible({
+        timeout: 15000,
+      });
+      await createSchedule(page, "2026-08-15");
+
+      // 17 of August's 31 days of $1,500 — and the page says why, so the
+      // short number cannot be mistaken for a shortfall.
+      await expect(page.getByTestId("rent-current-period")).toContainText(
+        "of $822.58",
+      );
+      await expect(page.getByTestId("rent-current-prorated")).toContainText(
+        "Prorated from $1,500.00",
+      );
+
+      const ledger = await getLedger(api, applicantId, "2026-09-20");
+      const [august, september] = ledger.charges;
+      expect([august.period_start, august.period_end]).toEqual([
+        "2026-08-15",
+        "2026-08-31",
+      ]);
+      expect(august.amount).toBe("822.58");
+      expect(august.full_amount).toBe("1500.00");
+      // The month after a prorated move-in is a whole calendar month.
+      expect([september.period_start, september.period_end]).toEqual([
+        "2026-09-01",
+        "2026-09-30",
+      ]);
+      expect(september.amount).toBe("1500.00");
+      expect(september.full_amount).toBeNull();
     } finally {
       await cleanUp(api, applicantId, transactionIds);
     }

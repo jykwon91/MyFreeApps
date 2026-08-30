@@ -54,6 +54,7 @@ const SONU_LEDGER: RentLedgerResponse = {
       period_end: "2026-08-31",
       due_date: "2026-08-01",
       amount: "1500.00",
+      full_amount: null,
       description: null,
       waived_at: null,
       waived_reason: null,
@@ -78,6 +79,7 @@ const SONU_LEDGER: RentLedgerResponse = {
     period_start: "2026-08-01",
     period_end: "2026-08-31",
     amount: "1500.00",
+    full_amount: null,
     allocated: "1125.00",
     remaining: "375.00",
     status: "partial",
@@ -143,6 +145,66 @@ describe("RentLedgerPanel", () => {
     expect(screen.getByTestId("rent-current-remaining")).toHaveTextContent(
       "$375.00 still to come",
     );
+  });
+
+  it("explains a prorated first period instead of leaving it looking short", () => {
+    // A mid-month move-in owes 17 of August's 31 days. Without the note,
+    // $822.58 against a $1,500 schedule reads as a data error.
+    mockGetLedger.mockReturnValue({
+      data: {
+        ...SONU_LEDGER,
+        charges: [
+          { ...SONU_LEDGER.charges[0], amount: "822.58", full_amount: "1500.00" },
+        ],
+        current_period: {
+          ...SONU_LEDGER.current_period!,
+          amount: "822.58",
+          full_amount: "1500.00",
+        },
+      },
+      isLoading: false,
+      isError: false,
+      refetch: mockRefetch,
+    });
+    renderPanel();
+    expect(screen.getByTestId("rent-current-prorated")).toHaveTextContent(
+      "Prorated from $1,500.00 for a partial month",
+    );
+  });
+
+  it("states a part-month's dates once, not twice", () => {
+    // The label for a part-month IS its date range, so appending the range
+    // again would read "Aug 15 – Aug 31, 2026 · Aug 15 – Aug 31".
+    mockGetLedger.mockReturnValue({
+      data: {
+        ...SONU_LEDGER,
+        current_period: {
+          ...SONU_LEDGER.current_period!,
+          label: "Aug 15 – Aug 31, 2026",
+          period_start: "2026-08-15",
+        },
+      },
+      isLoading: false,
+      isError: false,
+      refetch: mockRefetch,
+    });
+    renderPanel();
+    const card = screen.getByTestId("rent-current-period");
+    expect(card).toHaveTextContent("Aug 15 – Aug 31, 2026");
+    expect(card.textContent).not.toContain("2026 · Aug 15");
+  });
+
+  it("adds the explicit dates to a whole month, where they say something new", () => {
+    renderPanel();
+    expect(screen.getByTestId("rent-current-period")).toHaveTextContent(
+      "August 2026 · Aug 1 – Aug 31",
+    );
+  });
+
+  it("leaves a whole period unannotated, since it needs no explaining", () => {
+    renderPanel();
+    expect(screen.queryByTestId("rent-current-prorated")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("rent-charge-prorated")).not.toBeInTheDocument();
   });
 
   it("reports a weekly payer mid-month as partly paid, not overdue", () => {
