@@ -11,12 +11,13 @@ annotated-doc==0.0.4
     # via fastapi
 annotated-types==0.7.0
     # via pydantic
-anthropic==0.122.0
+anthropic==1.2.0
     # via mybookkeeper-backend
 anyio==4.14.1
     # via
     #   anthropic
     #   httpx
+    #   httpx2
     #   pytest-anyio
     #   starlette
     #   watchfiles
@@ -66,8 +67,6 @@ cryptography==50.0.0
     #   mybookkeeper-backend
     #   platform-shared
     #   pyjwt
-distro==1.9.0
-    # via anthropic
 dnspython==2.8.0
     # via email-validator
 docstring-parser==0.18.0
@@ -118,9 +117,12 @@ greenlet==3.5.2
 h11==0.16.0
     # via
     #   httpcore
+    #   httpcore2
     #   uvicorn
 httpcore==1.0.9
     # via httpx
+httpcore2==2.12.0 ; sys_platform != 'emscripten'
+    # via httpx2
 httplib2==0.32.0
     # via
     #   google-api-python-client
@@ -129,9 +131,12 @@ httptools==0.8.0
     # via uvicorn
 httpx==0.28.1
     # via
-    #   anthropic
     #   mybookkeeper-backend
     #   platform-shared
+httpx2==2.12.0
+    # via anthropic
+httpx2-jsfetch==1.0 ; sys_platform == 'emscripten'
+    # via httpx2
 icalendar==7.2.2
     # via mybookkeeper-backend
 idna==3.18
@@ -139,6 +144,7 @@ idna==3.18
     #   anyio
     #   email-validator
     #   httpx
+    #   httpx2
     #   requests
 iniconfig==2.3.0
     # via pytest
@@ -284,12 +290,17 @@ starlette==1.3.1
     # via
     #   fastapi
     #   mybookkeeper-backend
+truststore==0.10.4 ; sys_platform != 'emscripten'
+    # via
+    #   httpcore2
+    #   httpx2
 typing-extensions==4.15.0
     # via
     #   alembic
     #   anthropic
     #   anyio
     #   fastapi
+    #   httpx2
     #   icalendar
     #   minio
     #   pydantic
