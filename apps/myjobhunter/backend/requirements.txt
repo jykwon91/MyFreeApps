@@ -70,7 +70,7 @@ colorama==0.4.6 ; sys_platform == 'win32'
     #   pytest
     #   qrcode
     #   tqdm
-cryptography==50.0.0
+cryptography==50.0.1
     # via
     #   myjobhunter-backend
     #   platform-shared
@@ -198,14 +198,14 @@ pycparser==3.0 ; implementation_name != 'PyPy'
     # via cffi
 pycryptodome==3.23.0
     # via minio
-pydantic==2.13.4
+pydantic==2.13.5
     # via
     #   anthropic
     #   fastapi
     #   myjobhunter-backend
     #   platform-shared
     #   pydantic-settings
-pydantic-core==2.46.4
+pydantic-core==2.46.5
     # via pydantic
 pydantic-settings==2.15.0
     # via
@@ -250,7 +250,7 @@ requests==2.34.2
     # via fastembed
 rich==15.0.0
     # via typer
-sentry-sdk==2.68.0
+sentry-sdk==2.68.1
     # via
     #   myjobhunter-backend
     #   platform-shared
@@ -314,7 +314,7 @@ urllib3==2.7.0
     #   minio
     #   requests
     #   sentry-sdk
-uvicorn==0.52.3
+uvicorn==0.52.4
     # via myjobhunter-backend
 uvloop==0.22.1 ; platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32'
     # via uvicorn
