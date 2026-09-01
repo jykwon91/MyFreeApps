@@ -39,7 +39,7 @@ beautifulsoup4==4.15.0
     # via myjobhunter-backend
 brotli==1.2.0 ; platform_python_implementation == 'CPython'
     # via fonttools
-brotlicffi==1.2.0.1 ; platform_python_implementation != 'CPython'
+brotlicffi==1.2.0.2 ; platform_python_implementation != 'CPython'
     # via fonttools
 certifi==2026.5.20
     # via
