@@ -50,7 +50,7 @@ colorama==0.4.6 ; sys_platform == 'win32'
     #   click
     #   pytest
     #   qrcode
-cryptography==50.0.0
+cryptography==50.0.1
     # via
     #   mygamingassistant-backend
     #   platform-shared
@@ -127,14 +127,14 @@ pycparser==3.0 ; implementation_name != 'PyPy'
     # via cffi
 pycryptodome==3.23.0
     # via minio
-pydantic==2.13.4
+pydantic==2.13.5
     # via
     #   anthropic
     #   fastapi
     #   mygamingassistant-backend
     #   platform-shared
     #   pydantic-settings
-pydantic-core==2.46.4
+pydantic-core==2.46.5
     # via pydantic
 pydantic-settings==2.15.0
     # via
@@ -207,7 +207,7 @@ urllib3==2.7.0
     # via
     #   minio
     #   sentry-sdk
-uvicorn==0.52.3
+uvicorn==0.52.4
     # via mygamingassistant-backend
 uvloop==0.22.1 ; platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32'
     # via uvicorn
@@ -215,5 +215,5 @@ watchfiles==1.2.0
     # via uvicorn
 websockets==16.0
     # via uvicorn
-yt-dlp==2026.7.4
+yt-dlp==2026.8.19
     # via mygamingassistant-backend
