@@ -97,7 +97,7 @@ fastapi-users-db-sqlalchemy==7.0.0
     #   mybookkeeper-backend
 google-api-core==2.31.0
     # via google-api-python-client
-google-api-python-client==2.198.0
+google-api-python-client==2.199.0
     # via mybookkeeper-backend
 google-auth==2.55.1
     # via
@@ -105,11 +105,11 @@ google-auth==2.55.1
     #   google-api-python-client
     #   google-auth-httplib2
     #   google-auth-oauthlib
-google-auth-httplib2==0.4.1
+google-auth-httplib2==0.4.2
     # via
     #   google-api-python-client
     #   mybookkeeper-backend
-google-auth-oauthlib==1.4.0
+google-auth-oauthlib==1.4.1
     # via mybookkeeper-backend
 googleapis-common-protos==1.75.0
     # via google-api-core
@@ -132,7 +132,7 @@ httpx==0.28.1
     #   anthropic
     #   mybookkeeper-backend
     #   platform-shared
-icalendar==7.2.2
+icalendar==7.3.0
     # via mybookkeeper-backend
 idna==3.18
     # via
@@ -201,14 +201,14 @@ pycparser==3.0 ; implementation_name != 'PyPy'
     # via cffi
 pycryptodome==3.23.0
     # via minio
-pydantic==2.13.4
+pydantic==2.13.5
     # via
     #   anthropic
     #   fastapi
     #   mybookkeeper-backend
     #   platform-shared
     #   pydantic-settings
-pydantic-core==2.46.4
+pydantic-core==2.46.5
     # via pydantic
 pydantic-settings==2.15.0
     # via
@@ -241,7 +241,7 @@ python-dateutil==2.9.0.post0
     # via icalendar
 python-docx==1.2.0
     # via mybookkeeper-backend
-python-dotenv==1.2.2
+python-dotenv==1.2.3
     # via
     #   mybookkeeper-backend
     #   pydantic-settings
@@ -258,7 +258,7 @@ qrcode==8.2
     # via
     #   mybookkeeper-backend
     #   platform-shared
-reportlab==5.0.0
+reportlab==5.0.1
     # via mybookkeeper-backend
 requests==2.34.2
     # via
@@ -266,7 +266,7 @@ requests==2.34.2
     #   requests-oauthlib
 requests-oauthlib==2.0.0
     # via google-auth-oauthlib
-sentry-sdk==2.68.0
+sentry-sdk==2.68.1
     # via
     #   mybookkeeper-backend
     #   platform-shared
@@ -315,7 +315,7 @@ urllib3==2.7.0
     #   minio
     #   requests
     #   sentry-sdk
-uvicorn==0.52.3
+uvicorn==0.52.4
     # via mybookkeeper-backend
 uvloop==0.22.1 ; platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32'
     # via uvicorn
