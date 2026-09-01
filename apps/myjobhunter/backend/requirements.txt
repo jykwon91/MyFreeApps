@@ -10,7 +10,7 @@ annotated-doc==0.0.4
     #   typer
 annotated-types==0.7.0
     # via pydantic
-anthropic==1.2.0
+anthropic==0.109.2
     # via myjobhunter-backend
 anyio==4.14.2
     # via
