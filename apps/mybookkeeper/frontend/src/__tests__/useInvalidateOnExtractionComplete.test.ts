@@ -4,6 +4,7 @@ import { Provider } from "react-redux";
 import { configureStore } from "@reduxjs/toolkit";
 import { createElement, type ReactNode } from "react";
 import { baseApi } from "@/shared/store/baseApi";
+import { EMAIL_DERIVED_TAGS } from "@/shared/store/emailDerivedTags";
 import { useInvalidateOnExtractionComplete } from "@/shared/hooks/useInvalidateOnExtractionComplete";
 import type { EmailQueueItem } from "@/shared/types/integration/email-queue";
 
@@ -77,7 +78,7 @@ describe("useInvalidateOnExtractionComplete", () => {
     });
     expect(invalidationCalls.length).toBeGreaterThan(0);
     const action = invalidationCalls[0][0] as { payload?: unknown };
-    expect(action.payload).toEqual(["Summary", "Transaction", "Document"]);
+    expect(action.payload).toEqual(EMAIL_DERIVED_TAGS);
   });
 
   it("dispatches invalidateTags when an item transitions from extracting to failed", () => {
@@ -152,5 +153,44 @@ describe("useInvalidateOnExtractionComplete", () => {
       return typeof action?.type === "string" && action.type.includes("invalidateTags");
     });
     expect(invalidationCalls).toHaveLength(1);
+  });
+  it("invalidates the pending-receipts tag, not just Transaction/Summary/Document", () => {
+    // Regression: pending rent receipts are derived from transactions but cached
+    // under SignedLease/RECEIPTS_PENDING, so a sync left them stale until reload.
+    expect(EMAIL_DERIVED_TAGS).toContainEqual({ type: "SignedLease", id: "RECEIPTS_PENDING" });
+  });
+
+  it("dispatches when an item reaches done without ever being observed extracting", () => {
+    // Slow polling (any page other than Integrations) can miss the "extracting"
+    // window entirely; reaching a terminal status must still invalidate.
+    const initialQueue: EmailQueueItem[] = [makeItem("a", "fetched")];
+    const { rerender } = renderHook(
+      ({ queue }: { queue: EmailQueueItem[] }) => useInvalidateOnExtractionComplete(queue),
+      { wrapper: wrapper({ store }), initialProps: { queue: initialQueue } },
+    );
+
+    dispatchSpy.mockClear();
+    rerender({ queue: [makeItem("a", "done")] });
+
+    const invalidationCalls = dispatchSpy.mock.calls.filter((call: unknown[]) => {
+      const action = call[0] as { type?: string };
+      return typeof action?.type === "string" && action.type.includes("invalidateTags");
+    });
+    expect(invalidationCalls.length).toBeGreaterThan(0);
+  });
+
+  it("does not dispatch for terminal items already present on first observation", () => {
+    const queue: EmailQueueItem[] = [makeItem("a", "done"), makeItem("b", "failed")];
+    const { rerender } = renderHook(
+      ({ queue }: { queue: EmailQueueItem[] }) => useInvalidateOnExtractionComplete(queue),
+      { wrapper: wrapper({ store }), initialProps: { queue } },
+    );
+    rerender({ queue: [makeItem("a", "done"), makeItem("b", "failed")] });
+
+    const invalidationCalls = dispatchSpy.mock.calls.filter((call: unknown[]) => {
+      const action = call[0] as { type?: string };
+      return typeof action?.type === "string" && action.type.includes("invalidateTags");
+    });
+    expect(invalidationCalls).toHaveLength(0);
   });
 });

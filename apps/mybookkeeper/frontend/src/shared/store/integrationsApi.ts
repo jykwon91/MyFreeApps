@@ -1,9 +1,10 @@
 import { baseApi } from "./baseApi";
+import { SYNC_INVALIDATED_TAGS } from "./emailDerivedTags";
 import type { Integration } from "@/shared/types/integration/integration";
 import type { SyncLog } from "@/shared/types/integration/sync-log";
 import type { EmailQueueItem } from "@/shared/types/integration/email-queue";
 
-const integrationsApi = baseApi.injectEndpoints({
+export const integrationsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getIntegrations: builder.query<Integration[], void>({
       query: () => ({ url: "/integrations" }),
@@ -18,7 +19,7 @@ const integrationsApi = baseApi.injectEndpoints({
     }),
     syncGmail: builder.mutation<{ status: string; count?: number }, void>({
       query: () => ({ url: "/integrations/gmail/sync", method: "POST" }),
-      invalidatesTags: ["Integration", "Document", "Summary", "Transaction"],
+      invalidatesTags: SYNC_INVALIDATED_TAGS,
     }),
     getSyncLogs: builder.query<SyncLog[], void>({
       query: () => ({ url: "/integrations/gmail/logs" }),
@@ -38,7 +39,7 @@ const integrationsApi = baseApi.injectEndpoints({
     }),
     extractAll: builder.mutation<{ count: number }, void>({
       query: () => ({ url: "/integrations/gmail/extract", method: "POST" }),
-      invalidatesTags: ["Integration", "Document", "Summary"],
+      invalidatesTags: SYNC_INVALIDATED_TAGS,
     }),
     dismissQueueItem: builder.mutation<void, string>({
       query: (id) => ({ url: `/integrations/gmail/queue/${id}`, method: "DELETE" }),
@@ -46,11 +47,11 @@ const integrationsApi = baseApi.injectEndpoints({
     }),
     retryQueueItem: builder.mutation<{ id: string; status: string }, string>({
       query: (id) => ({ url: `/integrations/gmail/queue/${id}/retry`, method: "POST" }),
-      invalidatesTags: ["Integration", "Document", "Summary", "Transaction"],
+      invalidatesTags: SYNC_INVALIDATED_TAGS,
     }),
     retryAllFailed: builder.mutation<{ status: string }, void>({
       query: () => ({ url: "/integrations/gmail/queue/retry-all", method: "POST" }),
-      invalidatesTags: ["Integration", "Document", "Summary", "Transaction"],
+      invalidatesTags: SYNC_INVALIDATED_TAGS,
     }),
     updateGmailLabel: builder.mutation<Integration, { label: string }>({
       query: (data) => ({ url: "/integrations/gmail/label", method: "PATCH", data }),

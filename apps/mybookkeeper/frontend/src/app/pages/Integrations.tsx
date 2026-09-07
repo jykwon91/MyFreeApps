@@ -21,7 +21,6 @@ import { extractErrorMessage } from "@/shared/utils/errorMessage";
 import { groupBySession } from "@/shared/utils/email-queue";
 import { useToast } from "@/shared/hooks/useToast";
 import { useCanWrite } from "@/shared/hooks/useOrgRole";
-import { useInvalidateOnExtractionComplete } from "@/shared/hooks/useInvalidateOnExtractionComplete";
 import IntegrationsSkeleton from "@/app/features/integrations/IntegrationsSkeleton";
 import GmailHeaderActions from "@/app/features/integrations/GmailHeaderActions";
 import { LoadingButton } from "@platform/ui";
@@ -46,9 +45,8 @@ export default function Integrations() {
   const { data: syncLogs = [] } = useGetSyncLogsQuery(undefined, POLLING_OPTIONS);
   const { data: queue = EMPTY_QUEUE } = useGetEmailQueueQuery(undefined, POLLING_OPTIONS);
 
-  // Invalidate Summary/Transaction/Document caches when any queue item finishes extracting
-  // so downstream views (Dashboard charts, Transactions list) pick up newly-extracted data.
-  useInvalidateOnExtractionComplete(queue);
+  // Cache invalidation on extraction completion is handled app-wide by
+  // useGmailSyncWatcher() in Layout, so it keeps working after you navigate away.
 
   const [extractAll] = useExtractAllMutation();
   const [dismissItem] = useDismissQueueItemMutation();

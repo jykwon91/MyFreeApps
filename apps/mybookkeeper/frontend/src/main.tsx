@@ -1,6 +1,8 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import posthog from "posthog-js";
+import { setupListeners } from "@reduxjs/toolkit/query";
+import { store } from "@/shared/store";
 import App from "./App";
 import "./index.css";
 
@@ -53,6 +55,10 @@ if (import.meta.env.PROD) {
     });
   }
 }
+
+// Activates baseApi's refetchOnFocus / refetchOnReconnect. Without this call
+// both options are inert and the app serves stale cache after a tab regains focus.
+setupListeners(store.dispatch);
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

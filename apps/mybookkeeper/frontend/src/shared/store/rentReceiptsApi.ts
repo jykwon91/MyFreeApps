@@ -5,7 +5,7 @@ import type {
   SendReceiptResponse,
 } from "@/shared/types/lease/pending-receipt";
 
-const rentReceiptsApi = baseApi.injectEndpoints({
+export const rentReceiptsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getPendingReceipts: builder.query<
       PendingReceiptListResponse,
