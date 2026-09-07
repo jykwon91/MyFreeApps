@@ -15,12 +15,17 @@ import DemoWelcomeDialog from "@/app/components/DemoWelcomeDialog";
 import GmailReauthSidebarBanner from "@/app/components/GmailReauthSidebarBanner";
 import LegalFooter from "@/app/components/LegalFooter";
 import { useGetAttributionReviewQueueQuery } from "@/shared/store/attributionApi";
+import { useGmailSyncWatcher } from "@/shared/hooks/useGmailSyncWatcher";
 
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  // Keep transaction-derived caches fresh when a background Gmail extraction
+  // finishes while the user is on some other page.
+  useGmailSyncWatcher();
 
   // Poll attribution queue count every 2 min to keep the badge fresh.
   const { data: attributionQueueData } = useGetAttributionReviewQueueQuery(
