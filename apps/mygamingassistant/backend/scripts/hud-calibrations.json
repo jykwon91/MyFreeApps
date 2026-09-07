@@ -1,0 +1,150 @@
+{
+ "99XDk2UyO5I": {
+  "agree": "1/1",
+  "eyeballed": "eyeballed 2026-09-07 on 192-stand-poster: alignment is exact where the map is drawn. Only one frame is informative because this source circle-clips the minimap, so most posters show too little to fit",
+  "frame": "192-stand-poster.webp",
+  "frames_scanned": 14,
+  "game": "valorant",
+  "map": "haven",
+  "rect": [
+   7,
+   61,
+   205,
+   90
+  ],
+  "score": 0.2841,
+  "verdict": "ok"
+ },
+ "U0IlINyWPdE": {
+  "agree": "1/6",
+  "frame": "221-stand-poster.webp",
+  "frames_scanned": 6,
+  "game": "valorant",
+  "map": "haven",
+  "note": "player-follow minimap: rotates with the player's view and is circle-clipped to ~30% of the map, so there is no per-video rect to find. Needs per-frame rotation-invariant patch matching.",
+  "rect": [
+   188,
+   56,
+   126,
+   90
+  ],
+  "runners_up": [
+   {
+    "rect": [
+     199,
+     196,
+     117
+    ],
+    "score": 0.1487
+   },
+   {
+    "rect": [
+     125,
+     215,
+     110
+    ],
+    "score": 0.1378
+   },
+   {
+    "rect": [
+     72,
+     135,
+     120
+    ],
+    "score": 0.1303
+   }
+  ],
+  "score": 0.1525,
+  "verdict": "unsupported"
+ },
+ "U7AwrJhexw8": {
+  "agree": "8/8",
+  "eyeballed": "eyeballed 2026-09-07 on 54-stand-poster: silhouette sits exactly on the HUD map, every wall edge and the C/B/A lobes line up",
+  "frame": "89-stand-poster.webp",
+  "frames_scanned": 12,
+  "game": "valorant",
+  "map": "haven",
+  "rect": [
+   29,
+   45,
+   273,
+   90
+  ],
+  "score": 0.7463,
+  "verdict": "ok"
+ },
+ "UsfCu5uL3Qs": {
+  "agree": "1/12",
+  "frame": "1094-stand-poster.webp",
+  "frames_scanned": 14,
+  "game": "valorant",
+  "map": "haven",
+  "note": "pins are read off the full-screen tactical map, not the HUD corner: it is rotated per frame and far outside the search box. Needs per-frame rotation-invariant patch matching.",
+  "rect": [
+   0,
+   199,
+   110,
+   90
+  ],
+  "runners_up": [
+   {
+    "rect": [
+     1,
+     208,
+     110
+    ],
+    "score": 0.1577
+   },
+   {
+    "rect": [
+     27,
+     226,
+     114
+    ],
+    "score": 0.1544
+   },
+   {
+    "rect": [
+     63,
+     0,
+     110
+    ],
+    "score": 0.139
+   }
+  ],
+  "score": 0.1814,
+  "verdict": "unsupported"
+ },
+ "_VwWwoRSEcY": {
+  "agree": "13/13",
+  "eyeballed": "eyeballed 2026-08-22 at (21,34,235); this refit lands within 1-3 px of that and 13/13 frames agree",
+  "frame": "158-stand-poster.webp",
+  "frames_scanned": 14,
+  "game": "valorant",
+  "map": "haven",
+  "rect": [
+   22,
+   35,
+   232,
+   90
+  ],
+  "score": 0.7152,
+  "verdict": "ok"
+ },
+ "czketOpD2p8": {
+  "agree": "11/11",
+  "eyeballed": "eyeballed 2026-08-22 at (21,34,235); this refit lands within 1-3 px of that and 11/11 frames agree",
+  "frame": "212-stand-poster.webp",
+  "frames_scanned": 14,
+  "game": "valorant",
+  "map": "haven",
+  "rect": [
+   22,
+   35,
+   232,
+   90
+  ],
+  "score": 0.7141,
+  "verdict": "ok"
+ }
+}
