@@ -179,8 +179,16 @@ jobs:
             # deploy of one app does not wipe another's host-Caddy entry.
             if ! diff -q infra/Caddyfile /etc/caddy/Caddyfile > /dev/null 2>&1; then
               echo "Host Caddyfile differs from repo — updating"
+              # Validate the CANDIDATE file BEFORE it replaces the live one.
+              # The previous order (cp, then validate) left an invalid config at
+              # /etc/caddy/Caddyfile whenever validation failed: the running Caddy
+              # kept serving from its in-memory config, so nothing looked broken
+              # until the next restart or reboot — at which point Caddy would fail
+              # to start and take every app on the droplet down at once. Validating
+              # first means a bad config aborts the deploy with the live file
+              # untouched.
+              sudo caddy validate --config infra/Caddyfile --adapter caddyfile
               sudo cp infra/Caddyfile /etc/caddy/Caddyfile
-              sudo caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
               sudo caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile
               echo "Host Caddy reloaded with new config"
             else

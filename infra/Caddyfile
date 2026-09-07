@@ -11,30 +11,116 @@
 #
 # Adding a new app:
 #   1. Append a new <hostname> { ... reverse_proxy 127.0.0.1:<port> } block.
-#   2. Pick a unique loopback port (8094 = MBK, 8092 = MJH, 8096 = MGA, 9000 = MinIO).
+#      Copy an existing block verbatim — the `import cloudflare_origin_tls`
+#      line and the `header_up X-Forwarded-For {client_ip}` inside
+#      reverse_proxy are REQUIRED. See the global block below for what
+#      breaks when the header_up line is omitted.
+#   2. Pick a unique loopback port (8094 = MBK, 8092 = MJH, 8096 = MGA,
+#      8100 = MRC, 9000 = MinIO).
 #   3. Make sure the app's docker compose binds that port on 127.0.0.1.
+#   4. Create the DNS record in Cloudflare as PROXIED (orange cloud). A
+#      DNS-only record republishes the origin IP and loses the routing
+#      redundancy this setup exists to provide.
 #
 # Note: deploys only sync + `caddy reload` this file when it DIFFERS from
-# /etc/caddy/Caddyfile. If a block's DNS record is created AFTER the block
-# was already synced (ACME has been failing + backing off), touch this file
-# (any comment change) and dispatch a deploy to force the reload that
-# re-attempts certificate issuance. Done 2026-07-02 for myrecipes go-live (x2 —
-# first post-DNS attempt likely hit stale negative DNS cache at the CA).
+# /etc/caddy/Caddyfile.
+#
+# ─────────────────────────────────────────────────────────────────────────
+# ORIGIN IS BEHIND CLOUDFLARE (since 2026-09-07)
+#
+# Why: AT&T — and any ISP whose transit to DigitalOcean goes via Cogent — was
+# black-holing every route into AS14061. All five DO prefixes tested died at
+# the same Cogent hop (154.54.41.54), so these apps were unreachable for a
+# slice of the public internet while the droplet itself was perfectly healthy
+# and serving. Fronting the origin with Cloudflare's anycast edge removes the
+# single-transit-path dependency: visitors reach the nearest Cloudflare PoP,
+# and Cloudflare reaches the origin over its own transit.
+#
+# Two consequences are load-bearing and must not be casually reverted:
+#   1. TLS at this layer uses a Cloudflare ORIGIN CA certificate, not Let's
+#      Encrypt. Origin CA certs are trusted by Cloudflare only — never by
+#      browsers. That is correct for a proxied origin, but it means turning
+#      the orange cloud OFF for a hostname makes that hostname serve an
+#      untrusted certificate. Flip DNS back to proxied, or restore ACME for
+#      that block, before going DNS-only.
+#   2. Cloudflare's SSL/TLS mode must stay on "Full (strict)". Anything
+#      weaker ("Flexible") makes Cloudflare speak plain HTTP to an origin
+#      that only serves HTTPS here, producing a redirect loop.
+# ─────────────────────────────────────────────────────────────────────────
 
-# MyBookkeeper — primary domain.
-# Both addresses listed during the myfreeapps.org cutover so existing
-# bookmarks on the sslip.io URL keep working. Caddy auto-provisions TLS
-# certs for both via Let's Encrypt. Drop the sslip.io address once the
-# new domain is verified live.
-mybookkeeper.myfreeapps.org, 165-245-134-251.sslip.io {
+{
+    servers {
+        # Cloudflare terminates TLS at its edge and dials this origin from its
+        # own address space, so once proxying is on the socket peer is ALWAYS a
+        # Cloudflare IP. Without this block `{client_ip}` resolves to that edge
+        # IP for every request, which would:
+        #   - collapse every visitor into ONE per-IP rate-limit bucket, so a
+        #     single person tripping the login limit locks out all users
+        #     (platform_shared.core.rate_limit keys off get_client_ip), and
+        #   - write Cloudflare IPs into the auth-event audit log instead of
+        #     real client IPs (platform_shared.services.auth_event_service).
+        #
+        # Declaring the Cloudflare ranges as trusted proxies makes Caddy skip
+        # them when walking the forwarded chain. `client_ip_headers` then
+        # prefers CF-Connecting-IP, which Cloudflare sets itself and strips
+        # from inbound requests — so a client cannot forge it. X-Forwarded-For
+        # stays as a fallback for any non-proxied path.
+        #
+        # Ranges from https://www.cloudflare.com/ips-v4 and /ips-v6, fetched
+        # 2026-09-07. They change rarely. Deliberately kept on one line: a
+        # Caddyfile parse error here takes ALL FIVE apps down at once, so this
+        # trades diff readability for one less way to break the edge.
+        trusted_proxies static 173.245.48.0/20 103.21.244.0/22 103.22.200.0/22 103.31.4.0/22 141.101.64.0/18 108.162.192.0/18 190.93.240.0/20 188.114.96.0/20 197.234.240.0/22 198.41.128.0/17 162.158.0.0/15 104.16.0.0/13 104.24.0.0/14 172.64.0.0/13 131.0.72.0/22 2400:cb00::/32 2606:4700::/32 2803:f800::/32 2405:b500::/32 2405:8100::/32 2a06:98c0::/29 2c0f:f248::/32
+        client_ip_headers CF-Connecting-IP X-Forwarded-For
+    }
+}
+
+# Shared TLS snippet — every proxied hostname uses the same Cloudflare Origin
+# CA certificate. One cert covering myfreeapps.org + *.myfreeapps.org serves
+# every app subdomain, so adding an app needs no certificate work.
+#
+# These files are installed on the VPS OUT OF BAND (see the PR's operational
+# migration section) and are NOT in git — the .key is a private key. If they
+# are missing, `caddy reload` fails and the previously-loaded config keeps
+# serving, but a full restart would fail to come up. Install the cert BEFORE
+# deploying this file.
+(cloudflare_origin_tls) {
+    tls /etc/caddy/cloudflare-origin.pem /etc/caddy/cloudflare-origin.key
+}
+
+# Shared edge security headers — network-level protections that belong at the
+# TLS edge. Everything else lives in each app's docker Caddy.
+(edge_headers) {
     header {
         Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
         X-Content-Type-Options "nosniff"
         Referrer-Policy "strict-origin-when-cross-origin"
         -Server
     }
+}
 
-    reverse_proxy 127.0.0.1:8094
+# Shared reverse-proxy header handling. Overwrites the forwarded chain with
+# Caddy's computed real client IP (derived from CF-Connecting-IP via the
+# trusted-proxy config above). The docker Caddy trusts `private_ranges` and
+# reads X-Forwarded-For, so this is the handoff point where the true client IP
+# enters the app's view. Omit it and rate limiting silently keys on
+# Cloudflare's edge IP instead of the visitor.
+(proxy_client_ip) {
+    header_up X-Forwarded-For {client_ip}
+}
+
+# MyBookkeeper — primary domain.
+# The legacy 165-245-134-251.sslip.io address was dropped on 2026-09-07 with
+# the Cloudflare cutover: that hostname literally encodes the droplet's IP, so
+# keeping it published would let anyone bypass the proxy and reach the origin
+# directly — defeating both the origin-hiding and the routing redundancy.
+mybookkeeper.myfreeapps.org {
+    import cloudflare_origin_tls
+    import edge_headers
+
+    reverse_proxy 127.0.0.1:8094 {
+        import proxy_client_ip
+    }
 }
 
 # Shared MinIO — public storage endpoint. The minio container binds to
@@ -42,52 +128,58 @@ mybookkeeper.myfreeapps.org, 165-245-134-251.sslip.io {
 # host Caddy terminates TLS for storage.<domain> and proxies plaintext to
 # MinIO. Backends sign presigned URLs against this hostname so the browser
 # can fetch attachments directly without round-tripping through any API.
-storage.myfreeapps.org, storage.165-245-134-251.sslip.io {
-    header {
-        Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
-        X-Content-Type-Options "nosniff"
-        Referrer-Policy "strict-origin-when-cross-origin"
-        -Server
-    }
+#
+# Proxied through Cloudflare like everything else, so images and attachments
+# keep loading for visitors on the affected routes. Traffic here is presigned
+# GET only (platform_shared.core.storage uses presigned_get_object; there are
+# no presigned PUTs), so Cloudflare's request-body limit does not apply —
+# uploads go through /api/* on the app subdomains instead.
+#
+# REQUIRED companion config: a Cloudflare Cache Rule setting "Bypass cache"
+# for hostname storage.myfreeapps.org. Presigned URLs carry their signature in
+# the query string and expire (presigned_url_ttl_seconds, default 3600); a
+# cached object could otherwise be replayed to a request whose signature has
+# expired or differs. Verify that rule exists before trusting this block.
+storage.myfreeapps.org {
+    import cloudflare_origin_tls
+    import edge_headers
 
-    reverse_proxy 127.0.0.1:9000
+    reverse_proxy 127.0.0.1:9000 {
+        import proxy_client_ip
+    }
 }
 
 # MyJobHunter — separate subdomain.
-myjobhunter.myfreeapps.org, myjobhunter.165-245-134-251.sslip.io {
-    header {
-        Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
-        X-Content-Type-Options "nosniff"
-        Referrer-Policy "strict-origin-when-cross-origin"
-        -Server
-    }
+myjobhunter.myfreeapps.org {
+    import cloudflare_origin_tls
+    import edge_headers
 
-    reverse_proxy 127.0.0.1:8092
+    reverse_proxy 127.0.0.1:8092 {
+        import proxy_client_ip
+    }
 }
 
-# MyGamingAssistant — separate subdomain. New app (no sslip.io legacy address).
+# MyGamingAssistant — separate subdomain.
 # Public clip media is served separately by Cloudflare R2 at
 # mga-clips.myfreeapps.org (a CNAME to R2, NOT proxied here) — see
 # apps/mygamingassistant/backend/.env.docker.example MINIO_PUBLIC_BASE_URL.
+# NOTE: that CNAME does not currently resolve in public DNS; confirm it during
+# the Cloudflare zone import rather than assuming the scan carried it over.
 mygamingassistant.myfreeapps.org {
-    header {
-        Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
-        X-Content-Type-Options "nosniff"
-        Referrer-Policy "strict-origin-when-cross-origin"
-        -Server
-    }
+    import cloudflare_origin_tls
+    import edge_headers
 
-    reverse_proxy 127.0.0.1:8096
+    reverse_proxy 127.0.0.1:8096 {
+        import proxy_client_ip
+    }
 }
 
-# MyRecipes — separate subdomain. New app (no sslip.io legacy address).
+# MyRecipes — separate subdomain.
 myrecipes.myfreeapps.org {
-    header {
-        Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
-        X-Content-Type-Options "nosniff"
-        Referrer-Policy "strict-origin-when-cross-origin"
-        -Server
-    }
+    import cloudflare_origin_tls
+    import edge_headers
 
-    reverse_proxy 127.0.0.1:8100
+    reverse_proxy 127.0.0.1:8100 {
+        import proxy_client_ip
+    }
 }
