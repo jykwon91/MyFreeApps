@@ -228,6 +228,88 @@
   "rect": null,
   "verdict": "unsupported"
  },
+ "Q8gvPdspKQE": {
+  "agree": "2/4",
+  "frame": "243-stand-poster.webp",
+  "frames_scanned": 14,
+  "game": "valorant",
+  "map": "sunset",
+  "rect": [
+   24,
+   25,
+   241,
+   0
+  ],
+  "runners_up": [
+   {
+    "rect": [
+     24,
+     25,
+     241
+    ],
+    "score": 0.5323
+   },
+   {
+    "rect": [
+     71,
+     51,
+     241
+    ],
+    "score": 0.5006
+   },
+   {
+    "rect": [
+     40,
+     15,
+     241
+    ],
+    "score": 0.4369
+   }
+  ],
+  "score": 0.5417,
+  "verdict": "eyeball"
+ },
+ "RFVkhxHJZOw": {
+  "agree": "1/5",
+  "frame": "171-stand-poster.webp",
+  "frames_scanned": 14,
+  "game": "valorant",
+  "map": "sunset",
+  "rect": [
+   53,
+   72,
+   241,
+   0
+  ],
+  "runners_up": [
+   {
+    "rect": [
+     49,
+     99,
+     241
+    ],
+    "score": 0.4741
+   },
+   {
+    "rect": [
+     49,
+     99,
+     241
+    ],
+    "score": 0.4721
+   },
+   {
+    "rect": [
+     82,
+     57,
+     241
+    ],
+    "score": 0.4061
+   }
+  ],
+  "score": 0.524,
+  "verdict": "unsupported"
+ },
  "U0IlINyWPdE": {
   "agree": "1/6",
   "frame": "221-stand-poster.webp",
@@ -288,7 +370,7 @@
  },
  "UsfCu5uL3Qs": {
   "game": "valorant",
-  "map": "split",
+  "map": "sunset",
   "note": "no rotation its own frames agree on: the minimap is player-follow, absent, or drawn somewhere outside the search box",
   "rect": null,
   "verdict": "unsupported"
@@ -314,6 +396,47 @@
    90
   ],
   "score": 0.7152,
+  "verdict": "ok"
+ },
+ "_WfQDEgq5Dg": {
+  "agree": "9/9",
+  "frame": "118-stand-poster.webp",
+  "frames_scanned": 14,
+  "game": "valorant",
+  "map": "sunset",
+  "rect": [
+   22,
+   35,
+   232,
+   0
+  ],
+  "runners_up": [
+   {
+    "rect": [
+     22,
+     35,
+     232
+    ],
+    "score": 0.5328
+   },
+   {
+    "rect": [
+     22,
+     35,
+     232
+    ],
+    "score": 0.5152
+   },
+   {
+    "rect": [
+     22,
+     35,
+     232
+    ],
+    "score": 0.503
+   }
+  ],
+  "score": 0.5465,
   "verdict": "ok"
  },
  "aWxjHR5GXRQ": {
@@ -379,6 +502,13 @@
   ],
   "score": 0.8056,
   "verdict": "ok"
+ },
+ "fEiV1zAq1Y4": {
+  "game": "valorant",
+  "map": "sunset",
+  "note": "no rotation its own frames agree on: the minimap is player-follow, absent, or drawn somewhere outside the search box",
+  "rect": null,
+  "verdict": "unsupported"
  },
  "ffopLLNJfkQ": {
   "game": "valorant",
@@ -475,6 +605,54 @@
   "note": "no rotation its own frames agree on: the minimap is player-follow, absent, or drawn somewhere outside the search box",
   "rect": null,
   "verdict": "unsupported"
+ },
+ "vBZsTtVYfEY": {
+  "game": "valorant",
+  "map": "sunset",
+  "note": "no rotation its own frames agree on: the minimap is player-follow, absent, or drawn somewhere outside the search box",
+  "rect": null,
+  "verdict": "unsupported"
+ },
+ "vgfDU-_cXTc": {
+  "agree": "8/8",
+  "frame": "132-stand-poster.webp",
+  "frames_scanned": 14,
+  "game": "valorant",
+  "map": "sunset",
+  "rect": [
+   22,
+   35,
+   232,
+   0
+  ],
+  "runners_up": [
+   {
+    "rect": [
+     22,
+     35,
+     232
+    ],
+    "score": 0.5181
+   },
+   {
+    "rect": [
+     22,
+     35,
+     232
+    ],
+    "score": 0.4722
+   },
+   {
+    "rect": [
+     22,
+     35,
+     232
+    ],
+    "score": 0.4501
+   }
+  ],
+  "score": 0.5347,
+  "verdict": "ok"
  },
  "y8XT-7jCBLA": {
   "game": "valorant",
