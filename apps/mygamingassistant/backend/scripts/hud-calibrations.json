@@ -377,6 +377,7 @@
    241,
    0
   ],
+  "rejected": "2026-09-08: overlaid its own rect (24,25,241) and the consensus sunset rect (23,36,232) on its posters -- both sit visibly off the grey HUD map, and a --scan 45 refit made agreement worse (2/4 -> 2/7). Plausible size with scattered frames means no fixed minimap, not a wrong rotation, so no rect will fit this source. Cost 25 of sunset's 121 lineups; a wrong anchor would have cost the guess ring on all of them.",
   "runners_up": [
    {
     "rect": [
@@ -404,7 +405,7 @@
    }
   ],
   "score": 0.5417,
-  "verdict": "eyeball"
+  "verdict": "unsupported"
  },
  "RFVkhxHJZOw": {
   "agree": "1/5",
