@@ -56,10 +56,19 @@ rest saw no minimap at all and fit noise. Then:
 * voters scatter                                  -> ``unsupported``
 
 ``eyeball`` means run ``pin_sheet.py calibrate`` and look at the overlay before
-that source's lineups are sheeted. Record the result by adding ``"eyeballed":
-"<what you saw, dated>"`` to its row in the calibration file — a later re-fit
-carries the note forward and keeps the ``ok``, and shouts if the rect has moved
-out from under it.
+that source's lineups are sheeted. Record the result **either way**:
+
+* it looked right -> add ``"eyeballed": "<what you saw, dated>"``. A later re-fit
+  carries the note forward and keeps the ``ok``, and shouts if the rect has moved
+  out from under it.
+* it looked wrong -> add ``"rejected": "<what you saw, dated>"``. A later re-fit
+  carries that forward too and pins the verdict to ``unsupported``, so the source
+  stays out of ``detect_stand_pins`` and stops being re-proposed for eyeballing.
+
+Recording the rejection matters as much as recording the pass. Without it the
+verdict reverts to ``eyeball`` on every subsequent run of any map, and the same
+overlay gets looked at again by someone who has no way to know it was already
+judged.
 
 ## What this fitter cannot do
 
@@ -303,8 +312,13 @@ def main() -> None:
                                                  int(args.rotation))})
     out = Path(args.out)
     rows = json.loads(out.read_text(encoding="utf-8")) if out.is_file() else {}
+    # The ledger spans every map ever fitted. Track what THIS run touched so the
+    # closing eyeball prompt names only sources the operator just looked at --
+    # otherwise fitting lotus tells you to go eyeball a sunset source.
+    fitted: list[str] = []
 
     for d in dirs:
+        fitted.append(d.name)
         frames = sorted(d.glob("*-stand-poster.webp"))[:args.scan]
         if auto_rot:
             # Vote on a cheap prefix; the full scan is what the rect fit needs,
@@ -319,11 +333,14 @@ def main() -> None:
                     continue
                 print(f"{d.name:14} no rotation its frames agree on -- no fixed "
                       f"minimap to fit; skipped")
-                rows[d.name] = {"rect": None, "verdict": "unsupported",
-                                "map": args.map, "game": args.game,
-                                "note": "no rotation its own frames agree on: the "
-                                        "minimap is player-follow, absent, or drawn "
-                                        "somewhere outside the search box"}
+                row = {"rect": None, "verdict": "unsupported",
+                       "map": args.map, "game": args.game,
+                       "note": "no rotation its own frames agree on: the "
+                               "minimap is player-follow, absent, or drawn "
+                               "somewhere outside the search box"}
+                if prior_rejected := rows.get(d.name, {}).get("rejected"):
+                    row["rejected"] = prior_rejected
+                rows[d.name] = row
                 continue
             args.rotation = rot
         else:
@@ -335,7 +352,13 @@ def main() -> None:
         # somebody already confirmed. If the rect MOVED, the note no longer
         # describes what is in the file: say so instead of inheriting the blessing.
         prior = rows.get(d.name, {})
-        if note := prior.get("eyeballed"):
+        # A rejection is a human verdict too, and it outranks the fitter in the
+        # same way `eyeballed` does -- just in the other direction. Without this
+        # a source the operator already looked at and refused reverts to
+        # `eyeball` on the next fit of any map and gets re-proposed forever.
+        if note := prior.get("rejected"):
+            row["rejected"], row["verdict"] = note, "unsupported"
+        elif note := prior.get("eyeballed"):
             px, py, ps, _ = prior["rect"]
             x0, y0, s, _ = row["rect"]
             if max(abs(px - x0), abs(py - y0), abs(ps - s)) <= AGREE_TOL:
@@ -348,17 +371,20 @@ def main() -> None:
         x0, y0, s, rot = row["rect"]
         print(f'{d.name:14} ({x0:3}, {y0:3}, {s:3}, {rot})  score {row["score"]:.3f}'
               f'  agree {row["agree"]:>5}  {row["verdict"].upper()}'
-              f'{"  (eyeballed)" if row.get("eyeballed") else ""}')
+              f'{"  (eyeballed)" if row.get("eyeballed") else ""}'
+              f'{"  (rejected)" if row.get("rejected") else ""}')
 
     if args.dry_run:
         return
     out.write_text(json.dumps(rows, indent=1, sort_keys=True) + "\n", encoding="utf-8")
     print(f"\nwrote {out}")
-    eyeball = [k for k, v in rows.items() if v.get("verdict") == "eyeball"]
+    eyeball = [k for k in fitted if rows[k].get("verdict") == "eyeball"]
     if eyeball:
         print("eyeball before sheeting: " + ", ".join(eyeball) +
               "\n  pin_sheet.py calibrate --map <map> --frame <a poster> "
-              "--rect x0,y0,s --out overlay.png")
+              "--rect x0,y0,s --out overlay.png"
+              "\n  then record the outcome on the row: \"eyeballed\": \"...\" if "
+              "it looked right, \"rejected\": \"...\" if it did not")
 
 
 if __name__ == "__main__":
