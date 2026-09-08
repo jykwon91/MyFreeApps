@@ -6,17 +6,24 @@ per lineup by hand across ~870 lineups is the bottleneck. This tool pre-places
 both pins so the operator only NUDGES a near-right pin in MinimapPinEditor
 instead of placing from a blank minimap.
 
-Approach (validated 2026-07-20): NOT classical CV — the in-game minimap is faint,
-low-detail, and player-rotated, so arrow-detection + registration is brittle.
-Instead an LLM vision localizer reads the STAND/LANDING frame + our reference
-minimap + the lineup's known zone (a hard prior) and places a normalized pin, the
-same way a human studying the frame does. Output feeds MinimapPinEditor via the
-existing anchor plumbing (stand_anchor_*/target_anchor_* round-trip through
-LINEUP_SCALAR_FIELDS end-to-end — no app change needed).
+**For STAND pins, use `detect_stand_pins.py` instead — do not fan out localizers.**
+The 2026-07-20 note below said classical CV was too brittle for the faint,
+player-rotated minimap. That was true of arrow-detection against a per-source
+rect; it is not true once each frame is registered on its own and the player is
+found as the one thing that MOVES against a per-source background median.
+`detect_stand_pins.py` does that, deterministically and for free, at 51 of 53 on
+Haven — better than a model call per twelve lineups, and repeatable.
 
-STAND pins are strong (player marker + callouts). TARGET pins are weaker — a
-utility's landing isn't marked on the in-game minimap — so target proposals are
+The localizer path remains the answer for TARGET pins, and only for them: the
+in-game minimap marks the player, never where a utility lands, so no amount of
+registration finds a target. An LLM vision localizer reads the LANDING frame +
+our reference minimap + the lineup's known zone (a hard prior) and places a
+normalized pin the way a human studying the frame does. Those proposals are
 flagged low-confidence for the operator to scrutinize.
+
+Either way the output feeds MinimapPinEditor via the existing anchor plumbing
+(stand_anchor_*/target_anchor_* round-trip through LINEUP_SCALAR_FIELDS
+end-to-end — no app change needed).
 
 Pipeline (three deterministic modes here; the vision step is a subagent fan-out
 driven by PROPOSE_PINS_INSTRUCTIONS.md between `extract` and `apply`):
