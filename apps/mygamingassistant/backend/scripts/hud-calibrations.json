@@ -41,6 +41,47 @@
   "score": 0.5667,
   "verdict": "ok"
  },
+ "5wBWvIeMnlk": {
+  "agree": "10/10",
+  "frame": "68-stand-poster.webp",
+  "frames_scanned": 11,
+  "game": "valorant",
+  "map": "split",
+  "rect": [
+   41,
+   56,
+   229,
+   90
+  ],
+  "runners_up": [
+   {
+    "rect": [
+     41,
+     56,
+     229
+    ],
+    "score": 0.7553
+   },
+   {
+    "rect": [
+     41,
+     56,
+     229
+    ],
+    "score": 0.7479
+   },
+   {
+    "rect": [
+     41,
+     56,
+     229
+    ],
+    "score": 0.732
+   }
+  ],
+  "score": 0.7915,
+  "verdict": "ok"
+ },
  "6PbBfx6EuzM": {
   "agree": "11/11",
   "frame": "0-stand-poster.webp",
@@ -96,6 +137,47 @@
    90
   ],
   "score": 0.2841,
+  "verdict": "ok"
+ },
+ "9raAqRhORI0": {
+  "agree": "12/12",
+  "frame": "337-stand-poster.webp",
+  "frames_scanned": 14,
+  "game": "valorant",
+  "map": "split",
+  "rect": [
+   22,
+   35,
+   232,
+   90
+  ],
+  "runners_up": [
+   {
+    "rect": [
+     22,
+     35,
+     232
+    ],
+    "score": 0.7061
+   },
+   {
+    "rect": [
+     22,
+     35,
+     232
+    ],
+    "score": 0.6873
+   },
+   {
+    "rect": [
+     22,
+     35,
+     232
+    ],
+    "score": 0.6744
+   }
+  ],
+  "score": 0.7171,
   "verdict": "ok"
  },
  "DoFq0TyLJrU": {
@@ -205,45 +287,10 @@
   "verdict": "ok"
  },
  "UsfCu5uL3Qs": {
-  "agree": "1/12",
-  "frame": "1094-stand-poster.webp",
-  "frames_scanned": 14,
   "game": "valorant",
-  "map": "haven",
-  "note": "pins are read off the full-screen tactical map, not the HUD corner: it is rotated per frame and far outside the search box. Needs per-frame rotation-invariant patch matching.",
-  "rect": [
-   0,
-   199,
-   110,
-   90
-  ],
-  "runners_up": [
-   {
-    "rect": [
-     1,
-     208,
-     110
-    ],
-    "score": 0.1577
-   },
-   {
-    "rect": [
-     27,
-     226,
-     114
-    ],
-    "score": 0.1544
-   },
-   {
-    "rect": [
-     63,
-     0,
-     110
-    ],
-    "score": 0.139
-   }
-  ],
-  "score": 0.1814,
+  "map": "split",
+  "note": "no rotation its own frames agree on: the minimap is player-follow, absent, or drawn somewhere outside the search box",
+  "rect": null,
   "verdict": "unsupported"
  },
  "Zu7QLACQXv8": {
@@ -268,6 +315,13 @@
   ],
   "score": 0.7152,
   "verdict": "ok"
+ },
+ "aWxjHR5GXRQ": {
+  "game": "valorant",
+  "map": "split",
+  "note": "no rotation its own frames agree on: the minimap is player-follow, absent, or drawn somewhere outside the search box",
+  "rect": null,
+  "verdict": "unsupported"
  },
  "czketOpD2p8": {
   "agree": "11/11",
@@ -325,6 +379,95 @@
   ],
   "score": 0.8056,
   "verdict": "ok"
+ },
+ "ffopLLNJfkQ": {
+  "game": "valorant",
+  "map": "split",
+  "note": "no rotation its own frames agree on: the minimap is player-follow, absent, or drawn somewhere outside the search box",
+  "rect": null,
+  "verdict": "unsupported"
+ },
+ "k7GGhJ0NJCU": {
+  "agree": "12/12",
+  "frame": "260-stand-poster.webp",
+  "frames_scanned": 14,
+  "game": "valorant",
+  "map": "split",
+  "rect": [
+   23,
+   36,
+   231,
+   90
+  ],
+  "runners_up": [
+   {
+    "rect": [
+     22,
+     35,
+     232
+    ],
+    "score": 0.7242
+   },
+   {
+    "rect": [
+     23,
+     36,
+     231
+    ],
+    "score": 0.7213
+   },
+   {
+    "rect": [
+     23,
+     36,
+     231
+    ],
+    "score": 0.7008
+   }
+  ],
+  "score": 0.7259,
+  "verdict": "ok"
+ },
+ "kEyU458r2g0": {
+  "agree": "1/4",
+  "frame": "101-stand-poster.webp",
+  "frames_scanned": 14,
+  "game": "valorant",
+  "map": "split",
+  "rect": [
+   39,
+   25,
+   239,
+   90
+  ],
+  "runners_up": [
+   {
+    "rect": [
+     81,
+     64,
+     240
+    ],
+    "score": 0.678
+   },
+   {
+    "rect": [
+     81,
+     43,
+     241
+    ],
+    "score": 0.5538
+   },
+   {
+    "rect": [
+     81,
+     49,
+     241
+    ],
+    "score": 0.5372
+   }
+  ],
+  "score": 0.7771,
+  "verdict": "unsupported"
  },
  "qXlyMGB0noM": {
   "game": "valorant",
