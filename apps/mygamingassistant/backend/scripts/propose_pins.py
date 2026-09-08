@@ -110,6 +110,15 @@ def _mid(span: list) -> float:
 def cmd_extract(args) -> None:
     pack = _load_pack()
     lineups = _pack_lineups(pack, args.game, args.map, args.video)
+    if args.unpinned_only:
+        before = len(lineups)
+        lineups = [l for l in lineups if l.get("stand_anchor_x") is None]
+        # `apply` refuses to overwrite these anyway, so including them costs no
+        # correctness -- it costs audit time, which is the scarce resource. Every
+        # already-pinned lineup adds a tile to the --audit sheet that a human has
+        # to look at and then ignore. Ascent would have added 124 of them.
+        print(f"  --unpinned-only: skipping {before - len(lineups)} lineup(s) "
+              f"that already carry an operator stand pin")
     if not lineups:
         raise SystemExit("no matching lineups in pack")
 
@@ -230,10 +239,20 @@ def cmd_apply(args) -> None:
     # honesty is gone. Leave targets unpinned until there is real landing
     # evidence for them.
     centroids = _zone_centroids(args.map) if args.target_fallback else {}
-    changed = filled = 0
+    changed = filled = kept = 0
     for l in pack["lineups"]:
         p = proposals.get(l["id"])
         if not p:
+            continue
+        # An anchor already in the pack was placed by an operator — either by
+        # hand in MinimapPinEditor or by an earlier audited pass. A detection is
+        # weaker evidence than that, and overwriting is invisible: the pin moves
+        # but stand_anchor_x stays non-null, so MapLineupPins keeps drawing it as
+        # confirmed. Skip by default; --overwrite is for deliberately redoing a
+        # map. Ascent is why this exists — 124 of its 241 lineups were already
+        # pinned before the HUD detector ran over the other 117.
+        if l.get("stand_anchor_x") is not None and not args.overwrite:
+            kept += 1
             continue
         if p.get("stand"):
             l["stand_anchor_x"] = round(float(p["stand"]["x"]), 4)
@@ -247,6 +266,9 @@ def cmd_apply(args) -> None:
             l["target_anchor_y"] = round(cy, 4)
             filled += 1
         changed += 1
+    if kept:
+        print(f"  {kept} lineup(s) already carry an operator stand pin -- left "
+              f"alone (pass --overwrite to replace them)")
     if filled:
         print(f"  {filled} target pin(s) filled from the target zone's centroid")
     if args.dry_run:
@@ -309,12 +331,22 @@ def main() -> None:
     e.add_argument("--spans", help="<agent>-spans/<map>.json for stand/landing windows")
     e.add_argument("--from-posters", help="local dir holding the lineup poster webps")
     e.add_argument("--workdir", help="where to write extracted frames")
+    e.add_argument("--unpinned-only", action="store_true",
+                   help="skip lineups that already have a stand pin. `apply` "
+                        "will not overwrite them regardless; this keeps them off "
+                        "the audit sheet so nobody reads tiles for pins that are "
+                        "already placed")
     e.set_defaults(func=cmd_extract)
 
     a = sub.add_parser("apply", help="write proposed anchors into the pack")
     a.add_argument("--map")
     a.add_argument("--proposals", required=True)
     a.add_argument("--dry-run", action="store_true")
+    a.add_argument("--overwrite", action="store_true",
+                   help="replace stand pins that are already in the pack. Off by "
+                        "default: an existing anchor is operator-placed evidence, "
+                        "and a detection silently overwriting it looks identical "
+                        "on screen")
     a.add_argument("--target-fallback", action="store_true",
                    help="fill any missing target pin with its target zone's "
                         "centroid. RARELY WHAT YOU WANT: LineupRead.effective_"
