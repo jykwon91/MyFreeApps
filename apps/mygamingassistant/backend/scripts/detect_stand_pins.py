@@ -277,7 +277,12 @@ def main() -> None:
     ap.add_argument("--min-score", type=float, default=15.0,
                     help="drop a detection whose marker contrast is below this "
                          "(does NOT separate the known misses -- run --audit)")
-    ap.add_argument("--rotation", type=int, default=90)
+    ap.add_argument("--rotation", type=int,
+                    help="CCW degrees taking the HUD minimap to the reference. "
+                         "Defaults to whatever fit_hud_rect recorded for these "
+                         "sources -- pass it only to override, and note that a "
+                         "value disagreeing with the calibration means detecting "
+                         "against a rect fitted under different geometry")
     ap.add_argument("--box", type=int, default=340)
     ap.add_argument("--min-fit", type=float, default=0.35,
                     help="drop a frame whose own HUD fit scores below this "
@@ -299,17 +304,33 @@ def main() -> None:
     for r in reqs:
         frame = r.get("stand_frame")
         row = cal.get(Path(frame).parent.name, {}) if frame else {}
-        if not frame or not (row.get("verdict") == "ok" or row.get("eyeballed")):
+        usable = row.get("rect") and (row.get("verdict") == "ok"
+                                      or row.get("eyeballed"))
+        if not frame or not usable:
             skipped += 1
             continue
         by_video.setdefault(Path(frame).parent.name, []).append(r)
 
-    ref_gray, ref_mask = fit_hud_rect._reference(args.map, args.game, args.rotation)
+    # Rotation is per SOURCE -- creators fix the minimap's orientation differently,
+    # so one map's sources legitimately disagree (Summit: 0 and 90 in one batch).
+    # fit_hud_rect resolved each one and stored it in that rect's 4th slot; read it
+    # back rather than defaulting, or a frame gets registered against different
+    # geometry than its rect was fitted under and simply lands somewhere wrong,
+    # silently. One reference per distinct rotation, built once and shared.
+    if not by_video:
+        raise SystemExit("no calibrated source for this map -- run fit_hud_rect first")
+    refs = {}
+    for v in by_video:
+        rot = args.rotation if args.rotation is not None else cal[v]["rect"][3]
+        if rot not in refs:
+            refs[rot] = fit_hud_rect._reference(args.map, args.game, rot)
     playable = _playable_mask(args.map, args.game, REG_SIZE)
 
     proposals, dropped, dists, cells, weak = [], [], [], [], 0
     for vid, group in sorted(by_video.items()):
         rect = cal[vid]["rect"]
+        ref_gray, ref_mask = refs[args.rotation if args.rotation is not None
+                                  else rect[3]]
         squares: dict[str, np.ndarray] = {}
         for r in group:
             fit = _register(Path(r["stand_frame"]), ref_gray, ref_mask, rect, args)
