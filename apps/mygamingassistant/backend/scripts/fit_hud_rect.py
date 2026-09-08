@@ -182,6 +182,48 @@ def _fit_frame(frame: Image.Image, ref_gray: np.ndarray, ref_mask: np.ndarray,
     return best
 
 
+ROTATIONS = (0, 90, 180, 270)
+ROTATION_MARGIN = 1.6   # the winner must beat the runner-up by this factor
+
+
+def _detect_rotation(frames: list[Path], refs: dict, args) -> int | None:
+    """Pick the rotation taking THIS SOURCE's HUD minimap onto the reference.
+
+    Rotation is per SOURCE, not per map. Valorant lets a player fix the minimap's
+    orientation, and creators pick differently: on Summit, ``zwwwAiHOpu4`` draws B
+    left and A right while ``3GUKAYiurQk`` draws B top and A bottom -- the same map,
+    90 degrees apart, in the same batch. (The reference PNG's own orientation is
+    arbitrary too, so even a single-source map has no guessable answer: Haven's
+    usable sources are all 90, Summit's split 0 and 90.)
+
+    Getting it wrong is quiet and expensive: the fit finds nothing at any scale,
+    bottoms out at ``--min-size``, and reports the source ``unsupported`` -- which
+    reads as "this creator is unfittable" rather than "you asked the wrong
+    question". All nine Summit sources came back that way under a fixed 90.
+
+    Cheap to just measure, since there are four candidates and the fitter already
+    scores a frame against a rotated reference. Each frame votes for its own best,
+    and only when that beats its own runner-up by ``ROTATION_MARGIN`` -- pooling
+    raw scores across frames instead lets one frame with an illegible minimap
+    outvote the rest. Returns None when no frame can tell, which is the source
+    saying it has no fixed minimap to fit.
+    """
+    votes: dict[int, int] = {}
+    for f in frames:
+        im = Image.open(f)
+        s = {r: _fit_frame(im, g, m, args.box, args.min_size, args.box, 2)[0]
+             for r, (g, m) in refs.items()}
+        (best, hi), (_, second) = sorted(s.items(), key=lambda kv: -kv[1])[:2]
+        if hi >= 0.3 and hi >= second * ROTATION_MARGIN:
+            votes[best] = votes.get(best, 0) + 1
+    if not votes:
+        return None
+    ranked = sorted(votes.items(), key=lambda kv: -kv[1])
+    if len(ranked) > 1 and ranked[1][1] >= ranked[0][1]:
+        return None
+    return ranked[0][0]
+
+
 def _fit_source(frames: list[Path], ref_gray, ref_mask, args) -> dict:
     results = []
     for f in frames:
@@ -225,8 +267,15 @@ def main() -> None:
     ap.add_argument("--posters", required=True,
                     help="the map's poster root (fits every source under it), "
                          "or one source's poster dir")
-    ap.add_argument("--rotation", type=int, default=90,
-                    help="CCW degrees taking the HUD minimap to the reference")
+    ap.add_argument("--rotation", default="auto",
+                    help="CCW degrees taking the HUD minimap to the reference, or "
+                         "'auto' (default) to detect it per source by frame vote. "
+                         "It varies BY SOURCE, not by map -- Valorant lets a "
+                         "player fix the minimap's orientation and creators choose "
+                         "differently, so Summit's zwwwAiHOpu4 is 0 and its "
+                         "3GUKAYiurQk is 90. A wrong value does not fail loudly, "
+                         "it just calls the source unsupported, so passing this "
+                         "explicitly is for one-source debugging only")
     ap.add_argument("--box", type=int, default=340, help="HUD search box, px")
     ap.add_argument("--scan", type=int, default=14,
                     help="frames to fit per source; more helps when many posters "
@@ -246,12 +295,40 @@ def main() -> None:
     if not dirs:
         raise SystemExit(f"no source dir with *-stand-poster.webp under {root}")
 
-    ref_gray, ref_mask = _reference(args.map, args.game, args.rotation)
+    auto_rot = str(args.rotation).lower() == "auto"
+    # One reference per rotation, built once: rotating and gradient-ing a 1024px
+    # PNG is the expensive part, and every source re-uses the same four.
+    refs = ({r: _reference(args.map, args.game, r) for r in ROTATIONS} if auto_rot
+            else {int(args.rotation): _reference(args.map, args.game,
+                                                 int(args.rotation))})
     out = Path(args.out)
     rows = json.loads(out.read_text(encoding="utf-8")) if out.is_file() else {}
 
     for d in dirs:
         frames = sorted(d.glob("*-stand-poster.webp"))[:args.scan]
+        if auto_rot:
+            # Vote on a cheap prefix; the full scan is what the rect fit needs,
+            # not what picking one of four orientations needs.
+            rot = _detect_rotation(frames[:4], refs, args)
+            if rot is None:
+                # A rect somebody eyeballed outranks this, same as below: keep it
+                # rather than overwrite a human's confirmation with a null.
+                if rows.get(d.name, {}).get("eyeballed"):
+                    print(f"{d.name:14} no rotation its frames agree on, but its "
+                          f"rect is eyeballed -- kept")
+                    continue
+                print(f"{d.name:14} no rotation its frames agree on -- no fixed "
+                      f"minimap to fit; skipped")
+                rows[d.name] = {"rect": None, "verdict": "unsupported",
+                                "map": args.map, "game": args.game,
+                                "note": "no rotation its own frames agree on: the "
+                                        "minimap is player-follow, absent, or drawn "
+                                        "somewhere outside the search box"}
+                continue
+            args.rotation = rot
+        else:
+            args.rotation = int(args.rotation)
+        ref_gray, ref_mask = refs[args.rotation]
         row = _fit_source(frames, ref_gray, ref_mask, args)
         # A human overlay check outranks the fitter, so carry `eyeballed` forward
         # across re-fits — otherwise re-running the tool silently demotes a source
