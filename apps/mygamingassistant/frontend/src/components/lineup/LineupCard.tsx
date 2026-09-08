@@ -5,9 +5,9 @@
  *   thumbnail  — stand image only (small), title underneath, used in lists
  *
  * The expanded variant shares its pane primitives (StandPane, AimPane,
- * ClipView, ThrowPlaceholder, LandingPane) with GlanceBoardTile via
- * LineupPanes.tsx — both surfaces converge on the same 4-pane shape so a
- * change in pane behavior lands on both at once. AimPane applies a 2× zoom
+ * ClipView, ThrowPlaceholder, LandingPane) with GlanceBoardTile — both
+ * surfaces import the same one-component-per-file primitives, so a change
+ * in pane behavior lands on both at once. AimPane applies a 2× zoom
  * centered on the persisted anchor coords (replacing the older red dot).
  *
  * Pin toggle:
@@ -17,13 +17,11 @@
 import { Clock } from "lucide-react";
 import type { Lineup } from "@/types/game";
 import PinButton from "./PinButton";
-import {
-  AimPane,
-  ClipView,
-  LandingPane,
-  StandPane,
-  ThrowPlaceholder,
-} from "./LineupPanes";
+import { AimPane } from "./AimPane";
+import { ClipView } from "./ClipView";
+import { LandingPane } from "./LandingPane";
+import { StandPane } from "./StandPane";
+import { ThrowPlaceholder } from "./ThrowPlaceholder";
 
 interface LineupCardProps {
   lineup: Lineup;

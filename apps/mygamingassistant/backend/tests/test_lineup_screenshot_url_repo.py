@@ -99,7 +99,7 @@ async def test_setters_are_independent(db: AsyncSession):
 async def test_setters_do_not_clobber_sibling_clip_columns(db: AsyncSession):
     """Replacing a still must NOT null the matching clip column.
 
-    The operator may have both a clip and a still set on a pane (per LineupPanes
+    The operator may have both a clip and a still set on a pane (per the pane primitives
     fallback behavior — when both are present the clip wins). Replacing the
     still slot must leave the clip slot untouched so the prior clip continues
     to take precedence.

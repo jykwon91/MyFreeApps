@@ -20,22 +20,21 @@
  * Each pane does a distinct executional job: arrive (stand), look (aim),
  * throw (clip motion), land (target zone). All four render unconditionally
  * — gracefully degrades per-pane when its data is null. The AIM pane
- * applies a 2× zoom transform centered on screen middle (see AimPane in
- * LineupPanes.tsx for the full rationale).
+ * applies a 2× zoom transform centered on screen middle (see AimPane.tsx
+ * for the full rationale).
  *
  * Pane primitives (ScreenshotHalf, ClipView, ThrowPlaceholder, LandingPane,
- * StandPane, AimPane) live in LineupPanes.tsx so LineupCard's expanded
- * variant renders the identical shape inside the detail-panel.
+ * StandPane, AimPane) each live in their own file alongside this one, so
+ * LineupCard's expanded variant renders the identical shape inside the
+ * detail-panel.
  */
 import type { ReactNode } from "react";
 import type { Lineup } from "@/types/game";
-import {
-  AimPane,
-  ClipView,
-  LandingPane,
-  StandPane,
-  ThrowPlaceholder,
-} from "./LineupPanes";
+import { AimPane } from "./AimPane";
+import { ClipView } from "./ClipView";
+import { LandingPane } from "./LandingPane";
+import { StandPane } from "./StandPane";
+import { ThrowPlaceholder } from "./ThrowPlaceholder";
 import { DEFAULT_KNOBS } from "@/hooks/useDesignKnobs";
 import type { DesignKnobs } from "@/hooks/useDesignKnobs";
 import MicroClipShiftOverlay from "./MicroClipShiftOverlay";
@@ -55,7 +54,7 @@ interface GlanceBoardStoryboardProps {
 // ---------------------------------------------------------------------------
 // PaneSlot — wraps each pane in a group/pane div so hover-scoped affordances
 // (PaneReplaceOverlay) resolve to THIS pane only, not the whole tile. The
-// pane primitives in LineupPanes.tsx own their own ``flex-1 min-w-0`` so the
+// the pane primitives own their own ``flex-1 min-w-0`` so the
 // wrapper just adds positioning context — no flex sizing is moved here.
 // ---------------------------------------------------------------------------
 function PaneSlot({

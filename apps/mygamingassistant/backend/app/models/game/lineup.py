@@ -146,7 +146,7 @@ class Lineup(Base):
     # Bare MinIO keys like clip_url / landing_clip_url; presigned at read time
     # in lineup_service._build_read. Best-effort and orthogonal to lineup
     # validity — NULL gracefully degrades to the existing stand/aim stills in
-    # LineupPanes.StandPane / AimPane. See
+    # StandPane.tsx / AimPane.tsx. See
     # app/services/ingestion/micro_clip_generator.py.
     stand_clip_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     aim_clip_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
