@@ -43,6 +43,11 @@ export function PinGroup({
   onPointerDown,
   onKeyDown,
 }: PinGroupProps) {
+  function cursor(): string {
+    if (disabled) return "not-allowed";
+    return isDragging ? "grabbing" : "grab";
+  }
+
   return (
     <g
       tabIndex={disabled ? -1 : 0}
@@ -50,7 +55,7 @@ export function PinGroup({
       aria-label={ariaLabel}
       aria-valuetext={ariaValueText}
       style={{
-        cursor: disabled ? "not-allowed" : isDragging ? "grabbing" : "grab",
+        cursor: cursor(),
         pointerEvents: disabled ? "none" : "auto",
         opacity: disabled ? 0.5 : 1,
         outline: "none",
