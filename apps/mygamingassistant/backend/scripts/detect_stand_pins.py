@@ -48,6 +48,54 @@ Radii scale with the HUD rect, since a creator's UI scale sets both. A source ne
 several stand frames for the median to be a background at all; below
 ``MIN_BG_FRAMES`` the marker would survive into it and cancel itself out.
 
+## Why the ring is NOT checked for isotropy -- three rejected variants
+
+Averaging the annulus is what makes the score robust, and it looks like what
+makes it blind in one specific way: a dark LINE through a pixel -- a
+registration seam, a map edge, a scenery-bleed streak -- has two directions as
+dark as the core and ten of bright plate, so the annulus MEAN still comes out
+positive and the line scores like a marker. Sampling the ring by direction and
+demanding the weakest one carry a fair share looks like the fix. It is not, in
+any of the three forms it has been tried:
+
+* **Isotropy as the ranking score**, two variants -- both traded 28-29 verified
+  pins for 5-9 possible repairs.
+* **Isotropy as a VETO** -- exclude line-shaped candidates, keep the annulus
+  mean as the ranking score. This was supposed to be the safe form: a veto
+  cannot re-rank the survivors, so it "cannot move a detection already on the
+  marker". That reasoning is wrong. A veto cannot re-rank, but it CAN delete
+  the winning peak itself, and the detection then falls to the next-best
+  place, which is wrong.
+
+Measured for the veto as ``min/mean`` ring contrast over 12 directions,
+re-registering every stand frame of all six mapped Valorant maps and diffing
+peaks against the shipped anchors -- 315 detections, 288 of them audited good:
+
+    ISO_MIN_FRAC   moved   of which were AUDITED pins knocked off their marker
+        0.15         69                      50
+        0.05         42                      29
+        0.00         37                      23
+       -0.10         18                      11
+       -0.25         10                       7
+       -0.40          7                       5
+       -0.55          1                       1
+       -0.70          0                       0
+
+At every threshold that moves anything, most of what moves is a correct pin
+being broken, against about one repair (sunset's "Top Middle", which did move
+off a scenery-bleed streak onto a real marker). The first threshold that
+breaks nothing vetoes nothing either.
+
+The premise is what fails. A marker's ring is bright because the light map
+PLATE shows through it, so a marker standing anywhere near a dark map feature
+has a dark arc and is anisotropic for a reason that has nothing to do with
+being a line. Across those 288 audited-good pins the statistic spans
+-0.64..0.83 and the 27 rejected ones span -0.53..0.72 -- the same range, with
+79 of the 288 CORRECT pins sitting below the 0.15 threshold that was supposed
+to catch only lines. There is no signal here to threshold. Do not try a fourth
+variant without first showing a statistic that separates those two
+distributions.
+
 ## Registering every frame, not every source
 
 A source's HUD rect is only fixed if that creator runs the minimap in fixed-map
