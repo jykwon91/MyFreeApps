@@ -110,6 +110,15 @@ def _mid(span: list) -> float:
 def cmd_extract(args) -> None:
     pack = _load_pack()
     lineups = _pack_lineups(pack, args.game, args.map, args.video)
+    if args.unpinned_only:
+        before = len(lineups)
+        lineups = [l for l in lineups if l.get("stand_anchor_x") is None]
+        # `apply` refuses to overwrite these anyway, so including them costs no
+        # correctness -- it costs audit time, which is the scarce resource. Every
+        # already-pinned lineup adds a tile to the --audit sheet that a human has
+        # to look at and then ignore. Ascent would have added 124 of them.
+        print(f"  --unpinned-only: skipping {before - len(lineups)} lineup(s) "
+              f"that already carry an operator stand pin")
     if not lineups:
         raise SystemExit("no matching lineups in pack")
 
@@ -322,6 +331,11 @@ def main() -> None:
     e.add_argument("--spans", help="<agent>-spans/<map>.json for stand/landing windows")
     e.add_argument("--from-posters", help="local dir holding the lineup poster webps")
     e.add_argument("--workdir", help="where to write extracted frames")
+    e.add_argument("--unpinned-only", action="store_true",
+                   help="skip lineups that already have a stand pin. `apply` "
+                        "will not overwrite them regardless; this keeps them off "
+                        "the audit sheet so nobody reads tiles for pins that are "
+                        "already placed")
     e.set_defaults(func=cmd_extract)
 
     a = sub.add_parser("apply", help="write proposed anchors into the pack")
