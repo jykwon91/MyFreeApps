@@ -83,3 +83,4 @@ __pycache__/
 # --- Pin-proposer run artifacts (embed machine-local frame paths) ---
 *-pin-requests.json
 *-pin-proposals.json
+*-pin-audit.png

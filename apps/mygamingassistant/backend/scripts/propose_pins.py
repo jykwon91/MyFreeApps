@@ -6,17 +6,24 @@ per lineup by hand across ~870 lineups is the bottleneck. This tool pre-places
 both pins so the operator only NUDGES a near-right pin in MinimapPinEditor
 instead of placing from a blank minimap.
 
-Approach (validated 2026-07-20): NOT classical CV — the in-game minimap is faint,
-low-detail, and player-rotated, so arrow-detection + registration is brittle.
-Instead an LLM vision localizer reads the STAND/LANDING frame + our reference
-minimap + the lineup's known zone (a hard prior) and places a normalized pin, the
-same way a human studying the frame does. Output feeds MinimapPinEditor via the
-existing anchor plumbing (stand_anchor_*/target_anchor_* round-trip through
-LINEUP_SCALAR_FIELDS end-to-end — no app change needed).
+**For STAND pins, use `detect_stand_pins.py` instead — do not fan out localizers.**
+The 2026-07-20 note below said classical CV was too brittle for the faint,
+player-rotated minimap. That was true of arrow-detection against a per-source
+rect; it is not true once each frame is registered on its own and the player is
+found as the one thing that MOVES against a per-source background median.
+`detect_stand_pins.py` does that, deterministically and for free, at 51 of 53 on
+Haven — better than a model call per twelve lineups, and repeatable.
 
-STAND pins are strong (player marker + callouts). TARGET pins are weaker — a
-utility's landing isn't marked on the in-game minimap — so target proposals are
+The localizer path remains the answer for TARGET pins, and only for them: the
+in-game minimap marks the player, never where a utility lands, so no amount of
+registration finds a target. An LLM vision localizer reads the LANDING frame +
+our reference minimap + the lineup's known zone (a hard prior) and places a
+normalized pin the way a human studying the frame does. Those proposals are
 flagged low-confidence for the operator to scrutinize.
+
+Either way the output feeds MinimapPinEditor via the existing anchor plumbing
+(stand_anchor_*/target_anchor_* round-trip through LINEUP_SCALAR_FIELDS
+end-to-end — no app change needed).
 
 Pipeline (three deterministic modes here; the vision step is a subagent fan-out
 driven by PROPOSE_PINS_INSTRUCTIONS.md between `extract` and `apply`):
@@ -214,9 +221,14 @@ def cmd_apply(args) -> None:
     proposals = _load_proposals(args.proposals)
     # The HUD minimap marks the PLAYER, never where a utility lands, so a vision
     # pass over stand frames yields strong stand pins and no target evidence at
-    # all. Rather than invent a target, fall back to the centre of the lineup's
-    # own target zone — a deliberately coarse, clearly-labelled starting point
-    # the operator nudges, which still beats placing from a blank minimap.
+    # all. --target-fallback offers the target zone's centroid instead, but it is
+    # off by default and should usually stay off: LineupRead.effective_target_x
+    # already derives that exact centroid at read time, and MapLineupPins draws
+    # it as isGuess because target_anchor_x is null. Writing it into the pack
+    # moves no pin — it only sets target_anchor_x, which is precisely the flag
+    # that says "an operator placed this". The screen looks identical and the
+    # honesty is gone. Leave targets unpinned until there is real landing
+    # evidence for them.
     centroids = _zone_centroids(args.map) if args.target_fallback else {}
     changed = filled = 0
     for l in pack["lineups"]:
@@ -240,7 +252,10 @@ def cmd_apply(args) -> None:
     if args.dry_run:
         print(f"[dry-run] would set anchors on {changed} lineups (no write)")
         return
-    _PACK.write_text(json.dumps(pack, indent=2) + "\n", encoding="utf-8")
+    # ensure_ascii=False to match export_lineup_pack.py: the pack stores em-dashes
+    # as literal UTF-8, and escaping them here rewrites 189 unrelated title lines.
+    _PACK.write_text(json.dumps(pack, indent=2, ensure_ascii=False) + "\n",
+                     encoding="utf-8")
     print(f"wrote proposed anchors onto {changed} lineups in {_PACK.name}. "
           f"Import locally + eyeball/nudge in MinimapPinEditor before shipping.")
 
@@ -301,7 +316,12 @@ def main() -> None:
     a.add_argument("--proposals", required=True)
     a.add_argument("--dry-run", action="store_true")
     a.add_argument("--target-fallback", action="store_true",
-                   help="fill any missing target pin with its target zone's centroid")
+                   help="fill any missing target pin with its target zone's "
+                        "centroid. RARELY WHAT YOU WANT: LineupRead.effective_"
+                        "target_x already derives that same centroid at read "
+                        "time and the map flags it isGuess, so writing it into "
+                        "the pack changes nothing on screen except to relabel "
+                        "an honest guess as a confirmed pin")
     a.set_defaults(func=cmd_apply)
 
     r = sub.add_parser("render", help="overlay proposed pins on the reference minimap")
