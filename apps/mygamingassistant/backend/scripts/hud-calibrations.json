@@ -82,6 +82,47 @@
   "score": 0.7915,
   "verdict": "ok"
  },
+ "69sMI1UqbYk": {
+  "agree": "12/12",
+  "frame": "101-stand-poster.webp",
+  "frames_scanned": 14,
+  "game": "valorant",
+  "map": "ascent",
+  "rect": [
+   23,
+   36,
+   230,
+   90
+  ],
+  "runners_up": [
+   {
+    "rect": [
+     23,
+     36,
+     230
+    ],
+    "score": 0.7351
+   },
+   {
+    "rect": [
+     23,
+     36,
+     230
+    ],
+    "score": 0.7093
+   },
+   {
+    "rect": [
+     23,
+     36,
+     230
+    ],
+    "score": 0.7008
+   }
+  ],
+  "score": 0.7496,
+  "verdict": "ok"
+ },
  "6PbBfx6EuzM": {
   "agree": "11/11",
   "frame": "0-stand-poster.webp",
@@ -267,6 +308,47 @@
    }
   ],
   "score": 0.612,
+  "verdict": "ok"
+ },
+ "MMni5F7Pfl0": {
+  "agree": "9/9",
+  "frame": "269-stand-poster.webp",
+  "frames_scanned": 14,
+  "game": "valorant",
+  "map": "ascent",
+  "rect": [
+   22,
+   35,
+   232,
+   90
+  ],
+  "runners_up": [
+   {
+    "rect": [
+     22,
+     35,
+     232
+    ],
+    "score": 0.6546
+   },
+   {
+    "rect": [
+     22,
+     35,
+     232
+    ],
+    "score": 0.6471
+   },
+   {
+    "rect": [
+     22,
+     35,
+     232
+    ],
+    "score": 0.6389
+   }
+  ],
+  "score": 0.67,
   "verdict": "ok"
  },
  "P3FbvaUcB-A": {
@@ -466,7 +548,7 @@
  },
  "UsfCu5uL3Qs": {
   "game": "valorant",
-  "map": "lotus",
+  "map": "ascent",
   "note": "no rotation its own frames agree on: the minimap is player-follow, absent, or drawn somewhere outside the search box",
   "rect": null,
   "verdict": "unsupported"
@@ -556,6 +638,47 @@
    90
   ],
   "score": 0.7141,
+  "verdict": "ok"
+ },
+ "dgijTLxlLC4": {
+  "agree": "10/10",
+  "frame": "200-stand-poster.webp",
+  "frames_scanned": 14,
+  "game": "valorant",
+  "map": "ascent",
+  "rect": [
+   22,
+   35,
+   232,
+   90
+  ],
+  "runners_up": [
+   {
+    "rect": [
+     22,
+     35,
+     232
+    ],
+    "score": 0.6698
+   },
+   {
+    "rect": [
+     22,
+     35,
+     232
+    ],
+    "score": 0.5903
+   },
+   {
+    "rect": [
+     22,
+     35,
+     232
+    ],
+    "score": 0.5764
+   }
+  ],
+  "score": 0.6745,
   "verdict": "ok"
  },
  "ej8mSinpIs4": {
@@ -736,9 +859,112 @@
   "score": 0.7771,
   "verdict": "unsupported"
  },
+ "llo9vOgRrFw": {
+  "game": "valorant",
+  "map": "ascent",
+  "note": "no rotation its own frames agree on: the minimap is player-follow, absent, or drawn somewhere outside the search box",
+  "rect": null,
+  "verdict": "unsupported"
+ },
+ "mPE6_-Cip_M": {
+  "agree": "11/11",
+  "frame": "366-stand-poster.webp",
+  "frames_scanned": 14,
+  "game": "valorant",
+  "map": "ascent",
+  "rect": [
+   10,
+   23,
+   251,
+   90
+  ],
+  "runners_up": [
+   {
+    "rect": [
+     10,
+     23,
+     251
+    ],
+    "score": 0.721
+   },
+   {
+    "rect": [
+     9,
+     23,
+     252
+    ],
+    "score": 0.6952
+   },
+   {
+    "rect": [
+     9,
+     23,
+     252
+    ],
+    "score": 0.6912
+   }
+  ],
+  "score": 0.751,
+  "verdict": "ok"
+ },
+ "oe5FvG5-59k": {
+  "game": "valorant",
+  "map": "ascent",
+  "note": "no rotation its own frames agree on: the minimap is player-follow, absent, or drawn somewhere outside the search box",
+  "rect": null,
+  "verdict": "unsupported"
+ },
  "qXlyMGB0noM": {
   "game": "valorant",
   "map": "summit",
+  "note": "no rotation its own frames agree on: the minimap is player-follow, absent, or drawn somewhere outside the search box",
+  "rect": null,
+  "verdict": "unsupported"
+ },
+ "rrPhSQYLEMg": {
+  "agree": "11/11",
+  "frame": "109-stand-poster.webp",
+  "frames_scanned": 14,
+  "game": "valorant",
+  "map": "ascent",
+  "rect": [
+   22,
+   35,
+   232,
+   90
+  ],
+  "runners_up": [
+   {
+    "rect": [
+     22,
+     35,
+     232
+    ],
+    "score": 0.6848
+   },
+   {
+    "rect": [
+     22,
+     35,
+     232
+    ],
+    "score": 0.6816
+   },
+   {
+    "rect": [
+     22,
+     35,
+     232
+    ],
+    "score": 0.6736
+   }
+  ],
+  "score": 0.6973,
+  "verdict": "ok"
+ },
+ "uTpmDmpzt8E": {
+  "game": "valorant",
+  "map": "ascent",
   "note": "no rotation its own frames agree on: the minimap is player-follow, absent, or drawn somewhere outside the search box",
   "rect": null,
   "verdict": "unsupported"
