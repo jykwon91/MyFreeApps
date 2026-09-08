@@ -123,6 +123,13 @@
   "score": 0.5776,
   "verdict": "ok"
  },
+ "979CIGlymyM": {
+  "game": "valorant",
+  "map": "lotus",
+  "note": "no rotation its own frames agree on: the minimap is player-follow, absent, or drawn somewhere outside the search box",
+  "rect": null,
+  "verdict": "unsupported"
+ },
  "99XDk2UyO5I": {
   "agree": "1/1",
   "eyeballed": "eyeballed 2026-09-07 on 192-stand-poster: alignment is exact where the map is drawn. Only one frame is informative because this source circle-clips the minimap, so most posters show too little to fit",
@@ -221,9 +228,57 @@
   "score": 0.7711,
   "verdict": "ok"
  },
+ "Gb0RESvGUZw": {
+  "agree": "11/11",
+  "frame": "244-stand-poster.webp",
+  "frames_scanned": 14,
+  "game": "valorant",
+  "map": "lotus",
+  "rect": [
+   23,
+   36,
+   231,
+   0
+  ],
+  "runners_up": [
+   {
+    "rect": [
+     23,
+     36,
+     231
+    ],
+    "score": 0.5871
+   },
+   {
+    "rect": [
+     22,
+     35,
+     232
+    ],
+    "score": 0.5791
+   },
+   {
+    "rect": [
+     22,
+     35,
+     232
+    ],
+    "score": 0.5749
+   }
+  ],
+  "score": 0.612,
+  "verdict": "ok"
+ },
  "P3FbvaUcB-A": {
   "game": "valorant",
   "map": "summit",
+  "note": "no rotation its own frames agree on: the minimap is player-follow, absent, or drawn somewhere outside the search box",
+  "rect": null,
+  "verdict": "unsupported"
+ },
+ "Ph0O-IF71ew": {
+  "game": "valorant",
+  "map": "lotus",
   "note": "no rotation its own frames agree on: the minimap is player-follow, absent, or drawn somewhere outside the search box",
   "rect": null,
   "verdict": "unsupported"
@@ -368,9 +423,50 @@
   "score": 0.7463,
   "verdict": "ok"
  },
+ "UOjxEWdYg7U": {
+  "agree": "1/5",
+  "frame": "126-stand-poster.webp",
+  "frames_scanned": 14,
+  "game": "valorant",
+  "map": "lotus",
+  "rect": [
+   31,
+   25,
+   240,
+   0
+  ],
+  "runners_up": [
+   {
+    "rect": [
+     22,
+     76,
+     240
+    ],
+    "score": 0.4928
+   },
+   {
+    "rect": [
+     58,
+     81,
+     241
+    ],
+    "score": 0.4115
+   },
+   {
+    "rect": [
+     71,
+     64,
+     242
+    ],
+    "score": 0.3619
+   }
+  ],
+  "score": 0.5362,
+  "verdict": "unsupported"
+ },
  "UsfCu5uL3Qs": {
   "game": "valorant",
-  "map": "sunset",
+  "map": "lotus",
   "note": "no rotation its own frames agree on: the minimap is player-follow, absent, or drawn somewhere outside the search box",
   "rect": null,
   "verdict": "unsupported"
@@ -517,6 +613,47 @@
   "rect": null,
   "verdict": "unsupported"
  },
+ "iGA1BeLmEqU": {
+  "agree": "1/5",
+  "frame": "122-stand-poster.webp",
+  "frames_scanned": 14,
+  "game": "valorant",
+  "map": "lotus",
+  "rect": [
+   24,
+   13,
+   241,
+   0
+  ],
+  "runners_up": [
+   {
+    "rect": [
+     35,
+     67,
+     240
+    ],
+    "score": 0.5187
+   },
+   {
+    "rect": [
+     72,
+     67,
+     240
+    ],
+    "score": 0.49
+   },
+   {
+    "rect": [
+     74,
+     0,
+     240
+    ],
+    "score": 0.4024
+   }
+  ],
+  "score": 0.5292,
+  "verdict": "unsupported"
+ },
  "k7GGhJ0NJCU": {
   "agree": "12/12",
   "frame": "260-stand-poster.webp",
@@ -660,6 +797,47 @@
   "note": "no rotation its own frames agree on: the minimap is player-follow, absent, or drawn somewhere outside the search box",
   "rect": null,
   "verdict": "unsupported"
+ },
+ "yRfCBtiYDMg": {
+  "agree": "9/9",
+  "frame": "35-stand-poster.webp",
+  "frames_scanned": 12,
+  "game": "valorant",
+  "map": "lotus",
+  "rect": [
+   29,
+   45,
+   273,
+   0
+  ],
+  "runners_up": [
+   {
+    "rect": [
+     29,
+     45,
+     273
+    ],
+    "score": 0.6871
+   },
+   {
+    "rect": [
+     29,
+     45,
+     273
+    ],
+    "score": 0.6629
+   },
+   {
+    "rect": [
+     29,
+     45,
+     273
+    ],
+    "score": 0.6525
+   }
+  ],
+  "score": 0.6943,
+  "verdict": "ok"
  },
  "zwwwAiHOpu4": {
   "agree": "9/9",
