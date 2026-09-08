@@ -19,7 +19,8 @@
  */
 import { ImageOff } from "lucide-react";
 import type { Lineup } from "@/types/game";
-import { CornerLabel, ScreenshotHalf } from "./LineupPanes";
+import { CornerLabel } from "./CornerLabel";
+import { ScreenshotHalf } from "./ScreenshotHalf";
 
 interface LineupStillPreviewProps {
   lineup: Lineup;
@@ -31,7 +32,7 @@ interface LineupStillPreviewProps {
 // Fallback chain (priority order):
 //   1. landing_screenshot_url (real still image)
 //   2. "Lands in: <zone>" text card — verbatim shape reused from
-//      LineupPanes.tsx's LandingPane text fallback, so the two surfaces read
+//      LandingPane.tsx's text fallback, so the two surfaces read
 //      identically when neither has motion.
 //   3. em-dash, when the zone itself is also null (already covered by the
 //      `targetZoneName ?? "—"` fallback below).
