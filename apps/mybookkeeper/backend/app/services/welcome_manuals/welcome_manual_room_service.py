@@ -166,10 +166,7 @@ async def reorder_rooms(
                 "room_ids must be a permutation of the manual's current rooms",
             )
 
-        room_by_id = {r.id: r for r in existing}
-        for index, room_id in enumerate(room_ids):
-            room_by_id[room_id].display_order = index
-        await db.flush()
-
-        ordered = [room_by_id[room_id] for room_id in room_ids]
+        ordered = await welcome_manual_room_repo.set_display_order(
+            db, manual.id, room_ids,
+        )
         return [WelcomeManualRoomResponse.model_validate(r) for r in ordered]

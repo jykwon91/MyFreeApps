@@ -106,6 +106,25 @@ async def update(
     return room
 
 
+async def set_display_order(
+    db: AsyncSession,
+    manual_id: uuid.UUID,
+    room_ids: list[uuid.UUID],
+) -> list[WelcomeManualRoom]:
+    """Renumber a manual's rooms so ``display_order`` matches ``room_ids``.
+
+    The caller is responsible for having verified that ``room_ids`` is a
+    permutation of the manual's current rooms -- this writes whatever order it
+    is given. Returns the rooms in the new order.
+    """
+    rooms = await list_by_manual(db, manual_id)
+    room_by_id = {r.id: r for r in rooms}
+    for index, room_id in enumerate(room_ids):
+        room_by_id[room_id].display_order = index
+    await db.flush()
+    return [room_by_id[room_id] for room_id in room_ids]
+
+
 async def delete_by_id(
     db: AsyncSession,
     room_id: uuid.UUID,
