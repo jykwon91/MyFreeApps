@@ -19,6 +19,10 @@
 #   - portable .py / .ps1 pipeline tooling (no hardcoded operator path)
 #   - *-lineup-expert.md            — path-clean domain knowledge
 #   - <agent>-spans/<map>.json      — structured ingest source-of-truth
+#   - <agent>-spans/<map>.overrides.json — the frame-studied span corrections
+#     and exclusions merge_spans.py applies on top of localizer output. Without
+#     it the batch is not reproducible: re-running the merge from the raw task
+#     outputs alone would silently re-introduce every span the operator replaced.
 #   - *_items.json                  — per-chapter work lists (localization input)
 #   - *_accept.json                 — externalized accept mappings (gating input)
 #   - .env.r2.example
@@ -79,6 +83,11 @@ _*.log
 # --- Python bytecode cache ---
 __pycache__/
 *.pyc
+
+# --- Frame-study contact sheets (regenerable via framestudy/frames.sh) ---
+y_*.png
+q_*.png
+y_*/
 
 # --- Pin-proposer run artifacts (embed machine-local frame paths) ---
 *-pin-requests.json
