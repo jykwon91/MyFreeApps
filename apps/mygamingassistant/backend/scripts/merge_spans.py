@@ -28,10 +28,11 @@ all. No override can repair that -- there is no frame to point at -- so the row 
 the exclusion block below for why that beats shipping a clip of something else.
 
 Usage:  python merge_spans.py <agent> <map> <task-output> [...]
-            [--override <overrides.json> | --no-override]
+            [--pack <stem>] [--override <overrides.json> | --no-override]
 
-<agent>-spans/<map>.overrides.json is applied automatically when present, so the shipped
-pack is reproducible from the raw task outputs with no extra flags.
+<agent>-spans/<stem>.overrides.json is applied automatically when present, so the shipped
+pack is reproducible from the raw task outputs with no extra flags. `--pack` selects a
+non-default stem for a second source on the same map, exactly as ingest_agent.py does.
 """
 import json
 import sys
@@ -86,21 +87,34 @@ argv = sys.argv[1:]
 if len(argv) < 3:
     raise SystemExit(
         "usage: merge_spans.py <agent> <map> <task-output> [...] "
-        "[--override <overrides.json> | --no-override]"
+        "[--pack <stem>] [--override <overrides.json> | --no-override]"
     )
 agent, map_slug, argv = argv[0], argv[1], argv[2:]
+# `--pack <stem>` mirrors ingest_agent.py's flag and must exist here for the same reason: recut
+# keys clips by the pack's video id, so two sources for one map CANNOT share a pack file and a
+# second source lives at `<map>-2.json` beside the first. Without this flag the merge would always
+# resolve `<map>.json` and quietly overwrite source 1's shipped pack with source 2's rows.
+STEM = map_slug
+if "--pack" in argv:
+    i = argv.index("--pack")
+    if i + 1 >= len(argv):
+        raise SystemExit("ABORT - --pack needs a file stem")
+    STEM = argv[i + 1]
+    argv = argv[:i] + argv[i + 2:]
+
 # Same layout ingest_agent.py uses, resolved from this file so the script works from any cwd.
-PACK = ROOT / "scripts" / f"{agent}-spans" / f"{map_slug}.json"
+PACK = ROOT / "scripts" / f"{agent}-spans" / f"{STEM}.json"
 if not PACK.is_file():
     raise SystemExit(
-        f"ABORT - no spans pack at {PACK}. Run `ingest_agent.py {agent} {map_slug} plan` first."
+        f"ABORT - no spans pack at {PACK}. Run "
+        f"`ingest_agent.py {agent} {map_slug} plan --pack {STEM}` first."
     )
 # The override file is picked up AUTOMATICALLY from beside the pack when it exists. It is not an
 # optional extra: the merge rewrites the pack from scratch, so re-running without the overrides
 # would silently restore every gate-passed span the operator measured by hand and re-admit every
 # excluded row -- a regression that looks like a clean successful run. Pass --no-override only
 # when you deliberately want the raw localizer output.
-DEFAULT_OVERRIDE = PACK.parent / f"{map_slug}.overrides.json"
+DEFAULT_OVERRIDE = PACK.parent / f"{STEM}.overrides.json"
 
 overrides, prov, excluded = {}, {}, {}
 ov_path = None

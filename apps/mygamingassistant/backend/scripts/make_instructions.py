@@ -7,7 +7,11 @@ bucket invites drift in the GENERAL part — which is where the hard-won rules l
 source doc and rewrites only the map/source-specific spans, leaving everything else byte-identical,
 and prints a full diff so the rewrite is auditable before it is written.
 
-  python make_instructions.py FADE summit ascent [--apply]
+  python make_instructions.py FADE summit ascent [--pack <stem>] [--apply]
+
+`--pack <stem>` selects the title-grammar bucket and names the output doc when a map has more than
+one source (the second source's pack is `<map>-2.json`, so its bucket is keyed `<map>-2` too).
+Without it both stem and doc default to the map slug, which is the single-source case.
 
 Two kinds of rewrite:
   * the map NAME, as a word, anywhere (title line, prose, "the Summit callouts").
@@ -38,29 +42,42 @@ def opt(flag):
     return sys.argv[sys.argv.index(flag) + 1] if flag in sys.argv else None
 
 
-VIDEO, CREATOR = opt("--video"), opt("--creator")
+VIDEO, CREATOR, PACK = opt("--video"), opt("--creator"), opt("--pack")
 pos = [a for a in sys.argv[1:] if not a.startswith("--")]
-if VIDEO:
-    pos = [p for p in pos if p != VIDEO]
-if CREATOR:
-    pos = [p for p in pos if p != CREATOR]
+for consumed in (VIDEO, CREATOR, PACK):
+    if consumed:
+        pos = [p for p in pos if p != consumed]
 if len(pos) < 3:
     raise SystemExit(__doc__)
 AGENT, SRC_MAP, DST_MAP = pos[0], pos[1].lower(), pos[2].lower()
+
+# `--pack <stem>` mirrors ingest_agent.py / build_items.py / merge_spans.py, and exists here for a
+# sharper reason than parity: EXAMPLES describes ONE CREATOR's title grammar and HUD behaviour, so
+# a second source for a map that reused the first source's bucket would be localized against the
+# wrong grammar entirely -- wrong stand/target parsing, wrong advice about the chapter open. The
+# doc name is keyed on the stem for the same reason: two sources for one map are two docs.
+STEM = PACK or DST_MAP
 
 cfg = MAPS.get(DST_MAP)
 if cfg is None:
     raise SystemExit(f"ABORT - no callouts for {DST_MAP!r}. Add an entry to MAPS (derive it with "
                      f"`derive_callouts.py {DST_MAP}`) rather than shipping a doc that still lists "
                      f"{SRC_MAP}'s callouts.")
-examples = EXAMPLES.get((AGENT, DST_MAP))
+examples = EXAMPLES.get((AGENT, STEM))
 if examples is None:
-    raise SystemExit(f"ABORT - no title-grammar examples for ({AGENT}, {DST_MAP}). Paste REAL "
+    # Deliberately NO fallback to (AGENT, DST_MAP). For a second source that fallback is the bug:
+    # it silently hands this creator the OTHER creator's grammar and reads as a clean run.
+    sibling = "" if STEM == DST_MAP else (
+        f" ({AGENT}, {DST_MAP}) does exist, but it describes the FIRST source for this map -- a "
+        f"different creator, different title grammar. Add a ({AGENT}, {STEM}) bucket of its own to "
+        f"make_instructions_examples_{AGENT.lower()}.py rather than reusing it.")
+    raise SystemExit(f"ABORT - no title-grammar examples for ({AGENT}, {STEM}). Paste REAL "
                      f"chapter titles from THAT source into EXAMPLES; the {SRC_MAP} examples "
-                     f"describe a different source's grammar and would mislead the localizer.")
+                     f"describe a different source's grammar and would mislead the localizer."
+                     + sibling)
 
 src = BE / "scripts" / f"LOCALIZE_INSTRUCTIONS_{AGENT}.md"
-dst = BE / "scripts" / f"LOCALIZE_INSTRUCTIONS_{AGENT}_{DST_MAP.upper()}.md"
+dst = BE / "scripts" / f"LOCALIZE_INSTRUCTIONS_{AGENT}_{STEM.upper()}.md"
 if not src.exists():
     raise SystemExit(f"ABORT - {src} not found")
 

@@ -93,21 +93,55 @@ def target_text(title, table=None):
     if re.search(r"\bfrom\b", s, flags=re.I):
         return re.split(r"\bfrom\b", s, maxsplit=1, flags=re.I)[0].strip() or s.strip()
     if table:
-        parts = re.split(r"\s+(?:to|[-–—>]|→)\s+", s, maxsplit=1, flags=re.I)
+        parts = re.split(REVERSED_SEP_SRC, s, maxsplit=1, flags=re.I)
         if len(parts) == 2 and all(_first_table_hit(p, table) for p in parts):
             return parts[1].strip()
     return s.strip()
 
 
+# The separator set for the reversed `<STAND> to <TARGET>` grammar. build_items.REVERSED_SEP is
+# compiled from this exact string so the two can never drift — see target_text's "THE REVERSED
+# GRAMMAR" note for why a disagreement about where the boundary sits is silent and expensive.
+#
+# `-+>` / `=+>` carry their weight: the single-character class cannot match a TWO-character arrow,
+# because it needs whitespace on both sides and `->` has none between the dash and the angle. So
+# `C Long -> A Site` was never split at all, the whole string was matched, and the row resolved to
+# whichever of the two callouts the table happened to list first. That accident returned the right
+# answer on three shipped rows (haven, lotus, split) and would have flipped to the wrong one the
+# next time anyone re-sorted a callout table.
+REVERSED_SEP_SRC = r"\s+(?:to|-+>|=+>|[-–—>]|→)\s+"
+
+
 def _first_table_hit(text, table):
+    """The callout that appears EARLIEST in `text`; ties broken by the longest match.
+
+    "First" used to mean first by TABLE ORDER — whichever table row happened to be listed soonest
+    won, no matter where in the string it matched. That makes resolution depend on how the callout
+    table is sorted rather than on what the author wrote, and it silently mis-targets any title that
+    names two places without a joiner. Real case: Abyss's `B Site 3 B Lobby` (the third in a
+    numbered `B Site` series, thrown from B Lobby) resolved to b-lobby purely because `b lobby`
+    is listed above `b site` in that map's table — the arrow's destination became its stand.
+
+    Leftmost-wins makes the slash rule callout_to_zone documents ("a slash joins two adjacent areas
+    and the FIRST names the destination") a property of the resolver itself rather than a
+    special case bolted on for one separator. That case stays as it is: it is now belt-and-braces
+    rather than the only place the rule holds.
+
+    Longest-at-the-same-offset matters because callouts nest — `b site` and a bare `b` both match at
+    offset 0 of "B Site God Arrow", and the two-word entry is the more specific claim.
+    """
     t = re.sub(r"[^a-z0-9 ]+", " ", str(text or "").lower())
     t = re.sub(r"\s+", " ", t).strip()
     if not t:
         return None
+    best = None  # (start offset, -len(word)) — min() gives leftmost, then longest
     for word, slug in table:
-        if re.search(rf"\b{re.escape(word)}\b", t):
-            return slug
-    return None
+        m = re.search(rf"\b{re.escape(word)}\b", t)
+        if m:
+            key = (m.start(), -len(word))
+            if best is None or key < best[0]:
+                best = (key, slug)
+    return best[1] if best else None
 
 
 def callout_to_zone(text, table):
