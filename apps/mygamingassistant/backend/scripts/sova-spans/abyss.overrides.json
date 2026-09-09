@@ -1,0 +1,95 @@
+{
+ "_why_landing_148": "Chapter 07 failed its gate twice, both times on LANDING, and both failures were correct. The chapter is a ~5.25s lofted arc (release ~161.15, impact ~166.4); both localizer passes assumed a short flight and pinned LANDING at ~162, which catches the bolt still climbing. The gate's second verdict said so explicitly: 'the strip shows only the bolt still in mid-flight ... the real landing is later'. Rather than spend a third localize run on one chapter, the landing was measured directly from the cached source at 10fps over 165.6-167.8 (scratchpad/f07d_s.png): nothing through 166.0; blue trail entering frame 166.1-166.3; bolt ARRIVES AND STICKS 166.35-166.45; concentric blue sonar sphere peaks 166.7-166.8; scan rays fan out through ~167.2. STAND/AIM/THROW are unchanged and were all explicitly passed by the gate on run w13xd04oo; only LANDING is replaced.",
+ "_why_landing_464": "Found by a flight-time outlier check across all 30 rows (landing.start - throw.start). cs=464 came out at 0.18s against a next-shortest of 1.85s -- a 10x outlier, and the same shape as the two landings already known wrong. It was wrong for the same reason: the window 472.98-473.45 sits on the author's DRAWN CYAN TRAJECTORY ANNOTATION just after release, not on a deploy. The camera then travels down the corridor following the dart. Measured at 8fps then 20fps: the dart's approach glow runs through ~476.50, and the recon SCAN SWEEP -- blue rays fanning across the wall -- fires 476.60-477.30. New window 476.35-477.35 captures arrival plus the full sweep; flight becomes 3.55s, in line with the other 29 rows.",
+ "_why_ability_flips": "The localizer reported `recon` on four chapters whose titles carry the author's `(Shocks)` suffix. The hedge was designed so the FOOTAGE decides and the title is only a hint -- so the disagreement was checked against the footage rather than resolved by either label. Full-res peak-landing frames (scratchpad/pk_all.png) put a known recon (cs=148) and a known shock (cs=240) beside all four. The two signatures are unambiguous and completely distinct: RECON = a stuck cylindrical dart body on the surface wrapped in a large DOTTED CONCENTRIC RING sphere, persisting afterwards and followed by fan-out scan rays. SHOCK = a bright pinwheel of curved ELECTRIC ARCS with no dart body, no dotted rings, gone entirely within ~0.5s. All four disputed chapters show the shock pinwheel. Two further independent signals agree: the author's own on-screen captions on these rows describe DAMAGE -- 'killed by this lineup' (637), 'punish attackers' (665), 'kill the B-planter' (687) -- and a recon bolt deals no damage at all; and all 20 non-(Shocks) rows were re-checked the same way (scratchpad/nr_top.png, nr_bot.png) and every one shows the recon signature with captions reading scan/reveal/recon. After these flips, title suffix, caption semantics and landing visual agree on all 30 rows.",
+ "rows": {
+  "148": {
+   "landing": [
+    166.35,
+    167.15
+   ],
+   "ability": "recon",
+   "provenance": "LANDING measured by operator frame-study at 10fps (f07d_s.png) after two correct gate failures; stand/aim/throw are gate-passed localizer values from run w13xd04oo"
+  },
+  "464": {
+   "landing": [
+    476.35,
+    477.15
+   ],
+   "ability": "recon",
+   "provenance": "LANDING measured by operator frame-study at 8fps then 20fps (f464d_s.png, f464e_s.png) after a flight-time outlier check; stand/aim/throw are gate-passed localizer values from run w3ibxhajo Trimmed from 477.35 to 477.15 after watching the recut clip: 477.20-477.35 is empty corridor. Re-checked frame-exact (y_464.png) -- dart arrives small and distant at 476.50, scan rays run 476.80-477.10, nothing after. This lineup's camera never gets close to the dart, so a distant sphere plus the ray fan is the whole of what the source shows."
+  },
+  "637": {
+   "ability": "shock",
+   "provenance": "ability corrected recon->shock from full-res landing frame (pk_all.png): shock pinwheel, no stuck dart, no dotted rings; caption says the lineup KILLS, which recon cannot"
+  },
+  "665": {
+   "ability": "shock",
+   "provenance": "ability corrected recon->shock from full-res landing frame (pk_all.png): shock pinwheel, no stuck dart, no dotted rings; caption says 'punish attackers', which recon cannot"
+  },
+  "687": {
+   "ability": "shock",
+   "provenance": "ability corrected recon->shock from full-res landing frame (pk_all.png): shock pinwheel, no stuck dart, no dotted rings; caption says 'kill the B-planter', which recon cannot"
+  },
+  "704": {
+   "ability": "shock",
+   "provenance": "ability corrected recon->shock from full-res landing frame (pk_all.png): shock pinwheel, no stuck dart, no dotted rings; matches its (Shocks) title and the three sibling chapters"
+  },
+  "4": {
+   "landing": [
+    17.28,
+    17.85
+   ],
+   "ability": "recon",
+   "provenance": "LANDING measured by operator frame-study at frame-exact 0.10s steps (y_conf.png row 1): dart in flight 17.20-17.45, sticks to the wall 17.55, full recon sphere with stuck dart body and dotted concentric rings 17.65-17.85. The gate-passed window ended at 17.50, i.e. it cut one frame before the deploy it was supposed to show. stand/aim/throw unchanged."
+  },
+  "51": {
+   "landing": [
+    68.4,
+    68.95
+   ],
+   "ability": "recon",
+   "provenance": "LANDING re-measured by operator frame-study (q_51w.png at 5fps over the whole 62.4-68.6 flight, then y_conf.png row 2 frame-exact): the gate-passed window 63.95-65.20 contains no deploy at all, only the dart mid-arc over the skybox. The single deploy is at 68.55 (dart sticks) / 68.65 (full dotted-ring sonar sphere), with the scan wash running to ~69.5. Flight is genuinely ~6.45s -- the sweep shows one unbroken arc from release, no second throw and no cut. stand/aim/throw unchanged. Trimmed from 69.10 to 68.95 after watching the recut clip: once the dart lands this close to the camera the sonar sphere swallows the frame, so the last 0.15s was a flat blue field that showed nothing. The window now ends on the dotted-ring sphere while the geometry is still readable."
+  },
+  "312": {
+   "landing": [
+    328.5,
+    329.3
+   ],
+   "ability": "shock",
+   "provenance": "LANDING re-centred by operator frame-study (y_conf.png row 3): the gate-passed window 327.90-329.30 did contain the burst but opened 0.9s early on the author's DRAWN blue trajectory ribbon, so most of the clip was an annotation, not the lineup. Exact frames put dart arrival at 328.55, shock pinwheel 328.70-328.85, peak white-arc sphere 329.00, gone by 329.30. A scan of 329.2-332.1 (q_312b.png) finds NO second burst, so the title's 'double shock' is two darts detonating inside the same ~0.5s, not two separate events. stand/aim/throw unchanged."
+  },
+  "333": {
+   "landing": [
+    349.25,
+    350.05
+   ],
+   "ability": "shock",
+   "provenance": "LANDING moved to the SECOND burst by operator frame-study (y_333.png, frame-exact). This chapter fires two darts: release 1 at ~346.00 bursts at 348.60, release 2 at ~346.70 bursts at 349.60-349.85. The gate-passed window 348.30-349.10 caught burst 1 but then went dark for 0.3s as the camera swung under a roof, so a third of the clip was black. The pack's THROW window 346.45-347.05 is release 2 (confirmed in q_333w.png: release 1 is at 346.00, the second draw starts 346.40), so burst 2 is the landing that actually pairs with it -- and it is in clean daylight start to finish. stand/aim/throw unchanged."
+  },
+  "535": {
+   "landing": [
+    550.05,
+    550.6
+   ],
+   "ability": "recon",
+   "provenance": "LANDING tightened by operator frame-study (y_535c.png, y_535d.png, frame-exact at 0.10-0.15s steps). The gate-passed window 550.00-551.50 contained the deploy but ran 0.8s past it: the sonar sphere peaks at 550.25 with scan rays fanning 550.10-550.55, then the camera pans down behind a box and shows nothing until 551.60. Note the vertical blue streaks on the wall at 549.4-550.1 are Abyss's WATERFALL geometry, not utility -- that is what made this row read as ambiguous on the earlier 3fps sweep. stand/aim/throw unchanged. Trimmed from 550.70 to 550.60 after watching the recut clip, so the camera's pan-away is not in it. A search of 551.6-553.7 (y_535e.png) for a closer view found only the reveal aftermath -- the sweep beam and the dart's map marker -- so this distant angle is the only view of the deploy the source ever offers."
+  },
+  "388": {
+   "landing": [
+    407.8,
+    408.55
+   ],
+   "ability": "recon",
+   "provenance": "LANDING measured by operator frame-study (y_388.png, frame-exact 0.20s steps). The gate-passed window 406.50-408.00 ended on the exact frame the dart arrives: nothing through 407.60, trail at 407.80, dart sticks with its sonar sphere at 408.00, scan wash 408.20-408.60. Same defect as cs=4 -- a window that stops at the deploy instead of containing it. stand/aim/throw unchanged."
+  }
+ },
+ "_why_seek_vs_exact": "The five landings below were pinned with per-frame accurate extraction (one ffmpeg invocation per timestamp, -accurate_seek -ss <t> -frames:v 1), not with an fps= resample after a single input seek. That distinction mattered: the seek-and-resample sheets and the frame-exact sheets disagreed by up to ~0.15s on the same nominal timestamps, which is enough to put a 0.3s shock burst on the wrong side of a window boundary. cs=333 is the case that exposed it -- the resampled sheet placed the first burst at 348.60 and a dark cut at 348.70, the exact sheet placed the same burst at 348.60 but the cut at 348.80. Every window here is quoted from the exact sheet (scratchpad/y_*.png).",
+ "_why_landing_batch2": "Found by pulling all 30 recut LANDING clips out of storage and watching them as the shipped artifact rather than trusting the gate. Ten came back ambiguous at mid-frame; six-frame strips cleared five of them; the remaining five each turned out to be a real defect of one of two kinds. (a) WINDOW MISSES THE DEPLOY ENTIRELY -- cs=51's window 63.95-65.20 is pure mid-flight; a 5fps sweep of the whole 62.4-68.6 corridor shows one continuous lofted arc from release to a single deploy at 68.55, so the flight really is ~6.5s and the old window sat in the middle of it. (b) WINDOW STRADDLES AN EDITOR CUT OR THE AUTHOR'S DRAWN ANNOTATION -- cs=4 ended at 17.50 exactly as the dart stuck, cs=312 spent its first 0.9s on the drawn blue trajectory ribbon, cs=333 caught its burst then went dark for 0.3s as the camera swung under a roof, and cs=535 spent its last 0.8s panning behind a box after the sweep had ended. None of these is catchable by the adversarial gate: a contact sheet of any of these windows still contains a glowing blue thing somewhere, and the gate never sees the clip as a clip.",
+ "excluded": {
+  "582": "The source never puts this lineup's deploy on camera. Swept continuously from the release to the end of the chapter -- 593.3-615.8, at 2-6fps throughout with denser frame-exact passes over 594.4-598.2, 596.0-604.8 and 604.2-607.5 (q_582w/x/y/z.png, y_582/b/c/t.png) -- and there is no recon sphere and no scan sweep anywhere in it. What the chapter actually shows is the release from B at 593.9, then the author WALKING across to A to describe the coverage, then drawing a second dart at 604.9-605.2 that is never followed to its landing. The gate-passed window 604.50-605.60 sits on that second BOW DRAW, which is why it read as a bright blue thing and survived the gate. There is no frame in this source that shows this dart deploying, so no override can fix the row: it is dropped rather than shipped with a landing clip of something else. A second source for Abyss may cover it later.",
+  "219": "The source never puts THIS lineup's deploy on camera, and the window that passed the gate is a different dart. Chapter 10 is 'B Lobby to B (Postplant)': the minimap label at 222.80 reads B Lobby and the player icon sits south of the B box, so the stand/aim/throw at 222.1-227.45 are the lineup. Immediately after release the video cuts to the inside of B site and stays there. The dart's own minimap marker (white dart icon plus the cyan scan-radius ring, just south-west of the B box) first appears at 230.10 -- a ~3.0s flight, consistent with the lineup -- but frame-exact sweeps of 227.30-231.00 (y_219a.png, y_219j.png) show the camera indoors on stairs and blank walls the whole time, with no sphere and no scan rays anywhere. The gate-passed window 236.15-236.85 is a SECOND, DIFFERENT throw: at 235.70 the minimap puts the player up at B site, not in B Lobby, and 235.80-236.40 is that dart's release and flight. The only recon sweep visible in the whole chapter runs 238.00-238.30 (peak 238.18, y_219g.png) and belongs to that second dart, whose own body is off the bottom-left edge of frame. 239.00-240.35 has no further sweep before the chapter ends. Shipping 238.0-238.3 would be a landing clip of a dart thrown from somewhere else, so the row is dropped rather than dressed up. A second Abyss source may cover it later."
+ },
+ "_why_198_kept": "cs=198 was flagged on the all-30 mid-frame sheet as possibly sitting on the bow, the same signature that made cs=582 un-shippable. Frame-exact re-check (y_198a/b/c.png) cleared it: the dart is in flight with a visible blue trail through 212.00, the impact sparkle is at 212.10, the dotted-ring sonar sphere with the stuck dart body runs 212.20-212.40, the scan cone opens at 212.40, and the camera swings into a wall at 212.50. The gate-passed window 211.5-212.45 therefore contains the whole deploy and stops one frame before the swing -- it is the best window the source allows. The bow reads as prominent in every frame only because Sova's bow is his first-person weapon model and is on screen for the entire chapter; bow presence is NOT evidence of a bow-draw defect on its own. No override.",
+ "_why_long_flights_kept": "The merge's flight-time detector only flags SHORT flights, so the long tail of the distribution was never screened -- and cs=219 proved a long flight is exactly what a cut-away-and-pin-the-wrong-event defect looks like. The four long-flight rows that had never been frame-studied individually were therefore each re-checked frame-exact, and all four are correct: cs=436 'CT to B' (9.95s) is captioned 'this cross-map reveal', so the long flight is the point -- the dart approaches at 456.60-456.80 and sticks inside a full sonar sphere at 457.00 (y_436b.png); cs=240 (6.0s) shows the shock pinwheel at 258.20 (y_240x.png); cs=508 (6.15s) shows the dart plus sphere at 529.65 (y_240x.png frames 7-10); cs=616 (6.1s) shows the shock pinwheel at 632.95 (y_616x.png). cs=616's window runs ~0.4s past the burst into quiet aftermath, which was left alone deliberately: the earlier trims (51, 464, 535) each removed a tail that showed something misleading -- a camera pan-away or a blue wash that hid the geometry -- and a still-readable site is not that. No overrides from this pass."
+}

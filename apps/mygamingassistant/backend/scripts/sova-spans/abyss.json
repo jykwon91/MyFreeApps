@@ -1,0 +1,788 @@
+{
+ "video_id": "cTrav7nTu2Y",
+ "map_slug": "abyss",
+ "author": "maxWELL Lineup-Larry",
+ "lineups": [
+  {
+   "cs": 4,
+   "title": "A Lobby to A Main",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     6.0,
+     7.8
+    ],
+    "aim": [
+     12.8,
+     13.45
+    ],
+    "throw": [
+     13.45,
+     13.95
+    ],
+    "landing": [
+     17.28,
+     17.85
+    ]
+   },
+   "span_provenance": "LANDING measured by operator frame-study at frame-exact 0.10s steps (y_conf.png row 1): dart in flight 17.20-17.45, sticks to the wall 17.55, full recon sphere with stuck dart body and dotted concentric rings 17.65-17.85. The gate-passed window ended at 17.50, i.e. it cut one frame before the deploy it was supposed to show. stand/aim/throw unchanged."
+  },
+  {
+   "cs": 25,
+   "title": "A Lobby to A Main No.2",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     26.0,
+     28.0
+    ],
+    "aim": [
+     39.5,
+     40.3
+    ],
+    "throw": [
+     40.1,
+     40.65
+    ],
+    "landing": [
+     43.4,
+     44.2
+    ]
+   }
+  },
+  {
+   "cs": 51,
+   "title": "A Lobby to A",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     54.5,
+     56.5
+    ],
+    "aim": [
+     61.2,
+     61.95
+    ],
+    "throw": [
+     61.95,
+     62.55
+    ],
+    "landing": [
+     68.4,
+     68.95
+    ]
+   },
+   "span_provenance": "LANDING re-measured by operator frame-study (q_51w.png at 5fps over the whole 62.4-68.6 flight, then y_conf.png row 2 frame-exact): the gate-passed window 63.95-65.20 contains no deploy at all, only the dart mid-arc over the skybox. The single deploy is at 68.55 (dart sticks) / 68.65 (full dotted-ring sonar sphere), with the scan wash running to ~69.5. Flight is genuinely ~6.45s -- the sweep shows one unbroken arc from release, no second throw and no cut. stand/aim/throw unchanged. Trimmed from 69.10 to 68.95 after watching the recut clip: once the dart lands this close to the camera the sonar sphere swallows the frame, so the last 0.15s was a flat blue field that showed nothing. The window now ends on the dotted-ring sphere while the geometry is still readable."
+  },
+  {
+   "cs": 78,
+   "title": "A Main to A",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     80.6,
+     82.6
+    ],
+    "aim": [
+     90.9,
+     91.9
+    ],
+    "throw": [
+     91.85,
+     92.35
+    ],
+    "landing": [
+     94.6,
+     95.8
+    ]
+   }
+  },
+  {
+   "cs": 104,
+   "title": "Bottom Mid to Top Mid",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     107.6,
+     109.4
+    ],
+    "aim": [
+     112.45,
+     113.02
+    ],
+    "throw": [
+     113.02,
+     113.62
+    ],
+    "landing": [
+     115.0,
+     116.8
+    ]
+   }
+  },
+  {
+   "cs": 127,
+   "title": "B Lobby to B Main",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "b-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     131.9,
+     133.3
+    ],
+    "aim": [
+     136.8,
+     137.3
+    ],
+    "throw": [
+     137.3,
+     137.9
+    ],
+    "landing": [
+     140.5,
+     141.8
+    ]
+   }
+  },
+  {
+   "cs": 148,
+   "title": "B Lobby to B",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     152.7,
+     154.2
+    ],
+    "aim": [
+     160.55,
+     161.15
+    ],
+    "throw": [
+     160.95,
+     161.55
+    ],
+    "landing": [
+     166.35,
+     167.15
+    ]
+   },
+   "span_provenance": "LANDING measured by operator frame-study at 10fps (f07d_s.png) after two correct gate failures; stand/aim/throw are gate-passed localizer values from run w13xd04oo"
+  },
+  {
+   "cs": 175,
+   "title": "B Main to B",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     179.55,
+     180.55
+    ],
+    "aim": [
+     182.9,
+     183.9
+    ],
+    "throw": [
+     186.6,
+     187.1
+    ],
+    "landing": [
+     190.4,
+     191.6
+    ]
+   }
+  },
+  {
+   "cs": 198,
+   "title": "B Main to B Backsite",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     201.8,
+     203.3
+    ],
+    "aim": [
+     207.85,
+     208.3
+    ],
+    "throw": [
+     208.25,
+     208.85
+    ],
+    "landing": [
+     211.5,
+     212.45
+    ]
+   }
+  },
+  {
+   "cs": 240,
+   "title": "A Lobby to A Main (Shocks)",
+   "ability": "shock",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     248.9,
+     250.0
+    ],
+    "aim": [
+     250.7,
+     251.85
+    ],
+    "throw": [
+     251.85,
+     252.15
+    ],
+    "landing": [
+     257.85,
+     258.9
+    ]
+   }
+  },
+  {
+   "cs": 267,
+   "title": "A Lobby to A Default (Shocks)",
+   "ability": "shock",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     270.9,
+     271.8
+    ],
+    "aim": [
+     280.28,
+     280.6
+    ],
+    "throw": [
+     280.5,
+     281.0
+    ],
+    "landing": [
+     284.8,
+     285.6
+    ]
+   }
+  },
+  {
+   "cs": 289,
+   "title": "A Main to A Bridge (Shocks)",
+   "ability": "shock",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     291.5,
+     294.0
+    ],
+    "aim": [
+     304.3,
+     304.9
+    ],
+    "throw": [
+     304.75,
+     305.35
+    ],
+    "landing": [
+     306.6,
+     307.5
+    ]
+   }
+  },
+  {
+   "cs": 312,
+   "title": "B Lobby to B Default (Shocks)",
+   "ability": "shock",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     312.6,
+     314.6
+    ],
+    "aim": [
+     321.6,
+     322.55
+    ],
+    "throw": [
+     322.45,
+     322.95
+    ],
+    "landing": [
+     328.5,
+     329.3
+    ]
+   },
+   "span_provenance": "LANDING re-centred by operator frame-study (y_conf.png row 3): the gate-passed window 327.90-329.30 did contain the burst but opened 0.9s early on the author's DRAWN blue trajectory ribbon, so most of the clip was an annotation, not the lineup. Exact frames put dart arrival at 328.55, shock pinwheel 328.70-328.85, peak white-arc sphere 329.00, gone by 329.30. A scan of 329.2-332.1 (q_312b.png) finds NO second burst, so the title's 'double shock' is two darts detonating inside the same ~0.5s, not two separate events. stand/aim/throw unchanged."
+  },
+  {
+   "cs": 333,
+   "title": "B Main to B Backsite (Shocks)",
+   "ability": "shock",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     337.45,
+     339.45
+    ],
+    "aim": [
+     346.0,
+     346.58
+    ],
+    "throw": [
+     346.45,
+     347.05
+    ],
+    "landing": [
+     349.25,
+     350.05
+    ]
+   },
+   "span_provenance": "LANDING moved to the SECOND burst by operator frame-study (y_333.png, frame-exact). This chapter fires two darts: release 1 at ~346.00 bursts at 348.60, release 2 at ~346.70 bursts at 349.60-349.85. The gate-passed window 348.30-349.10 caught burst 1 but then went dark for 0.3s as the camera swung under a roof, so a third of the clip was black. The pack's THROW window 346.45-347.05 is release 2 (confirmed in q_333w.png: release 1 is at 346.00, the second draw starts 346.40), so burst 2 is the landing that actually pairs with it -- and it is in clean daylight start to finish. stand/aim/throw unchanged."
+  },
+  {
+   "cs": 354,
+   "title": "A Site/Backsite to A Lobby",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "a-lobby",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     355.3,
+     357.8
+    ],
+    "aim": [
+     364.45,
+     365.02
+    ],
+    "throw": [
+     364.95,
+     365.45
+    ],
+    "landing": [
+     368.2,
+     369.3
+    ]
+   }
+  },
+  {
+   "cs": 388,
+   "title": "CT to A Main",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "ct-spawn",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     391.5,
+     393.0
+    ],
+    "aim": [
+     400.9,
+     401.45
+    ],
+    "throw": [
+     401.35,
+     401.85
+    ],
+    "landing": [
+     407.8,
+     408.55
+    ]
+   },
+   "span_provenance": "LANDING measured by operator frame-study (y_388.png, frame-exact 0.20s steps). The gate-passed window 406.50-408.00 ended on the exact frame the dart arrives: nothing through 407.60, trail at 407.80, dart sticks with its sonar sphere at 408.00, scan wash 408.20-408.60. Same defect as cs=4 -- a window that stops at the deploy instead of containing it. stand/aim/throw unchanged."
+  },
+  {
+   "cs": 415,
+   "title": "CT to A",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "ct-spawn",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     419.5,
+     420.9
+    ],
+    "aim": [
+     421.0,
+     422.5
+    ],
+    "throw": [
+     424.65,
+     425.05
+    ],
+    "landing": [
+     428.9,
+     429.6
+    ]
+   }
+  },
+  {
+   "cs": 436,
+   "title": "CT to B",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "ct-spawn",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     438.3,
+     440.0
+    ],
+    "aim": [
+     446.1,
+     446.8
+    ],
+    "throw": [
+     446.8,
+     447.3
+    ],
+    "landing": [
+     456.75,
+     458.0
+    ]
+   }
+  },
+  {
+   "cs": 464,
+   "title": "Top Mid to Bottom Mid",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     469.0,
+     470.8
+    ],
+    "aim": [
+     472.35,
+     472.95
+    ],
+    "throw": [
+     472.8,
+     473.3
+    ],
+    "landing": [
+     476.35,
+     477.15
+    ]
+   },
+   "span_provenance": "LANDING measured by operator frame-study at 8fps then 20fps (f464d_s.png, f464e_s.png) after a flight-time outlier check; stand/aim/throw are gate-passed localizer values from run w3ibxhajo Trimmed from 477.35 to 477.15 after watching the recut clip: 477.20-477.35 is empty corridor. Re-checked frame-exact (y_464.png) -- dart arrives small and distant at 476.50, scan rays run 476.80-477.10, nothing after. This lineup's camera never gets close to the dart, so a distant sphere plus the ray fan is the whole of what the source shows."
+  },
+  {
+   "cs": 485,
+   "title": "B to B Main & Window",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     489.6,
+     491.4
+    ],
+    "aim": [
+     498.65,
+     499.1
+    ],
+    "throw": [
+     499.05,
+     499.55
+    ],
+    "landing": [
+     500.95,
+     502.35
+    ]
+   }
+  },
+  {
+   "cs": 508,
+   "title": "B Heaven to B Main & Rope",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     515.5,
+     517.3
+    ],
+    "aim": [
+     522.5,
+     523.35
+    ],
+    "throw": [
+     523.35,
+     523.95
+    ],
+    "landing": [
+     529.5,
+     530.3
+    ]
+   }
+  },
+  {
+   "cs": 535,
+   "title": "B Link to B Main",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     541.0,
+     543.3
+    ],
+    "aim": [
+     546.8,
+     547.15
+    ],
+    "throw": [
+     547.05,
+     547.65
+    ],
+    "landing": [
+     550.05,
+     550.6
+    ]
+   },
+   "span_provenance": "LANDING tightened by operator frame-study (y_535c.png, y_535d.png, frame-exact at 0.10-0.15s steps). The gate-passed window 550.00-551.50 contained the deploy but ran 0.8s past it: the sonar sphere peaks at 550.25 with scan rays fanning 550.10-550.55, then the camera pans down behind a box and shows nothing until 551.60. Note the vertical blue streaks on the wall at 549.4-550.1 are Abyss's WATERFALL geometry, not utility -- that is what made this row read as ambiguous on the earlier 3fps sweep. stand/aim/throw unchanged. Trimmed from 550.70 to 550.60 after watching the recut clip, so the camera's pan-away is not in it. A search of 551.6-553.7 (y_535e.png) for a closer view found only the reveal aftermath -- the sweep beam and the dart's map marker -- so this distant angle is the only view of the deploy the source ever offers."
+  },
+  {
+   "cs": 561,
+   "title": "B Link to B Backsite",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     562.0,
+     563.5
+    ],
+    "aim": [
+     570.9,
+     571.5
+    ],
+    "throw": [
+     571.35,
+     572.0
+    ],
+    "landing": [
+     573.85,
+     575.0
+    ]
+   }
+  },
+  {
+   "cs": 616,
+   "title": "CT to A Bridge (Shocks)",
+   "ability": "shock",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "ct-spawn",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     619.3,
+     620.2
+    ],
+    "aim": [
+     625.4,
+     626.35
+    ],
+    "throw": [
+     626.2,
+     626.8
+    ],
+    "landing": [
+     632.3,
+     633.6
+    ]
+   }
+  },
+  {
+   "cs": 637,
+   "title": "Library to Bottom Mid (Shocks)",
+   "ability": "shock",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     644.1,
+     645.1
+    ],
+    "aim": [
+     650.6,
+     651.3
+    ],
+    "throw": [
+     651.7,
+     652.2
+    ],
+    "landing": [
+     654.8,
+     655.9
+    ]
+   },
+   "span_provenance": "ability corrected recon->shock from full-res landing frame (pk_all.png): shock pinwheel, no stuck dart, no dotted rings; caption says the lineup KILLS, which recon cannot"
+  },
+  {
+   "cs": 665,
+   "title": "B to B Orb (Shocks)",
+   "ability": "shock",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     676.9,
+     677.6
+    ],
+    "aim": [
+     679.75,
+     680.35
+    ],
+    "throw": [
+     680.3,
+     680.85
+    ],
+    "landing": [
+     682.65,
+     683.65
+    ]
+   },
+   "span_provenance": "ability corrected recon->shock from full-res landing frame (pk_all.png): shock pinwheel, no stuck dart, no dotted rings; caption says 'punish attackers', which recon cannot"
+  },
+  {
+   "cs": 687,
+   "title": "B Link to B Default (Shocks)",
+   "ability": "shock",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     692.0,
+     693.5
+    ],
+    "aim": [
+     694.8,
+     695.6
+    ],
+    "throw": [
+     695.4,
+     696.0
+    ],
+    "landing": [
+     699.1,
+     700.2
+    ]
+   },
+   "span_provenance": "ability corrected recon->shock from full-res landing frame (pk_all.png): shock pinwheel, no stuck dart, no dotted rings; caption says 'kill the B-planter', which recon cannot"
+  },
+  {
+   "cs": 704,
+   "title": "B Heaven to B Default (Shocks)",
+   "ability": "shock",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     707.0,
+     709.5
+    ],
+    "aim": [
+     714.85,
+     715.75
+    ],
+    "throw": [
+     715.75,
+     716.3
+    ],
+    "landing": [
+     718.7,
+     719.9
+    ]
+   },
+   "span_provenance": "ability corrected recon->shock from full-res landing frame (pk_all.png): shock pinwheel, no stuck dart, no dotted rings; matches its (Shocks) title and the three sibling chapters"
+  }
+ ],
+ "note": "All 28 rows carry real frame-studied spans; no placeholders remain. 16 are localizer output that passed the adversarial gate as-is. The other 12 carry at least one event measured directly from the footage by operator frame-study; each such row has a `span_provenance` field saying which event was replaced and why.",
+ "excluded_no_event_in_source": [
+  {
+   "cs": 219,
+   "title": "B Lobby to B (Postplant)",
+   "reason": "The source never puts THIS lineup's deploy on camera, and the window that passed the gate is a different dart. Chapter 10 is 'B Lobby to B (Postplant)': the minimap label at 222.80 reads B Lobby and the player icon sits south of the B box, so the stand/aim/throw at 222.1-227.45 are the lineup. Immediately after release the video cuts to the inside of B site and stays there. The dart's own minimap marker (white dart icon plus the cyan scan-radius ring, just south-west of the B box) first appears at 230.10 -- a ~3.0s flight, consistent with the lineup -- but frame-exact sweeps of 227.30-231.00 (y_219a.png, y_219j.png) show the camera indoors on stairs and blank walls the whole time, with no sphere and no scan rays anywhere. The gate-passed window 236.15-236.85 is a SECOND, DIFFERENT throw: at 235.70 the minimap puts the player up at B site, not in B Lobby, and 235.80-236.40 is that dart's release and flight. The only recon sweep visible in the whole chapter runs 238.00-238.30 (peak 238.18, y_219g.png) and belongs to that second dart, whose own body is off the bottom-left edge of frame. 239.00-240.35 has no further sweep before the chapter ends. Shipping 238.0-238.3 would be a landing clip of a dart thrown from somewhere else, so the row is dropped rather than dressed up. A second Abyss source may cover it later."
+  },
+  {
+   "cs": 582,
+   "title": "B to A",
+   "reason": "The source never puts this lineup's deploy on camera. Swept continuously from the release to the end of the chapter -- 593.3-615.8, at 2-6fps throughout with denser frame-exact passes over 594.4-598.2, 596.0-604.8 and 604.2-607.5 (q_582w/x/y/z.png, y_582/b/c/t.png) -- and there is no recon sphere and no scan sweep anywhere in it. What the chapter actually shows is the release from B at 593.9, then the author WALKING across to A to describe the coverage, then drawing a second dart at 604.9-605.2 that is never followed to its landing. The gate-passed window 604.50-605.60 sits on that second BOW DRAW, which is why it read as a bright blue thing and survived the gate. There is no frame in this source that shows this dart deploying, so no override can fix the row: it is dropped rather than shipped with a landing clip of something else. A second source for Abyss may cover it later."
+  }
+ ]
+}

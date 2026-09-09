@@ -114,6 +114,28 @@ MAPS = {
             "B SITE while `B Pillars` is B MAIN."
         ),
     },
+    "abyss": {
+        "callouts": (
+            "A Main, A Lobby, A Site, A Bridge, A Tower, A Link, A Security, A Secret, A Vent, "
+            "A Default, A Backsite, Mid / Middle, Mid Top / Top Mid, Mid Bottom / Bottom Mid, "
+            "Mid Catwalk, Mid Library, Mid Bend, B Main, B Lobby, B Site, B Tower, B Heaven, "
+            "B Nest, B Danger, B Link, B Window, B Rope, B Default, B Backsite, "
+            "Attacker Side Spawn, Defender Side Spawn."
+        ),
+        "note": (
+            "**A Lobby and B Lobby are their OWN zones here** — the map seeds both, and Riot's "
+            "own A Lobby / B Lobby coordinates land inside them, so a lobby callout must NOT be "
+            "folded into A Main / B Main. **The two Links are NOT symmetric**: `A Link` is A "
+            "SITE, but `B Link` is MID — do not reason from one to the other. `A Vent` is MID "
+            "(it is the mid→A connector, entered from mid) even though the letter suggests A. "
+            "`B Heaven` is the community name for Riot's `B Tower` and is B SITE, while "
+            "`B Nest` and `B Danger` are B MAIN. `B Window` and `B Rope` name features OF B "
+            "Main rather than areas of their own. A bare `Tower`, `Link`, `Default` or "
+            "`Backsite` with no letter is genuinely ambiguous — this map carries both an A and "
+            "a B version of each and they resolve to different zones, so say so in NOTES "
+            "instead of picking one."
+        ),
+    },
     "split": {
         "callouts": (
             "A Main, A Lobby, A Ramps, A Sewer, A Site, A Screens, A Tower, A Rafters, A Back, "
@@ -492,6 +514,92 @@ EXAMPLES = {
             ("SIDE is NOT labelled by these authors", SIDE_RESOLVED_UPSTREAM),
         ],
     },
+    ("SOVA", "abyss"): {
+        "grammar": "**`<STAND> to <TARGET>`** — the REVERSED order: the callout BEFORE `to` is "
+                   "where the player STANDS and the one AFTER it is where the bolt lands. Both "
+                   "are already resolved in your item; confirm them against the footage",
+        "examples":
+        "`A Lobby to A Main` is thrown FROM A Lobby INTO A Main — reading it the other way round "
+        "would swap both fields. **This source writes the destination as a BARE LETTER**: `A Lobby "
+        "to A` and `B Main to B` land on A SITE and B SITE respectively. A SLASH joins two adjacent "
+        "areas of one position and the FIRST names it, so `A Site/Backsite to A Lobby` is thrown "
+        "from A SITE. An **`&`** joins two features of ONE destination: `B to B Main & Window` and "
+        "`B Heaven to B Main & Rope` both land in B MAIN — Window and Rope are features of that "
+        "corridor, not areas of their own. `A Lobby to A Main No.2` is a second variant from the "
+        "same stand as the row before it. A parenthetical names a ROLE, never a place: "
+        "`B Lobby to B (Postplant)`. **Five rows legitimately have the SAME zone either side of "
+        "`to`** — `Bottom Mid to Top Mid`, `Top Mid to Bottom Mid`, `Library to Bottom Mid`, "
+        "`B to B Orb`, `B Heaven to B Default` — because both callouts fall in one coarse zone. "
+        "That is expected here, not an error to flag. **The `(Shocks)` suffix marks the author's "
+        "shock-dart rows; treat it as a HINT and report the utility the LANDING actually shows** — "
+        "a recon bolt STICKS and emits repeating scan pulses, a shock dart DETONATES once and "
+        "leaves nothing.",
+        "bullets": [
+            ("Cached video:",
+             f"- Cached video: {SRC_CACHE.replace('<VID>', 'cTrav7nTu2Y')} (1920x1080 @ 59.94fps, "
+             f"verified with ffprobe). It is genuinely 60fps, so the release is wide enough to pin "
+             f"honestly — use `--step 0` and do not widen the THROW window to hedge."),
+            # CORRECTED 2026-09-09 from the first 30-lineup run. The previous text said this
+            # source has "no HUD-off intro ... the STAND beat can begin immediately". The HUD is
+            # indeed live throughout -- but the opening seconds are an EDITOR FLOURISH, and four
+            # separate gates (#08, #20, #27, #28) failed a STAND that had been pinned there,
+            # independently describing the same thing: a melee knife being twirled at a
+            # featureless teal wall under the number overlay, with no positional reference at all.
+            # "The HUD is live" was true and "so you may start immediately" did not follow.
+            ("Creator:",
+             "- Creator: **maxWELL Lineup-Larry**, filmed in a PRACTICE/custom server. The HUD is "
+             "live from the first frame (minimap, ability bar, location readout) — but **do NOT "
+             "take that as licence to pin STAND at the chapter's first stable moment.** Every "
+             "chapter opens with an EDITOR FLOURISH: a large **lineup NUMBER** wipes across the "
+             "centre of frame while the player idles with the **melee knife out**, twirling or "
+             "inspecting it, usually facing a blank wall in a corner with no landmark. That is not "
+             "the throwing spot and carries no spot evidence. **The reliable tell that the demo "
+             "has begun is the KNIFE→BOW swap** — the throwing stance is where the player stands "
+             "once Sova's bow is equipped. Three more overlays are the author's, not the game's, "
+             "and none is evidence of an event: a lower-third **`From <X> / To <Y>` banner** "
+             "(useful corroboration for stand/target, but it is the author's label, not the "
+             "footage); a **prose coaching caption** on the right — e.g. \"support your A-hit with "
+             "this fast recon\"; and occasional **punch-in zooms onto the ability HUD with drawn "
+             "red annotation circles**, which are a teaching aside and never a STAND. Shots are "
+             "joined by hard cuts AND by cross-dissolves — a dissolve shows two superimposed HUDs "
+             "(two minimaps, doubled ammo readouts) and is a transition, never a deploy. Never pin "
+             "LANDING to a caption, and note in WEAKEST if a caption is the only thing suggesting "
+             "an outcome you could not actually see."),
+            # The base doc's STAND and AIM bullets describe TSEEKY's editing by name (cuts straight
+            # into the aim behind a title card; habitually pans the aim up from a low reference).
+            # Neither claim has been checked against maxWELL's footage and one is already known to
+            # be false -- this source has no title card at all. Restated to say only what has been
+            # verified about it, and to make the shot structure something the localizer READS
+            # rather than something it expects.
+            ("- **STAND** =",
+             "- **STAND** = the creator DEMONSTRATING where to stand, and it must actually SHOW "
+             "the spot: body/feet against a wall seam, box edge or floor texture, with the "
+             "location readout and minimap dot corroborating. ~1.5–3s. **Start looking AFTER the "
+             "knife→bow swap, not at the top of the chapter** — the opening seconds are the "
+             "author's number-wipe flourish over a knife twirl at a blank wall, and a STAND pinned "
+             "there is the single most common way this source is localized wrong. Reject any "
+             "candidate window where: the player holds the MELEE knife rather than the bow; the "
+             "frames are an editor punch-in on the ability HUD; the view is a featureless "
+             "wall/floor corner with no landmark; or the five frames are five DIFFERENT places "
+             "(that is a montage, not a stance). If the chapter truly never shows a positioning "
+             "beat, use the earliest stable window at the throwing spot with the bow already out, "
+             "and say so in WEAKEST rather than stretching backwards into the intro."),
+            ("- **AIM** =",
+             "- **AIM** = the view SETTLED, bow drawn, **charge set**, crosshair parked on the "
+             "alignment reference, immediately pre-release. On Abyss the map has no ground beyond "
+             "its edges, so the reference is usually architectural — a rooftop tip, an antenna, a "
+             "platform corner, a skybox seam — rather than terrain. ~0.6–1.2s. If the aim is panned "
+             "or corrected before the loose, the AIM is the FINAL settled aim immediately before "
+             "release, never one it passes through on the way."),
+            ("Sides = **Attacker / Defender**",
+             "- Use the callouts below rather than fixture slugs. **Do NOT report a SIDE.** These "
+             "chapter titles carry no ATT/DEF prefix; the author instead prints **ATTACK** (red) "
+             "or **DEFENSE** (teal) in the bottom-right corner of every frame, and side is already "
+             "resolved from that upstream and deliberately absent from your item. The practice "
+             "server spawns the demo player attacker-side regardless, so spawn-side cues are not "
+             "evidence."),
+        ],
+    },
     ("PHOENIX", "breeze"): {
         "grammar": "**`<STAND> to <TARGET>`** — the REVERSED order: the callout BEFORE `to` is "
                    "where the player stands and the one AFTER it is what the fire hits. Both are "
@@ -736,11 +844,36 @@ for i, ln in enumerate(lines):
                                   f"{CREATOR or m.group(4)}{m.group(5)}"]))
     break
 
+# The heading is NOT the only place a base doc names its video, and on several docs it is not
+# there at all: SOVA/KAY-O/VIPER open with a bare `## Source` and put the id in the cached-video
+# path and in every copy-paste `frame_study.py --video <ID>` line of the Tooling block. Deriving
+# the old id from the heading alone therefore left `OLD_VIDEO = None` on exactly those docs, which
+# disabled BOTH the rewrite and the fail-loud guard below -- the first Sova/Abyss doc generated
+# clean while its tooling block still told every subagent to study `MMni5F7Pfl0`, Tseeky's ASCENT
+# video. A wrong id in a command the agent is told to paste is worse than a wrong id in prose: it
+# runs, it produces frames, and every timestamp read off them is silently for another map. So
+# collect ids from all three shapes these docs actually use and rewrite every one of them.
+VID_CONTEXTS = (
+    re.compile(r"--video\s+([A-Za-z0-9_-]{11})\b"),
+    re.compile(r"\b([A-Za-z0-9_-]{11})\.mp4\b"),
+    re.compile(r"`([A-Za-z0-9_-]{11})`"),
+)
+OLD_VIDEOS = {OLD_VIDEO} if OLD_VIDEO else set()
+for ln in lines:
+    for rx in VID_CONTEXTS:
+        OLD_VIDEOS.update(rx.findall(ln))
+OLD_VIDEOS.discard(VIDEO)
+
 for i, j, repl in sorted(blocks, reverse=True):
     lines[i:j] = repl
 
-# Then the bare map name everywhere it survives.
+# Then the bare map name everywhere it survives, and the old source id wherever it is named.
+# The id is a pure identifier -- unlike the creator's name it carries no claim about the footage,
+# so substituting it is always correct and cannot invent a fact about the new source.
 out = [re.sub(rf"\b{re.escape(SRC_MAP)}\b", DST_MAP.capitalize(), ln, flags=re.I) for ln in lines]
+if VIDEO:
+    for old in OLD_VIDEOS:
+        out = [ln.replace(old, VIDEO) for ln in out]
 after = "\n".join(out) + "\n"
 
 diff = list(difflib.unified_diff(before.splitlines(), after.splitlines(),
@@ -786,13 +919,37 @@ if wrong:
 
 # Same fail-loud rule for the source video id. Without it the wrong id survives silently, which is
 # how the Ascent doc kept the Summit video's id; with it, a bucket that forgets --video is caught.
-if VIDEO and OLD_VIDEO and VIDEO != OLD_VIDEO:
-    left = [i for i, ln in enumerate(after.splitlines(), 1) if OLD_VIDEO in ln]
+if VIDEO:
+    left = sorted({(i, old) for i, ln in enumerate(after.splitlines(), 1)
+                   for old in OLD_VIDEOS if old in ln})
     if left:
-        raise SystemExit(f"\nABORT - lines {left} still name the OLD source video {OLD_VIDEO!r}")
-if not VIDEO and OLD_VIDEO:
-    print(f"\n!! no --video given; this doc still names {OLD_VIDEO!r} as its source. Pass "
+        raise SystemExit("\nABORT - the output still names OLD source video(s): "
+                         + ", ".join(f"line {i} {v!r}" for i, v in left))
+elif OLD_VIDEOS:
+    print(f"\n!! no --video given; this doc still names {sorted(OLD_VIDEOS)} as its source. Pass "
           f"--video <ID> [--creator <NAME>] unless the new bucket really is the same video.")
+
+# And the same fail-loud rule for the CREATOR -- which is the half that must NOT be substituted.
+# These docs make behavioural claims BY NAME: "Tseeky usually CUTS STRAIGHT INTO THE AIM with the
+# title card", "Tseeky often pans the aim UP from a low reference". Those describe one person's
+# editing, not the game. Renaming would keep the sentence and change whose footage it describes --
+# the Abyss source has no title card at all, so a substituted doc would have told 30 subagents to
+# expect one and to treat its absence as a cut. There is no safe automatic rewrite here; the
+# caller must supply a `bullets` override stating what the NEW creator actually does. This guard
+# is what forces that, and is deliberately shaped like the map guard above: a closed pool of
+# proper nouns, matched case-sensitively.
+CREATOR_POOL = ("Tseeky", "Bonsai", "AiltonVG", "maxWELL", "Quible", "Snapiex",
+                "NartOutHere", "B3ast", "HEHE")
+foreign = sorted({(i, c) for i, ln in enumerate(after.splitlines(), 1) for c in CREATOR_POOL
+                  if re.search(rf"\b{re.escape(c)}\b", ln) and c not in (CREATOR or "")})
+if foreign:
+    raise SystemExit(
+        "\nABORT - the output still names another creator: "
+        + ", ".join(f"line {i} {c!r}" for i, c in foreign[:8])
+        + (f" (+{len(foreign) - 8} more)" if len(foreign) > 8 else "")
+        + "\nThose lines claim something about THAT creator's footage. Do NOT rename them - add a "
+          "`bullets` override to this bucket's EXAMPLES entry saying what the new source does."
+    )
 print(f"\n{len(before.splitlines())} -> {len(after.splitlines())} lines; no {SRC_MAP!r} left.")
 
 if not APPLY:
