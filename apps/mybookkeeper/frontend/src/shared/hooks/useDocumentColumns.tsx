@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { createColumnHelper } from "@tanstack/react-table";
 import type { ColumnDef } from "@tanstack/react-table";
+import { type AppTableFeatures } from "@/shared/lib/table-features";
 import { FileCheck } from "lucide-react";
 import { formatDate, timeAgo } from "@/shared/utils/date";
 import { DOCUMENT_TYPE_LABELS } from "@/shared/lib/constants";
@@ -17,10 +18,10 @@ interface ColumnActions {
   canWrite?: boolean;
 }
 
-const columnHelper = createColumnHelper<Document>();
+const columnHelper = createColumnHelper<AppTableFeatures, Document>();
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function useDocumentColumns(actions: ColumnActions): ColumnDef<Document, any>[] {
+export function useDocumentColumns(actions: ColumnActions): ColumnDef<AppTableFeatures, Document, any>[] {
   const { onDelete, onToggleEscrow, onReExtract, reExtractingId, canWrite = true } = actions;
 
   return useMemo(
@@ -31,7 +32,7 @@ export function useDocumentColumns(actions: ColumnActions): ColumnDef<Document, 
         header: ({ table }) => (
           <IndeterminateCheckbox
             checked={table.getIsAllRowsSelected()}
-            indeterminate={table.getIsSomeRowsSelected()}
+            indeterminate={table.getIsSomeRowsSelected() && !table.getIsAllRowsSelected()}
             onChange={table.getToggleAllRowsSelectedHandler()}
             onClick={(e) => e.stopPropagation()}
             aria-label="Select all documents"
@@ -73,7 +74,7 @@ export function useDocumentColumns(actions: ColumnActions): ColumnDef<Document, 
         header: "File",
         enableSorting: true,
         enableColumnFilter: true,
-        sortingFn: (rowA, rowB) => {
+        sortFn: (rowA, rowB) => {
           const a = rowA.original.file_name ?? "";
           const b = rowB.original.file_name ?? "";
           return a.localeCompare(b);
@@ -116,7 +117,7 @@ export function useDocumentColumns(actions: ColumnActions): ColumnDef<Document, 
       columnHelper.accessor("created_at", {
         header: "Uploaded",
         enableSorting: true,
-        sortingFn: (rowA, rowB) => {
+        sortFn: (rowA, rowB) => {
           const a = rowA.original.created_at ?? "";
           const b = rowB.original.created_at ?? "";
           return a.localeCompare(b);

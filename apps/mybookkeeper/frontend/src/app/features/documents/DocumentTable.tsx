@@ -1,5 +1,6 @@
 import { Fragment } from "react";
-import { flexRender, type Table } from "@tanstack/react-table";
+import { flexRender, type ReactTable } from "@tanstack/react-table";
+import type { AppTableFeatures } from "@/shared/lib/table-features";
 import {
   ChevronLeft,
   ChevronRight,
@@ -20,7 +21,7 @@ interface FilterOptions {
 }
 
 export interface DocumentTableProps {
-  table: Table<Document>;
+  table: ReactTable<AppTableFeatures, Document>;
   colCount: number;
   filterOptions: FilterOptions;
   onRowClick?: (doc: Document) => void;
@@ -42,7 +43,7 @@ export default function DocumentTable({
   reExtractingId,
   canWrite = true,
 }: DocumentTableProps) {
-  const { pageIndex, pageSize } = table.getState().pagination;
+  const { pageIndex, pageSize } = table.state.pagination;
   const totalRows = table.getFilteredRowModel().rows.length;
   const start = pageIndex * pageSize + 1;
   const end = Math.min((pageIndex + 1) * pageSize, totalRows);

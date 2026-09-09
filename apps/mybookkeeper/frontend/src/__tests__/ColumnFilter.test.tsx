@@ -2,15 +2,16 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import ColumnFilter from "@/shared/components/table/ColumnFilter";
-import type { Column } from "@tanstack/react-table";
+import type { Column, RowData } from "@tanstack/react-table";
+import type { AppTableFeatures } from "@/shared/lib/table-features";
 
-function makeColumn(filterValue?: string[]): Column<unknown, unknown> & { setFilterValue: ReturnType<typeof vi.fn> } {
+function makeColumn(filterValue?: string[]): Column<AppTableFeatures, RowData, unknown> & { setFilterValue: ReturnType<typeof vi.fn> } {
   const setFilterValue = vi.fn();
   return {
     id: "status",
     getFilterValue: vi.fn(() => filterValue),
     setFilterValue,
-  } as unknown as Column<unknown, unknown> & { setFilterValue: ReturnType<typeof vi.fn> };
+  } as unknown as Column<AppTableFeatures, RowData, unknown> & { setFilterValue: ReturnType<typeof vi.fn> };
 }
 
 const OPTIONS = [

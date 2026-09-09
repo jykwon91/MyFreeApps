@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { createColumnHelper } from "@tanstack/react-table";
 import type { ColumnDef } from "@tanstack/react-table";
+import { type AppTableFeatures } from "@/shared/lib/table-features";
 import { Trash2, Check, Home, Copy } from "lucide-react";
 import { compareAsc, parseISO } from "date-fns/fp";
 import { formatCurrency } from "@/shared/utils/currency";
@@ -23,10 +24,10 @@ interface ColumnActions {
   canWrite?: boolean;
 }
 
-const columnHelper = createColumnHelper<Transaction>();
+const columnHelper = createColumnHelper<AppTableFeatures, Transaction>();
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function useTransactionColumns(propertyMap: ReadonlyMap<string, string>, actions: ColumnActions): ColumnDef<Transaction, any>[] {
+export function useTransactionColumns(propertyMap: ReadonlyMap<string, string>, actions: ColumnActions): ColumnDef<AppTableFeatures, Transaction, any>[] {
   const { onDelete, onApprove, busyId, duplicateIds, canWrite = true } = actions;
 
   return useMemo(() => [
@@ -36,7 +37,7 @@ export function useTransactionColumns(propertyMap: ReadonlyMap<string, string>, 
       header: ({ table }) => (
         <IndeterminateCheckbox
           checked={table.getIsAllRowsSelected()}
-          indeterminate={table.getIsSomeRowsSelected()}
+          indeterminate={table.getIsSomeRowsSelected() && !table.getIsAllRowsSelected()}
           onChange={table.getToggleAllRowsSelectedHandler()}
           onClick={(e) => e.stopPropagation()}
           aria-label="Select all transactions"
@@ -69,7 +70,7 @@ export function useTransactionColumns(propertyMap: ReadonlyMap<string, string>, 
     }),
     columnHelper.accessor("transaction_date", {
       header: "Date",
-      sortingFn: (rowA, rowB) => {
+      sortFn: (rowA, rowB) => {
         const a = rowA.original.transaction_date ? parseISO(rowA.original.transaction_date) : new Date(0);
         const b = rowB.original.transaction_date ? parseISO(rowB.original.transaction_date) : new Date(0);
         return compareAsc(b)(a);
@@ -109,7 +110,7 @@ export function useTransactionColumns(propertyMap: ReadonlyMap<string, string>, 
     }),
     columnHelper.accessor("amount", {
       header: () => <span className="block text-right">Amount</span>,
-      sortingFn: (rowA, rowB) => {
+      sortFn: (rowA, rowB) => {
         const a = parseFloat(rowA.original.amount) || 0;
         const b = parseFloat(rowB.original.amount) || 0;
         return a - b;
@@ -150,7 +151,7 @@ export function useTransactionColumns(propertyMap: ReadonlyMap<string, string>, 
     }),
     columnHelper.accessor("property_id", {
       header: "Property",
-      sortingFn: (rowA, rowB) => {
+      sortFn: (rowA, rowB) => {
         const a = propertyMap.get(rowA.original.property_id ?? "") ?? "";
         const b = propertyMap.get(rowB.original.property_id ?? "") ?? "";
         return a.localeCompare(b);

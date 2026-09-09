@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { Provider } from 'react-redux';
 import { BrowserRouter } from 'react-router-dom';
 import { createColumnHelper, type CellContext } from '@tanstack/react-table';
+import type { AppTableFeatures } from '@/shared/lib/table-features';
 import { store } from '@/shared/store';
 import Documents from '@/app/pages/Documents';
 import type { Document } from '@/shared/types/document/document';
@@ -68,24 +69,24 @@ vi.mock('@/shared/store/documentsApi', () => ({
 
 vi.mock('@/shared/hooks/useDocumentColumns', () => ({
   useDocumentColumns: vi.fn(({ onDelete }: { onDelete: (id: string) => void }) => {
-    const helper = createColumnHelper<Document>();
+    const helper = createColumnHelper<AppTableFeatures, Document>();
     return [
       helper.accessor('file_name', {
         id: 'file_name',
         header: 'File',
         enableColumnFilter: true,
         filterFn: 'includesString',
-        cell: ({ getValue }: CellContext<Document, string | null>) => <span>{getValue() ?? '~'}</span>,
+        cell: ({ getValue }: CellContext<AppTableFeatures, Document, string | null>) => <span>{getValue() ?? '~'}</span>,
       }),
       helper.accessor('status', {
         id: 'status',
         header: 'Status',
-        cell: ({ getValue }: CellContext<Document, Document['status']>) => <span>{getValue()}</span>,
+        cell: ({ getValue }: CellContext<AppTableFeatures, Document, Document['status']>) => <span>{getValue()}</span>,
       }),
       helper.display({
         id: 'actions',
         header: () => null,
-        cell: ({ row }: CellContext<Document, unknown>) => (
+        cell: ({ row }: CellContext<AppTableFeatures, Document, unknown>) => (
           <button onClick={() => onDelete(row.original.id)}>Delete</button>
         ),
       }),

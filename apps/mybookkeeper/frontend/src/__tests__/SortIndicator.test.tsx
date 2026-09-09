@@ -1,14 +1,15 @@
 import { describe, it, expect, vi } from "vitest";
 import { render } from "@testing-library/react";
 import SortIndicator from "@/shared/components/table/SortIndicator";
-import type { Header } from "@tanstack/react-table";
+import type { Header, RowData } from "@tanstack/react-table";
+import type { AppTableFeatures } from "@/shared/lib/table-features";
 
-function makeHeader(sortState: false | "asc" | "desc"): Header<unknown, unknown> {
+function makeHeader(sortState: false | "asc" | "desc"): Header<AppTableFeatures, RowData, unknown> {
   return {
     column: {
       getIsSorted: vi.fn(() => sortState),
     },
-  } as unknown as Header<unknown, unknown>;
+  } as unknown as Header<AppTableFeatures, RowData, unknown>;
 }
 
 describe("SortIndicator", () => {

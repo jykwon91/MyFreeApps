@@ -1,15 +1,12 @@
 import { useMemo, useState } from "react";
 import {
-  useReactTable,
-  getCoreRowModel,
-  getSortedRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
+  useTable,
   type ColumnFiltersState,
+  type ColumnVisibilityState,
   type RowSelectionState,
   type SortingState,
-  type VisibilityState,
 } from "@tanstack/react-table";
+import { appTableFeatures } from "@/shared/lib/table-features";
 import { Plus, Upload, Sparkles } from "lucide-react";
 import { cn } from "@/shared/utils/cn";
 import { useTransactionColumns } from "@/shared/hooks/useTransactionColumns";
@@ -78,7 +75,7 @@ export default function Transactions() {
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [sorting, setSorting] = useState<SortingState>([{ id: "transaction_date", desc: true }]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
-  const columnVisibility: VisibilityState = useMemo(() => ({}), []);
+  const columnVisibility: ColumnVisibilityState = useMemo(() => ({}), []);
 
   // Build set of transaction IDs that belong to duplicate pairs for inline indicators
   const duplicateIdSet = useMemo(() => {
@@ -126,7 +123,8 @@ export default function Transactions() {
     [transactions, properties],
   );
 
-  const table = useReactTable({
+  const table = useTable({
+    features: appTableFeatures,
     data: transactions,
     columns,
     state: { rowSelection, sorting, columnVisibility, columnFilters },
@@ -135,11 +133,7 @@ export default function Transactions() {
     onColumnFiltersChange: setColumnFilters,
     enableRowSelection: true,
     getRowId: (row) => row.id,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    initialState: { pagination: { pageSize: 25 } },
+    initialState: { pagination: { pageIndex: 0, pageSize: 25 } },
   });
 
   const colCount = table.getAllLeafColumns().length;
