@@ -27,6 +27,40 @@ from app.services.rent import rent_ledger_service, rent_schedule_service
 ORG = uuid.uuid4()
 USER = uuid.uuid4()
 
+# ``create_schedule`` materializes every begun period at write time, against the
+# real clock. Pinning "today" is what keeps that deterministic: unpinned, each
+# test that back-dates a schedule gains one extra charge per calendar month that
+# elapses, which is what turned this module red in September 2026. Tests drive
+# the horizon they actually care about through an explicit ``through=``/``as_of=``.
+_TODAY = _dt.date(2026, 8, 15)
+
+
+@pytest.fixture(autouse=True)
+def _frozen_today():
+    with patch.object(rent_ledger_service, "_today", lambda: _TODAY):
+        yield
+
+
+async def _live_charges(db: AsyncSession, applicant_id: uuid.UUID) -> list[RentCharge]:
+    """Charges as the ledger shows them, ordered by period.
+
+    Retiring a charge is a soft delete, so a bare ``select`` also returns periods
+    the schedule has since dropped. Every repository filters those out, and so
+    must any assertion about them, or the test describes rows no user can see.
+    """
+    return list(
+        (
+            await db.execute(
+                select(RentCharge)
+                .where(
+                    RentCharge.applicant_id == applicant_id,
+                    RentCharge.deleted_at.is_(None),
+                )
+                .order_by(RentCharge.period_start),
+            )
+        ).scalars().all(),
+    )
+
 
 def _make_fake_uow(session: AsyncSession):
     @asynccontextmanager
@@ -120,13 +154,7 @@ class TestChargeGeneration:
                 through=_dt.date(2026, 8, 15),
             )
 
-        rows = (
-            await db.execute(
-                select(RentCharge)
-                .where(RentCharge.applicant_id == applicant_id)
-                .order_by(RentCharge.period_start),
-            )
-        ).scalars().all()
+        rows = await _live_charges(db, applicant_id)
 
         assert [r.period_start for r in rows] == [
             _dt.date(2026, 6, 1), _dt.date(2026, 7, 1), _dt.date(2026, 8, 1),
@@ -153,13 +181,7 @@ class TestChargeGeneration:
         # The first call may find rows already made at create time; the second
         # must add nothing at all.
         assert second == 0
-        count = len(
-            (
-                await db.execute(
-                    select(RentCharge).where(RentCharge.applicant_id == applicant_id),
-                )
-            ).scalars().all(),
-        )
+        count = len(await _live_charges(db, applicant_id))
         assert count == 3
         assert first >= 0
 
@@ -186,13 +208,7 @@ class TestChargeGeneration:
                 through=_dt.date(2026, 12, 31),
             )
 
-        rows = (
-            await db.execute(
-                select(RentCharge)
-                .where(RentCharge.applicant_id == applicant_id)
-                .order_by(RentCharge.period_start),
-            )
-        ).scalars().all()
+        rows = await _live_charges(db, applicant_id)
 
         assert len(rows) == 3
         assert rows[-1].period_end == _dt.date(2026, 8, 15)
@@ -217,13 +233,7 @@ class TestChargeGeneration:
                 through=_dt.date(2026, 10, 5),
             )
 
-        rows = (
-            await db.execute(
-                select(RentCharge)
-                .where(RentCharge.applicant_id == applicant_id)
-                .order_by(RentCharge.period_start),
-            )
-        ).scalars().all()
+        rows = await _live_charges(db, applicant_id)
 
         assert [(r.period_start, r.period_end, r.amount) for r in rows] == [
             (_dt.date(2026, 8, 15), _dt.date(2026, 8, 31), Decimal("822.58")),
@@ -291,14 +301,7 @@ class TestChargeGeneration:
                 through=_dt.date(2026, 8, 15),
             )
 
-        live = (
-            await db.execute(
-                select(RentCharge).where(
-                    RentCharge.applicant_id == applicant_id,
-                    RentCharge.deleted_at.is_(None),
-                ),
-            )
-        ).scalars().all()
+        live = await _live_charges(db, applicant_id)
         assert len(live) == 3
 
         with ledger_patch, schedule_patch:
@@ -307,14 +310,7 @@ class TestChargeGeneration:
                 end_date=_dt.date(2026, 6, 30), fields_set={"end_date"},
             )
 
-        live_after = (
-            await db.execute(
-                select(RentCharge).where(
-                    RentCharge.applicant_id == applicant_id,
-                    RentCharge.deleted_at.is_(None),
-                ),
-            )
-        ).scalars().all()
+        live_after = await _live_charges(db, applicant_id)
         assert [c.period_start for c in live_after] == [_dt.date(2026, 6, 1)]
 
 
