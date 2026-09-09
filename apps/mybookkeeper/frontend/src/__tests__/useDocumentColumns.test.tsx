@@ -1,11 +1,11 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, renderHook, screen, fireEvent } from "@testing-library/react";
 import {
-  useReactTable,
-  getCoreRowModel,
+  useTable,
   flexRender,
   type ColumnDef,
 } from "@tanstack/react-table";
+import { appTableFeatures, type AppTableFeatures } from "@/shared/lib/table-features";
 import { useDocumentColumns } from "@/shared/hooks/useDocumentColumns";
 import { DOCUMENT_TYPE_LABELS, DOCUMENT_TYPES } from "@/shared/lib/constants";
 import type { Document } from "@/shared/types/document/document";
@@ -14,7 +14,7 @@ interface ColumnWithFilter {
   filterFn: (row: { getValue: () => unknown }, columnId: string, filterValue: string[]) => boolean;
 }
 
-function findColumnByAccessorKey(columns: ColumnDef<Document, unknown>[], key: string): ColumnWithFilter {
+function findColumnByAccessorKey(columns: ColumnDef<AppTableFeatures, Document, unknown>[], key: string): ColumnWithFilter {
   // RTK/tanstack types don't expose accessorKey as a direct property at the union level,
   // so we cast to access it without polluting call sites with `any`.
   const col = columns.find((c) => (c as { accessorKey?: string }).accessorKey === key);
@@ -71,10 +71,10 @@ function makeDocument(overrides: Partial<Document> = {}): Document {
 
 function DocumentTypeCell({ doc }: { doc: Document }) {
   const columns = useDocumentColumns({ onDelete: vi.fn() });
-  const table = useReactTable({
+  const table = useTable({
+    features: appTableFeatures,
     data: [doc],
-    columns: columns as ColumnDef<Document, unknown>[],
-    getCoreRowModel: getCoreRowModel(),
+    columns: columns as ColumnDef<AppTableFeatures, Document, unknown>[],
     getRowId: (row) => row.id,
   });
 
@@ -149,21 +149,21 @@ describe("useDocumentColumns — document_type column", () => {
 describe("useDocumentColumns — document_type filterFn", () => {
   it("includes row when document_type matches filter value", () => {
     const { result } = renderHook(() => useDocumentColumns({ onDelete: vi.fn() }));
-    const col = findColumnByAccessorKey(result.current as ColumnDef<Document, unknown>[], "document_type");
+    const col = findColumnByAccessorKey(result.current as ColumnDef<AppTableFeatures, Document, unknown>[], "document_type");
     const mockRow = { getValue: () => "invoice" };
     expect(col.filterFn(mockRow, "document_type", ["invoice", "receipt"])).toBe(true);
   });
 
   it("excludes row when document_type is not in filter values", () => {
     const { result } = renderHook(() => useDocumentColumns({ onDelete: vi.fn() }));
-    const col = findColumnByAccessorKey(result.current as ColumnDef<Document, unknown>[], "document_type");
+    const col = findColumnByAccessorKey(result.current as ColumnDef<AppTableFeatures, Document, unknown>[], "document_type");
     const mockRow = { getValue: () => "lease" };
     expect(col.filterFn(mockRow, "document_type", ["invoice", "receipt"])).toBe(false);
   });
 
   it("treats null document_type as empty string for filter matching", () => {
     const { result } = renderHook(() => useDocumentColumns({ onDelete: vi.fn() }));
-    const col = findColumnByAccessorKey(result.current as ColumnDef<Document, unknown>[], "document_type");
+    const col = findColumnByAccessorKey(result.current as ColumnDef<AppTableFeatures, Document, unknown>[], "document_type");
     const mockRow = { getValue: () => null };
     expect(col.filterFn(mockRow, "document_type", [""])).toBe(true);
     expect(col.filterFn(mockRow, "document_type", ["invoice"])).toBe(false);
@@ -176,10 +176,10 @@ describe("useDocumentColumns — document_type filterFn", () => {
 
 function DocumentRow({ doc, onReExtract }: { doc: Document; onReExtract?: (id: string) => void }) {
   const columns = useDocumentColumns({ onDelete: vi.fn(), onReExtract, canWrite: true });
-  const table = useReactTable({
+  const table = useTable({
+    features: appTableFeatures,
     data: [doc],
-    columns: columns as ColumnDef<Document, unknown>[],
-    getCoreRowModel: getCoreRowModel(),
+    columns: columns as ColumnDef<AppTableFeatures, Document, unknown>[],
     getRowId: (row) => row.id,
   });
 

@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { type Column } from "@tanstack/react-table";
+import { type Column, type RowData } from "@tanstack/react-table";
+import type { AppTableFeatures } from "@/shared/lib/table-features";
 import { Filter, X } from "lucide-react";
 
-export interface ColumnFilterProps<TData = unknown> {
-  column: Column<TData, unknown>;
+export interface ColumnFilterProps<TData extends RowData = RowData> {
+  column: Column<AppTableFeatures, TData, unknown>;
   options?: { value: string; label: string }[];
   enableDateRange?: boolean;
 }
 
-export default function ColumnFilter<TData = unknown>({ column, options, enableDateRange }: ColumnFilterProps<TData>) {
+export default function ColumnFilter<TData extends RowData = RowData>({ column, options, enableDateRange }: ColumnFilterProps<TData>) {
   if (enableDateRange) {
     return <DateRangeFilter column={column} />;
   }
@@ -20,7 +21,7 @@ export default function ColumnFilter<TData = unknown>({ column, options, enableD
   return null;
 }
 
-function DateRangeFilter<TData = unknown>({ column }: { column: Column<TData, unknown> }) {
+function DateRangeFilter<TData extends RowData = RowData>({ column }: { column: Column<AppTableFeatures, TData, unknown> }) {
   const value = (column.getFilterValue() as [string, string] | undefined) ?? ["", ""];
 
   return (
@@ -43,11 +44,11 @@ function DateRangeFilter<TData = unknown>({ column }: { column: Column<TData, un
   );
 }
 
-function MultiSelectFilter<TData = unknown>({
+function MultiSelectFilter<TData extends RowData = RowData>({
   column,
   options,
 }: {
-  column: Column<TData, unknown>;
+  column: Column<AppTableFeatures, TData, unknown>;
   options: { value: string; label: string }[];
 }) {
   const [open, setOpen] = useState(false);

@@ -1,10 +1,17 @@
 import type { ReactNode } from "react";
 import {
-  useReactTable,
-  getCoreRowModel,
-  getSortedRowModel,
+  useTable,
+  tableFeatures,
+  rowSortingFeature,
+  rowPaginationFeature,
+  createSortedRowModel,
   flexRender,
-  type ColumnDef,
+  sortFn_alphanumeric,
+  sortFn_basic,
+  sortFn_datetime,
+  sortFn_text,
+  type ColumnDef as TableColumnDef,
+  type RowData,
   type SortingState,
   type PaginationState,
 } from "@tanstack/react-table";
@@ -12,9 +19,34 @@ import { ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 import { cn } from "../../utils/cn";
 import Skeleton from "../ui/Skeleton";
 
-export type { ColumnDef, SortingState, PaginationState };
+// Sorting and pagination are the only table behaviours this component offers.
+// The built-in comparators are registered by name so `sortFn: "auto"` — the
+// default for every column — resolves the same way it did before v9 made the
+// registry explicit.
+const dataTableFeatures = tableFeatures({
+  rowSortingFeature,
+  rowPaginationFeature,
+  sortedRowModel: createSortedRowModel(),
+  sortFns: {
+    alphanumeric: sortFn_alphanumeric,
+    basic: sortFn_basic,
+    datetime: sortFn_datetime,
+    text: sortFn_text,
+  },
+});
 
-export interface DataTableProps<T> {
+export type DataTableFeatures = typeof dataTableFeatures;
+
+/** A column definition bound to this table's feature set. */
+export type ColumnDef<T extends RowData, TValue = unknown> = TableColumnDef<
+  DataTableFeatures,
+  T,
+  TValue
+>;
+
+export type { SortingState, PaginationState };
+
+export interface DataTableProps<T extends RowData> {
   data: T[];
   columns: ColumnDef<T>[];
   loading?: boolean;
@@ -30,7 +62,7 @@ export interface DataTableProps<T> {
   pageCount?: number;
 }
 
-export default function DataTable<T>({
+export default function DataTable<T extends RowData>({
   data,
   columns,
   loading = false,
@@ -45,7 +77,8 @@ export default function DataTable<T>({
   onPaginationChange,
   pageCount,
 }: DataTableProps<T>) {
-  const table = useReactTable<T>({
+  const table = useTable<DataTableFeatures, T>({
+    features: dataTableFeatures,
     data,
     columns,
     state: {
@@ -68,8 +101,6 @@ export default function DataTable<T>({
           onPaginationChange(next);
         }
       : undefined,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
     getRowId: getRowId ? (row) => getRowId(row) : undefined,
     manualPagination: pageCount !== undefined,
     pageCount: pageCount,
@@ -162,7 +193,7 @@ export default function DataTable<T>({
                   role={onRowClick ? "button" : undefined}
                   tabIndex={onRowClick ? 0 : undefined}
                 >
-                  {row.getVisibleCells().map((cell) => (
+                  {row.getAllCells().map((cell) => (
                     <td key={cell.id} className="px-3 py-2.5">
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </td>

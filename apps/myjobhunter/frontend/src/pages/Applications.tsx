@@ -27,7 +27,7 @@ const COLUMNS: ColumnDef<Application>[] = [
     header: "Status",
     accessorKey: "latest_status",
     // Custom sort function so the order is applied → interview → offer → rejected → null
-    sortingFn: (rowA, rowB) => {
+    sortFn: (rowA, rowB) => {
       const a = getEventTypeSortRank(rowA.original.latest_status);
       const b = getEventTypeSortRank(rowB.original.latest_status);
       return a - b;

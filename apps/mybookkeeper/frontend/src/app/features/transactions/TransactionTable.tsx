@@ -1,5 +1,6 @@
 import { Fragment } from "react";
-import { flexRender, type Table } from "@tanstack/react-table";
+import { flexRender, type ReactTable } from "@tanstack/react-table";
+import type { AppTableFeatures } from "@/shared/lib/table-features";
 import {
   ChevronLeft,
   ChevronRight,
@@ -18,7 +19,7 @@ import { formatTag } from "@/shared/utils/tag";
 import { cn } from "@/shared/utils/cn";
 
 export interface TransactionTableProps {
-  table: Table<Transaction>;
+  table: ReactTable<AppTableFeatures, Transaction>;
   colCount: number;
   onRowClick: (transaction: Transaction) => void;
   editingId: string | null;
@@ -27,7 +28,7 @@ export interface TransactionTableProps {
 }
 
 export default function TransactionTable({ table, colCount, onRowClick, editingId, filterOptions, propertyMap }: TransactionTableProps) {
-  const { pageIndex, pageSize } = table.getState().pagination;
+  const { pageIndex, pageSize } = table.state.pagination;
   const totalRows = table.getFilteredRowModel().rows.length;
   const start = pageIndex * pageSize + 1;
   const end = Math.min((pageIndex + 1) * pageSize, totalRows);

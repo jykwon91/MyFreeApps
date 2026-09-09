@@ -1,14 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  useReactTable,
-  getCoreRowModel,
-  getSortedRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
+  useTable,
   type ColumnFiltersState,
   type RowSelectionState,
   type SortingState,
 } from "@tanstack/react-table";
+import { appTableFeatures } from "@/shared/lib/table-features";
 import { Search, X } from "lucide-react";
 import {
   useGetDocumentsQuery,
@@ -155,7 +152,8 @@ export default function Documents() {
     [],
   );
 
-  const table = useReactTable({
+  const table = useTable({
+    features: appTableFeatures,
     data: documents,
     columns,
     state: { rowSelection, sorting, columnFilters },
@@ -164,11 +162,7 @@ export default function Documents() {
     onColumnFiltersChange: setColumnFilters,
     enableRowSelection: true,
     getRowId: (row) => row.id,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    initialState: { pagination: { pageSize: 25 } },
+    initialState: { pagination: { pageIndex: 0, pageSize: 25 } },
   });
 
   const colCount = table.getAllLeafColumns().length;
