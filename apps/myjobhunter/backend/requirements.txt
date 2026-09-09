@@ -10,12 +10,13 @@ annotated-doc==0.0.4
     #   typer
 annotated-types==0.7.0
     # via pydantic
-anthropic==0.109.2
+anthropic==1.4.0
     # via myjobhunter-backend
 anyio==4.14.2
     # via
     #   anthropic
     #   httpx
+    #   httpx2
     #   myjobhunter-backend
     #   starlette
     #   watchfiles
@@ -25,7 +26,7 @@ argon2-cffi==25.1.0
     # via
     #   minio
     #   pwdlib
-argon2-cffi-bindings==25.1.0
+argon2-cffi-bindings==26.1.0
     # via argon2-cffi
 asyncpg==0.31.0
     # via
@@ -39,7 +40,7 @@ beautifulsoup4==4.15.0
     # via myjobhunter-backend
 brotli==1.2.0 ; platform_python_implementation == 'CPython'
     # via fonttools
-brotlicffi==1.2.0.1 ; platform_python_implementation != 'CPython'
+brotlicffi==1.2.0.2 ; platform_python_implementation != 'CPython'
     # via fonttools
 certifi==2026.5.20
     # via
@@ -70,15 +71,13 @@ colorama==0.4.6 ; sys_platform == 'win32'
     #   pytest
     #   qrcode
     #   tqdm
-cryptography==50.0.0
+cryptography==50.0.1
     # via
     #   myjobhunter-backend
     #   platform-shared
     #   pyjwt
 cssselect2==0.9.0
     # via weasyprint
-distro==1.9.0
-    # via anthropic
 dnspython==2.8.0
     # via email-validator
 docstring-parser==0.18.0
@@ -115,19 +114,25 @@ greenlet==3.5.1
 h11==0.16.0
     # via
     #   httpcore
+    #   httpcore2
     #   uvicorn
 hf-xet==1.5.1 ; platform_machine == 'AMD64' or platform_machine == 'aarch64' or platform_machine == 'amd64' or platform_machine == 'arm64' or platform_machine == 'x86_64'
     # via huggingface-hub
 httpcore==1.0.9
     # via httpx
+httpcore2==2.12.0 ; sys_platform != 'emscripten'
+    # via httpx2
 httptools==0.8.0
     # via uvicorn
 httpx==0.28.1
     # via
-    #   anthropic
     #   huggingface-hub
     #   myjobhunter-backend
     #   platform-shared
+httpx2==2.12.0
+    # via anthropic
+httpx2-jsfetch==1.0 ; sys_platform == 'emscripten'
+    # via httpx2
 huggingface-hub==1.19.0
     # via
     #   fastembed
@@ -137,6 +142,7 @@ idna==3.18
     #   anyio
     #   email-validator
     #   httpx
+    #   httpx2
     #   requests
 iniconfig==2.3.0
     # via pytest
@@ -198,14 +204,14 @@ pycparser==3.0 ; implementation_name != 'PyPy'
     # via cffi
 pycryptodome==3.23.0
     # via minio
-pydantic==2.13.4
+pydantic==2.13.5
     # via
     #   anthropic
     #   fastapi
     #   myjobhunter-backend
     #   platform-shared
     #   pydantic-settings
-pydantic-core==2.46.4
+pydantic-core==2.46.5
     # via pydantic
 pydantic-settings==2.15.0
     # via
@@ -250,7 +256,7 @@ requests==2.34.2
     # via fastembed
 rich==15.0.0
     # via typer
-sentry-sdk==2.68.0
+sentry-sdk==2.68.1
     # via
     #   myjobhunter-backend
     #   platform-shared
@@ -283,6 +289,10 @@ tqdm==4.68.2
     # via
     #   fastembed
     #   huggingface-hub
+truststore==0.10.4 ; sys_platform != 'emscripten'
+    # via
+    #   httpcore2
+    #   httpx2
 typer==0.25.1
     # via huggingface-hub
 typing-extensions==4.15.0
@@ -292,6 +302,7 @@ typing-extensions==4.15.0
     #   anyio
     #   beautifulsoup4
     #   fastapi
+    #   httpx2
     #   huggingface-hub
     #   minio
     #   pydantic
@@ -314,7 +325,7 @@ urllib3==2.7.0
     #   minio
     #   requests
     #   sentry-sdk
-uvicorn==0.52.3
+uvicorn==0.52.4
     # via myjobhunter-backend
 uvloop==0.22.1 ; platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32'
     # via uvicorn
@@ -327,7 +338,7 @@ webencodings==0.5.1
     #   cssselect2
     #   tinycss2
     #   tinyhtml5
-websockets==16.0
+websockets==17.1
     # via uvicorn
 win32-setctime==1.2.0 ; sys_platform == 'win32'
     # via loguru
