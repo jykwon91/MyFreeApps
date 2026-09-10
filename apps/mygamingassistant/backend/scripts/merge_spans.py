@@ -38,6 +38,10 @@ import json
 import sys
 from pathlib import Path
 
+# Same tables build_items.py and reconcile_agent.py resolve callouts against, so --apply-stand
+# below cannot map a callout onto a different zone than the rest of the pipeline would.
+from lineup_callouts import CALLOUTS_BY_MAP, callout_to_zone, leading_callout
+
 ROOT = Path(__file__).resolve().parent.parent
 VALID_ABILITY = {"recon", "shock"}
 
@@ -101,6 +105,17 @@ if "--pack" in argv:
         raise SystemExit("ABORT - --pack needs a file stem")
     STEM = argv[i + 1]
     argv = argv[:i] + argv[i + 2:]
+
+# `--apply-stand` is reconcile_agent.py's flag of the same name, needed HERE because reconcile's
+# own --apply rewrites the pack to exactly the gate-passed rows of one task output: it drops rows
+# the gate failed and knows nothing about the overrides file, so running it after this merge would
+# silently delete an operator-measured span and re-admit an excluded row. It never came up before
+# because the first Abyss source writes `<STAND> to <TARGET>` titles, so build_items read every
+# stand off the title and no localizer value was needed. A source that names only the target (21
+# of Tseeky's 27) leaves stand as a PLACEHOLDER COPY OF THE TARGET, and without this the pack
+# ships every one of those rows standing in the zone it is throwing at.
+APPLY_STAND = "--apply-stand" in argv
+argv = [a for a in argv if a != "--apply-stand"]
 
 # Same layout ingest_agent.py uses, resolved from this file so the script works from any cwd.
 PACK = ROOT / "scripts" / f"{agent}-spans" / f"{STEM}.json"
@@ -192,6 +207,36 @@ if excluded:
 else:
     pack.pop("excluded_no_event_in_source", None)
 
+if APPLY_STAND:
+    # The items file build_items wrote beside this pack, for ONE field: author_gave_stand. The
+    # author's own "from X" beats an inference, so those rows must not be touched -- and the
+    # placeholder is a copy of the target, so `stand == target` cannot distinguish them (a retake
+    # thrown from inside the site is genuinely stand == target).
+    ITEMS = ROOT / "scripts" / f"{agent}_{STEM}_items.json"
+    if not ITEMS.is_file():
+        raise SystemExit(
+            f"ABORT - --apply-stand needs {ITEMS}, which build_items.py writes beside the pack.\n"
+            "Without it there is no way to tell a placeholder stand from one the author gave."
+        )
+    AUTHOR_STAND = {int(i["cs"]): bool(i.get("author_gave_stand"))
+                    for i in json.loads(ITEMS.read_text(encoding="utf-8"))}
+    TABLE = CALLOUTS_BY_MAP.get(pack.get("map_slug"))
+    if not TABLE:
+        raise SystemExit(f"ABORT - no callout table for map {pack.get('map_slug')!r}")
+
+    def _apply_stand(row, loc, applied, unresolved, author):
+        cs = int(row["cs"])
+        if AUTHOR_STAND.get(cs):
+            author.append((cs, row["title"], row["stand"]))
+            return
+        z = callout_to_zone(leading_callout(loc.get("stand_loc") or ""), TABLE)
+        if not z:
+            unresolved.append((cs, row["title"], loc.get("stand_loc")))
+        elif z != row["stand"]:
+            applied.append((cs, row["title"], row["stand"], z, loc.get("stand_loc")))
+            row["stand"] = z
+
+stand_applied, stand_unresolved, stand_author = [], [], []
 merged, stale, changed_ability = [], [], []
 for row in pack["lineups"]:
     loc = passed.get(int(row["cs"]))
@@ -209,6 +254,8 @@ for row in pack["lineups"]:
                          f"not one of {sorted(VALID_ABILITY)}. Fix before accepting.")
     if int(row["cs"]) in prov:
         row["span_provenance"] = prov[int(row["cs"])]
+    if APPLY_STAND:
+        _apply_stand(row, loc, stand_applied, stand_unresolved, stand_author)
     merged.append(row["cs"])
 
 degenerate, thin = [], []
@@ -282,6 +329,17 @@ if excluded:
     for e in pack["excluded_no_event_in_source"]:
         mark = "new" if e["cs"] in {int(r["cs"]) for r in dropped} else "   "
         print(f"   {mark} cs={e['cs']:<5} {e['title']}")
+if APPLY_STAND:
+    print(f"\n--apply-stand: {len(stand_applied)} placeholder stand(s) replaced from the "
+          f"localizer's observed stand_loc, {len(stand_author)} left alone (author gave the "
+          f"stand in the title), {len(stand_unresolved)} UNRESOLVED:")
+    for cs, t, old, new, said in stand_applied:
+        print(f"   cs={cs:<5} {old:<9} -> {new:<9} (saw {said!r})   {t}")
+    for cs, t, said in stand_unresolved:
+        # Loud, because the row keeps a stand that is a copy of its own target -- it is wrong,
+        # not merely unconfirmed, and nothing downstream will say so again.
+        print(f"   cs={cs:<5} UNRESOLVED, keeping the placeholder: {said!r}   {t}")
+
 if changed_ability:
     print(f"\nability corrected from the footage on {len(changed_ability)} row(s):")
     for cs, t, old, new in changed_ability:

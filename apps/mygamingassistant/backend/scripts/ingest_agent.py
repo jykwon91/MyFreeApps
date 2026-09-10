@@ -207,7 +207,12 @@ async def cmd_create(agent: str, pack: str) -> None:
 def cmd_recut(agent: str, pack: str) -> None:
     data = _load(agent, pack)
     vid = data["video_id"]
-    py = str(ROOT / ".venv" / "Scripts" / "python.exe")
+    # The sibling venv when there is one, else the interpreter already running this script.
+    # A git WORKTREE has no .venv of its own -- batches there run under the main checkout's
+    # python -- and the hardcoded path turned that into a bare `FileNotFoundError: [WinError 2]`
+    # from deep inside subprocess, naming no file, after create/localize/merge had already run.
+    venv_py = ROOT / ".venv" / "Scripts" / "python.exe"
+    py = str(venv_py) if venv_py.is_file() else sys.executable
     recut = str(ROOT / "scripts" / "recut_lineup_clips.py")
 
     async def _ids():
