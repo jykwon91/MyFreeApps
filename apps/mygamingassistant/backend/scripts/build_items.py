@@ -16,7 +16,7 @@ card is present it supplies the stand (author_gave_stand, no --apply-stand neede
 disagrees with the chapter title, the name.
 
 Emits:
-  <scratch>/items_<agent>_<map>.json          workflow input (nn/cs/next/ability/name/target/stand/side)
+  scripts/<agent>_<pack-stem>_items.json      workflow input (nn/cs/next/ability/name/target/stand/side)
   scripts/<agent>-spans/<pack>.json           placeholder skeleton the localizer's spans overwrite
 
 Reuses reconcile_agent.py's OWN per-map callout table (imported, not copied) so the title->zone
@@ -41,6 +41,13 @@ What it deliberately does NOT invent:
          Mid *} and the 3 antiplant rows from {A Rafters, Defender Side Spawn}, two disjoint sets,
          so the 7 rows the author left unlabelled are placed by where he stood, not by a guess.
          A stand seen on BOTH sides, or on none, resolves nothing and falls through;
+      3b. the ALREADY-SHIPPED corpus's stand partition for this same agent+map, read from the
+         sibling packs under <agent>-spans/. Tier 3 can only see inside one video and is disabled
+         whenever a source's labelled rows all fall on one side — which is precisely the position
+         a SECOND source for a map starts from. Keyed on the stand ZONE (two creators name one
+         spot differently, but both resolve to the same zone), gated on the corpus containing BOTH
+         sides, and applied ONLY to rows whose own stand is real: a placeholder stand is a copy of
+         the target, so partitioning on it would answer a different question entirely.
       4. `--side-default <attacker|defender>`, which must be passed EXPLICITLY and whose rows are
          listed individually in the output so they can be checked at the eyeball gate.
     With no prefix, no phrase hit, no partition hit and no --side-default, it aborts.
@@ -75,6 +82,9 @@ from lineup_callouts import CALLOUTS_BY_MAP  # noqa: F401  (re-exported for call
 from lineup_callouts import callout_to_zone as _c2z
 from lineup_callouts import leading_callout as _lead
 from lineup_callouts import target_text as _target_text
+# Imported rather than re-typed: the comment below says these two must be IDENTICAL, and two copies
+# of a regex that must be identical are one edit away from not being.
+from lineup_callouts import REVERSED_SEP_SRC as _REVERSED_SEP_SRC
 
 
 def callout_to_zone(text, table):
@@ -103,106 +113,8 @@ def target_zone(title, table):
     # word "to" is unaffected. See target_text's docstring and <scratch>/title_grammar.py.
     return _c2z(_target_text(title, table), table)
 
-UNLABELLED = {
-    "fade": ("haunt", "haunt|seize - the author does NOT label it, so the LANDING may legitimately "
-             "be EITHER a hovering opened watching EYE (haunt) OR a flat spreading ground INK POOL "
-             "(seize); judge the deploy onset, not which of the two it is"),
-    "phoenix": ("hot-hands", "curveball|hot-hands - the author does NOT label it, so the LANDING "
-                "may legitimately be EITHER a white FLASH burst in the air from a curving orb "
-                "(curveball) OR an orange ground FIRE pool from a straight lob (hot-hands); judge "
-                "the deploy onset, not which of the two it is"),
-    # Viper is the first agent whose hedge is reached by DESIGN rather than by the author being
-    # silent. Snapiex brackets the utility in all 14 titles, so ABILITY_WORDS resolves 11 outright;
-    # the other 3 are bracketed "[Toxic Screen - Poison Cloud]" and match TWO patterns, which the
-    # len(hits)==1 guard turns into this hedge. That is the right answer, not a miss: those chapters
-    # genuinely deploy two utilities, and picking whichever pattern sat higher in the table would be
-    # a coin flip recorded as a fact. The localizer reports which deploy it actually pinned.
-    "viper": ("toxic-screen", "toxic-screen|poison-cloud|snake-bite - this chapter is a COMBO: the "
-              "author's own title brackets TWO utilities, and both are deployed. A toxic screen is "
-              "a long WALL of green gas that rises along a line from emitters; a poison cloud is a "
-              "thrown orb that blooms into one SPHERE of green gas at the spot it lands; a snake "
-              "bite is a canister that shatters into a flat corrosive ACID POOL on the ground. "
-              "Localize the CLEAREST single complete deploy, name which one you pinned, and say in "
-              "NOTES roughly when the other is deployed so it is not silently lost"),
-    "brimstone": ("brim-incendiary", "brim-incendiary|sky-smoke - the author does NOT label it, so "
-                  "the LANDING may legitimately be EITHER an orange burning MOLLY pool "
-                  "(brim-incendiary) OR a large dome SMOKE bloom (sky-smoke); judge the deploy "
-                  "onset, not which of the two it is"),
-    # KAY/O is the first THREE-way agent here. The hedge is correspondingly weaker than a two-way
-    # one, which is the argument for never reaching it: every plate on the Sunset source names the
-    # utility outright, so ABILITY_WORDS resolves all 41 rows and this string stays unused.
-    "kay-o": ("flashdrive", "flashdrive|zero-point|fragment - the author does NOT label it, so the "
-              "LANDING may legitimately be a white FLASH burst in the air from a thrown disc "
-              "(flashdrive), a KNIFE that sticks where it lands and opens a wide green suppression "
-              "dome (zero-point), or a bouncing grenade that settles into repeated explosive "
-              "PULSES on the ground (fragment); judge the deploy onset, not which of the three"),
-    # Sova's two throwables are far easier to tell apart on the LANDING than any other agent's pair
-    # here — one hovers and sweeps, the other detonates and is gone — so the hedge is unusually
-    # strong. It should still never be reached: the Sunset plate labels all 33.
-    "sova": ("recon", "recon|shock - the author does NOT label it, so the LANDING may legitimately "
-             "be EITHER a bolt that STICKS to a surface and emits repeating expanding SCAN pulses "
-             "that tag enemies through walls (recon) OR a dart that DETONATES on impact in a single "
-             "electric burst doing damage and leaving nothing behind (shock); judge the deploy "
-             "onset, not which of the two it is"),
-}
-
-# Phrase -> side, measured against the shipped corpus with derive_side.py (1128 lineups, 2026-07-29).
-# Only phrases that came back CONSISTENT are here; a SPLIT phrase is evidence of nothing and is
-# deliberately absent so it falls through to --side-default instead of borrowing a majority.
-#
-# ORDER MATTERS — first match wins, so every compound sits above the bare word it contains.
-# "Afterplant" is the case that forces it: `\bplant\b` does NOT match inside it (no word boundary),
-# so without its own entry an afterplant molly reaches the bare-plant rule only by accident of
-# spacing — "After Plant" would resolve and "Afterplant" would abort.
-SIDE_PHRASES = [
-    (r"\bafter[- ]?plant\b", "side_a",
-     "3/3 shipped 'afterplant' lineups are attacker — thrown by the side that planted"),
-    (r"\bpost[- ]?plant\b", "side_a", "24/24 shipped 'post plant'/'postplant' lineups are attacker"),
-    (r"\banti[- ]?plant\b", "side_b",
-     "denies the enemy plant; 3/3 shipped 'antiplant' and 70/70 'retake' lineups are defender"),
-    (r"\bretake\b", "side_b", "70/70 shipped 'retake' lineups are defender"),
-    (r"\bexecute\b", "side_a", "5/5 shipped 'execute' lineups are attacker — the attacking entry"),
-    (r"\bplant\b", "side_a", "48/48 shipped 'plant' lineups are attacker (post-plant utility)"),
-]
-
-# The creator's on-screen ability line NAMES the utility, which resolves the a|b ambiguity that
-# UNLABELLED exists to hedge: Brimstone's Sunset plate reads "Afterplant Molly" on all 23 of its
-# afterplant rows, and a molly is the incendiary, not the sky smoke. Only words that pick exactly
-# ONE of an agent's two candidates are listed — anything else falls through to the hedge prose so
-# the localizer's gate still decides rather than being told a wrong answer confidently.
-ABILITY_WORDS = {
-    "brimstone": [(r"\b(molly|molotov|incendiary|incend|fire)\b", "brim-incendiary"),
-                  (r"\b(smoke|smokes|sky)\b", "sky-smoke")],
-    "phoenix": [(r"\b(molly|molotov|hot.?hands|fire)\b", "hot-hands"),
-                (r"\b(flash|curveball|curve)\b", "curveball")],
-    "fade": [(r"\b(haunt|eye)\b", "haunt"), (r"\b(seize|ink)\b", "seize")],
-    # Deliberately ONLY the three official ability names, with no loose synonym. The temptation is
-    # to add "wall" for the screen, "orb"/"smoke" for the cloud and "molly" for the snake bite, as
-    # the other agents' tables do — but this source's whole ability signal is a bracket that spells
-    # the names out, and a loose synonym can only ever make a row match a SECOND pattern and fall to
-    # the hedge. The narrow table is what keeps 11 of 14 rows author-labelled. Add a synonym only if
-    # a future source actually needs it, and check the combo titles still resolve to exactly two.
-    "viper": [(r"\b(snake.?bite)\b", "snake-bite"),
-              (r"\b(poison.?cloud)\b", "poison-cloud"),
-              (r"\b(toxic.?screen)\b", "toxic-screen")],
-    # First agent with THREE candidates. Order is irrelevant here — the resolver collects the SET of
-    # matching patterns against the plate's role line only and demands exactly one, so a plate naming
-    # two utilities falls back to the hedge instead of picking whichever sits higher. That guard is
-    # what makes a three-way table safe: KAY/O's Sunset plates read exactly "Attacker Flash",
-    # "Defender Knife", "Attacker Molly" — one word each. (Titles are NOT searched for ability words,
-    # which is just as well: a chapter in the FLASH section is titled "...Pop Flash For Nerds" and a
-    # title-searching resolver would have to disentangle that from the knife section's own titles.)
-    "kay-o": [(r"\b(knife|zero.?point|suppress\w*)\b", "zero-point"),
-              (r"\b(molly|molotov|frag|fragment|grenade|nade)\b", "fragment"),
-              (r"\b(flash|flashdrive|pop.?flash)\b", "flashdrive")],
-    # `dart` is deliberately NOT in the recon pattern even though "recon dart" is common speech,
-    # because Sova's OTHER ability is literally called Shock Dart: the Sunset plates read "Attacker
-    # Recon" and "Att Shock Dart", so a `dart` alternative would make every shock row match BOTH
-    # patterns, hit the len(hits)==1 guard, and silently demote all 7 of them to the hedge. Matching
-    # narrowly on the words that pick exactly one ability is the whole contract of this table.
-    "sova": [(r"\b(recon|recon.?bolt|bolt)\b", "recon"),
-             (r"\b(shock|shock.?dart)\b", "shock")],
-}
+# The tables this reads titles against -- see build_items_data.py. Only the corpus grows.
+from build_items_data import ABILITY_WORDS, SIDE_PHRASES, UNLABELLED  # noqa: E402
 
 argv = sys.argv[1:]
 APPLY = "--apply" in argv
@@ -321,7 +233,7 @@ FROM_RE = re.compile(r"\bfrom\s+([^(\[]+)", re.I)
 # "THE REVERSED GRAMMAR" docstring. That function already splits `<STAND> to|- <TARGET>` and returns
 # the right half; this returns the LEFT half of the same accepted split, so the two can never
 # disagree about where the boundary is.
-REVERSED_SEP = re.compile(r"\s+(?:to|[-–—>]|→)\s+", re.I)
+REVERSED_SEP = re.compile(_REVERSED_SEP_SRC, re.I)
 
 
 def reversed_stand(title, table):
@@ -628,22 +540,66 @@ if len(_classes) < 2:
               f"absence of evidence, not evidence. Falling through to --side-default/--side-defer.")
     by_stand = {}
 
+# --- side tier 3b: the ALREADY-SHIPPED corpus's stand partition, for this same agent+map -------
+# Tier 3 can only see inside one video, and a source whose labelled rows all fall on one side
+# disables it — which is exactly the position a SECOND source for a map lands in. The NOTE this
+# script prints at the end already tells the operator to "resolve from a second source for this
+# agent/map"; this is that instruction with the evidence actually consulted instead of recalled.
+#
+# The evidence is the sibling packs under <agent>-spans/ for the same map: rows that are already
+# shipped and operator-reviewed, so their sides are decided facts rather than this run's guesses.
+# Keyed on the stand ZONE, not the callout string, because two creators name the same spot
+# differently ("B Nest" vs "B Main") and the zone is what both resolved to.
+#
+# Two guards, both load-bearing and both copied from tier 3 for the same reasons: the corpus must
+# contain BOTH sides before a one-sided answer counts as evidence, and the row's own stand must be
+# REAL. A placeholder stand is a copy of the TARGET, so partitioning on it would silently answer
+# "what side is this target usually attacked from", which is a different question and often the
+# opposite one.
+corpus_by_zone, corpus_n = {}, {}
+_sib_dir = BE / "scripts" / f"{AGENT}-spans"
+for _sib in sorted(_sib_dir.glob("*.json")) if _sib_dir.is_dir() else []:
+    if _sib.stem == PACK or _sib.name.endswith(".overrides.json"):
+        continue
+    try:
+        _doc = json.loads(_sib.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        continue
+    if _doc.get("map_slug") != MAP:
+        continue
+    for _ln in _doc.get("lineups", []):
+        if _ln.get("side") and _ln.get("stand"):
+            corpus_by_zone.setdefault(_ln["stand"], set()).add(_ln["side"])
+            corpus_n[_ln["stand"]] = corpus_n.get(_ln["stand"], 0) + 1
+if len({s for v in corpus_by_zone.values() for s in v}) < 2:
+    corpus_by_zone = {}
+
 for r in rows:
     if r["side"]:
         continue
     k = (r["stand_callout"] or "").strip().lower()
     seen = by_stand.get(k, set())
+    corpus_seen = corpus_by_zone.get(r["stand"], set()) if r["author_gave_stand"] else set()
     if len(seen) == 1:
         r["side"] = next(iter(seen))
         r["side_src"] = (f"stand partition — the stand is {r['side']} on every one of the "
                          f"{n_labelled[k]} title-labelled rows that share it")
+    elif len(corpus_seen) == 1:
+        r["side"] = next(iter(corpus_seen))
+        r["side_src"] = (f"shipped-corpus stand partition — {r['stand']!r} is {r['side']} on all "
+                         f"{corpus_n[r['stand']]} already-shipped {AGENT}/{MAP} row(s) that share it")
     elif SIDE_DEFAULT is not None:
         r["side"], r["side_src"] = SIDE_DEFAULT, "--side-default"
     elif SIDE_DEFER:
         r["side"], r["side_src"] = None, "--side-defer"
     else:
         why = ("appears on BOTH sides in this source" if len(seen) > 1
-               else "appears on no side-labelled row in this source")
+               else "appears on BOTH sides in the shipped corpus" if len(corpus_seen) > 1
+               else "appears on no side-labelled row in this source, and its stand zone "
+                    f"{r['stand']!r} settles nothing in the shipped {AGENT}/{MAP} corpus either"
+                    if r["author_gave_stand"]
+               else "appears on no side-labelled row in this source (and its stand is a "
+                    "placeholder, so the shipped-corpus partition cannot be consulted either)")
         raise SystemExit(
             f"ABORT - chapter {r['cs']} {r['name']!r} carries no ATT/DEF prefix, no phrase whose "
             f"side is consistent in the shipped corpus, and its stand "
@@ -793,7 +749,14 @@ def placeholder_spans(cs, end):
             "landing": [round(min(st + 4.5, e - 0.5), 2), round(min(st + 5.5, e), 2)]}
 
 
-items_path = HERE / f"items_{AGENT}_{MAP}.json"
+# Keyed on the PACK STEM, not the map, and named to match the `*_items.json` glob that
+# scripts/.gitignore tracks. Both details were bugs. The pack already refuses to overwrite itself
+# and tells you to pass `--pack <other-stem>`, but the items file it is written beside ignored the
+# stem entirely: a second source for the same (agent, map) -- the whole point of --pack -- silently
+# clobbered source 1's items list, which is the file the localizer reads. And the old
+# `items_<agent>_<map>` order matched no tracked glob, so every emitted items list fell outside the
+# convention and had to be renamed by hand before it could be committed.
+items_path = HERE / f"{AGENT}_{PACK}_items.json"
 pack_path = BE / "scripts" / f"{AGENT}-spans" / f"{PACK}.json"
 pack = {"video_id": ch["video_id"], "map_slug": MAP,
         "author": ch.get("uploader") or "unknown",
@@ -847,7 +810,9 @@ for src in sorted(prov, key=lambda s: (s not in LOUD, s)):
            "--side-defer": "!! UNRESOLVED - stays pending_review until a side is supplied"}
     print(f"\n  side from {src} — {len(rs)}/{len(rows)} rows   "
           f"{tag.get(src, 'evidence: ' + src)}")
-    if src in LOUD or src.startswith("stand partition"):
+    # Both partition tiers list their rows individually: they are the two that INFER a side from
+    # other rows rather than read it off the author, so they are the two worth eyeballing.
+    if src in LOUD or "stand partition" in src:
         for r in rs:
             print(f"     {r['nn']} cs={r['cs']:<5} {str(r['side']):7}  {r['name']}")
 if SIDE_DEFER and any(r["side"] is None for r in rows):
@@ -859,9 +824,10 @@ if SIDE_DEFER and any(r["side"] is None for r in rows):
 if not APPLY:
     print("\nDRY RUN - re-run with --apply to write the items file and the skeleton pack.")
     sys.exit(0)
-if pack_path.exists():
-    raise SystemExit(f"ABORT - {pack_path} already exists; writing would destroy localized spans. "
-                     f"Use --pack <other-stem> or move it aside deliberately.")
+for existing in (pack_path, items_path):
+    if existing.exists():
+        raise SystemExit(f"ABORT - {existing} already exists; writing would destroy localized "
+                         f"spans. Use --pack <other-stem> or move it aside deliberately.")
 pack_path.parent.mkdir(parents=True, exist_ok=True)
 items_path.write_text(json.dumps(rows, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
 pack_path.write_text(json.dumps(pack, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")

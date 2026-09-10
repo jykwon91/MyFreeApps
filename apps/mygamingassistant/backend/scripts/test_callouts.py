@@ -365,7 +365,37 @@ ABYSS_CASES = [
     ("A Lobby to A Main", "a-main"), ("B Main to B Backsite", "b-site"),
     ("B Heaven to B Main & Rope", "b-main"), ("B Lobby to B (Postplant)", "b-site"),
     ("A Site/Backsite to A Lobby", "a-lobby"),   # slash form must not resolve to a-site
+    # --- JUXTAPOSITION: two callouts, no joiner. The LEADING one is the target ----------------
+    # Real titles from the second Abyss source, which names the stand by placing it after the
+    # target with no "from" and no separator. Both are members of a numbered `B Site` series
+    # ("B Site God Arrow", "B Site 2 From B Nest", then these two), so the destination is not in
+    # doubt. Pre-fix both resolved to the STAND -- not because anything parsed them that way, but
+    # because `b lobby` and `b main` happen to sit above `b site` in this map's table and the
+    # resolver returned the first hit by TABLE ORDER. A title whose meaning depends on how a table
+    # is sorted is the bug these pin.
+    ("B Site 3 B Lobby", "b-site"),              # pre-fix -> 'b-lobby' (the stand)
+    ("B Site 4 B Main Mid Round", "b-site"),     # pre-fix -> 'b-main' (the stand)
+    ("A Site 2 From A Main", "a-site"),          # the same pair written WITH "from"
+    # `+` joins two areas ONE arrow reveals, so leftmost-wins must not read the second as a stand.
+    ("A Lobby + Main Simple Arrow", "a-lobby"),
     ("", None), ("somewhere unlabelled", None),
+]
+
+# The reversed grammar written with a TWO-CHARACTER arrow, asserted on haven because these are
+# that map's real chapter titles (B3ast plays YT's Viper source).
+#
+# `\s+[-–—>]\s+` cannot match `->`: it wants whitespace on both sides of ONE character, and there
+# is none between the dash and the angle. So these never split, the whole string was matched, and
+# the answer came from table order again -- which happened to be RIGHT here and wrong on the Abyss
+# pair above. Same latent bug, opposite luck. Pinned in both directions so neither can drift back.
+ARROW_CASES = [
+    ("C Long -> C Site (11m spike)", "c-site"),      # pre-fix -> 'c-lobby' by table order alone
+    ("C Long -> A Site (cross-map lob)", "a-site"),
+    ("Mid Courtyard -> C Site", "c-site"),
+    ("Mid Window -> B Site (run throw)", "b-site"),
+    # The evidence gate still governs: a right half that names no callout refuses the split, and
+    # the whole string is matched instead.
+    ("C Site -> win the round", "c-site"),
 ]
 
 def run():
@@ -375,7 +405,7 @@ def run():
                             ("sunset", SUNSET_CASES), ("ascent", REVERSED_CASES),
                             ("breeze", BREEZE_REVERSED_CASES), ("haven", HAVEN_CASES),
                             ("lotus", LOTUS_CASES), ("split", SPLIT_CASES),
-                            ("abyss", ABYSS_CASES)):
+                            ("abyss", ABYSS_CASES), ("haven", ARROW_CASES)):
         table = BY_MAP[map_slug]
         print(f"--- {map_slug} ({len(cases)} cases) ---")
         for raw, want in cases:
@@ -428,6 +458,7 @@ def run():
 
     total = (len(SUMMIT_CASES) + len(ASCENT_CASES) + len(SUNSET_CASES) + len(REVERSED_CASES)
              + len(BREEZE_REVERSED_CASES) + len(HAVEN_CASES) + len(LOTUS_CASES)
+             + len(ARROW_CASES)
              + len(SPLIT_CASES) + len(ABYSS_CASES) + 1 + entries)
     print(f"\n{total - bad}/{total} passed")
     return bad

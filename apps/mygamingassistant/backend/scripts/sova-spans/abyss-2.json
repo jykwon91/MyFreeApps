@@ -1,0 +1,739 @@
+{
+ "video_id": "-W5HiuAQm-o",
+ "map_slug": "abyss",
+ "author": "Tseeky - Pro Valorant Lineups",
+ "lineups": [
+  {
+   "cs": 7,
+   "title": "A Main 1",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     14.9,
+     17.3
+    ],
+    "aim": [
+     19.05,
+     19.95
+    ],
+    "throw": [
+     19.92,
+     20.52
+    ],
+    "landing": [
+     22.45,
+     23.75
+    ]
+   }
+  },
+  {
+   "cs": 29,
+   "title": "A Main 2",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     34.35,
+     35.1
+    ],
+    "aim": [
+     43.05,
+     43.45
+    ],
+    "throw": [
+     43.32,
+     43.92
+    ],
+    "landing": [
+     46.6,
+     47.9
+    ]
+   }
+  },
+  {
+   "cs": 54,
+   "title": "A Site God Arrow",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     60.4,
+     62.6
+    ],
+    "aim": [
+     70.7,
+     71.35
+    ],
+    "throw": [
+     71.3,
+     71.9
+    ],
+    "landing": [
+     74.6,
+     75.6
+    ]
+   }
+  },
+  {
+   "cs": 83,
+   "title": "A Site 2 From A Main",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     89.55,
+     91.05
+    ],
+    "aim": [
+     95.2,
+     95.8
+    ],
+    "throw": [
+     95.8,
+     96.4
+    ],
+    "landing": [
+     98.1,
+     99.5
+    ]
+   }
+  },
+  {
+   "cs": 105,
+   "title": "A Site 3 From A Lobby",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     113.6,
+     115.35
+    ],
+    "aim": [
+     119.45,
+     120.05
+    ],
+    "throw": [
+     119.98,
+     120.58
+    ],
+    "landing": [
+     126.3,
+     127.25
+    ]
+   }
+  },
+  {
+   "cs": 131,
+   "title": "A Site 4 Close",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     135.9,
+     137.6
+    ],
+    "aim": [
+     144.45,
+     145.15
+    ],
+    "throw": [
+     145.15,
+     145.78
+    ],
+    "landing": [
+     147.6,
+     149.1
+    ]
+   }
+  },
+  {
+   "cs": 154,
+   "title": "A Fake Arrow",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     164.05,
+     165.6
+    ],
+    "aim": [
+     166.95,
+     167.82
+    ],
+    "throw": [
+     167.7,
+     168.35
+    ],
+    "landing": [
+     177.1,
+     177.4
+    ]
+   },
+   "span_provenance": "LANDING widened from the localizer's 0.12s [177.16,177.28] by operator frame-study at full res, 60fps dense (abyss07-sweep) with a per-frame cyan-ray pixel measurement, after merge_spans rejected the row on minimum clip length. The deploy instant is off-camera; this is a periodic scan from the same bolt -- see _why_landing_154. stand/aim/throw are the gate-passed localizer values from run wf_c6edd850-b43."
+  },
+  {
+   "cs": 180,
+   "title": "B Site God Arrow",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     187.8,
+     190.0
+    ],
+    "aim": [
+     194.1,
+     194.75
+    ],
+    "throw": [
+     194.68,
+     195.28
+    ],
+    "landing": [
+     200.16,
+     201.14
+    ]
+   }
+  },
+  {
+   "cs": 207,
+   "title": "B Site 2 From B Nest",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     213.5,
+     215.4
+    ],
+    "aim": [
+     219.42,
+     220.22
+    ],
+    "throw": [
+     220.12,
+     220.72
+    ],
+    "landing": [
+     221.88,
+     223.38
+    ]
+   }
+  },
+  {
+   "cs": 229,
+   "title": "B Site 3 B Lobby",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     233.6,
+     235.9
+    ],
+    "aim": [
+     243.35,
+     244.04
+    ],
+    "throw": [
+     243.88,
+     244.53
+    ],
+    "landing": [
+     249.55,
+     250.85
+    ]
+   }
+  },
+  {
+   "cs": 256,
+   "title": "B Site 4 B Main Mid Round",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     261.8,
+     263.3
+    ],
+    "aim": [
+     268.2,
+     268.98
+    ],
+    "throw": [
+     268.95,
+     269.55
+    ],
+    "landing": [
+     272.8,
+     274.05
+    ]
+   }
+  },
+  {
+   "cs": 277,
+   "title": "B Fake Arrow",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     282.8,
+     284.8
+    ],
+    "aim": [
+     289.5,
+     290.08
+    ],
+    "throw": [
+     290.03,
+     290.6
+    ],
+    "landing": [
+     295.7,
+     297.2
+    ]
+   }
+  },
+  {
+   "cs": 303,
+   "title": "Middle Best Spot (Attacker)",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     310.5,
+     312.7
+    ],
+    "aim": [
+     314.05,
+     314.72
+    ],
+    "throw": [
+     314.54,
+     315.14
+    ],
+    "landing": [
+     317.45,
+     318.95
+    ]
+   }
+  },
+  {
+   "cs": 324,
+   "title": "A Main Ultimate Combo",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     335.0,
+     337.0
+    ],
+    "aim": [
+     338.78,
+     339.4
+    ],
+    "throw": [
+     339.35,
+     339.95
+    ],
+    "landing": [
+     349.09,
+     349.6
+    ]
+   }
+  },
+  {
+   "cs": 354,
+   "title": "A Lobby",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "a-lobby",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     360.1,
+     362.6
+    ],
+    "aim": [
+     365.2,
+     365.87
+    ],
+    "throw": [
+     365.75,
+     366.35
+    ],
+    "landing": [
+     369.7,
+     370.7
+    ]
+   }
+  },
+  {
+   "cs": 377,
+   "title": "A Lobby + Main Simple Arrow",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "a-lobby",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     384.6,
+     386.05
+    ],
+    "aim": [
+     388.75,
+     389.55
+    ],
+    "throw": [
+     389.55,
+     390.2
+    ],
+    "landing": [
+     391.45,
+     392.55
+    ]
+   }
+  },
+  {
+   "cs": 398,
+   "title": "A Retake God Arrow (Thanks JohnnyPKay!)",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "ct-spawn",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     402.95,
+     404.45
+    ],
+    "aim": [
+     410.0,
+     410.85
+    ],
+    "throw": [
+     410.85,
+     411.45
+    ],
+    "landing": [
+     418.2,
+     419.45
+    ]
+   }
+  },
+  {
+   "cs": 425,
+   "title": "A Support",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "ct-spawn",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     431.25,
+     432.95
+    ],
+    "aim": [
+     436.0,
+     436.87
+    ],
+    "throw": [
+     436.78,
+     437.4
+    ],
+    "landing": [
+     443.72,
+     444.6
+    ]
+   }
+  },
+  {
+   "cs": 449,
+   "title": "B Main",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     456.1,
+     458.1
+    ],
+    "aim": [
+     462.9,
+     463.8
+    ],
+    "throw": [
+     463.7,
+     464.3
+    ],
+    "landing": [
+     466.55,
+     467.85
+    ]
+   }
+  },
+  {
+   "cs": 474,
+   "title": "B Main + Nest Wallbang",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     481.8,
+     483.4
+    ],
+    "aim": [
+     486.66,
+     487.36
+    ],
+    "throw": [
+     487.36,
+     487.96
+    ],
+    "landing": [
+     492.25,
+     493.55
+    ]
+   }
+  },
+  {
+   "cs": 503,
+   "title": "B Lobby",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "b-lobby",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     507.65,
+     509.15
+    ],
+    "aim": [
+     516.88,
+     517.44
+    ],
+    "throw": [
+     517.32,
+     517.97
+    ],
+    "landing": [
+     519.78,
+     521.05
+    ]
+   }
+  },
+  {
+   "cs": 527,
+   "title": "B Retake 1",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "ct-spawn",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     532.0,
+     534.0
+    ],
+    "aim": [
+     542.0,
+     542.62
+    ],
+    "throw": [
+     542.55,
+     543.15
+    ],
+    "landing": [
+     548.4,
+     549.6
+    ]
+   }
+  },
+  {
+   "cs": 555,
+   "title": "B Retake 2",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     561.8,
+     564.2
+    ],
+    "aim": [
+     566.8,
+     567.52
+    ],
+    "throw": [
+     567.37,
+     567.97
+    ],
+    "landing": [
+     569.2,
+     570.7
+    ]
+   }
+  },
+  {
+   "cs": 576,
+   "title": "Middle Best Spot (Defender)",
+   "ability": "recon",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     584.6,
+     587.2
+    ],
+    "aim": [
+     588.9,
+     589.46
+    ],
+    "throw": [
+     589.36,
+     589.88
+    ],
+    "landing": [
+     589.52,
+     589.95
+    ]
+   },
+   "span_provenance": "LANDING measured by operator frame-study at full res, 60fps dense (abyss24-arrival, abyss24-verify) plus a 0.25s pre-throw sweep (abyss24-pre) to rule out a pre-existing bolt, after the adversarial gate failed the row on card legibility. stand/aim/throw are the gate-run localizer values from run wf_c6edd850-b43."
+  },
+  {
+   "cs": 599,
+   "title": "A Default Double Shock Dart",
+   "ability": "shock",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     606.9,
+     608.6
+    ],
+    "aim": [
+     610.9,
+     611.5
+    ],
+    "throw": [
+     611.35,
+     611.95
+    ],
+    "landing": [
+     628.1,
+     628.85
+    ]
+   }
+  },
+  {
+   "cs": 633,
+   "title": "B Default Double Shock Dart",
+   "ability": "shock",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     637.7,
+     639.3
+    ],
+    "aim": [
+     643.55,
+     644.4
+    ],
+    "throw": [
+     644.4,
+     645.0
+    ],
+    "landing": [
+     659.6,
+     660.5
+    ]
+   }
+  },
+  {
+   "cs": 662,
+   "title": "B Orb Double Shock Dart",
+   "ability": "shock",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     666.0,
+     667.6
+    ],
+    "aim": [
+     674.4,
+     675.02
+    ],
+    "throw": [
+     674.9,
+     675.5
+    ],
+    "landing": [
+     690.85,
+     691.7
+    ]
+   }
+  }
+ ],
+ "note": "All 27 rows carry real frame-studied spans; no placeholders remain. 25 are localizer output that passed the adversarial gate as-is. The other 2 carry at least one event measured directly from the footage by operator frame-study; each such row has a `span_provenance` field saying which event was replaced and why."
+}
