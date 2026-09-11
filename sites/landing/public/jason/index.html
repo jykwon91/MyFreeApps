@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Jason Kwon — Senior Full-Stack Engineer</title>
+    <meta
+      name="description"
+      content="Jason Kwon, senior full-stack engineer in Houston, TX. 10+ years shipping production software; designed, built, and runs four live web apps on one shared platform."
+    />
+    <meta name="theme-color" content="#0f172a" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/jason/portfolio.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#experience">Skip to experience</a>
+
+    <header class="hero">
+      <h1>Jason Kwon</h1>
+      <p class="role">Senior Full-Stack Engineer</p>
+      <p class="lede">
+        10+ years shipping production software in healthcare, construction, and energy. I also
+        designed, built, and run MyFreeApps: four live web apps on one shared platform, from the
+        architecture and CI/CD to the AI pipelines inside them.
+      </p>
+      <nav class="contact-links" aria-label="Contact">
+        <a href="mailto:jasonykwon91@gmail.com">jasonykwon91@gmail.com</a>
+        <a href="https://github.com/jykwon91">github.com/jykwon91</a>
+        <a href="https://www.linkedin.com/in/jason-kwon-235b6693">linkedin.com/in/jason-kwon-235b6693</a>
+        <span class="location">Houston, TX</span>
+      </nav>
+    </header>
+
+    <main>
+      <section class="stats" aria-labelledby="highlights-h">
+        <h2 id="highlights-h" class="visually-hidden">Highlights</h2>
+        <dl class="stat-list">
+          <div class="stat">
+            <dt class="stat-label">years shipping production software</dt>
+            <dd class="stat-value">10+</dd>
+          </div>
+          <div class="stat">
+            <dt class="stat-label">web apps live in production</dt>
+            <dd class="stat-value">4</dd>
+          </div>
+          <div class="stat">
+            <dt class="stat-label">pull requests merged since April 2026</dt>
+            <dd class="stat-value">900+</dd>
+          </div>
+          <div class="stat">
+            <dt class="stat-label">shared platform for auth, security, and deploys</dt>
+            <dd class="stat-value">1</dd>
+          </div>
+        </dl>
+      </section>
+
+      <section class="featured" aria-labelledby="featured-h">
+        <figure class="featured-media">
+          <a href="/jason/img/mygamingassistant.webp" target="_blank" rel="noopener">
+            <img
+              src="/jason/img/mygamingassistant.webp"
+              width="1200"
+              height="600"
+              alt="MyGamingAssistant map view for Ascent: lineup stand and landing pins plotted on the minimap next to a list of lineups with video stills."
+            />
+          </a>
+          <figcaption>Ascent: where each lineup is thrown from and where it lands, on the minimap.</figcaption>
+        </figure>
+        <div class="featured-body">
+          <p class="eyebrow">Featured project · live demo, no sign-up</p>
+          <h2 id="featured-h">MyGamingAssistant</h2>
+          <p>
+            A public library of Valorant and CS2 utility lineups: where to stand, where to aim,
+            and where it lands, shown on the minimap with the video clip.
+          </p>
+          <p>
+            The lineups come from YouTube tutorials. A computer-vision pipeline reads the video
+            frames and the in-game minimap to find the stand and landing positions, then publishes
+            the clips to Cloudflare R2.
+          </p>
+          <span class="tags">
+            <span class="tag">Computer vision</span>
+            <span class="tag">Valorant &amp; CS2</span>
+            <span class="tag">No sign-up</span>
+          </span>
+          <a class="cta ext" href="https://mygamingassistant.myfreeapps.org/"
+            >Browse lineups <span aria-hidden="true">→</span></a
+          >
+        </div>
+      </section>
+
+      <section class="platform" aria-labelledby="platform-h">
+        <h2 id="platform-h">The MyFreeApps platform</h2>
+        <p class="section-lede">
+          Since April 2026 I've designed, built, and operated MyFreeApps: four apps sharing one
+          platform, one server, and one CI/CD pipeline. FastAPI, PostgreSQL, and SQLAlchemy on the
+          backend; React, TypeScript, and Redux Toolkit on the frontend; Docker and Caddy in
+          production. Auth, RBAC, TOTP 2FA, account lockout, encrypted PII, audit logging,
+          breached-password checks, and CAPTCHA are written once in a shared package and used by
+          every app. Deploy workflows are generated from one template, with tests that fail CI if
+          an app drifts from it.
+        </p>
+
+        <ul class="projects">
+          <li class="project">
+            <a class="project-shot" href="/jason/img/myjobhunter.webp" target="_blank" rel="noopener">
+              <img
+                src="/jason/img/myjobhunter.webp"
+                width="1200"
+                height="800"
+                alt="MyJobHunter resume refinement: asked to add a 63% cost cut and an award to a bullet, the AI stops and asks for confirmation because neither appears in the resume shown beside it."
+              />
+            </a>
+            <h3>MyJobHunter</h3>
+            <span class="project-domain">myjobhunter.myfreeapps.org</span>
+            <p>
+              Job-search tracker with AI resume refinement. Claude critiques and rewrites weak
+              bullets, and a hallucination guard blocks any company, date, or metric that isn't in
+              your resume.
+            </p>
+            <span class="tags">
+              <span class="tag">Resume AI</span>
+              <span class="tag">Hallucination guard</span>
+              <span class="tag">Gmail status updates</span>
+            </span>
+            <a class="cta ext" href="https://myjobhunter.myfreeapps.org/"
+              >Sign up free <span aria-hidden="true">→</span></a
+            >
+          </li>
+          <li class="project">
+            <a class="project-shot" href="/jason/img/mybookkeeper.webp" target="_blank" rel="noopener">
+              <img
+                src="/jason/img/mybookkeeper.webp"
+                width="1200"
+                height="800"
+                alt="MyBookkeeper transactions: an expense created from an uploaded plumbing invoice, with the vendor, date, amount, category, and property filled in by the AI."
+              />
+            </a>
+            <h3>MyBookkeeper</h3>
+            <span class="project-domain">mybookkeeper.myfreeapps.org</span>
+            <p>
+              Bookkeeping for rental-property owners. AI pulls transactions out of receipts, PDFs,
+              photos, and Gmail; a rent ledger allocates tenant payments to charges automatically.
+            </p>
+            <span class="tags">
+              <span class="tag">Receipt AI</span>
+              <span class="tag">Rent ledger</span>
+              <span class="tag">Gmail import</span>
+            </span>
+            <a class="cta ext" href="https://mybookkeeper.myfreeapps.org/"
+              >Sign up free <span aria-hidden="true">→</span></a
+            >
+          </li>
+          <li class="project">
+            <a class="project-shot" href="/jason/img/myrecipes.webp" target="_blank" rel="noopener">
+              <img
+                src="/jason/img/myrecipes.webp"
+                width="1200"
+                height="800"
+                alt="MyRecipes version diff: two versions of a recipe side by side with changed ingredients and steps highlighted."
+              />
+            </a>
+            <h3>MyRecipes</h3>
+            <span class="project-domain">myrecipes.myfreeapps.org</span>
+            <p>
+              Version control for cooking. Every edit saves a new version you can diff against the
+              last, with a cook log to track how each version turned out.
+            </p>
+            <span class="tags">
+              <span class="tag">Version diffs</span>
+              <span class="tag">Cook log</span>
+              <span class="tag">Recipe search</span>
+            </span>
+            <a class="cta ext" href="https://myrecipes.myfreeapps.org/"
+              >Sign up free <span aria-hidden="true">→</span></a
+            >
+          </li>
+        </ul>
+
+        <p class="tooling">
+          I build the AI tooling I work with, too:
+          <a class="ext" href="https://github.com/jykwon91/jkwon-claude-config">jkwon-claude-config</a>
+          distributes 20+ custom Claude Code subagents, skills, and engineering rules across every
+          repo above, covering code review, security audits, testing, and deploy discipline. The
+          <a class="ext" href="https://github.com/jykwon91/MyFreeApps">MyFreeApps source</a> is
+          public.
+        </p>
+      </section>
+
+      <section class="experience" id="experience" aria-labelledby="experience-h">
+        <h2 id="experience-h">Experience</h2>
+
+        <article class="job">
+          <header class="job-header">
+            <h3>Senior Software Engineer · OneOncology</h3>
+            <p class="job-dates">Nov 2022 – Apr 2026</p>
+          </header>
+          <ul>
+            <li>
+              Led the full-stack modernization of a legacy oncology platform: rebuilt the web app
+              in React, Redux, and TypeScript, and moved a C#/ASP.NET monolith to .NET Core
+              microservices on Azure.
+            </li>
+            <li>Cut deployment time 60% and production deployment errors 75% with automated CI/CD.</li>
+            <li>
+              Shipped an RBAC admin console for practice-level permissions, clinical dashboards,
+              and multi-step intake forms, from Figma to production.
+            </li>
+            <li>
+              Architected the client-side Redux store and a shared component library reused across
+              the product suite.
+            </li>
+            <li>
+              Built a Chrome extension with a REST backend that overlays real-time treatment
+              recommendations onto third-party EMR systems.
+            </li>
+          </ul>
+        </article>
+
+        <article class="job">
+          <header class="job-header">
+            <h3>Software Engineer · RevenueWell</h3>
+            <p class="job-dates">Feb 2022 – Oct 2022</p>
+          </header>
+          <ul>
+            <li>
+              Delivered a real-time KPI dashboard end to end, from the React/TypeScript charts to
+              the REST API behind them.
+            </li>
+            <li>Cut report load time 40% through query tuning, indexing, and caching.</li>
+          </ul>
+        </article>
+
+        <article class="job">
+          <header class="job-header">
+            <h3>Application Developer · HCSS</h3>
+            <p class="job-dates">Feb 2021 – Jan 2022</p>
+          </header>
+          <ul>
+            <li>
+              Implemented role-based access control in the authentication and authorization
+              services, with an admin UI for enterprise subscriptions and permissions.
+            </li>
+            <li>Built CI/CD pipelines and owned production support for the auth services.</li>
+          </ul>
+        </article>
+
+        <article class="job">
+          <header class="job-header">
+            <h3>Software Engineer · Altus Intervention</h3>
+            <p class="job-dates">Mar 2020 – Feb 2021</p>
+          </header>
+          <ul>
+            <li>
+              Streamed real-time pressure, temperature, and voltage telemetry from field equipment
+              over serial into an Electron operator UI.
+            </li>
+          </ul>
+        </article>
+
+        <article class="job">
+          <header class="job-header">
+            <h3>Software Engineer · R1Soft</h3>
+            <p class="job-dates">2014 – 2018</p>
+          </header>
+        </article>
+      </section>
+    </main>
+
+    <footer class="footer portfolio-footer">
+      <p>BS Computer Science, University of Houston</p>
+      <nav class="contact-links" aria-label="Contact (footer)">
+        <a href="mailto:jasonykwon91@gmail.com">jasonykwon91@gmail.com</a>
+        <a href="https://github.com/jykwon91">github.com/jykwon91</a>
+        <a href="https://www.linkedin.com/in/jason-kwon-235b6693">linkedin.com/in/jason-kwon-235b6693</a>
+      </nav>
+      <p>© 2026 Jason Kwon</p>
+    </footer>
+  </body>
+</html>
