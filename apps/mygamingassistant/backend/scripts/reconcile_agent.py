@@ -72,19 +72,9 @@ def stand_zone_from_loc(text):
     """Zone for a localizer stand_loc, judged on the leading callout only."""
     return callout_to_zone(leading_callout(text), CALLOUTS)
 
-# Seeded ability slugs for this agent â€” the whitelist an --apply-ability call must match.
-AGENT_ABILITIES = {
-    "sova": {"recon", "shock"},
-    "kay-o": {"flashdrive", "fragment", "zero-point"},
-    "viper": {"snake-bite", "poison-cloud", "toxic-screen"},
-    "brimstone": {"brim-incendiary", "sky-smoke"},
-    "fade": {"haunt", "seize"},
-    # Phoenix's sources do NOT label the ability in the chapter title, so --apply-ability is
-    # REQUIRED here, not optional â€” the localizer's curveball-vs-hot-hands call is the only
-    # signal. Without this entry the whitelist is empty and every call silently stays
-    # UNRESOLVED, shipping whatever provisional label the skeleton guessed.
-    "phoenix": {"curveball", "hot-hands"},
-}
+# Seeded ability slugs per agent live in agent_abilities.py (shared with merge_spans.py).
+from agent_abilities import AGENT_ABILITIES  # noqa: E402
+
 VALID_ABILITIES = AGENT_ABILITIES.get(AGENT, set())
 if APPLY_ABILITY and not VALID_ABILITIES:
     raise SystemExit(f"ABORT â€” --apply-ability given but no whitelist for agent {AGENT!r}; "

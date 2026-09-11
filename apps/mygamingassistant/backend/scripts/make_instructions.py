@@ -7,7 +7,7 @@ bucket invites drift in the GENERAL part — which is where the hard-won rules l
 source doc and rewrites only the map/source-specific spans, leaving everything else byte-identical,
 and prints a full diff so the rewrite is auditable before it is written.
 
-  python make_instructions.py FADE summit ascent [--pack <stem>] [--apply]
+  python make_instructions.py FADE summit ascent [--pack <stem>] [--base <doc>] [--apply]
 
 `--pack <stem>` selects the title-grammar bucket and names the output doc when a map has more than
 one source (the second source's pack is `<map>-2.json`, so its bucket is keyed `<map>-2` too).
@@ -42,9 +42,9 @@ def opt(flag):
     return sys.argv[sys.argv.index(flag) + 1] if flag in sys.argv else None
 
 
-VIDEO, CREATOR, PACK = opt("--video"), opt("--creator"), opt("--pack")
+VIDEO, CREATOR, PACK, BASE = opt("--video"), opt("--creator"), opt("--pack"), opt("--base")
 pos = [a for a in sys.argv[1:] if not a.startswith("--")]
-for consumed in (VIDEO, CREATOR, PACK):
+for consumed in (VIDEO, CREATOR, PACK, BASE):
     if consumed:
         pos = [p for p in pos if p != consumed]
 if len(pos) < 3:
@@ -76,7 +76,12 @@ if examples is None:
                      f"describe a different source's grammar and would mislead the localizer."
                      + sibling)
 
-src = BE / "scripts" / f"LOCALIZE_INSTRUCTIONS_{AGENT}.md"
+# `--base <doc>` derives from a creator-matched doc instead of the generic one. KAY-O.md and
+# VIPER.md are written for B3ast's chapterless compilations; Tseeky's chaptered KAY/O Sunset doc
+# already describes Tseeky's editing and carries that run's LANDING lessons, so a new Tseeky map
+# starts from it. Every guard below still applies — the map and creator sweeps are what make a
+# derived-from-derived doc safe.
+src = Path(BASE) if BASE else BE / "scripts" / f"LOCALIZE_INSTRUCTIONS_{AGENT}.md"
 dst = BE / "scripts" / f"LOCALIZE_INSTRUCTIONS_{AGENT}_{STEM.upper()}.md"
 if not src.exists():
     raise SystemExit(f"ABORT - {src} not found")
@@ -129,14 +134,17 @@ blocks = []
 i, j = block_span(CALLOUT_MARK)
 blocks.append((i, j, wrap(f"- {DST_MAP.capitalize()} callouts you may see: {cfg['callouts']}")
                + wrap(f"- {cfg['note']}")))
-i, j = block_span(EXAMPLE_FIND)
+spec = examples if isinstance(examples, dict) else {}
+# A --base doc need not carry the stock examples paragraph: the Snapiex-built Viper Sunset doc
+# states its grammar as a "TARGET comes from the lineup's name" bullet instead. The bucket then
+# names the block its examples replace.
+i, j = block_span(spec.get("examples_marker", EXAMPLE_FIND))
 # The lead-in states the source's title GRAMMAR, so it is source-specific too: the Summit
 # Brimstone doc says titles read "<TARGET> from <STAND>", which is false of the Ascent source
 # (its titles are bare target names and the stand comes from the in-game readout). Keeping the
 # old lead-in and swapping only the examples after "e.g." left a doc whose first clause
 # contradicted its own examples. A dict entry replaces the lead-in; a plain string keeps it.
 head = lines[i].split(" — e.g.")[0].rstrip()
-spec = examples if isinstance(examples, dict) else {}
 if spec:
     head = f"{EXAMPLE_WRITE} {spec['grammar']}"
     examples = spec["examples"]
@@ -192,6 +200,15 @@ OLD_VIDEOS.discard(VIDEO)
 
 for i, j, repl in sorted(blocks, reverse=True):
     lines[i:j] = repl
+
+# Single-line swaps, for claims that sit inside a block block_span cannot bound: a line of the
+# fenced return template is followed by more template lines, not a blank, so a `bullets` override
+# keyed on it would swallow the rest of the template.
+for old, new in spec.get("replace", []):
+    hits = [k for k, ln in enumerate(lines) if old in ln]
+    if len(hits) != 1:
+        raise SystemExit(f"ABORT - replace {old!r} matched {len(hits)} lines; expected exactly 1.")
+    lines[hits[0]] = lines[hits[0]].replace(old, new)
 
 # Then the bare map name everywhere it survives, and the old source id wherever it is named.
 # The id is a pure identifier -- unlike the creator's name it carries no claim about the footage,

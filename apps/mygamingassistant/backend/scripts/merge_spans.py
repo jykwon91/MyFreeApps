@@ -41,9 +41,9 @@ from pathlib import Path
 # Same tables build_items.py and reconcile_agent.py resolve callouts against, so --apply-stand
 # below cannot map a callout onto a different zone than the rest of the pipeline would.
 from lineup_callouts import CALLOUTS_BY_MAP, callout_to_zone, leading_callout
+from agent_abilities import AGENT_ABILITIES
 
 ROOT = Path(__file__).resolve().parent.parent
-VALID_ABILITY = {"recon", "shock"}
 
 # Every span becomes a video clip a user actually watches, so a span of a few hundredths of a
 # second is a broken artifact even when the frame it names is correct. Neither the localizer nor
@@ -94,6 +94,9 @@ if len(argv) < 3:
         "[--pack <stem>] [--override <overrides.json> | --no-override]"
     )
 agent, map_slug, argv = argv[0], argv[1], argv[2:]
+VALID_ABILITY = AGENT_ABILITIES.get(agent)
+if not VALID_ABILITY:
+    raise SystemExit(f"ABORT - no ability whitelist for agent {agent!r}; add it to agent_abilities.py")
 # `--pack <stem>` mirrors ingest_agent.py's flag and must exist here for the same reason: recut
 # keys clips by the pack's video id, so two sources for one map CANNOT share a pack file and a
 # second source lives at `<map>-2.json` beside the first. Without this flag the merge would always

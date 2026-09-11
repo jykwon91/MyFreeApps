@@ -14,6 +14,16 @@ from make_instructions_prose import (  # noqa: E402
     BRIM_LANDING,
 )
 
+# The base doc's chaptered-source paragraph contrasts this source with "the B3ast Viper
+# compilations" -- a claim about another creator's footage, which make_instructions refuses to carry
+# into a new bucket. This is the same paragraph with the comparison dropped.
+CHAPTERED = (
+    "**This source HAS chapters and names.** The chapter title gives you the TARGET, and the STAND "
+    "is either in the title or already supplied in your item, so your job is the 4 event spans plus "
+    "CONFIRMING that what you see matches the title. If the footage contradicts the title, say so "
+    "loudly in NOTES rather than bending the spans to fit."
+)
+
 # (AGENT, map) -> the title-grammar paragraph. Every example is a REAL chapter title from that
 # exact source, pasted from the chapters dump — never a plausible-looking invention.
 EXAMPLES = {
@@ -138,6 +148,65 @@ EXAMPLES = {
         "bullets": [
             ("**SIDE**:", SIDE_RESOLVED_UPSTREAM),
             ("**LANDING** =", BRIM_LANDING),
+        ],
+    },
+    # HEHE XD's Abyss video (laUgRg37MPI) does NOT share the Breeze/Lotus HUD: there is no
+    # persistent top-right plate. Verified off a 1fps montage of chapter 1, not recalled.
+    ("BRIMSTONE", "abyss"): {
+        "grammar": "**`<TARGET> from <STAND>`** — the clause after **from** names where the player "
+                   "STANDS, never what the molly hits. Both are already resolved in your item; "
+                   "confirm them against the footage",
+        "examples":
+        "`B Open from B Main` LANDS on B site's open plant spot and is THROWN FROM B Main. `A "
+        "Default from A Vent` lands on A site's default plant from the vent. `B Safe from CT` and "
+        "`A Backsite from CT` are thrown from DEFENDER SPAWN — this creator writes `CT` for it. The "
+        "same target from the same stand appears up to three times in a row (`B Open from B Main`, "
+        "`A Default from A Lobby`): those are different alignments, not duplicates. **Unlike this "
+        "creator's other maps there is NO persistent corner plate here.** Each chapter instead "
+        "OPENS with a ~3s four-panel overview card (`POSITION` / `SHOWCASE` / `REFERENCE` / "
+        "`RESULT`, an `8 SEC` label and a difficulty badge such as `Easy`) — that card is a "
+        "preview, not gameplay; pin nothing inside it. Live play follows: the stand with the HUD "
+        "up, then a HUD-OFF close-up of the aim reference with a **red circle painted on it** "
+        "(an editor overlay marking the reference point, not a game element), then the HUD returns "
+        "for the throw, then a follow-cam of the flight. The follow-cam carries a **red "
+        "trajectory line** and a **numeric readout in the BOTTOM-LEFT** in `SS,hh` form that "
+        "counts up and freezes (`00,73` ... `08,00`); both are editor overlays — do NOT anchor any "
+        "beat to the number and do not report it as flight time. The video ends on an outro card; "
+        "a window that runs into it has no lineup there.",
+        "bullets": [
+            ("**SIDE**:", SIDE_RESOLVED_UPSTREAM),
+            ("**LANDING** =", BRIM_LANDING),
+            ("**This source HAS chapters and names**", CHAPTERED),
+        ],
+    },
+    # Tseeky's Abyss video (9HdWaEJvxCE). The HUD is UP from the first frame of each chapter here —
+    # TSEEKY_HUD_OFF describes this creator's Split source and does NOT apply.
+    ("BRIMSTONE", "abyss-2"): {
+        "grammar": "**`<TARGET> Molly [n] [qualifier]`** with no stand in the title — the stand "
+                   "came from VALORANT's own location readout above the minimap and is already in "
+                   "your item",
+        "examples":
+        "`A Default Molly 1 Easy & Safe` lands on A site's default plant spot; `Easy & Safe`, "
+        "`Fast` and `Mid Flank` / `Super Flank` are qualifiers, never callouts. `A Default Anti "
+        "Plant Molly 2` DENIES an enemy plant and is thrown from Defender Side Spawn. `A Site "
+        "Execute Molly + Ultimate Combo` is an entry molly. **Three chapters titled `B Danger "
+        "Plant Molly 1/2/3` carry on-screen plates reading `B CORNER 1/2/3`** — the name in your "
+        "item is the plate's; report the callout the molly actually lands on and say in NOTES "
+        "which of the two it matches. For the first ~3s of every chapter a two-line plate sits "
+        "bottom-left (`A DEFAULT 2` over `Attacker Molly` / `Defender Molly`) with the HUD already "
+        "up and the player at the stand — the stand beat can start there. Mid-chapter the editor "
+        "ZOOMS into the ability bar to show which mouse button throws; that zoomed frame is an "
+        "editor crop, not a HUD-off frame, and the release happens around it. The landing is shown "
+        "on a follow-cam.",
+        "bullets": [
+            ("**SIDE**:",
+             "- **Do NOT report a SIDE.** This creator states it on the second line of every "
+             "on-screen plate — `Attacker Molly` or `Defender Molly` — so it is already resolved "
+             "from the author's own words upstream and is deliberately absent from your item. The "
+             "practice server spawns the demo player attacker-side regardless, so spawn-side cues "
+             "are not evidence."),
+            ("**LANDING** =", BRIM_LANDING),
+            ("**This source HAS chapters and names**", CHAPTERED),
         ],
     },
 }
