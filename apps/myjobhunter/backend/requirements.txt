@@ -2,7 +2,7 @@
 #    uv export --format requirements-txt --no-hashes --no-emit-project --output-file requirements.txt
 -e ../../../packages/shared-backend
     # via myjobhunter-backend
-alembic==1.19.1
+alembic==1.19.2
     # via myjobhunter-backend
 annotated-doc==0.0.4
     # via
@@ -12,7 +12,7 @@ annotated-types==0.7.0
     # via pydantic
 anthropic==1.4.0
     # via myjobhunter-backend
-anyio==4.14.2
+anyio==4.15.1
     # via
     #   anthropic
     #   httpx
@@ -256,7 +256,7 @@ requests==2.34.2
     # via fastembed
 rich==15.0.0
     # via typer
-sentry-sdk==2.68.1
+sentry-sdk==2.69.1
     # via
     #   myjobhunter-backend
     #   platform-shared
@@ -295,7 +295,7 @@ truststore==0.10.4 ; sys_platform != 'emscripten'
     #   httpx2
 typer==0.25.1
     # via huggingface-hub
-typing-extensions==4.15.0
+typing-extensions==4.16.0
     # via
     #   alembic
     #   anthropic
