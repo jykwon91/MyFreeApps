@@ -12,6 +12,7 @@ from sqlalchemy import text
 
 from platform_shared.core.git import resolve_git_commit
 from platform_shared.core.lifespan import create_app_lifespan
+from platform_shared.core.openapi import docs_kwargs
 from platform_shared.core.logging_safety import install_crlf_safe_logging
 from platform_shared.api.transparency_router import build_transparency_router
 from platform_shared.services.transparency.scheduler import (
@@ -100,7 +101,11 @@ lifespan = create_app_lifespan(
 )
 
 
-app = FastAPI(title="MyBookkeeper API", lifespan=lifespan)
+app = FastAPI(
+    title="MyBookkeeper API",
+    lifespan=lifespan,
+    **docs_kwargs(settings.environment),
+)
 
 app.add_middleware(
     CORSMiddleware,
