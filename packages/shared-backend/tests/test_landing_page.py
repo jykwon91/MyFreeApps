@@ -27,7 +27,7 @@ _VPS_CHECKOUT = "/srv/myfreeapps"
 _APEX = "myfreeapps.org"
 
 # Hostnames host Caddy serves that are infrastructure, not apps a person visits.
-_NON_APP_HOSTS = {"storage.myfreeapps.org"}
+_NON_APP_HOSTS = {"storage.myfreeapps.org", "www.myfreeapps.org"}
 
 _SITE_ADDRESS_LINE = re.compile(r"^([a-z0-9][a-z0-9.,\s-]*?)\s*\{\s*$")
 _APP_URL = re.compile(r"^https://([a-z0-9-]+\.myfreeapps\.org)/?$")
