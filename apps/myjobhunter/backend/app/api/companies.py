@@ -186,9 +186,13 @@ async def get_company_research(
             "GET company research failed: company_id=%s",
             company_id,
         )
+        # Surface only the exception *type* — never the raw message — so a
+        # DB IntegrityError (SQL/schema fragments), KeyError, or library
+        # internal isn't disclosed to the client (CWE-209). The full detail
+        # is in the logged traceback above.
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to load research: {type(exc).__name__}: {exc}",
+            detail=f"Failed to load research: {type(exc).__name__}",
         ) from exc
 
 
@@ -264,9 +268,12 @@ async def trigger_company_research(
             "Company research failed: unexpected error company_id=%s",
             company_id,
         )
+        # Type name only — the raw message of an arbitrary exception can leak
+        # SQL/schema, file paths, or upstream response bodies to the client
+        # (CWE-209). Full detail is in the logged traceback above.
         raise HTTPException(
             status_code=500,
-            detail=f"Research failed: {type(exc).__name__}: {exc}",
+            detail=f"Research failed: {type(exc).__name__}",
         ) from exc
 
     if research is None:
