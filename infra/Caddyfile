@@ -14,12 +14,21 @@
 #   2. Pick a unique loopback port (8094 = MBK, 8092 = MJH, 8096 = MGA, 9000 = MinIO).
 #   3. Make sure the app's docker compose binds that port on 127.0.0.1.
 #
+#   4. Add the app's card to the landing page (sites/landing/public/index.html)
+#      — test_landing_page.py fails CI until every app hostname here is linked.
+#
 # Note: deploys only sync + `caddy reload` this file when it DIFFERS from
-# /etc/caddy/Caddyfile. If a block's DNS record is created AFTER the block
+# /etc/caddy/Caddyfile (infra/sync-host-caddyfile.sh). A push to main that
+# changes this file triggers deploy-landing.yml, which applies it on its own —
+# no app deploy needed. If a block's DNS record is created AFTER the block
 # was already synced (ACME has been failing + backing off), touch this file
-# (any comment change) and dispatch a deploy to force the reload that
-# re-attempts certificate issuance. Done 2026-07-02 for myrecipes go-live (x2 —
-# first post-DNS attempt likely hit stale negative DNS cache at the CA).
+# (any comment change) to force the reload that re-attempts certificate
+# issuance. Done 2026-07-02 for myrecipes go-live (x2 — first post-DNS attempt
+# likely hit stale negative DNS cache at the CA).
+#
+# The ONE exception to "thin proxy" is the myfreeapps.org landing page at the
+# bottom: a static page with no docker Caddy behind it, so host Caddy serves
+# the files and carries the full security-header set itself.
 
 # MyBookkeeper — primary domain.
 # Both addresses listed during the myfreeapps.org cutover so existing
@@ -90,4 +99,29 @@ myrecipes.myfreeapps.org {
     }
 
     reverse_proxy 127.0.0.1:8100
+}
+
+# MyFreeApps landing page — apex domain. Static HTML + CSS, no JavaScript,
+# served straight from the /srv/myfreeapps checkout (deploy-landing.yml
+# `git pull`s it). Source: sites/landing/public/. The CSP allows only
+# same-origin stylesheets and images — keep the page script-free and free of
+# inline style="" attributes (test_landing_page.py enforces both).
+# `no-cache` = always revalidate; file_server's ETag makes that a cheap 304,
+# and unfingerprinted styles.css can never go stale after a deploy.
+myfreeapps.org {
+    root * /srv/myfreeapps/sites/landing/public
+    encode zstd gzip
+
+    header {
+        Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        X-Frame-Options "DENY"
+        Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
+        Content-Security-Policy "default-src 'none'; style-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+        Cache-Control "no-cache"
+        -Server
+    }
+
+    file_server
 }
