@@ -1,0 +1,52 @@
+Alex Rivera
+Senior Backend Engineer
+alex.rivera@example.com | (555) 019-2847 | Portland, OR | linkedin.com/in/alex-rivera-demo
+
+SUMMARY
+Backend-focused full-stack engineer with 8 years building and scaling
+distributed systems for B2B SaaS products. Comfortable owning a service
+from design through on-call, with a track record of shipping migrations
+that cut latency and cost without breaking customers.
+
+EXPERIENCE
+
+Senior Backend Engineer — Solstice Cloud Works
+March 2022 - Present
+- Led the migration of the monolithic order-processing service to an
+  event-driven microservices architecture, cutting P95 API latency from
+  800ms to 220ms and enabling independent deploys for 6 downstream teams.
+- Designed a multi-region PostgreSQL read-replica strategy with automated
+  failover, reducing database failover time from 12 minutes to 90 seconds.
+- Worked on backend services for the platform team.
+- Mentored 4 mid-level engineers through a structured onboarding and
+  code-review rotation; two were promoted to senior within a year.
+- Introduced contract testing between services using Pact, cutting
+  integration-bug escapes to production by roughly a third.
+
+Backend Engineer — Harborlight Data
+June 2019 - February 2022
+- Built the ingestion pipeline that processes over 40 million events per
+  day from customer webhooks, using Kafka and a Go consumer fleet with
+  at-least-once delivery guarantees.
+- Helped improve deployment process.
+- Rewrote the billing reconciliation job from a nightly batch script to
+  an incremental streaming job, cutting reconciliation lag from 18 hours
+  to under 15 minutes.
+- Partnered with the SRE team to define SLOs for the core API and built
+  the Grafana dashboards used for the on-call rotation.
+
+Software Engineer — Trailmark Software
+July 2017 - May 2019
+- Implemented REST APIs and background workers for a logistics-tracking
+  product used by regional trucking companies.
+- Fixed a set of concurrency bugs in the shipment-status worker that had
+  been causing duplicate customer notifications.
+- Wrote the first version of the internal deploy CLI still used by the
+  platform team today.
+
+EDUCATION
+B.S. in Computer Science — Riverton State University, 2017
+
+SKILLS
+Python, Go, TypeScript, PostgreSQL, Redis, Kafka, AWS, Docker, Kubernetes,
+GraphQL, React, System Design, CI/CD, Technical Mentorship

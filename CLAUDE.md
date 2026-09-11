@@ -18,6 +18,8 @@ MyFreeApps/
 │   └── landing/public/      # myfreeapps.org — static page linking every deployed app
 │                            # (served by host Caddy; deploy-landing.yml; keep in sync
 │                            # with infra/Caddyfile — test_landing_page.py enforces it)
+│                            # public/jason/ = portfolio page; its screenshots come from
+│                            # sites/landing/capture/ (see its README — never from prod)
 ├── .github/workflows/       # Per-app deploy workflows
 └── package.json             # npm workspaces root
 ```

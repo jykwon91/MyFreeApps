@@ -6,7 +6,7 @@ host Caddy (infra/Caddyfile). These tests fail CI when:
 - an app hostname is added to infra/Caddyfile but not linked from the page
   (a deployed app nobody can find), or the page links a hostname host Caddy
   does not serve (a dead link);
-- the page grows a <script>, <style>, or style="" attribute, which the
+- any page under public/ grows a <script>, <style>, or style="" attribute, which the
   landing block's CSP (`default-src 'none'; style-src 'self'`) would block —
   silently, in the browser only;
 - the Caddy `root` stops pointing at the directory the page lives in.
@@ -107,11 +107,17 @@ def test_every_app_link_is_served() -> None:
 
 
 def test_page_has_no_csp_blocked_markup() -> None:
-    forbidden = _scan_page().forbidden
+    # Every page under public/ (the landing page and /jason/) is served by the
+    # same myfreeapps.org block, so every one is under the same CSP.
+    forbidden: dict[str, list[str]] = {}
+    for page in sorted(_PUBLIC_DIR.rglob("*.html")):
+        scan = _PageScan()
+        scan.feed(page.read_text(encoding="utf-8"))
+        if scan.forbidden:
+            forbidden[page.relative_to(_REPO_ROOT).as_posix()] = scan.forbidden
     assert not forbidden, (
-        f"sites/landing/public/index.html contains {forbidden}. The myfreeapps.org CSP "
-        "allows no scripts and only same-origin stylesheets — move styling into "
-        "styles.css and keep the page script-free."
+        f"{forbidden}: the myfreeapps.org CSP allows no scripts and only same-origin "
+        "stylesheets — move styling into a .css file and keep the pages script-free."
     )
 
 
