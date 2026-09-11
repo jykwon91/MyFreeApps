@@ -2,7 +2,7 @@
 #    uv export --format requirements-txt --no-hashes --no-emit-project --output-file requirements.txt
 -e ../../../packages/shared-backend
     # via mygamingassistant-backend
-alembic==1.19.1
+alembic==1.19.2
     # via mygamingassistant-backend
 annotated-doc==0.0.4
     # via fastapi
@@ -10,7 +10,7 @@ annotated-types==0.7.0
     # via pydantic
 anthropic==1.4.0
     # via mygamingassistant-backend
-anyio==4.14.2
+anyio==4.15.1
     # via
     #   anthropic
     #   httpx
@@ -191,7 +191,7 @@ truststore==0.10.4 ; sys_platform != 'emscripten'
     # via
     #   httpcore2
     #   httpx2
-typing-extensions==4.15.0
+typing-extensions==4.16.0
     # via
     #   alembic
     #   anthropic
