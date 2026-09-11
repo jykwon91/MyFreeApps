@@ -28,7 +28,7 @@
  *   npx playwright test --config capture/playwright.config.ts --project=seed seed-mbk
  */
 import { test as setup, expect, type APIRequestContext, type Page } from "@playwright/test";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 import { DEMO_EMAIL, DEMO_NAME, DEMO_PASSWORD } from "./fixtures/demo-user";
@@ -325,9 +325,13 @@ async function ensureTenantAndLease(
 // ---------------------------------------------------------------------------
 
 async function ensureInvoiceFixture(page: Page): Promise<Buffer> {
-  if (existsSync(INVOICE_FIXTURE_PATH)) {
+  // Read first and treat ENOENT as "not rendered yet" — no separate exists-check to race.
+  try {
+    const cached = readFileSync(INVOICE_FIXTURE_PATH);
     console.log("[seed-mbk] invoice fixture PNG already rendered — reusing it");
-    return readFileSync(INVOICE_FIXTURE_PATH);
+    return cached;
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
   }
   await page.setViewportSize({ width: 850, height: 1100 });
   await page.setContent(renderInvoiceHtml());
