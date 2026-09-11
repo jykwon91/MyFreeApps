@@ -32,11 +32,22 @@ def _disable_external_auth_gates(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.fixture(autouse=True)
 def _reset_login_limiter():
-    """Reset the per-IP login limiter buckets before every test."""
-    from app.core.rate_limit import login_limiter
-    login_limiter._buckets.clear()
+    """Reset the in-memory rate-limiter buckets before/after every test.
+
+    The limiters are module-level singletons, so without this a test that
+    places several orders (or does several lookups) would leak attempts into
+    the next test and trip a spurious 429.
+    """
+    from app.core.rate_limit import (
+        login_limiter,
+        public_lookup_limiter,
+        public_order_limiter,
+    )
+    for limiter in (login_limiter, public_order_limiter, public_lookup_limiter):
+        limiter._buckets.clear()
     yield
-    login_limiter._buckets.clear()
+    for limiter in (login_limiter, public_order_limiter, public_lookup_limiter):
+        limiter._buckets.clear()
 
 
 @pytest_asyncio.fixture(scope="session")

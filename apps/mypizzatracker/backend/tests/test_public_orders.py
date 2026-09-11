@@ -13,6 +13,7 @@ Covers:
 """
 from __future__ import annotations
 
+import uuid
 from decimal import Decimal
 
 import pytest
@@ -21,6 +22,7 @@ from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.rate_limit import public_lookup_limiter, public_order_limiter
 from app.models.customer.customer import Customer
 from app.models.user.user import User
 
@@ -560,4 +562,102 @@ async def test_get_order_invalid_uuid_422(client: AsyncClient):
     """Malformed UUID is a 422 from FastAPI's path-param coercion."""
     client.headers.pop("Authorization", None)
     resp = await client.get("/public/orders/not-a-uuid")
+    assert resp.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# Abuse hardening: rate limiting, Turnstile, payload caps
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_order_placement_is_rate_limited(
+    client: AsyncClient, auth_client: AsyncClient,
+):
+    """Anonymous order flood is throttled per-IP once the limiter trips.
+
+    Guards against slot-capacity exhaustion (business DoS) + junk customer
+    rows. The slot has ample capacity, so the block is the rate limiter, not
+    the capacity check.
+    """
+    threshold = public_order_limiter._config.max_attempts
+    drop_id, slot_id = await _create_active_drop(auth_client, max_pizzas=threshold + 5)
+    pizza_id = await _create_pizza(auth_client, "La Clasica", "17.00")
+
+    client.headers.pop("Authorization", None)
+    body = {
+        "drop_id": drop_id,
+        "slot_id": slot_id,
+        "customer_name": "Flood",
+        "customer_phone": "5125550001",
+        "payment_method_tag": "cash",
+        "pizzas": [{"pizza_type_id": pizza_id, "topping_type_ids": []}],
+    }
+    for i in range(threshold):
+        r = await client.post("/public/orders", json=body)
+        assert r.status_code == 201, f"attempt {i}: {r.status_code} {r.text}"
+
+    blocked = await client.post("/public/orders", json=body)
+    assert blocked.status_code == 429
+
+
+@pytest.mark.asyncio
+async def test_customer_lookup_is_rate_limited(client: AsyncClient):
+    """The phone lookup is an existence/PII oracle — enumeration is throttled."""
+    client.headers.pop("Authorization", None)
+    threshold = public_lookup_limiter._config.max_attempts
+    for i in range(threshold):
+        r = await client.get("/public/customers/lookup", params={"phone": f"512555{i:04d}"})
+        # 404 (no such customer) is fine — the point is it is NOT yet 429.
+        assert r.status_code != 429, f"attempt {i} unexpectedly rate-limited"
+
+    blocked = await client.get("/public/customers/lookup", params={"phone": "5125559999"})
+    assert blocked.status_code == 429
+
+
+@pytest.mark.asyncio
+async def test_order_rejects_oversized_pizza_list(
+    client: AsyncClient,
+):
+    """A flood payload of hundreds of pizza lines is rejected by schema caps
+    (422) before the order service ever resolves them."""
+    client.headers.pop("Authorization", None)
+    resp = await client.post(
+        "/public/orders",
+        json={
+            "drop_id": str(uuid.uuid4()),
+            "slot_id": str(uuid.uuid4()),
+            "customer_name": "Flood",
+            "customer_phone": "5125550001",
+            "payment_method_tag": "cash",
+            "pizzas": [
+                {"pizza_type_id": str(uuid.uuid4()), "topping_type_ids": []}
+                for _ in range(51)
+            ],
+        },
+    )
+    assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_order_rejects_oversized_topping_list(
+    client: AsyncClient,
+):
+    """A single line packed with hundreds of topping UUIDs is rejected (422)."""
+    client.headers.pop("Authorization", None)
+    resp = await client.post(
+        "/public/orders",
+        json={
+            "drop_id": str(uuid.uuid4()),
+            "slot_id": str(uuid.uuid4()),
+            "customer_name": "Flood",
+            "customer_phone": "5125550001",
+            "payment_method_tag": "cash",
+            "pizzas": [
+                {
+                    "pizza_type_id": str(uuid.uuid4()),
+                    "topping_type_ids": [str(uuid.uuid4()) for _ in range(51)],
+                },
+            ],
+        },
+    )
     assert resp.status_code == 422
