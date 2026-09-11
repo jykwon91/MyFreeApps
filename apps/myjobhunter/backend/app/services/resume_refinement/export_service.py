@@ -130,9 +130,14 @@ async def _markdown_to_pdf(markdown: str) -> bytes:
             "pandoc binary not found; backend image must install it."
         )
 
+    # ``-raw_html`` disables pandoc's raw-HTML passthrough so an injected
+    # ``<img>``/``<style>``/``<link>`` in the (attacker-controlled) resume
+    # draft is escaped as text instead of surfacing as a live resource
+    # reference. Defence in depth — the ``_pdf_url_fetcher`` below is the
+    # authoritative control, since markdown image syntax still emits ``<img>``.
     proc = await asyncio.create_subprocess_exec(
         "pandoc",
-        "-f", "markdown",
+        "-f", "markdown-raw_html",
         "-t", "html5",
         "--standalone",
         "--metadata", "title=Resume",
@@ -150,13 +155,34 @@ async def _markdown_to_pdf(markdown: str) -> bytes:
     return await asyncio.to_thread(_html_to_pdf_bytes, html)
 
 
+def _pdf_url_fetcher(url: str):
+    """Block every external / local resource fetch during PDF rendering.
+
+    WeasyPrint's default fetcher resolves ``file://`` (local file read),
+    ``http(s)://`` (SSRF to internal services / cloud metadata) and more. The
+    resume markdown is fully user-controlled, so a reference like
+    ``<embed src="file:///etc/passwd">`` or ``![](http://169.254.169.254/…)``
+    would make the *server* fetch it and embed the result in the returned PDF.
+    A resume never needs to pull a remote or local resource, so only inline
+    ``data:`` URIs are permitted; everything else raises.
+    """
+    if not url.startswith("data:"):
+        raise ValueError(f"blocked non-data resource during resume export: {url!r}")
+
+    from weasyprint import default_url_fetcher
+
+    return default_url_fetcher(url)
+
+
 def _html_to_pdf_bytes(html: str) -> bytes:
     # Lazy import keeps weasyprint's heavy graph out of cold-start paths
     # that don't need it.
     from weasyprint import CSS, HTML
 
     buffer = io.BytesIO()
-    HTML(string=html).write_pdf(target=buffer, stylesheets=[CSS(string=_PDF_CSS)])
+    HTML(string=html, url_fetcher=_pdf_url_fetcher).write_pdf(
+        target=buffer, stylesheets=[CSS(string=_PDF_CSS)]
+    )
     return buffer.getvalue()
 
 
