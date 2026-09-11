@@ -1,0 +1,37 @@
+{
+ "_why_punch_in_aim": "maxWELL's edit shows the settled aim as an editor punch-in: a still, magnified crop of the aim view with a red circle drawn on the crosshair reference. It is followed by only 3-4 live, unzoomed frames at 24fps with the ability raised before release. That leaves no live aim longer than 0.17s, under merge_spans' 0.25s clip floor. The rows below open AIM onto the punch-in's last frames. The punch-in is the same aim with the author's reference marked, never a different view. Every AIM clip therefore shows the circled reference, then the live frames through release. Measured with frames.sh (frame-exact).",
+ "_why_side_view_landing": "On this source a FLASH/drive pop is filmed from a second angle after a hard cut. There is no whiteout: the deploy is a yellow-white sphere with radial rays that grows, peaks and fades in about 0.3-0.4s. The localizer pinned only the peak (0.17-0.2s). The rows below cover the burst from first bloom to fade, measured frame-exact.",
+ "_why_excluded": "Two flash rows show no deploy on camera at all (see each reason), so no override can repair them.",
+ "rows": {
+  "5": {
+   "aim": [14.70, 15.0],
+   "provenance": "AIM widened 14.91-15.0 -> 14.70-15.0 by operator frame-study (frames.sh y_m01a.png 12.5-15.1 and y_m01b.png 14.667-15.083, frame-exact). The punch-in crop, with the crosshair circled on the tan wall-top box, runs 13.24-14.875. Live and unzoomed with the blade raised is 14.917-14.958, the swing is at 15.0 and the release at 15.042. The AIM now opens on the punch-in's last ~5 frames."
+  },
+  "196": {
+   "stand": [198.5, 200.4],
+   "aim": [204.33, 204.667],
+   "landing": [206.32, 206.62],
+   "provenance": "STAND widened 198.5-198.833 -> 198.5-200.4 (frames.sh y_m10a.png 196.5-205.0): after the knife flourish cuts away at ~197.8, the player is planted at the B Main spot, unzoomed with the minimap and the 'From B-Main / To B-Site' banner. The ability swirl comes at 198.5, then the Operator is drawn on the same view through 200.5, with scope-in by 201.0. AIM widened 204.5-204.667 -> 204.33-204.667 (frames.sh y_m10b.png 204.042-204.75): the punch-in crop with the crosshair circled runs through 204.458; live with FLASH/drive in hand is 204.5-204.625, the swing is at 204.667, and the drive is in flight by 204.75. LANDING widened 206.375-206.542 -> 206.32-206.62 (y_m10l.png 206.1-206.9): the burst sphere with rays appears ~206.32, peaks at 206.39, shrinks to an orb by 206.54 and is gone at the cut ~206.68."
+  },
+  "229": {
+   "stand": [231.3, 232.5],
+   "provenance": "STAND moved 236.21-236.42 -> 231.3-232.5 (frames.sh y_m12s.png 229.2-236.5): the player is planted at the A Main spot, unzoomed with the minimap and the 'From A-Main / To A-Bridge' banner. Hands are empty, then the Operator is drawn, and the view doesn't move from 231.35 through 232.64. Scope-in follows at ~232.9, and the camera holds still from there to release. The old STAND was the 5 unzoomed frames between scope-out and the punch-in."
+  },
+  "421": {
+   "stand": [422.6, 423.8],
+   "provenance": "STAND moved 428.68-428.9 -> 422.6-423.8 (frames.sh y_m25s.png 421.2-429.0): after the knife flourish cuts away at ~422.4, the player is planted at the B Link spot, unzoomed with the minimap and the 'From B-Link / To B-Site' banner, and draws the Operator on the same view through 423.49. Scope-in follows at ~423.95. The localizer notes the player stays planted from 422.4 to the release."
+  },
+  "438": {
+   "landing": [448.0, 448.36],
+   "provenance": "LANDING widened 448.1-448.3 -> 448.0-448.36 (frames.sh y_m26l.png 447.9-448.5): a small orb at 448.01 grows into the burst sphere with rays, peaking at 448.12. It shrinks to an orb by 448.28 and fades by ~448.39."
+  },
+  "141": {
+   "landing": [154.17, 154.46],
+   "provenance": "LANDING measured (frames.sh y_m07l.png 153.3-154.7). The gate failed this row, but only because the shot changes to the thrower's post-cut Operator POV. The event itself is on screen: the burst sphere with radial rays appears at the pillar edge at 154.2, peaks at 154.29, shrinks to an orb by 154.37 and fades by ~154.46. It has the same shape and size as the second-angle bursts on cs=196 and cs=438, which the gate passed. STAND/AIM/THROW are the localizer's values; the gate passed all three."
+  }
+ },
+ "excluded": {
+  "177": "LANDING: the deploy is never on camera. The flash goes over the wall toward B Site, out of the throwing view, and every frame from release through 191.66 has no bloom, no whiteout and no wash. The only detonation evidence is the minimap icon turning red at 188.72, and the gate's LANDING frames are a different close-up with no deploy.",
+  "405": "LANDING: the deploy is never on camera. A per-frame luminance scan from 413.8 to 419.0 shows no bloom. The flash goes over the wall into B Main, and the landing section is an editor composite: dark shots from inside level geometry with a drawn blue trajectory arc and a ring at its end. That is not in-game deploy footage."
+ }
+}

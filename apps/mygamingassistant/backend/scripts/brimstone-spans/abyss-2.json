@@ -1,0 +1,779 @@
+{
+ "video_id": "9HdWaEJvxCE",
+ "map_slug": "abyss",
+ "author": "Tseeky - Pro Valorant Lineups",
+ "lineups": [
+  {
+   "cs": 6,
+   "title": "A Default Molly 1 Easy & Safe",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     6.5,
+     8.8
+    ],
+    "aim": [
+     15.0,
+     15.63
+    ],
+    "throw": [
+     15.55,
+     16.2
+    ],
+    "landing": [
+     23.2,
+     24.4
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Attacker Molly'"
+  },
+  {
+   "cs": 26,
+   "title": "A Default Molly 2",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     26.8,
+     29.3
+    ],
+    "aim": [
+     37.4,
+     38.02
+    ],
+    "throw": [
+     38.02,
+     38.62
+    ],
+    "landing": [
+     45.47,
+     46.5
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Attacker Molly'"
+  },
+  {
+   "cs": 48,
+   "title": "A Default Molly 3 Mid Flank",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     48.8,
+     50.8
+    ],
+    "aim": [
+     56.3,
+     56.86
+    ],
+    "throw": [
+     56.75,
+     57.35
+    ],
+    "landing": [
+     64.1,
+     65.1
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Attacker Molly'"
+  },
+  {
+   "cs": 71,
+   "title": "A Bridge Molly 1",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     72.0,
+     74.5
+    ],
+    "aim": [
+     79.68,
+     80.27
+    ],
+    "throw": [
+     80.22,
+     80.88
+    ],
+    "landing": [
+     87.78,
+     89.0
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Attacker Molly'"
+  },
+  {
+   "cs": 91,
+   "title": "A Bridge Molly 2 Fast",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     92.5,
+     94.5
+    ],
+    "aim": [
+     98.05,
+     98.8
+    ],
+    "throw": [
+     98.7,
+     99.3
+    ],
+    "landing": [
+     102.45,
+     103.65
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Attacker Molly'"
+  },
+  {
+   "cs": 105,
+   "title": "A Bridge Molly 3 Mid Flank",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     106.0,
+     108.0
+    ],
+    "aim": [
+     112.2,
+     112.8
+    ],
+    "throw": [
+     112.78,
+     113.38
+    ],
+    "landing": [
+     120.42,
+     121.5
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Attacker Molly'"
+  },
+  {
+   "cs": 128,
+   "title": "A Site Execute Molly + Ultimate Combo (If main is smoked)",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     129.5,
+     131.8
+    ],
+    "aim": [
+     134.85,
+     135.55
+    ],
+    "throw": [
+     135.45,
+     136.05
+    ],
+    "landing": [
+     140.3,
+     141.5
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Attacker Molly'"
+  },
+  {
+   "cs": 144,
+   "title": "B Default Molly 1 Fast",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     146.2,
+     148.2
+    ],
+    "aim": [
+     151.05,
+     151.65
+    ],
+    "throw": [
+     151.55,
+     152.2
+    ],
+    "landing": [
+     156.95,
+     158.0
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Attacker Molly'",
+   "held": "Pre-rework source. Patch 11.08 (2025-10-15) reworked Abyss B Site (cover and plant positions) and the Mid hallway into B Main; this video was uploaded 2024-06-29, before it, and the row stands or lands in a reworked zone (b-site). The clip is sound, but the lineup may no longer work in the current map, so it is held until a post-11.08 source confirms it. Release by deleting this entry and re-running merge_spans."
+  },
+  {
+   "cs": 160,
+   "title": "B Default Molly 2",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     163.6,
+     165.6
+    ],
+    "aim": [
+     166.25,
+     166.92
+    ],
+    "throw": [
+     166.85,
+     167.45
+    ],
+    "landing": [
+     169.55,
+     170.55
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Attacker Molly'",
+   "held": "Pre-rework source. Patch 11.08 (2025-10-15) reworked Abyss B Site (cover and plant positions) and the Mid hallway into B Main; this video was uploaded 2024-06-29, before it, and the row stands or lands in a reworked zone (b-main, b-site). The clip is sound, but the lineup may no longer work in the current map, so it is held until a post-11.08 source confirms it. Release by deleting this entry and re-running merge_spans."
+  },
+  {
+   "cs": 183,
+   "title": "B Default Molly 3 Mid Flank",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     184.0,
+     186.0
+    ],
+    "aim": [
+     190.72,
+     191.3
+    ],
+    "throw": [
+     191.25,
+     191.85
+    ],
+    "landing": [
+     197.55,
+     198.75
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Attacker Molly'",
+   "held": "Pre-rework source. Patch 11.08 (2025-10-15) reworked Abyss B Site (cover and plant positions) and the Mid hallway into B Main; this video was uploaded 2024-06-29, before it, and the row stands or lands in a reworked zone (b-main, b-site). The clip is sound, but the lineup may no longer work in the current map, so it is held until a post-11.08 source confirms it. Release by deleting this entry and re-running merge_spans."
+  },
+  {
+   "cs": 209,
+   "title": "B Corner 1",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "b-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     210.5,
+     212.5
+    ],
+    "aim": [
+     215.55,
+     216.15
+    ],
+    "throw": [
+     216.1,
+     216.7
+    ],
+    "landing": [
+     223.85,
+     225.05
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Attacker Molly'",
+   "held": "Pre-rework source. Patch 11.08 (2025-10-15) reworked Abyss B Site (cover and plant positions) and the Mid hallway into B Main; this video was uploaded 2024-06-29, before it, and the row stands or lands in a reworked zone (b-main). The clip is sound, but the lineup may no longer work in the current map, so it is held until a post-11.08 source confirms it. Release by deleting this entry and re-running merge_spans."
+  },
+  {
+   "cs": 227,
+   "title": "B Site Execute Molly 1 Back Site",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     229.8,
+     231.8
+    ],
+    "aim": [
+     233.75,
+     234.39
+    ],
+    "throw": [
+     234.35,
+     234.95
+    ],
+    "landing": [
+     239.82,
+     241.02
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Attacker Molly'",
+   "held": "Pre-rework source. Patch 11.08 (2025-10-15) reworked Abyss B Site (cover and plant positions) and the Mid hallway into B Main; this video was uploaded 2024-06-29, before it, and the row stands or lands in a reworked zone (b-site). The clip is sound, but the lineup may no longer work in the current map, so it is held until a post-11.08 source confirms it. Release by deleting this entry and re-running merge_spans."
+  },
+  {
+   "cs": 243,
+   "title": "B Site Execute Molly 2",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     243.4,
+     245.4
+    ],
+    "aim": [
+     249.82,
+     250.28
+    ],
+    "throw": [
+     250.2,
+     250.8
+    ],
+    "landing": [
+     255.97,
+     257.2
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Attacker Molly'",
+   "held": "Pre-rework source. Patch 11.08 (2025-10-15) reworked Abyss B Site (cover and plant positions) and the Mid hallway into B Main; this video was uploaded 2024-06-29, before it, and the row stands or lands in a reworked zone (b-site). The clip is sound, but the lineup may no longer work in the current map, so it is held until a post-11.08 source confirms it. Release by deleting this entry and re-running merge_spans."
+  },
+  {
+   "cs": 259,
+   "title": "A Default Anti Plant Molly 1",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     261.2,
+     263.1
+    ],
+    "aim": [
+     263.7,
+     264.4
+    ],
+    "throw": [
+     264.3,
+     264.85
+    ],
+    "landing": [
+     266.13,
+     267.3
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Defender Molly'"
+  },
+  {
+   "cs": 269,
+   "title": "A Default Anti Plant Molly 2",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "ct-spawn",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     270.9,
+     272.8
+    ],
+    "aim": [
+     280.4,
+     281.03
+    ],
+    "throw": [
+     280.95,
+     281.6
+    ],
+    "landing": [
+     287.75,
+     288.75
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Defender Molly'"
+  },
+  {
+   "cs": 291,
+   "title": "B Default Anti Plant Molly 1",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "ct-spawn",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     292.4,
+     294.3
+    ],
+    "aim": [
+     297.4,
+     298.0
+    ],
+    "throw": [
+     298.0,
+     298.6
+    ],
+    "landing": [
+     306.45,
+     307.6
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Defender Molly'",
+   "held": "Pre-rework source. Patch 11.08 (2025-10-15) reworked Abyss B Site (cover and plant positions) and the Mid hallway into B Main; this video was uploaded 2024-06-29, before it, and the row stands or lands in a reworked zone (b-site). The clip is sound, but the lineup may no longer work in the current map, so it is held until a post-11.08 source confirms it. Release by deleting this entry and re-running merge_spans."
+  },
+  {
+   "cs": 309,
+   "title": "B Default Anti Plant Molly 2",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     311.8,
+     313.2
+    ],
+    "aim": [
+     315.0,
+     315.833
+    ],
+    "throw": [
+     315.75,
+     316.35
+    ],
+    "landing": [
+     318.15,
+     319.2
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Defender Molly'",
+   "held": "Pre-rework source. Patch 11.08 (2025-10-15) reworked Abyss B Site (cover and plant positions) and the Mid hallway into B Main; this video was uploaded 2024-06-29, before it, and the row stands or lands in a reworked zone (b-site). The clip is sound, but the lineup may no longer work in the current map, so it is held until a post-11.08 source confirms it. Release by deleting this entry and re-running merge_spans."
+  },
+  {
+   "cs": 321,
+   "title": "B Default Anti Plant Molly 3",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     321.5,
+     323.9
+    ],
+    "aim": [
+     325.9,
+     326.34
+    ],
+    "throw": [
+     326.3,
+     326.9
+    ],
+    "landing": [
+     328.43,
+     329.6
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Defender Molly'",
+   "held": "Pre-rework source. Patch 11.08 (2025-10-15) reworked Abyss B Site (cover and plant positions) and the Mid hallway into B Main; this video was uploaded 2024-06-29, before it, and the row stands or lands in a reworked zone (b-site, mid). The clip is sound, but the lineup may no longer work in the current map, so it is held until a post-11.08 source confirms it. Release by deleting this entry and re-running merge_spans."
+  },
+  {
+   "cs": 331,
+   "title": "A Default Molly 4",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     332.9,
+     333.7
+    ],
+    "aim": [
+     336.0,
+     336.567
+    ],
+    "throw": [
+     336.55,
+     337.15
+    ],
+    "landing": [
+     338.52,
+     339.6
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Attacker Molly'",
+   "held": "Pre-rework source. Patch 11.08 (2025-10-15) reworked Abyss B Site (cover and plant positions) and the Mid hallway into B Main; this video was uploaded 2024-06-29, before it, and the row stands or lands in a reworked zone (mid). The clip is sound, but the lineup may no longer work in the current map, so it is held until a post-11.08 source confirms it. Release by deleting this entry and re-running merge_spans."
+  },
+  {
+   "cs": 341,
+   "title": "A Default Molly 5",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     342.0,
+     343.8
+    ],
+    "aim": [
+     351.0,
+     351.95
+    ],
+    "throw": [
+     351.95,
+     352.55
+    ],
+    "landing": [
+     360.38,
+     361.5
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Attacker Molly'"
+  },
+  {
+   "cs": 363,
+   "title": "A Bridge Molly 4",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     364.9,
+     366.9
+    ],
+    "aim": [
+     371.35,
+     371.95
+    ],
+    "throw": [
+     371.88,
+     372.4
+    ],
+    "landing": [
+     379.33,
+     380.5
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Attacker Molly'"
+  },
+  {
+   "cs": 382,
+   "title": "A Bridge Molly 5",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     383.66,
+     384.08
+    ],
+    "aim": [
+     391.3,
+     392.3
+    ],
+    "throw": [
+     392.35,
+     392.95
+    ],
+    "landing": [
+     399.88,
+     400.9
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Attacker Molly'"
+  },
+  {
+   "cs": 403,
+   "title": "B Default Molly 4",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     403.6,
+     405.6
+    ],
+    "aim": [
+     410.62,
+     411.1
+    ],
+    "throw": [
+     411.08,
+     411.7
+    ],
+    "landing": [
+     418.55,
+     419.75
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Attacker Molly'",
+   "held": "Pre-rework source. Patch 11.08 (2025-10-15) reworked Abyss B Site (cover and plant positions) and the Mid hallway into B Main; this video was uploaded 2024-06-29, before it, and the row stands or lands in a reworked zone (b-site). The clip is sound, but the lineup may no longer work in the current map, so it is held until a post-11.08 source confirms it. Release by deleting this entry and re-running merge_spans."
+  },
+  {
+   "cs": 421,
+   "title": "B Default Molly 5",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     424.75,
+     425.15
+    ],
+    "aim": [
+     429.25,
+     429.72
+    ],
+    "throw": [
+     429.7,
+     430.3
+    ],
+    "landing": [
+     436.95,
+     438.2
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Attacker Molly'",
+   "held": "Pre-rework source. Patch 11.08 (2025-10-15) reworked Abyss B Site (cover and plant positions) and the Mid hallway into B Main; this video was uploaded 2024-06-29, before it, and the row stands or lands in a reworked zone (b-site). The clip is sound, but the lineup may no longer work in the current map, so it is held until a post-11.08 source confirms it. Release by deleting this entry and re-running merge_spans."
+  },
+  {
+   "cs": 440,
+   "title": "B Default Molly 6 Super Flank",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     440.5,
+     443.0
+    ],
+    "aim": [
+     446.4,
+     447.0
+    ],
+    "throw": [
+     446.9,
+     447.5
+    ],
+    "landing": [
+     454.85,
+     455.95
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Attacker Molly'",
+   "held": "Pre-rework source. Patch 11.08 (2025-10-15) reworked Abyss B Site (cover and plant positions) and the Mid hallway into B Main; this video was uploaded 2024-06-29, before it, and the row stands or lands in a reworked zone (b-site). The clip is sound, but the lineup may no longer work in the current map, so it is held until a post-11.08 source confirms it. Release by deleting this entry and re-running merge_spans."
+  },
+  {
+   "cs": 466,
+   "title": "B Corner 2",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     469.5,
+     471.4
+    ],
+    "aim": [
+     474.85,
+     475.25
+    ],
+    "throw": [
+     475.22,
+     475.82
+    ],
+    "landing": [
+     478.83,
+     479.9
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Attacker Molly'",
+   "held": "Pre-rework source. Patch 11.08 (2025-10-15) reworked Abyss B Site (cover and plant positions) and the Mid hallway into B Main; this video was uploaded 2024-06-29, before it, and the row stands or lands in a reworked zone (b-main). The clip is sound, but the lineup may no longer work in the current map, so it is held until a post-11.08 source confirms it. Release by deleting this entry and re-running merge_spans."
+  },
+  {
+   "cs": 482,
+   "title": "B Corner 3",
+   "ability": "brim-incendiary",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "b-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     483.6,
+     485.6
+    ],
+    "aim": [
+     489.4,
+     490.4
+    ],
+    "throw": [
+     490.35,
+     490.95
+    ],
+    "landing": [
+     498.7,
+     499.9
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Attacker Molly'",
+   "held": "Pre-rework source. Patch 11.08 (2025-10-15) reworked Abyss B Site (cover and plant positions) and the Mid hallway into B Main; this video was uploaded 2024-06-29, before it, and the row stands or lands in a reworked zone (b-main). The clip is sound, but the lineup may no longer work in the current map, so it is held until a post-11.08 source confirms it. Release by deleting this entry and re-running merge_spans."
+  }
+ ],
+ "note": "brimstone ABYSS lineups from 9HdWaEJvxCE (Tseeky - Pro Valorant Lineups); 27 gate-passed. Side and utility read off the author's two-line title plate on every chapter; stand from VALORANT's own location readout. All 27 sided. 15 rows are HELD (pre-11.08 source, reworked B/mid zones); see each row's held field."
+}

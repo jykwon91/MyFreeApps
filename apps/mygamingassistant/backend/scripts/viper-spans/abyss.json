@@ -1,0 +1,1091 @@
+{
+ "video_id": "VNYjHQrBmoY",
+ "map_slug": "abyss",
+ "author": "Tseeky - Pro Valorant Lineups",
+ "lineups": [
+  {
+   "cs": 107,
+   "title": "A Bridge Molly 1 Easy & Safe",
+   "ability": "snake-bite",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     111.5,
+     111.92
+    ],
+    "aim": [
+     114.12,
+     114.63
+    ],
+    "throw": [
+     114.55,
+     115.15
+    ],
+    "landing": [
+     119.72,
+     121.0
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Attacker Molly'"
+  },
+  {
+   "cs": 123,
+   "title": "A Bridge Molly 1,5 (Other Easy Variants)",
+   "ability": "snake-bite",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     137.6,
+     139.0
+    ],
+    "aim": [
+     142.0,
+     142.78
+    ],
+    "throw": [
+     142.72,
+     143.35
+    ],
+    "landing": [
+     144.88,
+     146.4
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Attacker Molly'"
+  },
+  {
+   "cs": 150,
+   "title": "A Bridge Molly 2 B Lobby (Flank Heaven From Mid)",
+   "ability": "snake-bite",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     150.5,
+     151.8
+    ],
+    "aim": [
+     156.95,
+     157.65
+    ],
+    "throw": [
+     157.55,
+     158.2
+    ],
+    "landing": [
+     162.35,
+     163.5
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Attacker Molly'"
+  },
+  {
+   "cs": 171,
+   "title": "A Bridge Molly 3 Fast",
+   "ability": "snake-bite",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     173.4,
+     175.2
+    ],
+    "aim": [
+     178.75,
+     179.45
+    ],
+    "throw": [
+     179.35,
+     179.95
+    ],
+    "landing": [
+     181.15,
+     182.5
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Attacker Molly'"
+  },
+  {
+   "cs": 184,
+   "title": "A Default Molly 1",
+   "ability": "snake-bite",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     184.5,
+     187.0
+    ],
+    "aim": [
+     193.7,
+     194.4
+    ],
+    "throw": [
+     194.35,
+     195.0
+    ],
+    "landing": [
+     199.55,
+     200.8
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Attacker Molly'"
+  },
+  {
+   "cs": 202,
+   "title": "A Default Molly 2 (Flank Heaven From Mid)",
+   "ability": "snake-bite",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     202.5,
+     204.2
+    ],
+    "aim": [
+     211.95,
+     212.5
+    ],
+    "throw": [
+     212.45,
+     213.05
+    ],
+    "landing": [
+     224.7,
+     225.35
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Attacker Molly'"
+  },
+  {
+   "cs": 227,
+   "title": "A Default Molly 3 Safe",
+   "ability": "snake-bite",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     228.5,
+     230.5
+    ],
+    "aim": [
+     237.9,
+     238.25
+    ],
+    "throw": [
+     238.23,
+     238.83
+    ],
+    "landing": [
+     243.3,
+     244.6
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Attacker Molly'"
+  },
+  {
+   "cs": 246,
+   "title": "A Default Molly 4 Main Fast (Good In 1v1)",
+   "ability": "snake-bite",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     250.1,
+     251.7
+    ],
+    "aim": [
+     252.25,
+     252.92
+    ],
+    "throw": [
+     252.8,
+     253.4
+    ],
+    "landing": [
+     255.35,
+     256.25
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Attacker Molly'"
+  },
+  {
+   "cs": 261,
+   "title": "B Default Molly 1 Easy",
+   "ability": "snake-bite",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     261.6,
+     263.6
+    ],
+    "aim": [
+     268.2,
+     268.88
+    ],
+    "throw": [
+     268.85,
+     269.45
+    ],
+    "landing": [
+     274.05,
+     275.3
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Attacker Molly'",
+   "held": "Pre-rework source. Patch 11.08 (2025-10-15) reworked Abyss B Site (cover and plant positions) and the Mid hallway into B Main; this video was uploaded 2024-06-27, before it, and the row stands or lands in a reworked zone (b-site). The clip is sound, but the lineup may no longer work in the current map, so it is held until a post-11.08 source confirms it. Release by deleting this entry and re-running merge_spans."
+  },
+  {
+   "cs": 276,
+   "title": "B Default Molly 2 Safe",
+   "ability": "snake-bite",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     277.0,
+     279.0
+    ],
+    "aim": [
+     282.9,
+     283.8
+    ],
+    "throw": [
+     283.75,
+     284.4
+    ],
+    "landing": [
+     288.85,
+     290.0
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Attacker Molly'",
+   "held": "Pre-rework source. Patch 11.08 (2025-10-15) reworked Abyss B Site (cover and plant positions) and the Mid hallway into B Main; this video was uploaded 2024-06-27, before it, and the row stands or lands in a reworked zone (b-site). The clip is sound, but the lineup may no longer work in the current map, so it is held until a post-11.08 source confirms it. Release by deleting this entry and re-running merge_spans."
+  },
+  {
+   "cs": 291,
+   "title": "B Default Molly 3 Nest Safe",
+   "ability": "snake-bite",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     292.2,
+     294.0
+    ],
+    "aim": [
+     297.55,
+     298.25
+    ],
+    "throw": [
+     298.15,
+     298.8
+    ],
+    "landing": [
+     300.7,
+     301.8
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Attacker Molly'",
+   "held": "Pre-rework source. Patch 11.08 (2025-10-15) reworked Abyss B Site (cover and plant positions) and the Mid hallway into B Main; this video was uploaded 2024-06-27, before it, and the row stands or lands in a reworked zone (b-main, b-site). The clip is sound, but the lineup may no longer work in the current map, so it is held until a post-11.08 source confirms it. Release by deleting this entry and re-running merge_spans."
+  },
+  {
+   "cs": 303,
+   "title": "B Default Molly 4 Mid Bend (Flank Heaven From Mid)",
+   "ability": "snake-bite",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     304.0,
+     305.9
+    ],
+    "aim": [
+     310.85,
+     311.58
+    ],
+    "throw": [
+     311.58,
+     312.15
+    ],
+    "landing": [
+     315.65,
+     316.85
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Attacker Molly'",
+   "held": "Pre-rework source. Patch 11.08 (2025-10-15) reworked Abyss B Site (cover and plant positions) and the Mid hallway into B Main; this video was uploaded 2024-06-27, before it, and the row stands or lands in a reworked zone (b-main, b-site). The clip is sound, but the lineup may no longer work in the current map, so it is held until a post-11.08 source confirms it. Release by deleting this entry and re-running merge_spans."
+  },
+  {
+   "cs": 328,
+   "title": "B Danger Plant Molly",
+   "ability": "snake-bite",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "b-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     330.85,
+     331.75
+    ],
+    "aim": [
+     334.95,
+     335.6
+    ],
+    "throw": [
+     335.45,
+     336.1
+    ],
+    "landing": [
+     341.55,
+     342.8
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Attacker Molly'",
+   "held": "Pre-rework source. Patch 11.08 (2025-10-15) reworked Abyss B Site (cover and plant positions) and the Mid hallway into B Main; this video was uploaded 2024-06-27, before it, and the row stands or lands in a reworked zone (b-main). The clip is sound, but the lineup may no longer work in the current map, so it is held until a post-11.08 source confirms it. Release by deleting this entry and re-running merge_spans."
+  },
+  {
+   "cs": 346,
+   "title": "B Back Site Molly",
+   "ability": "snake-bite",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     346.0,
+     348.0
+    ],
+    "aim": [
+     352.3,
+     353.2
+    ],
+    "throw": [
+     353.1,
+     353.75
+    ],
+    "landing": [
+     358.1,
+     359.4
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Attacker Molly'",
+   "held": "Pre-rework source. Patch 11.08 (2025-10-15) reworked Abyss B Site (cover and plant positions) and the Mid hallway into B Main; this video was uploaded 2024-06-27, before it, and the row stands or lands in a reworked zone (b-site). The clip is sound, but the lineup may no longer work in the current map, so it is held until a post-11.08 source confirms it. Release by deleting this entry and re-running merge_spans."
+  },
+  {
+   "cs": 362,
+   "title": "A Antiplant / Retake Molly 1 Heaven (Default)",
+   "ability": "snake-bite",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     362.7,
+     364.9
+    ],
+    "aim": [
+     367.3,
+     368.25
+    ],
+    "throw": [
+     368.1,
+     368.7
+    ],
+    "landing": [
+     370.3,
+     371.6
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Defender Molly'"
+  },
+  {
+   "cs": 376,
+   "title": "A Antiplant Molly 2 Spawn (Bridge)",
+   "ability": "snake-bite",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "ct-spawn",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     376.55,
+     378.95
+    ],
+    "aim": [
+     385.1,
+     385.78
+    ],
+    "throw": [
+     385.78,
+     386.4
+    ],
+    "landing": [
+     391.05,
+     392.3
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Defender Molly'"
+  },
+  {
+   "cs": 394,
+   "title": "B Antiplant Molly 1 CT (Default)",
+   "ability": "snake-bite",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "ct-spawn",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     394.3,
+     395.8
+    ],
+    "aim": [
+     401.0,
+     401.6
+    ],
+    "throw": [
+     401.58,
+     402.18
+    ],
+    "landing": [
+     407.7,
+     409.2
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Defender Molly'",
+   "held": "Pre-rework source. Patch 11.08 (2025-10-15) reworked Abyss B Site (cover and plant positions) and the Mid hallway into B Main; this video was uploaded 2024-06-27, before it, and the row stands or lands in a reworked zone (b-site). The clip is sound, but the lineup may no longer work in the current map, so it is held until a post-11.08 source confirms it. Release by deleting this entry and re-running merge_spans."
+  },
+  {
+   "cs": 411,
+   "title": "B Antiplant Molly 2 Heaven (Default)",
+   "ability": "snake-bite",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     411.9,
+     413.9
+    ],
+    "aim": [
+     415.1,
+     415.85
+    ],
+    "throw": [
+     415.87,
+     416.47
+    ],
+    "landing": [
+     417.38,
+     418.5
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Defender Molly'",
+   "held": "Pre-rework source. Patch 11.08 (2025-10-15) reworked Abyss B Site (cover and plant positions) and the Mid hallway into B Main; this video was uploaded 2024-06-27, before it, and the row stands or lands in a reworked zone (b-site). The clip is sound, but the lineup may no longer work in the current map, so it is held until a post-11.08 source confirms it. Release by deleting this entry and re-running merge_spans."
+  },
+  {
+   "cs": 420,
+   "title": "B Antiplant Molly 3 B Link (Default)",
+   "ability": "snake-bite",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     421.0,
+     423.0
+    ],
+    "aim": [
+     425.5,
+     426.2
+    ],
+    "throw": [
+     426.15,
+     426.75
+    ],
+    "landing": [
+     428.6,
+     429.8
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Defender Molly'",
+   "held": "Pre-rework source. Patch 11.08 (2025-10-15) reworked Abyss B Site (cover and plant positions) and the Mid hallway into B Main; this video was uploaded 2024-06-27, before it, and the row stands or lands in a reworked zone (b-site, mid). The clip is sound, but the lineup may no longer work in the current map, so it is held until a post-11.08 source confirms it. Release by deleting this entry and re-running merge_spans."
+  },
+  {
+   "cs": 431,
+   "title": "A Site Best Wall 1 Mid",
+   "ability": "toxic-screen",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     431.5,
+     434.5
+    ],
+    "aim": [
+     439.8,
+     440.45
+    ],
+    "throw": [
+     440.4,
+     441.0
+    ],
+    "landing": [
+     443.4,
+     444.8
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Attacker Wall'",
+   "held": "Pre-rework source. Patch 11.08 (2025-10-15) reworked Abyss B Site (cover and plant positions) and the Mid hallway into B Main; this video was uploaded 2024-06-27, before it, and the row stands or lands in a reworked zone (mid). The clip is sound, but the lineup may no longer work in the current map, so it is held until a post-11.08 source confirms it. Release by deleting this entry and re-running merge_spans."
+  },
+  {
+   "cs": 451,
+   "title": "A Site Best Wall 2 A Main",
+   "ability": "toxic-screen",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     451.6,
+     454.0
+    ],
+    "aim": [
+     457.78,
+     458.21
+    ],
+    "throw": [
+     458.13,
+     458.73
+    ],
+    "landing": [
+     460.5,
+     461.8
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Attacker Wall'"
+  },
+  {
+   "cs": 471,
+   "title": "A Site Split Wall (Enemies can't see you from A heaven)",
+   "ability": "toxic-screen",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     471.6,
+     474.0
+    ],
+    "aim": [
+     477.5,
+     478.2
+    ],
+    "throw": [
+     478.3,
+     478.9
+    ],
+    "landing": [
+     481.2,
+     482.6
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Attacker Wall'"
+  },
+  {
+   "cs": 493,
+   "title": "B Wall Best Wall",
+   "ability": "toxic-screen",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     494.0,
+     497.0
+    ],
+    "aim": [
+     501.2,
+     502.43
+    ],
+    "throw": [
+     502.35,
+     502.95
+    ],
+    "landing": [
+     504.9,
+     506.2
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Attacker Wall'",
+   "held": "Pre-rework source. Patch 11.08 (2025-10-15) reworked Abyss B Site (cover and plant positions) and the Mid hallway into B Main; this video was uploaded 2024-06-27, before it, and the row stands or lands in a reworked zone (b-site). The clip is sound, but the lineup may no longer work in the current map, so it is held until a post-11.08 source confirms it. Release by deleting this entry and re-running merge_spans."
+  },
+  {
+   "cs": 512,
+   "title": "A Site / Main God Wall",
+   "ability": "toxic-screen",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     513.0,
+     516.0
+    ],
+    "aim": [
+     518.3,
+     519.05
+    ],
+    "throw": [
+     519.03,
+     519.63
+    ],
+    "landing": [
+     520.8,
+     522.4
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Defender Wall'"
+  },
+  {
+   "cs": 535,
+   "title": "A Site / Mid Wall",
+   "ability": "toxic-screen",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     535.6,
+     538.2
+    ],
+    "aim": [
+     540.7,
+     541.233
+    ],
+    "throw": [
+     541.2,
+     541.8
+    ],
+    "landing": [
+     543.95,
+     544.75
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Defender Wall'"
+  },
+  {
+   "cs": 553,
+   "title": "A Default 1 Simple Smoke For Lineups",
+   "ability": "poison-cloud",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     556.78,
+     557.86
+    ],
+    "aim": [
+     561.47,
+     561.72
+    ],
+    "throw": [
+     561.7,
+     562.3
+    ],
+    "landing": [
+     568.3,
+     569.5
+    ]
+   },
+   "span_provenance": "AIM widened 561.54-561.70 -> 561.47-561.72 by operator frame-study (frames.sh y_v26aim.png, frame-exact): settled unzoomed aim 561.533-561.70, the last editor zoom-out easing frames 561.47-561.53 onto that same view, hand still until 561.70 and dropping by 561.75. stand/throw/landing are gate-passed localizer values.",
+   "side_evidence": "author's on-screen title plate reads 'Attacker Smoke'"
+  },
+  {
+   "cs": 571,
+   "title": "A Default 2 One Way Smoke",
+   "ability": "poison-cloud",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     573.3,
+     575.8
+    ],
+    "aim": [
+     580.1,
+     580.42
+    ],
+    "throw": [
+     580.45,
+     581.1
+    ],
+    "landing": [
+     587.2,
+     588.5
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Attacker Smoke'"
+  },
+  {
+   "cs": 596,
+   "title": "A Bridge Smoke",
+   "ability": "poison-cloud",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     599.2,
+     600.4
+    ],
+    "aim": [
+     602.2,
+     602.93
+    ],
+    "throw": [
+     602.95,
+     603.6
+    ],
+    "landing": [
+     609.6,
+     610.8
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Attacker Smoke'"
+  },
+  {
+   "cs": 613,
+   "title": "B Heaven Smoke",
+   "ability": "poison-cloud",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     613.6,
+     615.6
+    ],
+    "aim": [
+     620.5,
+     621.2
+    ],
+    "throw": [
+     621.25,
+     621.9
+    ],
+    "landing": [
+     625.95,
+     627.25
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Attacker Smoke'",
+   "held": "Pre-rework source. Patch 11.08 (2025-10-15) reworked Abyss B Site (cover and plant positions) and the Mid hallway into B Main; this video was uploaded 2024-06-27, before it, and the row stands or lands in a reworked zone (b-site). The clip is sound, but the lineup may no longer work in the current map, so it is held until a post-11.08 source confirms it. Release by deleting this entry and re-running merge_spans."
+  },
+  {
+   "cs": 629,
+   "title": "B Default 1 Simple Smoke For Lineups",
+   "ability": "poison-cloud",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     629.6,
+     631.6
+    ],
+    "aim": [
+     635.4,
+     636.2
+    ],
+    "throw": [
+     636.1,
+     636.7
+    ],
+    "landing": [
+     643.2,
+     644.4
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Attacker Smoke'",
+   "held": "Pre-rework source. Patch 11.08 (2025-10-15) reworked Abyss B Site (cover and plant positions) and the Mid hallway into B Main; this video was uploaded 2024-06-27, before it, and the row stands or lands in a reworked zone (b-site). The clip is sound, but the lineup may no longer work in the current map, so it is held until a post-11.08 source confirms it. Release by deleting this entry and re-running merge_spans."
+  },
+  {
+   "cs": 645,
+   "title": "B Default 2 One Way Smoke",
+   "ability": "poison-cloud",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     645.5,
+     647.5
+    ],
+    "aim": [
+     651.2,
+     652.2
+    ],
+    "throw": [
+     652.1,
+     652.75
+    ],
+    "landing": [
+     657.75,
+     659.0
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Attacker Smoke'",
+   "held": "Pre-rework source. Patch 11.08 (2025-10-15) reworked Abyss B Site (cover and plant positions) and the Mid hallway into B Main; this video was uploaded 2024-06-27, before it, and the row stands or lands in a reworked zone (b-site). The clip is sound, but the lineup may no longer work in the current map, so it is held until a post-11.08 source confirms it. Release by deleting this entry and re-running merge_spans."
+  },
+  {
+   "cs": 666,
+   "title": "B Back Site One Way (Also good for Danger Plant if spike is not in the corner)",
+   "ability": "poison-cloud",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     667.0,
+     669.0
+    ],
+    "aim": [
+     672.45,
+     673.4
+    ],
+    "throw": [
+     673.45,
+     674.05
+    ],
+    "landing": [
+     679.75,
+     681.25
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Attacker Smoke'",
+   "held": "Pre-rework source. Patch 11.08 (2025-10-15) reworked Abyss B Site (cover and plant positions) and the Mid hallway into B Main; this video was uploaded 2024-06-27, before it, and the row stands or lands in a reworked zone (b-site). The clip is sound, but the lineup may no longer work in the current map, so it is held until a post-11.08 source confirms it. Release by deleting this entry and re-running merge_spans."
+  },
+  {
+   "cs": 687,
+   "title": "A Site One Way Smoke 2",
+   "ability": "poison-cloud",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     687.5,
+     689.3
+    ],
+    "aim": [
+     692.95,
+     693.83
+    ],
+    "throw": [
+     693.72,
+     694.35
+    ],
+    "landing": [
+     698.3,
+     699.6
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Defender Smoke'"
+  },
+  {
+   "cs": 703,
+   "title": "A Site One Way Smoke 3",
+   "ability": "poison-cloud",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     703.6,
+     705.6
+    ],
+    "aim": [
+     708.0,
+     708.8
+    ],
+    "throw": [
+     708.72,
+     709.35
+    ],
+    "landing": [
+     711.35,
+     712.6
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Defender Smoke'"
+  },
+  {
+   "cs": 714,
+   "title": "A Site Retake Smoke (A Main Smoke)",
+   "ability": "poison-cloud",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     715.0,
+     717.0
+    ],
+    "aim": [
+     718.5,
+     719.4
+    ],
+    "throw": [
+     719.25,
+     719.9
+    ],
+    "landing": [
+     722.12,
+     723.4
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Defender Smoke'"
+  },
+  {
+   "cs": 725,
+   "title": "B Site Perfect Smoke",
+   "ability": "poison-cloud",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     725.6,
+     728.0
+    ],
+    "aim": [
+     731.6,
+     732.45
+    ],
+    "throw": [
+     732.4,
+     733.0
+    ],
+    "landing": [
+     735.2,
+     736.5
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Defender Smoke'",
+   "held": "Pre-rework source. Patch 11.08 (2025-10-15) reworked Abyss B Site (cover and plant positions) and the Mid hallway into B Main; this video was uploaded 2024-06-27, before it, and the row stands or lands in a reworked zone (b-site). The clip is sound, but the lineup may no longer work in the current map, so it is held until a post-11.08 source confirms it. Release by deleting this entry and re-running merge_spans."
+  },
+  {
+   "cs": 746,
+   "title": "B Site One Way Smoke 2",
+   "ability": "poison-cloud",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     748.0,
+     749.5
+    ],
+    "aim": [
+     751.9,
+     752.68
+    ],
+    "throw": [
+     752.62,
+     753.22
+    ],
+    "landing": [
+     755.25,
+     756.5
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Defender Smoke'",
+   "held": "Pre-rework source. Patch 11.08 (2025-10-15) reworked Abyss B Site (cover and plant positions) and the Mid hallway into B Main; this video was uploaded 2024-06-27, before it, and the row stands or lands in a reworked zone (b-site). The clip is sound, but the lineup may no longer work in the current map, so it is held until a post-11.08 source confirms it. Release by deleting this entry and re-running merge_spans."
+  },
+  {
+   "cs": 762,
+   "title": "B Site One Way Smoke 3",
+   "ability": "poison-cloud",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     763.0,
+     765.5
+    ],
+    "aim": [
+     769.5,
+     770.27
+    ],
+    "throw": [
+     770.28,
+     770.9
+    ],
+    "landing": [
+     775.9,
+     777.3
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Defender Smoke'",
+   "held": "Pre-rework source. Patch 11.08 (2025-10-15) reworked Abyss B Site (cover and plant positions) and the Mid hallway into B Main; this video was uploaded 2024-06-27, before it, and the row stands or lands in a reworked zone (b-site). The clip is sound, but the lineup may no longer work in the current map, so it is held until a post-11.08 source confirms it. Release by deleting this entry and re-running merge_spans."
+  }
+ ],
+ "note": "All 38 rows carry real frame-studied spans; no placeholders remain. 37 are localizer output that passed the adversarial gate as-is. The other 1 carry at least one event measured directly from the footage by operator frame-study; each such row has a `span_provenance` field saying which event was replaced and why."
+}

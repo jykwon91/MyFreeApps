@@ -1,0 +1,810 @@
+{
+ "video_id": "RrywrdMNx4A",
+ "map_slug": "abyss",
+ "author": "maxWELL Lineup-Larry",
+ "lineups": [
+  {
+   "cs": 5,
+   "title": "A Lobby to A Site",
+   "ability": "zero-point",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     11.75,
+     12.6
+    ],
+    "aim": [
+     14.7,
+     15.0
+    ],
+    "throw": [
+     15.0,
+     15.6
+    ],
+    "landing": [
+     20.85,
+     22.1
+    ]
+   },
+   "side_evidence": "author's chapter list: listed under the 'Attack' section (0:00), 'ZERO/point' run (0:05)",
+   "span_provenance": "AIM widened 14.91-15.0 -> 14.70-15.0 by operator frame-study (frames.sh y_m01a.png 12.5-15.1 and y_m01b.png 14.667-15.083, frame-exact). The punch-in crop, with the crosshair circled on the tan wall-top box, runs 13.24-14.875. Live and unzoomed with the blade raised is 14.917-14.958, the swing is at 15.0 and the release at 15.042. The AIM now opens on the punch-in's last ~5 frames."
+  },
+  {
+   "cs": 26,
+   "title": "T to B Site",
+   "ability": "zero-point",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     28.8,
+     29.6
+    ],
+    "aim": [
+     34.85,
+     35.44
+    ],
+    "throw": [
+     35.44,
+     36.04
+    ],
+    "landing": [
+     41.667,
+     42.3
+    ]
+   },
+   "side_evidence": "author's chapter list: listed under the 'Attack' section (0:00), 'ZERO/point' run (0:05)"
+  },
+  {
+   "cs": 47,
+   "title": "B Lobby to B Site (Knife)",
+   "ability": "zero-point",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     54.4,
+     55.16
+    ],
+    "aim": [
+     55.22,
+     55.58
+    ],
+    "throw": [
+     57.85,
+     58.43
+    ],
+    "landing": [
+     63.72,
+     64.8
+    ]
+   },
+   "side_evidence": "author's chapter list: listed under the 'Attack' section (0:00), 'ZERO/point' run (0:05)"
+  },
+  {
+   "cs": 68,
+   "title": "B Lobby to B Site No.2",
+   "ability": "zero-point",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     77.6,
+     79.0
+    ],
+    "aim": [
+     80.0,
+     80.8
+    ],
+    "throw": [
+     83.1,
+     83.7
+    ],
+    "landing": [
+     88.85,
+     89.9
+    ]
+   },
+   "side_evidence": "author's chapter list: listed under the 'Attack' section (0:00), 'ZERO/point' run (0:05)"
+  },
+  {
+   "cs": 97,
+   "title": "A Lobby to A Main",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     109.55,
+     110.45
+    ],
+    "aim": [
+     110.5,
+     111.24
+    ],
+    "throw": [
+     111.24,
+     111.84
+    ],
+    "landing": [
+     112.85,
+     113.45
+    ]
+   },
+   "side_evidence": "author's chapter list: listed under the 'Attack' section (0:00), 'FLASH/drive' run (1:37)"
+  },
+  {
+   "cs": 118,
+   "title": "A Main to A Site",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     130.46,
+     131.38
+    ],
+    "aim": [
+     131.4,
+     131.88
+    ],
+    "throw": [
+     131.88,
+     132.42
+    ],
+    "landing": [
+     133.54,
+     133.83
+    ]
+   },
+   "side_evidence": "author's chapter list: listed under the 'Attack' section (0:00), 'FLASH/drive' run (1:37)"
+  },
+  {
+   "cs": 141,
+   "title": "A Main to A Site No.2",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     150.92,
+     152.0
+    ],
+    "aim": [
+     152.0,
+     152.54
+    ],
+    "throw": [
+     152.5,
+     153.08
+    ],
+    "landing": [
+     154.17,
+     154.46
+    ]
+   },
+   "side_evidence": "author's chapter list: listed under the 'Attack' section (0:00), 'FLASH/drive' run (1:37)",
+   "span_provenance": "LANDING measured (frames.sh y_m07l.png 153.3-154.7). The gate failed this row, but only because the shot changes to the thrower's post-cut Operator POV. The event itself is on screen: the burst sphere with radial rays appears at the pillar edge at 154.2, peaks at 154.29, shrinks to an orb by 154.37 and fades by ~154.46. It has the same shape and size as the second-angle bursts on cs=196 and cs=438, which the gate passed. STAND/AIM/THROW are the localizer's values; the gate passed all three."
+  },
+  {
+   "cs": 160,
+   "title": "A Site to A Heaven",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     169.917,
+     170.792
+    ],
+    "aim": [
+     171.125,
+     171.625
+    ],
+    "throw": [
+     171.625,
+     172.208
+    ],
+    "landing": [
+     172.958,
+     173.458
+    ]
+   },
+   "side_evidence": "author's chapter list: listed under the 'Attack' section (0:00), 'FLASH/drive' run (1:37)"
+  },
+  {
+   "cs": 196,
+   "title": "B Main to B Site",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     198.5,
+     200.4
+    ],
+    "aim": [
+     204.33,
+     204.667
+    ],
+    "throw": [
+     204.667,
+     205.25
+    ],
+    "landing": [
+     206.32,
+     206.62
+    ]
+   },
+   "side_evidence": "author's chapter list: listed under the 'Attack' section (0:00), 'FLASH/drive' run (1:37)",
+   "span_provenance": "STAND widened 198.5-198.833 -> 198.5-200.4 (frames.sh y_m10a.png 196.5-205.0): after the knife flourish cuts away at ~197.8, the player is planted at the B Main spot, unzoomed with the minimap and the 'From B-Main / To B-Site' banner. The ability swirl comes at 198.5, then the Operator is drawn on the same view through 200.5, with scope-in by 201.0. AIM widened 204.5-204.667 -> 204.33-204.667 (frames.sh y_m10b.png 204.042-204.75): the punch-in crop with the crosshair circled runs through 204.458; live with FLASH/drive in hand is 204.5-204.625, the swing is at 204.667, and the drive is in flight by 204.75. LANDING widened 206.375-206.542 -> 206.32-206.62 (y_m10l.png 206.1-206.9): the burst sphere with rays appears ~206.32, peaks at 206.39, shrinks to an orb by 206.54 and is gone at the cut ~206.68."
+  },
+  {
+   "cs": 213,
+   "title": "A Lobby to A Default",
+   "ability": "fragment",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     216.25,
+     217.55
+    ],
+    "aim": [
+     217.55,
+     218.29
+    ],
+    "throw": [
+     220.583,
+     221.208
+    ],
+    "landing": [
+     226.55,
+     227.55
+    ]
+   },
+   "side_evidence": "author's chapter list: listed under the 'Attack' section (0:00), 'FRAG/ment' run (3:33)"
+  },
+  {
+   "cs": 229,
+   "title": "A Main to A Bridge",
+   "ability": "fragment",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     231.3,
+     232.5
+    ],
+    "aim": [
+     236.42,
+     237.0
+    ],
+    "throw": [
+     238.63,
+     239.25
+    ],
+    "landing": [
+     241.4,
+     242.4
+    ]
+   },
+   "side_evidence": "author's chapter list: listed under the 'Attack' section (0:00), 'FRAG/ment' run (3:33)",
+   "span_provenance": "STAND moved 236.21-236.42 -> 231.3-232.5 (frames.sh y_m12s.png 229.2-236.5): the player is planted at the A Main spot, unzoomed with the minimap and the 'From A-Main / To A-Bridge' banner. Hands are empty, then the Operator is drawn, and the view doesn't move from 231.35 through 232.64. Scope-in follows at ~232.9, and the camera holds still from there to release. The old STAND was the 5 unzoomed frames between scope-out and the punch-in."
+  },
+  {
+   "cs": 244,
+   "title": "B Lobby to B Backsite",
+   "ability": "fragment",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     246.25,
+     247.9
+    ],
+    "aim": [
+     247.95,
+     248.85
+    ],
+    "throw": [
+     251.46,
+     252.1
+    ],
+    "landing": [
+     257.44,
+     258.08
+    ]
+   },
+   "side_evidence": "author's chapter list: listed under the 'Attack' section (0:00), 'FRAG/ment' run (3:33)"
+  },
+  {
+   "cs": 261,
+   "title": "B Lobby to B Box",
+   "ability": "fragment",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     268.13,
+     269.21
+    ],
+    "aim": [
+     269.25,
+     270.15
+    ],
+    "throw": [
+     272.42,
+     273.02
+    ],
+    "landing": [
+     278.35,
+     279.35
+    ]
+   },
+   "side_evidence": "author's chapter list: listed under the 'Attack' section (0:00), 'FRAG/ment' run (3:33)"
+  },
+  {
+   "cs": 281,
+   "title": "B Lobby to B Default",
+   "ability": "fragment",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     283.0,
+     284.35
+    ],
+    "aim": [
+     284.4,
+     285.25
+    ],
+    "throw": [
+     287.55,
+     288.15
+    ],
+    "landing": [
+     293.7,
+     294.7
+    ]
+   },
+   "side_evidence": "author's chapter list: listed under the 'Attack' section (0:00), 'FRAG/ment' run (3:33)"
+  },
+  {
+   "cs": 295,
+   "title": "B Main to B Under",
+   "ability": "fragment",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     298.05,
+     298.8
+    ],
+    "aim": [
+     303.92,
+     304.54
+    ],
+    "throw": [
+     304.54,
+     305.16
+    ],
+    "landing": [
+     306.7,
+     307.55
+    ]
+   },
+   "side_evidence": "author's chapter list: listed under the 'Attack' section (0:00), 'FRAG/ment' run (3:33)"
+  },
+  {
+   "cs": 311,
+   "title": "A Site to A Main (Knife)",
+   "ability": "zero-point",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     314.67,
+     315.25
+    ],
+    "aim": [
+     315.25,
+     315.79
+    ],
+    "throw": [
+     315.79,
+     316.375
+    ],
+    "landing": [
+     317.75,
+     318.08
+    ]
+   },
+   "side_evidence": "author's chapter list: listed under the 'Defense' section (5:11), 'ZERO/point' run (5:11)"
+  },
+  {
+   "cs": 321,
+   "title": "Top Mid to Bottom Mid (Knife)",
+   "ability": "zero-point",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     324.25,
+     325.2
+    ],
+    "aim": [
+     325.03,
+     325.62
+    ],
+    "throw": [
+     325.6,
+     326.05
+    ],
+    "landing": [
+     326.93,
+     327.98
+    ]
+   },
+   "side_evidence": "author's chapter list: listed under the 'Defense' section (5:11), 'ZERO/point' run (5:11)"
+  },
+  {
+   "cs": 331,
+   "title": "B Site to B Main (Knife)",
+   "ability": "zero-point",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     335.46,
+     335.92
+    ],
+    "aim": [
+     335.92,
+     336.5
+    ],
+    "throw": [
+     336.5,
+     337.0
+    ],
+    "landing": [
+     337.75,
+     338.55
+    ]
+   },
+   "side_evidence": "author's chapter list: listed under the 'Defense' section (5:11), 'ZERO/point' run (5:11)"
+  },
+  {
+   "cs": 343,
+   "title": "CT to B Main",
+   "ability": "zero-point",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "ct-spawn",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     349.45,
+     350.55
+    ],
+    "aim": [
+     350.29,
+     350.58
+    ],
+    "throw": [
+     352.97,
+     353.55
+    ],
+    "landing": [
+     358.83,
+     359.99
+    ]
+   },
+   "side_evidence": "author's chapter list: listed under the 'Defense' section (5:11), 'ZERO/point' run (5:11)"
+  },
+  {
+   "cs": 364,
+   "title": "A Site to A Main (Flash)",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     365.7,
+     367.2
+    ],
+    "aim": [
+     370.9,
+     371.875
+    ],
+    "throw": [
+     371.875,
+     372.45
+    ],
+    "landing": [
+     373.58,
+     374.2
+    ]
+   },
+   "side_evidence": "author's chapter list: listed under the 'Defense' section (5:11), 'FLASH/drive' run (6:04)"
+  },
+  {
+   "cs": 378,
+   "title": "A Site to A Main No.2",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     379.9,
+     380.3
+    ],
+    "aim": [
+     380.3,
+     380.76
+    ],
+    "throw": [
+     386.69,
+     387.31
+    ],
+    "landing": [
+     388.23,
+     388.98
+    ]
+   },
+   "side_evidence": "author's chapter list: listed under the 'Defense' section (5:11), 'FLASH/drive' run (6:04)"
+  },
+  {
+   "cs": 393,
+   "title": "A Link to A Site",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     394.97,
+     395.5
+    ],
+    "aim": [
+     395.5,
+     396.05
+    ],
+    "throw": [
+     398.32,
+     398.94
+    ],
+    "landing": [
+     400.03,
+     400.45
+    ]
+   },
+   "side_evidence": "author's chapter list: listed under the 'Defense' section (5:11), 'FLASH/drive' run (6:04)"
+  },
+  {
+   "cs": 421,
+   "title": "B Link to B Site",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     422.6,
+     423.8
+    ],
+    "aim": [
+     430.45,
+     431.0
+    ],
+    "throw": [
+     430.99,
+     431.6
+    ],
+    "landing": [
+     432.63,
+     433.0
+    ]
+   },
+   "side_evidence": "author's chapter list: listed under the 'Defense' section (5:11), 'FLASH/drive' run (6:04)",
+   "span_provenance": "STAND moved 428.68-428.9 -> 422.6-423.8 (frames.sh y_m25s.png 421.2-429.0): after the knife flourish cuts away at ~422.4, the player is planted at the B Link spot, unzoomed with the minimap and the 'From B-Link / To B-Site' banner, and draws the Operator on the same view through 423.49. Scope-in follows at ~423.95. The localizer notes the player stays planted from 422.4 to the release."
+  },
+  {
+   "cs": 438,
+   "title": "B Site to B Backsite",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     440.6,
+     441.95
+    ],
+    "aim": [
+     445.55,
+     446.37
+    ],
+    "throw": [
+     446.375,
+     446.96
+    ],
+    "landing": [
+     448.0,
+     448.36
+    ]
+   },
+   "side_evidence": "author's chapter list: listed under the 'Defense' section (5:11), 'FLASH/drive' run (6:04)",
+   "span_provenance": "LANDING widened 448.1-448.3 -> 448.0-448.36 (frames.sh y_m26l.png 447.9-448.5): a small orb at 448.01 grows into the burst sphere with rays, peaking at 448.12. It shrinks to an orb by 448.28 and fades by ~448.39."
+  },
+  {
+   "cs": 454,
+   "title": "A Security to A Default",
+   "ability": "fragment",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     461.92,
+     462.7
+    ],
+    "aim": [
+     462.75,
+     463.7
+    ],
+    "throw": [
+     465.95,
+     466.55
+    ],
+    "landing": [
+     472.57,
+     473.67
+    ]
+   },
+   "side_evidence": "author's chapter list: listed under the 'Defense' section (5:11), 'FRAG/ment' run (7:34)"
+  },
+  {
+   "cs": 474,
+   "title": "Top Mid to Bottom Mid (Molly)",
+   "ability": "fragment",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     482.3,
+     482.55
+    ],
+    "aim": [
+     482.34,
+     482.65
+    ],
+    "throw": [
+     482.66,
+     483.26
+    ],
+    "landing": [
+     484.84,
+     485.3
+    ]
+   },
+   "side_evidence": "author's chapter list: listed under the 'Defense' section (5:11), 'FRAG/ment' run (7:34)"
+  },
+  {
+   "cs": 490,
+   "title": "B Heaven to B Default",
+   "ability": "fragment",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     496.9,
+     497.73
+    ],
+    "aim": [
+     499.76,
+     500.13
+    ],
+    "throw": [
+     500.13,
+     500.75
+    ],
+    "landing": [
+     503.77,
+     504.57
+    ]
+   },
+   "side_evidence": "author's chapter list: listed under the 'Defense' section (5:11), 'FRAG/ment' run (7:34)"
+  },
+  {
+   "cs": 506,
+   "title": "B Site to B Under",
+   "ability": "fragment",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     508.75,
+     510.25
+    ],
+    "aim": [
+     516.5,
+     516.875
+    ],
+    "throw": [
+     516.875,
+     517.458
+    ],
+    "landing": [
+     520.333,
+     521.0
+    ]
+   },
+   "side_evidence": "author's chapter list: listed under the 'Defense' section (5:11), 'FRAG/ment' run (7:34)"
+  }
+ ],
+ "note": "All 28 rows carry real frame-studied spans; no placeholders remain. 22 are localizer output that passed the adversarial gate as-is. The other 6 carry at least one event measured directly from the footage by operator frame-study; each such row has a `span_provenance` field saying which event was replaced and why.",
+ "excluded_no_event_in_source": [
+  {
+   "cs": 177,
+   "title": "B Lobby to B Site (Flash)",
+   "reason": "LANDING: the deploy is never on camera. The flash goes over the wall toward B Site, out of the throwing view, and every frame from release through 191.66 has no bloom, no whiteout and no wash. The only detonation evidence is the minimap icon turning red at 188.72, and the gate's LANDING frames are a different close-up with no deploy."
+  },
+  {
+   "cs": 405,
+   "title": "B Site to B Main (Flash)",
+   "reason": "LANDING: the deploy is never on camera. A per-frame luminance scan from 413.8 to 419.0 shows no bloom. The flash goes over the wall into B Main, and the landing section is an editor composite: dark shots from inside level geometry with a drawn blue trajectory arc and a ring at its end. That is not in-game deploy footage."
+  }
+ ]
+}

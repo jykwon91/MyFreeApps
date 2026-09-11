@@ -28,7 +28,8 @@ Subcommands (MAIN checkout venv, cwd = backend, PG:5433 up):
   plan   — resolve + validate every lineup (zones/utility exist), print, write nothing
   create — create pending_review rows (idempotent by video_id+cs)
   recut  — loop recut_lineup_clips.py per row with its spans
-  accept — set zones/side/utility on every row (accept_lineup)
+  accept — set zones/side/utility on every row (accept_lineup), except rows carrying a
+           `held` reason from merge_spans, which stay (or revert to) pending_review
 
   .venv/Scripts/python.exe scripts/ingest_agent.py <agent> <map> plan
   .venv/Scripts/python.exe scripts/ingest_agent.py <agent> <map> create
@@ -260,11 +261,21 @@ async def cmd_accept(agent: str, pack: str) -> None:
         _validate(data, zones, utils)
         rows = {r.chapter_start_seconds: r for r in (await db.execute(
             select(Lineup).where(Lineup.youtube_video_id == vid))).scalars().all()}
-        ok = 0
+        ok = held = 0
         for ln in data["lineups"]:
             row = rows.get(ln["cs"])
             if row is None:
                 print(f"  NO ROW cs={ln['cs']}"); continue
+            if ln.get("held"):
+                # merge_spans' `held` override: a sound clip teaching something the game may no
+                # longer do. Reverting a row accepted before the hold keeps it out of the export,
+                # which is the only thing that decides what reaches prod.
+                was = row.status
+                if was == "accepted":
+                    row.status = "pending_review"
+                print(f"  HELD   cs={ln['cs']:4} ({was}->{row.status}) :: {ln['title']}")
+                held += 1
+                continue
             await accept_lineup(db, row, {
                 "game_id": game_id, "map_id": vmap.id,
                 "utility_type_id": utils[ln["ability"]].id,
@@ -274,7 +285,7 @@ async def cmd_accept(agent: str, pack: str) -> None:
             print(f"  ACCEPT cs={ln['cs']:4} {ln['ability']:14} {ln['stand']}->{ln['target']} {ln['side']} :: {ln['title']}")
             ok += 1
         await db.commit()
-        print(f"ACCEPTED {ok}/{len(data['lineups'])}")
+        print(f"ACCEPTED {ok}/{len(data['lineups'])}, HELD {held}")
 
 
 def main() -> None:

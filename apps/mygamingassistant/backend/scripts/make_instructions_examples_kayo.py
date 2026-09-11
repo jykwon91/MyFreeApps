@@ -77,4 +77,119 @@ EXAMPLES = {
              "qualifier. Report the callout the utility actually lands on."),
         ],
     },
+    # SECOND source for abyss, derived FROM the bucket above's generated doc:
+    #   python make_instructions.py KAY-O abyss abyss --pack abyss-2
+    #       --base scripts/LOCALIZE_INSTRUCTIONS_KAY-O_ABYSS.md --video RrywrdMNx4A
+    #       --creator "maxWELL Lineup-Larry" --apply
+    # Every Tseeky claim that doc makes (HUD-off result preview, 60fps, title plates, walk-in
+    # stands, the three "(2 variations)" chapters, the readout at +6s) is false here and is
+    # overridden. What replaces it was read off contact sheets of cs=5 and cs=97, plus ffprobe
+    # (1920x1080 @ 24/1), and matches maxWELL's Sova Abyss editing where the two overlap.
+    ("KAY-O", "abyss-2"): {
+        "grammar": "**`<STAND> to <TARGET>`** — the callout BEFORE `to` is where the player "
+                   "STANDS and the one AFTER it is where the utility lands. Both are already "
+                   "resolved in your item; confirm them against the footage",
+        "examples":
+        "`A Lobby to A Site` is thrown FROM A Lobby ONTO A Site — reading it the other way round "
+        "would swap both fields. `T to B Site` is thrown from the attacker spawn and `CT to B Main` "
+        "from the defender spawn. `No.2` marks a second variant from the same stand as an earlier "
+        "row (`B Lobby to B Site No.2`, `A Main to A Site No.2`, `A Site to A Main No.2`). **A "
+        "`(Knife)`, `(Flash)` or `(Molly)` suffix is OURS, not the author's**: the author's chapter "
+        "titles carry a section prefix (`ZERO/point:`, `FLASH/drive:`, `FRAG/ment:`) that was "
+        "stripped upstream, and four titles collided once it was gone (`B Lobby to B Site`, `Top "
+        "Mid to Bottom Mid`, `B Site to B Main`, `A Site to A Main`). The suffix names the "
+        "utility, never a place. `A Default`, `B Default`, `B Box`, `B Under`, `B Backsite`, `A "
+        "Heaven` and `A Bridge` are spots the author names as destinations; report the callout the "
+        "utility actually lands on.",
+        "replace": [
+            ("Pin at 60fps — NEVER off a coarse frame.",
+             "This source is 24fps, so each frame is ~42ms: pin the first frame the device is out of "
+             "hand with `--step 0`, and NEVER off a coarse frame."),
+            ("every frame @60fps", "every frame @24fps"),
+            ("— pin it at 60fps.", "— pin it frame-exact at 24fps."),
+            ("this creator uses white/purple crossfade wipes",
+             "this creator joins shots with hard cuts AND cross-dissolves (a dissolve shows two "
+             "superimposed HUDs)"),
+            ("(say so explicitly for the three \"(2 variations)\" chapters)",
+             "(say so explicitly if the chapter shows a second throw)"),
+        ],
+        "bullets": [
+            ("**This source is NOT the chapterless",
+             "**This source is NOT the chapterless KAY/O compilation the generic doc describes.** "
+             "Do not carry that doc's \"you must infer everything\" premise over. Here the creator "
+             "supplies a chaptered video whose titles name the stand and the target, filed under "
+             "the author's own section headers for side and utility, so the NAME, ABILITY, SIDE and "
+             "STAND have all been resolved upstream from the author's own words. **Your job is the "
+             "four spans, plus confirming the ability against what you actually see land.**"),
+            ("Cached video:",
+             "- Cached video: `C:\\Users\\jason\\AppData\\Local\\Temp\\mga-debug-source\\<VID>.mp4` "
+             "(1920x1080 @ **24fps**, verified with ffprobe). Every frame is ~42ms, so the release "
+             "falls on a coarser grid than the 60fps sources: pin it to the first frame the device "
+             "is out of hand and do not claim sub-frame precision."),
+            ("Creator:",
+             "- Creator: **maxWELL Lineup-Larry**, Abyss, filmed in a PRACTICE/custom server. The HUD "
+             "is live from the first frame (minimap, ability bar, location readout) — but **do NOT "
+             "take that as licence to pin STAND at the chapter's first stable moment.** Every "
+             "chapter opens with an EDITOR FLOURISH: the player idles with the **MELEE knife** out, "
+             "often at a blank wall with no landmark. That is not the throwing spot and carries no "
+             "spot evidence. **KAY/O's ZERO/point is ALSO a blade — do not mistake the melee for "
+             "it.** The melee is the long flat sword KAY/O idles with; ZERO/point is the ability, "
+             "drawn from the ability bar (its slot lights) as a glowing energy blade. The tell that "
+             "the demo has begun is the swap from the melee to the ABILITY in hand."),
+            ("The video is sectioned by UTILITY",
+             "- The video is sectioned by SIDE, then by UTILITY, in the author's own chapter list: "
+             "an `Attack` half (four ZERO/point knives, six FLASH/drive flashes, six FRAG/ment "
+             "mollies) and a `Defense` half (four knives, six flashes, four mollies). Your item's "
+             "ability comes from that section header; trust it and confirm it from what lands."),
+            ("**The first ~3-4 seconds of every chapter are a HUD-OFF",
+             "- **Four overlays are the author's, not the game's, and none is evidence of an "
+             "event.** (1) A lower-third **`From <X> / To <Y>` banner** (e.g. `From A-Lobby / To "
+             "A-Site`): corroboration for stand and target, but a label, not footage. (2) An "
+             "**Operator-scope alignment shot**: on some chapters the author scopes an Operator to "
+             "show the aim point before switching to the ability. That is NOT the AIM — no ability "
+             "is in hand. (3) **Punch-in zooms** onto the ability bar and crosshair area, sometimes "
+             "with a drawn red circle on the aim reference: a teaching aside, never a STAND or an "
+             "AIM window. (4) A **prose caption** on the right (`to rush A-SITE`, `to take A-MAIN "
+             "CONTROL`) and an animated **like / subscribe / bell** bar at the bottom centre, which "
+             "can sit over the destination during LANDING. Never pin LANDING to a caption, and note "
+             "in WEAKEST if a caption is the only thing suggesting an outcome you could not see."),
+            ("**Three chapters demonstrate TWO throws under one title**",
+             "- **One chapter, one throw.** A second variant from the same stand is its own chapter "
+             "with a `No.2` title, not a second throw in this window. If your window does show two "
+             "throws, localize the first complete one and say so in NOTES."),
+            ("**On this creator's chapters the stand can come LATE",
+             "**Start looking for the stand AFTER the melee→ability swap, not at the top of the "
+             "chapter** — a STAND pinned inside the opening knife idle or the Operator-scope shot "
+             "has no spot evidence. Localizing AIM first and stepping backward to the last frame at "
+             "which the player is already planted is the reliable order. Stationary is decided by "
+             "MOTION, not by how composed the frame looks:"),
+            ("- **AIM** = the view SETTLED",
+             "- **AIM** = the view SETTLED, the FLASH/drive grenade (or ZERO/point blade / FRAG/ment "
+             "hex device) EQUIPPED in hand, crosshair parked on the alignment reference, "
+             "immediately pre-release. ~0.6-1.2s. **The Operator-scope shot and any punch-in zoom "
+             "are editor asides — the AIM is the FINAL settled LIVE aim with the ABILITY in hand, "
+             "right before release.** If the only settled aim you can find is inside a punch-in, "
+             "say so in WEAKEST."),
+            ("**LANDING is where this creator's KAY/O rows fail",
+             "**LANDING is where KAY/O rows fail — read the next three rules before you pin it.** On "
+             "an earlier 41-row KAY/O run from another creator, STAND/AIM/THROW mostly passed and "
+             "**every single failing row failed on LANDING** (18 of 18). The three causes are "
+             "mechanical, not specific to that creator:"),
+            ("**TARGET comes from the title; STAND comes from your item**",
+             "- **STAND and TARGET both come from the title** — the callout before `to` and the one "
+             "after it — and are already in your item. `T` is the attacker spawn and `CT` the "
+             "defender spawn. Corroborate the stand against VALORANT's location label above the "
+             "minimap and the `From` banner, and flag a genuine contradiction in NOTES."),
+            ("**Do NOT report a SIDE.**",
+             "- **Do NOT report a SIDE.** This source prints no side on screen; the author's own "
+             "chapter list files every lineup under an `Attack` or a `Defense` section header, and "
+             "side is already resolved from that upstream and deliberately absent from your item. "
+             "The practice server spawns the demo player attacker-side regardless, so spawn-side "
+             "cues are not evidence. The output schema still has a `side` field: put `not reported "
+             "(author-labelled upstream)` in it."),
+            ("**`Danger` is B MAIN in this project's zone table**",
+             "- **Report the callout the utility actually lands on**, not the one the title or "
+             "banner promises, and flag any disagreement between them in NOTES."),
+        ],
+    },
 }
