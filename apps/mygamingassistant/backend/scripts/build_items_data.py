@@ -92,9 +92,12 @@ ABILITY_WORDS = {
     # the names out, and a loose synonym can only ever make a row match a SECOND pattern and fall to
     # the hedge. The narrow table is what keeps 11 of 14 rows author-labelled. Add a synonym only if
     # a future source actually needs it, and check the combo titles still resolve to exactly two.
-    "viper": [(r"\b(snake.?bite)\b", "snake-bite"),
-              (r"\b(poison.?cloud)\b", "poison-cloud"),
-              (r"\b(toxic.?screen)\b", "toxic-screen")],
+    # Tseeky's Abyss source needed exactly that: its plates read "Attacker Molly", "Attacker Wall",
+    # "Defender Smoke" — one plain word each, never the official name. None of the three words
+    # occurs in any Snapiex bracket, so its 11 single + 3 combo rows resolve as before.
+    "viper": [(r"\b(snake.?bite|molly|molotov)\b", "snake-bite"),
+              (r"\b(poison.?cloud|smoke|orb)\b", "poison-cloud"),
+              (r"\b(toxic.?screen|wall)\b", "toxic-screen")],
     # First agent with THREE candidates. Order is irrelevant here — the resolver collects the SET of
     # matching patterns against the plate's role line only and demands exactly one, so a plate naming
     # two utilities falls back to the hedge instead of picking whichever sits higher. That guard is
