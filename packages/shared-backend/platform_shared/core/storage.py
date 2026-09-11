@@ -42,6 +42,7 @@ from __future__ import annotations
 
 import io
 import logging
+import re
 import uuid
 from datetime import timedelta
 from typing import Any
@@ -51,6 +52,33 @@ from minio import Minio
 from minio.error import S3Error
 
 logger = logging.getLogger(__name__)
+
+# Any character outside this set is replaced with ``_`` in an object-key
+# segment. Deliberately narrow: alphanumerics plus ``. _ -``. This drops path
+# separators (``/`` ``\``), whitespace, control characters (NUL, CR, LF),
+# and anything else that could reshape the key, poison a downstream
+# Content-Disposition header, or (if a key is ever materialized onto a local
+# filesystem) traverse directories.
+_UNSAFE_KEY_SEGMENT_CHARS = re.compile(r"[^A-Za-z0-9._-]")
+_MAX_KEY_SEGMENT_LEN = 200
+
+
+def sanitize_key_segment(filename: str) -> str:
+    """Reduce an arbitrary (user-supplied) filename to a safe object-key segment.
+
+    Object stores treat a key as an opaque string, so ``../`` is not a
+    filesystem traversal on the storage side — but the raw filename flows on
+    to presigned ``Content-Disposition`` headers and any tooling that later
+    writes the object to a local path, where ``/``, ``\\``, control chars, or
+    ``..`` are dangerous. This normalizes to ``basename`` + a narrow charset,
+    strips leading dots (no ``.``/``..``/dotfiles), bounds the length, and
+    falls back to ``"file"`` when nothing safe remains.
+    """
+    # Take the basename only — drop any directory components under either separator.
+    base = filename.replace("\\", "/").rsplit("/", 1)[-1]
+    cleaned = _UNSAFE_KEY_SEGMENT_CHARS.sub("_", base).lstrip(".").strip("_")
+    cleaned = cleaned[:_MAX_KEY_SEGMENT_LEN]
+    return cleaned or "file"
 
 
 class StorageNotConfiguredError(RuntimeError):
@@ -231,8 +259,14 @@ class StorageClient:
 
         The UUID middle segment ensures uniqueness even if the same
         filename is uploaded twice.
+
+        ``filename`` is untrusted (it comes straight from the client's
+        multipart upload), so it is sanitized to a safe key segment here —
+        centrally, so no caller can forget. Callers that pass their own
+        already-cleaned name lose nothing (the sanitizer is idempotent on
+        safe input).
         """
-        return f"{prefix}/{uuid.uuid4()}/{filename}"
+        return f"{prefix}/{uuid.uuid4()}/{sanitize_key_segment(filename)}"
 
 
 class _DualEndpointStorageClient(StorageClient):
