@@ -125,3 +125,14 @@ myfreeapps.org {
 
     file_server
 }
+
+# www → apex, so typing www.myfreeapps.org lands on the landing page. 301
+# (`permanent`), keeping the path and query. DNS: A record `www` → the VPS IP (Porkbun), like the others.
+www.myfreeapps.org {
+    header {
+        Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+        -Server
+    }
+
+    redir https://myfreeapps.org{uri} permanent
+}
