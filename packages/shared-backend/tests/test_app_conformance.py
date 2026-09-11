@@ -1166,3 +1166,31 @@ class TestComposeEnvFileFormatRaw:
             f"Every entry must disable interpolation — edit "
             f"infra/templates/docker-compose.yml.j2 and re-render."
         )
+
+
+@pytest.mark.parametrize("app", _APPS)
+class TestDocsDisabledInProduction:
+    """Every app must gate its FastAPI docs/schema exposure through the shared
+    ``docs_kwargs(settings.environment)`` helper.
+
+    Interactive docs (/docs, /redoc) and the raw schema (/openapi.json)
+    enumerate the whole API surface — disabled in production centrally via
+    platform_shared.core.openapi.docs_kwargs. A future app that hand-rolls
+    its FastAPI() without spreading the helper silently re-exposes them.
+    """
+
+    def test_main_imports_docs_kwargs(self, app: str) -> None:
+        main_src = _read("apps", app, "backend", "app", "main.py")
+        assert "from platform_shared.core.openapi import docs_kwargs" in main_src, (
+            f"{app}/backend/app/main.py must import docs_kwargs from "
+            f"platform_shared.core.openapi to gate docs exposure in production."
+        )
+
+    def test_main_spreads_docs_kwargs_into_fastapi(self, app: str) -> None:
+        main_src = _read("apps", app, "backend", "app", "main.py")
+        assert "**docs_kwargs(settings.environment)" in main_src, (
+            f"{app}/backend/app/main.py must spread "
+            f"**docs_kwargs(settings.environment) into its FastAPI(...) "
+            f"constructor so /docs, /redoc, and /openapi.json are disabled in "
+            f"production."
+        )
