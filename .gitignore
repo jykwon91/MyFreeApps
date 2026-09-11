@@ -21,13 +21,16 @@ dist/
 .next/
 *.tsbuildinfo
 
-# Environment
-.env
-.env.local
-.env.*.local
-*.env.docker
-# Local Cloudflare R2 publish creds for the MGA ship-library tool (never commit).
-.env.r2
+# Environment — ignore EVERY env-shaped file by default (real secrets live in
+# .env / .env.docker / .env.r2 / timestamped backups like .env.bak.YYYYMMDD).
+# A too-narrow list here let a plaintext-secret backup sit un-ignored, one
+# `git add -A` away from a public-repo leak — so default-deny and re-include
+# only the committed *.example templates.
+.env*
+!.env.example
+!*.env.example
+!.env.docker.example
+!.env.r2.example
 
 # OS
 .DS_Store
