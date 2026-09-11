@@ -5,7 +5,7 @@
 aiofiles==25.1.0
     # via mybookkeeper-backend
 aiosqlite==0.22.1
-alembic==1.19.1
+alembic==1.19.2
     # via mybookkeeper-backend
 annotated-doc==0.0.4
     # via fastapi
@@ -96,7 +96,7 @@ fastapi-users-db-sqlalchemy==7.0.0
     #   mybookkeeper-backend
 google-api-core==2.31.0
     # via google-api-python-client
-google-api-python-client==2.199.0
+google-api-python-client==2.200.0
     # via mybookkeeper-backend
 google-auth==2.55.1
     # via
@@ -272,7 +272,7 @@ requests==2.34.2
     #   requests-oauthlib
 requests-oauthlib==2.0.0
     # via google-auth-oauthlib
-sentry-sdk==2.68.1
+sentry-sdk==2.69.1
     # via
     #   mybookkeeper-backend
     #   platform-shared
