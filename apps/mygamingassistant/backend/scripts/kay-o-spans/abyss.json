@@ -1,0 +1,893 @@
+{
+ "video_id": "bC_GFxeWVjE",
+ "map_slug": "abyss",
+ "author": "Tseeky - Pro Valorant Lineups",
+ "lineups": [
+  {
+   "cs": 6,
+   "title": "A Main Flash (Do 1 step from the wall before you throw it so you won't flash your team)",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     15.0,
+     17.0
+    ],
+    "aim": [
+     17.25,
+     18.25
+    ],
+    "throw": [
+     18.25,
+     18.85
+    ],
+    "landing": [
+     19.88,
+     20.5
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Attacker Flash'"
+  },
+  {
+   "cs": 24,
+   "title": "A Site 1 Simple Entry Flash",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     31.0,
+     33.0
+    ],
+    "aim": [
+     33.55,
+     34.2
+    ],
+    "throw": [
+     34.22,
+     34.82
+    ],
+    "landing": [
+     35.6,
+     36.3
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Attacker Flash'"
+  },
+  {
+   "cs": 41,
+   "title": "A Site 2 Flash",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     47.4,
+     49.9
+    ],
+    "aim": [
+     50.1,
+     50.62
+    ],
+    "throw": [
+     50.62,
+     51.22
+    ],
+    "landing": [
+     51.97,
+     52.4
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Attacker Flash'"
+  },
+  {
+   "cs": 76,
+   "title": "B Nest 1 Self Peek One Way Flash",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     86.0,
+     88.0
+    ],
+    "aim": [
+     88.3,
+     89.03
+    ],
+    "throw": [
+     89.03,
+     89.63
+    ],
+    "landing": [
+     90.68,
+     91.2
+    ]
+   },
+   "held": "Pre-rework source. Patch 11.08 (2025-10-15) reworked Abyss B Site (cover and plant positions) and the Mid hallway into B Main; this video was uploaded 2024-06-25, before it, and the row stands or lands in a reworked zone (b-main). The clip is sound, but the lineup may no longer work in the current map, so it is held until a post-11.08 source confirms it. Release by deleting this entry and re-running merge_spans.",
+   "side_evidence": "author's on-screen title plate reads 'Attacker Flash'"
+  },
+  {
+   "cs": 93,
+   "title": "B Nest 2 Flash",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     99.45,
+     100.4
+    ],
+    "aim": [
+     102.62,
+     103.32
+    ],
+    "throw": [
+     103.32,
+     103.92
+    ],
+    "landing": [
+     105.05,
+     105.65
+    ]
+   },
+   "held": "Pre-rework source. Patch 11.08 (2025-10-15) reworked Abyss B Site (cover and plant positions) and the Mid hallway into B Main; this video was uploaded 2024-06-25, before it, and the row stands or lands in a reworked zone (b-main). The clip is sound, but the lineup may no longer work in the current map, so it is held until a post-11.08 source confirms it. Release by deleting this entry and re-running merge_spans.",
+   "side_evidence": "author's on-screen title plate reads 'Attacker Flash'"
+  },
+  {
+   "cs": 109,
+   "title": "B Site 1 God Flash (Risky but very good!)",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     114.9,
+     116.6
+    ],
+    "aim": [
+     118.15,
+     118.8
+    ],
+    "throw": [
+     118.75,
+     119.35
+    ],
+    "landing": [
+     120.07,
+     120.67
+    ]
+   },
+   "held": "Pre-rework source. Patch 11.08 (2025-10-15) reworked Abyss B Site (cover and plant positions) and the Mid hallway into B Main; this video was uploaded 2024-06-25, before it, and the row stands or lands in a reworked zone (b-main, b-site). The clip is sound, but the lineup may no longer work in the current map, so it is held until a post-11.08 source confirms it. Release by deleting this entry and re-running merge_spans.",
+   "side_evidence": "author's on-screen title plate reads 'Attacker Flash'"
+  },
+  {
+   "cs": 125,
+   "title": "B Site 2 One Way Flash Left",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     131.2,
+     133.2
+    ],
+    "aim": [
+     133.4,
+     134.0
+    ],
+    "throw": [
+     134.0,
+     134.6
+    ],
+    "landing": [
+     135.65,
+     136.15
+    ]
+   },
+   "held": "Pre-rework source. Patch 11.08 (2025-10-15) reworked Abyss B Site (cover and plant positions) and the Mid hallway into B Main; this video was uploaded 2024-06-25, before it, and the row stands or lands in a reworked zone (b-main, b-site). The clip is sound, but the lineup may no longer work in the current map, so it is held until a post-11.08 source confirms it. Release by deleting this entry and re-running merge_spans.",
+   "side_evidence": "author's on-screen title plate reads 'Attacker Flash'"
+  },
+  {
+   "cs": 140,
+   "title": "B Site 3 One Way Flash Right",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     145.0,
+     146.9
+    ],
+    "aim": [
+     147.3,
+     147.9
+    ],
+    "throw": [
+     147.85,
+     148.45
+    ],
+    "landing": [
+     149.45,
+     149.95
+    ]
+   },
+   "held": "Pre-rework source. Patch 11.08 (2025-10-15) reworked Abyss B Site (cover and plant positions) and the Mid hallway into B Main; this video was uploaded 2024-06-25, before it, and the row stands or lands in a reworked zone (b-main, b-site). The clip is sound, but the lineup may no longer work in the current map, so it is held until a post-11.08 source confirms it. Release by deleting this entry and re-running merge_spans.",
+   "side_evidence": "author's on-screen title plate reads 'Attacker Flash'"
+  },
+  {
+   "cs": 169,
+   "title": "A Lobby Push Flash (25 meter rule, just aim to the spot shown)",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "a-lobby",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     175.4,
+     177.1
+    ],
+    "aim": [
+     177.5,
+     178.067
+    ],
+    "throw": [
+     178.067,
+     178.667
+    ],
+    "landing": [
+     179.65,
+     180.25
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Defender Flash'"
+  },
+  {
+   "cs": 184,
+   "title": "A Main Flash 1 One Way Flash",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     191.0,
+     192.8
+    ],
+    "aim": [
+     193.1,
+     193.68
+    ],
+    "throw": [
+     193.62,
+     194.25
+    ],
+    "landing": [
+     194.98,
+     195.6
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Defender Flash'"
+  },
+  {
+   "cs": 214,
+   "title": "A Site 1 Self Peek Hidden God Flash",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     221.5,
+     223.9
+    ],
+    "aim": [
+     224.9,
+     225.48
+    ],
+    "throw": [
+     225.49,
+     226.09
+    ],
+    "landing": [
+     227.05,
+     227.85
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Defender Flash'"
+  },
+  {
+   "cs": 233,
+   "title": "A Site 2 Self Peek Flash",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     239.25,
+     241.75
+    ],
+    "aim": [
+     242.15,
+     242.8
+    ],
+    "throw": [
+     242.8,
+     243.4
+    ],
+    "landing": [
+     244.4,
+     245.1
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Defender Flash'"
+  },
+  {
+   "cs": 249,
+   "title": "B Lobby God Flash",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "b-lobby",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     254.4,
+     255.9
+    ],
+    "aim": [
+     259.15,
+     259.63
+    ],
+    "throw": [
+     259.63,
+     260.25
+    ],
+    "landing": [
+     261.1,
+     261.9
+    ]
+   },
+   "held": "Pre-rework source. Patch 11.08 (2025-10-15) reworked Abyss B Site (cover and plant positions) and the Mid hallway into B Main; this video was uploaded 2024-06-25, before it, and the row stands or lands in a reworked zone (b-site). The clip is sound, but the lineup may no longer work in the current map, so it is held until a post-11.08 source confirms it. Release by deleting this entry and re-running merge_spans.",
+   "side_evidence": "author's on-screen title plate reads 'Defender Flash'"
+  },
+  {
+   "cs": 265,
+   "title": "B Main Danger Peek Flash",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     270.5,
+     272.4
+    ],
+    "aim": [
+     272.75,
+     273.35
+    ],
+    "throw": [
+     273.3,
+     273.82
+    ],
+    "landing": [
+     275.05,
+     275.65
+    ]
+   },
+   "held": "Pre-rework source. Patch 11.08 (2025-10-15) reworked Abyss B Site (cover and plant positions) and the Mid hallway into B Main; this video was uploaded 2024-06-25, before it, and the row stands or lands in a reworked zone (b-main, b-site). The clip is sound, but the lineup may no longer work in the current map, so it is held until a post-11.08 source confirms it. Release by deleting this entry and re-running merge_spans.",
+   "side_evidence": "author's on-screen title plate reads 'Defender Flash'"
+  },
+  {
+   "cs": 283,
+   "title": "B Site 1 God Flash (2 variations)",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     289.6,
+     291.3
+    ],
+    "aim": [
+     291.55,
+     292.42
+    ],
+    "throw": [
+     292.42,
+     293.02
+    ],
+    "landing": [
+     293.97,
+     294.77
+    ]
+   },
+   "held": "Pre-rework source. Patch 11.08 (2025-10-15) reworked Abyss B Site (cover and plant positions) and the Mid hallway into B Main; this video was uploaded 2024-06-25, before it, and the row stands or lands in a reworked zone (b-site). The clip is sound, but the lineup may no longer work in the current map, so it is held until a post-11.08 source confirms it. Release by deleting this entry and re-running merge_spans.",
+   "side_evidence": "author's on-screen title plate reads 'Defender Flash'"
+  },
+  {
+   "cs": 322,
+   "title": "B Site 3 Danger Peek Flash",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     329.0,
+     331.1
+    ],
+    "aim": [
+     331.45,
+     332.05
+    ],
+    "throw": [
+     332.05,
+     332.65
+    ],
+    "landing": [
+     333.63,
+     334.33
+    ]
+   },
+   "held": "Pre-rework source. Patch 11.08 (2025-10-15) reworked Abyss B Site (cover and plant positions) and the Mid hallway into B Main; this video was uploaded 2024-06-25, before it, and the row stands or lands in a reworked zone (b-site). The clip is sound, but the lineup may no longer work in the current map, so it is held until a post-11.08 source confirms it. Release by deleting this entry and re-running merge_spans.",
+   "side_evidence": "author's on-screen title plate reads 'Defender Flash'"
+  },
+  {
+   "cs": 353,
+   "title": "Middle 1 Self Peek One Way Flash",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     360.5,
+     362.3
+    ],
+    "aim": [
+     362.6,
+     363.28
+    ],
+    "throw": [
+     363.27,
+     363.87
+    ],
+    "landing": [
+     364.58,
+     365.35
+    ]
+   },
+   "held": "Pre-rework source. Patch 11.08 (2025-10-15) reworked Abyss B Site (cover and plant positions) and the Mid hallway into B Main; this video was uploaded 2024-06-25, before it, and the row stands or lands in a reworked zone (mid). The clip is sound, but the lineup may no longer work in the current map, so it is held until a post-11.08 source confirms it. Release by deleting this entry and re-running merge_spans.",
+   "side_evidence": "author's on-screen title plate reads 'Defender Flash'"
+  },
+  {
+   "cs": 367,
+   "title": "Middle 2 Support Flash",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     374.6,
+     376.25
+    ],
+    "aim": [
+     376.5,
+     377.09
+    ],
+    "throw": [
+     377.05,
+     377.65
+    ],
+    "landing": [
+     378.7,
+     379.3
+    ]
+   },
+   "held": "Pre-rework source. Patch 11.08 (2025-10-15) reworked Abyss B Site (cover and plant positions) and the Mid hallway into B Main; this video was uploaded 2024-06-25, before it, and the row stands or lands in a reworked zone (mid). The clip is sound, but the lineup may no longer work in the current map, so it is held until a post-11.08 source confirms it. Release by deleting this entry and re-running merge_spans.",
+   "side_evidence": "author's on-screen title plate reads 'Defender Flash'"
+  },
+  {
+   "cs": 382,
+   "title": "Middle 3 Push Flash",
+   "ability": "flashdrive",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     389.4,
+     390.9
+    ],
+    "aim": [
+     392.2,
+     392.85
+    ],
+    "throw": [
+     392.86,
+     393.46
+    ],
+    "landing": [
+     394.48,
+     395.0
+    ]
+   },
+   "held": "Pre-rework source. Patch 11.08 (2025-10-15) reworked Abyss B Site (cover and plant positions) and the Mid hallway into B Main; this video was uploaded 2024-06-25, before it, and the row stands or lands in a reworked zone (mid). The clip is sound, but the lineup may no longer work in the current map, so it is held until a post-11.08 source confirms it. Release by deleting this entry and re-running merge_spans.",
+   "side_evidence": "author's on-screen title plate reads 'Defender Flash'"
+  },
+  {
+   "cs": 401,
+   "title": "A Site Best Knife (2 variations)",
+   "ability": "zero-point",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     408.0,
+     410.4
+    ],
+    "aim": [
+     413.78,
+     414.1
+    ],
+    "throw": [
+     414.1,
+     414.7
+    ],
+    "landing": [
+     419.85,
+     420.65
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Attacker Knife'"
+  },
+  {
+   "cs": 429,
+   "title": "B Site Best Knife (2 variations)",
+   "ability": "zero-point",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     435.0,
+     437.2
+    ],
+    "aim": [
+     439.55,
+     440.25
+    ],
+    "throw": [
+     440.25,
+     440.85
+    ],
+    "landing": [
+     446.1,
+     446.95
+    ]
+   },
+   "held": "Pre-rework source. Patch 11.08 (2025-10-15) reworked Abyss B Site (cover and plant positions) and the Mid hallway into B Main; this video was uploaded 2024-06-25, before it, and the row stands or lands in a reworked zone (b-site). The clip is sound, but the lineup may no longer work in the current map, so it is held until a post-11.08 source confirms it. Release by deleting this entry and re-running merge_spans.",
+   "side_evidence": "author's on-screen title plate reads 'Attacker Knife'"
+  },
+  {
+   "cs": 455,
+   "title": "A Main Simple Info Knife (Best Spot)",
+   "ability": "zero-point",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     460.9,
+     462.15
+    ],
+    "aim": [
+     462.3,
+     463.1
+    ],
+    "throw": [
+     463.1,
+     463.72
+    ],
+    "landing": [
+     464.5,
+     465.4
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Defender Knife'"
+  },
+  {
+   "cs": 470,
+   "title": "A Retake Knife",
+   "ability": "zero-point",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "ct-spawn",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     476.6,
+     479.2
+    ],
+    "aim": [
+     480.4,
+     481.3
+    ],
+    "throw": [
+     481.3,
+     481.95
+    ],
+    "landing": [
+     487.35,
+     488.65
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Defender Knife'"
+  },
+  {
+   "cs": 490,
+   "title": "B Main 1 Simple Info Knife (Best Spot)",
+   "ability": "zero-point",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     494.8,
+     496.7
+    ],
+    "aim": [
+     497.85,
+     498.45
+    ],
+    "throw": [
+     498.62,
+     499.22
+    ],
+    "landing": [
+     499.55,
+     500.25
+    ]
+   },
+   "held": "Pre-rework source. Patch 11.08 (2025-10-15) reworked Abyss B Site (cover and plant positions) and the Mid hallway into B Main; this video was uploaded 2024-06-25, before it, and the row stands or lands in a reworked zone (b-main, b-site). The clip is sound, but the lineup may no longer work in the current map, so it is held until a post-11.08 source confirms it. Release by deleting this entry and re-running merge_spans.",
+   "side_evidence": "author's on-screen title plate reads 'Defender Knife'"
+  },
+  {
+   "cs": 505,
+   "title": "B Main 2 Slow Knife",
+   "ability": "zero-point",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     512.5,
+     515.0
+    ],
+    "aim": [
+     519.0,
+     519.6
+    ],
+    "throw": [
+     519.58,
+     520.18
+    ],
+    "landing": [
+     524.9,
+     525.7
+    ]
+   },
+   "held": "Pre-rework source. Patch 11.08 (2025-10-15) reworked Abyss B Site (cover and plant positions) and the Mid hallway into B Main; this video was uploaded 2024-06-25, before it, and the row stands or lands in a reworked zone (b-main, b-site). The clip is sound, but the lineup may no longer work in the current map, so it is held until a post-11.08 source confirms it. Release by deleting this entry and re-running merge_spans.",
+   "side_evidence": "author's on-screen title plate reads 'Defender Knife'"
+  },
+  {
+   "cs": 528,
+   "title": "A Default Plant Molly",
+   "ability": "fragment",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     535.5,
+     537.9
+    ],
+    "aim": [
+     540.08,
+     540.68
+    ],
+    "throw": [
+     540.68,
+     541.3
+    ],
+    "landing": [
+     546.35,
+     547.6
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Attacker Molly'"
+  },
+  {
+   "cs": 551,
+   "title": "A Bridge Plant Molly",
+   "ability": "fragment",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     558.1,
+     560.5
+    ],
+    "aim": [
+     561.45,
+     561.92
+    ],
+    "throw": [
+     561.93,
+     562.53
+    ],
+    "landing": [
+     567.8,
+     568.8
+    ]
+   },
+   "side_evidence": "author's on-screen title plate reads 'Attacker Molly'"
+  },
+  {
+   "cs": 572,
+   "title": "B Backsite Molly",
+   "ability": "fragment",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     577.9,
+     579.9
+    ],
+    "aim": [
+     583.68,
+     584.28
+    ],
+    "throw": [
+     584.2,
+     584.8
+    ],
+    "landing": [
+     589.6,
+     590.4
+    ]
+   },
+   "held": "Pre-rework source. Patch 11.08 (2025-10-15) reworked Abyss B Site (cover and plant positions) and the Mid hallway into B Main; this video was uploaded 2024-06-25, before it, and the row stands or lands in a reworked zone (b-site). The clip is sound, but the lineup may no longer work in the current map, so it is held until a post-11.08 source confirms it. Release by deleting this entry and re-running merge_spans.",
+   "side_evidence": "author's on-screen title plate reads 'Attacker Molly'"
+  },
+  {
+   "cs": 594,
+   "title": "B Default Plant Molly",
+   "ability": "fragment",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     600.45,
+     602.15
+    ],
+    "aim": [
+     604.33,
+     604.93
+    ],
+    "throw": [
+     604.93,
+     605.53
+    ],
+    "landing": [
+     610.8,
+     612.3
+    ]
+   },
+   "held": "Pre-rework source. Patch 11.08 (2025-10-15) reworked Abyss B Site (cover and plant positions) and the Mid hallway into B Main; this video was uploaded 2024-06-25, before it, and the row stands or lands in a reworked zone (b-site). The clip is sound, but the lineup may no longer work in the current map, so it is held until a post-11.08 source confirms it. Release by deleting this entry and re-running merge_spans.",
+   "side_evidence": "author's on-screen title plate reads 'Attacker Molly'"
+  },
+  {
+   "cs": 615,
+   "title": "B Danger Plant Molly",
+   "ability": "fragment",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "b-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     622.3,
+     624.3
+    ],
+    "aim": [
+     625.5,
+     626.08
+    ],
+    "throw": [
+     626.05,
+     626.65
+    ],
+    "landing": [
+     630.55,
+     631.75
+    ]
+   },
+   "held": "Pre-rework source. Patch 11.08 (2025-10-15) reworked Abyss B Site (cover and plant positions) and the Mid hallway into B Main; this video was uploaded 2024-06-25, before it, and the row stands or lands in a reworked zone (b-main). The clip is sound, but the lineup may no longer work in the current map, so it is held until a post-11.08 source confirms it. Release by deleting this entry and re-running merge_spans.",
+   "side_evidence": "author's on-screen title plate reads 'Attacker Molly'"
+  }
+ ],
+ "note": "All 30 rows carry real frame-studied spans; no placeholders remain. 30 are localizer output that passed the adversarial gate as-is. The other 0 carry at least one event measured directly from the footage by operator frame-study; each such row has a `span_provenance` field saying which event was replaced and why.",
+ "excluded_no_event_in_source": [
+  {
+   "cs": 58,
+   "title": "A Site 3 Post Plant Flash",
+   "reason": "LANDING: the flash pops above the hallway ceiling-beam lip at the top edge of frame. The only deploy evidence is a small starburst at 69.2 (frames.sh y_k04l.png, 68.6-69.8, frame-exact), and by 69.3 the player turns to walk. There is no bloom and no whiteout, and nothing else at the landing can be cut. The gate failed LANDING on it for the same reason."
+  },
+  {
+   "cs": 154,
+   "title": "Middle Flash",
+   "reason": "LANDING: the author cuts to a different POV (Mid Catwalk, facing a wall) before the pop. A dense 60fps pass from the release to +3s finds no bloom, no whiteout and no lighting wash in the thrower's POV."
+  },
+  {
+   "cs": 200,
+   "title": "A Main Flash 2 Support God Flash",
+   "reason": "LANDING: the flash pops behind the building roofline while the thrower walks toward the wall without looking. The only evidence is a small glint at the top-left of the wall at 209.9 (frames.sh y_k13l.png, 209.3-210.6, frame-exact). By 210.4 the view is pressed against the wall."
+  },
+  {
+   "cs": 307,
+   "title": "B Site 2 Main Peek Flash",
+   "reason": "LANDING: the deploy is never on camera. The canister climbs over the overhang lip and the next shot is a different ground-level courtyard scene with the rifle out."
+  },
+  {
+   "cs": 336,
+   "title": "B Site 4 Support Flash",
+   "reason": "LANDING: the detonation is hidden behind the B-site crate. There is no bloom and no whiteout from the thrower's POV, and nothing else at the landing can be cut."
+  }
+ ]
+}

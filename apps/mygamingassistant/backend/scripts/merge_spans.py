@@ -134,7 +134,7 @@ if not PACK.is_file():
 # when you deliberately want the raw localizer output.
 DEFAULT_OVERRIDE = PACK.parent / f"{STEM}.overrides.json"
 
-overrides, prov, excluded = {}, {}, {}
+overrides, prov, excluded, held = {}, {}, {}, {}
 ov_path = None
 if "--override" in argv:
     i = argv.index("--override")
@@ -155,6 +155,11 @@ if ov_path is not None:
     # a dropped row simply stays pending_review and never reaches the export. Recorded here, not
     # by hand-editing the pack, because the merge rewrites the pack from scratch every run.
     excluded = {int(k): v for k, v in ov.get("excluded", {}).items()}
+    # A `held` row is the opposite case: the clip is sound, but what it teaches may no longer be
+    # true in the game (a map rework after the source was recorded). It keeps its spans and stays
+    # in the pack so create/recut still run and releasing it is one deleted line; `accept` skips
+    # it and reverts it to pending_review if it was accepted before the hold.
+    held = {int(k): v for k, v in ov.get("held", {}).items()}
 
 passed, any_loc = {}, {}
 for p in argv:
@@ -239,9 +244,19 @@ if APPLY_STAND:
             applied.append((cs, row["title"], row["stand"], z, loc.get("stand_loc")))
             row["stand"] = z
 
+unknown_held = sorted(set(held) - {int(r["cs"]) for r in pack["lineups"]})
+if unknown_held:
+    raise SystemExit(f"ABORT - override holds cs={unknown_held}, not in the pack. Nothing was "
+                     f"written; a hold that matches nothing would quietly ship the row it meant "
+                     f"to stop.")
+
 stand_applied, stand_unresolved, stand_author = [], [], []
 merged, stale, changed_ability = [], [], []
 for row in pack["lineups"]:
+    # Rewritten every run from the override file, the durable record, like everything else here.
+    row.pop("held", None)
+    if int(row["cs"]) in held:
+        row["held"] = held[int(row["cs"])]
     loc = passed.get(int(row["cs"]))
     if not loc:
         stale.append((row["cs"], row["title"]))
@@ -332,6 +347,12 @@ if excluded:
     for e in pack["excluded_no_event_in_source"]:
         mark = "new" if e["cs"] in {int(r["cs"]) for r in dropped} else "   "
         print(f"   {mark} cs={e['cs']:<5} {e['title']}")
+if held:
+    print(f"\nHELD {len(held)} row(s) — spans kept, `accept` will skip them "
+          f"(reason in each row's `held` field):")
+    for row in pack["lineups"]:
+        if "held" in row:
+            print(f"   cs={row['cs']:<5} {row['stand']}->{row['target']}   {row['title']}")
 if APPLY_STAND:
     print(f"\n--apply-stand: {len(stand_applied)} placeholder stand(s) replaced from the "
           f"localizer's observed stand_loc, {len(stand_author)} left alone (author gave the "

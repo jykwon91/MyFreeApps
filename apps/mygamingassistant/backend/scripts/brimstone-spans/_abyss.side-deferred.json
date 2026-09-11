@@ -1,0 +1,87 @@
+{
+  "video_id": "laUgRg37MPI",
+  "why": "side undecidable by stand-zone measurement: 'mid' brim-incendiary stands are 20 side_a / 1 side_b across 5 sources, and Tseeky's own author-labelled Abyss rows split from the same stands (cs 321 'B Default Anti Plant Molly 3' defender, cs 331 'A Default Molly 4' attacker). The title grammar '<TARGET> from <STAND>' carries no side. Operator resolves by watching the video's framing.",
+  "lineups": [
+    {
+      "cs": 133,
+      "title": "B Open from B Link",
+      "ability": "brim-incendiary",
+      "technique": "standing",
+      "target": "b-site",
+      "stand": "mid",
+      "side": null,
+      "spans": {
+        "stand": [
+          137.4,
+          139.6
+        ],
+        "aim": [
+          147.75,
+          148.79
+        ],
+        "throw": [
+          148.81,
+          149.41
+        ],
+        "landing": [
+          151.55,
+          152.75
+        ]
+      }
+    },
+    {
+      "cs": 334,
+      "title": "B Safe from B Link",
+      "ability": "brim-incendiary",
+      "technique": "standing",
+      "target": "b-site",
+      "stand": "mid",
+      "side": null,
+      "spans": {
+        "stand": [
+          338.0,
+          340.5
+        ],
+        "aim": [
+          348.2,
+          349.2
+        ],
+        "throw": [
+          349.085,
+          349.685
+        ],
+        "landing": [
+          353.4,
+          354.6
+        ]
+      }
+    },
+    {
+      "cs": 495,
+      "title": "A Default from A Vent",
+      "ability": "brim-incendiary",
+      "technique": "standing",
+      "target": "a-site",
+      "stand": "mid",
+      "side": null,
+      "spans": {
+        "stand": [
+          500.0,
+          502.5
+        ],
+        "aim": [
+          506.6,
+          507.7
+        ],
+        "throw": [
+          507.6,
+          508.25
+        ],
+        "landing": [
+          510.25,
+          511.35
+        ]
+      }
+    }
+  ]
+}

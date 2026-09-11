@@ -1,0 +1,568 @@
+{
+  "video_id": "laUgRg37MPI",
+  "map_slug": "abyss",
+  "author": "HEHE XD",
+  "lineups": [
+    {
+      "cs": 0,
+      "title": "B Open from B Main",
+      "ability": "brim-incendiary",
+      "technique": "standing",
+      "target": "b-site",
+      "stand": "b-main",
+      "side": "side_a",
+      "spans": {
+        "stand": [
+          2.7,
+          5.0
+        ],
+        "aim": [
+          13.5,
+          14.65
+        ],
+        "throw": [
+          14.6,
+          15.2
+        ],
+        "landing": [
+          22.05,
+          23.2
+        ]
+      },
+      "side_evidence": "stand zone 'b-main' for brim-incendiary: unanimous side_a 19/19 rows across 4 sources (all utilities: 168 A / 21 B, the B rows being placed setups and recon)"
+    },
+    {
+      "cs": 28,
+      "title": "B Open from B Main",
+      "ability": "brim-incendiary",
+      "technique": "standing",
+      "target": "b-site",
+      "stand": "b-main",
+      "side": "side_a",
+      "spans": {
+        "stand": [
+          30.8,
+          32.35
+        ],
+        "aim": [
+          39.0,
+          39.98
+        ],
+        "throw": [
+          39.85,
+          40.45
+        ],
+        "landing": [
+          47.25,
+          48.4
+        ]
+      },
+      "side_evidence": "stand zone 'b-main' for brim-incendiary: unanimous side_a 19/19 rows across 4 sources (all utilities: 168 A / 21 B, the B rows being placed setups and recon)"
+    },
+    {
+      "cs": 53,
+      "title": "B Open from B Main",
+      "ability": "brim-incendiary",
+      "technique": "standing",
+      "target": "b-site",
+      "stand": "b-main",
+      "side": "side_a",
+      "spans": {
+        "stand": [
+          55.3,
+          57.1
+        ],
+        "aim": [
+          65.6,
+          66.75
+        ],
+        "throw": [
+          66.7,
+          67.3
+        ],
+        "landing": [
+          72.5,
+          73.6
+        ]
+      },
+      "side_evidence": "stand zone 'b-main' for brim-incendiary: unanimous side_a 19/19 rows across 4 sources (all utilities: 168 A / 21 B, the B rows being placed setups and recon)"
+    },
+    {
+      "cs": 78,
+      "title": "B Open from B Lobby",
+      "ability": "brim-incendiary",
+      "technique": "standing",
+      "target": "b-site",
+      "stand": "b-lobby",
+      "side": "side_a",
+      "spans": {
+        "stand": [
+          80.7,
+          83.0
+        ],
+        "aim": [
+          92.35,
+          93.53
+        ],
+        "throw": [
+          93.52,
+          94.12
+        ],
+        "landing": [
+          100.067,
+          101.3
+        ]
+      },
+      "side_evidence": "stand zone 'b-lobby': unanimous side_a 7/7 rows across 2 sources"
+    },
+    {
+      "cs": 106,
+      "title": "B Open from B Lobby",
+      "ability": "brim-incendiary",
+      "technique": "standing",
+      "target": "b-site",
+      "stand": "b-lobby",
+      "side": "side_a",
+      "spans": {
+        "stand": [
+          113.9,
+          116.1
+        ],
+        "aim": [
+          119.75,
+          120.88
+        ],
+        "throw": [
+          120.85,
+          121.45
+        ],
+        "landing": [
+          127.9,
+          129.1
+        ]
+      },
+      "side_evidence": "stand zone 'b-lobby': unanimous side_a 7/7 rows across 2 sources"
+    },
+    {
+      "cs": 157,
+      "title": "B Open from CT",
+      "ability": "brim-incendiary",
+      "technique": "standing",
+      "target": "b-site",
+      "stand": "ct-spawn",
+      "side": "side_b",
+      "spans": {
+        "stand": [
+          161.0,
+          162.4
+        ],
+        "aim": [
+          169.9,
+          170.95
+        ],
+        "throw": [
+          171.05,
+          171.65
+        ],
+        "landing": [
+          179.95,
+          181.2
+        ]
+      },
+      "side_evidence": "stand zone 'ct-spawn': unanimous side_b 67/67 rows across 25 sources"
+    },
+    {
+      "cs": 186,
+      "title": "B Open from CT",
+      "ability": "brim-incendiary",
+      "technique": "standing",
+      "target": "b-site",
+      "stand": "ct-spawn",
+      "side": "side_b",
+      "spans": {
+        "stand": [
+          191.5,
+          194.5
+        ],
+        "aim": [
+          203.35,
+          204.38
+        ],
+        "throw": [
+          204.32,
+          204.97
+        ],
+        "landing": [
+          211.28,
+          212.38
+        ]
+      },
+      "side_evidence": "stand zone 'ct-spawn': unanimous side_b 67/67 rows across 25 sources"
+    },
+    {
+      "cs": 217,
+      "title": "B Under from B Main",
+      "ability": "brim-incendiary",
+      "technique": "standing",
+      "target": "b-site",
+      "stand": "b-main",
+      "side": "side_a",
+      "spans": {
+        "stand": [
+          219.6,
+          222.0
+        ],
+        "aim": [
+          232.5,
+          233.68
+        ],
+        "throw": [
+          233.63,
+          234.23
+        ],
+        "landing": [
+          240.85,
+          242.0
+        ]
+      },
+      "side_evidence": "stand zone 'b-main' for brim-incendiary: unanimous side_a 19/19 rows across 4 sources (all utilities: 168 A / 21 B, the B rows being placed setups and recon)"
+    },
+    {
+      "cs": 246,
+      "title": "B Under from B Lobby",
+      "ability": "brim-incendiary",
+      "technique": "standing",
+      "target": "b-site",
+      "stand": "b-lobby",
+      "side": "side_a",
+      "spans": {
+        "stand": [
+          248.5,
+          251.0
+        ],
+        "aim": [
+          262.0,
+          263.15
+        ],
+        "throw": [
+          263.1,
+          263.7
+        ],
+        "landing": [
+          269.52,
+          270.7
+        ]
+      },
+      "side_evidence": "stand zone 'b-lobby': unanimous side_a 7/7 rows across 2 sources"
+    },
+    {
+      "cs": 276,
+      "title": "B Safe from B Main",
+      "ability": "brim-incendiary",
+      "technique": "standing",
+      "target": "b-site",
+      "stand": "b-main",
+      "side": "side_a",
+      "spans": {
+        "stand": [
+          278.0,
+          280.8
+        ],
+        "aim": [
+          291.1,
+          292.28
+        ],
+        "throw": [
+          292.25,
+          292.85
+        ],
+        "landing": [
+          298.95,
+          300.2
+        ]
+      },
+      "side_evidence": "stand zone 'b-main' for brim-incendiary: unanimous side_a 19/19 rows across 4 sources (all utilities: 168 A / 21 B, the B rows being placed setups and recon)"
+    },
+    {
+      "cs": 305,
+      "title": "B Safe from B Lobby",
+      "ability": "brim-incendiary",
+      "technique": "standing",
+      "target": "b-site",
+      "stand": "b-lobby",
+      "side": "side_a",
+      "spans": {
+        "stand": [
+          307.2,
+          309.7
+        ],
+        "aim": [
+          320.45,
+          321.65
+        ],
+        "throw": [
+          321.6,
+          322.2
+        ],
+        "landing": [
+          328.53,
+          329.53
+        ]
+      },
+      "side_evidence": "stand zone 'b-lobby': unanimous side_a 7/7 rows across 2 sources"
+    },
+    {
+      "cs": 359,
+      "title": "B Safe from CT",
+      "ability": "brim-incendiary",
+      "technique": "standing",
+      "target": "b-site",
+      "stand": "ct-spawn",
+      "side": "side_b",
+      "spans": {
+        "stand": [
+          365.95,
+          367.95
+        ],
+        "aim": [
+          375.3,
+          376.3
+        ],
+        "throw": [
+          376.25,
+          376.85
+        ],
+        "landing": [
+          381.93,
+          383.0
+        ]
+      },
+      "side_evidence": "stand zone 'ct-spawn': unanimous side_b 67/67 rows across 25 sources"
+    },
+    {
+      "cs": 388,
+      "title": "A Default from A Main",
+      "ability": "brim-incendiary",
+      "technique": "standing",
+      "target": "a-site",
+      "stand": "a-main",
+      "side": "side_a",
+      "spans": {
+        "stand": [
+          391.2,
+          393.5
+        ],
+        "aim": [
+          401.2,
+          402.23
+        ],
+        "throw": [
+          402.13,
+          402.73
+        ],
+        "landing": [
+          406.1,
+          407.3
+        ]
+      },
+      "side_evidence": "stand zone 'a-main' for brim-incendiary: unanimous side_a 32/32 rows across 5 sources (all utilities: 216 A / 30 B, the B rows being placed setups and recon)"
+    },
+    {
+      "cs": 412,
+      "title": "A Default from A Lobby",
+      "ability": "brim-incendiary",
+      "technique": "standing",
+      "target": "a-site",
+      "stand": "a-lobby",
+      "side": "side_a",
+      "spans": {
+        "stand": [
+          415.2,
+          417.2
+        ],
+        "aim": [
+          426.0,
+          427.13
+        ],
+        "throw": [
+          427.1,
+          427.7
+        ],
+        "landing": [
+          432.85,
+          434.0
+        ]
+      },
+      "side_evidence": "stand zone 'a-lobby': unanimous side_a 30/30 rows across 7 sources"
+    },
+    {
+      "cs": 438,
+      "title": "A Default from A Lobby",
+      "ability": "brim-incendiary",
+      "technique": "standing",
+      "target": "a-site",
+      "stand": "a-lobby",
+      "side": "side_a",
+      "spans": {
+        "stand": [
+          444.0,
+          446.6
+        ],
+        "aim": [
+          453.55,
+          454.71
+        ],
+        "throw": [
+          454.58,
+          455.22
+        ],
+        "landing": [
+          462.85,
+          464.35
+        ]
+      },
+      "side_evidence": "stand zone 'a-lobby': unanimous side_a 30/30 rows across 7 sources"
+    },
+    {
+      "cs": 467,
+      "title": "A Default from A Lobby",
+      "ability": "brim-incendiary",
+      "technique": "standing",
+      "target": "a-site",
+      "stand": "a-lobby",
+      "side": "side_a",
+      "spans": {
+        "stand": [
+          469.8,
+          471.8
+        ],
+        "aim": [
+          480.05,
+          481.18
+        ],
+        "throw": [
+          481.12,
+          481.72
+        ],
+        "landing": [
+          489.45,
+          490.6
+        ]
+      },
+      "side_evidence": "stand zone 'a-lobby': unanimous side_a 30/30 rows across 7 sources"
+    },
+    {
+      "cs": 516,
+      "title": "A Default from CT",
+      "ability": "brim-incendiary",
+      "technique": "standing",
+      "target": "a-site",
+      "stand": "ct-spawn",
+      "side": "side_b",
+      "spans": {
+        "stand": [
+          519.8,
+          521.1
+        ],
+        "aim": [
+          532.8,
+          533.9
+        ],
+        "throw": [
+          533.767,
+          534.367
+        ],
+        "landing": [
+          541.38,
+          542.6
+        ]
+      },
+      "side_evidence": "stand zone 'ct-spawn': unanimous side_b 67/67 rows across 25 sources"
+    },
+    {
+      "cs": 547,
+      "title": "A Bridge from A Lobby",
+      "ability": "brim-incendiary",
+      "technique": "standing",
+      "target": "a-site",
+      "stand": "a-lobby",
+      "side": "side_a",
+      "spans": {
+        "stand": [
+          556.5,
+          558.9
+        ],
+        "aim": [
+          562.8,
+          563.85
+        ],
+        "throw": [
+          563.85,
+          564.45
+        ],
+        "landing": [
+          571.33,
+          572.6
+        ]
+      },
+      "side_evidence": "stand zone 'a-lobby': unanimous side_a 30/30 rows across 7 sources"
+    },
+    {
+      "cs": 576,
+      "title": "A Bridge from CT",
+      "ability": "brim-incendiary",
+      "technique": "standing",
+      "target": "a-site",
+      "stand": "ct-spawn",
+      "side": "side_b",
+      "spans": {
+        "stand": [
+          579.0,
+          581.0
+        ],
+        "aim": [
+          589.3,
+          590.3
+        ],
+        "throw": [
+          590.245,
+          590.845
+        ],
+        "landing": [
+          598.15,
+          599.35
+        ]
+      },
+      "side_evidence": "stand zone 'ct-spawn': unanimous side_b 67/67 rows across 25 sources"
+    },
+    {
+      "cs": 604,
+      "title": "A Backsite from CT",
+      "ability": "brim-incendiary",
+      "technique": "standing",
+      "target": "a-site",
+      "stand": "ct-spawn",
+      "side": "side_b",
+      "spans": {
+        "stand": [
+          606.1,
+          607.7
+        ],
+        "aim": [
+          617.85,
+          618.93
+        ],
+        "throw": [
+          618.93,
+          619.53
+        ],
+        "landing": [
+          625.68,
+          626.9
+        ]
+      },
+      "side_evidence": "stand zone 'ct-spawn': unanimous side_b 67/67 rows across 25 sources"
+    }
+  ],
+  "note": "brimstone ABYSS lineups from laUgRg37MPI (HEHE XD); 23 gate-passed. ability from localizer (author unlabelled; all 23 landed as molly pools). The source never states a side: 20 rows carry a side measured from stand-zone unanimity across the shipped Valorant library (see each row's side_evidence); 3 mid-stand rows (B Link x2, A Vent) parked in _abyss.side-deferred.json."
+}

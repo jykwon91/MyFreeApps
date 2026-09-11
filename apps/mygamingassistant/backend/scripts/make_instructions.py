@@ -213,7 +213,10 @@ for old, new in spec.get("replace", []):
 # Then the bare map name everywhere it survives, and the old source id wherever it is named.
 # The id is a pure identifier -- unlike the creator's name it carries no claim about the footage,
 # so substituting it is always correct and cannot invent a fact about the new source.
-out = [re.sub(rf"\b{re.escape(SRC_MAP)}\b", DST_MAP.capitalize(), ln, flags=re.I) for ln in lines]
+# Skipped for a same-map derivation: there is nothing to rename, and the case-folding sweep would
+# still capitalise lowercase slugs like the `abyss-03` label example.
+out = lines if SRC_MAP == DST_MAP else [
+    re.sub(rf"\b{re.escape(SRC_MAP)}\b", DST_MAP.capitalize(), ln, flags=re.I) for ln in lines]
 if VIDEO:
     for old in OLD_VIDEOS:
         out = [ln.replace(old, VIDEO) for ln in out]
@@ -223,9 +226,11 @@ diff = list(difflib.unified_diff(before.splitlines(), after.splitlines(),
                                  src.name, dst.name, lineterm="", n=1))
 print("\n".join(diff) if diff else "(no changes)")
 
-# Guard against the map the caller DECLARED as the source...
+# Guard against the map the caller DECLARED as the source... unless it IS the destination: a
+# second source for a map derives from the first source's doc, and there the map name surviving is
+# the correct outcome. The creator and video guards below are what protect that case.
 stale = [i for i, ln in enumerate(after.splitlines(), 1)
-         if re.search(rf"\b{re.escape(SRC_MAP)}\b", ln, re.I)]
+         if SRC_MAP != DST_MAP and re.search(rf"\b{re.escape(SRC_MAP)}\b", ln, re.I)]
 if stale:
     raise SystemExit(f"\nABORT - lines {stale} still mention {SRC_MAP!r}")
 
