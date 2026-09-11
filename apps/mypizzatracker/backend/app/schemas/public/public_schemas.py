@@ -67,7 +67,11 @@ class PublicDropRead(BaseModel):
 
 class PublicOrderPizzaCreate(BaseModel):
     pizza_type_id: uuid.UUID
-    topping_type_ids: list[uuid.UUID] = Field(default_factory=list)
+    # Capped so an anonymous caller can't pack hundreds of thousands of UUIDs
+    # into one line and force the order service to resolve/dedupe/IN-query them
+    # before the capacity check rejects the order (CPU/memory amplification).
+    # 50 is far above any real menu's topping count.
+    topping_type_ids: list[uuid.UUID] = Field(default_factory=list, max_length=50)
     modifications_text: Optional[str] = Field(None, max_length=500)
 
 
@@ -77,7 +81,9 @@ class PublicOrderCreate(BaseModel):
     customer_name: str = Field(..., min_length=1, max_length=100)
     customer_phone: str = Field(..., min_length=1, max_length=20)
     payment_method_tag: str = Field(..., min_length=1, max_length=30)
-    pizzas: list[PublicOrderPizzaCreate] = Field(..., min_length=1)
+    # Upper bound blocks a flood payload of hundreds of thousands of lines; 50
+    # is well above any single slot's realistic pizza count.
+    pizzas: list[PublicOrderPizzaCreate] = Field(..., min_length=1, max_length=50)
 
 
 class PublicOrderPizzaConfirmation(BaseModel):

@@ -22,6 +22,10 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.rate_limit import (
+    check_public_lookup_rate_limit,
+    check_public_order_rate_limit,
+)
 from app.db.session import get_db
 from app.repositories.order import order_repo
 from app.schemas.public.public_schemas import (
@@ -67,6 +71,7 @@ async def get_current_drop(
     "/orders",
     response_model=PublicOrderConfirmation,
     status_code=201,
+    dependencies=[Depends(check_public_order_rate_limit)],
 )
 async def place_public_order(
     body: PublicOrderCreate,
@@ -97,7 +102,11 @@ async def place_public_order(
     return await public_service.build_order_confirmation(db, order)
 
 
-@router.get("/customers/lookup", response_model=PublicCustomerLookup)
+@router.get(
+    "/customers/lookup",
+    response_model=PublicCustomerLookup,
+    dependencies=[Depends(check_public_lookup_rate_limit)],
+)
 async def lookup_public_customer(
     phone: str = Query(..., min_length=1, max_length=30),
     db: AsyncSession = Depends(get_db),

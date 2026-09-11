@@ -33,10 +33,14 @@ __all__ = [
     "get_user_by_email",
     "login_limiter",
     "totp_limiter",
+    "public_order_limiter",
+    "public_lookup_limiter",
     "check_login_rate_limit",
     "check_totp_rate_limit",
     "check_account_not_locked",
     "check_totp_account_not_locked",
+    "check_public_order_rate_limit",
+    "check_public_lookup_rate_limit",
     "verify_turnstile_token",
     "require_turnstile",
 ]
@@ -53,6 +57,20 @@ login_limiter = RateLimiter(
 
 # Mirrors MJH's totp_limiter (20 / 300s).
 totp_limiter = RateLimiter(max_attempts=20, window_seconds=300)
+
+# Anonymous customer-facing endpoints (app/api/public.py). These have no auth
+# and touch persistence, so they are per-IP throttled to blunt automated abuse:
+#   - order placement: flood → slot-capacity exhaustion (business DoS) + junk
+#     customer rows. 8 / 5 min is generous for a real customer (1-3 orders).
+#   - phone lookup: a PII/existence oracle (name + order shape by phone). 12 /
+#     5 min covers a customer correcting a typo while blocking mass enumeration.
+# Turnstile is intentionally NOT wired on these anonymous customer routes: the
+# public order bundle sends no token, so gating them on the secret would break
+# ordering the moment TURNSTILE_SECRET_KEY is set. Bot management for anonymous
+# public traffic belongs at the Cloudflare edge; the per-IP throttle is the
+# proportionate in-app control.
+public_order_limiter = RateLimiter(max_attempts=8, window_seconds=300)
+public_lookup_limiter = RateLimiter(max_attempts=12, window_seconds=300)
 
 
 # ---------------------------------------------------------------------------
@@ -170,3 +188,27 @@ async def check_account_not_locked(
             status_code=429,
             detail=RATE_LIMIT_GENERIC_DETAIL,
         )
+
+
+# ---------------------------------------------------------------------------
+# Public (anonymous) customer-endpoint throttles
+# ---------------------------------------------------------------------------
+
+
+async def check_public_order_rate_limit(request: Request) -> None:
+    """Per-IP throttle for anonymous order placement (POST /public/orders).
+
+    Blunts order-flood → slot-capacity exhaustion and junk-customer-row
+    writes. Raises the shared generic 429 on over-limit.
+    """
+    public_order_limiter.check(get_client_ip(request))
+
+
+async def check_public_lookup_rate_limit(request: Request) -> None:
+    """Per-IP throttle for the anonymous phone lookup (GET /public/customers/lookup).
+
+    The lookup is an existence/PII oracle keyed on a low-entropy phone
+    number; this caps how fast a single source can enumerate. Raises the
+    shared generic 429 on over-limit.
+    """
+    public_lookup_limiter.check(get_client_ip(request))
