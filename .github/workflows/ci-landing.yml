@@ -1,0 +1,63 @@
+name: Landing CI
+
+# E2E for the static myfreeapps.org landing page (sites/landing/). The page is
+# rendered under the production CSP read from infra/Caddyfile, so a change to
+# either side runs it. sites/landing is a standalone npm package (not a
+# workspace) — this job installs only Playwright, not every app's frontend.
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'sites/landing/**'
+      - 'infra/Caddyfile'
+      - '.github/workflows/ci-landing.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'sites/landing/**'
+      - 'infra/Caddyfile'
+      - '.github/workflows/ci-landing.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-landing-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  e2e:
+    name: e2e / landing
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: sites/landing
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: sites/landing/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run E2E tests
+        run: npm run test:e2e
+
+      - name: Upload Playwright artifacts
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: landing-playwright-results
+          path: sites/landing/e2e/test-results/
+          retention-days: 7
