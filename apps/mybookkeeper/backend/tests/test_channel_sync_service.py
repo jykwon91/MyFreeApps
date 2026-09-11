@@ -10,6 +10,10 @@ Verifies:
 - Delete when UID disappears from feed
 - HTTP failure preserves existing rows + records last_import_error
 - Error category branching: transient / auth / config / unknown
+- SSRF guard: ``ical_import_url`` is user-supplied, so ``_fetch`` must
+  reject internal / non-public targets (loopback, cloud metadata,
+  disallowed scheme/port) on the first hop AND re-validate every redirect
+  hop, and ``poll_one`` must record a blocked URL as category ``config``.
 """
 from __future__ import annotations
 
@@ -21,6 +25,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 import pytest
+
+from platform_shared.core.url_safety import UnsafeURLError
 
 from app.models.listings.channel import Channel
 from app.models.listings.channel_listing import ChannelListing
@@ -115,6 +121,28 @@ def _mock_client_returning(payload: bytes) -> AsyncMock:
 def _mock_client_raising(exc: Exception) -> AsyncMock:
     client = AsyncMock(spec=httpx.AsyncClient)
     client.get = AsyncMock(side_effect=exc)
+    return client
+
+
+def _resp(status_code: int, *, content: bytes = b"", location: str | None = None) -> MagicMock:
+    """Build a fake httpx response with real dict headers.
+
+    ``_fetch`` inspects ``.status_code``, ``.headers.get('location')``,
+    ``.raise_for_status()`` and ``.content`` — a plain ``MagicMock`` would
+    make ``headers.get`` return a truthy mock, so give it a real dict.
+    """
+    r = MagicMock()
+    r.status_code = status_code
+    r.content = content
+    r.headers = {"location": location} if location is not None else {}
+    r.raise_for_status = MagicMock(return_value=None)
+    return r
+
+
+def _mock_client_sequence(responses: list[MagicMock]) -> AsyncMock:
+    """Client whose successive ``.get()`` calls return ``responses`` in order."""
+    client = AsyncMock(spec=httpx.AsyncClient)
+    client.get = AsyncMock(side_effect=list(responses))
     return client
 
 
@@ -317,3 +345,85 @@ class TestPollOne:
             await channel_sync_service.poll_one(refreshed, client=client)
 
         client.get.assert_not_called()
+
+
+class TestFetchSSRFGuard:
+    """``_fetch`` must never egress to a non-public target.
+
+    The URLs below are literal IPs / non-http schemes, so the real
+    ``assert_url_safe`` runs without any network DNS lookup — the guard is
+    exercised for real, not mocked.
+    """
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "url",
+        [
+            "http://127.0.0.1/internal-only",  # loopback
+            "http://169.254.169.254/latest/meta-data/",  # cloud metadata
+            "file:///etc/passwd",  # disallowed scheme (local file read)
+            "http://8.8.8.8:9000/service",  # public IP, disallowed port
+        ],
+    )
+    async def test_first_hop_unsafe_url_blocked_before_egress(self, url) -> None:
+        client = _mock_client_sequence([])  # .get must never be reached
+        with pytest.raises(UnsafeURLError):
+            await channel_sync_service._fetch(url, client=client)
+        client.get.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_redirect_into_internal_target_blocked(self) -> None:
+        # Public first hop (8.8.8.8:80 passes) that 302s to loopback. The
+        # per-hop re-validation must reject the redirect before issuing it.
+        client = _mock_client_sequence(
+            [_resp(302, location="http://127.0.0.1/internal-only")]
+        )
+        with pytest.raises(UnsafeURLError):
+            await channel_sync_service._fetch("http://8.8.8.8/cal.ics", client=client)
+        # First (public) request issued; the internal redirect never was.
+        assert client.get.call_count == 1
+
+    @pytest.mark.asyncio
+    async def test_redirect_loop_trips_cap(self) -> None:
+        # Always redirect to a public literal so every hop passes the SSRF
+        # guard but the redirect cap eventually trips.
+        client = AsyncMock(spec=httpx.AsyncClient)
+        client.get = AsyncMock(
+            side_effect=lambda *a, **k: _resp(302, location="http://8.8.8.8/next")
+        )
+        with pytest.raises(httpx.HTTPError):
+            await channel_sync_service._fetch("http://8.8.8.8/start", client=client)
+        assert client.get.call_count == channel_sync_service._MAX_REDIRECTS + 1
+
+    @pytest.mark.asyncio
+    async def test_oversized_body_rejected(self) -> None:
+        big = b"x" * (channel_sync_service._MAX_FEED_BYTES + 1)
+        client = _mock_client_sequence([_resp(200, content=big)])
+        with pytest.raises(httpx.HTTPError):
+            await channel_sync_service._fetch("http://8.8.8.8/cal.ics", client=client)
+
+
+class TestPollOneBlocksSSRF:
+    @pytest.mark.asyncio
+    async def test_blocked_url_recorded_as_config(
+        self, db, seeded_channel_listing,
+    ) -> None:
+        cl = seeded_channel_listing
+        await channel_listing_repo.update(
+            db, cl.id, cl.listing_id,
+            {"ical_import_url": "http://169.254.169.254/latest/meta-data/"},
+        )
+        await db.commit()
+        refreshed = await channel_listing_repo.get_by_channel_listing_id(db, cl.id)
+        assert refreshed is not None
+
+        client = _mock_client_returning(b"")  # must never egress
+        with _patched_uow(db):
+            await channel_sync_service.poll_one(refreshed, client=client)
+
+        client.get.assert_not_called()
+        after = await channel_listing_repo.get_by_channel_listing_id(db, cl.id)
+        assert after is not None
+        assert after.last_import_error_category == "config"
+        assert after.last_import_error is not None
+        assert "UnsafeURLError" in after.last_import_error
