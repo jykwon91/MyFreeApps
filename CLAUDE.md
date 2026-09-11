@@ -14,6 +14,10 @@ MyFreeApps/
 ├── apps/
 │   ├── mybookkeeper/        # Personal bookkeeping + AI invoice extraction
 │   └── (future apps)
+├── sites/
+│   └── landing/public/      # myfreeapps.org — static page linking every deployed app
+│                            # (served by host Caddy; deploy-landing.yml; keep in sync
+│                            # with infra/Caddyfile — test_landing_page.py enforces it)
 ├── .github/workflows/       # Per-app deploy workflows
 └── package.json             # npm workspaces root
 ```

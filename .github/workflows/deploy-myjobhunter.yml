@@ -180,17 +180,8 @@ jobs:
 
             echo "--- Update host Caddyfile ---"
             # Sync the SHARED host Caddyfile (infra/Caddyfile) → /etc/caddy/Caddyfile.
-            # The shared file holds blocks for every app in the monorepo so a
-            # deploy of one app does not wipe another's host-Caddy entry.
-            if ! diff -q infra/Caddyfile /etc/caddy/Caddyfile > /dev/null 2>&1; then
-              echo "Host Caddyfile differs from repo — updating"
-              sudo cp infra/Caddyfile /etc/caddy/Caddyfile
-              sudo caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
-              sudo caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile
-              echo "Host Caddy reloaded with new config"
-            else
-              echo "Host Caddyfile already up to date"
-            fi
+            # Shared with deploy-landing.yml — see infra/sync-host-caddyfile.sh.
+            sudo bash infra/sync-host-caddyfile.sh
 
             echo "--- Bundle freshness tripwire ---"
             # Extract the script src from the live index.html and confirm

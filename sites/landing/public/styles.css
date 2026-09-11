@@ -1,0 +1,222 @@
+/* myfreeapps.org landing page. Palette mirrors the apps' shadcn/slate tokens
+   (each app's frontend/src/index.css). Muted text is darker/lighter than the apps'
+   --muted-foreground so small captions clear WCAG AA (4.5:1) in both themes.
+   Dark mode follows the OS — the page has no JavaScript, so no toggle. */
+
+:root {
+  color-scheme: light dark;
+  --background: hsl(0 0% 100%);
+  --foreground: hsl(222.2 84% 4.9%);
+  --muted: hsl(215.3 19.3% 34.5%);
+  --border: hsl(214.3 31.8% 91.4%);
+  --primary: hsl(221.2 83.2% 53.3%);
+  --tag-bg: hsl(210 40% 96.1%);
+  --card-hover: hsl(214 100% 98%);
+  --icon-bg: #0f172a;
+  --icon-ring: transparent;
+  --shadow: 0 8px 24px -12px hsl(222 47% 11% / 0.25);
+  --radius: 0.5rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: hsl(222.2 84% 4.9%);
+    --foreground: hsl(210 40% 98%);
+    --muted: hsl(215 20.2% 70%);
+    --border: hsl(217.2 32.6% 17.5%);
+    --primary: hsl(217.2 91.2% 59.8%);
+    --tag-bg: hsl(217.2 32.6% 17.5%);
+    --card-hover: hsl(222 47% 8%);
+    --icon-ring: hsl(217.2 32.6% 22%);
+    --shadow: 0 8px 24px -12px hsl(0 0% 0% / 0.6);
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  line-height: 1.5;
+  padding-inline: 1rem;
+}
+
+.hero,
+main,
+.footer {
+  max-width: 70rem;
+  margin-inline: auto;
+}
+
+.hero {
+  padding-block: 3.5rem 2.5rem;
+  text-align: center;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 1.5rem;
+  font-weight: 600;
+  font-size: 1.0625rem;
+}
+
+.brand-mark {
+  display: block;
+  border-radius: 0.375rem;
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(1.875rem, 5vw, 2.75rem);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.lede {
+  max-width: 40rem;
+  margin: 1rem auto 0;
+  color: var(--muted);
+  font-size: 1.125rem;
+}
+
+.apps {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 1.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--background);
+  color: inherit;
+  text-decoration: none;
+}
+
+.app:hover {
+  border-color: var(--primary);
+  background: var(--card-hover);
+  box-shadow: var(--shadow);
+}
+
+.app:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.app:active {
+  border-color: var(--primary);
+  box-shadow: none;
+}
+
+.app-icon {
+  display: grid;
+  place-items: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 0.75rem;
+  background: var(--icon-bg);
+  box-shadow: inset 0 0 0 1px var(--icon-ring);
+  font-size: 1.875rem;
+  line-height: 1;
+}
+
+.app h2 {
+  margin: 1rem 0 0;
+  font-size: 1.25rem;
+  line-height: 1.3;
+}
+
+.app-domain {
+  color: var(--muted);
+  font-size: 0.875rem;
+  overflow-wrap: anywhere;
+}
+
+.app-pitch {
+  margin: 0.75rem 0 0;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.tag {
+  padding: 0.125rem 0.625rem;
+  border-radius: 999px;
+  background: var(--tag-bg);
+  font-size: 0.8125rem;
+}
+
+.app-cta {
+  margin-top: auto;
+  padding-top: 1.25rem;
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.footer {
+  padding-block: 3rem;
+  color: var(--muted);
+  font-size: 0.875rem;
+  text-align: center;
+}
+
+.footer p {
+  margin: 0;
+}
+
+@media (min-width: 640px) {
+  body {
+    padding-inline: 2rem;
+  }
+
+  .hero {
+    padding-block: 5rem 3rem;
+  }
+
+  .apps {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .app {
+    transition:
+      border-color 150ms ease,
+      background-color 150ms ease,
+      box-shadow 150ms ease,
+      transform 150ms ease;
+  }
+
+  .app:hover {
+    transform: translateY(-2px);
+  }
+
+  .app:active {
+    transform: translateY(0);
+  }
+}

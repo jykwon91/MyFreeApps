@@ -1,0 +1,11 @@
+{
+  "name": "myfreeapps-landing",
+  "private": true,
+  "description": "myfreeapps.org landing page — static files in public/, E2E tests in e2e/. Standalone (not an npm workspace) so its CI installs only Playwright.",
+  "scripts": {
+    "test:e2e": "playwright test --config e2e/playwright.config.ts"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.60.0"
+  }
+}

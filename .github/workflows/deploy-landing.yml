@@ -1,0 +1,75 @@
+name: Deploy landing page
+
+# Deploys the static myfreeapps.org landing page (sites/landing/public/) and
+# the shared host Caddyfile. Host Caddy serves the page directly from the
+# /srv/myfreeapps checkout, so a deploy is just: pull, sync + reload host
+# Caddy if infra/Caddyfile changed, then verify the page serves over TLS.
+# No images, no containers.
+#
+# Also the path by which an infra/Caddyfile-only change reaches the VPS —
+# before this workflow existed, such a change waited for the next app deploy.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'sites/landing/**'
+      - 'infra/Caddyfile'
+      - 'infra/sync-host-caddyfile.sh'
+      - '.github/workflows/deploy-landing.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-landing
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          # Serialized behind any in-flight app deploys via the flock below.
+          command_timeout: 30m
+          script: |
+            set -e
+
+            # Same lock as every deploy-<app>.yml — they all `git pull` the one
+            # shared /srv/myfreeapps checkout and would race on its refs.
+            exec 9>/tmp/myfreeapps-deploy.lock
+            if ! flock -w 1500 9; then
+              echo "::error::Timed out (25m) waiting for the VPS deploy lock — an earlier deploy is wedged. Investigate before retrying."
+              exit 1
+            fi
+
+            cd /srv/myfreeapps
+
+            echo "--- Pull latest code ---"
+            git pull --ff-only
+
+            echo "--- Update host Caddyfile ---"
+            sudo bash infra/sync-host-caddyfile.sh
+
+            echo "--- Verify landing page serves over TLS ---"
+            # --resolve pins the request to this box so the check exercises host
+            # Caddy + its certificate, not DNS. The first deploy waits on ACME
+            # issuance for myfreeapps.org, hence the retry window.
+            for i in $(seq 1 30); do
+              page=$(curl -s -o /dev/null -w '%{http_code}' --resolve myfreeapps.org:443:127.0.0.1 https://myfreeapps.org/ || true)
+              css=$(curl -s -o /dev/null -w '%{http_code}' --resolve myfreeapps.org:443:127.0.0.1 https://myfreeapps.org/styles.css || true)
+              if [ "$page" = "200" ] && [ "$css" = "200" ]; then
+                echo "Landing page is live (index=$page styles.css=$css)"
+                exit 0
+              fi
+              echo "Attempt $i: index=$page styles.css=$css — retrying"
+              sleep 4
+            done
+            echo "::error::myfreeapps.org did not serve index.html + styles.css. Check 'journalctl -u caddy --since -10min' for ACME or file-permission errors."
+            exit 1
