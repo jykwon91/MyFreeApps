@@ -497,14 +497,15 @@ class TestTriggerCompanyResearchEndpoint:
         assert "ReadTimeout" in resp.json()["detail"]
 
     @pytest.mark.asyncio
-    async def test_trigger_returns_500_with_type_on_unexpected_error(
+    async def test_trigger_returns_500_with_type_not_message_on_unexpected_error(
         self,
         user_factory,
         as_user,
     ) -> None:
-        """Unexpected exceptions (DB IntegrityError, KeyError, etc.)
-        surface 500 WITH the exception type+message — not a bare
-        'Internal Server Error' that gives the operator no signal."""
+        """Unexpected exceptions (DB IntegrityError, KeyError, etc.) surface a
+        500 carrying the exception *type* (a signal for the operator) but NOT
+        the raw message — the message can leak SQL/schema/internals to the
+        client (CWE-209). Full detail is logged server-side."""
         user = await user_factory()
 
         async with await as_user(user) as authed:
@@ -515,28 +516,30 @@ class TestTriggerCompanyResearchEndpoint:
         with (
             patch(
                 "app.services.company.company_research_service.search_company",
-                new=AsyncMock(side_effect=KeyError("results")),
+                new=AsyncMock(side_effect=KeyError("secret_internal_detail")),
             ),
             patch(
                 "app.services.company.company_research_service.search_company_overview",
-                new=AsyncMock(side_effect=KeyError("results")),
+                new=AsyncMock(side_effect=KeyError("secret_internal_detail")),
             ),
         ):
             async with await as_user(user) as authed:
                 resp = await authed.post(f"/companies/{company_id}/research")
 
         assert resp.status_code == 500
-        assert "KeyError" in resp.json()["detail"]
+        detail = resp.json()["detail"]
+        assert "KeyError" in detail
+        assert "secret_internal_detail" not in detail
 
     @pytest.mark.asyncio
-    async def test_get_returns_500_with_type_on_unexpected_error(
+    async def test_get_returns_500_with_type_not_message_on_unexpected_error(
         self,
         user_factory,
         as_user,
     ) -> None:
-        """The GET research endpoint had no exception coverage — same
-        bare-500 problem the POST endpoint had. Verify the new fallback
-        surfaces the exception type."""
+        """The GET research endpoint surfaces the exception *type* on an
+        unexpected failure (not a bare 500) but NOT the raw message — same
+        CWE-209 guard as the POST endpoint."""
         user = await user_factory()
 
         async with await as_user(user) as authed:
@@ -546,14 +549,15 @@ class TestTriggerCompanyResearchEndpoint:
 
         with patch(
             "app.services.company.company_research_service.get_research",
-            new=AsyncMock(side_effect=RuntimeError("boom")),
+            new=AsyncMock(side_effect=RuntimeError("boom_secret_detail")),
         ):
             async with await as_user(user) as authed:
                 resp = await authed.get(f"/companies/{company_id}/research")
 
         assert resp.status_code == 500
-        assert "RuntimeError" in resp.json()["detail"]
-        assert "boom" in resp.json()["detail"]
+        detail = resp.json()["detail"]
+        assert "RuntimeError" in detail
+        assert "boom_secret_detail" not in detail
 
 
 # ---------------------------------------------------------------------------
