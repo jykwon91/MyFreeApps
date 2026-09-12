@@ -3,6 +3,7 @@
 Usage:
     python build_cypher_pack.py <workflow-output.json> <map_slug> <out.json> [note]
                                 [--video <youtube_id>] [--agent <slug>]
+                                [--author <channel name>]
 
 Callouts that no table maps are a HARD FAILURE, listed by name. Silently
 defaulting an unmapped callout to a site is how a lineup ships under the wrong
@@ -16,8 +17,16 @@ bug waiting for whoever forgets.
 """
 import json
 import math
+import os
 import sys
 from collections import Counter
+
+# The project-wide callout tables (scripts/callouts_<map>.py, aggregated by
+# lineup_callout_tables.py). This builder lives two directories down from scripts/,
+# and is run from the backend cwd like every other pipeline script, so add scripts/
+# explicitly rather than relying on sys.path[0].
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
+from lineup_callout_tables import CALLOUTS_BY_MAP  # noqa: E402
 
 DEFAULT_VIDEO = "UsfCu5uL3Qs"
 
@@ -32,12 +41,23 @@ DEFAULT_VIDEO = "UsfCu5uL3Qs"
 # app fixture's `placement` column, not guessed from the ability's name.
 AGENTS = {
     "cypher": {
-        "author": "spawns",
+        # video_id -> creator. The creator is a fact about the SOURCE, never about
+        # the agent: a second source for the same agent used to inherit the first
+        # creator's name silently, which is exactly the failure --video was added
+        # to close. It had already shipped -- both Summit Cypher sources went live
+        # credited to spawns, who made neither of them. An unrecognised video is a
+        # hard failure; register it here or name the creator with --author.
+        "sources": {
+            "UsfCu5uL3Qs": "spawns",
+            "y8XT-7jCBLA": "ItsFlameBTW",
+            "6PbBfx6EuzM": "Season 1 Act 1 Gold Cypher",
+            "mLtLqWULAqQ": "ItsFlameBTW",
+        },
         "placed": {"trapwire", "spycam"},
         "short": {"spycam": "Cam", "trapwire": "Trip", "cyber-cage": "Cage"},
     },
     "killjoy": {
-        "author": "SC Valorant Guides",
+        "sources": {"llo9vOgRrFw": "SC Valorant Guides"},
         # Both are PLACED. Riot's own text is "FIRE to deploy a bot" for the
         # alarmbot -- it is deployed at a spot, not lobbed on an arc -- and the
         # app fixture's `placement` column agrees. Only nanoswarm is thrown.
@@ -48,6 +68,17 @@ AGENTS = {
 DEFAULT_AGENT = "cypher"
 
 # Fine in-game callout -> the map's coarse fixture zone slug.
+#
+# LEGACY, FROZEN. These eight tables were hand-written for this builder before the
+# project-wide per-map tables (scripts/callouts_<map>.py) existed, and they disagree with
+# them on ~40 callouts -- Haven's bare "mid", Summit's "a garden", Ascent's "catwalk" and
+# so on. Every pack built from them shipped against these readings, so re-pointing them at
+# the shared table would silently reclassify a future re-run of a map already in prod.
+# A map with NO entry here (abyss and everything after it) resolves through the shared
+# table instead: see zone_table(). Do NOT add new maps here -- extend callouts_<map>.py,
+# which the whole rest of the pipeline already reads, and which is checked against Riot's
+# own coordinates by callout_zones.py. Reconciling the eight legacy tables away is tracked
+# in the app's TECH_DEBT.md.
 ZONES = {
     "ascent": {
         "a site": "a-site", "a": "a-site", "a back": "a-site", "a heaven": "a-site",
@@ -209,16 +240,18 @@ ZONES = {
 }
 
 
-# Set from AGENTS[...] by main(); the cypher values are the historical default so
-# an existing cypher invocation with no --agent behaves exactly as before.
-AUTHOR = AGENTS[DEFAULT_AGENT]["author"]
+# Set from AGENTS[...] by main(). PLACED/AB_SHORT keep the cypher values as their
+# module-level default so an existing cypher invocation with no --agent behaves
+# exactly as before; AUTHOR deliberately has none, because it is source-keyed and
+# any stand-in here is the very value that shipped two Summit packs miscredited.
+AUTHOR = None
 PLACED = AGENTS[DEFAULT_AGENT]["placed"]
 AB_SHORT = AGENTS[DEFAULT_AGENT]["short"]
 ZONE_LABEL = {
     "a-site": "A Site", "b-site": "B Site", "c-site": "C Site",
     "a-main": "A Main", "b-main": "B Main", "c-main": "C Main",
     "a-short": "A Short", "b-short": "B Short", "a-lobby": "A Lobby",
-    "c-lobby": "C Lobby", "garage": "Garage", "hookah": "Hookah",
+    "b-lobby": "B Lobby", "c-lobby": "C Lobby", "garage": "Garage", "hookah": "Hookah",
     "showers": "Showers", "mid": "Mid", "market": "Market", "mail": "Mail",
     "t-spawn": "Attacker Spawn", "ct-spawn": "Defender Spawn",
 }
@@ -281,6 +314,24 @@ def norm(s):
     return " ".join(n.split())
 
 
+def zone_table(map_slug):
+    """The callout -> coarse-zone table for one map, legacy dict first, shared table otherwise.
+
+    Fails loud on a map neither source covers: defaulting to another map's table is how a
+    lineup ships under a zone that does not exist on the map it was filmed on.
+    """
+    if map_slug in ZONES:
+        return ZONES[map_slug]
+    shared = CALLOUTS_BY_MAP.get(map_slug)
+    if shared is None:
+        raise SystemExit(
+            f"ABORT - no callout table for map {map_slug!r}. Write scripts/callouts_{map_slug}.py "
+            f"(derive it with callout_zones.py) and register it in lineup_callout_tables.py.")
+    # The shared tables are ordered lists (longest-first for their own matcher); zone() below
+    # picks the longest key itself, so order is not load-bearing here.
+    return dict(shared)
+
+
 def zone(raw, table, unmapped):
     n = norm(raw)
     if not n:
@@ -298,9 +349,36 @@ def zone(raw, table, unmapped):
     return None
 
 
+def resolve_author(agent, video, stated):
+    """The creator of THIS video, never whoever made the agent's first source.
+
+    Resolution is source-keyed: a video in the agent's `sources` registry carries
+    its creator with it, and anything else must be named on the command line. The
+    failure mode this exists to stop is silent -- a pack built for a new source
+    still validates, still ingests, and ships every row crediting the wrong
+    person -- so an unknown video aborts rather than defaulting.
+    """
+    known = AGENTS[agent].get("sources", {})
+    registered = known.get(video)
+    if stated and registered and stated != registered:
+        raise SystemExit(
+            "ABORT - --author %r disagrees with the registered creator of %s (%r). "
+            "One of them is wrong; check the video's channel before either ships."
+            % (stated, video, registered))
+    resolved = stated or registered
+    if not resolved:
+        raise SystemExit(
+            "ABORT - no creator known for video %r under agent %r. Look up the "
+            "channel name (https://www.youtube.com/oembed?url=https://www.youtube.com/"
+            "watch?v=%s&format=json), then pass --author \"<channel>\" and add it to "
+            "AGENTS[%r][\"sources\"] so the next run needs no flag."
+            % (video, agent, video, agent))
+    return resolved
+
+
 def main():
     global AUTHOR, PLACED, AB_SHORT
-    argv, video, agent = [], DEFAULT_VIDEO, DEFAULT_AGENT
+    argv, video, agent, author = [], DEFAULT_VIDEO, DEFAULT_AGENT, None
     rest = list(sys.argv[1:])
     while rest:
         a = rest.pop(0)
@@ -316,21 +394,25 @@ def main():
             agent = rest.pop(0)
         elif a.startswith("--agent="):
             agent = a.split("=", 1)[1]
+        elif a == "--author":
+            if not rest:
+                raise SystemExit("ABORT - --author needs a value")
+            author = rest.pop(0)
+        elif a.startswith("--author="):
+            author = a.split("=", 1)[1]
         else:
             argv.append(a)
     if agent not in AGENTS:
         raise SystemExit("ABORT - unknown --agent %r; known: %s"
                          % (agent, ", ".join(sorted(AGENTS))))
-    AUTHOR = AGENTS[agent]["author"]
+    AUTHOR = resolve_author(agent, video, author)
     PLACED = AGENTS[agent]["placed"]
     AB_SHORT = AGENTS[agent]["short"]
     if len(argv) < 3:
         raise SystemExit(__doc__)
     src, map_slug, out_path = argv[0], argv[1], argv[2]
     note = argv[3] if len(argv) > 3 else ""
-    table = ZONES.get(map_slug)
-    if table is None:
-        raise SystemExit(f"ABORT - no zone table for map {map_slug!r}; add one to ZONES")
+    table = zone_table(map_slug)
 
     raw = json.load(open(src, encoding="utf-8"))
     res = raw.get("result", raw)
@@ -402,7 +484,7 @@ def main():
         })
 
     if unmapped:
-        print("UNMAPPED CALLOUTS (extend ZONES[%r]):" % map_slug)
+        print("UNMAPPED CALLOUTS (extend the %r table -- see zone_table()):" % map_slug)
         for c, n in Counter(norm(u) for u in unmapped).most_common():
             print("   %-38s x%d" % (c, n))
 
