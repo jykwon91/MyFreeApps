@@ -329,6 +329,13 @@ backend/app/services/ingestion/clip_pipeline.py
 
   Lower-priority alternative if appetite is small: leave the three files as-is and just rename _cut_upload_persist to _cut_upload_persist_<column> so the duplication is at least labelled.
 
+### [Data] Callout tables - build_cypher_pack carries eight legacy per-map tables that disagree with scripts/callouts_<map>.py
+
+- **Severity:** Medium
+- **Location:** backend/scripts/cypher-spans/_raw/build_cypher_pack.py (ZONES) vs backend/scripts/callouts_*.py (aggregated by lineup_callout_tables.py)
+- **Problem:** The sentinel-agent pack builder resolves callouts through its own hand-written tables for ascent, bind, breeze, haven, lotus, split, summit and sunset. The rest of the pipeline (reconcile_agent, build_items) resolves the same callouts through the per-map modules, which are derived from Riot's own coordinates. The two disagree on ~40 callouts — Haven's bare `mid` (b-site vs a-lobby), Summit's `a garden` (a-main vs a-site), Ascent's `catwalk` (a-main vs mid), Breeze's `a bridge` (a-site vs ct-spawn) and others. Whichever table a row happens to pass through decides its zone, and nothing surfaces the disagreement. Abyss and every later map already resolve through the shared table (zone_table()), so the divergence is frozen, not growing.
+- **Recommendation:** Diff the two tables per map, decide each conflict against the seeded zone geometry (callout_zones.py / plot_callouts.py), fold the surviving cypher-only callouts into callouts_<map>.py, then delete ZONES and have zone_table() always read CALLOUTS_BY_MAP. Re-run the affected agent x map packs through build_cypher_pack afterwards and diff the emitted zones (diff_pack.py) so any row that moves is seen before it ships.
+
 ### [Data] Ingestion - Source soft-delete is config_json[deleted], not a deleted_at column
 
 - **Severity:** Medium

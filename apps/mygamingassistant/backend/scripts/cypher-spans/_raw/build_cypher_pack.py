@@ -16,8 +16,16 @@ bug waiting for whoever forgets.
 """
 import json
 import math
+import os
 import sys
 from collections import Counter
+
+# The project-wide callout tables (scripts/callouts_<map>.py, aggregated by
+# lineup_callout_tables.py). This builder lives two directories down from scripts/,
+# and is run from the backend cwd like every other pipeline script, so add scripts/
+# explicitly rather than relying on sys.path[0].
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
+from lineup_callout_tables import CALLOUTS_BY_MAP  # noqa: E402
 
 DEFAULT_VIDEO = "UsfCu5uL3Qs"
 
@@ -48,6 +56,17 @@ AGENTS = {
 DEFAULT_AGENT = "cypher"
 
 # Fine in-game callout -> the map's coarse fixture zone slug.
+#
+# LEGACY, FROZEN. These eight tables were hand-written for this builder before the
+# project-wide per-map tables (scripts/callouts_<map>.py) existed, and they disagree with
+# them on ~40 callouts -- Haven's bare "mid", Summit's "a garden", Ascent's "catwalk" and
+# so on. Every pack built from them shipped against these readings, so re-pointing them at
+# the shared table would silently reclassify a future re-run of a map already in prod.
+# A map with NO entry here (abyss and everything after it) resolves through the shared
+# table instead: see zone_table(). Do NOT add new maps here -- extend callouts_<map>.py,
+# which the whole rest of the pipeline already reads, and which is checked against Riot's
+# own coordinates by callout_zones.py. Reconciling the eight legacy tables away is tracked
+# in the app's TECH_DEBT.md.
 ZONES = {
     "ascent": {
         "a site": "a-site", "a": "a-site", "a back": "a-site", "a heaven": "a-site",
@@ -218,7 +237,7 @@ ZONE_LABEL = {
     "a-site": "A Site", "b-site": "B Site", "c-site": "C Site",
     "a-main": "A Main", "b-main": "B Main", "c-main": "C Main",
     "a-short": "A Short", "b-short": "B Short", "a-lobby": "A Lobby",
-    "c-lobby": "C Lobby", "garage": "Garage", "hookah": "Hookah",
+    "b-lobby": "B Lobby", "c-lobby": "C Lobby", "garage": "Garage", "hookah": "Hookah",
     "showers": "Showers", "mid": "Mid", "market": "Market", "mail": "Mail",
     "t-spawn": "Attacker Spawn", "ct-spawn": "Defender Spawn",
 }
@@ -281,6 +300,24 @@ def norm(s):
     return " ".join(n.split())
 
 
+def zone_table(map_slug):
+    """The callout -> coarse-zone table for one map, legacy dict first, shared table otherwise.
+
+    Fails loud on a map neither source covers: defaulting to another map's table is how a
+    lineup ships under a zone that does not exist on the map it was filmed on.
+    """
+    if map_slug in ZONES:
+        return ZONES[map_slug]
+    shared = CALLOUTS_BY_MAP.get(map_slug)
+    if shared is None:
+        raise SystemExit(
+            f"ABORT - no callout table for map {map_slug!r}. Write scripts/callouts_{map_slug}.py "
+            f"(derive it with callout_zones.py) and register it in lineup_callout_tables.py.")
+    # The shared tables are ordered lists (longest-first for their own matcher); zone() below
+    # picks the longest key itself, so order is not load-bearing here.
+    return dict(shared)
+
+
 def zone(raw, table, unmapped):
     n = norm(raw)
     if not n:
@@ -328,9 +365,7 @@ def main():
         raise SystemExit(__doc__)
     src, map_slug, out_path = argv[0], argv[1], argv[2]
     note = argv[3] if len(argv) > 3 else ""
-    table = ZONES.get(map_slug)
-    if table is None:
-        raise SystemExit(f"ABORT - no zone table for map {map_slug!r}; add one to ZONES")
+    table = zone_table(map_slug)
 
     raw = json.load(open(src, encoding="utf-8"))
     res = raw.get("result", raw)
@@ -402,7 +437,7 @@ def main():
         })
 
     if unmapped:
-        print("UNMAPPED CALLOUTS (extend ZONES[%r]):" % map_slug)
+        print("UNMAPPED CALLOUTS (extend the %r table -- see zone_table()):" % map_slug)
         for c, n in Counter(norm(u) for u in unmapped).most_common():
             print("   %-38s x%d" % (c, n))
 
