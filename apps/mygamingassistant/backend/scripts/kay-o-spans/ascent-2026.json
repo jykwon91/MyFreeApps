@@ -1,7 +1,7 @@
 {
  "video_id": "69sMI1UqbYk",
  "map_slug": "ascent",
- "author": "Tseeky",
+ "author": "Tseeky - Pro Valorant Lineups",
  "note": "KAY/O Ascent lineups from Tseeky 'Best KAYO Lineups Ascent 2026', client v12.10 (current), 50 chapters. SECOND source for the multi-source backfill alongside the 2024 AG Zapdos pack (kay-o-spans/ascent.json) \u00e2\u20ac\u201d union to be deduped by (utility, side, stand_anchor~, target_anchor~). Beats seeded by scripts/_kayo_localizer.py-adjacent seed.py (title-parse classification + 4fps annotated contact sheets), then each chapter frame-study VERIFIED here. Ascent minimap is FIXED/north-up on this source (verified across 3 positions) \u00e2\u2020\u2019 CV localizes stand via self-marker; zero-point targets via knife dome glyph; flash/fragment targets = zone-centroid seed (no minimap marker). STILL PENDING operator eyeball at localhost:5176 before ship. WORK IN PROGRESS \u00e2\u20ac\u201d flash block first.",
  "lineups": [
   {
