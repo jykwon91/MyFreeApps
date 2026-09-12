@@ -3,6 +3,7 @@
 Usage:
     python build_cypher_pack.py <workflow-output.json> <map_slug> <out.json> [note]
                                 [--video <youtube_id>] [--agent <slug>]
+                                [--author <channel name>]
 
 Callouts that no table maps are a HARD FAILURE, listed by name. Silently
 defaulting an unmapped callout to a site is how a lineup ships under the wrong
@@ -40,12 +41,23 @@ DEFAULT_VIDEO = "UsfCu5uL3Qs"
 # app fixture's `placement` column, not guessed from the ability's name.
 AGENTS = {
     "cypher": {
-        "author": "spawns",
+        # video_id -> creator. The creator is a fact about the SOURCE, never about
+        # the agent: a second source for the same agent used to inherit the first
+        # creator's name silently, which is exactly the failure --video was added
+        # to close. It had already shipped -- both Summit Cypher sources went live
+        # credited to spawns, who made neither of them. An unrecognised video is a
+        # hard failure; register it here or name the creator with --author.
+        "sources": {
+            "UsfCu5uL3Qs": "spawns",
+            "y8XT-7jCBLA": "ItsFlameBTW",
+            "6PbBfx6EuzM": "Season 1 Act 1 Gold Cypher",
+            "mLtLqWULAqQ": "ItsFlameBTW",
+        },
         "placed": {"trapwire", "spycam"},
         "short": {"spycam": "Cam", "trapwire": "Trip", "cyber-cage": "Cage"},
     },
     "killjoy": {
-        "author": "SC Valorant Guides",
+        "sources": {"llo9vOgRrFw": "SC Valorant Guides"},
         # Both are PLACED. Riot's own text is "FIRE to deploy a bot" for the
         # alarmbot -- it is deployed at a spot, not lobbed on an arc -- and the
         # app fixture's `placement` column agrees. Only nanoswarm is thrown.
@@ -228,9 +240,11 @@ ZONES = {
 }
 
 
-# Set from AGENTS[...] by main(); the cypher values are the historical default so
-# an existing cypher invocation with no --agent behaves exactly as before.
-AUTHOR = AGENTS[DEFAULT_AGENT]["author"]
+# Set from AGENTS[...] by main(). PLACED/AB_SHORT keep the cypher values as their
+# module-level default so an existing cypher invocation with no --agent behaves
+# exactly as before; AUTHOR deliberately has none, because it is source-keyed and
+# any stand-in here is the very value that shipped two Summit packs miscredited.
+AUTHOR = None
 PLACED = AGENTS[DEFAULT_AGENT]["placed"]
 AB_SHORT = AGENTS[DEFAULT_AGENT]["short"]
 ZONE_LABEL = {
@@ -335,9 +349,36 @@ def zone(raw, table, unmapped):
     return None
 
 
+def resolve_author(agent, video, stated):
+    """The creator of THIS video, never whoever made the agent's first source.
+
+    Resolution is source-keyed: a video in the agent's `sources` registry carries
+    its creator with it, and anything else must be named on the command line. The
+    failure mode this exists to stop is silent -- a pack built for a new source
+    still validates, still ingests, and ships every row crediting the wrong
+    person -- so an unknown video aborts rather than defaulting.
+    """
+    known = AGENTS[agent].get("sources", {})
+    registered = known.get(video)
+    if stated and registered and stated != registered:
+        raise SystemExit(
+            "ABORT - --author %r disagrees with the registered creator of %s (%r). "
+            "One of them is wrong; check the video's channel before either ships."
+            % (stated, video, registered))
+    resolved = stated or registered
+    if not resolved:
+        raise SystemExit(
+            "ABORT - no creator known for video %r under agent %r. Look up the "
+            "channel name (https://www.youtube.com/oembed?url=https://www.youtube.com/"
+            "watch?v=%s&format=json), then pass --author \"<channel>\" and add it to "
+            "AGENTS[%r][\"sources\"] so the next run needs no flag."
+            % (video, agent, video, agent))
+    return resolved
+
+
 def main():
     global AUTHOR, PLACED, AB_SHORT
-    argv, video, agent = [], DEFAULT_VIDEO, DEFAULT_AGENT
+    argv, video, agent, author = [], DEFAULT_VIDEO, DEFAULT_AGENT, None
     rest = list(sys.argv[1:])
     while rest:
         a = rest.pop(0)
@@ -353,12 +394,18 @@ def main():
             agent = rest.pop(0)
         elif a.startswith("--agent="):
             agent = a.split("=", 1)[1]
+        elif a == "--author":
+            if not rest:
+                raise SystemExit("ABORT - --author needs a value")
+            author = rest.pop(0)
+        elif a.startswith("--author="):
+            author = a.split("=", 1)[1]
         else:
             argv.append(a)
     if agent not in AGENTS:
         raise SystemExit("ABORT - unknown --agent %r; known: %s"
                          % (agent, ", ".join(sorted(AGENTS))))
-    AUTHOR = AGENTS[agent]["author"]
+    AUTHOR = resolve_author(agent, video, author)
     PLACED = AGENTS[agent]["placed"]
     AB_SHORT = AGENTS[agent]["short"]
     if len(argv) < 3:

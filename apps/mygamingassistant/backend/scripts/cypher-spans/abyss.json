@@ -1,0 +1,802 @@
+{
+ "video_id": "mLtLqWULAqQ",
+ "map_slug": "abyss",
+ "author": "ItsFlameBTW",
+ "lineups": [
+  {
+   "cs": 19,
+   "title": "A Site Cam 1 \u2014 Spycam stuck on the underside/face of the brown wooden panel",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     19.25,
+     20.35
+    ],
+    "aim": [
+     20.78,
+     21.3
+    ],
+    "landing": [
+     21.31,
+     22.1
+    ]
+   }
+  },
+  {
+   "cs": 29,
+   "title": "A Site Cam 2 \u2014 Spycam tucked into the ceiling-trim corner of the A Site",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     29.97,
+     30.55
+    ],
+    "aim": [
+     30.58,
+     31.24
+    ],
+    "landing": [
+     31.24,
+     31.98
+    ]
+   }
+  },
+  {
+   "cs": 35,
+   "title": "A Site Cam 3 \u2014 Spycam under the outer overhang beam at the A Site",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     35.8,
+     36.58
+    ],
+    "aim": [
+     36.6,
+     37.17
+    ],
+    "landing": [
+     37.2,
+     37.62
+    ]
+   }
+  },
+  {
+   "cs": 50,
+   "title": "A Site Cam 4 \u2014 Spycam on the outer edge of the corridor-doorway pillar",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     50.0,
+     51.1
+    ],
+    "aim": [
+     51.8,
+     52.37
+    ],
+    "landing": [
+     52.42,
+     53.06
+    ]
+   }
+  },
+  {
+   "cs": 79,
+   "title": "A Main Trip 1 \u2014 trapwire onto the wall corner at the mouth of A Main",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     79.38,
+     80.06
+    ],
+    "aim": [
+     79.3,
+     79.78
+    ],
+    "landing": [
+     82.9,
+     83.48
+    ]
+   }
+  },
+  {
+   "cs": 90,
+   "title": "A Site Trip 1 \u2014 trapwire anchored on the trash cans beside the crates on the",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     90.05,
+     90.68
+    ],
+    "aim": [
+     90.95,
+     91.44
+    ],
+    "landing": [
+     91.55,
+     93.0
+    ]
+   }
+  },
+  {
+   "cs": 107,
+   "title": "A Site Trip 2 \u2014 trapwire stuck on the wall in the corner beside the square",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     107.6,
+     108.5
+    ],
+    "aim": [
+     108.5,
+     108.98
+    ],
+    "landing": [
+     109.02,
+     109.5
+    ]
+   }
+  },
+  {
+   "cs": 118,
+   "title": "A Site Trip 3 \u2014 trapwire attached to the wall-mounted box above head height",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     118.55,
+     119.45
+    ],
+    "aim": [
+     119.8,
+     120.78
+    ],
+    "landing": [
+     120.9,
+     122.6
+    ]
+   }
+  },
+  {
+   "cs": 190,
+   "title": "A Site Trip 4 \u2014 trapwire at the base of the corner pillar on the bridge-side",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     190.1,
+     191.2
+    ],
+    "aim": [
+     192.55,
+     193.48
+    ],
+    "landing": [
+     193.9,
+     194.1
+    ]
+   }
+  },
+  {
+   "cs": 201,
+   "title": "A Site Trip 5 \u2014 trapwire strung horizontally across the bridge walkway just",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     201.05,
+     201.85
+    ],
+    "aim": [
+     201.85,
+     202.36
+    ],
+    "landing": [
+     202.65,
+     203.6
+    ]
+   }
+  },
+  {
+   "cs": 236,
+   "title": "A Site Trip 6 \u2014 Trapwire strung on the hexagon-panelled pillar/column corner",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     236.18,
+     236.78
+    ],
+    "aim": [
+     236.32,
+     236.74
+    ],
+    "landing": [
+     236.95,
+     237.45
+    ]
+   }
+  },
+  {
+   "cs": 356,
+   "title": "Mid Cam 1 \u2014 Standing in Mid Top behind the blue-wall corner, camera stuck",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     356.25,
+     357.6
+    ],
+    "aim": [
+     358.12,
+     358.62
+    ],
+    "landing": [
+     358.78,
+     359.5
+    ]
+   }
+  },
+  {
+   "cs": 362,
+   "title": "Mid Cam 2 \u2014 Second Mid Top spot, a step further right past the",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     362.35,
+     363.2
+    ],
+    "aim": [
+     363.3,
+     363.94
+    ],
+    "landing": [
+     363.94,
+     364.74
+    ]
+   }
+  },
+  {
+   "cs": 374,
+   "title": "Mid Cam 3 \u2014 Walks from B Link down into Mid Library and sticks the camera",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     374.1,
+     374.95
+    ],
+    "aim": [
+     374.9,
+     375.41
+    ],
+    "landing": [
+     375.43,
+     376.5
+    ]
+   }
+  },
+  {
+   "cs": 388,
+   "title": "Mid Trip 1 \u2014 Standing at Mid Top against the teal wall, aims across the",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     388.45,
+     389.6
+    ],
+    "aim": [
+     393.08,
+     393.58
+    ],
+    "landing": [
+     393.95,
+     395.2
+    ]
+   }
+  },
+  {
+   "cs": 406,
+   "title": "Mid Trip 2 \u2014 Standing in B Link tucked behind the teal pillar, aims ~17m",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     406.55,
+     407.95
+    ],
+    "aim": [
+     408.4,
+     408.95
+    ],
+    "landing": [
+     411.28,
+     411.8
+    ]
+   }
+  },
+  {
+   "cs": 431,
+   "title": "Mid Cage 1 \u2014 one-way cyber cage tossed up onto the underside of the",
+   "ability": "cyber-cage",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     431.5,
+     432.7
+    ],
+    "aim": [
+     433.85,
+     434.5
+    ],
+    "throw": [
+     434.45,
+     435.0
+    ],
+    "landing": [
+     435.03,
+     435.45
+    ]
+   }
+  },
+  {
+   "cs": 486,
+   "title": "B Site Cam 1 \u2014 spycam attached to the corner/underside of the raised ledge",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     486.1,
+     487.3
+    ],
+    "aim": [
+     488.5,
+     489.58
+    ],
+    "landing": [
+     489.68,
+     490.38
+    ]
+   }
+  },
+  {
+   "cs": 497,
+   "title": "B Site Cam 2 \u2014 spycam attached to the wooden wall panel under the upper",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     497.67,
+     498.05
+    ],
+    "aim": [
+     498.05,
+     498.4
+    ],
+    "landing": [
+     498.42,
+     499.3
+    ]
+   }
+  },
+  {
+   "cs": 504,
+   "title": "B Site Cam 3 \u2014 spycam sent across the gap onto the stone pillar face above",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     504.35,
+     505.0
+    ],
+    "aim": [
+     506.5,
+     507.22
+    ],
+    "landing": [
+     507.25,
+     508.02
+    ]
+   }
+  },
+  {
+   "cs": 523,
+   "title": "B Site Cam 4 \u2014 spycam attached to the top outer corner of the \"B\"-stencil",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     523.8,
+     524.55
+    ],
+    "aim": [
+     525.3,
+     525.93
+    ],
+    "landing": [
+     526.08,
+     526.75
+    ]
+   }
+  },
+  {
+   "cs": 529,
+   "title": "B Site Cam 5 \u2014 spycam attached to the outer edge of the wall/doorframe",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     529.5,
+     530.35
+    ],
+    "aim": [
+     531.55,
+     532.13
+    ],
+    "landing": [
+     532.15,
+     532.85
+    ]
+   }
+  },
+  {
+   "cs": 548,
+   "title": "B Site Trip 1 \u2014 wire strung from the ramp side across to the site wall with",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     548.95,
+     549.95
+    ],
+    "aim": [
+     550.1,
+     550.75
+    ],
+    "landing": [
+     550.88,
+     551.3
+    ]
+   }
+  },
+  {
+   "cs": 556,
+   "title": "B Site Trip 2 \u2014 wire hung vertically from the overhead pipe/ceiling beam down",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     556.8,
+     557.58
+    ],
+    "aim": [
+     557.6,
+     558.06
+    ],
+    "landing": [
+     559.55,
+     560.65
+    ]
+   }
+  },
+  {
+   "cs": 584,
+   "title": "B Site Trip 3 \u2014 long-range wire aimed from a fixed stand onto the pipe run on",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     584.9,
+     585.9
+    ],
+    "aim": [
+     586.28,
+     586.8
+    ],
+    "landing": [
+     586.83,
+     587.95
+    ]
+   }
+  },
+  {
+   "cs": 593,
+   "title": "B Site Cage 1 \u2014 cage dropped in the open middle of the site behind the wire",
+   "ability": "cyber-cage",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     593.55,
+     594.5
+    ],
+    "aim": [
+     594.6,
+     595.08
+    ],
+    "throw": [
+     595.0,
+     595.57
+    ],
+    "landing": [
+     596.25,
+     597.15
+    ]
+   }
+  },
+  {
+   "cs": 605,
+   "title": "B Site Trip 4 \u2014 wire across the wooden-plank bridge/walkway that runs over",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     605.35,
+     606.2
+    ],
+    "aim": [
+     608.4,
+     609.16
+    ],
+    "landing": [
+     609.5,
+     610.3
+    ]
+   }
+  },
+  {
+   "cs": 689,
+   "title": "B Site Trip 5 \u2014 wire across the green-wall doorway/gap",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     689.2,
+     689.88
+    ],
+    "aim": [
+     689.88,
+     690.38
+    ],
+    "landing": [
+     690.82,
+     691.42
+    ]
+   }
+  },
+  {
+   "cs": 698,
+   "title": "B Site Trip 6 \u2014 long-range aligned wire fired from the raised walkway down",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     698.9,
+     700.15
+    ],
+    "aim": [
+     700.95,
+     701.72
+    ],
+    "landing": [
+     703.28,
+     703.98
+    ]
+   }
+  },
+  {
+   "cs": 751,
+   "title": "B Site Cage 2 \u2014 B Site one-way cage: Cypher stands on the raised concrete",
+   "ability": "cyber-cage",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     751.56,
+     752.26
+    ],
+    "aim": [
+     753.75,
+     754.4
+    ],
+    "throw": [
+     757.6,
+     757.92
+    ],
+    "landing": [
+     757.7,
+     758.6
+    ]
+   }
+  },
+  {
+   "cs": 782,
+   "title": "B Site Trip 7 \u2014 B Site trapwire strung low across the dirt lane beside the",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     782.1,
+     782.5
+    ],
+    "aim": [
+     782.48,
+     782.82
+    ],
+    "landing": [
+     782.83,
+     782.98
+    ]
+   }
+  },
+  {
+   "cs": 1011,
+   "title": "Attacker Spawn Trip 1 \u2014 Attacker Side Spawn, spawn-exit walkway: walks up to the low",
+   "ability": "trapwire",
+   "technique": "standing",
+   "target": "t-spawn",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     1011.9,
+     1012.55
+    ],
+    "aim": [
+     1015.15,
+     1015.6
+    ],
+    "landing": [
+     1015.66,
+     1016.36
+    ]
+   }
+  },
+  {
+   "cs": 1039,
+   "title": "Mid Cam 4 \u2014 Mid Bend: camera stuck high on the pillar/wall edge of the",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     1039.95,
+     1040.5
+    ],
+    "aim": [
+     1040.72,
+     1041.14
+    ],
+    "landing": [
+     1041.16,
+     1041.6
+    ]
+   }
+  },
+  {
+   "cs": 1056,
+   "title": "Attacker Spawn Cam 1 \u2014 Attacker Side Spawn, spawn-exit structure by the void: camera",
+   "ability": "spycam",
+   "technique": "standing",
+   "target": "t-spawn",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     1056.7,
+     1057.55
+    ],
+    "aim": [
+     1058.03,
+     1058.55
+    ],
+    "landing": [
+     1058.58,
+     1059.33
+    ]
+   }
+  }
+ ],
+ "note": "ItsFlameBTW Best Cypher Setups for Abyss"
+}
