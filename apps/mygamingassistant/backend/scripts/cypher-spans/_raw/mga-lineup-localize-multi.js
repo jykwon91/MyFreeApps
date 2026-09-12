@@ -30,6 +30,12 @@ if (typeof A === 'string') { try { A = JSON.parse(A) } catch (e) { A = {} } }
 if (!A || typeof A !== 'object') A = {}
 const VIDEO = A.video, INSTR = A.instr, MAP = A.map || 'map'
 const MAX_PER_CHAPTER = A.maxPerChapter || 6
+// Whether the source burns a caption over each placement. spawns' Cypher guide does, and the
+// survey prompt used to state that as a fact about every source. ItsFlameBTW's Abyss guide
+// burns nothing onto the frame, and a survey agent told the captions are 'the best evidence
+// available' will reach for a HUD string or an editor flourish and transcribe that instead.
+// Pass captions:false for a source with none.
+const CAPTIONS = A.captions !== false
 
 // `map` may be set per item so one run can cover several maps (the callout
 // vocabulary an agent needs is per-map, so it must reach the prompt).
@@ -105,9 +111,9 @@ This source groups several separate utility placements into ONE chapter (e.g. a 
 
 Method: a single COARSE pass is enough -- frame_study.py --video ${VIDEO} --t0 ${it.cs} --t1 ${it.next} --step 0.5 --label ${it.map}-${it.nn}-survey, then montage_study.py to read it as a grid. Use the PowerShell tool. Read the montage and identify the shot boundaries: each placement typically runs walk-to-spot -> aim at surface -> deploy -> brief look at the result, then cuts to the next spot.
 
-READ THE ON-SCREEN CAPTIONS. This creator burns a caption into the footage for each placement ("Different early B main info cam", "Crouch + lineup with crosshair", "Just solid cages for playing backsite, no lineup"). They name the spot and state the intent, and they are the best evidence available. Transcribe them verbatim.
+${CAPTIONS ? `READ THE ON-SCREEN CAPTIONS. This creator burns a caption into the footage for each placement ("Different early B main info cam", "Crouch + lineup with crosshair", "Just solid cages for playing backsite, no lineup"). They name the spot and state the intent, and they are the best evidence available. Transcribe them verbatim.` : `THIS SOURCE HAS NO ON-SCREEN CAPTIONS, no chapter title plates and no drawn marks. Return caption:"" for every placement. Do not transcribe a HUD string, a location readout or an editor flourish as though it were a caption -- there is nothing to quote, and an invented one becomes the next agent's "best available statement" of what the spot is for.`}
 
-For EACH distinct placement return: t0/t1 = a GENEROUS sub-window (absolute seconds) that fully contains that placement's stand+aim+deploy, padded ~1s on each side and allowed to overlap its neighbours slightly; ability = one of trapwire, spycam, cyber-cage, called from WHAT IS ACTUALLY DEPLOYED, not from the chapter title (a thin beam strung across a gap with a small dark anchor disc = trapwire; a small camera stuck to a surface = spycam; a thrown device that blooms into a translucent cage box = cyber-cage); what = a one-line description of the spot; caption = the on-screen caption verbatim, or "" if none; aligned = whether this is an ALIGNED lineup (a deliberate stand spot + a crosshair/alignment reference, as in "lineup with crosshair") rather than a freehand close-range drop -- the creator often says which; complete = whether the chapter actually SHOWS the full stand->aim->deploy for it (false if it only shows the result, or cuts away mid-placement).
+For EACH distinct placement return: t0/t1 = a GENEROUS sub-window (absolute seconds) that fully contains that placement's stand+aim+deploy, padded ~1s on each side and allowed to overlap its neighbours slightly; ability = one of trapwire, spycam, cyber-cage, called from WHAT IS ACTUALLY DEPLOYED, not from the chapter title (a thin beam strung across a gap with a small dark anchor disc = trapwire; a small camera stuck to a surface = spycam; a thrown device that blooms into a translucent cage box = cyber-cage); what = a one-line description of the spot; caption = ${CAPTIONS ? 'the on-screen caption verbatim, or "" if none' : '"" (this source has none)'}; aligned = whether this is an ALIGNED lineup (a deliberate stand spot + a crosshair/alignment reference, as in "lineup with crosshair") rather than a freehand close-range drop -- the creator often says which; complete = whether the chapter actually SHOWS the full stand->aim->deploy for it (false if it only shows the result, or cuts away mid-placement).
 
 Rules:
 - CHAPTER BOUNDARIES ARE OFFSET on this source -- a "Cages" chapter can open on the tail of the previous chapter's cam. Trust the footage, never the title, when calling the ability.
