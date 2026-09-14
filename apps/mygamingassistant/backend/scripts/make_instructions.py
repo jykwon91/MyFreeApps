@@ -43,10 +43,17 @@ def opt(flag):
 
 
 VIDEO, CREATOR, PACK, BASE = opt("--video"), opt("--creator"), opt("--pack"), opt("--base")
-pos = [a for a in sys.argv[1:] if not a.startswith("--")]
-for consumed in (VIDEO, CREATOR, PACK, BASE):
-    if consumed:
-        pos = [p for p in pos if p != consumed]
+# Drop each flag AND the one argument it consumes, BY INDEX. Filtering by VALUE (the previous
+# shape) silently deleted the positional too whenever a flag's value equalled it -- and the
+# single commonest invocation, `... KILLJOY ascent abyss --pack abyss`, is exactly that case:
+# both `abyss` strings vanished, leaving two positionals and a bare usage dump that reads like
+# the command was malformed rather than like the parser ate an argument.
+_taken = set()
+for _flag in ("--video", "--creator", "--pack", "--base"):
+    if _flag in sys.argv:
+        _i = sys.argv.index(_flag)
+        _taken.update((_i, _i + 1))
+pos = [a for i, a in enumerate(sys.argv) if i and i not in _taken and not a.startswith("--")]
 if len(pos) < 3:
     raise SystemExit(__doc__)
 AGENT, SRC_MAP, DST_MAP = pos[0], pos[1].lower(), pos[2].lower()
@@ -90,7 +97,13 @@ before = src.read_text(encoding="utf-8")
 lines = before.splitlines()
 
 
-NEW_BLOCK = re.compile(r"^\s*(?:[-*#>]|```|\d+\.)")
+# A bullet/heading marker is only a marker when WHITESPACE follows it. Without that
+# requirement the `*` of a wrapped `**bold**` continuation line read as the start of a new
+# bullet, so block_span stopped one line into the block and an override replaced only the
+# first line of its bullet -- leaving the rest of the OLD claim in place, directly beneath
+# the new one. That shipped a doc asserting both "this source is mixed-side" and "default
+# your SIDE read to attacker" three lines apart.
+NEW_BLOCK = re.compile(r"^\s*(?:[-+*]\s|#{1,6}\s|>\s|```|\d+\.\s)")
 
 
 def block_span(marker):
@@ -145,10 +158,14 @@ i, j = block_span(spec.get("examples_marker", EXAMPLE_FIND))
 # old lead-in and swapping only the examples after "e.g." left a doc whose first clause
 # contradicted its own examples. A dict entry replaces the lead-in; a plain string keeps it.
 head = lines[i].split(" — e.g.")[0].rstrip()
+# Keep the line's own bullet prefix. EXAMPLE_WRITE carries none, so a dict spec used to
+# rewrite a `- ` bullet into a flush-left paragraph wedged inside the Source bullet list.
+_pfx = re.match(r"^(\s*[-+*]\s+)", lines[i])
+prefix = _pfx.group(1) if _pfx else ""
 if spec:
-    head = f"{EXAMPLE_WRITE} {spec['grammar']}"
+    head = f"{prefix}{EXAMPLE_WRITE} {spec['grammar']}"
     examples = spec["examples"]
-blocks.append((i, j, wrap(f"{head} — e.g. {examples}", indent="")))
+blocks.append((i, j, wrap(f"{head} — e.g. {examples}", indent=" " * len(prefix))))
 
 # Optional per-source bullet overrides. The source docs carry claims that are true of the video
 # they were written from and false elsewhere. The Phoenix doc is the reason this exists: it asserts
@@ -286,8 +303,13 @@ elif OLD_VIDEOS:
 # caller must supply a `bullets` override stating what the NEW creator actually does. This guard
 # is what forces that, and is deliberately shaped like the map guard above: a closed pool of
 # proper nouns, matched case-sensitively.
+# Every creator any base doc names BY NAME. A name missing from this pool disables the guard for
+# exactly the doc that needed it: the Killjoy base doc's creator was absent, so a Killjoy bucket
+# that forgot to override its Source section would have shipped that creator's editing claims to
+# every subagent, silently. Add a creator here in the same commit that first names them in a doc.
 CREATOR_POOL = ("Tseeky", "Bonsai", "AiltonVG", "maxWELL", "Quible", "Snapiex",
-                "NartOutHere", "B3ast", "HEHE")
+                "NartOutHere", "B3ast", "HEHE", "SC Valorant Guides", "ItsFlameBTW",
+                "Briiest")
 foreign = sorted({(i, c) for i, ln in enumerate(after.splitlines(), 1) for c in CREATOR_POOL
                   if re.search(rf"\b{re.escape(c)}\b", ln) and c not in (CREATOR or "")})
 if foreign:
