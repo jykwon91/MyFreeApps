@@ -1,0 +1,932 @@
+{
+ "video_id": "1FScWR9StjI",
+ "map_slug": "haven",
+ "author": "Chiru",
+ "lineups": [
+  {
+   "cs": 1,
+   "title": "A Site Turret 1 \u2014 Turret placed on top of the tall wooden crate/wall at A Site",
+   "ability": "turret",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     1.0,
+     2.0
+    ],
+    "aim": [
+     2.25,
+     3.1
+    ],
+    "landing": [
+     3.13,
+     3.55
+    ]
+   }
+  },
+  {
+   "cs": 5,
+   "title": "A Site Nano 1 \u2014 First nanoswarm dropped freehand onto the stone floor of A",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     5.5,
+     7.0
+    ],
+    "aim": [
+     7.1,
+     7.82
+    ],
+    "throw": [
+     7.83,
+     8.43
+    ],
+    "landing": [
+     8.15,
+     9.0
+    ]
+   }
+  },
+  {
+   "cs": 11,
+   "title": "A Site Nano 2 \u2014 Second nanoswarm thrown a short distance onto the A Site",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     11.0,
+     12.5
+    ],
+    "aim": [
+     13.35,
+     13.85
+    ],
+    "throw": [
+     13.85,
+     14.45
+    ],
+    "landing": [
+     14.2,
+     14.68
+    ]
+   }
+  },
+  {
+   "cs": 15,
+   "title": "A Site Bot 1 \u2014 Alarmbot set on the A Site floor in front of the doorway",
+   "ability": "alarmbot",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     15.97,
+     17.0
+    ],
+    "aim": [
+     15.97,
+     16.47
+    ],
+    "landing": [
+     16.55,
+     17.3
+    ]
+   }
+  },
+  {
+   "cs": 31,
+   "title": "A Site Bot 2 \u2014 Alarmbot dropped between the two stacked wooden crates on A",
+   "ability": "alarmbot",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     31.0,
+     31.95
+    ],
+    "aim": [
+     32.0,
+     32.73
+    ],
+    "landing": [
+     32.8,
+     33.8
+    ]
+   }
+  },
+  {
+   "cs": 35,
+   "title": "A Site Nano 3 \u2014 First nanoswarm tossed from close range (about 2 m) onto the",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     35.0,
+     35.95
+    ],
+    "aim": [
+     36.35,
+     36.83
+    ],
+    "throw": [
+     36.85,
+     37.45
+    ],
+    "landing": [
+     37.15,
+     37.55
+    ]
+   }
+  },
+  {
+   "cs": 40,
+   "title": "A Site Nano 4 \u2014 Second nanoswarm dropped (about 2 m) on the A Site floor",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     40.5,
+     41.7
+    ],
+    "aim": [
+     41.75,
+     42.57
+    ],
+    "throw": [
+     42.57,
+     43.17
+    ],
+    "landing": [
+     42.85,
+     43.75
+    ]
+   }
+  },
+  {
+   "cs": 59,
+   "title": "A Site Turret 2 \u2014 Turret placed on the floor in an A Site wall corner (tan",
+   "ability": "turret",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     59.7,
+     60.7
+    ],
+    "aim": [
+     59.75,
+     60.48
+    ],
+    "landing": [
+     60.9,
+     61.45
+    ]
+   }
+  },
+  {
+   "cs": 62,
+   "title": "A Site Nano 5 \u2014 Nanoswarm thrown onto the A Site floor beside the green-glass",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     62.45,
+     63.35
+    ],
+    "aim": [
+     62.95,
+     63.52
+    ],
+    "throw": [
+     63.5,
+     64.1
+    ],
+    "landing": [
+     63.9,
+     64.45
+    ]
+   }
+  },
+  {
+   "cs": 65,
+   "title": "A Site Bot 3 \u2014 Alarmbot dropped on the floor of the A Site back room: a",
+   "ability": "alarmbot",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     65.3,
+     65.8
+    ],
+    "aim": [
+     65.8,
+     66.16
+    ],
+    "landing": [
+     66.28,
+     66.95
+    ]
+   }
+  },
+  {
+   "cs": 66,
+   "title": "A Site Nano 6 \u2014 Second nanoswarm, thrown onto the floor of the same",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     66.55,
+     67.15
+    ],
+    "aim": [
+     68.0,
+     68.62
+    ],
+    "throw": [
+     68.64,
+     68.84
+    ],
+    "landing": [
+     68.84,
+     69.08
+    ]
+   }
+  },
+  {
+   "cs": 85,
+   "title": "B Site Turret 1 \u2014 Turret placed on top of the tall grey crate in the corner",
+   "ability": "turret",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     85.3,
+     85.78
+    ],
+    "aim": [
+     86.8,
+     87.05
+    ],
+    "landing": [
+     87.5,
+     88.3
+    ]
+   }
+  },
+  {
+   "cs": 90,
+   "title": "B Site Bot 1 \u2014 Alarmbot dropped on the metal floor strip beside the big grey",
+   "ability": "alarmbot",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     90.4,
+     91.3
+    ],
+    "aim": [
+     91.35,
+     92.41
+    ],
+    "landing": [
+     92.47,
+     93.5
+    ]
+   }
+  },
+  {
+   "cs": 94,
+   "title": "B Site Nano 1 \u2014 First nanoswarm on B Site: standing on the wooden walkway",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     94.65,
+     95.5
+    ],
+    "aim": [
+     95.3,
+     95.88
+    ],
+    "throw": [
+     95.93,
+     96.45
+    ],
+    "landing": [
+     96.22,
+     96.58
+    ]
+   }
+  },
+  {
+   "cs": 97,
+   "title": "B Site Nano 2 \u2014 Second nanoswarm on B Site from a nearby spot on the wooden",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     97.75,
+     98.5
+    ],
+    "aim": [
+     98.5,
+     99.27
+    ],
+    "throw": [
+     99.28,
+     99.9
+    ],
+    "landing": [
+     99.5,
+     100.15
+    ]
+   }
+  },
+  {
+   "cs": 106,
+   "title": "B Site Bot 2 \u2014 B Site (readout 'B Site'): alarmbot put on the metal floor",
+   "ability": "alarmbot",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     106.6,
+     107.55
+    ],
+    "aim": [
+     107.6,
+     108.55
+    ],
+    "landing": [
+     108.63,
+     109.4
+    ]
+   }
+  },
+  {
+   "cs": 109,
+   "title": "B Site Nano 3 \u2014 B Site: nanoswarm canister held at ~110 and dropped short",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     109.3,
+     110.35
+    ],
+    "aim": [
+     110.35,
+     110.82
+    ],
+    "throw": [
+     110.85,
+     111.42
+    ],
+    "landing": [
+     111.3,
+     112.1
+    ]
+   }
+  },
+  {
+   "cs": 115,
+   "title": "Garage Nano 1 \u2014 C Garage (readout 'C Garage'): nanoswarm canister held facing",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "garage",
+   "stand": "garage",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     115.55,
+     116.35
+    ],
+    "aim": [
+     116.35,
+     117.05
+    ],
+    "throw": [
+     117.03,
+     117.63
+    ],
+    "landing": [
+     117.45,
+     118.25
+    ]
+   }
+  },
+  {
+   "cs": 119,
+   "title": "Garage Turret 1 \u2014 C Garage corridor: turret put on the floor against the right",
+   "ability": "turret",
+   "technique": "standing",
+   "target": "garage",
+   "stand": "garage",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     119.0,
+     120.0
+    ],
+    "aim": [
+     120.0,
+     120.78
+    ],
+    "landing": [
+     121.25,
+     121.55
+    ]
+   }
+  },
+  {
+   "cs": 135,
+   "title": "C Site Nano 1 \u2014 Nanoswarm held at 135-137, thrown at about 137.5 and settling",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "c-site",
+   "stand": "c-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     135.75,
+     136.75
+    ],
+    "aim": [
+     136.75,
+     137.38
+    ],
+    "throw": [
+     137.38,
+     137.95
+    ],
+    "landing": [
+     137.8,
+     138.8
+    ]
+   }
+  },
+  {
+   "cs": 139,
+   "title": "C Site Nano 2 \u2014 Nanoswarm equipped at about 140, thrown at about 141.7-142",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "c-site",
+   "stand": "c-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     139.5,
+     140.9
+    ],
+    "aim": [
+     141.0,
+     141.53
+    ],
+    "throw": [
+     141.5,
+     142.1
+    ],
+    "landing": [
+     141.72,
+     142.4
+    ]
+   }
+  },
+  {
+   "cs": 142,
+   "title": "C Site Bot 1 \u2014 Alarmbot placed on the C Site floor in front of the",
+   "ability": "alarmbot",
+   "technique": "standing",
+   "target": "c-site",
+   "stand": "c-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     142.95,
+     143.9
+    ],
+    "aim": [
+     143.9,
+     144.48
+    ],
+    "landing": [
+     144.55,
+     145.3
+    ]
+   }
+  },
+  {
+   "cs": 154,
+   "title": "C Site Turret 1 \u2014 Turret placed on the metal-grated ledge by the metal door at",
+   "ability": "turret",
+   "technique": "standing",
+   "target": "c-site",
+   "stand": "c-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     154.8,
+     155.45
+    ],
+    "aim": [
+     155.85,
+     156.3
+    ],
+    "landing": [
+     156.4,
+     156.85
+    ]
+   }
+  },
+  {
+   "cs": 159,
+   "title": "C Site Nano 3 \u2014 Nanoswarm canister held while facing the open C Site floor",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "c-site",
+   "stand": "c-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     159.2,
+     160.2
+    ],
+    "aim": [
+     160.2,
+     160.85
+    ],
+    "throw": [
+     160.85,
+     161.4
+    ],
+    "landing": [
+     161.08,
+     161.72
+    ]
+   }
+  },
+  {
+   "cs": 163,
+   "title": "C Site Nano 4 \u2014 Second nanoswarm held facing a brick wall and corner on C",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "c-site",
+   "stand": "c-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     163.1,
+     164.5
+    ],
+    "aim": [
+     164.6,
+     165.42
+    ],
+    "throw": [
+     165.45,
+     166.05
+    ],
+    "landing": [
+     165.72,
+     166.08
+    ]
+   }
+  },
+  {
+   "cs": 166,
+   "title": "C Site Bot 2 \u2014 Alarmbot dropped on the open C Site floor in front of the",
+   "ability": "alarmbot",
+   "technique": "standing",
+   "target": "c-site",
+   "stand": "c-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     166.5,
+     167.45
+    ],
+    "aim": [
+     167.65,
+     168.03
+    ],
+    "landing": [
+     168.1,
+     169.0
+    ]
+   }
+  },
+  {
+   "cs": 185,
+   "title": "A Site Nano 7 \u2014 Nanoswarm lineup thrown from A Link (location readout 'A",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     185.5,
+     186.5
+    ],
+    "aim": [
+     188.5,
+     189.55
+    ],
+    "throw": [
+     189.65,
+     190.25
+    ],
+    "landing": [
+     193.85,
+     195.0
+    ]
+   }
+  },
+  {
+   "cs": 201,
+   "title": "A Lobby Nano 1 \u2014 Nanoswarm lobbed high over the rooftop from C Link (standing",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "a-lobby",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     201.5,
+     203.5
+    ],
+    "aim": [
+     207.15,
+     207.75
+    ],
+    "throw": [
+     207.75,
+     208.35
+    ],
+    "landing": [
+     213.45,
+     214.6
+    ]
+   }
+  },
+  {
+   "cs": 255,
+   "title": "A Site Nano 8 \u2014 Nanoswarm lobbed from outside A (stone wall beside the",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     255.5,
+     257.0
+    ],
+    "aim": [
+     260.8,
+     261.95
+    ],
+    "throw": [
+     262.1,
+     262.7
+    ],
+    "landing": [
+     267.7,
+     268.35
+    ]
+   }
+  },
+  {
+   "cs": 274,
+   "title": "A Site Nano 9 \u2014 Nanoswarm lineup from A Long: stand beside a wooden",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     274.8,
+     275.9
+    ],
+    "aim": [
+     278.4,
+     279.5
+    ],
+    "throw": [
+     279.58,
+     280.2
+    ],
+    "landing": [
+     285.8,
+     286.6
+    ]
+   }
+  },
+  {
+   "cs": 293,
+   "title": "A Site Nano 10 \u2014 Nanoswarm thrown from outside A",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     293.25,
+     295.25
+    ],
+    "aim": [
+     295.7,
+     296.22
+    ],
+    "throw": [
+     296.3,
+     296.9
+    ],
+    "landing": [
+     300.95,
+     301.95
+    ]
+   }
+  },
+  {
+   "cs": 308,
+   "title": "C Site Nano 5 \u2014 Attacker nanoswarm thrown from C Lobby into C Site: stand",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "c-site",
+   "stand": "c-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     308.5,
+     309.9
+    ],
+    "aim": [
+     312.3,
+     312.8
+    ],
+    "throw": [
+     312.8,
+     313.4
+    ],
+    "landing": [
+     318.85,
+     319.9
+    ]
+   }
+  },
+  {
+   "cs": 341,
+   "title": "C Site Nano 6 \u2014 Nanoswarm thrown high over the rooftop from outside C (open",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "c-site",
+   "stand": "c-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     341.0,
+     342.1
+    ],
+    "aim": [
+     348.7,
+     349.45
+    ],
+    "throw": [
+     349.43,
+     350.05
+    ],
+    "landing": [
+     353.95,
+     354.72
+    ]
+   }
+  },
+  {
+   "cs": 368,
+   "title": "A Site Nano 11 \u2014 Attacker post-plant nanoswarm on A site",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     368.5,
+     369.9
+    ],
+    "aim": [
+     371.9,
+     372.95
+    ],
+    "throw": [
+     373.0,
+     373.6
+    ],
+    "landing": [
+     376.6,
+     377.8
+    ]
+   }
+  },
+  {
+   "cs": 421,
+   "title": "C Site Nano 7 \u2014 Attacker post-plant nanoswarm: Killjoy stands flush against",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "c-site",
+   "stand": "c-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     421.2,
+     422.3
+    ],
+    "aim": [
+     424.0,
+     425.1
+    ],
+    "throw": [
+     425.15,
+     425.8
+    ],
+    "landing": [
+     428.8,
+     429.6
+    ]
+   }
+  },
+  {
+   "cs": 436,
+   "title": "C Site Nano 8 \u2014 Attacker post-plant nanoswarm from C Long (location readout",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "c-site",
+   "stand": "c-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     436.5,
+     438.4
+    ],
+    "aim": [
+     439.1,
+     440.1
+    ],
+    "throw": [
+     440.15,
+     440.75
+    ],
+    "landing": [
+     444.3,
+     444.9
+    ]
+   }
+  }
+ ],
+ "note": ""
+}

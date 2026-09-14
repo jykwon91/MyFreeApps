@@ -26,6 +26,8 @@ Chapters that are NOT placements are excluded by name:
 import json
 import os
 
+from killjoy_abilities import ABILITIES
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 WT = r"C:\Users\jason\Documents\Git\MyFreeApps-worktrees\mga-abyss-cypher"
 INSTR = os.path.join(WT, r"apps\mygamingassistant\backend\scripts",
@@ -41,36 +43,6 @@ CHAPTERS = [
     (5, 465, 590, "Initiator Lineups B-Site"),
     (6, 590, 647, "Initiator Lineups Mid"),
 ]
-
-# Killjoy's lineup-able abilities. `placement` here mirrors app/fixtures/utility_types.json --
-# turret and alarmbot are `placed` (3 beats, no THROW), nanoswarm is not (4 beats). ingest_agent
-# re-reads that from the DB and rejects a placed row carrying a throw, so these must agree.
-ABILITIES = {
-    "turret": {
-        "survey": "a three-legged sentry robot standing deployed on its tripod, eye lit and "
-                  "sweeping = turret",
-        "landing": "the turret DEPLOYED -- opaque, standing on its tripod with its legs planted "
-                   "and its eye lit, and it STAYS PUT when the view moves off it. The green/teal "
-                   "translucent placement hologram that tracks the crosshair is the AIM, never "
-                   "the LANDING (a hologram in the LANDING strip = FAIL).",
-    },
-    "alarmbot": {
-        "survey": "a squat wheeled bot with a single lit eye, sitting on the ground = alarmbot",
-        "landing": "the alarmbot DEPLOYED -- settled on the ground on its wheels, upright and its "
-                   "eye lit, not still in hand and not merely aimed at the spot.",
-    },
-    "nanoswarm": {
-        "survey": "a small canister THROWN in an arc that settles on the ground and then goes "
-                  "covert (near-invisible) = nanoswarm",
-        "landing": "the nanoswarm SETTLED at its destination -- the last motion of the canister "
-                   "as it comes to rest, immediately before it goes covert. The gas cloud is the "
-                   "ACTIVATION, a separate deliberate act often seconds later and after a cut -- "
-                   "a cloud in the LANDING strip = FAIL.",
-        "release": "the canister actually LEAVES THE HAND into its arc -- a held canister with "
-                   "NO release = FAIL. Note Killjoy's EQUIP flourish flips the device up and "
-                   "catches it; that is not a release.",
-    },
-}
 
 VAR_NOTE = (
     "Abyss is a NEWER map with a vertical, bridge-and-void layout - do not pattern-match callouts "
