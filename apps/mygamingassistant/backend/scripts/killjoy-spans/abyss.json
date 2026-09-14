@@ -1,0 +1,974 @@
+{
+ "video_id": "o1_qZPhJjRs",
+ "map_slug": "abyss",
+ "author": "Briiest",
+ "lineups": [
+  {
+   "cs": 19,
+   "title": "A Main Bot 1 \u2014 Put your Alarmbot in front of A-Main",
+   "ability": "alarmbot",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     19.35,
+     20.18
+    ],
+    "aim": [
+     19.7,
+     20.18
+    ],
+    "landing": [
+     20.3,
+     21.4
+    ]
+   }
+  },
+  {
+   "cs": 23,
+   "title": "A Site Nano 1 \u2014 Put your first Nanoswarm on the Boxes and the second one left",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     23.45,
+     24.95
+    ],
+    "aim": [
+     25.0,
+     26.13
+    ],
+    "throw": [
+     26.15,
+     26.75
+    ],
+    "landing": [
+     26.3,
+     27.05
+    ]
+   }
+  },
+  {
+   "cs": 27,
+   "title": "A Site Nano 2 \u2014 Put your first Nanoswarm on the Boxes and the second one left",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     27.0,
+     28.3
+    ],
+    "aim": [
+     28.3,
+     29.1
+    ],
+    "throw": [
+     29.12,
+     29.72
+    ],
+    "landing": [
+     29.25,
+     30.3
+    ]
+   }
+  },
+  {
+   "cs": 32,
+   "title": "A Site Turret 1 \u2014 Put your Turret here and it will hold Bridge and the top of",
+   "ability": "turret",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     32.75,
+     34.25
+    ],
+    "aim": [
+     36.0,
+     36.98
+    ],
+    "landing": [
+     37.8,
+     38.38
+    ]
+   }
+  },
+  {
+   "cs": 49,
+   "title": "A Main Bot 2 \u2014 Put your Alarmbot in front of A-Main with a Nanoswarm to",
+   "ability": "alarmbot",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     49.5,
+     50.35
+    ],
+    "aim": [
+     50.35,
+     50.98
+    ],
+    "landing": [
+     51.08,
+     51.62
+    ]
+   }
+  },
+  {
+   "cs": 51,
+   "title": "A Main Nano 1 \u2014 Put your Alarmbot in front of A-Main with a Nanoswarm to",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     51.45,
+     52.25
+    ],
+    "aim": [
+     53.45,
+     54.33
+    ],
+    "throw": [
+     54.35,
+     54.95
+    ],
+    "landing": [
+     54.8,
+     55.3
+    ]
+   }
+  },
+  {
+   "cs": 56,
+   "title": "A Site Nano 3 \u2014 Put your second one on the Boxes",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     56.45,
+     57.35
+    ],
+    "aim": [
+     57.0,
+     57.62
+    ],
+    "throw": [
+     57.6,
+     58.15
+    ],
+    "landing": [
+     57.9,
+     58.7
+    ]
+   }
+  },
+  {
+   "cs": 61,
+   "title": "A Site Turret 2 \u2014 Put your Turret on this position for Bridge and Boxes",
+   "ability": "turret",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     61.45,
+     62.3
+    ],
+    "aim": [
+     62.3,
+     63.2
+    ],
+    "landing": [
+     63.78,
+     64.15
+    ]
+   }
+  },
+  {
+   "cs": 76,
+   "title": "A Main Bot 3 \u2014 Put your Alarmbot in front of A-Main with two Nanoswarms like",
+   "ability": "alarmbot",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     76.2,
+     77.6
+    ],
+    "aim": [
+     76.3,
+     76.95
+    ],
+    "landing": [
+     77.03,
+     77.65
+    ]
+   }
+  },
+  {
+   "cs": 78,
+   "title": "A Main Nano 2 \u2014 Put your Alarmbot in front of A-Main with two Nanoswarms like",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     78.7,
+     80.3
+    ],
+    "aim": [
+     80.5,
+     81.4
+    ],
+    "throw": [
+     81.42,
+     81.98
+    ],
+    "landing": [
+     81.65,
+     82.3
+    ]
+   }
+  },
+  {
+   "cs": 82,
+   "title": "A Main Nano 3 \u2014 Put your Alarmbot in front of A-Main with two Nanoswarms like",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     82.0,
+     83.4
+    ],
+    "aim": [
+     83.45,
+     84.17
+    ],
+    "throw": [
+     84.18,
+     84.75
+    ],
+    "landing": [
+     84.38,
+     85.2
+    ]
+   }
+  },
+  {
+   "cs": 86,
+   "title": "A Site Turret 3 \u2014 Put your Turret in this corner to distract the enemies",
+   "ability": "turret",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     86.5,
+     87.4
+    ],
+    "aim": [
+     88.0,
+     88.98
+    ],
+    "landing": [
+     89.5,
+     89.95
+    ]
+   }
+  },
+  {
+   "cs": 101,
+   "title": "A Main Bot 4 \u2014 Put your Alarmbot in front of A-Main",
+   "ability": "alarmbot",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     101.5,
+     102.5
+    ],
+    "aim": [
+     102.55,
+     103.6
+    ],
+    "landing": [
+     103.75,
+     104.7
+    ]
+   }
+  },
+  {
+   "cs": 105,
+   "title": "A Site Turret 4 \u2014 Put your Turret in this corner",
+   "ability": "turret",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     105.9,
+     106.9
+    ],
+    "aim": [
+     106.45,
+     107.2
+    ],
+    "landing": [
+     107.25,
+     107.9
+    ]
+   }
+  },
+  {
+   "cs": 110,
+   "title": "A Site Nano 4 \u2014 Put your first Nanoswarm on this little box and the second",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     110.25,
+     111.1
+    ],
+    "aim": [
+     110.55,
+     111.13
+    ],
+    "throw": [
+     111.12,
+     111.72
+    ],
+    "landing": [
+     111.42,
+     112.3
+    ]
+   }
+  },
+  {
+   "cs": 112,
+   "title": "A Main Nano 4 \u2014 Put your first Nanoswarm on this little box and the second",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "a-main",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     112.25,
+     114.0
+    ],
+    "aim": [
+     114.2,
+     115.35
+    ],
+    "throw": [
+     115.4,
+     116.0
+    ],
+    "landing": [
+     115.78,
+     116.6
+    ]
+   }
+  },
+  {
+   "cs": 130,
+   "title": "B Site Turret 1 \u2014 Put your Turret in this corner",
+   "ability": "turret",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     130.8,
+     132.0
+    ],
+    "aim": [
+     132.4,
+     133.55
+    ],
+    "landing": [
+     134.1,
+     134.55
+    ]
+   }
+  },
+  {
+   "cs": 137,
+   "title": "B Site Bot 1 \u2014 Put your Alarmbot on this spot and one Nanoswarm on the right",
+   "ability": "alarmbot",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     137.62,
+     138.68
+    ],
+    "aim": [
+     138.2,
+     138.78
+    ],
+    "landing": [
+     139.78,
+     140.6
+    ]
+   }
+  },
+  {
+   "cs": 146,
+   "title": "B Site Nano 1 \u2014 Put your Alarmbot on this spot and one Nanoswarm on the right",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     146.0,
+     147.8
+    ],
+    "aim": [
+     148.5,
+     149.7
+    ],
+    "throw": [
+     149.72,
+     150.24
+    ],
+    "landing": [
+     150.04,
+     150.62
+    ]
+   }
+  },
+  {
+   "cs": 173,
+   "title": "B Main Bot 1 \u2014 Put your Alarmbot infront of Main and your Mollies on the",
+   "ability": "alarmbot",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     173.7,
+     174.6
+    ],
+    "aim": [
+     176.2,
+     177.3
+    ],
+    "landing": [
+     177.45,
+     178.05
+    ]
+   }
+  },
+  {
+   "cs": 199,
+   "title": "B Site Turret 2 \u2014 Put your Turret infront of B Tower",
+   "ability": "turret",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     199.92,
+     201.1
+    ],
+    "aim": [
+     200.3,
+     201.13
+    ],
+    "landing": [
+     201.25,
+     202.3
+    ]
+   }
+  },
+  {
+   "cs": 205,
+   "title": "B Main Bot 2 \u2014 Put your Alarmbot here and one Nanoswarm infront of Main and",
+   "ability": "alarmbot",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "b-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     205.85,
+     206.32
+    ],
+    "aim": [
+     206.32,
+     206.78
+    ],
+    "landing": [
+     207.25,
+     208.9
+    ]
+   }
+  },
+  {
+   "cs": 209,
+   "title": "B Main Nano 1 \u2014 Put your Alarmbot here and one Nanoswarm infront of Main and",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "b-main",
+   "stand": "b-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     209.25,
+     210.75
+    ],
+    "aim": [
+     211.5,
+     212.4
+    ],
+    "throw": [
+     212.4,
+     212.85
+    ],
+    "landing": [
+     212.83,
+     213.3
+    ]
+   }
+  },
+  {
+   "cs": 213,
+   "title": "B Site Nano 2 \u2014 Put your Alarmbot here and one Nanoswarm infront of Main and",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     213.75,
+     214.9
+    ],
+    "aim": [
+     215.25,
+     215.95
+    ],
+    "throw": [
+     215.97,
+     216.57
+    ],
+    "landing": [
+     216.2,
+     216.9
+    ]
+   }
+  },
+  {
+   "cs": 233,
+   "title": "B Site Turret 3 \u2014 Put your Turret on this Box",
+   "ability": "turret",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     233.4,
+     234.4
+    ],
+    "aim": [
+     233.4,
+     233.7
+    ],
+    "landing": [
+     234.62,
+     235.25
+    ]
+   }
+  },
+  {
+   "cs": 236,
+   "title": "B Site Bot 2 \u2014 Put your Alarmbot in this corner and one Molly as well and",
+   "ability": "alarmbot",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     236.95,
+     237.36
+    ],
+    "aim": [
+     237.38,
+     237.72
+    ],
+    "landing": [
+     238.28,
+     239.2
+    ]
+   }
+  },
+  {
+   "cs": 242,
+   "title": "B Site Nano 3 \u2014 Put your Alarmbot in this corner and one Molly as well and",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     242.6,
+     243.6
+    ],
+    "aim": [
+     243.6,
+     244.33
+    ],
+    "throw": [
+     244.4,
+     245.0
+    ],
+    "landing": [
+     244.6,
+     245.25
+    ]
+   }
+  },
+  {
+   "cs": 245,
+   "title": "A Site Nano 5 \u2014 Put your Alarmbot in this corner and one Molly as well and",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     245.8,
+     247.3
+    ],
+    "aim": [
+     248.0,
+     249.1
+    ],
+    "throw": [
+     249.15,
+     249.75
+    ],
+    "landing": [
+     249.4,
+     250.2
+    ]
+   }
+  },
+  {
+   "cs": 274,
+   "title": "A Site Nano 6 \u2014 From A Main (spot by the triangle hazard sign, planted A",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     274.0,
+     276.6
+    ],
+    "aim": [
+     284.52,
+     284.84
+    ],
+    "throw": [
+     284.85,
+     285.45
+    ],
+    "landing": [
+     289.45,
+     289.93
+    ]
+   }
+  },
+  {
+   "cs": 301,
+   "title": "A Site Nano 7 \u2014 Same A Main stand by the triangle sign, different aim",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     301.5,
+     303.5
+    ],
+    "aim": [
+     305.88,
+     307.12
+    ],
+    "throw": [
+     312.15,
+     312.8
+    ],
+    "landing": [
+     316.8,
+     317.7
+    ]
+   }
+  },
+  {
+   "cs": 329,
+   "title": "A Site Nano 8 \u2014 From A Lobby (behind the wooden planter crate), aligned throw",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     329.6,
+     331.6
+    ],
+    "aim": [
+     338.5,
+     338.88
+    ],
+    "throw": [
+     338.88,
+     339.45
+    ],
+    "landing": [
+     344.2,
+     345.2
+    ]
+   }
+  },
+  {
+   "cs": 354,
+   "title": "A Site Nano 9 \u2014 Same A Lobby planter-crate stand, crosshair aligned on the",
+   "ability": "nanoswarm",
+   "technique": "jump",
+   "target": "a-site",
+   "stand": "a-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     354.5,
+     356.5
+    ],
+    "aim": [
+     361.5,
+     362.0
+    ],
+    "throw": [
+     367.05,
+     367.65
+    ],
+    "landing": [
+     372.35,
+     373.2
+    ]
+   }
+  },
+  {
+   "cs": 431,
+   "title": "B Site Nano 4 \u2014 And this one is harder to break",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     431.5,
+     433.5
+    ],
+    "aim": [
+     443.4,
+     444.55
+    ],
+    "throw": [
+     444.55,
+     445.2
+    ],
+    "landing": [
+     450.25,
+     451.05
+    ]
+   }
+  },
+  {
+   "cs": 471,
+   "title": "B Site Nano 5 \u2014 This lineup clears the area backside Generator",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     471.0,
+     472.4
+    ],
+    "aim": [
+     483.28,
+     483.74
+    ],
+    "throw": [
+     483.78,
+     484.38
+    ],
+    "landing": [
+     489.25,
+     490.1
+    ]
+   }
+  },
+  {
+   "cs": 505,
+   "title": "B Site Nano 6 \u2014 This lineup clears the new space in Generator You can also",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     505.0,
+     507.3
+    ],
+    "aim": [
+     509.2,
+     510.4
+    ],
+    "throw": [
+     515.53,
+     516.13
+    ],
+    "landing": [
+     521.45,
+     522.35
+    ]
+   }
+  },
+  {
+   "cs": 534,
+   "title": "B Site Nano 7 \u2014 Lineup for top of the Generator",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     534.6,
+     535.9
+    ],
+    "aim": [
+     541.1,
+     542.45
+    ],
+    "throw": [
+     547.45,
+     548.05
+    ],
+    "landing": [
+     552.85,
+     553.95
+    ]
+   }
+  },
+  {
+   "cs": 564,
+   "title": "B Site Nano 8 \u2014 This lineup clears the area behind the little box",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     564.4,
+     566.2
+    ],
+    "aim": [
+     571.55,
+     572.05
+    ],
+    "throw": [
+     577.12,
+     577.77
+    ],
+    "landing": [
+     582.85,
+     583.65
+    ]
+   }
+  },
+  {
+   "cs": 627,
+   "title": "Mid Nano 1 \u2014 Lineup for Mid Boxes | Aim at this point than run and jump",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "mid",
+   "stand": "mid",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     627.2,
+     629.2
+    ],
+    "aim": [
+     630.55,
+     631.05
+    ],
+    "throw": [
+     636.2,
+     636.8
+    ],
+    "landing": [
+     638.25,
+     639.25
+    ]
+   }
+  }
+ ],
+ "note": ""
+}

@@ -57,7 +57,7 @@ AGENTS = {
         "short": {"spycam": "Cam", "trapwire": "Trip", "cyber-cage": "Cage"},
     },
     "killjoy": {
-        "sources": {"llo9vOgRrFw": "SC Valorant Guides"},
+        "sources": {"llo9vOgRrFw": "SC Valorant Guides", "o1_qZPhJjRs": "Briiest"},
         # Both are PLACED. Riot's own text is "FIRE to deploy a bot" for the
         # alarmbot -- it is deployed at a spot, not lobbed on an arc -- and the
         # app fixture's `placement` column agrees. Only nanoswarm is thrown.
