@@ -1,0 +1,454 @@
+{
+ "video_id": "U823N6M2UGM",
+ "map_slug": "haven",
+ "author": "hoverboarD",
+ "lineups": [
+  {
+   "cs": 17,
+   "title": "A Lobby Turret 1 \u2014 Mid Grass & C Lobby",
+   "ability": "turret",
+   "technique": "standing",
+   "target": "a-lobby",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     17.9,
+     19.9
+    ],
+    "aim": [
+     25.85,
+     26.53
+    ],
+    "landing": [
+     27.2,
+     28.4
+    ]
+   }
+  },
+  {
+   "cs": 60,
+   "title": "A Lobby Turret 2 \u2014 Mid & Mid Grass",
+   "ability": "turret",
+   "technique": "standing",
+   "target": "a-lobby",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     60.0,
+     61.4
+    ],
+    "aim": [
+     70.8,
+     71.32
+    ],
+    "landing": [
+     72.05,
+     73.25
+    ]
+   }
+  },
+  {
+   "cs": 109,
+   "title": "A Lobby Turret 3 \u2014 Mid Grass & Mid",
+   "ability": "turret",
+   "technique": "standing",
+   "target": "a-lobby",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     109.8,
+     111.5
+    ],
+    "aim": [
+     112.3,
+     113.2
+    ],
+    "landing": [
+     113.6,
+     114.6
+    ]
+   }
+  },
+  {
+   "cs": 128,
+   "title": "C Lobby Bot 1 \u2014 C Lobby/Dragon",
+   "ability": "alarmbot",
+   "technique": "standing",
+   "target": "c-lobby",
+   "stand": "c-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     128.25,
+     129.25
+    ],
+    "aim": [
+     131.3,
+     132.4
+    ],
+    "landing": [
+     132.47,
+     133.5
+    ]
+   }
+  },
+  {
+   "cs": 138,
+   "title": "C Lobby Bot 2 \u2014 C Lobby/Spawn",
+   "ability": "alarmbot",
+   "technique": "standing",
+   "target": "c-lobby",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     138.25,
+     139.25
+    ],
+    "aim": [
+     139.4,
+     140.03
+    ],
+    "landing": [
+     140.1,
+     141.3
+    ]
+   }
+  },
+  {
+   "cs": 151,
+   "title": "A Site Nano 1 \u2014 A Garden to A Long Ramp",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "t-spawn",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     151.0,
+     152.6
+    ],
+    "aim": [
+     159.0,
+     159.58
+    ],
+    "throw": [
+     159.45,
+     160.05
+    ],
+    "landing": [
+     164.9,
+     166.1
+    ]
+   }
+  },
+  {
+   "cs": 201,
+   "title": "A Lobby Nano 1 \u2014 A Garden to Mid Rabbit",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "a-lobby",
+   "stand": "a-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     201.9,
+     203.4
+    ],
+    "aim": [
+     220.8,
+     221.43
+    ],
+    "throw": [
+     221.43,
+     222.03
+    ],
+    "landing": [
+     224.35,
+     225.0
+    ]
+   }
+  },
+  {
+   "cs": 233,
+   "title": "A Site Nano 2 \u2014 A Long to A Site Back",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     233.5,
+     235.5
+    ],
+    "aim": [
+     253.9,
+     254.75
+    ],
+    "throw": [
+     254.78,
+     255.38
+    ],
+    "landing": [
+     258.5,
+     259.3
+    ]
+   }
+  },
+  {
+   "cs": 322,
+   "title": "A Site Nano 3 \u2014 A Long to A Site/Tunnel",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     322.0,
+     323.1
+    ],
+    "aim": [
+     330.35,
+     330.93
+    ],
+    "throw": [
+     330.93,
+     331.53
+    ],
+    "landing": [
+     334.98,
+     335.78
+    ]
+   }
+  },
+  {
+   "cs": 345,
+   "title": "A Site Nano 4 \u2014 A Long to A Site Quad",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     345.5,
+     346.45
+    ],
+    "aim": [
+     359.9,
+     360.4
+    ],
+    "throw": [
+     360.4,
+     361.0
+    ],
+    "landing": [
+     364.85,
+     365.95
+    ]
+   }
+  },
+  {
+   "cs": 407,
+   "title": "C Site Nano 1 \u2014 C Lobby to C Site/Monkey",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "c-site",
+   "stand": "c-lobby",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     407.5,
+     410.0
+    ],
+    "aim": [
+     420.1,
+     420.72
+    ],
+    "throw": [
+     420.72,
+     421.32
+    ],
+    "landing": [
+     425.5,
+     426.1
+    ]
+   }
+  },
+  {
+   "cs": 439,
+   "title": "Garage Turret 1 \u2014 C Garage & C Site",
+   "ability": "turret",
+   "technique": "standing",
+   "target": "garage",
+   "stand": "garage",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     439.0,
+     441.0
+    ],
+    "aim": [
+     450.9,
+     451.45
+    ],
+    "landing": [
+     452.45,
+     453.45
+    ]
+   }
+  },
+  {
+   "cs": 467,
+   "title": "Garage Turret 2 \u2014 C Long & C Garage",
+   "ability": "turret",
+   "technique": "standing",
+   "target": "garage",
+   "stand": "c-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     467.6,
+     469.6
+    ],
+    "aim": [
+     479.8,
+     480.38
+    ],
+    "landing": [
+     480.4,
+     481.5
+    ]
+   }
+  },
+  {
+   "cs": 495,
+   "title": "B Site Bot 1 \u2014 B Site (v1)",
+   "ability": "alarmbot",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     495.5,
+     496.9
+    ],
+    "aim": [
+     497.3,
+     498.33
+    ],
+    "landing": [
+     498.45,
+     499.6
+    ]
+   }
+  },
+  {
+   "cs": 506,
+   "title": "A Site Turret 1 \u2014 A Long & A Short",
+   "ability": "turret",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     506.2,
+     507.4
+    ],
+    "aim": [
+     515.95,
+     516.42
+    ],
+    "landing": [
+     517.1,
+     518.2
+    ]
+   }
+  },
+  {
+   "cs": 533,
+   "title": "B Site Bot 2 \u2014 B Site (v2)",
+   "ability": "alarmbot",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     533.15,
+     534.4
+    ],
+    "aim": [
+     535.2,
+     536.3
+    ],
+    "landing": [
+     536.45,
+     537.5
+    ]
+   }
+  },
+  {
+   "cs": 575,
+   "title": "C Site Nano 2 \u2014 CT Spawn to C Site/Long",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "c-site",
+   "stand": "ct-spawn",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     575.0,
+     576.4
+    ],
+    "aim": [
+     588.62,
+     589.1
+    ],
+    "throw": [
+     589.2,
+     589.8
+    ],
+    "landing": [
+     593.5,
+     594.1
+    ]
+   }
+  },
+  {
+   "cs": 608,
+   "title": "A Site Nano 5 \u2014 A Link to A Long",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "a-site",
+   "stand": "a-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     608.0,
+     610.5
+    ],
+    "aim": [
+     623.15,
+     623.7
+    ],
+    "throw": [
+     623.7,
+     624.3
+    ],
+    "landing": [
+     627.95,
+     629.1
+    ]
+   }
+  }
+ ],
+ "note": ""
+}
