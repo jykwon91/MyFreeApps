@@ -1,0 +1,366 @@
+{
+ "video_id": "cvENl2ZCyWQ",
+ "map_slug": "lotus",
+ "author": "Chiru",
+ "lineups": [
+  {
+   "cs": 52,
+   "title": "B Site Turret 1 \u2014 Turret placed on top of a stone box/ledge against the back",
+   "ability": "turret",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     52.1,
+     52.3
+    ],
+    "aim": [
+     51.7,
+     52.06
+    ],
+    "landing": [
+     53.05,
+     53.45
+    ]
+   }
+  },
+  {
+   "cs": 57,
+   "title": "B Site Bot 1 \u2014 Alarmbot dropped on the B Site floor a short distance ahead",
+   "ability": "alarmbot",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     57.75,
+     59.0
+    ],
+    "aim": [
+     59.5,
+     60.55
+    ],
+    "landing": [
+     60.82,
+     61.8
+    ]
+   }
+  },
+  {
+   "cs": 64,
+   "title": "B Site Nano 1 \u2014 First nanoswarm held and thrown underhand onto the B Site",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     64.7,
+     65.6
+    ],
+    "aim": [
+     65.6,
+     66.28
+    ],
+    "throw": [
+     66.28,
+     66.88
+    ],
+    "landing": [
+     66.62,
+     67.2
+    ]
+   }
+  },
+  {
+   "cs": 68,
+   "title": "B Site Nano 2 \u2014 Second nanoswarm thrown from a slightly different view onto",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     68.25,
+     69.7
+    ],
+    "aim": [
+     69.7,
+     70.5
+    ],
+    "throw": [
+     70.58,
+     71.18
+    ],
+    "landing": [
+     70.72,
+     71.3
+    ]
+   }
+  },
+  {
+   "cs": 77,
+   "title": "C Site Turret 1 \u2014 Turret placed on top of a tall stone crate in a C-site corner",
+   "ability": "turret",
+   "technique": "standing",
+   "target": "c-site",
+   "stand": "c-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     77.45,
+     78.05
+    ],
+    "aim": [
+     77.45,
+     77.65
+    ],
+    "landing": [
+     78.2,
+     79.2
+    ]
+   }
+  },
+  {
+   "cs": 83,
+   "title": "C Site Nano 1 \u2014 Nanoswarm dropped at close range into the corner where two",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "c-site",
+   "stand": "c-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     83.0,
+     83.42
+    ],
+    "aim": [
+     83.8,
+     84.38
+    ],
+    "throw": [
+     84.4,
+     85.0
+    ],
+    "landing": [
+     84.5,
+     85.3
+    ]
+   }
+  },
+  {
+   "cs": 87,
+   "title": "C Main Nano 1 \u2014 Second nanoswarm thrown onto the open C-site floor near the",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "c-main",
+   "stand": "c-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     87.5,
+     88.5
+    ],
+    "aim": [
+     89.0,
+     89.45
+    ],
+    "throw": [
+     89.45,
+     90.05
+    ],
+    "landing": [
+     89.95,
+     90.55
+    ]
+   }
+  },
+  {
+   "cs": 96,
+   "title": "C Main Turret 1 \u2014 Turret placed on the floor of a C-side room: pink tripod",
+   "ability": "turret",
+   "technique": "standing",
+   "target": "c-main",
+   "stand": "c-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     96.3,
+     96.55
+    ],
+    "aim": [
+     97.92,
+     98.18
+    ],
+    "landing": [
+     99.03,
+     99.15
+    ]
+   }
+  },
+  {
+   "cs": 101,
+   "title": "C Main Bot 1 \u2014 Alarmbot dropped by the stone wall on the green floor near C",
+   "ability": "alarmbot",
+   "technique": "standing",
+   "target": "c-main",
+   "stand": "c-main",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     101.47,
+     102.4
+    ],
+    "aim": [
+     101.47,
+     101.63
+    ],
+    "landing": [
+     101.75,
+     102.4
+    ]
+   }
+  },
+  {
+   "cs": 104,
+   "title": "C Site Nano 2 \u2014 Nanoswarm held from 103 while walking, thrown at about 106.3",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "c-site",
+   "stand": "c-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     104.9,
+     106.1
+    ],
+    "aim": [
+     105.3,
+     106.15
+    ],
+    "throw": [
+     106.13,
+     106.73
+    ],
+    "landing": [
+     106.53,
+     107.3
+    ]
+   }
+  },
+  {
+   "cs": 109,
+   "title": "C Site Nano 3 \u2014 Second nanoswarm thrown at about 110.3 onto the wooden floor",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "c-site",
+   "stand": "c-site",
+   "side": "side_b",
+   "spans": {
+    "stand": [
+     109.65,
+     110.5
+    ],
+    "aim": [
+     109.95,
+     110.5
+    ],
+    "throw": [
+     110.47,
+     111.07
+    ],
+    "landing": [
+     110.72,
+     111.55
+    ]
+   }
+  },
+  {
+   "cs": 150,
+   "title": "B Site Nano 3 \u2014 B post-plant nanoswarm: Killjoy stands by a B-side",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "b-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     150.25,
+     152.25
+    ],
+    "aim": [
+     156.65,
+     157.2
+    ],
+    "throw": [
+     157.2,
+     157.8
+    ],
+    "landing": [
+     159.38,
+     160.3
+    ]
+   }
+  },
+  {
+   "cs": 183,
+   "title": "B Site Nano 4 \u2014 Attacker post-plant nanoswarm on B: after planting B default",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "b-site",
+   "stand": "a-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     183.2,
+     183.7
+    ],
+    "aim": [
+     188.85,
+     189.55
+    ],
+    "throw": [
+     189.6,
+     190.2
+    ],
+    "landing": [
+     196.2,
+     197.05
+    ]
+   }
+  },
+  {
+   "cs": 203,
+   "title": "C Site Nano 4 \u2014 C post-plant nanoswarm (attacker): after planting on C site",
+   "ability": "nanoswarm",
+   "technique": "standing",
+   "target": "c-site",
+   "stand": "c-main",
+   "side": "side_a",
+   "spans": {
+    "stand": [
+     203.35,
+     204.15
+    ],
+    "aim": [
+     209.1,
+     210.15
+    ],
+    "throw": [
+     210.15,
+     210.75
+    ],
+    "landing": [
+     215.5,
+     216.05
+    ]
+   }
+  }
+ ],
+ "note": ""
+}
