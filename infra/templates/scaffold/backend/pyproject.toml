@@ -18,7 +18,7 @@ dependencies = [
     "passlib[bcrypt]==1.7.4",
     "cryptography==50.0.0",
     "httpx==0.28.1",
-    "anyio==4.13.0",
+    "anyio==4.14.2",
     "minio==7.2.20",
     "platform-shared",
     # Sentry -- fail-loud production enforcement. See app/core/observability.py.
