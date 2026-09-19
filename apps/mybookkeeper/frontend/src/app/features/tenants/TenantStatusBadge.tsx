@@ -1,5 +1,6 @@
 import { StatusBadge } from "@platform/ui";
 import type { ApplicantSummary } from "@/shared/types/applicant/applicant-summary";
+import { isTenantEnded } from "@/shared/lib/tenant-status";
 
 export interface TenantStatusBadgeProps {
   tenant: ApplicantSummary;
@@ -14,14 +15,7 @@ export interface TenantStatusBadgeProps {
  * - contract_end is not null and is before today (contract expiry)
  */
 export default function TenantStatusBadge({ tenant, today }: TenantStatusBadgeProps) {
-  const todayStr = today ?? new Date().toISOString().slice(0, 10);
-  const ended =
-    tenant.tenant_ended_at !== null ||
-    (tenant.contract_end !== null &&
-      tenant.contract_end !== undefined &&
-      tenant.contract_end < todayStr);
-
-  if (ended) {
+  if (isTenantEnded(tenant, today)) {
     return (
       <StatusBadge
         tone="neutral"
